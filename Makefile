@@ -15,9 +15,6 @@ minisat: always
 minisatd: always
 	cd core;   make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)"; mv minisat_debug ../minisat
 
-minisatp: always
-	cd parassumption; make INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)"; mv minisat ../minisat
-
 always:
 
 tar: clean
