@@ -164,18 +164,18 @@ int main(int argc, char** argv)
         if (S.verbosity > 0){
             printStats(S);
             printf("\n"); }
-        printf(ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
+        printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n");
         if (res != NULL){
             if (ret == l_True){
-                fprintf(res, "SAT\n");
+                fprintf(res, "s SATISFIABLE\nv ");
                 for (int i = 0; i < S.nVars(); i++)
                     if (S.model[i] != l_Undef)
                         fprintf(res, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
                 fprintf(res, " 0\n");
             }else if (ret == l_False)
-                fprintf(res, "UNSAT\n");
+                fprintf(res, "s UNSATISFIABLE\n");
             else
-                fprintf(res, "INDET\n");
+                fprintf(res, "s UNKNOWN\n");
             fclose(res);
         }
         
@@ -186,7 +186,7 @@ int main(int argc, char** argv)
 #endif
     } catch (OutOfMemoryException&){
         printf("===============================================================================\n");
-        printf("INDETERMINATE\n");
+        printf("s UNKNOWN\n");
         exit(0);
     }
 }

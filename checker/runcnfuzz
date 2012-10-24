@@ -1,4 +1,14 @@
 #!/bin/sh
+
+#
+#
+# call ./runcnfuzz ./solver
+# or ./runcnfuzz ./wrapper.sh
+#
+# ./solver or ./wrapper.sh will get an cnf file as argument
+# the return code has to be 10 or 20 (SAT/UNSAT) and the solution needs to be printed
+#
+
 die () {
   echo "*** runcnfuzz: $*" 1>&2
   exit 1
@@ -43,8 +53,8 @@ do
     10) 
       [ x"$qbf" = x ] || continue
       [ $ign = yes ] && continue
-      ./precochk $cnf $sol >/dev/null 2>/dev/null
-      [ $? = 10 ] && continue
+      ./verify SAT $sol $cnf >/dev/null 2>/dev/null
+      [ $? = 0 ] && continue
       ;;
     20) 
       ./lgl $cnf 2> /dev/null 1> /dev/null

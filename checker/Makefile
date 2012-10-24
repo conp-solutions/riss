@@ -1,4 +1,4 @@
-all: cnfdd cnfuzz precochk lgl #mtcnfdd
+all: verify cnfdd cnfuzz precochk lgl #mtcnfdd
 
 cnfdd: cnfdd.c Makefile
 	g++ -o cnfdd cnfdd.c -Wall -O0
@@ -14,7 +14,10 @@ precochk:
 
 lgl:
 	cd lingeling; ./configure && make; cp lingeling ../lgl
-	
+
+verify: 
+	g++ verify_model.c -o verify -O3 
+
 clean:
-	rm -f mtcnfdd cnfuzz cnfdd precochk lgl
+	rm -f mtcnfdd cnfuzz cnfdd precochk lgl verify
 	cd lingeling; make clean
