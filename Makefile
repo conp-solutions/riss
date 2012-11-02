@@ -10,11 +10,17 @@ COPTIMIZE ?= -O3
 
 # build the splitter solver
 minisat: always
-	cd core;   make INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)"; mv minisat ..
+	cd core;   make INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)"; mv minisat ..
 
 minisatd: always
-	cd core;   make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)"; mv minisat_debug ../minisat
+	cd core;   make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)"; mv minisat_debug ../minisat
 
+coprocessor: always
+	cd coprocessor-src;   make INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)"; mv coprocessor ..
+	
+coprocessord: always
+	cd coprocessor-src;   make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)"; mv coprocessor ..
+	
 always:
 
 tar: clean
@@ -22,8 +28,9 @@ tar: clean
 
 # clean up after solving
 clean:
-	@cd core; make clean MROOT=..;
+	@cd core; make clean CPDEPEND="" MROOT=..;
 	@cd simp; make clean MROOT=..;
-	@rm -f minisat
+	@cd coprocessor-src; make clean MROOT=..;
+	@rm -f minisat coprocessor minisatd
 	@rm -f *~ */*~
 	@echo Done

@@ -23,6 +23,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "mtl/Sort.h"
 #include "core/Solver.h"
 
+// to be able to use the preprocessor
+#include "coprocessor-src/Coprocessor.h"
+
 using namespace Minisat;
 
 //=================================================================================================
@@ -775,6 +778,12 @@ lbool Solver::solve_()
         status = search(rest_base * restart_first);
         if (!withinBudget()) break;
         curr_restarts++;
+	
+	if( status == l_Undef ) {
+	  if( coprocessor == 0 ) coprocessor = new Coprocessor(ca,this); // use number of threads from coprocessor
+          status = coprocessor->preprocess();
+	}
+	
     }
 
     if (verbosity >= 1)

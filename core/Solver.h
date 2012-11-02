@@ -27,6 +27,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "utils/Options.h"
 #include "core/SolverTypes.h"
 
+// forward declaration
+class Coprocessor;
 
 namespace Minisat {
 
@@ -34,6 +36,9 @@ namespace Minisat {
 // Solver -- the main class:
 
 class Solver {
+  
+    friend class Coprocessor;
+  
 public:
 
     // Constructor/Destructor:
@@ -268,6 +273,10 @@ protected:
     // Returns a random integer 0 <= x < size. Seed must never be 0.
     static inline int irand(double& seed, int size) {
         return (int)(drand(seed) * size); }
+        
+/// for coprocessor
+    Coprocessor* coprocessor;
+        
 };
 
 
