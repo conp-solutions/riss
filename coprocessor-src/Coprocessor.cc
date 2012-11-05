@@ -32,6 +32,10 @@ Coprocessor::~Coprocessor()
 lbool Coprocessor::preprocess()
 {
   std::cerr << "c start preprocessing with coprocessor" << std::endl;
+  
+  // first, remove all satisfied clauses
+  if( !solver->simplify() ) return l_False;
+  
   lbool status = l_Undef;
   // delete clauses from solver
   
