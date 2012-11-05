@@ -52,12 +52,14 @@ protected:
   
   
   // own methods:
-  void cleanSolver();              // remove all clauses from structures inside the solver
-  void reSetupSolver();            // add all clauses back into the solver, remove clauses that can be deleted
-  void initializePreprocessor();   // add all clauses from the solver to the preprocessing structures
-  void destroyPreprocessor();      // free resources of all preprocessing techniques
+  void cleanSolver();                // remove all clauses from structures inside the solver
+  void reSetupSolver();              // add all clauses back into the solver, remove clauses that can be deleted
+  void initializePreprocessor();     // add all clauses from the solver to the preprocessing structures
+  void destroyPreprocessor();        // free resources of all preprocessing techniques
   
-  void sortClauses();              // sort the literals within all clauses
+  // small helpers
+  void sortClauses();                // sort the literals within all clauses
+  void delete_clause(const CRef cr); // delete a clause from the solver (clause should not be attached within the solver)
 };
 
 };

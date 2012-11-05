@@ -780,6 +780,7 @@ lbool Solver::solve_()
         curr_restarts++;
 	
 	if( status == l_Undef ) {
+	  // restart, triggered by the solver
 	  if( coprocessor == 0 ) coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
           status = coprocessor->preprocess();
 	}

@@ -126,73 +126,117 @@ void Preprocessor::cleanSolver()
 void Preprocessor::reSetupSolver()
 {
     int j = 0;
-    //TODO: port!
-/*
-    for (int i = 0; i < clauses.size(); ++i)
+
+    for (int i = 0; i < solver->clauses.size(); ++i)
     {
-        CRef cr = clauses[i];
+        const CRef cr = solver->clauses[i];
         Clause & c = ca[cr];
         if (c.can_be_deleted())
             delete_clause(cr);
         else 
-        {    
+        {   
+	  assert( c.size() != 0 && "empty clauses should be recognized before re-setup" );
             if (c.size() > 1)
             {
-                clauses[j++] = cr;    
-                attachClause(cr);
+                solver->clauses[j++] = cr;    
+                solver->attachClause(cr);
             }
-            else if (value(c[0]) == l_Undef)
-                uncheckedEnqueue(c[0]);
+            else if (solver->value(c[0]) == l_Undef)
+                solver->uncheckedEnqueue(c[0]);
+	    else if (solver->value(c[0]) == l_False )
+	    {
+	      assert( false && "This UNSAT case should be recognized before re-setup" );
+	      solver->ok = false;
+	    }
         }
     }
-    int c_old = clauses.size();
-    clauses.shrink(clauses.size()-j);
+    int c_old = solver->clauses.size();
+    solver->clauses.shrink(solver->clauses.size()-j);
     
-    printf("c Subs-STATs: removed clauses: %i of %i," ,c_old - j,c_old);
+    fprintf(stderr,"c Subs-STATs: removed clauses: %i of %i," ,c_old - j,c_old);
 
     int learntToClause = 0;
     j = 0;
-    for (int i = 0; i < learnts.size(); ++i)
+    for (int i = 0; i < solver->learnts.size(); ++i)
     {
-        CRef cr = learnts[i];
+        const CRef cr = solver->learnts[i];
         Clause & c = ca[cr];
+        assert( c.size() != 0 && "empty clauses should be recognized before re-setup" );
         if (c.can_be_deleted())
         {
             delete_clause(cr);
             continue;
-        }
-        else if (c.learnt())
-        {
+        } else if (c.learnt()) {
             if (c.size() > 1)
             {
-                learnts[j++] = learnts[i];
+                solver->learnts[j++] = solver->learnts[i];
             }
-        }
-        // move subsuming clause from learnts to clauses
-        else
-	    {
-		    c.set_has_extra(true);
+        } else { // move subsuming clause from learnts to clauses
+	    c.set_has_extra(true);
             c.calcAbstraction();
             learntToClause ++;
 	    	if (c.size() > 1)
             {
-                clauses.push(cr);
+                solver->clauses.push(cr);
             }
  	    }
         if (c.size() > 1)
-            attachClause(cr);
-        else if (value(c[0]) == l_Undef)
-            uncheckedEnqueue(c[0]);
+            solver->attachClause(cr);
+        else if (solver->value(c[0]) == l_Undef)
+          solver->uncheckedEnqueue(c[0]);
+	else if (solver->value(c[0]) == l_False )
+	{
+	  assert( false && "This UNSAT case should be recognized before re-setup" );
+	  solver->ok = false;
+	}
     }
-    int l_old = learnts.size();
-    learnts.shrink(learnts.size()-j);
+    int l_old = solver->learnts.size();
+    solver->learnts.shrink(solver->learnts.size()-j);
     printf(" moved %i and removed %i from %i learnts\n",learntToClause,(l_old - j) -learntToClause, l_old);
-    */
 }
 
 void Preprocessor::sortClauses()
 {
- // TODO: add code here that sorts all literals in all clauses according to insertion sort!
- assert( false && "The sorting method has to be implemented." );
+  uint32_t clausesSize = (*solver).clauses.size();
+  for (int i = 0; i < clausesSize; ++i)
+  {
+    Clause& c = ca[solver->clauses[i]];
+    const uint32_t s = c.size();
+    for (uint32_t j = 1; j < s; ++j)
+    {
+        const Lit key = c[j];
+        int32_t i = j - 1;
+        while ( i >= 0 && toInt(c[i]) > toInt(key) )
+        {
+            c[i+1] = c[i];
+            i--;
+        }
+        c[i+1] = key;
+    }
+  }
+  
+  clausesSize = solver->learnts.size();
+  for (int i = 0; i < clausesSize; ++i)
+  { 
+    Clause& c = ca[solver->learnts[i]];
+    const uint32_t s = c.size();
+    for (uint32_t j = 1; j < s; ++j)
+    {
+        const Lit key = c[j];
+        int32_t i = j - 1;
+        while ( i >= 0 && toInt(c[i]) > toInt(key) )
+        {
+            c[i+1] = c[i];
+            i--;
+        }
+        c[i+1] = key;
+    }
+  }
 }
 
+void Preprocessor::delete_clause(const Minisat::CRef cr)
+{
+  Clause & c = ca[cr];
+  c.mark(1);
+  ca.free(cr);
+}

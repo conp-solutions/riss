@@ -22,6 +22,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_SolverTypes_h
 #define Minisat_SolverTypes_h
 
+#include <cstdio>
 #include <assert.h>
 
 #include "mtl/IntTypes.h"
@@ -72,6 +73,10 @@ inline  Lit  toLit     (int i)              { Lit p; p.x = i; return p; }
 const Lit lit_Undef = { -2 };  // }- Useful special constants.
 const Lit lit_Error = { -1 };  // }
 
+inline void printLit(Lit l)
+{
+    fprintf(stderr,"%s%d", sign(l) ? "-" : "", var(l)+1);
+}
 
 //=================================================================================================
 // Lifted booleans:
@@ -188,6 +193,11 @@ public:
 
     float&       activity    ()              { assert(header.has_extra); return data[header.size].act; }
     uint32_t     abstraction () const        { assert(header.has_extra); return data[header.size].abs; }
+    void         print       (bool nl=false) const { for (int i = 0; i < size(); i++){
+                                                 printLit(data[i].lit);
+                                                 fprintf(stderr," ");
+                                               }
+                                               if(nl) fprintf(stderr,"\n"); }
 
     Lit          subsumes         (const Clause& other) const;
     bool         ordered_subsumes (const Clause& other) const;
@@ -448,6 +458,8 @@ inline void Clause::strengthen(Lit p)
     remove(*this, p);
     calcAbstraction();
 }
+
+  
 
 //=================================================================================================
 }

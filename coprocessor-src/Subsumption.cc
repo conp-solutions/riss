@@ -24,7 +24,7 @@ void Subsumption::subsumeStrength(CoprocessorData& data)
 
 bool Subsumption::hasToSubsume()
 {
-  return false; 
+  return clause_processing_queue.size() > 0; 
 }
 
 lbool Subsumption::fullSubsumption(CoprocessorData& data)
@@ -42,7 +42,8 @@ void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int star
     for (; end > start;)
     {
         --end;
-        Clause &c = ca[clause_processing_queue[end]];
+	const CRef cr = clause_processing_queue[end];
+        Clause &c = ca[cr];
         if (c.can_be_deleted())
             continue;
         //find Lit with least occurrences
@@ -55,13 +56,14 @@ void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int star
         vector<CRef> & list = data.list(min);
         for (unsigned i = 0; i < list.size(); ++i)
         {
-            if (list[i] == clause_processing_queue[end])
+	  
+            if (list[i] == cr) {
                 continue;
-            if (ca[list[i]].size() < c.size())
+	    } else if (ca[list[i]].size() < c.size()) {
                 continue;
-            if (ca[list[i]].can_be_deleted())
+	    } else if (ca[list[i]].can_be_deleted()) {
                 continue;
-            if (c.ordered_subsumes(ca[list[i]]))
+	    } else if (c.ordered_subsumes(ca[list[i]]))
             {
                 ca[list[i]].set_delete(true);
                 if (!ca[list[i]].learnt() && c.learnt())
