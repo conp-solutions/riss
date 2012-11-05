@@ -11,12 +11,12 @@ Subsumption::Subsumption( ClauseAllocator& _ca )
 {
 }
 
-void Subsumption::subsumeStrength()
+void Subsumption::subsumeStrength(CoprocessorData& data)
 {
   while( hasToSubsume() || hasToStrengthen() )
   {
-    if( hasToSubsume() )    fullSubsumption();
-    if( hasToStrengthen() ) fullStrengthening();
+    if( hasToSubsume() )    fullSubsumption(data);
+    if( hasToStrengthen() ) fullStrengthening(data);
   }
 }
 
@@ -27,9 +27,52 @@ bool Subsumption::hasToSubsume()
   return false; 
 }
 
-lbool Subsumption::fullSubsumption()
+lbool Subsumption::fullSubsumption(CoprocessorData& data)
 {
+  // run subsumption for the whole queue
+  subsumption_worker(data,0,clause_processing_queue.size());
+  // clear queue afterwards
+  clause_processing_queue.clear();
+  // no result to tell to the outside
   return l_Undef; 
+}
+
+void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end)
+{
+    for (; end > start;)
+    {
+        --end;
+        Clause &c = ca[clause_processing_queue[end]];
+        if (c.can_be_deleted())
+            continue;
+        //find Lit with least occurrences
+        Lit min = c[0];
+        for (int l = 1; l < c.size(); l++)
+        {
+            if (data[c[l]] < data[min])
+               min = c[l]; 
+        }
+        vector<CRef> & list = data.list(min);
+        for (unsigned i = 0; i < list.size(); ++i)
+        {
+            if (list[i] == clause_processing_queue[end])
+                continue;
+            if (ca[list[i]].size() < c.size())
+                continue;
+            if (ca[list[i]].can_be_deleted())
+                continue;
+            if (c.ordered_subsumes(ca[list[i]]))
+            {
+                ca[list[i]].set_delete(true);
+                if (!ca[list[i]].learnt() && c.learnt())
+                {
+                    c.set_learnt(false);
+                }
+            }
+        }
+        //set can_subsume to false
+        c.set_subsume(false);
+    }    
 }
 
 bool Subsumption::hasToStrengthen()
@@ -37,7 +80,7 @@ bool Subsumption::hasToStrengthen()
   return false;  
 }
 
-lbool Subsumption::fullStrengthening()
+lbool Subsumption::fullStrengthening(CoprocessorData& data)
 {
   return l_Undef;   
 }

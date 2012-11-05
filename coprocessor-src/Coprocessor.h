@@ -53,9 +53,11 @@ protected:
   
   // own methods:
   void cleanSolver();              // remove all clauses from structures inside the solver
+  void reSetupSolver();            // add all clauses back into the solver, remove clauses that can be deleted
   void initializePreprocessor();   // add all clauses from the solver to the preprocessing structures
   void destroyPreprocessor();      // free resources of all preprocessing techniques
-  void reSetupSolver();            // add all clauses back into the solver, remove clauses that can be deleted
+  
+  void sortClauses();              // sort the literals within all clauses
 };
 
 };

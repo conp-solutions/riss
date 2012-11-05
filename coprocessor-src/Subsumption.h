@@ -30,7 +30,7 @@ public:
   
   
   /** run subsumption and strengthening until completion */
-  void subsumeStrength();
+  void subsumeStrength(Coprocessor::CoprocessorData& data);
 
   void initClause(const CRef cr); // inherited from Technique
   
@@ -45,10 +45,13 @@ public:
 protected:
   
   bool hasToSubsume();       // return whether there is something in the subsume queue
-  lbool fullSubsumption();   // performs subsumtion until completion
+  lbool fullSubsumption(CoprocessorData& data);   // performs subsumtion until completion
+  void subsumption_worker (CoprocessorData& data, unsigned start, unsigned end); // subsume certain set of elements of the processing queue
   
   bool hasToStrengthen();    // return whether there is something in the strengthening queue
-  lbool fullStrengthening(); // performs strengthening until completion, puts clauses into subsumption queue
+  lbool fullStrengthening(CoprocessorData& data); // performs strengthening until completion, puts clauses into subsumption queue
+  
+  
   
 
 };

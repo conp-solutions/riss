@@ -211,7 +211,6 @@ public:
 #endif
 };
 
-
 //=================================================================================================
 // ClauseAllocator -- a simple class for allocating memory for clauses:
 
@@ -419,6 +418,29 @@ inline Lit Clause::subsumes(const Clause& other) const
     }
 
     return ret;
+}
+
+
+inline bool Clause :: ordered_subsumes (const Clause & other) const
+{
+    int i = 0, j = 0;
+    while (i < size() && j < other.size())
+    {
+        if (data[i].lit == other[j])
+        {
+            ++i;
+            ++j;
+        }
+        // D does not contain c[i]
+        else if (data[i].lit < other[j])
+            return false;
+        else
+            ++j;
+    }
+    if (i == size())
+        return true;
+    else
+        return false;
 }
 
 inline void Clause::strengthen(Lit p)

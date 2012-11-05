@@ -154,6 +154,7 @@ int main(int argc, char** argv)
             exit(20);
         }
 
+        // TODO: do not reduce the variables withing the formula!
         if (dimacs){
             if (S.verbosity > 0)
                 printf("==============================[ Writing DIMACS ]===============================\n");

@@ -51,8 +51,11 @@ lbool Preprocessor::preprocess()
   cerr << "c coprocessor propagate" << endl;
   if( status == l_Undef ) status = propagation.propagate(data, solver);
   
+  // begin clauses have to be sorted here!!
+  sortClauses();
+  
   cerr << "c coprocessor subsume/strengthen" << endl;
-  if( status == l_Undef ) subsumption.subsumeStrength();  // cannot change status, can generate new unit clauses
+  if( status == l_Undef ) subsumption.subsumeStrength(data);  // cannot change status, can generate new unit clauses
   
   
   // clear / update clauses and learnts vectores and statistical counters
@@ -187,4 +190,9 @@ void Preprocessor::reSetupSolver()
     */
 }
 
+void Preprocessor::sortClauses()
+{
+ // TODO: add code here that sorts all literals in all clauses according to insertion sort!
+ assert( false && "The sorting method has to be implemented." );
+}
 
