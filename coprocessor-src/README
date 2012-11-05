@@ -23,5 +23,11 @@ CoprocessorData:
 Represents all clauses and related data for all preprocessing techniques
 Should provide methods for accessing this data, adding/deleting clauses from occurrence lists, updating counters, ...
 
+Technique:
+Super class for any class implementation of techniques. This class already copies the clause allocator and gives some more methods that are necessary for a nice interaction with the main preprocessor class. The method Technique::reset() should be overwritten by all classes the inherit from Technique
+
 Subsumption:
-Clas that implements subsumption and strengthening. Queues for the two techniques should be provided and cleared only on request. There should be methods that can be used to add more clauses to the queues, so that they can be used by other techniques (e.g. variable elimination).
+Class that implements subsumption and strengthening. Queues for the two techniques should be provided and cleared only on request. There should be methods that can be used to add more clauses to the queues, so that they can be used by other techniques (e.g. variable elimination).
+
+Propagation:
+Class that implements unit propagation (with removing literals from clauses), probing (double-lookahead,...) and distillation/asymmtricBranching.

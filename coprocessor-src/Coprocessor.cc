@@ -14,10 +14,12 @@ Coprocessor::Coprocessor( ClauseAllocator& _ca, Solver* _solver, int32_t _thread
 : threads( _threads < 0 ? opt_threads : _threads)
 , solver( _solver )
 , ca( _ca )
+, data( _ca )
 // attributes and all that
 
 // classes for preprocessing methods
 , subsumption( _ca )
+, propagation( _ca )
 {
   
 }
@@ -34,12 +36,10 @@ lbool Coprocessor::preprocess()
   // delete clauses from solver
   
   // do preprocessing
+
+  if( status == l_Undef ) status = propagation.propagate(data, solver);
   
-  while( subsumption.hasToSubsume() || subsumption.hasToStrengthen() )
-  {
-    if( status == l_Undef ) status = subsumption.fullSubsumption();
-    if( status == l_Undef ) status = subsumption.fullStrengthening();
-  }
+  if( status == l_Undef ) subsumption.subsumeStrength();  // cannot change status, can generate new unit clauses
   
   
   // clear / update clauses and learnts vectores and statistical counters
@@ -51,13 +51,15 @@ lbool Coprocessor::preprocess()
 
 lbool Coprocessor::inprocess()
 {
-
-  return l_Undef;
+  // TODO: do something before preprocessing? e.g. some extra things with learned / original clauses
+  
+  
+  return preprocess();
 }
 
 lbool Coprocessor::preprocessScheduled()
 {
-
+  // TODO execute preprocessing techniques in specified order
   return l_Undef;
 }
   

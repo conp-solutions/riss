@@ -6,8 +6,17 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 
 Subsumption::Subsumption( ClauseAllocator& _ca )
-: ca( _ca )
+: Technique( _ca )
 {
+}
+
+void Subsumption::subsumeStrength()
+{
+  while( hasToSubsume() || hasToStrengthen() )
+  {
+    if( hasToSubsume() )    fullSubsumption();
+    if( hasToStrengthen() ) fullStrengthening();
+  }
 }
 
 bool Subsumption::hasToSubsume()

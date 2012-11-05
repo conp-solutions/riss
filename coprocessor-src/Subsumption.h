@@ -7,19 +7,23 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "core/Solver.h"
 
+#include "coprocessor-src/Technique.h"
+
 #include "coprocessor-src/CoprocessorTypes.h"
 
 using namespace Minisat;
 
-class Subsumption {
-  ClauseAllocator& ca;
-  
-  /*  TODO: add queues and other attributes here!
-   */
+/** This class implement subsumption and strengthening, and related techniques
+ */
+class Subsumption : public Technique {
   
 public:
   
   Subsumption( ClauseAllocator& _ca );
+  
+  
+  /** run subsumption and strengthening until completion */
+  void subsumeStrength();
   
   /* TODO:
    *  - init
@@ -28,7 +32,8 @@ public:
    *  - struct for all the parameters that have to be passed to a thread that should do subsumption
    *  - static method that performs subsumption on the given part of the queue without stat updates
    */
-  
+
+protected:
   
   bool hasToSubsume();       // return whether there is something in the subsume queue
   lbool fullSubsumption();   // performs subsumtion until completion

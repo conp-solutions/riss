@@ -10,6 +10,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor-src/CoprocessorTypes.h"
 #include "coprocessor-src/Subsumption.h"
+#include "coprocessor-src/Propagation.h"
 
 
 using namespace Minisat;
@@ -45,6 +46,7 @@ public:
   
 private:
   Subsumption subsumption;
+  Propagation propagation;
   
 };
 
