@@ -28,7 +28,10 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "core/SolverTypes.h"
 
 // forward declaration
-class Coprocessor;
+namespace Coprocessor {
+class Preprocessor;
+class Propagation;
+}
 
 namespace Minisat {
 
@@ -37,7 +40,8 @@ namespace Minisat {
 
 class Solver {
   
-    friend class Coprocessor;
+    friend class Coprocessor::Preprocessor;
+    friend class Coprocessor::Propagation;
   
 public:
 
@@ -275,7 +279,7 @@ protected:
         return (int)(drand(seed) * size); }
         
 /// for coprocessor
-    Coprocessor* coprocessor;
+    Coprocessor::Preprocessor* coprocessor;
         
 };
 

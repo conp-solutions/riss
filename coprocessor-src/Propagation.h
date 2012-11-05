@@ -13,6 +13,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 using namespace Minisat;
 
+namespace Coprocessor {
+
 /** this class is used for usual unit propagation, probing and distillation/asyymetric branching
  */
 class Propagation : public Technique  {
@@ -25,7 +27,6 @@ public:
   
   Propagation( ClauseAllocator& _ca );
   
-
   void reset();
   
   /** perform usual unit propagation, but shrinks clause sizes also physically
@@ -33,6 +34,12 @@ public:
    *  @return l_Undef, if no conflict has been found, l_False if there has been a conflict
    */
   lbool propagate(CoprocessorData& data, Solver* solver);
+  
+  void initClause( const CRef cr );
+  
+protected:
 };
+
+}
 
 #endif

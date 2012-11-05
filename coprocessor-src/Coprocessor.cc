@@ -10,7 +10,9 @@ static const char* _cat = "COPROCESSOR 3";
 
 static IntOption opt_threads  (_cat, "cp3_threads",  "Number of extra threads that should be used for preprocessing", 2, IntRange(0, INT32_MAX));
 
-Coprocessor::Coprocessor( ClauseAllocator& _ca, Solver* _solver, int32_t _threads)
+using namespace Coprocessor;
+
+Preprocessor::Preprocessor( ClauseAllocator& _ca, Solver* _solver, int32_t _threads)
 : threads( _threads < 0 ? opt_threads : _threads)
 , solver( _solver )
 , ca( _ca )
@@ -24,12 +26,12 @@ Coprocessor::Coprocessor( ClauseAllocator& _ca, Solver* _solver, int32_t _thread
   
 }
 
-Coprocessor::~Coprocessor()
+Preprocessor::~Preprocessor()
 {
   
 }
   
-lbool Coprocessor::preprocess()
+lbool Preprocessor::preprocess()
 {
   std::cerr << "c start preprocessing with coprocessor" << std::endl;
   
@@ -38,6 +40,9 @@ lbool Coprocessor::preprocess()
   
   lbool status = l_Undef;
   // delete clauses from solver
+  cleanSolver ();
+  // initialize techniques
+  initializePreprocessor ();
   
   // do preprocessing
 
@@ -47,13 +52,16 @@ lbool Coprocessor::preprocess()
   
   
   // clear / update clauses and learnts vectores and statistical counters
-  
-  // attach all clauses to their watchers again
+  // attach all clauses to their watchers again, call the propagate method to get into a good state again
+  reSetupSolver();
+
+  // destroy preprocessor data
+  data.destroy();
   
   return l_Undef;
 }
 
-lbool Coprocessor::inprocess()
+lbool Preprocessor::inprocess()
 {
   // TODO: do something before preprocessing? e.g. some extra things with learned / original clauses
   
@@ -61,9 +69,116 @@ lbool Coprocessor::inprocess()
   return preprocess();
 }
 
-lbool Coprocessor::preprocessScheduled()
+lbool Preprocessor::preprocessScheduled()
 {
   // TODO execute preprocessing techniques in specified order
   return l_Undef;
 }
+
+void Preprocessor::initializePreprocessor()
+{
+  uint32_t clausesSize = (*solver).clauses.size();
+  for (int i = 0; i < clausesSize; ++i)
+  {
+    const CRef cr = solver->clauses[i];
+    data.addClause( cr );
+    subsumption.initClause( cr );
+    propagation.initClause( cr );
+  }
   
+  clausesSize = solver->learnts.size();
+  for (int i = 0; i < clausesSize; ++i)
+  {
+    const CRef cr = solver->learnts[i];
+    data.addClause( cr );
+    subsumption.initClause( cr );
+    propagation.initClause( cr );
+  }
+}
+
+void Preprocessor::destroyPreprocessor()
+{
+  subsumption.destroy();
+  propagation.destroy();
+}
+
+
+void Preprocessor::cleanSolver()
+{
+  // clear all watches!
+  for (int v = 0; v < solver->nVars(); v++)
+    for (int s = 0; s < 2; s++)
+      solver->watches[ mkLit(v, s) ].clear();
+
+  solver->learnts_literals = 0; 
+  solver->clauses_literals = 0;
+}
+
+void Preprocessor::reSetupSolver()
+{
+    int j = 0;
+    //TODO: port!
+/*
+    for (int i = 0; i < clauses.size(); ++i)
+    {
+        CRef cr = clauses[i];
+        Clause & c = ca[cr];
+        if (c.can_be_deleted())
+            delete_clause(cr);
+        else 
+        {    
+            if (c.size() > 1)
+            {
+                clauses[j++] = cr;    
+                attachClause(cr);
+            }
+            else if (value(c[0]) == l_Undef)
+                uncheckedEnqueue(c[0]);
+        }
+    }
+    int c_old = clauses.size();
+    clauses.shrink(clauses.size()-j);
+    
+    printf("c Subs-STATs: removed clauses: %i of %i," ,c_old - j,c_old);
+
+    int learntToClause = 0;
+    j = 0;
+    for (int i = 0; i < learnts.size(); ++i)
+    {
+        CRef cr = learnts[i];
+        Clause & c = ca[cr];
+        if (c.can_be_deleted())
+        {
+            delete_clause(cr);
+            continue;
+        }
+        else if (c.learnt())
+        {
+            if (c.size() > 1)
+            {
+                learnts[j++] = learnts[i];
+            }
+        }
+        // move subsuming clause from learnts to clauses
+        else
+	    {
+		    c.set_has_extra(true);
+            c.calcAbstraction();
+            learntToClause ++;
+	    	if (c.size() > 1)
+            {
+                clauses.push(cr);
+            }
+ 	    }
+        if (c.size() > 1)
+            attachClause(cr);
+        else if (value(c[0]) == l_Undef)
+            uncheckedEnqueue(c[0]);
+    }
+    int l_old = learnts.size();
+    learnts.shrink(learnts.size()-j);
+    printf(" moved %i and removed %i from %i learnts\n",learntToClause,(l_old - j) -learntToClause, l_old);
+    */
+}
+
+

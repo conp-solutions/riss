@@ -15,9 +15,10 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 using namespace Minisat;
 
+namespace Coprocessor {
 /** Main class that connects all the functionality of the preprocessor Coprocessor
  */
-class Coprocessor {
+class Preprocessor {
 
   // friends
   
@@ -30,8 +31,8 @@ class Coprocessor {
   
 public:
   
-  Coprocessor( ClauseAllocator& _ca, Solver* solver, int32_t _threads=-1 );
-  ~Coprocessor();
+  Preprocessor( ClauseAllocator& _ca, Solver* solver, int32_t _threads=-1 );
+  ~Preprocessor();
   
   // major methods to start preprocessing
   lbool preprocess();
@@ -44,10 +45,19 @@ public:
    - ...
   */
   
-private:
+protected:
+  // techniques
   Subsumption subsumption;
   Propagation propagation;
   
+  
+  // own methods:
+  void cleanSolver();              // remove all clauses from structures inside the solver
+  void initializePreprocessor();   // add all clauses from the solver to the preprocessing structures
+  void destroyPreprocessor();      // free resources of all preprocessing techniques
+  void reSetupSolver();            // add all clauses back into the solver, remove clauses that can be deleted
+};
+
 };
 
 #endif

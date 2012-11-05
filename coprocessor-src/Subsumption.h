@@ -11,11 +11,18 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor-src/CoprocessorTypes.h"
 
+#include <vector>
+
 using namespace Minisat;
+using namespace std;
+
+namespace Coprocessor {
 
 /** This class implement subsumption and strengthening, and related techniques
  */
 class Subsumption : public Technique {
+  
+  vector<CRef> clause_processing_queue;
   
 public:
   
@@ -24,6 +31,8 @@ public:
   
   /** run subsumption and strengthening until completion */
   void subsumeStrength();
+
+  void initClause(const CRef cr); // inherited from Technique
   
   /* TODO:
    *  - init
@@ -40,6 +49,10 @@ protected:
   
   bool hasToStrengthen();    // return whether there is something in the strengthening queue
   lbool fullStrengthening(); // performs strengthening until completion, puts clauses into subsumption queue
+  
+
 };
+
+}
 
 #endif
