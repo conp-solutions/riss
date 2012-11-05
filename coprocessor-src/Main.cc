@@ -16,7 +16,10 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "core/Dimacs.h"
 #include "simp/SimpSolver.h"
 
+#include "coprocessor-src/Coprocessor.h"
+
 using namespace Minisat;
+using namespace Coprocessor;
 
 //=================================================================================================
 
@@ -130,6 +133,9 @@ int main(int argc, char** argv)
         signal(SIGINT, SIGINT_interrupt);
         signal(SIGXCPU,SIGINT_interrupt);
 
+        Preprocessor preprocessor( &S );
+	preprocessor.preprocess();
+	
         double simplified_time = cpuTime();
         if (S.verbosity > 0){
             printf("|  Simplification time:  %12.2f s                                       |\n", simplified_time - parsed_time);

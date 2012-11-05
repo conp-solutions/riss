@@ -77,7 +77,7 @@ inline void Technique::didChange()
   modifiedFormula = true;
 }
 
-void Technique::initClause(const CRef cr)
+inline void Technique::initClause(const CRef cr)
 {
   assert( false && "This method has not been implemented." );   
 }
@@ -87,18 +87,18 @@ inline void Technique::reset()
   assert( false && "This method has not been implemented." ); 
 }
 
-void Technique::initializedTechnique()
+inline void Technique::initializedTechnique()
 {
   isInitialized = true;
 }
 
-bool Technique::isInitializedTechnique()
+inline bool Technique::isInitializedTechnique()
 {
   return isInitialized;
 }
 
 
-void Technique::destroy()
+inline void Technique::destroy()
 {
   assert( false && "This method has not been implemented." ); 
 }

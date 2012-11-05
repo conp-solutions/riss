@@ -16,11 +16,46 @@ Propagation::Propagation( ClauseAllocator& _ca )
 lbool Propagation::propagate(CoprocessorData& data, Solver* solver)
 {
   // propagate all literals that are on the trail but have not been propagated
-  for( ; lastPropagatedLiteral < solver->trail.size(); lastPropagatedLiteral )
+  for( ; lastPropagatedLiteral < solver->trail.size(); lastPropagatedLiteral ++ )
   {
+    const Lit l = solver->trail[lastPropagatedLiteral];
+    // remove positives
+    vector<CRef> positive = data.list(l);
+    for( int i = 0 ; i < positive.size(); ++i )
+    {
+      assert( !ca[ positive[i] ].can_be_deleted() && "clause should not be deleted already!" );
+      ca[ positive[i] ].set_delete(true);
+      data.removedClause( positive[i] );
+    }
+    positive.clear(); // clear list
     
-    
-    
+    const Lit nl = ~l;
+    int count = 0;
+    vector<CRef> negative = data.list(nl);
+    for( int i = 0 ; i < negative.size(); ++i )
+    {
+      Clause& c = ca[ negative[i] ];
+      // sorted propagation, no!
+      if( !c.can_be_deleted() ) {
+        for( int j = 0; j < c.size(); ++ j ) 
+          if( c[j] == nl ) { 
+	    c[j] = c[ c.size() - 1]; c.shrink(1); 
+            if (c.has_extra()) c.calcAbstraction();
+	    break;
+	  }
+        count ++;
+      }
+      // unit propagation
+      if( c.size() == 0 || (c.size() == 1 &&  solver->value( c[0] ) == l_False) ) {
+        solver->ok = false; // set state to false
+        break;              // abort unit propagation
+      } else if( c.size() == 1 ) {
+	  if( solver->value( c[0] ) == l_Undef ) solver->uncheckedEnqueue(c[0]);
+      }
+    }
+    // update formula data!
+    data.removedLiteral(nl, count);
+    data.list(nl).clear();
   }
   
 //    for (int i = 0; i < clause_list.size(); ++i)

@@ -124,9 +124,15 @@ class Clause {
     struct {
         unsigned mark      : 2;
         unsigned learnt    : 1;
+        // + write get_method()
         unsigned has_extra : 1;
         unsigned reloced   : 1;
-        unsigned size      : 27; }                            header;
+        //unsigned size      : 27;
+        unsigned can_be_deleted: 1;
+        unsigned can_subsume : 1;
+        unsigned can_strengthen : 1;
+        unsigned size : 24;
+        }                            header;
     union { Lit lit; float act; uint32_t abs; CRef rel; } data[0];
 
     friend class ClauseAllocator;
@@ -139,14 +145,16 @@ class Clause {
         header.has_extra = use_extra;
         header.reloced   = 0;
         header.size      = ps.size();
+        header.can_subsume = 1;
+        header.can_strengthen = 1;
 
-        for (int i = 0; i < ps.size(); i++) 
+        for (int i = 0; i < ps.size(); i++)
             data[i].lit = ps[i];
 
         if (header.has_extra){
             if (header.learnt)
-                data[header.size].act = 0; 
-            else 
+                data[header.size].act = 0;
+            else
                 calcAbstraction(); }
     }
 
@@ -181,8 +189,26 @@ public:
     float&       activity    ()              { assert(header.has_extra); return data[header.size].act; }
     uint32_t     abstraction () const        { assert(header.has_extra); return data[header.size].abs; }
 
-    Lit          subsumes    (const Clause& other) const;
-    void         strengthen  (Lit p);
+    Lit          subsumes         (const Clause& other) const;
+    bool         ordered_subsumes (const Clause& other) const;
+    void         strengthen       (Lit p);
+
+    void    set_delete (bool b) 	     { header.can_be_deleted = b; }
+    void    set_learnt (bool b)         { header.learnt = b; }
+    bool    can_be_deleted()     const  { return header.can_be_deleted; }
+
+    void    set_has_extra(bool b)       {header.has_extra = b;}
+
+    bool    can_subsume()        const  { return header.can_subsume; }
+    void    set_subsume(bool b)         { header.can_subsume = b; }
+    bool    can_strengthen()     const  { return header.can_strengthen; }
+    void    set_strengthen(bool b)      { header.can_strengthen = b; } 
+
+    //DebugOutput
+#ifdef SUBDEBUG
+    inline void print_clause() const ;
+    inline void print_lit(int i) const ;
+#endif
 };
 
 

@@ -41,7 +41,7 @@ public:
 
   int32_t operator[] (const Lit l ); // return the number of occurrences of literal l
   int32_t operator[] (const Var v ); // return the number of occurrences of variable v
-  
+  vector<CRef>& list( const Lit l ); // return the list of clauses, which have literal l
   
 // adding, removing clauses and literals =======
   void addClause (      const CRef cr );                 // add clause to data structures, update counters
@@ -99,7 +99,7 @@ inline bool CoprocessorData::removeClauseFrom(const Minisat::CRef cr, const Lit 
 
 inline void CoprocessorData::addedClause(const Minisat::CRef cr)
 {
-  Clause & c = ca[cr];
+  const Clause & c = ca[cr];
   for (int l = 0; l < c.size(); ++l)
   {
     addedLiteral( c[l] );
@@ -113,13 +113,33 @@ inline void CoprocessorData::addedLiteral(const Lit l, const  int32_t diff)
 
 inline void CoprocessorData::removedClause(const Minisat::CRef cr)
 {
-
+  const Clause & c = ca[cr];
+  for (int l = 0; l < c.size(); ++l)
+  {
+    removedLiteral( c[l] );
+  }
 }
 
 inline void CoprocessorData::removedLiteral(Lit l, int32_t diff)
 {
-
+  lit_occurrence_count[toInt(l)] -= diff;
 }
+
+inline int32_t CoprocessorData::operator[](const Lit l)
+{
+  return lit_occurrence_count[toInt(l)];
+}
+
+inline int32_t CoprocessorData::operator[](const Var v)
+{
+  return lit_occurrence_count[toInt(mkLit(v,0))] + lit_occurrence_count[toInt(mkLit(v,1))];
+}
+
+inline vector< Minisat::CRef >& CoprocessorData::list(const Lit l)
+{
+  return occs[ toInt(l) ];
+}
+
 
 }
 

@@ -31,7 +31,7 @@ class Preprocessor {
   
 public:
   
-  Preprocessor( ClauseAllocator& _ca, Solver* solver, int32_t _threads=-1 );
+  Preprocessor(Solver* solver, int32_t _threads=-1 );
   ~Preprocessor();
   
   // major methods to start preprocessing

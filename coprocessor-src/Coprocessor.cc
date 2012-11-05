@@ -10,18 +10,19 @@ static const char* _cat = "COPROCESSOR 3";
 
 static IntOption opt_threads  (_cat, "cp3_threads",  "Number of extra threads that should be used for preprocessing", 2, IntRange(0, INT32_MAX));
 
+using namespace std;
 using namespace Coprocessor;
 
-Preprocessor::Preprocessor( ClauseAllocator& _ca, Solver* _solver, int32_t _threads)
+Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 : threads( _threads < 0 ? opt_threads : _threads)
 , solver( _solver )
-, ca( _ca )
-, data( _ca )
+, ca( solver->ca )
+, data( solver->ca )
 // attributes and all that
 
 // classes for preprocessing methods
-, subsumption( _ca )
-, propagation( _ca )
+, subsumption( solver->ca )
+, propagation( solver->ca )
 {
   
 }
@@ -33,7 +34,7 @@ Preprocessor::~Preprocessor()
   
 lbool Preprocessor::preprocess()
 {
-  std::cerr << "c start preprocessing with coprocessor" << std::endl;
+  cerr << "c start preprocessing with coprocessor" << endl;
   
   // first, remove all satisfied clauses
   if( !solver->simplify() ) return l_False;
@@ -42,20 +43,25 @@ lbool Preprocessor::preprocess()
   // delete clauses from solver
   cleanSolver ();
   // initialize techniques
+  data.init( solver->nVars() );
   initializePreprocessor ();
-  
+  cerr << "c coprocessor finished initialization" << endl;
   // do preprocessing
 
+  cerr << "c coprocessor propagate" << endl;
   if( status == l_Undef ) status = propagation.propagate(data, solver);
   
+  cerr << "c coprocessor subsume/strengthen" << endl;
   if( status == l_Undef ) subsumption.subsumeStrength();  // cannot change status, can generate new unit clauses
   
   
   // clear / update clauses and learnts vectores and statistical counters
   // attach all clauses to their watchers again, call the propagate method to get into a good state again
+  cerr << "c coprocessor re-setup solver" << endl;
   reSetupSolver();
 
   // destroy preprocessor data
+  cerr << "c coprocessor free data structures" << endl;
   data.destroy();
   
   return l_Undef;
