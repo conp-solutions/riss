@@ -150,6 +150,7 @@ class Clause {
         header.has_extra = use_extra;
         header.reloced   = 0;
         header.size      = ps.size();
+	header.can_be_deleted = 0;
         header.can_subsume = 1;
         header.can_strengthen = 1;
 
