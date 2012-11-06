@@ -4,7 +4,7 @@
 CORE      = ../core
 MTL       = ../mtl
 MYCFLAGS    = -I.. -I. -I$(MTL) -I$(CORE) $(ARGS) -Wall -Wextra -ffloat-store
-# MYLFLAGS    = -L. -lz -static -lpthread
+MYLFLAGS    = -lpthread
 
 COPTIMIZE ?= -O3
 
@@ -19,7 +19,7 @@ coprocessor: always
 	cd coprocessor-src;   make INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)"; mv coprocessor ..
 	
 coprocessord: always
-	cd coprocessor-src;   make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)"; mv coprocessor ..
+	cd coprocessor-src;   make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)"; mv coprocessor_debug ../coprocessor
 	
 always:
 

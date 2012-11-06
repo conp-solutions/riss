@@ -22,10 +22,9 @@ class Propagation : public Technique  {
    */
   uint32_t lastPropagatedLiteral;  // store, which literal position in the trail has been propagated already to avoid duplicate work
   
-  
 public:
   
-  Propagation( ClauseAllocator& _ca );
+  Propagation( ClauseAllocator& _ca, ThreadController& _controller );
   
   void reset();
   

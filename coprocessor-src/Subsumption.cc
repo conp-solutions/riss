@@ -6,8 +6,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 using namespace Coprocessor;
 
-Subsumption::Subsumption( ClauseAllocator& _ca )
-: Technique( _ca )
+Subsumption::Subsumption( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller )
+: Technique( _ca, _controller )
 {
 }
 
@@ -30,14 +30,19 @@ bool Subsumption::hasToSubsume()
 lbool Subsumption::fullSubsumption(CoprocessorData& data)
 {
   // run subsumption for the whole queue
-  subsumption_worker(data,0,clause_processing_queue.size());
+  if( controller.size() > 0 && (clause_processing_queue.size() > 100000 || ( clause_processing_queue.size() > 50000 && 10*data.nCls() > 22*data.nVars() ) ) ) {
+    parallelSubsumption(data); // use parallel, is some conditions have been met
+    data.correctCounters();
+  } else {
+    subsumption_worker(data,0,clause_processing_queue.size());
+  }
   // clear queue afterwards
   clause_processing_queue.clear();
   // no result to tell to the outside
   return l_Undef; 
 }
 
-void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end)
+void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics)
 {
     for (; end > start;)
     {
@@ -63,10 +68,9 @@ void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int star
                 continue;
 	    } else if (ca[list[i]].can_be_deleted()) {
                 continue;
-	    } else if (c.ordered_subsumes(ca[list[i]]))
-            {
+	    } else if (c.ordered_subsumes(ca[list[i]])) {
                 ca[list[i]].set_delete(true);
-		data.removedClause(list[i]);  // tell statistic about clause removal
+		if( doStatistics ) data.removedClause(list[i]);  // tell statistic about clause removal
                 if (!ca[list[i]].learnt() && c.learnt())
                 {
                     c.set_learnt(false);
@@ -93,4 +97,32 @@ void Subsumption::initClause( const CRef cr )
   const Clause& c = ca[cr];
   if (c.can_subsume() && !c.can_be_deleted())
     clause_processing_queue.push_back(cr);
+}
+
+
+void Subsumption::parallelSubsumption(CoprocessorData& data)
+{
+  cerr << "c parallel subsumptoin with " << controller.size() << " threads" << endl;
+  SubsumeWorkData workData[ controller.size() ];
+  vector<Job> jobs( controller.size() );
+  
+  unsigned int queueSize = clause_processing_queue.size();
+  unsigned int partitionSize = clause_processing_queue.size() / controller.size();
+  // setup data for workers
+  for( int i = 0 ; i < controller.size(); ++ i ) {
+    workData[i].subsumption = this; 
+    workData[i].data  = &data; 
+    workData[i].start = i * partitionSize; 
+    workData[i].end   = (i + 1 == controller.size()) ? queueSize : (i+1) * partitionSize; // last element is not processed!
+    jobs[i].function  = Subsumption::runParallelSubsume;
+    jobs[i].argument  = &(workData[i]);
+  }
+  controller.runJobs( jobs );
+}
+
+void* Subsumption::runParallelSubsume(void* arg)
+{
+  SubsumeWorkData* workData = (SubsumeWorkData*) arg;
+  workData->subsumption->subsumption_worker(*(workData->data),workData->start,workData->end);
+  return 0;
 }

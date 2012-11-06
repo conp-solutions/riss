@@ -6,8 +6,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 using namespace Coprocessor;
 
-Propagation::Propagation( ClauseAllocator& _ca )
-: Technique( _ca )
+Propagation::Propagation( ClauseAllocator& _ca, ThreadController& _controller )
+: Technique( _ca, _controller )
 , lastPropagatedLiteral( 0 )
 {
 }

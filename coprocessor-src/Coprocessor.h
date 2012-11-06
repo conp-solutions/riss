@@ -9,6 +9,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "core/Solver.h"
 
 #include "coprocessor-src/CoprocessorTypes.h"
+#include "coprocessor-src/CoprocessorThreads.h"
+
 #include "coprocessor-src/Subsumption.h"
 #include "coprocessor-src/Propagation.h"
 
@@ -23,11 +25,12 @@ class Preprocessor {
   // friends
   
   // attributes
-  int32_t threads;    // number of threads that can be used by the preprocessor
-  Solver* solver;     // handle to the solver object that stores the formula
-  ClauseAllocator& ca; // reference to clause allocator
+  int32_t threads;             // number of threads that can be used by the preprocessor
+  Solver* solver;              // handle to the solver object that stores the formula
+  ClauseAllocator& ca;         // reference to clause allocator
   
-  CoprocessorData data;  // all the data that needs to be accessed by other classes (preprocessing methods)
+  CoprocessorData  data;       // all the data that needs to be accessed by other classes (preprocessing methods)
+  ThreadController controller; // controller for all threads
   
 public:
   
@@ -59,6 +62,7 @@ protected:
   
   // small helpers
   void sortClauses();                // sort the literals within all clauses
+  void correctCounters();            // update counters (if there are techniques that do not properly work with the counters=
   void delete_clause(const CRef cr); // delete a clause from the solver (clause should not be attached within the solver)
 };
 

@@ -23,12 +23,15 @@ typedef std::vector<std::vector <CRef> > ComplOcc;
 class CoprocessorData
 {
   ClauseAllocator& ca;
+  Solver* solver; 
   /* TODO to add here
    * occ list
    * counters
    * methods to update these structures
    * no statistical counters for each method, should be provided by each method!
    */
+  uint32_t numberOfVars;                // number of variables
+  uint32_t numberOfCls;                 // number of clauses
   ComplOcc occs;                        // list of clauses, per literal
   vector<int32_t> lit_occurrence_count; // number of literal occurrences in the formula
   
@@ -37,7 +40,7 @@ class CoprocessorData
   // TODO decide whether a vector of active variables would be good!
   
 public:
-  CoprocessorData(ClauseAllocator& _ca);
+  CoprocessorData(ClauseAllocator& _ca, Solver* _solver);
   
   // init all data structures for being used for nVars variables
   void init( uint32_t nVars );
@@ -45,9 +48,11 @@ public:
   // free all the resources that are used by this data object, 
   void destroy();
 
-  int32_t operator[] (const Lit l ); // return the number of occurrences of literal l
+  int32_t& operator[] (const Lit l ); // return the number of occurrences of literal l
   int32_t operator[] (const Var v ); // return the number of occurrences of variable v
   vector<CRef>& list( const Lit l ); // return the list of clauses, which have literal l
+  uint32_t nCls()  const { return numberOfCls; }
+  uint32_t nVars() const { return numberOfVars; }
   
 // adding, removing clauses and literals =======
   void addClause (      const CRef cr );                 // add clause to data structures, update counters
@@ -59,11 +64,14 @@ public:
   void addedClause (   const CRef cr );                   // update counters for literals in the clause
   void removedClause ( const CRef cr );                 // update counters for literals in the clause
   
+  void correctCounters();
+  
 };
 
 
-inline CoprocessorData::CoprocessorData(ClauseAllocator& _ca)
+inline CoprocessorData::CoprocessorData(ClauseAllocator& _ca, Solver* _solver)
 : ca ( _ca )
+, solver( _solver )
 {
 }
 
@@ -71,6 +79,7 @@ inline void CoprocessorData::init(uint32_t nVars)
 {
   occs.resize( nVars * 2 );
   lit_occurrence_count.resize( nVars * 2, 0 );
+  numberOfVars = nVars;
 }
 
 inline void CoprocessorData::destroy()
@@ -81,12 +90,14 @@ inline void CoprocessorData::destroy()
 
 inline void CoprocessorData::addClause(const Minisat::CRef cr)
 {
-  Clause & c = ca[cr];
+  const Clause & c = ca[cr];
+  if( c.can_be_deleted() ) return;
   for (int l = 0; l < c.size(); ++l)
   {
     occs[toInt(c[l])].push_back(cr);
     addedLiteral( c[l] );
   }
+  numberOfCls ++;
 }
 
 inline bool CoprocessorData::removeClauseFrom(const Minisat::CRef cr, const Lit l)
@@ -124,6 +135,7 @@ inline void CoprocessorData::removedClause(const Minisat::CRef cr)
   {
     removedLiteral( c[l] );
   }
+  numberOfCls --;
 }
 
 inline void CoprocessorData::removedLiteral(Lit l, int32_t diff)
@@ -131,7 +143,7 @@ inline void CoprocessorData::removedLiteral(Lit l, int32_t diff)
   lit_occurrence_count[toInt(l)] -= diff;
 }
 
-inline int32_t CoprocessorData::operator[](const Lit l)
+inline int32_t& CoprocessorData::operator[](const Lit l)
 {
   return lit_occurrence_count[toInt(l)];
 }
@@ -144,6 +156,29 @@ inline int32_t CoprocessorData::operator[](const Var v)
 inline vector< Minisat::CRef >& CoprocessorData::list(const Lit l)
 {
   return occs[ toInt(l) ];
+}
+
+inline void CoprocessorData::correctCounters()
+{
+  numberOfVars = solver->nVars();
+  numberOfCls = 0;
+  // reset to 0
+  for (int v = 0; v < solver->nVars(); v++)
+    for (int s = 0; s < 2; s++)
+      lit_occurrence_count[ toInt(mkLit(v,s)) ] = 0;
+  // re-calculate counters!
+  for( int i = 0 ; i < solver->clauses.size(); ++ i ) {
+    const Clause & c = ca[ solver->clauses[i] ];
+    if( c.can_be_deleted() ) continue;
+    numberOfCls ++;
+    for( int j = 0 ; j < c.size(); j++) lit_occurrence_count[ toInt(c[j]) ] ++; // increment all literal counters accordingly
+  }    
+  for( int i = 0 ; i < solver->learnts.size(); ++ i ) {
+    const Clause & c = ca[ solver->learnts[i] ];
+    if( c.can_be_deleted() ) continue;
+    numberOfCls ++;
+    for( int j = 0 ; j < c.size(); j++) lit_occurrence_count[ toInt(c[j]) ] ++; // increment all literal counters accordingly
+  }    
 }
 
 

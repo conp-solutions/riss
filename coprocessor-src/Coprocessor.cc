@@ -17,14 +17,15 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 : threads( _threads < 0 ? opt_threads : _threads)
 , solver( _solver )
 , ca( solver->ca )
-, data( solver->ca )
+, data( solver->ca, solver )
+, controller( opt_threads )
 // attributes and all that
 
 // classes for preprocessing methods
-, subsumption( solver->ca )
-, propagation( solver->ca )
+, subsumption( solver->ca, controller )
+, propagation( solver->ca, controller )
 {
-  
+  controller.init();
 }
 
 Preprocessor::~Preprocessor()
@@ -233,6 +234,9 @@ void Preprocessor::sortClauses()
     }
   }
 }
+
+
+
 
 void Preprocessor::delete_clause(const Minisat::CRef cr)
 {

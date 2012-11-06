@@ -26,7 +26,7 @@ class Subsumption : public Technique {
   
 public:
   
-  Subsumption( ClauseAllocator& _ca );
+  Subsumption( ClauseAllocator& _ca, ThreadController& _controller );
   
   
   /** run subsumption and strengthening until completion */
@@ -46,13 +46,26 @@ protected:
   
   bool hasToSubsume();       // return whether there is something in the subsume queue
   lbool fullSubsumption(CoprocessorData& data);   // performs subsumtion until completion
-  void subsumption_worker (CoprocessorData& data, unsigned start, unsigned end); // subsume certain set of elements of the processing queue
+  void subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics = true); // subsume certain set of elements of the processing queue, does not write to the queue
   
   bool hasToStrengthen();    // return whether there is something in the strengthening queue
   lbool fullStrengthening(CoprocessorData& data); // performs strengthening until completion, puts clauses into subsumption queue
   
+  /** data for parallel execution */
+  struct SubsumeWorkData {
+    Subsumption*     subsumption; // class with code
+    CoprocessorData* data;        // formula and maintain lists
+    unsigned int     start;       // partition of the queue
+    unsigned int     end;
+  };
+
+  /** run parallel subsumption with all available threads */
+  void parallelSubsumption(CoprocessorData& data);
   
-  
+public:
+
+  /** converts arg into SubsumeWorkData*, runs subsumption of its part of the queue */
+  static void* runParallelSubsume(void* arg);
 
 };
 

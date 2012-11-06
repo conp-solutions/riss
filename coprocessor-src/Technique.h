@@ -7,6 +7,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "core/Solver.h"
 
+#include "coprocessor-src/CoprocessorThreads.h"
+
 using namespace Minisat;
 
 namespace Coprocessor {
@@ -16,16 +18,17 @@ namespace Coprocessor {
  */
 class Technique {
 
-  bool modifiedFormula;  // true, if subsumption did something on formula
-  bool isInitialized;    // true, if the structures have been initialized and the technique can be used
+  bool modifiedFormula;         // true, if subsumption did something on formula
+  bool isInitialized;           // true, if the structures have been initialized and the technique can be used
     
 protected:
   
-  ClauseAllocator& ca;  // clause allocator for direct access to clauses
+  ClauseAllocator& ca;          // clause allocator for direct access to clauses
+  ThreadController& controller; // controller for parallel execution
     
 public:
   
-  Technique( ClauseAllocator& _ca );
+  Technique( ClauseAllocator& _ca, ThreadController& _controller );
   
   /** return whether some changes have been applied since last time
    *  resets the counter after call
@@ -59,10 +62,11 @@ protected:
   
 };
 
-inline Technique::Technique( ClauseAllocator& _ca )
+inline Technique::Technique( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller )
 : modifiedFormula(false)
 , isInitialized( false )
 , ca( _ca )
+, controller( _controller )
 {}
 
 inline bool Technique::appliedSomething()

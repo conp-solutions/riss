@@ -30,6 +30,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 // forward declaration
 namespace Coprocessor {
 class Preprocessor;
+class CoprocessorData;
 class Propagation;
 }
 
@@ -42,6 +43,7 @@ class Solver {
   
     friend class Coprocessor::Preprocessor;
     friend class Coprocessor::Propagation;
+    friend class Coprocessor::CoprocessorData;
   
 public:
 
