@@ -66,6 +66,7 @@ void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int star
 	    } else if (c.ordered_subsumes(ca[list[i]]))
             {
                 ca[list[i]].set_delete(true);
+		data.removedClause(list[i]);  // tell statistic about clause removal
                 if (!ca[list[i]].learnt() && c.learnt())
                 {
                     c.set_learnt(false);

@@ -23,7 +23,7 @@ lbool Propagation::propagate(CoprocessorData& data, Solver* solver)
     vector<CRef> positive = data.list(l);
     for( int i = 0 ; i < positive.size(); ++i )
     {
-      assert( !ca[ positive[i] ].can_be_deleted() && "clause should not be deleted already!" );
+//      assert( !ca[ positive[i] ].can_be_deleted() && "clause should not be deleted already!" );
       ca[ positive[i] ].set_delete(true);
       data.removedClause( positive[i] );
     }

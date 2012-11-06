@@ -7,6 +7,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "core/Solver.h"
 
+#include "coprocessor-src/LockCollection.h"
+
 #include <vector>
 
 using namespace Minisat;
@@ -27,8 +29,12 @@ class CoprocessorData
    * methods to update these structures
    * no statistical counters for each method, should be provided by each method!
    */
-  ComplOcc occs;                // list of clauses, per literal
+  ComplOcc occs;                        // list of clauses, per literal
   vector<int32_t> lit_occurrence_count; // number of literal occurrences in the formula
+  
+  Lock dataLock;                        // lock for parallel algorithms to synchronize access to data structures
+  
+  // TODO decide whether a vector of active variables would be good!
   
 public:
   CoprocessorData(ClauseAllocator& _ca);
