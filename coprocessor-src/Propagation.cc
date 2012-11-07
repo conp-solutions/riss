@@ -39,8 +39,7 @@ lbool Propagation::propagate(CoprocessorData& data, Solver* solver)
       if( !c.can_be_deleted() ) {
         for( int j = 0; j < c.size(); ++ j ) 
           if( c[j] == nl ) { 
-	    c[j] = c[ c.size() - 1]; c.shrink(1); 
-            if (c.has_extra()) c.calcAbstraction();
+	    c.removePositionUnsorted(j);
 	    break;
 	  }
         count ++;

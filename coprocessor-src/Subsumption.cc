@@ -15,8 +15,14 @@ void Subsumption::subsumeStrength(CoprocessorData& data)
 {
   while( hasToSubsume() || hasToStrengthen() )
   {
-    if( hasToSubsume() )    fullSubsumption(data);
-    if( hasToStrengthen() ) fullStrengthening(data);
+    if( hasToSubsume() ){
+      fullSubsumption(data);
+      // clear queue afterwards
+      clause_processing_queue.clear();
+    }
+    if( hasToStrengthen() ) {
+      fullStrengthening(data);
+    }
   }
 }
 
@@ -32,12 +38,11 @@ lbool Subsumption::fullSubsumption(CoprocessorData& data)
   // run subsumption for the whole queue
   if( controller.size() > 0 && (clause_processing_queue.size() > 100000 || ( clause_processing_queue.size() > 50000 && 10*data.nCls() > 22*data.nVars() ) ) ) {
     parallelSubsumption(data); // use parallel, is some conditions have been met
-    data.correctCounters();
+    data.correctCounters();    // 
   } else {
     subsumption_worker(data,0,clause_processing_queue.size());
   }
-  // clear queue afterwards
-  clause_processing_queue.clear();
+
   // no result to tell to the outside
   return l_Undef; 
 }
@@ -123,6 +128,6 @@ void Subsumption::parallelSubsumption(CoprocessorData& data)
 void* Subsumption::runParallelSubsume(void* arg)
 {
   SubsumeWorkData* workData = (SubsumeWorkData*) arg;
-  workData->subsumption->subsumption_worker(*(workData->data),workData->start,workData->end);
+  workData->subsumption->subsumption_worker(*(workData->data),workData->start,workData->end, false);
   return 0;
 }

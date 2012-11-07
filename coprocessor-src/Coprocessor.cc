@@ -7,8 +7,16 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include <iostream>
 
 static const char* _cat = "COPROCESSOR 3";
+static const char* _cat2 = "CP3 TECHNIQUES";
 
-static IntOption opt_threads  (_cat, "cp3_threads",  "Number of extra threads that should be used for preprocessing", 2, IntRange(0, INT32_MAX));
+// options
+static IntOption  opt_threads    (_cat, "cp3_threads",    "Number of extra threads that should be used for preprocessing", 2, IntRange(0, INT32_MAX));
+static BoolOption opt_unlimited  (_cat, "cp3_unlimited",  "No limits for preprocessing techniques", true);
+static BoolOption opt_randomized (_cat, "cp3_randomized", "Steps withing preprocessing techniques are executed in random order", false);
+// techniques
+static BoolOption opt_up      (_cat, "cp3_up",      "Use Unit Propagation during preprocessing", false);
+static BoolOption opt_subsimp (_cat, "cp3_subsimp", "Use Subsumption during preprocessing", false);
+static BoolOption opt_hte     (_cat, "cp3_hte",     "Use Hidden Tautology Elimination during preprocessing", false);
 
 using namespace std;
 using namespace Coprocessor;
@@ -17,13 +25,14 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 : threads( _threads < 0 ? opt_threads : _threads)
 , solver( _solver )
 , ca( solver->ca )
-, data( solver->ca, solver )
+, data( solver->ca, solver, opt_unlimited, opt_randomized )
 , controller( opt_threads )
 // attributes and all that
 
 // classes for preprocessing methods
 , subsumption( solver->ca, controller )
 , propagation( solver->ca, controller )
+, hte( solver->ca, controller )
 {
   controller.init();
 }
@@ -49,15 +58,23 @@ lbool Preprocessor::preprocess()
   cerr << "c coprocessor finished initialization" << endl;
   // do preprocessing
 
-  cerr << "c coprocessor propagate" << endl;
-  if( status == l_Undef ) status = propagation.propagate(data, solver);
+  if( opt_up ) {
+    cerr << "c coprocessor propagate" << endl;
+    if( status == l_Undef ) status = propagation.propagate(data, solver);
+  }
   
   // begin clauses have to be sorted here!!
   sortClauses();
+
+  if( opt_subsimp ) {
+    cerr << "c coprocessor subsume/strengthen" << endl;
+    if( status == l_Undef ) subsumption.subsumeStrength(data);  // cannot change status, can generate new unit clauses
+  }
   
-  cerr << "c coprocessor subsume/strengthen" << endl;
-  if( status == l_Undef ) subsumption.subsumeStrength(data);  // cannot change status, can generate new unit clauses
-  
+  if( opt_hte ) {
+    cerr << "c coprocessor hidden tautology elimination" << endl;
+    if( status == l_Undef ) hte.eliminate(data);  // cannot change status, can generate new unit clauses
+  }
   
   // clear / update clauses and learnts vectores and statistical counters
   // attach all clauses to their watchers again, call the propagate method to get into a good state again
@@ -92,8 +109,10 @@ void Preprocessor::initializePreprocessor()
   {
     const CRef cr = solver->clauses[i];
     data.addClause( cr );
+    // TODO: decide for which techniques initClause in not necessary!
     subsumption.initClause( cr );
     propagation.initClause( cr );
+    hte.initClause( cr );
   }
   
   clausesSize = solver->learnts.size();
@@ -101,15 +120,18 @@ void Preprocessor::initializePreprocessor()
   {
     const CRef cr = solver->learnts[i];
     data.addClause( cr );
+    // TODO: decide for which techniques initClause in not necessary! (especially learnt clauses)
     subsumption.initClause( cr );
     propagation.initClause( cr );
+    hte. initClause( cr );
   }
 }
 
 void Preprocessor::destroyPreprocessor()
 {
-  subsumption.destroy();
+  hte.destroy();
   propagation.destroy();
+  subsumption.destroy();
 }
 
 

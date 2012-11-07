@@ -3,7 +3,7 @@
 # variables to setup the build correctly
 CORE      = ../core
 MTL       = ../mtl
-MYCFLAGS    = -I.. -I. -I$(MTL) -I$(CORE) $(ARGS) -Wall -Wextra -ffloat-store
+MYCFLAGS    = -I.. -I. -I$(MTL) -I$(CORE) $(ARGS) -Wall -Wextra -ffloat-store -Wno-sign-compare -Wno-parentheses
 MYLFLAGS    = -lpthread
 
 COPTIMIZE ?= -O3

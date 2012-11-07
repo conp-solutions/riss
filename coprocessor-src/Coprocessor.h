@@ -13,6 +13,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor-src/Subsumption.h"
 #include "coprocessor-src/Propagation.h"
+#include "coprocessor-src/HiddenTautologyElimination.h"
 
 
 using namespace Minisat;
@@ -52,6 +53,7 @@ protected:
   // techniques
   Subsumption subsumption;
   Propagation propagation;
+  HiddenTautologyElimination hte;
   
   
   // own methods:

@@ -134,9 +134,10 @@ class Clause {
         unsigned reloced   : 1;
         //unsigned size      : 27;
         unsigned can_be_deleted: 1;
+	unsigned ignored : 1;
         unsigned can_subsume : 1;
         unsigned can_strengthen : 1;
-        unsigned size : 24;
+        unsigned size : 23;
         }                            header;
     union { Lit lit; float act; uint32_t abs; CRef rel; } data[0];
 
@@ -151,6 +152,7 @@ class Clause {
         header.reloced   = 0;
         header.size      = ps.size();
 	header.can_be_deleted = 0;
+	header.ignored   = 0;
         header.can_subsume = 1;
         header.can_strengthen = 1;
 
@@ -204,7 +206,7 @@ public:
     bool         ordered_subsumes (const Clause& other) const;
     void         strengthen       (Lit p);
 
-    void    set_delete (bool b) 	     { header.can_be_deleted = b; }
+    void    set_delete (bool b) 	 { header.can_be_deleted = b; }
     void    set_learnt (bool b)         { header.learnt = b; }
     bool    can_be_deleted()     const  { return header.can_be_deleted; }
 
@@ -215,6 +217,11 @@ public:
     bool    can_strengthen()     const  { return header.can_strengthen; }
     void    set_strengthen(bool b)      { header.can_strengthen = b; } 
 
+    bool    is_ignored()         const  { return (header.can_be_deleted || header.ignored); }
+    void    ignore()                    { header.ignored = true; }
+    
+    void    removePositionUnsorted(int i)    { data[i].lit = data[ size() - 1].lit; shrink(1); if (has_extra() && !header.learnt) calcAbstraction(); }
+    
     //DebugOutput
 #ifdef SUBDEBUG
     inline void print_clause() const ;
