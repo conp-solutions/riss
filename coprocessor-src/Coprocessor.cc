@@ -10,13 +10,13 @@ static const char* _cat = "COPROCESSOR 3";
 static const char* _cat2 = "CP3 TECHNIQUES";
 
 // options
-static IntOption  opt_threads    (_cat, "cp3_threads",    "Number of extra threads that should be used for preprocessing", 2, IntRange(0, INT32_MAX));
+static IntOption  opt_threads    (_cat, "cp3_threads",    "Number of extra threads that should be used for preprocessing", 0, IntRange(0, INT32_MAX));
 static BoolOption opt_unlimited  (_cat, "cp3_unlimited",  "No limits for preprocessing techniques", true);
 static BoolOption opt_randomized (_cat, "cp3_randomized", "Steps withing preprocessing techniques are executed in random order", false);
 // techniques
-static BoolOption opt_up      (_cat, "cp3_up",      "Use Unit Propagation during preprocessing", false);
-static BoolOption opt_subsimp (_cat, "cp3_subsimp", "Use Subsumption during preprocessing", false);
-static BoolOption opt_hte     (_cat, "cp3_hte",     "Use Hidden Tautology Elimination during preprocessing", false);
+static BoolOption opt_up      (_cat, "up",      "Use Unit Propagation during preprocessing", false);
+static BoolOption opt_subsimp (_cat, "subsimp", "Use Subsumption during preprocessing", false);
+static BoolOption opt_hte     (_cat, "hte",     "Use Hidden Tautology Elimination during preprocessing", false);
 
 using namespace std;
 using namespace Coprocessor;
@@ -45,7 +45,7 @@ Preprocessor::~Preprocessor()
 lbool Preprocessor::preprocess()
 {
   cerr << "c start preprocessing with coprocessor" << endl;
-  
+ 
   // first, remove all satisfied clauses
   if( !solver->simplify() ) return l_False;
   
@@ -158,7 +158,7 @@ void Preprocessor::reSetupSolver()
             delete_clause(cr);
         else 
         {   
-	  assert( c.size() != 0 && "empty clauses should be recognized before re-setup" );
+            assert( c.size() != 0 && "empty clauses should be recognized before re-setup" );
             if (c.size() > 1)
             {
                 solver->clauses[j++] = cr;    
@@ -189,20 +189,22 @@ void Preprocessor::reSetupSolver()
         {
             delete_clause(cr);
             continue;
-        } else if (c.learnt()) {
+        } else {
+	  if (c.learnt()) {
             if (c.size() > 1)
             {
                 solver->learnts[j++] = solver->learnts[i];
             }
-        } else { // move subsuming clause from learnts to clauses
+          } else { // move subsuming clause from learnts to clauses
 	    c.set_has_extra(true);
             c.calcAbstraction();
             learntToClause ++;
-	    	if (c.size() > 1)
+	    if (c.size() > 1)
             {
-                solver->clauses.push(cr);
+              solver->clauses.push(cr);
             }
- 	    }
+ 	  }
+	}
         if (c.size() > 1)
             solver->attachClause(cr);
         else if (solver->value(c[0]) == l_Undef)

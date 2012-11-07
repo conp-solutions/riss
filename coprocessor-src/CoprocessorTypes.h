@@ -216,6 +216,7 @@ inline CoprocessorData::CoprocessorData(ClauseAllocator& _ca, Solver* _solver, b
 , solver( _solver )
 , hasLimit( _limited )
 , randomOrder(_randomized)
+
 {
 }
 
@@ -224,12 +225,14 @@ inline void CoprocessorData::init(uint32_t nVars)
   occs.resize( nVars * 2 );
   lit_occurrence_count.resize( nVars * 2, 0 );
   numberOfVars = nVars;
+  deleteTimer.create( nVars );
 }
 
 inline void CoprocessorData::destroy()
 {
   ComplOcc().swap(occs); // free physical space of the vector
   vector<int32_t>().swap(lit_occurrence_count);
+  deleteTimer.destroy();
 }
 
 inline vec< Minisat::CRef >& CoprocessorData::getClauses()
@@ -414,15 +417,14 @@ inline void BIG::create(ClauseAllocator& ca, CoprocessorData& data, vec<CRef>& l
     sizes[ toInt( ~c[1] )  ] ++;
     sum += 2;
   }
-  
   storage = (Lit*) malloc( sizeof(Lit) * sum );
   big =  (Lit**)malloc ( sizeof(Lit*) * data.nVars() * 2 );
-  memset(sizes,0, sizeof(Lit*) * data.nVars() * 2 );
+  // memset(sizes,0, sizeof(Lit*) * data.nVars() * 2 );
   // set the pointers to the right location and clear the size
   sum = 0 ;
   for ( int i = 0 ; i < data.nVars() * 2; ++ i )
   {
-    big[0] = &(storage[i+sum]);
+    big[i] = &(storage[sum]);
     sum += sizes[i];
     sizes[i] = 0;
   }
@@ -432,12 +434,11 @@ inline void BIG::create(ClauseAllocator& ca, CoprocessorData& data, vec<CRef>& l
     const Clause& c = ca[list[i]];
     if(c.size() != 2 || c.can_be_deleted() ) continue;
     const Lit l0 = c[0]; const Lit l1 = c[1];
-    big[ toInt(~l0) ][ sizes[toInt(l0)] ] = l1;
-    big[ toInt(~l1) ][ sizes[toInt(l1)] ] = l0;
-    sizes[toInt(l0)] ++;
-    sizes[toInt(l1)] ++;
+    ( big[ toInt(~l0) ] )[ sizes[toInt(~l0)] ] = l1;
+    ( big[ toInt(~l1) ] )[ sizes[toInt(~l1)] ] = l0;
+    sizes[toInt(~l0)] ++;
+    sizes[toInt(~l1)] ++;
   }
-  
 }
 
 inline void BIG::removeEdge(const Lit l0, const Lit l1)

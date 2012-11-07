@@ -7,7 +7,7 @@
 # print to screen: solution for the cnf
 #
 
-./minisat ~/cnf/sudoku76.cnf /tmp/minisat-out > /dev/null 2> /dev/null
+./minisat $1 /tmp/minisat-out -hte > /dev/null # 2> /dev/null
 status=$?
 
 cat /tmp/minisat-out
