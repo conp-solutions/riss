@@ -127,14 +127,13 @@ typedef RegionAllocator<uint32_t>::Ref CRef;
 
 class Clause {
     struct {
-        unsigned mark      : 2;
+        unsigned mark      : 2; // TODO: for what is this mark used? its set to 1, if the clause can be deleted (by simplify) we could do the same thing!
         unsigned learnt    : 1;
         // + write get_method()
         unsigned has_extra : 1;
         unsigned reloced   : 1;
         //unsigned size      : 27;
-        unsigned can_be_deleted: 1;
-	
+// 	
 	// FIXME TODO: if modified-flag is introduced, handle it in HiddenTautologyElimination.cc!! ~line 310
 	
 	// unsigned ignored : 1; do not use such a flag for the preprocessor! copy clause immediately instead and use delete flag!
@@ -154,7 +153,6 @@ class Clause {
         header.has_extra = use_extra;
         header.reloced   = 0;
         header.size      = ps.size();
-	header.can_be_deleted = 0;
         header.can_subsume = 1;
         header.can_strengthen = 1;
 
@@ -208,9 +206,9 @@ public:
     bool         ordered_subsumes (const Clause& other) const;
     void         strengthen       (Lit p);
 
-    void    set_delete (bool b) 	 { header.can_be_deleted = b; }
+    void    set_delete (bool b) 	 { header.mark = 1; }
     void    set_learnt (bool b)         { header.learnt = b; }
-    bool    can_be_deleted()     const  { return header.can_be_deleted; }
+    bool    can_be_deleted()     const  { return mark() == 1; }
 
     void    set_has_extra(bool b)       {header.has_extra = b;}
 
@@ -277,6 +275,8 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
     {
         Clause& c = operator[](cr);
         
+	assert( cr != 94349 && "debug case" );
+	
         if (c.reloced()) { cr = c.relocation(); return; }
         
         cr = to.alloc(c, c.learnt());

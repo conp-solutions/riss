@@ -185,9 +185,7 @@ inline void ThreadData::run()
 
 inline ThreadController::ThreadController(int _threads)
 : threads( _threads ), threadHandles(0)
-{
-  cerr << "c open thread controller with " << threads << " threads" << endl;
-}
+{}
 
 inline ThreadController::~ThreadController()
 {

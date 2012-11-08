@@ -552,8 +552,9 @@ void Solver::removeSatisfied(vec<CRef>& cs)
     int i, j;
     for (i = j = 0; i < cs.size(); i++){
         Clause& c = ca[cs[i]];
-        if (satisfied(c))
+        if (satisfied(c)) {
             removeClause(cs[i]);
+	}
         else
             cs[j++] = cs[i];
     }
@@ -896,17 +897,21 @@ void Solver::relocAll(ClauseAllocator& to)
             Lit p = mkLit(v, s);
             // printf(" >>> RELOCING: %s%d\n", sign(p)?"-":"", var(p)+1);
             vec<Watcher>& ws = watches[p];
-            for (int j = 0; j < ws.size(); j++)
+            for (int j = 0; j < ws.size(); j++) {
                 ca.reloc(ws[j].cref, to);
+	    }
         }
 
     // All reasons:
     //
     for (int i = 0; i < trail.size(); i++){
         Var v = var(trail[i]);
-
+	// FIXME TODO: there needs to be a better workaround for this!!
+	if ( level(v) == 0 ) vardata[v].reason = CRef_Undef; // take care of reason clauses for literals at top-level
+        else
         if (reason(v) != CRef_Undef && (ca[reason(v)].reloced() || locked(ca[reason(v)])))
             ca.reloc(vardata[v].reason, to);
+	
     }
 
     // All learnt:

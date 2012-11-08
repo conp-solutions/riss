@@ -398,9 +398,9 @@ inline BIG::BIG()
 
 inline BIG::~BIG()
 {
- if( big != 0 )     delete [] big;
- if( storage != 0 ) delete [] storage;
- if( sizes != 0 )   delete [] sizes;
+ if( big != 0 )     free( big );
+ if( storage != 0 ) free( storage );
+ if( sizes != 0 )   free( sizes );
 }
 
 inline void BIG::create(ClauseAllocator& ca, CoprocessorData& data, vec<CRef>& list)

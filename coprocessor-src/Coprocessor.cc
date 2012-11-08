@@ -13,10 +13,12 @@ static const char* _cat2 = "CP3 TECHNIQUES";
 static IntOption  opt_threads    (_cat, "cp3_threads",    "Number of extra threads that should be used for preprocessing", 0, IntRange(0, INT32_MAX));
 static BoolOption opt_unlimited  (_cat, "cp3_unlimited",  "No limits for preprocessing techniques", true);
 static BoolOption opt_randomized (_cat, "cp3_randomized", "Steps withing preprocessing techniques are executed in random order", false);
+static IntOption  opt_verbose    (_cat, "cp3_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
 // techniques
-static BoolOption opt_up      (_cat, "up",      "Use Unit Propagation during preprocessing", false);
-static BoolOption opt_subsimp (_cat, "subsimp", "Use Subsumption during preprocessing", false);
-static BoolOption opt_hte     (_cat, "hte",     "Use Hidden Tautology Elimination during preprocessing", false);
+static BoolOption opt_up      (_cat, "up",          "Use Unit Propagation during preprocessing", false);
+static BoolOption opt_subsimp (_cat, "subsimp",     "Use Subsumption during preprocessing", false);
+static BoolOption opt_hte     (_cat, "hte",         "Use Hidden Tautology Elimination during preprocessing", false);
+static BoolOption opt_enabled (_cat, "enabled_cp3", "Use CP3", false);
 
 using namespace std;
 using namespace Coprocessor;
@@ -44,7 +46,8 @@ Preprocessor::~Preprocessor()
   
 lbool Preprocessor::preprocess()
 {
-  cerr << "c start preprocessing with coprocessor" << endl;
+  if( ! opt_enabled ) return l_Undef;
+  if( opt_verbose > 2 ) cerr << "c start preprocessing with coprocessor" << endl;
  
   // first, remove all satisfied clauses
   if( !solver->simplify() ) return l_False;
@@ -55,11 +58,11 @@ lbool Preprocessor::preprocess()
   // initialize techniques
   data.init( solver->nVars() );
   initializePreprocessor ();
-  cerr << "c coprocessor finished initialization" << endl;
+  if( opt_verbose > 2 )cerr << "c coprocessor finished initialization" << endl;
   // do preprocessing
 
   if( opt_up ) {
-    cerr << "c coprocessor propagate" << endl;
+    if( opt_verbose > 2 )cerr << "c coprocessor propagate" << endl;
     if( status == l_Undef ) status = propagation.propagate(data, solver);
   }
   
@@ -67,22 +70,23 @@ lbool Preprocessor::preprocess()
   sortClauses();
 
   if( opt_subsimp ) {
-    cerr << "c coprocessor subsume/strengthen" << endl;
+    if( opt_verbose > 2 )cerr << "c coprocessor subsume/strengthen" << endl;
     if( status == l_Undef ) subsumption.subsumeStrength(data);  // cannot change status, can generate new unit clauses
   }
   
   if( opt_hte ) {
-    cerr << "c coprocessor hidden tautology elimination" << endl;
+    if( opt_verbose > 2 )cerr << "c coprocessor hidden tautology elimination" << endl;
     if( status == l_Undef ) hte.eliminate(data);  // cannot change status, can generate new unit clauses
   }
+
   
   // clear / update clauses and learnts vectores and statistical counters
   // attach all clauses to their watchers again, call the propagate method to get into a good state again
-  cerr << "c coprocessor re-setup solver" << endl;
+  if( opt_verbose > 2 )cerr << "c coprocessor re-setup solver" << endl;
   reSetupSolver();
 
   // destroy preprocessor data
-  cerr << "c coprocessor free data structures" << endl;
+  if( opt_verbose > 2 )cerr << "c coprocessor free data structures" << endl;
   data.destroy();
   
   return l_Undef;
@@ -108,6 +112,8 @@ void Preprocessor::initializePreprocessor()
   for (int i = 0; i < clausesSize; ++i)
   {
     const CRef cr = solver->clauses[i];
+    assert( ca[cr].mark() == 0 && "mark of a clause has to be 0 before being put into preprocessor" );
+    // if( ca[cr].mark() != 0  ) continue; // do not use any specially marked clauses!
     data.addClause( cr );
     // TODO: decide for which techniques initClause in not necessary!
     subsumption.initClause( cr );
@@ -119,6 +125,8 @@ void Preprocessor::initializePreprocessor()
   for (int i = 0; i < clausesSize; ++i)
   {
     const CRef cr = solver->learnts[i];
+    assert( ca[cr].mark() == 0 && "mark of a clause has to be 0 before being put into preprocessor" );
+    // if( ca[cr].mark() != 0  ) continue; // do not use any specially marked clauses!
     data.addClause( cr );
     // TODO: decide for which techniques initClause in not necessary! (especially learnt clauses)
     subsumption.initClause( cr );
@@ -150,15 +158,23 @@ void Preprocessor::reSetupSolver()
 {
     int j = 0;
 
+    // check whether reasons of top level literals are marked as deleted. in this case, set reason to CRef_Undef!
+    for( int i = 0 ; i < solver->trail_lim[0]; ++ i )
+      if( solver->reason( var(solver->trail[i]) ) != CRef_Undef )
+        if( ca[ solver->reason( var(solver->trail[i]) ) ].can_be_deleted() )
+          solver->vardata[ var(solver->trail[i]) ].reason = CRef_Undef;
+    
+    // give back into solver
     for (int i = 0; i < solver->clauses.size(); ++i)
     {
         const CRef cr = solver->clauses[i];
         Clause & c = ca[cr];
+	assert( c.size() != 0 && "empty clauses should be recognized before re-setup" );
         if (c.can_be_deleted())
             delete_clause(cr);
         else 
         {   
-            assert( c.size() != 0 && "empty clauses should be recognized before re-setup" );
+            assert( c.mark() == 0 && "only clauses without a mark should be passed back to the solver!" );
             if (c.size() > 1)
             {
                 solver->clauses[j++] = cr;    
@@ -168,7 +184,7 @@ void Preprocessor::reSetupSolver()
                 solver->uncheckedEnqueue(c[0]);
 	    else if (solver->value(c[0]) == l_False )
 	    {
-	      assert( false && "This UNSAT case should be recognized before re-setup" );
+	      // assert( false && "This UNSAT case should be recognized before re-setup" );
 	      solver->ok = false;
 	    }
         }
@@ -176,7 +192,7 @@ void Preprocessor::reSetupSolver()
     int c_old = solver->clauses.size();
     solver->clauses.shrink(solver->clauses.size()-j);
     
-    fprintf(stderr,"c Subs-STATs: removed clauses: %i of %i," ,c_old - j,c_old);
+    if( opt_verbose > 0 ) fprintf(stderr,"c Subs-STATs: removed clauses: %i of %i," ,c_old - j,c_old);
 
     int learntToClause = 0;
     j = 0;
@@ -190,6 +206,7 @@ void Preprocessor::reSetupSolver()
             delete_clause(cr);
             continue;
         } else {
+	  assert( c.mark() == 0 && "only clauses without a mark should be passed back to the solver!" );
 	  if (c.learnt()) {
             if (c.size() > 1)
             {
@@ -211,13 +228,14 @@ void Preprocessor::reSetupSolver()
           solver->uncheckedEnqueue(c[0]);
 	else if (solver->value(c[0]) == l_False )
 	{
-	  assert( false && "This UNSAT case should be recognized before re-setup" );
+	  // assert( false && "This UNSAT case should be recognized before re-setup" );
 	  solver->ok = false;
 	}
     }
     int l_old = solver->learnts.size();
     solver->learnts.shrink(solver->learnts.size()-j);
-    printf(" moved %i and removed %i from %i learnts\n",learntToClause,(l_old - j) -learntToClause, l_old);
+    if( opt_verbose > 1 ) fprintf(stderr, " moved %i and removed %i from %i learnts\n",learntToClause,(l_old - j) -learntToClause, l_old);
+
 }
 
 void Preprocessor::sortClauses()
