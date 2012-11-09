@@ -1,0 +1,13 @@
+*~
+*.cnf
+*.o
+*.log
+*.dat
+
+*.swp
+
+
+tags
+debug
+minisat
+cnfdd
