@@ -277,6 +277,42 @@ void Preprocessor::sortClauses()
   }
 }
 
+void Preprocessor::mark1(Minisat::Lit x)
+{
+  std::vector<CRef> & clauses = occs[Minisat::toInt(x)];
+  for( int i = 0; i < clauses.size(); ++i)
+  {
+    CRef cr = clauses[i];
+    Clause &c = ca[cr];
+    for (int j = 0; j < c.size(); ++j)
+    {
+      deleteTimer.setCurrentStep(c[j]);
+    }
+  }
+  std::vector<CRef> & clauses = occs[Minisat::toInt(x.~)];
+  for( int i = 0; i < clauses.size(); ++i)
+  {
+    CRef cr = clauses[i];
+    Clause &c = ca[cr];
+    for (int j = 0; j < c.size(); ++j)
+    {
+      deleteTimer.setCurrentStep(c[j]);
+    }
+  }
+}
+
+void Preprocessor::mark2(Minisat::Lit x)
+{
+  // MarkArray help = MarkArray()
+  // help.create(deleteTimer.size())
+  //
+  // for C \in F_x do
+  //  for i \in C do
+  //    if ! deleteTimer.isCurrentStep(i)
+  //      mark1(i)
+  //      help
+}
+
 void Preprocessor::delete_clause(const Minisat::CRef cr)
 {
   Clause & c = ca[cr];
