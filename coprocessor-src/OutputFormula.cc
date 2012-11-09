@@ -13,6 +13,8 @@ void Preprocessor::outputFormula(const char *file)
 
 void Preprocessor::printFormula(FILE * fd) 
 {
+    // print header
+    fprintf(fd,"p cnf %u %i\n", (solver->nVars()) ,(solver->trail).size() + (solver->clauses).size());
     // print assignments
     for (int i = 0; i < (solver->trail).size(); ++i)
     {
