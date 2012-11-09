@@ -158,7 +158,8 @@ int main(int argc, char** argv)
         if (dimacs){
             if (S.verbosity > 0)
                 printf("==============================[ Writing DIMACS ]===============================\n");
-            S.toDimacs((const char*)dimacs);
+            //S.toDimacs((const char*)dimacs);
+            preprocessor.outputFormula((const char*) dimacs);
             if (S.verbosity > 0)
                 printStats(S);
             exit(0);
