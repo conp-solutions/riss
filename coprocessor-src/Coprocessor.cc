@@ -41,17 +41,17 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 
 Preprocessor::~Preprocessor()
 {
-  
+
 }
-  
+
 lbool Preprocessor::preprocess()
 {
   if( ! opt_enabled ) return l_Undef;
   if( opt_verbose > 2 ) cerr << "c start preprocessing with coprocessor" << endl;
- 
+
   // first, remove all satisfied clauses
   if( !solver->simplify() ) return l_False;
-  
+
   lbool status = l_Undef;
   // delete clauses from solver
   cleanSolver ();
@@ -65,7 +65,7 @@ lbool Preprocessor::preprocess()
     if( opt_verbose > 2 )cerr << "c coprocessor propagate" << endl;
     if( status == l_Undef ) status = propagation.propagate(data, solver);
   }
-  
+
   // begin clauses have to be sorted here!!
   sortClauses();
 
@@ -73,13 +73,13 @@ lbool Preprocessor::preprocess()
     if( opt_verbose > 2 )cerr << "c coprocessor subsume/strengthen" << endl;
     if( status == l_Undef ) subsumption.subsumeStrength(data);  // cannot change status, can generate new unit clauses
   }
-  
+
   if( opt_hte ) {
     if( opt_verbose > 2 )cerr << "c coprocessor hidden tautology elimination" << endl;
     if( status == l_Undef ) hte.eliminate(data);  // cannot change status, can generate new unit clauses
   }
 
-  
+
   // clear / update clauses and learnts vectores and statistical counters
   // attach all clauses to their watchers again, call the propagate method to get into a good state again
   if( opt_verbose > 2 )cerr << "c coprocessor re-setup solver" << endl;
@@ -88,15 +88,15 @@ lbool Preprocessor::preprocess()
   // destroy preprocessor data
   if( opt_verbose > 2 )cerr << "c coprocessor free data structures" << endl;
   data.destroy();
-  
+
   return l_Undef;
 }
 
 lbool Preprocessor::inprocess()
 {
   // TODO: do something before preprocessing? e.g. some extra things with learned / original clauses
-  
-  
+
+
   return preprocess();
 }
 
@@ -120,7 +120,7 @@ void Preprocessor::initializePreprocessor()
     propagation.initClause( cr );
     hte.initClause( cr );
   }
-  
+
   clausesSize = solver->learnts.size();
   for (int i = 0; i < clausesSize; ++i)
   {
@@ -150,7 +150,7 @@ void Preprocessor::cleanSolver()
     for (int s = 0; s < 2; s++)
       solver->watches[ mkLit(v, s) ].clear();
 
-  solver->learnts_literals = 0; 
+  solver->learnts_literals = 0;
   solver->clauses_literals = 0;
 }
 
@@ -163,7 +163,7 @@ void Preprocessor::reSetupSolver()
       if( solver->reason( var(solver->trail[i]) ) != CRef_Undef )
         if( ca[ solver->reason( var(solver->trail[i]) ) ].can_be_deleted() )
           solver->vardata[ var(solver->trail[i]) ].reason = CRef_Undef;
-    
+
     // give back into solver
     for (int i = 0; i < solver->clauses.size(); ++i)
     {
@@ -172,12 +172,12 @@ void Preprocessor::reSetupSolver()
 	assert( c.size() != 0 && "empty clauses should be recognized before re-setup" );
         if (c.can_be_deleted())
             delete_clause(cr);
-        else 
-        {   
+        else
+        {
             assert( c.mark() == 0 && "only clauses without a mark should be passed back to the solver!" );
             if (c.size() > 1)
             {
-                solver->clauses[j++] = cr;    
+                solver->clauses[j++] = cr;
                 solver->attachClause(cr);
             }
             else if (solver->value(c[0]) == l_Undef)
@@ -191,7 +191,7 @@ void Preprocessor::reSetupSolver()
     }
     int c_old = solver->clauses.size();
     solver->clauses.shrink(solver->clauses.size()-j);
-    
+
     if( opt_verbose > 0 ) fprintf(stderr,"c Subs-STATs: removed clauses: %i of %i," ,c_old - j,c_old);
 
     int learntToClause = 0;
@@ -257,10 +257,10 @@ void Preprocessor::sortClauses()
         c[i+1] = key;
     }
   }
-  
+
   clausesSize = solver->learnts.size();
   for (int i = 0; i < clausesSize; ++i)
-  { 
+  {
     Clause& c = ca[solver->learnts[i]];
     const uint32_t s = c.size();
     for (uint32_t j = 1; j < s; ++j)
@@ -277,8 +277,41 @@ void Preprocessor::sortClauses()
   }
 }
 
+void Preprocessor::mark1(Minisat::Lit x)
+{
+  std::vector<CRef> & clauses = occs[Minisat::toInt(x)];
+  for( int i = 0; i < clauses.size(); ++i)
+  {
+    CRef cr = clauses[i];
+    Clause &c = ca[cr];
+    for (int j = 0; j < c.size(); ++j)
+    {
+      deleteTimer.setCurrentStep(c[j]);
+    }
+  }
+  std::vector<CRef> & clauses = occs[Minisat::toInt(x.~)];
+  for( int i = 0; i < clauses.size(); ++i)
+  {
+    CRef cr = clauses[i];
+    Clause &c = ca[cr];
+    for (int j = 0; j < c.size(); ++j)
+    {
+      deleteTimer.setCurrentStep(c[j]);
+    }
+  }
+}
 
-
+void Preprocessor::mark2(Minisat::Lit x)
+{
+  // MarkArray help = MarkArray()
+  // help.create(deleteTimer.size())
+  //
+  // for C \in F_x do
+  //  for i \in C do
+  //    if ! deleteTimer.isCurrentStep(i)
+  //      mark1(i)
+  //      help
+}
 
 void Preprocessor::delete_clause(const Minisat::CRef cr)
 {
