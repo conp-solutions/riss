@@ -62,9 +62,6 @@ protected:
   void initializePreprocessor();     // add all clauses from the solver to the preprocessing structures
   void destroyPreprocessor();        // free resources of all preprocessing techniques
 
-  void mark1(Minisat::Lit x);        // mark direct
-  void mark2(Minisat::Lit x);        // mark indirect (2 steps)
-
   // small helpers
   void sortClauses();                // sort the literals within all clauses
   void correctCounters();            // update counters (if there are techniques that do not properly work with the counters=
