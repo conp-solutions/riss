@@ -274,8 +274,6 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
     void reloc(CRef& cr, ClauseAllocator& to)
     {
         Clause& c = operator[](cr);
-        
-	assert( cr != 94349 && "debug case" );
 	
         if (c.reloced()) { cr = c.relocation(); return; }
         
