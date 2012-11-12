@@ -159,10 +159,11 @@ void Preprocessor::reSetupSolver()
     int j = 0;
 
     // check whether reasons of top level literals are marked as deleted. in this case, set reason to CRef_Undef!
-    for( int i = 0 ; i < solver->trail_lim[0]; ++ i )
-      if( solver->reason( var(solver->trail[i]) ) != CRef_Undef )
-        if( ca[ solver->reason( var(solver->trail[i]) ) ].can_be_deleted() )
-          solver->vardata[ var(solver->trail[i]) ].reason = CRef_Undef;
+    if( solver->trail_lim.size() > 0 )
+      for( int i = 0 ; i < solver->trail_lim[0]; ++ i )
+        if( solver->reason( var(solver->trail[i]) ) != CRef_Undef )
+          if( ca[ solver->reason( var(solver->trail[i]) ) ].can_be_deleted() )
+            solver->vardata[ var(solver->trail[i]) ].reason = CRef_Undef;
     
     // give back into solver
     for (int i = 0; i < solver->clauses.size(); ++i)
