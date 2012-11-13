@@ -45,9 +45,9 @@ protected:
   void parallelBVE(CoprocessorData& data);
   
   inline void removeClauses(CoprocessorData & data, vector<CRef> & list);
-  inline void resolveSet(vector<CRef> & positive, vector<CRef> & negative, int v, vector < vec < Lit > > resolvents);
+  inline void resolveSet(vector<CRef> & positive, vector<CRef> & negative, int v, vector < vector < Lit > > resolvents);
   inline bool resolve(Clause & c, Clause & d, int v, vector<Lit> & resolvent);
-  inline bool checkPush(vec<Lit> & ps, Lit l);
+  inline bool checkPush(vector<Lit> & ps, Lit l);
 public:
 
   /** converts arg into BVEWorkData*, runs bve of its part of the queue */
