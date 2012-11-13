@@ -178,7 +178,7 @@ public:
 
 // mark methods
   void mark1(Var x, Coprocessor::MarkArray& array);
-  void mark2(Var x, Coprocessor::MarkArray& array);
+  void mark2(Var x, Coprocessor::MarkArray& array, MarkArray& tmp);
 
 // locking
   void lock()   { dataLock.lock();   } // lock and unlock the data structure
@@ -420,26 +420,37 @@ inline void CoprocessorData::mark1(Var x, MarkArray& array)
   }
 }
 
-inline void CoprocessorData::mark2(Var x, MarkArray& array)
+inline void CoprocessorData::mark2(Var x, MarkArray& array, MarkArray& tmp)
 {
-  std::vector<CRef> & clauses = occs[Minisat::toInt(x)];
+  tmp.nextStep();
+  std::vector<CRef> & clauses = occs[Minisat::toInt( mkLit(x,true))];
   for( int i = 0; i < clauses.size(); ++i)
   {
     Clause &c = ca[clauses[i]];
-    for (int j = 0; j < c.size(); ++j)
+    // for l in C
+    for (int l = 0; l < c.size(); ++l)
     {
-      mark1(c[j], array);
+      if( !tmp.isCurrentStep(var(c[l])) )
+      {
+        mark1(c[l], array);
+      }
+      tmp.setCurrentStep(var(c[l]))
     }
   }
 
-  // MarkArray help = MarkArray()
-  // help.create(deleteTimer.size())
-  //
-  // for C \in F_x do
-  //  for i \in C do
-  //    if ! deleteTimer.isCurrentStep(i)
-  //      mark1(i)
-  //      help
+  clauses = occs[Minisat::toInt( mkLit(x,false))];
+  for( int i = 0; i < clauses.size(); ++i)
+  {
+    Clause &c = ca[clauses[i]];
+    for (int l = 0; l < c.size(); ++l)
+    {
+      if( !tmp.isCurrentStep(var(c[l])) )
+      {
+        mark1(c[l], array);
+      }
+      tmp.setCurrentStep(var(c[l]))
+    }
+  }
 }
 
 inline BIG::BIG()
