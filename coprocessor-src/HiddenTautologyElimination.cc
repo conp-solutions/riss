@@ -375,3 +375,141 @@ Lit HiddenTautologyElimination::fillHlaArrays(Var v, BIG& big, MarkArray& hlaPos
 
   return lit_Undef;
 }
+
+bool HiddenTautologyElimination::hlaMarkClause(const Minisat::CRef cr, BIG& big, MarkArray& markArray, Lit* litQueue)
+{
+  const Clause& clause = ca[cr]; 
+  if( clause.size() < 3 ) return false; // do not work on binary and smaller clauses!
+  
+  Lit *head, *tail; // indicators for the hla queue
+  head = litQueue; tail = litQueue;
+  // markArray with all literals of the clause
+  for( uint32_t j = 0 ; j < clause.size(); ++ j ) {
+    const Lit clLit = clause[j];
+    markArray.setCurrentStep( toInt(clLit));	// mark current literal
+    *(head++) = clLit;				// add literal to the queue
+  }
+
+      while( tail < head ) {
+	const Lit lit = *(tail++);
+	const Lit* jList = big.getArray(~lit);
+	const uint32_t jListSize = big.getSize(~lit);
+	
+	for( uint32_t j = 0 ; j < jListSize; ++j ) {
+	  const Lit jLit = ~jList[j];
+	  if( clause.size() == 2 ) {
+	    // do not remove the binary clause that is responsible for the current edge
+	    if( lit == clause[0] && ~jLit == clause[1] ) continue;
+	    if( lit == clause[1] && ~jLit == clause[0] ) continue;
+	  }
+	  
+	  if( ! markArray.isCurrentStep( toInt(jLit) ) ) {
+	    if( markArray.isCurrentStep( toInt(~jLit) ) ) {
+	      if( cl.size() == 2 )
+                big.removeEdge ( clause[0], clause[1] );
+	      return true;
+	    }
+	    markArray.setCurrentStep( toInt(jLit) );
+	    *(head++) = jLit;
+	  }
+	}
+      }
+ 
+  return false;
+}
+
+bool HiddenTautologyElimination::hlaMarkClause(vec< Lit >& clause, BIG& big, MarkArray& markArray, Lit* litQueue, bool addLits)
+{
+  if( clause.size() < 3 ) return false; // do not work on binary and smaller clauses!
+  
+  Lit *head, *tail; // indicators for the hla queue
+  head = litQueue; tail = litQueue;
+  // markArray with all literals of the clause
+  for( uint32_t j = 0 ; j < clause.size(); ++ j ) {
+    const Lit clLit = clause[j];
+    markArray.setCurrentStep( toInt(clLit));	// mark current literal
+    *(head++) = clLit;				// add literal to the queue
+  }
+
+      while( tail < head ) {
+	const Lit lit = *(tail++);
+	const Lit* jList = big.getArray(~lit);
+	const uint32_t jListSize = big.getSize(~lit);
+	
+	for( uint32_t j = 0 ; j < jListSize; ++j ) {
+	  const Lit jLit = ~jList[j];
+	  if( clause.size() == 2 ) {
+	    // do not remove the binary clause that is responsible for the current edge
+	    if( lit == clause[0] && ~jLit == clause[1] ) continue;
+	    if( lit == clause[1] && ~jLit == clause[0] ) continue;
+	  }
+	  
+	  if( ! markArray.isCurrentStep( toInt(jLit) ) ) {
+	    if( markArray.isCurrentStep( toInt(~jLit) ) ) {
+	      if( cl.size() == 2 )
+                big.removeEdge ( clause[0], clause[1] );
+	      return true;
+	    }
+	    markArray.setCurrentStep( toInt(jLit) );
+	    if( addLits ) clause.push(jLit); // add literals to the vector?
+	    *(head++) = jLit;
+	  }
+	}
+      }
+ 
+  return false;
+}
+
+
+bool HiddenTautologyElimination::alaMarkClause(const CRef cr, BIG& big, MarkArray& markArray, MarkArray& helpArray)
+{
+  vec<Lit>& lits;
+  const Clause& c = ca[cr];
+  for (int i = 0 ; i < c.size(); ++ i ) lits.push(c[i]);
+  return alaMarkClause(lits,big,markArray,helpArray,false);
+}
+
+bool HiddenTautologyElimination::alaMarkClause(vec<Lit>& clause, CoprocessorData& data, MarkArray& markArray, MarkArray& helpArray, bool addLits)
+{
+  helpArray.nextStep();
+  deque <Lit> queue; // TODO: build heap here!
+  for ( int i = 0 ; i < clause.size(); ++ i ) {
+    helpArray.setCurrentStep(toInt(clause[i]));
+    markArray.setCurrentStep(toInt(clause[i]));
+    queue.push_back(clause[i]);
+  }
+  
+  while( !queue.empty() ) { // do not use a queue, but a heap!!
+    const Lit l = queue.front(); queue.pop_front(); 
+    helpArray.reset(toInt(l));
+    
+    vector<CRef>& list = data.list(l);
+    for( int i = 0 ; i < list.size(); ++ i ) {
+      const Clause& c = ca[ list[i] ];
+      Lit l1 = lit_Undef;
+      for( int j = 0 ; j < c.size(); ++ j ) {
+	const Lit l2 = c[j];
+	if( l2 == l ) continue;
+	if( ! markArray.isCurrentStep(toInt(l2)) ) {
+	 if( l1 == lit_Undef ) l1 = l2;  // remember missing literal!
+	 else {l1 = lit_Error; break;}     // there is more than one literal that does not fit!
+	}
+      }
+      if( l1 == lit_Undef ) return true; // ATE, since all literals are inside of the analyzed clause clause (is subsumed!)
+      if( l1 != lit_Undef && l1 != lit_Error ) {
+	if( markArray.isCurrentStep( toInt(l1) ) ) return true; // found ATE, the clause can be removed from the formula!
+	if( ! markArray.isCurrentStep(toInt(~l1)) ) {
+	  if( addLits ) clause.push(~l1); // add literal to array and to vector
+	   markArray.setCurrentStep(~l1);
+	}
+	if( !helpArray.isCurrentStep( toInt(~l1) ) ) {
+	  queue.push_back(~l1); 
+	  helpArray.setCurrentStep(~l1);
+	}
+	
+      }
+    }
+  }
+  
+}
+
