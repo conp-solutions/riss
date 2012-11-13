@@ -514,8 +514,6 @@ inline void BIG::removeEdge(const Lit l0, const Lit l1)
   }
 }
 
-
-
 inline Lit* BIG::getArray(const Lit l)
 {
   return big[ toInt(l) ];
@@ -525,9 +523,6 @@ inline const int BIG::getSize(const Lit l)
 {
   return sizes[ toInt(l) ];
 }
-
-
-
 
 }
 

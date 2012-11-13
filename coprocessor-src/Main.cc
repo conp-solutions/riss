@@ -81,8 +81,8 @@ int main(int argc, char** argv)
         solver = &S;
         // Use signal handlers that forcibly quit until the solver will be able to respond to
         // interrupts:
-        signal(SIGINT, SIGINT_exit);
-        signal(SIGXCPU,SIGINT_exit);
+        // signal(SIGINT, SIGINT_exit);
+        // signal(SIGXCPU,SIGINT_exit);
 
         // Set limit on CPU-time:
         if (cpu_lim != INT32_MAX){
@@ -158,7 +158,8 @@ int main(int argc, char** argv)
         if (dimacs){
             if (S.verbosity > 0)
                 printf("==============================[ Writing DIMACS ]===============================\n");
-            S.toDimacs((const char*)dimacs);
+            //S.toDimacs((const char*)dimacs);
+            preprocessor.outputFormula((const char*) dimacs);
             if (S.verbosity > 0)
                 printStats(S);
             exit(0);
