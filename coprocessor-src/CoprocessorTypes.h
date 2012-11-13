@@ -432,9 +432,9 @@ inline void CoprocessorData::mark2(Var x, MarkArray& array, MarkArray& tmp)
     {
       if( !tmp.isCurrentStep(var(c[l])) )
       {
-        mark1(c[l], array);
+        mark1(var(c[l]), array);
       }
-      tmp.setCurrentStep(var(c[l]))
+      tmp.setCurrentStep(var(c[l]));
     }
   }
 
@@ -446,9 +446,9 @@ inline void CoprocessorData::mark2(Var x, MarkArray& array, MarkArray& tmp)
     {
       if( !tmp.isCurrentStep(var(c[l])) )
       {
-        mark1(c[l], array);
+        mark1(var(c[l]), array);
       }
-      tmp.setCurrentStep(var(c[l]))
+      tmp.setCurrentStep(var(c[l]));
     }
   }
 }
