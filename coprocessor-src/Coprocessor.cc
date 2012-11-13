@@ -79,7 +79,21 @@ lbool Preprocessor::preprocess()
     if( status == l_Undef ) hte.eliminate(data);  // cannot change status, can generate new unit clauses
   }
 
-
+  // tobias
+//   vec<Var> vars;
+//   MarkArray array;
+//     array.create( solver->nVars() );
+//     array.nextStep();
+//   for( Var v = 0 ; v < solver->nVars(); ++v ) 
+//   {
+//     if(!array.isCurrentStep(v) ) {
+//       vars.push(v); 
+//       data.mark1(v);
+//     }
+//   }
+  // vars = cluster variablen
+  
+  
   // clear / update clauses and learnts vectores and statistical counters
   // attach all clauses to their watchers again, call the propagate method to get into a good state again
   if( opt_verbose > 2 )cerr << "c coprocessor re-setup solver" << endl;

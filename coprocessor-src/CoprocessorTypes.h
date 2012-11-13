@@ -177,8 +177,8 @@ public:
   void resetDeleteTimer();
 
 // mark methods
-  void mark1(Minisat::Lit x);
-  void mark2(Minisat::Lit x);
+  void mark1(Var x, Coprocessor::MarkArray& array);
+  void mark2(Var x, Coprocessor::MarkArray& array);
 
 // locking
   void lock()   { dataLock.lock();   } // lock and unlock the data structure
@@ -396,31 +396,31 @@ inline void CoprocessorData::correctCounters()
   }
 }
 
-void CoprocessorData::mark1(Minisat::Lit x)
+inline void CoprocessorData::mark1(Var x, MarkArray& array)
 {
-  std::vector<CRef> & clauses = occs[Minisat::toInt(x)];
+  std::vector<CRef> & clauses = occs[Minisat::toInt( mkLit(x,true))];
   for( int i = 0; i < clauses.size(); ++i)
   {
     CRef cr = clauses[i];
     Clause &c = ca[cr];
     for (int j = 0; j < c.size(); ++j)
     {
-      deleteTimer.setCurrentStep(toInt(c[j]));
+      array.setCurrentStep(var(c[j]));
     }
   }
-  clauses = occs[Minisat::toInt( ~x )];
+  clauses = occs[Minisat::toInt( mkLit(x,false) )];
   for( int i = 0; i < clauses.size(); ++i)
   {
     CRef cr = clauses[i];
     Clause &c = ca[cr];
     for (int j = 0; j < c.size(); ++j)
     {
-      deleteTimer.setCurrentStep(toInt(c[j]));
+      array.setCurrentStep(var(c[j]));
     }
   }
 }
 
-void CoprocessorData::mark2(Minisat::Lit x)
+inline void CoprocessorData::mark2(Var x, MarkArray& array)
 {
   std::vector<CRef> & clauses = occs[Minisat::toInt(x)];
   for( int i = 0; i < clauses.size(); ++i)
@@ -428,7 +428,7 @@ void CoprocessorData::mark2(Minisat::Lit x)
     Clause &c = ca[clauses[i]];
     for (int j = 0; j < c.size(); ++j)
     {
-      mark1(c[j]);
+      mark1(c[j], array);
     }
   }
 
