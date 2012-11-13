@@ -44,7 +44,10 @@ protected:
   /** run parallel bve with all available threads */
   void parallelBVE(CoprocessorData& data);
   
-  bool resolve(Clause & c, Clause & d, int v, vector<Lit> & resolvent);
+  inline void removeClauses(CoprocessorData & data, vector<CRef> & list);
+  inline void resolveSet(vector<CRef> & positive, vector<CRef> & negative, int v, vector < vec < Lit > > resolvents);
+  inline bool resolve(Clause & c, Clause & d, int v, vector<Lit> & resolvent);
+  inline bool checkPush(vec<Lit> & ps, Lit l);
 public:
 
   /** converts arg into BVEWorkData*, runs bve of its part of the queue */
