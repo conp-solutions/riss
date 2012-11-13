@@ -278,8 +278,14 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         if (c.reloced()) { cr = c.relocation(); return; }
         
         cr = to.alloc(c, c.learnt());
+        // Copy Flags
+        to[cr].header = c.header;
         c.relocate(cr);
-        
+        // Check this, otherwise segfault
+        if (!c.learnt())
+            to[cr].header.has_extra = to.extra_clause_field;
+
+
         // Copy extra data-fields: 
         // (This could be cleaned-up. Generalize Clause-constructor to be applicable here instead?)
         to[cr].mark(c.mark());
