@@ -15,7 +15,6 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/Propagation.h"
 #include "coprocessor-src/HiddenTautologyElimination.h"
 
-
 using namespace Minisat;
 
 namespace Coprocessor {
@@ -48,6 +47,9 @@ public:
    - extend model
    - ...
   */
+  // print formula (DIMACs)
+  void outputFormula(const char *file);
+
 
 protected:
   // techniques
@@ -66,6 +68,13 @@ protected:
   void sortClauses();                // sort the literals within all clauses
   void correctCounters();            // update counters (if there are techniques that do not properly work with the counters=
   void delete_clause(const CRef cr); // delete a clause from the solver (clause should not be attached within the solver)
+
+  // print formula
+  void printFormula(FILE * fd);
+  inline void printClause(FILE * fd, CRef cr);
+  inline void printLit(FILE * fd, int l);
+
+
 };
 
 };
