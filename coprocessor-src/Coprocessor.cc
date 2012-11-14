@@ -120,6 +120,12 @@ lbool Preprocessor::preprocessScheduled()
   return l_Undef;
 }
 
+void Preprocessor::extendModel(vec< lbool >& model)
+{
+  data.extendModel(model);
+}
+
+
 void Preprocessor::initializePreprocessor()
 {
   uint32_t clausesSize = (*solver).clauses.size();

@@ -405,7 +405,7 @@ bool HiddenTautologyElimination::hlaMarkClause(const Minisat::CRef cr, BIG& big,
 	  
 	  if( ! markArray.isCurrentStep( toInt(jLit) ) ) {
 	    if( markArray.isCurrentStep( toInt(~jLit) ) ) {
-	      if( cl.size() == 2 )
+	      if( clause.size() == 2 )
                 big.removeEdge ( clause[0], clause[1] );
 	      return true;
 	    }
@@ -446,7 +446,7 @@ bool HiddenTautologyElimination::hlaMarkClause(vec< Lit >& clause, BIG& big, Mar
 	  
 	  if( ! markArray.isCurrentStep( toInt(jLit) ) ) {
 	    if( markArray.isCurrentStep( toInt(~jLit) ) ) {
-	      if( cl.size() == 2 )
+	      if( clause.size() == 2 )
                 big.removeEdge ( clause[0], clause[1] );
 	      return true;
 	    }
@@ -461,12 +461,12 @@ bool HiddenTautologyElimination::hlaMarkClause(vec< Lit >& clause, BIG& big, Mar
 }
 
 
-bool HiddenTautologyElimination::alaMarkClause(const CRef cr, BIG& big, MarkArray& markArray, MarkArray& helpArray)
+bool HiddenTautologyElimination::alaMarkClause(const CRef cr, CoprocessorData& data, MarkArray& markArray, MarkArray& helpArray)
 {
-  vec<Lit>& lits;
+  vec<Lit> lits;
   const Clause& c = ca[cr];
   for (int i = 0 ; i < c.size(); ++ i ) lits.push(c[i]);
-  return alaMarkClause(lits,big,markArray,helpArray,false);
+  return alaMarkClause(lits,data,markArray,helpArray,false);
 }
 
 bool HiddenTautologyElimination::alaMarkClause(vec<Lit>& clause, CoprocessorData& data, MarkArray& markArray, MarkArray& helpArray, bool addLits)
@@ -500,11 +500,11 @@ bool HiddenTautologyElimination::alaMarkClause(vec<Lit>& clause, CoprocessorData
 	if( markArray.isCurrentStep( toInt(l1) ) ) return true; // found ATE, the clause can be removed from the formula!
 	if( ! markArray.isCurrentStep(toInt(~l1)) ) {
 	  if( addLits ) clause.push(~l1); // add literal to array and to vector
-	   markArray.setCurrentStep(~l1);
+	   markArray.setCurrentStep( toInt(~l1) );
 	}
 	if( !helpArray.isCurrentStep( toInt(~l1) ) ) {
 	  queue.push_back(~l1); 
-	  helpArray.setCurrentStep(~l1);
+	  helpArray.setCurrentStep( toInt(~l1) );
 	}
 	
       }

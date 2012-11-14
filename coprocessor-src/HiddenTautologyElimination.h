@@ -49,7 +49,7 @@ public:
   /** mark all literals that would appear in ALA(C) 
    * @return true, if clause can be removed by ATE
    */
-  bool alaMarkClause(const CRef cr, BIG& big, MarkArray& markArray, MarkArray& helpArray);
+  bool alaMarkClause(const Minisat::CRef cr, Coprocessor::CoprocessorData& data, Coprocessor::MarkArray& markArray, Coprocessor::MarkArray& helpArray);
   /// same as above, but can add literals to the vector, so that the vector represents the real ALA(C) clause
   bool alaMarkClause(vec< Lit >& clause, Coprocessor::CoprocessorData& data, Coprocessor::MarkArray& markArray, Coprocessor::MarkArray& helpArray, bool addLits = false);
   
