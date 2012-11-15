@@ -133,6 +133,7 @@ class CoprocessorData
   Lock dataLock;                        // lock for parallel algorithms to synchronize access to data structures
 
   MarkArray deleteTimer;                // store for each literal when (by which technique) it has been deleted
+  MarkArray untouchable;                // store all variables that should not be touched (altering presence in models)
 
   vector<Lit> undo;                     // store clauses that have to be undone for extending the model
   
@@ -195,11 +196,15 @@ public:
   void correctCounters();
 
   // extending model after clause elimination procedures - l will be put first in list to be undone if necessary!
-  void addToExtension( const Minisat::CRef cr, const Lit& l );
-  void addToExtension( vec< Lit >& lits, const Lit& l );
-  void addToExtension( vector<Lit>& lits, const Lit& l );
+  void addToExtension( const Minisat::CRef cr, const Lit l = lit_Error );
+  void addToExtension( vec< Lit >& lits, const Lit l = lit_Error );
+  void addToExtension( vector< Lit >& lits, const Lit l = lit_Error );
   
   void extendModel(vec<lbool>& model);
+  
+  // checking whether a literal can be altered
+  void setNotTouch(const Var v);
+  bool doNotTouch (const Var v) const ;
 };
 
 /** class representing the binary implication graph of the formula */
@@ -238,6 +243,7 @@ inline void CoprocessorData::init(uint32_t nVars)
   lit_occurrence_count.resize( nVars * 2, 0 );
   numberOfVars = nVars;
   deleteTimer.create( nVars );
+  untouchable .create( nVars);
 }
 
 inline void CoprocessorData::destroy()
@@ -461,29 +467,29 @@ inline void CoprocessorData::mark2(Var x, MarkArray& array, MarkArray& tmp)
   }
 }
 
-inline void CoprocessorData::addToExtension(const Minisat::CRef cr, const Lit& l)
+inline void CoprocessorData::addToExtension(const Minisat::CRef cr, const Lit l)
 {
   const Clause& c = ca[cr];
   undo.push_back(lit_Undef); 
-  undo.push_back(l); 
+  if( l != lit_Error ) undo.push_back(l); 
   for( int i = 0 ; i < c.size(); ++ i ) {
     if( c[i] != l ) undo.push_back(c[i]); 
   }
 }
 
-inline void CoprocessorData::addToExtension(vec< Lit >& lits, const Lit& l)
+inline void CoprocessorData::addToExtension(vec< Lit >& lits, const Lit l)
 {
   undo.push_back(lit_Undef); 
-  undo.push_back(l); 
+  if( l != lit_Error ) undo.push_back(l); 
   for( int i = 0 ; i < lits.size(); ++ i ) {
     if( lits[i] != l ) undo.push_back(lits[i]); 
   }
 }
 
-inline void CoprocessorData::addToExtension(vector< Lit >& lits, const Lit& l)
+inline void CoprocessorData::addToExtension(vector< Lit >& lits, const Lit l)
 {
   undo.push_back(lit_Undef); 
-  undo.push_back(l); 
+  if( l != lit_Error ) undo.push_back(l); 
   for( int i = 0 ; i < lits.size(); ++ i ) {
     if( lits[i] != l ) undo.push_back(lits[i]); 
   }
@@ -509,6 +515,16 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
        while( undo[i] != lit_Undef ) --i;
      }
   }
+}
+
+inline void CoprocessorData::setNotTouch(const Var v)
+{
+  untouchable.setCurrentStep(v);
+}
+
+inline bool CoprocessorData::doNotTouch(const Var v) const
+{
+  return untouchable.isCurrentStep(v);
 }
 
 
