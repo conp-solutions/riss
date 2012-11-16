@@ -798,9 +798,10 @@ lbool Solver::solve_()
         // Extend & copy model:
         model.growTo(nVars());
         for (int i = 0; i < nVars(); i++) model[i] = value(i);
+	
     }else if (status == l_False && conflict.size() == 0)
         ok = false;
-
+        if( coprocessor != 0 ) coprocessor->extendModel(model);
     cancelUntil(0);
     return status;
 }

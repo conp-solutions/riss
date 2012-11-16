@@ -31,12 +31,28 @@ public:
   
   HiddenTautologyElimination( ClauseAllocator& _ca, ThreadController& _controller );
   
-  
   /** run subsumption and strengthening until completion */
   void eliminate(Coprocessor::CoprocessorData& data);
 
   void initClause(const CRef cr); // inherited from Technique
 
+  /** fills the mark arrays for a certain variable */
+  Lit fillHlaArrays(Var v, Coprocessor::BIG& big, Coprocessor::MarkArray& hlaPositive, Coprocessor::MarkArray& hlaNegative, Lit* litQueue, bool doLock = false);
+  
+  /** mark all literals that would appear in HLA(C) 
+   * @return true, if clause can be removed by HTE
+   */
+  bool hlaMarkClause(const Minisat::CRef cr, Coprocessor::BIG& big, Coprocessor::MarkArray& markArray, Lit* litQueue );
+  /// same as above, but can add literals to the vector, so that the vector represents the real HLA(C) clause
+  bool hlaMarkClause(vec< Lit >& clause, Coprocessor::BIG& big, Coprocessor::MarkArray& markArray, Lit* litQueue, bool addLits = false);
+  
+  /** mark all literals that would appear in ALA(C) 
+   * @return true, if clause can be removed by ATE
+   */
+  bool alaMarkClause(const Minisat::CRef cr, Coprocessor::CoprocessorData& data, Coprocessor::MarkArray& markArray, Coprocessor::MarkArray& helpArray);
+  /// same as above, but can add literals to the vector, so that the vector represents the real ALA(C) clause
+  bool alaMarkClause(vec< Lit >& clause, Coprocessor::CoprocessorData& data, Coprocessor::MarkArray& markArray, Coprocessor::MarkArray& helpArray, bool addLits = false);
+  
 protected:
 
   /** is there currently something to do? */
@@ -48,10 +64,7 @@ protected:
   /** run hte for the specified variable */
   bool hiddenTautologyElimination(Var v, Coprocessor::CoprocessorData& data, Coprocessor::BIG& big, Coprocessor::MarkArray& hlaPositive, Coprocessor::MarkArray& hlaNegative, bool statistic = true, bool doLock = false);
   
-  /** fills the mark arrays for a certain variable */
-  Lit fillHlaArrays(Var v, Coprocessor::BIG& big, Coprocessor::MarkArray& hlaPositive, Coprocessor::MarkArray& hlaNegative, Lit* litQueue, bool doLock = false);
-  
-  /** data for parallel execution */
+  /** data for parallel execution of HTE */
   struct EliminationData {
     HiddenTautologyElimination* hte; // class with code
     CoprocessorData* data;           // formula and maintain lists

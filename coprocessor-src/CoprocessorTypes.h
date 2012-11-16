@@ -140,8 +140,10 @@ class CoprocessorData
 
   MarkArray deleteTimer;                // store for each literal when (by which technique) it has been deleted
 
+  vector<Lit> undo;                     // store clauses that have to be undone for extending the model
+  
   // TODO decide whether a vector of active variables would be good!
-
+  
 public:
   CoprocessorData(ClauseAllocator& _ca, Solver* _solver, bool _limited = true, bool _randomized = false);
 
@@ -198,6 +200,12 @@ public:
 
   void correctCounters();
 
+  // extending model after clause elimination procedures - l will be put first in list to be undone if necessary!
+  void addToExtension( const Minisat::CRef cr, const Lit& l );
+  void addToExtension( vec< Lit >& lits, const Lit& l );
+  void addToExtension( vector<Lit>& lits, const Lit& l );
+  
+  void extendModel(vec<lbool>& model);
 };
 
 /** class representing the binary implication graph of the formula */
@@ -459,6 +467,57 @@ inline void CoprocessorData::mark2(Var x, MarkArray& array, MarkArray& tmp)
     }
   }
 }
+
+inline void CoprocessorData::addToExtension(const Minisat::CRef cr, const Lit& l)
+{
+  const Clause& c = ca[cr];
+  undo.push_back(lit_Undef); 
+  undo.push_back(l); 
+  for( int i = 0 ; i < c.size(); ++ i ) {
+    if( c[i] != l ) undo.push_back(c[i]); 
+  }
+}
+
+inline void CoprocessorData::addToExtension(vec< Lit >& lits, const Lit& l)
+{
+  undo.push_back(lit_Undef); 
+  undo.push_back(l); 
+  for( int i = 0 ; i < lits.size(); ++ i ) {
+    if( lits[i] != l ) undo.push_back(lits[i]); 
+  }
+}
+
+inline void CoprocessorData::addToExtension(vector< Lit >& lits, const Lit& l)
+{
+  undo.push_back(lit_Undef); 
+  undo.push_back(l); 
+  for( int i = 0 ; i < lits.size(); ++ i ) {
+    if( lits[i] != l ) undo.push_back(lits[i]); 
+  }
+}
+
+inline void CoprocessorData::extendModel(vec< lbool >& model)
+{
+  // check current clause for being satisfied
+  bool isSat = false;
+  for( int i = undo.size() - 1; i >= 0 ; --i ) {
+     isSat = false; // init next clause!
+     Lit c = undo[i];
+     
+     if( c == lit_Undef ) {
+       // if clause is not satisfied, satisfy last literal!
+       const Lit& satLit = undo[i+1];
+       model[ var(satLit) ] = sign(satLit) ? l_False : l_True;
+     }
+     if( var(c) > model.size() ) model.growTo( var(c), l_True ); // model is too small?
+     if (model[var(c)] == (sign(c) ? l_False : l_True) ) // satisfied
+     {
+       isSat = true;
+       while( undo[i] != lit_Undef ) --i;
+     }
+  }
+}
+
 
 inline BIG::BIG()
 : big(0), storage(0), sizes(0)

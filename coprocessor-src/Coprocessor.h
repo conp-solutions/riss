@@ -42,6 +42,8 @@ public:
   lbool inprocess();
   lbool preprocessScheduled();
 
+  void extendModel( vec<lbool>& model );
+  
   /* TODO:
    - extra classes for each extra techniques, which are friend of coprocessor class
    - extend model
@@ -66,7 +68,6 @@ protected:
 
   // small helpers
   void sortClauses();                // sort the literals within all clauses
-  void correctCounters();            // update counters (if there are techniques that do not properly work with the counters=
   void delete_clause(const CRef cr); // delete a clause from the solver (clause should not be attached within the solver)
 
   // print formula
