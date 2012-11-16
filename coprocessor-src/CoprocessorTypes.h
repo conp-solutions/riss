@@ -119,6 +119,7 @@ public:
   Logger(int level, bool err = true);
   
   void log( int level, const string& s );
+  void log( int level, const string& s, const int i);
   void log( int level, const string& s, const Clause& c);
   void log( int level, const string& s, const Lit& l);
   void log( int level, const string& s, const Clause& c, const Lit& l);
@@ -168,6 +169,7 @@ public:
   int32_t& operator[] (const Lit l ); // return the number of occurrences of literal l
   int32_t operator[] (const Var v ); // return the number of occurrences of variable v
   vector<CRef>& list( const Lit l ); // return the list of clauses, which have literal l
+  const vector< Minisat::CRef >& list( const Lit l ) const; // return the list of clauses, which have literal l
 
   vec<CRef>& getClauses();           // return the vector of clauses in the solver object
   vec<CRef>& getLEarnts();           // return the vector of learnt clauses in the solver object
@@ -402,6 +404,11 @@ inline int32_t CoprocessorData::operator[](const Var v)
 }
 
 inline vector< Minisat::CRef >& CoprocessorData::list(const Lit l)
+{
+  return occs[ toInt(l) ];
+}
+
+inline const vector< Minisat::CRef >& CoprocessorData::list(const Lit l) const
 {
   return occs[ toInt(l) ];
 }
@@ -662,6 +669,14 @@ inline void Logger::log(int level, const string& s, const Lit& l)
     << (sign(l) ? "-" : "") << var(l)+1
     << endl;
 }
+
+inline void Logger::log(int level, const string& s, const int i)
+{
+  if( level > outputLevel ) return;
+  (useStdErr ? std::cerr : std::cout )
+    << "c [" << level << "] " << s << " " << i << endl;
+}
+
 
 inline void Logger::log(int level, const string& s, const Clause& c, const Lit& l)
 {

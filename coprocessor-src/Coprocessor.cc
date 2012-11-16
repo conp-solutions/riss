@@ -226,7 +226,7 @@ void Preprocessor::reSetupSolver()
     int c_old = solver->clauses.size();
     solver->clauses.shrink(solver->clauses.size()-j);
 
-    if( opt_verbose > 0 ) fprintf(stderr,"c Subs-STATs: removed clauses: %i of %i," ,c_old - j,c_old);
+    if( opt_verbose > 0 ) fprintf(stderr,"c Subs-STATs: removed clauses: %i of %i,%s" ,c_old - j,c_old, (opt_verbose == 1 ? "\n" : ""));
 
     int learntToClause = 0;
     j = 0;
