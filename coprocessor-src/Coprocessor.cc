@@ -3,6 +3,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
 #include "coprocessor-src/Coprocessor.h"
+#include "../coprocessor-src/VarGraphUtils.h"
 
 #include <iostream>
 
@@ -84,16 +85,17 @@ lbool Preprocessor::preprocess()
 //   MarkArray array;
 //     array.create( solver->nVars() );
 //     array.nextStep();
-//   for( Var v = 0 ; v < solver->nVars(); ++v ) 
+//   for( Var v = 0 ; v < solver->nVars(); ++v )
 //   {
 //     if(!array.isCurrentStep(v) ) {
-//       vars.push(v); 
+//       vars.push(v);
 //       data.mark1(v);
 //     }
 //   }
   // vars = cluster variablen
-  
-  
+  VarGraphUtils utils;
+
+
   // clear / update clauses and learnts vectores and statistical counters
   // attach all clauses to their watchers again, call the propagate method to get into a good state again
   if( opt_verbose > 2 )cerr << "c coprocessor re-setup solver" << endl;

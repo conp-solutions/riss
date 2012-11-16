@@ -16,6 +16,9 @@ using namespace std;
 
 namespace Coprocessor {
 
+  //forward declaration
+  class VarGraphUtils;
+
 typedef std::vector<std::vector <CRef> > ComplOcc;
 
 /** this object frees a pointer before a method /statementblock is left */
@@ -114,6 +117,9 @@ public:
  */
 class CoprocessorData
 {
+  // friend for VarGraph
+  friend class VarGraphUtils;
+
   ClauseAllocator& ca;
   Solver* solver;
   /* TODO to add here
@@ -423,6 +429,7 @@ inline void CoprocessorData::mark1(Var x, MarkArray& array)
 inline void CoprocessorData::mark2(Var x, MarkArray& array, MarkArray& tmp)
 {
   tmp.nextStep();
+  // for negative literal
   std::vector<CRef> & clauses = occs[Minisat::toInt( mkLit(x,true))];
   for( int i = 0; i < clauses.size(); ++i)
   {
@@ -437,7 +444,7 @@ inline void CoprocessorData::mark2(Var x, MarkArray& array, MarkArray& tmp)
       tmp.setCurrentStep(var(c[l]));
     }
   }
-
+  // for positive literal
   clauses = occs[Minisat::toInt( mkLit(x,false))];
   for( int i = 0; i < clauses.size(); ++i)
   {
