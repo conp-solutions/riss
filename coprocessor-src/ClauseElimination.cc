@@ -11,6 +11,8 @@ static const char* _cat = "COPROCESSOR 3 - CCE";
 static IntOption opt_steps  (_cat, "cp3_cce_steps",  "Number of steps that are allowed per iteration", INT32_MAX, IntRange(-1, INT32_MAX));
 static IntOption opt_level  (_cat, "cp3_cce_level",  "none, ALA+ATE, CLA+ATE, ALA+CLA+BCE", 3, IntRange(0, 3));
 
+static const int cceLevel = 1;
+
 ClauseElimination::ClauseElimination(ClauseAllocator& _ca, ThreadController& _controller)
 : Technique( _ca, _controller )
 {
@@ -20,8 +22,7 @@ ClauseElimination::ClauseElimination(ClauseAllocator& _ca, ThreadController& _co
 void ClauseElimination::eliminate(CoprocessorData& data)
 {
   if( opt_level == 0 ) return; // do not run anything!
-  WorkData wData;
-  
+  WorkData wData( data.nVars() );
   for( int i = 0 ; i < data.getClauses().size(); ++ i )
   {
     eliminate(data, wData, data.getClauses()[i] );
@@ -33,6 +34,8 @@ bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::Work
   assert(opt_level > 0 && "level needs to be higher than 0 to run elimination" );
   // put all literals of the clause into the mark-array and the other vectors!
   const Clause& c = ca[cr];
+  wData.reset();
+  data.log.log( cceLevel, "do cce on", c );
   for( int i = 0; i < c.size(); ++ i ) {
     const Lit& l = c[i];
     wData.array.setCurrentStep( toInt(l) );
@@ -46,24 +49,36 @@ bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::Work
     int oldProcessSize = wData.toProcess.size();
     for( int i = 0 ; i < wData.toProcess.size(); ++i ) {                          // do ALA for all literals in the array (sometimes also again!)
       const Lit l = wData.toProcess[i];
+      assert( l != lit_Undef && l != lit_Error && "only real literals can be in the queue" );
+      data.log.log(cceLevel, "check list of literal",l);
       const vector<CRef>& lList = data.list(l);
       for( int j = 0 ; j < lList.size(); ++ j ) { // TODO: add step counter here!
         if( lList[j] == cr ) continue;                                            // to not work on the same clause twice!
 	const Clause& cj = ca[lList[j]];
+	data.log.log(cceLevel,"analyze",cj);
 	if( cj.size() > wData.toProcess.size() + 1 ) continue;                    // larger clauses cannot add a contribution to the array!
 	Lit alaLit = lit_Undef;
 	for( int k = 0 ; k < cj.size(); ++k ) {                                   // are all literals of that clause except one literal inside the array?
 	  const Lit& lk = cj[k];
 	  if( wData.array.isCurrentStep(toInt(lk)) ) continue;                    // literal is already in array
+          else if (wData.array.isCurrentStep(toInt(~lk)) ) { alaLit = lit_Error; break; } // resolvent would be a tautology
           else if (alaLit != lit_Undef ) { alaLit = lit_Error; break; }           // more than one hitting literal
           else alaLit = lk;                                                       // literal which can be used to extend the array
 	}
-	if( alaLit == lit_Undef ) { fprintf(stderr, "c CLA-clause %d is subsumed by some other clause %d!\n",cr,lList[j]); continue; }
+	if( alaLit == lit_Error ) continue; // to many additional literals inside the clause
+	else if( alaLit == lit_Undef ) { fprintf(stderr, "c CLA-clause %d is subsumed by some other clause %d!\n",cr,lList[j]); continue; }
+	alaLit = ~alaLit;
+	data.log.log(cceLevel, "found ALA literal",alaLit);
+	if( wData.array.isCurrentStep( toInt(alaLit) ) ) continue;
 	if( wData.array.isCurrentStep( toInt(~alaLit) ) ) {                       // complement of current literal is also in CLA(F,C)
 	  doRemoveClause = true; break;
+	  data.log.log(cceLevel,"ALA found tautology",cj);
 	} else {
+	  data.log.log(cceLevel,"add literal to ALA", cj , alaLit);
 	  wData.array.setCurrentStep( toInt(alaLit) );
 	  if( !data.doNotTouch(var(alaLit)) ) wData.toProcess.push_back(alaLit);  // only if semantics is not allowed to be changed!
+          // i = -1; break; // need to redo whole calculation, because one more literal has been added!
+	  // exit(0);
 	}
       }
       if( doRemoveClause  ) break;
@@ -77,7 +92,7 @@ bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::Work
       const vector<CRef>& lList = data.list(l);
       int beforeCla = wData.cla.size();
       for( int j = 0 ; j < lList.size(); ++ j ) { // TODO: add step counter here!
-        const Clause& cj = ca[lList[i]];
+        const Clause& cj = ca[lList[j]];
 	if( firstClause ) {                                                       // first clause fills the array, the other shrink it again
           for( int j = 0 ; j < cj.size(); ++j ) {
 	    if( wData.array.isCurrentStep( toInt(~cj[j] ) ) ) {
@@ -135,7 +150,8 @@ ClaNextClause:;
   }
   // TODO: put undo to real undo information!
   if( doRemoveClause ) {
-    
+    data.log.log( cceLevel, "cce was able to remove clause", ca[cr]);
+    ca[cr].set_delete(true);
   }
   
   // sketch of the method:
@@ -147,6 +163,10 @@ ClaNextClause:;
   // if something happened, push to undo
 }
 
+void ClauseElimination::initClause(const Minisat::CRef cr)
+{
+
+}
 
 void ClauseElimination::parallelElimination(CoprocessorData& data)
 {

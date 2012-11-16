@@ -18,7 +18,10 @@ static IntOption  opt_verbose    (_cat, "cp3_verbose",    "Verbosity of preproce
 static BoolOption opt_up      (_cat, "up",          "Use Unit Propagation during preprocessing", false);
 static BoolOption opt_subsimp (_cat, "subsimp",     "Use Subsumption during preprocessing", false);
 static BoolOption opt_hte     (_cat, "hte",         "Use Hidden Tautology Elimination during preprocessing", false);
+static BoolOption opt_cce     (_cat, "cce",         "Use (covered) Clause Elimination during preprocessing", false);
 static BoolOption opt_enabled (_cat, "enabled_cp3", "Use CP3", false);
+
+static IntOption  opt_log     (_cat, "log",         "Output log messages until given level", 0, IntRange(0, 3));
 
 using namespace std;
 using namespace Coprocessor;
@@ -27,7 +30,8 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 : threads( _threads < 0 ? opt_threads : _threads)
 , solver( _solver )
 , ca( solver->ca )
-, data( solver->ca, solver, opt_unlimited, opt_randomized )
+, log( opt_log )
+, data( solver->ca, solver, log, opt_unlimited, opt_randomized )
 , controller( opt_threads )
 // attributes and all that
 
@@ -35,6 +39,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , subsumption( solver->ca, controller )
 , propagation( solver->ca, controller )
 , hte( solver->ca, controller )
+, cce( solver->ca, controller )
 {
   controller.init();
 }
@@ -79,6 +84,11 @@ lbool Preprocessor::preprocess()
     if( status == l_Undef ) hte.eliminate(data);  // cannot change status, can generate new unit clauses
   }
 
+  if( opt_cce ) {
+    if( opt_verbose > 2 )cerr << "c coprocessor (covered) clause elimination" << endl;
+    if( status == l_Undef ) cce.eliminate(data);  // cannot change status, can generate new unit clauses
+  }
+  
   // tobias
 //   vec<Var> vars;
 //   MarkArray array;
@@ -139,6 +149,7 @@ void Preprocessor::initializePreprocessor()
     subsumption.initClause( cr );
     propagation.initClause( cr );
     hte.initClause( cr );
+    cce.initClause( cr );
   }
 
   clausesSize = solver->learnts.size();
@@ -152,11 +163,13 @@ void Preprocessor::initializePreprocessor()
     subsumption.initClause( cr );
     propagation.initClause( cr );
     hte. initClause( cr );
+    cce.initClause( cr );
   }
 }
 
 void Preprocessor::destroyPreprocessor()
 {
+  cce.destroy();
   hte.destroy();
   propagation.destroy();
   subsumption.destroy();

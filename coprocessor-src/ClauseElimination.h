@@ -35,7 +35,7 @@ public:
     vector<Lit> toUndo;    // literals that have to be out to the undo information, if a cla clause is removed by ATE or ABCE
     int nextAla;           // position from which ala needs to be continued
     
-    WorkData(int vars) : nextAla(0) { array.create(vars); helpArray.create(vars);}
+    WorkData(int vars) : nextAla(0) { array.create(2*vars); helpArray.create(2*vars);}
     ~WorkData() {array.destroy();helpArray.destroy();}
     void reset () { cla.clear(); array.nextStep(); toProcess.clear(); toUndo.clear(); nextAla=0; }
   };

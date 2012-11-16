@@ -14,6 +14,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/Subsumption.h"
 #include "coprocessor-src/Propagation.h"
 #include "coprocessor-src/HiddenTautologyElimination.h"
+#include "coprocessor-src/ClauseElimination.h"
 
 using namespace Minisat;
 
@@ -29,6 +30,7 @@ class Preprocessor {
   Solver* solver;              // handle to the solver object that stores the formula
   ClauseAllocator& ca;         // reference to clause allocator
 
+  Logger log;                  // log output
   CoprocessorData  data;       // all the data that needs to be accessed by other classes (preprocessing methods)
   ThreadController controller; // controller for all threads
 
@@ -58,6 +60,7 @@ protected:
   Subsumption subsumption;
   Propagation propagation;
   HiddenTautologyElimination hte;
+  ClauseElimination cce;
 
 
   // own methods:
