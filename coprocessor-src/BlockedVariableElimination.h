@@ -1,6 +1,8 @@
 /********************************************************************[BlockedVariableElimination.h]
 Copyright (c) 2012, Kilian Gebhardt, All rights reserved.
 **************************************************************************************************/
+#ifndef BVE_HH
+#define BVE_HH
 
 #include "core/Solver.h"
 
@@ -47,7 +49,9 @@ protected:
   inline void removeClauses(CoprocessorData & data, vector<CRef> & list);
   inline void resolveSet(vector<CRef> & positive, vector<CRef> & negative, int v, vector < vector < Lit > > resolvents);
   inline bool resolve(Clause & c, Clause & d, int v, vector<Lit> & resolvent);
+  inline int  tryResolve(Clause & c, Clause & d, int v);
   inline bool checkPush(vector<Lit> & ps, Lit l);
+  inline bool checkUpdatePrev(Lit & prev, Lit l);
 public:
 
   /** converts arg into BVEWorkData*, runs bve of its part of the queue */
@@ -56,3 +60,4 @@ public:
 };
 
 }
+#endif 

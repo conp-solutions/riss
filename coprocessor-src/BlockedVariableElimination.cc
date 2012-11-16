@@ -33,17 +33,29 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, unsigned int
 {
     for (unsigned i = start; i < end; i++)
     {
-       vector < vector < Lit > > resolvents;
        int v = variable_queue[i];
 
-       //TODO will this call give me learnts? -> then skip learnts
-       vector<CRef> & pos = data.list(mkLit(v,false));
+       //TODO will this call give me learnts? -> handle future learnts...
+       vector<CRef> & pos = data.list(mkLit(v,false)); //
        vector<CRef> & neg = data.list(mkLit(v,true));
        
        // resolvents <- F_x * F_¬x 
+       // TODO : check how many deleted and learnt Clauses in F_x F_¬x
+       int pos_count; 
+       int neg_count;
+       int clauseCount = 0; //TODO |F_x| + |F_¬x| 
        // TODO : can it happen, that one of the lists is empty?
-       resolveSet(pos, neg,  v, resolvents);
+       // --> do this! --> handlePure();
        
+       // Initialize stats        
+       char pos_stats[pos_count];
+       char neg_stats[neg_count];
+       int lit_clauses;
+       int lit_learnts;
+       
+       anticipateElimination(pos, neg,  v, pos_stats, neg_stats, lit_clauses, lit_learnts);
+       
+       resolve
        // if resolving reduces number of clauses: 
        //    delete old clauses
        //    add resolvents
@@ -80,6 +92,50 @@ inline void BlockedVariableElimination::removeClauses(CoprocessorData & data, ve
 
 }
 
+inline void BlockedVariableElimination::anticipateElimination(vector<CRef> & positive, vector<CRef> & negative, int v, char[] & pos_stats, char[] & neg_stats, int & lit_clauses, int & lit_learnts)
+{
+    // Clean the stats
+    lit_clauses=0;
+    lit_learnts=0;
+    for (int i = 0; i < pos_stats.length; ++i)
+        pos_stats[i] = 0;
+    for (int i = 0; i < neg_stats.length; ++i)
+        neg_stats[i] = 0;
+    
+    int pc = 0;
+    int nc = 0;
+    for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
+    {
+        Clause & p = ca[cr_p];
+        if (p.can_be_deleted())
+            continue;
+        
+        nc = 0;
+        for (int cr_n = 0; cr_n < negative.size(); ++cr_n)
+        {
+            Clause & n = ca[cr_n];
+            if (n.can_be_deleted())
+                continue;
+            
+            int newLits = tryResolve(p, n, v);
+            if (newList > 1)
+            {
+                ++pos_stats[pc];
+                ++neg_stats[nc];
+                if (p.learnt() || n.learnt())
+                    ++lit_learnts;
+                else 
+                    ++lit_clauses;
+            }
+            // TODO can newLits = 0 or 1 occur?
+            //  0 -> false
+            //  1 -> propagation 
+             ++nc;
+        }
+        ++pc;
+    }
+}
+
 inline void BlockedVariableElimination::resolveSet(vector<CRef> & positive, vector<CRef> & negative, int v, vector < vector < Lit > > resolvents)
 {
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
@@ -88,7 +144,7 @@ inline void BlockedVariableElimination::resolveSet(vector<CRef> & positive, vect
         //TODO : use of flag correct?
         if (p.mark())
             continue;
-        for (int cr_n = 0; cr_n < positive.size(); ++cr_n)
+        for (int cr_n = 0; cr_n < negative.size(); ++cr_n)
         {
             Clause & n = ca[cr_n];
 
@@ -104,6 +160,68 @@ inline void BlockedVariableElimination::resolveSet(vector<CRef> & positive, vect
     }
 }
 
+//expects c to contain v positive and d to contain v negative
+//returns -1, if resolvent is satisfied
+//        number of resolvents Literals, otherwise
+inline int BlockedVariableElimination::tryResolve(Clause & c, Clause & d, int v)
+{
+    unsigned i = 0, j = 0, r = 0;
+    Lit prev = lit_Undef;
+    while (i < c.size() && j < d.size())
+    {   
+        if (c[i] == mkLit(v,false))
+        {
+            ++i;   
+        }
+        else if (d[j] == mkLit(v,true))
+            ++j;
+        else if (c[i] < d[j])
+        {
+           if (checkUpdatePrev(prev, c[i]))
+                return -1;
+           else 
+           {     
+               ++i;
+               ++r;
+           }
+        }
+        else 
+        {
+           if (checkUpdatePrev(prev, d[j]))
+              return -1;
+           else
+           {     
+               ++j; 
+               ++r;
+           }
+        }
+    }
+    while (i < c.size())
+    {
+        if (c[i] == mkLit(v,false))
+            ++i;   
+        else if (checkUpdatePrev(prev, c[i]))
+            return -1;
+        else 
+        {
+            ++i;
+            ++r;
+        }
+    }
+    while (j < d.size())
+    {
+        if (d[j] == mkLit(v,true))
+            ++j;
+        else if (checkUpdatePrev(prev, d[j]))
+            return -1;
+        else 
+        {
+            ++j;
+            ++r;
+        }
+    }
+    return r;
+}
 //expects c to contain v positive and d to contain v negative
 //returns true, if resolvent is satisfied
 //        else, otherwise
@@ -152,6 +270,19 @@ inline bool BlockedVariableElimination::resolve(Clause & c, Clause & d, int v, v
             ++j;
 
     }
+    return false;
+}
+
+inline bool BlockedVariableElimination::checkUpdatePrev(Lit & prev, Lit l);
+{
+    if (prev != lit_Undef;)
+    {
+        if (prev == l)
+            return false;
+        if (prev == ~l)
+            return true;
+    }
+    prev = l;
     return false;
 }
 
