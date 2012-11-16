@@ -33,7 +33,7 @@ protected:
   
   bool hasToEliminate();       // return whether there is something in the BVE queue
   lbool fullBVE(CoprocessorData& data);   // performs BVE until completion
-  void bve_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics = true);   
+  void bve_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool force = false, bool doStatistics = true);   
   
   /** data for parallel execution */
   struct BVEWorkData {
@@ -47,7 +47,7 @@ protected:
   void parallelBVE(CoprocessorData& data);
   
   inline void removeClauses(CoprocessorData & data, vector<CRef> & list);
-  inline void resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v);
+  inline void resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, bool force = false);
   inline bool resolve(Clause & c, Clause & d, int v, vec<Lit> & ps);
   inline int  tryResolve(Clause & c, Clause & d, int v);
   inline bool checkPush(vec<Lit> & ps, Lit l);

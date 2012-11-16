@@ -29,7 +29,9 @@ lbool BlockedVariableElimination::fullBVE(CoprocessorData& data)
 }  
 
 //expects filled variable processing queue
-void BlockedVariableElimination::bve_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics)   
+//
+// force -> forces resolution
+void BlockedVariableElimination::bve_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool force, bool doStatistics)   
 {
     for (unsigned i = start; i < end; i++)
     {
@@ -82,7 +84,8 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, unsigned int
        int lit_clauses;
        int lit_learnts;
        
-       anticipateElimination(data ,pos, neg,  v, pos_stats, neg_stats, lit_clauses, lit_learnts);
+       if (!force) 
+           anticipateElimination(data ,pos, neg,  v, pos_stats, neg_stats, lit_clauses, lit_learnts);
        
        //TODO remove Clauses without resolvents
        // -> if learnt, check if it was reason ?
@@ -90,7 +93,7 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, unsigned int
        // if resolving reduces number of literals in clauses: 
        //    add resolvents
        //    mark old clauses for deletion
-       if (lit_clauses <= lit_clauses_old)
+       if (force || lit_clauses <= lit_clauses_old)
        {
             resolveSet(data, pos, neg, v);
             removeClauses(data, pos);
@@ -197,9 +200,9 @@ inline void BlockedVariableElimination::anticipateElimination(CoprocessorData & 
  *   - resolvents that are tautologies are skipped 
  *   - unit clauses and empty clauses are not handeled here
  *          -> this is already done in anticipateElimination 
- *
+ *             TODO Force Case 
  */
-inline void BlockedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v)
+inline void BlockedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, bool force)
 {
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
     {
