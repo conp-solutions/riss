@@ -35,71 +35,106 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, unsigned int
     {
        int v = variable_queue[i];
 
-       //TODO will this call give me learnts? -> handle future learnts...
-       vector<CRef> & pos = data.list(mkLit(v,false)); //
+       vector<CRef> & pos = data.list(mkLit(v,false)); 
        vector<CRef> & neg = data.list(mkLit(v,true));
        
-       // resolvents <- F_x * F_¬x 
-       // TODO : check how many deleted and learnt Clauses in F_x F_¬x
-       int pos_count; 
-       int neg_count;
-       int clauseCount = 0; //TODO |F_x| + |F_¬x| 
-       // TODO : can it happen, that one of the lists is empty?
-       // --> do this! --> handlePure();
+       int pos_count = 0; 
+       int neg_count = 0;
+       int lit_clauses_old = 0;
+       int lit_learnts_old = 0;
+       int clauseCount = 0;  // |F_x| + |F_¬x| 
+       for (int i = 0; i < pos.size(); ++i)
+       {
+            Clause & c = ca[pos[i]];
+            if (c.can_be_deleted())
+                continue;
+            if (c.learnt())
+                lit_learnts_old += c.size();
+            else 
+                lit_clauses_old += c.size();
+            pos_count+=1;
+       }      
+       for (int i = 0; i < neg.size(); ++i)
+       {
+            Clause & c = ca[neg[i]];
+            if (c.can_be_deleted())
+                continue;
+            if (c.learnt())
+                lit_learnts_old += c.size();
+            else 
+                lit_clauses_old += c.size();
+            neg_count+=1;
+       }
        
-       // Initialize stats        
+       // handle pure Literal;
+       if (pos_count == 0 || neg_count == 0)
+       {
+            if (pos_count == 0)
+                ; //TODO propagate mkLit(v, false) !
+            else 
+                ; //TODO propagate mkLit(v, true) !
+            // TODO In Case of False Solver State => ABORT
+       }
+
+       // Declare stats variables;        
        char pos_stats[pos_count];
        char neg_stats[neg_count];
        int lit_clauses;
        int lit_learnts;
        
-       anticipateElimination(pos, neg,  v, pos_stats, neg_stats, lit_clauses, lit_learnts);
+       anticipateElimination(data ,pos, neg,  v, pos_stats, neg_stats, lit_clauses, lit_learnts);
        
-       resolve
-       // if resolving reduces number of clauses: 
-       //    delete old clauses
+       //TODO remove Clauses without resolvents
+       // -> if learnt, check if it was reason ?
+
+       // if resolving reduces number of literals in clauses: 
        //    add resolvents
-       if (resolvents.size() <= pos.size() + neg.size())
+       //    mark old clauses for deletion
+       if (lit_clauses <= lit_clauses_old)
        {
+            resolveSet(data, pos, neg, v);
             removeClauses(data, pos);
             removeClauses(data, neg);
-
-            //TODO : expects preprocessor to attach everything later on
-            //TODO : avoid the overhead by copying around (caused by problems with Minisat-vetor)
-            for (int res = 0; res < resolvents.size(); ++res)
-            {
-                vec < Lit > clause;
-                for (int l = 0; l < resolvents[res].size(); ++l)
-                {
-                    clause.push(resolvents[res][l]);
-                }
-                CRef cr = ca.alloc(clause, false);
-                data.addClause(cr);
-
-            }
        }
     }
 }
-
+/*
+ * on every clause, that is not yet marked for deletion:
+ *      remove it from data-Objects statistics
+ *      mark it for deletion
+ */
 inline void BlockedVariableElimination::removeClauses(CoprocessorData & data, vector<CRef> & list)
 {
     for (int cr_i = 0; cr_i < list.size(); ++cr_i)
     {
-        data.removedClause(list[cr_i]);
-        //TODO : remove Clauses properly 
-        ca[list[cr_i]].mark(1);
+        if (!ca[list[cr_i]].can_be_deleted())
+        {
+            data.removedClause(list[cr_i]);
+            ca[list[cr_i]].set_delete(true);
+        }
     }
 
 }
 
-inline void BlockedVariableElimination::anticipateElimination(vector<CRef> & positive, vector<CRef> & negative, int v, char[] & pos_stats, char[] & neg_stats, int & lit_clauses, int & lit_learnts)
+
+/*
+ *  anticipates following numbers:
+ *  -> number of resolvents derived from specific clause:       pos_stats / neg_stats
+ *  -> total number of literals in clauses after resolution:    lit_clauses
+ *  -> total number of literals in learnts after resolution:    lit_learnts
+ *
+ *  be aware, that stats are just generated for clauses that are not marked for deletion
+ *            and that indices of deleted clauses are NOT skipped in stats-array  
+ *       i.e. |pos_stats| <= |positive| and |neg_stats| <= |negative|            !!!!!!
+ */
+inline void BlockedVariableElimination::anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, char* pos_stats , char* neg_stats, int & lit_clauses, int & lit_learnts)
 {
     // Clean the stats
     lit_clauses=0;
     lit_learnts=0;
-    for (int i = 0; i < pos_stats.length; ++i)
+    for (int i = 0; i < (sizeof pos_stats)/(sizeof pos_stats[0]); ++i)
         pos_stats[i] = 0;
-    for (int i = 0; i < neg_stats.length; ++i)
+    for (int i = 0; i < (sizeof neg_stats)/(sizeof neg_stats[0]); ++i)
         neg_stats[i] = 0;
     
     int pc = 0;
@@ -118,7 +153,7 @@ inline void BlockedVariableElimination::anticipateElimination(vector<CRef> & pos
                 continue;
             
             int newLits = tryResolve(p, n, v);
-            if (newList > 1)
+            if (newLits > 1)
             {
                 ++pos_stats[pc];
                 ++neg_stats[nc];
@@ -127,33 +162,64 @@ inline void BlockedVariableElimination::anticipateElimination(vector<CRef> & pos
                 else 
                     ++lit_clauses;
             }
-            // TODO can newLits = 0 or 1 occur?
-            //  0 -> false
-            //  1 -> propagation 
-             ++nc;
+            
+            // empty Clause
+            else if (newLits == 0)
+            {
+                data.setFailed();
+                //TODO END calculation
+                //return; 
+            }
+            
+            // unit Clause
+            else if (newLits == 1)
+            {
+                Lit lit; //= TODO get Lit();
+                if (data.enqueue(lit) == l_False)
+                {
+                    //TODO end calculation!
+                }
+
+            }
+            ++nc;
         }
         ++pc;
     }
 }
 
-inline void BlockedVariableElimination::resolveSet(vector<CRef> & positive, vector<CRef> & negative, int v, vector < vector < Lit > > resolvents)
+
+/*
+ *   performes resolution and 
+ *   allocates resolvents c, with |c| > 1, in ClauseAllocator 
+ *   as learnts or clauses respectively
+ *   and adds them in data object
+ *
+ *   - resolvents that are tautologies are skipped 
+ *   - unit clauses and empty clauses are not handeled here
+ *          -> this is already done in anticipateElimination 
+ *
+ */
+inline void BlockedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v)
 {
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
     {
         Clause & p = ca[cr_p];
-        //TODO : use of flag correct?
-        if (p.mark())
+        if (p.can_be_deleted())
             continue;
         for (int cr_n = 0; cr_n < negative.size(); ++cr_n)
         {
             Clause & n = ca[cr_n];
-
-            //TODO : use of flag correct?
-            if (n.mark())
+            if (n.can_be_deleted())
                 continue;
-            vector<Lit> ps;
+            vec<Lit> ps;
             if (!resolve(p, n, v, ps))
-                resolvents.push_back(ps);
+            {
+               if (ps.size()>1)
+               {
+                    CRef cr = ca.alloc(ps, p.learnt() || n.learnt());
+                    data.addClause(cr);
+               }
+            }   
 
         }
 
@@ -225,7 +291,7 @@ inline int BlockedVariableElimination::tryResolve(Clause & c, Clause & d, int v)
 //expects c to contain v positive and d to contain v negative
 //returns true, if resolvent is satisfied
 //        else, otherwise
-inline bool BlockedVariableElimination::resolve(Clause & c, Clause & d, int v, vector<Lit> & resolvent)
+inline bool BlockedVariableElimination::resolve(Clause & c, Clause & d, int v, vec<Lit> & resolvent)
 {
     unsigned i = 0, j = 0;
     while (i < c.size() && j < d.size())
@@ -273,9 +339,9 @@ inline bool BlockedVariableElimination::resolve(Clause & c, Clause & d, int v, v
     return false;
 }
 
-inline bool BlockedVariableElimination::checkUpdatePrev(Lit & prev, Lit l);
+inline bool BlockedVariableElimination::checkUpdatePrev(Lit & prev, Lit l)
 {
-    if (prev != lit_Undef;)
+    if (prev != lit_Undef)
     {
         if (prev == l)
             return false;
@@ -286,16 +352,16 @@ inline bool BlockedVariableElimination::checkUpdatePrev(Lit & prev, Lit l);
     return false;
 }
 
-inline bool BlockedVariableElimination::checkPush(vector<Lit> & ps, Lit l)
+inline bool BlockedVariableElimination::checkPush(vec<Lit> & ps, Lit l)
 {
     if (ps.size() > 0)
     {
-        if (ps.back() == l)
+        if (ps.last() == l)
          return false;
-        if (ps.back() == ~l)
+        if (ps.last() == ~l)
          return true;
     }
-    ps.push_back(l);
+    ps.push(l);
     return false;
 }
 
