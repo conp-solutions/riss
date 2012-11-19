@@ -113,6 +113,21 @@ public:
 
 };
 
+/** class responsible for debug output */
+class Logger
+{
+  int outputLevel; // level to output
+  bool useStdErr;  // print to stderr, or to stdout?
+public:
+  Logger(int level, bool err = true);
+  
+  void log( int level, const string& s );
+  void log( int level, const string& s, const int i);
+  void log( int level, const string& s, const Clause& c);
+  void log( int level, const string& s, const Lit& l);
+  void log( int level, const string& s, const Clause& c, const Lit& l);
+};
+
 /** Data, that needs to be accessed by coprocessor and all the other classes
  */
 class CoprocessorData
@@ -139,13 +154,17 @@ class CoprocessorData
   Lock dataLock;                        // lock for parallel algorithms to synchronize access to data structures
 
   MarkArray deleteTimer;                // store for each literal when (by which technique) it has been deleted
+  char* untouchable;                    // store all variables that should not be touched (altering presence in models)
 
   vector<Lit> undo;                     // store clauses that have to be undone for extending the model
   
   // TODO decide whether a vector of active variables would be good!
   
 public:
-  CoprocessorData(ClauseAllocator& _ca, Solver* _solver, bool _limited = true, bool _randomized = false);
+  
+  Logger& log;                           // responsible for logs
+  
+  CoprocessorData(ClauseAllocator& _ca, Solver* _solver, Logger& _log, bool _limited = true, bool _randomized = false);
 
   // init all data structures for being used for nVars variables
   void init( uint32_t nVars );
@@ -156,6 +175,7 @@ public:
   int32_t& operator[] (const Lit l ); // return the number of occurrences of literal l
   int32_t operator[] (const Var v ); // return the number of occurrences of variable v
   vector<CRef>& list( const Lit l ); // return the list of clauses, which have literal l
+  const vector< Minisat::CRef >& list( const Lit l ) const; // return the list of clauses, which have literal l
 
   vec<CRef>& getClauses();           // return the vector of clauses in the solver object
   vec<CRef>& getLEarnts();           // return the vector of learnt clauses in the solver object
@@ -201,11 +221,15 @@ public:
   void correctCounters();
 
   // extending model after clause elimination procedures - l will be put first in list to be undone if necessary!
-  void addToExtension( const Minisat::CRef cr, const Lit& l );
-  void addToExtension( vec< Lit >& lits, const Lit& l );
-  void addToExtension( vector<Lit>& lits, const Lit& l );
+  void addToExtension( const Minisat::CRef cr, const Lit l = lit_Error );
+  void addToExtension( vec< Lit >& lits, const Lit l = lit_Error );
+  void addToExtension( vector< Lit >& lits, const Lit l = lit_Error );
   
   void extendModel(vec<lbool>& model);
+  
+  // checking whether a literal can be altered
+  void setNotTouch(const Var v);
+  bool doNotTouch (const Var v) const ;
 };
 
 /** class representing the binary implication graph of the formula */
@@ -229,12 +253,13 @@ public:
 
 };
 
-inline CoprocessorData::CoprocessorData(ClauseAllocator& _ca, Solver* _solver, bool _limited, bool _randomized)
+inline CoprocessorData::CoprocessorData(ClauseAllocator& _ca, Solver* _solver, Coprocessor::Logger& _log, bool _limited, bool _randomized)
 : ca ( _ca )
 , solver( _solver )
 , hasLimit( _limited )
 , randomOrder(_randomized)
-
+, log(_log)
+, untouchable(0)
 {
 }
 
@@ -244,6 +269,8 @@ inline void CoprocessorData::init(uint32_t nVars)
   lit_occurrence_count.resize( nVars * 2, 0 );
   numberOfVars = nVars;
   deleteTimer.create( nVars );
+  untouchable = (char*) malloc( sizeof(char) * nVars);
+  memset( untouchable, 0, sizeof(char) * nVars );
 }
 
 inline void CoprocessorData::destroy()
@@ -387,6 +414,11 @@ inline vector< Minisat::CRef >& CoprocessorData::list(const Lit l)
   return occs[ toInt(l) ];
 }
 
+inline const vector< Minisat::CRef >& CoprocessorData::list(const Lit l) const
+{
+  return occs[ toInt(l) ];
+}
+
 inline void CoprocessorData::correctCounters()
 {
   numberOfVars = solver->nVars();
@@ -468,29 +500,29 @@ inline void CoprocessorData::mark2(Var x, MarkArray& array, MarkArray& tmp)
   }
 }
 
-inline void CoprocessorData::addToExtension(const Minisat::CRef cr, const Lit& l)
+inline void CoprocessorData::addToExtension(const Minisat::CRef cr, const Lit l)
 {
   const Clause& c = ca[cr];
   undo.push_back(lit_Undef); 
-  undo.push_back(l); 
+  if( l != lit_Error ) undo.push_back(l); 
   for( int i = 0 ; i < c.size(); ++ i ) {
     if( c[i] != l ) undo.push_back(c[i]); 
   }
 }
 
-inline void CoprocessorData::addToExtension(vec< Lit >& lits, const Lit& l)
+inline void CoprocessorData::addToExtension(vec< Lit >& lits, const Lit l)
 {
   undo.push_back(lit_Undef); 
-  undo.push_back(l); 
+  if( l != lit_Error ) undo.push_back(l); 
   for( int i = 0 ; i < lits.size(); ++ i ) {
     if( lits[i] != l ) undo.push_back(lits[i]); 
   }
 }
 
-inline void CoprocessorData::addToExtension(vector< Lit >& lits, const Lit& l)
+inline void CoprocessorData::addToExtension(vector< Lit >& lits, const Lit l)
 {
   undo.push_back(lit_Undef); 
-  undo.push_back(l); 
+  if( l != lit_Error ) undo.push_back(l); 
   for( int i = 0 ; i < lits.size(); ++ i ) {
     if( lits[i] != l ) undo.push_back(lits[i]); 
   }
@@ -516,6 +548,16 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
        while( undo[i] != lit_Undef ) --i;
      }
   }
+}
+
+inline void CoprocessorData::setNotTouch(const Var v)
+{
+  untouchable[v] = 1;
+}
+
+inline bool CoprocessorData::doNotTouch(const Var v) const
+{
+  return untouchable[v] == 1;
 }
 
 
@@ -600,6 +642,64 @@ inline const int BIG::getSize(const Lit l)
 {
   return sizes[ toInt(l) ];
 }
+
+inline Logger::Logger(int level, bool err)
+: outputLevel(level), useStdErr(err)
+{}
+
+inline void Logger::log(int level, const string& s)
+{
+  if( level > outputLevel ) return;
+  (useStdErr ? std::cerr : std::cout )
+    << "c [" << level << "] " << s << endl;
+}
+
+inline void Logger::log(int level, const string& s, const Clause& c)
+{
+  if( level > outputLevel ) return;
+  (useStdErr ? std::cerr : std::cout )
+    << "c [" << level << "] " << s << " : " ;
+  for( int i = 0 ; i< c.size(); ++i ) {
+    const Lit& l = c[i];
+    (useStdErr ? std::cerr : std::cout )
+      << " " << (sign(l) ? "-" : "") << var(l)+1;
+  }
+  (useStdErr ? std::cerr : std::cout )
+    << endl;
+}
+
+inline void Logger::log(int level, const string& s, const Lit& l)
+{
+  if( level > outputLevel ) return;
+  (useStdErr ? std::cerr : std::cout )
+    << "c [" << level << "] " << s << " : " 
+    << (sign(l) ? "-" : "") << var(l)+1
+    << endl;
+}
+
+inline void Logger::log(int level, const string& s, const int i)
+{
+  if( level > outputLevel ) return;
+  (useStdErr ? std::cerr : std::cout )
+    << "c [" << level << "] " << s << " " << i << endl;
+}
+
+
+inline void Logger::log(int level, const string& s, const Clause& c, const Lit& l)
+{
+  if( level > outputLevel ) return;
+  (useStdErr ? std::cerr : std::cout )
+    << "c [" << level << "] " << s << " : " 
+    << (sign(l) ? "-" : "") << var(l)+1 << " with clause ";
+  for( int i = 0 ; i< c.size(); ++i ) {
+    const Lit& l = c[i];
+    (useStdErr ? std::cerr : std::cout )
+      << " " << (sign(l) ? "-" : "") << var(l)+1;
+  }
+  (useStdErr ? std::cerr : std::cout )
+    << endl;
+}
+
 
 }
 
