@@ -36,7 +36,42 @@ inline void partVars(int noParts, std::vector<std::vector<Var> >& variables, int
   bool finished = false;
 
   // ---------- initialize buffers --------------
-
+  MarkArray a, b, c, t;
+    a.create(solver->nVars());
+    a.nextStep():
+    b.create(solver->nVars());
+    b.nextStep();
+    c.create(solver->nVars());
+    c.nextStep();
+    t.create(solver->nVars());
+    t.nextStep();
+  bool conflict = false;
+  unsigned int count = 0;
+  // Get a free variable
+  for (int v = 0; v < solver->nVars(); ++v)
+  {
+    mark2(v, a, t);
+    for (int i = 0; i < a.size(); ++i)
+    {
+      if (a.isCurrentStep(i)) {
+        mark2(i, b, tmp);
+      }
+    }
+    // check if there are intersections
+    for (int i = 0; i < a.size(); ++i)
+    {
+      if (b.isCurrentStep(i) && c.isCurrentStep() ) {
+        conflict = true;
+        break;
+      }
+    }
+    if (!conflict)
+    {
+        c = b;
+        buffers[count].push_back(i);
+        count++;
+    }
+  }
   // --------- end initialize buffers -----------
   while(!finished)
   {
@@ -50,7 +85,7 @@ inline void partVars(int noParts, std::vector<std::vector<Var> >& variables, int
         Var & active = buffer[j];
         // find all succesors for _active_ -> mark1()
         MarkArray array;
-          array.create(solver->nVars());
+          array.create(cp_data::solver->nVars());
           array.nextStep();
         CoprocessorData::mark1(active, array);  // all marked variables are connected to the active node
         int k;

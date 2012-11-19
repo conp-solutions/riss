@@ -120,7 +120,7 @@ class Logger
   bool useStdErr;  // print to stderr, or to stdout?
 public:
   Logger(int level, bool err = true);
-  
+
   void log( int level, const string& s );
   void log( int level, const string& s, const int i);
   void log( int level, const string& s, const Clause& c);
@@ -133,7 +133,7 @@ public:
 class CoprocessorData
 {
   // friend for VarGraph
-  friend class VarGraphUtils;
+  friend class Coprocessor::VarGraphUtils;
 
   ClauseAllocator& ca;
   Solver* solver;
@@ -157,13 +157,13 @@ class CoprocessorData
   char* untouchable;                    // store all variables that should not be touched (altering presence in models)
 
   vector<Lit> undo;                     // store clauses that have to be undone for extending the model
-  
+
   // TODO decide whether a vector of active variables would be good!
-  
+
 public:
-  
+
   Logger& log;                           // responsible for logs
-  
+
   CoprocessorData(ClauseAllocator& _ca, Solver* _solver, Logger& _log, bool _limited = true, bool _randomized = false);
 
   // init all data structures for being used for nVars variables
@@ -224,9 +224,9 @@ public:
   void addToExtension( const Minisat::CRef cr, const Lit l = lit_Error );
   void addToExtension( vec< Lit >& lits, const Lit l = lit_Error );
   void addToExtension( vector< Lit >& lits, const Lit l = lit_Error );
-  
+
   void extendModel(vec<lbool>& model);
-  
+
   // checking whether a literal can be altered
   void setNotTouch(const Var v);
   bool doNotTouch (const Var v) const ;
@@ -503,28 +503,28 @@ inline void CoprocessorData::mark2(Var x, MarkArray& array, MarkArray& tmp)
 inline void CoprocessorData::addToExtension(const Minisat::CRef cr, const Lit l)
 {
   const Clause& c = ca[cr];
-  undo.push_back(lit_Undef); 
-  if( l != lit_Error ) undo.push_back(l); 
+  undo.push_back(lit_Undef);
+  if( l != lit_Error ) undo.push_back(l);
   for( int i = 0 ; i < c.size(); ++ i ) {
-    if( c[i] != l ) undo.push_back(c[i]); 
+    if( c[i] != l ) undo.push_back(c[i]);
   }
 }
 
 inline void CoprocessorData::addToExtension(vec< Lit >& lits, const Lit l)
 {
-  undo.push_back(lit_Undef); 
-  if( l != lit_Error ) undo.push_back(l); 
+  undo.push_back(lit_Undef);
+  if( l != lit_Error ) undo.push_back(l);
   for( int i = 0 ; i < lits.size(); ++ i ) {
-    if( lits[i] != l ) undo.push_back(lits[i]); 
+    if( lits[i] != l ) undo.push_back(lits[i]);
   }
 }
 
 inline void CoprocessorData::addToExtension(vector< Lit >& lits, const Lit l)
 {
-  undo.push_back(lit_Undef); 
-  if( l != lit_Error ) undo.push_back(l); 
+  undo.push_back(lit_Undef);
+  if( l != lit_Error ) undo.push_back(l);
   for( int i = 0 ; i < lits.size(); ++ i ) {
-    if( lits[i] != l ) undo.push_back(lits[i]); 
+    if( lits[i] != l ) undo.push_back(lits[i]);
   }
 }
 
@@ -535,7 +535,7 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
   for( int i = undo.size() - 1; i >= 0 ; --i ) {
      isSat = false; // init next clause!
      Lit c = undo[i];
-     
+
      if( c == lit_Undef ) {
        // if clause is not satisfied, satisfy last literal!
        const Lit& satLit = undo[i+1];
@@ -672,7 +672,7 @@ inline void Logger::log(int level, const string& s, const Lit& l)
 {
   if( level > outputLevel ) return;
   (useStdErr ? std::cerr : std::cout )
-    << "c [" << level << "] " << s << " : " 
+    << "c [" << level << "] " << s << " : "
     << (sign(l) ? "-" : "") << var(l)+1
     << endl;
 }
@@ -689,7 +689,7 @@ inline void Logger::log(int level, const string& s, const Clause& c, const Lit& 
 {
   if( level > outputLevel ) return;
   (useStdErr ? std::cerr : std::cout )
-    << "c [" << level << "] " << s << " : " 
+    << "c [" << level << "] " << s << " : "
     << (sign(l) ? "-" : "") << var(l)+1 << " with clause ";
   for( int i = 0 ; i< c.size(); ++i ) {
     const Lit& l = c[i];
