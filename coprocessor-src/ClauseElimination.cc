@@ -21,6 +21,7 @@ ClauseElimination::ClauseElimination(ClauseAllocator& _ca, ThreadController& _co
 
 void ClauseElimination::eliminate(CoprocessorData& data)
 {
+  // TODO: have a better scheduling here! (if a clause has been removed, potentially other clauses with those variables can be eliminated as well!!, similarly to BCE!)
   if( opt_level == 0 ) return; // do not run anything!
   WorkData wData( data.nVars() );
   for( int i = 0 ; i < data.getClauses().size(); ++ i )

@@ -19,6 +19,7 @@ static BoolOption opt_up      (_cat, "up",          "Use Unit Propagation during
 static BoolOption opt_subsimp (_cat, "subsimp",     "Use Subsumption during preprocessing", false);
 static BoolOption opt_hte     (_cat, "hte",         "Use Hidden Tautology Elimination during preprocessing", false);
 static BoolOption opt_cce     (_cat, "cce",         "Use (covered) Clause Elimination during preprocessing", false);
+static BoolOption opt_ee     (_cat, "ee",          "Use Equivalence Elimination during preprocessing", false);
 static BoolOption opt_enabled (_cat, "enabled_cp3", "Use CP3", false);
 
 static IntOption  opt_log     (_cat, "log",         "Output log messages until given level", 0, IntRange(0, 3));
@@ -40,6 +41,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , propagation( solver->ca, controller )
 , hte( solver->ca, controller )
 , cce( solver->ca, controller )
+, ee ( solver->ca, controller, propagation )
 {
   controller.init();
 }
@@ -68,7 +70,7 @@ lbool Preprocessor::preprocess()
 
   if( opt_up ) {
     if( opt_verbose > 2 )cerr << "c coprocessor propagate" << endl;
-    if( status == l_Undef ) status = propagation.propagate(data, solver);
+    if( status == l_Undef ) status = propagation.propagate(data);
   }
 
   // begin clauses have to be sorted here!!
@@ -79,6 +81,11 @@ lbool Preprocessor::preprocess()
     if( status == l_Undef ) subsumption.subsumeStrength(data);  // cannot change status, can generate new unit clauses
   }
 
+  if( opt_ee ) { // before this technique nothing should be run that alters the structure of the formula (e.g. BVE;BVA)
+    if( opt_verbose > 2 )cerr << "c coprocessor equivalence elimination" << endl;
+    if( status == l_Undef ) ee.eliminate(data);  // cannot change status, can generate new unit clauses
+  }
+  
   if( opt_hte ) {
     if( opt_verbose > 2 )cerr << "c coprocessor hidden tautology elimination" << endl;
     if( status == l_Undef ) hte.eliminate(data);  // cannot change status, can generate new unit clauses

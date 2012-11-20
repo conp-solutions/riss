@@ -15,6 +15,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/Propagation.h"
 #include "coprocessor-src/HiddenTautologyElimination.h"
 #include "coprocessor-src/ClauseElimination.h"
+#include "coprocessor-src/EquivalenceElimination.h"
 
 using namespace Minisat;
 
@@ -61,6 +62,7 @@ protected:
   Propagation propagation;
   HiddenTautologyElimination hte;
   ClauseElimination cce;
+  EquivalenceElimination ee;
 
 
   // own methods:
