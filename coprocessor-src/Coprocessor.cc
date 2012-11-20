@@ -82,7 +82,7 @@ lbool Preprocessor::preprocess()
   }
 
   if ( opt_bve ) {
-    if( opt_verbose > 2 )cerr << "c coprocessor hidden tautology elimination" << endl;
+    if( opt_verbose > 2 )cerr << "c coprocessor blocked variable elimination" << endl;
     if( status == l_Undef ) bve.runBVE(data);  // can change status, can generate new unit clauses
   }
   
