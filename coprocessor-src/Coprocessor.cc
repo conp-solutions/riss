@@ -19,6 +19,7 @@ static BoolOption opt_up      (_cat, "up",          "Use Unit Propagation during
 static BoolOption opt_subsimp (_cat, "subsimp",     "Use Subsumption during preprocessing", false);
 static BoolOption opt_hte     (_cat, "hte",         "Use Hidden Tautology Elimination during preprocessing", false);
 static BoolOption opt_enabled (_cat, "enabled_cp3", "Use CP3", false);
+static BoolOption opt_bve     (_cat, "bve",         "Use Blocked Variable Elimination during preprocessing", false);
 
 using namespace std;
 using namespace Coprocessor;
@@ -35,6 +36,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , subsumption( solver->ca, controller )
 , propagation( solver->ca, controller )
 , hte( solver->ca, controller )
+, bve( solver->ca, controller )
 {
   controller.init();
 }
@@ -79,6 +81,10 @@ lbool Preprocessor::preprocess()
     if( status == l_Undef ) hte.eliminate(data);  // cannot change status, can generate new unit clauses
   }
 
+  if ( opt_bve ) {
+    if( opt_verbose > 2 )cerr << "c coprocessor hidden tautology elimination" << endl;
+    if( status == l_Undef ) bve.runBVE(data);  // can change status, can generate new unit clauses
+  }
   
   // clear / update clauses and learnts vectores and statistical counters
   // attach all clauses to their watchers again, call the propagate method to get into a good state again
@@ -140,6 +146,7 @@ void Preprocessor::destroyPreprocessor()
   hte.destroy();
   propagation.destroy();
   subsumption.destroy();
+  bve.destroy();
 }
 
 

@@ -17,15 +17,20 @@ bool BlockedVariableElimination::hasToEliminate()
   return variable_queue.size() > 0; 
 }
 
-void BlockedVariableElimination::runBVE(Coprocessor::CoprocessorData& data)
+lbool BlockedVariableElimination::fullBVE(Coprocessor::CoprocessorData& data)
 {
-  
+  return l_Undef;
 }
 
-lbool BlockedVariableElimination::fullBVE(CoprocessorData& data)
+void BlockedVariableElimination::runBVE(CoprocessorData& data)
 {
+  assert(variable_queue.size() == 0);
+  
+  //  put all variables in queue 
+  for (int v = 0; v < data.nVars(); ++v)
+      variable_queue.push_back(v);
 
-  return l_Undef;
+  bve_worker(data, 0, variable_queue.size(), false);
 }  
 
 //expects filled variable processing queue
@@ -70,12 +75,24 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, unsigned int
        
        // handle pure Literal;
        if (pos_count == 0 || neg_count == 0)
-       {
-            if (pos_count == 0)
-                ; //TODO propagate mkLit(v, false) !
+       {    lbool state;
+            if      ((pos_count == 0) && (neg_count >  0))
+                state = data.enqueue(mkLit(v, false));             
+            else if ((pos_count >  0) && (neg_count == 0))
+                state = data.enqueue(mkLit(v, true));
             else 
-                ; //TODO propagate mkLit(v, true) !
-            // TODO In Case of False Solver State => ABORT
+                continue;  // no positive and no negative occurrences of v 
+                           // -> nothing to assign
+            if      (state == l_False) 
+                return;                 // level 0 conflict TODO ABORT ???
+            else if (state == l_Undef)
+                ;                       // variable already assigned
+            else if (state == l_True) 
+                ;                       // new assignment -> TODO propagation 
+            else 
+                assert(0);              // something went wrong
+            
+            continue;
        }
 
        // Declare stats variables;        
@@ -85,11 +102,13 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, unsigned int
        int lit_learnts;
        
        if (!force) 
-           anticipateElimination(data ,pos, neg,  v, pos_stats, neg_stats, lit_clauses, lit_learnts);
+           if (anticipateElimination(data ,pos, neg,  v, pos_stats, neg_stats, lit_clauses, lit_learnts) == l_False) 
+               return;  // level 0 conflict found while anticipation TODO ABORT
        
-       //TODO remove Clauses without resolvents
-       // -> if learnt, check if it was reason ?
-
+       //mark Clauses without resolvents for deletion -> makes stats-array indexing inconsistent
+       removeBlockedClauses(pos, pos_stats);
+       removeBlockedClauses(neg, neg_stats);
+        
        // if resolving reduces number of literals in clauses: 
        //    add resolvents
        //    mark old clauses for deletion
@@ -130,7 +149,7 @@ inline void BlockedVariableElimination::removeClauses(CoprocessorData & data, ve
  *            and that indices of deleted clauses are NOT skipped in stats-array  
  *       i.e. |pos_stats| <= |positive| and |neg_stats| <= |negative|            !!!!!!
  */
-inline void BlockedVariableElimination::anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, char* pos_stats , char* neg_stats, int & lit_clauses, int & lit_learnts)
+inline lbool BlockedVariableElimination::anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, char* pos_stats , char* neg_stats, int & lit_clauses, int & lit_learnts)
 {
     // Clean the stats
     lit_clauses=0;
@@ -170,24 +189,32 @@ inline void BlockedVariableElimination::anticipateElimination(CoprocessorData & 
             else if (newLits == 0)
             {
                 data.setFailed();
-                //TODO END calculation
-                //return; 
+                return l_False;
             }
             
             // unit Clause
             else if (newLits == 1)
             {
-                Lit lit; //= TODO get Lit();
-                if (data.enqueue(lit) == l_False)
-                {
-                    //TODO end calculation!
-                }
-
+                vec <Lit > resolvent;
+                resolve(p,n,v,resolvent); 
+                assert(resolvent.size() == 1);
+                lbool status = data.enqueue(resolvent[0]); //check for level 0 conflict
+                if (status == l_False)
+                    return l_False; 
+                else if (status == l_Undef)
+                     ; // variable already assigned
+                else if (status == l_True)
+                     ; //TODO propagate  
+                else 
+                    assert (0); //something went wrong
             }
+
+            
             ++nc;
         }
         ++pc;
     }
+    return l_Undef;
 }
 
 
@@ -382,3 +409,23 @@ void* BlockedVariableElimination::runParallelBVE(void* arg)
   return 0;
 }
  
+
+
+/* this function removes Clauses that have no resolvents
+ * i.e. all resolvents are tautologies
+ *
+ */
+inline void BlockedVariableElimination::removeBlockedClauses(vector< CRef> data, char stats[] )
+{
+   //TODO -> if learnt, check if it was reason ?
+   int stats_index = 0; 
+   for (unsigned ci = 0; ci < data.size(); ++ci)
+   {    
+        Clause & c =  ca[data[ci]];
+        if (c.can_be_deleted())
+            continue;
+        if (stats[stats_index] == 0)
+            c.set_delete(true);
+        ++stats_index;
+   }
+}

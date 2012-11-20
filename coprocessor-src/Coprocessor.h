@@ -14,6 +14,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/Subsumption.h"
 #include "coprocessor-src/Propagation.h"
 #include "coprocessor-src/HiddenTautologyElimination.h"
+#include "coprocessor-src/BlockedVariableElimination.h"
 
 using namespace Minisat;
 
@@ -54,7 +55,7 @@ protected:
   Subsumption subsumption;
   Propagation propagation;
   HiddenTautologyElimination hte;
-  
+  BlockedVariableElimination bve;
   
   // own methods:
   void cleanSolver();                // remove all clauses from structures inside the solver

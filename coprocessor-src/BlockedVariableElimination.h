@@ -25,14 +25,14 @@ public:
   BlockedVariableElimination( ClauseAllocator& _ca, ThreadController& _controller );
   
   /** run BVE until completion */
-  void runBVE(Coprocessor::CoprocessorData& data);
+  void runBVE(CoprocessorData& data);
 
   void initClause(const CRef cr); // inherited from Technique
 
 protected:
   
   bool hasToEliminate();       // return whether there is something in the BVE queue
-  lbool fullBVE(CoprocessorData& data);   // performs BVE until completion
+  lbool fullBVE(Coprocessor::CoprocessorData& data);   // performs BVE until completion
   void bve_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool force = false, bool doStatistics = true);   
   
   /** data for parallel execution */
@@ -52,8 +52,8 @@ protected:
   inline int  tryResolve(Clause & c, Clause & d, int v);
   inline bool checkPush(vec<Lit> & ps, Lit l);
   inline bool checkUpdatePrev(Lit & prev, Lit l);
-  inline void anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, char* pos_stats, char* neg_stats, int & lit_clauses, int & lit_learnts); 
-
+  inline lbool anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, char* pos_stats, char* neg_stats, int & lit_clauses, int & lit_learnts); 
+  inline void removeBlockedClauses(vector< CRef> data, char stats[] );
 public:
 
   /** converts arg into BVEWorkData*, runs bve of its part of the queue */
