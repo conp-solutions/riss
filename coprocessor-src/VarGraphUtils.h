@@ -12,17 +12,17 @@ class VarGraphUtils
 
   /* Partition the variables into _noParts_ disjoint sets of variables, such that the sets
    * have a pairwise "distance" of _bufferSize_ variables. */
-  void partVars(int noParts, std::vector<std::vector<Var> >& variables, int bufferSize);
+  void partVars(CoprocessorData& data, int noParts, std::vector<std::vector<Var> >& variables, int bufferSize);
 
-  void partClauses(std::vector<std::vector<Clause> >& variables, int bufferSize);
+  void partClauses(CoprocessorData& data, std::vector<std::vector<Clause> >& variables, int bufferSize);
 
-  void sortVars(std::vector<Var>& variables);
+  void sortVars(CoprocessorData& data, std::vector<Var>& variables);
 
   protected:
   private:
 };
 
-inline void partVars(int noParts, std::vector<std::vector<Var> >& variables, int bufferSize)
+inline void partVars(CoprocessorData& data, int noParts, std::vector<std::vector<Var> >& variables, int bufferSize)
 {
   //TODO: find good starting points
   //TODO: use sets instead of vectors - adding only unique elements, find() method, ... ?
@@ -30,45 +30,49 @@ inline void partVars(int noParts, std::vector<std::vector<Var> >& variables, int
   std::vector<std::vector<Var> > finalVars;  // vectors containing partitioned variables
 
   MarkArray locked;   // global array for locked variables
-    locked.create( solver->nVars() );
+    locked.create( data.nVars() );
     locked.nextStep();
 
+  MarkArray tmp;
+  tmp.create( data.nVars() );
+  tmp.nextStep();
+    
   bool finished = false;
 
   // ---------- initialize buffers --------------
   MarkArray a, b, c, t;
-    a.create(solver->nVars());
-    a.nextStep():
-    b.create(solver->nVars());
+    a.create(data.nVars());
+    a.nextStep();
+    b.create(data.nVars());
     b.nextStep();
-    c.create(solver->nVars());
+    c.create(data.nVars());
     c.nextStep();
-    t.create(solver->nVars());
+    t.create(data.nVars());
     t.nextStep();
-  bool conflict = false;
+  int conflict = -1;
   unsigned int count = 0;
   // Get a free variable
-  for (int v = 0; v < solver->nVars(); ++v)
+  for (int v = 0; v < data.nVars(); ++v)
   {
-    mark2(v, a, t);
+    data.mark2(v, a, t);
     for (int i = 0; i < a.size(); ++i)
     {
       if (a.isCurrentStep(i)) {
-        mark2(i, b, tmp);
+        data.mark2(i, b, tmp);
       }
     }
     // check if there are intersections
     for (int i = 0; i < a.size(); ++i)
     {
-      if (b.isCurrentStep(i) && c.isCurrentStep() ) {
-        conflict = true;
+      if (b.isCurrentStep(i) && c.isCurrentStep(i) ) { // TODO Norbert: added "i" here, is this right?
+        conflict = i;
         break;
       }
     }
-    if (!conflict)
+    if (conflict != -1)
     {
         c = b;
-        buffers[count].push_back(i);
+        buffers[count].push_back(conflict);
         count++;
     }
   }
@@ -85,9 +89,9 @@ inline void partVars(int noParts, std::vector<std::vector<Var> >& variables, int
         Var & active = buffer[j];
         // find all succesors for _active_ -> mark1()
         MarkArray array;
-          array.create(cp_data::solver->nVars());
+          array.create(data.nVars());
           array.nextStep();
-        CoprocessorData::mark1(active, array);  // all marked variables are connected to the active node
+        data.mark1(active, array);  // all marked variables are connected to the active node
         int k;
         for (k = 0; k < array.size(); ++k)
         {
@@ -96,9 +100,10 @@ inline void partVars(int noParts, std::vector<std::vector<Var> >& variables, int
             // TODO: deal with _active_ being successor of itself
             if (locked.isCurrentStep(k) ) { // k is already locked
               // check if is owned by this search instance
-              if ( std::find(buffer.begin(), buffer.end(), k) == buffer.end() ) {
-                break;
-              }
+              bool foundItem = false;
+	      for( int i = 0 ; i < buffer.size(); ++i ) 
+		if( buffer[i] == k ) {foundItem = true; break; }
+	      if( foundItem ) break;
             } else {
               locked.setCurrentStep(k);   // lock successor variable for further actions
               buffer.push_back(k);  // push sucessore into the buffer
@@ -112,21 +117,21 @@ inline void partVars(int noParts, std::vector<std::vector<Var> >& variables, int
     }
     // test if all buffers are empty -> finished!
     finished = true;
-    for (std::vector<Var>& v : buffers)
+    for ( int i = 0 ; i < buffers.size(); ++ i )
     {
-      if (!v.empty())
+      if (! buffers[i].empty())
         finished = false;
     }
   }
   // after this while loop, the final vectors contain the partitions.
 }
 
-inline void partClauses(std::vector<std::vector<Clause> >& variables, int bufferSize)
+inline void partClauses(CoprocessorData& data,std::vector<std::vector<Clause> >& variables, int bufferSize)  
 {
   // TODO: implement partitioning for clauses
 }
 
-inline void sortVars(std::vector<Var>& variables)
+inline void sortVars(CoprocessorData& data, std::vector<Var>& variables)
 {
   // TODO: sort a vector of variables according to partitions
   // TODO: write start and and position of each partition into a separate vector
