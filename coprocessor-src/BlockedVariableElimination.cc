@@ -33,12 +33,6 @@ void BlockedVariableElimination::runBVE(CoprocessorData& data)
   bve_worker(data, 0, variable_queue.size(), false);
 }  
 
-//expects filled variable processing queue
-//
-// force -> forces resolution
-//
-//
-
 
 static void printLitErr(Lit l)
 {
@@ -77,6 +71,11 @@ static void printClauses(ClauseAllocator & ca, vector<CRef> list)
 
 }
 
+//expects filled variable processing queue
+//
+// force -> forces resolution
+//
+//
 void BlockedVariableElimination::bve_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool force, bool doStatistics)   
 {
     for (unsigned i = start; i < end; i++)
