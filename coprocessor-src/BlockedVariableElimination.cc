@@ -317,12 +317,12 @@ inline void BlockedVariableElimination::resolveSet(CoprocessorData & data, vecto
 {
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
     {
-        Clause & p = ca[cr_p];
+        Clause & p = ca[positive[cr_p]];
         if (p.can_be_deleted())
             continue;
         for (int cr_n = 0; cr_n < negative.size(); ++cr_n)
         {
-            Clause & n = ca[cr_n];
+            Clause & n = ca[negative[cr_n]];
             if (n.can_be_deleted())
                 continue;
             vec<Lit> ps;
