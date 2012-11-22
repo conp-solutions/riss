@@ -204,6 +204,7 @@ public:
 
     Lit          subsumes         (const Clause& other) const;
     bool         ordered_subsumes (const Clause& other) const;
+    void         remove_lit       (const Lit p);
     void         strengthen       (Lit p);
 
     void    set_delete (bool b) 	 { header.mark = 1; }
@@ -461,6 +462,24 @@ inline bool Clause :: ordered_subsumes (const Clause & other) const
         return true;
     else
         return false;
+}
+
+inline void Clause::remove_lit(const Lit p)
+{
+    for (int i = 0; i < size(); ++i)
+    {
+        if(data[i].lit == p)
+        {
+            while(i < size())
+            {
+                data[i] = data[i + 1];
+                ++i;
+            }
+        }
+    }
+    shrink(1);
+    //if (has_extra() && size() > 1)
+    //    calcAbstraction();
 }
 
 inline void Clause::strengthen(Lit p)

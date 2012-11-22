@@ -6,6 +6,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 using namespace Coprocessor;
 
+static int upLevel = 1;
+
 Propagation::Propagation( ClauseAllocator& _ca, ThreadController& _controller )
 : Technique( _ca, _controller )
 , lastPropagatedLiteral( 0 )
@@ -13,12 +15,14 @@ Propagation::Propagation( ClauseAllocator& _ca, ThreadController& _controller )
 }
 
 
-lbool Propagation::propagate(CoprocessorData& data, Solver* solver)
+lbool Propagation::propagate(CoprocessorData& data)
 {
+  Solver* solver = data.getSolver();
   // propagate all literals that are on the trail but have not been propagated
   for( ; lastPropagatedLiteral < solver->trail.size(); lastPropagatedLiteral ++ )
   {
     const Lit l = solver->trail[lastPropagatedLiteral];
+    data.log.log(upLevel,"propagate literal",l);
     // remove positives
     vector<CRef> positive = data.list(l);
     for( int i = 0 ; i < positive.size(); ++i )

@@ -22,6 +22,8 @@ void Subsumption::subsumeStrength(CoprocessorData& data)
     }
     if( hasToStrengthen() ) {
       fullStrengthening(data);
+      // clear queue afterwards
+      strengthening_queue.clear();
     }
   }
 }
@@ -89,11 +91,61 @@ void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int star
 
 bool Subsumption::hasToStrengthen()
 {
-  return false;  
+  return strengthening_queue.size() > 0;
 }
 
 lbool Subsumption::fullStrengthening(CoprocessorData& data)
 {
+    //for every clause:
+    for (int i = 0; i < strengthening_queue.size(); ++i)
+    {
+        Clause &c = ca[strengthening_queue[i]];
+        if (c.can_be_deleted())
+            continue;
+        // for every literal in this clause:
+        for (int j = 0; j < c.size(); ++j)
+        {
+            // negate this literal and check for subsumptions for every occurance of his negation:
+            Lit neg_lit = ~c[j];
+            c[j] = neg_lit;     // change temporaly lit for subsumptiontest
+            // get ocurances of this lit
+            vector<CRef> & list = data.list(neg_lit);
+
+            for (unsigned int k = 0; k < list.size(); ++k)
+            {
+                if (ca[list[k]].can_be_deleted())     // dont check if this clause can be deleted
+                    continue;
+                if (c.ordered_subsumes(ca[list[k]]))    // check for subsumption
+                {
+/*#ifdef SUBDEBUG
+                    fprintf(stdout, "\nDoing Strengtening with following clauses:\nStrengthener: ");
+                    c.print_clause();
+                    //fprintf(stdout, "\nsubsumer: ");
+                    //semiClause.print_clause();
+                    fprintf(stdout, "\nother: ");
+                    ca[occs[toInt(neg_lit)][k]].print_clause();
+                    fprintf(stdout, "\non lit: ");
+                    c.print_lit(j);
+                    fprintf(stdout, "\n");
+                    CRef tempClause = occs[toInt(neg_lit)][k];  // used for printing
+#endif*/
+                    ca[list[k]].remove_lit(neg_lit);     // strenghten clause
+                    // update occurances
+                    list[k] = list[list.size() - 1];
+                    list.pop_back();    // shrink vector
+                    // add clause since it got smaler and could subsume to subsumption_queue
+                    clause_processing_queue.push_back(list[k]);
+/*#ifdef SUBDEBUG
+                    fprintf(stdout, "Clause after strengthening: ");
+                    ca[tempClause].print_clause();
+                    fprintf(stdout, "\n");
+#endif*/
+                }
+            }
+            c[j] = ~neg_lit;    // change the negated lit back
+        }
+    }
+  // no result to tell to the outside
   return l_Undef;   
 }
 
@@ -102,6 +154,8 @@ void Subsumption::initClause( const CRef cr )
   const Clause& c = ca[cr];
   if (c.can_subsume() && !c.can_be_deleted())
     clause_processing_queue.push_back(cr);
+  if (c.can_strengthen() && !c.can_be_deleted())
+    strengthening_queue.push_back(cr);
 }
 
 

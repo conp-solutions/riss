@@ -157,6 +157,7 @@ class CoprocessorData
   char* untouchable;                    // store all variables that should not be touched (altering presence in models)
 
   vector<Lit> undo;                     // store clauses that have to be undone for extending the model
+  vector<Lit> equivalences;             // stack of literal classes that represent equivalent literals
 
   // TODO decide whether a vector of active variables would be good!
 
@@ -187,6 +188,8 @@ public:
   bool ok();                                             // return ok-state of solver
   void setFailed();                                      // found UNSAT, set ok state to false
   lbool enqueue( const Lit l );                          // enqueue literal l to current solver structures
+  Solver* getSolver();                                   // return the pointer to the solver object
+  bool hasToPropagate();                                 // signal whether there are new unprocessed units
   bool unlimited();                                      // do preprocessing without technique limits?
   bool randomized();                                     // use a random order for preprocessing techniques
 
@@ -224,9 +227,20 @@ public:
   void addToExtension( const Minisat::CRef cr, const Lit l = lit_Error );
   void addToExtension( vec< Lit >& lits, const Lit l = lit_Error );
   void addToExtension( vector< Lit >& lits, const Lit l = lit_Error );
+<<<<<<< HEAD
 
   void extendModel(vec<lbool>& model);
 
+=======
+  void addToExtension( const Lit dontTouch, const Lit l = lit_Error );
+
+  void extendModel(vec<lbool>& model);
+
+  // handling equivalent literals
+  void addEquivalences( const std::vector<Lit>& list );
+  vector<Lit>& getEquivalences();
+
+>>>>>>> origin/coprocessor
   // checking whether a literal can be altered
   void setNotTouch(const Var v);
   bool doNotTouch (const Var v) const ;
@@ -243,6 +257,7 @@ public:
 
   /** adds binary clauses */
   void create( ClauseAllocator& ca, Coprocessor::CoprocessorData& data, vec< Minisat::CRef >& list);
+  void create( ClauseAllocator& ca, Coprocessor::CoprocessorData& data, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2);
 
   /** removes an edge from the graph again */
   void removeEdge(const Lit l0, const Lit l1 );
@@ -318,6 +333,17 @@ inline lbool CoprocessorData::enqueue(const Lit l)
   } else if( solver->value( l ) == l_Undef ) solver->uncheckedEnqueue(l);
     return l_True;
   return l_Undef;
+}
+
+inline Solver* CoprocessorData::getSolver()
+{
+  return solver;
+}
+
+
+inline bool CoprocessorData::hasToPropagate()
+{
+  return solver->trail.size() != solver->qhead;
 }
 
 
@@ -528,8 +554,18 @@ inline void CoprocessorData::addToExtension(vector< Lit >& lits, const Lit l)
   }
 }
 
+inline void CoprocessorData::addToExtension(const Lit dontTouch, const Lit l)
+{
+  undo.push_back(lit_Undef);
+  if( l != lit_Error) undo.push_back(l);
+  undo.push_back(dontTouch);
+
+}
+
+
 inline void CoprocessorData::extendModel(vec< lbool >& model)
 {
+
   // check current clause for being satisfied
   bool isSat = false;
   for( int i = undo.size() - 1; i >= 0 ; --i ) {
@@ -537,9 +573,12 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
      Lit c = undo[i];
 
      if( c == lit_Undef ) {
-       // if clause is not satisfied, satisfy last literal!
-       const Lit& satLit = undo[i+1];
-       model[ var(satLit) ] = sign(satLit) ? l_False : l_True;
+       if( !isSat ) {
+         // if clause is not satisfied, satisfy last literal!
+         const Lit& satLit = undo[i+1];
+         log.log(1, "set literal to true",satLit);
+         model[ var(satLit) ] = sign(satLit) ? l_False : l_True;
+       }
      }
      if( var(c) > model.size() ) model.growTo( var(c), l_True ); // model is too small?
      if (model[var(c)] == (sign(c) ? l_False : l_True) ) // satisfied
@@ -549,6 +588,18 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
      }
   }
 }
+
+inline void CoprocessorData::addEquivalences(const vector< Lit >& list)
+{
+  for( int i = 0 ; i < list.size(); ++ i ) equivalences.push_back(list[i]);
+  equivalences.push_back( lit_Undef ); // termination symbol!
+}
+
+inline vector< Lit >& CoprocessorData::getEquivalences()
+{
+  return equivalences;
+}
+
 
 inline void CoprocessorData::setNotTouch(const Var v)
 {
@@ -609,6 +660,51 @@ inline void BIG::create(ClauseAllocator& ca, CoprocessorData& data, vec<CRef>& l
     sizes[toInt(~l1)] ++;
   }
 }
+
+inline void BIG::create(ClauseAllocator& ca, CoprocessorData& data, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2)
+{
+  sizes = (int*) malloc( sizeof(int) * data.nVars() * 2 );
+  memset(sizes,0, sizeof(int) * data.nVars() * 2 );
+
+  int sum = 0;
+  // count occurrences of literals in binary clauses of the given list
+  for( int p = 0 ; p < 2; ++ p ) {
+    vec<CRef>& list = (p==0 ? list1 : list2 );
+    for( int i = 0 ; i < list.size(); ++i ) {
+      const Clause& c = ca[list[i]];
+      if(c.size() != 2 || c.can_be_deleted() ) continue;
+      sizes[ toInt( ~c[0] )  ] ++;
+      sizes[ toInt( ~c[1] )  ] ++;
+      sum += 2;
+    }
+  }
+  storage = (Lit*) malloc( sizeof(Lit) * sum );
+  big =  (Lit**)malloc ( sizeof(Lit*) * data.nVars() * 2 );
+  // memset(sizes,0, sizeof(Lit*) * data.nVars() * 2 );
+  // set the pointers to the right location and clear the size
+  sum = 0 ;
+  for ( int i = 0 ; i < data.nVars() * 2; ++ i )
+  {
+    big[i] = &(storage[sum]);
+    sum += sizes[i];
+    sizes[i] = 0;
+  }
+
+  // add all binary clauses to graph
+  for( int p = 0 ; p < 2; ++ p ) {
+    vec<CRef>& list = (p==0 ? list1 : list2 );
+    for( int i = 0 ; i < list.size(); ++i ) {
+      const Clause& c = ca[list[i]];
+      if(c.size() != 2 || c.can_be_deleted() ) continue;
+      const Lit l0 = c[0]; const Lit l1 = c[1];
+      ( big[ toInt(~l0) ] )[ sizes[toInt(~l0)] ] = l1;
+      ( big[ toInt(~l1) ] )[ sizes[toInt(~l1)] ] = l0;
+      sizes[toInt(~l0)] ++;
+      sizes[toInt(~l1)] ++;
+    }
+  }
+}
+
 
 inline void BIG::removeEdge(const Lit l0, const Lit l1)
 {
