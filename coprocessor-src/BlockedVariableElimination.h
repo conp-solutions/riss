@@ -19,10 +19,11 @@ namespace Coprocessor {
  */
 class BlockedVariableElimination : public Technique {
   vector<int> variable_queue;
-  
+  Propagation & propagation;
+
 public:
   
-  BlockedVariableElimination( ClauseAllocator& _ca, ThreadController& _controller );
+  BlockedVariableElimination( ClauseAllocator& _ca, ThreadController& _controller , Propagation & _propagation);
   
   /** run BVE until completion */
   void runBVE(CoprocessorData& data);

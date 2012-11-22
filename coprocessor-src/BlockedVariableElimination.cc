@@ -7,8 +7,9 @@ Copyright (c) 2012, Kilian Gebhardt, All rights reserved.
 using namespace Coprocessor;
 using namespace std;
 
-BlockedVariableElimination::BlockedVariableElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller )
-: Technique( _ca, _controller )
+BlockedVariableElimination::BlockedVariableElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Propagation& _propagation )
+: Technique( _ca, _controller ), 
+  propagation( _propagation)
 {
 }
 
