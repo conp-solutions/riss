@@ -329,8 +329,12 @@ inline void BlockedVariableElimination::resolveSet(CoprocessorData & data, vecto
             {
                if (ps.size()>1)
                {
-                    CRef cr = ca.alloc(ps, p.learnt() || n.learnt());
+                    CRef cr = ca.alloc(ps, p.learnt() && n.learnt());
                     data.addClause(cr);
+                    if (p.learnt() && n.learnt())
+                        data.getLEarnts().push(cr);
+                    else 
+                        data.getClauses().push(cr);
                }
             }   
 
