@@ -1,13 +1,13 @@
 /*******************************************************************[BlockedVariableElimination.cc]
 Copyright (c) 2012, Kilian Gebhardt, All rights reserved.
 **************************************************************************************************/
-
 #include "coprocessor-src/BlockedVariableElimination.h"
+#include "coprocessor-src/Propagation.h"
 
 using namespace Coprocessor;
 using namespace std;
 
-BlockedVariableElimination::BlockedVariableElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Propagation& _propagation )
+BlockedVariableElimination::BlockedVariableElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation )
 : Technique( _ca, _controller ), 
   propagation( _propagation)
 {
@@ -23,15 +23,15 @@ lbool BlockedVariableElimination::fullBVE(Coprocessor::CoprocessorData& data)
   return l_Undef;
 }
 
-void BlockedVariableElimination::runBVE(CoprocessorData& data)
+void BlockedVariableElimination::runBVE(CoprocessorData& data, Minisat::Solver * solver)
 {
   assert(variable_queue.size() == 0);
   
   //  put all variables in queue 
-  for (int v = 0; v < data.nVars() && v < 1; ++v)
+  for (int v = 0; v < data.nVars() /*&& v < 1 */ ; ++v)
       variable_queue.push_back(v);
 
-  bve_worker(data, 0, variable_queue.size(), false);
+  bve_worker(data, solver, 0, variable_queue.size(), false);
 }  
 
 
@@ -77,7 +77,7 @@ static void printClauses(ClauseAllocator & ca, vector<CRef> list)
 // force -> forces resolution
 //
 //
-void BlockedVariableElimination::bve_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool force, bool doStatistics)   
+void BlockedVariableElimination::bve_worker (CoprocessorData& data, Minisat::Solver * solver, unsigned int start, unsigned int end, bool force, bool doStatistics)   
 {
     for (unsigned i = start; i < end; i++)
     {
@@ -135,7 +135,7 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, unsigned int
             else if (state == l_Undef)
                 ;                       // variable already assigned
             else if (state == l_True) 
-                ;                       // new assignment -> TODO propagation 
+                propagation.propagate(data, solver);                       // new assignment -> TODO propagation 
             else 
                 assert(0);              // something went wrong
             
@@ -149,7 +149,7 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, unsigned int
        int lit_learnts;
        
        if (!force) 
-           if (anticipateElimination(data ,pos, neg,  v, pos_stats, neg_stats, lit_clauses, lit_learnts) == l_False) 
+           if (anticipateElimination(data, solver, pos, neg,  v, pos_stats, neg_stats, lit_clauses, lit_learnts) == l_False) 
                return;  // level 0 conflict found while anticipation TODO ABORT
        
        //mark Clauses without resolvents for deletion -> makes stats-array indexing inconsistent
@@ -199,7 +199,7 @@ inline void BlockedVariableElimination::removeClauses(CoprocessorData & data, ve
  *            and that indices of deleted clauses are NOT skipped in stats-array  
  *       i.e. |pos_stats| <= |positive| and |neg_stats| <= |negative|            !!!!!!
  */
-inline lbool BlockedVariableElimination::anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, char* pos_stats , char* neg_stats, int & lit_clauses, int & lit_learnts)
+inline lbool BlockedVariableElimination::anticipateElimination(CoprocessorData & data, Minisat::Solver * solver, vector<CRef> & positive, vector<CRef> & negative, int v, char* pos_stats , char* neg_stats, int & lit_clauses, int & lit_learnts)
 {
     cerr << "c anticipate BVE" << endl;
     // Clean the stats
@@ -288,7 +288,7 @@ inline lbool BlockedVariableElimination::anticipateElimination(CoprocessorData &
                 else if (status == l_Undef)
                      ; // variable already assigned
                 else if (status == l_True)
-                     ; //TODO propagate  
+                    propagation.propagate(data, solver);  //TODO propagate  
                 else 
                     assert (0); //something went wrong
             }
@@ -492,8 +492,8 @@ void parallelBVE(CoprocessorData& data)
 
 void* BlockedVariableElimination::runParallelBVE(void* arg)
 {
-  BVEWorkData* workData = (BVEWorkData*) arg;
-  workData->bve->bve_worker(*(workData->data), workData->start,workData->end, false);
+  BVEWorkData*      workData = (BVEWorkData*) arg;
+  workData->bve->bve_worker(*(workData->data), workData->solver, workData->start,workData->end, false);
   return 0;
 }
  
@@ -505,7 +505,7 @@ void* BlockedVariableElimination::runParallelBVE(void* arg)
  */
 inline void BlockedVariableElimination::removeBlockedClauses(vector< CRef> data, char stats[] )
 {
-   //TODO -> if learnt, check if it was reason ?
+   //TODO -> if learnt, check if it was reason ? i think this is done!
    int stats_index = 0; 
    for (unsigned ci = 0; ci < data.size(); ++ci)
    {    

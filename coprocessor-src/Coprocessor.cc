@@ -83,7 +83,7 @@ lbool Preprocessor::preprocess()
 
   if ( opt_bve ) {
     if( opt_verbose > 2 )cerr << "c coprocessor blocked variable elimination" << endl;
-    if( status == l_Undef ) bve.runBVE(data);  // can change status, can generate new unit clauses
+    if( status == l_Undef ) bve.runBVE(data, solver);  // can change status, can generate new unit clauses
   }
   
   // clear / update clauses and learnts vectores and statistical counters

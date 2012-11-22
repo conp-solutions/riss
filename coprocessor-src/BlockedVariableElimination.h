@@ -19,14 +19,14 @@ namespace Coprocessor {
  */
 class BlockedVariableElimination : public Technique {
   vector<int> variable_queue;
-  Propagation & propagation;
+  Coprocessor::Propagation & propagation;
 
 public:
   
-  BlockedVariableElimination( ClauseAllocator& _ca, ThreadController& _controller , Propagation & _propagation);
+  BlockedVariableElimination( ClauseAllocator& _ca, ThreadController& _controller , Coprocessor::Propagation & _propagation);
   
   /** run BVE until completion */
-  void runBVE(CoprocessorData& data);
+  void runBVE(CoprocessorData& data, Minisat::Solver * solver);
 
   void initClause(const CRef cr); // inherited from Technique
 
@@ -34,12 +34,13 @@ protected:
   
   bool hasToEliminate();       // return whether there is something in the BVE queue
   lbool fullBVE(Coprocessor::CoprocessorData& data);   // performs BVE until completion
-  void bve_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool force = false, bool doStatistics = true);   
+  void bve_worker (CoprocessorData& data, Minisat::Solver * solver, unsigned int start, unsigned int end, bool force = false, bool doStatistics = true);   
   
   /** data for parallel execution */
   struct BVEWorkData {
     BlockedVariableElimination*  bve; // class with code
     CoprocessorData* data;        // formula and maintain lists
+    Solver * solver;              // solver for UP
     unsigned int     start;       // partition of the queue
     unsigned int     end;
   };
@@ -53,7 +54,7 @@ protected:
   inline int  tryResolve(Clause & c, Clause & d, int v);
   inline bool checkPush(vec<Lit> & ps, Lit l);
   inline bool checkUpdatePrev(Lit & prev, Lit l);
-  inline lbool anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, char* pos_stats, char* neg_stats, int & lit_clauses, int & lit_learnts); 
+  inline lbool anticipateElimination(CoprocessorData & data, Minisat::Solver * solver, vector<CRef> & positive, vector<CRef> & negative, int v, char* pos_stats, char* neg_stats, int & lit_clauses, int & lit_learnts); 
   inline void removeBlockedClauses(vector< CRef> data, char stats[] );
 public:
 
