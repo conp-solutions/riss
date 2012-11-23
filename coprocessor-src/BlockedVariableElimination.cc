@@ -7,6 +7,10 @@ Copyright (c) 2012, Kilian Gebhardt, All rights reserved.
 using namespace Coprocessor;
 using namespace std;
 
+static const char* _cat = "COPROCESSOR 3 - BVE";
+
+static IntOption  opt_verbose    (_cat, "cp3_bve_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
+
 BlockedVariableElimination::BlockedVariableElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation )
 : Technique( _ca, _controller ), 
   propagation( _propagation)
@@ -23,15 +27,16 @@ lbool BlockedVariableElimination::fullBVE(Coprocessor::CoprocessorData& data)
   return l_Undef;
 }
 
-void BlockedVariableElimination::runBVE(CoprocessorData& data, Minisat::Solver * solver)
+void BlockedVariableElimination::runBVE(CoprocessorData& data)
 {
   assert(variable_queue.size() == 0);
   
   //  put all variables in queue 
-  for (int v = 0; v < data.nVars() /*&& v < 1 */ ; ++v)
+  for (int v = 0; v < data.nVars() /*&& v < 2*/ ; ++v)
       variable_queue.push_back(v);
 
-  bve_worker(data, solver, 0, variable_queue.size(), false);
+  bve_worker(data, 0, variable_queue.size(), false);
+  variable_queue.clear();
 }  
 
 
@@ -63,10 +68,12 @@ static void printLitVec(vec<Lit> & litvec)
 
 }
 
-static void printClauses(ClauseAllocator & ca, vector<CRef> list)
+static void printClauses(ClauseAllocator & ca, vector<CRef> list, bool skipDeleted)
 {
     for (unsigned i = 0; i < list.size(); ++i)
     {
+        if (skipDeleted && ca[list[i]].can_be_deleted())
+            continue; 
         printClause(ca[list[i]]);
     }
 
@@ -77,24 +84,36 @@ static void printClauses(ClauseAllocator & ca, vector<CRef> list)
 // force -> forces resolution
 //
 //
-void BlockedVariableElimination::bve_worker (CoprocessorData& data, Minisat::Solver * solver, unsigned int start, unsigned int end, bool force, bool doStatistics)   
+void BlockedVariableElimination::bve_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool force, bool doStatistics)   
 {
     for (unsigned i = start; i < end; i++)
     {
        int v = variable_queue[i];
-       cerr << "c Variable: " << v << endl;
        vector<CRef> & pos = data.list(mkLit(v,false)); 
        vector<CRef> & neg = data.list(mkLit(v,true));
-       cerr <<"c Positive: " << endl;
-       printClauses(ca, pos);
-       cerr <<"c Negative: " << endl;
-       printClauses(ca, neg); 
+           
+       // ---Printing all Clauses with v --------------------------//
+       if (opt_verbose > 2)
+       {
+           cerr << "c Variable: " << v+1 << endl;
+           cerr <<"c Clauses with Literal  " << v+1 <<":" << endl;
+           printClauses(ca, pos, false);
+           cerr <<"c Clauses with Literal ¬" << v+1 <<":" << endl;
+           printClauses(ca, neg, false); 
+       }
+       // ---------------------------------------------------------//
        int pos_count = 0; 
        int neg_count = 0;
        int lit_clauses_old = 0;
        int lit_learnts_old = 0;
        int clauseCount = 0;  // |F_x| + |F_¬x| 
-       cerr << "c Counting Clauses" << endl;
+
+       if (opt_verbose > 0)
+       {
+           cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+           cerr << "c Counting Clauses" << endl;
+       }
+       
        for (int i = 0; i < pos.size(); ++i)
        {
             Clause & c = ca[pos[i]];
@@ -117,28 +136,37 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, Minisat::Sol
                 lit_clauses_old += c.size();
             neg_count+=1;
        }
-       
+       if (opt_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
        // handle pure Literal;
        if (pos_count == 0 || neg_count == 0)
        {    
-            cerr << "handling pure literal" << endl;
             lbool state;
             if      ((pos_count == 0) && (neg_count >  0))
+            {
                 state = data.enqueue(mkLit(v, false));             
+                if(opt_verbose > 0) cerr << "c handling pure literal" << endl;
+            }
             else if ((pos_count >  0) && (neg_count == 0))
+            {
                 state = data.enqueue(mkLit(v, true));
+                if(opt_verbose > 0) cerr << "c handling pure literal" << endl;
+            }
             else 
+            {  
+                if(opt_verbose > 0) cerr << "c no occurences of " << v+1 << endl;
+                if(opt_verbose > 0) cerr << "c =============================================================================" << endl;
                 continue;  // no positive and no negative occurrences of v 
-                           // -> nothing to assign
+            }              // -> nothing to assign
             if      (state == l_False) 
                 return;                 // level 0 conflict TODO ABORT ???
             else if (state == l_Undef)
                 ;                       // variable already assigned
             else if (state == l_True) 
-                propagation.propagate(data, solver);                       // new assignment -> TODO propagation 
+                propagation.propagate(data);                       // new assignment -> TODO propagation 
             else 
                 assert(0);              // something went wrong
             
+            if(opt_verbose > 0) cerr << "c =============================================================================" << endl;
             continue;
        }
 
@@ -149,25 +177,28 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, Minisat::Sol
        int lit_learnts;
        
        if (!force) 
-           if (anticipateElimination(data, solver, pos, neg,  v, pos_stats, neg_stats, lit_clauses, lit_learnts) == l_False) 
+           if (anticipateElimination(data, pos, neg,  v, pos_stats, neg_stats, pos_count, neg_count, lit_clauses, lit_learnts) == l_False) 
                return;  // level 0 conflict found while anticipation TODO ABORT
        
        //mark Clauses without resolvents for deletion -> makes stats-array indexing inconsistent
-       cerr << "c removing blocked clauses from F_" << toInt(mkLit(v,false)) << endl;
-       removeBlockedClauses(pos, pos_stats);
-       cerr << "c removing blocked clauses from F_" << toInt(mkLit(v,true)) << endl;
-       removeBlockedClauses(neg, neg_stats);
+       
+       if(opt_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+       if(opt_verbose > 0) cerr << "c removing blocked clauses from F_" << v+1 << endl;
+       removeBlockedClauses(data, pos, pos_stats, mkLit(v, false));
+       if(opt_verbose > 0) cerr << "c removing blocked clauses from F_¬" << v+1 << endl;
+       removeBlockedClauses(data, neg, neg_stats, mkLit(v, true));
         
        // if resolving reduces number of literals in clauses: 
        //    add resolvents
        //    mark old clauses for deletion
        if (force || lit_clauses <= lit_clauses_old)
        {
-            cerr << "c resolveSet" <<endl;
+            if(opt_verbose > 0)  cerr << "c resolveSet" <<endl;
             resolveSet(data, pos, neg, v);
-            removeClauses(data, pos);
-            removeClauses(data, neg);
+            removeClauses(data, pos, mkLit(v,false));
+            removeClauses(data, neg, mkLit(v,true));
        }
+       if(opt_verbose > 0)   cerr << "c =============================================================================" << endl;
     }
 }
 /*
@@ -175,7 +206,7 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, Minisat::Sol
  *      remove it from data-Objects statistics
  *      mark it for deletion
  */
-inline void BlockedVariableElimination::removeClauses(CoprocessorData & data, vector<CRef> & list)
+inline void BlockedVariableElimination::removeClauses(CoprocessorData & data, vector<CRef> & list, Lit l)
 {
     for (int cr_i = 0; cr_i < list.size(); ++cr_i)
     {
@@ -183,6 +214,11 @@ inline void BlockedVariableElimination::removeClauses(CoprocessorData & data, ve
         {
             data.removedClause(list[cr_i]);
             ca[list[cr_i]].set_delete(true);
+            data.addToExtension(list[cr_i], l);
+            if(opt_verbose > 1){
+                cerr << "c removed clause: "; 
+                printClause(ca[list[cr_i]]);
+            }
         }
     }
 
@@ -199,28 +235,29 @@ inline void BlockedVariableElimination::removeClauses(CoprocessorData & data, ve
  *            and that indices of deleted clauses are NOT skipped in stats-array  
  *       i.e. |pos_stats| <= |positive| and |neg_stats| <= |negative|            !!!!!!
  */
-inline lbool BlockedVariableElimination::anticipateElimination(CoprocessorData & data, Minisat::Solver * solver, vector<CRef> & positive, vector<CRef> & negative, int v, char* pos_stats , char* neg_stats, int & lit_clauses, int & lit_learnts)
+inline lbool BlockedVariableElimination::anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, char* pos_stats , char* neg_stats, int pos_count, int neg_count, int & lit_clauses, int & lit_learnts)
 {
-    cerr << "c anticipate BVE" << endl;
+    if(opt_verbose > 2)  cerr << "c starting anticipate BVE" << endl;
     // Clean the stats
     lit_clauses=0;
     lit_learnts=0;
-    for (int i = 0; i < (sizeof pos_stats)/(sizeof pos_stats[0]); ++i)
+    for (int i = 0; i < pos_count; ++i)
         pos_stats[i] = 0;
-    for (int i = 0; i < (sizeof neg_stats)/(sizeof neg_stats[0]); ++i)
+    for (int i = 0; i < neg_count; ++i)
         neg_stats[i] = 0;
     
     int pc = 0;
     int nc = 0;
-    cerr << "positive size : " << positive.size() << endl;
-    cerr << "negative size : " << negative.size() << endl;
 
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
     {
         Clause & p = ca[positive[cr_p]];
         if (p.can_be_deleted())
-        {    cerr << "c skipped p"; 
-            printClause(p);
+        {  
+            if(opt_verbose > 2)
+            {  cerr << "c    skipped p"; 
+               printClause(p);
+            }
             continue;
         }
         nc = 0;
@@ -228,26 +265,32 @@ inline lbool BlockedVariableElimination::anticipateElimination(CoprocessorData &
         {
             Clause & n = ca[negative[cr_n]];
             if (n.can_be_deleted())
-            {    cerr << "c skipped n";
-                printClause(n);
+            {   
+                if(opt_verbose > 2)
+                {
+                    cerr << "c    skipped n";
+                    printClause(n);
+                }
                 continue;
             }
             int newLits = tryResolve(p, n, v);
             
 
-            cerr << "c resolvent size " << newLits << endl;
+            if(opt_verbose > 2) cerr << "c    resolvent size " << newLits << endl;
 
             if (newLits > 1)
             {
-                cerr << "c Clause P: ";
-                printClause(p);
-                cerr <<  "c Clause N: ";
-                printClause(n);
-                cerr  << "c Resolvent: ";
-                vec<Lit> resolvent; 
-                resolve(p,n,v,resolvent); 
-                printLitVec(resolvent);
-                
+                if(opt_verbose > 2)  
+                {   
+                    cerr << "c    Clause P: ";
+                    printClause(p);
+                    cerr <<  "c    Clause N: ";
+                    printClause(n);
+                    cerr  << "c    Resolvent: ";
+                    vec<Lit> resolvent; 
+                    resolve(p,n,v,resolvent); 
+                    printLitVec(resolvent);
+                }
                 ++pos_stats[pc];
                 ++neg_stats[nc];
                 if (p.learnt() && n.learnt())
@@ -259,11 +302,15 @@ inline lbool BlockedVariableElimination::anticipateElimination(CoprocessorData &
             // empty Clause
             else if (newLits == 0)
             {
-                cerr << "c empty reslovent" << endl;
-                cerr << "c Clause P: ";
-                printClause(p);
-                cerr << "c Clause N: ";
-                printClause(n);
+                if(opt_verbose > 2) 
+                {
+                    cerr << "c    empty reslovent" << endl;
+                    cerr << "c    Clause P: ";
+                    printClause(p);
+                    cerr << "c    Clause N: ";
+                    printClause(n);
+                    cerr << "c    finished anticipate_bve by finding empty clause" << endl;
+                }
                 data.setFailed();
                 return l_False;
             }
@@ -274,29 +321,42 @@ inline lbool BlockedVariableElimination::anticipateElimination(CoprocessorData &
                 vec <Lit > resolvent;
                 resolve(p,n,v,resolvent); 
                 assert(resolvent.size() == 1);
-                
-                cerr << "c Unit Resolvent: ";
-                printLitVec(resolvent);
-                cerr << "c Clause P: ";
-                printClause(p); 
-                cerr  << "c Clause N: ";
-                printClause(n);               
-                
+                if(opt_verbose > 2) 
+                {
+                    cerr << "c    Unit Resolvent: ";
+                    printLitVec(resolvent);
+                    cerr << "c    Clause P: ";
+                    printClause(p); 
+                    cerr  << "c     Clause N: ";
+                    printClause(n);               
+                }
                 lbool status = data.enqueue(resolvent[0]); //check for level 0 conflict
                 if (status == l_False)
-                    return l_False; 
+                {
+                    if(opt_verbose > 2) cerr << "c finished anticipate_bve with conflict" << endl;
+                    return l_False;
+                }
                 else if (status == l_Undef)
                      ; // variable already assigned
                 else if (status == l_True)
-                    propagation.propagate(data, solver);  //TODO propagate  
+                    propagation.propagate(data);  //TODO propagate  
                 else 
                     assert (0); //something went wrong
             }
 
-            cerr << endl;
+            if(opt_verbose > 2) cerr << "c ------------------------------------------" << endl;
             ++nc;
         }
         ++pc;
+    }
+    if(opt_verbose > 2) 
+    {
+        for (int i = 0; i < pos_count; ++i)
+            cerr << "c pos stat("<< i <<"): " << (unsigned) pos_stats[i] << endl;;
+        for (int i = 0; i < neg_count; ++i)
+            cerr << "c neg stat("<< i <<"): " << (unsigned) neg_stats[i] << endl;;
+
+        cerr << "c finished anticipate_bve normally" << endl;
     }
     return l_Undef;
 }
@@ -493,7 +553,7 @@ void parallelBVE(CoprocessorData& data)
 void* BlockedVariableElimination::runParallelBVE(void* arg)
 {
   BVEWorkData*      workData = (BVEWorkData*) arg;
-  workData->bve->bve_worker(*(workData->data), workData->solver, workData->start,workData->end, false);
+  workData->bve->bve_worker(*(workData->data), workData->start,workData->end, false);
   return 0;
 }
  
@@ -503,17 +563,26 @@ void* BlockedVariableElimination::runParallelBVE(void* arg)
  * i.e. all resolvents are tautologies
  *
  */
-inline void BlockedVariableElimination::removeBlockedClauses(vector< CRef> data, char stats[] )
+inline void BlockedVariableElimination::removeBlockedClauses(CoprocessorData & data, vector< CRef> & list, char stats[], Lit l )
 {
    //TODO -> if learnt, check if it was reason ? i think this is done!
    int stats_index = 0; 
-   for (unsigned ci = 0; ci < data.size(); ++ci)
+   for (unsigned ci = 0; ci < list.size(); ++ci)
    {    
-        Clause & c =  ca[data[ci]];
+        Clause & c =  ca[list[ci]];
         if (c.can_be_deleted())
             continue;
         if (stats[stats_index] == 0)
+        { 
             c.set_delete(true);
+            data.removedClause(list[ci]);
+            data.addToExtension(list[ci], l);
+            if(opt_verbose > 1) 
+            {
+                cerr << "c removed clause: "; 
+                printClause(ca[list[ci]]);
+            }
+        }
         ++stats_index;
    }
-}
+}           
