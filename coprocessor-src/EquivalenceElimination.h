@@ -8,6 +8,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "core/Solver.h"
 
 #include "coprocessor-src/CoprocessorTypes.h"
+#include "coprocessor-src/Circuit.h"
 
 #include "coprocessor-src/Technique.h"
 #include "coprocessor-src/Propagation.h"
@@ -61,6 +62,11 @@ protected:
    * @param externBig use extern big as basis for tarjan algorithm
    */
   void findEquivalencesOnBig(Coprocessor::CoprocessorData& data, vector< vector< Lit > >* externBig = 0);
+  
+  /** return literals that have to be equivalent because of the two gates 
+   * @param replacedBy stores for each variable the literal that represents its equivalence class
+   */
+  bool checkEquivalence( const Circuit::Gate& g1, const Circuit::Gate& g2, Lit& e1, Lit& e2);
   
   /** perform tarjan algorithm to find SCC on binary implication graph */
   void eqTarjan(Lit l, Lit list, Coprocessor::CoprocessorData& data, Coprocessor::BIG& big, vector< vector< Lit > >* externBig = 0);
