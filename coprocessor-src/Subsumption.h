@@ -23,6 +23,7 @@ namespace Coprocessor {
 class Subsumption : public Technique {
   
   vector<CRef> clause_processing_queue;
+  vector<CRef> strengthening_queue;
   
 public:
   

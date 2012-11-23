@@ -774,6 +774,12 @@ lbool Solver::solve_()
         printf("===============================================================================\n");
     }
 
+    if( status == l_Undef ) {
+	  // restart, triggered by the solver
+	  if( coprocessor == 0 ) coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
+          status = coprocessor->preprocess();
+    }
+    
     // Search:
     int curr_restarts = 0;
     while (status == l_Undef){
@@ -798,9 +804,11 @@ lbool Solver::solve_()
         // Extend & copy model:
         model.growTo(nVars());
         for (int i = 0; i < nVars(); i++) model[i] = value(i);
+	
+	if( coprocessor != 0 ) coprocessor->extendModel(model);
+	
     }else if (status == l_False && conflict.size() == 0)
         ok = false;
-
     cancelUntil(0);
     return status;
 }
