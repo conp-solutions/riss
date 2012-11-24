@@ -2,6 +2,8 @@
 #define VARGRAPHUTILS_H
 
 #include "CoprocessorTypes.h"
+#include <stdlib.h>
+#include <time.h>
 
 // forward declaration
 namespace Coprocessor {
@@ -25,28 +27,27 @@ class VarGraphUtils
 inline void partVars(CoprocessorData& data, int noParts, std::vector<std::vector<Var> >& variables, int bufferSize)
 {
   //TODO: find good starting points
-  //TODO: use sets instead of vectors - adding only unique elements, find() method, ... ?
   std::vector<std::vector<Var> > buffers;    // buffer vectors for breadth-first-search
   std::vector<std::vector<Var> > finalVars;  // vectors containing partitioned variables
 
-  MarkArray locked;   // global array for locked variables
-    locked.create( data.nVars() );
-    locked.nextStep();
+  char *locked = (char*) malloc( sizeof(char) * data.nVars() );
+  for (int i = 0; i < data.nVars(); ++i)
+    locked[i] = 0;
 
   MarkArray tmp;
   tmp.create( data.nVars() );
   tmp.nextStep();
-    
+
   bool finished = false;
 
   // ---------- initialize buffers --------------
-  MarkArray a, b, c, t;
+  /*MarkArray a, b, checked, t;
     a.create(data.nVars());
     a.nextStep();
     b.create(data.nVars());
     b.nextStep();
-    c.create(data.nVars());
-    c.nextStep();
+    checked.create(data.nVars());
+    checked.nextStep();
     t.create(data.nVars());
     t.nextStep();
   int conflict = -1;
@@ -64,55 +65,106 @@ inline void partVars(CoprocessorData& data, int noParts, std::vector<std::vector
     // check if there are intersections
     for (int i = 0; i < a.size(); ++i)
     {
-      if (b.isCurrentStep(i) && c.isCurrentStep(i) ) { // TODO Norbert: added "i" here, is this right?
+      if (b.isCurrentStep(i) && checked.isCurrentStep(i) ) { // TODO Norbert: added "i" here, is this right?
         conflict = i;
         break;
       }
     }
     if (conflict != -1)
     {
-        c = b;
+        checked = b;
         buffers[count].push_back(conflict);
         count++;
     }
+  }*/
+  MarkArray first, second, checked;
+    first.create(data.nVars());
+    first.nextStep();
+    second.create(data.nVars());
+    second.nextStep();
+    checked.create(data.nVars());
+    checked.nextStep();
+  unsigned int count = 0;
+  bool valid = false;
+
+  srand( time(NULL) );
+  while (count < noParts){
+    int x = rand() % data.nVars();   // get a random variable
+
+    first.nextStep();
+    second.nextStep();
+    tmp.nextStep();
+
+    data.mark2(x, first, tmp);
+    for (int i = 0; i < first.size(); ++i)
+    {
+      if (first.isCurrentStep(i)) {
+        data.mark2(i, second, tmp);
+      }
+    }
+    // check if there are intersections
+    for (int i = 0; i < first.size(); ++i)
+    {
+      if (second.isCurrentStep(i) && checked.isCurrentStep(i) ) {
+        valid = false;
+      } else {
+        // add second to checked first
+        for (int j = 0; j < second.size(); ++j){
+          if (second.isCurrentStep(j))
+            checked.setCurrentStep(j);
+        }
+      }
+    }
+    valid = true;
+
+    if ( valid ){            // check if the variable is valid
+      buffers[count].push_back(x);
+      count++;
+    }
   }
   // --------- end initialize buffers -----------
+
+  MarkArray array;              // mark array for finding successors
+  array.create(data.nVars());
+  array.nextStep();
+
+  tmp.nextStep();
+
   while(!finished)
   {
-  std::vector<Var> buffer;
-    for (int i = 0; i < noParts; ++i)
+  std::vector<Var> buffer;    // the working buffer
+    for (int partition = 0; partition < noParts; ++partition)
     {
-      // do breadth-first-search-step for every starting point
-      buffer = buffers[i];
-      for (int j = 0; j < buffers[i].size(); ++j)
+      // do breadth-first-search-step for every node
+      buffer = buffers[partition];
+      int start_length = buffer.size();
+      for (int j = 0; j < start_length; ++j)
       {
         Var & active = buffer[j];
         // find all succesors for _active_ -> mark1()
-        MarkArray array;
-          array.create(data.nVars());
-          array.nextStep();
+        array.nextStep();
+
         data.mark1(active, array);  // all marked variables are connected to the active node
         int k;
         for (k = 0; k < array.size(); ++k)
         {
-          if (array.isCurrentStep(k))   // _k_ is successor
+          if (array.isCurrentStep(k)) // k is successor of active
           {
-            // TODO: deal with _active_ being successor of itself
-            if (locked.isCurrentStep(k) ) { // k is already locked
-              // check if is owned by this search instance
-              bool foundItem = false;
-	      for( int i = 0 ; i < buffer.size(); ++i ) 
-		if( buffer[i] == k ) {foundItem = true; break; }
-	      if( foundItem ) break;
-            } else {
-              locked.setCurrentStep(k);   // lock successor variable for further actions
-              buffer.push_back(k);  // push sucessore into the buffer
+            if ( locked[k] == 0 )   // variable k is free
+            {
+              locked[k] = -(partition+1);       // lock the variable ...
+              buffer.push_back(k);    // ... and add it to the buffer
             }
+            else if (!locked[k] == partition+1 || !locked[k] == -(partition+1))
+              break;  // variable is occupied by another partition
           }
         }
         // if no successor clashed with locked variables, we can add the active var to tha final var list
         if (k == array.size())  // this means that the was no lock clash
-          finalVars[i].push_back(active);
+        {
+          finalVars[partition].push_back(active);
+          locked[active] = partition+1;
+        }
       }
     }
     // test if all buffers are empty -> finished!
@@ -126,7 +178,7 @@ inline void partVars(CoprocessorData& data, int noParts, std::vector<std::vector
   // after this while loop, the final vectors contain the partitions.
 }
 
-inline void partClauses(CoprocessorData& data,std::vector<std::vector<Clause> >& variables, int bufferSize)  
+inline void partClauses(CoprocessorData& data,std::vector<std::vector<Clause> >& variables, int bufferSize)
 {
   // TODO: implement partitioning for clauses
 }
@@ -137,6 +189,7 @@ inline void sortVars(CoprocessorData& data, std::vector<Var>& variables)
   // TODO: write start and and position of each partition into a separate vector
   // TODO: pass another argument for number of partitions?
 }
+
 }
 
 #endif // VARGRAPHUTILS_H

@@ -227,11 +227,6 @@ public:
   void addToExtension( const Minisat::CRef cr, const Lit l = lit_Error );
   void addToExtension( vec< Lit >& lits, const Lit l = lit_Error );
   void addToExtension( vector< Lit >& lits, const Lit l = lit_Error );
-<<<<<<< HEAD
-
-  void extendModel(vec<lbool>& model);
-
-=======
   void addToExtension( const Lit dontTouch, const Lit l = lit_Error );
 
   void extendModel(vec<lbool>& model);
@@ -240,7 +235,6 @@ public:
   void addEquivalences( const std::vector<Lit>& list );
   vector<Lit>& getEquivalences();
 
->>>>>>> origin/coprocessor
   // checking whether a literal can be altered
   void setNotTouch(const Var v);
   bool doNotTouch (const Var v) const ;
