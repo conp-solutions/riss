@@ -47,11 +47,11 @@ protected:
   void parallelBVE(CoprocessorData& data);
   
   inline void removeClauses(CoprocessorData & data, vector<CRef> & list, Lit l);
-  inline void resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, bool force = false);
+  inline lbool resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, bool force = false);
   inline bool resolve(Clause & c, Clause & d, int v, vec<Lit> & ps);
   inline int  tryResolve(Clause & c, Clause & d, int v);
   inline bool checkPush(vec<Lit> & ps, Lit l);
-  inline bool checkUpdatePrev(Lit & prev, Lit l);
+  inline char checkUpdatePrev(Lit & prev, Lit l);
   inline lbool anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, char* pos_stats, char* neg_stats, int pos_count, int neg_count, int & lit_clauses, int & lit_learnts); 
   inline void removeBlockedClauses(CoprocessorData & data, vector< CRef> & list, char stats[], Lit l );
 public:

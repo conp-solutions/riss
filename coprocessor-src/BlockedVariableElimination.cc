@@ -162,7 +162,7 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, unsigned int
             else if (state == l_Undef)
                 ;                       // variable already assigned
             else if (state == l_True) 
-                propagation.propagate(data);                       // new assignment -> TODO propagation 
+                propagation.propagate(data);                       // new assignment -> TODO propagate own lits only 
             else 
                 assert(0);              // something went wrong
             
@@ -194,7 +194,8 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, unsigned int
        if (force || lit_clauses <= lit_clauses_old)
        {
             if(opt_verbose > 0)  cerr << "c resolveSet" <<endl;
-            resolveSet(data, pos, neg, v);
+            if (resolveSet(data, pos, neg, v) == l_False)
+                return;
             removeClauses(data, pos, mkLit(v,false));
             removeClauses(data, neg, mkLit(v,true));
        }
@@ -304,7 +305,7 @@ inline lbool BlockedVariableElimination::anticipateElimination(CoprocessorData &
             {
                 if(opt_verbose > 2) 
                 {
-                    cerr << "c    empty reslovent" << endl;
+                    cerr << "c    empty resolvent" << endl;
                     cerr << "c    Clause P: ";
                     printClause(p);
                     cerr << "c    Clause N: ";
@@ -339,7 +340,7 @@ inline lbool BlockedVariableElimination::anticipateElimination(CoprocessorData &
                 else if (status == l_Undef)
                      ; // variable already assigned
                 else if (status == l_True)
-                    propagation.propagate(data);  //TODO propagate  
+                    propagation.propagate(data);  //TODO propagate own lits only (parallel)
                 else 
                     assert (0); //something went wrong
             }
@@ -373,7 +374,7 @@ inline lbool BlockedVariableElimination::anticipateElimination(CoprocessorData &
  *          -> this is already done in anticipateElimination 
  *             TODO Force Case 
  */
-inline void BlockedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, bool force)
+lbool BlockedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, bool force)
 {
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
     {
@@ -388,6 +389,7 @@ inline void BlockedVariableElimination::resolveSet(CoprocessorData & data, vecto
             vec<Lit> ps;
             if (!resolve(p, n, v, ps))
             {
+               // | resolvent | > 1
                if (ps.size()>1)
                {
                     CRef cr = ca.alloc(ps, p.learnt() && n.learnt());
@@ -397,11 +399,35 @@ inline void BlockedVariableElimination::resolveSet(CoprocessorData & data, vecto
                     else 
                         data.getClauses().push(cr);
                }
-            }   
+               else if (force)
+               {
+                    // | resolvent | == 0  => UNSAT
+                    if (ps.size() == 0)
+                    {
+                        data.setFailed();
+                        return l_False;
+                    }
+                    
+                    // | resolvent | == 1  => unit Clause
+                    else if (ps.size() == 1)
+                    {
+                        lbool status = data.enqueue(ps[0]); //check for level 0 conflict
+                        if (status == l_False)
+                            return l_False;
+                        else if (status == l_Undef)
+                             ; // variable already assigned
+                        else if (status == l_True)
+                            propagation.propagate(data);  //TODO propagate own lits only (parallel)
+                        else 
+                            assert (0); //something went wrong
+                    }
+                }   
 
+           }
         }
 
     }
+    return l_Undef;
 }
 
 //expects c to contain v positive and d to contain v negative
@@ -421,22 +447,24 @@ inline int BlockedVariableElimination::tryResolve(Clause & c, Clause & d, int v)
             ++j;
         else if (c[i] < d[j])
         {
-           if (checkUpdatePrev(prev, c[i]))
-                return -1;
+           char status = checkUpdatePrev(prev, c[i]);
+           if (status == -1)
+             return -1;
            else 
            {     
                ++i;
-               ++r;
+               r+=status;;
            }
         }
         else 
         {
-           if (checkUpdatePrev(prev, d[j]))
+           char status = checkUpdatePrev(prev, d[j]);
+           if (status == -1)
               return -1;
            else
            {     
                ++j; 
-               ++r;
+               r+=status;
            }
         }
     }
@@ -444,24 +472,32 @@ inline int BlockedVariableElimination::tryResolve(Clause & c, Clause & d, int v)
     {
         if (c[i] == mkLit(v,false))
             ++i;   
-        else if (checkUpdatePrev(prev, c[i]))
-            return -1;
-        else 
-        {
-            ++i;
-            ++r;
+        else
+        {   
+            char status = checkUpdatePrev(prev, c[i]);
+            if (status == -1)
+                return -1;
+            else 
+            {
+                ++i;
+                r+=status;
+            }
         }
     }
     while (j < d.size())
     {
         if (d[j] == mkLit(v,true))
             ++j;
-        else if (checkUpdatePrev(prev, d[j]))
-            return -1;
         else 
         {
-            ++j;
-            ++r;
+            char status = checkUpdatePrev(prev, d[j]);
+            if (status == -1)
+                return -1;
+            else 
+            {
+                ++j;
+                r+=status;
+            }
         }
     }
     return r;
@@ -517,17 +553,17 @@ inline bool BlockedVariableElimination::resolve(Clause & c, Clause & d, int v, v
     return false;
 }
 
-inline bool BlockedVariableElimination::checkUpdatePrev(Lit & prev, Lit l)
+inline char BlockedVariableElimination::checkUpdatePrev(Lit & prev, Lit l)
 {
     if (prev != lit_Undef)
     {
         if (prev == l)
-            return false;
+            return 0;
         if (prev == ~l)
-            return true;
+            return -1;
     }
     prev = l;
-    return false;
+    return 1;
 }
 
 inline bool BlockedVariableElimination::checkPush(vec<Lit> & ps, Lit l)
