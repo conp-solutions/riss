@@ -11,7 +11,7 @@ static const char* _cat = "COPROCESSOR 3 - EE";
 static IntOption opt_level  (_cat, "cp3_ee_level",  "EE on BIG, gate probing, structural hashing", 3, IntRange(0, 3));
 
 static const int eeLevel = 1;
-
+const static bool debug_out = false; // print output to screen
 
 EquivalenceElimination::EquivalenceElimination(ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Propagation& _propagation)
 : Technique(_ca,_controller)
@@ -29,7 +29,21 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
   if( isToAnalyze == 0 ) isToAnalyze = (char*) malloc( sizeof( char ) * data.nVars()  );
   else isToAnalyze = (char*) realloc( isToAnalyze, sizeof( char ) * data.nVars()  );
   memset( isToAnalyze, 0 , sizeof(char) * data.nVars() );
+  
+  if( opt_level > 1 ) {
+    Circuit circ(ca); 
+    vector<Circuit::Gate> gates;
+    circ.extractGates(data, gates);
+    data.log.log(eeLevel,"found gates", gates.size());
+    for( int i = 0 ; i < gates.size(); ++ i ) {
+      Circuit::Gate& gate = gates[i];
+      data.log.log(eeLevel,"gate output",gate.getOutput());
+      if(debug_out) gate.print(cerr);
+    }
     
+    // TODO free resources of gates!
+  }
+  
   // find SCCs
   for( Var v = 0 ; v < data.nVars(); ++ v ) {
     eqDoAnalyze.push_back( mkLit(v,false) );
@@ -190,7 +204,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data)
 	 if( ! setEquivalent(repr, ee[j] ) ) { data.setFailed(); return newBinary; }
        }
        
-       if( true )
+       if(debug_out)
        for( int j = start ; j < i; ++ j ) {// set all equivalent literals
          cerr << "c replace " << (sign(ee[j]) ? "-" : "" ) << var(ee[j]) + 1 << " by " << (sign(getReplacement(ee[j])) ? "-" : "" ) << var(getReplacement(ee[j])) + 1 << endl;
        }

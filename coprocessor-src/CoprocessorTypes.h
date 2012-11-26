@@ -16,6 +16,12 @@ using namespace std;
 
 namespace Coprocessor {
 
+/// print literals into a stream
+inline ostream& operator<<(ostream& other, Lit l ) {
+  other << (sign(l) ? "-" : "") << var(l) + 1;
+  return other;
+}
+  
 typedef std::vector<std::vector <CRef> > ComplOcc;
 
 /** this object frees a pointer before a method /statementblock is left */
@@ -159,6 +165,9 @@ public:
   
   Logger& log;                           // responsible for logs
   
+  MarkArray ma;                          // temporary markarray, that should be used only inside of methods
+  vector<Lit> lits;                      // temporary literal vector
+  
   CoprocessorData(ClauseAllocator& _ca, Solver* _solver, Logger& _log, bool _limited = true, bool _randomized = false);
 
   // init all data structures for being used for nVars variables
@@ -236,6 +245,7 @@ public:
 
 /** class representing the binary implication graph of the formula */
 class BIG {
+  // TODO implement a weak "implies" check based on the implication graph sampling!
   Lit* storage;
   int* sizes;
   Lit** big;
