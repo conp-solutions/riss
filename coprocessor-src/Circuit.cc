@@ -301,7 +301,102 @@ void Circuit::getITEGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 
 void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, CoprocessorData& data)
 {
+  int oldGates = gates.size();
+  // check for v <-> ITE( s,t,f )
+  for( int p = 0; p < 2 ; ++ p ) {
+    Lit a = mkLit( v, p == 1 ); // XOR(a,b,c) = 1
+    const vector<ternary>& cList = ternaries[ toInt(a) ]; // all clauses C with pos \in C
+    bool found [4]; found[0] = true; // found first clause!
+    for( int i = 0 ; i < cList.size(); ++ i ) 
+    {
+      bool binary = false;
+      const Lit b = cList[i].l1; const Lit c = cList[i].l2;
+      //test whether all the other clauses can be found as well
+      for( int j = i+1; j < cList.size(); ++ j ) {
+	const ternary& tern = cList[j];
+	if( (tern.l1 == ~b || tern.l2 == ~b) && ( tern.l1 == ~c || tern.l2 == ~c ) )
+	  { found[1] = true; break; }
+      }
+      if ( !found[1] ) { // check for 2nd clause in implications
+        Lit * list = big->getArray(~a);
+	const int listSize = big->getSize(~a);
+	for( int j = 0 ; j < listSize; ++ j ) {
+	  if( list[j] == ~b || list[j] == ~c )
+	    { found[1] = true; binary=true;break; }
+	}
+	if( !found[1] ) {
+	  Lit * bList = big->getArray(b);
+	  const int bListSize = big->getSize(b);
+	  for( int j = 0 ; j < bListSize; ++ j ) {
+	    if( bList[j] == ~c ) // no need to look for the other binary clause again!
+	      { found[1] = true; binary=true;break; }
+	  }	  
+	}
+      }
+      if( !found[1] ) continue; // this clause does not contribute to an XOR!
+      // check whether we can find the other's by blocked clause analysis
+      if( !binary && opt_BLOCKED ) {
+	  int countPos = 0;
+	  for( int j = 0 ; j < data.list( a ).size(); ++ j ) {
+	    const Clause& aClause = ca[data.list(a)[j]];
+	    if( aClause.can_be_deleted() ) continue;
+	    if( aClause.size() != 3 ) { countPos = 3; break; }
+	    countPos = countPos + 1; 
+	  }
+	  if(  countPos == 2 ) {
+	    if( debug_out ) cerr << "c current XOR gate is implied with blocked clauses! ternaries: " << countPos << endl; 
+	    // Lit x, Lit s, Lit t, Lit f, const Coprocessor::Circuit::Gate::Type _type, const Coprocessor::Circuit::Gate::Encoded e
+	    gates.push_back( Gate(a,b,c, Gate::XOR, Gate::POS_BLOCKED) );
+	    continue;
+	  }
+     }
 
+     // TODO: find full representation!
+     for( int j = i+1; j < cList.size(); ++ j ) {
+	const ternary& tern = cList[j];
+	if( (tern.l1 == ~b || tern.l2 == ~b) && ( tern.l1 == c || tern.l2 == c ) ) // found [-1,-b,c]
+	  { found[2] = true; }
+	else if( (tern.l1 == b || tern.l2 == b) && ( tern.l1 == ~c || tern.l2 == ~c ) ) // found [-a,b,-c]
+	  { found[3] = true; }
+     }
+     if ( !found[2] ) { // check for 2nd clause in implications
+        Lit * list = big->getArray(a);
+	const int listSize = big->getSize(a);
+	for( int j = 0 ; j < listSize; ++ j ) {
+	  if( list[j] == ~b || list[j] == c )
+	    { found[2] = true; binary=true;break; }
+	}
+	if( !found[2] ) {
+	  Lit * bList = big->getArray(b);
+	  const int bListSize = big->getSize(b);
+	  for( int j = 0 ; j < bListSize; ++ j ) {
+	    if( bList[j] == c ) // no need to look for the other binary clause again!
+	      { found[2] = true; binary=true;break; }
+	  }	  
+	}
+     }
+     if( !found[2] ) continue; // clause [-a,-b,c] not found
+     if ( !found[3] ) { // check for 2nd clause in implications
+        Lit * list = big->getArray(a);
+	const int listSize = big->getSize(a);
+	for( int j = 0 ; j < listSize; ++ j ) {
+	  if( list[j] == b || list[j] == ~c )
+	    { found[3] = true; binary=true;break; }
+	}
+	if( !found[3] ) {
+	  Lit * bList = big->getArray(~b);
+	  const int bListSize = big->getSize(~b);
+	  for( int j = 0 ; j < bListSize; ++ j ) {
+	    if( bList[j] == ~c ) // no need to look for the other binary clause again!
+	      { found[3] = true; binary=true;break; }
+	  }	  
+	}
+      }
+      if( !found[3] ) continue; // clause [-a,b,-c] not found
+      if( debug_out ) cerr << "c current XOR gate is fully encodeds: " << endl; 
+      gates.push_back( Gate(a,b,c, Gate::XOR, Gate::FULL) );
+    }
+  }
 }
 
 Circuit::Gate::~Gate()
