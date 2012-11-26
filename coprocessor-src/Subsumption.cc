@@ -6,6 +6,10 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 using namespace Coprocessor;
 
+static const char* _cat = "CP3 SUBSUMPTION";
+// options
+static BoolOption  opt_naivStrength    (_cat, "cp3_naiveStength", "use naive strengthening", false);
+
 Subsumption::Subsumption( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller )
 : Technique( _ca, _controller )
 {
@@ -96,9 +100,12 @@ bool Subsumption::hasToStrengthen()
 
 lbool Subsumption::fullStrengthening(CoprocessorData& data)
 {
-  strengthening_worker(data, 0, strengthening_queue.size());
+  if( !opt_naivStrength ) {
+    strengthening_worker(data, 0, strengthening_queue.size());
+    return l_Undef;
+  }
     //for every clause:
-/*    for (int i = 0; i < strengthening_queue.size(); ++i)
+    for (int i = 0; i < strengthening_queue.size(); ++i)
     {
         Clause &c = ca[strengthening_queue[i]];
         if (c.can_be_deleted())
@@ -120,6 +127,8 @@ lbool Subsumption::fullStrengthening(CoprocessorData& data)
                 {
 //printf(".");
                     ca[list[k]].remove_lit(neg_lit);     // strenghten clause
+		    // TODO unit clause in queue pushen!! (check Propagation.cc!)
+		    
                     // add clause since it got smaler and could subsume to subsumption_queue
                     clause_processing_queue.push_back(list[k]);
                     // update occurances
@@ -131,7 +140,7 @@ lbool Subsumption::fullStrengthening(CoprocessorData& data)
         }
     }
   // no result to tell to the outside
-//printf("\n");*/
+//printf("\n");
   return l_Undef;   
 }
 
@@ -148,13 +157,21 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
       continue;
     //find Lit with least occurrences and his occurances
     Lit min = strengthener[0];
+    
+    /*
+    for( int pos = 0 ; pos < 2; ++ pos )
+    {
+       vector<CRef>& list = pos == 0 ? data.list(min) :  data.list(~min);
+    }
+     */
+    
     vector<CRef>& list = data.list(min);        // occurances of minlit from strengthener
     vector<CRef>& list_neg = data.list(~min);   // occurances of negated minlit from strengthener
     // test every clause, where the minimum is, if it can be strenghtened
     for (unsigned int j = 0; j < list.size(); ++j)
     {
       Clause& other = ca[list[j]];
-      if (other.can_be_deleted())
+      if (other.can_be_deleted() || list[j] == cr)
         continue;
       // test if we can strengthen other clause
       si = 0;
@@ -191,6 +208,7 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
         // if neglit found and we went through all lits of strengthener, then the other clause can be strengthened
 //printf(".");
         other.remove_lit(other[negated_lit_pos]);
+	// TODO unit queue enqueuing !!
         // add clause to subsumptionqueue since it got smaler and could subsume
         clause_processing_queue.push_back(list[j]);
         // update occurance-list for this lit
@@ -231,6 +249,7 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
           // other can be strengthened
 //printf(".");
         other.remove_lit(other[negated_lit_pos]);
+	// TODO: unit enqueue
         // add clause to subsumptionqueue since it got smaler and could subsume
         clause_processing_queue.push_back(list_neg[j]);
         // update occurance-list for this lit
