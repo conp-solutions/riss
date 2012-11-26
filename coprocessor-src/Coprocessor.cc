@@ -95,7 +95,7 @@ lbool Preprocessor::preprocess()
 
   if ( opt_bve ) {
     if( opt_verbose > 2 )cerr << "c coprocessor blocked variable elimination" << endl;
-    if( status == l_Undef ) bve.runBVE(data);  // can change status, can generate new unit clauses
+    if( status == l_Undef ) status = bve.runBVE(data);  // can change status, can generate new unit clauses
   }
   
   if( opt_cce ) {
@@ -121,7 +121,7 @@ lbool Preprocessor::preprocess()
   // clear / update clauses and learnts vectores and statistical counters
   // attach all clauses to their watchers again, call the propagate method to get into a good state again
   if( opt_verbose > 2 )cerr << "c coprocessor re-setup solver" << endl;
-  reSetupSolver();
+  if (status == l_Undef) reSetupSolver();
 
   // destroy preprocessor data
   if( opt_verbose > 2 )cerr << "c coprocessor free data structures" << endl;

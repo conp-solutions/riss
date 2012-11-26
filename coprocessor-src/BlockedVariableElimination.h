@@ -25,7 +25,7 @@ public:
   BlockedVariableElimination( ClauseAllocator& _ca, ThreadController& _controller , Coprocessor::Propagation & _propagation);
   
   /** run BVE until completion */
-  void runBVE(CoprocessorData& data);
+  lbool runBVE(CoprocessorData& data);
 
   void initClause(const CRef cr); // inherited from Technique
 

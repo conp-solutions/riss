@@ -27,7 +27,7 @@ lbool BlockedVariableElimination::fullBVE(Coprocessor::CoprocessorData& data)
   return l_Undef;
 }
 
-void BlockedVariableElimination::runBVE(CoprocessorData& data)
+lbool BlockedVariableElimination::runBVE(CoprocessorData& data)
 {
   assert(variable_queue.size() == 0);
   
@@ -37,6 +37,10 @@ void BlockedVariableElimination::runBVE(CoprocessorData& data)
 
   bve_worker(data, 0, variable_queue.size(), false);
   variable_queue.clear();
+  if (data.getSolver()->okay())
+    return l_Undef;
+  else 
+    return l_False;
 }  
 
 
@@ -211,16 +215,25 @@ inline void BlockedVariableElimination::removeClauses(CoprocessorData & data, ve
 {
     for (int cr_i = 0; cr_i < list.size(); ++cr_i)
     {
-        if (!ca[list[cr_i]].can_be_deleted())
+        Clause & c = ca[list[cr_i]];
+        CRef cr = list[cr_i];
+        if (!c.can_be_deleted())
         {
-            data.removedClause(list[cr_i]);
-            ca[list[cr_i]].set_delete(true);
-            data.addToExtension(list[cr_i], l);
+            data.removedClause(cr);
+            c.set_delete(true);
+            data.addToExtension(cr, l);
             if(opt_verbose > 1){
                 cerr << "c removed clause: "; 
-                printClause(ca[list[cr_i]]);
+                printClause(c);
             }
         }
+
+        //Delete Clause from all Occ-Lists TODO too much overhead?
+        /*for (int j = 0; j < c.size(); ++j)
+            if (c[j] != l)
+                data.removeClauseFrom(cr,c[j]);
+        list[cr_i] = list[list.size() - 1];
+        list.pop_back();*/
     }
 
 }
@@ -601,7 +614,6 @@ void* BlockedVariableElimination::runParallelBVE(void* arg)
  */
 inline void BlockedVariableElimination::removeBlockedClauses(CoprocessorData & data, vector< CRef> & list, char stats[], Lit l )
 {
-   //TODO -> if learnt, check if it was reason ? i think this is done!
    int stats_index = 0; 
    for (unsigned ci = 0; ci < list.size(); ++ci)
    {    
