@@ -11,7 +11,7 @@ static const char* _cat = "COPROCESSOR 3 - EE";
 static IntOption opt_level  (_cat, "cp3_ee_level",  "EE on BIG, gate probing, structural hashing", 3, IntRange(0, 3));
 
 static const int eeLevel = 1;
-const static bool debug_out = false; // print output to screen
+const static bool debug_out = true; // print output to screen
 
 EquivalenceElimination::EquivalenceElimination(ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Propagation& _propagation)
 : Technique(_ca,_controller)
@@ -37,10 +37,10 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
     data.log.log(eeLevel,"found gates", gates.size());
     for( int i = 0 ; i < gates.size(); ++ i ) {
       Circuit::Gate& gate = gates[i];
-      data.log.log(eeLevel,"gate output",gate.getOutput());
+      // data.log.log(eeLevel,"gate output",gate.getOutput());
       if(debug_out) gate.print(cerr);
     }
-    
+    cerr << "c TODO TODO: for binary clauses, add the binary graph extension to BIG! TODO TODO" << endl;
     // TODO free resources of gates!
   }
   

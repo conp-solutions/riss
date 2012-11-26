@@ -51,7 +51,7 @@ public:
 public:
     enum Type { // kind of the gate
       AND,      // AND gate
-      AMO,      // at-most-one gate
+      ExO,      // exactly-one gate
       GenAND,   // generic AND
       ITE,      // if-then-else gate
       XOR,      // XOR gate
@@ -77,7 +77,7 @@ public:
     
     bool isInvalid() const { return type == INVALID ; }
     
-    const Lit getOutput() { return (type != GenAND && type != AMO ) ? (const Lit) x() : data.e.x; }
+    const Lit getOutput() { return (type != GenAND && type != ExO ) ? (const Lit) x() : data.e.x; }
     
     void print( std::ostream& stream ); // write gate to a stream
     
@@ -88,14 +88,14 @@ public:
     Encoded encoded;
 
   public:
-    Lit& x () {assert (type != XOR && type != GenAND && type != AMO && "gate cannot be XOR"); return data.lits[0]; } // output 
+    Lit& x () {assert (type != XOR && type != GenAND && type != ExO && "gate cannot be XOR"); return data.lits[0]; } // output 
     Lit& a () {assert (type != ITE && "gate cannot be ITE"); return data.lits[1]; } // AND, HA-SUM
     Lit& b () {assert (type != ITE && "gate cannot be ITE"); return data.lits[2]; } // AND, HA-SUM
-    Lit& c () {assert (type == HA_SUM && "gate has to be HA_SUM"); return data.lits[3]; } // HA-SUM
+    Lit& c () {assert ((type == HA_SUM || type == XOR) && "gate has to be HA_SUM"); return data.lits[3]; } // HA-SUM
     Lit& s () {assert (type == ITE && "gate has to be ITE"); return data.lits[1]; } // ITE selector
     Lit& t () {assert (type == ITE && "gate has to be ITE"); return data.lits[2]; } // ITE true branch
     Lit& f () {assert (type == ITE && "gate has to be ITE"); return data.lits[3]; } // ITE false branch
-    Lit& get( const int index) { assert( type == AMO || type == GenAND ); return data.e.externLits[index]; }
+    Lit& get( const int index) { assert( type == ExO || type == GenAND ); return data.e.externLits[index]; }
   };
   
   
@@ -108,10 +108,10 @@ private:
    */
   void getGatesWithOutput(const Var v, vector<Gate>& gates, CoprocessorData& data);
 
-  /** method that looks for AND gates (multiple AND might form an AMO gate!)*/
+  /** method that looks for AND gates (multiple AND might form an ExO gate!)*/
   void getANDGates(const Var v, vector<Gate>& gates, CoprocessorData& data);
-  /** one AMO can be understood as many AND gates! */
-  void getAMOGates(const Var v, vector<Gate>& gates, CoprocessorData& data);
+  /** one ExO can be understood as many AND gates! */
+  void getExOGates(const Var v, vector<Gate>& gates, CoprocessorData& data);
   /** method that looks for XOR gate( stores it only in list, if v is the smallest variable of the gate)*/
   void getXORGates(const Var v, vector<Gate>& gates, CoprocessorData& data);
   /** method that looks for ITE gates */
