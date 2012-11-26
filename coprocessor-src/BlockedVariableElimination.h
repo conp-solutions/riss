@@ -52,7 +52,7 @@ protected:
   inline int  tryResolve(Clause & c, Clause & d, int v);
   inline bool checkPush(vec<Lit> & ps, Lit l);
   inline char checkUpdatePrev(Lit & prev, Lit l);
-  inline lbool anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, char* pos_stats, char* neg_stats, int pos_count, int neg_count, int & lit_clauses, int & lit_learnts); 
+  inline lbool anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, char* pos_stats, char* neg_stats, int & lit_clauses, int & lit_learnts); 
   inline void removeBlockedClauses(CoprocessorData & data, vector< CRef> & list, char stats[], Lit l );
 public:
 
