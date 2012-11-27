@@ -54,7 +54,7 @@ do
       [ x"$qbf" = x ] || continue
       [ $ign = yes ] && continue
       ./verify SAT $sol $cnf >/dev/null 2>/dev/null
-      [ $? = 0 ] && continue
+      [ $? = 1 ] && continue
       ;;
     20) 
       ./lgl $cnf 2> /dev/null 1> /dev/null

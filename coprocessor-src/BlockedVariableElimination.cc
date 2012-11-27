@@ -168,7 +168,7 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, unsigned int
             else if (state == l_Undef)
                 ;                       // variable already assigned
             else if (state == l_True) 
-                propagation.propagate(data);                       // new assignment -> TODO propagate own lits only 
+                propagation.propagate(data, true);                       // new assignment -> TODO propagate own lits only 
             else 
                 assert(0);              // something went wrong
             
@@ -177,8 +177,8 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, unsigned int
        }
 
        // Declare stats variables;        
-       char pos_stats[pos.size()];
-       char neg_stats[neg.size()];
+       int32_t pos_stats[pos.size()];
+       int32_t neg_stats[neg.size()];
        int lit_clauses;
        int lit_learnts;
        
@@ -248,11 +248,8 @@ inline void BlockedVariableElimination::removeClauses(CoprocessorData & data, ve
  *  -> total number of literals in clauses after resolution:    lit_clauses
  *  -> total number of literals in learnts after resolution:    lit_learnts
  *
- *  be aware, that stats are just generated for clauses that are not marked for deletion
- *            and that indices of deleted clauses are NOT skipped in stats-array  
- *       i.e. |pos_stats| <= |positive| and |neg_stats| <= |negative|            !!!!!!
  */
-inline lbool BlockedVariableElimination::anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, char* pos_stats , char* neg_stats, int & lit_clauses, int & lit_learnts)
+inline lbool BlockedVariableElimination::anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, int32_t* pos_stats , int32_t* neg_stats, int & lit_clauses, int & lit_learnts)
 {
     if(opt_verbose > 2)  cerr << "c starting anticipate BVE" << endl;
     // Clean the stats
@@ -356,7 +353,7 @@ inline lbool BlockedVariableElimination::anticipateElimination(CoprocessorData &
                      ; // variable already assigned
                 else if (status == l_True)
                 {
-                    propagation.propagate(data);  //TODO propagate own lits only (parallel)
+                    propagation.propagate(data, true);  //TODO propagate own lits only (parallel)
                     if (p.can_be_deleted())
                         break;
                 }
@@ -389,7 +386,6 @@ inline lbool BlockedVariableElimination::anticipateElimination(CoprocessorData &
  *   - resolvents that are tautologies are skipped 
  *   - unit clauses and empty clauses are not handeled here
  *          -> this is already done in anticipateElimination 
- *             TODO Force Case 
  */
 lbool BlockedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, bool force)
 {
@@ -434,7 +430,11 @@ lbool BlockedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef
                         else if (status == l_Undef)
                              ; // variable already assigned
                         else if (status == l_True)
-                            propagation.propagate(data);  //TODO propagate own lits only (parallel)
+                        {
+                            propagation.propagate(data, true);  //TODO propagate own lits only (parallel)
+                            if (p.can_be_deleted())
+                                break;
+                        }
                         else 
                             assert (0); //something went wrong
                     }
@@ -616,7 +616,7 @@ void* BlockedVariableElimination::runParallelBVE(void* arg)
  * i.e. all resolvents are tautologies
  *
  */
-inline void BlockedVariableElimination::removeBlockedClauses(CoprocessorData & data, vector< CRef> & list, char stats[], Lit l )
+inline void BlockedVariableElimination::removeBlockedClauses(CoprocessorData & data, vector< CRef> & list, int32_t stats[], Lit l )
 {
    for (unsigned ci = 0; ci < list.size(); ++ci)
    {    
