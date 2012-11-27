@@ -249,6 +249,16 @@ class BIG {
   Lit* storage;
   int* sizes;
   Lit** big;
+  
+  /** these two arrays can be used to check whether a literal l implies another literal l'
+   *  Note: this is not a complete check!
+   */
+  uint32_t *start; // when has to literal been touch when scanning the BIG
+  uint32_t *stop;  // when has to literal been finished during scanning
+  
+  uint32_t stampLiteral( const Lit literal, uint32_t stamp, int32_t* index, deque< Lit >& stampQueue );
+  void shuffle( Lit* adj, int size ) const;
+  
 public:
   BIG();
   ~BIG();
@@ -263,6 +273,13 @@ public:
   Lit* getArray(const Lit l);
   const int getSize(const Lit l);
 
+  /** will travers the BIG and generate the start and stop indexes to check whether a literal implies another literal 
+   * @return false, if BIG is not initialized yet
+   */
+  bool generateImplied(Coprocessor::CoprocessorData& data);
+  
+  /** return true, if the condition "from -> to" holds, based on the stochstic scanned data */
+  bool implies(const Lit& from, const Lit& to);
 
 };
 
@@ -610,7 +627,7 @@ inline bool CoprocessorData::doNotTouch(const Var v) const
 
 
 inline BIG::BIG()
-: big(0), storage(0), sizes(0)
+: big(0), storage(0), sizes(0), start(0), stop(0)
 {}
 
 inline BIG::~BIG()
@@ -734,6 +751,115 @@ inline Lit* BIG::getArray(const Lit l)
 inline const int BIG::getSize(const Lit l)
 {
   return sizes[ toInt(l) ];
+}
+
+inline bool BIG::generateImplied( CoprocessorData& data )
+{
+    bool foundEE = false;
+    uint32_t stamp = 0 ;
+    
+    if( start == 0 ) start = (uint32_t*) malloc( data.nVars() * sizeof(uint32_t) * 2 );
+    else start = (uint32_t*)realloc( start, data.nVars() * sizeof(uint32_t) * 2 );
+    
+    if( stop == 0 ) stop = (uint32_t*) malloc( data.nVars() * sizeof(uint32_t) * 2 );
+    else stop = (uint32_t*)realloc( stop, data.nVars() * sizeof(int32_t) * 2 );
+    
+    int32_t* index = (int32_t*)malloc( data.nVars() * sizeof(int32_t) * 2 );
+    
+    // set everything to 0!
+    memset( start, 0, data.nVars() * sizeof(uint32_t) * 2 );
+    memset( stop, 0, data.nVars() * sizeof(uint32_t) * 2 );
+    memset( index, 0, data.nVars() * sizeof(int32_t) * 2 );
+    
+    
+    deque< Lit > stampQueue;
+    
+    data.lits.clear();
+    // reset all present variables, collect all roots in binary implication graph
+    for ( Var v = 0 ; v < data.nVars(); ++ v ) 
+    {
+      const Lit pos =  mkLit(v,false);
+      // a literal is a root, if its complement does not imply a literal
+      if( getSize(pos) == 0 ) data.lits.push_back(~pos);
+      if( getSize(~pos) == 0 ) data.lits.push_back(pos);
+    }
+    
+    // do stamping for all roots, shuffle first
+    const uint32_t ts = data.lits.size();
+    for( uint32_t i = 0 ; i < ts; i++ ) { const uint32_t rnd=rand()%ts; const Lit tmp = data.lits[i]; data.lits[i] = data.lits[rnd]; data.lits[rnd]=tmp; }
+    // stamp shuffled data.lits
+    for ( uint32_t i = 0 ; i < ts; ++ i ) 
+      stamp = stampLiteral(data.lits[i],stamp,index,stampQueue);
+
+    // stamp all remaining literals, after shuffling
+    data.lits.clear();
+    for ( Var v = 0 ; v < data.nVars(); ++ v ) 
+    {
+      const Lit pos =  mkLit(v,false);
+      if( start[ toInt(pos) ] == 0 ) data.lits.push_back(pos);
+      if( start[ toInt(~pos) ] == 0 ) data.lits.push_back(~pos);
+    }
+    // stamp shuffled data.lits
+    const uint32_t ts2 = data.lits.size();
+    for( uint32_t i = 0 ; i < ts2; i++ ) { const uint32_t rnd=rand()%ts2; const Lit tmp = data.lits[i]; data.lits[i] = data.lits[rnd]; data.lits[rnd]=tmp; }
+    for ( uint32_t i = 0 ; i < ts2; ++ i ) 
+      stamp = stampLiteral(data.lits[i],stamp,index,stampQueue);
+}
+
+inline void BIG::shuffle( Lit* adj, int size ) const 
+{
+  for( uint32_t i = 0 ;  i+1<size; ++i ) {
+    const uint32_t rnd = rand() % size;
+    const Lit tmp = adj[i];
+    adj[i] = adj[rnd];
+    adj[rnd] = tmp;
+  }
+}
+
+inline uint32_t BIG::stampLiteral( const Lit literal, uint32_t stamp, int32_t* index, deque<Lit>& stampQueue)
+{
+  // do not stamp a literal twice!
+  if( start[ toInt(literal) ] != 0 ) return stamp;
+  
+  stampQueue.clear();
+  // linearized algorithm from paper
+  stamp++;
+  // handle initial literal before putting it on queue
+  start[toInt(literal)] = stamp; // parent and root are already set to literal
+  stampQueue.push_back(literal);
+  
+  shuffle( getArray(literal), getSize(literal) );
+  index[toInt(literal)] = 0;
+  
+  while( ! stampQueue.empty() ) 
+    {
+      const Lit current = stampQueue.back();
+      const Lit* adj =   getArray(current);
+      const int adjSize = getSize(current);
+      
+      if( index[toInt(current)] == adjSize ) {
+	stampQueue.pop_back();
+	stamp++;
+	stop[toInt(current)] = stamp;
+      } else {
+	int32_t& ind = index[ toInt(current) ]; // store number of processed elements
+	const Lit impliedLit = getArray( current )[ind]; // get next implied literal
+	ind ++;
+	if( start[ toInt(impliedLit) ] != 0 ) continue;
+	stamp ++;
+	start[ toInt(impliedLit) ] = stamp;
+	index[ toInt(impliedLit) ] = 0;
+	stampQueue.push_back( impliedLit );
+	shuffle( getArray(impliedLit), getSize(impliedLit) );
+      }
+
+    } 
+}
+
+inline bool BIG::implies(const Lit& from, const Lit& to)
+{
+  if( start == 0 || stop == 0 ) return false;
+  return ( start[ toInt(from) ] < start[ toInt(to) ] && stop[ toInt(from) ] > stop[ toInt(to) ] ) ;
 }
 
 inline Logger::Logger(int level, bool err)
