@@ -475,6 +475,7 @@ inline void Clause::remove_lit(const Lit p)
                 data[i] = data[i + 1];
                 ++i;
             }
+            break;
         }
     }
     shrink(1);
