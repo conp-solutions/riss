@@ -271,7 +271,8 @@ public:
   void removeEdge(const Lit l0, const Lit l1 );
 
   Lit* getArray(const Lit l);
-  const int getSize(const Lit l);
+  const Lit* getArray(const Lit l) const;
+  const int getSize(const Lit l) const;
 
   /** will travers the BIG and generate the start and stop indexes to check whether a literal implies another literal 
    * @return false, if BIG is not initialized yet
@@ -279,8 +280,13 @@ public:
   bool generateImplied(Coprocessor::CoprocessorData& data);
   
   /** return true, if the condition "from -> to" holds, based on the stochstic scanned data */
-  bool implies(const Lit& from, const Lit& to);
+  bool implies(const Lit& from, const Lit& to) const;
 
+  /** return whether child occurs in the adjacence list of parent (and thus implied) */
+  bool isChild(const Lit& parent, const Lit& child) const ;
+  
+  /** return whether one of the two literals is a direct child of parent (and thus implied)  */
+  bool isOneChild( const Lit& parent, const Lit& child1, const Lit& child2 ) const ;
 };
 
 inline CoprocessorData::CoprocessorData(ClauseAllocator& _ca, Solver* _solver, Coprocessor::Logger& _log, bool _limited, bool _randomized)
@@ -748,7 +754,12 @@ inline Lit* BIG::getArray(const Lit l)
   return big[ toInt(l) ];
 }
 
-inline const int BIG::getSize(const Lit l)
+inline const Lit* BIG::getArray(const Lit l) const 
+{
+  return big[ toInt(l) ];
+}
+
+inline const int BIG::getSize(const Lit l) const
 {
   return sizes[ toInt(l) ];
 }
@@ -856,11 +867,34 @@ inline uint32_t BIG::stampLiteral( const Lit literal, uint32_t stamp, int32_t* i
     } 
 }
 
-inline bool BIG::implies(const Lit& from, const Lit& to)
+inline bool BIG::implies(const Lit& from, const Lit& to) const
 {
   if( start == 0 || stop == 0 ) return false;
-  return ( start[ toInt(from) ] < start[ toInt(to) ] && stop[ toInt(from) ] > stop[ toInt(to) ] ) ;
+  return ( start[ toInt(from) ] < start[ toInt(to) ] && stop[ toInt(from) ] > stop[ toInt(to) ] )
+   || ( start[ toInt(~to) ] < start[ toInt(~from) ] && stop[ toInt(~to) ] > stop[ toInt(~from) ] );
 }
+
+inline bool BIG::isChild(const Lit& parent, const Lit& child) const
+{
+  const Lit * list = getArray(parent);
+  const int listSize = getSize(parent);
+  for( int j = 0 ; j < listSize; ++ j ) {
+    if( list[j] == child )
+      return true;
+  }
+  return false;
+}
+
+inline bool BIG::isOneChild(const Lit& parent, const Lit& child1, const Lit& child2) const
+{
+  const Lit * list = getArray(parent);
+  const int listSize = getSize(parent);
+  for( int j = 0 ; j < listSize; ++ j ) {
+    if( list[j] == child1 || list[j] == child2 ) return true;
+  }
+  return false;
+}
+
 
 inline Logger::Logger(int level, bool err)
 : outputLevel(level), useStdErr(err)

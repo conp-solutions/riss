@@ -12,6 +12,7 @@ static BoolOption opt_genAND   (_cat, "cp3_genAND",      "extract generic AND ga
 static BoolOption opt_HASUM    (_cat, "cp3_extHASUM",    "extract half adder sum bit", true);
 static BoolOption opt_BLOCKED  (_cat, "cp3_extBlocked",  "extract gates, that can be found by blocked clause addition", true);
 static BoolOption opt_NegatedI (_cat, "cp3_extNgtInput", "extract gates, where inputs come from the same variable", true);
+static BoolOption opt_Implied  (_cat, "cp3_extImplied",  "extract half adder sum bit", true);
 
 using namespace Coprocessor;
 
@@ -26,6 +27,8 @@ int Circuit::extractGates(CoprocessorData& data, vector< Circuit::Gate >& gates)
   // create BIG
   big = new BIG( );
   big->create(ca,data,data.getClauses(),data.getLEarnts());
+  
+  if( opt_Implied ) big->generateImplied(data);
   
   // create the list of all ternary / quadrary clauses
   ternaries.resize( data.nVars() * 2 );
@@ -105,7 +108,8 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	  if( c.can_be_deleted() || c.size () < 3 ) continue; // only consider larger clauses, or new ones
 	  int marked = 0;
 	  for ( int j = 0 ; j < c.size(); ++j ) 
-	    if( data.ma.isCurrentStep( toInt(~c[j]) ) ) marked ++; // check whether all literals inside the clause are marked
+	    if( data.ma.isCurrentStep( toInt(~c[j]) ) 
+	      || big->implies( pos, c[j] ) ) marked ++; // check whether all literals inside the clause are marked
 	    else break;
 	  if( marked == c.size() ) {
 	    gates.push_back( Gate( c, c.size() == 3 ? Gate::AND : Gate::GenAND, Gate::FULL, pos ) ); // add the gate
@@ -117,7 +121,9 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	const vector<ternary>& cList = ternaries[ toInt(pos) ]; // all clauses C with pos \in C
 	for( int i = 0 ; i < cList.size(); ++i ) {  // there can be multiple gates per variable
 	  const ternary& c = cList[i];
-	  if( data.ma.isCurrentStep( toInt(~c.l1) ) && data.ma.isCurrentStep( toInt(~c.l2)) ) {
+	  // either, literal is marked (and thus in binary list), or its implied wrt. sampled BIG
+	  if( ( data.ma.isCurrentStep(toInt(~c.l1)) || big->implies(pos, c.l1 ) ) // since implied does not always work, also check alternative!
+	    &&( data.ma.isCurrentStep(toInt(~c.l2)) || big->implies(pos, c.l2 ) ) ){
 	    gates.push_back( Gate( pos, c.l1, c.l2, Gate::AND, Gate::FULL) ); // add the gate
 	    if( debug_out ) cerr << "c found FULL ternary only AND gate with output var " << v + 1 << endl; 
 	  }
@@ -184,7 +190,7 @@ void Circuit::getExOGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	const int lListSize = big->getSize(l);
 	int count = 0;
 	for( int k = 0 ; k < lListSize; ++ k )
-	  count = data.ma.isCurrentStep( toInt( lList[k] ) ) ? count+1 : count;
+	  count = (data.ma.isCurrentStep( toInt(lList[k]) ) || big->implies(l, lList[k]) ) ? count+1 : count;
 	if( count + 1 < c.size() ) { found = false; break; } // not all literals can be found by this literal!
       }
       if( !found ) continue;
@@ -205,14 +211,15 @@ void Circuit::getExOGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
       data.ma.nextStep();
       Lit * lList = big->getArray(~l);
       const int lListSize = big->getSize(~l);
-      data.ma.setCurrentStep( toInt(l) );
+      data.ma.setCurrentStep( toInt(l) ); // mark all literals that are implied by l
       for( int k = 0 ; k < lListSize; ++ k )
         data.ma.setCurrentStep( toInt(lList[k]) );
       int kept = 0;         // store number of kept elements
       int continueHere = 0; // store where to proceed
       for( int k = 0 ; k < data.lits.size(); ++ k ){
 	const Lit dl = data.lits[k];
-	if( data.ma.isCurrentStep( toInt(dl) ) ) {
+	if( data.ma.isCurrentStep( toInt(dl) ) 
+	  || big->implies(l,dl) ) { // check, if the current literal is marked, or if its implied via BIG
 	  continueHere = dl == l ? kept : continueHere; 
 	  data.lits[kept++] = data.lits[k];
 	} else {
@@ -354,16 +361,16 @@ void Circuit::getITEGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	    }
 	    if( ! foundFirst || ! foundSecond ) {
 	      if( debug_out ) cerr << "c found not all in ternaries" << endl;
-	      Lit * list = big->getArray(x);
-	      const int listSize = big->getSize(x);
 	      if( ! foundFirst ) { // try to find clause [t,-x], or [-s,-x]
-		for( int k = 0 ; k < listSize; ++ k )
-		  if( list[k] == t || list[k] == ~s ) { foundFirst = true; break; }
+		if( big->isOneChild(x,t,~s) )
+		  { foundFirst = true; break; }
 	      }
+	      if(!foundFirst) foundFirst = (big->implies(x,t) || big->implies(x,~s) ) ? true : foundFirst;
 	      if( ! foundSecond ) { // try to find clause [f,-x] or [s,-x]
-		for( int k = 0 ; k < listSize; ++ k )
-		  if( list[k] == f || list[k] == s ) { foundSecond = true; break; }
+	        if( big->isOneChild(x,f,s) )
+		  { foundSecond = true; break; }
 	      }
+	      if(!foundSecond) foundSecond = (big->implies(x,f) || big->implies(x,s) ) ? true : foundSecond;
 	    }
 	    if( !foundFirst || !foundSecond ) { // f candidate not verified -> remove gate!!
               if( debug_out ) cerr << "c could not verify " << data.lits[j] << " 1st: " << foundFirst << " 2nd: " << foundSecond << endl;
@@ -431,19 +438,17 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
       }
       if( found[1] ) cerr << "c found first clause as ternary" << endl;
       if ( !found[1] ) { // check for 2nd clause in implications
-        Lit * list = big->getArray(~a);
-	const int listSize = big->getSize(~a);
-	for( int j = 0 ; j < listSize; ++ j ) {
-	  if( list[j] == ~b || list[j] == ~c )
+	if( big->implies(a,~b) || big->implies(a,~c)  ) found[1] = true;
+	else { // not found in big
+	  if( big->isOneChild(~a,~b,~c ) )
 	    { found[1] = true; binary=true;break; }
-	}
-	if( !found[1] ) {
-	  Lit * bList = big->getArray(b);
-	  const int bListSize = big->getSize(b);
-	  for( int j = 0 ; j < bListSize; ++ j ) {
-	    if( bList[j] == ~c ) // no need to look for the other binary clause again!
-	      { found[1] = true; binary=true;break; }
-	  }	  
+	  else  { // found[1] is still false!
+	    if( big->implies(b,~c) ) found[1] = true;
+	    else {
+		if( big->isChild(b,~c) )
+		  { found[1] = true; binary=true;break; }
+	    }
+	  }
 	}
       }
       if( !found[1] ) continue; // this clause does not contribute to an XOR!
@@ -475,36 +480,30 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
      }
      cerr << "c found in ternaries: 3rd: " << (int)found[2] << " 4th: " << (int)found[3] << endl;
      if ( !found[2] ) { // check for 2nd clause in implications
-        Lit * list = big->getArray(a);
-	const int listSize = big->getSize(a);
-	for( int j = 0 ; j < listSize; ++ j ) {
-	  if( list[j] == ~b || list[j] == c )
+	if( big->implies(~a,~b) || big->implies(~a,c) ) { binary=true; found[2] = true; }
+	else {
+	  if( big->isOneChild(a,~b,c) )
 	    { found[2] = true; binary=true;break; }
-	}
-	if( !found[2] ) {
-	  Lit * bList = big->getArray(b);
-	  const int bListSize = big->getSize(b);
-	  for( int j = 0 ; j < bListSize; ++ j ) {
-	    if( bList[j] == c ) // no need to look for the other binary clause again!
-	      { found[2] = true; binary=true;break; }
-	  }	  
+	  else { // found[2] is still false!
+	    if( big->implies(~b,c) ) { binary=true; found[2] = true; }
+	    else {
+	      if( big->isChild(b,c) ){ found[2] = true; binary=true;break; }
+	    }
+	  }
 	}
      }
      if( !found[2] ) continue; // clause [-a,-b,c] not found
      if ( !found[3] ) { // check for 2nd clause in implications
-        Lit * list = big->getArray(a);
-	const int listSize = big->getSize(a);
-	for( int j = 0 ; j < listSize; ++ j ) {
-	  if( list[j] == b || list[j] == ~c )
-	    { found[3] = true; binary=true;break; }
-	}
-	if( !found[3] ) {
-	  Lit * bList = big->getArray(~b);
-	  const int bListSize = big->getSize(~b);
-	  for( int j = 0 ; j < bListSize; ++ j ) {
-	    if( bList[j] == ~c ) // no need to look for the other binary clause again!
+	if( big->implies(~a,b) || big->implies(~a,~c) ) { binary=true; found[3] = true; }
+	else {
+	  if( big->isOneChild(a,b,~c)){ found[3] = true; binary=true;break; }
+	  else {
+	    if( big->implies(b,~c) ) { binary=true; found[3] = true; }
+	    else {
+	      if( big->isChild(~b,~c) )
 	      { found[3] = true; binary=true;break; }
-	  }	  
+	    }
+	  }
 	}
       }
       if( !found[3] ) continue; // clause [-a,b,-c] not found
