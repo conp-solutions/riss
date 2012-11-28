@@ -58,6 +58,11 @@ protected:
    */
   bool applyEquivalencesToFormula( CoprocessorData& data );
   
+  /** check based on gates that have been extracted, whether more equivalent literals can be found!
+   * @return true, if new equivalent literals have been found
+   */
+  bool findGateEquivalences( Coprocessor::CoprocessorData& data, vector< Coprocessor::Circuit::Gate > gates );
+  
   /** find all strongly connected components on binary implication graph 
    * @param externBig use extern big as basis for tarjan algorithm
    */

@@ -29,6 +29,16 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
   if( isToAnalyze == 0 ) isToAnalyze = (char*) malloc( sizeof( char ) * data.nVars()  );
   else isToAnalyze = (char*) realloc( isToAnalyze, sizeof( char ) * data.nVars()  );
   memset( isToAnalyze, 0 , sizeof(char) * data.nVars() );
+
+  // find SCCs and apply them to the "replacedBy" structure
+  for( Var v = 0 ; v < data.nVars(); ++ v ) {
+    eqDoAnalyze.push_back( mkLit(v,false) );
+    isToAnalyze[ v ] = 1;
+  }
+  
+  do { 
+    findEquivalencesOnBig(data);                              // finds SCC based on all literals in the eqDoAnalyze array!
+  } while ( applyEquivalencesToFormula(data ) && data.ok() ); // will set literals that have to be analyzed again!
   
   if( opt_level > 1 ) {
     Circuit circ(ca); 
@@ -41,25 +51,34 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
       if(debug_out) gate.print(cerr);
     }
     cerr << "c TODO TODO: for binary clauses, add the binary graph extension to BIG! TODO TODO" << endl;
-    // TODO free resources of gates!
+
+    vector<Lit> oldReplacedBy = replacedBy;
+    //vector< vector<Lit> >* externBig
+    
+    if( findGateEquivalences( data, gates ) )
+      cerr << "c found new equivalences with the gate method!" << endl;
+    
+    replacedBy = oldReplacedBy;
+    
+    // after we extracted more information from the gates, we can apply these additional equivalences to the forula!
+    while ( applyEquivalencesToFormula(data ) && data.ok() ) {  // will set literals that have to be analyzed again!
+      findEquivalencesOnBig(data);                              // finds SCC based on all literals in the eqDoAnalyze array!
+    }
   }
-  
-  // find SCCs
-  for( Var v = 0 ; v < data.nVars(); ++ v ) {
-    eqDoAnalyze.push_back( mkLit(v,false) );
-    isToAnalyze[ v ] = 1;
-  }
-  
-  do { 
-    findEquivalencesOnBig(data);                              // finds SCC based on all literals in the eqDoAnalyze array!
-  } while ( applyEquivalencesToFormula(data ) && data.ok() ); // will set literals that have to be analyzed again!
-  
 }
 
 void EquivalenceElimination::initClause(const CRef cr)
 {
   
 }
+
+bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& data, vector< Circuit::Gate > gates)
+{
+  vector< vector<int32_t> > varTable; // table that stores per variable the ates where this variable is part of the input (or cluster)
+  
+  cerr << "c THIS METHOD IS NOT IMPLEMENTED YET!!" << endl;
+}
+
 
 void EquivalenceElimination::findEquivalencesOnBig(CoprocessorData& data, vector< vector<Lit> >* externBig)
 {
