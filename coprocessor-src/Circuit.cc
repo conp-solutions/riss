@@ -541,7 +541,7 @@ Circuit::Gate::~Gate()
 
 
 Circuit::Gate::Gate(const Clause& c, const Circuit::Gate::Type _type, const Circuit::Gate::Encoded e, const Lit output)
-: type(_type), encoded(e)
+: inQueue(false), touched(0), type(_type), encoded(e)
 {
   if( _type == Gate::GenAND || _type == Gate::ExO ) {
     data.e.size = (type == Gate::ExO ? c.size() : c.size() - 1); 
@@ -576,7 +576,7 @@ Circuit::Gate::Gate(const Clause& c, const Circuit::Gate::Type _type, const Circ
 }
 
 Circuit::Gate::Gate(const vector< Lit >& c, const Circuit::Gate::Type _type, const Circuit::Gate::Encoded e, const Lit output)
-: type(_type), encoded(e)
+: inQueue(false), touched(0), type(_type), encoded(e)
 {
   if( _type == Gate::GenAND || _type == Gate::ExO ) {
     data.e.size = c.size(); 
@@ -608,14 +608,14 @@ Circuit::Gate::Gate(const vector< Lit >& c, const Circuit::Gate::Type _type, con
 }
 
 Circuit::Gate::Gate(Lit _x, Lit _s, Lit _t, Lit _f, const Circuit::Gate::Type _type, const Circuit::Gate::Encoded e)
-: type(_type), encoded(e)
+: inQueue(false),touched(0), type(_type), encoded(e)
 {
   assert( (_type == ITE || _type == HA_SUM) && "This constructur can be used for ITE gates only" );
   x() = _x; s() = _s; t() = _t; f() = _f;
 }
 
 Circuit::Gate::Gate(Lit _x, Lit _a, Lit _b, const Circuit::Gate::Type _type, const Circuit::Gate::Encoded e)
-: type(_type), encoded(e)
+: inQueue(false), touched(0), type(_type), encoded(e)
 {
 //  assert( false && "This constructor is not yet implemented (should be for faster construction!)" );
   assert( (type == AND || type == XOR ) && "This constructor can only be used for AND or XOR gates" );
@@ -626,6 +626,7 @@ Circuit::Gate::Gate(Lit _x, Lit _a, Lit _b, const Circuit::Gate::Type _type, con
 
 Circuit::Gate& Circuit::Gate::operator=(const Circuit::Gate& other)
 {
+  inQueue = other.inQueue;
   type = other.type;
   encoded = other.encoded;
   if( type == ExO || type == GenAND ) {
@@ -654,7 +655,7 @@ void Circuit::Gate::destroy()
 }
 
 
-void Circuit::Gate::print(ostream& stream)
+void Circuit::Gate::print(ostream& stream) const
 {
   switch( encoded ) {
     case FULL: stream << "full "; break;

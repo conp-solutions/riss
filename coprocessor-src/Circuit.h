@@ -48,6 +48,9 @@ public:
       } e;
     } data;
     
+    bool inQueue; // is this gate currently in some queue (e.g. for structural hashing)?
+    int touched;  // how often has this gate been touched?
+    
 public:
     enum Type { // kind of the gate
       AND,      // AND gate
@@ -71,15 +74,16 @@ public:
     Gate(Lit x, Lit a, Lit b, const Coprocessor::Circuit::Gate::Type _type, const Coprocessor::Circuit::Gate::Encoded e); // AND, XOR
     ~Gate();
     Gate( const Gate& other );
+    /** Note: this operator does not copy the memory for the external literals, but simply copies the pointer! */
     Gate& operator=(const Gate& other);
     
     const Type getType() const { return type; }
     
     bool isInvalid() const { return type == INVALID ; }
     
-    const Lit getOutput() { return (type != GenAND && type != ExO ) ? (const Lit) x() : data.e.x; }
+    const Lit getOutput() const { return (type != GenAND && type != ExO ) ? (const Lit) x() : data.e.x; }
     
-    void print( std::ostream& stream ); // write gate to a stream
+    void print( std::ostream& stream ) const ; // write gate to a stream
     
     /** free resources, if necessary */
     void destroy();
@@ -96,6 +100,20 @@ public:
     Lit& t () {assert (type == ITE && "gate has to be ITE"); return data.lits[2]; } // ITE true branch
     Lit& f () {assert (type == ITE && "gate has to be ITE"); return data.lits[3]; } // ITE false branch
     Lit& get( const int index) { assert( type == ExO || type == GenAND ); return data.e.externLits[index]; }
+    
+    const Lit& x () const {return data.lits[0]; } // output 
+    const Lit& a () const {return data.lits[1]; } // AND, HA-SUM
+    const Lit& b () const {return data.lits[2]; } // AND, HA-SUM
+    const Lit& c () const {return data.lits[3]; } // HA-SUM
+    const Lit& s () const {return data.lits[1]; } // ITE selector
+    const Lit& t () const {return data.lits[2]; } // ITE true branch
+    const Lit& f () const {return data.lits[3]; } // ITE false branch
+    const Lit& get( const int index) const { return data.e.externLits[index]; }
+    const int size() const { assert( type == ExO || type == GenAND ); return data.e.size; }
+    
+    const bool isInQueue() const { return inQueue; }
+    void putInQueue() { assert( inQueue == false && "cannot put twice in a queue" ); inQueue = true; }
+    int touch() { return ++touched; }
   };
   
   

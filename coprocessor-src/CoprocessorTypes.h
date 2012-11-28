@@ -22,6 +22,15 @@ inline ostream& operator<<(ostream& other, Lit l ) {
   return other;
 }
   
+/// print a clause into a stream
+inline ostream& operator<<(ostream& other, Clause& c ) {
+  other << "[";
+  for( int i = 0 ; i < c.size(); ++ i )
+    other << " " << c[i];
+  other << "]";
+  return other;
+}
+  
 typedef std::vector<std::vector <CRef> > ComplOcc;
 
 /** this object frees a pointer before a method /statementblock is left */
@@ -236,6 +245,7 @@ public:
   
   // handling equivalent literals
   void addEquivalences( const std::vector<Lit>& list );
+  void addEquivalences( const Lit& l1, const Lit& l2 );
   vector<Lit>& getEquivalences();
   
   // checking whether a literal can be altered
@@ -612,6 +622,13 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
 inline void CoprocessorData::addEquivalences(const vector< Lit >& list)
 {
   for( int i = 0 ; i < list.size(); ++ i ) equivalences.push_back(list[i]);
+  equivalences.push_back( lit_Undef ); // termination symbol!
+}
+
+inline void CoprocessorData::addEquivalences(const Lit& l1, const Lit& l2)
+{
+  equivalences.push_back(l1);
+  equivalences.push_back(l2);
   equivalences.push_back( lit_Undef ); // termination symbol!
 }
 

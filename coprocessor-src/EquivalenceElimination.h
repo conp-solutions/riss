@@ -50,7 +50,6 @@ public:
 
   void initClause(const CRef cr); // inherited from Technique
 
-
 protected:
 
   /** apply equivalences stored in data object to formula
@@ -75,6 +74,22 @@ protected:
   
   /** perform tarjan algorithm to find SCC on binary implication graph */
   void eqTarjan(Lit l, Lit list, Coprocessor::CoprocessorData& data, Coprocessor::BIG& big, vector< vector< Lit > >* externBig = 0);
+
+  /** check whether this gate can be processed for equivalence checks */
+  bool allInputsStamped(Circuit::Gate& g, std::vector< unsigned char > bitType);
+  
+  /** check the current gate for equivalent literals, enqueue them to the "replacedBy" structure, invalidate the gate */
+  void processGate       (CoprocessorData& data, Circuit::Gate& g, vector<Circuit::Gate>& gates, deque<int>& queue);
+  
+  
+  void processANDgate    (CoprocessorData& data, Circuit::Gate& g, vector<Circuit::Gate>& gates, deque<int>& queue);
+  void processGenANDgate (CoprocessorData& data, Circuit::Gate& g, vector<Circuit::Gate>& gates, deque<int>& queue);
+  void processExOgate    (CoprocessorData& data, Circuit::Gate& g, vector<Circuit::Gate>& gates, deque<int>& queue);
+  void processITEgate    (CoprocessorData& data, Circuit::Gate& g, vector<Circuit::Gate>& gates, deque<int>& queue);
+  void processXORgate    (CoprocessorData& data, Circuit::Gate& g, vector<Circuit::Gate>& gates, deque<int>& queue);
+  
+  /** enqueue all successor gates of the given gate g into the queue, stamp output variables, have a limit when to stop?! */
+  void enqueueSucessorGates(Circuit::Gate& g, std::deque< int > queue, std::vector<Circuit::Gate>& gates, std::vector< unsigned char > bitType, vector< vector<int32_t> >& varTable);
   
   /** returns the literal, that represents the Equivalence-class of l */
   Lit getReplacement(Lit l ) const;

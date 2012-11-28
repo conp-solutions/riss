@@ -73,6 +73,14 @@ lbool Preprocessor::preprocess()
     if( status == l_Undef ) status = propagation.propagate(data);
   }
 
+  if( false ) {
+   cerr << "formula after UP: " << endl;
+   for( int i = 0 ; i < data.getClauses().size(); ++ i )
+     if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getClauses()[i] ] << endl;
+   for( int i = 0 ; i < data.getLEarnts().size(); ++ i )
+     if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getLEarnts()[i] ] << endl;    
+  }
+  
   // begin clauses have to be sorted here!!
   sortClauses();
 
