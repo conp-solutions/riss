@@ -127,7 +127,7 @@ lbool Preprocessor::preprocess()
   if( opt_verbose > 2 )cerr << "c coprocessor free data structures" << endl;
   data.destroy();
 
-  return l_Undef;
+  return status;
 }
 
 lbool Preprocessor::inprocess()
