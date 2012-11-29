@@ -30,6 +30,8 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
   else isToAnalyze = (char*) realloc( isToAnalyze, sizeof( char ) * data.nVars()  );
   memset( isToAnalyze, 0 , sizeof(char) * data.nVars() );
 
+  data.ma.resize(2*data.nVars());
+  
   // find SCCs and apply them to the "replacedBy" structure
   for( Var v = 0 ; v < data.nVars(); ++ v ) {
     eqDoAnalyze.push_back( mkLit(v,false) );
@@ -81,6 +83,17 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
       cerr << "c found new equivalences with the gate method!" << endl;
     
     replacedBy = oldReplacedBy;
+    
+  if( true ) {
+   for( Var v = 0 ; v < data.nVars() ; ++v ) {
+    for( int s = 0 ; s < 2; ++s ) {
+      const Lit l = mkLit(v,s!=0);
+      cerr << "c clauses with " << l << endl;
+      for( int i = 0 ; i < data.list(l).size(); ++ i )
+	if( !ca[data.list(l)[i]].can_be_deleted()  ) cerr << ca[data.list(l)[i]] << endl;
+    }
+   }
+  }
     
     // after we extracted more information from the gates, we can apply these additional equivalences to the forula!
     while ( applyEquivalencesToFormula(data ) && data.ok() ) {  // will set literals that have to be analyzed again!
@@ -567,16 +580,27 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data)
   if( data.getEquivalences().size() > 0 ) {
    
    vector<Lit>& ee = data.getEquivalences();
+   
    int start = 0, end = 0;
    for( int i = 0 ; i < ee.size(); ++ i ) {
      if( ee[i] == lit_Undef ) {
        // handle current EE class!
        end = i - 1;
        Lit repr = getReplacement(ee[start]);
-       for( int j = start ; j < i; ++ j ) // select minimum!
-	 repr =  repr < getReplacement(ee[j]) ? repr : getReplacement(ee[j]);
+	for( int j = start ; j < i; ++ j ) // select minimum!
+	{
+	  data.ma.nextStep();
+	  repr =  repr < getReplacement(ee[j]) ? repr : getReplacement(ee[j]);
+	  data.ma.setCurrentStep( toInt( ee[j] ) );
+	}
 
+       // check whether a literal has also an old replacement that has to be re-considered!
+       data.lits.clear();
+       
        for( int j = start ; j < i; ++ j ) {// set all equivalent literals
+	 const Lit myReplace = getReplacement(ee[j]);
+	 if( ! data.ma.isCurrentStep( toInt( myReplace )) )
+	   data.lits.push_back(myReplace); // has to look through that list as well!
 	 if( ! setEquivalent(repr, ee[j] ) ) { data.setFailed(); return newBinary; }
        }
        
@@ -585,13 +609,22 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data)
          cerr << "c replace " << (sign(ee[j]) ? "-" : "" ) << var(ee[j]) + 1 << " by " << (sign(getReplacement(ee[j])) ? "-" : "" ) << var(getReplacement(ee[j])) + 1 << endl;
        }
        
+       int dataElements = data.lits.size();
        for( int j = start ; j < i; ++ j ) {
 	 Lit l = ee[j];
+	 // first, process all the clauses on the list with old replacement variables
+	 if( j == start && dataElements > 0 ) {
+	   l = data.lits[ --dataElements ]; 
+	   cerr << "c process old replace literal " << l << endl;
+	   j--;
+         }
+	 
+	 if( l == repr ) continue;
 	 data.log.log(eeLevel,"work on literal",l);
 	 // if( getReplacement(l) == repr )  continue;
 	 // TODO handle equivalence here (detect inconsistency, replace literal in all clauses, check for clause duplicates!)
 	 for( int pol = 0; pol < 2; ++ pol ) { // do for both polarities!
-	 vector<CRef>& list = pol == 0 ? data.list( ee[j] ) : data.list( ~ee[j] );
+	 vector<CRef>& list = pol == 0 ? data.list( l ) : data.list( ~l );
 	 for( int k = 0 ; k < list.size(); ++ k ) {
 	  Clause& c = ca[list[k]];
 	  if( c.can_be_deleted() ) continue; // do not use deleted clauses!
@@ -603,6 +636,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data)
 	    if( c[m] == repr || c[m] == ~repr) { duplicate = true; continue; } // manage that this clause is not pushed into the list of clauses again!
 	    c[m] = getReplacement(c[m]);
 	  }
+	  
 	   const int s = c.size(); // sort the clause
 	   for (int m = 1; m < s; ++m)
 	   {
@@ -634,16 +668,24 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data)
 	     if( data.enqueue(c[0]) == l_False ) return newBinary; 
 	   } else if (c.size() == 0 ) {
 	     data.setFailed(); 
+	     return newBinary; 
 	   }
 	  data.log.log(eeLevel,"clause after sort",c);
 	  
 	  if( !duplicate ) {
-	    // TODO: check whether this clause is already inside the list!
-	    data.list( repr ).push_back( list[k] );
+	    cerr << "c give list of literal " << (pol == 0 ? repr : ~repr) << " for duplicate check" << endl;
+	    if( ! hasDuplicate( data.list( (pol == 0 ? repr : ~repr)  ), c ) )
+	      data.list( (pol == 0 ? repr : ~repr) ).push_back( list[k] );
+	    else {
+	      cerr << "c clause has duplicates: " << c << endl;
+	      c.set_delete(true);
+	      data.removedClause(list[k]);
+	    }
+	  } else {
+	    cerr << "c duplicate during sort" << endl; 
 	  }
 	  
 EEapplyNextClause:; // jump here, if a tautology has been found
-          if( c.can_be_deleted() ) data.log.log(eeLevel,"clause has complementary literals: ", c);
 	 }
 	 } // end polarity
        }
@@ -657,6 +699,7 @@ EEapplyNextClause:; // jump here, if a tautology has been found
 	 }
 	 for( int pol = 0; pol < 2; ++ pol ) // clear both occurrence lists!
 	   (pol == 0 ? data.list( ee[j] ) : data.list( ~ee[j] )).clear();
+	 cerr << "c cleared list of var " << var( ee[j] ) + 1 << endl;
        }
 
        // TODO take care of untouchable literals!
@@ -679,4 +722,20 @@ EEapplyNextClause:; // jump here, if a tautology has been found
   }
   return newBinary;
 }
+
+bool EquivalenceElimination::hasDuplicate(vector<CRef>& list, const Clause& c)
+{
+  cerr << "c check for duplicates: " << c << " (" << c.size() << ") against " << list.size() << " candidates" << endl;
+  for( int i = 0 ; i < list.size(); ++ i ) {
+    const Clause& d = ca[list[i]];
+    cerr << "c check " << d << " [del=" << d.can_be_deleted() << " size=" << d.size() << endl;
+    if( d.can_be_deleted() || d.size() != c.size() ) continue;
+    int j = 0 ;
+    while( j < c.size() && c[j] == d[j] ) ++j ;
+    if( j == c.size() ) { cerr << "c found partner" << endl; return true; }
+    cerr << "c clause " << c << " is not equal to " << d << endl;
+  }
+  return false;
+}
+
 

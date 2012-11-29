@@ -94,6 +94,17 @@ lbool Preprocessor::preprocess()
     if( status == l_Undef ) ee.eliminate(data);  // cannot change status, can generate new unit clauses
   }
   
+  if( true ) {
+   for( Var v = 0 ; v < data.nVars() ; ++v ) {
+    for( int s = 0 ; s < 2; ++s ) {
+      const Lit l = mkLit(v,s!=0);
+      cerr << "c clauses with " << l << endl;
+      for( int i = 0 ; i < data.list(l).size(); ++ i )
+	if( !ca[data.list(l)[i]].can_be_deleted()  ) cerr << ca[data.list(l)[i]] << endl;
+    }
+   }
+  }
+  
   if( opt_hte ) {
     if( opt_verbose > 2 )cerr << "c coprocessor hidden tautology elimination" << endl;
     if( status == l_Undef ) hte.eliminate(data);  // cannot change status, can generate new unit clauses

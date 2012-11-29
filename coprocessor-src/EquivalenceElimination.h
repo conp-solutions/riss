@@ -75,6 +75,12 @@ protected:
   /** perform tarjan algorithm to find SCC on binary implication graph */
   void eqTarjan(Lit l, Lit list, Coprocessor::CoprocessorData& data, Coprocessor::BIG& big, vector< vector< Lit > >* externBig = 0);
 
+  /** check whether the clause c has duplicates in the list of literal l
+   *  Note: assumes that all clauses are sorted!
+   *  @return true, if there are duplicates, so that c can be deleted
+   */
+  bool hasDuplicate( vector< Minisat::CRef >& list, const Clause& c );
+  
   /** check whether this gate can be processed for equivalence checks */
   bool allInputsStamped(Coprocessor::Circuit::Gate& g, std::vector< unsigned int >& bitType);
   

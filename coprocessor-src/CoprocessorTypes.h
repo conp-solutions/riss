@@ -17,13 +17,13 @@ using namespace std;
 namespace Coprocessor {
 
 /// print literals into a stream
-inline ostream& operator<<(ostream& other, Lit l ) {
+inline ostream& operator<<(ostream& other, const Lit& l ) {
   other << (sign(l) ? "-" : "") << var(l) + 1;
   return other;
 }
   
 /// print a clause into a stream
-inline ostream& operator<<(ostream& other, Clause& c ) {
+inline ostream& operator<<(ostream& other, const Clause& c ) {
   other << "[";
   for( int i = 0 ; i < c.size(); ++ i )
     other << " " << c[i];
