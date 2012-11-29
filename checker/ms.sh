@@ -8,6 +8,8 @@
 #
 
 ./minisat $1 /tmp/minisat-out -enabled_cp3 -bve > /dev/null # 2> /dev/null
+#./minisat $1 /tmp/minisat-out > /dev/null > /dev/null # 2> /dev/null
+#./minisat $1 /tmp/minisat-out > /dev/null -enabled_cp3 > /dev/null # 2> /dev/null
 status=$?
 
 cat /tmp/minisat-out
