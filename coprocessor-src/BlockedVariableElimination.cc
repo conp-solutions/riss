@@ -12,8 +12,8 @@ static const char* _cat = "COPROCESSOR 3 - BVE";
 static IntOption  opt_verbose    (_cat, "cp3_bve_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
 
 BlockedVariableElimination::BlockedVariableElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation )
-: Technique( _ca, _controller ), 
-  propagation( _propagation)
+: Technique( _ca, _controller )
+, propagation( _propagation)
 {
 }
 
