@@ -55,9 +55,9 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
     findEquivalencesOnBig(data);                              // finds SCC based on all literals in the eqDoAnalyze array!
   } while ( applyEquivalencesToFormula(data ) && data.ok() ); // will set literals that have to be analyzed again!
   
-  if( opt_level > 1 ) {
+  if( opt_level > 1  && data.ok() ) {
     
-    if( true ) {
+    if( false ) {
     cerr << "intermediate formula before gates: " << endl;
     for( int i = 0 ; i < data.getClauses().size(); ++ i )
       if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getClauses()[i] ] << endl;
@@ -75,7 +75,8 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
       if(debug_out) gate.print(cerr);
     }
     cerr << "c TODO TODO: for binary clauses, add the binary graph extension to BIG! TODO TODO" << endl;
-
+    return;
+    
     vector<Lit> oldReplacedBy = replacedBy;
     //vector< vector<Lit> >* externBig
     
@@ -150,7 +151,7 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
        varTable[var( g.b())]. push_back(i);
        varTable[var( g.c())]. push_back(i);
        break;
-     case Circuit::Gate::HA_SUM:
+     case Circuit::Gate::FA_SUM:
        assert( false && "This gate type has not been implemented (yet)" );
        break;
      case Circuit::Gate::INVALID:
@@ -201,13 +202,39 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
     for( int j = 0 ; j < varTable[v].size(); ++ j ) {
       Circuit::Gate& g = gates[ varTable[v][j] ]; 
       if( !g.isInQueue() ) 
-        { queue.push_back( varTable[v][j] ); g.putInQueue(); }
+        { queue.push_back( varTable[v][j] ); 
+          g.putInQueue();
+	  cerr << "c put gate into queue: ";
+	  g.print(cerr);
+	}
+    }
+  }
+  
+  if( queue.empty() && gates.size() > 0 ) {
+    // not pure inputs available, start with all clustered gates!
+    for( int i = 0 ; i < gates.size(); ++ i ) {
+      Circuit::Gate& g = gates[ i ]; 
+      if(  g.getType() == Circuit::Gate::XOR || g.getType() == Circuit::Gate::ExO  ) 
+        { queue.push_back( i ); 
+          g.putInQueue();
+	  cerr << "c put gate into queue: ";
+	  g.print(cerr);
+	  if( g.getType() == Circuit::Gate::XOR ) {
+	    bitType[var(g.a())] = (bitType[var(g.a())] | 4); // stamp
+	    bitType[var(g.b())] = (bitType[var(g.b())] | 4); // stamp
+	    bitType[var(g.c())] = (bitType[var(g.c())] | 4); // stamp
+	  } else {
+	    for( int j = 0 ; j < g.size(); ++ j ) {
+	      bitType[var(g.get(j))] = (bitType[var(g.get(j))] | 4); // stamp
+	    }
+	  }
+	}
     }
   }
   
   if( queue.empty() ) cerr << "c there are no gates to start from, with " << gates.size() << " initial gates!" << endl;
   assert ( (gates.size() == 0 || queue.size() > 0) && "there has to be at least one gate to start from!" ); 
-  while( !queue.empty() ) {
+  while( !queue.empty() && data.ok() ) {
     const int gateIndex = queue.front();
     Circuit::Gate& g = gates[ queue.front() ];
     queue.pop_front();
@@ -224,6 +251,7 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
       processGate( data, g, gates, queue, bitType, varTable );
       // enqueueSucessorGates(g,queue,gates,bitType,varTable);
     } else {
+      cerr << "c not all inputs are available for "; g.print(cerr );
        queue.push_back(gateIndex);
     }
   }
@@ -257,7 +285,7 @@ bool EquivalenceElimination::allInputsStamped(Circuit::Gate& g, std::vector< uns
 	 || (bitType[ var(g.b()) ] & 4) == 0  
 	 || (bitType[ var(g.c()) ] & 4) == 0 ) return false;
        return true;
-     case Circuit::Gate::HA_SUM:
+     case Circuit::Gate::FA_SUM:
        assert( false && "This gate type has not been implemented (yet)" );
        return false;
      case Circuit::Gate::INVALID:
@@ -337,7 +365,7 @@ switch( g.getType() ) {
 	  }
        }
        break;}
-     case Circuit::Gate::HA_SUM:
+     case Circuit::Gate::FA_SUM:
        assert( false && "This gate type has not been implemented (yet)" );
        break;
      case Circuit::Gate::INVALID:
@@ -360,8 +388,8 @@ void EquivalenceElimination::processGate(CoprocessorData& data, Circuit::Gate& g
        return processITEgate(data,g,gates,queue,bitType,varTable);
      case Circuit::Gate::XOR:
        return processXORgate(data,g,gates,queue,bitType,varTable);
-     case Circuit::Gate::HA_SUM:
-       assert( false && "This gate type has not been implemented (yet)" );
+     case Circuit::Gate::FA_SUM:
+       return processFASUMgate(data,g,gates,queue,bitType,varTable);
        break;
      case Circuit::Gate::INVALID:
        break;
@@ -432,27 +460,196 @@ void EquivalenceElimination::processANDgate(CoprocessorData& data, Circuit::Gate
   }
 }
 
-void EquivalenceElimination::processExOgate(CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector<int32_t> >& varTable1)
+void EquivalenceElimination::processExOgate(CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector<int32_t> >& varTable)
 {
 // TODO: also stamp and enqueue!
 }
 
-void EquivalenceElimination::processGenANDgate(CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector<int32_t> >& varTable1)
+void EquivalenceElimination::processGenANDgate(CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector<int32_t> >& varTable)
 {
 // TODO: also stamp and enqueue!
 }
 
-void EquivalenceElimination::processITEgate(CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector<int32_t> >& varTable1)
+void EquivalenceElimination::processITEgate(CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector<int32_t> >& varTable)
 {
-// TODO: also stamp and enqueue!
+  cerr << "c compare " << queue.size() << " gates against current ITE gate ";
+  g.print(cerr);
+  
+  const Lit s = getReplacement( g.s() ); 
+  const Lit t = getReplacement( g.t() ); 
+  const Lit f = getReplacement( g.f() ); 
+  const Lit x = getReplacement( g.x() ); 
+  
+  for( int i = 0 ; i < queue.size(); ++ i ) {
+    const Circuit::Gate& other = gates [queue[i]] ;
+    if( other.getType() != Circuit::Gate::ITE ) continue;
+
+    const Lit os = getReplacement( other.s() ); 
+    if( var(s) != var(os) ) continue; // the selector variable has to be the same!!
+    const Lit ot = getReplacement( other.t() ); 
+    if( var(t) != var(ot) && var(ot) != var(f) ) continue; // has to match one of the inputs!
+    const Lit of = getReplacement( other.f() ); 
+    if(  (var(t) == var(ot) && var(of) != var(f) )
+      || (var(f) == var(ot) && var(of) != var(t) )) continue; // inputs have to match inputs!
+    Lit ox = getReplacement( other.x() ); 
+    if( x == ox ) continue; // can only define output, but no other bits of the gates!
+    // equivalence could be either positive or negative
+    enum Match {
+      POS,
+      NONE,
+      NEG
+    };
+    Match match = NONE;
+    if( s == os ) {
+      if( t == ot && f == of ) match = POS;
+      else if ( t == ~ot && f == ~of ) match = NEG;
+    } else {
+      if( f == ot && t == of ) match = POS;
+      else if ( t == ~of && f == ~ot ) match = NEG;
+    }
+    if( match == NONE ) continue;
+    else if( match == NEG ) ox = ~ox;
+   
+    if( var(x) != var(ox) ) {
+      setEquivalent(x,ox);
+      data.addEquivalences(x,ox);
+      cerr << "c equi: " << x << " == " << ox << endl;
+      
+      // new equivalent gate -> enqueue successors!
+      const Var v = var( other.x() );
+      bitType[v] = bitType[v] | 4; // stamp output bit!
+      // enqueue gates, if not already inside the queue:
+      for( int i = 0 ; i < varTable[ v ].size(); ++ i ) {
+	if(! gates[ varTable[ v ][i] ].isInQueue() ) {
+	  gates[ varTable[ v ][i] ].putInQueue();
+	  queue.push_back( varTable[ v ][i] );
+	}
+      }
+      
+    } else {
+      if( x == ~ox ) {
+	data.setFailed();
+	cerr << "c failed, because procedure found that " << x << " is equivalent to " << ox << endl;
+      } else {
+	cerr << "c found equivalence " << x << " == " << ox << " again" << endl;
+      }
+    }
+    
+  }
+  // this gate has been processed!
+  const Var v = var( x );
+  bitType[v] = bitType[v] | 4; // stamp output bit!
+  // enqueue gates, if not already inside the queue:
+  for( int i = 0 ; i < varTable[ v ].size(); ++ i ) {
+    if(! gates[ varTable[ v ][i] ].isInQueue() ) {
+      gates[ varTable[ v ][i] ].putInQueue();
+      queue.push_back( varTable[ v ][i] );
+    }
+  }
 }
 
 void EquivalenceElimination::processXORgate(CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable)
 {
 // TODO: also stamp and enqueue!
+// TODO: also stamp and enqueue!
+  cerr << "c compare " << queue.size() << " gates against current XOR gate ";
+  g.print(cerr);
+  
+  Lit lits[3];
+  lits[0] = getReplacement( g.a() ); 
+  lits[1] = getReplacement( g.b() ); 
+  lits[2] = getReplacement( g.c() ); 
+  bool pol = sign(lits[0]) ^ sign(lits[1]) ^ sign(lits[2]);
+  
+  for( int i = 0 ; i < queue.size(); ++ i ) {
+    const Circuit::Gate& other = gates [queue[i]] ;
+    if( other.getType() != Circuit::Gate::XOR  // xor is either equivalent to another xor
+      && other.getType() != Circuit::Gate::FA_SUM ) continue; // or subsumes equivalent FA_SUM
+
+    cerr << "c other gate: "; other.print(cerr);
+    
+    if( other.getType() == Circuit::Gate::XOR ) {
+    int hit = 0;
+    Lit freeLit = lit_Undef;
+    const Lit oa = getReplacement( other.a() ); 
+    for( int j = 0; j < 3; ++ j ) {
+      if( var(lits[j]) == var(oa) ) { const Lit tmp = lits[0]; lits[0] = lits[j]; lits[j] = tmp; hit++; break; } 
+    }
+    if( hit == 0 ) freeLit = oa;
+    if( freeLit != lit_Undef ) cerr << "c freelit = " << freeLit << endl;
+    const Lit ob = getReplacement( other.b() ); 
+    for( int j = hit; j < 3; ++ j ) {
+      if( var(lits[j]) == var(ob) ) { const Lit tmp = lits[hit]; lits[hit] = lits[j]; lits[j] = tmp; hit++; break; } 
+    }
+    if( hit < 2 )  // check for the free literal
+      if( hit == 0 ) {cerr << "failed with one of literal " << oa << " ," << ob << endl; continue; } // this xor gate does not match 2 variables!
+      else if( freeLit == lit_Undef ) freeLit = ob ; // this literal is the literal that does not match!
+
+    if( freeLit != lit_Undef ) cerr << "c freelit = " << freeLit << endl;
+    const Lit oc = getReplacement( other.c() ); 
+    for( int j = hit; j < 3; ++ j ) {
+      if( var(lits[j]) == var(oc) ) { const Lit tmp = lits[hit]; lits[hit] = lits[j]; lits[j] = tmp; hit++; break; } 
+    }
+    if( hit < 3 )  // check for the free literal
+      if( hit < 2 ) {cerr << "failed with one of literal " << oa << " ," << ob << ", " << oc << endl; continue; } // this xor gate does not match 2 variables!
+    // might be the case that all variables match!
+    if( freeLit == lit_Undef ) freeLit = oc ; // this literal is the literal that does not match!
+
+    if( freeLit != lit_Undef ) cerr << "c freelit = " << freeLit << endl;
+    // get right polarity!
+    cerr << "c pol= " << pol << " new pol= " << (int)(sign(oa) ^ sign(ob) ^ sign(oc) ^ sign(freeLit) ) << endl;
+    if( (pol ^ sign(lits[2] ) ) != (sign(oa) ^ sign(ob) ^ sign(oc) ^ sign(freeLit) ) ) freeLit = ~freeLit;
+    
+    if( var(lits[2]) != var(freeLit) ) {
+      setEquivalent(lits[2],freeLit);
+      data.addEquivalences(lits[2],freeLit);
+      cerr << "c equi: " << lits[2] << " == " << freeLit << endl;
+      
+      // new equivalent gate -> enqueue successors!
+      for( int j = 0 ; j < 3; ++ j ) { // enqueue all literals!
+	const Var v = var( j == 0 ? other.a() : ((j == 1 ) ? other.b() : other.c() ));
+	bitType[v] = bitType[v] | 4; // stamp output bit!
+	// enqueue gates, if not already inside the queue:
+	for( int i = 0 ; i < varTable[ v ].size(); ++ i ) {
+	  if(! gates[ varTable[ v ][i] ].isInQueue() ) {
+	    gates[ varTable[ v ][i] ].putInQueue();
+	    queue.push_back( varTable[ v ][i] );
+	  }
+	}
+      }
+      
+    } else {
+      if( lits[2] == ~freeLit ) {
+	data.setFailed();
+	cerr << "c failed, because procedure found that " << lits[2] << " is equivalent to " << freeLit << endl;
+	return;
+      } else {
+	cerr << "c found equivalence " << lits[2] << " == " << freeLit << " again" << endl;
+      }
+    }
+    } else {
+      assert( false && "Not implemented yet" ); 
+    }
+
+  }
+  
+      for( int j = 0 ; j < 3; ++ j ) { // enqueue all literals!
+	const Var v = var( lits[j] );
+	bitType[v] = bitType[v] | 4; // stamp output bit!
+	// enqueue gates, if not already inside the queue:
+	for( int i = 0 ; i < varTable[ v ].size(); ++ i ) {
+	  if(! gates[ varTable[ v ][i] ].isInQueue() ) {
+	    gates[ varTable[ v ][i] ].putInQueue();
+	    queue.push_back( varTable[ v ][i] );
+	  }
+	}
+      }
 }
 
-
+void EquivalenceElimination::processFASUMgate(CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable)
+{
+  assert( false && "This method still has to be implemented!" );
+}
 
 
 void EquivalenceElimination::findEquivalencesOnBig(CoprocessorData& data, vector< vector<Lit> >* externBig)

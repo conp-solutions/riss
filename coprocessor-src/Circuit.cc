@@ -63,6 +63,7 @@ int Circuit::extractGates(CoprocessorData& data, vector< Circuit::Gate >& gates)
 
 void Circuit::getGatesWithOutput(const Var v, vector< Circuit::Gate >& gates, CoprocessorData& data)
 {
+  cerr << "check gates for variable " << v << endl;
   data.ma.resize(2*data.nVars());
   if( opt_ExO) getExOGates(v,gates, data);
 
@@ -70,7 +71,7 @@ void Circuit::getGatesWithOutput(const Var v, vector< Circuit::Gate >& gates, Co
   getITEGates(v,gates, data);
   getXORGates(v,gates, data);
   
-  if( opt_HASUM ) getHASUMGates(v,gates, data);
+  if( opt_HASUM ) getFASUMGates(v,gates, data);
   if( debug_out ) cerr << "c after variable " << v+1 << " found " << gates.size() << " gates" << endl;
 }
 
@@ -258,9 +259,175 @@ void Circuit::getExOGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 }
 
 
-void Circuit::getHASUMGates(const Var v, vector< Circuit::Gate >& gates, CoprocessorData& data)
+void Circuit::getFASUMGates(const Var v, vector< Circuit::Gate >& gates, CoprocessorData& data)
 {
+// clauses to look for:
+//    a  b  c  d == 0
+//   -a -b  c  d == 1
+//   -a  b -c  d == 2
+//    a -b -c  d == 3
+//   -a  b  c -d == 4
+//    a -b  c -d == 5
+//    a  b -c -d == 6
+//   -a -b -c -d == 7
+  int oldGates = gates.size();
+  // check for v <-> ITE( s,t,f )
+  for( int p = 0; p < 2 ; ++ p ) {
+    Lit a = mkLit( v, p == 1 ); // XOR(a,b,c) = 1
+    const vector<quad>& cList = quads[ toInt(a) ]; // all clauses C with pos \in C
+    bool found [8]; found[0] = true; // found first clause!
+    for( int i = 0 ; i < cList.size(); ++ i ) 
+    {
+      cerr << "c check quad " << i << "/" << cList.size() << endl;
+      const quad& current = cList[i];
+      // check size occurrence:
+      if( var(current.l1) < var(a) || var(current.l2) < var(a) || var(current.l3) < var(a) ) continue; // do not consider this order of this quad!
+      // reset
+      for( int j = 1; j < 8; ++j ) found [j] = false;
+      // scan for the clauses!
+      const Lit b = current.l1; const Lit c = current.l2; const Lit d = current.l3;
+      // check all binary clauses!
+      if( big->isChild( a, d) || big->implies( a, d) ) { found[1] = found[2] = true; }
+      if( big->isChild( a,~d) || big->implies( a,~d) ) { found[4] = found[7] = true; }
+      if( big->isChild(~a, d) || big->implies(~a, d) ) { found[3] = true; } // part of the initial quadrary!
+      if( big->isChild(~a,~d) || big->implies(~a,~d) ) { found[5] = found[6] = true; }
+      if( big->isChild( a, c) || big->implies( a, c) ) { found[1] = found[4] = true; }
+      if( big->isChild( a,~c) || big->implies( a,~c) ) { found[2] = found[7] = true; }
+      if( big->isChild(~a, c) || big->implies(~a, c) ) { found[5] = true; } // part of the initial quadrary!
+      if( big->isChild(~a,~c) || big->implies(~a,~c) ) { found[3] = found[6] = true; }
+      if( big->isChild( a, b) || big->implies( a, b) ) { found[2] = found[4] = true; }
+      if( big->isChild( a,~b) || big->implies( a,~b) ) { found[1] = found[7] = true; }
+      if( big->isChild(~a, b) || big->implies(~a, b) ) { found[6] = true; } // part of the initial quadrary!
+      if( big->isChild(~a,~b) || big->implies(~a,~b) ) { found[3] = found[5] = true; }      
+      if( big->isChild( b, d) || big->implies( b, d) ) { found[1] = found[3] = true; }
+      if( big->isChild( b,~d) || big->implies( b,~d) ) { found[5] = found[7] = true; }
+      if( big->isChild(~b, d) || big->implies(~b, d) ) { found[2] = true; } // part of the initial quadrary!
+      if( big->isChild(~b,~d) || big->implies(~b,~d) ) { found[4] = found[6] = true; }      
+      if( big->isChild( b, c) || big->implies( b, c) ) { found[1] = found[5] = true; }
+      if( big->isChild( b,~c) || big->implies( b,~c) ) { found[3] = found[7] = true; }
+      if( big->isChild(~b, c) || big->implies(~b, c) ) { found[4] = true; } // part of the initial quadrary!
+      if( big->isChild(~b,~c) || big->implies(~b,~c) ) { found[2] = found[6] = true; }      
+      if( big->isChild( c, d) || big->implies( c, d) ) { found[2] = found[3] = true; }
+      if( big->isChild( c,~d) || big->implies( c,~d) ) { found[6] = found[7] = true; }
+      if( big->isChild(~c, d) || big->implies(~c, d) ) { found[1] = true; } // part of the initial quadrary!
+      if( big->isChild(~c,~d) || big->implies(~c,~d) ) { found[4] = found[5] = true; }      
+      cerr << "c finished binaries" << endl;
+      // gates that have not been found are looked for via ternary and if not succesful via quadrary
+      Lit lits[4];
+      for( int j = 1; j < 8; ++ j ) {
+	if( found[j] == true ) continue; // already found this clause!
+	switch(j) { // setup literals to look for
+	  case 1: lits[0] = ~a; lits[1] = ~b; lits[2] =  c; lits[3] =  d; break;
+	  case 2: lits[0] = ~a; lits[1] =  b; lits[2] = ~c; lits[3] =  d; break;
+	  case 3: lits[0] =  a; lits[1] = ~b; lits[2] = ~c; lits[3] =  d; break;
+	  case 4: lits[0] = ~a; lits[1] =  b; lits[2] =  c; lits[3] = ~d; break;
+	  case 5: lits[0] =  a; lits[1] = ~b; lits[2] =  c; lits[3] = ~d; break;
+	  case 6: lits[0] =  a; lits[1] =  b; lits[2] = ~c; lits[3] = ~d; break;
+	  case 7: lits[0] = ~a; lits[1] = ~b; lits[2] = ~c; lits[3] = ~d; break;
+	}
+	for( int ind = 0; ind < 2; ++ ind ) { // index of literal to iterate over
+	  const vector<ternary>& tList = ternaries[ toInt(lits[0]) ]; // all clauses C with pos \in C
+	  for( int ti = 0 ; ti < tList.size(); ++ ti ) 
+	  {
+	    const ternary tern = tList[ti];
+	    if( tern.l1 == lits[1] && (tern.l2 == lits[2] || tern.l2 == lits[3] ) ) { found[j] = true; goto HASUMnextJ; }
+	    if( tern.l1 == lits[2] && (tern.l2 == lits[1] || tern.l2 == lits[3] ) ) { found[j] = true; goto HASUMnextJ; }
+	    if( tern.l1 == lits[3] && (tern.l2 == lits[0] || tern.l2 == lits[1] ) ) { found[j] = true; goto HASUMnextJ; }
+	  }
+          // done? swap!
+          const Lit tmp = lits[0]; lits[0] = lits[1]; lits[1] = tmp;
+	}
+	// swap back in case the ternary attempt failed
+	{
+	  cerr << "c try to find quad: [" << lits[0] << ", " << lits[1] << ", " << lits[2] << ", " << lits[3] << "]" << endl;
+	  const vector<quad>& qList = quads[ toInt(lits[0]) ]; // all clauses C with pos \in C
+	  for( int qi = 0 ; qi < qList.size(); ++ qi ) 
+	  {
+	    const quad& qQuad = qList[qi];
+	    cerr << "c check sub quad " << qi << "/" << qList.size() << ": " << qQuad.l1 << "," << qQuad.l2 << "," << qQuad.l3 << endl;
+	    if( qQuad.l1 == lits[1] && qQuad.l2 == lits[2] && qQuad.l3 == lits[3] ) // since ordered, there can be only one candidate!
+	      { found[j] = true; break; }
+	  }
+	}
+HASUMnextJ:;
+      }
 
+      // if not all clauses found, check for blocked!
+      
+      // check whether current has been found!
+      int count = 0;
+      for( int j = 0 ; j < 8; ++ j ) if( found[j] ) count ++;
+      
+      cerr << "c found " << count << " clauses" << endl;
+      
+      if( count < 4 ) continue; // need at least 4 clauses to have a chance for blocked!
+      if( count == 8 ) { // found a full gate!
+	data.lits.resize(4);
+	data.lits[0] = a;data.lits[1] = b;data.lits[2] = c;data.lits[3] = d;
+	gates.push_back( Gate(data.lits, Gate::FA_SUM, Gate::FULL) );
+	continue;
+      }
+      
+      if( opt_BLOCKED ) {
+	cerr << "c find blocked gate?" << endl;
+	// depending on the found clauses, four block variants can occur -> select the right literal!
+        Lit blockLit = lit_Undef ;
+             if( found[0] && found[3] && found[5] && found[6] ) blockLit = a;
+	else if( found[1] && found[2] && found[4] && found[7] ) blockLit = ~a;
+	else if( found[0] && found[2] && found[4] && found[6] ) blockLit = b;
+	else if( found[1] && found[3] && found[5] && found[7] ) blockLit = ~b;
+	else if( found[0] && found[1] && found[4] && found[5] ) blockLit = c;
+	else if( found[2] && found[3] && found[6] && found[7] ) blockLit = ~c;
+	else if( found[0] && found[1] && found[2] && found[3] ) blockLit = d;
+	else if( found[4] && found[5] && found[6] && found[7] ) blockLit = ~d;
+	cerr << "c block lit for gate: " << blockLit << endl;
+	if( blockLit == lit_Undef ) continue; // no opportunity for blocking!
+
+	// check whether the literal "blockLit" appears exactly four times in quad clauses, and not else!
+	vector<CRef>& list = data.list(blockLit);
+	int count = 0;
+	for( int j = 0 ; j < list.size(); ++ j ) {
+	  const Clause& c = ca[ list[j] ];
+	  if( c.can_be_deleted() ) continue;
+	  if( c.size() != 4 )  { count = 0; break; }
+	  count ++;
+	}
+	
+	if( count == 4 ) {
+	  data.lits.resize(4);
+	  data.lits[0] = a;data.lits[1] = b;data.lits[2] = c;data.lits[3] = d;
+	  gates.push_back( Gate(data.lits, Gate::FA_SUM, found[0] ? Gate::NEG_BLOCKED : Gate::POS_BLOCKED) );
+	}
+      }
+      
+      
+HASUMnextCandidate:;
+    }
+      
+  }
+  
+  // TODO remove redundant gates!
+  for( int i = oldGates + 1; i < gates.size(); ++ i ) {
+    for( int j = oldGates ; j < i; ++ j ) {
+      // ordered -> only one comparison necessary
+      if(  var(gates[i].x()) == var(gates[j].x())
+	|| var(gates[i].a()) == var(gates[j].a()) 
+	|| var(gates[i].b()) == var(gates[j].b()) 
+	|| var(gates[i].c()) == var(gates[j].c()) )
+      {
+	// gates have same variables, check for same polarity. if true, kick later gate out!
+	bool pol = sign( gates[i].a() ) ^ sign( gates[i].b() ) ^ sign( gates[i].c() ) ^ sign( gates[i].x() );
+	if( pol == sign( gates[j].a() ) ^ sign( gates[j].b() ) ^ sign( gates[j].c() ) ^ sign( gates[j].x() ) )
+	{ // gates are equivalent! XOR(a,b,c) with same polarity
+	  gates[i] = gates[ gates.size() - 1 ];
+	  gates.pop_back();
+	  --i; break;
+	} else {
+	  assert( false && "found a pair of gates that has to be unsatisfiable!" ); 
+	}
+      }
+    }
+  }
 }
 
 void Circuit::getITEGates(const Var v, vector< Circuit::Gate >& gates, CoprocessorData& data)
@@ -560,12 +727,10 @@ Circuit::Gate::Gate(const Clause& c, const Circuit::Gate::Type _type, const Circ
       if( c[i] != output ) data.lits[j++] = c[i];
   } else if ( _type == Gate::ITE ) {
     assert( false && "this constructor is not suitable for ITE gates!" );
-  } else if ( _type == Gate::HA_SUM ) {
-    assert( c.size() == 4 && "half adder sum clause has to have four literals" );
-    data.lits[0] = output;
-    int j = 1;
+  } else if ( _type == Gate::FA_SUM ) {
+    assert( c.size() == 4 && "full adder sum clause has to have four literals" );
     for( int i = 0 ; i < 4; ++i )
-      if( c[i] != output ) data.lits[j++] = c[i];
+      data.lits[i] = c[i];
   } else if ( _type == AND ) {
     assert( c.size() == 3 && "AND gate can only be generated from a ternary clause" );
     if( debug_out ) cerr << "c create AND gate from ternary clause" << endl;
@@ -594,12 +759,10 @@ Circuit::Gate::Gate(const vector< Lit >& c, const Circuit::Gate::Type _type, con
       if( c[i] != output ) data.lits[j++] = c[i];
   } else if ( _type == Gate::ITE ) {
     assert( false && "this constructor is not suitable for ITE gates!" );
-  } else if ( _type == Gate::HA_SUM ) {
-    assert( c.size() == 4 && "half adder sum clause has to have four literals" );
-    data.lits[0] = output;
-    int j = 1;
+  } else if ( _type == Gate::FA_SUM ) {
+    assert( c.size() == 4 && "full adder sum clause has to have four literals" );
     for( int i = 0 ; i < 4; ++i )
-      if( c[i] != output ) data.lits[j++] = c[i];
+      data.lits[i] = c[i];
   } else if ( _type == AND ) {
     x() = output;
     a() = c[0] == output ? c[1] : c[0];
@@ -610,7 +773,7 @@ Circuit::Gate::Gate(const vector< Lit >& c, const Circuit::Gate::Type _type, con
 Circuit::Gate::Gate(Lit _x, Lit _s, Lit _t, Lit _f, const Circuit::Gate::Type _type, const Circuit::Gate::Encoded e)
 : inQueue(false),touched(0), type(_type), encoded(e)
 {
-  assert( (_type == ITE || _type == HA_SUM) && "This constructur can be used for ITE gates only" );
+  assert( (_type == ITE || _type == FA_SUM) && "This constructur can be used for ITE gates only" );
   x() = _x; s() = _s; t() = _t; f() = _f;
 }
 
@@ -634,7 +797,11 @@ Circuit::Gate& Circuit::Gate::operator=(const Circuit::Gate& other)
     data.e.x = other.data.e.x;
     data.e.externLits = other.data.e.externLits;
     data.e.size = other.data.e.size;
-  } else memcpy( data.lits, other.data.lits, sizeof(Lit) * 4 );
+  } else {
+    for( int i = 0 ; i < 4; ++ i ) {
+      data.lits[i] = other.data.lits[i]; 
+    }
+  }
   return *this;
 }
 
@@ -661,11 +828,11 @@ void Circuit::Gate::destroy()
 void Circuit::Gate::print(ostream& stream) const
 {
   switch( encoded ) {
-    case FULL: stream << "full "; break;
+    case FULL:        stream << "full "; break;
     case POS_BLOCKED: stream << "posB "; break;
     case NEG_BLOCKED: stream << "negB "; break;
   }
-  if( type != XOR && type != ExO ) {
+  if( type != XOR && type != ExO && type != FA_SUM) {
     stream << getOutput() << " <-> ";
     switch( type ) {
       case AND:    stream << "AND( " << a() << " , " << b() << " )" << endl; break;
@@ -674,13 +841,17 @@ void Circuit::Gate::print(ostream& stream) const
 	  stream << " " << data.e.externLits[i] ;
 	stream << " )" << endl;
         break;
-      case ITE:    stream << "ITE( " << s() << " , " << t() << " " << f() << " )" << endl; break;
+      case ITE:    stream << "ITE( " << s() << " , " << t() << " , " << f() << " )" << endl; break;
     }
   } else if( type == XOR ) {
     stream << "XOR( " << a() << " , " << b() << " " << c() << " )" << endl;
-  } else {
+  } else if( type == ExO ) {
     stream << "ExO("; 
     for( int i = 0 ;  i < data.e.size; ++ i ) stream << " " << data.e.externLits[i] ;
     stream << " )" << endl;
+  } else {
+    stream << "XOR( ";
+    for( int i = 0 ; i < 4; ++ i ) cerr << " " << data.lits[i];
+    cerr << ")" << endl;
   }
 }

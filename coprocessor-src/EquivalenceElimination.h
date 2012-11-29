@@ -93,6 +93,7 @@ protected:
   void processExOgate    (Coprocessor::CoprocessorData& data, Coprocessor::Circuit::Gate& g, vector< Coprocessor::Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable);
   void processITEgate    (Coprocessor::CoprocessorData& data, Coprocessor::Circuit::Gate& g, vector< Coprocessor::Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable);
   void processXORgate    (Coprocessor::CoprocessorData& data, Coprocessor::Circuit::Gate& g, vector< Coprocessor::Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable);
+  void processFASUMgate  (Coprocessor::CoprocessorData& data, Coprocessor::Circuit::Gate& g, vector< Coprocessor::Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable);
   
   /** enqueue all successor gates of the given gate g into the queue, stamp output variables, have a limit when to stop?! */
   void enqueueSucessorGates(Circuit::Gate& g, std::deque< int > queue, std::vector<Circuit::Gate>& gates, std::vector< unsigned int >& bitType, vector< vector<int32_t> >& varTable);
