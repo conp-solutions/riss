@@ -627,6 +627,7 @@ Circuit::Gate::Gate(Lit _x, Lit _a, Lit _b, const Circuit::Gate::Type _type, con
 Circuit::Gate& Circuit::Gate::operator=(const Circuit::Gate& other)
 {
   inQueue = other.inQueue;
+  touched = other.touched;
   type = other.type;
   encoded = other.encoded;
   if( type == ExO || type == GenAND ) {
@@ -639,6 +640,8 @@ Circuit::Gate& Circuit::Gate::operator=(const Circuit::Gate& other)
 
 Circuit::Gate::Gate(const Circuit::Gate& other)
 {
+  inQueue = other.inQueue;
+  touched = other.touched;
   type = other.type;
   encoded = other.encoded;
   if( type == ExO || type == GenAND ) {

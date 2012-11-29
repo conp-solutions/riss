@@ -99,7 +99,7 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
   /** a variable in a circuit can participate in non-clustered gates only, or also participated in clustered gates */
   vector< vector<int32_t> > varTable ( data.nVars() ); // store for each variable which gates have this variable as input
   // store for each variable, whether this variable has a real output (bit 1=output, bit 2=clustered, bit 3 = stamped)
-  vector< unsigned char > bitType ( data.nVars(), 0 ); // upper 4 bits are a counter to count how often this variable has been considered already as output
+  vector< unsigned int > bitType ( data.nVars(), 0 ); // upper 4 bits are a counter to count how often this variable has been considered already as output
   
   for( int i = 0 ; i < gates.size() ; ++ i ) {
    const Circuit::Gate& g = gates[i];
@@ -151,30 +151,34 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
   
   if( true ) {
    for( Var v = 0 ; v < data.nVars(); ++ v ) {
-     cerr << "c var " << v+1 << " role: " << ( bitType[v] & 2 != 0 ? "clustered " : "") << ( bitType[v] & 1 != 0 ? "output" : "") << " with dependend gates: " << endl;
+     cerr << "c var " << v+1 << " role: " << ( ((bitType[v]) & 2) != 0 ? "clustered " : "") << ( (bitType[v] & 1) != 0 ? "output" : "") << "("<< (int)bitType[v] << ") with dependend gates: " << endl;
      for( int i = 0 ; i < varTable[v].size(); ++ i )
        gates[ varTable[v][i] ].print(cerr);
    }
   }
   cerr << "c ===== START SCANNING ======= " << endl;
   
+  for( Var v = 0 ; v < data.nVars(); ++ v ) {
+     cerr << "c var " << v+1 << " role: " << "("<< (int)bitType[v] << ")" << endl;
+  }
+  
   vector< Var > inputVariables;
   deque< int > queue;
   // collect pure input variables!
   for( Var v = 0 ; v < data.nVars(); ++ v ) {
-    if( bitType[v] == 0 ) {
+    if( 0 == bitType[v] ) {
+      cerr << "c use for initial scanning: " << v+1 << " with " << ((int)bitType[v]) << endl; 
       inputVariables.push_back(v);
-      bitType[v] = bitType[v] | 4; // stamp
+      bitType[v] = (bitType[v] | 4); // stamp
       // todo: stamp variable?!
-      cerr << "c use for initial scanning: " << v << endl; 
     }
   }
   for( Var v = 0 ; v < data.nVars(); ++ v ) {
-    if( bitType[v] & 2 != 0 ) {
+    if( (bitType[v] & 5) == 0  ) { // not yet stamped, and no output
       inputVariables.push_back(v);
-      bitType[v] = bitType[v] | 4; // stamp
+      cerr << "c use for initial clustered scanning: " << v+1 << " with " << ((int)bitType[v]) << endl; 
+      bitType[v] = (bitType[v] | 4); // stamp
       // todo: stamp variable?!
-      cerr << "c use for initial clustered scanning: " << v << endl; 
     }
   }
   
@@ -203,43 +207,42 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
      
     // check whether we are allowed to work on this gate already
     if( allInputsStamped( g, bitType ) ) {
-      processGate( data, g, gates, queue );
-      enqueueSucessorGates(g,queue,gates,bitType,varTable);
-      // TODO: stamp (all)output variable(s)
-      // TODO: add gates with this variable as input. Be careful with adding a (clustered) gate again - have a counter per variable?! (bitType upper 4 bits?)
+      // calculate equivalences based on gate type, stamp output variable and enqueue successor gates
+      processGate( data, g, gates, queue, bitType, varTable );
+      // enqueueSucessorGates(g,queue,gates,bitType,varTable);
     } else {
        queue.push_back(gateIndex);
     }
   }
 }
 
-bool EquivalenceElimination::allInputsStamped(Circuit::Gate& g, std::vector< unsigned char > bitType)
+bool EquivalenceElimination::allInputsStamped(Circuit::Gate& g, std::vector< unsigned int >& bitType)
 {
    switch( g.getType() ) {
      case Circuit::Gate::AND:
-       return bitType[ var(g.a()) ] & 4 != 0 && bitType[ var(g.b()) ] & 4 != 0 ;
+       return (bitType[ var(g.a()) ] & 4) != 0 && (bitType[ var(g.b()) ] & 4) != 0 ;
        break;
      case Circuit::Gate::ExO:
        for( int j = 0 ; j<g.size() ; ++ j ) {
 	 const Var v = var( g.get(j) );
-         if( bitType[ v ] & 4 == 0 ) return false;
+         if( (bitType[ v ] & 4) == 0 ) return false;
        }
        return true;
      case Circuit::Gate::GenAND:
        for( int j = 0 ; j<g.size() ; ++ j ) {
 	 const Var v = var( g.get(j) );
-	 if( bitType[ v ] & 4 == 0 ) return false;
+	 if( (bitType[ v ] & 4) == 0 ) return false;
        }
        return true;
      case Circuit::Gate::ITE:
-       if(  bitType[ var(g.s()) ] & 4 == 0  
-	 || bitType[ var(g.t()) ] & 4 == 0  
-	 || bitType[ var(g.f()) ] & 4 == 0 ) return false;
+       if(  (bitType[ var(g.s()) ] & 4) == 0  
+	 || (bitType[ var(g.t()) ] & 4) == 0  
+	 || (bitType[ var(g.f()) ] & 4) == 0 ) return false;
        return true;
      case Circuit::Gate::XOR:
-       if(  bitType[ var(g.a()) ] & 4 == 0  
-	 || bitType[ var(g.b()) ] & 4 == 0  
-	 || bitType[ var(g.c()) ] & 4 == 0 ) return false;
+       if(  (bitType[ var(g.a()) ] & 4) == 0  
+	 || (bitType[ var(g.b()) ] & 4) == 0  
+	 || (bitType[ var(g.c()) ] & 4) == 0 ) return false;
        return true;
      case Circuit::Gate::HA_SUM:
        assert( false && "This gate type has not been implemented (yet)" );
@@ -258,7 +261,7 @@ bool EquivalenceElimination::checkEquivalence(const Circuit::Gate& g1, const Cir
   return false;
 }
 
-void EquivalenceElimination::enqueueSucessorGates( Circuit::Gate& g, std::deque< int > queue, std::vector<Circuit::Gate>& gates, std::vector< unsigned char > bitType, vector< vector<int32_t> >& varTable)
+void EquivalenceElimination::enqueueSucessorGates( Circuit::Gate& g, std::deque< int > queue, std::vector<Circuit::Gate>& gates, std::vector< unsigned int >& bitType, vector< vector<int32_t> >& varTable)
 {
 switch( g.getType() ) {
      case Circuit::Gate::AND:
@@ -331,19 +334,19 @@ switch( g.getType() ) {
    }
 }
 
-void EquivalenceElimination::processGate(CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, std::deque< int >& queue)
+void EquivalenceElimination::processGate(CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector<int32_t> >& varTable)
 {
   switch( g.getType() ) {
      case Circuit::Gate::AND:
-       return processANDgate(data,g,gates,queue);
+       return processANDgate(data,g,gates,queue,bitType,varTable);
      case Circuit::Gate::ExO:
-       return processExOgate(data,g,gates,queue);
+       return processExOgate(data,g,gates,queue,bitType,varTable);
      case Circuit::Gate::GenAND:
-       return processGenANDgate(data,g,gates,queue);
+       return processGenANDgate(data,g,gates,queue,bitType,varTable);
      case Circuit::Gate::ITE:
-       return processITEgate(data,g,gates,queue);
+       return processITEgate(data,g,gates,queue,bitType,varTable);
      case Circuit::Gate::XOR:
-       return processXORgate(data,g,gates,queue);
+       return processXORgate(data,g,gates,queue,bitType,varTable);
      case Circuit::Gate::HA_SUM:
        assert( false && "This gate type has not been implemented (yet)" );
        break;
@@ -354,8 +357,11 @@ void EquivalenceElimination::processGate(CoprocessorData& data, Circuit::Gate& g
    }
 }
 
-void EquivalenceElimination::processANDgate(CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, std::deque< int >& queue)
+void EquivalenceElimination::processANDgate(CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable)
 {
+  cerr << "c compare " << queue.size() << " gates against current AND gate ";
+  g.print(cerr);
+  
   Lit a = getReplacement( g.a() ); 
   Lit b = getReplacement( g.b() ); 
   Lit x = getReplacement( g.x() ); 
@@ -378,6 +384,18 @@ void EquivalenceElimination::processANDgate(CoprocessorData& data, Circuit::Gate
       setEquivalent(x,ox);
       data.addEquivalences(x,ox);
       cerr << "c equi: " << x << " == " << ox << endl;
+      
+      // new equivalent gate -> enqueue successors!
+      const Var v = var( other.x() );
+      bitType[v] = bitType[v] | 4; // stamp output bit!
+	// enqueue gates, if not already inside the queue:
+	for( int i = 0 ; i < varTable[ v ].size(); ++ i ) {
+	  if(! gates[ varTable[ v ][i] ].isInQueue() ) {
+	    gates[ varTable[ v ][i] ].putInQueue();
+	    queue.push_back( varTable[ v ][i] );
+	  }
+	}
+      
     } else {
       if( x == ~ox ) {
 	data.setFailed();
@@ -388,26 +406,37 @@ void EquivalenceElimination::processANDgate(CoprocessorData& data, Circuit::Gate
     }
     
   }
+  
+  // new equivalent gate -> enqueue successors!
+  const Var v = var( g.x() );
+  bitType[v] = bitType[v] | 4; // stamp output bit!
+  // enqueue gates, if not already inside the queue:
+  for( int i = 0 ; i < varTable[ v ].size(); ++ i ) {
+    if(! gates[ varTable[ v ][i] ].isInQueue() ) {
+      gates[ varTable[ v ][i] ].putInQueue();
+      queue.push_back( varTable[ v ][i] );
+    }
+  }
 }
 
-void EquivalenceElimination::processExOgate(CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, std::deque< int >& queue)
+void EquivalenceElimination::processExOgate(CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector<int32_t> >& varTable1)
 {
-
+// TODO: also stamp and enqueue!
 }
 
-void EquivalenceElimination::processGenANDgate(CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, std::deque< int >& queue)
+void EquivalenceElimination::processGenANDgate(CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector<int32_t> >& varTable1)
 {
-
+// TODO: also stamp and enqueue!
 }
 
-void EquivalenceElimination::processITEgate(CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, std::deque< int >& queue)
+void EquivalenceElimination::processITEgate(CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector<int32_t> >& varTable1)
 {
-
+// TODO: also stamp and enqueue!
 }
 
-void EquivalenceElimination::processXORgate(CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, std::deque< int >& queue)
+void EquivalenceElimination::processXORgate(CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable)
 {
-
+// TODO: also stamp and enqueue!
 }
 
 
