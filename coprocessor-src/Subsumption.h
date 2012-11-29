@@ -51,6 +51,7 @@ protected:
   
   bool hasToStrengthen();    // return whether there is something in the strengthening queue
   lbool fullStrengthening(CoprocessorData& data); // performs strengthening until completion, puts clauses into subsumption queue
+  void strengthening_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics = true);
   
   /** data for parallel execution */
   struct SubsumeWorkData {
