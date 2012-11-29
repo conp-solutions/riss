@@ -23,6 +23,10 @@ coprocessord: always
 	
 always:
 
+doc: clean
+	cd doc; doxygen solver.config
+	touch doc
+
 tar: clean
 	tar czvf minisat22.tar.gz core  HOWTO  LICENSE  Makefile mtl  README  simp  splittings  utils
 
@@ -33,4 +37,5 @@ clean:
 	@cd coprocessor-src; make clean MROOT=..;
 	@rm -f minisat coprocessor minisatd
 	@rm -f *~ */*~
+	@rm -rf doc/html
 	@echo Done

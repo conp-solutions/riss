@@ -8,6 +8,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "core/Solver.h"
 
 #include "coprocessor-src/CoprocessorTypes.h"
+#include "coprocessor-src/Circuit.h"
 
 #include "coprocessor-src/Technique.h"
 #include "coprocessor-src/Propagation.h"
@@ -49,7 +50,6 @@ public:
 
   void initClause(const CRef cr); // inherited from Technique
 
-
 protected:
 
   /** apply equivalences stored in data object to formula
@@ -57,13 +57,39 @@ protected:
    */
   bool applyEquivalencesToFormula( CoprocessorData& data );
   
+  /** check based on gates that have been extracted, whether more equivalent literals can be found!
+   * @return true, if new equivalent literals have been found
+   */
+  bool findGateEquivalences( Coprocessor::CoprocessorData& data, vector< Coprocessor::Circuit::Gate > gates );
+  
   /** find all strongly connected components on binary implication graph 
    * @param externBig use extern big as basis for tarjan algorithm
    */
   void findEquivalencesOnBig(Coprocessor::CoprocessorData& data, vector< vector< Lit > >* externBig = 0);
   
+  /** return literals that have to be equivalent because of the two gates 
+   * @param replacedBy stores for each variable the literal that represents its equivalence class
+   */
+  bool checkEquivalence( const Circuit::Gate& g1, const Circuit::Gate& g2, Lit& e1, Lit& e2);
+  
   /** perform tarjan algorithm to find SCC on binary implication graph */
   void eqTarjan(Lit l, Lit list, Coprocessor::CoprocessorData& data, Coprocessor::BIG& big, vector< vector< Lit > >* externBig = 0);
+
+  /** check whether this gate can be processed for equivalence checks */
+  bool allInputsStamped(Coprocessor::Circuit::Gate& g, std::vector< unsigned int >& bitType);
+  
+  /** check the current gate for equivalent literals, enqueue them to the "replacedBy" structure, invalidate the gate */
+  void processGate       (Coprocessor::CoprocessorData& data, Coprocessor::Circuit::Gate& g, vector< Coprocessor::Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable);
+  
+  
+  void processANDgate    (Coprocessor::CoprocessorData& data, Coprocessor::Circuit::Gate& g, vector< Coprocessor::Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable);
+  void processGenANDgate (Coprocessor::CoprocessorData& data, Coprocessor::Circuit::Gate& g, vector< Coprocessor::Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable);
+  void processExOgate    (Coprocessor::CoprocessorData& data, Coprocessor::Circuit::Gate& g, vector< Coprocessor::Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable);
+  void processITEgate    (Coprocessor::CoprocessorData& data, Coprocessor::Circuit::Gate& g, vector< Coprocessor::Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable);
+  void processXORgate    (Coprocessor::CoprocessorData& data, Coprocessor::Circuit::Gate& g, vector< Coprocessor::Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable);
+  
+  /** enqueue all successor gates of the given gate g into the queue, stamp output variables, have a limit when to stop?! */
+  void enqueueSucessorGates(Circuit::Gate& g, std::deque< int > queue, std::vector<Circuit::Gate>& gates, std::vector< unsigned int >& bitType, vector< vector<int32_t> >& varTable);
   
   /** returns the literal, that represents the Equivalence-class of l */
   Lit getReplacement(Lit l ) const;
