@@ -595,6 +595,16 @@ inline void CoprocessorData::addToExtension(const Lit dontTouch, const Lit l)
 
 inline void CoprocessorData::extendModel(vec< lbool >& model)
 {
+  const bool doOutput = false;
+  if( doOutput ) {
+    cerr << "c extend model of size " << model.size() << " with undo information of size " << undo.size() << endl;
+    cerr << "c  in model: ";
+    for( int i = 0 ; i < model.size(); ++ i ) {
+      const Lit satLit = mkLit( i, model[i] == l_True ? false : true ); 
+      cerr << satLit << " ";
+    }
+    cerr << endl;
+  }
   
   // check current clause for being satisfied
   bool isSat = false;
@@ -616,6 +626,15 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
        isSat = true;
        while( undo[i] != lit_Undef ) --i;
      }
+  }
+  
+  if( doOutput ) {
+    cerr << "c out model: ";
+    for( int i = 0 ; i < model.size(); ++ i ) {
+      const Lit satLit = mkLit( i, model[i] == l_True ? false : true ); 
+      cerr << satLit << " ";
+    }
+    cerr << endl;
   }
 }
 
