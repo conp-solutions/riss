@@ -163,7 +163,7 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, unsigned int
                 if(opt_verbose > 1) cerr << "c =============================================================================" << endl;
                 continue;  // no positive and no negative occurrences of v 
             }              // -> nothing to assign
-            if      (state == l_False) 
+            if      (state == l_False)  // TODO: that is not an UNSAT case -> there are may other lits, that make the clauses true.
                 return;                 // level 0 conflict TODO ABORT ???
             else if (state == l_Undef)
                 ;                       // variable already assigned
