@@ -473,7 +473,7 @@ void EquivalenceElimination::processANDgate(CoprocessorData& data, Circuit::Gate
     } else {
       if( x == ~ox ) {
 	data.setFailed();
-	cerr << "c failed, because procedure found that " << x << " is equivalent to " << ox << endl;
+	cerr << "c failed, because AND procedure found that " << x << " is equivalent to " << ox << endl;
       } else {
 	cerr << "c found equivalence " << x << " == " << ox << " again" << endl;
       }
@@ -562,7 +562,9 @@ void EquivalenceElimination::processITEgate(CoprocessorData& data, Circuit::Gate
     } else {
       if( x == ~ox ) {
 	data.setFailed();
-	cerr << "c failed, because procedure found that " << x << " is equivalent to " << ox << endl;
+	cerr << "c failed, because ITE procedure found that " << x << " is equivalent to " << ox << endl;
+	cerr << "c equi gate 1: " << x << " = ITE(" << s << "," << t << "," << f << ")" << endl;
+	cerr << "c equi gate 2: " << ox << " = ITE(" << os << "," << ot << "," << of << ")" << endl;
       } else {
 	cerr << "c found equivalence " << x << " == " << ox << " again" << endl;
       }
@@ -652,14 +654,13 @@ void EquivalenceElimination::processXORgate(CoprocessorData& data, Circuit::Gate
       } else {
 	if( lits[2] == ~freeLit ) {
 	  data.setFailed();
-	  cerr << "c failed, because procedure found that " << lits[2] << " is equivalent to " << freeLit << endl;
+	  cerr << "c failed, because XOR procedure found that " << lits[2] << " is equivalent to " << freeLit << endl;
 	  return;
 	} else {
 	  cerr << "c found equivalence " << lits[2] << " == " << freeLit << " again" << endl;
 	}
       }
     } else {
-      cerr << " XOR vs FA_SUM: Not implemented yet" << endl;
       int hit = 0;
       Lit freeLit = lit_Undef;
       
@@ -675,13 +676,12 @@ void EquivalenceElimination::processXORgate(CoprocessorData& data, Circuit::Gate
       }
       if( freeLit == lit_Error ) continue; // these gates do not match!
       
-      if( pol != qPol ) freeLit = ~freeLit;
-      cerr << "c" << endl << "c found the unit " << freeLit << " based on XOR reasoning" << "c" << endl;
-      
-
-
+      if( pol == qPol ) freeLit = ~freeLit;
+      cerr << "c" << endl << "c found the unit " << freeLit << " based on XOR reasoning" << "c NOT HANDLED YET!" << endl << "c" << endl;
+      cerr << "c corresponding gates: " << endl;
+      g.print(cerr);
+      other.print(cerr);
     }
-
   }
   
       for( int j = 0 ; j < 3; ++ j ) { // enqueue all literals!
@@ -779,7 +779,7 @@ void EquivalenceElimination::processFASUMgate(CoprocessorData& data, Circuit::Ga
       } else {
 	if( lits[3] == ~freeLit ) {
 	  data.setFailed();
-	  cerr << "c failed, because procedure found that " << lits[3] << " is equivalent to " << freeLit << endl;
+	  cerr << "c failed, because FASUM procedure found that " << lits[3] << " is equivalent to " << freeLit << endl;
 	  return;
 	} else {
 	  cerr << "c found equivalence " << lits[3] << " == " << freeLit << " again" << endl;
@@ -788,6 +788,24 @@ void EquivalenceElimination::processFASUMgate(CoprocessorData& data, Circuit::Ga
     } else {
       cerr << " FA_SUM vs XOR: Not implemented yet" << endl;
       // TODO: is the small xor subsumes the big one, the neagtion of the remaining literal has to be unit propagated!
+      int hit = 0;
+      Lit freeLit = lit_Undef;
+      
+      bool qPol = false;
+      for( int j = 0 ; j < 3; ++ j ) { // enqueue all literals!
+        const Lit ol = ( j == 0 ? other.a() : ((j == 1 ) ? other.b() : other.c() ) );
+	for ( int k = hit; k < 4; ++ k )
+	  if( var(ol) == var(lits[k]) ) // if this variable matches, remember that it does! collect the polarity!
+	    { const Lit tmp = lits[hit]; lits[hit] = lits[k]; lits[k] = tmp; hit++; pol = pol ^ sign(ol); break; }
+      }
+      if( hit < 3 ) continue; // these gates do not match!
+      freeLit = lits[3];
+      
+      if( pol ^ sign( freeLit ) == qPol ) freeLit = ~freeLit;
+      cerr << "c" << endl << "c found the unit " << freeLit << " based on XOR reasoning" << "c NOT HANDLED YET!" << endl << "c" << endl;
+      cerr << "corresponding gates:" << endl;
+      g.print(cerr);
+      other.print(cerr);
     }
 
   }
