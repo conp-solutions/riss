@@ -694,18 +694,20 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
       {
 	// gates have same variables, check for same polarity. if true, kick later gate out!
 	bool pol = sign( gates[i].a() ) ^ sign( gates[i].b() ) ^ sign( gates[i].c() );
+	// if same pol, than one is obsolete
 	if( pol == sign( gates[j].a() ) ^ sign( gates[j].b() ) ^ sign( gates[j].c() ) )
 	{ // gates are equivalent! XOR(a,b,c) with same polarity
 	  gates[i] = gates[ gates.size() - 1 ];
 	  gates.pop_back();
 	  --i; break;
-	}
-      } else {
+	} else {
+	  // if different pol, combining both gates leads to UNSAT!
 	  cerr << "c pair of unsatisfiable gates: " << endl;
 	  gates[i].print(cerr);
 	  gates[j].print(cerr);
 	  assert( false && "found a pair of gates that has to be unsatisfiable!" ); 
-      }
+	}
+      } 
     }
   }
 }
