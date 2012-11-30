@@ -325,21 +325,22 @@ void Circuit::getFASUMGates(const Var v, vector< Circuit::Gate >& gates, Coproce
 	  case 6: lits[0] =  a; lits[1] =  b; lits[2] = ~c; lits[3] = ~d; break;
 	  case 7: lits[0] = ~a; lits[1] = ~b; lits[2] = ~c; lits[3] = ~d; break;
 	}
+	cerr << "c try to find quad: [" << lits[0] << ", " << lits[1] << ", " << lits[2] << ", " << lits[3] << "]" << endl;
 	for( int ind = 0; ind < 2; ++ ind ) { // index of literal to iterate over
 	  const vector<ternary>& tList = ternaries[ toInt(lits[0]) ]; // all clauses C with pos \in C
 	  for( int ti = 0 ; ti < tList.size(); ++ ti ) 
 	  {
 	    const ternary tern = tList[ti];
+	    cerr << "c check with ternaries of lit " << lits[0] << " : " << ti << "/" << tList.size() << " [" << lits[0] << "," << tern.l1 << "," << tern.l2 << "]"<< endl;
 	    if( tern.l1 == lits[1] && (tern.l2 == lits[2] || tern.l2 == lits[3] ) ) { found[j] = true; goto HASUMnextJ; }
 	    if( tern.l1 == lits[2] && (tern.l2 == lits[1] || tern.l2 == lits[3] ) ) { found[j] = true; goto HASUMnextJ; }
-	    if( tern.l1 == lits[3] && (tern.l2 == lits[0] || tern.l2 == lits[1] ) ) { found[j] = true; goto HASUMnextJ; }
+	    if( tern.l1 == lits[3] && (tern.l2 == lits[2] || tern.l2 == lits[1] ) ) { found[j] = true; goto HASUMnextJ; }
 	  }
           // done? swap!
           const Lit tmp = lits[0]; lits[0] = lits[1]; lits[1] = tmp;
 	}
 	// swap back in case the ternary attempt failed
 	{
-	  cerr << "c try to find quad: [" << lits[0] << ", " << lits[1] << ", " << lits[2] << ", " << lits[3] << "]" << endl;
 	  const vector<quad>& qList = quads[ toInt(lits[0]) ]; // all clauses C with pos \in C
 	  for( int qi = 0 ; qi < qList.size(); ++ qi ) 
 	  {
@@ -350,6 +351,7 @@ void Circuit::getFASUMGates(const Var v, vector< Circuit::Gate >& gates, Coproce
 	  }
 	}
 HASUMnextJ:;
+        if( found[j] ) cerr << "c found clause " << j << endl;
       }
 
       // if not all clauses found, check for blocked!
@@ -411,9 +413,9 @@ HASUMnextCandidate:;
     for( int j = oldGates ; j < i; ++ j ) {
       // ordered -> only one comparison necessary
       if(  var(gates[i].x()) == var(gates[j].x())
-	|| var(gates[i].a()) == var(gates[j].a()) 
-	|| var(gates[i].b()) == var(gates[j].b()) 
-	|| var(gates[i].c()) == var(gates[j].c()) )
+	&& var(gates[i].a()) == var(gates[j].a()) 
+	&& var(gates[i].b()) == var(gates[j].b()) 
+	&& var(gates[i].c()) == var(gates[j].c()) )
       {
 	// gates have same variables, check for same polarity. if true, kick later gate out!
 	bool pol = sign( gates[i].a() ) ^ sign( gates[i].b() ) ^ sign( gates[i].c() ) ^ sign( gates[i].x() );
@@ -423,6 +425,9 @@ HASUMnextCandidate:;
 	  gates.pop_back();
 	  --i; break;
 	} else {
+	  cerr << "c pair of unsatisfiable gates: " << endl;
+	  gates[i].print(cerr);
+	  gates[j].print(cerr);
 	  assert( false && "found a pair of gates that has to be unsatisfiable!" ); 
 	}
       }
@@ -696,7 +701,10 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	  --i; break;
 	}
       } else {
-	
+	  cerr << "c pair of unsatisfiable gates: " << endl;
+	  gates[i].print(cerr);
+	  gates[j].print(cerr);
+	  assert( false && "found a pair of gates that has to be unsatisfiable!" ); 
       }
     }
   }
