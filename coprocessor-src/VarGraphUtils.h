@@ -12,18 +12,42 @@ class VarGraphUtils
 {
   public:
 
-  /* Partition the variables into _noParts_ disjoint sets of variables, such that the sets
-   * have a pairwise "distance" of _bufferSize_ variables. */
+  /** Partition the variables into _noParts_ disjoint sets of variables.
+   *
+   * The partitions are build such that the sets have a pairwise "distance" of _bufferSize_ variables.
+   *
+   * @param data data object holding the variable information
+   * @param noParts number of partitions
+   * @param variables reference on the partitioned variable set
+   * @param bufferSize distance between two partitions
+   */
   void partVars(CoprocessorData& data, int noParts, std::vector<std::vector<Var> >& variables, int bufferSize);
 
-  void partClauses(CoprocessorData& data, std::vector<std::vector<Clause> >& variables, int bufferSize);
+  /** Partition the clauses with buffer space between them.
+   *
+   * The partitions are build such that the sets have a pairwise "distance" of _bufferSize_.
+   *
+   * @param data data object holding the variable information
+   * @param clauses reference on the partitioned clause set
+   * @param bufferSize distance between each two partitions
+   */
+  void partClauses(CoprocessorData& data, std::vector<std::vector<Clause> >& clauses, int bufferSize);
 
+  /** Sort the set of variables such that the variables are sorted into partitions.
+   *
+   * The variables are sorted such that the variables that belong to one partition are right after each
+   * other in the sorted vector.
+   *
+   */
   void sortVars(CoprocessorData& data, std::vector<Var>& variables);
 
   protected:
   private:
 };
 
+/**
+ *
+ */
 inline void partVars(CoprocessorData& data, int noParts, std::vector<std::vector<Var> >& variables, int bufferSize)
 {
   //TODO: find good starting points
@@ -40,43 +64,10 @@ inline void partVars(CoprocessorData& data, int noParts, std::vector<std::vector
 
   bool finished = false;
 
+  //TODO: adjacency list for graph search
+  //TODO: use correct buffer size (lock »bufferSize« limits)
+
   // ---------- initialize buffers --------------
-  /*MarkArray a, b, checked, t;
-    a.create(data.nVars());
-    a.nextStep();
-    b.create(data.nVars());
-    b.nextStep();
-    checked.create(data.nVars());
-    checked.nextStep();
-    t.create(data.nVars());
-    t.nextStep();
-  int conflict = -1;
-  unsigned int count = 0;
-  // Get a free variable
-  for (int v = 0; v < data.nVars(); ++v)
-  {
-    data.mark2(v, a, t);
-    for (int i = 0; i < a.size(); ++i)
-    {
-      if (a.isCurrentStep(i)) {
-        data.mark2(i, b, tmp);
-      }
-    }
-    // check if there are intersections
-    for (int i = 0; i < a.size(); ++i)
-    {
-      if (b.isCurrentStep(i) && checked.isCurrentStep(i) ) { // TODO Norbert: added "i" here, is this right?
-        conflict = i;
-        break;
-      }
-    }
-    if (conflict != -1)
-    {
-        checked = b;
-        buffers[count].push_back(conflict);
-        count++;
-    }
-  }*/
   MarkArray first, second, checked;
     first.create(data.nVars());
     first.nextStep();
@@ -178,11 +169,17 @@ inline void partVars(CoprocessorData& data, int noParts, std::vector<std::vector
   // after this while loop, the final vectors contain the partitions.
 }
 
-inline void partClauses(CoprocessorData& data,std::vector<std::vector<Clause> >& variables, int bufferSize)
+/**
+ *
+ */
+inline void partClauses(CoprocessorData& data,std::vector<std::vector<Clause> >& clauses, int bufferSize)
 {
   // TODO: implement partitioning for clauses
 }
 
+/**
+ *
+ */
 inline void sortVars(CoprocessorData& data, std::vector<Var>& variables)
 {
   // TODO: sort a vector of variables according to partitions

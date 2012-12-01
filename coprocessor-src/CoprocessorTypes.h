@@ -462,6 +462,11 @@ inline void CoprocessorData::correctCounters()
   }
 }
 
+/** Mark all variables that occure together with _x_.
+ *
+ * @param x the variable to start with
+ * @param array the mark array in which the marks are set
+ */
 inline void CoprocessorData::mark1(Var x, MarkArray& array)
 {
   std::vector<CRef> & clauses = occs[Minisat::toInt( mkLit(x,true))];
@@ -486,6 +491,15 @@ inline void CoprocessorData::mark1(Var x, MarkArray& array)
   }
 }
 
+/** Marks all variables that occure together with x or with one of x's direct neighbors.
+ *
+ * mark2 marks all variables in two steps from x. That means, all variables that can be reched
+ * in the adjacency graph of variables within two steps.
+ *
+ * @param x the variable to start from
+ * @param array the mark array which contains the marks as result
+ * @param tmp an array used for internal compution (temporary)
+ */
 inline void CoprocessorData::mark2(Var x, MarkArray& array, MarkArray& tmp)
 {
   tmp.nextStep();
