@@ -3,6 +3,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
 #include "coprocessor-src/Coprocessor.h"
+#include "../coprocessor-src/VarGraphUtils.h"
 
 #include <iostream>
 
@@ -73,6 +74,14 @@ lbool Preprocessor::preprocess()
     if( status == l_Undef ) status = propagation.propagate(data);
   }
 
+  if( false ) {
+   cerr << "formula after UP: " << endl;
+   for( int i = 0 ; i < data.getClauses().size(); ++ i )
+     if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getClauses()[i] ] << endl;
+   for( int i = 0 ; i < data.getLEarnts().size(); ++ i )
+     if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getLEarnts()[i] ] << endl;    
+  }
+  
   // begin clauses have to be sorted here!!
   sortClauses();
 
@@ -101,16 +110,17 @@ lbool Preprocessor::preprocess()
 //   MarkArray array;
 //     array.create( solver->nVars() );
 //     array.nextStep();
-//   for( Var v = 0 ; v < solver->nVars(); ++v ) 
+//   for( Var v = 0 ; v < solver->nVars(); ++v )
 //   {
 //     if(!array.isCurrentStep(v) ) {
-//       vars.push(v); 
+//       vars.push(v);
 //       data.mark1(v);
 //     }
 //   }
   // vars = cluster variablen
-  
-  
+  VarGraphUtils utils;
+
+
   // clear / update clauses and learnts vectores and statistical counters
   // attach all clauses to their watchers again, call the propagate method to get into a good state again
   if( opt_verbose > 2 )cerr << "c coprocessor re-setup solver" << endl;
@@ -219,6 +229,16 @@ void Preprocessor::reSetupSolver()
             if (c.size() > 1)
             {
                 solver->clauses[j++] = cr;
+		// do not watch literals that are false!
+		int j = 2;
+		for ( int k = 0 ; k < 2; ++ k ) { // ensure that the first two literals are undefined!
+		  if( solver->value( c[k] ) == l_False ) {
+		    for( ; j < c.size() ; ++j )
+		      if( solver->value( c[j] ) != l_False ) 
+		        { const Lit tmp = c[k]; c[k] = c[j]; c[j] = tmp; break; }
+		  }
+		}
+		assert( (solver->value( c[0] ) != l_False || solver->value( c[1] ) != l_False) && "Cannot watch falsified literals" );
                 solver->attachClause(cr);
             }
             else if (solver->value(c[0]) == l_Undef)
@@ -263,9 +283,19 @@ void Preprocessor::reSetupSolver()
             }
  	  }
 	}
-        if (c.size() > 1)
-            solver->attachClause(cr);
-        else if (solver->value(c[0]) == l_Undef)
+        if (c.size() > 1) {
+	  // do not watch literals that are false!
+	  int j = 2;
+	  for ( int k = 0 ; k < 2; ++ k ) { // ensure that the first two literals are undefined!
+	    if( solver->value( c[k] ) == l_False ) {
+	      for( ; j < c.size() ; ++j )
+		if( solver->value( c[j] ) != l_False ) 
+		  { const Lit tmp = c[k]; c[k] = c[j]; c[j] = tmp; break; }
+	    }
+	  }
+	  assert( (solver->value( c[0] ) != l_False || solver->value( c[1] ) != l_False) && "Cannot watch falsified literals" );
+	  solver->attachClause(cr);
+	} else if (solver->value(c[0]) == l_Undef)
           solver->uncheckedEnqueue(c[0]);
 	else if (solver->value(c[0]) == l_False )
 	{
@@ -277,6 +307,32 @@ void Preprocessor::reSetupSolver()
     solver->learnts.shrink(solver->learnts.size()-j);
     if( opt_verbose > 1 ) fprintf(stderr, " moved %i and removed %i from %i learnts\n",learntToClause,(l_old - j) -learntToClause, l_old);
 
+    if( false ) {
+      cerr << "c trail after cp3: ";
+      for( int i = 0 ; i< solver->trail.size(); ++i ) 
+      {
+	cerr << solver->trail[i] << " " ;
+      }
+      cerr << endl;
+      
+      if( false ) {
+      cerr << "formula: " << endl;
+      for( int i = 0 ; i < data.getClauses().size(); ++ i )
+	if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getClauses()[i] ] << endl;
+      for( int i = 0 ; i < data.getLEarnts().size(); ++ i )
+	if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getLEarnts()[i] ] << endl;    
+      }
+      
+      cerr << "c watch lists: " << endl;
+      for (int v = 0; v < solver->nVars(); v++)
+	  for (int s = 0; s < 2; s++) {
+	    const Lit l = mkLit(v, s == 0 ? false : true );
+	    cerr << "c watch for " << l << endl;
+	    for( int i = 0; i < solver->watches[ l ].size(); ++ i ) {
+	      cerr << ca[solver->watches[l][i].cref] << endl;
+	    }
+	  }
+    }
 }
 
 void Preprocessor::sortClauses()
