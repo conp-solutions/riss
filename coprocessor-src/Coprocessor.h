@@ -11,8 +11,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/CoprocessorTypes.h"
 #include "coprocessor-src/CoprocessorThreads.h"
 
-#include "coprocessor-src/Subsumption.h"
 #include "coprocessor-src/Propagation.h"
+#include "coprocessor-src/Subsumption.h"
 #include "coprocessor-src/HiddenTautologyElimination.h"
 #include "coprocessor-src/ClauseElimination.h"
 #include "coprocessor-src/EquivalenceElimination.h"

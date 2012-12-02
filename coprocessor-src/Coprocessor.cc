@@ -37,8 +37,8 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 // attributes and all that
 
 // classes for preprocessing methods
-, subsumption( solver->ca, controller )
 , propagation( solver->ca, controller )
+, subsumption( solver->ca, controller, propagation )
 , hte( solver->ca, controller )
 , cce( solver->ca, controller )
 , ee ( solver->ca, controller, propagation )
