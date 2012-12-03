@@ -16,12 +16,15 @@ using namespace std;
 
 namespace Coprocessor {
 
+  //forward declaration
+  class VarGraphUtils;
+
 /// print literals into a stream
 inline ostream& operator<<(ostream& other, Lit l ) {
   other << (sign(l) ? "-" : "") << var(l) + 1;
   return other;
 }
-  
+
 /// print a clause into a stream
 inline ostream& operator<<(ostream& other, Clause& c ) {
   other << "[";
@@ -30,7 +33,7 @@ inline ostream& operator<<(ostream& other, Clause& c ) {
   other << "]";
   return other;
 }
-  
+
 typedef std::vector<std::vector <CRef> > ComplOcc;
 
 /** this object frees a pointer before a method /statementblock is left */
@@ -132,7 +135,7 @@ class Logger
   bool useStdErr;  // print to stderr, or to stdout?
 public:
   Logger(int level, bool err = true);
-  
+
   void log( int level, const string& s );
   void log( int level, const string& s, const int i);
   void log( int level, const string& s, const Clause& c);
@@ -144,6 +147,9 @@ public:
  */
 class CoprocessorData
 {
+  // friend for VarGraph
+  friend class Coprocessor::VarGraphUtils;
+
   ClauseAllocator& ca;
   Solver* solver;
   /* TODO to add here
@@ -167,16 +173,16 @@ class CoprocessorData
 
   vector<Lit> undo;                     // store clauses that have to be undone for extending the model
   vector<Lit> equivalences;             // stack of literal classes that represent equivalent literals
-  
+
   // TODO decide whether a vector of active variables would be good!
-  
+
 public:
-  
+
   Logger& log;                           // responsible for logs
-  
+
   MarkArray ma;                          // temporary markarray, that should be used only inside of methods
   vector<Lit> lits;                      // temporary literal vector
-  
+
   CoprocessorData(ClauseAllocator& _ca, Solver* _solver, Logger& _log, bool _limited = true, bool _randomized = false);
 
   // init all data structures for being used for nVars variables
@@ -240,14 +246,14 @@ public:
   void addToExtension( vec< Lit >& lits, const Lit l = lit_Error );
   void addToExtension( vector< Lit >& lits, const Lit l = lit_Error );
   void addToExtension( const Lit dontTouch, const Lit l = lit_Error );
-  
+
   void extendModel(vec<lbool>& model);
-  
+
   // handling equivalent literals
   void addEquivalences( const std::vector<Lit>& list );
   void addEquivalences( const Lit& l1, const Lit& l2 );
   vector<Lit>& getEquivalences();
-  
+
   // checking whether a literal can be altered
   void setNotTouch(const Var v);
   bool doNotTouch (const Var v) const ;
@@ -259,16 +265,16 @@ class BIG {
   Lit* storage;
   int* sizes;
   Lit** big;
-  
+
   /** these two arrays can be used to check whether a literal l implies another literal l'
    *  Note: this is not a complete check!
    */
   uint32_t *start; // when has to literal been touch when scanning the BIG
   uint32_t *stop;  // when has to literal been finished during scanning
-  
+
   uint32_t stampLiteral( const Lit literal, uint32_t stamp, int32_t* index, deque< Lit >& stampQueue );
   void shuffle( Lit* adj, int size ) const;
-  
+
 public:
   BIG();
   ~BIG();
@@ -284,17 +290,17 @@ public:
   const Lit* getArray(const Lit l) const;
   const int getSize(const Lit l) const;
 
-  /** will travers the BIG and generate the start and stop indexes to check whether a literal implies another literal 
+  /** will travers the BIG and generate the start and stop indexes to check whether a literal implies another literal
    * @return false, if BIG is not initialized yet
    */
   bool generateImplied(Coprocessor::CoprocessorData& data);
-  
+
   /** return true, if the condition "from -> to" holds, based on the stochstic scanned data */
   bool implies(const Lit& from, const Lit& to) const;
 
   /** return whether child occurs in the adjacence list of parent (and thus implied) */
   bool isChild(const Lit& parent, const Lit& child) const ;
-  
+
   /** return whether one of the two literals is a direct child of parent (and thus implied)  */
   bool isOneChild( const Lit& parent, const Lit& child1, const Lit& child2 ) const ;
 };
@@ -500,6 +506,11 @@ inline void CoprocessorData::correctCounters()
   }
 }
 
+/** Mark all variables that occure together with _x_.
+ *
+ * @param x the variable to start with
+ * @param array the mark array in which the marks are set
+ */
 inline void CoprocessorData::mark1(Var x, MarkArray& array)
 {
   std::vector<CRef> & clauses = occs[Minisat::toInt( mkLit(x,true))];
@@ -524,9 +535,19 @@ inline void CoprocessorData::mark1(Var x, MarkArray& array)
   }
 }
 
+/** Marks all variables that occure together with x or with one of x's direct neighbors.
+ *
+ * mark2 marks all variables in two steps from x. That means, all variables that can be reched
+ * in the adjacency graph of variables within two steps.
+ *
+ * @param x the variable to start from
+ * @param array the mark array which contains the marks as result
+ * @param tmp an array used for internal compution (temporary)
+ */
 inline void CoprocessorData::mark2(Var x, MarkArray& array, MarkArray& tmp)
 {
   tmp.nextStep();
+  // for negative literal
   std::vector<CRef> & clauses = occs[Minisat::toInt( mkLit(x,true))];
   for( int i = 0; i < clauses.size(); ++i)
   {
@@ -541,7 +562,7 @@ inline void CoprocessorData::mark2(Var x, MarkArray& array, MarkArray& tmp)
       tmp.setCurrentStep(var(c[l]));
     }
   }
-
+  // for positive literal
   clauses = occs[Minisat::toInt( mkLit(x,false))];
   for( int i = 0; i < clauses.size(); ++i)
   {
@@ -560,28 +581,28 @@ inline void CoprocessorData::mark2(Var x, MarkArray& array, MarkArray& tmp)
 inline void CoprocessorData::addToExtension(const Minisat::CRef cr, const Lit l)
 {
   const Clause& c = ca[cr];
-  undo.push_back(lit_Undef); 
-  if( l != lit_Error ) undo.push_back(l); 
+  undo.push_back(lit_Undef);
+  if( l != lit_Error ) undo.push_back(l);
   for( int i = 0 ; i < c.size(); ++ i ) {
-    if( c[i] != l ) undo.push_back(c[i]); 
+    if( c[i] != l ) undo.push_back(c[i]);
   }
 }
 
 inline void CoprocessorData::addToExtension(vec< Lit >& lits, const Lit l)
 {
-  undo.push_back(lit_Undef); 
-  if( l != lit_Error ) undo.push_back(l); 
+  undo.push_back(lit_Undef);
+  if( l != lit_Error ) undo.push_back(l);
   for( int i = 0 ; i < lits.size(); ++ i ) {
-    if( lits[i] != l ) undo.push_back(lits[i]); 
+    if( lits[i] != l ) undo.push_back(lits[i]);
   }
 }
 
 inline void CoprocessorData::addToExtension(vector< Lit >& lits, const Lit l)
 {
-  undo.push_back(lit_Undef); 
-  if( l != lit_Error ) undo.push_back(l); 
+  undo.push_back(lit_Undef);
+  if( l != lit_Error ) undo.push_back(l);
   for( int i = 0 ; i < lits.size(); ++ i ) {
-    if( lits[i] != l ) undo.push_back(lits[i]); 
+    if( lits[i] != l ) undo.push_back(lits[i]);
   }
 }
 
@@ -590,34 +611,35 @@ inline void CoprocessorData::addToExtension(const Lit dontTouch, const Lit l)
   undo.push_back(lit_Undef);
   if( l != lit_Error) undo.push_back(l);
   undo.push_back(dontTouch);
-  
+
 }
 
 
 inline void CoprocessorData::extendModel(vec< lbool >& model)
 {
+
   const bool doOutput = false;
   if( doOutput ) {
     cerr << "c extend model of size " << model.size() << " with undo information of size " << undo.size() << endl;
     cerr << "c  in model: ";
     for( int i = 0 ; i < model.size(); ++ i ) {
-      const Lit satLit = mkLit( i, model[i] == l_True ? false : true ); 
+      const Lit satLit = mkLit( i, model[i] == l_True ? false : true );
       cerr << satLit << " ";
     }
     cerr << endl;
   }
-  
+
   // check current clause for being satisfied
   bool isSat = false;
   for( int i = undo.size() - 1; i >= 0 ; --i ) {
      isSat = false; // init next clause!
      Lit c = undo[i];
-     
+
      if( c == lit_Undef ) {
        if( !isSat ) {
          // if clause is not satisfied, satisfy last literal!
          const Lit& satLit = undo[i+1];
-         log.log(1, "set literal to true",satLit); 
+         log.log(1, "set literal to true",satLit);
          model[ var(satLit) ] = sign(satLit) ? l_False : l_True;
        }
      }
@@ -628,11 +650,11 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
        while( undo[i] != lit_Undef ) --i;
      }
   }
-  
+
   if( doOutput ) {
     cerr << "c out model: ";
     for( int i = 0 ; i < model.size(); ++ i ) {
-      const Lit satLit = mkLit( i, model[i] == l_True ? false : true ); 
+      const Lit satLit = mkLit( i, model[i] == l_True ? false : true );
       cerr << satLit << " ";
     }
     cerr << endl;
@@ -791,7 +813,7 @@ inline Lit* BIG::getArray(const Lit l)
   return big[ toInt(l) ];
 }
 
-inline const Lit* BIG::getArray(const Lit l) const 
+inline const Lit* BIG::getArray(const Lit l) const
 {
   return big[ toInt(l) ];
 }
@@ -805,43 +827,43 @@ inline bool BIG::generateImplied( CoprocessorData& data )
 {
     bool foundEE = false;
     uint32_t stamp = 0 ;
-    
+
     if( start == 0 ) start = (uint32_t*) malloc( data.nVars() * sizeof(uint32_t) * 2 );
     else start = (uint32_t*)realloc( start, data.nVars() * sizeof(uint32_t) * 2 );
-    
+
     if( stop == 0 ) stop = (uint32_t*) malloc( data.nVars() * sizeof(uint32_t) * 2 );
     else stop = (uint32_t*)realloc( stop, data.nVars() * sizeof(int32_t) * 2 );
-    
+
     int32_t* index = (int32_t*)malloc( data.nVars() * sizeof(int32_t) * 2 );
-    
+
     // set everything to 0!
     memset( start, 0, data.nVars() * sizeof(uint32_t) * 2 );
     memset( stop, 0, data.nVars() * sizeof(uint32_t) * 2 );
     memset( index, 0, data.nVars() * sizeof(int32_t) * 2 );
-    
-    
+
+
     deque< Lit > stampQueue;
-    
+
     data.lits.clear();
     // reset all present variables, collect all roots in binary implication graph
-    for ( Var v = 0 ; v < data.nVars(); ++ v ) 
+    for ( Var v = 0 ; v < data.nVars(); ++ v )
     {
       const Lit pos =  mkLit(v,false);
       // a literal is a root, if its complement does not imply a literal
       if( getSize(pos) == 0 ) data.lits.push_back(~pos);
       if( getSize(~pos) == 0 ) data.lits.push_back(pos);
     }
-    
+
     // do stamping for all roots, shuffle first
     const uint32_t ts = data.lits.size();
     for( uint32_t i = 0 ; i < ts; i++ ) { const uint32_t rnd=rand()%ts; const Lit tmp = data.lits[i]; data.lits[i] = data.lits[rnd]; data.lits[rnd]=tmp; }
     // stamp shuffled data.lits
-    for ( uint32_t i = 0 ; i < ts; ++ i ) 
+    for ( uint32_t i = 0 ; i < ts; ++ i )
       stamp = stampLiteral(data.lits[i],stamp,index,stampQueue);
 
     // stamp all remaining literals, after shuffling
     data.lits.clear();
-    for ( Var v = 0 ; v < data.nVars(); ++ v ) 
+    for ( Var v = 0 ; v < data.nVars(); ++ v )
     {
       const Lit pos =  mkLit(v,false);
       if( start[ toInt(pos) ] == 0 ) data.lits.push_back(pos);
@@ -850,11 +872,11 @@ inline bool BIG::generateImplied( CoprocessorData& data )
     // stamp shuffled data.lits
     const uint32_t ts2 = data.lits.size();
     for( uint32_t i = 0 ; i < ts2; i++ ) { const uint32_t rnd=rand()%ts2; const Lit tmp = data.lits[i]; data.lits[i] = data.lits[rnd]; data.lits[rnd]=tmp; }
-    for ( uint32_t i = 0 ; i < ts2; ++ i ) 
+    for ( uint32_t i = 0 ; i < ts2; ++ i )
       stamp = stampLiteral(data.lits[i],stamp,index,stampQueue);
 }
 
-inline void BIG::shuffle( Lit* adj, int size ) const 
+inline void BIG::shuffle( Lit* adj, int size ) const
 {
   for( uint32_t i = 0 ;  i+1<size; ++i ) {
     const uint32_t rnd = rand() % size;
@@ -868,23 +890,23 @@ inline uint32_t BIG::stampLiteral( const Lit literal, uint32_t stamp, int32_t* i
 {
   // do not stamp a literal twice!
   if( start[ toInt(literal) ] != 0 ) return stamp;
-  
+
   stampQueue.clear();
   // linearized algorithm from paper
   stamp++;
   // handle initial literal before putting it on queue
   start[toInt(literal)] = stamp; // parent and root are already set to literal
   stampQueue.push_back(literal);
-  
+
   shuffle( getArray(literal), getSize(literal) );
   index[toInt(literal)] = 0;
-  
-  while( ! stampQueue.empty() ) 
+
+  while( ! stampQueue.empty() )
     {
       const Lit current = stampQueue.back();
       const Lit* adj =   getArray(current);
       const int adjSize = getSize(current);
-      
+
       if( index[toInt(current)] == adjSize ) {
 	stampQueue.pop_back();
 	stamp++;
@@ -901,7 +923,7 @@ inline uint32_t BIG::stampLiteral( const Lit literal, uint32_t stamp, int32_t* i
 	shuffle( getArray(impliedLit), getSize(impliedLit) );
       }
 
-    } 
+    }
 }
 
 inline bool BIG::implies(const Lit& from, const Lit& to) const
@@ -962,7 +984,7 @@ inline void Logger::log(int level, const string& s, const Lit& l)
 {
   if( level > outputLevel ) return;
   (useStdErr ? std::cerr : std::cout )
-    << "c [" << level << "] " << s << " : " 
+    << "c [" << level << "] " << s << " : "
     << (sign(l) ? "-" : "") << var(l)+1
     << endl;
 }
@@ -979,7 +1001,7 @@ inline void Logger::log(int level, const string& s, const Clause& c, const Lit& 
 {
   if( level > outputLevel ) return;
   (useStdErr ? std::cerr : std::cout )
-    << "c [" << level << "] " << s << " : " 
+    << "c [" << level << "] " << s << " : "
     << (sign(l) ? "-" : "") << var(l)+1 << " with clause ";
   for( int i = 0 ; i< c.size(); ++i ) {
     const Lit& l = c[i];

@@ -7,6 +7,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "core/Solver.h"
 
+#include "coprocessor-src/Propagation.h"
+
 #include "coprocessor-src/Technique.h"
 
 #include "coprocessor-src/CoprocessorTypes.h"
@@ -23,11 +25,12 @@ namespace Coprocessor {
 class Subsumption : public Technique {
   
   vector<CRef> clause_processing_queue;
-  vector<CRef> strengthening_queue;
+  vector<CRef> strengthening_queue;         // vector of clausereferences, which can strengthen
+  Coprocessor::Propagation& propagation;
   
 public:
   
-  Subsumption( ClauseAllocator& _ca, ThreadController& _controller );
+  Subsumption( ClauseAllocator& _ca, ThreadController& _controller, Coprocessor::Propagation& _propagation );
   
   
   /** run subsumption and strengthening until completion */
