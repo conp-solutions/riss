@@ -145,17 +145,27 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, unsigned int
        if (pos_count == 0 || neg_count == 0)
        {    
             lbool state;
-            if      ((pos_count == 0) && (neg_count >  0))
+            if      ((pos_count > 0) && (neg_count ==  0))
             {
-                state = data.enqueue(mkLit(v, false));             
+                state = data.getSolver()->value(mkLit(v, false));             
+                if (state != l_False)
+                {    
+                    state = data.enqueue(mkLit(v, false));
+                }
                 if(opt_verbose > 1) cerr << "c handling pure literal" << endl;
                 if(opt_verbose > 0) cerr << "c Pure Lit " << v+1 << endl;
+                if(opt_verbose > 1) cerr << "c Pure Lit " << (state == l_False ? "negation enqueued before" : "enqueued successful") << endl;
             }
-            else if ((pos_count >  0) && (neg_count == 0))
+            else if ((pos_count ==  0) && (neg_count > 0))
             {
-                state = data.enqueue(mkLit(v, true));
+                state = data.getSolver()->value(mkLit(v, true));
+                if (state != l_False)
+                {
+                    state = data.enqueue(mkLit(v, true));
+                } 
                 if(opt_verbose > 1) cerr << "c handling pure literal" << endl;
-                if(opt_verbose > 0) cerr << "c Pure Lit " << v+1 << endl;
+                if(opt_verbose > 0) cerr << "c Pure Lit ¬" << v+1 << endl;
+                if(opt_verbose > 1) cerr << "c Pure Lit " << (state == l_False ? "negation enqueued before" : "enqueued successful") << endl;
             }
             else 
             {  
@@ -163,8 +173,8 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, unsigned int
                 if(opt_verbose > 1) cerr << "c =============================================================================" << endl;
                 continue;  // no positive and no negative occurrences of v 
             }              // -> nothing to assign
-            if      (state == l_False)  // TODO: that is not an UNSAT case -> there are may other lits, that make the clauses true.
-                return;                 // level 0 conflict TODO ABORT ???
+            if      (state == l_False)  // this is not an UNSAT case -> there may are other lits, that make the clauses true.
+                ; 
             else if (state == l_Undef)
                 ;                       // variable already assigned
             else if (state == l_True) 
