@@ -32,7 +32,7 @@ public:
    *  will run over all clauses with satisfied/unsatisfied literals (that have not been done already)
    *  @return l_Undef, if no conflict has been found, l_False if there has been a conflict
    */
-  lbool propagate(CoprocessorData& data);
+  lbool propagate(CoprocessorData& data, bool sort = false);
   
   void initClause( const CRef cr );
   

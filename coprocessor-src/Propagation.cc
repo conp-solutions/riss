@@ -15,7 +15,7 @@ Propagation::Propagation( ClauseAllocator& _ca, ThreadController& _controller )
 }
 
 
-lbool Propagation::propagate(CoprocessorData& data)
+lbool Propagation::propagate(CoprocessorData& data, bool sort)
 {
   Solver* solver = data.getSolver();
   // propagate all literals that are on the trail but have not been propagated
@@ -42,7 +42,10 @@ lbool Propagation::propagate(CoprocessorData& data)
       if( !c.can_be_deleted() ) {
         for( int j = 0; j < c.size(); ++ j ) 
           if( c[j] == nl ) { 
-	    c.removePositionUnsorted(j);
+	    if (!sort) 
+          c.removePositionUnsorted(j);
+        else 
+          c.removePositionSorted(j);
 	    break;
 	  }
         count ++;
