@@ -8,6 +8,7 @@
 #
 
 ./minisat $1 /tmp/minisat-out > /dev/null -enabled_cp3 -subsimp > /dev/null # 2> /dev/null
+
 status=$?
 
 cat /tmp/minisat-out

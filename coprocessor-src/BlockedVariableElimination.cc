@@ -192,6 +192,11 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, unsigned int
        int lit_clauses;
        int lit_learnts;
        
+       // get current time
+       //  
+       // int myDeleteTime = data.getMyDeleteTimer();
+       
+       
        if (!force) 
            if (anticipateElimination(data, pos, neg,  v, pos_stats, neg_stats, lit_clauses, lit_learnts) == l_False) 
                return;  // level 0 conflict found while anticipation TODO ABORT
@@ -217,7 +222,14 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, unsigned int
             if (opt_verbose > 0) cerr << "c Resolved " << v+1 <<endl;
        }
        if(opt_verbose > 1)   cerr << "c =============================================================================" << endl;
+       
+       // subsumption with new clauses!!
+       
     }
+    
+    // add active variables and clauses to variable heap and subsumption queues
+    // data.getActiveVariables(myDeleteTime, vector<Var>& variables);
+
 }
 /*
  * on every clause, that is not yet marked for deletion:
@@ -232,6 +244,7 @@ inline void BlockedVariableElimination::removeClauses(CoprocessorData & data, ve
         CRef cr = list[cr_i];
         if (!c.can_be_deleted())
         {
+	    // also updated deleteTimer
             data.removedClause(cr);
             c.set_delete(true);
             data.addToExtension(cr, l);
