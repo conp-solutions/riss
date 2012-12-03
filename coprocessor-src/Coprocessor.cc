@@ -21,6 +21,7 @@ static BoolOption opt_hte     (_cat, "hte",         "Use Hidden Tautology Elimin
 static BoolOption opt_cce     (_cat, "cce",         "Use (covered) Clause Elimination during preprocessing", false);
 static BoolOption opt_ee     (_cat, "ee",          "Use Equivalence Elimination during preprocessing", false);
 static BoolOption opt_enabled (_cat, "enabled_cp3", "Use CP3", false);
+static BoolOption opt_bve     (_cat, "bve",         "Use Blocked Variable Elimination during preprocessing", false);
 
 static IntOption  opt_log     (_cat, "log",         "Output log messages until given level", 0, IntRange(0, 3));
 
@@ -40,6 +41,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , subsumption( solver->ca, controller )
 , propagation( solver->ca, controller )
 , hte( solver->ca, controller )
+, bve( solver->ca, controller, propagation )
 , cce( solver->ca, controller )
 , ee ( solver->ca, controller, propagation )
 {
@@ -99,6 +101,11 @@ lbool Preprocessor::preprocess()
     if( status == l_Undef ) hte.eliminate(data);  // cannot change status, can generate new unit clauses
   }
 
+  if ( opt_bve ) {
+    if( opt_verbose > 2 )cerr << "c coprocessor blocked variable elimination" << endl;
+    if( status == l_Undef ) status = bve.runBVE(data);  // can change status, can generate new unit clauses
+  }
+  
   if( opt_cce ) {
     if( opt_verbose > 2 )cerr << "c coprocessor (covered) clause elimination" << endl;
     if( status == l_Undef ) cce.eliminate(data);  // cannot change status, can generate new unit clauses
@@ -122,13 +129,13 @@ lbool Preprocessor::preprocess()
   // clear / update clauses and learnts vectores and statistical counters
   // attach all clauses to their watchers again, call the propagate method to get into a good state again
   if( opt_verbose > 2 )cerr << "c coprocessor re-setup solver" << endl;
-  reSetupSolver();
+  if (status == l_Undef) reSetupSolver();
 
   // destroy preprocessor data
   if( opt_verbose > 2 )cerr << "c coprocessor free data structures" << endl;
   data.destroy();
 
-  return l_Undef;
+  return status;
 }
 
 lbool Preprocessor::inprocess()
@@ -188,6 +195,7 @@ void Preprocessor::destroyPreprocessor()
   hte.destroy();
   propagation.destroy();
   subsumption.destroy();
+  bve.destroy();
 }
 
 

@@ -417,7 +417,7 @@ inline uint32_t CoprocessorData::deletedVar(const Var v)
 inline void CoprocessorData::getActiveVariables(const uint32_t myTimer, vector< Var >& activeVariables)
 {
   for( Var v = 0 ; v < solver->nVars(); ++ v ) {
-    if( deleteTimer.getIndex(v) > myTimer ) activeVariables.push_back(v);
+    if( deleteTimer.getIndex(v) >= myTimer ) activeVariables.push_back(v);
   }
 }
 
@@ -453,6 +453,7 @@ inline void CoprocessorData::removedClause(const Minisat::CRef cr)
 
 inline void CoprocessorData::removedLiteral(Lit l, int32_t diff)
 {
+  deletedVar(var(l));
   lit_occurrence_count[toInt(l)] -= diff;
 }
 
