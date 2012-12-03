@@ -90,6 +90,8 @@ lbool Preprocessor::preprocess()
   if( opt_subsimp ) {
     if( opt_verbose > 2 )cerr << "c coprocessor subsume/strengthen" << endl;
     if( status == l_Undef ) subsumption.subsumeStrength(data);  // cannot change status, can generate new unit clauses
+    if (! solver->okay())
+        status = l_False;
   }
 
   if( opt_ee ) { // before this technique nothing should be run that alters the structure of the formula (e.g. BVE;BVA)
