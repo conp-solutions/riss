@@ -41,7 +41,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , propagation( solver->ca, controller )
 , hte( solver->ca, controller )
 , cce( solver->ca, controller )
-, ee ( solver->ca, controller, propagation )
+, ee ( solver->ca, controller, propagation, subsumption )
 {
   controller.init();
 }

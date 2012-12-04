@@ -12,6 +12,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor-src/Technique.h"
 #include "coprocessor-src/Propagation.h"
+#include "coprocessor-src/Subsumption.h"
 
 #include <vector>
 
@@ -40,12 +41,13 @@ class EquivalenceElimination : public Technique {
   vector<Lit> eqDoAnalyze;             /// stores the literals to be analyzed
   
   Propagation& propagation;            /// object that takes care of unit propagation
+  Subsumption& subsumption;		/// object that takes care of subsumption and strengthening
   
 public:
   
-  EquivalenceElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation );
+  EquivalenceElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation, Coprocessor::Subsumption& _subsumption  );
   
-  /** run subsumption and strengthening until completion */
+  /** run equivalent literal elimination */
   void eliminate(Coprocessor::CoprocessorData& data);
 
   void initClause(const CRef cr); // inherited from Technique
@@ -61,6 +63,7 @@ protected:
    * @return true, if new equivalent literals have been found
    */
   bool findGateEquivalences( Coprocessor::CoprocessorData& data, vector< Coprocessor::Circuit::Gate > gates );
+  bool findGateEquivalencesNew(Coprocessor::CoprocessorData& data, vector< Coprocessor::Circuit::Gate >& gates);
   
   /** find all strongly connected components on binary implication graph 
    * @param externBig use extern big as basis for tarjan algorithm
@@ -88,12 +91,12 @@ protected:
   void processGate       (Coprocessor::CoprocessorData& data, Coprocessor::Circuit::Gate& g, vector< Coprocessor::Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable);
   
   
-  void processANDgate    (Coprocessor::CoprocessorData& data, Coprocessor::Circuit::Gate& g, vector< Coprocessor::Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable);
-  void processGenANDgate (Coprocessor::CoprocessorData& data, Coprocessor::Circuit::Gate& g, vector< Coprocessor::Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable);
-  void processExOgate    (Coprocessor::CoprocessorData& data, Coprocessor::Circuit::Gate& g, vector< Coprocessor::Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable);
-  void processITEgate    (Coprocessor::CoprocessorData& data, Coprocessor::Circuit::Gate& g, vector< Coprocessor::Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable);
-  void processXORgate    (Coprocessor::CoprocessorData& data, Coprocessor::Circuit::Gate& g, vector< Coprocessor::Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable);
-  void processFASUMgate  (Coprocessor::CoprocessorData& data, Coprocessor::Circuit::Gate& g, vector< Coprocessor::Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable);
+  void processANDgate    (CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, deque< int >& queue, vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable, MarkArray* active = 0, vector<Var>* activeVariables=0);
+  void processGenANDgate (CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, deque< int >& queue, vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable, MarkArray* active = 0, vector<Var>* activeVariables=0);
+  void processExOgate    (CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, deque< int >& queue, vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable, MarkArray* active = 0, vector<Var>* activeVariables=0);
+  void processITEgate    (CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, deque< int >& queue, vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable, MarkArray* active = 0, vector<Var>* activeVariables=0);
+  void processXORgate    (CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, deque< int >& queue, vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable, MarkArray* active = 0, vector<Var>* activeVariables=0);
+  void processFASUMgate  (CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, deque< int >& queue, vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable, MarkArray* active = 0, vector<Var>* activeVariables=0);
   
   /** enqueue all successor gates of the given gate g into the queue, stamp output variables, have a limit when to stop?! */
   void enqueueSucessorGates(Circuit::Gate& g, std::deque< int > queue, std::vector<Circuit::Gate>& gates, std::vector< unsigned int >& bitType, vector< vector<int32_t> >& varTable);

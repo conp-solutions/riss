@@ -121,6 +121,7 @@ public:
     
     const bool isInQueue() const { return inQueue; }
     void putInQueue() { assert( inQueue == false && "cannot put twice in a queue" ); inQueue = true; }
+    void takeFromQueue() { inQueue = false; }
     int touch() { return ++touched; }
   };
   

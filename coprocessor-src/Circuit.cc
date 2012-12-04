@@ -428,6 +428,8 @@ HASUMnextCandidate:;
 	  cerr << "c pair of unsatisfiable gates: " << endl;
 	  gates[i].print(cerr);
 	  gates[j].print(cerr);
+	  data.setFailed();
+	  return;
 	  assert( false && "found a pair of gates that has to be unsatisfiable!" ); 
 	}
       }
@@ -705,6 +707,8 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	  cerr << "c pair of unsatisfiable gates: " << endl;
 	  gates[i].print(cerr);
 	  gates[j].print(cerr);
+	  data.setFailed();
+	  return;
 	  assert( false && "found a pair of gates that has to be unsatisfiable!" ); 
 	}
       } 

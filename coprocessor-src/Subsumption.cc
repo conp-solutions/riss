@@ -261,6 +261,15 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
 //printf("\n");
 }
 
+void Subsumption::addClause(const Minisat::CRef cr)
+{
+  const Clause& c = ca[cr];
+  if (c.can_subsume() && !c.can_be_deleted())
+    clause_processing_queue.push_back(cr);
+  if (c.can_strengthen() && !c.can_be_deleted())
+    strengthening_queue.push_back(cr);
+}
+
 void Subsumption::initClause( const CRef cr )
 {
   const Clause& c = ca[cr];

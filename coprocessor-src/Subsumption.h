@@ -35,6 +35,9 @@ public:
 
   void initClause(const CRef cr); // inherited from Technique
   
+  /** add a clause to the queues, so that this clause will be checked by the next call to subsumeStrength */
+  void addClause( const CRef cr );
+  
   /* TODO:
    *  - init
    *  - add to queue
