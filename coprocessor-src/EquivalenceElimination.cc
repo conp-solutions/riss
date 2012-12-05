@@ -224,7 +224,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
       }
 
       // handle all gates based on the type!
-      while ( !queue.empty() ) {  
+      while ( !queue.empty() && data.ok() ) {  
 	Circuit::Gate& g = gates[ queue.front() ];
 	queue.pop_front();
 	g.takeFromQueue();
@@ -943,7 +943,7 @@ void EquivalenceElimination::processITEgate(CoprocessorData& data, Circuit::Gate
       if( x == ~ox ) {
 	data.setFailed();
 	cerr << "c failed, because ITE procedure found that " << x << " is equivalent to " << ox << endl;
-//	cerr << "c equi gate 1: " << x << " = ITE(" << s << "," << t << "," << f << ")" << endl;
+//	cerr << "c equi gate 1: " << x  << " = ITE(" << s  << "," << t  << "," << f  << ")" << endl;
 // 	cerr << "c equi gate 2: " << ox << " = ITE(" << os << "," << ot << "," << of << ")" << endl;
       } else {
 // 	cerr << "c found equivalence " << x << " == " << ox << " again" << endl;
@@ -1458,7 +1458,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data)
 	  data.log.log(eeLevel,"clause after sort",c);
 	  
 	  if( !duplicate ) {
-	    cerr << "c give list of literal " << (pol == 0 ? repr : ~repr) << " for duplicate check" << endl;
+// 	    cerr << "c give list of literal " << (pol == 0 ? repr : ~repr) << " for duplicate check" << endl;
 	    if( ! hasDuplicate( data.list( (pol == 0 ? repr : ~repr)  ), c ) ) {
 	      data.list( (pol == 0 ? repr : ~repr) ).push_back( list[k] );
 	      if( getsNewLiterals ) {
@@ -1466,16 +1466,16 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data)
 		  c.set_strengthen(true);
 		  c.set_subsume(true);
 		  subsumption.addClause( list[k] );
-		  cerr << "c add clause to subsume list: " << c << endl;
+// 		  cerr << "c add clause to subsume list: " << c << endl;
 		}
 	      }
 	    } else {
-	      cerr << "c clause has duplicates: " << c << endl;
+// 	      cerr << "c clause has duplicates: " << c << endl;
 	      c.set_delete(true);
 	      data.removedClause(list[k]);
 	    }
 	  } else {
-	    cerr << "c duplicate during sort" << endl; 
+// 	    cerr << "c duplicate during sort" << endl; 
 	  }
 	  
 EEapplyNextClause:; // jump here, if a tautology has been found
@@ -1504,11 +1504,11 @@ EEapplyNextClause:; // jump here, if a tautology has been found
        
        // take care of unit propagation and subsumption / strengthening
        if( data.hasToPropagate() ) { // after each application of equivalent literals perform unit propagation!
-	 if( propagation.propagate(data) == l_False ) return newBinary;
+	 if( propagation.propagate(data,true) == l_False ) return newBinary;
        }
        subsumption.subsumeStrength(data);
        if( data.hasToPropagate() ) { // after each application of equivalent literals perform unit propagation!
-	 if( propagation.propagate(data) == l_False ) return newBinary;
+	 if( propagation.propagate(data,true) == l_False ) return newBinary;
        }
        
      } // finished current class, continue with next EE class!
@@ -1523,15 +1523,17 @@ EEapplyNextClause:; // jump here, if a tautology has been found
 
 bool EquivalenceElimination::hasDuplicate(vector<CRef>& list, const Clause& c)
 {
-  cerr << "c check for duplicates: " << c << " (" << c.size() << ") against " << list.size() << " candidates" << endl;
+//   cerr << "c check for duplicates: " << c << " (" << c.size() << ") against " << list.size() << " candidates" << endl;
   for( int i = 0 ; i < list.size(); ++ i ) {
     const Clause& d = ca[list[i]];
-    cerr << "c check " << d << " [del=" << d.can_be_deleted() << " size=" << d.size() << endl;
+//     cerr << "c check " << d << " [del=" << d.can_be_deleted() << " size=" << d.size() << endl;
     if( d.can_be_deleted() || d.size() != c.size() ) continue;
     int j = 0 ;
     while( j < c.size() && c[j] == d[j] ) ++j ;
-    if( j == c.size() ) { cerr << "c found partner" << endl; return true; }
-    cerr << "c clause " << c << " is not equal to " << d << endl;
+    if( j == c.size() ) { 
+//       cerr << "c found partner" << endl;
+      return true; }
+//     cerr << "c clause " << c << " is not equal to " << d << endl;
   }
   return false;
 }

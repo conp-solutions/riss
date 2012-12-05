@@ -63,7 +63,7 @@ int Circuit::extractGates(CoprocessorData& data, vector< Circuit::Gate >& gates)
 
 void Circuit::getGatesWithOutput(const Var v, vector< Circuit::Gate >& gates, CoprocessorData& data)
 {
-  cerr << "check gates for variable " << v << endl;
+//   cerr << "check gates for variable " << v << endl;
   data.ma.resize(2*data.nVars());
   if( opt_ExO) getExOGates(v,gates, data);
 
