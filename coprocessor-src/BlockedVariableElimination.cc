@@ -103,163 +103,177 @@ static void printClauses(ClauseAllocator & ca, vector<CRef> list, bool skipDelet
 //
 void BlockedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, unsigned int start, unsigned int end, bool force, bool doStatistics)   
 {
-    
-    //for (unsigned i = start; i < end; i++)
-    while (heap.size() > 0)
+    while (heap.size() > 0 )
     {
-       //Subsumption / Strengthening
-       subsumption.subsumeStrength(data); 
-       
-       //int v = variable_queue[i];
-       int v = heap.removeMin();
-       vector<CRef> & pos = data.list(mkLit(v,false)); 
-       vector<CRef> & neg = data.list(mkLit(v,true));
+        int outerTimer = data.getMyDeleteTimer();
+        //for (unsigned i = start; i < end; i++)
+        while (heap.size() > 0)
+        {
+           //Subsumption / Strengthening
+           subsumption.subsumeStrength(data); 
            
-       // ---Printing all Clauses with v --------------------------//
-       if (opt_verbose > 2)
-       {
-           cerr << "c Variable: " << v+1 << endl;
-           cerr <<"c Clauses with Literal  " << v+1 <<":" << endl;
-           printClauses(ca, pos, false);
-           cerr <<"c Clauses with Literal ¬" << v+1 <<":" << endl;
-           printClauses(ca, neg, false); 
-       }
-       // ---------------------------------------------------------//
-       int pos_count = 0; 
-       int neg_count = 0;
-       int lit_clauses_old = 0;
-       int lit_learnts_old = 0;
-       int clauseCount = 0;  // |F_x| + |F_¬x| 
+           //int v = variable_queue[i];
+           int v = heap.removeMin();
+           vector<CRef> & pos = data.list(mkLit(v,false)); 
+           vector<CRef> & neg = data.list(mkLit(v,true));
+               
+           // ---Printing all Clauses with v --------------------------//
+           if (opt_verbose > 2)
+           {
+               cerr << "c Variable: " << v+1 << endl;
+               cerr <<"c Clauses with Literal  " << v+1 <<":" << endl;
+               printClauses(ca, pos, false);
+               cerr <<"c Clauses with Literal ¬" << v+1 <<":" << endl;
+               printClauses(ca, neg, false); 
+           }
+           // ---------------------------------------------------------//
+           int pos_count = 0; 
+           int neg_count = 0;
+           int lit_clauses_old = 0;
+           int lit_learnts_old = 0;
+           int clauseCount = 0;  // |F_x| + |F_¬x| 
 
-       if (opt_verbose > 1)
-       {
-           cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-           cerr << "c Counting Clauses" << endl;
-       }
-       
-       for (int i = 0; i < pos.size(); ++i)
-       {
-            Clause & c = ca[pos[i]];
-            if (c.can_be_deleted())
-                continue;
-            if (c.learnt())
-                lit_learnts_old += c.size();
-            else 
-                lit_clauses_old += c.size();
-            ++pos_count;
-       }      
-       for (int i = 0; i < neg.size(); ++i)
-       {
-            Clause & c = ca[neg[i]];
-            if (c.can_be_deleted())
-                continue;
-            if (c.learnt())
-                lit_learnts_old += c.size();
-            else 
-                lit_clauses_old += c.size();
-            ++neg_count;
-       }
-       if (opt_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-       
-       
-       // handle pure Literal -> don't do this, blocked Clause Elimination will remove the clauses
-       if (false && (pos_count == 0 || neg_count == 0))
-       {    
-            lbool state;
-            if      ((pos_count > 0) && (neg_count ==  0))
-            {
-                state = data.getSolver()->value(mkLit(v, false));             
-                if (state != l_False)
-                {    
-                    state = data.enqueue(mkLit(v, false));
-                }
-                if(opt_verbose > 1) cerr << "c handling pure literal" << endl;
-                if(opt_verbose > 0) cerr << "c Pure Lit " << v+1 << endl;
-                if(opt_verbose > 1) cerr << "c Pure Lit " << (state == l_False ? "negation enqueued before" : "enqueued successful") << endl;
-            }
-            else if ((pos_count ==  0) && (neg_count > 0))
-            {
-                state = data.getSolver()->value(mkLit(v, true));
-                if (state != l_False)
-                {
-                    state = data.enqueue(mkLit(v, true));
-                } 
-                if(opt_verbose > 1) cerr << "c handling pure literal" << endl;
-                if(opt_verbose > 0) cerr << "c Pure Lit ¬" << v+1 << endl;
-                if(opt_verbose > 1) cerr << "c Pure Lit " << (state == l_False ? "negation enqueued before" : "enqueued successful") << endl;
-            }
-            else 
-            {  
-                if(opt_verbose > 1) cerr << "c no occurences of " << v+1 << endl;
-                if(opt_verbose > 1) cerr << "c =============================================================================" << endl;
-                continue;  // no positive and no negative occurrences of v 
-            }              // -> nothing to assign
-            if      (state == l_False)  // this is not an UNSAT case -> there may are other lits, that make the clauses true.
-                ; 
-            else if (state == l_Undef)
-                ;                       // variable already assigned
-            else if (state == l_True) 
-                propagation.propagate(data, true);                       // new assignment -> TODO propagate own lits only 
-            else 
-                assert(0);              // something went wrong
-            
-            if(opt_verbose > 1) cerr << "c =============================================================================" << endl;
-            continue;
-       }
-
-       // Declare stats variables;        
-       int32_t pos_stats[pos.size()];
-       int32_t neg_stats[neg.size()];
-       int lit_clauses;
-       int lit_learnts;
-       
-       // get current time
-       //  
-       int myDeleteTime = data.getMyDeleteTimer();
-       
-       
-       if (!force) 
-       {
+           if (opt_verbose > 1)
+           {
+               cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+               cerr << "c Counting Clauses" << endl;
+           }
+           
            for (int i = 0; i < pos.size(); ++i)
-                pos_stats[i] = 0;
+           {
+                Clause & c = ca[pos[i]];
+                if (c.can_be_deleted())
+                    continue;
+                if (c.learnt())
+                    lit_learnts_old += c.size();
+                else 
+                    lit_clauses_old += c.size();
+                ++pos_count;
+           }      
            for (int i = 0; i < neg.size(); ++i)
-                neg_stats[i] = 0;
+           {
+                Clause & c = ca[neg[i]];
+                if (c.can_be_deleted())
+                    continue;
+                if (c.learnt())
+                    lit_learnts_old += c.size();
+                else 
+                    lit_clauses_old += c.size();
+                ++neg_count;
+           }
+           if (opt_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+           
+           
+           // handle pure Literal -> don't do this, blocked Clause Elimination will remove the clauses
+           if (false && (pos_count == 0 || neg_count == 0))
+           {    
+                lbool state;
+                if      ((pos_count > 0) && (neg_count ==  0))
+                {
+                    state = data.getSolver()->value(mkLit(v, false));             
+                    if (state != l_False)
+                    {    
+                        state = data.enqueue(mkLit(v, false));
+                    }
+                    if(opt_verbose > 1) cerr << "c handling pure literal" << endl;
+                    if(opt_verbose > 0) cerr << "c Pure Lit " << v+1 << endl;
+                    if(opt_verbose > 1) cerr << "c Pure Lit " << (state == l_False ? "negation enqueued before" : "enqueued successful") << endl;
+                }
+                else if ((pos_count ==  0) && (neg_count > 0))
+                {
+                    state = data.getSolver()->value(mkLit(v, true));
+                    if (state != l_False)
+                    {
+                        state = data.enqueue(mkLit(v, true));
+                    } 
+                    if(opt_verbose > 1) cerr << "c handling pure literal" << endl;
+                    if(opt_verbose > 0) cerr << "c Pure Lit ¬" << v+1 << endl;
+                    if(opt_verbose > 1) cerr << "c Pure Lit " << (state == l_False ? "negation enqueued before" : "enqueued successful") << endl;
+                }
+                else 
+                {  
+                    if(opt_verbose > 1) cerr << "c no occurences of " << v+1 << endl;
+                    if(opt_verbose > 1) cerr << "c =============================================================================" << endl;
+                    continue;  // no positive and no negative occurrences of v 
+                }              // -> nothing to assign
+                if      (state == l_False)  // this is not an UNSAT case -> there may are other lits, that make the clauses true.
+                    ; 
+                else if (state == l_Undef)
+                    ;                       // variable already assigned
+                else if (state == l_True) 
+                    propagation.propagate(data, true);                       // new assignment -> TODO propagate own lits only 
+                else 
+                    assert(0);              // something went wrong
+                
+                if(opt_verbose > 1) cerr << "c =============================================================================" << endl;
+                continue;
+           }
 
-           // anticipate only, there are positiv and negative occurrences of var 
-           if (pos_count != 0 &&  neg_count != 0)
-               if (anticipateElimination(data, pos, neg,  v, pos_stats, neg_stats, lit_clauses, lit_learnts) == l_False) 
-                   return;  // level 0 conflict found while anticipation TODO ABORT
-       
-           //mark Clauses without resolvents for deletion
-           if(opt_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-           if(opt_verbose > 1) cerr << "c removing blocked clauses from F_" << v+1 << endl;
-           removeBlockedClauses(data, pos, pos_stats, mkLit(v, false));
-           if(opt_verbose > 1) cerr << "c removing blocked clauses from F_¬" << v+1 << endl;
-           removeBlockedClauses(data, neg, neg_stats, mkLit(v, true));
-       }
+           // Declare stats variables;        
+           int32_t pos_stats[pos.size()];
+           int32_t neg_stats[neg.size()];
+           int lit_clauses;
+           int lit_learnts;
+           
+           // get current time
+           //  
+           int myDeleteTime = data.getMyDeleteTimer();
+           
+           
+           if (!force) 
+           {
+               for (int i = 0; i < pos.size(); ++i)
+                    pos_stats[i] = 0;
+               for (int i = 0; i < neg.size(); ++i)
+                    neg_stats[i] = 0;
 
-       // if resolving reduces number of literals in clauses: 
-       //    add resolvents
-       //    mark old clauses for deletion
-       if (force || lit_clauses <= lit_clauses_old)
-       {
-            if(opt_verbose > 1)  cerr << "c resolveSet" <<endl;
-            if (resolveSet(data, pos, neg, v) == l_False)
-                return;
-            removeClauses(data, pos, mkLit(v,false));
-            removeClauses(data, neg, mkLit(v,true));
-            if (opt_verbose > 0) cerr << "c Resolved " << v+1 <<endl;
-       }
-       if(opt_verbose > 1)   cerr << "c =============================================================================" << endl;
-       
-       //subsumption with new clauses!!
-       subsumption.subsumeStrength(data);
+               // anticipate only, there are positiv and negative occurrences of var 
+               if (pos_count != 0 &&  neg_count != 0)
+                   if (anticipateElimination(data, pos, neg,  v, pos_stats, neg_stats, lit_clauses, lit_learnts) == l_False) 
+                       return;  // level 0 conflict found while anticipation TODO ABORT
+           
+               //mark Clauses without resolvents for deletion
+               if(opt_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+               if(opt_verbose > 1) cerr << "c removing blocked clauses from F_" << v+1 << endl;
+               removeBlockedClauses(data, pos, pos_stats, mkLit(v, false));
+               if(opt_verbose > 1) cerr << "c removing blocked clauses from F_¬" << v+1 << endl;
+               removeBlockedClauses(data, neg, neg_stats, mkLit(v, true));
+           }
+
+           // if resolving reduces number of literals in clauses: 
+           //    add resolvents
+           //    mark old clauses for deletion
+           if (force || lit_clauses <= lit_clauses_old)
+           {
+                if(opt_verbose > 1)  cerr << "c resolveSet" <<endl;
+                if (resolveSet(data, pos, neg, v) == l_False)
+                    return;
+                removeClauses(data, pos, mkLit(v,false));
+                removeClauses(data, neg, mkLit(v,true));
+                if (opt_verbose > 0) cerr << "c Resolved " << v+1 <<endl;
+           }
+           if(opt_verbose > 1)   cerr << "c =============================================================================" << endl;
+           
+           //subsumption with new clauses!!
+           subsumption.subsumeStrength(data);
+           
+           vector<Var> touched_variables;
+           data.getActiveVariables(myDeleteTime, touched_variables);
+           touchedVarsForSubsumption(data, touched_variables);
+        }
+
+        // add active variables and clauses to variable heap and subsumption queues
+        vector<Var> touched_variables;
+        data.getActiveVariables(outerTimer, touched_variables);
+        touchedVarsForSubsumption(data, touched_variables);
+        heap.clear();
+        for (int i = 0; i < touched_variables.size(); ++i)
+        {
+            heap.insert(touched_variables[i]);
+        }
     }
-    
-    // add active variables and clauses to variable heap and subsumption queues
-    // data.getActiveVariables(myDeleteTime, vector<Var>& variables);
-
 }
+
 /*
  * on every clause, that is not yet marked for deletion:
  *      remove it from data-Objects statistics
@@ -685,4 +699,56 @@ inline void BlockedVariableElimination::removeBlockedClauses(CoprocessorData & d
             } 
         }
    }
-}           
+}
+
+
+// All clauses that have been modified, can possibly be subsumed by clauses
+// that share a subset of their literals
+// Therefore we add those clauses to the processing list (if they are not contained in it already).
+/*void BlockedVariableElimination :: append_modified (CoprocessorData & data, std::vector<CRef> & modified_list)
+{
+    for (int i = 0; i < modified_list.size(); ++i)
+    {
+        Clause & c = ca[modified_list[i]];
+        for (int l = 0; l < c.size(); l++)
+        {
+            vector<CRef> & clauses = data.list(c[l]);
+            for (int j = 0; j < clauses.size(); ++j)
+            {
+                Clause & d = ca[clauses[j]];
+                if (! d.can_subsume())
+                {
+                    d.set_subsume(true);
+                    subsumption.initClause(d);
+                    //subsumption_processing_queue.push_back(occs[l][j]);
+                }
+            }
+
+        }
+        //c.set_modified(false);
+    }
+}*/
+inline void BlockedVariableElimination :: touchedVarsForSubsumption (CoprocessorData & data, const std::vector<Var> & touched_vars)
+{
+    for (int i = 0; i < touched_vars.size(); ++i)
+    {
+        Var v = touched_vars[i]; 
+        addClausesToSubsumption(data, data.list(mkLit(v,false)));
+        addClausesToSubsumption(data, data.list(mkLit(v,true)));
+        
+    }
+}       
+inline void BlockedVariableElimination::addClausesToSubsumption (CoprocessorData & data, const vector<CRef> & clauses)
+{
+    for (int j = 0; j < clauses.size(); ++j)
+    {
+        Clause & d = ca[clauses[j]];
+        if (!d.can_be_deleted() && !d.can_subsume())
+        {
+            d.set_subsume(true);
+            d.set_strengthen(true);
+            subsumption.initClause(clauses[j]);
+            //subsumption_processing_queue.push_back(occs[l][j]);
+        }
+    }    
+}

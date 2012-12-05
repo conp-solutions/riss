@@ -64,6 +64,8 @@ protected:
   inline char checkUpdatePrev(Lit & prev, Lit l);
   inline lbool anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, int32_t* pos_stats, int32_t* neg_stats, int & lit_clauses, int & lit_learnts); 
   inline void removeBlockedClauses(CoprocessorData & data, vector< CRef> & list, int32_t stats[], Lit l );
+  inline void touchedVarsForSubsumption (CoprocessorData & data, const std::vector<Var> & touched_vars);
+  inline void addClausesToSubsumption (CoprocessorData & data, const vector<CRef> & clauses);
 public:
 
   /** converts arg into BVEWorkData*, runs bve of its part of the queue */
