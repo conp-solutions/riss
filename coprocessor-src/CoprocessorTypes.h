@@ -192,7 +192,7 @@ public:
   void destroy();
 
   int32_t& operator[] (const Lit l ); // return the number of occurrences of literal l
-  int32_t operator[] (const Var v ); // return the number of occurrences of variable v
+  int32_t operator[] (const Var v ) const; // return the number of occurrences of variable v
   vector<CRef>& list( const Lit l ); // return the list of clauses, which have literal l
   const vector< Minisat::CRef >& list( const Lit l ) const; // return the list of clauses, which have literal l
 
@@ -468,7 +468,7 @@ inline int32_t& CoprocessorData::operator[](const Lit l)
   return lit_occurrence_count[toInt(l)];
 }
 
-inline int32_t CoprocessorData::operator[](const Var v)
+inline int32_t CoprocessorData::operator[](const Var v) const
 {
   return lit_occurrence_count[toInt(mkLit(v,0))] + lit_occurrence_count[toInt(mkLit(v,1))];
 }

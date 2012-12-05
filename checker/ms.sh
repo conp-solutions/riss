@@ -7,7 +7,7 @@
 # print to screen: solution for the cnf
 #
 
-./minisat $1 /tmp/minisat-out > /dev/null -enabled_cp3 -subsimp > /dev/null # 2> /dev/null
+./minisat $1 /tmp/minisat-out > /dev/null -enabled_cp3 -bve > /dev/null # 2> /dev/null
 
 status=$?
 

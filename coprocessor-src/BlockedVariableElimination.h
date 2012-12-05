@@ -10,6 +10,8 @@ Copyright (c) 2012, Kilian Gebhardt, All rights reserved.
 
 #include "coprocessor-src/CoprocessorTypes.h"
 
+#include "mtl/Heap.h"
+
 using namespace Minisat;
 using namespace std;
 
@@ -18,7 +20,14 @@ namespace Coprocessor {
 /** This class implement blocked variable elimination
  */
 class BlockedVariableElimination : public Technique {
+  struct VarOrderBVEHeapLt {
+        CoprocessorData & data;
+        bool operator () (Var x, Var y) const {/* assert (data != NULL && "Please assign a valid data object before heap usage" );*/ return data[x]  > data[y]; }
+        VarOrderBVEHeapLt(CoprocessorData & _data) : data(_data) { }
+    };
   vector<int> variable_queue;
+  //VarOrderBVEHeapLt heap_comp;
+  //Heap<VarOrderBVEHeapLt> variable_heap;
   Coprocessor::Propagation & propagation;
 public:
   
@@ -33,7 +42,7 @@ protected:
   
   bool hasToEliminate();       // return whether there is something in the BVE queue
   lbool fullBVE(Coprocessor::CoprocessorData& data);   // performs BVE until completion
-  void bve_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool force = false, bool doStatistics = true);   
+  void bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, unsigned int start, unsigned int end, bool force = false, bool doStatistics = true);   
   
   /** data for parallel execution */
   struct BVEWorkData {

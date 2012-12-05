@@ -3,7 +3,7 @@ Copyright (c) 2012, Kilian Gebhardt, All rights reserved.
 **************************************************************************************************/
 #include "coprocessor-src/BlockedVariableElimination.h"
 #include "coprocessor-src/Propagation.h"
-
+#include "mtl/Heap.h"
 using namespace Coprocessor;
 using namespace std;
 
@@ -14,12 +14,14 @@ static IntOption  opt_verbose    (_cat, "cp3_bve_verbose",    "Verbosity of prep
 BlockedVariableElimination::BlockedVariableElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation )
 : Technique( _ca, _controller )
 , propagation( _propagation)
+//, heap_comp(NULL)
+//, variable_heap(heap_comp)
 {
 }
 
 bool BlockedVariableElimination::hasToEliminate()
 {
-  return variable_queue.size() > 0; 
+  return false; //variable_heap.size() > 0; 
 }
 
 lbool BlockedVariableElimination::fullBVE(Coprocessor::CoprocessorData& data)
@@ -30,13 +32,16 @@ lbool BlockedVariableElimination::fullBVE(Coprocessor::CoprocessorData& data)
 lbool BlockedVariableElimination::runBVE(CoprocessorData& data)
 {
   assert(variable_queue.size() == 0);
-  
+  //heap_comp.data = &data;
+  VarOrderBVEHeapLt comp(data);
+  Heap<VarOrderBVEHeapLt> newheap(comp);
   //  put all variables in queue 
   for (int v = 0; v < data.nVars() /*&& v < 2*/ ; ++v)
-      variable_queue.push_back(v);
-
-  bve_worker(data, 0, variable_queue.size(), false);
-  variable_queue.clear();
+  //    variable_queue.push_back(v);
+      newheap.insert(v);
+  bve_worker(data, newheap, 0, variable_queue.size(), false);
+  //variable_queue.clear();
+  newheap.clear();
   if (data.getSolver()->okay())
     return l_Undef;
   else 
@@ -88,11 +93,17 @@ static void printClauses(ClauseAllocator & ca, vector<CRef> list, bool skipDelet
 // force -> forces resolution
 //
 //
-void BlockedVariableElimination::bve_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool force, bool doStatistics)   
+void BlockedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, unsigned int start, unsigned int end, bool force, bool doStatistics)   
 {
-    for (unsigned i = start; i < end; i++)
+    //for (unsigned i = start; i < end; i++)
+    while (heap.size() > 0)
     {
-       int v = variable_queue[i];
+       //Subsumption / Strengthening
+
+       
+        
+       //int v = variable_queue[i];
+       int v = heap.removeMin();
        vector<CRef> & pos = data.list(mkLit(v,false)); 
        vector<CRef> & neg = data.list(mkLit(v,true));
            
@@ -629,7 +640,7 @@ void parallelBVE(CoprocessorData& data)
 void* BlockedVariableElimination::runParallelBVE(void* arg)
 {
   BVEWorkData*      workData = (BVEWorkData*) arg;
-  workData->bve->bve_worker(*(workData->data), workData->start,workData->end, false);
+  //workData->bve->bve_worker(*(workData->data), workData->start,workData->end, false);
   return 0;
 }
  
