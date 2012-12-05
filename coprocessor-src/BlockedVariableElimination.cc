@@ -3,6 +3,7 @@ Copyright (c) 2012, Kilian Gebhardt, All rights reserved.
 **************************************************************************************************/
 #include "coprocessor-src/BlockedVariableElimination.h"
 #include "coprocessor-src/Propagation.h"
+#include "coprocessor-src/Subsumption.h"
 #include "mtl/Heap.h"
 using namespace Coprocessor;
 using namespace std;
@@ -11,9 +12,10 @@ static const char* _cat = "COPROCESSOR 3 - BVE";
 
 static IntOption  opt_verbose    (_cat, "cp3_bve_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
 
-BlockedVariableElimination::BlockedVariableElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation )
+BlockedVariableElimination::BlockedVariableElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation, Coprocessor::Subsumption & _subsumption )
 : Technique( _ca, _controller )
 , propagation( _propagation)
+, subsumption( _subsumption)
 //, heap_comp(NULL)
 //, variable_heap(heap_comp)
 {
@@ -39,6 +41,12 @@ lbool BlockedVariableElimination::runBVE(CoprocessorData& data)
   for (int v = 0; v < data.nVars() /*&& v < 2*/ ; ++v)
   //    variable_queue.push_back(v);
       newheap.insert(v);
+ 
+  //Propagation (TODO Why does omitting the propagation
+  // and no PureLit Propagation cause wrong model extension?)
+  
+  propagation.propagate(data, true);
+
   bve_worker(data, newheap, 0, variable_queue.size(), false);
   //variable_queue.clear();
   newheap.clear();
@@ -95,13 +103,13 @@ static void printClauses(ClauseAllocator & ca, vector<CRef> list, bool skipDelet
 //
 void BlockedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, unsigned int start, unsigned int end, bool force, bool doStatistics)   
 {
+    
     //for (unsigned i = start; i < end; i++)
     while (heap.size() > 0)
     {
        //Subsumption / Strengthening
-
+       subsumption.subsumeStrength(data); 
        
-        
        //int v = variable_queue[i];
        int v = heap.removeMin();
        vector<CRef> & pos = data.list(mkLit(v,false)); 
@@ -152,8 +160,10 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
             ++neg_count;
        }
        if (opt_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-       // handle pure Literal;
-       if (pos_count == 0 || neg_count == 0)
+       
+       
+       // handle pure Literal -> don't do this, blocked Clause Elimination will remove the clauses
+       if (false && (pos_count == 0 || neg_count == 0))
        {    
             lbool state;
             if      ((pos_count > 0) && (neg_count ==  0))
@@ -205,21 +215,29 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
        
        // get current time
        //  
-       // int myDeleteTime = data.getMyDeleteTimer();
+       int myDeleteTime = data.getMyDeleteTimer();
        
        
        if (!force) 
-           if (anticipateElimination(data, pos, neg,  v, pos_stats, neg_stats, lit_clauses, lit_learnts) == l_False) 
-               return;  // level 0 conflict found while anticipation TODO ABORT
+       {
+           for (int i = 0; i < pos.size(); ++i)
+                pos_stats[i] = 0;
+           for (int i = 0; i < neg.size(); ++i)
+                neg_stats[i] = 0;
+
+           // anticipate only, there are positiv and negative occurrences of var 
+           if (pos_count != 0 &&  neg_count != 0)
+               if (anticipateElimination(data, pos, neg,  v, pos_stats, neg_stats, lit_clauses, lit_learnts) == l_False) 
+                   return;  // level 0 conflict found while anticipation TODO ABORT
        
-       //mark Clauses without resolvents for deletion -> makes stats-array indexing inconsistent
-       
-       if(opt_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-       if(opt_verbose > 1) cerr << "c removing blocked clauses from F_" << v+1 << endl;
-       removeBlockedClauses(data, pos, pos_stats, mkLit(v, false));
-       if(opt_verbose > 1) cerr << "c removing blocked clauses from F_¬" << v+1 << endl;
-       removeBlockedClauses(data, neg, neg_stats, mkLit(v, true));
-        
+           //mark Clauses without resolvents for deletion
+           if(opt_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+           if(opt_verbose > 1) cerr << "c removing blocked clauses from F_" << v+1 << endl;
+           removeBlockedClauses(data, pos, pos_stats, mkLit(v, false));
+           if(opt_verbose > 1) cerr << "c removing blocked clauses from F_¬" << v+1 << endl;
+           removeBlockedClauses(data, neg, neg_stats, mkLit(v, true));
+       }
+
        // if resolving reduces number of literals in clauses: 
        //    add resolvents
        //    mark old clauses for deletion
@@ -234,8 +252,8 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
        }
        if(opt_verbose > 1)   cerr << "c =============================================================================" << endl;
        
-       // subsumption with new clauses!!
-       
+       //subsumption with new clauses!!
+       subsumption.subsumeStrength(data);
     }
     
     // add active variables and clauses to variable heap and subsumption queues
@@ -289,11 +307,7 @@ inline lbool BlockedVariableElimination::anticipateElimination(CoprocessorData &
     // Clean the stats
     lit_clauses=0;
     lit_learnts=0;
-    for (int i = 0; i < positive.size(); ++i)
-        pos_stats[i] = 0;
-    for (int i = 0; i < negative.size(); ++i)
-        neg_stats[i] = 0;
-    
+   
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
     {
         Clause & p = ca[positive[cr_p]];
@@ -445,6 +459,8 @@ lbool BlockedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef
                         data.getLEarnts().push(cr);
                     else 
                         data.getClauses().push(cr);
+                    // push Clause on subsumption-queue
+                    subsumption.initClause(cr);
                }
                else if (force)
                {

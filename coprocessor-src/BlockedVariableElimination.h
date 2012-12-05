@@ -9,7 +9,7 @@ Copyright (c) 2012, Kilian Gebhardt, All rights reserved.
 #include "coprocessor-src/Technique.h"
 
 #include "coprocessor-src/CoprocessorTypes.h"
-
+#include "coprocessor-src/Subsumption.h"
 #include "mtl/Heap.h"
 
 using namespace Minisat;
@@ -29,9 +29,10 @@ class BlockedVariableElimination : public Technique {
   //VarOrderBVEHeapLt heap_comp;
   //Heap<VarOrderBVEHeapLt> variable_heap;
   Coprocessor::Propagation & propagation;
+  Coprocessor::Subsumption & subsumption;
 public:
   
-  BlockedVariableElimination( ClauseAllocator& _ca, ThreadController& _controller , Coprocessor::Propagation & _propagation);
+  BlockedVariableElimination( ClauseAllocator& _ca, ThreadController& _controller , Coprocessor::Propagation & _propagation, Coprocessor::Subsumption & _subsumption);
   
   /** run BVE until completion */
   lbool runBVE(CoprocessorData& data);
