@@ -4,7 +4,7 @@
 CORE      = ../core
 MTL       = ../mtl
 MYCFLAGS    = -I.. -I. -I$(MTL) -I$(CORE) $(ARGS) -Wall -Wextra -ffloat-store -Wno-sign-compare -Wno-parentheses
-MYLFLAGS    = -lpthread
+MYLFLAGS    = -lpthread $(ARGS)
 
 COPTIMIZE ?= -O3
 

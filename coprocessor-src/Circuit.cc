@@ -7,9 +7,14 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 static const char* _cat = "CP3 CIRCUIT";
 
 // options
-static BoolOption opt_ExO      (_cat, "cp3_extExO",      "extract ExO gates", true);
-static BoolOption opt_genAND   (_cat, "cp3_genAND",      "extract generic AND gates", true);
-static BoolOption opt_HASUM    (_cat, "cp3_extHASUM",    "extract half adder sum bit", true);
+
+static BoolOption opt_AND      (_cat, "cp3_extAND",      "extract AND gates", true);
+static BoolOption opt_ITE      (_cat, "cp3_extITE",      "extract ITE gates", false);
+static BoolOption opt_XOR      (_cat, "cp3_extXOR",      "extract XOR gates", false);
+static BoolOption opt_ExO      (_cat, "cp3_extExO",      "extract ExO gates", false);
+static BoolOption opt_genAND   (_cat, "cp3_genAND",      "extract generic AND gates", false);
+static BoolOption opt_FASUM    (_cat, "cp3_extHASUM",    "extract full adder sum bit gates", false);
+
 static BoolOption opt_BLOCKED  (_cat, "cp3_extBlocked",  "extract gates, that can be found by blocked clause addition", true);
 static BoolOption opt_NegatedI (_cat, "cp3_extNgtInput", "extract gates, where inputs come from the same variable", true);
 static BoolOption opt_Implied  (_cat, "cp3_extImplied",  "extract half adder sum bit", true);
@@ -65,19 +70,20 @@ void Circuit::getGatesWithOutput(const Var v, vector< Circuit::Gate >& gates, Co
 {
 //   cerr << "check gates for variable " << v << endl;
   data.ma.resize(2*data.nVars());
-  if( opt_ExO) getExOGates(v,gates, data);
 
-  getANDGates(v,gates, data);
-  getITEGates(v,gates, data);
-  getXORGates(v,gates, data);
-  
-  if( opt_HASUM ) getFASUMGates(v,gates, data);
+  if( opt_AND ) getANDGates(v,gates, data);
+  if( opt_ITE ) getITEGates(v,gates, data);
+  if( opt_XOR ) getXORGates(v,gates, data);
+
+  if( opt_ExO) getExOGates(v,gates, data);
+  if( opt_FASUM ) getFASUMGates(v,gates, data);
   if( debug_out ) cerr << "c after variable " << v+1 << " found " << gates.size() << " gates" << endl;
 }
 
 void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, CoprocessorData& data)
 {
   // check for v <-> A and B
+  // cerr << "c check AND gates with variable " << v+1 << endl;
   for( int p = 0; p < 2 ; ++ p ) {
     data.ma.nextStep();
     data.lits.clear();
@@ -86,42 +92,54 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
     Lit* list = big->getArray(pos);
     const int listSize = big->getSize(pos);
     data.ma.setCurrentStep( toInt(~pos) ); 
+    //cerr << "c mark literal " << ~pos << endl;
     // find all binary clauses for gate with positive output "pos"
     for( int i = 0 ; i < listSize; ++i ) {
      data.ma.setCurrentStep( toInt(list[i]) ); 
      data.lits.push_back( list[i] );
+     // cerr << "c mark literal " << list[i] << endl;
     }
     if( data.lits.size() > 1 ) { // work on found binary clauses!
-      if( !opt_genAND && data.lits.size() != 2 ) continue;  // do not consider gates that are larger than with binary inputs
       // positive blocked clause is not present, if there are no more negative occurrences of the output literal of the gate!
       if( opt_BLOCKED ) {
-	if( data[ ~pos ] == data.lits.size() ) { // all occurrences in binary clauses!
+	if( data[ ~pos ] == data.lits.size() && (data.lits.size() == 2 || opt_genAND)) { // all occurrences in binary clauses!
 	  gates.push_back( Gate(data.lits, (data.lits.size() == 2 ? Gate::AND : Gate::GenAND), Gate::POS_BLOCKED, pos) );
 	  if( debug_out ) cerr << "c found posBlocked AND gate with output var " << v + 1 << endl;
+	  blockedSize = data.lits.size();
 	}
-	blockedSize = data.lits.size();
-	continue; // already found the gate! (there is only one blocked gate per variable ?!)
+	// if no blocked gate has been found, still look for it!
       }
+      // only ternary gates are possible, and the blocked candidate has been already found
+      if( blockedSize == 2 ) { /*cerr << "c continue because blocked size is 2"<< endl; */ continue; }
       if( opt_genAND ) {
+	// cerr << "c genMethod" << endl;
 	const vector<CRef>& cList = data.list(pos);  // all clauses C with pos \in C
 	for( int i = 0 ; i < cList.size(); ++i ) {   // there can be multiple full encoded gates per variable
 	  const Clause& c = ca[ cList[i] ];
-	  if( c.can_be_deleted() || c.size () < 3 ) continue; // only consider larger clauses, or new ones
+	  if( c.can_be_deleted() || c.size () < 3 || (c.size() >= blockedSize && blockedSize != -1) ) continue; // only consider larger clauses, or new ones
+	  // cerr << "c considere clause " << c << endl;
 	  int marked = 0;
 	  for ( int j = 0 ; j < c.size(); ++j ) 
 	    if( data.ma.isCurrentStep( toInt(~c[j]) ) 
 	      || big->implies( pos, c[j] ) ) marked ++; // check whether all literals inside the clause are marked
-	    else break;
+	    else {
+	  //    cerr << "literal " << ~c[j] << " is not marked, and literal " << c[j] << " is not implied by literal " << pos << endl;
+	      break;
+	    }
 	  if( marked == c.size() ) {
 	    gates.push_back( Gate( c, c.size() == 3 ? Gate::AND : Gate::GenAND, Gate::FULL, pos ) ); // add the gate
 	    if( debug_out ) cerr << "c found FULL AND gate with output var " << v + 1 << endl; 
 	    data.log.log( 1, "clause for gate" ,c );
+	  } else {
+	    //cerr << "c marked=" << marked << " while size is " << c.size() << endl;
 	  }
 	}
       } else {
+	//cerr << "c ternary method" << endl;
 	const vector<ternary>& cList = ternaries[ toInt(pos) ]; // all clauses C with pos \in C
 	for( int i = 0 ; i < cList.size(); ++i ) {  // there can be multiple gates per variable
 	  const ternary& c = cList[i];
+	  // cerr << "consider clause [" << pos << ", " << c.l1 << ", " << c.l2 << "]" << endl;
 	  // either, literal is marked (and thus in binary list), or its implied wrt. sampled BIG
 	  if( ( data.ma.isCurrentStep(toInt(~c.l1)) || big->implies(pos, c.l1 ) ) // since implied does not always work, also check alternative!
 	    &&( data.ma.isCurrentStep(toInt(~c.l2)) || big->implies(pos, c.l2 ) ) ){
@@ -626,7 +644,7 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	}
       }
       if( !found[1] ) continue; // this clause does not contribute to an XOR!
-      cerr << "c found first two clauses, check for next two" << endl;
+      // cerr << "c found first two clauses, check for next two" << endl;
       // check whether we can find the other's by blocked clause analysis
       if( !binary && opt_BLOCKED ) {
 	  int countPos = 0;
@@ -652,7 +670,7 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	else if( (tern.l1 == b || tern.l2 == b) && ( tern.l1 == ~c || tern.l2 == ~c ) ) // found [-a,b,-c]
 	  { found[3] = true; }
      }
-     cerr << "c found in ternaries: 3rd: " << (int)found[2] << " 4th: " << (int)found[3] << endl;
+     // cerr << "c found in ternaries: 3rd: " << (int)found[2] << " 4th: " << (int)found[3] << endl;
      if ( !found[2] ) { // check for 2nd clause in implications
 	if( big->implies(~a,~b) || big->implies(~a,c) ) { binary=true; found[2] = true; }
 	else {
@@ -683,7 +701,7 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
       if( !found[3] ) continue; // clause [-a,b,-c] not found
       if( var(a) < var(c) && var(a) < var(b))
       { // for fully encoded gates we do not need to add all, but only one representation
-        cerr << "c current XOR gate is fully encodeds: " << endl; 
+        // cerr << "c current XOR gate is fully encodeds: " << endl; 
         gates.push_back( Gate(a,b,c, Gate::XOR, Gate::FULL) );
       }
     }

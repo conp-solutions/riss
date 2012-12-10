@@ -8,10 +8,11 @@ using namespace Coprocessor;
 
 static const char* _cat = "COPROCESSOR 3 - EE";
 
-static IntOption opt_level  (_cat, "cp3_ee_level",  "EE on BIG, gate probing, structural hashing", 3, IntRange(0, 3));
+static IntOption  opt_level   (_cat, "cp3_ee_level",    "EE on BIG, gate probing, structural hashing", 3, IntRange(0, 3));
+static BoolOption opt_circuit (_cat, "cp3_old_circuit", "do old circuit extraction", false);
 
 static const int eeLevel = 1;
-const static bool debug_out = true; // print output to screen
+const static bool debug_out = false; // print output to screen
 
 EquivalenceElimination::EquivalenceElimination(ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation, Coprocessor::Subsumption& _subsumption)
 : Technique(_ca,_controller)
@@ -51,14 +52,6 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
   
   if( opt_level > 1  && data.ok() ) {
     
-    if( false ) {
-    cerr << "intermediate formula before gates: " << endl;
-    for( int i = 0 ; i < data.getClauses().size(); ++ i )
-      if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getClauses()[i] ] << endl;
-    for( int i = 0 ; i < data.getLEarnts().size(); ++ i )
-      if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getLEarnts()[i] ] << endl;    
-    }
-
     bool moreEquivalences = true;
     
     // repeat until fixpoint?!
@@ -70,9 +63,21 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
 	gates[i].destroy();
       }
       gates.clear();
-      
+
       iter ++;
       cerr << "c run " << iter << " round of circuit equivalences" << endl;
+
+    if( debug_out ) {
+      cerr << endl << "====================================" << endl;
+      cerr << "intermediate formula before gates: " << endl;
+      for( int i = 0 ; i < data.getClauses().size(); ++ i )
+	if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getClauses()[i] ] << endl;
+      for( int i = 0 ; i < data.getLEarnts().size(); ++ i )
+	if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getLEarnts()[i] ] << endl;    
+      cerr << "====================================" << endl << endl;
+    }
+      
+      
       
       Circuit circ(ca); 
       
@@ -93,7 +98,7 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
     
 
 
-      if( false ) {
+      if( opt_circuit ) {
 	moreEquivalences = findGateEquivalences( data, gates );
 	if( moreEquivalences )
 	  cerr << "c found new equivalences with the gate method!" << endl;
@@ -212,6 +217,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
         ( t == 3 ? Circuit::Gate::XOR : 
         ( t == 4 ? Circuit::Gate::FA_SUM : Circuit::Gate::ExO ) ) ) ) );
 
+	cerr << "c compare gates at iter " << iter << " with type " << t << endl;
       for( int i = 0 ; i < currentPtr->size(); ++ i ) {
 	const Var v = (*currentPtr)[i];
 	for( int j = 0 ; j < varTable[v].size(); ++ j ) {
@@ -219,6 +225,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	  if( g.getType() == currentType && !g.isInQueue() ) {
 	    queue.push_back( varTable[v][j] );
 	    g.putInQueue();
+	    // g.print(cerr);
 	  }
 	}
       }
@@ -254,7 +261,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	  assert( false && "This gate type cannot be handled (yet)" );
 	}
       }
-      cerr << "c for type " << t << " found literals: " << activePtr->size() << endl;
+      // cerr << "c for type " << t << " found literals: " << activePtr->size() << endl;
     }
     
     if( activePtr->size() == 0 ) break;
@@ -1397,7 +1404,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data)
 	 // first, process all the clauses on the list with old replacement variables
 	 if( j == start && dataElements > 0 ) {
 	   l = data.lits[ --dataElements ]; 
-	   cerr << "c process old replace literal " << l << endl;
+	   if( debug_out) cerr << "c process old replace literal " << l << endl;
 	   j--;
          }
 	 
@@ -1492,7 +1499,7 @@ EEapplyNextClause:; // jump here, if a tautology has been found
 	 }
 	 for( int pol = 0; pol < 2; ++ pol ) // clear both occurrence lists!
 	   (pol == 0 ? data.list( ee[j] ) : data.list( ~ee[j] )).clear();
-	 cerr << "c cleared list of var " << var( ee[j] ) + 1 << endl;
+	 if( debug_out ) cerr << "c cleared list of var " << var( ee[j] ) + 1 << endl;
        }
 
        // TODO take care of untouchable literals!
