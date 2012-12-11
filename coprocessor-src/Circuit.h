@@ -87,14 +87,18 @@ public:
     
     const Type getType() const { return type; }
     
-    bool isInvalid() const { return type == INVALID ; }
+    bool isInvalid() const { return (type == INVALID) ; }
     
+    bool isFull() const { return encoded == FULL; }
+
     const Lit getOutput() const { return (type != GenAND && type != ExO ) ? (const Lit) x() : data.e.x; }
     
     void print( std::ostream& stream ) const ; // write gate to a stream
     
     /** free resources, if necessary */
     void destroy();
+    
+    void invalidate();
   private:
     Type type;
     Encoded encoded;

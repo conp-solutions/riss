@@ -856,6 +856,12 @@ void Circuit::Gate::destroy()
   {  ::free ( data.e.externLits ); data.e.externLits = 0 ; }
 }
 
+void Circuit::Gate::invalidate()
+{
+  destroy();
+  type = Gate::INVALID;
+}
+
 
 void Circuit::Gate::print(ostream& stream) const
 {
