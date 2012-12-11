@@ -20,13 +20,13 @@ namespace Coprocessor {
   class VarGraphUtils;
 
 /// print literals into a stream
-inline ostream& operator<<(ostream& other, Lit l ) {
+inline ostream& operator<<(ostream& other, const Lit& l ) {
   other << (sign(l) ? "-" : "") << var(l) + 1;
   return other;
 }
 
 /// print a clause into a stream
-inline ostream& operator<<(ostream& other, Clause& c ) {
+inline ostream& operator<<(ostream& other, const Clause& c ) {
   other << "[";
   for( int i = 0 ; i < c.size(); ++ i )
     other << " " << c[i];
@@ -206,8 +206,11 @@ public:
   bool ok();                                             // return ok-state of solver
   void setFailed();                                      // found UNSAT, set ok state to false
   lbool enqueue( const Lit l );                          // enqueue literal l to current solver structures
+  lbool value( const Lit l ) const ;                     // return the assignment of a literal
+  
   Solver* getSolver();                                   // return the pointer to the solver object
   bool hasToPropagate();                                 // signal whether there are new unprocessed units
+  
   bool unlimited();                                      // do preprocessing without technique limits?
   bool randomized();                                     // use a random order for preprocessing techniques
 
@@ -375,6 +378,11 @@ inline lbool CoprocessorData::enqueue(const Lit l)
   } else if( solver->value( l ) == l_Undef ) solver->uncheckedEnqueue(l);
     return l_True;
   return l_Undef;
+}
+
+inline lbool CoprocessorData::value(const Lit l) const
+{
+ return solver->value( l );
 }
 
 inline Solver* CoprocessorData::getSolver()

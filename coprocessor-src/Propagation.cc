@@ -39,20 +39,18 @@ lbool Propagation::propagate(CoprocessorData& data, bool sort)
     {
       Clause& c = ca[ negative[i] ];
       // sorted propagation, no!
-      if( !c.can_be_deleted() ) {
-        for( int j = 0; j < c.size(); ++ j ) 
-          if( c[j] == nl ) { 
-	    if (!sort) 
-          c.removePositionUnsorted(j);
-        else 
-          c.removePositionSorted(j);
+      if ( !c.can_be_deleted() ) {
+        for ( int j = 0; j < c.size(); ++ j ) 
+          if ( c[j] == nl ) { 
+	    if (!sort) c.removePositionUnsorted(j);
+            else c.removePositionSorted(j);
 	    break;
 	  }
         count ++;
       }
       // unit propagation
       if( c.size() == 0 || (c.size() == 1 &&  solver->value( c[0] ) == l_False) ) {
-        solver->ok = false; // set state to false
+        data.setFailed();   // set state to false
         break;              // abort unit propagation
       } else if( c.size() == 1 ) {
 	  if( solver->value( c[0] ) == l_Undef ) solver->uncheckedEnqueue(c[0]);
@@ -76,8 +74,7 @@ lbool Propagation::propagate(CoprocessorData& data, bool sort)
 //             if (c.has_extra())
 //             c.calcAbstraction();
 //    }
-  
-  return l_Undef;
+  return data.ok() ? l_Undef : l_False;
 }
 
 void Propagation::initClause( const CRef cr ) {}

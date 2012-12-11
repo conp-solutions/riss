@@ -20,9 +20,9 @@ static BoolOption opt_up      (_cat, "up",          "Use Unit Propagation during
 static BoolOption opt_subsimp (_cat, "subsimp",     "Use Subsumption during preprocessing", false);
 static BoolOption opt_hte     (_cat, "hte",         "Use Hidden Tautology Elimination during preprocessing", false);
 static BoolOption opt_cce     (_cat, "cce",         "Use (covered) Clause Elimination during preprocessing", false);
-static BoolOption opt_ee     (_cat, "ee",          "Use Equivalence Elimination during preprocessing", false);
+static BoolOption opt_ee      (_cat, "ee",          "Use Equivalence Elimination during preprocessing", false);
 static BoolOption opt_enabled (_cat, "enabled_cp3", "Use CP3", false);
-static BoolOption opt_bve     (_cat, "bve",         "Use Blocked Variable Elimination during preprocessing", false);
+static BoolOption opt_bve     (_cat, "bve",         "Use Bounded Variable Elimination during preprocessing", false);
 
 static IntOption  opt_log     (_cat, "log",         "Output log messages until given level", 0, IntRange(0, 3));
 
@@ -44,7 +44,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , hte( solver->ca, controller )
 , bve( solver->ca, controller, propagation, subsumption )
 , cce( solver->ca, controller )
-, ee ( solver->ca, controller, propagation )
+, ee ( solver->ca, controller, propagation, subsumption )
 {
   controller.init();
 }
@@ -75,14 +75,6 @@ lbool Preprocessor::preprocess()
     if( opt_verbose > 2 )cerr << "c coprocessor propagate" << endl;
     if( status == l_Undef ) status = propagation.propagate(data);
   }
-
-  if( false ) {
-   cerr << "formula after UP: " << endl;
-   for( int i = 0 ; i < data.getClauses().size(); ++ i )
-     if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getClauses()[i] ] << endl;
-   for( int i = 0 ; i < data.getLEarnts().size(); ++ i )
-     if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getLEarnts()[i] ] << endl;    
-  }
   
   // begin clauses have to be sorted here!!
   sortClauses();
@@ -104,6 +96,17 @@ lbool Preprocessor::preprocess()
   if( opt_ee ) { // before this technique nothing should be run that alters the structure of the formula (e.g. BVE;BVA)
     if( opt_verbose > 2 )cerr << "c coprocessor equivalence elimination" << endl;
     if( status == l_Undef ) ee.eliminate(data);  // cannot change status, can generate new unit clauses
+  }
+  
+  if( false ) {
+   for( Var v = 0 ; v < data.nVars() ; ++v ) {
+    for( int s = 0 ; s < 2; ++s ) {
+      const Lit l = mkLit(v,s!=0);
+      cerr << "c clauses with " << l << endl;
+      for( int i = 0 ; i < data.list(l).size(); ++ i )
+	if( !ca[data.list(l)[i]].can_be_deleted()  ) cerr << ca[data.list(l)[i]] << endl;
+    }
+   }
   }
   
   if( opt_hte ) {
@@ -139,11 +142,11 @@ lbool Preprocessor::preprocess()
 
   // clear / update clauses and learnts vectores and statistical counters
   // attach all clauses to their watchers again, call the propagate method to get into a good state again
-  if( opt_verbose > 2 )cerr << "c coprocessor re-setup solver" << endl;
-  if (status == l_Undef) reSetupSolver();
+  if( opt_verbose > 2 ) cerr << "c coprocessor re-setup solver" << endl;
+  if ( data.ok() ) reSetupSolver();
 
   // destroy preprocessor data
-  if( opt_verbose > 2 )cerr << "c coprocessor free data structures" << endl;
+  if( opt_verbose > 2 ) cerr << "c coprocessor free data structures" << endl;
   data.destroy();
 
   return status;
