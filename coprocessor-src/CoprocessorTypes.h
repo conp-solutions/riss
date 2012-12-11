@@ -222,6 +222,11 @@ public:
   uint32_t deletedVar( const Var v );
   /** fill the vector with all the literals that have been deleted after the given timer */
   void getActiveVariables(const uint32_t myTimer, vector< Var >& activeVariables );
+  /** fill the heap with all the literals that have been deleted afetr the given timer */
+  
+  template<class Comp>
+  void getActiveVariables(const uint32_t myTimer, Heap < Comp > & heap );
+
   /** resets all delete timer */
   void resetDeleteTimer();
 
@@ -425,6 +430,15 @@ inline void CoprocessorData::getActiveVariables(const uint32_t myTimer, vector< 
   for( Var v = 0 ; v < solver->nVars(); ++ v ) {
     if( deleteTimer.getIndex(v) >= myTimer ) activeVariables.push_back(v);
   }
+}
+
+
+template<class Comp>
+inline void CoprocessorData::getActiveVariables(const uint32_t myTimer, Heap< Comp > & heap)
+{
+  for( Var v = 0 ; v < solver->nVars(); ++ v ) {
+    if( deleteTimer.getIndex(v) >= myTimer ) heap.insert(v);
+  } 
 }
 
 inline void CoprocessorData::resetDeleteTimer()

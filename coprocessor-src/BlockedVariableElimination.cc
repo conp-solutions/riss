@@ -30,7 +30,9 @@ lbool BlockedVariableElimination::fullBVE(Coprocessor::CoprocessorData& data)
 {
   return l_Undef;
 }
-
+// 
+// TODO getActive with timer myDeleteTimer
+// TODO use techniques myDeleteTimer 
 lbool BlockedVariableElimination::runBVE(CoprocessorData& data)
 {
   assert(variable_queue.size() == 0);
@@ -38,10 +40,11 @@ lbool BlockedVariableElimination::runBVE(CoprocessorData& data)
   VarOrderBVEHeapLt comp(data);
   Heap<VarOrderBVEHeapLt> newheap(comp);
   //  put all variables in queue 
-  for (int v = 0; v < data.nVars() /*&& v < 2*/ ; ++v)
+  //for (int v = 0; v < data.nVars() /*&& v < 2*/ ; ++v)
   //    variable_queue.push_back(v);
-      newheap.insert(v);
- 
+  //    newheap.insert(v);
+  data.getActiveVariables(lastDeleteTime(), newheap);
+
   //Propagation (TODO Why does omitting the propagation
   // and no PureLit Propagation cause wrong model extension?)
   
@@ -103,16 +106,16 @@ static void printClauses(ClauseAllocator & ca, vector<CRef> list, bool skipDelet
 //
 void BlockedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, unsigned int start, unsigned int end, bool force, bool doStatistics)   
 {
+    vector<Var> touched_variables;
     while (heap.size() > 0 )
     {
-        int outerTimer = data.getMyDeleteTimer();
+        //Subsumption / Strengthening
+        subsumption.subsumeStrength(data); 
+
+        updateDeleteTime(data.getMyDeleteTimer());
         //for (unsigned i = start; i < end; i++)
         while (heap.size() > 0)
         {
-           //Subsumption / Strengthening
-           subsumption.subsumeStrength(data); 
-           
-           //int v = variable_queue[i];
            int v = heap.removeMin();
            vector<CRef> & pos = data.list(mkLit(v,false)); 
            vector<CRef> & neg = data.list(mkLit(v,true));
@@ -215,11 +218,6 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            int lit_clauses;
            int lit_learnts;
            
-           // get current time
-           //  
-           int myDeleteTime = data.getMyDeleteTimer();
-           
-           
            if (!force) 
            {
                for (int i = 0; i < pos.size(); ++i)
@@ -252,25 +250,22 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                 removeClauses(data, neg, mkLit(v,true));
                 if (opt_verbose > 0) cerr << "c Resolved " << v+1 <<endl;
            }
-           if(opt_verbose > 1)   cerr << "c =============================================================================" << endl;
-           
+
            //subsumption with new clauses!!
            subsumption.subsumeStrength(data);
-           
-           vector<Var> touched_variables;
-           data.getActiveVariables(myDeleteTime, touched_variables);
-           touchedVarsForSubsumption(data, touched_variables);
+           if(opt_verbose > 1)   cerr << "c =============================================================================" << endl;
+          
         }
 
         // add active variables and clauses to variable heap and subsumption queues
-        vector<Var> touched_variables;
-        data.getActiveVariables(outerTimer, touched_variables);
+        data.getActiveVariables(lastDeleteTime(), touched_variables);
         touchedVarsForSubsumption(data, touched_variables);
         heap.clear();
         for (int i = 0; i < touched_variables.size(); ++i)
         {
             heap.insert(touched_variables[i]);
         }
+        touched_variables.clear();
     }
 }
 
@@ -448,6 +443,7 @@ inline lbool BlockedVariableElimination::anticipateElimination(CoprocessorData &
  *   - resolvents that are tautologies are skipped 
  *   - unit clauses and empty clauses are not handeled here
  *          -> this is already done in anticipateElimination 
+ * TODO how to deal with learnt clauses
  */
 lbool BlockedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, bool force)
 {
