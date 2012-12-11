@@ -123,6 +123,8 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
         while (heap.size() > 0)
         {
            int v = heap.removeMin();
+	   // TODO: do not work on this variable, if it will be unit-propagated! if all units are eagerly propagated, this is not necessary
+	   // if( data.value( mkLit(v,true) ) != l_Undef ) continue;
            vector<CRef> & pos = data.list(mkLit(v,false)); 
            vector<CRef> & neg = data.list(mkLit(v,true));
                
