@@ -102,6 +102,9 @@ protected:
   /** enqueue all successor gates of the given gate g into the queue, stamp output variables, have a limit when to stop?! */
   void enqueueSucessorGates(Circuit::Gate& g, deque< int > queue, vector<Circuit::Gate>& gates, vector< unsigned int >& bitType, vector< vector<int32_t> >& varTable);
   
+  /** write the AIGER circuit that can be found based on the clauses in the formula to a file in aag format */
+  void writeAAGfile( CoprocessorData& data );
+  
   /** returns the literal, that represents the Equivalence-class of l */
   Lit getReplacement(Lit l ) const;
   

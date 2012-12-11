@@ -27,7 +27,7 @@ Circuit::Circuit(ClauseAllocator& _ca)
 : ca (_ca)
 {}
 
-int Circuit::extractGates(CoprocessorData& data, vector< Circuit::Gate >& gates)
+int Circuit::extractGates(CoprocessorData& data, vector< Gate >& gates)
 {
   // create BIG
   big = new BIG( );

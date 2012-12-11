@@ -4,12 +4,16 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor-src/EquivalenceElimination.h"
 
+#include <fstream>
+
 using namespace Coprocessor;
 
 static const char* _cat = "COPROCESSOR 3 - EE";
 
-static IntOption  opt_level   (_cat, "cp3_ee_level",    "EE on BIG, gate probing, structural hashing", 3, IntRange(0, 3));
+static IntOption  opt_level       (_cat, "cp3_ee_level",    "EE on BIG, gate probing, structural hashing", 3, IntRange(0, 3));
 static BoolOption opt_old_circuit (_cat, "cp3_old_circuit", "do old circuit extraction", false);
+static StringOption aagFile       (_cat, "ee_aag", "write final circuit to this file");
+
 
 static const int eeLevel = 1;
 const static bool debug_out = true; // print output to screen
@@ -97,8 +101,6 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
       vector<Lit> oldReplacedBy = replacedBy;
       //vector< vector<Lit> >* externBig
     
-
-
       if( opt_old_circuit ) {
 	moreEquivalences = findGateEquivalences( data, gates );
 	if( moreEquivalences )
@@ -120,13 +122,16 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
 	break;
       }
       moreEquivalences = false;
-      while ( applyEquivalencesToFormula(data ) && data.ok() ) {  // will set literals that have to be analyzed again!
+      bool doRepeat = false;
+      do {  // will set literals that have to be analyzed again!
 	findEquivalencesOnBig(data);                              // finds SCC based on all literals in the eqDoAnalyze array!
-	moreEquivalences = true;
-      }
+	doRepeat = applyEquivalencesToFormula(data);
+	moreEquivalences = doRepeat || moreEquivalences;
+      } while ( doRepeat && data.ok() );
       cerr << "c moreEquivalences in iteration " << iter << " : " << moreEquivalences << endl;
     }
-    return;
+    if( aagFile != "" )
+      writeAAGfile(data);
   }
   
   //do binary reduction
@@ -284,6 +289,9 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	      data.enqueue(~ox);  
 	    }
 	  }
+	  
+	  // TODO: x<->AND(a,c) , and c <-> AND(a,x) => c == x !!!
+	  // one has to match, the other could also be equivalent to the output of the gate g!
 	  
 	  if( oa != a && oa != b ) {
 	    if( debug_out ) cerr << "c does not match A" << endl;
@@ -686,6 +694,8 @@ void EquivalenceElimination::processANDgate(CoprocessorData& data, Circuit::Gate
 {
   // cerr << "c compare " << queue.size() << " gates against current AND gate ";
 //   g.print(cerr);
+  
+  // TODO: x<->AND(a,c) , and c <-> AND(a,x) => c == x !!!
   
   Lit a = getReplacement( g.a() ); 
   Lit b = getReplacement( g.b() ); 
@@ -1600,3 +1610,54 @@ bool EquivalenceElimination::hasDuplicate(vector<CRef>& list, const Clause& c)
 }
 
 
+void EquivalenceElimination::writeAAGfile(CoprocessorData& data)
+{
+  // get the circuit!
+  vector<Circuit::Gate> gates;
+  Circuit circ(ca); 
+  circ.extractGates(data, gates);
+  unsigned char type [ data.nVars() ];
+  memset( type,0, sizeof(unsigned char) * data.nVars() );
+  
+  for( int i = 0 ; i < gates.size(); ++ i ) {
+    const Circuit::Gate& g = gates[i];
+    type [ var(g.x()) ] = ( type [ var(g.x()) ] | 1 ); // set output
+    type [ var(g.a()) ] = ( type [ var(g.a()) ] | 2 ); // set input
+    type [ var(g.b()) ] = ( type [ var(g.b()) ] | 2 ); // set input
+  }
+  vector <Var> pureInputs;
+  vector <Var> pureOutputs;
+  
+  for( Var v = 0 ; v < data.nVars(); ++v ) {
+    if( type[v] == 1 ) pureOutputs.push_back(v);
+    if( type[v] == 2 ) pureInputs.push_back(v);
+  }
+  cerr << "AAG:" << endl
+       << " maxV=" << data.nVars()
+       << " inputs=" << pureInputs.size()
+       << " outputs=" << pureOutputs.size()
+       << " gates=" << gates.size() << endl;
+  
+  ofstream AAG( aagFile );
+  AAG << "aag "
+      << data.nVars() << " "
+      << pureInputs.size() << " "
+      << "0 "
+      << pureOutputs.size() << " "
+      << gates.size() << endl;
+  // input
+  for( int i = 0 ; i< pureInputs.size(); ++ i )
+    AAG << (pureInputs[i]+1)*2 << endl;
+  // output
+  for( int i = 0 ; i< pureOutputs.size(); ++ i )
+    AAG << (pureOutputs[i]+1)*2 << endl;
+  // gates
+  for( int i = 0; i < gates.size(); ++ i ) {
+    const Circuit::Gate& g = gates[i];
+    int lx = (var( g.x()) + 1) * 2 + ( sign(g.x()) ? 1 : 0);
+    int la = (var( g.a()) + 1) * 2 + ( sign(g.a()) ? 1 : 0);
+    int lb = (var( g.b()) + 1) * 2 + ( sign(g.b()) ? 1 : 0);
+    AAG << lx << " " << la << " " << lb << endl;
+  }
+  AAG.close();
+}
