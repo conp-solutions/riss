@@ -22,6 +22,7 @@ static BoolOption opt_hte     (_cat, "hte",         "Use Hidden Tautology Elimin
 static BoolOption opt_cce     (_cat, "cce",         "Use (covered) Clause Elimination during preprocessing", false);
 static BoolOption opt_ee      (_cat, "ee",          "Use Equivalence Elimination during preprocessing", false);
 static BoolOption opt_enabled (_cat, "enabled_cp3", "Use CP3", false);
+static BoolOption opt_inprocess (_cat, "inprocess", "Apply Preprocessing methods before each restart", false);
 static BoolOption opt_bve     (_cat, "bve",         "Use Bounded Variable Elimination during preprocessing", false);
 
 static IntOption  opt_log     (_cat, "log",         "Output log messages until given level", 0, IntRange(0, 3));
@@ -155,9 +156,10 @@ lbool Preprocessor::preprocess()
 lbool Preprocessor::inprocess()
 {
   // TODO: do something before preprocessing? e.g. some extra things with learned / original clauses
-
-
-  return preprocess();
+  if (opt_inprocess)
+    return preprocess();
+  else 
+    return l_Undef; 
 }
 
 lbool Preprocessor::preprocessScheduled()
