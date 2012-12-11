@@ -141,7 +141,7 @@ lbool Subsumption::fullStrengthening(CoprocessorData& data)
                     {
                       // propagate if clause is only 1 lit big
                       data.enqueue(ca[list[k]][0]);
-                      propagation.propagate(data);
+                      propagation.propagate(data, true);
                     }
                     // add clause since it got smaler and could subsume to subsumption_queue
                     clause_processing_queue.push_back(list[k]);
@@ -239,7 +239,7 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
         {
           // propagate if clause is only 1 lit big
           data.enqueue(other[0]);
-          propagation.propagate(data);
+          propagation.propagate(data, true);
         }
       }
     }
@@ -296,7 +296,7 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
         {
           // propagate if clause is only 1 lit big
           data.enqueue(other[0]);
-          propagation.propagate(data);
+          propagation.propagate(data, true);
         }
       }
     }
