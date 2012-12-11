@@ -57,7 +57,7 @@ protected:
   void parallelBVE(CoprocessorData& data);
   
   inline void removeClauses(CoprocessorData & data, vector<CRef> & list, Lit l);
-  inline lbool resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, bool force = false);
+  inline lbool resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, bool keepLearntResolvents = false, bool force = false);
   inline bool resolve(Clause & c, Clause & d, int v, vec<Lit> & ps);
   inline int  tryResolve(Clause & c, Clause & d, int v);
   inline bool checkPush(vec<Lit> & ps, Lit l);

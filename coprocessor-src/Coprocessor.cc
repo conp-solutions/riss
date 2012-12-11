@@ -86,7 +86,14 @@ lbool Preprocessor::preprocess()
   
   // begin clauses have to be sorted here!!
   sortClauses();
-
+  
+  if( false ) {
+   cerr << "formula after Sorting: " << endl;
+   for( int i = 0 ; i < data.getClauses().size(); ++ i )
+     if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getClauses()[i] ] << endl;
+   for( int i = 0 ; i < data.getLEarnts().size(); ++ i )
+     if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getLEarnts()[i] ] << endl;    
+  }
   if( opt_subsimp ) {
     if( opt_verbose > 2 )cerr << "c coprocessor subsume/strengthen" << endl;
     if( status == l_Undef ) subsumption.subsumeStrength(data);  // cannot change status, can generate new unit clauses

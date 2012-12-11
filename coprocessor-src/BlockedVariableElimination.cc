@@ -30,29 +30,28 @@ lbool BlockedVariableElimination::fullBVE(Coprocessor::CoprocessorData& data)
 {
   return l_Undef;
 }
-// 
-// TODO getActive with timer myDeleteTimer
-// TODO use techniques myDeleteTimer 
+ 
 lbool BlockedVariableElimination::runBVE(CoprocessorData& data)
 {
-  assert(variable_queue.size() == 0);
-  //heap_comp.data = &data;
   VarOrderBVEHeapLt comp(data);
   Heap<VarOrderBVEHeapLt> newheap(comp);
-  //  put all variables in queue 
-  //for (int v = 0; v < data.nVars() /*&& v < 2*/ ; ++v)
-  //    variable_queue.push_back(v);
-  //    newheap.insert(v);
   data.getActiveVariables(lastDeleteTime(), newheap);
 
   //Propagation (TODO Why does omitting the propagation
   // and no PureLit Propagation cause wrong model extension?)
-  
   propagation.propagate(data, true);
+  
+  if( false ) {
+   cerr << "formula after propagation: " << endl;
+   for( int i = 0 ; i < data.getClauses().size(); ++ i )
+     if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getClauses()[i] ] << endl;
+   for( int i = 0 ; i < data.getLEarnts().size(); ++ i )
+     if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getLEarnts()[i] ] << endl;    
+  }
 
   bve_worker(data, newheap, 0, variable_queue.size(), false);
-  //variable_queue.clear();
   newheap.clear();
+  
   if (data.getSolver()->okay())
     return l_Undef;
   else 
@@ -111,6 +110,13 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
     {
         //Subsumption / Strengthening
         subsumption.subsumeStrength(data); 
+        if( false ) {
+            cerr << "formula after subsumeStrength: " << endl;
+            for( int i = 0 ; i < data.getClauses().size(); ++ i )
+                if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getClauses()[i] ] << endl;
+            for( int i = 0 ; i < data.getLEarnts().size(); ++ i )
+                if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getLEarnts()[i] ] << endl;    
+        }
 
         updateDeleteTime(data.getMyDeleteTimer());
         //for (unsigned i = start; i < end; i++)
@@ -445,7 +451,7 @@ inline lbool BlockedVariableElimination::anticipateElimination(CoprocessorData &
  *          -> this is already done in anticipateElimination 
  * TODO how to deal with learnt clauses
  */
-lbool BlockedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, bool force)
+lbool BlockedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, bool keepLearntResolvents, bool force)
 {
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
     {
@@ -463,6 +469,8 @@ lbool BlockedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef
                // | resolvent | > 1
                if (ps.size()>1)
                {
+                    if (!keepLearntResolvents && p.learnt() && n.learnt())
+                        continue;
                     CRef cr = ca.alloc(ps, p.learnt() && n.learnt());
                     data.addClause(cr);
                     if (p.learnt() && n.learnt())
@@ -690,8 +698,8 @@ inline void BlockedVariableElimination::removeBlockedClauses(CoprocessorData & d
             data.addToExtension(list[ci], l);
             if(opt_verbose > 1 || (opt_verbose > 0 && ! c.learnt())) 
             {
-                cerr << "c removed clause: "; 
-                printClause(ca[list[ci]]);
+                cerr << "c removed clause: " << ca[list[ci]] << endl;
+                cerr << "c added to extension with Lit " << l << endl;;
             } 
         }
    }
