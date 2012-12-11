@@ -1,7 +1,7 @@
-/*******************************************************************[BlockedVariableElimination.cc]
+/*******************************************************************[BoundedVariableElimination.cc]
 Copyright (c) 2012, Kilian Gebhardt, All rights reserved.
 **************************************************************************************************/
-#include "coprocessor-src/BlockedVariableElimination.h"
+#include "coprocessor-src/BoundedVariableElimination.h"
 #include "coprocessor-src/Propagation.h"
 #include "coprocessor-src/Subsumption.h"
 #include "mtl/Heap.h"
@@ -12,7 +12,7 @@ static const char* _cat = "COPROCESSOR 3 - BVE";
 
 static IntOption  opt_verbose    (_cat, "cp3_bve_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
 
-BlockedVariableElimination::BlockedVariableElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation, Coprocessor::Subsumption & _subsumption )
+BoundedVariableElimination::BoundedVariableElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation, Coprocessor::Subsumption & _subsumption )
 : Technique( _ca, _controller )
 , propagation( _propagation)
 , subsumption( _subsumption)
@@ -21,17 +21,17 @@ BlockedVariableElimination::BlockedVariableElimination( ClauseAllocator& _ca, Co
 {
 }
 
-bool BlockedVariableElimination::hasToEliminate()
+bool BoundedVariableElimination::hasToEliminate()
 {
   return false; //variable_heap.size() > 0; 
 }
 
-lbool BlockedVariableElimination::fullBVE(Coprocessor::CoprocessorData& data)
+lbool BoundedVariableElimination::fullBVE(Coprocessor::CoprocessorData& data)
 {
   return l_Undef;
 }
  
-lbool BlockedVariableElimination::runBVE(CoprocessorData& data)
+lbool BoundedVariableElimination::runBVE(CoprocessorData& data)
 {
   VarOrderBVEHeapLt comp(data);
   Heap<VarOrderBVEHeapLt> newheap(comp);
@@ -103,7 +103,7 @@ static void printClauses(ClauseAllocator & ca, vector<CRef> list, bool skipDelet
 // force -> forces resolution
 //
 //
-void BlockedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, unsigned int start, unsigned int end, bool force, bool doStatistics)   
+void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, unsigned int start, unsigned int end, bool force, bool doStatistics)   
 {
     vector<Var> touched_variables;
     while (heap.size() > 0 )
@@ -282,7 +282,7 @@ void BlockedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
  *      remove it from data-Objects statistics
  *      mark it for deletion
  */
-inline void BlockedVariableElimination::removeClauses(CoprocessorData & data, vector<CRef> & list, Lit l)
+inline void BoundedVariableElimination::removeClauses(CoprocessorData & data, vector<CRef> & list, Lit l)
 {
     for (int cr_i = 0; cr_i < list.size(); ++cr_i)
     {
@@ -318,7 +318,7 @@ inline void BlockedVariableElimination::removeClauses(CoprocessorData & data, ve
  *  -> total number of literals in learnts after resolution:    lit_learnts
  *
  */
-inline lbool BlockedVariableElimination::anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, int32_t* pos_stats , int32_t* neg_stats, int & lit_clauses, int & lit_learnts)
+inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, int32_t* pos_stats , int32_t* neg_stats, int & lit_clauses, int & lit_learnts)
 {
     if(opt_verbose > 2)  cerr << "c starting anticipate BVE" << endl;
     // Clean the stats
@@ -453,7 +453,7 @@ inline lbool BlockedVariableElimination::anticipateElimination(CoprocessorData &
  *          -> this is already done in anticipateElimination 
  * TODO how to deal with learnt clauses
  */
-lbool BlockedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, bool keepLearntResolvents, bool force)
+lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, bool keepLearntResolvents, bool force)
 {
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
     {
@@ -520,7 +520,7 @@ lbool BlockedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef
 //expects c to contain v positive and d to contain v negative
 //returns -1, if resolvent is satisfied
 //        number of resolvents Literals, otherwise
-inline int BlockedVariableElimination::tryResolve(Clause & c, Clause & d, int v)
+inline int BoundedVariableElimination::tryResolve(Clause & c, Clause & d, int v)
 {
     unsigned i = 0, j = 0, r = 0;
     Lit prev = lit_Undef;
@@ -592,7 +592,7 @@ inline int BlockedVariableElimination::tryResolve(Clause & c, Clause & d, int v)
 //expects c to contain v positive and d to contain v negative
 //returns true, if resolvent is satisfied
 //        else, otherwise
-inline bool BlockedVariableElimination::resolve(Clause & c, Clause & d, int v, vec<Lit> & resolvent)
+inline bool BoundedVariableElimination::resolve(Clause & c, Clause & d, int v, vec<Lit> & resolvent)
 {
     unsigned i = 0, j = 0;
     while (i < c.size() && j < d.size())
@@ -640,7 +640,7 @@ inline bool BlockedVariableElimination::resolve(Clause & c, Clause & d, int v, v
     return false;
 }
 
-inline char BlockedVariableElimination::checkUpdatePrev(Lit & prev, Lit l)
+inline char BoundedVariableElimination::checkUpdatePrev(Lit & prev, Lit l)
 {
     if (prev != lit_Undef)
     {
@@ -653,7 +653,7 @@ inline char BlockedVariableElimination::checkUpdatePrev(Lit & prev, Lit l)
     return 1;
 }
 
-inline bool BlockedVariableElimination::checkPush(vec<Lit> & ps, Lit l)
+inline bool BoundedVariableElimination::checkPush(vec<Lit> & ps, Lit l)
 {
     if (ps.size() > 0)
     {
@@ -673,7 +673,7 @@ void parallelBVE(CoprocessorData& data)
 
 }
 
-void* BlockedVariableElimination::runParallelBVE(void* arg)
+void* BoundedVariableElimination::runParallelBVE(void* arg)
 {
   BVEWorkData*      workData = (BVEWorkData*) arg;
   //workData->bve->bve_worker(*(workData->data), workData->start,workData->end, false);
@@ -686,7 +686,7 @@ void* BlockedVariableElimination::runParallelBVE(void* arg)
  * i.e. all resolvents are tautologies
  *
  */
-inline void BlockedVariableElimination::removeBlockedClauses(CoprocessorData & data, vector< CRef> & list, int32_t stats[], Lit l )
+inline void BoundedVariableElimination::removeBlockedClauses(CoprocessorData & data, vector< CRef> & list, int32_t stats[], Lit l )
 {
    for (unsigned ci = 0; ci < list.size(); ++ci)
    {    
@@ -711,7 +711,7 @@ inline void BlockedVariableElimination::removeBlockedClauses(CoprocessorData & d
 // All clauses that have been modified, can possibly be subsumed by clauses
 // that share a subset of their literals
 // Therefore we add those clauses to the processing list (if they are not contained in it already).
-/*void BlockedVariableElimination :: append_modified (CoprocessorData & data, std::vector<CRef> & modified_list)
+/*void BoundedVariableElimination :: append_modified (CoprocessorData & data, std::vector<CRef> & modified_list)
 {
     for (int i = 0; i < modified_list.size(); ++i)
     {
@@ -734,7 +734,7 @@ inline void BlockedVariableElimination::removeBlockedClauses(CoprocessorData & d
         //c.set_modified(false);
     }
 }*/
-inline void BlockedVariableElimination :: touchedVarsForSubsumption (CoprocessorData & data, const std::vector<Var> & touched_vars)
+inline void BoundedVariableElimination :: touchedVarsForSubsumption (CoprocessorData & data, const std::vector<Var> & touched_vars)
 {
     for (int i = 0; i < touched_vars.size(); ++i)
     {
@@ -744,7 +744,7 @@ inline void BlockedVariableElimination :: touchedVarsForSubsumption (Coprocessor
         
     }
 }       
-inline void BlockedVariableElimination::addClausesToSubsumption (CoprocessorData & data, const vector<CRef> & clauses)
+inline void BoundedVariableElimination::addClausesToSubsumption (CoprocessorData & data, const vector<CRef> & clauses)
 {
     for (int j = 0; j < clauses.size(); ++j)
     {

@@ -1,4 +1,4 @@
-/********************************************************************[BlockedVariableElimination.h]
+/********************************************************************[BoundedVariableElimination.h]
 Copyright (c) 2012, Kilian Gebhardt, All rights reserved.
 **************************************************************************************************/
 #ifndef BVE_HH
@@ -19,7 +19,7 @@ namespace Coprocessor {
 
 /** This class implement blocked variable elimination
  */
-class BlockedVariableElimination : public Technique {
+class BoundedVariableElimination : public Technique {
   struct VarOrderBVEHeapLt {
         CoprocessorData & data;
         bool operator () (Var x, Var y) const {/* assert (data != NULL && "Please assign a valid data object before heap usage" );*/ return data[x]  > data[y]; }
@@ -32,7 +32,7 @@ class BlockedVariableElimination : public Technique {
   Coprocessor::Subsumption & subsumption;
 public:
   
-  BlockedVariableElimination( ClauseAllocator& _ca, ThreadController& _controller , Coprocessor::Propagation & _propagation, Coprocessor::Subsumption & _subsumption);
+  BoundedVariableElimination( ClauseAllocator& _ca, ThreadController& _controller , Coprocessor::Propagation & _propagation, Coprocessor::Subsumption & _subsumption);
   
   /** run BVE until completion */
   lbool runBVE(CoprocessorData& data);
@@ -47,7 +47,7 @@ protected:
   
   /** data for parallel execution */
   struct BVEWorkData {
-    BlockedVariableElimination*  bve; // class with code
+    BoundedVariableElimination*  bve; // class with code
     CoprocessorData* data;        // formula and maintain lists
     unsigned int     start;       // partition of the queue
     unsigned int     end;
