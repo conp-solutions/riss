@@ -11,6 +11,8 @@ using namespace std;
 static const char* _cat = "COPROCESSOR 3 - BVE";
 
 static IntOption  opt_verbose    (_cat, "cp3_bve_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
+static IntOption  opt_learnt_growth (_cat, "cp3_bve_learnt_growth", "Keep C (x) D, where C or D is learnt, if |C (x) D| <= max(|C|,|D|) + N", 0, IntRange(-1, INT32_MAX));
+static IntOption  opt_resolve_learnts (_cat, "cp3_bve_resolve_learnts", "Resolve learnt clauses: 0: off, 1: original with learnts, 2: 1 and learnts with learnts", 0, IntRange(0,2));
 
 BoundedVariableElimination::BoundedVariableElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation, Coprocessor::Subsumption & _subsumption )
 : Technique( _ca, _controller )
@@ -368,7 +370,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
                 }
                 ++pos_stats[cr_p];
                 ++neg_stats[cr_n];
-                if (p.learnt() && n.learnt())
+                if (p.learnt() || n.learnt())
                     lit_learnts += newLits;
                 else 
                     lit_clauses += newLits;
@@ -465,15 +467,32 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef
             Clause & n = ca[negative[cr_n]];
             if (n.can_be_deleted())
                 continue;
+            // Dont compute resolvents for learnt clauses (this is done in case of force,
+            // since blocked clauses and units have not been computed by anticipate)
+            if (!force)
+            {
+                if (opt_resolve_learnts == 0 && (p.learnt() || n.learnt()))
+                    continue;
+                if (opt_resolve_learnts == 1 && (p.learnt() && n.learnt()))
+                    continue;
+            }        
             vec<Lit> ps;
             if (!resolve(p, n, v, ps))
             {
                // | resolvent | > 1
                if (ps.size()>1)
                {
-                    if (!keepLearntResolvents && p.learnt() && n.learnt())
+                    // Depending on opt_resovle_learnts, skip clause creation
+                    if (force)
+                    { 
+                        if (opt_resolve_learnts == 0 && (p.learnt() || n.learnt()))
+                            continue;
+                        if (opt_resolve_learnts == 1 && (p.learnt() && n.learnt()))
+                            continue;
+                    }
+                    if ((p.learnt() || n.learnt()) && ps.size() > max(p.size(),n.size()) + opt_learnt_growth)
                         continue;
-                    CRef cr = ca.alloc(ps, p.learnt() && n.learnt());
+                    CRef cr = ca.alloc(ps, p.learnt() || n.learnt());
                     data.addClause(cr);
                     if (p.learnt() && n.learnt())
                         data.getLEarnts().push(cr);
