@@ -69,12 +69,12 @@ protected:
 
   /** run parallel subsumption with all available threads */
   void parallelSubsumption(CoprocessorData& data);
-  
+  void parallelStrengthening(CoprocessorData& data);  
 public:
 
   /** converts arg into SubsumeWorkData*, runs subsumption of its part of the queue */
   static void* runParallelSubsume(void* arg);
-
+  static void* runParallelStrengthening(void * arg);
 };
 
 }
