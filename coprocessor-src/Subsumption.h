@@ -54,7 +54,8 @@ protected:
   bool hasToSubsume();       // return whether there is something in the subsume queue
   lbool fullSubsumption(CoprocessorData& data);   // performs subsumtion until completion
   void subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics = true); // subsume certain set of elements of the processing queue, does not write to the queue
-  
+  void par_subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics, vector<CRef> & duplicates);
+
   bool hasToStrengthen();    // return whether there is something in the strengthening queue
   lbool fullStrengthening(CoprocessorData& data); // performs strengthening until completion, puts clauses into subsumption queue
   void strengthening_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics = true);
@@ -63,6 +64,7 @@ protected:
   struct SubsumeWorkData {
     Subsumption*     subsumption; // class with code
     CoprocessorData* data;        // formula and maintain lists
+    vector<CRef> *   duplicates;  // Vector for duplicate clauses
     unsigned int     start;       // partition of the queue
     unsigned int     end;
   };
