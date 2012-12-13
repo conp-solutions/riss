@@ -68,7 +68,7 @@ inline void partVars(CoprocessorData& data, int noParts, std::vector<std::vector
   //TODO: use correct buffer size (lock »bufferSize« limits)
 
   // ---------- initialize buffers --------------
-  MarkArray first, second, checked;
+  MarkArray first, second, checked; //first -> distance 2 neighbors, second -> distance 4 neighbors + first, checked -> 
     first.create(data.nVars());
     first.nextStep();
     second.create(data.nVars());
@@ -94,23 +94,24 @@ inline void partVars(CoprocessorData& data, int noParts, std::vector<std::vector
       }
     }
     // check if there are intersections
+    valid = true;
     for (int i = 0; i < first.size(); ++i)
     {
       if (second.isCurrentStep(i) && checked.isCurrentStep(i) ) {
         valid = false;
-      } else {
+        break;
+      } 
+    }
+    // if not valid remember to prevent from checking again! 
+    if ( valid ) { 
         // add second to checked first
         for (int j = 0; j < second.size(); ++j){
           if (second.isCurrentStep(j))
             checked.setCurrentStep(j);
-        }
-      }
-    }
-    valid = true;
-
-    if ( valid ){            // check if the variable is valid
-      buffers[count].push_back(x);
-      count++;
+          }
+           // check if the variable is valid
+        buffers[count].push_back(x);
+        count++;
     }
   }
   // --------- end initialize buffers -----------
