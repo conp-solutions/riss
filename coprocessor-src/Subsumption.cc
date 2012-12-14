@@ -55,7 +55,7 @@ lbool Subsumption::fullSubsumption(CoprocessorData& data)
   return l_Undef; 
 }
 
-void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics)
+void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, const bool doStatistics)
 {
     for (; end > start;)
     {
@@ -82,7 +82,14 @@ void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int star
 	        } else if (ca[list[i]].can_be_deleted()) {
                 continue;
 	        } else if (c.ordered_subsumes(ca[list[i]])) {
-                ca[list[i]].set_delete(true); //ATOMIC 
+                if (c.size() == ca[list[i]].size() && cr > list[i])
+                {
+                    c.set_delete(true);
+                    if (!c.learnt() && ca[list[i]].learnt())
+                        ca[list[i]].set_learnt(false);
+                    continue;
+                }
+                ca[list[i]].set_delete(true); 
                 if( doStatistics ) data.removedClause(list[i]);  // tell statistic about clause removal
                 if (!ca[list[i]].learnt() && c.learnt())
                 {
@@ -94,9 +101,9 @@ void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int star
         c.set_subsume(false);
     }    
 }
+
 /**
- * Copy of subsumption_that does not delete duplicates of clauses, but remembers them in the duplicate vector.
- * We do this, to ensure that no mutual subsumption of duplicate clauses occurs.
+ * copy of subsumption_worker that remembers dublicates,  inefficient, but maybe usefull for later subsumption modules for parallel BVE / Strengthening
  */
 void Subsumption :: par_subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics, vector<CRef> & duplicates)
 {
@@ -389,14 +396,12 @@ void Subsumption::parallelSubsumption(CoprocessorData& data)
   cerr << "c parallel subsumption with " << controller.size() << " threads" << endl;
   SubsumeWorkData workData[ controller.size() ];
   vector<Job> jobs( controller.size() );
-  vector < vector< CRef > > duplicates (controller.size() ) ;
   unsigned int queueSize = clause_processing_queue.size();
   unsigned int partitionSize = clause_processing_queue.size() / controller.size();
   // setup data for workers
   for( int i = 0 ; i < controller.size(); ++ i ) {
     workData[i].subsumption = this; 
     workData[i].data  = &data;
-    workData[i].duplicates = &(duplicates[i]);
     workData[i].start = i * partitionSize; 
     workData[i].end   = (i + 1 == controller.size()) ? queueSize : (i+1) * partitionSize; // last element is not processed!
     jobs[i].function  = Subsumption::runParallelSubsume;
@@ -404,49 +409,12 @@ void Subsumption::parallelSubsumption(CoprocessorData& data)
   }
   controller.runJobs( jobs );
 
-  // deleting duplicates seriell 
-  for (int i = 0; i < controller.size(); ++ i) 
-  {
-    cerr << "c Dublicates in partition " << i << ": " << duplicates[i].size() << endl;
-    for (int j = 0; j < duplicates[i].size(); ++j)
-    {
-        const CRef cr = duplicates[i][j];
-        Clause & c = ca[cr];
-        if (c.can_be_deleted())
-            continue;
-        //find Lit with least occurrences
-        Lit min = c[0];
-        for (int l = 1; l < c.size(); l++)
-        {
-            if (data[c[l]] < data[min])
-               min = c[l]; 
-        }
-        vector<CRef> & list = data.list(min);
-        for (unsigned i = 0; i < list.size(); ++i)
-        {
-	  
-            if (list[i] == cr) {
-                continue;
-	        } else if (ca[list[i]].can_be_deleted()) {
-                continue;
-	        } else if (c.ordered_equals(ca[list[i]])) {
-              ca[list[i]].set_delete(true);  
-              if( false ) data.removedClause(list[i]);  
-              if (!ca[list[i]].learnt() && c.learnt())
-              {
-                c.set_learnt(false);
-              }
-                
-            }
-        }
-    }
-  }
 }
 
 void* Subsumption::runParallelSubsume(void* arg)
 {
   SubsumeWorkData* workData = (SubsumeWorkData*) arg;
-  workData->subsumption->par_subsumption_worker(*(workData->data),workData->start,workData->end, false, *(workData->duplicates));
+  workData->subsumption->subsumption_worker(*(workData->data),workData->start,workData->end, false);
   return 0;
 }
 
