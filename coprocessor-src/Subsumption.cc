@@ -478,4 +478,5 @@ void* Subsumption::runParallelStrengthening(void* arg)
 {
     SubsumeWorkData* workData = (SubsumeWorkData*) arg;
     workData->subsumption->strengthening_worker(*(workData->data),workData->start,workData->end, false);
+    return 0;
 }

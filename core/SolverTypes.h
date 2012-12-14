@@ -207,7 +207,7 @@ public:
     void         remove_lit       (const Lit p);
     void         strengthen       (Lit p);
 
-    void    set_delete (bool b) 	 { header.mark = 1; }
+    void    set_delete (bool b) 	    { if (b) header.mark = 1; else header.mark = 0;}
     void    set_learnt (bool b)         { header.learnt = b; }
     bool    can_be_deleted()     const  { return mark() == 1; }
 
