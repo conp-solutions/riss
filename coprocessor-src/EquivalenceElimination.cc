@@ -16,7 +16,7 @@ static StringOption aagFile       (_cat, "ee_aag", "write final circuit to this 
 
 
 static const int eeLevel = 1;
-const static bool debug_out = true; // print output to screen
+const static bool debug_out = false; // print output to screen
 
 EquivalenceElimination::EquivalenceElimination(ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation, Coprocessor::Subsumption& _subsumption)
 : Technique(_ca,_controller)
@@ -83,7 +83,7 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
       
       circ.extractGates(data, gates);
       cerr << "c found " << gates.size() << " gates" << endl ;
-      if ( true ) {
+      if ( false ) {
 	cerr << endl << "==============================" << endl;
       data.log.log(eeLevel,"found gates", gates.size());
       for( int i = 0 ; i < gates.size(); ++ i ) {
@@ -95,7 +95,7 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
       cerr << "c equivalences:" << endl;
       for ( Var v = 0 ; v < data.nVars(); ++v )
 	if( mkLit(v,false) != getReplacement( mkLit(v,false) ) )
-	  cerr << "c " << v << " == " << getReplacement( mkLit(v,false) ) << endl;
+	  cerr << "c " << v+1 << " == " << getReplacement( mkLit(v,false) ) << endl;
       }
 
       vector<Lit> oldReplacedBy = replacedBy;
@@ -123,12 +123,14 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
       }
       moreEquivalences = false;
       bool doRepeat = false;
+      int eeIter = 0;
       do {  // will set literals that have to be analyzed again!
 	findEquivalencesOnBig(data);                              // finds SCC based on all literals in the eqDoAnalyze array!
 	doRepeat = applyEquivalencesToFormula(data);
 	moreEquivalences = doRepeat || moreEquivalences;
+	eeIter ++;
       } while ( doRepeat && data.ok() );
-      cerr << "c moreEquivalences in iteration " << iter << " : " << moreEquivalences << endl;
+      cerr << "c moreEquivalences in iteration " << iter << " : " << moreEquivalences << " with BIGee iterations " << eeIter << endl;
     }
     if( aagFile != "" )
       writeAAGfile(data);
@@ -189,7 +191,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
     // Assumption: inside a miter, each pure input variable has to have an even number of gates!
     if( (varTable[v].size() & 1) != 0 ) { 
       isMiter = false;
-      cerr << "c the given gate structure cannot be a miter, because variable " << v+1 << " has " << varTable[v].size() << " gates" << endl;
+      if( debug_out ) cerr << "c the given gate structure cannot be a miter, because variable " << v+1 << " has " << varTable[v].size() << " gates" << endl;
     }
   }
   
@@ -199,6 +201,10 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
   for( int i = 0 ; i < currentPtr->size(); ++ i ) cerr << currentVariables[i]+1 << " ";
   cerr << endl;
   }
+  
+  // structures to store temporary literals
+  vector<Lit> upLits (2); upLits.clear();
+  vector<Lit> eeLits (2); eeLits.clear();
   
   // as long as there are variables inside the queue
   while( currentPtr->size() > 0 ) {
@@ -224,13 +230,11 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	  data.addEquivalences(x,a);
 	  a = getReplacement( g.a() );
 	  x = getReplacement( g.x() );
-	  --i; // process the same gate again!
-	  continue;
 	} else if ( a == ~b ) {
 	  cerr << "c find an unsatisfiable gate based on complementary inputs" << endl; 
 	  data.enqueue(~x);
 	} else if ( data.value(a) != l_Undef || data.value(b) != l_Undef ) {
-	  cerr << "c gate has assigned inputs" << endl;
+	  if( debug_out ) cerr << "c gate has assigned inputs" << endl;
 	  if ( data.value(a) == l_True ) {
 	    if( eagerEquivalence ) setEquivalent(b,x);
 	    data.addEquivalences( x,b );
@@ -271,7 +275,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	    data.enqueue(~ox);
 	  }
 	  if ( data.value(oa) != l_Undef || data.value(ob) != l_Undef ) {
-	    cerr << "c gate has assigned inputs" << endl;
+	    if( debug_out ) cerr << "c gate has assigned inputs" << endl;
 	    if ( data.value(oa) == l_True ) {
 	      if( eagerEquivalence ) setEquivalent(ob,ox);
 	      data.addEquivalences( ox,ob );
@@ -290,43 +294,59 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	    }
 	  }
 	  
-	  // TODO: x<->AND(a,c) , and c <-> AND(a,x) => c == x !!!
-	  // one has to match, the other could also be equivalent to the output of the gate g!
-	  
-	  if( oa != a && oa != b ) {
-	    if( debug_out ) cerr << "c does not match A" << endl;
-	    continue; // does not match another input!
-	  }
-	  if( (oa == b && ob != a) || ( oa == a && ob != b ) ) {
-	    if( debug_out ) cerr << "c does not match B" << endl;
-	    continue; // does not match another input!
-	  }
-	  
-	  if( var(x) != var(ox) ) {
-	    if( eagerEquivalence ) setEquivalent(x,ox);
-	    data.addEquivalences(x,ox);
-	    // put smaller variable in queue, if not already present
-	    Var minV = var(x) < var(ox) ? var(x) : var(ox);
-	    Var maxV = (minV ^ var(x) ^ var(ox));
-	    cerr << "c equi: " << x << " == " << ox << " min=" << minV+1 << " max=" << maxV+1 << endl;
-	    if( !putAllAlways && ! active.isCurrentStep(minV) ) {
-	      active.setCurrentStep(minV);
-	      currentPtr->push_back(minV);
-	    }
-	    // moves gates from greater to smaller!
-	    for( int k = 0 ; k < varTable[maxV].size(); ++k )
-	      varTable[minV].push_back( varTable[maxV][k] );
-	    varTable[maxV].clear();
-	    other.invalidate();
-	  } else {
-	    if( x == ~ox ) {
-	      data.setFailed();
-	      cerr << "c failed, because AND miter procedure found that " << x << " is equivalent to " << ox << endl;
-	      return true;
-	    } else {
-         	cerr << "c found equivalence " << x << " == " << ox << " again" << endl;
+	  // handle all equivalence cases!
+	  eeLits.clear(); upLits.clear();
+	  if ( (oa == a && ob == b) || (oa == b && ob == a ) ) {
+	    // usual equivalence of outputs!
+	    eeLits.push_back(x); eeLits.push_back(ox);
+	  } else if( var(oa) == var(a) || var(oa) == var(b) || var(ob) == var(a) || var(ob) == var(b) ) {
+	    // TODO: implement all cases!
+	    // extra cases where at least one input matches!
+	    if(  (oa == a && ob == x) // x<->AND(a,c) , and c <-> AND(a,x) => c == x !!!
+	      || (ob == b && oa == x)
+	      || (b == ob && a == ox)
+	      || (a == oa && b == ox)
+	      ) {
+	      eeLits.push_back(x);eeLits.push_back(ox);
+	    } else if ( ox == ~x && 
+	      ( (oa == ~a && ob==~b ) || (oa == ~b && ob ==~a) )
+	    ) {
+	      // x <-> AND(a,b) and -x <-> AND(-a,-b) => x=a=b!
+	      eeLits.push_back(x);eeLits.push_back(a); // every two literals represent an equivalent pair
+	      eeLits.push_back(x);eeLits.push_back(b);
 	    }
 	  }
+	  
+	  
+	    while ( eeLits.size() >= 2 ) {
+	      const Lit x = eeLits[eeLits.size()-1]; const Lit ox = eeLits[eeLits.size()-2];
+	      eeLits.pop_back();eeLits.pop_back();
+	      if( var(x) != var(ox) ) {
+		if( eagerEquivalence ) setEquivalent(x,ox);
+		data.addEquivalences(x,ox);
+		// put smaller variable in queue, if not already present
+		Var minV = var(x) < var(ox) ? var(x) : var(ox);
+		Var maxV = (minV ^ var(x) ^ var(ox));
+		if( debug_out ) cerr << "c equi: " << x << " == " << ox << " min=" << minV+1 << " max=" << maxV+1 << endl;
+		if( !putAllAlways && ! active.isCurrentStep(minV) ) {
+		  active.setCurrentStep(minV);
+		  currentPtr->push_back(minV);
+		}
+		// moves gates from greater to smaller!
+		for( int k = 0 ; k < varTable[maxV].size(); ++k )
+		  varTable[minV].push_back( varTable[maxV][k] );
+		varTable[maxV].clear();
+		other.invalidate();
+	      } else {
+		if( x == ~ox ) {
+		  data.setFailed();
+		  cerr << "c failed, because AND miter procedure found that " << x << " is equivalent to " << ox << endl;
+		  return true;
+		} else {
+		    if( debug_out ) cerr << "c found equivalence " << x << " == " << ox << " again" << endl;
+		}
+	      }
+	    }
 	  
 	}
 	
@@ -1327,7 +1347,22 @@ void EquivalenceElimination::findEquivalencesOnBig(CoprocessorData& data, vector
   BIG big;
   if( externBig == 0 ) big.create(ca, data, data.getClauses(), data.getLEarnts() );
   
-
+  if( debug_out ) {
+     cerr << "c to process: ";
+     for( int i = 0 ; i < eqDoAnalyze.size(); ++ i ) {
+        cerr << eqDoAnalyze[i] << " ";
+     }
+      if( debug_out ) {
+	cerr << endl << "====================================" << endl;
+	cerr << "intermediate formula before gates: " << endl;
+	for( int i = 0 ; i < data.getClauses().size(); ++ i )
+	  if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getClauses()[i] ] << endl;
+	for( int i = 0 ; i < data.getLEarnts().size(); ++ i )
+	  if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getLEarnts()[i] ] << endl;    
+	cerr << "====================================" << endl << endl;
+      }
+     cerr << endl;
+  }
   
   int count = 0 ;
   while( !eqDoAnalyze.empty() )
@@ -1515,10 +1550,12 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data)
 	     if( isToAnalyze[ var(c[0]) ] == 0 ) {
 	       eqDoAnalyze.push_back(~c[0]);
 	       isToAnalyze[ var(c[0]) ] = 1;
+	       if( debug_out ) cerr << "c EE re-enable ee-variable " << var(c[0])+1 << endl;
 	     }
              if( isToAnalyze[ var(c[1]) ] == 0 ) {
 	       eqDoAnalyze.push_back(~c[1]);
 	       isToAnalyze[ var(c[1]) ] = 1;
+	       if( debug_out ) cerr << "c EE re-enable ee-variable " << var(c[1])+1 << endl;
 	     }
 	   } else if (c.size() == 1 ) {
 	     if( data.enqueue(c[0]) == l_False ) return newBinary; 
@@ -1573,6 +1610,16 @@ EEapplyNextClause:; // jump here, if a tautology has been found
        
        start = i+1;
        
+       // the formula will change, thus, enqueue everything
+       if( data.hasToPropagate() || subsumption.hasWork() ) {
+	 // re-enable all literals (over-approximation) 
+	 for( Var v = 0 ; v < data.nVars(); ++ v ) {
+	    if( isToAnalyze[ v ] == 0 ) {
+		  eqDoAnalyze.push_back( mkLit(v,false) );
+		  isToAnalyze[ v ] = 1;
+	    }
+	 }
+       }
        // take care of unit propagation and subsumption / strengthening
        if( data.hasToPropagate() ) { // after each application of equivalent literals perform unit propagation!
 	 if( propagation.propagate(data,true) == l_False ) return newBinary;
@@ -1621,6 +1668,7 @@ void EquivalenceElimination::writeAAGfile(CoprocessorData& data)
   
   for( int i = 0 ; i < gates.size(); ++ i ) {
     const Circuit::Gate& g = gates[i];
+    if( g.getType() != Circuit::Gate::AND ) continue;
     type [ var(g.x()) ] = ( type [ var(g.x()) ] | 1 ); // set output
     type [ var(g.a()) ] = ( type [ var(g.a()) ] | 2 ); // set input
     type [ var(g.b()) ] = ( type [ var(g.b()) ] | 2 ); // set input

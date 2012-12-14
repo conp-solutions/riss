@@ -15,9 +15,10 @@ static BoolOption opt_ExO      (_cat, "cp3_extExO",      "extract ExO gates", fa
 static BoolOption opt_genAND   (_cat, "cp3_genAND",      "extract generic AND gates", false);
 static BoolOption opt_FASUM    (_cat, "cp3_extHASUM",    "extract full adder sum bit gates", false);
 
-static BoolOption opt_BLOCKED  (_cat, "cp3_extBlocked",  "extract gates, that can be found by blocked clause addition", true);
-static BoolOption opt_NegatedI (_cat, "cp3_extNgtInput", "extract gates, where inputs come from the same variable", true);
-static BoolOption opt_Implied  (_cat, "cp3_extImplied",  "extract half adder sum bit", true);
+static BoolOption opt_BLOCKED    (_cat, "cp3_extBlocked",  "extract gates, that can be found by blocked clause addition", true);
+static BoolOption opt_AddBlocked (_cat, "cp3_addBlocked",  "clauses that are used to extract blocked gates will be added eagerly (soundness)", true);
+static BoolOption opt_NegatedI   (_cat, "cp3_extNgtInput", "extract gates, where inputs come from the same variable", true);
+static BoolOption opt_Implied    (_cat, "cp3_extImplied",  "extract half adder sum bit", true);
 
 using namespace Coprocessor;
 
@@ -82,6 +83,7 @@ void Circuit::getGatesWithOutput(const Var v, vector< Circuit::Gate >& gates, Co
 
 void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, CoprocessorData& data)
 {
+  vec<Lit> learnt_clause;
   // check for v <-> A and B
   // cerr << "c check AND gates with variable " << v+1 << endl;
   for( int p = 0; p < 2 ; ++ p ) {
@@ -100,23 +102,15 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
      // cerr << "c mark literal " << list[i] << endl;
     }
     if( data.lits.size() > 1 ) { // work on found binary clauses!
-      // positive blocked clause is not present, if there are no more negative occurrences of the output literal of the gate!
-      if( opt_BLOCKED ) {
-	if( data[ ~pos ] == data.lits.size() && (data.lits.size() == 2 || opt_genAND)) { // all occurrences in binary clauses!
-	  gates.push_back( Gate(data.lits, (data.lits.size() == 2 ? Gate::AND : Gate::GenAND), Gate::POS_BLOCKED, pos) );
-	  if( debug_out ) cerr << "c found posBlocked AND gate with output var " << v + 1 << endl;
-	  blockedSize = data.lits.size();
-	}
-	// if no blocked gate has been found, still look for it!
-      }
-      // only ternary gates are possible, and the blocked candidate has been already found
-      if( blockedSize == 2 ) { /*cerr << "c continue because blocked size is 2"<< endl; */ continue; }
+
+// TODO: do not do blocked clause addition here, but only if all the other techniques did not reveal the BCA-gate
+    bool foundBlockedCandidate = false;
       if( opt_genAND ) {
 	// cerr << "c genMethod" << endl;
 	const vector<CRef>& cList = data.list(pos);  // all clauses C with pos \in C
 	for( int i = 0 ; i < cList.size(); ++i ) {   // there can be multiple full encoded gates per variable
 	  const Clause& c = ca[ cList[i] ];
-	  if( c.can_be_deleted() || c.size () < 3 || (c.size() >= blockedSize && blockedSize != -1) ) continue; // only consider larger clauses, or new ones
+	  if( c.can_be_deleted() || c.size () < 3 || c.size() > data.lits.size()+1 ) continue; // new clauses that provide not too much literals
 	  // cerr << "c considere clause " << c << endl;
 	  int marked = 0;
 	  for ( int j = 0 ; j < c.size(); ++j ) 
@@ -130,6 +124,7 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	    gates.push_back( Gate( c, c.size() == 3 ? Gate::AND : Gate::GenAND, Gate::FULL, pos ) ); // add the gate
 	    if( debug_out ) cerr << "c found FULL AND gate with output var " << v + 1 << endl; 
 	    data.log.log( 1, "clause for gate" ,c );
+	    if( marked == data.lits.size() ) foundBlockedCandidate = true;
 	  } else {
 	    //cerr << "c marked=" << marked << " while size is " << c.size() << endl;
 	  }
@@ -145,6 +140,41 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	    &&( data.ma.isCurrentStep(toInt(~c.l2)) || big->implies(pos, c.l2 ) ) ){
 	    gates.push_back( Gate( pos, c.l1, c.l2, Gate::AND, Gate::FULL) ); // add the gate
 	    if( debug_out ) cerr << "c found FULL ternary only AND gate with output var " << v + 1 << endl; 
+	    if( data.lits.size() == 2 ) foundBlockedCandidate = true;
+	  }
+	}
+      }
+      if( ! foundBlockedCandidate && opt_BLOCKED ) {
+	if( data.lits.size() > 2 && ! opt_genAND ) continue;
+	int presentClauses = 0;
+	for( int j = 0 ; j < data.list(~pos).size(); ++ j ) {
+	  const Clause& c = ca[ data.list(~pos)[j] ];
+	  if( c.can_be_deleted() ) continue;
+	  if( c.size() != 2 ) { presentClauses = -1; break; }
+	  presentClauses ++;
+	}
+	if( presentClauses == data.lits.size() ) // all clauses with ~pos are binary and define one half of the gate!
+	{ // all occurrences in binary clauses!
+	  if( opt_AddBlocked ) {
+	    learnt_clause.clear();
+	    for( int j = 0 ; j < data.lits.size(); ++ j )
+	      learnt_clause.push( ~data.lits[j] );
+	    learnt_clause.push( pos );
+	    if( !opt_genAND ) { assert( learnt_clause.size() == 3 && "only binary and-gates are allowed" ); }
+	    // todo: have method to add new clause!
+            if( learnt_clause.size() == 3 ) { // push ternaries!
+	      ternaries[ toInt(learnt_clause[0]) ].push_back(ternary (learnt_clause[1],learnt_clause[2]));
+	      ternaries[ toInt(learnt_clause[1]) ].push_back(ternary (learnt_clause[0],learnt_clause[2]));
+	      ternaries[ toInt(learnt_clause[2]) ].push_back(ternary (learnt_clause[0],learnt_clause[1]));
+	    } else if( learnt_clause.size() == 4 ) { // push quads
+	      cerr << "c ADDING QUADS IS NOT PROPERLY IMPLEMENTED YET!!" << endl;
+	      continue;
+	    }
+	    // if this code is reached, then the gate can be added, and blocked clause addition has been executed properly!
+	    gates.push_back( Gate(data.lits, (data.lits.size() == 2 ? Gate::AND : Gate::GenAND), Gate::POS_BLOCKED, pos) );
+	    cerr << "c found posBlocked AND gate with output var " << v + 1 << endl;
+	    CRef cr = ca.alloc(learnt_clause, true); // create as learnt clause (theses clauses have to be considered for inprocessing as well, see "inprocessing rules" paper!
+	    data.addClause(cr);
 	  }
 	}
       }
@@ -155,8 +185,14 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
       for( int i = 0 ; i < data.list(pos).size(); ++i ) 
 	count = ( ca[ data.list(pos)[i] ].can_be_deleted() ? count : count + 1 );
       if( count == 1 ) {
+	cerr << "c BLOCKED Generic Gates IS NOT PROPERLY IMPLEMENTED YET!!" << endl;
+	continue;
+	// TODO: if blocked clause addition is performed with binary clauses, the BIG has to be updated!
 	gates.push_back( Gate( data.lits, data.lits.size() == 2 ? Gate::AND : Gate::GenAND, Gate::NEG_BLOCKED, pos ) );
 	if( debug_out ) cerr << "c found NEG_BLOCKED AND gate with output var " << v + 1 << endl; 
+        if( opt_AddBlocked ) {
+	  // be careful with the clauses that have to be added! this will change the BIG!    
+        }
       }
     }
   } // end pos/neg for loop

@@ -38,6 +38,9 @@ public:
 
   void initClause(const CRef cr); // inherited from Technique
   
+  /** indicate whether clauses could be reduced */
+  bool hasWork() const ;
+  
   /** add a clause to the queues, so that this clause will be checked by the next call to subsumeStrength */
   void addClause( const CRef cr );
   
@@ -51,11 +54,11 @@ public:
 
 protected:
   
-  bool hasToSubsume();       // return whether there is something in the subsume queue
+  bool hasToSubsume() const ;       // return whether there is something in the subsume queue
   lbool fullSubsumption(CoprocessorData& data);   // performs subsumtion until completion
   void subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics = true); // subsume certain set of elements of the processing queue, does not write to the queue
   
-  bool hasToStrengthen();    // return whether there is something in the strengthening queue
+  bool hasToStrengthen() const ;    // return whether there is something in the strengthening queue
   lbool fullStrengthening(CoprocessorData& data); // performs strengthening until completion, puts clauses into subsumption queue
   void strengthening_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics = true);
   

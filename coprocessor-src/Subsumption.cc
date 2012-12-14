@@ -35,7 +35,7 @@ void Subsumption::subsumeStrength(CoprocessorData& data)
 
 
 
-bool Subsumption::hasToSubsume()
+bool Subsumption::hasToSubsume() const
 {
   return clause_processing_queue.size() > 0; 
 }
@@ -53,6 +53,12 @@ lbool Subsumption::fullSubsumption(CoprocessorData& data)
   // no result to tell to the outside
   return l_Undef; 
 }
+
+bool Subsumption::hasWork() const
+{
+  return hasToStrengthen() || hasToSubsume();
+}
+
 
 void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics)
 {
@@ -94,7 +100,7 @@ void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int star
     }    
 }
 
-bool Subsumption::hasToStrengthen()
+bool Subsumption::hasToStrengthen() const
 {
   return strengthening_queue.size() > 0;
 }
