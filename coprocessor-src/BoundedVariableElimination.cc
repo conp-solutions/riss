@@ -61,7 +61,7 @@ lbool BoundedVariableElimination::runBVE(CoprocessorData& data)
 }  
 
 
-static void printLitErr(Lit l)
+static void printLitErr(const Lit l) 
 {
     if (toInt(l) % 2)
            cerr << "-";
@@ -69,7 +69,7 @@ static void printLitErr(Lit l)
 }
 
 
-static void printClause(Clause & c)
+static void printClause(const Clause & c)
 {
     cerr << "c ";
     for (int i = 0; i < c.size(); ++i)
@@ -78,7 +78,7 @@ static void printClause(Clause & c)
 
 }
 
-static void printLitVec(vec<Lit> & litvec)
+static void printLitVec(const vec<Lit> & litvec)
 {
     cerr <<"c "; 
     for (int i = 0; i < litvec.size(); ++i)
@@ -105,7 +105,7 @@ static void printClauses(ClauseAllocator & ca, vector<CRef> list, bool skipDelet
 // force -> forces resolution
 //
 //
-void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, unsigned int start, unsigned int end, bool force, bool doStatistics)   
+void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, unsigned int start, unsigned int end, const bool force, const bool doStatistics)   
 {
     vector<Var> touched_variables;
     while (heap.size() > 0 )
@@ -284,7 +284,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
  *      remove it from data-Objects statistics
  *      mark it for deletion
  */
-inline void BoundedVariableElimination::removeClauses(CoprocessorData & data, vector<CRef> & list, Lit l)
+inline void BoundedVariableElimination::removeClauses(CoprocessorData & data, const vector<CRef> & list, const Lit l)
 {
     for (int cr_i = 0; cr_i < list.size(); ++cr_i)
     {
@@ -320,7 +320,7 @@ inline void BoundedVariableElimination::removeClauses(CoprocessorData & data, ve
  *  -> total number of literals in learnts after resolution:    lit_learnts
  *
  */
-inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, int32_t* pos_stats , int32_t* neg_stats, int & lit_clauses, int & lit_learnts)
+inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, int32_t* pos_stats , int32_t* neg_stats, int & lit_clauses, int & lit_learnts)
 {
     if(opt_verbose > 2)  cerr << "c starting anticipate BVE" << endl;
     // Clean the stats
@@ -455,7 +455,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
  *          -> this is already done in anticipateElimination 
  * TODO how to deal with learnt clauses
  */
-lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, int v, bool keepLearntResolvents, bool force)
+lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const bool keepLearntResolvents, const bool force)
 {
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
     {
@@ -539,7 +539,7 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef
 //expects c to contain v positive and d to contain v negative
 //returns -1, if resolvent is satisfied
 //        number of resolvents Literals, otherwise
-inline int BoundedVariableElimination::tryResolve(Clause & c, Clause & d, int v)
+inline int BoundedVariableElimination::tryResolve(const Clause & c, const Clause & d, const int v)
 {
     unsigned i = 0, j = 0, r = 0;
     Lit prev = lit_Undef;
@@ -611,7 +611,7 @@ inline int BoundedVariableElimination::tryResolve(Clause & c, Clause & d, int v)
 //expects c to contain v positive and d to contain v negative
 //returns true, if resolvent is satisfied
 //        else, otherwise
-inline bool BoundedVariableElimination::resolve(Clause & c, Clause & d, int v, vec<Lit> & resolvent)
+inline bool BoundedVariableElimination::resolve(const Clause & c, const Clause & d, const int v, vec<Lit> & resolvent)
 {
     unsigned i = 0, j = 0;
     while (i < c.size() && j < d.size())
@@ -659,7 +659,7 @@ inline bool BoundedVariableElimination::resolve(Clause & c, Clause & d, int v, v
     return false;
 }
 
-inline char BoundedVariableElimination::checkUpdatePrev(Lit & prev, Lit l)
+inline char BoundedVariableElimination::checkUpdatePrev(Lit & prev, const Lit l)
 {
     if (prev != lit_Undef)
     {
@@ -672,7 +672,7 @@ inline char BoundedVariableElimination::checkUpdatePrev(Lit & prev, Lit l)
     return 1;
 }
 
-inline bool BoundedVariableElimination::checkPush(vec<Lit> & ps, Lit l)
+inline bool BoundedVariableElimination::checkPush(vec<Lit> & ps, const Lit l)
 {
     if (ps.size() > 0)
     {
@@ -705,7 +705,7 @@ void* BoundedVariableElimination::runParallelBVE(void* arg)
  * i.e. all resolvents are tautologies
  *
  */
-inline void BoundedVariableElimination::removeBlockedClauses(CoprocessorData & data, vector< CRef> & list, int32_t stats[], Lit l )
+inline void BoundedVariableElimination::removeBlockedClauses(CoprocessorData & data, const vector< CRef> & list, const int32_t stats[], const Lit l )
 {
    for (unsigned ci = 0; ci < list.size(); ++ci)
    {    
