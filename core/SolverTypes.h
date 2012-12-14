@@ -204,6 +204,7 @@ public:
 
     Lit          subsumes         (const Clause& other) const;
     bool         ordered_subsumes (const Clause& other) const;
+    bool         ordered_equals   (const Clause& other) const;
     void         remove_lit       (const Lit p);
     void         strengthen       (Lit p);
 
@@ -462,6 +463,21 @@ inline bool Clause :: ordered_subsumes (const Clause & other) const
         return true;
     else
         return false;
+}
+
+/**
+ * Checks if two clauses consist of the same elements
+ * Expects both clauses to be ordered
+ */
+inline bool Clause::ordered_equals (const Clause & other) const 
+{
+    if (size() != other.size())
+        return false;
+    else 
+        for (int i = 0; i < size(); ++i)
+            if (data[i].lit != other[i])
+                return false;
+    return true;
 }
 
 inline void Clause::remove_lit(const Lit p)

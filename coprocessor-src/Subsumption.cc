@@ -44,7 +44,7 @@ lbool Subsumption::fullSubsumption(CoprocessorData& data)
 {
   // run subsumption for the whole queue
   //if( controller.size() > 0 && (clause_processing_queue.size() > 100000 || ( clause_processing_queue.size() > 50000 && 10*data.nCls() > 22*data.nVars() ) ) ) {
-  if (controller.size() > 0){
+  if (controller.size() > 0){ //TODO for Development only
     parallelSubsumption(data); // use parallel, is some conditions have been met
     data.correctCounters();    // 
   } else {
@@ -427,11 +427,9 @@ void Subsumption::parallelSubsumption(CoprocessorData& data)
 	  
             if (list[i] == cr) {
                 continue;
-	        } else if (ca[list[i]].size() != c.size()) {
-                continue;
 	        } else if (ca[list[i]].can_be_deleted()) {
                 continue;
-	        } else if (c.ordered_subsumes(ca[list[i]])) {
+	        } else if (c.ordered_equals(ca[list[i]])) {
               ca[list[i]].set_delete(true);  
               if( false ) data.removedClause(list[i]);  
               if (!ca[list[i]].learnt() && c.learnt())
@@ -441,9 +439,7 @@ void Subsumption::parallelSubsumption(CoprocessorData& data)
                 
             }
         }
- 
     }
-
   }
 }
 
@@ -456,8 +452,8 @@ void* Subsumption::runParallelSubsume(void* arg)
 
 void Subsumption::parallelStrengthening(CoprocessorData& data)
 {
-  fullStrengthening(data);
-  /*  cerr << "c parallel strengthening with " << controller.size() << " threads" << endl;
+  //fullStrengthening(data);
+  cerr << "c parallel strengthening with " << controller.size() << " threads" << endl;
   SubsumeWorkData workData[ controller.size() ];
   vector<Job> jobs( controller.size() );
   //TODO partition work
@@ -470,7 +466,7 @@ void Subsumption::parallelStrengthening(CoprocessorData& data)
     jobs[i].function  = Subsumption::runParallelStrengthening;
     jobs[i].argument  = &(workData[i]);
   }
-  controller.runJobs( jobs );*/
+  controller.runJobs( jobs );
   
 }
 
