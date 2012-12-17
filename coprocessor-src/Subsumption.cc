@@ -1,5 +1,5 @@
 /**********************************************************************************[Subsumption.cc]
-Copyright (c) 2012, Norbert Manthey, All rights reserved.
+Copyright (c) 2012, Norbert Manthey, Kilian Gebhardt, Max Löwen, All rights reserved.
 **************************************************************************************************/
 
 #include "coprocessor-src/Subsumption.h"
@@ -109,18 +109,41 @@ void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int star
 }
 
 /**
- * copy of subsumption_worker that remembers dublicates,  inefficient, but maybe usefull for later subsumption modules for parallel BVE / Strengthening
+ * Threadsafe copy of subsumption_worker:
+ * Fixes the following race conditions:
+ *  - Two equivalent clauses (duplicates) could subsume mutual, 
+ *    if subsumption is performed on them in parallel.
+ *    Therefore the clause with the smaller CRef will be kept.
+ *
+ *  - Let A, B be learnt clauses, C non-learnt clause.
+ *    If A subsumes B, and in parallel B subsumes C, 
+ *      A stays learnt clause since B is learnt, 
+ *      B becomes deleted by A, but non-learnt by C
+ *      C becomes deleted by B. 
+ *    Since C is deleted, A will ommit the subsumption-check. 
+ *    Afterwards just A as learnt clause will be kept, and the
+ *    non-learnt information of C got lost. 
+ *
+ *    To solve this problem, the deletion and learnt flags are 
+ *    not updated in time, but Clauses are remembered in two vectors.
+ *    
+ *    Now A will check C for subsumption, and inherit the non-learnt flag.
+ *
+ * @param start          start index of work-queue 
+ * @param stop           stop index (+1) of work-queue
+ * @param to_delete      this clauses, if not deleted, need to be set deleted afterwards
+ * @param set_non_learnt this clauses, if not deleted, need to be set non-learnt afterwards 
  */
-void Subsumption :: par_subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics, vector<CRef> & duplicates)
+void Subsumption :: par_subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, vector<CRef> & to_delete, vector< CRef > & set_non_learnt)
 {
-    for (; end > start;)
+    while (end > start)
     {
         --end;
         const CRef cr = clause_processing_queue[end];
         Clause &c = ca[cr];
         if (c.can_be_deleted())
             continue;
-        bool duplicate = false;
+        bool learnt_subsumed_non_learnt = false;
         //find Lit with least occurrences
         Lit min = c[0];
         for (int l = 1; l < c.size(); l++)
@@ -138,29 +161,36 @@ void Subsumption :: par_subsumption_worker (CoprocessorData& data, unsigned int 
                 continue;
 	        } else if (ca[list[i]].can_be_deleted()) {
                 continue;
-	        } else if (c.ordered_subsumes(ca[list[i]])) {
-                if (ca[list[i]].size() == c.size())
+	        } else  if (c.ordered_subsumes(ca[list[i]])) {
+                // safe at least one duplicate, by deleting the clause with smaller CRef
+                if (c.size() == ca[list[i]].size() && cr > list[i])
                 {
-                    //duplicate found
-                    duplicate = true;
-                } 
-                else 
-                {
-                    ca[list[i]].set_delete(true);  
-                    if( doStatistics ) data.removedClause(list[i]);  
-                    if (!ca[list[i]].learnt() && c.learnt())
+                    // safe the non-learnt information
+                    if (!c.learnt() && ca[list[i]].learnt())
                     {
-                        c.set_learnt(false);
-                    }
+                        to_delete.push_back(cr);
+                        set_non_learnt.push_back(list[i]);
+                    } 
+                    else 
+                        c.set_delete(true);
+                    continue;
                 }
+                // safe the non-learnt information
+                if (c.learnt() && !ca[list[i]].learnt())
+                {
+                    learnt_subsumed_non_learnt = true;
+                    to_delete.push_back(list[i]);
+                    continue;
+                }
+                ca[list[i]].set_delete(true);  
             }
         }
         //set can_subsume to false
         c.set_subsume(false);
         
-        // add duplicate
-        if (duplicate)
-            duplicates.push_back(cr);
+        // add Clause to non-learnt-queue
+        if (learnt_subsumed_non_learnt)
+            set_non_learnt.push_back(cr);
     }    
 }
 
@@ -402,6 +432,8 @@ void Subsumption::parallelSubsumption(CoprocessorData& data)
   cerr << "c parallel subsumption with " << controller.size() << " threads" << endl;
   SubsumeWorkData workData[ controller.size() ];
   vector<Job> jobs( controller.size() );
+  vector< vector < CRef > > toDeletes  (controller.size());
+  vector< vector < CRef > > nonLearnts (controller.size());
   unsigned int queueSize = clause_processing_queue.size();
   unsigned int partitionSize = clause_processing_queue.size() / controller.size();
   // setup data for workers
@@ -410,17 +442,35 @@ void Subsumption::parallelSubsumption(CoprocessorData& data)
     workData[i].data  = &data;
     workData[i].start = i * partitionSize; 
     workData[i].end   = (i + 1 == controller.size()) ? queueSize : (i+1) * partitionSize; // last element is not processed!
+    workData[i].to_delete = & toDeletes[i];
+    workData[i].set_non_learnt = & nonLearnts[i];
     jobs[i].function  = Subsumption::runParallelSubsume;
     jobs[i].argument  = &(workData[i]);
   }
   controller.runJobs( jobs );
 
+  // Setting delete information
+  for (int i = 0 ; i < toDeletes.size(); ++ i) 
+    for (int j = 0; j < toDeletes[i].size(); ++j)
+    {
+        Clause & c = ca[toDeletes[i][j]]; 
+        if (!c.can_be_deleted())
+            c.set_delete(true);
+    } 
+  // Setting non-learnt information
+  for (int i = 0; i < nonLearnts.size(); ++i)
+    for (int j = 0; j < nonLearnts[i].size(); ++j)
+    {
+        Clause & c = ca[nonLearnts[i][j]];
+        if (!c.can_be_deleted() && c.learnt())
+            c.set_learnt(false);
+    }
 }
 
 void* Subsumption::runParallelSubsume(void* arg)
 {
   SubsumeWorkData* workData = (SubsumeWorkData*) arg;
-  workData->subsumption->subsumption_worker(*(workData->data),workData->start,workData->end, false);
+  workData->subsumption->par_subsumption_worker(*(workData->data),workData->start,workData->end, *(workData->to_delete), *(workData->set_non_learnt));
   return 0;
 }
 

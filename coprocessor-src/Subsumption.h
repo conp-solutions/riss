@@ -1,5 +1,5 @@
 /************************************************************************************[Subsumption.h]
-Copyright (c) 2012, Norbert Manthey, All rights reserved.
+Copyright (c) 2012, Norbert Manthey, Kilian Gebhardt, All rights reserved.
 **************************************************************************************************/
 
 #ifndef SUBSUMPTION_HH
@@ -57,7 +57,7 @@ protected:
   bool hasToSubsume() const ;       // return whether there is something in the subsume queue
   lbool fullSubsumption(CoprocessorData& data);   // performs subsumtion until completion
   void subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, const bool doStatistics = true); // subsume certain set of elements of the processing queue, does not write to the queue
-  void par_subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics, vector<CRef> & duplicates);
+  void par_subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, vector<CRef> & to_delete, vector< CRef > & set_non_learnt);
   
   bool hasToStrengthen() const ;    // return whether there is something in the strengthening queue
   lbool fullStrengthening(CoprocessorData& data); // performs strengthening until completion, puts clauses into subsumption queue
@@ -69,6 +69,8 @@ protected:
     CoprocessorData* data;        // formula and maintain lists
     unsigned int     start;       // partition of the queue
     unsigned int     end;
+    vector<CRef>*    to_delete;
+    vector<CRef>*    set_non_learnt;
   };
 
   /** run parallel subsumption with all available threads */
