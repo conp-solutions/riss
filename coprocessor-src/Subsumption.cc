@@ -162,10 +162,10 @@ void Subsumption :: par_subsumption_worker (CoprocessorData& data, unsigned int 
 	        } else if (ca[list[i]].can_be_deleted()) {
                 continue;
 	        } else  if (c.ordered_subsumes(ca[list[i]])) {
-                // safe at least one duplicate, by deleting the clause with smaller CRef
+                // save at least one duplicate, by deleting the clause with smaller CRef
                 if (c.size() == ca[list[i]].size() && cr > list[i])
                 {
-                    // safe the non-learnt information
+                    // save the non-learnt information
                     if (!c.learnt() && ca[list[i]].learnt())
                     {
                         to_delete.push_back(cr);
@@ -175,7 +175,7 @@ void Subsumption :: par_subsumption_worker (CoprocessorData& data, unsigned int 
                         c.set_delete(true);
                     continue;
                 }
-                // safe the non-learnt information
+                // save the non-learnt information
                 if (c.learnt() && !ca[list[i]].learnt())
                 {
                     learnt_subsumed_non_learnt = true;
