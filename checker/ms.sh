@@ -7,8 +7,12 @@
 # print to screen: solution for the cnf
 #
 
+# set this to the right values!
 param="-enabled_cp3 -ee -log=0 -no-cp3_extBlocked -cp3_extNgtInput -no-inprocess_cp3 -cp3_eagerGates"
 
+#
+# run the program
+#
 ./minisat $1 /tmp/minisat-out $param > /dev/null 2> /dev/null
 
 status=$?

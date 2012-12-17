@@ -22,8 +22,9 @@ static BoolOption opt_hte       (_cat, "hte",           "Use Hidden Tautology El
 static BoolOption opt_cce       (_cat, "cce",           "Use (covered) Clause Elimination during preprocessing", false);
 static BoolOption opt_ee        (_cat, "ee",            "Use Equivalence Elimination during preprocessing", false);
 static BoolOption opt_enabled   (_cat, "enabled_cp3",   "Use CP3", false);
-static BoolOption opt_inprocess (_cat, "inprocess_cp3", "Use CP3 for inprocessing", false);
+static BoolOption opt_inprocess (_cat, "inprocess", "Use CP3 for inprocessing", false);
 static BoolOption opt_bve       (_cat, "bve",           "Use Bounded Variable Elimination during preprocessing", false);
+
 
 static IntOption  opt_log       (_cat, "log",           "Output log messages until given level", 0, IntRange(0, 3));
 
@@ -43,7 +44,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , propagation( solver->ca, controller )
 , subsumption( solver->ca, controller, propagation )
 , hte( solver->ca, controller )
-, bve( solver->ca, controller, propagation )
+, bve( solver->ca, controller, propagation, subsumption )
 , cce( solver->ca, controller )
 , ee ( solver->ca, controller, propagation, subsumption )
 {
@@ -79,7 +80,14 @@ lbool Preprocessor::preprocess()
   
   // begin clauses have to be sorted here!!
   sortClauses();
-
+  
+  if( false ) {
+   cerr << "formula after Sorting: " << endl;
+   for( int i = 0 ; i < data.getClauses().size(); ++ i )
+     if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getClauses()[i] ] << endl;
+   for( int i = 0 ; i < data.getLEarnts().size(); ++ i )
+     if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getLEarnts()[i] ] << endl;    
+  }
   if( opt_subsimp ) {
     if( opt_verbose > 2 )cerr << "c coprocessor subsume/strengthen" << endl;
     if( status == l_Undef ) subsumption.subsumeStrength(data);  // cannot change status, can generate new unit clauses
@@ -152,9 +160,10 @@ lbool Preprocessor::inprocess()
   // if no inprocesing enabled, do not do it!
   if( !opt_inprocess ) return l_Undef;
   // TODO: do something before preprocessing? e.g. some extra things with learned / original clauses
-
-
-  return preprocess();
+  if (opt_inprocess)
+    return preprocess();
+  else 
+    return l_Undef; 
 }
 
 lbool Preprocessor::preprocessScheduled()

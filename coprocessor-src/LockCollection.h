@@ -153,7 +153,7 @@ public:
     {
       // could also be done without atomic operation?!  
       // __sync_bool_compare_and_swap(&_lock, 0xffff, 0);
-      lock = 0;
+      _lock = 0;
     }
     
     /** return the current value of the lock (for debug purposes)

@@ -195,7 +195,7 @@ public:
   void destroy();
 
   int32_t& operator[] (const Lit l ); // return the number of occurrences of literal l
-  int32_t operator[] (const Var v ); // return the number of occurrences of variable v
+  int32_t operator[] (const Var v ) const; // return the number of occurrences of variable v
   vector<CRef>& list( const Lit l ); // return the list of clauses, which have literal l
   const vector< Minisat::CRef >& list( const Lit l ) const; // return the list of clauses, which have literal l
 
@@ -228,6 +228,11 @@ public:
   void deletedVar( const Var v );
   /** fill the vector with all the literals that have been deleted after the given timer */
   void getActiveVariables(const uint32_t myTimer, vector< Var >& activeVariables );
+  /** fill the heap with all the literals that have been deleted afetr the given timer */
+  
+  template<class Comp>
+  void getActiveVariables(const uint32_t myTimer, Heap < Comp > & heap );
+
   /** resets all delete timer */
   void resetDeleteTimer();
 
@@ -443,6 +448,15 @@ inline void CoprocessorData::getActiveVariables(const uint32_t myTimer, vector< 
   }
 }
 
+
+template<class Comp>
+inline void CoprocessorData::getActiveVariables(const uint32_t myTimer, Heap< Comp > & heap)
+{
+  for( Var v = 0 ; v < solver->nVars(); ++ v ) {
+    if( deleteTimer.getIndex(v) >= myTimer ) heap.insert(v);
+  } 
+}
+
 inline void CoprocessorData::resetDeleteTimer()
 {
   deleteTimer.reset();
@@ -484,7 +498,7 @@ inline int32_t& CoprocessorData::operator[](const Lit l)
   return lit_occurrence_count[toInt(l)];
 }
 
-inline int32_t CoprocessorData::operator[](const Var v)
+inline int32_t CoprocessorData::operator[](const Var v) const
 {
   return lit_occurrence_count[toInt(mkLit(v,0))] + lit_occurrence_count[toInt(mkLit(v,1))];
 }

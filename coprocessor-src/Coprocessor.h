@@ -14,7 +14,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/Propagation.h"
 #include "coprocessor-src/Subsumption.h"
 #include "coprocessor-src/HiddenTautologyElimination.h"
-#include "coprocessor-src/BlockedVariableElimination.h"
+#include "coprocessor-src/BoundedVariableElimination.h"
 #include "coprocessor-src/ClauseElimination.h"
 #include "coprocessor-src/EquivalenceElimination.h"
 
@@ -62,7 +62,7 @@ protected:
   Subsumption subsumption;
   Propagation propagation;
   HiddenTautologyElimination hte;
-  BlockedVariableElimination bve;
+  BoundedVariableElimination bve;
   ClauseElimination cce;
   EquivalenceElimination ee;
 
