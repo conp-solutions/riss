@@ -130,7 +130,7 @@ void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int star
  *    Now A will check C for subsumption, and inherit the non-learnt flag.
  *
  * @param start          start index of work-queue 
- * @param stop           stop index (+1) of work-queue
+ * @param stop           stop index (+1) of work-queue, i.e. this index is not included
  * @param to_delete      this clauses, if not deleted, need to be set deleted afterwards
  * @param set_non_learnt this clauses, if not deleted, need to be set non-learnt afterwards 
  */
