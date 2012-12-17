@@ -10,12 +10,14 @@ using namespace Coprocessor;
 
 static const char* _cat = "COPROCESSOR 3 - EE";
 
-static IntOption  opt_level       (_cat, "cp3_ee_level",    "EE on BIG, gate probing, structural hashing", 3, IntRange(0, 3));
-static BoolOption opt_old_circuit (_cat, "cp3_old_circuit", "do old circuit extraction", false);
+static IntOption  opt_level            (_cat, "cp3_ee_level",    "EE on BIG, gate probing, structural hashing", 3, IntRange(0, 3));
+static BoolOption opt_old_circuit      (_cat, "cp3_old_circuit", "do old circuit extraction", false);
+static BoolOption opt_eagerEquivalence (_cat, "cp3_eagerGates",  "do old circuit extraction", true);
 static StringOption aagFile       (_cat, "ee_aag", "write final circuit to this file");
 
 
 static const int eeLevel = 1;
+/// temporary Boolean flag to quickly enable debug output for the whole file
 const static bool debug_out = false; // print output to screen
 
 EquivalenceElimination::EquivalenceElimination(ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation, Coprocessor::Subsumption& _subsumption)
@@ -83,7 +85,7 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
       
       circ.extractGates(data, gates);
       cerr << "c found " << gates.size() << " gates" << endl ;
-      if ( false ) {
+      if ( debug_out ) {
 	cerr << endl << "==============================" << endl;
       data.log.log(eeLevel,"found gates", gates.size());
       for( int i = 0 ; i < gates.size(); ++ i ) {
@@ -181,7 +183,6 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
   active.nextStep();
   
   const bool putAllAlways = true;
-  const bool eagerEquivalence = false;
   
   bool isMiter = true;
   for( Var v = 0; v < data.nVars(); ++ v ) {
@@ -226,7 +227,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	
 	if( a == b ) {
 	  cerr << "c found equivalence based on equivalent inputs" << endl;
-	  if( eagerEquivalence ) setEquivalent(a,x);
+	  if( opt_eagerEquivalence ) setEquivalent(a,x);
 	  data.addEquivalences(x,a);
 	  a = getReplacement( g.a() );
 	  x = getReplacement( g.x() );
@@ -236,7 +237,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	} else if ( data.value(a) != l_Undef || data.value(b) != l_Undef ) {
 	  if( debug_out ) cerr << "c gate has assigned inputs" << endl;
 	  if ( data.value(a) == l_True ) {
-	    if( eagerEquivalence ) setEquivalent(b,x);
+	    if( opt_eagerEquivalence ) setEquivalent(b,x);
 	    data.addEquivalences( x,b );
 	    b = getReplacement( g.b() );
 	    x = getReplacement( g.x() );
@@ -244,7 +245,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	    data.enqueue(~x);  
 	  }
 	  if ( data.value(b) == l_True ) {
-	    if( eagerEquivalence ) setEquivalent(a,x);
+	    if( opt_eagerEquivalence ) setEquivalent(a,x);
 	    data.addEquivalences( x,a );
 	    a = getReplacement( g.a() );
 	    x = getReplacement( g.x() );
@@ -266,7 +267,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	  /// do simplify gate!
 	  if( oa == ob ) {
 	    cerr << "c found equivalence based on equivalent inputs" << endl;
-	    if( eagerEquivalence ) setEquivalent(oa,ox);
+	    if( opt_eagerEquivalence ) setEquivalent(oa,ox);
 	    data.addEquivalences(ox,oa);
 	    oa = getReplacement( other.a() ); 
 	    ox = getReplacement( other.x() );
@@ -277,7 +278,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	  if ( data.value(oa) != l_Undef || data.value(ob) != l_Undef ) {
 	    if( debug_out ) cerr << "c gate has assigned inputs" << endl;
 	    if ( data.value(oa) == l_True ) {
-	      if( eagerEquivalence ) setEquivalent(ob,ox);
+	      if( opt_eagerEquivalence ) setEquivalent(ob,ox);
 	      data.addEquivalences( ox,ob );
 	      ob = getReplacement( other.b() ); 
 	      ox = getReplacement( other.x() );
@@ -285,7 +286,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	      data.enqueue(~ox);  
 	    }
 	    if ( data.value(ob) == l_True ) {
-	      if( eagerEquivalence ) setEquivalent(oa,ox);
+	      if( opt_eagerEquivalence ) setEquivalent(oa,ox);
 	      data.addEquivalences( ox,oa );
 	      oa = getReplacement( other.a() ); 
 	      ox = getReplacement( other.x() );
@@ -322,7 +323,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	      const Lit x = eeLits[eeLits.size()-1]; const Lit ox = eeLits[eeLits.size()-2];
 	      eeLits.pop_back();eeLits.pop_back();
 	      if( var(x) != var(ox) ) {
-		if( eagerEquivalence ) setEquivalent(x,ox);
+		if( opt_eagerEquivalence ) setEquivalent(x,ox);
 		data.addEquivalences(x,ox);
 		// put smaller variable in queue, if not already present
 		Var minV = var(x) < var(ox) ? var(x) : var(ox);

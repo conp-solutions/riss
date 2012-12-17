@@ -7,7 +7,9 @@
 # print to screen: solution for the cnf
 #
 
-./minisat $1 /tmp/minisat-out > /dev/null -enabled_cp3 -subsimp > /dev/null # 2> /dev/null
+param="-enabled_cp3 -ee -log=0 -no-cp3_extBlocked -cp3_extNgtInput -no-inprocess_cp3 -cp3_eagerGates"
+
+./minisat $1 /tmp/minisat-out $param > /dev/null 2> /dev/null
 
 status=$?
 

@@ -65,8 +65,12 @@ do
         echo "[runcnfuzz] FALSE UNSAT bug-$seed $head"
         mv $cnf bug-$seed.cnf
         echo $seed >> $log
+        # wrong UNSAT
+      else 
+        continue
+        # good UNSAT
       fi
-      continue;;
+      ;;
     0) [ $ign = yes ] && continue;;
   esac
   head="`awk '/p cnf /{print $3, $4}' $cnf`"
@@ -77,7 +81,7 @@ do
   mv $cnf $bug
   #if [ x"$qbf" = x ]
   #then
-    ./cnfdd $bug $red $prg 1>/dev/null 2>/dev/null
+    ./cnfdd $bug $red ./scriptCheck.sh $prg 1>/dev/null 2>/dev/null
   #else
   #  qbfdd.py -v -v -o $red $bug $prg 1>/dev/null 2>/dev/null
   #fi

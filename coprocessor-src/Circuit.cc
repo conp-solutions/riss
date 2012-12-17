@@ -18,23 +18,34 @@ static BoolOption opt_FASUM    (_cat, "cp3_extHASUM",    "extract full adder sum
 static BoolOption opt_BLOCKED    (_cat, "cp3_extBlocked",  "extract gates, that can be found by blocked clause addition", true);
 static BoolOption opt_AddBlocked (_cat, "cp3_addBlocked",  "clauses that are used to extract blocked gates will be added eagerly (soundness)", true);
 static BoolOption opt_NegatedI   (_cat, "cp3_extNgtInput", "extract gates, where inputs come from the same variable", true);
-static BoolOption opt_Implied    (_cat, "cp3_extImplied",  "extract half adder sum bit", true);
+static BoolOption opt_Implied    (_cat, "cp3_extImplied",  "extract half adder sum bit - can be BUGGY!", true);
 
 using namespace Coprocessor;
 
+/// temporary Boolean flag to quickly enable debug output for the whole file
 const static bool debug_out = false; // print output to screen
 
 Circuit::Circuit(ClauseAllocator& _ca)
 : ca (_ca)
 {}
 
-int Circuit::extractGates(CoprocessorData& data, vector< Gate >& gates)
+void Circuit::extractGates(CoprocessorData& data, vector< Gate >& gates)
 {
   // create BIG
   big = new BIG( );
   big->create(ca,data,data.getClauses(),data.getLEarnts());
   
   if( opt_Implied ) big->generateImplied(data);
+  
+  if( debug_out ) {
+    cerr << "c sampled BIG:" << endl;
+    for( Var v =  0 ; v < data.nVars(); ++ v ) {
+      for ( int p = 0 ; p < 2; ++ p ) {
+	const Lit l = mkLit( v, p==1 );
+	cerr << "c " << l << "  [" << big->getStart(l) << ", " << big->getStop(l) << "]" << endl;
+      }
+    }
+  }
   
   // create the list of all ternary / quadrary clauses
   ternaries.resize( data.nVars() * 2 );
@@ -83,6 +94,7 @@ void Circuit::getGatesWithOutput(const Var v, vector< Circuit::Gate >& gates, Co
 
 void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, CoprocessorData& data)
 {
+  if( debug_out ) cerr << "c try to find AND gate for variable " <<  v + 1 <<  " (found so far:" << gates.size() << ")" << endl;
   vec<Lit> learnt_clause;
   // check for v <-> A and B
   // cerr << "c check AND gates with variable " << v+1 << endl;
@@ -99,11 +111,11 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
     for( int i = 0 ; i < listSize; ++i ) {
      data.ma.setCurrentStep( toInt(list[i]) ); 
      data.lits.push_back( list[i] );
-     // cerr << "c mark literal " << list[i] << endl;
+     if( debug_out ) cerr << "c mark literal " << list[i] << endl;
     }
     if( data.lits.size() > 1 ) { // work on found binary clauses!
 
-// TODO: do not do blocked clause addition here, but only if all the other techniques did not reveal the BCA-gate
+    // TODO: do not do blocked clause addition here, but only if all the other techniques did not reveal the BCA-gate
     bool foundBlockedCandidate = false;
       if( opt_genAND ) {
 	// cerr << "c genMethod" << endl;
@@ -122,7 +134,11 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	    }
 	  if( marked == c.size() ) {
 	    gates.push_back( Gate( c, c.size() == 3 ? Gate::AND : Gate::GenAND, Gate::FULL, pos ) ); // add the gate
-	    if( debug_out ) cerr << "c found FULL AND gate with output var " << v + 1 << endl; 
+	    if( debug_out ) {
+	      cerr << "c found FULL AND gate with output var " << v + 1 << endl; 
+	      cerr << "clause " << c << " leads to gate: ";
+	      gates[ gates.size() -1 ].print(cerr);
+	    }
 	    data.log.log( 1, "clause for gate" ,c );
 	    if( marked == data.lits.size() ) foundBlockedCandidate = true;
 	  } else {
@@ -136,10 +152,16 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	  const ternary& c = cList[i];
 	  // cerr << "consider clause [" << pos << ", " << c.l1 << ", " << c.l2 << "]" << endl;
 	  // either, literal is marked (and thus in binary list), or its implied wrt. sampled BIG
-	  if( ( data.ma.isCurrentStep(toInt(~c.l1)) || big->implies(pos, c.l1 ) ) // since implied does not always work, also check alternative!
-	    &&( data.ma.isCurrentStep(toInt(~c.l2)) || big->implies(pos, c.l2 ) ) ){
+	  if( ( data.ma.isCurrentStep(toInt(~c.l1)) || big->implies(pos, ~c.l1 ) ) // since implied does not always work, also check alternative!
+	    &&( data.ma.isCurrentStep(toInt(~c.l2)) || big->implies(pos, ~c.l2 ) ) ){
 	    gates.push_back( Gate( pos, c.l1, c.l2, Gate::AND, Gate::FULL) ); // add the gate
-	    if( debug_out ) cerr << "c found FULL ternary only AND gate with output var " << v + 1 << endl; 
+	    if( debug_out ) { 
+	      cerr << "c found FULL ternary only AND gate with output var " << v + 1 << endl;
+	      cerr << " implied: " << pos << " -> " << c.l1 << " : " << big->implies(pos, ~c.l1 ) << endl; 
+	      cerr << " implied: " << pos << " -> " << c.l2 << " : " << big->implies(pos, ~c.l2 ) << endl; 
+	      cerr << "clause [" << pos << "," << c.l1 << "," << c.l2 << "] leads to gate: ";
+	      gates[ gates.size() -1 ].print(cerr);
+	    }
 	    if( data.lits.size() == 2 ) foundBlockedCandidate = true;
 	  }
 	}
@@ -173,6 +195,10 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	    // if this code is reached, then the gate can be added, and blocked clause addition has been executed properly!
 	    gates.push_back( Gate(data.lits, (data.lits.size() == 2 ? Gate::AND : Gate::GenAND), Gate::POS_BLOCKED, pos) );
 	    cerr << "c found posBlocked AND gate with output var " << v + 1 << endl;
+	    cerr << "clause [";
+	    for( int abc = 0; abc < data.lits.size(); ++ abc ) cerr << data.lits[abc] << " ";
+	    cerr << "] leads to gate: ";
+	    gates[ gates.size() -1 ].print(cerr);
 	    CRef cr = ca.alloc(learnt_clause, true); // create as learnt clause (theses clauses have to be considered for inprocessing as well, see "inprocessing rules" paper!
 	    data.addClause(cr);
 	  }
@@ -850,9 +876,8 @@ Circuit::Gate::Gate(Lit _x, Lit _a, Lit _b, const Circuit::Gate::Type _type, con
 {
 //  assert( false && "This constructor is not yet implemented (should be for faster construction!)" );
   assert( (type == AND || type == XOR ) && "This constructor can only be used for AND or XOR gates" );
-  a() =  _a; b() = _b; 
-  if( type == AND ) x() = _x;
-  else c() = _x;
+  if( type == AND ) {x() = _x; a() =  ~_a; b() = ~_b; }
+  else { c() = _x; a() =  _a; b() = _b; }
 }
 
 Circuit::Gate& Circuit::Gate::operator=(const Circuit::Gate& other)
