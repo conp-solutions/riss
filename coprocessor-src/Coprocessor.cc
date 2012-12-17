@@ -16,16 +16,17 @@ static BoolOption opt_unlimited  (_cat, "cp3_unlimited",  "No limits for preproc
 static BoolOption opt_randomized (_cat, "cp3_randomized", "Steps withing preprocessing techniques are executed in random order", false);
 static IntOption  opt_verbose    (_cat, "cp3_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
 // techniques
-static BoolOption opt_up      (_cat, "up",          "Use Unit Propagation during preprocessing", false);
-static BoolOption opt_subsimp (_cat, "subsimp",     "Use Subsumption during preprocessing", false);
-static BoolOption opt_hte     (_cat, "hte",         "Use Hidden Tautology Elimination during preprocessing", false);
-static BoolOption opt_cce     (_cat, "cce",         "Use (covered) Clause Elimination during preprocessing", false);
-static BoolOption opt_ee      (_cat, "ee",          "Use Equivalence Elimination during preprocessing", false);
-static BoolOption opt_enabled (_cat, "enabled_cp3", "Use CP3", false);
-static BoolOption opt_inprocess (_cat, "inprocess", "Apply Preprocessing methods before each restart", false);
-static BoolOption opt_bve     (_cat, "bve",         "Use Bounded Variable Elimination during preprocessing", false);
+static BoolOption opt_up        (_cat, "up",            "Use Unit Propagation during preprocessing", false);
+static BoolOption opt_subsimp   (_cat, "subsimp",       "Use Subsumption during preprocessing", false);
+static BoolOption opt_hte       (_cat, "hte",           "Use Hidden Tautology Elimination during preprocessing", false);
+static BoolOption opt_cce       (_cat, "cce",           "Use (covered) Clause Elimination during preprocessing", false);
+static BoolOption opt_ee        (_cat, "ee",            "Use Equivalence Elimination during preprocessing", false);
+static BoolOption opt_enabled   (_cat, "enabled_cp3",   "Use CP3", false);
+static BoolOption opt_inprocess (_cat, "inprocess", "Use CP3 for inprocessing", false);
+static BoolOption opt_bve       (_cat, "bve",           "Use Bounded Variable Elimination during preprocessing", false);
 
-static IntOption  opt_log     (_cat, "log",         "Output log messages until given level", 0, IntRange(0, 3));
+
+static IntOption  opt_log       (_cat, "log",           "Output log messages until given level", 0, IntRange(0, 3));
 
 using namespace std;
 using namespace Coprocessor;
@@ -150,11 +151,14 @@ lbool Preprocessor::preprocess()
   if( opt_verbose > 2 ) cerr << "c coprocessor free data structures" << endl;
   data.destroy();
 
+  if( !data.ok() ) status = l_False; // to fall back, if a technique forgets to do this
   return status;
 }
 
 lbool Preprocessor::inprocess()
 {
+  // if no inprocesing enabled, do not do it!
+  if( !opt_inprocess ) return l_Undef;
   // TODO: do something before preprocessing? e.g. some extra things with learned / original clauses
   if (opt_inprocess)
     return preprocess();

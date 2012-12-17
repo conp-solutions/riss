@@ -16,6 +16,9 @@ using namespace std;
 
 namespace Coprocessor {
 
+  /// temporary Boolean flag to quickly enable debug output for the whole file
+  const bool debug_out = false;
+  
   //forward declaration
   class VarGraphUtils;
 
@@ -222,7 +225,7 @@ public:
   /** gives back the current times, increases for the next technique */
   uint32_t getMyDeleteTimer();
   /** tell timer system that variable has been deleted (thread safe!) */
-  uint32_t deletedVar( const Var v );
+  void deletedVar( const Var v );
   /** fill the vector with all the literals that have been deleted after the given timer */
   void getActiveVariables(const uint32_t myTimer, vector< Var >& activeVariables );
   /** fill the heap with all the literals that have been deleted afetr the given timer */
@@ -301,7 +304,7 @@ public:
   /** will travers the BIG and generate the start and stop indexes to check whether a literal implies another literal
    * @return false, if BIG is not initialized yet
    */
-  bool generateImplied(Coprocessor::CoprocessorData& data);
+  void generateImplied(Coprocessor::CoprocessorData& data);
 
   /** return true, if the condition "from -> to" holds, based on the stochstic scanned data */
   bool implies(const Lit& from, const Lit& to) const;
@@ -311,6 +314,11 @@ public:
 
   /** return whether one of the two literals is a direct child of parent (and thus implied)  */
   bool isOneChild( const Lit& parent, const Lit& child1, const Lit& child2 ) const ;
+  
+  /** get indexes of BIG scan algorithm */
+  uint32_t getStart( const Lit& l ) { return start != 0 ? start[ toInt(l) ] : 0; }
+  /** get indexes of BIG scan algorithm */
+  uint32_t getStop( const Lit& l ) { return stop != 0 ? stop[ toInt(l) ] : 0; }
 };
 
 inline CoprocessorData::CoprocessorData(ClauseAllocator& _ca, Solver* _solver, Coprocessor::Logger& _log, bool _limited, bool _randomized)
@@ -428,7 +436,7 @@ inline uint32_t CoprocessorData::getMyDeleteTimer()
   return deleteTimer.nextStep();
 }
 
-inline uint32_t CoprocessorData::deletedVar(const Var v)
+inline void CoprocessorData::deletedVar(const Var v)
 {
   deleteTimer.setCurrentStep(v);
 }
@@ -845,10 +853,9 @@ inline const int BIG::getSize(const Lit l) const
   return sizes[ toInt(l) ];
 }
 
-inline bool BIG::generateImplied( CoprocessorData& data )
+inline void BIG::generateImplied( CoprocessorData& data )
 {
-    bool foundEE = false;
-    uint32_t stamp = 0 ;
+    uint32_t stamp = 1 ;
 
     if( start == 0 ) start = (uint32_t*) malloc( data.nVars() * sizeof(uint32_t) * 2 );
     else start = (uint32_t*)realloc( start, data.nVars() * sizeof(uint32_t) * 2 );
@@ -913,11 +920,14 @@ inline uint32_t BIG::stampLiteral( const Lit literal, uint32_t stamp, int32_t* i
   // do not stamp a literal twice!
   if( start[ toInt(literal) ] != 0 ) return stamp;
 
+  if( debug_out ) cerr << "c call STAMP for " << literal << endl;
+  
   stampQueue.clear();
   // linearized algorithm from paper
   stamp++;
   // handle initial literal before putting it on queue
   start[toInt(literal)] = stamp; // parent and root are already set to literal
+  if( debug_out ) cerr << "c start[" << literal << "] = " << stamp << endl;
   stampQueue.push_back(literal);
 
   shuffle( getArray(literal), getSize(literal) );
@@ -933,6 +943,7 @@ inline uint32_t BIG::stampLiteral( const Lit literal, uint32_t stamp, int32_t* i
 	stampQueue.pop_back();
 	stamp++;
 	stop[toInt(current)] = stamp;
+	if( debug_out ) cerr << "c stop[" << current << "] = " << stamp << endl;
       } else {
 	int32_t& ind = index[ toInt(current) ]; // store number of processed elements
 	const Lit impliedLit = getArray( current )[ind]; // get next implied literal
@@ -940,12 +951,14 @@ inline uint32_t BIG::stampLiteral( const Lit literal, uint32_t stamp, int32_t* i
 	if( start[ toInt(impliedLit) ] != 0 ) continue;
 	stamp ++;
 	start[ toInt(impliedLit) ] = stamp;
+	if( debug_out ) cerr << "c start[" << impliedLit << "] = " << stamp << endl;
 	index[ toInt(impliedLit) ] = 0;
 	stampQueue.push_back( impliedLit );
 	shuffle( getArray(impliedLit), getSize(impliedLit) );
       }
 
     }
+    return stamp;
 }
 
 inline bool BIG::implies(const Lit& from, const Lit& to) const

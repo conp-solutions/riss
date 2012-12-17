@@ -510,6 +510,6 @@ bool HiddenTautologyElimination::alaMarkClause(vec<Lit>& clause, CoprocessorData
       }
     }
   }
-  
+  return false;
 }
 

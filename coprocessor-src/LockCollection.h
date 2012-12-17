@@ -68,7 +68,6 @@ public:
   }
 };
 
-
 /** locking class, also for waiting 
  * class that offers a mutex combibed with a conditional variable and a boolean variable
  */
@@ -131,6 +130,36 @@ public:
     pthread_cond_broadcast (&master_cv); // initial attempt will fail!
     pthread_mutex_unlock (&mutex); 
   }
+};
+
+/** implement a spin lock based on gcc's atomic operations (perform busy wait) */
+class SpinLock {
+
+private:
+  /// the integer that is used for locking
+    volatile unsigned short _lock;
+public:
+    SpinLock() 
+    : _lock(0)
+    {}
+
+    void lock()
+    {
+        // Aquire once locked==false (atomic)
+        while ( _lock != 0 || __sync_bool_compare_and_swap(&_lock, 0, 0xffff) == false) {}
+    }
+
+    void unlock()
+    {
+      // could also be done without atomic operation?!  
+      // __sync_bool_compare_and_swap(&_lock, 0xffff, 0);
+      _lock = 0;
+    }
+    
+    /** return the current value of the lock (for debug purposes)
+     *  Note: this call is not thread safe!
+     */
+    int getValue() const { return _lock; }
 };
 
 

@@ -130,7 +130,7 @@ public:
   };
   
   
-  int extractGates( CoprocessorData& data, vector< Gate >& gates );
+  void extractGates( Coprocessor::CoprocessorData& data, vector< Coprocessor::Circuit::Gate >& gates );
   
 private:
   

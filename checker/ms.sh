@@ -7,7 +7,13 @@
 # print to screen: solution for the cnf
 #
 
-./minisat $1 /tmp/minisat-out > /dev/null -enabled_cp3 -subsimp -cp3_threads=2 -inprocess > /dev/null # 2> /dev/null
+# set this to the right values!
+param="-enabled_cp3 -subsimp -cp3_threads=2 -inprocess"
+
+#
+# run the program
+#
+./minisat $1 /tmp/minisat-out $param > /dev/null 2> /dev/null
 
 status=$?
 
