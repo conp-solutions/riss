@@ -17,7 +17,7 @@ using namespace std;
 namespace Coprocessor {
 
   /// temporary Boolean flag to quickly enable debug output for the whole file
-  const bool debug_out = false;
+  const bool global_debug_out = false;
   
   //forward declaration
   class VarGraphUtils;
@@ -920,14 +920,14 @@ inline uint32_t BIG::stampLiteral( const Lit literal, uint32_t stamp, int32_t* i
   // do not stamp a literal twice!
   if( start[ toInt(literal) ] != 0 ) return stamp;
 
-  if( debug_out ) cerr << "c call STAMP for " << literal << endl;
+  if( global_debug_out ) cerr << "c call STAMP for " << literal << endl;
   
   stampQueue.clear();
   // linearized algorithm from paper
   stamp++;
   // handle initial literal before putting it on queue
   start[toInt(literal)] = stamp; // parent and root are already set to literal
-  if( debug_out ) cerr << "c start[" << literal << "] = " << stamp << endl;
+  if( global_debug_out ) cerr << "c start[" << literal << "] = " << stamp << endl;
   stampQueue.push_back(literal);
 
   shuffle( getArray(literal), getSize(literal) );
@@ -943,7 +943,7 @@ inline uint32_t BIG::stampLiteral( const Lit literal, uint32_t stamp, int32_t* i
 	stampQueue.pop_back();
 	stamp++;
 	stop[toInt(current)] = stamp;
-	if( debug_out ) cerr << "c stop[" << current << "] = " << stamp << endl;
+	if( global_debug_out ) cerr << "c stop[" << current << "] = " << stamp << endl;
       } else {
 	int32_t& ind = index[ toInt(current) ]; // store number of processed elements
 	const Lit impliedLit = getArray( current )[ind]; // get next implied literal
@@ -951,7 +951,7 @@ inline uint32_t BIG::stampLiteral( const Lit literal, uint32_t stamp, int32_t* i
 	if( start[ toInt(impliedLit) ] != 0 ) continue;
 	stamp ++;
 	start[ toInt(impliedLit) ] = stamp;
-	if( debug_out ) cerr << "c start[" << impliedLit << "] = " << stamp << endl;
+	if( global_debug_out ) cerr << "c start[" << impliedLit << "] = " << stamp << endl;
 	index[ toInt(impliedLit) ] = 0;
 	stampQueue.push_back( impliedLit );
 	shuffle( getArray(impliedLit), getSize(impliedLit) );

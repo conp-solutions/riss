@@ -98,6 +98,8 @@ lbool Preprocessor::preprocess()
   if( opt_ee ) { // before this technique nothing should be run that alters the structure of the formula (e.g. BVE;BVA)
     if( opt_verbose > 2 )cerr << "c coprocessor equivalence elimination" << endl;
     if( status == l_Undef ) ee.eliminate(data);  // cannot change status, can generate new unit clauses
+    if (! data.ok() )
+        status = l_False;
   }
   
   if( false ) {

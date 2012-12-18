@@ -37,7 +37,7 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
   if( isToAnalyze == 0 ) isToAnalyze = (char*) malloc( sizeof( char ) * data.nVars()  );
   else isToAnalyze = (char*) realloc( isToAnalyze, sizeof( char ) * data.nVars()  );
   memset( isToAnalyze, 0 , sizeof(char) * data.nVars() );
-
+  
   data.ma.resize(2*data.nVars());
   
   // find SCCs and apply them to the "replacedBy" structure
@@ -69,18 +69,16 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
       iter ++;
       cerr << "c run " << iter << " round of circuit equivalences" << endl;
 
-    if( debug_out ) {
-      cerr << endl << "====================================" << endl;
-      cerr << "intermediate formula before gates: " << endl;
-      for( int i = 0 ; i < data.getClauses().size(); ++ i )
-	if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getClauses()[i] ] << endl;
-      for( int i = 0 ; i < data.getLEarnts().size(); ++ i )
-	if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getLEarnts()[i] ] << endl;    
-      cerr << "====================================" << endl << endl;
-    }
-      
-      
-      
+      if( debug_out ) {
+	cerr << endl << "====================================" << endl;
+	cerr << "intermediate formula before gates: " << endl;
+	for( int i = 0 ; i < data.getClauses().size(); ++ i )
+	  if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getClauses()[i] ] << endl;
+	for( int i = 0 ; i < data.getLEarnts().size(); ++ i )
+	  if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getLEarnts()[i] ] << endl;    
+	cerr << "====================================" << endl << endl;
+      }
+
       Circuit circ(ca); 
       
       circ.extractGates(data, gates);
@@ -119,16 +117,18 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
       
       if( !data.ok() ) return;
       // after we extracted more information from the gates, we can apply these additional equivalences to the forula!
-      if ( !moreEquivalences ) {
+      if ( !moreEquivalences && iter > 1 ) {
 	cerr << "c no more gate equivalences found" << endl;
 	break;
+      } else {
+	cerr << "c more equi " << moreEquivalences << " iter= " << iter << endl;
       }
       moreEquivalences = false;
       bool doRepeat = false;
       int eeIter = 0;
       do {  // will set literals that have to be analyzed again!
 	findEquivalencesOnBig(data);                              // finds SCC based on all literals in the eqDoAnalyze array!
-	doRepeat = applyEquivalencesToFormula(data);
+	doRepeat = applyEquivalencesToFormula(data, (iter == 1 && eeIter == 0) );   // in the first iteration, run subsumption/strengthening and UP!
 	moreEquivalences = doRepeat || moreEquivalences;
 	eeIter ++;
       } while ( doRepeat && data.ok() );
@@ -139,9 +139,11 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
   }
   
   //do binary reduction
-  do { 
-    findEquivalencesOnBig(data);                              // finds SCC based on all literals in the eqDoAnalyze array!
-  } while ( applyEquivalencesToFormula(data ) && data.ok() ); // will set literals that have to be analyzed again!
+  if( data.ok() ) {
+    do { 
+      findEquivalencesOnBig(data);                              // finds SCC based on all literals in the eqDoAnalyze array!
+    } while ( applyEquivalencesToFormula(data ) && data.ok() ); // will set literals that have to be analyzed again!
+  }
 }
 
 void EquivalenceElimination::initClause(const CRef cr)
@@ -225,16 +227,28 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	if( debug_out ) g.print(cerr);
 	Lit a = getReplacement( g.a() ); Lit b = getReplacement( g.b() ); Lit x = getReplacement( g.x() ); 
 	
+	// somehow same inputs
 	if( a == b ) {
-	  cerr << "c found equivalence based on equivalent inputs" << endl;
+	  if( debug_out ) cerr << "c found equivalence based on equivalent inputs" << endl;
 	  if( opt_eagerEquivalence ) setEquivalent(a,x);
 	  data.addEquivalences(x,a);
 	  a = getReplacement( g.a() );
 	  x = getReplacement( g.x() );
 	} else if ( a == ~b ) {
-	  cerr << "c find an unsatisfiable gate based on complementary inputs" << endl; 
+	  if( debug_out ) cerr << "c find an unsatisfiable G-gate based on complementary inputs" << endl; 
 	  data.enqueue(~x);
-	} else if ( data.value(a) != l_Undef || data.value(b) != l_Undef ) {
+	} else if ( x == a ) {
+	  if( opt_eagerEquivalence ) setEquivalent(b,x);
+	  data.addEquivalences(x,b);
+	} else if ( x == b ) {
+	  if( opt_eagerEquivalence ) setEquivalent(a,x);
+	  data.addEquivalences(x,a);
+	} else if ( x == ~a || x == ~b) {
+	  if( debug_out ) cerr << "c find an unsatisfiable G-gate based on complementary input to output" << endl; 
+	  data.enqueue(~x);
+	} 
+	// assigned value
+	if ( data.value(a) != l_Undef || data.value(b) != l_Undef ) {
 	  if( debug_out ) cerr << "c gate has assigned inputs" << endl;
 	  if ( data.value(a) == l_True ) {
 	    if( opt_eagerEquivalence ) setEquivalent(b,x);
@@ -266,15 +280,25 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	  Lit ox = getReplacement( other.x() ); 
 	  /// do simplify gate!
 	  if( oa == ob ) {
-	    cerr << "c found equivalence based on equivalent inputs" << endl;
+	    if( debug_out ) cerr << "c found equivalence based on equivalent inputs" << endl;
 	    if( opt_eagerEquivalence ) setEquivalent(oa,ox);
 	    data.addEquivalences(ox,oa);
 	    oa = getReplacement( other.a() ); 
 	    ox = getReplacement( other.x() );
 	  } else if ( oa == ~ob ) {
-	    cerr << "c find an unsatisfiable gate based on complementary inputs" << endl; 
+	    if( debug_out ) cerr << "c find an unsatisfiable O-gate based on complementary inputs" << endl; 
 	    data.enqueue(~ox);
-	  }
+	  }  else if ( x == a ) {
+	    if( opt_eagerEquivalence ) setEquivalent(b,x);
+	    data.addEquivalences(x,b);
+	  } else if ( x == b ) {
+	    if( opt_eagerEquivalence ) setEquivalent(a,x);
+	    data.addEquivalences(x,a);
+	  } else if ( x == ~a || x == ~b) {
+	    if( debug_out ) cerr << "c find an unsatisfiable G-gate based on complementary input to output" << endl; 
+	    data.enqueue(~x);
+	  } 
+	  // assigned value
 	  if ( data.value(oa) != l_Undef || data.value(ob) != l_Undef ) {
 	    if( debug_out ) cerr << "c gate has assigned inputs" << endl;
 	    if ( data.value(oa) == l_True ) {
@@ -315,6 +339,65 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	      // x <-> AND(a,b) and -x <-> AND(-a,-b) => x=a=b!
 	      eeLits.push_back(x);eeLits.push_back(a); // every two literals represent an equivalent pair
 	      eeLits.push_back(x);eeLits.push_back(b);
+	    } 
+// 	      else if( (oa == ~a && ob == ~b ) || (oa==~b && ob==~a) ){
+// 	      if( x == ox ) { data.enqueue(~ox);  
+// 	      } else {
+// 		// both gates cannot be active at the same time! -> add a new learned clause!
+// 		eeLits.clear();
+// 		if( ox < x ) { eeLits.push_back(~ox);eeLits.push_back(~x); }
+// 		else { eeLits.push_back(~x);eeLits.push_back(~ox); }
+// 		CRef lc = ca.alloc(eeLits, true);
+// 		assert ( ca[lc].size() == 2 && "new learned clause has to be binary!" );
+// 		data.addClause(lc);
+// 		data.getLEarnts().push(lc);
+// 		eeLits.clear();
+// 		if( debug_out ) cerr << "c add clause " << ca[lc] << endl;
+// 		if( isToAnalyze[ var(x) ] == 0 ) { eqDoAnalyze.push_back(x); isToAnalyze[ var(x) ] = 1; }
+// 		if( isToAnalyze[ var(ox) ] == 0 ) { eqDoAnalyze.push_back(ox); isToAnalyze[ var(ox) ] = 1; }
+// 	      }
+// 	    } 
+	    else if( (oa == a && ob == ~b) || (oa == b && ob == ~a)  || (oa == ~a && ob == b)  || (oa == ~b && ob == a) ) {
+	      // derive a new gate from the given ones!
+	      int oldGates = gates.size();
+	      if( oa == a ) {
+		// constructor expects literals of the ternary representative clause
+		if( x == ~ox ) data.enqueue(a); // handle gates where the input would be complementary
+		else gates.push_back( Circuit::Gate( ~a, x, ox, Circuit::Gate::AND, Circuit::Gate::FULL) );
+	      } else if ( ob == b ) {
+		if( x == ~ox ) data.enqueue(b); // handle gates where the input would be complementary
+		else gates.push_back( Circuit::Gate( ~b, x, ox, Circuit::Gate::AND, Circuit::Gate::FULL) );
+	      } else if ( ob == a ) {
+		if( x == ~ox ) data.enqueue(a); // handle gates where the input would be complementary
+		else gates.push_back( Circuit::Gate( ~a, x, ox, Circuit::Gate::AND, Circuit::Gate::FULL) );
+	      } else if ( oa == b ) {
+		if( x == ~ox ) data.enqueue(b); // handle gates where the input would be complementary
+		else gates.push_back( Circuit::Gate( ~b, x, ox, Circuit::Gate::AND, Circuit::Gate::FULL) );
+	      }
+	      if( gates.size() > oldGates ) {
+		if( debug_out ) {
+		  cerr << "c added new gate";
+		  gates[ oldGates ].print(cerr);
+		}
+		// TODO: what to do with the new gate? for now, put it into the lists of the other variables!
+		if( !active.isCurrentStep(var(x)) ) { currentPtr->push_back( var(x) ); active.setCurrentStep(var(x)); }
+		if( !active.isCurrentStep(var(ox)) ) { currentPtr->push_back( var(ox) ); active.setCurrentStep(var(ox)); }
+		// TODO: move to front?
+		varTable[ var(x)].push_back( oldGates );
+		varTable[var(ox)].push_back( oldGates );
+	      }
+
+	    } else {
+	      if( debug_out ) {
+		if( var(x) == var(ox) ||
+		  ( (var(a) == var(oa) && var(b) == var(ob)) || (var(b) == var(oa) && var(a) == var(ob)) )
+		|| ( var(x) == var(oa) && (var(a) == var(ob) || var(b) == var(ob) ) )
+		|| ( var(x) == var(ob) && (var(a) == var(oa) || var(b) == var(oa) ) ) ) {
+		  cerr << "c UNHANDLED CASE with two gates:" << endl;
+		  cerr << x << " <-> AND(" << a << ", " << b << ")" << endl
+		      << ox << " <-> AND(" << oa << ", " << ob << ")" << endl;
+		}
+	      }
 	    }
 	  }
 	  
@@ -1461,10 +1544,11 @@ bool EquivalenceElimination::setEquivalent(Lit representative, Lit toReplace)
   return true;
 }
 
-bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data)
+bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, bool force)
 {
   bool newBinary = false;
-  if( data.getEquivalences().size() > 0 ) {
+  bool resetVariables = false;
+  if( data.getEquivalences().size() > 0 || force) {
    
     // TODO: take care of units that have to be propagated, if an element of an EE-class has already a value!
     
@@ -1568,7 +1652,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data)
 	  
 	  if( !duplicate ) {
 // 	    cerr << "c give list of literal " << (pol == 0 ? repr : ~repr) << " for duplicate check" << endl;
-	    if( ! hasDuplicate( data.list( (pol == 0 ? repr : ~repr)  ), c ) ) {
+	    if( !hasDuplicate( data.list( (pol == 0 ? repr : ~repr)  ), c )  ) {
 	      data.list( (pol == 0 ? repr : ~repr) ).push_back( list[k] );
 	      if( getsNewLiterals ) {
 		if( !c.can_strengthen() || !c.can_subsume() ) {
@@ -1613,13 +1697,7 @@ EEapplyNextClause:; // jump here, if a tautology has been found
        
        // the formula will change, thus, enqueue everything
        if( data.hasToPropagate() || subsumption.hasWork() ) {
-	 // re-enable all literals (over-approximation) 
-	 for( Var v = 0 ; v < data.nVars(); ++ v ) {
-	    if( isToAnalyze[ v ] == 0 ) {
-		  eqDoAnalyze.push_back( mkLit(v,false) );
-		  isToAnalyze[ v ] = 1;
-	    }
-	 }
+	 resetVariables = true;
        }
        // take care of unit propagation and subsumption / strengthening
        if( data.hasToPropagate() ) { // after each application of equivalent literals perform unit propagation!
@@ -1636,22 +1714,52 @@ EEapplyNextClause:; // jump here, if a tautology has been found
    // TODO: take care of the doNotTouch literals inside the stack, which have been replaced still -> add new binary clauses!
    
    ee.clear(); // clear the stack, because all EEs have been processed
+   
+  
+   // if force, or there has been equis:
+       // take care of unit propagation and subsumption / strengthening
+    if( data.hasToPropagate() ) { // after each application of equivalent literals perform unit propagation!
+	 if( propagation.propagate(data,true) == l_False ) return newBinary;
+    }
+    subsumption.subsumeStrength(data);
+    if( data.hasToPropagate() ) { // after each application of equivalent literals perform unit propagation!
+      resetVariables = true;
+	 if( propagation.propagate(data,true) == l_False ) return newBinary;
+    }
+
+    // the formula will change, thus, enqueue everything
+    if( resetVariables ) {
+    // re-enable all literals (over-approximation) 
+      for( Var v = 0 ; v < data.nVars(); ++ v ) {
+	  if( isToAnalyze[ v ] == 0 ) {
+		eqDoAnalyze.push_back( mkLit(v,false) );
+		isToAnalyze[ v ] = 1;
+	  }
+      }
+    }
+       
   }
-  return newBinary;
+  return newBinary || force;
 }
 
 bool EquivalenceElimination::hasDuplicate(vector<CRef>& list, const Clause& c)
 {
+  bool irredundant = !c.learnt();
 //   cerr << "c check for duplicates: " << c << " (" << c.size() << ") against " << list.size() << " candidates" << endl;
   for( int i = 0 ; i < list.size(); ++ i ) {
-    const Clause& d = ca[list[i]];
+    Clause& d = ca[list[i]];
 //     cerr << "c check " << d << " [del=" << d.can_be_deleted() << " size=" << d.size() << endl;
     if( d.can_be_deleted() || d.size() != c.size() ) continue;
     int j = 0 ;
     while( j < c.size() && c[j] == d[j] ) ++j ;
     if( j == c.size() ) { 
 //       cerr << "c found partner" << endl;
-      return true; }
+      if( irredundant && d.learnt() ) {
+	d.set_delete(true); // learned clauses are no duplicate for irredundant clauses -> delete learned!
+	return false;
+      }
+      return true;
+    }
 //     cerr << "c clause " << c << " is not equal to " << d << endl;
   }
   return false;
