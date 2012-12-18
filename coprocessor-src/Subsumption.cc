@@ -10,6 +10,7 @@ static const char* _cat = "CP3 SUBSUMPTION";
 // options
 static BoolOption  opt_naivStrength    (_cat, "cp3_naiveStength", "use naive strengthening", false);
 
+    
 Subsumption::Subsumption( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation )
 : Technique( _ca, _controller )
 , propagation( _propagation )
@@ -26,7 +27,13 @@ void Subsumption::subsumeStrength(CoprocessorData& data)
       clause_processing_queue.clear();
     }
     if( hasToStrengthen() ) {
-      fullStrengthening(data);
+      if (controller.size() > 0)
+      {
+          parallelStrengthening(data);
+      }
+      else {
+          fullStrengthening(data);
+      }
       // clear queue afterwards
       strengthening_queue.clear();
     }
@@ -192,6 +199,148 @@ void Subsumption :: par_subsumption_worker (CoprocessorData& data, unsigned int 
         if (learnt_subsumed_non_learnt)
             set_non_learnt.push_back(cr);
     }    
+}
+
+
+/**
+ * locking based strengthening, based on naive subsumption check with negated literal
+ * 
+ * @param var_lock vector of locks for each variable
+ *
+ */
+void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int stop, vector< SpinLock > & var_lock) 
+{
+    assert(start <= stop && stop <= strengthening_queue.size() && "invalid indices");
+    assert(data.nVars() <= var_lock.size() && "var_lock vector to small");
+    for (unsigned int i = start; i < stop; ++i)
+    {
+        Clause & c = ca[strengthening_queue[i]];
+        lock_strengthener:
+        if (c.can_be_deleted() || c.size() == 0)
+            continue;
+        Var fst = var(c[0]);
+        // lock 1st var
+        var_lock[fst].lock();
+        
+        // assure that clause can still strengthen
+        if (c.can_be_deleted() || c.size() == 0)
+        {
+            var_lock[fst].unlock();
+            continue;
+        }
+        
+        // assure that first var still valid
+        if (var(c[0]) != fst)
+        {
+            var_lock[fst].unlock();
+            goto lock_strengthener;
+        }
+
+        for (int l = 0; l < c.size(); ++l)
+        {
+            Lit neg = ~ c[l];
+            c[l] = neg;
+            vector< CRef> & list = data.list(neg);
+            for (int l_cr = 0; l_cr < list.size(); ++l_cr)
+            {
+                assert(list[l_cr] != strengthening_queue[i] && "expect no tautoligies here");
+                Clause & d = ca[list[l_cr]];
+                lock_to_strengthen:
+                if (d.can_be_deleted() || d.size() == 0)
+                    continue;
+                Var d_fst = var(d[0]);
+
+                // if the d_fst > fst, d cannot contain fst, and therefore c cannot strengthen d
+                if (d_fst > fst)
+                    continue;
+
+                // check if d_fst already locked by this thread, if not: lock
+                if (d_fst != fst)
+                {
+                   var_lock[d_fst].lock();
+
+                   // check if d has been deleted, while waiting for lock
+                   if (d.can_be_deleted() || d.size() == 0)
+                   {
+                       var_lock[d_fst].unlock();
+                       continue;
+                   }
+
+                   // check if d's first lit has changed, while waiting for lock
+                   if (var(d[0]) != d_fst)
+                   {
+                       var_lock[d_fst].unlock();
+                       goto lock_to_strengthen;
+                   }
+                }
+                
+                // now d_fst is locked and for sure first variable
+                // do subsumption check
+                int l1 = 0, l2 = 0, pos = -1;
+                while (l1 < c.size() && l1 < d.size())
+                {
+                   if (c[l1] == d[l2])
+                   {
+                        if (c[l1] == neg)
+                            pos = l2;
+                        ++l1;
+                        ++l2;
+                   }
+                   // d does not contain c[l1]
+                   else if (c[l1] < d[l2])
+                        break;
+                   else
+                        ++l2;
+                }
+                
+                // if subsumption successful, strengthen
+                if (l1 == c.size())
+                {
+                    assert(pos != -1 && "Position invalid");
+                    // unit found
+                    if (d.size() == 2)
+                    {
+                        d.set_delete(true);
+                        data.lock();
+                        lbool state = data.enqueue(d[(pos + 1) % 2]);
+                        data.removedClause(list[l_cr]);
+                        data.unlock();   
+                    }
+                    else if (d.size() == 1)
+                    {
+                        assert(false && "no unit clauses should be strengthend");
+                        // empty -> fail
+                    }
+                    //O if the first lit was strengthend, overwrite it in the end, since the lock would not be efficient any more
+                    else
+                    {
+                        d.removePositionSortedThreadSafe(pos);
+                        // TODO to much overhead? 
+                        data.lock();
+                        data.removedLiteral(neg, 1);
+                        if ( ! d.can_subsume()) 
+                        {
+                            d.set_subsume(true);
+                            clause_processing_queue.push_back(list[l_cr]);
+                        }
+                        data.unlock();
+                    }
+                }
+                
+                // if a new lock was acquired, free it
+                if (d_fst != fst)
+                {
+                    var_lock[d_fst].unlock();
+                }
+               
+            }
+            c[l] = ~neg;
+        }
+
+        // free lock of first variable
+        var_lock[fst].unlock();
+    
+    }
 }
 
 bool Subsumption::hasToStrengthen() const
@@ -480,23 +629,26 @@ void Subsumption::parallelStrengthening(CoprocessorData& data)
   cerr << "c parallel strengthening with " << controller.size() << " threads" << endl;
   SubsumeWorkData workData[ controller.size() ];
   vector<Job> jobs( controller.size() );
-  //TODO partition work
+  vector< SpinLock > var_locks (data.nVars());
 
   for ( int i = 0 ; i < controller.size(); ++ i ) {
     workData[i].subsumption = this; 
     workData[i].data  = &data; 
     workData[i].start = 0; //TODO set i-th partition limits
     workData[i].end   = 0; 
+    workData[i].var_locks = & var_locks;
     jobs[i].function  = Subsumption::runParallelStrengthening;
     jobs[i].argument  = &(workData[i]);
   }
   controller.runJobs( jobs );
-  
+
+  //propagate units
+  propagation.propagate(data, true);
 }
 
 void* Subsumption::runParallelStrengthening(void* arg)
 {
     SubsumeWorkData* workData = (SubsumeWorkData*) arg;
-    workData->subsumption->strengthening_worker(*(workData->data),workData->start,workData->end, false);
+    workData->subsumption->par_strengthening_worker(*(workData->data),workData->start,workData->end, *(workData->var_locks));
     return 0;
 }

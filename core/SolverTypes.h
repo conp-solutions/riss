@@ -173,7 +173,16 @@ public:
         for (int i = 0; i < size(); i++)
             abstraction |= 1 << (var(data[i].lit) & 31);
         data[header.size].abs = abstraction;  }
-
+    
+    // thread safe copy for strengthening  
+    void calcAbstraction(Lit first) {
+        assert(header.has_extra);
+        uint32_t abstraction = 0;
+        abstraction |= 1 << (var(first) & 31);
+        for (int i = 1; i < size(); i++)
+            abstraction |= 1 << (var(data[i].lit) & 31);
+        data[header.size].abs = abstraction; 
+    }
 
     int          size        ()      const   { return header.size; }
     void         shrink      (int i)         { assert(i <= size()); if (header.has_extra) data[header.size-i] = data[header.size]; header.size -= i; }
@@ -220,7 +229,20 @@ public:
     void    set_strengthen(bool b)      { header.can_strengthen = b; }
 
     void    removePositionUnsorted(int i)    { data[i].lit = data[ size() - 1].lit; shrink(1); if (has_extra() && !header.learnt) calcAbstraction(); }
-    void    removePositionSorted(int i)      { for (int j = i; j < size() - 1; ++j) data[j] = data[j+1]; shrink(1); if (has_extra() && !header.learnt) calcAbstraction(); }
+    inline void removePositionSorted(int i)      { for (int j = i; j < size() - 1; ++j) data[j] = data[j+1]; shrink(1); if (has_extra() && !header.learnt) calcAbstraction(); }
+    // thread safe version, that changes the first literal last
+    inline void removePositionSortedThreadSafe(int i)
+    {
+      if (i == 0)
+      {
+         Lit second = data[1].lit;
+         for (int j = 1; j < size() - 1; ++j) data[j] = data[j+1]; shrink(1);  
+         if (has_extra() && !header.learnt) calcAbstraction(second);
+         data[0].lit = second;
+      }
+      else removePositionSorted(i);      
+    }
+ 
     //DebugOutput
 #ifdef SUBDEBUG
     inline void print_clause() const ;
@@ -481,7 +503,7 @@ inline bool Clause::ordered_equals (const Clause & other) const
 }
 
 inline void Clause::remove_lit(const Lit p)
-{
+{   //TODO shouldn't this be size()-1
     for (int i = 0; i < size(); ++i)
     {
         if(data[i].lit == p)

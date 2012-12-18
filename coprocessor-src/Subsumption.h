@@ -62,13 +62,14 @@ protected:
   bool hasToStrengthen() const ;    // return whether there is something in the strengthening queue
   lbool fullStrengthening(CoprocessorData& data); // performs strengthening until completion, puts clauses into subsumption queue
   void strengthening_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics = true);
-  
+  void par_strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int stop, vector< SpinLock > & var_lock); 
   /** data for parallel execution */
   struct SubsumeWorkData {
     Subsumption*     subsumption; // class with code
     CoprocessorData* data;        // formula and maintain lists
     unsigned int     start;       // partition of the queue
     unsigned int     end;
+    vector<SpinLock> * var_locks;
     vector<CRef>*    to_delete;
     vector<CRef>*    set_non_learnt;
   };
