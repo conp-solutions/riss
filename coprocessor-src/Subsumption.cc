@@ -9,7 +9,7 @@ using namespace Coprocessor;
 static const char* _cat = "CP3 SUBSUMPTION";
 // options
 static BoolOption  opt_naivStrength    (_cat, "cp3_naiveStength", "use naive strengthening", false);
-
+static BoolOption  opt_par_strength    (_cat, "cp3_par_strength", "use par strengthening", false);
     
 Subsumption::Subsumption( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation )
 : Technique( _ca, _controller )
@@ -27,7 +27,7 @@ void Subsumption::subsumeStrength(CoprocessorData& data)
       clause_processing_queue.clear();
     }
     if( hasToStrengthen() ) {
-      if (controller.size() > 0)
+      if (opt_par_strength && controller.size() > 0)
       {
           parallelStrengthening(data);
       }
@@ -243,7 +243,7 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
             vector< CRef> & list = data.list(neg);
             for (int l_cr = 0; l_cr < list.size(); ++l_cr)
             {
-                assert(list[l_cr] != strengthening_queue[i] && "expect no tautoligies here");
+                assert(list[l_cr] != strengthening_queue[i] && "expect no tautologies here");
                 Clause & d = ca[list[l_cr]];
                 lock_to_strengthen:
                 if (d.can_be_deleted() || d.size() == 0)
@@ -277,7 +277,7 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
                 // now d_fst is locked and for sure first variable
                 // do subsumption check
                 int l1 = 0, l2 = 0, pos = -1;
-                while (l1 < c.size() && l1 < d.size())
+                while (l1 < c.size() && l2 < d.size())
                 {
                    if (c[l1] == d[l2])
                    {
@@ -630,12 +630,14 @@ void Subsumption::parallelStrengthening(CoprocessorData& data)
   SubsumeWorkData workData[ controller.size() ];
   vector<Job> jobs( controller.size() );
   vector< SpinLock > var_locks (data.nVars());
-
+  unsigned int queueSize = strengthening_queue.size();
+  unsigned int partitionSize = strengthening_queue.size() / controller.size();
+  
   for ( int i = 0 ; i < controller.size(); ++ i ) {
     workData[i].subsumption = this; 
+    workData[i].start = i * partitionSize; 
+    workData[i].end   = (i + 1 == controller.size()) ? queueSize : (i+1) * partitionSize; // last element is not processed!
     workData[i].data  = &data; 
-    workData[i].start = 0; //TODO set i-th partition limits
-    workData[i].end   = 0; 
     workData[i].var_locks = & var_locks;
     jobs[i].function  = Subsumption::runParallelStrengthening;
     jobs[i].argument  = &(workData[i]);

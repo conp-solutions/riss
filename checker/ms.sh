@@ -8,7 +8,7 @@
 #
 
 # set this to the right values!
-param="-enabled_cp3 -subsimp -cp3_threads=2 -inprocess"
+param="-enabled_cp3 -subsimp -cp3_threads=2 -inprocess -cp3_par_strength"
 
 #
 # run the program
