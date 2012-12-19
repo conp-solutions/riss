@@ -31,6 +31,11 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "mtl/Map.h"
 #include "mtl/Alloc.h"
 
+/// TODO remove after debug
+#include <iostream>
+using namespace std;
+
+
 namespace Minisat {
 
 //=================================================================================================

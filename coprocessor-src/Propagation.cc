@@ -27,6 +27,7 @@ lbool Propagation::propagate(CoprocessorData& data, bool sort)
     vector<CRef> positive = data.list(l);
     for( int i = 0 ; i < positive.size(); ++i )
     {
+      if( global_debug_out ) cerr << "c UP remove " << ca[ positive[i] ] << endl;
       ca[ positive[i] ].set_delete(true);
       data.removedClause( positive[i] );
     }
@@ -42,6 +43,7 @@ lbool Propagation::propagate(CoprocessorData& data, bool sort)
       if ( !c.can_be_deleted() ) {
         for ( int j = 0; j < c.size(); ++ j ) 
           if ( c[j] == nl ) { 
+	    if( global_debug_out ) cerr << "c UP remove " << nl << " from " << c << endl;
 	    if (!sort) c.removePositionUnsorted(j);
             else c.removePositionSorted(j);
 	    break;
@@ -74,6 +76,7 @@ lbool Propagation::propagate(CoprocessorData& data, bool sort)
 //             if (c.has_extra())
 //             c.calcAbstraction();
 //    }
+  solver->qhead = lastPropagatedLiteral;
   return data.ok() ? l_Undef : l_False;
 }
 

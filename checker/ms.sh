@@ -8,7 +8,7 @@
 #
 
 # set this to the right values!
-param="-enabled_cp3 -ee -log=0 -no-cp3_extBlocked -cp3_extNgtInput -no-inprocess_cp3 -cp3_eagerGates"
+param="-enabled_cp3 -ee -log=0 -no-cp3_extBlocked -cp3_extNgtInput -no-inprocess -cp3_eagerGates"
 
 #
 # run the program
