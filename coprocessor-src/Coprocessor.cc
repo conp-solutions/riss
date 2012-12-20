@@ -98,6 +98,8 @@ lbool Preprocessor::preprocess()
   if( opt_ee ) { // before this technique nothing should be run that alters the structure of the formula (e.g. BVE;BVA)
     if( opt_verbose > 2 )cerr << "c coprocessor equivalence elimination" << endl;
     if( status == l_Undef ) ee.eliminate(data);  // cannot change status, can generate new unit clauses
+    if (! data.ok() )
+        status = l_False;
   }
   
   if( false ) {
@@ -145,7 +147,10 @@ lbool Preprocessor::preprocess()
   // clear / update clauses and learnts vectores and statistical counters
   // attach all clauses to their watchers again, call the propagate method to get into a good state again
   if( opt_verbose > 2 ) cerr << "c coprocessor re-setup solver" << endl;
-  if ( data.ok() ) reSetupSolver();
+  if ( data.ok() ) {
+    propagation.propagate(data);
+    if ( data.ok() ) reSetupSolver();
+  }
 
   // destroy preprocessor data
   if( opt_verbose > 2 ) cerr << "c coprocessor free data structures" << endl;

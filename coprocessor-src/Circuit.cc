@@ -18,7 +18,7 @@ static BoolOption opt_FASUM    (_cat, "cp3_extHASUM",    "extract full adder sum
 static BoolOption opt_BLOCKED    (_cat, "cp3_extBlocked",  "extract gates, that can be found by blocked clause addition", true);
 static BoolOption opt_AddBlocked (_cat, "cp3_addBlocked",  "clauses that are used to extract blocked gates will be added eagerly (soundness)", true);
 static BoolOption opt_NegatedI   (_cat, "cp3_extNgtInput", "extract gates, where inputs come from the same variable", true);
-static BoolOption opt_Implied    (_cat, "cp3_extImplied",  "extract half adder sum bit - can be BUGGY!", true);
+static BoolOption opt_Implied    (_cat, "cp3_extImplied",  "extract half adder sum bit", true);
 
 using namespace Coprocessor;
 
@@ -194,11 +194,13 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	    }
 	    // if this code is reached, then the gate can be added, and blocked clause addition has been executed properly!
 	    gates.push_back( Gate(data.lits, (data.lits.size() == 2 ? Gate::AND : Gate::GenAND), Gate::POS_BLOCKED, pos) );
-	    cerr << "c found posBlocked AND gate with output var " << v + 1 << endl;
-	    cerr << "clause [";
-	    for( int abc = 0; abc < data.lits.size(); ++ abc ) cerr << data.lits[abc] << " ";
-	    cerr << "] leads to gate: ";
-	    gates[ gates.size() -1 ].print(cerr);
+	    if( debug_out ) {
+	      cerr << "c found posBlocked AND gate with output var " << v + 1 << endl;
+	      cerr << "clause [";
+	      for( int abc = 0; abc < data.lits.size(); ++ abc ) cerr << data.lits[abc] << " ";
+	      cerr << "] leads to gate: ";
+	      gates[ gates.size() -1 ].print(cerr);
+	    }
 	    CRef cr = ca.alloc(learnt_clause, true); // create as learnt clause (theses clauses have to be considered for inprocessing as well, see "inprocessing rules" paper!
 	    data.addClause(cr);
 	  }

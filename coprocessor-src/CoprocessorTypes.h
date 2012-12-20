@@ -17,7 +17,7 @@ using namespace std;
 namespace Coprocessor {
 
   /// temporary Boolean flag to quickly enable debug output for the whole file
-  const bool debug_out = false;
+  const bool global_debug_out = true;
   
   //forward declaration
   class VarGraphUtils;
@@ -268,6 +268,11 @@ public:
   // checking whether a literal can be altered
   void setNotTouch(const Var v);
   bool doNotTouch (const Var v) const ;
+  
+  // TODO: remove after debug
+  void printTrail(ostream& stream) {
+    for( int i = 0 ; i < solver->trail.size(); ++ i ) cerr << " " << solver->trail[i]; 
+  }
 };
 
 /** class representing the binary implication graph of the formula */
@@ -380,6 +385,7 @@ inline bool CoprocessorData::randomized()
 
 inline lbool CoprocessorData::enqueue(const Lit l)
 {
+  if( global_debug_out ) cerr << "c enqueue " << l << " with previous value " << (solver->value( l ) == l_Undef ? "undef" : (solver->value( l ) == l_False ? "unsat" : " sat ") ) << endl;
   if( solver->value( l ) == l_False) {
     solver->ok = false; // set state to false
     return l_False;
@@ -647,9 +653,7 @@ inline void CoprocessorData::addToExtension(const Lit dontTouch, const Lit l)
 
 inline void CoprocessorData::extendModel(vec< lbool >& model)
 {
-
-  const bool doOutput = false;
-  if( doOutput ) {
+  if( global_debug_out ) {
     cerr << "c extend model of size " << model.size() << " with undo information of size " << undo.size() << endl;
     cerr << "c  in model: ";
     for( int i = 0 ; i < model.size(); ++ i ) {
@@ -663,8 +667,8 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
   bool isSat = false;
   for( int i = undo.size() - 1; i >= 0 ; --i ) {
      isSat = false; // init next clause!
-     Lit c = undo[i];
-
+     const Lit c = undo[i];
+     if( global_debug_out ) cerr << "c read literal " << c << endl;
      if( c == lit_Undef ) {
        if( !isSat ) {
          // if clause is not satisfied, satisfy last literal!
@@ -677,11 +681,14 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
      if (model[var(c)] == (sign(c) ? l_False : l_True) ) // satisfied
      {
        isSat = true;
-       while( undo[i] != lit_Undef ) --i;
+       while( undo[i] != lit_Undef ){
+	 if( global_debug_out ) cerr << "c skip because SAT: " << undo[i] << endl; 
+	 --i;
+       }
      }
   }
 
-  if( doOutput ) {
+  if( global_debug_out ) {
     cerr << "c out model: ";
     for( int i = 0 ; i < model.size(); ++ i ) {
       const Lit satLit = mkLit( i, model[i] == l_True ? false : true );
@@ -699,6 +706,7 @@ inline void CoprocessorData::addEquivalences(const vector< Lit >& list)
 
 inline void CoprocessorData::addEquivalences(const Lit& l1, const Lit& l2)
 {
+  if( global_debug_out ) cerr << "c set equi: " << l1 << " == " << l2 << endl;
   equivalences.push_back(l1);
   equivalences.push_back(l2);
   equivalences.push_back( lit_Undef ); // termination symbol!
@@ -920,14 +928,14 @@ inline uint32_t BIG::stampLiteral( const Lit literal, uint32_t stamp, int32_t* i
   // do not stamp a literal twice!
   if( start[ toInt(literal) ] != 0 ) return stamp;
 
-  if( debug_out ) cerr << "c call STAMP for " << literal << endl;
+  if( global_debug_out ) cerr << "c call STAMP for " << literal << endl;
   
   stampQueue.clear();
   // linearized algorithm from paper
   stamp++;
   // handle initial literal before putting it on queue
   start[toInt(literal)] = stamp; // parent and root are already set to literal
-  if( debug_out ) cerr << "c start[" << literal << "] = " << stamp << endl;
+  if( global_debug_out ) cerr << "c start[" << literal << "] = " << stamp << endl;
   stampQueue.push_back(literal);
 
   shuffle( getArray(literal), getSize(literal) );
@@ -943,7 +951,7 @@ inline uint32_t BIG::stampLiteral( const Lit literal, uint32_t stamp, int32_t* i
 	stampQueue.pop_back();
 	stamp++;
 	stop[toInt(current)] = stamp;
-	if( debug_out ) cerr << "c stop[" << current << "] = " << stamp << endl;
+	if( global_debug_out ) cerr << "c stop[" << current << "] = " << stamp << endl;
       } else {
 	int32_t& ind = index[ toInt(current) ]; // store number of processed elements
 	const Lit impliedLit = getArray( current )[ind]; // get next implied literal
@@ -951,7 +959,7 @@ inline uint32_t BIG::stampLiteral( const Lit literal, uint32_t stamp, int32_t* i
 	if( start[ toInt(impliedLit) ] != 0 ) continue;
 	stamp ++;
 	start[ toInt(impliedLit) ] = stamp;
-	if( debug_out ) cerr << "c start[" << impliedLit << "] = " << stamp << endl;
+	if( global_debug_out ) cerr << "c start[" << impliedLit << "] = " << stamp << endl;
 	index[ toInt(impliedLit) ] = 0;
 	stampQueue.push_back( impliedLit );
 	shuffle( getArray(impliedLit), getSize(impliedLit) );

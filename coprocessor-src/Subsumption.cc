@@ -95,7 +95,7 @@ void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int star
 	        } else if (ca[list[i]].can_be_deleted()) {
                 continue;
 	        } else if (c.ordered_subsumes(ca[list[i]])) {
-                if (c.size() == ca[list[i]].size() && cr > list[i])
+                if (c.size() == ca[list[i]].size() && cr > list[i]) //TODO disable this in non-parallel worker
                 {
                     c.set_delete(true);
                     if (!c.learnt() && ca[list[i]].learnt())
@@ -104,6 +104,7 @@ void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int star
                 }
                 ca[list[i]].set_delete(true); 
                 if( doStatistics ) data.removedClause(list[i]);  // tell statistic about clause removal
+		        if( global_debug_out ) cerr << "c clause " << ca[list[i]] << " is deleted by " << c << endl;
                 if (!ca[list[i]].learnt() && c.learnt())
                 {
                     c.set_learnt(false);
@@ -386,6 +387,7 @@ lbool Subsumption::fullStrengthening(CoprocessorData& data)
                 if (c.ordered_subsumes(ca[list[k]]))    // check for subsumption
                 {
                     ca[list[k]].remove_lit(neg_lit);     // strengthen clause //TODO are UNIT-Clauses consistent?
+		            if( global_debug_out ) cerr << "c remove " << neg_lit << " from clause " << ca[list[k]] << endl;
                     if(ca[list[k]].size() == 1)
                     {
                       // propagate if clause is unit
@@ -419,10 +421,18 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
 {
   int si, so;           // indices used for "can be strengthened"-testing
   int negated_lit_pos;  // index of negative lit, if we find one
+  deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
   for (; end > start;)
   {
-    --end;
-    CRef cr = strengthening_queue[end];
+    CRef cr = CRef_Undef;
+    if( localQueue.size() == 0 ) {
+      --end;
+      cr = strengthening_queue[end];
+    } else {
+      // TODO: have a counter for this situation!
+      cr = localQueue.back();
+      localQueue.pop_back();
+    }
     Clause& strengthener = ca[cr];
     if (strengthener.can_be_deleted() || !strengthener.can_strengthen())
       continue;
@@ -476,7 +486,12 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
           other.set_subsume(true);
           clause_processing_queue.push_back(list[j]);
         }
-        // update occurrence-list for this lit (this must be done after pushing to subsumptionqueue)
+        // keep track of this clause for further strengthening!
+        if( !other.can_strengthen() ) {
+	        localQueue.push_back( list[j] );
+	        other.set_strengthen(true);
+	    }
+        // update occurance-list for this lit (this must be done after pushing to subsumptionqueue)
         // first find the list, which has to be updated
         for (int l = 0; l < data.list(other[negated_lit_pos]).size(); ++l)
         {
@@ -487,7 +502,8 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
             break;
           }
         }
-        other.remove_lit(other[negated_lit_pos]);   // remove lit from clause (this must be done after updating occurrences)
+        if( global_debug_out ) cerr << "c remove " << negated_lit_pos << " from clause " << other << endl;
+        other.remove_lit(other[negated_lit_pos]);   // remove lit from clause (this must be done after updating occurances)
         if(other.size() == 1)
         {
           // propagate if clause is only 1 lit big
@@ -533,7 +549,12 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
           other.set_subsume(true);
           clause_processing_queue.push_back(list_neg[j]);
         }
-        // update occurrence-list for this lit (this must be done after pushing to subsumptionqueue)
+	// keep track of this clause for further strengthening!
+        if( !other.can_strengthen() ) {
+	   localQueue.push_back( list_neg[j] );
+	   other.set_strengthen(true);
+	}
+        // update occurance-list for this lit (this must be done after pushing to subsumptionqueue)
         // first find the list, which has to be updated
         for (int l = 0; l < data.list(other[negated_lit_pos]).size(); ++l)
         {
@@ -544,7 +565,8 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
             break;
           }
         }
-        other.remove_lit(other[negated_lit_pos]);   // remove lit from clause (this must be done after updating occurrences)
+        if( global_debug_out ) cerr << "c remove " << negated_lit_pos << " from clause " << other << endl;
+        other.remove_lit(other[negated_lit_pos]);   // remove lit from clause (this must be done after updating occurances)
         if(other.size() == 1)
         {
           // propagate if clause is only 1 lit big

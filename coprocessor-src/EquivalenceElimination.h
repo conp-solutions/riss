@@ -56,9 +56,10 @@ public:
 protected:
 
   /** apply equivalences stored in data object to formula
+   * @param force run subsumption and unit propagation, even if no equivalences are found
    * @return true, if new binary clauses have been created (for completion)
    */
-  bool applyEquivalencesToFormula( CoprocessorData& data );
+  bool applyEquivalencesToFormula( Coprocessor::CoprocessorData& data, bool force = false);
   
   /** check based on gates that have been extracted, whether more equivalent literals can be found!
    * @return true, if new equivalent literals have been found
@@ -79,7 +80,7 @@ protected:
   /** perform tarjan algorithm to find SCC on binary implication graph */
   void eqTarjan(Lit l, Lit list, CoprocessorData& data, BIG& big, vector< vector< Lit > >* externBig = 0);
 
-  /** check whether the clause c has duplicates in the list of literal l
+  /** check whether the clause c has duplicates in the list of literal l (irredundant clause is no duplicate for learned clause! -> deletes learned clause!)
    *  Note: assumes that all clauses are sorted!
    *  @return true, if there are duplicates, so that c can be deleted
    */
