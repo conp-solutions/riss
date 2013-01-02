@@ -320,7 +320,7 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
                     }
                     else if (d.size() == 1)
                     {
-                        assert(false && "no unit clauses should be strengthend");
+                        assert(false && "no unit clauses should be strengthened");
                         // empty -> fail
                     }
                     //O if the first lit was strengthend, overwrite it in the end, since the lock would not be efficient any more
