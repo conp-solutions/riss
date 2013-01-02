@@ -63,6 +63,7 @@ protected:
   lbool fullStrengthening(CoprocessorData& data); // performs strengthening until completion, puts clauses into subsumption queue
   void strengthening_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics = true);
   void par_strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int stop, vector< SpinLock > & var_lock); 
+  void par_nn_strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int end, vector< SpinLock > & var_lock);
   /** data for parallel execution */
   struct SubsumeWorkData {
     Subsumption*     subsumption; // class with code
