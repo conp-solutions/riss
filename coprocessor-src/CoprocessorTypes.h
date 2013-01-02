@@ -17,7 +17,7 @@ using namespace std;
 namespace Coprocessor {
 
   /// temporary Boolean flag to quickly enable debug output for the whole file
-  const bool global_debug_out = true;
+  const bool global_debug_out = false;
   
   //forward declaration
   class VarGraphUtils;

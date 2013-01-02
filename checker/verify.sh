@@ -7,7 +7,9 @@
 # print to screen: solution for the cnf
 #
 
-./minisat $1 /tmp/minisat-out -enabled_cp3 -subsimp -cp3_threads=2 -cp3_par_strength > /dev/null # 2> /dev/null
+param="-enabled_cp3 -subsimp -cp3_threads=2 -inprocess -cp3_par_strength"
+#./minisat $1 /tmp/minisat-out -enabled_cp3 -subsimp -cp3_threads=2 -cp3_par_strength > /dev/null # 2> /dev/null
+./minisat $1 /tmp/minisat-out $param > /dev/null 2> /dev/null
 status=$?
 
 if [ $status = 10 ]

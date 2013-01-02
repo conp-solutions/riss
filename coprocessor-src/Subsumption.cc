@@ -213,9 +213,20 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
 {
     assert(start <= stop && stop <= strengthening_queue.size() && "invalid indices");
     assert(data.nVars() <= var_lock.size() && "var_lock vector to small");
-    for (unsigned int i = start; i < stop; ++i)
-    {
-        Clause & c = ca[strengthening_queue[i]];
+    deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
+    while (stop > start)
+    {    
+        CRef cr = CRef_Undef;
+        if( localQueue.size() == 0 ) {
+            --stop;
+            cr = strengthening_queue[stop];
+        } else {
+            // TODO: have a counter for this situation!
+            cr = localQueue.back();
+            localQueue.pop_back();
+        }
+ 
+        Clause & c = ca[strengthening_queue[stop]];
         lock_strengthener:
         if (c.can_be_deleted() || c.size() == 0)
             continue;
@@ -244,7 +255,7 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
             vector< CRef> & list = data.list(neg);
             for (int l_cr = 0; l_cr < list.size(); ++l_cr)
             {
-                assert(list[l_cr] != strengthening_queue[i] && "expect no tautologies here");
+                assert(list[l_cr] != strengthening_queue[stop] && "expect no tautologies here");
                 Clause & d = ca[list[l_cr]];
                 lock_to_strengthen:
                 if (d.can_be_deleted() || d.size() == 0)
@@ -315,6 +326,11 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
                     //O if the first lit was strengthend, overwrite it in the end, since the lock would not be efficient any more
                     else
                     {
+                        // keep track of this clause for further strengthening!
+                        if( !d.can_strengthen() ) {
+	                        localQueue.push_back( list[l_cr] );
+	                        d.set_strengthen(true);
+	                    }
                         d.removePositionSortedThreadSafe(pos);
                         // TODO to much overhead? 
                         data.lock();
