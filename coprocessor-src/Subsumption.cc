@@ -8,7 +8,7 @@ using namespace Coprocessor;
 
 static const char* _cat = "CP3 SUBSUMPTION";
 // options
-static BoolOption  opt_naivStrength    (_cat, "cp3_naiveStength", "use naive strengthening", false);
+static BoolOption  opt_naivStrength    (_cat, "cp3_naive_strength", "use naive strengthening", false);
 static BoolOption  opt_par_strength    (_cat, "cp3_par_strength", "use par strengthening", false);
     
 Subsumption::Subsumption( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation )
@@ -30,6 +30,7 @@ void Subsumption::subsumeStrength(CoprocessorData& data)
       if (opt_par_strength && controller.size() > 0)
       {
           parallelStrengthening(data);
+          data.correctCounters();
       }
       else {
           fullStrengthening(data);
@@ -57,7 +58,7 @@ lbool Subsumption::fullSubsumption(CoprocessorData& data)
   } else {
     subsumption_worker(data,0,clause_processing_queue.size());
   }
-
+  clause_processing_queue.clear();
   // no result to tell to the outside
   return l_Undef; 
 }
@@ -960,6 +961,7 @@ void Subsumption::parallelStrengthening(CoprocessorData& data)
     workData[i].subsumption = this; 
     workData[i].start = i * partitionSize; 
     workData[i].end   = (i + 1 == controller.size()) ? queueSize : (i+1) * partitionSize; // last element is not processed!
+    cerr << "c p s thread " << i << " running from " << workData[i].start << " to " << workData[i].end << endl;
     workData[i].data  = &data; 
     workData[i].var_locks = & var_locks;
     jobs[i].function  = Subsumption::runParallelStrengthening;
@@ -974,6 +976,6 @@ void Subsumption::parallelStrengthening(CoprocessorData& data)
 void* Subsumption::runParallelStrengthening(void* arg)
 {
     SubsumeWorkData* workData = (SubsumeWorkData*) arg;
-    workData->subsumption->par_nn_strengthening_worker(*(workData->data),workData->start,workData->end, *(workData->var_locks));
+    workData->subsumption->par_strengthening_worker(*(workData->data),workData->start,workData->end, *(workData->var_locks));
     return 0;
 }
