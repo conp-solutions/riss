@@ -144,6 +144,8 @@ lbool Preprocessor::preprocess()
   VarGraphUtils utils;
 
 
+  ee.printStatistics(cerr);
+  
   // clear / update clauses and learnts vectores and statistical counters
   // attach all clauses to their watchers again, call the propagate method to get into a good state again
   if( opt_verbose > 2 ) cerr << "c coprocessor re-setup solver" << endl;

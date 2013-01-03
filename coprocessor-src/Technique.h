@@ -46,6 +46,10 @@ public:
    */
   void destroy();
   
+  /** This method should be used to print the statistics of the technique that inherits from this class
+   */
+  void printStatistics( ostream& stream );
+  
 protected:
   /** call this method to indicate that the technique has applied changes to the formula */
   void didChange();
