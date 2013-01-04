@@ -24,6 +24,11 @@ class ClauseElimination : public Technique {
   
   vector<CRef> clause_processing_queue;
   
+  int steps;		// performed clause comparisons (loading a clause)
+  double processTime;  // required time
+  int removedClauses;  // number of removed clauses
+  int removedBceClauses; // number of clauses that have been removed without changing equivalence
+  
 public:
   
   class WorkData {
@@ -35,7 +40,10 @@ public:
     vector<Lit> toUndo;    // literals that have to be out to the undo information, if a cla clause is removed by ATE or ABCE
     int nextAla;           // position from which ala needs to be continued
     
-    WorkData(int vars) : nextAla(0) { array.create(2*vars); helpArray.create(2*vars);}
+    int steps;
+    int removedClauses;
+    int removedBceClauses;
+    WorkData(int vars) : nextAla(0), steps(0), removedClauses(0), removedBceClauses(0) { array.create(2*vars); helpArray.create(2*vars);}
     ~WorkData() {array.destroy();helpArray.destroy();}
     void reset () { cla.clear(); array.nextStep(); toProcess.clear(); toUndo.clear(); nextAla=0; }
   };
@@ -45,6 +53,8 @@ public:
   void eliminate(CoprocessorData& data);
   
   void initClause(const CRef cr); // inherited from Technique
+  
+  void printStatistics(ostream& stream);
   
 protected:
   

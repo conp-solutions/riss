@@ -11,6 +11,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor-src/CoprocessorTypes.h"
 
+#include "coprocessor-src/Propagation.h"
+
 #include <vector>
 
 using namespace Minisat;
@@ -22,17 +24,21 @@ namespace Coprocessor {
  */
 class HiddenTautologyElimination : public Technique {
   
+  Propagation& propagation;            /// object that takes care of unit propagation
+  
   int steps;                   // how many steps is the worker allowed to do
   double processTime;          // how many seconds have been used
   int removedClauses;		// how many clauses could be removed
+  int removedLits;		// how many literals have been removed
   
   vector<Var> activeVariables; // which variables should be considered?
   vector<char> activeFlag;     // array that stores a flag per variable whether it is active
   
 
+  
 public:
   
-  HiddenTautologyElimination( ClauseAllocator& _ca, ThreadController& _controller );
+  HiddenTautologyElimination( ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation );
   
   /** run subsumption and strengthening until completion */
   void eliminate(Coprocessor::CoprocessorData& data);

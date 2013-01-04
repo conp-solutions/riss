@@ -15,6 +15,7 @@ static IntOption  opt_threads    (_cat, "cp3_threads",    "Number of extra threa
 static BoolOption opt_unlimited  (_cat, "cp3_unlimited",  "No limits for preprocessing techniques", true);
 static BoolOption opt_randomized (_cat, "cp3_randomized", "Steps withing preprocessing techniques are executed in random order", false);
 static IntOption  opt_verbose    (_cat, "cp3_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
+static BoolOption opt_printStats (_cat, "cp3_stats",      "Print Technique Statistics", false);
 // techniques
 static BoolOption opt_up        (_cat, "up",            "Use Unit Propagation during preprocessing", false);
 static BoolOption opt_subsimp   (_cat, "subsimp",       "Use Subsumption during preprocessing", false);
@@ -43,7 +44,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 // classes for preprocessing methods
 , propagation( solver->ca, controller )
 , subsumption( solver->ca, controller, propagation )
-, hte( solver->ca, controller )
+, hte( solver->ca, controller, propagation )
 , bve( solver->ca, controller, propagation, subsumption )
 , cce( solver->ca, controller )
 , ee ( solver->ca, controller, propagation, subsumption )
@@ -71,8 +72,11 @@ lbool Preprocessor::preprocess()
   data.init( solver->nVars() );
   initializePreprocessor ();
   if( opt_verbose > 2 )cerr << "c coprocessor finished initialization" << endl;
+  
+  
+  const bool printBVE = false, printCCE = false, printEE = false, printHTE = false, printSusi = false, printUP = false;  
+  
   // do preprocessing
-
   if( opt_up ) {
     if( opt_verbose > 2 )cerr << "c coprocessor propagate" << endl;
     if( status == l_Undef ) status = propagation.propagate(data);
@@ -81,13 +85,10 @@ lbool Preprocessor::preprocess()
   // begin clauses have to be sorted here!!
   sortClauses();
   
-  if( false ) {
-   cerr << "formula after Sorting: " << endl;
-   for( int i = 0 ; i < data.getClauses().size(); ++ i )
-     if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getClauses()[i] ] << endl;
-   for( int i = 0 ; i < data.getLEarnts().size(); ++ i )
-     if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getLEarnts()[i] ] << endl;    
+  if( false  || printUP  ) {
+   printFormula("after Sorting");
   }
+  
   if( opt_subsimp ) {
     if( opt_verbose > 2 )cerr << "c coprocessor subsume/strengthen" << endl;
     if( status == l_Undef ) subsumption.subsumeStrength(data);  // cannot change status, can generate new unit clauses
@@ -95,6 +96,10 @@ lbool Preprocessor::preprocess()
         status = l_False;
   }
 
+  if( false  || printSusi ) {
+   printFormula("after Susi");
+  }
+  
   if( opt_ee ) { // before this technique nothing should be run that alters the structure of the formula (e.g. BVE;BVA)
     if( opt_verbose > 2 )cerr << "c coprocessor equivalence elimination" << endl;
     if( status == l_Undef ) ee.eliminate(data);  // cannot change status, can generate new unit clauses
@@ -110,20 +115,36 @@ lbool Preprocessor::preprocess()
     }
    }
   }
+
+  if( false  || printEE ) {
+   printFormula("after EE");
+  }
   
   if( opt_hte ) {
     if( opt_verbose > 2 )cerr << "c coprocessor hidden tautology elimination" << endl;
     if( status == l_Undef ) hte.eliminate(data);  // cannot change status, can generate new unit clauses
   }
 
+  if( false  || printHTE ) {
+   printFormula("after HTE");
+  }
+  
   if ( opt_bve ) {
     if( opt_verbose > 2 )cerr << "c coprocessor blocked variable elimination" << endl;
     if( status == l_Undef ) status = bve.runBVE(data);  // can change status, can generate new unit clauses
   }
   
+  if( false || printBVE  ) {
+   printFormula("after BVE");
+  }
+  
   if( opt_cce ) {
     if( opt_verbose > 2 )cerr << "c coprocessor (covered) clause elimination" << endl;
     if( status == l_Undef ) cce.eliminate(data);  // cannot change status, can generate new unit clauses
+  }
+  
+  if( false || printCCE ) {
+   printFormula("after CCE");
   }
   
   // tobias
@@ -141,8 +162,12 @@ lbool Preprocessor::preprocess()
   // vars = cluster variablen
   VarGraphUtils utils;
 
-  
-  hte.printStatistics(cerr);
+  if( opt_printStats ) {
+    propagation.printStatistics(cerr);
+    subsumption.printStatistics(cerr);
+    hte.printStatistics(cerr);
+    cce.printStatistics(cerr);
+  }
 
   // clear / update clauses and learnts vectores and statistical counters
   // attach all clauses to their watchers again, call the propagate method to get into a good state again
@@ -407,4 +432,16 @@ void Preprocessor::delete_clause(const Minisat::CRef cr)
   Clause & c = ca[cr];
   c.mark(1);
   ca.free(cr);
+}
+
+void Preprocessor::printFormula(const string& headline)
+{
+   cerr << "=== Formula " << headline << ": " << endl;
+   for( int i = 0 ; i < data.getSolver()->trail.size(); ++i )
+       cerr << "[" << data.getSolver()->trail[i] << "]" << endl;   
+   for( int i = 0 ; i < data.getClauses().size(); ++ i )
+     if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getClauses()[i] ] << endl;
+   for( int i = 0 ; i < data.getLEarnts().size(); ++ i )
+     if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getLEarnts()[i] ] << endl;    
+   cerr << "==================== " << endl;
 }

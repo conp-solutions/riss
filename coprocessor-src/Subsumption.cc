@@ -26,13 +26,13 @@ Subsumption::Subsumption( ClauseAllocator& _ca, Coprocessor::ThreadController& _
 void Subsumption::printStatistics(ostream& stream)
 {
 stream << "c [STAT] SuSi(1) " << processTime << " s, " 
-                              << subsumedClauses << " cls," 
+                              << subsumedClauses << " cls, " 
 			       << " with " << subsumedLiterals << " lits, "
 			       << removedLiterals << " strengthed "
 			       << endl;
 stream << "c [STAT] SuSi(2) " << subsumeSteps << " subs-steps, " 
-                              << strengthSteps << " strenght-steps," 
-			       << strengthTime << "s strengthening"
+                              << strengthSteps << " strenght-steps, " 
+			       << strengthTime << "s strengthening "
 			       << endl;
 }
 

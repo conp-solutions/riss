@@ -10,11 +10,13 @@ static IntOption opt_steps  (_cat, "cp3_hte_steps",  "Number of steps that are a
 
 using namespace Coprocessor;
 
-HiddenTautologyElimination::HiddenTautologyElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller )
+HiddenTautologyElimination::HiddenTautologyElimination( ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation )
 : Technique( _ca, _controller )
+, propagation (_propagation)
 , steps(opt_steps)
 , processTime(0)
 , removedClauses(0)
+, removedLits(0)
 , activeFlag(0)
 {
 }
@@ -77,6 +79,10 @@ void HiddenTautologyElimination::eliminate(CoprocessorData& data)
     data.correctCounters();
   } else {
     elimination_worker(data, 0, activeVariables.size(), big);
+  }
+  
+  if( data.hasToPropagate() ) {
+    propagation.propagate(data);
   }
   
   // get delete timer
@@ -275,6 +281,7 @@ bool HiddenTautologyElimination::hiddenTautologyElimination(Var v, CoprocessorDa
 			    didSomething = true;
                             ignClause = true;
                             cl.set_delete(true); // TODO remove from occurence lists?
+			    if( !doLock ) removedClauses ++;
 			    if( statistic ) data.removedClause(clsidx);
                             break;
                         }
@@ -289,7 +296,8 @@ bool HiddenTautologyElimination::hiddenTautologyElimination(Var v, CoprocessorDa
                           changed = true;
 			  if( statistic ) data[ clauseLiteral ] --;
 			    cl.removePositionUnsorted(j);
-                            // update the index
+                           if( !doLock ) removedLits ++;  
+			    // update the index
                             j--;
 			    
                             if ( cl.size() == 1 ) {
@@ -518,5 +526,6 @@ bool HiddenTautologyElimination::alaMarkClause(vec<Lit>& clause, CoprocessorData
 
 void HiddenTautologyElimination::printStatistics(ostream& stream)
 {
-  stream << "c [STAT] HTE " << processTime << " s, " << removedClauses << " cls, " << steps << " steps left" << endl;
+  stream << "c [STAT] HTE " << processTime << " s, " << removedClauses << " cls, " 
+			    <<  removedLits << " lits, " << steps << " steps left" << endl;
 }

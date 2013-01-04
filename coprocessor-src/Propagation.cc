@@ -11,12 +11,15 @@ static int upLevel = 1;
 Propagation::Propagation( ClauseAllocator& _ca, ThreadController& _controller )
 : Technique( _ca, _controller )
 , lastPropagatedLiteral( 0 )
+, removedClauses(0)
+, removedLiterals(0)
 {
 }
 
 
 lbool Propagation::propagate(CoprocessorData& data, bool sort)
 {
+  processTime = cpuTime() - processTime;
   Solver* solver = data.getSolver();
   // propagate all literals that are on the trail but have not been propagated
   for( ; lastPropagatedLiteral < solver->trail.size(); lastPropagatedLiteral ++ )
@@ -27,6 +30,7 @@ lbool Propagation::propagate(CoprocessorData& data, bool sort)
     vector<CRef> positive = data.list(l);
     for( int i = 0 ; i < positive.size(); ++i )
     {
+      removedClauses = ca[ positive[i] ].can_be_deleted() ? removedClauses : removedClauses + 1;
       ca[ positive[i] ].set_delete(true);
       data.removedClause( positive[i] );
     }
@@ -58,6 +62,7 @@ lbool Propagation::propagate(CoprocessorData& data, bool sort)
     }
     // update formula data!
     data.removedLiteral(nl, count);
+    removedLiterals += count;
     data.list(nl).clear();
   }
   
@@ -74,7 +79,15 @@ lbool Propagation::propagate(CoprocessorData& data, bool sort)
 //             if (c.has_extra())
 //             c.calcAbstraction();
 //    }
+
+  processTime = cpuTime() - processTime;
   return data.ok() ? l_Undef : l_False;
 }
 
 void Propagation::initClause( const CRef cr ) {}
+
+void Propagation::printStatistics(ostream& stream)
+{
+  stream << "c [STAT] UP " << processTime << " s, " << removedClauses << " cls,"
+			    << removedLiterals << " lits" << endl;
+}
