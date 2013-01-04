@@ -13,12 +13,15 @@ using namespace Coprocessor;
 HiddenTautologyElimination::HiddenTautologyElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller )
 : Technique( _ca, _controller )
 , steps(opt_steps)
+, processTime(0)
+, removedClauses(0)
 , activeFlag(0)
 {
 }
 
 void HiddenTautologyElimination::eliminate(CoprocessorData& data)
 {
+  processTime = cpuTime() - processTime;
   if( ! isInitializedTechnique() ) {
     initializedTechnique(); 
   }
@@ -68,7 +71,7 @@ void HiddenTautologyElimination::eliminate(CoprocessorData& data)
   else data.getActiveVariables( lastDeleteTime(), activeVariables);
   // TODO: define an order?
   
-  // run subsumption for the whole queue
+  // run HTE for the whole queue
   if( controller.size() > 0 ) {
     parallelElimination(data, big); // use parallel, is some conditions have been met
     data.correctCounters();
@@ -81,6 +84,7 @@ void HiddenTautologyElimination::eliminate(CoprocessorData& data)
   
   // clear queue afterwards
   activeVariables.clear();
+  processTime = cpuTime() - processTime;
 }
 
 
@@ -195,10 +199,8 @@ bool HiddenTautologyElimination::hiddenTautologyElimination(Var v, CoprocessorDa
     for( Var v = 0 ; v < data.nVars(); ++v )
       for( int p = 0 ; p < 2; ++ p )
 	if( hlaArray.isCurrentStep( toInt(mkLit(v,p)) ) ) { printLit( mkLit(v,p)); fprintf(stderr, " "); }
-    fprintf(stderr, "\n");
+      fprintf(stderr, "\n");
     }
-    
-    // hlaArray.nextStep(); // TODO: this check seems to be not necessary!
     
     // iterate over binary clauses with occurences of the literal i
     const vector<CRef>& iList = data.list(i);
@@ -226,13 +228,14 @@ bool HiddenTautologyElimination::hiddenTautologyElimination(Var v, CoprocessorDa
                        break;
                     }
                 }
-// TODO enable for parallel?		steps = (steps>0) ? steps - 1 : 0; // limit
+                if( !doLock)	steps = (steps>0) ? steps - 1 : 0; // limit
                 // if clause has been removed from its lists, update!
                 if ( remClause ) {
 		    // TODO: statistics removed clause
 		    if( statistic ) data.removedClause(clsidx);
                     cl.set_delete(true);
                     k--;
+		    if( !doLock ) removedClauses ++;
                 }
             }
         }
@@ -264,7 +267,7 @@ bool HiddenTautologyElimination::hiddenTautologyElimination(Var v, CoprocessorDa
                 bool ignClause = false;
 		bool changed = false;
                 if ( cl.size() > 2 ) {
-// TODO enable for parallel?		    steps = (steps>0) ? steps - 1 : 0; // limit
+	        if( !doLock ) steps = (steps>0) ? steps - 1 : 0; // limit
 
                     for ( uint32_t j = 0; j < cl.size(); j++ ) {
 		      const Lit clauseLiteral = cl[j];
@@ -513,3 +516,7 @@ bool HiddenTautologyElimination::alaMarkClause(vec<Lit>& clause, CoprocessorData
   return false;
 }
 
+void HiddenTautologyElimination::printStatistics(ostream& stream)
+{
+  stream << "c [STAT] HTE " << processTime << " s, " << removedClauses << " cls, " << steps << " steps left" << endl;
+}

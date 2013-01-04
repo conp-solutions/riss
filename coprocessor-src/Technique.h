@@ -6,6 +6,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #define TECHNIQUE_HH
 
 #include "core/Solver.h"
+#include "utils/System.h"
 
 #include "coprocessor-src/CoprocessorThreads.h"
 
@@ -117,7 +118,7 @@ inline void Technique::destroy()
   assert( false && "This method has not been implemented." ); 
 }
 
-void Technique::printStatistics(ostream& stream)
+inline void Technique::printStatistics(ostream& stream)
 {
   /* // example output
   stream << "c [STAT] EE " << eeTime << " s, " << steps << " steps" << endl;

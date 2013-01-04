@@ -23,6 +23,9 @@ namespace Coprocessor {
 class HiddenTautologyElimination : public Technique {
   
   int steps;                   // how many steps is the worker allowed to do
+  double processTime;          // how many seconds have been used
+  int removedClauses;		// how many clauses could be removed
+  
   vector<Var> activeVariables; // which variables should be considered?
   vector<char> activeFlag;     // array that stores a flag per variable whether it is active
   
@@ -36,6 +39,8 @@ public:
 
   void initClause(const CRef cr); // inherited from Technique
 
+  void printStatistics(ostream& stream);
+  
   /** fills the mark arrays for a certain variable */
   Lit fillHlaArrays(Var v, Coprocessor::BIG& big, Coprocessor::MarkArray& hlaPositive, Coprocessor::MarkArray& hlaNegative, Lit* litQueue, bool doLock = false);
   

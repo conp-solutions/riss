@@ -141,6 +141,8 @@ lbool Preprocessor::preprocess()
   // vars = cluster variablen
   VarGraphUtils utils;
 
+  
+  hte.printStatistics(cerr);
 
   // clear / update clauses and learnts vectores and statistical counters
   // attach all clauses to their watchers again, call the propagate method to get into a good state again
