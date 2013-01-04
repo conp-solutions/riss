@@ -213,7 +213,7 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
       for( int i = 0 ; i < data.list(pos).size(); ++i ) 
 	count = ( ca[ data.list(pos)[i] ].can_be_deleted() ? count : count + 1 );
       if( count == 1 ) {
-	cerr << "c BLOCKED Generic Gates IS NOT PROPERLY IMPLEMENTED YET!!" << endl;
+	if( debug_out ) cerr << "c BLOCKED Generic Gates IS NOT PROPERLY IMPLEMENTED YET!!" << endl;
 	continue;
 	// TODO: if blocked clause addition is performed with binary clauses, the BIG has to be updated!
 	gates.push_back( Gate( data.lits, data.lits.size() == 2 ? Gate::AND : Gate::GenAND, Gate::NEG_BLOCKED, pos ) );

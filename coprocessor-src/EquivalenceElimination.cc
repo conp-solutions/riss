@@ -76,7 +76,7 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
       gates.clear();
 
       iter ++;
-      cerr << "c run " << iter << " round of circuit equivalences" << endl;
+      // cerr << "c run " << iter << " round of circuit equivalences" << endl;
 
       if( debug_out ) {
 	cerr << endl << "====================================" << endl;
@@ -92,7 +92,7 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
       Circuit circ(ca); 
       
       circ.extractGates(data, gates);
-      cerr << "c found " << gates.size() << " gates" << endl ;
+      // cerr << "c found " << gates.size() << " gates" << endl ;
       if ( debug_out ) {
 	cerr << endl << "==============================" << endl;
       data.log.log(eeLevel,"found gates", gates.size());
@@ -119,7 +119,7 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
 	if( debug_out ) cerr << "c run miter EQ method" << endl;
 	moreEquivalences = findGateEquivalencesNew( data, gates );
 	if( moreEquivalences )
-	  cerr << "c found new equivalences with the gate method!" << endl;
+	  if( debug_out ) cerr << "c found new equivalences with the gate method!" << endl;
 	if( !data.ok() )
 	  if( debug_out ) cerr << "state of formula is UNSAT!" << endl;
       }
@@ -128,10 +128,10 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
       if( !data.ok() ) { eeTime  = cpuTime() - eeTime; return; }
       // after we extracted more information from the gates, we can apply these additional equivalences to the forula!
       if ( !moreEquivalences && iter > 1 ) {
-	cerr << "c no more gate equivalences found" << endl;
+	// cerr << "c no more gate equivalences found" << endl;
 	break;
       } else {
-	cerr << "c more equi " << moreEquivalences << " iter= " << iter << endl;
+	// cerr << "c more equi " << moreEquivalences << " iter= " << iter << endl;
       }
       moreEquivalences = false;
       bool doRepeat = false;
@@ -142,9 +142,9 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
 	moreEquivalences = doRepeat || moreEquivalences;
 	eeIter ++;
       } while ( doRepeat && data.ok() );
-      cerr << "c moreEquivalences in iteration " << iter << " : " << moreEquivalences << " with BIGee iterations " << eeIter << endl;
+      // cerr << "c moreEquivalences in iteration " << iter << " : " << moreEquivalences << " with BIGee iterations " << eeIter << endl;
     }
-    if( aagFile != "" )
+    if( ((const char*)aagFile) != 0  )
       writeAAGfile(data);
   }
   
@@ -154,7 +154,7 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
       findEquivalencesOnBig(data);                              // finds SCC based on all literals in the eqDoAnalyze array!
     } while ( applyEquivalencesToFormula(data ) && data.ok() ); // will set literals that have to be analyzed again!
     
-    cerr << "c ok=" << data.ok() << " toPropagate=" << data.hasToPropagate() <<endl;
+    // cerr << "c ok=" << data.ok() << " toPropagate=" << data.hasToPropagate() <<endl;
     assert( (!data.ok() || !data.hasToPropagate() )&& "After these operations, all propagation should have been done" );
     
     
@@ -169,8 +169,9 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
 	cerr << "Solver Trail: " << endl;
 	data.printTrail(cerr);
 	cerr << endl << "====================================" << endl << endl;
+	cerr << endl;
       }
-     cerr << endl;
+     
     
   }
   eeTime  = cpuTime() - eeTime;
@@ -195,7 +196,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
   int oldEquivalences = data.getEquivalences().size();
   
   if( opt_eeGateBigFirst ) {
-    cerr << "c do BIG extraction " << endl;
+    if( debug_out ) cerr << "c do BIG extraction " << endl;
     do { 
       findEquivalencesOnBig(data);                              // finds SCC based on all literals in the eqDoAnalyze array!
     } while ( applyEquivalencesToFormula(data ) && data.ok() ); // will set literals that have to be analyzed again!

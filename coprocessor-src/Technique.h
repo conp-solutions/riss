@@ -6,6 +6,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #define TECHNIQUE_HH
 
 #include "core/Solver.h"
+#include "utils/System.h"
 
 #include "coprocessor-src/CoprocessorThreads.h"
 
@@ -116,6 +117,15 @@ inline bool Technique::isInitializedTechnique()
 inline void Technique::destroy()
 {
   assert( false && "This method has not been implemented." ); 
+}
+
+inline void Technique::printStatistics(ostream& stream)
+{
+  /* // example output
+  stream << "c [STAT] EE " << eeTime << " s, " << steps << " steps" << endl;
+  stream << "c [STAT] EE-gate " << gateTime << " s, " << gateSteps << " steps" << endl;
+  */
+  assert( false && "This method has not been implemented" );
 }
 
 inline uint32_t Technique::lastDeleteTime()
