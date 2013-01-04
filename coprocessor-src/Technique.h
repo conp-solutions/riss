@@ -46,6 +46,9 @@ public:
    */
   void destroy();
   
+  /** use this method to report statistics of this technique to the given stream */
+  void printStatistics(ostream& stream);
+  
 protected:
   /** call this method to indicate that the technique has applied changes to the formula */
   void didChange();
@@ -112,6 +115,15 @@ inline bool Technique::isInitializedTechnique()
 inline void Technique::destroy()
 {
   assert( false && "This method has not been implemented." ); 
+}
+
+void Technique::printStatistics(ostream& stream)
+{
+  /* // example output
+  stream << "c [STAT] EE " << eeTime << " s, " << steps << " steps" << endl;
+  stream << "c [STAT] EE-gate " << gateTime << " s, " << gateSteps << " steps" << endl;
+  */
+  assert( false && "This method has not been implemented" );
 }
 
 inline uint32_t Technique::lastDeleteTime()

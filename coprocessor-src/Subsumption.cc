@@ -13,8 +13,29 @@ static BoolOption  opt_naivStrength    (_cat, "cp3_naiveStength", "use naive str
 Subsumption::Subsumption( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation )
 : Technique( _ca, _controller )
 , propagation( _propagation )
+, subsumedClauses(0)
+, subsumedLiterals(0)
+, removedLiterals(0)
+, subsumeSteps(0)
+, strengthSteps(0)
+, processTime(0)
+, strengthTime(0)
 {
 }
+
+void Subsumption::printStatistics(ostream& stream)
+{
+stream << "c [STAT] SuSi(1) " << processTime << " s, " 
+                              << subsumedClauses << " cls," 
+			       << " with " << subsumedLiterals << " lits, "
+			       << removedLiterals << " strengthed "
+			       << endl;
+stream << "c [STAT] SuSi(2) " << subsumeSteps << " subs-steps, " 
+                              << strengthSteps << " strenght-steps," 
+			       << strengthTime << "s strengthening"
+			       << endl;
+}
+
 
 void Subsumption::subsumeStrength(CoprocessorData& data)
 {

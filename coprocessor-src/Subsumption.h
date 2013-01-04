@@ -28,6 +28,14 @@ class Subsumption : public Technique {
   vector<CRef> strengthening_queue;         // vector of clausereferences, which can strengthen
   Coprocessor::Propagation& propagation;
   
+  int subsumedClauses;  // statistic counter
+  int subsumedLiterals; // sum up the literals of the clauses that have been subsumed
+  int removedLiterals;  // statistic counter
+  int subsumeSteps;     // number of clause comparisons in subsumption 
+  int strengthSteps;    // number of clause comparisons in strengthening
+  double processTime;   // statistic counter
+  double strengthTime;  // statistic counter
+  
 public:
   
   Subsumption( ClauseAllocator& _ca, ThreadController& _controller, Coprocessor::Propagation& _propagation );
@@ -43,6 +51,8 @@ public:
   
   /** add a clause to the queues, so that this clause will be checked by the next call to subsumeStrength */
   void addClause( const CRef cr );
+  
+  void printStatistics(ostream& stream);
   
   /* TODO:
    *  - init
