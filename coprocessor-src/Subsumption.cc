@@ -215,6 +215,7 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
     assert(start <= stop && stop <= strengthening_queue.size() && "invalid indices");
     assert(data.nVars() <= var_lock.size() && "var_lock vector to small");
     deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
+    SpinLock & data_lock = var_lock[data.nVars()];
     while (stop > start)
     {    
         CRef cr = CRef_Undef;
@@ -314,10 +315,11 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
                     if (d.size() == 2)
                     {
                         d.set_delete(true);
-                        data.lock();
+                        //data.lock();
+                        data_lock.lock();
                         lbool state = data.enqueue(d[(pos + 1) % 2]);
                         data.removedClause(list[l_cr]);
-                        data.unlock();   
+                        data_lock.unlock();   
                     }
                     else if (d.size() == 1)
                     {
@@ -334,14 +336,14 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
 	                      }
                         d.removePositionSortedThreadSafe(pos);
                         // TODO to much overhead? 
-                        data.lock();
+                        data_lock.lock();
                         data.removedLiteral(neg, 1);
                         if ( ! d.can_subsume()) 
                         {
                             d.set_subsume(true);
                             clause_processing_queue.push_back(list[l_cr]);
                         }
-                        data.unlock();
+                        data_lock.unlock();
                     }
                 }
                 
@@ -375,6 +377,8 @@ void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned in
   int si, so;           // indices used for "can be strengthened"-testing
   int negated_lit_pos;  // index of negative lit, if we find one
   deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
+  SpinLock & data_lock = var_lock[data.nVars()];
+
   for (; end > start;)
   {
     CRef cr = CRef_Undef;
@@ -488,10 +492,10 @@ void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned in
           if (other.size() == 2)
           {
               other.set_delete(true);
-              data.lock();
+              data_lock.lock();
               lbool state = data.enqueue(other[0]);
               data.removedClause(list[j]);
-              data.unlock();   
+              data_lock.unlock();   
           }
           //TODO optimize out
           else if (other.size() == 1)
@@ -511,14 +515,14 @@ void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned in
               //no need for threadsafe implementation of rPS, since 1st lit could not be removed here
               other.removePositionSorted(negated_lit_pos);
               // TODO to much overhead? 
-              data.lock();
+              data_lock.lock();
               data.removedLiteral(neg, 1);
               if ( ! other.can_subsume()) 
               {
                   other.set_subsume(true);
                   clause_processing_queue.push_back(list[j]);
               }
-              data.unlock();
+              data_lock.unlock();
           }
       }
       // if a new lock was acquired, free it
@@ -600,10 +604,10 @@ void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned in
           if (other.size() == 2)
           {
               other.set_delete(true);
-              data.lock();
+              data_lock.lock();
               lbool state = data.enqueue(other[1]);
               data.removedClause(list_neg[j]);
-              data.unlock();   
+              data_lock.unlock();   
           }
           //TODO optimize out
           else if (other.size() == 1)
@@ -623,14 +627,14 @@ void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned in
               //threadsafe implementation of rPS necessary
               other.removePositionSortedThreadSafe(negated_lit_pos);
               // TODO to much overhead? 
-              data.lock();
+              data_lock.lock();
               data.removedLiteral(neg, 1);
               if ( ! other.can_subsume()) 
               {
                   other.set_subsume(true);
                   clause_processing_queue.push_back(list_neg[j]);
               }
-              data.unlock();
+              data_lock.unlock();
           }
       }
       // if a new lock was acquired, free it
@@ -669,10 +673,20 @@ lbool Subsumption::fullStrengthening(CoprocessorData& data)
     strengthening_worker(data, 0, strengthening_queue.size());
     return l_Undef;
   }
+    deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
     //for every clause:
-    for (int i = 0; i < strengthening_queue.size(); ++i)
+    for (int i = 0; i < strengthening_queue.size();)
     {
-        Clause &c = ca[strengthening_queue[i]];
+        CRef cr = CRef_Undef;
+        if( localQueue.size() == 0 ) {
+            cr = strengthening_queue[i];
+            ++i;
+        } else {
+            // TODO: have a counter for this situation!
+            cr = localQueue.back();
+            localQueue.pop_back();
+        }
+        Clause &c = ca[cr];
         if (c.can_be_deleted() || !c.can_strengthen())
             continue;   // dont check if it cant strengthen or can be deleted
         // for every literal in this clause:
@@ -684,31 +698,45 @@ lbool Subsumption::fullStrengthening(CoprocessorData& data)
             vector<CRef> & list = data.list(neg_lit);  // get occurrences of this lit
             for (unsigned int k = 0; k < list.size(); ++k)
             {
-                if (ca[list[k]].can_be_deleted())     // dont check if this clause can be deleted
+                Clause & other = ca[list[k]];
+                if (other.can_be_deleted())     // dont check if this clause can be deleted
                     continue;
-                if (c.ordered_subsumes(ca[list[k]]))    // check for subsumption
+                if (c.ordered_subsumes(other))    // check for subsumption
                 {
-                    ca[list[k]].remove_lit(neg_lit);     // strengthen clause //TODO are UNIT-Clauses consistent?
-		            if( global_debug_out ) cerr << "c remove " << neg_lit << " from clause " << ca[list[k]] << endl;
-                    if(ca[list[k]].size() == 1)
+                    other.remove_lit(neg_lit);     // strenghten clause
+		            if( global_debug_out ) cerr << "c remove " << neg_lit << " from clause " << other << endl;
+                    if(other.size() == 1)
                     {
                       // propagate if clause is unit
-                      data.enqueue(ca[list[k]][0]);
+                      data.enqueue(other[0]);
                       propagation.propagate(data, true);
-                    }
-                    else 
+                    } 
+                    else
                     {
-                        // add clause since it got smaller and could subsume to subsumption_queue
-                        clause_processing_queue.push_back(list[k]);
-                    
-                        // update occurrences
+                        // add clause since it got smaler and could subsume to subsumption_queue
+                        if(!other.can_subsume())
+                        {
+                            // if the flag was set, this clause is allready in the subsumptionqueue, if not, we need to add this clause as it could subsume again
+                            other.set_subsume(true);
+                            clause_processing_queue.push_back(list[k]);
+                        }
+                        // keep track of this clause for further strengthening!
+                        if( !other.can_strengthen() ) {
+	                        localQueue.push_back( list[k] );
+	                        other.set_strengthen(true);
+	                    }
+
+                        // update occurances
                         list[k] = list[list.size() - 1];
                         list.pop_back();    // shrink vector
+                        
+                        k--; // since k++ in for-loop
                     }
                 }
             }
             c[j] = ~neg_lit;    // change the negated lit back
         }
+        c.set_strengthen(false);
     }
   // no result to tell to the outside
   return l_Undef;   
@@ -953,7 +981,7 @@ void Subsumption::parallelStrengthening(CoprocessorData& data)
   cerr << "c parallel strengthening with " << controller.size() << " threads" << endl;
   SubsumeWorkData workData[ controller.size() ];
   vector<Job> jobs( controller.size() );
-  vector< SpinLock > var_locks (data.nVars());
+  vector< SpinLock > var_locks (data.nVars() + 1); // 1 extra SpinLock for data
   unsigned int queueSize = strengthening_queue.size();
   unsigned int partitionSize = strengthening_queue.size() / controller.size();
   

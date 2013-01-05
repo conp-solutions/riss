@@ -513,7 +513,7 @@ inline void Clause::remove_lit(const Lit p)
     {
         if(data[i].lit == p)
         {
-            while(i < size())
+            while(i < size()-1)
             {
                 data[i] = data[i + 1];
                 ++i;
@@ -522,8 +522,8 @@ inline void Clause::remove_lit(const Lit p)
         }
     }
     shrink(1);
-    //if (has_extra() && size() > 1)
-    //    calcAbstraction();
+    if (has_extra() && size() > 1 && !header.learnt)
+        calcAbstraction();
 }
 
 inline void Clause::strengthen(Lit p)
