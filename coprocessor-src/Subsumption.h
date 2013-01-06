@@ -72,6 +72,7 @@ protected:
     int strengthSteps;    // number of clause comparisons in strengthening
     double processTime;   // statistic counter
     double strengthTime;  // statistic counter
+    double lockTime;      // statistic counter
     };
 
   bool hasToSubsume() const ;       // return whether there is something in the subsume queue

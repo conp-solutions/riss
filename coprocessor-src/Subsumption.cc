@@ -10,7 +10,8 @@ static const char* _cat = "CP3 SUBSUMPTION";
 // options
 static BoolOption  opt_naivStrength    (_cat, "cp3_naive_strength", "use naive strengthening", false);
 static BoolOption  opt_par_strength    (_cat, "cp3_par_strength", "use par strengthening", false);
-    
+static BoolOption  opt_lock_stats      (_cat, "cp3_lock_stats", "measure time waiting in spin locks", false);
+
 Subsumption::Subsumption( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation )
 : Technique( _ca, _controller )
 , propagation( _propagation )
@@ -256,7 +257,7 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
 {
     assert(start <= stop && stop <= strengthening_queue.size() && "invalid indices");
     assert(data.nVars() <= var_lock.size() && "var_lock vector to small");
-    
+    double & lock_time = stats.lockTime;
     if (doStatistics)
         stats.strengthTime = cpuTime() - stats.strengthTime;
     
@@ -279,9 +280,12 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
         if (c.can_be_deleted() || c.size() == 0)
             continue;
         Var fst = var(c[0]);
-        // lock 1st var
-        var_lock[fst].lock();
         
+        // lock 1st var
+        if (opt_lock_stats) lock_time = cpuTime() - lock_time;
+        var_lock[fst].lock();
+        if (opt_lock_stats) lock_time = cpuTime() - lock_time;
+
         // assure that clause can still strengthen
         if (c.can_be_deleted() || c.size() == 0)
         {
@@ -317,7 +321,9 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
                 // check if d_fst already locked by this thread, if not: lock
                 if (d_fst != fst)
                 {
+                   if (opt_lock_stats) lock_time = cpuTime() - lock_time;
                    var_lock[d_fst].lock();
+                   if (opt_lock_stats) lock_time = cpuTime() - lock_time;
 
                    // check if d has been deleted, while waiting for lock
                    if (d.can_be_deleted() || d.size() == 0)
@@ -365,7 +371,9 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
                     {
                         d.set_delete(true);
                         //data.lock();
+                        if (opt_lock_stats) lock_time = cpuTime() - lock_time; //TODO maybe extra data lock measure
                         data_lock.lock();
+                        if (opt_lock_stats) lock_time = cpuTime() - lock_time; //TODO maybe extra data lock measure
                         lbool state = data.enqueue(d[(pos + 1) % 2]);
                         data.removedClause(list[l_cr]);
                         data_lock.unlock();   
@@ -385,7 +393,9 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
 	                      }
                         d.removePositionSortedThreadSafe(pos);
                         // TODO to much overhead? 
+                        if (opt_lock_stats) lock_time = cpuTime() - lock_time; //TODO maybe extra data lock measure
                         data_lock.lock();
+                        if (opt_lock_stats) lock_time = cpuTime() - lock_time; //TODO maybe extra data lock measure
                         data.removedLiteral(neg, 1);
                         if ( ! d.can_subsume()) 
                         {
@@ -1079,6 +1089,7 @@ void Subsumption::parallelStrengthening(CoprocessorData& data)
     localStats[i].removedLiterals = 0;
     localStats[i].strengthSteps = 0;
     localStats[i].strengthTime = 0;
+    localStats[i].lockTime = 0;
     workData[i].stats = & localStats[i];
     jobs[i].function  = Subsumption::runParallelStrengthening;
     jobs[i].argument  = &(workData[i]);
