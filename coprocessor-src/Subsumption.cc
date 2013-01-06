@@ -163,9 +163,14 @@ void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int star
  * @param stop           stop index (+1) of work-queue, i.e. this index is not included
  * @param to_delete      this clauses, if not deleted, need to be set deleted afterwards
  * @param set_non_learnt this clauses, if not deleted, need to be set non-learnt afterwards 
+ * @param stats          local stats
  */
-void Subsumption :: par_subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, vector<CRef> & to_delete, vector< CRef > & set_non_learnt)
+void Subsumption :: par_subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, vector<CRef> & to_delete, vector< CRef > & set_non_learnt, struct SubsumeStatsData & stats, const bool doStatistics)
 {
+    if (doStatistics)
+    {
+        stats.processTime = cpuTime() - stats.processTime;   
+    }
     while (end > start)
     {
         --end;
@@ -191,7 +196,8 @@ void Subsumption :: par_subsumption_worker (CoprocessorData& data, unsigned int 
                 continue;
 	        } else if (ca[list[i]].can_be_deleted()) {
                 continue;
-	        } else  if (c.ordered_subsumes(ca[list[i]])) {
+	        } else if (c.ordered_subsumes(ca[list[i]])) {
+                if (doStatistics) ++stats.subsumeSteps;
                 // save at least one duplicate, by deleting the clause with smaller CRef
                 if (c.size() == ca[list[i]].size() && cr > list[i])
                 {
@@ -201,8 +207,15 @@ void Subsumption :: par_subsumption_worker (CoprocessorData& data, unsigned int 
                         to_delete.push_back(cr);
                         set_non_learnt.push_back(list[i]);
                     } 
-                    else 
+                    else
+                    { 
                         c.set_delete(true);
+                        if (doStatistics)
+                        {
+                            ++stats.subsumedClauses;
+                            stats.subsumedLiterals += c.size();
+                        }
+                    }
                     continue;
                 }
                 // save the non-learnt information
@@ -212,8 +225,14 @@ void Subsumption :: par_subsumption_worker (CoprocessorData& data, unsigned int 
                     to_delete.push_back(list[i]);
                     continue;
                 }
-                ca[list[i]].set_delete(true);  
-            }
+                ca[list[i]].set_delete(true);
+                if (doStatistics)
+                {
+                    ++stats.subsumedClauses;
+                    stats.subsumedLiterals += ca[list[i]].size();
+                }  
+            } else if (doStatistics)       
+                    ++stats.subsumeSteps;
         }
         //set can_subsume to false
         c.set_subsume(false);
@@ -221,7 +240,9 @@ void Subsumption :: par_subsumption_worker (CoprocessorData& data, unsigned int 
         // add Clause to non-learnt-queue
         if (learnt_subsumed_non_learnt)
             set_non_learnt.push_back(cr);
-    }    
+    }
+    if (doStatistics) 
+        stats.processTime = cpuTime() - stats.processTime;
 }
 
 
@@ -949,13 +970,14 @@ void Subsumption::initClause( const CRef cr )
 }
 
 
-void Subsumption::parallelSubsumption(CoprocessorData& data)
+void Subsumption::parallelSubsumption(CoprocessorData& data, const bool doStatistics)
 {
   cerr << "c parallel subsumption with " << controller.size() << " threads" << endl;
   SubsumeWorkData workData[ controller.size() ];
   vector<Job> jobs( controller.size() );
   vector< vector < CRef > > toDeletes  (controller.size());
   vector< vector < CRef > > nonLearnts (controller.size());
+  vector< struct SubsumeStatsData > localStats (controller.size());
   unsigned int queueSize = clause_processing_queue.size();
   unsigned int partitionSize = clause_processing_queue.size() / controller.size();
   // setup data for workers
@@ -966,6 +988,11 @@ void Subsumption::parallelSubsumption(CoprocessorData& data)
     workData[i].end   = (i + 1 == controller.size()) ? queueSize : (i+1) * partitionSize; // last element is not processed!
     workData[i].to_delete = & toDeletes[i];
     workData[i].set_non_learnt = & nonLearnts[i];
+    localStats[i].subsumedClauses = 0;
+    localStats[i].subsumedLiterals = 0;
+    localStats[i].subsumeSteps = 0;
+    localStats[i].processTime = 0;
+    workData[i].stats = & localStats[i];
     jobs[i].function  = Subsumption::runParallelSubsume;
     jobs[i].argument  = &(workData[i]);
   }
@@ -977,7 +1004,14 @@ void Subsumption::parallelSubsumption(CoprocessorData& data)
     {
         Clause & c = ca[toDeletes[i][j]]; 
         if (!c.can_be_deleted())
+        {
             c.set_delete(true);
+            if (doStatistics)
+            {
+                ++localStats[i].subsumedClauses;
+                localStats[i].subsumedLiterals += c.size();
+            }
+        }
     } 
   // Setting non-learnt information
   for (int i = 0; i < nonLearnts.size(); ++i)
@@ -992,7 +1026,7 @@ void Subsumption::parallelSubsumption(CoprocessorData& data)
 void* Subsumption::runParallelSubsume(void* arg)
 {
   SubsumeWorkData* workData = (SubsumeWorkData*) arg;
-  workData->subsumption->par_subsumption_worker(*(workData->data),workData->start,workData->end, *(workData->to_delete), *(workData->set_non_learnt));
+  workData->subsumption->par_subsumption_worker(*(workData->data),workData->start,workData->end, *(workData->to_delete), *(workData->set_non_learnt), *(workData->stats));
   return 0;
 }
 

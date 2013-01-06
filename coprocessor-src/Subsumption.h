@@ -63,11 +63,21 @@ public:
    */
 
 protected:
-  
+  // local stats for parallel execution
+  struct SubsumeStatsData {
+    int subsumedClauses;  // statistic counter
+    int subsumedLiterals; // sum up the literals of the clauses that have been subsumed
+    int removedLiterals;  // statistic counter
+    int subsumeSteps;     // number of clause comparisons in subsumption 
+    int strengthSteps;    // number of clause comparisons in strengthening
+    double processTime;   // statistic counter
+    double strengthTime;  // statistic counter
+    };
+
   bool hasToSubsume() const ;       // return whether there is something in the subsume queue
   lbool fullSubsumption(CoprocessorData& data);   // performs subsumtion until completion
   void subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, const bool doStatistics = true); // subsume certain set of elements of the processing queue, does not write to the queue
-  void par_subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, vector<CRef> & to_delete, vector< CRef > & set_non_learnt);
+  void par_subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, vector<CRef> & to_delete, vector< CRef > & set_non_learnt, struct SubsumeStatsData & stats, const bool doStatistics = true);
   
   bool hasToStrengthen() const ;    // return whether there is something in the strengthening queue
   lbool fullStrengthening(CoprocessorData& data); // performs strengthening until completion, puts clauses into subsumption queue
@@ -83,10 +93,11 @@ protected:
     vector<SpinLock> * var_locks;
     vector<CRef>*    to_delete;
     vector<CRef>*    set_non_learnt;
-  };
-
+    struct SubsumeStatsData* stats;
+    };
+  
   /** run parallel subsumption with all available threads */
-  void parallelSubsumption(CoprocessorData& data);
+  void parallelSubsumption(CoprocessorData& data, const bool doStatistics = true);
   void parallelStrengthening(CoprocessorData& data);  
 public:
 
