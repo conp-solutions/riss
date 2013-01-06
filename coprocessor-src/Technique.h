@@ -6,6 +6,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #define TECHNIQUE_HH
 
 #include "core/Solver.h"
+#include "utils/System.h"
 
 #include "coprocessor-src/CoprocessorThreads.h"
 
@@ -45,6 +46,10 @@ public:
    *  This method should be overwritten by all techniques that inherit this class
    */
   void destroy();
+  
+  /** This method should be used to print the statistics of the technique that inherits from this class
+   */
+  void printStatistics( ostream& stream );
   
 protected:
   /** call this method to indicate that the technique has applied changes to the formula */
@@ -112,6 +117,15 @@ inline bool Technique::isInitializedTechnique()
 inline void Technique::destroy()
 {
   assert( false && "This method has not been implemented." ); 
+}
+
+inline void Technique::printStatistics(ostream& stream)
+{
+  /* // example output
+  stream << "c [STAT] EE " << eeTime << " s, " << steps << " steps" << endl;
+  stream << "c [STAT] EE-gate " << gateTime << " s, " << gateSteps << " steps" << endl;
+  */
+  assert( false && "This method has not been implemented" );
 }
 
 inline uint32_t Technique::lastDeleteTime()

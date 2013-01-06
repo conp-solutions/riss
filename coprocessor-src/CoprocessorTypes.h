@@ -7,6 +7,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "core/Solver.h"
 
+#include "utils/System.h"
+
 #include "coprocessor-src/LockCollection.h"
 
 #include <vector>
@@ -706,7 +708,7 @@ inline void CoprocessorData::addEquivalences(const vector< Lit >& list)
 
 inline void CoprocessorData::addEquivalences(const Lit& l1, const Lit& l2)
 {
-  if( global_debug_out ) cerr << "c set equi: " << l1 << " == " << l2 << endl;
+  if( global_debug_out ) cerr << "c [DATA] set equi: " << l1 << " == " << l2 << endl;
   equivalences.push_back(l1);
   equivalences.push_back(l2);
   equivalences.push_back( lit_Undef ); // termination symbol!

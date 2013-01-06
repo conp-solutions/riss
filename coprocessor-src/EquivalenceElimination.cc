@@ -10,12 +10,13 @@ using namespace Coprocessor;
 
 static const char* _cat = "COPROCESSOR 3 - EE";
 
-static IntOption  opt_level            (_cat, "cp3_ee_level",    "EE on BIG, gate probing, structural hashing", 3, IntRange(0, 3));
-static BoolOption opt_old_circuit      (_cat, "cp3_old_circuit", "do old circuit extraction", false);
-static BoolOption opt_eagerEquivalence (_cat, "cp3_eagerGates",  "do old circuit extraction", true);
-static StringOption aagFile       (_cat, "ee_aag", "write final circuit to this file");
+static IntOption  opt_level            (_cat, "cp3_ee_level",      "EE on BIG, gate probing, structural hashing", 3, IntRange(0, 3));
+static BoolOption opt_old_circuit      (_cat, "cp3_old_circuit",   "do old circuit extraction", false);
+static BoolOption opt_eagerEquivalence (_cat, "cp3_eagerGates",    "do old circuit extraction", true);
+static BoolOption opt_eeGateBigFirst   (_cat, "cp3_BigBeforeGate", "detect binary equivalences before going for gates", true);
+static StringOption aagFile            (_cat, "ee_aag", "write final circuit to this file");
 /// enable this parameter only during debug!
-static BoolOption debug_out          (_cat, "ee_debug", "write final circuit to this file",false);
+static BoolOption debug_out            (_cat, "ee_debug", "write final circuit to this file",false);
 
 
 static const int eeLevel = 1;
@@ -24,6 +25,10 @@ static const int eeLevel = 1;
 
 EquivalenceElimination::EquivalenceElimination(ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation, Coprocessor::Subsumption& _subsumption)
 : Technique(_ca,_controller)
+, gateSteps(0)
+, gateTime(0)
+, eeTime(0)
+, steps(0)
 , eqLitInStack(0)
 , eqInSCC(0)
 , eqIndex(0)
@@ -35,6 +40,8 @@ EquivalenceElimination::EquivalenceElimination(ClauseAllocator& _ca, ThreadContr
 void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
 {
   // TODO continue here!!
+  
+  eeTime  = cpuTime() - eeTime;
   
   if( isToAnalyze == 0 ) isToAnalyze = (char*) malloc( sizeof( char ) * data.nVars()  );
   else isToAnalyze = (char*) realloc( isToAnalyze, sizeof( char ) * data.nVars()  );
@@ -69,7 +76,7 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
       gates.clear();
 
       iter ++;
-      cerr << "c run " << iter << " round of circuit equivalences" << endl;
+      // cerr << "c run " << iter << " round of circuit equivalences" << endl;
 
       if( debug_out ) {
 	cerr << endl << "====================================" << endl;
@@ -85,7 +92,7 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
       Circuit circ(ca); 
       
       circ.extractGates(data, gates);
-      cerr << "c found " << gates.size() << " gates" << endl ;
+      // cerr << "c found " << gates.size() << " gates" << endl ;
       if ( debug_out ) {
 	cerr << endl << "==============================" << endl;
       data.log.log(eeLevel,"found gates", gates.size());
@@ -112,19 +119,19 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
 	if( debug_out ) cerr << "c run miter EQ method" << endl;
 	moreEquivalences = findGateEquivalencesNew( data, gates );
 	if( moreEquivalences )
-	  cerr << "c found new equivalences with the gate method!" << endl;
+	  if( debug_out ) cerr << "c found new equivalences with the gate method!" << endl;
 	if( !data.ok() )
-	  if( debug_out ) cerr << "stae of formula is UNSAT!" << endl;
+	  if( debug_out ) cerr << "state of formula is UNSAT!" << endl;
       }
       replacedBy = oldReplacedBy;
       
-      if( !data.ok() ) return;
+      if( !data.ok() ) { eeTime  = cpuTime() - eeTime; return; }
       // after we extracted more information from the gates, we can apply these additional equivalences to the forula!
       if ( !moreEquivalences && iter > 1 ) {
-	cerr << "c no more gate equivalences found" << endl;
+	// cerr << "c no more gate equivalences found" << endl;
 	break;
       } else {
-	cerr << "c more equi " << moreEquivalences << " iter= " << iter << endl;
+	// cerr << "c more equi " << moreEquivalences << " iter= " << iter << endl;
       }
       moreEquivalences = false;
       bool doRepeat = false;
@@ -135,9 +142,9 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
 	moreEquivalences = doRepeat || moreEquivalences;
 	eeIter ++;
       } while ( doRepeat && data.ok() );
-      cerr << "c moreEquivalences in iteration " << iter << " : " << moreEquivalences << " with BIGee iterations " << eeIter << endl;
+      // cerr << "c moreEquivalences in iteration " << iter << " : " << moreEquivalences << " with BIGee iterations " << eeIter << endl;
     }
-    if( aagFile != "" )
+    if( ((const char*)aagFile) != 0  )
       writeAAGfile(data);
   }
   
@@ -147,7 +154,7 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
       findEquivalencesOnBig(data);                              // finds SCC based on all literals in the eqDoAnalyze array!
     } while ( applyEquivalencesToFormula(data ) && data.ok() ); // will set literals that have to be analyzed again!
     
-    cerr << "c ok=" << data.ok() << " toPropagate=" << data.hasToPropagate() <<endl;
+    // cerr << "c ok=" << data.ok() << " toPropagate=" << data.hasToPropagate() <<endl;
     assert( (!data.ok() || !data.hasToPropagate() )&& "After these operations, all propagation should have been done" );
     
     
@@ -162,10 +169,12 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
 	cerr << "Solver Trail: " << endl;
 	data.printTrail(cerr);
 	cerr << endl << "====================================" << endl << endl;
+	cerr << endl;
       }
-     cerr << endl;
+     
     
   }
+  eeTime  = cpuTime() - eeTime;
 }
 
 void EquivalenceElimination::initClause(const CRef cr)
@@ -175,14 +184,23 @@ void EquivalenceElimination::initClause(const CRef cr)
 
 bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorData& data, vector< Circuit::Gate >& gates)
 {
+  gateTime  = cpuTime() - gateTime;
   vector< vector<int32_t> > varTable ( data.nVars() ); // store for each variable which gates have this variable as input
   vector< unsigned int > bitType ( data.nVars(), 0 );  // upper 4 bits are a counter to count how often this variable has been considered already as output
  
   const bool enqOut = true;
   const bool enqInp  = true;
   
+  if( debug_out ) cerr << "c has to Propagate: " << data.hasToPropagate() << endl;
   
   int oldEquivalences = data.getEquivalences().size();
+  
+  if( opt_eeGateBigFirst ) {
+    if( debug_out ) cerr << "c do BIG extraction " << endl;
+    do { 
+      findEquivalencesOnBig(data);                              // finds SCC based on all literals in the eqDoAnalyze array!
+    } while ( applyEquivalencesToFormula(data ) && data.ok() ); // will set literals that have to be analyzed again!
+  }
   
   // have gates per variable
   for( int i = 0 ; i < gates.size() ; ++ i ) {
@@ -257,7 +275,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	if( debug_out ) cerr << "c check gate ";
 	if( debug_out ) g.print(cerr);
 	Lit a = getReplacement( g.a() ); Lit b = getReplacement( g.b() ); Lit x = getReplacement( g.x() ); 
-	
+	if( debug_out ) cerr << "c WHICH is rewritten " << x << " <-> AND(" << a << "," << b << ")" << endl;
 	
 	// assigned value
 	if ( data.value(a) != l_Undef || data.value(b) != l_Undef || data.value(x) != l_Undef) {
@@ -325,6 +343,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
  	  Lit oa = getReplacement( other.a() ); 
  	  Lit ob = getReplacement( other.b() ); 
  	  Lit ox = getReplacement( other.x() ); 
+	  if( debug_out ) cerr << "c WHICH is rewritten " << ox << " <-> AND(" << oa << "," << ob << ")" << endl;
 	  // assigned value
 	  if ( data.value(oa) != l_Undef || data.value(ob) != l_Undef || data.value(ox) != l_Undef) {
 	    if( debug_out ) { cerr << "c gate has assigned inputs" << endl; other.print(cerr); }
@@ -355,6 +374,10 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	    // do not reason with assigned gates!
 	    continue;
 	  }
+	  
+	  // do some statistics
+	  gateSteps ++;
+	  
 	  /// do simplify gate!
 	  if( oa == ob ) {
 	    if( debug_out ) cerr << "c found equivalence based on equivalent inputs" << endl;
@@ -542,6 +565,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 		if( x == ~ox ) {
 		  data.setFailed();
 		  cerr << "c failed, because AND miter procedure found that " << x << " is equivalent to " << ox << endl;
+		  gateTime  = cpuTime() - gateTime;
 		  return true;
 		} else {
 		  if( debug_out ) cerr << "c found equivalence " << x << " == " << ox << " again" << endl;
@@ -554,7 +578,9 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
       }
   }
   
-  return data.getEquivalences().size() - oldEquivalences > 0;
+  if( debug_out ) cerr << "c OLD equis: " << oldEquivalences << "  current equis: " << data.getEquivalences().size() << " hasToPropagate" << data.hasToPropagate() << endl;
+  gateTime  = cpuTime() - gateTime;
+  return (data.getEquivalences().size() - oldEquivalences > 0) || data.hasToPropagate();
 }
 
 bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& data, vector< Circuit::Gate > gates)
@@ -1879,14 +1905,17 @@ EEapplyNextClause:; // jump here, if a tautology has been found
        // take care of unit propagation and subsumption / strengthening
     if( data.hasToPropagate() ) { // after each application of equivalent literals perform unit propagation!
 	 resetVariables = true;
+	 newBinary = true; // potentially, there are new binary clauses
 	 if( propagation.propagate(data,true) == l_False ) return newBinary;
     }
     if( subsumption.hasWork() ) {
 	subsumption.subsumeStrength(data);
+	newBinary = true; // potentially, there are new binary clauses
     	resetVariables = true;
     }
     if( data.hasToPropagate() ) { // after each application of equivalent literals perform unit propagation!
       resetVariables = true;
+      newBinary = true; // potentially, there are new binary clauses
       if( propagation.propagate(data,true) == l_False ) return newBinary;
     }
 
@@ -1981,4 +2010,11 @@ void EquivalenceElimination::writeAAGfile(CoprocessorData& data)
     AAG << lx << " " << la << " " << lb << endl;
   }
   AAG.close();
+}
+
+
+void EquivalenceElimination::printStatistics(ostream& stream)
+{
+  stream << "c [STAT] EE " << eeTime << " s, " << steps << " steps" << endl;
+  stream << "c [STAT] EE-gate " << gateTime << " s, " << gateSteps << " steps" << endl;
 }

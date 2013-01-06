@@ -22,6 +22,10 @@ class Propagation : public Technique  {
    */
   uint32_t lastPropagatedLiteral;  // store, which literal position in the trail has been propagated already to avoid duplicate work
   
+  int removedClauses;  // number of clauses that have been removed due to unit propagation
+  int removedLiterals; // number of literals that have been removed due to unit propagation
+  double processTime;  // seconds spend on unit propagation
+  
 public:
   
   Propagation( ClauseAllocator& _ca, ThreadController& _controller );
@@ -35,6 +39,8 @@ public:
   lbool propagate(CoprocessorData& data, bool sort = false);
   
   void initClause( const CRef cr );
+  
+  void printStatistics(ostream& stream);
   
 protected:
 };

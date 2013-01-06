@@ -15,19 +15,29 @@ static const int cceLevel = 1;
 
 ClauseElimination::ClauseElimination(ClauseAllocator& _ca, ThreadController& _controller)
 : Technique( _ca, _controller )
+, steps(0)
+, processTime(0)
+, removedClauses(0)
+, removedBceClauses(0)
 {
 
 }
 
 void ClauseElimination::eliminate(CoprocessorData& data)
 {
+  processTime = cpuTime() - processTime;
   // TODO: have a better scheduling here! (if a clause has been removed, potentially other clauses with those variables can be eliminated as well!!, similarly to BCE!)
   if( opt_level == 0 ) return; // do not run anything!
   WorkData wData( data.nVars() );
   for( int i = 0 ; i < data.getClauses().size(); ++ i )
   {
     eliminate(data, wData, data.getClauses()[i] );
+    if( !data.unlimited() && steps > opt_steps ) break;
   }
+  steps += wData.steps;
+  removedBceClauses += wData.removedBceClauses;
+  removedClauses += wData.removedClauses;
+  processTime = cpuTime() - processTime;
 }
 
 bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::WorkData& wData, Minisat::CRef cr)
@@ -35,6 +45,7 @@ bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::Work
   assert(opt_level > 0 && "level needs to be higher than 0 to run elimination" );
   // put all literals of the clause into the mark-array and the other vectors!
   const Clause& c = ca[cr];
+  if( c.can_be_deleted() ) return false;
   wData.reset();
   data.log.log( cceLevel, "do cce on", c );
   for( int i = 0; i < c.size(); ++ i ) {
@@ -57,6 +68,7 @@ bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::Work
         if( lList[j] == cr ) continue;                                            // to not work on the same clause twice!
 	const Clause& cj = ca[lList[j]];
 	if( cj.can_be_deleted() ) continue;                                       // act as the clause is not here
+	wData.steps ++;
 	data.log.log(cceLevel,"analyze",cj);
 	if( cj.size() > wData.toProcess.size() + 1 ) continue;                    // larger clauses cannot add a contribution to the array!
 	Lit alaLit = lit_Undef;
@@ -101,6 +113,7 @@ bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::Work
       for( int j = 0 ; j < lList.size(); ++ j ) { // TODO: add step counter here!
         const Clause& cj = ca[lList[j]];
 	if( cj.can_be_deleted() ) continue;                                       // act as the clause is not here
+	wData.steps ++;
 	if( firstClause ) {                                                       // first clause fills the array, the other shrink it again
           data.log.log(cceLevel,"analyze as first",cj);
           for( int j = 0 ; j < cj.size(); ++j ) {
@@ -134,8 +147,6 @@ bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::Work
 	    wData.cla.resize(oldClaSize); break;
 	  }
 	  wData.cla.resize( current );        // remove all other literals from the vector!
-
-          // TODO: take care of the cla vector
 	}
 ClaNextClause:;
       } // processed all clauses of current literal inside of CLA
@@ -172,6 +183,7 @@ ClaNextClause:;
     if( doRemoveClause ) {
       // TODO: take care that BCE clause is also written to undo information! 
       data.log.log( cceLevel, "cce with BCE was able to remove clause", ca[cr]);
+      wData.removedBceClauses ++;
     }
   }
   // TODO: put undo to real undo information!
@@ -180,15 +192,11 @@ ClaNextClause:;
     ca[cr].set_delete(true);
     data.removedClause( cr );
     data.addToExtension( wData.toUndo );
+    wData.removedClauses ++;
+    return true;
+  } else {
+    return false; 
   }
-  
-  // sketch of the method:
-  // as long as possible, do ala!
-    // always check for ATE!
-  // then, do cla
-    // always check for ATE!
-  // finally, test abce!
-  // if something happened, push to undo
 }
 
 bool ClauseElimination::markedBCE(const CoprocessorData& data, const Lit& l, const MarkArray& array)
@@ -221,3 +229,11 @@ void* ClauseElimination::runParallelElimination(void* arg)
   assert( false && "Method not yet implemented" );
 }
 
+void ClauseElimination::printStatistics(ostream& stream)
+{
+  stream << "c [STAT] CCE " << processTime << " s, " 
+			    << removedClauses << " cls, " 
+			    << removedBceClauses << " nonEE-cls, "
+			    << steps << " steps"
+			    << endl;
+}

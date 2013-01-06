@@ -81,7 +81,7 @@ protected:
   inline void printClause(FILE * fd, CRef cr);
   inline void printLit(FILE * fd, int l);
 
-
+  void printFormula( const string& headline );
 };
 
 };

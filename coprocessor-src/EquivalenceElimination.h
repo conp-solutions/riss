@@ -26,7 +26,11 @@ namespace Coprocessor {
  */
 class EquivalenceElimination : public Technique {
   
-  int steps;                   // how many steps is the worker allowed to do
+  uint64_t gateSteps;
+  double gateTime;
+  double eeTime;
+  
+  uint64_t steps;                   // how many steps is the worker allowed to do
 
   char* eqLitInStack;			/// mark whether an element is in the stack
   char* eqInSCC;			/// indicate whether a literal has already been found in another SCC (than it cannot be in the current one)
@@ -53,6 +57,9 @@ public:
 
   void initClause(const CRef cr); // inherited from Technique
 
+  /** inherited from @see Technique */
+  void printStatistics( ostream& stream );
+  
 protected:
 
   /** apply equivalences stored in data object to formula
