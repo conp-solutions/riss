@@ -80,10 +80,10 @@ protected:
   void par_subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, vector<CRef> & to_delete, vector< CRef > & set_non_learnt, struct SubsumeStatsData & stats, const bool doStatistics = true);
   
   bool hasToStrengthen() const ;    // return whether there is something in the strengthening queue
-  lbool fullStrengthening(CoprocessorData& data); // performs strengthening until completion, puts clauses into subsumption queue
+  lbool fullStrengthening(CoprocessorData& data, const bool doStatistics = true); // performs strengthening until completion, puts clauses into subsumption queue
   void strengthening_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics = true);
-  void par_strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int stop, vector< SpinLock > & var_lock); 
-  void par_nn_strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int end, vector< SpinLock > & var_lock);
+  void par_strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int stop, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, const bool doStatistics = true); 
+  void par_nn_strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int end, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, const bool doStatistics = true);
   /** data for parallel execution */
   struct SubsumeWorkData {
     Subsumption*     subsumption; // class with code

@@ -252,10 +252,14 @@ void Subsumption :: par_subsumption_worker (CoprocessorData& data, unsigned int 
  * @param var_lock vector of locks for each variable
  *
  */
-void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int stop, vector< SpinLock > & var_lock) 
+void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int stop, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, const bool doStatistics) 
 {
     assert(start <= stop && stop <= strengthening_queue.size() && "invalid indices");
     assert(data.nVars() <= var_lock.size() && "var_lock vector to small");
+    
+    if (doStatistics)
+        stats.strengthTime = cpuTime() - stats.strengthTime;
+    
     deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
     SpinLock & data_lock = var_lock[data.nVars()];
     while (stop > start)
@@ -332,6 +336,8 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
                 
                 // now d_fst is locked and for sure first variable
                 // do subsumption check
+                if (doStatistics) ++stats.strengthSteps;
+
                 int l1 = 0, l2 = 0, pos = -1;
                 while (l1 < c.size() && l2 < d.size())
                 {
@@ -353,6 +359,7 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
                 if (l1 == c.size())
                 {
                     assert(pos != -1 && "Position invalid");
+                    if (doStatistics) ++stats.removedLiterals;
                     // unit found
                     if (d.size() == 2)
                     {
@@ -403,6 +410,7 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
         var_lock[fst].unlock();
         
     }
+    if (doStatistics) stats.strengthTime = cpuTime() - stats.strengthTime;
 }
 
 /** lock-based parallel non-naive strengthening-methode
@@ -411,10 +419,12 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
  * @param end where to stop strengthening
  * @param var_lock vector of locks for each variable
  */
-void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int end, vector< SpinLock > & var_lock)
+void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int end, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, const bool doStatistics)
 { 
   assert(start <= end && end <= strengthening_queue.size() && "invalid indices");
   assert(data.nVars() <= var_lock.size() && "var_lock vector to small");
+  if (doStatistics)
+    stats.strengthTime = cpuTime() - stats.strengthTime;
  
   int si, so;           // indices used for "can be strengthened"-testing
   int negated_lit_pos;  // index of negative lit, if we find one
@@ -495,7 +505,7 @@ void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned in
       }
       
       // now other_fst is locked and for sure first variable
-
+      if (doStatistics) ++stats.strengthSteps;
       // test if we can strengthen other clause
       si = 0;
       so = 0;
@@ -530,6 +540,8 @@ void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned in
       // if subsumption successful, strengthen
       if (negated_lit_pos > 0 && si == strengthener.size())
       {
+          
+          if (doStatistics) ++stats.removedLiterals;
           // unit found
           if (other.size() == 2)
           {
@@ -609,6 +621,8 @@ void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned in
       
       // now other_fst is locked and for sure first variable
 
+      if (doStatistics) ++stats.strengthSteps;
+
       si = 1;
       so = 0;
       negated_lit_pos = 0;
@@ -641,7 +655,9 @@ void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned in
         else
           ++so;
       }
-      if (si == strengthener.size()){
+      if (si == strengthener.size())
+      {
+          if (doStatistics) ++stats.removedLiterals;
           // unit found
           if (other.size() == 2)
           {
@@ -690,6 +706,7 @@ void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned in
     // free lock of first variable
     var_lock[fst].unlock();
   }
+  if (doStatistics) stats.strengthTime = cpuTime() - stats.strengthTime;
 }
 
 bool Subsumption::hasToStrengthen() const
@@ -701,7 +718,7 @@ bool Subsumption::hasToStrengthen() const
  * @param data occurrenceslists
  * @return 
  */
-lbool Subsumption::fullStrengthening(CoprocessorData& data)
+lbool Subsumption::fullStrengthening(CoprocessorData& data, const bool doStatistics)
 {
     /*
      * TODO strengthening with min oppurances-lits
@@ -715,6 +732,7 @@ lbool Subsumption::fullStrengthening(CoprocessorData& data)
     strengthening_worker(data, 0, strengthening_queue.size());
     return l_Undef;
   }
+    if (doStatistics) strengthTime = cpuTime() - strengthTime;
     deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
     //for every clause:
     for (int i = 0; i < strengthening_queue.size();)
@@ -743,9 +761,11 @@ lbool Subsumption::fullStrengthening(CoprocessorData& data)
                 Clause & other = ca[list[k]];
                 if (other.can_be_deleted())     // dont check if this clause can be deleted
                     continue;
+                if (doStatistics) ++strengthSteps;
                 if (c.ordered_subsumes(other))    // check for subsumption
                 {
-                    other.remove_lit(neg_lit);     // strenghten clause
+                    if (doStatistics) ++removedLiterals;
+                    other.remove_lit(neg_lit);     // strengthen clause
 		            if( global_debug_out ) cerr << "c remove " << neg_lit << " from clause " << other << endl;
                     if(other.size() == 1)
                     {
@@ -780,6 +800,7 @@ lbool Subsumption::fullStrengthening(CoprocessorData& data)
         }
         c.set_strengthen(false);
     }
+  if (doStatistics) strengthTime = cpuTime() - strengthTime;
   // no result to tell to the outside
   return l_Undef;   
 }
@@ -791,6 +812,8 @@ lbool Subsumption::fullStrengthening(CoprocessorData& data)
  */
 void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics)
 {
+  if (doStatistics)
+      strengthTime = cpuTime() - strengthTime;
   int si, so;           // indices used for "can be strengthened"-testing
   int negated_lit_pos;  // index of negative lit, if we find one
   deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
@@ -820,6 +843,7 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
       if (other.can_be_deleted() || list[j] == cr)
         continue;
       // test if we can strengthen other clause
+      if (doStatistics) ++strengthSteps;
       si = 0;
       so = 0;
       negated_lit_pos = 0;  //the position for neglit cant be 0, so we will use this as "neglit not found"
@@ -851,6 +875,7 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
       }
       if (negated_lit_pos > 0 && si == strengthener.size())
       {
+        if (doStatistics) ++ removedLiterals;
         // if neglit found and we went through all lits of strengthener, then the other clause can be strengthened
         if(!other.can_subsume())
         {
@@ -890,6 +915,7 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
       Clause& other = ca[list_neg[j]];
       if (other.can_be_deleted())
         continue;
+      if (doStatistics) ++ strengthSteps;
       si = 1;
       so = 0;
       negated_lit_pos = 0;
@@ -914,6 +940,7 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
       }
       if (si == strengthener.size())
       {
+        if (doStatistics) ++removedLiterals;
         // other can be strengthened
         if(!other.can_subsume())
         {
@@ -949,6 +976,7 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
     }
     strengthener.set_strengthen(false);
   }
+  if (doStatistics) strengthTime = cpuTime() - strengthTime;
 }
 
 void Subsumption::addClause(const Minisat::CRef cr)
@@ -1035,6 +1063,7 @@ void Subsumption::parallelStrengthening(CoprocessorData& data)
   //fullStrengthening(data);
   cerr << "c parallel strengthening with " << controller.size() << " threads" << endl;
   SubsumeWorkData workData[ controller.size() ];
+  vector< struct SubsumeStatsData > localStats (controller.size());
   vector<Job> jobs( controller.size() );
   vector< SpinLock > var_locks (data.nVars() + 1); // 1 extra SpinLock for data
   unsigned int queueSize = strengthening_queue.size();
@@ -1047,6 +1076,10 @@ void Subsumption::parallelStrengthening(CoprocessorData& data)
     cerr << "c p s thread " << i << " running from " << workData[i].start << " to " << workData[i].end << endl;
     workData[i].data  = &data; 
     workData[i].var_locks = & var_locks;
+    localStats[i].removedLiterals = 0;
+    localStats[i].strengthSteps = 0;
+    localStats[i].strengthTime = 0;
+    workData[i].stats = & localStats[i];
     jobs[i].function  = Subsumption::runParallelStrengthening;
     jobs[i].argument  = &(workData[i]);
   }
@@ -1059,6 +1092,6 @@ void Subsumption::parallelStrengthening(CoprocessorData& data)
 void* Subsumption::runParallelStrengthening(void* arg)
 {
     SubsumeWorkData* workData = (SubsumeWorkData*) arg;
-    workData->subsumption->par_strengthening_worker(*(workData->data),workData->start,workData->end, *(workData->var_locks));
+    workData->subsumption->par_strengthening_worker(*(workData->data),workData->start,workData->end, *(workData->var_locks), *(workData->stats));
     return 0;
 }
