@@ -1,6 +1,8 @@
 #include "coprocessor-src/Coprocessor.h"
 #include <stdio.h>
+
 using namespace Coprocessor;
+
 void Preprocessor::outputFormula(const char *file)
 {
     FILE* f = fopen(file, "wr");
@@ -12,6 +14,11 @@ void Preprocessor::outputFormula(const char *file)
 
 void Preprocessor::printFormula(FILE * fd) 
 {
+    if( !data.ok() ) {
+      fprintf(fd,"p cnf 0 1\n0\n");
+      return;
+    }
+  
     vec<Lit> & trail = solver->trail;
     vec<CRef> & clauses = solver->clauses;
     
