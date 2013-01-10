@@ -29,6 +29,9 @@ doc: clean
 
 tar: clean
 	tar czvf minisat22.tar.gz core  HOWTO  LICENSE  Makefile mtl  README  simp  splittings  utils
+	
+cotar: clean
+	tar czvf coprocessor3.tar.gz core LICENSE  Makefile mtl  README  simp  utils coprocessor-src
 
 # clean up after solving
 clean:
