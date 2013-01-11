@@ -126,6 +126,10 @@ bool Subsumption::hasWork() const
 
 void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, const bool doStatistics)
 {
+    if (doStatistics)
+    {
+        processTime = cpuTime() - processTime;   
+    }   
     for (; end > start;)
     {
         --end;
@@ -151,25 +155,29 @@ void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int star
 	        } else if (ca[list[i]].can_be_deleted()) {
                 continue;
 	        } else if (c.ordered_subsumes(ca[list[i]])) {
-                if (c.size() == ca[list[i]].size() && cr > list[i]) //TODO disable this in non-parallel worker
+                if ( doStatistics ) ++ subsumeSteps;
+                if (doStatistics)
                 {
-                    c.set_delete(true);
-                    if (!c.learnt() && ca[list[i]].learnt())
-                        ca[list[i]].set_learnt(false);
-                    continue;
+                    ++subsumedClauses;
+                    subsumedLiterals += ca[list[i]].size();
                 }
                 ca[list[i]].set_delete(true); 
-                if( doStatistics ) data.removedClause(list[i]);  // tell statistic about clause removal
+                data.removedClause(list[i]);  // tell statistic about clause removal
 		        if( global_debug_out ) cerr << "c clause " << ca[list[i]] << " is deleted by " << c << endl;
                 if (!ca[list[i]].learnt() && c.learnt())
                 {
                     c.set_learnt(false);
                 }
-            }
+            } else
+                if (doStatistics) ++subsumeSteps;
         }
         //set can_subsume to false
         c.set_subsume(false);
-    }    
+    }  
+    if (doStatistics)
+    {
+        processTime = cpuTime() - processTime;   
+    }  
 }
 
 /**
