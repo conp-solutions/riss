@@ -142,17 +142,6 @@ int main(int argc, char** argv)
             printf("|                                                                             |\n"); }
 
         // do coprocessing here!
-            
-        if (!S.okay()){
-            if (res != NULL) fprintf(res, "UNSAT\n"), fclose(res);
-            if (S.verbosity > 0){
-                printf("===============================================================================\n");
-                printf("Solved by simplification\n");
-                printStats(S);
-                printf("\n"); }
-            printf("UNSATISFIABLE\n");
-            exit(20);
-        }
 
         // TODO: do not reduce the variables withing the formula!
         if (dimacs){
@@ -162,7 +151,17 @@ int main(int argc, char** argv)
             preprocessor.outputFormula((const char*) dimacs);
             if (S.verbosity > 0)
                 printStats(S);
-            exit(0);
+        }
+        
+        if (!S.okay()){
+            if (res != NULL) fprintf(res, "UNSAT\n"), fclose(res);
+            if (S.verbosity > 0){
+                printf("===============================================================================\n");
+                printf("Solved by simplification\n");
+                printStats(S);
+                printf("\n"); }
+            printf("UNSATISFIABLE\n");
+            exit(20);
         }
 
         // no solving in coprocessor

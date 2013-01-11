@@ -9,12 +9,13 @@ README
 LICENSE
 
 ================================================================================
-BUILDING: (release version: without assertions, statically linked, etc)
+BUILDING: 
 
-export MROOT=<minisat-dir>              (or setenv in cshell)
-cd { core | simp }
-gmake rs
-cp minisat_static <install-dir>/minisat
+To build minisat:
+make minisat
+
+To build coprocessor:
+make coprocessor
 
 ================================================================================
 EXAMPLES:
@@ -22,3 +23,8 @@ EXAMPLES:
 Run minisat with same heuristics as version 2.0:
 
 > minisat <cnf-file> -no-luby -rinc=1.5 -phase-saving=0 -rnd-freq=0.02
+
+Run minisat with coprocessor as preprocessor
+
+> minisat <cnf-file> -enabled_cp3
+
