@@ -9,9 +9,9 @@
 
 # set this to the right values!
 #param="-enabled_cp3 -subsimp -cp3_naive_strength -inprocess "
-param="-enabled_cp3 -subsimp -cp3_threads=2 -inprocess -cp3_par_strength"
+#param="-enabled_cp3 -subsimp -cp3_threads=2 -inprocess -cp3_par_strength"
 #param="-enabled_cp3 -ee -log=0 -no-cp3_extBlocked -cp3_extNgtInput -no-inprocess -cp3_eagerGates"
-
+param="-enabled_cp3 -subsimp -cp3_naive_strength -inprocess"
 #
 # run the program
 #

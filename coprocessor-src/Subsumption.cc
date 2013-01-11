@@ -316,7 +316,7 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
             localQueue.pop_back();
         }
  
-        Clause & c = ca[strengthening_queue[stop]];
+        Clause & c = ca[cr];//strengthening_queue[stop]];
         lock_strengthener:
         if (c.can_be_deleted() || c.size() == 0)
             continue;
@@ -340,15 +340,26 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
             var_lock[fst].unlock();
             goto lock_strengthener;
         }
+        
+        // search lit with minimal occurrences
+        Lit min = c[0];
+        for (int j = 1; j < c.size(); ++j)
+            if (data[min] > data[c[j]])
+                min = c[j];
+
 
         for (int l = 0; l < c.size(); ++l)
         {
-            Lit neg = ~ c[l];
+            Lit neg = ~(c[l]);
             c[l] = neg;
-            vector< CRef> & list = data.list(neg);
+            //use minimal list, or the negated list if  min == c[l] 
+            vector< CRef> & list = (neg == ~min) ? data.list(neg) : data.list(min);
+            // vector< CRef> & list = data.list(neg);
             for (int l_cr = 0; l_cr < list.size(); ++l_cr)
             {
-                assert(list[l_cr] != strengthening_queue[stop] && "expect no tautologies here");
+                if (list[l_cr] == cr)
+                    continue;
+                assert(list[l_cr] != cr && "expect no tautologies here");
                 Clause & d = ca[list[l_cr]];
                 lock_to_strengthen:
                 if (d.can_be_deleted() || d.size() == 0)
@@ -384,7 +395,7 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
                 // now d_fst is locked and for sure first variable
                 // do subsumption check
                 if (doStatistics) ++stats.strengthSteps;
-
+                
                 int l1 = 0, l2 = 0, pos = -1;
                 while (l1 < c.size() && l2 < d.size())
                 {
@@ -801,14 +812,24 @@ lbool Subsumption::fullStrengthening(CoprocessorData& data, const bool doStatist
         if (c.can_be_deleted() || !c.can_strengthen())
             continue;   // dont check if it cant strengthen or can be deleted
         // for every literal in this clause:
+        
+        // search for lit with minimal occurrences;
+        Lit min = c[0];
+        for (int j = 1; j < c.size(); ++j)
+            if (data[min] > data[c[j]])
+                min = c[j];
+
         for (int j = 0; j < c.size(); ++j)
         {
             // negate this literal and check for subsumptions for every occurrence of its negation:
             Lit neg_lit = ~c[j];
             c[j] = neg_lit;     // temporarily change lit for subsumptiontest
-            vector<CRef> & list = data.list(neg_lit);  // get occurrences of this lit
+            vector<CRef> & list = (neg_lit == ~min) ? data.list(neg_lit) : data.list(min);  // get occurrences of this lit
+            //vector<CRef> & list = data.list(neg_lit);  // get occurrences of this lit
             for (unsigned int k = 0; k < list.size(); ++k)
             {
+                if (list[k] == cr)
+                    continue;
                 Clause & other = ca[list[k]];
                 if (other.can_be_deleted())     // dont check if this clause can be deleted
                     continue;
@@ -818,11 +839,13 @@ lbool Subsumption::fullStrengthening(CoprocessorData& data, const bool doStatist
                     if (doStatistics) ++removedLiterals;
                     other.remove_lit(neg_lit);     // strengthen clause
 		            if( global_debug_out ) cerr << "c remove " << neg_lit << " from clause " << other << endl;
+                    //if( global_debug_out ) cerr << "c used strengthener (lit negated) " << c << endl;
                     if(other.size() == 1)
                     {
                       // propagate if clause is unit
+                      other.set_delete(true);
                       data.enqueue(other[0]);
-                      propagation.propagate(data, true);
+                      //propagation.propagate(data, true); -> causes problems if effecting c
                     } 
                     else
                     {
@@ -840,14 +863,18 @@ lbool Subsumption::fullStrengthening(CoprocessorData& data, const bool doStatist
 	                    }
 
                         // update occurances
-                        list[k] = list[list.size() - 1];
-                        list.pop_back();    // shrink vector
+                        //list[k] = list[list.size() - 1];
+                        //list.pop_back();    // shrink vector
                         
-                        k--; // since k++ in for-loop
+                        // k--; // since k++ in for-loop
                     }
                 }
             }
             c[j] = ~neg_lit;    // change the negated lit back
+            if (data.hasToPropagate()) 
+            {
+                propagation.propagate(data, true);   
+            }
         }
         c.set_strengthen(false);
     }
