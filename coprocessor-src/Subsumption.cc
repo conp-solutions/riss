@@ -36,8 +36,41 @@ stream << "c [STAT] SuSi(2) " << subsumeSteps << " subs-steps, "
                               << strengthSteps << " strenght-steps, " 
 			       << strengthTime << "s strengthening "
 			       << endl;
+    for (int i = 0; i < controller.size(); ++i)
+    {
+        stream << "c [STAT] SuSi(1) Thread " << i << " "
+                           << localStats[i].processTime << " s, " 
+                                      << localStats[i].subsumedClauses << " cls, " 
+                           << " with " << localStats[i].subsumedLiterals << " lits, "
+                           << localStats[i].removedLiterals << " strengthed "
+                           << endl;
+        stream << "c [STAT] SuSi(2) Thread " << i << " " 
+                           << localStats[i].subsumeSteps << " subs-steps, " 
+                                      << localStats[i].strengthSteps << " strenght-steps, " 
+                           << localStats[i].strengthTime << "s strengthening "
+                           << localStats[i].lockTime << "s locking "
+                           << endl;
+    }
 }
 
+void Subsumption::resetStatistics()
+{
+    if (localStats.size() < controller.size()) 
+        localStats.resize(controller.size());
+    for (int i = 0; i < controller.size(); ++i)
+    {
+        localStats[i].removedLiterals = 0;
+        localStats[i].strengthSteps = 0;
+        localStats[i].subsumedClauses = 0;
+        localStats[i].subsumedLiterals = 0;
+        localStats[i].subsumeSteps = 0;
+        localStats[i].processTime = 0;
+        localStats[i].strengthTime = 0;
+        localStats[i].lockTime = 0;
+    }
+    
+
+}
 
 void Subsumption::subsumeStrength(CoprocessorData& data)
 {
@@ -1015,7 +1048,7 @@ void Subsumption::parallelSubsumption(CoprocessorData& data, const bool doStatis
   vector<Job> jobs( controller.size() );
   vector< vector < CRef > > toDeletes  (controller.size());
   vector< vector < CRef > > nonLearnts (controller.size());
-  vector< struct SubsumeStatsData > localStats (controller.size());
+  //vector< struct SubsumeStatsData > localStats (controller.size());
   unsigned int queueSize = clause_processing_queue.size();
   unsigned int partitionSize = clause_processing_queue.size() / controller.size();
   // setup data for workers
@@ -1026,10 +1059,10 @@ void Subsumption::parallelSubsumption(CoprocessorData& data, const bool doStatis
     workData[i].end   = (i + 1 == controller.size()) ? queueSize : (i+1) * partitionSize; // last element is not processed!
     workData[i].to_delete = & toDeletes[i];
     workData[i].set_non_learnt = & nonLearnts[i];
-    localStats[i].subsumedClauses = 0;
+/*    localStats[i].subsumedClauses = 0;
     localStats[i].subsumedLiterals = 0;
     localStats[i].subsumeSteps = 0;
-    localStats[i].processTime = 0;
+    localStats[i].processTime = 0;*/
     workData[i].stats = & localStats[i];
     jobs[i].function  = Subsumption::runParallelSubsume;
     jobs[i].argument  = &(workData[i]);
@@ -1073,7 +1106,7 @@ void Subsumption::parallelStrengthening(CoprocessorData& data)
   //fullStrengthening(data);
   cerr << "c parallel strengthening with " << controller.size() << " threads" << endl;
   SubsumeWorkData workData[ controller.size() ];
-  vector< struct SubsumeStatsData > localStats (controller.size());
+  //vector< struct SubsumeStatsData > localStats (controller.size());
   vector<Job> jobs( controller.size() );
   vector< SpinLock > var_locks (data.nVars() + 1); // 1 extra SpinLock for data
   unsigned int queueSize = strengthening_queue.size();
@@ -1086,10 +1119,10 @@ void Subsumption::parallelStrengthening(CoprocessorData& data)
     cerr << "c p s thread " << i << " running from " << workData[i].start << " to " << workData[i].end << endl;
     workData[i].data  = &data; 
     workData[i].var_locks = & var_locks;
-    localStats[i].removedLiterals = 0;
+/*    localStats[i].removedLiterals = 0;
     localStats[i].strengthSteps = 0;
     localStats[i].strengthTime = 0;
-    localStats[i].lockTime = 0;
+    localStats[i].lockTime = 0;*/
     workData[i].stats = & localStats[i];
     jobs[i].function  = Subsumption::runParallelStrengthening;
     jobs[i].argument  = &(workData[i]);
@@ -1103,6 +1136,7 @@ void Subsumption::parallelStrengthening(CoprocessorData& data)
 void* Subsumption::runParallelStrengthening(void* arg)
 {
     SubsumeWorkData* workData = (SubsumeWorkData*) arg;
-    workData->subsumption->par_strengthening_worker(*(workData->data),workData->start,workData->end, *(workData->var_locks), *(workData->stats));
+    if ( opt_naivStrength ) workData->subsumption->par_strengthening_worker(*(workData->data),workData->start,workData->end, *(workData->var_locks), *(workData->stats));
+    else workData->subsumption->par_nn_strengthening_worker(*(workData->data),workData->start,workData->end, *(workData->var_locks), *(workData->stats));
     return 0;
 }

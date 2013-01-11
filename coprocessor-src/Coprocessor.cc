@@ -89,6 +89,10 @@ lbool Preprocessor::preprocess()
    printFormula("after Sorting");
   }
   
+  // clear subsimp stats
+  if ( true ) 
+      subsumption.resetStatistics();
+
   if( opt_subsimp ) {
     if( opt_verbose > 2 )cerr << "c coprocessor subsume/strengthen" << endl;
     if( status == l_Undef ) subsumption.subsumeStrength(data);  // cannot change status, can generate new unit clauses

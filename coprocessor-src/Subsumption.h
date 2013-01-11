@@ -36,6 +36,7 @@ class Subsumption : public Technique {
   double processTime;   // statistic counter
   double strengthTime;  // statistic counter
   
+
 public:
   
   Subsumption( ClauseAllocator& _ca, ThreadController& _controller, Coprocessor::Propagation& _propagation );
@@ -54,6 +55,7 @@ public:
   
   void printStatistics(ostream& stream);
   
+  void resetStatistics();
   /* TODO:
    *  - init
    *  - add to queue
@@ -74,6 +76,8 @@ protected:
     double strengthTime;  // statistic counter
     double lockTime;      // statistic counter
     };
+
+  vector< struct SubsumeStatsData > localStats;
 
   bool hasToSubsume() const ;       // return whether there is something in the subsume queue
   lbool fullSubsumption(CoprocessorData& data);   // performs subsumtion until completion
