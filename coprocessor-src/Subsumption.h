@@ -89,6 +89,7 @@ protected:
   void strengthening_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics = true);
   void par_strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int stop, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, const bool doStatistics = true); 
   void par_nn_strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int end, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, const bool doStatistics = true);
+  inline void par_nn_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, const bool doStatistics = true) ; 
   /** data for parallel execution */
   struct SubsumeWorkData {
     Subsumption*     subsumption; // class with code
