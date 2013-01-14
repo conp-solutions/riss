@@ -25,6 +25,11 @@ class BoundedVariableElimination : public Technique {
         bool operator () (Var x, Var y) const {/* assert (data != NULL && "Please assign a valid data object before heap usage" );*/ return data[x]  > data[y]; }
         VarOrderBVEHeapLt(CoprocessorData & _data) : data(_data) { }
     };
+
+  struct NeighborLt {
+        bool operator () (Var x, Var y) const { return x < y; }
+  }
+
   vector<int> variable_queue;
   //VarOrderBVEHeapLt heap_comp;
   //Heap<VarOrderBVEHeapLt> variable_heap;
@@ -49,8 +54,9 @@ protected:
   struct BVEWorkData {
     BoundedVariableElimination*  bve; // class with code
     CoprocessorData* data;        // formula and maintain lists
-    unsigned int     start;       // partition of the queue
-    unsigned int     end;
+    vector<SpinLock> * var_locks; // Spin Lock for Variables
+    Heap<VarOrderBVEHeapLt> * heap; // Shared heap with variables for elimination check
+    Heap<NeighborLt> * neighbor_heap; // heap for Neighbor calculation
   };
 
   /** run parallel bve with all available threads */
