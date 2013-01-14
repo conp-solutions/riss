@@ -558,7 +558,7 @@ void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned in
     
     par_nn_strength_check(data, list, localQueue,  strengthener, cr, fst, var_lock, stats, doStatistics);
     // if we use ~min, then some optimization can be done, since neg_lit has to be ~min
-    par_nn_strength_check(data, list_neg, localQueue, strengthener, cr, fst, var_lock, stats, doStatistics);
+    par_nn_negated_strength_check(data, list_neg, localQueue, strengthener, cr, min, fst, var_lock, stats, doStatistics);
 /*
     // now test for the occurrences of negated min, we only need to test, if all lits after min in strengthener are also in other
     for (unsigned int j = 0; j < list_neg.size(); ++j)
@@ -826,6 +826,141 @@ inline void Subsumption::par_nn_strength_check(CoprocessorData & data, vector < 
     }
 }
 
+/**
+ * strengthening check for the negated literal for parallel non-naive strengthening
+ * i.e. the Literal that has to occur negated is already known
+ *
+ * Preconditions: 
+ * fst is locked by this thread
+ *
+ * Thread-Saftey-Requirements
+ * only smaller variables than fst are locked
+ * write acces to data only if var_lock[nVars()] is locked
+ * no data.list(Lit) are written
+ *
+ * Postconditions:
+ * all locks, that were aquired, are freed
+ *
+ * @param strengthener 
+ * @param list          a list with CRef to check for strengthening
+ * @param var_lock      lock for each variable
+ *
+ */
+inline void Subsumption::par_nn_negated_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, const bool doStatistics) 
+{
+    int si, so;           // indices used for "can be strengthened"-testing
+    int negated_lit_pos;  // index of negative lit, if we find one
+ 
+    SpinLock & data_lock = var_lock[data.nVars()];
+    
+    // test every clause, where the minimum is, if it can be strenghtened
+    for (unsigned int j = 0; j < list.size(); ++j)
+    {
+      Clause& other = ca[list[j]];
+      
+      lock_to_strengthen_nn:
+      if (other.can_be_deleted() || list[j] == cr || other.size() == 0)
+        continue;
+      Var other_fst = var(other[0]);
+
+      // if the other_fst > fst, other cannot contain fst, and therefore strengthener cannot strengthen other
+      if (other_fst > fst)
+          continue;
+
+      // check if other_fst already locked by this thread, if not: lock
+      if (other_fst != fst)
+      {
+         var_lock[other_fst].lock();
+
+         // check if other has been deleted, while waiting for lock
+         if (other.can_be_deleted() || other.size() == 0)
+         {
+             var_lock[other_fst].unlock();
+             continue;
+         }
+
+         // check if others first lit has changed, while waiting for lock
+         if (var(other[0]) != other_fst)
+         {
+             var_lock[other_fst].unlock();
+             goto lock_to_strengthen_nn;
+         }
+      }
+      
+      // now other_fst is locked and for sure first variable
+      if (doStatistics) ++stats.strengthSteps;
+      // test if we can strengthen other clause
+      si = 0;
+      so = 0;
+      negated_lit_pos = -1;  //the position for neglit cant be -1, so we will use this as "neglit not found"
+      while (si < strengthener.size() && so < other.size())
+      {
+        if(strengthener[si] == other[so])
+        {
+          // the lits are the same in both clauses
+          ++si;
+          ++so;
+        }
+        else if (other[so] == ~min)
+        {
+            negated_lit_pos = so;
+            ++si;
+            ++so;
+        }
+        else if (strengthener[si] < other[so])
+          break;    // the other clause did not contain this variable => can't strengthen
+        else
+          ++so;
+      }
+
+      // if subsumption successful, strengthen
+      if (negated_lit_pos != -1 && si == strengthener.size())
+      {
+          
+          if (doStatistics) ++stats.removedLiterals;
+          // unit found
+          if (other.size() == 2)
+          {
+              other.set_delete(true);
+              data_lock.lock();
+              lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
+              data.removedClause(list[j]);
+              data_lock.unlock();   
+          }
+          //TODO optimize out
+          else if (other.size() == 1)
+          {
+              assert(false && "no unit clauses should be strengthened");
+              // empty -> fail
+          }
+          else
+          {
+              if( global_debug_out ) cerr << "c remove " << negated_lit_pos << " from clause " << other << endl;
+              // keep track of this clause for further strengthening!
+              if( !other.can_strengthen() ) {
+                localQueue.push_back( list[j] );
+                other.set_strengthen(true);
+              }
+              Lit neg = other[negated_lit_pos];
+              other.removePositionSortedThreadSafe(negated_lit_pos);
+              // TODO to much overhead? 
+              data_lock.lock();
+              data.removedLiteral(neg, 1);
+              if ( ! other.can_subsume()) 
+              {
+                  other.set_subsume(true);
+                  clause_processing_queue.push_back(list[j]);
+              }
+              data_lock.unlock();
+          }
+      }
+      // if a new lock was acquired, free it
+      if (other_fst != fst)
+      {
+          var_lock[other_fst].unlock();
+      }
+    }
+}
 bool Subsumption::hasToStrengthen() const
 {
   return strengthening_queue.size() > 0;
@@ -1122,7 +1257,7 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
         {
           // propagate if clause is only 1 lit big
           other.set_delete(true);
-          data.enqueue(other[0]);
+          data.enqueue(other[(negated_lit_pos + 1) % 2]);
           //propagation.propagate(data, true);
         }
       }
