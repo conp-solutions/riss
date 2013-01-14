@@ -416,7 +416,7 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
                 // if subsumption successful, strengthen
                 if (l1 == c.size())
                 {
-                    assert(pos != -1 && "Position invalid");
+                    assert(pos != -1 && "Position invalid"); //TODO -> if this happens, we found normel a subsumption case?, so why not deal with it? this is no error
                     if (doStatistics) ++stats.removedLiterals;
                     // unit found
                     if (d.size() == 2)
@@ -926,10 +926,10 @@ lbool Subsumption::fullStrengthening(CoprocessorData& data, const bool doStatist
                 }
             }
             c[j] = ~neg_lit;    // change the negated lit back
-            if (data.hasToPropagate()) 
-            {
-                propagation.propagate(data, true);   
-            }
+        }
+        if (data.hasToPropagate()) 
+        {
+            propagation.propagate(data, true);   
         }
         c.set_strengthen(false);
     }
@@ -965,21 +965,33 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
     if (strengthener.can_be_deleted() || !strengthener.can_strengthen())
       continue;
     //find Lit with least occurrences and its occurrences
-    Lit min = strengthener[0];
+    // search lit with minimal occurrences
+    assert (strengthener.size() > 1 && "expect strengthener to be > 1");
+    Lit min = lit_Undef, nmin = lit_Undef;
+    Lit minT = strengthener[0];
+    for (int j = 1; j < strengthener.size(); ++j)
+    {
+     if (data[var(minT)] > data[var(strengthener[j])])
+          minT = strengthener[j];
+    }
+    min = minT;
+    nmin = ~minT;
     
+    assert(min != nmin && "min and nmin should be different");
+ 
     vector<CRef>& list = data.list(min);        // occurrences of minlit from strengthener
-    vector<CRef>& list_neg = data.list(~min);   // occurrences of negated minlit from strengthener
+    vector<CRef>& list_neg = data.list(nmin);   // occurrences of negated minlit from strengthener
     // test every clause, where the minimum is, if it can be strenghtened
     for (unsigned int j = 0; j < list.size(); ++j)
     {
       Clause& other = ca[list[j]];
-      if (other.can_be_deleted() || list[j] == cr)
+      if (other.can_be_deleted() || list[j] == cr || other.size() == 0)
         continue;
       // test if we can strengthen other clause
       if (doStatistics) ++strengthSteps;
       si = 0;
       so = 0;
-      negated_lit_pos = 0;  //the position for neglit cant be 0, so we will use this as "neglit not found"
+      negated_lit_pos = -1;  //the position for neglit cant be 0, so we will use this as "neglit not found"
       while (si < strengthener.size() && so < other.size())
       {
         if(strengthener[si] == other[so])
@@ -991,7 +1003,7 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
         else if (strengthener[si] == ~other[so])
         {
           // found neglit...
-          if (negated_lit_pos == 0)
+          if (negated_lit_pos == -1)
           {
             // if it's the first neglit found, save its position
             negated_lit_pos = so;
@@ -1006,7 +1018,7 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
         else
           ++so;
       }
-      if (negated_lit_pos > 0 && si == strengthener.size())
+      if (negated_lit_pos != -1 && si == strengthener.size()) // TODO if negated_lit_pos == -1 -> normal subsumption case, why not apply  it?
       {
         if (doStatistics) ++ removedLiterals;
         // if neglit found and we went through all lits of strengthener, then the other clause can be strengthened
@@ -1021,9 +1033,9 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
 	        localQueue.push_back( list[j] );
 	        other.set_strengthen(true);
 	    }
-        // update occurance-list for this lit (this must be done after pushing to subsumptionqueue)
+        // update occurance-list for this lit (this must be done after pushing to subsumptionqueue) TODO Why?
         // first find the list, which has to be updated
-        for (int l = 0; l < data.list(other[negated_lit_pos]).size(); ++l)
+    /*    for (int l = 0; l < data.list(other[negated_lit_pos]).size(); ++l)
         {
           if(list[j] == data.list(other[negated_lit_pos])[l])
           {
@@ -1031,47 +1043,53 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
             data.list(other[negated_lit_pos]).pop_back();
             break;
           }
-        }
-        if( global_debug_out ) cerr << "c remove " << negated_lit_pos << " from clause " << other << endl;
-        other.remove_lit(other[negated_lit_pos]);   // remove lit from clause (this must be done after updating occurances)
+        } */
+        if( global_debug_out ) cerr << "c remove " << other[negated_lit_pos] << " from clause " << other << endl;
+        //other.remove_lit(other[negated_lit_pos]);   // remove lit from clause (this must be done after updating occurances) TODO Why?
+        other.removePositionSorted(negated_lit_pos);
         if(other.size() == 1)
         {
           // propagate if clause is only 1 lit big
           data.enqueue(other[0]);
-          propagation.propagate(data, true);
+          other.set_delete(true);
+          //propagation.propagate(data, true);
         }
       }
     }
-    // now test for the occurrences of negated min, we only need to test, if all lits after min in strengthener are also in other
+    //propagation only in a valid state 
+    if (data.hasToPropagate()) 
+    {
+        propagation.propagate(data, true);   
+    }
+    // now test for the occurrences of negated min, now the literal, that appears negated has to be min
     for (unsigned int j = 0; j < list_neg.size(); ++j)
     {
       Clause& other = ca[list_neg[j]];
       if (other.can_be_deleted())
         continue;
       if (doStatistics) ++ strengthSteps;
-      si = 1;
+      si = 0;
       so = 0;
-      negated_lit_pos = 0;
-      // find neg_lit_pos (it should be here, because other is from the occurrences of ~min)
-      while (other[so] != ~min)
-      {
-          ++so;
-      }
-      negated_lit_pos = so;
-      // we found the position of neglit, now test if all lits from strengthener besides neglit are in other
+      negated_lit_pos = -1;
       while (si < strengthener.size() && so < other.size())
       {
         if(strengthener[si] == other[so])
         {
           ++si;
           ++so;
+        } 
+        else if (~min == other[so])
+        {
+            negated_lit_pos = so;
+            ++si; 
+            ++so; 
         }
         else if (strengthener[si] < other[so])
           break;
         else
           ++so;
       }
-      if (si == strengthener.size())
+      if (si == strengthener.size() && negated_lit_pos != -1)
       {
         if (doStatistics) ++removedLiterals;
         // other can be strengthened
@@ -1085,10 +1103,10 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
         if( !other.can_strengthen() ) {
 	   localQueue.push_back( list_neg[j] );
 	   other.set_strengthen(true);
-	}
+	    }
         // update occurance-list for this lit (this must be done after pushing to subsumptionqueue)
         // first find the list, which has to be updated
-        for (int l = 0; l < data.list(other[negated_lit_pos]).size(); ++l)
+ /*       for (int l = 0; l < data.list(other[negated_lit_pos]).size(); ++l)
         {
           if(list_neg[j] == data.list(other[negated_lit_pos])[l])
           {
@@ -1096,16 +1114,22 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
             data.list(other[negated_lit_pos]).pop_back();
             break;
           }
-        }
-        if( global_debug_out ) cerr << "c remove " << negated_lit_pos << " from clause " << other << endl;
-        other.remove_lit(other[negated_lit_pos]);   // remove lit from clause (this must be done after updating occurances)
+        } */
+        if( global_debug_out ) cerr << "c remove " << other[negated_lit_pos] << " from clause " << other << endl;
+        //other.remove_lit(other[negated_lit_pos]);   // remove lit from clause (this must be done after updating occurances)
+        other.removePositionSorted(negated_lit_pos);
         if(other.size() == 1)
         {
           // propagate if clause is only 1 lit big
+          other.set_delete(true);
           data.enqueue(other[0]);
-          propagation.propagate(data, true);
+          //propagation.propagate(data, true);
         }
       }
+    }
+    if (data.hasToPropagate()) 
+    {
+        propagation.propagate(data, true);   
     }
     strengthener.set_strengthen(false);
   }

@@ -100,6 +100,25 @@ static void printClauses(ClauseAllocator & ca, vector<CRef> list, bool skipDelet
 
 }
 
+/*
+void BoundedVariableElimination::par_bve_worker ()
+{
+    // TODO 
+    // Var v <- getVariable (threadsafe, probably randomly)
+    // if (heuristic cutoff (v))
+    //      continue;
+    // vector < Var > neighbors <- calc sorted vector with neighbors of v 
+    //      use a globally existing mark array per thread
+    // Lock neighbors in order
+    // Perform the normal bve-check (with unit enqueueing)
+    //  -> remove Blocked Clauses
+    //  -> if (less literes by bve)
+    //      -> perform bve
+    //  maybe include some subsumption and strengthening check at this point, since all clauses are already cached and locked (really?)
+    // Free neighbors in reverse order
+}
+*/
+
 //expects filled variable processing queue
 //
 // force -> forces resolution
@@ -126,6 +145,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
         {
            int v = heap.removeMin();
 	   // TODO: do not work on this variable, if it will be unit-propagated! if all units are eagerly propagated, this is not necessary
+       // TODO: CUT-off if ! unlimited and data[mkLit(v,false)] > 10 && data[mkLit(v,true)] > 10 or data[v] > 20 -> adopt values
 	   // if( data.value( mkLit(v,true) ) != l_Undef ) continue;
            vector<CRef> & pos = data.list(mkLit(v,false)); 
            vector<CRef> & neg = data.list(mkLit(v,true));
