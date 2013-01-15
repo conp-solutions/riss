@@ -33,6 +33,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "core/Solver.h"
 #include "core/Constants.h"
 
+// to be able to use the preprocessor
+#include "coprocessor-src/Coprocessor.h"
+
 using namespace Minisat;
 
 //=================================================================================================
@@ -126,6 +129,7 @@ Solver::Solver() :
   , conflict_budget    (-1)
   , propagation_budget (-1)
   , asynch_interrupt   (false)
+  , coprocessor(0)
 {MYFLAG=0;}
 
 
@@ -797,8 +801,6 @@ void Solver::removeSatisfied(vec<CRef>& cs)
     int i, j;
     for (i = j = 0; i < cs.size(); i++){
         Clause& c = ca[cs[i]];
-
-
         if (c.size()>2 && satisfied(c)) // A bug if we remove size ==2, We need to correct it, but later.
             removeClause(cs[i]);
         else
@@ -1039,6 +1041,12 @@ printf("c ==================================[ Search Statistics (every %6d confl
       printf("c =========================================================================================================\n");
     }
 
+    if( status == l_Undef ) {
+	  // restart, triggered by the solver
+	  if( coprocessor == 0 ) coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
+          status = coprocessor->preprocess();
+    }
+    
     // Search:
     int curr_restarts = 0;
     while (status == l_Undef){
@@ -1046,6 +1054,13 @@ printf("c ==================================[ Search Statistics (every %6d confl
 
         if (!withinBudget()) break;
         curr_restarts++;
+	
+	if( status == l_Undef ) {
+	  // restart, triggered by the solver
+	  if( coprocessor == 0 ) coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
+          status = coprocessor->inprocess();
+	}
+	
     }
 
     if (verbosity >= 1)
@@ -1056,9 +1071,11 @@ printf("c ==================================[ Search Statistics (every %6d confl
         // Extend & copy model:
         model.growTo(nVars());
         for (int i = 0; i < nVars(); i++) model[i] = value(i);
+	
+	if( coprocessor != 0 ) coprocessor->extendModel(model);
+	
     }else if (status == l_False && conflict.size() == 0)
         ok = false;
-
     cancelUntil(0);
     return status;
 }
@@ -1156,20 +1173,27 @@ void Solver::relocAll(ClauseAllocator& to)
             Lit p = mkLit(v, s);
             // printf(" >>> RELOCING: %s%d\n", sign(p)?"-":"", var(p)+1);
             vec<Watcher>& ws = watches[p];
-            for (int j = 0; j < ws.size(); j++)
+            for (int j = 0; j < ws.size(); j++) {
                 ca.reloc(ws[j].cref, to);
+
             vec<Watcher>& ws2 = watchesBin[p];
             for (int j = 0; j < ws2.size(); j++)
                 ca.reloc(ws2[j].cref, to);
+
+	    }
+
         }
 
     // All reasons:
     //
     for (int i = 0; i < trail.size(); i++){
         Var v = var(trail[i]);
-
+	// FIXME TODO: there needs to be a better workaround for this!!
+	if ( level(v) == 0 ) vardata[v].reason = CRef_Undef; // take care of reason clauses for literals at top-level
+        else
         if (reason(v) != CRef_Undef && (ca[reason(v)].reloced() || locked(ca[reason(v)])))
             ca.reloc(vardata[v].reason, to);
+	
     }
 
     // All learnt:

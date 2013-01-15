@@ -7,7 +7,16 @@
 # print to screen: solution for the cnf
 #
 
-./minisat ~/cnf/sudoku76.cnf /tmp/minisat-out > /dev/null 2> /dev/null
+# set this to the right values!
+#param="-enabled_cp3 -subsimp -cp3_naive_strength -inprocess "
+#param="-enabled_cp3 -subsimp -cp3_threads=2 -inprocess -cp3_par_strength"
+#param="-enabled_cp3 -ee -log=0 -no-cp3_extBlocked -cp3_extNgtInput -no-inprocess -cp3_eagerGates"
+param="-enabled_cp3 -subsimp -cp3_par_strength -inprocess -cp3_threads=2"
+#
+# run the program
+#
+./minisat $1 /tmp/minisat-out $param > /dev/null 2> /dev/null
+
 status=$?
 
 cat /tmp/minisat-out

@@ -170,7 +170,7 @@ int main(int argc, char** argv)
         //signal(SIGXCPU,SIGINT_interrupt);
        
         if (!S.simplify()){
-            if (res != NULL) fprintf(res, "UNSAT\n"), fclose(res);
+            if (res != NULL) fprintf(res, "s UNSATISFIABLE\n"), fclose(res);
             if (S.verbosity > 0){
 	        printf("c =========================================================================================================\n");
                 printf("Solved by unit propagation\n");

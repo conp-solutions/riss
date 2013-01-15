@@ -30,6 +30,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_SolverTypes_h
 #define Minisat_SolverTypes_h
 
+#include <cstdio>
 #include <assert.h>
 
 #include "mtl/IntTypes.h"
@@ -37,6 +38,11 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "mtl/Vec.h"
 #include "mtl/Map.h"
 #include "mtl/Alloc.h"
+
+/// TODO remove after debug
+#include <iostream>
+using namespace std;
+
 
 namespace Minisat {
 
@@ -70,9 +76,9 @@ inline  bool sign      (Lit p)              { return p.x & 1; }
 inline  int  var       (Lit p)              { return p.x >> 1; }
 
 // Mapping Literals to and from compact integers suitable for array indexing:
-inline  int  toInt     (Var v)              { return v; } 
-inline  int  toInt     (Lit p)              { return p.x; } 
-inline  Lit  toLit     (int i)              { Lit p; p.x = i; return p; } 
+inline  int  toInt     (Var v)              { return v; }
+inline  int  toInt     (Lit p)              { return p.x; }
+inline  Lit  toLit     (int i)              { Lit p; p.x = i; return p; }
 
 //const Lit lit_Undef = mkLit(var_Undef, false);  // }- Useful special constants.
 //const Lit lit_Error = mkLit(var_Undef, true );  // }
@@ -80,12 +86,16 @@ inline  Lit  toLit     (int i)              { Lit p; p.x = i; return p; }
 const Lit lit_Undef = { -2 };  // }- Useful special constants.
 const Lit lit_Error = { -1 };  // }
 
+inline void printLit(Lit l)
+{
+    fprintf(stderr,"%s%d", sign(l) ? "-" : "", var(l)+1);
+}
 
 //=================================================================================================
 // Lifted booleans:
 //
 // NOTE: this implementation is optimized for the case when comparisons between values are mostly
-//       between one variable and one constant. Some care had to be taken to make sure that gcc 
+//       between one variable and one constant. Some care had to be taken to make sure that gcc
 //       does enough constant propagation to produce sensible code, and this appears to be somewhat
 //       fragile unfortunately.
 
@@ -106,7 +116,7 @@ public:
     bool  operator != (lbool b) const { return !(*this == b); }
     lbool operator ^  (bool  b) const { return lbool((uint8_t)(value^(uint8_t)b)); }
 
-    lbool operator && (lbool b) const { 
+    lbool operator && (lbool b) const {
         uint8_t sel = (this->value << 1) | (b.value << 3);
         uint8_t v   = (0xF7F755F4 >> sel) & 3;
         return lbool(v); }
@@ -130,14 +140,19 @@ typedef RegionAllocator<uint32_t>::Ref CRef;
 
 class Clause {
     struct {
-      unsigned mark      : 2;
-      unsigned learnt    : 1;
-      unsigned has_extra : 1;
-      unsigned reloced   : 1;
-      unsigned lbd       : 26;
-      unsigned canbedel  : 1;
-      unsigned size      : 32;
-    }                            header;
+
+        unsigned mark      : 2; // TODO: for what is this mark used? its set to 1, if the clause can be deleted (by simplify) we could do the same thing!
+        unsigned learnt    : 1;
+        // + write get_method()
+        unsigned has_extra : 1;
+        unsigned reloced   : 1;
+        unsigned lbd       : 24;
+        unsigned canbedel  : 1;
+        unsigned can_subsume : 1;
+        unsigned can_strengthen : 1;
+        unsigned size      : 32;
+        }                            header;
+
     union { Lit lit; float act; uint32_t abs; CRef rel; } data[0];
 
     friend class ClauseAllocator;
@@ -152,13 +167,16 @@ class Clause {
         header.size      = ps.size();
 	header.lbd = 0;
 	header.canbedel = 1;
-        for (int i = 0; i < ps.size(); i++) 
+        header.can_subsume = 1;
+        header.can_strengthen = 1;
+
+        for (int i = 0; i < ps.size(); i++)
             data[i].lit = ps[i];
 	
         if (header.has_extra){
-	  if (header.learnt) 
-                data[header.size].act = 0; 
-            else 
+            if (header.learnt)
+                data[header.size].act = 0;
+            else
                 calcAbstraction(); }
     }
 
@@ -169,7 +187,16 @@ public:
         for (int i = 0; i < size(); i++)
             abstraction |= 1 << (var(data[i].lit) & 31);
         data[header.size].abs = abstraction;  }
-
+    
+    // thread safe copy for strengthening  
+    void calcAbstraction(Lit first) {
+        assert(header.has_extra);
+        uint32_t abstraction = 0;
+        abstraction |= 1 << (var(first) & 31);
+        for (int i = 1; i < size(); i++)
+            abstraction |= 1 << (var(data[i].lit) & 31);
+        data[header.size].abs = abstraction; 
+    }
 
     int          size        ()      const   { return header.size; }
     void         shrink      (int i)         { assert(i <= size()); if (header.has_extra) data[header.size-i] = data[header.size]; header.size -= i; }
@@ -193,15 +220,57 @@ public:
     float&       activity    ()              { assert(header.has_extra); return data[header.size].act; }
     uint32_t     abstraction () const        { assert(header.has_extra); return data[header.size].abs; }
 
-    Lit          subsumes    (const Clause& other) const;
-    void         strengthen  (Lit p);
     void         setLBD(int i)  {header.lbd = i;} 
     // unsigned int&       lbd    ()              { return header.lbd; }
     unsigned int        lbd    () const        { return header.lbd; }
     void setCanBeDel(bool b) {header.canbedel = b;}
     bool canBeDel() {return header.canbedel;}
-};
 
+    void         print       (bool nl=false) const { for (int i = 0; i < size(); i++){
+                                                 printLit(data[i].lit);
+                                                 fprintf(stderr," ");
+                                               }
+                                               if(nl) fprintf(stderr,"\n"); }
+
+    Lit          subsumes         (const Clause& other) const;
+    bool         ordered_subsumes (const Clause& other) const;
+    bool         ordered_equals   (const Clause& other) const;
+    void         remove_lit       (const Lit p);
+    void         strengthen       (Lit p);
+
+    void    set_delete (bool b) 	    { if (b) header.mark = 1; else header.mark = 0;}
+    void    set_learnt (bool b)         { header.learnt = b; }
+    bool    can_be_deleted()     const  { return mark() == 1; }
+
+    void    set_has_extra(bool b)       {header.has_extra = b;}
+
+    bool    can_subsume()        const  { return header.can_subsume; }
+    void    set_subsume(bool b)         { header.can_subsume = b; }
+    bool    can_strengthen()     const  { return header.can_strengthen; }
+    void    set_strengthen(bool b)      { header.can_strengthen = b; }
+
+    void    removePositionUnsorted(int i)    { data[i].lit = data[ size() - 1].lit; shrink(1); if (has_extra() && !header.learnt) calcAbstraction(); }
+    inline void removePositionSorted(int i)      { for (int j = i; j < size() - 1; ++j) data[j] = data[j+1]; shrink(1); if (has_extra() && !header.learnt) calcAbstraction(); }
+    // thread safe version, that changes the first literal last
+    inline void removePositionSortedThreadSafe(int i)
+    {
+      if (i == 0)
+      {
+         Lit second = data[1].lit;
+         for (int j = 1; j < size() - 1; ++j) data[j] = data[j+1]; shrink(1);  
+         if (has_extra() && !header.learnt) calcAbstraction(second);
+         data[0].lit = second;
+      }
+      else removePositionSorted(i);      
+    }
+ 
+    //DebugOutput
+#ifdef SUBDEBUG
+    inline void print_clause() const ;
+    inline void print_lit(int i) const ;
+#endif
+
+};
 
 //=================================================================================================
 // ClauseAllocator -- a simple class for allocating memory for clauses:
@@ -251,13 +320,18 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
     void reloc(CRef& cr, ClauseAllocator& to)
     {
         Clause& c = operator[](cr);
-        
         if (c.reloced()) { cr = c.relocation(); return; }
-        
+
         cr = to.alloc(c, c.learnt());
+        // Copy Flags
+        to[cr].header = c.header;
         c.relocate(cr);
-        
-        // Copy extra data-fields: 
+        // Check this, otherwise segfault
+        if (!c.learnt())
+            to[cr].header.has_extra = to.extra_clause_field;
+
+
+        // Copy extra data-fields:
         // (This could be cleaned-up. Generalize Clause-constructor to be applicable here instead?)
         to[cr].mark(c.mark());
         if (to[cr].learnt())        {
@@ -283,7 +357,7 @@ class OccLists
 
  public:
     OccLists(const Deleted& d) : deleted(d) {}
-    
+
     void  init      (const Idx& idx){ occs.growTo(toInt(idx)+1); dirty.growTo(toInt(idx)+1, 0); }
     // Vec&  operator[](const Idx& idx){ return occs[toInt(idx)]; }
     Vec&  operator[](const Idx& idx){ return occs[toInt(idx)]; }
@@ -342,13 +416,13 @@ class CMap
 
     typedef Map<CRef, T, CRefHash> HashTable;
     HashTable map;
-        
+
  public:
     // Size-operations:
     void     clear       ()                           { map.clear(); }
     int      size        ()                const      { return map.elems(); }
 
-    
+
     // Insert/Remove/Test mapping:
     void     insert      (CRef cr, const T& t){ map.insert(cr, t); }
     void     growTo      (CRef cr, const T& t){ map.insert(cr, t); } // NOTE: for compatibility
@@ -375,11 +449,11 @@ class CMap
 /*_________________________________________________________________________________________________
 |
 |  subsumes : (other : const Clause&)  ->  Lit
-|  
+|
 |  Description:
 |       Checks if clause subsumes 'other', and at the same time, if it can be used to simplify 'other'
 |       by subsumption resolution.
-|  
+|
 |    Result:
 |       lit_Error  - No subsumption or simplification
 |       lit_Undef  - Clause subsumes 'other'
@@ -416,12 +490,68 @@ inline Lit Clause::subsumes(const Clause& other) const
     return ret;
 }
 
+
+inline bool Clause :: ordered_subsumes (const Clause & other) const
+{
+    int i = 0, j = 0;
+    while (i < size() && j < other.size())
+    {
+        if (data[i].lit == other[j])
+        {
+            ++i;
+            ++j;
+        }
+        // D does not contain c[i]
+        else if (data[i].lit < other[j])
+            return false;
+        else
+            ++j;
+    }
+    if (i == size())
+        return true;
+    else
+        return false;
+}
+
+/**
+ * Checks if two clauses consist of the same elements
+ * Expects both clauses to be ordered
+ */
+inline bool Clause::ordered_equals (const Clause & other) const 
+{
+    if (size() != other.size())
+        return false;
+    else 
+        for (int i = 0; i < size(); ++i)
+            if (data[i].lit != other[i])
+                return false;
+    return true;
+}
+
+inline void Clause::remove_lit(const Lit p)
+{   //TODO shouldn't this be size()-1
+    for (int i = 0; i < size(); ++i)
+    {
+        if(data[i].lit == p)
+        {
+            while(i < size()-1)
+            {
+                data[i] = data[i + 1];
+                ++i;
+            }
+            break;
+        }
+    }
+    shrink(1);
+    if (has_extra() && size() > 1 && !header.learnt)
+        calcAbstraction();
+}
+
 inline void Clause::strengthen(Lit p)
 {
     remove(*this, p);
     calcAbstraction();
 }
- 
 //=================================================================================================
 }
 

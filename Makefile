@@ -3,17 +3,25 @@
 # variables to setup the build correctly
 CORE      = ../core
 MTL       = ../mtl
-MYCFLAGS    = -I.. -I. -I$(MTL) -I$(CORE) $(ARGS) -Wall -Wextra -ffloat-store
-# MYLFLAGS    = -L. -lz -static -lpthread
+MYCFLAGS    = -I.. -I. -I$(MTL) -I$(CORE) $(ARGS) -Wall -Wextra -ffloat-store -Wno-sign-compare -Wno-parentheses
+MYLFLAGS    = -lpthread $(ARGS)
 
 COPTIMIZE ?= -O3
 
 # build the splitter solver
+
 glucose: always
-	cd core;   make INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)"; mv glucose ..
+	cd core;   make INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv glucose ..
 
 glucosed: always
-	cd core;   make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)"; mv glucose_debug ../glucose
+	cd core;   make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv glucose_debug ../glucose
+
+coprocessor: always
+	cd coprocessor-src;   make INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv coprocessor ..
+	
+coprocessord: always
+	cd coprocessor-src;   make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv coprocessor_debug ../coprocessor
+	
 
 always:
 
@@ -22,13 +30,17 @@ doc: clean
 	touch doc
 
 tar: clean
-	tar czvf minisat22.tar.gz core  HOWTO  LICENSE  Makefile mtl  README  simp  splittings  utils
+	tar czvf glucose21.tar.gz core  HOWTO  LICENSE  Makefile mtl  README  simp  splittings  utils
+	
+cotar: clean
+	tar czvf coprocessor3.tar.gz core LICENSE  Makefile mtl  README  simp  utils coprocessor-src
 
 # clean up after solving
 clean:
-	@cd core; make clean MROOT=..;
+	@cd core; make clean CPDEPEND="" MROOT=..;
 	@cd simp; make clean MROOT=..;
-	@rm -f minisat
+	@cd coprocessor-src; make clean MROOT=..;
+	@rm -f minisat coprocessor minisatd
 	@rm -f *~ */*~
 	@rm -rf doc/html
 	@echo Done

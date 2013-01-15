@@ -37,6 +37,12 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "core/BoundedQueue.h"
 #include "core/Constants.h"
 
+// forward declaration
+namespace Coprocessor {
+class Preprocessor;
+class CoprocessorData;
+class Propagation;
+}
 
 namespace Minisat {
 
@@ -44,6 +50,11 @@ namespace Minisat {
 // Solver -- the main class:
 
 class Solver {
+  
+    friend class Coprocessor::Preprocessor;
+    friend class Coprocessor::Propagation;
+    friend class Coprocessor::CoprocessorData;
+  
 public:
 
     // Constructor/Destructor:
@@ -309,6 +320,10 @@ protected:
     // Returns a random integer 0 <= x < size. Seed must never be 0.
     static inline int irand(double& seed, int size) {
         return (int)(drand(seed) * size); }
+        
+/// for coprocessor
+    Coprocessor::Preprocessor* coprocessor;
+        
 };
 
 
