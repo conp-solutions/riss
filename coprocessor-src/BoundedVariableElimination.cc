@@ -119,7 +119,7 @@ void BoundedVariableElimination::par_bve_worker ()
 }
 */
 
-void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap, vector< SpinLock > & var_lock, const bool force, const bool doStatistics)   
+void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap, vector< SpinLock > & var_lock, const bool force, const bool doStatistics)   
 {
     SpinLock & data_lock = var_lock[data.nVars()]; 
     SpinLock & heap_lock = var_lock[data.nVars() + 1];
@@ -142,37 +142,38 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
         if (!data.unlimited() && (data[mkLit(v,true)] > 10 && data[mkLit(v,false)] > 10 || data[v] > 15 && (data[mkLit(v,true)] > 5 || data[mkLit(v,false)] > 5)))
             continue;
 
+        // TODO READ.lock
         // Get the clauses with v
         vector<CRef> & pos = data.list(mkLit(v,false)); 
         vector<CRef> & neg = data.list(mkLit(v,true));
            
         // Build neighbor-vector
-        // TODO: expecting valid occurrence-lists, i.e. v really occurs in lists
+        // TODO: expecting valid occurrence-lists, i.e. v really occurs in lists 
         for (int r = 0; r < pos.size(); ++r)
         {
-            Clause c = pos[r];
+            Clause & c = ca[pos[r]];
             if (c.can_be_deleted())
                 continue;
-            for (int l = 0; l < c.size() ++ l)
+            for (int l = 0; l < c.size(); ++ l)
             {
-                Var var = var(c[l]);
-                if (! neighbor_heap.inHeap(var))
-                    insert(var);
+                Var v = var(c[l]);
+                if (! neighbor_heap.inHeap(v))
+                    neighbor_heap.insert(v);
             }
         }
         for (int r = 0; r < neg.size(); ++r)
         {
-            Clause c = neg[r];
+            Clause & c = ca[neg[r]];
             if (c.can_be_deleted())
                 continue;
-            for (int l = 0; l < c.size() ++ l)
+            for (int l = 0; l < c.size(); ++ l)
             {
-                Var var = var(c[l]);
-                if (! neighbor_heap.inHeap(var))
-                    neighbor_heap.insert(var);
+                Var v = var(c[l]);
+                if (! neighbor_heap.inHeap(v))
+                    neighbor_heap.insert(v);
             }
         }
-
+        // TODO READ.free
         while (neighbor_heap.size() > 0)
             neighbors.push_back(neighbor_heap.removeMin());
         // neighbor contains all neighbors in ascending order
@@ -183,13 +184,30 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            var_lock[neighbors[i]].lock();
         }
         
+        // TODO READ.lock
+        //
         // TODO check if the variable-sub-graph is still valid
+        // with help of markarry
+        // if valid -> continue
+        // else: free READ.free, neighbors.free start again
 
         // 
         // TODO perform Clause Elimination as usual
+        // and delete blocked clauses -> (maybe write lock for mark array (seperate)) 
+        
         // problem : occurrence-list updates
         //           clause-allocator
-        
+        // solution: 
+        // TODO READ.free
+        // TODO WRITE.lock
+        //
+        // create new clauses
+        // delete old ones
+        // update mark array
+        //
+        // TODO WRITE.free
+
+
         // free all locks on Vars in descending order 
         for (int i = neighbors.size() - 1; i >= 0; --i)
         {
@@ -557,8 +575,6 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
  *   - resolvents that are tautologies are skipped 
  *   - unit clauses and empty clauses are not handeled here
  *          -> this is already done in anticipateElimination 
- * TODO how to deal with learnt clauses
- * TODO in case of reloc -> ClauseReferences can get unvalid -> make this safe
  */
 lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const bool keepLearntResolvents, const bool force)
 {
@@ -569,6 +585,7 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef
             continue;
         for (int cr_n = 0; cr_n < negative.size(); ++cr_n)
         {
+            Clause & p = ca[positive[cr_p]]; // renew reference as it could got invalid while clause allocation
             Clause & n = ca[negative[cr_n]];
             if (n.can_be_deleted())
                 continue;
@@ -597,9 +614,11 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef
                     }
                     if ((p.learnt() || n.learnt()) && ps.size() > max(p.size(),n.size()) + opt_learnt_growth)
                         continue;
-                    CRef cr = ca.alloc(ps, p.learnt() || n.learnt());
+                    CRef cr = ca.alloc(ps, p.learnt() || n.learnt()); 
+                    // IMPORTANT! dont use p and n in this block, as they could got invalid
+                    Clause & resolvent = ca[cr];
                     data.addClause(cr);
-                    if (p.learnt() && n.learnt())
+                    if (resolvent.learnt()) 
                         data.getLEarnts().push(cr);
                     else 
                         data.getClauses().push(cr);

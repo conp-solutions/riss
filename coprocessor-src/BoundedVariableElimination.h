@@ -28,7 +28,7 @@ class BoundedVariableElimination : public Technique {
 
   struct NeighborLt {
         bool operator () (Var x, Var y) const { return x < y; }
-  }
+  }; 
 
   vector<int> variable_queue;
   //VarOrderBVEHeapLt heap_comp;
@@ -50,6 +50,7 @@ protected:
   lbool fullBVE(Coprocessor::CoprocessorData& data);   // performs BVE until completion
   void bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, unsigned int start, unsigned int end, const bool force = false, const bool doStatistics = true);   
   
+  void par_bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap, vector< SpinLock > & var_lock, const bool force = true, const bool doStatistics = true) ; 
   /** data for parallel execution */
   struct BVEWorkData {
     BoundedVariableElimination*  bve; // class with code
