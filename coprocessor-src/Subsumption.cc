@@ -9,8 +9,9 @@ using namespace Coprocessor;
 static const char* _cat = "CP3 SUBSUMPTION";
 // options
 static BoolOption  opt_naivStrength    (_cat, "cp3_naive_strength", "use naive strengthening", false);
-static BoolOption  opt_par_strength    (_cat, "cp3_par_strength", "use par strengthening", false);
+static BoolOption  opt_par_strength    (_cat, "cp3_par_strength", "force par strengthening (if threads exist)", false);
 static BoolOption  opt_lock_stats      (_cat, "cp3_lock_stats", "measure time waiting in spin locks", false);
+static BoolOption  opt_par_subs        (_cat, "cp3_par_subs", "force par subsumption (if threads exist)", false);
 
 Subsumption::Subsumption( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation )
 : Technique( _ca, _controller )
@@ -106,8 +107,7 @@ bool Subsumption::hasToSubsume() const
 lbool Subsumption::fullSubsumption(CoprocessorData& data)
 {
   // run subsumption for the whole queue
-  //if( controller.size() > 0 && (clause_processing_queue.size() > 100000 || ( clause_processing_queue.size() > 50000 && 10*data.nCls() > 22*data.nVars() ) ) ) {
-  if (controller.size() > 0){ //TODO for Development only
+  if( controller.size() > 0 && (opt_par_subs || clause_processing_queue.size() > 100000 || ( clause_processing_queue.size() > 50000 && 10*data.nCls() > 22*data.nVars() ) ) ) {
     parallelSubsumption(data); // use parallel, is some conditions have been met
     data.correctCounters();    // 
   } else {
