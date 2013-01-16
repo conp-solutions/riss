@@ -163,4 +163,40 @@ public:
 };
 
 
+/** implement a readers-writer lock based on pthreads rw lock */
+class ReadersWriterLock {
+private:
+    pthread_rwlock_t mutex;
+    pthread_rwlockattr_t attr;
+public: 
+    ReadersWriterLock() 
+    {
+        pthread_rwlockattr_init(&attr);
+        pthread_rwlock_init(&mutex, &attr);
+    }
+    ~ReadersWriterLock()
+    {
+        pthread_rwlock_destroy(&mutex);
+        pthread_rwlockattr_destroy(&attr);
+    }
+    void readLock() 
+    {
+        pthread_rwlock_rdlock(&mutex);
+    }
+    void readUnlock() 
+    {
+        pthread_rwlock_unlock(&mutex);
+    }
+
+    void writeLock() 
+    {
+        pthread_rwlock_wrlock(&mutex);
+    }
+    void writeUnlock() 
+    {
+        pthread_rwlock_unlock(&mutex);
+    }
+
+};
+
 #endif
