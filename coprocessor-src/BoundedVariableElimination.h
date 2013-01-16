@@ -67,6 +67,7 @@ protected:
   inline void removeClauses(CoprocessorData & data, const vector<CRef> & list, const Lit l);
   inline void removeClausesThreadSafe(CoprocessorData & data, const vector<CRef> & list, const Lit l, SpinLock & data_lock);
   inline lbool resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const bool keepLearntResolvents = false, const bool force = false);
+  inline lbool resolveSetThreadSafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const bool keepLearntResolvents = false, const bool force = false);
   inline bool resolve(const Clause & c, const Clause & d, const int v, vec<Lit> & ps);
   inline int  tryResolve(const Clause & c, const Clause & d, const int v);
   inline bool checkPush(vec<Lit> & ps, const Lit l);

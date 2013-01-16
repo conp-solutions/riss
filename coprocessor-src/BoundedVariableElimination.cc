@@ -235,7 +235,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         // or UNSAT
         if (lastTouched.getIndex(v) != timeStamp || !data.ok())
         {
-            rwlock.readUnlock(); // Early Exit Write Lock
+            rwlock.readUnlock(); // Early Exit Read Lock
             // free all locks on Vars in descending order 
             for (int i = neighbors.size() - 1; i >= 0; --i)
             {
@@ -253,6 +253,14 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
             goto calculate_neighbors;
         }
 
+        ///////////////////////////////////////////////////////////////////////////////////////////
+        //
+        //  The process now holds all exclusive locks for the current neighbors of v, 
+        //  and perhaps some additional, since some Clauses could have 
+        //  been removed from pos and neg, but for sure none were added. 
+        //
+        ///////////////////////////////////////////////////////////////////////////////////////////
+        
         int pos_count = 0; 
         int neg_count = 0;
         int lit_clauses_old = 0;
@@ -304,8 +312,17 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
 
             // anticipate only, if there are positiv and negative occurrences of var 
             if (pos_count != 0 &&  neg_count != 0)
-                if (anticipateElimination(data, pos, neg,  v, pos_stats, neg_stats, lit_clauses, lit_learnts) == l_False) 
-                    return;  // level 0 conflict found while anticipation TODO ABORT -> how?
+                if (anticipateEliminationThreadsafe(data, pos, neg,  v, pos_stats, neg_stats, lit_clauses, lit_learnts, data_lock) == l_False) 
+                {
+                    // UNSAT: free locks and abort
+                    rwlock.readUnlock(); // Early Exit Read Lock
+                    // free all locks on Vars in descending order 
+                    for (int i = neighbors.size() - 1; i >= 0; --i)
+                    {
+                        var_lock[neighbors[i]].unlock();
+                    }
+                    return;  
+                }
         
             //mark Clauses without resolvents for deletion
             if(opt_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
@@ -332,6 +349,9 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         //
         //  Begin: write locked part 
         //
+        //  Until the read lock was released, no clauses were added to list(v) or list(~v).
+        //  -> TODO What could have changed? (especially with strengthening and subsumption)
+        //
         ///////////////////////////////////////////////////////////////////////////////////////////
        
              rwlock.writeLock(); 
@@ -349,7 +369,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
              
              if(opt_verbose > 1)  cerr << "c resolveSet" <<endl;
 
-             if (resolveSet(data, pos, neg, v) == l_False) //make threadsafe TODO ? maybe just remove propagation ?
+             if (resolveSetThreadSafe(data, pos, neg, v) == l_False) 
              {
                  // UNSAT case -> end thread, but first release all locks
                  rwlock.writeUnlock();
@@ -362,8 +382,9 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
              }
 
              // remove Clauses that were resolved
-             removeClausesThreadSafe(data, pos, mkLit(v,false), data_lock); // TODO maybe threadsafe version not needed, since we hold the exclusive RW-Lock
-             removeClausesThreadSafe(data, neg, mkLit(v,true), data_lock);
+             // (since write lock, no threadsafe implementation needed)
+             removeClauses(data, pos, mkLit(v,false));
+             removeClauses(data, neg, mkLit(v,true));
              if (opt_verbose > 0) cerr << "c Resolved " << v+1 <<endl;
  
              // touch variables:
@@ -1011,6 +1032,104 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef
     }
     return l_Undef;
 }
+
+/**
+ *   threadsafe variant of resolve set, 
+ *   assumption: Write Lock is holded, i.e. exclusive read and write access to data object and clause allocator
+ *
+ *   performes resolution and 
+ *   allocates resolvents c, with |c| > 1, in ClauseAllocator 
+ *   as learnts or clauses respectively
+ *   and adds them in data object
+ *
+ *   - resolvents that are tautologies are skipped 
+ *   - unit clauses and empty clauses are not handeled here
+ *          -> this is already done in anticipateElimination 
+ */
+lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const bool keepLearntResolvents, const bool force)
+{
+    for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
+    {
+        Clause & p = ca[positive[cr_p]];
+        if (p.can_be_deleted())
+            continue;
+        for (int cr_n = 0; cr_n < negative.size(); ++cr_n)
+        {
+            Clause & p = ca[positive[cr_p]]; // renew reference as it could got invalid while clause allocation
+            Clause & n = ca[negative[cr_n]];
+            if (n.can_be_deleted())
+                continue;
+            // Dont compute resolvents for learnt clauses (this is done in case of force,
+            // since blocked clauses and units have not been computed by anticipate)
+            if (!force)
+            {
+                if (opt_resolve_learnts == 0 && (p.learnt() || n.learnt()))
+                    continue;
+                if (opt_resolve_learnts == 1 && (p.learnt() && n.learnt()))
+                    continue;
+            }        
+            vec<Lit> ps;
+            if (!resolve(p, n, v, ps))
+            {
+               // | resolvent | > 1
+               if (ps.size()>1)
+               {
+                    // Depending on opt_resovle_learnts, skip clause creation
+                    if (force)
+                    { 
+                        if (opt_resolve_learnts == 0 && (p.learnt() || n.learnt()))
+                            continue;
+                        if (opt_resolve_learnts == 1 && (p.learnt() && n.learnt()))
+                            continue;
+                    }
+                    if ((p.learnt() || n.learnt()) && ps.size() > max(p.size(),n.size()) + opt_learnt_growth)
+                        continue;
+                    CRef cr = ca.alloc(ps, p.learnt() || n.learnt()); 
+                    // IMPORTANT! dont use p and n in this block, as they could got invalid
+                    Clause & resolvent = ca[cr];
+                    data.addClause(cr);
+                    if (resolvent.learnt()) 
+                        data.getLEarnts().push(cr);
+                    else 
+                        data.getClauses().push(cr);
+                    // push Clause on subsumption-queue
+                    subsumption.initClause(cr);
+               }
+               else if (force)
+               {
+                    // | resolvent | == 0  => UNSAT
+                    if (ps.size() == 0)
+                    {
+                        data.setFailed();
+                        return l_False;
+                    }
+                    
+                    // | resolvent | == 1  => unit Clause
+                    else if (ps.size() == 1)
+                    {
+                        lbool status = data.enqueue(ps[0]); //check for level 0 conflict
+                        if (status == l_False)
+                            return l_False;
+                        else if (status == l_Undef)
+                             ; // variable already assigned
+                        else if (status == l_True)
+                        {
+                            /*propagation.propagate(data, true);  //TODO propagate own lits only (parallel)
+                            if (p.can_be_deleted())
+                                break;*/
+                        }
+                        else 
+                            assert (0); //something went wrong
+                    }
+                }   
+
+           }
+        }
+
+    }
+    return l_Undef;
+}
+
 
 //expects c to contain v positive and d to contain v negative
 //returns -1, if resolvent is satisfied
