@@ -35,6 +35,7 @@ class BoundedVariableElimination : public Technique {
   //Heap<VarOrderBVEHeapLt> variable_heap;
   Coprocessor::Propagation & propagation;
   Coprocessor::Subsumption & subsumption;
+  MarkArray lastTouched; //MarkArray to track modifications of parallel BVE-Threads
 public:
   
   BoundedVariableElimination( ClauseAllocator& _ca, ThreadController& _controller , Coprocessor::Propagation & _propagation, Coprocessor::Subsumption & _subsumption);
@@ -50,7 +51,7 @@ protected:
   lbool fullBVE(Coprocessor::CoprocessorData& data);   // performs BVE until completion
   void bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, unsigned int start, unsigned int end, const bool force = false, const bool doStatistics = true);   
   
-  void par_bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap, vector< SpinLock > & var_lock, const bool force = true, const bool doStatistics = true) ; 
+  void par_bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, const bool force = true, const bool doStatistics = true) ; 
   /** data for parallel execution */
   struct BVEWorkData {
     BoundedVariableElimination*  bve; // class with code
@@ -64,13 +65,16 @@ protected:
   void parallelBVE(CoprocessorData& data);
   
   inline void removeClauses(CoprocessorData & data, const vector<CRef> & list, const Lit l);
+  inline void removeClausesThreadSafe(CoprocessorData & data, const vector<CRef> & list, const Lit l, SpinLock & data_lock);
   inline lbool resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const bool keepLearntResolvents = false, const bool force = false);
   inline bool resolve(const Clause & c, const Clause & d, const int v, vec<Lit> & ps);
   inline int  tryResolve(const Clause & c, const Clause & d, const int v);
   inline bool checkPush(vec<Lit> & ps, const Lit l);
   inline char checkUpdatePrev(Lit & prev, const Lit l);
   inline lbool anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, int32_t* pos_stats, int32_t* neg_stats, int & lit_clauses, int & lit_learnts); 
+  inline lbool anticipateEliminationThreadsafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, int32_t* pos_stats, int32_t* neg_stats, int & lit_clauses, int & lit_learnts, SpinLock & data_lock); 
   inline void removeBlockedClauses(CoprocessorData & data, const vector< CRef> & list, const int32_t stats[], const Lit l );
+  inline void removeBlockedClausesThreadSafe(CoprocessorData & data, const vector< CRef> & list, const int32_t stats[], const Lit l, SpinLock & data_lock );
   inline void touchedVarsForSubsumption (CoprocessorData & data, const std::vector<Var> & touched_vars);
   inline void addClausesToSubsumption (CoprocessorData & data, const vector<CRef> & clauses);
 public:

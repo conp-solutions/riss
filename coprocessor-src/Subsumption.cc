@@ -86,10 +86,10 @@ void Subsumption::subsumeStrength(CoprocessorData& data)
       if (opt_par_strength && controller.size() > 0)
       {
           parallelStrengthening(data);
-          data.correctCounters();
+          data.correctCounters(); //TODO correct occurrences as well
       }
       else {
-          fullStrengthening(data);
+          fullStrengthening(data); //TODO correct counters and occurrences, since this is omitted now
       }
       // clear queue afterwards
       strengthening_queue.clear();
