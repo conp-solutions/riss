@@ -8,7 +8,7 @@ using namespace Coprocessor;
 
 static const char* _cat = "CP3 SUBSUMPTION";
 // options
-static BoolOption  opt_naivStrength    (_cat, "cp3_naive_strength", "use naive strengthening", false);
+static BoolOption  opt_naivStrength    (_cat, "cp3_nv_strength", "use naive strengthening", false);
 static BoolOption  opt_par_strength    (_cat, "cp3_par_strength", "force par strengthening (if threads exist)", false);
 static BoolOption  opt_lock_stats      (_cat, "cp3_lock_stats", "measure time waiting in spin locks", false);
 static BoolOption  opt_par_subs        (_cat, "cp3_par_subs", "force par subsumption (if threads exist)", false);
