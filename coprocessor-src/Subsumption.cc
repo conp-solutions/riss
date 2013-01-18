@@ -89,7 +89,7 @@ void Subsumption::resetStatistics()
 
 void Subsumption::subsumeStrength(CoprocessorData& data)
 {
-  while( hasToSubsume() || hasToStrengthen() )
+  while( data.ok() && (hasToSubsume() || hasToStrengthen() ))
   {
     if( hasToSubsume() ){
       fullSubsumption(data);

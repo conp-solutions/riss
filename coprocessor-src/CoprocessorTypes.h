@@ -513,12 +513,12 @@ inline int32_t CoprocessorData::operator[](const Var v) const
 
 inline vector< Minisat::CRef >& CoprocessorData::list(const Lit l)
 {
-  return occs[ toInt(l) ];
+   return occs[ toInt(l) ];
 }
 
 inline const vector< Minisat::CRef >& CoprocessorData::list(const Lit l) const
 {
-  return occs[ toInt(l) ];
+   return occs[ toInt(l) ];
 }
 
 inline void CoprocessorData::correctCounters()

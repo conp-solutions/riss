@@ -10,14 +10,17 @@ using namespace std;
 
 static const char* _cat = "COPROCESSOR 3 - BVE";
 
-static IntOption  opt_verbose    (_cat, "cp3_bve_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
-static IntOption  opt_learnt_growth (_cat, "cp3_bve_learnt_growth", "Keep C (x) D, where C or D is learnt, if |C (x) D| <= max(|C|,|D|) + N", 0, IntRange(-1, INT32_MAX));
+static IntOption  opt_verbose    (_cat,      "cp3_bve_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
+static IntOption  opt_learnt_growth (_cat,   "cp3_bve_learnt_growth", "Keep C (x) D, where C or D is learnt, if |C (x) D| <= max(|C|,|D|) + N", 0, IntRange(-1, INT32_MAX));
 static IntOption  opt_resolve_learnts (_cat, "cp3_bve_resolve_learnts", "Resolve learnt clauses: 0: off, 1: original with learnts, 2: 1 and learnts with learnts", 0, IntRange(0,2));
+static BoolOption opt_unlimited_bve   (_cat, "bve_unlimited",  "perform bve test for Var v, if there are more than 10 + 10 or 15 + 5 Clauses containing v", false);
+static IntOption  opt_bve_heap        (_cat, "cp3_bve_heap"     ,  "0: minimum heap, 1: maximum heap, 2: random", 0, IntRange(0,2));
 
 BoundedVariableElimination::BoundedVariableElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation, Coprocessor::Subsumption & _subsumption )
 : Technique( _ca, _controller )
 , propagation( _propagation)
 , subsumption( _subsumption)
+, heap_option(opt_unlimited_bve)
 //, heap_comp(NULL)
 //, variable_heap(heap_comp)
 {
@@ -35,13 +38,20 @@ lbool BoundedVariableElimination::fullBVE(Coprocessor::CoprocessorData& data)
  
 lbool BoundedVariableElimination::runBVE(CoprocessorData& data)
 {
-  VarOrderBVEHeapLt comp(data);
+  VarOrderBVEHeapLt comp(data, opt_bve_heap);
   Heap<VarOrderBVEHeapLt> newheap(comp);
-  data.getActiveVariables(lastDeleteTime(), newheap);
-
+  if (opt_bve_heap != 2)
+  {
+    data.getActiveVariables(lastDeleteTime(), newheap);
+  }
+  else 
+  {
+    data.getActiveVariables(lastDeleteTime(), variable_queue);
+  }
   //Propagation (TODO Why does omitting the propagation
   // and no PureLit Propagation cause wrong model extension?)
-  propagation.propagate(data, true);
+  if (propagation.propagate(data, true) == l_False)
+      return l_False;
   
   if( false ) {
    cerr << "formula after propagation: " << endl;
@@ -51,8 +61,24 @@ lbool BoundedVariableElimination::runBVE(CoprocessorData& data)
      if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getLEarnts()[i] ] << endl;    
   }
 
+  if( false ) {
+   cerr << "96 lists before bve: " << endl;
+   for( int i = 0 ; i < data.list(mkLit(95,false)).size(); ++ i )
+     if( !ca[  data.list(mkLit(95,false))[i] ].can_be_deleted() ) cerr << ca[  data.list(mkLit(95,false))[i] ] << endl;
+   for( int i = 0 ; i < data.list(mkLit(95,true)).size(); ++ i )
+     if( !ca[  data.list(mkLit(95,true))[i] ].can_be_deleted() ) cerr << ca[  data.list(mkLit(95,true))[i] ] << endl;    
+  }
+  
+
   bve_worker(data, newheap, 0, variable_queue.size(), false);
-  newheap.clear();
+  if (opt_bve_heap != 2)
+  {
+    newheap.clear();
+  }
+  else 
+  {
+    variable_queue.clear();
+  }
   
   if (data.getSolver()->okay())
     return l_Undef;
@@ -164,7 +190,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
     calculate_neighbors:
     
         // Heuristic Cutoff
-        if (!data.unlimited() && (data[mkLit(v,true)] > 10 && data[mkLit(v,false)] > 10 || data[v] > 15 && (data[mkLit(v,true)] > 5 || data[mkLit(v,false)] > 5)))
+        if (!opt_unlimited_bve && (data[mkLit(v,true)] > 10 && data[mkLit(v,false)] > 10 || data[v] > 15 && (data[mkLit(v,true)] > 5 || data[mkLit(v,false)] > 5)))
             continue;
 
         ///////////////////////////////////////////////////////////////////////////////////////////
@@ -433,10 +459,12 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
 void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, unsigned int start, unsigned int end, const bool force, const bool doStatistics)   
 {
     vector<Var> touched_variables;
-    while (heap.size() > 0 )
+    while ((opt_bve_heap != 2 && heap.size() > 0) || (opt_bve_heap == 2 && variable_queue.size() > 0))
     {
         //Subsumption / Strengthening
         subsumption.subsumeStrength(data); 
+        if (!data.ok())
+            return;
         if( false ) {
             cerr << "formula after subsumeStrength: " << endl;
             for( int i = 0 ; i < data.getClauses().size(); ++ i )
@@ -447,11 +475,29 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
 
         updateDeleteTime(data.getMyDeleteTimer());
         //for (unsigned i = start; i < end; i++)
-        while (heap.size() > 0)
+        while ((opt_bve_heap != 2 && heap.size() > 0) || (opt_bve_heap == 2 && variable_queue.size() > 0))
         {
-           int v = heap.removeMin();
-	   // TODO: do not work on this variable, if it will be unit-propagated! if all units are eagerly propagated, this is not necessary
-       // TODO: CUT-off if ! unlimited and data[mkLit(v,false)] > 10 && data[mkLit(v,true)] > 10 or data[v] > 20 -> adopt values
+           Var v = var_Undef;
+           if (opt_bve_heap != 2)
+             v = heap.removeMin();
+           else 
+           {
+                int rand = data.getSolver()->irand(data.getSolver()->random_seed, variable_queue.size());
+                v = variable_queue[rand];
+                if (variable_queue.size() > 1)
+                {
+                    variable_queue[rand] = variable_queue[variable_queue.size() - 2];
+                }
+                variable_queue.pop_back();
+           }
+           assert (v != var_Undef && "variable heap or queue failed");
+
+	   // do not work on this variable, if it will be unit-propagated! if all units are eagerly propagated, this is not necessary
+       if  (data.value(mkLit(v,true)) != l_Undef || data.value(mkLit(v,false)) != l_Undef)
+           continue;
+       // Heuristic Cutoff
+        if (!opt_unlimited_bve && (data[mkLit(v,true)] > 10 && data[mkLit(v,false)] > 10 || data[v] > 15 && (data[mkLit(v,true)] > 5 || data[mkLit(v,false)] > 5)))
+            continue;
 	   // if( data.value( mkLit(v,true) ) != l_Undef ) continue;
            vector<CRef> & pos = data.list(mkLit(v,false)); 
            vector<CRef> & neg = data.list(mkLit(v,true));
@@ -589,6 +635,8 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
 
            //subsumption with new clauses!!
            subsumption.subsumeStrength(data);
+           if (!data.ok())
+               return;
            if(opt_verbose > 1)   cerr << "c =============================================================================" << endl;
           
         }
@@ -596,10 +644,16 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
         // add active variables and clauses to variable heap and subsumption queues
         data.getActiveVariables(lastDeleteTime(), touched_variables);
         touchedVarsForSubsumption(data, touched_variables);
-        heap.clear();
+        if (opt_bve_heap != 2)
+            heap.clear();
+        else
+            variable_queue.clear();
         for (int i = 0; i < touched_variables.size(); ++i)
         {
-            heap.insert(touched_variables[i]);
+            if (opt_bve_heap != 2)
+                heap.insert(touched_variables[i]);
+            else 
+                variable_queue.push_back(touched_variables[i]);
         }
         touched_variables.clear();
     }
@@ -782,7 +836,8 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
                      ; // variable already assigned
                 else if (status == l_True)
                 {
-                    propagation.propagate(data, true);  //TODO propagate own lits only (parallel)
+                    if (propagation.propagate(data, true) == l_False)
+                        return l_False;  
                     if (p.can_be_deleted())
                         break;
                 }
@@ -1017,7 +1072,8 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef
                              ; // variable already assigned
                         else if (status == l_True)
                         {
-                            propagation.propagate(data, true);  //TODO propagate own lits only (parallel)
+                            if (propagation.propagate(data, true) == l_False)  //TODO propagate own lits only (parallel)
+                                return l_False;
                             if (p.can_be_deleted())
                                 break;
                         }

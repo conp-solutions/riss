@@ -20,17 +20,26 @@ namespace Coprocessor {
 /** This class implement blocked variable elimination
  */
 class BoundedVariableElimination : public Technique {
+  const int heap_option;
   struct VarOrderBVEHeapLt {
+        const int heapOption;
         CoprocessorData & data;
-        bool operator () (Var x, Var y) const {/* assert (data != NULL && "Please assign a valid data object before heap usage" );*/ return data[x]  > data[y]; }
-        VarOrderBVEHeapLt(CoprocessorData & _data) : data(_data) { }
+        bool operator () (Var x, Var y) const {/* assert (data != NULL && "Please assign a valid data object before heap usage" );*/ 
+            switch (heapOption)
+            {
+                case 0: return data[x] < data[y]; 
+                case 1: return data[x] > data[y]; 
+                default: assert(false && "In case of random order no heap should be used");
+            }
+        }
+        VarOrderBVEHeapLt(CoprocessorData & _data, int _heapOption) : data(_data), heapOption(_heapOption) { }
     };
 
   struct NeighborLt {
         bool operator () (Var x, Var y) const { return x < y; }
   }; 
 
-  vector<int> variable_queue;
+  vector< Var > variable_queue;
   //VarOrderBVEHeapLt heap_comp;
   //Heap<VarOrderBVEHeapLt> variable_heap;
   Coprocessor::Propagation & propagation;
