@@ -18,12 +18,11 @@ Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, Max Löwen, All rights res
 
 
 #include "coprocessor-src/Subsumption.h"
-
 using namespace Coprocessor;
 
 static const char* _cat = "CP3 SUBSUMPTION";
 // options
-static BoolOption  opt_naivStrength    (_cat, "cp3_naive_strength", "use naive strengthening", false);
+static BoolOption  opt_naivStrength    (_cat, "naive_strength", "use naive strengthening", false);
 static BoolOption  opt_par_strength    (_cat, "cp3_par_strength", "force par strengthening (if threads exist)", false);
 static BoolOption  opt_lock_stats      (_cat, "cp3_lock_stats", "measure time waiting in spin locks", false);
 static BoolOption  opt_par_subs        (_cat, "cp3_par_subs", "force par subsumption (if threads exist)", false);
@@ -1008,8 +1007,7 @@ lbool Subsumption::fullStrengthening(CoprocessorData& data, const bool doStatist
     }
      */
   if( !opt_naivStrength ) {
-    strengthening_worker(data, 0, strengthening_queue.size());
-    return l_Undef;
+    return strengthening_worker(data, 0, strengthening_queue.size());
   }
     if (doStatistics) strengthTime = cpuTime() - strengthTime;
     deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
@@ -1093,7 +1091,8 @@ lbool Subsumption::fullStrengthening(CoprocessorData& data, const bool doStatist
         }
         if (data.hasToPropagate()) 
         {
-            propagation.propagate(data, true);   
+            if (propagation.propagate(data, true) == l_False)
+                return l_False;
         }
         c.set_strengthen(false);
     }
@@ -1112,7 +1111,7 @@ lbool Subsumption::fullStrengthening(CoprocessorData& data, const bool doStatist
  *
  * 
  */
-void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics)
+lbool Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics)
 {
   if (doStatistics)
       strengthTime = cpuTime() - strengthTime;
@@ -1136,6 +1135,11 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
       continue;
     //find Lit with least occurrences and its occurrences
     // search lit with minimal occurrences
+    if (strengthener.size() <= 1)
+    {
+        cerr << strengthener << endl;
+
+    }
     assert (strengthener.size() > 1 && "expect strengthener to be > 1");
     Lit min = lit_Undef, nmin = lit_Undef;
     Lit minT = strengthener[0];
@@ -1209,6 +1213,7 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
         if(other.size() == 1)
         {
           // propagate if clause is only 1 lit big
+          assert(var(other[0]) < data.nVars() && "Literal does not exist");
           data.enqueue(other[0]);
           other.set_delete(true);
           //propagation.propagate(data, true);
@@ -1218,7 +1223,8 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
     //propagation only in a valid state 
     if (data.hasToPropagate()) 
     {
-        propagation.propagate(data, true);   
+        if (propagation.propagate(data, true) == l_False)
+            return l_False;
     }
     // now test for the occurrences of negated min, now the literal, that appears negated has to be min
     for (unsigned int j = 0; j < list_neg.size(); ++j)
@@ -1272,15 +1278,17 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
         if(other.size() == 1)
         {
           // propagate if clause is only 1 lit big
+          assert(var(other[0]) < data.nVars() && "Literal does not exist");
+          data.enqueue(other[0]);
           other.set_delete(true);
-          data.enqueue(other[(negated_lit_pos + 1) % 2]);
           //propagation.propagate(data, true);
         }
       }
     }
     if (data.hasToPropagate()) 
     {
-        propagation.propagate(data, true);   
+        if (propagation.propagate(data, true) == l_False)
+            return l_False;
     }
     strengthener.set_strengthen(false);
   }
