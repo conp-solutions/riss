@@ -30,8 +30,10 @@ lbool Propagation::propagate(CoprocessorData& data, bool sort)
     vector<CRef> positive = data.list(l);
     for( int i = 0 ; i < positive.size(); ++i )
     {
+      if (ca[ positive[i] ].can_be_deleted()) // only track yet-non-deleted clauses
+          continue;
       if( global_debug_out ) cerr << "c UP remove " << ca[ positive[i] ] << endl;
-      removedClauses = ca[ positive[i] ].can_be_deleted() ? removedClauses : removedClauses + 1;
+      ++removedClauses; // = ca[ positive[i] ].can_be_deleted() ? removedClauses : removedClauses + 1;
       ca[ positive[i] ].set_delete(true);
       data.removedClause( positive[i] );
     }
@@ -54,6 +56,7 @@ lbool Propagation::propagate(CoprocessorData& data, bool sort)
 	  }
         count ++;
       }
+      //TODO ->what if c can be deleted?
       // unit propagation
       if( c.size() == 0 || (c.size() == 1 &&  solver->value( c[0] ) == l_False) ) {
         data.setFailed();   // set state to false

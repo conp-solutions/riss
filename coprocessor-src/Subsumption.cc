@@ -1,6 +1,21 @@
 /**********************************************************************************[Subsumption.cc]
 Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, Max Löwen, All rights reserved.
 **************************************************************************************************/
+/*
+ *
+ * Global assumptions concerning occurrence-lists and occurrence-stats
+ * -> the sequentiell algorithms update this on their own
+ * -> the parallel algorithms fill a vector < OccUpdate >, 
+ *    which updates are sequencially performed
+ *    -> if some operations occur multiple times, 
+ *       the first is performed and the others are ignored
+ *       TODO guarantee this !
+ *       TODO propagate seems to allow this approach, since it clears Occ-Lists and 
+ *            updates Stats, but are all it's operations consistent?
+ *
+ */
+
+
 
 #include "coprocessor-src/Subsumption.h"
 
@@ -89,7 +104,7 @@ void Subsumption::subsumeStrength(CoprocessorData& data)
           data.correctCounters(); //TODO correct occurrences as well
       }
       else {
-          fullStrengthening(data); //TODO correct counters and occurrences, since this is omitted now
+          fullStrengthening(data); // corrects occs and counters by itself
       }
       // clear queue afterwards
       strengthening_queue.clear();
@@ -111,7 +126,7 @@ lbool Subsumption::fullSubsumption(CoprocessorData& data)
     parallelSubsumption(data); // use parallel, is some conditions have been met
     data.correctCounters();    // 
   } else {
-    subsumption_worker(data,0,clause_processing_queue.size());
+    subsumption_worker(data,0,clause_processing_queue.size()); // performs all occ and stat-updates
   }
   clause_processing_queue.clear();
   // no result to tell to the outside
@@ -126,6 +141,7 @@ bool Subsumption::hasWork() const
 
 void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, const bool doStatistics)
 {
+    vector < CRef > occ_updates; 
     if (doStatistics)
     {
         processTime = cpuTime() - processTime;   
@@ -162,7 +178,7 @@ void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int star
                     subsumedLiterals += ca[list[i]].size();
                 }
                 ca[list[i]].set_delete(true); 
-                data.removedClause(list[i]);  // tell statistic about clause removal
+                occ_updates.push_back(list[i]);
 		        if( global_debug_out ) cerr << "c clause " << ca[list[i]] << " is deleted by " << c << endl;
                 if (!ca[list[i]].learnt() && c.learnt())
                 {
@@ -177,7 +193,18 @@ void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int star
     if (doStatistics)
     {
         processTime = cpuTime() - processTime;   
-    }  
+    } 
+    // Update Stats and remove Clause from all Occurrence-Lists
+    for (int i = 0; i < occ_updates.size(); ++i)
+    {
+        CRef cr = occ_updates[i];
+        Clause & c = ca[cr];
+        data.removedClause(cr);
+        for (int l = 0; l < c.size(); ++l)
+        {
+            data.removeClauseFrom(cr,c[l]);
+        }
+    }
 }
 
 /**
@@ -1082,6 +1109,8 @@ lbool Subsumption::fullStrengthening(CoprocessorData& data, const bool doStatist
  * @param data vector of occurrences of clauses
  * @param start where to start strengthening in strengtheningqueue
  * @param end where to stop strengthening
+ *
+ * 
  */
 void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics)
 {
@@ -1174,21 +1203,8 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
 	        localQueue.push_back( list[j] );
 	        other.set_strengthen(true);
 	    }
-        // update occurance-list for this lit (this must be done after pushing to subsumptionqueue) TODO Why?
-        // first find the list, which has to be updated
-    /*    for (int l = 0; l < data.list(other[negated_lit_pos]).size(); ++l)
-        {
-          if(list[j] == data.list(other[negated_lit_pos])[l])
-          {
-            data.list(other[negated_lit_pos])[l] = data.list(other[negated_lit_pos])[data.list(other[negated_lit_pos]).size() - 1];
-            data.list(other[negated_lit_pos]).pop_back();
-            break;
-          }
-        } */
-        if( global_debug_out ) cerr << "c remove " << other[negated_lit_pos] << " from clause " << other << endl;
-        //other.remove_lit(other[negated_lit_pos]);   // remove lit from clause (this must be done after updating occurances) TODO Why?
-
         occ_updates.push_back(OccUpdate(list[j] , other[negated_lit_pos]));
+        if( global_debug_out ) cerr << "c remove " << other[negated_lit_pos] << " from clause " << other << endl;
         other.removePositionSorted(negated_lit_pos);
         if(other.size() == 1)
         {
@@ -1242,27 +1258,17 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
           other.set_subsume(true);
           clause_processing_queue.push_back(list_neg[j]);
         }
-	// keep track of this clause for further strengthening!
+	    
+        // keep track of this clause for further strengthening!
         if( !other.can_strengthen() ) {
 	   localQueue.push_back( list_neg[j] );
 	   other.set_strengthen(true);
 	    }
-        // update occurance-list for this lit (this must be done after pushing to subsumptionqueue)
-        // first find the list, which has to be updated
- /*       for (int l = 0; l < data.list(other[negated_lit_pos]).size(); ++l)
-        {
-          if(list_neg[j] == data.list(other[negated_lit_pos])[l])
-          {
-            data.list(other[negated_lit_pos])[l] = data.list(other[negated_lit_pos])[data.list(other[negated_lit_pos]).size() - 1];
-            data.list(other[negated_lit_pos]).pop_back();
-            break;
-          }
-        } */
-        if( global_debug_out ) cerr << "c remove " << other[negated_lit_pos] << " from clause " << other << endl;
-        //other.remove_lit(other[negated_lit_pos]);   // remove lit from clause (this must be done after updating occurances)
         
         occ_updates.push_back(OccUpdate(list_neg[j] , other[negated_lit_pos]));
+        if( global_debug_out ) cerr << "c remove " << other[negated_lit_pos] << " from clause " << other << endl;
         other.removePositionSorted(negated_lit_pos);
+        
         if(other.size() == 1)
         {
           // propagate if clause is only 1 lit big
@@ -1286,8 +1292,10 @@ inline void Subsumption::updateOccurrences(CoprocessorData & data, const vector<
 {
     for (int i = 0; i < updates.size(); ++i)
     {
-        data.removeClauseFrom(updates[i].cr, updates[i].l);
-        data.removedLiteral(l,1);
+        // just remove once from stats -> this is consistent with propagation, since propagation will clear occ-lists 
+        // and sets occ-stats by itself
+        if (data.removeClauseFrom(updates[i].cr, updates[i].l))
+            data.removedLiteral(updates[i].l,1);
     }
 }
 
