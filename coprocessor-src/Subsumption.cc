@@ -12,7 +12,8 @@ Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, Max Löwen, All rights res
  *       TODO guarantee this !
  *       TODO propagate seems to allow this approach, since it clears Occ-Lists and 
  *            updates Stats, but are all it's operations consistent?
- *
+ * 
+ * TODO -> change time measure function to wall clock time!
  */
 
 
@@ -1049,11 +1050,30 @@ lbool Subsumption::fullStrengthening(CoprocessorData& data, const bool doStatist
                 Clause & other = ca[list[k]];
                 if (other.can_be_deleted())     // dont check if this clause can be deleted
                     continue;
+                assert(other.size() > 1 && "Expect other to be > 1");
                 if (doStatistics) ++strengthSteps;
-                if (c.ordered_subsumes(other))    // check for subsumption
+                
+                // check for subsumption
+                int l1 = 0, l2 = 0, pos = -1;
+                while (l1 < c.size() && l2 < other.size())
+                {
+                   if (c[l1] == other[l2])
+                   {
+                        if (c[l1] == neg_lit)
+                            pos = l2;
+                        ++l1;
+                        ++l2;
+                   }
+                   // other does not contain c[l1]
+                   else if (c[l1] < other[l2])
+                        break;
+                   else
+                        ++l2;
+                }
+                if (l1 == c.size() && pos != -1)    
                 {
                     if (doStatistics) ++removedLiterals;
-                    other.remove_lit(neg_lit);     // strengthen clause
+                    other.removePositionSorted(pos);     // strengthen clause
 		            if( global_debug_out ) cerr << "c remove " << neg_lit << " from clause " << other << endl;
                     //if( global_debug_out ) cerr << "c used strengthener (lit negated) " << c << endl;
                     if(other.size() == 1)
