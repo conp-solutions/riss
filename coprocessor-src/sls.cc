@@ -6,12 +6,16 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 using namespace Coprocessor;
 
+static const char* _cat = "SLS";
+static BoolOption opt_debug (_cat, "sls-debug", "Print SLS debug output", false);
+
 Sls::Sls(CoprocessorData& _data, ClauseAllocator& _ca, ThreadController& _controller)
 : 
 Technique(_ca, _controller)
 , data(_data)
 , ca ( _ca )
 , solveTime(0)
+, flips ( 0 )
 {
 
 }
@@ -46,12 +50,16 @@ void Sls::init(bool reinit)
 
 	createRandomAssignment();
 	
+	cerr << "SLS randomly created assignment: ";
+	  for( Var v = 0 ; v < data.nVars(); ++ v ) cerr << " " << ((int)assignment[v]) * (v+1);
+	  cerr << endl;
+	
 	// fill sat and unsat clauses
 	const vec<CRef>& formula = data.getClauses();
 	
 	for( unsigned i = 0 ; i < formula.size(); ++i )
 	{
-		Clause& clause = ca[ formula[i] ];
+		const Clause& clause = ca[ formula[i] ];
 		// check for sat
 		unsigned j = 0;
 		for(  ; j < clause.size(); ++j ){
@@ -61,6 +69,14 @@ void Sls::init(bool reinit)
 			}
 		}
 		if( j == clause.size () ){
+		  if( opt_debug) {
+		    cerr << "clause " << ca[ formula[i] ] << " is considered unsatisfied" << endl;
+		    for( int k = 0 ; k < clause.size(); ++ k ) {
+		      cerr << " " << clause[k] << " isUnsat: " << isUnsat( assignment, clause[k] ) << "; "; 
+		    }
+		    cerr << endl;
+		  }
+		  
 			watchUnsatClause( formula[i] );
 			unsatisfiedClauses++;
 		}
@@ -70,7 +86,7 @@ void Sls::init(bool reinit)
 void Sls::createRandomAssignment()
 {
 	// init random assignment
-	for( Var v = 1 ; v <= varCnt; v++ )
+	for( Var v = 0 ; v < varCnt; v++ )
 	{
 		setPolarity(assignment, v, ( (rand() & 1) == 1 ? 1 : -1) );
 	}
@@ -172,6 +188,30 @@ bool Sls::search(uint32_t flipSteps)
 
 Var Sls::heuristic(){
 	Var flipMe = 0;
+	
+	cerr << "SLS model before pick: ";
+	  for( Var v = 0 ; v < data.nVars(); ++ v ) cerr << " " << ((int)assignment[v]) * (v+1);
+	  cerr << endl;
+	
+	cerr << "unsat clauses: ";
+	for( Var v = 0 ; v < data.nVars(); ++ v ) {
+	  cerr << "Lit " <<  mkLit(v,false) << ":";
+	  for( int i = 0 ; i < unsatClauses[toInt(mkLit(v,false))].size(); ++ i ) cerr << ca[ unsatClauses[toInt(mkLit(v,false))][i] ] << ", ";
+	  cerr << endl;
+	  cerr << "Lit " <<  mkLit(v,true) << ":";
+	  for( int i = 0 ; i < unsatClauses[toInt(mkLit(v,true))].size(); ++ i ) cerr << ca[ unsatClauses[toInt(mkLit(v,true))][i] ] << ", ";
+	  cerr << endl;
+	}
+	cerr << "sat clauses: ";
+	for( Var v = 0 ; v < data.nVars(); ++ v ) {
+	  cerr << "Lit " <<  mkLit(v,false) << ":";
+	  for( int i = 0 ; i < satClauses[toInt(mkLit(v,false))].size(); ++ i ) cerr << ca[ satClauses[toInt(mkLit(v,false))][i] ] << ", ";
+	  cerr << endl;
+	  cerr << "Lit " <<  mkLit(v,true) << ":";
+	  for( int i = 0 ; i < satClauses[toInt(mkLit(v, true))].size(); ++ i ) cerr << ca[ satClauses[toInt(mkLit(v, true))][i] ] << ", ";
+	  cerr << endl;
+	}
+	
 	if( unsatisfiedLiterals.size() > 0 ){
 		
 		const int& limitL = unsatisfiedLiterals.size();
@@ -182,8 +222,13 @@ Var Sls::heuristic(){
 		const Clause& cl = ca[ list[ rand() %  limitC ] ];
 		// do walksat on that clause
 		
+		if( opt_debug ) {
+		  cerr << "heuristic picks clause " << cl << " based on literal " << tmp << " - current unsatisfied literals: " << unsatisfiedLiterals.size() << endl;
+		}
+		
 		assert( cl.size() > 0 && "cannot handle empty clauses!" );
 		
+		tmpSet.clear();
 		tmpSet.push_back( cl[0] );
 		int smallestBreak = getFlipUnsat( var( cl[0] ) );
 		
@@ -201,6 +246,9 @@ Var Sls::heuristic(){
 		  
 		}
 		
+		cerr << "smallest break: " << smallestBreak << " candidates: " << tmpSet.size() << endl;
+		
+		tmp = lit_Undef;
 		// if literal without break, select smallest such literal!
 		if( smallestBreak == 0 ) {
 		  tmp = tmpSet[ rand() % tmpSet.size() ]; 
@@ -215,8 +263,9 @@ Var Sls::heuristic(){
 		  }
 		}
 		
+		assert( tmp != lit_Undef && "sls pick heuristic has to be able to select at least one literal!" );
 		flipMe = var(tmp);
-		assert( flipMe != 0 && "sls pick heuristic has to be able to select at least one literal!" );
+		cerr << "heuristic picks " << flipMe+1 << endl;
 	}
 	return flipMe;
 }
@@ -277,16 +326,50 @@ bool Sls::solve( const vec<CRef>& formula, uint32_t stepLimit )
 	
 	solveTime = cpuTime() - solveTime;
 	
+	if( opt_debug ) {
+	  if( solution) {
+	    bool foundUnsatisfiedClause = false;;
+	    for( int i = 0 ; i < formula.size()  ; ++ i ) {
+	      bool thisClauseIsSatisfied = false;
+	      const Clause& cl = ca[ formula[i] ];
+	      if( cl.can_be_deleted() ) continue;
+	      for( int j = 0 ; j < cl.size(); ++ j ) {
+		if ( isSat( assignment, cl[j] ) ) { thisClauseIsSatisfied = true; break; }
+	      }
+	      if( ! thisClauseIsSatisfied ) { 
+		foundUnsatisfiedClause = true;
+		if( opt_debug ) cerr << "the clause " << ca[formula[i]] << " is not satisfied by the SLS model" << endl;
+		break;
+	      }
+	    }
+	    if( !foundUnsatisfiedClause ) {
+	      cerr << "SLS model was successfully checked" << endl; 
+	    }
+	  }
+	}
+	
+	if( opt_debug ) {
+	  cerr << "SLS model: ";
+	  for( Var v = 0 ; v < data.nVars(); ++ v ) cerr << " " << ((int)assignment[v]) * (v+1);
+	  cerr << endl;
+	  cerr << "unsatisfied clauses according to data structures:" << endl;
+	  for( Var v = 0 ; v < data.nVars(); ++ v ) {
+	    cerr << " " << mkLit(v,false) << "@" << unsatClauses[ toInt(mkLit(v,false)) ].size();
+	    cerr << " " <<  mkLit(v,true) << "@" << unsatClauses[ toInt( mkLit(v,true)) ].size();
+	  }
+	  cerr << endl;
+	}
+	
+	
+	
 	// return satisfying assignment or 0, if no solution has been found so far
 	return solution;
 }
 
 void Sls::printStatistics( ostream& stream )
 {
-	cerr << "c unsatisfied clauses:  " << unsatisfiedClauses << endl;
-	cerr << "c unsatisfied literals: " << unsatisfiedLiterals.size() << endl;
-	cerr << "c flips: " << flips << endl;
-	cerr << "c fps: " << flips * 1000000 / solveTime << endl;
+  stream << "c [STAT] SLS " << solveTime << " s, " << flips << " flips, " << flips / solveTime << " fps" << endl;
+  stream << "c [STAT] SLS-info " <<  unsatisfiedClauses << " unsatClauses, " << unsatisfiedLiterals.size() << " unsatLits" << endl;
 }
 
 

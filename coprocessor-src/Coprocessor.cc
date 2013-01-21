@@ -25,6 +25,7 @@ static BoolOption opt_ee        (_cat, "ee",            "Use Equivalence Elimina
 static BoolOption opt_enabled   (_cat, "enabled_cp3",   "Use CP3", false);
 static BoolOption opt_inprocess (_cat, "inprocess", "Use CP3 for inprocessing", false);
 static BoolOption opt_bve       (_cat, "bve",           "Use Bounded Variable Elimination during preprocessing", false);
+static BoolOption opt_sls       (_cat, "sls",           "Use Simple Walksat algorithm to test whether formula is satisfiable quickly", false);
 
 
 static IntOption  opt_log       (_cat, "log",           "Output log messages until given level", 0, IntRange(0, 3));
@@ -48,6 +49,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , bve( solver->ca, controller, propagation, subsumption )
 , cce( solver->ca, controller )
 , ee ( solver->ca, controller, propagation, subsumption )
+, sls ( data, solver->ca, controller )
 {
   controller.init();
 }
@@ -168,12 +170,30 @@ lbool Preprocessor::preprocess()
   // vars = cluster variablen
   VarGraphUtils utils;
 
+  if( opt_sls ) {
+    if( opt_verbose > 2 )cerr << "c coprocessor sls" << endl;
+    if( status == l_Undef ) {
+      bool solvedBySls = sls.solve( data.getClauses(), 100000 );  // cannot change status, can generate new unit clauses
+      if( solvedBySls ) {
+	cerr << "c formula was solved with SLS!" << endl;
+	cerr << endl 
+	 << "=======================" << endl 
+	 << " use the result of SLS as model! " 
+	 << "=======================" << endl
+	 << endl;
+      }
+    }
+    if (! solver->okay())
+        status = l_False;
+  }  
+  
   if( opt_printStats ) {
     propagation.printStatistics(cerr);
     subsumption.printStatistics(cerr);
     ee.printStatistics(cerr);
     hte.printStatistics(cerr);
     cce.printStatistics(cerr);
+    sls.printStatistics(cerr);
   }
 
   // clear / update clauses and learnts vectores and statistical counters

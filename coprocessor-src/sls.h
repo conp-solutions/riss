@@ -113,8 +113,8 @@ private:
 	*/
 	void debug();
 	
-	bool isSat( const vector<char>& assignment, const Lit l ) const { return (sign(l) && assignment[ var(l) ]) == -1 || (!sign(l) && assignment[ var(l) ] == 1); }
-	bool isUnsat( const vector<char>& assignment, const Lit l ) const { return (sign(l) && assignment[ var(l) ]) == 1 || (!sign(l) && assignment[ var(l) ] == -1); }
+	bool isSat( const vector<char>& assignment, const Lit l ) const { return (sign(l) && assignment[ var(l) ] == -1) || (!sign(l) && assignment[ var(l) ] == 1); }
+	bool isUnsat( const vector<char>& assignment, const Lit l ) const { return (sign(l) && assignment[ var(l) ] == 1) || (!sign(l) && assignment[ var(l) ] == -1); }
 	bool isUndef( const vector<char>& assignment, const Lit l ) const { return assignment[ var(l) ] == 0; }
 	bool setPolarity( vector<char>& assignment, const Var v, const char pol ) { assignment[ v ] = pol; }
 	bool invertPolarity( vector<char>& assignment, const Var v) { if(assignment[ v ] != 0) assignment[v] = -assignment[v]; }

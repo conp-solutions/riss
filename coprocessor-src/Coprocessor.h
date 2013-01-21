@@ -18,6 +18,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/ClauseElimination.h"
 #include "coprocessor-src/EquivalenceElimination.h"
 
+#include "coprocessor-src/sls.h"
+
 using namespace Minisat;
 
 namespace Coprocessor {
@@ -65,6 +67,7 @@ protected:
   BoundedVariableElimination bve;
   ClauseElimination cce;
   EquivalenceElimination ee;
+  Sls sls;
 
   // own methods:
   void cleanSolver();                // remove all clauses from structures inside the solver
