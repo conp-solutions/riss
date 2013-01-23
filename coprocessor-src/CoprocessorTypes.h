@@ -120,8 +120,8 @@ public:
 	  array[index] = step;
 	}
 
-	/** check whether a given index has the wanted index */
-	bool hasSameIndex( const uint32_t index, const uint32_t comparestep ) const {
+	/** check whether a given index has the wanted index */ 
+	bool hasSameIndex( const uint32_t index, const uint32_t comparestep ) const { //TODO name is confusing hasSameStep ??
 	  return array[index] == comparestep;
 	}
 
@@ -513,12 +513,12 @@ inline int32_t CoprocessorData::operator[](const Var v) const
 
 inline vector< Minisat::CRef >& CoprocessorData::list(const Lit l)
 {
-  return occs[ toInt(l) ];
+   return occs[ toInt(l) ];
 }
 
 inline const vector< Minisat::CRef >& CoprocessorData::list(const Lit l) const
 {
-  return occs[ toInt(l) ];
+   return occs[ toInt(l) ];
 }
 
 inline void CoprocessorData::correctCounters()
