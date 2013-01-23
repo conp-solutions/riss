@@ -40,7 +40,7 @@ clean:
 	@cd core; make clean CPDEPEND="" MROOT=..;
 	@cd simp; make clean MROOT=..;
 	@cd coprocessor-src; make clean MROOT=..;
-	@rm -f minisat coprocessor minisatd
+	@rm -f minisat coprocessor minisatd glucose
 	@rm -f *~ */*~
 	@rm -rf doc/html
 	@echo Done
