@@ -77,6 +77,15 @@ protected:
     double lockTime;      // statistic counter
     };
 
+  // Structure to track updates of occurrence lists
+  struct OccUpdate {
+      CRef cr;
+      Lit  l;
+      OccUpdate(const CRef _cr, const Lit _l) : cr(_cr), l(_l) {} 
+  };
+
+
+  inline void updateOccurrences(CoprocessorData & data, const vector< OccUpdate > & updates);
   vector< struct SubsumeStatsData > localStats;
 
   bool hasToSubsume() const ;       // return whether there is something in the subsume queue
@@ -86,9 +95,9 @@ protected:
   
   bool hasToStrengthen() const ;    // return whether there is something in the strengthening queue
   lbool fullStrengthening(CoprocessorData& data, const bool doStatistics = true); // performs strengthening until completion, puts clauses into subsumption queue
-  void strengthening_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics = true);
-  void par_strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int stop, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, const bool doStatistics = true); 
-  void par_nn_strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int end, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, const bool doStatistics = true);
+  lbool strengthening_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics = true);
+  void par_strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int stop, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, const bool doStatistics = true); 
+  void par_nn_strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int end, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, const bool doStatistics = true);
   inline void par_nn_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, const bool doStatistics = true) ; 
   inline void par_nn_negated_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, const bool doStatistics = true);
   /** data for parallel execution */
@@ -100,6 +109,7 @@ protected:
     vector<SpinLock> * var_locks;
     vector<CRef>*    to_delete;
     vector<CRef>*    set_non_learnt;
+    vector<OccUpdate> * occ_updates;
     struct SubsumeStatsData* stats;
     };
   

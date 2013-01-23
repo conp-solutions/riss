@@ -25,7 +25,9 @@ static BoolOption opt_ee        (_cat, "ee",            "Use Equivalence Elimina
 static BoolOption opt_enabled   (_cat, "enabled_cp3",   "Use CP3", false);
 static BoolOption opt_inprocess (_cat, "inprocess", "Use CP3 for inprocessing", false);
 static BoolOption opt_bve       (_cat, "bve",           "Use Bounded Variable Elimination during preprocessing", false);
-
+static BoolOption opt_sls       (_cat, "sls",           "Use Simple Walksat algorithm to test whether formula is satisfiable quickly", false);
+static BoolOption opt_twosat    (_cat, "2sat",          "2SAT algorithm to check satisfiability of binary clauses", false);
+static BoolOption opt_ts_phase  (_cat, "2sat-phase",    "use 2SAT model as initial phase for SAT solver", false);
 
 static IntOption  opt_log       (_cat, "log",           "Output log messages until given level", 0, IntRange(0, 3));
 
@@ -40,7 +42,9 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , data( solver->ca, solver, log, opt_unlimited, opt_randomized )
 , controller( opt_threads )
 // attributes and all that
-
+, isInprocessing( false )
+, ppTime( 0 )
+, ipTime( 0 )
 // classes for preprocessing methods
 , propagation( solver->ca, controller )
 , subsumption( solver->ca, controller, propagation )
@@ -48,6 +52,8 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , bve( solver->ca, controller, propagation, subsumption )
 , cce( solver->ca, controller )
 , ee ( solver->ca, controller, propagation, subsumption )
+, sls ( data, solver->ca, controller )
+, twoSAT( solver->ca, controller, data)
 {
   controller.init();
 }
@@ -57,11 +63,13 @@ Preprocessor::~Preprocessor()
 
 }
 
-lbool Preprocessor::preprocess()
+lbool Preprocessor::performSimplification()
 {
   if( ! opt_enabled ) return l_Undef;
   if( opt_verbose > 2 ) cerr << "c start preprocessing with coprocessor" << endl;
 
+  MethodTimer methodTime( isInprocessing ? &ipTime : &ppTime ); // measure time spend in this method
+  
   // first, remove all satisfied clauses
   if( !solver->simplify() ) return l_False;
 
@@ -168,14 +176,65 @@ lbool Preprocessor::preprocess()
   // vars = cluster variablen
   VarGraphUtils utils;
 
-  if( opt_printStats ) {
-    propagation.printStatistics(cerr);
-    subsumption.printStatistics(cerr);
-    ee.printStatistics(cerr);
-    hte.printStatistics(cerr);
-    cce.printStatistics(cerr);
+  if( opt_sls ) {
+    if( opt_verbose > 2 )cerr << "c coprocessor sls" << endl;
+    if( status == l_Undef ) {
+      bool solvedBySls = sls.solve( data.getClauses(), 200000 );  // cannot change status, can generate new unit clauses
+      if( solvedBySls ) {
+	cerr << "c formula was solved with SLS!" << endl;
+	cerr // << endl 
+	 << "c ================================" << endl 
+	 << "c  use the result of SLS as model " << endl
+	 << "c ================================" << endl;
+      }
+    }
+    if (! solver->okay())
+        status = l_False;
   }
-
+  
+  if( opt_twosat ) {
+    if( opt_verbose > 2 )cerr << "c coprocessor 2SAT" << endl;
+    if( status == l_Undef ) {
+      bool solvedBy2SAT = twoSAT.solve();  // cannot change status, can generate new unit clauses
+      if( solvedBy2SAT ) {
+	// cerr << "binary clauses have been solved with 2SAT" << endl;
+	// check satisfiability of whole formula!
+	bool isNotSat = false;
+	for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
+	  const Clause& cl = ca[ data.getClauses()[i] ];
+	  int j = 0;
+	  for(  ; j < cl.size(); ++ j ) {
+	    if( twoSAT.isSat(cl[j]) ) break;
+	  }
+	  if( j == cl.size() ) { isNotSat = true; break; }
+	}
+	if( isNotSat ) {
+	  // only set the phase before search!
+	  if( opt_twosat && !isInprocessing) {
+	    for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
+	  }
+	  cerr // << endl 
+	  << "c ================================" << endl 
+	  << "c  2SAT model is not a real model " << endl
+	  << "c ================================" << endl;
+	} else {
+	  cerr // << endl 
+	  << "c =================================" << endl 
+	  << "c  use the result of 2SAT as model " << endl 
+	  << "c =================================" << endl;
+	}
+      } else {
+	cerr // << endl 
+	 << "================================" << endl 
+	 << " unsatisfiability shown by 2SAT " << endl
+	 << "================================" << endl;
+	data.setFailed();
+      }
+    }
+    if (! solver->okay())
+        status = l_False;
+  }  
+  
   // clear / update clauses and learnts vectores and statistical counters
   // attach all clauses to their watchers again, call the propagate method to get into a good state again
   if( opt_verbose > 2 ) cerr << "c coprocessor re-setup solver" << endl;
@@ -184,6 +243,17 @@ lbool Preprocessor::preprocess()
     if ( data.ok() ) reSetupSolver();
   }
 
+  if( opt_printStats ) {
+    printStatistics(cerr);
+    propagation.printStatistics(cerr);
+    subsumption.printStatistics(cerr);
+    ee.printStatistics(cerr);
+    hte.printStatistics(cerr);
+    cce.printStatistics(cerr);
+    sls.printStatistics(cerr);
+    twoSAT.printStatistics(cerr);
+  }
+  
   // destroy preprocessor data
   if( opt_verbose > 2 ) cerr << "c coprocessor free data structures" << endl;
   data.destroy();
@@ -192,13 +262,22 @@ lbool Preprocessor::preprocess()
   return status;
 }
 
+
+lbool Preprocessor::preprocess()
+{
+  isInprocessing = false;
+  return performSimplification();
+}
+
 lbool Preprocessor::inprocess()
 {
   // if no inprocesing enabled, do not do it!
   if( !opt_inprocess ) return l_Undef;
   // TODO: do something before preprocessing? e.g. some extra things with learned / original clauses
-  if (opt_inprocess)
-    return preprocess();
+  if (opt_inprocess) {
+    isInprocessing = true;
+    return performSimplification();
+  }
   else 
     return l_Undef; 
 }
@@ -207,6 +286,16 @@ lbool Preprocessor::preprocessScheduled()
 {
   // TODO execute preprocessing techniques in specified order
   return l_Undef;
+}
+
+void Preprocessor::printStatistics(ostream& stream)
+{
+stream << "c [STAT] CP3 "
+<< ppTime << " s-ppTime, " 
+<< ipTime << " s-ipTime, "
+<< data.getClauses().size() << " cls, " 
+<< data.getLEarnts().size() << " learnts "
+<< endl;
 }
 
 void Preprocessor::extendModel(vec< lbool >& model)
@@ -396,6 +485,7 @@ void Preprocessor::reSetupSolver()
 	    }
 	  }
     }
+
 }
 
 void Preprocessor::sortClauses()

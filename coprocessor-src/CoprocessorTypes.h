@@ -49,6 +49,15 @@ public:
   ~MethodFree() { free( pointer ); }
 };
 
+/** class that measures the time between creation and destruction of the object, and adds it*/
+class MethodTimer {
+  double* pointer;
+public:
+  MethodTimer( double* timer ) : pointer( timer ) { *pointer = cpuTime() - *pointer;}
+  ~MethodTimer() { *pointer = cpuTime() - *pointer; }
+};  
+
+
 /** class that is used as mark array */
 class MarkArray {
 private:
@@ -120,8 +129,8 @@ public:
 	  array[index] = step;
 	}
 
-	/** check whether a given index has the wanted index */
-	bool hasSameIndex( const uint32_t index, const uint32_t comparestep ) const {
+	/** check whether a given index has the wanted index */ 
+	bool hasSameIndex( const uint32_t index, const uint32_t comparestep ) const { //TODO name is confusing hasSameStep ??
 	  return array[index] == comparestep;
 	}
 
@@ -513,12 +522,12 @@ inline int32_t CoprocessorData::operator[](const Var v) const
 
 inline vector< Minisat::CRef >& CoprocessorData::list(const Lit l)
 {
-  return occs[ toInt(l) ];
+   return occs[ toInt(l) ];
 }
 
 inline const vector< Minisat::CRef >& CoprocessorData::list(const Lit l) const
 {
-  return occs[ toInt(l) ];
+   return occs[ toInt(l) ];
 }
 
 inline void CoprocessorData::correctCounters()
@@ -788,7 +797,7 @@ inline void BIG::create(ClauseAllocator& ca, CoprocessorData& data, vec< Minisat
   int sum = 0;
   // count occurrences of literals in binary clauses of the given list
   for( int p = 0 ; p < 2; ++ p ) {
-    vec<CRef>& list = (p==0 ? list1 : list2 );
+    const vec<CRef>& list = (p==0 ? list1 : list2 );
     for( int i = 0 ; i < list.size(); ++i ) {
       const Clause& c = ca[list[i]];
       if(c.size() != 2 || c.can_be_deleted() ) continue;
@@ -811,7 +820,7 @@ inline void BIG::create(ClauseAllocator& ca, CoprocessorData& data, vec< Minisat
 
   // add all binary clauses to graph
   for( int p = 0 ; p < 2; ++ p ) {
-    vec<CRef>& list = (p==0 ? list1 : list2 );
+    const vec<CRef>& list = (p==0 ? list1 : list2 );
     for( int i = 0 ; i < list.size(); ++i ) {
       const Clause& c = ca[list[i]];
       if(c.size() != 2 || c.can_be_deleted() ) continue;

@@ -13,8 +13,7 @@ static const char* _cat = "COPROCESSOR 3 - EE";
 static IntOption  opt_level            (_cat, "cp3_ee_level",      "EE on BIG, gate probing, structural hashing", 3, IntRange(0, 3));
 static BoolOption opt_old_circuit      (_cat, "cp3_old_circuit",   "do old circuit extraction", false);
 static BoolOption opt_eagerEquivalence (_cat, "cp3_eagerGates",    "do old circuit extraction", true);
-//static BoolOption opt_eeGateBigFirst   (_cat, "cp3_BigBeforeGate", "detect binary equivalences before going for gates", true);
-static bool opt_eeGateBigFirst = true;
+static BoolOption opt_eeGateBigFirst   (_cat, "cp3_BigThenGate", "detect binary equivalences before going for gates", true);
 /// enable this parameter only during debug!
 static BoolOption debug_out            (_cat, "ee_debug", "write final circuit to this file",false);
 static StringOption aagFile            (_cat, "ee_aag", "write final circuit to this file");
@@ -1840,6 +1839,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 		  c.set_strengthen(true);
 		  c.set_subsume(true);
 		  // TODO: take care of duplicates!
+		  cerr << "c added clause " << ca[ list[k] ] << " to the subsumption queue" << endl;
 		  subsumption.addClause( list[k] );
 		  resetVariables = true;
  		  if( debug_out )  cerr << "c add clause to subsume list: " << c << endl;

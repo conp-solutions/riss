@@ -18,6 +18,9 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/ClauseElimination.h"
 #include "coprocessor-src/EquivalenceElimination.h"
 
+#include "coprocessor-src/sls.h"
+#include "coprocessor-src/TwoSAT.h"
+
 using namespace Minisat;
 
 namespace Coprocessor {
@@ -36,6 +39,10 @@ class Preprocessor {
   CoprocessorData  data;       // all the data that needs to be accessed by other classes (preprocessing methods)
   ThreadController controller; // controller for all threads
 
+  bool isInprocessing;		// control whether current call of the preprocessor should be handled as inprocessing
+  double ppTime;		// time to do preprocessing
+  double ipTime;		// time to do inpreprocessing
+  
 public:
 
   Preprocessor(Solver* solver, int32_t _threads=-1 );
@@ -65,7 +72,13 @@ protected:
   BoundedVariableElimination bve;
   ClauseElimination cce;
   EquivalenceElimination ee;
+  Sls sls;
+  TwoSatSolver twoSAT;
 
+  // do the real work
+  lbool performSimplification();
+  void printStatistics(ostream& stream);
+  
   // own methods:
   void cleanSolver();                // remove all clauses from structures inside the solver
   void reSetupSolver();              // add all clauses back into the solver, remove clauses that can be deleted
@@ -80,8 +93,8 @@ protected:
   void printFormula(FILE * fd);
   inline void printClause(FILE * fd, CRef cr);
   inline void printLit(FILE * fd, int l);
-
   void printFormula( const string& headline );
+
 };
 
 };

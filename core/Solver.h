@@ -318,11 +318,11 @@ protected:
         return seed / 2147483647; }
 
     // Returns a random integer 0 <= x < size. Seed must never be 0.
-    static inline int irand(double& seed, int size) {
+public: static inline int irand(double& seed, int size) {
         return (int)(drand(seed) * size); }
         
 /// for coprocessor
-    Coprocessor::Preprocessor* coprocessor;
+protected:  Coprocessor::Preprocessor* coprocessor;
         
 };
 
