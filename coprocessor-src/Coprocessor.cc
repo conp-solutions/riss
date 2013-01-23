@@ -26,7 +26,8 @@ static BoolOption opt_enabled   (_cat, "enabled_cp3",   "Use CP3", false);
 static BoolOption opt_inprocess (_cat, "inprocess", "Use CP3 for inprocessing", false);
 static BoolOption opt_bve       (_cat, "bve",           "Use Bounded Variable Elimination during preprocessing", false);
 static BoolOption opt_sls       (_cat, "sls",           "Use Simple Walksat algorithm to test whether formula is satisfiable quickly", false);
-
+static BoolOption opt_twosat    (_cat, "2sat",          "2SAT algorithm to check satisfiability of binary clauses", false);
+static BoolOption opt_ts_phase  (_cat, "2sat-phase",    "use 2SAT model as initial phase for SAT solver", false);
 
 static IntOption  opt_log       (_cat, "log",           "Output log messages until given level", 0, IntRange(0, 3));
 
@@ -50,6 +51,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , cce( solver->ca, controller )
 , ee ( solver->ca, controller, propagation, subsumption )
 , sls ( data, solver->ca, controller )
+, twoSAT( solver->ca, controller, data)
 {
   controller.init();
 }
@@ -173,14 +175,55 @@ lbool Preprocessor::preprocess()
   if( opt_sls ) {
     if( opt_verbose > 2 )cerr << "c coprocessor sls" << endl;
     if( status == l_Undef ) {
-      bool solvedBySls = sls.solve( data.getClauses(), 100000 );  // cannot change status, can generate new unit clauses
+      bool solvedBySls = sls.solve( data.getClauses(), 200000 );  // cannot change status, can generate new unit clauses
       if( solvedBySls ) {
 	cerr << "c formula was solved with SLS!" << endl;
-	cerr << endl 
-	 << "=======================" << endl 
-	 << " use the result of SLS as model! " 
-	 << "=======================" << endl
-	 << endl;
+	cerr // << endl 
+	 << "c ================================" << endl 
+	 << "c  use the result of SLS as model " << endl
+	 << "c ================================" << endl;
+      }
+    }
+    if (! solver->okay())
+        status = l_False;
+  }
+  
+  if( opt_twosat ) {
+    if( opt_verbose > 2 )cerr << "c coprocessor 2SAT" << endl;
+    if( status == l_Undef ) {
+      bool solvedBy2SAT = twoSAT.solve();  // cannot change status, can generate new unit clauses
+      if( solvedBy2SAT ) {
+	// cerr << "binary clauses have been solved with 2SAT" << endl;
+	// check satisfiability of whole formula!
+	bool isNotSat = false;
+	for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
+	  const Clause& cl = ca[ data.getClauses()[i] ];
+	  int j = 0;
+	  for(  ; j < cl.size(); ++ j ) {
+	    if( twoSAT.isSat(cl[j]) ) break;
+	  }
+	  if( j == cl.size() ) { isNotSat = true; break; }
+	}
+	if( isNotSat ) {
+	  if( opt_twosat ) {
+	    for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
+	  }
+	  cerr // << endl 
+	  << "c ================================" << endl 
+	  << "c  2SAT model is not a real model " << endl
+	  << "c ================================" << endl;
+	} else {
+	  cerr // << endl 
+	  << "c =================================" << endl 
+	  << "c  use the result of 2SAT as model " << endl 
+	  << "c =================================" << endl;
+	}
+      } else {
+	cerr // << endl 
+	 << "================================" << endl 
+	 << " unsatisfiability shown by 2SAT " << endl
+	 << "================================" << endl;
+	data.setFailed();
       }
     }
     if (! solver->okay())
@@ -194,6 +237,7 @@ lbool Preprocessor::preprocess()
     hte.printStatistics(cerr);
     cce.printStatistics(cerr);
     sls.printStatistics(cerr);
+    twoSAT.printStatistics(cerr);
   }
 
   // clear / update clauses and learnts vectores and statistical counters

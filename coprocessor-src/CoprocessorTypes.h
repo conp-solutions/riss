@@ -788,7 +788,7 @@ inline void BIG::create(ClauseAllocator& ca, CoprocessorData& data, vec< Minisat
   int sum = 0;
   // count occurrences of literals in binary clauses of the given list
   for( int p = 0 ; p < 2; ++ p ) {
-    vec<CRef>& list = (p==0 ? list1 : list2 );
+    const vec<CRef>& list = (p==0 ? list1 : list2 );
     for( int i = 0 ; i < list.size(); ++i ) {
       const Clause& c = ca[list[i]];
       if(c.size() != 2 || c.can_be_deleted() ) continue;
@@ -811,7 +811,7 @@ inline void BIG::create(ClauseAllocator& ca, CoprocessorData& data, vec< Minisat
 
   // add all binary clauses to graph
   for( int p = 0 ; p < 2; ++ p ) {
-    vec<CRef>& list = (p==0 ? list1 : list2 );
+    const vec<CRef>& list = (p==0 ? list1 : list2 );
     for( int i = 0 ; i < list.size(); ++i ) {
       const Clause& c = ca[list[i]];
       if(c.size() != 2 || c.can_be_deleted() ) continue;

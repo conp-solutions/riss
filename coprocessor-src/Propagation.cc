@@ -90,6 +90,6 @@ void Propagation::initClause( const CRef cr ) {}
 
 void Propagation::printStatistics(ostream& stream)
 {
-  stream << "c [STAT] UP " << processTime << " s, " << removedClauses << " cls,"
+  stream << "c [STAT] UP " << processTime << " s, " << lastPropagatedLiteral << " units, " << removedClauses << " cls, "
 			    << removedLiterals << " lits" << endl;
 }

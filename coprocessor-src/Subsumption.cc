@@ -1101,6 +1101,10 @@ void Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start
       continue;
     //find Lit with least occurrences and its occurrences
     // search lit with minimal occurrences
+    if( strengthener.size() < 2 ) {
+      if( strengthener.size() == 1 ) { if( l_False == data.enqueue(strengthener[0]) ) break; }
+      else { data.setFailed(); break; }
+    }
     assert (strengthener.size() > 1 && "expect strengthener to be > 1");
     Lit min = lit_Undef, nmin = lit_Undef;
     Lit minT = strengthener[0];

@@ -25,34 +25,21 @@ Sls::~Sls()
 
 }
 
-void Sls::init(bool reinit)
+void Sls::init()
 {
 	unsatisfiedClauses = 0;
-	satClauses.resize( 2 *(varCnt) );
-	unsatClauses.resize( 2 *(varCnt) );
 	assignment.resize( varCnt );
+	breakCount.resize( varCnt );
 	
-	if( !reinit ){
-		unsatisfiedLiteralsContains.resize( 2*varCnt );
-		unsatisfiedLiteralsContains.reset();
-	} else {
-		// clear heap
-		unsatisfiedLiteralsContains.create( varCnt * 2 );
-		unsatisfiedLiterals.clear();
-		for(int literal = 0; literal < 2 * varCnt; ++ literal )
-		{
-			satClauses[ literal ].clear();
-			unsatClauses[ literal ].clear();
-		}
-	}
-
-	unsatisfiedLiteralsContains.nextStep();
-
+	watchSatClauses.resize( varCnt * 2 );
+	
 	createRandomAssignment();
 	
+	if( opt_debug ) {
 	cerr << "SLS randomly created assignment: ";
 	  for( Var v = 0 ; v < data.nVars(); ++ v ) cerr << " " << ((int)assignment[v]) * (v+1);
 	  cerr << endl;
+	}
 	
 	// fill sat and unsat clauses
 	const vec<CRef>& formula = data.getClauses();
@@ -60,10 +47,13 @@ void Sls::init(bool reinit)
 	for( unsigned i = 0 ; i < formula.size(); ++i )
 	{
 		const Clause& clause = ca[ formula[i] ];
+		if( clause.can_be_deleted() ) continue; // do not work with redundant clauses!
+		Lit satLit = lit_Undef;
 		// check for sat
 		unsigned j = 0;
 		for(  ; j < clause.size(); ++j ){
 			if( isSat( assignment, clause[j]) ){
+				satLit = clause[j];
 				watchSatClause( formula[i], clause[j] );
 				break;
 			}
@@ -76,9 +66,18 @@ void Sls::init(bool reinit)
 		    }
 		    cerr << endl;
 		  }
-		  
-			watchUnsatClause( formula[i] );
-			unsatisfiedClauses++;
+		  unsatisfiedClauses++;
+		  unsatClauses.push_back( formula[i] );
+		} else {
+		  assert( satLit != lit_Undef && "if clause is satisfied, there needs to be a satisfied literal" );
+		  // if there is only this literal, which satisfies the clause, increase the break count!
+		  ++j; // next literal!
+		  for(  ; j < clause.size(); ++j ){
+			if( isSat( assignment, clause[j]) ) break;
+		  }
+		  if( j == clause.size () ) {
+		     breakCount [ var( satLit ) ] ++;
+		  }
 		}
 	}
 }
@@ -94,44 +93,7 @@ void Sls::createRandomAssignment()
 
 void Sls::watchSatClause( const Minisat::CRef clause, const Lit satisfyingLiteral )
 {
-	satClauses[ toInt( satisfyingLiteral) ].push_back( clause );
-}
-
-void Sls::watchUnsatClause( const CRef clause )
-{
-	const Clause& cl = ca[clause];
-	for( unsigned i = 0 ; i < cl.size(); ++i ){
-		const unsigned index = toInt(cl[i]);
-		const Lit literal = cl[i];
-		unsatClauses[ index ].push_back( clause );
- 		if( ! unsatisfiedLiteralsContains.isCurrentStep(index) ) { 
-		  unsatisfiedLiteralsContains.setCurrentStep(index);
-		  unsatisfiedLiterals.push_back( literal);
-		}
-	}
-}
-
-void Sls::unwatchUnsatClause( const CRef clause )
-{
-	const Clause& cl = ca[clause];
-	for( unsigned i = 0 ; i < cl.size(); ++i ){
-		vector<CRef>& list = unsatClauses[ toInt(cl[i]) ];
-		const Lit literal = cl[i];
-		// check for the clause in the list and remove it, by pushing the other clause into this list
-		for( unsigned j = 0 ; j < list.size(); ++j ){
-			if( list[j] == clause ){
-				list[j] = list[ list.size() - 1];
-				list.pop_back();
-				break;
-			}
-		}
-		
-		// update heap
-// 		if( ( --unsatClauseCounter[ toInt(literal) ]) == 0 )
-// 		{
-// 			if( unsatisfiedLiterals.contains( literal.data() ) ) unsatisfiedLiterals.remove_item( literal.data() );
-// 		}
-	}
+	watchSatClauses[ toInt( satisfyingLiteral) ].push_back( clause );
 }
 
 bool Sls::search(uint32_t flipSteps)
@@ -189,51 +151,43 @@ bool Sls::search(uint32_t flipSteps)
 Var Sls::heuristic(){
 	Var flipMe = 0;
 	
+	if( false &&  opt_debug ) {
+	cerr << endl << "=======================" << endl;
 	cerr << "SLS model before pick: ";
 	  for( Var v = 0 ; v < data.nVars(); ++ v ) cerr << " " << ((int)assignment[v]) * (v+1);
 	  cerr << endl;
 	
-	cerr << "unsat clauses: ";
+	cerr << "sat clauses: " << endl;
 	for( Var v = 0 ; v < data.nVars(); ++ v ) {
 	  cerr << "Lit " <<  mkLit(v,false) << ":";
-	  for( int i = 0 ; i < unsatClauses[toInt(mkLit(v,false))].size(); ++ i ) cerr << ca[ unsatClauses[toInt(mkLit(v,false))][i] ] << ", ";
+	  for( int i = 0 ; i < watchSatClauses[toInt(mkLit(v,false))].size(); ++ i ) cerr << ca[ watchSatClauses[toInt(mkLit(v,false))][i] ] << ", ";
 	  cerr << endl;
 	  cerr << "Lit " <<  mkLit(v,true) << ":";
-	  for( int i = 0 ; i < unsatClauses[toInt(mkLit(v,true))].size(); ++ i ) cerr << ca[ unsatClauses[toInt(mkLit(v,true))][i] ] << ", ";
+	  for( int i = 0 ; i < watchSatClauses[toInt(mkLit(v, true))].size(); ++ i ) cerr << ca[ watchSatClauses[toInt(mkLit(v, true))][i] ] << ", ";
 	  cerr << endl;
+	  cerr << "BreakCount[ " << v+1 << " ]: " << breakCount[v] << endl;
 	}
-	cerr << "sat clauses: ";
-	for( Var v = 0 ; v < data.nVars(); ++ v ) {
-	  cerr << "Lit " <<  mkLit(v,false) << ":";
-	  for( int i = 0 ; i < satClauses[toInt(mkLit(v,false))].size(); ++ i ) cerr << ca[ satClauses[toInt(mkLit(v,false))][i] ] << ", ";
-	  cerr << endl;
-	  cerr << "Lit " <<  mkLit(v,true) << ":";
-	  for( int i = 0 ; i < satClauses[toInt(mkLit(v, true))].size(); ++ i ) cerr << ca[ satClauses[toInt(mkLit(v, true))][i] ] << ", ";
-	  cerr << endl;
+	cerr << "unsat clauses[ " << unsatisfiedClauses << " ]: " << endl;
+	for( int i = 0 ; i < unsatClauses.size(); ++ i) {
+	  cerr << ca[unsatClauses[i]] << endl;
+	}
 	}
 	
-	if( unsatisfiedLiterals.size() > 0 ){
-		
-		const int& limitL = unsatisfiedLiterals.size();
-		Lit tmp = unsatisfiedLiterals[ rand() % limitL ];
+	if( unsatisfiedClauses > 0 ){
 		// get a random clause:
-		const vector< CRef >& list = unsatClauses[ toInt(tmp) ];
-		const int& limitC = list.size();
-		const Clause& cl = ca[ list[ rand() %  limitC ] ];
+		const int& limitC = unsatClauses.size();
+		const Clause& cl = ca[ unsatClauses[ rand() %  limitC ] ];
 		// do walksat on that clause
 		
-		if( opt_debug ) {
-		  cerr << "heuristic picks clause " << cl << " based on literal " << tmp << " - current unsatisfied literals: " << unsatisfiedLiterals.size() << endl;
-		}
-		
+	
 		assert( cl.size() > 0 && "cannot handle empty clauses!" );
 		
 		tmpSet.clear();
 		tmpSet.push_back( cl[0] );
-		int smallestBreak = getFlipUnsat( var( cl[0] ) );
+		int smallestBreak = breakCount[ var( cl[0] ) ];
 		
 		for( int i = 1; i < cl.size(); ++ i ) {
-		  int thisBreak =   getFlipUnsat( var( cl[i] ) );
+		  int thisBreak =   breakCount[ var( cl[i] ) ];
 		  
 		  if( thisBreak > smallestBreak )  continue;
 		  
@@ -246,9 +200,9 @@ Var Sls::heuristic(){
 		  
 		}
 		
-		cerr << "smallest break: " << smallestBreak << " candidates: " << tmpSet.size() << endl;
+		if( opt_debug ) cerr << "smallest break: " << smallestBreak << " candidates: " << tmpSet.size() << endl;
 		
-		tmp = lit_Undef;
+		Lit tmp = lit_Undef;
 		// if literal without break, select smallest such literal!
 		if( smallestBreak == 0 ) {
 		  tmp = tmpSet[ rand() % tmpSet.size() ]; 
@@ -265,49 +219,86 @@ Var Sls::heuristic(){
 		
 		assert( tmp != lit_Undef && "sls pick heuristic has to be able to select at least one literal!" );
 		flipMe = var(tmp);
-		cerr << "heuristic picks " << flipMe+1 << endl;
+		if( opt_debug ) cerr << "heuristic picks " << flipMe+1 << endl;
 	}
 	return flipMe;
 }
 
 void Sls::updateFlip(const Lit becameSat){
+  
+	if( opt_debug ) cerr << "update flip with " << becameSat << endl;
+  
+	// check all unsat clauses whether the have been satisfied now
+	for( unsigned i = 0 ; i < unsatClauses.size(); ++i )
+	{
+		const Clause& clause = ca[ unsatClauses[i] ];
+		if(false &&  opt_debug ) cerr << "check whether " << clause << " contains " << becameSat << endl;
+		for( int j = 0 ; j < clause.size(); ++ j ) {
+		  if( clause[j] == becameSat ) {
+		    // this clause is satisfied now by exactly this literal!
+		    watchSatClause(unsatClauses[i], becameSat);
+		    breakCount[ var(becameSat) ] ++;
+		    unsatisfiedClauses --;
+		    if( opt_debug ) cerr << "c satisfied clause " << ca[ unsatClauses[i] ] << " with literal " << becameSat << endl;
+		    // remove this clause from the unsatisfied clauses vector!
+		    unsatClauses[i] = unsatClauses[ unsatClauses.size() - 1 ];
+		    unsatClauses.pop_back();
+		    --i;
+		    break;
+		  }
+		}
+	}
+  
+  
+	
 	// check whether new clauses became unsatisfiedClauses
-	vector<CRef>& list = satClauses[ toInt(~becameSat) ];
-	// cerr << "c process unsat clauses" << endl;
-	for( unsigned i = 0 ; i < list.size(); ++i ){
+	vector<CRef>& list = watchSatClauses[ toInt(~becameSat) ];
+	breakCount[var(becameSat)] -= list.size();
+	for( unsigned i = 0 ; i < list.size(); ++i )
+	{
 		const Clause& clause = ca[ list[i] ];
-		unsigned j = 0 ;
-		for(; j < clause.size(); ++j ){
-			if( isSat( assignment, clause[j] ) )
-			{
-				// watch the satisfied clause
-				watchSatClause( list[i], clause[j]);
+		Lit satLit = lit_Undef;
+		// check for sat
+		unsigned j = 0;
+		for(  ; j < clause.size(); ++j ){
+			if( isSat( assignment, clause[j]) ){
+				satLit = clause[j];
+				watchSatClause( list[i], clause[j] );
 				break;
 			}
 		}
-		// handle the unsatisfied clause
-		if( j == clause.size() ){
-			watchUnsatClause( list[i] );
-			++unsatisfiedClauses;
+		if( j == clause.size () ){
+		  if( opt_debug) {
+		    cerr << "clause " << ca[ list[i] ] << " is considered unsatisfied" << endl;
+		    for( int k = 0 ; k < clause.size(); ++ k ) {
+		      cerr << " " << clause[k] << " isUnsat: " << isUnsat( assignment, clause[k] ) << "; "; 
+		    }
+		    cerr << endl;
+		  }
+		  unsatisfiedClauses++;
+		  unsatClauses.push_back( list[i] );
+		} else {
+		  assert( satLit != lit_Undef && "if clause is satisfied, there needs to be a satisfied literal" );
+		  // if there is only this literal, which satisfies the clause, increase the break count!
+		  ++j; // next literal!
+		  for(  ; j < clause.size(); ++j ){
+			if( isSat( assignment, clause[j]) ) break;
+		  }
+		  if( j == clause.size () ) {
+		     breakCount [ var( satLit ) ] ++;
+		  }
 		}
 	}
+	list.clear(); // clear watch list of this literal!
 	
-	// remove all clauses from this list (they have been either pushed to another sat-list or are in the unsat-lists)
-	list.clear();
-
-	// cerr << "c process sat clauses" << endl;
-	// put newly satisfied clauses into sat clause structure
-	while( unsatClauses[ toInt(becameSat) ].size() > 0 )
-	{
-		watchSatClause( unsatClauses[ toInt(becameSat) ][0], becameSat );
-		unwatchUnsatClause( unsatClauses[ toInt(becameSat) ][0] );
-		--unsatisfiedClauses;
-	}
+	
+	
+	// assert( false && "implement this method!" );
 }
 
 bool Sls::solve( const vec<CRef>& formula, uint32_t stepLimit )
 {
-    solveTime = cpuTime() - solveTime;
+        solveTime = cpuTime() - solveTime;
 	// setup main variables
 	assignment.resize(data.nVars());
 	this->varCnt = data.nVars();
@@ -318,9 +309,9 @@ bool Sls::solve( const vec<CRef>& formula, uint32_t stepLimit )
 	unsigned restarts = 0;
 
 	// init search
-	init( true );
-	restarts ++;
-	cerr << "c start with " << unsatisfiedClauses << " unsatisfied clauses" << endl;
+	init();
+	
+	if( opt_debug ) cerr << "c start with " << unsatisfiedClauses << " unsatisfied clauses" << endl;
 	// search
 	solution = search(stepLimit);
 	
@@ -352,12 +343,6 @@ bool Sls::solve( const vec<CRef>& formula, uint32_t stepLimit )
 	  cerr << "SLS model: ";
 	  for( Var v = 0 ; v < data.nVars(); ++ v ) cerr << " " << ((int)assignment[v]) * (v+1);
 	  cerr << endl;
-	  cerr << "unsatisfied clauses according to data structures:" << endl;
-	  for( Var v = 0 ; v < data.nVars(); ++ v ) {
-	    cerr << " " << mkLit(v,false) << "@" << unsatClauses[ toInt(mkLit(v,false)) ].size();
-	    cerr << " " <<  mkLit(v,true) << "@" << unsatClauses[ toInt( mkLit(v,true)) ].size();
-	  }
-	  cerr << endl;
 	}
 	
 	
@@ -369,51 +354,7 @@ bool Sls::solve( const vec<CRef>& formula, uint32_t stepLimit )
 void Sls::printStatistics( ostream& stream )
 {
   stream << "c [STAT] SLS " << solveTime << " s, " << flips << " flips, " << flips / solveTime << " fps" << endl;
-  stream << "c [STAT] SLS-info " <<  unsatisfiedClauses << " unsatClauses, " << unsatisfiedLiterals.size() << " unsatLits" << endl;
-}
-
-
-int Sls::getFlipDiff( const Var v ) const {
-	const Lit currentSat = mkLit(v, assignment[v] == -1 );
-	unsigned int newSat = unsatClauses[ toInt(~currentSat) ].size();
-	int newUnsat = 0;
-	const vector<CRef>& list = satClauses[ toInt(currentSat) ];
-	for( unsigned i = 0 ; i < list.size(); ++i ){
-		const Clause& clause = ca[list[i]];
-		unsigned j = 0 ;
-		for(; j < clause.size(); ++j ){
-			if( isSat( assignment, clause[j] ) ) break;
-		}
-		// handle the unsatisfied clause
-		if( j == clause.size() ){
-			newUnsat++;
-		}
-	}
-	
-	return newSat - newUnsat;
-}
-
-unsigned int Sls::getFlipSat( const Var v ) const {
-	const Lit currentSat = mkLit(v, assignment[v] == 0 );
-	return unsatClauses[ toInt(~currentSat) ].size();
-}
-
-int Sls::getFlipUnsat( const Var v ) const {
-	const Lit currentSat = mkLit(v, assignment[v] == -1 );
-	int newUnsat = 0;
-	const vector<CRef>& list = satClauses[ toInt(currentSat) ];
-	for( unsigned i = 0 ; i < list.size(); ++i ){
-		const Clause& clause = ca[list[i]];
-		unsigned j = 0 ;
-		for(; j < clause.size(); ++j ){
-			if( isSat( assignment, clause[j] ) ) break;
-		}
-		// handle the unsatisfied clause
-		if( j == clause.size() ){
-			newUnsat++;
-		}
-	}
-	return newUnsat;
+  stream << "c [STAT] SLS-info " <<  unsatisfiedClauses << " unsatClauses" << endl;
 }
 
 

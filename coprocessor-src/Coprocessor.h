@@ -19,6 +19,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/EquivalenceElimination.h"
 
 #include "coprocessor-src/sls.h"
+#include "coprocessor-src/TwoSAT.h"
 
 using namespace Minisat;
 
@@ -68,6 +69,7 @@ protected:
   ClauseElimination cce;
   EquivalenceElimination ee;
   Sls sls;
+  TwoSatSolver twoSAT;
 
   // own methods:
   void cleanSolver();                // remove all clauses from structures inside the solver

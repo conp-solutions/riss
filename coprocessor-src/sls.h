@@ -40,11 +40,9 @@ private:
     double solveTime;		// number of seconds for solving
   
 	// work data
-	vector< vector<CRef> > satClauses;   // clauses that are satisfied by a single literal (watch this literal)
-	vector< vector<CRef> > unsatClauses; // clauses that are unsatisfied. all the literals of the clause are watched
-	
-	MarkArray unsatisfiedLiteralsContains;     // store which literals are in the unsatisfied literals vector
-	vector< Lit > unsatisfiedLiterals;	    // heap that contains the literals, that have unsatisfied clauses
+	vector< vector<CRef> > watchSatClauses;	// clauses that are satisfied by a single literal (watch this literal)
+	vector< CRef > unsatClauses;			// clauses that are unsatisfied. all the literals of the clause are watched
+	vector< uint32_t > breakCount;			// number of clauses that would be falsified by flipping the given variable
 	
 	vector< Lit > tmpSet;	// temporary set for single methods
 	
@@ -54,17 +52,16 @@ private:
 	uint32_t varCnt;
 	
 	// work counter
-	unsigned unsatisfiedClauses;	// number of clauses, that are unsatisfied at the moment
+	int unsatisfiedClauses;	// number of clauses, that are unsatisfied at the moment
 	uint64_t flips;	// number of variable flips
 	
-	vector<Var> safeVariables;	// vector to store safe literals
 	float randomPropability;	// propability to not do a heuristic step, but a random one
 	float walkPropability;	  	// propability to perform a usual walk step instead of a novelty step
 	
 	/** initialize the search
 	* create random assignment, setup the clause watch lists
 	*/
-	void init(bool reinit = false);
+	void init();
 	
 	/** search until a satisfying assignment is found
 	*	returns true, if a solution has been found
@@ -74,13 +71,6 @@ private:
 	/** enqueue the clause into the list of the literal
 	*/
 	void watchSatClause( const CRef clause, const Lit satisfyingLiteral );
-	
-	/** enqueue the clause into the lists of all its literals
-	*/
-	void watchUnsatClause( const CRef clause );
-	/** dequeue the clause
-	*/
-	void unwatchUnsatClause( const CRef clause );
 	
 	/** rearrange clauses
 	*
@@ -117,7 +107,7 @@ private:
 	bool isUnsat( const vector<char>& assignment, const Lit l ) const { return (sign(l) && assignment[ var(l) ] == 1) || (!sign(l) && assignment[ var(l) ] == -1); }
 	bool isUndef( const vector<char>& assignment, const Lit l ) const { return assignment[ var(l) ] == 0; }
 	bool setPolarity( vector<char>& assignment, const Var v, const char pol ) { assignment[ v ] = pol; }
-	bool invertPolarity( vector<char>& assignment, const Var v) { if(assignment[ v ] != 0) assignment[v] = -assignment[v]; }
+	void invertPolarity( vector<char>& assignment, const Var v) { if(assignment[ v ] != 0) assignment[v] = -assignment[v]; }
 
 };
 
