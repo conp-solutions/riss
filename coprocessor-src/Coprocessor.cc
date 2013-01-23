@@ -42,7 +42,9 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , data( solver->ca, solver, log, opt_unlimited, opt_randomized )
 , controller( opt_threads )
 // attributes and all that
-
+, isInprocessing( false )
+, ppTime( 0 )
+, ipTime( 0 )
 // classes for preprocessing methods
 , propagation( solver->ca, controller )
 , subsumption( solver->ca, controller, propagation )
@@ -61,11 +63,13 @@ Preprocessor::~Preprocessor()
 
 }
 
-lbool Preprocessor::preprocess()
+lbool Preprocessor::performSimplification()
 {
   if( ! opt_enabled ) return l_Undef;
   if( opt_verbose > 2 ) cerr << "c start preprocessing with coprocessor" << endl;
 
+  MethodTimer methodTime( isInprocessing ? &ipTime : &ppTime ); // measure time spend in this method
+  
   // first, remove all satisfied clauses
   if( !solver->simplify() ) return l_False;
 
@@ -205,7 +209,8 @@ lbool Preprocessor::preprocess()
 	  if( j == cl.size() ) { isNotSat = true; break; }
 	}
 	if( isNotSat ) {
-	  if( opt_twosat ) {
+	  // only set the phase before search!
+	  if( opt_twosat && !isInprocessing) {
 	    for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
 	  }
 	  cerr // << endl 
@@ -230,16 +235,6 @@ lbool Preprocessor::preprocess()
         status = l_False;
   }  
   
-  if( opt_printStats ) {
-    propagation.printStatistics(cerr);
-    subsumption.printStatistics(cerr);
-    ee.printStatistics(cerr);
-    hte.printStatistics(cerr);
-    cce.printStatistics(cerr);
-    sls.printStatistics(cerr);
-    twoSAT.printStatistics(cerr);
-  }
-
   // clear / update clauses and learnts vectores and statistical counters
   // attach all clauses to their watchers again, call the propagate method to get into a good state again
   if( opt_verbose > 2 ) cerr << "c coprocessor re-setup solver" << endl;
@@ -248,6 +243,17 @@ lbool Preprocessor::preprocess()
     if ( data.ok() ) reSetupSolver();
   }
 
+  if( opt_printStats ) {
+    printStatistics(cerr);
+    propagation.printStatistics(cerr);
+    subsumption.printStatistics(cerr);
+    ee.printStatistics(cerr);
+    hte.printStatistics(cerr);
+    cce.printStatistics(cerr);
+    sls.printStatistics(cerr);
+    twoSAT.printStatistics(cerr);
+  }
+  
   // destroy preprocessor data
   if( opt_verbose > 2 ) cerr << "c coprocessor free data structures" << endl;
   data.destroy();
@@ -256,13 +262,22 @@ lbool Preprocessor::preprocess()
   return status;
 }
 
+
+lbool Preprocessor::preprocess()
+{
+  isInprocessing = false;
+  return performSimplification();
+}
+
 lbool Preprocessor::inprocess()
 {
   // if no inprocesing enabled, do not do it!
   if( !opt_inprocess ) return l_Undef;
   // TODO: do something before preprocessing? e.g. some extra things with learned / original clauses
-  if (opt_inprocess)
-    return preprocess();
+  if (opt_inprocess) {
+    isInprocessing = true;
+    return performSimplification();
+  }
   else 
     return l_Undef; 
 }
@@ -271,6 +286,16 @@ lbool Preprocessor::preprocessScheduled()
 {
   // TODO execute preprocessing techniques in specified order
   return l_Undef;
+}
+
+void Preprocessor::printStatistics(ostream& stream)
+{
+stream << "c [STAT] CP3 "
+<< ppTime << " s-ppTime, " 
+<< ipTime << " s-ipTime, "
+<< data.getClauses().size() << " cls, " 
+<< data.getLEarnts().size() << " learnts "
+<< endl;
 }
 
 void Preprocessor::extendModel(vec< lbool >& model)
@@ -460,6 +485,7 @@ void Preprocessor::reSetupSolver()
 	    }
 	  }
     }
+
 }
 
 void Preprocessor::sortClauses()

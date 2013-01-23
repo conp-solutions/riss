@@ -49,6 +49,15 @@ public:
   ~MethodFree() { free( pointer ); }
 };
 
+/** class that measures the time between creation and destruction of the object, and adds it*/
+class MethodTimer {
+  double* pointer;
+public:
+  MethodTimer( double* timer ) : pointer( timer ) { *pointer = cpuTime() - *pointer;}
+  ~MethodTimer() { *pointer = cpuTime() - *pointer; }
+};  
+
+
 /** class that is used as mark array */
 class MarkArray {
 private:

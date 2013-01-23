@@ -39,6 +39,10 @@ class Preprocessor {
   CoprocessorData  data;       // all the data that needs to be accessed by other classes (preprocessing methods)
   ThreadController controller; // controller for all threads
 
+  bool isInprocessing;		// control whether current call of the preprocessor should be handled as inprocessing
+  double ppTime;		// time to do preprocessing
+  double ipTime;		// time to do inpreprocessing
+  
 public:
 
   Preprocessor(Solver* solver, int32_t _threads=-1 );
@@ -71,6 +75,10 @@ protected:
   Sls sls;
   TwoSatSolver twoSAT;
 
+  // do the real work
+  lbool performSimplification();
+  void printStatistics(ostream& stream);
+  
   // own methods:
   void cleanSolver();                // remove all clauses from structures inside the solver
   void reSetupSolver();              // add all clauses back into the solver, remove clauses that can be deleted
