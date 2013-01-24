@@ -1839,7 +1839,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 		  c.set_strengthen(true);
 		  c.set_subsume(true);
 		  // TODO: take care of duplicates!
-		  cerr << "c added clause " << ca[ list[k] ] << " to the subsumption queue" << endl;
+		  // cerr << "c added clause " << ca[ list[k] ] << " to the subsumption queue" << endl;
 		  subsumption.addClause( list[k] );
 		  resetVariables = true;
  		  if( debug_out )  cerr << "c add clause to subsume list: " << c << endl;

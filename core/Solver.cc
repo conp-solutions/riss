@@ -363,8 +363,9 @@ void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned
         }
         
         // Select next clause to look at:
-        while (!seen[var(trail[index--])]);
+        while (!seen[var(trail[index--])]); // cerr << "c check seen for literal " << (sign(trail[index]) ? "-" : " ") << var(trail[index]) + 1 << " at index " << index << " and level " << level( var( trail[index] ) )<< endl;
         p     = trail[index+1];
+//	cerr << "c get the reason for literal " << (sign(p) ? "-" : " ") << var(p) + 1 << endl;
         confl = reason(var(p));
         seen[var(p)] = 0;
         pathC--;
@@ -919,7 +920,7 @@ lbool Solver::search(int nof_conflicts)
 
                 learnts.push(cr);
                 attachClause(cr);
-
+		
                 claBumpActivity(ca[cr]);
                 uncheckedEnqueue(learnt_clause[0], cr);
             }
@@ -1173,15 +1174,12 @@ void Solver::relocAll(ClauseAllocator& to)
             Lit p = mkLit(v, s);
             // printf(" >>> RELOCING: %s%d\n", sign(p)?"-":"", var(p)+1);
             vec<Watcher>& ws = watches[p];
-            for (int j = 0; j < ws.size(); j++) {
+            for (int j = 0; j < ws.size(); j++)
                 ca.reloc(ws[j].cref, to);
-
+	    
             vec<Watcher>& ws2 = watchesBin[p];
             for (int j = 0; j < ws2.size(); j++)
                 ca.reloc(ws2[j].cref, to);
-
-	    }
-
         }
 
     // All reasons:

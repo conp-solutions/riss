@@ -301,6 +301,9 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         CRef cid = RegionAllocator<uint32_t>::alloc(clauseWord32Size(ps.size(), use_extra));
         new (lea(cid)) Clause(ps, use_extra, learnt);
 
+// 	if( ((Clause&)RegionAllocator<uint32_t>::operator[](cid)).learnt() && ! ((Clause&)RegionAllocator<uint32_t>::operator[](cid)).header.has_extra )
+// 	  cerr << "c created learnt clause without has_extra field" << endl;
+	
         return cid;
     }
 
@@ -323,17 +326,21 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         if (c.reloced()) { cr = c.relocation(); return; }
 
         cr = to.alloc(c, c.learnt());
-        // Copy Flags
+	
+	// Copy Flags
         to[cr].header = c.header;
         c.relocate(cr);
+
         // Check this, otherwise segfault
         if (!c.learnt())
             to[cr].header.has_extra = to.extra_clause_field;
 
-
         // Copy extra data-fields:
         // (This could be cleaned-up. Generalize Clause-constructor to be applicable here instead?)
         to[cr].mark(c.mark());
+	
+	
+	
         if (to[cr].learnt())        {
 	  to[cr].activity() = c.activity();
 	  to[cr].setLBD(c.lbd());

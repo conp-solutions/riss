@@ -1046,10 +1046,11 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef
                     // IMPORTANT! dont use p and n in this block, as they could got invalid
                     Clause & resolvent = ca[cr];
                     data.addClause(cr);
-                    if (resolvent.learnt()) 
+                    if (resolvent.learnt()) {
                         data.getLEarnts().push(cr);
-                    else 
+		    } else {
                         data.getClauses().push(cr);
+		    }
                     // push Clause on subsumption-queue
                     subsumption.initClause(cr);
                }
