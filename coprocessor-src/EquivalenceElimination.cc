@@ -81,10 +81,10 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
 	cerr << endl << "====================================" << endl;
 	cerr << "intermediate formula before gates: " << endl;
 	for( int i = 0 ; i < data.getClauses().size(); ++ i )
-	  if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getClauses()[i] ] << endl;
+	  if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << "[" << data.getClauses()[i] << "]" << ca[  data.getClauses()[i] ] << endl;
 	cerr << "c learnts: " << endl;
 	for( int i = 0 ; i < data.getLEarnts().size(); ++ i )
-	  if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getLEarnts()[i] ] << endl;    
+	  if( !ca[  data.getLEarnts()[i] ].can_be_deleted() ) cerr << "[" << data.getLEarnts()[i] << "]"  << ca[  data.getLEarnts()[i] ] << endl;    
 	cerr << "====================================" << endl << endl;
       }
 
@@ -1802,7 +1802,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	   int n = 1;
 	   for( int m = 1; m < s; ++ m ) {
 	     if( c[m-1] == ~c[m] ) { 
-	       if( debug_out ) cerr << "c ee deletes clause " << c << endl;
+	       if( debug_out ) cerr << "c ee deletes clause [" << list[k] << "]" << c << endl;
 	       c.set_delete(true); 
 	       goto EEapplyNextClause;
 	    } // this clause is a tautology

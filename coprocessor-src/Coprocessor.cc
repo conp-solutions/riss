@@ -347,10 +347,18 @@ void Preprocessor::destroyPreprocessor()
 
 void Preprocessor::cleanSolver()
 {
+  solver->watches.cleanAll();
+  solver->watchesBin.cleanAll();
+  
   // clear all watches!
   for (int v = 0; v < solver->nVars(); v++)
     for (int s = 0; s < 2; s++)
       solver->watches[ mkLit(v, s) ].clear();
+    
+  // for glucose, also clean binary clauses!
+  for (int v = 0; v < solver->nVars(); v++)
+    for (int s = 0; s < 2; s++)
+      solver->watchesBin[ mkLit(v, s) ].clear();
 
   solver->learnts_literals = 0;
   solver->clauses_literals = 0;
@@ -373,8 +381,9 @@ void Preprocessor::reSetupSolver()
         const CRef cr = solver->clauses[i];
         Clause & c = ca[cr];
 	assert( c.size() != 0 && "empty clauses should be recognized before re-setup" );
-        if (c.can_be_deleted())
+        if (c.can_be_deleted()) {
             delete_clause(cr);
+	}
         else
         {
             assert( c.mark() == 0 && "only clauses without a mark should be passed back to the solver!" );
