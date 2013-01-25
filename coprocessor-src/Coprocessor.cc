@@ -249,6 +249,7 @@ lbool Preprocessor::performSimplification()
     subsumption.printStatistics(cerr);
     ee.printStatistics(cerr);
     hte.printStatistics(cerr);
+    bve.printStatistics(cerr);
     cce.printStatistics(cerr);
     sls.printStatistics(cerr);
     twoSAT.printStatistics(cerr);
