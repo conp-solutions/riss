@@ -25,6 +25,7 @@ static BoolOption opt_ee        (_cat, "ee",            "Use Equivalence Elimina
 static BoolOption opt_enabled   (_cat, "enabled_cp3",   "Use CP3", false);
 static BoolOption opt_inprocess (_cat, "inprocess", "Use CP3 for inprocessing", false);
 static BoolOption opt_bve       (_cat, "bve",           "Use Bounded Variable Elimination during preprocessing", false);
+static BoolOption opt_bva       (_cat, "bva",           "Use Bounded Variable Addition during preprocessing", false);
 static BoolOption opt_sls       (_cat, "sls",           "Use Simple Walksat algorithm to test whether formula is satisfiable quickly", false);
 static BoolOption opt_twosat    (_cat, "2sat",          "2SAT algorithm to check satisfiability of binary clauses", false);
 static BoolOption opt_ts_phase  (_cat, "2sat-phase",    "use 2SAT model as initial phase for SAT solver", false);
@@ -50,6 +51,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , subsumption( solver->ca, controller, propagation )
 , hte( solver->ca, controller, propagation )
 , bve( solver->ca, controller, propagation, subsumption )
+, bva( solver->ca, controller, data )
 , cce( solver->ca, controller )
 , ee ( solver->ca, controller, propagation, subsumption )
 , sls ( data, solver->ca, controller )
@@ -82,7 +84,7 @@ lbool Preprocessor::performSimplification()
   if( opt_verbose > 2 )cerr << "c coprocessor finished initialization" << endl;
   
   
-  const bool printBVE = false, printCCE = false, printEE = false, printHTE = false, printSusi = false, printUP = false;  
+  const bool printBVE = false,printBVA = false, printCCE = false, printEE = false, printHTE = false, printSusi = false, printUP = false;  
   
   // do preprocessing
   if( opt_up ) {
@@ -150,6 +152,16 @@ lbool Preprocessor::performSimplification()
   
   if( false || printBVE  ) {
    printFormula("after BVE");
+  }
+  
+  if ( opt_bva ) {
+    if( opt_verbose > 2 )cerr << "c coprocessor blocked variable addition" << endl;
+    if( status == l_Undef ) bva.variableAddtion(true); 
+    if( !data.ok() ) status = l_False;
+  }
+  
+  if( false || printBVA  ) {
+   printFormula("after BVA");
   }
   
   if( opt_cce ) {
@@ -249,6 +261,8 @@ lbool Preprocessor::performSimplification()
     subsumption.printStatistics(cerr);
     ee.printStatistics(cerr);
     hte.printStatistics(cerr);
+    // bve.printStatistics(cerr);
+    bva.printStatistics(cerr);
     cce.printStatistics(cerr);
     sls.printStatistics(cerr);
     twoSAT.printStatistics(cerr);

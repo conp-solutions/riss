@@ -236,6 +236,9 @@ public:
   bool removeClauseFrom (const Minisat::CRef cr, const Lit l); // remove clause reference from list of clauses for literal l, returns true, if successful
   void removeClauseFrom (const Minisat::CRef cr, const Lit l, const int index); // remove clause reference from list of clauses for literal l, returns true, if successful
 
+  void updateClauseAfterDelLit(const Minisat::Clause& clause)
+  { if( global_debug_out ) cerr << "what to update in clause?!" << endl; }
+  
 // delete timers
   /** gives back the current times, increases for the next technique */
   uint32_t getMyDeleteTimer();
@@ -264,8 +267,6 @@ public:
   void removedLiteral( const Lit l, const int32_t diff = 1);  // update counter for literal
   void addedClause (   const CRef cr );                   // update counters for literals in the clause
   void removedClause ( const CRef cr );                 // update counters for literals in the clause
-  void updateClauseAfterDelLit(Clause& clause);		// update clause info after deleting a literal
-  
   
   void correctCounters();
 

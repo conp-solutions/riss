@@ -54,13 +54,13 @@ stream << "c [STAT] SuSi(2) " << subsumeSteps << " subs-steps, "
 			       << endl;
     for (int i = 0; i < controller.size(); ++i)
     {
-        stream << "c [STAT] SuSi(1) Thread " << i << " "
+        stream << "c [STAT] SuSi(1)-Thread " << i << " "
                            << localStats[i].processTime << " s, " 
                                       << localStats[i].subsumedClauses << " cls, " 
                            << " with " << localStats[i].subsumedLiterals << " lits, "
                            << localStats[i].removedLiterals << " strengthed "
                            << endl;
-        stream << "c [STAT] SuSi(2) Thread " << i << " " 
+        stream << "c [STAT] SuSi(2)-Thread " << i << " " 
                            << localStats[i].subsumeSteps << " subs-steps, " 
                                       << localStats[i].strengthSteps << " strenght-steps, " 
                            << localStats[i].strengthTime << "s strengthening "
@@ -1157,7 +1157,10 @@ lbool Subsumption::strengthening_worker(CoprocessorData& data, unsigned int star
     // search lit with minimal occurrences
 
     if( strengthener.size() < 2 ) {
-      if( strengthener.size() == 1 ) { if( l_False == data.enqueue(strengthener[0]) ) break; }
+      if( strengthener.size() == 1 ) { 
+	if( l_False == data.enqueue(strengthener[0]) ) break;
+	else continue;
+      }
       else { data.setFailed(); break; }
     }
     

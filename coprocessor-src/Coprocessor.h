@@ -17,6 +17,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/BoundedVariableElimination.h"
 #include "coprocessor-src/ClauseElimination.h"
 #include "coprocessor-src/EquivalenceElimination.h"
+#include "coprocessor-src/Bva.h"
 
 #include "coprocessor-src/sls.h"
 #include "coprocessor-src/TwoSAT.h"
@@ -70,6 +71,7 @@ protected:
   Propagation propagation;
   HiddenTautologyElimination hte;
   BoundedVariableElimination bve;
+  BoundedVariableAddition bva;
   ClauseElimination cce;
   EquivalenceElimination ee;
   Sls sls;

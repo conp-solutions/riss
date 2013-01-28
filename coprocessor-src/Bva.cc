@@ -365,6 +365,7 @@ bool BoundedVariableAddition::variableAddtion(bool firstCall) {
 		  if( l_False == data.enqueue( replaceLit ) ) {
 		    return didSomething;
 		  }
+		  clauseI.set_delete(true);
 		}
 		assert( replaceFlag && "could not replace literal right");
 	      
@@ -449,6 +450,7 @@ bool BoundedVariableAddition::variableAddtion(bool firstCall) {
 		      if( l_False == data.enqueue(clause[0] ) ) {
 			return false;
 		      }
+		      clause.set_delete(true); // forget about this clause, it's in the trail now
 		    }
 		    --j;
 		  }
@@ -573,9 +575,35 @@ bool BoundedVariableAddition::bvaHandleComplement( const Lit right ) {
       if( l_False == data.enqueue(clause[0] ) ) {
 	return false;
       }
+      clause.set_delete(true);
     }
   }
   
   if( bvaPush > 0 ) bvaHeap.insert( toInt(right) );
+  return true;
+}
+
+Var BoundedVariableAddition::nextVariable()
+{
+  Var nextVar = data.nextFreshVariable();
+  
+  // enlarge own structures
+  bvaHeap.addNewElement(nextVar);
+
+  bvaCountMark.resize( nextVar * 2);
+  bvaCountCount.resize( nextVar * 2);
+  bvaCountSize.resize( nextVar * 2);
+}
+
+
+void BoundedVariableAddition::printStatistics(ostream& stream)
+{
+stream << "c [STAT] BVA " << endl;
+}
+
+
+bool BoundedVariableAddition::variableAddtionMulti(bool sort)
+{
+  assert( false && "This method is not implemented yet" );
   return true;
 }
