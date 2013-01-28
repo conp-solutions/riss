@@ -183,7 +183,7 @@ class CoprocessorData
   Lock dataLock;                        // lock for parallel algorithms to synchronize access to data structures
 
   MarkArray deleteTimer;                // store for each literal when (by which technique) it has been deleted
-  char* untouchable;                    // store all variables that should not be touched (altering presence in models)
+  vector<char> untouchable;             // store all variables that should not be touched (altering presence in models)
 
   vector<Lit> undo;                     // store clauses that have to be undone for extending the model
   vector<Lit> equivalences;             // stack of literal classes that represent equivalent literals
@@ -283,7 +283,7 @@ public:
   void addEquivalences( const Lit& l1, const Lit& l2 );
   vector<Lit>& getEquivalences();
 
-  // checking whether a literal can be altered
+  // checking whether a literal can be altered - TODO: use the frozen information from the solver object!
   void setNotTouch(const Var v);
   bool doNotTouch (const Var v) const ;
   
@@ -350,7 +350,6 @@ inline CoprocessorData::CoprocessorData(ClauseAllocator& _ca, Solver* _solver, C
 , hasLimit( _limited )
 , randomOrder(_randomized)
 , log(_log)
-, untouchable(0)
 {
 }
 
@@ -360,8 +359,7 @@ inline void CoprocessorData::init(uint32_t nVars)
   lit_occurrence_count.resize( nVars * 2, 0 );
   numberOfVars = nVars;
   deleteTimer.create( nVars );
-  untouchable = (char*) malloc( sizeof(char) * nVars);
-  memset( untouchable, 0, sizeof(char) * nVars );
+  untouchable.resize(nVars);
 }
 
 inline void CoprocessorData::destroy()
@@ -384,7 +382,19 @@ inline vec< Minisat::CRef >& CoprocessorData::getLEarnts()
 inline Var CoprocessorData::nextFreshVariable()
 {
   // be careful
-  return solver->newVar();
+  Var nextVar = solver->newVar();
+  numberOfVars = solver->nVars();
+  ma.resize( 2*nVars() );
+  
+  deleteTimer.resize( 2*nVars() );
+  
+  occs.resize( 2*nVars() );
+  cerr << "c resize occs to " << occs.size() << endl;
+  lit_occurrence_count.resize( 2*	nVars() );
+  
+  untouchable.push_back(0);
+  cerr << "c new fresh variable: " << nextVar+1 << endl;
+  return nextVar;
 }
 
 
