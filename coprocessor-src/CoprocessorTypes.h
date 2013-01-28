@@ -196,6 +196,7 @@ public:
 
   MarkArray ma;                          // temporary markarray, that should be used only inside of methods
   vector<Lit> lits;                      // temporary literal vector
+  vector<CRef> clss;                     // temporary literal vector
 
   CoprocessorData(ClauseAllocator& _ca, Solver* _solver, Logger& _log, bool _limited = true, bool _randomized = false);
 
@@ -215,6 +216,7 @@ public:
 
   uint32_t nCls()  const { return numberOfCls; }
   uint32_t nVars() const { return numberOfVars; }
+  Var nextFreshVariable();
 
 // semantic:
   bool ok();                                             // return ok-state of solver
@@ -227,10 +229,12 @@ public:
   
   bool unlimited();                                      // do preprocessing without technique limits?
   bool randomized();                                     // use a random order for preprocessing techniques
+  bool isInterupted();					  // has received signal from the outside
 
 // adding, removing clauses and literals =======
   void addClause (      const CRef cr );                 // add clause to data structures, update counters
   bool removeClauseFrom (const Minisat::CRef cr, const Lit l); // remove clause reference from list of clauses for literal l, returns true, if successful
+  void removeClauseFrom (const Minisat::CRef cr, const Lit l, const int index); // remove clause reference from list of clauses for literal l, returns true, if successful
 
 // delete timers
   /** gives back the current times, increases for the next technique */
@@ -260,7 +264,9 @@ public:
   void removedLiteral( const Lit l, const int32_t diff = 1);  // update counter for literal
   void addedClause (   const CRef cr );                   // update counters for literals in the clause
   void removedClause ( const CRef cr );                 // update counters for literals in the clause
-
+  void updateClauseAfterDelLit(Clause& clause);		// update clause info after deleting a literal
+  
+  
   void correctCounters();
 
   // extending model after clause elimination procedures - l will be put first in list to be undone if necessary!
@@ -374,6 +380,13 @@ inline vec< Minisat::CRef >& CoprocessorData::getLEarnts()
   return solver->learnts;
 }
 
+inline Var CoprocessorData::nextFreshVariable()
+{
+  // be careful
+  return solver->newVar();
+}
+
+
 inline bool CoprocessorData::ok()
 {
   return solver->ok;
@@ -393,6 +406,12 @@ inline bool CoprocessorData::randomized()
 {
   return randomOrder;
 }
+
+inline bool CoprocessorData::isInterupted()
+{
+  return solver->asynch_interrupt;
+}
+
 
 inline lbool CoprocessorData::enqueue(const Lit l)
 {
@@ -447,6 +466,14 @@ inline bool CoprocessorData::removeClauseFrom(const Minisat::CRef cr, const Lit 
   }
   return false;
 }
+
+inline void CoprocessorData::removeClauseFrom(const Minisat::CRef cr, const Lit l, const int index)
+{
+  vector<CRef>& list = occs[toInt(l)];
+  assert( list[index] == cr );
+  list[index] = list[ list.size() -1 ];
+}
+
 
 inline uint32_t CoprocessorData::getMyDeleteTimer()
 {
