@@ -31,6 +31,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "mtl/Map.h"
 #include "mtl/Alloc.h"
 
+// for parallel stuff
+#include <pthread.h>
+
 /// TODO remove after debug
 #include <iostream>
 using namespace std;
@@ -131,8 +134,9 @@ class Clause;
 typedef RegionAllocator<uint32_t>::Ref CRef;
 
 class Clause {
-    struct {
-        unsigned mark      : 2; // TODO: for what is this mark used? its set to 1, if the clause can be deleted (by simplify) we could do the same thing!
+    struct ClauseHeader {
+        unsigned mark      : 1; // TODO: for what is this mark used? its set to 1, if the clause can be deleted (by simplify) we could do the same thing!
+        unsigned locked    : 1; // if set to 1, some thread has locked the clause
         unsigned learnt    : 1;
         // + write get_method()
         unsigned has_extra : 1;
@@ -154,6 +158,7 @@ class Clause {
     template<class V>
     Clause(const V& ps, bool use_extra, bool learnt) {
         header.mark      = 0;
+	header.locked    = 0;
         header.learnt    = learnt;
         header.has_extra = use_extra;
         header.reloced   = 0;
@@ -232,6 +237,40 @@ public:
     void    set_subsume(bool b)         { header.can_subsume = b; }
     bool    can_strengthen()     const  { return header.can_strengthen; }
     void    set_strengthen(bool b)      { header.can_strengthen = b; }
+    
+    /** spinlocks the clause by trying to set the locked bit 
+     * Note: be very careful with the implementation, it relies on the header being 32 bit!
+     */
+    bool    spinlock() {
+      ClauseHeader compare = header;
+      compare.locked = 0;
+      ClauseHeader setHeader = header;
+      setHeader.locked = 1;
+      assert( sizeof(ClauseHeader) == sizeof(uint32_t) && "data type sizes have to be equivalent") ;
+      uint32_t* cHeader = (uint32_t*)(&compare);
+      uint32_t* sHeader = (uint32_t*)(&setHeader);
+      uint32_t* iHeader = (uint32_t*)(&header);
+      while ( *iHeader != *cHeader || __sync_bool_compare_and_swap( iHeader, uint32_t(*cHeader), uint32_t(*sHeader) ) == false) {
+	// renew header
+	compare = header;
+	setHeader = header;
+	compare.locked = 0;
+	setHeader.locked = 1;
+	cHeader = (uint32_t*)(&compare);
+	sHeader = (uint32_t*)(&setHeader);
+	iHeader = (uint32_t*)(&header);
+      }
+    }
+    
+    /** check whether the locked bit of the clause is set 
+     *  Note: cannot be used to detect whether somebody has the lock, because not atmoic!
+     */
+    bool isLocked() const { return header.locked; }
+    
+    /** reset the header bit unlocked to indicate that the clause is unlocked */
+    void unlock() {
+      header.locked = 0;
+    };
 
     void    removePositionUnsorted(int i)    { data[i].lit = data[ size() - 1].lit; shrink(1); if (has_extra() && !header.learnt) calcAbstraction(); }
     inline void removePositionSorted(int i)      { for (int j = i; j < size() - 1; ++j) data[j] = data[j+1]; shrink(1); if (has_extra() && !header.learnt) calcAbstraction(); }
