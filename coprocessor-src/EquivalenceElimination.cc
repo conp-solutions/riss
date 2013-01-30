@@ -10,7 +10,7 @@ using namespace Coprocessor;
 
 static const char* _cat = "COPROCESSOR 3 - EE";
 
-static IntOption  opt_level            (_cat, "cp3_ee_level",      "EE on BIG, gate probing, structural hashing", 3, IntRange(0, 3));
+static IntOption  opt_level            (_cat, "cp3_ee_level",      "EE on BIG, gate probing, structural hashing", 0, IntRange(0, 3));
 static BoolOption opt_old_circuit      (_cat, "cp3_old_circuit",   "do old circuit extraction", false);
 static BoolOption opt_eagerEquivalence (_cat, "cp3_eagerGates",    "do old circuit extraction", true);
 static BoolOption opt_eeGateBigFirst   (_cat, "cp3_BigThenGate", "detect binary equivalences before going for gates", true);
