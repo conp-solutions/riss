@@ -1778,6 +1778,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	    continue; // do not use deleted clauses!
 	  }
 	  data.log.log(eeLevel,"analyze clause",c);
+	  if( debug_out ) cerr << "c analyze clause " << c << endl;
           bool duplicate  = false;
 	  bool getsNewLiterals = false;
           Lit tmp = repr;
@@ -1839,7 +1840,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 		  c.set_strengthen(true);
 		  c.set_subsume(true);
 		  // TODO: take care of duplicates!
-		  cerr << "c added clause " << ca[ list[k] ] << " to the subsumption queue" << endl;
+		  // cerr << "c added clause " << ca[ list[k] ] << " to the subsumption queue" << endl;
 		  subsumption.addClause( list[k] );
 		  resetVariables = true;
  		  if( debug_out )  cerr << "c add clause to subsume list: " << c << endl;

@@ -83,7 +83,7 @@ lbool Preprocessor::performSimplification()
   initializePreprocessor ();
   if( opt_verbose > 2 )cerr << "c coprocessor finished initialization" << endl;
   
-  const bool printBVE = false,printBVA = false, printCCE = false, printEE = false, printHTE = false, printSusi = false, printUP = false;  
+  const bool printBVE = false, printBVA = false, printCCE = false, printEE = false, printHTE = false, printSusi = false, printUP = false;  
   
   // do preprocessing
   if( opt_up ) {

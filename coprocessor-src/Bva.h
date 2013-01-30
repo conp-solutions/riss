@@ -22,6 +22,16 @@ class BoundedVariableAddition : public Technique  {
   // attributes for current run
   bool doSort;			// ensure that all clauses are sorted afterwards (assume, they are sorted before)
   
+  // statistics
+  uint32_t duplicates;		// how many duplicate clauses have been found
+  uint32_t complementCount;	// how many complementary literals have been found (strengthening)
+  uint32_t replacements;	// how many new variables could be introduced
+  uint32_t totalReduction;	// how many clauses have been reduced
+  uint32_t replacedOrs;		// how many disjunctions could be replaced by the fresh variable
+  uint32_t replacedMultipleOrs;	// how many times could multiple or gates be replaced
+  double processTime;		// seconds of process time
+  
+  
   // work data
   /// compare two literals
   struct LitOrderBVAHeapLt {
@@ -76,7 +86,6 @@ public:
   uint32_t bvaLimit;		/// number of checks until bva is aborted
   bool bvaRemoveDubplicates;	/// remove duplicate clauses from occurrence lists
   bool bvaSubstituteOr;	/// when c = (a AND b) is found, also replace (-a OR -b) by -c
-  
 };
 
 };

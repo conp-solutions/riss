@@ -14,25 +14,42 @@ using namespace Coprocessor;
 // 	CONST_PARAM bool bvaRemoveDubplicates;	/// remove duplicate clauses from occurrence lists
 // 	CONST_PARAM bool bvaSubstituteOr;	/// when c = (a AND b) is found, also replace (-a OR -b) by -c
 
-static IntOption  bva_debug    ("BVA", "bva-debug", "Debug Output of BVA", 0, IntRange(0, 3));
+static const char* _cat = "COPROCESSOR 3 - BVA";
+
+static IntOption  opt_bva_push             (_cat, "cp3_bva_push",    "push variables back to queue (0=none,1=original,2=all)", 2, IntRange(0, 2));
+static IntOption  opt_bva_limit            (_cat, "cp3_bva_limit",   "number of steps allowed for BVA", 20000000, IntRange(0, INT32_MAX));
+
+static BoolOption opt_bvaComplement         (_cat, "cp3_bva_compl",   "treat complementary literals special", true);
+static BoolOption opt_bvaRemoveDubplicates (_cat, "cp3_bva_dupli",   "remove duplicate clauses", true);
+static BoolOption opt_bvaSubstituteOr      (_cat, "cp3_bva_subOr",   "try to also substitus disjunctions", false);
+
+static IntOption  bva_debug                (_cat, "bva-debug",       "Debug Output of BVA", 0, IntRange(0, 4));
 	
 BoundedVariableAddition::BoundedVariableAddition(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data)
 : Technique( _ca, _controller )
 , data( _data )
 , doSort( true )
+, duplicates(0)
+, complementCount(0)
+, replacements(0)
+, totalReduction(0)
+, replacedOrs(0)
+, replacedMultipleOrs(0)
+, processTime(0)
 , bvaHeap( data )
-, bvaComplement(true)
-, bvaPush(2)
-, bvaLimit(20000000)
-, bvaRemoveDubplicates(true)
-, bvaSubstituteOr(false)
+, bvaComplement(opt_bvaComplement)
+, bvaPush(opt_bva_push)
+, bvaLimit(opt_bva_limit)
+, bvaRemoveDubplicates(opt_bvaRemoveDubplicates)
+, bvaSubstituteOr(opt_bvaSubstituteOr)
 {
 
 }
 
 bool BoundedVariableAddition::variableAddtion(bool _sort) {
   bool didSomething=false;
-  
+
+  MethodTimer processTimer( &processTime );
   doSort = _sort;
 
   // setup own structures
@@ -48,8 +65,6 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
   
 	vector<Lit> stack;
 	
-	uint32_t duplicates = 0;
-	uint32_t complementCount = 0;
 	int32_t currentReduction = 0;
 	
 	bool addedNewAndGate = false;
@@ -62,13 +77,11 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	  const Lit right = toLit(bvaHeap[0]);
 	  assert( bvaHeap.inHeap( toInt(right) ) && "item from the heap has to be on the heap");
 
-	  bvaHeap.removeMin();
 	  if( bva_debug > 2 && bvaHeap.size() > 0 ) cerr << "c [BVA] new first item: " << bvaHeap[0] << " which is " << right << endl;
+	  bvaHeap.removeMin();
 	  
 	  // TODO: check for literals that are frozen
 	  // if( search.eliminated.get( right.toVar() ) ) continue;
-	  
-	  cerr << "c work on right= " << right << endl;
 	  
 	  if( data.value( right ) != l_Undef ) continue;
 	  
@@ -112,7 +125,7 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	    if( clauseC.size() == 1 ) continue;
 	    data.ma.nextStep();	// mark current step
 	    
-	    cerr << "c check clause[" << C << "]= " << clauseC << " whether lit " << right << " is part of it" << endl;
+	    // cerr << "c check clause[" << C << "]= " << clauseC << " whether lit " << right << " is part of it" << endl;
 	    
 	    // try to find a minimum!
 	    Lit l1 = lit_Undef;
@@ -132,7 +145,7 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 		}
 	      }
 	    }
-	    cerr << "c selected literal " << l1 << endl;
+	    // cerr << "c selected literal " << l1 << endl;
 	    
 	    assert ( rightInFlag && "literal does not occur in match clause" );
 	    assert( l1 != right  && "minimal literal is equal to right" );
@@ -165,11 +178,12 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 		}
 	      }
 	      
-	      cerr << "c found match: " << match << endl;
+	      // cerr << "c found match: " << match << endl;
 	      
 	      if( match == lit_Undef ) { duplicates++; continue; } // found a matching clause
 	      assert ( match != right && "matching literal is the right literal");
 	
+	      if( bva_debug > 3 ) cerr << "c check count for literal " << match << " where countSize is mark: " << bvaCountMark.size() << " count:" << bvaCountCount.size() << " index: " << toInt(match) << endl;
 	      // count found match
 	      if (bvaCountMark[ toInt( match ) ] == right ) {
 		bvaCountCount[ toInt( match ) ] ++;
@@ -341,6 +355,7 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	  
 	  // create the new clauses!
 	  const Var newX = nextVariable();
+	  replacements++; totalReduction += currentReduction;
 	  didSomething = true;
 	  assert( !bvaHeap.inHeap( toInt(right) ) && "by adding new variable, heap should not contain the currently removed variable" );
 	  
@@ -368,7 +383,7 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 		if( bva_debug > 2 && clauseI.size() < 2) cerr << "c [BVA] unit clause for replacement (" << clauseI.size() << ")" << endl;
 		assert( ! clauseI.can_be_deleted() && "matching clause is ignored" );
 		
-		cerr << "c rewrite clause[ " << iClauses[j] << " ]= " << clauseI << endl;
+		if( bva_debug > 2 )cerr << "c rewrite clause[ " << iClauses[j] << " ]= " << clauseI << endl;
 		
 		// take care of learned clauses (if the replace clause is learned and any matching clause is original, keep this clause!)
 		for( uint32_t k = 1; k< bvaMatchingLiterals.size(); ++ k ) {
@@ -376,7 +391,7 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 		}
 		for( uint32_t k = 0 ; k< clauseI.size(); ++k ) {
 		  if( clauseI[k] == right ) { 
-		    cerr << "c replace literal " << clauseI[k] << " with literal " << replaceLit << endl;
+		    if( bva_debug > 2 ) cerr << "c replace literal " << clauseI[k] << " with literal " << replaceLit << endl;
 		    clauseI[k] = replaceLit;
 		    data.removedLiteral( right );
 		    data.addedLiteral( replaceLit );
@@ -399,8 +414,8 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 		
 		// add clause into occurrenceList list of new variable
 		data.list( replaceLit ). push_back(iClauses[j]);
-		
-		cerr << "c into clause[ " << iClauses[j] << " ]= " << clauseI << endl;
+	        clauseI.sort();
+		if( bva_debug > 2 )cerr << "c into clause[ " << iClauses[j] << " ]= " << clauseI << endl;
 	      }
 	    } else {
 	      assert( iClauses.size() == bvaMatchingClauses[0].size() );
@@ -408,7 +423,7 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	      for( uint32_t j = 0 ; j < iClauses.size(); ++ j ) {
 		if( bvaMatchingClauses[0][j] != CRef_Undef && iClauses[j] != CRef_Undef ) {
 		  Clause& clauseI = ca[ iClauses[j] ];
-		  cerr << "c delete clause[" << iClauses[j] << "]= " << clauseI << endl;
+		  // cerr << "c delete clause[" << iClauses[j] << "]= " << clauseI << endl;
 		  clauseI.set_delete(true);
 		  data.removedClause( iClauses[j] );
 		}
@@ -434,6 +449,7 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	      }
 	    }
 	    bool addedAnd = false;
+	    bool isNotFirst = false; // for statistics
 	    for( uint32_t i = data.list(min).size() ; i > 0; --i ) {
 	      const CRef clRef = data.list(min)[i-1];
 	      Clause& clause = ca[ clRef ];
@@ -448,21 +464,30 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	      if( count != bvaMatchingLiterals.size() ) continue;
 	      // rewrite current clause
 	      {
+		if( bva_debug > 2 ) cerr << "c rewrite clause[ " << clRef << " ]= " << clause << endl;
+		replacedOrs ++;
+		replacedMultipleOrs = (isNotFirst ? replacedMultipleOrs + 1 : replacedMultipleOrs );
+		isNotFirst = true; // each next clause is not the first clause
 		uint32_t j = 0;
 		for(  ; j < clause.size(); ++ j ) {
 		  const Lit literal = clause[j];
 		  if( data.ma.isCurrentStep( toInt(literal) ) ) {
+		    if( bva_debug > 2 ) cerr << "c replace literal " << clause[j] << " with " << ~replaceLit << endl;
 		    data.removeClauseFrom(clRef, literal);
-		    clause[j] =  mkLit(newX, false) ;
+		    clause[j] =  ~replaceLit ;
 		    data.removedLiteral(literal);
-		    data.addedLiteral( mkLit(newX, false) );
-		    data.list( mkLit(newX, false) ).push_back( clRef );
+		    data.addedLiteral( ~replaceLit );
+		    data.list( ~replaceLit ).push_back( clRef );
+		    count --;
 		    break;
 		  }
 		}
-		for( ; j < clause.size(); ++ j ) {
+		if( bva_debug > 2 ) cerr << "c found first literal at " << j << "/" << clause.size() << endl;
+		for( ; j < clause.size(); ++ j ) { 
 		  const Lit literal = clause[j];
+		  if( bva_debug > 2 ) cerr << "c check literal " << clause[j] << endl;
 		  if( data.ma.isCurrentStep( toInt(literal) ) ) {
+		    if( bva_debug > 2 ) cerr << "c remove literal " << clause[j] << endl;
 		    data.removeClauseFrom(clRef, literal);
 		    if( doSort ) clause.removePositionUnsorted(j);
 		    else clause.removePositionSorted(j);
@@ -476,8 +501,12 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 		      clause.set_delete(true); // forget about this clause, it's in the trail now
 		    }
 		    --j;
+		    count --;
 		  }
 		}
+		clause.sort();
+		assert( count == 0 && "all matching literals have to be replaced/removed!" );
+		if( bva_debug > 2 ) cerr << "c into clause[ " << clRef << " ]= " << clause << endl;
 	      }
 	      
 	      // add and-clause only once
@@ -487,17 +516,18 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 		clauseLits.clear();
 		for( uint32_t j = 0 ; j < bvaMatchingLiterals.size(); ++j )
 		  clauseLits.push( ~bvaMatchingLiterals[j] );
-		clauseLits.push( mkLit( newX, true ) );
+		clauseLits.push( replaceLit );
 		CRef tmpRef = ca.alloc(clauseLits, false); // no learnt clause!
 		data.addClause( tmpRef );
 		data.getClauses().push( tmpRef );
+		if( bva_debug > 2 ) cerr << "add new ANDclause[ " << tmpRef << " ]= " << ca[tmpRef] << endl;
 	      }
 	    }
 	    
 	  }
 
 	  clauseLits.clear();
-	  clauseLits.push( mkLit(newX,false) );
+	  clauseLits.push( ~replaceLit );
 	  clauseLits.push( lit_Undef );
 	  
 	  for( uint32_t i = 0; i < bvaMatchingLiterals.size(); ++i ) {
@@ -505,6 +535,7 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	    CRef newClause = ca.alloc(clauseLits, false); // no learnt clause!
 	    data.addClause( newClause );
 	    data.getClauses().push( newClause );
+	    if( bva_debug > 2 ) cerr << "add BVA clause " << ca[newClause] << endl;
 	  }
 	  
 	  if( bvaPush > 0 ) {
@@ -611,11 +642,13 @@ Var BoundedVariableAddition::nextVariable()
   Var nextVar = data.nextFreshVariable();
   
   // enlarge own structures
-  bvaHeap.addNewElement(nextVar);
+  bvaHeap.addNewElement(data.nVars());
 
-  bvaCountMark .resize( nextVar * 2, lit_Undef);
-  bvaCountCount.resize( nextVar * 2);
-  bvaCountSize .resize( nextVar * 2);
+  bvaCountMark .resize( data.nVars() * 2, lit_Undef);
+  bvaCountCount.resize( data.nVars() * 2);
+  bvaCountSize .resize( data.nVars() * 2);
+  
+  if( bva_debug > 3 ) cerr << "c enlarge count mark,size and count to " << bvaCountMark.size() << endl;
   
   return nextVar;
 }
@@ -623,7 +656,15 @@ Var BoundedVariableAddition::nextVariable()
 
 void BoundedVariableAddition::printStatistics(ostream& stream)
 {
-stream << "c [STAT] BVA " << endl;
+stream << "c [STAT] BVA " 
+<< processTime << "s, "
+<< replacements << " freshVars, "
+<< totalReduction << " reducedClauses, "
+<< duplicates << " duplicateClauses, "
+<< complementCount << " complLits, "
+<< replacedOrs << " orGSubs, "
+<< replacedMultipleOrs << " multiOGS, "
+<< endl;
 }
 
 

@@ -389,11 +389,11 @@ inline Var CoprocessorData::nextFreshVariable()
   deleteTimer.resize( 2*nVars() );
   
   occs.resize( 2*nVars() );
-  cerr << "c resize occs to " << occs.size() << endl;
+  // cerr << "c resize occs to " << occs.size() << endl;
   lit_occurrence_count.resize( 2*	nVars() );
   
   untouchable.push_back(0);
-  cerr << "c new fresh variable: " << nextVar+1 << endl;
+  // cerr << "c new fresh variable: " << nextVar+1 << endl;
   return nextVar;
 }
 
@@ -702,7 +702,8 @@ inline void CoprocessorData::addToExtension(const Lit dontTouch, const Lit l)
 
 inline void CoprocessorData::extendModel(vec< lbool >& model)
 {
-  if( global_debug_out ) {
+  const bool local_debug = false;
+  if( global_debug_out || local_debug) {
     cerr << "c extend model of size " << model.size() << " with undo information of size " << undo.size() << endl;
     cerr << "c  in model: ";
     for( int i = 0 ; i < model.size(); ++ i ) {
@@ -717,7 +718,7 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
   for( int i = undo.size() - 1; i >= 0 ; --i ) {
      isSat = false; // init next clause!
      const Lit c = undo[i];
-     if( global_debug_out ) cerr << "c read literal " << c << endl;
+     if( global_debug_out  || local_debug) cerr << "c read literal " << c << endl;
      if( c == lit_Undef ) {
        if( !isSat ) {
          // if clause is not satisfied, satisfy last literal!
@@ -731,13 +732,13 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
      {
        isSat = true;
        while( undo[i] != lit_Undef ){
-	 if( global_debug_out ) cerr << "c skip because SAT: " << undo[i] << endl; 
+	 if( global_debug_out  || local_debug) cerr << "c skip because SAT: " << undo[i] << endl; 
 	 --i;
        }
      }
   }
 
-  if( global_debug_out ) {
+  if( global_debug_out  || local_debug) {
     cerr << "c out model: ";
     for( int i = 0 ; i < model.size(); ++ i ) {
       const Lit satLit = mkLit( i, model[i] == l_True ? false : true );

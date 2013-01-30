@@ -230,6 +230,24 @@ public:
     void    set_delete (bool b) 	    { if (b) header.mark = 1; else header.mark = 0;}
     void    set_learnt (bool b)         { header.learnt = b; }
     bool    can_be_deleted()     const  { return mark() == 1; }
+    
+    /** sort the literals in the clause 
+     *  Note: do not use if clause is watched or reason!
+     */
+    void sort() {
+      const uint32_t s = size();
+      for (uint32_t j = 1; j < s; ++j)
+      {
+	  const Lit key = operator[](j);
+	  int32_t i = j - 1;
+	  while ( i >= 0 && toInt(operator[](i)) > toInt(key) )
+	  {
+	      operator[](i+1) = operator[](i);
+	      i--;
+	  }
+	  operator[](i+1) = key;
+      }
+    }
 
     void    set_has_extra(bool b)       {header.has_extra = b;}
 
