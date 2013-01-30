@@ -565,7 +565,7 @@ inline bool Clause::ordered_equals (const Clause & other) const
 }
 
 inline void Clause::remove_lit(const Lit p)
-{   //TODO shouldn't this be size()-1
+{   
     for (int i = 0; i < size(); ++i)
     {
         if(data[i].lit == p)

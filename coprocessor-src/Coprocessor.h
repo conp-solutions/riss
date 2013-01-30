@@ -18,6 +18,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/ClauseElimination.h"
 #include "coprocessor-src/EquivalenceElimination.h"
 #include "coprocessor-src/Bva.h"
+#include "coprocessor-src/Unhiding.h"
+#include "coprocessor-src/Probing.h"
 
 #include "coprocessor-src/sls.h"
 #include "coprocessor-src/TwoSAT.h"
@@ -74,6 +76,9 @@ protected:
   BoundedVariableAddition bva;
   ClauseElimination cce;
   EquivalenceElimination ee;
+  Unhiding unhiding;
+  Probing probing;
+  
   Sls sls;
   TwoSatSolver twoSAT;
 

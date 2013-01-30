@@ -60,8 +60,6 @@ public:
 
   /** inherited from @see Technique */
   void printStatistics( ostream& stream );
-  
-protected:
 
   /** apply equivalences stored in data object to formula
    * @param force run subsumption and unit propagation, even if no equivalences are found
@@ -69,6 +67,8 @@ protected:
    */
   bool applyEquivalencesToFormula( Coprocessor::CoprocessorData& data, bool force = false);
   
+protected:
+
   /** check based on gates that have been extracted, whether more equivalent literals can be found!
    * @return true, if new equivalent literals have been found
    */

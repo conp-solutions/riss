@@ -263,10 +263,11 @@ public:
   void unlock() { dataLock.unlock(); } // lock and unlock data structure
 
 // formula statistics ==========================
-  void addedLiteral(   const Lit l, const int32_t diff = 1);  // update counter for literal
-  void removedLiteral( const Lit l, const int32_t diff = 1);  // update counter for literal
-  void addedClause (   const CRef cr );                   // update counters for literals in the clause
-  void removedClause ( const CRef cr );                 // update counters for literals in the clause
+  void addedLiteral(   const Lit l, const int32_t diff = 1);	// update counter for literal
+  void removedLiteral( const Lit l, const int32_t diff = 1);	// update counter for literal
+  void addedClause (   const CRef cr );			// update counters for literals in the clause
+  void removedClause ( const CRef cr );			// update counters for literals in the clause
+  void removedClause ( const Lit l1, const Lit l2 );		// update counters for literals in the clause
   
   void correctCounters();
 
@@ -540,6 +541,25 @@ inline void CoprocessorData::removedClause(const Minisat::CRef cr)
     removedLiteral( c[l] );
   }
   numberOfCls --;
+}
+
+inline void CoprocessorData::removedClause(const Lit l1, const Lit l2)
+{
+  removedLiteral(l1);
+  removedLiteral(l2);
+  
+  const Lit searchLit = lit_occurrence_count[toInt(l1)] < lit_occurrence_count[toInt(l2)] ? l1 : l2;
+  const Lit secondLit = toLit(  toInt(l1) ^ toInt(l2) ^ toInt(searchLit) );
+
+  // find the right binary clause and remove it!
+  for( int i = 0 ; i < list(searchLit).size(); ++ i ) {
+    Clause& cl = ca[list(searchLit)[i]];
+    if( cl.can_be_deleted() || cl.size() != 2 ) continue;
+    if( cl[0] == secondLit || cl[1] == secondLit ) {
+      cl.set_delete(true);
+      break;
+    }
+  }
 }
 
 inline void CoprocessorData::removedLiteral(Lit l, int32_t diff)

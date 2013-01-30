@@ -17,20 +17,22 @@ static BoolOption opt_randomized (_cat, "cp3_randomized", "Steps withing preproc
 static IntOption  opt_verbose    (_cat, "cp3_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
 static BoolOption opt_printStats (_cat, "cp3_stats",      "Print Technique Statistics", false);
 // techniques
-static BoolOption opt_up        (_cat, "up",            "Use Unit Propagation during preprocessing", false);
-static BoolOption opt_subsimp   (_cat, "subsimp",       "Use Subsumption during preprocessing", false);
-static BoolOption opt_hte       (_cat, "hte",           "Use Hidden Tautology Elimination during preprocessing", false);
-static BoolOption opt_cce       (_cat, "cce",           "Use (covered) Clause Elimination during preprocessing", false);
-static BoolOption opt_ee        (_cat, "ee",            "Use Equivalence Elimination during preprocessing", false);
-static BoolOption opt_enabled   (_cat, "enabled_cp3",   "Use CP3", false);
-static BoolOption opt_inprocess (_cat, "inprocess", "Use CP3 for inprocessing", false);
-static BoolOption opt_bve       (_cat, "bve",           "Use Bounded Variable Elimination during preprocessing", false);
-static BoolOption opt_bva       (_cat, "bva",           "Use Bounded Variable Addition during preprocessing", false);
-static BoolOption opt_sls       (_cat, "sls",           "Use Simple Walksat algorithm to test whether formula is satisfiable quickly", false);
-static BoolOption opt_twosat    (_cat, "2sat",          "2SAT algorithm to check satisfiability of binary clauses", false);
-static BoolOption opt_ts_phase  (_cat, "2sat-phase",    "use 2SAT model as initial phase for SAT solver", false);
+static BoolOption opt_up        (_cat2, "up",            "Use Unit Propagation during preprocessing", false);
+static BoolOption opt_subsimp   (_cat2, "subsimp",       "Use Subsumption during preprocessing", false);
+static BoolOption opt_hte       (_cat2, "hte",           "Use Hidden Tautology Elimination during preprocessing", false);
+static BoolOption opt_cce       (_cat2, "cce",           "Use (covered) Clause Elimination during preprocessing", false);
+static BoolOption opt_ee        (_cat2, "ee",            "Use Equivalence Elimination during preprocessing", false);
+static BoolOption opt_enabled   (_cat2, "enabled_cp3",   "Use CP3", false);
+static BoolOption opt_inprocess (_cat2, "inprocess",     "Use CP3 for inprocessing", false);
+static BoolOption opt_bve       (_cat2, "bve",           "Use Bounded Variable Elimination during preprocessing", false);
+static BoolOption opt_bva       (_cat2, "bva",           "Use Bounded Variable Addition during preprocessing", false);
+static BoolOption opt_unhide    (_cat2, "unhide",        "Use Bounded Variable Addition during preprocessing", false);
+static BoolOption opt_probe     (_cat2, "probe",         "Use Bounded Variable Addition during preprocessing", false);
+static BoolOption opt_sls       (_cat2, "sls",           "Use Simple Walksat algorithm to test whether formula is satisfiable quickly", false);
+static BoolOption opt_twosat    (_cat2, "2sat",          "2SAT algorithm to check satisfiability of binary clauses", false);
+static BoolOption opt_ts_phase  (_cat2, "2sat-phase",    "use 2SAT model as initial phase for SAT solver", false);
 
-static IntOption  opt_log       (_cat, "log",           "Output log messages until given level", 0, IntRange(0, 3));
+static IntOption  opt_log       (_cat, "log",            "Output log messages until given level", 0, IntRange(0, 3));
 
 using namespace std;
 using namespace Coprocessor;
@@ -54,6 +56,8 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , bva( solver->ca, controller, data )
 , cce( solver->ca, controller )
 , ee ( solver->ca, controller, propagation, subsumption )
+, unhiding ( solver->ca, controller, data, propagation, subsumption, ee )
+, probing  ( solver->ca, controller, data )
 , sls ( data, solver->ca, controller )
 , twoSAT( solver->ca, controller, data)
 {
@@ -136,6 +140,12 @@ lbool Preprocessor::performSimplification()
    printFormula("after EE");
   }
   
+  if ( opt_unhide ) {
+    if( opt_verbose > 2 )cerr << "c coprocessor unhiding" << endl;
+    if( status == l_Undef ) unhiding.unhide(); 
+    if( !data.ok() ) status = l_False;
+  }
+  
   if( opt_hte ) {
     if( opt_verbose > 2 )cerr << "c coprocessor hidden tautology elimination" << endl;
     if( status == l_Undef ) hte.eliminate(data);  // cannot change status, can generate new unit clauses
@@ -143,6 +153,12 @@ lbool Preprocessor::performSimplification()
 
   if( false  || printHTE ) {
    printFormula("after HTE");
+  }
+  
+  if ( opt_probe ) {
+    if( opt_verbose > 2 )cerr << "c coprocessor probing" << endl;
+    if( status == l_Undef ) probing.probe(); 
+    if( !data.ok() ) status = l_False;
   }
   
   if ( opt_bve ) {
