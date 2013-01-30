@@ -88,7 +88,8 @@ protected:
   inline bool checkPush(vec<Lit> & ps, const Lit l);
   inline char checkUpdatePrev(Lit & prev, const Lit l);
   inline lbool anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, int32_t* pos_stats, int32_t* neg_stats, int & lit_clauses, int & lit_learnts, const bool doStatistics = true); 
-  inline lbool anticipateEliminationThreadsafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, int32_t* pos_stats, int32_t* neg_stats, int & lit_clauses, int & lit_learnts, SpinLock & data_lock); 
+  inline lbool anticipateEliminationThreadsafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, int32_t* pos_stats, int32_t* neg_stats, int & lit_clauses, int & lit_learnts, SpinLock & data_lock);
+  inline void findGates(CoprocessorData & data, const Var v, int & p_limit, int & v_limit, MarkArray * helper = NULL);
   inline void removeBlockedClauses(CoprocessorData & data, const vector< CRef> & list, const int32_t stats[], const Lit l, const bool doStatistics = true );
   inline void removeBlockedClausesThreadSafe(CoprocessorData & data, const vector< CRef> & list, const int32_t stats[], const Lit l, SpinLock & data_lock );
   inline void touchedVarsForSubsumption (CoprocessorData & data, const std::vector<Var> & touched_vars);

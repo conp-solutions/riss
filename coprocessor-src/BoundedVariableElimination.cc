@@ -662,6 +662,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            
            if (!force) 
            {
+               // TODO memset here!
                for (int i = 0; i < pos.size(); ++i)
                     pos_stats[i] = 0;
                for (int i = 0; i < neg.size(); ++i)
@@ -671,6 +672,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                if (pos_count != 0 &&  neg_count != 0)
                {
                    if (doStatistics) ++anticipations;
+                   findGates(data, v, p_limit, v_limit);
                    if (anticipateElimination(data, pos, neg,  v, pos_stats, neg_stats, lit_clauses, lit_learnts) == l_False) 
                        return;  // level 0 conflict found while anticipation TODO ABORT
                }
@@ -1555,4 +1557,10 @@ inline void BoundedVariableElimination::addClausesToSubsumption (CoprocessorData
             //subsumption_processing_queue.push_back(occs[l][j]);
         }
     }    
+}
+
+inline void findGates(CoprocessorData & data, const Var v, int & p_limit, int & v_limit, MarkArray * helper)
+{
+    p_limit = data.list(mkVar(v,false));
+    n_limit = data.list(mkVar(v,true));
 }
