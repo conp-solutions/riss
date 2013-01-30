@@ -26,6 +26,7 @@ EquivalenceElimination::EquivalenceElimination(ClauseAllocator& _ca, ThreadContr
 : Technique(_ca,_controller)
 , gateSteps(0)
 , gateTime(0)
+, gateExtractTime(0)
 , eeTime(0)
 , steps(0)
 , eqLitInStack(0)
@@ -89,8 +90,9 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
       }
 
       Circuit circ(ca); 
-      
+      gateExtractTime = cpuTime() - gateExtractTime;
       circ.extractGates(data, gates);
+      gateExtractTime = cpuTime() - gateExtractTime;
       // cerr << "c found " << gates.size() << " gates" << endl ;
       if ( debug_out ) {
 	cerr << endl << "==============================" << endl;
@@ -1843,7 +1845,6 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 		  // cerr << "c added clause " << ca[ list[k] ] << " to the subsumption queue" << endl;
 		  subsumption.addClause( list[k] );
 		  resetVariables = true;
- 		  if( debug_out )  cerr << "c add clause to subsume list: " << c << endl;
 		}
 	      }
 	    } else {
@@ -2017,5 +2018,5 @@ void EquivalenceElimination::writeAAGfile(CoprocessorData& data)
 void EquivalenceElimination::printStatistics(ostream& stream)
 {
   stream << "c [STAT] EE " << eeTime << " s, " << steps << " steps" << endl;
-  stream << "c [STAT] EE-gate " << gateTime << " s, " << gateSteps << " steps" << endl;
+  stream << "c [STAT] EE-gate " << gateTime << " s, " << gateSteps << " steps, " << gateExtractTime << " extractGateTime, " << endl;
 }

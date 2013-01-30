@@ -70,7 +70,8 @@ lbool Preprocessor::performSimplification()
   if( ! opt_enabled ) return l_Undef;
   if( opt_verbose > 2 ) cerr << "c start preprocessing with coprocessor" << endl;
 
-  MethodTimer methodTime( isInprocessing ? &ipTime : &ppTime ); // measure time spend in this method
+  if( isInprocessing ) ipTime = cpuTime() - ipTime;
+  else ppTime = cpuTime() - ppTime;
   
   // first, remove all satisfied clauses
   if( !solver->simplify() ) return l_False;
@@ -254,6 +255,9 @@ lbool Preprocessor::performSimplification()
     if ( data.ok() ) reSetupSolver();
   }
 
+  if( isInprocessing ) ipTime = cpuTime() - ipTime;
+  else ppTime = cpuTime() - ppTime;
+  
   if( opt_printStats ) {
     printStatistics(cerr);
     propagation.printStatistics(cerr);
