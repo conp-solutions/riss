@@ -43,7 +43,7 @@ class EquivalenceElimination : public Technique {
 
   vector<Lit> replacedBy;              /// stores which variable has been replaced by which literal
   
-  char* isToAnalyze;                   /// stores that a literal has to be analyzed further
+  vector<char> isToAnalyze;            /// stores that a literal has to be analyzed further
   vector<Lit> eqDoAnalyze;             /// stores the literals to be analyzed
   
   Propagation& propagation;            /// object that takes care of unit propagation
