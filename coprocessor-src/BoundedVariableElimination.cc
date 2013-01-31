@@ -519,6 +519,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
        
         if (!data.ok())
             return;
+        
         if( false ) {
             cerr << "formula after subsumeStrength: " << endl;
             for( int i = 0 ; i < data.getClauses().size(); ++ i )
@@ -546,19 +547,31 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            }
            assert (v != var_Undef && "variable heap or queue failed");
 
-	   // do not work on this variable, if it will be unit-propagated! if all units are eagerly propagated, this is not necessary
-       if  (data.value(mkLit(v,true)) != l_Undef || data.value(mkLit(v,false)) != l_Undef)
-           continue;
-       // Heuristic Cutoff
-        if (!opt_unlimited_bve && (data[mkLit(v,true)] > 10 && data[mkLit(v,false)] > 10 || data[v] > 15 && (data[mkLit(v,true)] > 5 || data[mkLit(v,false)] > 5)))
-        {
-            if (doStatistics) ++skippedVars;
-            continue;
-        }
-        
-        if (doStatistics) ++testedVars;
+           // do not work on this variable, if it will be unit-propagated! if all units are eagerly propagated, this is not necessary
+           if  (data.value(mkLit(v,true)) != l_Undef || data.value(mkLit(v,false)) != l_Undef)
+               continue;
+           
+           // Heuristic Cutoff Gate-Search
+           if (!opt_unlimited_bve && false) //TODO make up a heuristic
+           {
+               if (doStatistics) ++skippedVars;
+               continue;
+           }
 
-	   // if( data.value( mkLit(v,true) ) != l_Undef ) continue;
+           // Search for Gates
+           int p_limit, n_limit;
+           bool foundGate = findGates(data, v, p_limit, n_limit);
+            
+           // Heuristic Cutoff Anticipation (if no Gate Found)
+           if (!opt_unlimited_bve && !foundGate && (data[mkLit(v,true)] > 10 && data[mkLit(v,false)] > 10 || data[v] > 15 && (data[mkLit(v,true)] > 5 || data[mkLit(v,false)] > 5)))
+           {
+               if (doStatistics) ++skippedVars;
+               continue;
+           }
+            
+           if (doStatistics) ++testedVars;
+
+           // if( data.value( mkLit(v,true) ) != l_Undef ) continue;
            vector<CRef> & pos = data.list(mkLit(v,false)); 
            vector<CRef> & neg = data.list(mkLit(v,true));
                
@@ -608,60 +621,16 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            }
            if (opt_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
            
-           
-           // handle pure Literal -> don't do this, blocked Clause Elimination will remove the clauses
-           if (false && (pos_count == 0 || neg_count == 0))
-           {    
-                lbool state;
-                if      ((pos_count > 0) && (neg_count ==  0))
-                {
-                    state = data.getSolver()->value(mkLit(v, false));             
-                    if (state != l_False)
-                    {    
-                        state = data.enqueue(mkLit(v, false));
-                    }
-                    if(opt_verbose > 1) cerr << "c handling pure literal" << endl;
-                    if(opt_verbose > 0) cerr << "c Pure Lit " << v+1 << endl;
-                    if(opt_verbose > 1) cerr << "c Pure Lit " << (state == l_False ? "negation enqueued before" : "enqueued successful") << endl;
-                }
-                else if ((pos_count ==  0) && (neg_count > 0))
-                {
-                    state = data.getSolver()->value(mkLit(v, true));
-                    if (state != l_False)
-                    {
-                        state = data.enqueue(mkLit(v, true));
-                    } 
-                    if(opt_verbose > 1) cerr << "c handling pure literal" << endl;
-                    if(opt_verbose > 0) cerr << "c Pure Lit ¬" << v+1 << endl;
-                    if(opt_verbose > 1) cerr << "c Pure Lit " << (state == l_False ? "negation enqueued before" : "enqueued successful") << endl;
-                }
-                else 
-                {  
-                    if(opt_verbose > 1) cerr << "c no occurences of " << v+1 << endl;
-                    if(opt_verbose > 1) cerr << "c =============================================================================" << endl;
-                    continue;  // no positive and no negative occurrences of v 
-                }              // -> nothing to assign
-                if      (state == l_False)  // this is not an UNSAT case -> there may are other lits, that make the clauses true.
-                    ; 
-                else if (state == l_Undef)
-                    ;                       // variable already assigned
-                else if (state == l_True) 
-                    propagation.propagate(data, true);                       // new assignment -> TODO propagate own lits only 
-                else 
-                    assert(0);              // something went wrong
-                
-                if(opt_verbose > 1) cerr << "c =============================================================================" << endl;
-                continue;
-           }
-
            // Declare stats variables;        
            int32_t pos_stats[pos.size()];
            int32_t neg_stats[neg.size()];
            int lit_clauses;
            int lit_learnts;
-           
+          
+                  
            if (!force) 
            {
+               // TODO memset here!
                for (int i = 0; i < pos.size(); ++i)
                     pos_stats[i] = 0;
                for (int i = 0; i < neg.size(); ++i)
@@ -671,7 +640,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                if (pos_count != 0 &&  neg_count != 0)
                {
                    if (doStatistics) ++anticipations;
-                   if (anticipateElimination(data, pos, neg,  v, pos_stats, neg_stats, lit_clauses, lit_learnts) == l_False) 
+                   if (anticipateElimination(data, pos, neg,  v, p_limit, n_limit, pos_stats, neg_stats, lit_clauses, lit_learnts) == l_False) 
                        return;  // level 0 conflict found while anticipation TODO ABORT
                }
 
@@ -689,7 +658,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            if (force || lit_clauses <= lit_clauses_old)
            {
                 if(opt_verbose > 1)  cerr << "c resolveSet" <<endl;
-                if (resolveSet(data, pos, neg, v) == l_False)
+                if (resolveSet(data, pos, neg, v, p_limit, n_limit) == l_False)
                     return;
                 if (doStatistics) ++eliminatedVars;
                 removeClauses(data, pos, mkLit(v,false));
@@ -809,14 +778,14 @@ inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData 
  *  -> total number of literals in learnts after resolution:    lit_learnts
  *
  */
-inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, int32_t* pos_stats , int32_t* neg_stats, int & lit_clauses, int & lit_learnts, const bool doStatistics)
+inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const int p_limit, const int  n_limit, int32_t* pos_stats , int32_t* neg_stats, int & lit_clauses, int & lit_learnts, const bool doStatistics)
 {
     if(opt_verbose > 2)  cerr << "c starting anticipate BVE" << endl;
     // Clean the stats
     lit_clauses=0;
     lit_learnts=0;
    
-    for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
+    for (int cr_p = 0; cr_p < positive.size() && cr_p < p_limit; ++cr_p)
     {
         Clause & p = ca[positive[cr_p]];
         if (p.can_be_deleted())
@@ -827,7 +796,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
             }
             continue;
         }
-        for (int cr_n = 0; cr_n < negative.size(); ++cr_n)
+        for (int cr_n = 0; cr_n < negative.size() && cr_n < n_limit; ++cr_n)
         {
             Clause & n = ca[negative[cr_n]];
             if (n.can_be_deleted())
@@ -909,6 +878,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
                      ; // variable already assigned
                 else if (status == l_True)
                 {
+                    //assert(false && "all units should be discovered before (while strengthening)!");
                     if (doStatistics) ++ unitsEnqueued;
                     if (propagation.propagate(data, true) == l_False)
                         return l_False;  
@@ -1078,14 +1048,14 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
  *   - unit clauses and empty clauses are not handeled here
  *          -> this is already done in anticipateElimination 
  */
-lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const bool keepLearntResolvents, const bool force, const bool doStatistics)
+lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const int p_limit, const int n_limit, const bool keepLearntResolvents, const bool force, const bool doStatistics)
 {
-    for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
+    for (int cr_p = 0; cr_p < positive.size() && cr_p < p_limit; ++cr_p)
     {
         Clause & p = ca[positive[cr_p]];
         if (p.can_be_deleted())
             continue;
-        for (int cr_n = 0; cr_n < negative.size(); ++cr_n)
+        for (int cr_n = 0; cr_n < negative.size() && cr_n < n_limit; ++cr_n)
         {
             Clause & p = ca[positive[cr_p]]; // renew reference as it could got invalid while clause allocation
             Clause & n = ca[negative[cr_n]];
@@ -1153,6 +1123,7 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef
                     // | resolvent | == 1  => unit Clause
                     else if (ps.size() == 1)
                     {
+                        //assert(false && "all units should be discovered before (while strengthening)!");
                         lbool status = data.enqueue(ps[0]); //check for level 0 conflict
                         if (status == l_False)
                             return l_False;
@@ -1160,7 +1131,7 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef
                              ; // variable already assigned
                         else if (status == l_True)
                         {
-                    if (doStatistics) ++ unitsEnqueued;
+                            if (doStatistics) ++ unitsEnqueued;
                             if (propagation.propagate(data, true) == l_False)  //TODO propagate own lits only (parallel)
                                 return l_False;
                             if (p.can_be_deleted())
@@ -1555,4 +1526,11 @@ inline void BoundedVariableElimination::addClausesToSubsumption (CoprocessorData
             //subsumption_processing_queue.push_back(occs[l][j]);
         }
     }    
+}
+
+inline bool BoundedVariableElimination::findGates(CoprocessorData & data, const Var v, int & p_limit, int & n_limit, MarkArray * helper)
+{
+    p_limit = data.list(mkLit(v,false)).size();
+    n_limit = data.list(mkLit(v,true)).size();
+    return false;
 }
