@@ -10,10 +10,11 @@ using namespace std;
 
 static const char* _cat = "COPROCESSOR 3 - BVE";
 
-static IntOption  opt_verbose    (_cat,      "cp3_bve_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
-static IntOption  opt_learnt_growth (_cat,   "cp3_bve_learnt_growth", "Keep C (x) D, where C or D is learnt, if |C (x) D| <= max(|C|,|D|) + N", 0, IntRange(-1, INT32_MAX));
+static IntOption  opt_verbose         (_cat, "cp3_bve_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
+static IntOption  opt_learnt_growth   (_cat, "cp3_bve_learnt_growth", "Keep C (x) D, where C or D is learnt, if |C (x) D| <= max(|C|,|D|) + N", 0, IntRange(-1, INT32_MAX));
 static IntOption  opt_resolve_learnts (_cat, "cp3_bve_resolve_learnts", "Resolve learnt clauses: 0: off, 1: original with learnts, 2: 1 and learnts with learnts", 0, IntRange(0,2));
 static BoolOption opt_unlimited_bve   (_cat, "bve_unlimited",  "perform bve test for Var v, if there are more than 10 + 10 or 15 + 5 Clauses containing v", false);
+static BoolOption opt_bve_findGate    (_cat, "bve_gates",  "try to find variable AND gate definition before elimination", false);
 static IntOption  opt_bve_heap        (_cat, "cp3_bve_heap"     ,  "0: minimum heap, 1: maximum heap, 2: random", 0, IntRange(0,2));
 
 BoundedVariableElimination::BoundedVariableElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation, Coprocessor::Subsumption & _subsumption )
@@ -38,8 +39,10 @@ BoundedVariableElimination::BoundedVariableElimination( ClauseAllocator& _ca, Co
 , learntBlockedLit(0)
 , skippedVars(0)
 , unitsEnqueued(0)
+, foundGates(0)
 , processTime(0)
 , subsimpTime(0)
+, gateTime(0)
 //, heap_comp(NULL)
 //, variable_heap(heap_comp)
 {
@@ -69,6 +72,9 @@ void BoundedVariableElimination::printStatistics(ostream& stream)
                                  << removedBlockedLearnt << " blocked learnts removed, "
                    << "with "    << learntBlockedLit << " lits, "
                                  << endl;  
+    stream << "c [STAT] BVE(4) " << foundGates << " gateDefs, "
+                                 << gateTime << " gateSeconds, " 
+				  << endl;
 }
 
 
@@ -119,6 +125,7 @@ lbool BoundedVariableElimination::runBVE(CoprocessorData& data, const bool doSta
      if( !ca[  data.list(mkLit(95,true))[i] ].can_be_deleted() ) cerr << ca[  data.list(mkLit(95,true))[i] ] << endl;    
   }
   
+  data.ma.resize( data.nVars() * 2 );
 
   bve_worker(data, newheap, 0, variable_queue.size(), false);
   if (opt_bve_heap != 2)
@@ -559,8 +566,13 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            }
 
            // Search for Gates
-           int p_limit, n_limit;
-           bool foundGate = findGates(data, v, p_limit, n_limit);
+           int p_limit = data.list(mkLit(v,false)).size();
+	   int n_limit = data.list(mkLit(v,true)).size();
+	   bool foundGate = false;
+	   if( opt_bve_findGate ) {
+	    foundGate = findGates(data, v, p_limit, n_limit);
+	    foundGates ++;
+	   }
             
            // Heuristic Cutoff Anticipation (if no Gate Found)
            if (!opt_unlimited_bve && !foundGate && (data[mkLit(v,true)] > 10 && data[mkLit(v,false)] > 10 || data[v] > 15 && (data[mkLit(v,true)] > 5 || data[mkLit(v,false)] > 5)))
@@ -784,8 +796,9 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
     // Clean the stats
     lit_clauses=0;
     lit_learnts=0;
-   
-    for (int cr_p = 0; cr_p < positive.size() && cr_p < p_limit; ++cr_p)
+    const bool hasDefinition = (p_limit < positive.size() || n_limit < negative.size() );
+    
+    for (int cr_p = 0; cr_p < positive.size() ; ++cr_p)
     {
         Clause & p = ca[positive[cr_p]];
         if (p.can_be_deleted())
@@ -796,8 +809,12 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
             }
             continue;
         }
-        for (int cr_n = 0; cr_n < negative.size() && cr_n < n_limit; ++cr_n)
+        for (int cr_n = 0; cr_n < negative.size(); ++cr_n)
         {
+	    // do not check resolvents, which would touch two clauses out of the variable definition
+	    if( cr_p >= p_limit && cr_n >= n_limit ) continue; 
+	    if( hasDefinition && cr_p < p_limit && cr_n < n_limit ) continue; // no need to resolve the definition clauses with each other NOTE: assumes that these clauses result in tautologies
+	    
             Clause & n = ca[negative[cr_n]];
             if (n.can_be_deleted())
             {   
@@ -1050,13 +1067,22 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
  */
 lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const int p_limit, const int n_limit, const bool keepLearntResolvents, const bool force, const bool doStatistics)
 {
-    for (int cr_p = 0; cr_p < positive.size() && cr_p < p_limit; ++cr_p)
+    vec<Lit> ps; // TODO: make this a member variable!!
+    const bool hasDefinition = (p_limit < positive.size() || n_limit < negative.size() );
+    
+  
+    for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
     {
         Clause & p = ca[positive[cr_p]];
         if (p.can_be_deleted())
             continue;
-        for (int cr_n = 0; cr_n < negative.size() && cr_n < n_limit; ++cr_n)
+        for (int cr_n = 0; cr_n < negative.size(); ++cr_n)
         {
+	    // no need to resolve two clauses that are both not within the variable definition
+	    if( cr_p >= p_limit && cr_n >= n_limit ) continue;
+	    if( hasDefinition && cr_p < p_limit && cr_n < n_limit ) continue; // no need to resolve the definition clauses with each other NOTE: assumes that these clauses result in tautologies
+	    
+	    
             Clause & p = ca[positive[cr_p]]; // renew reference as it could got invalid while clause allocation
             Clause & n = ca[negative[cr_n]];
             if (n.can_be_deleted())
@@ -1070,7 +1096,7 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef
                 if (opt_resolve_learnts == 1 && (p.learnt() && n.learnt()))
                     continue;
             }        
-            vec<Lit> ps;
+            ps.clear();
             if (!resolve(p, n, v, ps))
             {
                // | resolvent | > 1
@@ -1530,7 +1556,85 @@ inline void BoundedVariableElimination::addClausesToSubsumption (CoprocessorData
 
 inline bool BoundedVariableElimination::findGates(CoprocessorData & data, const Var v, int & p_limit, int & n_limit, MarkArray * helper)
 {
-    p_limit = data.list(mkLit(v,false)).size();
-    n_limit = data.list(mkLit(v,true)).size();
-    return false;
+  // do not touch lists that are too small for benefit
+  if( data.list(mkLit(v,false)).size() < 3 &&  data.list( mkLit(v,true) ).size() < 3 ) return false;
+  if( data.list(mkLit(v,false)).size() < 2 || data.list( mkLit(v,true) ).size() < 2 ) return false;
+ 
+  MethodTimer gateTimer ( &gateTime ); // measure time spend in this method
+  MarkArray& markArray = (helper == 0 ? data.ma : *helper);
+  
+  for( uint32_t pn = 0 ; pn < 2; ++ pn ) {
+    vector<CRef>& pList = data.list(mkLit(v, pn == 0 ? false : true ));
+    vector<CRef>& nList = data.list(mkLit(v, pn == 0 ? true : false ));
+    const Lit pLit = mkLit(v,pn == 0 ? false : true);
+    const Lit nLit = mkLit(v,pn == 0 ? true : false);
+    int& pClauses = pn == 0 ? p_limit : n_limit;
+    int& nClauses = pn == 0 ? n_limit : p_limit;
+    
+    // check binary of pos variable
+    markArray.nextStep();
+    for( uint32_t i = 0 ; i < pList.size(); ++ i ) {
+      const Clause& clause = ca[ pList[i] ];
+      if( clause.can_be_deleted() || clause.learnt() || clause.size() != 2 ) continue; // NOTE: do not use learned clauses for gate detection!
+      Lit other = clause[0] == pLit ? clause[1] : clause[0];
+      markArray.setCurrentStep( toInt(~other) );
+    }
+    for( uint32_t i = 0 ; i < nList.size(); ++ i ) {
+      const Clause& clause = ca[ nList[i] ];
+      if( clause.can_be_deleted() || clause.learnt() ) continue;
+      uint32_t j = 0; for(  ; j < clause.size(); ++ j ) {
+	const Lit cLit = clause[j];
+	if( cLit == nLit ) continue; // do not consider variable that is to eliminate
+	if( !markArray.isCurrentStep( toInt(cLit) ) ) break;
+      }
+      if( j == clause.size() ) {
+	assert( !clause.can_be_deleted() && "a participating clause of the gate cannot be learned, because learned clauses will be removed completely during BVE");
+	if( opt_verbose > 0 ) {cerr << "c [BVE] found " << (pn == 0 ? "pos" : "neg") << " gate with size " << j << " p: " << pList.size() << " n:" << nList.size() << " :=" << clause << endl;}
+	// setup values
+	pClauses = clause.size() - 1;
+	nClauses = 1;
+	 // do not add unnecessary clauses
+	for( uint32_t k = 0 ; k < clause.size(); ++k ) markArray.reset( toInt(clause[k]) );
+	CRef tmp = nList[0]; nList[0] = nList[i]; nList[i] = tmp; // swap responsible clause in list to front
+	// swap responsible clauses in list to front
+	uint32_t placedClauses = 0;
+	for( uint32_t k = 0 ; k < pList.size(); ++ k ) {
+	  const Clause& clause = ca[ pList[k] ];
+	  if( clause.learnt() || clause.can_be_deleted() || clause.size() != 2 ) continue;
+	  Lit other = clause[0] == pLit ? clause[1] : clause[0];
+	  if(  !markArray.isCurrentStep ( toInt(~other) ) ) {
+	    CRef tmp = pList[placedClauses];
+	    pList[placedClauses++] = pList[k];
+	    pList[k] = tmp;
+	    markArray.setCurrentStep( toInt(~other) ); // no need to add the same binary twice
+	  }
+	}
+	if( opt_verbose > 0 ) {
+	  cerr << "c [BVE] GATE clause: " << ca[ nList[0] ] << " placed clauses: " << placedClauses << endl;
+	  for( uint32_t k = 0 ; k < placedClauses; ++ k ) {
+	    cerr << "c [BVE] bin clause[" << k << "]: "<< ca[ pList[k] ] << endl;
+	  }
+	  cerr << "c return parameter: pos:" << p_limit << " neg: " << n_limit << endl;
+	  
+	  cerr << "c clause lists: " << endl;
+	  cerr << "for " << mkLit(v,false) << endl;
+	  for( int i = 0 ; i < data.list( mkLit(v,false) ).size(); ++ i ) {
+	    if( ca[  data.list( mkLit(v,false) )[i] ].can_be_deleted() ) continue;
+	    else cerr << i << " : " << ca[  data.list( mkLit(v,false) )[i] ] << endl;
+	  }
+	  cerr << "for " << mkLit(v,true) << endl;
+	  for( int i = 0 ; i < data.list( mkLit(v,true) ).size(); ++ i ) {
+	    if( ca[  data.list( mkLit(v,true) )[i] ].can_be_deleted() ) continue;
+	    else cerr << i << " : " << ca[  data.list( mkLit(v,true) )[i] ] << endl;
+	  }
+	}
+	
+	if( pClauses != placedClauses ) cerr << cerr << "c [BVE-G] placed: " << placedClauses << ", participating: " << pClauses << endl;
+	assert( pClauses == placedClauses && "number of moved binary clauses and number of participating clauses has to be the same");
+	return true;
+      }
+    }
+  }
+
+  return false;
 }
