@@ -43,10 +43,8 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
   
   eeTime  = cpuTime() - eeTime;
   
-  if( isToAnalyze == 0 ) isToAnalyze = (char*) malloc( sizeof( char ) * data.nVars()  );
-  else isToAnalyze = (char*) realloc( isToAnalyze, sizeof( char ) * data.nVars()  );
-  memset( isToAnalyze, 0 , sizeof(char) * data.nVars() );
-  
+  isToAnalyze.resize( data.nVars(), 0 );
+    
   data.ma.resize(2*data.nVars());
   
   // find SCCs and apply them to the "replacedBy" structure
@@ -1706,6 +1704,13 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
   if( data.getEquivalences().size() > 0 || force) {
    
     // TODO: take care of units that have to be propagated, if an element of an EE-class has already a value!
+    isToAnalyze.resize( data.nVars(), 0 );
+    data.ma.resize(2*data.nVars());
+    
+    if( replacedBy.size() < data.nVars() ) { // extend replacedBy structure
+      for( Var v = replacedBy.size(); v < data.nVars(); ++v )
+	replacedBy.push_back ( mkLit(v,false) );
+    }
     
    vector<Lit>& ee = data.getEquivalences();
    

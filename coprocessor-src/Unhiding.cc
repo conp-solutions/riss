@@ -57,8 +57,7 @@ uint32_t Unhiding::linStamp( const Lit literal, uint32_t stamp, bool& detectedEE
   stampInfo[ toInt( literal ) ].obs = stamp;
   // bool flag = true;
   Lit* adj = big.getArray(literal);
-  int adjSize = big.getSize(literal);
-  if (!uhdNoShuffle) shuffleVector( adj, adjSize );
+  if (!uhdNoShuffle) shuffleVector( adj, big.getSize(literal) );
   stampEE.push_back(literal);
   stampQueue.push_back(literal);
   level ++;
@@ -70,8 +69,8 @@ uint32_t Unhiding::linStamp( const Lit literal, uint32_t stamp, bool& detectedEE
   while( !stampQueue. empty() )
   {
     const Lit l = stampQueue.back();
-    Lit* adj = big.getArray(l);
-    const int adjSize = big.getSize(literal);
+    const Lit* adj = big.getArray(l);
+    const int adjSize = big.getSize(l);
     /*
     cerr << "c [UHD-A] current literal " << l << " at level " << level << " and index " << stampInfo[ toInt(l) ].index << "/" << adjSize << endl;
     cerr << "c adj:";
@@ -534,7 +533,8 @@ bool Unhiding::unhide (  )
   stampInfo.resize( 2*data.nVars() );
   unhideEEflag.resize( 2*data.nVars() );
   
-  big.create(ca, data, data.getClauses(), data.getLEarnts() );
+  // be careful here - do not use learned clauses, because they could be removed, and then the whole mechanism breaks
+  big.create(ca, data, data.getClauses() );
   
   for( uint32_t iteration = 0 ; iteration < unhideIter; ++ iteration )
   {

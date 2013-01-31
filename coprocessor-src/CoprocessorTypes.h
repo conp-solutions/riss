@@ -800,7 +800,7 @@ inline bool CoprocessorData::doNotTouch(const Var v) const
 
 
 inline BIG::BIG()
-: big(0), storage(0), sizes(0), start(0), stop(0)
+: storage(0), sizes(0), big(0), start(0), stop(0)
 {}
 
 inline BIG::~BIG()
