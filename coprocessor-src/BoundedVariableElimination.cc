@@ -796,6 +796,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
     // Clean the stats
     lit_clauses=0;
     lit_learnts=0;
+    // vec <Lit > resolvent;
     const bool hasDefinition = (p_limit < positive.size() || n_limit < negative.size() );
     
     for (int cr_p = 0; cr_p < positive.size() ; ++cr_p)
@@ -870,7 +871,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
             // unit Clause
             else if (newLits == 1)
             {
-                vec <Lit > resolvent;
+                resolvent.clear();
                 resolve(p,n,v,resolvent); 
                 assert(resolvent.size() == 1);
                 if(opt_verbose > 0) 
@@ -1067,7 +1068,7 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
  */
 lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const int p_limit, const int n_limit, const bool keepLearntResolvents, const bool force, const bool doStatistics)
 {
-    vec<Lit> ps; // TODO: make this a member variable!!
+    vec<Lit> & ps = resolvent; // TODO: make this a member variable!!
     const bool hasDefinition = (p_limit < positive.size() || n_limit < negative.size() );
     
   
@@ -1190,6 +1191,7 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef
  */
 lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const bool keepLearntResolvents, const bool force)
 {
+    vec<Lit> ps;
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
     {
         Clause & p = ca[positive[cr_p]];
@@ -1210,7 +1212,6 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, v
                 if (opt_resolve_learnts == 1 && (p.learnt() && n.learnt()))
                     continue;
             }        
-            vec<Lit> ps;
             if (!resolve(p, n, v, ps))
             {
                // | resolvent | > 1
@@ -1220,13 +1221,23 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, v
                     if (force)
                     { 
                         if (opt_resolve_learnts == 0 && (p.learnt() || n.learnt()))
+                        {
+                            ps.clear();
                             continue;
+                        }
                         if (opt_resolve_learnts == 1 && (p.learnt() && n.learnt()))
+                        {
+                            ps.clear();
                             continue;
+                        }
                     }
                     if ((p.learnt() || n.learnt()) && ps.size() > max(p.size(),n.size()) + opt_learnt_growth)
+                    {
+                        ps.clear();
                         continue;
+                    }
                     CRef cr = ca.alloc(ps, p.learnt() || n.learnt()); 
+                    ps.clear();
                     // IMPORTANT! dont use p and n in this block, as they could got invalid
                     Clause & resolvent = ca[cr];
                     data.addClause(cr);
@@ -1262,8 +1273,10 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, v
                         }
                         else 
                             assert (0); //something went wrong
+                        ps.clear();
                     }
-                }   
+                } 
+                else ps.clear();  
 
            }
         }

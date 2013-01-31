@@ -40,6 +40,7 @@ class BoundedVariableElimination : public Technique {
   }; 
 
   vector< Var > variable_queue;
+  vec< Lit > resolvent; // vector for sequential resolution
   //VarOrderBVEHeapLt heap_comp;
   //Heap<VarOrderBVEHeapLt> variable_heap;
   Coprocessor::Propagation & propagation;
