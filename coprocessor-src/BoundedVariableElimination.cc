@@ -519,6 +519,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
        
         if (!data.ok())
             return;
+        
         if( false ) {
             cerr << "formula after subsumeStrength: " << endl;
             for( int i = 0 ; i < data.getClauses().size(); ++ i )
@@ -549,14 +550,26 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            // do not work on this variable, if it will be unit-propagated! if all units are eagerly propagated, this is not necessary
            if  (data.value(mkLit(v,true)) != l_Undef || data.value(mkLit(v,false)) != l_Undef)
                continue;
-           // Heuristic Cutoff
-            if (!opt_unlimited_bve && (data[mkLit(v,true)] > 10 && data[mkLit(v,false)] > 10 || data[v] > 15 && (data[mkLit(v,true)] > 5 || data[mkLit(v,false)] > 5)))
-            {
-                if (doStatistics) ++skippedVars;
-                continue;
-            }
+           
+           // Heuristic Cutoff Gate-Search
+           if (!opt_unlimited_bve && false) //TODO make up a heuristic
+           {
+               if (doStatistics) ++skippedVars;
+               continue;
+           }
+
+           // Search for Gates
+           int p_limit, n_limit;
+           bool foundGate = findGates(data, v, p_limit, n_limit);
             
-            if (doStatistics) ++testedVars;
+           // Heuristic Cutoff Anticipation (if no Gate Found)
+           if (!opt_unlimited_bve && !foundGate && (data[mkLit(v,true)] > 10 && data[mkLit(v,false)] > 10 || data[v] > 15 && (data[mkLit(v,true)] > 5 || data[mkLit(v,false)] > 5)))
+           {
+               if (doStatistics) ++skippedVars;
+               continue;
+           }
+            
+           if (doStatistics) ++testedVars;
 
            // if( data.value( mkLit(v,true) ) != l_Undef ) continue;
            vector<CRef> & pos = data.list(mkLit(v,false)); 
@@ -613,7 +626,8 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            int32_t neg_stats[neg.size()];
            int lit_clauses;
            int lit_learnts;
-           
+          
+                  
            if (!force) 
            {
                // TODO memset here!
@@ -626,8 +640,6 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                if (pos_count != 0 &&  neg_count != 0)
                {
                    if (doStatistics) ++anticipations;
-                   int p_limit, n_limit;
-                   findGates(data, v, p_limit, n_limit);
                    if (anticipateElimination(data, pos, neg,  v, p_limit, n_limit, pos_stats, neg_stats, lit_clauses, lit_learnts) == l_False) 
                        return;  // level 0 conflict found while anticipation TODO ABORT
                }
@@ -646,7 +658,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            if (force || lit_clauses <= lit_clauses_old)
            {
                 if(opt_verbose > 1)  cerr << "c resolveSet" <<endl;
-                if (resolveSet(data, pos, neg, v) == l_False)
+                if (resolveSet(data, pos, neg, v, p_limit, n_limit) == l_False)
                     return;
                 if (doStatistics) ++eliminatedVars;
                 removeClauses(data, pos, mkLit(v,false));
@@ -866,6 +878,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
                      ; // variable already assigned
                 else if (status == l_True)
                 {
+                    //assert(false && "all units should be discovered before (while strengthening)!");
                     if (doStatistics) ++ unitsEnqueued;
                     if (propagation.propagate(data, true) == l_False)
                         return l_False;  
@@ -1035,14 +1048,14 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
  *   - unit clauses and empty clauses are not handeled here
  *          -> this is already done in anticipateElimination 
  */
-lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const bool keepLearntResolvents, const bool force, const bool doStatistics)
+lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const int p_limit, const int n_limit, const bool keepLearntResolvents, const bool force, const bool doStatistics)
 {
-    for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
+    for (int cr_p = 0; cr_p < positive.size() && cr_p < p_limit; ++cr_p)
     {
         Clause & p = ca[positive[cr_p]];
         if (p.can_be_deleted())
             continue;
-        for (int cr_n = 0; cr_n < negative.size(); ++cr_n)
+        for (int cr_n = 0; cr_n < negative.size() && cr_n < n_limit; ++cr_n)
         {
             Clause & p = ca[positive[cr_p]]; // renew reference as it could got invalid while clause allocation
             Clause & n = ca[negative[cr_n]];
@@ -1110,6 +1123,7 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef
                     // | resolvent | == 1  => unit Clause
                     else if (ps.size() == 1)
                     {
+                        //assert(false && "all units should be discovered before (while strengthening)!");
                         lbool status = data.enqueue(ps[0]); //check for level 0 conflict
                         if (status == l_False)
                             return l_False;
@@ -1117,7 +1131,7 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef
                              ; // variable already assigned
                         else if (status == l_True)
                         {
-                    if (doStatistics) ++ unitsEnqueued;
+                            if (doStatistics) ++ unitsEnqueued;
                             if (propagation.propagate(data, true) == l_False)  //TODO propagate own lits only (parallel)
                                 return l_False;
                             if (p.can_be_deleted())
@@ -1514,8 +1528,9 @@ inline void BoundedVariableElimination::addClausesToSubsumption (CoprocessorData
     }    
 }
 
-inline void BoundedVariableElimination::findGates(CoprocessorData & data, const Var v, int & p_limit, int & n_limit, MarkArray * helper)
+inline bool BoundedVariableElimination::findGates(CoprocessorData & data, const Var v, int & p_limit, int & n_limit, MarkArray * helper)
 {
     p_limit = data.list(mkLit(v,false)).size();
     n_limit = data.list(mkLit(v,true)).size();
+    return false;
 }
