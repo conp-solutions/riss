@@ -33,6 +33,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 // for parallel stuff
 #include <pthread.h>
+#include "coprocessor-src/LockCollection.h"
 
 /// TODO remove after debug
 #include <iostream>
@@ -422,9 +423,10 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
 
  public:
     /**
-     * Reserves memmory of the CA.
-     * Assumes that just one function calls reserveMemory -> secure this with a spin lock.
-     * Make shure that the read-lock on the CA was freed before
+     * Reserves memory in the CA.
+     * Assumes that just one function calls reserveMemory 
+     *      -> secure this with a spin lock before calling
+     *      -> Make shure that the calling thread has not locked CA_Lock
      */
     AllocatorReservation reserveMemory(int clauses, int literals, int learnts, ReadersWriterLock CA_Lock)
     {
@@ -432,7 +434,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         if (need_lock)
             CA_Lock.writeLock();
         uint32_t start = RegionAllocator<uint32_t>::alloc(requiredMemory(clauses, literals, learnts));
-        uint32_t limit  = RegionAllocator::size();
+        uint32_t limit = RegionAllocator<uint32_t>::size();
         if (need_lock)
             CA_Lock.writeUnlock();
         return AllocatorReservation(start, limit);

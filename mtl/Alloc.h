@@ -23,7 +23,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "mtl/XAlloc.h"
 #include "mtl/Vec.h"
-#include "coprocessor-src/LockCollection.h"
 namespace Minisat {
 
 //=================================================================================================
