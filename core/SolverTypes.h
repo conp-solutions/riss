@@ -315,6 +315,19 @@ public:
 //=================================================================================================
 // ClauseAllocator -- a simple class for allocating memory for clauses:
 
+/**
+ * A struct that stores a maximum and a minimum address in the Clause Allocator
+ *
+ */
+class AllocatorReservation 
+{
+    friend class ClauseAllocator;
+
+    uint32_t current;
+    uint32_t upper_limit;
+
+    AllocatorReservation(uint32_t _current, uint32_t _limit) : current(_current), upper_limit(_limit) {}
+};
 
 const CRef CRef_Undef = RegionAllocator<uint32_t>::Ref_Undef;
 class ClauseAllocator : public RegionAllocator<uint32_t>
@@ -377,11 +390,78 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         if (to[cr].learnt())         to[cr].activity() = c.activity();
         else if (to[cr].has_extra()) to[cr].calcAbstraction();
     }
+
+    // Methods for threadsafe parallel allocation in BVE / subsimp context of CP3
+ private:
+    int requiredMemory(int clauses, int literals, int learnts) const
+    {
+        assert(sizeof(Lit)      == sizeof(uint32_t));
+        assert(sizeof(float)    == sizeof(uint32_t));
+        return            (   sizeof(Clause) * clauses 
+                            + sizeof(Lit)    * literals
+                            + sizeof(Lit)    * learnts          // for extra field
+                            + sizeof(Lit)    * (((int) extra_clause_field) * (clauses - learnts)) // if extra-field is used
+                          ) / sizeof(uint32_t);
+    }
+
+    /**
+     * Checks whether CA has enough memory for some clause allocations
+     * @param clauses   total number of clauses (learnt and non-learnt)
+     * @param literals  total number of literals
+     * @param learnts   number of clauses that are learnt
+     */ 
+    bool hasFreeMemory(int clauses, int literals, int learnts) const
+    {
+        assert(clauses >= learnts);
+        assert(literals >= clauses);
+        if ( currentCap() >= size() + requiredMemory(clauses, literals, learnts) )
+            return true;
+        else
+            return false;
+    };
+
+ public:
+    /**
+     * Reserves memmory of the CA.
+     * Assumes that just one function calls reserveMemory -> secure this with a spin lock.
+     * Make shure that the read-lock on the CA was freed before
+     */
+    AllocatorReservation reserveMemory(int clauses, int literals, int learnts, ReadersWriterLock CA_Lock)
+    {
+        bool need_lock = ! hasFreeMemory(clauses, literals, learnts);
+        if (need_lock)
+            CA_Lock.writeLock();
+        uint32_t start = RegionAllocator<uint32_t>::alloc(requiredMemory(clauses, literals, learnts));
+        uint32_t limit  = RegionAllocator::size();
+        if (need_lock)
+            CA_Lock.writeUnlock();
+        return AllocatorReservation(start, limit);
+    }
+
+    template<class Lits>
+    CRef allocThreadsafe(AllocatorReservation & reservation, const Lits& ps, bool learnt = false)
+    {
+        assert(sizeof(Lit)      == sizeof(uint32_t));
+        assert(sizeof(float)    == sizeof(uint32_t));
+        assert(reservation.current < reservation.upper_limit && "no reserved space left");
+        
+        bool use_extra = learnt | extra_clause_field;
+        
+        assert(reservation.current + clauseWord32Size(ps.size(), use_extra) <= reservation.upper_limit && "requested clause size does not fit in reservation");
+        
+        CRef cid = reservation.current;
+        new (lea(cid)) Clause(ps, use_extra, learnt);
+        
+        reservation.current += clauseWord32Size(ps.size(), use_extra);
+
+        return cid;
+    }
 };
 
 
+
 //=================================================================================================
-// OccLists -- a class for maintaining occurence lists with lazy deletion:
+// OccLists -- a class for maintaining occurrence lists with lazy deletion:
 
 template<class Idx, class Vec, class Deleted>
 class OccLists

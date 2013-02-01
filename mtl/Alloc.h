@@ -23,7 +23,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "mtl/XAlloc.h"
 #include "mtl/Vec.h"
-
+#include "coprocessor-src/LockCollection.h"
 namespace Minisat {
 
 //=================================================================================================
@@ -52,7 +52,7 @@ class RegionAllocator
             ::free(memory);
     }
 
-
+    uint32_t currentCap() const      { return cap;}
     uint32_t size      () const      { return sz; }
     uint32_t wasted    () const      { return wasted_; }
 
