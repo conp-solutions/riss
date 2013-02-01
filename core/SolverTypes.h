@@ -456,6 +456,14 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
 
         return cid;
     }
+    
+    void freeReservation(AllocatorReservation & reservation)
+    {
+        assert(reservation.current <= reservation.upper_limit);
+        RegionAllocator<uint32_t>::free(reservation.upper_limit - reservation.current);
+        reservation.current       = 0;
+        reservation.upper_limit   = 0;
+    }
 };
 
 
