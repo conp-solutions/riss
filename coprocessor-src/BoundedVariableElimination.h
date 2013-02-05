@@ -84,10 +84,142 @@ protected:
   inline void removeClausesThreadSafe(CoprocessorData & data, const vector<CRef> & list, const Lit l, SpinLock & data_lock);
   inline lbool resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const int p_limit, const int n_limit, const bool keepLearntResolvents = false, const bool force = false, const bool doStatistics = true);
   inline lbool resolveSetThreadSafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const bool keepLearntResolvents = false, const bool force = false);
-  inline bool resolve(const Clause & c, const Clause & d, const int v, vec<Lit> & ps);
-  inline int  tryResolve(const Clause & c, const Clause & d, const int v);
-  inline bool checkPush(vec<Lit> & ps, const Lit l);
-  inline char checkUpdatePrev(Lit & prev, const Lit l);
+  //expects c to contain v positive and d to contain v negative
+  //returns true, if resolvent is satisfied
+  //        else, otherwise
+  inline bool resolve(const Clause & c, const Clause & d, const int v, vec<Lit> & resolvent)
+  {
+    unsigned i = 0, j = 0;
+    while (i < c.size() && j < d.size())
+    {   
+        if (c[i] == mkLit(v,false))      ++i;   
+        else if (d[j] == mkLit(v,true))  ++j;
+        else if (c[i] < d[j])
+        {
+           if (checkPush(resolvent, c[i]))
+                return true;
+           else ++i;
+        }
+        else 
+        {
+           if (checkPush(resolvent, d[j]))
+              return true;
+           else
+                ++j; 
+        }
+    }
+    while (i < c.size())
+    {
+        if (c[i] == mkLit(v,false))    ++i;   
+        else if (checkPush(resolvent, c[i]))
+            return true;
+        else 
+            ++i;
+    }
+    while (j < d.size())
+    {
+        if (d[j] == mkLit(v,true))     ++j;
+        else if (checkPush(resolvent, d[j]))
+            return true;
+        else                           ++j;
+
+    }
+    return false;
+  } // inline bool resolve(const Clause & c, const Clause & d, const int v, vec<Lit> & ps);
+
+  //expects c to contain v positive and d to contain v negative
+  //returns -1, if resolvent is satisfied
+  //        number of resolvents Literals, otherwise
+  inline int tryResolve(const Clause & c, const Clause & d, const int v)
+  {
+    unsigned i = 0, j = 0, r = 0;
+    Lit prev = lit_Undef;
+    while (i < c.size() && j < d.size())
+    {   
+        if (c[i] == mkLit(v,false))           ++i;   
+        else if (d[j] == mkLit(v,true))       ++j;
+        else if (c[i] < d[j])
+        {
+           char status = checkUpdatePrev(prev, c[i]);
+           if (status == -1)
+             return -1;
+           else 
+           {     
+               ++i;
+               r+=status;;
+           }
+        }
+        else 
+        {
+           char status = checkUpdatePrev(prev, d[j]);
+           if (status == -1)
+              return -1;
+           else
+           {     
+               ++j; 
+               r+=status;
+           }
+        }
+    }
+    while (i < c.size())
+    {
+        if (c[i] == mkLit(v,false))
+            ++i;   
+        else
+        {   
+            char status = checkUpdatePrev(prev, c[i]);
+            if (status == -1)
+                return -1;
+            else 
+            {
+                ++i;
+                r+=status;
+            }
+        }
+    }
+    while (j < d.size())
+    {
+        if (d[j] == mkLit(v,true))              ++j;
+        else 
+        {
+            char status = checkUpdatePrev(prev, d[j]);
+            if (status == -1)
+                return -1;
+            else 
+            {
+                ++j;
+                r+=status;
+            }
+        }
+    }
+    return r;
+  } 
+  //inline int  tryResolve(const Clause & c, const Clause & d, const int v);
+  inline bool checkPush(vec<Lit> & ps, const Lit l)
+  {
+    if (ps.size() > 0)
+    {
+        if (ps.last() == l)
+         return false;
+        if (ps.last() == ~l)
+         return true;
+    }
+    ps.push(l);
+    return false;
+  } // inline bool checkPush(vec<Lit> & ps, const Lit l);
+  inline char checkUpdatePrev(Lit & prev, const Lit l)
+  {
+    if (prev != lit_Undef)
+    {
+        if (prev == l)
+            return 0;
+        if (prev == ~l)
+            return -1;
+    }
+    prev = l;
+    return 1;
+  }
+//inline char checkUpdatePrev(Lit & prev, const Lit l);
   inline lbool anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const int p_limit, const int n_limit, int32_t* pos_stats, int32_t* neg_stats, int & lit_clauses, int & lit_learnts, const bool doStatistics = true); 
   inline lbool anticipateEliminationThreadsafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, int32_t* pos_stats, int32_t* neg_stats, int & lit_clauses, int & lit_learnts, SpinLock & data_lock);
   inline bool findGates(CoprocessorData & data, const Var v, int & p_limit, int & n_limit, MarkArray * helper = NULL);
