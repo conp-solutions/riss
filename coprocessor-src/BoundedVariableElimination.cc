@@ -353,9 +353,9 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            // if resolving reduces number of literals in clauses: 
            //    add resolvents
            //    mark old clauses for deletion
-           if (force || lit_clauses <= lit_clauses_old)
+           if (force || (lit_clauses > 0 && lit_clauses <= lit_clauses_old))
            {
-		usedGates = (foundGate ? usedGates + 1 : usedGates ); // statistics
+		        usedGates = (foundGate ? usedGates + 1 : usedGates ); // statistics
                 if(opt_verbose > 1)  cerr << "c resolveSet" <<endl;
                 if (resolveSet(data, pos, neg, v, p_limit, n_limit) == l_False)
                     return;

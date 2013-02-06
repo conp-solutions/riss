@@ -76,7 +76,7 @@ void BoundedVariableElimination::par_bve_worker ()
  *          you must not acquire a write lock on the data object, if alread 2.b was acquired
  *          you either hold a heap lock or any of the other locks 
  */
-void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, const bool force, const bool doStatistics)   
+void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap, vector <CRef> & subsumeQueue, vector <CRef> & sharedSubsumeQueue, vector < CRef > & strengthQueue, vector < CRef > & sharedStrengthQeue, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, const bool force, const bool doStatistics)   
 {
     SpinLock & data_lock = var_lock[data.nVars()]; 
     SpinLock & heap_lock = var_lock[data.nVars() + 1];
@@ -145,8 +145,9 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
                     neighbor_heap.insert(v);
             }
         }
-
+        // TODO: do we need a data-lock here?
         timeStamp = lastTouched.getIndex(v); // get last modification of v
+
         rwlock.readUnlock();
 
         ///////////////////////////////////////////////////////////////////////////////////////////
@@ -288,7 +289,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         // if resolving reduces number of literals in clauses: 
         //    add resolvents
         //    mark old clauses for deletion
-        if (force || lit_clauses <= lit_clauses_old)
+        if (new_clauses > 0 && (force || lit_clauses <= lit_clauses_old))
         {
         ///////////////////////////////////////////////////////////////////////////////////////////
         //
@@ -340,11 +341,13 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
              if (opt_verbose > 0) cerr << "c Resolved " << v+1 <<endl;
  
              // touch variables:
+             data_lock.lock();
              lastTouched.nextStep();
              for (int i = 0; i < neighbors.size(); ++i)
              {
                 lastTouched.setCurrentStep(neighbors[i]); 
              }
+             data_lock.unlock();
 
              //subsumption with new clauses!!
              //TODO implement a threadsafe variant for this
@@ -558,7 +561,6 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
  */
 lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, vec<Lit> & ps, AllocatorReservation & memoryReservation, const bool keepLearntResolvents, const bool force)
 {
-    assert (ps.size() == 0);
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
     {
         Clause & p = ca[positive[cr_p]];
@@ -569,80 +571,32 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, v
             Clause & n = ca[negative[cr_n]];
             if (n.can_be_deleted())
                 continue;
-            // Dont compute resolvents for learnt clauses (this is done in case of force,
-            // since blocked clauses and units have not been computed by anticipate)
-            if (!force)
-            {
-                if (opt_resolve_learnts == 0 && (p.learnt() || n.learnt()))
-                    continue;
-                if (opt_resolve_learnts == 1 && (p.learnt() && n.learnt()))
-                    continue;
-            }        
+
+            // Dont compute resolvents for learnt clauses
+            if (opt_resolve_learnts == 0 && (p.learnt() || n.learnt()))
+               continue;
+            if (opt_resolve_learnts == 1 && (p.learnt() && n.learnt()))
+               continue;
+
+            ps.clear();
             if (!resolve(p, n, v, ps))
             {
                // | resolvent | > 1
                if (ps.size()>1)
                {
-                    // Depending on opt_resovle_learnts, skip clause creation
-                    if (force)
-                    { 
-                        if (opt_resolve_learnts == 0 && (p.learnt() || n.learnt()))
-                        {
-                            ps.clear();
-                            continue;
-                        }
-                        if (opt_resolve_learnts == 1 && (p.learnt() && n.learnt()))
-                        {
-                            ps.clear();
-                            continue;
-                        }
-                    }
                     if ((p.learnt() || n.learnt()) && ps.size() > max(p.size(),n.size()) + opt_learnt_growth)
-                    {
-                        ps.clear();
                         continue;
-                    }
                     CRef cr = ca.allocThreadsafe(memoryReservation, ps, p.learnt() || n.learnt()); 
-                    ps.clear();
                     Clause & resolvent = ca[cr];
                     data.addClause(cr);
                     if (resolvent.learnt()) 
                         data.getLEarnts().push(cr);
                     else 
                         data.getClauses().push(cr);
-                    // push Clause on subsumption-queue
-                    subsumption.initClause(cr);
-               }
-               else if (force)
-               {
-                    // | resolvent | == 0  => UNSAT
-                    if (ps.size() == 0)
-                    {
-                        data.setFailed();
-                        return l_False;
-                    }
-                    
-                    // | resolvent | == 1  => unit Clause
-                    else if (ps.size() == 1)
-                    {
-                        lbool status = data.enqueue(ps[0]); //check for level 0 conflict
-                        if (status == l_False)
-                            return l_False;
-                        else if (status == l_Undef)
-                             ; // variable already assigned
-                        else if (status == l_True)
-                        {
-                            /*propagation.propagate(data, true);  //TODO propagate own lits only (parallel)
-                            if (p.can_be_deleted())
-                                break;*/
-                        }
-                        else 
-                            assert (0); //something went wrong
-                        ps.clear();
-                    }
-                } 
-                else ps.clear();  
 
+                    // TODO push Clause to local subsumption-queue
+                    // subsumption.initClause(cr);
+               }
            }
         }
 
@@ -680,7 +634,7 @@ inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(Coprocess
 void* BoundedVariableElimination::runParallelBVE(void* arg)
 {
   BVEWorkData*      workData = (BVEWorkData*) arg;
-  //workData->bve->bve_worker(*(workData->data), workData->start,workData->end, false);
+  workData->bve->par_bve_worker(*(workData->data), *(workData->heap), *(workData->neighbor_heap), *(workData->subsumeQueue), *(workData->sharedSubsumeQueue), *(workData->strengthQueue), *(workData->sharedStrengthQeue), *(workData->var_locks), *(workData->rw_lock)); 
   return 0;
 }
 
@@ -688,6 +642,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
 {
   cerr << "c parallel bve with " << controller.size() << " threads" << endl;
   
+  lastTouched.resize(data.nVars());
   
   VarOrderBVEHeapLt comp(data, opt_bve_heap);
   Heap<VarOrderBVEHeapLt> newheap(comp);
@@ -705,7 +660,16 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
   BVEWorkData workData[ controller.size() ];
   vector<Job> jobs( controller.size() );
   vector< SpinLock > var_locks (data.nVars() + 3); // 3 extra SpinLock for data, heap, ca
-  //vector< Heap < VarOrderBVEHeapLt > > heaps (controller.size()); 
+  vector< vector < CRef > > subsumeQueues (controller.size());
+  vector< vector < CRef > > strengthQueues (controller.size());
+  NeighborLt comperator;
+  Heap<NeighborLt>  * neighbor_heaps[controller.size()];
+  for (int i = 0; i < controller.size(); ++ i)
+  {
+      neighbor_heaps[i] = new Heap<NeighborLt>(comperator);
+  }
+  vector< CRef > sharedSubsumeQueue; 
+  vector< CRef > sharedStrengthQeue;
   ReadersWriterLock rw_lock;
   
   for ( int i = 0 ; i < controller.size(); ++ i ) 
@@ -715,6 +679,11 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
     workData[i].var_locks = & var_locks;
     workData[i].rw_lock = & rw_lock;
     workData[i].heap  = &newheap;
+    workData[i].neighbor_heap = neighbor_heaps[i];
+    workData[i].subsumeQueue = & subsumeQueues[i];
+    workData[i].strengthQueue = & strengthQueues[i];
+    workData[i].sharedSubsumeQueue = & sharedSubsumeQueue;
+    workData[i].sharedStrengthQeue = & sharedSubsumeQueue;
     //workData[i].stats = & localStats[i];
     jobs[i].function  = BoundedVariableElimination::runParallelBVE;
     jobs[i].argument  = &(workData[i]);
