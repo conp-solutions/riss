@@ -10,6 +10,7 @@ using namespace std;
 
 static const char* _cat = "COPROCESSOR 3 - BVE";
 
+static BoolOption opt_par_bve         (_cat, "cp3_par_bve",    "Parallel BVE", false);
 static IntOption  opt_verbose         (_cat, "cp3_bve_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
 static IntOption  opt_learnt_growth   (_cat, "cp3_bve_learnt_growth", "Keep C (x) D, where C or D is learnt, if |C (x) D| <= max(|C|,|D|) + N", 0, IntRange(-1, INT32_MAX));
 static IntOption  opt_resolve_learnts (_cat, "cp3_bve_resolve_learnts", "Resolve learnt clauses: 0: off, 1: original with learnts, 2: 1 and learnts with learnts", 0, IntRange(0,2));
@@ -92,6 +93,14 @@ lbool BoundedVariableElimination::fullBVE(Coprocessor::CoprocessorData& data)
  
 lbool BoundedVariableElimination::runBVE(CoprocessorData& data, const bool doStatistics)
 {
+  if (opt_par_bve)
+  {
+     parallelBVE(data);
+     if (data.ok())
+         return l_Undef;
+     else 
+         return l_False;
+  }
   if (doStatistics)
   {
     processTime = cpuTime() - processTime;   

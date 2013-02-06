@@ -73,6 +73,7 @@ protected:
     BoundedVariableElimination*  bve; // class with code
     CoprocessorData* data;        // formula and maintain lists
     vector<SpinLock> * var_locks; // Spin Lock for Variables
+    ReadersWriterLock * rw_lock;  // rw-lock for CA
     Heap<VarOrderBVEHeapLt> * heap; // Shared heap with variables for elimination check
     Heap<NeighborLt> * neighbor_heap; // heap for Neighbor calculation
   };

@@ -14,6 +14,8 @@ static IntOption  opt_resolve_learnts (_cat, "cp3_bve_resolve_learnts", "Resolve
 static BoolOption opt_unlimited_bve   (_cat, "bve_unlimited",  "perform bve test for Var v, if there are more than 10 + 10 or 15 + 5 Clauses containing v", false);
 static IntOption  opt_learnt_growth   (_cat, "cp3_bve_learnt_growth", "Keep C (x) D, where C or D is learnt, if |C (x) D| <= max(|C|,|D|) + N", 0, IntRange(-1, INT32_MAX));
 
+static IntOption  opt_bve_heap        (_cat, "cp3_bve_heap"     ,  "0: minimum heap, 1: maximum heap, 2: random", 0, IntRange(0,2));
+
 static void printLitErr(const Lit l) 
 {
     if (toInt(l) % 2)
@@ -675,14 +677,53 @@ inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(Coprocess
    }
 }
 
-void parallelBVE(CoprocessorData& data)
-{
-
-}
-
 void* BoundedVariableElimination::runParallelBVE(void* arg)
 {
   BVEWorkData*      workData = (BVEWorkData*) arg;
   //workData->bve->bve_worker(*(workData->data), workData->start,workData->end, false);
   return 0;
 }
+
+void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
+{
+  cerr << "c parallel bve with " << controller.size() << " threads" << endl;
+  
+  
+  VarOrderBVEHeapLt comp(data, opt_bve_heap);
+  Heap<VarOrderBVEHeapLt> newheap(comp);
+  if (opt_bve_heap != 2)
+  {
+    data.getActiveVariables(lastDeleteTime(), newheap);
+  }
+  else 
+  {
+    data.getActiveVariables(lastDeleteTime(), variable_queue);
+  }
+  if (propagation.propagate(data, true) == l_False)
+      return;
+  
+  BVEWorkData workData[ controller.size() ];
+  vector<Job> jobs( controller.size() );
+  vector< SpinLock > var_locks (data.nVars() + 3); // 3 extra SpinLock for data, heap, ca
+  //vector< Heap < VarOrderBVEHeapLt > > heaps (controller.size()); 
+  ReadersWriterLock rw_lock;
+  
+  for ( int i = 0 ; i < controller.size(); ++ i ) 
+  {
+    workData[i].bve   = this;
+    workData[i].data  = &data; 
+    workData[i].var_locks = & var_locks;
+    workData[i].rw_lock = & rw_lock;
+    workData[i].heap  = &newheap;
+    //workData[i].stats = & localStats[i];
+    jobs[i].function  = BoundedVariableElimination::runParallelBVE;
+    jobs[i].argument  = &(workData[i]);
+  }
+  controller.runJobs( jobs );
+
+  //propagate units
+  if (data.hasToPropagate())
+      propagation.propagate(data, true);
+
+}
+
