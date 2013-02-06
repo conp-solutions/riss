@@ -259,7 +259,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
 
             // anticipate only, if there are positiv and negative occurrences of var 
             if (pos_count != 0 &&  neg_count != 0)
-                if (anticipateEliminationThreadsafe(data, pos, neg,  v, pos_stats, neg_stats, lit_clauses, lit_learnts, new_clauses, new_learnts, data_lock) == l_False) 
+                if (anticipateEliminationThreadsafe(data, pos, neg,  v, ps, pos_stats, neg_stats, lit_clauses, lit_learnts, new_clauses, new_learnts, data_lock) == l_False) 
                 {
                     // UNSAT: free locks and abort
                     rwlock.readUnlock(); // Early Exit Read Lock
@@ -422,7 +422,7 @@ inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData 
  *  -> total number of literals in learnts after resolution:    lit_learnts
  *
  */
-inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, int32_t* pos_stats , int32_t* neg_stats, int & lit_clauses, int & lit_learnts, int & new_clauses, int & new_learnts, SpinLock & data_lock)
+inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, vec <Lit> & resolvent, int32_t* pos_stats , int32_t* neg_stats, int & lit_clauses, int & lit_learnts, int & new_clauses, int & new_learnts, SpinLock & data_lock)
 {
     if(opt_verbose > 2)  cerr << "c starting anticipate BVE" << endl;
     // Clean the stats
@@ -497,7 +497,7 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
             // unit Clause
             else if (newLits == 1)
             {
-                vec <Lit > resolvent;
+                resolvent.clear();
                 resolve(p,n,v,resolvent); 
                 assert(resolvent.size() == 1);
                 if(opt_verbose > 0) 
@@ -523,9 +523,6 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
                 else if (status == l_True)
                 { 
                 // TODO -> omit propagation for now
-                /*    propagation.propagate(data, true);  //TODO propagate own lits only (parallel)
-                    if (p.can_be_deleted())
-                        break;*/
                 }
                 else 
                     assert (0); //something went wrong

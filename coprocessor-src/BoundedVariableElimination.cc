@@ -203,6 +203,9 @@ static void printClauses(ClauseAllocator & ca, vector<CRef> list, bool skipDelet
 void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, unsigned int start, unsigned int end, const bool force, const bool doStatistics)   
 {
     vector<Var> touched_variables;
+    int32_t * pos_stats = (int32_t*) malloc (5 * sizeof(int32_t));
+    int32_t * neg_stats = (int32_t*) malloc (5 * sizeof(int32_t));
+           
     while ((opt_bve_heap != 2 && heap.size() > 0) || (opt_bve_heap == 2 && variable_queue.size() > 0))
     {
         //Subsumption / Strengthening
@@ -253,12 +256,12 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
 
            // Search for Gates
            int p_limit = data.list(mkLit(v,false)).size();
-	   int n_limit = data.list(mkLit(v,true)).size();
-	   bool foundGate = false;
-	   if( opt_bve_findGate ) {
-	    foundGate = findGates(data, v, p_limit, n_limit);
-	    foundGates ++;
-	   }
+	       int n_limit = data.list(mkLit(v,true)).size();
+	       bool foundGate = false;
+	       if( opt_bve_findGate ) {
+	           foundGate = findGates(data, v, p_limit, n_limit);
+	           foundGates ++;
+	       }
             
            // Heuristic Cutoff Anticipation (if no Gate Found)
            if (!opt_unlimited_bve && !foundGate && (data[mkLit(v,true)] > 10 && data[mkLit(v,false)] > 10 || data[v] > 15 && (data[mkLit(v,true)] > 5 || data[mkLit(v,false)] > 5)))
@@ -320,19 +323,20 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            if (opt_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
            
            // Declare stats variables;        
-           int32_t pos_stats[pos.size()];
-           int32_t neg_stats[neg.size()];
            int lit_clauses;
            int lit_learnts;
-          
+           pos_stats = (int32_t *) realloc(pos_stats, sizeof( int32_t) * pos.size() );
+           neg_stats = (int32_t *) realloc(neg_stats, sizeof( int32_t) * neg.size() );
                   
            if (!force) 
            {
                // TODO memset here!
-               for (int i = 0; i < pos.size(); ++i)
-                    pos_stats[i] = 0;
-               for (int i = 0; i < neg.size(); ++i)
-                    neg_stats[i] = 0;
+               //for (int i = 0; i < pos.size(); ++i)
+               //     pos_stats[i] = 0;
+               //for (int i = 0; i < neg.size(); ++i)
+               //     neg_stats[i] = 0;
+               memset( pos_stats, 0 , sizeof( int32_t) * pos.size() );
+               memset( neg_stats, 0 , sizeof( int32_t) * neg.size() );
 
                // anticipate only, if there are positiv and negative occurrences of var 
                if (pos_count != 0 &&  neg_count != 0)
@@ -393,6 +397,8 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
         }
         touched_variables.clear();
     }
+    free(pos_stats);
+    free(neg_stats);
 }
 
 /*
