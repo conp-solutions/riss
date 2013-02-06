@@ -34,26 +34,8 @@ static void printLitVec(const vec<Lit> & litvec)
 }
 
 
-/*
-void BoundedVariableElimination::par_bve_worker ()
-{
-    // TODO 
-    // Var v <- getVariable (threadsafe, probably randomly)
-    // if (heuristic cutoff (v))
-    //      continue;
-    // vector < Var > neighbors <- calc sorted vector with neighbors of v 
-    //      use a globally existing mark array per thread
-    // Lock neighbors in order
-    // Perform the normal bve-check (with unit enqueueing)
-    //  -> remove Blocked Clauses
-    //  -> if (less literes by bve)
-    //      -> perform bve
-    //  maybe include some subsumption and strengthening check at this point, since all clauses are already cached and locked (really?)
-    // Free neighbors in reverse order
-}
-*/
 /** parallel version of bve worker
- *
+ *  TODO update this
  *  Preconditions:
  *  all unit clauses were propagated
  *
@@ -81,7 +63,10 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
     SpinLock & data_lock = var_lock[data.nVars()]; 
     SpinLock & heap_lock = var_lock[data.nVars() + 1];
     SpinLock & ca_lock   = var_lock[data.nVars() + 2];
-
+    
+    int32_t * pos_stats = (int32_t*) malloc (5 * sizeof(int32_t));
+    int32_t * neg_stats = (int32_t*) malloc (5 * sizeof(int32_t));
+     
     vector < Var > neighbors;
     vec < Lit > ps;
 
@@ -243,8 +228,8 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         if (opt_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
         
         // Declare stats variables;        
-        int32_t pos_stats[pos.size()];
-        int32_t neg_stats[neg.size()];
+        pos_stats = (int32_t *) realloc(pos_stats, sizeof( int32_t) * pos.size() );
+        neg_stats = (int32_t *) realloc(neg_stats, sizeof( int32_t) * neg.size() );
         int lit_clauses;
         int lit_learnts;
         int new_clauses; 
@@ -252,10 +237,9 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         
         if (!force) 
         {
-            for (int i = 0; i < pos.size(); ++i)
-                 pos_stats[i] = 0;
-            for (int i = 0; i < neg.size(); ++i)
-                 neg_stats[i] = 0;
+            // set stats to 0
+            memset( pos_stats, 0 , sizeof( int32_t) * pos.size() );
+            memset( neg_stats, 0 , sizeof( int32_t) * neg.size() );
 
             // anticipate only, if there are positiv and negative occurrences of var 
             if (pos_count != 0 &&  neg_count != 0)
@@ -359,7 +343,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         
         ///////////////////////////////////////////////////////////////////////////////////////////
         //
-        //  End: write locked part 
+        //  End: read locked part 
         //
         ///////////////////////////////////////////////////////////////////////////////////////////
        
@@ -376,6 +360,9 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         neighbors.clear();
         neighbor_heap.clear();
     }
+
+    free(pos_stats);
+    free(neg_stats);
 
 }
 
