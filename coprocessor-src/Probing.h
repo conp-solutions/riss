@@ -13,6 +13,8 @@ using namespace Minisat;
 using namespace std;
 
 namespace Coprocessor {
+ 
+// forward declaration
   
 /** class that implements probing techniques */
 class Probing : public Technique {
@@ -40,7 +42,7 @@ public:
 protected:
   
   /** perform special propagation for probing (track ternary clauses, LHBR if enabled) */
-  CRef prPropagate(); 
+  CRef prPropagate(bool doDouble = true); 
   
   /** perform conflict analysis and enqueue each unit clause that could be learned 
    * @return false, if formula is unsatisfiable
@@ -52,6 +54,8 @@ protected:
    */
   bool prDoubleLook();
   
+  /** add all clauses to solver object -- code taken from @see Preprocessor::reSetupSolver, but without deleting clauses */
+  void reSetupSolver();
 };
   
 };
