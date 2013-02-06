@@ -235,6 +235,7 @@ public:
   void addClause (      const CRef cr );                 // add clause to data structures, update counters
   bool removeClauseFrom (const Minisat::CRef cr, const Lit l); // remove clause reference from list of clauses for literal l, returns true, if successful
   void removeClauseFrom (const Minisat::CRef cr, const Lit l, const int index); // remove clause reference from list of clauses for literal l, returns true, if successful
+  void cleanOccurrences();				// remove all clauses and set counters to 0
 
   void updateClauseAfterDelLit(const Minisat::Clause& clause)
   { if( global_debug_out ) cerr << "what to update in clause?!" << endl; }
@@ -484,6 +485,15 @@ inline void CoprocessorData::removeClauseFrom(const Minisat::CRef cr, const Lit 
   vector<CRef>& list = occs[toInt(l)];
   assert( list[index] == cr );
   list[index] = list[ list.size() -1 ];
+}
+
+inline void CoprocessorData::cleanOccurrences()
+{
+  for( Var v = 0; v < nVars(); ++v ) {
+    list( mkLit(v,false) ).clear(); 
+    list( mkLit(v,true) ).clear();
+  }
+  lit_occurrence_count.assign(0,nVars()*2);
 }
 
 

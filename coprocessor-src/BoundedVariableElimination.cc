@@ -40,6 +40,7 @@ BoundedVariableElimination::BoundedVariableElimination( ClauseAllocator& _ca, Co
 , skippedVars(0)
 , unitsEnqueued(0)
 , foundGates(0)
+, usedGates(0)
 , processTime(0)
 , subsimpTime(0)
 , gateTime(0)
@@ -73,6 +74,7 @@ void BoundedVariableElimination::printStatistics(ostream& stream)
                    << "with "    << learntBlockedLit << " lits, "
                                  << endl;  
     stream << "c [STAT] BVE(4) " << foundGates << " gateDefs, "
+				  << usedGates << " usedGates, "
                                  << gateTime << " gateSeconds, " 
 				  << endl;
 }
@@ -344,6 +346,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            //    mark old clauses for deletion
            if (force || lit_clauses <= lit_clauses_old)
            {
+		usedGates = (foundGate ? usedGates + 1 : usedGates ); // statistics
                 if(opt_verbose > 1)  cerr << "c resolveSet" <<endl;
                 if (resolveSet(data, pos, neg, v, p_limit, n_limit) == l_False)
                     return;

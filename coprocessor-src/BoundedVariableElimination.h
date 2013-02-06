@@ -48,7 +48,7 @@ class BoundedVariableElimination : public Technique {
   MarkArray lastTouched; //MarkArray to track modifications of parallel BVE-Threads
   int removedClauses, removedLiterals, createdClauses, createdLiterals, removedLearnts, learntLits, newLearnts, 
       newLearntLits, testedVars, anticipations, eliminatedVars, removedBC, blockedLits, removedBlockedLearnt, learntBlockedLit, 
-      skippedVars, unitsEnqueued, foundGates;   
+      skippedVars, unitsEnqueued, foundGates, usedGates;   
   double processTime, subsimpTime, gateTime;
 
 public:

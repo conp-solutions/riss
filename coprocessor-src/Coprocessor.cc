@@ -57,7 +57,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , cce( solver->ca, controller )
 , ee ( solver->ca, controller, propagation, subsumption )
 , unhiding ( solver->ca, controller, data, propagation, subsumption, ee )
-, probing  ( solver->ca, controller, data )
+, probing  ( solver->ca, controller, data, *solver )
 , sls ( data, solver->ca, controller )
 , twoSAT( solver->ca, controller, data)
 {
