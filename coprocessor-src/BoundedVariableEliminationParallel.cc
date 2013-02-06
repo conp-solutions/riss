@@ -78,7 +78,11 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
 {
     SpinLock & data_lock = var_lock[data.nVars()]; 
     SpinLock & heap_lock = var_lock[data.nVars() + 1];
+    SpinLock & ca_lock   = var_lock[data.nVars() + 2];
+
     vector < Var > neighbors;
+    vec < Lit > ps;
+
     int32_t timeStamp;  
     while ( data.ok() ) // if solver state = false => abort
     {
@@ -98,6 +102,9 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         // Heuristic Cutoff
         if (!opt_unlimited_bve && (data[mkLit(v,true)] > 10 && data[mkLit(v,false)] > 10 || data[v] > 15 && (data[mkLit(v,true)] > 5 || data[mkLit(v,false)] > 5)))
             continue;
+        
+        // Lock v 
+        var_lock[v].lock();
 
         ///////////////////////////////////////////////////////////////////////////////////////////
         //
@@ -146,6 +153,9 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         //
         ///////////////////////////////////////////////////////////////////////////////////////////
         
+        // unlock v
+        var_lock[v].unlock();
+
         while (neighbor_heap.size() > 0)
             neighbors.push_back(neighbor_heap.removeMin());
         // neighbor contains all neighbors in ascending order
@@ -234,6 +244,8 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         int32_t neg_stats[neg.size()];
         int lit_clauses;
         int lit_learnts;
+        int new_clauses; 
+        int new_learnts;
         
         if (!force) 
         {
@@ -244,7 +256,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
 
             // anticipate only, if there are positiv and negative occurrences of var 
             if (pos_count != 0 &&  neg_count != 0)
-                if (anticipateEliminationThreadsafe(data, pos, neg,  v, pos_stats, neg_stats, lit_clauses, lit_learnts, data_lock) == l_False) 
+                if (anticipateEliminationThreadsafe(data, pos, neg,  v, pos_stats, neg_stats, lit_clauses, lit_learnts, new_clauses, new_learnts, data_lock) == l_False) 
                 {
                     // UNSAT: free locks and abort
                     rwlock.readUnlock(); // Early Exit Read Lock
@@ -276,21 +288,27 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         //    mark old clauses for deletion
         if (force || lit_clauses <= lit_clauses_old)
         {
-             
         ///////////////////////////////////////////////////////////////////////////////////////////
         //
-        //  Begin: write locked part 
+        //  Reservation of Allocator-Memory 
         //
-        //  Until the read lock was released, no clauses were added to list(v) or list(~v).
-        //  -> TODO What could have changed? (especially with strengthening and subsumption)
+        ///////////////////////////////////////////////////////////////////////////////////////////
+            
+            ca_lock.lock();      
+            AllocatorReservation memoryReservation = ca.reserveMemory( new_clauses, lit_clauses, 0, rwlock);
+            ca_lock.unlock();
+
+        ///////////////////////////////////////////////////////////////////////////////////////////
+        //
+        //  Begin: read locked part 
         //
         ///////////////////////////////////////////////////////////////////////////////////////////
        
-             rwlock.writeLock(); 
+             rwlock.readLock(); 
              if (!data.ok())
              {
                  // UNSAT case -> end thread, but first release all locks
-                 rwlock.writeUnlock();
+                 rwlock.readUnlock();
                  // free all locks on Vars in descending order 
                  for (int i = neighbors.size() - 1; i >= 0; --i)
                  {
@@ -301,10 +319,10 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
              
              if(opt_verbose > 1)  cerr << "c resolveSet" <<endl;
 
-             if (resolveSetThreadSafe(data, pos, neg, v) == l_False) 
+             if (resolveSetThreadSafe(data, pos, neg, v, ps, memoryReservation) == l_False) 
              {
                  // UNSAT case -> end thread, but first release all locks
-                 rwlock.writeUnlock();
+                 rwlock.readUnlock();
                  // free all locks on Vars in descending order 
                  for (int i = neighbors.size() - 1; i >= 0; --i)
                  {
@@ -332,7 +350,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
              // -> strengthening without local queue -> just tagging
              //subsumption.subsumeStrength(data); 
 
-             rwlock.writeUnlock();
+             rwlock.readUnlock();
         
         ///////////////////////////////////////////////////////////////////////////////////////////
         //
@@ -399,7 +417,7 @@ inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData 
  *  -> total number of literals in learnts after resolution:    lit_learnts
  *
  */
-inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, int32_t* pos_stats , int32_t* neg_stats, int & lit_clauses, int & lit_learnts, SpinLock & data_lock)
+inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, int32_t* pos_stats , int32_t* neg_stats, int & lit_clauses, int & lit_learnts, int & new_clauses, int & new_learnts, SpinLock & data_lock)
 {
     if(opt_verbose > 2)  cerr << "c starting anticipate BVE" << endl;
     // Clean the stats
@@ -428,7 +446,8 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
             int newLits = tryResolve(p, n, v);
 
             if(opt_verbose > 2) cerr << "c    resolvent size " << newLits << endl;
-
+            
+            // Clause Size > 1
             if (newLits > 1)
             {
                 if(opt_verbose > 2)  
@@ -443,9 +462,15 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
                 ++pos_stats[cr_p];
                 ++neg_stats[cr_n];
                 if (p.learnt() || n.learnt())
+                {
                     lit_learnts += newLits;
+                    ++new_learnts;
+                }
                 else 
+                {
                     lit_clauses += newLits;
+                    ++new_clauses;
+                }
             }
             
             // empty Clause
@@ -529,9 +554,9 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
  *   - unit clauses and empty clauses are not handeled here
  *          -> this is already done in anticipateElimination 
  */
-lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const bool keepLearntResolvents, const bool force)
+lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, vec<Lit> & ps, AllocatorReservation & memoryReservation, const bool keepLearntResolvents, const bool force)
 {
-    vec<Lit> ps;
+    assert (ps.size() == 0);
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
     {
         Clause & p = ca[positive[cr_p]];
@@ -539,7 +564,6 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, v
             continue;
         for (int cr_n = 0; cr_n < negative.size(); ++cr_n)
         {
-            Clause & p = ca[positive[cr_p]]; // renew reference as it could got invalid while clause allocation
             Clause & n = ca[negative[cr_n]];
             if (n.can_be_deleted())
                 continue;
@@ -576,9 +600,8 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, v
                         ps.clear();
                         continue;
                     }
-                    CRef cr = ca.alloc(ps, p.learnt() || n.learnt()); 
+                    CRef cr = ca.allocThreadsafe(memoryReservation, ps, p.learnt() || n.learnt()); 
                     ps.clear();
-                    // IMPORTANT! dont use p and n in this block, as they could got invalid
                     Clause & resolvent = ca[cr];
                     data.addClause(cr);
                     if (resolvent.learnt()) 
