@@ -642,26 +642,29 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
       return;
   
   BVEWorkData workData[ controller.size() ];
-  vector<Job> jobs( controller.size() );
-  vector< SpinLock > var_locks (data.nVars() + 3); // 3 extra SpinLock for data, heap, ca
-  vector< vector < CRef > > subsumeQueues (controller.size());
-  vector< vector < CRef > > strengthQueues (controller.size());
-  NeighborLt comperator;
-  Heap<NeighborLt>  * neighbor_heaps[controller.size()];
-  for (int i = 0; i < controller.size(); ++ i)
-  {
-      neighbor_heaps[i] = new Heap<NeighborLt>(comperator);
+
+  jobs.resize( controller.size() );
+  variableLocks.resize(data.nVars() + 3); // 3 extra SpinLock for data, heap, ca
+  subsumeQueues.resize(controller.size());
+  strengthQueues.resize(controller.size());
+
+  if (neighbor_heaps == NULL) 
+  { 
+      neighbor_heaps = (Heap<NeighborLt> **) malloc( sizeof(Heap<NeighborLt> * ) * controller.size());
+      for (int i = 0; i < controller.size(); ++ i)
+      {
+        neighbor_heaps[i] = new Heap<NeighborLt>(neighborComperator);
+      }
   }
-  vector< CRef > sharedSubsumeQueue; 
-  vector< CRef > sharedStrengthQeue;
-  ReadersWriterLock rw_lock;
+
+  allocatorRWLock.writeUnlock();
   
   for ( int i = 0 ; i < controller.size(); ++ i ) 
   {
     workData[i].bve   = this;
     workData[i].data  = &data; 
-    workData[i].var_locks = & var_locks;
-    workData[i].rw_lock = & rw_lock;
+    workData[i].var_locks = & variableLocks;
+    workData[i].rw_lock = & allocatorRWLock;
     workData[i].heap  = &newheap;
     workData[i].neighbor_heap = neighbor_heaps[i];
     workData[i].subsumeQueue = & subsumeQueues[i];

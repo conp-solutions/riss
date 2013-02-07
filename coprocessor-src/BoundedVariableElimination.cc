@@ -82,8 +82,8 @@ void BoundedVariableElimination::printStatistics(ostream& stream)
 
 
 bool BoundedVariableElimination::hasToEliminate()
-{
-  return false; //variable_heap.size() > 0; 
+{ // TODO if heap is used, this will not work, since the heap depends on the changing data-object
+  return (variable_queue.size() > 0 );
 }
 
 lbool BoundedVariableElimination::fullBVE(Coprocessor::CoprocessorData& data)
@@ -138,7 +138,7 @@ lbool BoundedVariableElimination::runBVE(CoprocessorData& data, const bool doSta
   
   data.ma.resize( data.nVars() * 2 );
 
-  bve_worker(data, newheap, 0, variable_queue.size(), false);
+  bve_worker(data, newheap, false);
   if (opt_bve_heap != 2)
   {
     newheap.clear();
@@ -200,7 +200,7 @@ static void printClauses(ClauseAllocator & ca, vector<CRef> list, bool skipDelet
 // force -> forces resolution
 //
 //
-void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, unsigned int start, unsigned int end, const bool force, const bool doStatistics)   
+void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, const bool force, const bool doStatistics)   
 {
     vector<Var> touched_variables;
     int32_t * pos_stats = (int32_t*) malloc (5 * sizeof(int32_t));
