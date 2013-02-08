@@ -58,15 +58,12 @@ static void printLitVec(const vec<Lit> & litvec)
  *          you must not acquire a write lock on the data object, if alread 2.b was acquired
  *          you either hold a heap lock or any of the other locks 
  */
-void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap2, deque <CRef> & subsumeQueue, deque <CRef> & sharedSubsumeQueue, deque < CRef > & strengthQueue, deque < CRef > & sharedStrengthQeue, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, const bool force, const bool doStatistics)   
+void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap, deque <CRef> & subsumeQueue, deque <CRef> & sharedSubsumeQueue, deque < CRef > & strengthQueue, deque < CRef > & sharedStrengthQeue, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, const bool force, const bool doStatistics)   
 {
     SpinLock & data_lock = var_lock[data.nVars()]; 
     SpinLock & heap_lock = var_lock[data.nVars() + 1];
     SpinLock & ca_lock   = var_lock[data.nVars() + 2];
     
-    NeighborLt comp;
-    Heap<NeighborLt> neighbor_heap(comp); 
-
     int32_t * pos_stats = (int32_t*) malloc (5 * sizeof(int32_t));
     int32_t * neg_stats = (int32_t*) malloc (5 * sizeof(int32_t));
      
@@ -107,10 +104,8 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         vector<CRef> & pos = data.list(mkLit(v,false)); 
         vector<CRef> & neg = data.list(mkLit(v,true));
 
-        // TODO ? assert(neighbor_heap.size() == 0);   
+        assert(neighbor_heap.size() == 0);   
         
-        //neighbor_heap.clear();
-
         // Build neighbor-vector
         // expecting valid occurrence-lists, i.e. v really occurs in lists 
         for (int r = 0; r < pos.size(); ++r)
