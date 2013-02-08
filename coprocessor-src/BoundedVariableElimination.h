@@ -54,11 +54,11 @@ class BoundedVariableElimination : public Technique {
   MarkArray dirtyOccs;                      // tracks occs that contain CRef_Undef
   vector< Job > jobs;                     
   vector< SpinLock > variableLocks;         // 3 extra SpinLock for data, heap, ca
-  vector< vector < CRef > > subsumeQueues;
-  vector< vector < CRef > > strengthQueues;
+  vector< deque < CRef > > subsumeQueues;
+  vector< deque < CRef > > strengthQueues;
   Heap<NeighborLt>  ** neighbor_heaps;
-  vector< CRef > sharedSubsumeQueue; 
-  vector< CRef > sharedStrengthQeue;
+  deque< CRef > sharedSubsumeQueue; 
+  deque< CRef > sharedStrengthQeue;
   NeighborLt neighborComperator;
   ReadersWriterLock allocatorRWLock;
   
@@ -105,17 +105,17 @@ protected:
     Heap<VarOrderBVEHeapLt> * heap; // Shared heap with variables for elimination check
     Heap<NeighborLt> * neighbor_heap; // heap for Neighbor calculation
     MarkArray * dirtyOccs;
-    vector<CRef> * subsumeQueue;
-    vector<CRef> * sharedSubsumeQueue;
-    vector<CRef> * strengthQueue;
-    vector<CRef> * sharedStrengthQeue;
+    deque<CRef> * subsumeQueue;
+    deque<CRef> * sharedSubsumeQueue;
+    deque<CRef> * strengthQueue;
+    deque<CRef> * sharedStrengthQeue;
   };
 
 
   // parallel functions:
   void par_bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap
-          , vector <CRef> & subsumeQueue, vector <CRef> & sharedSubsumeQueue, vector < CRef > & strengthQueue
-          , vector < CRef > & sharedStrengthQeue, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock
+          , deque <CRef> & subsumeQueue, deque <CRef> & sharedSubsumeQueue, deque < CRef > & strengthQueue
+          , deque < CRef > & sharedStrengthQeue, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock
           , const bool force = true, const bool doStatistics = true) ; 
 
   inline void removeBlockedClauses(CoprocessorData & data, const vector< CRef> & list, const int32_t stats[], const Lit l, const bool doStatistics = true );
@@ -129,7 +129,7 @@ protected:
   inline void removeBlockedClausesThreadSafe(CoprocessorData & data, const vector< CRef> & list, const int32_t stats[], const Lit l, SpinLock & data_lock );
 
   // Special subsimp implementations for par bve:
-  void par_bve_strengthening_worker(CoprocessorData& data, vector< SpinLock > & var_lock, deque <CRef> & subsumeQueue, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, MarkArray & dirtyOccs, const bool strength_resolvents, const bool doStatistics);
+  void par_bve_strengthening_worker(CoprocessorData& data, vector< SpinLock > & var_lock, deque <CRef> & subsumeQueue, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, MarkArray & dirtyOccs, const bool strength_resolvents, const bool doStatistics = true);
 
 
 inline void strength_check_pos(CoprocessorData & data, vector < CRef > & list, deque<CRef> & subsumeQueue, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, MarkArray & dirtyOccs, const bool strength_resolvents, const bool doStatistics = true); 
