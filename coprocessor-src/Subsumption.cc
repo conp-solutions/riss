@@ -551,7 +551,26 @@ void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned in
         var_lock[fst].unlock();
         goto lock_strengthener_nn;
     }
-     
+ 
+    if( strengthener.size() < 2 ) {
+        if( strengthener.size() == 1 ) 
+        {
+            data_lock.lock();
+                lBool status = data.enqueue(strengthener[0]); 
+            data_lock.unlock();
+
+            var_lock[fst].unlock(); // unlock fst var
+
+            if( l_False == status ) break;
+	        else continue;
+        }
+        else 
+        { 
+            data.setFailed();  // can be done asynchronously
+            var_lock[fst].unlock(); 
+            break; 
+        }
+    }    
     //find Lit with least occurrences and its occurrences
     // search lit with minimal occurrences
     assert (strengthener.size() > 1 && "expect strengthener to be > 1");

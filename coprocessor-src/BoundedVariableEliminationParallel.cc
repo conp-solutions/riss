@@ -1,5 +1,5 @@
-/*******************************************************************[BoundedVariableElimination.cc]
-Copyright (c) 2012, Kilian Gebhardt, All rights reserved.
+/***********************************************************[BoundedVariableEliminationParallel.cc]
+Copyright (c) 2013, Kilian Gebhardt, All rights reserved.
 **************************************************************************************************/
 #include "coprocessor-src/BoundedVariableElimination.h"
 #include "coprocessor-src/Propagation.h"
@@ -16,7 +16,7 @@ static IntOption  opt_learnt_growth   (_cat, "cp3_bve_learnt_growth", "Keep C (x
 
 static IntOption  opt_bve_heap        (_cat, "cp3_bve_heap"     ,  "0: minimum heap, 1: maximum heap, 2: random", 0, IntRange(0,2));
 
-static void printLitErr(const Lit l) 
+static inline void printLitErr(const Lit l) 
 {
     if (toInt(l) % 2)
            cerr << "-";
@@ -644,7 +644,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
   BVEWorkData workData[ controller.size() ];
 
   jobs.resize( controller.size() );
-  variableLocks.resize(data.nVars() + 3); // 3 extra SpinLock for data, heap, ca
+  variableLocks.resize(data.nVars() + 5); // 5 extra SpinLock for data, heap, ca, shared subsume-queue, shared strength-queue
   subsumeQueues.resize(controller.size());
   strengthQueues.resize(controller.size());
 
@@ -683,3 +683,400 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
 
 }
 
+/** lock-based parallel non-naive strengthening-methode
+ * @param data object
+ * @param start where to start strengthening in strengtheningqueue
+ * @param end where to stop strengthening
+ * @param var_lock vector of locks for each variable
+ *
+ * @param strength_resolvents
+ * 
+ *
+ * Idea of strengthening Lock:
+ * -> lock fst variable of strengthener
+ * -> lock strentghener
+ * -> if fstvar(other) <= fstvar(strengthener)
+ *      -> lock other
+ */
+void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& data, vector< SpinLock > & var_lock, deque<CRef> & localQueue, vector<OccUpdate> & occ_updates, const bool strength_resolvents, const bool doStatistics)
+{ 
+  assert(data.nVars() <= var_lock.size() && "var_lock vector to small");
+//  if (doStatistics)
+//    stats.strengthTime = cpuTime() - stats.strengthTime;
+ 
+  SpinLock & data_lock = var_lock[data.nVars()];
+
+  while ((!strength_resolvents && sharedQueue.size() > 0) || localQueue.size() > 0)
+  {
+    CRef cr = CRef_Undef;
+    if( localQueue.size() == 0 ) {
+        assert(!strength_resolvents);
+    //TODO get clause from shared queue (secure with lock)
+    //  --end;
+    //  cr = strengthening_queue[end];
+    } else {
+      // TODO: have a counter for this situation!
+      cr = localQueue.back();
+      localQueue.pop_back();
+    }
+    
+    Clause& strengthener = ca[cr];
+
+    // No locking if strength_resolvents
+    if (!strength_resolvents)
+    {
+        lock_strengthener_nn:
+        if (strengthener.can_be_deleted() || strengthener.size() == 0)
+            continue;
+        Var fst = var(strengthener[0]);
+        
+        // lock 1st var
+        var_lock[fst].lock();
+        
+        // assure that clause can still strengthen
+        if (strengthener.can_be_deleted() || strengthener.size() == 0)
+        {
+            var_lock[fst].unlock();
+            continue;
+        }
+        
+        // assure that first var still valid
+        if (var(strengthener[0]) != fst)
+        {
+            var_lock[fst].unlock();
+            goto lock_strengthener_nn;
+        }
+    } 
+   
+    // handle unit of empty clause strengthener
+    if( strengthener.size() < 2 ) {
+        if( strengthener.size() == 1 ) 
+        {
+            data_lock.lock();
+                lBool status = data.enqueue(strengthener[0]); 
+            data_lock.unlock();
+
+            if (!strength_resolvents) var_lock[fst].unlock(); // unlock fst var
+
+            if( l_False == status ) break;
+	        else continue;
+        }
+        else 
+        { 
+            data.setFailed();  // can be done asynchronously
+            if (!strength_resolvents) var_lock[fst].unlock(); 
+            break; 
+        }
+    }
+
+    assert (strengthener.size() > 1 && "expect strengthener to be > 1");
+
+    //find Lit with least occurrences and its occurrences
+    // search lit with minimal occurrences
+    Lit min = lit_Undef, nmin = lit_Undef;
+    Lit minT = strengthener[0];
+    for (int j = 1; j < strengthener.size(); ++j)
+    {
+       if (data[var(minT)] > data[var(strengthener[j])])
+          minT = strengthener[j];
+    }
+    min = minT;
+    nmin = ~minT;
+     
+    assert(min != nmin && "min and nmin should be different");
+    vector<CRef>& list = data.list(min);        // occurrences of minlit from strengthener
+    vector<CRef>& list_neg = data.list(nmin);   // occurrences of negated minlit from strengthener
+    
+    strength_check_pos(data, list, localQueue,  strengthener, cr, fst, var_lock, stats, doStatistics);
+    // if we use ~min, then some optimization can be done, since neg_lit has to be ~min
+    strength_check_neg(data, list_neg, localQueue, strengthener, cr, min, fst, var_lock, stats, doStatistics);
+    strengthener.set_strengthen(false);
+
+    // No locking if strength_resolvents
+    if (!strength_resolvents)
+    {
+        // free lock of first variable
+        var_lock[fst].unlock();
+    }
+  }
+  //if (doStatistics) stats.strengthTime = cpuTime() - stats.strengthTime;
+}
+
+
+/**
+ * strengthening check for parallel non-naive strengthening
+ *
+ * Preconditions: 
+ * fst is locked by this thread
+ *
+ * Thread-Saftey-Requirements
+ * only smaller variables than fst are locked
+ * write acces to data only if var_lock[nVars()] is locked
+ * no data.list(Lit) are written
+ *
+ * Postconditions:
+ * all locks, that were aquired, are freed
+ *
+ * @param strengthener 
+ * @param list          a list with CRef to check for strengthening
+ * @param var_lock      lock for each variable
+ *
+ */
+inline void BoundedVariableElimination::strength_check_pos(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, const bool doStatistics) 
+{
+    int si, so;           // indices used for "can be strengthened"-testing
+    int negated_lit_pos;  // index of negative lit, if we find one
+ 
+    SpinLock & data_lock = var_lock[data.nVars()];
+    
+    // test every clause, where the minimum is, if it can be strenghtened
+    for (unsigned int j = 0; j < list.size(); ++j)
+    {
+      Clause& other = ca[list[j]];
+      
+      lock_to_strengthen_nn:
+      if (other.can_be_deleted() || list[j] == cr || other.size() == 0)
+        continue;
+      Var other_fst = var(other[0]);
+
+      // if the other_fst > fst, other cannot contain fst, and therefore strengthener cannot strengthen other
+      if (other_fst > fst)
+          continue;
+
+      // check if other_fst already locked by this thread, if not: lock
+      if (other_fst != fst)
+      {
+         var_lock[other_fst].lock();
+
+         // check if other has been deleted, while waiting for lock
+         if (other.can_be_deleted() || other.size() == 0)
+         {
+             var_lock[other_fst].unlock();
+             continue;
+         }
+
+         // check if others first lit has changed, while waiting for lock
+         if (var(other[0]) != other_fst)
+         {
+             var_lock[other_fst].unlock();
+             goto lock_to_strengthen_nn;
+         }
+      }
+      
+      // now other_fst is locked and for sure first variable
+      //if (doStatistics) ++stats.strengthSteps;
+      // test if we can strengthen other clause
+      si = 0;
+      so = 0;
+      negated_lit_pos = -1;  //the position for neglit cant be 0, so we will use this as "neglit not found"
+      while (si < strengthener.size() && so < other.size())
+      {
+        if(strengthener[si] == other[so])
+        {
+          // the lits are the same in both clauses
+          ++si;
+          ++so;
+        }
+        else if (strengthener[si] == ~other[so])
+        {
+          // found neglit...
+          if (negated_lit_pos == -1)
+          {
+            // if it's the first neglit found, save its position
+            negated_lit_pos = so;
+            ++si;
+            ++so;
+          }
+          else
+            break;  // found more than 1 negated lit, can't strengthen
+        }
+        else if (strengthener[si] < other[so])
+          break;    // the other clause did not contain this variable => can't strengthen
+        else
+          ++so;
+      }
+
+      // if subsumption successful, strengthen
+      if (negated_lit_pos != -1 && si == strengthener.size())
+      {
+          
+          //if (doStatistics) ++stats.removedLiterals;
+          // unit found
+          if (other.size() == 2)
+          {
+              other.set_delete(true);
+              data_lock.lock();
+              lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
+              data.removedClause(list[j]);
+              data_lock.unlock();   
+          }
+          //TODO optimize out
+          else if (other.size() == 1)
+          {
+              assert(false && "no unit clauses should be strengthened");
+              // empty -> fail
+          }
+          else
+          {
+              if( global_debug_out ) cerr << "c remove " << negated_lit_pos << " from clause " << other << endl;
+              // keep track of this clause for further strengthening!
+              if( !other.can_strengthen() ) {
+                localQueue.push_back( list[j] );
+                other.set_strengthen(true);
+              }
+              Lit neg = other[negated_lit_pos];
+              other.removePositionSortedThreadSafe(negated_lit_pos);
+              // TODO to much overhead? 
+              data_lock.lock();
+              data.removedLiteral(neg, 1);
+              if ( ! other.can_subsume()) 
+              {
+                  other.set_subsume(true);
+                  clause_processing_queue.push_back(list[j]);
+              }
+              data_lock.unlock();
+          }
+      }
+      // if a new lock was acquired, free it
+      if (other_fst != fst)
+      {
+          var_lock[other_fst].unlock();
+      }
+    }
+}
+
+/**
+ * strengthening check for the negated literal for parallel non-naive strengthening
+ * i.e. the Literal that has to occur negated is already known
+ *
+ * Preconditions: 
+ * fst is locked by this thread
+ *
+ * Thread-Saftey-Requirements
+ * only smaller variables than fst are locked
+ * write acces to data only if var_lock[nVars()] is locked
+ * no data.list(Lit) are written
+ *
+ * Postconditions:
+ * all locks, that were aquired, are freed
+ *
+ * @param strengthener 
+ * @param list          a list with CRef to check for strengthening
+ * @param var_lock      lock for each variable
+ *
+ */
+inline void BoundedVariableElimination::strength_check_neg(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, const bool doStatistics) 
+{
+    int si, so;           // indices used for "can be strengthened"-testing
+    int negated_lit_pos;  // index of negative lit, if we find one
+ 
+    SpinLock & data_lock = var_lock[data.nVars()];
+    
+    // test every clause, where the minimum is, if it can be strenghtened
+    for (unsigned int j = 0; j < list.size(); ++j)
+    {
+      Clause& other = ca[list[j]];
+      
+      lock_to_strengthen_nn:
+      if (other.can_be_deleted() || list[j] == cr || other.size() == 0)
+        continue;
+      Var other_fst = var(other[0]);
+
+      // if the other_fst > fst, other cannot contain fst, and therefore strengthener cannot strengthen other
+      if (other_fst > fst)
+          continue;
+
+      // check if other_fst already locked by this thread, if not: lock
+      if (other_fst != fst)
+      {
+         var_lock[other_fst].lock();
+
+         // check if other has been deleted, while waiting for lock
+         if (other.can_be_deleted() || other.size() == 0)
+         {
+             var_lock[other_fst].unlock();
+             continue;
+         }
+
+         // check if others first lit has changed, while waiting for lock
+         if (var(other[0]) != other_fst)
+         {
+             var_lock[other_fst].unlock();
+             goto lock_to_strengthen_nn;
+         }
+      }
+      
+      // now other_fst is locked and for sure first variable
+      //if (doStatistics) ++stats.strengthSteps;
+      // test if we can strengthen other clause
+      si = 0;
+      so = 0;
+      negated_lit_pos = -1;  //the position for neglit cant be -1, so we will use this as "neglit not found"
+      while (si < strengthener.size() && so < other.size())
+      {
+        if(strengthener[si] == other[so])
+        {
+          // the lits are the same in both clauses
+          ++si;
+          ++so;
+        }
+        else if (other[so] == ~min)
+        {
+            negated_lit_pos = so;
+            ++si;
+            ++so;
+        }
+        else if (strengthener[si] < other[so])
+          break;    // the other clause did not contain this variable => can't strengthen
+        else
+          ++so;
+      }
+
+      // if subsumption successful, strengthen
+      if (negated_lit_pos != -1 && si == strengthener.size())
+      {
+          
+          //if (doStatistics) ++stats.removedLiterals;
+          // unit found
+          if (other.size() == 2)
+          {
+              other.set_delete(true);
+              data_lock.lock();
+              lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
+              data.removedClause(list[j]);
+              data_lock.unlock();   
+          }
+          //TODO optimize out
+          else if (other.size() == 1)
+          {
+              assert(false && "no unit clauses should be strengthened");
+              // empty -> fail
+          }
+          else
+          {
+              if( global_debug_out ) cerr << "c remove " << negated_lit_pos << " from clause " << other << endl;
+              // keep track of this clause for further strengthening!
+              if( !other.can_strengthen() ) {
+                localQueue.push_back( list[j] );
+                other.set_strengthen(true);
+              }
+              Lit neg = other[negated_lit_pos];
+              other.removePositionSortedThreadSafe(negated_lit_pos);
+              // TODO to much overhead? 
+              data_lock.lock();
+              data.removedLiteral(neg, 1);
+              if ( ! other.can_subsume()) 
+              {
+                  other.set_subsume(true);
+                  clause_processing_queue.push_back(list[j]);
+              }
+              data_lock.unlock();
+          }
+      }
+      // if a new lock was acquired, free it
+      if (other_fst != fst)
+      {
+          var_lock[other_fst].unlock();
+      }
+    }
+}
