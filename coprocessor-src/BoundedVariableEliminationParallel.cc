@@ -689,38 +689,52 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
  * @param end where to stop strengthening
  * @param var_lock vector of locks for each variable
  *
- * @param strength_resolvents
+ * @param strength_resolvents : if activated, strengthener wont be locked
+ *                              to use directly after VE when all locks are
+ *                              already hold by the thread
  * 
- *
  * Idea of strengthening Lock:
  * -> lock fst variable of strengthener
  * -> lock strentghener
  * -> if fstvar(other) <= fstvar(strengthener)
  *      -> lock other
  */
-void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& data, vector< SpinLock > & var_lock, deque<CRef> & localQueue, vector<OccUpdate> & occ_updates, const bool strength_resolvents, const bool doStatistics)
+void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& data, vector< SpinLock > & var_lock, deque <CRef > & subsumeQueue, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, MarkArray & dirtyOccs, const bool strength_resolvents, const bool doStatistics)
 { 
   assert(data.nVars() <= var_lock.size() && "var_lock vector to small");
 //  if (doStatistics)
 //    stats.strengthTime = cpuTime() - stats.strengthTime;
  
   SpinLock & data_lock = var_lock[data.nVars()];
+  SpinLock & strength_lock   = var_lock[data.nVars() + 4];
 
-  while ((!strength_resolvents && sharedQueue.size() > 0) || localQueue.size() > 0)
+  while ((!strength_resolvents && sharedStrengthQueue.size() > 0) || localQueue.size() > 0)
   {
     CRef cr = CRef_Undef;
     if( localQueue.size() == 0 ) {
         assert(!strength_resolvents);
-    //TODO get clause from shared queue (secure with lock)
-    //  --end;
-    //  cr = strengthening_queue[end];
+        strength_lock.lock();
+        if (sharedStrengthQueue.size() > 0)
+        {
+            cr = sharedStrengthQueue.back();
+            sharedStrengthQueue.pop_back();
+        }
+        strength_lock.unlock();
     } else {
       // TODO: have a counter for this situation!
       cr = localQueue.back();
       localQueue.pop_back();
     }
-    
+
+    if (cr == CRef_Undef)
+    {
+        assert( ! strength_resolvents );
+        break;
+
+    }
     Clause& strengthener = ca[cr];
+
+    Var fst;
 
     // No locking if strength_resolvents
     if (!strength_resolvents)
@@ -728,14 +742,17 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
         lock_strengthener_nn:
         if (strengthener.can_be_deleted() || strengthener.size() == 0)
             continue;
-        Var fst = var(strengthener[0]);
+        fst = var(strengthener[0]);
         
-        // lock 1st var
+        // lock 1st var 
         var_lock[fst].lock();
-        
+        // lock strengthener
+        strengthener.spinlock();
+
         // assure that clause can still strengthen
         if (strengthener.can_be_deleted() || strengthener.size() == 0)
         {
+            strengthener.unlock();
             var_lock[fst].unlock();
             continue;
         }
@@ -743,20 +760,25 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
         // assure that first var still valid
         if (var(strengthener[0]) != fst)
         {
+            strengthener.unlock();
             var_lock[fst].unlock();
             goto lock_strengthener_nn;
         }
     } 
    
-    // handle unit of empty clause strengthener
+    // handle unit of empty strengthener
     if( strengthener.size() < 2 ) {
         if( strengthener.size() == 1 ) 
         {
             data_lock.lock();
-                lBool status = data.enqueue(strengthener[0]); 
+                lbool status = data.enqueue(strengthener[0]); 
             data_lock.unlock();
 
-            if (!strength_resolvents) var_lock[fst].unlock(); // unlock fst var
+            if (!strength_resolvents) 
+            {
+                strengthener.unlock();
+                var_lock[fst].unlock(); // unlock fst var
+            }
 
             if( l_False == status ) break;
 	        else continue;
@@ -764,7 +786,12 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
         else 
         { 
             data.setFailed();  // can be done asynchronously
-            if (!strength_resolvents) var_lock[fst].unlock(); 
+            if (!strength_resolvents) 
+            {
+                strengthener.unlock();
+                var_lock[fst].unlock(); 
+            }
+
             break; 
         }
     }
@@ -787,14 +814,15 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
     vector<CRef>& list = data.list(min);        // occurrences of minlit from strengthener
     vector<CRef>& list_neg = data.list(nmin);   // occurrences of negated minlit from strengthener
     
-    strength_check_pos(data, list, localQueue,  strengthener, cr, fst, var_lock, stats, doStatistics);
-    // if we use ~min, then some optimization can be done, since neg_lit has to be ~min
-    strength_check_neg(data, list_neg, localQueue, strengthener, cr, min, fst, var_lock, stats, doStatistics);
+    strength_check_pos(data, list,     subsumeQueue, sharedStrengthQueue, localQueue, strengthener, cr,      fst, var_lock, dirtyOccs, strength_resolvents, doStatistics);
+    strength_check_neg(data, list_neg, subsumeQueue, sharedStrengthQueue, localQueue, strengthener, cr, min, fst, var_lock, dirtyOccs, strength_resolvents, doStatistics);
+
     strengthener.set_strengthen(false);
 
     // No locking if strength_resolvents
     if (!strength_resolvents)
     {
+        strengthener.unlock();
         // free lock of first variable
         var_lock[fst].unlock();
     }
@@ -822,12 +850,13 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
  * @param var_lock      lock for each variable
  *
  */
-inline void BoundedVariableElimination::strength_check_pos(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, const bool doStatistics) 
+inline void BoundedVariableElimination::strength_check_pos(CoprocessorData & data, vector < CRef > & list, deque<CRef> & subsumeQueue, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, MarkArray & dirtyOccs, const bool strength_resolvents, const bool doStatistics) 
 {
     int si, so;           // indices used for "can be strengthened"-testing
     int negated_lit_pos;  // index of negative lit, if we find one
  
     SpinLock & data_lock = var_lock[data.nVars()];
+    SpinLock & strength_lock   = var_lock[data.nVars() + 4];
     
     // test every clause, where the minimum is, if it can be strenghtened
     for (unsigned int j = 0; j < list.size(); ++j)
@@ -843,27 +872,24 @@ inline void BoundedVariableElimination::strength_check_pos(CoprocessorData & dat
       if (other_fst > fst)
           continue;
 
-      // check if other_fst already locked by this thread, if not: lock
-      if (other_fst != fst)
+      // lock the other clause (we already tested it for beeing different from cr)
+      other.spinlock();
+
+      // check if other has been deleted, while waiting for lock
+      if (other.can_be_deleted() || other.size() == 0)
       {
-         var_lock[other_fst].lock();
+         other.unlock();
+         continue;
+      }
 
-         // check if other has been deleted, while waiting for lock
-         if (other.can_be_deleted() || other.size() == 0)
-         {
-             var_lock[other_fst].unlock();
-             continue;
-         }
-
-         // check if others first lit has changed, while waiting for lock
-         if (var(other[0]) != other_fst)
-         {
-             var_lock[other_fst].unlock();
-             goto lock_to_strengthen_nn;
-         }
+      // check if others first lit has changed, while waiting for lock
+      if (var(other[0]) != other_fst)
+      {
+         other.unlock();
+         goto lock_to_strengthen_nn;
       }
       
-      // now other_fst is locked and for sure first variable
+      // now other is locked
       //if (doStatistics) ++stats.strengthSteps;
       // test if we can strengthen other clause
       si = 0;
@@ -919,29 +945,39 @@ inline void BoundedVariableElimination::strength_check_pos(CoprocessorData & dat
           else
           {
               if( global_debug_out ) cerr << "c remove " << negated_lit_pos << " from clause " << other << endl;
-              // keep track of this clause for further strengthening!
-              if( !other.can_strengthen() ) {
-                localQueue.push_back( list[j] );
-                other.set_strengthen(true);
-              }
               Lit neg = other[negated_lit_pos];
+              
+              //remove from occ-list (by overwriting cr with CRef_Undef
+              data.removeClauseFromThreadSafe(list[j], neg);
+              dirtyOccs.setCurrentStep(toInt(neg));
+
               other.removePositionSortedThreadSafe(negated_lit_pos);
               // TODO to much overhead? 
               data_lock.lock();
               data.removedLiteral(neg, 1);
+              data_lock.unlock();
               if ( ! other.can_subsume()) 
               {
                   other.set_subsume(true);
-                  clause_processing_queue.push_back(list[j]);
+                  subsumeQueue.push_back(list[j]);
               }
-              data_lock.unlock();
+              // keep track of this clause for further strengthening!
+              if( !other.can_strengthen() ) 
+              {
+                other.set_strengthen(true);
+                if (!strength_resolvents)
+                    localQueue.push_back( list[j] );
+                else 
+                {
+                    strength_lock.lock();
+                    sharedStrengthQueue.push_back( list[j] );
+                    strength_lock.unlock();
+                }
+              }          
           }
       }
-      // if a new lock was acquired, free it
-      if (other_fst != fst)
-      {
-          var_lock[other_fst].unlock();
-      }
+      // unlock other
+      other.unlock();
     }
 }
 
@@ -965,13 +1001,13 @@ inline void BoundedVariableElimination::strength_check_pos(CoprocessorData & dat
  * @param var_lock      lock for each variable
  *
  */
-inline void BoundedVariableElimination::strength_check_neg(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, const bool doStatistics) 
+inline void BoundedVariableElimination::strength_check_neg(CoprocessorData & data, vector < CRef > & list, deque<CRef> & subsumeQueue, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, MarkArray & dirtyOccs, const bool strength_resolvents, const bool doStatistics) 
 {
     int si, so;           // indices used for "can be strengthened"-testing
     int negated_lit_pos;  // index of negative lit, if we find one
  
     SpinLock & data_lock = var_lock[data.nVars()];
-    
+    SpinLock & strength_lock = var_lock[data.nVars() + 4]; 
     // test every clause, where the minimum is, if it can be strenghtened
     for (unsigned int j = 0; j < list.size(); ++j)
     {
@@ -986,27 +1022,25 @@ inline void BoundedVariableElimination::strength_check_neg(CoprocessorData & dat
       if (other_fst > fst)
           continue;
 
-      // check if other_fst already locked by this thread, if not: lock
-      if (other_fst != fst)
+      // lock the other clause (we already tested it for beeing different from cr)
+      other.spinlock();
+
+      // check if other has been deleted, while waiting for lock
+      if (other.can_be_deleted() || other.size() == 0)
       {
-         var_lock[other_fst].lock();
+         other.unlock();
+         continue;
+      }
 
-         // check if other has been deleted, while waiting for lock
-         if (other.can_be_deleted() || other.size() == 0)
-         {
-             var_lock[other_fst].unlock();
-             continue;
-         }
-
-         // check if others first lit has changed, while waiting for lock
-         if (var(other[0]) != other_fst)
-         {
-             var_lock[other_fst].unlock();
-             goto lock_to_strengthen_nn;
-         }
+      // check if others first lit has changed, while waiting for lock
+      if (var(other[0]) != other_fst)
+      {
+         other.unlock();
+         goto lock_to_strengthen_nn;
       }
       
-      // now other_fst is locked and for sure first variable
+      // now other is locked
+ 
       //if (doStatistics) ++stats.strengthSteps;
       // test if we can strengthen other clause
       si = 0;
@@ -1055,28 +1089,39 @@ inline void BoundedVariableElimination::strength_check_neg(CoprocessorData & dat
           else
           {
               if( global_debug_out ) cerr << "c remove " << negated_lit_pos << " from clause " << other << endl;
-              // keep track of this clause for further strengthening!
-              if( !other.can_strengthen() ) {
-                localQueue.push_back( list[j] );
-                other.set_strengthen(true);
-              }
+              
               Lit neg = other[negated_lit_pos];
+              
+              //remove from occ-list (by overwriting cr with CRef_Undef
+              data.removeClauseFromThreadSafe(list[j], neg);
+              dirtyOccs.setCurrentStep(toInt(neg));
+
               other.removePositionSortedThreadSafe(negated_lit_pos);
               // TODO to much overhead? 
               data_lock.lock();
               data.removedLiteral(neg, 1);
+              data_lock.unlock();
               if ( ! other.can_subsume()) 
               {
                   other.set_subsume(true);
-                  clause_processing_queue.push_back(list[j]);
+                  subsumeQueue.push_back(list[j]);
               }
-              data_lock.unlock();
+              // keep track of this clause for further strengthening!
+              if( !other.can_strengthen() ) 
+              {
+                other.set_strengthen(true);
+                if (!strength_resolvents)
+                    localQueue.push_back( list[j] );
+                else 
+                {
+                    strength_lock.lock();
+                    sharedStrengthQueue.push_back( list[j] );
+                    strength_lock.unlock();
+                }
+              }
           }
       }
-      // if a new lock was acquired, free it
-      if (other_fst != fst)
-      {
-          var_lock[other_fst].unlock();
-      }
+      // unlock other
+      other.unlock();
     }
 }

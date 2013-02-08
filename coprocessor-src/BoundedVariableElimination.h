@@ -27,8 +27,8 @@ class BoundedVariableElimination : public Technique {
   // variable heap comperators
   const int heap_option;
   struct VarOrderBVEHeapLt {
-        const int heapOption;
         CoprocessorData & data;
+        const int heapOption;
         bool operator () (Var x, Var y) const {/* assert (data != NULL && "Please assign a valid data object before heap usage" );*/ 
             switch (heapOption)
             {
@@ -51,11 +51,12 @@ class BoundedVariableElimination : public Technique {
 
   // parallel member variables
   MarkArray lastTouched;                    //MarkArray to track modifications of parallel BVE-Threads
+  MarkArray dirtyOccs;                      // tracks occs that contain CRef_Undef
   vector< Job > jobs;                     
   vector< SpinLock > variableLocks;         // 3 extra SpinLock for data, heap, ca
   vector< vector < CRef > > subsumeQueues;
   vector< vector < CRef > > strengthQueues;
-  Heap<NeighborLt>  ** neighbor_heaps = NULL;
+  Heap<NeighborLt>  ** neighbor_heaps;
   vector< CRef > sharedSubsumeQueue; 
   vector< CRef > sharedStrengthQeue;
   NeighborLt neighborComperator;
@@ -81,8 +82,6 @@ public:
 protected:
   
   bool hasToEliminate();                               // return whether there is something in the BVE queue
-  lbool fullBVE(Coprocessor::CoprocessorData& data);   // performs BVE until completion
-
 
   // sequential functions:
   void bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, const bool force = false, const bool doStatistics = true);   
@@ -93,7 +92,7 @@ protected:
   inline lbool anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative
           , const int v, const int p_limit, const int n_limit, int32_t* pos_stats, int32_t* neg_stats
           , int & lit_clauses, int & lit_learnts, const bool doStatistics = true); 
-  inline void addClausesToSubsumption (CoprocessorData & data, const vector<CRef> & clauses);
+  inline void addClausesToSubsumption (const vector<CRef> & clauses);
   inline void touchedVarsForSubsumption (CoprocessorData & data, const std::vector<Var> & touched_vars);
 
   
@@ -128,8 +127,13 @@ protected:
   inline lbool anticipateEliminationThreadsafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, vec<Lit> & resolvent, int32_t* pos_stats, int32_t* neg_stats, int & lit_clauses, int & lit_learnts, int & new_clauses, int & new_learnts, SpinLock & data_lock);
   inline void removeBlockedClausesThreadSafe(CoprocessorData & data, const vector< CRef> & list, const int32_t stats[], const Lit l, SpinLock & data_lock );
 
+  // Special subsimp implementations for par bve:
+  void par_bve_strengthening_worker(CoprocessorData& data, vector< SpinLock > & var_lock, deque <CRef> & subsumeQueue, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, MarkArray & dirtyOccs, const bool strength_resolvents, const bool doStatistics);
 
 
+inline void strength_check_pos(CoprocessorData & data, vector < CRef > & list, deque<CRef> & subsumeQueue, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, MarkArray & dirtyOccs, const bool strength_resolvents, const bool doStatistics = true); 
+
+inline void strength_check_neg(CoprocessorData & data, vector < CRef > & list, deque<CRef> & subsumeQueue, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, MarkArray & dirtyOccs, const bool strength_resolvents, const bool doStatistics = true); 
   // Helpers for both par and seq
   inline bool resolve(const Clause & c, const Clause & d, const int v, vec<Lit> & ps);
   inline int  tryResolve(const Clause & c, const Clause & d, const int v);

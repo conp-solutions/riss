@@ -235,6 +235,8 @@ public:
   void addClause (      const CRef cr );                 // add clause to data structures, update counters
   bool removeClauseFrom (const Minisat::CRef cr, const Lit l); // remove clause reference from list of clauses for literal l, returns true, if successful
   void removeClauseFrom (const Minisat::CRef cr, const Lit l, const int index); // remove clause reference from list of clauses for literal l, returns true, if successful
+  inline bool removeClauseFromThreadSafe (const Minisat::CRef cr, const Lit l); // replaces clause reference from clause list by CRef_Undef, returns true, if successful
+  inline void cleanUpOccurrences(const MarkArray & dirtyOccs, const uint32_t timer); // removes CRef_Undef from all dirty occurrences
   void cleanOccurrences();				// remove all clauses and set counters to 0
 
   void updateClauseAfterDelLit(const Minisat::Clause& clause)
@@ -485,6 +487,49 @@ inline void CoprocessorData::removeClauseFrom(const Minisat::CRef cr, const Lit 
   vector<CRef>& list = occs[toInt(l)];
   assert( list[index] == cr );
   list[index] = list[ list.size() -1 ];
+}
+
+/** replaces clause reference from clause list by CRef_Undef, returns true, if successful
+ *  asynchronous list modification
+ */
+inline bool CoprocessorData::removeClauseFromThreadSafe (const Minisat::CRef cr, const Lit l) 
+{
+  assert( cr != CRef_Undef);
+  vector<CRef>& list = occs[toInt(l)];
+  for( int i = 0 ; i < list.size(); ++ i )
+  {
+    if( list[i] == cr ) {
+      list[i] = CRef_Undef;       
+      return true;
+    }
+  }
+  return false;
+}
+
+/** removes CRef_Undef from all dirty occurrences
+ *  should be used sequentiell or with exclusive occ-access
+ *
+ *  @param dirtyOccs (on Lits !)
+ */
+inline void CoprocessorData::cleanUpOccurrences(const MarkArray & dirtyOccs, const uint32_t timer)
+{
+    for(int l = 0 ; l < dirtyOccs.size() ; ++ l ) {
+        if( dirtyOccs.getIndex(l) >= timer ) 
+        {
+            vector<CRef> & list = occs[l];
+            int i = 0; 
+            while (i < list.size())
+            {
+                if (list[i] == CRef_Undef)
+                {
+                    list[i] = list[list.size() - 1];
+                    list.pop_back();
+                    continue;
+                }
+                ++i;
+            }
+        }
+    }
 }
 
 inline void CoprocessorData::cleanOccurrences()

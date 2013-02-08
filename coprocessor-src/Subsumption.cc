@@ -556,7 +556,7 @@ void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned in
         if( strengthener.size() == 1 ) 
         {
             data_lock.lock();
-                lBool status = data.enqueue(strengthener[0]); 
+                lbool status = data.enqueue(strengthener[0]); 
             data_lock.unlock();
 
             var_lock[fst].unlock(); // unlock fst var

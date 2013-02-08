@@ -23,12 +23,13 @@ BoundedVariableElimination::BoundedVariableElimination( ClauseAllocator& _ca, Co
 , propagation( _propagation)
 , subsumption( _subsumption)
 , heap_option(opt_unlimited_bve)
+, neighbor_heaps(NULL)
 , removedClauses(0)
 , removedLiterals(0)
-, removedLearnts(0)
-, learntLits(0)
 , createdClauses(0)
 , createdLiterals(0)
+, removedLearnts(0)
+, learntLits(0)
 , newLearnts(0)
 , newLearntLits(0)
 , testedVars(0)
@@ -86,11 +87,6 @@ bool BoundedVariableElimination::hasToEliminate()
   return (variable_queue.size() > 0 );
 }
 
-lbool BoundedVariableElimination::fullBVE(Coprocessor::CoprocessorData& data)
-{
-  return l_Undef;
-}
- 
 lbool BoundedVariableElimination::runBVE(CoprocessorData& data, const bool doStatistics)
 {
   if (opt_par_bve)
@@ -290,7 +286,6 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            int neg_count = 0;
            int lit_clauses_old = 0;
            int lit_learnts_old = 0;
-           int clauseCount = 0;  // |F_x| + |F_¬x| 
 
            if (opt_verbose > 1)
            {
@@ -777,12 +772,12 @@ inline void BoundedVariableElimination :: touchedVarsForSubsumption (Coprocessor
     for (int i = 0; i < touched_vars.size(); ++i)
     {
         Var v = touched_vars[i]; 
-        addClausesToSubsumption(data, data.list(mkLit(v,false)));
-        addClausesToSubsumption(data, data.list(mkLit(v,true)));
+        addClausesToSubsumption(data.list(mkLit(v,false)));
+        addClausesToSubsumption(data.list(mkLit(v,true)));
         
     }
 }       
-inline void BoundedVariableElimination::addClausesToSubsumption (CoprocessorData & data, const vector<CRef> & clauses)
+inline void BoundedVariableElimination::addClausesToSubsumption (const vector<CRef> & clauses)
 {
     for (int j = 0; j < clauses.size(); ++j)
     {
