@@ -108,7 +108,10 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         // expecting valid occurrence-lists, i.e. v really occurs in lists 
         for (int r = 0; r < pos.size(); ++r)
         {
-            Clause & c = ca[pos[r]];
+            CRef cr = pos[r];
+            if (CRef_Undef == cr)
+                continue;
+            Clause & c = ca[cr];
             if (c.can_be_deleted())
                 continue;
             for (int l = 0; l < c.size(); ++ l)
@@ -120,7 +123,10 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         }
         for (int r = 0; r < neg.size(); ++r)
         {
-            Clause & c = ca[neg[r]];
+            CRef cr = neg[r];
+            if (CRef_Undef == cr)
+                continue;
+            Clause & c = ca[cr];
             if (c.can_be_deleted())
                 continue;
             for (int l = 0; l < c.size(); ++ l)
@@ -205,7 +211,10 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
        
         for (int i = 0; i < pos.size(); ++i)
         {
-            Clause & c = ca[pos[i]];
+            CRef cr = pos[i];
+            if (CRef_Undef == cr)
+                continue;
+            Clause & c = ca[cr];
             if (c.can_be_deleted())
                 continue;
             if (c.learnt())
@@ -216,7 +225,10 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         }      
         for (int i = 0; i < neg.size(); ++i)
         {
-            Clause & c = ca[neg[i]];
+            CRef cr = neg[i];
+            if (CRef_Undef == cr)
+                continue;
+            Clause & c = ca[cr];
             if (c.can_be_deleted())
                 continue;
             if (c.learnt())
@@ -377,14 +389,15 @@ inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData 
 {
     for (int cr_i = 0; cr_i < list.size(); ++cr_i)
     {
-        Clause & c = ca[list[cr_i]];
         CRef cr = list[cr_i];
+        if (CRef_Undef == cr_i)
+            continue;
+        Clause & c = ca[cr];
         if (!c.can_be_deleted())
         {
-	    // also updated deleteTimer
             c.set_delete(true);
             data_lock.lock();
-            data.removedClause(cr);
+            data.removedClause(cr); // updates stats and deleteTimer
             data.addToExtension(cr, l);
             data_lock.unlock();
             if(opt_verbose > 1){
@@ -418,7 +431,10 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
    
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
     {
-        Clause & p = ca[positive[cr_p]];
+        CRef crPos = positive[cr_p];
+        if (CRef_Undef == crPos)
+            continue;
+        Clause & p = ca[crPos];
         if (p.can_be_deleted())
         {  
             if(opt_verbose > 2) cerr << "c    skipped p " << p << endl;
@@ -426,7 +442,10 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
         }
         for (int cr_n = 0; cr_n < negative.size(); ++cr_n)
         {
-            Clause & n = ca[negative[cr_n]];
+            CRef crNeg = negative[cr_n];
+            if (CRef_Undef == crNeg)
+                continue;
+            Clause & n = ca[crNeg];
             if (n.can_be_deleted())
             {   
                 if(opt_verbose > 2)
@@ -547,12 +566,18 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, v
 {
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
     {
-        Clause & p = ca[positive[cr_p]];
+        CRef crPos = positive[cr_p];
+        if (CRef_Undef == crPos)
+            continue;
+        Clause & p = ca[crPos];
         if (p.can_be_deleted())
             continue;
         for (int cr_n = 0; cr_n < negative.size(); ++cr_n)
         {
-            Clause & n = ca[negative[cr_n]];
+            CRef crNeg = negative[cr_n];
+            if (CRef_Undef == crNeg)
+                continue;
+            Clause & n = ca[crNeg];
             if (n.can_be_deleted())
                 continue;
 
@@ -596,18 +621,21 @@ inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(Coprocess
 {
    for (unsigned ci = 0; ci < list.size(); ++ci)
    {    
-        Clause & c =  ca[list[ci]];
+        CRef cr = list[ci];
+        if (CRef_Undef == cr)
+            continue;
+        Clause & c =  ca[cr];
         if (c.can_be_deleted())
             continue;
         if (stats[ci] == 0)
         { 
             c.set_delete(true);
             data_lock.lock();
-            data.removedClause(list[ci]);
-            data.addToExtension(list[ci], l);
+            data.removedClause(cr);
+            data.addToExtension(cr, l);
             if(opt_verbose > 1 || (opt_verbose > 0 && ! c.learnt())) 
             {
-                cerr << "c removed clause: " << ca[list[ci]] << endl;
+                cerr << "c removed clause: " << c << endl;
                 cerr << "c added to extension with Lit " << l << endl;;
             } 
             data_lock.unlock();
@@ -735,8 +763,8 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
     {
         assert( ! strength_resolvents );
         break;
-
     }
+
     Clause& strengthener = ca[cr];
 
     Var fst = var(strengthener[0]);
@@ -866,10 +894,14 @@ inline void BoundedVariableElimination::strength_check_pos(CoprocessorData & dat
     // test every clause, where the minimum is, if it can be strenghtened
     for (unsigned int j = 0; j < list.size(); ++j)
     {
-      Clause& other = ca[list[j]];
+      CRef crO = list[j];
+      if (CRef_Undef == crO) 
+          continue;
+
+      Clause& other = ca[crO];
       
       lock_to_strengthen_nn:
-      if (other.can_be_deleted() || list[j] == cr || other.size() == 0)
+      if (other.can_be_deleted() || crO == cr || other.size() == 0)
         continue;
       Var other_fst = var(other[0]);
 
@@ -938,7 +970,7 @@ inline void BoundedVariableElimination::strength_check_pos(CoprocessorData & dat
               other.set_delete(true);
               data_lock.lock();
               lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
-              data.removedClause(list[j]);
+              data.removedClause(crO);
               data_lock.unlock();   
           }
           //TODO optimize out
@@ -953,7 +985,7 @@ inline void BoundedVariableElimination::strength_check_pos(CoprocessorData & dat
               Lit neg = other[negated_lit_pos];
               
               //remove from occ-list (by overwriting cr with CRef_Undef
-              data.removeClauseFromThreadSafe(list[j], neg);
+              data.removeClauseFromThreadSafe(crO, neg);
               dirtyOccs.setCurrentStep(toInt(neg));
 
               other.removePositionSortedThreadSafe(negated_lit_pos);
@@ -964,18 +996,18 @@ inline void BoundedVariableElimination::strength_check_pos(CoprocessorData & dat
               if ( ! other.can_subsume()) 
               {
                   other.set_subsume(true);
-                  subsumeQueue.push_back(list[j]);
+                  subsumeQueue.push_back(crO);
               }
               // keep track of this clause for further strengthening!
               if( !other.can_strengthen() ) 
               {
                 other.set_strengthen(true);
                 if (!strength_resolvents)
-                    localQueue.push_back( list[j] );
+                    localQueue.push_back(crO);
                 else 
                 {
                     strength_lock.lock();
-                    sharedStrengthQueue.push_back( list[j] );
+                    sharedStrengthQueue.push_back(crO);
                     strength_lock.unlock();
                 }
               }          
@@ -1016,10 +1048,13 @@ inline void BoundedVariableElimination::strength_check_neg(CoprocessorData & dat
     // test every clause, where the minimum is, if it can be strenghtened
     for (unsigned int j = 0; j < list.size(); ++j)
     {
-      Clause& other = ca[list[j]];
+      CRef crO = list[j];
+      if (CRef_Undef == crO)
+          continue;
+      Clause& other = ca[crO];
       
       lock_to_strengthen_nn:
-      if (other.can_be_deleted() || list[j] == cr || other.size() == 0)
+      if (other.can_be_deleted() || crO == cr || other.size() == 0)
         continue;
       Var other_fst = var(other[0]);
 
@@ -1082,7 +1117,7 @@ inline void BoundedVariableElimination::strength_check_neg(CoprocessorData & dat
               other.set_delete(true);
               data_lock.lock();
               lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
-              data.removedClause(list[j]);
+              data.removedClause(crO);
               data_lock.unlock();   
           }
           //TODO optimize out
@@ -1098,7 +1133,7 @@ inline void BoundedVariableElimination::strength_check_neg(CoprocessorData & dat
               Lit neg = other[negated_lit_pos];
               
               //remove from occ-list (by overwriting cr with CRef_Undef
-              data.removeClauseFromThreadSafe(list[j], neg);
+              data.removeClauseFromThreadSafe( crO, neg );
               dirtyOccs.setCurrentStep(toInt(neg));
 
               other.removePositionSortedThreadSafe(negated_lit_pos);
@@ -1109,18 +1144,18 @@ inline void BoundedVariableElimination::strength_check_neg(CoprocessorData & dat
               if ( ! other.can_subsume()) 
               {
                   other.set_subsume(true);
-                  subsumeQueue.push_back(list[j]);
+                  subsumeQueue.push_back( crO );
               }
               // keep track of this clause for further strengthening!
               if( !other.can_strengthen() ) 
               {
                 other.set_strengthen(true);
                 if (!strength_resolvents)
-                    localQueue.push_back( list[j] );
+                    localQueue.push_back( crO );
                 else 
                 {
                     strength_lock.lock();
-                    sharedStrengthQueue.push_back( list[j] );
+                    sharedStrengthQueue.push_back( crO );
                     strength_lock.unlock();
                 }
               }
