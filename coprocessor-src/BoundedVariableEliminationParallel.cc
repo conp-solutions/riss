@@ -647,6 +647,8 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
   variableLocks.resize(data.nVars() + 5); // 5 extra SpinLock for data, heap, ca, shared subsume-queue, shared strength-queue
   subsumeQueues.resize(controller.size());
   strengthQueues.resize(controller.size());
+  dirtyOccs.resize(data.nVars() * 2);
+  uint32_t timer = dirtyOccs.nextStep();
 
   if (neighbor_heaps == NULL) 
   { 
@@ -657,7 +659,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
       }
   }
 
-  allocatorRWLock.writeUnlock();
+  // TODO make sure, that the RWLock is free
   
   for ( int i = 0 ; i < controller.size(); ++ i ) 
   {
@@ -677,6 +679,9 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
   }
   controller.runJobs( jobs );
 
+  // clean dirty occs
+  data.cleanUpOccurrences(dirtyOccs,timer);
+
   //propagate units
   if (data.hasToPropagate())
       propagation.propagate(data, true);
@@ -695,7 +700,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
  * 
  * Idea of strengthening Lock:
  * -> lock fst variable of strengthener
- * -> lock strentghener
+ * -> lock strengthener
  * -> if fstvar(other) <= fstvar(strengthener)
  *      -> lock other
  */
@@ -734,7 +739,7 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
     }
     Clause& strengthener = ca[cr];
 
-    Var fst;
+    Var fst = var(strengthener[0]);
 
     // No locking if strength_resolvents
     if (!strength_resolvents)

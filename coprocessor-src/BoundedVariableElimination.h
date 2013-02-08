@@ -104,6 +104,7 @@ protected:
     ReadersWriterLock * rw_lock;  // rw-lock for CA
     Heap<VarOrderBVEHeapLt> * heap; // Shared heap with variables for elimination check
     Heap<NeighborLt> * neighbor_heap; // heap for Neighbor calculation
+    MarkArray * dirtyOccs;
     vector<CRef> * subsumeQueue;
     vector<CRef> * sharedSubsumeQueue;
     vector<CRef> * strengthQueue;
