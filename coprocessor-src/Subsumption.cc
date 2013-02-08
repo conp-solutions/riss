@@ -238,7 +238,7 @@ void Subsumption :: par_subsumption_worker (CoprocessorData& data, unsigned int 
 {
     if (doStatistics)
     {
-        stats.processTime = cpuTime() - stats.processTime;   
+        stats.processTime = wallClockTime() - stats.processTime;   
     }
     while (end > start)
     {
@@ -311,7 +311,7 @@ void Subsumption :: par_subsumption_worker (CoprocessorData& data, unsigned int 
             set_non_learnt.push_back(cr);
     }
     if (doStatistics) 
-        stats.processTime = cpuTime() - stats.processTime;
+        stats.processTime = wallClockTime() - stats.processTime;
 }
 
 
@@ -326,8 +326,7 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
     assert(start <= stop && stop <= strengthening_queue.size() && "invalid indices");
     assert(data.nVars() <= var_lock.size() && "var_lock vector to small");
     double & lock_time = stats.lockTime;
-    if (doStatistics)
-        stats.strengthTime = cpuTime() - stats.strengthTime;
+    if (doStatistics) stats.strengthTime = wallClockTime() - stats.strengthTime;
     
     deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
     SpinLock & data_lock = var_lock[data.nVars()];
@@ -500,7 +499,7 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
         var_lock[fst].unlock();
         
     }
-    if (doStatistics) stats.strengthTime = cpuTime() - stats.strengthTime;
+    if (doStatistics) stats.strengthTime = wallClockTime() - stats.strengthTime;
 }
 
 /** lock-based parallel non-naive strengthening-methode
@@ -514,7 +513,7 @@ void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned in
   assert(start <= end && end <= strengthening_queue.size() && "invalid indices");
   assert(data.nVars() <= var_lock.size() && "var_lock vector to small");
   if (doStatistics)
-    stats.strengthTime = cpuTime() - stats.strengthTime;
+    stats.strengthTime = wallClockTime() - stats.strengthTime;
  
    deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
   SpinLock & data_lock = var_lock[data.nVars()];
@@ -728,7 +727,7 @@ void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned in
     // free lock of first variable
     var_lock[fst].unlock();
   }
-  if (doStatistics) stats.strengthTime = cpuTime() - stats.strengthTime;
+  if (doStatistics) stats.strengthTime = wallClockTime() - stats.strengthTime;
 }
 
 /**
