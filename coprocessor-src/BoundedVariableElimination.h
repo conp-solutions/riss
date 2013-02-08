@@ -124,7 +124,7 @@ protected:
   void parallelBVE(CoprocessorData& data);
   
   inline void removeClausesThreadSafe(CoprocessorData & data, const vector<CRef> & list, const Lit l, SpinLock & data_lock);
-  inline lbool resolveSetThreadSafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, vec < Lit > & ps, AllocatorReservation & memoryReservation, const bool keepLearntResolvents = false, const bool force = false);
+  inline lbool resolveSetThreadSafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, vec < Lit > & ps, AllocatorReservation & memoryReservation, deque<CRef> & strengthQueue, deque <CRef> & subsumeQueue, const bool keepLearntResolvents = false, const bool force = false);
   inline lbool anticipateEliminationThreadsafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, vec<Lit> & resolvent, int32_t* pos_stats, int32_t* neg_stats, int & lit_clauses, int & lit_learnts, int & new_clauses, int & new_learnts, SpinLock & data_lock);
   inline void removeBlockedClausesThreadSafe(CoprocessorData & data, const vector< CRef> & list, const int32_t stats[], const Lit l, SpinLock & data_lock );
 

@@ -320,7 +320,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
              
              if(opt_verbose > 1)  cerr << "c resolveSet" <<endl;
 
-             if (resolveSetThreadSafe(data, pos, neg, v, ps, memoryReservation) == l_False) 
+             if (resolveSetThreadSafe(data, pos, neg, v, ps, memoryReservation, strengthQueue, subsumeQueue) == l_False) 
              {
                  // UNSAT case -> end thread, but first release all locks
                  rwlock.readUnlock();
@@ -565,7 +565,7 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
  *   - unit clauses and empty clauses are not handeled here
  *          -> this is already done in anticipateElimination 
  */
-lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, vec<Lit> & ps, AllocatorReservation & memoryReservation, const bool keepLearntResolvents, const bool force)
+lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, vec<Lit> & ps, AllocatorReservation & memoryReservation, deque<CRef> & strengthQueue, deque <CRef> & subsumeQueue, const bool keepLearntResolvents, const bool force)
 {
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
     {
@@ -606,8 +606,9 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, v
                     else 
                         data.getClauses().push(cr);
 
-                    // TODO push Clause to local subsumption-queue
-                    // subsumption.initClause(cr);
+                    // add clause to local subsimp queues
+                    strengthQueue.push_back(cr);
+                    subsumeQueue.push_back(cr);
                }
            }
         }
