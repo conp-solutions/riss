@@ -470,6 +470,7 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
 	                        localQueue.push_back( list[l_cr] );
 	                        d.set_strengthen(true);
 	                      }
+                        occ_updates.push_back(OccUpdate(list[l_cr] , d[pos]));
                         d.removePositionSortedThreadSafe(pos);
                         // TODO to much overhead? 
                         if (opt_lock_stats) lock_time = cpuTime() - lock_time; 
@@ -602,9 +603,9 @@ void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned in
     vector<CRef>& list = data.list(min);        // occurrences of minlit from strengthener
     vector<CRef>& list_neg = data.list(nmin);   // occurrences of negated minlit from strengthener
     
-    par_nn_strength_check(data, list, localQueue,  strengthener, cr, fst, var_lock, stats, doStatistics);
+    par_nn_strength_check(data, list, localQueue,  strengthener, cr, fst, var_lock, stats, occ_updates, doStatistics);
     // if we use ~min, then some optimization can be done, since neg_lit has to be ~min
-    par_nn_negated_strength_check(data, list_neg, localQueue, strengthener, cr, min, fst, var_lock, stats, doStatistics);
+    par_nn_negated_strength_check(data, list_neg, localQueue, strengthener, cr, min, fst, var_lock, stats, occ_updates, doStatistics);
 /*
     // now test for the occurrences of negated min, we only need to test, if all lits after min in strengthener are also in other
     for (unsigned int j = 0; j < list_neg.size(); ++j)
@@ -749,7 +750,7 @@ void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned in
  * @param var_lock      lock for each variable
  *
  */
-inline void Subsumption::par_nn_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, const bool doStatistics) 
+inline void Subsumption::par_nn_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, vector< OccUpdate> & occ_updates, const bool doStatistics) 
 {
     int si, so;           // indices used for "can be strengthened"-testing
     int negated_lit_pos;  // index of negative lit, if we find one
@@ -852,6 +853,7 @@ inline void Subsumption::par_nn_strength_check(CoprocessorData & data, vector < 
                 other.set_strengthen(true);
               }
               Lit neg = other[negated_lit_pos];
+              occ_updates.push_back(OccUpdate(list[j] , neg));
               other.removePositionSortedThreadSafe(negated_lit_pos);
               // TODO to much overhead? 
               data_lock.lock();
@@ -892,7 +894,7 @@ inline void Subsumption::par_nn_strength_check(CoprocessorData & data, vector < 
  * @param var_lock      lock for each variable
  *
  */
-inline void Subsumption::par_nn_negated_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, const bool doStatistics) 
+inline void Subsumption::par_nn_negated_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, vector< OccUpdate> & occ_updates, const bool doStatistics) 
 {
     int si, so;           // indices used for "can be strengthened"-testing
     int negated_lit_pos;  // index of negative lit, if we find one
@@ -988,6 +990,7 @@ inline void Subsumption::par_nn_negated_strength_check(CoprocessorData & data, v
                 other.set_strengthen(true);
               }
               Lit neg = other[negated_lit_pos];
+              occ_updates.push_back(OccUpdate(list[j] , neg));
               other.removePositionSortedThreadSafe(negated_lit_pos);
               // TODO to much overhead? 
               data_lock.lock();
@@ -1458,6 +1461,10 @@ void Subsumption::parallelStrengthening(CoprocessorData& data)
     jobs[i].argument  = &(workData[i]);
   }
   controller.runJobs( jobs );
+
+  // update Occurrences
+  for (int i = 0; i < controller.size(); ++i)
+    updateOccurrences(data, occ_updates[i]);
 
   //propagate units
   propagation.propagate(data, true);
