@@ -330,7 +330,7 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
     
     deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
     SpinLock & data_lock = var_lock[data.nVars()];
-    while (stop > start)
+    while (stop > start && data.ok())
     {    
         CRef cr = CRef_Undef;
         if( localQueue.size() == 0 ) {
@@ -454,7 +454,14 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
                         if (opt_lock_stats) lock_time = cpuTime() - lock_time; 
                         lbool state = data.enqueue(d[(pos + 1) % 2]);
                         data.removedClause(list[l_cr]);
-                        data_lock.unlock();   
+                        data_lock.unlock();  
+                        if (l_False == state)
+                        {
+                            var_lock[d_fst].unlock();
+                            var_lock[fst].unlock();
+                            if (doStatistics) stats.strengthTime = wallClockTime() - stats.strengthTime;
+                            return;
+                        }
                     }
                     else if (d.size() == 1)
                     {
@@ -520,6 +527,11 @@ void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned in
 
   for (; end > start;)
   {
+    if (!data.ok()) 
+    {
+        stats.strengthTime = wallClockTime() - stats.strengthTime;
+        return;
+    }
     CRef cr = CRef_Undef;
     if( localQueue.size() == 0 ) {
       --end;
@@ -602,9 +614,19 @@ void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned in
     vector<CRef>& list = data.list(min);        // occurrences of minlit from strengthener
     vector<CRef>& list_neg = data.list(nmin);   // occurrences of negated minlit from strengthener
     
-    par_nn_strength_check(data, list, localQueue,  strengthener, cr, fst, var_lock, stats, occ_updates, doStatistics);
+    if (l_False == par_nn_strength_check(data, list, localQueue,  strengthener, cr, fst, var_lock, stats, occ_updates, doStatistics))
+    {
+        var_lock[fst].unlock();
+        if (doStatistics) stats.strengthTime = wallClockTime() - stats.strengthTime;
+        return;
+    }
     // if we use ~min, then some optimization can be done, since neg_lit has to be ~min
-    par_nn_negated_strength_check(data, list_neg, localQueue, strengthener, cr, min, fst, var_lock, stats, occ_updates, doStatistics);
+    if (l_False == par_nn_negated_strength_check(data, list_neg, localQueue, strengthener, cr, min, fst, var_lock, stats, occ_updates, doStatistics))
+    {
+        var_lock[fst].unlock();
+        if (doStatistics) stats.strengthTime = wallClockTime() - stats.strengthTime;
+        return;
+    }
 /*
     // now test for the occurrences of negated min, we only need to test, if all lits after min in strengthener are also in other
     for (unsigned int j = 0; j < list_neg.size(); ++j)
@@ -749,7 +771,7 @@ void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned in
  * @param var_lock      lock for each variable
  *
  */
-inline void Subsumption::par_nn_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, vector< OccUpdate> & occ_updates, const bool doStatistics) 
+inline lbool Subsumption::par_nn_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, vector< OccUpdate> & occ_updates, const bool doStatistics) 
 {
     int si, so;           // indices used for "can be strengthened"-testing
     int negated_lit_pos;  // index of negative lit, if we find one
@@ -835,7 +857,12 @@ inline void Subsumption::par_nn_strength_check(CoprocessorData & data, vector < 
               data_lock.lock();
               lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
               data.removedClause(list[j]);
-              data_lock.unlock();   
+              data_lock.unlock();
+              if (l_False == state)
+              {
+                  var_lock[other_fst].unlock();
+                  return l_False;
+              }
           }
           //TODO optimize out
           else if (other.size() == 1)
@@ -871,6 +898,7 @@ inline void Subsumption::par_nn_strength_check(CoprocessorData & data, vector < 
           var_lock[other_fst].unlock();
       }
     }
+    return l_Undef;
 }
 
 /**
@@ -893,7 +921,7 @@ inline void Subsumption::par_nn_strength_check(CoprocessorData & data, vector < 
  * @param var_lock      lock for each variable
  *
  */
-inline void Subsumption::par_nn_negated_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, vector< OccUpdate> & occ_updates, const bool doStatistics) 
+inline lbool Subsumption::par_nn_negated_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, vector< OccUpdate> & occ_updates, const bool doStatistics) 
 {
     int si, so;           // indices used for "can be strengthened"-testing
     int negated_lit_pos;  // index of negative lit, if we find one
@@ -972,7 +1000,12 @@ inline void Subsumption::par_nn_negated_strength_check(CoprocessorData & data, v
               data_lock.lock();
               lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
               data.removedClause(list[j]);
-              data_lock.unlock();   
+              data_lock.unlock();
+              if (l_False == state)
+              {
+                 var_lock[other_fst].unlock();
+                 return l_False;
+              }
           }
           //TODO optimize out
           else if (other.size() == 1)
@@ -1008,7 +1041,9 @@ inline void Subsumption::par_nn_negated_strength_check(CoprocessorData & data, v
           var_lock[other_fst].unlock();
       }
     }
+    return l_Undef;
 }
+
 bool Subsumption::hasToStrengthen() const
 {
   return strengthening_queue.size() > 0;
