@@ -32,6 +32,7 @@ namespace Coprocessor {
   class Preprocessor;
   class CoprocessorData;
   class Propagation;
+  class BoundedVariableElimination;
   class Probing;
 }
 
@@ -44,6 +45,7 @@ class Solver {
   
     friend class Coprocessor::Preprocessor;
     friend class Coprocessor::Propagation;
+    friend class Coprocessor::BoundedVariableElimination;
     friend class Coprocessor::CoprocessorData;
     friend class Coprocessor::Probing;
   

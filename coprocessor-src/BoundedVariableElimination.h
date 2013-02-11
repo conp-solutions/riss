@@ -129,8 +129,10 @@ protected:
   inline void removeBlockedClausesThreadSafe(CoprocessorData & data, const vector< CRef> & list, const int32_t stats[], const Lit l, SpinLock & data_lock );
 
   // Special subsimp implementations for par bve:
-  void par_bve_strengthening_worker(CoprocessorData& data, vector< SpinLock > & var_lock, deque <CRef> & subsumeQueue, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, MarkArray & dirtyOccs, const bool strength_resolvents, const bool doStatistics = true);
+  void par_bve_strengthening_worker(CoprocessorData& data, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, deque <CRef> & subsumeQueue, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, MarkArray & dirtyOccs, const bool strength_resolvents, const bool doStatistics = true);
 
+  // Special propagation for par bve
+  lbool par_bve_propagate(CoprocessorData& data, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, MarkArray & dirtyOccs);
 
 inline void strength_check_pos(CoprocessorData & data, vector < CRef > & list, deque<CRef> & subsumeQueue, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, MarkArray & dirtyOccs, const bool strength_resolvents, const bool doStatistics = true); 
 

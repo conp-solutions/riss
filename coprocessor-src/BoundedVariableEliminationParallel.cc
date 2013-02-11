@@ -16,6 +16,8 @@ static IntOption  opt_learnt_growth   (_cat, "cp3_bve_learnt_growth", "Keep C (x
 
 static IntOption  opt_bve_heap        (_cat, "cp3_bve_heap"     ,  "0: minimum heap, 1: maximum heap, 2: random", 0, IntRange(0,2));
 
+static int upLevel = 1;
+
 static inline void printLitErr(const Lit l) 
 {
     if (toInt(l) % 2)
@@ -73,6 +75,20 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
     int32_t timeStamp;  
     while ( data.ok() ) // if solver state = false => abort
     {
+        // Propagate (rw-locks)
+        if (data.hasToPropagate())
+        {
+            par_bve_propagate(data, var_lock, rwlock, dirtyOccs);
+            continue;
+        }
+        // Subsimp
+        if (sharedStrengthQeue.size() > 0)
+        {
+            par_bve_strengthening_worker(data, var_lock, rwlock, subsumeQueue, sharedStrengthQeue, strengthQueue, dirtyOccs, false);
+            continue;
+        }
+       
+        // Eliminate
         Var v = var_Undef; 
         // lock Heap and acquire variable
         heap_lock.lock();
@@ -114,14 +130,19 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
             if (CRef_Undef == cr)
                 continue;
             Clause & c = ca[cr];
+            c.spinlock();
             if (c.can_be_deleted())
-                continue;
+            {
+              c.unlock();
+              continue;
+            }
             for (int l = 0; l < c.size(); ++ l)
             {
                 Var v = var(c[l]);
                 if (! neighbor_heap.inHeap(v))
                     neighbor_heap.insert(v);
             }
+            c.unlock();
         }
         for (int r = 0; r < neg.size(); ++r)
         {
@@ -129,14 +150,19 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
             if (CRef_Undef == cr)
                 continue;
             Clause & c = ca[cr];
+            c.spinlock();
             if (c.can_be_deleted())
+            {
+                c.unlock();
                 continue;
+            }
             for (int l = 0; l < c.size(); ++ l)
             {
                 Var v = var(c[l]);
                 if (! neighbor_heap.inHeap(v))
                     neighbor_heap.insert(v);
             }
+            c.unlock();
         }
         // TODO: do we need a data-lock here?
         timeStamp = lastTouched.getIndex(v); // get last modification of v
@@ -351,7 +377,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
              //TODO implement a threadsafe variant for this
              // -> subsumption as usual
              // -> strengthening without local queue -> just tagging
-             par_bve_strengthening_worker(data, var_lock, subsumeQueue, sharedStrengthQeue, strengthQueue, dirtyOccs, true);
+             par_bve_strengthening_worker(data, var_lock, rwlock, subsumeQueue, sharedStrengthQeue, strengthQueue, dirtyOccs, true);
              //subsumption.subsumeStrength(data); 
 
              rwlock.readUnlock();
@@ -736,7 +762,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
  * -> if fstvar(other) <= fstvar(strengthener)
  *      -> lock other
  */
-void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& data, vector< SpinLock > & var_lock, deque <CRef > & subsumeQueue, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, MarkArray & dirtyOccs, const bool strength_resolvents, const bool doStatistics)
+void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& data, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, deque <CRef > & subsumeQueue, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, MarkArray & dirtyOccs, const bool strength_resolvents, const bool doStatistics)
 { 
   assert(data.nVars() <= var_lock.size() && "var_lock vector to small");
 //  if (doStatistics)
@@ -769,20 +795,28 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
         break;
     }
 
-    Clause& strengthener = ca[cr];
+    if (!strength_resolvents) rwlock.readLock();
 
+    Clause& strengthener = ca[cr];
     Var fst = var(strengthener[0]);
+    
 
     // No locking if strength_resolvents
-    if (!strength_resolvents)
+    if (!strength_resolvents) 
     {
-        lock_strengthener_nn:
+        lock_strengthener_nn: // readlock @ this point
         if (strengthener.can_be_deleted() || strengthener.size() == 0)
+        {
+            rwlock.readUnlock();
             continue;
+        }
         fst = var(strengthener[0]);
-        
+        rwlock.readUnlock();
+
         // lock 1st var 
         var_lock[fst].lock();
+
+        rwlock.readLock();
         // lock strengthener
         strengthener.spinlock();
 
@@ -790,6 +824,7 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
         if (strengthener.can_be_deleted() || strengthener.size() == 0)
         {
             strengthener.unlock();
+            rwlock.readUnlock();
             var_lock[fst].unlock();
             continue;
         }
@@ -798,11 +833,14 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
         if (var(strengthener[0]) != fst)
         {
             strengthener.unlock();
+            rwlock.readUnlock();
             var_lock[fst].unlock();
+            rwlock.readLock();
             goto lock_strengthener_nn;
         }
     } 
    
+    // readlock @ this point
     // handle unit of empty strengthener
     if( strengthener.size() < 2 ) {
         if( strengthener.size() == 1 ) 
@@ -814,8 +852,9 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
             if (!strength_resolvents) 
             {
                 strengthener.unlock();
+                rwlock.readUnlock();
                 var_lock[fst].unlock(); // unlock fst var
-            }
+            } // no readlock @ this point
 
             if( l_False == status ) break;
 	        else continue;
@@ -826,9 +865,9 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
             if (!strength_resolvents) 
             {
                 strengthener.unlock();
+                rwlock.readUnlock();
                 var_lock[fst].unlock(); 
             }
-
             break; 
         }
     }
@@ -861,6 +900,7 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
     if (!strength_resolvents)
     {
         strengthener.unlock();
+        rwlock.readUnlock();
         // free lock of first variable
         var_lock[fst].unlock();
     }
@@ -1197,4 +1237,163 @@ inline void BoundedVariableElimination::strength_check_neg(CoprocessorData & dat
       // unlock other
       other.unlock();
     }
+}
+
+lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, MarkArray & dirtyOccs)
+{
+  //processTime = cpuTime() - processTime;
+  SpinLock & data_lock = var_lock[data.nVars()];
+
+  Solver* solver = data.getSolver();
+  // propagate all literals that are on the trail but have not been propagated
+  // TODO -> make the trail access threadsafe
+  while (data.ok() && data.hasToPropagate())
+  {
+    data.lock();
+
+    const Lit l = (solver->qhead < solver->trail.size()) ? solver->trail[solver->qhead] : lit_Undef;
+    if (lit_Undef == l)
+    {
+      data.unlock();
+      break;
+    }
+    else
+    { 
+      ++(solver->qhead);
+      data.unlock();
+    }
+    
+    const Var v = var(l);
+
+    // Lock variable
+    var_lock[v].lock();
+    
+    if (global_debug_out) cerr << "c UP propagating " << l << endl;
+
+    data_lock.lock();
+    data.log.log(upLevel,"propagate literal",l);
+    data_lock.unlock();
+    
+    // Readlock on CA
+    rwlock.readLock();
+
+    // remove positives
+    vector<CRef> positive = data.list(l);
+    for( int i = 0 ; i < positive.size(); ++i )
+    {
+      CRef cr = positive[i];
+      if (CRef_Undef == cr)
+        continue;
+      Clause & satisfied = ca[cr];
+      if ( satisfied.can_be_deleted() ) // only track yet-non-deleted clauses
+        continue;
+
+      // lock satisfied
+      satisfied.spinlock();
+
+      if( global_debug_out ) cerr << "c UP remove " << satisfied << endl;
+      //++removedClauses; // = ca[ positive[i] ].can_be_deleted() ? removedClauses : removedClauses + 1;
+      satisfied.set_delete(true);
+      satisfied.unlock();
+      
+      // overwrite CRef in Occ 
+      positive[i] = CRef_Undef;
+      dirtyOccs.setCurrentStep(toInt(l));
+
+      data_lock.lock();
+      data.removedClause( positive[i] );
+      data_lock.unlock();
+
+   }
+
+    const Lit nl = ~l;
+    int count = 0;
+    vector<CRef> negative = data.list(nl);
+
+    for( int i = 0 ; i < negative.size(); ++i )
+    {
+      CRef cr = negative[i];
+      if (CRef_Undef == cr)
+          continue;
+
+      Clause& c = ca[cr];
+      if (c.can_be_deleted())
+          continue;
+
+      c.spinlock();
+
+      // sorted propagation, no!
+      if ( !c.can_be_deleted() ) 
+      {
+        for ( int j = 0; j < c.size(); ++ j ) 
+          if ( c[j] == nl ) 
+          { 
+	        if( global_debug_out ) cerr << "c UP remove " << nl << " from " << c << endl;
+                c.removePositionSorted(j);
+	        break;
+	  }
+        count ++;
+      }
+      // unit propagation
+      if ( c.size() == 0 || (c.size() == 1 &&  solver->value( c[0] ) == l_False) ) 
+      {
+        data.setFailed();   // set state to false
+        
+        if (global_debug_out) cerr << "c UNSAT by UP" << endl;
+        c.set_delete(true); // TODO it seems safer to do this, is it necessary
+        c.unlock();
+
+        // End Readlock
+        rwlock.readUnlock();
+        var_lock[v].unlock();
+
+        //processTime = cpuTime() - processTime;
+        return l_False;
+      } 
+      else if( c.size() == 1 ) 
+      {
+         if( solver->value( c[0] ) == l_Undef && global_debug_out ) 
+             cerr << "c UP enqueue " << c[0] << " with previous value " 
+                  << (solver->value( c[0] ) == l_Undef ? "undef" : (solver->value( c[0] ) == l_False ? "unsat" : " sat ") ) << endl;
+	 if( solver->value( c[0] ) == l_Undef ) 
+         {
+           data_lock.lock();
+           solver->uncheckedEnqueue(c[0]);
+           data_lock.unlock();
+         }
+      }
+
+      c.unlock();
+      negative[i] = CRef_Undef;
+      dirtyOccs.setCurrentStep(toInt(nl));
+    }
+
+    // End Readlock
+    rwlock.readUnlock();
+
+    // update formula data!
+    data_lock.lock();
+    data.removedLiteral(nl, count);
+    data_lock.unlock();
+    //removedLiterals += count;
+
+    var_lock[v].unlock();
+  }
+  
+//    for (int i = 0; i < clause_list.size(); ++i)
+//    {
+//         Clause & c = ca[clause_list[i]];
+//         int k = 0;
+//         for (int l = 0; l < c.size(); ++l)
+//         {
+//             if (value(c[l]) != l_False)
+//                 c[k++] = c[l];
+//         }
+//         c.shrink(c.size() - k);
+//             if (c.has_extra())
+//             c.calcAbstraction();
+//    }
+  
+  //processTime = cpuTime() - processTime;
+  return data.ok() ? l_Undef : l_False;
 }
