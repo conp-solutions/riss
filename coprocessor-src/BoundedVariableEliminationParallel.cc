@@ -855,6 +855,7 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
     strength_check_neg(data, list_neg, subsumeQueue, sharedStrengthQueue, localQueue, strengthener, cr, min, fst, var_lock, dirtyOccs, strength_resolvents, doStatistics);
 
     strengthener.set_strengthen(false);
+    strengthener.set_subsume(false);
 
     // No locking if strength_resolvents
     if (!strength_resolvents)
@@ -970,8 +971,15 @@ inline void BoundedVariableElimination::strength_check_pos(CoprocessorData & dat
           ++so;
       }
 
+      // subsumption 
+      if (negated_lit_pos == -1 && si == strengthener.size())
+      {
+         other.set_delete(true);
+         // TODO stats !
+         // TODO learnt subsumes non-learnt !
+      }
       // if subsumption successful, strengthen
-      if (negated_lit_pos != -1 && si == strengthener.size())
+      else if (negated_lit_pos >= 0 && si == strengthener.size())
       {
           
           //if (doStatistics) ++stats.removedLiterals;
@@ -1122,9 +1130,17 @@ inline void BoundedVariableElimination::strength_check_neg(CoprocessorData & dat
         else
           ++so;
       }
+      // subsumption TODO -> maybe just in pos strength check!
+      // but it doesn't harm at this point (just takes longer?)
+      if (negated_lit_pos == -1 && si == strengthener.size())
+      {
+         other.set_delete(true);
+         // TODO stats !
+         // TODO learnt subsumes non-learnt !
+      }
 
       // if subsumption successful, strengthen
-      if (negated_lit_pos != -1 && si == strengthener.size())
+      else if (negated_lit_pos >= 0 && si == strengthener.size())
       {
           
           //if (doStatistics) ++stats.removedLiterals;
