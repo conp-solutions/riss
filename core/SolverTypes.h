@@ -259,8 +259,12 @@ public:
     
     /** spinlocks the clause by trying to set the locked bit 
      * Note: be very careful with the implementation, it relies on the header being 32 bit!
+     *
+     * @return true  if the lock was acquired
+     *         false gave up locking, because first literal of clause has changed
+     *               (only if first lit was specified)
      */
-    bool    spinlock() {
+    bool    spinlock(const Lit first = lit_Undef) {
       ClauseHeader compare = header;
       compare.locked = 0;
       ClauseHeader setHeader = header;
@@ -270,6 +274,9 @@ public:
       uint32_t* sHeader = (uint32_t*)(&setHeader);
       uint32_t* iHeader = (uint32_t*)(&header);
       while ( *iHeader != *cHeader || __sync_bool_compare_and_swap( iHeader, uint32_t(*cHeader), uint32_t(*sHeader) ) == false) {
+        // integrity check on first literal to prevent deadlocks
+        if (first != lit_Undef && data[0].lit != first)
+          return false;
 	// renew header
 	compare = header;
 	setHeader = header;
@@ -279,6 +286,7 @@ public:
 	sHeader = (uint32_t*)(&setHeader);
 	iHeader = (uint32_t*)(&header);
       }
+      return true;
     }
     
     /** check whether the locked bit of the clause is set 

@@ -905,19 +905,26 @@ inline void BoundedVariableElimination::strength_check_pos(CoprocessorData & dat
       Clause& other = ca[crO];
       
       lock_to_strengthen_nn:
-      if (other.can_be_deleted() || crO == cr || other.size() == 0)
+      // a clause can not strengthen itself, and a clause can not strengther smaller clauses
+      if (other.can_be_deleted() || crO == cr || other.size() < strengthener.size())
         continue;
+      Lit other_fst_lit = other[0];
       Var other_fst = var(other[0]);
+      
 
       // if the other_fst > fst, other cannot contain fst, and therefore strengthener cannot strengthen other
-      if (other_fst > fst)
+      // if other_fst == fst, then other has to be longer 
+      if (other_fst > fst || other_fst == fst && other.size() <= strengthener.size())
           continue;
 
       // lock the other clause (we already tested it for beeing different from cr)
-      other.spinlock();
+      // if false is returned: the first variable changed, and no lock was performed
+      bool locked = other.spinlock(other_fst_lit);
+      if (false == locked)
+        goto lock_to_strengthen_nn;
 
       // check if other has been deleted, while waiting for lock
-      if (other.can_be_deleted() || other.size() == 0)
+      if (other.can_be_deleted() || other.size() <= strengthener.size())
       {
          other.unlock();
          continue;
@@ -1058,19 +1065,25 @@ inline void BoundedVariableElimination::strength_check_neg(CoprocessorData & dat
       Clause& other = ca[crO];
       
       lock_to_strengthen_nn:
-      if (other.can_be_deleted() || crO == cr || other.size() == 0)
+      // a clause can not strengthen itself, and a clause can not strengther smaller clauses
+      if (other.can_be_deleted() || crO == cr || other.size() < strengthener.size())
         continue;
+      Lit other_fst_lit = other[0];
       Var other_fst = var(other[0]);
 
       // if the other_fst > fst, other cannot contain fst, and therefore strengthener cannot strengthen other
-      if (other_fst > fst)
+      // if other_fst == fst, then other has to be longer 
+      if (other_fst > fst || other_fst == fst && other.size() <= strengthener.size())
           continue;
 
       // lock the other clause (we already tested it for beeing different from cr)
-      other.spinlock();
+      // if false is returned: the first literal changed, and no lock was performed
+      bool locked = other.spinlock(other_fst_lit);
+      if (false == locked)
+        goto lock_to_strengthen_nn;
 
       // check if other has been deleted, while waiting for lock
-      if (other.can_be_deleted() || other.size() == 0)
+      if (other.can_be_deleted() || other.size() < strengthener.size())
       {
          other.unlock();
          continue;
