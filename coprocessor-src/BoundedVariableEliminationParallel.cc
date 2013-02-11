@@ -60,7 +60,7 @@ static void printLitVec(const vec<Lit> & litvec)
  *          you must not acquire a write lock on the data object, if alread 2.b was acquired
  *          you either hold a heap lock or any of the other locks 
  */
-void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap, deque <CRef> & subsumeQueue, deque <CRef> & sharedSubsumeQueue, deque < CRef > & strengthQueue, deque < CRef > & sharedStrengthQeue, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, const bool force, const bool doStatistics)   
+void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap, deque <CRef> & subsumeQueue, deque <CRef> & sharedSubsumeQueue, deque < CRef > & strengthQueue, deque < CRef > & sharedStrengthQueue, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, const bool force, const bool doStatistics)   
 {
     SpinLock & data_lock = var_lock[data.nVars()]; 
     SpinLock & heap_lock = var_lock[data.nVars() + 1];
@@ -78,13 +78,13 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         // Propagate (rw-locks)
         if (data.hasToPropagate())
         {
-            par_bve_propagate(data, var_lock, rwlock, dirtyOccs);
+            par_bve_propagate(data, var_lock, rwlock, dirtyOccs, sharedStrengthQueue);
             continue;
         }
         // Subsimp
-        if (sharedStrengthQeue.size() > 0)
+        if (sharedStrengthQueue.size() > 0)
         {
-            par_bve_strengthening_worker(data, var_lock, rwlock, subsumeQueue, sharedStrengthQeue, strengthQueue, dirtyOccs, false);
+            par_bve_strengthening_worker(data, var_lock, rwlock, subsumeQueue, sharedStrengthQueue, strengthQueue, dirtyOccs, false);
             continue;
         }
        
@@ -377,7 +377,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
              //TODO implement a threadsafe variant for this
              // -> subsumption as usual
              // -> strengthening without local queue -> just tagging
-             par_bve_strengthening_worker(data, var_lock, rwlock, subsumeQueue, sharedStrengthQeue, strengthQueue, dirtyOccs, true);
+             par_bve_strengthening_worker(data, var_lock, rwlock, subsumeQueue, sharedStrengthQueue, strengthQueue, dirtyOccs, true);
              //subsumption.subsumeStrength(data); 
 
              rwlock.readUnlock();
@@ -676,7 +676,7 @@ inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(Coprocess
 void* BoundedVariableElimination::runParallelBVE(void* arg)
 {
   BVEWorkData*      workData = (BVEWorkData*) arg;
-  workData->bve->par_bve_worker(*(workData->data), *(workData->heap), *(workData->neighbor_heap), *(workData->subsumeQueue), *(workData->sharedSubsumeQueue), *(workData->strengthQueue), *(workData->sharedStrengthQeue), *(workData->var_locks), *(workData->rw_lock)); 
+  workData->bve->par_bve_worker(*(workData->data), *(workData->heap), *(workData->neighbor_heap), *(workData->subsumeQueue), *(workData->sharedSubsumeQueue), *(workData->strengthQueue), *(workData->sharedStrengthQueue), *(workData->var_locks), *(workData->rw_lock)); 
   return 0;
 }
 
@@ -730,7 +730,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
     workData[i].subsumeQueue = & subsumeQueues[i];
     workData[i].strengthQueue = & strengthQueues[i];
     workData[i].sharedSubsumeQueue = & sharedSubsumeQueue;
-    workData[i].sharedStrengthQeue = & sharedSubsumeQueue;
+    workData[i].sharedStrengthQueue = & sharedStrengthQueue;
     //workData[i].stats = & localStats[i];
     jobs[i].function  = BoundedVariableElimination::runParallelBVE;
     jobs[i].argument  = &(workData[i]);
@@ -797,20 +797,18 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
 
     if (!strength_resolvents) rwlock.readLock();
 
-    Clause& strengthener = ca[cr];
-    Var fst = var(strengthener[0]);
+    Var fst = var(ca[cr][0]);
     
-
     // No locking if strength_resolvents
     if (!strength_resolvents) 
     {
         lock_strengthener_nn: // readlock @ this point
-        if (strengthener.can_be_deleted() || strengthener.size() == 0)
+        if (ca[cr].can_be_deleted() || ca[cr].size() == 0)
         {
             rwlock.readUnlock();
             continue;
         }
-        fst = var(strengthener[0]);
+        fst = var(ca[cr][0]);
         rwlock.readUnlock();
 
         // lock 1st var 
@@ -818,21 +816,21 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
 
         rwlock.readLock();
         // lock strengthener
-        strengthener.spinlock();
+        ca[cr].spinlock();
 
         // assure that clause can still strengthen
-        if (strengthener.can_be_deleted() || strengthener.size() == 0)
+        if (ca[cr].can_be_deleted() || ca[cr].size() == 0)
         {
-            strengthener.unlock();
+            ca[cr].unlock();
             rwlock.readUnlock();
             var_lock[fst].unlock();
             continue;
         }
         
         // assure that first var still valid
-        if (var(strengthener[0]) != fst)
+        if (var(ca[cr][0]) != fst)
         {
-            strengthener.unlock();
+            ca[cr].unlock();
             rwlock.readUnlock();
             var_lock[fst].unlock();
             rwlock.readLock();
@@ -841,6 +839,8 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
     } 
    
     // readlock @ this point
+    Clause& strengthener = ca[cr];
+
     // handle unit of empty strengthener
     if( strengthener.size() < 2 ) {
         if( strengthener.size() == 1 ) 
@@ -954,8 +954,8 @@ inline void BoundedVariableElimination::strength_check_pos(CoprocessorData & dat
       
 
       // if the other_fst > fst, other cannot contain fst, and therefore strengthener cannot strengthen other
-      // if other_fst == fst, then other has to be longer 
-      if (other_fst > fst || other_fst == fst && other.size() <= strengthener.size())
+      // if other_fst < fst, then other has to be longer 
+      if (other_fst > fst || other_fst < fst && other.size() <= strengthener.size())
           continue;
 
       // lock the other clause (we already tested it for beeing different from cr)
@@ -1052,15 +1052,17 @@ inline void BoundedVariableElimination::strength_check_pos(CoprocessorData & dat
               data_lock.lock();
               data.removedLiteral(neg, 1);
               data_lock.unlock();
-              if ( ! other.can_subsume()) 
+/*              if ( ! other.can_subsume()) 
               {
                   other.set_subsume(true);
                   subsumeQueue.push_back(crO);
-              }
+              } 
+*/
               // keep track of this clause for further strengthening!
               if( !other.can_strengthen() ) 
               {
                 other.set_strengthen(true);
+                other.set_subsume(true);
                 if (!strength_resolvents)
                     localQueue.push_back(crO);
                 else 
@@ -1120,8 +1122,8 @@ inline void BoundedVariableElimination::strength_check_neg(CoprocessorData & dat
       Var other_fst = var(other[0]);
 
       // if the other_fst > fst, other cannot contain fst, and therefore strengthener cannot strengthen other
-      // if other_fst == fst, then other has to be longer 
-      if (other_fst > fst || other_fst == fst && other.size() <= strengthener.size())
+      // if other_fst < fst, then other has to be longer 
+      if (other_fst > fst || other_fst < fst && other.size() <= strengthener.size())
           continue;
 
       // lock the other clause (we already tested it for beeing different from cr)
@@ -1214,11 +1216,11 @@ inline void BoundedVariableElimination::strength_check_neg(CoprocessorData & dat
               data_lock.lock();
               data.removedLiteral(neg, 1);
               data_lock.unlock();
-              if ( ! other.can_subsume()) 
+/*              if ( ! other.can_subsume()) 
               {
                   other.set_subsume(true);
                   subsumeQueue.push_back( crO );
-              }
+              } */
               // keep track of this clause for further strengthening!
               if( !other.can_strengthen() ) 
               {
@@ -1239,11 +1241,11 @@ inline void BoundedVariableElimination::strength_check_neg(CoprocessorData & dat
     }
 }
 
-lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, MarkArray & dirtyOccs)
+lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, MarkArray & dirtyOccs, deque < CRef > & sharedSubsimpQueue)
 {
   //processTime = cpuTime() - processTime;
   SpinLock & data_lock = var_lock[data.nVars()];
-
+  SpinLock & strength_lock = var_lock[data.nVars() + 4];
   Solver* solver = data.getSolver();
   // propagate all literals that are on the trail but have not been propagated
   // TODO -> make the trail access threadsafe
@@ -1362,7 +1364,14 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vecto
            data_lock.unlock();
          }
       }
-
+      else if (true && ! c.can_strengthen())
+      {
+         c.set_strengthen(true);
+         c.set_subsume(true);
+         strength_lock.lock();
+         sharedSubsimpQueue.push_back(cr);
+         strength_lock.unlock();
+      }        
       c.unlock();
       negative[i] = CRef_Undef;
       dirtyOccs.setCurrentStep(toInt(nl));

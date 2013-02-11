@@ -275,6 +275,7 @@ public:
       uint32_t* iHeader = (uint32_t*)(&header);
       while ( *iHeader != *cHeader || __sync_bool_compare_and_swap( iHeader, uint32_t(*cHeader), uint32_t(*sHeader) ) == false) {
         // integrity check on first literal to prevent deadlocks
+        assert(size() > 0);
         if (first != lit_Undef && data[0].lit != first)
           return false;
 	// renew header
