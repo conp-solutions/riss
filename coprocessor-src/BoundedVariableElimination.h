@@ -134,7 +134,7 @@ protected:
           , deque <CRef> & subsumeQueue, deque <CRef> & sharedSubsumeQueue, deque < CRef > & strengthQueue
           , deque < CRef > & sharedStrengthQueue, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock
           , ParBVEStats & stats
-          , const bool force = true, const bool doStatistics = true) ; 
+          , const bool force = false, const bool doStatistics = true) ; 
 
   inline void removeBlockedClauses(CoprocessorData & data, const vector< CRef> & list, const int32_t stats[], const Lit l, const bool doStatistics = true );
   
@@ -142,7 +142,7 @@ protected:
   void parallelBVE(CoprocessorData& data);
   
   inline void removeClausesThreadSafe(CoprocessorData & data, const vector<CRef> & list, const Lit l, SpinLock & data_lock, ParBVEStats & stats, const bool doStatistics);
-  inline lbool resolveSetThreadSafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, vec < Lit > & ps, AllocatorReservation & memoryReservation, deque<CRef> & strengthQueue, deque <CRef> & subsumeQueue, ParBVEStats & stats, const bool doStatistics, const bool keepLearntResolvents = false, const bool force = false);
+  inline lbool resolveSetThreadSafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, vec < Lit > & ps, AllocatorReservation & memoryReservation, deque<CRef> & strengthQueue, deque <CRef> & subsumeQueue, ParBVEStats & stats, SpinLock & data_lock, const bool doStatistics, const bool keepLearntResolvents = false, const bool force = false);
   inline lbool anticipateEliminationThreadsafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, vec<Lit> & resolvent, int32_t* pos_stats, int32_t* neg_stats, int & lit_clauses, int & lit_learnts, int & new_clauses, int & new_learnts, SpinLock & data_lock);
   inline void removeBlockedClausesThreadSafe(CoprocessorData & data, const vector< CRef> & list, const int32_t _stats[], const Lit l, SpinLock & data_lock, ParBVEStats & stats, const bool doStatistics );
 

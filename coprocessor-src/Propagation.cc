@@ -28,7 +28,7 @@ lbool Propagation::propagate(CoprocessorData& data, bool sort)
     if (global_debug_out) cerr << "c UP propagating " << l << endl;
     data.log.log(upLevel,"propagate literal",l);
     // remove positives
-    vector<CRef> positive = data.list(l);
+    vector<CRef> & positive = data.list(l);
     for( int i = 0 ; i < positive.size(); ++i )
     {
 
@@ -50,7 +50,7 @@ lbool Propagation::propagate(CoprocessorData& data, bool sort)
     
     const Lit nl = ~l;
     int count = 0;
-    vector<CRef> negative = data.list(nl);
+    vector<CRef> & negative = data.list(nl);
 
     for( int i = 0 ; i < negative.size(); ++i )
     {
