@@ -43,6 +43,8 @@ class BoundedVariableElimination : public Technique {
   struct NeighborLt {
         bool operator () (Var x, Var y) const { return x < y; }
   }; 
+  // Vector for restarting bve (seq and par)
+  vector<Var> touched_variables;
   // variable queue for random variable-order
   vector< Var > variable_queue;
 
@@ -109,7 +111,7 @@ protected:
           , const int v, const int p_limit, const int n_limit, int32_t* pos_stats, int32_t* neg_stats
           , int & lit_clauses, int & lit_learnts, const bool doStatistics = true); 
   inline void addClausesToSubsumption (const vector<CRef> & clauses);
-  inline void touchedVarsForSubsumption (CoprocessorData & data, const std::vector<Var> & touched_vars);
+  void touchedVarsForSubsumption (CoprocessorData & data, const std::vector<Var> & touched_vars);
 
   
   /** data for parallel execution */

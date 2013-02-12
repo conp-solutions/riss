@@ -65,7 +65,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
     if (doStatistics) stats.processTime = wallClockTime() - stats.processTime;
 
     SpinLock & data_lock = var_lock[data.nVars()]; 
-    SpinLock & heap_lock = var_lock[data.nVars() + 1];
+    SpinLock & heap_lock = var_lock[data.nVars() + 1]; // used for variable-heap or queue
     SpinLock & ca_lock   = var_lock[data.nVars() + 2];
     
     int32_t * pos_stats = (int32_t*) malloc (5 * sizeof(int32_t));
@@ -95,14 +95,27 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         }
        
         // Eliminate
-        Var v = var_Undef; 
-        // lock Heap and acquire variable
+        Var v = var_Undef;
+        // lock Heap or Q and acquire variable
         heap_lock.lock();
-        if (heap.size() > 0)
-            v = heap.removeMin();
+        if (opt_bve_heap != 2)
+        {
+            if (heap.size() > 0)
+                v = heap.removeMin();
+        }
+        else if (variable_queue.size() > 0)
+        {
+            int rand = data.getSolver()->irand(data.getSolver()->random_seed, variable_queue.size());
+            v = variable_queue[rand];
+            if (variable_queue.size() > 1)
+            {
+                variable_queue[rand] = variable_queue[variable_queue.size() - 2];
+            }
+
+        }
         heap_lock.unlock();
         
-        // if Heap was empty, break
+        // if Heap or Queue was empty, break
         if (v == var_Undef)
             break;
         
@@ -736,32 +749,22 @@ void* BoundedVariableElimination::runParallelBVE(void* arg)
 
 void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
 {
+  if (data.hasToPropagate())
+    if (propagation.propagate(data, true) == l_False)
+      return;
+
   cerr << "c parallel bve with " << controller.size() << " threads" << endl;
   
   lastTouched.resize(data.nVars());
-  
   VarOrderBVEHeapLt comp(data, opt_bve_heap);
   Heap<VarOrderBVEHeapLt> newheap(comp);
-  if (opt_bve_heap != 2)
-  {
-    data.getActiveVariables(lastDeleteTime(), newheap);
-  }
-  else 
-  {
-    data.getActiveVariables(lastDeleteTime(), variable_queue);
-  }
-  if (propagation.propagate(data, true) == l_False)
-      return;
-  
   BVEWorkData workData[ controller.size() ];
-
   jobs.resize( controller.size() );
   variableLocks.resize(data.nVars() + 5); // 5 extra SpinLock for data, heap, ca, shared subsume-queue, shared strength-queue
   subsumeQueues.resize(controller.size());
   strengthQueues.resize(controller.size());
   parStats.resize(controller.size());
   dirtyOccs.resize(data.nVars() * 2);
-  uint32_t timer = dirtyOccs.nextStep();
 
   if (neighbor_heaps == NULL) 
   { 
@@ -772,8 +775,6 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
       }
   }
 
-  // TODO make sure, that the RWLock is free
-  
   for ( int i = 0 ; i < controller.size(); ++ i ) 
   {
     workData[i].bve   = this;
@@ -787,18 +788,61 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
     workData[i].sharedSubsumeQueue = & sharedSubsumeQueue;
     workData[i].sharedStrengthQueue = & sharedStrengthQueue;
     workData[i].bveStats = & parStats[i];
-    jobs[i].function  = BoundedVariableElimination::runParallelBVE;
-    jobs[i].argument  = &(workData[i]);
   }
-  controller.runJobs( jobs );
 
-  // clean dirty occs
-  data.cleanUpOccurrences(dirtyOccs,timer);
+  if (opt_bve_heap != 2)
+  {
+    data.getActiveVariables(lastDeleteTime(), newheap);
+  }
+  else 
+  {
+    data.getActiveVariables(lastDeleteTime(), variable_queue);
+  }
+  
+  while ((opt_bve_heap != 2 && newheap.size() > 0) || (opt_bve_heap == 2 && variable_queue.size() > 0))
+  {
 
-  //propagate units
-  if (data.hasToPropagate())
-      propagation.propagate(data, true);
+    updateDeleteTime(data.getMyDeleteTimer());
+    
+    uint32_t timer = dirtyOccs.nextStep();
+  
+    for ( int i = 0 ; i < controller.size(); ++ i ) 
+    {
+      jobs[i].function  = BoundedVariableElimination::runParallelBVE;
+      jobs[i].argument  = &(workData[i]);
+    }
+    controller.runJobs( jobs );
 
+    if (!data.ok())
+      return;
+
+    // clean dirty occs
+    data.cleanUpOccurrences(dirtyOccs,timer);
+  
+    //propagate units
+    if (data.hasToPropagate())
+      if (l_False == propagation.propagate(data, true))
+        return;
+    
+    // add active variables and clauses to variable heap and subsumption queues
+    data.getActiveVariables(lastDeleteTime(), touched_variables);
+    touchedVarsForSubsumption(data, touched_variables);
+    subsumption.subsumeStrength(data);
+
+    if (opt_bve_heap != 2)
+        newheap.clear();
+    else
+        variable_queue.clear();
+    
+    for (int i = 0; i < touched_variables.size(); ++i)
+    {
+        if (opt_bve_heap != 2)
+            newheap.insert(touched_variables[i]);
+        else 
+            variable_queue.push_back(touched_variables[i]);
+    }
+    touched_variables.clear();
+  }
 }
 
 /** lock-based parallel non-naive strengthening-methode

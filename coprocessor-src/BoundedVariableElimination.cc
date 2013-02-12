@@ -233,7 +233,8 @@ static void printClauses(ClauseAllocator & ca, vector<CRef> list, bool skipDelet
 //
 void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, const bool force, const bool doStatistics)   
 {
-    vector<Var> touched_variables;
+    //vector<Var> touched_variables;
+    touched_variables.clear();
     int32_t * pos_stats = (int32_t*) malloc (5 * sizeof(int32_t));
     int32_t * neg_stats = (int32_t*) malloc (5 * sizeof(int32_t));
            
@@ -810,7 +811,7 @@ inline void BoundedVariableElimination::removeBlockedClauses(CoprocessorData & d
         //c.set_modified(false);
     }
 }*/
-inline void BoundedVariableElimination :: touchedVarsForSubsumption (CoprocessorData & data, const std::vector<Var> & touched_vars)
+void BoundedVariableElimination :: touchedVarsForSubsumption (CoprocessorData & data, const std::vector<Var> & touched_vars)
 {
     for (int i = 0; i < touched_vars.size(); ++i)
     {
