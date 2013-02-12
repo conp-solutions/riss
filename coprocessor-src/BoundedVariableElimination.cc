@@ -79,6 +79,41 @@ void BoundedVariableElimination::printStatistics(ostream& stream)
 				  << usedGates << " usedGates, "
                                  << gateTime << " gateSeconds, " 
 				  << endl;
+    for (int i = 0; i < parStats.size(); ++i)
+    {
+        ParBVEStats & s = parStats[i]; 
+        stream << "c [STAT] BVE(1)-T" << i << " " 
+                                     << s.processTime     << " s, " 
+                                     << s.subsimpTime     << " s spent on subsimp, "
+                                     << s.upTime          << " s spent on up, "
+                                     << s.testedVars       << " vars tested, "
+                                     << s.anticipations    << " anticipations, "  //  = tested vars?
+                                     << s.skippedVars      << " vars skipped "
+                       << endl;
+        stream << "c [STAT] BVE(2)-T" << i << " " 
+                                     << s.removedClauses  <<  " rem cls, " 
+                       << "with "    << s.removedLiterals << " lits, "
+                                     << s.removedLearnts  << " learnts rem, "
+                       << "with "    << s.learntLits      << " lits, "
+                                     << s.createdClauses  << " new cls, "
+                       << "with "    << s.createdLiterals << " lits, "
+                                     << s.newLearnts      << " new learnts, "
+                       << "with "    << s.newLearntLits   << " lits, " 
+                       << endl;
+        stream << "c [STAT] BVE(3)-T" << i << " " 
+                                     << s.eliminatedVars   << " vars eliminated, "
+                                     << s.unitsEnqueued    << " units enqueued, "
+                                     << s.removedBC        << " BC removed, "
+                       << "with "    << s.blockedLits      << " lits, "
+                                     << s.removedBlockedLearnt << " blocked learnts removed, "
+                       << "with "    << s.learntBlockedLit << " lits, "
+                                     << endl;  
+        stream << "c [STAT] BVE(4)-T" << i << " " 
+                                      << s.foundGates << " gateDefs, "
+                                      << s.usedGates << " usedGates, "
+                                      << s.gateTime << " gateSeconds, " 
+                                      << endl;
+    }
 }
 
 
@@ -415,8 +450,16 @@ inline void BoundedVariableElimination::removeClauses(CoprocessorData & data, co
             data.addToExtension(cr, l);
             if (doStatistics)
             {
-                ++removedClauses;
-                removedLiterals += c.size();
+                if (c.learnt())
+                {
+                    ++removedLearnts;
+                    learntLits += c.size();
+                }
+                else
+                {
+                    ++removedClauses;
+                    removedLiterals += c.size();
+                }
             }
             if(opt_verbose > 1){
                 cerr << "c removed clause: "; 

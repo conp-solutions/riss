@@ -423,7 +423,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
     bool hasFreeMemory(int clauses, int literals, int learnts) const
     {
         assert(clauses >= learnts);
-        if (literals >= 2 * clauses)
+        if (literals < 2 * clauses)
         {
             std::cerr << "c lits: " << literals << " clauses: " << clauses << endl; 
         }
