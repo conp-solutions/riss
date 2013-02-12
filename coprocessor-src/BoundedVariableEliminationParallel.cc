@@ -771,7 +771,7 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
   SpinLock & data_lock = var_lock[data.nVars()];
   SpinLock & strength_lock   = var_lock[data.nVars() + 4];
 
-  while ((!strength_resolvents && sharedStrengthQueue.size() > 0) || localQueue.size() > 0)
+  while (data.ok() && ((!strength_resolvents && sharedStrengthQueue.size() > 0) || localQueue.size() > 0))
   {
     CRef cr = CRef_Undef;
     if( localQueue.size() == 0 ) {
@@ -890,8 +890,9 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
     vector<CRef>& list = data.list(min);        // occurrences of minlit from strengthener
     vector<CRef>& list_neg = data.list(nmin);   // occurrences of negated minlit from strengthener
     
-    strength_check_pos(data, list,     subsumeQueue, sharedStrengthQueue, localQueue, strengthener, cr,      fst, var_lock, dirtyOccs, strength_resolvents, doStatistics);
-    strength_check_neg(data, list_neg, subsumeQueue, sharedStrengthQueue, localQueue, strengthener, cr, min, fst, var_lock, dirtyOccs, strength_resolvents, doStatistics);
+    lbool state = strength_check_pos(data, list,     subsumeQueue, sharedStrengthQueue, localQueue, strengthener, cr,      fst, var_lock, dirtyOccs, strength_resolvents, doStatistics);
+    if (l_False != state)
+        strength_check_neg(data, list_neg, subsumeQueue, sharedStrengthQueue, localQueue, strengthener, cr, min, fst, var_lock, dirtyOccs, strength_resolvents, doStatistics);
 
     strengthener.set_strengthen(false);
     strengthener.set_subsume(false);
@@ -928,7 +929,7 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
  * @param var_lock      lock for each variable
  *
  */
-inline void BoundedVariableElimination::strength_check_pos(CoprocessorData & data, vector < CRef > & list, deque<CRef> & subsumeQueue, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, MarkArray & dirtyOccs, const bool strength_resolvents, const bool doStatistics) 
+inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData & data, vector < CRef > & list, deque<CRef> & subsumeQueue, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, MarkArray & dirtyOccs, const bool strength_resolvents, const bool doStatistics) 
 {
     int si, so;           // indices used for "can be strengthened"-testing
     int negated_lit_pos;  // index of negative lit, if we find one
@@ -1031,6 +1032,11 @@ inline void BoundedVariableElimination::strength_check_pos(CoprocessorData & dat
               lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
               data.removedClause(crO);
               data_lock.unlock();   
+              if (l_False == state)
+              {
+                  other.unlock();
+                  return l_False;
+              }
           }
           //TODO optimize out
           else if (other.size() == 1)
@@ -1077,6 +1083,7 @@ inline void BoundedVariableElimination::strength_check_pos(CoprocessorData & dat
       // unlock other
       other.unlock();
     }
+    return l_Undef;
 }
 
 /**
@@ -1099,7 +1106,7 @@ inline void BoundedVariableElimination::strength_check_pos(CoprocessorData & dat
  * @param var_lock      lock for each variable
  *
  */
-inline void BoundedVariableElimination::strength_check_neg(CoprocessorData & data, vector < CRef > & list, deque<CRef> & subsumeQueue, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, MarkArray & dirtyOccs, const bool strength_resolvents, const bool doStatistics) 
+inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & data, vector < CRef > & list, deque<CRef> & subsumeQueue, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, MarkArray & dirtyOccs, const bool strength_resolvents, const bool doStatistics) 
 {
     int si, so;           // indices used for "can be strengthened"-testing
     int negated_lit_pos;  // index of negative lit, if we find one
@@ -1194,6 +1201,11 @@ inline void BoundedVariableElimination::strength_check_neg(CoprocessorData & dat
               lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
               data.removedClause(crO);
               data_lock.unlock();   
+              if (l_False == state)
+              {
+                  other.unlock();
+                  return l_False;
+              }
           }
           //TODO optimize out
           else if (other.size() == 1)
@@ -1239,6 +1251,7 @@ inline void BoundedVariableElimination::strength_check_neg(CoprocessorData & dat
       // unlock other
       other.unlock();
     }
+    return l_Undef;
 }
 
 lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, MarkArray & dirtyOccs, deque < CRef > & sharedSubsimpQueue)
