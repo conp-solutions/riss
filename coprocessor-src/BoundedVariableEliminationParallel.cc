@@ -135,7 +135,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         // expecting valid occurrence-lists, i.e. v really occurs in lists 
         for (int r = 0; r < pos.size(); ++r)
         {
-            CRef cr = pos[r];
+            const CRef cr = pos[r];
             if (CRef_Undef == cr)
                 continue;
             Clause & c = ca[cr];
@@ -155,7 +155,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         }
         for (int r = 0; r < neg.size(); ++r)
         {
-            CRef cr = neg[r];
+            const CRef cr = neg[r];
             if (CRef_Undef == cr)
                 continue;
             Clause & c = ca[cr];
@@ -250,7 +250,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
        
         for (int i = 0; i < pos.size(); ++i)
         {
-            CRef cr = pos[i];
+            const CRef cr = pos[i];
             if (CRef_Undef == cr)
                 continue;
             Clause & c = ca[cr];
@@ -264,7 +264,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         }      
         for (int i = 0; i < neg.size(); ++i)
         {
-            CRef cr = neg[i];
+            const CRef cr = neg[i];
             if (CRef_Undef == cr)
                 continue;
             Clause & c = ca[cr];
@@ -433,7 +433,7 @@ inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData 
 {
     for (int cr_i = 0; cr_i < list.size(); ++cr_i)
     {
-        CRef cr = list[cr_i];
+        const CRef cr = list[cr_i];
         if (CRef_Undef == cr)
             continue;
         Clause & c = ca[cr];
@@ -489,7 +489,7 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
    
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
     {
-        CRef crPos = positive[cr_p];
+        const CRef crPos = positive[cr_p];
         if (CRef_Undef == crPos)
             continue;
         Clause & p = ca[crPos];
@@ -500,7 +500,7 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
         }
         for (int cr_n = 0; cr_n < negative.size(); ++cr_n)
         {
-            CRef crNeg = negative[cr_n];
+            const CRef crNeg = negative[cr_n];
             if (CRef_Undef == crNeg)
                 continue;
             Clause & n = ca[crNeg];
@@ -622,7 +622,7 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, v
 {
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
     {
-        CRef crPos = positive[cr_p];
+        const CRef crPos = positive[cr_p];
         if (CRef_Undef == crPos)
             continue;
         Clause & p = ca[crPos];
@@ -630,7 +630,7 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, v
             continue;
         for (int cr_n = 0; cr_n < negative.size(); ++cr_n)
         {
-            CRef crNeg = negative[cr_n];
+            const CRef crNeg = negative[cr_n];
             if (CRef_Undef == crNeg)
                 continue;
             Clause & n = ca[crNeg];
@@ -651,7 +651,7 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, v
                {
                     if ((p.learnt() || n.learnt()) && ps.size() > max(p.size(),n.size()) + opt_learnt_growth)
                         continue;
-                    CRef cr = ca.allocThreadsafe(memoryReservation, ps, p.learnt() || n.learnt()); 
+                    const CRef cr = ca.allocThreadsafe(memoryReservation, ps, p.learnt() || n.learnt()); 
                     Clause & resolvent = ca[cr];
                     data_lock.lock();
                     data.addClause(cr);
@@ -692,7 +692,7 @@ inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(Coprocess
 {
    for (unsigned ci = 0; ci < list.size(); ++ci)
    {    
-        CRef cr = list[ci];
+        const CRef cr = list[ci];
         if (CRef_Undef == cr)
             continue;
         Clause & c =  ca[cr];
@@ -995,7 +995,7 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData & da
     // test every clause, where the minimum is, if it can be strenghtened
     for (unsigned int j = 0; j < list.size(); ++j)
     {
-      CRef crO = list[j];
+      const CRef crO = list[j];
       if (CRef_Undef == crO) 
           continue;
 
@@ -1184,7 +1184,7 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & da
     // test every clause, where the minimum is, if it can be strenghtened
     for (unsigned int j = 0; j < list.size(); ++j)
     {
-      CRef crO = list[j];
+      const CRef crO = list[j];
       if (CRef_Undef == crO)
           continue;
       Clause& other = ca[crO];
@@ -1378,7 +1378,7 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vecto
     vector<CRef> & positive = data.list(l);
     for( int i = 0 ; i < positive.size(); ++i )
     {
-      CRef cr = positive[i];
+      const CRef cr = positive[i];
       if (CRef_Undef == cr)
         continue;
 //      cerr << "cr: " << cr << " Undef " << CRef_Undef << endl;
@@ -1411,7 +1411,7 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vecto
 
     for( int i = 0 ; i < negative.size(); ++i )
     {
-      CRef cr = negative[i];
+      const CRef cr = negative[i];
       if (CRef_Undef == cr)
           continue;
 
