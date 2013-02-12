@@ -753,6 +753,8 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
     if (propagation.propagate(data, true) == l_False)
       return;
 
+  const bool doStatistics = true;
+  if (doStatistics) processTime = wallClockTime() - processTime;
   cerr << "c parallel bve with " << controller.size() << " threads" << endl;
   
   lastTouched.resize(data.nVars());
@@ -814,15 +816,20 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
     controller.runJobs( jobs );
 
     if (!data.ok())
+    {
+      if (doStatistics) processTime = wallClockTime() - processTime;
       return;
-
+    }
     // clean dirty occs
     data.cleanUpOccurrences(dirtyOccs,timer);
   
     //propagate units
     if (data.hasToPropagate())
       if (l_False == propagation.propagate(data, true))
+      {
+        if (doStatistics) processTime = wallClockTime() - processTime;
         return;
+      }
     
     // add active variables and clauses to variable heap and subsumption queues
     data.getActiveVariables(lastDeleteTime(), touched_variables);
@@ -843,6 +850,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
     }
     touched_variables.clear();
   }
+  if (doStatistics) processTime = wallClockTime() - processTime;
 }
 
 /** lock-based parallel non-naive strengthening-methode
