@@ -1394,13 +1394,14 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vecto
       satisfied.unlock();
       
       // overwrite CRef in Occ 
-      positive[i] = CRef_Undef;
+      
       dirtyOccs.setCurrentStep(toInt(l));
 
       data_lock.lock();
       data.removedClause( positive[i] );
       data_lock.unlock();
-
+      
+      positive[i] = CRef_Undef;
    }
 
     const Lit nl = ~l;
