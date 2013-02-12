@@ -1377,7 +1377,7 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vecto
     vector<CRef> & positive = data.list(l);
     for( int i = 0 ; i < positive.size(); ++i )
     {
-      volatile CRef cr = positive[i];
+      CRef cr = positive[i];
       if (CRef_Undef == cr)
         continue;
       cerr << "cr: " << cr << " Undef " << CRef_Undef << endl;
