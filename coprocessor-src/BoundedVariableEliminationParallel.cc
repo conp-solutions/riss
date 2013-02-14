@@ -62,7 +62,7 @@ static void printLitVec(const vec<Lit> & litvec)
  *          you must not acquire a write lock on the data object, if alread 2.b was acquired
  *          you either hold a heap lock or any of the other locks 
  */
-void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap, deque < CRef > & strengthQueue, deque < CRef > & sharedStrengthQueue, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, ParBVEStats & stats, const bool force, const bool doStatistics)   
+void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap, deque < CRef > & strengthQueue, deque < CRef > & sharedStrengthQueue, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, ParBVEStats & stats, MarkArray * gateMarkArray, const bool force, const bool doStatistics)   
 {
     if (doStatistics) stats.processTime = wallClockTime() - stats.processTime;
 
@@ -123,7 +123,10 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
             break;
         
     calculate_neighbors:
-    
+       // do not work on this variable, if it will be unit-propagated! if all units are eagerly propagated, this is not necessary
+       if  (data.value(mkLit(v,true)) != l_Undef || data.value(mkLit(v,false)) != l_Undef)
+               continue;
+ 
         // Heuristic Cutoff
         if (!opt_unlimited_bve && (data[mkLit(v,true)] > 10 && data[mkLit(v,false)] > 10 || data[v] > 15 && (data[mkLit(v,true)] > 5 || data[mkLit(v,false)] > 5)))
         {
@@ -250,6 +253,15 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         //
         ///////////////////////////////////////////////////////////////////////////////////////////
         
+        // Search for Gates
+        int p_limit = data.list(mkLit(v,false)).size();
+	    int n_limit = data.list(mkLit(v,true)).size();
+	    bool foundGate = false;
+        if ( opt_bve_findGate ) {
+           foundGate = findGates(data, v, p_limit, n_limit, stats.gateTime, gateMarkArray);
+           if (doStatistics) stats.foundGates ++;
+        }
+ 
         if (doStatistics) ++stats.testedVars;
 
         int pos_count = 0; 
@@ -745,7 +757,7 @@ inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(Coprocess
 void* BoundedVariableElimination::runParallelBVE(void* arg)
 {
   BVEWorkData*      workData = (BVEWorkData*) arg;
-  workData->bve->par_bve_worker(*(workData->data), *(workData->heap), *(workData->neighbor_heap), *(workData->strengthQueue), *(workData->sharedStrengthQueue), *(workData->var_locks), *(workData->rw_lock), *(workData->bveStats)); 
+  workData->bve->par_bve_worker(*(workData->data), *(workData->heap), *(workData->neighbor_heap), *(workData->strengthQueue), *(workData->sharedStrengthQueue), *(workData->var_locks), *(workData->rw_lock), *(workData->bveStats), workData->gateMarkArray); 
   return 0;
 }
 
@@ -767,7 +779,13 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
   strengthQueues.resize(controller.size());
   parStats.resize(controller.size());
   dirtyOccs.resize(data.nVars() * 2);
-
+  if (opt_bve_findGate) 
+  {
+      gateMarkArrays.resize(controller.size());
+      for (int i = 0; i < controller.size(); ++i)
+          gateMarkArrays[i].resize(data.nVars() * 2);
+  }
+  
   if (neighbor_heaps == NULL) 
   { 
       neighbor_heaps = (Heap<NeighborLt> **) malloc( sizeof(Heap<NeighborLt> * ) * controller.size());
@@ -777,7 +795,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
       }
   }
 
-  for ( int i = 0 ; i < controller.size(); ++ i ) 
+ for ( int i = 0 ; i < controller.size(); ++ i ) 
   {
     workData[i].bve   = this;
     workData[i].data  = &data; 
@@ -788,6 +806,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
     workData[i].strengthQueue = & strengthQueues[i];
     workData[i].sharedStrengthQueue = & sharedStrengthQueue;
     workData[i].bveStats = & parStats[i];
+    if (opt_bve_findGate) workData[i].gateMarkArray = & gateMarkArrays[i];
   }
 
   if (opt_bve_heap != 2)

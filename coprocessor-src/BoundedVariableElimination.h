@@ -58,6 +58,7 @@ class BoundedVariableElimination : public Technique {
   vector< SpinLock > variableLocks;         // 3 extra SpinLock for data, heap, ca
   vector< deque < CRef > > subsumeQueues;
   vector< deque < CRef > > strengthQueues;
+  vector< MarkArray > gateMarkArrays;
   Heap<NeighborLt>  ** neighbor_heaps;
   deque< CRef > sharedStrengthQueue;
   NeighborLt neighborComperator;
@@ -126,6 +127,7 @@ protected:
     deque<CRef> * strengthQueue;
     deque<CRef> * sharedStrengthQueue;
     ParBVEStats * bveStats;
+    MarkArray * gateMarkArray;
   };
 
 
@@ -134,7 +136,7 @@ protected:
           ( CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap
           , deque < CRef > & strengthQueue , deque < CRef > & sharedStrengthQueue
           , vector< SpinLock > & var_lock, ReadersWriterLock & rwlock
-          , ParBVEStats & stats
+          , ParBVEStats & stats , MarkArray * gateMarkArray
           , const bool force = false, const bool doStatistics = true) ; 
 
   inline void removeBlockedClauses(CoprocessorData & data, const vector< CRef> & list, const int32_t stats[], const Lit l, const bool doStatistics = true );
@@ -161,7 +163,7 @@ inline lbool strength_check_neg(CoprocessorData & data, vector < CRef > & list, 
   inline int  tryResolve(const Clause & c, const Clause & d, const int v);
   inline bool checkPush(vec<Lit> & ps, const Lit l);
   inline char checkUpdatePrev(Lit & prev, const Lit l);
-  inline bool findGates(CoprocessorData & data, const Var v, int & p_limit, int & n_limit, MarkArray * helper = NULL);
+  inline bool findGates(CoprocessorData & data, const Var v, int & p_limit, int & n_limit, double & _gateTim, MarkArray * helper = NULL);
 
 
 public:

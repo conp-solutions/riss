@@ -333,7 +333,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
 	       int n_limit = data.list(mkLit(v,true)).size();
 	       bool foundGate = false;
 	       if( opt_bve_findGate ) {
-	           foundGate = findGates(data, v, p_limit, n_limit);
+	           foundGate = findGates(data, v, p_limit, n_limit, gateTime);
 	           foundGates ++;
 	       }
             
@@ -862,13 +862,13 @@ inline void BoundedVariableElimination::addClausesToSubsumption (const vector<CR
     }    
 }
 
-inline bool BoundedVariableElimination::findGates(CoprocessorData & data, const Var v, int & p_limit, int & n_limit, MarkArray * helper)
+inline bool BoundedVariableElimination::findGates(CoprocessorData & data, const Var v, int & p_limit, int & n_limit, double & _gateTime, MarkArray * helper)
 {
   // do not touch lists that are too small for benefit
   if( data.list(mkLit(v,false)).size() < 3 &&  data.list( mkLit(v,true) ).size() < 3 ) return false;
   if( data.list(mkLit(v,false)).size() < 2 || data.list( mkLit(v,true) ).size() < 2 ) return false;
  
-  MethodTimer gateTimer ( &gateTime ); // measure time spend in this method
+  MethodTimer gateTimer ( &_gateTime ); // measure time spend in this method
   MarkArray& markArray = (helper == 0 ? data.ma : *helper);
   
   for( uint32_t pn = 0 ; pn < 2; ++ pn ) {
