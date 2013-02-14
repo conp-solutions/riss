@@ -8,9 +8,9 @@ Copyright (c) 2012, Kilian Gebhardt, All rights reserved.
 using namespace Coprocessor;
 using namespace std;
 
-static const char* _cat_bve = "COPROCESSOR 3 - BVE";
+ const char* _cat_bve = "COPROCESSOR 3 - BVE";
 
- BoolOption opt_par_bve         (_cat_bve, "cp3_par_bve",    "Parallel BVE", false);
+ BoolOption opt_par_bve         (_cat_bve, "cp3_par_bve",    "Forcing Parallel BVE (if threads are available)", false);
  IntOption  opt_bve_verbose     (_cat_bve, "cp3_bve_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
  IntOption  opt_learnt_growth   (_cat_bve, "cp3_bve_learnt_growth", "Keep C (x) D, where C or D is learnt, if |C (x) D| <= max(|C|,|D|) + N", 0, IntRange(-1, INT32_MAX));
  IntOption  opt_resolve_learnts (_cat_bve, "cp3_bve_resolve_learnts", "Resolve learnt clauses: 0: off, 1: original with learnts, 2: 1 and learnts with learnts", 0, IntRange(0,2));
@@ -125,7 +125,7 @@ bool BoundedVariableElimination::hasToEliminate()
 
 lbool BoundedVariableElimination::runBVE(CoprocessorData& data, const bool doStatistics)
 {
-  if (opt_par_bve && controller.size() > 0)
+  if (controller.size() > 0)
   {
      parallelBVE(data);
      if (data.ok())

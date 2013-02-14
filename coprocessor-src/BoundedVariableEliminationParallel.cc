@@ -8,13 +8,16 @@ Copyright (c) 2013, Kilian Gebhardt, All rights reserved.
 using namespace Coprocessor;
 using namespace std;
 
+extern const char* _cat_bve;
 extern BoolOption opt_par_bve;        
 extern IntOption  opt_bve_verbose;
 extern IntOption  opt_learnt_growth;
 extern IntOption  opt_resolve_learnts;
 extern BoolOption opt_unlimited_bve;
 extern BoolOption opt_bve_findGate; 
-extern IntOption  opt_bve_heap; 
+extern IntOption  opt_bve_heap;
+static IntOption  par_bve_threshold (_cat_bve, "par_bve_th", "Threshold for use of BVE-Worker", 20000, IntRange(0,INT32_MAX));
+
 static int upLevel = 1;
 
 static inline void printLitErr(const Lit l) 
@@ -802,24 +805,33 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
     updateDeleteTime(data.getMyDeleteTimer());
     
     uint32_t timer = dirtyOccs.nextStep();
-  
-    for ( int i = 0 ; i < controller.size(); ++ i ) 
-    {
-      jobs[i].function  = BoundedVariableElimination::runParallelBVE;
-      jobs[i].argument  = &(workData[i]);
-    }
-    cerr << "c parallel bve with " << controller.size() << " threads on " 
-         << ((opt_bve_heap != 2) ? newheap.size() : variable_queue.size()) << " variables" << endl;
-    controller.runJobs( jobs );
+    int QSize = ((opt_bve_heap != 2) ? newheap.size() : variable_queue.size()); 
 
-    if (!data.ok())
+    if (opt_par_bve || QSize > par_bve_threshold)
     {
-      if (doStatistics) processTime = wallClockTime() - processTime;
-      return;
+        for ( int i = 0 ; i < controller.size(); ++ i ) 
+        {
+          jobs[i].function  = BoundedVariableElimination::runParallelBVE;
+          jobs[i].argument  = &(workData[i]);
+        }
+        cerr << "c parallel bve with " << controller.size() << " threads on " 
+             << QSize << " variables" << endl;
+        controller.runJobs( jobs );
+
+        if (!data.ok())
+        {
+          if (doStatistics) processTime = wallClockTime() - processTime;
+          return;
+        }
+        // clean dirty occs
+        data.cleanUpOccurrences(dirtyOccs,timer);
     }
-    // clean dirty occs
-    data.cleanUpOccurrences(dirtyOccs,timer);
-  
+    else
+    {
+        cerr << "c sequentiel bve on " 
+             << QSize << " variables" << endl;
+        bve_worker (data, newheap);
+    }
     //propagate units
     if (data.hasToPropagate())
       if (l_False == propagation.propagate(data, true))
@@ -831,7 +843,10 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
     // add active variables and clauses to variable heap and subsumption queues
     data.getActiveVariables(lastDeleteTime(), touched_variables);
     touchedVarsForSubsumption(data, touched_variables);
+
+    if (doStatistics) subsimpTime = wallClockTime() - subsimpTime;
     subsumption.subsumeStrength(data);
+    if (doStatistics) subsimpTime = wallClockTime() - subsimpTime;
 
     if (opt_bve_heap != 2)
         newheap.clear();
