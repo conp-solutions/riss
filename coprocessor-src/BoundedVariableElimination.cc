@@ -8,15 +8,16 @@ Copyright (c) 2012, Kilian Gebhardt, All rights reserved.
 using namespace Coprocessor;
 using namespace std;
 
-static const char* _cat = "COPROCESSOR 3 - BVE";
+static const char* _cat_bve = "COPROCESSOR 3 - BVE";
 
-static BoolOption opt_par_bve         (_cat, "cp3_par_bve",    "Parallel BVE", false);
-static IntOption  opt_verbose         (_cat, "cp3_bve_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
-static IntOption  opt_learnt_growth   (_cat, "cp3_bve_learnt_growth", "Keep C (x) D, where C or D is learnt, if |C (x) D| <= max(|C|,|D|) + N", 0, IntRange(-1, INT32_MAX));
-static IntOption  opt_resolve_learnts (_cat, "cp3_bve_resolve_learnts", "Resolve learnt clauses: 0: off, 1: original with learnts, 2: 1 and learnts with learnts", 0, IntRange(0,2));
-static BoolOption opt_unlimited_bve   (_cat, "bve_unlimited",  "perform bve test for Var v, if there are more than 10 + 10 or 15 + 5 Clauses containing v", false);
-static BoolOption opt_bve_findGate    (_cat, "bve_gates",  "try to find variable AND gate definition before elimination", false);
-static IntOption  opt_bve_heap        (_cat, "cp3_bve_heap"     ,  "0: minimum heap, 1: maximum heap, 2: random", 0, IntRange(0,2));
+ BoolOption opt_par_bve         (_cat_bve, "cp3_par_bve",    "Parallel BVE", false);
+ IntOption  opt_bve_verbose     (_cat_bve, "cp3_bve_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
+ IntOption  opt_learnt_growth   (_cat_bve, "cp3_bve_learnt_growth", "Keep C (x) D, where C or D is learnt, if |C (x) D| <= max(|C|,|D|) + N", 0, IntRange(-1, INT32_MAX));
+ IntOption  opt_resolve_learnts (_cat_bve, "cp3_bve_resolve_learnts", "Resolve learnt clauses: 0: off, 1: original with learnts, 2: 1 and learnts with learnts", 0, IntRange(0,2));
+ BoolOption opt_unlimited_bve   (_cat_bve, "bve_unlimited",  "perform bve test for Var v, if there are more than 10 + 10 or 15 + 5 Clauses containing v", false);
+ BoolOption opt_bve_findGate    (_cat_bve, "bve_gates",  "try to find variable AND gate definition before elimination", false);
+ IntOption  opt_bve_heap        (_cat_bve, "cp3_bve_heap"     ,  "0: minimum heap, 1: maximum heap, 2: random", 0, IntRange(0,2));
+
 
 BoundedVariableElimination::BoundedVariableElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation, Coprocessor::Subsumption & _subsumption )
 : Technique( _ca, _controller )
@@ -309,7 +310,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            vector<CRef> & neg = data.list(mkLit(v,true));
                
            // ---Printing all Clauses with v --------------------------//
-           if (opt_verbose > 2)
+           if (opt_bve_verbose > 2)
            {
                cerr << "c Variable: " << v+1 << endl;
                cerr <<"c Clauses with Literal  " << v+1 <<":" << endl;
@@ -323,7 +324,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            int lit_clauses_old = 0;
            int lit_learnts_old = 0;
 
-           if (opt_verbose > 1)
+           if (opt_bve_verbose > 1)
            {
                cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
                cerr << "c Counting Clauses" << endl;
@@ -351,7 +352,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                     lit_clauses_old += c.size();
                 ++neg_count;
            }
-           if (opt_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+           if (opt_bve_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
            
            // Declare stats variables;        
            int lit_clauses;
@@ -378,10 +379,10 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                }
 
                //mark Clauses without resolvents for deletion
-               if(opt_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-               if(opt_verbose > 1) cerr << "c removing blocked clauses from F_" << v+1 << endl;
+               if(opt_bve_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+               if(opt_bve_verbose > 1) cerr << "c removing blocked clauses from F_" << v+1 << endl;
                removeBlockedClauses(data, pos, pos_stats, mkLit(v, false));
-               if(opt_verbose > 1) cerr << "c removing blocked clauses from F_¬" << v+1 << endl;
+               if(opt_bve_verbose > 1) cerr << "c removing blocked clauses from F_¬" << v+1 << endl;
                removeBlockedClauses(data, neg, neg_stats, mkLit(v, true));
            }
 
@@ -391,14 +392,14 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            if (force || (lit_clauses > 0 && lit_clauses <= lit_clauses_old))
            {
 		        usedGates = (foundGate ? usedGates + 1 : usedGates ); // statistics
-                if(opt_verbose > 1)  cerr << "c resolveSet" <<endl;
+                if(opt_bve_verbose > 1)  cerr << "c resolveSet" <<endl;
                 if (resolveSet(data, pos, neg, v, p_limit, n_limit) == l_False)
                     return;
                 if (doStatistics) ++eliminatedVars;
                 removeClauses(data, pos, mkLit(v,false));
                 removeClauses(data, neg, mkLit(v,true));
                
-                if (opt_verbose > 0) cerr << "c Resolved " << v+1 <<endl;
+                if (opt_bve_verbose > 0) cerr << "c Resolved " << v+1 <<endl;
                 //subsumption with new clauses!!
                 if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
                 subsumption.subsumeStrength(data);
@@ -408,7 +409,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                     return;
            }
 
-           if(opt_verbose > 1)   cerr << "c =============================================================================" << endl;
+           if(opt_bve_verbose > 1)   cerr << "c =============================================================================" << endl;
           
         }
 
@@ -462,7 +463,7 @@ inline void BoundedVariableElimination::removeClauses(CoprocessorData & data, co
                     removedLiterals += c.size();
                 }
             }
-            if(opt_verbose > 1){
+            if(opt_bve_verbose > 1){
                 cerr << "c removed clause: "; 
                 printClause(c);
             }
@@ -487,7 +488,7 @@ inline void BoundedVariableElimination::removeClauses(CoprocessorData & data, co
  */
 inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const int p_limit, const int  n_limit, int32_t* pos_stats , int32_t* neg_stats, int & lit_clauses, int & lit_learnts, const bool doStatistics)
 {
-    if(opt_verbose > 2)  cerr << "c starting anticipate BVE" << endl;
+    if(opt_bve_verbose > 2)  cerr << "c starting anticipate BVE" << endl;
     // Clean the stats
     lit_clauses=0;
     lit_learnts=0;
@@ -499,7 +500,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
         Clause & p = ca[positive[cr_p]];
         if (p.can_be_deleted())
         {  
-            if(opt_verbose > 2)
+            if(opt_bve_verbose > 2)
             {  cerr << "c    skipped p"; 
                printClause(p);
             }
@@ -514,7 +515,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
             Clause & n = ca[negative[cr_n]];
             if (n.can_be_deleted())
             {   
-                if(opt_verbose > 2)
+                if(opt_bve_verbose > 2)
                 {
                     cerr << "c    skipped n";
                     printClause(n);
@@ -524,11 +525,11 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
             int newLits = tryResolve(p, n, v);
             
 
-            if(opt_verbose > 2) cerr << "c    resolvent size " << newLits << endl;
+            if(opt_bve_verbose > 2) cerr << "c    resolvent size " << newLits << endl;
 
             if (newLits > 1)
             {
-                if(opt_verbose > 2)  
+                if(opt_bve_verbose > 2)  
                 {   
                     cerr << "c    Clause P: ";
                     printClause(p);
@@ -550,7 +551,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
             // empty Clause
             else if (newLits == 0)
             {
-                if(opt_verbose > 2) 
+                if(opt_bve_verbose > 2) 
                 {
                     cerr << "c    empty resolvent" << endl;
                     cerr << "c    Clause P: ";
@@ -569,12 +570,12 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
                 resolvent.clear();
                 resolve(p,n,v,resolvent); 
                 assert(resolvent.size() == 1);
-                if(opt_verbose > 0) 
+                if(opt_bve_verbose > 0) 
                 {
                     cerr << "c    Unit Resolvent: ";
                     printLitVec(resolvent);
                 }   
-                if(opt_verbose > 2)
+                if(opt_bve_verbose > 2)
                 {
                     cerr << "c    Clause P: ";
                     printClause(p); 
@@ -584,7 +585,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
                 lbool status = data.enqueue(resolvent[0]); //check for level 0 conflict
                 if (status == l_False)
                 {
-                    if(opt_verbose > 2) cerr << "c finished anticipate_bve with conflict" << endl;
+                    if(opt_bve_verbose > 2) cerr << "c finished anticipate_bve with conflict" << endl;
                     return l_False;
                 }
                 else if (status == l_Undef)
@@ -602,10 +603,10 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
                     assert (0); //something went wrong
             }
 
-            if(opt_verbose > 2) cerr << "c ------------------------------------------" << endl;
+            if(opt_bve_verbose > 2) cerr << "c ------------------------------------------" << endl;
         }
     }
-    if(opt_verbose > 2) 
+    if(opt_bve_verbose > 2) 
     {
         for (int i = 0; i < positive.size(); ++i)
             cerr << "c pos stat("<< i <<"): " << (unsigned) pos_stats[i] << endl;;
@@ -776,7 +777,7 @@ inline void BoundedVariableElimination::removeBlockedClauses(CoprocessorData & d
                     blockedLits += c.size();
                 }
             }
-            if(opt_verbose > 1 || (opt_verbose > 0 && ! c.learnt())) 
+            if(opt_bve_verbose > 1 || (opt_bve_verbose > 0 && ! c.learnt())) 
             {
                 cerr << "c removed clause: " << ca[list[ci]] << endl;
                 cerr << "c added to extension with Lit " << l << endl;;
@@ -871,7 +872,7 @@ inline bool BoundedVariableElimination::findGates(CoprocessorData & data, const 
       }
       if( j == clause.size() ) {
 	assert( !clause.can_be_deleted() && "a participating clause of the gate cannot be learned, because learned clauses will be removed completely during BVE");
-	if( opt_verbose > 0 ) {cerr << "c [BVE] found " << (pn == 0 ? "pos" : "neg") << " gate with size " << j << " p: " << pList.size() << " n:" << nList.size() << " :=" << clause << endl;}
+	if( opt_bve_verbose > 0 ) {cerr << "c [BVE] found " << (pn == 0 ? "pos" : "neg") << " gate with size " << j << " p: " << pList.size() << " n:" << nList.size() << " :=" << clause << endl;}
 	// setup values
 	pClauses = clause.size() - 1;
 	nClauses = 1;
@@ -891,7 +892,7 @@ inline bool BoundedVariableElimination::findGates(CoprocessorData & data, const 
 	    markArray.setCurrentStep( toInt(~other) ); // no need to add the same binary twice
 	  }
 	}
-	if( opt_verbose > 0 ) {
+	if( opt_bve_verbose > 0 ) {
 	  cerr << "c [BVE] GATE clause: " << ca[ nList[0] ] << " placed clauses: " << placedClauses << endl;
 	  for( uint32_t k = 0 ; k < placedClauses; ++ k ) {
 	    cerr << "c [BVE] bin clause[" << k << "]: "<< ca[ pList[k] ] << endl;

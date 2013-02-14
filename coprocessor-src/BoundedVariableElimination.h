@@ -134,7 +134,7 @@ protected:
           , deque < CRef > & strengthQueue , deque < CRef > & sharedStrengthQueue
           , vector< SpinLock > & var_lock, ReadersWriterLock & rwlock
           , ParBVEStats & stats
-          , const bool force = true, const bool doStatistics = true) ; 
+          , const bool force = false, const bool doStatistics = true) ; 
 
   inline void removeBlockedClauses(CoprocessorData & data, const vector< CRef> & list, const int32_t stats[], const Lit l, const bool doStatistics = true );
   

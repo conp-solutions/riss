@@ -8,14 +8,13 @@ Copyright (c) 2013, Kilian Gebhardt, All rights reserved.
 using namespace Coprocessor;
 using namespace std;
 
-static const char* _cat = "COPROCESSOR 3 - BVE";
-static IntOption  opt_verbose         (_cat, "cp3_bve_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
-static IntOption  opt_resolve_learnts (_cat, "cp3_bve_resolve_learnts", "Resolve learnt clauses: 0: off, 1: original with learnts, 2: 1 and learnts with learnts", 0, IntRange(0,2));
-static BoolOption opt_unlimited_bve   (_cat, "bve_unlimited",  "perform bve test for Var v, if there are more than 10 + 10 or 15 + 5 Clauses containing v", false);
-static IntOption  opt_learnt_growth   (_cat, "cp3_bve_learnt_growth", "Keep C (x) D, where C or D is learnt, if |C (x) D| <= max(|C|,|D|) + N", 0, IntRange(-1, INT32_MAX));
-
-static IntOption  opt_bve_heap        (_cat, "cp3_bve_heap"     ,  "0: minimum heap, 1: maximum heap, 2: random", 0, IntRange(0,2));
-
+extern BoolOption opt_par_bve;        
+extern IntOption  opt_bve_verbose;
+extern IntOption  opt_learnt_growth;
+extern IntOption  opt_resolve_learnts;
+extern BoolOption opt_unlimited_bve;
+extern BoolOption opt_bve_findGate; 
+extern IntOption  opt_bve_heap; 
 static int upLevel = 1;
 
 static inline void printLitErr(const Lit l) 
@@ -111,6 +110,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
             {
                 variable_queue[rand] = variable_queue[variable_queue.size() - 2];
             }
+            variable_queue.pop_back();
 
         }
         heap_lock.unlock();
@@ -254,7 +254,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         int lit_clauses_old = 0;
         int lit_learnts_old = 0;
 
-        if (opt_verbose > 1)
+        if (opt_bve_verbose > 1)
         {
            cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
            cerr << "c Counting Clauses" << endl;
@@ -288,7 +288,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
                 lit_clauses_old += c.size();
             ++neg_count;
         }
-        if (opt_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+        if (opt_bve_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
         
         // Declare stats variables;        
         pos_stats = (int32_t *) realloc(pos_stats, sizeof( int32_t) * pos.size() );
@@ -321,10 +321,10 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         }
     
         //mark Clauses without resolvents for deletion
-        if(opt_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-        if(opt_verbose > 1) cerr << "c removing blocked clauses from F_" << v+1 << endl;
+        if(opt_bve_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+        if(opt_bve_verbose > 1) cerr << "c removing blocked clauses from F_" << v+1 << endl;
         removeBlockedClausesThreadSafe(data, pos, pos_stats, mkLit(v, false), data_lock, stats, doStatistics); 
-        if(opt_verbose > 1) cerr << "c removing blocked clauses from F_¬" << v+1 << endl;
+        if(opt_bve_verbose > 1) cerr << "c removing blocked clauses from F_¬" << v+1 << endl;
         removeBlockedClausesThreadSafe(data, neg, neg_stats, mkLit(v, true), data_lock, stats, doStatistics); 
         rwlock.readUnlock();
 
@@ -370,7 +370,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
                  break; // break the main-loop, i.e. end of function
              }
              
-             if(opt_verbose > 1)  cerr << "c resolveSet" <<endl;
+             if(opt_bve_verbose > 1)  cerr << "c resolveSet" <<endl;
 
              if (resolveSetThreadSafe(data, pos, neg, v, ps, memoryReservation, strengthQueue, stats, data_lock, doStatistics) == l_False) 
              {
@@ -389,7 +389,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
              // (since write lock, no threadsafe implementation needed)
              removeClausesThreadSafe(data, pos, mkLit(v,false), data_lock, stats, doStatistics);
              removeClausesThreadSafe(data, neg, mkLit(v,true), data_lock, stats, doStatistics);
-             if (opt_verbose > 0) cerr << "c Resolved " << v+1 <<endl;
+             if (opt_bve_verbose > 0) cerr << "c Resolved " << v+1 <<endl;
              if (doStatistics) ++stats.eliminatedVars;
 
              // touch variables:
@@ -416,7 +416,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
        
         }
         
-        if(opt_verbose > 1)   cerr << "c =============================================================================" << endl;
+        if(opt_bve_verbose > 1)   cerr << "c =============================================================================" << endl;
 
         // free all locks on Vars in descending order 
         for (int i = neighbors.size() - 1; i >= 0; --i)
@@ -470,7 +470,7 @@ inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData 
                     stats.removedLiterals += c.size();
                 }
             }
-            if(opt_verbose > 1){
+            if(opt_bve_verbose > 1){
                 cerr << "c removed clause: " << c << endl; 
             }
         }
@@ -494,7 +494,7 @@ inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData 
  */
 inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, vec <Lit> & resolvent, int32_t* pos_stats , int32_t* neg_stats, int & lit_clauses, int & lit_learnts, int & new_clauses, int & new_learnts, SpinLock & data_lock)
 {
-    if(opt_verbose > 2)  cerr << "c starting anticipate BVE" << endl;
+    if(opt_bve_verbose > 2)  cerr << "c starting anticipate BVE" << endl;
     // Clean the stats
     lit_clauses=0;
     lit_learnts=0;
@@ -507,7 +507,7 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
         Clause & p = ca[crPos];
         if (p.can_be_deleted())
         {  
-            if(opt_verbose > 2) cerr << "c    skipped p " << p << endl;
+            if(opt_bve_verbose > 2) cerr << "c    skipped p " << p << endl;
             continue;
         }
         for (int cr_n = 0; cr_n < negative.size(); ++cr_n)
@@ -518,7 +518,7 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
             Clause & n = ca[crNeg];
             if (n.can_be_deleted())
             {   
-                if(opt_verbose > 2)
+                if(opt_bve_verbose > 2)
                 {
                     cerr << "c    skipped n " << n << endl;
                 }
@@ -526,12 +526,12 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
             }
             int newLits = tryResolve(p, n, v);
 
-            if(opt_verbose > 2) cerr << "c    resolvent size " << newLits << endl;
+            if(opt_bve_verbose > 2) cerr << "c    resolvent size " << newLits << endl;
             
             // Clause Size > 1
             if (newLits > 1)
             {
-                if(opt_verbose > 2)  
+                if(opt_bve_verbose > 2)  
                 {   
                     cerr << "c    Clause P: " << p << endl; 
                     cerr << "c    Clause N: " << n << endl; 
@@ -557,7 +557,7 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
             // empty Clause
             else if (newLits == 0)
             {
-                if(opt_verbose > 2) 
+                if(opt_bve_verbose > 2) 
                 {
                     cerr << "c    empty resolvent" << endl;
                     cerr << "c    Clause P: " << p << endl; 
@@ -574,12 +574,12 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
                 resolvent.clear();
                 resolve(p,n,v,resolvent); 
                 assert(resolvent.size() == 1);
-                if(opt_verbose > 0) 
+                if(opt_bve_verbose > 0) 
                 {
                     cerr << "c    Unit Resolvent: ";
                     printLitVec(resolvent);
                 }   
-                if(opt_verbose > 2)
+                if(opt_bve_verbose > 2)
                 {
                     cerr << "c    Clause P: " << p << endl; 
                     cerr  << "c     Clause N: " << n << endl; 
@@ -589,7 +589,7 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
                 data_lock.unlock();
                 if (status == l_False)
                 {
-                    if(opt_verbose > 2) cerr << "c finished anticipate_bve with conflict" << endl;
+                    if(opt_bve_verbose > 2) cerr << "c finished anticipate_bve with conflict" << endl;
                     return l_False;
                 }
                 else if (status == l_Undef)
@@ -602,10 +602,10 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
                     assert (0); //something went wrong
             }
 
-            if(opt_verbose > 2) cerr << "c ------------------------------------------" << endl;
+            if(opt_bve_verbose > 2) cerr << "c ------------------------------------------" << endl;
         }
     }
-    if(opt_verbose > 2) 
+    if(opt_bve_verbose > 2) 
     {
         for (int i = 0; i < positive.size(); ++i)
             cerr << "c pos stat("<< i <<"): " << (unsigned) pos_stats[i] << endl;;
@@ -730,7 +730,7 @@ inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(Coprocess
                     stats.blockedLits += c.size();
                 }
             }
-            if(opt_verbose > 1 || (opt_verbose > 0 && ! c.learnt())) 
+            if(opt_bve_verbose > 1 || (opt_bve_verbose > 0 && ! c.learnt())) 
             {
                 cerr << "c removed clause: " << c << endl;
                 cerr << "c added to extension with Lit " << l << endl;;
