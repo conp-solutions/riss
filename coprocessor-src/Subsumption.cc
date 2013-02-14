@@ -98,7 +98,7 @@ void Subsumption::subsumeStrength(CoprocessorData& data)
       clause_processing_queue.clear();
     }
     if( hasToStrengthen() ) {
-      if (opt_par_strength && controller.size() > 0)
+      if ((opt_par_strength || strengthening_queue.size() > 80000) && controller.size() > 0)
       {
           parallelStrengthening(data);
           data.correctCounters(); //TODO correct occurrences as well

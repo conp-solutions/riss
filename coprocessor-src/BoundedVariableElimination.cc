@@ -125,7 +125,7 @@ bool BoundedVariableElimination::hasToEliminate()
 
 lbool BoundedVariableElimination::runBVE(CoprocessorData& data, const bool doStatistics)
 {
-  if (opt_par_bve)
+  if (opt_par_bve && controller.size() > 0)
   {
      parallelBVE(data);
      if (data.ok())

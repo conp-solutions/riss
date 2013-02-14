@@ -754,7 +754,6 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
 
   const bool doStatistics = true;
   if (doStatistics) processTime = wallClockTime() - processTime;
-  cerr << "c parallel bve with " << controller.size() << " threads" << endl;
   
   lastTouched.resize(data.nVars());
   VarOrderBVEHeapLt comp(data, opt_bve_heap);
@@ -809,6 +808,8 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
       jobs[i].function  = BoundedVariableElimination::runParallelBVE;
       jobs[i].argument  = &(workData[i]);
     }
+    cerr << "c parallel bve with " << controller.size() << " threads on " 
+         << ((opt_bve_heap != 2) ? newheap.size() : variable_queue.size()) << " variables" << endl;
     controller.runJobs( jobs );
 
     if (!data.ok())
