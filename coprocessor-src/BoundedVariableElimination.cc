@@ -170,7 +170,7 @@ lbool BoundedVariableElimination::runBVE(CoprocessorData& data, const bool doSta
   
   data.ma.resize( data.nVars() * 2 );
 
-  bve_worker(data, newheap, false);
+  sequentiellBVE(data, newheap, false);
   if (opt_bve_heap != 2)
   {
     newheap.clear();
@@ -227,6 +227,69 @@ static void printClauses(ClauseAllocator & ca, vector<CRef> list, bool skipDelet
 
 }
 
+void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const bool force, const bool doStatistics)   
+{
+  //Subsumption / Strengthening
+  if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
+  subsumption.subsumeStrength(data); 
+  if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
+ 
+  if (!data.ok())
+    return;
+ 
+  touched_variables.clear();
+
+  while ((opt_bve_heap != 2 && heap.size() > 0) || (opt_bve_heap == 2 && variable_queue.size() > 0))
+  {
+
+    updateDeleteTime(data.getMyDeleteTimer());
+    
+    uint32_t timer = dirtyOccs.nextStep();
+  
+    cerr << "c sequentiel bve on " 
+         << ((opt_bve_heap != 2) ? heap.size() : variable_queue.size()) << " variables" << endl;
+
+    bve_worker (data, heap, force, doStatistics);
+
+    if (!data.ok())
+    {
+      //if (doStatistics) processTime = wallClockTime() - processTime;
+      return;
+    }
+  
+    //propagate units
+    if (data.hasToPropagate())
+      if (l_False == propagation.propagate(data, true))
+      {
+        //if (doStatistics) processTime = wallClockTime() - processTime;
+        return;
+      }
+    
+    // add active variables and clauses to variable heap and subsumption queues
+    data.getActiveVariables(lastDeleteTime(), touched_variables);
+    touchedVarsForSubsumption(data, touched_variables);
+
+    if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
+    subsumption.subsumeStrength(data);
+    if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
+
+    if (opt_bve_heap != 2)
+        heap.clear();
+    else
+        variable_queue.clear();
+    
+    for (int i = 0; i < touched_variables.size(); ++i)
+    {
+        if (opt_bve_heap != 2)
+            heap.insert(touched_variables[i]);
+        else 
+            variable_queue.push_back(touched_variables[i]);
+    }
+    touched_variables.clear();
+  }
+
+}
+
 //expects filled variable processing queue
 //
 // force -> forces resolution
@@ -234,31 +297,9 @@ static void printClauses(ClauseAllocator & ca, vector<CRef> list, bool skipDelet
 //
 void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, const bool force, const bool doStatistics)   
 {
-    //vector<Var> touched_variables;
-    touched_variables.clear();
     int32_t * pos_stats = (int32_t*) malloc (5 * sizeof(int32_t));
     int32_t * neg_stats = (int32_t*) malloc (5 * sizeof(int32_t));
            
-    while ((opt_bve_heap != 2 && heap.size() > 0) || (opt_bve_heap == 2 && variable_queue.size() > 0))
-    {
-        //Subsumption / Strengthening
-        if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
-        subsumption.subsumeStrength(data); 
-        if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
-       
-        if (!data.ok())
-            return;
-        
-        if( false ) {
-            cerr << "formula after subsumeStrength: " << endl;
-            for( int i = 0 ; i < data.getClauses().size(); ++ i )
-                if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getClauses()[i] ] << endl;
-            for( int i = 0 ; i < data.getLEarnts().size(); ++ i )
-                if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getLEarnts()[i] ] << endl;    
-        }
-
-        updateDeleteTime(data.getMyDeleteTimer());
-        //for (unsigned i = start; i < end; i++)
         while ((opt_bve_heap != 2 && heap.size() > 0) || (opt_bve_heap == 2 && variable_queue.size() > 0))
         {
            Var v = var_Undef;
@@ -413,22 +454,6 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
           
         }
 
-        // add active variables and clauses to variable heap and subsumption queues
-        data.getActiveVariables(lastDeleteTime(), touched_variables);
-        touchedVarsForSubsumption(data, touched_variables);
-        if (opt_bve_heap != 2)
-            heap.clear();
-        else
-            variable_queue.clear();
-        for (int i = 0; i < touched_variables.size(); ++i)
-        {
-            if (opt_bve_heap != 2)
-                heap.insert(touched_variables[i]);
-            else 
-                variable_queue.push_back(touched_variables[i]);
-        }
-        touched_variables.clear();
-    }
     free(pos_stats);
     free(neg_stats);
 }

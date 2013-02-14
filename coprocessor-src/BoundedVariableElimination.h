@@ -101,6 +101,7 @@ protected:
   bool hasToEliminate();                               // return whether there is something in the BVE queue
 
   // sequential functions:
+  void sequentiellBVE(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const bool force = false, const bool doStatistics = true);
   void bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, const bool force = false, const bool doStatistics = true);   
   inline void removeClauses(CoprocessorData & data, const vector<CRef> & list, const Lit l, const bool doStatistics = true);
   inline lbool resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative
