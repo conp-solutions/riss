@@ -17,7 +17,7 @@ extern BoolOption opt_unlimited_bve;
 extern BoolOption opt_bve_findGate; 
 extern IntOption  opt_bve_heap;
 static IntOption  par_bve_threshold (_cat_bve, "par_bve_th", "Threshold for use of BVE-Worker", 20000, IntRange(0,INT32_MAX));
-
+static BoolOption opt_force_par_gates     (_cat_bve, "cp3_par_gates", "Force gate search while parallel BVE (more locking, probably slow)", false);
 static int upLevel = 1;
 
 static inline void printLitErr(const Lit l) 
@@ -128,7 +128,8 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
                continue;
  
         // Heuristic Cutoff
-        if (!opt_unlimited_bve && (data[mkLit(v,true)] > 10 && data[mkLit(v,false)] > 10 || data[v] > 15 && (data[mkLit(v,true)] > 5 || data[mkLit(v,false)] > 5)))
+        if (!opt_force_par_gates && !opt_unlimited_bve 
+                && (data[mkLit(v,true)] > 10 && data[mkLit(v,false)] > 10 || data[v] > 15 && (data[mkLit(v,true)] > 5 || data[mkLit(v,false)] > 5)))
         {
             if (doStatistics) ++stats.skippedVars;
             continue;
@@ -262,7 +263,30 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
            foundGate = findGates(data, v, p_limit, n_limit, stats.gateTime, gateMarkArray);
            if (doStatistics) stats.foundGates ++;
         }
- 
+    
+        // Heuristic Cutoff if Gate-Search is forced
+        if (opt_force_par_gates && !foundGate && !opt_unlimited_bve 
+                && (data[mkLit(v,true)] > 10 && data[mkLit(v,false)] > 10 || data[v] > 15 && (data[mkLit(v,true)] > 5 || data[mkLit(v,false)] > 5)))
+        {
+            if (doStatistics) ++stats.skippedVars;
+            
+            rwlock.readUnlock(); // Early Exit Read Lock
+            // free all locks on Vars in descending order 
+            for (int i = neighbors.size() - 1; i >= 0; --i)
+            {
+               var_lock[neighbors[i]].unlock();
+            }
+
+            // if UNSAT -> return
+            if (!data.ok())
+                break;
+
+            // Cleanup
+            neighbors.clear();
+            neighbor_heap.clear();
+            continue;
+        }
+
         if (doStatistics) ++stats.testedVars;
 
         int pos_count = 0; 
