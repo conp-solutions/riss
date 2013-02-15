@@ -523,7 +523,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
     {
         //Subsumption / Strengthening
         if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
-        subsumption.subsumeStrength(data); 
+        subsumption.subsumeStrength(); 
         if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
        
         if (!data.ok())
@@ -682,7 +682,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                 if (opt_verbose > 0) cerr << "c Resolved " << v+1 <<endl;
                 //subsumption with new clauses!!
                 if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
-                subsumption.subsumeStrength(data);
+                subsumption.subsumeStrength();
                 if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
 
                 if (!data.ok())

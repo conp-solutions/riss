@@ -50,7 +50,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , ipTime( 0 )
 // classes for preprocessing methods
 , propagation( solver->ca, controller )
-, subsumption( solver->ca, controller, propagation )
+, subsumption( solver->ca, controller, data, propagation )
 , hte( solver->ca, controller, propagation )
 , bve( solver->ca, controller, propagation, subsumption )
 , bva( solver->ca, controller, data )
@@ -109,7 +109,7 @@ lbool Preprocessor::performSimplification()
 
   if( opt_subsimp ) {
     if( opt_verbose > 2 )cerr << "c coprocessor subsume/strengthen" << endl;
-    if( status == l_Undef ) subsumption.subsumeStrength(data);  // cannot change status, can generate new unit clauses
+    if( status == l_Undef ) subsumption.subsumeStrength();  // cannot change status, can generate new unit clauses
     if (! solver->okay())
         status = l_False;
   }
