@@ -346,7 +346,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         if (pos_count != 0 &&  neg_count != 0)
         {
             if (doStatistics) ++stats.anticipations;
-            if (anticipateEliminationThreadsafe(data, pos, neg,  v, ps, pos_stats, neg_stats, lit_clauses, lit_learnts, new_clauses, new_learnts, data_lock) == l_False) 
+            if (anticipateEliminationThreadsafe(data, pos, neg,  v, p_limit, n_limit, ps, pos_stats, neg_stats, lit_clauses, lit_learnts, new_clauses, new_learnts, data_lock) == l_False) 
             {
                 // UNSAT: free locks and abort
                 rwlock.readUnlock(); // Early Exit Read Lock
@@ -412,7 +412,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
              
              if(opt_bve_verbose > 1)  cerr << "c resolveSet" <<endl;
 
-             if (resolveSetThreadSafe(data, pos, neg, v, ps, memoryReservation, strengthQueue, stats, data_lock, doStatistics) == l_False) 
+             if (resolveSetThreadSafe(data, pos, neg, v, p_limit, n_limit, ps, memoryReservation, strengthQueue, stats, data_lock, doStatistics) == l_False) 
              {
                  // UNSAT case -> end thread, but first release all locks
                  rwlock.readUnlock();
@@ -532,13 +532,15 @@ inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData 
  *  -> total number of literals in learnts after resolution:    lit_learnts
  *
  */
-inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, vec <Lit> & resolvent, int32_t* pos_stats , int32_t* neg_stats, int & lit_clauses, int & lit_learnts, int & new_clauses, int & new_learnts, SpinLock & data_lock)
+inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const int p_limit, const int n_limit, vec <Lit> & resolvent, int32_t* pos_stats , int32_t* neg_stats, int & lit_clauses, int & lit_learnts, int & new_clauses, int & new_learnts, SpinLock & data_lock)
 {
     if(opt_bve_verbose > 2)  cerr << "c starting anticipate BVE" << endl;
     // Clean the stats
     lit_clauses=0;
     lit_learnts=0;
    
+    const bool hasDefinition = (p_limit < positive.size() || n_limit < negative.size() );
+    
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
     {
         const CRef crPos = positive[cr_p];
@@ -552,6 +554,9 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
         }
         for (int cr_n = 0; cr_n < negative.size(); ++cr_n)
         {
+	    // do not check resolvents, which would touch two clauses out of the variable definition
+	    if( cr_p >= p_limit && cr_n >= n_limit ) continue; 
+	    if( hasDefinition && cr_p < p_limit && cr_n < n_limit ) continue; // no need to resolve the definition clauses with each other NOTE: assumes that these clauses result in tautologies
             const CRef crNeg = negative[cr_n];
             if (CRef_Undef == crNeg)
                 continue;
@@ -673,8 +678,9 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
  *   - unit clauses and empty clauses are not handeled here
  *          -> this is already done in anticipateElimination 
  */
-lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, vec<Lit> & ps, AllocatorReservation & memoryReservation, deque<CRef> & strengthQueue, ParBVEStats & stats, SpinLock & data_lock, const bool doStatistics, const bool keepLearntResolvents)
+lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const int p_limit, const int n_limit, vec<Lit> & ps, AllocatorReservation & memoryReservation, deque<CRef> & strengthQueue, ParBVEStats & stats, SpinLock & data_lock, const bool doStatistics, const bool keepLearntResolvents)
 {
+    const bool hasDefinition = (p_limit < positive.size() || n_limit < negative.size() );
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
     {
         const CRef crPos = positive[cr_p];
@@ -685,6 +691,9 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, v
             continue;
         for (int cr_n = 0; cr_n < negative.size(); ++cr_n)
         {
+	    // no need to resolve two clauses that are both not within the variable definition
+	    if( cr_p >= p_limit && cr_n >= n_limit ) continue;
+	    if( hasDefinition && cr_p < p_limit && cr_n < n_limit ) continue; // no need to resolve the definition clauses with each other NOTE: assumes that these clauses result in tautologies
             const CRef crNeg = negative[cr_n];
             if (CRef_Undef == crNeg)
                 continue;

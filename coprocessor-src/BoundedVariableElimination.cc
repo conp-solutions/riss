@@ -653,7 +653,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
  */
 lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const int p_limit, const int n_limit, const bool keepLearntResolvents, const bool force, const bool doStatistics)
 {
-    vec<Lit> & ps = resolvent; // TODO: make this a member variable!!
+    vec<Lit> & ps = resolvent; 
     const bool hasDefinition = (p_limit < positive.size() || n_limit < negative.size() );
     
   
