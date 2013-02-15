@@ -17,7 +17,8 @@ using namespace std;
  BoolOption opt_unlimited_bve   (_cat_bve, "bve_unlimited",  "perform bve test for Var v, if there are more than 10 + 10 or 15 + 5 Clauses containing v", false);
  BoolOption opt_bve_findGate    (_cat_bve, "bve_gates",  "try to find variable AND gate definition before elimination", false);
  IntOption  opt_bve_heap        (_cat_bve, "cp3_bve_heap"     ,  "0: minimum heap, 1: maximum heap, 2: random", 0, IntRange(0,2));
-
+ BoolOption opt_bve_bc          (_cat_bve, "bve_BCElim",    "Eliminate Blocked Clauses", true);
+ 
 
 BoundedVariableElimination::BoundedVariableElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation, Coprocessor::Subsumption & _subsumption )
 : Technique( _ca, _controller )
@@ -334,7 +335,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
 	       bool foundGate = false;
 	       if( opt_bve_findGate ) {
 	           foundGate = findGates(data, v, p_limit, n_limit, gateTime);
-	           foundGates ++;
+	           if (doStatistics) foundGates ++;
 	       }
             
            // Heuristic Cutoff Anticipation (if no Gate Found)
@@ -432,7 +433,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            //    mark old clauses for deletion
            if (force || (lit_clauses > 0 && lit_clauses <= lit_clauses_old))
            {
-		        usedGates = (foundGate ? usedGates + 1 : usedGates ); // statistics
+		        if (doStatistics) usedGates = (foundGate ? usedGates + 1 : usedGates ); // statistics
                 if(opt_bve_verbose > 1)  cerr << "c resolveSet" <<endl;
                 if (resolveSet(data, pos, neg, v, p_limit, n_limit) == l_False)
                     return;
@@ -881,13 +882,17 @@ inline bool BoundedVariableElimination::findGates(CoprocessorData & data, const 
     // check binary of pos variable
     markArray.nextStep();
     for( uint32_t i = 0 ; i < pList.size(); ++ i ) {
-      const Clause& clause = ca[ pList[i] ];
+      CRef cr = pList[i]; 
+      if (CRef_Undef == cr) continue;
+      const Clause& clause = ca[ cr ];
       if( clause.can_be_deleted() || clause.learnt() || clause.size() != 2 ) continue; // NOTE: do not use learned clauses for gate detection!
       Lit other = clause[0] == pLit ? clause[1] : clause[0];
       markArray.setCurrentStep( toInt(~other) );
     }
     for( uint32_t i = 0 ; i < nList.size(); ++ i ) {
-      const Clause& clause = ca[ nList[i] ];
+      CRef cr = nList[i];
+      if (CRef_Undef == cr) continue;
+      const Clause& clause = ca[ cr ];
       if( clause.can_be_deleted() || clause.learnt() ) continue;
       uint32_t j = 0; for(  ; j < clause.size(); ++ j ) {
 	const Lit cLit = clause[j];
@@ -906,7 +911,9 @@ inline bool BoundedVariableElimination::findGates(CoprocessorData & data, const 
 	// swap responsible clauses in list to front
 	uint32_t placedClauses = 0;
 	for( uint32_t k = 0 ; k < pList.size(); ++ k ) {
-	  const Clause& clause = ca[ pList[k] ];
+      CRef cr = pList[k];
+      if (CRef_Undef == cr) continue;
+	  const Clause& clause = ca[ cr ];
 	  if( clause.learnt() || clause.can_be_deleted() || clause.size() != 2 ) continue;
 	  Lit other = clause[0] == pLit ? clause[1] : clause[0];
 	  if(  !markArray.isCurrentStep ( toInt(~other) ) ) {
@@ -936,7 +943,7 @@ inline bool BoundedVariableElimination::findGates(CoprocessorData & data, const 
 	  }
 	}
 	
-	if( pClauses != placedClauses ) cerr << cerr << "c [BVE-G] placed: " << placedClauses << ", participating: " << pClauses << endl;
+	if( pClauses != placedClauses ) cerr << "c [BVE-G] placed: " << placedClauses << ", participating: " << pClauses << endl;
 	assert( pClauses == placedClauses && "number of moved binary clauses and number of participating clauses has to be the same");
 	return true;
       }

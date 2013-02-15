@@ -19,6 +19,7 @@ extern IntOption  opt_bve_heap;
 static IntOption  par_bve_threshold (_cat_bve, "par_bve_th", "Threshold for use of BVE-Worker", 20000, IntRange(0,INT32_MAX));
 static BoolOption opt_force_par_gates     (_cat_bve, "cp3_par_gates", "Force gate search while parallel BVE (more locking, probably slow)", false);
 static int upLevel = 1;
+extern BoolOption opt_bve_bc;
 
 static inline void printLitErr(const Lit l) 
 {
@@ -410,6 +411,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
                  break; // break the main-loop, i.e. end of function
              }
              
+		     if (doStatistics) stats.usedGates = (foundGate ? stats.usedGates + 1 : stats.usedGates ); // statistics
              if(opt_bve_verbose > 1)  cerr << "c resolveSet" <<endl;
 
              if (resolveSetThreadSafe(data, pos, neg, v, p_limit, n_limit, ps, memoryReservation, strengthQueue, stats, data_lock, doStatistics) == l_False) 
@@ -884,6 +886,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
     }
     else
     {
+        if (opt_bve_findGate) data.ma.resize( data.nVars() * 2 );
         cerr << "c sequentiel bve on " 
              << QSize << " variables" << endl;
         bve_worker (data, newheap);
