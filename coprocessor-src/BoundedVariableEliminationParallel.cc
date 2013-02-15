@@ -580,8 +580,11 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
                     resolve(p,n,v,resolvent); 
                     printLitVec(resolvent);
                 }
-                ++pos_stats[cr_p];
-                ++neg_stats[cr_n];
+                if (p.learnt() || !n.learnt()) // don't increment blocking-stats for p,
+                    ++pos_stats[cr_p];         // if p is original and n learnt
+                                               // goal: detect that p is blocked by all orig. n-clauses
+                if (n.learnt() || !p.learnt()) // vice versa 
+                    ++neg_stats[cr_n];
                 if (p.learnt() || n.learnt())
                 {
                     lit_learnts += newLits;
