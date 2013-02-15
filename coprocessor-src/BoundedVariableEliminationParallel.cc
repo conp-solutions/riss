@@ -1120,13 +1120,13 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData & da
     // test every clause, where the minimum is, if it can be strenghtened
     for (unsigned int j = 0; j < list.size(); ++j)
     {
+      lock_to_strengthen_nn_pos:
       const CRef crO = list[j];
       if (CRef_Undef == crO) 
           continue;
 
       Clause& other = ca[crO];
       
-      lock_to_strengthen_nn_pos:
       // a clause can not strengthen itself, and a clause can not strengther smaller clauses
       if (other.can_be_deleted() || crO == cr || other.size() < strengthener.size())
         continue;
@@ -1143,8 +1143,10 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData & da
       // if false is returned: the first variable changed, and no lock was performed
       bool locked = other.spinlock(other_fst_lit);
       if (false == locked)
+      { //FIXME this is just a workaround
+        cerr << "c " << other_fst_lit << " " << locked << endl;
         goto lock_to_strengthen_nn_pos;
-
+      }
       // check if other has been deleted, while waiting for lock
       if (other.can_be_deleted() || other.size() <= strengthener.size())
       {
@@ -1309,12 +1311,12 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & da
     // test every clause, where the minimum is, if it can be strenghtened
     for (unsigned int j = 0; j < list.size(); ++j)
     {
+      lock_to_strengthen_nn_neg:
       const CRef crO = list[j];
       if (CRef_Undef == crO)
           continue;
       Clause& other = ca[crO];
       
-      lock_to_strengthen_nn_neg:
       // a clause can not strengthen itself, and a clause can not strengther smaller clauses
       if (other.can_be_deleted() || crO == cr || other.size() < strengthener.size())
         continue;
@@ -1330,8 +1332,10 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & da
       // if false is returned: the first literal changed, and no lock was performed
       bool locked = other.spinlock(other_fst_lit);
       if (false == locked)
+      { //FIXME this is just a workaround
+        cerr << "c " << other_fst_lit << " " << locked << endl;
         goto lock_to_strengthen_nn_neg;
-
+      }
       // check if other has been deleted, while waiting for lock
       if (other.can_be_deleted() || other.size() < strengthener.size())
       {
