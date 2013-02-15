@@ -474,7 +474,7 @@ inline void BoundedVariableElimination::removeClauses(CoprocessorData & data, co
 	    // also updated deleteTimer
             data.removedClause(cr);
             c.set_delete(true);
-            data.addToExtension(cr, l);
+            if (!c.learnt()) data.addToExtension(cr, l);
             if (doStatistics)
             {
                 if (c.learnt())
@@ -525,10 +525,8 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
         Clause & p = ca[positive[cr_p]];
         if (p.can_be_deleted())
         {  
-            if(opt_bve_verbose > 2)
-            {  cerr << "c    skipped p"; 
-               printClause(p);
-            }
+            if(opt_bve_verbose > 2) 
+                cerr << "c    skipped p " << p << endl;
             continue;
         }
         for (int cr_n = 0; cr_n < negative.size(); ++cr_n)
@@ -542,8 +540,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
             {   
                 if(opt_bve_verbose > 2)
                 {
-                    cerr << "c    skipped n";
-                    printClause(n);
+                    cerr << "c    skipped n " << n << endl;
                 }
                 continue;
             }
@@ -556,11 +553,9 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
             {
                 if(opt_bve_verbose > 2)  
                 {   
-                    cerr << "c    Clause P: ";
-                    printClause(p);
-                    cerr <<  "c    Clause N: ";
-                    printClause(n);
-                    cerr  << "c    Resolvent: ";
+                    cerr << "c    Clause P: " << p << endl;
+                    cerr << "c    Clause N: " << n << endl;
+                    cerr << "c    Resolvent: ";
                     vec<Lit> resolvent; 
                     resolve(p,n,v,resolvent); 
                     printLitVec(resolvent);
@@ -788,7 +783,8 @@ inline void BoundedVariableElimination::removeBlockedClauses(CoprocessorData & d
         { 
             c.set_delete(true);
             data.removedClause(list[ci]);
-            data.addToExtension(list[ci], l);
+            if (!c.learnt()) 
+                data.addToExtension(list[ci], l);
             if (doStatistics)
             {
                 if (c.learnt())
