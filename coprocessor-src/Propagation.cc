@@ -64,12 +64,14 @@ lbool Propagation::propagate(CoprocessorData& data, bool sort)
         for ( int j = 0; j < c.size(); ++ j ) 
           if ( c[j] == nl ) 
           { 
-	        if( global_debug_out ) cerr << "c UP remove " << nl << " from " << c << endl;
-	        if (!sort) c.removePositionUnsorted(j);
+	    if( global_debug_out ) cerr << "c UP remove " << nl << " from " << c << endl;
+	    if (!sort) c.removePositionUnsorted(j);
             else c.removePositionSorted(j);
-	        break;
-	      }
-        count ++;
+	    break;
+	  }
+	  // tell subsumption / strengthening about this modified clause
+	  data.addSubStrengthClause(negative[i]);
+	  count ++;
       }
       // unit propagation
       if ( c.size() == 0 || (c.size() == 1 &&  solver->value( c[0] ) == l_False) ) 
