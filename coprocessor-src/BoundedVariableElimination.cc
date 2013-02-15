@@ -926,20 +926,22 @@ inline bool BoundedVariableElimination::findGates(CoprocessorData & data, const 
 	  }
 	}
 	if( opt_bve_verbose > 0 ) {
-	  cerr << "c [BVE] GATE clause: " << ca[ nList[0] ] << " placed clauses: " << placedClauses << endl;
+	  if (nList[0] != CRef_Undef) cerr << "c [BVE] GATE clause: " << ca[ nList[0] ] << " placed clauses: " << placedClauses << endl;
 	  for( uint32_t k = 0 ; k < placedClauses; ++ k ) {
-	    cerr << "c [BVE] bin clause[" << k << "]: "<< ca[ pList[k] ] << endl;
+	    if (pList[k] != CRef_Undef) cerr << "c [BVE] bin clause[" << k << "]: "<< ca[ pList[k] ] << endl;
 	  }
 	  cerr << "c return parameter: pos:" << p_limit << " neg: " << n_limit << endl;
 	  
 	  cerr << "c clause lists: " << endl;
 	  cerr << "for " << mkLit(v,false) << endl;
 	  for( int i = 0 ; i < data.list( mkLit(v,false) ).size(); ++ i ) {
+        if (data.list( mkLit(v,false))[i] == CRef_Undef) continue;
 	    if( ca[  data.list( mkLit(v,false) )[i] ].can_be_deleted() ) continue;
 	    else cerr << i << " : " << ca[  data.list( mkLit(v,false) )[i] ] << endl;
 	  }
 	  cerr << "for " << mkLit(v,true) << endl;
 	  for( int i = 0 ; i < data.list( mkLit(v,true) ).size(); ++ i ) {
+        if (data.list( mkLit(v,true))[i] == CRef_Undef) continue;
 	    if( ca[  data.list( mkLit(v,true) )[i] ].can_be_deleted() ) continue;
 	    else cerr << i << " : " << ca[  data.list( mkLit(v,true) )[i] ] << endl;
 	  }
