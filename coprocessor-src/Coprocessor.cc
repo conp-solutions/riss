@@ -161,6 +161,10 @@ lbool Preprocessor::performSimplification()
     if( !data.ok() ) status = l_False;
   }
   
+  if( true ) {
+   printFormula("after PROBING");
+  }
+  
   if ( opt_bve ) {
     if( opt_verbose > 2 )cerr << "c coprocessor blocked variable elimination" << endl;
     if( status == l_Undef ) status = bve.runBVE(data);  // can change status, can generate new unit clauses
@@ -282,6 +286,8 @@ lbool Preprocessor::performSimplification()
     hte.printStatistics(cerr);
     bve.printStatistics(cerr);
     bva.printStatistics(cerr);
+    probing.printStatistics(cerr);
+    unhiding.printStatistics(cerr);
     cce.printStatistics(cerr);
     sls.printStatistics(cerr);
     twoSAT.printStatistics(cerr);
@@ -423,6 +429,15 @@ void Preprocessor::reSetupSolver()
 		        { const Lit tmp = c[k]; c[k] = c[j]; c[j] = tmp; break; }
 		  }
 		}
+		if( (solver->value( c[0] ) == l_False && solver->value( c[1] ) == l_False) ) {
+		  cerr << "c found unsatisfiable clause " << c << endl;
+		  data.setFailed();
+		  break;
+		} else if( solver->value( c[0] ) == l_Undef && solver->value( c[1] ) == l_False) {
+		  cerr << "c found unit clause " << c << endl;
+		  solver->uncheckedEnqueue( c[0] );
+		}
+		
 		assert( (solver->value( c[0] ) != l_False || solver->value( c[1] ) != l_False) && "Cannot watch falsified literals" );
                 solver->attachClause(cr);
             }
