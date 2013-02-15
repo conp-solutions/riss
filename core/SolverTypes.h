@@ -159,7 +159,7 @@ class Clause {
     template<class V>
     Clause(const V& ps, bool use_extra, bool learnt) {
         header.mark      = 0;
-	header.locked    = 0;
+    	header.locked    = 0;
         header.learnt    = learnt;
         header.has_extra = use_extra;
         header.reloced   = 0;
@@ -275,17 +275,16 @@ public:
       uint32_t* iHeader = (uint32_t*)(&header);
       while ( *iHeader != *cHeader || __sync_bool_compare_and_swap( iHeader, uint32_t(*cHeader), uint32_t(*sHeader) ) == false) {
         // integrity check on first literal to prevent deadlocks
-        assert(size() > 0);
-        if (first != lit_Undef && data[0].lit != first)
+        if (header.size == 0 || first != lit_Undef && data[0].lit != first)
           return false;
-	// renew header
-	compare = header;
-	setHeader = header;
-	compare.locked = 0;
-	setHeader.locked = 1;
-	cHeader = (uint32_t*)(&compare);
-	sHeader = (uint32_t*)(&setHeader);
-	iHeader = (uint32_t*)(&header);
+	    // renew header
+	    compare = header;
+	    setHeader = header;
+	    compare.locked = 0;
+	    setHeader.locked = 1;
+	    cHeader = (uint32_t*)(&compare);
+	    sHeader = (uint32_t*)(&setHeader);
+	    iHeader = (uint32_t*)(&header);
       }
       return true;
     }

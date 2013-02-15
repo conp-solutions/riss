@@ -89,7 +89,18 @@ class BoundedVariableElimination : public Technique {
 public:
   
   BoundedVariableElimination( ClauseAllocator& _ca, ThreadController& _controller , Coprocessor::Propagation & _propagation, Coprocessor::Subsumption & _subsumption);
-  
+ ~BoundedVariableElimination()
+ {
+    if (neighbor_heaps != NULL)
+    {
+        for (int i = 0; i < controller.size(); ++i)
+        {
+            if (neighbor_heaps[i] != NULL)
+                delete neighbor_heaps[i];
+        }
+        free(neighbor_heaps);
+    }
+ } 
   /** run BVE until completion */
   lbool runBVE(CoprocessorData& data, const bool doStatistics = true);
 

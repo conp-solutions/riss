@@ -187,8 +187,9 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
             for (int l = 0; l < c.size(); ++ l)
             {
                 Var v = var(c[l]);
-                if (! neighbor_heap.inHeap(v))
-                    neighbor_heap.insert(v);
+                //if (! neighbor_heap.inHeap(v))
+                //    neighbor_heap.insert(v);
+                neighbor_heap.update(v);
             }
             c.unlock();
         }
