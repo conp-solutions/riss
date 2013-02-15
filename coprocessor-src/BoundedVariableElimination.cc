@@ -419,13 +419,15 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                    if (anticipateElimination(data, pos, neg,  v, p_limit, n_limit, pos_stats, neg_stats, lit_clauses, lit_learnts) == l_False) 
                        return;  // level 0 conflict found while anticipation TODO ABORT
                }
-
-               //mark Clauses without resolvents for deletion
-               if(opt_bve_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-               if(opt_bve_verbose > 1) cerr << "c removing blocked clauses from F_" << v+1 << endl;
-               removeBlockedClauses(data, pos, pos_stats, mkLit(v, false));
-               if(opt_bve_verbose > 1) cerr << "c removing blocked clauses from F_¬" << v+1 << endl;
-               removeBlockedClauses(data, neg, neg_stats, mkLit(v, true));
+               if (opt_bve_bc)
+               {
+                   //mark Clauses without resolvents for deletion
+                   if(opt_bve_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+                   if(opt_bve_verbose > 1) cerr << "c removing blocked clauses from F_" << v+1 << endl;
+                   removeBlockedClauses(data, pos, pos_stats, mkLit(v, false));
+                   if(opt_bve_verbose > 1) cerr << "c removing blocked clauses from F_¬" << v+1 << endl;
+                   removeBlockedClauses(data, neg, neg_stats, mkLit(v, true));
+               }
            }
 
            // if resolving reduces number of literals in clauses: 

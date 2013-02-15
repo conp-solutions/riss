@@ -360,13 +360,15 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
                 break;  
             }
         }
-    
-        //mark Clauses without resolvents for deletion
-        if(opt_bve_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-        if(opt_bve_verbose > 1) cerr << "c removing blocked clauses from F_" << v+1 << endl;
-        removeBlockedClausesThreadSafe(data, pos, pos_stats, mkLit(v, false), data_lock, stats, doStatistics); 
-        if(opt_bve_verbose > 1) cerr << "c removing blocked clauses from F_¬" << v+1 << endl;
-        removeBlockedClausesThreadSafe(data, neg, neg_stats, mkLit(v, true), data_lock, stats, doStatistics); 
+        if (opt_bve_bc)
+        { 
+            //mark Clauses without resolvents for deletion
+            if(opt_bve_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+            if(opt_bve_verbose > 1) cerr << "c removing blocked clauses from F_" << v+1 << endl;
+            removeBlockedClausesThreadSafe(data, pos, pos_stats, mkLit(v, false), data_lock, stats, doStatistics); 
+            if(opt_bve_verbose > 1) cerr << "c removing blocked clauses from F_¬" << v+1 << endl;
+            removeBlockedClausesThreadSafe(data, neg, neg_stats, mkLit(v, true), data_lock, stats, doStatistics); 
+        }
         rwlock.readUnlock();
 
         ///////////////////////////////////////////////////////////////////////////////////////////
@@ -1124,7 +1126,7 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData & da
 
       Clause& other = ca[crO];
       
-      lock_to_strengthen_nn:
+      lock_to_strengthen_nn_pos:
       // a clause can not strengthen itself, and a clause can not strengther smaller clauses
       if (other.can_be_deleted() || crO == cr || other.size() < strengthener.size())
         continue;
@@ -1141,7 +1143,7 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData & da
       // if false is returned: the first variable changed, and no lock was performed
       bool locked = other.spinlock(other_fst_lit);
       if (false == locked)
-        goto lock_to_strengthen_nn;
+        goto lock_to_strengthen_nn_pos;
 
       // check if other has been deleted, while waiting for lock
       if (other.can_be_deleted() || other.size() <= strengthener.size())
@@ -1154,7 +1156,7 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData & da
       if (var(other[0]) != other_fst)
       {
          other.unlock();
-         goto lock_to_strengthen_nn;
+         goto lock_to_strengthen_nn_pos;
       }
       
       // now other is locked
@@ -1312,7 +1314,7 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & da
           continue;
       Clause& other = ca[crO];
       
-      lock_to_strengthen_nn:
+      lock_to_strengthen_nn_neg:
       // a clause can not strengthen itself, and a clause can not strengther smaller clauses
       if (other.can_be_deleted() || crO == cr || other.size() < strengthener.size())
         continue;
@@ -1328,7 +1330,7 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & da
       // if false is returned: the first literal changed, and no lock was performed
       bool locked = other.spinlock(other_fst_lit);
       if (false == locked)
-        goto lock_to_strengthen_nn;
+        goto lock_to_strengthen_nn_neg;
 
       // check if other has been deleted, while waiting for lock
       if (other.can_be_deleted() || other.size() < strengthener.size())
@@ -1341,7 +1343,7 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & da
       if (var(other[0]) != other_fst)
       {
          other.unlock();
-         goto lock_to_strengthen_nn;
+         goto lock_to_strengthen_nn_neg;
       }
       
       // now other is locked
