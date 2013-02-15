@@ -7,12 +7,16 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 using namespace Coprocessor;
 
 static const char* _cat = "COPROCESSOR 3 - PROBE";
+
+static IntOption pr_uip       (_cat, "pr_uips", "perform learning if a conflict occurs up to x-th UIP (-1 = all )", -1, IntRange(-1, INT32_MAX));
+
 static BoolOption debug_out            (_cat, "pr_debug", "debug output for probing",false);
 
-Probing::Probing(ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::CoprocessorData& _data, Solver& _solver)
+Probing::Probing(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, Solver& _solver)
 : Technique( _ca, _controller )
 , data( _data )
 , solver( _solver )
+, propagation ( _propagation )
 , probeLimit(20000)
 , processTime(0)
 , l1implied(0)
@@ -41,7 +45,7 @@ bool Probing::probe()
   reSetupSolver();
   
   // clean cp3 data structures!
-  data.cleanOccurrences();
+  // data.cleanOccurrences();
   
   for( Var v = 0 ; v < data.nVars(); ++v ) variableHeap.push_back(v);
   
@@ -55,7 +59,7 @@ bool Probing::probe()
     
     if( solver.value(v) != l_Undef ) continue; // no need to check assigned variable!
 
-    cerr << "c test variable " << v + 1 << endl;
+    // cerr << "c test variable " << v + 1 << endl;
 
     assert( solver.decisionLevel() == 0 && "probing only at level 0!");
     const Lit posLit = mkLit(v,false);
@@ -67,7 +71,9 @@ bool Probing::probe()
     if( debug_out ) cerr << "c conflict after propagate " << posLit << " present? " << (thisConflict != CRef_Undef) << " trail elements: " << solver.trail.size() << endl;
     if( thisConflict != CRef_Undef ) {
       l1failed++;
-      prAnalyze( thisConflict );
+      if( !prAnalyze( thisConflict ) ) {
+	learntUnits.push_back( ~posLit );
+      }
       solver.cancelUntil(0);
       // tell system about new units!
       for( int i = 0 ; i < learntUnits.size(); ++ i ) data.enqueue( learntUnits[i] );
@@ -93,7 +99,9 @@ bool Probing::probe()
     if( debug_out ) cerr << "c conflict after propagate " << negLit << " present? " << (thisConflict != CRef_Undef) << " trail elements: " << solver.trail.size() << endl;
     if( thisConflict != CRef_Undef ) {
       l1failed++;
-      prAnalyze(thisConflict);
+      if( !prAnalyze( thisConflict ) ) {
+	learntUnits.push_back( ~negLit );
+      }
       solver.cancelUntil(0);
       // tell system about new units!
       for( int i = 0 ; i < learntUnits.size(); ++ i ) data.enqueue( learntUnits[i] );
@@ -168,6 +176,12 @@ bool Probing::probe()
   
   // clean solver again!
   cleanSolver();
+  
+  sortClauses();
+  if( propagation.propagate(data,true) == l_False){
+    if( debug_out ) cerr << "c propagation failed" << endl;
+    data.setFailed();
+  }
   
   return data.ok();
 }
@@ -253,10 +267,14 @@ CRef Probing::prPropagate( bool doDouble )
 
 bool Probing::prAnalyze( CRef confl )
 {
+    learntUnits.clear();
+    // do not do analysis -- return that nothing has been learned
+    if( pr_uip == 0 ) return false;
+  
     // genereate learnt clause - extract all units!
     int pathC = 0;
     Lit p     = lit_Undef;
-    learntUnits.clear();
+    unsigned uips = 0;
     
     // Generate conflict clause:
     //
@@ -294,18 +312,28 @@ bool Probing::prAnalyze( CRef confl )
         solver.seen[var(p)] = 0;
         pathC--;
 
+	// this works only is the decision level is 1
 	if( pathC == 0 ) {
-	   cerr << "c possible unit: " << ~p << endl;
+	  if( solver.decisionLevel() == 1) {
+	   if( debug_out ) cerr << "c possible unit: " << ~p << endl;
+	   uips ++;
+	   // learned enough uips - return. if none has been found, return false!
+	   if( pr_uip != -1 && uips > pr_uip ) return learntUnits.size() == 0 ? false : true;
 	   learntUnits.push_back(~p);
+	  } else {
+	    assert(false && "cannot handle different levels than 1 yet! level2 probing needs to be implemented!" ); 
+	  }
 	}
 	
     }while (index >= solver.trail_lim[0] ); // pathC > 0 finds unit clauses
     data.lits[0] = ~p;
   
   // print learned clause
-  cerr << "c probing returned conflict: ";
-  for( int i = 0 ; i < data.lits.size(); ++ i ) cerr << " " << data.lits[i];
-  cerr << endl;
+  if( debug_out ) {
+    cerr << "c probing returned conflict: ";
+    for( int i = 0 ; i < data.lits.size(); ++ i ) cerr << " " << data.lits[i];
+    cerr << endl;
+  }
 
   // NOTE no need to add the unit again, has been done in the loop already!
   
@@ -468,4 +496,45 @@ void Probing::printStatistics( ostream& stream )
   <<  l2probes << " l2probes "
   << probeLimit << " stepsLeft "
   << endl;   
+}
+
+void Probing::sortClauses()
+{
+  uint32_t clausesSize = solver.clauses.size();
+  for (int i = 0; i < clausesSize; ++i)
+  {
+    Clause& c = ca[solver.clauses[i]];
+    if( c.can_be_deleted() ) continue;
+    const uint32_t s = c.size();
+    for (uint32_t j = 1; j < s; ++j)
+    {
+        const Lit key = c[j];
+        int32_t i = j - 1;
+        while ( i >= 0 && toInt(c[i]) > toInt(key) )
+        {
+            c[i+1] = c[i];
+            i--;
+        }
+        c[i+1] = key;
+    }
+  }
+
+  clausesSize = solver.learnts.size();
+  for (int i = 0; i < clausesSize; ++i)
+  {
+    Clause& c = ca[solver.learnts[i]];
+    if( c.can_be_deleted() ) continue;
+    const uint32_t s = c.size();
+    for (uint32_t j = 1; j < s; ++j)
+    {
+        const Lit key = c[j];
+        int32_t i = j - 1;
+        while ( i >= 0 && toInt(c[i]) > toInt(key) )
+        {
+            c[i+1] = c[i];
+            i--;
+        }
+        c[i+1] = key;
+    }
+  }
 }

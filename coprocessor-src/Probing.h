@@ -9,6 +9,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/CoprocessorTypes.h"
 #include "coprocessor-src/Technique.h"
 
+#include "coprocessor-src/Propagation.h"
+
 using namespace Minisat;
 using namespace std;
 
@@ -21,7 +23,8 @@ class Probing : public Technique {
   
   CoprocessorData& data;
   Solver& solver;
-
+  Propagation& propagation;            /// object that takes care of unit propagation
+  
   // necessary local variables
   deque<Var> variableHeap;
   vec<lbool> prPositive;
@@ -29,8 +32,9 @@ class Probing : public Technique {
   vector<Lit> learntUnits;
   vector<Lit> doubleLiterals;
   
+  
 public:
-  Probing( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Solver& _solver);
+  Probing( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, Solver& _solver);
   
   /** perform probing 
    * @return false, if formula is UNSAT
@@ -48,7 +52,7 @@ protected:
   CRef prPropagate(bool doDouble = true); 
   
   /** perform conflict analysis and enqueue each unit clause that could be learned 
-   * @return false, if formula is unsatisfiable
+   * @return false, nothing has been learned
    */
   bool prAnalyze(CRef confl);
   
@@ -62,6 +66,9 @@ protected:
   
   /** remove all clauses from the watch lists inside the solver */
   void cleanSolver();
+  
+  /** sort literals in clauses */
+  void sortClauses();
   
   // staistics
   unsigned probeLimit;		// step limit for probing

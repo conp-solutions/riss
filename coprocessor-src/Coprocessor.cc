@@ -57,7 +57,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , cce( solver->ca, controller )
 , ee ( solver->ca, controller, propagation, subsumption )
 , unhiding ( solver->ca, controller, data, propagation, subsumption, ee )
-, probing  ( solver->ca, controller, data, *solver )
+, probing  ( solver->ca, controller, data, propagation, *solver )
 , sls ( data, solver->ca, controller )
 , twoSAT( solver->ca, controller, data)
 {
@@ -159,10 +159,6 @@ lbool Preprocessor::performSimplification()
     if( opt_verbose > 2 )cerr << "c coprocessor probing" << endl;
     if( status == l_Undef ) probing.probe(); 
     if( !data.ok() ) status = l_False;
-  }
-  
-  if( true ) {
-   printFormula("after PROBING");
   }
   
   if ( opt_bve ) {
@@ -542,6 +538,7 @@ void Preprocessor::sortClauses()
   for (int i = 0; i < clausesSize; ++i)
   {
     Clause& c = ca[solver->clauses[i]];
+    if( c.can_be_deleted() ) continue;
     const uint32_t s = c.size();
     for (uint32_t j = 1; j < s; ++j)
     {
@@ -560,6 +557,7 @@ void Preprocessor::sortClauses()
   for (int i = 0; i < clausesSize; ++i)
   {
     Clause& c = ca[solver->learnts[i]];
+    if( c.can_be_deleted() ) continue;
     const uint32_t s = c.size();
     for (uint32_t j = 1; j < s; ++j)
     {
