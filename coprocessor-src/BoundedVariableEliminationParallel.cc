@@ -390,7 +390,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         ///////////////////////////////////////////////////////////////////////////////////////////
             
             ca_lock.lock();      
-            AllocatorReservation memoryReservation = ca.reserveMemory( new_clauses, lit_clauses, 0, rwlock);
+            AllocatorReservation memoryReservation = ca.reserveMemory( new_clauses + new_learnts, lit_clauses + lit_learnts, new_learnts, rwlock);
             ca_lock.unlock();
 
         ///////////////////////////////////////////////////////////////////////////////////////////
@@ -596,8 +596,12 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
                     ++neg_stats[cr_n];
                 if (p.learnt() || n.learnt())
                 {
-                    lit_learnts += newLits;
-                    ++new_learnts;
+                    if (    (opt_resolve_learnts > 1 
+                                || opt_resolve_learnts > 0 && p.learnt() && n.learnt()
+                            ) && newLits <= max(p.size(),n.size()) + opt_learnt_growth) {
+                        lit_learnts += newLits;
+                        ++new_learnts;
+                    }
                 }
                 else 
                 {
