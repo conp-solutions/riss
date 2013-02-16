@@ -150,6 +150,19 @@ class Clause {
         unsigned can_subsume : 1;
         unsigned can_strengthen : 1;
         unsigned size : 24;
+
+        volatile ClauseHeader& operator = (const ClauseHeader& rhs) volatile
+        {
+            mark = rhs.mark;
+            locked = rhs.locked;
+            learnt = rhs.learnt;
+            has_extra = rhs.has_extra;
+            reloced = rhs.reloced;
+            can_subsume = rhs.can_subsume;
+            can_strengthen = rhs.can_strengthen;
+            size = rhs.size;
+            return *this;
+        }
         }                            header;
     union { Lit lit; float act; uint32_t abs; CRef rel; } data[0];
 
@@ -265,9 +278,9 @@ public:
      *               (only if first lit was specified)
      */
     bool    spinlock(const Lit first = lit_Undef) {
-      ClauseHeader compare = header;
+      volatile ClauseHeader compare = header;
       compare.locked = 0;
-      ClauseHeader setHeader = header;
+      volatile ClauseHeader setHeader = header;
       setHeader.locked = 1;
       assert( sizeof(ClauseHeader) == sizeof(uint32_t) && "data type sizes have to be equivalent") ;
       uint32_t* cHeader = (uint32_t*)(&compare);

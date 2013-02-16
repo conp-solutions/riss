@@ -1143,10 +1143,8 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData & da
       // if false is returned: the first variable changed, and no lock was performed
       bool locked = other.spinlock(other_fst_lit);
       if (false == locked)
-      { //FIXME this is just a workaround
-        cerr << "c " << other_fst_lit << " " << locked << endl;
         goto lock_to_strengthen_nn_pos;
-      }
+
       // check if other has been deleted, while waiting for lock
       if (other.can_be_deleted() || other.size() <= strengthener.size())
       {
@@ -1332,10 +1330,8 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & da
       // if false is returned: the first literal changed, and no lock was performed
       bool locked = other.spinlock(other_fst_lit);
       if (false == locked)
-      { //FIXME this is just a workaround
-        cerr << "c " << other_fst_lit << " " << locked << endl;
         goto lock_to_strengthen_nn_neg;
-      }
+
       // check if other has been deleted, while waiting for lock
       if (other.can_be_deleted() || other.size() < strengthener.size())
       {
