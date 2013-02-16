@@ -1563,10 +1563,12 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vecto
         count ++;
       }
       // unit propagation
+      data_lock.lock();
       if ( c.size() == 0 || (c.size() == 1 &&  solver->value( c[0] ) == l_False) ) 
       {
         data.setFailed();   // set state to false
-        
+        data_lock.unlock();
+
         if (global_debug_out) cerr << "c UNSAT by UP" << endl;
         c.set_delete(true); // TODO it seems safer to do this, is it necessary
         c.unlock();
@@ -1583,20 +1585,24 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vecto
          if( solver->value( c[0] ) == l_Undef && global_debug_out ) 
              cerr << "c UP enqueue " << c[0] << " with previous value " 
                   << (solver->value( c[0] ) == l_Undef ? "undef" : (solver->value( c[0] ) == l_False ? "unsat" : " sat ") ) << endl;
-	 if( solver->value( c[0] ) == l_Undef ) 
+	     if( solver->value( c[0] ) == l_Undef ) 
          {
-           data_lock.lock();
            solver->uncheckedEnqueue(c[0]);
-           data_lock.unlock();
          }
+         data_lock.unlock();
       }
-      else if (true && ! c.can_strengthen())
-      {
-         c.set_strengthen(true);
-         c.set_subsume(true);
-         strength_lock.lock();
-         sharedSubsimpQueue.push_back(cr);
-         strength_lock.unlock();
+      else
+      { 
+         data_lock.unlock();
+       
+         if (true && ! c.can_strengthen())
+         {
+            c.set_strengthen(true);
+            c.set_subsume(true);
+            strength_lock.lock();
+            sharedSubsimpQueue.push_back(cr);
+            strength_lock.unlock();
+         }
       }        
       c.unlock();
       negative[i] = CRef_Undef;
