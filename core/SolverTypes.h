@@ -149,9 +149,22 @@ class Clause {
 	// unsigned ignored : 1; do not use such a flag for the preprocessor! copy clause immediately instead and use delete flag!
         unsigned can_subsume : 1;
         unsigned can_strengthen : 1;
-        unsigned size : 24;
+        unsigned size : 25;
 
-        volatile ClauseHeader& operator = (const ClauseHeader& rhs) volatile
+        ClauseHeader(void) {} 
+        ClauseHeader(volatile ClauseHeader & rhs)
+        {
+            mark = rhs.mark;
+            locked = rhs.locked;
+            learnt = rhs.learnt;
+            has_extra = rhs.has_extra;
+            reloced = rhs.reloced;
+            can_subsume = rhs.can_subsume;
+            can_strengthen = rhs.can_strengthen;
+            size = rhs.size;
+        }
+
+        ClauseHeader& operator = (volatile ClauseHeader& rhs)
         {
             mark = rhs.mark;
             locked = rhs.locked;
@@ -277,10 +290,10 @@ public:
      *         false gave up locking, because first literal of clause has changed
      *               (only if first lit was specified)
      */
-    bool    spinlock(const Lit first = lit_Undef) {
-      volatile ClauseHeader compare = header;
+    bool    spinlock(const Lit first = lit_Undef) volatile{
+      ClauseHeader compare = header;
       compare.locked = 0;
-      volatile ClauseHeader setHeader = header;
+      ClauseHeader setHeader = header;
       setHeader.locked = 1;
       assert( sizeof(ClauseHeader) == sizeof(uint32_t) && "data type sizes have to be equivalent") ;
       uint32_t* cHeader = (uint32_t*)(&compare);
@@ -288,7 +301,7 @@ public:
       uint32_t* iHeader = (uint32_t*)(&header);
       while ( *iHeader != *cHeader || __sync_bool_compare_and_swap( iHeader, uint32_t(*cHeader), uint32_t(*sHeader) ) == false) {
         // integrity check on first literal to prevent deadlocks
-        if (header.size == 0 || first != lit_Undef && data[0].lit != first)
+        if (header.size == 0 || lit_Undef != first && data[0].lit.x != first.x)
           return false;
 	    // renew header
 	    compare = header;
