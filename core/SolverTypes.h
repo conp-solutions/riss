@@ -290,7 +290,7 @@ public:
      *         false gave up locking, because first literal of clause has changed
      *               (only if first lit was specified)
      */
-    bool    spinlock(const Lit first = lit_Undef) volatile{
+    bool    spinlock(const Lit first = lit_Undef) {
       ClauseHeader compare = header;
       compare.locked = 0;
       ClauseHeader setHeader = header;
