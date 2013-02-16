@@ -28,8 +28,9 @@ static BoolOption  opt_par_strength    (_cat, "cp3_par_strength", "force par str
 static BoolOption  opt_lock_stats      (_cat, "cp3_lock_stats", "measure time waiting in spin locks", false);
 static BoolOption  opt_par_subs        (_cat, "cp3_par_subs", "force par subsumption (if threads exist)", false);
 
-Subsumption::Subsumption( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation )
+Subsumption::Subsumption( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation )
 : Technique( _ca, _controller )
+, data(_data)
 , propagation( _propagation )
 , subsumedClauses(0)
 , subsumedLiterals(0)
@@ -88,26 +89,26 @@ void Subsumption::resetStatistics()
 
 }
 
-void Subsumption::subsumeStrength(CoprocessorData& data)
+void Subsumption::subsumeStrength()
 {
   while( data.ok() && (hasToSubsume() || hasToStrengthen() ))
   {
     if( hasToSubsume() ){
-      fullSubsumption(data);
+      fullSubsumption();
       // clear queue afterwards
-      clause_processing_queue.clear();
+      data.getSubsumeClauses().clear();
     }
     if( hasToStrengthen() ) {
-      if ((opt_par_strength || strengthening_queue.size() > 150000) && controller.size() > 0)
+      if ((opt_par_strength || data.getStrengthClauses().size() > 150000) && controller.size() > 0)
       {
-          parallelStrengthening(data);
+          parallelStrengthening();
           data.correctCounters(); //TODO correct occurrences as well
       }
       else {
-          fullStrengthening(data); // corrects occs and counters by itself
+          fullStrengthening(); // corrects occs and counters by itself
       }
       // clear queue afterwards
-      strengthening_queue.clear();
+      data.getStrengthClauses().clear();
     }
   }
 }
@@ -116,19 +117,19 @@ void Subsumption::subsumeStrength(CoprocessorData& data)
 
 bool Subsumption::hasToSubsume() const
 {
-  return clause_processing_queue.size() > 0; 
+  return data.getSubsumeClauses().size() > 0; 
 }
 
-lbool Subsumption::fullSubsumption(CoprocessorData& data)
+lbool Subsumption::fullSubsumption()
 {
   // run subsumption for the whole queue
-  if( controller.size() > 0 && (opt_par_subs || clause_processing_queue.size() > 100000 || ( clause_processing_queue.size() > 50000 && 10*data.nCls() > 22*data.nVars() ) ) ) {
-    parallelSubsumption(data); // use parallel, is some conditions have been met
+  if( controller.size() > 0 && (opt_par_subs || data.getSubsumeClauses().size() > 100000 || ( data.getSubsumeClauses().size() > 50000 && 10*data.nCls() > 22*data.nVars() ) ) ) {
+    parallelSubsumption(); // use parallel, is some conditions have been met
     data.correctCounters();    // 
   } else {
-    subsumption_worker(data,0,clause_processing_queue.size()); // performs all occ and stat-updates
+    subsumption_worker(0,data.getSubsumeClauses().size()); // performs all occ and stat-updates
   }
-  clause_processing_queue.clear();
+  data.getSubsumeClauses().clear();
   // no result to tell to the outside
   return l_Undef; 
 }
@@ -139,7 +140,7 @@ bool Subsumption::hasWork() const
 }
 
 
-void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, const bool doStatistics)
+void Subsumption :: subsumption_worker ( unsigned int start, unsigned int end, const bool doStatistics)
 {
     vector < CRef > occ_updates; 
     if (doStatistics)
@@ -149,7 +150,7 @@ void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int star
     for (; end > start;)
     {
         --end;
-	const CRef cr = clause_processing_queue[end];
+	const CRef cr = data.getSubsumeClauses()[end];
         Clause &c = ca[cr];
         if (c.can_be_deleted())
             continue;
@@ -234,7 +235,7 @@ void Subsumption :: subsumption_worker (CoprocessorData& data, unsigned int star
  * @param set_non_learnt this clauses, if not deleted, need to be set non-learnt afterwards 
  * @param stats          local stats
  */
-void Subsumption :: par_subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, vector<CRef> & to_delete, vector< CRef > & set_non_learnt, struct SubsumeStatsData & stats, const bool doStatistics)
+void Subsumption :: par_subsumption_worker ( unsigned int start, unsigned int end, vector<CRef> & to_delete, vector< CRef > & set_non_learnt, struct SubsumeStatsData & stats, const bool doStatistics)
 {
     if (doStatistics)
     {
@@ -243,7 +244,7 @@ void Subsumption :: par_subsumption_worker (CoprocessorData& data, unsigned int 
     while (end > start)
     {
         --end;
-        const CRef cr = clause_processing_queue[end];
+        const CRef cr = data.getSubsumeClauses()[end];
         Clause &c = ca[cr];
         if (c.can_be_deleted())
             continue;
@@ -321,9 +322,9 @@ void Subsumption :: par_subsumption_worker (CoprocessorData& data, unsigned int 
  * @param var_lock vector of locks for each variable
  *
  */
-void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int stop, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, vector< OccUpdate > & occ_updates, const bool doStatistics) 
+void Subsumption::par_strengthening_worker( unsigned int start, unsigned int stop, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, vector< OccUpdate > & occ_updates, const bool doStatistics) 
 {
-    assert(start <= stop && stop <= strengthening_queue.size() && "invalid indices");
+    assert(start <= stop && stop <= data.getStrengthClauses().size() && "invalid indices");
     assert(data.nVars() <= var_lock.size() && "var_lock vector to small");
     double & lock_time = stats.lockTime;
     if (doStatistics) stats.strengthTime = wallClockTime() - stats.strengthTime;
@@ -335,14 +336,14 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
         CRef cr = CRef_Undef;
         if( localQueue.size() == 0 ) {
             --stop;
-            cr = strengthening_queue[stop];
+            cr = data.getStrengthClauses()[stop];
         } else {
             // TODO: have a counter for this situation!
             cr = localQueue.back();
             localQueue.pop_back();
         }
  
-        Clause & c = ca[cr];//strengthening_queue[stop]];
+        Clause & c = ca[cr];//data.getStrengthClauses()[stop]];
         lock_strengthener:
         if (c.can_be_deleted() || c.size() == 0)
             continue;
@@ -486,7 +487,7 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
                         if ( ! d.can_subsume()) 
                         {
                             d.set_subsume(true);
-                            clause_processing_queue.push_back(list[l_cr]);
+                            data.getSubsumeClauses().push_back(list[l_cr]);
                         }
                         data_lock.unlock();
                     }
@@ -515,9 +516,9 @@ void Subsumption::par_strengthening_worker(CoprocessorData& data, unsigned int s
  * @param end where to stop strengthening
  * @param var_lock vector of locks for each variable
  */
-void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int end, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, const bool doStatistics)
+void Subsumption::par_nn_strengthening_worker( unsigned int start, unsigned int end, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, const bool doStatistics)
 { 
-  assert(start <= end && end <= strengthening_queue.size() && "invalid indices");
+  assert(start <= end && end <= data.getStrengthClauses().size() && "invalid indices");
   assert(data.nVars() <= var_lock.size() && "var_lock vector to small");
   if (doStatistics)
     stats.strengthTime = wallClockTime() - stats.strengthTime;
@@ -535,7 +536,7 @@ void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned in
     CRef cr = CRef_Undef;
     if( localQueue.size() == 0 ) {
       --end;
-      cr = strengthening_queue[end];
+      cr = data.getStrengthClauses()[end];
     } else {
       // TODO: have a counter for this situation!
       cr = localQueue.back();
@@ -733,7 +734,7 @@ void Subsumption::par_nn_strengthening_worker(CoprocessorData& data, unsigned in
               if ( ! other.can_subsume()) 
               {
                   other.set_subsume(true);
-                  clause_processing_queue.push_back(list_neg[j]);
+                  data.getSubsumeClauses().push_back(list_neg[j]);
               }
               data_lock.unlock();
           }
@@ -887,7 +888,7 @@ inline lbool Subsumption::par_nn_strength_check(CoprocessorData & data, vector <
               if ( ! other.can_subsume()) 
               {
                   other.set_subsume(true);
-                  clause_processing_queue.push_back(list[j]);
+                  data.getSubsumeClauses().push_back(list[j]);
               }
               data_lock.unlock();
           }
@@ -1030,7 +1031,7 @@ inline lbool Subsumption::par_nn_negated_strength_check(CoprocessorData & data, 
               if ( ! other.can_subsume()) 
               {
                   other.set_subsume(true);
-                  clause_processing_queue.push_back(list[j]);
+                  data.getSubsumeClauses().push_back(list[j]);
               }
               data_lock.unlock();
           }
@@ -1046,14 +1047,14 @@ inline lbool Subsumption::par_nn_negated_strength_check(CoprocessorData & data, 
 
 bool Subsumption::hasToStrengthen() const
 {
-  return strengthening_queue.size() > 0;
+  return data.getStrengthClauses().size() > 0;
 }
 
-/** runs a fullstrengthening on strengthening_queue, needs occurrencelists (naive strengthening seems to be faster, TODO: strengthening on literals with minimal occurrences)
+/** runs a fullstrengthening on data.getStrengthClauses(), needs occurrencelists (naive strengthening seems to be faster, TODO: strengthening on literals with minimal occurrences)
  * @param data occurrenceslists
  * @return 
  */
-lbool Subsumption::fullStrengthening(CoprocessorData& data, const bool doStatistics)
+lbool Subsumption::fullStrengthening( const bool doStatistics)
 {
     /*
      * TODO strengthening with min oppurances-lits
@@ -1064,17 +1065,17 @@ lbool Subsumption::fullStrengthening(CoprocessorData& data, const bool doStatist
     }
      */
   if( !opt_naivStrength ) {
-    return strengthening_worker(data, 0, strengthening_queue.size());
+    return strengthening_worker( 0, data.getStrengthClauses().size());
   }
     if (doStatistics) strengthTime = cpuTime() - strengthTime;
     deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
     vector<OccUpdate> occ_updates;
     //for every clause:
-    for (int i = 0; i < strengthening_queue.size();)
+    for (int i = 0; i < data.getStrengthClauses().size();)
     {
         CRef cr = CRef_Undef;
         if( localQueue.size() == 0 ) {
-            cr = strengthening_queue[i];
+            cr = data.getStrengthClauses()[i];
             ++i;
         } else {
             // TODO: have a counter for this situation!
@@ -1146,7 +1147,7 @@ lbool Subsumption::fullStrengthening(CoprocessorData& data, const bool doStatist
                         {
                             // if the flag was set, this clause is allready in the subsumptionqueue, if not, we need to add this clause as it could subsume again
                             other.set_subsume(true);
-                            clause_processing_queue.push_back(list[k]);
+                            data.getSubsumeClauses().push_back(list[k]);
                         }
                         // keep track of this clause for further strengthening!
                         if( !other.can_strengthen() ) {
@@ -1173,7 +1174,7 @@ lbool Subsumption::fullStrengthening(CoprocessorData& data, const bool doStatist
         c.set_strengthen(false);
     }
 
-  updateOccurrences(data, occ_updates);
+  updateOccurrences( occ_updates);
 
   if (doStatistics) strengthTime = cpuTime() - strengthTime;
   // no result to tell to the outside
@@ -1187,7 +1188,7 @@ lbool Subsumption::fullStrengthening(CoprocessorData& data, const bool doStatist
  *
  * 
  */
-lbool Subsumption::strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics)
+lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, bool doStatistics)
 {
   if (doStatistics)
       strengthTime = cpuTime() - strengthTime;
@@ -1200,7 +1201,7 @@ lbool Subsumption::strengthening_worker(CoprocessorData& data, unsigned int star
     CRef cr = CRef_Undef;
     if( localQueue.size() == 0 ) {
       --end;
-      cr = strengthening_queue[end];
+      cr = data.getStrengthClauses()[end];
     } else {
       // TODO: have a counter for this situation!
       cr = localQueue.back();
@@ -1280,7 +1281,7 @@ lbool Subsumption::strengthening_worker(CoprocessorData& data, unsigned int star
         {
           // if the flag was set, this clause is allready in the subsumptionqueue, if not, we need to add this clause as it could subsume again
           other.set_subsume(true);
-          clause_processing_queue.push_back(list[j]);
+          data.getSubsumeClauses().push_back(list[j]);
         }
         // keep track of this clause for further strengthening!
         if( !other.can_strengthen() ) {
@@ -1342,7 +1343,7 @@ lbool Subsumption::strengthening_worker(CoprocessorData& data, unsigned int star
         {
           // if the flag was set, this clause is allready in the subsumptionqueue, if not, we need to add this clause as it could subsume again
           other.set_subsume(true);
-          clause_processing_queue.push_back(list_neg[j]);
+          data.getSubsumeClauses().push_back(list_neg[j]);
         }
 	    
         // keep track of this clause for further strengthening!
@@ -1372,11 +1373,11 @@ lbool Subsumption::strengthening_worker(CoprocessorData& data, unsigned int star
     }
     strengthener.set_strengthen(false);
   }
-  updateOccurrences(data, occ_updates);
+  updateOccurrences( occ_updates);
   if (doStatistics) strengthTime = cpuTime() - strengthTime;
 }
 
-inline void Subsumption::updateOccurrences(CoprocessorData & data, const vector< OccUpdate > & updates)
+inline void Subsumption::updateOccurrences(const vector< OccUpdate > & updates)
 {
     for (int i = 0; i < updates.size(); ++i)
     {
@@ -1387,26 +1388,19 @@ inline void Subsumption::updateOccurrences(CoprocessorData & data, const vector<
     }
 }
 
-void Subsumption::addClause(const Minisat::CRef cr)
-{
-  const Clause& c = ca[cr];
-  if (c.can_subsume() && !c.can_be_deleted())
-    clause_processing_queue.push_back(cr);
-  if (c.can_strengthen() && !c.can_be_deleted())
-    strengthening_queue.push_back(cr);
-}
-
 void Subsumption::initClause( const CRef cr )
 {
   const Clause& c = ca[cr];
-  if (c.can_subsume() && !c.can_be_deleted())
-    clause_processing_queue.push_back(cr);
-  if (c.can_strengthen() && !c.can_be_deleted())
-    strengthening_queue.push_back(cr);
+  if( !c.can_be_deleted() ) {
+    if (c.can_subsume() )
+      data.getSubsumeClauses().push_back(cr);
+    if (c.can_strengthen())
+      data.getStrengthClauses().push_back(cr);
+  }
 }
 
 
-void Subsumption::parallelSubsumption(CoprocessorData& data, const bool doStatistics)
+void Subsumption::parallelSubsumption( const bool doStatistics)
 {
   cerr << "c parallel subsumption with " << controller.size() << " threads" << endl;
   SubsumeWorkData workData[ controller.size() ];
@@ -1414,8 +1408,8 @@ void Subsumption::parallelSubsumption(CoprocessorData& data, const bool doStatis
   vector< vector < CRef > > toDeletes  (controller.size());
   vector< vector < CRef > > nonLearnts (controller.size());
   //vector< struct SubsumeStatsData > localStats (controller.size());
-  unsigned int queueSize = clause_processing_queue.size();
-  unsigned int partitionSize = clause_processing_queue.size() / controller.size();
+  unsigned int queueSize = data.getSubsumeClauses().size();
+  unsigned int partitionSize = data.getSubsumeClauses().size() / controller.size();
   // setup data for workers
   for( int i = 0 ; i < controller.size(); ++ i ) {
     workData[i].subsumption = this; 
@@ -1462,11 +1456,11 @@ void Subsumption::parallelSubsumption(CoprocessorData& data, const bool doStatis
 void* Subsumption::runParallelSubsume(void* arg)
 {
   SubsumeWorkData* workData = (SubsumeWorkData*) arg;
-  workData->subsumption->par_subsumption_worker(*(workData->data),workData->start,workData->end, *(workData->to_delete), *(workData->set_non_learnt), *(workData->stats));
+  workData->subsumption->par_subsumption_worker(workData->start,workData->end, *(workData->to_delete), *(workData->set_non_learnt), *(workData->stats));
   return 0;
 }
 
-void Subsumption::parallelStrengthening(CoprocessorData& data)
+void Subsumption::parallelStrengthening()
 {
   //fullStrengthening(data);
   cerr << "c parallel strengthening with " << controller.size() << " threads" << endl;
@@ -1475,8 +1469,8 @@ void Subsumption::parallelStrengthening(CoprocessorData& data)
   vector<Job> jobs( controller.size() );
   vector< SpinLock > var_locks (data.nVars() + 1); // 1 extra SpinLock for data
   vector< vector < OccUpdate > > occ_updates(controller.size());
-  unsigned int queueSize = strengthening_queue.size();
-  unsigned int partitionSize = strengthening_queue.size() / controller.size();
+  unsigned int queueSize = data.getStrengthClauses().size();
+  unsigned int partitionSize = data.getStrengthClauses().size() / controller.size();
   
   for ( int i = 0 ; i < controller.size(); ++ i ) {
     workData[i].subsumption = this; 
@@ -1498,7 +1492,7 @@ void Subsumption::parallelStrengthening(CoprocessorData& data)
 
   // update Occurrences
   for (int i = 0; i < controller.size(); ++i)
-    updateOccurrences(data, occ_updates[i]);
+    updateOccurrences(occ_updates[i]);
 
   //propagate units
   propagation.propagate(data, true);
@@ -1507,7 +1501,7 @@ void Subsumption::parallelStrengthening(CoprocessorData& data)
 void* Subsumption::runParallelStrengthening(void* arg)
 {
     SubsumeWorkData* workData = (SubsumeWorkData*) arg;
-    if ( opt_naivStrength ) workData->subsumption->par_strengthening_worker(*(workData->data),workData->start,workData->end, *(workData->var_locks), *(workData->stats), *(workData->occ_updates));
-    else workData->subsumption->par_nn_strengthening_worker(*(workData->data),workData->start,workData->end, *(workData->var_locks), *(workData->stats), *(workData->occ_updates));
+    if ( opt_naivStrength ) workData->subsumption->par_strengthening_worker(workData->start,workData->end, *(workData->var_locks), *(workData->stats), *(workData->occ_updates));
+    else workData->subsumption->par_nn_strengthening_worker(workData->start,workData->end, *(workData->var_locks), *(workData->stats), *(workData->occ_updates));
     return 0;
 }

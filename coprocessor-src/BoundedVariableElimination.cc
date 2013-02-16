@@ -232,7 +232,7 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<Var
 {
   //Subsumption / Strengthening
   if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
-  subsumption.subsumeStrength(data); 
+  subsumption.subsumeStrength(); 
   if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
  
   if (!data.ok())
@@ -271,7 +271,7 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<Var
     touchedVarsForSubsumption(data, touched_variables);
 
     if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
-    subsumption.subsumeStrength(data);
+    subsumption.subsumeStrength();
     if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
 
     if (opt_bve_heap != 2)
@@ -300,7 +300,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
 {
     int32_t * pos_stats = (int32_t*) malloc (5 * sizeof(int32_t));
     int32_t * neg_stats = (int32_t*) malloc (5 * sizeof(int32_t));
-           
+        
         while ((opt_bve_heap != 2 && heap.size() > 0) || (opt_bve_heap == 2 && variable_queue.size() > 0))
         {
            Var v = var_Undef;
@@ -446,7 +446,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                 if (opt_bve_verbose > 0) cerr << "c Resolved " << v+1 <<endl;
                 //subsumption with new clauses!!
                 if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
-                subsumption.subsumeStrength(data);
+                subsumption.subsumeStrength();
                 if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
 
                 if (!data.ok())

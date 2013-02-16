@@ -187,7 +187,10 @@ class CoprocessorData
 
   vector<Lit> undo;                     // store clauses that have to be undone for extending the model
   vector<Lit> equivalences;             // stack of literal classes that represent equivalent literals
-
+  vector<CRef> subsume_queue; // queue of clause references that potentially can subsume other clauses
+  vector<CRef> strengthening_queue;     // vector of clausereferences, which potentially can strengthen
+  
+  
   // TODO decide whether a vector of active variables would be good!
 
 public:
@@ -287,6 +290,13 @@ public:
   void addEquivalences( const Lit& l1, const Lit& l2 );
   vector<Lit>& getEquivalences();
 
+  /** add a clause to the queues, so that this clause will be checked by the next call to subsumeStrength 
+   * @return true, if clause has really been added and was not in both queues before
+   */
+  bool addSubStrengthClause( const Minisat::CRef cr );
+  vector<CRef>& getSubsumeClauses();
+  vector<CRef>& getStrengthClauses();
+  
   // checking whether a literal can be altered - TODO: use the frozen information from the solver object!
   void setNotTouch(const Var v);
   bool doNotTouch (const Var v) const ;
@@ -840,6 +850,34 @@ inline void CoprocessorData::addEquivalences(const Lit& l1, const Lit& l2)
 inline vector< Lit >& CoprocessorData::getEquivalences()
 {
   return equivalences;
+}
+
+inline bool CoprocessorData::addSubStrengthClause(const Minisat::CRef cr)
+{
+  bool ret = false;
+  Clause& c = ca[cr];
+  if( !c.can_strengthen() ) {
+    c.set_strengthen(true); 
+    strengthening_queue.push_back(cr);
+    ret = true;
+  }
+  if( !c.can_subsume() ) {
+    c.set_subsume(true); 
+    subsume_queue.push_back(cr);
+    ret = true;
+  }
+  return ret;
+}
+
+inline vector< Minisat::CRef >& CoprocessorData::getSubsumeClauses()
+{
+  return subsume_queue;
+}
+
+
+inline vector<CRef>& CoprocessorData::getStrengthClauses()
+{
+  return strengthening_queue; 
 }
 
 

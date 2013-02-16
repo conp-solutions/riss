@@ -15,7 +15,7 @@ static BoolOption opt_old_circuit      (_cat, "cp3_old_circuit",   "do old circu
 static BoolOption opt_eagerEquivalence (_cat, "cp3_eagerGates",    "do old circuit extraction", true);
 static BoolOption opt_eeGateBigFirst   (_cat, "cp3_BigThenGate", "detect binary equivalences before going for gates", true);
 /// enable this parameter only during debug!
-static BoolOption debug_out            (_cat, "ee_debug", "write final circuit to this file",false);
+static BoolOption debug_out            (_cat, "ee_debug", "print debug output to screen",false);
 static StringOption aagFile            (_cat, "ee_aag", "write final circuit to this file");
 
 static const int eeLevel = 1;
@@ -1843,14 +1843,8 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	    if( !hasDuplicate( data.list( (pol == 0 ? repr : ~repr)  ), c )  ) {
 	      data.list( (pol == 0 ? repr : ~repr) ).push_back( list[k] );
 	      if( getsNewLiterals ) {
-		if( !c.can_strengthen() || !c.can_subsume() ) {
-		  c.set_strengthen(true);
-		  c.set_subsume(true);
-		  // TODO: take care of duplicates!
-		  // cerr << "c added clause " << ca[ list[k] ] << " to the subsumption queue" << endl;
-		  subsumption.addClause( list[k] );
-		  resetVariables = true;
-		}
+		if( data.addSubStrengthClause( list[k] ) ) resetVariables = true;
+
 	      }
 	    } else {
  	      if( debug_out ) cerr << "c clause has duplicates: " << c << endl;
@@ -1916,7 +1910,7 @@ EEapplyNextClause:; // jump here, if a tautology has been found
 	 if( propagation.propagate(data,true) == l_False ) return newBinary;
     }
     if( subsumption.hasWork() ) {
-	subsumption.subsumeStrength(data);
+	subsumption.subsumeStrength();
 	newBinary = true; // potentially, there are new binary clauses
     	resetVariables = true;
     }

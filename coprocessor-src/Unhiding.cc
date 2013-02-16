@@ -450,7 +450,8 @@ bool Unhiding::unhideSimplify()
 	    data.removedLiteral(l);
 	    if( clause.size() == 2 ) big.removeEdge(clause[0],clause[1]);
 	    clause.remove_lit(l);
-
+	    // tell subsumption / strengthening about this modified clause
+	    data.addSubStrengthClause(clRef);
 	    // if you did something useful, call
 	    removedLiterals ++;
 	    didSomething = true;
@@ -491,6 +492,8 @@ bool Unhiding::unhideSimplify()
 	    data.removedLiteral(~l);
 	    if( clause.size() == 2 ) big.removeEdge(clause[0],clause[1]);
 	    clause.remove_lit( ~l );
+	    // tell subsumption / strengthening about this modified clause
+	    data.addSubStrengthClause(clRef);
 	    // if you did something useful, call
 	    removedLiterals ++;
 	    didSomething = true;

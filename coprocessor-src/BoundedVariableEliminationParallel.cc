@@ -906,7 +906,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
     touchedVarsForSubsumption(data, touched_variables);
 
     if (doStatistics) subsimpTime = wallClockTime() - subsimpTime;
-    subsumption.subsumeStrength(data);
+    subsumption.subsumeStrength();
     if (doStatistics) subsimpTime = wallClockTime() - subsimpTime;
 
     if (opt_bve_heap != 2)

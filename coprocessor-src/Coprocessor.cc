@@ -50,14 +50,14 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , ipTime( 0 )
 // classes for preprocessing methods
 , propagation( solver->ca, controller )
-, subsumption( solver->ca, controller, propagation )
+, subsumption( solver->ca, controller, data, propagation )
 , hte( solver->ca, controller, propagation )
 , bve( solver->ca, controller, propagation, subsumption )
 , bva( solver->ca, controller, data )
 , cce( solver->ca, controller )
 , ee ( solver->ca, controller, propagation, subsumption )
 , unhiding ( solver->ca, controller, data, propagation, subsumption, ee )
-, probing  ( solver->ca, controller, data, *solver )
+, probing  ( solver->ca, controller, data, propagation, *solver )
 , sls ( data, solver->ca, controller )
 , twoSAT( solver->ca, controller, data)
 {
@@ -109,7 +109,7 @@ lbool Preprocessor::performSimplification()
 
   if( opt_subsimp ) {
     if( opt_verbose > 2 )cerr << "c coprocessor subsume/strengthen" << endl;
-    if( status == l_Undef ) subsumption.subsumeStrength(data);  // cannot change status, can generate new unit clauses
+    if( status == l_Undef ) subsumption.subsumeStrength();  // cannot change status, can generate new unit clauses
     if (! solver->okay())
         status = l_False;
   }
@@ -282,6 +282,8 @@ lbool Preprocessor::performSimplification()
     hte.printStatistics(cerr);
     bve.printStatistics(cerr);
     bva.printStatistics(cerr);
+    probing.printStatistics(cerr);
+    unhiding.printStatistics(cerr);
     cce.printStatistics(cerr);
     sls.printStatistics(cerr);
     twoSAT.printStatistics(cerr);
@@ -423,6 +425,15 @@ void Preprocessor::reSetupSolver()
 		        { const Lit tmp = c[k]; c[k] = c[j]; c[j] = tmp; break; }
 		  }
 		}
+		if( (solver->value( c[0] ) == l_False && solver->value( c[1] ) == l_False) ) {
+		  cerr << "c found unsatisfiable clause " << c << endl;
+		  data.setFailed();
+		  break;
+		} else if( solver->value( c[0] ) == l_Undef && solver->value( c[1] ) == l_False) {
+		  cerr << "c found unit clause " << c << endl;
+		  solver->uncheckedEnqueue( c[0] );
+		}
+		
 		assert( (solver->value( c[0] ) != l_False || solver->value( c[1] ) != l_False) && "Cannot watch falsified literals" );
                 solver->attachClause(cr);
             }
@@ -527,6 +538,7 @@ void Preprocessor::sortClauses()
   for (int i = 0; i < clausesSize; ++i)
   {
     Clause& c = ca[solver->clauses[i]];
+    if( c.can_be_deleted() ) continue;
     const uint32_t s = c.size();
     for (uint32_t j = 1; j < s; ++j)
     {
@@ -545,6 +557,7 @@ void Preprocessor::sortClauses()
   for (int i = 0; i < clausesSize; ++i)
   {
     Clause& c = ca[solver->learnts[i]];
+    if( c.can_be_deleted() ) continue;
     const uint32_t s = c.size();
     for (uint32_t j = 1; j < s; ++j)
     {
