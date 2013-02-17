@@ -624,7 +624,7 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
                 if (p.learnt() || n.learnt())
                 {
                     if (    (opt_resolve_learnts > 1 
-                                || opt_resolve_learnts > 0 && p.learnt() && n.learnt()
+                                || opt_resolve_learnts > 0 && !(p.learnt() && n.learnt())
                             ) && newLits <= max(p.size(),n.size()) + opt_learnt_growth) {
                         lit_learnts += newLits;
                         ++new_learnts;
