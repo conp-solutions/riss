@@ -86,7 +86,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         {
             data_lock.unlock();
             if (doStatistics) stats.upTime = wallClockTime() -  stats.upTime;
-            par_bve_propagate(data, var_lock, rwlock, dirtyOccs, sharedStrengthQueue, rwlock_count);
+            par_bve_propagate(data, var_lock, rwlock, dirtyOccs, sharedStrengthQueue, stats, rwlock_count, doStatistics);
             if (doStatistics) stats.upTime = wallClockTime() -  stats.upTime;
             continue;
         }
@@ -364,7 +364,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         if (pos_count != 0 &&  neg_count != 0)
         {
             if (doStatistics) ++stats.anticipations;
-            if (anticipateEliminationThreadsafe(data, pos, neg,  v, p_limit, n_limit, ps, pos_stats, neg_stats, lit_clauses, lit_learnts, new_clauses, new_learnts, data_lock) == l_False) 
+            if (anticipateEliminationThreadsafe(data, pos, neg,  v, p_limit, n_limit, ps, pos_stats, neg_stats, lit_clauses, lit_learnts, new_clauses, new_learnts, data_lock, stats, doStatistics) == l_False) 
             {
                 // UNSAT: free locks and abort
                 assert(rwlock_count == 1);
@@ -563,7 +563,7 @@ inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData 
  *  -> total number of literals in learnts after resolution:    lit_learnts
  *
  */
-inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const int p_limit, const int n_limit, vec <Lit> & resolvent, int32_t* pos_stats , int32_t* neg_stats, int & lit_clauses, int & lit_learnts, int & new_clauses, int & new_learnts, SpinLock & data_lock)
+inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const int p_limit, const int n_limit, vec <Lit> & resolvent, int32_t* pos_stats , int32_t* neg_stats, int & lit_clauses, int & lit_learnts, int & new_clauses, int & new_learnts, SpinLock & data_lock, ParBVEStats & stats, const bool doStatistics)
 {
     if(opt_bve_verbose > 2)  cerr << "c starting anticipate BVE" << endl;
     // Clean the stats
@@ -678,8 +678,9 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
                 else if (status == l_Undef)
                      ; // variable already assigned
                 else if (status == l_True)
-                { 
-                // TODO -> omit propagation for now
+                {
+                    if (doStatistics)
+                        ++stats.unitsEnqueued;
                 }
                 else 
                     assert (0); //something went wrong
@@ -1291,6 +1292,10 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData & da
                   other.unlock();
                   return l_False;
               }
+              if (state == l_True && doStatistics)
+              {
+                 ++stats.unitsEnqueued;
+              }
           }
           //TODO optimize out
           else if (other.size() == 1)
@@ -1474,6 +1479,10 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & da
                   other.unlock();
                   return l_False;
               }
+              if (state == l_True && doStatistics)
+              {
+                 ++stats.unitsEnqueued;
+              }
           }
           //TODO optimize out
           else if (other.size() == 1)
@@ -1522,14 +1531,13 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & da
     return l_Undef;
 }
 
-lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, MarkArray & dirtyOccs, deque < CRef > & sharedSubsimpQueue, int & rwlock_count)
+lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, MarkArray & dirtyOccs, deque < CRef > & sharedSubsimpQueue, ParBVEStats & stats, int & rwlock_count, const bool doStatistics)
 {
   //processTime = cpuTime() - processTime;
   SpinLock & data_lock = var_lock[data.nVars()];
   SpinLock & strength_lock = var_lock[data.nVars() + 4];
   Solver* solver = data.getSolver();
   // propagate all literals that are on the trail but have not been propagated
-  // TODO -> make the trail access threadsafe
   while (data.ok() && data.hasToPropagate())
   {
     data.lock();
@@ -1578,7 +1586,19 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vecto
       satisfied.spinlock();
 
       if( global_debug_out ) cerr << "c UP remove " << satisfied << endl;
-      //++removedClauses; // = ca[ positive[i] ].can_be_deleted() ? removedClauses : removedClauses + 1;
+      if (doStatistics)
+      {
+        if (satisfied.learnt())
+        {
+            ++stats.removedLearnts;
+            stats.learntLits += satisfied.size();
+        }
+        else 
+        { 
+            ++stats.removedClauses;
+            stats.removedLiterals += satisfied.size();
+        }
+      }
       satisfied.set_delete(true);
       satisfied.unlock();
       
@@ -1594,7 +1614,8 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vecto
    }
 
     const Lit nl = ~l;
-    int count = 0;
+    int countO = 0;
+    int countL = 0;
     vector<CRef> & negative = data.list(nl);
 
     for( int i = 0 ; i < negative.size(); ++i )
@@ -1618,8 +1639,9 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vecto
 	        if( global_debug_out ) cerr << "c UP remove " << nl << " from " << c << endl;
                 c.removePositionSorted(j);
 	        break;
-	  }
-        count ++;
+	    }
+        if (c.learnt())  ++countL;
+        else             ++countO;
       }
       // unit propagation
       data_lock.lock();
@@ -1638,7 +1660,6 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vecto
         rwlock.readUnlock();
         var_lock[v].unlock();
 
-        //processTime = cpuTime() - processTime;
         return l_False;
       } 
       else if( c.size() == 1 ) 
@@ -1651,6 +1672,7 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vecto
            solver->uncheckedEnqueue(c[0]);
          }
          data_lock.unlock();
+         if (doStatistics) ++stats.unitsEnqueued;
       }
       else
       { 
@@ -1676,27 +1698,15 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vecto
 
     // update formula data!
     data_lock.lock();
-    data.removedLiteral(nl, count);
+    data.removedLiteral(nl, countL + countO);
     data_lock.unlock();
-    //removedLiterals += count;
-
+    if (doStatistics) 
+    {
+        stats.removedLiterals += countO;
+        stats.learntLits      += countL;
+    }
     var_lock[v].unlock();
   }
   
-//    for (int i = 0; i < clause_list.size(); ++i)
-//    {
-//         Clause & c = ca[clause_list[i]];
-//         int k = 0;
-//         for (int l = 0; l < c.size(); ++l)
-//         {
-//             if (value(c[l]) != l_False)
-//                 c[k++] = c[l];
-//         }
-//         c.shrink(c.size() - k);
-//             if (c.has_extra())
-//             c.calcAbstraction();
-//    }
-  
-  //processTime = cpuTime() - processTime;
   return data.ok() ? l_Undef : l_False;
 }
