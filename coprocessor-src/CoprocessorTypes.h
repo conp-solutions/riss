@@ -811,8 +811,9 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
          log.log(1, "set literal to true",satLit);
          model[ var(satLit) ] = sign(satLit) ? l_False : l_True;
        }
+       continue;
      }
-     if( var(c) > model.size() ) model.growTo( var(c), l_True ); // model is too small?
+     if( var(c) >= model.size() ) model.growTo( var(c) + 1, l_True ); // model is too small?
      if (model[var(c)] == (sign(c) ? l_False : l_True) ) // satisfied
      {
        isSat = true;

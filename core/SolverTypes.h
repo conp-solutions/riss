@@ -466,7 +466,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
      *      -> secure this with a spin lock before calling
      *      -> Make shure that the calling thread has not locked CA_Lock
      */
-    AllocatorReservation reserveMemory(int clauses, int literals, int learnts, ReadersWriterLock CA_Lock)
+    AllocatorReservation reserveMemory(int clauses, int literals, int learnts, ReadersWriterLock & CA_Lock)
     {
         bool need_lock = ! hasFreeMemory(clauses, literals, learnts);
         if (need_lock)

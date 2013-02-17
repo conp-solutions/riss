@@ -139,6 +139,8 @@ protected:
     deque<CRef> * sharedStrengthQueue;
     ParBVEStats * bveStats;
     MarkArray * gateMarkArray;
+    int rwlock_count;
+    BVEWorkData () : rwlock_count(0) {}
   };
 
 
@@ -147,7 +149,7 @@ protected:
           ( CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap
           , deque < CRef > & strengthQueue , deque < CRef > & sharedStrengthQueue
           , vector< SpinLock > & var_lock, ReadersWriterLock & rwlock
-          , ParBVEStats & stats , MarkArray * gateMarkArray
+          , ParBVEStats & stats , MarkArray * gateMarkArray, int & rwlock_count
           , const bool force = false, const bool doStatistics = true) ; 
 
   inline void removeBlockedClauses(CoprocessorData & data, const vector< CRef> & list, const int32_t stats[], const Lit l, const bool doStatistics = true );
@@ -161,10 +163,10 @@ protected:
   inline void removeBlockedClausesThreadSafe(CoprocessorData & data, const vector< CRef> & list, const int32_t _stats[], const Lit l, SpinLock & data_lock, ParBVEStats & stats, const bool doStatistics );
 
   // Special subsimp implementations for par bve:
-  void par_bve_strengthening_worker(CoprocessorData& data, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, MarkArray & dirtyOccs, ParBVEStats & stats, const bool strength_resolvents, const bool doStatistics);
+  void par_bve_strengthening_worker(CoprocessorData& data, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, MarkArray & dirtyOccs, ParBVEStats & stats, int & rwlock_count, const bool strength_resolvents, const bool doStatistics);
 
   // Special propagation for par bve
-  lbool par_bve_propagate(CoprocessorData& data, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, MarkArray & dirtyOccs, deque <CRef> & sharedSubsimpQueue);
+  lbool par_bve_propagate(CoprocessorData& data, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, MarkArray & dirtyOccs, deque <CRef> & sharedSubsimpQueue, int & rwlock_count);
 
 inline lbool strength_check_pos(CoprocessorData & data, vector < CRef > & list, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, MarkArray & dirtyOccs, ParBVEStats & stats, const bool strength_resolvents, const bool doStatistics); 
 

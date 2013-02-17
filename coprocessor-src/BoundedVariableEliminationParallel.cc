@@ -63,14 +63,14 @@ static void printLitVec(const vec<Lit> & litvec)
  *          you must not acquire a write lock on the data object, if alread 2.b was acquired
  *          you either hold a heap lock or any of the other locks 
  */
-void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap, deque < CRef > & strengthQueue, deque < CRef > & sharedStrengthQueue, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, ParBVEStats & stats, MarkArray * gateMarkArray, const bool force, const bool doStatistics)   
+void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap, deque < CRef > & strengthQueue, deque < CRef > & sharedStrengthQueue, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, ParBVEStats & stats, MarkArray * gateMarkArray, int & rwlock_count, const bool force, const bool doStatistics)   
 {
     if (doStatistics) stats.processTime = wallClockTime() - stats.processTime;
 
     SpinLock & data_lock = var_lock[data.nVars()]; 
     SpinLock & heap_lock = var_lock[data.nVars() + 1]; // used for variable-heap or queue
     SpinLock & ca_lock   = var_lock[data.nVars() + 2];
-    
+    SpinLock & susi_lock = var_lock[data.nVars() + 4];
     int32_t * pos_stats = (int32_t*) malloc (5 * sizeof(int32_t));
     int32_t * neg_stats = (int32_t*) malloc (5 * sizeof(int32_t));
      
@@ -81,21 +81,27 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
     while ( data.ok() ) // if solver state = false => abort
     {
         // Propagate (rw-locks)
+        data_lock.lock();
         if (data.hasToPropagate())
         {
+            data_lock.unlock();
             if (doStatistics) stats.upTime = wallClockTime() -  stats.upTime;
-            par_bve_propagate(data, var_lock, rwlock, dirtyOccs, sharedStrengthQueue);
+            par_bve_propagate(data, var_lock, rwlock, dirtyOccs, sharedStrengthQueue, rwlock_count);
             if (doStatistics) stats.upTime = wallClockTime() -  stats.upTime;
             continue;
         }
+        data_lock.unlock();
         // Subsimp
+        susi_lock.lock();
         if (sharedStrengthQueue.size() > 0)
         {
+            susi_lock.unlock();
             if (doStatistics) stats.subsimpTime = wallClockTime() -  stats.subsimpTime;
-            par_bve_strengthening_worker(data, var_lock, rwlock, sharedStrengthQueue, strengthQueue, dirtyOccs, stats, false, doStatistics);
+            par_bve_strengthening_worker(data, var_lock, rwlock, sharedStrengthQueue, strengthQueue, dirtyOccs, stats, rwlock_count, false, doStatistics);
             if (doStatistics) stats.subsimpTime = wallClockTime() -  stats.subsimpTime;
             continue;
         }
+        susi_lock.unlock();
        
         // Eliminate
         Var v = var_Undef;
@@ -137,6 +143,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         }
        
         // Lock v 
+        assert(rwlock_count == 0);
         var_lock[v].lock();
 
         ///////////////////////////////////////////////////////////////////////////////////////////
@@ -145,6 +152,8 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         //
         ///////////////////////////////////////////////////////////////////////////////////////////
         
+        assert(rwlock_count == 0);
+        rwlock_count++;
         rwlock.readLock();
         // Get the clauses with v
         vector<CRef> & pos = data.list(mkLit(v,false)); 
@@ -198,6 +207,8 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         // TODO: do we need a data-lock here?
         timeStamp = lastTouched.getIndex(v); // get last modification of v
 
+        assert(rwlock_count == 1);
+        --rwlock_count;
         rwlock.readUnlock();
 
         ///////////////////////////////////////////////////////////////////////////////////////////
@@ -224,12 +235,16 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         //  Begin: read locked part 
         //
         ///////////////////////////////////////////////////////////////////////////////////////////
+        assert(rwlock_count == 0);
+        rwlock_count++;
         rwlock.readLock(); 
         
         // check if the variable-sub-graph is still valid
         // or UNSAT
         if (lastTouched.getIndex(v) != timeStamp || !data.ok())
         {
+            assert(rwlock_count == 1);
+            --rwlock_count;
             rwlock.readUnlock(); // Early Exit Read Lock
             // free all locks on Vars in descending order 
             for (int i = neighbors.size() - 1; i >= 0; --i)
@@ -271,6 +286,8 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         {
             if (doStatistics) ++stats.skippedVars;
             
+            assert(rwlock_count == 1);
+            --rwlock_count;
             rwlock.readUnlock(); // Early Exit Read Lock
             // free all locks on Vars in descending order 
             for (int i = neighbors.size() - 1; i >= 0; --i)
@@ -350,6 +367,8 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
             if (anticipateEliminationThreadsafe(data, pos, neg,  v, p_limit, n_limit, ps, pos_stats, neg_stats, lit_clauses, lit_learnts, new_clauses, new_learnts, data_lock) == l_False) 
             {
                 // UNSAT: free locks and abort
+                assert(rwlock_count == 1);
+                --rwlock_count;
                 rwlock.readUnlock(); // Early Exit Read Lock
                 // free all locks on Vars in descending order 
                 for (int i = neighbors.size() - 1; i >= 0; --i)
@@ -369,6 +388,8 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
             if(opt_bve_verbose > 1) cerr << "c removing blocked clauses from F_¬" << v+1 << endl;
             removeBlockedClausesThreadSafe(data, neg, neg_stats, mkLit(v, true), data_lock, stats, doStatistics); 
         }
+        assert(rwlock_count == 1);
+        --rwlock_count;
         rwlock.readUnlock();
 
         ///////////////////////////////////////////////////////////////////////////////////////////
@@ -388,7 +409,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         //  Reservation of Allocator-Memory 
         //
         ///////////////////////////////////////////////////////////////////////////////////////////
-            
+            assert(rwlock_count == 0);
             ca_lock.lock();      
             AllocatorReservation memoryReservation = ca.reserveMemory( new_clauses + new_learnts, lit_clauses + lit_learnts, new_learnts, rwlock);
             ca_lock.unlock();
@@ -398,11 +419,14 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         //  Begin: read locked part 
         //
         ///////////////////////////////////////////////////////////////////////////////////////////
-       
+             assert(rwlock_count == 0);
+             rwlock_count++;
              rwlock.readLock(); 
              if (!data.ok())
              {
                  // UNSAT case -> end thread, but first release all locks
+                assert(rwlock_count == 1);
+                --rwlock_count;
                  rwlock.readUnlock();
                  // free all locks on Vars in descending order 
                  for (int i = neighbors.size() - 1; i >= 0; --i)
@@ -419,6 +443,8 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
              if (resolveSetThreadSafe(data, pos, neg, v, p_limit, n_limit, ps, memoryReservation, strengthQueue, stats, data_lock, doStatistics) == l_False) 
              {
                  // UNSAT case -> end thread, but first release all locks
+                assert(rwlock_count == 1);
+                --rwlock_count;
                  rwlock.readUnlock();
                  // free all locks on Vars in descending order 
                  for (int i = neighbors.size() - 1; i >= 0; --i)
@@ -447,9 +473,10 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
 
              //subsimp with new clauses!!
             if (doStatistics) stats.subsimpTime = wallClockTime() -  stats.subsimpTime;
-             par_bve_strengthening_worker(data, var_lock, rwlock, sharedStrengthQueue, strengthQueue, dirtyOccs, stats, true, doStatistics);
+             par_bve_strengthening_worker(data, var_lock, rwlock, sharedStrengthQueue, strengthQueue, dirtyOccs, stats, rwlock_count, true, doStatistics);
             if (doStatistics) stats.subsimpTime = wallClockTime() -  stats.subsimpTime;
-
+             assert(rwlock_count == 1);
+             --rwlock_count;
              rwlock.readUnlock();
         
         ///////////////////////////////////////////////////////////////////////////////////////////
@@ -802,7 +829,7 @@ inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(Coprocess
 void* BoundedVariableElimination::runParallelBVE(void* arg)
 {
   BVEWorkData*      workData = (BVEWorkData*) arg;
-  workData->bve->par_bve_worker(*(workData->data), *(workData->heap), *(workData->neighbor_heap), *(workData->strengthQueue), *(workData->sharedStrengthQueue), *(workData->var_locks), *(workData->rw_lock), *(workData->bveStats), workData->gateMarkArray); 
+  workData->bve->par_bve_worker(*(workData->data), *(workData->heap), *(workData->neighbor_heap), *(workData->strengthQueue), *(workData->sharedStrengthQueue), *(workData->var_locks), *(workData->rw_lock), *(workData->bveStats), workData->gateMarkArray, workData->rwlock_count); 
   return 0;
 }
 
@@ -870,16 +897,24 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
     
     uint32_t timer = dirtyOccs.nextStep();
     int QSize = ((opt_bve_heap != 2) ? newheap.size() : variable_queue.size()); 
-
+    ReadersWriterLock allocatorRWLock;
     if (opt_par_bve || QSize > par_bve_threshold)
     {
         for ( int i = 0 ; i < controller.size(); ++ i ) 
         {
           jobs[i].function  = BoundedVariableElimination::runParallelBVE;
+          workData[i].rw_lock = & allocatorRWLock;
           jobs[i].argument  = &(workData[i]);
         }
         cerr << "c parallel bve with " << controller.size() << " threads on " 
              << QSize << " variables" << endl;
+        pthread_rwlock_t mutex = allocatorRWLock.getValue();
+        assert (mutex.__data.__nr_readers == 0);
+        assert (mutex.__data.__readers_wakeup == 0);
+        assert (mutex.__data.__writer_wakeup == 0);
+        assert (mutex.__data.__nr_readers_queued == 0);
+        assert (mutex.__data.__writer == 0);
+        assert (mutex.__data.__lock == 0);
         controller.runJobs( jobs );
 
         if (!data.ok())
@@ -946,7 +981,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
  * -> if fstvar(other) <= fstvar(strengthener)
  *      -> lock other
  */
-void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& data, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, MarkArray & dirtyOccs, ParBVEStats & stats, const bool strength_resolvents, const bool doStatistics)
+void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& data, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, MarkArray & dirtyOccs, ParBVEStats & stats, int & rwlock_count, const bool strength_resolvents, const bool doStatistics)
 { 
   assert(data.nVars() <= var_lock.size() && "var_lock vector to small");
 //  if (doStatistics)
@@ -979,7 +1014,11 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
         break;
     }
 
-    if (!strength_resolvents) rwlock.readLock();
+    if (!strength_resolvents){
+        assert(rwlock_count == 0);
+        rwlock_count++;
+        rwlock.readLock();
+    }
 
     Var fst = var(ca[cr][0]);
     
@@ -989,15 +1028,21 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
         lock_strengthener_nn: // readlock @ this point
         if (ca[cr].can_be_deleted() || ca[cr].size() == 0)
         {
+             assert(rwlock_count == 1);
+             --rwlock_count;
             rwlock.readUnlock();
             continue;
         }
         fst = var(ca[cr][0]);
+        assert(rwlock_count == 1);
+        --rwlock_count;
         rwlock.readUnlock();
 
         // lock 1st var 
         var_lock[fst].lock();
 
+        assert(rwlock_count == 0);
+        rwlock_count++;
         rwlock.readLock();
         // lock strengthener
         ca[cr].spinlock();
@@ -1006,6 +1051,8 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
         if (ca[cr].can_be_deleted() || ca[cr].size() == 0)
         {
             ca[cr].unlock();
+            assert(rwlock_count == 1);
+            --rwlock_count;
             rwlock.readUnlock();
             var_lock[fst].unlock();
             continue;
@@ -1015,8 +1062,12 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
         if (var(ca[cr][0]) != fst)
         {
             ca[cr].unlock();
+            assert(rwlock_count == 1);
+            --rwlock_count;
             rwlock.readUnlock();
             var_lock[fst].unlock();
+            assert(rwlock_count == 0);
+            rwlock_count++;
             rwlock.readLock();
             goto lock_strengthener_nn;
         }
@@ -1036,6 +1087,8 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
             if (!strength_resolvents) 
             {
                 strengthener.unlock();
+                assert(rwlock_count == 1);
+                --rwlock_count;
                 rwlock.readUnlock();
                 var_lock[fst].unlock(); // unlock fst var
             } // no readlock @ this point
@@ -1049,6 +1102,8 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
             if (!strength_resolvents) 
             {
                 strengthener.unlock();
+                assert(rwlock_count == 1);
+                --rwlock_count;
                 rwlock.readUnlock();
                 var_lock[fst].unlock(); 
             }
@@ -1085,6 +1140,8 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
     if (!strength_resolvents)
     {
         strengthener.unlock();
+        assert(rwlock_count == 1);
+        --rwlock_count;
         rwlock.readUnlock();
         // free lock of first variable
         var_lock[fst].unlock();
@@ -1465,7 +1522,7 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & da
     return l_Undef;
 }
 
-lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, MarkArray & dirtyOccs, deque < CRef > & sharedSubsimpQueue)
+lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, MarkArray & dirtyOccs, deque < CRef > & sharedSubsimpQueue, int & rwlock_count)
 {
   //processTime = cpuTime() - processTime;
   SpinLock & data_lock = var_lock[data.nVars()];
@@ -1501,6 +1558,8 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vecto
     data_lock.unlock();
     
     // Readlock on CA
+    assert(rwlock_count == 0);
+    rwlock_count++;
     rwlock.readLock();
 
     // remove positives
@@ -1550,7 +1609,7 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vecto
 
       c.spinlock();
 
-      // sorted propagation, no!
+      // sorted propagation!
       if ( !c.can_be_deleted() ) 
       {
         for ( int j = 0; j < c.size(); ++ j ) 
@@ -1574,6 +1633,8 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vecto
         c.unlock();
 
         // End Readlock
+        assert(rwlock_count == 1);
+        --rwlock_count;
         rwlock.readUnlock();
         var_lock[v].unlock();
 
@@ -1594,7 +1655,6 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vecto
       else
       { 
          data_lock.unlock();
-       
          if (true && ! c.can_strengthen())
          {
             c.set_strengthen(true);
@@ -1610,6 +1670,8 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, vecto
     }
 
     // End Readlock
+    assert(rwlock_count == 1);
+    --rwlock_count;
     rwlock.readUnlock();
 
     // update formula data!
