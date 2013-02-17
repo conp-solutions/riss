@@ -28,9 +28,12 @@ class Probing : public Technique {
   // necessary local variables
   deque<Var> variableHeap;
   vec<lbool> prPositive;
+  vec<lbool> prL2Positive;
   
-  vector<Lit> learntUnits;
+  vec<Lit> learntUnits;
   vector<Lit> doubleLiterals;
+  vector<CRef> l2conflicts;
+  vector<CRef> l2implieds;
   
   
 public:
@@ -52,14 +55,15 @@ protected:
   CRef prPropagate(bool doDouble = true); 
   
   /** perform conflict analysis and enqueue each unit clause that could be learned 
+   * note: prLits contains the learned clause (not necessarily 1st UIP!)
    * @return false, nothing has been learned
    */
   bool prAnalyze(CRef confl);
   
   /** perform double look ahead on literals that have been traced during level1 probing
-   * @return true, if first decision is failed literal
+   * @return true, if procedure jumped back at level 0
    */
-  bool prDoubleLook();
+  bool prDoubleLook(Lit l1decision);
   
   /** add all clauses to solver object -- code taken from @see Preprocessor::reSetupSolver, but without deleting clauses */
   void reSetupSolver();
@@ -77,6 +81,7 @@ protected:
   unsigned l1failed;		// number of found l1 failed literals
   unsigned l1learntUnit;	// learnt unit clauses
   unsigned l1ee;		// number of found l1 equivalences
+  unsigned l2implied;		// number of literals implied on level2
   unsigned l2failed;		// number of found l2 failed literals
   unsigned l2ee;		// number of found l2 equivalences
   unsigned totalL2cand;		// number of l2 probe candidates
