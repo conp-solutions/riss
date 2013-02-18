@@ -99,7 +99,7 @@ void Subsumption::subsumeStrength()
       data.getSubsumeClauses().clear();
     }
     if( hasToStrengthen() ) {
-      if (opt_par_strength && controller.size() > 0)
+      if ((opt_par_strength || data.getStrengthClauses().size() > 150000) && controller.size() > 0)
       {
           parallelStrengthening();
           data.correctCounters(); //TODO correct occurrences as well
@@ -240,7 +240,7 @@ void Subsumption :: par_subsumption_worker ( unsigned int start, unsigned int en
 {
     if (doStatistics)
     {
-        stats.processTime = cpuTime() - stats.processTime;   
+        stats.processTime = wallClockTime() - stats.processTime;   
     }
     while (end > start)
     {
@@ -313,7 +313,7 @@ void Subsumption :: par_subsumption_worker ( unsigned int start, unsigned int en
             set_non_learnt.push_back(cr);
     }
     if (doStatistics) 
-        stats.processTime = cpuTime() - stats.processTime;
+        stats.processTime = wallClockTime() - stats.processTime;
 }
 
 
@@ -328,12 +328,11 @@ void Subsumption::par_strengthening_worker( unsigned int start, unsigned int sto
     assert(start <= stop && stop <= data.getStrengthClauses().size() && "invalid indices");
     assert(data.nVars() <= var_lock.size() && "var_lock vector to small");
     double & lock_time = stats.lockTime;
-    if (doStatistics)
-        stats.strengthTime = cpuTime() - stats.strengthTime;
+    if (doStatistics) stats.strengthTime = wallClockTime() - stats.strengthTime;
     
     deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
     SpinLock & data_lock = var_lock[data.nVars()];
-    while (stop > start)
+    while (stop > start && data.ok())
     {    
         CRef cr = CRef_Undef;
         if( localQueue.size() == 0 ) {
@@ -457,7 +456,14 @@ void Subsumption::par_strengthening_worker( unsigned int start, unsigned int sto
                         if (opt_lock_stats) lock_time = cpuTime() - lock_time; 
                         lbool state = data.enqueue(d[(pos + 1) % 2]);
                         data.removedClause(list[l_cr]);
-                        data_lock.unlock();   
+                        data_lock.unlock();  
+                        if (l_False == state)
+                        {
+                            var_lock[d_fst].unlock();
+                            var_lock[fst].unlock();
+                            if (doStatistics) stats.strengthTime = wallClockTime() - stats.strengthTime;
+                            return;
+                        }
                     }
                     else if (d.size() == 1)
                     {
@@ -472,6 +478,7 @@ void Subsumption::par_strengthening_worker( unsigned int start, unsigned int sto
 	                        localQueue.push_back( list[l_cr] );
 	                        d.set_strengthen(true);
 	                      }
+                        occ_updates.push_back(OccUpdate(list[l_cr] , d[pos]));
                         d.removePositionSortedThreadSafe(pos);
                         // TODO to much overhead? 
                         if (opt_lock_stats) lock_time = cpuTime() - lock_time; 
@@ -501,7 +508,7 @@ void Subsumption::par_strengthening_worker( unsigned int start, unsigned int sto
         var_lock[fst].unlock();
         
     }
-    if (doStatistics) stats.strengthTime = cpuTime() - stats.strengthTime;
+    if (doStatistics) stats.strengthTime = wallClockTime() - stats.strengthTime;
 }
 
 /** lock-based parallel non-naive strengthening-methode
@@ -515,13 +522,18 @@ void Subsumption::par_nn_strengthening_worker( unsigned int start, unsigned int 
   assert(start <= end && end <= data.getStrengthClauses().size() && "invalid indices");
   assert(data.nVars() <= var_lock.size() && "var_lock vector to small");
   if (doStatistics)
-    stats.strengthTime = cpuTime() - stats.strengthTime;
+    stats.strengthTime = wallClockTime() - stats.strengthTime;
  
    deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
   SpinLock & data_lock = var_lock[data.nVars()];
 
   for (; end > start;)
   {
+    if (!data.ok()) 
+    {
+        stats.strengthTime = wallClockTime() - stats.strengthTime;
+        return;
+    }
     CRef cr = CRef_Undef;
     if( localQueue.size() == 0 ) {
       --end;
@@ -553,7 +565,26 @@ void Subsumption::par_nn_strengthening_worker( unsigned int start, unsigned int 
         var_lock[fst].unlock();
         goto lock_strengthener_nn;
     }
-     
+ 
+    if( strengthener.size() < 2 ) {
+        if( strengthener.size() == 1 ) 
+        {
+            data_lock.lock();
+                lbool status = data.enqueue(strengthener[0]); 
+            data_lock.unlock();
+
+            var_lock[fst].unlock(); // unlock fst var
+
+            if( l_False == status ) break;
+	        else continue;
+        }
+        else 
+        { 
+            data.setFailed();  // can be done asynchronously
+            var_lock[fst].unlock(); 
+            break; 
+        }
+    }    
     //find Lit with least occurrences and its occurrences
     // search lit with minimal occurrences
     assert (strengthener.size() > 1 && "expect strengthener to be > 1");
@@ -585,9 +616,19 @@ void Subsumption::par_nn_strengthening_worker( unsigned int start, unsigned int 
     vector<CRef>& list = data.list(min);        // occurrences of minlit from strengthener
     vector<CRef>& list_neg = data.list(nmin);   // occurrences of negated minlit from strengthener
     
-    par_nn_strength_check(data, list, localQueue,  strengthener, cr, fst, var_lock, stats, doStatistics);
+    if (l_False == par_nn_strength_check(data, list, localQueue,  strengthener, cr, fst, var_lock, stats, occ_updates, doStatistics))
+    {
+        var_lock[fst].unlock();
+        if (doStatistics) stats.strengthTime = wallClockTime() - stats.strengthTime;
+        return;
+    }
     // if we use ~min, then some optimization can be done, since neg_lit has to be ~min
-    par_nn_negated_strength_check(data, list_neg, localQueue, strengthener, cr, min, fst, var_lock, stats, doStatistics);
+    if (l_False == par_nn_negated_strength_check(data, list_neg, localQueue, strengthener, cr, min, fst, var_lock, stats, occ_updates, doStatistics))
+    {
+        var_lock[fst].unlock();
+        if (doStatistics) stats.strengthTime = wallClockTime() - stats.strengthTime;
+        return;
+    }
 /*
     // now test for the occurrences of negated min, we only need to test, if all lits after min in strengthener are also in other
     for (unsigned int j = 0; j < list_neg.size(); ++j)
@@ -710,7 +751,7 @@ void Subsumption::par_nn_strengthening_worker( unsigned int start, unsigned int 
     // free lock of first variable
     var_lock[fst].unlock();
   }
-  if (doStatistics) stats.strengthTime = cpuTime() - stats.strengthTime;
+  if (doStatistics) stats.strengthTime = wallClockTime() - stats.strengthTime;
 }
 
 /**
@@ -732,7 +773,7 @@ void Subsumption::par_nn_strengthening_worker( unsigned int start, unsigned int 
  * @param var_lock      lock for each variable
  *
  */
-inline void Subsumption::par_nn_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, const bool doStatistics) 
+inline lbool Subsumption::par_nn_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, vector< OccUpdate> & occ_updates, const bool doStatistics) 
 {
     int si, so;           // indices used for "can be strengthened"-testing
     int negated_lit_pos;  // index of negative lit, if we find one
@@ -818,7 +859,12 @@ inline void Subsumption::par_nn_strength_check(CoprocessorData & data, vector < 
               data_lock.lock();
               lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
               data.removedClause(list[j]);
-              data_lock.unlock();   
+              data_lock.unlock();
+              if (l_False == state)
+              {
+                  var_lock[other_fst].unlock();
+                  return l_False;
+              }
           }
           //TODO optimize out
           else if (other.size() == 1)
@@ -835,6 +881,7 @@ inline void Subsumption::par_nn_strength_check(CoprocessorData & data, vector < 
                 other.set_strengthen(true);
               }
               Lit neg = other[negated_lit_pos];
+              occ_updates.push_back(OccUpdate(list[j] , neg));
               other.removePositionSortedThreadSafe(negated_lit_pos);
               // TODO to much overhead? 
               data_lock.lock();
@@ -853,6 +900,7 @@ inline void Subsumption::par_nn_strength_check(CoprocessorData & data, vector < 
           var_lock[other_fst].unlock();
       }
     }
+    return l_Undef;
 }
 
 /**
@@ -875,7 +923,7 @@ inline void Subsumption::par_nn_strength_check(CoprocessorData & data, vector < 
  * @param var_lock      lock for each variable
  *
  */
-inline void Subsumption::par_nn_negated_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, const bool doStatistics) 
+inline lbool Subsumption::par_nn_negated_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, vector< OccUpdate> & occ_updates, const bool doStatistics) 
 {
     int si, so;           // indices used for "can be strengthened"-testing
     int negated_lit_pos;  // index of negative lit, if we find one
@@ -954,7 +1002,12 @@ inline void Subsumption::par_nn_negated_strength_check(CoprocessorData & data, v
               data_lock.lock();
               lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
               data.removedClause(list[j]);
-              data_lock.unlock();   
+              data_lock.unlock();
+              if (l_False == state)
+              {
+                 var_lock[other_fst].unlock();
+                 return l_False;
+              }
           }
           //TODO optimize out
           else if (other.size() == 1)
@@ -971,6 +1024,7 @@ inline void Subsumption::par_nn_negated_strength_check(CoprocessorData & data, v
                 other.set_strengthen(true);
               }
               Lit neg = other[negated_lit_pos];
+              occ_updates.push_back(OccUpdate(list[j] , neg));
               other.removePositionSortedThreadSafe(negated_lit_pos);
               // TODO to much overhead? 
               data_lock.lock();
@@ -989,7 +1043,9 @@ inline void Subsumption::par_nn_negated_strength_check(CoprocessorData & data, v
           var_lock[other_fst].unlock();
       }
     }
+    return l_Undef;
 }
+
 bool Subsumption::hasToStrengthen() const
 {
   return data.getStrengthClauses().size() > 0;
@@ -1434,6 +1490,10 @@ void Subsumption::parallelStrengthening()
     jobs[i].argument  = &(workData[i]);
   }
   controller.runJobs( jobs );
+
+  // update Occurrences
+  for (int i = 0; i < controller.size(); ++i)
+    updateOccurrences(occ_updates[i]);
 
   //propagate units
   propagation.propagate(data, true);

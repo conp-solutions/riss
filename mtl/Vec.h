@@ -83,8 +83,8 @@ public:
     T&       last  (void)              { return data[sz-1]; }
 
     // Vector interface:
-    const T& operator [] (int index) const { return data[index]; }
-    T&       operator [] (int index)       { return data[index]; }
+    const T& operator [] (int index) const { assert (0 <= index && index < sz); return data[index]; }
+    T&       operator [] (int index)       { assert (0 <= index && index < sz); return data[index]; }
 
     // Duplicatation (preferred instead):
     void copyTo(vec<T>& copy) const { copy.clear(); copy.growTo(sz); for (int i = 0; i < sz; i++) copy[i] = data[i]; }

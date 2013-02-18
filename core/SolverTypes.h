@@ -33,6 +33,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 // for parallel stuff
 #include <pthread.h>
+#include "coprocessor-src/LockCollection.h"
 
 /// TODO remove after debug
 #include <iostream>
@@ -148,7 +149,33 @@ class Clause {
 	// unsigned ignored : 1; do not use such a flag for the preprocessor! copy clause immediately instead and use delete flag!
         unsigned can_subsume : 1;
         unsigned can_strengthen : 1;
-        unsigned size : 24;
+        unsigned size : 25;
+
+        ClauseHeader(void) {} 
+        ClauseHeader(volatile ClauseHeader & rhs)
+        {
+            mark = rhs.mark;
+            locked = rhs.locked;
+            learnt = rhs.learnt;
+            has_extra = rhs.has_extra;
+            reloced = rhs.reloced;
+            can_subsume = rhs.can_subsume;
+            can_strengthen = rhs.can_strengthen;
+            size = rhs.size;
+        }
+
+        ClauseHeader& operator = (volatile ClauseHeader& rhs)
+        {
+            mark = rhs.mark;
+            locked = rhs.locked;
+            learnt = rhs.learnt;
+            has_extra = rhs.has_extra;
+            reloced = rhs.reloced;
+            can_subsume = rhs.can_subsume;
+            can_strengthen = rhs.can_strengthen;
+            size = rhs.size;
+            return *this;
+        }
         }                            header;
     union { Lit lit; float act; uint32_t abs; CRef rel; } data[0];
 
@@ -158,7 +185,7 @@ class Clause {
     template<class V>
     Clause(const V& ps, bool use_extra, bool learnt) {
         header.mark      = 0;
-	header.locked    = 0;
+    	header.locked    = 0;
         header.learnt    = learnt;
         header.has_extra = use_extra;
         header.reloced   = 0;
@@ -258,8 +285,12 @@ public:
     
     /** spinlocks the clause by trying to set the locked bit 
      * Note: be very careful with the implementation, it relies on the header being 32 bit!
+     *
+     * @return true  if the lock was acquired
+     *         false gave up locking, because first literal of clause has changed
+     *               (only if first lit was specified)
      */
-    bool    spinlock() {
+    bool    spinlock(const Lit first = lit_Undef) {
       ClauseHeader compare = header;
       compare.locked = 0;
       ClauseHeader setHeader = header;
@@ -269,15 +300,19 @@ public:
       uint32_t* sHeader = (uint32_t*)(&setHeader);
       uint32_t* iHeader = (uint32_t*)(&header);
       while ( *iHeader != *cHeader || __sync_bool_compare_and_swap( iHeader, uint32_t(*cHeader), uint32_t(*sHeader) ) == false) {
-	// renew header
-	compare = header;
-	setHeader = header;
-	compare.locked = 0;
-	setHeader.locked = 1;
-	cHeader = (uint32_t*)(&compare);
-	sHeader = (uint32_t*)(&setHeader);
-	iHeader = (uint32_t*)(&header);
+        // integrity check on first literal to prevent deadlocks
+        if (header.size == 0 || lit_Undef != first && data[0].lit.x != first.x)
+          return false;
+	    // renew header
+	    compare = header;
+	    setHeader = header;
+	    compare.locked = 0;
+	    setHeader.locked = 1;
+	    cHeader = (uint32_t*)(&compare);
+	    sHeader = (uint32_t*)(&setHeader);
+	    iHeader = (uint32_t*)(&header);
       }
+      return true;
     }
     
     /** check whether the locked bit of the clause is set 
@@ -315,6 +350,19 @@ public:
 //=================================================================================================
 // ClauseAllocator -- a simple class for allocating memory for clauses:
 
+/**
+ * A struct that stores a maximum and a minimum address in the Clause Allocator
+ *
+ */
+class AllocatorReservation 
+{
+    friend class ClauseAllocator;
+
+    uint32_t current;
+    uint32_t upper_limit;
+
+    AllocatorReservation(uint32_t _current, uint32_t _limit) : current(_current), upper_limit(_limit) {}
+};
 
 const CRef CRef_Undef = RegionAllocator<uint32_t>::Ref_Undef;
 class ClauseAllocator : public RegionAllocator<uint32_t>
@@ -377,11 +425,91 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         if (to[cr].learnt())         to[cr].activity() = c.activity();
         else if (to[cr].has_extra()) to[cr].calcAbstraction();
     }
+
+    // Methods for threadsafe parallel allocation in BVE / subsimp context of CP3
+ private:
+    int requiredMemory(int clauses, int literals, int learnts) const
+    {
+        assert(sizeof(Lit)      == sizeof(uint32_t));
+        assert(sizeof(float)    == sizeof(uint32_t));
+        return            (   sizeof(Clause) * clauses 
+                            + sizeof(Lit)    * literals
+                            + sizeof(Lit)    * learnts          // for extra field
+                            + sizeof(Lit)    * (((int) extra_clause_field) * (clauses - learnts)) // if extra-field is used
+                          ) / sizeof(uint32_t);
+    }
+
+    /**
+     * Checks whether CA has enough memory for some clause allocations
+     * @param clauses   total number of clauses (learnt and non-learnt)
+     * @param literals  total number of literals
+     * @param learnts   number of clauses that are learnt
+     */ 
+    bool hasFreeMemory(int clauses, int literals, int learnts) const
+    {
+        assert(clauses >= learnts);
+        if (literals < 2 * clauses)
+        {
+            std::cerr << "c lits: " << literals << " clauses: " << clauses << endl; 
+        }
+        assert(literals >= 2 * clauses);
+        if ( currentCap() >= size() + requiredMemory(clauses, literals, learnts) )
+            return true;
+        else
+            return false;
+    };
+
+ public:
+    /**
+     * Reserves memory in the CA.
+     * Assumes that just one function calls reserveMemory 
+     *      -> secure this with a spin lock before calling
+     *      -> Make shure that the calling thread has not locked CA_Lock
+     */
+    AllocatorReservation reserveMemory(int clauses, int literals, int learnts, ReadersWriterLock & CA_Lock)
+    {
+        bool need_lock = ! hasFreeMemory(clauses, literals, learnts);
+        if (need_lock)
+            CA_Lock.writeLock();
+        uint32_t start = RegionAllocator<uint32_t>::alloc(requiredMemory(clauses, literals, learnts));
+        uint32_t limit = RegionAllocator<uint32_t>::size();
+        if (need_lock)
+            CA_Lock.writeUnlock();
+        return AllocatorReservation(start, limit);
+    }
+
+    template<class Lits>
+    CRef allocThreadsafe(AllocatorReservation & reservation, const Lits& ps, bool learnt = false)
+    {
+        assert(sizeof(Lit)      == sizeof(uint32_t));
+        assert(sizeof(float)    == sizeof(uint32_t));
+        assert(reservation.current < reservation.upper_limit && "no reserved space left");
+        
+        bool use_extra = learnt | extra_clause_field;
+        
+        assert(reservation.current + clauseWord32Size(ps.size(), use_extra) <= reservation.upper_limit && "requested clause size does not fit in reservation");
+        
+        CRef cid = reservation.current;
+        new (lea(cid)) Clause(ps, use_extra, learnt);
+        
+        reservation.current += clauseWord32Size(ps.size(), use_extra);
+
+        return cid;
+    }
+    
+    void freeReservation(AllocatorReservation & reservation)
+    {
+        assert(reservation.current <= reservation.upper_limit);
+        RegionAllocator<uint32_t>::free(reservation.upper_limit - reservation.current);
+        reservation.current       = 0;
+        reservation.upper_limit   = 0;
+    }
 };
 
 
+
 //=================================================================================================
-// OccLists -- a class for maintaining occurence lists with lazy deletion:
+// OccLists -- a class for maintaining occurrence lists with lazy deletion:
 
 template<class Idx, class Vec, class Deleted>
 class OccLists

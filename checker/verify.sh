@@ -6,8 +6,10 @@
 # return code: 10 or 20 (SAT/UNSAT)
 # print to screen: solution for the cnf
 #
-
-param="-enabled_cp3 -subsimp -inprocess -cp3_naive_strength"
+param=""
+#param="-enabled_cp3 -subsimp -bve"
+#param="-enabled_cp3 -subsimp -bve -cp3_par_bve -cp3_threads=2"
+#param="-enabled_cp3 -subsimp -inprocess -cp3_naive_strength"
 #./minisat $1 /tmp/minisat-out -enabled_cp3 -subsimp -cp3_threads=2 -cp3_par_strength > /dev/null # 2> /dev/null
 #./minisat $1 /tmp/minisat-out $param > /dev/null 2> /dev/null
 status=$?

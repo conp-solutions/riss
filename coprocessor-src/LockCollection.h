@@ -152,8 +152,8 @@ public:
     void unlock()
     {
       // could also be done without atomic operation?!  
-      // __sync_bool_compare_and_swap(&_lock, 0xffff, 0);
-      _lock = 0;
+       __sync_bool_compare_and_swap(&_lock, 0xffff, 0);
+      //_lock = 0;
     }
     
     /** return the current value of the lock (for debug purposes)
@@ -176,7 +176,8 @@ public:
     }
     ~ReadersWriterLock()
     {
-        pthread_rwlock_destroy(&mutex);
+        int val = pthread_rwlock_destroy(&mutex);
+        assert (val == 0);
         pthread_rwlockattr_destroy(&attr);
     }
     void readLock() 
@@ -195,6 +196,10 @@ public:
     void writeUnlock() 
     {
         pthread_rwlock_unlock(&mutex);
+    }
+    pthread_rwlock_t getValue()
+    {
+        return mutex;
     }
 
 };
