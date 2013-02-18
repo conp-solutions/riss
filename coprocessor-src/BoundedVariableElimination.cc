@@ -16,6 +16,7 @@ using namespace std;
  IntOption  opt_resolve_learnts (_cat_bve, "cp3_bve_resolve_learnts", "Resolve learnt clauses: 0: off, 1: original with learnts, 2: 1 and learnts with learnts", 0, IntRange(0,2));
  BoolOption opt_unlimited_bve   (_cat_bve, "bve_unlimited",  "perform bve test for Var v, if there are more than 10 + 10 or 15 + 5 Clauses containing v", false);
  BoolOption opt_bve_findGate    (_cat_bve, "bve_gates",  "try to find variable AND gate definition before elimination", false);
+ BoolOption opt_force_gates     (_cat_bve, "bve_force_gates", "Force gate search (slower, but probably more eliminations and blockeds are found)", false);
  IntOption  opt_bve_heap        (_cat_bve, "cp3_bve_heap"     ,  "0: minimum heap, 1: maximum heap, 2: random", 0, IntRange(0,2));
  BoolOption opt_bve_bc          (_cat_bve, "bve_BCElim",    "Eliminate Blocked Clauses", true);
  BoolOption heap_updates (_cat_bve, "bve_heap_updates",    "Always update variable heap if clauses / literals are added or removed", false);
@@ -323,7 +324,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                continue;
            
            // Heuristic Cutoff Gate-Search
-           if (!opt_unlimited_bve && false) //TODO make up a heuristic
+           if (!opt_force_gates && !opt_unlimited_bve && (data[mkLit(v,true)] > 10 && data[mkLit(v,false)] > 10 || data[v] > 15 && (data[mkLit(v,true)] > 5 || data[mkLit(v,false)] > 5)))
            {
                if (doStatistics) ++skippedVars;
                continue;
