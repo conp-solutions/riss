@@ -27,7 +27,7 @@ static BoolOption  opt_naivStrength    (_cat, "naive_strength", "use naive stren
 static BoolOption  opt_par_strength    (_cat, "cp3_par_strength", "force par strengthening (if threads exist)", false);
 static BoolOption  opt_lock_stats      (_cat, "cp3_lock_stats", "measure time waiting in spin locks", false);
 static BoolOption  opt_par_subs        (_cat, "cp3_par_subs", "force par subsumption (if threads exist)", false);
-
+static IntOption  opt_par_subs_counts  (_cat, "par_subs_counts" ,  "Updates of counts in par-subs 0: compare_xchange, 1: CRef-vector", 0, IntRange(0,0));
 Subsumption::Subsumption( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation )
 : Technique( _ca, _controller )
 , data(_data)
@@ -123,9 +123,9 @@ bool Subsumption::hasToSubsume() const
 lbool Subsumption::fullSubsumption(Heap<VarOrderBVEHeapLt> * heap)
 {
   // run subsumption for the whole queue
-  if( controller.size() > 0 && (opt_par_subs || data.getSubsumeClauses().size() > 100000 || ( data.getSubsumeClauses().size() > 50000 && 10*data.nCls() > 22*data.nVars() ) ) ) {
+  if( heap == 0 && controller.size() > 0 && (opt_par_subs || data.getSubsumeClauses().size() > 100000 || ( data.getSubsumeClauses().size() > 50000 && 10*data.nCls() > 22*data.nVars() ) ) ) {
     parallelSubsumption(); // use parallel, is some conditions have been met
-    data.correctCounters();    // 
+    //data.correctCounters();    // 
   } else {
     subsumption_worker(0,data.getSubsumeClauses().size(), heap); // performs all occ and stat-updates
   }
@@ -280,11 +280,14 @@ void Subsumption :: par_subsumption_worker ( unsigned int start, unsigned int en
                     } 
                     else
                     { 
-                        c.set_delete(true);
-                        if (doStatistics)
+                        if (opt_par_subs_counts == 0)
                         {
-                            ++stats.subsumedClauses;
-                            stats.subsumedLiterals += c.size();
+                            bool removed = data.removeClauseThreadSafe(cr);
+                            if (doStatistics && removed)
+                            {
+                                ++stats.subsumedClauses;
+                                stats.subsumedLiterals += c.size();
+                            }
                         }
                     }
                     continue;
@@ -296,12 +299,15 @@ void Subsumption :: par_subsumption_worker ( unsigned int start, unsigned int en
                     to_delete.push_back(list[i]);
                     continue;
                 }
-                ca[list[i]].set_delete(true);
-                if (doStatistics)
+                if (opt_par_subs_counts == 0)
                 {
-                    ++stats.subsumedClauses;
-                    stats.subsumedLiterals += ca[list[i]].size();
-                }  
+                    bool removed = data.removeClauseThreadSafe(list[i]);
+                    if (doStatistics && removed)
+                    {
+                        ++stats.subsumedClauses;
+                        stats.subsumedLiterals += ca[list[i]].size();
+                    }  
+                }
             } else if (doStatistics)       
                     ++stats.subsumeSteps;
         }
@@ -1437,6 +1443,7 @@ void Subsumption::parallelSubsumption( const bool doStatistics)
         if (!c.can_be_deleted())
         {
             c.set_delete(true);
+            data.removedClause(toDeletes[i][j]);
             if (doStatistics)
             {
                 ++localStats[i].subsumedClauses;
