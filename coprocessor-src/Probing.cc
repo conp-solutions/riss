@@ -8,9 +8,13 @@ using namespace Coprocessor;
 
 static const char* _cat = "COPROCESSOR 3 - PROBE";
 
-static IntOption pr_uip       (_cat, "pr_uips", "perform learning if a conflict occurs up to x-th UIP (-1 = all )", -1, IntRange(-1, INT32_MAX));
+static IntOption pr_uip            (_cat, "pr-uips",   "perform learning if a conflict occurs up to x-th UIP (-1 = all )", -1, IntRange(-1, INT32_MAX));
+static BoolOption pr_double        (_cat, "pr-double", "perform double look-ahead",true);
+static IntOption pr_keepLearnts    (_cat, "pr-keepL",  "keep conflict clauses in solver (0=no,1=learnt,2=original)", 2, IntRange(0,2));
+static IntOption pr_keepImplied    (_cat, "pr-keepI",  "keep clauses that imply on level 1 (0=no,1=learnt,2=original)", 2, IntRange(0,2));
 
-static BoolOption debug_out            (_cat, "pr_debug", "debug output for probing",false);
+
+static BoolOption debug_out            (_cat, "pr-debug", "debug output for probing",false);
 
 Probing::Probing(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, Solver& _solver)
 : Technique( _ca, _controller )
@@ -49,13 +53,19 @@ bool Probing::probe()
   
   for( Var v = 0 ; v < data.nVars(); ++v ) variableHeap.push_back(v);
   
-  cerr << "sort literals in probing queue according to some heuristic (BIG roots first, ... )" << endl;
+  cerr << "sort literals in probing queue according to some heuristic (BIG roots first, activity, ... )" << endl;
   
   // probe for each variable 
+  Lit repeatLit = lit_Undef;
   while(  variableHeap.size() > 0 && !data.isInterupted()  && (probeLimit > 0 || data.unlimited()) && data.ok() )
   {
-    Var v = variableHeap.front();
-    variableHeap.pop_front();
+    // repeat variable, if demanded - otherwise take next from heap!
+    Var v = var(repeatLit);
+    if( repeatLit == lit_Undef ) {
+      v = variableHeap.front();
+      variableHeap.pop_front();
+    }
+    repeatLit = lit_Undef;
     
     if( solver.value(v) != l_Undef ) continue; // no need to check assigned variable!
 
@@ -72,18 +82,18 @@ bool Probing::probe()
     if( thisConflict != CRef_Undef ) {
       l1failed++;
       if( !prAnalyze( thisConflict ) ) {
-	learntUnits.push_back( ~posLit );
+	learntUnits.push( ~posLit );
       }
       solver.cancelUntil(0);
       // tell system about new units!
       for( int i = 0 ; i < learntUnits.size(); ++ i ) data.enqueue( learntUnits[i] );
       if( !data.ok() ) break; // interrupt loop, if UNSAT has been found!
       l1learntUnit+=learntUnits.size();
-      solver.propagate();
+      if( solver.propagate() != CRef_Undef ) { data.setFailed(); break; }
       continue;
     } else {
       totalL2cand += doubleLiterals.size();
-      if( prDoubleLook() ) continue; // something has been found, so that second polarity has not to be propagated
+      if( prDoubleLook(posLit) ) { repeatLit = posLit; continue; } // something has been found, so that second polarity has not to be propagated
     }
     solver.assigns.copyTo( prPositive );
     // other polarity
@@ -100,18 +110,18 @@ bool Probing::probe()
     if( thisConflict != CRef_Undef ) {
       l1failed++;
       if( !prAnalyze( thisConflict ) ) {
-	learntUnits.push_back( ~negLit );
+	learntUnits.push( ~negLit );
       }
       solver.cancelUntil(0);
       // tell system about new units!
       for( int i = 0 ; i < learntUnits.size(); ++ i ) data.enqueue( learntUnits[i] );
       l1learntUnit+=learntUnits.size();
       if( !data.ok() ) break; // interrupt loop, if UNSAT has been found!
-      solver.propagate();
+      if( solver.propagate() != CRef_Undef ) { data.setFailed(); break; }
       continue;
     } else {
       totalL2cand += doubleLiterals.size();
-      if( prDoubleLook() ) continue; // something has been found, so that second polarity has not to be propagated
+      if( prDoubleLook(negLit) ) { repeatLit = negLit; continue; } // something has been found, so that second polarity has not to be propagated
     }
     // could copy to prNegatie here, but we do not do this, but refer to the vector inside the solver instead
     vec<lbool>& prNegative = solver.assigns;
@@ -269,7 +279,7 @@ bool Probing::prAnalyze( CRef confl )
 {
     learntUnits.clear();
     // do not do analysis -- return that nothing has been learned
-    if( pr_uip == 0 ) return false;
+    if( pr_uip == 0 && solver.decisionLevel() == 0) return false;
   
     // genereate learnt clause - extract all units!
     int pathC = 0;
@@ -319,9 +329,10 @@ bool Probing::prAnalyze( CRef confl )
 	   uips ++;
 	   // learned enough uips - return. if none has been found, return false!
 	   if( pr_uip != -1 && uips > pr_uip ) return learntUnits.size() == 0 ? false : true;
-	   learntUnits.push_back(~p);
+	   learntUnits.push(~p);
 	  } else {
-	    assert(false && "cannot handle different levels than 1 yet! level2 probing needs to be implemented!" ); 
+	    cerr << "[TODO] have more advanced learning routine for level 1 ?!?" << endl;
+	    break;
 	  }
 	}
 	
@@ -340,11 +351,157 @@ bool Probing::prAnalyze( CRef confl )
   return true;
 }
 
-bool Probing::prDoubleLook()
+bool Probing::prDoubleLook(Lit l1decision)
 {
+  // reject double lookahead, if necessary!
+  if( ! pr_double ) return false;
+  
   // TODO: sort literals in double lookahead queue, use only first n literals
+  cerr << "sort literals in double queue according to some heuristic (occurrences, ... )" << endl;
+  CRef thisConflict = CRef_Undef;
   
-  
+  for( int i = 0 ; i < doubleLiterals.size(); ++ i )
+  {
+    Var v = var(doubleLiterals[i]);
+    if( solver.value(v) != l_Undef ) continue; // no need to check assigned variable!
+
+    // cerr << "c test variable " << v + 1 << endl;
+
+    assert( solver.decisionLevel() == 1 && "probing only at level 1!");
+    const Lit posLit = doubleLiterals[i];
+    cerr << "c deciding " << posLit << " at level 1" << endl;
+    solver.newDecisionLevel();
+    solver.uncheckedEnqueue(posLit);
+    l2probes++;
+    probeLimit = probeLimit > 0 ? probeLimit - 1 : 0;
+    thisConflict = prPropagate();
+    if( debug_out ) cerr << "c conflict after level 2 propagate " << posLit << " present? " << (thisConflict != CRef_Undef) << " trail elements: " << solver.trail.size() << endl;
+    if( thisConflict != CRef_Undef ) {
+      l2failed++;
+      prAnalyze( thisConflict );
+      int backtrack_level = 1;
+      if( data.lits.size() == 0 ) {
+	data.lits.push_back(~l1decision);
+	data.lits.push_back(~posLit);
+      } else {
+	if( data.lits.size() == 1 ) backtrack_level = 0;
+	else backtrack_level = solver.level( var( data.lits[1] ) );
+      }
+      cerr << "c learnt clause at level " << solver.decisionLevel() << " with jump to " << backtrack_level << " after decideing " << l1decision << " and " << posLit << " ";
+      for( int i = 0 ; i < data.lits.size(); ++i ) cerr << " " << data.lits[i];
+      cerr << endl;
+      solver.cancelUntil(backtrack_level);
+      if (data.lits.size() == 1){
+	solver.enqueue(data.lits[0]);
+      }else{
+	CRef cr = ca.alloc(data.lits, false);
+	solver.clauses.push(cr);
+	solver.attachClause(cr);
+	data.addClause(cr);
+	l2conflicts.push_back(cr);
+	solver.uncheckedEnqueue(data.lits[0], cr);
+      }
+      solver.propagate();
+      if( solver.decisionLevel() == 1 ) {i--;continue;}
+      else return true;
+    }
+    solver.assigns.copyTo( prL2Positive );
+    // other polarity
+    solver.cancelUntil(1);
+    
+    assert( solver.decisionLevel() == 1 && "probing only at level 1!");
+    const Lit negLit = ~posLit;
+    solver.newDecisionLevel();
+    solver.uncheckedEnqueue(negLit);
+    l2probes++;
+    probeLimit = probeLimit > 0 ? probeLimit - 1 : 0;
+    thisConflict = prPropagate();
+    if( debug_out ) cerr << "c conflict after level 2 propagate " << negLit << " present? " << (thisConflict != CRef_Undef) << " trail elements: " << solver.trail.size() << endl;
+    if( thisConflict != CRef_Undef ) {
+      l2failed++;
+      prAnalyze( thisConflict );
+      int backtrack_level = 1;
+      if( data.lits.size() == 0 ) {
+	data.lits.push_back(~l1decision);
+	data.lits.push_back(~negLit);
+      } else {
+	if( data.lits.size() == 1 ) backtrack_level = 0;
+	else backtrack_level = solver.level( var( data.lits[1] ) );
+      }
+      cerr << "c learnt clause at level " << solver.decisionLevel() << " with jump to " << backtrack_level << " after decideing " << l1decision << " and " << negLit << " ";
+      for( int i = 0 ; i < data.lits.size(); ++i ) cerr << " " << data.lits[i];
+      cerr << endl;
+      solver.cancelUntil(backtrack_level);
+      if (data.lits.size() == 1){
+	solver.enqueue(data.lits[0]);
+      }else{
+	CRef cr = ca.alloc(data.lits, true);
+	solver.clauses.push(cr);
+	solver.attachClause(cr);
+	data.addClause(cr);
+	l2conflicts.push_back(cr);
+	solver.uncheckedEnqueue(data.lits[0], cr);
+      }
+      solver.propagate();
+      if( solver.decisionLevel() == 1 ) {i--;continue;}
+      else return true;
+    }
+    // could copy to prNegatie here, but we do not do this, but refer to the vector inside the solver instead
+    vec<lbool>& prNegative = solver.assigns;
+    
+    assert( solver.decisionLevel() == 1 && "");
+    
+    // prepare new learnt clause!
+    learntUnits.clear();
+    learntUnits.push();
+    learntUnits.push( ~l1decision );
+    unsigned oldl2implieds = l2implieds.size();
+    // look for necessary literals, and equivalent literals (do not add literal itself)
+    for( int i = solver.trail_lim[0] + 1; i < solver.trail.size(); ++ i )
+    {
+      // check whether same polarity in both trails, or different polarity and in both trails
+      const Var tv = var( solver.trail[ i ] );
+      if( debug_out ) cerr << "c compare variable " << tv + 1 << ": pos = " << toInt(prL2Positive[tv]) << " neg = " << toInt(solver.assigns[tv]) << endl;
+      if( solver.assigns[ tv ] == prL2Positive[tv] ) {
+	if( debug_out ) cerr << "c l2 implied literal: " << l1decision << " -> " << solver.trail[i] << endl;
+	solver.trail[ i ];
+	l2implied ++;
+	CRef cr = ca.alloc(data.lits, false);
+	data.addClause(cr);
+	l2implieds.push_back(cr);
+      } 
+      
+    }
+    
+    solver.cancelUntil(1);
+    // add all found implied literals!
+    for( int i = oldl2implieds ; i < l2implieds.size(); ++i )
+    {
+      CRef cr = l2implieds[i];
+      solver.clauses.push(cr);
+      solver.attachClause(cr);
+      solver.uncheckedEnqueue(data.lits[0], cr);
+    }
+
+    // propagate implied(necessary) literals on level 1 inside solver
+    thisConflict = solver.propagate() ;
+    if( thisConflict != CRef_Undef ) {
+      // perform l1 analysis - as in usual probing routine
+      l1failed++;
+      if( !prAnalyze( thisConflict ) ) {
+	learntUnits.push( ~posLit );
+      }
+      solver.cancelUntil(0);
+      // tell system about new units!
+      for( int i = 0 ; i < learntUnits.size(); ++ i ) data.enqueue( learntUnits[i] );
+      if( !data.ok() ) break; // interrupt loop, if UNSAT has been found!
+      l1learntUnit+=learntUnits.size();
+      if( solver.propagate() != CRef_Undef ) { data.setFailed(); break; }
+      
+      return true; 
+    }
+    
+  }
   
   // first decision is not a failed literal
   return false;

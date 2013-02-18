@@ -140,7 +140,7 @@ class Heap {
     {
       if( number == - 1 ) 
 	indices.push( -1 ); 	// element is not in heap
-      else while( indices.size() < number )
+      else while( indices.size() <= number )
 	indices.push( -1 ); 	// elements are not in heap
     }    
 

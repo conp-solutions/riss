@@ -53,10 +53,10 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
   doSort = _sort;
 
   // setup own structures
-  bvaHeap.addNewElement(data.nVars());
+  bvaHeap.addNewElement(data.nVars() * 2);
   for( Var v = 0 ; v < data.nVars(); ++ v ) {
-    if( data[  mkLit(v,false) ] > 2 ) bvaHeap.insert( toInt(mkLit(v,false)) );
-    if( data[  mkLit(v,true)  ] > 2 ) bvaHeap.insert( toInt(mkLit(v,true) ) );
+    if( data[  mkLit(v,false) ] > 2 ) if( !bvaHeap.inHeap(toInt(mkLit(v,false))) )  bvaHeap.insert( toInt(mkLit(v,false)) );
+    if( data[  mkLit(v,true)  ] > 2 ) if( !bvaHeap.inHeap(toInt(mkLit(v,true))) )   bvaHeap.insert( toInt(mkLit(v,true))  );
   }
   data.ma.resize(2*data.nVars());
   bvaCountMark.resize( data.nVars() * 2, lit_Undef);
@@ -71,6 +71,13 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	
 	// for l in F
 	while (bvaHeap.size() > 0 && (data.unlimited() || bvaLimit > 0) ) {
+	  
+	  if( bva_debug > 1 ) cerr << "c next major loop iteration with heapSize " << bvaHeap.size() << endl;
+	  
+	  if( bva_debug > 2 )
+	    if( checkLists("check data structure integrity") )
+	      assert( false && "there cannot be duplicate clause entries in clause lists!" );
+	  
 	  // interupted ?
 	  if( data.isInterupted() ) break;
 	  
@@ -113,6 +120,7 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	  // create the stack with all matching literals
 	  for( uint32_t i = 0 ; i <  bvaMatchingClauses[0].size(); ++i )
 	  {
+	    if( bva_debug > 2 ) cerr << "c next reduce literal loop iteration with matching clauses: " << bvaMatchingClauses[0].size() << endl;
 	    // reserve space
 	    while ( bvaMatchingClauses.size() < index+1 ) bvaMatchingClauses.push_back( vector<CRef>() );
 	    
@@ -146,6 +154,8 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	      }
 	    }
 	    // cerr << "c selected literal " << l1 << endl;
+	    
+	    if( ! rightInFlag && bva_debug>3) { cerr << "literal " << right << " is not part of the clause " << clauseC <<  " , which is learned(" << clauseC.learnt() << ") and canBeDeleted(" << clauseC.can_be_deleted() << ")" << endl;}
 	    
 	    assert ( rightInFlag && "literal does not occur in match clause" );
 	    assert( l1 != right  && "minimal literal is equal to right" );
@@ -373,6 +383,13 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	  for( uint32_t i = 0 ; i < bvaMatchingLiterals.size(); ++ i ) {
 	    vector<CRef>& iClauses = bvaMatchingClauses[i];
 	    if( i == 0 ) {	// clauses that are in the occurrenceList list of right
+
+		if( bva_debug > 3 ) {
+		  cerr << "c PRE occurrence list of right - lit: " << right << " : " << endl;
+		  for( int i = 0 ; i < data.list(right).size(); ++ i )
+		    cerr << "c [" << i << "] clause[ " << data.list(right)[i] << " ]= " << ca[data.list(right)[i]] << endl;
+		}
+
 	      // clauses of right literal, alter, so that they will be kept
 	      for( uint32_t j = 0 ; j < iClauses.size(); ++ j )
 	      {
@@ -414,8 +431,15 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 		
 		// add clause into occurrenceList list of new variable
 		data.list( replaceLit ). push_back(iClauses[j]);
+		if( bva_debug > 2 )cerr << "c into pre-sort clause[ " << iClauses[j] << " ]= " << clauseI << endl;
 	        clauseI.sort();
 		if( bva_debug > 2 )cerr << "c into clause[ " << iClauses[j] << " ]= " << clauseI << endl;
+		
+		if( bva_debug > 3 ) {
+		  cerr << "c POST occurrence list of right - lit: " << right << " : " << endl;
+		  for( int i = 0 ; i < data.list(right).size(); ++ i )
+		    cerr << "c [" << i << "] clause[ " << data.list(right)[i] << " ]= " << ca[data.list(right)[i]] << endl;
+		}
 	      }
 	    } else {
 	      assert( iClauses.size() == bvaMatchingClauses[0].size() );
@@ -672,4 +696,26 @@ bool BoundedVariableAddition::variableAddtionMulti(bool sort)
 {
   assert( false && "This method is not implemented yet" );
   return true;
+}
+
+
+bool BoundedVariableAddition::checkLists(const string& headline)
+{
+  bool ret = false;
+  cerr << "c check data structures: " << headline << " ... " << endl;
+  for( Var v = 0 ; v < data.nVars(); ++ v )
+  {
+    for( int p = 0 ; p < 2; ++ p ) {
+      const Lit l = p == 0 ? mkLit(v,false) : mkLit(v,true);
+      for( int i = 0 ; i < data.list(l).size(); ++ i ) {
+	for( int j = i+1 ; j < data.list(l).size(); ++ j ) {
+	  if( data.list(l)[i] == data.list(l)[j] ) {
+	    ret = true;
+	    cerr << "c duplicate " << data.list(l)[j] << " for lit " << l << " at " << i << " and " << j << " out of " << data.list(l).size() << endl;
+	  }
+	}
+      }
+    }
+  }
+  return ret;
 }

@@ -96,6 +96,8 @@ protected:
   void sortClauses();                // sort the literals within all clauses
   void delete_clause(const CRef cr); // delete a clause from the solver (clause should not be attached within the solver)
 
+  bool checkLists(const string& headline); // check each clause list for duplicate occurrences
+  
   // print formula
   void printFormula(FILE * fd);
   inline void printClause(FILE * fd, CRef cr);

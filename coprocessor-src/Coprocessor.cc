@@ -32,6 +32,7 @@ static BoolOption opt_sls       (_cat2, "sls",           "Use Simple Walksat alg
 static BoolOption opt_twosat    (_cat2, "2sat",          "2SAT algorithm to check satisfiability of binary clauses", false);
 static BoolOption opt_ts_phase  (_cat2, "2sat-phase",    "use 2SAT model as initial phase for SAT solver", false);
 
+static BoolOption opt_debug     (_cat2, "cp3-debug",     "do more debugging", false);
 static IntOption  opt_log       (_cat, "log",            "Output log messages until given level", 0, IntRange(0, 3));
 
 using namespace std;
@@ -118,12 +119,16 @@ lbool Preprocessor::performSimplification()
    printFormula("after Susi");
   }
   
+  if( opt_debug ) checkLists("after SUSI");
+  
   if( opt_ee ) { // before this technique nothing should be run that alters the structure of the formula (e.g. BVE;BVA)
     if( opt_verbose > 2 )cerr << "c coprocessor equivalence elimination" << endl;
     if( status == l_Undef ) ee.eliminate(data);  // cannot change status, can generate new unit clauses
     if (! data.ok() )
         status = l_False;
   }
+  
+  if( opt_debug ) checkLists("after EE");
   
   if( false ) {
    for( Var v = 0 ; v < data.nVars() ; ++v ) {
@@ -146,11 +151,14 @@ lbool Preprocessor::performSimplification()
     if( !data.ok() ) status = l_False;
   }
   
+  if( opt_debug ) checkLists("after UNHIDING");
+  
   if( opt_hte ) {
     if( opt_verbose > 2 )cerr << "c coprocessor hidden tautology elimination" << endl;
     if( status == l_Undef ) hte.eliminate(data);  // cannot change status, can generate new unit clauses
   }
 
+  if( opt_debug ) checkLists("after HTE");
   if( false  || printHTE ) {
    printFormula("after HTE");
   }
@@ -160,12 +168,14 @@ lbool Preprocessor::performSimplification()
     if( status == l_Undef ) probing.probe(); 
     if( !data.ok() ) status = l_False;
   }
+  if( opt_debug ) checkLists("after PROBE");
   
   if ( opt_bve ) {
     if( opt_verbose > 2 )cerr << "c coprocessor blocked variable elimination" << endl;
     if( status == l_Undef ) status = bve.runBVE(data);  // can change status, can generate new unit clauses
   }
   
+  if( opt_debug ) checkLists("after BVE");
   if( false || printBVE  ) {
    printFormula("after BVE");
   }
@@ -176,6 +186,7 @@ lbool Preprocessor::performSimplification()
     if( !data.ok() ) status = l_False;
   }
   
+  if( opt_debug ) checkLists("after BVA");
   if( false || printBVA  ) {
    printFormula("after BVA");
   }
@@ -590,4 +601,25 @@ void Preprocessor::printFormula(const string& headline)
    for( int i = 0 ; i < data.getLEarnts().size(); ++ i )
      if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getLEarnts()[i] ] << endl;    
    cerr << "==================== " << endl;
+}
+
+bool Preprocessor::checkLists(const string& headline)
+{
+  bool ret = false;
+  cerr << "c check data structures: " << headline << " ... " << endl;
+  for( Var v = 0 ; v < data.nVars(); ++ v )
+  {
+    for( int p = 0 ; p < 2; ++ p ) {
+      const Lit l = p == 0 ? mkLit(v,false) : mkLit(v,true);
+      for( int i = 0 ; i < data.list(l).size(); ++ i ) {
+	for( int j = i+1 ; j < data.list(l).size(); ++ j ) {
+	  if( data.list(l)[i] == data.list(l)[j] ) {
+	    ret = true;
+	    cerr << "c duplicate " << data.list(l)[j] << " for lit " << l << " at " << i << " and " << j << " out of " << data.list(l).size() << endl;
+	  }
+	}
+      }
+    }
+  }
+  return ret;
 }

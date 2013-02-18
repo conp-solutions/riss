@@ -397,10 +397,10 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            if (opt_bve_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
            
            // Declare stats variables;        
-           int lit_clauses;
-           int lit_learnts;
-           pos_stats = (int32_t *) realloc(pos_stats, sizeof( int32_t) * pos.size() );
-           neg_stats = (int32_t *) realloc(neg_stats, sizeof( int32_t) * neg.size() );
+           int32_t pos_stats[pos.size()];
+           int32_t neg_stats[neg.size()];
+           int lit_clauses = 0;
+           int lit_learnts = 0;
                   
            if (!force) 
            {
