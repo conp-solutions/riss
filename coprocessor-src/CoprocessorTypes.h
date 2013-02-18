@@ -756,7 +756,6 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
   // check current clause for being satisfied
   bool isSat = false;
   for( int i = undo.size() - 1; i >= 0 ; --i ) {
-     isSat = false; // init next clause!
      const Lit c = undo[i];
      if( global_debug_out  || local_debug) cerr << "c read literal " << c << endl;
      if( c == lit_Undef ) {
@@ -766,8 +765,9 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
          log.log(1, "set literal to true",satLit);
          model[ var(satLit) ] = sign(satLit) ? l_False : l_True;
        }
+       isSat = false; // init next clause!
      }
-     if( var(c) > model.size() ) model.growTo( var(c), l_True ); // model is too small?
+     if( var(c) > model.size() ) model.growTo( var(c) + 1, l_True ); // model is too small?
      if (model[var(c)] == (sign(c) ? l_False : l_True) ) // satisfied
      {
        isSat = true;
