@@ -65,6 +65,12 @@ protected:
    */
   bool prDoubleLook(Lit l1decision);
   
+  /** perform probing */
+  void probing();
+  
+  /** perform clause vivification */
+  void clauseVivification();
+  
   /** add all clauses to solver object -- code taken from @see Preprocessor::reSetupSolver, but without deleting clauses */
   void reSetupSolver();
   
@@ -87,6 +93,12 @@ protected:
   unsigned totalL2cand;		// number of l2 probe candidates
   unsigned probes;		// number of probes
   unsigned l2probes;		// number of l2 probes
+  double viviTime;		// seconds spend for vivification
+  unsigned viviLits;		// number of removed literals through vivification
+  unsigned viviCls;		// number of clauses modified by vivification
+  unsigned viviCands;		// number of clauses candidates for vivification
+  unsigned viviLimits;		// step limit for vivification
+  unsigned viviSize;		// size of clauses that are vivified
 };
   
 };
