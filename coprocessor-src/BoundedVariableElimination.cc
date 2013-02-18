@@ -638,8 +638,8 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            // Declare stats variables;        
            int32_t pos_stats[pos.size()];
            int32_t neg_stats[neg.size()];
-           int lit_clauses;
-           int lit_learnts;
+           int lit_clauses = 0;
+           int lit_learnts = 0;
           
                   
            if (!force) 

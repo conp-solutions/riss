@@ -142,11 +142,12 @@ bool Subsumption::hasWork() const
 
 void Subsumption :: subsumption_worker ( unsigned int start, unsigned int end, const bool doStatistics)
 {
-    vector < CRef > occ_updates; 
+    vector < CRef > occ_updates; // TODO transform this into a member / thread-attribute member
     if (doStatistics)
     {
         processTime = cpuTime() - processTime;   
     }   
+    if(global_debug_out) cerr << "subsume from " << start << " to " << end << " with size " << data.getSubsumeClauses().size() << endl;
     for (; end > start;)
     {
         --end;

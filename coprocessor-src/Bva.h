@@ -78,6 +78,9 @@ protected:
   /** introduce a fresh variable, update the size of all required structures*/
   Var nextVariable();
 
+  /** check data structures */
+  bool checkLists(const string& headline);
+  
 public:
   // parameters
   bool bvaComplement;		/// treat found complements special?

@@ -495,6 +495,7 @@ inline void CoprocessorData::removeClauseFrom(const Minisat::CRef cr, const Lit 
   vector<CRef>& list = occs[toInt(l)];
   assert( list[index] == cr );
   list[index] = list[ list.size() -1 ];
+  list.pop_back();
 }
 
 inline void CoprocessorData::cleanOccurrences()
@@ -754,24 +755,26 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
   }
 
   // check current clause for being satisfied
-  bool isSat = false;
+  bool isSat = false; // FIXME: this bool is redundant!
   for( int i = undo.size() - 1; i >= 0 ; --i ) {
-     const Lit c = undo[i];
+    
+     isSat = false; // init next clause - redundant!
+     const Lit c = undo[i]; // check current literal
      if( global_debug_out  || local_debug) cerr << "c read literal " << c << endl;
-     if( c == lit_Undef ) {
-       if( !isSat ) {
+     if( c == lit_Undef ) {  // found clause delimiter, without jumping over it in the SAT case (below)
+       if( !isSat ) {        // this condition is always satisfied -- the current clause has to be unsatisfied (otherwise, would have been ignored below!)
          // if clause is not satisfied, satisfy last literal!
          const Lit& satLit = undo[i+1];
          log.log(1, "set literal to true",satLit);
          model[ var(satLit) ] = sign(satLit) ? l_False : l_True;
        }
-       isSat = false; // init next clause!
+       continue; // finished current clause, continue with next one
      }
-     if( var(c) > model.size() ) model.growTo( var(c) + 1, l_True ); // model is too small?
-     if (model[var(c)] == (sign(c) ? l_False : l_True) ) // satisfied
+     if( var(c) > model.size() ) model.growTo( var(c) + 1, l_True ); // model is too small -- extend the model to an appropriate size
+     if (model[var(c)] == (sign(c) ? l_False : l_True) ) // the current clause is satisfied -- jump over the whole clause including clause delimiter
      {
-       isSat = true;
-       while( undo[i] != lit_Undef ){
+       isSat = true; // redundant -- will be reset in the next loop iteration immediately
+       while( undo[i] != lit_Undef ){ // skip literal until hitting the delimiter - for loop will decrease i once more
 	 if( global_debug_out  || local_debug) cerr << "c skip because SAT: " << undo[i] << endl; 
 	 --i;
        }
