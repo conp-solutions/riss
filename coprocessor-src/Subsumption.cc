@@ -1314,6 +1314,7 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
     // test every clause, where the minimum is, if it can be strenghtened
     for (unsigned int j = 0; j < list.size(); ++j)
     {
+      Clause& strengthener = ca[cr]; // if opt_allStrengthRes -> realloc possible
       Clause& other = ca[list[j]];
       if (other.can_be_deleted() || list[j] == cr || other.size() == 0)
         continue;
@@ -1403,6 +1404,7 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
     // now test for the occurrences of negated min, now the literal, that appears negated has to be min
     for (unsigned int j = 0; j < list_neg.size(); ++j)
     {
+      Clause& strengthener = ca[cr]; // if opt_allStrengthRes -> realloc possible
       Clause& other = ca[list_neg[j]];
       if (other.can_be_deleted())
         continue;
@@ -1483,7 +1485,7 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
         if (propagation.propagate(data, true, heap) == l_False)
             return l_False;
     }
-    strengthener.set_strengthen(false);
+    ca[cr].set_strengthen(false);
   }
   updateOccurrences( occ_updates, heap);
   occ_updates.clear();
