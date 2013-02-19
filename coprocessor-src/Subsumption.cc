@@ -27,7 +27,7 @@ static BoolOption  opt_naivStrength    (_cat, "naive_strength", "use naive stren
 static BoolOption  opt_par_strength    (_cat, "cp3_par_strength", "force par strengthening (if threads exist)", false);
 static BoolOption  opt_lock_stats      (_cat, "cp3_lock_stats", "measure time waiting in spin locks", false);
 static BoolOption  opt_par_subs        (_cat, "cp3_par_subs", "force par subsumption (if threads exist)", false);
-static IntOption  opt_par_subs_counts  (_cat, "par_subs_counts" ,  "Updates of counts in par-subs 0: compare_xchange, 1: CRef-vector", 0, IntRange(0,0));
+static IntOption  opt_par_subs_counts  (_cat, "par_subs_counts" ,  "Updates of counts in par-subs 0: compare_xchange, 1: CRef-vector", 1, IntRange(0,1));
 Subsumption::Subsumption( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation )
 : Technique( _ca, _controller )
 , data(_data)
@@ -289,6 +289,10 @@ void Subsumption :: par_subsumption_worker ( unsigned int start, unsigned int en
                                 stats.subsumedLiterals += c.size();
                             }
                         }
+                        else 
+                        {
+                            to_delete.push_back(cr);
+                        }
                     }
                     continue;
                 }
@@ -307,6 +311,10 @@ void Subsumption :: par_subsumption_worker ( unsigned int start, unsigned int en
                         ++stats.subsumedClauses;
                         stats.subsumedLiterals += ca[list[i]].size();
                     }  
+                }
+                else
+                {
+                    to_delete.push_back(list[i]);
                 }
             } else if (doStatistics)       
                     ++stats.subsumeSteps;

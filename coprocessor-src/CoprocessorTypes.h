@@ -371,7 +371,7 @@ struct VarOrderBVEHeapLt {
             {
                 case 0: return data[x] < data[y]; 
                 case 1: return data[x] > data[y]; 
-                default: assert(false && "In case of random order no heap should be used");
+                default: assert(false && "In case of random order no heap should be used"); return false;
             }
         }
         VarOrderBVEHeapLt(CoprocessorData & _data, int _heapOption) : data(_data), heapOption(_heapOption) { }
@@ -1042,6 +1042,7 @@ bool inline CoprocessorData::removeClauseThreadSafe (const CRef cr)
     if (!c.can_be_deleted())
     {
         c.set_delete(true);
+        while ( __sync_bool_compare_and_swap(&numberOfCls, numberOfCls, numberOfCls-1) == false);
         for (int l = 0; l < c.size(); ++l)
         {
             int32_t old_count, new_count;
