@@ -1289,7 +1289,8 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData & da
                 stats.subsumedLearntLiterals += other.size();
              }
          }
-         // TODO learnt subsumes non-learnt !
+         if (strengthener.learnt() && !other.learnt())
+             strengthener.set_learnt(false);       
       }
       // if subsumption successful, strengthen
       else if (negated_lit_pos >= 0 && si == strengthener.size())
@@ -1479,7 +1480,8 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & da
                 stats.subsumedLearntLiterals += other.size();
              }
          }
-         // TODO learnt subsumes non-learnt !
+         if (strengthener.learnt() && !other.learnt())
+             strengthener.set_learnt(false);       
       }
 
       // if subsumption successful, strengthen
