@@ -70,7 +70,8 @@ class BoundedVariableElimination : public Technique {
   // stats variables
   int removedClauses, removedLiterals, createdClauses, createdLiterals, removedLearnts, learntLits, newLearnts, 
       newLearntLits, testedVars, anticipations, eliminatedVars, removedBC, blockedLits, removedBlockedLearnt, learntBlockedLit, 
-      skippedVars, unitsEnqueued, foundGates, usedGates;   
+      skippedVars, unitsEnqueued, foundGates, usedGates, 
+      initialClauses, initialLits, clauseCount, litCount, unitCount, elimCount, restarts;   
   double processTime, subsimpTime, gateTime;
 
 public:
@@ -97,6 +98,7 @@ public:
 
 protected:
   
+  void progressStats(CoprocessorData & data, const bool cputime = false);                            // prints statistics before/after each BVE-Run
   bool hasToEliminate();                               // return whether there is something in the BVE queue
 
   // sequential functions:

@@ -46,6 +46,13 @@ BoundedVariableElimination::BoundedVariableElimination( ClauseAllocator& _ca, Co
 , unitsEnqueued(0)
 , foundGates(0)
 , usedGates(0)
+, initialClauses (0)
+, initialLits (0)
+, clauseCount (0)
+, litCount  (0)
+, unitCount (0)
+, elimCount (0)
+, restarts (0)
 , processTime(0)
 , subsimpTime(0)
 , gateTime(0)
@@ -119,6 +126,20 @@ void BoundedVariableElimination::printStatistics(ostream& stream)
     }
 }
 
+void BoundedVariableElimination::progressStats(CoprocessorData & data, const bool cputime)
+{
+    clauseCount = data.nCls();
+    unitCount = data.getSolver()->trail.size();
+    elimCount = eliminatedVars;
+    for (int i = 0; i < parStats.size(); ++i)
+        elimCount += parStats[i].eliminatedVars;
+    cerr << "c [STAT] BVEprogress: restarts: " << restarts 
+         << ", clauses: " << clauseCount << " (" << ((double ) clauseCount / (double) initialClauses * 100) << " %), "
+         <<  "units: "    << unitCount   << " (" << ((double )   unitCount / (double) data.nVars() * 100)  << " %), "
+         <<  "elim:  "    << elimCount   << " (" << ((double )   elimCount / (double) data.nVars() * 100)   << " %), "
+         <<  "bve-time: " << (cputime ? cpuTime() : wallClockTime()) - processTime << endl;
+    restarts++;
+}
 
 bool BoundedVariableElimination::hasToEliminate()
 { // TODO if heap is used, this will not work, since the heap depends on the changing data-object
@@ -127,6 +148,8 @@ bool BoundedVariableElimination::hasToEliminate()
 
 lbool BoundedVariableElimination::runBVE(CoprocessorData& data, const bool doStatistics)
 {
+  initialClauses = data.nCls();
+  restarts = 0;
   if (controller.size() > 0)
   {
      parallelBVE(data);
@@ -247,7 +270,7 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<Var
     updateDeleteTime(data.getMyDeleteTimer());
     
     uint32_t timer = dirtyOccs.nextStep();
-  
+    progressStats(data, true);
     cerr << "c sequentiel bve on " 
          << ((opt_bve_heap != 2) ? heap.size() : variable_queue.size()) << " variables" << endl;
 
@@ -290,6 +313,7 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<Var
     touched_variables.clear();
   }
 
+  progressStats(data, true);
 }
 
 //expects filled variable processing queue

@@ -909,6 +909,9 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
     updateDeleteTime(data.getMyDeleteTimer());
     
     uint32_t timer = dirtyOccs.nextStep();
+
+    progressStats(data, false);
+
     int QSize = ((opt_bve_heap != 2) ? newheap.size() : variable_queue.size()); 
     ReadersWriterLock allocatorRWLock;
     if (opt_par_bve || QSize > par_bve_threshold)
@@ -975,6 +978,8 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
     }
     touched_variables.clear();
   }
+
+  progressStats(data, false);
   if (doStatistics) processTime = wallClockTime() - processTime;
 }
 
