@@ -98,7 +98,7 @@ public:
 
 protected:
   
-  void progressStats(CoprocessorData & data, const bool cputime = false);                            // prints statistics before/after each BVE-Run
+  void progressStats(CoprocessorData & data, const bool cputime = false);     // prints statistics before/after each BVE-Run
   bool hasToEliminate();                               // return whether there is something in the BVE queue
 
   // sequential functions:

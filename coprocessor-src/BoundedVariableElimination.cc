@@ -127,7 +127,7 @@ void BoundedVariableElimination::printStatistics(ostream& stream)
     }
 }
 
-void inline BoundedVariableElimination::progressStats(CoprocessorData & data, const bool cputime)
+void BoundedVariableElimination::progressStats(CoprocessorData & data, const bool cputime)
 {
     if (!opt_printStats) return;
     clauseCount = data.nCls();

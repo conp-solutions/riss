@@ -1247,9 +1247,12 @@ lbool Subsumption::createResolvent( const CRef cr, CRef & resolvent, const int n
       { // count resolvents negatively
         removedLiterals -= origin.size() - 1;
       }
-      resolvent = ca.alloc(ps);
+      resolvent = ca.alloc(ps, origin.learnt());
       data.addClause(resolvent, heap);
-      data.getClauses().push(resolvent);
+      if (ca[resolvent].learnt())
+        data.getLEarnts().push(resolvent);
+      else
+        data.getClauses().push(resolvent);
       return l_Undef;
     }
 }
