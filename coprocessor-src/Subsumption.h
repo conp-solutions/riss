@@ -39,6 +39,38 @@ class Subsumption : public Technique {
   vec<Lit> ps;  // Resolution vector for keepAllResolvent
   vector<CRef> toDelete; // Delete vector for keepAllResolvent
   vector<CRef> newClauses; //Collect new Strengthening Clauses to avoid endless loops
+  
+  // Structure to track updates of occurrence lists
+  struct OccUpdate {
+      CRef cr;
+      Lit  l;
+      OccUpdate(const CRef _cr, const Lit _l) : cr(_cr), l(_l) {} 
+  };
+
+  // local stats for parallel execution
+  struct SubsumeStatsData {
+    int subsumedClauses;  // statistic counter
+    int subsumedLiterals; // sum up the literals of the clauses that have been subsumed
+    int removedLiterals;  // statistic counter
+    int subsumeSteps;     // number of clause comparisons in subsumption 
+    int strengthSteps;    // number of clause comparisons in strengthening
+    double processTime;   // statistic counter
+    double strengthTime;  // statistic counter
+    double lockTime;      // statistic counter
+    };
+
+  // Member var seq subsumption
+  vector < CRef > subs_occ_updates;
+  // Member var seq strength
+  vector < OccUpdate > strength_occ_updates;
+  // Member vars parallel Subsumption
+  vector< vector < CRef > > toDeletes;
+  vector< vector < CRef > > nonLearnts;
+  vector< struct SubsumeStatsData > localStats;
+  
+  // Member vars parallel Strengthening
+  vector< SpinLock > var_locks; // 1 extra SpinLock for data
+  vector< vector < OccUpdate > > occ_updates;
             
 public:
   
@@ -65,28 +97,10 @@ public:
    */
 
 protected:
-  // local stats for parallel execution
-  struct SubsumeStatsData {
-    int subsumedClauses;  // statistic counter
-    int subsumedLiterals; // sum up the literals of the clauses that have been subsumed
-    int removedLiterals;  // statistic counter
-    int subsumeSteps;     // number of clause comparisons in subsumption 
-    int strengthSteps;    // number of clause comparisons in strengthening
-    double processTime;   // statistic counter
-    double strengthTime;  // statistic counter
-    double lockTime;      // statistic counter
-    };
 
-  // Structure to track updates of occurrence lists
-  struct OccUpdate {
-      CRef cr;
-      Lit  l;
-      OccUpdate(const CRef _cr, const Lit _l) : cr(_cr), l(_l) {} 
-  };
 
 
   inline void updateOccurrences(const vector< Coprocessor::Subsumption::OccUpdate >& updates, Heap<VarOrderBVEHeapLt> * heap);
-  vector< struct SubsumeStatsData > localStats;
 
   bool hasToSubsume() const ;       // return whether there is something in the subsume queue
   lbool fullSubsumption(Heap<VarOrderBVEHeapLt> * heap, const bool doStatistics);   // performs subsumtion until completion

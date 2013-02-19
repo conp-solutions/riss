@@ -121,7 +121,8 @@ void Subsumption::subsumeStrength(Heap<VarOrderBVEHeapLt> * heap, const bool doS
                       removedLiterals += c.size();
                   }
               }
-            } 
+            }
+            toDelete.clear(); 
             data.getStrengthClauses().swap(newClauses);
             newClauses.clear();
           }
@@ -161,7 +162,7 @@ bool Subsumption::hasWork() const
 
 void Subsumption :: subsumption_worker ( unsigned int start, unsigned int end, Heap<VarOrderBVEHeapLt> * heap, const bool doStatistics)
 {
-    vector < CRef > occ_updates; // TODO transform this into a member / thread-attribute member
+    vector < CRef > & occ_updates = subs_occ_updates;
     if (doStatistics)
     {
         processTime = cpuTime() - processTime;   
@@ -226,6 +227,7 @@ void Subsumption :: subsumption_worker ( unsigned int start, unsigned int end, H
             data.removeClauseFrom(cr,c[l]);
         }
     }
+    occ_updates.clear();
 }
 
 /**
@@ -916,7 +918,6 @@ inline lbool Subsumption::par_nn_strength_check(CoprocessorData & data, vector <
               Lit neg = other[negated_lit_pos];
               occ_updates.push_back(OccUpdate(list[j] , neg));
               other.removePositionSortedThreadSafe(negated_lit_pos);
-              // TODO to much overhead? 
               data_lock.lock();
               data.removedLiteral(neg, 1, heap);
               if ( ! other.can_subsume()) 
@@ -1059,7 +1060,6 @@ inline lbool Subsumption::par_nn_negated_strength_check(CoprocessorData & data, 
               Lit neg = other[negated_lit_pos];
               occ_updates.push_back(OccUpdate(list[j] , neg));
               other.removePositionSortedThreadSafe(negated_lit_pos);
-              // TODO to much overhead? 
               data_lock.lock();
               data.removedLiteral(neg, 1, heap);
               if ( ! other.can_subsume()) 
@@ -1091,7 +1091,7 @@ bool Subsumption::hasToStrengthen() const
 lbool Subsumption::fullStrengthening(Heap<VarOrderBVEHeapLt> * heap, const bool doStatistics)
 {
     /*
-     * TODO strengthening with min oppurances-lits
+     * TODO strengthening with min occurances-lits
     for( int pos = 0 ; pos < 2; ++ pos )
     {
        //find lit with minimal occurrences
@@ -1103,7 +1103,7 @@ lbool Subsumption::fullStrengthening(Heap<VarOrderBVEHeapLt> * heap, const bool 
   }
     if (doStatistics) strengthTime = cpuTime() - strengthTime;
     deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
-    vector<OccUpdate> occ_updates;
+    vector<OccUpdate> & occ_updates = strength_occ_updates; 
     //for every clause:
     for (int i = 0; i < data.getStrengthClauses().size();)
     {
@@ -1209,6 +1209,7 @@ lbool Subsumption::fullStrengthening(Heap<VarOrderBVEHeapLt> * heap, const bool 
     }
 
   updateOccurrences( occ_updates, heap);
+  occ_updates.clear();
 
   if (doStatistics) strengthTime = cpuTime() - strengthTime;
   // no result to tell to the outside
@@ -1269,7 +1270,7 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
   int si, so;           // indices used for "can be strengthened"-testing
   int negated_lit_pos;  // index of negative lit, if we find one
   deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
-  vector < OccUpdate > occ_updates;
+  vector < OccUpdate > & occ_updates = strength_occ_updates;
   for (; end > start;)
   {
     CRef cr = CRef_Undef;
@@ -1485,6 +1486,7 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
     strengthener.set_strengthen(false);
   }
   updateOccurrences( occ_updates, heap);
+  occ_updates.clear();
   if (doStatistics) strengthTime = cpuTime() - strengthTime;
 }
 
@@ -1516,9 +1518,9 @@ void Subsumption::parallelSubsumption( const bool doStatistics)
   cerr << "c parallel subsumption with " << controller.size() << " threads" << endl;
   SubsumeWorkData workData[ controller.size() ];
   vector<Job> jobs( controller.size() );
-  vector< vector < CRef > > toDeletes  (controller.size()); //TODO member var!!!
-  vector< vector < CRef > > nonLearnts (controller.size());
-  //vector< struct SubsumeStatsData > localStats (controller.size());
+  toDeletes.resize(controller.size());
+  nonLearnts.resize(controller.size());
+  localStats.resize(controller.size());
   unsigned int queueSize = data.getSubsumeClauses().size();
   unsigned int partitionSize = data.getSubsumeClauses().size() / controller.size();
   // setup data for workers
@@ -1529,10 +1531,6 @@ void Subsumption::parallelSubsumption( const bool doStatistics)
     workData[i].end   = (i + 1 == controller.size()) ? queueSize : (i+1) * partitionSize; // last element is not processed!
     workData[i].to_delete = & toDeletes[i];
     workData[i].set_non_learnt = & nonLearnts[i];
-/*    localStats[i].subsumedClauses = 0;
-    localStats[i].subsumedLiterals = 0;
-    localStats[i].subsumeSteps = 0;
-    localStats[i].processTime = 0;*/
     workData[i].stats = & localStats[i];
     jobs[i].function  = Subsumption::runParallelSubsume;
     jobs[i].argument  = &(workData[i]);
@@ -1541,6 +1539,7 @@ void Subsumption::parallelSubsumption( const bool doStatistics)
 
   // Setting delete information
   for (int i = 0 ; i < toDeletes.size(); ++ i) 
+  {
     for (int j = 0; j < toDeletes[i].size(); ++j)
     {
         Clause & c = ca[toDeletes[i][j]]; 
@@ -1554,15 +1553,20 @@ void Subsumption::parallelSubsumption( const bool doStatistics)
                 localStats[i].subsumedLiterals += c.size();
             }
         }
-    } 
+    }
+    toDeletes[i].clear();
+  } 
   // Setting non-learnt information
   for (int i = 0; i < nonLearnts.size(); ++i)
+  {
     for (int j = 0; j < nonLearnts[i].size(); ++j)
     {
         Clause & c = ca[nonLearnts[i][j]];
         if (!c.can_be_deleted() && c.learnt())
             c.set_learnt(false);
     }
+    nonLearnts[i].clear();
+  }
 }
 
 void* Subsumption::runParallelSubsume(void* arg)
@@ -1579,8 +1583,8 @@ void Subsumption::parallelStrengthening(Heap<VarOrderBVEHeapLt> * heap, const bo
   SubsumeWorkData workData[ controller.size() ];
   //vector< struct SubsumeStatsData > localStats (controller.size());
   vector<Job> jobs( controller.size() );
-  vector< SpinLock > var_locks (data.nVars() + 1); // 1 extra SpinLock for data
-  vector< vector < OccUpdate > > occ_updates(controller.size());
+  var_locks.resize(data.nVars() + 1); // 1 extra SpinLock for data
+  occ_updates.resize(controller.size());
   unsigned int queueSize = data.getStrengthClauses().size();
   unsigned int partitionSize = data.getStrengthClauses().size() / controller.size();
   
@@ -1605,7 +1609,10 @@ void Subsumption::parallelStrengthening(Heap<VarOrderBVEHeapLt> * heap, const bo
 
   // update Occurrences
   for (int i = 0; i < controller.size(); ++i)
+  {
     updateOccurrences(occ_updates[i], heap);
+    occ_updates[i].clear();
+  }
 
   //propagate units
   propagation.propagate(data, true, heap);

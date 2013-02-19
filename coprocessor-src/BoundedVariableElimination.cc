@@ -241,7 +241,7 @@ static void printLitVec(const vec<Lit> & litvec)
 
 }
 
-static void printClauses(ClauseAllocator & ca, vector<CRef> list, bool skipDeleted)
+static void printClauses(ClauseAllocator & ca, vector<CRef> & list, bool skipDeleted)
 {
     for (unsigned i = 0; i < list.size(); ++i)
     {
