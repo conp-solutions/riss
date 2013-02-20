@@ -157,6 +157,8 @@ public:
   void log( int level, const string& s, const Clause& c, const Lit& l);
 };
 
+struct VarOrderBVEHeapLt;
+
 /** Data, that needs to be accessed by coprocessor and all the other classes
  */
 class CoprocessorData
@@ -236,6 +238,7 @@ public:
 
 // adding, removing clauses and literals =======
   void addClause (      const CRef cr );                 // add clause to data structures, update counters
+  void addClause (      const CRef cr , Heap<VarOrderBVEHeapLt> * heap, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL);     // add clause to data structures, update counters
   bool removeClauseFrom (const Minisat::CRef cr, const Lit l); // remove clause reference from list of clauses for literal l, returns true, if successful
   void removeClauseFrom (const Minisat::CRef cr, const Lit l, const int index); // remove clause reference from list of clauses for literal l, returns true, if successful
   inline bool removeClauseFromThreadSafe (const Minisat::CRef cr, const Lit l); // replaces clause reference from clause list by CRef_Undef, returns true, if successful
@@ -253,8 +256,7 @@ public:
   /** fill the vector with all the literals that have been deleted after the given timer */
   void getActiveVariables(const uint32_t myTimer, vector< Var >& activeVariables );
   /** fill the heap with all the literals that have been deleted afetr the given timer */
-  
-  template<class Comp>
+  template <class Comp>  
   void getActiveVariables(const uint32_t myTimer, Heap < Comp > & heap );
 
   /** resets all delete timer */
@@ -268,11 +270,12 @@ public:
   void lock()   { dataLock.lock();   } // lock and unlock the data structure
   void unlock() { dataLock.unlock(); } // lock and unlock data structure
 
-// formula statistics ==========================
-  void addedLiteral(   const Lit l, const int32_t diff = 1);	// update counter for literal
-  void removedLiteral( const Lit l, const int32_t diff = 1);	// update counter for literal
-  void addedClause (   const CRef cr );			// update counters for literals in the clause
-  void removedClause ( const CRef cr );			// update counters for literals in the clause
+// formula statistics with HeapUpdate and LockHandling
+  
+  void addedLiteral( const Lit l, const int32_t diff = 1, Heap<VarOrderBVEHeapLt> * heap = NULL, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL); // update counter for literal
+  void removedLiteral( const Lit l, const int32_t diff = 1, Heap<VarOrderBVEHeapLt> * heap = NULL, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL); // update counter for literal
+  void addedClause (   const CRef cr, Heap<VarOrderBVEHeapLt> * heap = NULL, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL );			// update counters for literals in the clause
+  void removedClause ( const CRef cr, Heap<VarOrderBVEHeapLt> * heap = NULL, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL );			// update counters for literals in the clause
   void removedClause ( const Lit l1, const Lit l2 );		// update counters for literals in the clause
   
   void correctCounters();
@@ -357,6 +360,21 @@ public:
   /** get indexes of BIG scan algorithm */
   uint32_t getStop( const Lit& l ) { return stop != 0 ? stop[ toInt(l) ] : 0; }
 };
+
+/** Comperator for Variable Heap of BVE */
+struct VarOrderBVEHeapLt {
+        CoprocessorData & data;
+        const int heapOption;
+        bool operator () (Var x, Var y) const {/* assert (data != NULL && "Please assign a valid data object before heap usage" );*/ 
+            switch (heapOption)
+            {
+                case 0: return data[x] < data[y]; 
+                case 1: return data[x] > data[y]; 
+                default: assert(false && "In case of random order no heap should be used");
+            }
+        }
+        VarOrderBVEHeapLt(CoprocessorData & _data, int _heapOption) : data(_data), heapOption(_heapOption) { }
+    };
 
 inline CoprocessorData::CoprocessorData(ClauseAllocator& _ca, Solver* _solver, Coprocessor::Logger& _log, bool _limited, bool _randomized)
 : ca ( _ca )
@@ -473,9 +491,43 @@ inline void CoprocessorData::addClause(const Minisat::CRef cr)
   for (int l = 0; l < c.size(); ++l)
   {
     occs[toInt(c[l])].push_back(cr);
-    addedLiteral( c[l] );
+    lit_occurrence_count[toInt(l)] += 1;
   }
   numberOfCls ++;
+}
+
+inline void CoprocessorData::addClause ( const CRef cr , Heap<VarOrderBVEHeapLt> * heap, SpinLock * data_lock, SpinLock * heap_lock) 
+{
+  const Clause & c = ca[cr];
+  if( c.can_be_deleted() ) return;
+  if (heap == NULL && data_lock == NULL && heap_lock == NULL)
+  {
+      for (int l = 0; l < c.size(); ++l)
+      {
+        occs[toInt(c[l])].push_back(cr);
+        lit_occurrence_count[toInt(l)] += 1;
+      }
+      numberOfCls ++;
+  }
+  else 
+  {
+      if (data_lock != NULL)
+          data_lock->lock();
+      if (heap_lock != NULL)
+          heap_lock->lock();
+      for (int l = 0; l < c.size(); ++l)
+      {
+        occs[toInt(c[l])].push_back(cr);
+        lit_occurrence_count[toInt(l)] += 1;
+        if (heap != NULL)
+            heap->update(var(c[l]));
+      }
+      if (heap_lock != NULL) 
+          heap_lock->unlock();
+      numberOfCls ++;
+      if (data_lock != NULL) 
+          data_lock->unlock();
+  }
 }
 
 inline bool CoprocessorData::removeClauseFrom(const Minisat::CRef cr, const Lit l)
@@ -585,30 +637,6 @@ inline void CoprocessorData::resetDeleteTimer()
 }
 
 
-inline void CoprocessorData::addedClause(const Minisat::CRef cr)
-{
-  const Clause & c = ca[cr];
-  for (int l = 0; l < c.size(); ++l)
-  {
-    addedLiteral( c[l] );
-  }
-}
-
-inline void CoprocessorData::addedLiteral(const Lit l, const  int32_t diff)
-{
-  lit_occurrence_count[toInt(l)] += diff;
-}
-
-inline void CoprocessorData::removedClause(const Minisat::CRef cr)
-{
-  const Clause & c = ca[cr];
-  for (int l = 0; l < c.size(); ++l)
-  {
-    removedLiteral( c[l] );
-  }
-  numberOfCls --;
-}
-
 inline void CoprocessorData::removedClause(const Lit l1, const Lit l2)
 {
   removedLiteral(l1);
@@ -628,11 +656,123 @@ inline void CoprocessorData::removedClause(const Lit l1, const Lit l2)
   }
 }
 
-inline void CoprocessorData::removedLiteral(Lit l, int32_t diff)
+inline void CoprocessorData::addedLiteral( const Lit l, const int32_t diff, Heap<VarOrderBVEHeapLt> * heap, SpinLock * data_lock, SpinLock * heap_lock)
 {
-  deletedVar(var(l));
-  lit_occurrence_count[toInt(l)] -= diff;
+    if (heap == NULL && data_lock == NULL && heap_lock == NULL)
+    {
+        lit_occurrence_count[toInt(l)] += diff; 
+    }
+    else 
+    {
+        if (data_lock != NULL)
+            data_lock->lock();
+        if (heap_lock != NULL)
+            heap_lock->lock();
+        lit_occurrence_count[toInt(l)] += diff;
+        if (heap != NULL)
+        {
+            heap->update(var(l));
+        }    
+        if (heap_lock != NULL)
+            heap_lock->unlock();
+        if (data_lock != NULL)
+            data_lock->unlock();
+    }
 }
+inline void CoprocessorData::removedLiteral( const Lit l, const int32_t diff, Heap<VarOrderBVEHeapLt> * heap, SpinLock * data_lock, SpinLock * heap_lock) // update counter for literal
+{
+  if (heap == NULL && data_lock == NULL && heap_lock == NULL)
+  {
+    deletedVar(var(l));
+    lit_occurrence_count[toInt(l)] -= diff;
+  }
+  else
+  {
+    if (data_lock != NULL)
+        data_lock->lock();
+    if (heap_lock != NULL)
+        heap_lock->lock();
+    deletedVar(var(l));
+    lit_occurrence_count[toInt(l)] -= diff;
+    if (heap != NULL)
+    {
+        if (heap->inHeap(var(l)))
+        {
+            heap->increase(var(l));
+        }
+    }
+    if (heap_lock != NULL)
+        heap_lock->unlock();
+    if (data_lock != NULL)
+        data_lock->unlock();
+  }
+}
+inline void CoprocessorData::addedClause (   const CRef cr, Heap<VarOrderBVEHeapLt> * heap, SpinLock * data_lock, SpinLock * heap_lock)			// update counters for literals in the clause
+{
+  const Clause & c = ca[cr];
+  if (heap == NULL && data_lock == NULL && heap_lock == NULL)
+  {
+      for (int l = 0; l < c.size(); ++l)
+      {
+        lit_occurrence_count[toInt(l)] += 1;
+      }
+  }
+  else 
+  {
+      if (data_lock != NULL)
+        data_lock->lock();
+      if (heap_lock != NULL)
+        heap_lock->lock();
+      for (int l = 0; l < c.size(); ++l)
+      {
+        lit_occurrence_count[toInt(l)] += 1;
+        if (heap != NULL)
+        {
+            heap->update(var(c[l]));
+        }
+      }
+      numberOfCls --;
+      if (heap_lock != NULL)
+          heap_lock->unlock();
+      if (data_lock != NULL)
+          data_lock->unlock();
+  }
+}
+inline void CoprocessorData::removedClause ( const CRef cr, Heap<VarOrderBVEHeapLt> * heap, SpinLock * data_lock, SpinLock * heap_lock)			// update counters for literals in the clause
+{
+  const Clause & c = ca[cr];
+  if (heap == NULL && data_lock == NULL && heap_lock == NULL)
+  {
+      for (int l = 0; l < c.size(); ++l)
+      {
+        removedLiteral( c[l] );
+      }
+      numberOfCls --;
+  }
+  else
+  {
+      if (data_lock != NULL)
+        data_lock->lock();
+      if (heap_lock != NULL)
+        heap_lock->lock();
+      for (int l = 0; l < c.size(); ++l)
+      {
+        removedLiteral( c[l] );
+        if (heap != NULL)
+        {
+            if (heap->inHeap(var(c[l])))
+            {
+                heap->increase(var(c[l]));
+            }
+        }
+      }
+      numberOfCls --;
+      if (heap_lock != NULL)
+          heap_lock->unlock();
+      if (data_lock != NULL)
+          data_lock->unlock();
+  }
+} 
 
 inline int32_t& CoprocessorData::operator[](const Lit l)
 {

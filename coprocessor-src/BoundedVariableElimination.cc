@@ -18,7 +18,7 @@ using namespace std;
  BoolOption opt_bve_findGate    (_cat_bve, "bve_gates",  "try to find variable AND gate definition before elimination", false);
  IntOption  opt_bve_heap        (_cat_bve, "cp3_bve_heap"     ,  "0: minimum heap, 1: maximum heap, 2: random", 0, IntRange(0,2));
  BoolOption opt_bve_bc          (_cat_bve, "bve_BCElim",    "Eliminate Blocked Clauses", true);
- 
+ BoolOption heap_updates (_cat_bve, "bve_heap_updates",    "Always update variable heap if clauses / literals are added or removed", false);
 
 BoundedVariableElimination::BoundedVariableElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation, Coprocessor::Subsumption & _subsumption )
 : Technique( _ca, _controller )
