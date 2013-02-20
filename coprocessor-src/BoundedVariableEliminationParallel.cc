@@ -547,7 +547,8 @@ inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData 
                 }
             }
             if(opt_bve_verbose > 1){
-                cerr << "c removed clause: " << c << endl; 
+                cerr << "c removed clause: " << c << endl;
+                cerr << "c added to extension with Lit " << l << endl;;
             }
         }
 
