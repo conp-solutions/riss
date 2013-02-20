@@ -1041,6 +1041,7 @@ bool inline CoprocessorData::removeClauseThreadSafe (const CRef cr)
     c.spinlock();
     if (!c.can_be_deleted())
     {
+        didChange();
         c.set_delete(true);
         while ( __sync_bool_compare_and_swap(&numberOfCls, numberOfCls, numberOfCls-1) == false);
         for (int l = 0; l < c.size(); ++l)

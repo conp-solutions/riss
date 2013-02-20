@@ -853,7 +853,8 @@ inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(Coprocess
         if (c.can_be_deleted())
             continue;
         if (_stats[ci] == 0)
-        { 
+        {
+            didChange();
             c.set_delete(true);
             if (heap_updates && opt_bve_heap != 2)
                 data.removedClause(cr, &heap, &data_lock, &heap_lock); // updates stats and deleteTimer
@@ -896,6 +897,8 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
   if (data.hasToPropagate())
     if (propagation.propagate(data, true) == l_False)
       return;
+    else
+        didChange();
 
   const bool doStatistics = true;
   if (doStatistics) processTime = wallClockTime() - processTime;
@@ -1000,13 +1003,16 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
         if (doStatistics) processTime = wallClockTime() - processTime;
         return;
       }
-    
+      else
+         didChange(); 
     // add active variables and clauses to variable heap and subsumption queues
     data.getActiveVariables(lastDeleteTime(), touched_variables);
     touchedVarsForSubsumption(data, touched_variables);
 
     if (doStatistics) subsimpTime = wallClockTime() - subsimpTime;
     subsumption.subsumeStrength();
+    if (subsumption.appliedSomething())
+        didChange();
     if (doStatistics) subsimpTime = wallClockTime() - subsimpTime;
 
     if (opt_bve_heap != 2)
@@ -1348,6 +1354,7 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData & da
           if (other.size() == 2)
           {
               other.set_delete(true);
+              didChange();
               data_lock.lock();
               lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
               data_lock.unlock();   
@@ -1373,6 +1380,7 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData & da
           }
           else
           {
+              didChange();
               Lit neg = other[negated_lit_pos];
               if( opt_bve_verbose > 2 || global_debug_out ) cerr << "c remove " << neg << " from clause " << other << endl;
               
@@ -1512,6 +1520,7 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & da
       if (negated_lit_pos == -1 && si == strengthener.size())
       {
          other.set_delete(true);
+         didChange();
          if (opt_bve_verbose > 2) cerr << "c " << strengthener << " subsumed " << other << endl;
          if (doStatistics) 
          {
@@ -1540,6 +1549,7 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & da
           // unit found
           if (other.size() == 2)
           {
+              didChange();
               other.set_delete(true);
               data_lock.lock();
               lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
@@ -1574,6 +1584,7 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & da
               dirtyOccs.setCurrentStep(toInt(neg));
 
               other.removePositionSortedThreadSafe(negated_lit_pos);
+              didChange();
               // TODO to much overhead? 
               if (heap_updates && opt_bve_heap != 2)
                   data.removedLiteral(neg, 1, &heap, &data_lock, &heap_lock);
@@ -1676,6 +1687,7 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
       }
       satisfied.set_delete(true);
       satisfied.unlock();
+      didChange();
       
       // overwrite CRef in Occ 
       
@@ -1747,6 +1759,7 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
          {
            solver->uncheckedEnqueue(c[0]);
          }
+         didChange();
          c.set_delete(true);
          data_lock.unlock();
          if (heap_updates && opt_bve_heap != 2)
@@ -1763,6 +1776,7 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
       else
       { 
          data_lock.unlock();
+         didChange();
          if (true && ! c.can_strengthen())
          {
             c.set_strengthen(true);

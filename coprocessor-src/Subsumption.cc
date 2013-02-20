@@ -200,10 +200,12 @@ void Subsumption :: subsumption_worker ( unsigned int start, unsigned int end, H
                     subsumedLiterals += ca[list[i]].size();
                 }
                 ca[list[i]].set_delete(true); 
+		cerr << "c subsumption removed " << (ca[list[i]].learnt() ? "learned" : "" ) << " clause " << ca[list[i]] << " by "  <<  (ca[list[i]].learnt() ? "learned" : "" ) << c << endl;
                 occ_updates.push_back(list[i]);
 		        if( global_debug_out ) cerr << "c clause " << ca[list[i]] << " is deleted by " << c << endl;
                 if (!ca[list[i]].learnt() && c.learnt())
                 {
+		  cerr << "c subsumption turned clause " << c << " from learned in original " << endl;
                     c.set_learnt(false);
                 }
             } else
@@ -1172,6 +1174,7 @@ lbool Subsumption::fullStrengthening(Heap<VarOrderBVEHeapLt> * heap, const bool 
                       // propagate if clause is unit
                       other.set_delete(true);
                       data.enqueue(other[0]);
+		      // cerr << "c enqueue unit based on strengthening: " << other[0] << endl;
                       //propagation.propagate(data, true); -> causes problems if effecting c
                     } 
                     else
@@ -1202,8 +1205,10 @@ lbool Subsumption::fullStrengthening(Heap<VarOrderBVEHeapLt> * heap, const bool 
         }
         if (data.hasToPropagate()) 
         {
-            if (propagation.propagate(data, true, heap) == l_False)
-                return l_False;
+            if (propagation.propagate(data, true) == l_False) {
+	            data.setFailed();
+              return l_False;
+	    }
         }
         c.set_strengthen(false);
     }

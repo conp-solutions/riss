@@ -33,6 +33,7 @@ static BoolOption opt_twosat    (_cat2, "2sat",          "2SAT algorithm to chec
 static BoolOption opt_ts_phase  (_cat2, "2sat-phase",    "use 2SAT model as initial phase for SAT solver", false);
 
 static BoolOption opt_debug     (_cat2, "cp3-debug",     "do more debugging", false);
+static BoolOption opt_check     (_cat2, "cp3-check",     "check solver state before returning control to solver", false);
 static IntOption  opt_log       (_cat, "log",            "Output log messages until given level", 0, IntRange(0, 3));
 
 using namespace std;
@@ -83,11 +84,16 @@ lbool Preprocessor::performSimplification()
 
   lbool status = l_Undef;
   // delete clauses from solver
+  
+  if( opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << endl;
+  
   cleanSolver ();
   // initialize techniques
   data.init( solver->nVars() );
   initializePreprocessor ();
   if( opt_verbose > 2 )cerr << "c coprocessor finished initialization" << endl;
+  
+  if( !isInprocessing ) {
   
   const bool printBVE = false, printBVA = false, printCCE = false, printEE = false, printHTE = false, printSusi = false, printUP = false;  
   
@@ -200,6 +206,8 @@ lbool Preprocessor::performSimplification()
    printFormula("after CCE");
   }
   
+  }
+  
   // tobias
 //   vec<Var> vars;
 //   MarkArray array;
@@ -282,6 +290,8 @@ lbool Preprocessor::performSimplification()
     if ( data.ok() ) reSetupSolver();
   }
 
+  if( opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;
+  
   if( isInprocessing ) ipTime = cpuTime() - ipTime;
   else ppTime = cpuTime() - ppTime;
   
@@ -300,11 +310,14 @@ lbool Preprocessor::performSimplification()
     twoSAT.printStatistics(cerr);
   }
   
+  if( opt_check ) fullCheck("final check");
+  
   // destroy preprocessor data
   if( opt_verbose > 2 ) cerr << "c coprocessor free data structures" << endl;
   data.destroy();
 
   if( !data.ok() ) status = l_False; // to fall back, if a technique forgets to do this
+
   return status;
 }
 
@@ -321,8 +334,11 @@ lbool Preprocessor::inprocess()
   if( !opt_inprocess ) return l_Undef;
   // TODO: do something before preprocessing? e.g. some extra things with learned / original clauses
   if (opt_inprocess) {
+    cerr << "c start inprocessing " << endl;
     isInprocessing = true;
-    return performSimplification();
+    lbool ret = performSimplification();
+    cerr << "c finished inprocessing " << endl;
+    return ret;
   }
   else 
     return l_Undef; 
@@ -356,28 +372,47 @@ void Preprocessor::initializePreprocessor()
   for (int i = 0; i < clausesSize; ++i)
   {
     const CRef cr = solver->clauses[i];
-    assert( ca[cr].mark() == 0 && "mark of a clause has to be 0 before being put into preprocessor" );
+    Clause& c = ca[cr];
+    assert( c.mark() == 0 && "mark of a clause has to be 0 before being put into preprocessor" );
     // if( ca[cr].mark() != 0  ) continue; // do not use any specially marked clauses!
-    data.addClause( cr );
-    // TODO: decide for which techniques initClause in not necessary!
-    subsumption.initClause( cr );
-    propagation.initClause( cr );
-    hte.initClause( cr );
-    cce.initClause( cr );
+    
+    if( c.size() == 0 ) {
+      data.setFailed(); 
+      break;
+    } else if (c.size() == 1 ) {
+      if( data.enqueue(c[0]) == l_False ) break;
+      c.set_delete(true);
+    } else {
+      data.addClause( cr );
+      // TODO: decide for which techniques initClause in not necessary!
+      subsumption.initClause( cr );
+      propagation.initClause( cr );
+      hte.initClause( cr );
+      cce.initClause( cr );
+    }
   }
 
   clausesSize = solver->learnts.size();
   for (int i = 0; i < clausesSize; ++i)
   {
     const CRef cr = solver->learnts[i];
-    assert( ca[cr].mark() == 0 && "mark of a clause has to be 0 before being put into preprocessor" );
+    Clause& c = ca[cr];
+    assert( c.mark() == 0 && "mark of a clause has to be 0 before being put into preprocessor" );
     // if( ca[cr].mark() != 0  ) continue; // do not use any specially marked clauses!
-    data.addClause( cr );
-    // TODO: decide for which techniques initClause in not necessary! (especially learnt clauses)
-    subsumption.initClause( cr );
-    propagation.initClause( cr );
-    hte. initClause( cr );
-    cce.initClause( cr );
+    if( c.size() == 0 ) {
+      data.setFailed(); 
+      break;
+    } else if (c.size() == 1 ) {
+      if( data.enqueue(c[0]) == l_False ) break;
+      c.set_delete(true);
+    } else {
+      data.addClause( cr );
+      // TODO: decide for which techniques initClause in not necessary!
+      subsumption.initClause( cr );
+      propagation.initClause( cr );
+      hte.initClause( cr );
+      cce.initClause( cr );
+    }
   }
 }
 
@@ -404,7 +439,8 @@ void Preprocessor::cleanSolver()
 
 void Preprocessor::reSetupSolver()
 {
-    int j = 0;
+  assert( solver->decisionLevel() == 0 && "can re-setup solver only if its at decision level 0!" );
+    int kept_clauses = 0;
 
     // check whether reasons of top level literals are marked as deleted. in this case, set reason to CRef_Undef!
     if( solver->trail_lim.size() > 0 )
@@ -422,48 +458,56 @@ void Preprocessor::reSetupSolver()
         if (c.can_be_deleted())
             delete_clause(cr);
         else
-        {
-            assert( c.mark() == 0 && "only clauses without a mark should be passed back to the solver!" );
-            if (c.size() > 1)
-            {
-                solver->clauses[j++] = cr;
-		// do not watch literals that are false!
-		int j = 2;
-		for ( int k = 0 ; k < 2; ++ k ) { // ensure that the first two literals are undefined!
-		  if( solver->value( c[k] ) == l_False ) {
-		    for( ; j < c.size() ; ++j )
-		      if( solver->value( c[j] ) != l_False ) 
-		        { const Lit tmp = c[k]; c[k] = c[j]; c[j] = tmp; break; }
+	  {
+	      assert( c.mark() == 0 && "only clauses without a mark should be passed back to the solver!" );
+	      if (c.size() > 1)
+	      {
+		  // do not watch literals that are false!
+		  int j = 1;
+		  for ( int k = 0 ; k < 2; ++ k ) { // ensure that the first two literals are undefined!
+		    if( solver->value( c[k] ) == l_False ) {
+		      for( ; j < c.size() ; ++j )
+			if( solver->value( c[j] ) != l_False ) 
+			  { const Lit tmp = c[k]; c[k] = c[j]; c[j] = tmp; break; }
+		    }
 		  }
-		}
-		if( (solver->value( c[0] ) == l_False && solver->value( c[1] ) == l_False) ) {
-		  cerr << "c found unsatisfiable clause " << c << endl;
+		  // assert( (solver->value( c[0] ) != l_False || solver->value( c[1] ) != l_False) && "Cannot watch falsified literals" );
+		  
+		  // reduct of clause is empty, or unit
+		  if( solver->value( c[0] ) == l_False ) { data.setFailed(); return; }
+		  else if( solver->value( c[1] ) == l_False ) {
+		    if( data.enqueue(c[0]) == l_False ) { if( opt_debug ) cerr  << "enqueing " << c[0] << " failed." << endl; return; }
+		    else { 
+		      if( opt_debug ) cerr << "enqueued " << c[0] << " successfully" << endl; 
+		      c.set_delete(true);
+		    }
+		    if( solver->propagate() != CRef_Undef ) { data.setFailed(); return; }
+		    c.set_delete(true);
+		  } else {
+		    // cerr << "c attach orig clause " << c << " as " << kept_clauses << endl;
+		    solver->attachClause(cr);
+		    solver->clauses[kept_clauses++] = cr; // add original clauss back! 
+		  }
+	      }
+	      else {
+		if (solver->value(c[0]) == l_Undef)
+		  if( data.enqueue(c[0]) == l_False ) { return; }
+		else if (solver->value(c[0]) == l_False )
+		{
+		  // assert( false && "This UNSAT case should be recognized before re-setup" );
 		  data.setFailed();
-		  break;
-		} else if( solver->value( c[0] ) == l_Undef && solver->value( c[1] ) == l_False) {
-		  cerr << "c found unit clause " << c << endl;
-		  solver->uncheckedEnqueue( c[0] );
 		}
-		
-		assert( (solver->value( c[0] ) != l_False || solver->value( c[1] ) != l_False) && "Cannot watch falsified literals" );
-                solver->attachClause(cr);
-            }
-            else if (solver->value(c[0]) == l_Undef)
-                solver->uncheckedEnqueue(c[0]);
-	    else if (solver->value(c[0]) == l_False )
-	    {
-	      // assert( false && "This UNSAT case should be recognized before re-setup" );
-	      solver->ok = false;
-	    }
-        }
+		c.set_delete(true);
+	      }
+	  }
     }
     int c_old = solver->clauses.size();
-    solver->clauses.shrink(solver->clauses.size()-j);
+    solver->clauses.shrink(solver->clauses.size()-kept_clauses);
 
-    if( opt_verbose > 0 ) fprintf(stderr,"c Subs-STATs: removed clauses: %i of %i,%s" ,c_old - j,c_old, (opt_verbose == 1 ? "\n" : ""));
+    if( opt_verbose > 0 ) fprintf(stderr,"c Subs-STATs: removed clauses: %i of %i,%s" ,c_old - kept_clauses,c_old, (opt_verbose == 1 ? "\n" : ""));
 
     int learntToClause = 0;
-    j = 0;
+    kept_clauses = 0;
     for (int i = 0; i < solver->learnts.size(); ++i)
     {
         const CRef cr = solver->learnts[i];
@@ -473,14 +517,15 @@ void Preprocessor::reSetupSolver()
         {
             delete_clause(cr);
             continue;
-        } else {
+        } 
 	  assert( c.mark() == 0 && "only clauses without a mark should be passed back to the solver!" );
 	  if (c.learnt()) {
             if (c.size() > 1)
             {
-                solver->learnts[j++] = solver->learnts[i];
+                solver->learnts[kept_clauses++] = solver->learnts[i];
             }
           } else { // move subsuming clause from learnts to clauses
+	    if( opt_check ) cerr << "c clause " << c << " moves from learnt to original " << endl;
 	    c.set_has_extra(true);
             c.calcAbstraction();
             learntToClause ++;
@@ -489,30 +534,43 @@ void Preprocessor::reSetupSolver()
               solver->clauses.push(cr);
             }
  	  }
-	}
-        if (c.size() > 1) {
-	  // do not watch literals that are false!
-	  int j = 2;
-	  for ( int k = 0 ; k < 2; ++ k ) { // ensure that the first two literals are undefined!
-	    if( solver->value( c[k] ) == l_False ) {
-	      for( ; j < c.size() ; ++j )
-		if( solver->value( c[j] ) != l_False ) 
-		  { const Lit tmp = c[k]; c[k] = c[j]; c[j] = tmp; break; }
-	    }
-	  }
-	  assert( (solver->value( c[0] ) != l_False || solver->value( c[1] ) != l_False) && "Cannot watch falsified literals" );
-	  solver->attachClause(cr);
-	} else if (solver->value(c[0]) == l_Undef)
-          solver->uncheckedEnqueue(c[0]);
-	else if (solver->value(c[0]) == l_False )
-	{
-	  // assert( false && "This UNSAT case should be recognized before re-setup" );
-	  solver->ok = false;
-	}
+	
+	  
+	      assert( c.mark() == 0 && "only clauses without a mark should be passed back to the solver!" );
+	      if (c.size() > 1)
+	      {
+		  // do not watch literals that are false!
+		  int j = 1;
+		  for ( int k = 0 ; k < 2; ++ k ) { // ensure that the first two literals are undefined!
+		    if( solver->value( c[k] ) == l_False ) {
+		      for( ; j < c.size() ; ++j )
+			if( solver->value( c[j] ) != l_False ) 
+			  { const Lit tmp = c[k]; c[k] = c[j]; c[j] = tmp; break; }
+		    }
+		  }
+		  // assert( (solver->value( c[0] ) != l_False || solver->value( c[1] ) != l_False) && "Cannot watch falsified literals" );
+		  
+		  // reduct of clause is empty, or unit
+		  if( solver->value( c[0] ) == l_False ) { data.setFailed(); return; }
+		  else if( solver->value( c[1] ) == l_False ) {
+		    if( data.enqueue(c[0]) == l_False ) { if( opt_debug ) cerr  << "enqueing " << c[0] << " failed." << endl; return; }
+		    else { if( opt_debug ) cerr << "enqueued " << c[0] << " successfully" << endl; }
+		    if( solver->propagate() != CRef_Undef ) { data.setFailed(); return; }
+		    c.set_delete(true);
+		  } else solver->attachClause(cr);
+	      }
+	      else if (solver->value(c[0]) == l_Undef)
+		  if( data.enqueue(c[0]) == l_False ) { return; }
+	      else if (solver->value(c[0]) == l_False )
+	      {
+		// assert( false && "This UNSAT case should be recognized before re-setup" );
+		data.setFailed();
+	      }
+	  
     }
     int l_old = solver->learnts.size();
-    solver->learnts.shrink(solver->learnts.size()-j);
-    if( opt_verbose > 1 ) fprintf(stderr, " moved %i and removed %i from %i learnts\n",learntToClause,(l_old - j) -learntToClause, l_old);
+    solver->learnts.shrink(solver->learnts.size()-kept_clauses);
+    if( opt_verbose > 1 ) fprintf(stderr, " moved %i and removed %i from %i learnts\n",learntToClause,(l_old - kept_clauses) -learntToClause, l_old);
 
     if( false ) {
       cerr << "c trail after cp3: ";
@@ -596,6 +654,7 @@ void Preprocessor::printFormula(const string& headline)
    cerr << "=== Formula " << headline << ": " << endl;
    for( int i = 0 ; i < data.getSolver()->trail.size(); ++i )
        cerr << "[" << data.getSolver()->trail[i] << "]" << endl;   
+   cerr << "c clauses " << endl;
    for( int i = 0 ; i < data.getClauses().size(); ++ i )
      if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getClauses()[i] ] << endl;
    for( int i = 0 ; i < data.getLEarnts().size(); ++ i )
@@ -623,3 +682,54 @@ bool Preprocessor::checkLists(const string& headline)
   }
   return ret;
 }
+
+void Preprocessor::fullCheck(const string& headline)
+{
+  cerr << "c perform full solver state check " << headline << endl;
+  checkLists(headline);
+  
+  // check whether clause is in solver in the right watch lists
+  for( int p = 0 ; p < 2; ++ p ) {
+  
+    const vec<CRef>& clauses = (p==0 ? data.getClauses() : data.getLEarnts() );
+    for( int i = 0 ; i<clauses.size(); ++ i ) {
+      const CRef cr = clauses[i];
+      const Clause& c = ca[cr];
+      if( c.can_be_deleted() ) continue;
+      
+      void  *end = 0;
+      if( c.size() == 1 ) cerr << "there should not be unit clauses! [" << cr << "]" << c << endl;
+      else {
+	for( int j = 0 ; j < 2; ++ j ) {
+	  const Lit l = ~c[j];
+	  vec<Solver::Watcher>&  ws  = solver->watches[l];
+	  bool didFind = false;
+	  for ( int j = 0 ; j < ws.size(); ++ j){
+	      CRef     wcr        = ws[j].cref;
+	      if( wcr  == cr ) { didFind = true; break; }
+	  }
+	  if( ! didFind ) cerr << "could not find clause[" << cr << "] " << c << " in watcher for lit " << l << endl;
+	}
+	
+      }
+      
+    }
+  }
+  
+  for( Var v = 0; v < data.nVars(); ++ v )
+  {
+    for( int p = 0 ; p < 2; ++ p ) 
+    {
+      const Lit l = mkLit(v, p==1);
+      vec<Solver::Watcher>&  ws  = solver->watches[l];
+      for ( int j = 0 ; j < ws.size(); ++ j){
+	      CRef     wcr        = ws[j].cref;
+	      const Clause& c = ca[wcr];
+	      if( c[0] != ~l && c[1] != ~l ) cerr << "wrong literals for clause [" << wcr << "] " << c << " are watched. Found in list for " << l << endl;
+	  }
+    }
+    if( solver->seen[ v ] != 0 ) cerr << "c seen for variable " << v << " is not 0, but " << (int) solver->seen[v] << endl;
+  }
+}
+
+
