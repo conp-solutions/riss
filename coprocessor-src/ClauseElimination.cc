@@ -23,9 +23,11 @@ ClauseElimination::ClauseElimination(ClauseAllocator& _ca, ThreadController& _co
 
 }
 
-void ClauseElimination::eliminate(CoprocessorData& data)
+void ClauseElimination::process(CoprocessorData& data)
 {
   processTime = cpuTime() - processTime;
+  modifiedFormula = false;
+  if( !data.ok() ) return;
   // TODO: have a better scheduling here! (if a clause has been removed, potentially other clauses with those variables can be eliminated as well!!, similarly to BCE!)
   if( opt_level == 0 ) return; // do not run anything!
   WorkData wData( data.nVars() );
@@ -193,6 +195,7 @@ ClaNextClause:;
     data.removedClause( cr );
     data.addToExtension( wData.toUndo );
     wData.removedClauses ++;
+    modifiedFormula = true;
     return true;
   } else {
     return false; 

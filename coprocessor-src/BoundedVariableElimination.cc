@@ -150,8 +150,9 @@ lbool BoundedVariableElimination::runBVE(CoprocessorData& data, const bool doSta
   }
   //Propagation (TODO Why does omitting the propagation
   // and no PureLit Propagation cause wrong model extension?)
-  if (propagation.propagate(data, true) == l_False)
+  if (propagation.process(data, true) == l_False)
       return l_False;
+  modifiedFormula = modifiedFormula || propagation.appliedSomething();
   
   if( false ) {
    cerr << "formula after propagation: " << endl;
@@ -232,7 +233,8 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<Var
 {
   //Subsumption / Strengthening
   if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
-  subsumption.subsumeStrength(); 
+  subsumption.process(); 
+  modifiedFormula = modifiedFormula || subsumption.appliedSomething();
   if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
  
   if (!data.ok())
@@ -260,19 +262,21 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<Var
   
     //propagate units
     if (data.hasToPropagate())
-      if (l_False == propagation.propagate(data, true))
+      if (l_False == propagation.process(data, true))
       {
         //if (doStatistics) processTime = wallClockTime() - processTime;
         return;
       }
+      modifiedFormula = modifiedFormula || propagation.appliedSomething();
     
     // add active variables and clauses to variable heap and subsumption queues
     data.getActiveVariables(lastDeleteTime(), touched_variables);
     touchedVarsForSubsumption(data, touched_variables);
 
     if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
-    subsumption.subsumeStrength();
+    subsumption.process();
     if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
+    modifiedFormula = modifiedFormula || subsumption.appliedSomething();
 
     if (opt_bve_heap != 2)
         heap.clear();
@@ -446,8 +450,9 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                 if (opt_bve_verbose > 0) cerr << "c Resolved " << v+1 <<endl;
                 //subsumption with new clauses!!
                 if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
-                subsumption.subsumeStrength();
+                subsumption.process();
                 if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
+		modifiedFormula = modifiedFormula || subsumption.appliedSomething();
 
                 if (!data.ok())
                     return;
@@ -620,8 +625,9 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
                 {
                     //assert(false && "all units should be discovered before (while strengthening)!");
                     if (doStatistics) ++ unitsEnqueued;
-                    if (propagation.propagate(data, true) == l_False)
+                    if (propagation.process(data, true) == l_False)
                         return l_False;  
+		    modifiedFormula = modifiedFormula || propagation.appliedSomething();
                     if (p.can_be_deleted())
                         break;
                 }
@@ -747,8 +753,9 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, vector<CRef
                         else if (status == l_True)
                         {
                             if (doStatistics) ++ unitsEnqueued;
-                            if (propagation.propagate(data, true) == l_False)  //TODO propagate own lits only (parallel)
+                            if (propagation.process(data, true) == l_False)  //TODO propagate own lits only (parallel)
                                 return l_False;
+			    modifiedFormula = modifiedFormula || propagation.appliedSomething();
                             if (p.can_be_deleted())
                                 break;
                         }

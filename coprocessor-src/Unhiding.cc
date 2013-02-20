@@ -99,6 +99,7 @@ uint32_t Unhiding::linStamp( const Lit literal, uint32_t stamp, bool& detectedEE
       if( uhdTransitive && stampInfo[ toInt(l) ].dsc < stampInfo[ toInt(l1) ].obs ) {
 	if( opt_uhdDebug > 1 ) cerr << "c [UHD-A] l.dsc=" << stampInfo[ toInt(l) ].dsc << " l1.obs=" << stampInfo[ toInt(l1) ].obs << endl;
 	data.removedClause( ~l, l1 );
+	modifiedFormula = true;
 	big.removeEdge(~l, l1);
 	if( opt_uhdDebug > 1 ) { cerr << "c [UHD-A] remove transitive edge " << ~l << "," << l1 << " and reduce index to " << stampInfo[ toInt(l) ].index - 1 << endl; }
 	-- stampInfo[ toInt(l) ].index;
@@ -226,6 +227,7 @@ uint32_t Unhiding::recStamp( const Lit l, uint32_t stamp, bool& detectedEE )
     if( stampInfo[ toInt(l) ].dsc < stampInfo[ toInt(l1) ].obs ) {
       data.removedClause( ~l, l1);
       big.removeEdge(~l, l1); // automatically done by removeClause
+      modifiedFormula = true;
       i --;
       continue;
     }
@@ -420,6 +422,7 @@ bool Unhiding::unhideSimplify()
 
       if( UHTE ) {
 	clause.set_delete( true );
+	modifiedFormula = true;
 	if( opt_uhdDebug > 1 ){  cerr << "c [UHTE] remove " << clause << cerr << endl; }
 	data.removedClause(clRef);
 	if( clause.size() == 2 ) big.removeEdge(clause[0],clause[1]);
@@ -448,6 +451,7 @@ bool Unhiding::unhideSimplify()
 	    if( opt_uhdDebug > 1 ){  cerr << "c [UHLE-P] remove " << l << " because finish time of " << finLit << " from " << clause << endl; }
 	    data.removeClauseFrom( clRef, l );
 	    data.removedLiteral(l);
+	    modifiedFormula = true;
 	    if( clause.size() == 2 ) big.removeEdge(clause[0],clause[1]);
 	    clause.remove_lit(l);
 	    // tell subsumption / strengthening about this modified clause
@@ -490,6 +494,7 @@ bool Unhiding::unhideSimplify()
 	    if( opt_uhdDebug > 1 ){  cerr << "c [UHLE-N] remove " << ~l << " because of fin time " << fin << " of " <<  l << " and finLit " << finLit << " [" << finished << "] from " << clause << endl; }
 	    data.removeClauseFrom(clRef,~l);
 	    data.removedLiteral(~l);
+	    modifiedFormula = true;
 	    if( clause.size() == 2 ) big.removeEdge(clause[0],clause[1]);
 	    clause.remove_lit( ~l );
 	    // tell subsumption / strengthening about this modified clause
@@ -527,11 +532,11 @@ bool Unhiding::unhideSimplify()
   return didSomething;
 }
 
-bool Unhiding::unhide (  )
+void Unhiding::process (  )
 {
-  bool didSomething = false;
   MethodTimer unhideTimer( &unhideTime );
-  
+  modifiedFormula = false;
+  if( !data.ok() ) return;
   
   stampInfo.resize( 2*data.nVars() );
   unhideEEflag.resize( 2*data.nVars() );
@@ -598,16 +603,17 @@ bool Unhiding::unhide (  )
     if( data.ok() ) {
       if( data.hasToPropagate() ) {
 	if( opt_uhdDebug > 1 ) cerr << "c [UHD-A] run UP before simplification" << endl;
-	propagation.propagate(data,true);
+	propagation.process(data,true);
+	modifiedFormula = modifiedFormula || propagation.appliedSomething();
       }
     }
     
     if( data.ok() && unhideSimplify() ) {
-      didSomething = true;
-      if(didSomething && data.ok()) {
+      if( data.ok() ) {
 	if( data.hasToPropagate() ) {
 	  if( opt_uhdDebug > 1 ) cerr << "c [UHD-A] run UP before simplification" << endl;
-	  propagation.propagate(data,true);
+	  propagation.process(data,true);
+	  modifiedFormula = modifiedFormula || propagation.appliedSomething();
 	}
       } else {
 	if( opt_uhdDebug > 0 ) cerr << "c [UHD] ok: " << data.ok() << endl;
@@ -618,13 +624,15 @@ bool Unhiding::unhide (  )
     
     if( foundEE ) {
       if( opt_uhdDebug > 1 ) cerr << "c [UHD] call equivalence elimination" << endl;
-      if( data.getEquivalences().size() > 0 )
+      if( data.getEquivalences().size() > 0 ) {
+	modifiedFormula = modifiedFormula || ee.appliedSomething();
 	ee.applyEquivalencesToFormula(data);
+      }
     }
     
   } // next iteration ?!
 
-  return didSomething;
+  return;
 
 }
 

@@ -89,8 +89,11 @@ void Subsumption::resetStatistics()
 
 }
 
-void Subsumption::subsumeStrength()
+void Subsumption::process()
 {
+  modifiedFormula = false;
+  if( !data.ok() ) return;
+  
   while( data.ok() && (hasToSubsume() || hasToStrengthen() ))
   {
     if( hasToSubsume() ){
@@ -111,6 +114,8 @@ void Subsumption::subsumeStrength()
       data.getStrengthClauses().clear();
     }
   }
+  
+  modifiedFormula = modifiedFormula || propagation.appliedSomething();
 }
 
 
@@ -180,12 +185,13 @@ void Subsumption :: subsumption_worker ( unsigned int start, unsigned int end, c
                     subsumedLiterals += ca[list[i]].size();
                 }
                 ca[list[i]].set_delete(true); 
-		cerr << "c subsumption removed " << (ca[list[i]].learnt() ? "learned" : "" ) << " clause ("<< list[i] << ") " << ca[list[i]] << " by ("<< cr << ") "  <<  (ca[list[i]].learnt() ? "learned" : "" ) << c << endl;
+		modifiedFormula = true;
+		// cerr << "c subsumption removed " << (ca[list[i]].learnt() ? "learned" : "" ) << " clause ("<< list[i] << ") " << ca[list[i]] << " by ("<< cr << ") "  <<  (ca[list[i]].learnt() ? "learned" : "" ) << c << endl;
                 occ_updates.push_back(list[i]);
 		        if( global_debug_out ) cerr << "c clause " << ca[list[i]] << " is deleted by " << c << endl;
                 if (!ca[list[i]].learnt() && c.learnt())
                 {
-		  cerr << "c subsumption turned clause " << c << " from learned in original " << endl;
+		  // cerr << "c subsumption turned clause " << c << " from learned in original " << endl;
                     c.set_learnt(false);
                 }
             } else
@@ -274,6 +280,7 @@ void Subsumption :: par_subsumption_worker ( unsigned int start, unsigned int en
                 // save at least one duplicate, by deleting the clause with smaller CRef
                 if (c.size() == ca[list[i]].size() && cr > list[i])
                 {
+		    modifiedFormula = true;
                     // save the non-learnt information
                     if (!c.learnt() && ca[list[i]].learnt())
                     {
@@ -448,6 +455,7 @@ void Subsumption::par_strengthening_worker( unsigned int start, unsigned int sto
                 {
                     assert(pos != -1 && "Position invalid"); //TODO -> if this happens, we found normel a subsumption case?, so why not deal with it? this is no error
                     if (doStatistics) ++stats.removedLiterals;
+		    modifiedFormula = true;
                     // unit found
                     if (d.size() == 2)
                     {
@@ -862,6 +870,7 @@ inline lbool Subsumption::par_nn_strength_check(CoprocessorData & data, vector <
               lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
               data.removedClause(list[j]);
               data_lock.unlock();
+	      modifiedFormula = true;
               if (l_False == state)
               {
                   var_lock[other_fst].unlock();
@@ -885,6 +894,7 @@ inline lbool Subsumption::par_nn_strength_check(CoprocessorData & data, vector <
               Lit neg = other[negated_lit_pos];
               occ_updates.push_back(OccUpdate(list[j] , neg));
               other.removePositionSortedThreadSafe(negated_lit_pos);
+	      modifiedFormula = true;
               // TODO to much overhead? 
               data_lock.lock();
               data.removedLiteral(neg, 1);
@@ -1004,6 +1014,7 @@ inline lbool Subsumption::par_nn_negated_strength_check(CoprocessorData & data, 
               data_lock.lock();
               lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
               data.removedClause(list[j]);
+	      modifiedFormula = true;
               data_lock.unlock();
               if (l_False == state)
               {
@@ -1028,6 +1039,7 @@ inline lbool Subsumption::par_nn_negated_strength_check(CoprocessorData & data, 
               Lit neg = other[negated_lit_pos];
               occ_updates.push_back(OccUpdate(list[j] , neg));
               other.removePositionSortedThreadSafe(negated_lit_pos);
+	      modifiedFormula = true;
               // TODO to much overhead? 
               data_lock.lock();
               data.removedLiteral(neg, 1);
@@ -1134,6 +1146,7 @@ lbool Subsumption::fullStrengthening( const bool doStatistics)
                 {
                     if (doStatistics) ++removedLiterals;
                     other.removePositionSorted(pos);     // strengthen clause
+		    modifiedFormula = true;
 		            if( global_debug_out ) cerr << "c remove " << neg_lit << " from clause " << other << endl;
                     //if( global_debug_out ) cerr << "c used strengthener (lit negated) " << c << endl;
                     if(other.size() == 1)
@@ -1172,7 +1185,7 @@ lbool Subsumption::fullStrengthening( const bool doStatistics)
         }
         if (data.hasToPropagate()) 
         {
-            if (propagation.propagate(data, true) == l_False) {
+            if (propagation.process(data, true) == l_False) {
 	      data.setFailed();
               return l_False;
 	    }
@@ -1297,6 +1310,7 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, b
         occ_updates.push_back(OccUpdate(list[j] , other[negated_lit_pos]));
         if( global_debug_out ) cerr << "c remove " << other[negated_lit_pos] << " from clause " << other << endl;
         other.removePositionSorted(negated_lit_pos);
+	modifiedFormula = true;
         if(other.size() == 1)
         {
           // propagate if clause is only 1 lit big
@@ -1310,7 +1324,7 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, b
     //propagation only in a valid state 
     if (data.hasToPropagate()) 
     {
-        if (propagation.propagate(data, true) == l_False)
+        if (propagation.process(data, true) == l_False)
             return l_False;
     }
     // now test for the occurrences of negated min, now the literal, that appears negated has to be min
@@ -1361,6 +1375,7 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, b
         occ_updates.push_back(OccUpdate(list_neg[j] , other[negated_lit_pos]));
         if( global_debug_out ) cerr << "c remove " << other[negated_lit_pos] << " from clause " << other << endl;
         other.removePositionSorted(negated_lit_pos);
+	modifiedFormula = true;
         
         if(other.size() == 1)
         {
@@ -1374,8 +1389,9 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, b
     }
     if (data.hasToPropagate()) 
     {
-        if (propagation.propagate(data, true) == l_False)
+        if (propagation.process(data, true) == l_False)
             return l_False;
+	modifiedFormula = modifiedFormula || propagation.appliedSomething();
     }
     strengthener.set_strengthen(false);
   }
@@ -1501,7 +1517,7 @@ void Subsumption::parallelStrengthening()
     updateOccurrences(occ_updates[i]);
 
   //propagate units
-  propagation.propagate(data, true);
+  propagation.process(data, true);
 }
 
 void* Subsumption::runParallelStrengthening(void* arg)

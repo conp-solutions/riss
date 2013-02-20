@@ -37,11 +37,12 @@ EquivalenceElimination::EquivalenceElimination(ClauseAllocator& _ca, ThreadContr
 , subsumption( _subsumption )
 {}
 
-void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
+void EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
 {
   // TODO continue here!!
-  
   eeTime  = cpuTime() - eeTime;
+  modifiedFormula = false;
+  if( !data.ok() ) return;
   
   isToAnalyze.resize( data.nVars(), 0 );
     
@@ -110,11 +111,7 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
       vector<Lit> oldReplacedBy = replacedBy;
       //vector< vector<Lit> >* externBig
     
-      if( opt_old_circuit ) {
-	moreEquivalences = findGateEquivalences( data, gates );
-	if( moreEquivalences )
-	  if( debug_out ) cerr << "c found new equivalences with the gate method!" << endl;
-      } else {
+      {
 	if( debug_out ) cerr << "c run miter EQ method" << endl;
 	moreEquivalences = findGateEquivalencesNew( data, gates );
 	if( moreEquivalences )
@@ -152,6 +149,7 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
     do { 
       findEquivalencesOnBig(data);                              // finds SCC based on all literals in the eqDoAnalyze array!
     } while ( applyEquivalencesToFormula(data ) && data.ok() ); // will set literals that have to be analyzed again!
+  
     
     // cerr << "c ok=" << data.ok() << " toPropagate=" << data.hasToPropagate() <<endl;
     assert( (!data.ok() || !data.hasToPropagate() )&& "After these operations, all propagation should have been done" );
@@ -173,6 +171,7 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
      
     
   }
+  
   eeTime  = cpuTime() - eeTime;
 }
 
@@ -780,8 +779,10 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
   }
   
   // just in case some unit has been found, we have to propagate it!
-  if( data.hasToPropagate() )
-    propagation.propagate(data);
+  if( data.hasToPropagate() ) {
+    propagation.process(data);
+    modifiedFormula = modifiedFormula || propagation.appliedSomething(); 
+  }
   
   return oldEquivalences < data.getEquivalences().size();
 }
@@ -1754,7 +1755,10 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	 const Lit myReplace = getReplacement(ee[j]);
 	 if( ! data.ma.isCurrentStep( toInt( myReplace )) )
 	   data.lits.push_back(myReplace); // has to look through that list as well!
-	 if( ! setEquivalent(repr, ee[j] ) ) { data.setFailed(); return newBinary; }
+	 if( ! setEquivalent(repr, ee[j] ) ) { 
+	   if( debug_out ) cerr << "c applying EE failed due to setting " << repr << " and " << ee[j] << " equivalent -> UNSAT" << endl;
+	   data.setFailed(); return newBinary;
+	}
        }
        
        if(debug_out)
@@ -1817,6 +1821,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	     if( c[m-1] != c[m] ) c[n++] = c[m];
 	   }
            c.shrink(s-n);
+	   modifiedFormula = true;
 	   
 	   if( c.size() == 2 )  { // take care of newly created binary clause for further analysis!
 	     newBinary = true;
@@ -1834,6 +1839,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	     if( data.enqueue(c[0]) == l_False ) return newBinary; 
 	   } else if (c.size() == 0 ) {
 	     data.setFailed(); 
+	     if( debug_out ) cerr << "c applying EE failed due getting an empty clause" << endl;
 	     return newBinary; 
 	   }
 	  data.log.log(eeLevel,"clause after sort",c);
@@ -1850,6 +1856,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
  	      if( debug_out ) cerr << "c clause has duplicates: " << c << endl;
 	      c.set_delete(true);
 	      data.removedClause(list[k]);
+	      modifiedFormula = true;
 	    }
 	  } else {
 // 	    cerr << "c duplicate during sort" << endl; 
@@ -1907,19 +1914,21 @@ EEapplyNextClause:; // jump here, if a tautology has been found
     if( data.hasToPropagate() ) { // after each application of equivalent literals perform unit propagation!
 	 resetVariables = true;
 	 newBinary = true; // potentially, there are new binary clauses
-	 if( propagation.propagate(data,true) == l_False ) return newBinary;
+	 if( propagation.process(data,true) == l_False ) return newBinary;
     }
     if( subsumption.hasWork() ) {
-	subsumption.subsumeStrength();
+	subsumption.process();
 	newBinary = true; // potentially, there are new binary clauses
     	resetVariables = true;
     }
     if( data.hasToPropagate() ) { // after each application of equivalent literals perform unit propagation!
       resetVariables = true;
       newBinary = true; // potentially, there are new binary clauses
-      if( propagation.propagate(data,true) == l_False ) return newBinary;
+      if( propagation.process(data,true) == l_False ) return newBinary;
     }
 
+    modifiedFormula = modifiedFormula || propagation.appliedSomething() || subsumption.appliedSomething();
+    
     // the formula will change, thus, enqueue everything
     if( resetVariables ) {
     // re-enable all literals (over-approximation) 

@@ -42,7 +42,7 @@ public:
   
   
   /** run subsumption and strengthening until completion */
-  void subsumeStrength();
+  void process();
 
   void initClause(const CRef cr); // inherited from Technique
   

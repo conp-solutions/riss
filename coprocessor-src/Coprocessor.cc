@@ -59,7 +59,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , cce( solver->ca, controller )
 , ee ( solver->ca, controller, propagation, subsumption )
 , unhiding ( solver->ca, controller, data, propagation, subsumption, ee )
-, probing  ( solver->ca, controller, data, propagation, *solver )
+, probing  ( solver->ca, controller, data, propagation, ee, *solver )
 , sls ( data, solver->ca, controller )
 , twoSAT( solver->ca, controller, data)
 {
@@ -93,14 +93,12 @@ lbool Preprocessor::performSimplification()
   initializePreprocessor ();
   if( opt_verbose > 2 )cerr << "c coprocessor finished initialization" << endl;
   
-  if( !isInprocessing ) {
-  
   const bool printBVE = false, printBVA = false, printCCE = false, printEE = false, printHTE = false, printSusi = false, printUP = false;  
   
   // do preprocessing
   if( opt_up ) {
     if( opt_verbose > 2 )cerr << "c coprocessor propagate" << endl;
-    if( status == l_Undef ) status = propagation.propagate(data);
+    if( status == l_Undef ) status = propagation.process(data);
   }
   
   // begin clauses have to be sorted here!!
@@ -116,7 +114,7 @@ lbool Preprocessor::performSimplification()
 
   if( opt_subsimp ) {
     if( opt_verbose > 2 )cerr << "c coprocessor subsume/strengthen" << endl;
-    if( status == l_Undef ) subsumption.subsumeStrength();  // cannot change status, can generate new unit clauses
+    if( status == l_Undef ) subsumption.process();  // cannot change status, can generate new unit clauses
     if (! solver->okay())
         status = l_False;
   }
@@ -129,7 +127,7 @@ lbool Preprocessor::performSimplification()
   
   if( opt_ee ) { // before this technique nothing should be run that alters the structure of the formula (e.g. BVE;BVA)
     if( opt_verbose > 2 )cerr << "c coprocessor equivalence elimination" << endl;
-    if( status == l_Undef ) ee.eliminate(data);  // cannot change status, can generate new unit clauses
+    if( status == l_Undef ) ee.process(data);  // cannot change status, can generate new unit clauses
     if (! data.ok() )
         status = l_False;
   }
@@ -153,7 +151,7 @@ lbool Preprocessor::performSimplification()
   
   if ( opt_unhide ) {
     if( opt_verbose > 2 )cerr << "c coprocessor unhiding" << endl;
-    if( status == l_Undef ) unhiding.unhide(); 
+    if( status == l_Undef ) unhiding.process(); 
     if( !data.ok() ) status = l_False;
   }
   
@@ -161,7 +159,7 @@ lbool Preprocessor::performSimplification()
   
   if( opt_hte ) {
     if( opt_verbose > 2 )cerr << "c coprocessor hidden tautology elimination" << endl;
-    if( status == l_Undef ) hte.eliminate(data);  // cannot change status, can generate new unit clauses
+    if( status == l_Undef ) hte.process(data);  // cannot change status, can generate new unit clauses
   }
 
   if( opt_debug ) checkLists("after HTE");
@@ -171,7 +169,7 @@ lbool Preprocessor::performSimplification()
   
   if ( opt_probe ) {
     if( opt_verbose > 2 )cerr << "c coprocessor probing" << endl;
-    if( status == l_Undef ) probing.probe(); 
+    if( status == l_Undef ) probing.process(); 
     if( !data.ok() ) status = l_False;
   }
   if( opt_debug ) checkLists("after PROBE");
@@ -199,15 +197,13 @@ lbool Preprocessor::performSimplification()
   
   if( opt_cce ) {
     if( opt_verbose > 2 )cerr << "c coprocessor (covered) clause elimination" << endl;
-    if( status == l_Undef ) cce.eliminate(data);  // cannot change status, can generate new unit clauses
+    if( status == l_Undef ) cce.process(data);  // cannot change status, can generate new unit clauses
   }
   
   if( false || printCCE ) {
    printFormula("after CCE");
   }
-  
-  }
-  
+    
   // tobias
 //   vec<Var> vars;
 //   MarkArray array;
@@ -286,7 +282,7 @@ lbool Preprocessor::performSimplification()
   // attach all clauses to their watchers again, call the propagate method to get into a good state again
   if( opt_verbose > 2 ) cerr << "c coprocessor re-setup solver" << endl;
   if ( data.ok() ) {
-    propagation.propagate(data);
+    propagation.process(data);
     if ( data.ok() ) reSetupSolver();
   }
 

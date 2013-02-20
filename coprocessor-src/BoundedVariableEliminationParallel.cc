@@ -848,9 +848,11 @@ void* BoundedVariableElimination::runParallelBVE(void* arg)
 
 void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
 {
-  if (data.hasToPropagate())
-    if (propagation.propagate(data, true) == l_False)
+  if (data.hasToPropagate()) {
+    if (propagation.process(data, true) == l_False)
       return;
+    modifiedFormula = modifiedFormula || propagation.appliedSomething();
+  }
 
   const bool doStatistics = true;
   if (doStatistics) processTime = wallClockTime() - processTime;
@@ -946,20 +948,22 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
         bve_worker (data, newheap);
     }
     //propagate units
-    if (data.hasToPropagate())
-      if (l_False == propagation.propagate(data, true))
+    if (data.hasToPropagate()) {
+      if (l_False == propagation.process(data, true))
       {
         if (doStatistics) processTime = wallClockTime() - processTime;
         return;
       }
-    
+      modifiedFormula = modifiedFormula || propagation.appliedSomething();
+    }
     // add active variables and clauses to variable heap and subsumption queues
     data.getActiveVariables(lastDeleteTime(), touched_variables);
     touchedVarsForSubsumption(data, touched_variables);
 
     if (doStatistics) subsimpTime = wallClockTime() - subsimpTime;
-    subsumption.subsumeStrength();
+    subsumption.process();
     if (doStatistics) subsimpTime = wallClockTime() - subsimpTime;
+    modifiedFormula = modifiedFormula || subsumption.appliedSomething();
 
     if (opt_bve_heap != 2)
         newheap.clear();

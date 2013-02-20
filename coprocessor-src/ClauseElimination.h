@@ -50,7 +50,7 @@ public:
   
   ClauseElimination( ClauseAllocator& _ca, ThreadController& _controller );
 
-  void eliminate(CoprocessorData& data);
+  void process(CoprocessorData& data);
   
   void initClause(const CRef cr); // inherited from Technique
   

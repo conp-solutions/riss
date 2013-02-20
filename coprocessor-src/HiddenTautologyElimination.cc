@@ -21,9 +21,11 @@ HiddenTautologyElimination::HiddenTautologyElimination( ClauseAllocator& _ca, Th
 {
 }
 
-void HiddenTautologyElimination::eliminate(CoprocessorData& data)
+void HiddenTautologyElimination::process(CoprocessorData& data)
 {
   processTime = cpuTime() - processTime;
+  modifiedFormula = false;
+  if( !data.ok() ) return;
   if( ! isInitializedTechnique() ) {
     initializedTechnique(); 
   }
@@ -82,8 +84,10 @@ void HiddenTautologyElimination::eliminate(CoprocessorData& data)
   }
   
   if( data.hasToPropagate() ) {
-    propagation.propagate(data);
+    propagation.process(data);
   }
+  
+  modifiedFormula = modifiedFormula || propagation.appliedSomething();
   
   // get delete timer
   updateDeleteTime( data.getMyDeleteTimer() );
@@ -240,6 +244,7 @@ bool HiddenTautologyElimination::hiddenTautologyElimination(Var v, CoprocessorDa
 		    // TODO: statistics removed clause
 		    if( statistic ) data.removedClause(clsidx);
                     cl.set_delete(true);
+		    modifiedFormula = true;
                     k--;
 		    if( !doLock ) removedClauses ++;
                 }
@@ -281,6 +286,7 @@ bool HiddenTautologyElimination::hiddenTautologyElimination(Var v, CoprocessorDa
 			    didSomething = true;
                             ignClause = true;
                             cl.set_delete(true); // TODO remove from occurence lists?
+			    modifiedFormula = true;
 			    if( !doLock ) removedClauses ++;
 			    if( statistic ) data.removedClause(clsidx);
                             break;
@@ -296,6 +302,7 @@ bool HiddenTautologyElimination::hiddenTautologyElimination(Var v, CoprocessorDa
                           changed = true;
 			  if( statistic ) data[ clauseLiteral ] --;
 			    cl.removePositionUnsorted(j);
+			    modifiedFormula = true;
                            if( !doLock ) removedLits ++;  
 			    // update the index
                             j--;
@@ -358,7 +365,7 @@ Lit HiddenTautologyElimination::fillHlaArrays(Var v, BIG& big, MarkArray& hlaPos
       
       head = litQueue; tail = litQueue;
       *(head++) = imp;
-      cerr << "c [HTE] write at litQueue head pos " << headPos ++ << endl;
+      // cerr << "c [HTE] write at litQueue head pos " << headPos ++ << endl;
       // headPos ++; 
       hlaArray.setCurrentStep( toInt(imp ) );
       if( talkMuch ) cerr << "c [HTE] add to array: " << toInt(imp) << endl;
@@ -379,7 +386,7 @@ Lit HiddenTautologyElimination::fillHlaArrays(Var v, BIG& big, MarkArray& hlaPos
 	    hlaArray.setCurrentStep( toInt(kLit) );
 	    if( talkMuch ) { cerr << "c [HTE] add to array " << toInt(i) << " for " << toInt(kLit) << endl;
 	    }
-	    cerr << "c [HTE] put an element to the queue at position " << (int)(head - litQueue) << endl;
+	    // cerr << "c [HTE] put an element to the queue at position " << (int)(head - litQueue) << endl;
 	    *(head++) = kLit;
 	  }
 	}

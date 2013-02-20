@@ -41,7 +41,7 @@ public:
   HiddenTautologyElimination( ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation );
   
   /** run subsumption and strengthening until completion */
-  void eliminate(Coprocessor::CoprocessorData& data);
+  void process(Coprocessor::CoprocessorData& data);
 
   void initClause(const CRef cr); // inherited from Technique
 

@@ -18,13 +18,13 @@ namespace Coprocessor {
  *  should be inherited by all implementations of classes
  */
 class Technique {
+ 
+protected:
 
   bool modifiedFormula;         // true, if subsumption did something on formula
   bool isInitialized;           // true, if the structures have been initialized and the technique can be used
   uint32_t myDeleteTimer;       // timer to control which deleted variables have been seen already
   
-protected:
-
   ClauseAllocator& ca;          // clause allocator for direct access to clauses
   ThreadController& controller; // controller for parallel execution
     

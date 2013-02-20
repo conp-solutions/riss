@@ -22,11 +22,12 @@ static IntOption pr_viviLimit      (_cat, "pr-viviL",  "step limit for clause vi
 
 static IntOption debug_out        (_cat, "pr-debug", "debug output for probing",0, IntRange(0,4) );
 
-Probing::Probing(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, Solver& _solver)
+Probing::Probing(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, EquivalenceElimination& _ee, Solver& _solver)
 : Technique( _ca, _controller )
 , data( _data )
 , solver( _solver )
 , propagation ( _propagation )
+, ee ( _ee )
 , probeLimit(20000)
 , processTime(0)
 , l1implied(0)
@@ -48,11 +49,14 @@ Probing::Probing(ClauseAllocator& _ca, ThreadController& _controller, Coprocesso
 
 }
 
-bool Probing::probe()
+bool Probing::process()
 {
   MethodTimer mt( &processTime );
+  modifiedFormula = false;
+  if( !data.ok() ) return false;
   
-  if( ! pr_probe && ! pr_vivi ) return data.ok();
+  // do not enter, if already unsatisfiable!
+  if( (! pr_probe && ! pr_vivi) || !data.ok() ) return data.ok();
   
   // resetup solver
   reSetupSolver();
@@ -71,14 +75,14 @@ bool Probing::probe()
     solver.polarity.copyTo( polarity );
     
     // run probing?
-    if( pr_probe ) {
+    if( pr_probe && data.ok()  ) {
       if( debug_out > 0 ) cerr << "c old trail: " << solver.trail.size() << endl;
       probing();
-      if( debug_out > 0 ) cerr << "c new trail: " << solver.trail.size() << endl;
+      if( debug_out > 0 ) cerr << "c new trail: " << solver.trail.size() << " solver.ok: " << data.ok() << endl;
     }
     
     // run clause vivification?
-    if( pr_vivi ) {
+    if( pr_vivi && data.ok() ) {
       clauseVivification();
     }
 
@@ -90,10 +94,11 @@ bool Probing::probe()
     cleanSolver();
     
     sortClauses();
-    if( propagation.propagate(data,true) == l_False){
+    if( propagation.process(data,true) == l_False){
       if( debug_out > 1 ) cerr << "c propagation failed" << endl;
       data.setFailed();
     }
+    modifiedFormula = modifiedFormula || propagation.appliedSomething();
 
   }
   
@@ -335,7 +340,7 @@ bool Probing::prDoubleLook(Lit l1decision)
       solver.cancelUntil(backtrack_level);
       if (data.lits.size() == 1){
 	solver.enqueue(data.lits[0]);
-	cerr << "c L2 learnt clause: " << data.lits[0] << " 0" << endl;
+	if( debug_out > 0 ) cerr << "c L2 learnt clause: " << data.lits[0] << " 0" << endl;
       }else{
 	CRef cr = ca.alloc(data.lits, false);
 	solver.clauses.push(cr);
@@ -343,7 +348,7 @@ bool Probing::prDoubleLook(Lit l1decision)
 	data.addClause(cr);
 	l2conflicts.push_back(cr);
 	solver.uncheckedEnqueue(data.lits[0], cr);
-	cerr << "c L2 learnt clause: " << ca[cr] << " 0" << endl;
+	if( debug_out > 0 ) cerr << "c L2 learnt clause: " << ca[cr] << " 0" << endl;
       }
       if( solver.propagate() != CRef_Undef ) { if( debug_out > 1 ) {cerr << "c l1 propagatin learned clause failed" << endl;} return false; }
       if( solver.decisionLevel() == 1 ) {i--;continue;}
@@ -387,7 +392,7 @@ bool Probing::prDoubleLook(Lit l1decision)
       solver.cancelUntil(backtrack_level);
       if (data.lits.size() == 1){
 	solver.enqueue(data.lits[0]);
-	cerr << "c L2 learnt clause: " << data.lits[0] << " 0" << endl;
+	if( debug_out > 0 ) cerr << "c L2 learnt clause: " << data.lits[0] << " 0" << endl;
       }else{
 	CRef cr = ca.alloc(data.lits, true);
 	solver.clauses.push(cr);
@@ -395,7 +400,7 @@ bool Probing::prDoubleLook(Lit l1decision)
 	data.addClause(cr);
 	l2conflicts.push_back(cr);
 	solver.uncheckedEnqueue(data.lits[0], cr);
-	cerr << "c L2 learnt clause: " << ca[cr] << " 0" << endl;
+	if( debug_out > 0 ) cerr << "c L2 learnt clause: " << ca[cr] << " 0" << endl;
       }
       if( solver.propagate() != CRef_Undef ) { if( debug_out > 1 ) {cerr << "c l1 propagatin learned clause failed" << endl;} return false; }
       if( solver.decisionLevel() == 1 ) {i--;continue;}
@@ -705,6 +710,13 @@ void Probing::probing()
       else if( debug_out > 1 ) cerr << "c double lookahead did not fail" << endl;
     }
     solver.assigns.copyTo( prPositive );
+    
+    if( debug_out > 0 ) {
+      cerr << "c positive trail: " ;
+      for( int i = 0 ; i < solver.trail.size(); ++ i ) cerr << " " << solver.trail[i];
+      cerr << endl;
+    }
+    
     // other polarity
     solver.cancelUntil(0);
     
@@ -742,6 +754,12 @@ void Probing::probing()
     
     assert( solver.decisionLevel() == 1 && "");
     
+    if( debug_out > 0 ) {
+      cerr << "c negative trail: " ;
+      for( int i = 0 ; i < solver.trail.size(); ++ i ) cerr << " " << solver.trail[i];
+      cerr << endl;
+    }
+    
     data.lits.clear();
     data.lits.push_back(negLit); // equivalent literals
     doubleLiterals.clear();	  // NOTE re-use for unit literals!
@@ -759,10 +777,12 @@ void Probing::probing()
 	if( debug_out > 1 )cerr << "c equivalent literals " << negLit << " == " << solver.trail[i] << endl;
 	data.lits.push_back( solver.trail[ i ] ); // equivalent literals
 	l1ee++;
+	modifiedFormula = true;
       } else if( solver.assigns[ tv ] == l_False && prPositive[tv] == l_True ) {
-	if( debug_out > 1 )cerr << "c equivalent literals " << negLit << " == " << ~solver.trail[i] << endl;
-	data.lits.push_back( ~solver.trail[ i ] ); // equivalent literals
+	if( debug_out > 1 )cerr << "c equivalent literals " << negLit << " == " << solver.trail[i] << endl;
+	data.lits.push_back( solver.trail[ i ] ); // equivalent literals
 	l1ee++;
+	modifiedFormula = true;
       }
     }
     
@@ -791,11 +811,15 @@ void Probing::probing()
       data.addEquivalences( data.lits );
     
   }
+
+  propagation.process(data,true);
+  modifiedFormula = modifiedFormula || propagation.appliedSomething();
   
   // TODO apply equivalent literals!
-  if( data.getEquivalences().size() > 0 )
-    cerr << "equivalent literal elimination has to be applied" << endl;
-  
+  if( data.getEquivalences().size() > 0 ) {
+    ee.process(data); 
+    modifiedFormula = modifiedFormula || ee.appliedSomething();
+  }
 }
 
 
@@ -803,6 +827,22 @@ void Probing::probing()
 void Probing::clauseVivification()
 {
   MethodTimer vTimer ( &viviTime );
+  
+  if( true ) {
+    for( Var v = 0; v < data.nVars(); ++ v )
+    {
+      for( int p = 0 ; p < 2; ++ p ) 
+      {
+	const Lit l = mkLit(v, p==1);
+	vec<Solver::Watcher>&  ws  = solver.watches[l];
+	for ( int j = 0 ; j < ws.size(); ++ j){
+		CRef     wcr        = ws[j].cref;
+		const Clause& c = ca[wcr];
+		if( c[0] != ~l && c[1] != ~l ) cerr << "wrong literals for clause [" << wcr << "] " << c << " are watched. Found in list for " << l << endl;
+	    }
+      }
+    }
+  }
   
   uint32_t maxSize = 0;
   for( uint32_t i = 0 ; i< data.getClauses().size() && (data.unlimited() || viviLimits>0); ++ i ) {
@@ -856,6 +896,10 @@ void Probing::clauseVivification()
     viviLimits = ( viviLimits > 0 ) ? viviLimits - 1 : 0;
     
     // detach this clause, so that it cannot be used for unit propagation
+    if( debug_out > 2 ) cerr << "c available watches for " << clause[0] << " : " << solver.watches[ ~clause[0] ].size()
+         << " and " << clause[1] << " : " << solver.watches[ ~clause[1] ].size() << endl;
+    
+    
     solver.detachClause(ref, true);
     
     bool viviConflict = false;
@@ -960,6 +1004,7 @@ void Probing::clauseVivification()
       }
       clause.shrink( clause.size() - keptLits );
       clause.sort();
+      modifiedFormula = true;
       if( debug_out > 1 ) cerr << "c new clause: " << clause << endl;
     }
     

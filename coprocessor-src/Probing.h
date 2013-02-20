@@ -10,6 +10,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/Technique.h"
 
 #include "coprocessor-src/Propagation.h"
+#include "coprocessor-src/EquivalenceElimination.h"
 
 using namespace Minisat;
 using namespace std;
@@ -24,6 +25,7 @@ class Probing : public Technique {
   CoprocessorData& data;
   Solver& solver;
   Propagation& propagation;            /// object that takes care of unit propagation
+  EquivalenceElimination& ee;		/// object that takes care of equivalent literal elimination
   
   // necessary local variables
   deque<Var> variableHeap;
@@ -37,12 +39,12 @@ class Probing : public Technique {
   
   
 public:
-  Probing( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, Solver& _solver);
+  Probing( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, EquivalenceElimination& _ee, Solver& _solver);
   
-  /** perform probing 
+  /** perform probing and clause vivification
    * @return false, if formula is UNSAT
    */
-  bool probe();
+  bool process();
   
   /** This method should be used to print the statistics of the technique that inherits from this class
    */

@@ -18,9 +18,11 @@ Propagation::Propagation( ClauseAllocator& _ca, ThreadController& _controller )
 }
 
 
-lbool Propagation::propagate(CoprocessorData& data, bool sort)
+lbool Propagation::process(CoprocessorData& data, bool sort)
 {
   processTime = cpuTime() - processTime;
+  modifiedFormula = false;
+  if( !data.ok() ) return l_False;
   Solver* solver = data.getSolver();
   // propagate all literals that are on the trail but have not been propagated
   for( ; lastPropagatedLiteral < solver->trail.size(); lastPropagatedLiteral ++ )
@@ -39,6 +41,7 @@ lbool Propagation::propagate(CoprocessorData& data, bool sort)
       if( global_debug_out ) cerr << "c UP remove " << ca[ positive[i] ] << endl;
       ++removedClauses; // = ca[ positive[i] ].can_be_deleted() ? removedClauses : removedClauses + 1;
       ca[ positive[i] ].set_delete(true);
+      modifiedFormula = true;
       data.removedClause( positive[i] );
       // TODO : necessary? -> just performance trade-off
       /*for (int lit = 0; lit < satisfied.size(); ++lit)
@@ -68,6 +71,7 @@ lbool Propagation::propagate(CoprocessorData& data, bool sort)
 	    if( global_debug_out ) cerr << "c UP remove " << nl << " from " << c << endl;
 	    if (!sort) c.removePositionUnsorted(j);
             else c.removePositionSorted(j);
+	    modifiedFormula = true;
 	    break;
 	  }
 	  // tell subsumption / strengthening about this modified clause
