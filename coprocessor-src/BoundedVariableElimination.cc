@@ -161,14 +161,6 @@ lbool BoundedVariableElimination::runBVE(CoprocessorData& data, const bool doSta
      if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getLEarnts()[i] ] << endl;    
   }
 
-  if( false ) {
-   cerr << "96 lists before bve: " << endl;
-   for( int i = 0 ; i < data.list(mkLit(95,false)).size(); ++ i )
-     if( !ca[  data.list(mkLit(95,false))[i] ].can_be_deleted() ) cerr << ca[  data.list(mkLit(95,false))[i] ] << endl;
-   for( int i = 0 ; i < data.list(mkLit(95,true)).size(); ++ i )
-     if( !ca[  data.list(mkLit(95,true))[i] ].can_be_deleted() ) cerr << ca[  data.list(mkLit(95,true))[i] ] << endl;    
-  }
-  
   data.ma.resize( data.nVars() * 2 );
 
   sequentiellBVE(data, newheap, false);
@@ -260,11 +252,14 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<Var
   
     //propagate units
     if (data.hasToPropagate())
+    {
+      modifiedFormula = true;
       if (l_False == propagation.propagate(data, true))
       {
         //if (doStatistics) processTime = wallClockTime() - processTime;
         return;
       }
+    }
     
     // add active variables and clauses to variable heap and subsumption queues
     data.getActiveVariables(lastDeleteTime(), touched_variables);
@@ -475,6 +470,7 @@ inline void BoundedVariableElimination::removeClauses(CoprocessorData & data, co
         if (!c.can_be_deleted())
         {
 	    // also updated deleteTimer
+            modifiedFormula = true;
             data.removedClause(cr);
             c.set_delete(true);
             if (!c.learnt()) data.addToExtension(cr, l);
@@ -577,6 +573,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
             // empty Clause
             else if (newLits == 0)
             {
+                modifiedFormula = true;
                 if(opt_bve_verbose > 2) 
                 {
                     cerr << "c    empty resolvent" << endl;
@@ -611,6 +608,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
                 lbool status = data.enqueue(resolvent[0]); //check for level 0 conflict
                 if (status == l_False)
                 {
+                    modifiedFormula = true;
                     if(opt_bve_verbose > 2) cerr << "c finished anticipate_bve with conflict" << endl;
                     return l_False;
                 }
@@ -618,6 +616,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
                      ; // variable already assigned
                 else if (status == l_True)
                 {
+                    modifiedFormula = true;
                     //assert(false && "all units should be discovered before (while strengthening)!");
                     if (doStatistics) ++ unitsEnqueued;
                     if (propagation.propagate(data, true) == l_False)
@@ -788,6 +787,7 @@ inline void BoundedVariableElimination::removeBlockedClauses(CoprocessorData & d
         if (stats[ci] == 0)
         { 
             c.set_delete(true);
+            modifiedFormula = true;
             data.removedClause(list[ci]);
             if (!c.learnt()) 
                 data.addToExtension(list[ci], l);
