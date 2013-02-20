@@ -88,10 +88,16 @@ public:
         free(neighbor_heaps);
     }
  } 
+ 
+  lbool process(CoprocessorData & data, const bool doStatistics = true) { modifiedFormula = false; return runBVE(data, doStatistics); }
+
   /** run BVE until completion */
   lbool runBVE(CoprocessorData& data, const bool doStatistics = true);
 
   void initClause(const CRef cr); // inherited from Technique
+
+  
+
 
   void printStatistics(ostream& stream);
 
