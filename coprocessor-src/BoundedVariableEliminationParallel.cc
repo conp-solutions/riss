@@ -39,6 +39,17 @@ static void printLitVec(const vec<Lit> & litvec)
 
 }
 
+static void printClauses(ClauseAllocator & ca, vector<CRef> & list, bool skipDeleted)
+{
+    for (unsigned i = 0; i < list.size(); ++i)
+    {
+        if (list[i] == CRef_Undef || skipDeleted && ca[list[i]].can_be_deleted())
+            continue; 
+        cerr << ca[list[i]] << (ca[list[i]].can_be_deleted() ? " delete" : " valid") << endl; 
+    }
+
+}
+
 
 /** parallel version of bve worker
  *  TODO update this
@@ -272,6 +283,18 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         //
         ///////////////////////////////////////////////////////////////////////////////////////////
         
+       // ---Printing all Clauses with v --------------------------//
+       if (opt_bve_verbose > 2)
+       {
+           cerr << "c Variable: " << v+1 << endl;
+           cerr <<"c before Gates: " << endl;
+           cerr <<"c Clauses with Literal  " << v+1 <<":" << endl;
+           printClauses(ca, pos, false);
+           cerr <<"c Clauses with Literal ¬" << v+1 <<":" << endl;
+           printClauses(ca, neg, false); 
+       }
+       // ---------------------------------------------------------//
+       //
         // Search for Gates
         int p_limit = data.list(mkLit(v,false)).size();
 	    int n_limit = data.list(mkLit(v,true)).size();
@@ -281,6 +304,17 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
            if (doStatistics) stats.foundGates ++;
         }
     
+       // ---Printing all Clauses with v --------------------------//
+       if (opt_bve_findGate && opt_bve_verbose > 2)
+       {
+           cerr << "c Variable: " << v+1 << endl;
+           cerr <<"c after Gates: " << endl;
+           cerr <<"c Clauses with Literal  " << v+1 <<":" << endl;
+           printClauses(ca, pos, false);
+           cerr <<"c Clauses with Literal ¬" << v+1 <<":" << endl;
+           printClauses(ca, neg, false); 
+       }
+       // ---------------------------------------------------------//
         // Heuristic Cutoff if Gate-Search is forced
         if (opt_force_gates && !foundGate && !opt_unlimited_bve 
                 && (data[mkLit(v,true)] > 10 && data[mkLit(v,false)] > 10 || data[v] > 15 && (data[mkLit(v,true)] > 5 || data[mkLit(v,false)] > 5)))

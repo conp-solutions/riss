@@ -228,7 +228,7 @@ static void printClause(const Clause & c)
     cerr << "c ";
     for (int i = 0; i < c.size(); ++i)
         printLitErr(c[i]);
-    cerr << endl;
+    cerr << (c.can_be_deleted() ? " delete" : " valid" )<< endl;
 
 }
 
