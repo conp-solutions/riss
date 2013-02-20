@@ -7,6 +7,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 static const char* _cat = "COPROCESSOR 3 - HTE";
 
 static IntOption opt_steps  (_cat, "cp3_hte_steps",  "Number of steps that are allowed per iteration", INT32_MAX, IntRange(-1, INT32_MAX));
+static BoolOption debug_out (_cat, "cp3_hte_debug",  "print debug output to screen",false);
 
 using namespace Coprocessor;
 
@@ -121,7 +122,8 @@ void HiddenTautologyElimination::elimination_worker (CoprocessorData& data, uint
   MarkArray negArray;
   posArray.create( data.nVars() * 2);
   negArray.create( data.nVars() * 2);
-  Lit* litQueue = (Lit*) malloc( data.nVars() * 2 );
+  Lit* litQueue = (Lit*) malloc( data.nVars() * 2 * sizeof(Lit) );
+  if( debug_out ) cerr << "c allocate litQueue for " << data.nVars() * 2 << " elements at " << std::hex << litQueue << std::hex << endl;
   MethodFree litQueueFree(litQueue); // will automatically free the resources at a return!
   
   if( talk ) fprintf(stderr, "c HTE from %d to %d out of %d\n", start, end, activeVariables.size());
@@ -163,7 +165,7 @@ void HiddenTautologyElimination::initClause( const CRef cr )
 
 void HiddenTautologyElimination::parallelElimination(CoprocessorData& data, BIG& big)
 {
-  cerr << "c parallel HTE with " << controller.size() << " threads" << endl;
+  if( debug_out ) cerr << "c parallel HTE with " << controller.size() << " threads" << endl;
   EliminationData workData[ controller.size() ];
   vector<Job> jobs( controller.size() );
   
@@ -343,6 +345,7 @@ Lit HiddenTautologyElimination::fillHlaArrays(Var v, BIG& big, MarkArray& hlaPos
   Lit *head, *tail; // maintain the hla queue
 
   unsigned headPos = 0;
+  unsigned tailPos = 0;
   
   // create both the positive and negative array!
   for( uint32_t pol = 0; pol < 2; ++ pol )
@@ -365,13 +368,15 @@ Lit HiddenTautologyElimination::fillHlaArrays(Var v, BIG& big, MarkArray& hlaPos
       
       head = litQueue; tail = litQueue;
       *(head++) = imp;
-      // cerr << "c [HTE] write at litQueue head pos " << headPos ++ << endl;
-      // headPos ++; 
+       if( debug_out ) cerr << "c [HTE] write at litQueue head pos " << headPos ++ << endl;
+       headPos ++; 
       hlaArray.setCurrentStep( toInt(imp ) );
       if( talkMuch ) cerr << "c [HTE] add to array: " << toInt(imp) << endl;
       // process queue
       while( tail < head ) {
 	const Lit lit = *(tail++);
+	if( talkMuch ) cerr << "c [HTE] read from array at " << tailPos << " == " << lit << endl;
+	tailPos++;
 	steps = ( steps > 0 ) ? steps - 1 : 0;
 	const Lit* kList = big.getArray(~lit);
 	const uint32_t kListSize = big.getSize(~lit);
@@ -386,7 +391,7 @@ Lit HiddenTautologyElimination::fillHlaArrays(Var v, BIG& big, MarkArray& hlaPos
 	    hlaArray.setCurrentStep( toInt(kLit) );
 	    if( talkMuch ) { cerr << "c [HTE] add to array " << toInt(i) << " for " << toInt(kLit) << endl;
 	    }
-	    // cerr << "c [HTE] put an element to the queue at position " << (int)(head - litQueue) << endl;
+	    if( debug_out )  cerr << "c [HTE] put an element to the queue at position " << (int)(head - litQueue) << " with ptr " << std::hex << head << std::dec << endl;
 	    *(head++) = kLit;
 	  }
 	}

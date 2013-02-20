@@ -100,6 +100,11 @@ bool Probing::process()
     }
     modifiedFormula = modifiedFormula || propagation.appliedSomething();
 
+    if( data.getEquivalences().size() > 0 ) {
+      ee.process(data); 
+      modifiedFormula = modifiedFormula || ee.appliedSomething();
+    }
+    
   }
   
   return data.ok();
@@ -345,7 +350,7 @@ bool Probing::prDoubleLook(Lit l1decision)
 	CRef cr = ca.alloc(data.lits, false);
 	solver.clauses.push(cr);
 	solver.attachClause(cr);
-	data.addClause(cr);
+	data.addClause(cr, debug_out > 0);
 	l2conflicts.push_back(cr);
 	solver.uncheckedEnqueue(data.lits[0], cr);
 	if( debug_out > 0 ) cerr << "c L2 learnt clause: " << ca[cr] << " 0" << endl;
@@ -397,7 +402,7 @@ bool Probing::prDoubleLook(Lit l1decision)
 	CRef cr = ca.alloc(data.lits, true);
 	solver.clauses.push(cr);
 	solver.attachClause(cr);
-	data.addClause(cr);
+	data.addClause(cr, debug_out > 0);
 	l2conflicts.push_back(cr);
 	solver.uncheckedEnqueue(data.lits[0], cr);
 	if( debug_out > 0 ) cerr << "c L2 learnt clause: " << ca[cr] << " 0" << endl;
@@ -429,8 +434,7 @@ bool Probing::prDoubleLook(Lit l1decision)
 	learntUnits[0] = solver.trail[ i ];
 	l2implied ++;
 	CRef cr = ca.alloc(learntUnits, false);
-	solver.clauses.push(cr);
-	data.addClause(cr);
+	data.addClause(cr, debug_out > 0);
 	l2implieds.push_back(cr);
       } 
       
@@ -812,14 +816,6 @@ void Probing::probing()
     
   }
 
-  propagation.process(data,true);
-  modifiedFormula = modifiedFormula || propagation.appliedSomething();
-  
-  // TODO apply equivalent literals!
-  if( data.getEquivalences().size() > 0 ) {
-    ee.process(data); 
-    modifiedFormula = modifiedFormula || ee.appliedSomething();
-  }
 }
 
 

@@ -237,7 +237,7 @@ public:
   bool isInterupted();					  // has received signal from the outside
 
 // adding, removing clauses and literals =======
-  void addClause (      const CRef cr );                 // add clause to data structures, update counters
+  void addClause (      const Minisat::CRef cr, bool check = false );                 // add clause to data structures, update counters
   void addClause (      const CRef cr , Heap<VarOrderBVEHeapLt> * heap, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL);     // add clause to data structures, update counters
   bool removeClauseFrom (const Minisat::CRef cr, const Lit l); // remove clause reference from list of clauses for literal l, returns true, if successful
   void removeClauseFrom (const Minisat::CRef cr, const Lit l, const int index); // remove clause reference from list of clauses for literal l, returns true, if successful
@@ -484,12 +484,19 @@ inline bool CoprocessorData::hasToPropagate()
 }
 
 
-inline void CoprocessorData::addClause(const Minisat::CRef cr)
+inline void CoprocessorData::addClause(const Minisat::CRef cr, bool check)
 {
   const Clause & c = ca[cr];
   if( c.can_be_deleted() ) return;
   for (int l = 0; l < c.size(); ++l)
   {
+    if( check ) {
+      for( int i = 0 ; i < occs[toInt(c[l])].size(); ++ i ) {
+	if( occs[toInt(c[l])][i] == cr ) {
+	  cerr << "c clause " << cr << " is already in list for lit " << c[l] << " clause is: " << ca[cr] << endl; 
+	}
+      }
+    }
     occs[toInt(c[l])].push_back(cr);
     lit_occurrence_count[toInt(l)] += 1;
   }

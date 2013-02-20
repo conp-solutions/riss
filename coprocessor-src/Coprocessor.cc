@@ -90,7 +90,11 @@ lbool Preprocessor::performSimplification()
   cleanSolver ();
   // initialize techniques
   data.init( solver->nVars() );
+  
+  if( opt_check ) checkLists("before initializing");
   initializePreprocessor ();
+  if( opt_check ) checkLists("after initializing");
+  
   if( opt_verbose > 2 )cerr << "c coprocessor finished initialization" << endl;
   
   const bool printBVE = false, printBVA = false, printCCE = false, printEE = false, printHTE = false, printSusi = false, printUP = false;  
@@ -371,7 +375,7 @@ void Preprocessor::initializePreprocessor()
     Clause& c = ca[cr];
     assert( c.mark() == 0 && "mark of a clause has to be 0 before being put into preprocessor" );
     // if( ca[cr].mark() != 0  ) continue; // do not use any specially marked clauses!
-    
+    cerr << "c process clause " << cr << endl;
     if( c.size() == 0 ) {
       data.setFailed(); 
       break;
@@ -379,7 +383,7 @@ void Preprocessor::initializePreprocessor()
       if( data.enqueue(c[0]) == l_False ) break;
       c.set_delete(true);
     } else {
-      data.addClause( cr );
+      data.addClause( cr, opt_check );
       // TODO: decide for which techniques initClause in not necessary!
       subsumption.initClause( cr );
       propagation.initClause( cr );
@@ -394,6 +398,7 @@ void Preprocessor::initializePreprocessor()
     const CRef cr = solver->learnts[i];
     Clause& c = ca[cr];
     assert( c.mark() == 0 && "mark of a clause has to be 0 before being put into preprocessor" );
+    cerr << "c process learnt clause " << cr << endl;
     // if( ca[cr].mark() != 0  ) continue; // do not use any specially marked clauses!
     if( c.size() == 0 ) {
       data.setFailed(); 
@@ -402,7 +407,7 @@ void Preprocessor::initializePreprocessor()
       if( data.enqueue(c[0]) == l_False ) break;
       c.set_delete(true);
     } else {
-      data.addClause( cr );
+      data.addClause( cr, opt_check );
       // TODO: decide for which techniques initClause in not necessary!
       subsumption.initClause( cr );
       propagation.initClause( cr );
@@ -662,20 +667,48 @@ bool Preprocessor::checkLists(const string& headline)
 {
   bool ret = false;
   cerr << "c check data structures: " << headline << " ... " << endl;
+  int foundEmpty = 0;
   for( Var v = 0 ; v < data.nVars(); ++ v )
   {
     for( int p = 0 ; p < 2; ++ p ) {
       const Lit l = p == 0 ? mkLit(v,false) : mkLit(v,true);
+      if( data.list(l).size() == 0 ) foundEmpty ++;
       for( int i = 0 ; i < data.list(l).size(); ++ i ) {
 	for( int j = i+1 ; j < data.list(l).size(); ++ j ) {
 	  if( data.list(l)[i] == data.list(l)[j] ) {
 	    ret = true;
-	    cerr << "c duplicate " << data.list(l)[j] << " for lit " << l << " at " << i << " and " << j << " out of " << data.list(l).size() << endl;
+	    cerr << "c duplicate " << data.list(l)[j] << " for lit " << l << " at " << i << " and " << j << " out of " << data.list(l).size() << " = " << ca[data.list(l)[j]] << endl;
 	  }
 	}
       }
     }
   }
+  cerr << "c found " << foundEmpty << " lists, out of " << data.nVars() * 2 << endl;
+  
+  for( int i = 0 ; i < data.getLEarnts().size(); ++ i ) {
+    const Clause& c = ca[data.getLEarnts()[i]];
+    if( c.can_be_deleted() ) continue;
+    for( int j = 0 ; j < data.getClauses().size(); ++ j ) {
+      if( data.getLEarnts()[i] == data.getClauses()[j] ) cerr << "c found clause " << data.getLEarnts()[i] << " in both vectors" << endl;
+    }
+  }
+  
+  for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
+    const Clause& c = ca[data.getClauses()[i]];
+    if( c.can_be_deleted() ) continue;
+    for( int j = i+1 ; j < data.getClauses().size(); ++ j ) {
+      if( data.getClauses()[i] == data.getClauses()[j] ) cerr << "c found clause " << data.getClauses()[i] << " in both vectors" << endl;
+    }
+  }
+  
+  for( int i = 0 ; i < data.getLEarnts().size(); ++ i ) {
+    const Clause& c = ca[data.getLEarnts()[i]];
+    if( c.can_be_deleted() ) continue;
+    for( int j = i+1 ; j < data.getLEarnts().size(); ++ j ) {
+      if( data.getLEarnts()[i] == data.getLEarnts()[j] ) cerr << "c found clause " << data.getLEarnts()[i] << " in both vectors" << endl;
+    }
+  }
+  
   return ret;
 }
 
