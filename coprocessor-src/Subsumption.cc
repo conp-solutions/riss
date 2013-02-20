@@ -180,7 +180,7 @@ void Subsumption :: subsumption_worker ( unsigned int start, unsigned int end, c
                     subsumedLiterals += ca[list[i]].size();
                 }
                 ca[list[i]].set_delete(true); 
-		cerr << "c subsumption removed " << (ca[list[i]].learnt() ? "learned" : "" ) << " clause " << ca[list[i]] << " by "  <<  (ca[list[i]].learnt() ? "learned" : "" ) << c << endl;
+		cerr << "c subsumption removed " << (ca[list[i]].learnt() ? "learned" : "" ) << " clause ("<< list[i] << ") " << ca[list[i]] << " by ("<< cr << ") "  <<  (ca[list[i]].learnt() ? "learned" : "" ) << c << endl;
                 occ_updates.push_back(list[i]);
 		        if( global_debug_out ) cerr << "c clause " << ca[list[i]] << " is deleted by " << c << endl;
                 if (!ca[list[i]].learnt() && c.learnt())

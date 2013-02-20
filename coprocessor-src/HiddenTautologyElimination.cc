@@ -335,6 +335,8 @@ Lit HiddenTautologyElimination::fillHlaArrays(Var v, BIG& big, MarkArray& hlaPos
   const bool talkMuch = false;
   Lit *head, *tail; // maintain the hla queue
 
+  unsigned headPos = 0;
+  
   // create both the positive and negative array!
   for( uint32_t pol = 0; pol < 2; ++ pol )
   {
@@ -356,6 +358,8 @@ Lit HiddenTautologyElimination::fillHlaArrays(Var v, BIG& big, MarkArray& hlaPos
       
       head = litQueue; tail = litQueue;
       *(head++) = imp;
+      cerr << "c [HTE] write at litQueue head pos " << headPos ++ << endl;
+      // headPos ++; 
       hlaArray.setCurrentStep( toInt(imp ) );
       if( talkMuch ) cerr << "c [HTE] add to array: " << toInt(imp) << endl;
       // process queue
@@ -375,6 +379,7 @@ Lit HiddenTautologyElimination::fillHlaArrays(Var v, BIG& big, MarkArray& hlaPos
 	    hlaArray.setCurrentStep( toInt(kLit) );
 	    if( talkMuch ) { cerr << "c [HTE] add to array " << toInt(i) << " for " << toInt(kLit) << endl;
 	    }
+	    cerr << "c [HTE] put an element to the queue at position " << (int)(head - litQueue) << endl;
 	    *(head++) = kLit;
 	  }
 	}
