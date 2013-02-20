@@ -247,7 +247,7 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<Var
     
     uint32_t timer = dirtyOccs.nextStep();
   
-    cerr << "c sequentiel bve on " 
+    cerr << "c sequential bve on " 
          << ((opt_bve_heap != 2) ? heap.size() : variable_queue.size()) << " variables" << endl;
 
     bve_worker (data, heap, force, doStatistics);

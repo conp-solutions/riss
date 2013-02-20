@@ -97,6 +97,7 @@ protected:
   void delete_clause(const CRef cr); // delete a clause from the solver (clause should not be attached within the solver)
 
   bool checkLists(const string& headline); // check each clause list for duplicate occurrences
+  void fullCheck(const string& headline);  // check solver state before control is passed to solver
   
   // print formula
   void printFormula(FILE * fd);
