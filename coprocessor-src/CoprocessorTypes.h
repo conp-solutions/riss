@@ -19,7 +19,7 @@ using namespace std;
 namespace Coprocessor {
 
   /// temporary Boolean flag to quickly enable debug output for the whole file
-  const bool global_debug_out = false;
+  const bool global_debug_out = true;
   
   //forward declaration
   class VarGraphUtils;
@@ -699,7 +699,7 @@ inline void CoprocessorData::removedLiteral( const Lit l, const int32_t diff, He
     {
         if (heap->inHeap(var(l)))
         {
-            heap->increase(var(l));
+            heap->decrease(var(l));
         }
     }
     if (heap_lock != NULL)
@@ -763,7 +763,7 @@ inline void CoprocessorData::removedClause ( const CRef cr, Heap<VarOrderBVEHeap
         {
             if (heap->inHeap(var(c[l])))
             {
-                heap->increase(var(c[l]));
+                heap->decrease(var(c[l]));
             }
         }
       }

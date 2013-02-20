@@ -145,6 +145,9 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
        // do not work on this variable, if it will be unit-propagated! if all units are eagerly propagated, this is not necessary
        if  (data.value(mkLit(v,true)) != l_Undef || data.value(mkLit(v,false)) != l_Undef)
                continue;
+       // if no occurrences of v, continue
+       if (data[v] == 0)
+           continue;
  
         // Heuristic Cutoff
         if (!opt_force_gates && !opt_unlimited_bve 
@@ -253,7 +256,11 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         
         // check if the variable-sub-graph is still valid
         // or UNSAT
-        if (lastTouched.getIndex(v) != timeStamp || !data.ok())
+        //  or var enqueued
+        if (lastTouched.getIndex(v) != timeStamp 
+                || !data.ok()
+                || data.value(mkLit(v,true)) != l_Undef 
+                || data.value(mkLit(v,false)) != l_Undef)
         {
             assert(rwlock_count == 1);
             --rwlock_count;
@@ -272,6 +279,9 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
             neighbors.clear();
             neighbor_heap.clear();
             
+            if (   data.value(mkLit(v,true)) != l_Undef 
+                || data.value(mkLit(v,false)) != l_Undef)
+                continue;
             goto calculate_neighbors;
         }
 
@@ -1311,6 +1321,7 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData & da
       if (negated_lit_pos == -1 && si == strengthener.size())
       {
          other.set_delete(true);
+         if (opt_bve_verbose > 2) cerr << "c " << strengthener << " subsumed " << other << endl;
          if (doStatistics) 
          {
              if (!other.learnt())
@@ -1362,13 +1373,12 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData & da
           }
           else
           {
-              if( global_debug_out ) cerr << "c remove " << negated_lit_pos << " from clause " << other << endl;
               Lit neg = other[negated_lit_pos];
+              if( opt_bve_verbose > 2 || global_debug_out ) cerr << "c remove " << neg << " from clause " << other << endl;
               
               //remove from occ-list (by overwriting cr with CRef_Undef
               data.removeClauseFromThreadSafe(crO, neg);
               dirtyOccs.setCurrentStep(toInt(neg));
-
               other.removePositionSortedThreadSafe(negated_lit_pos);
               // TODO to much overhead? 
               if (heap_updates && opt_bve_heap != 2)
@@ -1502,6 +1512,7 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & da
       if (negated_lit_pos == -1 && si == strengthener.size())
       {
          other.set_delete(true);
+         if (opt_bve_verbose > 2) cerr << "c " << strengthener << " subsumed " << other << endl;
          if (doStatistics) 
          {
              if (!other.learnt())
@@ -1555,9 +1566,8 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & da
           }
           else
           {
-              if( global_debug_out ) cerr << "c remove " << negated_lit_pos << " from clause " << other << endl;
-              
               Lit neg = other[negated_lit_pos];
+              if( opt_bve_verbose > 2 || global_debug_out ) cerr << "c remove " << neg << " from clause " << other << endl;
               
               //remove from occ-list (by overwriting cr with CRef_Undef
               data.removeClauseFromThreadSafe( crO, neg );
@@ -1624,7 +1634,7 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
     // Lock variable
     var_lock[v].lock();
     
-    if (global_debug_out) cerr << "c UP propagating " << l << endl;
+    if (opt_bve_verbose > 2 || global_debug_out) cerr << "c UP propagating " << l << endl;
 
     data_lock.lock();
     data.log.log(upLevel,"propagate literal",l);
@@ -1650,7 +1660,7 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
       // lock satisfied
       satisfied.spinlock();
 
-      if( global_debug_out ) cerr << "c UP remove " << satisfied << endl;
+      if( opt_bve_verbose > 2 || global_debug_out ) cerr << "c UP remove " << satisfied << endl;
       if (doStatistics)
       {
         if (satisfied.learnt())
@@ -1702,7 +1712,7 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
         for ( int j = 0; j < c.size(); ++ j ) 
           if ( c[j] == nl ) 
           { 
-	        if( global_debug_out ) cerr << "c UP remove " << nl << " from " << c << endl;
+	        if( opt_bve_verbose > 2 || global_debug_out ) cerr << "c UP remove " << nl << " from " << c << endl;
                 c.removePositionSorted(j);
 	        break;
 	    }
@@ -1716,7 +1726,7 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
         data.setFailed();   // set state to false
         data_lock.unlock();
 
-        if (global_debug_out) cerr << "c UNSAT by UP" << endl;
+        if (opt_bve_verbose > 2 || global_debug_out) cerr << "c UNSAT by UP" << endl;
         c.set_delete(true); // TODO it seems safer to do this, is it necessary
         c.unlock();
 
@@ -1730,15 +1740,25 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
       } 
       else if( c.size() == 1 ) 
       {
-         if( solver->value( c[0] ) == l_Undef && global_debug_out ) 
+         if( solver->value( c[0] ) == l_Undef && (global_debug_out || opt_bve_verbose > 2) )
              cerr << "c UP enqueue " << c[0] << " with previous value " 
                   << (solver->value( c[0] ) == l_Undef ? "undef" : (solver->value( c[0] ) == l_False ? "unsat" : " sat ") ) << endl;
 	     if( solver->value( c[0] ) == l_Undef ) 
          {
            solver->uncheckedEnqueue(c[0]);
          }
+         c.set_delete(true);
          data_lock.unlock();
-         if (doStatistics) ++stats.unitsEnqueued;
+         if (heap_updates && opt_bve_heap != 2)
+            data.removedClause(cr, &heap, &data_lock, &heap_lock); // updates stats and deleteTimer
+         else 
+            data.removedClause(cr, NULL,  &data_lock, NULL);
+         if (doStatistics) 
+         {
+             if (c.learnt())  ++countL; 
+             else ++countO;
+             ++stats.unitsEnqueued;
+         }
       }
       else
       { 

@@ -258,7 +258,9 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<Var
 {
   //Subsumption / Strengthening
   if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
-  subsumption.subsumeStrength(); 
+  subsumption.subsumeStrength();
+  if (subsumption.appliedSomething())
+    didChange();
   if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
  
   if (!data.ok())
@@ -298,6 +300,8 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<Var
 
     if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
     subsumption.subsumeStrength();
+    if (subsumption.appliedSomething())
+        didChange();
     if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
 
     if (opt_bve_heap != 2)
@@ -477,6 +481,8 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                     subsumption.subsumeStrength(&heap);
                 else 
                     subsumption.subsumeStrength();
+                if (subsumption.appliedSomething())
+                    didChange();
                 if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
 
                 if (!data.ok())
