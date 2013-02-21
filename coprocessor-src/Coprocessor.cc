@@ -375,7 +375,7 @@ void Preprocessor::initializePreprocessor()
     Clause& c = ca[cr];
     assert( c.mark() == 0 && "mark of a clause has to be 0 before being put into preprocessor" );
     // if( ca[cr].mark() != 0  ) continue; // do not use any specially marked clauses!
-    cerr << "c process clause " << cr << endl;
+    if (global_debug_out) cerr << "c process clause " << cr << endl;
     if( c.size() == 0 ) {
       data.setFailed(); 
       break;
