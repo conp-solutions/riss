@@ -1767,6 +1767,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
        }
        
        int dataElements = data.lits.size();
+       data.ma.nextStep();
        for( int j = start ; j < i; ++ j ) {
 	 Lit l = ee[j];
 	 // first, process all the clauses on the list with old replacement variables
@@ -1776,112 +1777,126 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	   j--;
          }
 	 
-	 if( l == repr ) continue;
+	 if( l == repr ) {
+	   if( debug_out) cerr << "c do not process representative " << l << endl;
+	   continue;
+	 }
+	 
 	 data.log.log(eeLevel,"work on literal",l);
+	 
+	 // add to extension here!
+	 if( !data.doNotTouch(var(l)) && ! data.ma.isCurrentStep(var(l)) && 
+	   (data.list( l ).size() > 0 ||  data.list( ~l ).size() > 0) ) { // only add to extension, if clauses will be rewritten!
+	  data.addToExtension( ~repr , l );
+	  data.addToExtension( repr , ~l);
+	  if( debug_out ) cerr << "c added to extension: " << repr << " <=> " << l << endl;
+	  data.ma.setCurrentStep(var(l)); // to not add same equivalence twice
+	 } else {
+	   if( debug_out ) cerr << "c do not add to extension: " << repr << " <=> " << l << endl; 
+	 }
+	 
 	 // if( getReplacement(l) == repr )  continue;
 	 // TODO handle equivalence here (detect inconsistency, replace literal in all clauses, check for clause duplicates!)
 	 for( int pol = 0; pol < 2; ++ pol ) { // do for both polarities!
-	 vector<CRef>& list = pol == 0 ? data.list( l ) : data.list( ~l );
-	 for( int k = 0 ; k < list.size(); ++ k ) {
-	  Clause& c = ca[list[k]];
-	  if( c.can_be_deleted() ) {
-	    if( debug_out ) cerr << "c skip clause " << c << " it can be deleted already" << endl;
-	    continue; // do not use deleted clauses!
-	  }
-	  data.log.log(eeLevel,"analyze clause",c);
-	  if( debug_out ) cerr << "c analyze clause " << c << endl;
-          bool duplicate  = false;
-	  bool getsNewLiterals = false;
-          Lit tmp = repr;
-	  // TODO: update counter statistics for all literals of the clause!
-          for( int m = 0 ; m < c.size(); ++ m ) {
-	    if( c[m] == repr || c[m] == ~repr) { duplicate = true; continue; } // manage that this clause is not pushed into the list of clauses again!
-	    const Lit tr = getReplacement(c[m]);
-	    if( tr != c[m] ) getsNewLiterals = true;
-	    c[m] = tr;
-	  }
-	  
-	   const int s = c.size(); // sort the clause
-	   for (int m = 1; m < s; ++m)
-	   {
-	      const Lit key = c[m];
-	      int n = m - 1;
-	      while ( n >= 0 && toInt(c[n]) > toInt(key) )
-		  c[n+1] = c[n--];
-	      c[n+1] = key;
-	   }
-	   
-	   int n = 1;
-	   for( int m = 1; m < s; ++ m ) {
-	     if( c[m-1] == ~c[m] ) { 
-	       if( debug_out ) cerr << "c ee deletes clause " << c << endl;
-	       c.set_delete(true); 
-	       goto EEapplyNextClause;
-	    } // this clause is a tautology
-	     if( c[m-1] != c[m] ) c[n++] = c[m];
-	   }
-           c.shrink(s-n);
-	   modifiedFormula = true;
-	   
-	   if( c.size() == 2 )  { // take care of newly created binary clause for further analysis!
-	     newBinary = true;
-	     if( isToAnalyze[ var(c[0]) ] == 0 ) {
-	       eqDoAnalyze.push_back(~c[0]);
-	       isToAnalyze[ var(c[0]) ] = 1;
-	       if( debug_out ) cerr << "c EE re-enable ee-variable " << var(c[0])+1 << endl;
-	     }
-             if( isToAnalyze[ var(c[1]) ] == 0 ) {
-	       eqDoAnalyze.push_back(~c[1]);
-	       isToAnalyze[ var(c[1]) ] = 1;
-	       if( debug_out ) cerr << "c EE re-enable ee-variable " << var(c[1])+1 << endl;
-	     }
-	   } else if (c.size() == 1 ) {
-	     if( data.enqueue(c[0]) == l_False ) return newBinary; 
-	   } else if (c.size() == 0 ) {
-	     data.setFailed(); 
-	     if( debug_out ) cerr << "c applying EE failed due getting an empty clause" << endl;
-	     return newBinary; 
-	   }
-	  data.log.log(eeLevel,"clause after sort",c);
-	  
-	  if( !duplicate ) {
-// 	    cerr << "c give list of literal " << (pol == 0 ? repr : ~repr) << " for duplicate check" << endl;
-	    if( !hasDuplicate( data.list( (pol == 0 ? repr : ~repr)  ), c )  ) {
-	      data.list( (pol == 0 ? repr : ~repr) ).push_back( list[k] );
-	      if( getsNewLiterals ) {
-		if( data.addSubStrengthClause( list[k] ) ) resetVariables = true;
+	  vector<CRef>& list = pol == 0 ? data.list( l ) : data.list( ~l );
+	  if( debug_out ) cerr << "c rewrite clauses of lit " << ( pol == 0 ? l : ~l )<< endl;
+	  for( int k = 0 ; k < list.size(); ++ k ) {
+	    Clause& c = ca[list[k]];
+	    if( c.can_be_deleted() ) {
+	      if( debug_out ) cerr << "c skip clause " << c << " it can be deleted already" << endl;
+	      continue; // do not use deleted clauses!
+	    }
+	    data.log.log(eeLevel,"analyze clause",c);
+	    if( debug_out ) cerr << "c analyze clause " << c << endl;
+	    bool duplicate  = false;
+	    bool getsNewLiterals = false;
+	    Lit tmp = repr;
+	    // TODO: update counter statistics for all literals of the clause!
+	    for( int m = 0 ; m < c.size(); ++ m ) {
+	      if( c[m] == repr || c[m] == ~repr) { duplicate = true; continue; } // manage that this clause is not pushed into the list of clauses again!
+	      const Lit tr = getReplacement(c[m]);
+	      if( tr != c[m] ) getsNewLiterals = true;
+	      c[m] = tr;
+	    }
+	    
+	    c.sort(); // sort the clause!
+	    
+	    int n = 1,removed=0;
+	    for( int m = 1; m < c.size(); ++ m ) {
+	      if( c[m-1] == ~c[m] ) { 
+		if( debug_out ) cerr << "c ee deletes clause " << c << endl;
+		c.set_delete(true); 
+		goto EEapplyNextClause;
+	      } // this clause is a tautology
+	      if( c[m-1] != c[m] ) { c[n++] = c[m]; removed ++; }
+	    }
+	    c.shrink(c.size() - n);
+	    if( debug_out ) cerr << "c ee shrinked clause to " << c << endl;
+	    modifiedFormula = true;
+	    
+	    if( c.size() == 2 )  { // take care of newly created binary clause for further analysis!
+	      newBinary = true;
+	      if( isToAnalyze[ var(c[0]) ] == 0 ) {
+		eqDoAnalyze.push_back(~c[0]);
+		isToAnalyze[ var(c[0]) ] = 1;
+		if( debug_out ) cerr << "c EE re-enable ee-variable " << var(c[0])+1 << endl;
+	      }
+	      if( isToAnalyze[ var(c[1]) ] == 0 ) {
+		eqDoAnalyze.push_back(~c[1]);
+		isToAnalyze[ var(c[1]) ] = 1;
+		if( debug_out ) cerr << "c EE re-enable ee-variable " << var(c[1])+1 << endl;
+	      }
+	    } else if (c.size() == 1 ) {
+	      if( data.enqueue(c[0]) == l_False ) return newBinary; 
+	    } else if (c.size() == 0 ) {
+	      data.setFailed(); 
+	      if( debug_out ) cerr << "c applying EE failed due getting an empty clause" << endl;
+	      return newBinary; 
+	    }
+	    data.log.log(eeLevel,"clause after sort",c);
+	    
+	    if( !duplicate ) {
+  // 	    cerr << "c give list of literal " << (pol == 0 ? repr : ~repr) << " for duplicate check" << endl;
+	      if( !hasDuplicate( data.list( (pol == 0 ? repr : ~repr)  ), c )  ) {
+		data.list( (pol == 0 ? repr : ~repr) ).push_back( list[k] );
+		if( getsNewLiterals ) {
+		  if( data.addSubStrengthClause( list[k] ) ) resetVariables = true;
 
+		}
+	      } else {
+		if( debug_out ) cerr << "c clause has duplicates: " << c << endl;
+		c.set_delete(true);
+		data.removedClause(list[k]);
+		modifiedFormula = true;
 	      }
 	    } else {
- 	      if( debug_out ) cerr << "c clause has duplicates: " << c << endl;
-	      c.set_delete(true);
-	      data.removedClause(list[k]);
-	      modifiedFormula = true;
+  // 	    cerr << "c duplicate during sort" << endl; 
 	    }
-	  } else {
-// 	    cerr << "c duplicate during sort" << endl; 
+	    
+  EEapplyNextClause:; // jump here, if a tautology has been found
 	  }
-	  
-EEapplyNextClause:; // jump here, if a tautology has been found
-	 }
 	 } // end polarity
-       }
+       
+	 
+	 // clear the occurrence lists, since there are no clauses in them any more!
+	 assert( l != repr && "will not clear list of representative literal!" );
+	 for( int pol = 0; pol < 2; ++ pol ) // clear both occurrence lists!
+	   (pol == 0 ? data.list( l ) : data.list( ~l )).clear();
+	 if( debug_out ) cerr << "c cleared list of var " << var( l ) + 1 << endl;
+	 
+      }
        
        // clear all occurrence lists of certain ee class literals
-       for( int j = start ; j < i; ++ j ) {
-	 if( ee[j] == repr ) continue;
-	 if( !data.doNotTouch(var(ee[j])) ) {
-	 data.addToExtension( ~repr , ee[j] );
-	 data.addToExtension( repr , ~ee[j]);
-	 }
-	 for( int pol = 0; pol < 2; ++ pol ) // clear both occurrence lists!
-	   (pol == 0 ? data.list( ee[j] ) : data.list( ~ee[j] )).clear();
-	 if( debug_out ) cerr << "c cleared list of var " << var( ee[j] ) + 1 << endl;
-       }
+//        for( int j = start ; j < i; ++ j ) {
+// 	 if( ee[j] == repr ) continue;
+// 	 for( int pol = 0; pol < 2; ++ pol ) // clear both occurrence lists!
+// 	   (pol == 0 ? data.list( ee[j] ) : data.list( ~ee[j] )).clear();
+// 	 if( debug_out ) cerr << "c cleared list of var " << var( ee[j] ) + 1 << endl;
+//        }
 
        // TODO take care of untouchable literals!
        for( int j = start ; j < i; ++ j ) {
-         
+         assert( !data.doNotTouch(var(ee[j]) ) && "equivalent literal elimination cannot handle untouchable literals/variables yet!"  );
        }
        
        start = i+1;

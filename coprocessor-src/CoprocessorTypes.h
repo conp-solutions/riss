@@ -335,6 +335,10 @@ public:
   void create( ClauseAllocator& ca, Coprocessor::CoprocessorData& data, vec< Minisat::CRef >& list);
   void create( ClauseAllocator& ca, Coprocessor::CoprocessorData& data, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2);
 
+  /** recreate the big after the formula changed */
+  void recreate( ClauseAllocator& ca, Coprocessor::CoprocessorData& data, vec< Minisat::CRef >& list);
+  void recreate( ClauseAllocator& ca, Coprocessor::CoprocessorData& data, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2);
+  
   /** removes an edge from the graph again */
   void removeEdge(const Lit l0, const Lit l1 );
 
@@ -459,7 +463,7 @@ inline bool CoprocessorData::isInterupted()
 
 inline lbool CoprocessorData::enqueue(const Lit l)
 {
-  if( global_debug_out ) cerr << "c enqueue " << l << " with previous value " << (solver->value( l ) == l_Undef ? "undef" : (solver->value( l ) == l_False ? "unsat" : " sat ") ) << endl;
+  if( false || global_debug_out ) cerr << "c enqueue " << l << " with previous value " << (solver->value( l ) == l_Undef ? "undef" : (solver->value( l ) == l_False ? "unsat" : " sat ") ) << endl;
   if( solver->value( l ) == l_False) {
     solver->ok = false; // set state to false
     return l_False;
@@ -955,6 +959,20 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
     }
     cerr << endl;
   }
+  
+  if( local_debug ) {
+    cerr << "extend Stack: " << endl; 
+    for( int i = undo.size() - 1; i >= 0 ; --i ) {
+      if( undo[i] == lit_Undef ) cerr << endl;
+      else cerr << " " << undo[i];
+    }
+    
+    
+    cerr << "next clause: ";
+    for( int j = undo.size() - 1; j >= 0 ; --j ) if( undo[j] == lit_Undef ) break; else cerr << " " << undo[j];
+    cerr << endl;
+
+  }
 
   // check current clause for being satisfied
   bool isSat = false; // FIXME: this bool is redundant!
@@ -968,7 +986,21 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
          // if clause is not satisfied, satisfy last literal!
          const Lit& satLit = undo[i+1];
          log.log(1, "set literal to true",satLit);
+	 if( local_debug ) cerr << "c set literal " << undo[i+1] << " to true " << endl;
          model[ var(satLit) ] = sign(satLit) ? l_False : l_True;
+       }
+       
+       // finished this clause!
+       if( local_debug ) { // print intermediate state!
+       cerr << "c current model: ";
+	for( int j = 0 ; j < model.size(); ++ j ) {
+	  const Lit satLit = mkLit( j, model[j] == l_True ? false : true );
+	  cerr << satLit << " ";
+	}
+	cerr << endl;
+        cerr << "next clause: ";
+	for( int j = i - 1; j >= 0 ; --j ) if( undo[j] == lit_Undef ) break; else cerr << " " << undo[j];
+	cerr << endl;
        }
        continue;
      }
@@ -979,6 +1011,11 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
        while( undo[i] != lit_Undef ){ // skip literal until hitting the delimiter - for loop will decrease i once more
 	 if( global_debug_out  || local_debug) cerr << "c skip because SAT: " << undo[i] << endl; 
 	 --i;
+       }
+       if( local_debug ) { // print intermediate state!
+        cerr << "next clause: ";
+	for( int j = i - 1; j >= 0 ; --j ) if( undo[j] == lit_Undef ) break; else cerr << " " << undo[j];
+	cerr << endl;
        }
      }
   }
@@ -1172,6 +1209,49 @@ inline void BIG::create(ClauseAllocator& ca, CoprocessorData& data, vec< Minisat
 }
 
 
+inline void BIG::recreate( ClauseAllocator& ca, Coprocessor::CoprocessorData& data, vec< Minisat::CRef >& list)
+{
+  sizes = sizes == 0 ? (int*) malloc( sizeof(int) * data.nVars() * 2 ) : (int*) realloc( sizes, sizeof(int) * data.nVars() * 2 );
+  memset(sizes,0, sizeof(int) * data.nVars() * 2 );
+
+  int sum = 0;
+  // count occurrences of literals in binary clauses of the given list
+  for( int i = 0 ; i < list.size(); ++i ) {
+    const Clause& c = ca[list[i]];
+    if(c.size() != 2 || c.can_be_deleted() ) continue;
+    sizes[ toInt( ~c[0] )  ] ++;
+    sizes[ toInt( ~c[1] )  ] ++;
+    sum += 2;
+  }
+  storage = storage == 0 ? (Lit*) malloc( sizeof(Lit) * sum ) : (Lit*) realloc( storage, sizeof(Lit) * sum )  ;
+  big = big == 0 ? (Lit**)malloc ( sizeof(Lit*) * data.nVars() * 2 ) : (Lit**)realloc ( big, sizeof(Lit*) * data.nVars() * 2 );
+  // memset(sizes,0, sizeof(Lit*) * data.nVars() * 2 );
+  // set the pointers to the right location and clear the size
+  sum = 0 ;
+  for ( int i = 0 ; i < data.nVars() * 2; ++ i )
+  {
+    big[i] = &(storage[sum]);
+    sum += sizes[i];
+    sizes[i] = 0;
+  }
+
+  // add all binary clauses to graph
+  for( int i = 0 ; i < list.size(); ++i ) {
+    const Clause& c = ca[list[i]];
+    if(c.size() != 2 || c.can_be_deleted() ) continue;
+    const Lit l0 = c[0]; const Lit l1 = c[1];
+    ( big[ toInt(~l0) ] )[ sizes[toInt(~l0)] ] = l1;
+    ( big[ toInt(~l1) ] )[ sizes[toInt(~l1)] ] = l0;
+    sizes[toInt(~l0)] ++;
+    sizes[toInt(~l1)] ++;
+  }
+}
+
+inline void BIG::recreate( ClauseAllocator& ca, Coprocessor::CoprocessorData& data, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2)
+{
+  
+}
+
 inline void BIG::removeEdge(const Lit l0, const Lit l1)
 {
   // remove literal from the two lists
@@ -1182,15 +1262,19 @@ inline void BIG::removeEdge(const Lit l0, const Lit l1)
     if( list[i] == l1 ) {
       list[i] = list[ size - 1 ];
       sizes[ toInt(~l0) ] --;
+      cerr << "c removed edge " << ~l0 << " -> " << l1 << endl;
+      break;
     }
   }
-  Lit* list2 = getArray( ~l0 );
-  const uint32_t size2 = getSize( ~l0 );
+  Lit* list2 = getArray( ~l1 );
+  const uint32_t size2 = getSize( ~l1 );
   for( int i = 0 ; i < size2; ++i )
   {
     if( list2[i] == l0 ) {
-      list2[i] = list2[ size - 1 ];
+      list2[i] = list2[ size2 - 1 ];
       sizes[ toInt(~l1) ] --;
+      cerr << "c removed edge " << ~l1 << " -> " << l0 << endl;
+      break;
     }
   }
 }

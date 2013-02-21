@@ -89,7 +89,6 @@ bool Probing::process()
     // restore the polarity for phase saving
     polarity.copyTo(solver.polarity);
 
-    
     // clean solver again!
     cleanSolver();
     
@@ -414,7 +413,7 @@ bool Probing::prDoubleLook(Lit l1decision)
     // could copy to prNegatie here, but we do not do this, but refer to the vector inside the solver instead
     vec<lbool>& prNegative = solver.assigns;
     
-    if( solver.decisionLevel() != 2 ) cerr << "c resulted in decision level " << solver.decisionLevel() << endl;
+    if( solver.decisionLevel() != 2 ) cerr << "c L2 lookahead resulted in decision level " << solver.decisionLevel() << endl;
     assert( solver.decisionLevel() == 2 && "double look-ahead can only be continued at level 1!");
     assert( solver.trail_lim.size() == 2 && "there have to be 2 decisions!" );
     
@@ -428,7 +427,7 @@ bool Probing::prDoubleLook(Lit l1decision)
     {
       // check whether same polarity in both trails, or different polarity and in both trails
       const Var tv = var( solver.trail[ i ] );
-      if( debug_out > 1 ) cerr << "c compare variable " << tv + 1 << ": pos = " << toInt(prL2Positive[tv]) << " neg = " << toInt(solver.assigns[tv]) << endl;
+      if( debug_out > 1 ) cerr << "c compare variable (level 1)" << tv + 1 << ": pos = " << toInt(prL2Positive[tv]) << " neg = " << toInt(solver.assigns[tv]) << endl;
       if( solver.assigns[ tv ] == prL2Positive[tv] ) {
 	if( debug_out > 1 ) cerr << "c l2 implied literal: " << l1decision << " -> " << solver.trail[i] << endl;
 	learntUnits[0] = solver.trail[ i ];
@@ -772,7 +771,7 @@ void Probing::probing()
     {
       // check whether same polarity in both trails, or different polarity and in both trails
       const Var tv = var( solver.trail[ i ] );
-      if( debug_out > 1 )cerr << "c compare variable " << tv + 1 << ": pos = " << toInt(prPositive[tv]) << " neg = " << toInt(solver.assigns[tv]) << endl;
+      if( debug_out > 1 )cerr << "c compare variable (level 0) " << tv + 1 << ": pos = " << toInt(prPositive[tv]) << " neg = " << toInt(solver.assigns[tv]) << endl;
       if( solver.assigns[ tv ] == prPositive[tv] ) {
 	if( debug_out > 1 )cerr << "c implied literal " << solver.trail[i] << endl;
 	doubleLiterals.push_back(solver.trail[ i ] );
