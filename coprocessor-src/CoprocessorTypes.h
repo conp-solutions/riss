@@ -15,7 +15,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 using namespace Minisat;
 using namespace std;
-
+extern IntOption heap_updates; // Updates of BVE-Heap
 namespace Coprocessor {
 
   /// temporary Boolean flag to quickly enable debug output for the whole file
@@ -246,7 +246,7 @@ public:
   void cleanOccurrences();				// remove all clauses and set counters to 0
 
   void updateClauseAfterDelLit(const Minisat::Clause& clause)
-  { if( global_debug_out ) cerr << "what to update in clause?!" << endl; }
+  { if( global_debug_out ) cerr << "what to update in clause?! " << clause << endl; }
   
 // delete timers
   /** gives back the current times, increases for the next technique */
@@ -277,7 +277,8 @@ public:
   void addedClause (   const CRef cr, Heap<VarOrderBVEHeapLt> * heap = NULL, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL );			// update counters for literals in the clause
   void removedClause ( const CRef cr, Heap<VarOrderBVEHeapLt> * heap = NULL, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL );			// update counters for literals in the clause
   void removedClause ( const Lit l1, const Lit l2 );		// update counters for literals in the clause
-  
+
+  bool removeClauseThreadSafe (const CRef cr);
   void correctCounters();
 
   // extending model after clause elimination procedures - l will be put first in list to be undone if necessary!
@@ -370,7 +371,7 @@ struct VarOrderBVEHeapLt {
             {
                 case 0: return data[x] < data[y]; 
                 case 1: return data[x] > data[y]; 
-                default: assert(false && "In case of random order no heap should be used");
+                default: assert(false && "In case of random order no heap should be used"); return false;
             }
         }
         VarOrderBVEHeapLt(CoprocessorData & _data, int _heapOption) : data(_data), heapOption(_heapOption) { }
@@ -498,7 +499,7 @@ inline void CoprocessorData::addClause(const Minisat::CRef cr, bool check)
       }
     }
     occs[toInt(c[l])].push_back(cr);
-    lit_occurrence_count[toInt(l)] += 1;
+    lit_occurrence_count[toInt(c[l])] += 1;
   }
   numberOfCls ++;
 }
@@ -512,7 +513,7 @@ inline void CoprocessorData::addClause ( const CRef cr , Heap<VarOrderBVEHeapLt>
       for (int l = 0; l < c.size(); ++l)
       {
         occs[toInt(c[l])].push_back(cr);
-        lit_occurrence_count[toInt(l)] += 1;
+        lit_occurrence_count[toInt(c[l])] += 1;
       }
       numberOfCls ++;
   }
@@ -525,9 +526,12 @@ inline void CoprocessorData::addClause ( const CRef cr , Heap<VarOrderBVEHeapLt>
       for (int l = 0; l < c.size(); ++l)
       {
         occs[toInt(c[l])].push_back(cr);
-        lit_occurrence_count[toInt(l)] += 1;
+        lit_occurrence_count[toInt(c[l])] += 1;
         if (heap != NULL)
-            heap->update(var(c[l]));
+            if (heap->inHeap(var(c[l])))
+                heap->increase(var(c[l]));
+            else if (heap_updates == 2)
+                heap->update(var(c[l]));
       }
       if (heap_lock != NULL) 
           heap_lock->unlock();
@@ -678,7 +682,10 @@ inline void CoprocessorData::addedLiteral( const Lit l, const int32_t diff, Heap
         lit_occurrence_count[toInt(l)] += diff;
         if (heap != NULL)
         {
-            heap->update(var(l));
+            if (heap->inHeap(var(l)))
+                heap->increase(var(l));
+            else if (heap_updates == 2)
+                heap->update(var(l));
         }    
         if (heap_lock != NULL)
             heap_lock->unlock();
@@ -704,9 +711,9 @@ inline void CoprocessorData::removedLiteral( const Lit l, const int32_t diff, He
     if (heap != NULL)
     {
         if (heap->inHeap(var(l)))
-        {
-            heap->increase(var(l));
-        }
+            heap->decrease(var(l));
+        else if (heap_updates == 2)
+            heap->update(var(l));
     }
     if (heap_lock != NULL)
         heap_lock->unlock();
@@ -721,7 +728,7 @@ inline void CoprocessorData::addedClause (   const CRef cr, Heap<VarOrderBVEHeap
   {
       for (int l = 0; l < c.size(); ++l)
       {
-        lit_occurrence_count[toInt(l)] += 1;
+        lit_occurrence_count[toInt(c[l])] += 1;
       }
   }
   else 
@@ -732,10 +739,13 @@ inline void CoprocessorData::addedClause (   const CRef cr, Heap<VarOrderBVEHeap
         heap_lock->lock();
       for (int l = 0; l < c.size(); ++l)
       {
-        lit_occurrence_count[toInt(l)] += 1;
+        lit_occurrence_count[toInt(c[l])] += 1;
         if (heap != NULL)
         {
-            heap->update(var(c[l]));
+            if (heap->inHeap(var(c[l])))
+                heap->increase(var(c[l]));
+            else if (heap_updates == 2)
+                heap->update(var(c[l]));
         }
       }
       numberOfCls --;
@@ -768,9 +778,9 @@ inline void CoprocessorData::removedClause ( const CRef cr, Heap<VarOrderBVEHeap
         if (heap != NULL)
         {
             if (heap->inHeap(var(c[l])))
-            {
-                heap->increase(var(c[l]));
-            }
+                heap->decrease(var(c[l]));
+            else if (heap_updates == 2)
+                heap->update(var(c[l]));
         }
       }
       numberOfCls --;
@@ -1041,6 +1051,32 @@ inline bool CoprocessorData::doNotTouch(const Var v) const
   return untouchable[v] == 1;
 }
 
+bool inline CoprocessorData::removeClauseThreadSafe (const CRef cr)
+{
+    Clause & c = ca[cr];
+    c.spinlock();
+    if (!c.can_be_deleted())
+    {
+        c.set_delete(true);
+        while ( __sync_bool_compare_and_swap(&numberOfCls, numberOfCls, numberOfCls-1) == false);
+        for (int l = 0; l < c.size(); ++l)
+        {
+            int32_t old_count, new_count;
+            Lit lit = c[l];
+            do {
+                old_count = lit_occurrence_count[toInt(lit)];
+                new_count = old_count - 1;  
+            } while ( __sync_bool_compare_and_swap(&lit_occurrence_count[toInt(lit)], old_count, new_count) == false);
+        }
+        c.unlock();
+        return true;
+    } 
+    else
+    {
+        c.unlock();
+        return false;
+    }
+}
 
 inline BIG::BIG()
 : storage(0), sizes(0), big(0), start(0), stop(0)
