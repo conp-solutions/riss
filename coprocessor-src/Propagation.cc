@@ -18,7 +18,7 @@ Propagation::Propagation( ClauseAllocator& _ca, ThreadController& _controller )
 }
 
 
-lbool Propagation::process(CoprocessorData& data, bool sort)
+lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHeapLt> * heap)
 {
   processTime = cpuTime() - processTime;
   modifiedFormula = false;
@@ -43,6 +43,7 @@ lbool Propagation::process(CoprocessorData& data, bool sort)
       ca[ positive[i] ].set_delete(true);
       modifiedFormula = true;
       data.removedClause( positive[i] );
+      data.removedClause( positive[i], heap );
       // TODO : necessary? -> just performance trade-off
       /*for (int lit = 0; lit < satisfied.size(); ++lit)
       {
@@ -96,7 +97,7 @@ lbool Propagation::process(CoprocessorData& data, bool sort)
       }
     }
     // update formula data!
-    data.removedLiteral(nl, count);
+    data.removedLiteral(nl, count, heap);
     removedLiterals += count;
     data.list(nl).clear();
   }

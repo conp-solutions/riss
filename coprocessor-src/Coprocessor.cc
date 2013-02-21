@@ -15,7 +15,7 @@ static IntOption  opt_threads    (_cat, "cp3_threads",    "Number of extra threa
 static BoolOption opt_unlimited  (_cat, "cp3_unlimited",  "No limits for preprocessing techniques", true);
 static BoolOption opt_randomized (_cat, "cp3_randomized", "Steps withing preprocessing techniques are executed in random order", false);
 static IntOption  opt_verbose    (_cat, "cp3_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
-static BoolOption opt_printStats (_cat, "cp3_stats",      "Print Technique Statistics", false);
+       BoolOption opt_printStats (_cat, "cp3_stats",      "Print Technique Statistics", false);
 // techniques
 static BoolOption opt_up        (_cat2, "up",            "Use Unit Propagation during preprocessing", false);
 static BoolOption opt_subsimp   (_cat2, "subsimp",       "Use Subsumption during preprocessing", false);
@@ -382,6 +382,7 @@ void Preprocessor::initializePreprocessor()
     assert( c.mark() == 0 && "mark of a clause has to be 0 before being put into preprocessor" );
     // if( ca[cr].mark() != 0  ) continue; // do not use any specially marked clauses!
     // cerr << "c process clause " << cr << endl;
+
     if( c.size() == 0 ) {
       data.setFailed(); 
       break;

@@ -36,7 +36,7 @@ public:
    *  will run over all clauses with satisfied/unsatisfied literals (that have not been done already)
    *  @return l_Undef, if no conflict has been found, l_False if there has been a conflict
    */
-  lbool process(CoprocessorData& data, bool sort = false);
+  lbool process(CoprocessorData& data, bool sort = false, Heap<VarOrderBVEHeapLt> * heap = NULL);
   
   void initClause( const CRef cr );
   
