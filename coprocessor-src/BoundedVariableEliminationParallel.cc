@@ -574,7 +574,7 @@ inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData 
             else 
                 data.removedClause(cr, NULL,  &data_lock, NULL);
 
-            if (! c.learnt() && cr < limit) {
+            if (! c.learnt() /*&& cr < limit*/) {
                 data_lock.lock();
                 data.addToExtension(cr, l);
                 data_lock.unlock();
@@ -863,7 +863,7 @@ inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(Coprocess
                 data.removedClause(cr, &heap, &data_lock, &heap_lock); // updates stats and deleteTimer
             else 
                 data.removedClause(cr, NULL,  &data_lock, NULL);
-            if(! c.learnt() && cr < limit)
+            if(! c.learnt() /* && cr < limit*/)
             {
                 data_lock.lock();
                 data.addToExtension(cr, l);

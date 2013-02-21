@@ -510,7 +510,7 @@ inline void BoundedVariableElimination::removeClauses(CoprocessorData & data, He
                 data.removedClause(cr);
             didChange();
             c.set_delete(true);
-            if (!c.learnt() && cr < limit) data.addToExtension(cr, l);
+            if (!c.learnt() /*&& cr < limit*/) data.addToExtension(cr, l);
             if (doStatistics)
             {
                 if (c.learnt())
@@ -834,7 +834,7 @@ inline void BoundedVariableElimination::removeBlockedClauses(CoprocessorData & d
             else
                 data.removedClause(list[ci]);
             didChange();
-            if (!c.learnt() && ci < limit) 
+            if (!c.learnt() /*&& ci < limit*/) 
                 data.addToExtension(list[ci], l);
             if (doStatistics)
             {
