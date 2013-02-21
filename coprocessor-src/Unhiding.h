@@ -39,6 +39,7 @@ class Unhiding : public Technique {
   
   unsigned removedClauses;	// number of removed clauses
   unsigned removedLiterals;	// number of removed literals
+  unsigned removedLits;		// number of literals that are removed by unhiding
   double unhideTime;		// seconds for unhiding
   
 public:
