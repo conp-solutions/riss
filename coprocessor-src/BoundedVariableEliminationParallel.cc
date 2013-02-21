@@ -429,9 +429,9 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
             //mark Clauses without resolvents for deletion
             if(opt_bve_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
             if(opt_bve_verbose > 1) cerr << "c removing blocked clauses from F_" << v+1 << endl;
-            removeBlockedClausesThreadSafe(data, heap, pos, pos_stats, mkLit(v, false), data_lock, heap_lock, stats, doStatistics); 
+            removeBlockedClausesThreadSafe(data, heap, pos, pos_stats, mkLit(v, false), p_limit, data_lock, heap_lock, stats, doStatistics); 
             if(opt_bve_verbose > 1) cerr << "c removing blocked clauses from F_¬" << v+1 << endl;
-            removeBlockedClausesThreadSafe(data, heap, neg, neg_stats, mkLit(v, true), data_lock, heap_lock, stats, doStatistics); 
+            removeBlockedClausesThreadSafe(data, heap, neg, neg_stats, mkLit(v, true), n_limit, data_lock, heap_lock, stats, doStatistics); 
         }
         assert(rwlock_count == 1);
         --rwlock_count;
@@ -502,8 +502,8 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
 
              // remove Clauses that were resolved
              // (since write lock, no threadsafe implementation needed)
-             removeClausesThreadSafe(data, heap, pos, mkLit(v,false), data_lock, heap_lock, stats, doStatistics);
-             removeClausesThreadSafe(data, heap, neg, mkLit(v,true) , data_lock, heap_lock, stats, doStatistics);
+             removeClausesThreadSafe(data, heap, pos, mkLit(v,false), p_limit, data_lock, heap_lock, stats, doStatistics);
+             removeClausesThreadSafe(data, heap, neg, mkLit(v,true) , n_limit, data_lock, heap_lock, stats, doStatistics);
              if (opt_bve_verbose > 0) cerr << "c Resolved " << v+1 <<endl;
              if (doStatistics) ++stats.eliminatedVars;
 
@@ -557,7 +557,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
  *
  *      TODO don't use the data_lock, since we already have the global writeLock
  */
-inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const vector<CRef> & list, const Lit l, SpinLock & data_lock, SpinLock & heap_lock, ParBVEStats & stats, const bool doStatistics)
+inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const vector<CRef> & list, const Lit l, const int limit, SpinLock & data_lock, SpinLock & heap_lock, ParBVEStats & stats, const bool doStatistics)
 {
     for (int cr_i = 0; cr_i < list.size(); ++cr_i)
     {
@@ -574,9 +574,11 @@ inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData 
             else 
                 data.removedClause(cr, NULL,  &data_lock, NULL);
 
-            data_lock.lock();
-            if (! c.learnt()) data.addToExtension(cr, l);
-            data_lock.unlock();
+            if (! c.learnt() && cr < limit) {
+                data_lock.lock();
+                data.addToExtension(cr, l);
+                data_lock.unlock();
+            }
             if (doStatistics)
             {
                 if (c.learnt())
@@ -843,7 +845,7 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, H
  * i.e. all resolvents are tautologies
  *
  */
-inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const vector< CRef> & list, const int32_t _stats[], const Lit l, SpinLock & data_lock, SpinLock & heap_lock, ParBVEStats & stats, const bool doStatistics)
+inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const vector< CRef> & list, const int32_t _stats[], const Lit l, const int limit, SpinLock & data_lock, SpinLock & heap_lock, ParBVEStats & stats, const bool doStatistics)
 {
    for (unsigned ci = 0; ci < list.size(); ++ci)
    {    
@@ -861,9 +863,12 @@ inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(Coprocess
                 data.removedClause(cr, &heap, &data_lock, &heap_lock); // updates stats and deleteTimer
             else 
                 data.removedClause(cr, NULL,  &data_lock, NULL);
-            data_lock.lock();
-            if(! c.learnt()) data.addToExtension(cr, l);
-            data_lock.unlock();
+            if(! c.learnt() && cr < limit)
+            {
+                data_lock.lock();
+                data.addToExtension(cr, l);
+                data_lock.unlock();
+            }
             if (doStatistics)
             {
                 if (c.learnt())

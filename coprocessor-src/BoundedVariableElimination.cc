@@ -449,9 +449,9 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                    //mark Clauses without resolvents for deletion
                    if(opt_bve_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
                    if(opt_bve_verbose > 1) cerr << "c removing blocked clauses from F_" << v+1 << endl;
-                   removeBlockedClauses(data, heap, pos, pos_stats, mkLit(v, false));
+                   removeBlockedClauses(data, heap, pos, pos_stats, mkLit(v, false), p_limit, doStatistics);
                    if(opt_bve_verbose > 1) cerr << "c removing blocked clauses from F_¬" << v+1 << endl;
-                   removeBlockedClauses(data, heap, neg, neg_stats, mkLit(v, true));
+                   removeBlockedClauses(data, heap, neg, neg_stats, mkLit(v, true), n_limit, doStatistics);
                }
            }
 
@@ -465,8 +465,8 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                 if (resolveSet(data, heap, pos, neg, v, p_limit, n_limit) == l_False)
                     return;
                 if (doStatistics) ++eliminatedVars;
-                removeClauses(data, heap, pos, mkLit(v,false));
-                removeClauses(data, heap, neg, mkLit(v,true));
+                removeClauses(data, heap, pos, mkLit(v,false), p_limit, doStatistics);
+                removeClauses(data, heap, neg, mkLit(v,true),  n_limit, doStatistics);
                
                 if (opt_bve_verbose > 0) cerr << "c Resolved " << v+1 <<endl;
                 //subsumption with new clauses!!
@@ -495,7 +495,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
  *      remove it from data-Objects statistics
  *      mark it for deletion
  */
-inline void BoundedVariableElimination::removeClauses(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const vector<CRef> & list, const Lit l, const bool doStatistics)
+inline void BoundedVariableElimination::removeClauses(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const vector<CRef> & list, const Lit l, const int limit, const bool doStatistics)
 {
     for (int cr_i = 0; cr_i < list.size(); ++cr_i)
     {
@@ -510,7 +510,7 @@ inline void BoundedVariableElimination::removeClauses(CoprocessorData & data, He
                 data.removedClause(cr);
             didChange();
             c.set_delete(true);
-            if (!c.learnt()) data.addToExtension(cr, l);
+            if (!c.learnt() && cr < limit) data.addToExtension(cr, l);
             if (doStatistics)
             {
                 if (c.learnt())
@@ -819,7 +819,7 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, Heap<VarOrd
  * i.e. all resolvents are tautologies
  *
  */
-inline void BoundedVariableElimination::removeBlockedClauses(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const vector< CRef> & list, const int32_t stats[], const Lit l , const bool doStatistics)
+inline void BoundedVariableElimination::removeBlockedClauses(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const vector< CRef> & list, const int32_t stats[], const Lit l , const int limit, const bool doStatistics)
 {
    for (unsigned ci = 0; ci < list.size(); ++ci)
    {    
@@ -834,7 +834,7 @@ inline void BoundedVariableElimination::removeBlockedClauses(CoprocessorData & d
             else
                 data.removedClause(list[ci]);
             didChange();
-            if (!c.learnt()) 
+            if (!c.learnt() && ci < limit) 
                 data.addToExtension(list[ci], l);
             if (doStatistics)
             {
