@@ -21,6 +21,7 @@ extern BoolOption opt_force_gates;
 static int upLevel = 1;
 extern BoolOption opt_bve_bc;
 extern IntOption heap_updates;
+extern BoolOption opt_bce_only;
 
 static inline void printLitErr(const Lit l) 
 {
@@ -447,7 +448,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         // if resolving reduces number of literals in clauses: 
         //    add resolvents
         //    mark old clauses for deletion
-        if (new_clauses > 0 && (force || lit_clauses <= lit_clauses_old))
+        if (!opt_bce_only && new_clauses > 0 && (force || lit_clauses <= lit_clauses_old))
         {
         ///////////////////////////////////////////////////////////////////////////////////////////
         //

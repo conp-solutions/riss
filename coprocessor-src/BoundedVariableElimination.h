@@ -96,10 +96,7 @@ public:
   lbool runBVE(CoprocessorData& data, const bool doStatistics = true);
 
   void initClause(const CRef cr); // inherited from Technique
-
-  
-
-
+  void destroy();
   void printStatistics(ostream& stream);
 
 protected:
