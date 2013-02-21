@@ -20,6 +20,8 @@ using namespace std;
  IntOption  opt_bve_heap        (_cat_bve, "cp3_bve_heap"     ,  "0: minimum heap, 1: maximum heap, 2: random", 0, IntRange(0,2));
  BoolOption opt_bve_bc          (_cat_bve, "bve_BCElim",    "Eliminate Blocked Clauses", true);
  IntOption heap_updates         (_cat_bve, "bve_heap_updates",    "Always update variable heap if clauses / literals are added or removed, 2 add variables, if not in heap", 1, IntRange(0,2));
+ BoolOption opt_bce_only        (_cat_bve, "bce_only",    "Only remove blocked clauses but do not resolve variables.", false);
+
 extern BoolOption opt_printStats;
 
 BoundedVariableElimination::BoundedVariableElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation, Coprocessor::Subsumption & _subsumption )
@@ -458,7 +460,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            // if resolving reduces number of literals in clauses: 
            //    add resolvents
            //    mark old clauses for deletion
-           if (force || (lit_clauses > 0 && lit_clauses <= lit_clauses_old))
+           if ((force || (lit_clauses > 0 && lit_clauses <= lit_clauses_old)) && !opt_bce_only)
            {
 		        if (doStatistics) usedGates = (foundGate ? usedGates + 1 : usedGates ); // statistics
                 if(opt_bve_verbose > 1)  cerr << "c resolveSet" <<endl;
@@ -1001,3 +1003,32 @@ inline bool BoundedVariableElimination::findGates(CoprocessorData & data, const 
 
   return false;
 }
+/**
+ *  Performs clear and minimize on all member vars to release memory
+ */
+void BoundedVariableElimination::destroy()
+{
+    
+  vector< Var >().swap( touched_variables);
+  vector< Var >().swap( variable_queue   );
+  
+  resolvent.clear(true); // vector for sequential resolution
+
+  // parallel member variables
+  lastTouched.destroy();                    //MarkArray to track modifications of parallel BVE-Threads
+  dirtyOccs.destroy();                      // tracks occs that contain CRef_Undef
+  vector< Job >().swap( jobs );                     
+  vector< SpinLock >().swap( variableLocks );         // 3 extra SpinLock for data, heap, ca
+  vector< deque < CRef > >().swap( subsumeQueues );
+  vector< deque < CRef > >().swap( strengthQueues);
+  vector< MarkArray > ().swap( gateMarkArrays );
+  if (neighbor_heaps != 0)
+  {
+    for (int i = 0; i < controller.size(); ++i)
+        if (neighbor_heaps[i] != 0)
+            delete neighbor_heaps[i];
+    free(neighbor_heaps);
+  }
+  deque< CRef > ().swap (sharedStrengthQueue );
+}
+
