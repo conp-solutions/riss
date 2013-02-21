@@ -42,34 +42,34 @@ void HiddenTautologyElimination::process(CoprocessorData& data)
   big.create(ca,data,data.getClauses() );
 
   if( debug_out > 1 ) {
-  fprintf(stderr, "implications:\n");
-  // debug output - print big
-  for( Var v = 0 ; v < data.nVars(); ++v )
-  {
-    Lit l         = mkLit(v,false);
-    Lit* list     = big.getArray(l);
-    uint32_t size = big.getSize(l);
-    printLit(l);
-    fprintf(stderr, " -> ");
-    for( int i = 0 ; i < size; ++ i )
+    fprintf(stderr, "implications:\n");
+    // debug output - print big
+    for( Var v = 0 ; v < data.nVars(); ++v )
     {
-      printLit( list[i] );
-      fprintf(stderr, ", ");   
+      Lit l         = mkLit(v,false);
+      Lit* list     = big.getArray(l);
+      uint32_t size = big.getSize(l);
+      printLit(l);
+      fprintf(stderr, " -> ");
+      for( int i = 0 ; i < size; ++ i )
+      {
+	printLit( list[i] );
+	fprintf(stderr, ", ");   
+      }
+      fprintf(stderr, "\n");
+      l    = mkLit(v,true);
+      list = big.getArray(l);
+      size = big.getSize(l);
+      
+      printLit(l);
+      fprintf(stderr, " -> ");
+      for( int i = 0 ; i < size; ++ i )
+      {
+	printLit( list[i] );
+	fprintf(stderr, ", ");   
+      }
     }
-    fprintf(stderr, "\n");
-    l    = mkLit(v,true);
-    list = big.getArray(l);
-    size = big.getSize(l);
-    
-    printLit(l);
-    fprintf(stderr, " -> ");
-    for( int i = 0 ; i < size; ++ i )
-    {
-      printLit( list[i] );
-      fprintf(stderr, ", ");   
-    }
-  }
-  fprintf(stderr, "\n");  
+    fprintf(stderr, "\n");  
   }
   
   // get active variables
@@ -134,7 +134,7 @@ void HiddenTautologyElimination::elimination_worker (CoprocessorData& data, uint
     const Var v = activeVariables[index];
     if( opt_uhdUHTE )  fprintf(stderr, "c HTE on variable %d\n", v+1);
     
-    if( true ) {
+    if( false ) {
       for ( int i = 0 ; i < data.getClauses().size(); ++ i ) if( !ca[ data.getClauses()[i] ].can_be_deleted() ) cerr << ca[ data.getClauses()[i] ] << endl; 
     }
     
@@ -273,7 +273,7 @@ bool HiddenTautologyElimination::hiddenTautologyElimination(Var v, CoprocessorDa
 	Lit* binaryI = big.getArray( ~i );
 	const uint32_t binaryIsize = big.getSize(~i);
         for ( uint32_t j = 0; j < binaryIsize; j++ ) {
-	  if( opt_uhdUHTE ) cerr << "c mark " << toInt( ~binaryI[j] ) << " with " << toInt(i) << endl;
+	  if( opt_uhdUHTE && debug_out) cerr << "c mark " << toInt( ~binaryI[j] ) << " with " << toInt(i) << endl;
 	  hlaArray.setCurrentStep( toInt( ~binaryI[j] ) );
 	}
    // TODO: port other code     
