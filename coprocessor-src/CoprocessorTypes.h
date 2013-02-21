@@ -15,11 +15,11 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 using namespace Minisat;
 using namespace std;
-
+extern IntOption heap_updates; // Updates of BVE-Heap
 namespace Coprocessor {
 
   /// temporary Boolean flag to quickly enable debug output for the whole file
-  const bool global_debug_out = true;
+  const bool global_debug_out = false;
   
   //forward declaration
   class VarGraphUtils;
@@ -521,7 +521,10 @@ inline void CoprocessorData::addClause ( const CRef cr , Heap<VarOrderBVEHeapLt>
         occs[toInt(c[l])].push_back(cr);
         lit_occurrence_count[toInt(c[l])] += 1;
         if (heap != NULL)
-            heap->update(var(c[l]));
+            if (heap->inHeap(var(c[l])))
+                heap->increase(var(c[l]));
+            else if (heap_updates == 2)
+                heap->update(var(c[l]));
       }
       if (heap_lock != NULL) 
           heap_lock->unlock();
@@ -672,7 +675,10 @@ inline void CoprocessorData::addedLiteral( const Lit l, const int32_t diff, Heap
         lit_occurrence_count[toInt(l)] += diff;
         if (heap != NULL)
         {
-            heap->update(var(l));
+            if (heap->inHeap(var(l)))
+                heap->increase(var(l));
+            else if (heap_updates == 2)
+                heap->update(var(l));
         }    
         if (heap_lock != NULL)
             heap_lock->unlock();
@@ -698,9 +704,9 @@ inline void CoprocessorData::removedLiteral( const Lit l, const int32_t diff, He
     if (heap != NULL)
     {
         if (heap->inHeap(var(l)))
-        {
             heap->decrease(var(l));
-        }
+        else if (heap_updates == 2)
+            heap->update(var(l));
     }
     if (heap_lock != NULL)
         heap_lock->unlock();
@@ -729,7 +735,10 @@ inline void CoprocessorData::addedClause (   const CRef cr, Heap<VarOrderBVEHeap
         lit_occurrence_count[toInt(c[l])] += 1;
         if (heap != NULL)
         {
-            heap->update(var(c[l]));
+            if (heap->inHeap(var(c[l])))
+                heap->increase(var(c[l]));
+            else if (heap_updates == 2)
+                heap->update(var(c[l]));
         }
       }
       numberOfCls --;
@@ -762,9 +771,9 @@ inline void CoprocessorData::removedClause ( const CRef cr, Heap<VarOrderBVEHeap
         if (heap != NULL)
         {
             if (heap->inHeap(var(c[l])))
-            {
                 heap->decrease(var(c[l]));
-            }
+            else if (heap_updates == 2)
+                heap->update(var(c[l]));
         }
       }
       numberOfCls --;
@@ -929,7 +938,7 @@ inline void CoprocessorData::addToExtension(const Lit dontTouch, const Lit l)
 
 inline void CoprocessorData::extendModel(vec< lbool >& model)
 {
-  const bool local_debug = true;
+  const bool local_debug = false;
   if( global_debug_out || local_debug) {
     cerr << "c extend model of size " << model.size() << " with undo information of size " << undo.size() << endl;
     cerr << "c  in model: ";
@@ -1041,7 +1050,6 @@ bool inline CoprocessorData::removeClauseThreadSafe (const CRef cr)
     c.spinlock();
     if (!c.can_be_deleted())
     {
-        didChange();
         c.set_delete(true);
         while ( __sync_bool_compare_and_swap(&numberOfCls, numberOfCls, numberOfCls-1) == false);
         for (int l = 0; l < c.size(); ++l)

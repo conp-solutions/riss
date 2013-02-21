@@ -19,7 +19,7 @@ using namespace std;
  BoolOption opt_force_gates     (_cat_bve, "bve_force_gates", "Force gate search (slower, but probably more eliminations and blockeds are found)", false);
  IntOption  opt_bve_heap        (_cat_bve, "cp3_bve_heap"     ,  "0: minimum heap, 1: maximum heap, 2: random", 0, IntRange(0,2));
  BoolOption opt_bve_bc          (_cat_bve, "bve_BCElim",    "Eliminate Blocked Clauses", true);
- BoolOption heap_updates (_cat_bve, "bve_heap_updates",    "Always update variable heap if clauses / literals are added or removed", true);
+ IntOption heap_updates         (_cat_bve, "bve_heap_updates",    "Always update variable heap if clauses / literals are added or removed, 2 add variables, if not in heap", 1, IntRange(0,2));
 extern BoolOption opt_printStats;
 
 BoundedVariableElimination::BoundedVariableElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation, Coprocessor::Subsumption & _subsumption )
@@ -472,7 +472,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                 if (opt_bve_verbose > 0) cerr << "c Resolved " << v+1 <<endl;
                 //subsumption with new clauses!!
                 if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
-                if (heap_updates && opt_bve_heap != 2)
+                if (heap_updates > 0 && opt_bve_heap != 2)
                     subsumption.subsumeStrength(&heap);
                 else 
                     subsumption.subsumeStrength();
@@ -506,7 +506,7 @@ inline void BoundedVariableElimination::removeClauses(CoprocessorData & data, He
         if (!c.can_be_deleted())
         {
 	    // also updated deleteTimer
-            if (heap_updates && opt_bve_heap != 2)
+            if (heap_updates > 0 && opt_bve_heap != 2)
                 data.removedClause(cr, &heap);
             else
                 data.removedClause(cr);
@@ -742,7 +742,7 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, Heap<VarOrd
                     CRef cr = ca.alloc(ps, p.learnt() || n.learnt()); 
                     // IMPORTANT! dont use p and n in this block, as they could got invalid
                     Clause & resolvent = ca[cr];
-                    if (heap_updates && opt_bve_heap != 2)
+                    if (heap_updates > 0 && opt_bve_heap != 2)
                         data.addClause(cr, &heap);
                     else 
                         data.addClause(cr);
@@ -829,7 +829,7 @@ inline void BoundedVariableElimination::removeBlockedClauses(CoprocessorData & d
         if (stats[ci] == 0)
         { 
             c.set_delete(true);
-            if (heap_updates && opt_bve_heap != 2)
+            if (heap_updates > 0 && opt_bve_heap != 2)
                 data.removedClause(list[ci], &heap);
             else
                 data.removedClause(list[ci]);
