@@ -97,7 +97,7 @@ lbool Preprocessor::performSimplification()
   
   if( opt_verbose > 2 )cerr << "c coprocessor finished initialization" << endl;
   
-  const bool printBVE = false, printBVA = false, printCCE = false, printEE = false, printHTE = false, printSusi = false, printUP = false;  
+  const bool printBVE = false, printBVA = false, printProbe = false, printUnhide = false, printCCE = false, printEE = false, printHTE = false, printSusi = false, printUP = false;  
   
   // do preprocessing
   if( opt_up ) {
@@ -159,6 +159,9 @@ lbool Preprocessor::performSimplification()
     if( !data.ok() ) status = l_False;
   }
   
+  if( false  || printUnhide  ) {
+   printFormula("after Unhiding");
+  }
   if( opt_debug ) checkLists("after UNHIDING");
   
   if( opt_hte ) {
@@ -177,6 +180,9 @@ lbool Preprocessor::performSimplification()
     if( !data.ok() ) status = l_False;
   }
   if( opt_debug ) checkLists("after PROBE");
+  if( false  || printProbe ) {
+   printFormula("after Probing");
+  }
   
   if ( opt_bve ) {
     if( opt_verbose > 2 )cerr << "c coprocessor blocked variable elimination" << endl;
@@ -375,7 +381,7 @@ void Preprocessor::initializePreprocessor()
     Clause& c = ca[cr];
     assert( c.mark() == 0 && "mark of a clause has to be 0 before being put into preprocessor" );
     // if( ca[cr].mark() != 0  ) continue; // do not use any specially marked clauses!
-    cerr << "c process clause " << cr << endl;
+    // cerr << "c process clause " << cr << endl;
     if( c.size() == 0 ) {
       data.setFailed(); 
       break;
@@ -398,7 +404,7 @@ void Preprocessor::initializePreprocessor()
     const CRef cr = solver->learnts[i];
     Clause& c = ca[cr];
     assert( c.mark() == 0 && "mark of a clause has to be 0 before being put into preprocessor" );
-    cerr << "c process learnt clause " << cr << endl;
+    // cerr << "c process learnt clause " << cr << endl;
     // if( ca[cr].mark() != 0  ) continue; // do not use any specially marked clauses!
     if( c.size() == 0 ) {
       data.setFailed(); 

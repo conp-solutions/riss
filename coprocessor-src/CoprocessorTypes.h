@@ -1146,10 +1146,11 @@ inline void BIG::removeEdge(const Lit l0, const Lit l1)
     if( list[i] == l1 ) {
       list[i] = list[ size - 1 ];
       sizes[ toInt(~l0) ] --;
+      break;
     }
   }
-  Lit* list2 = getArray( ~l0 );
-  const uint32_t size2 = getSize( ~l0 );
+  Lit* list2 = getArray( ~l1 );
+  const uint32_t size2 = getSize( ~l1 );
   for( int i = 0 ; i < size2; ++i )
   {
     if( list2[i] == l0 ) {

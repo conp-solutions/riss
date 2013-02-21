@@ -1821,6 +1821,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	     if( c[m-1] != c[m] ) c[n++] = c[m];
 	   }
            c.shrink(s-n);
+	   if( debug_out ) cerr << "c ee shrinked clause to " << c << endl;
 	   modifiedFormula = true;
 	   
 	   if( c.size() == 2 )  { // take care of newly created binary clause for further analysis!
