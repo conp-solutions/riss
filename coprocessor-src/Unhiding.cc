@@ -31,6 +31,7 @@ Unhiding::Unhiding(ClauseAllocator& _ca, ThreadController& _controller, Coproces
 , uhdEE(opt_uhdEE)
 , removedClauses(0)
 , removedLiterals(0)
+, removedLits(0)
 , unhideTime(0)
 {
 
@@ -115,7 +116,7 @@ uint32_t Unhiding::linStamp( const Lit literal, uint32_t stamp, bool& detectedEE
 	if( stampInfo[ toInt( ~l1 ) ].dsc != 0 && stampInfo[ toInt( ~l1 ) ].fin == 0 ) continue;
       }
       
-      if( opt_uhdDebug > 1 ) cerr << "c [UHD-A] enqueue " << l1 << " with dsc=" << stampInfo[ toInt(l1) ].dsc << " index=" << stampInfo[ toInt(l1) ].index << endl;
+      if( opt_uhdDebug > 1 ) cerr << "c [UHD-A] enqueue " << l1 << " with dsc=" << stampInfo[ toInt(l1) ].dsc << " index=" << stampInfo[ toInt(l1) ].index << " state ok? " << data.ok() << endl;
       if( stampInfo[ toInt(l1) ].dsc == 0 ) {
 	stampInfo[ toInt(l) ].lastSeen = l1; // set information if literals are pushed back
 	stampInfo[ toInt(l1) ].parent = l;
@@ -339,6 +340,9 @@ bool Unhiding::unhideSimplify()
   
   // removes ignored clauses, destroys mark-to-delete clauses
   uint32_t j = 0;
+  
+  // TODO implement second for loop to iterate also over learned clauses and check whether one of them is not learned!
+  
   for( uint32_t i = 0 ; i < data.getClauses().size(); ++ i ) 
   {
     // run UHTE before UHLE !!  (remark in paper)
@@ -346,7 +350,7 @@ bool Unhiding::unhideSimplify()
     Clause& clause = ca[clRef];
     if( clause.can_be_deleted() ) continue;
 
-    if( opt_uhdDebug > 1 ) { cerr << "c [UHD] work on " << clause << endl; }
+    if( opt_uhdDebug > 0 ) { cerr << "c [UHD] work on " << clause << " state ok? " << data.ok() << endl; }
     
     const uint32_t cs = clause.size();
     Lit Splus  [cs];
@@ -448,9 +452,10 @@ bool Unhiding::unhideSimplify()
 	  const Lit l = Splus[ pp - 1];
 	  const uint32_t fin = stampInfo[  toInt(l)  ].fin;
 	  if( fin > finished ) {
-	    if( opt_uhdDebug > 1 ){  cerr << "c [UHLE-P] remove " << l << " because finish time of " << finLit << " from " << clause << endl; }
+	    if( opt_uhdDebug > 0 ){  cerr << "c [UHLE-P] remove " << l << " because finish time of " << finLit << " from " << clause << endl; }
 	    data.removeClauseFrom( clRef, l );
 	    data.removedLiteral(l);
+	    removedLits++;
 	    modifiedFormula = true;
 	    if( clause.size() == 2 ) big.removeEdge(clause[0],clause[1]);
 	    clause.remove_lit(l);
@@ -497,6 +502,7 @@ bool Unhiding::unhideSimplify()
 	    modifiedFormula = true;
 	    if( clause.size() == 2 ) big.removeEdge(clause[0],clause[1]);
 	    clause.remove_lit( ~l );
+	    removedLits++;
 	    // tell subsumption / strengthening about this modified clause
 	    data.addSubStrengthClause(clRef);
 	    // if you did something useful, call
@@ -541,11 +547,19 @@ void Unhiding::process (  )
   stampInfo.resize( 2*data.nVars() );
   unhideEEflag.resize( 2*data.nVars() );
   
-  // be careful here - do not use learned clauses, because they could be removed, and then the whole mechanism breaks
-  big.create(ca, data, data.getClauses() );
-  
   for( uint32_t iteration = 0 ; iteration < unhideIter; ++ iteration )
   {
+    // TODO: either re-create BIG, or do clause modifications after algorithm finished
+    // be careful here - do not use learned clauses, because they could be removed, and then the whole mechanism breaks
+    big.recreate(ca, data, data.getClauses() );    
+    
+    if( opt_uhdDebug > 2 ) {
+      cerr << "c iteration " << iteration << " formula, state ok? " << data.ok() << endl;
+      for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
+	if( !ca[ data.getClauses()[i] ].can_be_deleted() ) cerr << ca[ data.getClauses()[i] ] << endl;
+      }
+    }
+    
     bool foundEE = false;
     uint32_t stamp = 0 ;
     
@@ -600,9 +614,10 @@ void Unhiding::process (  )
     
     if( opt_uhdDebug > 0 ) cerr << "c [UHD] foundEE: " << foundEE << endl;
     
-    if( data.ok() ) {
+    // propagating might destroy the information of the stamps?
+    if( false &&  data.ok() ) {
       if( data.hasToPropagate() ) {
-	if( opt_uhdDebug > 1 ) cerr << "c [UHD-A] run UP before simplification" << endl;
+	if( opt_uhdDebug > 1 ) cerr << "c [UHD-A] run UP before simplification, state ok? " << data.ok() << endl;
 	propagation.process(data,true);
 	modifiedFormula = modifiedFormula || propagation.appliedSomething();
       }
@@ -632,6 +647,13 @@ void Unhiding::process (  )
     
   } // next iteration ?!
 
+  if( opt_uhdDebug > 2 ) {
+    cerr << "c final formula with solver state " << data.ok() << endl;
+    for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
+      if( !ca[ data.getClauses()[i] ].can_be_deleted() ) cerr << "(" << data.getClauses()[i] << ") " << ca[ data.getClauses()[i] ] << endl;
+    }
+  }
+  
   return;
 
 }
@@ -639,6 +661,11 @@ void Unhiding::process (  )
 
 void Unhiding::printStatistics( ostream& stream )
 {
-  stream << "c [UNHIDE] " << endl;   
+  stream << "c [UNHIDE] " 
+  << unhideTime << " s, "
+  << removedClauses << " cls, "
+  << removedLiterals << " totalLits, "
+  << removedLits << " lits "
+  << endl;   
 }
 

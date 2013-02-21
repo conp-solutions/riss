@@ -97,11 +97,11 @@ lbool Preprocessor::performSimplification()
   
   if( opt_verbose > 2 )cerr << "c coprocessor finished initialization" << endl;
   
-  const bool printBVE = false, printBVA = false, printProbe = false, printUnhide = false, printCCE = false, printEE = false, printHTE = false, printSusi = false, printUP = false;  
+  const bool printBVE = false, printBVA = false, printProbe = false, printUnhide = true, printCCE = false, printEE = false, printHTE = false, printSusi = false, printUP = false;  
   
   // do preprocessing
   if( opt_up ) {
-    if( opt_verbose > 2 )cerr << "c coprocessor propagate" << endl;
+    if( opt_verbose > 2 )cerr << "c coprocessor(" << data.ok() << ") propagate" << endl;
     if( status == l_Undef ) status = propagation.process(data);
   }
   
@@ -117,7 +117,7 @@ lbool Preprocessor::performSimplification()
       subsumption.resetStatistics();
 
   if( opt_subsimp ) {
-    if( opt_verbose > 2 )cerr << "c coprocessor subsume/strengthen" << endl;
+    if( opt_verbose > 2 )cerr << "c coprocessor(" << data.ok() << ") subsume/strengthen" << endl;
     if( status == l_Undef ) subsumption.process();  // cannot change status, can generate new unit clauses
     if (! solver->okay())
         status = l_False;
@@ -130,7 +130,7 @@ lbool Preprocessor::performSimplification()
   if( opt_debug ) checkLists("after SUSI");
   
   if( opt_ee ) { // before this technique nothing should be run that alters the structure of the formula (e.g. BVE;BVA)
-    if( opt_verbose > 2 )cerr << "c coprocessor equivalence elimination" << endl;
+    if( opt_verbose > 2 )cerr << "c coprocessor(" << data.ok() << ") equivalence elimination" << endl;
     if( status == l_Undef ) ee.process(data);  // cannot change status, can generate new unit clauses
     if (! data.ok() )
         status = l_False;
@@ -154,7 +154,7 @@ lbool Preprocessor::performSimplification()
   }
   
   if ( opt_unhide ) {
-    if( opt_verbose > 2 )cerr << "c coprocessor unhiding" << endl;
+    if( opt_verbose > 2 )cerr << "c coprocessor(" << data.ok() << ") unhiding" << endl;
     if( status == l_Undef ) unhiding.process(); 
     if( !data.ok() ) status = l_False;
   }
@@ -165,7 +165,7 @@ lbool Preprocessor::performSimplification()
   if( opt_debug ) checkLists("after UNHIDING");
   
   if( opt_hte ) {
-    if( opt_verbose > 2 )cerr << "c coprocessor hidden tautology elimination" << endl;
+    if( opt_verbose > 2 )cerr << "c coprocessor(" << data.ok() << ") hidden tautology elimination" << endl;
     if( status == l_Undef ) hte.process(data);  // cannot change status, can generate new unit clauses
   }
 
@@ -175,7 +175,7 @@ lbool Preprocessor::performSimplification()
   }
   
   if ( opt_probe ) {
-    if( opt_verbose > 2 )cerr << "c coprocessor probing" << endl;
+    if( opt_verbose > 2 )cerr << "c coprocessor(" << data.ok() << ") probing" << endl;
     if( status == l_Undef ) probing.process(); 
     if( !data.ok() ) status = l_False;
   }
@@ -185,7 +185,7 @@ lbool Preprocessor::performSimplification()
   }
   
   if ( opt_bve ) {
-    if( opt_verbose > 2 )cerr << "c coprocessor blocked variable elimination" << endl;
+    if( opt_verbose > 2 )cerr << "c coprocessor(" << data.ok() << ") blocked variable elimination" << endl;
     if( status == l_Undef ) status = bve.runBVE(data);  // can change status, can generate new unit clauses
   }
   
@@ -195,7 +195,7 @@ lbool Preprocessor::performSimplification()
   }
   
   if ( opt_bva ) {
-    if( opt_verbose > 2 )cerr << "c coprocessor blocked variable addition" << endl;
+    if( opt_verbose > 2 )cerr << "c coprocessor(" << data.ok() << ") blocked variable addition" << endl;
     if( status == l_Undef ) bva.variableAddtion(true); 
     if( !data.ok() ) status = l_False;
   }
@@ -206,7 +206,7 @@ lbool Preprocessor::performSimplification()
   }
   
   if( opt_cce ) {
-    if( opt_verbose > 2 )cerr << "c coprocessor (covered) clause elimination" << endl;
+    if( opt_verbose > 2 )cerr << "c coprocessor(" << data.ok() << ") (covered) clause elimination" << endl;
     if( status == l_Undef ) cce.process(data);  // cannot change status, can generate new unit clauses
   }
   

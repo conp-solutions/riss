@@ -68,8 +68,8 @@ void HiddenTautologyElimination::process(CoprocessorData& data)
 	printLit( list[i] );
 	fprintf(stderr, ", ");   
       }
+      fprintf(stderr, "\n");
     }
-    fprintf(stderr, "\n");  
   }
   
   // get active variables
@@ -134,9 +134,41 @@ void HiddenTautologyElimination::elimination_worker (CoprocessorData& data, uint
     const Var v = activeVariables[index];
     if( opt_uhdUHTE )  fprintf(stderr, "c HTE on variable %d\n", v+1);
     
-    if( false ) {
-      for ( int i = 0 ; i < data.getClauses().size(); ++ i ) if( !ca[ data.getClauses()[i] ].can_be_deleted() ) cerr << ca[ data.getClauses()[i] ] << endl; 
+  if( debug_out > 1 ) {
+    fprintf(stderr, "[HTE] ITERATION implications:\n");
+    // debug output - print big
+    for( Var v = 0 ; v < data.nVars(); ++v )
+    {
+      Lit l         = mkLit(v,false);
+      Lit* list     = big.getArray(l);
+      uint32_t size = big.getSize(l);
+      printLit(l);
+      fprintf(stderr, " -> ");
+      for( int i = 0 ; i < size; ++ i )
+      {
+	printLit( list[i] );
+	fprintf(stderr, ", ");   
+      }
+      fprintf(stderr, "\n");
+      l    = mkLit(v,true);
+      list = big.getArray(l);
+      size = big.getSize(l);
+      
+      printLit(l);
+      fprintf(stderr, " -> ");
+      for( int i = 0 ; i < size; ++ i )
+      {
+	printLit( list[i] );
+	fprintf(stderr, ", ");   
+      }
+      fprintf(stderr, "\n");
     }
+    
+    for ( int i = 0 ; i < data.getClauses().size(); ++ i ) if( !ca[ data.getClauses()[i] ].can_be_deleted() ) cerr << ca[ data.getClauses()[i] ] << endl; 
+    
+  }
+    
+
     
     // fill hlaArrays, check for failed literals
     if( true ) {
@@ -388,12 +420,12 @@ Lit HiddenTautologyElimination::fillHlaArrays(Var v, BIG& big, MarkArray& hlaPos
 	  const Lit kLit = ~kList[k];
 	  if( ! hlaArray.isCurrentStep( toInt(kLit) ) ) {
 	    if ( hlaArray.isCurrentStep( toInt( ~kLit) ) ) {
-	      if( opt_uhdUHTE ) cerr << "c [HTE] failed literal: " << toInt(i) << endl;
+	      if( opt_uhdUHTE ) cerr << "c [HTE] failed literal: " << i << endl;
 	      return i; // return the failed literal
 	    }
 	    
 	    hlaArray.setCurrentStep( toInt(kLit) );
-	    if( opt_uhdUHTE ) { cerr << "c [HTE] add to array " << toInt(i) << " for " << kLit << endl;
+	    if( opt_uhdUHTE ) { cerr << "c [HTE] add to array " << i << " for " << kLit << endl;
 	    }
 	    if( debug_out > 3 )  cerr << "c [HTE] put an element to the queue at position " << (int)(head - litQueue) << " with ptr " << std::hex << head << std::dec << endl;
 	    *(head++) = kLit;
