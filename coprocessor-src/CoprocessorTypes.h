@@ -945,6 +945,20 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
     }
     cerr << endl;
   }
+  
+  if( local_debug ) {
+    cerr << "extend Stack: " << endl; 
+    for( int i = undo.size() - 1; i >= 0 ; --i ) {
+      if( undo[i] == lit_Undef ) cerr << endl;
+      else cerr << " " << undo[i];
+    }
+    
+    
+    cerr << "next clause: ";
+    for( int j = undo.size() - 1; j >= 0 ; --j ) if( undo[j] == lit_Undef ) break; else cerr << " " << undo[j];
+    cerr << endl;
+
+  }
 
   // check current clause for being satisfied
   bool isSat = false; // FIXME: this bool is redundant!
@@ -958,7 +972,21 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
          // if clause is not satisfied, satisfy last literal!
          const Lit& satLit = undo[i+1];
          log.log(1, "set literal to true",satLit);
+	 if( local_debug ) cerr << "c set literal " << undo[i+1] << " to true " << endl;
          model[ var(satLit) ] = sign(satLit) ? l_False : l_True;
+       }
+       
+       // finished this clause!
+       if( local_debug ) { // print intermediate state!
+       cerr << "c current model: ";
+	for( int j = 0 ; j < model.size(); ++ j ) {
+	  const Lit satLit = mkLit( j, model[j] == l_True ? false : true );
+	  cerr << satLit << " ";
+	}
+	cerr << endl;
+        cerr << "next clause: ";
+	for( int j = i - 1; j >= 0 ; --j ) if( undo[j] == lit_Undef ) break; else cerr << " " << undo[j];
+	cerr << endl;
        }
        continue;
      }
@@ -969,6 +997,11 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
        while( undo[i] != lit_Undef ){ // skip literal until hitting the delimiter - for loop will decrease i once more
 	 if( global_debug_out  || local_debug) cerr << "c skip because SAT: " << undo[i] << endl; 
 	 --i;
+       }
+       if( local_debug ) { // print intermediate state!
+        cerr << "next clause: ";
+	for( int j = i - 1; j >= 0 ; --j ) if( undo[j] == lit_Undef ) break; else cerr << " " << undo[j];
+	cerr << endl;
        }
      }
   }

@@ -1767,6 +1767,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
        }
        
        int dataElements = data.lits.size();
+       data.ma.nextStep();
        for( int j = start ; j < i; ++ j ) {
 	 Lit l = ee[j];
 	 // first, process all the clauses on the list with old replacement variables
@@ -1776,8 +1777,20 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	   j--;
          }
 	 
-	 if( l == repr ) continue;
+	 if( l == repr ) {
+	   if( debug_out) cerr << "c do not process representative " << l << endl;
+	   continue;
+	 }
+	 
 	 data.log.log(eeLevel,"work on literal",l);
+	 
+	 // add to extension here!
+	 if( !data.doNotTouch(var(l)) && ! data.ma.isCurrentStep(var(l)) ) {
+	  data.addToExtension( ~repr , l );
+	  data.addToExtension( repr , ~l);
+	  data.ma.setCurrentStep(var(l)); // to not add same equivalence twice
+	 }
+	 
 	 // if( getReplacement(l) == repr )  continue;
 	 // TODO handle equivalence here (detect inconsistency, replace literal in all clauses, check for clause duplicates!)
 	 for( int pol = 0; pol < 2; ++ pol ) { // do for both polarities!
@@ -1871,10 +1884,6 @@ EEapplyNextClause:; // jump here, if a tautology has been found
        // clear all occurrence lists of certain ee class literals
        for( int j = start ; j < i; ++ j ) {
 	 if( ee[j] == repr ) continue;
-	 if( !data.doNotTouch(var(ee[j])) ) {
-	 data.addToExtension( ~repr , ee[j] );
-	 data.addToExtension( repr , ~ee[j]);
-	 }
 	 for( int pol = 0; pol < 2; ++ pol ) // clear both occurrence lists!
 	   (pol == 0 ? data.list( ee[j] ) : data.list( ~ee[j] )).clear();
 	 if( debug_out ) cerr << "c cleared list of var " << var( ee[j] ) + 1 << endl;
@@ -1882,7 +1891,7 @@ EEapplyNextClause:; // jump here, if a tautology has been found
 
        // TODO take care of untouchable literals!
        for( int j = start ; j < i; ++ j ) {
-         
+         assert( !data.doNotTouch(var(ee[j]) ) && "equivalent literal elimination cannot handle untouchable literals/variables yet!"  );
        }
        
        start = i+1;
