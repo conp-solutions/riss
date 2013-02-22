@@ -11,6 +11,7 @@ static const char* _cat = "COPROCESSOR 3 - PROBE";
 static IntOption pr_uip            (_cat, "pr-uips",   "perform learning if a conflict occurs up to x-th UIP (-1 = all )", -1, IntRange(-1, INT32_MAX));
 static BoolOption pr_double        (_cat, "pr-double", "perform double look-ahead",true);
 static BoolOption pr_probe         (_cat, "pr-probe",  "perform probing",true);
+static BoolOption pr_rootsOnly     (_cat, "pr-roots",  "probe only on root literals",false);
 static BoolOption pr_vivi          (_cat, "pr-vivi",   "perform clause vivification",true);
 static IntOption pr_keepLearnts    (_cat, "pr-keepL",  "keep conflict clauses in solver (0=no,1=learnt,2=original)", 2, IntRange(0,2));
 static IntOption pr_keepImplied    (_cat, "pr-keepI",  "keep clauses that imply on level 1 (0=no,1=learnt,2=original)", 2, IntRange(0,2));
@@ -663,19 +664,23 @@ void Probing::probing()
   
   CRef thisConflict = CRef_Undef;
   
-  for( Var v = 0 ; v < data.nVars(); ++v ) variableHeap.push_back(v);
   
-  cerr << "sort literals in probing queue according to some heuristic (BIG roots first, activity, ... )" << endl;
+  BIG big;
+  big.create(ca,data,data.getClauses(),data.getLEarnts()); // lets have the full big
+  
+  big.fillSorted( variableHeap, data, pr_rootsOnly );
+  
+  
+  // cerr << "sort literals in probing queue according to some heuristic (BIG roots first, activity, ... )" << endl;
   
   // probe for each variable 
   Lit repeatLit = lit_Undef;
-  while(  variableHeap.size() > 0 && !data.isInterupted()  && (probeLimit > 0 || data.unlimited()) && data.ok() )
+  for( int index = 0;  index < variableHeap.size() && !data.isInterupted()  && (probeLimit > 0 || data.unlimited()) && data.ok(); ++ index )
   {
     // repeat variable, if demanded - otherwise take next from heap!
     Var v = var(repeatLit);
     if( repeatLit == lit_Undef ) {
-      v = variableHeap.front();
-      variableHeap.pop_front();
+      v = variableHeap[index];
     }
     repeatLit = lit_Undef;
     

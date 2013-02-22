@@ -28,7 +28,7 @@ class Probing : public Technique {
   EquivalenceElimination& ee;		/// object that takes care of equivalent literal elimination
   
   // necessary local variables
-  deque<Var> variableHeap;
+  vector<Var> variableHeap;
   vec<lbool> prPositive;
   vec<lbool> prL2Positive;
   

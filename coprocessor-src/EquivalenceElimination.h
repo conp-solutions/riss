@@ -86,7 +86,7 @@ protected:
   bool checkEquivalence( const Circuit::Gate& g1, const Circuit::Gate& g2, Lit& e1, Lit& e2);
   
   /** perform tarjan algorithm to find SCC on binary implication graph */
-  void eqTarjan(Lit l, Lit list, CoprocessorData& data, BIG& big, vector< vector< Lit > >* externBig = 0);
+  void eqTarjan(int depth, Lit l, Lit list, CoprocessorData& data, BIG& big, vector< vector< Lit > >* externBig = 0);
 
   /** check whether the clause c has duplicates in the list of literal l (irredundant clause is no duplicate for learned clause! -> deletes learned clause!)
    *  Note: assumes that all clauses are sorted!

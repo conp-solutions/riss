@@ -350,6 +350,13 @@ public:
    * @return false, if BIG is not initialized yet
    */
   void generateImplied(Coprocessor::CoprocessorData& data);
+  
+  /** fill the literals in the order they would appear in a BFS in the big, starting with root nodes 
+   *  NOTE: will pollute the data.ma MarkArray
+   * @param rootsOnly: fill the vector only with root literals
+   */
+  void fillSorted( vector< Lit >& literals, Coprocessor::CoprocessorData& data, bool rootsOnly = false);
+  void fillSorted(vector<Var>& variables, CoprocessorData& data, bool rootsOnly);
 
   /** return true, if the condition "from -> to" holds, based on the stochstic scanned data */
   bool implies(const Lit& from, const Lit& to) const;
@@ -1344,6 +1351,68 @@ inline void BIG::generateImplied( CoprocessorData& data )
     for( uint32_t i = 0 ; i < ts2; i++ ) { const uint32_t rnd=rand()%ts2; const Lit tmp = data.lits[i]; data.lits[i] = data.lits[rnd]; data.lits[rnd]=tmp; }
     for ( uint32_t i = 0 ; i < ts2; ++ i )
       stamp = stampLiteral(data.lits[i],stamp,index,stampQueue);
+}
+
+inline void BIG::fillSorted(vector<Lit>& literals, CoprocessorData& data, bool rootsOnly)
+{
+  literals.clear();
+  
+  // put root nodes in queue
+  for( Var v = 0 ; v < data.nVars(); ++ v )
+  {
+    if( getSize( mkLit(v,false) ) == 0 )
+      if( getSize( mkLit(v,true) ) == 0 ) continue;
+      else { 
+	data.ma.setCurrentStep( toInt(mkLit(v,true)) );
+      }
+    else if( getSize( mkLit(v,true) ) == 0 ) {
+      literals.push_back( mkLit(v,false) ); // tthis is a root node
+    }
+  }
+  
+  // shuffle root nodes
+  for( int i = 0 ; i + 1 < literals.size(); ++ i )
+  {
+    const Lit tmp = literals[i];
+    const int rndInd = rand() % literals.size();
+    literals[i] = literals[ rndInd ];
+    literals[ rndInd ] = tmp;
+  }
+  
+  if( rootsOnly ) return;
+  
+  // perform BFS
+  data.ma.nextStep();
+  for( int i = 0 ; i < literals.size(); ++ i ) {
+    const Lit l = literals[i];
+    Lit* lits = getArray(l);
+    int s = getSize(l);
+    for( int j = 0 ; j < s; ++ j ) {
+      const Lit l2 = lits[j];
+      // each literal only once!
+      if( data.ma.isCurrentStep( toInt(l2) ) ) continue;
+      data.ma.setCurrentStep( toInt(l2) );
+      literals.push_back(l2);
+    }
+  }
+}
+
+inline void BIG::fillSorted(vector<Var>& variables, CoprocessorData& data, bool rootsOnly)
+{
+  // get sorted list of lits
+  data.lits.clear();
+  fillSorted(data.lits, data, rootsOnly);
+  variables.clear();
+  
+  // store variables in vector, according to occurrence of first literal in literal vector
+  data.ma.nextStep();
+  for( int i = 0 ; i < data.lits.size(); ++ i ) {
+     const Lit l = data.lits[i];
+     if( !data.ma.isCurrentStep( var(l) ) ) {
+       variables.push_back(var(l)); 
+       data.ma.setCurrentStep( var(l) );
+     }
+  }
 }
 
 inline void BIG::shuffle( Lit* adj, int size ) const
