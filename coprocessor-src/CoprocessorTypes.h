@@ -1356,6 +1356,7 @@ inline void BIG::generateImplied( CoprocessorData& data )
 inline void BIG::fillSorted(vector<Lit>& literals, CoprocessorData& data, bool rootsOnly)
 {
   literals.clear();
+  data.ma.resize( data.nVars() *2 );
   
   // put root nodes in queue
   for( Var v = 0 ; v < data.nVars(); ++ v )

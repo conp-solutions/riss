@@ -1,0 +1,180 @@
+#include "coprocessor-src/Resolving.h"
+
+using namespace Coprocessor;
+
+static const char* _cat = "COPROCESSOR 3 - RES";
+
+static IntOption    opt_level         (_cat, "cp3_res_bin",     "resolve with binary clauses", 0, IntRange(0, 3));
+static DoubleOption opt_add_percent   (_cat, "cp3_res_percent", "produce this percent many new clauses out of the total", 1, DoubleRange(0, true, 1, true));
+static BoolOption   opt_add_red       (_cat, "cp3_res_add_red", "add redundant binary clauses", false);
+static BoolOption   opt_red_level     (_cat, "cp3_res_add_lev", "calculate added percent based on level", false);
+
+static BoolOption   opt_add_red_start (_cat, "cp3_res_ars",     "also before preprocessing?", false);
+
+/// enable this parameter only during debug!
+static BoolOption debug_out         (_cat, "cp3_res_debug",   "print debug output to screen",false);
+
+Resolving::Resolving(ClauseAllocator& _ca, ThreadController& _controller)
+: Technique(_ca,_controller)
+, processTime(0)
+, addedTernaries(0)
+, addedBinaries(0)
+{
+
+}
+
+void Resolving::process(CoprocessorData& data, bool post)
+{
+  MethodTimer mt( &processTime );
+  modifiedFormula = false;
+  if( ! post )
+    ternaryResolve(data);
+  
+  if( opt_add_red_start || post ) {
+    if( opt_add_red ) {
+      addRedundantBinaries(data); 
+    }
+  }
+}
+
+void Resolving::printStatistics(ostream& stream)
+{
+  stream << "c [STAT] RES " 
+      << processTime << " s, " 
+      << addedTernaries+addedBinaries << " cls+, " 
+      << addedBinaries << " bin+, " 
+      << addedTernaries << " tern+, "
+      << endl;
+}
+
+void Resolving::ternaryResolve(CoprocessorData& data)
+{
+
+}
+
+
+void Resolving::addRedundantBinaries(CoprocessorData& data)
+{
+  vector<int> seen( data.nVars() *2 , 0); // which literals have been seen already?
+  data.ma.resize( data.nVars() *2 );
+  vector < vector<Lit> > big (data.nVars() *2) ;
+  
+  if( debug_out ) cerr << "add redundant binaries" << endl;
+  
+  // create big
+  for( int p = 0 ; p < 2 ; ++ p ) 
+  {
+    vec<CRef>& cls = p == 0 ? data.getClauses() : data.getLEarnts();
+    for( int i = 0 ; i < cls.size(); ++ i ) {
+      const Clause& c = ca[cls[i]];
+      if( c.can_be_deleted() || c.size() != 2 ) continue;
+      big[ toInt(~c[0]) ].push_back( c[1] );
+      big[ toInt(~c[1]) ].push_back( c[0] );
+    }
+  }
+  // count how many literals have been seens already
+  for( Var v  = 0; v < data.nVars(); ++v ) {
+    seen[ toInt(mkLit(v,false)) ] = big[toInt(mkLit(v,false))].size();
+    seen[ toInt(mkLit(v,true)) ] = big[toInt(mkLit(v,true))].size();
+  }
+  
+  // for each literal, create its "binary" trail, and then add partially redundant clauses
+  for( Var v  = 0; v < data.nVars(); ++v ) {
+    for( int p = 0 ; p < 2 ; ++ p ) 
+    {
+      const Lit startLit = mkLit(v, p == 1);
+     // cerr << "c start for lit " << startLit << endl;
+      data.ma.nextStep();
+      data.ma.setCurrentStep( toInt(startLit) );
+      data.lits.clear();
+      
+      for( int i = 0 ; i < big[ toInt(startLit) ].size(); ++ i ) {
+	const Lit l = big[ toInt(startLit) ][i];
+	// not twice!
+	if( data.ma.isCurrentStep( toInt(l) ) ) continue;
+	data.ma.setCurrentStep( toInt(l) );
+	if( debug_out ) cerr << "c found direct " << l << endl;
+	data.lits.push_back(l);
+      }
+      int directLits = data.lits.size();
+      
+      if( debug_out ) cerr << "c direct lits: " << directLits << endl;
+      // no need to work on "empty" trails (no transitive literals)
+      if( data.lits.size() == 0 ) continue;
+      int level = 1;
+      data.lits.push_back(lit_Undef);
+      for( int i = 0 ; i < data.lits.size(); ++ i ) {
+	const Lit l = data.lits[i];
+	// cerr << "c check lit: " << l << " [" << i << "/" << data.lits.size() << "]" << endl;
+	// add new levels or abort!
+	if( l == lit_Undef )
+	  if( i+1 < data.lits.size() && data.lits[i+1] != lit_Undef ) { data.lits.push_back(lit_Undef); level ++; continue;}
+	  else break;
+	
+	// work only on "old" literals!
+	for( int j = 0 ; j < big[ toInt(l) ].size(); ++ j ) {
+	  const Lit k = big[ toInt(l) ][j];
+	  if( data.ma.isCurrentStep( toInt(k) ) ) continue;
+	  data.ma.setCurrentStep( toInt(k) );
+	  data.lits.push_back(k);
+	  if( debug_out ) cerr << "c found transitive " << startLit << " -> " << k  << "  @ " << level << " via " << l << endl;
+	}
+	
+      }
+      
+      // remove lit_undefs from list!
+      for( int i = directLits ; i < data.lits.size(); ++ i ) 
+	if( data.lits[i] == lit_Undef ) {
+	  data.lits[i] = data.lits[ data.lits.size() - 1]; data.lits.pop_back(); --i;
+	}
+      
+      if( debug_out ) cerr << "c found " << data.lits.size() << " new (" << directLits << " direct) literals for " << startLit << " with " << level << " levels" << endl;
+      
+      int use = opt_level ? (level * opt_add_percent) : (opt_add_percent * ( data.lits.size() - directLits ) );
+      
+      // cerr << "c use new literals: " << use << endl;
+      
+      assert( use <= data.lits.size() && "used literals have to be less than the ones in the found list" );
+      
+      // shuffle some literals to the front!
+      for( int i = directLits; i < use+directLits; ++ i ) {
+	int r = i + rand() % (data.lits.size() - i );
+	if( debug_out ) cerr << "c swap " << i << " and " << r << " out of " << data.lits.size() << endl;
+	const Lit tmp = data.lits[i];
+	data.lits [ i ] = data.lits [ r ];
+	data.lits[r] = tmp;
+      }
+      
+      // add both directionr to avoid adding twice!
+      for( int i = directLits; i < use+directLits; ++ i ) {
+	  big[ toInt(startLit) ].push_back( data.lits[i] );
+	  big[ toInt( ~data.lits[i]) ].push_back( ~startLit );
+	  if( debug_out ) cerr  << "c add " << startLit << " -> " << data.lits[i] << endl;
+	  if( debug_out ) cerr  << "c add " << ~data.lits[i] << " -> " << ~startLit << endl;
+      }
+    }
+  }
+  
+  vec<Lit> ps;
+  ps.push();ps.push();
+  // add the new clauses to the formula / data structures!
+  for( Var v  = 0; v < data.nVars(); ++v ) {
+    for( int p = 0 ; p < 2 ; ++ p ) 
+    {
+      const Lit thisLit = mkLit(v, p == 1);
+      ps[0] = ~thisLit;
+      for( int j =  seen[ toInt(thisLit) ]; j < big[ toInt(thisLit) ].size() ; ++ j ) {
+	  const Lit k = big[ toInt(thisLit) ][j];
+	  ps[1] = k;
+	  if( k < thisLit ) continue;
+	  assert( thisLit < k && "add only ordered clauses!" );
+	  const CRef cr = ca.alloc(ps,false); // not a learnt clause!
+	  addedBinaries ++;
+	  data.addClause(cr);
+	  data.getClauses().push(cr);
+	  modifiedFormula = true;
+	  if( debug_out ) cerr << "c added " << ca[cr] << endl;
+      }
+    }
+  }
+}

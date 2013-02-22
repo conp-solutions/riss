@@ -20,6 +20,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/Bva.h"
 #include "coprocessor-src/Unhiding.h"
 #include "coprocessor-src/Probing.h"
+#include "coprocessor-src/Resolving.h"
 
 #include "coprocessor-src/sls.h"
 #include "coprocessor-src/TwoSAT.h"
@@ -78,6 +79,7 @@ protected:
   EquivalenceElimination ee;
   Unhiding unhiding;
   Probing probing;
+  Resolving res;
   
   Sls sls;
   TwoSatSolver twoSAT;
