@@ -49,6 +49,8 @@ class Preprocessor {
   int thisClauses;		// number of original clauses before current run
   int thisLearnts;		// number of learnt clauses before current run
   
+  int lastInpConflicts;		// number of conflicts when inprocessing has been called last time
+  
 public:
 
   Preprocessor(Solver* solver, int32_t _threads=-1 );

@@ -15,6 +15,7 @@ static IntOption  opt_threads     (_cat, "cp3_threads",    "Number of extra thre
 static BoolOption opt_unlimited   (_cat, "cp3_unlimited",  "No limits for preprocessing techniques", true);
 static BoolOption opt_randomized  (_cat, "cp3_randomized", "Steps withing preprocessing techniques are executed in random order", false);
 static IntOption  opt_verbose     (_cat, "cp3_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
+static IntOption  opt_inprocessInt(_cat, "cp3_inp_cons",   "Perform Inprocessing after at least X conflicts", 20000, IntRange(0, INT32_MAX));
        BoolOption opt_printStats  (_cat, "cp3_stats",      "Print Technique Statistics", false);
 // techniques
 static BoolOption opt_up          (_cat2, "up",            "Use Unit Propagation during preprocessing", false);
@@ -54,6 +55,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , ipTime( 0 )
 , thisClauses( 0 )
 , thisLearnts( 0 )
+, lastInpConflicts(0)
 // classes for preprocessing methods
 , propagation( solver->ca, controller )
 , subsumption( solver->ca, controller, data, propagation )
@@ -360,10 +362,17 @@ lbool Preprocessor::inprocess()
   if( !opt_inprocess ) return l_Undef;
   // TODO: do something before preprocessing? e.g. some extra things with learned / original clauses
   if (opt_inprocess) {
-    cerr << "c start inprocessing " << endl;
+    
+    // reject inprocessing here!
+    if( lastInpConflicts + opt_inprocessInt < solver->conflicts ) {
+      return l_Undef;  
+    }
+    
+    if( opt_verbose > 1 ) cerr << "c start inprocessing after another " << solver->conflicts - lastInpConflicts << endl;
     isInprocessing = true;
     lbool ret = performSimplification();
-    cerr << "c finished inprocessing " << endl;
+    lastInpConflicts = solver->conflicts;
+    if( opt_verbose > 2 ) cerr << "c finished inprocessing " << endl;
     return ret;
   }
   else 
