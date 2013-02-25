@@ -2048,7 +2048,7 @@ void EquivalenceElimination::writeAAGfile(CoprocessorData& data)
 void EquivalenceElimination::printStatistics(ostream& stream)
 {
   stream << "c [STAT] EE " << eeTime << " s, " << steps << " steps" << endl;
-  stream << "c [STAT] EE-gate " << gateTime << " s, " << gateSteps << " steps, " << gateExtractTime << " extractGateTime, " << endl;
+  if( opt_level > 0 ) stream << "c [STAT] EE-gate " << gateTime << " s, " << gateSteps << " steps, " << gateExtractTime << " extractGateTime, " << endl;
 }
 
 

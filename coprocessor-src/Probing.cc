@@ -11,14 +11,12 @@ static const char* _cat = "COPROCESSOR 3 - PROBE";
 static IntOption pr_uip            (_cat, "pr-uips",   "perform learning if a conflict occurs up to x-th UIP (-1 = all )", -1, IntRange(-1, INT32_MAX));
 static BoolOption pr_double        (_cat, "pr-double", "perform double look-ahead",true);
 static BoolOption pr_probe         (_cat, "pr-probe",  "perform probing",true);
-static BoolOption pr_rootsOnly     (_cat, "pr-roots",  "probe only on root literals",false);
+static BoolOption pr_rootsOnly     (_cat, "pr-roots",  "probe only on root literals",true);
 static BoolOption pr_vivi          (_cat, "pr-vivi",   "perform clause vivification",true);
 static IntOption pr_keepLearnts    (_cat, "pr-keepL",  "keep conflict clauses in solver (0=no,1=learnt,2=original)", 2, IntRange(0,2));
 static IntOption pr_keepImplied    (_cat, "pr-keepI",  "keep clauses that imply on level 1 (0=no,1=learnt,2=original)", 2, IntRange(0,2));
 static IntOption pr_viviPercent    (_cat, "pr-viviP",  "percent of max. clause size for clause vivification", 80, IntRange(0,100));
 static IntOption pr_viviLimit      (_cat, "pr-viviL",  "step limit for clause vivification", 5000000,  IntRange(0, INT32_MAX));
-
-
 
 
 static IntOption debug_out        (_cat, "pr-debug", "debug output for probing",0, IntRange(0,4) );
@@ -856,7 +854,7 @@ void Probing::clauseVivification()
   maxSize = maxSize > 2 ? maxSize : 3;	// do not process binary clauses, because they are used for propagation
   viviSize = maxSize;
   
-  for( uint32_t i = 0 ; i< data.getClauses().size() && (data.unlimited() || viviLimits>0); ++ i ) {
+  for( uint32_t i = 0 ; i< data.getClauses().size() && (data.unlimited() || viviLimits>0)  && !data.isInterupted() ; ++ i ) {
     const CRef ref = data.getClauses()[i];
     Clause& clause = ca[ ref ];
     if( clause.can_be_deleted() ) continue;
@@ -952,7 +950,11 @@ void Probing::clauseVivification()
 	cerr << endl;
       }
       
+      int trailDiff = solver.trail.size();
       CRef confl = solver.propagate();
+      trailDiff = solver.trail.size() - trailDiff;
+      viviLimits = viviLimits > trailDiff ? viviLimits - trailDiff : 0; // calculate limit!
+      
       if( confl != CRef_Undef ) {
 	if( debug_out > 1 ) {
 	  cerr << "c found conflict [" << confl << "]" << ca[confl] << endl;

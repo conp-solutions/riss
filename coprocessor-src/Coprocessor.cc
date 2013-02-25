@@ -52,6 +52,8 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , isInprocessing( false )
 , ppTime( 0 )
 , ipTime( 0 )
+, thisClauses( 0 )
+, thisLearnts( 0 )
 // classes for preprocessing methods
 , propagation( solver->ca, controller )
 , subsumption( solver->ca, controller, data, propagation )
@@ -89,6 +91,8 @@ lbool Preprocessor::performSimplification()
   // delete clauses from solver
   
   if( opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << endl;
+  thisClauses = solver->clauses.size();
+  thisLearnts = solver->learnts.size();
   
   cleanSolver ();
   // initialize techniques
@@ -321,15 +325,15 @@ lbool Preprocessor::performSimplification()
     propagation.printStatistics(cerr);
     subsumption.printStatistics(cerr);
     ee.printStatistics(cerr);
-    hte.printStatistics(cerr);
-    bve.printStatistics(cerr);
-    bva.printStatistics(cerr);
-    probing.printStatistics(cerr);
-    unhiding.printStatistics(cerr);
-    cce.printStatistics(cerr);
-    res.printStatistics(cerr);
-    sls.printStatistics(cerr);
-    twoSAT.printStatistics(cerr);
+    if( opt_hte ) hte.printStatistics(cerr);
+    if( opt_bve ) bve.printStatistics(cerr);
+    if( opt_bva ) bva.printStatistics(cerr);
+    if( opt_probe ) probing.printStatistics(cerr);
+    if( opt_unhide ) unhiding.printStatistics(cerr);
+    if( opt_ternResolve || opt_addRedBins ) res.printStatistics(cerr);
+    if( opt_sls ) sls.printStatistics(cerr);
+    if( opt_twosat) twoSAT.printStatistics(cerr);
+    if( opt_cce ) cce.printStatistics(cerr);
   }
   
   if( opt_check ) fullCheck("final check");
@@ -378,7 +382,9 @@ stream << "c [STAT] CP3 "
 << ppTime << " s-ppTime, " 
 << ipTime << " s-ipTime, "
 << data.getClauses().size() << " cls, " 
-<< data.getLEarnts().size() << " learnts "
+<< data.getLEarnts().size() << " learnts, "
+<< thisClauses - data.getClauses().size() << " rem-cls, " 
+<< thisLearnts - data.getLEarnts().size() << " rem-learnts "
 << endl;
 }
 

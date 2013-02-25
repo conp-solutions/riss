@@ -778,6 +778,7 @@ lbool Solver::solve_()
 	  // restart, triggered by the solver
 	  if( coprocessor == 0 ) coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
           status = coprocessor->preprocess();
+        printf("===============================================================================\n");
     }
     
     // Search:

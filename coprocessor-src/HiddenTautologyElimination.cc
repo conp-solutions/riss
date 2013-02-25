@@ -128,7 +128,7 @@ void HiddenTautologyElimination::elimination_worker (CoprocessorData& data, uint
   
   if( opt_uhdUHTE ) fprintf(stderr, "c HTE from %d to %d out of %d\n", start, end, activeVariables.size());
   
-  for (uint32_t index = start; index < end; ++index)
+  for (uint32_t index = start; index < end && !data.isInterupted() ; ++index)
   {
     if( steps == 0 && !data.unlimited() ) break; // stop if number of iterations has been reached
     const Var v = activeVariables[index];

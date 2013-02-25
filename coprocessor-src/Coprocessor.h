@@ -46,6 +46,8 @@ class Preprocessor {
   bool isInprocessing;		// control whether current call of the preprocessor should be handled as inprocessing
   double ppTime;		// time to do preprocessing
   double ipTime;		// time to do inpreprocessing
+  int thisClauses;		// number of original clauses before current run
+  int thisLearnts;		// number of learnt clauses before current run
   
 public:
 

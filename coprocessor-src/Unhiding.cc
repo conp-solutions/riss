@@ -343,7 +343,7 @@ bool Unhiding::unhideSimplify()
   
   // TODO implement second for loop to iterate also over learned clauses and check whether one of them is not learned!
   
-  for( uint32_t i = 0 ; i < data.getClauses().size(); ++ i ) 
+  for( uint32_t i = 0 ; i < data.getClauses().size() && !data.isInterupted() ; ++ i ) 
   {
     // run UHTE before UHLE !!  (remark in paper)
     const uint32_t clRef =  data.getClauses()[i] ;
@@ -566,7 +566,7 @@ void Unhiding::process (  )
     // represents rool literals!
     data.lits.clear();
     // reset all present variables, collect all roots in binary implication graph
-    for ( Var v = 0 ; v < data.nVars(); ++ v ) 
+    for ( Var v = 0 ; v < data.nVars() && !data.isInterupted() ; ++ v ) 
     {
       for( int p = 0 ; p < 2; ++ p ) {
 	const Lit pos =  mkLit(v, p == 1);
@@ -661,7 +661,7 @@ void Unhiding::process (  )
 
 void Unhiding::printStatistics( ostream& stream )
 {
-  stream << "c [UNHIDE] " 
+  stream << "c [STAT] UNHIDE " 
   << unhideTime << " s, "
   << removedClauses << " cls, "
   << removedLiterals << " totalLits, "
