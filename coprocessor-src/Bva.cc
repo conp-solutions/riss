@@ -238,6 +238,9 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	    }
 	    nextStackLiteral:;
 	  }
+	  
+	  if( left == lit_Undef ) break;
+	  
 	  if( bva_debug > 2 ) cerr << "c BVA selected left: " << left << endl;
 	  // tackle complement specially, if found
 	  if( bvaComplement && foundRightComplement ) left = ~right;
@@ -266,7 +269,7 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	    if( bva_debug > 2 ) cerr << "c [BVA] interrupt because of too few matchings " << right << " @" << index << " with " << max << endl;
 	    break;
 	  }
-	  if( bva_debug > 2 ) cerr << "c [BVA] index=" << index << " max=" << max << " rightList= " << data.list(right).size() << " leftList= " << data.list(left).size() << endl;
+	  if( bva_debug > 0 ) cerr << "c [BVA] index=" << index << " max=" << max << " rightList= " << data.list(right).size() << " leftList= " << data.list(left).size() << endl;
 
 	  // heuristically remove duplicates!
 	  if( max > data.list(left).size() || max > data.list(right).size() ) {
