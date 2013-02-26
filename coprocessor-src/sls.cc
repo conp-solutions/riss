@@ -188,8 +188,8 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
     if( opt_debug ) cerr << "c flip literal " << ~unsatLit << " to " << unsatLit << " , taken from clause " << c << " [left:" << unsatClauses.size() << "]" << endl;
     assert( isUnsat( unsatLit ) && "this literal has to be false" );
     
-    vector<int>& plusClauses = occ[ toInt( unsatLit) ];
-    vector<int>& negClauses  = occ[ toInt(~unsatLit) ];
+    const vector<int>& plusClauses = occ[ toInt( unsatLit) ];
+    const vector<int>& negClauses  = occ[ toInt(~unsatLit) ];
     
     // handle clauses that get one more satisfied literal
     for( int i = 0; i < plusClauses.size(); ++ i ) {
