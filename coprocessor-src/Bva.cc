@@ -239,7 +239,11 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	    nextStackLiteral:;
 	  }
 	  
-	  if( left == lit_Undef ) break;
+	  if( left == lit_Undef ) {
+	    static bool didIt = false;
+	    if( !didIt ) { cerr << "c second BVA literal became litUndef - check how!" << endl; didIt = true; }
+	    break;
+	  }
 	  
 	  if( bva_debug > 2 ) cerr << "c BVA selected left: " << left << endl;
 	  // tackle complement specially, if found
