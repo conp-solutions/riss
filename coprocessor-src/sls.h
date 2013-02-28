@@ -33,6 +33,8 @@ public:
   */
   void printStatistics( ostream& stream );
 
+  void destroy();
+  
 private:
   
   CoprocessorData& data;	// reference to coprocessor data object

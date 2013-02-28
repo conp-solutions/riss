@@ -66,6 +66,8 @@ public:
   bool variableAddtionMulti(bool sort = true);
   
   void printStatistics(ostream& stream);
+
+  void destroy();
   
 protected:
   
@@ -80,8 +82,6 @@ protected:
 
   /** check data structures */
   bool checkLists(const string& headline);
-  
-  void destroy();
   
 public:
   // parameters

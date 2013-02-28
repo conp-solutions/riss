@@ -41,19 +41,7 @@ class Unhiding : public Technique {
   unsigned removedLiterals;	// number of removed literals
   unsigned removedLits;		// number of literals that are removed by unhiding
   double unhideTime;		// seconds for unhiding
-  
-public:
-  
-  Unhiding( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data,  Propagation& _propagation, Subsumption& _subsumption, EquivalenceElimination& _ee  );
-  
-  /** perform unhiding algorithm */
-  void process();
-  
-  /** This method should be used to print the statistics of the technique that inherits from this class */
-  void printStatistics( ostream& stream );
-  
-protected:
-  
+ 
 	/// structure that store all necessary stamp information of the paper for each literal
 	struct literalData {
 	  uint32_t fin;	// finished
@@ -65,17 +53,31 @@ protected:
 	  uint32_t index;	// index of the literal that has already been processed in the adjacence list of the literal
 	  literalData () : fin(0),dsc(0),obs(0),parent(lit_Undef),root(lit_Undef),index(0) {};
 	};
-	
-	/// stamp information (access via literalData[ literal.toIndex() ] ), is maintained by extendStructures-method
-	vector<literalData> stampInfo;
-	
-	/// queue of literals that have to be stamped in the current function call
-	deque< Lit > stampQueue;
-	/// equivalent literals during stamping
-	vector< Lit > stampEE;
-	vector< Lit > stampClassEE;
-	vector< char > unhideEEflag;
-	
+ 
+  /// stamp information (access via literalData[ literal.toIndex() ] ), is maintained by extendStructures-method
+  vector<literalData> stampInfo;
+	  
+  /// queue of literals that have to be stamped in the current function call
+  deque< Lit > stampQueue;
+  /// equivalent literals during stamping
+  vector< Lit > stampEE;
+  vector< Lit > stampClassEE;
+  vector< char > unhideEEflag;
+ 
+public:
+  
+  Unhiding( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data,  Propagation& _propagation, Subsumption& _subsumption, EquivalenceElimination& _ee  );
+  
+  /** perform unhiding algorithm */
+  void process();
+  
+  /** This method should be used to print the statistics of the technique that inherits from this class */
+  void printStatistics( ostream& stream );
+  
+  void destroy();
+  
+protected:
+  
 	/** sorts the given array with increasing discovery stamp
 	 * NOTE: uses insertion sort
 	 */

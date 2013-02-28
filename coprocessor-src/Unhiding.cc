@@ -669,3 +669,16 @@ void Unhiding::printStatistics( ostream& stream )
   << endl;   
 }
 
+
+void Unhiding::destroy()
+{
+  big.~BIG();
+  vector<literalData>().swap( stampInfo );
+	  
+  /// queue of literals that have to be stamped in the current function call
+  deque< Lit >().swap(  stampQueue );
+  /// equivalent literals during stamping
+  vector< Lit >().swap(  stampEE );
+  vector< Lit >().swap(  stampClassEE );
+  vector< char >().swap(  unhideEEflag );
+}

@@ -351,3 +351,12 @@ void Sls::printStatistics( ostream& stream )
 }
 
 
+void Sls::destroy()
+{
+  vector<CRef>().swap( unsatClauses); // data
+  vector<int>().swap( indexes ); // indexes
+  vector<VarData>().swap( varData );
+  vector< ClsData >().swap( clsData );
+  vector< vector< int > >().swap( occ );
+}
+
