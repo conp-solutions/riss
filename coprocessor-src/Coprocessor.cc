@@ -314,7 +314,6 @@ lbool Preprocessor::performSimplification()
   if( opt_verbose > 2 ) cerr << "c coprocessor re-setup solver" << endl;
   if ( data.ok() ) {
     propagation.process(data);
-    if ( data.ok() ) reSetupSolver();
   }
 
   if( opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;
@@ -339,6 +338,10 @@ lbool Preprocessor::performSimplification()
   }
   
   if( opt_check ) fullCheck("final check");
+
+  destroyTechniques();
+  
+  if ( data.ok() ) reSetupSolver();
   
   // destroy preprocessor data
   if( opt_verbose > 2 ) cerr << "c coprocessor free data structures" << endl;
@@ -393,7 +396,8 @@ stream << "c [STAT] CP3 "
 << data.getClauses().size() << " cls, " 
 << data.getLEarnts().size() << " learnts, "
 << thisClauses - data.getClauses().size() << " rem-cls, " 
-<< thisLearnts - data.getLEarnts().size() << " rem-learnts "
+<< thisLearnts - data.getLEarnts().size() << " rem-learnts, "
+<< memUsedPeak() << " MB "
 << endl;
 }
 
@@ -455,13 +459,21 @@ void Preprocessor::initializePreprocessor()
   }
 }
 
-void Preprocessor::destroyPreprocessor()
+void Preprocessor::destroyTechniques()
 {
-  cce.destroy();
-  hte.destroy();
-  propagation.destroy();
-  subsumption.destroy();
-  bve.destroy();
+    propagation.destroy();
+    subsumption.destroy();
+    ee.destroy();
+    if( opt_hte ) hte.destroy();
+    if( opt_bve ) bve.destroy();
+    if( opt_bva ) bva.destroy();
+    if( opt_probe ) probing.destroy();
+    if( opt_unhide ) unhiding.destroy();
+    if( opt_ternResolve || opt_addRedBins ) res.destroy();
+    if( opt_sls ) sls.destroy();
+    if( opt_twosat) twoSAT.destroy();
+    if( opt_cce ) cce.destroy();
+  
 }
 
 
@@ -494,9 +506,9 @@ void Preprocessor::reSetupSolver()
         const CRef cr = solver->clauses[i];
         Clause & c = ca[cr];
 	assert( c.size() != 0 && "empty clauses should be recognized before re-setup" );
-        if (c.can_be_deleted())
+        if (c.can_be_deleted()) {
             delete_clause(cr);
-        else
+	} else
 	  {
 	      assert( c.mark() == 0 && "only clauses without a mark should be passed back to the solver!" );
 	      if (c.size() > 1)
@@ -611,6 +623,7 @@ void Preprocessor::reSetupSolver()
     solver->learnts.shrink(solver->learnts.size()-kept_clauses);
     if( opt_verbose > 1 ) fprintf(stderr, " moved %i and removed %i from %i learnts\n",learntToClause,(l_old - kept_clauses) -learntToClause, l_old);
 
+    
     if( false ) {
       cerr << "c trail after cp3: ";
       for( int i = 0 ; i< solver->trail.size(); ++i ) 

@@ -67,6 +67,8 @@ public:
    */
   bool applyEquivalencesToFormula( Coprocessor::CoprocessorData& data, bool force = false);
   
+  void destroy();
+  
 protected:
 
   /** check based on gates that have been extracted, whether more equivalent literals can be found!

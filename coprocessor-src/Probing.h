@@ -50,6 +50,7 @@ public:
    */
   void printStatistics( ostream& stream );
   
+  void destroy();
   
 protected:
   

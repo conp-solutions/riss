@@ -1021,3 +1021,15 @@ void Probing::clauseVivification()
   } // end for clause in data.getClauses()
  
 }
+
+void Probing::destroy()
+{
+  vector<Var>().swap( variableHeap );
+  prPositive.clear(true);
+  prL2Positive.clear(true);
+  learntUnits.clear(true);
+  vector<Lit>().swap( doubleLiterals );
+  vector<CRef>().swap( l2conflicts );
+  vector<CRef> ().swap(l2implieds );
+}
+

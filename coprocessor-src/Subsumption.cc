@@ -1651,3 +1651,18 @@ void* Subsumption::runParallelStrengthening(void* arg)
     else workData->subsumption->par_nn_strengthening_worker(workData->start,workData->end, *(workData->var_locks), *(workData->stats), *(workData->occ_updates), workData->heap);
     return 0;
 }
+
+void Subsumption::destroy() {
+    // Member var seq subsumption
+  vector < CRef >().swap(subs_occ_updates);
+  // Member var seq strength
+  vector < OccUpdate >().swap(strength_occ_updates);
+  // Member vars parallel Subsumption
+  vector< vector < CRef > >().swap(toDeletes);
+  vector< vector < CRef > >().swap(nonLearnts);
+  vector< struct SubsumeStatsData >().swap(localStats);
+  
+  // Member vars parallel Strengthening
+  vector< SpinLock >().swap(var_locks); // 1 extra SpinLock for data
+  vector< vector < OccUpdate > >().swap(occ_updates);
+}

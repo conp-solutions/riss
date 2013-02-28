@@ -726,3 +726,15 @@ bool BoundedVariableAddition::checkLists(const string& headline)
   }
   return ret;
 }
+
+void BoundedVariableAddition::destroy()
+{
+  bvaHeap.clear(true);
+  vector< vector< CRef > >().swap( bvaMatchingClauses); 
+  vector< Lit >().swap( bvaMatchingLiterals); 
+  // use general mark array!
+  vector< Lit >().swap( bvaCountMark);	
+  vector< uint32_t >().swap( bvaCountCount);
+  vector< uint64_t >().swap( bvaCountSize );
+  clauseLits.clear(true) ;
+}

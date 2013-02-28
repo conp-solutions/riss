@@ -582,3 +582,10 @@ void HiddenTautologyElimination::printStatistics(ostream& stream)
   stream << "c [STAT] HTE " << processTime << " s, " << removedClauses << " cls, " 
 			    <<  removedLits << " lits, " << steps << " steps left" << endl;
 }
+
+void HiddenTautologyElimination::destroy()
+{
+  vector<Var>().swap( activeVariables);
+  vector<char>().swap( activeFlag);
+}
+

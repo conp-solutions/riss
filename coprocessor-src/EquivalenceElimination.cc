@@ -2112,3 +2112,17 @@ def Tarjanite(my_DiGraph):
     return Tarjan_ite(D)
     
 #endif
+
+void EquivalenceElimination::destroy()
+{
+  vector< Lit >().swap( eqStack);		
+  vector< int32_t >().swap( eqNodeLowLinks);	
+  vector< int32_t >().swap( eqNodeIndex);	
+  vector< Lit >().swap( eqCurrentComponent);	
+
+  vector<Lit>().swap( replacedBy);              
+  
+  vector<char>().swap( isToAnalyze);            
+  vector<Lit>().swap( eqDoAnalyze);             
+  
+}

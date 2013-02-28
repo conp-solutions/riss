@@ -345,3 +345,9 @@ void Resolving::addRedundantBinaries(CoprocessorData& data)
     }
   }
 }
+
+
+void Resolving::destroy()
+{
+  vector<int>().swap( seen );
+}

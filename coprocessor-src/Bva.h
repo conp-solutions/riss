@@ -81,6 +81,8 @@ protected:
   /** check data structures */
   bool checkLists(const string& headline);
   
+  void destroy();
+  
 public:
   // parameters
   bool bvaComplement;		/// treat found complements special?

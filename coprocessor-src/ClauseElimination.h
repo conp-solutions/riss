@@ -56,6 +56,7 @@ public:
   
   void printStatistics(ostream& stream);
   
+  
 protected:
   
   /** try to run CCE on clause cr, return true if clause has been removed */

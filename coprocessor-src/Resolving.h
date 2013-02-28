@@ -27,6 +27,8 @@ public:
   /** inherited from @see Technique */
   void printStatistics( ostream& stream );
   
+  void destroy();
+  
 protected:
   
   /** resolve ternary clauses */
