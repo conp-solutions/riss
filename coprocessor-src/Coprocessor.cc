@@ -253,7 +253,7 @@ lbool Preprocessor::performSimplification()
   if( opt_sls ) {
     if( opt_verbose > 2 )cerr << "c coprocessor sls" << endl;
     if( status == l_Undef ) {
-      bool solvedBySls = sls.solve( data.getClauses(), 200000 );  // cannot change status, can generate new unit clauses
+      bool solvedBySls = sls.solve( data.getClauses(), 4000000 );  // cannot change status, can generate new unit clauses
       if( solvedBySls ) {
 	cerr << "c formula was solved with SLS!" << endl;
 	cerr // << endl 

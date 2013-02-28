@@ -267,6 +267,9 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	    break;
 	  }
 	  
+	  // if nothing has been selected, because not enough there - use next literal!
+	  if( left == lit_Undef ) continue;
+	  
 	  // do not continue, if there won't be a reduction
 	  // dows not hold in the multi case!!
 	  if( index == 1 && max < 3 ) {
@@ -276,6 +279,10 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	  if( bva_debug > 0 ) cerr << "c [BVA] index=" << index << " max=" << max << " rightList= " << data.list(right).size() << " leftList= " << data.list(left).size() << endl;
 
 	  // heuristically remove duplicates!
+	  if( var(left) >= data.nVars() ) cerr << "c [BVA] working on too large variable " << var(left) << " vs " << data.nVars() 
+	      << " literal L: " << left << " int: " << toInt(left)
+	      << " literal R: " << right << " int: " << toInt(right)  
+	      << endl;
 	  if( max > data.list(left).size() || max > data.list(right).size() ) {
 	    if( bva_debug > 1 ) cerr << "c remove duplicate clauses from left list " << left << " with index= " << index << endl;
 	    uint32_t os = data.list(left).size();
