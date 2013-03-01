@@ -21,7 +21,7 @@ Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, Max Löwen, All rights res
 #include "coprocessor-src/Subsumption.h"
 using namespace Coprocessor;
 
-static const char* _cat = "COPROCESSOR 3 SUBSUMPTION";
+static const char* _cat = "COPROCESSOR 3 - SUBSUMPTION";
 // options
 static BoolOption  opt_naivStrength    (_cat, "naive_strength", "use naive strengthening", false);
 static BoolOption  opt_allStrengthRes  (_cat, "all_strength_res", "Create all self-subsuming resolvents (prob. slow & blowup, only seq)", false); 

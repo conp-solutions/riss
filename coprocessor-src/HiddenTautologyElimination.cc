@@ -7,12 +7,13 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 static const char* _cat = "COPROCESSOR 3 - HTE";
 
 static IntOption opt_steps    (_cat, "cp3_hte_steps",  "Number of steps that are allowed per iteration", INT32_MAX, IntRange(-1, INT32_MAX));
-static BoolOption opt_uhdUHTE (_cat, "cp3_uhdTalk",    "talk about algorithm execution", false);
 
 #if defined CP3VERSION  
 static const int debug_out = 0;
+static const bool opt_hteTalk = false;
 #else
 static IntOption debug_out    (_cat, "cp3_hte_debug",  "print debug output to screen", 0, IntRange(0, 4));
+static BoolOption opt_hteTalk (_cat, "cp3_hteTalk",    "talk about algorithm execution", false);
 #endif
 
 using namespace Coprocessor;
@@ -131,13 +132,13 @@ void HiddenTautologyElimination::elimination_worker (CoprocessorData& data, uint
   if( debug_out > 3 ) cerr << "c allocate litQueue for " << data.nVars() * 2 << " elements at " << std::hex << litQueue << std::hex << endl;
   MethodFree litQueueFree(litQueue); // will automatically free the resources at a return!
   
-  if( opt_uhdUHTE ) fprintf(stderr, "c HTE from %d to %d out of %d\n", start, end, activeVariables.size());
+  if( opt_hteTalk ) fprintf(stderr, "c HTE from %d to %d out of %d\n", start, end, activeVariables.size());
   
   for (uint32_t index = start; index < end && !data.isInterupted() ; ++index)
   {
     if( steps == 0 && !data.unlimited() ) break; // stop if number of iterations has been reached
     const Var v = activeVariables[index];
-    if( opt_uhdUHTE )  fprintf(stderr, "c HTE on variable %d\n", v+1);
+    if( opt_hteTalk )  fprintf(stderr, "c HTE on variable %d\n", v+1);
     
   if( debug_out > 1 ) {
     fprintf(stderr, "[HTE] ITERATION implications:\n");
@@ -310,7 +311,7 @@ bool HiddenTautologyElimination::hiddenTautologyElimination(Var v, CoprocessorDa
 	Lit* binaryI = big.getArray( ~i );
 	const uint32_t binaryIsize = big.getSize(~i);
         for ( uint32_t j = 0; j < binaryIsize; j++ ) {
-	  if( opt_uhdUHTE && debug_out) cerr << "c mark " << toInt( ~binaryI[j] ) << " with " << toInt(i) << endl;
+	  if( opt_hteTalk && debug_out) cerr << "c mark " << toInt( ~binaryI[j] ) << " with " << toInt(i) << endl;
 	  hlaArray.setCurrentStep( toInt( ~binaryI[j] ) );
 	}
    // TODO: port other code     
@@ -395,7 +396,7 @@ Lit HiddenTautologyElimination::fillHlaArrays(Var v, BIG& big, MarkArray& hlaPos
     const Lit i = mkLit(v, pol == 0 ? false : true);
     MarkArray& hlaArray = (pol == 0 ) ? hlaPositive : hlaNegative;
     hlaArray.nextStep();
-    if( opt_uhdUHTE ) cerr << "c [HTE] fill hla for " << i << endl;
+    if( opt_hteTalk ) cerr << "c [HTE] fill hla for " << i << endl;
     
     hlaArray.setCurrentStep( toInt(i) );
     // process all literals in list (inverse BIG!)
@@ -404,7 +405,7 @@ Lit HiddenTautologyElimination::fillHlaArrays(Var v, BIG& big, MarkArray& hlaPos
     for( uint32_t j = 0 ; j < posSize; ++ j )
     {
       const Lit imp = ~(posList[j]);
-      if( opt_uhdUHTE ) cerr << "c [HTE] look at literal " << imp << endl;
+      if( opt_hteTalk ) cerr << "c [HTE] look at literal " << imp << endl;
       if ( hlaArray.isCurrentStep( toInt(imp) ) ) continue;
       
       head = litQueue; tail = litQueue;
@@ -412,7 +413,7 @@ Lit HiddenTautologyElimination::fillHlaArrays(Var v, BIG& big, MarkArray& hlaPos
        if( debug_out > 3 ) cerr << "c [HTE] write at litQueue head pos " << headPos ++ << endl;
        headPos ++; 
       hlaArray.setCurrentStep( toInt(imp ) );
-      if( opt_uhdUHTE ) cerr << "c [HTE] add to array: " << imp << endl;
+      if( opt_hteTalk ) cerr << "c [HTE] add to array: " << imp << endl;
       // process queue
       while( tail < head ) {
 	const Lit lit = *(tail++);
@@ -425,19 +426,19 @@ Lit HiddenTautologyElimination::fillHlaArrays(Var v, BIG& big, MarkArray& hlaPos
 	  const Lit kLit = ~kList[k];
 	  if( ! hlaArray.isCurrentStep( toInt(kLit) ) ) {
 	    if ( hlaArray.isCurrentStep( toInt( ~kLit) ) ) {
-	      if( opt_uhdUHTE ) cerr << "c [HTE] failed literal: " << i << endl;
+	      if( opt_hteTalk ) cerr << "c [HTE] failed literal: " << i << endl;
 	      return i; // return the failed literal
 	    }
 	    
 	    hlaArray.setCurrentStep( toInt(kLit) );
-	    if( opt_uhdUHTE ) { cerr << "c [HTE] add to array " << i << " for " << kLit << endl;
+	    if( opt_hteTalk ) { cerr << "c [HTE] add to array " << i << " for " << kLit << endl;
 	    }
 	    if( debug_out > 3 )  cerr << "c [HTE] put an element to the queue at position " << (int)(head - litQueue) << " with ptr " << std::hex << head << std::dec << endl;
 	    *(head++) = kLit;
 	  }
 	}
       }
-      if( opt_uhdUHTE ) cerr << "c [HTE] remove from array: " << imp << endl;
+      if( opt_hteTalk ) cerr << "c [HTE] remove from array: " << imp << endl;
       hlaArray.reset( toInt(imp) );
     } // end for pos list
   }
