@@ -19,7 +19,11 @@ static IntOption pr_viviPercent    (_cat, "pr-viviP",  "percent of max. clause s
 static IntOption pr_viviLimit      (_cat, "pr-viviL",  "step limit for clause vivification", 5000000,  IntRange(0, INT32_MAX));
 
 
+#if defined CP3VERSION  
+static const int debug_out = 0;
+#else
 static IntOption debug_out        (_cat, "pr-debug", "debug output for probing",0, IntRange(0,4) );
+#endif
 
 Probing::Probing(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, EquivalenceElimination& _ee, Solver& _solver)
 : Technique( _ca, _controller )

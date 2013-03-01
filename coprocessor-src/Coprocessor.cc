@@ -8,10 +8,9 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include <iostream>
 
 static const char* _cat = "COPROCESSOR 3";
-static const char* _cat2 = "CP3 TECHNIQUES";
+static const char* _cat2 = "PREPROCESSOR TECHNIQUES";
 
 // options
-static IntOption  opt_threads     (_cat, "cp3_threads",    "Number of extra threads that should be used for preprocessing", 0, IntRange(0, INT32_MAX));
 static BoolOption opt_unlimited   (_cat, "cp3_unlimited",  "No limits for preprocessing techniques", true);
 static BoolOption opt_randomized  (_cat, "cp3_randomized", "Steps withing preprocessing techniques are executed in random order", false);
 static IntOption  opt_verbose     (_cat, "cp3_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
@@ -31,13 +30,30 @@ static BoolOption opt_unhide      (_cat2, "unhide",        "Use Bounded Variable
 static BoolOption opt_probe       (_cat2, "probe",         "Use Bounded Variable Addition during preprocessing", false);
 static BoolOption opt_ternResolve (_cat2, "3resolve",      "Use Ternary Clause Resolution", false);
 static BoolOption opt_addRedBins  (_cat2, "addRed2",       "Use Adding Redundant Binary Clauses", false);
+
+// use 2sat and sls only for high versions!
+#if defined CP3VERSION && CP3VERSION < 301
+static const int opt_threads = 0;
+static const bool opt_sls = false;       
+static const bool opt_twosat = false;
+static const bool  opt_ts_phase =false;    
+#else
+static IntOption  opt_threads     (_cat, "cp3_threads",    "Number of extra threads that should be used for preprocessing", 0, IntRange(0, INT32_MAX));
 static BoolOption opt_sls         (_cat2, "sls",           "Use Simple Walksat algorithm to test whether formula is satisfiable quickly", false);
 static BoolOption opt_twosat      (_cat2, "2sat",          "2SAT algorithm to check satisfiability of binary clauses", false);
 static BoolOption opt_ts_phase    (_cat2, "2sat-phase",    "use 2SAT model as initial phase for SAT solver", false);
+#endif
 
+#if defined CP3VERSION // debug only, if no version is given!
+static const bool opt_debug = false;       
+static const bool opt_check = false;
+static const int  opt_log =0;
+#else
 static BoolOption opt_debug       (_cat2, "cp3-debug",     "do more debugging", false);
 static BoolOption opt_check       (_cat2, "cp3-check",     "check solver state before returning control to solver", false);
 static IntOption  opt_log         (_cat, "log",            "Output log messages until given level", 0, IntRange(0, 3));
+#endif
+
 
 using namespace std;
 using namespace Coprocessor;
@@ -321,6 +337,12 @@ lbool Preprocessor::performSimplification()
   if( isInprocessing ) ipTime = cpuTime() - ipTime;
   else ppTime = cpuTime() - ppTime;
   
+  if( opt_check ) fullCheck("final check");
+
+  destroyTechniques();
+  
+  if ( data.ok() ) reSetupSolver();
+
   if( opt_printStats ) {
     printStatistics(cerr);
     propagation.printStatistics(cerr);
@@ -336,12 +358,6 @@ lbool Preprocessor::performSimplification()
     if( opt_twosat) twoSAT.printStatistics(cerr);
     if( opt_cce ) cce.printStatistics(cerr);
   }
-  
-  if( opt_check ) fullCheck("final check");
-
-  destroyTechniques();
-  
-  if ( data.ok() ) reSetupSolver();
   
   // destroy preprocessor data
   if( opt_verbose > 2 ) cerr << "c coprocessor free data structures" << endl;
@@ -367,7 +383,8 @@ lbool Preprocessor::inprocess()
   if (opt_inprocess) {
     
     // reject inprocessing here!
-    if( lastInpConflicts + opt_inprocessInt < solver->conflicts ) {
+    cerr << "c check " << lastInpConflicts << " and " << (int)opt_inprocessInt << " vs " << solver->conflicts << endl;
+    if( lastInpConflicts + opt_inprocessInt > solver->conflicts ) {
       return l_Undef;  
     }
     
@@ -461,7 +478,7 @@ void Preprocessor::initializePreprocessor()
 
 void Preprocessor::destroyTechniques()
 {
-    propagation.destroy();
+    // propagation.destroy();
     subsumption.destroy();
     ee.destroy();
     if( opt_hte ) hte.destroy();

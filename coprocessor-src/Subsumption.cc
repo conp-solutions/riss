@@ -21,14 +21,24 @@ Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, Max Löwen, All rights res
 #include "coprocessor-src/Subsumption.h"
 using namespace Coprocessor;
 
-static const char* _cat = "CP3 SUBSUMPTION";
+static const char* _cat = "COPROCESSOR 3 SUBSUMPTION";
 // options
 static BoolOption  opt_naivStrength    (_cat, "naive_strength", "use naive strengthening", false);
+static BoolOption  opt_allStrengthRes  (_cat, "all_strength_res", "Create all self-subsuming resolvents (prob. slow & blowup, only seq)", false); 
+
+#if defined CP3VERSION && CP3VERSION < 302
+static const bool  opt_par_strength    =false;
+static const bool  opt_lock_stats      =false;
+static const bool  opt_par_subs        =false;
+static const int  opt_par_subs_counts  =false;
+#else
 static BoolOption  opt_par_strength    (_cat, "cp3_par_strength", "force par strengthening (if threads exist)", false);
 static BoolOption  opt_lock_stats      (_cat, "cp3_lock_stats", "measure time waiting in spin locks", false);
 static BoolOption  opt_par_subs        (_cat, "cp3_par_subs", "force par subsumption (if threads exist)", false);
 static IntOption  opt_par_subs_counts  (_cat, "par_subs_counts" ,  "Updates of counts in par-subs 0: compare_xchange, 1: CRef-vector", 1, IntRange(0,1));
-static BoolOption  opt_allStrengthRes  (_cat, "all_strength_res", "Create all self-subsuming resolvents (prob. slow & blowup, only seq)", false); 
+#endif
+
+
 Subsumption::Subsumption( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation )
 : Technique( _ca, _controller )
 , data(_data)

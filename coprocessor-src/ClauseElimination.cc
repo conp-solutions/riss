@@ -12,7 +12,11 @@ static IntOption opt_steps  (_cat, "cp3_cce_steps",  "Number of steps that are a
 static IntOption opt_level  (_cat, "cp3_cce_level",  "none, ALA+ATE, CLA+ATE, ALA+CLA+BCE", 3, IntRange(0, 3));
 static IntOption opt_ccePercent (_cat, "cp3_cce_sizeP", "percent of max. clause size for clause elimination (excluding)", 70, IntRange(0,100));
 
+#if defined CP3VERSION  
+static const bool debug_out = false;
+#else
 static IntOption debug_out (_cat, "cce-debug", "debug output for clause elimination",0, IntRange(0,4) );
+#endif
 
 static const int cceLevel = 1;
 

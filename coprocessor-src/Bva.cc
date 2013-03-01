@@ -23,7 +23,11 @@ static BoolOption opt_bvaComplement         (_cat, "cp3_bva_compl",   "treat com
 static BoolOption opt_bvaRemoveDubplicates (_cat, "cp3_bva_dupli",   "remove duplicate clauses", true);
 static BoolOption opt_bvaSubstituteOr      (_cat, "cp3_bva_subOr",   "try to also substitus disjunctions", false);
 
+#if defined CP3VERSION 
+static const int bva_debug = 0;
+#else
 static IntOption  bva_debug                (_cat, "bva-debug",       "Debug Output of BVA", 0, IntRange(0, 4));
+#endif
 	
 BoundedVariableAddition::BoundedVariableAddition(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data)
 : Technique( _ca, _controller )

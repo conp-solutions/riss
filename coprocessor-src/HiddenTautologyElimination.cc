@@ -7,8 +7,13 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 static const char* _cat = "COPROCESSOR 3 - HTE";
 
 static IntOption opt_steps    (_cat, "cp3_hte_steps",  "Number of steps that are allowed per iteration", INT32_MAX, IntRange(-1, INT32_MAX));
-static IntOption debug_out    (_cat, "cp3_hte_debug",  "print debug output to screen", 0, IntRange(0, 4));
 static BoolOption opt_uhdUHTE (_cat, "cp3_uhdTalk",    "talk about algorithm execution", false);
+
+#if defined CP3VERSION  
+static const int debug_out = 0;
+#else
+static IntOption debug_out    (_cat, "cp3_hte_debug",  "print debug output to screen", 0, IntRange(0, 4));
+#endif
 
 using namespace Coprocessor;
 

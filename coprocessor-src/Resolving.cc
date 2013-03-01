@@ -9,11 +9,14 @@ static DoubleOption opt_add_percent   (_cat, "cp3_res_percent", "produce this pe
 static BoolOption   opt_add_red       (_cat, "cp3_res_add_red", "add redundant binary clauses", false);
 static BoolOption   opt_red_level     (_cat, "cp3_res_add_lev", "calculate added percent based on level", false);
 static BoolOption   opt_add_red_lea   (_cat, "cp3_res_add_lea", "add redundants based on learneds as well?", false);
-
 static BoolOption   opt_add_red_start (_cat, "cp3_res_ars",     "also before preprocessing?", false);
 
 /// enable this parameter only during debug!
+#if defined CP3VERSION  
+static const bool debug_out = false;
+#else
 static BoolOption debug_out         (_cat, "cp3_res_debug",   "print debug output to screen",false);
+#endif
 
 Resolving::Resolving(ClauseAllocator& _ca, ThreadController& _controller)
 : Technique(_ca,_controller)

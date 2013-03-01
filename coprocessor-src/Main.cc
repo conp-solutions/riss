@@ -112,7 +112,15 @@ int main(int argc, char** argv)
         if (in == NULL)
             printf("ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
         
-        if (S.verbosity > 0){
+        if (S.verbosity > 0) {
+#ifdef CP3VERSION
+            printf("===============================[ Coprocessor %4.2f  ]===========================\n", CP3VERSION/100);	    
+            printf("| Norbert Manthey. The use of the tool is limited to research only!           |\n");
+#else
+            printf("===============================[ Coprocessor  ]================================\n",);	    
+            printf("| Norbert Manthey                                                             |\n");
+#endif
+            printf("|                                                                             |\n");
             printf("============================[ Problem Statistics ]=============================\n");
             printf("|                                                                             |\n"); }
         

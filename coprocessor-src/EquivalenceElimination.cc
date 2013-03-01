@@ -10,13 +10,29 @@ using namespace Coprocessor;
 
 static const char* _cat = "COPROCESSOR 3 - EE";
 
+#if defined CP3VERSION  && CP3VERSION < 350
+static const int opt_level            = 0;
+static const bool opt_old_circuit      = false;
+static const bool opt_eagerEquivalence = false;
+static const bool opt_eeGateBigFirst   = false;
+static const char* aagFile = 0;
+#else
 static IntOption  opt_level            (_cat, "cp3_ee_level",      "EE on BIG, gate probing, structural hashing", 0, IntRange(0, 3));
 static BoolOption opt_old_circuit      (_cat, "cp3_old_circuit",   "do old circuit extraction", false);
 static BoolOption opt_eagerEquivalence (_cat, "cp3_eagerGates",    "do old circuit extraction", true);
 static BoolOption opt_eeGateBigFirst   (_cat, "cp3_BigThenGate", "detect binary equivalences before going for gates", true);
-/// enable this parameter only during debug!
-static BoolOption debug_out            (_cat, "ee_debug", "print debug output to screen",false);
 static StringOption aagFile            (_cat, "ee_aag", "write final circuit to this file");
+#endif
+
+/// enable this parameter only during debug!
+
+#if defined CP3VERSION  
+static const bool debug_out = false;
+#else
+static BoolOption debug_out            (_cat, "ee_debug", "print debug output to screen",false);
+#endif
+
+
 
 static const int eeLevel = 1;
 /// temporary Boolean flag to quickly enable debug output for the whole file

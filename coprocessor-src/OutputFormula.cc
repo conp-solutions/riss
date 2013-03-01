@@ -1,6 +1,10 @@
 #include "coprocessor-src/Coprocessor.h"
 #include <stdio.h>
 
+#include <sstream>
+
+using namespace std;
+
 using namespace Coprocessor;
 
 void Preprocessor::outputFormula(const char *file)
@@ -52,13 +56,14 @@ void Preprocessor::printFormula(FILE * fd)
 inline void Preprocessor::printClause(FILE * fd, CRef cr) 
 {
     Clause & c = ca[cr];
+    if (c.mark()) return;
+    stringstream s;
     for (int i = 0; i < c.size(); ++i)
-    {
-        //check if clause is obsolete
-        if (!c.mark())
-            printLit(fd, toInt(c[i]));
-    }
-    fprintf(fd, "0\n");
+      s << c[i] << " ";
+    s << "0" << endl;
+    
+    fprintf(fd, "%s", s.str().c_str() );
+    
 }
 
 inline void Preprocessor::printLit(FILE * fd, int l) 

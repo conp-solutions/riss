@@ -15,7 +15,12 @@ static BoolOption opt_uhdUHTE      (_cat, "cp3_uhdUHTE",      "Use Unhiding+Hidd
 static BoolOption opt_uhdNoShuffle (_cat, "cp3_uhdNoShuffle", "Do not perform randomized graph traversation", false);
 static BoolOption opt_uhdEE        (_cat, "cp3_uhdEE",        "Use equivalent literal elimination", false);
 
+#if defined CP3VERSION  
+static const int opt_uhdDebug = 0;
+#else
 static IntOption  opt_uhdDebug     (_cat, "cp3_uhdDebug",     "Debug Level of Unhiding", 0, IntRange(0, 3));
+#endif
+
 
 Unhiding::Unhiding(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, Subsumption& _subsumption, EquivalenceElimination& _ee)
 : Technique( _ca, _controller )

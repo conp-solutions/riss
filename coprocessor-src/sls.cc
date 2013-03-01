@@ -7,7 +7,12 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 using namespace Coprocessor;
 
 static const char* _cat = "SLS";
+
+#if defined CP3VERSION 
+const static bool opt_debug = false;
+#else
 static BoolOption opt_debug (_cat, "sls-debug", "Print SLS debug output", false);
+#endif
 
 Sls::Sls(CoprocessorData& _data, ClauseAllocator& _ca, ThreadController& _controller)
 : 
