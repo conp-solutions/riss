@@ -101,6 +101,7 @@ Solver::Solver() :
   , asynch_interrupt   (false)
   
   , coprocessor(0)
+  , useCoprocessor(true)
 {}
 
 
@@ -776,8 +777,8 @@ lbool Solver::solve_()
 
     if( status == l_Undef ) {
 	  // restart, triggered by the solver
-	  if( coprocessor == 0 ) coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
-          status = coprocessor->preprocess();
+	  if( coprocessor == 0 && useCoprocessor) coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
+          if( coprocessor != 0 && useCoprocessor) status = coprocessor->preprocess();
         printf("===============================================================================\n");
     }
     
@@ -791,8 +792,8 @@ lbool Solver::solve_()
 	
 	if( status == l_Undef ) {
 	  // restart, triggered by the solver
-	  if( coprocessor == 0 ) coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
-          status = coprocessor->inprocess();
+	  if( coprocessor == 0 && useCoprocessor)  coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
+          if( coprocessor != 0 && useCoprocessor) status = coprocessor->inprocess();
 	}
 	
     }
@@ -806,7 +807,7 @@ lbool Solver::solve_()
         model.growTo(nVars());
         for (int i = 0; i < nVars(); i++) model[i] = value(i);
 	
-	if( coprocessor != 0 ) coprocessor->extendModel(model);
+	if( coprocessor != 0 && useCoprocessor) coprocessor->extendModel(model);
 	
     }else if (status == l_False && conflict.size() == 0)
         ok = false;

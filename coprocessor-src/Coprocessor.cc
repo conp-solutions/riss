@@ -16,6 +16,7 @@ static BoolOption opt_randomized  (_cat, "cp3_randomized", "Steps withing prepro
 static IntOption  opt_verbose     (_cat, "cp3_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
 static IntOption  opt_inprocessInt(_cat, "cp3_inp_cons",   "Perform Inprocessing after at least X conflicts", 20000, IntRange(0, INT32_MAX));
        BoolOption opt_printStats  (_cat, "cp3_stats",      "Print Technique Statistics", false);
+      
 // techniques
 static BoolOption opt_up          (_cat2, "up",            "Use Unit Propagation during preprocessing", false);
 static BoolOption opt_subsimp     (_cat2, "subsimp",       "Use Subsumption during preprocessing", false);
@@ -72,6 +73,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , thisClauses( 0 )
 , thisLearnts( 0 )
 , lastInpConflicts(0)
+, formulaVariables(-1)
 // classes for preprocessing methods
 , propagation( solver->ca, controller )
 , subsumption( solver->ca, controller, data, propagation )
@@ -97,8 +99,13 @@ Preprocessor::~Preprocessor()
 lbool Preprocessor::performSimplification()
 {
   if( ! opt_enabled ) return l_Undef;
-  if( opt_verbose > 2 ) cerr << "c start preprocessing with coprocessor" << endl;
+  if( opt_verbose > 2 ) cerr << "c start simplifying with coprocessor" << endl;
 
+  if( formulaVariables == -1 ) {
+    if( opt_verbose > 0 ) cerr << "c initialize CP3 with " << solver->nVars()  << " variables " << endl;
+    formulaVariables = solver->nVars() ;
+  }
+  
   if( isInprocessing ) ipTime = cpuTime() - ipTime;
   else ppTime = cpuTime() - ppTime;
   
@@ -420,6 +427,7 @@ stream << "c [STAT] CP3 "
 
 void Preprocessor::extendModel(vec< lbool >& model)
 {
+  if( formulaVariables > model.size() ) model.growTo(formulaVariables);
   data.extendModel(model);
 }
 

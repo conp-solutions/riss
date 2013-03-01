@@ -91,7 +91,7 @@ void HiddenTautologyElimination::process(CoprocessorData& data)
   // TODO: define an order?
   
   // run HTE for the whole queue, but parallel only if enabled via flag!
-  if( controller.size() > 0 || !opt_par_hte ) {
+  if( controller.size() > 0 && opt_par_hte ) {
     parallelElimination(data, big); // use parallel, is some conditions have been met
     data.correctCounters();
   } else {

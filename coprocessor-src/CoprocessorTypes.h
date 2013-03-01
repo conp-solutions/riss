@@ -288,6 +288,8 @@ public:
   void addToExtension( const Lit dontTouch, const Lit l = lit_Error );
 
   void extendModel(vec<lbool>& model);
+  const vector<Lit>& getUndo() const { return undo; }
+  
 
   // handling equivalent literals
   void addEquivalences( const std::vector<Lit>& list );

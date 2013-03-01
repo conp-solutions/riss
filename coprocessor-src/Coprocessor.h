@@ -50,6 +50,7 @@ class Preprocessor {
   int thisLearnts;		// number of learnt clauses before current run
   
   int lastInpConflicts;		// number of conflicts when inprocessing has been called last time
+  int formulaVariables;		// number of variables in the initial formula
   
 public:
 
@@ -71,7 +72,25 @@ public:
   // print formula (DIMACs)
   void outputFormula(const char *file);
 
+  // handle model processing
+  
+  const int getFormulaVariables() const { return formulaVariables; }
+  
+  /** parse model, if no file is specified, read from stdin 
+   * @return false, if some error happened
+   */
+  int parseModel(const string& filename);
 
+  /** parse model extend information 
+   * @return false, if some error happened
+   */
+  bool parseUndoInfo(const string& filename);
+
+  /** write model extend information to specified file 
+   * @return false, if some error happened
+   */
+  bool writeUndoInfo(const string& filename);
+  
 protected:
   // techniques
   Subsumption subsumption;
@@ -110,7 +129,9 @@ protected:
   inline void printClause(FILE * fd, CRef cr);
   inline void printLit(FILE * fd, int l);
   void printFormula( const string& headline );
+  
 
+  
 };
 
 };

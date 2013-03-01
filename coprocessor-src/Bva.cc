@@ -74,7 +74,7 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	bool addedNewAndGate = false;
 	
 	// for l in F
-	while (bvaHeap.size() > 0 && (data.unlimited() || bvaLimit > 0) ) {
+	while (bvaHeap.size() > 0 && (data.unlimited() || bvaLimit > 0) && !data.isInterupted() ) {
 	  
 	  if( bva_debug > 1 ) cerr << "c next major loop iteration with heapSize " << bvaHeap.size() << endl;
 	  
