@@ -26,6 +26,7 @@ ClauseElimination::ClauseElimination(ClauseAllocator& _ca, ThreadController& _co
 , processTime(0)
 , removedClauses(0)
 , removedBceClauses(0)
+, cceSize(0)
 {
 
 }
@@ -46,7 +47,7 @@ void ClauseElimination::process(CoprocessorData& data)
     maxSize = clause.size() > maxSize ? clause.size() : maxSize;
   }
   
-  uint32_t cceSize = (maxSize * opt_ccePercent) / 100;
+  cceSize = (maxSize * opt_ccePercent) / 100;
   cceSize = cceSize > 2 ? cceSize : 3;	// do not process binary clauses
   if( debug_out > 0 ) cerr << "c work on clauses larger than " << cceSize << " maxSize= " << maxSize << endl;
   WorkData wData( data.nVars() );
@@ -259,6 +260,7 @@ void ClauseElimination::printStatistics(ostream& stream)
   stream << "c [STAT] CCE " << processTime << " s, " 
 			    << removedClauses << " cls, " 
 			    << removedBceClauses << " nonEE-cls, "
-			    << steps << " steps"
+			    << steps << " steps "
+			    << cceSize << " rejectSize "
 			    << endl;
 }

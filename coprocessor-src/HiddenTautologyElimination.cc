@@ -8,6 +8,12 @@ static const char* _cat = "COPROCESSOR 3 - HTE";
 
 static IntOption opt_steps    (_cat, "cp3_hte_steps",  "Number of steps that are allowed per iteration", INT32_MAX, IntRange(-1, INT32_MAX));
 
+#if defined CP3VERSION && CP3VERSION < 302
+ static const bool opt_par_hte        = false;
+#else
+ BoolOption opt_par_hte         (_cat, "cp3_par_hte",    "Forcing Parallel HTE", false);
+#endif
+
 #if defined CP3VERSION  
 static const int debug_out = 0;
 static const bool opt_hteTalk = false;
@@ -84,8 +90,8 @@ void HiddenTautologyElimination::process(CoprocessorData& data)
   else data.getActiveVariables( lastDeleteTime(), activeVariables);
   // TODO: define an order?
   
-  // run HTE for the whole queue
-  if( controller.size() > 0 ) {
+  // run HTE for the whole queue, but parallel only if enabled via flag!
+  if( controller.size() > 0 || !opt_par_hte ) {
     parallelElimination(data, big); // use parallel, is some conditions have been met
     data.correctCounters();
   } else {
@@ -208,6 +214,9 @@ void HiddenTautologyElimination::initClause( const CRef cr )
 
 void HiddenTautologyElimination::parallelElimination(CoprocessorData& data, BIG& big)
 {
+  static bool didIt = false;
+  if( !didIt ) { cerr << "c parallel HTE can result in unsound formulas!" << endl; didIt = true; }
+  
   if( debug_out > 3 ) cerr << "c parallel HTE with " << controller.size() << " threads" << endl;
   EliminationData workData[ controller.size() ];
   vector<Job> jobs( controller.size() );

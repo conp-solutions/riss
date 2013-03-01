@@ -12,6 +12,7 @@ static IntOption pr_uip            (_cat, "pr-uips",   "perform learning if a co
 static BoolOption pr_double        (_cat, "pr-double", "perform double look-ahead",true);
 static BoolOption pr_probe         (_cat, "pr-probe",  "perform probing",true);
 static BoolOption pr_rootsOnly     (_cat, "pr-roots",  "probe only on root literals",true);
+static IntOption pr_prLimit        (_cat, "pr-probeL", "step limit for probing", 5000000,  IntRange(0, INT32_MAX));
 static BoolOption pr_vivi          (_cat, "pr-vivi",   "perform clause vivification",true);
 static IntOption pr_keepLearnts    (_cat, "pr-keepL",  "keep conflict clauses in solver (0=no,1=learnt,2=original)", 2, IntRange(0,2));
 static IntOption pr_keepImplied    (_cat, "pr-keepI",  "keep clauses that imply on level 1 (0=no,1=learnt,2=original)", 2, IntRange(0,2));
@@ -31,7 +32,7 @@ Probing::Probing(ClauseAllocator& _ca, ThreadController& _controller, Coprocesso
 , solver( _solver )
 , propagation ( _propagation )
 , ee ( _ee )
-, probeLimit(20000)
+, probeLimit(pr_prLimit)
 , processTime(0)
 , l1implied(0)
 , l1failed(0)
@@ -41,6 +42,7 @@ Probing::Probing(ClauseAllocator& _ca, ThreadController& _controller, Coprocesso
 , l2ee(0)
 , totalL2cand(0)
 , probes(0)
+, probeCandidates(0)
 , l2probes(0)
 , viviTime(0)
 , viviLits(0)
@@ -141,6 +143,8 @@ CRef Probing::prPropagate( bool doDouble )
             // Make sure the false literal is data[1]:
             CRef     cr        = i->cref;
             Clause&  c         = ca[cr];
+	    // more fine grained probe limit
+	    probeLimit = probeLimit > 0 ? probeLimit - 1 : 0;
             Lit      false_lit = ~p;
             if (c[0] == false_lit)
                 c[0] = c[1], c[1] = false_lit;
@@ -349,8 +353,8 @@ bool Probing::prDoubleLook(Lit l1decision)
 	solver.enqueue(data.lits[0]);
 	if( debug_out > 0 ) cerr << "c L2 learnt clause: " << data.lits[0] << " 0" << endl;
       }else{
-	CRef cr = ca.alloc(data.lits, false);
-	solver.clauses.push(cr);
+	CRef cr = ca.alloc(data.lits, pr_keepLearnts == 1);
+	// solver.clauses.push(cr);
 	solver.attachClause(cr);
 	data.addClause(cr, debug_out > 0);
 	l2conflicts.push_back(cr);
@@ -401,8 +405,8 @@ bool Probing::prDoubleLook(Lit l1decision)
 	solver.enqueue(data.lits[0]);
 	if( debug_out > 0 ) cerr << "c L2 learnt clause: " << data.lits[0] << " 0" << endl;
       }else{
-	CRef cr = ca.alloc(data.lits, true);
-	solver.clauses.push(cr);
+	CRef cr = ca.alloc(data.lits, pr_keepLearnts == 1);
+	// solver.clauses.push(cr);
 	solver.attachClause(cr);
 	data.addClause(cr, debug_out > 0);
 	l2conflicts.push_back(cr);
@@ -435,10 +439,15 @@ bool Probing::prDoubleLook(Lit l1decision)
 	if( debug_out > 1 ) cerr << "c l2 implied literal: " << l1decision << " -> " << solver.trail[i] << endl;
 	learntUnits[0] = solver.trail[ i ];
 	l2implied ++;
-	CRef cr = ca.alloc(learntUnits, false);
+	CRef cr = ca.alloc(learntUnits, pr_keepImplied == 1);
 	data.addClause(cr, debug_out > 0);
 	l2implieds.push_back(cr);
-      } 
+      } else { // this is for statistics only and is currently not handled!
+// 	if( 
+// 	  (solver.assigns[ tv ] == l_True && prPositive[tv] == l_False)
+// 	  || (solver.assigns[ tv ] == l_False && prPositive[tv] == l_True)
+// 	) l2ee ++;
+      }
       
     }
     
@@ -456,7 +465,6 @@ bool Probing::prDoubleLook(Lit l1decision)
     {
       CRef cr = l2implieds[i];
       if( debug_out > 1 ) cerr << "c add clause " << ca[cr] << endl;
-      solver.clauses.push(cr);
       solver.attachClause(cr);
       solver.uncheckedEnqueue(ca[cr][0], cr);
     }
@@ -600,9 +608,10 @@ void Probing::printStatistics( ostream& stream )
   << endl;   
   
   stream << "c [STAT] PROBING(2) " 
+  << probes << " probes "
+  << probeCandidates << " probeCands "
+  << l2probes << " l2probes "
   << totalL2cand << " l2cands "
-  <<  probes << " probes "
-  <<  l2probes << " l2probes "
   << probeLimit << " stepsLeft "
   << endl;   
   
@@ -671,8 +680,9 @@ void Probing::probing()
   big.create(ca,data,data.getClauses(),data.getLEarnts()); // lets have the full big
   
   big.fillSorted( variableHeap, data, pr_rootsOnly );
-  
-  
+  // if there are no root variables (or lits implied by roots), consider all variables!
+  if( variableHeap.size() == 0 ) big.fillSorted( variableHeap, data, false, true );
+  probeCandidates += variableHeap.size();
   // cerr << "sort literals in probing queue according to some heuristic (BIG roots first, activity, ... )" << endl;
   
   // probe for each variable 
@@ -822,6 +832,39 @@ void Probing::probing()
     
   }
 
+  // take care of clauses that have been added during probing!
+  if( pr_keepLearnts != 2 ) {
+    for( int i = 0 ; i < l2conflicts.size(); ++ i ) {
+      Clause& c = ca[ l2conflicts[i] ];
+      if( pr_keepLearnts == 0 ) {
+	c.can_be_deleted();
+      } else {
+	c.set_learnt(true);
+	c.activity() = 0;
+	data.getLEarnts().push( l2conflicts[i] );
+      }
+    }
+  } else {
+    for( int i = 0 ; i < l2conflicts.size(); ++ i )
+      data.getClauses().push(l2conflicts[i]);
+  }
+  
+  if( pr_keepImplied != 2 ) {
+    for( int i = 0 ; i < l2implieds.size(); ++ i ) {
+      Clause& c = ca[ l2implieds[i] ];
+      if( pr_keepImplied == 0) {
+	c.can_be_deleted();
+      } else {
+	c.set_learnt(true);
+	c.activity() = 0;
+	data.getLEarnts().push( l2implieds[i] );
+      }
+    }
+  } else {
+    for( int i = 0 ; i < l2implieds.size(); ++ i )
+      data.getClauses().push(l2implieds[i]);
+  }
+  
 }
 
 

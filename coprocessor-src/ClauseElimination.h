@@ -28,6 +28,7 @@ class ClauseElimination : public Technique {
   double processTime;  // required time
   int removedClauses;  // number of removed clauses
   int removedBceClauses; // number of clauses that have been removed without changing equivalence
+  unsigned cceSize;
   
 public:
   
@@ -39,10 +40,12 @@ public:
     vector<Lit> toProcess; // literals that still need to be processed
     vector<Lit> toUndo;    // literals that have to be out to the undo information, if a cla clause is removed by ATE or ABCE
     int nextAla;           // position from which ala needs to be continued
-    
+
     int steps;
     int removedClauses;
     int removedBceClauses;
+    unsigned cceSize;
+    
     WorkData(int vars) : nextAla(0), steps(0), removedClauses(0), removedBceClauses(0) { array.create(2*vars); helpArray.create(2*vars);}
     ~WorkData() {array.destroy();helpArray.destroy();}
     void reset () { cla.clear(); array.nextStep(); toProcess.clear(); toUndo.clear(); nextAla=0; }
@@ -69,6 +72,7 @@ protected:
   
   /** check whether the clause resolved with the array results in a tautology */
   bool markedBCE(const Lit& l, const Clause& c, const MarkArray& array);
+
   
   /*
    *  Parallel Stuff later!!

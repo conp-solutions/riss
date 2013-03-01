@@ -355,8 +355,8 @@ public:
    *  NOTE: will pollute the data.ma MarkArray
    * @param rootsOnly: fill the vector only with root literals
    */
-  void fillSorted( vector< Lit >& literals, Coprocessor::CoprocessorData& data, bool rootsOnly = false);
-  void fillSorted(vector<Var>& variables, CoprocessorData& data, bool rootsOnly);
+  void fillSorted( vector< Lit >& literals, Coprocessor::CoprocessorData& data, bool rootsOnly = true, bool getAll=false);
+  void fillSorted(vector<Var>& variables, CoprocessorData& data, bool rootsOnly = true, bool getAll=false);
 
   /** return true, if the condition "from -> to" holds, based on the stochstic scanned data */
   bool implies(const Lit& from, const Lit& to) const;
@@ -1353,10 +1353,11 @@ inline void BIG::generateImplied( CoprocessorData& data )
       stamp = stampLiteral(data.lits[i],stamp,index,stampQueue);
 }
 
-inline void BIG::fillSorted(vector<Lit>& literals, CoprocessorData& data, bool rootsOnly)
+inline void BIG::fillSorted(vector<Lit>& literals, CoprocessorData& data, bool rootsOnly, bool getAll)
 {
   literals.clear();
   data.ma.resize( data.nVars() *2 );
+  data.ma.nextStep();
   
   // put root nodes in queue
   for( Var v = 0 ; v < data.nVars(); ++ v )
@@ -1365,8 +1366,10 @@ inline void BIG::fillSorted(vector<Lit>& literals, CoprocessorData& data, bool r
       if( getSize( mkLit(v,true) ) == 0 ) continue;
       else { 
 	data.ma.setCurrentStep( toInt(mkLit(v,true)) );
+	literals.push_back( mkLit(v,true) ); // tthis is a root node
       }
     else if( getSize( mkLit(v,true) ) == 0 ) {
+      data.ma.setCurrentStep( toInt(mkLit(v,false)) );
       literals.push_back( mkLit(v,false) ); // tthis is a root node
     }
   }
@@ -1396,13 +1399,32 @@ inline void BIG::fillSorted(vector<Lit>& literals, CoprocessorData& data, bool r
       literals.push_back(l2);
     }
   }
+  
+  if( !getAll ) return;
+  
+  unsigned seenSoFar = literals.size();
+  for( Var v = 0 ; v < data.nVars(); ++ v ) {
+    for( int p = 0 ; p < 2; ++ p ) {
+      const Lit l = mkLit(v,p==1);
+      if( data.ma.isCurrentStep(toInt(l)) ) continue; // literal already in heap
+      else literals.push_back(l);
+    }
+  }
+  // shuffle these variables!
+  const unsigned diff = literals.size() - seenSoFar;
+  for( int i =  seenSoFar; i < literals.size(); ++ i ) {
+    const Lit tmp = literals[i];
+    const int rndInd = (rand() % diff) + seenSoFar;
+    literals[i] = literals[ rndInd ];
+    literals[ rndInd ] = tmp;
+  }
 }
 
-inline void BIG::fillSorted(vector<Var>& variables, CoprocessorData& data, bool rootsOnly)
+inline void BIG::fillSorted(vector< Var >& variables, Coprocessor::CoprocessorData& data, bool rootsOnly, bool getAll)
 {
   // get sorted list of lits
   data.lits.clear();
-  fillSorted(data.lits, data, rootsOnly);
+  fillSorted(data.lits, data, rootsOnly, getAll);
   variables.clear();
   
   // store variables in vector, according to occurrence of first literal in literal vector

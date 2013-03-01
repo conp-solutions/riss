@@ -95,6 +95,7 @@ protected:
   unsigned l2ee;		// number of found l2 equivalences
   unsigned totalL2cand;		// number of l2 probe candidates
   unsigned probes;		// number of probes
+  unsigned probeCandidates;	// number of probing candidates
   unsigned l2probes;		// number of l2 probes
   double viviTime;		// seconds spend for vivification
   unsigned viviLits;		// number of removed literals through vivification
