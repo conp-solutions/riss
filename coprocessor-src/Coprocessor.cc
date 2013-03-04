@@ -224,7 +224,7 @@ lbool Preprocessor::performSimplification()
   }
   
   if ( opt_bve ) {
-    if( opt_verbose > 2 )cerr << "c coprocessor(" << data.ok() << ") blocked variable elimination" << endl;
+    if( opt_verbose > 2 )cerr << "c coprocessor(" << data.ok() << ") bounded variable elimination" << endl;
     if( status == l_Undef ) status = bve.runBVE(data);  // can change status, can generate new unit clauses
   }
   
