@@ -8,33 +8,53 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include <iostream>
 
 static const char* _cat = "COPROCESSOR 3";
-static const char* _cat2 = "CP3 TECHNIQUES";
+static const char* _cat2 = "PREPROCESSOR TECHNIQUES";
 
 // options
-static IntOption  opt_threads    (_cat, "cp3_threads",    "Number of extra threads that should be used for preprocessing", 0, IntRange(0, INT32_MAX));
-static BoolOption opt_unlimited  (_cat, "cp3_unlimited",  "No limits for preprocessing techniques", true);
-static BoolOption opt_randomized (_cat, "cp3_randomized", "Steps withing preprocessing techniques are executed in random order", false);
-static IntOption  opt_verbose    (_cat, "cp3_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
-       BoolOption opt_printStats (_cat, "cp3_stats",      "Print Technique Statistics", false);
+static BoolOption opt_unlimited   (_cat, "cp3_unlimited",  "No limits for preprocessing techniques", true);
+static BoolOption opt_randomized  (_cat, "cp3_randomized", "Steps withing preprocessing techniques are executed in random order", false);
+static IntOption  opt_verbose     (_cat, "cp3_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
+static IntOption  opt_inprocessInt(_cat, "cp3_inp_cons",   "Perform Inprocessing after at least X conflicts", 20000, IntRange(0, INT32_MAX));
+       BoolOption opt_printStats  (_cat, "cp3_stats",      "Print Technique Statistics", false);
+      
 // techniques
-static BoolOption opt_up        (_cat2, "up",            "Use Unit Propagation during preprocessing", false);
-static BoolOption opt_subsimp   (_cat2, "subsimp",       "Use Subsumption during preprocessing", false);
-static BoolOption opt_hte       (_cat2, "hte",           "Use Hidden Tautology Elimination during preprocessing", false);
-static BoolOption opt_cce       (_cat2, "cce",           "Use (covered) Clause Elimination during preprocessing", false);
-static BoolOption opt_ee        (_cat2, "ee",            "Use Equivalence Elimination during preprocessing", false);
-static BoolOption opt_enabled   (_cat2, "enabled_cp3",   "Use CP3", false);
-static BoolOption opt_inprocess (_cat2, "inprocess",     "Use CP3 for inprocessing", false);
-static BoolOption opt_bve       (_cat2, "bve",           "Use Bounded Variable Elimination during preprocessing", false);
-static BoolOption opt_bva       (_cat2, "bva",           "Use Bounded Variable Addition during preprocessing", false);
-static BoolOption opt_unhide    (_cat2, "unhide",        "Use Bounded Variable Addition during preprocessing", false);
-static BoolOption opt_probe     (_cat2, "probe",         "Use Bounded Variable Addition during preprocessing", false);
-static BoolOption opt_sls       (_cat2, "sls",           "Use Simple Walksat algorithm to test whether formula is satisfiable quickly", false);
-static BoolOption opt_twosat    (_cat2, "2sat",          "2SAT algorithm to check satisfiability of binary clauses", false);
-static BoolOption opt_ts_phase  (_cat2, "2sat-phase",    "use 2SAT model as initial phase for SAT solver", false);
+static BoolOption opt_up          (_cat2, "up",            "Use Unit Propagation during preprocessing", false);
+static BoolOption opt_subsimp     (_cat2, "subsimp",       "Use Subsumption during preprocessing", false);
+static BoolOption opt_hte         (_cat2, "hte",           "Use Hidden Tautology Elimination during preprocessing", false);
+static BoolOption opt_cce         (_cat2, "cce",           "Use (covered) Clause Elimination during preprocessing", false);
+static BoolOption opt_ee          (_cat2, "ee",            "Use Equivalence Elimination during preprocessing", false);
+static BoolOption opt_enabled     (_cat2, "enabled_cp3",   "Use CP3", false);
+static BoolOption opt_inprocess   (_cat2, "inprocess",     "Use CP3 for inprocessing", false);
+static BoolOption opt_bve         (_cat2, "bve",           "Use Bounded Variable Elimination during preprocessing", false);
+static BoolOption opt_bva         (_cat2, "bva",           "Use Bounded Variable Addition during preprocessing", false);
+static BoolOption opt_unhide      (_cat2, "unhide",        "Use Bounded Variable Addition during preprocessing", false);
+static BoolOption opt_probe       (_cat2, "probe",         "Use Bounded Variable Addition during preprocessing", false);
+static BoolOption opt_ternResolve (_cat2, "3resolve",      "Use Ternary Clause Resolution", false);
+static BoolOption opt_addRedBins  (_cat2, "addRed2",       "Use Adding Redundant Binary Clauses", false);
 
-static BoolOption opt_debug     (_cat2, "cp3-debug",     "do more debugging", false);
-static BoolOption opt_check     (_cat2, "cp3-check",     "check solver state before returning control to solver", false);
-static IntOption  opt_log       (_cat, "log",            "Output log messages until given level", 0, IntRange(0, 3));
+// use 2sat and sls only for high versions!
+#if defined CP3VERSION && CP3VERSION < 301
+static const int opt_threads = 0;
+static const bool opt_sls = false;       
+static const bool opt_twosat = false;
+static const bool  opt_ts_phase =false;    
+#else
+static IntOption  opt_threads     (_cat, "cp3_threads",    "Number of extra threads that should be used for preprocessing", 0, IntRange(0, INT32_MAX));
+static BoolOption opt_sls         (_cat2, "sls",           "Use Simple Walksat algorithm to test whether formula is satisfiable quickly", false);
+static BoolOption opt_twosat      (_cat2, "2sat",          "2SAT algorithm to check satisfiability of binary clauses", false);
+static BoolOption opt_ts_phase    (_cat2, "2sat-phase",    "use 2SAT model as initial phase for SAT solver", false);
+#endif
+
+#if defined CP3VERSION // debug only, if no version is given!
+static const bool opt_debug = false;       
+static const bool opt_check = false;
+static const int  opt_log =0;
+#else
+static BoolOption opt_debug       (_cat2, "cp3-debug",     "do more debugging", false);
+static BoolOption opt_check       (_cat2, "cp3-check",     "check solver state before returning control to solver", false);
+static IntOption  opt_log         (_cat, "log",            "Output log messages until given level", 0, IntRange(0, 3));
+#endif
+
 
 using namespace std;
 using namespace Coprocessor;
@@ -50,6 +70,10 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , isInprocessing( false )
 , ppTime( 0 )
 , ipTime( 0 )
+, thisClauses( 0 )
+, thisLearnts( 0 )
+, lastInpConflicts(0)
+, formulaVariables(-1)
 // classes for preprocessing methods
 , propagation( solver->ca, controller )
 , subsumption( solver->ca, controller, data, propagation )
@@ -60,6 +84,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , ee ( solver->ca, controller, propagation, subsumption )
 , unhiding ( solver->ca, controller, data, propagation, subsumption, ee )
 , probing  ( solver->ca, controller, data, propagation, ee, *solver )
+, res( solver->ca, controller )
 , sls ( data, solver->ca, controller )
 , twoSAT( solver->ca, controller, data)
 {
@@ -74,8 +99,13 @@ Preprocessor::~Preprocessor()
 lbool Preprocessor::performSimplification()
 {
   if( ! opt_enabled ) return l_Undef;
-  if( opt_verbose > 2 ) cerr << "c start preprocessing with coprocessor" << endl;
+  if( opt_verbose > 2 ) cerr << "c start simplifying with coprocessor" << endl;
 
+  if( formulaVariables == -1 ) {
+    if( opt_verbose > 0 ) cerr << "c initialize CP3 with " << solver->nVars()  << " variables " << endl;
+    formulaVariables = solver->nVars() ;
+  }
+  
   if( isInprocessing ) ipTime = cpuTime() - ipTime;
   else ppTime = cpuTime() - ppTime;
   
@@ -86,6 +116,8 @@ lbool Preprocessor::performSimplification()
   // delete clauses from solver
   
   if( opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << endl;
+  thisClauses = solver->clauses.size();
+  thisLearnts = solver->learnts.size();
   
   cleanSolver ();
   // initialize techniques
@@ -95,9 +127,11 @@ lbool Preprocessor::performSimplification()
   initializePreprocessor ();
   if( opt_check ) checkLists("after initializing");
   
-  if( opt_verbose > 2 )cerr << "c coprocessor finished initialization" << endl;
+  if( opt_verbose > 2 ) cerr << "c coprocessor finished initialization" << endl;
   
-  const bool printBVE = false, printBVA = false, printProbe = false, printUnhide = false, printCCE = false, printEE = false, printHTE = false, printSusi = false, printUP = false;  
+  const bool printBVE = false, printBVA = false, printProbe = false, printUnhide = false, 
+	printCCE = false, printEE = false, printHTE = false, printSusi = false, printUP = false,
+	printTernResolve = false, printAddRedBin = false;  
   
   // do preprocessing
   if( opt_up ) {
@@ -110,6 +144,11 @@ lbool Preprocessor::performSimplification()
   
   if( false  || printUP  ) {
    printFormula("after Sorting");
+  }
+  
+  if( opt_ternResolve ) {
+    res.process(data,false); 
+    if( printTernResolve  ) printFormula("after TernResolve");
   }
   
   // clear subsimp stats
@@ -213,7 +252,12 @@ lbool Preprocessor::performSimplification()
   if( false || printCCE ) {
    printFormula("after CCE");
   }
-    
+   
+  if( opt_addRedBins ) {
+    res.process(data,true); 
+    if( printAddRedBin  ) printFormula("after TernResolve");
+  }
+   
   // tobias
 //   vec<Var> vars;
 //   MarkArray array;
@@ -232,7 +276,7 @@ lbool Preprocessor::performSimplification()
   if( opt_sls ) {
     if( opt_verbose > 2 )cerr << "c coprocessor sls" << endl;
     if( status == l_Undef ) {
-      bool solvedBySls = sls.solve( data.getClauses(), 200000 );  // cannot change status, can generate new unit clauses
+      bool solvedBySls = sls.solve( data.getClauses(), 4000000 );  // cannot change status, can generate new unit clauses
       if( solvedBySls ) {
 	cerr << "c formula was solved with SLS!" << endl;
 	cerr // << endl 
@@ -293,7 +337,6 @@ lbool Preprocessor::performSimplification()
   if( opt_verbose > 2 ) cerr << "c coprocessor re-setup solver" << endl;
   if ( data.ok() ) {
     propagation.process(data);
-    if ( data.ok() ) reSetupSolver();
   }
 
   if( opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;
@@ -301,22 +344,27 @@ lbool Preprocessor::performSimplification()
   if( isInprocessing ) ipTime = cpuTime() - ipTime;
   else ppTime = cpuTime() - ppTime;
   
+  if( opt_check ) fullCheck("final check");
+
+  destroyTechniques();
+  
+  if ( data.ok() ) reSetupSolver();
+
   if( opt_printStats ) {
     printStatistics(cerr);
     propagation.printStatistics(cerr);
     subsumption.printStatistics(cerr);
     ee.printStatistics(cerr);
-    hte.printStatistics(cerr);
-    bve.printStatistics(cerr);
-    bva.printStatistics(cerr);
-    probing.printStatistics(cerr);
-    unhiding.printStatistics(cerr);
-    cce.printStatistics(cerr);
-    sls.printStatistics(cerr);
-    twoSAT.printStatistics(cerr);
+    if( opt_hte ) hte.printStatistics(cerr);
+    if( opt_bve ) bve.printStatistics(cerr);
+    if( opt_bva ) bva.printStatistics(cerr);
+    if( opt_probe ) probing.printStatistics(cerr);
+    if( opt_unhide ) unhiding.printStatistics(cerr);
+    if( opt_ternResolve || opt_addRedBins ) res.printStatistics(cerr);
+    if( opt_sls ) sls.printStatistics(cerr);
+    if( opt_twosat) twoSAT.printStatistics(cerr);
+    if( opt_cce ) cce.printStatistics(cerr);
   }
-  
-  if( opt_check ) fullCheck("final check");
   
   // destroy preprocessor data
   if( opt_verbose > 2 ) cerr << "c coprocessor free data structures" << endl;
@@ -340,10 +388,18 @@ lbool Preprocessor::inprocess()
   if( !opt_inprocess ) return l_Undef;
   // TODO: do something before preprocessing? e.g. some extra things with learned / original clauses
   if (opt_inprocess) {
-    cerr << "c start inprocessing " << endl;
+    
+    // reject inprocessing here!
+    cerr << "c check " << lastInpConflicts << " and " << (int)opt_inprocessInt << " vs " << solver->conflicts << endl;
+    if( lastInpConflicts + opt_inprocessInt > solver->conflicts ) {
+      return l_Undef;  
+    }
+    
+    if( opt_verbose > 1 ) cerr << "c start inprocessing after another " << solver->conflicts - lastInpConflicts << endl;
     isInprocessing = true;
     lbool ret = performSimplification();
-    cerr << "c finished inprocessing " << endl;
+    lastInpConflicts = solver->conflicts;
+    if( opt_verbose > 2 ) cerr << "c finished inprocessing " << endl;
     return ret;
   }
   else 
@@ -362,12 +418,16 @@ stream << "c [STAT] CP3 "
 << ppTime << " s-ppTime, " 
 << ipTime << " s-ipTime, "
 << data.getClauses().size() << " cls, " 
-<< data.getLEarnts().size() << " learnts "
+<< data.getLEarnts().size() << " learnts, "
+<< thisClauses - data.getClauses().size() << " rem-cls, " 
+<< thisLearnts - data.getLEarnts().size() << " rem-learnts, "
+<< memUsedPeak() << " MB "
 << endl;
 }
 
 void Preprocessor::extendModel(vec< lbool >& model)
 {
+  if( formulaVariables > model.size() ) model.growTo(formulaVariables);
   data.extendModel(model);
 }
 
@@ -424,13 +484,21 @@ void Preprocessor::initializePreprocessor()
   }
 }
 
-void Preprocessor::destroyPreprocessor()
+void Preprocessor::destroyTechniques()
 {
-  cce.destroy();
-  hte.destroy();
-  propagation.destroy();
-  subsumption.destroy();
-  bve.destroy();
+    // propagation.destroy();
+    subsumption.destroy();
+    ee.destroy();
+    if( opt_hte ) hte.destroy();
+    if( opt_bve ) bve.destroy();
+    if( opt_bva ) bva.destroy();
+    if( opt_probe ) probing.destroy();
+    if( opt_unhide ) unhiding.destroy();
+    if( opt_ternResolve || opt_addRedBins ) res.destroy();
+    if( opt_sls ) sls.destroy();
+    if( opt_twosat) twoSAT.destroy();
+    if( opt_cce ) cce.destroy();
+  
 }
 
 
@@ -463,9 +531,9 @@ void Preprocessor::reSetupSolver()
         const CRef cr = solver->clauses[i];
         Clause & c = ca[cr];
 	assert( c.size() != 0 && "empty clauses should be recognized before re-setup" );
-        if (c.can_be_deleted())
+        if (c.can_be_deleted()) {
             delete_clause(cr);
-        else
+	} else
 	  {
 	      assert( c.mark() == 0 && "only clauses without a mark should be passed back to the solver!" );
 	      if (c.size() > 1)
@@ -580,6 +648,7 @@ void Preprocessor::reSetupSolver()
     solver->learnts.shrink(solver->learnts.size()-kept_clauses);
     if( opt_verbose > 1 ) fprintf(stderr, " moved %i and removed %i from %i learnts\n",learntToClause,(l_old - kept_clauses) -learntToClause, l_old);
 
+    
     if( false ) {
       cerr << "c trail after cp3: ";
       for( int i = 0 ; i< solver->trail.size(); ++i ) 

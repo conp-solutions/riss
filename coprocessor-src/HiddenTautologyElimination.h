@@ -64,6 +64,8 @@ public:
   /// same as above, but can add literals to the vector, so that the vector represents the real ALA(C) clause
   bool alaMarkClause(vec< Lit >& clause, Coprocessor::CoprocessorData& data, Coprocessor::MarkArray& markArray, Coprocessor::MarkArray& helpArray, bool addLits = false);
   
+  void destroy();
+  
 protected:
 
   /** is there currently something to do? */

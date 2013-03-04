@@ -61,7 +61,7 @@ static inline double Minisat::cpuTime(void) {
 static inline double Minisat::wallClockTime(void)
 {
     struct timespec timestamp;
-    clock_gettime(CLOCK_MONOTONIC_RAW, &timestamp);
+    clock_gettime(CLOCK_MONOTONIC, &timestamp);
     return ((double) timestamp.tv_sec) + ((double) timestamp.tv_nsec / 1000000000);
 }
 #endif

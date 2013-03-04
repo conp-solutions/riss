@@ -49,6 +49,8 @@ class TwoSatSolver : public Technique
   */
   void printStatistics( ostream& stream );
   
+  void destroy();
+  
 protected:
   
   bool unitPropagate();

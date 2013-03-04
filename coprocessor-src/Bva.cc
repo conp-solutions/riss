@@ -23,7 +23,11 @@ static BoolOption opt_bvaComplement         (_cat, "cp3_bva_compl",   "treat com
 static BoolOption opt_bvaRemoveDubplicates (_cat, "cp3_bva_dupli",   "remove duplicate clauses", true);
 static BoolOption opt_bvaSubstituteOr      (_cat, "cp3_bva_subOr",   "try to also substitus disjunctions", false);
 
+#if defined CP3VERSION 
+static const int bva_debug = 0;
+#else
 static IntOption  bva_debug                (_cat, "bva-debug",       "Debug Output of BVA", 0, IntRange(0, 4));
+#endif
 	
 BoundedVariableAddition::BoundedVariableAddition(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data)
 : Technique( _ca, _controller )
@@ -70,7 +74,7 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	bool addedNewAndGate = false;
 	
 	// for l in F
-	while (bvaHeap.size() > 0 && (data.unlimited() || bvaLimit > 0) ) {
+	while (bvaHeap.size() > 0 && (data.unlimited() || bvaLimit > 0) && !data.isInterupted() ) {
 	  
 	  if( bva_debug > 1 ) cerr << "c next major loop iteration with heapSize " << bvaHeap.size() << endl;
 	  
@@ -238,6 +242,13 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	    }
 	    nextStackLiteral:;
 	  }
+	  
+	  if( left == lit_Undef ) {
+	    static bool didIt = false;
+	    if( !didIt ) { cerr << "c second BVA literal became litUndef - check how!" << endl; didIt = true; }
+	    break;
+	  }
+	  
 	  if( bva_debug > 2 ) cerr << "c BVA selected left: " << left << endl;
 	  // tackle complement specially, if found
 	  if( bvaComplement && foundRightComplement ) left = ~right;
@@ -260,15 +271,22 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	    break;
 	  }
 	  
+	  // if nothing has been selected, because not enough there - use next literal!
+	  if( left == lit_Undef ) continue;
+	  
 	  // do not continue, if there won't be a reduction
 	  // dows not hold in the multi case!!
 	  if( index == 1 && max < 3 ) {
 	    if( bva_debug > 2 ) cerr << "c [BVA] interrupt because of too few matchings " << right << " @" << index << " with " << max << endl;
 	    break;
 	  }
-	  if( bva_debug > 2 ) cerr << "c [BVA] index=" << index << " max=" << max << " rightList= " << data.list(right).size() << " leftList= " << data.list(left).size() << endl;
+	  if( bva_debug > 0 ) cerr << "c [BVA] index=" << index << " max=" << max << " rightList= " << data.list(right).size() << " leftList= " << data.list(left).size() << endl;
 
 	  // heuristically remove duplicates!
+	  if( var(left) >= data.nVars() ) cerr << "c [BVA] working on too large variable " << var(left) << " vs " << data.nVars() 
+	      << " literal L: " << left << " int: " << toInt(left)
+	      << " literal R: " << right << " int: " << toInt(right)  
+	      << endl;
 	  if( max > data.list(left).size() || max > data.list(right).size() ) {
 	    if( bva_debug > 1 ) cerr << "c remove duplicate clauses from left list " << left << " with index= " << index << endl;
 	    uint32_t os = data.list(left).size();
@@ -718,4 +736,16 @@ bool BoundedVariableAddition::checkLists(const string& headline)
     }
   }
   return ret;
+}
+
+void BoundedVariableAddition::destroy()
+{
+  bvaHeap.clear(true);
+  vector< vector< CRef > >().swap( bvaMatchingClauses); 
+  vector< Lit >().swap( bvaMatchingLiterals); 
+  // use general mark array!
+  vector< Lit >().swap( bvaCountMark);	
+  vector< uint32_t >().swap( bvaCountCount);
+  vector< uint64_t >().swap( bvaCountSize );
+  clauseLits.clear(true) ;
 }

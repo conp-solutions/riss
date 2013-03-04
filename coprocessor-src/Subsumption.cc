@@ -21,14 +21,25 @@ Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, Max Löwen, All rights res
 #include "coprocessor-src/Subsumption.h"
 using namespace Coprocessor;
 
-static const char* _cat = "CP3 SUBSUMPTION";
+static const char* _cat = "COPROCESSOR 3 - SUBSUMPTION";
 // options
 static BoolOption  opt_naivStrength    (_cat, "naive_strength", "use naive strengthening", false);
+static IntOption   opt_allStrengthRes  (_cat, "all_strength_res", "Create all self-subsuming resolvents of clauses less equal given size (prob. slow & blowup, only seq)", 0, IntRange(0,INT32_MAX)); 
+static BoolOption  opt_strength        (_cat, "cp3_strength", "Perform clause strengthening", true); 
+
+#if defined CP3VERSION && CP3VERSION < 302
+static const bool  opt_par_strength    =false;
+static const bool  opt_lock_stats      =false;
+static const bool  opt_par_subs        =false;
+static const int  opt_par_subs_counts  =false;
+#else
 static BoolOption  opt_par_strength    (_cat, "cp3_par_strength", "force par strengthening (if threads exist)", false);
 static BoolOption  opt_lock_stats      (_cat, "cp3_lock_stats", "measure time waiting in spin locks", false);
 static BoolOption  opt_par_subs        (_cat, "cp3_par_subs", "force par subsumption (if threads exist)", false);
 static IntOption  opt_par_subs_counts  (_cat, "par_subs_counts" ,  "Updates of counts in par-subs 0: compare_xchange, 1: CRef-vector", 1, IntRange(0,1));
-static BoolOption  opt_allStrengthRes  (_cat, "all_strength_res", "Create all self-subsuming resolvents (prob. slow & blowup, only seq)", false); 
+#endif
+
+
 Subsumption::Subsumption( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation )
 : Technique( _ca, _controller )
 , data(_data)
@@ -110,7 +121,7 @@ void Subsumption::process(Heap<VarOrderBVEHeapLt> * heap, const bool doStatistic
       }
       else {
           fullStrengthening(heap, doStatistics); // corrects occs and counters by itself
-          if (opt_allStrengthRes)
+          if (opt_allStrengthRes > 0)
           {
             for (int j = 0; j < toDelete.size(); ++j)
             {  
@@ -131,7 +142,7 @@ void Subsumption::process(Heap<VarOrderBVEHeapLt> * heap, const bool doStatistic
           }
       }
       // clear queue afterwards
-      if (!opt_allStrengthRes) data.getStrengthClauses().clear();
+      if (opt_allStrengthRes == 0) data.getStrengthClauses().clear();
     }
   }
   
@@ -1112,7 +1123,7 @@ lbool Subsumption::fullStrengthening(Heap<VarOrderBVEHeapLt> * heap, const bool 
        vector<CRef>& list = pos == 0 ? data.list(min) :  data.list(~min);
     }
      */
-  if( opt_allStrengthRes || !opt_naivStrength ) {
+  if( opt_allStrengthRes > 0 || !opt_naivStrength ) {
     return strengthening_worker( 0, data.getStrengthClauses().size(), heap);
   }
     if (doStatistics) strengthTime = cpuTime() - strengthTime;
@@ -1134,6 +1145,11 @@ lbool Subsumption::fullStrengthening(Heap<VarOrderBVEHeapLt> * heap, const bool 
         if (c.can_be_deleted() || !c.can_strengthen())
             continue;   // dont check if it cant strengthen or can be deleted
         // for every literal in this clause:
+        
+	if( !opt_strength ) { // if not enabled, only remove clauses from queue and reset their flag!
+	  c.set_strengthen(false);
+	  continue;
+	}
         
         // search for lit with minimal occurrences;
         Lit min = c[0];
@@ -1306,6 +1322,12 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
     Clause& strengthener = ca[cr];
     if (strengthener.can_be_deleted() || !strengthener.can_strengthen())
       continue;
+    
+    if( !opt_strength ) { // if not enabled, only remove clauses from queue and reset their flag!
+      strengthener.set_strengthen(false);
+      continue;
+    }
+    
     //find Lit with least occurrences and its occurrences
     // search lit with minimal occurrences
 
@@ -1372,7 +1394,7 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
       }
       if (negated_lit_pos != -1 && si == strengthener.size()) // TODO if negated_lit_pos == -1 -> normal subsumption case, why not apply  it?
       {
-        if (opt_allStrengthRes)
+        if (other.size() <= opt_allStrengthRes) // check this only for relevant clauses
         {
           CRef newCRef;
           toDelete.push_back(list[j]);
@@ -1454,7 +1476,7 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
       }
       if (si == strengthener.size() && negated_lit_pos != -1)
       {
-        if (opt_allStrengthRes)
+        if (other.size() <= opt_allStrengthRes)
         {
           CRef newCRef;
           toDelete.push_back(list_neg[j]);
@@ -1650,4 +1672,19 @@ void* Subsumption::runParallelStrengthening(void* arg)
     if ( opt_naivStrength ) workData->subsumption->par_strengthening_worker(workData->start,workData->end, *(workData->var_locks), *(workData->stats), *(workData->occ_updates), workData->heap);
     else workData->subsumption->par_nn_strengthening_worker(workData->start,workData->end, *(workData->var_locks), *(workData->stats), *(workData->occ_updates), workData->heap);
     return 0;
+}
+
+void Subsumption::destroy() {
+    // Member var seq subsumption
+  vector < CRef >().swap(subs_occ_updates);
+  // Member var seq strength
+  vector < OccUpdate >().swap(strength_occ_updates);
+  // Member vars parallel Subsumption
+  vector< vector < CRef > >().swap(toDeletes);
+  vector< vector < CRef > >().swap(nonLearnts);
+  vector< struct SubsumeStatsData >().swap(localStats);
+  
+  // Member vars parallel Strengthening
+  vector< SpinLock >().swap(var_locks); // 1 extra SpinLock for data
+  vector< vector < OccUpdate > >().swap(occ_updates);
 }

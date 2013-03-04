@@ -10,8 +10,14 @@ using namespace std;
 
  const char* _cat_bve = "COPROCESSOR 3 - BVE";
 
+#if defined CP3VERSION && CP3VERSION < 302
+ static const bool opt_par_bve         = false;
+ static const int  opt_bve_verbose     = 0;
+#else
  BoolOption opt_par_bve         (_cat_bve, "cp3_par_bve",    "Forcing Parallel BVE (if threads are available)", false);
  IntOption  opt_bve_verbose     (_cat_bve, "cp3_bve_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
+#endif
+ 
  IntOption  opt_learnt_growth   (_cat_bve, "cp3_bve_learnt_growth", "Keep C (x) D, where C or D is learnt, if |C (x) D| <= max(|C|,|D|) + N", 0, IntRange(-1, INT32_MAX));
  IntOption  opt_resolve_learnts (_cat_bve, "cp3_bve_resolve_learnts", "Resolve learnt clauses: 0: off, 1: original with learnts, 2: 1 and learnts with learnts", 0, IntRange(0,2));
  BoolOption opt_unlimited_bve   (_cat_bve, "bve_unlimited",  "perform bve test for Var v, if there are more than 10 + 10 or 15 + 5 Clauses containing v", false);
@@ -137,11 +143,13 @@ void BoundedVariableElimination::progressStats(CoprocessorData & data, const boo
     elimCount = eliminatedVars;
     for (int i = 0; i < parStats.size(); ++i)
         elimCount += parStats[i].eliminatedVars;
+    if( opt_bve_verbose > 0 ){
     cerr << "c [STAT] BVEprogress: restarts: " << restarts 
          << ", clauses: " << clauseCount << " (" << ((double ) clauseCount / (double) initialClauses * 100) << " %), "
          <<  "units: "    << unitCount   << " (" << ((double )   unitCount / (double) data.nVars() * 100)  << " %), "
          <<  "elim:  "    << elimCount   << " (" << ((double )   elimCount / (double) data.nVars() * 100)   << " %), "
          <<  "bve-time: " << (cputime ? cpuTime() : wallClockTime()) - processTime << endl;
+    }
     restarts++;
 }
 
@@ -269,6 +277,8 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<Var
     
     uint32_t timer = dirtyOccs.nextStep();
     progressStats(data, true);
+    
+    if( opt_bve_verbose > 0 )
     cerr << "c sequentiel bve on " 
          << ((opt_bve_heap != 2) ? heap.size() : variable_queue.size()) << " variables" << endl;
 
@@ -911,7 +921,7 @@ inline void BoundedVariableElimination::addClausesToSubsumption (const vector<CR
     }    
 }
 
-inline bool BoundedVariableElimination::findGates(CoprocessorData & data, const Var v, int & p_limit, int & n_limit, double & _gateTime, MarkArray * helper)
+bool BoundedVariableElimination::findGates(CoprocessorData & data, const Var v, int & p_limit, int & n_limit, double & _gateTime, MarkArray * helper)
 {
   // do not touch lists that are too small for benefit
   if( data.list(mkLit(v,false)).size() < 3 &&  data.list( mkLit(v,true) ).size() < 3 ) return false;

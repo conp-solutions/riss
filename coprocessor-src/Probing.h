@@ -28,7 +28,7 @@ class Probing : public Technique {
   EquivalenceElimination& ee;		/// object that takes care of equivalent literal elimination
   
   // necessary local variables
-  deque<Var> variableHeap;
+  vector<Var> variableHeap;
   vec<lbool> prPositive;
   vec<lbool> prL2Positive;
   
@@ -50,6 +50,7 @@ public:
    */
   void printStatistics( ostream& stream );
   
+  void destroy();
   
 protected:
   
@@ -94,6 +95,7 @@ protected:
   unsigned l2ee;		// number of found l2 equivalences
   unsigned totalL2cand;		// number of l2 probe candidates
   unsigned probes;		// number of probes
+  unsigned probeCandidates;	// number of probing candidates
   unsigned l2probes;		// number of l2 probes
   double viviTime;		// seconds spend for vivification
   unsigned viviLits;		// number of removed literals through vivification

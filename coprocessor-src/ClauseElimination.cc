@@ -10,6 +10,13 @@ static const char* _cat = "COPROCESSOR 3 - CCE";
 
 static IntOption opt_steps  (_cat, "cp3_cce_steps",  "Number of steps that are allowed per iteration", INT32_MAX, IntRange(-1, INT32_MAX));
 static IntOption opt_level  (_cat, "cp3_cce_level",  "none, ALA+ATE, CLA+ATE, ALA+CLA+BCE", 3, IntRange(0, 3));
+static IntOption opt_ccePercent (_cat, "cp3_cce_sizeP", "percent of max. clause size for clause elimination (excluding)", 70, IntRange(0,100));
+
+#if defined CP3VERSION  
+static const bool debug_out = false;
+#else
+static IntOption debug_out (_cat, "cce-debug", "debug output for clause elimination",0, IntRange(0,4) );
+#endif
 
 static const int cceLevel = 1;
 
@@ -19,6 +26,7 @@ ClauseElimination::ClauseElimination(ClauseAllocator& _ca, ThreadController& _co
 , processTime(0)
 , removedClauses(0)
 , removedBceClauses(0)
+, cceSize(0)
 {
 
 }
@@ -30,9 +38,24 @@ void ClauseElimination::process(CoprocessorData& data)
   if( !data.ok() ) return;
   // TODO: have a better scheduling here! (if a clause has been removed, potentially other clauses with those variables can be eliminated as well!!, similarly to BCE!)
   if( opt_level == 0 ) return; // do not run anything!
+
+  uint32_t maxSize = 0;
+  for( uint32_t i = 0 ; i< data.getClauses().size() ; ++ i ) {
+    const CRef ref = data.getClauses()[i];
+    Clause& clause = ca[ ref ];
+    if( clause.can_be_deleted() ) continue;
+    maxSize = clause.size() > maxSize ? clause.size() : maxSize;
+  }
+  
+  cceSize = (maxSize * opt_ccePercent) / 100;
+  cceSize = cceSize > 2 ? cceSize : 3;	// do not process binary clauses
+  if( debug_out > 0 ) cerr << "c work on clauses larger than " << cceSize << " maxSize= " << maxSize << endl;
   WorkData wData( data.nVars() );
   for( int i = 0 ; i < data.getClauses().size(); ++ i )
   {
+    if( ca[ data.getClauses()[i] ].size() <= cceSize ) continue; // work only on very large clauses to eliminate them!
+    if( ca[ data.getClauses()[i] ].can_be_deleted() ) continue;
+    if( debug_out > 1) cerr << "c work on clause " << ca[ data.getClauses()[i] ] << endl;
     eliminate(data, wData, data.getClauses()[i] );
     if( !data.unlimited() && steps > opt_steps ) break;
   }
@@ -237,6 +260,7 @@ void ClauseElimination::printStatistics(ostream& stream)
   stream << "c [STAT] CCE " << processTime << " s, " 
 			    << removedClauses << " cls, " 
 			    << removedBceClauses << " nonEE-cls, "
-			    << steps << " steps"
+			    << steps << " steps "
+			    << cceSize << " rejectSize "
 			    << endl;
 }

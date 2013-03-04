@@ -71,6 +71,11 @@ int main(int argc, char** argv)
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
+	const char* _cat = "COPROCESSOR 3";
+	StringOption undoFile      (_cat, "cp3_undo",   "write information about undoing simplifications into given file");
+	BoolOption   post          (_cat, "cp3_post",   "perform post processing", false);
+	StringOption modelFile     (_cat, "cp3_model",  "read model from SAT solver from this file");
+	
         parseOptions(argc, argv, true);
         
         Solver  S;
@@ -104,67 +109,172 @@ int main(int argc, char** argv)
                 if (setrlimit(RLIMIT_AS, &rl) == -1)
                     printf("WARNING! Could not set resource limit: Virtual memory.\n");
             } }
+
+	FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
+	if( !post ) {
+            
+	  if (argc == 1)
+	      printf("Reading from standard input... Use '--help' for help.\n");
+
+	  gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
+	  if (in == NULL)
+	      printf("ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
+	  
+	  if (S.verbosity > 0) {
+  #ifdef CP3VERSION
+	      printf("===============================[ Coprocessor %4.2f  ]===========================\n", CP3VERSION/100);	    
+	      printf("| Norbert Manthey. The use of the tool is limited to research only!           |\n");
+  #else
+	      printf("===============================[ Coprocessor  ]================================\n");	    
+	      printf("| Norbert Manthey                                                             |\n");
+  #endif
+	  }
+	  
+	      if (S.verbosity > 0) {
+		  printf("|                                                                             |\n");
+		  printf("============================[ Problem Statistics ]=============================\n");
+		  printf("|                                                                             |\n"); }
+	    
+	    parse_DIMACS(in, S);
+	    gzclose(in);
+
+	    if (S.verbosity > 0){
+		printf("|  Number of variables:  %12d                                         |\n", S.nVars());
+		printf("|  Number of clauses:    %12d                                         |\n", S.nClauses()); }
+	    
+	    double parsed_time = cpuTime();
+	    if (S.verbosity > 0)
+		printf("|  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time);
+
+	    // Change to signal-handlers that will only notify the solver and allow it to terminate
+	    // voluntarily:
+	    signal(SIGINT, SIGINT_interrupt);
+	    signal(SIGXCPU,SIGINT_interrupt);
+
+	    Preprocessor preprocessor( &S );
+	    preprocessor.preprocess();
+	    
+	    double simplified_time = cpuTime();
+	    if (S.verbosity > 0){
+		printf("|  Simplification time:  %12.2f s                                       |\n", simplified_time - parsed_time);
+		printf("|                                                                             |\n"); }
+
+	    // do coprocessing here!
+
+	    // TODO: do not reduce the variables withing the formula!
+	    if (dimacs){
+		if (S.verbosity > 0)
+		    printf("==============================[ Writing DIMACS ]===============================\n");
+		//S.toDimacs((const char*)dimacs);
+		preprocessor.outputFormula((const char*) dimacs);
+	    }
+	    
+	    if(  (const char*)undoFile != 0  ) {
+		if (S.verbosity > 0)
+		    printf("=============================[ Writing Undo Info ]=============================\n");
+	      preprocessor.writeUndoInfo( string(undoFile) );
+	    }
+	    
+	    if (!S.okay()){
+		if (res != NULL) fprintf(res, "s UNSATISFIABLE\n"), fclose(res);
+		if (S.verbosity > 0){
+		    printf("===============================================================================\n");
+		    printf("Solved by simplification\n");
+		    printStats(S);
+		    printf("\n"); }
+		printf("s UNSATISFIABLE\n");
+#ifdef NDEBUG
+		exit(20);     // (faster than "return", which will invoke the destructor for 'Solver')
+#else
+		return (20);
+#endif
+	    } else {
+	      S.setConfBudget(1); // solve until first conflict!
+	      S.verbosity = 0;
+	      vec<Lit> dummy;
+	      S.useCoprocessor = false;
+	      lbool ret = S.solveLimited(dummy);
+	      if( ret == l_True ) {
+		preprocessor.extendModel(S.model);
+		if( res != NULL ) {
+		  printf("s SATISFIABLE\n");
+		  fprintf(res, "s SATISFIABLE\nv ");
+		  for (int i = 0; i < preprocessor.getFormulaVariables(); i++)
+		    if (S.model[i] != l_Undef)
+		      fprintf(res, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
+		  fprintf(res, " 0\n");
+		} else {
+		  printf("s SATISFIABLE\nv ");
+		  for (int i = 0; i < preprocessor.getFormulaVariables(); i++)
+		    if (S.model[i] != l_Undef)
+		      printf("%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
+		  printf(" 0\n");
+		}
+#ifdef NDEBUG
+		exit(10);     // (faster than "return", which will invoke the destructor for 'Solver')
+#else
+		return (10);
+#endif
+	      } else if ( ret == l_False ) {
+		if (res != NULL) fprintf(res, "s UNSATISFIABLE\n"), fclose(res);
+		printf("s UNSATISFIABLE\n");
+#ifdef NDEBUG
+		exit(20);     // (faster than "return", which will invoke the destructor for 'Solver')
+#else
+		return (20);
+#endif
+	      }
+	    }
+	} else {
+//
+// process undo here!
+//
+	  Preprocessor preprocessor( &S );
+	  if( undoFile == 0) {
+	    cerr << "c ERROR: no undo file specified" << endl;
+	    exit(1);
+	  }
+	  
+	  int solution = preprocessor.parseModel( modelFile == 0 ? string("") : string(modelFile) );
+	  bool good = solution != -1;
+	  good = good && preprocessor.parseUndoInfo( string(undoFile) );
+	  if(!good) { cerr << "c will not continue because of above errors" << endl; return 1; }
+	  
+	  if( solution == 10 ) {
+	    preprocessor.extendModel(S.model);
+	    if( res != NULL ) {
+	      printf("s SATISFIABLE\n");
+	      fprintf(res, "s SATISFIABLE\nv ");
+	      for (int i = 0; i < preprocessor.getFormulaVariables(); i++)
+		if (S.model[i] != l_Undef)
+		  fprintf(res, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
+	      fprintf(res, " 0\n");
+	    } else {
+	      printf("s SATISFIABLE\nv ");
+	      for (int i = 0; i < preprocessor.getFormulaVariables(); i++)
+		if (S.model[i] != l_Undef)
+		  printf("%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
+	      printf(" 0\n");	    
+	    }
+#ifdef NDEBUG
+		exit(10);     // (faster than "return", which will invoke the destructor for 'Solver')
+#else
+		return (10);
+#endif
+	  } else if (solution == 20 ) {
+		if (res != NULL) fprintf(res, "s UNSATISFIABLE\n"), fclose(res);
+		printf("s UNSATISFIABLE\n");
+#ifdef NDEBUG
+		exit(20);     // (faster than "return", which will invoke the destructor for 'Solver')
+#else
+		return (20);
+#endif
+	  } else {
+		if (res != NULL) fprintf(res, "s UNKNOWN\n"), fclose(res);
+		printf("s UNKNOWN\n");	  }
+	  
+	}
         
-        if (argc == 1)
-            printf("Reading from standard input... Use '--help' for help.\n");
-
-        gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
-        if (in == NULL)
-            printf("ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
-        
-        if (S.verbosity > 0){
-            printf("============================[ Problem Statistics ]=============================\n");
-            printf("|                                                                             |\n"); }
-        
-        parse_DIMACS(in, S);
-        gzclose(in);
-        FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
-
-        if (S.verbosity > 0){
-            printf("|  Number of variables:  %12d                                         |\n", S.nVars());
-            printf("|  Number of clauses:    %12d                                         |\n", S.nClauses()); }
-        
-        double parsed_time = cpuTime();
-        if (S.verbosity > 0)
-            printf("|  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time);
-
-        // Change to signal-handlers that will only notify the solver and allow it to terminate
-        // voluntarily:
-        signal(SIGINT, SIGINT_interrupt);
-        signal(SIGXCPU,SIGINT_interrupt);
-
-        Preprocessor preprocessor( &S );
-	preprocessor.preprocess();
-	
-        double simplified_time = cpuTime();
-        if (S.verbosity > 0){
-            printf("|  Simplification time:  %12.2f s                                       |\n", simplified_time - parsed_time);
-            printf("|                                                                             |\n"); }
-
-        // do coprocessing here!
-
-        // TODO: do not reduce the variables withing the formula!
-        if (dimacs){
-            if (S.verbosity > 0)
-                printf("==============================[ Writing DIMACS ]===============================\n");
-            //S.toDimacs((const char*)dimacs);
-            preprocessor.outputFormula((const char*) dimacs);
-            if (S.verbosity > 0)
-                printStats(S);
-        }
-        
-        if (!S.okay()){
-            if (res != NULL) fprintf(res, "UNSAT\n"), fclose(res);
-            if (S.verbosity > 0){
-                printf("===============================================================================\n");
-                printf("Solved by simplification\n");
-                printStats(S);
-                printf("\n"); }
-            printf("UNSATISFIABLE\n");
-            exit(20);
-        }
-
-        // no solving in coprocessor
         
 #ifdef NDEBUG
         exit(0);     // (faster than "return", which will invoke the destructor for 'Solver')
@@ -173,7 +283,7 @@ int main(int argc, char** argv)
 #endif
     } catch (OutOfMemoryException&){
         printf("===============================================================================\n");
-        printf("INDETERMINATE\n");
+        printf("s UNKNOWN\n");
         exit(0);
     }
 }

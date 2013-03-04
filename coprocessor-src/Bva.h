@@ -66,6 +66,8 @@ public:
   bool variableAddtionMulti(bool sort = true);
   
   void printStatistics(ostream& stream);
+
+  void destroy();
   
 protected:
   

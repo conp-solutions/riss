@@ -15,7 +15,12 @@ static BoolOption opt_uhdUHTE      (_cat, "cp3_uhdUHTE",      "Use Unhiding+Hidd
 static BoolOption opt_uhdNoShuffle (_cat, "cp3_uhdNoShuffle", "Do not perform randomized graph traversation", false);
 static BoolOption opt_uhdEE        (_cat, "cp3_uhdEE",        "Use equivalent literal elimination", false);
 
+#if defined CP3VERSION  
+static const int opt_uhdDebug = 0;
+#else
 static IntOption  opt_uhdDebug     (_cat, "cp3_uhdDebug",     "Debug Level of Unhiding", 0, IntRange(0, 3));
+#endif
+
 
 Unhiding::Unhiding(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, Subsumption& _subsumption, EquivalenceElimination& _ee)
 : Technique( _ca, _controller )
@@ -343,7 +348,7 @@ bool Unhiding::unhideSimplify()
   
   // TODO implement second for loop to iterate also over learned clauses and check whether one of them is not learned!
   
-  for( uint32_t i = 0 ; i < data.getClauses().size(); ++ i ) 
+  for( uint32_t i = 0 ; i < data.getClauses().size() && !data.isInterupted() ; ++ i ) 
   {
     // run UHTE before UHLE !!  (remark in paper)
     const uint32_t clRef =  data.getClauses()[i] ;
@@ -566,7 +571,7 @@ void Unhiding::process (  )
     // represents rool literals!
     data.lits.clear();
     // reset all present variables, collect all roots in binary implication graph
-    for ( Var v = 0 ; v < data.nVars(); ++ v ) 
+    for ( Var v = 0 ; v < data.nVars() && !data.isInterupted() ; ++ v ) 
     {
       for( int p = 0 ; p < 2; ++ p ) {
 	const Lit pos =  mkLit(v, p == 1);
@@ -661,7 +666,7 @@ void Unhiding::process (  )
 
 void Unhiding::printStatistics( ostream& stream )
 {
-  stream << "c [UNHIDE] " 
+  stream << "c [STAT] UNHIDE " 
   << unhideTime << " s, "
   << removedClauses << " cls, "
   << removedLiterals << " totalLits, "
@@ -669,3 +674,16 @@ void Unhiding::printStatistics( ostream& stream )
   << endl;   
 }
 
+
+void Unhiding::destroy()
+{
+  big.~BIG();
+  vector<literalData>().swap( stampInfo );
+	  
+  /// queue of literals that have to be stamped in the current function call
+  deque< Lit >().swap(  stampQueue );
+  /// equivalent literals during stamping
+  vector< Lit >().swap(  stampEE );
+  vector< Lit >().swap(  stampClassEE );
+  vector< char >().swap(  unhideEEflag );
+}

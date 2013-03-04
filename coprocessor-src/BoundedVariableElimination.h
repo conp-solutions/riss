@@ -168,7 +168,7 @@ inline lbool strength_check_neg(CoprocessorData & data, Heap<VarOrderBVEHeapLt> 
   inline int  tryResolve(const Clause & c, const Clause & d, const int v);
   inline bool checkPush(vec<Lit> & ps, const Lit l);
   inline char checkUpdatePrev(Lit & prev, const Lit l);
-  inline bool findGates(CoprocessorData & data, const Var v, int & p_limit, int & n_limit, double & _gateTim, MarkArray * helper = NULL);
+  bool findGates(CoprocessorData & data, const Var v, int & p_limit, int & n_limit, double & _gateTim, MarkArray * helper = NULL);
 
 
 public:

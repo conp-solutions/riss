@@ -10,13 +10,29 @@ using namespace Coprocessor;
 
 static const char* _cat = "COPROCESSOR 3 - EE";
 
+#if defined CP3VERSION  && CP3VERSION < 350
+static const int opt_level            = 0;
+static const bool opt_old_circuit      = false;
+static const bool opt_eagerEquivalence = false;
+static const bool opt_eeGateBigFirst   = false;
+static const char* aagFile = 0;
+#else
 static IntOption  opt_level            (_cat, "cp3_ee_level",      "EE on BIG, gate probing, structural hashing", 0, IntRange(0, 3));
 static BoolOption opt_old_circuit      (_cat, "cp3_old_circuit",   "do old circuit extraction", false);
 static BoolOption opt_eagerEquivalence (_cat, "cp3_eagerGates",    "do old circuit extraction", true);
 static BoolOption opt_eeGateBigFirst   (_cat, "cp3_BigThenGate", "detect binary equivalences before going for gates", true);
-/// enable this parameter only during debug!
-static BoolOption debug_out            (_cat, "ee_debug", "print debug output to screen",false);
 static StringOption aagFile            (_cat, "ee_aag", "write final circuit to this file");
+#endif
+
+/// enable this parameter only during debug!
+
+#if defined CP3VERSION  
+static const bool debug_out = false;
+#else
+static BoolOption debug_out            (_cat, "ee_debug", "print debug output to screen",false);
+#endif
+
+
 
 static const int eeLevel = 1;
 /// temporary Boolean flag to quickly enable debug output for the whole file
@@ -1613,27 +1629,34 @@ void EquivalenceElimination::findEquivalencesOnBig(CoprocessorData& data, vector
       // compute SCC
       eqCurrentComponent.clear();
       // if there is any SCC, add it to SCC, if it contains more than one literal
-      eqTarjan(l,l,data,big,externBig);
+      eqTarjan(1,l,l,data,big,externBig);
   }
 }
 
 #define MININ(x,y) (x) < (y) ? (x) : (y)
 
-void EquivalenceElimination::eqTarjan(Lit l, Lit list, CoprocessorData& data, BIG& big, vector< vector< Lit > >* externBig)
+void EquivalenceElimination::eqTarjan(int depth, Lit l, Lit list, CoprocessorData& data, BIG& big, vector< vector< Lit > >* externBig)
 {
     eqNodeIndex[toInt(l)] = eqIndex;
     eqNodeLowLinks[toInt(l)] = eqIndex;
     eqIndex++;
     eqStack.push_back(l);
     eqLitInStack[ toInt(l) ] = 1;
-    if( debug_out ) cerr << "c run tarjan on " << l << endl;
+    
+    if( depth > 32000 ) {
+      static bool didit = false;
+      if( !didit ) { cerr << "c recursive EE algorithm reached depth 32K, get the iterative one!" << endl; didit = true; }
+      return; // stop recursion here, because it can break things!
+    }
+    
+    if( debug_out ) cerr  << "c run tarjan on " << l << " at depth " << depth << endl;
     if( externBig != 0 ) {
       const vector<Lit>& impliedLiterals =  (*externBig)[ toInt(list) ];
       for(uint32_t i = 0 ; i < impliedLiterals.size(); ++i)
       {
         const Lit n = impliedLiterals[i];
         if(eqNodeIndex[toInt(n)] == -1){
-          eqTarjan(n, n, data,big,externBig);
+          eqTarjan(depth+1, n, n, data,big,externBig);
           eqNodeLowLinks[toInt(l)] = MININ( eqNodeLowLinks[toInt(l)], eqNodeLowLinks[toInt(n)]);
         } else if( eqLitInStack[ toInt(n) ] == 1 ){
           eqNodeLowLinks[toInt(l)] = MININ(eqNodeLowLinks[toInt(l)], eqNodeIndex[toInt(n)]);
@@ -1647,7 +1670,7 @@ void EquivalenceElimination::eqTarjan(Lit l, Lit list, CoprocessorData& data, BI
         const Lit n = impliedLiterals[i];
 	if( debug_out ) cerr << "c next implied lit from " << l << " is " << n << " [" << i << "/" << impliedLiteralsSize << "]" << endl;
         if(eqNodeIndex[toInt(n)] == -1){
-          eqTarjan(n, n, data,big,externBig);
+          eqTarjan(depth+1, n, n, data,big,externBig);
           eqNodeLowLinks[toInt(l)] = MININ( eqNodeLowLinks[toInt(l)], eqNodeLowLinks[toInt(n)]);
         } else if( eqLitInStack[ toInt(n) ] == 1 ){
           eqNodeLowLinks[toInt(l)] = MININ(eqNodeLowLinks[toInt(l)], eqNodeIndex[toInt(n)]);
@@ -2041,5 +2064,81 @@ void EquivalenceElimination::writeAAGfile(CoprocessorData& data)
 void EquivalenceElimination::printStatistics(ostream& stream)
 {
   stream << "c [STAT] EE " << eeTime << " s, " << steps << " steps" << endl;
-  stream << "c [STAT] EE-gate " << gateTime << " s, " << gateSteps << " steps, " << gateExtractTime << " extractGateTime, " << endl;
+  if( opt_level > 0 ) stream << "c [STAT] EE-gate " << gateTime << " s, " << gateSteps << " steps, " << gateExtractTime << " extractGateTime, " << endl;
+}
+
+
+/** iterative tarjan algorithm in python
+ */
+#if 0
+def G2D(my_DiGraph):
+    """
+    Returns a dictionary mapping nodes to their successors.
+    my_DiGraph should be a networkx.DiGraph graph.
+    """
+    result=dict()
+    for node in my_DiGraph.nodes_iter():
+        result[node]=my_DiGraph.neighbors(node)
+    return result
+
+def Tarjan_ite(G):
+    """
+    Returns a dictionary mapping roots to their irriducible components
+    Ex:
+    d={1: [2], 2: [3], 3: [1, 4], 4: [5], 5: [6], 6: [4]}
+    Tarjan_ite(d)-->{1: [3, 2, 1], 4: [6, 5, 4]}
+    """
+    stack=[]
+    explored=[]
+    todo={}
+    for k,v in G.iteritems(): todo[k]=v[:]
+    component=dict()
+    number=dict()
+    low=dict()
+    for w in todo:
+        if w not in number:
+            explored.append(w)
+            low[w]=number[w]=len(number)
+            stack.append(w)
+            while len(explored)!=0:
+                h=explored[-1]
+                if len(todo[h])!=0:
+                    s=todo[h].pop()
+                    if s not in number:
+                        low[s]=number[s]=len(number)
+                        stack.append(s)
+                        explored.append(s)
+                    elif number[s] < number[h] and s in stack:
+                        low[h]=min(low[h],number[s])
+                else:
+                    explored.pop()
+                    if low[h]==number[h]:
+                        component[h]=[]
+                        while len(stack)!=0 and number[stack[-1]] >= number[h]:
+                            component[h].append(stack.pop())
+                    if len(explored)!=0: low[explored[-1]]=min(low[explored[-1]],low[h])
+    return component
+
+def Tarjanite(my_DiGraph):
+    """
+    Returns a dictionary mapping roots to their irriducible components.
+    my_DiGraph should be a networkx.DiGraph graph.
+    """
+    D=G2D(my_DiGraph)
+    return Tarjan_ite(D)
+    
+#endif
+
+void EquivalenceElimination::destroy()
+{
+  vector< Lit >().swap( eqStack);		
+  vector< int32_t >().swap( eqNodeLowLinks);	
+  vector< int32_t >().swap( eqNodeIndex);	
+  vector< Lit >().swap( eqCurrentComponent);	
+
+  vector<Lit>().swap( replacedBy);              
+  
+  vector<char>().swap( isToAnalyze);            
+  vector<Lit>().swap( eqDoAnalyze);             
+  
 }

@@ -1,1 +1,0 @@
--enabled_cp3 -cp3_stats -up -subsimp -bve -no-bve_gates -cp3_bve_heap=2 -cp3_threads=4

@@ -288,6 +288,8 @@ public:
   void addToExtension( const Lit dontTouch, const Lit l = lit_Error );
 
   void extendModel(vec<lbool>& model);
+  const vector<Lit>& getUndo() const { return undo; }
+  
 
   // handling equivalent literals
   void addEquivalences( const std::vector<Lit>& list );
@@ -350,6 +352,13 @@ public:
    * @return false, if BIG is not initialized yet
    */
   void generateImplied(Coprocessor::CoprocessorData& data);
+  
+  /** fill the literals in the order they would appear in a BFS in the big, starting with root nodes 
+   *  NOTE: will pollute the data.ma MarkArray
+   * @param rootsOnly: fill the vector only with root literals
+   */
+  void fillSorted( vector< Lit >& literals, Coprocessor::CoprocessorData& data, bool rootsOnly = true, bool getAll=false);
+  void fillSorted(vector<Var>& variables, CoprocessorData& data, bool rootsOnly = true, bool getAll=false);
 
   /** return true, if the condition "from -> to" holds, based on the stochstic scanned data */
   bool implies(const Lit& from, const Lit& to) const;
@@ -1121,9 +1130,9 @@ inline BIG::BIG()
 
 inline BIG::~BIG()
 {
- if( big != 0 )     free( big );
- if( storage != 0 ) free( storage );
- if( sizes != 0 )   free( sizes );
+ if( big != 0 )    { free( big ); big = 0; }
+ if( storage != 0 ){ free( storage ); storage = 0; }
+ if( sizes != 0 )  { free( sizes ); sizes = 0 ; }
 }
 
 inline void BIG::create(ClauseAllocator& ca, CoprocessorData& data, vec<CRef>& list)
@@ -1262,7 +1271,7 @@ inline void BIG::removeEdge(const Lit l0, const Lit l1)
     if( list[i] == l1 ) {
       list[i] = list[ size - 1 ];
       sizes[ toInt(~l0) ] --;
-      cerr << "c removed edge " << ~l0 << " -> " << l1 << endl;
+      // cerr << "c removed edge " << ~l0 << " -> " << l1 << endl;
       break;
     }
   }
@@ -1273,7 +1282,7 @@ inline void BIG::removeEdge(const Lit l0, const Lit l1)
     if( list2[i] == l0 ) {
       list2[i] = list2[ size2 - 1 ];
       sizes[ toInt(~l1) ] --;
-      cerr << "c removed edge " << ~l1 << " -> " << l0 << endl;
+      // cerr << "c removed edge " << ~l1 << " -> " << l0 << endl;
       break;
     }
   }
@@ -1344,6 +1353,91 @@ inline void BIG::generateImplied( CoprocessorData& data )
     for( uint32_t i = 0 ; i < ts2; i++ ) { const uint32_t rnd=rand()%ts2; const Lit tmp = data.lits[i]; data.lits[i] = data.lits[rnd]; data.lits[rnd]=tmp; }
     for ( uint32_t i = 0 ; i < ts2; ++ i )
       stamp = stampLiteral(data.lits[i],stamp,index,stampQueue);
+}
+
+inline void BIG::fillSorted(vector<Lit>& literals, CoprocessorData& data, bool rootsOnly, bool getAll)
+{
+  literals.clear();
+  data.ma.resize( data.nVars() *2 );
+  data.ma.nextStep();
+  
+  // put root nodes in queue
+  for( Var v = 0 ; v < data.nVars(); ++ v )
+  {
+    if( getSize( mkLit(v,false) ) == 0 )
+      if( getSize( mkLit(v,true) ) == 0 ) continue;
+      else { 
+	data.ma.setCurrentStep( toInt(mkLit(v,true)) );
+	literals.push_back( mkLit(v,true) ); // tthis is a root node
+      }
+    else if( getSize( mkLit(v,true) ) == 0 ) {
+      data.ma.setCurrentStep( toInt(mkLit(v,false)) );
+      literals.push_back( mkLit(v,false) ); // tthis is a root node
+    }
+  }
+  
+  // shuffle root nodes
+  for( int i = 0 ; i + 1 < literals.size(); ++ i )
+  {
+    const Lit tmp = literals[i];
+    const int rndInd = rand() % literals.size();
+    literals[i] = literals[ rndInd ];
+    literals[ rndInd ] = tmp;
+  }
+  
+  if( rootsOnly ) return;
+  
+  // perform BFS
+  data.ma.nextStep();
+  for( int i = 0 ; i < literals.size(); ++ i ) {
+    const Lit l = literals[i];
+    Lit* lits = getArray(l);
+    int s = getSize(l);
+    for( int j = 0 ; j < s; ++ j ) {
+      const Lit l2 = lits[j];
+      // each literal only once!
+      if( data.ma.isCurrentStep( toInt(l2) ) ) continue;
+      data.ma.setCurrentStep( toInt(l2) );
+      literals.push_back(l2);
+    }
+  }
+  
+  if( !getAll ) return;
+  
+  unsigned seenSoFar = literals.size();
+  for( Var v = 0 ; v < data.nVars(); ++ v ) {
+    for( int p = 0 ; p < 2; ++ p ) {
+      const Lit l = mkLit(v,p==1);
+      if( data.ma.isCurrentStep(toInt(l)) ) continue; // literal already in heap
+      else literals.push_back(l);
+    }
+  }
+  // shuffle these variables!
+  const unsigned diff = literals.size() - seenSoFar;
+  for( int i =  seenSoFar; i < literals.size(); ++ i ) {
+    const Lit tmp = literals[i];
+    const int rndInd = (rand() % diff) + seenSoFar;
+    literals[i] = literals[ rndInd ];
+    literals[ rndInd ] = tmp;
+  }
+}
+
+inline void BIG::fillSorted(vector< Var >& variables, Coprocessor::CoprocessorData& data, bool rootsOnly, bool getAll)
+{
+  // get sorted list of lits
+  data.lits.clear();
+  fillSorted(data.lits, data, rootsOnly, getAll);
+  variables.clear();
+  
+  // store variables in vector, according to occurrence of first literal in literal vector
+  data.ma.nextStep();
+  for( int i = 0 ; i < data.lits.size(); ++ i ) {
+     const Lit l = data.lits[i];
+     if( !data.ma.isCurrentStep( var(l) ) ) {
+       variables.push_back(var(l)); 
+       data.ma.setCurrentStep( var(l) );
+     }
+  }
 }
 
 inline void BIG::shuffle( Lit* adj, int size ) const

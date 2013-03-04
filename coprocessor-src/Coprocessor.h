@@ -20,6 +20,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/Bva.h"
 #include "coprocessor-src/Unhiding.h"
 #include "coprocessor-src/Probing.h"
+#include "coprocessor-src/Resolving.h"
 
 #include "coprocessor-src/sls.h"
 #include "coprocessor-src/TwoSAT.h"
@@ -45,6 +46,11 @@ class Preprocessor {
   bool isInprocessing;		// control whether current call of the preprocessor should be handled as inprocessing
   double ppTime;		// time to do preprocessing
   double ipTime;		// time to do inpreprocessing
+  int thisClauses;		// number of original clauses before current run
+  int thisLearnts;		// number of learnt clauses before current run
+  
+  int lastInpConflicts;		// number of conflicts when inprocessing has been called last time
+  int formulaVariables;		// number of variables in the initial formula
   
 public:
 
@@ -66,7 +72,25 @@ public:
   // print formula (DIMACs)
   void outputFormula(const char *file);
 
+  // handle model processing
+  
+  const int getFormulaVariables() const { return formulaVariables; }
+  
+  /** parse model, if no file is specified, read from stdin 
+   * @return false, if some error happened
+   */
+  int parseModel(const string& filename);
 
+  /** parse model extend information 
+   * @return false, if some error happened
+   */
+  bool parseUndoInfo(const string& filename);
+
+  /** write model extend information to specified file 
+   * @return false, if some error happened
+   */
+  bool writeUndoInfo(const string& filename);
+  
 protected:
   // techniques
   Subsumption subsumption;
@@ -78,6 +102,7 @@ protected:
   EquivalenceElimination ee;
   Unhiding unhiding;
   Probing probing;
+  Resolving res;
   
   Sls sls;
   TwoSatSolver twoSAT;
@@ -90,7 +115,7 @@ protected:
   void cleanSolver();                // remove all clauses from structures inside the solver
   void reSetupSolver();              // add all clauses back into the solver, remove clauses that can be deleted
   void initializePreprocessor();     // add all clauses from the solver to the preprocessing structures
-  void destroyPreprocessor();        // free resources of all preprocessing techniques
+  void destroyTechniques();        // free resources of all preprocessing techniques
 
   // small helpers
   void sortClauses();                // sort the literals within all clauses
@@ -104,7 +129,9 @@ protected:
   inline void printClause(FILE * fd, CRef cr);
   inline void printLit(FILE * fd, int l);
   void printFormula( const string& headline );
+  
 
+  
 };
 
 };

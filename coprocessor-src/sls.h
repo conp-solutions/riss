@@ -24,91 +24,83 @@ public:
   * @param model vector that can contain a model for the formula afterwards
   * @return true, if a model has been found
   */
-  bool solve(  const vec< Minisat::CRef >& formula, uint32_t stepLimit  );
+  bool solve(  const vec< Minisat::CRef >& formula, uint64_t stepLimit  );
 
   /** if search succeeded, return polarity for variable v (1 = positive, -1 = negative) */
-  char getModelPolarity( const Var v ) { return assignment[v]; }
+  char getModelPolarity( const Var v ) { return varData[v].polarity ? 1 : -1; }
 
   /** This method should be used to print the statistics of the technique that inherits from this class
   */
   void printStatistics( ostream& stream );
 
+  void destroy();
+  
 private:
   
   CoprocessorData& data;	// reference to coprocessor data object
-    ClauseAllocator& ca;	// reference to clause allocator
-    double solveTime;		// number of seconds for solving
+  ClauseAllocator& ca;	// reference to clause allocator
+  double solveTime;		// number of seconds for solving
   
-	// work data
-	vector< vector<CRef> > watchSatClauses;	// clauses that are satisfied by a single literal (watch this literal)
-	vector< CRef > unsatClauses;			// clauses that are unsatisfied. all the literals of the clause are watched
-	vector< uint32_t > breakCount;			// number of clauses that would be falsified by flipping the given variable
+  // keep track of unsat clauses
+  vector<CRef> unsatClauses; // data
+  vector<int> indexes; // indexes
+  
+  uint64_t flips;
+  
+  struct VarData {
+    int breakCount;
+    bool polarity; // true = false!
+    VarData() : breakCount(0),polarity(false) {}
+  };
+  
+  vector<VarData> varData;
+  
+  // data per variable
+  struct ClsData {
+    Var watch1;
+    Var watch2;
+    int satLiterals;
+    
+    ClsData() : watch1(1 << 30), watch2(1 << 30), satLiterals(0){}
+  };
+  
+  vector< ClsData > clsData;
+  
+  vector< vector< int > > occ;
 	
-	vector< Lit > tmpSet;	// temporary set for single methods
-	
-	// formula data
-	vector<char> assignment;
-	vec<CRef>* formulaAdress;
-	uint32_t varCnt;
-	
-	// work counter
-	int unsatisfiedClauses;	// number of clauses, that are unsatisfied at the moment
-	uint64_t flips;	// number of variable flips
-	
-	float randomPropability;	// propability to not do a heuristic step, but a random one
-	float walkPropability;	  	// propability to perform a usual walk step instead of a novelty step
-	
-	/** initialize the search
-	* create random assignment, setup the clause watch lists
-	*/
-	void init();
-	
-	/** search until a satisfying assignment is found
-	*	returns true, if a solution has been found
-	*/
-	bool search(uint32_t flipSteps);
-	
-	/** enqueue the clause into the list of the literal
-	*/
-	void watchSatClause( const CRef clause, const Lit satisfyingLiteral );
-	
-	/** rearrange clauses
-	*
-	* s.t. new sat clauses become sat-watch
-	* clauses that are sat by another literal are moved into the literals list
-	* unsatisfied clauses are moved into unsat-lists
-	*/
-	void updateFlip(const Lit becameSat);
-	
-	/** heuristic implementations
-	*/
-	Var heuristic();
-	
-	/** fill the assignment with random values
-	*/
-	void createRandomAssignment();
-	
-	/** return number of clauses, that are satisfied (positive -> more clauses satisfied afterwards )
-	*/
-	int getFlipDiff( const Var v ) const;
-	/** return number of clauses that become satisfied with flip of v (uses length of unsat list)*/
-	unsigned int getFlipSat( const Var v ) const;
-	/** return number of clauses, that become unsatisfied with flip of v (computes number) */
-	int getFlipUnsat( const Var v ) const;
-	
-	
-	/** check invariants
-	* -satisfied clauses are watched by a satisfied literals
-	* -unsatisfied clauses are watched by all their literals
-	*/
-	void debug();
-	
-	bool isSat( const vector<char>& assignment, const Lit l ) const { return (sign(l) && assignment[ var(l) ] == -1) || (!sign(l) && assignment[ var(l) ] == 1); }
-	bool isUnsat( const vector<char>& assignment, const Lit l ) const { return (sign(l) && assignment[ var(l) ] == 1) || (!sign(l) && assignment[ var(l) ] == -1); }
-	bool isUndef( const vector<char>& assignment, const Lit l ) const { return assignment[ var(l) ] == 0; }
-	void setPolarity( vector<char>& assignment, const Var v, const char pol ) { assignment[ v ] = pol; }
-	void invertPolarity( vector<char>& assignment, const Var v) { if(assignment[ v ] != 0) assignment[v] = -assignment[v]; }
+  void addHeap(int index) {
+    assert( indexes[ index ] == -1 && "cannot be in already" );
+    indexes[ index ] = unsatClauses.size();
+    unsatClauses.push_back(index);
+  }
+  
+  void delHeap( int index ) {
+    unsatClauses[ indexes[index] ] = unsatClauses[ unsatClauses.size() -1 ];
+    indexes[ unsatClauses[ indexes[index] ] ] = indexes[index];
+    unsatClauses.pop_back();
+    indexes[index] = -1;
+  }
+  
+  bool contains( int index ) const {
+    return indexes[index] != -1; 
+  }
+    
+  bool isSat( const Lit& l ) const {
+    return (sign(l) && varData[var(l)].polarity == false) 
+       || (!sign(l) && varData[var(l)].polarity == true);
+  }
+  
+  bool isUnsat( const Lit& l ) const {
+    return !isSat(l);
+  }
+  
+  /** heuristic implementations
+  */
+  Lit heuristic();
 
+  /** fill the assignment with random values
+  */
+  void createRandomAssignment();
 };
 
 }; // end namespace

@@ -9,19 +9,32 @@ using namespace Coprocessor;
 using namespace std;
 
 extern const char* _cat_bve;
-extern BoolOption opt_par_bve;        
+#if defined CP3VERSION && CP3VERSION < 302
+ static const bool opt_par_bve         = false;
+ static const int  opt_bve_verbose     = 0;
+#else
+extern BoolOption opt_par_bve;      
 extern IntOption  opt_bve_verbose;
+#endif
+
 extern IntOption  opt_learnt_growth;
 extern IntOption  opt_resolve_learnts;
 extern BoolOption opt_unlimited_bve;
 extern BoolOption opt_bve_findGate; 
 extern IntOption  opt_bve_heap;
+
+#if defined CP3VERSION && CP3VERSION < 302
+static const int par_bve_threshold = 0;
+#else
 static IntOption  par_bve_threshold (_cat_bve, "par_bve_th", "Threshold for use of BVE-Worker", 1000, IntRange(0,INT32_MAX)); //TODO lower in case of force_gates
+#endif
+
 extern BoolOption opt_force_gates;
-static int upLevel = 1;
 extern BoolOption opt_bve_bc;
 extern IntOption heap_updates;
 extern BoolOption opt_bce_only;
+
+static int upLevel = 1;
 
 static inline void printLitErr(const Lit l) 
 {

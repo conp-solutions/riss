@@ -286,7 +286,7 @@ public: static inline int irand(double& seed, int size) {
         
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;
-        
+public:     bool useCoprocessor;
 };
 
 

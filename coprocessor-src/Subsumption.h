@@ -96,9 +96,9 @@ public:
    *  - static method that performs subsumption on the given part of the queue without stat updates
    */
 
+  void destroy();
+  
 protected:
-
-
 
   inline void updateOccurrences(const vector< Coprocessor::Subsumption::OccUpdate >& updates, Heap<VarOrderBVEHeapLt> * heap);
 
