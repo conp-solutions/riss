@@ -85,6 +85,8 @@ int main(int argc, char** argv)
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
         
+	BoolOption   opt_quiet  ("MAIN", "quiet", "Do not print the model", false);
+	
         parseOptions(argc, argv, true);
 
         Solver S;
@@ -127,6 +129,8 @@ int main(int argc, char** argv)
             printf("ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
         
         if (S.verbosity > 0){
+	    printf("============================[    Minisat + CP3   ]=============================\n");
+	    printf("| Norbert Manthey. The use of the tool is limited to research only!           |\n");
             printf("============================[ Problem Statistics ]=============================\n");
             printf("|                                                                             |\n"); }
         
@@ -149,13 +153,13 @@ int main(int argc, char** argv)
         signal(SIGXCPU,SIGINT_interrupt);
        
         if (!S.simplify()){
-            if (res != NULL) fprintf(res, "UNSAT\n"), fclose(res);
+            if (res != NULL) fprintf(res, "s UNSATISFIABLE\n"), fclose(res);
             if (S.verbosity > 0){
                 printf("===============================================================================\n");
                 printf("Solved by unit propagation\n");
                 printStats(S);
                 printf("\n"); }
-            printf("UNSATISFIABLE\n");
+            printf("s UNSATISFIABLE\n");
             exit(20);
         }
         
@@ -178,6 +182,12 @@ int main(int argc, char** argv)
                 fprintf(res, "s UNKNOWN\n");
             fclose(res);
         }
+        if(! opt_quiet && ret == l_True) {
+          for (int i = 0; i < S.nVars(); i++)
+            if (S.model[i] != l_Undef)
+              printf( "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
+	  printf(" 0\n");
+	}
         
 #ifdef NDEBUG
         exit(ret == l_True ? 10 : ret == l_False ? 20 : 0);     // (faster than "return", which will invoke the destructor for 'Solver')

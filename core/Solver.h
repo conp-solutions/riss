@@ -142,8 +142,8 @@ protected:
 
     // Helper structures:
     //
-    struct VarData { CRef reason; int level; };
-    static inline VarData mkVarData(CRef cr, int l){ VarData d = {cr, l}; return d; }
+    struct VarData { CRef reason; int level; int cost; };
+    static inline VarData mkVarData(CRef cr, int l){ VarData d = {cr, l, -1}; return d; }
 
     struct Watcher {
         CRef cref;
