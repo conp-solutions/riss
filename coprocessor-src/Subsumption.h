@@ -78,7 +78,7 @@ public:
   
   
   /** run subsumption and strengthening until completion */
-  void process(Heap<VarOrderBVEHeapLt> * heap = NULL, const bool doStatistics = true);
+  void process(Heap<VarOrderBVEHeapLt> * heap = NULL, const Var ignore = var_Undef, const bool doStatistics = true);
 
   void initClause(const CRef cr); // inherited from Technique
   
@@ -100,22 +100,22 @@ public:
   
 protected:
 
-  inline void updateOccurrences(const vector< Coprocessor::Subsumption::OccUpdate >& updates, Heap<VarOrderBVEHeapLt> * heap);
+  inline void updateOccurrences(const vector< Coprocessor::Subsumption::OccUpdate >& updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef);
 
   bool hasToSubsume() const ;       // return whether there is something in the subsume queue
-  lbool fullSubsumption(Heap<VarOrderBVEHeapLt> * heap, const bool doStatistics);   // performs subsumtion until completion
-  void subsumption_worker (unsigned int start, unsigned int end, Heap<VarOrderBVEHeapLt> * heap, const bool doStatistics = true); // subsume certain set of elements of the processing queue, does not write to the queue
+  lbool fullSubsumption(Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);   // performs subsumtion until completion
+  void subsumption_worker (unsigned int start, unsigned int end, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true); // subsume certain set of elements of the processing queue, does not write to the queue
   void par_subsumption_worker ( unsigned int start, unsigned int end, vector<CRef> & to_delete, vector< CRef > & set_non_learnt, struct SubsumeStatsData & stats, const bool doStatistics = true);
   
   bool hasToStrengthen() const ;    // return whether there is something in the strengthening queue
   
-  lbool fullStrengthening( Heap<VarOrderBVEHeapLt> * heap, const bool doStatistics = true); // performs strengthening until completion, puts clauses into subsumption queue
-  lbool strengthening_worker ( unsigned int start, unsigned int end, Heap<VarOrderBVEHeapLt> * heap, bool doStatistics = true);
-lbool createResolvent( const CRef cr, CRef & resolvent, const int negated_lit_pos, Heap<VarOrderBVEHeapLt> * heap, const bool doStatistics);
-  void par_strengthening_worker( unsigned int start, unsigned int stop, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const bool doStatistics = true); 
-  void par_nn_strengthening_worker( unsigned int start, unsigned int end, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const bool doStatistics = true);
-  inline lbool par_nn_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const bool doStatistics = true) ; 
-  inline lbool par_nn_negated_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const bool doStatistics = true);
+  lbool fullStrengthening( Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true); // performs strengthening until completion, puts clauses into subsumption queue
+  lbool strengthening_worker ( unsigned int start, unsigned int end, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, bool doStatistics = true);
+lbool createResolvent( const CRef cr, CRef & resolvent, const int negated_lit_pos, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);
+  void par_strengthening_worker( unsigned int start, unsigned int stop, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true); 
+  void par_nn_strengthening_worker( unsigned int start, unsigned int end, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);
+  inline lbool par_nn_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true) ; 
+  inline lbool par_nn_negated_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);
   
   /** data for parallel execution */
   struct SubsumeWorkData {
@@ -129,11 +129,12 @@ lbool createResolvent( const CRef cr, CRef & resolvent, const int negated_lit_po
     vector<OccUpdate> * occ_updates;
     struct SubsumeStatsData* stats;
     Heap<VarOrderBVEHeapLt> * heap;
+    Var              ignore;
     };
   
   /** run parallel subsumption with all available threads */
   void parallelSubsumption( const bool doStatistics = true);
-  void parallelStrengthening(Heap<VarOrderBVEHeapLt> * heap, const bool doStatistics = true);  
+  void parallelStrengthening(Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);  
 public:
 
   /** converts arg into SubsumeWorkData*, runs subsumption of its part of the queue */

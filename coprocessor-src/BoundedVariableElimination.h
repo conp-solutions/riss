@@ -155,14 +155,14 @@ protected:
   inline void removeBlockedClausesThreadSafe(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const vector< CRef> & list, const int32_t _stats[], const Lit l, const int limit, SpinLock & data_lock, SpinLock & heap_lock, ParBVEStats & stats, const bool doStatistics );
 
   // Special subsimp implementations for par bve:
-  void par_bve_strengthening_worker(CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, MarkArray & dirtyOccs, ParBVEStats & stats, int & rwlock_count, const bool strength_resolvents, const bool doStatistics);
+  void par_bve_strengthening_worker(CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, const Var ignore, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, MarkArray & dirtyOccs, ParBVEStats & stats, int & rwlock_count, const bool strength_resolvents, const bool doStatistics);
 
   // Special propagation for par bve
-  lbool par_bve_propagate(CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, MarkArray & dirtyOccs, deque <CRef> & sharedSubsimpQueue, ParBVEStats & stats, int & rwlock_count, const bool doStatistics);
+  lbool par_bve_propagate(CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, const Var ignore, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, MarkArray & dirtyOccs, deque <CRef> & sharedSubsimpQueue, ParBVEStats & stats, int & rwlock_count, const bool doStatistics);
 
-inline lbool strength_check_pos(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, vector < CRef > & list, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, MarkArray & dirtyOccs, ParBVEStats & stats, const bool strength_resolvents, const bool doStatistics); 
+inline lbool strength_check_pos(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const Var ignore, vector < CRef > & list, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, MarkArray & dirtyOccs, ParBVEStats & stats, const bool strength_resolvents, const bool doStatistics); 
 
-inline lbool strength_check_neg(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, vector < CRef > & list, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, MarkArray & dirtyOccs, ParBVEStats & stats, const bool strength_resolvents, const bool doStatistics); 
+inline lbool strength_check_neg(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const Var ignore, vector < CRef > & list, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, MarkArray & dirtyOccs, ParBVEStats & stats, const bool strength_resolvents, const bool doStatistics); 
   // Helpers for both par and seq
   inline bool resolve(const Clause & c, const Clause & d, const int v, vec<Lit> & ps);
   inline int  tryResolve(const Clause & c, const Clause & d, const int v);

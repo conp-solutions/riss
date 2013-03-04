@@ -484,7 +484,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                 //subsumption with new clauses!!
                 if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
                 if (heap_updates > 0 && opt_bve_heap != 2)
-                    subsumption.process(&heap);
+                    subsumption.process(&heap, v);
                 else 
                     subsumption.process();
                 if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
