@@ -349,6 +349,8 @@ lbool Preprocessor::performSimplification()
   destroyTechniques();
   
   if ( data.ok() ) reSetupSolver();
+  
+  if( opt_verbose > 0 ) printFormula("after full simplification");
 
   if( opt_printStats ) {
     printStatistics(cerr);
