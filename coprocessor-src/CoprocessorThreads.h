@@ -98,7 +98,7 @@ class ThreadController
 public:
   /** set up the threads, wait for them to finish initialization */
   ThreadController(int _threads);
-  ~ThreadController();
+  ~ThreadController(); 
   
   /** initializes the controller object */
   void init();
@@ -184,7 +184,7 @@ inline void ThreadData::run()
 }
 
 inline ThreadController::ThreadController(int _threads)
-: threads( _threads ), threadHandles(0)
+: threads( _threads ), threadHandles(0), data(0)
 {}
 
 inline ThreadController::~ThreadController()
@@ -199,6 +199,17 @@ inline ThreadController::~ThreadController()
         void* status;
         pthread_join( threadHandles[i], &status);
     }
+    // delete thread-handles
+    if (threadHandles != 0) 
+        delete[] threadHandles;
+
+    // delete thread-data
+    for( int i = 0; i < threads; ++i)
+    {
+        delete data[i];
+        data[i] = 0;
+    }
+    if (data != 0) delete[] data;
 }
 
 inline void ThreadController::init()

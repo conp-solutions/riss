@@ -943,7 +943,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
           gateMarkArrays[i].resize(data.nVars() * 2);
   }
   
-  if (neighbor_heaps == NULL) 
+  if (neighbor_heaps == 0) 
   { 
       neighbor_heaps = (Heap<NeighborLt> **) malloc( sizeof(Heap<NeighborLt> * ) * controller.size());
       for (int i = 0; i < controller.size(); ++ i)

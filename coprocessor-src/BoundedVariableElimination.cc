@@ -35,7 +35,7 @@ BoundedVariableElimination::BoundedVariableElimination( ClauseAllocator& _ca, Co
 , propagation( _propagation)
 , subsumption( _subsumption)
 , heap_option(opt_unlimited_bve)
-, neighbor_heaps(NULL)
+, neighbor_heaps(0)
 , removedClauses(0)
 , removedLiterals(0)
 , createdClauses(0)
@@ -1040,8 +1040,12 @@ void BoundedVariableElimination::destroy()
   {
     for (int i = 0; i < controller.size(); ++i)
         if (neighbor_heaps[i] != 0)
+        {
             delete neighbor_heaps[i];
+            neighbor_heaps[i] = 0;
+        }
     free(neighbor_heaps);
+    neighbor_heaps = 0;
   }
   deque< CRef > ().swap (sharedStrengthQueue );
 }
