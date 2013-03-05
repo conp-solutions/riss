@@ -183,6 +183,7 @@ int main(int argc, char** argv)
             fclose(res);
         }
         if(! opt_quiet && ret == l_True && res == NULL ) {
+	  printf ("v ");
           for (int i = 0; i < S.nVars(); i++)
             if (S.model[i] != l_Undef)
               printf( "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
