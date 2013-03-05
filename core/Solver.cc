@@ -107,6 +107,8 @@ Solver::Solver() :
 
 Solver::~Solver()
 {
+    if (coprocessor != 0)
+        delete coprocessor;
 }
 
 
