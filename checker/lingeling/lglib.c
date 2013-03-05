@@ -11688,10 +11688,10 @@ ALA:
 	  assert (tag == OCCS);
 	  d = lglidx2lits (lgl, OCCS, 0, other);
 	  assert (d != c);
-	  for (q = d; (other = *q); q++)
+	  for (q = d; (other = *q); q++) // check tautology
 	    if (other != -lit && lglsignedmarked (lgl, -other)) break;
 	  if (other) continue;
-	  for (q = d; (other = *q); q++)
+	  for (q = d; (other = *q); q++) // add to cla only, if lits are not already marked!
 	    if (other != -lit && !lglsignedmarked (lgl, other))
 	      lglpushstk (lgl, &lgl->cce->cla, other);
 	}

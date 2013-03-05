@@ -152,6 +152,16 @@ bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::Work
       assert( l != lit_Undef && l != lit_Error && "only real literals can be in the queue" );
       data.log.log(cceLevel,"CLA check literal", l);
       data.log.log(cceLevel,"start inner iteration with cla size", wData.cla.size() );
+      
+      if( debug_out > 0 ) {
+	cerr << "c current virtual clause: " << endl;
+	for( Var tv = 0 ; tv < data.nVars(); ++ tv ) 
+	  for( int tp = 0 ; tp < 2; tp ++ )
+	    if( wData.array.isCurrentStep( toInt( mkLit(tv,tp==1) ) ) ) cerr << " " << mkLit(tv,tp==1) ;
+	cerr << endl;
+      }
+      
+      
       const vector<CRef>& lList = data.list(l);
       int beforeCla = wData.cla.size();
       for( int j = 0 ; j < lList.size(); ++ j ) { // TODO: add step counter here!
@@ -167,13 +177,14 @@ bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::Work
 	      data.log.log(cceLevel,"reject, because tautology",cj);
 	      if( debug_out ) cerr << "c reduce CLA back to old size, because literal " << cj[j] << " leads to tautology " << endl;
 	      goto ClaNextClause;
-	    } else if( !wData.array.isCurrentStep( toInt( cj[j] ) ) ) { // add only, if not already in!
+	    } else if( !wData.array.isCurrentStep( toInt(cj[j]) ) ) { // TODO: check whether this needs to be done! if( !wData.array.isCurrentStep( toInt( cj[j] ) ) ) { // add only, if not already in!
 	      // FIXME: ensure that a literal is not added twice!
 	      wData.cla.push_back(cj[j]);
-	      if( debug_out ) cerr << "c add " << cj[j] << " to CLA" << endl;
+	      if( debug_out > 0 ) cerr << "c add " << cj[j] << " to CLA" << endl;
+	      if( debug_out > 0  && wData.array.isCurrentStep( toInt( cj[j] ) ) ) cerr << "c regard resolvent literal that is already in the virtual clause: " << cj[j] << endl;
 	    }
 	  }
-	  if( wData.cla.size() == beforeCla ) goto ClaNextClause; // no new literal -> jump to next clause
+	  if( wData.cla.size() == beforeCla ) break; // no new literal -> jnothing to be added with CLA
 	  firstClause = false; // only had first clause, if not tautology!
 	  data.log.log(cceLevel,"increased(/kept) cla to",wData.cla.size());
 	} else { // not the first clause
@@ -223,8 +234,16 @@ ClaNextClause:;
 	}
 	// these lines have been added after the whole algorithm!
 	for( int k = beforeCla; k < wData.cla.size(); ++ k ) {
-	  wData.toProcess.push_back( wData.cla[k] );
-	  wData.array.setCurrentStep( toInt(wData.cla[k]) );
+	  if( debug_out > 1 ) cerr << "c consider " << wData.cla[k] << " for being added to cla" << endl;
+	  if( !wData.array.isCurrentStep( toInt(wData.cla[k]) ) ) { // TODO: add only, if already there
+	    wData.toProcess.push_back( wData.cla[k] );
+	    wData.array.setCurrentStep( toInt(wData.cla[k]) );
+	  } else {
+	    if( debug_out > 0 ) cerr << "c already out literal " << wData.cla[k] << " survived all resolvents, still, do not use it!" << endl; 
+	    wData.cla[k] = wData.cla[ wData.cla.size() ];
+	    wData.cla.pop_back();
+	    --k;
+	  }
 	}
 	if( debug_out ) {
 	  cerr << "c current undo: " << endl;
@@ -252,7 +271,7 @@ ClaNextClause:;
 	 preserveEE = false;
 	 wData.toUndo.push_back(lit_Undef);
 	 wData.toUndo.push_back(wData.cla[i]);
-	 cerr << "c BCE sucess on literal " << wData.cla[i] << endl;
+	 if( debug_out > 1 ) cerr << "c BCE sucess on literal " << wData.cla[i] << endl;
 	 for( int j = 0 ; j < wData.cla.size(); ++ j )
 	   if( wData.cla[i] != wData.cla[j] ) wData.toUndo.push_back( wData.cla[j] );
 	 break; // need only removed by BCE once

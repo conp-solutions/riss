@@ -966,7 +966,7 @@ inline void CoprocessorData::addExtensionToExtension(vector< Lit >& lits)
 
 inline void CoprocessorData::extendModel(vec< lbool >& model)
 {
-  const bool local_debug = true	;
+  const bool local_debug = false	;
   if( global_debug_out || local_debug) {
     cerr << "c extend model of size " << model.size() << " with undo information of size " << undo.size() << endl;
     cerr << "c  in model: ";
