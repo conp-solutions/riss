@@ -300,7 +300,9 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<Var
       }
       modifiedFormula = modifiedFormula || propagation.appliedSomething();
     }
-    
+    // perform garbage collection
+    data.checkGarbage();
+
     // add active variables and clauses to variable heap and subsumption queues
     data.getActiveVariables(lastDeleteTime(), touched_variables);
     touchedVarsForSubsumption(data, touched_variables);
@@ -479,7 +481,8 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                 if (doStatistics) ++eliminatedVars;
                 removeClauses(data, heap, pos, mkLit(v,false), p_limit, doStatistics);
                 removeClauses(data, heap, neg, mkLit(v,true),  n_limit, doStatistics);
-               
+                vector<CRef>().swap(pos); //free physical memory of occs
+                vector<CRef>().swap(neg); //free physical memory of occs
                 if (opt_bve_verbose > 0) cerr << "c Resolved " << v+1 <<endl;
                 //subsumption with new clauses!!
                 if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
@@ -910,6 +913,7 @@ inline void BoundedVariableElimination::addClausesToSubsumption (const vector<CR
 {
     for (int j = 0; j < clauses.size(); ++j)
     {
+        assert(clauses[j] != CRef_Undef);
         Clause & d = ca[clauses[j]];
         if (!d.can_be_deleted() && !d.can_subsume())
         {

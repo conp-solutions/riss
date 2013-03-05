@@ -518,6 +518,8 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
              // (since write lock, no threadsafe implementation needed)
              removeClausesThreadSafe(data, heap, pos, mkLit(v,false), p_limit, data_lock, heap_lock, stats, doStatistics);
              removeClausesThreadSafe(data, heap, neg, mkLit(v,true) , n_limit, data_lock, heap_lock, stats, doStatistics);
+             vector<CRef>().swap(pos); // free physical memory of pos-occ
+             vector<CRef>().swap(neg); // free physical memory of neg-occ
              if (opt_bve_verbose > 0) cerr << "c Resolved " << v+1 <<endl;
              if (doStatistics) ++stats.eliminatedVars;
 
@@ -1027,6 +1029,12 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
       }
       modifiedFormula = modifiedFormula || propagation.appliedSomething();
     }
+    for ( int i = 0 ; i < controller.size(); ++ i ) 
+    {
+        assert(strengthQueues[i].size() == 0);
+    }
+    assert(sharedStrengthQueue.size() == 0);
+    data.checkGarbage();
     
     // add active variables and clauses to variable heap and subsumption queues
     data.getActiveVariables(lastDeleteTime(), touched_variables);

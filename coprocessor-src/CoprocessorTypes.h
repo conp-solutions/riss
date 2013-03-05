@@ -245,6 +245,12 @@ public:
   inline void cleanUpOccurrences(const MarkArray & dirtyOccs, const uint32_t timer); // removes CRef_Undef from all dirty occurrences
   void cleanOccurrences();				// remove all clauses and set counters to 0
 
+  // Garbage Collection
+  void garbageCollect();
+  void relocAll(ClauseAllocator & to);
+  void checkGarbage(void){ return checkGarbage(solver->garbage_frac); }
+  void checkGarbage(double gf){  if (ca.wasted() > ca.size() * gf) garbageCollect(); }
+
   void updateClauseAfterDelLit(const Minisat::Clause& clause)
   { if( global_debug_out ) cerr << "what to update in clause?! " << clause << endl; }
   
@@ -712,6 +718,7 @@ inline void CoprocessorData::removedLiteral( const Lit l, const int32_t diff, He
   {
     deletedVar(var(l));
     lit_occurrence_count[toInt(l)] -= diff;
+    ca.freeLit();
   }
   else
   {
@@ -775,9 +782,11 @@ inline void CoprocessorData::removedClause ( const CRef cr, Heap<VarOrderBVEHeap
   {
       for (int l = 0; l < c.size(); ++l)
       {
-        removedLiteral( c[l] );
+        deletedVar(var(c[l]));
+        --lit_occurrence_count[toInt(c[l])];
       }
       numberOfCls --;
+      ca.free(cr);
   }
   else
   {
@@ -787,7 +796,9 @@ inline void CoprocessorData::removedClause ( const CRef cr, Heap<VarOrderBVEHeap
         heap_lock->lock();
       for (int l = 0; l < c.size(); ++l)
       {
-        removedLiteral( c[l] );
+        deletedVar(var(c[l]));
+        --lit_occurrence_count[toInt(c[l])];
+        
         if (heap != NULL)
         {
             if (heap->inHeap(var(c[l])))
@@ -797,6 +808,7 @@ inline void CoprocessorData::removedClause ( const CRef cr, Heap<VarOrderBVEHeap
         }
       }
       numberOfCls --;
+      ca.free(cr);
       if (heap_lock != NULL)
           heap_lock->unlock();
       if (data_lock != NULL)
@@ -845,6 +857,134 @@ inline void CoprocessorData::correctCounters()
     numberOfCls ++;
     for( int j = 0 ; j < c.size(); j++) lit_occurrence_count[ toInt(c[j]) ] ++; // increment all literal counters accordingly
   }
+}
+
+inline void CoprocessorData::garbageCollect() 
+{
+    ClauseAllocator to(ca.size() - ca.wasted()); 
+
+    relocAll(to);
+    cerr << " c Garbage collection: " << ca.size()*ClauseAllocator::Unit_Size 
+        << " bytes => " << to.size()*ClauseAllocator::Unit_Size <<  " bytes " << endl; 
+    
+    to.moveTo(ca);
+}
+
+inline void CoprocessorData::relocAll(ClauseAllocator& to)
+{
+     
+    // Subsume Queue
+    {
+        int i, j;
+        for (i = j = 0; i < subsume_queue.size(); ++i){
+            Clause & c = ca[subsume_queue[i]];
+            if (c.can_be_deleted()) {
+                // removeClause(subsume_queue[i]);
+            }
+            else
+            {
+                ca.reloc(subsume_queue[i], to);
+                subsume_queue[j++] = subsume_queue[i];
+            }
+        }
+        subsume_queue.resize(j);
+    }
+    // Strength Queue
+    {
+        int i, j;
+        for (i = j = 0; i < strengthening_queue.size(); ++i){
+            Clause & c = ca[strengthening_queue[i]];
+            if (c.can_be_deleted()) {
+                // removeClause(strength_queue[i]);
+            }
+            else
+            {
+                ca.reloc(strengthening_queue[i], to);
+                strengthening_queue[j++] = strengthening_queue[i];
+            }
+        }
+        strengthening_queue.resize(j);
+    }
+
+    // All Occurrences
+    for (int v = 0 ; v < nVars(); ++ v)
+    {
+        for (int i = 0 ; i < 2; ++i)
+        {
+            vector<CRef> & litOccs = list(mkLit(v, ((i == 0) ? false : true)));
+            int j, k;
+            for (j = k = 0; j < litOccs.size(); ++j)
+            {
+                if (litOccs[j] == CRef_Undef)
+                    continue;
+                Clause & c = ca[litOccs[j]];
+                if (c.can_be_deleted()) {
+                    //removeClause(litOccs[j]);
+                } 
+                else
+                {
+                    ca.reloc(litOccs[j], to);
+                    litOccs[k++] = litOccs[j];
+                }
+            }
+            litOccs.resize(k);
+        }
+    }
+    // Watches are clean!
+
+    // All reasons:
+    //
+    for (int i = 0; i < solver->trail.size(); i++){
+        Var v = var(solver->trail[i]);
+	// FIXME TODO: there needs to be a better workaround for this!!
+	if ( solver->level(v) == 0 ) solver->vardata[v].reason = CRef_Undef; // take care of reason clauses for literals at top-level
+        else
+        if (solver->reason(v) != CRef_Undef && (ca[solver->reason(v)].reloced() || solver->locked(ca[solver->reason(v)])))
+            ca.reloc(solver->vardata[v].reason, to);
+    }
+
+    vec<CRef> & clauses = solver->clauses;
+    vec<CRef> & learnts = solver->learnts;
+
+    // All original:
+    //
+    {
+        int i, j;
+        for (i = j = 0; i < clauses.size(); ++i){
+            Clause & c = ca[clauses[i]];
+            if (c.can_be_deleted()) {
+                // removeClause(clauses[i]);
+            }
+            else
+            {
+                ca.reloc(clauses[i], to);
+                clauses[j++] = clauses[i];
+            }
+        }
+        clauses.shrink(i - j);
+    }
+    // All learnt:
+    //
+    {
+        int i, j;
+        for (i = j = 0; i < learnts.size(); ++i){
+            Clause & c = ca[learnts[i]];
+            if (c.can_be_deleted()) {
+                // removeClause(learnts[i]);
+            }
+            else if (!c.learnt())
+            {
+                ca.reloc(learnts[i], to);
+                clauses.push(learnts[i]);
+            }
+            else
+            {
+                ca.reloc(learnts[i], to);
+                learnts[j++] = learnts[i];
+            }
+        }
+        learnts.shrink(i - j);
+    }
 }
 
 /** Mark all variables that occure together with _x_.

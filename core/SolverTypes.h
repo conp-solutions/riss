@@ -405,6 +405,13 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         RegionAllocator<uint32_t>::free(clauseWord32Size(c.size(), c.has_extra()));
     }
 
+    void freeLit(int diff = 1)
+    {
+        assert(sizeof(Lit) == sizeof(uint32_t));
+        assert(diff > 0);
+        RegionAllocator<uint32_t>::free(diff);
+    }
+
     void reloc(CRef& cr, ClauseAllocator& to)
     {
         Clause& c = operator[](cr);

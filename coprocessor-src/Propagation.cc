@@ -51,7 +51,7 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
             data.removeClauseFrom(positive[i], satisfied[lit]);
       }*/
     }
-    positive.clear(); // clear list
+    vector<CRef>().swap(positive); // free physical space of positive
     
     const Lit nl = ~l;
     int count = 0;
@@ -99,7 +99,7 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
     // update formula data!
     data.removedLiteral(nl, count, heap, ignore);
     removedLiterals += count;
-    data.list(nl).clear();
+    vector<CRef>().swap(negative); // free physical scace of negative
   }
   
 //    for (int i = 0; i < clause_list.size(); ++i)
