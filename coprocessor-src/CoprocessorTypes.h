@@ -191,7 +191,27 @@ class CoprocessorData
   vector<Lit> equivalences;             // stack of literal classes that represent equivalent literals
   vector<CRef> subsume_queue; // queue of clause references that potentially can subsume other clauses
   vector<CRef> strengthening_queue;     // vector of clausereferences, which potentially can strengthen
-  
+
+  int countLitOcc(Lit l){
+    int count = 0;
+    vector<CRef> & list = occs[toInt(l)];
+    for (int i = 0; i < list.size(); ++i)
+    {
+        CRef cr = list[i];
+        if (cr == CRef_Undef) continue;
+        Clause & c = ca[cr];
+        if (c.can_be_deleted()) continue;
+        bool occurs = false;
+        for (int j = 0; j < c.size(); ++j) 
+            if (c[j] == l) 
+            {
+                occurs = true; break;
+            }
+        if (occurs) ++count;
+        else assert(false && "dirty occurrence list!!!");
+    }
+    return count;
+  }  
   
   // TODO decide whether a vector of active variables would be good!
 
@@ -719,6 +739,7 @@ inline void CoprocessorData::removedLiteral( const Lit l, const int32_t diff, He
     deletedVar(var(l));
     lit_occurrence_count[toInt(l)] -= diff;
     ca.freeLit();
+    //assert(lit_occurrence_count[toInt(l)] == countLitOcc(l)); 
   }
   else
   {
@@ -728,6 +749,7 @@ inline void CoprocessorData::removedLiteral( const Lit l, const int32_t diff, He
         heap_lock->lock();
     deletedVar(var(l));
     lit_occurrence_count[toInt(l)] -= diff;
+    //assert(lit_occurrence_count[toInt(l)] == countLitOcc(l)); 
     if (heap != NULL)
     {
         if (heap->inHeap(var(l)))
@@ -784,6 +806,7 @@ inline void CoprocessorData::removedClause ( const CRef cr, Heap<VarOrderBVEHeap
       {
         deletedVar(var(c[l]));
         --lit_occurrence_count[toInt(c[l])];
+        //assert(lit_occurrence_count[toInt(c[l])] == countLitOcc(c[l]));
       }
       numberOfCls --;
       ca.free(cr);
@@ -798,6 +821,7 @@ inline void CoprocessorData::removedClause ( const CRef cr, Heap<VarOrderBVEHeap
       {
         deletedVar(var(c[l]));
         --lit_occurrence_count[toInt(c[l])];
+        //assert(lit_occurrence_count[toInt(c[l])] == countLitOcc(c[l]));
         
         if (heap != NULL)
         {
@@ -861,8 +885,8 @@ inline void CoprocessorData::correctCounters()
 
 inline void CoprocessorData::garbageCollect() 
 {
-    ClauseAllocator to(ca.size() - ca.wasted()); 
-
+    ClauseAllocator to((ca.size() >= ca.wasted()) ? ca.size() - ca.wasted() : 0);  //FIXME just a workaround
+                                                                                   // correct add / remove would be nicer
     relocAll(to);
     cerr << " c Garbage collection: " << ca.size()*ClauseAllocator::Unit_Size 
         << " bytes => " << to.size()*ClauseAllocator::Unit_Size <<  " bytes " << endl; 

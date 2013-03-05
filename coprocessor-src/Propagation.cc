@@ -69,15 +69,15 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
         for ( int j = 0; j < c.size(); ++ j ) 
           if ( c[j] == nl ) 
           { 
-	    if( global_debug_out ) cerr << "c UP remove " << nl << " from " << c << endl;
-	    if (!sort) c.removePositionUnsorted(j);
+	        if( global_debug_out ) cerr << "c UP remove " << nl << " from " << c << endl;
+	        if (!sort) c.removePositionUnsorted(j);
             else c.removePositionSorted(j);
-	    modifiedFormula = true;
-	    break;
-	  }
-	  // tell subsumption / strengthening about this modified clause
-	  data.addSubStrengthClause(negative[i]);
-	  count ++;
+	        modifiedFormula = true;
+	        count ++;
+	        break;
+	      }
+	      // tell subsumption / strengthening about this modified clause
+	      data.addSubStrengthClause(negative[i]);
       }
       // unit propagation
       if ( c.size() == 0 || (c.size() == 1 &&  solver->value( c[0] ) == l_False) ) 
@@ -97,9 +97,9 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
       }
     }
     // update formula data!
+    vector<CRef>().swap(negative); // free physical scace of negative
     data.removedLiteral(nl, count, heap, ignore);
     removedLiterals += count;
-    vector<CRef>().swap(negative); // free physical scace of negative
   }
   
 //    for (int i = 0; i < clause_list.size(); ++i)
