@@ -266,10 +266,10 @@ public:
   void cleanOccurrences();				// remove all clauses and set counters to 0
 
   // Garbage Collection
-  void garbageCollect();
-  void relocAll(ClauseAllocator & to);
-  void checkGarbage(void){ return checkGarbage(solver->garbage_frac); }
-  void checkGarbage(double gf){  if (ca.wasted() > ca.size() * gf) garbageCollect(); }
+  void garbageCollect(vector<CRef> ** updateVectors = 0, int size = 0);
+  void relocAll(ClauseAllocator & to, vector<CRef> ** updateVectors = 0, int size = 0);
+  void checkGarbage(vector<CRef> ** updateVectors = 0, int size = 0) { return checkGarbage(solver->garbage_frac, updateVectors, size); }
+  void checkGarbage(double gf, vector<CRef> ** updateVectors = 0, int size = 0){  if (ca.wasted() > ca.size() * gf) garbageCollect(updateVectors, size); }
 
   void updateClauseAfterDelLit(const Minisat::Clause& clause)
   { if( global_debug_out ) cerr << "what to update in clause?! " << clause << endl; }
@@ -883,20 +883,43 @@ inline void CoprocessorData::correctCounters()
   }
 }
 
-inline void CoprocessorData::garbageCollect() 
+inline void CoprocessorData::garbageCollect(vector<CRef> ** updateVectors, int size) 
 {
     ClauseAllocator to((ca.size() >= ca.wasted()) ? ca.size() - ca.wasted() : 0);  //FIXME just a workaround
                                                                                    // correct add / remove would be nicer
-    relocAll(to);
+    relocAll(to, updateVectors);
     cerr << " c Garbage collection: " << ca.size()*ClauseAllocator::Unit_Size 
         << " bytes => " << to.size()*ClauseAllocator::Unit_Size <<  " bytes " << endl; 
     
     to.moveTo(ca);
 }
 
-inline void CoprocessorData::relocAll(ClauseAllocator& to)
+inline void CoprocessorData::relocAll(ClauseAllocator& to, vector<CRef> ** updateVectors, int size)
 {
-     
+    // Update Vectors
+    if (size > 0 && updateVectors != 0)
+    {
+        for (int v_ix = 0; v_ix < size; ++v_ix)
+        {
+            if (updateVectors[v_ix] == 0)
+                continue;
+            vector<CRef> & list = *(updateVectors[v_ix]);
+            int i, j;
+            for (i = j = 0; i < list.size(); ++i){
+                Clause & c = ca[list[i]];
+                if (c.can_be_deleted()) {
+                    // removeClause(list[i]);
+                }
+                else
+                {
+                    ca.reloc(list[i], to);
+                    list[j++] = list[i];
+                }
+            }
+            list.resize(j);
+        }    
+    }
+
     // Subsume Queue
     {
         int i, j;
