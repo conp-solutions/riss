@@ -312,6 +312,9 @@ public:
   void addToExtension( vec< Lit >& lits, const Lit l = lit_Error );
   void addToExtension( vector< Lit >& lits, const Lit l = lit_Error );
   void addToExtension( const Lit dontTouch, const Lit l = lit_Error );
+  
+  /// add already created vector to extension vector
+  void addExtensionToExtension(vector< Lit >& lits);
 
   void extendModel(vec<lbool>& model);
   const vector<Lit>& getUndo() const { return undo; }
@@ -1139,13 +1142,18 @@ inline void CoprocessorData::addToExtension(const Lit dontTouch, const Lit l)
   undo.push_back(lit_Undef);
   if( l != lit_Error) undo.push_back(l);
   undo.push_back(dontTouch);
-
 }
 
+inline void CoprocessorData::addExtensionToExtension(vector< Lit >& lits)
+{
+  for( int i = 0 ; i < lits.size(); ++ i ) {
+    undo.push_back(lits[i]);
+  }
+}
 
 inline void CoprocessorData::extendModel(vec< lbool >& model)
 {
-  const bool local_debug = false;
+  const bool local_debug = false	;
   if( global_debug_out || local_debug) {
     cerr << "c extend model of size " << model.size() << " with undo information of size " << undo.size() << endl;
     cerr << "c  in model: ";
@@ -1181,6 +1189,7 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
        if( !isSat ) {        // this condition is always satisfied -- the current clause has to be unsatisfied (otherwise, would have been ignored below!)
          // if clause is not satisfied, satisfy last literal!
          const Lit& satLit = undo[i+1];
+	 assert( satLit != lit_Undef && "there should not be an empty clause on the undo stack" );
          log.log(1, "set literal to true",satLit);
 	 if( local_debug ) cerr << "c set literal " << undo[i+1] << " to true " << endl;
          model[ var(satLit) ] = sign(satLit) ? l_False : l_True;

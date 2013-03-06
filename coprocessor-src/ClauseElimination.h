@@ -28,7 +28,9 @@ class ClauseElimination : public Technique {
   double processTime;  // required time
   int removedClauses;  // number of removed clauses
   int removedBceClauses; // number of clauses that have been removed without changing equivalence
-  unsigned cceSize;
+  unsigned removedNonEEClauses; // number of clauses that have been removed without preserving equivalence
+  unsigned cceSize;		 // clause size for which cce is applied
+  unsigned candidates;		 // number of candidates for which cce was tested
   
 public:
   
@@ -44,9 +46,9 @@ public:
     int steps;
     int removedClauses;
     int removedBceClauses;
-    unsigned cceSize;
+    unsigned removedNonEEClauses;  // number of clauses that have been removed without preserving equivalence
     
-    WorkData(int vars) : nextAla(0), steps(0), removedClauses(0), removedBceClauses(0) { array.create(2*vars); helpArray.create(2*vars);}
+    WorkData(int vars) : nextAla(0), steps(0), removedClauses(0), removedBceClauses(0), removedNonEEClauses(0) { array.create(2*vars); helpArray.create(2*vars);}
     ~WorkData() {array.destroy();helpArray.destroy();}
     void reset () { cla.clear(); array.nextStep(); toProcess.clear(); toUndo.clear(); nextAla=0; }
   };
@@ -59,6 +61,7 @@ public:
   
   void printStatistics(ostream& stream);
   
+  void destroy();
   
 protected:
   

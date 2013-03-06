@@ -1,4 +1,4 @@
-/* Copyright 2010 Armin Biere, Johannes Kepler University, Linz, Austria */
+/* Copyright 2010-2012 Armin Biere, Johannes Kepler University, Linz, Austria */
 
 #include "lglib.h"
 
@@ -8,15 +8,20 @@
 #include <ctype.h>
 #include <assert.h>
 #include <signal.h>
+#include <unistd.h>
+#include <stdarg.h>
 
 static LGL * lgl4sigh;
 static int catchedsig, verbose, ignmissingheader, ignaddcls;
+
+static int * targets, sztargets, ntargets, multiple;
 
 static void (*sig_int_handler)(int);
 static void (*sig_segv_handler)(int);
 static void (*sig_abrt_handler)(int);
 static void (*sig_term_handler)(int);
 static void (*sig_bus_handler)(int);
+static void (*sig_alrm_handler)(int);
 
 static void resetsighandlers (void) {
   (void) signal (SIGINT, sig_int_handler);
@@ -28,7 +33,17 @@ static void resetsighandlers (void) {
 
 static void caughtsigmsg (int sig) {
   if (!verbose) return;
-  printf ("c\nc CAUGHT SIGNAL %d\nc\n", sig);
+  printf ("c\nc CAUGHT SIGNAL %d", sig);
+  switch (sig) {
+    case SIGINT: printf (" SIGINT"); break;
+    case SIGSEGV: printf (" SIGSEGV"); break;
+    case SIGABRT: printf (" SIGABRT"); break;
+    case SIGTERM: printf (" SIGTERM"); break;
+    case SIGBUS: printf (" SIGBUS"); break;
+    case SIGALRM: printf (" SIGALRM"); break;
+    default: break;
+  }
+  printf ("\nc\n");
   fflush (stdout);
 }
 
@@ -36,7 +51,13 @@ static void catchsig (int sig) {
   if (!catchedsig) {
     catchedsig = 1;
     caughtsigmsg (sig);
-    if (verbose) lglstats (lgl4sigh), caughtsigmsg (sig);
+    fputs ("s UNKNOWN\n", stdout);
+    fflush (stdout);
+    if (verbose) {
+      lglflushtimers (lgl4sigh);
+      lglstats (lgl4sigh);
+      caughtsigmsg (sig);
+    }
   }
   resetsighandlers ();
   if (!getenv ("LGLNABORT")) raise (sig); else exit (1);
@@ -48,6 +69,26 @@ static void setsighandlers (void) {
   sig_abrt_handler = signal (SIGABRT, catchsig);
   sig_term_handler = signal (SIGTERM, catchsig);
   sig_bus_handler = signal (SIGBUS, catchsig);
+}
+
+static int timelimit = -1, caughtalarm = 0;
+
+static void catchalrm (int sig) {
+  assert (sig == SIGALRM);
+  if (!caughtalarm) {
+    caughtalarm = 1;
+    caughtsigmsg (sig);
+    if (timelimit >= 0) {
+      printf ("c time limit of %d reached after %.1f seconds\nc\n",
+              timelimit, lglsec (lgl4sigh));
+      fflush (stdout);
+    }
+  }
+}
+
+static int checkalarm (void * ptr) {
+  assert (ptr == (void*) &caughtalarm);
+  return caughtalarm;
 }
 
 static int next (FILE * in, int *linenoptr) {
@@ -115,7 +156,7 @@ SKIP:
       if (!lglhasopt (lgl, opt.name)) {
 	fprintf (stderr, 
 	         "*** lingeling warning: "
-		 " parsed invalid embedded option '--%s'\n", 
+		 "parsed invalid embedded option '--%s'\n", 
 		 opt.name);
 	continue;
       }
@@ -145,17 +186,21 @@ SKIP:
   }
   if (ch != 'p') return "missing 'p ...' header";
   if (next (in, lp) != ' ') return "invalid header: expected ' ' after 'p'";
-  if (next (in, lp) != 'c') return "invalid header: expected 'c' after ' '";
+  while ((ch = next (in, lp)) == ' ')
+    ;
+  if (ch != 'c') return "invalid header: expected 'c' after ' '";
   if (next (in, lp) != 'n') return "invalid header: expected 'n' after 'c'";
   if (next (in, lp) != 'f') return "invalid header: expected 'f' after 'n'";
   if (next (in, lp) != ' ') return "invalid header: expected ' ' after 'f'";
-  ch = next (in, lp);
+  while ((ch = next (in, lp)) == ' ')
+    ;
   if (!isdigit (ch)) return "invalid header: expected digit after 'p cnf '";
   m = ch - '0';
   while (isdigit (ch = next (in, lp)))
     m = 10 * m + (ch - '0');
   if (ch != ' ') return "invalid header: expected ' ' after 'p cnf <m>'"; 
-  ch = next (in, lp);
+  while ((ch = next (in, lp)) == ' ')
+    ;
   if (!isdigit (ch)) 
     return "invalid header: expected digit after 'p cnf <m> '";
   n = ch - '0';
@@ -179,9 +224,14 @@ BODY2:
     if (header && c + 1 == n) return "clause missing";
     if (header && c < n) return "clauses missing";
 DONE:
-    if (verbose) 
+    if (verbose) {
       printf ("c read %d variables, %d clauses, %d literals in %.1f seconds\n", 
 	      v, c, l, lglsec (lgl));
+      printf ("c\n");
+      lglprintfeatures (lgl);
+      printf ("c\n");
+      fflush (stdout);
+    }
     return 0;
   }
   if (ch == '-') {
@@ -206,37 +256,83 @@ DONE:
 
 typedef struct OBuf { char line[81]; int pos; } OBuf;
 
-static void flushobuf (OBuf * obuf) {
+static void flushobuf (OBuf * obuf, FILE * file) {
   assert (0 < obuf->pos);
   assert (obuf->pos < 81);
   obuf->line[obuf->pos++] = '\n';
   assert (obuf->pos < 81);
   obuf->line[obuf->pos++] = 0;
-  fputc ('v', stdout);
-  fputs (obuf->line, stdout);
+  fputc ('v', file);
+  fputs (obuf->line, file);
   obuf->pos = 0;
 }
 
-static void print2obuf (OBuf * obuf, int i) {
+static void print2obuf (OBuf * obuf, int i, FILE * file) {
   char str[20];
   int len;
   sprintf (str, " %d", i);
   len = strlen (str);
   assert (len > 1);
-  if (obuf->pos + len > 79) flushobuf (obuf);
+  if (obuf->pos + len > 79) flushobuf (obuf, file);
   strcpy (obuf->line + obuf->pos, str);
   obuf->pos += len;
   assert (obuf->pos <= 79);
 }
 
+static FILE * writefile (const char * name, int * clptr) {
+  int len = strlen (name);
+  char * tmp;
+  FILE * res;
+  if (len >= 3 && !strcmp (name + len - 3, ".gz")) {
+    tmp = malloc (len + 20);
+    unlink (name);
+    sprintf (tmp, "gzip -c > %s", name);
+    res = popen (tmp, "w");
+    if (res) *clptr = 2;
+    free (tmp);
+  } else {
+    res = fopen (name, "w");
+    if (res) *clptr = 1;
+  }
+  if (!res) fprintf (stderr, "*** lingeling error: can not write %s\n", name);
+  return res;
+}
+
+static void closefile (FILE * file, int type) {
+  if (type == 1) fclose (file);
+  if (type == 2) pclose (file);
+}
+
+static void lgltravcounter (void * voidptr, int lit) {
+  int * cntptr = voidptr;
+  if (!lit) *cntptr += 1;
+}
+
+static void lglpushtarget (int target) {
+  if (ntargets == sztargets)
+    targets = realloc (targets, sizeof *targets *
+               (sztargets = sztargets ? 2*sztargets : 1));
+  targets[ntargets++] = target;
+}
+
+static int lglmonotifiy (void * lgl, int target, int val) {
+  printf ("t %d %d after %.3f seconds\n", target, val, lglsec (lgl));
+  fflush (stdout);
+  return 1;
+}
+
 int main (int argc, char ** argv) {
-  int res = 0, i, j, clin = 0, val, len, lineno = 1;
-  const char * name = 0, * match, * p, * err;
-  int maxvar, lit;
+  int res, i, j, clin, clout, val, len, lineno, simponly, count, target;
+  const char * iname, * oname, * pname, * match, * p, * err;
+  FILE * in, * out, * pfile;
+  int maxvar, lit, nopts;
   char * tmp;
   LGL * lgl;
   OBuf obuf;
-  FILE * in;
+  lineno = 1;
+  in = out = 0;
+  res = clin = clout = simponly = 0;
+  iname = oname = pname = 0;
   lgl4sigh = lgl = lglinit ();
   setsighandlers ();
   for (i = 1; i < argc; i++) {
@@ -245,24 +341,129 @@ int main (int argc, char ** argv) {
       printf ("\n");
       printf ("where <option> is one of the following:\n");
       printf ("\n");
-      printf ("--help        | -h    print command line option summary\n");
-      printf ("--force       | -f    force reading even without header\n");
-      printf ("--ignore      | -i    ignore additional clauses\n");
-      printf ("--ranges      | -r    print value ranges of options\n");
-      printf ("--defaults    | -d    print default values of options\n");
-      printf ("--nowitness   | -n    no solution (see '--witness')\n");
+      printf ("-s               only simplify and print to output file\n");
+      printf ("-o <output>      set output file (default 'stdout')\n");
+      printf ("-p <options>     read options from file\n");
+      printf ("\n");
+      printf ("-t <seconds>     set time limit\n");
+      printf ("\n");
+      printf ("-a <assumption>  use multiple assumptions\n");
+      printf ("-m <objective>   use multiple objectives\n");
+      printf ("\n");
+      printf ("-h|--help        print command line option summary\n");
+      printf ("-f|--force       force reading even without header\n");
+      printf ("-i|--ignore      ignore additional clauses\n");
+      printf ("-r|--ranges      print value ranges of options\n");
+      printf ("-d|--defaults    print default values of options\n");
+      printf ("-e|--embedded    dito but in an embedded format print\n");
+      printf ("-n|--nowitness   no solution (see '--witness')\n");
       printf ("\n");
       printf (
 "The following options can also be used in the form '--<name>=<int>',\n"
 "just '--<name>' for increment and '--no-<name>' for zero.  They\n"
-"can be embedded into the CNF file or set through the API as well.\n"
-"Their default values are displayed at higher verbose levels or\n"
-"explicitly with the command line option '-d' or '--defaults'.\n");
+"can be embedded into the CNF file, set through the API or capitalized\n"
+"with prefix 'LGL' instead of '--' through environment variables.\n"
+"Their default values are displayed in square brackets, explicitly\n"
+"at higher verbose levels or with the command line options '-d' and\n"
+"'--defaults'.\n");
       printf ("\n");
       lglusage (lgl);
       goto DONE;
+    } else if (!strcmp (argv[i], "-s")) simponly = 1;
+    else if (!strcmp (argv[i], "-o")) {
+      if (++i == argc) {
+	fprintf (stderr, "*** lingeling error: argument to '-o' missing");
+	res = 1;
+	goto DONE;
+      } 
+      if (oname) {
+	fprintf (stderr, 
+	         "*** lingeling error: "
+		 "multiple output files '%s' and '%s'\n",
+		 oname, argv[i]);
+	res = 1;
+	goto DONE;
+      }
+      oname = argv[i];
+    } else if (!strcmp (argv[i], "-p")) {
+      if (++i == argc) {
+	fprintf (stderr, "*** lingeling error: argument to '-p' missing");
+	res = 1;
+	goto DONE;
+      } 
+      if (pname) {
+	fprintf (stderr, 
+	         "*** lingeling error: "
+		 "multiple option files '%s' and '%s'\n",
+		 pname, argv[i]);
+	res = 1;
+	goto DONE;
+      }
+      pname = argv[i];
+    } else if (!strcmp (argv[i], "-t")) {
+      if (++i == argc) {
+	fprintf (stderr, "*** lingeling error: argument to '-t' missing");
+	res = 1;
+	goto DONE;
+      }
+      if (timelimit >= 0) {
+	fprintf (stderr, "*** lingeling error: timit limit set twice");
+	res = 1;
+	goto DONE;
+      }
+      for (p = argv[i]; *p && isdigit (*p); p++) 
+	;
+      if (p == argv[i] || *p || (timelimit = atoi (argv[i])) < 0) {
+	fprintf (stderr, 
+	  "*** lingeling error: invalid time limit '-t %s'", argv[i]);
+	res = 1;
+	goto DONE;
+      }
+    } else if (!strcmp (argv[i], "-a")) {
+      if (++i == argc) {
+	fprintf (stderr, "*** lingeling error: argument to '-a' missing");
+	res = 1;
+	goto DONE;
+      }
+      if (multiple) {
+	assert (ntargets > 0);
+	fprintf (stderr, "*** lingeling error: unexpectd '-a' after '-m'");
+	res = 1;
+	goto DONE;
+      }
+      target = atoi (argv[i]);
+      if (!target) {
+	fprintf (stderr,
+	  "*** lingeling error: invalid literal in '-a %d'", target);
+	res = 1;
+	goto DONE;
+      }
+      lglpushtarget (target);
+    } else if (!strcmp (argv[i], "-m")) {
+      if (++i == argc) {
+	fprintf (stderr, "*** lingeling error: argument to '-m' missing");
+	res = 1;
+	goto DONE;
+      }
+      if (!multiple && ntargets > 0) {
+	fprintf (stderr, "*** lingeling error: unexpectd '-m' after '-a'");
+	res = 1;
+	goto DONE;
+      }
+      target = atoi (argv[i]);
+      if (!target) {
+	fprintf (stderr,
+	  "*** lingeling error: invalid literal in '-m %d'", target);
+	res = 1;
+	goto DONE;
+      }
+      lglpushtarget (target);
+      multiple = 1;
     } else if (!strcmp (argv[i], "-d") || !strcmp (argv[i], "--defaults")) {
-      lglopts (lgl, "");
+      lglopts (lgl, "", 0);
+      goto DONE;
+    } else if (!strcmp (argv[i], "-e") || !strcmp (argv[i], "--embedded")) {
+      lglopts (lgl, "c ", 1);
       goto DONE;
     } else if (!strcmp (argv[i], "-r") || !strcmp (argv[i], "--ranges")) {
       lglrgopts (lgl);
@@ -271,20 +472,21 @@ int main (int argc, char ** argv) {
       ignmissingheader = 1;
     } else if (!strcmp (argv[i], "-i") || !strcmp (argv[i], "--ignore")) {
       ignaddcls = 1;
-    } else if (!strcmp (argv[i], "-n") || !strcmp (argv[i], "nowitness"))
+    } else if (!strcmp (argv[i], "-n") || !strcmp (argv[i], "nowitness")) {
       lglsetopt (lgl, "witness", 0);
-    else if (argv[i][0] == '-') {
+    } else if (argv[i][0] == '-') {
       if (argv[i][1] == '-') {
 	match = strchr (argv[i] + 2, '=');
 	if (match) {
 	  p = match + 1;
 	  if (*p == '-') p++;
-	  if (!isdigit (*p)) {
+	  len = p - argv[i];
+	  if (!strncmp (argv[i], "--write-api-trace=", len)) continue;
+	  else if (!isdigit (*p)) {
 ERR:
             fprintf (stderr,
-	             "*** lingeling error: "
-		     " invalid command line option '%s'\n",
-	             argv[i]);
+	      "*** lingeling error: invalid command line option '%s'\n",
+	      argv[i]);
 	    res = 1;
 	    goto DONE;
 	  }
@@ -311,59 +513,134 @@ ERR:
 	val = lglgetopt (lgl, argv[i] + 1) + 1;
 	lglsetopt (lgl, argv[i] + 1, val);
       }
-    } else if (name) {
+    } else if (iname) {
       fprintf (stderr, "*** lingeling error: can not read '%s' and '%s'\n",
-               name, argv[i]);
+               iname, argv[i]);
       res = 1;
       goto DONE;
-    } else name = argv[i];
+    } else iname = argv[i];
   }
   verbose = lglgetopt (lgl, "verbose");
-  if (verbose) lglbnr ("Lingeling");
+  if (verbose) {
+    lglbnr ("Lingeling SAT Solver", "c ", stdout);
+    if (simponly) printf ("c simplifying only\n");
+    if (oname) printf ("c output file %s\n", oname);
+    if (simponly || oname) fflush (stdout);
+  }
   if (verbose >= 2) {
    printf ("c\nc options after command line parsing:\nc\n");
-   lglopts (lgl, "c ");
+   lglopts (lgl, "c ", 0);
    printf ("c\n");
-   lglsizes ();
+   lglsizes (lgl);
    printf ("c\n");
   }
-  if (name) {
-    len = strlen (name);
-    if (len >= 3 && 
-	name[len-3] == '.' &&
-	name[len-2] == 'g' &&
-	name[len-1] == 'z') {
+  if (iname) {
+    len = strlen (iname);
+    if (len >= 3 && !strcmp (iname + len - 3, ".gz")) {
+      if (verbose > 1) printf ("c openening %s with 'gunzip'\n", iname);
       tmp = malloc (len + 20);
-      sprintf (tmp, "gunzip -c %s", name);
+      sprintf (tmp, "gunzip -c %s", iname);
+      in = popen (tmp, "r");
+      if (in) clin = 2;
+      free (tmp);
+    } else if (len >= 5 && !strcmp (iname + len - 5, ".lzma")) {
+      tmp = malloc (len + 20);
+      sprintf (tmp, "lzcat %s", iname);
+      in = popen (tmp, "r");
+      if (in) clin = 2;
+      free (tmp);
+    } else if (len >= 4 && !strcmp (iname + len - 4, ".bz2")) {
+      tmp = malloc (len + 20);
+      sprintf (tmp, "bzcat %s", iname);
+      in = popen (tmp, "r");
+      if (in) clin = 2;
+      free (tmp);
+    } else if (len >= 3 && !strcmp (iname + len - 3, ".7z")) {
+      tmp = malloc (len + 40);
+      sprintf (tmp, "7z x -so %s 2>/dev/null", iname);
       in = popen (tmp, "r");
       if (in) clin = 2;
       free (tmp);
     } else {
-      in = fopen (name, "r");
+      in = fopen (iname, "r");
       if (in) clin = 1;
     }
     if (!in) {
-      fprintf (stderr, "*** lingeling error: can not read %s\n", name);
+      fprintf (stderr,
+         "*** lingeling error: can not read input file %s\n", iname);
       res = 1;
       goto DONE;
     }
-  } else name = "<stdin>", in = stdin;
-  if (verbose) printf ("c reading %s\n", name);
+  } else iname = "<stdin>", in = stdin;
+  if (pname) {
+    pfile = fopen (pname, "r");
+    if (!pfile) {
+      fprintf (stderr,
+        "*** lingeling error: can not read option file %s\n", pname);
+      res = 1;
+      goto DONE;
+    }
+    if (verbose) {
+      printf ("c reading options file %s\n", pname);
+      fflush (stdout);
+    }
+    nopts = lglreadopts (lgl, pfile);
+    if (verbose) 
+      printf ("c read and set %d options\nc\n", nopts), fflush (stdout);
+    fclose (pfile);
+  }
+  if (verbose) printf ("c reading input file %s\n", iname);
   fflush (stdout);
   if ((err = parse (lgl, in, &lineno))) {
-    fprintf (stderr, "%s:%d: %s\n", name, lineno, err);
+    fprintf (stderr, "%s:%d: %s\n", iname, lineno, err);
     res = 1;
     goto DONE;
   }
-  if (clin == 1) fclose (in);
-  if (clin == 2) pclose (in);
+  closefile (in, clin);
   clin = 0;
   if (verbose) {
     printf ("c\n");
     if (verbose >= 2) printf ("c final options:\nc\n");
-    lglopts (lgl, "c ");
+    lglopts (lgl, "c ", 0);
   }
-  res = lglsat (lgl);
+  if (timelimit >= 0) {
+    if (verbose) {
+      printf ("c\nc setting time limit of %d seconds\n", timelimit);
+      fflush (stdout);
+    }
+    lglseterm (lgl, checkalarm, &caughtalarm);
+    sig_alrm_handler = signal (SIGALRM, catchalrm);
+    alarm (timelimit);
+  }
+  if (multiple) lglpushtarget (0), ntargets--;
+  else for (i = 0; i < ntargets; i++) lglassume (lgl, targets[i]);
+  if (multiple) res = lglmosat (lgl, lgl, lglmonotifiy, targets);
+  else if (simponly) res = lglsimp (lgl, 0);
+  else res = lglsat (lgl);
+  if (timelimit >= 0) {
+    caughtalarm = 0;
+    (void) signal (SIGALRM, sig_alrm_handler);
+  }
+  if (oname) {
+    double start = lglsec (lgl), delta;
+    if (!strcmp (oname, "-")) out = stdout, oname = "<stdout>", clout = 0;
+    else if (!(out = writefile (oname, &clout))) { res = 1; goto DONE; }
+    if (verbose) {
+      count = 0;
+      lglctrav (lgl, &count, lgltravcounter);
+      printf ("c\nc writing 'p cnf %d %d' to '%s'\n",
+	      lglmaxvar (lgl), count, oname);
+      fflush (stdout);
+    }
+    lglprint (lgl, out);
+    closefile (out, clout);
+    if (verbose) {
+      delta = lglsec (lgl) - start; if (delta < 0) delta = 0;
+      printf ("c collected garbage and wrote '%s' in %.1f seconds\n", 
+              oname, delta);
+      printf ("c\n"), fflush (stdout);
+    }
+  }
   if (verbose) lglstats (lgl), fputs ("c\n", stdout);
   if (res == 10) fputs ("s SATISFIABLE\n", stdout);
   else if (res == 20) fputs ("s UNSATISFIABLE\n", stdout);
@@ -374,17 +651,17 @@ ERR:
     maxvar = lglmaxvar (lgl);
     for (i = 1; i <= maxvar; i++) {
       lit = (lglderef (lgl, i) > 0) ? i : -i;
-      print2obuf (&obuf, lit);
+      print2obuf (&obuf, lit, stdout);
     }
-    print2obuf (&obuf, 0);
-    if (obuf.pos > 0) flushobuf (&obuf);
+    print2obuf (&obuf, 0, stdout);
+    if (obuf.pos > 0) flushobuf (&obuf, stdout);
     fflush (stdout);
   }
 DONE:
-  if (clin == 1) fclose (in);
-  if (clin == 2) pclose (in);
+  closefile (in, clin);
   resetsighandlers ();
   lgl4sigh = 0;
   lglrelease (lgl);
+  free (targets);
   return res;
 }
