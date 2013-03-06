@@ -891,7 +891,7 @@ inline void CoprocessorData::garbageCollect(vector<CRef> ** updateVectors, int s
     ClauseAllocator to((ca.size() >= ca.wasted()) ? ca.size() - ca.wasted() : 0);  //FIXME just a workaround
                                                                                    // correct add / remove would be nicer
     relocAll(to, updateVectors);
-    cerr << " c Garbage collection: " << ca.size()*ClauseAllocator::Unit_Size 
+    cerr << "c Garbage collection: " << ca.size()*ClauseAllocator::Unit_Size 
         << " bytes => " << to.size()*ClauseAllocator::Unit_Size <<  " bytes " << endl; 
     
     to.moveTo(ca);

@@ -27,7 +27,7 @@ using namespace std;
  BoolOption opt_bve_bc          (_cat_bve, "bve_BCElim",    "Eliminate Blocked Clauses", true);
  IntOption heap_updates         (_cat_bve, "bve_heap_updates",    "Always update variable heap if clauses / literals are added or removed, 2 add variables, if not in heap", 1, IntRange(0,2));
  BoolOption opt_bce_only        (_cat_bve, "bce_only",    "Only remove blocked clauses but do not resolve variables.", false);
-
+ BoolOption opt_print_progress  (_cat_bve, "bve_progress", "Print bve progress stats.", false);
 extern BoolOption opt_printStats;
 
 BoundedVariableElimination::BoundedVariableElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation, Coprocessor::Subsumption & _subsumption )
@@ -137,19 +137,17 @@ void BoundedVariableElimination::printStatistics(ostream& stream)
 
 void BoundedVariableElimination::progressStats(CoprocessorData & data, const bool cputime)
 {
-    if (!opt_printStats) return;
+    if (! opt_print_progress || !opt_printStats) return;
     clauseCount = data.nCls();
     unitCount = data.getSolver()->trail.size();
     elimCount = eliminatedVars;
     for (int i = 0; i < parStats.size(); ++i)
         elimCount += parStats[i].eliminatedVars;
-    if( opt_bve_verbose > 0 ){
     cerr << "c [STAT] BVEprogress: restarts: " << restarts 
          << ", clauses: " << clauseCount << " (" << ((double ) clauseCount / (double) initialClauses * 100) << " %), "
          <<  "units: "    << unitCount   << " (" << ((double )   unitCount / (double) data.nVars() * 100)  << " %), "
          <<  "elim:  "    << elimCount   << " (" << ((double )   elimCount / (double) data.nVars() * 100)   << " %), "
          <<  "bve-time: " << (cputime ? cpuTime() : wallClockTime()) - processTime << endl;
-    }
     restarts++;
 }
 
