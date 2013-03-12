@@ -44,6 +44,7 @@ EquivalenceElimination::EquivalenceElimination(ClauseAllocator& _ca, ThreadContr
 , gateTime(0)
 , gateExtractTime(0)
 , eeTime(0)
+, equivalentLits(0)
 , steps(0)
 , eqLitInStack(0)
 , eqInSCC(0)
@@ -1766,7 +1767,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
        Lit repr = getReplacement(ee[start]);
 	for( int j = start ; j < i; ++ j ) // select minimum!
 	{
-	  data.ma.nextStep();
+	  data.ma.nextStep(); // TODO FIXME check whether this has to be moved before the for loop
 	  repr =  repr < getReplacement(ee[j]) ? repr : getReplacement(ee[j]);
 	  data.ma.setCurrentStep( toInt( ee[j] ) );
 	}
@@ -1774,8 +1775,10 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
        // check whether a literal has also an old replacement that has to be re-considered!
        data.lits.clear();
        
+       equivalentLits --; // one of the literals wont be removed
        for( int j = start ; j < i; ++ j ) {// set all equivalent literals
 	 const Lit myReplace = getReplacement(ee[j]);
+	 if( myReplace == ee[j] ) equivalentLits ++; // count how many equal literals
 	 if( ! data.ma.isCurrentStep( toInt( myReplace )) )
 	   data.lits.push_back(myReplace); // has to look through that list as well!
 	 if( ! setEquivalent(repr, ee[j] ) ) { 
@@ -2063,7 +2066,7 @@ void EquivalenceElimination::writeAAGfile(CoprocessorData& data)
 
 void EquivalenceElimination::printStatistics(ostream& stream)
 {
-  stream << "c [STAT] EE " << eeTime << " s, " << steps << " steps" << endl;
+  stream << "c [STAT] EE " << eeTime << " s, " << steps << " steps " << equivalentLits << " ee-lits" << endl;
   if( opt_level > 0 ) stream << "c [STAT] EE-gate " << gateTime << " s, " << gateSteps << " steps, " << gateExtractTime << " extractGateTime, " << endl;
 }
 

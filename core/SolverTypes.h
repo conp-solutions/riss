@@ -256,7 +256,7 @@ public:
     Lit          subsumes         (const Clause& other) const;
     bool         ordered_subsumes (const Clause& other) const;
     bool         ordered_equals   (const Clause& other) const;
-    void         remove_lit       (const Lit p);
+    void         remove_lit       (const Lit p); /// keeps the order of the remaining literals
     void         strengthen       (Lit p);
 
     void    set_delete (bool b) 	    { if (b) header.mark = 1; else header.mark = 0;}

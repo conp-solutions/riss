@@ -184,7 +184,7 @@ void Subsumption :: subsumption_worker ( unsigned int start, unsigned int end, H
         processTime = cpuTime() - processTime;   
     }   
     if(global_debug_out) cerr << "subsume from " << start << " to " << end << " with size " << data.getSubsumeClauses().size() << endl;
-    for (; end > start;)
+    for (; end > start && !data.isInterupted();)
     {
         --end;
 	const CRef cr = data.getSubsumeClauses()[end];
@@ -282,7 +282,7 @@ void Subsumption :: par_subsumption_worker ( unsigned int start, unsigned int en
     {
         stats.processTime = wallClockTime() - stats.processTime;   
     }
-    while (end > start)
+    while (end > start &&  !data.isInterupted() )
     {
         --end;
         const CRef cr = data.getSubsumeClauses()[end];
@@ -387,7 +387,7 @@ void Subsumption::par_strengthening_worker( unsigned int start, unsigned int sto
     
     deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
     SpinLock & data_lock = var_lock[data.nVars()];
-    while (stop > start && data.ok())
+    while (stop > start && data.ok() && !data.isInterupted())
     {    
         CRef cr = CRef_Undef;
         if( localQueue.size() == 0 ) {
@@ -583,7 +583,7 @@ void Subsumption::par_nn_strengthening_worker( unsigned int start, unsigned int 
    deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
   SpinLock & data_lock = var_lock[data.nVars()];
 
-  for (; end > start;)
+  for (; end > start  && !data.isInterupted() ;)
   {
     if (!data.ok()) 
     {
@@ -837,7 +837,7 @@ inline lbool Subsumption::par_nn_strength_check(CoprocessorData & data, vector <
     SpinLock & data_lock = var_lock[data.nVars()];
     
     // test every clause, where the minimum is, if it can be strenghtened
-    for (unsigned int j = 0; j < list.size(); ++j)
+    for (unsigned int j = 0; j < list.size() && !data.isInterupted(); ++j)
     {
       Clause& other = ca[list[j]];
       
@@ -988,7 +988,7 @@ inline lbool Subsumption::par_nn_negated_strength_check(CoprocessorData & data, 
     SpinLock & data_lock = var_lock[data.nVars()];
     
     // test every clause, where the minimum is, if it can be strenghtened
-    for (unsigned int j = 0; j < list.size(); ++j)
+    for (unsigned int j = 0; j < list.size() && !data.isInterupted(); ++j)
     {
       Clause& other = ca[list[j]];
       
@@ -1130,7 +1130,7 @@ lbool Subsumption::fullStrengthening(Heap<VarOrderBVEHeapLt> * heap, const Var i
     deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
     vector<OccUpdate> & occ_updates = strength_occ_updates; 
     //for every clause:
-    for (int i = 0; i < data.getStrengthClauses().size();)
+    for (int i = 0; i < data.getStrengthClauses().size() && !data.isInterupted();)
     {
         CRef cr = CRef_Undef;
         if( localQueue.size() == 0 ) {
@@ -1308,7 +1308,7 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
   int negated_lit_pos;  // index of negative lit, if we find one
   deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
   vector < OccUpdate > & occ_updates = strength_occ_updates;
-  for (; end > start;)
+  for (; end > start && !data.isInterupted();)
   {
     CRef cr = CRef_Undef;
     if( localQueue.size() == 0 ) {

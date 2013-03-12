@@ -110,7 +110,7 @@ lbool Preprocessor::performSimplification()
   else ppTime = cpuTime() - ppTime;
   
   // first, remove all satisfied clauses
-  if( !solver->simplify() ) return l_False;
+  if( !solver->simplify() ) { cout.flush(); cerr.flush(); return l_False; }
 
   lbool status = l_Undef;
   // delete clauses from solver
@@ -376,6 +376,8 @@ lbool Preprocessor::performSimplification()
   data.destroy();
 
   if( !data.ok() ) status = l_False; // to fall back, if a technique forgets to do this
+
+  cout.flush(); cerr.flush();
 
   return status;
 }
@@ -737,9 +739,9 @@ void Preprocessor::printFormula(const string& headline)
    for( int i = 0 ; i < data.getSolver()->trail.size(); ++i )
        cerr << "[" << data.getSolver()->trail[i] << "]" << endl;   
    cerr << "c clauses " << endl;
-   for( int i = 0 ; i < data.getClauses().size(); ++ i )
+   for( int i = 0 ; i < data.getClauses().size() && !data.isInterupted(); ++ i )
      if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getClauses()[i] ] << endl;
-   for( int i = 0 ; i < data.getLEarnts().size(); ++ i )
+   for( int i = 0 ; i < data.getLEarnts().size() && !data.isInterupted(); ++ i )
      if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getLEarnts()[i] ] << endl;    
    cerr << "==================== " << endl;
 }
@@ -808,7 +810,13 @@ void Preprocessor::scanCheck(const string& headline) {
       
       for( int j = 0 ; j < c.size(); ++ j ) {
 	for( int k = j+1; k < c.size(); ++ k ) {
-	  if( c[j] == c[k] ) cerr << "c clause ["<<clauses[i]<<"]" << c << " has duplicate literals" << endl;
+	  if( c[j] == c[k] ) {
+	    cerr << "c clause ["<<clauses[i]<<"]" << c << " has duplicate literals" << endl;
+	    j = c.size(); break; 
+	  } else { 
+	    if ( toInt(c[j]) > toInt(c[k]) ) cerr << "c clause ["<<clauses[i]<<"]" << c << " is not sorted" << endl;
+	    j = c.size(); break; 
+	  }
 	}
       }
       

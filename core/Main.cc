@@ -160,6 +160,7 @@ int main(int argc, char** argv)
                 printStats(S);
                 printf("\n"); }
             printf("s UNSATISFIABLE\n");
+	    cout.flush(); cerr.flush();
             exit(20);
         }
         
@@ -189,6 +190,8 @@ int main(int argc, char** argv)
               printf( "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
 	  printf(" 0\n");
 	}
+        
+        cout.flush(); cerr.flush();
         
 #ifdef NDEBUG
         exit(ret == l_True ? 10 : ret == l_False ? 20 : 0);     // (faster than "return", which will invoke the destructor for 'Solver')

@@ -753,6 +753,19 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, Heap<VarOrd
                     }
                     if ((p.learnt() || n.learnt()) && ps.size() > max(p.size(),n.size()) + opt_learnt_growth)
                         continue;
+		    
+		    for( int i = 0 ; i < ps.size(); ++ i ) {
+		      for( int j =  i+1; j < ps.size(); ++ j ) {
+			if( ps[i] == ps[j] ) {
+			  cerr << "c resolvent of clauses " << p << " and " << n << " result in duplicate lits clause! (" << i << "," << j << "): " << endl;
+			  for(i = 0 ; i < ps.size(); ++ i ) cerr << " " << ps[i];
+			  cerr << endl;
+			  break;
+			}
+		      }
+		    }
+		    
+		    
                     CRef cr = ca.alloc(ps, p.learnt() || n.learnt()); 
                     // IMPORTANT! dont use p and n in this block, as they could got invalid
                     Clause & resolvent = ca[cr];

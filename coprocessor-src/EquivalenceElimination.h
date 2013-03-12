@@ -30,6 +30,7 @@ class EquivalenceElimination : public Technique {
   double gateTime;
   double gateExtractTime;
   double eeTime;
+  unsigned equivalentLits;
   
   uint64_t steps;                   // how many steps is the worker allowed to do
 
