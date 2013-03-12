@@ -105,7 +105,8 @@ void BoundedVariableElimination::printStatistics(ostream& stream)
                                      << s.processTime     << " s, " 
                                      << s.subsimpTime     << " s spent on subsimp, "
                                      << s.upTime          << " s spent on up, "
-                                     << s.lockNeighborTime << " s locking, "
+                                     << s.lockNeighborTime << " s locking & neighb-calc, "
+                                     << s.mereLockingTime << " s mere locking, "
                                      << s.testedVars       << " vars tested, "
                                      << s.anticipations    << " anticipations, "  //  = tested vars?
                                      << s.skippedVars      << " vars skipped "
