@@ -45,6 +45,7 @@ EquivalenceElimination::EquivalenceElimination(ClauseAllocator& _ca, ThreadContr
 , gateExtractTime(0)
 , eeTime(0)
 , equivalentLits(0)
+, removedCls(0)
 , steps(0)
 , eqLitInStack(0)
 , eqInSCC(0)
@@ -1852,6 +1853,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	      if( c[m-1] == ~c[m] ) { 
 		if( debug_out ) cerr << "c ee deletes clause " << c << endl;
 		c.set_delete(true); 
+		removedCls++;
 		goto EEapplyNextClause;
 	      } // this clause is a tautology
 	      if( c[m-1] != c[m] ) { c[n++] = c[m]; removed ++; }
@@ -1891,6 +1893,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 		}
 	      } else {
 		if( debug_out ) cerr << "c clause has duplicates: " << c << endl;
+		removedCls++;
 		c.set_delete(true);
 		data.removedClause(list[k]);
 		modifiedFormula = true;
@@ -2066,7 +2069,7 @@ void EquivalenceElimination::writeAAGfile(CoprocessorData& data)
 
 void EquivalenceElimination::printStatistics(ostream& stream)
 {
-  stream << "c [STAT] EE " << eeTime << " s, " << steps << " steps " << equivalentLits << " ee-lits" << endl;
+  stream << "c [STAT] EE " << eeTime << " s, " << steps << " steps " << equivalentLits << " ee-lits " << removedCls << " removedCls" << endl;
   if( opt_level > 0 ) stream << "c [STAT] EE-gate " << gateTime << " s, " << gateSteps << " steps, " << gateExtractTime << " extractGateTime, " << endl;
 }
 

@@ -397,7 +397,7 @@ lbool Preprocessor::inprocess()
   if (opt_inprocess) {
     
     // reject inprocessing here!
-    cerr << "c check " << lastInpConflicts << " and " << (int)opt_inprocessInt << " vs " << solver->conflicts << endl;
+    // cerr << "c check " << lastInpConflicts << " and " << (int)opt_inprocessInt << " vs " << solver->conflicts << endl;
     if( lastInpConflicts + opt_inprocessInt > solver->conflicts ) {
       return l_Undef;  
     }
