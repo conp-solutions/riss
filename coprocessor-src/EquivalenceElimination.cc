@@ -2139,6 +2139,8 @@ void EquivalenceElimination::destroy()
   vector<Lit>().swap( replacedBy);              
   
   vector<char>().swap( isToAnalyze);            
-  vector<Lit>().swap( eqDoAnalyze);             
+  vector<Lit>().swap( eqDoAnalyze);        
+  
+  if( eqLitInStack != 0 ) { free(eqLitInStack); eqLitInStack = 0; }
   
 }

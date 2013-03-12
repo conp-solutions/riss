@@ -193,6 +193,11 @@ class Clause {
         header.can_subsume = 1;
         header.can_strengthen = 1;
 
+	for (int i = 0; i < ps.size(); i++)
+	  for (int j = i+1; j < ps.size(); j++)
+	    assert( ps[i] != ps[j] && "have no duplicate literals in clauses!" );
+	
+	
         for (int i = 0; i < ps.size(); i++)
             data[i].lit = ps[i];
 

@@ -146,6 +146,8 @@ lbool Preprocessor::performSimplification()
    printFormula("after Sorting");
   }
   
+  if( opt_debug )  { scanCheck("after SORT"); }  
+  
   if( opt_ternResolve ) {
     res.process(data,false); 
     if( printTernResolve  ) printFormula("after TernResolve");
@@ -166,7 +168,7 @@ lbool Preprocessor::performSimplification()
    printFormula("after Susi");
   }
   
-  if( opt_debug ) checkLists("after SUSI");
+  if( opt_debug ) { checkLists("after SUSI"); scanCheck("after SUSI"); }
   
   if( opt_ee ) { // before this technique nothing should be run that alters the structure of the formula (e.g. BVE;BVA)
     if( opt_verbose > 2 )cerr << "c coprocessor(" << data.ok() << ") equivalence elimination" << endl;
@@ -175,7 +177,7 @@ lbool Preprocessor::performSimplification()
         status = l_False;
   }
   
-  if( opt_debug ) checkLists("after EE");
+  if( opt_debug ) { checkLists("after EE"); scanCheck("after EE"); }
   
   if( false ) {
    for( Var v = 0 ; v < data.nVars() ; ++v ) {
@@ -201,14 +203,14 @@ lbool Preprocessor::performSimplification()
   if( false  || printUnhide  ) {
    printFormula("after Unhiding");
   }
-  if( opt_debug ) checkLists("after UNHIDING");
+  if( opt_debug ) {checkLists("after UNHIDING");  scanCheck("after UNHIDING"); }
   
   if( opt_hte ) {
     if( opt_verbose > 2 )cerr << "c coprocessor(" << data.ok() << ") hidden tautology elimination" << endl;
     if( status == l_Undef ) hte.process(data);  // cannot change status, can generate new unit clauses
   }
 
-  if( opt_debug ) checkLists("after HTE");
+  if( opt_debug ) { checkLists("after HTE");  scanCheck("after HTE"); }
   if( false  || printHTE ) {
    printFormula("after HTE");
   }
@@ -218,7 +220,7 @@ lbool Preprocessor::performSimplification()
     if( status == l_Undef ) probing.process(); 
     if( !data.ok() ) status = l_False;
   }
-  if( opt_debug ) checkLists("after PROBE");
+  if( opt_debug ) { checkLists("after PROBE");  scanCheck("after PROBE"); }
   if( false  || printProbe ) {
    printFormula("after Probing");
   }
@@ -228,7 +230,7 @@ lbool Preprocessor::performSimplification()
     if( status == l_Undef ) status = bve.runBVE(data);  // can change status, can generate new unit clauses
   }
   
-  if( opt_debug ) checkLists("after BVE");
+  if( opt_debug ) { checkLists("after BVE");  scanCheck("after BVE"); }
   if( false || printBVE  ) {
    printFormula("after BVE");
   }
@@ -239,7 +241,7 @@ lbool Preprocessor::performSimplification()
     if( !data.ok() ) status = l_False;
   }
   
-  if( opt_debug ) checkLists("after BVA");
+  if( opt_debug ) { checkLists("after BVA");  scanCheck("after BVA"); }
   if( false || printBVA  ) {
    printFormula("after BVA");
   }
@@ -249,6 +251,7 @@ lbool Preprocessor::performSimplification()
     if( status == l_Undef ) cce.process(data);  // cannot change status, can generate new unit clauses
   }
   
+  if( opt_debug )  { scanCheck("after CCE"); }  
   if( false || printCCE ) {
    printFormula("after CCE");
   }
@@ -761,8 +764,9 @@ bool Preprocessor::checkLists(const string& headline)
       }
     }
   }
-  cerr << "c found " << foundEmpty << " lists, out of " << data.nVars() * 2 << endl;
+  cerr << "c found " << foundEmpty << " empty lists, out of " << data.nVars() * 2 << endl;
   
+  if( false ) {
   for( int i = 0 ; i < data.getLEarnts().size(); ++ i ) {
     const Clause& c = ca[data.getLEarnts()[i]];
     if( c.can_be_deleted() ) continue;
@@ -786,8 +790,32 @@ bool Preprocessor::checkLists(const string& headline)
       if( data.getLEarnts()[i] == data.getLEarnts()[j] ) cerr << "c found clause " << data.getLEarnts()[i] << " in both vectors" << endl;
     }
   }
+  }
   
   return ret;
+}
+
+void Preprocessor::scanCheck(const string& headline) {
+   cerr << "c perform scan check " << headline << endl;
+  // check whether clause is in solver in the right watch lists
+  for( int p = 0 ; p < 2; ++ p ) {
+  
+    const vec<CRef>& clauses = (p==0 ? data.getClauses() : data.getLEarnts() );
+    for( int i = 0 ; i<clauses.size(); ++ i ) {
+      const CRef cr = clauses[i];
+      const Clause& c = ca[cr];
+      if( c.can_be_deleted() ) continue;
+      
+      for( int j = 0 ; j < c.size(); ++ j ) {
+	for( int k = j+1; k < c.size(); ++ k ) {
+	  if( c[j] == c[k] ) cerr << "c clause ["<<clauses[i]<<"]" << c << " has duplicate literals" << endl;
+	}
+      }
+      
+    }
+    
+  }
+  cerr << "c finished check " << endl;
 }
 
 void Preprocessor::fullCheck(const string& headline)

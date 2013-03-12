@@ -268,7 +268,8 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<Var
  
   touched_variables.clear();
 
-  while ((opt_bve_heap != 2 && heap.size() > 0) || (opt_bve_heap == 2 && variable_queue.size() > 0))
+  // repeat loop only, if not already interrupted
+  while ( !data.isInterupted () && ((opt_bve_heap != 2 && heap.size() > 0) || (opt_bve_heap == 2 && variable_queue.size() > 0)) )
   {
 
     updateDeleteTime(data.getMyDeleteTimer());
@@ -338,7 +339,8 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
     int32_t * pos_stats = (int32_t*) malloc (5 * sizeof(int32_t));
     int32_t * neg_stats = (int32_t*) malloc (5 * sizeof(int32_t));
         
-        while ((opt_bve_heap != 2 && heap.size() > 0) || (opt_bve_heap == 2 && variable_queue.size() > 0))
+    // repeat loop only until being interrupted
+        while ( !data.isInterupted() && ((opt_bve_heap != 2 && heap.size() > 0) || (opt_bve_heap == 2 && variable_queue.size() > 0)))
         {
            Var v = var_Undef;
            if (opt_bve_heap != 2)
@@ -949,6 +951,7 @@ bool BoundedVariableElimination::findGates(CoprocessorData & data, const Var v, 
       if( clause.can_be_deleted() || clause.learnt() || clause.size() != 2 ) continue; // NOTE: do not use learned clauses for gate detection!
       Lit other = clause[0] == pLit ? clause[1] : clause[0];
       markArray.setCurrentStep( toInt(~other) );
+      if( opt_bve_verbose > 0 ) cerr << "c mark " << ~other << " by " << clause << endl;
     }
     for( uint32_t i = 0 ; i < nList.size(); ++ i ) {
       CRef cr = nList[i];
@@ -967,24 +970,36 @@ bool BoundedVariableElimination::findGates(CoprocessorData & data, const Var v, 
 	pClauses = clause.size() - 1;
 	nClauses = 1;
 	 // do not add unnecessary clauses
-	for( uint32_t k = 0 ; k < clause.size(); ++k ) markArray.reset( toInt(clause[k]) );
+	if( opt_bve_verbose > 0 ) cerr << "unmark literals of clause " << clause << endl;
+	for( uint32_t k = 0 ; k < clause.size(); ++k ) {
+	  if( opt_bve_verbose > 0 ) cerr << "unmark " << clause[k] << endl;
+	  markArray.reset( toInt(clause[k]) );
+	}
 	CRef tmp = nList[0]; nList[0] = nList[i]; nList[i] = tmp; // swap responsible clause in list to front
 	// swap responsible clauses in list to front
 	uint32_t placedClauses = 0;
 	for( uint32_t k = 0 ; k < pList.size(); ++ k ) {
-      CRef cr = pList[k];
-      if (CRef_Undef == cr) continue;
+	  CRef cr = pList[k];
+	  if (CRef_Undef == cr) continue;
 	  const Clause& clause = ca[ cr ];
 	  if( clause.learnt() || clause.can_be_deleted() || clause.size() != 2 ) continue;
 	  Lit other = clause[0] == pLit ? clause[1] : clause[0];
 	  if(  !markArray.isCurrentStep ( toInt(~other) ) ) {
 	    CRef tmp = pList[placedClauses];
-	    pList[placedClauses++] = pList[k];
+	    pList[placedClauses] = pList[k];
 	    pList[k] = tmp;
+	    placedClauses++;
 	    markArray.setCurrentStep( toInt(~other) ); // no need to add the same binary twice
+	    if( opt_bve_verbose > 0 ) cerr << "c move binary clause with " << other << " and clause " << clause << endl;
+	  } else {
+	    if( opt_bve_verbose > 0 ) cerr << "c do not work with " << other << " and clause " << clause << ", because already re-marked" << endl;
 	  }
 	}
-	if( opt_bve_verbose > 0 ) {
+	
+	bool failPrint = false;
+	if( pClauses != placedClauses ) { cerr << "c [BVE-G] placed: " << placedClauses << ", participating: " << pClauses << endl; failPrint = true; }
+	
+	if( failPrint || opt_bve_verbose > 1 ) {
 	  if (nList[0] != CRef_Undef) cerr << "c [BVE] GATE clause: " << ca[ nList[0] ] << " placed clauses: " << placedClauses << endl;
 	  for( uint32_t k = 0 ; k < placedClauses; ++ k ) {
 	    if (pList[k] != CRef_Undef) cerr << "c [BVE] bin clause[" << k << "]: "<< ca[ pList[k] ] << endl;
@@ -1006,7 +1021,7 @@ bool BoundedVariableElimination::findGates(CoprocessorData & data, const Var v, 
 	  }
 	}
 	
-	if( pClauses != placedClauses ) cerr << "c [BVE-G] placed: " << placedClauses << ", participating: " << pClauses << endl;
+	
 	assert( pClauses == placedClauses && "number of moved binary clauses and number of participating clauses has to be the same");
 	return true;
       }

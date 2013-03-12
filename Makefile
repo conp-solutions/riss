@@ -32,6 +32,9 @@ coprocessord: always
 	
 always:
 
+touch:
+	touch core/Solver.cc coprocessor-src/Coprocessor.cc
+
 doc: clean
 	cd doc; doxygen solver.config
 	touch doc

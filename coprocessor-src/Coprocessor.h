@@ -123,6 +123,7 @@ protected:
 
   bool checkLists(const string& headline); // check each clause list for duplicate occurrences
   void fullCheck(const string& headline);  // check solver state before control is passed to solver
+  void scanCheck(const string& headline);	// check clauses for duplicate literals
   
   // print formula
   void printFormula(FILE * fd);
