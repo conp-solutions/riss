@@ -56,14 +56,14 @@ class BoundedVariableElimination : public Technique {
       newLearntLits, testedVars, anticipations, eliminatedVars, removedBC, blockedLits, removedBlockedLearnt, learntBlockedLit, 
       skippedVars, unitsEnqueued, foundGates, usedGates, subsumedClauses, subsumedLiterals, subsumedLearnts, subsumedLearntLiterals,
       subsimpSteps, strengthtLits, strengthtLearntLits;   
-      double processTime, subsimpTime, gateTime, upTime;
+      double processTime, subsimpTime, gateTime, upTime, lockNeighborTime;
       ParBVEStats() :   removedClauses(0), removedLiterals(0), createdClauses(0), createdLiterals(0), removedLearnts(0)
                       , learntLits(0), newLearnts(0), newLearntLits(0), testedVars(0), anticipations(0), eliminatedVars(0)
                       , removedBC(0), blockedLits(0), removedBlockedLearnt(0), learntBlockedLit(0), skippedVars(0)
                       , unitsEnqueued(0), foundGates(0), usedGates(0), subsumedClauses(0), subsumedLiterals(0)
                       , subsumedLearnts(0), subsumedLearntLiterals(0), subsimpSteps(0)
                       , strengthtLits(0), strengthtLearntLits(0)
-                      , processTime(0), subsimpTime(0), gateTime(0), upTime(0) {}
+                      , processTime(0), subsimpTime(0), gateTime(0), upTime(0), lockNeighborTime(0) {}
   };
   vector<struct ParBVEStats> parStats;
 

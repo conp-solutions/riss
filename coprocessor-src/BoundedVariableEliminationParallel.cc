@@ -172,6 +172,8 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         }
        
         // Lock v 
+        if (doStatistics) stats.lockNeighborTime = wallClockTime() - stats.lockNeighborTime;
+
         assert(rwlock_count == 0);
         var_lock[v].lock();
 
@@ -259,6 +261,8 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
            var_lock[neighbors[i]].lock();
         }
         
+        if (doStatistics) stats.lockNeighborTime = wallClockTime() - stats.lockNeighborTime;
+
         ///////////////////////////////////////////////////////////////////////////////////////////
         //
         //  Begin: read locked part 
