@@ -4,6 +4,7 @@ Copyright (c) 2013, Kilian Gebhardt, All rights reserved.
 #include "coprocessor-src/BoundedVariableElimination.h"
 #include "coprocessor-src/Propagation.h"
 #include "coprocessor-src/Subsumption.h"
+#include <algorithm> // std::sort
 #include "mtl/Heap.h"
 using namespace Coprocessor;
 using namespace std;
@@ -103,7 +104,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
      
     vector < Var > neighbors;
     vec < Lit > ps;
-
+    MarkArray & neighborMA = *gateMarkArray; //reuse gate MA
     int32_t timeStamp;  
     while ( data.ok() ) // if solver state = false => abort
     {
@@ -223,7 +224,9 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         int locked_neigbors = 0;
         Var reason = var_Undef;
         
-        neighbor_heap.insert(v);
+        //neighbor_heap.insert(v);
+        neighborMA.nextStep();
+        neighborMA.setCurrentStep(v);
         // Build neighbor-vector
         // expecting valid occurrence-lists, i.e. v really occurs in lists 
         for (int r = 0; r < pos.size() && locked_neigbors <= postpone_locked_neighbors; ++r)
@@ -241,7 +244,8 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
             for (int l = 0; l < c.size(); ++ l)
             {
                 Var v = var(c[l]);
-                if (! neighbor_heap.inHeap(v))
+                //if (! neighbor_heap.inHeap(v))
+                if (!neighborMA.isCurrentStep(v))
                 {
                     if (opt_bve_heap != 2 && var_lock[v].getValue())
                         if (++locked_neigbors > postpone_locked_neighbors)
@@ -249,7 +253,9 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
                             reason = v;
                             break;
                         }
-                    neighbor_heap.insert(v);
+                    //neighbor_heap.insert(v);
+                    neighborMA.setCurrentStep(v);
+                    neighbors.push_back(v);
                 }
             }
             c.unlock();
@@ -269,7 +275,8 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
             for (int l = 0; l < c.size(); ++ l)
             {
                 Var v = var(c[l]);
-                if (! neighbor_heap.inHeap(v))
+                //if (! neighbor_heap.inHeap(v))
+                if (!neighborMA.isCurrentStep(v))
                 {
                     if (opt_bve_heap != 2 && var_lock[v].getValue())
                         if (++locked_neigbors > postpone_locked_neighbors)
@@ -277,7 +284,9 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
                             reason = v;
                             break;
                         }
-                    neighbor_heap.insert(v);
+                    //neighbor_heap.insert(v);
+                    neighborMA.setCurrentStep(v);
+                    neighbors.push_back(v);
                 }
             }
             c.unlock();
@@ -301,14 +310,16 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         if (locked_neigbors > postpone_locked_neighbors)
         {
             assert(reason != var_Undef);
-            neighbor_heap.clear();
+            neighbors.clear();
+            //neighbor_heap.clear();
             postponed.push_back(PostponeReason(v, reason));
             if (doStatistics) stats.lockNeighborTime = wallClockTime() - stats.lockNeighborTime;
             continue;
         }
 
-        while (neighbor_heap.size() > 0)
-            neighbors.push_back(neighbor_heap.removeMin());
+        //while (neighbor_heap.size() > 0)
+            //neighbors.push_back(neighbor_heap.removeMin());
+        std::sort(neighbors.begin(), neighbors.end());
         // neighbor contains all neighbors in ascending order
        
         // lock all Vars in ascending order 
@@ -999,11 +1010,12 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
   postpones.resize(controller.size());
   parStats.resize(controller.size());
   dirtyOccs.resize(data.nVars() * 2);
-  if (opt_bve_findGate) 
+  // use also for neighbors
+  if ( true || opt_bve_findGate) 
   {
       gateMarkArrays.resize(controller.size());
       for (int i = 0; i < controller.size(); ++i)
-          gateMarkArrays[i].resize(data.nVars() * 2);
+          gateMarkArrays[i].resize(opt_bve_findGate ? data.nVars() * 2 : data.nVars());
   }
   
   if (neighbor_heaps == 0) 
@@ -1027,7 +1039,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
     workData[i].sharedStrengthQueue = & sharedStrengthQueue;
     workData[i].postponed = & postpones[i];
     workData[i].bveStats = & parStats[i];
-    if (opt_bve_findGate) workData[i].gateMarkArray = & gateMarkArrays[i];
+    if (true || opt_bve_findGate) workData[i].gateMarkArray = & gateMarkArrays[i];
   }
 
   if (opt_bve_heap != 2)
