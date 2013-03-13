@@ -37,7 +37,7 @@ static BoolOption  opt_par_strength    (_cat, "cp3_par_strength", "force par str
 static BoolOption  opt_lock_stats      (_cat, "cp3_lock_stats", "measure time waiting in spin locks", false);
 static BoolOption  opt_par_subs        (_cat, "cp3_par_subs", "force par subsumption (if threads exist)", false);
 static IntOption  opt_par_subs_counts  (_cat, "par_subs_counts" ,  "Updates of counts in par-subs 0: compare_xchange, 1: CRef-vector", 1, IntRange(0,1));
-static IntOption   chunk_size          (_cat, "susi_chunk_size" ,  "Size of Par SuSi Chunks", 65536, IntRange(1,INT32_MAX));
+static IntOption   chunk_size          (_cat, "susi_chunk_size" ,  "Size of Par SuSi Chunks", 200000, IntRange(1,INT32_MAX));
 #endif
 
 
@@ -1486,11 +1486,12 @@ void Subsumption::parallelSubsumption( const bool doStatistics)
   localStats.resize(controller.size());
   unsigned int queueSize = data.getSubsumeClauses().size();
   unsigned int partitionSize = data.getSubsumeClauses().size() / controller.size();
+  unsigned int next_start = 0;
   // setup data for workers
   for( int i = 0 ; i < controller.size(); ++ i ) {
     workData[i].subsumption = this; 
     workData[i].data  = &data;
-    workData[i].start = 0;
+    workData[i].start = & next_start;
     workData[i].end   = queueSize;
     workData[i].balancerLock = & balancerLock;
     workData[i].to_delete = & toDeletes[i];
@@ -1536,7 +1537,7 @@ void Subsumption::parallelSubsumption( const bool doStatistics)
 void* Subsumption::runParallelSubsume(void* arg)
 {
   SubsumeWorkData* workData = (SubsumeWorkData*) arg;
-  workData->subsumption->par_subsumption_worker(workData->start,workData->end, *(workData->balancerLock), *(workData->to_delete), *(workData->set_non_learnt), *(workData->stats));
+  workData->subsumption->par_subsumption_worker(*(workData->start),workData->end, *(workData->balancerLock), *(workData->to_delete), *(workData->set_non_learnt), *(workData->stats));
   return 0;
 }
 
@@ -1551,13 +1552,13 @@ void Subsumption::parallelStrengthening(Heap<VarOrderBVEHeapLt> * heap, const Va
   occ_updates.resize(controller.size());
   unsigned int queueSize = data.getStrengthClauses().size();
   unsigned int partitionSize = data.getStrengthClauses().size() / controller.size();
-  
+  unsigned int next_start = 0;
   for ( int i = 0 ; i < controller.size(); ++ i ) {
     workData[i].subsumption = this; 
-    workData[i].start = 0;
+    workData[i].start = & next_start;
     workData[i].end   = queueSize;
     workData[i].balancerLock = & balancerLock;
-    cerr << "c p s thread " << i << " running from " << workData[i].start << " to " << workData[i].end << endl;
+    //cerr << "c p s thread " << i << " running from " << *(workData[i].start) << " to " << workData[i].end << endl;
     workData[i].data  = &data; 
     workData[i].var_locks = & var_locks;
 /*    localStats[i].removedLiterals = 0;
@@ -1587,8 +1588,8 @@ void Subsumption::parallelStrengthening(Heap<VarOrderBVEHeapLt> * heap, const Va
 void* Subsumption::runParallelStrengthening(void* arg)
 {
     SubsumeWorkData* workData = (SubsumeWorkData*) arg;
-    if ( opt_naivStrength ) workData->subsumption->par_strengthening_worker(workData->start,workData->end, *(workData->balancerLock), *(workData->var_locks), *(workData->stats), *(workData->occ_updates), workData->heap, workData->ignore);
-    else workData->subsumption->par_nn_strengthening_worker(workData->start,workData->end, *(workData->balancerLock), *(workData->var_locks), *(workData->stats), *(workData->occ_updates), workData->heap, workData->ignore);
+    if ( opt_naivStrength ) workData->subsumption->par_strengthening_worker(*(workData->start),workData->end, *(workData->balancerLock), *(workData->var_locks), *(workData->stats), *(workData->occ_updates), workData->heap, workData->ignore);
+    else workData->subsumption->par_nn_strengthening_worker(*(workData->start),workData->end, *(workData->balancerLock), *(workData->var_locks), *(workData->stats), *(workData->occ_updates), workData->heap, workData->ignore);
     return 0;
 }
 

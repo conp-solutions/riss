@@ -122,7 +122,7 @@ lbool createResolvent( const CRef cr, CRef & resolvent, const int negated_lit_po
   struct SubsumeWorkData {
     Subsumption*     subsumption; // class with code
     CoprocessorData* data;        // formula and maintain lists
-    unsigned int     start;       // partition of the queue
+    unsigned int *   start;       // partition of the queue
     unsigned int     end;
     SpinLock *       balancerLock;
     vector<SpinLock> * var_locks;

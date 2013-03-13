@@ -11,10 +11,10 @@ using namespace std;
 
 extern const char* _cat_bve;
 #if defined CP3VERSION && CP3VERSION < 302
- static const bool opt_par_bve         = false;
+ static const int  opt_par_bve         = 1;
  static const int  opt_bve_verbose     = 0;
 #else
-extern BoolOption opt_par_bve;      
+extern IntOption opt_par_bve;      
 extern IntOption  opt_bve_verbose;
 #endif
 
@@ -27,14 +27,14 @@ extern IntOption  opt_bve_heap;
 #if defined CP3VERSION && CP3VERSION < 302
 static const int par_bve_threshold = 0;
 #else
-static IntOption  par_bve_threshold (_cat_bve, "par_bve_th", "Threshold for use of BVE-Worker", 1000, IntRange(0,INT32_MAX)); //TODO lower in case of force_gates
+static IntOption  par_bve_threshold (_cat_bve, "par_bve_th", "Threshold for use of BVE-Worker", 10000, IntRange(0,INT32_MAX)); //TODO lower in case of force_gates
 #endif
 
 extern BoolOption opt_force_gates;
 extern BoolOption opt_bve_bc;
 extern IntOption heap_updates;
 extern BoolOption opt_bce_only;
-static IntOption  postpone_locked_neighbors (_cat_bve, "postp_lockd_neighb", "Postpone Elimination-Check if more neighbors are locked", 0, IntRange(0,INT32_MAX));
+static IntOption  postpone_locked_neighbors (_cat_bve, "postp_lockd_neighb", "Postpone Elimination-Check if more neighbors are locked", 1, IntRange(0,INT32_MAX));
 
 static int upLevel = 1;
 
@@ -1062,7 +1062,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
 
     int QSize = ((opt_bve_heap != 2) ? newheap.size() : variable_queue.size()); 
     ReadersWriterLock allocatorRWLock;
-    if (opt_par_bve || QSize > par_bve_threshold)
+    if (opt_par_bve == 2 || (QSize > par_bve_threshold && opt_par_bve == 1))
     {
         for ( int i = 0 ; i < controller.size(); ++ i ) 
         {
