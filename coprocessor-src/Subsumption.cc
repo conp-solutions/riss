@@ -28,15 +28,15 @@ static IntOption   opt_allStrengthRes  (_cat, "all_strength_res", "Create all se
 static BoolOption  opt_strength        (_cat, "cp3_strength", "Perform clause strengthening", true); 
 
 #if defined CP3VERSION && CP3VERSION < 302
-static const bool  opt_par_strength    =false;
+static const int   opt_par_strength    =1;
 static const bool  opt_lock_stats      =false;
-static const bool  opt_par_subs        =false;
-static const int  opt_par_subs_counts  =false;
+static const int   opt_par_subs        =1;
+static const int   opt_par_subs_counts =false;
 #else
-static BoolOption  opt_par_strength    (_cat, "cp3_par_strength", "force par strengthening (if threads exist)", false);
+static IntOption   opt_par_strength    (_cat, "cp3_par_strength", "par strengthening: 0 never, 1 heuristic, 2 always", 1, IntRange(0,2));
 static BoolOption  opt_lock_stats      (_cat, "cp3_lock_stats", "measure time waiting in spin locks", false);
-static BoolOption  opt_par_subs        (_cat, "cp3_par_subs", "force par subsumption (if threads exist)", false);
-static IntOption  opt_par_subs_counts  (_cat, "par_subs_counts" ,  "Updates of counts in par-subs 0: compare_xchange, 1: CRef-vector", 1, IntRange(0,1));
+static IntOption   opt_par_subs        (_cat, "cp3_par_subs", "par subsumption: 0 never, 1 heuristic, 2 always", 1, IntRange(0,2));
+static IntOption   opt_par_subs_counts (_cat, "par_subs_counts" ,  "Updates of counts in par-subs 0: compare_xchange, 1: CRef-vector", 1, IntRange(0,1));
 static IntOption   chunk_size          (_cat, "susi_chunk_size" ,  "Size of Par SuSi Chunks", 200000, IntRange(1,INT32_MAX));
 #endif
 
@@ -115,7 +115,7 @@ void Subsumption::process(Heap<VarOrderBVEHeapLt> * heap, const Var ignore, cons
       data.getSubsumeClauses().clear();
     }
     if( hasToStrengthen() ) {
-      if ((opt_par_strength || data.getStrengthClauses().size() > 150000) && controller.size() > 0)
+      if ((opt_par_strength == 2 || data.getStrengthClauses().size() > 150000) && controller.size() > 0 && opt_par_strength == 1)
       {
           parallelStrengthening(heap, ignore, doStatistics);
           data.correctCounters(); //TODO correct occurrences as well
@@ -160,7 +160,7 @@ bool Subsumption::hasToSubsume() const
 lbool Subsumption::fullSubsumption(Heap<VarOrderBVEHeapLt> * heap, const Var ignore, const bool doStatistics)
 {
   // run subsumption for the whole queue
-  if( heap == 0 && controller.size() > 0 && (opt_par_subs || data.getSubsumeClauses().size() > 100000 || ( data.getSubsumeClauses().size() > 50000 && 10*data.nCls() > 22*data.nVars() ) ) ) {
+  if( heap == 0 && controller.size() > 0 && (opt_par_subs == 2 || opt_par_subs == 1 && (data.getSubsumeClauses().size() > 100000 || ( data.getSubsumeClauses().size() > 50000 && 10*data.nCls() > 22*data.nVars() ) )) ) {
     parallelSubsumption(doStatistics); // use parallel, is some conditions have been met
     //data.correctCounters();    // 
   } else {
