@@ -1,0 +1,1 @@
+-enabled_cp3 -cp3_stats -up -subsimp -cp3_par_subs=2 -cp3_par_strength=2 -cp3_threads=2 
