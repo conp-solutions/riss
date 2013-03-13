@@ -1536,6 +1536,8 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
   updateOccurrences( occ_updates, heap, ignore);
   occ_updates.clear();
   if (doStatistics) strengthTime = cpuTime() - strengthTime;
+  
+  return data.ok() ? l_Undef : l_False;
 }
 
 inline void Subsumption::updateOccurrences(const vector< OccUpdate > & updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore)

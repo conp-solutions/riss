@@ -176,13 +176,14 @@ int main(int argc, char** argv)
 	    }
 	    
 	    if (!S.okay()){
-		if (res != NULL) fprintf(res, "s UNSATISFIABLE\n"), fclose(res);
+		if (res != NULL) { fprintf(res, "s UNSATISFIABLE\n"); fclose(res); cerr << "s UNSATISFIABLE" << endl; }
+		else printf("s UNSATISFIABLE\n");
 		if (S.verbosity > 0){
 		    printf("===============================================================================\n");
 		    printf("Solved by simplification\n");
 		    printStats(S);
 		    printf("\n"); }
-		printf("s UNSATISFIABLE\n");
+		
 		cerr.flush(); cout.flush();
 #ifdef NDEBUG
 		exit(20);     // (faster than "return", which will invoke the destructor for 'Solver')
@@ -198,7 +199,7 @@ int main(int argc, char** argv)
 	      if( ret == l_True ) {
 		preprocessor.extendModel(S.model);
 		if( res != NULL ) {
-		  printf("s SATISFIABLE\n");
+		  cerr << "s SATISFIABLE" << endl;
 		  fprintf(res, "s SATISFIABLE\nv ");
 		  for (int i = 0; i < preprocessor.getFormulaVariables(); i++)
 		    if (S.model[i] != l_Undef)
