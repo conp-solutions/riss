@@ -440,6 +440,8 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 		  }
 		  clauseI.set_delete(true);
 		}
+		// ensure that the clauses are sorted
+		clauseI.sort();
 		assert( replaceFlag && "could not replace literal right");
 	      
 		// remove clause from the occurrenceList list
@@ -560,6 +562,7 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 		  clauseLits.push( ~bvaMatchingLiterals[j] );
 		clauseLits.push( replaceLit );
 		CRef tmpRef = ca.alloc(clauseLits, false); // no learnt clause!
+		if( doSort ) ca[tmpRef].sort();
 		data.addClause( tmpRef );
 		data.getClauses().push( tmpRef );
 		if( bva_debug > 2 ) cerr << "add new ANDclause[ " << tmpRef << " ]= " << ca[tmpRef] << endl;
@@ -575,6 +578,7 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	  for( uint32_t i = 0; i < bvaMatchingLiterals.size(); ++i ) {
 	    clauseLits[1] = bvaMatchingLiterals[i];
 	    CRef newClause = ca.alloc(clauseLits, false); // no learnt clause!
+	    if( doSort ) ca[newClause].sort();
 	    data.addClause( newClause );
 	    data.getClauses().push( newClause );
 	    if( bva_debug > 2 ) cerr << "add BVA clause " << ca[newClause] << endl;

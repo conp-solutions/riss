@@ -176,13 +176,15 @@ int main(int argc, char** argv)
 	    }
 	    
 	    if (!S.okay()){
-		if (res != NULL) fprintf(res, "s UNSATISFIABLE\n"), fclose(res);
+		if (res != NULL) { fprintf(res, "s UNSATISFIABLE\n"); fclose(res); cerr << "s UNSATISFIABLE" << endl; }
+		else printf("s UNSATISFIABLE\n");
 		if (S.verbosity > 0){
 		    printf("===============================================================================\n");
 		    printf("Solved by simplification\n");
 		    printStats(S);
 		    printf("\n"); }
-		printf("s UNSATISFIABLE\n");
+		
+		cerr.flush(); cout.flush();
 #ifdef NDEBUG
 		exit(20);     // (faster than "return", which will invoke the destructor for 'Solver')
 #else
@@ -197,7 +199,7 @@ int main(int argc, char** argv)
 	      if( ret == l_True ) {
 		preprocessor.extendModel(S.model);
 		if( res != NULL ) {
-		  printf("s SATISFIABLE\n");
+		  cerr << "s SATISFIABLE" << endl;
 		  fprintf(res, "s SATISFIABLE\nv ");
 		  for (int i = 0; i < preprocessor.getFormulaVariables(); i++)
 		    if (S.model[i] != l_Undef)
@@ -210,6 +212,7 @@ int main(int argc, char** argv)
 		      printf("%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
 		  printf(" 0\n");
 		}
+		cerr.flush(); cout.flush();
 #ifdef NDEBUG
 		exit(10);     // (faster than "return", which will invoke the destructor for 'Solver')
 #else
@@ -218,6 +221,7 @@ int main(int argc, char** argv)
 	      } else if ( ret == l_False ) {
 		if (res != NULL) fprintf(res, "s UNSATISFIABLE\n"), fclose(res);
 		printf("s UNSATISFIABLE\n");
+		cerr.flush(); cout.flush();
 #ifdef NDEBUG
 		exit(20);     // (faster than "return", which will invoke the destructor for 'Solver')
 #else
@@ -256,6 +260,7 @@ int main(int argc, char** argv)
 		  printf("%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
 	      printf(" 0\n");	    
 	    }
+	    cerr.flush(); cout.flush();
 #ifdef NDEBUG
 		exit(10);     // (faster than "return", which will invoke the destructor for 'Solver')
 #else
@@ -264,6 +269,7 @@ int main(int argc, char** argv)
 	  } else if (solution == 20 ) {
 		if (res != NULL) fprintf(res, "s UNSATISFIABLE\n"), fclose(res);
 		printf("s UNSATISFIABLE\n");
+		cerr.flush(); cout.flush();
 #ifdef NDEBUG
 		exit(20);     // (faster than "return", which will invoke the destructor for 'Solver')
 #else
@@ -275,7 +281,7 @@ int main(int argc, char** argv)
 	  
 	}
         
-        
+        cerr.flush(); cout.flush();
 #ifdef NDEBUG
         exit(0);     // (faster than "return", which will invoke the destructor for 'Solver')
 #else

@@ -99,7 +99,7 @@ void HiddenTautologyElimination::process(CoprocessorData& data)
   }
   
   if( data.hasToPropagate() ) {
-    propagation.process(data);
+    propagation.process(data,true);
   }
   
   modifiedFormula = modifiedFormula || propagation.appliedSomething();
@@ -355,7 +355,7 @@ bool HiddenTautologyElimination::hiddenTautologyElimination(Var v, CoprocessorDa
                             // remove the literal
                           changed = true;
 			  if( statistic ) data[ clauseLiteral ] --;
-			    cl.removePositionUnsorted(j);
+			    cl.removePositionSorted(j);
 			    modifiedFormula = true;
                            if( !doLock ) removedLits ++;  
 			    // update the index

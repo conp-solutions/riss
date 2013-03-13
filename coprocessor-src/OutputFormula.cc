@@ -146,12 +146,14 @@ int Preprocessor::parseModel(const string& filename)
 
   istream& file = *fileptr;
  
+  bool standartSAT = true;
  while( getline( file, line ) ) {
    // cerr << "c process line " << line << endl;
    // check satisfiability
     if( line.find( "s" ) == 0 ) { 
       foundS = true;
-      if( line.find( "UNSATISFIABLE" ) != string::npos ) {
+      if( line.find( "UNSATISFIABLE" ) != string::npos)
+      {
 	solution = 20;
 	break;
       } else if( line.find( "UNKNOWN" ) != string::npos ) { 
@@ -160,6 +162,18 @@ int Preprocessor::parseModel(const string& filename)
       } else {
 	solution = 10;
       }
+    } else if( line.find( "UNSAT" ) == 0 ) {
+      cerr << "c found non-standart UNSAT answer" << endl;
+      solution = 20;
+      foundS = true;
+      break;
+    } else if( line.find( "SAT" ) == 0 ) {
+      cerr << "c found non-standart SAT answer" << endl;
+      solution = 10;
+      foundV = true;
+      standartSAT = false;
+      foundS = true;
+      continue; // do not proceed on this line!
     }
     // check model
     if( line.find( "v" ) == 0 ) {
@@ -174,13 +188,28 @@ int Preprocessor::parseModel(const string& filename)
 	// set polarity for other literals
 	solver->model[ var(literals[i]) ] =  sign(literals[i]) ? l_False : l_True ;
       }
+    } else if ( !standartSAT ) {
+      // try to read the model in minisat/glucose format 
+      cerr << "c try to extract non-standart model" << endl;
+      literals.clear();
+      parseClause( line , literals );
+      cerr << "c found " << literals.size() << " values" << endl;
+      for( uint32_t i = 0 ; i < literals.size(); ++i ) {
+	// consider only variables of the original formula
+	if( var(literals[i]) >= solver->model.size() ) {
+	  solver->model.growTo( var(literals[i]) + 1);
+	}
+	// set polarity for other literals
+	solver->model[ var(literals[i]) ] =  sign(literals[i]) ? l_False : l_True ;
+      }
     }
     // ignore all the other lines
  }
  
  if( !foundS ) cerr << "c WARNING: could not find any solution information!" << endl;
  if( solution == 10 && !foundS ) cerr << "c WARNING: could not find any variable value information!" << endl;
-
+ if( !standartSAT ) cerr << "c WARNING: result based on non-standart solution!" << endl;
+ 
  return solution;
 }
 

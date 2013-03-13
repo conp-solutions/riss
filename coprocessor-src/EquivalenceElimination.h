@@ -30,6 +30,8 @@ class EquivalenceElimination : public Technique {
   double gateTime;
   double gateExtractTime;
   double eeTime;
+  unsigned equivalentLits;	// number of equivalent literals
+  unsigned removedCls;		// number of removed clauses due to rewriting
   
   uint64_t steps;                   // how many steps is the worker allowed to do
 
