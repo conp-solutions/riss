@@ -115,10 +115,9 @@ void Subsumption::process(Heap<VarOrderBVEHeapLt> * heap, const Var ignore, cons
       data.getSubsumeClauses().clear();
     }
     if( hasToStrengthen() ) {
-      if ((opt_par_strength == 2 || data.getStrengthClauses().size() > 150000) && controller.size() > 0 && opt_par_strength == 1)
+      if (controller.size() > 0 && (opt_par_strength == 2 || (data.getStrengthClauses().size() > 250000 && opt_par_strength == 1)))
       {
           parallelStrengthening(heap, ignore, doStatistics);
-          data.correctCounters(); //TODO correct occurrences as well
       }
       else {
           fullStrengthening(heap, ignore, doStatistics); // corrects occs and counters by itself
@@ -621,7 +620,7 @@ void Subsumption::par_nn_strengthening_worker( unsigned int & next_start, unsign
           end   = next_start > global_end ? global_end : next_start;
       }
       balancerLock.unlock();
-      while (end > start & data.isInterupted())
+      while (end > start && !data.isInterupted())
       {
         if (!data.ok()) 
         {
