@@ -20,7 +20,7 @@ file=$1											# first argument is CNF instance to be solved
 shift												# reduce the parameters, removed the very first one. remaining $@ parameters are arguments
 
 # binary of the used SAT solver
-satsolver=minisat						# name of the binary (if not in this directory, give relative path as well)
+satsolver=glucose_static						# name of the binary (if not in this directory, give relative path as well)
 
 # default parameters for preprocessor
 cp3params="-cp3_stats -up -ee"	
@@ -85,7 +85,7 @@ else
 		if [ "$exitCode" -eq "10" ]
 		then
 			echo "c verify model ..."
-			# ./verify SAT $realModel $file
+			./verify SAT $realModel $file
 		fi
 	else
 		#
