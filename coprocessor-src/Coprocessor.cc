@@ -84,7 +84,9 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , ee ( solver->ca, controller, propagation, subsumption )
 , unhiding ( solver->ca, controller, data, propagation, subsumption, ee )
 , probing  ( solver->ca, controller, data, propagation, ee, *solver )
-, res( solver->ca, controller )
+, res( solver->ca, controller, data
+  
+)
 , sls ( data, solver->ca, controller )
 , twoSAT( solver->ca, controller, data)
 {
@@ -149,7 +151,7 @@ lbool Preprocessor::performSimplification()
   if( opt_debug )  { scanCheck("after SORT"); }  
   
   if( opt_ternResolve ) {
-    res.process(data,false); 
+    res.process(false); 
     if( printTernResolve  ) printFormula("after TernResolve");
   }
   
@@ -257,7 +259,7 @@ lbool Preprocessor::performSimplification()
   }
    
   if( opt_addRedBins ) {
-    res.process(data,true); 
+    res.process(true); 
     if( printAddRedBin  ) printFormula("after TernResolve");
   }
    
