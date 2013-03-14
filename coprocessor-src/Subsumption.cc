@@ -32,6 +32,7 @@ static const int   opt_par_strength    =1;
 static const bool  opt_lock_stats      =false;
 static const int   opt_par_subs        =1;
 static const int   opt_par_subs_counts =false;
+static const int   chunk_size          =200000;
 #else
 static IntOption   opt_par_strength    (_cat, "cp3_par_strength", "par strengthening: 0 never, 1 heuristic, 2 always", 1, IntRange(0,2));
 static BoolOption  opt_lock_stats      (_cat, "cp3_lock_stats", "measure time waiting in spin locks", false);
