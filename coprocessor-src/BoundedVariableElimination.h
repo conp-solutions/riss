@@ -30,6 +30,10 @@ class BoundedVariableElimination : public Technique {
   struct NeighborLt {
         bool operator () (Var x, Var y) const { return x < y; }
   }; 
+  struct PostponeReason {
+      Var var, reason;
+      PostponeReason ( Var _var, Var _reason) : var(_var), reason(_reason) {}
+  };
   // Vector for restarting bve (seq and par)
   vector<Var> touched_variables;
   // variable queue for random variable-order
@@ -45,6 +49,7 @@ class BoundedVariableElimination : public Technique {
   vector< SpinLock > variableLocks;         // 3 extra SpinLock for data, heap, ca
   vector< deque < CRef > > subsumeQueues;
   vector< deque < CRef > > strengthQueues;
+  vector< deque < PostponeReason > > postpones;
   vector< MarkArray > gateMarkArrays;
   Heap<NeighborLt>  ** neighbor_heaps;
   deque< CRef > sharedStrengthQueue;
@@ -56,14 +61,14 @@ class BoundedVariableElimination : public Technique {
       newLearntLits, testedVars, anticipations, eliminatedVars, removedBC, blockedLits, removedBlockedLearnt, learntBlockedLit, 
       skippedVars, unitsEnqueued, foundGates, usedGates, subsumedClauses, subsumedLiterals, subsumedLearnts, subsumedLearntLiterals,
       subsimpSteps, strengthtLits, strengthtLearntLits;   
-      double processTime, subsimpTime, gateTime, upTime;
+      double processTime, subsimpTime, gateTime, upTime, lockNeighborTime, mereLockingTime;
       ParBVEStats() :   removedClauses(0), removedLiterals(0), createdClauses(0), createdLiterals(0), removedLearnts(0)
                       , learntLits(0), newLearnts(0), newLearntLits(0), testedVars(0), anticipations(0), eliminatedVars(0)
                       , removedBC(0), blockedLits(0), removedBlockedLearnt(0), learntBlockedLit(0), skippedVars(0)
                       , unitsEnqueued(0), foundGates(0), usedGates(0), subsumedClauses(0), subsumedLiterals(0)
                       , subsumedLearnts(0), subsumedLearntLiterals(0), subsimpSteps(0)
                       , strengthtLits(0), strengthtLearntLits(0)
-                      , processTime(0), subsimpTime(0), gateTime(0), upTime(0) {}
+                      , processTime(0), subsimpTime(0), gateTime(0), upTime(0), lockNeighborTime(0) , mereLockingTime(0){}
   };
   vector<struct ParBVEStats> parStats;
 
@@ -129,6 +134,7 @@ protected:
     MarkArray * dirtyOccs;
     deque<CRef> * strengthQueue;
     deque<CRef> * sharedStrengthQueue;
+    deque< PostponeReason > * postponed;
     ParBVEStats * bveStats;
     MarkArray * gateMarkArray;
     int rwlock_count;
@@ -139,7 +145,7 @@ protected:
   // parallel functions:
   void par_bve_worker 
           ( CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap
-          , deque < CRef > & strengthQueue , deque < CRef > & sharedStrengthQueue
+          , deque < CRef > & strengthQueue , deque < CRef > & sharedStrengthQueue, deque < PostponeReason > & postponed 
           , vector< SpinLock > & var_lock, ReadersWriterLock & rwlock
           , ParBVEStats & stats , MarkArray * gateMarkArray, int & rwlock_count
           , const bool force = false, const bool doStatistics = true) ; 

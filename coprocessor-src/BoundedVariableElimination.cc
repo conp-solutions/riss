@@ -11,10 +11,10 @@ using namespace std;
  const char* _cat_bve = "COPROCESSOR 3 - BVE";
 
 #if defined CP3VERSION && CP3VERSION < 302
- static const bool opt_par_bve         = false;
+ static const bool opt_par_bve         = 1;
  static const int  opt_bve_verbose     = 0;
 #else
- BoolOption opt_par_bve         (_cat_bve, "cp3_par_bve",    "Forcing Parallel BVE (if threads are available)", false);
+ IntOption opt_par_bve         (_cat_bve, "cp3_par_bve",    "Parallel BVE: 0 never, 1 heur., 2 always", 1,IntRange(0,2));
  IntOption  opt_bve_verbose     (_cat_bve, "cp3_bve_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3));
 #endif
  
@@ -105,6 +105,8 @@ void BoundedVariableElimination::printStatistics(ostream& stream)
                                      << s.processTime     << " s, " 
                                      << s.subsimpTime     << " s spent on subsimp, "
                                      << s.upTime          << " s spent on up, "
+                                     << s.lockNeighborTime << " s locking & neighb-calc, "
+                                     << s.mereLockingTime << " s mere locking, "
                                      << s.testedVars       << " vars tested, "
                                      << s.anticipations    << " anticipations, "  //  = tested vars?
                                      << s.skippedVars      << " vars skipped "
