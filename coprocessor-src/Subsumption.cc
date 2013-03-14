@@ -216,6 +216,7 @@ void Subsumption :: subsumption_worker ( unsigned int start, unsigned int end, H
                     subsumedLiterals += ca[list[i]].size();
                 }
                 ca[list[i]].set_delete(true); 
+		data.removedClause(list[i]);
 		        didChange(); 
 		        if (global_debug_out) cerr << "c subsumption removed " << (ca[list[i]].learnt() ? "learned" : "" ) << " clause " << ca[list[i]] << " by "  <<  (ca[list[i]].learnt() ? "learned" : "" ) << c << endl;
                 occ_updates.push_back(list[i]);

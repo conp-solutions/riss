@@ -5,7 +5,8 @@ using namespace Coprocessor;
 static const char* _cat = "COPROCESSOR 3 - RES";
 
 static BoolOption   opt_use_binaries  (_cat, "cp3_res_bin",      "resolve with binary clauses", false);
-static IntOption    opt_res3_steps    (_cat, "cp3_res3_steps",   "Number of resolution-attempts that are allowed per iteration", 500000, IntRange(0, INT32_MAX-1));
+static IntOption    opt_res3_steps    (_cat, "cp3_res3_steps",   "Number of resolution-attempts that are allowed per iteration", 1000000, IntRange(0, INT32_MAX-1));
+static BoolOption   opt_res3_reAdd    (_cat, "cp3_res3_reAdd",   "Add variables of newly created resolvents back to working queues", true);
 static BoolOption   opt_use_subs      (_cat, "cp3_res_eagerSub", "perform eager subsumption", false);
 static DoubleOption opt_add_percent   (_cat, "cp3_res_percent",  "produce this percent many new clauses out of the total", 0.01, DoubleRange(0, true, 1, true));
 static BoolOption   opt_add_red       (_cat, "cp3_res_add_red",  "add redundant binary clauses", false);
@@ -30,6 +31,8 @@ Resolving::Resolving(ClauseAllocator& _ca, ThreadController& _controller, Coproc
 , addedBinaries(0)
 , res3steps(0)
 , add2steps(0)
+, removedViaSubsubption(0)
+, detectedDuplicates(0)
 , resHeap(data)
 {
 
@@ -58,7 +61,9 @@ void Resolving::printStatistics(ostream& stream)
       << addedTern2 << " tern2+, "
       << addedTern3 << " tern3+, "
       
-      << res3steps << " res3teps"
+      << res3steps << " res3teps, "
+      << removedViaSubsubption << " subsCls, "
+      << detectedDuplicates << " duplicates, "
       << endl;
 }
 
@@ -92,7 +97,7 @@ void Resolving::ternaryResolve()
       if( c.can_be_deleted() ) { // remove clauses that do not belong into the list!
 	cls[i] = cls[ cls.size() ];
 	cls.pop_back(); --i;
-      } else if ( (!opt_add_red_lea && c.learnt() ) 
+      } else if ( (!opt_add_red_lea && c.learnt() )  // use learnt clauses?
 	|| (c.size() != 3 && c.size() != moveSize) ) { // if enabled, also move binary clauses to back!
 	CRef tmp = cls[i]; // move nonternary clauses to front!
 	cls[i] = cls[j];
@@ -108,13 +113,12 @@ void Resolving::ternaryResolve()
   
   // sort activeVariables according to size!
   
-  
   while( resHeap.size() > 0 && !data.isInterupted() )
   {
     const Var v = (Var)resHeap[0];
     resHeap.removeMin();
         
-    if( debug_out ) cerr << "c process variable " << v+1 << endl;
+    if( debug_out ) cerr << "c process variable " << v+1 << " vars[" << data[v] << "]" << endl;
     
     const Lit p = mkLit(v,false);
     const Lit n = mkLit(v,true);
@@ -137,11 +141,12 @@ void Resolving::ternaryResolve()
 	} else if( resolvent.size() < 4 && // use resolvent only, if it has less then 4 literals
 	  !hasDuplicate(data.list(resolvent[0]),resolvent) ) { // and if this clause is not already in the data structures!
 	  // add clause here! 
-	  CRef cr = ca.alloc(resolvent, c.learnt() || d.learnt()); 
+	  const bool becomeLearnt = c.learnt() || d.learnt();
+	  CRef cr = ca.alloc(resolvent, becomeLearnt); 
 	  if( debug_out ) cerr << "c add clause " << ca[cr] << endl;
 	  data.addClause(cr);
 	  data.addSubStrengthClause(cr);
-	  if( c.learnt() || d.learnt() ) {
+	  if( becomeLearnt ) {
 	    data.getLEarnts().push(cr);
 	  } else {
 	    data.getClauses().push(cr);
@@ -149,12 +154,13 @@ void Resolving::ternaryResolve()
 	  if(resolvent.size() == 2 ) addedTern2 ++;
 	  else addedTern3 ++;
 	  
-	  // add variables of resolvent back to queue, if not there already
-	  for( int k = 0 ; k < resolvent.size(); ++ k ) {
-	    const Var rv = var(resolvent[k]);
-	    if(!resHeap.inHeap(rv) ) resHeap.insert(rv);
+	  if( opt_res3_reAdd ) {
+	    // add variables of resolvent back to queue, if not there already
+	    for( int k = 0 ; k < resolvent.size(); ++ k ) {
+	      const Var rv = var(resolvent[k]);
+	      if(!resHeap.inHeap(rv) ) resHeap.insert(rv);
+	    }
 	  }
-	  
 	}
       }
     }
@@ -273,15 +279,18 @@ bool Resolving::hasDuplicate(vector<CRef>& list, const vec<Lit>& c)
     int j = 0 ;
     while( j < c.size() && c[j] == d[j] ) ++j ;
     if( j == c.size() ) { 
+      detectedDuplicates ++;
       return true;
     }
     if( opt_use_subs ) { // check each clause for being subsumed -> kick subsumed clauses!
       if( d.size() < c.size() ) {
+	detectedDuplicates ++;
 	if( ordered_subsumes(d,c) ) return true; // the other clause subsumes the current clause!
       } if( d.size() > c.size() ) { // if size is equal, then either removed before, or not removed at all!
 	if( ordered_subsumes(c,d) ) { 
 	  d.set_delete(true);
 	  data.removedClause(list[i]);
+	  removedViaSubsubption ++;
 	}
       }
     }

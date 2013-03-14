@@ -59,6 +59,8 @@ protected:
   unsigned addedBinaries;
   unsigned res3steps;
   unsigned add2steps;
+  unsigned removedViaSubsubption;
+  unsigned detectedDuplicates;
   
   /// compare two literals
   struct VarOrderHeapLt {

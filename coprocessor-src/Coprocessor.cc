@@ -95,7 +95,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 
 Preprocessor::~Preprocessor()
 {
-
+  if (opt_verbose > 0) cerr << "c destruct preprocessor" << endl;
 }
 
 lbool Preprocessor::performSimplification()
@@ -165,7 +165,8 @@ lbool Preprocessor::performSimplification()
     if (! solver->okay())
         status = l_False;
   }
-
+  data.checkGarbage(); // perform garbage collection
+  
   if( false  || printSusi ) {
    printFormula("after Susi");
   }
@@ -178,19 +179,9 @@ lbool Preprocessor::performSimplification()
     if (! data.ok() )
         status = l_False;
   }
+  data.checkGarbage(); // perform garbage collection
   
   if( opt_debug ) { checkLists("after EE"); scanCheck("after EE"); }
-  
-  if( false ) {
-   for( Var v = 0 ; v < data.nVars() ; ++v ) {
-    for( int s = 0 ; s < 2; ++s ) {
-      const Lit l = mkLit(v,s!=0);
-      cerr << "c clauses with " << l << endl;
-      for( int i = 0 ; i < data.list(l).size(); ++ i )
-	if( !ca[data.list(l)[i]].can_be_deleted()  ) cerr << ca[data.list(l)[i]] << endl;
-    }
-   }
-  }
 
   if( false  || printEE ) {
    printFormula("after EE");
@@ -201,6 +192,7 @@ lbool Preprocessor::performSimplification()
     if( status == l_Undef ) unhiding.process(); 
     if( !data.ok() ) status = l_False;
   }
+  data.checkGarbage(); // perform garbage collection
   
   if( false  || printUnhide  ) {
    printFormula("after Unhiding");
@@ -211,6 +203,7 @@ lbool Preprocessor::performSimplification()
     if( opt_verbose > 2 )cerr << "c coprocessor(" << data.ok() << ") hidden tautology elimination" << endl;
     if( status == l_Undef ) hte.process(data);  // cannot change status, can generate new unit clauses
   }
+  data.checkGarbage(); // perform garbage collection
 
   if( opt_debug ) { checkLists("after HTE");  scanCheck("after HTE"); }
   if( false  || printHTE ) {
@@ -222,6 +215,8 @@ lbool Preprocessor::performSimplification()
     if( status == l_Undef ) probing.process(); 
     if( !data.ok() ) status = l_False;
   }
+  data.checkGarbage(); // perform garbage collection
+    
   if( opt_debug ) { checkLists("after PROBE");  scanCheck("after PROBE"); }
   if( false  || printProbe ) {
    printFormula("after Probing");
@@ -231,6 +226,7 @@ lbool Preprocessor::performSimplification()
     if( opt_verbose > 2 )cerr << "c coprocessor(" << data.ok() << ") bounded variable elimination" << endl;
     if( status == l_Undef ) status = bve.runBVE(data);  // can change status, can generate new unit clauses
   }
+  data.checkGarbage(); // perform garbage collection
   
   if( opt_debug ) { checkLists("after BVE");  scanCheck("after BVE"); }
   if( false || printBVE  ) {
@@ -242,6 +238,7 @@ lbool Preprocessor::performSimplification()
     if( status == l_Undef ) bva.variableAddtion(true); 
     if( !data.ok() ) status = l_False;
   }
+  data.checkGarbage(); // perform garbage collection
   
   if( opt_debug ) { checkLists("after BVA");  scanCheck("after BVA"); }
   if( false || printBVA  ) {
@@ -252,6 +249,7 @@ lbool Preprocessor::performSimplification()
     if( opt_verbose > 2 )cerr << "c coprocessor(" << data.ok() << ") (covered) clause elimination" << endl;
     if( status == l_Undef ) cce.process(data);  // cannot change status, can generate new unit clauses
   }
+  data.checkGarbage(); // perform garbage collection
   
   if( opt_debug )  { scanCheck("after CCE"); }  
   if( false || printCCE ) {

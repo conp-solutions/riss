@@ -438,6 +438,8 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 		  if( l_False == data.enqueue( replaceLit ) ) {
 		    return didSomething;
 		  }
+		  static bool didIt = true;
+		  if( didIt ) { cerr << "c BVA clause with replaced literal is unit" << endl; didIt = false; }
 		  clauseI.set_delete(true);
 		}
 		// ensure that the clauses are sorted

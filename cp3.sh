@@ -85,7 +85,7 @@ else
 		if [ "$exitCode" -eq "10" ]
 		then
 			echo "c verify model ..."
-			./verify SAT $realModel $file
+#			./verify SAT $realModel $file
 		fi
 	else
 		#
@@ -97,7 +97,7 @@ else
 		# and output to stdout of the sat solver is redirected to stderr
 		#
 		solveStart=`date +%s`
-		./$satsolver $tmpCNF $realModel  1>&2
+		./$satsolver $file $realModel  1>&2
 		exitCode=$?
 		solveEnd=`date +%s`
 		echo "c solved $(( $solveEnd - $solveStart )) seconds" 1>&2
