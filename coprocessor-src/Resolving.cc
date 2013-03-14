@@ -6,8 +6,8 @@ static const char* _cat = "COPROCESSOR 3 - RES";
 
 static BoolOption   opt_use_binaries  (_cat, "cp3_res_bin",      "resolve with binary clauses", false);
 static IntOption    opt_res3_steps    (_cat, "cp3_res3_steps",   "Number of resolution-attempts that are allowed per iteration", 1000000, IntRange(0, INT32_MAX-1));
-static BoolOption   opt_res3_reAdd    (_cat, "cp3_res3_reAdd",   "Add variables of newly created resolvents back to working queues", true);
-static BoolOption   opt_use_subs      (_cat, "cp3_res_eagerSub", "perform eager subsumption", false);
+static BoolOption   opt_res3_reAdd    (_cat, "cp3_res3_reAdd",   "Add variables of newly created resolvents back to working queues", false);
+static BoolOption   opt_use_subs      (_cat, "cp3_res_eagerSub", "perform eager subsumption", true);
 static DoubleOption opt_add_percent   (_cat, "cp3_res_percent",  "produce this percent many new clauses out of the total", 0.01, DoubleRange(0, true, 1, true));
 static BoolOption   opt_add_red       (_cat, "cp3_res_add_red",  "add redundant binary clauses", false);
 static BoolOption   opt_red_level     (_cat, "cp3_res_add_lev",  "calculate added percent based on level", true);
@@ -275,12 +275,14 @@ bool Resolving::hasDuplicate(vector<CRef>& list, const vec<Lit>& c)
 {
   for( int i = 0 ; i < list.size(); ++ i ) {
     Clause& d = ca[list[i]];
-    if( d.can_be_deleted() || d.size() != c.size() ) continue;
+    if( d.can_be_deleted() || (!opt_use_subs && d.size() != c.size()) ) continue;
     int j = 0 ;
-    while( j < c.size() && c[j] == d[j] ) ++j ;
-    if( j == c.size() ) { 
-      detectedDuplicates ++;
-      return true;
+    if( d.size() == c.size() ) {
+      while( j < c.size() && c[j] == d[j] ) ++j ;
+      if( j == c.size() ) { 
+	detectedDuplicates ++;
+	return true;
+      }
     }
     if( opt_use_subs ) { // check each clause for being subsumed -> kick subsumed clauses!
       if( d.size() < c.size() ) {

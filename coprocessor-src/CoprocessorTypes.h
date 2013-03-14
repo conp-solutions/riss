@@ -12,6 +12,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/LockCollection.h"
 
 #include <vector>
+#include <iostream>
 
 using namespace Minisat;
 using namespace std;
@@ -36,6 +37,15 @@ inline ostream& operator<<(ostream& other, const Clause& c ) {
   for( int i = 0 ; i < c.size(); ++ i )
     other << " " << c[i];
   other << "]";
+  return other;
+}
+
+/// print elements of a vector
+template <typename T>
+inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data ) 
+{
+  for( int i = 0 ; i < data.size(); ++ i )
+    other << " " << data[i];
   return other;
 }
 
