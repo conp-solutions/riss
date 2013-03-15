@@ -27,10 +27,10 @@ static BoolOption opt_bvaSubstituteOr      (_cat, "cp3_bva_subOr",   "try to als
 #if defined CP3VERSION 
 static const int bva_debug = 0;
 static const bool opt_bvaAnalysis = false;
-static const bool opt_bvaAnalysisDebug = false;
+static const int opt_bvaAnalysisDebug = 0;
 #else
 static IntOption  bva_debug                (_cat, "bva-debug",       "Debug Output of BVA", 0, IntRange(0, 4));
-static BoolOption opt_bvaAnalysisDebug     (_cat, "cp3_bva_ad",      "experimental analysis", false);
+static IntOption  opt_bvaAnalysisDebug     (_cat, "cp3_bva_ad",      "experimental analysis", 0, IntRange(0, 4));
 static BoolOption opt_bvaAnalysis          (_cat, "cp3_bva_a",       "experimental analysis", false);
 #endif
 	
@@ -646,7 +646,7 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 void BoundedVariableAddition::analysis()
 {
   // setup parameters
-  const int replacePairs = 3;
+  const int replacePairs = 2;
   const int smallestSize = 3;
   
   // data structures
@@ -664,7 +664,7 @@ void BoundedVariableAddition::analysis()
   vector<bvaPair> bvaPairs;
   int foundMatchings=0;
   int matchSize=0;
-  
+  int maxPairs = 0;
   
   seenVariable.nextStep();
   while (bvaHeap.size() > 0 && (data.unlimited() || bvaLimit > 0) && !data.isInterupted() ) {
@@ -680,12 +680,12 @@ void BoundedVariableAddition::analysis()
     // check each pair of literals only once!
     data.ma.nextStep();
 
-    if( opt_bvaAnalysisDebug ) cerr << "c analysis on " << right << endl;
+    if( opt_bvaAnalysisDebug > 2 ) cerr << "c analysis on " << right << endl;
     for( uint32_t j = 0 ; j < data.list( right ).size() && !data.isInterupted(); ++j ) { // iterate over all candidates for C
       const Clause & c = ca[ data.list(right)[j] ] ;
       if( c.can_be_deleted() || c.size() < smallestSize ) continue;
     
-      if( opt_bvaAnalysisDebug ) cerr << "c work on clause " << c << endl;
+      if( opt_bvaAnalysisDebug  > 3 ) cerr << "c work on clause " << c << endl;
       match.nextStep();
       for( int k = 0 ; k < c.size(); ++ k ) {
 	const Lit l1 = c[k];
@@ -703,6 +703,8 @@ void BoundedVariableAddition::analysis()
 	bool doesMatch = true;
 	for( uint32_t m = 0 ; m < data.list( ~l1 ).size(); ++m ) {
 	  if( data.list( ~l1 )[m] == data.list(right)[j] ) continue; // C != D
+	  if( data.list(right)[j] > data.list( ~l1 )[m] ) continue; // find each case only once!
+
 	  const Clause & d = ca[ data.list( ~l1 )[m] ] ;
 	  if( d.can_be_deleted() || d.size() != c.size() ) continue; // |D| == |C|
 
@@ -714,7 +716,7 @@ void BoundedVariableAddition::analysis()
 	  }
 	  
 	  if( !doesMatch ) continue; // check next candidate for D!
-	  if( opt_bvaAnalysisDebug ) cerr << "c match with clause " << d << endl;
+	  if( opt_bvaAnalysisDebug > 3 ) cerr << "c match with clause " << d << endl;
 	  // cerr << "c match for (" << right << "," << l1 << ") -- (" << ~right << "," << ~l1 << "): " << c << " and " << d << endl;
 	  bvaPairs.push_back( bvaPair(right,l1, data.list(right)[j], data.list( ~l1 )[m]) );
 	  break; // do not try to find more clauses that match C!
@@ -742,7 +744,13 @@ void BoundedVariableAddition::analysis()
       while ( j < bvaPairs.size() && toInt(bvaPairs[i].l2) == toInt(bvaPairs[j].l2 ) ) ++j ;
       assert(j>=i);
       if( j - i >= replacePairs ) {
-	if( opt_bvaAnalysisDebug ) cerr << "c found XOR matching with " << j-i << " pairs for (" << bvaPairs[i].l1 << " -- " << bvaPairs[i].l2 << ")" << endl;
+	maxPairs = maxPairs > j-i ? maxPairs : j - i ;
+	if( opt_bvaAnalysisDebug > 0) {
+	  cerr << "c found XOR matching with " << j-i << " pairs for (" << bvaPairs[i].l1 << " -- " << bvaPairs[i].l2 << ")" << endl;
+	  if( opt_bvaAnalysisDebug > 1) {
+	    for( int k = i; k < j; ++ k ) cerr << "c p " << k - i << " : " << ca[ bvaPairs[k].c1 ] << " and " << ca[ bvaPairs[k].c2 ] << endl;
+	  }
+	}
 	// apply replacing/rewriting here
 	
 	// remove modified/deleted clause references in remaining list
@@ -754,7 +762,8 @@ void BoundedVariableAddition::analysis()
     bvaPairs.clear();
   }
 
-  cerr << "c BVA analysis: " << foundMatchings << " matchings, " << matchSize << " matchSize" << endl;
+  cerr << "c BVA analysis: " << foundMatchings << " matchings, " << matchSize << " matchSize, " << maxPairs << " maxPair, "  << endl;
+  exit(15);
 }
 
 
