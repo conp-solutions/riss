@@ -27,8 +27,10 @@ static BoolOption opt_bvaSubstituteOr      (_cat, "cp3_bva_subOr",   "try to als
 #if defined CP3VERSION 
 static const int bva_debug = 0;
 static const bool opt_bvaAnalysis = false;
+static const bool opt_bvaAnalysisDebug = false;
 #else
 static IntOption  bva_debug                (_cat, "bva-debug",       "Debug Output of BVA", 0, IntRange(0, 4));
+static BoolOption opt_bvaAnalysisDebug     (_cat, "cp3_bva_ad",      "experimental analysis", false);
 static BoolOption opt_bvaAnalysis          (_cat, "cp3_bva_a",       "experimental analysis", false);
 #endif
 	
@@ -103,6 +105,7 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	  if( data.list(right).size() < 3 ) continue;
 	  // removeDuplicateClauses(right);
 	  // if( data.list(right).size() < 3 ) continue;
+	  // cerr << "c BVA work on " << right << " with " << data[right] << endl;
 	  
 	  uint32_t index = 0;
 	  while ( bvaMatchingClauses.size() < index+1 ) bvaMatchingClauses.push_back( vector<CRef>() );
@@ -110,6 +113,7 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	  bvaMatchingClauses[0].clear();
 	  for( uint32_t i = 0 ; i < data.list( right).size(); ++i )
 	  {
+	    
 	    bvaMatchingClauses[0].push_back( data.list(right)[i] );
 	  }
 	  
@@ -125,7 +129,7 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	  index ++; // count column of literal that will be added
 	  
 	  // create the stack with all matching literals
-	  for( uint32_t i = 0 ; i <  bvaMatchingClauses[0].size(); ++i )
+	  for( uint32_t i = 0 ; i <  bvaMatchingClauses[0].size() && !data.isInterupted(); ++i )
 	  {
 	    if( bva_debug > 2 ) cerr << "c next reduce literal loop iteration with matching clauses: " << bvaMatchingClauses[0].size() << endl;
 	    // reserve space
@@ -215,6 +219,7 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	    }
 	    
 	  }
+	  // cerr << "c check match-stack for " << right << " of size " << stack.size()  << endl;
 	  
 	  // found all partner literals for l, if there is none, continue with next literal
 	  if( stack.size() == 0 ) break;
@@ -245,21 +250,33 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	    }
 	    nextStackLiteral:;
 	  }
+	  // cerr << "c picked left = " << left << endl;
+	  
+	  for( int i = 0 ; i < stack.size() ; ++ i ) {
+	    bvaCountMark[ toInt( stack[i] ) ] = lit_Error;
+	    bvaCountCount[ toInt( stack[i] ) ] = 0;
+	    bvaCountSize[ toInt( stack[i] ) ] = 0;
+	  }
+	  
 	  
 	  if( left == lit_Undef ) {
 	    static bool didIt = false;
-	    if( !didIt ) { cerr << "c second BVA literal became litUndef - check how!" << endl; didIt = true; }
+	    if( !didIt ) {
+	      // cerr << "c second BVA literal became litUndef - check how!" << endl; didIt = true; 
+	      // assert(false && "remove this bug?!" );
+	    }
+	    // cerr << "c break" << endl;
 	    break;
 	  }
 	  
-	  if( bva_debug > 2 ) cerr << "c BVA selected left: " << left << endl;
+	  if(  bva_debug > 2 ) cerr << "c BVA selected left: " << left << " foundRC=" << foundRightComplement << ", bvaCmpl=" << bvaComplement << endl;
 	  // tackle complement specially, if found
 	  if( bvaComplement && foundRightComplement ) left = ~right;
 	  
 	  // found clause(s) [right, l,...], [-right,l,...]
 	  if( left == ~right && bvaComplement ) {
 	    didSomething = true;
-	    if( bva_debug > 1 ) cerr << "c [BVA] found complement " << left << endl;
+	    if(  bva_debug > 1 ) cerr << "c [BVA] found complement " << left << endl;
 	    if( !bvaHandleComplement( right ) ) {
 	      data.setFailed();
 	      return didSomething;
@@ -275,15 +292,18 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	  }
 	  
 	  // if nothing has been selected, because not enough there - use next literal!
-	  if( left == lit_Undef ) continue;
+	  if( left == lit_Undef ) {
+	    // cerr << "c continue with no match?" << endl;
+	    continue;
+	  }
 	  
 	  // do not continue, if there won't be a reduction
 	  // dows not hold in the multi case!!
 	  if( index == 1 && max < 3 ) {
-	    if( bva_debug > 2 ) cerr << "c [BVA] interrupt because of too few matchings " << right << " @" << index << " with " << max << endl;
+	    if(  bva_debug > 2 ) cerr << "c [BVA] interrupt because of too few matchings " << right << " @" << index << " with " << max << endl;
 	    break;
 	  }
-	  if( bva_debug > 0 ) cerr << "c [BVA] index=" << index << " max=" << max << " rightList= " << data.list(right).size() << " leftList= " << data.list(left).size() << endl;
+	  if(  bva_debug > 0 ) cerr << "c [BVA] index=" << index << " max=" << max << " rightList= " << data.list(right).size() << " leftList= " << data.list(left).size() << endl;
 
 	  // heuristically remove duplicates!
 	  if( var(left) >= data.nVars() ) cerr << "c [BVA] working on too large variable " << var(left) << " vs " << data.nVars() 
@@ -291,11 +311,12 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	      << " literal R: " << right << " int: " << toInt(right)  
 	      << endl;
 	  if( max > data.list(left).size() || max > data.list(right).size() ) {
-	    if( bva_debug > 1 ) cerr << "c remove duplicate clauses from left list " << left << " with index= " << index << endl;
+	    if(  bva_debug > 1 ) cerr << "c remove duplicate clauses from left list " << left << " with index= " << index << endl;
 	    uint32_t os = data.list(left).size();
-	    if( bva_debug > 1 ) {
+	    removeDuplicateClauses(left);
+	    if(  bva_debug > 1 ) {
 	      cerr << "c reduced list by " << os - data.list(left).size() << " to " << data.list(left).size() << endl;
-	      for( uint32_t j = 0 ; j<data.list(left).size(); ++j ) { cerr <<  data.list(left)[j] << endl;}
+	      for( uint32_t j = 0 ; j<data.list(left).size(); ++j ) { cerr <<  data.list(left)[j] << " : " << ca[ data.list(left)[j] ]  << endl;}
 	    }
 	    index --; continue; // redo the current literal!
 	  }
@@ -624,44 +645,47 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 
 void BoundedVariableAddition::analysis()
 {
-#if 0
   // setup parameters
-  const int replacePairs = 2;
+  const int replacePairs = 3;
   const int smallestSize = 3;
   
   // data structures
   bvaHeap.addNewElement(data.nVars() * 2);
   for( Var v = 0 ; v < data.nVars(); ++ v ) {
-    if( data[  mkLit(v,false) ] > replacePairs ) if( !bvaHeap.inHeap(toInt(mkLit(v,false))) )  bvaHeap.insert( toInt(mkLit(v,false)) );
-    if( data[  mkLit(v,true)  ] > replacePairs ) if( !bvaHeap.inHeap(toInt(mkLit(v,true))) )   bvaHeap.insert( toInt(mkLit(v,true))  );
+    if( data[  mkLit(v,false) ] >= replacePairs ) if( !bvaHeap.inHeap(toInt(mkLit(v,false))) )  bvaHeap.insert( toInt(mkLit(v,false)) );
+    if( data[  mkLit(v,true)  ] >= replacePairs ) if( !bvaHeap.inHeap(toInt(mkLit(v,true))) )   bvaHeap.insert( toInt(mkLit(v,true))  );
   }
   data.ma.resize(2*data.nVars());
-  Markarray match; // to detect whether clauses are equal
+  MarkArray match; // to detect whether clauses are equal
   match.resize(2*data.nVars());
+  MarkArray seenVariable; // to detect whether clauses are equal
+  seenVariable.resize(data.nVars());
   
-  struct bvaPair {
-    Lit l1,l2;
-    CRef c1,c2;
-    bvaPair( Lit _l1, Lit _l2, CRef _c1, CRef _c2) : l1(_l1),l2(_l2),c1(_c1),c2(_c2){}
-  };
   vector<bvaPair> bvaPairs;
+  int foundMatchings=0;
+  int matchSize=0;
   
+  
+  seenVariable.nextStep();
   while (bvaHeap.size() > 0 && (data.unlimited() || bvaLimit > 0) && !data.isInterupted() ) {
     const Lit right = toLit(bvaHeap[0]);
     assert( bvaHeap.inHeap( toInt(right) ) && "item from the heap has to be on the heap");
 
-    if( bva_debug > 2 && bvaHeap.size() > 0 ) cerr << "c [BVA] new first item: " << bvaHeap[0] << " which is " << right << endl;
     bvaHeap.removeMin();
     if( data.value( right ) != l_Undef ) continue;
 
+    if( seenVariable.isCurrentStep( var(right) ) ) continue; // check each variable only once!
+    seenVariable.setCurrentStep( var(right) );
+    
     // check each pair of literals only once!
     data.ma.nextStep();
-    
-    
-    for( uint32_t j = 0 ; j < data.list( right ).size(); ++j ) { // iterate over all candidates for C
+
+    if( opt_bvaAnalysisDebug ) cerr << "c analysis on " << right << endl;
+    for( uint32_t j = 0 ; j < data.list( right ).size() && !data.isInterupted(); ++j ) { // iterate over all candidates for C
       const Clause & c = ca[ data.list(right)[j] ] ;
       if( c.can_be_deleted() || c.size() < smallestSize ) continue;
-      
+    
+      if( opt_bvaAnalysisDebug ) cerr << "c work on clause " << c << endl;
       match.nextStep();
       for( int k = 0 ; k < c.size(); ++ k ) {
 	const Lit l1 = c[k];
@@ -672,41 +696,65 @@ void BoundedVariableAddition::analysis()
       Lit min = lit_Undef;
       for( int k = 0 ; k < c.size(); ++ k ) {
 	const Lit l1 = c[k];
-	if( l1 <= right ) continue; // only bigger literals!
-        if( data.ma.isCurrentStep( toInt(l1) ) ) continue; // each pair only once!
-
-	// work on pair right, l1
-	data.ma.setCurrentStep( toInt(l1) ); // memorize that we looked at this pair already
+	if( toInt(l1) <= toInt(right) ) continue; // only bigger literals!
 	match.reset( toInt(l1) );
 
 	// here, look only for the interesting case for XOR!
+	bool doesMatch = true;
 	for( uint32_t m = 0 ; m < data.list( ~l1 ).size(); ++m ) {
 	  if( data.list( ~l1 )[m] == data.list(right)[j] ) continue; // C != D
 	  const Clause & d = ca[ data.list( ~l1 )[m] ] ;
 	  if( d.can_be_deleted() || d.size() != c.size() ) continue; // |D| == |C|
-	  
-	  bool match = true;
+
+	  doesMatch = true;	  
 	  for( int r = 0 ; r < d.size(); ++ r ) {
 	    const Lit dl = d[r];
 	    if( dl == ~l1 || dl == ~right ) continue;
-	    if( ! match.isCurrentStep( toInt(dl) ) ) { match = false; break; }
+	    if( ! match.isCurrentStep  ( toInt(dl) ) ) { doesMatch = false; break; }
 	  }
 	  
-	  if( !match ) continue; // check next candidate for D!
-
-	  cerr << "c match for (" << right << "," << l1 << ") -- (" << ~right << "," << ~l1 << "): " << c << " and " << d << endl;
-	  bvaPairs.push_back( bvaPair(right,l1,data.list(right)[j],data.list( ~l1 )[m]);
+	  if( !doesMatch ) continue; // check next candidate for D!
+	  if( opt_bvaAnalysisDebug ) cerr << "c match with clause " << d << endl;
+	  // cerr << "c match for (" << right << "," << l1 << ") -- (" << ~right << "," << ~l1 << "): " << c << " and " << d << endl;
+	  bvaPairs.push_back( bvaPair(right,l1, data.list(right)[j], data.list( ~l1 )[m]) );
+	  break; // do not try to find more clauses that match C!
 	}
 
-
-
-
 	match.setCurrentStep( toInt(l1) ); // add back to match set!
+	if( doesMatch ) break; // do not collect all pairs of this clause!
       }
       
     }
+    // evaluate matches here!
+    // sort based on second literal -- TODO: use improved sort!
+    for( int i = 0 ; i < bvaPairs.size(); ++ i ) {
+      for( int j = i+1; j < bvaPairs.size(); ++ j ) {
+	if ( toInt(bvaPairs[i].l2) > toInt(bvaPairs[j].l2) ) {
+	  const bvaPair tmp =  bvaPairs[i];
+	  bvaPairs[i] = bvaPairs[j];
+	  bvaPairs[j] = tmp;
+	}
+      }
+    }
+    // check whether one literal matches multiple clauses
+    for( int i = 0 ; i < bvaPairs.size(); ++ i ) {
+      int j = i;
+      while ( j < bvaPairs.size() && toInt(bvaPairs[i].l2) == toInt(bvaPairs[j].l2 ) ) ++j ;
+      assert(j>=i);
+      if( j - i >= replacePairs ) {
+	if( opt_bvaAnalysisDebug ) cerr << "c found XOR matching with " << j-i << " pairs for (" << bvaPairs[i].l1 << " -- " << bvaPairs[i].l2 << ")" << endl;
+	// apply replacing/rewriting here
+	
+	// remove modified/deleted clause references in remaining list
+	foundMatchings ++;
+	matchSize += (j-i);
+      }
+      i = j - 1; // jump to next matching
+    }
+    bvaPairs.clear();
   }
-#endif
+
+  cerr << "c BVA analysis: " << foundMatchings << " matchings, " << matchSize << " matchSize" << endl;
 }
 
 
@@ -848,4 +896,37 @@ void BoundedVariableAddition::destroy()
   vector< uint32_t >().swap( bvaCountCount);
   vector< uint64_t >().swap( bvaCountSize );
   clauseLits.clear(true) ;
+}
+
+
+void BoundedVariableAddition::removeDuplicateClauses( const Lit literal )
+{
+  for( uint32_t i = 0 ; i < data.list(literal).size() ; ++ i ) 
+  {
+    Clause& clause = ca[ data.list(literal)[i]];
+    if( clause.can_be_deleted() ) { 
+      data.list(literal)[i] = data.list(literal)[ data.list(literal).size() -1 ];
+      data.list(literal).pop_back();
+      --i; continue;
+    }
+  }
+  
+  for( uint32_t i = 0 ; i < data.list(literal).size() ; ++ i ) 
+  {
+    Clause& clauseI = ca[( data.list(literal)[i] )];
+    for( uint32_t j = i+1 ; j < data.list(literal).size() ; ++ j ) 
+    {
+      CRef removeCandidate = data.list(literal)[j];
+      Clause& clauseJ = ca[( removeCandidate )];
+      if( clauseI.size() != clauseJ.size() ) continue;
+      for( uint32_t k = 0 ; k < clauseI.size(); ++k ) {
+	if( clauseI[k] != clauseJ[k] ) goto duplicateNextJ;
+      }
+      data.removedClause( removeCandidate );
+      data.list(literal)[j] = data.list(literal)[ data.list(literal).size() -1 ];
+      data.list(literal).pop_back();
+      j--;
+      duplicateNextJ:;
+    }
+  }
 }

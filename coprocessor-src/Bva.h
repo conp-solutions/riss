@@ -37,7 +37,7 @@ class BoundedVariableAddition : public Technique  {
   struct LitOrderBVAHeapLt {
         CoprocessorData & data;
         bool operator () (int& x, int& y) const {
-	    return data[ toLit(x)] < data[toLit(y)]; 
+	    return data[ toLit(x)] > data[toLit(y)]; 
         }
         LitOrderBVAHeapLt(CoprocessorData & _data) : data(_data) {}
   };
@@ -83,8 +83,18 @@ protected:
   /** check data structures */
   bool checkLists(const string& headline);
   
+  /** pair of literals and clauses */
+  struct bvaPair {
+    Lit l1,l2;
+    CRef c1,c2;
+    bvaPair( Lit _l1, Lit _l2, CRef _c1, CRef _c2) : l1(_l1),l2(_l2),c1(_c1),c2(_c2){}
+  };
+  
   /** other bva like formula analysis */
   void analysis();
+  
+  /** remove duplicate clauses from the clause list of the given literal*/
+  void removeDuplicateClauses( const Lit literal );
   
 public:
   // parameters
