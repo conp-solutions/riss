@@ -103,7 +103,7 @@ void Subsumption::resetStatistics()
 
 }
 
-void Subsumption::process(Heap<VarOrderBVEHeapLt> * heap, const Var ignore, const bool doStatistics)
+void Subsumption::process(bool doStrengthen, Heap< VarOrderBVEHeapLt >* heap, const Var ignore, const bool doStatistics)
 {
   modifiedFormula = false;
   if( !data.ok() ) return;
@@ -116,6 +116,11 @@ void Subsumption::process(Heap<VarOrderBVEHeapLt> * heap, const Var ignore, cons
       data.getSubsumeClauses().clear();
     }
     if( hasToStrengthen() ) {
+      if( !doStrengthen ) {
+	// do not apply strengthening?
+	data.getStrengthClauses().clear();
+	continue;
+      }
       if (controller.size() > 0 && (opt_par_strength == 2 || (data.getStrengthClauses().size() > 250000 && opt_par_strength == 1)))
       {
           parallelStrengthening(heap, ignore, doStatistics);

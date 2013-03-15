@@ -21,6 +21,7 @@ using namespace std;
  IntOption  opt_learnt_growth   (_cat_bve, "cp3_bve_learnt_growth", "Keep C (x) D, where C or D is learnt, if |C (x) D| <= max(|C|,|D|) + N", 0, IntRange(-1, INT32_MAX));
  IntOption  opt_resolve_learnts (_cat_bve, "cp3_bve_resolve_learnts", "Resolve learnt clauses: 0: off, 1: original with learnts, 2: 1 and learnts with learnts", 0, IntRange(0,2));
  BoolOption opt_unlimited_bve   (_cat_bve, "bve_unlimited",  "perform bve test for Var v, if there are more than 10 + 10 or 15 + 5 Clauses containing v", false);
+ BoolOption opt_bve_strength    (_cat_bve, "bve_strength",  "do strengthening during bve", true);
  BoolOption opt_bve_findGate    (_cat_bve, "bve_gates",  "try to find variable AND gate definition before elimination", true);
  BoolOption opt_force_gates     (_cat_bve, "bve_force_gates", "Force gate search (slower, but probably more eliminations and blockeds are found)", false);
  IntOption  opt_bve_heap        (_cat_bve, "cp3_bve_heap"     ,  "0: minimum heap, 1: maximum heap, 2: random", 0, IntRange(0,2));
@@ -261,7 +262,7 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<Var
 {
   //Subsumption / Strengthening
   if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
-  subsumption.process(); 
+  subsumption.process(opt_bve_strength); 
   modifiedFormula = modifiedFormula || subsumption.appliedSomething();
   if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
  
@@ -309,7 +310,7 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<Var
     touchedVarsForSubsumption(data, touched_variables);
 
     if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
-    subsumption.process();
+    subsumption.process(opt_bve_strength);
     if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
     modifiedFormula = modifiedFormula || subsumption.appliedSomething();
 
@@ -489,9 +490,9 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                 //subsumption with new clauses!!
                 if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
                 if (heap_updates > 0 && opt_bve_heap != 2)
-                    subsumption.process(&heap, v);
+                    subsumption.process(opt_bve_strength,&heap, v);
                 else 
-                    subsumption.process();
+                    subsumption.process(opt_bve_strength);
                 if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
 		        modifiedFormula = modifiedFormula || subsumption.appliedSomething();
 
