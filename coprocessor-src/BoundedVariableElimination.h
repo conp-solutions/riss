@@ -118,7 +118,7 @@ protected:
           , const bool keepLearntResolvents = false, const bool force = false, const bool doStatistics = true);
   inline lbool anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative
           , const int v, const int p_limit, const int n_limit, int32_t* pos_stats, int32_t* neg_stats
-          , int & lit_clauses, int & lit_learnts, const bool doStatistics = true); 
+          , int & lit_clauses, int & lit_learnts, int& resolvents, const bool doStatistics = true); 
   inline void addClausesToSubsumption (const vector<CRef> & clauses);
   void touchedVarsForSubsumption (CoprocessorData & data, const std::vector<Var> & touched_vars);
 

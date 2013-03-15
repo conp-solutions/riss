@@ -22,6 +22,7 @@ using namespace std;
  IntOption  opt_resolve_learnts (_cat_bve, "cp3_bve_resolve_learnts", "Resolve learnt clauses: 0: off, 1: original with learnts, 2: 1 and learnts with learnts", 0, IntRange(0,2));
  BoolOption opt_unlimited_bve   (_cat_bve, "bve_unlimited",  "perform bve test for Var v, if there are more than 10 + 10 or 15 + 5 Clauses containing v", false);
  BoolOption opt_bve_strength    (_cat_bve, "bve_strength",  "do strengthening during bve", true);
+ IntOption  opt_bve_lits        (_cat_bve, "bve_red_lits",  "0=reduce number of literals, 1=reduce number of clauses,2=reduce any of the two,3 reduce both", 0, IntRange(0,3));
  BoolOption opt_bve_findGate    (_cat_bve, "bve_gates",  "try to find variable AND gate definition before elimination", true);
  BoolOption opt_force_gates     (_cat_bve, "bve_force_gates", "Force gate search (slower, but probably more eliminations and blockeds are found)", false);
  IntOption  opt_bve_heap        (_cat_bve, "cp3_bve_heap"     ,  "0: minimum heap, 1: maximum heap, 2: random", 0, IntRange(0,2));
@@ -443,6 +444,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            int32_t neg_stats[neg.size()];
            int lit_clauses = 0;
            int lit_learnts = 0;
+	   int resolvents = 0;
                   
            if (!force) 
            {
@@ -458,7 +460,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                if (pos_count != 0 &&  neg_count != 0)
                {
                    if (doStatistics) ++anticipations;
-                   if (anticipateElimination(data, pos, neg,  v, p_limit, n_limit, pos_stats, neg_stats, lit_clauses, lit_learnts) == l_False) 
+                   if (anticipateElimination(data, pos, neg,  v, p_limit, n_limit, pos_stats, neg_stats, lit_clauses, lit_learnts, resolvents) == l_False) 
                        return;  // level 0 conflict found while anticipation TODO ABORT
                }
                if (opt_bve_bc)
@@ -475,7 +477,17 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            // if resolving reduces number of literals in clauses: 
            //    add resolvents
            //    mark old clauses for deletion
-           if ((force || (lit_clauses > 0 && lit_clauses <= lit_clauses_old)) && !opt_bce_only)
+           bool doResolve = false;
+           bool reducedLits = lit_clauses > 0 && lit_clauses <= lit_clauses_old;
+	   bool reducedClss = pos_count + neg_count > 0 && pos_count + neg_count >= resolvents;
+           if( opt_bve_lits == 0 ) doResolve = reducedLits;				// number of literals decreasesd
+	   else if( opt_bve_lits == 1 ) doResolve = reducedClss;			// number of clauses decreasesd
+	   else if( opt_bve_lits == 2 ) doResolve = reducedClss || reducedLits;	// number of literals or clauses decreasesd
+	   else if( opt_bve_lits == 3 ) doResolve = reducedClss && reducedLits;	// number of literals and clauses decreasesd
+           
+           if ( (force || doResolve ) // clauses or literals should be reduced and we did
+		&& !opt_bce_only // only if bve should be done
+	      )
            {
 		        if (doStatistics) usedGates = (foundGate ? usedGates + 1 : usedGates ); // statistics
                 if(opt_bve_verbose > 1)  cerr << "c resolveSet" <<endl;
@@ -565,7 +577,7 @@ inline void BoundedVariableElimination::removeClauses(CoprocessorData & data, He
  *  -> total number of literals in learnts after resolution:    lit_learnts
  *
  */
-inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const int p_limit, const int  n_limit, int32_t* pos_stats , int32_t* neg_stats, int & lit_clauses, int & lit_learnts, const bool doStatistics)
+inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& data, vector< CRef >& positive, vector< CRef >& negative, const int v, const int p_limit, const int n_limit, int32_t* pos_stats, int32_t* neg_stats, int& lit_clauses, int& lit_learnts, int& resolvents, const bool doStatistics)
 {
     if(opt_bve_verbose > 2)  cerr << "c starting anticipate BVE" << endl;
     // Clean the stats
@@ -623,6 +635,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData &
                     lit_learnts += newLits;
                 else 
                     lit_clauses += newLits;
+		resolvents ++; // count number of produced clauses!
             }
             
             // empty Clause
