@@ -227,6 +227,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         //neighbor_heap.insert(v);
         neighborMA.nextStep();
         neighborMA.setCurrentStep(v);
+        neighbors.push_back(v);
         // Build neighbor-vector
         // expecting valid occurrence-lists, i.e. v really occurs in lists 
         for (int r = 0; r < pos.size() && locked_neigbors <= postpone_locked_neighbors; ++r)
@@ -542,7 +543,14 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         //
         ///////////////////////////////////////////////////////////////////////////////////////////
             assert(rwlock_count == 0);
-            ca_lock.lock();      
+            ca_lock.lock();     
+            if (false) 
+            {
+                cerr << "c want resolve " << new_clauses + new_learnts << " clauses on variable " << v + 1 << " with pos size: " << pos.size() << " negs: " << neg.size() <<endl;
+                cerr << "c v " << v + 1 << " neighbors: "; 
+                for (int i = 0; i < neighbors.size(); ++i) { cerr << neighbors[i] + 1 << ", " ; }
+                cerr << endl;
+            }
             AllocatorReservation memoryReservation = ca.reserveMemory( new_clauses + new_learnts, lit_clauses + lit_learnts, new_learnts, rwlock);
             ca_lock.unlock();
 
@@ -572,7 +580,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
 		     if (doStatistics) stats.usedGates = (foundGate ? stats.usedGates + 1 : stats.usedGates ); // statistics
              if(opt_bve_verbose > 1)  cerr << "c resolveSet" <<endl;
 
-             if (resolveSetThreadSafe(data, heap, pos, neg, v, p_limit, n_limit, ps, memoryReservation, strengthQueue, stats, data_lock, heap_lock, doStatistics) == l_False) 
+             if (resolveSetThreadSafe(data, heap, pos, neg, v, p_limit, n_limit, ps, memoryReservation, strengthQueue, stats, data_lock, heap_lock, new_clauses + new_learnts, doStatistics) == l_False) 
              {
                  // UNSAT case -> end thread, but first release all locks
                 assert(rwlock_count == 1);
@@ -857,8 +865,9 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
  *   - unit clauses and empty clauses are not handeled here
  *          -> this is already done in anticipateElimination 
  */
-lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, vector<CRef> & positive, vector<CRef> & negative, const int v, const int p_limit, const int n_limit, vec<Lit> & ps, AllocatorReservation & memoryReservation, deque<CRef> & strengthQueue, ParBVEStats & stats, SpinLock & data_lock, SpinLock & heap_lock, const bool doStatistics, const bool keepLearntResolvents)
+lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, vector<CRef> & positive, vector<CRef> & negative, const int v, const int p_limit, const int n_limit, vec<Lit> & ps, AllocatorReservation & memoryReservation, deque<CRef> & strengthQueue, ParBVEStats & stats, SpinLock & data_lock, SpinLock & heap_lock, int expectedResolvents, const bool doStatistics, const bool keepLearntResolvents)
 {
+    int resolvents = 0;
     const bool hasDefinition = (p_limit < positive.size() || n_limit < negative.size() );
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
     {
@@ -894,7 +903,13 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, H
                {
                     if ((p.learnt() || n.learnt()) && ps.size() > max(p.size(),n.size()) + opt_learnt_growth)
                         continue;
-                    const CRef cr = ca.allocThreadsafe(memoryReservation, ps, p.learnt() || n.learnt()); 
+                    resolvents++;
+                    if (false) 
+                    {
+                        cerr <<  "c on variable " << v + 1 << " with pos size: " << positive.size() << " negs: " << negative.size() <<endl;
+                        cerr << "c resolving " << resolvents << " of " << expectedResolvents << " at adress " << memoryReservation.getCurrent() << " with limit " << memoryReservation.getUpperLimit() << endl; 
+                    }
+                    const CRef cr = ca.allocThreadsafe(memoryReservation, ps, p.learnt() || n.learnt());
                     Clause & resolvent = ca[cr];
                     if (heap_updates > 0 && opt_bve_heap != 2)
                         data.addClause(cr, &heap, v, &data_lock, &heap_lock);
