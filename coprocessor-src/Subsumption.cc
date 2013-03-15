@@ -32,6 +32,7 @@ static const int   opt_par_strength    =1;
 static const bool  opt_lock_stats      =false;
 static const int   opt_par_subs        =1;
 static const int   opt_par_subs_counts =false;
+static const int   chunk_size          =200000;
 #else
 static IntOption   opt_par_strength    (_cat, "cp3_par_strength", "par strengthening: 0 never, 1 heuristic, 2 always", 1, IntRange(0,2));
 static BoolOption  opt_lock_stats      (_cat, "cp3_lock_stats", "measure time waiting in spin locks", false);
@@ -102,7 +103,7 @@ void Subsumption::resetStatistics()
 
 }
 
-void Subsumption::process(Heap<VarOrderBVEHeapLt> * heap, const Var ignore, const bool doStatistics)
+void Subsumption::process(bool doStrengthen, Heap< VarOrderBVEHeapLt >* heap, const Var ignore, const bool doStatistics)
 {
   modifiedFormula = false;
   if( !data.ok() ) return;
@@ -115,6 +116,11 @@ void Subsumption::process(Heap<VarOrderBVEHeapLt> * heap, const Var ignore, cons
       data.getSubsumeClauses().clear();
     }
     if( hasToStrengthen() ) {
+      if( !doStrengthen ) {
+	// do not apply strengthening?
+	data.getStrengthClauses().clear();
+	continue;
+      }
       if (controller.size() > 0 && (opt_par_strength == 2 || (data.getStrengthClauses().size() > 250000 && opt_par_strength == 1)))
       {
           parallelStrengthening(heap, ignore, doStatistics);
@@ -216,6 +222,7 @@ void Subsumption :: subsumption_worker ( unsigned int start, unsigned int end, H
                     subsumedLiterals += ca[list[i]].size();
                 }
                 ca[list[i]].set_delete(true); 
+		data.removedClause(list[i]);
 		        didChange(); 
 		        if (global_debug_out) cerr << "c subsumption removed " << (ca[list[i]].learnt() ? "learned" : "" ) << " clause " << ca[list[i]] << " by "  <<  (ca[list[i]].learnt() ? "learned" : "" ) << c << endl;
                 occ_updates.push_back(list[i]);

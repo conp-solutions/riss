@@ -16,13 +16,13 @@ namespace Coprocessor {
 
 class Resolving  : public Technique
 {
-
+  CoprocessorData& data;
   vector<int> seen; // remembers how many clauses per variable have been processed already
   
 public:
-  Resolving(ClauseAllocator& _ca, ThreadController& _controller);
+  Resolving(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data);
 
-  void process(CoprocessorData& data, bool post = false);
+  void process( bool post = false);
 
   /** inherited from @see Technique */
   void printStatistics( ostream& stream );
@@ -32,10 +32,10 @@ public:
 protected:
   
   /** resolve ternary clauses */
-  void ternaryResolve(CoprocessorData& data);
+  void ternaryResolve();
   
   /** add redundant binary clauses */
-  void addRedundantBinaries(CoprocessorData& data);
+  void addRedundantBinaries();
 
   /** check whether this clause already exists in the occurence list */
   bool hasDuplicate(vector< Minisat::CRef >& list, const vec< Lit >& c);
@@ -47,12 +47,31 @@ protected:
   */
   bool resolve(const Clause & c, const Clause & d, const int v, vec<Lit> & resolvent);
   
+  // check whether a vector of lits subsumes a given clause
+  bool ordered_subsumes (const vec<Lit>& c, const Clause & other) const;
+  bool ordered_subsumes (const Clause & c, const vec<Lit>& other) const;
+  
   bool checkPush(vec<Lit> & ps, const Lit l);
   
   double processTime;
   unsigned addedTern2;
   unsigned addedTern3;
   unsigned addedBinaries;
+  unsigned res3steps;
+  unsigned add2steps;
+  unsigned removedViaSubsubption;
+  unsigned detectedDuplicates;
+  
+  /// compare two literals
+  struct VarOrderHeapLt {
+        CoprocessorData & data;
+        bool operator () (const Var& x, const Var& y) const {
+	    return data[ x] < data[y]; 
+        }
+        VarOrderHeapLt(CoprocessorData & _data) : data(_data) {}
+  };
+  Heap<VarOrderHeapLt> resHeap; // heap that stores the variables according to their frequency (dedicated for BVA)
+  
 };
 
 

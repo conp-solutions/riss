@@ -26,15 +26,17 @@ extern IntOption  opt_bve_heap;
 
 #if defined CP3VERSION && CP3VERSION < 302
 static const int par_bve_threshold = 0;
+static const int postpone_locked_neighbors = 1;
 #else
 static IntOption  par_bve_threshold (_cat_bve, "par_bve_th", "Threshold for use of BVE-Worker", 10000, IntRange(0,INT32_MAX)); //TODO lower in case of force_gates
+static IntOption  postpone_locked_neighbors (_cat_bve, "postp_lockd_neighb", "Postpone Elimination-Check if more neighbors are locked", 1, IntRange(0,INT32_MAX));
 #endif
 
 extern BoolOption opt_force_gates;
 extern BoolOption opt_bve_bc;
 extern IntOption heap_updates;
 extern BoolOption opt_bce_only;
-static IntOption  postpone_locked_neighbors (_cat_bve, "postp_lockd_neighb", "Postpone Elimination-Check if more neighbors are locked", 1, IntRange(0,INT32_MAX));
+
 
 static int upLevel = 1;
 

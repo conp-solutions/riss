@@ -78,8 +78,10 @@ public:
   Subsumption( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Coprocessor::Propagation& _propagation );
   
   
-  /** run subsumption and strengthening until completion */
-  void process(Heap<VarOrderBVEHeapLt> * heap = NULL, const Var ignore = var_Undef, const bool doStatistics = true);
+  /** run subsumption and strengthening until completion 
+   * @param doStrengthen use strengthening in this call?
+   */
+  void process(bool doStrengthen=true, Heap<VarOrderBVEHeapLt> * heap = NULL, const Var ignore = var_Undef, const bool doStatistics = true);
 
   void initClause(const CRef cr); // inherited from Technique
   
