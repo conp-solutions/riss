@@ -23,13 +23,16 @@ extern IntOption  opt_resolve_learnts;
 extern BoolOption opt_unlimited_bve;
 extern BoolOption opt_bve_findGate; 
 extern IntOption  opt_bve_heap;
+extern IntOption  opt_bve_lits;
 
 #if defined CP3VERSION && CP3VERSION < 302
 static const int par_bve_threshold = 0;
 static const int postpone_locked_neighbors = 1;
+static const bool opt_minimal_updates = false;
 #else
 static IntOption  par_bve_threshold (_cat_bve, "par_bve_th", "Threshold for use of BVE-Worker", 10000, IntRange(0,INT32_MAX)); //TODO lower in case of force_gates
-static IntOption  postpone_locked_neighbors (_cat_bve, "postp_lockd_neighb", "Postpone Elimination-Check if more neighbors are locked", 1, IntRange(0,INT32_MAX));
+static IntOption  postpone_locked_neighbors (_cat_bve, "postp_lockd_neighb", "Postpone Elimination-Check if more neighbors are locked", 3, IntRange(0,INT32_MAX));
+static BoolOption opt_minimal_updates       (_cat_bve, "par_bve_min_upd", "Omit LitOcc and Heap updates to reduce locking", false);
 #endif
 
 extern BoolOption opt_force_gates;
@@ -93,7 +96,7 @@ static void printClauses(ClauseAllocator & ca, vector<CRef> & list, bool skipDel
  *          you must not acquire a write lock on the data object, if alread 2.b was acquired
  *          you either hold a heap lock or any of the other locks 
  */
-void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap, deque < CRef > & strengthQueue, deque < CRef > & sharedStrengthQueue, deque< PostponeReason > & postponed, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, ParBVEStats & stats, MarkArray * gateMarkArray, int & rwlock_count, const bool force, const bool doStatistics)   
+void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap, deque < CRef > & strengthQueue, deque < CRef > & sharedStrengthQueue, deque< PostponeReason > & postponed, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, ParBVEStats & stats, MarkArray * gateMarkArray, int & rwlock_count, int & garbageCounter, const bool force, const bool doStatistics)   
 {
     if (doStatistics) stats.processTime = wallClockTime() - stats.processTime;
 
@@ -116,7 +119,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         {
             data_lock.unlock();
             if (doStatistics) stats.upTime = wallClockTime() -  stats.upTime;
-            par_bve_propagate(data, heap, var_Undef, var_lock, rwlock, dirtyOccs, sharedStrengthQueue, stats, rwlock_count, doStatistics);
+            par_bve_propagate(data, heap, var_Undef, var_lock, rwlock, dirtyOccs, sharedStrengthQueue, stats, rwlock_count, garbageCounter, doStatistics);
             if (doStatistics) stats.upTime = wallClockTime() -  stats.upTime;
             continue;
         }
@@ -127,7 +130,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         {
             susi_lock.unlock();
             if (doStatistics) stats.subsimpTime = wallClockTime() -  stats.subsimpTime;
-            par_bve_strengthening_worker(data, heap, var_Undef, var_lock, rwlock, sharedStrengthQueue, strengthQueue, dirtyOccs, stats, rwlock_count, false, doStatistics);
+            par_bve_strengthening_worker(data, heap, var_Undef, var_lock, rwlock, sharedStrengthQueue, strengthQueue, dirtyOccs, stats, rwlock_count, garbageCounter, false, doStatistics);
             if (doStatistics) stats.subsimpTime = wallClockTime() -  stats.subsimpTime;
             continue;
         }
@@ -519,9 +522,9 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
             //mark Clauses without resolvents for deletion
             if(opt_bve_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
             if(opt_bve_verbose > 1) cerr << "c removing blocked clauses from F_" << v+1 << endl;
-            removeBlockedClausesThreadSafe(data, heap, pos, pos_stats, mkLit(v, false), p_limit, data_lock, heap_lock, stats, doStatistics); 
+            removeBlockedClausesThreadSafe(data, heap, pos, pos_stats, mkLit(v, false), p_limit, data_lock, heap_lock, stats, garbageCounter, doStatistics); 
             if(opt_bve_verbose > 1) cerr << "c removing blocked clauses from F_¬" << v+1 << endl;
-            removeBlockedClausesThreadSafe(data, heap, neg, neg_stats, mkLit(v, true), n_limit, data_lock, heap_lock, stats, doStatistics); 
+            removeBlockedClausesThreadSafe(data, heap, neg, neg_stats, mkLit(v, true), n_limit, data_lock, heap_lock, stats, garbageCounter, doStatistics); 
         }
         assert(rwlock_count == 1);
         --rwlock_count;
@@ -537,7 +540,15 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         // if resolving reduces number of literals in clauses: 
         //    add resolvents
         //    mark old clauses for deletion
-        if (!opt_bce_only && new_clauses > 0 && (force || lit_clauses <= lit_clauses_old))
+        bool doResolve = false;
+        bool reducedLits = lit_clauses > 0 && lit_clauses <= lit_clauses_old;
+	    bool reducedClss = new_clauses > 0 && pos_count + neg_count >= new_clauses;
+             if( opt_bve_lits == 0 ) doResolve = reducedLits;				    // number of literals decreasesd
+	    else if( opt_bve_lits == 1 ) doResolve = reducedClss;			        // number of clauses decreasesd
+	    else if( opt_bve_lits == 2 ) doResolve = reducedClss || reducedLits;	// number of literals or clauses decreasesd
+	    else if( opt_bve_lits == 3 ) doResolve = reducedClss && reducedLits;	// number of literals and clauses decreasesd
+        
+        if (!opt_bce_only && new_clauses > 0 && (force || doResolve) )
         {
         ///////////////////////////////////////////////////////////////////////////////////////////
         //
@@ -599,8 +610,8 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
 
              // remove Clauses that were resolved
              // (since write lock, no threadsafe implementation needed)
-             removeClausesThreadSafe(data, heap, pos, mkLit(v,false), p_limit, data_lock, heap_lock, stats, doStatistics);
-             removeClausesThreadSafe(data, heap, neg, mkLit(v,true) , n_limit, data_lock, heap_lock, stats, doStatistics);
+             removeClausesThreadSafe(data, heap, pos, mkLit(v,false), p_limit, data_lock, heap_lock, stats, garbageCounter, doStatistics);
+             removeClausesThreadSafe(data, heap, neg, mkLit(v,true) , n_limit, data_lock, heap_lock, stats, garbageCounter, doStatistics);
              vector<CRef>().swap(pos); // free physical memory of pos-occ
              vector<CRef>().swap(neg); // free physical memory of neg-occ
              if (opt_bve_verbose > 0) cerr << "c Resolved " << v+1 <<endl;
@@ -617,7 +628,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
 
              //subsimp with new clauses!!
             if (doStatistics) stats.subsimpTime = wallClockTime() -  stats.subsimpTime;
-             par_bve_strengthening_worker(data, heap, v, var_lock, rwlock, sharedStrengthQueue, strengthQueue, dirtyOccs, stats, rwlock_count, true, doStatistics);
+             par_bve_strengthening_worker(data, heap, v, var_lock, rwlock, sharedStrengthQueue, strengthQueue, dirtyOccs, stats, rwlock_count, garbageCounter, true, doStatistics);
             if (doStatistics) stats.subsimpTime = wallClockTime() -  stats.subsimpTime;
              assert(rwlock_count == 1);
              --rwlock_count;
@@ -656,7 +667,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
  *
  *      TODO don't use the data_lock, since we already have the global writeLock
  */
-inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const vector<CRef> & list, const Lit l, const int limit, SpinLock & data_lock, SpinLock & heap_lock, ParBVEStats & stats, const bool doStatistics)
+inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const vector<CRef> & list, const Lit l, const int limit, SpinLock & data_lock, SpinLock & heap_lock, ParBVEStats & stats, int & garbageCounter, const bool doStatistics)
 {
     const Var ignore = var(l);
     for (int cr_i = 0; cr_i < list.size(); ++cr_i)
@@ -669,7 +680,13 @@ inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData 
         {
             c.set_delete(true);
             didChange();
-            if (heap_updates > 0 && opt_bve_heap != 2)
+            if (opt_minimal_updates)
+            {
+                for (int i = 0; i < c.size(); ++i) 
+                    data.deletedVar(var(c[i]));
+                garbageCounter += ca.clauseWord32Size(c.size(), c.has_extra());
+            }
+            else if (heap_updates > 0 && opt_bve_heap != 2)
                 data.removedClause(cr, &heap, ignore, &data_lock, &heap_lock); // updates stats and deleteTimer
             else 
                 data.removedClause(cr, NULL,  ignore, &data_lock, NULL);
@@ -913,7 +930,15 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, H
                     }
                     const CRef cr = ca.allocThreadsafe(memoryReservation, ps, p.learnt() || n.learnt());
                     Clause & resolvent = ca[cr];
-                    if (heap_updates > 0 && opt_bve_heap != 2)
+                    if (opt_minimal_updates)
+                    {
+                        // just add to occs
+                        data_lock.lock();  
+                        for (int l = 0; l < resolvent.size(); ++l)
+                            data.list(resolvent[l]).push_back(cr);
+                        data_lock.unlock();
+                    }
+                    else if (heap_updates > 0 && opt_bve_heap != 2)
                         data.addClause(cr, &heap, v, &data_lock, &heap_lock);
                     else 
                         data.addClause(cr, NULL, var_Undef, &data_lock, NULL);
@@ -952,7 +977,7 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, H
  * i.e. all resolvents are tautologies
  *
  */
-inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const vector< CRef> & list, const int32_t _stats[], const Lit l, const int limit, SpinLock & data_lock, SpinLock & heap_lock, ParBVEStats & stats, const bool doStatistics)
+inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const vector< CRef> & list, const int32_t _stats[], const Lit l, const int limit, SpinLock & data_lock, SpinLock & heap_lock, ParBVEStats & stats, int & garbageCounter, const bool doStatistics)
 {
    const Var ignore = var(l);
    for (unsigned ci = 0; ci < list.size(); ++ci)
@@ -967,7 +992,13 @@ inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(Coprocess
         {
             didChange();
             c.set_delete(true);
-            if (heap_updates > 0 && opt_bve_heap != 2)
+            if (opt_minimal_updates)
+            {
+                for (int i = 0; i < c.size(); ++i) 
+                    data.deletedVar(var(c[i]));
+                garbageCounter += ca.clauseWord32Size(c.size(), c.has_extra());
+            }
+            else if (heap_updates > 0 && opt_bve_heap != 2)
                 data.removedClause(cr, &heap, ignore, &data_lock, &heap_lock); // updates stats and deleteTimer
             else 
                 data.removedClause(cr, NULL, var_Undef, &data_lock, NULL);
@@ -1002,7 +1033,7 @@ inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(Coprocess
 void* BoundedVariableElimination::runParallelBVE(void* arg)
 {
   BVEWorkData*      workData = (BVEWorkData*) arg;
-  workData->bve->par_bve_worker(*(workData->data), *(workData->heap), *(workData->neighbor_heap), *(workData->strengthQueue), *(workData->sharedStrengthQueue), *(workData->postponed), *(workData->var_locks), *(workData->rw_lock), *(workData->bveStats), workData->gateMarkArray, workData->rwlock_count); 
+  workData->bve->par_bve_worker(*(workData->data), *(workData->heap), *(workData->neighbor_heap), *(workData->strengthQueue), *(workData->sharedStrengthQueue), *(workData->postponed), *(workData->var_locks), *(workData->rw_lock), *(workData->bveStats), workData->gateMarkArray, workData->rwlock_count, workData->garbageCounter); 
   return 0;
 }
 
@@ -1085,6 +1116,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
         {
           jobs[i].function  = BoundedVariableElimination::runParallelBVE;
           workData[i].rw_lock = & allocatorRWLock;
+          workData[i].garbageCounter = 0;
           jobs[i].argument  = &(workData[i]);
         }
         cerr << "c parallel bve with " << controller.size() << " threads on " 
@@ -1105,6 +1137,13 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
         }
         // clean dirty occs
         data.cleanUpOccurrences(dirtyOccs,timer);
+        if (opt_minimal_updates)
+        {
+            for (int i = 0; i < controller.size(); ++i) 
+            {
+                if (workData[i].garbageCounter > 0) ca.freeLit(workData[i].garbageCounter);
+            }
+        }
     }
     else
     {
@@ -1175,7 +1214,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
  * -> if fstvar(other) <= fstvar(strengthener)
  *      -> lock other
  */
-void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, const Var ignore, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, MarkArray & dirtyOccs, ParBVEStats & stats, int & rwlock_count, const bool strength_resolvents, const bool doStatistics)
+void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, const Var ignore, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, MarkArray & dirtyOccs, ParBVEStats & stats, int & rwlock_count, int & garbageCounter, const bool strength_resolvents, const bool doStatistics)
 { 
   assert(data.nVars() <= var_lock.size() && "var_lock vector to small");
 //  if (doStatistics)
@@ -1323,9 +1362,9 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
     vector<CRef>& list = data.list(min);        // occurrences of minlit from strengthener
     vector<CRef>& list_neg = data.list(nmin);   // occurrences of negated minlit from strengthener
     
-    lbool state = strength_check_pos(data, heap, ignore, list, sharedStrengthQueue, localQueue, strengthener, cr,      fst, var_lock, dirtyOccs, stats, strength_resolvents, doStatistics);
+    lbool state = strength_check_pos(data, heap, ignore, list, sharedStrengthQueue, localQueue, strengthener, cr,      fst, var_lock, dirtyOccs, stats, garbageCounter, strength_resolvents, doStatistics);
     if (l_False != state)
-        strength_check_neg(data, heap, ignore, list_neg,     sharedStrengthQueue, localQueue, strengthener, cr, min, fst, var_lock, dirtyOccs, stats, strength_resolvents, doStatistics);
+        strength_check_neg(data, heap, ignore, list_neg,     sharedStrengthQueue, localQueue, strengthener, cr, min, fst, var_lock, dirtyOccs, stats, garbageCounter, strength_resolvents, doStatistics);
 
     strengthener.set_strengthen(false);
     strengthener.set_subsume(false);
@@ -1364,7 +1403,7 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
  * @param var_lock      lock for each variable
  *
  */
-inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const Var ignore, vector < CRef > & list, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, MarkArray & dirtyOccs, ParBVEStats & stats, const bool strength_resolvents, const bool doStatistics) 
+inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const Var ignore, vector < CRef > & list, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, MarkArray & dirtyOccs, ParBVEStats & stats, int & garbageCounter, const bool strength_resolvents, const bool doStatistics) 
 {
     int si, so;           // indices used for "can be strengthened"-testing
     int negated_lit_pos;  // index of negative lit, if we find one
@@ -1483,7 +1522,13 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData & da
               data_lock.lock();
               lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
               data_lock.unlock();   
-              if (heap_updates > 0 && opt_bve_heap != 2)
+              if (opt_minimal_updates)
+              {
+                for (int i = 0; i < other.size(); ++i) 
+                    data.deletedVar(var(other[i]));
+                garbageCounter += ca.clauseWord32Size(other.size(), other.has_extra());
+              }
+              else if (heap_updates > 0 && opt_bve_heap != 2)
                 data.removedClause(crO, &heap, ignore, &data_lock, &heap_lock); // updates stats and deleteTimer
               else 
                 data.removedClause(crO, NULL, var_Undef, &data_lock, NULL);
@@ -1513,8 +1558,12 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData & da
               data.removeClauseFromThreadSafe(crO, neg);
               dirtyOccs.setCurrentStep(toInt(neg));
               other.removePositionSortedThreadSafe(negated_lit_pos);
-              // TODO to much overhead? 
-              if (heap_updates  > 0 && opt_bve_heap != 2)
+              if (opt_minimal_updates)
+              {
+                  data.deletedVar(var(neg));
+                  ++garbageCounter; // do not update data structure
+              }
+              else if (heap_updates  > 0 && opt_bve_heap != 2)
                   data.removedLiteral(neg, 1, &heap, ignore, &data_lock, &heap_lock);
               else 
                   data.removedLiteral(neg, 1, NULL, var_Undef, &data_lock, NULL);
@@ -1566,7 +1615,7 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData & da
  * @param var_lock      lock for each variable
  *
  */
-inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const Var ignore, vector < CRef > & list, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, MarkArray & dirtyOccs, ParBVEStats & stats, const bool strength_resolvents, const bool doStatistics) 
+inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const Var ignore, vector < CRef > & list, deque<CRef> & sharedStrengthQueue, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, MarkArray & dirtyOccs, ParBVEStats & stats, int & garbageCounter, const bool strength_resolvents, const bool doStatistics) 
 {
     int si, so;           // indices used for "can be strengthened"-testing
     int negated_lit_pos;  // index of negative lit, if we find one
@@ -1679,7 +1728,13 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & da
               data_lock.lock();
               lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
               data_lock.unlock();   
-              if (heap_updates > 0 && opt_bve_heap != 2)
+              if (opt_minimal_updates)
+              {
+                for (int i = 0; i < other.size(); ++i) 
+                    data.deletedVar(var(other[i]));
+                garbageCounter += ca.clauseWord32Size(other.size(), other.has_extra());
+              }
+              else if (heap_updates > 0 && opt_bve_heap != 2)
                 data.removedClause(crO, &heap, ignore, &data_lock, &heap_lock); // updates stats and deleteTimer
               else 
                 data.removedClause(crO, NULL, var_Undef, &data_lock, NULL);
@@ -1710,8 +1765,12 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & da
 
               other.removePositionSortedThreadSafe(negated_lit_pos);
               didChange();
-              // TODO to much overhead? 
-              if (heap_updates > 0 && opt_bve_heap != 2)
+              if (opt_minimal_updates)
+              {
+                  data.deletedVar(var(neg));
+                  ++garbageCounter; // do not update data structure
+              }
+              else if (heap_updates > 0 && opt_bve_heap != 2)
                   data.removedLiteral(neg, 1, &heap, ignore, &data_lock, &heap_lock);
               else 
                   data.removedLiteral(neg, 1, NULL, var_Undef, &data_lock, NULL);
@@ -1741,7 +1800,7 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & da
     return l_Undef;
 }
 
-lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, const Var ignore, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, MarkArray & dirtyOccs, deque < CRef > & sharedSubsimpQueue, ParBVEStats & stats, int & rwlock_count, const bool doStatistics)
+lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, const Var ignore, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, MarkArray & dirtyOccs, deque < CRef > & sharedSubsimpQueue, ParBVEStats & stats, int & rwlock_count, int & garbageCounter, const bool doStatistics)
 {
   //processTime = cpuTime() - processTime;
   SpinLock & data_lock = var_lock[data.nVars()];
@@ -1819,7 +1878,13 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
       dirtyOccs.setCurrentStep(toInt(l));
       positive[i] = CRef_Undef;
 
-      if (heap_updates > 0 && opt_bve_heap != 2)
+      if (opt_minimal_updates)
+      {
+        for (int i = 0; i< satisfied.size(); ++i) 
+            data.deletedVar(var(satisfied[i]));
+        garbageCounter += ca.clauseWord32Size(satisfied.size(), satisfied.has_extra());
+      }
+      else if (heap_updates > 0 && opt_bve_heap != 2)
         data.removedClause(cr, &heap, ignore, &data_lock, &heap_lock); // updates stats and deleteTimer
       else 
         data.removedClause(cr, NULL, var_Undef, &data_lock, NULL);
@@ -1887,7 +1952,13 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
          didChange();
          c.set_delete(true);
          data_lock.unlock();
-         if (heap_updates > 0 && opt_bve_heap != 2)
+         if (opt_minimal_updates)
+         {
+            for (int i = 0; i < c.size(); ++i) 
+                data.deletedVar(var(c[i]));
+            garbageCounter += ca.clauseWord32Size(c.size(), c.has_extra());
+         }
+         else if (heap_updates > 0 && opt_bve_heap != 2)
             data.removedClause(cr, &heap, ignore, &data_lock, &heap_lock); // updates stats and deleteTimer
          else 
             data.removedClause(cr, NULL, var_Undef, &data_lock, NULL);
@@ -1922,7 +1993,12 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
     rwlock.readUnlock();
 
     // update formula data!
-    if (heap_updates > 0 && opt_bve_heap != 2)
+    if (opt_minimal_updates)
+    {
+      data.deletedVar(var(nl));
+      garbageCounter += countL + countO; // do not update data structure
+    }
+    else if (heap_updates > 0 && opt_bve_heap != 2)
       data.removedLiteral(nl, countL + countO, &heap, ignore, &data_lock, &heap_lock);
     else 
       data.removedLiteral(nl, countL + countO, NULL, var_Undef, &data_lock, NULL);

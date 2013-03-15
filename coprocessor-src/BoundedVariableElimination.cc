@@ -479,7 +479,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            //    mark old clauses for deletion
            bool doResolve = false;
            bool reducedLits = lit_clauses > 0 && lit_clauses <= lit_clauses_old;
-	   bool reducedClss = pos_count + neg_count > 0 && pos_count + neg_count >= resolvents;
+	       bool reducedClss = resolvents > 0 && pos_count + neg_count >= resolvents;
            if( opt_bve_lits == 0 ) doResolve = reducedLits;				// number of literals decreasesd
 	   else if( opt_bve_lits == 1 ) doResolve = reducedClss;			// number of clauses decreasesd
 	   else if( opt_bve_lits == 2 ) doResolve = reducedClss || reducedLits;	// number of literals or clauses decreasesd

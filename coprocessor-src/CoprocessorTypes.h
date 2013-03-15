@@ -762,6 +762,7 @@ inline void CoprocessorData::removedLiteral( const Lit l, const int32_t diff, He
         heap_lock->lock();
     deletedVar(var(l));
     lit_occurrence_count[toInt(l)] -= diff;
+    ca.freeLit();
     //assert(lit_occurrence_count[toInt(l)] == countLitOcc(l)); 
     if (heap != NULL)
     {
@@ -785,6 +786,7 @@ inline void CoprocessorData::addedClause (   const CRef cr, Heap<VarOrderBVEHeap
       {
         lit_occurrence_count[toInt(c[l])] += 1;
       }
+      numberOfCls++;
   }
   else 
   {
@@ -803,7 +805,7 @@ inline void CoprocessorData::addedClause (   const CRef cr, Heap<VarOrderBVEHeap
                 heap->update(var(c[l]));
         }
       }
-      numberOfCls --;
+      numberOfCls++;
       if (heap_lock != NULL)
           heap_lock->unlock();
       if (data_lock != NULL)

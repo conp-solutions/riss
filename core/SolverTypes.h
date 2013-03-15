@@ -375,9 +375,9 @@ class AllocatorReservation
 const CRef CRef_Undef = RegionAllocator<uint32_t>::Ref_Undef;
 class ClauseAllocator : public RegionAllocator<uint32_t>
 {
+ public:
     static int clauseWord32Size(int size, bool has_extra){
         return (sizeof(Clause) + (sizeof(Lit) * (size + (int)has_extra))) / sizeof(uint32_t); }
- public:
     bool extra_clause_field;
 
     ClauseAllocator(uint32_t start_cap) : RegionAllocator<uint32_t>(start_cap), extra_clause_field(false){}
