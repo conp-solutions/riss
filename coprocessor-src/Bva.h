@@ -83,6 +83,9 @@ protected:
   /** check data structures */
   bool checkLists(const string& headline);
   
+  /** other bva like formula analysis */
+  void analysis();
+  
 public:
   // parameters
   bool bvaComplement;		/// treat found complements special?
