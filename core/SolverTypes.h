@@ -362,19 +362,22 @@ public:
 class AllocatorReservation 
 {
     friend class ClauseAllocator;
-
+    uint32_t start;
     uint32_t current;
     uint32_t upper_limit;
 
-    AllocatorReservation(uint32_t _current, uint32_t _limit) : current(_current), upper_limit(_limit) {}
+    AllocatorReservation(uint32_t _current, uint32_t _limit) : start(_current), current(_current), upper_limit(_limit) {}
+    public:
+    uint32_t getCurrent() const { return current; }
+    uint32_t getUpperLimit() const { return upper_limit; }
 };
 
 const CRef CRef_Undef = RegionAllocator<uint32_t>::Ref_Undef;
 class ClauseAllocator : public RegionAllocator<uint32_t>
 {
+ public:
     static int clauseWord32Size(int size, bool has_extra){
         return (sizeof(Clause) + (sizeof(Lit) * (size + (int)has_extra))) / sizeof(uint32_t); }
- public:
     bool extra_clause_field;
 
     ClauseAllocator(uint32_t start_cap) : RegionAllocator<uint32_t>(start_cap), extra_clause_field(false){}
@@ -444,10 +447,11 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
     {
         assert(sizeof(Lit)      == sizeof(uint32_t));
         assert(sizeof(float)    == sizeof(uint32_t));
+        assert(clauses >= learnts); 
         return            (   sizeof(Clause) * clauses 
                             + sizeof(Lit)    * literals
                             + sizeof(Lit)    * learnts          // for extra field
-                            + sizeof(Lit)    * (((int) extra_clause_field) * (clauses - learnts)) // if extra-field is used
+                            + (extra_clause_field ? sizeof(Lit)    * (clauses - learnts) : 0)
                           ) / sizeof(uint32_t);
     }
 
@@ -496,11 +500,16 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         assert(sizeof(Lit)      == sizeof(uint32_t));
         assert(sizeof(float)    == sizeof(uint32_t));
         assert(reservation.current < reservation.upper_limit && "no reserved space left");
-        
+        if (false && reservation.current >= reservation.upper_limit)
+        {
+           cerr <<  "no reserved space left" << endl;
+           abort();
+        }
         bool use_extra = learnt | extra_clause_field;
         
         assert(reservation.current + clauseWord32Size(ps.size(), use_extra) <= reservation.upper_limit && "requested clause size does not fit in reservation");
-        
+        if(false && reservation.current + clauseWord32Size(ps.size(), use_extra) > reservation.upper_limit)
+            cerr << "requested clause size does not fit in reservation" <<endl;
         CRef cid = reservation.current;
         new (lea(cid)) Clause(ps, use_extra, learnt);
         
