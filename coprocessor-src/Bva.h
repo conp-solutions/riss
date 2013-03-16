@@ -84,14 +84,23 @@ protected:
   bool checkLists(const string& headline);
   
   /** pair of literals and clauses */
-  struct bvaPair {
+  struct xorPair {
     Lit l1,l2;
     CRef c1,c2;
-    bvaPair( Lit _l1, Lit _l2, CRef _c1, CRef _c2) : l1(_l1),l2(_l2),c1(_c1),c2(_c2){}
+    xorPair( Lit _l1, Lit _l2, CRef _c1, CRef _c2) : l1(_l1),l2(_l2),c1(_c1),c2(_c2){}
+  };
+  
+  struct itePair {
+    Lit l1,l2,l3;
+    CRef c1,c2;
+    itePair( Lit _l1, Lit _l2, Lit _l3, CRef _c1, CRef _c2) : l1(_l1),l2(_l2),l3(_l3),c1(_c1),c2(_c2){}
   };
   
   /** other bva like formula analysis */
   void analysis();
+  
+  void xorAnalysis();
+  void iteAnalysis();
   
   /** remove duplicate clauses from the clause list of the given literal*/
   void removeDuplicateClauses( const Lit literal );
