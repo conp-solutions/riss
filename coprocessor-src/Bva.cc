@@ -17,52 +17,93 @@ using namespace Coprocessor;
 static const char* _cat = "COPROCESSOR 3 - BVA";
 
 static IntOption  opt_bva_push             (_cat, "cp3_bva_push",    "push variables back to queue (0=none,1=original,2=all)", 2, IntRange(0, 2));
-static IntOption  opt_bva_limit            (_cat, "cp3_bva_limit",   "number of steps allowed for BVA", 1500000, IntRange(0, INT32_MAX));
+static IntOption  opt_bva_Alimit            (_cat, "cp3_bva_limit",   "number of steps allowed for AND-BVA", 1500000, IntRange(0, INT32_MAX));
+static IntOption  opt_bva_Xlimit            (_cat, "cp3_bva_Xlimit",   "number of steps allowed for XOR-BVA", 100000000, IntRange(0, INT32_MAX));
+static IntOption  opt_bva_Ilimit            (_cat, "cp3_bva_Ilimit",   "number of steps allowed for ITE-BVA", 100000000, IntRange(0, INT32_MAX));
 
 static BoolOption opt_bvaComplement        (_cat, "cp3_bva_compl",   "treat complementary literals special", true);
 static BoolOption opt_bvaRemoveDubplicates (_cat, "cp3_bva_dupli",   "remove duplicate clauses", true);
 static BoolOption opt_bvaSubstituteOr      (_cat, "cp3_bva_subOr",   "try to also substitus disjunctions", false);
 
 
+
 #if defined CP3VERSION 
 static const int bva_debug = 0;
 static const bool opt_bvaAnalysis = false;
+static const bool opt_Xbva = false;
+static const bool opt_Ibva = false;
 static const int opt_bvaAnalysisDebug = 0;
 #else
 static IntOption  bva_debug                (_cat, "bva-debug",       "Debug Output of BVA", 0, IntRange(0, 4));
 static IntOption  opt_bvaAnalysisDebug     (_cat, "cp3_bva_ad",      "experimental analysis", 0, IntRange(0, 4));
-static BoolOption opt_bvaAnalysis          (_cat, "cp3_bva_a",       "experimental analysis", false);
+
+static BoolOption opt_Xbva          (_cat, "cp3_Xbva",       "perform XOR-bva", false);
+static BoolOption opt_Ibva          (_cat, "cp3_Ibva",       "perform ITE-bva", false);
+
 #endif
 	
 BoundedVariableAddition::BoundedVariableAddition(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data)
 : Technique( _ca, _controller )
 , data( _data )
 , doSort( true )
-, duplicates(0)
-, complementCount(0)
-, replacements(0)
-, totalReduction(0)
-, replacedOrs(0)
-, replacedMultipleOrs(0)
 , processTime(0)
+, andTime(0)
+, iteTime(0)
+, xorTime(0)
+, andDuplicates(0)
+, andComplementCount(0)
+, andReplacements(0)
+, andTotalReduction(0)
+, andReplacedOrs(0)
+, andReplacedMultipleOrs(0)
+, andMatchChecks(0)
+, xorfoundMatchings(0)
+, xorMultiMatchings(0)
+, xorMatchSize(0)
+, xorMaxPairs(0)
+, xorFullMatches(0)
+, xorTotalReduction(0)
+, xorMatchChecks(0)
+, iteFoundMatchings(0)
+, iteMultiMatchings(0)
+, iteMatchSize(0)
+, iteMaxPairs (0)
+, iteTotalReduction(0)
+, iteMatchChecks(0)
+
 , bvaHeap( data )
 , bvaComplement(opt_bvaComplement)
 , bvaPush(opt_bva_push)
-, bvaLimit(opt_bva_limit)
+, bvaALimit(opt_bva_Alimit)
+, bvaXLimit(opt_bva_Xlimit)
+, bvaILimit(opt_bva_Ilimit)
 , bvaRemoveDubplicates(opt_bvaRemoveDubplicates)
 , bvaSubstituteOr(opt_bvaSubstituteOr)
 {
 
 }
 
-bool BoundedVariableAddition::variableAddtion(bool _sort) {
+
+bool BoundedVariableAddition::process()
+{
+  processTime = cpuTime() - processTime;
+  bool didSomething = false;
+
+  // run all three types of bva - could even re-run?
+  didSomething = andBVA();
+  if( opt_Xbva ) didSomething = xorBVA() || didSomething;
+  if( opt_Ibva ) didSomething = iteBVA() || didSomething;
   
-  if( opt_bvaAnalysis ) analysis();
+  processTime = cpuTime() - processTime;
+}
+
+
+bool BoundedVariableAddition::andBVA() {
   
   bool didSomething=false;
 
-  MethodTimer processTimer( &processTime );
-  doSort = _sort;
+  MethodTimer processTimer( &andTime );
+  doSort = true;
 
   // setup own structures
   bvaHeap.addNewElement(data.nVars() * 2);
@@ -82,7 +123,7 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	bool addedNewAndGate = false;
 	
 	// for l in F
-	while (bvaHeap.size() > 0 && (data.unlimited() || bvaLimit > 0) && !data.isInterupted() ) {
+	while (bvaHeap.size() > 0 && (data.unlimited() || bvaALimit > andMatchChecks) && !data.isInterupted() ) {
 	  
 	  if( bva_debug > 1 ) cerr << "c next major loop iteration with heapSize " << bvaHeap.size() << endl;
 	  
@@ -181,7 +222,7 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	    // for D in Fl1
 	    for( uint32_t j = 0 ; j < data.list( l1).size(); ++j ) {
 	      const CRef D = data.list( l1)[j];
-	      bvaLimit = (bvaLimit > 0 ) ? bvaLimit - 1 : 0;
+	      andMatchChecks ++;
 	      if( D == C ) continue;
 	      const Clause& clauseD = ca[ D];
 	      if( clauseD.can_be_deleted() ) continue;
@@ -204,7 +245,7 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	      
 	      // cerr << "c found match: " << match << endl;
 	      
-	      if( match == lit_Undef ) { duplicates++; continue; } // found a matching clause
+	      if( match == lit_Undef ) { andDuplicates++; continue; } // found a matching clause
 	      assert ( match != right && "matching literal is the right literal");
 	
 	      if( bva_debug > 3 ) cerr << "c check count for literal " << match << " where countSize is mark: " << bvaCountMark.size() << " count:" << bvaCountCount.size() << " index: " << toInt(match) << endl;
@@ -284,7 +325,7 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	      data.setFailed();
 	      return didSomething;
 	    }
-	    complementCount ++;
+	    andComplementCount ++;
 	    if( !bvaHeap.inHeap( toInt(right) ) ) bvaHeap.insert( toInt(right) ) ;
 	    else bvaHeap.update( toInt(right) );
 	    if( !bvaHeap.inHeap( toInt(left) ) ) bvaHeap.insert( toInt(left) ) ;
@@ -409,8 +450,8 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	  }
 	  
 	  // create the new clauses!
-	  const Var newX = nextVariable();
-	  replacements++; totalReduction += currentReduction;
+	  const Var newX = nextVariable('a');
+	  andReplacements++; andTotalReduction += currentReduction;
 	  didSomething = true;
 	  assert( !bvaHeap.inHeap( toInt(right) ) && "by adding new variable, heap should not contain the currently removed variable" );
 	  
@@ -538,8 +579,8 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
 	      // rewrite current clause
 	      {
 		if( bva_debug > 2 ) cerr << "c rewrite clause[ " << clRef << " ]= " << clause << endl;
-		replacedOrs ++;
-		replacedMultipleOrs = (isNotFirst ? replacedMultipleOrs + 1 : replacedMultipleOrs );
+		andReplacedOrs ++;
+		andReplacedMultipleOrs = (isNotFirst ? andReplacedMultipleOrs + 1 : andReplacedMultipleOrs );
 		isNotFirst = true; // each next clause is not the first clause
 		uint32_t j = 0;
 		for(  ; j < clause.size(); ++ j ) {
@@ -644,15 +685,10 @@ bool BoundedVariableAddition::variableAddtion(bool _sort) {
   return didSomething;
 }
 
-void BoundedVariableAddition::analysis()
+bool BoundedVariableAddition::xorBVA()
 {
-  xorAnalysis();
-  iteAnalysis();
-  exit(15);
-}
-
-void BoundedVariableAddition::xorAnalysis()
-{
+  xorTime = cpuTime() - xorTime ;
+  
   // setup parameters
   const int replacePairs = 3;
   const int smallestSize = 3;
@@ -664,30 +700,17 @@ void BoundedVariableAddition::xorAnalysis()
     if( data[  mkLit(v,true)  ] >= replacePairs ) if( !bvaHeap.inHeap(toInt(mkLit(v,true))) )   bvaHeap.insert( toInt(mkLit(v,true))  );
   }
   data.ma.resize(2*data.nVars());
-  MarkArray match; // to detect whether clauses are equal
-  match.resize(2*data.nVars());
-  MarkArray seenVariable; // to detect whether clauses are equal
-  seenVariable.resize(data.nVars());
   
   vector<xorPair> xorPairs;
-  int foundMatchings=0;
-  int matchSize=0;
-  int maxPairs = 0;
-  int64_t matchChecks = 0;
   
-  seenVariable.nextStep();
-  while (bvaHeap.size() > 0 && (data.unlimited() || bvaLimit > 0) && !data.isInterupted() ) {
+  bool didSomething = false;
+  
+  while (bvaHeap.size() > 0 && (data.unlimited() || bvaXLimit > xorMatchChecks) && !data.isInterupted() ) {
     const Lit right = toLit(bvaHeap[0]);
     assert( bvaHeap.inHeap( toInt(right) ) && "item from the heap has to be on the heap");
 
     bvaHeap.removeMin();
     if( data.value( right ) != l_Undef ) continue;
-
-    if( seenVariable.isCurrentStep( var(right) ) ) continue; // check each variable only once!
-    seenVariable.setCurrentStep( var(right) );
-    
-    // check each pair of literals only once!
-    data.ma.nextStep();
 
     if( opt_bvaAnalysisDebug > 2 ) cerr << "c analysis on " << right << endl;
     for( uint32_t j = 0 ; j < data.list( right ).size() && !data.isInterupted(); ++j ) { // iterate over all candidates for C
@@ -695,18 +718,18 @@ void BoundedVariableAddition::xorAnalysis()
       if( c.can_be_deleted() || c.size() < smallestSize ) continue;
     
       if( opt_bvaAnalysisDebug  > 3 ) cerr << "c work on clause " << c << endl;
-      match.nextStep();
+      data.ma.nextStep();
       for( int k = 0 ; k < c.size(); ++ k ) {
 	const Lit l1 = c[k];
-	match.setCurrentStep( toInt( c[k] ) ); // mark all lits in C to check "C == D" fast
+	data.ma.setCurrentStep( toInt( c[k] ) ); // mark all lits in C to check "C == D" fast
       }
-      match.reset( toInt(right) );
+      data.ma.reset( toInt(right) );
       
       Lit min = lit_Undef;
       for( int k = 0 ; k < c.size(); ++ k ) {
 	const Lit l1 = c[k];
 	if( toInt(l1) <= toInt(right) ) continue; // only bigger literals!
-	match.reset( toInt(l1) );
+	data.ma.reset( toInt(l1) );
 
 	// here, look only for the interesting case for XOR!
 	bool doesMatch = true;
@@ -715,24 +738,24 @@ void BoundedVariableAddition::xorAnalysis()
 	  if( data.list(right)[j] > data.list( ~l1 )[m] ) continue; // find each case only once!
 
 	  const Clause & d = ca[ data.list( ~l1 )[m] ] ;
-	  matchChecks ++;
+	  xorMatchChecks ++;
 	  if( d.can_be_deleted() || d.size() != c.size() ) continue; // |D| == |C|
 
 	  doesMatch = true;	  
 	  for( int r = 0 ; r < d.size(); ++ r ) {
 	    const Lit dl = d[r];
-	    if( dl == ~l1 || dl == ~right ) continue;
-	    if( ! match.isCurrentStep  ( toInt(dl) ) ) { doesMatch = false; break; }
+	    if( var(dl) == var(l1) || var(dl) == var(right) ) continue;
+	    if( ! data.ma.isCurrentStep  ( toInt(dl) ) ) { doesMatch = false; break; }
 	  }
 	  
 	  if( !doesMatch ) continue; // check next candidate for D!
-	  if( opt_bvaAnalysisDebug > 3 ) cerr << "c match with clause " << d << endl;
+	  if( opt_bvaAnalysisDebug > 3 ) cerr << "c data.ma with clause " << d << endl;
 	  // cerr << "c match for (" << right << "," << l1 << ") -- (" << ~right << "," << ~l1 << "): " << c << " and " << d << endl;
 	  xorPairs.push_back( xorPair(right,l1, data.list(right)[j], data.list( ~l1 )[m]) );
 	  break; // do not try to find more clauses that match C!
 	}
 
-	match.setCurrentStep( toInt(l1) ); // add back to match set!
+	data.ma.setCurrentStep( toInt(l1) ); // add back to match set!
 	if( doesMatch ) break; // do not collect all pairs of this clause!
       }
       
@@ -748,38 +771,120 @@ void BoundedVariableAddition::xorAnalysis()
 	}
       }
     }
+    
+    
+    
     // check whether one literal matches multiple clauses
+    int maxR = 0; int maxI = 0; int maxJ = 0;
+    bool multipleMatches = false;
     for( int i = 0 ; i < xorPairs.size(); ++ i ) {
       int j = i;
-      while ( j < xorPairs.size() && toInt(xorPairs[i].l2) == toInt(xorPairs[j].l2 ) ) ++j ;
+      while ( j < xorPairs.size() && toInt(xorPairs[i].l2) == toInt(xorPairs[j].l2) ) ++j ;
       assert(j>=i);
       if( j - i >= replacePairs ) {
-	maxPairs = maxPairs > j-i ? maxPairs : j - i ;
-	if( opt_bvaAnalysisDebug > 0) {
-	  cerr << "c found XOR matching with " << j-i << " pairs for (" << xorPairs[i].l1 << " -- " << xorPairs[i].l2 << ")" << endl;
-	  if( opt_bvaAnalysisDebug > 1) {
-	    for( int k = i; k < j; ++ k ) cerr << "c p " << k - i << " : " << ca[ xorPairs[k].c1 ] << " and " << ca[ xorPairs[k].c2 ] << endl;
-	  }
+	int thisR = j-i;
+	multipleMatches = maxR > 0; // set to true, if multiple matchings could be found
+	if( thisR > maxR ) {
+	  maxI = i; maxJ = j; maxR = thisR; 
 	}
-	// apply replacing/rewriting here
-	
-	// remove modified/deleted clause references in remaining list
-	foundMatchings ++;
-	matchSize += (j-i);
       }
       i = j - 1; // jump to next matching
     }
+
+    if( maxR >= replacePairs ) {
+    // apply rewriting for the biggest matching!
+	  xorMaxPairs = xorMaxPairs > maxJ-maxI ? xorMaxPairs : maxJ - maxI ;
+	  if( opt_bvaAnalysisDebug > 0) {
+	    if( opt_bvaAnalysisDebug ) cerr << "c found XOR matching with " << maxJ-maxI << " pairs for (" << xorPairs[maxI].l1 << " -- " << xorPairs[maxI].l2 << ")" << endl;
+	    if( opt_bvaAnalysisDebug > 1) {
+	      for( int k = maxI; k < maxJ; ++ k ) cerr << "c p " << k - maxI << " : " << ca[ xorPairs[k].c1 ] << " and " << ca[ xorPairs[k].c2 ] << endl;
+	    }
+	  }
+	  // TODO: check for implicit full gate
+	  
+	  // apply replacing/rewriting here (right,l1) -> (x); add clauses (-x,right,l1),(-x,-right,-l1)
+	  const Var newX = nextVariable('x'); // done by procedure! bvaHeap.addNewElement();
+	  if( opt_bvaAnalysisDebug ) cerr << "c introduce new variable " << newX + 1 << endl;
+	  
+	  didSomething = true;
+	  for( int k = maxI; k < maxJ; ++ k ) {
+	    ca[ xorPairs[k].c2 ].set_delete(true); // all second clauses will be deleted, all first clauses will be rewritten
+	    if( opt_bvaAnalysisDebug ) cerr  << "c XOR-BVA deleted " << ca[xorPairs[k].c2] << endl;
+	    data.removedClause( xorPairs[k].c2 );
+	    Clause& c = ca[ xorPairs[k].c1 ];
+	    if( opt_bvaAnalysisDebug ) cerr << "c XOR-BVA rewrite " << c << endl;
+	    for( int ci = 0 ; ci < c.size(); ++ ci ) { // rewrite clause
+	      if( c[ci] == xorPairs[k].l1 ) c[ci] = mkLit(newX,false);
+	      else if (c[ci] == xorPairs[k].l2) {
+		c.removePositionSorted(ci); 
+		ci --;
+	      }
+	    }
+	    c.sort();
+	    if( opt_bvaAnalysisDebug ) cerr << "c XOR-BVA into " << c << endl;
+	    data.removeClauseFrom(xorPairs[k].c1,xorPairs[k].l1);
+	    data.removeClauseFrom(xorPairs[k].c1,xorPairs[k].l2);
+	    data.removedLiteral(xorPairs[k].l1); data.removedLiteral(xorPairs[k].l2); data.addedLiteral(mkLit(newX,false));
+	    data.list(mkLit(newX,false)).push_back( xorPairs[k].c1 );
+	  }
+	  // add new clauses
+	  data.lits.clear();
+	  data.lits.push_back( mkLit(newX,true) );
+	  data.lits.push_back( xorPairs[maxI].l1 );
+	  data.lits.push_back( xorPairs[maxI].l2 );
+	  CRef tmpRef = ca.alloc(data.lits, false); // no learnt clause!
+	  ca[tmpRef].sort();
+	  data.addClause( tmpRef );
+	  data.getClauses().push( tmpRef );
+	  if( opt_bvaAnalysisDebug ) cerr << "c XOR-BVA added " << ca[tmpRef] << endl;
+	  data.lits[1] = ~data.lits[1];data.lits[2] = ~data.lits[2];
+	  tmpRef = ca.alloc(data.lits, false); // no learnt clause!
+	  ca[tmpRef].sort();
+	  data.addClause( tmpRef );
+	  data.getClauses().push( tmpRef );
+	  if( opt_bvaAnalysisDebug ) cerr << "c XOR-BVA added " << ca[tmpRef] << endl;
+	  
+	  xorTotalReduction += (maxR - 2);
+	  
+	  // occurrences of l1 and l2 are only reduced; do not check!
+	  if( opt_bva_push > 1 && data[mkLit(newX,false)] > replacePairs ) {
+	    if( !bvaHeap.inHeap( toInt(mkLit(newX,false))) ) bvaHeap.insert( toInt(mkLit(newX,false)) );
+	  }
+	  // stats
+	  xorfoundMatchings ++;
+	  xorMatchSize += (maxJ-maxI);
+	  // TODO: look for the other half of the gate definition!
+    }
+    
+    if( multipleMatches ) xorMultiMatchings ++;
+    if( opt_bva_push > 0 && multipleMatches && data[right] > replacePairs ) { // readd only, if we missed something!
+      assert( !bvaHeap.inHeap( toInt(right)) && "literal representing right hand side has to be removed from heap already" ) ;
+      if( !bvaHeap.inHeap( toInt(right)) ) bvaHeap.insert( toInt(right) );
+    }
+    
+    if(opt_bvaAnalysisDebug && checkLists("XOR: check data structure integrity") ){
+      assert( false && "integrity of data structures has to be ensured" ); 
+    }
+    
     xorPairs.clear();
   }
 
-  cerr << "c BVA XOR analysis: " << foundMatchings << " matchings, " << matchSize << " matchSize, " << maxPairs << " maxPair, " << matchChecks << " checks, " << endl;
+  xorTime = cpuTime() - xorTime;
+  
+
+  
+  return didSomething;
 }
 
-void BoundedVariableAddition::iteAnalysis()
+bool BoundedVariableAddition::iteBVA()
 {
+  iteTime = cpuTime() - iteTime;
+  
   // setup parameters
   const int replacePairs = 3;
   const int smallestSize = 3;
+  
+  bool didSomething = false;;
   
   // data structures
   bvaHeap.addNewElement(data.nVars() * 2);
@@ -792,30 +897,15 @@ void BoundedVariableAddition::iteAnalysis()
     }
   }
   data.ma.resize(2*data.nVars());
-  MarkArray match; // to detect whether clauses are equal
-  match.resize(2*data.nVars());
-  MarkArray seenVariable; // to detect whether clauses are equal
-  seenVariable.resize(data.nVars());
   
   vector<itePair> itePairs;
-  int foundMatchings=0;
-  int matchSize=0;
-  int maxPairs = 0;
-  int64_t matchChecks = 0;
   
-  seenVariable.nextStep();
-  while (bvaHeap.size() > 0 && (data.unlimited() || bvaLimit > 0) && !data.isInterupted() ) {
+  while (bvaHeap.size() > 0 && (data.unlimited() || bvaILimit > iteMatchChecks) && !data.isInterupted() ) {
     const Lit right = toLit(bvaHeap[0]);
     assert( bvaHeap.inHeap( toInt(right) ) && "item from the heap has to be on the heap");
 
     bvaHeap.removeMin();
     if( data.value( right ) != l_Undef ) continue;
-
-    if( seenVariable.isCurrentStep( var(right) ) ) continue; // check each variable only once!
-    seenVariable.setCurrentStep( var(right) );
-    
-    // check each pair of literals only once!
-    data.ma.nextStep();
 
     // x <-> ITE(s,t,f) in cls:
     // s  and  t ->  x  == -s,-t,x
@@ -833,27 +923,27 @@ void BoundedVariableAddition::iteAnalysis()
       if( c.can_be_deleted() || c.size() < smallestSize ) continue;
     
       if( opt_bvaAnalysisDebug  > 3 ) cerr << "c work on clause " << c << endl;
-      match.nextStep();
+      data.ma.nextStep();
       for( int k = 0 ; k < c.size(); ++ k ) {
 	const Lit l1 = c[k];
-	match.setCurrentStep( toInt( c[k] ) ); // mark all lits in C to check "C == D" fast
+	data.ma.setCurrentStep( toInt( c[k] ) ); // mark all lits in C to check "C == D" fast
       }
-      match.reset( toInt(right) );
-      match.setCurrentStep( toInt(~right) ); // array to be hit fully: C \setminus r \cup ~r, have exactly one miss!
+      data.ma.reset( toInt(right) );
+      data.ma.setCurrentStep( toInt(~right) ); // array to be hit fully: C \setminus r \cup ~r, have exactly one miss!
       
       Lit min = lit_Undef;
       for( int k = 0 ; k < c.size(); ++ k ) {
-	const Lit l1 = c[k];
-	if( toInt(l1) <= toInt(right) ) continue; // only bigger literals!
-
-	// here, look only for the interesting case for XOR!
+	const Lit l1 = c[k]; 
+	if( l1 == right ) continue;  // TODO can symmetry breaking be applied?
+	
+	// here, look only for the interesting case for ITE!
 	bool doesMatch = true;
 	for( uint32_t m = 0 ; m < data.list( ~right ).size(); ++m ) {
 	  if( data.list( ~right )[m] == data.list(right)[j] ) continue; // C != D
 	  if( data.list(right)[j] > data.list( ~right )[m] ) continue; // find each case only once!
 
 	  const Clause & d = ca[ data.list( ~right )[m] ] ;
-	  matchChecks++;
+	  iteMatchChecks++;
 	  if( d.can_be_deleted() || d.size() != c.size() ) continue; // |D| == |C|
 
 	  doesMatch = true;	  
@@ -861,7 +951,7 @@ void BoundedVariableAddition::iteAnalysis()
 	  for( int r = 0 ; r < d.size(); ++ r ) {
 	    const Lit dl = d[r];
 	    if( dl == ~right ) continue;
-	    if( ! match.isCurrentStep  ( toInt(dl) ) ) { 
+	    if( ! data.ma.isCurrentStep  ( toInt(dl) ) ) { 
 	      if( matchLit == lit_Undef && var(dl) != var(l1)  ) matchLit = dl; // ensure that f and t have different variables
 	      else { // only one literal is allowed to miss the hit
 		doesMatch = false;
@@ -891,15 +981,17 @@ void BoundedVariableAddition::iteAnalysis()
 	// first, variable of right should be the same! - always ensured, because looking at this type here only!
 	// next min variable of l1 and l2 should be smaller
 	// next variable of l3 should smaller
-	
+
+	// TODO: have symmetry breaking sort (also below?)?
+	/*
 	Var minI = var( itePairs[i].l2 ) < var( itePairs[i].l3 ) ? var( itePairs[i].l2 ) : var( itePairs[i].l3 );
 	Var minJ = var( itePairs[j].l2 ) < var( itePairs[j].l3 ) ? var( itePairs[j].l2 ) : var( itePairs[j].l3 );
 	Var maxI = var( itePairs[i].l2 ) > var( itePairs[i].l3 ) ? var( itePairs[i].l2 ) : var( itePairs[i].l3 );
 	Var maxJ = var( itePairs[j].l2 ) > var( itePairs[j].l3 ) ? var( itePairs[j].l2 ) : var( itePairs[j].l3 );
 	
-	if ( var(itePairs[i].l2) > var(itePairs[j].l2)
-	  || ( toInt(itePairs[i].l2) == toInt(itePairs[j].l2) && minI > minJ )
-	  || ( toInt(itePairs[i].l2) == toInt(itePairs[j].l2) && minI == minJ && maxI > maxJ )
+	  */
+	if ( toInt(itePairs[i].l2) > toInt(itePairs[j].l2)
+	  || ( toInt(itePairs[i].l2) == toInt(itePairs[j].l2) && toInt(itePairs[i].l3) > toInt(itePairs[j].l3) )
 	) {
 	  const itePair tmp =  itePairs[i];
 	  itePairs[i] = itePairs[j];
@@ -907,36 +999,101 @@ void BoundedVariableAddition::iteAnalysis()
 	}
       }
     }
+    
     // check whether one literal matches multiple clauses
+    int maxR = 0; int maxI = 0; int maxJ = 0;
+    bool multipleMatches = false;
     for( int i = 0 ; i < itePairs.size(); ++ i ) {
       int j = i;
       while ( j < itePairs.size() 
-	&& ( // if both variables match
-	    (var(itePairs[i].l2) == var(itePairs[j].l2 ) && var(itePairs[i].l3) == var(itePairs[j].l3 ) )
-        ||  (var(itePairs[i].l3) == var(itePairs[j].l2 ) && var(itePairs[i].l2) == var(itePairs[j].l3 ) )
+	&& ( // if both literals match // TODO: have a more symmetry-breaking one here? there are 4 kinds of ITEs that can be represented with 4 variables, two work on the same output literal, combine them!
+	    ( toInt(itePairs[i].l2) == toInt(itePairs[j].l2 ) && toInt(itePairs[i].l3) == toInt(itePairs[j].l3 ) )
 	)
       ) ++j ;
       assert(j>=i);
       if( j - i >= replacePairs ) {
-	maxPairs = maxPairs > j-i ? maxPairs : j - i ;
-	if( opt_bvaAnalysisDebug > 0) {
-	  cerr << "c found ITE matching with " << j-i << " pairs for (" << itePairs[i].l1 << " -- " << itePairs[i].l2 << ")" << endl;
-	  if( opt_bvaAnalysisDebug > 1) {
-	    for( int k = i; k < j; ++ k ) cerr << "c p " << k - i << " : " << ca[ itePairs[k].c1 ] << " and " << ca[ itePairs[k].c2 ] << endl;
-	  }
+	int thisR = j-i;
+	multipleMatches = maxR > 0; // set to true, if multiple matchings could be found
+	if( thisR > maxR ) {
+	  maxI = i; maxJ = j; maxR = thisR; 
 	}
-	// apply replacing/rewriting here
-	
-	// remove modified/deleted clause references in remaining list
-	foundMatchings ++;
-	matchSize += (j-i);
       }
       i = j - 1; // jump to next matching
     }
+
+    if( maxR >= replacePairs ) {
+    // apply rewriting for the biggest matching!
+	  iteMaxPairs = iteMaxPairs > maxJ-maxI ? iteMaxPairs : maxJ - maxI ;
+
+	  // TODO: check for implicit full gate
+
+	  // apply replacing/rewriting here (right,l1) -> (x); add clauses (-x,right,l1),(-x,-right,-l1)
+	  const Var newX = nextVariable('x'); // done by procedure! bvaHeap.addNewElement();
+	  if( opt_bvaAnalysisDebug ) cerr << "c introduce new variable " << newX + 1 << endl;
+	  
+	  for( int k = maxI; k < maxJ; ++ k ) {
+	    ca[ itePairs[k].c2 ].set_delete(true); // all second clauses will be deleted, all first clauses will be rewritten
+	    if( opt_bvaAnalysisDebug ) cerr  << "c ITE-BVA deleted " << ca[itePairs[k].c2] << endl;
+	    data.removedClause( itePairs[k].c2 );
+	    Clause& c = ca[ itePairs[k].c1 ];
+	    if( opt_bvaAnalysisDebug ) cerr << "c ITE-BVA rewrite " << c << endl;
+	    for( int ci = 0 ; ci < c.size(); ++ ci ) { // rewrite clause
+	      if( c[ci] == itePairs[k].l1 ) c[ci] = mkLit(newX,false);
+	      else if (c[ci] == itePairs[k].l2) {
+		c.removePositionSorted(ci); 
+		ci --;
+	      }
+	    }
+	    c.sort();
+	    if( opt_bvaAnalysisDebug ) cerr << "c ITE-BVA into " << c << endl;
+	    data.removeClauseFrom(itePairs[k].c1,itePairs[k].l1);
+	    data.removeClauseFrom(itePairs[k].c1,itePairs[k].l2);
+	    data.removedLiteral(itePairs[k].l1); data.removedLiteral(itePairs[k].l2); data.addedLiteral(mkLit(newX,false));
+	    data.list(mkLit(newX,false)).push_back( itePairs[k].c1 );
+	  }
+	  // add new clauses
+	  data.lits.clear();
+	  data.lits.push_back( mkLit(newX,true) );
+	  data.lits.push_back( itePairs[maxI].l1 );
+	  data.lits.push_back( itePairs[maxI].l2 );
+	  CRef tmpRef = ca.alloc(data.lits, false); // no learnt clause!
+	  ca[tmpRef].sort();
+	  data.addClause( tmpRef );
+	  data.getClauses().push( tmpRef );
+	  if( opt_bvaAnalysisDebug ) cerr << "c ITE-BVA added " << ca[tmpRef] << endl;
+	  data.lits[1] = ~data.lits[1];data.lits[2] = itePairs[maxI].l3;
+	  tmpRef = ca.alloc(data.lits, false); // no learnt clause!
+	  ca[tmpRef].sort();
+	  data.addClause( tmpRef );
+	  data.getClauses().push( tmpRef );
+	  if( opt_bvaAnalysisDebug ) cerr << "c ITE-BVA added " << ca[tmpRef] << endl;
+	  
+	  if( opt_bva_push > 1 && data[mkLit(newX,false)] > replacePairs ) {
+	    if( !bvaHeap.inHeap( toInt(mkLit(newX,false))) ) bvaHeap.insert( toInt(mkLit(newX,false)) );
+	  }
+	  // stats
+	  didSomething = true;
+	  iteFoundMatchings ++;
+	  iteMatchSize += (maxJ-maxI);
+	  iteTotalReduction += (maxR - 2);
+	  // TODO: look for the other half of the gate definition!
+    }
+    
+    if( multipleMatches ) iteMultiMatchings ++;
+    if( ( opt_bva_push > 0 && multipleMatches ) && data[right] > replacePairs ) { // readd only, if something might have been missed!
+      assert( !bvaHeap.inHeap( toInt(right)) && "literal representing right hand side has to be removed from heap already" ) ;
+      if( !bvaHeap.inHeap( toInt(right)) ) bvaHeap.insert( toInt(right) );
+    }
+    
+    if(opt_bvaAnalysisDebug && checkLists("ITE: check data structure integrity") ) {
+      assert( false && "integrity of data structures has to be ensured" ); 
+    }
+    
     itePairs.clear();
   }
-
-  cerr << "c BVA ITE analysis: " << foundMatchings << " matchings, " << matchSize << " matchSize, " << maxPairs << " maxPair, " << matchChecks << " checks, " << endl;
+  
+  iteTime = cpuTime() - iteTime;
+  return didSomething;
 }
 
 
@@ -1009,9 +1166,9 @@ bool BoundedVariableAddition::bvaHandleComplement( const Lit right ) {
   return true;
 }
 
-Var BoundedVariableAddition::nextVariable()
+Var BoundedVariableAddition::nextVariable(char type)
 {
-  Var nextVar = data.nextFreshVariable();
+  Var nextVar = data.nextFreshVariable(type);
   
   // enlarge own structures
   bvaHeap.addNewElement(data.nVars());
@@ -1028,15 +1185,30 @@ Var BoundedVariableAddition::nextVariable()
 
 void BoundedVariableAddition::printStatistics(ostream& stream)
 {
-stream << "c [STAT] BVA " 
-<< processTime << "s, "
-<< replacements << " freshVars, "
-<< totalReduction << " reducedClauses, "
-<< duplicates << " duplicateClauses, "
-<< complementCount << " complLits, "
-<< replacedOrs << " orGSubs, "
-<< replacedMultipleOrs << " multiOGS, "
+stream << "c [STAT] BVA " << processTime << "s, "
+<< andTotalReduction + xorTotalReduction + iteTotalReduction << " reducedClauses, "
+<< andReplacements + xorfoundMatchings + iteFoundMatchings << " freshVariables, "
 << endl;
+
+stream << "c [STAT] AND-BVA "
+<< andTime << " seconds, "
+<< andReplacements << " freshVars, "
+<< andTotalReduction << " reducedClauses, "
+<< andDuplicates << " duplicateClauses, "
+<< andComplementCount << " complLits, "
+<< andReplacedOrs << " orGSubs, "
+<< andReplacedMultipleOrs << " multiOGS, "
+<< andMatchChecks << " checks, "
+<< endl;
+
+// print only if enabled!
+if( opt_Xbva )
+stream << "c [STAT] XOR-BVA " << xorTime << " seconds, " << xorfoundMatchings << " matchings, " << xorMultiMatchings << " multis, " << xorTotalReduction << " reducedClauses, " 
+       << xorMatchSize << " matchSize, " << xorMaxPairs << " maxPair, " <<  xorMatchChecks << " checks, "  << endl;
+
+if( opt_Ibva )
+stream << "c [STAT] ITE-BVA " << iteTime << " seconds, " << iteFoundMatchings << " matchings, " << iteMultiMatchings << " multis, " << iteTotalReduction << " reducedClauses, " 
+       << iteMatchSize << " matchSize, " << iteMaxPairs << " maxPair, " << iteMatchChecks << " checks, " << endl;
 }
 
 

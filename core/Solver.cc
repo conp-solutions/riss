@@ -99,7 +99,9 @@ Solver::Solver() :
   , conflict_budget    (-1)
   , propagation_budget (-1)
   , asynch_interrupt   (false)
-  
+  // bva analysis
+  , oDecs(0), aDecs(0), iDecs(0), xDecs(0)
+  // preprocessor
   , coprocessor(0)
   , useCoprocessor(true)
 {}
@@ -119,7 +121,7 @@ Solver::~Solver()
 // Creates a new SAT variable in the solver. If 'decision' is cleared, variable will not be
 // used as a decision variable (NOTE! This has effects on the meaning of a SATISFIABLE result).
 //
-Var Solver::newVar(bool sign, bool dvar)
+Var Solver::newVar(bool sign, bool dvar, char type)
 {
     int v = nVars();
     watches  .init(mkLit(v, false));
@@ -133,6 +135,11 @@ Var Solver::newVar(bool sign, bool dvar)
     decision .push();
     trail    .capacity(v+1);
     setDecisionVar(v, dvar);
+    
+    // bva analysis, store the type of this variable!
+    assert( type != 'd' && "there is no such a type!" );
+    varType  .push(type);
+    
     return v;
 }
 
@@ -706,6 +713,15 @@ lbool Solver::search(int nof_conflicts)
                     return l_True;
             }
 
+            // bva analysis
+            switch( varType[ var(next) ] ) {
+	      case 'o': oDecs ++; break;
+	      case 'a': aDecs ++; break;
+	      case 'i': iDecs ++; break;
+	      case 'x': xDecs ++; break;
+	      default: assert( false && "variable should have one of the above types!" ); break;
+	    }
+            
             // Increase decision level and enqueue 'next'
             newDecisionLevel();
             uncheckedEnqueue(next);
@@ -802,7 +818,14 @@ lbool Solver::solve_()
 
     if (verbosity >= 1)
         printf("===============================================================================\n");
-
+    
+// #if defined CP3VERSION && CP3VERSION > 300
+    cerr << "c [STAT] BVA-DEC " << decisions << " total, "
+      << (decisions == 0 ? 0 : (double)aDecs/(double)decisions) << " aDecs, "
+      << (decisions == 0 ? 0 : (double)xDecs/(double)decisions) << " xDecs, "
+      << (decisions == 0 ? 0 : (double)iDecs/(double)decisions) << " iDecs, "
+      << endl;
+// #endif
 
     if (status == l_True){
         // Extend & copy model:

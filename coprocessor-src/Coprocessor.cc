@@ -235,7 +235,7 @@ lbool Preprocessor::performSimplification()
   
   if ( opt_bva ) {
     if( opt_verbose > 2 )cerr << "c coprocessor(" << data.ok() << ") blocked variable addition" << endl;
-    if( status == l_Undef ) bva.variableAddtion(true); 
+    if( status == l_Undef ) bva.process(); 
     if( !data.ok() ) status = l_False;
   }
   data.checkGarbage(); // perform garbage collection

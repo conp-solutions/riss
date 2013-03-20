@@ -251,7 +251,7 @@ public:
 
   uint32_t nCls()  const { return numberOfCls; }
   uint32_t nVars() const { return numberOfVars; }
-  Var nextFreshVariable();
+  Var nextFreshVariable(char type);
 
 // semantic:
   bool ok();                                             // return ok-state of solver
@@ -464,10 +464,10 @@ inline vec< Minisat::CRef >& CoprocessorData::getLEarnts()
   return solver->learnts;
 }
 
-inline Var CoprocessorData::nextFreshVariable()
+inline Var CoprocessorData::nextFreshVariable(char type)
 {
-  // be careful
-  Var nextVar = solver->newVar();
+  // be careful here
+  Var nextVar = solver->newVar(true,true,type);
   numberOfVars = solver->nVars();
   ma.resize( 2*nVars() );
   
@@ -475,7 +475,7 @@ inline Var CoprocessorData::nextFreshVariable()
   
   occs.resize( 2*nVars() );
   // cerr << "c resize occs to " << occs.size() << endl;
-  lit_occurrence_count.resize( 2*	nVars() );
+  lit_occurrence_count.resize( 2 * nVars() );
   
   untouchable.push_back(0);
   // cerr << "c new fresh variable: " << nextVar+1 << endl;

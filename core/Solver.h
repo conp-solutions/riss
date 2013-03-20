@@ -58,7 +58,7 @@ public:
 
     // Problem specification:
     //
-    Var     newVar    (bool polarity = true, bool dvar = true); // Add a new variable with parameters specifying variable mode.
+    Var     newVar    (bool polarity = true, bool dvar = true, char type = 'o'); // Add a new variable with parameters specifying variable mode.
 
     bool    addClause (const vec<Lit>& ps);                     // Add a clause to the solver. 
     bool    addEmptyClause();                                   // Add the empty clause, making the solver contradictory.
@@ -283,6 +283,10 @@ protected:
     // Returns a random integer 0 <= x < size. Seed must never be 0.
 public: static inline int irand(double& seed, int size) {
         return (int)(drand(seed) * size); }
+        
+/// for bva analysis
+	vec<char> varType; // o=original, a=AND-BVA, i=ITE-BVA, x=XOR-BVA
+	unsigned oDecs, aDecs, iDecs, xDecs;  // count decisions per type
         
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;

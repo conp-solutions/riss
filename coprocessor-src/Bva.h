@@ -23,13 +23,31 @@ class BoundedVariableAddition : public Technique  {
   bool doSort;			// ensure that all clauses are sorted afterwards (assume, they are sorted before)
   
   // statistics
-  uint32_t duplicates;		// how many duplicate clauses have been found
-  uint32_t complementCount;	// how many complementary literals have been found (strengthening)
-  uint32_t replacements;	// how many new variables could be introduced
-  uint32_t totalReduction;	// how many clauses have been reduced
-  uint32_t replacedOrs;		// how many disjunctions could be replaced by the fresh variable
-  uint32_t replacedMultipleOrs;	// how many times could multiple or gates be replaced
   double processTime;		// seconds of process time
+  double andTime,iteTime,xorTime;	// seconds per technique
+  
+  uint32_t andDuplicates;		// how many duplicate clauses have been found
+  uint32_t andComplementCount;	// how many complementary literals have been found (strengthening)
+  uint32_t andReplacements;	// how many new variables could be introduced
+  uint32_t andTotalReduction;	// how many clauses have been reduced
+  uint32_t andReplacedOrs;		// how many disjunctions could be replaced by the fresh variable
+  uint32_t andReplacedMultipleOrs;	// how many times could multiple or gates be replaced
+  int64_t andMatchChecks;
+  
+  int xorfoundMatchings;
+  int xorMultiMatchings;
+  int xorMatchSize;
+  int xorMaxPairs;
+  int xorFullMatches;
+  int xorTotalReduction;
+  int64_t xorMatchChecks;
+  
+  int iteFoundMatchings;
+  int iteMultiMatchings;
+  int iteMatchSize;
+  int iteMaxPairs ;
+  int iteTotalReduction;
+  int64_t iteMatchChecks;
   
   
   // work data
@@ -59,17 +77,26 @@ public:
   /** applies bounded variable addition algorithm
   * @return true, if something has been altered
   */
-  bool variableAddtion(bool sort = true);
-
-  /** prototype implementation of a BVA version that can replace multiple literals
-  */
-  bool variableAddtionMulti(bool sort = true);
-  
+  bool process();
+    
   void printStatistics(ostream& stream);
 
   void destroy();
   
 protected:
+  
+  /** perform AND-bva */
+  bool andBVA();
+
+  /** perform ITE-bva */
+  bool iteBVA();
+  
+  /** perform XOR-bva */
+  bool xorBVA();
+  
+  /** prototype implementation of a BVA version that can replace multiple literals
+  */
+  bool variableAddtionMulti(bool sort = true);
   
   /** sub-routine of BVA to handle complementary literals
   * @param right literal that represents the right side
@@ -78,7 +105,7 @@ protected:
   bool bvaHandleComplement( const Lit right );
 
   /** introduce a fresh variable, update the size of all required structures*/
-  Var nextVariable();
+  Var nextVariable(char type);
 
   /** check data structures */
   bool checkLists(const string& headline);
@@ -96,11 +123,6 @@ protected:
     itePair( Lit _l1, Lit _l2, Lit _l3, CRef _c1, CRef _c2) : l1(_l1),l2(_l2),l3(_l3),c1(_c1),c2(_c2){}
   };
   
-  /** other bva like formula analysis */
-  void analysis();
-  
-  void xorAnalysis();
-  void iteAnalysis();
   
   /** remove duplicate clauses from the clause list of the given literal*/
   void removeDuplicateClauses( const Lit literal );
@@ -110,7 +132,9 @@ public:
   bool bvaComplement;		/// treat found complements special?
   uint32_t bvaPush;		/// which literals to push to queue again (0=none,1=original,2=all)
   bool bvaRewEE;		/// run rewEE after BVA found new gates?
-  uint32_t bvaLimit;		/// number of checks until bva is aborted
+  uint32_t bvaALimit;		/// number of checks until and-bva is aborted
+  uint32_t bvaXLimit;		/// number of checks until xor-bva is aborted
+  uint32_t bvaILimit;		/// number of checks until ite-bva is aborted
   bool bvaRemoveDubplicates;	/// remove duplicate clauses from occurrence lists
   bool bvaSubstituteOr;	/// when c = (a AND b) is found, also replace (-a OR -b) by -c
 };
