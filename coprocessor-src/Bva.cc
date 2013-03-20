@@ -812,6 +812,7 @@ bool BoundedVariableAddition::xorBVA()
 	    if( opt_bvaAnalysisDebug ) cerr  << "c XOR-BVA deleted " << ca[xorPairs[k].c2] << endl;
 	    data.removedClause( xorPairs[k].c2 );
 	    Clause& c = ca[ xorPairs[k].c1 ];
+	    if( !ca[ xorPairs[k].c2 ].learnt() && c.learnt() ) c.set_learnt(false); // during inprocessing, do not remove other important clauses!
 	    if( opt_bvaAnalysisDebug ) cerr << "c XOR-BVA rewrite " << c << endl;
 	    for( int ci = 0 ; ci < c.size(); ++ ci ) { // rewrite clause
 	      if( c[ci] == xorPairs[k].l1 ) c[ci] = mkLit(newX,false);
@@ -925,7 +926,6 @@ bool BoundedVariableAddition::iteBVA()
       if( opt_bvaAnalysisDebug  > 3 ) cerr << "c work on clause " << c << endl;
       data.ma.nextStep();
       for( int k = 0 ; k < c.size(); ++ k ) {
-	const Lit l1 = c[k];
 	data.ma.setCurrentStep( toInt( c[k] ) ); // mark all lits in C to check "C == D" fast
       }
       data.ma.reset( toInt(right) );
@@ -936,6 +936,8 @@ bool BoundedVariableAddition::iteBVA()
 	const Lit l1 = c[k]; 
 	if( l1 == right ) continue;  // TODO can symmetry breaking be applied?
 	
+	data.ma.reset( toInt(l1) ); // should have all literals except right and l1, but at least ~right, and some other literal! remaining literals have to be equal!
+
 	// here, look only for the interesting case for ITE!
 	bool doesMatch = true;
 	for( uint32_t m = 0 ; m < data.list( ~right ).size(); ++m ) {
@@ -950,7 +952,7 @@ bool BoundedVariableAddition::iteBVA()
 	  Lit matchLit = lit_Undef;
 	  for( int r = 0 ; r < d.size(); ++ r ) {
 	    const Lit dl = d[r];
-	    if( dl == ~right ) continue;
+	    if( dl == ~right ) continue; // first literal, which does not hit!
 	    if( ! data.ma.isCurrentStep  ( toInt(dl) ) ) { 
 	      if( matchLit == lit_Undef && var(dl) != var(l1)  ) matchLit = dl; // ensure that f and t have different variables
 	      else { // only one literal is allowed to miss the hit
@@ -968,7 +970,9 @@ bool BoundedVariableAddition::iteBVA()
 	  break; // do not try to find more clauses that match C on the selected literal!
 	}
 
+	data.ma.setCurrentStep( toInt(l1) );
 	// for ITE, try to find all matches!
+	
 	//if( doesMatch ) break; // do not collect all pairs of this clause!
       }
       
@@ -1036,6 +1040,7 @@ bool BoundedVariableAddition::iteBVA()
 	    if( opt_bvaAnalysisDebug ) cerr  << "c ITE-BVA deleted " << ca[itePairs[k].c2] << endl;
 	    data.removedClause( itePairs[k].c2 );
 	    Clause& c = ca[ itePairs[k].c1 ];
+	    if( !ca[ itePairs[k].c2 ].learnt() && c.learnt() ) c.set_learnt(false); // during inprocessing, do not remove other important clauses!
 	    if( opt_bvaAnalysisDebug ) cerr << "c ITE-BVA rewrite " << c << endl;
 	    for( int ci = 0 ; ci < c.size(); ++ ci ) { // rewrite clause
 	      if( c[ci] == itePairs[k].l1 ) c[ci] = mkLit(newX,false);
