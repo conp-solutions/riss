@@ -173,7 +173,7 @@ bool BoundedVariableAddition::andBVA() {
 	  index ++; // count column of literal that will be added
 	  
 	  // create the stack with all matching literals
-	  for( uint32_t i = 0 ; i <  bvaMatchingClauses[0].size() && !data.isInterupted(); ++i )
+	  for( uint32_t i = 0 ; i <  bvaMatchingClauses[0].size() && ( data.unlimited() || bvaALimit > andMatchChecks ) && !data.isInterupted() ; ++i )
 	  {
 	    if( bva_debug > 2 ) cerr << "c next reduce literal loop iteration with matching clauses: " << bvaMatchingClauses[0].size() << endl;
 	    // reserve space
@@ -733,7 +733,7 @@ bool BoundedVariableAddition::xorBVA()
 
 	// here, look only for the interesting case for XOR!
 	bool doesMatch = true;
-	for( uint32_t m = 0 ; m < data.list( ~l1 ).size(); ++m ) {
+	for( uint32_t m = 0 ; m < data.list( ~l1 ).size() && (data.unlimited() || bvaXLimit > xorMatchChecks) ; ++m ) {
 	  if( data.list( ~l1 )[m] == data.list(right)[j] ) continue; // C != D
 	  if( data.list(right)[j] > data.list( ~l1 )[m] ) continue; // find each case only once!
 
@@ -940,7 +940,7 @@ bool BoundedVariableAddition::iteBVA()
 
 	// here, look only for the interesting case for ITE!
 	bool doesMatch = true;
-	for( uint32_t m = 0 ; m < data.list( ~right ).size(); ++m ) {
+	for( uint32_t m = 0 ; m < data.list( ~right ).size() && (data.unlimited() || bvaILimit > iteMatchChecks); ++m ) {
 	  if( data.list( ~right )[m] == data.list(right)[j] ) continue; // C != D
 	  if( data.list(right)[j] > data.list( ~right )[m] ) continue; // find each case only once!
 

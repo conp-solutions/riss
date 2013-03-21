@@ -132,9 +132,9 @@ public:
   bool bvaComplement;		/// treat found complements special?
   uint32_t bvaPush;		/// which literals to push to queue again (0=none,1=original,2=all)
   bool bvaRewEE;		/// run rewEE after BVA found new gates?
-  uint32_t bvaALimit;		/// number of checks until and-bva is aborted
-  uint32_t bvaXLimit;		/// number of checks until xor-bva is aborted
-  uint32_t bvaILimit;		/// number of checks until ite-bva is aborted
+  int64_t bvaALimit;		/// number of checks until and-bva is aborted
+  int64_t bvaXLimit;		/// number of checks until xor-bva is aborted
+  int64_t bvaILimit;		/// number of checks until ite-bva is aborted
   bool bvaRemoveDubplicates;	/// remove duplicate clauses from occurrence lists
   bool bvaSubstituteOr;	/// when c = (a AND b) is found, also replace (-a OR -b) by -c
 };
