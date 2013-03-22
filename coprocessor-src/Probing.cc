@@ -528,7 +528,7 @@ int j = 0;
 	  const CRef cr = clauses[i];
 	  Clause & c = ca[cr];
 	  assert( c.size() != 0 && "empty clauses should be recognized before re-setup" );
-	  if (!c.can_be_deleted() || c.size() > pr_clsSize) // reject deleted and too large clauses!
+	  if (!c.can_be_deleted() && c.size() <= pr_clsSize) // reject deleted and too large clauses!
 	  {
 	      assert( c.mark() == 0 && "only clauses without a mark should be passed back to the solver!" );
 	      if (c.size() > 1)
