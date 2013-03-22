@@ -35,6 +35,7 @@ Probing::Probing(ClauseAllocator& _ca, ThreadController& _controller, Coprocesso
 , propagation ( _propagation )
 , ee ( _ee )
 , probeLimit(pr_prLimit)
+, probeChecks(0)
 , processTime(0)
 , l1implied(0)
 , l1failed(0)
@@ -50,7 +51,8 @@ Probing::Probing(ClauseAllocator& _ca, ThreadController& _controller, Coprocesso
 , viviLits(0)
 , viviCls(0)
 , viviCands(0)
-, viviLimits(pr_viviLimit)
+, viviLimit(pr_viviLimit)
+, viviChecks(0)
 , viviSize(0)
 {
 
@@ -107,7 +109,7 @@ bool Probing::process()
     modifiedFormula = modifiedFormula || propagation.appliedSomething();
 
     if( data.getEquivalences().size() > 0 ) {
-      ee.process(data); 
+      ee.applyEquivalencesToFormula(data); // do not search for lit-sccs, but apply found equivalences
       modifiedFormula = modifiedFormula || ee.appliedSomething();
     }
     
@@ -146,7 +148,7 @@ CRef Probing::prPropagate( bool doDouble )
             CRef     cr        = i->cref;
             Clause&  c         = ca[cr];
 	    // more fine grained probe limit
-	    probeLimit = probeLimit > 0 ? probeLimit - 1 : 0;
+	    probeChecks++;
             Lit      false_lit = ~p;
             if (c[0] == false_lit)
                 c[0] = c[1], c[1] = false_lit;
@@ -323,7 +325,7 @@ bool Probing::prDoubleLook(Lit l1decision)
     solver.newDecisionLevel();
     solver.uncheckedEnqueue(posLit);
     l2probes++;
-    probeLimit = probeLimit > 0 ? probeLimit - 1 : 0;
+    probeChecks++;
     thisConflict = prPropagate();
     if( debug_out > 1 ) cerr << "c conflict after level 2 propagate " << posLit << " present? " << (thisConflict != CRef_Undef) << " trail elements: " << solver.trail.size() << endl;
     
@@ -377,7 +379,7 @@ bool Probing::prDoubleLook(Lit l1decision)
     solver.newDecisionLevel();
     solver.uncheckedEnqueue(negLit);
     l2probes++;
-    probeLimit = probeLimit > 0 ? probeLimit - 1 : 0;
+    probeChecks++;
     thisConflict = prPropagate();
     if( debug_out > 1 ) cerr << "c conflict after level 2 propagate " << negLit << " present? " << (thisConflict != CRef_Undef) << " trail elements: " << solver.trail.size() << endl;
     if( debug_out > 1 ) {
@@ -614,7 +616,7 @@ void Probing::printStatistics( ostream& stream )
   << probeCandidates << " probeCands "
   << l2probes << " l2probes "
   << totalL2cand << " l2cands "
-  << probeLimit << " stepsLeft "
+  << probeChecks << " checks "
   << endl;   
   
   stream << "c [STAT] VIVI " 
@@ -622,7 +624,7 @@ void Probing::printStatistics( ostream& stream )
   <<  viviLits << " lits, "
   <<  viviCls << " cls, "
   << viviCands << " candidates, "
-  << viviLimits << " stepsLeft, "
+  << viviChecks << " checks, "
   << viviSize << " viviSize"
   << endl;   
 }
@@ -693,7 +695,7 @@ void Probing::probing()
   bool globalModify = modifiedFormula;
   do {
     modifiedFormula = false;
-    for( int index = 0;  index < variableHeap.size() && !data.isInterupted()  && (probeLimit > 0 || data.unlimited()) && data.ok(); ++ index )
+    for( int index = 0;  index < variableHeap.size() && !data.isInterupted()  && (probeLimit > probeChecks || data.unlimited()) && data.ok(); ++ index )
     {
       // repeat variable, if demanded - otherwise take next from heap!
       Var v = var(repeatLit);
@@ -711,7 +713,7 @@ void Probing::probing()
       solver.newDecisionLevel();
       solver.uncheckedEnqueue(posLit);
       probes++;
-      probeLimit = probeLimit > 0 ? probeLimit - 1 : 0;
+      probeChecks++;
       thisConflict = prPropagate();
       if( debug_out > 1 ) cerr << "c conflict after propagate " << posLit << " present? " << (thisConflict != CRef_Undef) << " trail elements: " << solver.trail.size() << endl;
       if( thisConflict != CRef_Undef ) {
@@ -751,7 +753,7 @@ void Probing::probing()
       solver.newDecisionLevel();
       solver.uncheckedEnqueue(negLit);
       probes++;
-      probeLimit = probeLimit > 0 ? probeLimit - 1 : 0;
+      probeChecks++;
       thisConflict = prPropagate();
       if( debug_out > 1 ) cerr << "c conflict after propagate " << negLit << " present? " << (thisConflict != CRef_Undef) << " trail elements: " << solver.trail.size() << endl;
       if( thisConflict != CRef_Undef ) {
@@ -900,7 +902,7 @@ void Probing::clauseVivification()
   }
   
   uint32_t maxSize = 0;
-  for( uint32_t i = 0 ; i< data.getClauses().size() && (data.unlimited() || viviLimits>0); ++ i ) {
+  for( uint32_t i = 0 ; i< data.getClauses().size() && (data.unlimited() || viviLimit > viviChecks); ++ i ) {
     const CRef ref = data.getClauses()[i];
     Clause& clause = ca[ ref ];
     if( clause.can_be_deleted() ) continue;
@@ -911,7 +913,7 @@ void Probing::clauseVivification()
   maxSize = maxSize > 2 ? maxSize : 3;	// do not process binary clauses, because they are used for propagation
   viviSize = maxSize;
   
-  for( uint32_t i = 0 ; i< data.getClauses().size() && (data.unlimited() || viviLimits>0)  && !data.isInterupted() ; ++ i ) {
+  for( uint32_t i = 0 ; i< data.getClauses().size() && (data.unlimited() || viviLimit > viviChecks)  && !data.isInterupted() ; ++ i ) {
     const CRef ref = data.getClauses()[i];
     Clause& clause = ca[ ref ];
     if( clause.can_be_deleted() ) continue;
@@ -948,7 +950,7 @@ void Probing::clauseVivification()
     data.lits.pop_back();
     
     // calculate for all propagated literals!
-    viviLimits = ( viviLimits > 0 ) ? viviLimits - 1 : 0;
+    viviChecks ++;
     
     // detach this clause, so that it cannot be used for unit propagation
     if( debug_out > 2 ) cerr << "c available watches for " << clause[0] << " : " << solver.watches[ ~clause[0] ].size()
@@ -1010,7 +1012,7 @@ void Probing::clauseVivification()
       int trailDiff = solver.trail.size();
       CRef confl = solver.propagate();
       trailDiff = solver.trail.size() - trailDiff;
-      viviLimits = viviLimits > trailDiff ? viviLimits - trailDiff : 0; // calculate limit!
+      viviChecks += trailDiff; // calculate limit!
       
       if( confl != CRef_Undef ) {
 	if( debug_out > 1 ) {

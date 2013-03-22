@@ -8,7 +8,7 @@ using namespace Coprocessor;
 
 static const char* _cat = "COPROCESSOR 3 - CCE";
 
-static IntOption opt_steps         (_cat, "cp3_cce_steps", "Number of steps that are allowed per iteration", INT32_MAX, IntRange(-1, INT32_MAX));
+static IntOption opt_steps         (_cat, "cp3_cce_steps", "Number of steps that are allowed per iteration", 2000000, IntRange(-1, INT32_MAX));
 static IntOption opt_level         (_cat, "cp3_cce_level", "none, ALA+ATE, CLA+ATE, ALA+CLA+BCE", 3, IntRange(0, 3));
 static IntOption opt_ccePercent    (_cat, "cp3_cce_sizeP", "percent of max. clause size for clause elimination (excluding)", 40, IntRange(0,100));
 
@@ -62,6 +62,7 @@ void ClauseElimination::process(CoprocessorData& data)
     candidates ++;
     eliminate(data, wData, data.getClauses()[i] );
     if( !data.unlimited() && steps > opt_steps ) break;
+    // FIXME: not possible here, because clause vector is also modified! data.garbageCollect();
   }
   steps += wData.steps;
   removedBceClauses += wData.removedBceClauses;
@@ -345,7 +346,7 @@ void ClauseElimination::printStatistics(ostream& stream)
 			    << removedClauses << " cls, " 
 			    << removedNonEEClauses << " nonEE-cls, "
 			    << removedBceClauses << " bce-cls, "
-			    << steps << " steps "
+			    << steps << " checks "
 			    << cceSize << " rejectSize "
 			    << candidates << " candidates "
 			    << endl;

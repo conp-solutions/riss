@@ -17,15 +17,12 @@ using namespace Coprocessor;
 static const char* _cat = "COPROCESSOR 3 - BVA";
 
 static IntOption  opt_bva_push             (_cat, "cp3_bva_push",    "push variables back to queue (0=none,1=original,2=all)", 2, IntRange(0, 2));
-static IntOption  opt_bva_Alimit            (_cat, "cp3_bva_limit",   "number of steps allowed for AND-BVA", 1500000, IntRange(0, INT32_MAX));
-static IntOption  opt_bva_Xlimit            (_cat, "cp3_bva_Xlimit",   "number of steps allowed for XOR-BVA", 100000000, IntRange(0, INT32_MAX));
-static IntOption  opt_bva_Ilimit            (_cat, "cp3_bva_Ilimit",   "number of steps allowed for ITE-BVA", 100000000, IntRange(0, INT32_MAX));
+static IntOption  opt_bva_VarLimit         (_cat, "cp3_bva_Vlimit",  "use BVA only, if number of variables is below threshold", 3000000, IntRange(-1, INT32_MAX));
+static IntOption  opt_bva_Alimit           (_cat, "cp3_bva_limit",   "number of steps allowed for AND-BVA", 1500000, IntRange(0, INT32_MAX));
 
 static BoolOption opt_bvaComplement        (_cat, "cp3_bva_compl",   "treat complementary literals special", true);
 static BoolOption opt_bvaRemoveDubplicates (_cat, "cp3_bva_dupli",   "remove duplicate clauses", true);
 static BoolOption opt_bvaSubstituteOr      (_cat, "cp3_bva_subOr",   "try to also substitus disjunctions", false);
-
-
 
 #if defined CP3VERSION 
 static const int bva_debug = 0;
@@ -33,13 +30,17 @@ static const bool opt_bvaAnalysis = false;
 static const bool opt_Xbva = false;
 static const bool opt_Ibva = false;
 static const int opt_bvaAnalysisDebug = 0;
+static const int opt_bva_Xlimit = 100000000;
+static const int opt_bva_Ilimit = 100000000;
 #else
 static IntOption  bva_debug                (_cat, "bva-debug",       "Debug Output of BVA", 0, IntRange(0, 4));
 static IntOption  opt_bvaAnalysisDebug     (_cat, "cp3_bva_ad",      "experimental analysis", 0, IntRange(0, 4));
 
+static IntOption  opt_bva_Xlimit            (_cat, "cp3_bva_Xlimit",   "number of steps allowed for XOR-BVA", 100000000, IntRange(0, INT32_MAX));
+static IntOption  opt_bva_Ilimit            (_cat, "cp3_bva_Ilimit",   "number of steps allowed for ITE-BVA", 100000000, IntRange(0, INT32_MAX));
+
 static BoolOption opt_Xbva          (_cat, "cp3_Xbva",       "perform XOR-bva", false);
 static BoolOption opt_Ibva          (_cat, "cp3_Ibva",       "perform ITE-bva", false);
-
 #endif
 	
 BoundedVariableAddition::BoundedVariableAddition(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data)
@@ -89,10 +90,13 @@ bool BoundedVariableAddition::process()
   processTime = cpuTime() - processTime;
   bool didSomething = false;
 
-  // run all three types of bva - could even re-run?
-  didSomething = andBVA();
-  if( opt_Xbva ) didSomething = xorBVA() || didSomething;
-  if( opt_Ibva ) didSomething = iteBVA() || didSomething;
+  // use BVA only, if number of variables is not too large 
+  if( data.nVars() < opt_bva_VarLimit || !data.unlimited() ) {
+    // run all three types of bva - could even re-run?
+    didSomething = andBVA();
+    if( opt_Xbva ) didSomething = xorBVA() || didSomething;
+    if( opt_Ibva ) didSomething = iteBVA() || didSomething;
+  }
   
   processTime = cpuTime() - processTime;
 }
@@ -133,6 +137,9 @@ bool BoundedVariableAddition::andBVA() {
 	  
 	  // interupted ?
 	  if( data.isInterupted() ) break;
+	  
+	  /** garbage collection */
+	  data.checkGarbage();
 	  
 	  const Lit right = toLit(bvaHeap[0]);
 	  assert( bvaHeap.inHeap( toInt(right) ) && "item from the heap has to be on the heap");
@@ -706,6 +713,10 @@ bool BoundedVariableAddition::xorBVA()
   bool didSomething = false;
   
   while (bvaHeap.size() > 0 && (data.unlimited() || bvaXLimit > xorMatchChecks) && !data.isInterupted() ) {
+    
+    /** garbage collection */
+    data.checkGarbage();
+    
     const Lit right = toLit(bvaHeap[0]);
     assert( bvaHeap.inHeap( toInt(right) ) && "item from the heap has to be on the heap");
 
@@ -902,6 +913,9 @@ bool BoundedVariableAddition::iteBVA()
   vector<itePair> itePairs;
   
   while (bvaHeap.size() > 0 && (data.unlimited() || bvaILimit > iteMatchChecks) && !data.isInterupted() ) {
+    
+    data.checkGarbage();
+    
     const Lit right = toLit(bvaHeap[0]);
     assert( bvaHeap.inHeap( toInt(right) ) && "item from the heap has to be on the heap");
 

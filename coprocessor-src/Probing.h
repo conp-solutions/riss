@@ -85,6 +85,7 @@ protected:
   
   // staistics
   unsigned probeLimit;		// step limit for probing
+  unsigned probeChecks;		// number of performed steps
   double processTime;		// seconds for probing
   unsigned l1implied;		// number of found l1 implied literals
   unsigned l1failed;		// number of found l1 failed literals
@@ -101,7 +102,8 @@ protected:
   unsigned viviLits;		// number of removed literals through vivification
   unsigned viviCls;		// number of clauses modified by vivification
   unsigned viviCands;		// number of clauses candidates for vivification
-  unsigned viviLimits;		// step limit for vivification
+  unsigned viviLimit;		// step limit for vivification
+  unsigned viviChecks;		// number of steps performed by vivification
   unsigned viviSize;		// size of clauses that are vivified
 };
   

@@ -96,7 +96,7 @@ static void printClauses(ClauseAllocator & ca, vector<CRef> & list, bool skipDel
  *          you must not acquire a write lock on the data object, if alread 2.b was acquired
  *          you either hold a heap lock or any of the other locks 
  */
-void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap, deque < CRef > & strengthQueue, deque < CRef > & sharedStrengthQueue, deque< PostponeReason > & postponed, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, ParBVEStats & stats, MarkArray * gateMarkArray, int & rwlock_count, int & garbageCounter, const bool force, const bool doStatistics)   
+void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap, deque < CRef > & strengthQueue, deque < CRef > & sharedStrengthQueue, deque< PostponeReason > & postponed, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, ParBVEStats & stats, MarkArray * gateMarkArray, int & rwlock_count, int & garbageCounter, int64_t& parBVEchecks, const bool force, const bool doStatistics)   
 {
     if (doStatistics) stats.processTime = wallClockTime() - stats.processTime;
 
@@ -111,10 +111,13 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
     vec < Lit > ps;
     MarkArray & neighborMA = *gateMarkArray; //reuse gate MA
     int32_t timeStamp;  
-    while ( data.ok() ) // if solver state = false => abort
+    while ( data.ok()
+      && ( !data.isInterupted() )
+      && ( seqBveSteps + parBVEchecks < bveLimit || data.unlimited() )
+    ) // if solver state = false => abort
     {
         // Propagate (rw-locks)
-        data_lock.lock();
+        data_lock.lock(); // FIXME: do this check also before the lock!
         if (data.hasToPropagate())
         {
             data_lock.unlock();
@@ -126,7 +129,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         data_lock.unlock();
         // Subsimp
         susi_lock.lock();
-        if (sharedStrengthQueue.size() > 0)
+        if (sharedStrengthQueue.size() > 0) // FIXME do this check also before the lock!
         {
             susi_lock.unlock();
             if (doStatistics) stats.subsimpTime = wallClockTime() -  stats.subsimpTime;
@@ -502,7 +505,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         if (pos_count != 0 &&  neg_count != 0)
         {
             if (doStatistics) ++stats.anticipations;
-            if (anticipateEliminationThreadsafe(data, pos, neg,  v, p_limit, n_limit, ps, pos_stats, neg_stats, lit_clauses, lit_learnts, new_clauses, new_learnts, data_lock, stats, doStatistics) == l_False) 
+            if (anticipateEliminationThreadsafe(data, pos, neg,  v, p_limit, n_limit, ps, pos_stats, neg_stats, lit_clauses, lit_learnts, new_clauses, new_learnts, data_lock, stats, parBVEchecks, doStatistics) == l_False) 
             {
                 // UNSAT: free locks and abort
                 assert(rwlock_count == 1);
@@ -593,7 +596,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
 		     if (doStatistics) stats.usedGates = (foundGate ? stats.usedGates + 1 : stats.usedGates ); // statistics
              if(opt_bve_verbose > 1)  cerr << "c resolveSet" <<endl;
 
-             if (resolveSetThreadSafe(data, heap, pos, neg, v, p_limit, n_limit, ps, memoryReservation, strengthQueue, stats, data_lock, heap_lock, new_clauses + new_learnts, doStatistics) == l_False) 
+             if (resolveSetThreadSafe(data, heap, pos, neg, v, p_limit, n_limit, ps, memoryReservation, strengthQueue, stats, data_lock, heap_lock, new_clauses + new_learnts, parBVEchecks, doStatistics) == l_False) 
              {
                  // UNSAT case -> end thread, but first release all locks
                 assert(rwlock_count == 1);
@@ -733,7 +736,7 @@ inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData 
  *  -> total number of literals in learnts after resolution:    lit_learnts
  *
  */
-inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const int p_limit, const int n_limit, vec <Lit> & resolvent, int32_t* pos_stats , int32_t* neg_stats, int & lit_clauses, int & lit_learnts, int & new_clauses, int & new_learnts, SpinLock & data_lock, ParBVEStats & stats, const bool doStatistics)
+inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(CoprocessorData& data, vector< Minisat::CRef >& positive, vector< Minisat::CRef >& negative, const int v, const int p_limit, const int n_limit, vec< Lit >& resolvent, int32_t* pos_stats, int32_t* neg_stats, int& lit_clauses, int& lit_learnts, int& new_clauses, int& new_learnts, SpinLock& data_lock, BoundedVariableElimination::ParBVEStats& stats, int64_t& bveChecks, const bool doStatistics)
 {
     if(opt_bve_verbose > 2)  cerr << "c starting anticipate BVE" << endl;
     // Clean the stats
@@ -761,6 +764,7 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
             const CRef crNeg = negative[cr_n];
             if (CRef_Undef == crNeg)
                 continue;
+	    bveChecks ++;
             Clause & n = ca[crNeg];
             if (n.can_be_deleted())
             {   
@@ -884,7 +888,7 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
  *   - unit clauses and empty clauses are not handeled here
  *          -> this is already done in anticipateElimination 
  */
-lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, vector<CRef> & positive, vector<CRef> & negative, const int v, const int p_limit, const int n_limit, vec<Lit> & ps, AllocatorReservation & memoryReservation, deque<CRef> & strengthQueue, ParBVEStats & stats, SpinLock & data_lock, SpinLock & heap_lock, int expectedResolvents, const bool doStatistics, const bool keepLearntResolvents)
+lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, vector<CRef> & positive, vector<CRef> & negative, const int v, const int p_limit, const int n_limit, vec<Lit> & ps, AllocatorReservation & memoryReservation, deque<CRef> & strengthQueue, ParBVEStats & stats, SpinLock & data_lock, SpinLock & heap_lock, int expectedResolvents, int64_t& bveChecks, const bool doStatistics, const bool keepLearntResolvents)
 {
     int resolvents = 0;
     const bool hasDefinition = (p_limit < positive.size() || n_limit < negative.size() );
@@ -904,6 +908,8 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, H
             const CRef crNeg = negative[cr_n];
             if (CRef_Undef == crNeg)
                 continue;
+	    
+	    bveChecks ++;
             Clause & n = ca[crNeg];
             if (n.can_be_deleted())
                 continue;
@@ -1033,7 +1039,7 @@ inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(Coprocess
 void* BoundedVariableElimination::runParallelBVE(void* arg)
 {
   BVEWorkData*      workData = (BVEWorkData*) arg;
-  workData->bve->par_bve_worker(*(workData->data), *(workData->heap), *(workData->neighbor_heap), *(workData->strengthQueue), *(workData->sharedStrengthQueue), *(workData->postponed), *(workData->var_locks), *(workData->rw_lock), *(workData->bveStats), workData->gateMarkArray, workData->rwlock_count, workData->garbageCounter); 
+  workData->bve->par_bve_worker(*(workData->data), *(workData->heap), *(workData->neighbor_heap), *(workData->strengthQueue), *(workData->sharedStrengthQueue), *(workData->postponed), *(workData->var_locks), *(workData->rw_lock), *(workData->bveStats), workData->gateMarkArray, workData->rwlock_count, workData->garbageCounter, workData->bveStats->parBveChecks); 
   return 0;
 }
 
@@ -1121,7 +1127,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
         }
         cerr << "c parallel bve with " << controller.size() << " threads on " 
              << QSize << " variables" << endl;
-        pthread_rwlock_t mutex = allocatorRWLock.getValue();
+        pthread_rwlock_t mutex = allocatorRWLock.getValue(); // FIXME reicht hier auch eine reference?
         assert (mutex.__data.__nr_readers == 0);
         assert (mutex.__data.__readers_wakeup == 0);
         assert (mutex.__data.__writer_wakeup == 0);
@@ -1150,7 +1156,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
         if (opt_bve_findGate) data.ma.resize( data.nVars() * 2 );
         cerr << "c sequentiel bve on " 
              << QSize << " variables" << endl;
-        bve_worker (data, newheap);
+        bve_worker (data, newheap,seqBveSteps);
     }
     //propagate units
     if (data.hasToPropagate()) {
