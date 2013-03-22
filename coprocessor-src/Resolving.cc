@@ -6,6 +6,7 @@ static const char* _cat = "COPROCESSOR 3 - RES";
 
 static BoolOption   opt_use_binaries  (_cat, "cp3_res_bin",      "resolve with binary clauses", false);
 static IntOption    opt_res3_steps    (_cat, "cp3_res3_steps",   "Number of resolution-attempts that are allowed per iteration", 1000000, IntRange(0, INT32_MAX-1));
+static IntOption    opt_res3_newCls   (_cat, "cp3_res3_ncls",    "Max. Number of newly created clauses", 100000, IntRange(0, INT32_MAX-1));
 static BoolOption   opt_res3_reAdd    (_cat, "cp3_res3_reAdd",   "Add variables of newly created resolvents back to working queues", false);
 static BoolOption   opt_use_subs      (_cat, "cp3_res_eagerSub", "perform eager subsumption", true);
 static DoubleOption opt_add_percent   (_cat, "cp3_res_percent",  "produce this percent many new clauses out of the total", 0.01, DoubleRange(0, true, 1, true));
@@ -113,8 +114,12 @@ void Resolving::ternaryResolve()
   
   // sort activeVariables according to size!
   
-  while( resHeap.size() > 0 && !data.isInterupted() )
+  while( resHeap.size() > 0 && !data.isInterupted() 
+    && (data.unlimited() || addedTern2 + addedTern3 < opt_res3_newCls )
+    && (data.unlimited() || res3steps < opt_res3_steps )
+  )
   {
+    // FIXME: garbage collection, cannot be done because of ignore structures!
     const Var v = (Var)resHeap[0];
     resHeap.removeMin();
         
@@ -131,7 +136,8 @@ void Resolving::ternaryResolve()
 	if( c.can_be_deleted() ) continue;
 	const Clause& d = ca[data.list(n)[j]];
 	if( d.can_be_deleted() ) continue;
-	if( res3steps++ > opt_res3_steps ) goto endTernResolve;
+	res3steps++;
+	if( !data.unlimited() && res3steps > opt_res3_steps ) goto endTernResolve;
 	if( resolve( c,d, v, resolvent) ) continue;
 	if( debug_out ) cerr << "c resolved " << c << " with " << d << endl;
 	if( resolvent.size() == 0 ) {

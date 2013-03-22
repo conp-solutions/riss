@@ -27,6 +27,10 @@ static BoolOption  opt_naivStrength    (_cat, "naive_strength", "use naive stren
 static IntOption   opt_allStrengthRes  (_cat, "all_strength_res", "Create all self-subsuming resolvents of clauses less equal given size (prob. slow & blowup, only seq)", 0, IntRange(0,INT32_MAX)); 
 static BoolOption  opt_strength        (_cat, "cp3_strength", "Perform clause strengthening", true); 
 
+static IntOption   opt_subLimit        (_cat, "cp3_sub_limit", "limit of subsumption steps",   300000000, IntRange(0,INT32_MAX)); 
+static IntOption   opt_strLimit        (_cat, "cp3_str_limit", "limit of strengthening steps", 300000000, IntRange(0,INT32_MAX)); 
+static IntOption   opt_callIncrease    (_cat, "cp3_call_inc",  "max. limit increase per process call (subsimp is frequently called from other techniques)", 100, IntRange(0,INT32_MAX)); 
+
 #if defined CP3VERSION && CP3VERSION < 302
 static const int   opt_par_strength    =1;
 static const bool  opt_lock_stats      =false;
@@ -53,6 +57,10 @@ Subsumption::Subsumption( ClauseAllocator& _ca, ThreadController& _controller, C
 , strengthSteps(0)
 , processTime(0)
 , strengthTime(0)
+, subLimit(opt_subLimit)
+, strLimit(opt_strLimit)
+, callIncrease(opt_callIncrease)
+, limitIncreases(0)
 {
 }
 
@@ -65,6 +73,7 @@ stream << "c [STAT] SuSi(1) " << processTime << " s, "
 			       << endl;
 stream << "c [STAT] SuSi(2) " << subsumeSteps << " subs-steps, " 
                               << strengthSteps << " strenght-steps, " 
+			      << limitIncreases << " increases, "
 			       << strengthTime << "s strengthening "
 			       << endl;
     for (int i = 0; i < controller.size(); ++i)
@@ -107,6 +116,10 @@ void Subsumption::process(bool doStrengthen, Heap< VarOrderBVEHeapLt >* heap, co
 {
   modifiedFormula = false;
   if( !data.ok() ) return;
+
+  // increase limits per call if necessary
+  if( subsumeSteps + callIncrease > subLimit )  { subLimit = subsumeSteps + callIncrease;  limitIncreases++; }
+  if( strengthSteps + callIncrease > strLimit ) { strLimit = strengthSteps + callIncrease; limitIncreases++; }
   
   while( data.ok() && (hasToSubsume() || hasToStrengthen() ))
   {
@@ -190,7 +203,9 @@ void Subsumption :: subsumption_worker ( unsigned int start, unsigned int end, H
         processTime = cpuTime() - processTime;   
     }   
     if(global_debug_out) cerr << "subsume from " << start << " to " << end << " with size " << data.getSubsumeClauses().size() << endl;
-    for (; end > start && !data.isInterupted();)
+    for (; end > start && !data.isInterupted()
+      && ( data.unlimited() || (doStatistics && subsumeSteps < subLimit) )
+      ;)
     {
         --end;
 	const CRef cr = data.getSubsumeClauses()[end];
@@ -205,17 +220,22 @@ void Subsumption :: subsumption_worker ( unsigned int start, unsigned int end, H
                min = c[l]; 
         }
         vector<CRef> & list = data.list(min);
-        for (unsigned i = 0; i < list.size(); ++i)
+        for (unsigned i = 0; i < list.size()
+	  && ( data.unlimited() || (doStatistics && subsumeSteps < subLimit) )
+	  ; ++i)
         {
 	  
             if (list[i] == cr) {
                 continue;
-	        } else if (ca[list[i]].size() < c.size()) {
-                continue;
-	        } else if (ca[list[i]].can_be_deleted()) {
+	        } 
+	        if ( doStatistics ) ++ subsumeSteps;
+	        if (ca[list[i]].size() < c.size()) {
+		  continue;
+	        } 
+	        if (ca[list[i]].can_be_deleted()) {
                 continue;
 	        } else if (c.ordered_subsumes(ca[list[i]])) {
-                if ( doStatistics ) ++ subsumeSteps;
+                
                 if (doStatistics)
                 {
                     ++subsumedClauses;
@@ -229,11 +249,10 @@ void Subsumption :: subsumption_worker ( unsigned int start, unsigned int end, H
 		        if( global_debug_out ) cerr << "c clause " << ca[list[i]] << " is deleted by " << c << endl;
                 if (!ca[list[i]].learnt() && c.learnt())
                 {
-		            if (global_debug_out) cerr << "c subsumption turned clause " << c << " from learned in original " << endl;
+		    if (global_debug_out) cerr << "c subsumption turned clause " << c << " from learned in original " << endl;
                     c.set_learnt(false);
                 }
-            } else
-                if (doStatistics) ++subsumeSteps;
+            }
         }
         //set can_subsume to false
         c.set_subsume(false);
@@ -1078,22 +1097,29 @@ lbool Subsumption::fullStrengthening(Heap<VarOrderBVEHeapLt> * heap, const Var i
             if (data[min] * (c.size() - 1) + data[~min] > data[c[j]] * (c.size() -1) + data[~c[j]])
                 min = c[j];
 
-        for (int j = 0; j < c.size(); ++j)
+        for (int j = 0; j < c.size()
+	  && (data.unlimited() || (doStatistics && strengthSteps < strLimit ) )
+	  ; ++j)
         {
             // negate this literal and check for subsumptions for every occurrence of its negation:
             Lit neg_lit = ~c[j];
             c[j] = neg_lit;     // temporarily change lit for subsumptiontest
             vector<CRef> & list = (neg_lit == ~min) ? data.list(neg_lit) : data.list(min);  // get occurrences of this lit
             //vector<CRef> & list = data.list(neg_lit);  // get occurrences of this lit
-            for (unsigned int k = 0; k < list.size(); ++k)
+            for (unsigned int k = 0; k < list.size()
+	      && (data.unlimited() || (doStatistics && strengthSteps < strLimit ) )
+	      ; ++k)
             {
                 if (list[k] == cr)
                     continue;
+		
+		if (doStatistics) ++strengthSteps;
+		
                 Clause & other = ca[list[k]];
                 if (other.can_be_deleted())     // dont check if this clause can be deleted
                     continue;
                 assert(other.size() > 1 && "Expect other to be > 1");
-                if (doStatistics) ++strengthSteps;
+                
                 
                 // check for subsumption
                 int l1 = 0, l2 = 0, pos = -1;
@@ -1229,7 +1255,9 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
   int negated_lit_pos;  // index of negative lit, if we find one
   deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
   vector < OccUpdate > & occ_updates = strength_occ_updates;
-  for (; end > start && !data.isInterupted();)
+  for (; end > start && !data.isInterupted()
+    && (data.unlimited() || (doStatistics && strengthSteps < strLimit ) )
+    ;)
   {
     CRef cr = CRef_Undef;
     if( localQueue.size() == 0 ) {
@@ -1276,14 +1304,17 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
     vector<CRef>& list = data.list(min);        // occurrences of minlit from strengthener
     vector<CRef>& list_neg = data.list(nmin);   // occurrences of negated minlit from strengthener
     // test every clause, where the minimum is, if it can be strenghtened
-    for (unsigned int j = 0; j < list.size(); ++j)
+    for (unsigned int j = 0; j < list.size()
+      && !data.isInterupted()
+      && (data.unlimited() || (doStatistics && strengthSteps < strLimit ) )
+      ; ++j)
     {
       Clause& strengthener = ca[cr]; // if opt_allStrengthRes -> realloc possible
       Clause& other = ca[list[j]];
+      if (doStatistics) ++strengthSteps;
       if (other.can_be_deleted() || list[j] == cr || other.size() == 0)
         continue;
       // test if we can strengthen other clause
-      if (doStatistics) ++strengthSteps;
       si = 0;
       so = 0;
       negated_lit_pos = -1;  //the position for neglit cant be 0, so we will use this as "neglit not found"
@@ -1367,13 +1398,16 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
             return l_False;
     }
     // now test for the occurrences of negated min, now the literal, that appears negated has to be min
-    for (unsigned int j = 0; j < list_neg.size(); ++j)
+    for (unsigned int j = 0; j < list_neg.size()
+      && !data.isInterupted()
+      && (data.unlimited() || (doStatistics && strengthSteps < strLimit ) )
+      ; ++j)
     {
       Clause& strengthener = ca[cr]; // if opt_allStrengthRes -> realloc possible
       Clause& other = ca[list_neg[j]];
+      if (doStatistics) ++ strengthSteps;
       if (other.can_be_deleted())
         continue;
-      if (doStatistics) ++ strengthSteps;
       si = 0;
       so = 0;
       negated_lit_pos = -1;

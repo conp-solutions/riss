@@ -12,14 +12,16 @@ static const char* _cat = "COPROCESSOR 3 - EE";
 
 #if defined CP3VERSION  && CP3VERSION < 350
 static const int opt_level            = 0;
+static const int opt_gate_limit       = 0;
 static const bool opt_old_circuit      = false;
 static const bool opt_eagerEquivalence = false;
 static const bool opt_eeGateBigFirst   = false;
 static const char* aagFile = 0;
 #else
-static IntOption  opt_level            (_cat, "cp3_ee_level",      "EE on BIG, gate probing, structural hashing", 0, IntRange(0, 3));
-static BoolOption opt_old_circuit      (_cat, "cp3_old_circuit",   "do old circuit extraction", false);
-static BoolOption opt_eagerEquivalence (_cat, "cp3_eagerGates",    "do old circuit extraction", true);
+static IntOption  opt_level            (_cat, "cp3_ee_level",    "EE on BIG, gate probing, structural hashing", 0, IntRange(0, 3));
+static IntOption  opt_gate_limit       (_cat, "cp3_ee_glimit",   "step limit for structural hashing", INT32_MAX, IntRange(0, INT32_MAX));
+static BoolOption opt_old_circuit      (_cat, "cp3_old_circuit", "do old circuit extraction", false);
+static BoolOption opt_eagerEquivalence (_cat, "cp3_eagerGates",  "do handle gates eagerly", true);
 static BoolOption opt_eeGateBigFirst   (_cat, "cp3_BigThenGate", "detect binary equivalences before going for gates", true);
 static StringOption aagFile            (_cat, "ee_aag", "write final circuit to this file");
 #endif
@@ -31,6 +33,8 @@ static const bool debug_out = false;
 #else
 static BoolOption debug_out            (_cat, "ee_debug", "print debug output to screen",false);
 #endif
+
+static IntOption opt_ee_limit  (_cat, "cp3_ee_limit", "step limit for detecting equivalent literals", 1000000, IntRange(0, INT32_MAX));
 
 
 
@@ -166,7 +170,11 @@ void EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
   if( data.ok() ) {
     do { 
       findEquivalencesOnBig(data);                              // finds SCC based on all literals in the eqDoAnalyze array!
-    } while ( applyEquivalencesToFormula(data ) && data.ok() ); // will set literals that have to be analyzed again!
+    } while ( applyEquivalencesToFormula(data ) 
+    && data.ok()
+    && !data.isInterupted()  
+    && (data.unlimited() || steps << opt_ee_limit )
+    ); // will set literals that have to be analyzed again!
   
     
     // cerr << "c ok=" << data.ok() << " toPropagate=" << data.hasToPropagate() <<endl;
@@ -1592,6 +1600,8 @@ void EquivalenceElimination::findEquivalencesOnBig(CoprocessorData& data, vector
   BIG big;
   if( externBig == 0 ) big.create(ca, data, data.getClauses(), data.getLEarnts() );
   
+  steps += (data.getClauses().size() / 16); // some initial steps, because BIG was created
+  
   if( debug_out ) {
      cerr << "c to process: ";
      for( int i = 0 ; i < eqDoAnalyze.size(); ++ i ) {
@@ -1610,7 +1620,7 @@ void EquivalenceElimination::findEquivalencesOnBig(CoprocessorData& data, vector
   }
   
   int count = 0 ;
-  while( !eqDoAnalyze.empty() )
+  while( !eqDoAnalyze.empty() && !data.isInterupted() && (data.unlimited() || steps < opt_ee_limit) )
   {
       Lit randL = eqDoAnalyze[ eqDoAnalyze.size() -1 ];
       if( data.randomized() ) { // shuffle an element back!
@@ -1647,9 +1657,12 @@ void EquivalenceElimination::eqTarjan(int depth, Lit l, Lit list, CoprocessorDat
     
     if( depth > 32000 ) {
       static bool didit = false;
-      if( !didit ) { cerr << "c recursive EE algorithm reached depth 32K, get the iterative one!" << endl; didit = true; }
-      return; // stop recursion here, because it can break things!
+      if( !didit ) { cerr << "c recursive EE algorithm reached depth 32K, get the iterative SCC version!" << endl; didit = true; }
+      return; // stop recursion here, because it can break things when too many recursive calls are done!
     }
+    
+    steps ++;
+    if( steps > opt_ee_limit ) return;
     
     if( debug_out ) cerr  << "c run tarjan on " << l << " at depth " << depth << endl;
     if( externBig != 0 ) {
