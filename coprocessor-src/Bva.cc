@@ -19,6 +19,7 @@ static const char* _cat = "COPROCESSOR 3 - BVA";
 static IntOption  opt_bva_push             (_cat, "cp3_bva_push",    "push variables back to queue (0=none,1=original,2=all)", 2, IntRange(0, 2));
 static IntOption  opt_bva_VarLimit         (_cat, "cp3_bva_Vlimit",  "use BVA only, if number of variables is below threshold", 3000000, IntRange(-1, INT32_MAX));
 static IntOption  opt_bva_Alimit           (_cat, "cp3_bva_limit",   "number of steps allowed for AND-BVA", 1200000, IntRange(0, INT32_MAX));
+static BoolOption opt_Abva                 (_cat, "cp3_Abva",       "perform XOR-bva", true);
 
 static BoolOption opt_bvaComplement        (_cat, "cp3_bva_compl",   "treat complementary literals special", true);
 static BoolOption opt_bvaRemoveDubplicates (_cat, "cp3_bva_dupli",   "remove duplicate clauses", true);
@@ -93,7 +94,7 @@ bool BoundedVariableAddition::process()
   // use BVA only, if number of variables is not too large 
   if( data.nVars() < opt_bva_VarLimit || !data.unlimited() ) {
     // run all three types of bva - could even re-run?
-    didSomething = andBVA();
+    if( opt_Abva ) didSomething = andBVA();
     if( opt_Xbva ) didSomething = xorBVA() || didSomething;
     if( opt_Ibva ) didSomething = iteBVA() || didSomething;
   }
