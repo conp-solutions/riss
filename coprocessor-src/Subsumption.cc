@@ -36,13 +36,13 @@ static const int   opt_par_strength    =1;
 static const bool  opt_lock_stats      =false;
 static const int   opt_par_subs        =1;
 static const int   opt_par_subs_counts =false;
-static const int   chunk_size          =200000;
+static const int   opt_chunk_size      =100000;
 #else
 static IntOption   opt_par_strength    (_cat, "cp3_par_strength", "par strengthening: 0 never, 1 heuristic, 2 always", 1, IntRange(0,2));
 static BoolOption  opt_lock_stats      (_cat, "cp3_lock_stats", "measure time waiting in spin locks", false);
 static IntOption   opt_par_subs        (_cat, "cp3_par_subs", "par subsumption: 0 never, 1 heuristic, 2 always", 1, IntRange(0,2));
 static IntOption   opt_par_subs_counts (_cat, "par_subs_counts" ,  "Updates of counts in par-subs 0: compare_xchange, 1: CRef-vector", 1, IntRange(0,1));
-static IntOption   chunk_size          (_cat, "susi_chunk_size" ,  "Size of Par SuSi Chunks", 200000, IntRange(1,INT32_MAX));
+static IntOption   opt_chunk_size      (_cat, "susi_chunk_size" ,  "Size of Par SuSi Chunks", 100000, IntRange(1,INT32_MAX));
 #endif
 
 
@@ -1520,6 +1520,7 @@ void Subsumption::initClause( const CRef cr )
 
 void Subsumption::parallelSubsumption( const bool doStatistics)
 {
+  if (doStatistics) processTime = wallClockTime() - processTime;
   cerr << "c parallel subsumption with " << controller.size() << " threads" << endl;
   SubsumeWorkData workData[ controller.size() ];
   vector<Job> jobs( controller.size() );
@@ -1529,6 +1530,11 @@ void Subsumption::parallelSubsumption( const bool doStatistics)
   unsigned int queueSize = data.getSubsumeClauses().size();
   unsigned int partitionSize = data.getSubsumeClauses().size() / controller.size();
   unsigned int next_start = 0;
+
+  // Setting Chunk Size
+  chunk_size = queueSize > opt_chunk_size * controller.size() * 1.8 ? opt_chunk_size : (queueSize / controller.size());
+  if (chunk_size <= 0) chunk_size = 1;
+
   // setup data for workers
   for( int i = 0 ; i < controller.size(); ++ i ) {
     workData[i].subsumption = this; 
@@ -1574,6 +1580,7 @@ void Subsumption::parallelSubsumption( const bool doStatistics)
     }
     nonLearnts[i].clear();
   }
+  if (doStatistics) processTime = wallClockTime() - processTime;
 }
 
 void* Subsumption::runParallelSubsume(void* arg)
@@ -1587,6 +1594,7 @@ void Subsumption::parallelStrengthening(Heap<VarOrderBVEHeapLt> * heap, const Va
 {
   //fullStrengthening(data);
   cerr << "c parallel strengthening with " << controller.size() << " threads" << endl;
+  if (doStatistics) strengthTime = wallClockTime() - strengthTime;
   SubsumeWorkData workData[ controller.size() ];
   //vector< struct SubsumeStatsData > localStats (controller.size());
   vector<Job> jobs( controller.size() );
@@ -1595,6 +1603,11 @@ void Subsumption::parallelStrengthening(Heap<VarOrderBVEHeapLt> * heap, const Va
   unsigned int queueSize = data.getStrengthClauses().size();
   unsigned int partitionSize = data.getStrengthClauses().size() / controller.size();
   unsigned int next_start = 0;
+
+  // Setting Chunk Size
+  chunk_size = queueSize > opt_chunk_size * controller.size() * 1.8 ? opt_chunk_size : (queueSize / controller.size());
+  if (chunk_size <= 0) chunk_size = 1;
+
   for ( int i = 0 ; i < controller.size(); ++ i ) {
     workData[i].subsumption = this; 
     workData[i].start = & next_start;
@@ -1625,6 +1638,7 @@ void Subsumption::parallelStrengthening(Heap<VarOrderBVEHeapLt> * heap, const Va
 
   //propagate units
   propagation.process(data, true, heap, ignore);
+  if (doStatistics) strengthTime = wallClockTime() - strengthTime;
 }
 
 void* Subsumption::runParallelStrengthening(void* arg)
