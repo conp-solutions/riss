@@ -39,7 +39,7 @@ class Subsumption : public Technique {
   int64_t strLimit;	// step limit for strengthening
   int64_t callIncrease; // step limit increase to be able to perform at least this number of checks
   int limitIncreases;	// number of times the limits have been relaxed
-
+  int chunk_size;
 
   vec<Lit> ps;  // Resolution vector for keepAllResolvent
   vector<CRef> toDelete; // Delete vector for keepAllResolvent
