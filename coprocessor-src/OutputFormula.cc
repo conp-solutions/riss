@@ -20,7 +20,7 @@ void Preprocessor::outputFormula(const char *file)
 void Preprocessor::getCNFinfo(int& vars, int& cls)
 {
     if( !data.ok() ) { // unsat
-      vars = 0; cls = 0; return;
+      vars = solver->nVars(); cls = 0; return;
     }
   
     vec<Lit> & trail = solver->trail;
@@ -327,5 +327,5 @@ bool Preprocessor::writeUndoInfo(const string& filename) {
   }
   file << s.str();
  }
- 
+ return true; 
 }

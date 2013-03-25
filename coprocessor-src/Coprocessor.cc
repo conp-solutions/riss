@@ -363,7 +363,9 @@ lbool Preprocessor::performSimplification()
   // attach all clauses to their watchers again, call the propagate method to get into a good state again
   if( opt_verbose > 4 ) cerr << "c coprocessor re-setup solver" << endl;
   if ( data.ok() ) {
-    propagation.process(data);
+    if( data.hasToPropagate() ) 
+      if( opt_up ) propagation.process(data);
+      else cerr << "c should apply UP" << endl;
   }
 
   if( opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;
