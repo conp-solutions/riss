@@ -143,6 +143,12 @@ Var Solver::newVar(bool sign, bool dvar, char type)
     return v;
 }
 
+void Solver::reserveVars(Var v)
+{
+  // TODO: reserve space for all the variable methods!
+}
+
+
 
 bool Solver::addClause_(vec<Lit>& ps)
 {

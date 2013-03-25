@@ -91,6 +91,14 @@ public:
    */
   bool writeUndoInfo(const string& filename);
   
+  /** return info about formula to be writtern*/
+  void getCNFinfo(int& vars, int& cls);
+
+  /** write formula into file of file descriptor 
+   * @param clausesOnly: will not print the cnf header (e.g. to print something before)
+   */
+  void printFormula(FILE* fd, bool clausesOnly = false);
+  
 protected:
   // techniques
   Subsumption subsumption;
@@ -126,7 +134,6 @@ protected:
   void scanCheck(const string& headline);	// check clauses for duplicate literals
   
   // print formula
-  void printFormula(FILE * fd);
   inline void printClause(FILE * fd, CRef cr);
   inline void printLit(FILE * fd, int l);
   void printFormula( const string& headline );

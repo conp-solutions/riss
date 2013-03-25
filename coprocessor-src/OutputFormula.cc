@@ -17,11 +17,10 @@ void Preprocessor::outputFormula(const char *file)
     fclose(f);
 }
 
-void Preprocessor::printFormula(FILE * fd) 
+void Preprocessor::getCNFinfo(int& vars, int& cls)
 {
     if( !data.ok() ) { // unsat
-      fprintf(fd,"p cnf 0 1\n0\n");
-      return;
+      vars = 0; cls = 0; return;
     }
   
     vec<Lit> & trail = solver->trail;
@@ -36,8 +35,35 @@ void Preprocessor::printFormula(FILE * fd)
             ++level0;
         }
     }
-    // print header
-    fprintf(fd,"p cnf %u %i\n", (solver->nVars()) ,level0 + clauses.size());
+    
+    vars = solver->nVars();
+    cls = level0 + clauses.size();
+}
+
+void Preprocessor::printFormula(FILE * fd, bool clausesOnly) 
+{
+    if( !data.ok() ) { // unsat
+      if( ! clausesOnly ) fprintf(fd,"p cnf 0 1\n0\n");
+      else fprintf(fd,"0\n"); // print the empty clause!
+      return;
+    }
+  
+    vec<Lit> & trail = solver->trail;
+    vec<CRef> & clauses = solver->clauses;
+    
+    if( ! clausesOnly ) { // calc and print header if necessary
+      // count level 0 assignments 
+      int level0 = 0;
+      for (int i = 0; i < trail.size(); ++i)
+      {
+	  if ((solver->level)(var(trail[i])) == 0) 
+	  {
+	      ++level0;
+	  }
+      }
+      // print header, if activated
+      fprintf(fd,"p cnf %u %i\n", (solver->nVars()) ,level0 + clauses.size());
+    }
     // print assignments
     for (int i = 0; i < trail.size(); ++i)
     {

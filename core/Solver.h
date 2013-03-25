@@ -59,6 +59,7 @@ public:
     // Problem specification:
     //
     Var     newVar    (bool polarity = true, bool dvar = true, char type = 'o'); // Add a new variable with parameters specifying variable mode.
+    void    reserveVars( Var v );
 
     bool    addClause (const vec<Lit>& ps);                     // Add a clause to the solver. 
     bool    addEmptyClause();                                   // Add the empty clause, making the solver contradictory.
@@ -291,6 +292,12 @@ public: static inline int irand(double& seed, int size) {
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;
 public:     bool useCoprocessor;
+
+/// for qprocessor
+public:
+	    void writeClauses( std::ostream& stream ) {
+	       
+	    }
 };
 
 
