@@ -21,6 +21,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/Unhiding.h"
 #include "coprocessor-src/Probing.h"
 #include "coprocessor-src/Resolving.h"
+#include "coprocessor-src/Dense.h"
 
 #include "coprocessor-src/sls.h"
 #include "coprocessor-src/TwoSAT.h"
@@ -69,8 +70,9 @@ public:
    - extend model
    - ...
   */
-  // print formula (DIMACs)
-  void outputFormula(const char *file);
+  
+  /** print formula (DIMACs), and dense, if another filename is given */
+  void outputFormula(const char *file, const char *varMap = 0);
 
   // handle model processing
   
@@ -111,6 +113,7 @@ protected:
   Unhiding unhiding;
   Probing probing;
   Resolving res;
+  Dense dense;
   
   Sls sls;
   TwoSatSolver twoSAT;

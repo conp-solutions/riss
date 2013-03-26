@@ -15,6 +15,7 @@ static BoolOption pr_rootsOnly     (_cat, "pr-roots",  "probe only on root liter
 static BoolOption pr_repeat        (_cat, "pr-repeat", "repeat probing if changes have been applied",false);
 static IntOption pr_clsSize        (_cat, "pr-csize",  "size of clauses that are considered for probing (propagation)", INT32_MAX,  IntRange(0, INT32_MAX));
 static IntOption pr_prLimit        (_cat, "pr-probeL", "step limit for probing", 5000000,  IntRange(0, INT32_MAX));
+static BoolOption pr_EE            (_cat, "pr-EE",     "run equivalent literal detection",true);
 static BoolOption pr_vivi          (_cat, "pr-vivi",   "perform clause vivification",true);
 static IntOption pr_keepLearnts    (_cat, "pr-keepL",  "keep conflict clauses in solver (0=no,1=learnt,2=original)", 2, IntRange(0,2));
 static IntOption pr_keepImplied    (_cat, "pr-keepI",  "keep clauses that imply on level 1 (0=no,1=learnt,2=original)", 2, IntRange(0,2));
@@ -41,6 +42,7 @@ Probing::Probing(ClauseAllocator& _ca, ThreadController& _controller, Coprocesso
 , l1failed(0)
 , l1learntUnit(0)
 , l1ee(0)
+, l2implied(0)
 , l2failed(0)
 , l2ee(0)
 , totalL2cand(0)
@@ -801,16 +803,18 @@ void Probing::probing()
 	  if( debug_out > 1 )cerr << "c implied literal " << solver.trail[i] << endl;
 	  doubleLiterals.push_back(solver.trail[ i ] );
 	  l1implied ++;
-	} else if( solver.assigns[ tv ] == l_True && prPositive[tv] == l_False ) {
-	  if( debug_out > 1 )cerr << "c equivalent literals " << negLit << " == " << solver.trail[i] << endl;
-	  data.lits.push_back( solver.trail[ i ] ); // equivalent literals
-	  l1ee++;
-	  modifiedFormula = true;
-	} else if( solver.assigns[ tv ] == l_False && prPositive[tv] == l_True ) {
-	  if( debug_out > 1 )cerr << "c equivalent literals " << negLit << " == " << solver.trail[i] << endl;
-	  data.lits.push_back( solver.trail[ i ] ); // equivalent literals
-	  l1ee++;
-	  modifiedFormula = true;
+	} else if( pr_EE ) {
+	  if( solver.assigns[ tv ] == l_True && prPositive[tv] == l_False ) {
+	    if( debug_out > 1 )cerr << "c equivalent literals " << negLit << " == " << solver.trail[i] << endl;
+	    data.lits.push_back( solver.trail[ i ] ); // equivalent literals
+	    l1ee++;
+	    modifiedFormula = true;
+	  } else if( solver.assigns[ tv ] == l_False && prPositive[tv] == l_True ) {
+	    if( debug_out > 1 )cerr << "c equivalent literals " << negLit << " == " << solver.trail[i] << endl;
+	    data.lits.push_back( solver.trail[ i ] ); // equivalent literals
+	    l1ee++;
+	    modifiedFormula = true;
+	  }
 	}
       }
       

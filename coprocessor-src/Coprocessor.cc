@@ -27,10 +27,11 @@ static BoolOption opt_enabled     (_cat2, "enabled_cp3",   "Use CP3", false);
 static BoolOption opt_inprocess   (_cat2, "inprocess",     "Use CP3 for inprocessing", false);
 static BoolOption opt_bve         (_cat2, "bve",           "Use Bounded Variable Elimination during preprocessing", false);
 static BoolOption opt_bva         (_cat2, "bva",           "Use Bounded Variable Addition during preprocessing", false);
-static BoolOption opt_unhide      (_cat2, "unhide",        "Use Bounded Variable Addition during preprocessing", false);
-static BoolOption opt_probe       (_cat2, "probe",         "Use Bounded Variable Addition during preprocessing", false);
+static BoolOption opt_unhide      (_cat2, "unhide",        "Use Unhiding (UHTE, UHLE based on BIG sampling)", false);
+static BoolOption opt_probe       (_cat2, "probe",         "Use Probing/Clause Vivification", false);
 static BoolOption opt_ternResolve (_cat2, "3resolve",      "Use Ternary Clause Resolution", false);
 static BoolOption opt_addRedBins  (_cat2, "addRed2",       "Use Adding Redundant Binary Clauses", false);
+static BoolOption opt_dense       (_cat2, "dense",         "Remove gaps in variables of the formula", false);
 
 // use 2sat and sls only for high versions!
 #if defined CP3VERSION && CP3VERSION < 301
@@ -84,9 +85,8 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , ee ( solver->ca, controller, propagation, subsumption )
 , unhiding ( solver->ca, controller, data, propagation, subsumption, ee )
 , probing  ( solver->ca, controller, data, propagation, ee, *solver )
-, res( solver->ca, controller, data
-  
-)
+, res( solver->ca, controller, data)
+, dense( solver->ca, controller, data, propagation)
 , sls ( data, solver->ca, controller )
 , twoSAT( solver->ca, controller, data)
 {
@@ -359,6 +359,10 @@ lbool Preprocessor::performSimplification()
         status = l_False;
   }  
   
+  if( opt_dense ) {
+    dense.compress(); 
+  }
+  
   // clear / update clauses and learnts vectores and statistical counters
   // attach all clauses to their watchers again, call the propagate method to get into a good state again
   if( opt_verbose > 4 ) cerr << "c coprocessor re-setup solver" << endl;
@@ -396,6 +400,7 @@ lbool Preprocessor::performSimplification()
     if( opt_sls ) sls.printStatistics(cerr);
     if( opt_twosat) twoSAT.printStatistics(cerr);
     if( opt_cce ) cce.printStatistics(cerr);
+    if( opt_dense ) dense.printStatistics(cerr);
   }
   
   // destroy preprocessor data
@@ -461,7 +466,10 @@ stream << "c [STAT] CP3 "
 
 void Preprocessor::extendModel(vec< lbool >& model)
 {
+  dense.decompress( model ); // if model has not been compressed before, nothing has to be done!
+//  cerr << "c formula variables: " << formulaVariables << " model: " << model.size() << endl;
   if( formulaVariables > model.size() ) model.growTo(formulaVariables);
+//  cerr << "c run data extend model" << endl;
   data.extendModel(model);
 }
 

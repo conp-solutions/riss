@@ -289,6 +289,7 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
     varData[v].polarity = ! varData[v].polarity;
   }
   
+  return unsatClauses.size() == 0;
 }
 
 #if 0

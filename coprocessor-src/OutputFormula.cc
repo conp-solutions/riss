@@ -8,7 +8,7 @@ using namespace std;
 
 using namespace Coprocessor;
 
-void Preprocessor::outputFormula(const char *file)
+void Preprocessor::outputFormula(const char *file, const char *varMap)
 {
     FILE* f = fopen(file, "wr");
     if (f == NULL)

@@ -248,10 +248,17 @@ public:
 
   vec<CRef>& getClauses();           // return the vector of clauses in the solver object
   vec<CRef>& getLEarnts();           // return the vector of learnt clauses in the solver object
+  vec<Lit>&  getTrail();             // return trail
 
   uint32_t nCls()  const { return numberOfCls; }
   uint32_t nVars() const { return numberOfVars; }
   Var nextFreshVariable(char type);
+  
+  /** overwrite data of variable to with data of variable from 
+   * Note: does not work on watches
+   * @param final if true, decision heap will be re-build, and the set of variables will be shrinked to the given to variable
+   */
+  void moveVar( Var from, Var to, bool final = false );
 
 // semantic:
   bool ok();                                             // return ok-state of solver
@@ -328,7 +335,6 @@ public:
 
   void extendModel(vec<lbool>& model);
   const vector<Lit>& getUndo() const { return undo; }
-  
 
   // handling equivalent literals
   void addEquivalences( const std::vector<Lit>& list );
@@ -464,6 +470,12 @@ inline vec< Minisat::CRef >& CoprocessorData::getLEarnts()
   return solver->learnts;
 }
 
+inline vec< Lit >& CoprocessorData::getTrail()
+{
+  return solver->trail;
+}
+
+
 inline Var CoprocessorData::nextFreshVariable(char type)
 {
   // be careful here
@@ -480,6 +492,44 @@ inline Var CoprocessorData::nextFreshVariable(char type)
   untouchable.push_back(0);
   // cerr << "c new fresh variable: " << nextVar+1 << endl;
   return nextVar;
+}
+
+inline void CoprocessorData::moveVar(Var from, Var to, bool final)
+{
+  if( from != to ) { // move data only if necessary
+    solver->assigns[to] = solver->assigns[from]; solver->assigns[from] = l_Undef;
+    solver->vardata[to] = solver->vardata[from]; solver->vardata[from] = Solver::VarData();
+    solver->activity[to] = solver->activity[from]; solver->activity[from] = 0;
+    solver->seen[to] = solver->seen[from]; solver->seen[from] = 0;
+    solver->polarity[to] = solver->polarity[from]; solver->polarity[from] = 0;
+    solver->decision[to] = solver->decision[from]; solver->decision[from] = false;
+    solver->varType[to] = solver->varType[from]; solver->varType[from] = false;
+    
+    // cp3 structures
+    lit_occurrence_count[toInt( mkLit(to, false ))] = lit_occurrence_count[toInt( mkLit(from, false ))];
+    lit_occurrence_count[toInt( mkLit(to, true  ))] = lit_occurrence_count[toInt( mkLit(from, true  ))];
+    occs[toInt( mkLit(to, false ))].swap( occs[toInt( mkLit(from, false ))] );
+    occs[toInt( mkLit(to, true  ))].swap( occs[toInt( mkLit(from, true  ))] );
+    untouchable[to] = untouchable[from];
+  }
+  if( final == true ) {
+  
+    solver->assigns.shrink( solver->assigns.size() - to - 1);
+    solver->vardata.shrink( solver->vardata.size() - to - 1);
+    solver->activity.shrink( solver->activity.size() - to - 1);
+    solver->seen.shrink( solver->seen.size() - to - 1);
+    solver->polarity.shrink( solver->polarity.size() - to - 1);
+    solver->decision.shrink( solver->decision.size() - to - 1);
+    solver->varType.shrink( solver->varType.size() - to - 1);
+    
+    solver->rebuildOrderHeap();
+    
+    // set cp3 variable representation!
+    numberOfVars = solver->nVars();
+    lit_occurrence_count.resize( nVars() * 2 );
+    occs.resize(nVars() * 2);
+    untouchable.resize( nVars() );
+  }
 }
 
 
@@ -1165,7 +1215,7 @@ inline void CoprocessorData::addExtensionToExtension(vector< Lit >& lits)
 
 inline void CoprocessorData::extendModel(vec< lbool >& model)
 {
-  const bool local_debug = false	;
+  const bool local_debug = false;
   if( global_debug_out || local_debug) {
     cerr << "c extend model of size " << model.size() << " with undo information of size " << undo.size() << endl;
     cerr << "c  in model: ";
