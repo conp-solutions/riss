@@ -23,7 +23,7 @@ shift												# reduce the parameters, removed the very first one. remaining 
 satsolver=glucose_static						# name of the binary (if not in this directory, give relative path as well)
 
 # default parameters for preprocessor
-cp3params="-cp3_stats -up -ee"	
+cp3params=""
 
 # some temporary files 
 undo=/tmp/cp3_undo_$$				# path to temporary file that stores cp3 undo information
@@ -77,7 +77,7 @@ else
 		# coprocessor can also handle "s UNSATISFIABLE"
 		#
 		echo "c post-process with cp3"
-		./cp3 -cp3_post -cp3_undo=$undo -cp3_model=$model > $realModel
+		./cp3 -cp3_post -cp3_undo=$undo -cp3_model=$model $cp3params > $realModel
 	
 		#
 		# verify final output if SAT?
@@ -108,17 +108,17 @@ fi
 # print times
 #
 
-echo "c pp-time: $(( $ppEnd - $ppStart)) solve-time: $(( $solveEnd - $solveStart ))"
+echo "c pp-time: $(( $ppEnd - $ppStart)) solve-time: $(( $solveEnd - $solveStart ))";
 
 #
 # print solution
 #
-cat $realModel
+cat $realModel;
 
 #
 # remove tmp files
 #
-# rm -f $undo $tmpCNF $model $realModel
+rm -f $undo $undo.map $tmpCNF $model $realModel;
 
 #
 # return with correct exit code

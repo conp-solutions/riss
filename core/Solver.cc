@@ -803,7 +803,7 @@ lbool Solver::solve_()
 	  // restart, triggered by the solver
 	  if( coprocessor == 0 && useCoprocessor) coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
           if( coprocessor != 0 && useCoprocessor) status = coprocessor->preprocess();
-        printf("===============================================================================\n");
+         if (verbosity >= 1) printf("===============================================================================\n");
     }
     
     // Search:

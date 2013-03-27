@@ -72,7 +72,7 @@ int main(int argc, char** argv)
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
 	const char* _cat = "COPROCESSOR 3";
-	StringOption undoFile      (_cat, "cp3_undo",   "write information about undoing simplifications into given file");
+	StringOption undoFile      (_cat, "cp3_undo",   "write information about undoing simplifications into given file (and var map into X.map file)");
 	BoolOption   post          (_cat, "cp3_post",   "perform post processing", false);
 	StringOption modelFile     (_cat, "cp3_model",  "read model from SAT solver from this file");
 	

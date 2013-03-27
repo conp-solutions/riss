@@ -74,11 +74,6 @@ int main(int argc, char** argv)
         setUsageHelp("USAGE: %s [options] <input-file> <result-output-file>\n\n  where input may be either in plain or gzipped DIMACS.\n");
         // printf("This is MiniSat 2.0 beta\n");
         
-#if defined(__linux__)
-        fpu_control_t oldcw, newcw;
-        _FPU_GETCW(oldcw); newcw = (oldcw & ~_FPU_EXTENDED) | _FPU_DOUBLE; _FPU_SETCW(newcw);
-        printf("WARNING: for repeatability, setting FPU to use double precision\n");
-#endif
         // Extra options:
         //
         IntOption    verb   ("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
@@ -93,7 +88,13 @@ int main(int argc, char** argv)
         double initial_time = cpuTime();
 
         S.verbosity = verb;
-        
+
+#if defined(__linux__)
+        fpu_control_t oldcw, newcw;
+        _FPU_GETCW(oldcw); newcw = (oldcw & ~_FPU_EXTENDED) | _FPU_DOUBLE; _FPU_SETCW(newcw);
+        if( verb > 0 ) printf("WARNING: for repeatability, setting FPU to use double precision\n");
+#endif
+	
         solver = &S;
         // Use signal handlers that forcibly quit until the solver will be able to respond to
         // interrupts:
@@ -174,7 +175,7 @@ int main(int argc, char** argv)
             if (ret == l_True){
                 fprintf(res, "s SATISFIABLE\nv ");
                 for (int i = 0; i < S.nVars(); i++)
-                    if (S.model[i] != l_Undef)
+                  //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
                         fprintf(res, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
                 fprintf(res, " 0\n");
             }else if (ret == l_False)
@@ -186,7 +187,7 @@ int main(int argc, char** argv)
         if(! opt_quiet && ret == l_True && res == NULL ) {
 	  printf ("v ");
           for (int i = 0; i < S.nVars(); i++)
-            if (S.model[i] != l_Undef)
+            //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
               printf( "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
 	  printf(" 0\n");
 	}
@@ -199,7 +200,7 @@ int main(int argc, char** argv)
         return (ret == l_True ? 10 : ret == l_False ? 20 : 0);
 #endif
     } catch (OutOfMemoryException&){
-        printf("===============================================================================\n");
+	// printf("===============================================================================\n");
         printf("s UNKNOWN\n");
         exit(0);
     }

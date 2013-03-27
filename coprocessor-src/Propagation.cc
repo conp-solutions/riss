@@ -17,6 +17,11 @@ Propagation::Propagation( ClauseAllocator& _ca, ThreadController& _controller )
 {
 }
 
+void Propagation::reset()
+{
+  lastPropagatedLiteral = 0;
+}
+
 
 lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHeapLt> * heap, const Var ignore)
 {

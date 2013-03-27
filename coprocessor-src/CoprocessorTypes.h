@@ -249,6 +249,7 @@ public:
   vec<CRef>& getClauses();           // return the vector of clauses in the solver object
   vec<CRef>& getLEarnts();           // return the vector of learnt clauses in the solver object
   vec<Lit>&  getTrail();             // return trail
+  void clearTrail();                 // remove all variables from the trail, and reset qhead in the solver
 
   uint32_t nCls()  const { return numberOfCls; }
   uint32_t nVars() const { return numberOfVars; }
@@ -265,6 +266,7 @@ public:
   void setFailed();                                      // found UNSAT, set ok state to false
   lbool enqueue( const Lit l );                          // enqueue literal l to current solver structures
   lbool value( const Lit l ) const ;                     // return the assignment of a literal
+  void resetAssignment( const Var v );                   // set the polarity of a variable to l_Undef -- Note: be careful with this!
   
   Solver* getSolver();                                   // return the pointer to the solver object
   bool hasToPropagate();                                 // signal whether there are new unprocessed units
@@ -441,6 +443,7 @@ inline CoprocessorData::CoprocessorData(ClauseAllocator& _ca, Solver* _solver, C
 , hasLimit( _limited )
 , randomOrder(_randomized)
 , log(_log)
+, numberOfVars(0)
 {
 }
 
@@ -474,6 +477,13 @@ inline vec< Lit >& CoprocessorData::getTrail()
 {
   return solver->trail;
 }
+
+inline void CoprocessorData::clearTrail()
+{
+  solver->trail.clear();
+  solver->qhead = 0;
+}
+
 
 
 inline Var CoprocessorData::nextFreshVariable(char type)
@@ -514,6 +524,7 @@ inline void CoprocessorData::moveVar(Var from, Var to, bool final)
   }
   if( final == true ) {
   
+    cerr << "c compress variables to " << to+1 << endl;
     solver->assigns.shrink( solver->assigns.size() - to - 1);
     solver->vardata.shrink( solver->vardata.size() - to - 1);
     solver->activity.shrink( solver->activity.size() - to - 1);
@@ -574,6 +585,12 @@ inline lbool CoprocessorData::value(const Lit l) const
 {
  return solver->value( l );
 }
+
+inline void CoprocessorData::resetAssignment(const Var v)
+{
+  solver->assigns[ v ] = l_Undef;
+}
+
 
 inline Solver* CoprocessorData::getSolver()
 {

@@ -23,7 +23,8 @@ class Dense  : public Technique
   struct Compression {
     // mapping from old variables to new ones
     int* mapping;
-    uint32_t variables;// number of variables before compression
+    uint32_t variables;	// number of variables before compression
+    vector<Lit> trail;	// already assigned literals
     
     Compression() : mapping(0), variables(0) {};
     /// free the used resources again
@@ -50,6 +51,13 @@ public:
   void printStatistics( ostream& stream );
   
   void destroy();
+  
+  
+  /** write dense information to file, so that it can be loaded afterwards again */
+  bool writeUndoInfo(const string& filename);
+  
+  /** read dense information from file */
+  bool readUndoInfo(const string& filename);
   
 protected:
 

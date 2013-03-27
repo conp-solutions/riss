@@ -5,6 +5,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/Dense.h"
 
 #include <fstream>
+#include <sstream>
 
 using namespace std;
 using namespace Coprocessor;
@@ -17,6 +18,8 @@ static const bool debug_out = false;
 #else
 static BoolOption debug_out         (_cat, "cp3_dense_debug", "print debug output to screen",false);
 #endif
+
+static IntOption  opt_frag  (_cat, "cp3_dense_frag",   "Perform densing, if fragmentation is higher than (percent)", 0, IntRange(0, 100));
 
 Dense::Dense(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation)
 : Technique(_ca,_controller)
@@ -57,19 +60,19 @@ void Dense::compress(const char* newWhiteFile)
   uint32_t diff = 0;
   for( Var v = 0 ; v < data.nVars(); v++ ){
     assert( diff <= v && "there cannot be more variables that variables that have been analyzed so far");
-    if( count[v] != 0 || data.doNotTouch(v) || data.value( mkLit(v,false) ) != l_Undef ){ // be able to rewrite trail!
+    if( count[v] != 0 || data.doNotTouch(v) ){ // do not rewrite the trail!
       compression.mapping[v] = v - diff;
     }
     else { diff++; assert( compression.mapping[v] == -1 ); }
   }
   free( count ); // do not need the count array any more
   
-  // formula is already compact
-  if( diff == 0 ) return;
+  // formula is already compact, or not too loose
+  if( diff == 0 || ( opt_frag > 1 + ( (diff * 100)  / data.nVars()  ) ) ) return;
   globalDiff += diff;
   
   // replace everything in the clauses
-  if( debug_out > 0 ) cerr << "c [COM] compress clauses" << endl;
+  if( debug_out > 0 ) cerr << "c [DENSE] compress clauses" << endl;
   for( int s = 0 ; s < 2; ++ s ) {
     vec<CRef>& list = s == 0 ? data.getClauses() : data.getLEarnts();
     for( uint32_t i = 0 ; i < list.size(); ++i ){
@@ -101,14 +104,20 @@ void Dense::compress(const char* newWhiteFile)
   }
   
   // compress trail, so that it can still be used!
-  for( uint32_t i = 0 ; i < data.getTrail().size(); ++ i ) {
-    const Lit l = data.getTrail()[i];
-    const bool p = sign(l);
-    const Var v = compression.mapping[ var(l) ];
-    if( debug_out ) cerr << "c trail " << var(l) + 1 << " to " << v+1 << endl;
-    data.getTrail()[i] = mkLit( v, p );
+  if( debug_out ) {
+    cerr << "c before trail: "; 
+    for( uint32_t i = 0 ; i < data.getTrail().size(); ++ i ) cerr << " " << data.getTrail()[i];
+    cerr << endl;
   }
   
+  // erase all top level units after backup!
+  for( int i = 0 ; i < data.getTrail().size(); ++ i ) {
+    compression.trail.push_back(data.getTrail()[i] );
+    data.resetAssignment( var(data.getTrail()[i]) );
+  }
+  data.clearTrail();
+  propagation.reset(); // reset propagated literals in UP
+
   if( debug_out ) {
     cerr << "c final trail: "; 
     for( uint32_t i = 0 ; i < data.getTrail().size(); ++ i ) cerr << " " << data.getTrail()[i];
@@ -119,16 +128,32 @@ void Dense::compress(const char* newWhiteFile)
   // invert mapping - and re-arrange all variable data
   for( Var v = 0; v < data.nVars() ; v++ )
   {
+    assert( data.value( mkLit( v, false) ) == l_Undef && "there is no assigned variable allowed " );
+//	    if( v+1 == data.nVars() ) cerr << "c final round with variable " << v+1 << endl;
     if ( compression.mapping[v] != -1 ){
+      if( debug_out ) cerr << "c map " << v+1 << " to " << compression.mapping[v] + 1 << endl;
+//      if( v+1 == data.nVars() ) cerr << "c final round with move" << endl;
       // cerr << "c move intern var " << v << " to " << compression.mapping[v] << endl;
       data.moveVar( v, compression.mapping[v], v+1 == data.nVars() ); // map variable, and if done, re-organise everything
+      assert( data.value( mkLit(compression.mapping[ v ],false) ) == l_Undef && "there is no assigned variable allowed " );
       // invert!
       compression.mapping[ compression.mapping[v] ] = v;
       // only set to 0, if needed afterwards
       if( compression.mapping[ v ] != v ) compression.mapping[ v ] = -1;
+    } else {
+      if( debug_out ) cerr << "c remove variable " << v+1  << endl;
+//      if( v+1 == data.nVars() ) cerr << "c final round without move" << endl;
+      // any variable that is not replaced should have l_Undef
+      if( v+1 == data.nVars() ) data.moveVar( v-diff, v-diff, true ); // compress number of variables!
     }
   }
 
+  if( data.nVars() + diff != compression.variables ) {
+    cerr << "c number of variables does not match: " << endl
+	 << "c diff= " << diff << " old= " << compression.variables << " new=" << data.nVars() << endl;
+  }
+  assert( data.nVars() + diff == compression.variables  && "number of variables has to be reduced" );
+  
   map_stack.push_back( compression );
   
   return; 
@@ -141,14 +166,16 @@ void Dense::decompress(vec< lbool >& model)
     for( int i = 0 ; i < model.size(); ++ i ) cerr << (model[i] == l_True ? i+1 : -i-1) << " ";
     cerr << endl;
   }
+  if( map_stack.size() == 0 && debug_out ) cerr << "c no decompression" << endl;
   // walk backwards on compression stack!
   for( int i = map_stack.size() - 1; i >= 0; --i ) {
     Compression& compression = map_stack[i];
-    if( debug_out ) cerr << "c [COM] change number of variables from " << model.size() << " to " << compression.variables << endl;
+    if( debug_out ) cerr << "c [DENSE] change number of variables from " << model.size() << " to " << compression.variables << endl;
     // extend the assignment, so that it is large enough
     if( model.size() < compression.variables ){
       model.growTo( compression.variables, l_False  );
-      while( data.nVars() < compression.variables ) data.nextFreshVariable('o');
+      while( data.nVars() < compression.variables ) 
+	data.nextFreshVariable('o');
     }
     // backwards, because variables will increase - do not overwrite old values!
     for( int v = compression.variables-1; v >= 0 ; v-- ){
@@ -166,9 +193,152 @@ void Dense::decompress(vec< lbool >& model)
 	  }
 	}
     }
+    
+    // write trail assignments back
+    for( int j = 0 ; j < compression.trail.size(); ++ j ) {
+      if ( sign( compression.trail[j] ) ) model[ var(compression.trail[j]) ] = l_False;
+      else model[ var(compression.trail[j]) ] = l_True;
+      if( debug_out ) cerr << "c satisfy " << compression.trail[j] << endl;
+    }
+  }
+  if( debug_out ) {
+    cerr << "c decompressed model: ";
+    for( int i = 0 ; i < model.size(); ++ i ) cerr << (model[i] == l_True ? i+1 : -i-1) << " ";
+    cerr << endl;
   }
 }
 
+
+bool Dense::writeUndoInfo(const string& filename) {
+ 
+  if( map_stack.size() == 0 ) return true; // nothing to write?
+  
+  ofstream file( filename.c_str(), ios_base::out);
+  if( ! file ) {
+    cerr << "c ERROR: could not open map - undo file " << filename << endl;
+    return false;
+  }
+
+  // for each mapping, write two lines in the file
+  for( int i = 0 ; i < map_stack.size(); ++ i ) {
+    Compression& compression = map_stack[i];
+    file << "p cnf " << compression.variables << " " << compression.trail.size() + 1 << endl;
+    for( int j = 0 ; j < compression.variables; ++ j ) file << compression.mapping[j] + 2 << " "; // since we are also using -1 and 0 
+    file << "0" << endl;
+    for( int j = 0 ; j < compression.trail.size(); ++ j ) {
+      file <<  compression.trail[j] << " 0" << endl;
+    }
+  }
+
+  file.close();
+  return true;
+}
+
+/** parse a clause from string and store it in the literals vector
+ *
+ */
+static int parseClause( const string& line, vector<Lit>& literals ) 
+{
+	uint32_t ind = 0;
+	// skip whitespaces
+	while( ind < line.size() && line[ind] == ' ' ) ++ind;
+	// parse numbers
+	while(line.size() > ind)	// read each single number
+	{
+		// cerr << "c FP check(" << lines << "," << ind << "): " << line[ind] << endl;
+		int32_t number = 0;
+		bool negative = false;
+		
+		while ( ind < line.size() && line[ind] == '-')
+		{
+			negative = true;
+			ind++;
+		}
+		// read next number here
+		while( ind < line.size() && line[ind] >= '0' && line[ind] <= '9' )
+		{
+			number *=10;
+			number += line[ind++] - '0';
+		}
+		
+		if( number == 0 ) break;	// there may be some symbols behind a 0, but they do not matter
+		
+		// put right sign on the number
+		// number = (negative) ? 0 - number : number;
+
+		const Lit lit1 = mkLit( number - 1, negative );
+		literals.push_back( lit1 );
+
+		
+		// skip whitespaces
+		while(line[ind] == ' ') ind++;
+	}
+	return 0;
+}
+
+  
+  
+bool Dense::readUndoInfo(const string& filename) {
+ vector<Lit> literals;
+ string line;
+ 
+ assert( map_stack.size() == 0 && "do not load undo information, if there is already information present!");
+ 
+  ifstream file( filename.c_str(), ios_base::in);
+  if( ! file ) {
+    cerr << "c WARNING: could not open undo file " << filename << " (might not have been created)" << endl;
+    return false;
+  } else {
+    cerr << "c opened var map " << filename << " for reading ... " << endl; 
+  }
+
+  int parsedClauses = 0;
+  int promisedClauses = -1;
+  int variables = 0;
+
+  
+  bool pLine = false;
+ while( getline( file, line ) ) {
+
+   if( line.find( "c" ) == 0 ) continue; // comments are fine!
+   
+   pLine = !pLine; // per line that can be worked on, change the line that is expected
+   if( pLine ) {
+    if( line.find( "p cnf" ) == 0 ) {
+      stringstream s(line.substr(5));
+      s >> variables >> promisedClauses;
+    }  else {
+      cerr << "c WARNING: did not find expected p cnf information" << endl;
+      exit(-1);
+    }
+   }
+   else if( !pLine )  {
+     parsedClauses ++;
+     // there is a clause!
+     literals.clear();
+     parseClause( line , literals );
+     Compression compression;
+     compression.variables = variables;
+     compression.mapping = (Var*)malloc( sizeof(Var) * (variables) );
+     for( Var v = 0; v < variables; ++v ) compression.mapping[v] = -1;
+     for( int i = 0 ; i < literals.size(); ++ i ) {
+       compression.mapping[i] = ((int) var(literals[i])) - 1; // since we have been shifting before as well, but now differnt internal representation
+     }
+     
+     for( int i = 1 ; i < promisedClauses; ++ i ) { // one clause has been read already
+	if( !getline( file, line ) ) { cerr << "c ERROR: cannot read all clauses from variable map!" << endl; exit(-1); }
+	literals.clear();
+	parseClause( line , literals );
+	if( literals.size() != 1 ) { cerr << "c ERROR: parsed assignment clause is not unit!" << endl; exit(-1); }
+	compression.trail.push_back(literals[0]);
+     }
+     cerr << "c parsed compression with " << variables << " variables and " << promisedClauses << " clauses" << endl;
+     map_stack.push_back( compression );
+   }
+ }
+ cerr << "c undo var map stack with " << map_stack.size() << " elements" << endl;
+ return false;
+}
 
 void Dense::printStatistics( ostream& stream )
 {

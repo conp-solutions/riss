@@ -279,6 +279,9 @@ bool Preprocessor::parseUndoInfo(const string& filename) {
     cerr << "c ERROR: not sufficiently many clauses given in the file";
     return false;
  }
+ 
+ dense.readUndoInfo( filename + ".map" );
+ 
  return true;
 }
 
@@ -310,7 +313,7 @@ bool Preprocessor::writeUndoInfo(const string& filename) {
  
  for( int i = 1; i < undo.size(); ++ i ) {
    stringstream s;
-   while( undo[i] != lit_Undef && i < undo.size()) {
+   while( i < undo.size() && undo[i] != lit_Undef) {
      s << undo[i] << " ";
      ++i;
    }
@@ -327,5 +330,6 @@ bool Preprocessor::writeUndoInfo(const string& filename) {
   }
   file << s.str();
  }
- return true; 
+ 
+ return dense.writeUndoInfo( filename + ".map" );
 }

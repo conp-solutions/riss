@@ -359,10 +359,6 @@ lbool Preprocessor::performSimplification()
         status = l_False;
   }  
   
-  if( opt_dense ) {
-    dense.compress(); 
-  }
-  
   // clear / update clauses and learnts vectores and statistical counters
   // attach all clauses to their watchers again, call the propagate method to get into a good state again
   if( opt_verbose > 4 ) cerr << "c coprocessor re-setup solver" << endl;
@@ -374,6 +370,11 @@ lbool Preprocessor::performSimplification()
 
   if( opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;
   
+  if( opt_dense ) {
+    // do as very last step -- not nice, if there are units on the trail!
+    dense.compress(); 
+  }
+  
   if( isInprocessing ) ipTime = cpuTime() - ipTime;
   else ppTime = cpuTime() - ppTime;
   
@@ -383,6 +384,7 @@ lbool Preprocessor::performSimplification()
   
   if ( data.ok() ) reSetupSolver();
   
+  if( opt_verbose > 5 ) printSolver(cerr, 4); // print all details of the solver
   if( opt_verbose > 4 ) printFormula("after full simplification");
 
   if( opt_printStats ) {
@@ -466,11 +468,15 @@ stream << "c [STAT] CP3 "
 
 void Preprocessor::extendModel(vec< lbool >& model)
 {
+  // order is important!
   dense.decompress( model ); // if model has not been compressed before, nothing has to be done!
-//  cerr << "c formula variables: " << formulaVariables << " model: " << model.size() << endl;
+  
+  cerr << "c formula variables: " << formulaVariables << " model: " << model.size() << endl;
   if( formulaVariables > model.size() ) model.growTo(formulaVariables);
-//  cerr << "c run data extend model" << endl;
+  cerr << "c run data extend model" << endl;
   data.extendModel(model);
+  
+
 }
 
 
@@ -602,7 +608,6 @@ void Preprocessor::reSetupSolver()
 		    if( solver->propagate() != CRef_Undef ) { data.setFailed(); return; }
 		    c.set_delete(true);
 		  } else {
-		    // cerr << "c attach orig clause " << c << " as " << kept_clauses << endl;
 		    solver->attachClause(cr);
 		    solver->clauses[kept_clauses++] = cr; // add original clauss back! 
 		  }
@@ -911,3 +916,56 @@ void Preprocessor::fullCheck(const string& headline)
 }
 
 
+void Preprocessor::printSolver(ostream& s, int verbose)
+{
+  s << "Solver state:"  << endl
+    << " ok " << solver->ok << endl
+    << " decision level: " << solver->decisionLevel()  << endl;
+  if( verbose == 0 ) return;
+  s << " trail_lims: ";
+  for( int i = 0 ; i < solver->trail_lim.size(); i ++ )
+    s << " " << solver->trail_lim[i];
+  s  << endl;
+  s  << " trail: ";
+  for( int i = 0 ; i < solver->trail.size(); ++ i ) {
+    s << " " << solver->trail[i]; 
+  }
+  s << endl;
+  
+  cerr << "c seen variables:";
+  for( Var v = 0 ; v < solver->nVars(); ++ v )
+    if( solver->seen[v] != 0 ) cerr << " " << v+1;
+  cerr << endl;
+  
+  cerr << "c assigned variables:";
+  for( Var v = 0 ; v < solver->nVars(); ++ v )
+    if( solver->assigns[v] != l_Undef ) cerr << " " << v+1;
+  cerr << endl;
+  
+  if( verbose == 1 ) return;
+  s << "formula clauses (without unit clauses):" << endl;
+  for( int i = 0 ; i < solver->clauses.size(); ++ i ) {
+    const Clause& c = solver->ca[ solver->clauses[i] ];
+    if( c.mark() != 0 ) continue;
+    s << c << endl; // print the clause, will print the tag as well
+  }
+  if( verbose == 2 ) return;
+  s << "learnt clauses (without unit clauses):" << endl;
+  for( int i = 0 ; i < solver->learnts.size(); ++ i ) {
+    const Clause& c = solver->ca[ solver->learnts[i] ];
+    if( c.mark() != 0 ) continue;
+    s << c << endl; // print the clause, will print the tag as well
+  }  
+  if( verbose == 3 ) return;
+  for( Var v = 0 ; v < solver->nVars(); ++ v ) {
+    for( int pl = 0 ; pl < 2; ++ pl ) {
+      const Lit p = mkLit(v, pl == 1 );
+      vec<Minisat::Solver::Watcher>&  ws  = solver->watches[p];
+      
+      for (int i = 0 ; i <  ws.size();  i ++){
+            CRef     cr        = ws[i].cref;
+	cerr << "c watch for " << p << " clause " << ca[cr] << " with blocker " << ws[i].blocker << endl;
+      }
+    }
+  }
+}

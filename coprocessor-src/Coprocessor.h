@@ -142,7 +142,8 @@ protected:
   void printFormula( const string& headline );
   
 
-  
+  /** print current state of the solver */
+  void printSolver(ostream& s, int verbose);
 };
 
 };
