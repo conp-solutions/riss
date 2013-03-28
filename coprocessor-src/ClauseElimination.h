@@ -28,6 +28,9 @@ class ClauseElimination : public Technique {
   double processTime;  // required time
   int removedClauses;  // number of removed clauses
   int removedBceClauses; // number of clauses that have been removed without changing equivalence
+  unsigned removedNonEEClauses; // number of clauses that have been removed without preserving equivalence
+  unsigned cceSize;		 // clause size for which cce is applied
+  unsigned candidates;		 // number of candidates for which cce was tested
   
 public:
   
@@ -39,22 +42,26 @@ public:
     vector<Lit> toProcess; // literals that still need to be processed
     vector<Lit> toUndo;    // literals that have to be out to the undo information, if a cla clause is removed by ATE or ABCE
     int nextAla;           // position from which ala needs to be continued
-    
+
     int steps;
     int removedClauses;
     int removedBceClauses;
-    WorkData(int vars) : nextAla(0), steps(0), removedClauses(0), removedBceClauses(0) { array.create(2*vars); helpArray.create(2*vars);}
+    unsigned removedNonEEClauses;  // number of clauses that have been removed without preserving equivalence
+    
+    WorkData(int vars) : nextAla(0), steps(0), removedClauses(0), removedBceClauses(0), removedNonEEClauses(0) { array.create(2*vars); helpArray.create(2*vars);}
     ~WorkData() {array.destroy();helpArray.destroy();}
     void reset () { cla.clear(); array.nextStep(); toProcess.clear(); toUndo.clear(); nextAla=0; }
   };
   
   ClauseElimination( ClauseAllocator& _ca, ThreadController& _controller );
 
-  void eliminate(CoprocessorData& data);
+  void process(CoprocessorData& data);
   
   void initClause(const CRef cr); // inherited from Technique
   
   void printStatistics(ostream& stream);
+  
+  void destroy();
   
 protected:
   
@@ -68,6 +75,7 @@ protected:
   
   /** check whether the clause resolved with the array results in a tautology */
   bool markedBCE(const Lit& l, const Clause& c, const MarkArray& array);
+
   
   /*
    *  Parallel Stuff later!!

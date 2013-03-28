@@ -12,10 +12,11 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/LockCollection.h"
 
 #include <vector>
+#include <iostream>
 
 using namespace Minisat;
 using namespace std;
-
+extern IntOption heap_updates; // Updates of BVE-Heap
 namespace Coprocessor {
 
   /// temporary Boolean flag to quickly enable debug output for the whole file
@@ -36,6 +37,15 @@ inline ostream& operator<<(ostream& other, const Clause& c ) {
   for( int i = 0 ; i < c.size(); ++ i )
     other << " " << c[i];
   other << "]";
+  return other;
+}
+
+/// print elements of a vector
+template <typename T>
+inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data ) 
+{
+  for( int i = 0 ; i < data.size(); ++ i )
+    other << " " << data[i];
   return other;
 }
 
@@ -157,6 +167,8 @@ public:
   void log( int level, const string& s, const Clause& c, const Lit& l);
 };
 
+struct VarOrderBVEHeapLt;
+
 /** Data, that needs to be accessed by coprocessor and all the other classes
  */
 class CoprocessorData
@@ -183,11 +195,34 @@ class CoprocessorData
   Lock dataLock;                        // lock for parallel algorithms to synchronize access to data structures
 
   MarkArray deleteTimer;                // store for each literal when (by which technique) it has been deleted
-  char* untouchable;                    // store all variables that should not be touched (altering presence in models)
+  vector<char> untouchable;             // store all variables that should not be touched (altering presence in models)
 
   vector<Lit> undo;                     // store clauses that have to be undone for extending the model
   vector<Lit> equivalences;             // stack of literal classes that represent equivalent literals
+  vector<CRef> subsume_queue; // queue of clause references that potentially can subsume other clauses
+  vector<CRef> strengthening_queue;     // vector of clausereferences, which potentially can strengthen
 
+  int countLitOcc(Lit l){
+    int count = 0;
+    vector<CRef> & list = occs[toInt(l)];
+    for (int i = 0; i < list.size(); ++i)
+    {
+        CRef cr = list[i];
+        if (cr == CRef_Undef) continue;
+        Clause & c = ca[cr];
+        if (c.can_be_deleted()) continue;
+        bool occurs = false;
+        for (int j = 0; j < c.size(); ++j) 
+            if (c[j] == l) 
+            {
+                occurs = true; break;
+            }
+        if (occurs) ++count;
+        else assert(false && "dirty occurrence list!!!");
+    }
+    return count;
+  }  
+  
   // TODO decide whether a vector of active variables would be good!
 
 public:
@@ -196,6 +231,7 @@ public:
 
   MarkArray ma;                          // temporary markarray, that should be used only inside of methods
   vector<Lit> lits;                      // temporary literal vector
+  vector<CRef> clss;                     // temporary literal vector
 
   CoprocessorData(ClauseAllocator& _ca, Solver* _solver, Logger& _log, bool _limited = true, bool _randomized = false);
 
@@ -212,26 +248,51 @@ public:
 
   vec<CRef>& getClauses();           // return the vector of clauses in the solver object
   vec<CRef>& getLEarnts();           // return the vector of learnt clauses in the solver object
+  vec<Lit>&  getTrail();             // return trail
+  void clearTrail();                 // remove all variables from the trail, and reset qhead in the solver
 
   uint32_t nCls()  const { return numberOfCls; }
   uint32_t nVars() const { return numberOfVars; }
+  Var nextFreshVariable(char type);
+  
+  /** overwrite data of variable to with data of variable from 
+   * Note: does not work on watches
+   * @param final if true, decision heap will be re-build, and the set of variables will be shrinked to the given to variable
+   */
+  void moveVar( Var from, Var to, bool final = false );
 
 // semantic:
   bool ok();                                             // return ok-state of solver
   void setFailed();                                      // found UNSAT, set ok state to false
   lbool enqueue( const Lit l );                          // enqueue literal l to current solver structures
   lbool value( const Lit l ) const ;                     // return the assignment of a literal
+  void resetAssignment( const Var v );                   // set the polarity of a variable to l_Undef -- Note: be careful with this!
   
   Solver* getSolver();                                   // return the pointer to the solver object
   bool hasToPropagate();                                 // signal whether there are new unprocessed units
   
   bool unlimited();                                      // do preprocessing without technique limits?
   bool randomized();                                     // use a random order for preprocessing techniques
+  bool isInterupted();					  // has received signal from the outside
 
 // adding, removing clauses and literals =======
-  void addClause (      const CRef cr );                 // add clause to data structures, update counters
+  void addClause (      const Minisat::CRef cr, bool check = false );                 // add clause to data structures, update counters
+  void addClause (      const CRef cr , Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL);     // add clause to data structures, update counters
   bool removeClauseFrom (const Minisat::CRef cr, const Lit l); // remove clause reference from list of clauses for literal l, returns true, if successful
+  void removeClauseFrom (const Minisat::CRef cr, const Lit l, const int index); // remove clause reference from list of clauses for literal l, returns true, if successful
+  inline bool removeClauseFromThreadSafe (const Minisat::CRef cr, const Lit l); // replaces clause reference from clause list by CRef_Undef, returns true, if successful
+  inline void cleanUpOccurrences(const MarkArray & dirtyOccs, const uint32_t timer); // removes CRef_Undef from all dirty occurrences
+  void cleanOccurrences();				// remove all clauses and set counters to 0
 
+  // Garbage Collection
+  void garbageCollect(vector<CRef> ** updateVectors = 0, int size = 0);
+  void relocAll(ClauseAllocator & to, vector<CRef> ** updateVectors = 0, int size = 0);
+  void checkGarbage(vector<CRef> ** updateVectors = 0, int size = 0) { return checkGarbage(solver->garbage_frac, updateVectors, size); }
+  void checkGarbage(double gf, vector<CRef> ** updateVectors = 0, int size = 0){  if (ca.wasted() > ca.size() * gf) garbageCollect(updateVectors, size); }
+
+  void updateClauseAfterDelLit(const Minisat::Clause& clause)
+  { if( global_debug_out ) cerr << "what to update in clause?! " << clause << endl; }
+  
 // delete timers
   /** gives back the current times, increases for the next technique */
   uint32_t getMyDeleteTimer();
@@ -240,8 +301,7 @@ public:
   /** fill the vector with all the literals that have been deleted after the given timer */
   void getActiveVariables(const uint32_t myTimer, vector< Var >& activeVariables );
   /** fill the heap with all the literals that have been deleted afetr the given timer */
-  
-  template<class Comp>
+  template <class Comp>  
   void getActiveVariables(const uint32_t myTimer, Heap < Comp > & heap );
 
   /** resets all delete timer */
@@ -255,12 +315,15 @@ public:
   void lock()   { dataLock.lock();   } // lock and unlock the data structure
   void unlock() { dataLock.unlock(); } // lock and unlock data structure
 
-// formula statistics ==========================
-  void addedLiteral(   const Lit l, const int32_t diff = 1);  // update counter for literal
-  void removedLiteral( const Lit l, const int32_t diff = 1);  // update counter for literal
-  void addedClause (   const CRef cr );                   // update counters for literals in the clause
-  void removedClause ( const CRef cr );                 // update counters for literals in the clause
+// formula statistics with HeapUpdate and LockHandling
+  
+  void addedLiteral( const Lit l, const int32_t diff = 1, Heap<VarOrderBVEHeapLt> * heap = NULL, const Var ignore = var_Undef, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL); // update counter for literal
+  void removedLiteral( const Lit l, const int32_t diff = 1, Heap<VarOrderBVEHeapLt> * heap = NULL, const Var ignore = var_Undef, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL); // update counter for literal
+  void addedClause (   const CRef cr, Heap<VarOrderBVEHeapLt> * heap = NULL, const Var ignore = var_Undef, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL );			// update counters for literals in the clause
+  void removedClause ( const CRef cr, Heap<VarOrderBVEHeapLt> * heap = NULL, const Var ignore = var_Undef, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL );			// update counters for literals in the clause
+  void removedClause ( const Lit l1, const Lit l2 );		// update counters for literals in the clause
 
+  bool removeClauseThreadSafe (const CRef cr);
   void correctCounters();
 
   // extending model after clause elimination procedures - l will be put first in list to be undone if necessary!
@@ -268,15 +331,26 @@ public:
   void addToExtension( vec< Lit >& lits, const Lit l = lit_Error );
   void addToExtension( vector< Lit >& lits, const Lit l = lit_Error );
   void addToExtension( const Lit dontTouch, const Lit l = lit_Error );
+  
+  /// add already created vector to extension vector
+  void addExtensionToExtension(vector< Lit >& lits);
 
   void extendModel(vec<lbool>& model);
+  const vector<Lit>& getUndo() const { return undo; }
 
   // handling equivalent literals
   void addEquivalences( const std::vector<Lit>& list );
   void addEquivalences( const Lit& l1, const Lit& l2 );
   vector<Lit>& getEquivalences();
 
-  // checking whether a literal can be altered
+  /** add a clause to the queues, so that this clause will be checked by the next call to subsumeStrength 
+   * @return true, if clause has really been added and was not in both queues before
+   */
+  bool addSubStrengthClause( const Minisat::CRef cr );
+  vector<CRef>& getSubsumeClauses();
+  vector<CRef>& getStrengthClauses();
+  
+  // checking whether a literal can be altered - TODO: use the frozen information from the solver object!
   void setNotTouch(const Var v);
   bool doNotTouch (const Var v) const ;
   
@@ -310,6 +384,10 @@ public:
   void create( ClauseAllocator& ca, Coprocessor::CoprocessorData& data, vec< Minisat::CRef >& list);
   void create( ClauseAllocator& ca, Coprocessor::CoprocessorData& data, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2);
 
+  /** recreate the big after the formula changed */
+  void recreate( ClauseAllocator& ca, Coprocessor::CoprocessorData& data, vec< Minisat::CRef >& list);
+  void recreate( ClauseAllocator& ca, Coprocessor::CoprocessorData& data, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2);
+  
   /** removes an edge from the graph again */
   void removeEdge(const Lit l0, const Lit l1 );
 
@@ -321,6 +399,13 @@ public:
    * @return false, if BIG is not initialized yet
    */
   void generateImplied(Coprocessor::CoprocessorData& data);
+  
+  /** fill the literals in the order they would appear in a BFS in the big, starting with root nodes 
+   *  NOTE: will pollute the data.ma MarkArray
+   * @param rootsOnly: fill the vector only with root literals
+   */
+  void fillSorted( vector< Lit >& literals, Coprocessor::CoprocessorData& data, bool rootsOnly = true, bool getAll=false);
+  void fillSorted(vector<Var>& variables, CoprocessorData& data, bool rootsOnly = true, bool getAll=false);
 
   /** return true, if the condition "from -> to" holds, based on the stochstic scanned data */
   bool implies(const Lit& from, const Lit& to) const;
@@ -337,13 +422,28 @@ public:
   uint32_t getStop( const Lit& l ) { return stop != 0 ? stop[ toInt(l) ] : 0; }
 };
 
+/** Comperator for Variable Heap of BVE */
+struct VarOrderBVEHeapLt {
+        CoprocessorData & data;
+        const int heapOption;
+        bool operator () (Var x, Var y) const {/* assert (data != NULL && "Please assign a valid data object before heap usage" );*/ 
+            switch (heapOption)
+            {
+                case 0: return data[x] < data[y]; 
+                case 1: return data[x] > data[y]; 
+                default: assert(false && "In case of random order no heap should be used"); return false;
+            }
+        }
+        VarOrderBVEHeapLt(CoprocessorData & _data, int _heapOption) : data(_data), heapOption(_heapOption) { }
+    };
+
 inline CoprocessorData::CoprocessorData(ClauseAllocator& _ca, Solver* _solver, Coprocessor::Logger& _log, bool _limited, bool _randomized)
 : ca ( _ca )
 , solver( _solver )
 , hasLimit( _limited )
 , randomOrder(_randomized)
 , log(_log)
-, untouchable(0)
+, numberOfVars(0)
 {
 }
 
@@ -353,8 +453,7 @@ inline void CoprocessorData::init(uint32_t nVars)
   lit_occurrence_count.resize( nVars * 2, 0 );
   numberOfVars = nVars;
   deleteTimer.create( nVars );
-  untouchable = (char*) malloc( sizeof(char) * nVars);
-  memset( untouchable, 0, sizeof(char) * nVars );
+  untouchable.resize(nVars);
 }
 
 inline void CoprocessorData::destroy()
@@ -373,6 +472,77 @@ inline vec< Minisat::CRef >& CoprocessorData::getLEarnts()
 {
   return solver->learnts;
 }
+
+inline vec< Lit >& CoprocessorData::getTrail()
+{
+  return solver->trail;
+}
+
+inline void CoprocessorData::clearTrail()
+{
+  solver->trail.clear();
+  solver->qhead = 0;
+}
+
+
+
+inline Var CoprocessorData::nextFreshVariable(char type)
+{
+  // be careful here
+  Var nextVar = solver->newVar(true,true,type);
+  numberOfVars = solver->nVars();
+  ma.resize( 2*nVars() );
+  
+  deleteTimer.resize( 2*nVars() );
+  
+  occs.resize( 2*nVars() );
+  // cerr << "c resize occs to " << occs.size() << endl;
+  lit_occurrence_count.resize( 2 * nVars() );
+  
+  untouchable.push_back(0);
+  // cerr << "c new fresh variable: " << nextVar+1 << endl;
+  return nextVar;
+}
+
+inline void CoprocessorData::moveVar(Var from, Var to, bool final)
+{
+  if( from != to ) { // move data only if necessary
+    solver->assigns[to] = solver->assigns[from]; solver->assigns[from] = l_Undef;
+    solver->vardata[to] = solver->vardata[from]; solver->vardata[from] = Solver::VarData();
+    solver->activity[to] = solver->activity[from]; solver->activity[from] = 0;
+    solver->seen[to] = solver->seen[from]; solver->seen[from] = 0;
+    solver->polarity[to] = solver->polarity[from]; solver->polarity[from] = 0;
+    solver->decision[to] = solver->decision[from]; solver->decision[from] = false;
+    solver->varType[to] = solver->varType[from]; solver->varType[from] = false;
+    
+    // cp3 structures
+    lit_occurrence_count[toInt( mkLit(to, false ))] = lit_occurrence_count[toInt( mkLit(from, false ))];
+    lit_occurrence_count[toInt( mkLit(to, true  ))] = lit_occurrence_count[toInt( mkLit(from, true  ))];
+    occs[toInt( mkLit(to, false ))].swap( occs[toInt( mkLit(from, false ))] );
+    occs[toInt( mkLit(to, true  ))].swap( occs[toInt( mkLit(from, true  ))] );
+    untouchable[to] = untouchable[from];
+  }
+  if( final == true ) {
+  
+    cerr << "c compress variables to " << to+1 << endl;
+    solver->assigns.shrink( solver->assigns.size() - to - 1);
+    solver->vardata.shrink( solver->vardata.size() - to - 1);
+    solver->activity.shrink( solver->activity.size() - to - 1);
+    solver->seen.shrink( solver->seen.size() - to - 1);
+    solver->polarity.shrink( solver->polarity.size() - to - 1);
+    solver->decision.shrink( solver->decision.size() - to - 1);
+    solver->varType.shrink( solver->varType.size() - to - 1);
+    
+    solver->rebuildOrderHeap();
+    
+    // set cp3 variable representation!
+    numberOfVars = solver->nVars();
+    lit_occurrence_count.resize( nVars() * 2 );
+    occs.resize(nVars() * 2);
+    untouchable.resize( nVars() );
+  }
+}
+
 
 inline bool CoprocessorData::ok()
 {
@@ -394,9 +564,15 @@ inline bool CoprocessorData::randomized()
   return randomOrder;
 }
 
+inline bool CoprocessorData::isInterupted()
+{
+  return solver->asynch_interrupt;
+}
+
+
 inline lbool CoprocessorData::enqueue(const Lit l)
 {
-  if( global_debug_out ) cerr << "c enqueue " << l << " with previous value " << (solver->value( l ) == l_Undef ? "undef" : (solver->value( l ) == l_False ? "unsat" : " sat ") ) << endl;
+  if( false || global_debug_out ) cerr << "c enqueue " << l << " with previous value " << (solver->value( l ) == l_Undef ? "undef" : (solver->value( l ) == l_False ? "unsat" : " sat ") ) << endl;
   if( solver->value( l ) == l_False) {
     solver->ok = false; // set state to false
     return l_False;
@@ -410,6 +586,12 @@ inline lbool CoprocessorData::value(const Lit l) const
  return solver->value( l );
 }
 
+inline void CoprocessorData::resetAssignment(const Var v)
+{
+  solver->assigns[ v ] = l_Undef;
+}
+
+
 inline Solver* CoprocessorData::getSolver()
 {
   return solver;
@@ -422,16 +604,60 @@ inline bool CoprocessorData::hasToPropagate()
 }
 
 
-inline void CoprocessorData::addClause(const Minisat::CRef cr)
+inline void CoprocessorData::addClause(const Minisat::CRef cr, bool check)
 {
   const Clause & c = ca[cr];
   if( c.can_be_deleted() ) return;
   for (int l = 0; l < c.size(); ++l)
   {
+    if( check ) {
+      for( int i = 0 ; i < occs[toInt(c[l])].size(); ++ i ) {
+	if( occs[toInt(c[l])][i] == cr ) {
+	  cerr << "c clause " << cr << " is already in list for lit " << c[l] << " clause is: " << ca[cr] << endl; 
+	}
+      }
+    }
     occs[toInt(c[l])].push_back(cr);
-    addedLiteral( c[l] );
+    lit_occurrence_count[toInt(c[l])] += 1;
   }
   numberOfCls ++;
+}
+
+inline void CoprocessorData::addClause ( const CRef cr , Heap<VarOrderBVEHeapLt> * heap, const Var ignore, SpinLock * data_lock, SpinLock * heap_lock) 
+{
+  const Clause & c = ca[cr];
+  if( c.can_be_deleted() ) return;
+  if (heap == NULL && data_lock == NULL && heap_lock == NULL)
+  {
+      for (int l = 0; l < c.size(); ++l)
+      {
+        occs[toInt(c[l])].push_back(cr);
+        lit_occurrence_count[toInt(c[l])] += 1;
+      }
+      numberOfCls ++;
+  }
+  else 
+  {
+      if (data_lock != NULL)
+          data_lock->lock();
+      if (heap_lock != NULL)
+          heap_lock->lock();
+      for (int l = 0; l < c.size(); ++l)
+      {
+        occs[toInt(c[l])].push_back(cr);
+        lit_occurrence_count[toInt(c[l])] += 1;
+        if (heap != NULL)
+            if (heap->inHeap(var(c[l])))
+                heap->increase(var(c[l]));
+            else if (heap_updates == 2 && var(c[l]) != ignore)
+                heap->update(var(c[l]));
+      }
+      if (heap_lock != NULL) 
+          heap_lock->unlock();
+      numberOfCls ++;
+      if (data_lock != NULL) 
+          data_lock->unlock();
+  }
 }
 
 inline bool CoprocessorData::removeClauseFrom(const Minisat::CRef cr, const Lit l)
@@ -447,6 +673,67 @@ inline bool CoprocessorData::removeClauseFrom(const Minisat::CRef cr, const Lit 
   }
   return false;
 }
+
+inline void CoprocessorData::removeClauseFrom(const Minisat::CRef cr, const Lit l, const int index)
+{
+  vector<CRef>& list = occs[toInt(l)];
+  assert( list[index] == cr );
+  list[index] = list[ list.size() -1 ];
+  list.pop_back();
+}
+
+/** replaces clause reference from clause list by CRef_Undef, returns true, if successful
+ *  asynchronous list modification
+ */
+inline bool CoprocessorData::removeClauseFromThreadSafe (const Minisat::CRef cr, const Lit l) 
+{
+  assert( cr != CRef_Undef);
+  vector<CRef>& list = occs[toInt(l)];
+  for( int i = 0 ; i < list.size(); ++ i )
+  {
+    if( list[i] == cr ) {
+      list[i] = CRef_Undef;       
+      return true;
+    }
+  }
+  return false;
+}
+
+/** removes CRef_Undef from all dirty occurrences
+ *  should be used sequentiell or with exclusive occ-access
+ *
+ *  @param dirtyOccs (on Lits !)
+ */
+inline void CoprocessorData::cleanUpOccurrences(const MarkArray & dirtyOccs, const uint32_t timer)
+{
+    for(int l = 0 ; l < dirtyOccs.size() ; ++ l ) {
+        if( dirtyOccs.getIndex(l) >= timer ) 
+        {
+            vector<CRef> & list = occs[l];
+            int i = 0; 
+            while (i < list.size())
+            {
+                if (list[i] == CRef_Undef)
+                {
+                    list[i] = list[list.size() - 1];
+                    list.pop_back();
+                    continue;
+                }
+                ++i;
+            }
+        }
+    }
+}
+
+inline void CoprocessorData::cleanOccurrences()
+{
+  for( Var v = 0; v < nVars(); ++v ) {
+    list( mkLit(v,false) ).clear(); 
+    list( mkLit(v,true) ).clear();
+  }
+  lit_occurrence_count.assign(0,nVars()*2);
+}
+
 
 inline uint32_t CoprocessorData::getMyDeleteTimer()
 {
@@ -480,35 +767,160 @@ inline void CoprocessorData::resetDeleteTimer()
 }
 
 
-inline void CoprocessorData::addedClause(const Minisat::CRef cr)
+inline void CoprocessorData::removedClause(const Lit l1, const Lit l2)
 {
-  const Clause & c = ca[cr];
-  for (int l = 0; l < c.size(); ++l)
-  {
-    addedLiteral( c[l] );
+  removedLiteral(l1);
+  removedLiteral(l2);
+  
+  const Lit searchLit = lit_occurrence_count[toInt(l1)] < lit_occurrence_count[toInt(l2)] ? l1 : l2;
+  const Lit secondLit = toLit(  toInt(l1) ^ toInt(l2) ^ toInt(searchLit) );
+
+  // find the right binary clause and remove it!
+  for( int i = 0 ; i < list(searchLit).size(); ++ i ) {
+    Clause& cl = ca[list(searchLit)[i]];
+    if( cl.can_be_deleted() || cl.size() != 2 ) continue;
+    if( cl[0] == secondLit || cl[1] == secondLit ) {
+      cl.set_delete(true);
+      break;
+    }
   }
 }
 
-inline void CoprocessorData::addedLiteral(const Lit l, const  int32_t diff)
+inline void CoprocessorData::addedLiteral( const Lit l, const int32_t diff, Heap<VarOrderBVEHeapLt> * heap, const Var ignore, SpinLock * data_lock, SpinLock * heap_lock)
 {
-  lit_occurrence_count[toInt(l)] += diff;
+    if (heap == NULL && data_lock == NULL && heap_lock == NULL)
+    {
+        lit_occurrence_count[toInt(l)] += diff; 
+    }
+    else 
+    {
+        if (data_lock != NULL)
+            data_lock->lock();
+        if (heap_lock != NULL)
+            heap_lock->lock();
+        lit_occurrence_count[toInt(l)] += diff;
+        if (heap != NULL)
+        {
+            if (heap->inHeap(var(l)))
+                heap->increase(var(l));
+            else if (heap_updates == 2 && var(l) != ignore)
+                heap->update(var(l));
+        }    
+        if (heap_lock != NULL)
+            heap_lock->unlock();
+        if (data_lock != NULL)
+            data_lock->unlock();
+    }
 }
-
-inline void CoprocessorData::removedClause(const Minisat::CRef cr)
+inline void CoprocessorData::removedLiteral( const Lit l, const int32_t diff, Heap<VarOrderBVEHeapLt> * heap, const Var ignore, SpinLock * data_lock, SpinLock * heap_lock) // update counter for literal
+{
+  if (heap == NULL && data_lock == NULL && heap_lock == NULL)
+  {
+    deletedVar(var(l));
+    lit_occurrence_count[toInt(l)] -= diff;
+    ca.freeLit();
+    //assert(lit_occurrence_count[toInt(l)] == countLitOcc(l)); 
+  }
+  else
+  {
+    if (data_lock != NULL)
+        data_lock->lock();
+    if (heap_lock != NULL)
+        heap_lock->lock();
+    deletedVar(var(l));
+    lit_occurrence_count[toInt(l)] -= diff;
+    ca.freeLit();
+    //assert(lit_occurrence_count[toInt(l)] == countLitOcc(l)); 
+    if (heap != NULL)
+    {
+        if (heap->inHeap(var(l)))
+            heap->decrease(var(l));
+        else if (heap_updates == 2 && var(l) != ignore)
+            heap->update(var(l));
+    }
+    if (heap_lock != NULL)
+        heap_lock->unlock();
+    if (data_lock != NULL)
+        data_lock->unlock();
+  }
+}
+inline void CoprocessorData::addedClause (   const CRef cr, Heap<VarOrderBVEHeapLt> * heap, const Var ignore, SpinLock * data_lock, SpinLock * heap_lock)			// update counters for literals in the clause
 {
   const Clause & c = ca[cr];
-  for (int l = 0; l < c.size(); ++l)
+  if (heap == NULL && data_lock == NULL && heap_lock == NULL)
   {
-    removedLiteral( c[l] );
+      for (int l = 0; l < c.size(); ++l)
+      {
+        lit_occurrence_count[toInt(c[l])] += 1;
+      }
+      numberOfCls++;
   }
-  numberOfCls --;
+  else 
+  {
+      if (data_lock != NULL)
+        data_lock->lock();
+      if (heap_lock != NULL)
+        heap_lock->lock();
+      for (int l = 0; l < c.size(); ++l)
+      {
+        lit_occurrence_count[toInt(c[l])] += 1;
+        if (heap != NULL)
+        {
+            if (heap->inHeap(var(c[l])))
+                heap->increase(var(c[l]));
+            else if (heap_updates == 2 && var(c[l]) != ignore)
+                heap->update(var(c[l]));
+        }
+      }
+      numberOfCls++;
+      if (heap_lock != NULL)
+          heap_lock->unlock();
+      if (data_lock != NULL)
+          data_lock->unlock();
+  }
 }
-
-inline void CoprocessorData::removedLiteral(Lit l, int32_t diff)
+inline void CoprocessorData::removedClause ( const CRef cr, Heap<VarOrderBVEHeapLt> * heap, const Var ignore, SpinLock * data_lock, SpinLock * heap_lock)			// update counters for literals in the clause
 {
-  deletedVar(var(l));
-  lit_occurrence_count[toInt(l)] -= diff;
-}
+  const Clause & c = ca[cr];
+  if (heap == NULL && data_lock == NULL && heap_lock == NULL)
+  {
+      for (int l = 0; l < c.size(); ++l)
+      {
+        deletedVar(var(c[l]));
+        --lit_occurrence_count[toInt(c[l])];
+        //assert(lit_occurrence_count[toInt(c[l])] == countLitOcc(c[l]));
+      }
+      numberOfCls --;
+      ca.free(cr);
+  }
+  else
+  {
+      if (data_lock != NULL)
+        data_lock->lock();
+      if (heap_lock != NULL)
+        heap_lock->lock();
+      for (int l = 0; l < c.size(); ++l)
+      {
+        deletedVar(var(c[l]));
+        --lit_occurrence_count[toInt(c[l])];
+        //assert(lit_occurrence_count[toInt(c[l])] == countLitOcc(c[l]));
+        
+        if (heap != NULL)
+        {
+            if (heap->inHeap(var(c[l])))
+                heap->decrease(var(c[l]));
+            else if (heap_updates == 2 && var(c[l]) != ignore)
+                heap->update(var(c[l]));
+        }
+      }
+      numberOfCls --;
+      ca.free(cr);
+      if (heap_lock != NULL)
+          heap_lock->unlock();
+      if (data_lock != NULL)
+          data_lock->unlock();
+  }
+} 
 
 inline int32_t& CoprocessorData::operator[](const Lit l)
 {
@@ -551,6 +963,157 @@ inline void CoprocessorData::correctCounters()
     numberOfCls ++;
     for( int j = 0 ; j < c.size(); j++) lit_occurrence_count[ toInt(c[j]) ] ++; // increment all literal counters accordingly
   }
+}
+
+inline void CoprocessorData::garbageCollect(vector<CRef> ** updateVectors, int size) 
+{
+    ClauseAllocator to((ca.size() >= ca.wasted()) ? ca.size() - ca.wasted() : 0);  //FIXME just a workaround
+                                                                                   // correct add / remove would be nicer
+    relocAll(to, updateVectors);
+    cerr << "c Garbage collection: " << ca.size()*ClauseAllocator::Unit_Size 
+        << " bytes => " << to.size()*ClauseAllocator::Unit_Size <<  " bytes " << endl; 
+    
+    to.moveTo(ca);
+}
+
+inline void CoprocessorData::relocAll(ClauseAllocator& to, vector<CRef> ** updateVectors, int size)
+{
+    // Update Vectors
+    if (size > 0 && updateVectors != 0)
+    {
+        for (int v_ix = 0; v_ix < size; ++v_ix)
+        {
+            if (updateVectors[v_ix] == 0)
+                continue;
+            vector<CRef> & list = *(updateVectors[v_ix]);
+            int i, j;
+            for (i = j = 0; i < list.size(); ++i){
+                Clause & c = ca[list[i]];
+                if (c.can_be_deleted()) {
+                    // removeClause(list[i]);
+                }
+                else
+                {
+                    ca.reloc(list[i], to);
+                    list[j++] = list[i];
+                }
+            }
+            list.resize(j);
+        }    
+    }
+
+    // Subsume Queue
+    {
+        int i, j;
+        for (i = j = 0; i < subsume_queue.size(); ++i){
+            Clause & c = ca[subsume_queue[i]];
+            if (c.can_be_deleted()) {
+                // removeClause(subsume_queue[i]);
+            }
+            else
+            {
+                ca.reloc(subsume_queue[i], to);
+                subsume_queue[j++] = subsume_queue[i];
+            }
+        }
+        subsume_queue.resize(j);
+    }
+    // Strength Queue
+    {
+        int i, j;
+        for (i = j = 0; i < strengthening_queue.size(); ++i){
+            Clause & c = ca[strengthening_queue[i]];
+            if (c.can_be_deleted()) {
+                // removeClause(strength_queue[i]);
+            }
+            else
+            {
+                ca.reloc(strengthening_queue[i], to);
+                strengthening_queue[j++] = strengthening_queue[i];
+            }
+        }
+        strengthening_queue.resize(j);
+    }
+
+    // All Occurrences
+    for (int v = 0 ; v < nVars(); ++ v)
+    {
+        for (int i = 0 ; i < 2; ++i)
+        {
+            vector<CRef> & litOccs = list(mkLit(v, ((i == 0) ? false : true)));
+            int j, k;
+            for (j = k = 0; j < litOccs.size(); ++j)
+            {
+                if (litOccs[j] == CRef_Undef)
+                    continue;
+                Clause & c = ca[litOccs[j]];
+                if (c.can_be_deleted()) {
+                    //removeClause(litOccs[j]);
+                } 
+                else
+                {
+                    ca.reloc(litOccs[j], to);
+                    litOccs[k++] = litOccs[j];
+                }
+            }
+            litOccs.resize(k);
+        }
+    }
+    // Watches are clean!
+
+    // All reasons:
+    //
+    for (int i = 0; i < solver->trail.size(); i++){
+        Var v = var(solver->trail[i]);
+	// FIXME TODO: there needs to be a better workaround for this!!
+	if ( solver->level(v) == 0 ) solver->vardata[v].reason = CRef_Undef; // take care of reason clauses for literals at top-level
+        else
+        if (solver->reason(v) != CRef_Undef && (ca[solver->reason(v)].reloced() || solver->locked(ca[solver->reason(v)])))
+            ca.reloc(solver->vardata[v].reason, to);
+    }
+
+    vec<CRef> & clauses = solver->clauses;
+    vec<CRef> & learnts = solver->learnts;
+
+    // All original:
+    //
+    {
+        int i, j;
+        for (i = j = 0; i < clauses.size(); ++i){
+            Clause & c = ca[clauses[i]];
+            if (c.can_be_deleted()) {
+                // removeClause(clauses[i]);
+            }
+            else
+            {
+                ca.reloc(clauses[i], to);
+                clauses[j++] = clauses[i];
+            }
+        }
+        clauses.shrink(i - j);
+    }
+    // All learnt:
+    //
+    {
+        int i, j;
+        for (i = j = 0; i < learnts.size(); ++i){
+            Clause & c = ca[learnts[i]];
+            if (c.can_be_deleted()) {
+                // removeClause(learnts[i]);
+            }
+            else if (!c.learnt())
+            {
+                ca.reloc(learnts[i], to);
+                clauses.push(learnts[i]);
+            }
+            else
+            {
+                ca.reloc(learnts[i], to);
+                learnts[j++] = learnts[i];
+            }
+        }
+        learnts.shrink(i - j);
+    }
 }
 
 /** Mark all variables that occure together with _x_.
@@ -658,13 +1221,19 @@ inline void CoprocessorData::addToExtension(const Lit dontTouch, const Lit l)
   undo.push_back(lit_Undef);
   if( l != lit_Error) undo.push_back(l);
   undo.push_back(dontTouch);
-
 }
 
+inline void CoprocessorData::addExtensionToExtension(vector< Lit >& lits)
+{
+  for( int i = 0 ; i < lits.size(); ++ i ) {
+    undo.push_back(lits[i]);
+  }
+}
 
 inline void CoprocessorData::extendModel(vec< lbool >& model)
 {
-  if( global_debug_out ) {
+  const bool local_debug = false;
+  if( global_debug_out || local_debug) {
     cerr << "c extend model of size " << model.size() << " with undo information of size " << undo.size() << endl;
     cerr << "c  in model: ";
     for( int i = 0 ; i < model.size(); ++ i ) {
@@ -673,33 +1242,69 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
     }
     cerr << endl;
   }
+  
+  if( local_debug ) {
+    cerr << "extend Stack: " << endl; 
+    for( int i = undo.size() - 1; i >= 0 ; --i ) {
+      if( undo[i] == lit_Undef ) cerr << endl;
+      else cerr << " " << undo[i];
+    }
+    
+    
+    cerr << "next clause: ";
+    for( int j = undo.size() - 1; j >= 0 ; --j ) if( undo[j] == lit_Undef ) break; else cerr << " " << undo[j];
+    cerr << endl;
+
+  }
 
   // check current clause for being satisfied
-  bool isSat = false;
+  bool isSat = false; // FIXME: this bool is redundant!
   for( int i = undo.size() - 1; i >= 0 ; --i ) {
-     isSat = false; // init next clause!
-     const Lit c = undo[i];
-     if( global_debug_out ) cerr << "c read literal " << c << endl;
-     if( c == lit_Undef ) {
-       if( !isSat ) {
+    
+     isSat = false; // init next clause - redundant!
+     const Lit c = undo[i]; // check current literal
+     if( global_debug_out  || local_debug) cerr << "c read literal " << c << endl;
+     if( c == lit_Undef ) {  // found clause delimiter, without jumping over it in the SAT case (below)
+       if( !isSat ) {        // this condition is always satisfied -- the current clause has to be unsatisfied (otherwise, would have been ignored below!)
          // if clause is not satisfied, satisfy last literal!
          const Lit& satLit = undo[i+1];
+	 assert( satLit != lit_Undef && "there should not be an empty clause on the undo stack" );
          log.log(1, "set literal to true",satLit);
+	 if( local_debug ) cerr << "c set literal " << undo[i+1] << " to true " << endl;
          model[ var(satLit) ] = sign(satLit) ? l_False : l_True;
        }
+       
+       // finished this clause!
+       if( local_debug ) { // print intermediate state!
+       cerr << "c current model: ";
+	for( int j = 0 ; j < model.size(); ++ j ) {
+	  const Lit satLit = mkLit( j, model[j] == l_True ? false : true );
+	  cerr << satLit << " ";
+	}
+	cerr << endl;
+        cerr << "next clause: ";
+	for( int j = i - 1; j >= 0 ; --j ) if( undo[j] == lit_Undef ) break; else cerr << " " << undo[j];
+	cerr << endl;
+       }
+       continue;
      }
-     if( var(c) > model.size() ) model.growTo( var(c), l_True ); // model is too small?
+     if( var(c) >= model.size() ) model.growTo( var(c) + 1, l_True ); // model is too small?
      if (model[var(c)] == (sign(c) ? l_False : l_True) ) // satisfied
      {
-       isSat = true;
-       while( undo[i] != lit_Undef ){
-	 if( global_debug_out ) cerr << "c skip because SAT: " << undo[i] << endl; 
+       isSat = true; // redundant -- will be reset in the next loop iteration immediately
+       while( undo[i] != lit_Undef ){ // skip literal until hitting the delimiter - for loop will decrease i once more
+	 if( global_debug_out  || local_debug) cerr << "c skip because SAT: " << undo[i] << endl; 
 	 --i;
+       }
+       if( local_debug ) { // print intermediate state!
+        cerr << "next clause: ";
+	for( int j = i - 1; j >= 0 ; --j ) if( undo[j] == lit_Undef ) break; else cerr << " " << undo[j];
+	cerr << endl;
        }
      }
   }
 
-  if( global_debug_out ) {
+  if( global_debug_out  || local_debug) {
     cerr << "c out model: ";
     for( int i = 0 ; i < model.size(); ++ i ) {
       const Lit satLit = mkLit( i, model[i] == l_True ? false : true );
@@ -728,6 +1333,34 @@ inline vector< Lit >& CoprocessorData::getEquivalences()
   return equivalences;
 }
 
+inline bool CoprocessorData::addSubStrengthClause(const Minisat::CRef cr)
+{
+  bool ret = false;
+  Clause& c = ca[cr];
+  if( !c.can_strengthen() ) {
+    c.set_strengthen(true); 
+    strengthening_queue.push_back(cr);
+    ret = true;
+  }
+  if( !c.can_subsume() ) {
+    c.set_subsume(true); 
+    subsume_queue.push_back(cr);
+    ret = true;
+  }
+  return ret;
+}
+
+inline vector< Minisat::CRef >& CoprocessorData::getSubsumeClauses()
+{
+  return subsume_queue;
+}
+
+
+inline vector<CRef>& CoprocessorData::getStrengthClauses()
+{
+  return strengthening_queue; 
+}
+
 
 inline void CoprocessorData::setNotTouch(const Var v)
 {
@@ -739,16 +1372,42 @@ inline bool CoprocessorData::doNotTouch(const Var v) const
   return untouchable[v] == 1;
 }
 
+bool inline CoprocessorData::removeClauseThreadSafe (const CRef cr)
+{
+    Clause & c = ca[cr];
+    c.spinlock();
+    if (!c.can_be_deleted())
+    {
+        c.set_delete(true);
+        while ( __sync_bool_compare_and_swap(&numberOfCls, numberOfCls, numberOfCls-1) == false);
+        for (int l = 0; l < c.size(); ++l)
+        {
+            int32_t old_count, new_count;
+            Lit lit = c[l];
+            do {
+                old_count = lit_occurrence_count[toInt(lit)];
+                new_count = old_count - 1;  
+            } while ( __sync_bool_compare_and_swap(&lit_occurrence_count[toInt(lit)], old_count, new_count) == false);
+        }
+        c.unlock();
+        return true;
+    } 
+    else
+    {
+        c.unlock();
+        return false;
+    }
+}
 
 inline BIG::BIG()
-: big(0), storage(0), sizes(0), start(0), stop(0)
+: storage(0), sizes(0), big(0), start(0), stop(0)
 {}
 
 inline BIG::~BIG()
 {
- if( big != 0 )     free( big );
- if( storage != 0 ) free( storage );
- if( sizes != 0 )   free( sizes );
+ if( big != 0 )    { free( big ); big = 0; }
+ if( storage != 0 ){ free( storage ); storage = 0; }
+ if( sizes != 0 )  { free( sizes ); sizes = 0 ; }
 }
 
 inline void BIG::create(ClauseAllocator& ca, CoprocessorData& data, vec<CRef>& list)
@@ -834,6 +1493,49 @@ inline void BIG::create(ClauseAllocator& ca, CoprocessorData& data, vec< Minisat
 }
 
 
+inline void BIG::recreate( ClauseAllocator& ca, Coprocessor::CoprocessorData& data, vec< Minisat::CRef >& list)
+{
+  sizes = sizes == 0 ? (int*) malloc( sizeof(int) * data.nVars() * 2 ) : (int*) realloc( sizes, sizeof(int) * data.nVars() * 2 );
+  memset(sizes,0, sizeof(int) * data.nVars() * 2 );
+
+  int sum = 0;
+  // count occurrences of literals in binary clauses of the given list
+  for( int i = 0 ; i < list.size(); ++i ) {
+    const Clause& c = ca[list[i]];
+    if(c.size() != 2 || c.can_be_deleted() ) continue;
+    sizes[ toInt( ~c[0] )  ] ++;
+    sizes[ toInt( ~c[1] )  ] ++;
+    sum += 2;
+  }
+  storage = storage == 0 ? (Lit*) malloc( sizeof(Lit) * sum ) : (Lit*) realloc( storage, sizeof(Lit) * sum )  ;
+  big = big == 0 ? (Lit**)malloc ( sizeof(Lit*) * data.nVars() * 2 ) : (Lit**)realloc ( big, sizeof(Lit*) * data.nVars() * 2 );
+  // memset(sizes,0, sizeof(Lit*) * data.nVars() * 2 );
+  // set the pointers to the right location and clear the size
+  sum = 0 ;
+  for ( int i = 0 ; i < data.nVars() * 2; ++ i )
+  {
+    big[i] = &(storage[sum]);
+    sum += sizes[i];
+    sizes[i] = 0;
+  }
+
+  // add all binary clauses to graph
+  for( int i = 0 ; i < list.size(); ++i ) {
+    const Clause& c = ca[list[i]];
+    if(c.size() != 2 || c.can_be_deleted() ) continue;
+    const Lit l0 = c[0]; const Lit l1 = c[1];
+    ( big[ toInt(~l0) ] )[ sizes[toInt(~l0)] ] = l1;
+    ( big[ toInt(~l1) ] )[ sizes[toInt(~l1)] ] = l0;
+    sizes[toInt(~l0)] ++;
+    sizes[toInt(~l1)] ++;
+  }
+}
+
+inline void BIG::recreate( ClauseAllocator& ca, Coprocessor::CoprocessorData& data, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2)
+{
+  
+}
+
 inline void BIG::removeEdge(const Lit l0, const Lit l1)
 {
   // remove literal from the two lists
@@ -844,15 +1546,19 @@ inline void BIG::removeEdge(const Lit l0, const Lit l1)
     if( list[i] == l1 ) {
       list[i] = list[ size - 1 ];
       sizes[ toInt(~l0) ] --;
+      // cerr << "c removed edge " << ~l0 << " -> " << l1 << endl;
+      break;
     }
   }
-  Lit* list2 = getArray( ~l0 );
-  const uint32_t size2 = getSize( ~l0 );
+  Lit* list2 = getArray( ~l1 );
+  const uint32_t size2 = getSize( ~l1 );
   for( int i = 0 ; i < size2; ++i )
   {
     if( list2[i] == l0 ) {
-      list2[i] = list2[ size - 1 ];
+      list2[i] = list2[ size2 - 1 ];
       sizes[ toInt(~l1) ] --;
+      // cerr << "c removed edge " << ~l1 << " -> " << l0 << endl;
+      break;
     }
   }
 }
@@ -922,6 +1628,91 @@ inline void BIG::generateImplied( CoprocessorData& data )
     for( uint32_t i = 0 ; i < ts2; i++ ) { const uint32_t rnd=rand()%ts2; const Lit tmp = data.lits[i]; data.lits[i] = data.lits[rnd]; data.lits[rnd]=tmp; }
     for ( uint32_t i = 0 ; i < ts2; ++ i )
       stamp = stampLiteral(data.lits[i],stamp,index,stampQueue);
+}
+
+inline void BIG::fillSorted(vector<Lit>& literals, CoprocessorData& data, bool rootsOnly, bool getAll)
+{
+  literals.clear();
+  data.ma.resize( data.nVars() *2 );
+  data.ma.nextStep();
+  
+  // put root nodes in queue
+  for( Var v = 0 ; v < data.nVars(); ++ v )
+  {
+    if( getSize( mkLit(v,false) ) == 0 )
+      if( getSize( mkLit(v,true) ) == 0 ) continue;
+      else { 
+	data.ma.setCurrentStep( toInt(mkLit(v,true)) );
+	literals.push_back( mkLit(v,true) ); // tthis is a root node
+      }
+    else if( getSize( mkLit(v,true) ) == 0 ) {
+      data.ma.setCurrentStep( toInt(mkLit(v,false)) );
+      literals.push_back( mkLit(v,false) ); // tthis is a root node
+    }
+  }
+  
+  // shuffle root nodes
+  for( int i = 0 ; i + 1 < literals.size(); ++ i )
+  {
+    const Lit tmp = literals[i];
+    const int rndInd = rand() % literals.size();
+    literals[i] = literals[ rndInd ];
+    literals[ rndInd ] = tmp;
+  }
+  
+  if( rootsOnly ) return;
+  
+  // perform BFS
+  data.ma.nextStep();
+  for( int i = 0 ; i < literals.size(); ++ i ) {
+    const Lit l = literals[i];
+    Lit* lits = getArray(l);
+    int s = getSize(l);
+    for( int j = 0 ; j < s; ++ j ) {
+      const Lit l2 = lits[j];
+      // each literal only once!
+      if( data.ma.isCurrentStep( toInt(l2) ) ) continue;
+      data.ma.setCurrentStep( toInt(l2) );
+      literals.push_back(l2);
+    }
+  }
+  
+  if( !getAll ) return;
+  
+  unsigned seenSoFar = literals.size();
+  for( Var v = 0 ; v < data.nVars(); ++ v ) {
+    for( int p = 0 ; p < 2; ++ p ) {
+      const Lit l = mkLit(v,p==1);
+      if( data.ma.isCurrentStep(toInt(l)) ) continue; // literal already in heap
+      else literals.push_back(l);
+    }
+  }
+  // shuffle these variables!
+  const unsigned diff = literals.size() - seenSoFar;
+  for( int i =  seenSoFar; i < literals.size(); ++ i ) {
+    const Lit tmp = literals[i];
+    const int rndInd = (rand() % diff) + seenSoFar;
+    literals[i] = literals[ rndInd ];
+    literals[ rndInd ] = tmp;
+  }
+}
+
+inline void BIG::fillSorted(vector< Var >& variables, Coprocessor::CoprocessorData& data, bool rootsOnly, bool getAll)
+{
+  // get sorted list of lits
+  data.lits.clear();
+  fillSorted(data.lits, data, rootsOnly, getAll);
+  variables.clear();
+  
+  // store variables in vector, according to occurrence of first literal in literal vector
+  data.ma.nextStep();
+  for( int i = 0 ; i < data.lits.size(); ++ i ) {
+     const Lit l = data.lits[i];
+     if( !data.ma.isCurrentStep( var(l) ) ) {
+       variables.push_back(var(l)); 
+       data.ma.setCurrentStep( var(l) );
+     }
+  }
 }
 
 inline void BIG::shuffle( Lit* adj, int size ) const

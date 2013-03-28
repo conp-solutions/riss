@@ -41,7 +41,7 @@ public:
   HiddenTautologyElimination( ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation );
   
   /** run subsumption and strengthening until completion */
-  void eliminate(Coprocessor::CoprocessorData& data);
+  void process(Coprocessor::CoprocessorData& data);
 
   void initClause(const CRef cr); // inherited from Technique
 
@@ -63,6 +63,8 @@ public:
   bool alaMarkClause(const Minisat::CRef cr, Coprocessor::CoprocessorData& data, Coprocessor::MarkArray& markArray, Coprocessor::MarkArray& helpArray);
   /// same as above, but can add literals to the vector, so that the vector represents the real ALA(C) clause
   bool alaMarkClause(vec< Lit >& clause, Coprocessor::CoprocessorData& data, Coprocessor::MarkArray& markArray, Coprocessor::MarkArray& helpArray, bool addLits = false);
+  
+  void destroy();
   
 protected:
 

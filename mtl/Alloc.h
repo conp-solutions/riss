@@ -23,7 +23,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "mtl/XAlloc.h"
 #include "mtl/Vec.h"
-
+#include <iostream>
 namespace Minisat {
 
 //=================================================================================================
@@ -52,7 +52,7 @@ class RegionAllocator
             ::free(memory);
     }
 
-
+    uint32_t currentCap() const      { return cap;}
     uint32_t size      () const      { return sz; }
     uint32_t wasted    () const      { return wasted_; }
 
@@ -60,8 +60,10 @@ class RegionAllocator
     void     free      (int size)    { wasted_ += size; }
 
     // Deref, Load Effective Address (LEA), Inverse of LEA (AEL):
-    T&       operator[](Ref r)       { assert(r >= 0 && r < sz); return memory[r]; }
-    const T& operator[](Ref r) const { assert(r >= 0 && r < sz); return memory[r]; }
+    T&       operator[](Ref r)       { // if (r < 0 || r >= sz) std::cerr << "r " << r << " sz " << sz << std::endl; 
+	assert(r >= 0 && r < sz); return memory[r]; }
+    const T& operator[](Ref r) const { // if (r < 0 || r >= sz) std::cerr << "r " << r << " sz " << sz << std::endl;  
+	assert(r >= 0 && r < sz); return memory[r]; }
 
     T*       lea       (Ref r)       { assert(r >= 0 && r < sz); return &memory[r]; }
     const T* lea       (Ref r) const { assert(r >= 0 && r < sz); return &memory[r]; }

@@ -774,3 +774,12 @@ int main(int argc, char **argv)
 }
 
 #endif
+
+
+void Coprocessor::TwoSatSolver::destroy()
+{
+  vector<char>().swap( tempVal );
+  vector<char>().swap( permVal );
+  deque<Lit>().swap(  unitQueue);
+  deque<Lit>().swap( tmpUnitQueue);
+}

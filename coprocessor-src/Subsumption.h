@@ -24,47 +24,34 @@ namespace Coprocessor {
  */
 class Subsumption : public Technique {
   
-  vector<CRef> clause_processing_queue;
-  vector<CRef> strengthening_queue;         // vector of clausereferences, which can strengthen
+  Coprocessor::CoprocessorData& data;
   Coprocessor::Propagation& propagation;
   
   int subsumedClauses;  // statistic counter
   int subsumedLiterals; // sum up the literals of the clauses that have been subsumed
   int removedLiterals;  // statistic counter
-  int subsumeSteps;     // number of clause comparisons in subsumption 
-  int strengthSteps;    // number of clause comparisons in strengthening
+  int64_t subsumeSteps;     // number of clause comparisons in subsumption 
+  int64_t strengthSteps;    // number of clause comparisons in strengthening
   double processTime;   // statistic counter
   double strengthTime;  // statistic counter
   
+  int64_t subLimit;	// step limit for subsumption
+  int64_t strLimit;	// step limit for strengthening
+  int64_t callIncrease; // step limit increase to be able to perform at least this number of checks
+  int limitIncreases;	// number of times the limits have been relaxed
+  int chunk_size;
 
-public:
+  vec<Lit> ps;  // Resolution vector for keepAllResolvent
+  vector<CRef> toDelete; // Delete vector for keepAllResolvent
+  vector<CRef> newClauses; //Collect new Strengthening Clauses to avoid endless loops
   
-  Subsumption( ClauseAllocator& _ca, ThreadController& _controller, Coprocessor::Propagation& _propagation );
-  
-  
-  /** run subsumption and strengthening until completion */
-  void subsumeStrength(Coprocessor::CoprocessorData& data);
+  // Structure to track updates of occurrence lists
+  struct OccUpdate {
+      CRef cr;
+      Lit  l;
+      OccUpdate(const CRef _cr, const Lit _l) : cr(_cr), l(_l) {} 
+  };
 
-  void initClause(const CRef cr); // inherited from Technique
-  
-  /** indicate whether clauses could be reduced */
-  bool hasWork() const ;
-  
-  /** add a clause to the queues, so that this clause will be checked by the next call to subsumeStrength */
-  void addClause( const CRef cr );
-  
-  void printStatistics(ostream& stream);
-  
-  void resetStatistics();
-  /* TODO:
-   *  - init
-   *  - add to queue
-   * stuff for parallel subsumption
-   *  - struct for all the parameters that have to be passed to a thread that should do subsumption
-   *  - static method that performs subsumption on the given part of the queue without stat updates
-   */
-
-protected:
   // local stats for parallel execution
   struct SubsumeStatsData {
     int subsumedClauses;  // statistic counter
@@ -77,45 +64,86 @@ protected:
     double lockTime;      // statistic counter
     };
 
-  // Structure to track updates of occurrence lists
-  struct OccUpdate {
-      CRef cr;
-      Lit  l;
-      OccUpdate(const CRef _cr, const Lit _l) : cr(_cr), l(_l) {} 
-  };
-
-
-  inline void updateOccurrences(CoprocessorData & data, const vector< OccUpdate > & updates);
+  // Member var seq subsumption
+  vector < CRef > subs_occ_updates;
+  // Member var seq strength
+  vector < OccUpdate > strength_occ_updates;
+  // Member vars parallel Subsumption
+  SpinLock balancerLock;
+  vector< vector < CRef > > toDeletes;
+  vector< vector < CRef > > nonLearnts;
   vector< struct SubsumeStatsData > localStats;
+  
+  // Member vars parallel Strengthening
+  vector< SpinLock > var_locks; // 1 extra SpinLock for data
+  vector< vector < OccUpdate > > occ_updates;
+            
+public:
+  
+  Subsumption( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Coprocessor::Propagation& _propagation );
+  
+  
+  /** run subsumption and strengthening until completion 
+   * @param doStrengthen use strengthening in this call?
+   */
+  void process(bool doStrengthen=true, Heap<VarOrderBVEHeapLt> * heap = NULL, const Var ignore = var_Undef, const bool doStatistics = true);
+
+  void initClause(const CRef cr); // inherited from Technique
+  
+  /** indicate whether clauses could be reduced */
+  bool hasWork() const ;
+  
+  void printStatistics(ostream& stream);
+  
+  void resetStatistics();
+  /* TODO:
+   *  - init
+   *  - add to queue
+   * stuff for parallel subsumption
+   *  - struct for all the parameters that have to be passed to a thread that should do subsumption
+   *  - static method that performs subsumption on the given part of the queue without stat updates
+   */
+
+  void destroy();
+  
+protected:
+
+  inline void updateOccurrences(const vector< Coprocessor::Subsumption::OccUpdate >& updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef);
 
   bool hasToSubsume() const ;       // return whether there is something in the subsume queue
-  lbool fullSubsumption(CoprocessorData& data);   // performs subsumtion until completion
-  void subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, const bool doStatistics = true); // subsume certain set of elements of the processing queue, does not write to the queue
-  void par_subsumption_worker (CoprocessorData& data, unsigned int start, unsigned int end, vector<CRef> & to_delete, vector< CRef > & set_non_learnt, struct SubsumeStatsData & stats, const bool doStatistics = true);
+  lbool fullSubsumption(Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);   // performs subsumtion until completion
+  void subsumption_worker (unsigned int start, unsigned int end, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true); // subsume certain set of elements of the processing queue, does not write to the queue
+  void par_subsumption_worker ( unsigned int & next_start, unsigned int global_end, SpinLock & balancerLock, vector<CRef> & to_delete, vector< CRef > & set_non_learnt, struct SubsumeStatsData & stats, const bool doStatistics = true);
   
   bool hasToStrengthen() const ;    // return whether there is something in the strengthening queue
-  lbool fullStrengthening(CoprocessorData& data, const bool doStatistics = true); // performs strengthening until completion, puts clauses into subsumption queue
-  lbool strengthening_worker (CoprocessorData& data, unsigned int start, unsigned int end, bool doStatistics = true);
-  void par_strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int stop, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, const bool doStatistics = true); 
-  void par_nn_strengthening_worker(CoprocessorData& data, unsigned int start, unsigned int end, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, const bool doStatistics = true);
-  inline void par_nn_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, const bool doStatistics = true) ; 
-  inline void par_nn_negated_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, const bool doStatistics = true);
+  
+  lbool fullStrengthening( Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true); // performs strengthening until completion, puts clauses into subsumption queue
+  lbool strengthening_worker ( unsigned int start, unsigned int end, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, bool doStatistics = true);
+lbool createResolvent( const CRef cr, CRef & resolvent, const int negated_lit_pos, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);
+  void par_strengthening_worker( unsigned int & next_start, unsigned int global_stop, SpinLock & balancerLock, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true); 
+  void par_nn_strengthening_worker( unsigned int & next_start, unsigned int global_end, SpinLock & balancerLock, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);
+  inline lbool par_nn_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true) ; 
+  inline lbool par_nn_negated_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);
+  
   /** data for parallel execution */
   struct SubsumeWorkData {
     Subsumption*     subsumption; // class with code
     CoprocessorData* data;        // formula and maintain lists
-    unsigned int     start;       // partition of the queue
+    unsigned int *   start;       // partition of the queue
     unsigned int     end;
+    SpinLock *       balancerLock;
     vector<SpinLock> * var_locks;
     vector<CRef>*    to_delete;
     vector<CRef>*    set_non_learnt;
     vector<OccUpdate> * occ_updates;
     struct SubsumeStatsData* stats;
+    Heap<VarOrderBVEHeapLt> * heap;
+    Var              ignore;
     };
   
   /** run parallel subsumption with all available threads */
-  void parallelSubsumption(CoprocessorData& data, const bool doStatistics = true);
-  void parallelStrengthening(CoprocessorData& data);  
+  void parallelSubsumption( const bool doStatistics = true);
+  void parallelStrengthening(Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);  
 public:
 
   /** converts arg into SubsumeWorkData*, runs subsumption of its part of the queue */

@@ -10,13 +10,33 @@ using namespace Coprocessor;
 
 static const char* _cat = "COPROCESSOR 3 - EE";
 
-static IntOption  opt_level            (_cat, "cp3_ee_level",      "EE on BIG, gate probing, structural hashing", 3, IntRange(0, 3));
-static BoolOption opt_old_circuit      (_cat, "cp3_old_circuit",   "do old circuit extraction", false);
-static BoolOption opt_eagerEquivalence (_cat, "cp3_eagerGates",    "do old circuit extraction", true);
+#if defined CP3VERSION  && CP3VERSION < 350
+static const int opt_level            = 0;
+static const int opt_gate_limit       = 0;
+static const bool opt_old_circuit      = false;
+static const bool opt_eagerEquivalence = false;
+static const bool opt_eeGateBigFirst   = false;
+static const char* aagFile = 0;
+#else
+static IntOption  opt_level            (_cat, "cp3_ee_level",    "EE on BIG, gate probing, structural hashing", 0, IntRange(0, 3));
+static IntOption  opt_gate_limit       (_cat, "cp3_ee_glimit",   "step limit for structural hashing", INT32_MAX, IntRange(0, INT32_MAX));
+static BoolOption opt_old_circuit      (_cat, "cp3_old_circuit", "do old circuit extraction", false);
+static BoolOption opt_eagerEquivalence (_cat, "cp3_eagerGates",  "do handle gates eagerly", true);
 static BoolOption opt_eeGateBigFirst   (_cat, "cp3_BigThenGate", "detect binary equivalences before going for gates", true);
-/// enable this parameter only during debug!
-static BoolOption debug_out            (_cat, "ee_debug", "write final circuit to this file",false);
 static StringOption aagFile            (_cat, "ee_aag", "write final circuit to this file");
+#endif
+
+/// enable this parameter only during debug!
+
+#if defined CP3VERSION  
+static const bool debug_out = false;
+#else
+static BoolOption debug_out            (_cat, "ee_debug", "print debug output to screen",false);
+#endif
+
+static IntOption opt_ee_limit  (_cat, "cp3_ee_limit", "step limit for detecting equivalent literals", 1000000, IntRange(0, INT32_MAX));
+
+
 
 static const int eeLevel = 1;
 /// temporary Boolean flag to quickly enable debug output for the whole file
@@ -26,7 +46,10 @@ EquivalenceElimination::EquivalenceElimination(ClauseAllocator& _ca, ThreadContr
 : Technique(_ca,_controller)
 , gateSteps(0)
 , gateTime(0)
+, gateExtractTime(0)
 , eeTime(0)
+, equivalentLits(0)
+, removedCls(0)
 , steps(0)
 , eqLitInStack(0)
 , eqInSCC(0)
@@ -36,16 +59,15 @@ EquivalenceElimination::EquivalenceElimination(ClauseAllocator& _ca, ThreadContr
 , subsumption( _subsumption )
 {}
 
-void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
+void EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
 {
   // TODO continue here!!
-  
   eeTime  = cpuTime() - eeTime;
+  modifiedFormula = false;
+  if( !data.ok() ) return;
   
-  if( isToAnalyze == 0 ) isToAnalyze = (char*) malloc( sizeof( char ) * data.nVars()  );
-  else isToAnalyze = (char*) realloc( isToAnalyze, sizeof( char ) * data.nVars()  );
-  memset( isToAnalyze, 0 , sizeof(char) * data.nVars() );
-  
+  isToAnalyze.resize( data.nVars(), 0 );
+    
   data.ma.resize(2*data.nVars());
   
   // find SCCs and apply them to the "replacedBy" structure
@@ -89,8 +111,9 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
       }
 
       Circuit circ(ca); 
-      
+      gateExtractTime = cpuTime() - gateExtractTime;
       circ.extractGates(data, gates);
+      gateExtractTime = cpuTime() - gateExtractTime;
       // cerr << "c found " << gates.size() << " gates" << endl ;
       if ( debug_out ) {
 	cerr << endl << "==============================" << endl;
@@ -110,11 +133,7 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
       vector<Lit> oldReplacedBy = replacedBy;
       //vector< vector<Lit> >* externBig
     
-      if( opt_old_circuit ) {
-	moreEquivalences = findGateEquivalences( data, gates );
-	if( moreEquivalences )
-	  if( debug_out ) cerr << "c found new equivalences with the gate method!" << endl;
-      } else {
+      {
 	if( debug_out ) cerr << "c run miter EQ method" << endl;
 	moreEquivalences = findGateEquivalencesNew( data, gates );
 	if( moreEquivalences )
@@ -151,7 +170,12 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
   if( data.ok() ) {
     do { 
       findEquivalencesOnBig(data);                              // finds SCC based on all literals in the eqDoAnalyze array!
-    } while ( applyEquivalencesToFormula(data ) && data.ok() ); // will set literals that have to be analyzed again!
+    } while ( applyEquivalencesToFormula(data ) 
+    && data.ok()
+    && !data.isInterupted()  
+    && (data.unlimited() || steps << opt_ee_limit )
+    ); // will set literals that have to be analyzed again!
+  
     
     // cerr << "c ok=" << data.ok() << " toPropagate=" << data.hasToPropagate() <<endl;
     assert( (!data.ok() || !data.hasToPropagate() )&& "After these operations, all propagation should have been done" );
@@ -173,6 +197,7 @@ void EquivalenceElimination::eliminate(Coprocessor::CoprocessorData& data)
      
     
   }
+  
   eeTime  = cpuTime() - eeTime;
 }
 
@@ -780,8 +805,10 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
   }
   
   // just in case some unit has been found, we have to propagate it!
-  if( data.hasToPropagate() )
-    propagation.propagate(data);
+  if( data.hasToPropagate() ) {
+    propagation.process(data);
+    modifiedFormula = modifiedFormula || propagation.appliedSomething(); 
+  }
   
   return oldEquivalences < data.getEquivalences().size();
 }
@@ -1573,6 +1600,8 @@ void EquivalenceElimination::findEquivalencesOnBig(CoprocessorData& data, vector
   BIG big;
   if( externBig == 0 ) big.create(ca, data, data.getClauses(), data.getLEarnts() );
   
+  steps += (data.getClauses().size() / 16); // some initial steps, because BIG was created
+  
   if( debug_out ) {
      cerr << "c to process: ";
      for( int i = 0 ; i < eqDoAnalyze.size(); ++ i ) {
@@ -1591,7 +1620,7 @@ void EquivalenceElimination::findEquivalencesOnBig(CoprocessorData& data, vector
   }
   
   int count = 0 ;
-  while( !eqDoAnalyze.empty() )
+  while( !eqDoAnalyze.empty() && !data.isInterupted() && (data.unlimited() || steps < opt_ee_limit) )
   {
       Lit randL = eqDoAnalyze[ eqDoAnalyze.size() -1 ];
       if( data.randomized() ) { // shuffle an element back!
@@ -1612,27 +1641,37 @@ void EquivalenceElimination::findEquivalencesOnBig(CoprocessorData& data, vector
       // compute SCC
       eqCurrentComponent.clear();
       // if there is any SCC, add it to SCC, if it contains more than one literal
-      eqTarjan(l,l,data,big,externBig);
+      eqTarjan(1,l,l,data,big,externBig);
   }
 }
 
 #define MININ(x,y) (x) < (y) ? (x) : (y)
 
-void EquivalenceElimination::eqTarjan(Lit l, Lit list, CoprocessorData& data, BIG& big, vector< vector< Lit > >* externBig)
+void EquivalenceElimination::eqTarjan(int depth, Lit l, Lit list, CoprocessorData& data, BIG& big, vector< vector< Lit > >* externBig)
 {
     eqNodeIndex[toInt(l)] = eqIndex;
     eqNodeLowLinks[toInt(l)] = eqIndex;
     eqIndex++;
     eqStack.push_back(l);
     eqLitInStack[ toInt(l) ] = 1;
-    if( debug_out ) cerr << "c run tarjan on " << l << endl;
+    
+    if( depth > 32000 ) {
+      static bool didit = false;
+      if( !didit ) { cerr << "c recursive EE algorithm reached depth 32K, get the iterative SCC version!" << endl; didit = true; }
+      return; // stop recursion here, because it can break things when too many recursive calls are done!
+    }
+    
+    steps ++;
+    if( steps > opt_ee_limit ) return;
+    
+    if( debug_out ) cerr  << "c run tarjan on " << l << " at depth " << depth << endl;
     if( externBig != 0 ) {
       const vector<Lit>& impliedLiterals =  (*externBig)[ toInt(list) ];
       for(uint32_t i = 0 ; i < impliedLiterals.size(); ++i)
       {
         const Lit n = impliedLiterals[i];
         if(eqNodeIndex[toInt(n)] == -1){
-          eqTarjan(n, n, data,big,externBig);
+          eqTarjan(depth+1, n, n, data,big,externBig);
           eqNodeLowLinks[toInt(l)] = MININ( eqNodeLowLinks[toInt(l)], eqNodeLowLinks[toInt(n)]);
         } else if( eqLitInStack[ toInt(n) ] == 1 ){
           eqNodeLowLinks[toInt(l)] = MININ(eqNodeLowLinks[toInt(l)], eqNodeIndex[toInt(n)]);
@@ -1646,7 +1685,7 @@ void EquivalenceElimination::eqTarjan(Lit l, Lit list, CoprocessorData& data, BI
         const Lit n = impliedLiterals[i];
 	if( debug_out ) cerr << "c next implied lit from " << l << " is " << n << " [" << i << "/" << impliedLiteralsSize << "]" << endl;
         if(eqNodeIndex[toInt(n)] == -1){
-          eqTarjan(n, n, data,big,externBig);
+          eqTarjan(depth+1, n, n, data,big,externBig);
           eqNodeLowLinks[toInt(l)] = MININ( eqNodeLowLinks[toInt(l)], eqNodeLowLinks[toInt(n)]);
         } else if( eqLitInStack[ toInt(n) ] == 1 ){
           eqNodeLowLinks[toInt(l)] = MININ(eqNodeLowLinks[toInt(l)], eqNodeIndex[toInt(n)]);
@@ -1704,6 +1743,13 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
   if( data.getEquivalences().size() > 0 || force) {
    
     // TODO: take care of units that have to be propagated, if an element of an EE-class has already a value!
+    isToAnalyze.resize( data.nVars(), 0 );
+    data.ma.resize(2*data.nVars());
+    
+    if( replacedBy.size() < data.nVars() ) { // extend replacedBy structure
+      for( Var v = replacedBy.size(); v < data.nVars(); ++v )
+	replacedBy.push_back ( mkLit(v,false) );
+    }
     
    vector<Lit>& ee = data.getEquivalences();
    
@@ -1735,7 +1781,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
        Lit repr = getReplacement(ee[start]);
 	for( int j = start ; j < i; ++ j ) // select minimum!
 	{
-	  data.ma.nextStep();
+	  data.ma.nextStep(); // TODO FIXME check whether this has to be moved before the for loop
 	  repr =  repr < getReplacement(ee[j]) ? repr : getReplacement(ee[j]);
 	  data.ma.setCurrentStep( toInt( ee[j] ) );
 	}
@@ -1743,11 +1789,16 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
        // check whether a literal has also an old replacement that has to be re-considered!
        data.lits.clear();
        
+       equivalentLits --; // one of the literals wont be removed
        for( int j = start ; j < i; ++ j ) {// set all equivalent literals
 	 const Lit myReplace = getReplacement(ee[j]);
+	 if( myReplace == ee[j] ) equivalentLits ++; // count how many equal literals
 	 if( ! data.ma.isCurrentStep( toInt( myReplace )) )
 	   data.lits.push_back(myReplace); // has to look through that list as well!
-	 if( ! setEquivalent(repr, ee[j] ) ) { data.setFailed(); return newBinary; }
+	 if( ! setEquivalent(repr, ee[j] ) ) { 
+	   if( debug_out ) cerr << "c applying EE failed due to setting " << repr << " and " << ee[j] << " equivalent -> UNSAT" << endl;
+	   data.setFailed(); return newBinary;
+	}
        }
        
        if(debug_out)
@@ -1756,6 +1807,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
        }
        
        int dataElements = data.lits.size();
+       data.ma.nextStep();
        for( int j = start ; j < i; ++ j ) {
 	 Lit l = ee[j];
 	 // first, process all the clauses on the list with old replacement variables
@@ -1765,115 +1817,127 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	   j--;
          }
 	 
-	 if( l == repr ) continue;
+	 if( l == repr ) {
+	   if( debug_out) cerr << "c do not process representative " << l << endl;
+	   continue;
+	 }
+	 
 	 data.log.log(eeLevel,"work on literal",l);
+	 
+	 // add to extension here!
+	 if( !data.doNotTouch(var(l)) && ! data.ma.isCurrentStep(var(l)) && 
+	   (data.list( l ).size() > 0 ||  data.list( ~l ).size() > 0) ) { // only add to extension, if clauses will be rewritten!
+	  data.addToExtension( ~repr , l );
+	  data.addToExtension( repr , ~l);
+	  if( debug_out ) cerr << "c added to extension: " << repr << " <=> " << l << endl;
+	  data.ma.setCurrentStep(var(l)); // to not add same equivalence twice
+	 } else {
+	   if( debug_out ) cerr << "c do not add to extension: " << repr << " <=> " << l << endl; 
+	 }
+	 
 	 // if( getReplacement(l) == repr )  continue;
 	 // TODO handle equivalence here (detect inconsistency, replace literal in all clauses, check for clause duplicates!)
 	 for( int pol = 0; pol < 2; ++ pol ) { // do for both polarities!
-	 vector<CRef>& list = pol == 0 ? data.list( l ) : data.list( ~l );
-	 for( int k = 0 ; k < list.size(); ++ k ) {
-	  Clause& c = ca[list[k]];
-	  if( c.can_be_deleted() ) {
-	    if( debug_out ) cerr << "c skip clause " << c << " it can be deleted already" << endl;
-	    continue; // do not use deleted clauses!
-	  }
-	  data.log.log(eeLevel,"analyze clause",c);
-          bool duplicate  = false;
-	  bool getsNewLiterals = false;
-          Lit tmp = repr;
-	  // TODO: update counter statistics for all literals of the clause!
-          for( int m = 0 ; m < c.size(); ++ m ) {
-	    if( c[m] == repr || c[m] == ~repr) { duplicate = true; continue; } // manage that this clause is not pushed into the list of clauses again!
-	    const Lit tr = getReplacement(c[m]);
-	    if( tr != c[m] ) getsNewLiterals = true;
-	    c[m] = tr;
-	  }
-	  
-	   const int s = c.size(); // sort the clause
-	   for (int m = 1; m < s; ++m)
-	   {
-	      const Lit key = c[m];
-	      int n = m - 1;
-	      while ( n >= 0 && toInt(c[n]) > toInt(key) )
-		  c[n+1] = c[n--];
-	      c[n+1] = key;
-	   }
-	   
-	   int n = 1;
-	   for( int m = 1; m < s; ++ m ) {
-	     if( c[m-1] == ~c[m] ) { 
-	       if( debug_out ) cerr << "c ee deletes clause [" << list[k] << "]" << c << endl;
-	       c.set_delete(true); 
-	       goto EEapplyNextClause;
-	    } // this clause is a tautology
-	     if( c[m-1] != c[m] ) c[n++] = c[m];
-	   }
-           c.shrink(s-n);
-	   
-	   if( c.size() == 2 )  { // take care of newly created binary clause for further analysis!
-	     newBinary = true;
-	     if( isToAnalyze[ var(c[0]) ] == 0 ) {
-	       eqDoAnalyze.push_back(~c[0]);
-	       isToAnalyze[ var(c[0]) ] = 1;
-	       if( debug_out ) cerr << "c EE re-enable ee-variable " << var(c[0])+1 << endl;
-	     }
-             if( isToAnalyze[ var(c[1]) ] == 0 ) {
-	       eqDoAnalyze.push_back(~c[1]);
-	       isToAnalyze[ var(c[1]) ] = 1;
-	       if( debug_out ) cerr << "c EE re-enable ee-variable " << var(c[1])+1 << endl;
-	     }
-	   } else if (c.size() == 1 ) {
-	     if( data.enqueue(c[0]) == l_False ) return newBinary; 
-	   } else if (c.size() == 0 ) {
-	     data.setFailed(); 
-	     return newBinary; 
-	   }
-	  data.log.log(eeLevel,"clause after sort",c);
-	  
-	  if( !duplicate ) {
-// 	    cerr << "c give list of literal " << (pol == 0 ? repr : ~repr) << " for duplicate check" << endl;
-	    if( !hasDuplicate( data.list( (pol == 0 ? repr : ~repr)  ), c )  ) {
-	      data.list( (pol == 0 ? repr : ~repr) ).push_back( list[k] );
-	      if( getsNewLiterals ) {
-		if( !c.can_strengthen() || !c.can_subsume() ) {
-		  c.set_strengthen(true);
-		  c.set_subsume(true);
-		  // TODO: take care of duplicates!
-		  // cerr << "c added clause " << ca[ list[k] ] << " to the subsumption queue" << endl;
-		  subsumption.addClause( list[k] );
-		  resetVariables = true;
- 		  if( debug_out )  cerr << "c add clause to subsume list: " << c << endl;
+	  vector<CRef>& list = pol == 0 ? data.list( l ) : data.list( ~l );
+	  if( debug_out ) cerr << "c rewrite clauses of lit " << ( pol == 0 ? l : ~l )<< endl;
+	  for( int k = 0 ; k < list.size(); ++ k ) {
+	    Clause& c = ca[list[k]];
+	    if( c.can_be_deleted() ) {
+	      if( debug_out ) cerr << "c skip clause " << c << " it can be deleted already" << endl;
+	      continue; // do not use deleted clauses!
+	    }
+	    data.log.log(eeLevel,"analyze clause",c);
+	    if( debug_out ) cerr << "c analyze clause " << c << endl;
+	    bool duplicate  = false;
+	    bool getsNewLiterals = false;
+	    Lit tmp = repr;
+	    // TODO: update counter statistics for all literals of the clause!
+	    for( int m = 0 ; m < c.size(); ++ m ) {
+	      if( c[m] == repr || c[m] == ~repr) { duplicate = true; continue; } // manage that this clause is not pushed into the list of clauses again!
+	      const Lit tr = getReplacement(c[m]);
+	      if( tr != c[m] ) getsNewLiterals = true;
+	      c[m] = tr;
+	    }
+	    
+	    c.sort(); // sort the clause!
+	    
+	    int n = 1,removed=0;
+	    for( int m = 1; m < c.size(); ++ m ) {
+	      if( c[m-1] == ~c[m] ) { 
+		if( debug_out ) cerr << "c ee deletes clause " << c << endl;
+		c.set_delete(true); 
+		removedCls++;
+		goto EEapplyNextClause;
+	      } // this clause is a tautology
+	      if( c[m-1] != c[m] ) { c[n++] = c[m]; removed ++; }
+	    }
+	    c.shrink(c.size() - n);
+	    if( debug_out ) cerr << "c ee shrinked clause to " << c << endl;
+	    modifiedFormula = true;
+	    
+	    if( c.size() == 2 )  { // take care of newly created binary clause for further analysis!
+	      newBinary = true;
+	      if( isToAnalyze[ var(c[0]) ] == 0 ) {
+		eqDoAnalyze.push_back(~c[0]);
+		isToAnalyze[ var(c[0]) ] = 1;
+		if( debug_out ) cerr << "c EE re-enable ee-variable " << var(c[0])+1 << endl;
+	      }
+	      if( isToAnalyze[ var(c[1]) ] == 0 ) {
+		eqDoAnalyze.push_back(~c[1]);
+		isToAnalyze[ var(c[1]) ] = 1;
+		if( debug_out ) cerr << "c EE re-enable ee-variable " << var(c[1])+1 << endl;
+	      }
+	    } else if (c.size() == 1 ) {
+	      if( data.enqueue(c[0]) == l_False ) return newBinary; 
+	    } else if (c.size() == 0 ) {
+	      data.setFailed(); 
+	      if( debug_out ) cerr << "c applying EE failed due getting an empty clause" << endl;
+	      return newBinary; 
+	    }
+	    data.log.log(eeLevel,"clause after sort",c);
+	    
+	    if( !duplicate ) {
+  // 	    cerr << "c give list of literal " << (pol == 0 ? repr : ~repr) << " for duplicate check" << endl;
+	      if( !hasDuplicate( data.list( (pol == 0 ? repr : ~repr)  ), c )  ) {
+		data.list( (pol == 0 ? repr : ~repr) ).push_back( list[k] );
+		if( getsNewLiterals ) {
+		  if( data.addSubStrengthClause( list[k] ) ) resetVariables = true;
 		}
+	      } else {
+		if( debug_out ) cerr << "c clause has duplicates: " << c << endl;
+		removedCls++;
+		c.set_delete(true);
+		data.removedClause(list[k]);
+		modifiedFormula = true;
 	      }
 	    } else {
- 	      if( debug_out ) cerr << "c clause has duplicates: " << c << endl;
-	      c.set_delete(true);
-	      data.removedClause(list[k]);
+  // 	    cerr << "c duplicate during sort" << endl; 
 	    }
-	  } else {
-// 	    cerr << "c duplicate during sort" << endl; 
+	    
+  EEapplyNextClause:; // jump here, if a tautology has been found
 	  }
-	  
-EEapplyNextClause:; // jump here, if a tautology has been found
-	 }
 	 } // end polarity
-       }
+       
+	 
+	 // clear the occurrence lists, since there are no clauses in them any more!
+	 assert( l != repr && "will not clear list of representative literal!" );
+	 for( int pol = 0; pol < 2; ++ pol ) // clear both occurrence lists!
+	   (pol == 0 ? data.list( l ) : data.list( ~l )).clear();
+	 if( debug_out ) cerr << "c cleared list of var " << var( l ) + 1 << endl;
+	 
+      }
        
        // clear all occurrence lists of certain ee class literals
-       for( int j = start ; j < i; ++ j ) {
-	 if( ee[j] == repr ) continue;
-	 if( !data.doNotTouch(var(ee[j])) ) {
-	 data.addToExtension( ~repr , ee[j] );
-	 data.addToExtension( repr , ~ee[j]);
-	 }
-	 for( int pol = 0; pol < 2; ++ pol ) // clear both occurrence lists!
-	   (pol == 0 ? data.list( ee[j] ) : data.list( ~ee[j] )).clear();
-	 if( debug_out ) cerr << "c cleared list of var " << var( ee[j] ) + 1 << endl;
-       }
+//        for( int j = start ; j < i; ++ j ) {
+// 	 if( ee[j] == repr ) continue;
+// 	 for( int pol = 0; pol < 2; ++ pol ) // clear both occurrence lists!
+// 	   (pol == 0 ? data.list( ee[j] ) : data.list( ~ee[j] )).clear();
+// 	 if( debug_out ) cerr << "c cleared list of var " << var( ee[j] ) + 1 << endl;
+//        }
 
        // TODO take care of untouchable literals!
        for( int j = start ; j < i; ++ j ) {
-         
+         assert( !data.doNotTouch(var(ee[j]) ) && "equivalent literal elimination cannot handle untouchable literals/variables yet!"  );
        }
        
        start = i+1;
@@ -1906,19 +1970,21 @@ EEapplyNextClause:; // jump here, if a tautology has been found
     if( data.hasToPropagate() ) { // after each application of equivalent literals perform unit propagation!
 	 resetVariables = true;
 	 newBinary = true; // potentially, there are new binary clauses
-	 if( propagation.propagate(data,true) == l_False ) return newBinary;
+	 if( propagation.process(data,true) == l_False ) return newBinary;
     }
     if( subsumption.hasWork() ) {
-	subsumption.subsumeStrength(data);
+	subsumption.process();
 	newBinary = true; // potentially, there are new binary clauses
     	resetVariables = true;
     }
     if( data.hasToPropagate() ) { // after each application of equivalent literals perform unit propagation!
       resetVariables = true;
       newBinary = true; // potentially, there are new binary clauses
-      if( propagation.propagate(data,true) == l_False ) return newBinary;
+      if( propagation.process(data,true) == l_False ) return newBinary;
     }
 
+    modifiedFormula = modifiedFormula || propagation.appliedSomething() || subsumption.appliedSomething();
+    
     // the formula will change, thus, enqueue everything
     if( resetVariables ) {
     // re-enable all literals (over-approximation) 
@@ -2015,6 +2081,84 @@ void EquivalenceElimination::writeAAGfile(CoprocessorData& data)
 
 void EquivalenceElimination::printStatistics(ostream& stream)
 {
-  stream << "c [STAT] EE " << eeTime << " s, " << steps << " steps" << endl;
-  stream << "c [STAT] EE-gate " << gateTime << " s, " << gateSteps << " steps" << endl;
+  stream << "c [STAT] EE " << eeTime << " s, " << steps << " steps " << equivalentLits << " ee-lits " << removedCls << " removedCls" << endl;
+  if( opt_level > 0 ) stream << "c [STAT] EE-gate " << gateTime << " s, " << gateSteps << " steps, " << gateExtractTime << " extractGateTime, " << endl;
+}
+
+
+/** iterative tarjan algorithm in python
+ */
+#if 0
+def G2D(my_DiGraph):
+    """
+    Returns a dictionary mapping nodes to their successors.
+    my_DiGraph should be a networkx.DiGraph graph.
+    """
+    result=dict()
+    for node in my_DiGraph.nodes_iter():
+        result[node]=my_DiGraph.neighbors(node)
+    return result
+
+def Tarjan_ite(G):
+    """
+    Returns a dictionary mapping roots to their irriducible components
+    Ex:
+    d={1: [2], 2: [3], 3: [1, 4], 4: [5], 5: [6], 6: [4]}
+    Tarjan_ite(d)-->{1: [3, 2, 1], 4: [6, 5, 4]}
+    """
+    stack=[]
+    explored=[]
+    todo={}
+    for k,v in G.iteritems(): todo[k]=v[:]
+    component=dict()
+    number=dict()
+    low=dict()
+    for w in todo:
+        if w not in number:
+            explored.append(w)
+            low[w]=number[w]=len(number)
+            stack.append(w)
+            while len(explored)!=0:
+                h=explored[-1]
+                if len(todo[h])!=0:
+                    s=todo[h].pop()
+                    if s not in number:
+                        low[s]=number[s]=len(number)
+                        stack.append(s)
+                        explored.append(s)
+                    elif number[s] < number[h] and s in stack:
+                        low[h]=min(low[h],number[s])
+                else:
+                    explored.pop()
+                    if low[h]==number[h]:
+                        component[h]=[]
+                        while len(stack)!=0 and number[stack[-1]] >= number[h]:
+                            component[h].append(stack.pop())
+                    if len(explored)!=0: low[explored[-1]]=min(low[explored[-1]],low[h])
+    return component
+
+def Tarjanite(my_DiGraph):
+    """
+    Returns a dictionary mapping roots to their irriducible components.
+    my_DiGraph should be a networkx.DiGraph graph.
+    """
+    D=G2D(my_DiGraph)
+    return Tarjan_ite(D)
+    
+#endif
+
+void EquivalenceElimination::destroy()
+{
+  vector< Lit >().swap( eqStack);		
+  vector< int32_t >().swap( eqNodeLowLinks);	
+  vector< int32_t >().swap( eqNodeIndex);	
+  vector< Lit >().swap( eqCurrentComponent);	
+
+  vector<Lit>().swap( replacedBy);              
+  
+  vector<char>().swap( isToAnalyze);            
+  vector<Lit>().swap( eqDoAnalyze);        
+  
+  if( eqLitInStack != 0 ) { free(eqLitInStack); eqLitInStack = 0; }
+  
 }

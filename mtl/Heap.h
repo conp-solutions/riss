@@ -132,6 +132,17 @@ class Heap {
         for (int i = heap.size() / 2 - 1; i >= 0; i--)
             percolateDown(i);
     }
+    
+    /** enlarge the heap 
+     * Note: assumes, that compare object can handle new elements
+     */
+    void addNewElement ( int number = -1) 
+    {
+      if( number == - 1 ) 
+	indices.push( -1 ); 	// element is not in heap
+      else while( indices.size() <= number )
+	indices.push( -1 ); 	// elements are not in heap
+    }    
 
     void clear(bool dealloc = false) 
     { 

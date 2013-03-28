@@ -89,16 +89,11 @@ static void SIGINT_exit(int signum) {
 
 int main(int argc, char** argv)
 {
-  printf("c\nc This is glucose 2.1 --  based on MiniSAT (Many thanks to MiniSAT team)\nc\n");
+//  printf("c\nc This is glucose 2.1 --  based on MiniSAT (Many thanks to MiniSAT team)\nc\n");
     try {
         setUsageHelp("c USAGE: %s [options] <input-file> <result-output-file>\n\n  where input may be either in plain or gzipped DIMACS.\n");
         // printf("This is MiniSat 2.0 beta\n");
         
-#if defined(__linux__)
-        fpu_control_t oldcw, newcw;
-        _FPU_GETCW(oldcw); newcw = (oldcw & ~_FPU_EXTENDED) | _FPU_DOUBLE; _FPU_SETCW(newcw);
-        printf("c WARNING: for repeatability, setting FPU to use double precision\n");
-#endif
         // Extra options:
         //
         IntOption    verb   ("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
@@ -106,6 +101,8 @@ int main(int argc, char** argv)
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
         
+	BoolOption   opt_quiet  ("MAIN", "quiet", "Do not print the model", false);
+	
         parseOptions(argc, argv, true);
 
         Solver S;
@@ -113,6 +110,13 @@ int main(int argc, char** argv)
 
         S.verbosity = verb;
         S.verbEveryConflicts = vv;
+
+#if defined(__linux__)
+        fpu_control_t oldcw, newcw;
+        _FPU_GETCW(oldcw); newcw = (oldcw & ~_FPU_EXTENDED) | _FPU_DOUBLE; _FPU_SETCW(newcw);
+        if( verb > 0 ) printf("c WARNING: for repeatability, setting FPU to use double precision\n");
+#endif
+
         solver = &S;
         // Use signal handlers that forcibly quit until the solver will be able to respond to
         // interrupts:
@@ -148,8 +152,14 @@ int main(int argc, char** argv)
             printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
         
         if (S.verbosity > 0){
-            printf("c ========================================[ Problem Statistics ]===========================================\n");
-            printf("c |                                                                                                       |\n"); }
+
+	    printf("c ============================[       RISS 3G      ]=============================\n");
+	    printf("c | Norbert Manthey. The use of the tool is limited to research only!           |\n");
+	    printf("c | Based on Minisat 2.2 and Glucose 2.1  -- thanks!                            |\n");
+	    printf("c | Contributors:                                                               |\n");
+	    printf("c |      Kilian Gebhard (BVE implementatino,parallel preprocessor)              |\n");
+            printf("c ============================[ Problem Statistics ]=============================\n");
+            printf("c |                                                                             |\n"); }
         
         parse_DIMACS(in, S);
         gzclose(in);
@@ -177,36 +187,15 @@ int main(int argc, char** argv)
                 printStats(S);
                 printf("\n"); }
             printf("s UNSATISFIABLE\n");
+	    cout.flush(); cerr.flush();
             exit(20);
         }
         
         vec<Lit> dummy;
         lbool ret = S.solveLimited(dummy);
-        if (S.verbosity > 0){
-            printStats(S);
-            printf("\n"); }
-        if (res != NULL){
-            if (ret == l_True){
-                fprintf(res, "SAT\n");
-                for (int i = 0; i < S.nVars(); i++)
-                    if (S.model[i] != l_Undef)
-                        fprintf(res, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
-                fprintf(res, " 0\n");
-            }else if (ret == l_False)
-                fprintf(res, "UNSAT\n");
-            else
-                fprintf(res, "INDET\n");
-            fclose(res);
-        } else {
-        printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s INDETERMINATE\n");
-	  if(ret==l_True) {
-	    printf("v ");
-	    for (int i = 0; i < S.nVars(); i++)
-	      if (S.model[i] != l_Undef)
-		printf("%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
-	    printf(" 0\n");
-	  }
-	}
+
+	
+	// TODO: use code from other branch!
         
 #ifdef NDEBUG
         exit(ret == l_True ? 10 : ret == l_False ? 20 : 0);     // (faster than "return", which will invoke the destructor for 'Solver')
@@ -214,8 +203,8 @@ int main(int argc, char** argv)
         return (ret == l_True ? 10 : ret == l_False ? 20 : 0);
 #endif
     } catch (OutOfMemoryException&){
-      printf("c ===================================================================================================\n");
-        printf("INDETERMINATE\n");
+	// printf("===============================================================================\n");
+        printf("s UNKNOWN\n");
         exit(0);
     }
 }

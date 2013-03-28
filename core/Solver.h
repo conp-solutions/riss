@@ -39,9 +39,11 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 // forward declaration
 namespace Coprocessor {
-class Preprocessor;
-class CoprocessorData;
-class Propagation;
+  class Preprocessor;
+  class CoprocessorData;
+  class Propagation;
+  class BoundedVariableElimination;
+  class Probing;
 }
 
 namespace Minisat {
@@ -53,7 +55,9 @@ class Solver {
   
     friend class Coprocessor::Preprocessor;
     friend class Coprocessor::Propagation;
+    friend class Coprocessor::BoundedVariableElimination;
     friend class Coprocessor::CoprocessorData;
+    friend class Coprocessor::Probing;
   
 public:
 
@@ -64,7 +68,8 @@ public:
 
     // Problem specification:
     //
-    Var     newVar    (bool polarity = true, bool dvar = true); // Add a new variable with parameters specifying variable mode.
+    Var     newVar    (bool polarity = true, bool dvar = true, char type = 'o'); // Add a new variable with parameters specifying variable mode.
+    void    reserveVars( Var v );
 
     bool    addClause (const vec<Lit>& ps);                     // Add a clause to the solver. 
     bool    addEmptyClause();                                   // Add the empty clause, making the solver contradictory.
@@ -321,9 +326,19 @@ protected:
 public: static inline int irand(double& seed, int size) {
         return (int)(drand(seed) * size); }
         
+/// for bva analysis
+	vec<char> varType; // o=original, a=AND-BVA, i=ITE-BVA, x=XOR-BVA
+	unsigned oDecs, aDecs, iDecs, xDecs;  // count decisions per type
+        
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;
-        
+public:     bool useCoprocessor;
+
+/// for qprocessor
+public:
+	    void writeClauses( std::ostream& stream ) {
+	       
+	    }
 };
 
 

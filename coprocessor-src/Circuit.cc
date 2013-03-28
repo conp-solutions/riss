@@ -8,22 +8,41 @@ static const char* _cat = "CP3 CIRCUIT";
 
 // options
 
-static BoolOption opt_AND      (_cat, "cp3_extAND",      "extract AND gates", true);
-static BoolOption opt_ITE      (_cat, "cp3_extITE",      "extract ITE gates", false);
-static BoolOption opt_XOR      (_cat, "cp3_extXOR",      "extract XOR gates", false);
-static BoolOption opt_ExO      (_cat, "cp3_extExO",      "extract ExO gates", false);
-static BoolOption opt_genAND   (_cat, "cp3_genAND",      "extract generic AND gates", false);
-static BoolOption opt_FASUM    (_cat, "cp3_extHASUM",    "extract full adder sum bit gates", false);
+#if defined CP3VERSION  && CP3VERSION < 350
+static const bool opt_AND        = false;
+static const bool opt_ITE        = false;
+static const bool opt_XOR        = false;
+static const bool opt_ExO        = false;
+static const bool opt_genAND     = false;
+static const bool opt_FASUM      = false;
 
-static BoolOption opt_BLOCKED    (_cat, "cp3_extBlocked",  "extract gates, that can be found by blocked clause addition", true);
+static const bool opt_BLOCKED    = false;
+static const bool opt_AddBlocked = false;
+static const bool opt_NegatedI   = false;
+static const bool opt_Implied    = false;
+#else
+static BoolOption opt_AND        (_cat, "cp3_extAND",      "extract AND gates", true);
+static BoolOption opt_ITE        (_cat, "cp3_extITE",      "extract ITE gates", false);
+static BoolOption opt_XOR        (_cat, "cp3_extXOR",      "extract XOR gates", false);
+static BoolOption opt_ExO        (_cat, "cp3_extExO",      "extract ExO gates", false);
+static BoolOption opt_genAND     (_cat, "cp3_genAND",      "extract generic AND gates", false);
+static BoolOption opt_FASUM      (_cat, "cp3_extHASUM",    "extract full adder sum bit gates", false);
+
+static BoolOption opt_BLOCKED    (_cat, "cp3_extBlocked",  "extract gates, that can be found by blocked clause addition", false);
 static BoolOption opt_AddBlocked (_cat, "cp3_addBlocked",  "clauses that are used to extract blocked gates will be added eagerly (soundness)", true);
 static BoolOption opt_NegatedI   (_cat, "cp3_extNgtInput", "extract gates, where inputs come from the same variable", true);
-static BoolOption opt_Implied    (_cat, "cp3_extImplied",  "extract half adder sum bit", true);
+static BoolOption opt_Implied    (_cat, "cp3_extImplied",  "do search binary clause also in BIG with dfs", true);
+#endif
 
-using namespace Coprocessor;
 
 /// temporary Boolean flag to quickly enable debug output for the whole file
-const static bool debug_out = false; // print output to screen
+#if defined CP3VERSION  
+static const bool debug_out = false;
+#else
+  static BoolOption debug_out      (_cat, "cp3_circ_debug",  "print debug output for circuitextraction", false);
+#endif
+
+using namespace Coprocessor;
 
 Circuit::Circuit(ClauseAllocator& _ca)
 : ca (_ca)
@@ -197,12 +216,20 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	    if( debug_out ) {
 	      cerr << "c found posBlocked AND gate with output var " << v + 1 << endl;
 	      cerr << "clause [";
-	      for( int abc = 0; abc < data.lits.size(); ++ abc ) cerr << data.lits[abc] << " ";
+	      for( int abc = 0; abc < learnt_clause.size(); ++ abc ) cerr << learnt_clause[abc] << " ";
 	      cerr << "] leads to gate: ";
 	      gates[ gates.size() -1 ].print(cerr);
 	    }
-	    CRef cr = ca.alloc(learnt_clause, true); // create as learnt clause (theses clauses have to be considered for inprocessing as well, see "inprocessing rules" paper!
+	    CRef cr = ca.alloc(learnt_clause, false); // create as learnt clause (theses clauses have to be considered for inprocessing as well, see "inprocessing rules" paper!
 	    data.addClause(cr);
+	    data.getClauses().push(cr);
+	    
+	    if( learnt_clause.size() == 3 ) {
+	      ternaries[ toInt(learnt_clause[0]) ].push_back( ternary(learnt_clause[1],learnt_clause[2]) );
+	      ternaries[ toInt(learnt_clause[1]) ].push_back( ternary(learnt_clause[0],learnt_clause[2]) );
+	      ternaries[ toInt(learnt_clause[2]) ].push_back( ternary(learnt_clause[0],learnt_clause[1]) );
+	    }
+	    // TODO: add ternary clause to ternaries!
 	  }
 	}
       }

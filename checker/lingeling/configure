@@ -1,20 +1,23 @@
 #!/bin/sh
-log=undefined
+
 check=undefined
-stats=undefined
+chksol=undefined
 coverage=undefined
-profile=undefined
-competition=no
-feedback=no
+debug=no
+log=undefined
+lto=no
 olevel=none
 other=none
 picosat=no
+profile=undefined
 static=no
-debug=no
+aiger=undefined
+
 die () {
   echo "*** configure: $*" 1>&2
   exit 1
 }
+
 while [ $# -gt 0 ]
 do
   case $1 in
@@ -24,54 +27,75 @@ do
        echo "where <option> is one of the following"
        echo
        echo "-h | --help"
-       echo "-g | --debug   include debugging code and symbols"
-       echo "-l | --log     include logging code (default with '-g')"
-       echo "-s | --stats   include statistic code (default with '-g')"
-       echo "-c | --check   include checking code (default with '-g')"
-       echo "-p | --profile compile with '-pg' for profiling"
-       echo "-f | --feeback compile with profile feedback"
-       echo "--competition  SAT race / SAT competition options"
-       echo "--coverage     compile with coverage options"
-       echo "--no-check     no checking code (overwrite default for '-g')"
-       echo "--no-stats     no statistic code (overwrite default for '-g')"
-       echo "--no-log       no logging code (overwrite default for '-g')"
-       echo "-O[0-3]        set optimization level unless '-g' specified"
-       echo "--picosat      add checking code depending on PicoSAT"
-       echo "-f...|-m...    add other compiler options"
+       echo "-g | --debug    include debugging code and symbols"
+       echo "-l | --log      include logging code (default with '-g')"
+       echo "-c | --check    include checking code (default with '-g')"
+       echo "-p | --profile  compile with '-pg' for profiling"
+       echo "--coverage      compile with coverage options"
+       echo "--no-check      no checking code (overwrite default for '-g')"
+       echo "--chksol        always check solution (default for '-c')"
+       echo "--no-chksol     do not check solution"
+       echo "--no-log        no logging code (overwrite default for '-g')"
+       echo "-O[0-4]         set optimization level unless '-g' specified"
+       echo "-flto           enable link time optimization"
+       echo "--picosat       add checking code depending on PicoSAT"
+       echo "-f...|-m...     add other compiler options"
+       echo "--aiger=<dir>   specify AIGER directory (default '../aiger')"
+       echo "--no-aiger      no targets requiring AIGER library"
        exit 0
        ;;
     -g|--debug) debug=yes;;
     -l|--log) log=yes;;
-    -s|--stats) stats=yes;;
     -c|--check) check=yes;;
-    -f|--feedback) feedback=yes;;
-    --competition) competition=yes;;
+    --chksol) chksol=yes;;
+    --no-chksol|--nchksol) chksol=no;;
     --no-check) check=no;;
-    --no-stats) stats=no;;
     --no-log) log=no;;
     -p|--profile) profile=yes;;
     --coverage) coverage=yes;;
     --picosat) picosat=yes;;
     -O) debug=no;;
-    -O0|-O1|-O2|-O3) olevel=$1;;
+    -O0|-O1|-O2|-O3|-O4) olevel=$1;;
+    -lto|-flto|--lto|--flto) lto=yes;;
     -static) static=yes;;
+    --aiger=*) aiger=`echo "$1"|sed -e 's,^--aiger=,,' `;;
+    --no-aiger) aiger=no;;
     -f*|-m*) if [ $other = none ]; then other=$1; else other="$other $1"; fi;;
     *) echo "*** configure: invalid command line option '$1'"; exit 1;;
   esac
   shift
 done
-if [ $competition = yes ]
+
+if [ x"$aiger" = xundefined ]
 then
-  if [ $other = none ]; then other=""; else other="$other "; fi
-  other="${other}-march=core2"
-  static=yes
-  feedback=yes
-  [ x"$CC" = x ] && CC=/usr/bin/gcc
+  if [ -d ../aiger ]
+  then
+    aiger="../aiger"
+  fi
 fi
+
+if [ x"$aiger" = xundefined ]
+then
+  aiger=no
+elif [ ! x"$aiger" = xno ]
+then
+  if [ ! -d "$aiger" ]
+  then
+    die "'$aiger' not a directory (use '--aiger' or '--no-aiger')"
+  elif [ ! -f "$aiger/aiger.h" ]
+  then
+    die "can not find '$aiger/aiger.h'"
+  elif [ ! -f "$aiger/aiger.o" ]
+  then
+    die "can not find '$aiger/aiger.o'"
+  fi
+fi
+
 [ $log = undefined ] && log=$debug
-[ $stats = undefined ] && stats=$debug
 [ $check = undefined ] && check=$debug
-for CNF in /data/cnf/sc2009/applications/simon-s03-fifo8-300.cnf \
+
+for CNF in profile.cnf.gz \
+           /data/cnf/sc2009/applications/simon-s03-fifo8-300.cnf \
            /data/cnf/cmu/longmult12.dimacs \
 	   log/prime65537.in \
 	   none
@@ -79,15 +103,10 @@ do
   [ -f $CNF ] && break;
 done
 
-if [ $feedback = yes ]
-then
-  [ $CNF = none ] && die "no CNF for feedback found"
-  TARGET="feedback"
-else
-  TARGET="targets"
-fi
+TARGET="targets"
 
 [ x"$CC" = x ] && CC=gcc
+
 CFLAGS="-Wall"
 if [ $debug = yes ]
 then
@@ -96,9 +115,10 @@ then
 else
   [ $olevel = none ] && olevel=-O3
   CFLAGS="$CFLAGS $olevel"
-  [ $olevel = O3 ] && \
-  CFLAGS="$CFLAGS -finline-limit=10000000 -fomit-frame-pointer"
+  [ $lto = yes ] && CFLAGS="$CFLAGS -flto -fwhole-program"
 fi
+
+LIBS="-lm"
 if [ $picosat = yes ]
 then
   if [ ! -d ../picosat ]
@@ -116,24 +136,35 @@ then
   else
     HDEPS="../picosat/picosat.h"
     LDEPS="../picosat/libpicosat.a"
-    LIBS="-L../picosat -lpicosat"
+    LIBS="$LIBS -L../picosat -lpicosat"
     CFLAGS="$CFLAGS -I../picosat"
   fi
 else
   HDEPS=""
   LDEPS=""
-  LIBS=""
 fi
+
+if [ "$aiger" = no ]
+then
+  AIGERTARGETS=""
+  AIGER=""
+else
+  AIGERTARGETS="blimc"
+  AIGER="$aiger"
+fi
+
+[ $chksol = undefined ] && chksol=$check
 [ $static = yes ] && CFLAGS="$CFLAGS -static"
 [ $profile = yes ] && CFLAGS="$CFLAGS -pg"
 [ $coverage = yes ] && CFLAGS="$CFLAGS -ftest-coverage -fprofile-arcs"
 [ $other = none ] || CFLAGS="$CFLAGS $other"
-[ $log = yes ] && LIBS="$LIBS -lm"
 [ $log = no ] && CFLAGS="$CFLAGS -DNLGLOG"
-[ $stats = no ] && CFLAGS="$CFLAGS -DNLGLSTATS"
 [ $check = no ] && CFLAGS="$CFLAGS -DNDEBUG"
+[ $chksol = no ] && CFLAGS="$CFLAGS -DNCHKSOL"
 [ $picosat = no ] && CFLAGS="$CFLAGS -DNLGLPICOSAT"
+
 echo "$CC $CFLAGS"
+
 rm -f makefile
 sed \
   -e "s,@CC@,$CC," \
@@ -141,6 +172,8 @@ sed \
   -e "s,@TARGET@,$TARGET," \
   -e "s,@HDEPS@,$HDEPS," \
   -e "s,@LDEPS@,$LDEPS," \
+  -e "s,@AIGERTARGETS@,$AIGERTARGETS," \
+  -e "s,@AIGER@,$AIGER," \
   -e "s,@CNF@,$CNF," \
   -e "s,@LIBS@,$LIBS," \
   makefile.in > makefile

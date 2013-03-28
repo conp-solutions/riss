@@ -32,6 +32,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 namespace Minisat {
 
 static inline double cpuTime(void); // CPU-time in seconds.
+static inline double wallClockTime(void); //Wall-Clock-time in seconds
 extern double memUsed();            // Memory in mega bytes (returns 0 for unsupported architectures).
 extern double memUsedPeak();        // Peak-memory in mega bytes (returns 0 for unsupported architectures).
 
@@ -44,17 +45,25 @@ extern double memUsedPeak();        // Peak-memory in mega bytes (returns 0 for 
 #include <time.h>
 
 static inline double Minisat::cpuTime(void) { return (double)clock() / CLOCKS_PER_SEC; }
-
+//static inline double Minisat::wallClockTime(void) { return (double) clock() / CLOCKS_PER_SEC; }
 #else
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <unistd.h>
+#include <time.h>
 
 static inline double Minisat::cpuTime(void) {
     struct rusage ru;
     getrusage(RUSAGE_SELF, &ru);
     return (double)ru.ru_utime.tv_sec + (double)ru.ru_utime.tv_usec / 1000000; }
 
+
+static inline double Minisat::wallClockTime(void)
+{
+    struct timespec timestamp;
+    clock_gettime(CLOCK_MONOTONIC, &timestamp);
+    return ((double) timestamp.tv_sec) + ((double) timestamp.tv_nsec / 1000000000);
+}
 #endif
 
 #endif

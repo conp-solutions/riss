@@ -39,6 +39,10 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "mtl/Map.h"
 #include "mtl/Alloc.h"
 
+// for parallel stuff
+#include <pthread.h>
+#include "coprocessor-src/LockCollection.h"
+
 /// TODO remove after debug
 #include <iostream>
 using namespace std;
@@ -139,18 +143,49 @@ class Clause;
 typedef RegionAllocator<uint32_t>::Ref CRef;
 
 class Clause {
-    struct {
 
-        unsigned mark      : 2; // TODO: for what is this mark used? its set to 1, if the clause can be deleted (by simplify) we could do the same thing!
+    struct ClauseHeader {
+        unsigned mark      : 1; // TODO: for what is this mark used? its set to 1, if the clause can be deleted (by simplify) we could do the same thing!
+        unsigned locked    : 1; // if set to 1, some thread has locked the clause
+
         unsigned learnt    : 1;
         // + write get_method()
         unsigned has_extra : 1;
         unsigned reloced   : 1;
-        unsigned lbd       : 24;
-        unsigned canbedel  : 1;
+        unsigned lbd       : 25;
+        // unsigned canbedel  : 1;
         unsigned can_subsume : 1;
         unsigned can_strengthen : 1;
         unsigned size      : 32;
+
+        ClauseHeader(void) {} 
+        ClauseHeader(volatile ClauseHeader & rhs)
+        {
+            mark = rhs.mark;
+            locked = rhs.locked;
+            learnt = rhs.learnt;
+            has_extra = rhs.has_extra;
+            reloced = rhs.reloced;
+	    lbd = rhs.lbd;
+            can_subsume = rhs.can_subsume;
+            can_strengthen = rhs.can_strengthen;
+            size = rhs.size;
+        }
+
+        ClauseHeader& operator = (volatile ClauseHeader& rhs)
+        {
+            mark = rhs.mark;
+            locked = rhs.locked;
+            learnt = rhs.learnt;
+            has_extra = rhs.has_extra;
+            reloced = rhs.reloced;
+	    lbd = rhs.lbd;
+            can_subsume = rhs.can_subsume;
+            can_strengthen = rhs.can_strengthen;
+            size = rhs.size;
+            return *this;
+        }
+
         }                            header;
 
     union { Lit lit; float act; uint32_t abs; CRef rel; } data[0];
@@ -161,15 +196,20 @@ class Clause {
     template<class V>
     Clause(const V& ps, bool use_extra, bool learnt) {
         header.mark      = 0;
+    	header.locked    = 0;
         header.learnt    = learnt;
         header.has_extra = use_extra;
         header.reloced   = 0;
         header.size      = ps.size();
 	header.lbd = 0;
-	header.canbedel = 1;
         header.can_subsume = 1;
         header.can_strengthen = 1;
 
+	for (int i = 0; i < ps.size(); i++)
+	  for (int j = i+1; j < ps.size(); j++)
+	    assert( ps[i] != ps[j] && "have no duplicate literals in clauses!" );
+	
+	
         for (int i = 0; i < ps.size(); i++)
             data[i].lit = ps[i];
 	
@@ -223,8 +263,6 @@ public:
     void         setLBD(int i)  {header.lbd = i;} 
     // unsigned int&       lbd    ()              { return header.lbd; }
     unsigned int        lbd    () const        { return header.lbd; }
-    void setCanBeDel(bool b) {header.canbedel = b;}
-    bool canBeDel() {return header.canbedel;}
 
     void         print       (bool nl=false) const { for (int i = 0; i < size(); i++){
                                                  printLit(data[i].lit);
@@ -235,12 +273,30 @@ public:
     Lit          subsumes         (const Clause& other) const;
     bool         ordered_subsumes (const Clause& other) const;
     bool         ordered_equals   (const Clause& other) const;
-    void         remove_lit       (const Lit p);
+    void         remove_lit       (const Lit p); /// keeps the order of the remaining literals
     void         strengthen       (Lit p);
 
     void    set_delete (bool b) 	    { if (b) header.mark = 1; else header.mark = 0;}
     void    set_learnt (bool b)         { header.learnt = b; }
     bool    can_be_deleted()     const  { return mark() == 1; }
+    
+    /** sort the literals in the clause 
+     *  Note: do not use if clause is watched or reason!
+     */
+    void sort() {
+      const uint32_t s = size();
+      for (uint32_t j = 1; j < s; ++j)
+      {
+	  const Lit key = operator[](j);
+	  int32_t i = j - 1;
+	  while ( i >= 0 && toInt(operator[](i)) > toInt(key) )
+	  {
+	      operator[](i+1) = operator[](i);
+	      i--;
+	  }
+	  operator[](i+1) = key;
+      }
+    }
 
     void    set_has_extra(bool b)       {header.has_extra = b;}
 
@@ -248,6 +304,48 @@ public:
     void    set_subsume(bool b)         { header.can_subsume = b; }
     bool    can_strengthen()     const  { return header.can_strengthen; }
     void    set_strengthen(bool b)      { header.can_strengthen = b; }
+    
+    /** spinlocks the clause by trying to set the locked bit 
+     * Note: be very careful with the implementation, it relies on the header being 32 bit!
+     *
+     * @return true  if the lock was acquired
+     *         false gave up locking, because first literal of clause has changed
+     *               (only if first lit was specified)
+     */
+    bool    spinlock(const Lit first = lit_Undef) {
+      ClauseHeader compare = header;
+      compare.locked = 0;
+      ClauseHeader setHeader = header;
+      setHeader.locked = 1;
+      assert( sizeof(ClauseHeader) == sizeof(uint32_t) && "data type sizes have to be equivalent") ;
+      uint32_t* cHeader = (uint32_t*)(&compare);
+      uint32_t* sHeader = (uint32_t*)(&setHeader);
+      uint32_t* iHeader = (uint32_t*)(&header);
+      while ( *iHeader != *cHeader || __sync_bool_compare_and_swap( iHeader, uint32_t(*cHeader), uint32_t(*sHeader) ) == false) {
+        // integrity check on first literal to prevent deadlocks
+        if (header.size == 0 || lit_Undef != first && data[0].lit.x != first.x)
+          return false;
+	    // renew header
+	    compare = header;
+	    setHeader = header;
+	    compare.locked = 0;
+	    setHeader.locked = 1;
+	    cHeader = (uint32_t*)(&compare);
+	    sHeader = (uint32_t*)(&setHeader);
+	    iHeader = (uint32_t*)(&header);
+      }
+      return true;
+    }
+    
+    /** check whether the locked bit of the clause is set 
+     *  Note: cannot be used to detect whether somebody has the lock, because not atmoic!
+     */
+    bool isLocked() const { return header.locked; }
+    
+    /** reset the header bit unlocked to indicate that the clause is unlocked */
+    void unlock() {
+      header.locked = 0;
+    };
 
     void    removePositionUnsorted(int i)    { data[i].lit = data[ size() - 1].lit; shrink(1); if (has_extra() && !header.learnt) calcAbstraction(); }
     inline void removePositionSorted(int i)      { for (int j = i; j < size() - 1; ++j) data[j] = data[j+1]; shrink(1); if (has_extra() && !header.learnt) calcAbstraction(); }
@@ -275,13 +373,29 @@ public:
 //=================================================================================================
 // ClauseAllocator -- a simple class for allocating memory for clauses:
 
+/**
+ * A struct that stores a maximum and a minimum address in the Clause Allocator
+ *
+ */
+class AllocatorReservation 
+{
+    friend class ClauseAllocator;
+    uint32_t start;
+    uint32_t current;
+    uint32_t upper_limit;
+
+    AllocatorReservation(uint32_t _current, uint32_t _limit) : start(_current), current(_current), upper_limit(_limit) {}
+    public:
+    uint32_t getCurrent() const { return current; }
+    uint32_t getUpperLimit() const { return upper_limit; }
+};
 
 const CRef CRef_Undef = RegionAllocator<uint32_t>::Ref_Undef;
 class ClauseAllocator : public RegionAllocator<uint32_t>
 {
+ public:
     static int clauseWord32Size(int size, bool has_extra){
         return (sizeof(Clause) + (sizeof(Lit) * (size + (int)has_extra))) / sizeof(uint32_t); }
- public:
     bool extra_clause_field;
 
     ClauseAllocator(uint32_t start_cap) : RegionAllocator<uint32_t>(start_cap), extra_clause_field(false){}
@@ -320,6 +434,13 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         RegionAllocator<uint32_t>::free(clauseWord32Size(c.size(), c.has_extra()));
     }
 
+    void freeLit(int diff = 1)
+    {
+        assert(sizeof(Lit) == sizeof(uint32_t));
+        assert(diff > 0);
+        RegionAllocator<uint32_t>::free(diff);
+    }
+
     void reloc(CRef& cr, ClauseAllocator& to)
     {
         Clause& c = operator[](cr);
@@ -348,11 +469,97 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
 	}
         else if (to[cr].has_extra()) to[cr].calcAbstraction();
     }
+
+    // Methods for threadsafe parallel allocation in BVE / subsimp context of CP3
+ private:
+    int requiredMemory(int clauses, int literals, int learnts) const
+    {
+        assert(sizeof(Lit)      == sizeof(uint32_t));
+        assert(sizeof(float)    == sizeof(uint32_t));
+        assert(clauses >= learnts); 
+        return            (   sizeof(Clause) * clauses 
+                            + sizeof(Lit)    * literals
+                            + sizeof(Lit)    * learnts          // for extra field
+                            + (extra_clause_field ? sizeof(Lit)    * (clauses - learnts) : 0)
+                          ) / sizeof(uint32_t);
+    }
+
+    /**
+     * Checks whether CA has enough memory for some clause allocations
+     * @param clauses   total number of clauses (learnt and non-learnt)
+     * @param literals  total number of literals
+     * @param learnts   number of clauses that are learnt
+     */ 
+    bool hasFreeMemory(int clauses, int literals, int learnts) const
+    {
+        assert(clauses >= learnts);
+        if (literals < 2 * clauses)
+        {
+            std::cerr << "c lits: " << literals << " clauses: " << clauses << endl; 
+        }
+        assert(literals >= 2 * clauses);
+        if ( currentCap() >= size() + requiredMemory(clauses, literals, learnts) )
+            return true;
+        else
+            return false;
+    };
+
+ public:
+    /**
+     * Reserves memory in the CA.
+     * Assumes that just one function calls reserveMemory 
+     *      -> secure this with a spin lock before calling
+     *      -> Make shure that the calling thread has not locked CA_Lock
+     */
+    AllocatorReservation reserveMemory(int clauses, int literals, int learnts, ReadersWriterLock & CA_Lock)
+    {
+        bool need_lock = ! hasFreeMemory(clauses, literals, learnts);
+        if (need_lock)
+            CA_Lock.writeLock();
+        uint32_t start = RegionAllocator<uint32_t>::alloc(requiredMemory(clauses, literals, learnts));
+        uint32_t limit = RegionAllocator<uint32_t>::size();
+        if (need_lock)
+            CA_Lock.writeUnlock();
+        return AllocatorReservation(start, limit);
+    }
+
+    template<class Lits>
+    CRef allocThreadsafe(AllocatorReservation & reservation, const Lits& ps, bool learnt = false)
+    {
+        assert(sizeof(Lit)      == sizeof(uint32_t));
+        assert(sizeof(float)    == sizeof(uint32_t));
+        assert(reservation.current < reservation.upper_limit && "no reserved space left");
+        if (false && reservation.current >= reservation.upper_limit)
+        {
+           cerr <<  "no reserved space left" << endl;
+           abort();
+        }
+        bool use_extra = learnt | extra_clause_field;
+        
+        assert(reservation.current + clauseWord32Size(ps.size(), use_extra) <= reservation.upper_limit && "requested clause size does not fit in reservation");
+        if(false && reservation.current + clauseWord32Size(ps.size(), use_extra) > reservation.upper_limit)
+            cerr << "requested clause size does not fit in reservation" <<endl;
+        CRef cid = reservation.current;
+        new (lea(cid)) Clause(ps, use_extra, learnt);
+        
+        reservation.current += clauseWord32Size(ps.size(), use_extra);
+
+        return cid;
+    }
+    
+    void freeReservation(AllocatorReservation & reservation)
+    {
+        assert(reservation.current <= reservation.upper_limit);
+        RegionAllocator<uint32_t>::free(reservation.upper_limit - reservation.current);
+        reservation.current       = 0;
+        reservation.upper_limit   = 0;
+    }
 };
 
 
+
 //=================================================================================================
-// OccLists -- a class for maintaining occurence lists with lazy deletion:
+// OccLists -- a class for maintaining occurrence lists with lazy deletion:
 
 template<class Idx, class Vec, class Deleted>
 class OccLists
@@ -536,7 +743,7 @@ inline bool Clause::ordered_equals (const Clause & other) const
 }
 
 inline void Clause::remove_lit(const Lit p)
-{   //TODO shouldn't this be size()-1
+{   
     for (int i = 0; i < size(); ++i)
     {
         if(data[i].lit == p)

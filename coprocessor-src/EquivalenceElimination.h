@@ -28,7 +28,10 @@ class EquivalenceElimination : public Technique {
   
   uint64_t gateSteps;
   double gateTime;
+  double gateExtractTime;
   double eeTime;
+  unsigned equivalentLits;	// number of equivalent literals
+  unsigned removedCls;		// number of removed clauses due to rewriting
   
   uint64_t steps;                   // how many steps is the worker allowed to do
 
@@ -42,7 +45,7 @@ class EquivalenceElimination : public Technique {
 
   vector<Lit> replacedBy;              /// stores which variable has been replaced by which literal
   
-  char* isToAnalyze;                   /// stores that a literal has to be analyzed further
+  vector<char> isToAnalyze;            /// stores that a literal has to be analyzed further
   vector<Lit> eqDoAnalyze;             /// stores the literals to be analyzed
   
   Propagation& propagation;            /// object that takes care of unit propagation
@@ -53,14 +56,12 @@ public:
   EquivalenceElimination( ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation, Subsumption& _subsumption  );
   
   /** run equivalent literal elimination */
-  void eliminate(CoprocessorData& data);
+  void process(CoprocessorData& data);
 
   void initClause(const CRef cr); // inherited from Technique
 
   /** inherited from @see Technique */
   void printStatistics( ostream& stream );
-  
-protected:
 
   /** apply equivalences stored in data object to formula
    * @param force run subsumption and unit propagation, even if no equivalences are found
@@ -68,6 +69,10 @@ protected:
    */
   bool applyEquivalencesToFormula( Coprocessor::CoprocessorData& data, bool force = false);
   
+  void destroy();
+  
+protected:
+
   /** check based on gates that have been extracted, whether more equivalent literals can be found!
    * @return true, if new equivalent literals have been found
    */
@@ -85,7 +90,7 @@ protected:
   bool checkEquivalence( const Circuit::Gate& g1, const Circuit::Gate& g2, Lit& e1, Lit& e2);
   
   /** perform tarjan algorithm to find SCC on binary implication graph */
-  void eqTarjan(Lit l, Lit list, CoprocessorData& data, BIG& big, vector< vector< Lit > >* externBig = 0);
+  void eqTarjan(int depth, Lit l, Lit list, CoprocessorData& data, BIG& big, vector< vector< Lit > >* externBig = 0);
 
   /** check whether the clause c has duplicates in the list of literal l (irredundant clause is no duplicate for learned clause! -> deletes learned clause!)
    *  Note: assumes that all clauses are sorted!

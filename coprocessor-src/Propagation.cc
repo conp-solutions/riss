@@ -10,6 +10,7 @@ static int upLevel = 1;
 
 Propagation::Propagation( ClauseAllocator& _ca, ThreadController& _controller )
 : Technique( _ca, _controller )
+, processTime(0)
 , lastPropagatedLiteral( 0 )
 , removedClauses(0)
 , removedLiterals(0)
@@ -17,10 +18,17 @@ Propagation::Propagation( ClauseAllocator& _ca, ThreadController& _controller )
 {
 }
 
+void Propagation::reset()
+{
+  lastPropagatedLiteral = 0;
+}
 
-lbool Propagation::propagate(CoprocessorData& data, bool sort)
+
+lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHeapLt> * heap, const Var ignore)
 {
   processTime = cpuTime() - processTime;
+  modifiedFormula = false;
+  if( !data.ok() ) return l_False;
   Solver* solver = data.getSolver();
   // propagate all literals that are on the trail but have not been propagated
   for( ; lastPropagatedLiteral < solver->trail.size(); lastPropagatedLiteral ++ )
@@ -29,7 +37,7 @@ lbool Propagation::propagate(CoprocessorData& data, bool sort)
     if (global_debug_out) cerr << "c UP propagating " << l << endl;
     data.log.log(upLevel,"propagate literal",l);
     // remove positives
-    vector<CRef> positive = data.list(l);
+    vector<CRef> & positive = data.list(l);
     for( int i = 0 ; i < positive.size(); ++i )
     {
 
@@ -39,7 +47,9 @@ lbool Propagation::propagate(CoprocessorData& data, bool sort)
       if( global_debug_out ) cerr << "c UP remove " << ca[ positive[i] ] << endl;
       ++removedClauses; // = ca[ positive[i] ].can_be_deleted() ? removedClauses : removedClauses + 1;
       ca[ positive[i] ].set_delete(true);
-      data.removedClause( positive[i] );
+      modifiedFormula = true;
+      //data.removedClause( positive[i] );
+      data.removedClause( positive[i], heap, ignore);
       // TODO : necessary? -> just performance trade-off
       /*for (int lit = 0; lit < satisfied.size(); ++lit)
       {
@@ -47,11 +57,11 @@ lbool Propagation::propagate(CoprocessorData& data, bool sort)
             data.removeClauseFrom(positive[i], satisfied[lit]);
       }*/
     }
-    positive.clear(); // clear list
+    vector<CRef>().swap(positive); // free physical space of positive
     
     const Lit nl = ~l;
     int count = 0;
-    vector<CRef> negative = data.list(nl);
+    vector<CRef> & negative = data.list(nl);
 
     for( int i = 0 ; i < negative.size(); ++i )
     {
@@ -68,9 +78,12 @@ lbool Propagation::propagate(CoprocessorData& data, bool sort)
 	        if( global_debug_out ) cerr << "c UP remove " << nl << " from " << c << endl;
 	        if (!sort) c.removePositionUnsorted(j);
             else c.removePositionSorted(j);
+	        modifiedFormula = true;
+	        count ++;
 	        break;
 	      }
-        count ++;
+	      // tell subsumption / strengthening about this modified clause
+	      data.addSubStrengthClause(negative[i]);
       }
       // unit propagation
       if ( c.size() == 0 || (c.size() == 1 &&  solver->value( c[0] ) == l_False) ) 
@@ -90,9 +103,9 @@ lbool Propagation::propagate(CoprocessorData& data, bool sort)
       }
     }
     // update formula data!
-    data.removedLiteral(nl, count);
+    vector<CRef>().swap(negative); // free physical scace of negative
+    data.removedLiteral(nl, count, heap, ignore);
     removedLiterals += count;
-    data.list(nl).clear();
   }
   
 //    for (int i = 0; i < clause_list.size(); ++i)
