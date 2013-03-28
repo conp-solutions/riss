@@ -152,8 +152,8 @@ class Clause {
         // + write get_method()
         unsigned has_extra : 1;
         unsigned reloced   : 1;
-        unsigned lbd       : 25;
-        // unsigned canbedel  : 1;
+        unsigned lbd       : 24;
+        unsigned canbedel  : 1;
         unsigned can_subsume : 1;
         unsigned can_strengthen : 1;
         unsigned size      : 32;
@@ -167,6 +167,7 @@ class Clause {
             has_extra = rhs.has_extra;
             reloced = rhs.reloced;
 	    lbd = rhs.lbd;
+	    canbedel = rhs.canbedel;
             can_subsume = rhs.can_subsume;
             can_strengthen = rhs.can_strengthen;
             size = rhs.size;
@@ -180,6 +181,7 @@ class Clause {
             has_extra = rhs.has_extra;
             reloced = rhs.reloced;
 	    lbd = rhs.lbd;
+	    canbedel = rhs.canbedel;
             can_subsume = rhs.can_subsume;
             can_strengthen = rhs.can_strengthen;
             size = rhs.size;
@@ -202,6 +204,7 @@ class Clause {
         header.reloced   = 0;
         header.size      = ps.size();
 	header.lbd = 0;
+	header.canbedel = 0;
         header.can_subsume = 1;
         header.can_strengthen = 1;
 
@@ -263,7 +266,10 @@ public:
     void         setLBD(int i)  {header.lbd = i;} 
     // unsigned int&       lbd    ()              { return header.lbd; }
     unsigned int        lbd    () const        { return header.lbd; }
-
+    void setCanBeDel(bool b) {header.canbedel = b;}
+    bool canBeDel() {return header.canbedel;}
+    
+    
     void         print       (bool nl=false) const { for (int i = 0; i < size(); i++){
                                                  printLit(data[i].lit);
                                                  fprintf(stderr," ");

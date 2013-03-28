@@ -193,9 +193,32 @@ int main(int argc, char** argv)
         
         vec<Lit> dummy;
         lbool ret = S.solveLimited(dummy);
-
-	
-	// TODO: use code from other branch!
+        if (S.verbosity > 0){
+            printStats(S);
+            printf("\n"); }
+        printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n");
+        if (res != NULL){
+            if (ret == l_True){
+                fprintf(res, "s SATISFIABLE\nv ");
+                for (int i = 0; i < S.nVars(); i++)
+                  //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
+                        fprintf(res, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
+                fprintf(res, " 0\n");
+            }else if (ret == l_False)
+                fprintf(res, "s UNSATISFIABLE\n");
+            else
+                fprintf(res, "s UNKNOWN\n");
+            fclose(res);
+        }
+        if(! opt_quiet && ret == l_True && res == NULL ) {
+	  printf ("v ");
+          for (int i = 0; i < S.nVars(); i++)
+            //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
+              printf( "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
+	  printf(" 0\n");
+	}
+        
+        cout.flush(); cerr.flush();
         
 #ifdef NDEBUG
         exit(ret == l_True ? 10 : ret == l_False ? 20 : 0);     // (faster than "return", which will invoke the destructor for 'Solver')
