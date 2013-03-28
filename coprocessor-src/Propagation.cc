@@ -10,7 +10,6 @@ static int upLevel = 1;
 
 Propagation::Propagation( ClauseAllocator& _ca, ThreadController& _controller )
 : Technique( _ca, _controller )
-, processTime(0)
 , lastPropagatedLiteral( 0 )
 , removedClauses(0)
 , removedLiterals(0)

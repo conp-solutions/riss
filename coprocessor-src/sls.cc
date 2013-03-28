@@ -20,7 +20,6 @@ Technique(_ca, _controller)
 , data(_data)
 , ca ( _ca )
 , solveTime(0)
-, unsatisfiedClauses(0)
 , flips ( 0 )
 {
 
