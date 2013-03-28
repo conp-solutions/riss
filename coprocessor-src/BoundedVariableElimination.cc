@@ -798,17 +798,14 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, Heap<VarOrd
                     CRef cr = ca.alloc(ps, p.learnt() || n.learnt()); 
                     // IMPORTANT! dont use p and n in this block, as they could got invalid
                     Clause & resolvent = ca[cr];
-		    
                     if (heap_updates > 0 && opt_bve_heap != 2)
                         data.addClause(cr, &heap);
                     else 
                         data.addClause(cr);
                     if (resolvent.learnt()) 
-
-		      data.getLEarnts().push(cr);
-		    } else {
+                        data.getLEarnts().push(cr);
+                    else 
                         data.getClauses().push(cr);
-		    }
                     // push Clause on subsumption-queue
                     subsumption.initClause(cr);
 
