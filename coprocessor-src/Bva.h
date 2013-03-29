@@ -89,10 +89,12 @@ protected:
   bool andBVA();
 
   /** perform ITE-bva */
-  bool iteBVA();
+  bool iteBVAhalf();
+  bool iteBVAfull();
   
   /** perform XOR-bva */
-  bool xorBVA();
+  bool xorBVAhalf();
+  bool xorBVAfull();
   
   /** prototype implementation of a BVA version that can replace multiple literals
   */
@@ -111,16 +113,30 @@ protected:
   bool checkLists(const string& headline);
   
   /** pair of literals and clauses */
-  struct xorPair {
+  struct xorHalfPair {
     Lit l1,l2;
     CRef c1,c2;
-    xorPair( Lit _l1, Lit _l2, CRef _c1, CRef _c2) : l1(_l1),l2(_l2),c1(_c1),c2(_c2){}
+    xorHalfPair( Lit _l1, Lit _l2, CRef _c1, CRef _c2) : l1(_l1),l2(_l2),c1(_c1),c2(_c2){}
   };
-  
-  struct itePair {
+  struct xorFullPair {
+    Lit l1,l2;
+    CRef c1,c2,c3,c4;
+    xorFullPair( Lit _l1, Lit _l2, CRef _c1, CRef _c2, CRef _c3, CRef _c4)
+      : l1(_l1),l2(_l2),c1(_c1),c2(_c2),c3(_c3),c4(_c4){}
+  };
+
+  struct iteHalfPair {
     Lit l1,l2,l3;
     CRef c1,c2;
-    itePair( Lit _l1, Lit _l2, Lit _l3, CRef _c1, CRef _c2) : l1(_l1),l2(_l2),l3(_l3),c1(_c1),c2(_c2){}
+    iteHalfPair( Lit _l1, Lit _l2, Lit _l3, CRef _c1, CRef _c2)
+      : l1(_l1),l2(_l2),l3(_l3),c1(_c1),c2(_c2){}
+  };
+  
+  struct iteFullPair {
+    Lit l1,l2,l3;
+    CRef c1,c2,c3,c4;
+    iteFullPair( Lit _l1, Lit _l2, Lit _l3, CRef _c1, CRef _c2, CRef _c3, CRef _c4)
+      : l1(_l1),l2(_l2),l3(_l3),c1(_c1),c2(_c2),c3(_c3),c4(_c4){}
   };
   
   
