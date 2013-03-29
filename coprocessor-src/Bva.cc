@@ -1363,8 +1363,8 @@ bool BoundedVariableAddition::iteBVAhalf()
 	)
       ) ++j ;
       assert(j>=i);
-      if( j - i >= replacePairs ) {
-	int thisR = j-i;
+      if( j - i  >= replacePairs ) {
+	int thisR = j-i ;
 	multipleMatches = maxR > 0; // set to true, if multiple matchings could be found
 	if( thisR > maxR ) {
 	  maxI = i; maxJ = j; maxR = thisR; 
@@ -1380,7 +1380,7 @@ bool BoundedVariableAddition::iteBVAhalf()
 	  // TODO: check for implicit full gate
 
 	  // apply replacing/rewriting here (right,l1) -> (x); add clauses (-x,right,l1),(-x,-right,-l1)
-	  const Var newX = nextVariable('x'); // done by procedure! bvaHeap.addNewElement();
+	  const Var newX = nextVariable('i'); // done by procedure! bvaHeap.addNewElement();
 	  if( opt_bvaAnalysisDebug ) cerr << "c introduce new variable " << newX + 1 << endl;
 	  
 	  for( int k = maxI; k < maxJ; ++ k ) {
@@ -1455,17 +1455,17 @@ bool BoundedVariableAddition::iteBVAfull()
   iteTime = cpuTime() - iteTime;
   
   // setup parameters
-  const int replacePairs = 3;
-  const int smallestSize = 3;
+  const int replacePairs = 5; // number of clauses
+  const int smallestSize = 3; // clause size
   
   bool didSomething = false;;
+  
+  cerr << "c full ITE bva" << endl;
   
   // data structures
   bvaHeap.addNewElement(data.nVars() * 2);
   for( Var v = 0 ; v < data.nVars(); ++ v ) {
-    if( data[  mkLit(v,false) ] >= replacePairs
-      && data[  mkLit(v,true) ] >= replacePairs // add only, if both polarities occur frequently enough!
-    ) {
+    { // TODO: have some way of filtering?
       if( !bvaHeap.inHeap(toInt(mkLit(v,false))) ) bvaHeap.insert( toInt(mkLit(v,false)) );
       if( !bvaHeap.inHeap(toInt(mkLit(v,true))) ) bvaHeap.insert( toInt(mkLit(v,true))  );
     }
@@ -1518,7 +1518,7 @@ bool BoundedVariableAddition::iteBVAfull()
 	bool doesMatch = true;
 	for( uint32_t m = 0 ; m < data.list( ~right ).size() && (data.unlimited() || bvaILimit > iteMatchChecks); ++m ) {
 	  if( data.list( ~right )[m] == data.list(right)[j] ) continue; // C != D
-	  if( data.list(right)[j] > data.list( ~right )[m] ) continue; // find each case only once!
+	  if( data.list(right)[j] > data.list( ~right )[m] ) continue; // symmetry breaking: find each case only once!
 
 	  const Clause & d = ca[ data.list( ~right )[m] ] ;
 	  iteMatchChecks++;
@@ -1570,8 +1570,13 @@ bool BoundedVariableAddition::iteBVAfull()
 	Var maxJ = var( itePairs[j].l2 ) > var( itePairs[j].l3 ) ? var( itePairs[j].l2 ) : var( itePairs[j].l3 );
 	
 	  */
-	if ( toInt(itePairs[i].l2) > toInt(itePairs[j].l2)
-	  || ( toInt(itePairs[i].l2) == toInt(itePairs[j].l2) && toInt(itePairs[i].l3) > toInt(itePairs[j].l3) )
+	const Var iv2 = var(itePairs[i].l2); const Var jv2 = var(itePairs[j].l2);
+	const Var iv3 = var(itePairs[i].l3); const Var jv3 = var(itePairs[j].l3);
+	const bool signDiff = (sign(itePairs[i].l2));
+	
+	if(   iv2 > jv2
+	   || (iv2 == jv2 &&  iv3 > jv3)
+	   || (iv2 == jv2 &&  iv3 == jv3 && signDiff )
 	) {
 	  const iteHalfPair tmp =  itePairs[i];
 	  itePairs[i] = itePairs[j];
@@ -1580,8 +1585,14 @@ bool BoundedVariableAddition::iteBVAfull()
       }
     }
     
+    /*
+    cerr << "c final matches: " << endl;
+    for( int i = 0 ; i < itePairs.size(); ++ i ) {
+      cerr << "c ITE[" << i << "] s=" << itePairs[i].l1 << " f=" << itePairs[i].l2 << " t=" << itePairs[i].l3 << endl; ;
+    }
+    */
     // check whether one literal matches multiple clauses
-    int maxR = 0; int maxI = 0; int maxJ = 0;
+    int maxR = 0; int maxI = 0; int maxJ = 0; int maxK = 0;
     bool multipleMatches = false;
     for( int i = 0 ; i < itePairs.size(); ++ i ) {
       int j = i;
@@ -1589,14 +1600,27 @@ bool BoundedVariableAddition::iteBVAfull()
 	&& ( // if both literals match // TODO: have a more symmetry-breaking one here? there are 4 kinds of ITEs that can be represented with 4 variables, two work on the same output literal, combine them!
 	    ( toInt(itePairs[i].l2) == toInt(itePairs[j].l2 ) && toInt(itePairs[i].l3) == toInt(itePairs[j].l3 ) )
 	)
-      ) ++j ;
+      ) ++j ; // j exatly points behind the last hitting tuple
       assert(j>=i);
-      if( j - i >= replacePairs ) {
-	int thisR = j-i;
-	multipleMatches = maxR > 0; // set to true, if multiple matchings could be found
-	if( thisR > maxR ) {
-	  maxI = i; maxJ = j; maxR = thisR; 
+
+	// if( j + 1 < itePairs.size() ) cerr << "c following ITE s=" << itePairs[j+1].l1 << " f=" << itePairs[j+1].l2 << " t=" << itePairs[j+1].l3 << endl;
+	int k = j;
+	if( j + 1 < itePairs.size() ) { // check for other half of the gate!
+	  while ( k < itePairs.size() 
+	    && ( // if both literals match // TODO: have a more symmetry-breaking one here? there are 4 kinds of ITEs that can be represented with 4 variables, two work on the same output literal, combine them!
+		( toInt(itePairs[i].l2) == toInt(~ itePairs[k].l2 ) && toInt(itePairs[i].l3) == toInt(~ itePairs[k].l3 ) )
+	    )
+	  ) k++;
 	}
+	
+      if( k - i  >= replacePairs ) {
+	multipleMatches = maxR > 0; // set to true, if multiple matchings could be found
+	int thisR = k-i ;
+	// cerr << "c found replaceable (" << thisR << ") ITE s=" << itePairs[j-1].l1 << " f=" << itePairs[j-1].l2 << " t=" << itePairs[j-1].l3 << endl;
+	if( thisR > maxR ) {
+	  maxI = i; maxJ = j; maxK = k; maxR = thisR; 
+	}
+	j = k;
       }
       i = j - 1; // jump to next matching
     }
@@ -1608,7 +1632,7 @@ bool BoundedVariableAddition::iteBVAfull()
 	  // TODO: check for implicit full gate
 
 	  // apply replacing/rewriting here (right,l1) -> (x); add clauses (-x,right,l1),(-x,-right,-l1)
-	  const Var newX = nextVariable('x'); // done by procedure! bvaHeap.addNewElement();
+	  const Var newX = nextVariable('i'); // done by procedure! bvaHeap.addNewElement();
 	  if( opt_bvaAnalysisDebug ) cerr << "c introduce new variable " << newX + 1 << endl;
 	  
 	  for( int k = maxI; k < maxJ; ++ k ) {
@@ -1632,31 +1656,76 @@ bool BoundedVariableAddition::iteBVAfull()
 	    data.removedLiteral(itePairs[k].l1); data.removedLiteral(itePairs[k].l2); data.addedLiteral(mkLit(newX,false));
 	    data.list(mkLit(newX,false)).push_back( itePairs[k].c1 );
 	  }
+	  for( int k = maxJ; k < maxK; ++ k ) {
+	    ca[ itePairs[k].c2 ].set_delete(true); // all second clauses will be deleted, all first clauses will be rewritten
+	    if( opt_bvaAnalysisDebug ) cerr  << "c ITE-BVA deleted " << ca[itePairs[k].c2] << endl;
+	    data.removedClause( itePairs[k].c2 );
+	    Clause& c = ca[ itePairs[k].c1 ];
+	    if( !ca[ itePairs[k].c2 ].learnt() && c.learnt() ) c.set_learnt(false); // during inprocessing, do not remove other important clauses!
+	    if( opt_bvaAnalysisDebug ) cerr << "c ITE-BVA rewrite " << c << endl;
+	    for( int ci = 0 ; ci < c.size(); ++ ci ) { // rewrite clause
+	      if( c[ci] == itePairs[k].l1 ) c[ci] = mkLit(newX,true);
+	      else if (c[ci] == itePairs[k].l2) {
+		c.removePositionSorted(ci); 
+		ci --;
+	      }
+	    }
+	    c.sort();
+	    if( opt_bvaAnalysisDebug ) cerr << "c ITE-BVA into " << c << endl;
+	    data.removeClauseFrom(itePairs[k].c1,itePairs[k].l1);
+	    data.removeClauseFrom(itePairs[k].c1,itePairs[k].l2);
+	    data.removedLiteral(itePairs[k].l1); data.removedLiteral(itePairs[k].l2); data.addedLiteral(mkLit(newX,true));
+	    data.list(mkLit(newX,true)).push_back( itePairs[k].c1 );
+	  }	  
+	  
 	  // add new clauses
-	  data.lits.clear();
-	  data.lits.push_back( mkLit(newX,true) );
-	  data.lits.push_back( itePairs[maxI].l1 );
-	  data.lits.push_back( itePairs[maxI].l2 );
-	  CRef tmpRef = ca.alloc(data.lits, false); // no learnt clause!
-	  ca[tmpRef].sort();
-	  data.addClause( tmpRef );
-	  data.getClauses().push( tmpRef );
-	  if( opt_bvaAnalysisDebug ) cerr << "c ITE-BVA added " << ca[tmpRef] << endl;
-	  data.lits[1] = ~data.lits[1];data.lits[2] = itePairs[maxI].l3;
-	  tmpRef = ca.alloc(data.lits, false); // no learnt clause!
-	  ca[tmpRef].sort();
-	  data.addClause( tmpRef );
-	  data.getClauses().push( tmpRef );
-	  if( opt_bvaAnalysisDebug ) cerr << "c ITE-BVA added " << ca[tmpRef] << endl;
+	  if( maxI < maxJ ) { // should always be the case
+	    data.lits.clear();
+	    data.lits.push_back( mkLit(newX,true) );
+	    data.lits.push_back( itePairs[maxI].l1 );
+	    data.lits.push_back( itePairs[maxI].l2 );
+	    CRef tmpRef = ca.alloc(data.lits, false); // no learnt clause!
+	    ca[tmpRef].sort();
+	    data.addClause( tmpRef );
+	    data.getClauses().push( tmpRef );
+	    if( opt_bvaAnalysisDebug ) cerr << "c ITE-BVA added " << ca[tmpRef] << endl;
+	    data.lits[1] = ~data.lits[1];data.lits[2] = itePairs[maxI].l3;
+	    tmpRef = ca.alloc(data.lits, false); // no learnt clause!
+	    ca[tmpRef].sort();
+	    data.addClause( tmpRef );
+	    data.getClauses().push( tmpRef );
+	    if( opt_bvaAnalysisDebug ) cerr << "c ITE-BVA added " << ca[tmpRef] << endl;
+	  }
+	  if( maxJ < maxK ) { // should always be the case
+	    data.lits.clear();
+	    data.lits.push_back( mkLit(newX,false) );
+	    data.lits.push_back( itePairs[maxJ].l1 );
+	    data.lits.push_back( itePairs[maxJ].l2 );
+	    CRef tmpRef = ca.alloc(data.lits, false); // no learnt clause!
+	    ca[tmpRef].sort();
+	    data.addClause( tmpRef );
+	    data.getClauses().push( tmpRef );
+	    if( opt_bvaAnalysisDebug ) cerr << "c ITE-BVA added " << ca[tmpRef] << endl;
+	    data.lits[1] = ~data.lits[1];data.lits[2] = itePairs[maxJ].l3;
+	    tmpRef = ca.alloc(data.lits, false); // no learnt clause!
+	    ca[tmpRef].sort();
+	    data.addClause( tmpRef );
+	    data.getClauses().push( tmpRef );
+	    if( opt_bvaAnalysisDebug ) cerr << "c ITE-BVA added " << ca[tmpRef] << endl;
+	  }
 	  
 	  if( opt_bva_push > 1 && data[mkLit(newX,false)] > replacePairs ) {
 	    if( !bvaHeap.inHeap( toInt(mkLit(newX,false))) ) bvaHeap.insert( toInt(mkLit(newX,false)) );
 	  }
+	  if( opt_bva_push > 1 && data[mkLit(newX,true)] > replacePairs ) {
+	    if( !bvaHeap.inHeap( toInt(mkLit(newX,true))) ) bvaHeap.insert( toInt(mkLit(newX,true)) );
+	  }
+	  
 	  // stats
 	  didSomething = true;
 	  iteFoundMatchings ++;
-	  iteMatchSize += (maxJ-maxI);
-	  iteTotalReduction += (maxR - 2);
+	  iteMatchSize += (maxK-maxI);
+	  iteTotalReduction += (maxR ) - (maxJ > maxI ? 2 : 0 )  - (maxK > maxJ ? 2 : 0 ) ;
 	  // TODO: look for the other half of the gate definition!
     }
     
