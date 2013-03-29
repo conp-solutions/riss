@@ -1460,7 +1460,7 @@ bool BoundedVariableAddition::iteBVAfull()
   
   bool didSomething = false;;
   
-  cerr << "c full ITE bva" << endl;
+  // cerr << "c full ITE bva" << endl;
   
   // data structures
   bvaHeap.addNewElement(data.nVars() * 2);
