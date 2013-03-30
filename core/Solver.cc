@@ -76,6 +76,9 @@ static DoubleOption  opt_restart_inc       (_cat, "rinc",        "Restart interv
 static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction of wasted memory allowed before a garbage collection is triggered",  0.20, DoubleRange(0, false, HUGE_VAL, false));
 
 
+static IntOption     opt_hack              ("HACK",    "hack",      "use hack modifications", 0, IntRange(0, 3) );
+static BoolOption    opt_hack_cost         ("HACK",    "hack-cost", "use size cost", true );
+
 //=================================================================================================
 // Constructor/Destructor:
 
@@ -174,6 +177,9 @@ Var Solver::newVar(bool sign, bool dvar, char type)
     // bva analysis, store the type of this variable!
     assert( type != 'd' && "there is no such a type!" );
     varType  .push(type);
+    
+    if( opt_hack > 0 )
+      trailPos.push( -1 );	/// modified learning for selection the "best" reason clause
     
     return v;
 }
@@ -625,6 +631,10 @@ void Solver::uncheckedEnqueue(Lit p, CRef from)
     assert(value(p) == l_Undef);
     assigns[var(p)] = lbool(!sign(p));
     vardata[var(p)] = mkVarData(from, decisionLevel());
+    
+    if( opt_hack > 0 )
+      trailPos[ var(p) ] = (int)trail.size(); /// modified learning, important: before trail.push()!
+
     trail.push_(p);
 }
 
@@ -667,7 +677,35 @@ CRef Solver::propagate()
 	  if(value(imp) == l_Undef) {
 	    //printLit(p);printf(" ");printClause(wbin[k].cref);printf("->  ");printLit(imp);printf("\n");
 	    uncheckedEnqueue(imp,wbin[k].cref);
+	  } else {
+	    // hack
+	      // consider variation only, if the improvement options are enabled!
+	      if( (opt_hack > 0 ) && reason(var(imp)) != CRef_Undef) { // if its not a decision
+		
+		const int implicantPosition = trailPos[ var(imp) ];
+		bool fail = false;
+	       if( value( p ) != l_False || trailPos[ var(p) ] > implicantPosition ) { fail = true; break; }
+
+		// consider change only, if the order of positions is correct, e.g. impl realy implies p, otherwise, we found a cycle
+		if( !fail ) {
+		  if( opt_hack_cost ) { // size based cost
+		    if( vardata[var(imp)].cost > 2  ) { // 2 is smaller than old reasons size
+		      vardata[var(imp)].reason = wbin[k].cref;
+		      vardata[var(imp)].cost = 2;
+		    } 
+		  } else { // lbd based cost
+		    int thisCost = ca[wbin[k].cref].lbd();
+		    if( vardata[var(imp)].cost > thisCost  ) { // 2 is smaller than old reasons size
+		      vardata[var(imp)].reason = wbin[k].cref;
+		      vardata[var(imp)].cost = thisCost;
+		    } 
+		  }
+		} else {
+		  // could be a cycle here, or this clause is satisfied, but not a reason clause!
+		}
+	      }
 	  }
+	    
 	}
     
 
@@ -691,6 +729,37 @@ CRef Solver::propagate()
             Lit     first = c[0];
             Watcher w     = Watcher(cr, first);
             if (first != blocker && value(first) == l_True){
+	      
+	      // consider variation only, if the improvement options are enabled!
+	      if( (opt_hack > 0 ) && reason(var(first)) != CRef_Undef) { // if its not a decision
+		
+		const int implicantPosition = trailPos[ var(first) ];
+		bool fail = false;
+		for( int i = 1; i < c.size(); ++ i ) {
+		  if( value( c[i] ) != l_False || trailPos[ var(c[i]) ] > implicantPosition ) { fail = true; break; }
+		}
+
+		// consider change only, if the order of positions is correct, e.g. impl realy implies p, otherwise, we found a cycle
+		if( !fail ) {
+		  
+		  if( opt_hack_cost ) { // size based cost
+		    if( vardata[var(first)].cost > c.size()  ) { // 2 is smaller than old reasons size -> update vardata!
+		      vardata[var(first)].reason = cr;
+		      vardata[var(first)].cost = c.size();
+		    }
+		  } else { // lbd based cost
+		    int thisCost = c.lbd();
+		    if( vardata[var(first)].cost > thisCost  ) { // 2 is smaller than old reasons size -> update vardata!
+		      vardata[var(first)].reason = cr;
+		      vardata[var(first)].cost = thisCost;
+		    }
+		  }
+		  
+		   
+		} else {
+		  // could be a cycle here, or this clause is satisfied, but not a reason clause!
+		}
+	      }
 	      
 	      *j++ = w; continue; }
 

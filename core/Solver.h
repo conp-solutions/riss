@@ -180,8 +180,12 @@ protected:
     long curRestart;
     // Helper structures:
     //
-    struct VarData { CRef reason; int level; };
-    static inline VarData mkVarData(CRef cr, int l){ VarData d = {cr, l}; return d; }
+    struct VarData { CRef reason; int level; 
+      int32_t cost; /// for hack
+    };
+    static inline VarData mkVarData(CRef cr, int l){ VarData d = {cr, l, -1}; return d; }
+    static inline VarData mkVarData(CRef cr, int l, int _cost){ VarData d = {cr, l,_cost}; return d; }  
+    
 
     struct Watcher {
         CRef cref;
@@ -257,7 +261,8 @@ protected:
     vec<Lit>            add_tmp;
     unsigned long  MYFLAG;
 
-
+    vec<int> trailPos;			/// store the position where the variable is located in the trail exactly (for hack)
+    
     double              max_learnts;
     double              learntsize_adjust_confl;
     int                 learntsize_adjust_cnt;
