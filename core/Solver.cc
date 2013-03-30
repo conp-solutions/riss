@@ -111,6 +111,7 @@ Solver::Solver() :
   ,  nbRemovedClauses(0),nbReducedClauses(0), nbDL2(0),nbBin(0),nbUn(0) , nbReduceDB(0)
     , solves(0), starts(0), decisions(0), rnd_decisions(0), propagations(0), conflicts(0),nbstopsrestarts(0),nbstopsrestartssame(0),lastblockatrestart(0)
   , dec_vars(0), clauses_literals(0), learnts_literals(0), max_literals(0), tot_literals(0)
+    , curRestart(1)
 
   , ok                 (true)
   , cla_inc            (1)
@@ -820,7 +821,7 @@ void Solver::removeSatisfied(vec<CRef>& cs)
     int i, j;
     for (i = j = 0; i < cs.size(); i++){
         Clause& c = ca[cs[i]];
-        if (c.size()>2 && satisfied(c)) // A bug if we remove size ==2, We need to correct it, but later.
+        if (c.size()>=2 && satisfied(c)) // A bug if we remove size ==2, We need to correct it, but later.
             removeClause(cs[i]);
         else
             cs[j++] = cs[i];
@@ -884,7 +885,6 @@ bool Solver::simplify()
 |    all variables are decision variables, this means that the clause set is satisfiable. 'l_False'
 |    if the clause set is unsatisfiable. 'l_Undef' if the bound on number of conflicts is reached.
 |________________________________________________________________________________________________@*/
-static  long conf4stats = 0,cons = 0,curRestart=1;
 lbool Solver::search(int nof_conflicts)
 {
     assert(ok);
@@ -921,7 +921,6 @@ lbool Solver::search(int nof_conflicts)
             learnt_clause.clear();
             analyze(confl, learnt_clause, backtrack_level,nblevels);
 
-	    conf4stats++;cons++;
 	    lbdQueue.push(nblevels);
 	    sumLBD += nblevels;
  
@@ -950,7 +949,7 @@ lbool Solver::search(int nof_conflicts)
         }else{
 	  // Our dynamic restart, see the SAT09 competition compagnion paper 
 	  if (
-	      ( lbdQueue.isvalid() && ((lbdQueue.getavg()*K) > (sumLBD / conf4stats)))) {
+	      ( lbdQueue.isvalid() && ((lbdQueue.getavg()*K) > (sumLBD / conflicts)))) {
 	    lbdQueue.fastclear();
 	    progress_estimate = progressEstimate();
 	    cancelUntil(0);
@@ -963,7 +962,7 @@ lbool Solver::search(int nof_conflicts)
 	    return l_False;
 	  }
 	    // Perform clause database reduction !
-	    if(cons-curRestart* nbclausesbeforereduce>=0) 
+	    if(conflicts>=curRestart* nbclausesbeforereduce) 
 	      {
 	
 		assert(learnts.size()>0);
