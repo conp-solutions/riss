@@ -988,7 +988,7 @@ void Probing::clauseVivification()
     viviChecks ++;
     
     // detach this clause, so that it cannot be used for unit propagation
-    if( debug_out > 2 || true ) cerr << "c available watches for " << clause[0] << " : " << solver.watches[ ~clause[0] ].size()
+    if( debug_out > 2 ) cerr << "c available watches for " << clause[0] << " : " << solver.watches[ ~clause[0] ].size()
          << " and " << clause[1] << " : " << solver.watches[ ~clause[1] ].size() << endl;
     
     // take care of the size restriction
