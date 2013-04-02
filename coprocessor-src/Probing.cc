@@ -13,7 +13,7 @@ static BoolOption pr_double        (_cat, "pr-double", "perform double look-ahea
 static BoolOption pr_probe         (_cat, "pr-probe",  "perform probing",true);
 static BoolOption pr_rootsOnly     (_cat, "pr-roots",  "probe only on root literals",true);
 static BoolOption pr_repeat        (_cat, "pr-repeat", "repeat probing if changes have been applied",false);
-static IntOption pr_clsSize        (_cat, "pr-csize",  "size of clauses that are considered for probing (propagation)", INT32_MAX,  IntRange(0, INT32_MAX));
+static IntOption pr_clsSize        (_cat, "pr-csize",  "size of clauses that are considered for probing/vivification (propagation)", INT32_MAX,  IntRange(0, INT32_MAX));
 static IntOption pr_prLimit        (_cat, "pr-probeL", "step limit for probing", 5000000,  IntRange(0, INT32_MAX));
 static BoolOption pr_EE            (_cat, "pr-EE",     "run equivalent literal detection",true);
 static BoolOption pr_vivi          (_cat, "pr-vivi",   "perform clause vivification",true);
@@ -517,6 +517,7 @@ void Probing::cleanSolver()
 
   solver.learnts_literals = 0;
   solver.clauses_literals = 0;
+  solver.watches.cleanAll();
 }
 
 void Probing::reSetupSolver()
@@ -863,6 +864,7 @@ void Probing::probing()
       Clause& c = ca[ l2conflicts[i] ];
       if( pr_keepLearnts == 0 ) {
 	c.can_be_deleted();
+	solver.detachClause( l2conflicts[i] ); // remove from solver structures -> to be not available for vivification
       } else {
 	c.set_learnt(true);
 	c.activity() = 0;
@@ -871,14 +873,17 @@ void Probing::probing()
     }
   } else {
     for( int i = 0 ; i < l2conflicts.size(); ++ i )
-      data.getClauses().push(l2conflicts[i]);
+      if( ca[l2conflicts[i]].size() > 1 )
+	data.getClauses().push(l2conflicts[i]);
   }
+  l2conflicts.clear();
   
   if( pr_keepImplied != 2 ) {
     for( int i = 0 ; i < l2implieds.size(); ++ i ) {
       Clause& c = ca[ l2implieds[i] ];
       if( pr_keepImplied == 0) {
 	c.can_be_deleted();
+	solver.detachClause( l2implieds[i] ); // remove from solver structures -> to be not available for vivification
       } else {
 	c.set_learnt(true);
 	c.activity() = 0;
@@ -887,9 +892,12 @@ void Probing::probing()
     }
   } else {
     for( int i = 0 ; i < l2implieds.size(); ++ i )
-      data.getClauses().push(l2implieds[i]);
+      if( ca[l2implieds[i]].size() > 1 )
+	data.getClauses().push(l2implieds[i]);
   }
+  l2implieds.clear();
   
+  solver.watches.cleanAll(); // clean data structures
 }
 
 
@@ -898,7 +906,7 @@ void Probing::clauseVivification()
 {
   MethodTimer vTimer ( &viviTime );
   
-  if( true ) {
+  if( debug_out ) {
     for( Var v = 0; v < data.nVars(); ++ v )
     {
       for( int p = 0 ; p < 2; ++ p ) 
@@ -911,6 +919,29 @@ void Probing::clauseVivification()
 		if( c[0] != ~l && c[1] != ~l ) cerr << "wrong literals for clause [" << wcr << "] " << c << " are watched. Found in list for " << l << endl;
 	    }
       }
+    }
+    
+    for( int i = 0 ; i< solver.clauses.size(); ++ i ) {
+      const CRef cr = solver.clauses[i];
+      const Clause& c = ca[cr];
+      if( c.can_be_deleted() ) continue;
+      
+      void  *end = 0;
+      if( c.size() == 1 ) cerr << "there should not be unit clauses! [" << cr << "]" << c << endl;
+      else {
+	for( int j = 0 ; j < 2; ++ j ) {
+	  const Lit l = ~c[j];
+	  vec<Solver::Watcher>&  ws  = solver.watches[l];
+	  bool didFind = false;
+	  for ( int j = 0 ; j < ws.size(); ++ j){
+	      CRef     wcr        = ws[j].cref;
+	      if( wcr  == cr ) { didFind = true; break; }
+	  }
+	  if( ! didFind ) cerr << "could not find clause[" << cr << "] " << c << " in watcher for lit " << l << endl;
+	}
+	
+      }
+      
     }
   }
   
@@ -925,7 +956,7 @@ void Probing::clauseVivification()
   maxSize = (maxSize * pr_viviPercent) / 100;
   maxSize = maxSize > 2 ? maxSize : 3;	// do not process binary clauses, because they are used for propagation
   viviSize = maxSize;
-  
+    
   for( uint32_t i = 0 ; i< data.getClauses().size() && (data.unlimited() || viviLimit > viviChecks)  && !data.isInterupted() ; ++ i ) {
     const CRef ref = data.getClauses()[i];
     Clause& clause = ca[ ref ];
@@ -969,8 +1000,8 @@ void Probing::clauseVivification()
     if( debug_out > 2 ) cerr << "c available watches for " << clause[0] << " : " << solver.watches[ ~clause[0] ].size()
          << " and " << clause[1] << " : " << solver.watches[ ~clause[1] ].size() << endl;
     
-    
-    solver.detachClause(ref, true);
+    // take care of the size restriction
+    if( clause.size() <= pr_clsSize ) solver.detachClause(ref, true);
     
     bool viviConflict = false;
     bool viviNextLit = false;
@@ -1087,7 +1118,7 @@ void Probing::clauseVivification()
       data.setFailed();
     } else if ( clause.size() == 1 ) {
       data.enqueue( clause[0] );
-    } else solver.attachClause(ref);
+    } else if( clause.size() <= pr_clsSize ) solver.attachClause(ref);
 
     if( !data.ok() ) break;
   } // end for clause in data.getClauses()
