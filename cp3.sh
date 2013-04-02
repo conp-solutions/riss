@@ -23,7 +23,7 @@ shift												# reduce the parameters, removed the very first one. remaining 
 satsolver=glucose_static						# name of the binary (if not in this directory, give relative path as well)
 
 # default parameters for preprocessor
-cp3params=""
+cp3params="-enabled_cp3 -cp3_stats -up -probe -pr-keepI=0 -pr-keepL=0"
 
 # some temporary files 
 undo=/tmp/cp3_undo_$$				# path to temporary file that stores cp3 undo information
@@ -45,7 +45,7 @@ ppStart=`date +%s`
 ./cp3 $file $realModel -enabled_cp3 -cp3_undo=$undo -dimacs=$tmpCNF $cp3params $@  1>&2
 exitCode=$?
 ppEnd=`date +%s`
-echo "c preprocessed $(( $ppEnd - $ppStart)) seconds" 1>&2
+echo "c preprocessed $(( $ppEnd - $ppStart)) seconds with exit code $exitCode" 1>&2
 echo "c preprocessed $(( $ppEnd - $ppStart)) seconds with exit code $exitCode"
 
 # solved by preprocessing
