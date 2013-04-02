@@ -204,7 +204,7 @@ class Clause {
         header.reloced   = 0;
         header.size      = ps.size();
 	header.lbd = 0;
-	header.canbedel = 0;
+	header.canbedel = 1;
         header.can_subsume = 1;
         header.can_strengthen = 1;
 
