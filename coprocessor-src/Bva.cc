@@ -4,6 +4,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor-src/Bva.h"
 
+#include <algorithm>
+
 using namespace Coprocessor;
 
 // potential options
@@ -776,16 +778,21 @@ bool BoundedVariableAddition::xorBVAhalf()
     }
     // evaluate matches here!
     // sort based on second literal -- TODO: use improved sort!
-    for( int i = 0 ; i < xorPairs.size(); ++ i ) {
-      for( int j = i+1; j < xorPairs.size(); ++ j ) {
-	if ( toInt(xorPairs[i].l2) > toInt(xorPairs[j].l2) ) {
-	  const xorHalfPair tmp =  xorPairs[i];
-	  xorPairs[i] = xorPairs[j];
-	  xorPairs[j] = tmp;
+    
+    // sort( xorPairs.begin(), xorPairs.end() );
+    if( xorPairs.size() > 20 ) 
+      mergesort( &(xorPairs[0]), xorPairs.size());
+    else {
+      for( int i = 0 ; i < xorPairs.size(); ++ i ) {
+	for( int j = i+1; j < xorPairs.size(); ++ j ) {
+	  if ( xorPairs[i] > xorPairs[j] ) {
+	    const xorHalfPair tmp =  xorPairs[i];
+	    xorPairs[i] = xorPairs[j];
+	    xorPairs[j] = tmp;
+	  }
 	}
       }
     }
-    
     
     
     // check whether one literal matches multiple clauses
@@ -930,7 +937,7 @@ bool BoundedVariableAddition::xorBVAfull()
     nCount.assign(data.nVars() * 2, 0 ); // reset literal counts!
 
     if( opt_bvaAnalysisDebug > 2 ) cerr << "c analysis on " << right << endl;
-    for( uint32_t j = 0 ; j < data.list( right ).size() && !data.isInterupted(); ++j ) { // iterate over all candidates for C
+    for( uint32_t j = 0 ; j < data.list( right ).size() && !data.isInterupted() && (data.unlimited() || bvaXLimit > xorMatchChecks); ++j ) { // iterate over all candidates for C
       const Clause & c = ca[ data.list(right)[j] ] ;
       if( c.can_be_deleted() || c.size() < smallestSize ) continue;
     
@@ -979,18 +986,23 @@ bool BoundedVariableAddition::xorBVAfull()
     }
     // evaluate matches here!
     // sort based on second literal -- TODO: use improved sort!
-    for( int i = 0 ; i < xorPairs.size(); ++ i ) {
-      for( int j = i+1; j < xorPairs.size(); ++ j ) {
-	if ( toInt(xorPairs[i].l2) > toInt(xorPairs[j].l2) ) {
-	  const xorHalfPair tmp =  xorPairs[i];
-	  xorPairs[i] = xorPairs[j];
-	  xorPairs[j] = tmp;
+    // sort( xorPairs.begin(), xorPairs.end() );
+    if( xorPairs.size() > 20 ) 
+      mergesort( &(xorPairs[0]), xorPairs.size());
+    else {
+      for( int i = 0 ; i < xorPairs.size(); ++ i ) {
+	for( int j = i+1; j < xorPairs.size(); ++ j ) {
+	  if ( xorPairs[i] > xorPairs[j] ) {
+	    const xorHalfPair tmp =  xorPairs[i];
+	    xorPairs[i] = xorPairs[j];
+	    xorPairs[j] = tmp;
+	  }
 	}
       }
     }
     
     const Lit nRight = ~right;
-    for( uint32_t j = 0 ; j < data.list( nRight ).size() && !data.isInterupted(); ++j ) { // iterate over all candidates for C
+    for( uint32_t j = 0 ; j < data.list( nRight ).size() && !data.isInterupted() && (data.unlimited() || bvaXLimit > xorMatchChecks); ++j ) { // iterate over all candidates for C
       const Clause & c = ca[ data.list(nRight)[j] ] ;
       if( c.can_be_deleted() || c.size() < smallestSize ) continue;
     
@@ -1215,7 +1227,7 @@ bool BoundedVariableAddition::xorBVAfull()
 
   xorTime = cpuTime() - xorTime;
   
-  cerr << "c check when other literal can be removed!" << endl;
+  // cerr << "c check when other literal can be removed!" << endl;
 
   
   return didSomething;
@@ -1327,27 +1339,16 @@ bool BoundedVariableAddition::iteBVAhalf()
     }
     // evaluate matches here!
     // sort based on second literal -- TODO: use improved sort!
-    for( int i = 0 ; i < itePairs.size(); ++ i ) {
-      for( int j = i+1; j < itePairs.size(); ++ j ) {
-	
-	// first, variable of right should be the same! - always ensured, because looking at this type here only!
-	// next min variable of l1 and l2 should be smaller
-	// next variable of l3 should smaller
-
-	// TODO: have symmetry breaking sort (also below?)?
-	/*
-	Var minI = var( itePairs[i].l2 ) < var( itePairs[i].l3 ) ? var( itePairs[i].l2 ) : var( itePairs[i].l3 );
-	Var minJ = var( itePairs[j].l2 ) < var( itePairs[j].l3 ) ? var( itePairs[j].l2 ) : var( itePairs[j].l3 );
-	Var maxI = var( itePairs[i].l2 ) > var( itePairs[i].l3 ) ? var( itePairs[i].l2 ) : var( itePairs[i].l3 );
-	Var maxJ = var( itePairs[j].l2 ) > var( itePairs[j].l3 ) ? var( itePairs[j].l2 ) : var( itePairs[j].l3 );
-	
-	  */
-	if ( toInt(itePairs[i].l2) > toInt(itePairs[j].l2)
-	  || ( toInt(itePairs[i].l2) == toInt(itePairs[j].l2) && toInt(itePairs[i].l3) > toInt(itePairs[j].l3) )
-	) {
-	  const iteHalfPair tmp =  itePairs[i];
-	  itePairs[i] = itePairs[j];
-	  itePairs[j] = tmp;
+    if( itePairs.size() > 20 ) 
+      mergesort( &(itePairs[0]), itePairs.size());
+    else {
+      for( int i = 0 ; i < itePairs.size(); ++ i ) {
+	for( int j = i+1; j < itePairs.size(); ++ j ) {
+	  if ( itePairs[i] > itePairs[j]) {
+	    const iteHalfPair tmp =  itePairs[i];
+	    itePairs[i] = itePairs[j];
+	    itePairs[j] = tmp;
+	  }
 	}
       }
     }
@@ -1555,32 +1556,16 @@ bool BoundedVariableAddition::iteBVAfull()
     }
     // evaluate matches here!
     // sort based on second literal -- TODO: use improved sort!
-    for( int i = 0 ; i < itePairs.size(); ++ i ) {
-      for( int j = i+1; j < itePairs.size(); ++ j ) {
-	
-	// first, variable of right should be the same! - always ensured, because looking at this type here only!
-	// next min variable of l1 and l2 should be smaller
-	// next variable of l3 should smaller
-
-	// TODO: have symmetry breaking sort (also below?)?
-	/*
-	Var minI = var( itePairs[i].l2 ) < var( itePairs[i].l3 ) ? var( itePairs[i].l2 ) : var( itePairs[i].l3 );
-	Var minJ = var( itePairs[j].l2 ) < var( itePairs[j].l3 ) ? var( itePairs[j].l2 ) : var( itePairs[j].l3 );
-	Var maxI = var( itePairs[i].l2 ) > var( itePairs[i].l3 ) ? var( itePairs[i].l2 ) : var( itePairs[i].l3 );
-	Var maxJ = var( itePairs[j].l2 ) > var( itePairs[j].l3 ) ? var( itePairs[j].l2 ) : var( itePairs[j].l3 );
-	
-	  */
-	const Var iv2 = var(itePairs[i].l2); const Var jv2 = var(itePairs[j].l2);
-	const Var iv3 = var(itePairs[i].l3); const Var jv3 = var(itePairs[j].l3);
-	const bool signDiff = (sign(itePairs[i].l2));
-	
-	if(   iv2 > jv2
-	   || (iv2 == jv2 &&  iv3 > jv3)
-	   || (iv2 == jv2 &&  iv3 == jv3 && signDiff )
-	) {
-	  const iteHalfPair tmp =  itePairs[i];
-	  itePairs[i] = itePairs[j];
-	  itePairs[j] = tmp;
+    if( itePairs.size() > 20 ) 
+      mergesort( &(itePairs[0]), itePairs.size());
+    else {
+      for( int i = 0 ; i < itePairs.size(); ++ i ) {
+	for( int j = i+1; j < itePairs.size(); ++ j ) {
+	  if ( itePairs[i] > itePairs[j]) {
+	    const iteHalfPair tmp =  itePairs[i];
+	    itePairs[i] = itePairs[j];
+	    itePairs[j] = tmp;
+	  }
 	}
       }
     }
