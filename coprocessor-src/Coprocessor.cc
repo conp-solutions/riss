@@ -81,7 +81,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , hte( solver->ca, controller, propagation )
 , bve( solver->ca, controller, propagation, subsumption )
 , bva( solver->ca, controller, data )
-, cce( solver->ca, controller )
+, cce( solver->ca, controller, propagation )
 , ee ( solver->ca, controller, propagation, subsumption )
 , unhiding ( solver->ca, controller, data, propagation, subsumption, ee )
 , probing  ( solver->ca, controller, data, propagation, ee, *solver )
@@ -131,8 +131,8 @@ lbool Preprocessor::performSimplification()
   
   if( opt_verbose > 4 ) cerr << "c coprocessor finished initialization" << endl;
   
-  const bool printBVE = false, printBVA = false, printProbe = false, printUnhide = false, 
-	printCCE = false, printEE = false, printHTE = false, printSusi = false, printUP = false,
+  const bool printBVE = false, printBVA = true, printProbe = false, printUnhide = false, 
+	printCCE = true, printEE = false, printHTE = false, printSusi = false, printUP = false,
 	printTernResolve = false, printAddRedBin = false;  
   
   // do preprocessing
@@ -229,6 +229,12 @@ lbool Preprocessor::performSimplification()
     if( !data.ok() ) status = l_False;
     if( opt_verbose > 1 )  { printStatistics(cerr); probing.printStatistics(cerr); }
   }
+
+  if( opt_debug ) { checkLists("after PROBE - before GC");  scanCheck("after PROBE - before GC"); }
+  if( false  || printProbe ) {
+   printFormula("after Probing");
+  }
+  
   data.checkGarbage(); // perform garbage collection
     
   if( opt_debug ) { checkLists("after PROBE");  scanCheck("after PROBE"); }

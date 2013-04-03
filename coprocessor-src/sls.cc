@@ -6,7 +6,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 using namespace Coprocessor;
 
-static const char* _cat = "SLS";
+static const char* _cat = "COPROCESSOR 3 - SLS";
 
 #if defined CP3VERSION 
 const static bool opt_debug = false;

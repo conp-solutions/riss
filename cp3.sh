@@ -23,7 +23,7 @@ shift												# reduce the parameters, removed the very first one. remaining 
 satsolver=glucose_static						# name of the binary (if not in this directory, give relative path as well)
 
 # default parameters for preprocessor
-cp3params="-enabled_cp3 -cp3_stats -up -probe -pr-keepI=0 -pr-keepL=0"
+cp3params="-enabled_cp3 -cp3_stats -cce"
 
 # some temporary files 
 undo=/tmp/cp3_undo_$$				# path to temporary file that stores cp3 undo information
@@ -118,7 +118,7 @@ cat $realModel;
 #
 # remove tmp files
 #
-rm -f $undo $undo.map $tmpCNF $model $realModel;
+# rm -f $undo $undo.map $tmpCNF $model $realModel;
 
 #
 # return with correct exit code

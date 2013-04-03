@@ -7,9 +7,10 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "core/Solver.h"
 
-#include "coprocessor-src/Technique.h"
-
 #include "coprocessor-src/CoprocessorTypes.h"
+
+#include "coprocessor-src/Technique.h"
+#include "coprocessor-src/Propagation.h"
 
 #include <vector>
 
@@ -21,6 +22,8 @@ namespace Coprocessor {
 /** This class implement subsumption and strengthening, and related techniques
  */
 class ClauseElimination : public Technique {
+  
+  Propagation& propagation;            /// object that takes care of unit propagation
   
   vector<CRef> clause_processing_queue;
   
@@ -53,7 +56,7 @@ public:
     void reset () { cla.clear(); array.nextStep(); toProcess.clear(); toUndo.clear(); nextAla=0; }
   };
   
-  ClauseElimination( ClauseAllocator& _ca, ThreadController& _controller );
+  ClauseElimination( ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation );
 
   void process(CoprocessorData& data);
   

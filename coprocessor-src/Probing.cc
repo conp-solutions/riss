@@ -95,6 +95,7 @@ bool Probing::process()
     // run clause vivification?
     if( pr_vivi && data.ok() ) {
       clauseVivification();
+      assert( solver.decisionLevel() == 0 && "after vivification the decision level should be 0!" );
     }
 
     // restore the polarity for phase saving
@@ -103,6 +104,19 @@ bool Probing::process()
     // clean solver again!
     cleanSolver();
     
+    if( debug_out > 3 ) {
+      for( Var v = 0 ; v < data.nVars(); ++ v ) {
+	for( int p = 0 ; p < 2; ++p ) {
+	  const Lit l = mkLit(v, p==1);
+	  vector<CRef>& list  = data.list( l );
+	  cerr << "c data list for lit " << l << ": " << endl;
+	  for( int i = 0 ; i < list.size(); ++ i ) {
+	    cerr << "c [" << list[i] << "] : " << ca[ list[i] ] << " - " << (ca[ list[i] ].can_be_deleted() ? "del " : "keep" ) << endl;
+	  }
+	}
+      }
+    }
+    
     sortClauses();
     if( propagation.process(data,true) == l_False){
       if( debug_out > 1 ) cerr << "c propagation failed" << endl;
@@ -110,6 +124,9 @@ bool Probing::process()
     }
     modifiedFormula = modifiedFormula || propagation.appliedSomething();
 
+    
+    
+    
     if( data.getEquivalences().size() > 0 ) {
       ee.applyEquivalencesToFormula(data); // do not search for lit-sccs, but apply found equivalences
       modifiedFormula = modifiedFormula || ee.appliedSomething();
@@ -309,7 +326,7 @@ bool Probing::prDoubleLook(Lit l1decision)
   
   // TODO: sort literals in double lookahead queue, use only first n literals
   static bool didit = false;
-  if( !didit ) { cerr << "sort literals in double queue according to some heuristic (occurrences, ... )" << endl; didit = true; }
+  if( !didit ) { cerr << "c sort literals in double queue according to some heuristic (occurrences, ... )" << endl; didit = true; }
   
   CRef thisConflict = CRef_Undef;
   
@@ -509,11 +526,31 @@ void Probing::cleanSolver()
   solver.learnts_literals = 0;
   solver.clauses_literals = 0;
   solver.watches.cleanAll();
+  
+  if( debug_out > 1 ) {
+    cerr << "c formula before resetup: " << endl;
+      for( int i = 0 ; i< solver.clauses.size(); ++ i ) {
+      const CRef cr = solver.clauses[i];
+      const Clause& c = ca[cr];
+      if( c.can_be_deleted() ) continue;
+      cerr << "[" << cr << "] : " << c << endl;
+    }
+  }
 }
 
 void Probing::reSetupSolver()
 {
 int j = 0;
+
+  if( debug_out > 1 ) {
+    cerr << "c formula before resetup: " << endl;
+      for( int i = 0 ; i< solver.clauses.size(); ++ i ) {
+      const CRef cr = solver.clauses[i];
+      const Clause& c = ca[cr];
+      if( c.can_be_deleted() ) continue;
+      cerr << "[" << cr << "] : " << c << endl;
+    }
+  }
 
   assert( solver.decisionLevel() == 0 && "solver can be re-setup only at level 0!" );
     // check whether reasons of top level literals are marked as deleted. in this case, set reason to CRef_Undef!
@@ -669,6 +706,16 @@ void Probing::sortClauses()
             i--;
         }
         c[i+1] = key;
+    }
+  }
+  
+  if( debug_out > 1 ) {
+    cerr << "c formula after sort: " << endl;
+      for( int i = 0 ; i< solver.clauses.size(); ++ i ) {
+      const CRef cr = solver.clauses[i];
+      const Clause& c = ca[cr];
+      if( c.can_be_deleted() ) continue;
+      cerr << "[" << cr << "] : " << c << endl;
     }
   }
 }
@@ -854,7 +901,8 @@ void Probing::probing()
     for( int i = 0 ; i < l2conflicts.size(); ++ i ) {
       Clause& c = ca[ l2conflicts[i] ];
       if( pr_keepLearnts == 0 ) {
-	c.can_be_deleted();
+	if( debug_out > 0 ) cerr << "c delete clause [" << l2conflicts[i] << "] : " << c << endl;
+	c.set_delete(true);
 	solver.detachClause( l2conflicts[i] ); // remove from solver structures -> to be not available for vivification
       } else {
 	c.set_learnt(true);
@@ -873,7 +921,8 @@ void Probing::probing()
     for( int i = 0 ; i < l2implieds.size(); ++ i ) {
       Clause& c = ca[ l2implieds[i] ];
       if( pr_keepImplied == 0) {
-	c.can_be_deleted();
+	if( debug_out > 0 ) cerr << "c delete clause [" << l2implieds[i] << "] : " << c << endl;
+	c.set_delete(true);
 	solver.detachClause( l2implieds[i] ); // remove from solver structures -> to be not available for vivification
       } else {
 	c.set_learnt(true);
@@ -912,10 +961,13 @@ void Probing::clauseVivification()
       }
     }
     
+    cerr << "c formula before vivi: " << endl;
     for( int i = 0 ; i< solver.clauses.size(); ++ i ) {
       const CRef cr = solver.clauses[i];
       const Clause& c = ca[cr];
       if( c.can_be_deleted() ) continue;
+      cerr << "[" << cr << "] : " << c << endl;
+      
       
       void  *end = 0;
       if( c.size() == 1 ) cerr << "there should not be unit clauses! [" << cr << "]" << c << endl;
@@ -937,17 +989,23 @@ void Probing::clauseVivification()
   }
   
   uint32_t maxSize = 0;
-  for( uint32_t i = 0 ; i< data.getClauses().size() && (data.unlimited() || viviLimit > viviChecks); ++ i ) {
-    const CRef ref = data.getClauses()[i];
-    Clause& clause = ca[ ref ];
-    if( clause.can_be_deleted() ) continue;
-    maxSize = clause.size() > maxSize ? clause.size() : maxSize;
+  if( (data.unlimited() || viviLimit > viviChecks) ) {
+    cerr << "c calculate maxSize based on " << data.getClauses().size() << " clauses" << endl;
+    for( uint32_t i = 0 ; i< data.getClauses().size(); ++ i ) {
+      const CRef ref = data.getClauses()[i];
+      Clause& clause = ca[ ref ];
+      if( clause.can_be_deleted() ) continue;
+      maxSize = clause.size() > maxSize ? clause.size() : maxSize;
+    }
   }
+  cerr << "c calculated maxSize: " << maxSize << endl;
   
   maxSize = (maxSize * pr_viviPercent) / 100;
   maxSize = maxSize > 2 ? maxSize : 3;	// do not process binary clauses, because they are used for propagation
   viviSize = maxSize;
-    
+  
+  cerr << "c final viviSize: " << viviSize << endl;
+  
   for( uint32_t i = 0 ; i< data.getClauses().size() && (data.unlimited() || viviLimit > viviChecks)  && !data.isInterupted() ; ++ i ) {
     const CRef ref = data.getClauses()[i];
     Clause& clause = ca[ ref ];
@@ -992,7 +1050,10 @@ void Probing::clauseVivification()
          << " and " << clause[1] << " : " << solver.watches[ ~clause[1] ].size() << endl;
     
     // take care of the size restriction
-    if( clause.size() <= pr_clsSize ) solver.detachClause(ref, true);
+    if( clause.size() <= pr_clsSize ) {
+      if( debug_out > 1 ) cerr << "c detach clause [" << ref << "] : " << ca[ref] << endl;
+      solver.detachClause(ref, true);
+    }
     
     bool viviConflict = false;
     bool viviNextLit = false;
@@ -1114,6 +1175,15 @@ void Probing::clauseVivification()
     if( !data.ok() ) break;
   } // end for clause in data.getClauses()
  
+    if( debug_out > 0 ) {
+      cerr << "c formula after vivi: " << endl;
+      for( int i = 0 ; i< solver.clauses.size(); ++ i ) {
+	const CRef cr = solver.clauses[i];
+	const Clause& c = ca[cr];
+	if( c.can_be_deleted() ) continue;
+	cerr << "[" << cr << "] : " << c << endl;
+      }
+    }
 }
 
 void Probing::destroy()
