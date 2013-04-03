@@ -1904,7 +1904,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 		  if( data.addSubStrengthClause( list[k] ) ) resetVariables = true;
 		}
 	      } else {
-		if( debug_out ) cerr << "c clause has duplicates: " << c << endl;
+		if( debug_out ) cerr << "c clause[" << list[k] << "] has duplicates: " << c << endl;
 		removedCls++;
 		c.set_delete(true);
 		data.removedClause(list[k]);
@@ -2016,7 +2016,7 @@ bool EquivalenceElimination::hasDuplicate(vector<CRef>& list, const Clause& c)
 	d.set_delete(true); // learned clauses are no duplicate for irredundant clauses -> delete learned!
 	return false;
       }
-      if( debug_out ) cerr << "c find duplicate " << d << " for clause " << c << endl;
+      if( debug_out ) cerr << "c find duplicate [" << list[i] << "]" << d << " for clause " << c << endl;
       return true;
     }
 //     cerr << "c clause " << c << " is not equal to " << d << endl;

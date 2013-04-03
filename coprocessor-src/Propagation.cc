@@ -8,6 +8,15 @@ using namespace Coprocessor;
 
 static int upLevel = 1;
 
+
+static const char* _cat = "COPROCESSOR 3 - UP";
+
+#if defined CP3VERSION  
+static const int debug_out = 0;
+#else
+static IntOption debug_out        (_cat, "up-debug", "debug output for propagation",0, IntRange(0,4) );
+#endif
+
 Propagation::Propagation( ClauseAllocator& _ca, ThreadController& _controller )
 : Technique( _ca, _controller )
 , lastPropagatedLiteral( 0 )
@@ -33,7 +42,7 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
   for( ; lastPropagatedLiteral < solver->trail.size(); lastPropagatedLiteral ++ )
   {
     const Lit l = solver->trail[lastPropagatedLiteral];
-    if (global_debug_out) cerr << "c UP propagating " << l << endl;
+    if (debug_out) cerr << "c UP propagating " << l << endl;
     data.log.log(upLevel,"propagate literal",l);
     // remove positives
     vector<CRef> & positive = data.list(l);
@@ -43,7 +52,7 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
       Clause & satisfied = ca[positive[i]];
       if (ca[ positive[i] ].can_be_deleted()) // only track yet-non-deleted clauses
           continue;
-      if( global_debug_out ) cerr << "c UP remove " << ca[ positive[i] ] << endl;
+      if( debug_out ) cerr << "c UP remove " << ca[ positive[i] ] << endl;
       ++removedClauses; // = ca[ positive[i] ].can_be_deleted() ? removedClauses : removedClauses + 1;
       ca[ positive[i] ].set_delete(true);
       modifiedFormula = true;
@@ -74,7 +83,7 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
         for ( int j = 0; j < c.size(); ++ j ) 
           if ( c[j] == nl ) 
           { 
-	        if( global_debug_out ) cerr << "c UP remove " << nl << " from " << c << endl;
+	        if( debug_out ) cerr << "c UP remove " << nl << " from " << c << endl;
 	        if (!sort) c.removePositionUnsorted(j);
             else c.removePositionSorted(j);
 	        modifiedFormula = true;
@@ -90,12 +99,12 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
         data.setFailed();   // set state to false
         //-> this stops just the inner loop!
         //break;              // abort unit propagation
-        if (global_debug_out) cerr << "c UNSAT by UP" << endl;
+        if (debug_out) cerr << "c UNSAT by UP" << endl;
         processTime = cpuTime() - processTime;
         return l_False;
       } else if( c.size() == 1 ) 
       {
-         if( solver->value( c[0] ) == l_Undef && global_debug_out ) 
+         if( solver->value( c[0] ) == l_Undef && debug_out ) 
              cerr << "c UP enqueue " << c[0] << " with previous value " 
                   << (solver->value( c[0] ) == l_Undef ? "undef" : (solver->value( c[0] ) == l_False ? "unsat" : " sat ") ) << endl;
 	     if( solver->value( c[0] ) == l_Undef ) solver->uncheckedEnqueue(c[0]);

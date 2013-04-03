@@ -21,8 +21,9 @@ static IntOption debug_out (_cat, "cce-debug", "debug output for clause eliminat
 
 static const int cceLevel = 1;
 
-ClauseElimination::ClauseElimination(ClauseAllocator& _ca, ThreadController& _controller)
+ClauseElimination::ClauseElimination(ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation)
 : Technique( _ca, _controller )
+, propagation(_propagation)
 , steps(0)
 , processTime(0)
 , removedClauses(0)
@@ -41,6 +42,13 @@ void ClauseElimination::process(CoprocessorData& data)
   if( !data.ok() ) return;
   // TODO: have a better scheduling here! (if a clause has been removed, potentially other clauses with those variables can be eliminated as well!!, similarly to BCE!)
   if( opt_level == 0 ) return; // do not run anything!
+
+  if( propagation.process(data,true) == l_False){
+    if( debug_out > 0 ) cerr << "c propagation failed" << endl;
+    data.setFailed();
+    return;
+  }
+  modifiedFormula = modifiedFormula || propagation.appliedSomething();
 
   uint32_t maxSize = 0;
   for( uint32_t i = 0 ; i< data.getClauses().size() ; ++ i ) {
