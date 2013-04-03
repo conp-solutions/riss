@@ -706,7 +706,6 @@ CRef Solver::propagate()
 	    // hack
 	      // consider variation only, if the improvement options are enabled!
 	      if( (opt_hack > 0 ) && reason(var(imp)) != CRef_Undef) { // if its not a decision
-		cerr << "c check positions and assingnment (short)" << endl;
 		const int implicantPosition = trailPos[ var(imp) ];
 		bool fail = false;
 	       if( value( p ) != l_False || trailPos[ var(p) ] > implicantPosition ) { fail = true; }
@@ -715,7 +714,7 @@ CRef Solver::propagate()
 		if( !fail ) {
 		  if( opt_hack_cost ) { // size based cost
 		    if( vardata[var(imp)].cost > 2  ) { // 2 is smaller than old reasons size
-		      if( true || opt_dbg ) cerr << "c for literal " << imp << " replace reason " << vardata[var(imp)].reason << " with " << wbin[k].cref << endl;
+		      if( opt_dbg ) cerr << "c for literal " << imp << " replace reason " << vardata[var(imp)].reason << " with " << wbin[k].cref << endl;
 		      vardata[var(imp)].reason = wbin[k].cref;
 		      vardata[var(imp)].cost = 2;
 		      
@@ -723,7 +722,7 @@ CRef Solver::propagate()
 		  } else { // lbd based cost
 		    int thisCost = ca[wbin[k].cref].lbd();
 		    if( vardata[var(imp)].cost > thisCost  ) { // 2 is smaller than old reasons size
-		      if( true || opt_dbg ) cerr << "c for literal " << imp << " replace reason " << vardata[var(imp)].reason << " with " << wbin[k].cref << endl;
+		      if( opt_dbg ) cerr << "c for literal " << imp << " replace reason " << vardata[var(imp)].reason << " with " << wbin[k].cref << endl;
 		      vardata[var(imp)].reason = wbin[k].cref;
 		      vardata[var(imp)].cost = thisCost;
 		    } 
@@ -760,7 +759,6 @@ CRef Solver::propagate()
 	      
 	      // consider variation only, if the improvement options are enabled!
 	      if( (opt_hack > 0 ) && reason(var(first)) != CRef_Undef) { // if its not a decision
-		cerr << "c check positions and assingnment (long)" << endl;
 		const int implicantPosition = trailPos[ var(first) ];
 		bool fail = false;
 		for( int i = 1; i < c.size(); ++ i ) {
@@ -772,14 +770,14 @@ CRef Solver::propagate()
 		  
 		  if( opt_hack_cost ) { // size based cost
 		    if( vardata[var(first)].cost > c.size()  ) { // 2 is smaller than old reasons size -> update vardata!
-		      if( true || opt_dbg ) cerr << "c for literal " << c[0] << " replace reason " << vardata[var(first)].reason << " with " << cr << endl;
+		      if( opt_dbg ) cerr << "c for literal " << c[0] << " replace reason " << vardata[var(first)].reason << " with " << cr << endl;
 		      vardata[var(first)].reason = cr;
 		      vardata[var(first)].cost = c.size();
 		    }
 		  } else { // lbd based cost
 		    int thisCost = c.lbd();
 		    if( vardata[var(first)].cost > thisCost  ) { // 2 is smaller than old reasons size -> update vardata!
-		      if( true || opt_dbg ) cerr << "c for literal " << c[0] << " replace reason " << vardata[var(first)].reason << " with " << cr << endl;
+		      if( opt_dbg ) cerr << "c for literal " << c[0] << " replace reason " << vardata[var(first)].reason << " with " << cr << endl;
 		      vardata[var(first)].reason = cr;
 		      vardata[var(first)].cost = thisCost;
 		    }
