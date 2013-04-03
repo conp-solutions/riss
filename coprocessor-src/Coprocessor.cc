@@ -131,8 +131,8 @@ lbool Preprocessor::performSimplification()
   
   if( opt_verbose > 4 ) cerr << "c coprocessor finished initialization" << endl;
   
-  const bool printBVE = false, printBVA = true, printProbe = false, printUnhide = false, 
-	printCCE = true, printEE = false, printHTE = false, printSusi = false, printUP = false,
+  const bool printBVE = false, printBVA = false, printProbe = false, printUnhide = false, 
+	printCCE = false, printEE = false, printHTE = false, printSusi = false, printUP = false,
 	printTernResolve = false, printAddRedBin = false;  
   
   // do preprocessing
