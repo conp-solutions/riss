@@ -80,6 +80,7 @@ class BoundedVariableElimination : public Technique {
       skippedVars, unitsEnqueued, foundGates, usedGates, 
       initialClauses, initialLits, clauseCount, litCount, unitCount, elimCount, restarts;   
   int64_t seqBveSteps, bveLimit;
+  int64_t nClsIncreases,nClsDecreases,totallyAddedClauses; // number of clauses that have been added by bve
   double processTime, subsimpTime, gateTime;
 
 public:

@@ -426,13 +426,42 @@ public:
 struct VarOrderBVEHeapLt {
         CoprocessorData & data;
         const int heapOption;
-        bool operator () (Var x, Var y) const {/* assert (data != NULL && "Please assign a valid data object before heap usage" );*/ 
-            switch (heapOption)
-            {
-                case 0: return data[x] < data[y]; 
-                case 1: return data[x] > data[y]; 
-                default: assert(false && "In case of random order no heap should be used"); return false;
-            }
+        bool operator () (Var x, Var y) const 
+        {/* assert (data != NULL && "Please assign a valid data object before heap usage" );*/ 
+	  if( heapOption == 0 ) { return data[x] < data[y]; 
+	  } else if( heapOption == 1 ) { return data[x] > data[y]; 
+	  } else if( heapOption > 2 && heapOption < 7 ) {
+	    const double xp =data[ mkLit(x,false) ];
+	    const double xn =data[ mkLit(x,true)  ];
+	    const double yp =data[ mkLit(y,false) ];
+	    const double yn =data[ mkLit(y,true)  ];
+	    double rx = 0;
+	    if( xp != 0 || xn != 0 ) rx = xp > xn ?  ( xn != 0 ? xp / xn : xp * 1000 ) : ( xp != 0 ? xn  / xp : xn * 1000 );
+	    double ry = 0;
+	    if( yp != 0 || yn != 0 ) ry = yp > yn ?  ( yn != 0 ? yp / yn : yp * 1000 ) : ( yp != 0 ? yn  / yp : yn * 1000 );
+	    
+	    if( heapOption == 3 ) {
+	      return ( rx < ry )
+		    || ( rx == ry && data[x] < data[y] );
+	    }
+	    else if( heapOption == 4 )  {
+	      return ( rx < ry )
+		    || (rx == ry &&  data[x] > data[y] );
+	    } 
+	    else if( heapOption == 5 )  {
+	      return ( rx > ry )
+		    || (rx == ry &&  data[x] < data[y] );
+	    } 
+	    else if( heapOption == 6 )  {
+	      return ( rx > ry )
+		    || (rx == ry &&  data[x] > data[y] );
+	    } 
+	    else {
+	      assert( false && "forgot to update all paramete checks!" ); 
+	    }
+	  } else {
+	    assert(false && "In case of random order no heap should be used"); return false;
+	  }
         }
         VarOrderBVEHeapLt(CoprocessorData & _data, int _heapOption) : data(_data), heapOption(_heapOption) { }
     };
