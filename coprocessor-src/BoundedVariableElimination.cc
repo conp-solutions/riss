@@ -359,11 +359,6 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<Var
 //
 void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, int64_t& bveChecks, const bool force, const bool doStatistics)   
 {
-  // FIXME: why has this allocation been here? -> acts like a lock to main memory!
-  /*
-    int32_t * pos_stats = (int32_t*) malloc (5 * sizeof(int32_t));
-    int32_t * neg_stats = (int32_t*) malloc (5 * sizeof(int32_t));
-    */
         
     // repeat loop only until being interrupted
         while ( !data.isInterupted() 
@@ -468,22 +463,14 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            }
            if (opt_bve_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
            
-           // Declare stats variables;        
-           int32_t pos_stats[pos.size()];
-           int32_t neg_stats[neg.size()];
+           pos_stats.growTo(pos.size(),0);
+           neg_stats.growTo(neg.size(),0);
            int lit_clauses = 0;
            int lit_learnts = 0;
 	   int resolvents = 0;
                   
            if (!force) 
            {
-               // TODO memset here!
-               //for (int i = 0; i < pos.size(); ++i)
-               //     pos_stats[i] = 0;
-               //for (int i = 0; i < neg.size(); ++i)
-               //     neg_stats[i] = 0;
-               memset( pos_stats, 0 , sizeof( int32_t) * pos.size() );
-               memset( neg_stats, 0 , sizeof( int32_t) * neg.size() );
 
                // anticipate only, if there are positiv and negative occurrences of var 
                if (pos_count != 0 &&  neg_count != 0)
@@ -553,14 +540,12 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                 if (!data.ok())
                     return;
            }
+           pos_stats.clear();
+           neg_stats.clear();
 
            if(opt_bve_verbose > 1)   cerr << "c =============================================================================" << endl;
           
         }
-/*
-    free(pos_stats);
-    free(neg_stats);
-    */
 }
 
 /*
@@ -620,7 +605,7 @@ inline void BoundedVariableElimination::removeClauses(CoprocessorData & data, He
  *  -> total number of literals in learnts after resolution:    lit_learnts
  *
  */
-inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& data, vector< CRef >& positive, vector< CRef >& negative, const int v, const int p_limit, const int n_limit, int32_t* pos_stats, int32_t* neg_stats, int& lit_clauses, int& lit_learnts, int& resolvents, int64_t& bveChecks, const bool doStatistics)
+inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& data, vector< CRef >& positive, vector< CRef >& negative, const int v, const int p_limit, const int n_limit, vec<int32_t> & pos_stats, vec<int32_t> & neg_stats, int& lit_clauses, int& lit_learnts, int& resolvents, int64_t& bveChecks, const bool doStatistics)
 {
     if(opt_bve_verbose > 2)  cerr << "c starting anticipate BVE" << endl;
     // Clean the stats
@@ -1114,6 +1099,8 @@ void BoundedVariableElimination::destroy()
   vector< Var >().swap( variable_queue   );
   
   resolvent.clear(true); // vector for sequential resolution
+  pos_stats.clear(true);
+  neg_stats.clear(true);
 
   // parallel member variables
   lastTouched.destroy();                    //MarkArray to track modifications of parallel BVE-Threads

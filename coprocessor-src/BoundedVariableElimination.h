@@ -41,7 +41,8 @@ class BoundedVariableElimination : public Technique {
 
   // sequential member variables
   vec< Lit > resolvent; // vector for sequential resolution
-
+  vec< int32_t > pos_stats;
+  vec< int32_t > neg_stats; 
   // parallel member variables
   MarkArray lastTouched;                    //MarkArray to track modifications of parallel BVE-Threads
   MarkArray dirtyOccs;                      // tracks occs that contain CRef_Undef
@@ -121,7 +122,7 @@ protected:
           , const int v, const int p_limit, const int n_limit, int64_t& bveChecks
           , const bool keepLearntResolvents = false, const bool force = false, const bool doStatistics = true);
   inline lbool anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative
-          , const int v, const int p_limit, const int n_limit, int32_t* pos_stats, int32_t* neg_stats
+          , const int v, const int p_limit, const int n_limit, vec<int32_t> & pos_stats, vec<int32_t> & neg_stats
           , int & lit_clauses, int & lit_learnts, int& resolvents, int64_t& bveChecks, const bool doStatistics = true); 
   inline void addClausesToSubsumption (const vector<CRef> & clauses);
   void touchedVarsForSubsumption (CoprocessorData & data, const std::vector<Var> & touched_vars);
