@@ -96,7 +96,7 @@ static void printClauses(ClauseAllocator & ca, vector<CRef> & list, bool skipDel
  *          you must not acquire a write lock on the data object, if alread 2.b was acquired
  *          you either hold a heap lock or any of the other locks 
  */
-void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap, deque < CRef > & strengthQueue, deque < CRef > & sharedStrengthQueue, deque< PostponeReason > & postponed, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, ParBVEStats & stats, MarkArray * gateMarkArray, int & rwlock_count, int & garbageCounter, int64_t& parBVEchecks, const bool force, const bool doStatistics)   
+void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, deque < CRef > & strengthQueue, deque < CRef > & sharedStrengthQueue, deque< PostponeReason > & postponed, vector< SpinLock > & var_lock, ReadersWriterLock & rwlock, ParBVEStats & stats, MarkArray * gateMarkArray, int & rwlock_count, int & garbageCounter, int64_t& parBVEchecks, const bool force, const bool doStatistics)   
 {
     if (doStatistics) stats.processTime = wallClockTime() - stats.processTime;
 
@@ -227,8 +227,6 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         vector<CRef> & pos = data.list(mkLit(v,false)); 
         vector<CRef> & neg = data.list(mkLit(v,true));
         
-        assert(neighbor_heap.size() == 0);   
-        
         int locked_neigbors = 0;
         Var reason = var_Undef;
         
@@ -253,7 +251,6 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
             for (int l = 0; l < c.size(); ++ l)
             {
                 Var v = var(c[l]);
-                //if (! neighbor_heap.inHeap(v))
                 if (!neighborMA.isCurrentStep(v))
                 {
                     if (opt_bve_heap != 2 && var_lock[v].getValue())
@@ -262,7 +259,6 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
                             reason = v;
                             break;
                         }
-                    //neighbor_heap.insert(v);
                     neighborMA.setCurrentStep(v);
                     neighbors.push_back(v);
                 }
@@ -373,7 +369,6 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
 
             // Cleanup
             neighbors.clear();
-            neighbor_heap.clear();
             
             if (   data.value(mkLit(v,true)) != l_Undef 
                 || data.value(mkLit(v,false)) != l_Undef)
@@ -442,7 +437,6 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
 
             // Cleanup
             neighbors.clear();
-            neighbor_heap.clear();
             continue;
         }
 
@@ -654,7 +648,6 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         }
         // Cleanup
         neighbors.clear();
-        neighbor_heap.clear();
     }
 
     free(pos_stats);
@@ -1039,7 +1032,7 @@ inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(Coprocess
 void* BoundedVariableElimination::runParallelBVE(void* arg)
 {
   BVEWorkData*      workData = (BVEWorkData*) arg;
-  workData->bve->par_bve_worker(*(workData->data), *(workData->heap), *(workData->neighbor_heap), *(workData->strengthQueue), *(workData->sharedStrengthQueue), *(workData->postponed), *(workData->var_locks), *(workData->rw_lock), *(workData->bveStats), workData->gateMarkArray, workData->rwlock_count, workData->garbageCounter, workData->bveStats->parBveChecks); 
+  workData->bve->par_bve_worker(*(workData->data), *(workData->heap), *(workData->strengthQueue), *(workData->sharedStrengthQueue), *(workData->postponed), *(workData->var_locks), *(workData->rw_lock), *(workData->bveStats), workData->gateMarkArray, workData->rwlock_count, workData->garbageCounter, workData->bveStats->parBveChecks); 
   return 0;
 }
 
@@ -1072,15 +1065,6 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
           gateMarkArrays[i].resize(opt_bve_findGate ? data.nVars() * 2 : data.nVars());
   }
   
-  if (neighbor_heaps == 0) 
-  { 
-      neighbor_heaps = (Heap<NeighborLt> **) malloc( sizeof(Heap<NeighborLt> * ) * controller.size());
-      for (int i = 0; i < controller.size(); ++ i)
-      {
-        neighbor_heaps[i] = new Heap<NeighborLt>(neighborComperator);
-      }
-  }
-
  for ( int i = 0 ; i < controller.size(); ++ i ) 
   {
     workData[i].bve   = this;
@@ -1088,7 +1072,6 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
     workData[i].var_locks = & variableLocks;
     workData[i].rw_lock = & allocatorRWLock;
     workData[i].heap  = &newheap;
-    workData[i].neighbor_heap = neighbor_heaps[i];
     workData[i].strengthQueue = & strengthQueues[i];
     workData[i].sharedStrengthQueue = & sharedStrengthQueue;
     workData[i].postponed = & postpones[i];
