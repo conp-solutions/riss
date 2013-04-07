@@ -607,8 +607,8 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 	if( opt_verbose > 1 ) cerr << "c Probing changed formula: " << change << endl;
     }
     
-    // unhide "u"
-    else if( execute == 'p' && opt_unhide && status == l_Undef && data.ok() ) {
+    // unhide "g"
+    else if( execute == 'g' && opt_unhide && status == l_Undef && data.ok() ) {
 	if( opt_verbose > 2 ) cerr << "c unhiding" << endl;
 	unhiding.process();
 	change = unhiding.appliedSomething() || change;
@@ -640,11 +640,19 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     }
     
     // cce "c"
-    else if( execute == 'e' && opt_cce && status == l_Undef && data.ok() ) {
+    else if( execute == 'c' && opt_cce && status == l_Undef && data.ok() ) {
 	if( opt_verbose > 2 ) cerr << "c cce" << endl;
 	cce.process(data);
 	change = cce.appliedSomething() || change;
 	if( opt_verbose > 1 ) cerr << "c CCE changed formula: " << change << endl;
+    }
+    
+    // hte "h"
+    else if( execute == 'h' && opt_hte && status == l_Undef && data.ok() ) {
+	if( opt_verbose > 2 ) cerr << "c hte" << endl;
+	hte.process(data);
+	change = hte.appliedSomething() || change;
+	if( opt_verbose > 1 ) cerr << "c HTE changed formula: " << change << endl;
     }
     
     // none left so far
