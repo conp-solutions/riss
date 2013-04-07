@@ -430,7 +430,7 @@ struct VarOrderBVEHeapLt {
         {/* assert (data != NULL && "Please assign a valid data object before heap usage" );*/ 
 	  if( heapOption == 0 ) { return data[x] < data[y]; 
 	  } else if( heapOption == 1 ) { return data[x] > data[y]; 
-	  } else if( heapOption > 2 && heapOption < 7 ) {
+	  } else if( heapOption > 2 && heapOption < 11 ) {
 	    const double xp =data[ mkLit(x,false) ];
 	    const double xn =data[ mkLit(x,true)  ];
 	    const double yp =data[ mkLit(y,false) ];
@@ -455,6 +455,22 @@ struct VarOrderBVEHeapLt {
 	    else if( heapOption == 6 )  {
 	      return ( rx > ry )
 		    || (rx == ry &&  data[x] > data[y] );
+	    } 
+	    else if( heapOption == 7 ) {
+	      return ( data[x] < data[y] )
+		    || ( rx < ry && data[x] == data[y] );
+	    }
+	    else if( heapOption == 8 )  {
+	      return ( data[x] > data[y] )
+		    || (rx < ry &&  data[x] == data[y] );
+	    } 
+	    else if( heapOption == 9 )  {
+	      return ( data[x] < data[y] )
+		    || (rx > ry &&  data[x] == data[y] );
+	    } 
+	    else if( heapOption == 10 )  {
+	      return ( data[x] > data[y] )
+		    || (rx > ry &&  data[x] == data[y] );
 	    } 
 	    else {
 	      assert( false && "forgot to update all paramete checks!" ); 

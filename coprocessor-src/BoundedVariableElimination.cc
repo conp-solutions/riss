@@ -27,7 +27,7 @@ using namespace std;
  BoolOption opt_bve_findGate    (_cat_bve, "bve_gates",  "try to find variable AND gate definition before elimination", true);
  BoolOption opt_force_gates     (_cat_bve, "bve_force_gates", "Force gate search (slower, but probably more eliminations and blockeds are found)", false);
  // pick order of eliminations
- IntOption  opt_bve_heap        (_cat_bve, "cp3_bve_heap"   ,  "0: minimum heap, 1: maximum heap, 2: random, 3: ratio pos/neg smaller+less, 4: ratio pos/neg smaller+greater, 5: ratio pos/neg greater+less, 6: ratio pos/neg greater + greater ", 0, IntRange(0,6));
+ IntOption  opt_bve_heap        (_cat_bve, "cp3_bve_heap"   ,  "0: minimum heap, 1: maximum heap, 2: random, 3: ratio pos/neg smaller+less, 4: ratio pos/neg smaller+greater, 5: ratio pos/neg greater+less, 6: ratio pos/neg greater + greater, 7-10: same as 3-6, but inverse measure order", 0, IntRange(0,10));
  // increasing eliminations
  IntOption  opt_bve_grow        (_cat_bve, "bve_cgrow"  , "number of additional clauses per elimination", 0, IntRange(-INT32_MAX,INT32_MAX));
  IntOption  opt_bve_growTotal   (_cat_bve, "bve_cgrow_t", "total number of additional clauses", INT32_MAX, IntRange(0,INT32_MAX));
@@ -73,7 +73,7 @@ BoundedVariableElimination::BoundedVariableElimination( ClauseAllocator& _ca, Co
 , restarts (0)
 , seqBveSteps(0)
 , bveLimit( opt_bve_limit )
-, nClsIncreases(0),nClsDecreases(0),totallyAddedClauses(0)
+, nClsIncreases(0),nClsDecreases(0),nClsKeep(0),totallyAddedClauses(0)
 , processTime(0)
 , subsimpTime(0)
 , gateTime(0)
@@ -112,6 +112,7 @@ void BoundedVariableElimination::printStatistics(ostream& stream)
                                  << gateTime << " gateSeconds, " 
 				  << endl;
     stream << "c [STAT] BVE(5) " << nClsIncreases << " incElims, "
+				  << nClsKeep << " keepElims, "
 				  << nClsDecreases << " decElims, "
 				  << totallyAddedClauses << " totalAdds," 
 				  << endl;
@@ -513,11 +514,9 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
 	   bool reducedClss = resolvents <= pos_count + neg_count + opt_bve_grow ; // && resolvents > 0 ;
 	   
 	   if( resolvents > pos_count + neg_count ) {
-	     if( reducedClss ) totallyAddedClauses += resolvents - ( pos_count + neg_count);
+	     if( reducedClss ) totallyAddedClauses += resolvents - ( pos_count + neg_count); // TODO: decide whether to exchange this order!
 	     if( totallyAddedClauses > opt_bve_growTotal ) reducedClss = false; // stop increasing!
-	     else nClsIncreases ++;
 	   } else {
-	     nClsDecreases ++;
 	     if ( opt_totalGrow ) totallyAddedClauses += resolvents - ( pos_count + neg_count); // substract!
 	   }
 	   
@@ -531,8 +530,17 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
 		&& !opt_bce_only // only if bve should be done
 	      )
            {
-		        if (doStatistics) usedGates = (foundGate ? usedGates + 1 : usedGates ); // statistics
+	        if( resolvents < pos_count + neg_count ) {
+		  nClsDecreases ++;
+		} else if( resolvents > pos_count + neg_count ){
+		  nClsIncreases ++;
+		} else if( resolvents == pos_count + neg_count ) {
+		  nClsKeep ++; 
+		}
+	     
+		if (doStatistics) usedGates = (foundGate ? usedGates + 1 : usedGates ); // statistics
                 if(opt_bve_verbose > 1)  cerr << "c resolveSet" <<endl;
+		
                 if (resolveSet(data, heap, pos, neg, v, p_limit, n_limit, bveChecks) == l_False)
                     return;
                 if (doStatistics) ++eliminatedVars;
