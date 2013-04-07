@@ -210,6 +210,7 @@ int main(int argc, char** argv)
                 fprintf(res, "s UNKNOWN\n");
             fclose(res);
         }
+
         if(! opt_quiet && ret == l_True && res == NULL ) {
 	  printf ("v ");
           for (int i = 0; i < S.nVars(); i++)

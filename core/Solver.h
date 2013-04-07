@@ -180,13 +180,13 @@ protected:
     long curRestart;
     // Helper structures:
     //
+
     struct VarData { CRef reason; int level; 
       int32_t cost; /// for hack
     };
     static inline VarData mkVarData(CRef cr, int l){ VarData d = {cr, l, -1}; return d; }
     static inline VarData mkVarData(CRef cr, int l, int _cost){ VarData d = {cr, l,_cost}; return d; }  
     
-
     struct Watcher {
         CRef cref;
         Lit  blocker;

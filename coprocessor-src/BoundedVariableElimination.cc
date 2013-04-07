@@ -26,7 +26,13 @@ using namespace std;
  IntOption  opt_bve_lits        (_cat_bve, "bve_red_lits",  "0=reduce number of literals, 1=reduce number of clauses,2=reduce any of the two,3 reduce both", 0, IntRange(0,3));
  BoolOption opt_bve_findGate    (_cat_bve, "bve_gates",  "try to find variable AND gate definition before elimination", true);
  BoolOption opt_force_gates     (_cat_bve, "bve_force_gates", "Force gate search (slower, but probably more eliminations and blockeds are found)", false);
- IntOption  opt_bve_heap        (_cat_bve, "cp3_bve_heap"     ,  "0: minimum heap, 1: maximum heap, 2: random", 0, IntRange(0,2));
+ // pick order of eliminations
+ IntOption  opt_bve_heap        (_cat_bve, "cp3_bve_heap"   ,  "0: minimum heap, 1: maximum heap, 2: random, 3: ratio pos/neg smaller+less, 4: ratio pos/neg smaller+greater, 5: ratio pos/neg greater+less, 6: ratio pos/neg greater + greater, 7-10: same as 3-6, but inverse measure order", 0, IntRange(0,10));
+ // increasing eliminations
+ IntOption  opt_bve_grow        (_cat_bve, "bve_cgrow"  , "number of additional clauses per elimination", 0, IntRange(-INT32_MAX,INT32_MAX));
+ IntOption  opt_bve_growTotal   (_cat_bve, "bve_cgrow_t", "total number of additional clauses", INT32_MAX, IntRange(0,INT32_MAX));
+ BoolOption opt_totalGrow       (_cat_bve, "bve_totalG" , "Keep track of total size of formula when allowing increasing eliminations", false);
+  
  BoolOption opt_bve_bc          (_cat_bve, "bve_BCElim",    "Eliminate Blocked Clauses", true);
  IntOption heap_updates         (_cat_bve, "bve_heap_updates",    "Always update variable heap if clauses / literals are added or removed, 2 add variables, if not in heap", 1, IntRange(0,2));
  BoolOption opt_bce_only        (_cat_bve, "bce_only",    "Only remove blocked clauses but do not resolve variables.", false);
@@ -67,6 +73,7 @@ BoundedVariableElimination::BoundedVariableElimination( ClauseAllocator& _ca, Co
 , restarts (0)
 , seqBveSteps(0)
 , bveLimit( opt_bve_limit )
+, nClsIncreases(0),nClsDecreases(0),nClsKeep(0),totallyAddedClauses(0)
 , processTime(0)
 , subsimpTime(0)
 , gateTime(0)
@@ -103,6 +110,11 @@ void BoundedVariableElimination::printStatistics(ostream& stream)
     stream << "c [STAT] BVE(4) " << foundGates << " gateDefs, "
 				  << usedGates << " usedGates, "
                                  << gateTime << " gateSeconds, " 
+				  << endl;
+    stream << "c [STAT] BVE(5) " << nClsIncreases << " incElims, "
+				  << nClsKeep << " keepElims, "
+				  << nClsDecreases << " decElims, "
+				  << totallyAddedClauses << " totalAdds," 
 				  << endl;
     for (int i = 0; i < parStats.size(); ++i)
     {
@@ -348,8 +360,6 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<Var
 //
 void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, int64_t& bveChecks, const bool force, const bool doStatistics)   
 {
-    int32_t * pos_stats = (int32_t*) malloc (5 * sizeof(int32_t));
-    int32_t * neg_stats = (int32_t*) malloc (5 * sizeof(int32_t));
         
     // repeat loop only until being interrupted
         while ( !data.isInterupted() 
@@ -393,7 +403,11 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
 	       }
             
            // Heuristic Cutoff Anticipation (if no Gate Found)
-           if (!opt_unlimited_bve && !foundGate && (data[mkLit(v,true)] > 10 && data[mkLit(v,false)] > 10 || data[v] > 15 && (data[mkLit(v,true)] > 5 || data[mkLit(v,false)] > 5)))
+           if (!opt_unlimited_bve && !foundGate && 
+	     (data[mkLit(v,true)] > 10 && data[mkLit(v,false)] > 10
+		|| data[v] > 15 && (data[mkLit(v,true)] > 5 || data[mkLit(v,false)] > 5)
+	     )
+	     )
            {
                if (doStatistics) ++skippedVars;
                continue;
@@ -450,22 +464,14 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            }
            if (opt_bve_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
            
-           // Declare stats variables;        
-           int32_t pos_stats[pos.size()];
-           int32_t neg_stats[neg.size()];
+           pos_stats.growTo(pos.size(),0);
+           neg_stats.growTo(neg.size(),0);
            int lit_clauses = 0;
            int lit_learnts = 0;
 	   int resolvents = 0;
                   
            if (!force) 
            {
-               // TODO memset here!
-               //for (int i = 0; i < pos.size(); ++i)
-               //     pos_stats[i] = 0;
-               //for (int i = 0; i < neg.size(); ++i)
-               //     neg_stats[i] = 0;
-               memset( pos_stats, 0 , sizeof( int32_t) * pos.size() );
-               memset( neg_stats, 0 , sizeof( int32_t) * neg.size() );
 
                // anticipate only, if there are positiv and negative occurrences of var 
                if (pos_count != 0 &&  neg_count != 0)
@@ -488,9 +494,20 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            // if resolving reduces number of literals in clauses: 
            //    add resolvents
            //    mark old clauses for deletion
-           bool doResolve = false;
-           bool reducedLits = lit_clauses > 0 && lit_clauses <= lit_clauses_old;
-	       bool reducedClss = resolvents > 0 && pos_count + neg_count >= resolvents;
+           bool doResolve = false; // TODO: do we need the lit_clauses > 0 or resolvents > 0 check? Assumption: no!
+           bool reducedLits = lit_clauses <= lit_clauses_old; // && lit_clauses > 0;
+	   
+	   // we do allow growth
+	   bool reducedClss = resolvents <= pos_count + neg_count + opt_bve_grow ; // && resolvents > 0 ;
+	   
+	   if( resolvents > pos_count + neg_count ) {
+	     if( reducedClss ) totallyAddedClauses += resolvents - ( pos_count + neg_count); // TODO: decide whether to exchange this order!
+	     if( totallyAddedClauses > opt_bve_growTotal ) reducedClss = false; // stop increasing!
+	   } else {
+	     if ( opt_totalGrow ) totallyAddedClauses += resolvents - ( pos_count + neg_count); // substract!
+	   }
+	   
+	   
            if( opt_bve_lits == 0 ) doResolve = reducedLits;				// number of literals decreasesd
 	   else if( opt_bve_lits == 1 ) doResolve = reducedClss;			// number of clauses decreasesd
 	   else if( opt_bve_lits == 2 ) doResolve = reducedClss || reducedLits;	// number of literals or clauses decreasesd
@@ -500,8 +517,17 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
 		&& !opt_bce_only // only if bve should be done
 	      )
            {
-		        if (doStatistics) usedGates = (foundGate ? usedGates + 1 : usedGates ); // statistics
+	        if( resolvents < pos_count + neg_count ) {
+		  nClsDecreases ++;
+		} else if( resolvents > pos_count + neg_count ){
+		  nClsIncreases ++;
+		} else if( resolvents == pos_count + neg_count ) {
+		  nClsKeep ++; 
+		}
+	     
+		if (doStatistics) usedGates = (foundGate ? usedGates + 1 : usedGates ); // statistics
                 if(opt_bve_verbose > 1)  cerr << "c resolveSet" <<endl;
+		
                 if (resolveSet(data, heap, pos, neg, v, p_limit, n_limit, bveChecks) == l_False)
                     return;
                 if (doStatistics) ++eliminatedVars;
@@ -522,13 +548,12 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                 if (!data.ok())
                     return;
            }
+           pos_stats.clear();
+           neg_stats.clear();
 
            if(opt_bve_verbose > 1)   cerr << "c =============================================================================" << endl;
           
         }
-
-    free(pos_stats);
-    free(neg_stats);
 }
 
 /*
@@ -588,7 +613,7 @@ inline void BoundedVariableElimination::removeClauses(CoprocessorData & data, He
  *  -> total number of literals in learnts after resolution:    lit_learnts
  *
  */
-inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& data, vector< CRef >& positive, vector< CRef >& negative, const int v, const int p_limit, const int n_limit, int32_t* pos_stats, int32_t* neg_stats, int& lit_clauses, int& lit_learnts, int& resolvents, int64_t& bveChecks, const bool doStatistics)
+inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& data, vector< CRef >& positive, vector< CRef >& negative, const int v, const int p_limit, const int n_limit, vec<int32_t> & pos_stats, vec<int32_t> & neg_stats, int& lit_clauses, int& lit_learnts, int& resolvents, int64_t& bveChecks, const bool doStatistics)
 {
     if(opt_bve_verbose > 2)  cerr << "c starting anticipate BVE" << endl;
     // Clean the stats
@@ -1082,6 +1107,8 @@ void BoundedVariableElimination::destroy()
   vector< Var >().swap( variable_queue   );
   
   resolvent.clear(true); // vector for sequential resolution
+  pos_stats.clear(true);
+  neg_stats.clear(true);
 
   // parallel member variables
   lastTouched.destroy();                    //MarkArray to track modifications of parallel BVE-Threads

@@ -41,7 +41,8 @@ class BoundedVariableElimination : public Technique {
 
   // sequential member variables
   vec< Lit > resolvent; // vector for sequential resolution
-
+  vec< int32_t > pos_stats;
+  vec< int32_t > neg_stats; 
   // parallel member variables
   MarkArray lastTouched;                    //MarkArray to track modifications of parallel BVE-Threads
   MarkArray dirtyOccs;                      // tracks occs that contain CRef_Undef
@@ -63,6 +64,7 @@ class BoundedVariableElimination : public Technique {
       subsimpSteps, strengthtLits, strengthtLearntLits;   
       int64_t parBveChecks;
       double processTime, subsimpTime, gateTime, upTime, lockNeighborTime, mereLockingTime;
+      char _pad[60];
       ParBVEStats() :   removedClauses(0), removedLiterals(0), createdClauses(0), createdLiterals(0), removedLearnts(0)
                       , learntLits(0), newLearnts(0), newLearntLits(0), testedVars(0), anticipations(0), eliminatedVars(0)
                       , removedBC(0), blockedLits(0), removedBlockedLearnt(0), learntBlockedLit(0), skippedVars(0)
@@ -80,6 +82,7 @@ class BoundedVariableElimination : public Technique {
       skippedVars, unitsEnqueued, foundGates, usedGates, 
       initialClauses, initialLits, clauseCount, litCount, unitCount, elimCount, restarts;   
   int64_t seqBveSteps, bveLimit;
+  int64_t nClsIncreases,nClsDecreases,nClsKeep,totallyAddedClauses; // number of clauses that have been added by bve
   double processTime, subsimpTime, gateTime;
 
 public:
@@ -120,7 +123,7 @@ protected:
           , const int v, const int p_limit, const int n_limit, int64_t& bveChecks
           , const bool keepLearntResolvents = false, const bool force = false, const bool doStatistics = true);
   inline lbool anticipateElimination(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative
-          , const int v, const int p_limit, const int n_limit, int32_t* pos_stats, int32_t* neg_stats
+          , const int v, const int p_limit, const int n_limit, vec<int32_t> & pos_stats, vec<int32_t> & neg_stats
           , int & lit_clauses, int & lit_learnts, int& resolvents, int64_t& bveChecks, const bool doStatistics = true); 
   inline void addClausesToSubsumption (const vector<CRef> & clauses);
   void touchedVarsForSubsumption (CoprocessorData & data, const std::vector<Var> & touched_vars);

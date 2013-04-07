@@ -26,7 +26,11 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/sls.h"
 #include "coprocessor-src/TwoSAT.h"
 
+#include <string>
+#include <cstring>
+
 using namespace Minisat;
+using namespace std;
 
 namespace Coprocessor {
 /** Main class that connects all the functionality of the preprocessor Coprocessor
@@ -62,6 +66,7 @@ public:
   lbool preprocess();
   lbool inprocess();
   lbool preprocessScheduled();
+  lbool performSimplificationScheduled(string techniques);
 
   void extendModel( vec<lbool>& model );
   
