@@ -11,7 +11,7 @@ static const char* _cat = "COPROCESSOR 3";
 static const char* _cat2 = "PREPROCESSOR TECHNIQUES";
 
 // options
-static BoolOption opt_unlimited   (_cat, "cp3_unlimited",  "No limits for preprocessing techniques", true);
+static BoolOption opt_unlimited   (_cat, "cp3_limited",    "Limits for preprocessing techniques", true);
 static BoolOption opt_randomized  (_cat, "cp3_randomized", "Steps withing preprocessing techniques are executed in random order", false);
 static IntOption  opt_verbose     (_cat, "cp3_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 5));
 static IntOption  opt_inprocessInt(_cat, "cp3_inp_cons",   "Perform Inprocessing after at least X conflicts", 20000, IntRange(0, INT32_MAX));
@@ -32,6 +32,9 @@ static BoolOption opt_probe       (_cat2, "probe",         "Use Probing/Clause V
 static BoolOption opt_ternResolve (_cat2, "3resolve",      "Use Ternary Clause Resolution", false);
 static BoolOption opt_addRedBins  (_cat2, "addRed2",       "Use Adding Redundant Binary Clauses", false);
 static BoolOption opt_dense       (_cat2, "dense",         "Remove gaps in variables of the formula", false);
+
+static StringOption opt_ptechs (_cat2, "cp3_ptechs", "techniques for preprocessing");
+static StringOption opt_itechs (_cat2, "cp3_itechs", "techniques for inprocessing");
 
 // use 2sat and sls only for high versions!
 #if defined CP3VERSION && CP3VERSION < 301
@@ -423,10 +426,374 @@ lbool Preprocessor::performSimplification()
 }
 
 
+
+lbool Preprocessor::performSimplificationScheduled(string techniques)
+{
+  if( ! opt_enabled ) return l_Undef;
+  if( opt_verbose > 4 ) cerr << "c start simplifying with coprocessor" << endl;
+
+  if( formulaVariables == -1 ) {
+    if( opt_verbose > 2 ) cerr << "c initialize CP3 with " << solver->nVars()  << " variables " << endl;
+    formulaVariables = solver->nVars() ;
+  }
+  
+  //
+  // scan for techniques
+  //
+  vector< string > grammar;
+  grammar.push_back( string() );
+  
+  char c=0;
+  uint32_t pos=0;
+  uint32_t line = 0;
+  uint32_t level=0;
+  while( pos < techniques.size() ){
+   c = techniques[pos++];
+   if( c == '[' ) {
+      level ++;
+      if( level > 1 ) { 
+	cerr << "c parser at " << pos-1 << " warning: too many '[' levels" << endl;
+	exit(-2);
+      } else {
+	  if( grammar[line].size() > 0 ) {
+	    grammar.push_back( string() );
+	    line ++;  
+	  }
+      }
+      continue;
+   }
+   if( c == ']' ) {
+      if( level < 1 ) { 
+	cerr << "c parser at " << pos-1 << " warning: ignore ']'" << endl;
+	exit(-2);
+      }
+      if( level == 1 ) { 
+	// star behing brackets?
+	if( pos < techniques.size() && techniques[pos] == '+' && grammar[line].size() > 0 ) { grammar[line] += "+"; pos++; }
+	if( grammar[line].size() > 0 ) {
+	  grammar.push_back( string() );
+	  line ++;  
+	}
+      }
+      level --;
+      continue;
+   }
+   if( c == '+' ) {
+      if( level == 0 ) { 
+	cerr << "c parser at " << pos-1 << " ignore '+' at level 0" << endl;
+	continue;
+      }
+   }
+   grammar[line] += c;
+  }
+  
+  if( opt_verbose > 0 ) {
+    cerr << "c parsed grammar:" << endl;
+    for( uint32_t i = 0 ; i < grammar.size(); ++ i ) 
+    {
+      cerr << "c " << grammar[i] << endl;
+    }
+  }
+
+  lbool status = l_Undef;
+  if( grammar.size() == 0 ) {
+    cerr << "c warning: set of techniques empty - abort" << endl;
+    return status;
+  }
+  
+  if( isInprocessing ) ipTime = cpuTime() - ipTime;
+  else ppTime = cpuTime() - ppTime;
+  
+  // first, remove all satisfied clauses
+  if( !solver->simplify() ) { cout.flush(); cerr.flush(); return l_False; }
+
+  // delete clauses from solver
+  
+  if( opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << endl;
+  thisClauses = solver->clauses.size();
+  thisLearnts = solver->learnts.size();
+  
+  cleanSolver ();
+  // initialize techniques
+  data.init( solver->nVars() );
+  
+  if( opt_check ) checkLists("before initializing");
+  initializePreprocessor ();
+  if( opt_check ) checkLists("after initializing");
+  
+  if( opt_verbose > 4 ) cerr << "c coprocessor finished initialization" << endl;
+  
+  
+  //
+  //  perform scheduled preprocessing
+  //
+  sortClauses();
+  uint32_t currentLine = 0;
+  uint32_t currentPosition = 0;
+  uint32_t currentSize = grammar[currentLine].size();
+  bool change = false;
+
+  while( status == l_Undef && (currentLine < grammar.size() || currentPosition < currentSize ) )
+  {
+    
+    char execute = grammar[currentLine][currentPosition];
+    if( opt_verbose > 0 ) cerr << "c current line: " << grammar[currentLine] << " pos: " << currentPosition << " execute=" << execute << endl;
+    if( execute == '+' ) { // if there is a star in a line and there has been change,
+      if( change ) {
+	currentPosition = 0;
+	continue; // start current line in grammar again!
+      } else {
+	currentPosition ++;
+      }
+    }
+    
+    if( currentPosition >= currentSize ) { // start with next line, if current line has been evaluated
+      if( opt_verbose > 1 ) cerr << "c reached end of line " << currentLine << endl;
+      currentLine++;
+      if( currentLine < grammar.size() ) {
+	currentSize = grammar[currentLine].size();
+	currentPosition=0;
+	if( opt_verbose > 1 ) cerr << "c new data: current line: " << grammar[currentLine] << " pos: " << currentPosition << " execute=" << execute << endl;
+	continue;
+      }
+    }
+    
+    if( currentLine >= grammar.size() ) break; // stop if all lines of the grammar have been evaluated
+    
+    if( currentPosition == 0 ) { // if the line is started from scratch, reset the change flag
+      change = false;
+    }
+    
+    // in the next iteration, the position is increased
+    currentPosition++;
+    
+    // unit propagation has letter "u"
+    if( execute == 'u' && opt_up && status == l_Undef && data.ok() ) {
+	if( opt_verbose > 2 ) cerr << "c up" << endl;
+	propagation.process(data,true);
+	change = propagation.appliedSomething() || change;
+	if( opt_verbose > 1 ) cerr << "c UP changed formula: " << change << endl;
+    }
+
+    // subsumption has letter "s"
+    else if( execute == 's' && opt_subsimp && status == l_Undef && data.ok() ) {
+	if( opt_verbose > 2 ) cerr << "c subsimp" << endl;
+	subsumption.process();
+	change = subsumption.appliedSomething() || change;
+	if( opt_verbose > 1 ) cerr << "c Subsumption changed formula: " << change << endl;
+    }
+
+    // addRed2 "a"
+    else if( execute == 'a' && opt_addRedBins && status == l_Undef && data.ok() ) {
+	if( opt_verbose > 2 ) cerr << "c addRed2" << endl;
+	res.process(true);
+	change = res.appliedSomething() || change;
+	if( opt_verbose > 1 ) cerr << "c AddRed2 changed formula: " << change << endl;
+    }
+    
+    // ternRes "3"
+    else if( execute == '3' && opt_ternResolve && status == l_Undef && data.ok() ) {
+	if( opt_verbose > 2 ) cerr << "c ternRes" << endl;
+	res.process(false);
+	change = res.appliedSomething() || change;
+	if( opt_verbose > 1 ) cerr << "c TernRes changed formula: " << change << endl;
+    }
+    
+    // probing "p"
+    else if( execute == 'p' && opt_probe && status == l_Undef && data.ok() ) {
+	if( opt_verbose > 2 ) cerr << "c probing" << endl;
+	probing.process();
+	change = probing.appliedSomething() || change;
+	if( opt_verbose > 1 ) cerr << "c Probing changed formula: " << change << endl;
+    }
+    
+    // unhide "g"
+    else if( execute == 'g' && opt_unhide && status == l_Undef && data.ok() ) {
+	if( opt_verbose > 2 ) cerr << "c unhiding" << endl;
+	unhiding.process();
+	change = unhiding.appliedSomething() || change;
+	if( opt_verbose > 1 ) cerr << "c Unhiding changed formula: " << change << endl;
+    }
+    
+    // bva "w"
+    else if( execute == 'w' && opt_bva && status == l_Undef && data.ok() ) {
+	if( opt_verbose > 2 ) cerr << "c bva" << endl;
+	bva.process();
+	change = bva.appliedSomething() || change;
+	if( opt_verbose > 1 ) cerr << "c BVA changed formula: " << change << endl;
+    }
+    
+    // bve "v"
+    else if( execute == 'v' && opt_bve && status == l_Undef && data.ok() ) {
+	if( opt_verbose > 2 ) cerr << "c bve" << endl;
+	bve.process(data);
+	change = bve.appliedSomething() || change;
+	if( opt_verbose > 1 ) cerr << "c BVE changed formula: " << change << endl;
+    }
+    
+    // ee "e"
+    else if( execute == 'e' && opt_ee && status == l_Undef && data.ok() ) {
+	if( opt_verbose > 2 ) cerr << "c ee" << endl;
+	ee.process(data);
+	change = ee.appliedSomething() || change;
+	if( opt_verbose > 1 ) cerr << "c EE changed formula: " << change << endl;
+    }
+    
+    // cce "c"
+    else if( execute == 'c' && opt_cce && status == l_Undef && data.ok() ) {
+	if( opt_verbose > 2 ) cerr << "c cce" << endl;
+	cce.process(data);
+	change = cce.appliedSomething() || change;
+	if( opt_verbose > 1 ) cerr << "c CCE changed formula: " << change << endl;
+    }
+    
+    // hte "h"
+    else if( execute == 'h' && opt_hte && status == l_Undef && data.ok() ) {
+	if( opt_verbose > 2 ) cerr << "c hte" << endl;
+	hte.process(data);
+	change = hte.appliedSomething() || change;
+	if( opt_verbose > 1 ) cerr << "c HTE changed formula: " << change << endl;
+    }
+    
+    // none left so far
+    else {
+      cerr << "c warning: cannot execute technique related to  " << execute << endl;
+    }
+    
+    // perform afte reach call
+    if( opt_debug )  { scanCheck("after iteration"); }   
+    data.checkGarbage(); // perform garbage collection
+    if( opt_verbose > 3 )  printStatistics(cerr);
+  }
+  
+  
+  
+  if( opt_sls ) {
+    if( opt_verbose > 0 ) cerr << "c sls ..." << endl;
+    if( opt_verbose > 4 )cerr << "c coprocessor sls" << endl;
+    if( status == l_Undef ) {
+      bool solvedBySls = sls.solve( data.getClauses(), 4000000 );  // cannot change status, can generate new unit clauses
+      if( solvedBySls ) {
+	cerr << "c formula was solved with SLS!" << endl;
+	cerr // << endl 
+	 << "c ================================" << endl 
+	 << "c  use the result of SLS as model " << endl
+	 << "c ================================" << endl;
+      }
+    }
+    if (! solver->okay())
+        status = l_False;
+  }
+  
+  if( opt_twosat ) {
+    if( opt_verbose > 0 ) cerr << "c 2sat ..." << endl;
+    if( opt_verbose > 4 )cerr << "c coprocessor 2SAT" << endl;
+    if( status == l_Undef ) {
+      bool solvedBy2SAT = twoSAT.solve();  // cannot change status, can generate new unit clauses
+      if( solvedBy2SAT ) {
+	// cerr << "binary clauses have been solved with 2SAT" << endl;
+	// check satisfiability of whole formula!
+	bool isNotSat = false;
+	for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
+	  const Clause& cl = ca[ data.getClauses()[i] ];
+	  int j = 0;
+	  for(  ; j < cl.size(); ++ j ) {
+	    if( twoSAT.isSat(cl[j]) ) break;
+	  }
+	  if( j == cl.size() ) { isNotSat = true; break; }
+	}
+	if( isNotSat ) {
+	  // only set the phase before search!
+	  if( opt_twosat && !isInprocessing) {
+	    for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
+	  }
+	  cerr // << endl 
+	  << "c ================================" << endl 
+	  << "c  2SAT model is not a real model " << endl
+	  << "c ================================" << endl;
+	} else {
+	  cerr // << endl 
+	  << "c =================================" << endl 
+	  << "c  use the result of 2SAT as model " << endl 
+	  << "c =================================" << endl;
+	}
+      } else {
+	cerr // << endl 
+	 << "================================" << endl 
+	 << " unsatisfiability shown by 2SAT " << endl
+	 << "================================" << endl;
+	data.setFailed();
+      }
+    }
+    if (! solver->okay())
+        status = l_False;
+  }  
+  
+  // clear / update clauses and learnts vectores and statistical counters
+  // attach all clauses to their watchers again, call the propagate method to get into a good state again
+  if( opt_verbose > 4 ) cerr << "c coprocessor re-setup solver" << endl;
+  if ( data.ok() ) {
+    if( data.hasToPropagate() ) 
+      if( opt_up ) propagation.process(data);
+      else cerr << "c should apply UP" << endl;
+  }
+
+  if( opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;
+  
+  if( opt_dense ) {
+    // do as very last step -- not nice, if there are units on the trail!
+    dense.compress(); 
+  }
+  
+  if( isInprocessing ) ipTime = cpuTime() - ipTime;
+  else ppTime = cpuTime() - ppTime;
+  
+  if( opt_check ) fullCheck("final check");
+
+  destroyTechniques();
+  
+  if ( data.ok() ) reSetupSolver();
+  
+  if( opt_verbose > 5 ) printSolver(cerr, 4); // print all details of the solver
+  if( opt_verbose > 4 ) printFormula("after full simplification");
+
+  if( opt_printStats ) {
+    
+    printStatistics(cerr);
+    propagation.printStatistics(cerr);
+    subsumption.printStatistics(cerr);
+    ee.printStatistics(cerr);
+    if( opt_hte ) hte.printStatistics(cerr);
+    if( opt_bve ) bve.printStatistics(cerr);
+    if( opt_bva ) bva.printStatistics(cerr);
+    if( opt_probe ) probing.printStatistics(cerr);
+    if( opt_unhide ) unhiding.printStatistics(cerr);
+    if( opt_ternResolve || opt_addRedBins ) res.printStatistics(cerr);
+    if( opt_sls ) sls.printStatistics(cerr);
+    if( opt_twosat) twoSAT.printStatistics(cerr);
+    if( opt_cce ) cce.printStatistics(cerr);
+    if( opt_dense ) dense.printStatistics(cerr);
+  }
+  
+  // destroy preprocessor data
+  if( opt_verbose > 4 ) cerr << "c coprocessor free data structures" << endl;
+  data.destroy();
+
+  if( !data.ok() ) status = l_False; // to fall back, if a technique forgets to do this
+
+  cout.flush(); cerr.flush();
+
+  return status;
+}
+
+
+
 lbool Preprocessor::preprocess()
 {
   isInprocessing = false;
-  return performSimplification();
+  
+  if( opt_ptechs ) return performSimplificationScheduled( string(opt_ptechs) );
+  else return performSimplification();
 }
 
 lbool Preprocessor::inprocess()
@@ -444,7 +811,11 @@ lbool Preprocessor::inprocess()
     
     if( opt_verbose > 3 ) cerr << "c start inprocessing after another " << solver->conflicts - lastInpConflicts << endl;
     isInprocessing = true;
-    lbool ret = performSimplification();
+    
+    lbool ret = l_Undef;
+    if( opt_itechs ) ret = performSimplificationScheduled( string(opt_itechs) );
+    else ret = performSimplification();
+    
     lastInpConflicts = solver->conflicts;
     if( opt_verbose > 4 ) cerr << "c finished inprocessing " << endl;
     return ret;

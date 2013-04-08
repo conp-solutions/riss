@@ -59,7 +59,7 @@ class BoundedVariableElimination : public Technique {
       subsimpSteps, strengthtLits, strengthtLearntLits;   
       int64_t parBveChecks;
       double processTime, subsimpTime, gateTime, upTime, lockNeighborTime, mereLockingTime;
-      char pad [60]; 
+      char _pad[60];
       ParBVEStats() :   removedClauses(0), removedLiterals(0), createdClauses(0), createdLiterals(0), removedLearnts(0)
                       , learntLits(0), newLearnts(0), newLearntLits(0), testedVars(0), anticipations(0), eliminatedVars(0)
                       , removedBC(0), blockedLits(0), removedBlockedLearnt(0), learntBlockedLit(0), skippedVars(0)
@@ -77,7 +77,7 @@ class BoundedVariableElimination : public Technique {
       skippedVars, unitsEnqueued, foundGates, usedGates, 
       initialClauses, initialLits, clauseCount, litCount, unitCount, elimCount, restarts;   
   int64_t seqBveSteps, bveLimit;
-  int64_t nClsIncreases,nClsDecreases,totallyAddedClauses; // number of clauses that have been added by bve
+  int64_t nClsIncreases,nClsDecreases,nClsKeep,totallyAddedClauses; // number of clauses that have been added by bve
   double processTime, subsimpTime, gateTime;
 
 public:
