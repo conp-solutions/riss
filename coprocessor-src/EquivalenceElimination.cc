@@ -173,7 +173,7 @@ void EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
     } while ( applyEquivalencesToFormula(data ) 
     && data.ok()
     && !data.isInterupted()  
-    && (data.unlimited() || steps << opt_ee_limit )
+    && (data.unlimited() || steps < opt_ee_limit )
     ); // will set literals that have to be analyzed again!
   
     
