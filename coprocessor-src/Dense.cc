@@ -48,6 +48,7 @@ void Dense::compress(const char* newWhiteFile)
     for( ; j < clause.size(); ++j ){
       const Lit l = clause[j];
       
+      if( debug_out && l_Undef != data.value(l) ) cerr << "c DENSE found assigned literal " << l << " in clause ["<< data.getClauses()[i] << "] : " << clause << endl ;
       assert( l_Undef == data.value(l) && "there cannot be assigned literals");
       assert(var(l) < data.nVars() );
       
