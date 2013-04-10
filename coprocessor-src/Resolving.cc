@@ -1,3 +1,7 @@
+/*************************************************************************************[Resolving.h]
+Copyright (c) 2012, Norbert Manthey, All rights reserved.
+**************************************************************************************************/
+
 #include "coprocessor-src/Resolving.h"
 
 using namespace Coprocessor;
