@@ -838,7 +838,8 @@ void Probing::probing()
       }
       // could copy to prNegatie here, but we do not do this, but refer to the vector inside the solver instead
       vec<lbool>& prNegative = solver.assigns;
-      
+
+      if(!data.ok() ) break;
       assert( solver.decisionLevel() == 1 && "");
       
       if( debug_out > 0 ) {

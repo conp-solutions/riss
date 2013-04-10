@@ -24,7 +24,7 @@ void Preprocessor::outputFormula(const char *file, const char *varMap)
 void Preprocessor::getCNFinfo(int& vars, int& cls)
 {
     if( !data.ok() ) { // unsat
-      vars = solver->nVars(); cls = 0; return;
+      vars = solver->nVars(); cls = 1; return;
     }
   
     vec<Lit> & trail = solver->trail;

@@ -114,7 +114,7 @@ int main(int argc, char** argv)
 	      printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
 	  
 	  if (S.verbosity > 0) {
-	      printf("c ===============================[    Qprocessor    ]===========================\n", CP3VERSION/100);	    
+	      printf("c ===============================[    Qprocessor    ]============================\n");
 	      printf("c | Norbert Manthey. The use of the tool is limited to research only!           |\n");
 	  }
 	  
