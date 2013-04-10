@@ -39,7 +39,7 @@ solveEnd=0
 # and output to stdout of the preprocessor is redirected to stderr
 #
 ppStart=`date +%s`
-./cp3 $file $realModel -enabled_cp3 -dimacs=$tmpCNF $cp3params  1>&2
+./qprocessor $file $realModel -enabled_cp3 -dimacs=$tmpCNF $cp3params  1>&2
 exitCode=$?
 ppEnd=`date +%s`
 echo "c preprocessed $(( $ppEnd - $ppStart)) seconds with exit code $exitCode" 1>&2
