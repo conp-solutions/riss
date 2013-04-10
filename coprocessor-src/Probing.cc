@@ -840,6 +840,7 @@ void Probing::probing()
       vec<lbool>& prNegative = solver.assigns;
 
       if(!data.ok() ) break;
+
       assert( solver.decisionLevel() == 1 && "");
       
       if( debug_out > 0 ) {
