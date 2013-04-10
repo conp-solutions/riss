@@ -9,7 +9,7 @@ using namespace Coprocessor;
 static const char* _cat = "COPROCESSOR 3 - UNHIDE";
 
 static IntOption  opt_uhdIters     (_cat, "cp3_uhdIters",     "Number of iterations for unhiding", 3, IntRange(0, INT32_MAX));
-static BoolOption opt_uhdTrans     (_cat, "cp3_uhdTrans",     "Use Transitive Graph Reduction (might be buggy)", false);
+static BoolOption opt_uhdTrans     (_cat, "cp3_uhdTrans",     "Use Transitive Graph Reduction (is buggy)", false);
 static BoolOption opt_uhdUHLE      (_cat, "cp3_uhdUHLE",      "Use Unhiding+Hidden Literal Elimination", true);
 static BoolOption opt_uhdUHTE      (_cat, "cp3_uhdUHTE",      "Use Unhiding+Hidden Tautology Elimination", true);
 static BoolOption opt_uhdNoShuffle (_cat, "cp3_uhdNoShuffle", "Do not perform randomized graph traversation", false);
