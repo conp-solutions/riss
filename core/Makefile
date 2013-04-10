@@ -1,5 +1,4 @@
-
-EXEC      = glucose
+EXEC      = riss3g
 
 DEPDIR    = mtl utils 
 

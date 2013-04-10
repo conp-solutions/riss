@@ -1,22 +1,6 @@
 /**********************************************************************************[Subsumption.cc]
-Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, Max Löwen, All rights reserved.
+Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
-/*
- *
- * Global assumptions concerning occurrence-lists and occurrence-stats
- * -> the sequentiell algorithms update this on their own
- * -> the parallel algorithms fill a vector < OccUpdate >, 
- *    which updates are sequencially performed
- *    -> if some operations occur multiple times, 
- *       the first is performed and the others are ignored
- *       TODO guarantee this !
- *       TODO propagate seems to allow this approach, since it clears Occ-Lists and 
- *            updates Stats, but are all it's operations consistent?
- * 
- * TODO -> change time measure function to wall clock time!
- */
-
-
 
 #include "coprocessor-src/Subsumption.h"
 using namespace Coprocessor;
@@ -665,8 +649,14 @@ void Subsumption::par_nn_strengthening_worker( unsigned int & next_start, unsign
         Clause& strengthener = ca[cr];
      
         lock_strengthener_nn:
-        if (strengthener.can_be_deleted() || strengthener.size() == 0)
+        if (strengthener.can_be_deleted() || !strengthener.can_strengthen() 
+                /*strengthener.size() == 0*/)
             continue;
+        if( !opt_strength ) { // if not enabled, only remove clauses from queue and reset their flag!
+            strengthener.set_strengthen(false);
+            continue;
+        }
+
         Var fst = var(strengthener[0]);
         // lock 1st var
         var_lock[fst].lock();

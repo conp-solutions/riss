@@ -9,6 +9,7 @@ Glucose are exactly the same as Minisat on which it is based on. (see below).
 ---------------
 Copyright (c) 2003-2006, Niklas Een, Niklas Sorensson
 Copyright (c) 2007-2010, Niklas Sorensson
+Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -331,10 +332,6 @@ protected:
     // Returns a random integer 0 <= x < size. Seed must never be 0.
 public: static inline int irand(double& seed, int size) {
         return (int)(drand(seed) * size); }
-        
-/// for bva analysis
-	vec<char> varType; // o=original, a=AND-BVA, i=ITE-BVA, x=XOR-BVA
-	unsigned oDecs, aDecs, iDecs, xDecs;  // count decisions per type
         
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;

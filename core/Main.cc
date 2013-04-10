@@ -10,6 +10,7 @@ Glucose are exactly the same as Minisat on which it is based on. (see below).
 
 Copyright (c) 2003-2006, Niklas Een, Niklas Sorensson
 Copyright (c) 2007-2010, Niklas Sorensson
+Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -46,6 +47,7 @@ using namespace Minisat;
 void printStats(Solver& solver)
 {
     double cpu_time = cpuTime();
+
     double mem_used = 0;//memUsedPeak();
     printf("c restarts              : %"PRIu64" (%"PRIu64" conflicts in avg)\n", solver.starts, solver.starts == 0 ? 0 : solver.conflicts/solver.starts );
     printf("c blocked restarts      : %"PRIu64" (multiple: %"PRIu64") \n", solver.nbstopsrestarts,solver.nbstopsrestartssame);
@@ -63,6 +65,7 @@ void printStats(Solver& solver)
     printf("c nb reduced Clauses    : %lld\n",solver.nbReducedClauses);
     
     if (mem_used != 0) printf("Memory used           : %.2f MB\n", mem_used);
+
     printf("c CPU time              : %g s\n", cpu_time);
 }
 
@@ -76,10 +79,10 @@ static void SIGINT_interrupt(int signum) { solver->interrupt(); }
 // destructors and may cause deadlocks if a malloc/free function happens to be running (these
 // functions are guarded by locks for multithreaded use).
 static void SIGINT_exit(int signum) {
-    printf("\n"); printf("*** INTERRUPTED ***\n");
+    printf("\n"); printf("c *** INTERRUPTED ***\n");
     if (solver->verbosity > 0){
         printStats(*solver);
-        printf("\n"); printf("*** INTERRUPTED ***\n"); }
+        printf("\n"); printf("c *** INTERRUPTED ***\n"); }
     _exit(1); }
 
 
@@ -92,7 +95,6 @@ int main(int argc, char** argv)
 //  printf("c\nc This is glucose 2.1 --  based on MiniSAT (Many thanks to MiniSAT team)\nc\n");
     try {
         setUsageHelp("c USAGE: %s [options] <input-file> <result-output-file>\n\n  where input may be either in plain or gzipped DIMACS.\n");
-        // printf("This is MiniSat 2.0 beta\n");
         
         // Extra options:
         //
@@ -152,20 +154,20 @@ int main(int argc, char** argv)
             printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
         
         if (S.verbosity > 0){
-
-	    printf("c ============================[       RISS 3G      ]=============================\n");
-	    printf("c | Norbert Manthey. The use of the tool is limited to research only!           |\n");
-	    printf("c | Based on Minisat 2.2 and Glucose 2.1  -- thanks!                            |\n");
-	    printf("c | Contributors:                                                               |\n");
-	    printf("c |      Kilian Gebhard (BVE implementatino,parallel preprocessor)              |\n");
-            printf("c ============================[ Problem Statistics ]=============================\n");
-            printf("c |                                                                             |\n"); }
+	    printf("c ============================[       riss3g       ]=======================================================\n");
+	    printf("c | Norbert Manthey. The use of the tool is limited to research only!                                     |\n");
+	    printf("c | Based on Minisat 2.2 and Glucose 2.1  -- thanks!                                                      |\n");
+	    printf("c | Contributors:                                                                                         |\n");
+	    printf("c |      Kilian Gebhard (BVE Implementation,parallel preprocessor)                                        |\n");
+            printf("c ============================[ Problem Statistics ]=======================================================\n");
+            printf("c |                                                                                                       |\n"); }
         
         parse_DIMACS(in, S);
         gzclose(in);
         FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
         
         if (S.verbosity > 0){
+
             printf("c |  Number of variables:  %12d                                                                   |\n", S.nVars());
             printf("c |  Number of clauses:    %12d                                                                   |\n", S.nClauses()); }
         
@@ -227,7 +229,8 @@ int main(int argc, char** argv)
         return (ret == l_True ? 10 : ret == l_False ? 20 : 0);
 #endif
     } catch (OutOfMemoryException&){
-	// printf("===============================================================================\n");
+	// printf("c ===============================================================================\n");
+	printf("c Warning: caught an exception\n");
         printf("s UNKNOWN\n");
         exit(0);
     }
