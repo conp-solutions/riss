@@ -23,14 +23,14 @@ shift												# reduce the parameters, removed the very first one. remaining 
 satsolver=glucose_static						# name of the binary (if not in this directory, give relative path as well)
 
 # default parameters for preprocessor
-cp3params="-enabled_cp3 -cp3_stats -cce"
+cp3params="-enabled_cp3 -cp3_stats"
 
 # some temporary files 
 undo=/tmp/cp3_undo_$$				# path to temporary file that stores cp3 undo information
 tmpCNF=/tmp/cp3_tmpCNF_$$		# path to temporary file that stores cp3 simplified formula
 model=/tmp/cp3_model_$$			# path to temporary file that model of the preprocessor (stdout)
 realModel=/tmp/model_$$			# path to temporary file that model of the SAT solver (stdout)
-echo "c undo: $undo tmpCNF: $tmpCNF model: $model realModel: $realModel"
+echo "c undo: $undo tmpCNF: $tmpCNF model: $model realModel: $realModel"  1>&2
 
 ppStart=0
 ppEnd=0
@@ -51,9 +51,9 @@ echo "c preprocessed $(( $ppEnd - $ppStart)) seconds with exit code $exitCode"
 # solved by preprocessing
 if [ "$exitCode" -eq "10" -o "$exitCode" -eq "20" ]
 then 
-	echo "c solved by preprocessor"
+	echo "c solved by preprocessor" 1>&2
 else
-	echo "c not solved by preprocessor -- do search"
+	echo "c not solved by preprocessor -- do search" 1>&2
 	if [ "$exitCode" -eq "0" ]
 	then
 		#
@@ -76,7 +76,7 @@ else
 		# undo the model
 		# coprocessor can also handle "s UNSATISFIABLE"
 		#
-		echo "c post-process with cp3"
+		echo "c post-process with cp3" 1>&2
 		./cp3 -cp3_post -cp3_undo=$undo -cp3_model=$model $cp3params > $realModel
 	
 		#
@@ -84,14 +84,14 @@ else
 		#
 		if [ "$exitCode" -eq "10" ]
 		then
-			echo "c verify model ..."
+			echo "c verify model ..." 1>&2
 #			./verify SAT $realModel $file
 		fi
 	else
 		#
 		# preprocessor returned some unwanted exit code
 		#
-		echo "c preprocessor has been unable to solve the instance"
+		echo "c preprocessor has been unable to solve the instance" 1>&2
 		#
 		# run sat solver on initial instance
 		# and output to stdout of the sat solver is redirected to stderr
@@ -108,7 +108,7 @@ fi
 # print times
 #
 
-echo "c pp-time: $(( $ppEnd - $ppStart)) solve-time: $(( $solveEnd - $solveStart ))";
+echo "c pp-time: $(( $ppEnd - $ppStart)) solve-time: $(( $solveEnd - $solveStart ))" 1>&2
 
 #
 # print solution
@@ -118,7 +118,7 @@ cat $realModel;
 #
 # remove tmp files
 #
-# rm -f $undo $undo.map $tmpCNF $model $realModel;
+rm -f $undo $undo.map $tmpCNF $model $realModel;
 
 #
 # return with correct exit code

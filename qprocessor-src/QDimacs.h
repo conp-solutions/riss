@@ -95,7 +95,7 @@ static void parse_QDIMACS_main(B& in, Solver& S, std::vector<quantification>& qu
 	    readQuantifier(in, S, quantifiers[quantifiers.size() - 1]);
 	}
         else{
-	  cerr << "next symbol: (" << *in << ")" << endl;
+	  // cerr << "next symbol: (" << *in << ")" << endl;
             cnt++;
             readClause(in, S, lits);
             S.addClause_(lits); }
