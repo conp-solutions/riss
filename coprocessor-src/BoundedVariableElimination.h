@@ -27,9 +27,6 @@ class BoundedVariableElimination : public Technique {
   // variable heap comperators
   const int heap_option;
   
-  struct NeighborLt {
-        bool operator () (Var x, Var y) const { return x < y; }
-  }; 
   struct PostponeReason {
       Var var, reason;
       PostponeReason ( Var _var, Var _reason) : var(_var), reason(_reason) {}
@@ -52,9 +49,7 @@ class BoundedVariableElimination : public Technique {
   vector< deque < CRef > > strengthQueues;
   vector< deque < PostponeReason > > postpones;
   vector< MarkArray > gateMarkArrays;
-  Heap<NeighborLt>  ** neighbor_heaps;
   deque< CRef > sharedStrengthQueue;
-  NeighborLt neighborComperator;
   ReadersWriterLock allocatorRWLock;
   // stats variables
   struct ParBVEStats {
@@ -88,18 +83,6 @@ class BoundedVariableElimination : public Technique {
 public:
   
   BoundedVariableElimination( ClauseAllocator& _ca, ThreadController& _controller , Coprocessor::Propagation & _propagation, Coprocessor::Subsumption & _subsumption);
- ~BoundedVariableElimination()
- {
-    if (neighbor_heaps != 0)
-    {
-        for (int i = 0; i < controller.size(); ++i)
-        {
-            if (neighbor_heaps[i] != 0)
-                delete neighbor_heaps[i];
-        }
-        free(neighbor_heaps);
-    }
- } 
  
   lbool process(CoprocessorData & data, const bool doStatistics = true) { modifiedFormula = false; return runBVE(data, doStatistics); }
 
@@ -136,7 +119,6 @@ protected:
     vector<SpinLock> * var_locks; // Spin Lock for Variables
     ReadersWriterLock * rw_lock;  // rw-lock for CA
     Heap<VarOrderBVEHeapLt> * heap; // Shared heap with variables for elimination check
-    Heap<NeighborLt> * neighbor_heap; // heap for Neighbor calculation
     MarkArray * dirtyOccs;
     deque<CRef> * strengthQueue;
     deque<CRef> * sharedStrengthQueue;
@@ -151,7 +133,7 @@ protected:
 
   // parallel functions:
   void par_bve_worker 
-          ( CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap, Heap<NeighborLt> & neighbor_heap
+          ( CoprocessorData& data, Heap<VarOrderBVEHeapLt> & heap
           , deque < CRef > & strengthQueue , deque < CRef > & sharedStrengthQueue, deque < PostponeReason > & postponed 
           , vector< SpinLock > & var_lock, ReadersWriterLock & rwlock
           , ParBVEStats & stats , MarkArray * gateMarkArray, int & rwlock_count
@@ -166,7 +148,7 @@ protected:
   
   inline void removeClausesThreadSafe(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const vector<CRef> & list, const Lit l, const int limit, SpinLock & data_lock, SpinLock & heap_lock, ParBVEStats & stats, int & garbageCounter, const bool doStatistics);
   inline lbool resolveSetThreadSafe(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, vector<CRef> & positive, vector<CRef> & negative, const int v, const int p_limit, const int n_limit, vec < Lit > & ps, AllocatorReservation & memoryReservation, deque<CRef> & strengthQueue, ParBVEStats & stats, SpinLock & data_lock, SpinLock & heap_lock, int expectedResolvents, int64_t& bveChecks, const bool doStatistics, const bool keepLearntResolvents = false);
-  inline lbool anticipateEliminationThreadsafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const int p_limit, const int n_limit, vec<Lit> & resolvent, int32_t* pos_stats, int32_t* neg_stats, int & lit_clauses, int & lit_learnts, int & new_clauses, int & new_learnts, SpinLock & data_lock, ParBVEStats & stats, int64_t& bveChecks, const bool doStatistics);
+  inline lbool anticipateEliminationThreadsafe(CoprocessorData & data, vector<CRef> & positive, vector<CRef> & negative, const int v, const int p_limit, const int n_limit, vec<Lit> & resolvent, vec < int32_t > & pos_stats, vec < int32_t > & neg_stats, int & lit_clauses, int & lit_learnts, int & new_clauses, int & new_learnts, SpinLock & data_lock, ParBVEStats & stats, int64_t& bveChecks, const bool doStatistics);
   inline void removeBlockedClausesThreadSafe(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const vector< CRef> & list, const int32_t _stats[], const Lit l, const int limit, SpinLock & data_lock, SpinLock & heap_lock, ParBVEStats & stats, int & garbageCounter, const bool doStatistics );
 
   // Special subsimp implementations for par bve:
