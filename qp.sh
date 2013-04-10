@@ -23,7 +23,7 @@ shift												# reduce the parameters, removed the very first one. remaining 
 qbfsolver=depqbf						# name of the binary (if not in this directory, give relative path as well)
 
 # default parameters for preprocessor
-cp3params="-enabled_cp3 -cp3_stats -up -subsimp -bva -no-cp3_strength -probe"
+cp3params="-enabled_cp3 -cp3_stats -up -subsimp -bva -cp3_strength -probe"
 
 # some temporary files 
 tmpCNF=/tmp/cp3_tmpCNF_$$		# path to temporary file that stores cp3 simplified formula
@@ -66,22 +66,26 @@ then
 else
 		if [ "$exitCode" -eq "20" ]
 		then
+			#
+			# preprocessor found formula being unsatisfiable
+			#
 			echo "c preprocessor found UNSAT"  1>&2
 		  echo "UNSAT"
+		else
+			#
+			# preprocessor returned some unwanted exit code
+			#
+			echo "c preprocessor has been unable to solve the instance"  1>&2
+			#
+			# run qbf solver on initial instance
+			# and output to stdout of the qbf solver is redirected to stderr
+			#
+			solveStart=`date +%s`
+			./$qbfsolver $file   $@ 
+				exitCode=$?
+			solveEnd=`date +%s`
+			echo "c solved $(( $solveEnd - $solveStart )) seconds" 1>&2
 		fi
-		#
-		# preprocessor returned some unwanted exit code
-		#
-		echo "c preprocessor has been unable to solve the instance"  1>&2
-		#
-		# run qbf solver on initial instance
-		# and output to stdout of the qbf solver is redirected to stderr
-		#
-		solveStart=`date +%s`
-		./$qbfsolver $file 1>&2
-		exitCode=$?
-		solveEnd=`date +%s`
-		echo "c solved $(( $solveEnd - $solveStart )) seconds" 1>&2
 fi
 
 
