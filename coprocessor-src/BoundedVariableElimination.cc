@@ -1,5 +1,5 @@
 /*******************************************************************[BoundedVariableElimination.cc]
-Copyright (c) 2012, Kilian Gebhardt, All rights reserved.
+Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 #include "coprocessor-src/BoundedVariableElimination.h"
 #include "coprocessor-src/Propagation.h"

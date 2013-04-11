@@ -3,7 +3,6 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
 #include "coprocessor-src/Coprocessor.h"
-#include "../coprocessor-src/VarGraphUtils.h"
 
 #include <iostream>
 
@@ -292,20 +291,6 @@ lbool Preprocessor::performSimplification()
     if( printAddRedBin  ) printFormula("after TernResolve");
   }
    
-  // tobias
-//   vec<Var> vars;
-//   MarkArray array;
-//     array.create( solver->nVars() );
-//     array.nextStep();
-//   for( Var v = 0 ; v < solver->nVars(); ++v )
-//   {
-//     if(!array.isCurrentStep(v) ) {
-//       vars.push(v);
-//       data.mark1(v);
-//     }
-//   }
-  // vars = cluster variablen
-  VarGraphUtils utils;
 
   if( opt_sls ) {
     if( opt_verbose > 0 ) cerr << "c sls ..." << endl;

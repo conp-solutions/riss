@@ -30,13 +30,13 @@ void printStats(Solver& solver)
 {
     double cpu_time = cpuTime();
     double mem_used = memUsedPeak();
-    printf("restarts              : %"PRIu64"\n", solver.starts);
-    printf("conflicts             : %-12"PRIu64"   (%.0f /sec)\n", solver.conflicts   , solver.conflicts   /cpu_time);
-    printf("decisions             : %-12"PRIu64"   (%4.2f %% random) (%.0f /sec)\n", solver.decisions, (float)solver.rnd_decisions*100 / (float)solver.decisions, solver.decisions   /cpu_time);
-    printf("propagations          : %-12"PRIu64"   (%.0f /sec)\n", solver.propagations, solver.propagations/cpu_time);
-    printf("conflict literals     : %-12"PRIu64"   (%4.2f %% deleted)\n", solver.tot_literals, (solver.max_literals - solver.tot_literals)*100 / (double)solver.max_literals);
-    if (mem_used != 0) printf("Memory used           : %.2f MB\n", mem_used);
-    printf("CPU time              : %g s\n", cpu_time);
+    printf("c restarts              : %"PRIu64"\n", solver.starts);
+    printf("c conflicts             : %-12"PRIu64"   (%.0f /sec)\n", solver.conflicts   , solver.conflicts   /cpu_time);
+    printf("c decisions             : %-12"PRIu64"   (%4.2f %% random) (%.0f /sec)\n", solver.decisions, (float)solver.rnd_decisions*100 / (float)solver.decisions, solver.decisions   /cpu_time);
+    printf("c propagations          : %-12"PRIu64"   (%.0f /sec)\n", solver.propagations, solver.propagations/cpu_time);
+    printf("c conflict literals     : %-12"PRIu64"   (%4.2f %% deleted)\n", solver.tot_literals, (solver.max_literals - solver.tot_literals)*100 / (double)solver.max_literals);
+    if (mem_used != 0) printf("c Memory used           : %.2f MB\n", mem_used);
+    printf("c CPU time              : %g s\n", cpu_time);
 }
 
 
@@ -49,10 +49,10 @@ static void SIGINT_interrupt(int signum) { solver->interrupt(); }
 // destructors and may cause deadlocks if a malloc/free function happens to be running (these
 // functions are guarded by locks for multithreaded use).
 static void SIGINT_exit(int signum) {
-    printf("\n"); printf("*** INTERRUPTED ***\n");
+    printf("\n"); printf("c *** INTERRUPTED ***\n");
     if (solver->verbosity > 0){
         printStats(*solver);
-        printf("\n"); printf("*** INTERRUPTED ***\n"); }
+        printf("\n"); printf("c *** INTERRUPTED ***\n"); }
     _exit(1); }
 
 
@@ -63,7 +63,6 @@ int main(int argc, char** argv)
 {
     try {
         setUsageHelp("USAGE: %s [options] <input-file> <result-output-file>\n\n  where input may be either in plain or gzipped DIMACS.\n");
-        // printf("This is MiniSat 2.0 beta\n");
         
         // Extra options:
         //
@@ -93,7 +92,7 @@ int main(int argc, char** argv)
             if (rl.rlim_max == RLIM_INFINITY || (rlim_t)cpu_lim < rl.rlim_max){
                 rl.rlim_cur = cpu_lim;
                 if (setrlimit(RLIMIT_CPU, &rl) == -1)
-                    printf("WARNING! Could not set resource limit: CPU-time.\n");
+                    printf("c WARNING! Could not set resource limit: CPU-time.\n");
             } }
 
         // Set limit on virtual memory:
@@ -104,43 +103,38 @@ int main(int argc, char** argv)
             if (rl.rlim_max == RLIM_INFINITY || new_mem_lim < rl.rlim_max){
                 rl.rlim_cur = new_mem_lim;
                 if (setrlimit(RLIMIT_AS, &rl) == -1)
-                    printf("WARNING! Could not set resource limit: Virtual memory.\n");
+                    printf("c WARNING! Could not set resource limit: Virtual memory.\n");
             } }
     
 	  if (argc == 1)
-	      printf("Reading from standard input... Use '--help' for help.\n");
+	      printf("c Reading from standard input... Use '--help' for help.\n");
 
 	  gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
 	  if (in == NULL)
-	      printf("ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
+	      printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
 	  
 	  if (S.verbosity > 0) {
-  #ifdef CP3VERSION
-	      printf("===============================[  Qprocessor %4.2f  ]===========================\n", CP3VERSION/100);	    
-	      printf("| Norbert Manthey. The use of the tool is limited to research only!           |\n");
-  #else
-	      printf("===============================[  Qprocessor  ]================================\n");	    
-	      printf("| Norbert Manthey                                                             |\n");
-  #endif
+	      printf("c ===============================[    Qprocessor    ]============================\n");
+	      printf("c | Norbert Manthey. The use of the tool is limited to research only!           |\n");
 	  }
 	  
 	      if (S.verbosity > 0) {
-		  printf("|                                                                             |\n");
-		  printf("============================[ Problem Statistics ]=============================\n");
-		  printf("|                                                                             |\n"); }
+		  printf("c |                                                                             |\n");
+		  printf("c ============================[ Problem Statistics ]=============================\n");
+		  printf("c |                                                                             |\n"); }
 	    
 	    vector<quantification> quantifiers;
 	    parse_QDIMACS(in, S,quantifiers);
 	    gzclose(in);
 
 	    if (S.verbosity > 0){
-	        printf("|  Number of quantifiers:  %12d                                       |\n", quantifiers.size());
-		printf("|  Number of variables:    %12d                                       |\n", S.nVars());
-		printf("|  Number of clauses:      %12d                                       |\n", S.nClauses()); }
+	        printf("c |  Number of quantifiers:  %12d                                       |\n", quantifiers.size());
+		printf("c |  Number of variables:    %12d                                       |\n", S.nVars());
+		printf("c |  Number of clauses:      %12d                                       |\n", S.nClauses()); }
 	    
 	    double parsed_time = cpuTime();
 	    if (S.verbosity > 0)
-		printf("|  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time);
+		printf("c |  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time);
 
 	    // Change to signal-handlers that will only notify the solver and allow it to terminate
 	    // voluntarily:
@@ -152,14 +146,14 @@ int main(int argc, char** argv)
 	    
 	    double simplified_time = cpuTime();
 	    if (S.verbosity > 0){
-		printf("|  Simplification time:  %12.2f s                                       |\n", simplified_time - parsed_time);
-		printf("|                                                                             |\n"); }
+		printf("c |  Simplification time:  %12.2f s                                       |\n", simplified_time - parsed_time);
+		printf("c |                                                                             |\n"); }
 
 	    // do coprocessing here!
 
 	    if (dimacs){
 		if (S.verbosity > 0)
-		    printf("==============================[ Writing QDIMACS ]===============================\n");
+		    printf("c ==============================[ Writing QDIMACS ]===============================\n");
 		
 		  FILE* res = fopen(dimacs, "wb") ;
 		
@@ -188,7 +182,8 @@ int main(int argc, char** argv)
         return (0);
 #endif
     } catch (OutOfMemoryException&){
-        printf("===============================================================================\n");
+        printf("c ===============================================================================\n");
+	printf("c WARNING: caught an exception \n");
         printf("s UNKNOWN\n");
         exit(0);
     }

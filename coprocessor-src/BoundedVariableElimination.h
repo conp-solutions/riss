@@ -1,5 +1,5 @@
 /********************************************************************[BoundedVariableElimination.h]
-Copyright (c) 2012, Kilian Gebhardt, All rights reserved.
+Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 #ifndef BVE_HH
 #define BVE_HH

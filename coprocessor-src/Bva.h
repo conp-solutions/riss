@@ -24,7 +24,7 @@ class BoundedVariableAddition : public Technique  {
   
   // statistics
   double processTime;		// seconds of process time
-  double andTime,iteTime,xorTime;	// seconds per technique
+  double andTime;	// seconds per technique
   
   uint32_t andDuplicates;		// how many duplicate clauses have been found
   uint32_t andComplementCount;	// how many complementary literals have been found (strengthening)
@@ -33,23 +33,7 @@ class BoundedVariableAddition : public Technique  {
   uint32_t andReplacedOrs;		// how many disjunctions could be replaced by the fresh variable
   uint32_t andReplacedMultipleOrs;	// how many times could multiple or gates be replaced
   int64_t andMatchChecks;
-  
-  int xorfoundMatchings;
-  int xorMultiMatchings;
-  int xorMatchSize;
-  int xorMaxPairs;
-  int xorFullMatches;
-  int xorTotalReduction;
-  int64_t xorMatchChecks;
-  
-  int iteFoundMatchings;
-  int iteMultiMatchings;
-  int iteMatchSize;
-  int iteMaxPairs ;
-  int iteTotalReduction;
-  int64_t iteMatchChecks;
-  
-  
+
   // work data
   /// compare two literals
   struct LitOrderBVAHeapLt {
@@ -88,14 +72,6 @@ protected:
   /** perform AND-bva */
   bool andBVA();
 
-  /** perform ITE-bva */
-  bool iteBVAhalf();
-  bool iteBVAfull();
-  
-  /** perform XOR-bva */
-  bool xorBVAhalf();
-  bool xorBVAfull();
-  
   /** prototype implementation of a BVA version that can replace multiple literals
   */
   bool variableAddtionMulti(bool sort = true);
@@ -111,47 +87,7 @@ protected:
 
   /** check data structures */
   bool checkLists(const string& headline);
-  
-  /** pair of literals and clauses, including sort operator */
-  struct xorHalfPair {
-    Lit l1,l2;
-    CRef c1,c2;
-    xorHalfPair( Lit _l1, Lit _l2, CRef _c1, CRef _c2) : l1(_l1),l2(_l2),c1(_c1),c2(_c2){}
-    xorHalfPair() : l1(lit_Undef),l2(lit_Undef),c1(CRef_Undef),c2(CRef_Undef){}
-    
-    /** generate an order, so that pairs that belong to the same XOR gate are placed behind each other */
-    bool operator>(const xorHalfPair& other ) const {
-      return ( toInt(l2) > toInt( other.l2 ));
-    }
-    bool operator<(const xorHalfPair& other ) const {
-      return ( toInt(l2) < toInt( other.l2 ));
-    }
-    
-  };
 
-  struct iteHalfPair {
-    Lit l1,l2,l3;
-    CRef c1,c2;
-    iteHalfPair( Lit _l1, Lit _l2, Lit _l3, CRef _c1, CRef _c2)
-      : l1(_l1),l2(_l2),l3(_l3),c1(_c1),c2(_c2){}
-      
-    iteHalfPair() : l1(lit_Undef),l2(lit_Undef),l3(lit_Undef),c1(CRef_Undef),c2(CRef_Undef){}
-
-      /** generate an order, so that pairs that belong to the same ITE gate are placed behind each other */
-    bool operator>(const iteHalfPair& other) const {
-	const Var iv2 = var(l2); const Var jv2 = var(other.l2);
-	const Var iv3 = var(l3); const Var jv3 = var(other.l3);
-	const bool signDiff = (sign(l2));
-	return (   iv2 > jv2
-	   || (iv2 == jv2 &&  iv3 > jv3)
-	   || (iv2 == jv2 &&  iv3 == jv3 && signDiff )
-	);
-    }
-    bool operator<(const iteHalfPair& other) const {
-      return other > *this; 
-    }
-  };
-  
   /** remove duplicate clauses from the clause list of the given literal*/
   void removeDuplicateClauses( const Lit literal );
   
@@ -161,8 +97,6 @@ public:
   uint32_t bvaPush;		/// which literals to push to queue again (0=none,1=original,2=all)
   bool bvaRewEE;		/// run rewEE after BVA found new gates?
   int64_t bvaALimit;		/// number of checks until and-bva is aborted
-  int64_t bvaXLimit;		/// number of checks until xor-bva is aborted
-  int64_t bvaILimit;		/// number of checks until ite-bva is aborted
   bool bvaRemoveDubplicates;	/// remove duplicate clauses from occurrence lists
   bool bvaSubstituteOr;	/// when c = (a AND b) is found, also replace (-a OR -b) by -c
 };

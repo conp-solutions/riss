@@ -1,22 +1,6 @@
 /**********************************************************************************[Subsumption.cc]
-Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, Max Löwen, All rights reserved.
+Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
-/*
- *
- * Global assumptions concerning occurrence-lists and occurrence-stats
- * -> the sequentiell algorithms update this on their own
- * -> the parallel algorithms fill a vector < OccUpdate >, 
- *    which updates are sequencially performed
- *    -> if some operations occur multiple times, 
- *       the first is performed and the others are ignored
- *       TODO guarantee this !
- *       TODO propagate seems to allow this approach, since it clears Occ-Lists and 
- *            updates Stats, but are all it's operations consistent?
- * 
- * TODO -> change time measure function to wall clock time!
- */
-
-
 
 #include "coprocessor-src/Subsumption.h"
 using namespace Coprocessor;

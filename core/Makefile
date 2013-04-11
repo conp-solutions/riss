@@ -1,4 +1,4 @@
-EXEC      = minisat
+EXEC      = riss3m
 
 DEPDIR    = mtl utils 
 
