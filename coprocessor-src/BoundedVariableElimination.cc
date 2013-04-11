@@ -384,7 +384,10 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            // do not work on this variable, if it will be unit-propagated! if all units are eagerly propagated, this is not necessary
            if  (data.value(mkLit(v,true)) != l_Undef || data.value(mkLit(v,false)) != l_Undef)
                continue;
-           
+           // do not work on this variable, if it does not occur in the formula (any more)
+           if (data.list(mkLit(v,false)).size() == 0 && data.list(mkLit(v,true)).size() == 0)
+               continue;
+
            // Heuristic Cutoff Gate-Search
            if (!opt_force_gates && !opt_unlimited_bve && (data[mkLit(v,true)] > 10 && data[mkLit(v,false)] > 10 || data[v] > 15 && (data[mkLit(v,true)] > 5 || data[mkLit(v,false)] > 5)))
            {
