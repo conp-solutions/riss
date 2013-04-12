@@ -30,7 +30,7 @@ static const int par_bve_threshold = 0;
 static const int postpone_locked_neighbors = 1;
 static const bool opt_minimal_updates = false;
 #else
-static IntOption  par_bve_threshold (_cat_bve, "par_bve_th", "Threshold for use of BVE-Worker", 10000, IntRange(0,INT32_MAX)); //TODO lower in case of force_gates
+static IntOption  par_bve_threshold (_cat_bve, "par_bve_th", "Threshold for use of BVE-Worker", 10000, IntRange(0,INT32_MAX)); 
 static IntOption  postpone_locked_neighbors (_cat_bve, "postp_lockd_neighb", "Postpone Elimination-Check if more neighbors are locked", 3, IntRange(0,INT32_MAX));
 static BoolOption opt_minimal_updates       (_cat_bve, "par_bve_min_upd", "Omit LitOcc and Heap updates to reduce locking", false);
 #endif
@@ -290,7 +290,6 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
             }
             c.unlock();
         }
-        // TODO: do we need a data-lock here?
         timeStamp = lastTouched.getIndex(v); // get last modification of v
 
         assert(rwlock_count == 1);
@@ -1128,7 +1127,12 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
         if (opt_bve_findGate) data.ma.resize( data.nVars() * 2 );
         cerr << "c sequentiel bve on " 
              << QSize << " variables" << endl;
+        int parBveStepSum = 0; 
+        for (int i = 0; i < controller.size(); ++i)
+            parBveStepSum += parStats[i].parBveChecks;
+        seqBveSteps += parBveStepSum / controller.size();
         bve_worker (data, newheap,seqBveSteps);
+        seqBveSteps -= parBveStepSum / controller.size();
     }
     //propagate units
     if (data.hasToPropagate()) {
