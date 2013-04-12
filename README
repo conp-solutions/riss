@@ -1,30 +1,15 @@
-================================================================================
-DIRECTORY OVERVIEW:
-
-mtl/            Mini Template Library
-utils/          Generic helper code (I/O, Parsing, CPU-time, etc)
-core/           A core version of the solver
-simp/           An extended solver with simplification capabilities
-README
-LICENSE
+You can receive the latest copy of the riss and coprocessor tool collection from
+http://tools.computational-logic.org
+Please send bug reports to norbert.manthey@tu-dresden.de
 
 ================================================================================
 BUILDING: 
 
-To build minisat:
-make minisat
+To build riss:
+make rissRS
 
 To build coprocessor:
-make coprocessor
+make coprocessorRS
 
-================================================================================
-EXAMPLES:
-
-Run minisat with same heuristics as version 2.0:
-
-> minisat <cnf-file> -no-luby -rinc=1.5 -phase-saving=0 -rnd-freq=0.02
-
-Run minisat with coprocessor as preprocessor
-
-> minisat <cnf-file> -enabled_cp3
-
+To get help, run
+<tool> --help

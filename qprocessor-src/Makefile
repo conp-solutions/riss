@@ -1,3 +1,7 @@
+# Makefile for qprocessor QBF preprocessor
+# Copyright (c) 2012-2013, Norbert Manthey
+
+
 EXEC      = qprocessor
 DEPDIR    = mtl utils core
 
