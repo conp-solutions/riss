@@ -117,27 +117,21 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
     ) // if solver state = false => abort
     {
         // Propagate (rw-locks)
-        data_lock.lock(); // FIXME: do this check also before the lock!
         if (data.hasToPropagate())
         {
-            data_lock.unlock();
             if (doStatistics) stats.upTime = wallClockTime() -  stats.upTime;
             par_bve_propagate(data, heap, var_Undef, var_lock, rwlock, dirtyOccs, sharedStrengthQueue, stats, rwlock_count, garbageCounter, doStatistics);
             if (doStatistics) stats.upTime = wallClockTime() -  stats.upTime;
             continue;
         }
-        data_lock.unlock();
         // Subsimp
-        susi_lock.lock();
-        if (sharedStrengthQueue.size() > 0) // FIXME do this check also before the lock!
+        if (sharedStrengthQueue.size() > 0) 
         {
-            susi_lock.unlock();
             if (doStatistics) stats.subsimpTime = wallClockTime() -  stats.subsimpTime;
             par_bve_strengthening_worker(data, heap, var_Undef, var_lock, rwlock, sharedStrengthQueue, strengthQueue, dirtyOccs, stats, rwlock_count, garbageCounter, false, doStatistics);
             if (doStatistics) stats.subsimpTime = wallClockTime() -  stats.subsimpTime;
             continue;
         }
-        susi_lock.unlock();
        
         // Eliminate
         Var v = var_Undef;
