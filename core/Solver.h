@@ -285,6 +285,12 @@ protected:
     // Returns a random integer 0 <= x < size. Seed must never be 0.
 public: static inline int irand(double& seed, int size) {
         return (int)(drand(seed) * size); }
+
+protected:
+  // UIP hack
+  void analyzeOne( Minisat::CRef confl, Minisat::vec< Minisat::Lit >& learntUnits );
+  int l1conflicts; // number of conflicts at level 1
+  int multiLearnt; // number of multiple learnt units at level 1
         
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;
