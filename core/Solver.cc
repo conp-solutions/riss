@@ -707,7 +707,7 @@ lbool Solver::search(int nof_conflicts)
 	      analyzeOne(confl, learnt_clause );
 	      cancelUntil(0);
 	      for( int i = 0 ; i < learnt_clause.size(); ++ i ) 
-		uncheckedEnqueue(learnt_clause[0]);
+		uncheckedEnqueue(learnt_clause[i]);
 	      multiLearnt = ( learnt_clause.size() > 1 ? multiLearnt + 1 : multiLearnt );
 	      
 	    } else {
