@@ -438,6 +438,10 @@ void Subsumption::par_strengthening_worker( unsigned int & next_start, unsigned 
             lock_strengthener:
             if (c.can_be_deleted() || c.size() == 0)
                 continue;
+            if( !opt_strength ) { // if not enabled, only remove clauses from queue and reset their flag!
+                c.set_strengthen(false);
+                continue;
+            }
             Var fst = var(c[0]);
             
             // lock 1st var
