@@ -133,7 +133,7 @@ int main(int argc, char** argv)
 	    printf("c ============================[       riss3m       ]=============================\n");
 	    printf("c | Norbert Manthey. The use of the tool is limited to research only!           |\n");
 	    printf("c | Contributors:                                                               |\n");
-	    printf("c |     Kilian Gebhard: Implementation of BVE, Subsumption, Parallelization     |\n");
+	    printf("c |     Kilian Gebhardt: Implementation of BVE, Subsumption, Parallelization    |\n");
             printf("c ============================[ Problem Statistics ]=============================\n");
             printf("c |                                                                             |\n"); }
         
