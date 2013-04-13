@@ -76,13 +76,15 @@ static DoubleOption  opt_restart_inc       (_cat, "rinc",        "Restart interv
 */
 static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction of wasted memory allowed before a garbage collection is triggered",  0.20, DoubleRange(0, false, HUGE_VAL, false));
 
+static IntOption     opt_allUipHack        ("MODS", "alluiphack", "learn all unit UIPs at any level", 0, IntRange(0, 2) );
 static BoolOption    opt_uipHack           ("MODS", "uiphack",      "learn more UIPs at decision level 1", false);
 static IntOption     opt_uips              ("MODS", "uiphack-uips", "learn at most X UIPs at decision level 1 (0=all)", 0, IntRange(0, INT32_MAX));
 
 
-static IntOption     opt_hack              ("HACK",    "hack",      "use hack modifications", 0, IntRange(0, 3) );
-static BoolOption    opt_hack_cost         ("HACK",    "hack-cost", "use size cost", true );
-static BoolOption    opt_dbg               ("HACK",    "dbg",       "debug hack", false );
+static IntOption     opt_hack              ("REASON",    "hack",      "use hack modifications", 0, IntRange(0, 3) );
+static BoolOption    opt_hack_cost         ("REASON",    "hack-cost", "use size cost", true );
+static BoolOption    opt_dbg               ("REASON",    "dbg",       "debug hack", false );
+
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -342,11 +344,15 @@ Lit Solver::pickBranchLit()
 |        rest of literals. There may be others from the same level though.
 |  
 |________________________________________________________________________________________________@*/
-void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned int &lbd)
+
+int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned int &lbd)
 {
     int pathC = 0;
     Lit p     = lit_Undef;
 
+    int units = 0;
+    bool isOnlyUnit = true;
+    
     // Generate conflict clause:
     //
     out_learnt.push();      // (leave room for the asserting literal)
@@ -384,9 +390,14 @@ void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned
 
 		} else {
                     out_learnt.push(q);
+		    // if( isOnlyUnit && units > 0 ) printf("c stopUnits because of variable %d\n", var(q) + 1 );
+		    isOnlyUnit = false; // we found a literal from another level, thus the multi-unit clause cannot be learned
 		}
 	    }
+
         }
+        
+        if( !isOnlyUnit && units > 0 ) break; // do not consider the next clause, because we cannot continue with units
         
         // Select next clause to look at:
         while (!seen[var(trail[index--])]); // cerr << "c check seen for literal " << (sign(trail[index]) ? "-" : " ") << var(trail[index]) + 1 << " at index " << index << " and level " << level( var( trail[index] ) )<< endl;
@@ -396,8 +407,46 @@ void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned
         seen[var(p)] = 0;
         pathC--;
 
-    }while (pathC > 0);
-    out_learnt[0] = ~p;
+	// do unit analysis only, if the clause did not become larger already!
+	if( opt_allUipHack > 0  && pathC <= 0 && isOnlyUnit && out_learnt.size() == 1+units ) { 
+	  learntUnit ++; 
+	  units ++; // count current units
+	  // printf(" c found units: %d, this var: %d\n", units, var(~p)+1 );
+	  out_learnt.push( ~p ); // store unit
+	  if( opt_allUipHack == 1 ) break; // for now, stop at the first unit! // TODO collect all units
+	}
+	
+	// do stop here
+    } while (
+       //if no unit clause is learned, and the first UIP is hit
+         (units == 0 && pathC > 0)
+      // or 1stUIP is unit, but the current learned clause would be bigger, and there are still literals on the current level
+      || (isOnlyUnit && units > 0 && index >= trail_lim[ decisionLevel() - 1] ) 
+      
+    );
+    
+    assert( out_learnt.size() > 0 && "there has to be some learnt clause" );
+    
+        // if we do not use units, add asserting literal to learned clause!
+    if( units == 0 ) out_learnt[0] = ~p;
+    else { 
+      // process learnt units!
+      // clear seen
+      for( int i = units+1; i < out_learnt.size() ; ++ i ) seen[ var(out_learnt[i]) ] = 0;
+      out_learnt.shrink( out_learnt.size() - 1 - units );  // keep units+1 elements!
+      
+      assert( out_learnt.size() > 1 && "there should have been a unit" );
+      out_learnt[0] = out_learnt.last(); out_learnt.pop(); // close gap in vector
+      // printf("c first unit is %d\n", var( out_learnt[0] ) + 1 );
+      
+      out_btlevel = 0; // jump back to level 0!
+      
+      // clean seen, if more literals have been added
+      if( !isOnlyUnit ) while (index >= trail_lim[ decisionLevel() - 1 ] ) seen[ var(trail[index--]) ] = 0;
+      
+      lbd = 1; // for glucoses LBD score
+      return units;
+    }
 
     // Simplify conflict clause:
     //
@@ -545,6 +594,7 @@ void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned
 
 
     for (int j = 0; j < analyze_toclear.size(); j++) seen[var(analyze_toclear[j])] = 0;    // ('seen[]' is now cleared)
+    return 0;
 }
 
 
@@ -1092,21 +1142,31 @@ lbool Solver::search(int nof_conflicts)
 	      
 	      nbUn+=learnt_clause.size(); // stats
 	      if(nblevels<=2) nbDL2++; // stats
+
 	      multiLearnt = ( learnt_clause.size() > 1 ? multiLearnt + 1 : multiLearnt );
 
 	      
 	    } else {
 	      learnt_clause.clear();
-	      analyze(confl, learnt_clause, backtrack_level,nblevels);
 
-	      lbdQueue.push(nblevels);
-	      sumLBD += nblevels;
-  
-	      cancelUntil(backtrack_level);
+	      int ret = analyze(confl, learnt_clause, backtrack_level,nblevels);
+	      if( ret > 0 ) { // multiple learned clauses
+		assert( backtrack_level == 0 && "found units, have to jump to level 0!" );
+		cancelUntil(backtrack_level);
+		lbdQueue.push(1);sumLBD += 1; // unit clause has one level
+		for( int i = 0 ; i < learnt_clause.size(); ++ i ) // add all units to current state
+		  { uncheckedEnqueue(learnt_clause[i]);  }
+		multiLearnt = ( learnt_clause.size() > 1 ? multiLearnt + 1 : multiLearnt ); // stats
+	      } else { // treat usual learned clause!
 
-	      if (learnt_clause.size() == 1){
-		uncheckedEnqueue(learnt_clause[0]);nbUn++;
-	      }else{
+		lbdQueue.push(nblevels);
+		sumLBD += nblevels;
+
+		cancelUntil(backtrack_level);
+
+		if (learnt_clause.size() == 1){
+		    uncheckedEnqueue(learnt_clause[0]);nbUn++;
+		}else{
 		  CRef cr = ca.alloc(learnt_clause, true);
 		  ca[cr].setLBD(nblevels); 
 		  if(nblevels<=2) nbDL2++; // stats
@@ -1117,6 +1177,8 @@ lbool Solver::search(int nof_conflicts)
 		  
 		  claBumpActivity(ca[cr]);
 		  uncheckedEnqueue(learnt_clause[0], cr);
+		}
+
 	      }
 	    }
             varDecayActivity();
@@ -1265,7 +1327,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
       printf("c =========================================================================================================\n");
     
     if (verbosity >= 1)
-        printf("c Learnt At Level 1: %d  Multiple: %d \n", l1conflicts, multiLearnt);
+            printf("c Learnt At Level 1: %d  Multiple: %d Units: %d\n", l1conflicts, multiLearnt,learntUnit);
 
     if (status == l_True){
         // Extend & copy model:
