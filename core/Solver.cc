@@ -352,6 +352,8 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 
     int units = 0;
     bool isOnlyUnit = true;
+    lastDecisionLevel.clear();  // must clear before loop, because alluip can abort loop and would leave filled vector
+    
     
     // Generate conflict clause:
     //
