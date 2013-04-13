@@ -76,7 +76,9 @@ static DoubleOption  opt_restart_inc       (_cat, "rinc",        "Restart interv
 */
 static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction of wasted memory allowed before a garbage collection is triggered",  0.20, DoubleRange(0, false, HUGE_VAL, false));
 
-static BoolOption    opt_uipHack           ("MODS", "uiphack", "learn all UIPs at decision level 1", false);
+static BoolOption    opt_uipHack           ("MODS", "uiphack",      "learn more UIPs at decision level 1", false);
+static IntOption     opt_uips              ("MODS", "uiphack-uips", "learn at most X UIPs at decision level 1 (0=all)", 0, IntRange(0, INT32_MAX));
+
 
 static IntOption     opt_hack              ("HACK",    "hack",      "use hack modifications", 0, IntRange(0, 3) );
 static BoolOption    opt_hack_cost         ("HACK",    "hack-cost", "use size cost", true );
@@ -974,8 +976,7 @@ void Solver::analyzeOne( CRef confl, vec<Lit>& learntUnits)
 {
     learntUnits.clear();
     assert( decisionLevel() == 1 && "works only on first decision level!" );
-  
-    // genereate learnt clause - extract all units!
+    // genereate learnt clause - extract selected number of units!
     int pathC = 0;
     Lit p     = lit_Undef;
     unsigned uips = 0;
@@ -989,6 +990,7 @@ void Solver::analyzeOne( CRef confl, vec<Lit>& learntUnits)
 	  Clause& c = ca[confl];
 	  for (int j = (p == lit_Undef) ? 0 : 1; j < c.size(); j++){
 	      Lit q = c[j];
+	      if( c.size() == 2 && q == p ) q = c[0]; // in glucose, binary clauses are not ordered!
 	      if (!seen[var(q)] && level(var(q)) > 0){
 		  varBumpActivity(var(q));
 		  seen[var(q)] = 1;
@@ -1003,15 +1005,26 @@ void Solver::analyzeOne( CRef confl, vec<Lit>& learntUnits)
         confl = reason(var(p));
         seen[var(p)] = 0;
         pathC--;
+        // this works only is the decision level is 1
+        if( pathC <= 0 ) {
+          assert( loops > 1 && "learned clause can occur only if already 2 clauses have been resolved!" );
+           uips ++;
+           learntUnits.push(~p);
 
-	if( pathC <= 0 ) {
-	  assert( loops > 1 && "learned clause can occur only if already 2 clauses have been resolved!" );
-	   uips ++;
-	   learntUnits.push(~p);
-	   break;
-	}
+	   // learned enough uips - return. if none has been found, return false!
+           if( opt_uips != 0 && uips >= opt_uips ) {
+             // reset seen literals - index points to position before current UIP
+             for( int i = 0 ; i < index + 1; ++ i ) seen[ var(trail[i]) ] = 0;
+             return;
+           }
+        }
+
 	
     }while (index >= trail_lim[0] ); // pathC > 0 finds unit clauses
+
+    // add uip in form of decision!  
+    if( learntUnits.size() == 0 || learntUnits.last() != ~p ) learntUnits.push(~p);
+  
   assert( learntUnits.size() > 0 && "there has to be at least one UIP (decision literal)" );
   return;
 }
@@ -1068,13 +1081,15 @@ lbool Solver::search(int nof_conflicts)
 	    if( decisionLevel() == 1 && opt_uipHack) {
 	      // learn a bunch of unit clauses!
 	      analyzeOne(confl, learnt_clause );
+
 	      nblevels = 1;
 	      lbdQueue.push(nblevels);
 	      sumLBD += nblevels;
 	      cancelUntil(0);
 
-	      for( int i = 0 ; i < learnt_clause.size(); ++ i ) 
+	      for( int i = 0 ; i < learnt_clause.size(); ++ i )
 		uncheckedEnqueue(learnt_clause[i]);
+	      
 	      nbUn+=learnt_clause.size(); // stats
 	      if(nblevels<=2) nbDL2++; // stats
 	      multiLearnt = ( learnt_clause.size() > 1 ? multiLearnt + 1 : multiLearnt );
