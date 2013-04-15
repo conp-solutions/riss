@@ -37,6 +37,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 // to be able to use the preprocessor
 #include "coprocessor-src/Coprocessor.h"
 
+// to be able to read var files
+#include "coprocessor-src/VarFileParser.h"
+
 using namespace Minisat;
 
 //=================================================================================================
@@ -84,6 +87,14 @@ static IntOption     opt_uips              ("MODS", "uiphack-uips", "learn at mo
 static IntOption     opt_hack              ("REASON",    "hack",      "use hack modifications", 0, IntRange(0, 3) );
 static BoolOption    opt_hack_cost         ("REASON",    "hack-cost", "use size cost", true );
 static BoolOption    opt_dbg               ("REASON",    "dbg",       "debug hack", false );
+
+// extra 
+static IntOption     opt_act               ("INIT", "actIncMode", "how to inc 0=lin, 1=geo", 0, IntRange(0, 1) );
+static DoubleOption  opt_actStart          ("INIT", "actStart",   "highest value for first variable",         91648253, DoubleRange(0, false, HUGE_VAL, false));
+static DoubleOption  pot_actDec            ("INIT", "actDec",     "decrease per element (sub, or divide)",10, DoubleRange(0, false, HUGE_VAL, true));
+static StringOption  actFile               ("INIT", "cp3_act",    "increase activities of those variables");
+static BoolOption    opt_pol               ("INIT", "polMode",    "invert provided polarities", false );
+static StringOption  polFile               ("INIT", "cp3_pol",    "use these polarities");
 
 
 //=================================================================================================
@@ -1301,6 +1312,38 @@ printf("c ==================================[ Search Statistics (every %6d confl
       printf("c =========================================================================================================\n");
 
     }
+    
+    // parse for variable polarities from file!
+    if( polFile ) { // read polarities from file, initialize phase polarities with this value!
+      Coprocessor::VarFileParser vfp( string(polFile) );
+      vector<int> polLits;
+      vfp.extract( polLits );
+      for( int i = 0 ; i < polLits.size(); ++ i ) {
+	const Var v = polLits[i] > 0 ? polLits[i] : - polLits[i];
+	Lit thisL = mkLit(v, polLits[i] < 0 );
+	if( opt_pol ) thisL = ~thisL;
+	polarity[ v ] = sign(thisL);
+      }
+      cerr << "c adopted poarity of " << polLits.size() << " variables" << endl;
+    }
+    
+    
+    // parse for activities from file!
+    if( actFile ) { // set initial activities
+      Coprocessor::VarFileParser vfp( string(actFile) );
+      vector<int> actVars;
+      vfp.extract( actVars );
+      
+      double thisValue = opt_actStart;
+      for( int i = 0 ; i < actVars.size(); ++ i ) {
+	const Var v = actVars[i];
+	activity[ v] = thisValue;
+	thisValue = (opt_act == 0 ? thisValue - pot_actDec : thisValue / pot_actDec );
+      }
+      cerr << "c adopted activity of " << actVars.size() << " variables" << endl;
+      rebuildOrderHeap();
+    }
+    
 
     if( status == l_Undef ) {
 	  // restart, triggered by the solver
