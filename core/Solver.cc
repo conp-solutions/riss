@@ -90,11 +90,11 @@ static BoolOption    opt_dbg               ("REASON",    "dbg",       "debug hac
 
 // extra 
 static IntOption     opt_act               ("INIT", "actIncMode", "how to inc 0=lin, 1=geo", 0, IntRange(0, 1) );
-static DoubleOption  opt_actStart          ("INIT", "actStart",   "highest value for first variable",         91648253, DoubleRange(0, false, HUGE_VAL, false));
-static DoubleOption  pot_actDec            ("INIT", "actDec",     "decrease per element (sub, or divide)",10, DoubleRange(0, false, HUGE_VAL, true));
-static StringOption  actFile               ("INIT", "cp3_act",    "increase activities of those variables");
+static DoubleOption  opt_actStart          ("INIT", "actStart",   "highest value for first variable", 1024, DoubleRange(0, false, HUGE_VAL, false));
+static DoubleOption  pot_actDec            ("INIT", "actDec",     "decrease per element (sub, or divide)",1/0.95, DoubleRange(0, false, HUGE_VAL, true));
+static StringOption  actFile               ("INIT", "actFile",    "increase activities of those variables");
 static BoolOption    opt_pol               ("INIT", "polMode",    "invert provided polarities", false );
-static StringOption  polFile               ("INIT", "cp3_pol",    "use these polarities");
+static StringOption  polFile               ("INIT", "polFile",    "use these polarities");
 
 
 //=================================================================================================
@@ -1315,14 +1315,16 @@ printf("c ==================================[ Search Statistics (every %6d confl
     
     // parse for variable polarities from file!
     if( polFile ) { // read polarities from file, initialize phase polarities with this value!
-      Coprocessor::VarFileParser vfp( string(polFile) );
+      string filename = string(polFile);
+      Coprocessor::VarFileParser vfp( filename );
       vector<int> polLits;
       vfp.extract( polLits );
       for( int i = 0 ; i < polLits.size(); ++ i ) {
 	const Var v = polLits[i] > 0 ? polLits[i] : - polLits[i];
-	Lit thisL = mkLit(v, polLits[i] < 0 );
+	if( v - 1 >= nVars() ) continue; // other file might contain more variables
+	Lit thisL = mkLit(v-1, polLits[i] < 0 );
 	if( opt_pol ) thisL = ~thisL;
-	polarity[ v ] = sign(thisL);
+	polarity[ v-1 ] = sign(thisL);
       }
       cerr << "c adopted poarity of " << polLits.size() << " variables" << endl;
     }
@@ -1330,13 +1332,15 @@ printf("c ==================================[ Search Statistics (every %6d confl
     
     // parse for activities from file!
     if( actFile ) { // set initial activities
-      Coprocessor::VarFileParser vfp( string(actFile) );
+      string filename = string(actFile);
+      Coprocessor::VarFileParser vfp( filename );
       vector<int> actVars;
-      vfp.extract( actVars );
+      vfp.extract(actVars);
       
       double thisValue = opt_actStart;
       for( int i = 0 ; i < actVars.size(); ++ i ) {
-	const Var v = actVars[i];
+	const Var v = actVars[i]-1;
+	if( v >= nVars() ) continue; // other file might contain more variables
 	activity[ v] = thisValue;
 	thisValue = (opt_act == 0 ? thisValue - pot_actDec : thisValue / pot_actDec );
       }
