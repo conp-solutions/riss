@@ -95,6 +95,7 @@ static DoubleOption  pot_actDec            ("INIT", "actDec",     "decrease per 
 static StringOption  actFile               ("INIT", "actFile",    "increase activities of those variables");
 static BoolOption    opt_pol               ("INIT", "polMode",    "invert provided polarities", false );
 static StringOption  polFile               ("INIT", "polFile",    "use these polarities");
+static BoolOption    opt_printDecisions    ("INIT", "printDec",   "print decisions", false );
 
 
 //=================================================================================================
@@ -1120,6 +1121,7 @@ lbool Solver::search(int nof_conflicts)
         if (confl != CRef_Undef){
             // CONFLICT
 	  conflicts++; conflictC++;
+	  if( opt_printDecisions ) printf("c conflict at level %d\n", decisionLevel() );
 
 	  if (verbosity >= 1 && conflicts%verbEveryConflicts==0){
 	    printf("c | %8d   %7d    %5d | %7d %8d %8d | %5d %8d   %6d %8d | %6.3f %% |\n", 
@@ -1179,6 +1181,7 @@ lbool Solver::search(int nof_conflicts)
 
 		if (learnt_clause.size() == 1){
 		    uncheckedEnqueue(learnt_clause[0]);nbUn++;
+		    if( opt_printDecisions ) printf("c enqueue literal $s%d at level %d\n", sign(learnt_clause[0]) ? "-" : "", var(learnt_clause[0]) + 1, decisionLevel() );
 		}else{
 		  CRef cr = ca.alloc(learnt_clause, true);
 		  ca[cr].setLBD(nblevels); 
@@ -1190,6 +1193,7 @@ lbool Solver::search(int nof_conflicts)
 		  
 		  claBumpActivity(ca[cr]);
 		  uncheckedEnqueue(learnt_clause[0], cr);
+		  if( opt_printDecisions ) printf("c enqueue literal %s%d at level %d\n", sign(learnt_clause[0]) ? "-" : "", var(learnt_clause[0]) + 1, decisionLevel() );
 		}
 
 	      }
@@ -1253,6 +1257,7 @@ lbool Solver::search(int nof_conflicts)
             
             // Increase decision level and enqueue 'next'
             newDecisionLevel();
+	    if(opt_printDecisions) printf("c decide %s%d at level %d\n", sign(next) ? "-" : "", var(next) + 1, decisionLevel() );
             uncheckedEnqueue(next);
         }
     }
