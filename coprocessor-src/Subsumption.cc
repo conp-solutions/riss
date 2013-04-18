@@ -123,7 +123,18 @@ void Subsumption::process(bool doStrengthen, Heap< VarOrderBVEHeapLt >* heap, co
           parallelStrengthening(heap, ignore, doStatistics);
       }
       else {
+          int avgParStrengthSteps = 0; 
+          for (int i = 0; i < localStats.size(); ++i) {
+              avgParStrengthSteps += localStats[i].strengthSteps;
+          }
+          // increase seq StrengthSteps by parallel Avarage 
+          if (controller.size() > 0) strengthSteps += avgParStrengthSteps / controller.size();
+
           fullStrengthening(heap, ignore, doStatistics); // corrects occs and counters by itself
+
+          // decrease seq StrengthSteps by parallel Avarage again
+          if (controller.size() > 0) strengthSteps -= avgParStrengthSteps / controller.size();
+
           if (opt_allStrengthRes > 0)
           {
             for (int j = 0; j < toDelete.size(); ++j)
@@ -166,7 +177,16 @@ lbool Subsumption::fullSubsumption(Heap<VarOrderBVEHeapLt> * heap, const Var ign
     parallelSubsumption(doStatistics); // use parallel, is some conditions have been met
     //data.correctCounters();    // 
   } else {
+    int avgParSubsSteps = 0; 
+    for (int i = 0; i < localStats.size(); ++i) {
+      avgParSubsSteps += localStats[i].subsumeSteps;
+    }
+    // increase seq StrengthSteps by parallel Avarage 
+    if (controller.size() > 0) subsumeSteps += avgParSubsSteps / controller.size();
+
     subsumption_worker(0,data.getSubsumeClauses().size(), heap, ignore, doStatistics); // performs all occ and stat-updates
+    
+    if (controller.size() > 0) subsumeSteps -= avgParSubsSteps / controller.size();
   }
   data.getSubsumeClauses().clear();
   // no result to tell to the outside
@@ -293,7 +313,8 @@ void Subsumption :: par_subsumption_worker ( unsigned int & next_start, unsigned
     {
         stats.processTime = wallClockTime() - stats.processTime;   
     }
-    while (global_end > next_start &&  !data.isInterupted() )
+    while (global_end > next_start &&  !data.isInterupted() 
+            && ( data.unlimited() || (doStatistics && subsumeSteps + stats.subsumeSteps < subLimit) ))
     {
         balancerLock.lock();
         if (global_end > next_start)
@@ -303,11 +324,13 @@ void Subsumption :: par_subsumption_worker ( unsigned int & next_start, unsigned
             end   = next_start > global_end ? global_end : next_start;
         }
         balancerLock.unlock();
-        while (end > start && !data.isInterupted())
+        while (end > start && !data.isInterupted()
+            && ( data.unlimited() || (doStatistics && subsumeSteps + stats.subsumeSteps < subLimit) ))
         {
             --end;
             const CRef cr = data.getSubsumeClauses()[end];
             Clause &c = ca[cr];
+            if (doStatistics) ++stats.subsumeSteps;
             if (c.can_be_deleted())
                 continue;
             bool learnt_subsumed_non_learnt = false;
@@ -329,7 +352,6 @@ void Subsumption :: par_subsumption_worker ( unsigned int & next_start, unsigned
                 } else if (ca[list[i]].can_be_deleted()) {
                     continue;
                 } else if (c.ordered_subsumes(ca[list[i]])) {
-                    if (doStatistics) ++stats.subsumeSteps;
                     // save at least one duplicate, by deleting the clause with smaller CRef
                     if (c.size() == ca[list[i]].size() && cr > list[i])
                     {
@@ -378,8 +400,8 @@ void Subsumption :: par_subsumption_worker ( unsigned int & next_start, unsigned
                     {
                         to_delete.push_back(list[i]);
                     }
-                } else if (doStatistics)       
-                        ++stats.subsumeSteps;
+                } //else if (doStatistics)       
+                  //      ++stats.subsumeSteps;
             }
             //set can_subsume to false
             c.set_subsume(false);
@@ -438,6 +460,10 @@ void Subsumption::par_strengthening_worker( unsigned int & next_start, unsigned 
             lock_strengthener:
             if (c.can_be_deleted() || c.size() == 0)
                 continue;
+            if( !opt_strength ) { // if not enabled, only remove clauses from queue and reset their flag!
+                c.set_strengthen(false);
+                continue;
+            }
             Var fst = var(c[0]);
             
             // lock 1st var
@@ -620,7 +646,8 @@ void Subsumption::par_nn_strengthening_worker( unsigned int & next_start, unsign
    deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
   SpinLock & data_lock = var_lock[data.nVars()];
 
-  while (global_end > next_start && !data.isInterupted())
+  while (global_end > next_start && !data.isInterupted() 
+          && (data.unlimited() || (doStatistics && strengthSteps + stats.strengthSteps < strLimit )))
   { 
       balancerLock.lock();
       if (global_end > next_start)
@@ -630,7 +657,8 @@ void Subsumption::par_nn_strengthening_worker( unsigned int & next_start, unsign
           end   = next_start > global_end ? global_end : next_start;
       }
       balancerLock.unlock();
-      while (end > start && !data.isInterupted())
+      while (end > start && !data.isInterupted()
+          && (data.unlimited() || (doStatistics && strengthSteps + stats.strengthSteps < strLimit )))
       {
         if (!data.ok()) 
         {
@@ -767,9 +795,12 @@ inline lbool Subsumption::par_nn_strength_check(CoprocessorData & data, vector <
     SpinLock & data_lock = var_lock[data.nVars()];
     
     // test every clause, where the minimum is, if it can be strenghtened
-    for (unsigned int j = 0; j < list.size() && !data.isInterupted(); ++j)
+    for (unsigned int j = 0; j < list.size() && !data.isInterupted()
+      && (data.unlimited() || (doStatistics && strengthSteps + stats.strengthSteps < strLimit ) );
+      ++j )
     {
       Clause& other = ca[list[j]];
+      if (doStatistics) ++stats.strengthSteps;
       
       lock_to_strengthen_nn:
       if (other.can_be_deleted() || list[j] == cr || other.size() == 0)
@@ -801,7 +832,6 @@ inline lbool Subsumption::par_nn_strength_check(CoprocessorData & data, vector <
       }
       
       // now other_fst is locked and for sure first variable
-      if (doStatistics) ++stats.strengthSteps;
       // test if we can strengthen other clause
       si = 0;
       so = 0;
@@ -918,9 +948,12 @@ inline lbool Subsumption::par_nn_negated_strength_check(CoprocessorData & data, 
     SpinLock & data_lock = var_lock[data.nVars()];
     
     // test every clause, where the minimum is, if it can be strenghtened
-    for (unsigned int j = 0; j < list.size() && !data.isInterupted(); ++j)
+    for (unsigned int j = 0; j < list.size() && !data.isInterupted()
+      && (data.unlimited() || (doStatistics && strengthSteps + stats.strengthSteps < strLimit ) )
+      ; ++j)
     {
       Clause& other = ca[list[j]];
+      if (doStatistics) ++stats.strengthSteps;
       
       lock_to_strengthen_nn:
       if (other.can_be_deleted() || list[j] == cr || other.size() == 0)
@@ -952,7 +985,6 @@ inline lbool Subsumption::par_nn_negated_strength_check(CoprocessorData & data, 
       }
       
       // now other_fst is locked and for sure first variable
-      if (doStatistics) ++stats.strengthSteps;
       // test if we can strengthen other clause
       si = 0;
       so = 0;
