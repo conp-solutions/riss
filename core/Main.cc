@@ -71,16 +71,20 @@ static void SIGINT_exit(int signum) {
 
 int main(int argc, char** argv)
 {
+  
+  setUsageHelp("USAGE: %s [options] <input-file> <result-output-file>\n\n  where input may be either in plain or gzipped DIMACS.\n");
+  // Extra options:
+  //
+  IntOption    verb   ("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
+  IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
+  IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
+
+  BoolOption   opt_modelStyle ("MAIN", "oldModel", "present model on screen in old format", false);
+  BoolOption   opt_quiet      ("MAIN", "quiet", "Do not print the model", false);
+  
     try {
-        setUsageHelp("USAGE: %s [options] <input-file> <result-output-file>\n\n  where input may be either in plain or gzipped DIMACS.\n");
         
-        // Extra options:
-        //
-        IntOption    verb   ("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
-        IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
-        IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
-        
-	BoolOption   opt_quiet  ("MAIN", "quiet", "Do not print the model", false);
+
 	
         parseOptions(argc, argv, true);
 
@@ -156,13 +160,19 @@ int main(int argc, char** argv)
         signal(SIGXCPU,SIGINT_interrupt);
        
         if (!S.simplify()){
-            if (res != NULL) fprintf(res, "s UNSATISFIABLE\n"), fclose(res);
+            if (res != NULL) {
+	      if( opt_modelStyle ) fprintf(res, "UNSAT\n"), fclose(res);
+	      else fprintf(res, "s UNSATISFIABLE\n"), fclose(res);
+	    }
             if (S.verbosity > 0){
                 printf("c ===============================================================================\n");
                 printf("c Solved by unit propagation\n");
                 printStats(S);
                 printf("\n"); }
-            printf("s UNSATISFIABLE\n");
+                
+                // choose among output formats!
+                if( opt_modelStyle ) printf("UNSAT");
+		else printf("s UNSATISFIABLE\n");
 	    cout.flush(); cerr.flush();
             exit(20);
         }
@@ -172,23 +182,27 @@ int main(int argc, char** argv)
         if (S.verbosity > 0){
             printStats(S);
             printf("\n"); }
-        printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n");
+            if( opt_modelStyle ) printf(ret == l_True ? "SAT\n" : ret == l_False ? "UNSAT\n" : "UNKNOWN\n");
+	    else printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n");
         if (res != NULL){
             if (ret == l_True){
-                fprintf(res, "s SATISFIABLE\nv ");
+		if( opt_modelStyle ) fprintf(res, "SAT\n");
+                else fprintf(res, "s SATISFIABLE\nv ");
                 for (int i = 0; i < S.nVars(); i++)
                   //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
                         fprintf(res, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
                 fprintf(res, " 0\n");
-            }else if (ret == l_False)
-                fprintf(res, "s UNSATISFIABLE\n");
-            else
-                fprintf(res, "s UNKNOWN\n");
+            }else if (ret == l_False) {
+                if( opt_modelStyle ) fprintf(res, "UNSAT\n");
+                else fprintf(res, "s UNSATISFIABLE\n");
+	    }else
+		if( opt_modelStyle ) fprintf(res, "UNKNOWN\n");
+                else fprintf(res, "s UNKNOWN\n");
             fclose(res);
         }
 
         if(! opt_quiet && ret == l_True && res == NULL ) {
-	  printf ("v ");
+	  if( !opt_modelStyle ) printf ("v ");
           for (int i = 0; i < S.nVars(); i++)
             //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
               printf( "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
@@ -204,7 +218,8 @@ int main(int argc, char** argv)
 #endif
     } catch (OutOfMemoryException&){
 	// printf("c ===============================================================================\n");
-        printf("s UNKNOWN\n");
+        if( opt_modelStyle ) printf("UNKNOWN\n"); 
+	else printf("s UNKNOWN\n");
         exit(0);
     }
 }
