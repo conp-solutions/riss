@@ -58,7 +58,7 @@ bool Coprocessor::TwoSatSolver::tmpUnitPropagate()
     Lit x = tmpUnitQueue.front();
     tmpUnitQueue.pop_front();
 
-    if( tmpUnitQueue.size() % 100 == 0 ) cerr << "queue.size() = " << tmpUnitQueue.size() << endl;
+    if( debug_out > 2 && tmpUnitQueue.size() % 100 == 0 ) cerr << "queue.size() = " << tmpUnitQueue.size() << endl;
     
     touchedLiterals ++;
     
@@ -67,7 +67,6 @@ bool Coprocessor::TwoSatSolver::tmpUnitPropagate()
     {
       unitQueue.push_back(x);
       if (! tmpUnitQueue.empty()) tmpUnitQueue.clear();
-      cerr << "c perm" << endl;
       return unitPropagate();
     }
 
@@ -86,7 +85,6 @@ bool Coprocessor::TwoSatSolver::tmpUnitPropagate()
 	if (tempVal[toInt(l)] == -1) {// conflict!!
 	  unitQueue.push_back(~x); // we cannot set x like we do it now, otherwise, we would have to set l and -l
 	  if (! tmpUnitQueue.empty()) tmpUnitQueue.clear();
-	  cerr << "c perm" << endl;
 	  return unitPropagate();
 	} else { tempVal[toInt(l)] = 1; tempVal[toInt(~l)] = -1; }
       }
@@ -105,7 +103,7 @@ bool Coprocessor::TwoSatSolver::unitPropagate()
     
     if (permVal[toInt(x)] == -1)
     {
-      cerr << "Prop Unit Conflict " << x  << endl;
+      if( debug_out > 1 ) cerr << "Prop Unit Conflict " << x  << endl;
       return false;
     }
     
@@ -187,14 +185,14 @@ bool Coprocessor::TwoSatSolver::solve()
   {
     Lit DL = getDecisionVariable();
     decs++;
-    if( decs % 100 == 0 ) cerr << "c dec " << decs << "/" << data.nVars() << " mem: " << memUsedPeak() << endl;
+    if( debug_out > 2 && decs % 100 == 0 ) cerr << "c dec " << decs << "/" << data.nVars() << " mem: " << memUsedPeak() << endl;
     //if (Debug_Print2SATAssignments.IsSet()) std::cout << "DECIDE: " << toNumber(DL) << " ";
     tmpUnitQueue.push_back(DL);
     Conflict = !tmpUnitPropagate();
   }
     
   //if (Debug_Print2SATAssignments.IsSet())
-  cerr << "2SAT result: " << (Conflict ? "UNSAT " : "SAT ") << endl ;
+  if( debug_out > 2 ) cerr << "2SAT result: " << (Conflict ? "UNSAT " : "SAT ") << endl ;
   
   solveTime = cpuTime() - solveTime;
   return !Conflict;
