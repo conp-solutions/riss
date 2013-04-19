@@ -1,0 +1,76 @@
+/***************************************************************************************[Rewriter.h]
+Copyright (c) 2013, Norbert Manthey, All rights reserved.
+**************************************************************************************************/
+
+#ifndef REWRITER_HH
+#define REWRITER_HH
+
+#include "core/Solver.h"
+#include "coprocessor-src/Technique.h"
+#include "coprocessor-src/CoprocessorTypes.h"
+
+using namespace Minisat;
+
+namespace Coprocessor {
+
+/** this class is used for bounded variable addition (replace patterns by introducion a fresh variable)
+ */
+class Rewriter : public Technique  {
+    
+  CoprocessorData& data;
+  
+  // statistics
+  double processTime;		// seconds of process time
+  unsigned rewLimit; // upper limit of steps
+  unsigned steps;  //current number of steps
+
+  // TODO: initialize these ones!
+  unsigned detectedDuplicates;     // how many clauses after rewriting detected as duplicate
+  unsigned removedViaSubsubption;  // how many have been removed due to subsumption?
+  
+  // work data
+  /// compare two literals
+  struct LitOrderHeapLt {
+        CoprocessorData & data;
+        bool operator () (int& x, int& y) const {
+	    return data[ toLit(x)] > data[toLit(y)]; 
+        }
+        LitOrderHeapLt(CoprocessorData & _data) : data(_data) {}
+  };
+  Heap<LitOrderHeapLt> rewHeap; // heap that stores the variables according to their frequency (dedicated for BVA)
+  
+public:
+  
+  Rewriter( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data );
+  
+  void reset();
+  
+  /** applies bounded variable addition algorithm
+  * @return true, if something has been altered
+  */
+  bool process();
+    
+  void printStatistics(ostream& stream);
+
+  void destroy();
+  
+protected:
+  
+  /** take care of creating a new variable */
+  Var nextVariable(char type);
+  
+  /** check whether the clause represented in the vector c has duplicates, and remove clauses that are subsumed by c */
+  bool hasDuplicate(vector<CRef>& list, const vec<Lit>& c);
+  
+  bool checkPush(vec<Lit> & ps, const Lit l);
+  bool ordered_subsumes (const vec<Lit>& c, const Clause & other) const;
+  bool ordered_subsumes (const Clause & c, const vec<Lit>& other) const;
+  
+public:
+  
+  
+};
+
+};
+
+#endif

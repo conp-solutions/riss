@@ -4,10 +4,13 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor-src/TwoSAT.h"
 
-static const char* _cat = "COPROCESSOR 3 - 2SAT";
+static const char* _cat = "COPROCESSOR 3 - REWRITE";
 
-static IntOption  opt_iterations (_cat, "2sat-times", "run another time with inverse polarities", 1, IntRange(1, INT32_MAX));
-
+#if defined CP3VERSION 
+static const int debug_out = 0;
+#else
+static IntOption debug_out                 (_cat, "2sat-debug",  "Debug Output of 2sat", 0, IntRange(0, 4));
+#endif
 
 Coprocessor::TwoSatSolver::TwoSatSolver(ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::CoprocessorData& _data)
 : Technique( _ca, _controller)
@@ -16,7 +19,6 @@ Coprocessor::TwoSatSolver::TwoSatSolver(ClauseAllocator& _ca, Coprocessor::Threa
   solveTime = 0;
   touchedLiterals = 0;
   permLiterals = 0;
-  flips = 0;
 }
 
 Coprocessor::TwoSatSolver::~TwoSatSolver()
@@ -38,7 +40,7 @@ assert( v < permVal.size() && "literal has to be in bounds" );
 
 void Coprocessor::TwoSatSolver::printStatistics(ostream& stream)
 {
-  stream << "c [STAT] 2SAT " << solveTime << " s, " << touchedLiterals << " lits, " << permLiterals << " permanents, " << flips << " flips, " << endl;
+  stream << "c [STAT] 2SAT " << solveTime << " s, " << touchedLiterals << " lits, " << permLiterals << " permanents" << endl;
 }
 
 
@@ -56,6 +58,8 @@ bool Coprocessor::TwoSatSolver::tmpUnitPropagate()
     Lit x = tmpUnitQueue.front();
     tmpUnitQueue.pop_front();
 
+    if( debug_out > 2 && tmpUnitQueue.size() % 100 == 0 ) cerr << "queue.size() = " << tmpUnitQueue.size() << endl;
+    
     touchedLiterals ++;
     
     // if found a conflict, propagate the other polarity for real!
@@ -66,17 +70,24 @@ bool Coprocessor::TwoSatSolver::tmpUnitPropagate()
       return unitPropagate();
     }
 
+    assert( var(x) < data.nVars() && "do handle variables only that are part of the formula" );
     tempVal[toInt(x)] = 1; tempVal[toInt(~x)] = -1;
     const Lit* impliedLiterals = big.getArray(x);
     const uint32_t impliedLiteralsSize = big.getSize(x);  
-    
     for (int i = 0 ; i < impliedLiteralsSize; ++ i )
     {
       const Lit l = impliedLiterals[i];
+      assert( var(l) != var(x) && "a variable should/cannot imply iteself" );
       if (permVal[ toInt(l) ] != 0 || tempVal[toInt(l)] == 1)
         continue;
-      else
+      else {
 	tmpUnitQueue.push_back(l);
+	if (tempVal[toInt(l)] == -1) {// conflict!!
+	  unitQueue.push_back(~x); // we cannot set x like we do it now, otherwise, we would have to set l and -l
+	  if (! tmpUnitQueue.empty()) tmpUnitQueue.clear();
+	  return unitPropagate();
+	} else { tempVal[toInt(l)] = 1; tempVal[toInt(~l)] = -1; }
+      }
     }
   }
   
@@ -91,13 +102,20 @@ bool Coprocessor::TwoSatSolver::unitPropagate()
     unitQueue.pop_front();
     
     if (permVal[toInt(x)] == -1)
+    {
+      if( debug_out > 1 ) cerr << "Prop Unit Conflict " << x  << endl;
       return false;
-
-    // do not propagate this unit twice!
-    if (permVal[toInt(x)] == 1) continue;
+    }
     
-    // TODO: can this information used from outside the 2sat search? always binary clauses as reason -> binary learned clause, or even unit?
-    permVal[toInt(x)] = 1; permVal[toInt(~x)] = -1;
+    if (permVal[toInt(x)] == 1) {
+      assert( tempVal[ toInt(x)] == 1 && "when unit propagated, temporary value should also be fixed!");
+      continue;
+    }
+    
+ //   if (Debug_Print2SATAssignments.IsSet())
+ //     std::cout << "PERM: Assign " << toNumber(x) << " ";
+    permVal[toInt(x)] = 1; permVal[toInt(~x)] = -1; // actually, this should be the case already
+    tempVal[toInt(x)] = 1; tempVal[toInt(~x)] = -1;
     permLiterals ++;
     
     const Lit* impliedLiterals = big.getArray(x);
@@ -106,8 +124,8 @@ bool Coprocessor::TwoSatSolver::unitPropagate()
     for (int i = 0 ; i < impliedLiteralsSize; ++ i)
     {      
       if( permVal[ toInt(impliedLiterals[i]) ] == 0 ) {
-	permVal[ toInt(impliedLiterals[i]) ]  = 1;
-	permVal[ toInt(~impliedLiterals[i]) ] = -1;
+	permVal[ toInt(impliedLiterals[i]) ] = 1; permVal[ toInt(~impliedLiterals[i]) ] = -1;
+	tempVal[ toInt(impliedLiterals[i]) ] = 1; tempVal[ toInt(~impliedLiterals[i])] = -1;
         unitQueue.push_back( impliedLiterals[i] );
       } else if ( permVal[ toInt(impliedLiterals[i]) ] == -1 )
 	return false;
@@ -153,43 +171,28 @@ bool Coprocessor::TwoSatSolver::solve()
   solveTime = cpuTime() - solveTime;
   big.create(ca, data, data.getClauses() );
   
-  tempVal.resize(data.nVars()* 2,0);
-  permVal.resize(data.nVars()* 2,0);
+  tempVal.assign(data.nVars()* 2,0);
+  permVal.assign(data.nVars()* 2,0);
   unitQueue.clear();
   tmpUnitQueue.clear();
   lastSeenIndex = -1;
   
-  vector<char> pol;
-  
   bool Conflict = !unitPropagate();
   
-  int iter = 0;
+  int decs = 0;
   
-  for ( int iter = 0 ; iter < opt_iterations; ++ iter )
+  while (!Conflict && hasDecisionVariable())
   {
-    
-    // at the beginning of the second loop, reset everything, and setup a polarity vector
-    if( iter > 0 ) {
-      pol = tempVal; // store old polarities!
-      tempVal.assign(data.nVars()* 2,0);
-      permVal.assign(data.nVars()* 2,0);
-      unitQueue.clear();
-      tmpUnitQueue.clear();
-      lastSeenIndex = -1;
-    }
-    
-    while (!Conflict && hasDecisionVariable())
-    {
-      Lit DL = getDecisionVariable();
-      if( iter != 0 ) { // only in later iterations
-	if(  sign(DL) && -1 == pol [ var(DL) ]
-	  || !sign(DL) && 1 == pol [ var(DL) ]
-	) { DL = ~DL; flips ++; }  // choose inverse polarity!
-      }
-      tmpUnitQueue.push_back(DL);
-      Conflict = !tmpUnitPropagate();
-    }
+    Lit DL = getDecisionVariable();
+    decs++;
+    if( debug_out > 2 && decs % 100 == 0 ) cerr << "c dec " << decs << "/" << data.nVars() << " mem: " << memUsedPeak() << endl;
+    //if (Debug_Print2SATAssignments.IsSet()) std::cout << "DECIDE: " << toNumber(DL) << " ";
+    tmpUnitQueue.push_back(DL);
+    Conflict = !tmpUnitPropagate();
   }
+    
+  //if (Debug_Print2SATAssignments.IsSet())
+  if( debug_out > 2 ) cerr << "2SAT result: " << (Conflict ? "UNSAT " : "SAT ") << endl ;
   
   solveTime = cpuTime() - solveTime;
   return !Conflict;
