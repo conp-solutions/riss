@@ -21,6 +21,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/Unhiding.h"
 #include "coprocessor-src/Probing.h"
 #include "coprocessor-src/Resolving.h"
+#include "coprocessor-src/Rewriter.h"
 #include "coprocessor-src/Dense.h"
 
 #include "coprocessor-src/sls.h"
@@ -118,6 +119,7 @@ protected:
   Unhiding unhiding;
   Probing probing;
   Resolving res;
+  Rewriter rew;
   Dense dense;
   
   Sls sls;
