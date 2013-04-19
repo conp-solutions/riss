@@ -30,7 +30,7 @@ static const int par_bve_threshold = 0;
 static const int postpone_locked_neighbors = 1;
 static const bool opt_minimal_updates = false;
 #else
-static IntOption  par_bve_threshold (_cat_bve, "par_bve_th", "Threshold for use of BVE-Worker", 10000, IntRange(0,INT32_MAX)); //TODO lower in case of force_gates
+static IntOption  par_bve_threshold (_cat_bve, "par_bve_th", "Threshold for use of BVE-Worker", 10000, IntRange(0,INT32_MAX)); 
 static IntOption  postpone_locked_neighbors (_cat_bve, "postp_lockd_neighb", "Postpone Elimination-Check if more neighbors are locked", 3, IntRange(0,INT32_MAX));
 static BoolOption opt_minimal_updates       (_cat_bve, "par_bve_min_upd", "Omit LitOcc and Heap updates to reduce locking", false);
 #endif
@@ -117,27 +117,21 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
     ) // if solver state = false => abort
     {
         // Propagate (rw-locks)
-        data_lock.lock(); // FIXME: do this check also before the lock!
         if (data.hasToPropagate())
         {
-            data_lock.unlock();
             if (doStatistics) stats.upTime = wallClockTime() -  stats.upTime;
             par_bve_propagate(data, heap, var_Undef, var_lock, rwlock, dirtyOccs, sharedStrengthQueue, stats, rwlock_count, garbageCounter, doStatistics);
             if (doStatistics) stats.upTime = wallClockTime() -  stats.upTime;
             continue;
         }
-        data_lock.unlock();
         // Subsimp
-        susi_lock.lock();
-        if (sharedStrengthQueue.size() > 0) // FIXME do this check also before the lock!
+        if (sharedStrengthQueue.size() > 0) 
         {
-            susi_lock.unlock();
             if (doStatistics) stats.subsimpTime = wallClockTime() -  stats.subsimpTime;
             par_bve_strengthening_worker(data, heap, var_Undef, var_lock, rwlock, sharedStrengthQueue, strengthQueue, dirtyOccs, stats, rwlock_count, garbageCounter, false, doStatistics);
             if (doStatistics) stats.subsimpTime = wallClockTime() -  stats.subsimpTime;
             continue;
         }
-        susi_lock.unlock();
        
         // Eliminate
         Var v = var_Undef;
@@ -296,7 +290,6 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
             }
             c.unlock();
         }
-        // TODO: do we need a data-lock here?
         timeStamp = lastTouched.getIndex(v); // get last modification of v
 
         assert(rwlock_count == 1);
@@ -1134,7 +1127,12 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
         if (opt_bve_findGate) data.ma.resize( data.nVars() * 2 );
         cerr << "c sequentiel bve on " 
              << QSize << " variables" << endl;
+        int parBveStepSum = 0; 
+        for (int i = 0; i < controller.size(); ++i)
+            parBveStepSum += parStats[i].parBveChecks;
+        seqBveSteps += parBveStepSum / controller.size();
         bve_worker (data, newheap,seqBveSteps);
+        seqBveSteps -= parBveStepSum / controller.size();
     }
     //propagate units
     if (data.hasToPropagate()) {

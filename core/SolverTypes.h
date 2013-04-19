@@ -9,7 +9,7 @@ Glucose are exactly the same as Minisat on which it is based on. (see below).
 ---------------
 Copyright (c) 2003-2006, Niklas Een, Niklas Sorensson
 Copyright (c) 2007-2010, Niklas Sorensson
-Copyright (c) 2013, Norbert Manthey, All rights reserved.
+Copyright (c) 2013, Norbert Manthey, Kilian Gebhardt, All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
