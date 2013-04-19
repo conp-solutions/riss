@@ -335,6 +335,7 @@ lbool Preprocessor::performSimplification()
 	bool isNotSat = false;
 	for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
 	  const Clause& cl = ca[ data.getClauses()[i] ];
+	  if( cl.can_be_deleted() ) continue;
 	  int j = 0;
 	  for(  ; j < cl.size(); ++ j ) {
 	    if( twoSAT.isSat(cl[j]) ) break;
