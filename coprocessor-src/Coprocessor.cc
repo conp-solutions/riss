@@ -640,6 +640,14 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 	if( opt_verbose > 1 ) cerr << "c HTE changed formula: " << change << endl;
     }
     
+    // rewriting "r"
+    else if( execute == 'r' && opt_rew && status == l_Undef && data.ok() ) {
+	if( opt_verbose > 2 ) cerr << "c rew" << endl;
+	rew.process(data);
+	change = rew.appliedSomething() || change;
+	if( opt_verbose > 1 ) cerr << "c REW changed formula: " << change << endl;
+    }
+    
     // none left so far
     else {
       cerr << "c warning: cannot execute technique related to  " << execute << endl;
