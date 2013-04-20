@@ -10,6 +10,7 @@ static const char* _cat = "COPROCESSOR 3 - REWRITE";
 static const int debug_out = 0;
 #else
 static IntOption debug_out                 (_cat, "2sat-debug",  "Debug Output of 2sat", 0, IntRange(0, 4));
+static BoolOption useUnits                 (_cat, "2sat-units",  "If 2SAT finds units, use them!", false);
 #endif
 
 Coprocessor::TwoSatSolver::TwoSatSolver(ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::CoprocessorData& _data)
@@ -100,6 +101,8 @@ bool Coprocessor::TwoSatSolver::unitPropagate()
   {
     Lit x = unitQueue.front();
     unitQueue.pop_front();
+    
+    if(useUnits) data.enqueue(x); // if allowed, use the found unit!
     
     if (permVal[toInt(x)] == -1)
     {

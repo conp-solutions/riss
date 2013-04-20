@@ -674,8 +674,11 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     if( opt_verbose > 0 ) cerr << "c 2sat ..." << endl;
     if( opt_verbose > 4 )cerr << "c coprocessor 2SAT" << endl;
     if( status == l_Undef ) {
-      bool solvedBy2SAT = twoSAT.solve();  // cannot change status, can generate new unit clauses
-      if( solvedBy2SAT ) {
+      bool notFailed = twoSAT.solve();  // cannot change status, can generate new unit clauses
+      
+      if( data.hasToPropagate() ) if( propagation.process(data) == l_False ) {data.setFailed();} ;
+      
+      if( notFailed ) {
 	// cerr << "binary clauses have been solved with 2SAT" << endl;
 	// check satisfiability of whole formula!
 	bool isNotSat = false;
@@ -689,7 +692,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 	}
 	if( isNotSat ) {
 	  // only set the phase before search!
-	  if( opt_twosat && !isInprocessing) {
+	  if( opt_ts_phase && !isInprocessing) {
 	    for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
 	  }
 	  cerr // << endl 
@@ -701,6 +704,8 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 	  << "c =================================" << endl 
 	  << "c  use the result of 2SAT as model " << endl 
 	  << "c =================================" << endl;
+	  // next, search would be called, and then a model will be generated!
+	  for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
 	}
       } else {
 	cerr // << endl 
