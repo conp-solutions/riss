@@ -9,6 +9,8 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/Technique.h"
 #include "coprocessor-src/CoprocessorTypes.h"
 
+#include "coprocessor-src/Subsumption.h"
+
 using namespace Minisat;
 
 namespace Coprocessor {
@@ -21,12 +23,26 @@ class Rewriter : public Technique  {
   
   // statistics
   double processTime;		// seconds of process time
+  double amoTime;	// seconds of process time
+  double rewTime;	// seconds of process time
   unsigned rewLimit; // upper limit of steps
   unsigned steps;  //current number of steps
 
   // TODO: initialize these ones!
   unsigned detectedDuplicates;     // how many clauses after rewriting detected as duplicate
-  unsigned removedViaSubsubption;  // how many have been removed due to subsumption?
+  unsigned createdClauses;
+  unsigned droppedClauses;
+  unsigned enlargedClauses;
+  unsigned sortCalls;
+  unsigned reuses;
+  unsigned processedAmos;
+  unsigned foundAmos;
+  unsigned maxAmo;
+  unsigned addedVariables;
+  unsigned removedVars;
+  unsigned removedViaSubsubption;
+  
+  Subsumption& subsumption;		/// object that takes care of subsumption and strengthening
   
   // work data
   /// compare two literals
@@ -41,7 +57,7 @@ class Rewriter : public Technique  {
   
 public:
   
-  Rewriter( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data );
+  Rewriter( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::CoprocessorData& _data, Coprocessor::Subsumption& _subsumption );
   
   void reset();
   
@@ -61,8 +77,10 @@ protected:
   
   /** check whether the clause represented in the vector c has duplicates, and remove clauses that are subsumed by c */
   bool hasDuplicate(vector<CRef>& list, const vec<Lit>& c);
+  bool hasDuplicate(vector<CRef>& list, const Clause& c);
   
   bool checkPush(vec<Lit> & ps, const Lit l);
+  bool ordered_subsumes (const Clause& c, const Clause & other) const;
   bool ordered_subsumes (const vec<Lit>& c, const Clause & other) const;
   bool ordered_subsumes (const Clause & c, const vec<Lit>& other) const;
   

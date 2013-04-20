@@ -39,11 +39,13 @@ static StringOption opt_itechs (_cat2, "cp3_itechs", "techniques for inprocessin
 #if defined CP3VERSION && CP3VERSION < 301
 static const int opt_threads = 0;
 static const bool opt_sls = false;       
+static const bool opt_rew = false;    
 static const bool opt_twosat = false;
 static const bool  opt_ts_phase =false;    
 #else
 static IntOption  opt_threads     (_cat, "cp3_threads",    "Number of extra threads that should be used for preprocessing", 0, IntRange(0, INT32_MAX));
 static BoolOption opt_sls         (_cat2, "sls",           "Use Simple Walksat algorithm to test whether formula is satisfiable quickly", false);
+static BoolOption opt_rew         (_cat2, "rew",           "Rewrite AMO constraints", false);
 static BoolOption opt_twosat      (_cat2, "2sat",          "2SAT algorithm to check satisfiability of binary clauses", false);
 static BoolOption opt_ts_phase    (_cat2, "2sat-phase",    "use 2SAT model as initial phase for SAT solver", false);
 #endif
@@ -90,6 +92,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , unhiding ( solver->ca, controller, data, propagation, subsumption, ee )
 , probing  ( solver->ca, controller, data, propagation, ee, *solver )
 , res( solver->ca, controller, data)
+, rew( solver->ca, controller, data, subsumption )
 , dense( solver->ca, controller, data, propagation)
 , sls ( data, solver->ca, controller )
 , twoSAT( solver->ca, controller, data)
@@ -134,7 +137,7 @@ lbool Preprocessor::performSimplification()
   if( opt_verbose > 4 ) cerr << "c coprocessor finished initialization" << endl;
   
   const bool printBVE = false, printBVA = false, printProbe = false, printUnhide = false, 
-	printCCE = false, printEE = false, printHTE = false, printSusi = false, printUP = false,
+	printCCE = false, printEE = false, printREW = false, printHTE = false, printSusi = false, printUP = false,
 	printTernResolve = false, printAddRedBin = false;  
   
   // do preprocessing
@@ -180,6 +183,21 @@ lbool Preprocessor::performSimplification()
   }
   
   if( opt_debug ) { checkLists("after SUSI"); scanCheck("after SUSI"); }
+  
+  if( opt_rew ) {
+    if( opt_verbose > 0 ) cerr << "c rew ..." << endl;
+    if( opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") rewriting" << endl;
+    if( status == l_Undef ) rew.process();  // cannot change status, can generate new unit clauses
+    if( opt_verbose > 1 )  { printStatistics(cerr); rew.printStatistics(cerr); }
+    if (! data.ok() )
+        status = l_False;
+  }
+  data.checkGarbage(); // perform garbage collection
+  
+  if( opt_debug ) { checkLists("after REW"); scanCheck("after REW"); }
+  if( false  || printREW ) {
+   printFormula("after REW");
+  }
   
   if( opt_ee ) { // before this technique nothing should be run that alters the structure of the formula (e.g. BVE;BVA)
     if( opt_verbose > 0 ) cerr << "c ee ..." << endl;
@@ -396,6 +414,7 @@ lbool Preprocessor::performSimplification()
     if( opt_sls ) sls.printStatistics(cerr);
     if( opt_twosat) twoSAT.printStatistics(cerr);
     if( opt_cce ) cce.printStatistics(cerr);
+    if( opt_rew ) rew.printStatistics(cerr);
     if( opt_dense ) dense.printStatistics(cerr);
   }
   
@@ -643,7 +662,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     // rewriting "r"
     else if( execute == 'r' && opt_rew && status == l_Undef && data.ok() ) {
 	if( opt_verbose > 2 ) cerr << "c rew" << endl;
-	rew.process(data);
+	rew.process();
 	change = rew.appliedSomething() || change;
 	if( opt_verbose > 1 ) cerr << "c REW changed formula: " << change << endl;
     }
@@ -770,6 +789,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     if( opt_sls ) sls.printStatistics(cerr);
     if( opt_twosat) twoSAT.printStatistics(cerr);
     if( opt_cce ) cce.printStatistics(cerr);
+    if( opt_rew ) rew.printStatistics(cerr);
     if( opt_dense ) dense.printStatistics(cerr);
   }
   

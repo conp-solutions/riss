@@ -49,6 +49,15 @@ inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data 
   return other;
 }
 
+/// print elements of a vector
+template <typename T>
+inline std::ostream& operator<<(std::ostream& other, const vec<T>& data ) 
+{
+  for( int i = 0 ; i < data.size(); ++ i )
+    other << " " << data[i];
+  return other;
+}
+
 typedef std::vector<std::vector <CRef> > ComplOcc;
 
 /** this object frees a pointer before a method /statementblock is left */
@@ -333,6 +342,7 @@ public:
   void addToExtension( const Lit dontTouch, const Lit l = lit_Error );
   
   /// add already created vector to extension vector
+  void addExtensionToExtension(vec< Lit >& lits);
   void addExtensionToExtension(vector< Lit >& lits);
 
   void extendModel(vec<lbool>& model);
@@ -1264,6 +1274,14 @@ inline void CoprocessorData::addToExtension(const Lit dontTouch, const Lit l)
   undo.push_back(lit_Undef);
   if( l != lit_Error) undo.push_back(l);
   undo.push_back(dontTouch);
+}
+
+// TODO: use template!
+inline void CoprocessorData::addExtensionToExtension(vec< Lit >& lits)
+{
+  for( int i = 0 ; i < lits.size(); ++ i ) {
+    undo.push_back(lits[i]);
+  }
 }
 
 inline void CoprocessorData::addExtensionToExtension(vector< Lit >& lits)

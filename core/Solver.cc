@@ -106,6 +106,7 @@ Solver::Solver() :
   // UIP hack
   , l1conflicts(0)
   , multiLearnt(0)
+  , learntUnit(0)
   
   // preprocessor
   , coprocessor(0)
