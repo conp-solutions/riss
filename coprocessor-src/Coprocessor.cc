@@ -73,6 +73,8 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , isInprocessing( false )
 , ppTime( 0 )
 , ipTime( 0 )
+, ppwTime(0)
+, ipwTime(0)
 , thisClauses( 0 )
 , thisLearnts( 0 )
 , lastInpConflicts(0)
@@ -110,8 +112,8 @@ lbool Preprocessor::performSimplification()
     formulaVariables = solver->nVars() ;
   }
   
-  if( isInprocessing ) ipTime = cpuTime() - ipTime;
-  else ppTime = cpuTime() - ppTime;
+  if( isInprocessing ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
+  else {ppTime = cpuTime() - ppTime; ppwTime = wallClockTime() - ppwTime;}
   
   // first, remove all satisfied clauses
   if( !solver->simplify() ) { cout.flush(); cerr.flush(); return l_False; }
@@ -120,8 +122,6 @@ lbool Preprocessor::performSimplification()
   // delete clauses from solver
   
   if( opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << endl;
-  thisClauses = solver->clauses.size();
-  thisLearnts = solver->learnts.size();
   
   cleanSolver ();
   // initialize techniques
@@ -369,8 +369,8 @@ lbool Preprocessor::performSimplification()
     dense.compress(); 
   }
   
-  if( isInprocessing ) ipTime = cpuTime() - ipTime;
-  else ppTime = cpuTime() - ppTime;
+  if( isInprocessing ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
+  else {ppTime = cpuTime() - ppTime; ppwTime = wallClockTime() - ppwTime;}
   
   if( opt_check ) fullCheck("final check");
 
@@ -486,8 +486,8 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     return status;
   }
   
-  if( isInprocessing ) ipTime = cpuTime() - ipTime;
-  else ppTime = cpuTime() - ppTime;
+  if( isInprocessing ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
+  else {ppTime = cpuTime() - ppTime; ppwTime = wallClockTime() - ppwTime;}
   
   // first, remove all satisfied clauses
   if( !solver->simplify() ) { cout.flush(); cerr.flush(); return l_False; }
@@ -730,8 +730,8 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     dense.compress(); 
   }
   
-  if( isInprocessing ) ipTime = cpuTime() - ipTime;
-  else ppTime = cpuTime() - ppTime;
+  if( isInprocessing ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
+  else {ppTime = cpuTime() - ppTime; ppwTime = wallClockTime() - ppwTime;}
   
   if( opt_check ) fullCheck("final check");
 
@@ -820,11 +820,16 @@ void Preprocessor::printStatistics(ostream& stream)
 stream << "c [STAT] CP3 "
 << ppTime << " s-ppTime, " 
 << ipTime << " s-ipTime, "
+<< ppwTime << " s-ppwTime, " 
+<< ipwTime << " s-ipwTime, "
+<< memUsedPeak() << " MB "
+<< endl;
+
+stream << "c [STAT] CP3(2) "
 << data.getClauses().size() << " cls, " 
 << data.getLEarnts().size() << " learnts, "
 << thisClauses - data.getClauses().size() << " rem-cls, " 
 << thisLearnts - data.getLEarnts().size() << " rem-learnts, "
-<< memUsedPeak() << " MB "
 << endl;
 }
 
@@ -844,6 +849,9 @@ void Preprocessor::extendModel(vec< lbool >& model)
 
 void Preprocessor::initializePreprocessor()
 {
+  thisClauses = 0;
+  thisLearnts = 0;
+  
   uint32_t clausesSize = (*solver).clauses.size();
   for (int i = 0; i < clausesSize; ++i)
   {
@@ -859,6 +867,7 @@ void Preprocessor::initializePreprocessor()
     } else if (c.size() == 1 ) {
       if( data.enqueue(c[0]) == l_False ) break;
       c.set_delete(true);
+      thisClauses ++;
     } else {
       data.addClause( cr, opt_check );
       // TODO: decide for which techniques initClause in not necessary!
@@ -866,6 +875,7 @@ void Preprocessor::initializePreprocessor()
       propagation.initClause( cr );
       hte.initClause( cr );
       cce.initClause( cr );
+      thisClauses ++;
     }
   }
 
@@ -883,6 +893,7 @@ void Preprocessor::initializePreprocessor()
     } else if (c.size() == 1 ) {
       if( data.enqueue(c[0]) == l_False ) break;
       c.set_delete(true);
+      thisLearnts++;
     } else {
       data.addClause( cr, opt_check );
       // TODO: decide for which techniques initClause in not necessary!
@@ -890,6 +901,7 @@ void Preprocessor::initializePreprocessor()
       propagation.initClause( cr );
       hte.initClause( cr );
       cce.initClause( cr );
+      thisLearnts++;
     }
   }
 }
