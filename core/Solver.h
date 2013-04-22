@@ -293,6 +293,24 @@ protected:
   int multiLearnt; // number of multiple learnt units at level 1
   int learntUnit;  // learnt a unit clause
         
+  // la hack
+  // stats
+  int laAssignments;
+  int tabus;
+  int las;
+  int failedLAs;
+  int maxBound;
+  double laTime;
+  
+  // real data
+  Lit hstry[5];
+  int untilLa;		// count until  next LA is performed
+  int laBound;		// current bound for l5-LA
+  bool laStart;		// when reached the la level, perform la
+  
+  void fm(uint64_t* p, bool mo); // fills current model into variable vector
+  bool laHack();	// perform la hack, return false -> unsat instance!
+        
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;
 public:     bool useCoprocessor;
