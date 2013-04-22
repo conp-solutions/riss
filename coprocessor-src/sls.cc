@@ -21,6 +21,7 @@ Technique(_ca, _controller)
 , ca ( _ca )
 , solveTime(0)
 , flips ( 0 )
+, unsats(0)
 {
 
 }
@@ -289,6 +290,7 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
     varData[v].polarity = ! varData[v].polarity;
   }
   
+  unsats = unsatClauses.size();
   return unsatClauses.size() == 0;
 }
 
@@ -353,12 +355,13 @@ bool Sls::solve( const vec<CRef>& formula, uint32_t stepLimit )
 void Sls::printStatistics( ostream& stream )
 {
   stream << "c [STAT] SLS " << solveTime << " s, " << flips << " flips, " << flips / solveTime << " fps" << endl;
-  stream << "c [STAT] SLS-info " <<  unsatClauses.size() << " unsatClauses" << endl;
+  stream << "c [STAT] SLS-info " <<  unsats << " unsatClauses" << endl;
 }
 
 
 void Sls::destroy()
 {
+  unsats = unsatClauses.size();
   vector<CRef>().swap( unsatClauses); // data
   vector<int>().swap( indexes ); // indexes
   vector<VarData>().swap( varData );

@@ -39,12 +39,15 @@ static StringOption opt_itechs (_cat2, "cp3_itechs", "techniques for inprocessin
 #if defined CP3VERSION && CP3VERSION < 301
 static const int opt_threads = 0;
 static const bool opt_sls = false;       
+static const bool opt_sls_phase = false;    
 static const bool opt_rew = false;    
 static const bool opt_twosat = false;
 static const bool  opt_ts_phase =false;    
 #else
 static IntOption  opt_threads     (_cat, "cp3_threads",    "Number of extra threads that should be used for preprocessing", 0, IntRange(0, INT32_MAX));
 static BoolOption opt_sls         (_cat2, "sls",           "Use Simple Walksat algorithm to test whether formula is satisfiable quickly", false);
+static BoolOption opt_sls_phase   (_cat2, "sls-phase",     "Use current interpretation of SLS as phase", false);
+static IntOption  opt_sls_flips   (_cat2, "sls-flips",     "Perform given number of SLS flips", 8000000, IntRange(-1, INT32_MAX));
 static BoolOption opt_rew         (_cat2, "rew",           "Rewrite AMO constraints", false);
 static BoolOption opt_twosat      (_cat2, "2sat",          "2SAT algorithm to check satisfiability of binary clauses", false);
 static BoolOption opt_ts_phase    (_cat2, "2sat-phase",    "use 2SAT model as initial phase for SAT solver", false);
@@ -314,13 +317,17 @@ lbool Preprocessor::performSimplification()
     if( opt_verbose > 0 ) cerr << "c sls ..." << endl;
     if( opt_verbose > 4 )cerr << "c coprocessor sls" << endl;
     if( status == l_Undef ) {
-      bool solvedBySls = sls.solve( data.getClauses(), 4000000 );  // cannot change status, can generate new unit clauses
+      bool solvedBySls = sls.solve( data.getClauses(), opt_sls_flips == -1 ? (uint64_t)4000000000000000 : (uint64_t)opt_sls_flips  );  // cannot change status, can generate new unit clauses
+      cerr << "c sls returned " << solvedBySls << endl;
       if( solvedBySls ) {
 	cerr << "c formula was solved with SLS!" << endl;
 	cerr // << endl 
 	 << "c ================================" << endl 
 	 << "c  use the result of SLS as model " << endl
 	 << "c ================================" << endl;
+      }
+      if( solvedBySls || opt_sls_phase ) {
+	for( Var v= 0 ; v < data.nVars(); ++ v ) solver->polarity[v] = sls.getModelPolarity(v) == 1 ? 1 : 0; // minisat uses sign instead of polarity!
       }
     }
     if (! solver->okay())
@@ -680,11 +687,11 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
   
   
   
-  if( opt_sls ) {
+  if( false && opt_sls ) { // TODO: decide whether this should be possible!
     if( opt_verbose > 0 ) cerr << "c sls ..." << endl;
     if( opt_verbose > 4 )cerr << "c coprocessor sls" << endl;
     if( status == l_Undef ) {
-      bool solvedBySls = sls.solve( data.getClauses(), 4000000 );  // cannot change status, can generate new unit clauses
+      bool solvedBySls = sls.solve( data.getClauses(), opt_sls_flips == -1 ? (uint64_t)4000000000000000 : (uint64_t)opt_sls_flips  );  // cannot change status, can generate new unit clauses
       if( solvedBySls ) {
 	cerr << "c formula was solved with SLS!" << endl;
 	cerr // << endl 
@@ -692,12 +699,15 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 	 << "c  use the result of SLS as model " << endl
 	 << "c ================================" << endl;
       }
+      if( solvedBySls || opt_sls_phase ) {
+	for( Var v= 0 ; v < data.nVars(); ++ v ) solver->polarity[v] = sls.getModelPolarity(v) == 1 ? 1 : 0; // minisat uses sign instead of polarity!
+      }
     }
     if (! solver->okay())
         status = l_False;
   }
   
-  if( opt_twosat ) {
+  if( false && opt_twosat ) {// TODO: decide whether this should be possible! -> have a parameter, 2sat seems to be more useful
     if( opt_verbose > 0 ) cerr << "c 2sat ..." << endl;
     if( opt_verbose > 4 )cerr << "c coprocessor 2SAT" << endl;
     if( status == l_Undef ) {
