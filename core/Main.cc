@@ -160,7 +160,7 @@ int main(int argc, char** argv)
 	    printf("c | Norbert Manthey. The use of the tool is limited to research only!                                     |\n");
 	    printf("c | Based on Minisat 2.2 and Glucose 2.1  -- thanks!                                                      |\n");
 	    printf("c | Contributors:                                                                                         |\n");
-	    printf("c |      Kilian Gebhard (BVE Implementation,parallel preprocessor)                                        |\n");
+	    printf("c |      Kilian Gebhardt (BVE Implementation,parallel preprocessor)                                       |\n");
             printf("c ============================[ Problem Statistics ]=======================================================\n");
             printf("c |                                                                                                       |\n"); }
 
