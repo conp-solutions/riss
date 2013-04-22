@@ -98,6 +98,14 @@ static StringOption  polFile               ("INIT", "polFile",    "use these pol
 static BoolOption    opt_printDecisions    ("INIT", "printDec",   "print decisions", false );
 
 
+BoolOption    dx                    ("MODS", "laHackOutput","output info about LA", false);
+BoolOption    hk                    ("MODS", "laHack",      "enable lookahead on level 0", false);
+BoolOption    tb                    ("MODS", "tabu",        "do not perform LA, if all considered LA variables are as before", false);
+BoolOption    opt_laDyn             ("MODS", "dyn",         "dynamically set the frequency based on success", false);
+IntOption     opt_laMaxEvery        ("MODS", "hlaMax",      "maximum bound for frequency", 50, IntRange(0, INT32_MAX) );
+IntOption     opt_laLevel           ("MODS", "hlaLevel",    "level of look ahead", 5, IntRange(0, 5) );
+IntOption     opt_laEvery           ("MODS", "hlaevery",    "initial frequency of LA", 1, IntRange(0, INT32_MAX) );
+
 //=================================================================================================
 // Constructor/Destructor:
 
@@ -156,6 +164,18 @@ Solver::Solver() :
   // UIP hack
   , l1conflicts(0)
   , multiLearnt(0)
+  , learntUnit(0)
+  
+  // LA hack
+  ,laAssignments(0)
+  ,tabus(0)
+  ,las(0)
+  ,failedLAs(0)
+  ,maxBound(0)
+  ,laTime(0)
+  ,untilLa(opt_laEvery)
+  ,laBound(opt_laEvery)
+  ,laStart(false)
   
   // preprocessor
   , coprocessor(0)
@@ -1255,12 +1275,109 @@ lbool Solver::search(int nof_conflicts)
 		}
             }
             
+            if(hk) { // perform LA hack?
+	      int hl = decisionLevel();
+	      if( hl == 0 ) if( --untilLa == 0 ) {laStart = true; if(dx)cerr << "c startLA" << endl;}
+	      if( laStart && hl == opt_laLevel ) {
+		if( !laHack() ) return l_False;
+	      }
+	    }
+            
             // Increase decision level and enqueue 'next'
             newDecisionLevel();
 	    if(opt_printDecisions) printf("c decide %s%d at level %d\n", sign(next) ? "-" : "", var(next) + 1, decisionLevel() );
             uncheckedEnqueue(next);
         }
     }
+}
+
+
+void Solver::fm(uint64_t*p,bool mo){ // for negative, add bit patter 10, for positive, add bit pattern 01!
+if(!mo) for(int i=trail_lim[0];i<trail.size();++i){
+  Lit l=trail[i];
+  p[var(l)]+=(sign(l)?2:1);
+//  cerr << "c update " << var(l) + 1 << " to " << p[var(l)] << endl;
+  
+} //TODO: check whether it is worth to have the extra variable!
+for(Var v=0;v<nVars();++v) p[v]=(p[v]<<2); // move two bits, so that the next assignment can be put there
+
+// TODO: can be removed!
+//for(Var v=0;v<nVars();++v) cerr << "c update " << v + 1 << " to " << p[v] << endl;
+
+}
+
+bool Solver::laHack() {
+  assert(decisionLevel() == opt_laLevel && "can perform LA only, if level is correct" );
+  laTime = cpuTime() - laTime;
+  uint64_t hit[]={20,40,340,680,87380,174760,5726623060,11453246120,6148914691236517204,12297829382473034408};
+  // TODO: remove white spaces, output, comments and assertions!
+  uint64_t p[nVars()];
+  memset(p,0,nVars()*sizeof(uint64_t)); // TODO: change sizeof into 4!
+  vec<char> bu;
+  polarity.copyTo(bu);  
+  uint64_t pt=~0; // everything set -> == 2^32-1
+  if(dx) cerr << "c initial pattern: " << pt << endl;
+  Lit d[5];
+  for(int i=0;i<opt_laLevel;++i) d[i]=trail[ trail_lim[i] ]; // get all decisions into dec array
+
+  if(tb){ // use tabu
+    bool same = true;
+    for( int i = 0 ; i < opt_laLevel; ++i ){
+      for( int j = 0 ; j < opt_laEvery; ++j )
+	if(var(d[i])!=var(hstry[j]) ) same = false; 
+    }
+    if( same ) { laTime = cpuTime() - laTime; return true; }
+    for( int i = 0 ; i < opt_laLevel; ++i ) hstry[i]=d[i];
+  }
+  las++;
+  
+  int bound=1<<opt_laLevel;
+  if(dx) cerr << "c do LA until " << bound << " starting at level " << decisionLevel() << endl;
+  fm(p,false); // fill current model
+  for(uint64_t i=1;i<bound;++i){ // for each combination
+    cancelUntil(0);
+    newDecisionLevel();
+    for(int j=0;j<opt_laLevel;++j) uncheckedEnqueue((i&(1<<j))!=0?~d[j]:d[j]); // flip polarity of d[j], if corresponding bit in i is set -> enumberate all combinations!
+    bool f=propagate() != CRef_Undef;
+    if(dx) cerr << "c propagated iteration " << i << endl;
+    fm(p,f);
+    uint64_t m=3;
+    if(f)pt=(pt&(~(m<<(2*i))));
+    if(dx) cerr << "c this propafation [" << i << "] failed: " << f << " current match pattern: " << pt << "(inv: " << ~pt << ")" << endl;
+    if(dx) { cerr << "c cut: "; for(int j=0;j<2<<opt_laLevel;++j) cerr << ((pt&(1<<j))  != (uint64_t)0 ); cerr << endl; }
+  }
+  cancelUntil(0);
+  int t=2*opt_laLevel-2;
+  // evaluate result of LA!
+  bool foundUnit=false;
+  if(dx) cerr << "c pos hit: " << (pt & (hit[t])) << endl;
+  if(dx) cerr << "c neg hit: " << (pt & (hit[t+1])) << endl;
+  for(Var v=0; v<nVars(); ++v ){
+    if(value(v)==l_Undef){ // l_Undef == 2
+      if( (pt & p[v]) == (pt & (hit[t])) ){foundUnit=true;uncheckedEnqueue(mkLit(v,false));laAssignments++;} // pos consequence
+      if( (pt & p[v]) == (pt & (hit[t+1])) ){foundUnit=true;uncheckedEnqueue(mkLit(v,true));laAssignments++;}// neg consequence
+
+      // TODO: can be cut!
+      if(dx) if( (pt & p[v]) == (pt & (hit[t])) ) { cerr << "c pos " << v+1 << endl; }
+      if(dx) if( (pt & p[v]) == (pt & (hit[t+1])) ) { cerr << "c neg " << v+1 << endl; }
+      if(dx) if( p[v] != 0 ) cerr << "p[" << v+1 << "] = " << p[v] << endl;
+    } // use brackets needs less symbols than writing continue!
+  }
+  
+  if( propagate() != CRef_Undef ){laTime = cpuTime() - laTime; return false;}
+  
+  // done with la, continue usual search, until next time something is done
+  bu.copyTo(polarity); // restore polarities from before!
+  if(opt_laDyn){
+    if(foundUnit)laBound=opt_laEvery; 		// reset down to specified minimum
+    else {if(laBound<opt_laMaxEvery)laBound++;}	// increase by one!
+  }
+  laStart=false;untilLa=laBound; // reset counter
+  laTime = cpuTime() - laTime;
+  
+  if(!foundUnit)failedLAs++;
+  maxBound=maxBound>laBound ? maxBound : laBound;
+  return true;
 }
 
 
@@ -1380,8 +1497,10 @@ printf("c ==================================[ Search Statistics (every %6d confl
     if (verbosity >= 1)
       printf("c =========================================================================================================\n");
     
-    if (verbosity >= 1)
+    if (verbosity >= 1) {
             printf("c Learnt At Level 1: %d  Multiple: %d Units: %d\n", l1conflicts, multiLearnt,learntUnit);
+	    printf("c LAs: %d laSeconds %lf LA assigned: %d tabus: %d, failedLas: %d, maxEvery %d\n", laTime, las, laAssignments, tabus, failedLAs, maxBound );
+    }
 
     if (status == l_True){
         // Extend & copy model:

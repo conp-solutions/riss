@@ -1076,7 +1076,11 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
     data.getActiveVariables(lastDeleteTime(), variable_queue);
   }
   
-  while ((opt_bve_heap != 2 && newheap.size() > 0) || (opt_bve_heap == 2 && variable_queue.size() > 0))
+  bool reachedLimit = false; // indicate if enough steps have been performed
+  while ( ((opt_bve_heap != 2 && newheap.size() > 0) || (opt_bve_heap == 2 && variable_queue.size() > 0))
+    && !data.isInterupted()
+    && !reachedLimit
+  )
   {
 
     updateDeleteTime(data.getMyDeleteTimer());
@@ -1096,8 +1100,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
           workData[i].garbageCounter = 0;
           jobs[i].argument  = &(workData[i]);
         }
-        cerr << "c parallel bve with " << controller.size() << " threads on " 
-             << QSize << " variables" << endl;
+        if(opt_bve_verbose>0) cerr << "c parallel bve with " << controller.size() << " threads on " << QSize << " variables" << endl;
         pthread_rwlock_t mutex = allocatorRWLock.getValue(); // FIXME reicht hier auch eine reference?
         assert (mutex.__data.__nr_readers == 0);
         assert (mutex.__data.__readers_wakeup == 0);
@@ -1125,8 +1128,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
     else
     {
         if (opt_bve_findGate) data.ma.resize( data.nVars() * 2 );
-        cerr << "c sequentiel bve on " 
-             << QSize << " variables" << endl;
+        if(opt_bve_verbose>0) cerr << "c sequentiel bve on " << QSize << " variables" << endl;
         int parBveStepSum = 0; 
         for (int i = 0; i < controller.size(); ++i)
             parBveStepSum += parStats[i].parBveChecks;

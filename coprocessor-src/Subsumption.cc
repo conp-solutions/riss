@@ -110,17 +110,20 @@ void Subsumption::process(bool doStrengthen, Heap< VarOrderBVEHeapLt >* heap, co
     if( hasToSubsume() ){
       fullSubsumption(heap, ignore, doStatistics);
       // clear queue afterwards
+      for( int i = 0 ; i < data.getSubsumeClauses().size(); ++ i ) ca[ data.getSubsumeClauses()[i] ].set_subsume(false);
       data.getSubsumeClauses().clear();
     }
     if( hasToStrengthen() ) {
       if( !doStrengthen ) {
 	// do not apply strengthening?
+	for( int i = 0 ; i < data.getStrengthClauses().size(); ++ i ) ca[ data.getStrengthClauses()[i] ].set_strengthen(false);
 	data.getStrengthClauses().clear();
 	continue;
       }
       if (controller.size() > 0 && (opt_par_strength == 2 || (data.getStrengthClauses().size() > 250000 && opt_par_strength == 1)))
       {
           parallelStrengthening(heap, ignore, doStatistics);
+	  assert( data.getStrengthClauses().size() == 0 && "finished strengthening" );
       }
       else {
           int avgParStrengthSteps = 0; 
@@ -156,7 +159,10 @@ void Subsumption::process(bool doStrengthen, Heap< VarOrderBVEHeapLt >* heap, co
           }
       }
       // clear queue afterwards
-      if (opt_allStrengthRes == 0) data.getStrengthClauses().clear();
+      if (opt_allStrengthRes == 0) {
+	for( int i = 0 ; i < data.getStrengthClauses().size(); ++ i ) ca[ data.getStrengthClauses()[i] ].set_strengthen(false);
+	data.getStrengthClauses().clear();
+      }
     }
   }
   
@@ -188,6 +194,8 @@ lbool Subsumption::fullSubsumption(Heap<VarOrderBVEHeapLt> * heap, const Var ign
     
     if (controller.size() > 0) subsumeSteps -= avgParSubsSteps / controller.size();
   }
+  
+  for( int i = 0 ; i < data.getSubsumeClauses().size(); ++ i ) ca[ data.getSubsumeClauses()[i] ].set_subsume(false);
   data.getSubsumeClauses().clear();
   // no result to tell to the outside
   return l_Undef; 
@@ -1543,7 +1551,7 @@ void Subsumption::initClause( const CRef cr )
 void Subsumption::parallelSubsumption( const bool doStatistics)
 {
   if (doStatistics) processTime = wallClockTime() - processTime;
-  cerr << "c parallel subsumption with " << controller.size() << " threads" << endl;
+  if( false ) cerr << "c parallel subsumption with " << controller.size() << " threads" << endl;
   SubsumeWorkData workData[ controller.size() ];
   vector<Job> jobs( controller.size() );
   toDeletes.resize(controller.size());
@@ -1614,8 +1622,9 @@ void* Subsumption::runParallelSubsume(void* arg)
 
 void Subsumption::parallelStrengthening(Heap<VarOrderBVEHeapLt> * heap, const Var ignore, const bool doStatistics)
 {
+  // assert( !data.isInterupted() && "if interrupted, do not hit this point!" );
   //fullStrengthening(data);
-  cerr << "c parallel strengthening with " << controller.size() << " threads" << endl;
+  if( false ) cerr << "c parallel strengthening with " << controller.size() << " threads" << endl;
   if (doStatistics) strengthTime = wallClockTime() - strengthTime;
   SubsumeWorkData workData[ controller.size() ];
   //vector< struct SubsumeStatsData > localStats (controller.size());
@@ -1658,6 +1667,10 @@ void Subsumption::parallelStrengthening(Heap<VarOrderBVEHeapLt> * heap, const Va
     occ_updates[i].clear();
   }
 
+  // we do not have the resources for the remaining clauses!
+  for( int i = 0 ; i < data.getStrengthClauses().size(); ++ i ) ca[ data.getStrengthClauses()[i] ].set_strengthen(false);
+  data.getStrengthClauses().clear(); 
+  
   //propagate units
   propagation.process(data, true, heap, ignore);
   if (doStatistics) strengthTime = wallClockTime() - strengthTime;

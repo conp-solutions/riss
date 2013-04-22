@@ -75,6 +75,8 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , isInprocessing( false )
 , ppTime( 0 )
 , ipTime( 0 )
+, ppwTime(0)
+, ipwTime(0)
 , thisClauses( 0 )
 , thisLearnts( 0 )
 , lastInpConflicts(0)
@@ -90,7 +92,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , unhiding ( solver->ca, controller, data, propagation, subsumption, ee )
 , probing  ( solver->ca, controller, data, propagation, ee, *solver )
 , res( solver->ca, controller, data)
-, rew( solver->ca, controller, data )
+, rew( solver->ca, controller, data, subsumption )
 , dense( solver->ca, controller, data, propagation)
 , sls ( data, solver->ca, controller )
 , twoSAT( solver->ca, controller, data)
@@ -113,8 +115,8 @@ lbool Preprocessor::performSimplification()
     formulaVariables = solver->nVars() ;
   }
   
-  if( isInprocessing ) ipTime = cpuTime() - ipTime;
-  else ppTime = cpuTime() - ppTime;
+  if( isInprocessing ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
+  else {ppTime = cpuTime() - ppTime; ppwTime = wallClockTime() - ppwTime;}
   
   // first, remove all satisfied clauses
   if( !solver->simplify() ) { cout.flush(); cerr.flush(); return l_False; }
@@ -123,8 +125,6 @@ lbool Preprocessor::performSimplification()
   // delete clauses from solver
   
   if( opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << endl;
-  thisClauses = solver->clauses.size();
-  thisLearnts = solver->learnts.size();
   
   cleanSolver ();
   // initialize techniques
@@ -137,7 +137,7 @@ lbool Preprocessor::performSimplification()
   if( opt_verbose > 4 ) cerr << "c coprocessor finished initialization" << endl;
   
   const bool printBVE = false, printBVA = false, printProbe = false, printUnhide = false, 
-	printCCE = false, printEE = false, printHTE = false, printSusi = false, printUP = false,
+	printCCE = false, printEE = false, printREW = false, printHTE = false, printSusi = false, printUP = false,
 	printTernResolve = false, printAddRedBin = false;  
   
   // do preprocessing
@@ -195,6 +195,9 @@ lbool Preprocessor::performSimplification()
   data.checkGarbage(); // perform garbage collection
   
   if( opt_debug ) { checkLists("after REW"); scanCheck("after REW"); }
+  if( false  || printREW ) {
+   printFormula("after REW");
+  }
   
   if( opt_ee ) { // before this technique nothing should be run that alters the structure of the formula (e.g. BVE;BVA)
     if( opt_verbose > 0 ) cerr << "c ee ..." << endl;
@@ -385,8 +388,8 @@ lbool Preprocessor::performSimplification()
     dense.compress(); 
   }
   
-  if( isInprocessing ) ipTime = cpuTime() - ipTime;
-  else ppTime = cpuTime() - ppTime;
+  if( isInprocessing ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
+  else {ppTime = cpuTime() - ppTime; ppwTime = wallClockTime() - ppwTime;}
   
   if( opt_check ) fullCheck("final check");
 
@@ -412,6 +415,7 @@ lbool Preprocessor::performSimplification()
     if( opt_sls ) sls.printStatistics(cerr);
     if( opt_twosat) twoSAT.printStatistics(cerr);
     if( opt_cce ) cce.printStatistics(cerr);
+    if( opt_rew ) rew.printStatistics(cerr);
     if( opt_dense ) dense.printStatistics(cerr);
   }
   
@@ -502,8 +506,8 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     return status;
   }
   
-  if( isInprocessing ) ipTime = cpuTime() - ipTime;
-  else ppTime = cpuTime() - ppTime;
+  if( isInprocessing ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
+  else {ppTime = cpuTime() - ppTime; ppwTime = wallClockTime() - ppwTime;}
   
   // first, remove all satisfied clauses
   if( !solver->simplify() ) { cout.flush(); cerr.flush(); return l_False; }
@@ -656,6 +660,14 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 	if( opt_verbose > 1 ) cerr << "c HTE changed formula: " << change << endl;
     }
     
+    // rewriting "r"
+    else if( execute == 'r' && opt_rew && status == l_Undef && data.ok() ) {
+	if( opt_verbose > 2 ) cerr << "c rew" << endl;
+	rew.process();
+	change = rew.appliedSomething() || change;
+	if( opt_verbose > 1 ) cerr << "c REW changed formula: " << change << endl;
+    }
+    
     // none left so far
     else {
       cerr << "c warning: cannot execute technique related to  " << execute << endl;
@@ -690,8 +702,11 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     if( opt_verbose > 0 ) cerr << "c 2sat ..." << endl;
     if( opt_verbose > 4 )cerr << "c coprocessor 2SAT" << endl;
     if( status == l_Undef ) {
-      bool solvedBy2SAT = twoSAT.solve();  // cannot change status, can generate new unit clauses
-      if( solvedBy2SAT ) {
+      bool notFailed = twoSAT.solve();  // cannot change status, can generate new unit clauses
+      
+      if( data.hasToPropagate() ) if( propagation.process(data) == l_False ) {data.setFailed();} ;
+      
+      if( notFailed ) {
 	// cerr << "binary clauses have been solved with 2SAT" << endl;
 	// check satisfiability of whole formula!
 	bool isNotSat = false;
@@ -705,7 +720,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 	}
 	if( isNotSat ) {
 	  // only set the phase before search!
-	  if( opt_twosat && !isInprocessing) {
+	  if( opt_ts_phase && !isInprocessing) {
 	    for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
 	  }
 	  cerr // << endl 
@@ -717,6 +732,8 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 	  << "c =================================" << endl 
 	  << "c  use the result of 2SAT as model " << endl 
 	  << "c =================================" << endl;
+	  // next, search would be called, and then a model will be generated!
+	  for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
 	}
       } else {
 	cerr // << endl 
@@ -746,8 +763,8 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     dense.compress(); 
   }
   
-  if( isInprocessing ) ipTime = cpuTime() - ipTime;
-  else ppTime = cpuTime() - ppTime;
+  if( isInprocessing ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
+  else {ppTime = cpuTime() - ppTime; ppwTime = wallClockTime() - ppwTime;}
   
   if( opt_check ) fullCheck("final check");
 
@@ -773,6 +790,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     if( opt_sls ) sls.printStatistics(cerr);
     if( opt_twosat) twoSAT.printStatistics(cerr);
     if( opt_cce ) cce.printStatistics(cerr);
+    if( opt_rew ) rew.printStatistics(cerr);
     if( opt_dense ) dense.printStatistics(cerr);
   }
   
@@ -836,11 +854,16 @@ void Preprocessor::printStatistics(ostream& stream)
 stream << "c [STAT] CP3 "
 << ppTime << " s-ppTime, " 
 << ipTime << " s-ipTime, "
+<< ppwTime << " s-ppwTime, " 
+<< ipwTime << " s-ipwTime, "
+<< memUsedPeak() << " MB "
+<< endl;
+
+stream << "c [STAT] CP3(2) "
 << data.getClauses().size() << " cls, " 
 << data.getLEarnts().size() << " learnts, "
 << thisClauses - data.getClauses().size() << " rem-cls, " 
 << thisLearnts - data.getLEarnts().size() << " rem-learnts, "
-<< memUsedPeak() << " MB "
 << endl;
 }
 
@@ -860,6 +883,9 @@ void Preprocessor::extendModel(vec< lbool >& model)
 
 void Preprocessor::initializePreprocessor()
 {
+  thisClauses = 0;
+  thisLearnts = 0;
+  
   uint32_t clausesSize = (*solver).clauses.size();
   for (int i = 0; i < clausesSize; ++i)
   {
@@ -875,6 +901,7 @@ void Preprocessor::initializePreprocessor()
     } else if (c.size() == 1 ) {
       if( data.enqueue(c[0]) == l_False ) break;
       c.set_delete(true);
+      thisClauses ++;
     } else {
       data.addClause( cr, opt_check );
       // TODO: decide for which techniques initClause in not necessary!
@@ -882,6 +909,7 @@ void Preprocessor::initializePreprocessor()
       propagation.initClause( cr );
       hte.initClause( cr );
       cce.initClause( cr );
+      thisClauses ++;
     }
   }
 
@@ -899,6 +927,7 @@ void Preprocessor::initializePreprocessor()
     } else if (c.size() == 1 ) {
       if( data.enqueue(c[0]) == l_False ) break;
       c.set_delete(true);
+      thisLearnts++;
     } else {
       data.addClause( cr, opt_check );
       // TODO: decide for which techniques initClause in not necessary!
@@ -906,6 +935,7 @@ void Preprocessor::initializePreprocessor()
       propagation.initClause( cr );
       hte.initClause( cr );
       cce.initClause( cr );
+      thisLearnts++;
     }
   }
 }
