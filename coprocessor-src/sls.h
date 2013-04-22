@@ -27,7 +27,7 @@ public:
   bool solve(  const vec< Minisat::CRef >& formula, uint64_t stepLimit  );
 
   /** if search succeeded, return polarity for variable v (1 = positive, -1 = negative) */
-  char getModelPolarity( const Var v ) { return varData[v].polarity ? 1 : -1; }
+  char getModelPolarity( const Var v ) { return varData[v].polarity ? -1 : 1; }
 
   /** This method should be used to print the statistics of the technique that inherits from this class
   */
@@ -101,6 +101,8 @@ private:
   /** fill the assignment with random values
   */
   void createRandomAssignment();
+  
+  unsigned unsats;
 };
 
 }; // end namespace

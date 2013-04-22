@@ -1113,6 +1113,11 @@ void Solver::analyzeOne( CRef confl, vec<Lit>& learntUnits)
   return;
 }
 
+/// print literals into a stream
+inline ostream& operator<<(ostream& other, const Lit& l ) {
+  other << (sign(l) ? "-" : "") << var(l) + 1;
+  return other;
+}
 
 /*_________________________________________________________________________________________________
 |
