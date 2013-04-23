@@ -1292,14 +1292,14 @@ lbool Solver::search(int nof_conflicts)
 
 
 void Solver::fm(uint64_t*p,bool mo){ // for negative, add bit patter 10, for positive, add bit pattern 01!
+for(Var v=0;v<nVars();++v) p[v]=(p[v]<<2); // move two bits, so that the next assignment can be put there
+
 if(!mo) for(int i=trail_lim[0];i<trail.size();++i){
   Lit l=trail[i];
   p[var(l)]+=(sign(l)?2:1);
-//  cerr << "c update " << var(l) + 1 << " to " << p[var(l)] << endl;
-  
 } //TODO: check whether it is worth to have the extra variable!
-for(Var v=0;v<nVars();++v) p[v]=(p[v]<<2); // move two bits, so that the next assignment can be put there
-cerr << "c move!" << endl;
+
+//cerr << "c move!" << endl;
 // TODO: can be removed!
 //for(Var v=0;v<nVars();++v) cerr << "c update " << v + 1 << " to " << p[v] << endl;
 
@@ -1308,7 +1308,28 @@ cerr << "c move!" << endl;
 bool Solver::laHack() {
   assert(decisionLevel() == opt_laLevel && "can perform LA only, if level is correct" );
   laTime = cpuTime() - laTime;
-  uint64_t hit[]={20,40,340,680,87380,174760,5726623060,11453246120,6148914691236517204,12297829382473034408};
+  
+  if(false){
+  uint64_t t = 0;
+  cerr << "POS!" << endl;
+  for( int i = 0 ; i < 32; ++ i ) {
+     t = t << 2;
+     t += 1;
+     cerr << "c [" << i+1 << "] : " << t << endl;
+  }
+  t = 0;
+  cerr << "NEG!" << endl;
+  for( int i = 0 ; i < 32; ++ i ) {
+     t = t << 2;
+     t += 2;
+     cerr << "c [" << i+1 << "] : " << t << endl;
+  }
+  }
+  
+  
+  // old: uint64_t hit[]={20,40,340,680,87380,174760,5726623060,11453246120,6148914691236517204,12297829382473034408};
+  // new:
+   uint64_t hit[]={5,10,85,170,21845,43690,1431655765,2863311530,6148914691236517205,12297829382473034410};
   // TODO: remove white spaces, output, comments and assertions!
   uint64_t p[nVars()];
   memset(p,0,nVars()*sizeof(uint64_t)); // TODO: change sizeof into 4!
