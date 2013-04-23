@@ -1113,12 +1113,6 @@ void Solver::analyzeOne( CRef confl, vec<Lit>& learntUnits)
   return;
 }
 
-/// print literals into a stream
-inline ostream& operator<<(ostream& other, const Lit& l ) {
-  other << (sign(l) ? "-" : "") << var(l) + 1;
-  return other;
-}
-
 /*_________________________________________________________________________________________________
 |
 |  search : (nof_conflicts : int) (params : const SearchParams&)  ->  [lbool]
@@ -1305,7 +1299,7 @@ if(!mo) for(int i=trail_lim[0];i<trail.size();++i){
   
 } //TODO: check whether it is worth to have the extra variable!
 for(Var v=0;v<nVars();++v) p[v]=(p[v]<<2); // move two bits, so that the next assignment can be put there
-
+cerr << "c move!" << endl;
 // TODO: can be removed!
 //for(Var v=0;v<nVars();++v) cerr << "c update " << v + 1 << " to " << p[v] << endl;
 

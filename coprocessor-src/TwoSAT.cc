@@ -58,6 +58,7 @@ bool Coprocessor::TwoSatSolver::tmpUnitPropagate()
   {
     Lit x = tmpUnitQueue.front();
     tmpUnitQueue.pop_front();
+    data.ma.reset(toInt(x));
 
     if( debug_out > 2 && tmpUnitQueue.size() % 100 == 0 ) cerr << "queue.size() = " << tmpUnitQueue.size() << endl;
     
@@ -66,11 +67,15 @@ bool Coprocessor::TwoSatSolver::tmpUnitPropagate()
     // if found a conflict, propagate the other polarity for real!
     if (tempVal[toInt(x)] == -1)
     {
+      cerr << "c add to propagation queue(out) : " << ~x << endl;
       unitQueue.push_back(x);
       if (! tmpUnitQueue.empty()) tmpUnitQueue.clear();
+      data.ma.nextStep();
+      permLiterals++;
       return unitPropagate();
     }
 
+    if( debug_out > 2 ) cerr  << "TEMP: Assign " << x << " " << endl;
     assert( var(x) < data.nVars() && "do handle variables only that are part of the formula" );
     tempVal[toInt(x)] = 1; tempVal[toInt(~x)] = -1;
     const Lit* impliedLiterals = big.getArray(x);
@@ -82,12 +87,19 @@ bool Coprocessor::TwoSatSolver::tmpUnitPropagate()
       if (permVal[ toInt(l) ] != 0 || tempVal[toInt(l)] == 1)
         continue;
       else {
-	tmpUnitQueue.push_back(l);
+	
 	if (tempVal[toInt(l)] == -1) {// conflict!!
-	  unitQueue.push_back(~x); // we cannot set x like we do it now, otherwise, we would have to set l and -l
+	  cerr << "c add to propagation queue(in) : " << l << " because " << ~x  << " failed" << endl;
+	  unitQueue.push_back(l); // we cannot set x like we do it now, otherwise, we would have to set l and -l
 	  if (! tmpUnitQueue.empty()) tmpUnitQueue.clear();
+	  data.ma.nextStep();
+	  permLiterals++;
 	  return unitPropagate();
-	} else { tempVal[toInt(l)] = 1; tempVal[toInt(~l)] = -1; }
+	} 
+	if( debug_out > 2 ) cerr  << "TEMP: Assign " << l << " " << endl;
+	// tempVal[toInt(l)] = 1; tempVal[toInt(~l)] = -1;
+	tmpUnitQueue.push_back(l);
+	data.ma.setCurrentStep(toInt(l));
       }
     }
   }
@@ -102,7 +114,10 @@ bool Coprocessor::TwoSatSolver::unitPropagate()
     Lit x = unitQueue.front();
     unitQueue.pop_front();
     
-    if(useUnits) data.enqueue(x); // if allowed, use the found unit!
+    if(useUnits) {
+      if( debug_out > 0 ) cerr << "c enqeue unit " << x << endl;
+      data.enqueue(x); // if allowed, use the found unit!
+    }
     
     if (permVal[toInt(x)] == -1)
     {
@@ -110,13 +125,14 @@ bool Coprocessor::TwoSatSolver::unitPropagate()
       return false;
     }
     
+    if( debug_out > 2 ) cerr  << "PERM: Assign " << x << " " << endl;
     if (permVal[toInt(x)] == 1) {
       assert( tempVal[ toInt(x)] == 1 && "when unit propagated, temporary value should also be fixed!");
       continue;
     }
     
  //   if (Debug_Print2SATAssignments.IsSet())
- //     std::cout << "PERM: Assign " << toNumber(x) << " ";
+    
     permVal[toInt(x)] = 1; permVal[toInt(~x)] = -1; // actually, this should be the case already
     tempVal[toInt(x)] = 1; tempVal[toInt(~x)] = -1;
     permLiterals ++;
@@ -129,6 +145,7 @@ bool Coprocessor::TwoSatSolver::unitPropagate()
       if( permVal[ toInt(impliedLiterals[i]) ] == 0 ) {
 	permVal[ toInt(impliedLiterals[i]) ] = 1; permVal[ toInt(~impliedLiterals[i]) ] = -1;
 	tempVal[ toInt(impliedLiterals[i]) ] = 1; tempVal[ toInt(~impliedLiterals[i])] = -1;
+	cerr << "c unit propagate " << impliedLiterals[i] << endl;
         unitQueue.push_back( impliedLiterals[i] );
       } else if ( permVal[ toInt(impliedLiterals[i]) ] == -1 )
 	return false;
@@ -178,6 +195,8 @@ bool Coprocessor::TwoSatSolver::solve()
   permVal.assign(data.nVars()* 2,0);
   unitQueue.clear();
   tmpUnitQueue.clear();
+  data.ma.reset( data.nVars() *2 );
+  data.ma.nextStep(); // make tmpUnitQueue a set!
   lastSeenIndex = -1;
   
   bool Conflict = !unitPropagate();
@@ -191,6 +210,7 @@ bool Coprocessor::TwoSatSolver::solve()
     if( debug_out > 2 && decs % 100 == 0 ) cerr << "c dec " << decs << "/" << data.nVars() << " mem: " << memUsedPeak() << endl;
     //if (Debug_Print2SATAssignments.IsSet()) std::cout << "DECIDE: " << toNumber(DL) << " ";
     tmpUnitQueue.push_back(DL);
+    data.ma.setCurrentStep(toInt(DL));
     Conflict = !tmpUnitPropagate();
   }
     
