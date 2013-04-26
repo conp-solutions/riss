@@ -248,7 +248,7 @@ public:
   void init( uint32_t nVars );
 
   /** tell preprocessor to use randomized search now */
-  void randomize() { randomized = true; }
+  void randomize() { randomOrder = true; }
   
   // free all the resources that are used by this data object,
   void destroy();
