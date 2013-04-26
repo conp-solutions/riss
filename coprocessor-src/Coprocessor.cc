@@ -24,6 +24,7 @@ static BoolOption opt_cce         (_cat2, "cce",           "Use (covered) Clause
 static BoolOption opt_ee          (_cat2, "ee",            "Use Equivalence Elimination during preprocessing", false);
 static BoolOption opt_enabled     (_cat2, "enabled_cp3",   "Use CP3", false);
 static BoolOption opt_inprocess   (_cat2, "inprocess",     "Use CP3 for inprocessing", false);
+static BoolOption opt_randInp     (_cat2, "randInp",       "Randomize Inprocessing", true);
 static BoolOption opt_inc_inp     (_cat2, "inc-inp",       "increase technique limits per inprocess step", false);
 static BoolOption opt_bve         (_cat2, "bve",           "Use Bounded Variable Elimination during preprocessing", false);
 static BoolOption opt_bva         (_cat2, "bva",           "Use Bounded Variable Addition during preprocessing", false);
@@ -841,6 +842,7 @@ lbool Preprocessor::inprocess()
     if( opt_verbose > 3 ) cerr << "c start inprocessing after another " << solver->conflicts - lastInpConflicts << endl;
     isInprocessing = true;
     
+    if(opt_randInp) data.randomized();
     if(opt_inc_inp) giveMoreSteps();
     
     lbool ret = l_Undef;
