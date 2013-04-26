@@ -70,6 +70,8 @@ public:
 
   void destroy();
   
+    void giveMoreSteps();
+  
 protected:
   
   /** take care of creating a new variable */

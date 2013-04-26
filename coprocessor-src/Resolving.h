@@ -29,6 +29,8 @@ public:
   
   void destroy();
   
+  void giveMoreSteps();
+  
 protected:
   
   /** resolve ternary clauses */

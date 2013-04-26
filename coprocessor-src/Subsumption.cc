@@ -29,6 +29,7 @@ static IntOption   opt_par_subs_counts (_cat, "par_subs_counts" ,  "Updates of c
 static IntOption   opt_chunk_size      (_cat, "susi_chunk_size" ,  "Size of Par SuSi Chunks", 100000, IntRange(1,INT32_MAX));
 #endif
 
+static IntOption  opt_inpStepInc      (_cat, "cp3_sub_inpInc","increase for steps per inprocess call", 40000000, IntRange(0, INT32_MAX));
 
 Subsumption::Subsumption( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation )
 : Technique( _ca, _controller )
@@ -47,6 +48,13 @@ Subsumption::Subsumption( ClauseAllocator& _ca, ThreadController& _controller, C
 , limitIncreases(0)
 {
 }
+
+void Subsumption::giveMoreSteps()
+{
+  subsumeSteps = subsumeSteps < opt_inpStepInc ? 0 : subsumeSteps - opt_inpStepInc;
+  strengthTime = strengthTime < opt_inpStepInc ? 0 : strengthTime - opt_inpStepInc;
+}
+
 
 void Subsumption::printStatistics(ostream& stream)
 {

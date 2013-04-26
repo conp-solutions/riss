@@ -66,6 +66,8 @@ public:
   
   void destroy();
   
+  void giveMoreSteps();
+  
 protected:
 
   /** is there currently something to do? */

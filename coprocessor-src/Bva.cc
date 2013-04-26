@@ -19,6 +19,8 @@ static BoolOption opt_bvaComplement        (_cat, "cp3_bva_compl",   "treat comp
 static BoolOption opt_bvaRemoveDubplicates (_cat, "cp3_bva_dupli",   "remove duplicate clauses", true);
 static BoolOption opt_bvaSubstituteOr      (_cat, "cp3_bva_subOr",   "try to also substitus disjunctions", false);
 
+static IntOption  opt_inpStepInc           (_cat, "cp3_bva_inpInc","increase for steps per inprocess call", 20000, IntRange(0, INT32_MAX));
+
 #if defined CP3VERSION 
 static const int bva_debug = 0;
 #else
@@ -47,6 +49,11 @@ BoundedVariableAddition::BoundedVariableAddition(ClauseAllocator& _ca, ThreadCon
 , bvaSubstituteOr(opt_bvaSubstituteOr)
 {
 
+}
+
+void BoundedVariableAddition::giveMoreSteps()
+{
+andMatchChecks = andMatchChecks < opt_inpStepInc ? 0 : andMatchChecks - opt_inpStepInc;
 }
 
 

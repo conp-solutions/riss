@@ -91,6 +91,7 @@ public:
 
   void initClause(const CRef cr); // inherited from Technique
   void destroy();
+  void giveMoreSteps();
   void printStatistics(ostream& stream);
 
 protected:

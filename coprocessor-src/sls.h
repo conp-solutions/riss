@@ -35,6 +35,8 @@ public:
 
   void destroy();
   
+  void giveMoreSteps();
+  
 private:
   
   CoprocessorData& data;	// reference to coprocessor data object

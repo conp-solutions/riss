@@ -22,6 +22,8 @@ static IntOption pr_keepImplied    (_cat, "pr-keepI",  "keep clauses that imply 
 static IntOption pr_viviPercent    (_cat, "pr-viviP",  "percent of max. clause size for clause vivification", 80, IntRange(0,100));
 static IntOption pr_viviLimit      (_cat, "pr-viviL",  "step limit for clause vivification", 5000000,  IntRange(0, INT32_MAX));
 
+static IntOption  opt_inpStepInc1      (_cat, "cp3_pr_inpInc","increase for steps per inprocess call", 1000000, IntRange(0, INT32_MAX));
+static IntOption  opt_inpStepInc2      (_cat, "cp3_viv_inpInc","increase for steps per inprocess call", 1000000, IntRange(0, INT32_MAX));
 
 #if defined CP3VERSION  
 static const int debug_out = 0;
@@ -58,6 +60,13 @@ Probing::Probing(ClauseAllocator& _ca, ThreadController& _controller, Coprocesso
 , viviSize(0)
 {
 
+}
+
+
+void Probing::giveMoreSteps()
+{
+probeChecks = probeChecks < opt_inpStepInc1 ? 0 : probeChecks - opt_inpStepInc1;
+viviChecks = viviChecks < opt_inpStepInc2 ? 0 : viviChecks - opt_inpStepInc2;
 }
 
 bool Probing::process()

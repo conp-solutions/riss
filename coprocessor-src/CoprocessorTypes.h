@@ -509,6 +509,10 @@ inline void CoprocessorData::init(uint32_t nVars)
   numberOfVars = nVars;
   deleteTimer.create( nVars );
   untouchable.resize(nVars);
+  
+  //if there is still something in the queues, get rid of it!
+  getStrengthClauses().clear();
+  getSubsumeClauses().clear();
 }
 
 inline void CoprocessorData::destroy()

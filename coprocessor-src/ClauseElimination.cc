@@ -18,6 +18,7 @@ static const int debug_out = 0;
 #else
 static IntOption debug_out (_cat, "cce-debug", "debug output for clause elimination",0, IntRange(0,4) );
 #endif
+static IntOption  opt_inpStepInc      (_cat, "cp3_cce_inpInc","increase for steps per inprocess call", 60000, IntRange(0, INT32_MAX));
 
 static const int cceLevel = 1;
 
@@ -34,6 +35,12 @@ ClauseElimination::ClauseElimination(ClauseAllocator& _ca, ThreadController& _co
 {
 
 }
+
+void ClauseElimination::giveMoreSteps()
+{
+    steps = steps < opt_inpStepInc ? 0 : steps - opt_inpStepInc;
+}
+
 
 void ClauseElimination::process(CoprocessorData& data)
 {

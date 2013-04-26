@@ -35,7 +35,7 @@ static BoolOption debug_out            (_cat, "ee_debug", "print debug output to
 #endif
 
 static IntOption opt_ee_limit  (_cat, "cp3_ee_limit", "step limit for detecting equivalent literals", 1000000, IntRange(0, INT32_MAX));
-
+static IntOption  opt_inpStepInc      (_cat, "cp3_ee_inpInc","increase for steps per inprocess call", 200000, IntRange(0, INT32_MAX));
 
 
 static const int eeLevel = 1;
@@ -58,6 +58,12 @@ EquivalenceElimination::EquivalenceElimination(ClauseAllocator& _ca, ThreadContr
 , propagation( _propagation )
 , subsumption( _subsumption )
 {}
+
+void EquivalenceElimination::giveMoreSteps()
+{
+steps = steps < opt_inpStepInc ? 0 : steps - opt_inpStepInc;
+}
+
 
 void EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
 {

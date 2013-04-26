@@ -20,6 +20,9 @@ static BoolOption   opt_add_red_lea   (_cat, "cp3_res_add_lea",  "add redundants
 static BoolOption   opt_add_red_start (_cat, "cp3_res_ars",      "also before preprocessing?", false);
 // static IntOption    opt_add2_steps    (_cat, "cp3_add2_steps",   "Number of steps that are allowed per iteration", INT32_MAX-2, IntRange(0, INT32_MAX-1));
 
+static IntOption  opt_inpStepInc1      (_cat, "cp3_res_inpInc","increase for steps per inprocess call", 200000, IntRange(0, INT32_MAX));
+static IntOption  opt_inpStepInc2      (_cat, "cp3_add_inpInc","increase for steps per inprocess call", 60000, IntRange(0, INT32_MAX));
+
 /// enable this parameter only during debug!
 #if defined CP3VERSION  
 static const bool debug_out = false;
@@ -42,6 +45,13 @@ Resolving::Resolving(ClauseAllocator& _ca, ThreadController& _controller, Coproc
 {
 
 }
+
+void Resolving::giveMoreSteps()
+{
+  res3steps = res3steps < opt_inpStepInc1 ? 0 : res3steps - opt_inpStepInc1;
+  add2steps = add2steps < opt_inpStepInc2 ? 0 : add2steps - opt_inpStepInc2;
+}
+
 
 void Resolving::process(bool post)
 {

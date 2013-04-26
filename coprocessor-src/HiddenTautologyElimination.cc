@@ -22,6 +22,8 @@ static IntOption debug_out    (_cat, "cp3_hte_debug",  "print debug output to sc
 static BoolOption opt_hteTalk (_cat, "cp3_hteTalk",    "talk about algorithm execution", false);
 #endif
 
+static IntOption  opt_inpStepInc      (_cat, "cp3_hte_inpInc","increase for steps per inprocess call", 60000, IntRange(0, INT32_MAX));
+
 using namespace Coprocessor;
 
 HiddenTautologyElimination::HiddenTautologyElimination( ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation )
@@ -34,6 +36,12 @@ HiddenTautologyElimination::HiddenTautologyElimination( ClauseAllocator& _ca, Th
 , activeFlag(0)
 {
 }
+
+void HiddenTautologyElimination::giveMoreSteps()
+{
+ steps = steps < opt_inpStepInc ? 0 : steps - opt_inpStepInc; 
+}
+
 
 void HiddenTautologyElimination::process(CoprocessorData& data)
 {

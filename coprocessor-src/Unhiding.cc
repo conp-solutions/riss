@@ -21,6 +21,11 @@ static const int opt_uhdDebug = 0;
 static IntOption  opt_uhdDebug     (_cat, "cp3_uhdDebug",     "Debug Level of Unhiding", 0, IntRange(0, 3));
 #endif
 
+void Unhiding::giveMoreSteps()
+{
+// nothing to do here ...
+}
+
 
 Unhiding::Unhiding(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, Subsumption& _subsumption, EquivalenceElimination& _ee)
 : Technique( _ca, _controller )

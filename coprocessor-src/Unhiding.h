@@ -76,6 +76,8 @@ public:
   
   void destroy();
   
+  void giveMoreSteps();
+  
 protected:
   
 	/** sorts the given array with increasing discovery stamp
@@ -102,7 +104,6 @@ protected:
 	 * 
 	 */
 	bool unhideSimplify();
-	
 };
 
 
