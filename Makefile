@@ -13,7 +13,13 @@ MYLFLAGS    = -lpthread -lrt $(ARGS)
 
 COPTIMIZE ?= -O3
 
+all: rs
 
+d: rissd
+rs: rissRS
+
+cd: coprocessord
+crs: coprocessorRS
 
 # build the splitter solver
 riss: always
