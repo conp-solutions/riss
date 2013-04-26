@@ -50,6 +50,9 @@ public:
   /** This method should be used to print the statistics of the technique that inherits from this class
    */
   void printStatistics( ostream& stream );
+
+  /** per call to the inprocess method of the preprocessor, allow a technique to have this number more steps */
+  void giveMoreSteps();
   
 protected:
   /** call this method to indicate that the technique has applied changes to the formula */
@@ -71,7 +74,14 @@ protected:
   
   /** update current delete timer */
   void updateDeleteTime( const uint32_t deleteTime );
+  
 };
+
+inline void Technique::giveMoreSteps()
+{
+  assert( false && "needs to be overwritten" );
+}
+
 
 inline Technique::Technique( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller )
 : modifiedFormula(false)

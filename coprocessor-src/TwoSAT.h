@@ -51,6 +51,8 @@ class TwoSatSolver : public Technique
   
   void destroy();
   
+    void giveMoreSteps();
+  
 protected:
   
   bool unitPropagate();

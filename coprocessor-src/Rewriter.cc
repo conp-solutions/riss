@@ -23,12 +23,20 @@ static BoolOption opt_rew_avg         (_cat, "cp3_rew_avg"   ,"use AMOs above eq
 static BoolOption opt_rew_ratio       (_cat, "cp3_rew_ratio" ,"allow literals in AMO only, if their complement is not more frequent", true);
 static BoolOption opt_rew_once        (_cat, "cp3_rew_once"  ,"rewrite each variable at most once! (currently: yes only!)", true);
 
+static IntOption  opt_inpStepInc      (_cat, "cp3_rew_inpInc","increase for steps per inprocess call", 60000, IntRange(0, INT32_MAX));
+
 #if defined CP3VERSION 
 static const int debug_out = 0;
 #else
 static IntOption debug_out                 (_cat, "rew-debug",       "Debug Output of Rewriter", 0, IntRange(0, 4));
 #endif
 	
+void Rewriter::giveMoreSteps()
+{
+  steps = steps < opt_inpStepInc ? 0 : steps - opt_inpStepInc;
+}
+
+
 Rewriter::Rewriter(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Coprocessor::Subsumption& _subsumption)
 : Technique( _ca, _controller )
 , data( _data )

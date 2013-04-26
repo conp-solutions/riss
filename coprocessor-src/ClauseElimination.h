@@ -66,6 +66,8 @@ public:
   
   void destroy();
   
+  void giveMoreSteps();
+  
 protected:
   
   /** try to run CCE on clause cr, return true if clause has been removed */

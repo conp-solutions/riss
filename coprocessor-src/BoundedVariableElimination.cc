@@ -39,6 +39,8 @@ using namespace std;
  BoolOption opt_print_progress  (_cat_bve, "bve_progress", "Print bve progress stats.", false);
 extern BoolOption opt_printStats;
 
+static IntOption  opt_inpStepInc      (_cat_bve, "cp3_bve_inpInc","increase for steps per inprocess call", 5000000, IntRange(0, INT32_MAX));
+
 BoundedVariableElimination::BoundedVariableElimination( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation, Coprocessor::Subsumption & _subsumption )
 : Technique( _ca, _controller )
 , propagation( _propagation)
@@ -80,6 +82,12 @@ BoundedVariableElimination::BoundedVariableElimination( ClauseAllocator& _ca, Co
 //, variable_heap(heap_comp)
 {
 }
+
+void BoundedVariableElimination::giveMoreSteps()
+{
+  seqBveSteps = seqBveSteps < opt_inpStepInc ? 0 : seqBveSteps - opt_inpStepInc;
+}
+
 
 void BoundedVariableElimination::printStatistics(ostream& stream)
 {

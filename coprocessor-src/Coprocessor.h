@@ -137,6 +137,8 @@ protected:
   void initializePreprocessor();     // add all clauses from the solver to the preprocessing structures
   void destroyTechniques();        // free resources of all preprocessing techniques
 
+  void giveMoreSteps();
+  
   // small helpers
   void sortClauses();                // sort the literals within all clauses
   void delete_clause(const CRef cr); // delete a clause from the solver (clause should not be attached within the solver)

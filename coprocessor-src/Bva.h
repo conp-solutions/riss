@@ -67,6 +67,8 @@ public:
 
   void destroy();
   
+  void giveMoreSteps();
+  
 protected:
   
   /** perform AND-bva */

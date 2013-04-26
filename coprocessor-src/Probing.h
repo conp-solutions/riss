@@ -52,6 +52,8 @@ public:
   
   void destroy();
   
+  void giveMoreSteps();
+  
 protected:
   
   /** perform special propagation for probing (track ternary clauses, LHBR if enabled) */

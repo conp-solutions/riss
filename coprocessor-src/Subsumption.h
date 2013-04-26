@@ -106,6 +106,8 @@ public:
 
   void destroy();
   
+    void giveMoreSteps();
+  
 protected:
 
   inline void updateOccurrences(const vector< Coprocessor::Subsumption::OccUpdate >& updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef);
