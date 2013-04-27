@@ -88,6 +88,8 @@ static IntOption     opt_hack              ("REASON",    "hack",      "use hack 
 static BoolOption    opt_hack_cost         ("REASON",    "hack-cost", "use size cost", true );
 static BoolOption    opt_dbg               ("REASON",    "dbg",       "debug hack", false );
 
+static BoolOption    opt_long_conflict     ("REASON",    "longConflict", "if a binary conflict is found, check for a longer one!", false);
+
 // extra 
 static IntOption     opt_act               ("INIT", "actIncMode", "how to inc 0=lin, 1=geo", 0, IntRange(0, 1) );
 static DoubleOption  opt_actStart          ("INIT", "actStart",   "highest value for first variable", 1024, DoubleRange(0, false, HUGE_VAL, false));
@@ -780,7 +782,10 @@ CRef Solver::propagate()
 	  Lit imp = wbin[k].blocker;
 	  
 	  if(value(imp) == l_False) {
-	    return wbin[k].cref;
+	    if( !opt_long_conflict ) return wbin[k].cref;
+	    // else
+	    confl = wbin[k].cref;
+	    break;
 	  }
 	  
 	  if(value(imp) == l_Undef) {
@@ -885,7 +890,7 @@ CRef Solver::propagate()
             // Did not find watch -- clause is unit under assignment:
             *j++ = w;
             if (value(first) == l_False){
-                confl = cr;
+                confl = cr; // independent of opt_long_conflict -> overwrite confl!
                 qhead = trail.size();
                 // Copy the remaining watches:
                 while (i < end)
