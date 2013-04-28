@@ -110,6 +110,7 @@ IntOption     opt_laMaxEvery        ("MODS", "hlaMax",      "maximum bound for f
 IntOption     opt_laLevel           ("MODS", "hlaLevel",    "level of look ahead", 5, IntRange(0, 5) );
 IntOption     opt_laEvery           ("MODS", "hlaevery",    "initial frequency of LA", 1, IntRange(0, INT32_MAX) );
 IntOption     opt_laBound           ("MODS", "hlabound",    "max. nr of LAs (-1 == inf)", -1, IntRange(-1, INT32_MAX) );
+IntOption     opt_laTopUnit         ("MODS", "hlaTop",      "allow another LA after learning another nr of top level units (-1 = never)", -1, IntRange(-1, INT32_MAX));
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -183,6 +184,8 @@ Solver::Solver() :
   ,failedLAs(0)
   ,maxBound(0)
   ,laTime(0)
+  ,maxLaNumber(opt_laBound)
+  ,topLevelsSinceLastLa(0)
   ,untilLa(opt_laEvery)
   ,laBound(opt_laEvery)
   ,laStart(false)
@@ -1191,7 +1194,7 @@ lbool Solver::search(int nof_conflicts)
 	      if(nblevels<=2) nbDL2++; // stats
 
 	      multiLearnt = ( learnt_clause.size() > 1 ? multiLearnt + 1 : multiLearnt );
-
+	      topLevelsSinceLastLa ++;
 	      
 	    } else {
 	      learnt_clause.clear();
@@ -1204,6 +1207,7 @@ lbool Solver::search(int nof_conflicts)
 		for( int i = 0 ; i < learnt_clause.size(); ++ i ) // add all units to current state
 		  { uncheckedEnqueue(learnt_clause[i]);  }
 		multiLearnt = ( learnt_clause.size() > 1 ? multiLearnt + 1 : multiLearnt ); // stats
+		topLevelsSinceLastLa ++;
 	      } else { // treat usual learned clause!
 
 		lbdQueue.push(nblevels);
@@ -1212,6 +1216,7 @@ lbool Solver::search(int nof_conflicts)
 		cancelUntil(backtrack_level);
 
 		if (learnt_clause.size() == 1){
+		    topLevelsSinceLastLa ++;
 		    uncheckedEnqueue(learnt_clause[0]);nbUn++;
 		    if( opt_printDecisions ) printf("c enqueue literal $s%d at level %d\n", sign(learnt_clause[0]) ? "-" : "", var(learnt_clause[0]) + 1, decisionLevel() );
 		}else{
@@ -1295,11 +1300,14 @@ lbool Solver::search(int nof_conflicts)
 		}
             }
             
-            if(hk && opt_laBound != -1 && (las < opt_laBound) ) { // perform LA hack -- only if max. nr is not reached?
+            // if sufficiently many new top level units have been learned, trigger another LA!
+	    if( opt_laTopUnit != -1 && topLevelsSinceLastLa >= opt_laTopUnit && maxLaNumber != -1) { maxLaNumber ++; topLevelsSinceLastLa = 0 ; }
+            if(hk && maxLaNumber != -1 && (las < maxLaNumber) ) { // perform LA hack -- only if max. nr is not reached?
 	      int hl = decisionLevel();
 	      if( hl == 0 ) if( --untilLa == 0 ) {laStart = true; if(dx)cerr << "c startLA" << endl;}
 	      if( laStart && hl == opt_laLevel ) {
 		if( !laHack() ) return l_False;
+		topLevelsSinceLastLa = 0;
 	      }
 	    }
             
