@@ -20,6 +20,7 @@ Coprocessor::TwoSatSolver::TwoSatSolver(ClauseAllocator& _ca, Coprocessor::Threa
   solveTime = 0;
   touchedLiterals = 0;
   permLiterals = 0;
+  calls = 0;
 }
 
 Coprocessor::TwoSatSolver::~TwoSatSolver()
@@ -41,7 +42,7 @@ assert( v < permVal.size() && "literal has to be in bounds" );
 
 void Coprocessor::TwoSatSolver::printStatistics(ostream& stream)
 {
-  stream << "c [STAT] 2SAT " << solveTime << " s, " << touchedLiterals << " lits, " << permLiterals << " permanents" << endl;
+  stream << "c [STAT] 2SAT " << solveTime << " s, " << touchedLiterals << " lits, " << permLiterals << " permanents, " << calls << " calls " << endl;
 }
 
 
@@ -174,6 +175,7 @@ bool Coprocessor::TwoSatSolver::solve()
   solveTime = cpuTime() - solveTime;
   big.create(ca, data, data.getClauses() );
   
+  calls ++;
   tempVal.assign(data.nVars()* 2,0);
   permVal.assign(data.nVars()* 2,0);
   unitQueue.clear();

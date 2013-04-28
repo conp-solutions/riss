@@ -44,6 +44,7 @@ static const bool opt_sls = false;
 static const bool opt_sls_phase = false;    
 static const bool opt_rew = false;    
 static const bool opt_twosat = false;
+static const bool opt_twosat_init=false;
 static const bool  opt_ts_phase =false;    
 #else
 static IntOption  opt_threads     (_cat, "cp3_threads",    "Number of extra threads that should be used for preprocessing", 0, IntRange(0, INT32_MAX));
@@ -52,6 +53,7 @@ static BoolOption opt_sls_phase   (_cat2, "sls-phase",     "Use current interpre
 static IntOption  opt_sls_flips   (_cat2, "sls-flips",     "Perform given number of SLS flips", 8000000, IntRange(-1, INT32_MAX));
 static BoolOption opt_rew         (_cat2, "rew",           "Rewrite AMO constraints", false);
 static BoolOption opt_twosat      (_cat2, "2sat",          "2SAT algorithm to check satisfiability of binary clauses", false);
+static BoolOption opt_twosat_init (_cat2, "2sat1",         "2SAT before all other algorithms to find units", false);
 static BoolOption opt_ts_phase    (_cat2, "2sat-phase",    "use 2SAT model as initial phase for SAT solver", false);
 #endif
 
@@ -152,6 +154,42 @@ lbool Preprocessor::performSimplification()
     if( status == l_Undef ) status = propagation.process(data);
     if( opt_verbose > 1 )  { printStatistics(cerr); propagation.printStatistics(cerr); }
   }
+  
+  if( opt_twosat_init ) {
+    if( opt_verbose > 0 ) cerr << "c 2sat ..." << endl;
+    if( opt_verbose > 4 )cerr << "c coprocessor 2SAT" << endl;
+    if( status == l_Undef ) {
+      bool solvedBy2SAT = twoSAT.solve();  // cannot change status, can generate new unit clauses
+      if( solvedBy2SAT ) {
+	bool isNotSat = false;
+	for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
+	  const Clause& cl = ca[ data.getClauses()[i] ];
+	  int j = 0;
+	  for(  ; j < cl.size(); ++ j ) {
+	    if( twoSAT.isSat(cl[j]) ) break;
+	  }
+	  if( j == cl.size() ) { isNotSat = true; break; }
+	}
+	if( isNotSat ) {
+	  // only set the phase before search!
+	  if( opt_ts_phase && !isInprocessing) {
+	    for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
+	  }
+	} else {
+	  cerr // << endl 
+	  << "c =================================" << endl 
+	  << "c  use the result of 2SAT as model " << endl 
+	  << "c =================================" << endl;
+	  // initial twosat model should always be used as a model!
+	  for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
+	}
+      } else {
+	data.setFailed();
+      }
+    }
+    if (! solver->okay())
+        status = l_False;
+  }  
   
   // begin clauses have to be sorted here!!
   sortClauses();
@@ -355,7 +393,7 @@ lbool Preprocessor::performSimplification()
 	}
 	if( isNotSat ) {
 	  // only set the phase before search!
-	  if( opt_twosat && !isInprocessing) {
+	  if( opt_ts_phase && !isInprocessing) {
 	    for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
 	  }
 	  cerr // << endl 
