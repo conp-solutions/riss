@@ -99,6 +99,8 @@ static BoolOption    opt_pol               ("INIT", "polMode",    "invert provid
 static StringOption  polFile               ("INIT", "polFile",    "use these polarities");
 static BoolOption    opt_printDecisions    ("INIT", "printDec",   "print decisions", false );
 
+static IntOption     opt_rMax       ("MODS", "rMax",        "initial max. interval between two restarts (-1 = off)", -1, IntRange(-1, INT32_MAX) );
+static DoubleOption  opt_rMaxInc    ("MODS", "rMaxInc",     "increase of the max. restart interval per restart",  1.1, DoubleRange(1, true, HUGE_VAL, false));
 
 BoolOption    dx                    ("MODS", "laHackOutput","output info about LA", false);
 BoolOption    hk                    ("MODS", "laHack",      "enable lookahead on level 0", false);
@@ -107,6 +109,7 @@ BoolOption    opt_laDyn             ("MODS", "dyn",         "dynamically set the
 IntOption     opt_laMaxEvery        ("MODS", "hlaMax",      "maximum bound for frequency", 50, IntRange(0, INT32_MAX) );
 IntOption     opt_laLevel           ("MODS", "hlaLevel",    "level of look ahead", 5, IntRange(0, 5) );
 IntOption     opt_laEvery           ("MODS", "hlaevery",    "initial frequency of LA", 1, IntRange(0, INT32_MAX) );
+IntOption     opt_laBound           ("MODS", "hlabound",    "max. nr of LAs (-1 == inf)", -1, IntRange(-1, INT32_MAX) );
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -167,6 +170,11 @@ Solver::Solver() :
   , l1conflicts(0)
   , multiLearnt(0)
   , learntUnit(0)
+
+  // restart interval hack
+  , conflictsSinceLastRestart(0)
+  , currentRestartIntervalBound(opt_rMax)
+  , intervalRestart(0)
   
   // LA hack
   ,laAssignments(0)
@@ -1225,11 +1233,19 @@ lbool Solver::search(int nof_conflicts)
             varDecayActivity();
             claDecayActivity();
 
+	    conflictsSinceLastRestart ++;
            
         }else{
 	  // Our dynamic restart, see the SAT09 competition compagnion paper 
 	  if (
-	      ( lbdQueue.isvalid() && ((lbdQueue.getavg()*K) > (sumLBD / conflicts)))) {
+	      ( lbdQueue.isvalid() && ((lbdQueue.getavg()*K) > (sumLBD / conflicts)))
+	      || (opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound )// if thre have been too many conflicts
+	     ) {
+	    
+	    // increase current limit, if this has been the reason for the restart!!
+	    if( (opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound ) ) { intervalRestart++;conflictsSinceLastRestart = (double)conflictsSinceLastRestart * (double)opt_rMaxInc; }
+	    
+	    conflictsSinceLastRestart = 0;
 	    lbdQueue.fastclear();
 	    progress_estimate = progressEstimate();
 	    cancelUntil(0);
@@ -1279,7 +1295,7 @@ lbool Solver::search(int nof_conflicts)
 		}
             }
             
-            if(hk) { // perform LA hack?
+            if(hk && opt_laBound != -1 && (las < opt_laBound) ) { // perform LA hack -- only if max. nr is not reached?
 	      int hl = decisionLevel();
 	      if( hl == 0 ) if( --untilLa == 0 ) {laStart = true; if(dx)cerr << "c startLA" << endl;}
 	      if( laStart && hl == opt_laLevel ) {
@@ -1525,6 +1541,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
     if (verbosity >= 1) {
             printf("c Learnt At Level 1: %d  Multiple: %d Units: %d\n", l1conflicts, multiLearnt,learntUnit);
 	    printf("c LAs: %d laSeconds %lf LA assigned: %d tabus: %d, failedLas: %d, maxEvery %d\n", laTime, las, laAssignments, tabus, failedLAs, maxBound );
+	    printf("c IntervalRestarts: %d\n", intervalRestart);
     }
 
     if (status == l_True){

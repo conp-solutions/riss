@@ -20,6 +20,7 @@ Coprocessor::TwoSatSolver::TwoSatSolver(ClauseAllocator& _ca, Coprocessor::Threa
   solveTime = 0;
   touchedLiterals = 0;
   permLiterals = 0;
+  calls = 0;
 }
 
 Coprocessor::TwoSatSolver::~TwoSatSolver()
@@ -41,7 +42,7 @@ assert( v < permVal.size() && "literal has to be in bounds" );
 
 void Coprocessor::TwoSatSolver::printStatistics(ostream& stream)
 {
-  stream << "c [STAT] 2SAT " << solveTime << " s, " << touchedLiterals << " lits, " << permLiterals << " permanents" << endl;
+  stream << "c [STAT] 2SAT " << solveTime << " s, " << touchedLiterals << " lits, " << permLiterals << " permanents, " << calls << " calls " << endl;
 }
 
 
@@ -67,7 +68,7 @@ bool Coprocessor::TwoSatSolver::tmpUnitPropagate()
     // if found a conflict, propagate the other polarity for real!
     if (tempVal[toInt(x)] == -1)
     {
-      cerr << "c add to propagation queue(out) : " << ~x << endl;
+      if( debug_out > 1 ) cerr << "c add to propagation queue(out) : " << ~x << endl;
       unitQueue.push_back(x);
       if (! tmpUnitQueue.empty()) tmpUnitQueue.clear();
       data.ma.nextStep();
@@ -87,15 +88,16 @@ bool Coprocessor::TwoSatSolver::tmpUnitPropagate()
       if (permVal[ toInt(l) ] != 0 || tempVal[toInt(l)] == 1)
         continue;
       else {
-	
+	/* don't care - wait until all literals are added ... FIXME: this can be done faster!
 	if (tempVal[toInt(l)] == -1) {// conflict!!
-	  cerr << "c add to propagation queue(in) : " << l << " because " << ~x  << " failed" << endl;
+	  if( debug_out > 1 ) cerr << "c add to propagation queue(in) : " << l << " because " << ~x  << " failed" << endl;
 	  unitQueue.push_back(l); // we cannot set x like we do it now, otherwise, we would have to set l and -l
 	  if (! tmpUnitQueue.empty()) tmpUnitQueue.clear();
 	  data.ma.nextStep();
 	  permLiterals++;
 	  return unitPropagate();
 	} 
+	*/
 	if( debug_out > 2 ) cerr  << "TEMP: Assign " << l << " " << endl;
 	// tempVal[toInt(l)] = 1; tempVal[toInt(~l)] = -1;
 	tmpUnitQueue.push_back(l);
@@ -145,7 +147,7 @@ bool Coprocessor::TwoSatSolver::unitPropagate()
       if( permVal[ toInt(impliedLiterals[i]) ] == 0 ) {
 	permVal[ toInt(impliedLiterals[i]) ] = 1; permVal[ toInt(~impliedLiterals[i]) ] = -1;
 	tempVal[ toInt(impliedLiterals[i]) ] = 1; tempVal[ toInt(~impliedLiterals[i])] = -1;
-	cerr << "c unit propagate " << impliedLiterals[i] << endl;
+	if( debug_out > 2 )  cerr << "c unit propagate " << impliedLiterals[i] << endl;
         unitQueue.push_back( impliedLiterals[i] );
       } else if ( permVal[ toInt(impliedLiterals[i]) ] == -1 )
 	return false;
@@ -191,11 +193,12 @@ bool Coprocessor::TwoSatSolver::solve()
   solveTime = cpuTime() - solveTime;
   big.create(ca, data, data.getClauses() );
   
+  calls ++;
   tempVal.assign(data.nVars()* 2,0);
   permVal.assign(data.nVars()* 2,0);
   unitQueue.clear();
   tmpUnitQueue.clear();
-  data.ma.reset( data.nVars() *2 );
+  data.ma.resize( data.nVars() *2 );
   data.ma.nextStep(); // make tmpUnitQueue a set!
   lastSeenIndex = -1;
   

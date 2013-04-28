@@ -340,6 +340,11 @@ protected:
   int multiLearnt; // number of multiple learnt units at level 1
   int learntUnit;  // learnt a unit clause
         
+  // restart interval
+  unsigned conflictsSinceLastRestart; // number of conflicts since last restart
+  unsigned currentRestartIntervalBound;      // max. nr. of conflicts until the next restart is triggered
+  unsigned intervalRestart;  // number of restarts triggered by the interval
+        
   // la hack
   // stats
   int laAssignments;

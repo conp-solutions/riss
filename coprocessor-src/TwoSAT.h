@@ -32,6 +32,7 @@ class TwoSatSolver : public Technique
   double solveTime;		// number of seconds for solving
   int touchedLiterals;		// number of literals that have been touched during search
   int permLiterals;		// number of permanently fixed literals
+  int calls;			// number of calls to twosat solver
   
   public:
     TwoSatSolver(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data);
