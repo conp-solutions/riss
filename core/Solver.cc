@@ -118,9 +118,11 @@ IntOption     opt_laTopUnit         ("MODS", "hlaTop",      "allow another LA af
 
 Solver::Solver() :
 
+    // DRUP output file
+    output (0)
     // Parameters (user settable):
     //
-    verbosity        (0)
+    , verbosity        (0)
     , K              (opt_K)
     , R              (opt_R)
     , sizeLBDQueue   (opt_size_lbd_queue)
@@ -234,7 +236,20 @@ Var Solver::newVar(bool sign, bool dvar, char type)
 
 void Solver::reserveVars(Var v)
 {
-  // TODO: reserve space for all the variable methods!
+    watches  .init(mkLit(v, false));
+    watches  .init(mkLit(v, true ));
+    watchesBin  .init(mkLit(v, false));
+    watchesBin  .init(mkLit(v, true ));
+    
+    assigns  .capacity(v+1);
+    vardata  .capacity(v+1);
+    //activity .push(0);
+    activity .capacity(v+1);
+    seen     .capacity(v+1);
+    permDiff  .capacity(v+1);
+    polarity .capacity(v+1);
+    decision .capacity(v+1);
+    trail    .capacity(v+1);
 }
 
 
@@ -246,13 +261,35 @@ bool Solver::addClause_(vec<Lit>& ps)
 
     // Check if clause is satisfied and remove false/duplicate literals:
     sort(ps);
-    Lit p; int i, j;
+
+    // analyze for DRUP - add if necessary!
+    vec<Lit>    oc;
+    oc.clear();
+    Lit p; int i, j, flag = 0;
+    for (i = j = 0, p = lit_Undef; i < ps.size(); i++) {
+        oc.push(ps[i]);
+        if (value(ps[i]) == l_True || ps[i] == ~p || value(ps[i]) == l_False)
+          flag = 1;
+    }
+
     for (i = j = 0, p = lit_Undef; i < ps.size(); i++)
         if (value(ps[i]) == l_True || ps[i] == ~p)
             return true;
         else if (value(ps[i]) != l_False && ps[i] != p)
             ps[j++] = p = ps[i];
     ps.shrink(i - j);
+
+    // print to DRUP
+    if ( flag && (output != NULL)) {
+      for (i = j = 0, p = lit_Undef; i < ps.size(); i++)
+        fprintf(output, "%i ", (var(ps[i]) + 1) * (-2 * sign(ps[i]) + 1));
+      fprintf(output, "0\n");
+
+      fprintf(output, "d ");
+      for (i = j = 0, p = lit_Undef; i < oc.size(); i++)
+        fprintf(output, "%i ", (var(oc[i]) + 1) * (-2 * sign(oc[i]) + 1));
+      fprintf(output, "0\n");
+    }
 
     if (ps.size() == 0)
         return ok = false;
@@ -315,6 +352,15 @@ void Solver::detachClause(CRef cr, bool strict) {
 void Solver::removeClause(CRef cr) {
   
   Clause& c = ca[cr];
+
+  // tell DRUP that clause has been deleted
+  if (output != NULL) {
+    fprintf(output, "d ");
+    for (int i = 0; i < c.size(); i++)
+      fprintf(output, "%i ", (var(c[i]) + 1) * (-2 * sign(c[i]) + 1));
+    fprintf(output, "0\n");
+  }
+
   detachClause(cr);
   // Don't leave pointers to free'd memory!
   if (locked(c)) vardata[var(c[0])].reason = CRef_Undef;
@@ -1190,6 +1236,16 @@ lbool Solver::search(int nof_conflicts)
 	      for( int i = 0 ; i < learnt_clause.size(); ++ i )
 		uncheckedEnqueue(learnt_clause[i]);
 	      
+
+          // write learned unit clauses to DRUP!
+          if (output != NULL) {
+	          for( int i = 0 ; i < learnt_clause.size(); ++ i )
+              for (int i = 0; i < learnt_clause.size(); i++)
+                fprintf(output, "%i 0\n" , (var(learnt_clause[i]) + 1) *
+                            (-2 * sign(learnt_clause[i]) + 1) );
+          }
+
+
 	      nbUn+=learnt_clause.size(); // stats
 	      if(nblevels<=2) nbDL2++; // stats
 
@@ -1206,6 +1262,15 @@ lbool Solver::search(int nof_conflicts)
 		lbdQueue.push(1);sumLBD += 1; // unit clause has one level
 		for( int i = 0 ; i < learnt_clause.size(); ++ i ) // add all units to current state
 		  { uncheckedEnqueue(learnt_clause[i]);  }
+		  
+          // write learned unit clauses to DRUP!
+          if (output != NULL) {
+	          for( int i = 0 ; i < learnt_clause.size(); ++ i )
+              for (int i = 0; i < learnt_clause.size(); i++)
+                fprintf(output, "%i 0\n" , (var(learnt_clause[i]) + 1) *
+                            (-2 * sign(learnt_clause[i]) + 1) );
+          }
+		  
 		multiLearnt = ( learnt_clause.size() > 1 ? multiLearnt + 1 : multiLearnt ); // stats
 		topLevelsSinceLastLa ++;
 	      } else { // treat usual learned clause!
@@ -1214,6 +1279,14 @@ lbool Solver::search(int nof_conflicts)
 		sumLBD += nblevels;
 
 		cancelUntil(backtrack_level);
+
+          // write learned clause to DRUP!
+          if (output != NULL) {
+              for (int i = 0; i < learnt_clause.size(); i++)
+                fprintf(output, "%i " , (var(learnt_clause[i]) + 1) *
+                            (-2 * sign(learnt_clause[i]) + 1) );
+              fprintf(output, "0\n");
+          }
 
 		if (learnt_clause.size() == 1){
 		    topLevelsSinceLastLa ++;
@@ -1302,11 +1375,11 @@ lbool Solver::search(int nof_conflicts)
             
             // if sufficiently many new top level units have been learned, trigger another LA!
 	    if( opt_laTopUnit != -1 && topLevelsSinceLastLa >= opt_laTopUnit && maxLaNumber != -1) { maxLaNumber ++; topLevelsSinceLastLa = 0 ; }
-            if(hk && maxLaNumber != -1 && (las < maxLaNumber) ) { // perform LA hack -- only if max. nr is not reached?
+            if(hk && (maxLaNumber == -1 || (las < maxLaNumber)) ) { // perform LA hack -- only if max. nr is not reached?
 	      int hl = decisionLevel();
 	      if( hl == 0 ) if( --untilLa == 0 ) {laStart = true; if(dx)cerr << "c startLA" << endl;}
 	      if( laStart && hl == opt_laLevel ) {
-		if( !laHack() ) return l_False;
+		if( !laHack(learnt_clause) ) return l_False;
 		topLevelsSinceLastLa = 0;
 	      }
 	    }
@@ -1334,30 +1407,10 @@ if(!mo) for(int i=trail_lim[0];i<trail.size();++i){
 
 }
 
-bool Solver::laHack() {
+bool Solver::laHack(vec<Lit>& toEnqueue ) {
   assert(decisionLevel() == opt_laLevel && "can perform LA only, if level is correct" );
   laTime = cpuTime() - laTime;
-  
-  if(false){
-  uint64_t t = 0;
-  cerr << "POS!" << endl;
-  for( int i = 0 ; i < 32; ++ i ) {
-     t = t << 2;
-     t += 1;
-     cerr << "c [" << i+1 << "] : " << t << endl;
-  }
-  t = 0;
-  cerr << "NEG!" << endl;
-  for( int i = 0 ; i < 32; ++ i ) {
-     t = t << 2;
-     t += 2;
-     cerr << "c [" << i+1 << "] : " << t << endl;
-  }
-  }
-  
-  
-  // old: uint64_t hit[]={20,40,340,680,87380,174760,5726623060,11453246120,6148914691236517204,12297829382473034408};
-  // new:
+
    uint64_t hit[]={5,10,85,170,21845,43690,1431655765,2863311530,6148914691236517205,12297829382473034410};
   // TODO: remove white spaces, output, comments and assertions!
   uint64_t p[nVars()];
@@ -1401,17 +1454,65 @@ bool Solver::laHack() {
   bool foundUnit=false;
   if(dx) cerr << "c pos hit: " << (pt & (hit[t])) << endl;
   if(dx) cerr << "c neg hit: " << (pt & (hit[t+1])) << endl;
+  toEnqueue.clear();
   for(Var v=0; v<nVars(); ++v ){
     if(value(v)==l_Undef){ // l_Undef == 2
-      if( (pt & p[v]) == (pt & (hit[t])) ){foundUnit=true;uncheckedEnqueue(mkLit(v,false));laAssignments++;} // pos consequence
-      if( (pt & p[v]) == (pt & (hit[t+1])) ){foundUnit=true;uncheckedEnqueue(mkLit(v,true));laAssignments++;}// neg consequence
+      if( (pt & p[v]) == (pt & (hit[t])) ){  foundUnit=true;toEnqueue.push( mkLit(v,false) );laAssignments++;} // pos consequence
+      if( (pt & p[v]) == (pt & (hit[t+1])) ){foundUnit=true;toEnqueue.push( mkLit(v,true)  );laAssignments++;} // neg consequence
 
       // TODO: can be cut!
-      if(dx) if( (pt & p[v]) == (pt & (hit[t])) ) { cerr << "c pos " << v+1 << endl; }
+      if(dx) if( (pt & p[v]) == (pt & (hit[t])) )   { cerr << "c pos " << v+1 << endl; }
       if(dx) if( (pt & p[v]) == (pt & (hit[t+1])) ) { cerr << "c neg " << v+1 << endl; }
       if(dx) if( p[v] != 0 ) cerr << "p[" << v+1 << "] = " << p[v] << endl;
     } // use brackets needs less symbols than writing continue!
   }
+  
+  // enqueue new units
+  for( int i = 0 ; i < toEnqueue.size(); ++ i ) uncheckedEnqueue( toEnqueue[i] );
+
+  // TODO: apply schema to have all learned unit clauses in DRUP! -> have an extra vector!
+  vector< vector< Lit > > clauses;
+  vector<Lit> tmp;
+  
+  if(  0  ) cerr << "c LA " << las << " write clauses: " << endl;
+  if (output != NULL) {
+     // construct look-ahead clauses
+    for( int i = 0 ; i < toEnqueue.size(); ++ i ){
+      // cerr << "c write literal " << i << " from LA " << las << endl;
+      const Lit l = toEnqueue[i];
+      tmp.clear();
+      tmp.push_back(l);
+      clauses.clear();
+      clauses.push_back(tmp);
+      // if(  0  ) cerr << "c write clause [" << clauses.size() << "] " << clauses[ clauses.size() -1 ] << endl;
+      for( int j = 0 ; j < opt_laLevel; ++ j ) {
+	int oldClausesSize = clauses.size();
+	for( int k = 0 ; k < oldClausesSize; ++ k ){
+	  clauses.push_back( clauses[k] );
+	  clauses[ clauses.size() -1 ].push_back( ~ d[j] );
+	  // if(  0  ) cerr << "c write clause [" << clauses.size() << "] " << clauses[ clauses.size() -1 ] << endl;
+	}
+      }
+    }
+   // write all clauses to proof -- including the learned unit
+   for( int j = clauses.size() - 1; j >= 0; -- j ){
+     if(  0  ) cerr << "c write clause [" << j << "] " << clauses[ j ] << endl;
+    for (int i = 0; i < clauses[j].size(); i++)
+      fprintf(output, "%i " , (var(clauses[j][i]) + 1) * (-2 * sign(clauses[j][i]) + 1) );
+    fprintf(output, "0\n");
+   }
+   // delete all redundant clauses
+//    for( int j = clauses.size() - 1; j > 0; -- j ){
+//     assert( clauses[j].size() > 1 && "the only unit clause in the list should not be removed!" );
+//     fprintf(output, "d ");
+//     for (int i = 0; i < clauses[j].size(); i++)
+//       fprintf(output, "%i " , (var(clauses[j][i]) + 1) * (-2 * sign(clauses[j][i]) + 1) );
+//     fprintf(output, "0\n");
+//    }
+    
+  }
+
+  toEnqueue.clear();
   
   if( propagate() != CRef_Undef ){laTime = cpuTime() - laTime; return false;}
   
@@ -1670,7 +1771,6 @@ void Solver::relocAll(ClauseAllocator& to)
     //
     for (int i = 0; i < trail.size(); i++){
         Var v = var(trail[i]);
-	// FIXME TODO: there needs to be a better workaround for this!!
 	if ( level(v) == 0 ) vardata[v].reason = CRef_Undef; // take care of reason clauses for literals at top-level
         else
         if (reason(v) != CRef_Undef && (ca[reason(v)].reloced() || locked(ca[reason(v)])))

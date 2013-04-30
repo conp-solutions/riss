@@ -18,6 +18,9 @@ all: rs
 d: rissd
 rs: rissRS
 
+simp: rissSimpRS
+simpd: rissSimpd
+
 cd: coprocessord
 crs: coprocessorRS
 
@@ -27,6 +30,12 @@ riss: always
 
 rissRS: always
 	cd core; make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g_static ../riss3g
+
+rissSimpRS: always
+	cd simp; make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g_static ../riss3g
+
+rissSimpd: always
+	cd simp; make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g_debug ../riss3g
 
 rissd: always
 	cd core;   make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g_debug ../riss3g

@@ -133,6 +133,9 @@ public:
     void    checkGarbage(double gf);
     void    checkGarbage();
 
+    // Output for DRUP unsat proof
+    FILE*               output;
+
     // Extra results: (read-only member variable)
     //
     vec<lbool> model;             // If problem is satisfiable, this vector contains the model (if any).
@@ -363,7 +366,7 @@ protected:
   bool laStart;		// when reached the la level, perform la
   
   void fm(uint64_t* p, bool mo); // fills current model into variable vector
-  bool laHack();	// perform la hack, return false -> unsat instance!
+  bool laHack(Minisat::vec< Minisat::Lit >& toEnqueue);	// perform la hack, return false -> unsat instance!
         
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;

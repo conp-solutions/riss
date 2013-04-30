@@ -101,6 +101,9 @@ int main(int argc, char** argv)
   IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
   IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
+  StringOption drupFile               ("MAIN", "drup", "Write a proof trace into the given file");
+  BoolOption   opt_printProofFormat   ("MAIN", "proofFormat", "Do print the proof format", true);
+  
   BoolOption   opt_modelStyle ("MAIN", "oldModel", "present model on screen in old format", false);
   BoolOption   opt_quiet      ("MAIN", "quiet", "Do not print the model", false);
   
@@ -165,6 +168,10 @@ int main(int argc, char** argv)
             printf("c |                                                                                                       |\n"); }
 
         
+        // open file for proof
+        S.output = (drupFile) ? fopen( (const char*) drupFile , "wb") : NULL;
+	if( opt_printProofFormat &&  S.output != NULL ) fprintf( S.output, "o proof DRUP\n" ); // we are writing BDRUP proofs
+
         parse_DIMACS(in, S);
         gzclose(in);
         FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
@@ -189,6 +196,8 @@ int main(int argc, char** argv)
 	      if( opt_modelStyle ) fprintf(res, "UNSAT\n"), fclose(res);
 	      else fprintf(res, "s UNSATISFIABLE\n"), fclose(res);
 	    }
+         // add the empty clause to the proof, close proof file
+         if (S.output != NULL) fprintf(S.output, "0\n"), fclose(S.output);
             if (S.verbosity > 0){
 	        printf("c =========================================================================================================\n");
                 printf("Solved by unit propagation\n");
@@ -207,8 +216,15 @@ int main(int argc, char** argv)
         if (S.verbosity > 0){
             printStats(S);
             printf("\n"); }
+
+        // print solution to screen
             if( opt_modelStyle ) printf(ret == l_True ? "SAT\n" : ret == l_False ? "UNSAT\n" : "UNKNOWN\n");
 	    else printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n");
+
+        // put empty clause on proof
+        if(ret == l_False && S.output != NULL ) fprintf(S.output, "0\n");
+
+        // print solution into file
         if (res != NULL){
             if (ret == l_True){
 		if( opt_modelStyle ) fprintf(res, "SAT\n");
@@ -226,6 +242,7 @@ int main(int argc, char** argv)
             fclose(res);
         }
 
+        // print model to screen
         if(! opt_quiet && ret == l_True && res == NULL ) {
 	  if( !opt_modelStyle ) printf ("v ");
           for (int i = 0; i < S.nVars(); i++)
