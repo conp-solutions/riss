@@ -1480,35 +1480,35 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
     for( int i = 0 ; i < toEnqueue.size(); ++ i ){
       // cerr << "c write literal " << i << " from LA " << las << endl;
       const Lit l = toEnqueue[i];
+      clauses.clear();
       tmp.clear();
       tmp.push_back(l);
-      clauses.clear();
       clauses.push_back(tmp);
-      // if(  0  ) cerr << "c write clause [" << clauses.size() << "] " << clauses[ clauses.size() -1 ] << endl;
-      for( int j = 0 ; j < opt_laLevel; ++ j ) {
-	int oldClausesSize = clauses.size();
-	for( int k = 0 ; k < oldClausesSize; ++ k ){
-	  clauses.push_back( clauses[k] );
-	  clauses[ clauses.size() -1 ].push_back( ~ d[j] );
-	  // if(  0  ) cerr << "c write clause [" << clauses.size() << "] " << clauses[ clauses.size() -1 ] << endl;
-	}
+      if(  0  ) cerr << "c add clause " << tmp << endl;
+      for(uint64_t i=0;i<bound;++i){ // produce all 2^n combinations
+	tmp.clear();
+	tmp.push_back(l);
+	for(int j=0;j<opt_laLevel;++j) tmp.push_back( (i&(1<<j))!=0?~d[j]:d[j]) ;
+	if(  0  ) cerr << "c add clause " << tmp << endl;
+	clauses.push_back(tmp);
       }
+      
+      // write all clauses to proof -- including the learned unit
+      for( int j = clauses.size() - 1; j >= 0; -- j ){
+	if(  0  ) cerr << "c write clause [" << j << "] " << clauses[ j ] << endl;
+	for (int i = 0; i < clauses[j].size(); i++)
+	  fprintf(output, "%i " , (var(clauses[j][i]) + 1) * (-2 * sign(clauses[j][i]) + 1) );
+	fprintf(output, "0\n");
+      }
+      // delete all redundant clauses
+//       for( int j = clauses.size() - 1; j > 0; -- j ){
+// 	assert( clauses[j].size() > 1 && "the only unit clause in the list should not be removed!" );
+// 	fprintf(output, "d ");
+// 	for (int i = 0; i < clauses[j].size(); i++)
+// 	  fprintf(output, "%i " , (var(clauses[j][i]) + 1) * (-2 * sign(clauses[j][i]) + 1) );
+// 	fprintf(output, "0\n");
+//       }
     }
-   // write all clauses to proof -- including the learned unit
-   for( int j = clauses.size() - 1; j >= 0; -- j ){
-     if(  0  ) cerr << "c write clause [" << j << "] " << clauses[ j ] << endl;
-    for (int i = 0; i < clauses[j].size(); i++)
-      fprintf(output, "%i " , (var(clauses[j][i]) + 1) * (-2 * sign(clauses[j][i]) + 1) );
-    fprintf(output, "0\n");
-   }
-   // delete all redundant clauses
-//    for( int j = clauses.size() - 1; j > 0; -- j ){
-//     assert( clauses[j].size() > 1 && "the only unit clause in the list should not be removed!" );
-//     fprintf(output, "d ");
-//     for (int i = 0; i < clauses[j].size(); i++)
-//       fprintf(output, "%i " , (var(clauses[j][i]) + 1) * (-2 * sign(clauses[j][i]) + 1) );
-//     fprintf(output, "0\n");
-//    }
     
   }
 
