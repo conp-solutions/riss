@@ -1495,7 +1495,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
       for ( int j = 0; true; ++ j ) { // TODO: count literals!
 	int k = litList[j];
 	if( k == -1 ) { clauses.push_back(tmp);
-	  cerr << "c write " << tmp << endl;
+	  // cerr << "c write " << tmp << endl;
 	  tmp.clear(); 
 	  cCount ++;
 	  if( cCount == 32 ) break;
