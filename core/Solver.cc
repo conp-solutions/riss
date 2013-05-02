@@ -1487,32 +1487,39 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
       const Lit l = toEnqueue[i];
       clauses.clear();
       tmp.clear();
-      tmp.push_back(l);
-      clauses.push_back(tmp);
-      if(  0  ) cerr << "c add clause " << tmp << endl;
-      for(uint64_t i=0;i<bound;++i){ // produce all 2^n combinations
-	tmp.clear();
-	tmp.push_back(l);
-	for(int j=0;j<opt_laLevel;++j) tmp.push_back( (i&(1<<j))!=0?~d[j]:d[j]) ;
-	if(  0  ) cerr << "c add clause " << tmp << endl;
-	clauses.push_back(tmp);
+
+      int litList[] = {0,1,2,3,4,5,-1,0,1,2,3,5,-1,0,1,2,4,5,-1,0,1,2,5,-1,0,1,3,4,5,-1,0,1,3,5,-1,0,1,4,5,-1,0,1,5,-1,0,2,3,4,5,-1,0,2,3,5,-1,0,2,4,5,-1,0,2,5,-1,0,3,4,5,-1,0,3,5,-1,0,4,5,-1,0,5,-1,1,2,3,4,5,-1,1,2,3,5,-1,1,2,4,5,-1,1,2,5,-1,1,3,4,5,-1,1,3,5,-1,1,4,5,-1,1,5,-1,2,3,4,5,-1,2,3,5,-1,2,4,5,-1,2,5,-1,3,4,5,-1,3,5,-1,4,5,-1,5,-1};
+      int cCount = 0 ;
+      tmp.clear();
+      assert(opt_laLevel == 5 && "current proof generation only works for level 5!" );
+      for ( int j = 0; true; ++ j ) { // TODO: count literals!
+	int k = litList[j];
+	if( k == -1 ) { clauses.push_back(tmp);
+	  cerr << "c write " << tmp << endl;
+	  tmp.clear(); 
+	  cCount ++;
+	  if( cCount == 32 ) break;
+	  continue; 
+	}
+	if( k == 5 ) tmp.push_back( l );
+	else tmp.push_back( d[k] );
       }
-      
+
       // write all clauses to proof -- including the learned unit
-      for( int j = clauses.size() - 1; j >= 0; -- j ){
+      for( int j = 0; j < clauses.size() ; ++ j ){
 	if(  0  ) cerr << "c write clause [" << j << "] " << clauses[ j ] << endl;
 	for (int i = 0; i < clauses[j].size(); i++)
 	  fprintf(output, "%i " , (var(clauses[j][i]) + 1) * (-2 * sign(clauses[j][i]) + 1) );
 	fprintf(output, "0\n");
       }
       // delete all redundant clauses
-//       for( int j = clauses.size() - 1; j > 0; -- j ){
-// 	assert( clauses[j].size() > 1 && "the only unit clause in the list should not be removed!" );
-// 	fprintf(output, "d ");
-// 	for (int i = 0; i < clauses[j].size(); i++)
-// 	  fprintf(output, "%i " , (var(clauses[j][i]) + 1) * (-2 * sign(clauses[j][i]) + 1) );
-// 	fprintf(output, "0\n");
-//       }
+      for( int j = 0; j+1 < clauses.size() ; ++ j ){
+	assert( clauses[j].size() > 1 && "the only unit clause in the list should not be removed!" );
+	fprintf(output, "d ");
+	for (int i = 0; i < clauses[j].size(); i++)
+	  fprintf(output, "%i " , (var(clauses[j][i]) + 1) * (-2 * sign(clauses[j][i]) + 1) );
+	fprintf(output, "0\n");
+      }
     }
     
   }
