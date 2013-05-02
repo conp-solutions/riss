@@ -487,6 +487,7 @@ struct VarOrderBVEHeapLt {
 	    } 
 	    else {
 	      assert( false && "forgot to update all paramete checks!" ); 
+	      return false;
 	    }
 	  } else {
 	    assert(false && "In case of random order no heap should be used"); return false;

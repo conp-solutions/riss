@@ -102,15 +102,17 @@ static BoolOption    opt_printDecisions    ("INIT", "printDec",   "print decisio
 static IntOption     opt_rMax       ("MODS", "rMax",        "initial max. interval between two restarts (-1 = off)", -1, IntRange(-1, INT32_MAX) );
 static DoubleOption  opt_rMaxInc    ("MODS", "rMaxInc",     "increase of the max. restart interval per restart",  1.1, DoubleRange(1, true, HUGE_VAL, false));
 
-BoolOption    dx                    ("MODS", "laHackOutput","output info about LA", false);
-BoolOption    hk                    ("MODS", "laHack",      "enable lookahead on level 0", false);
-BoolOption    tb                    ("MODS", "tabu",        "do not perform LA, if all considered LA variables are as before", false);
-BoolOption    opt_laDyn             ("MODS", "dyn",         "dynamically set the frequency based on success", false);
-IntOption     opt_laMaxEvery        ("MODS", "hlaMax",      "maximum bound for frequency", 50, IntRange(0, INT32_MAX) );
-IntOption     opt_laLevel           ("MODS", "hlaLevel",    "level of look ahead", 5, IntRange(0, 5) );
-IntOption     opt_laEvery           ("MODS", "hlaevery",    "initial frequency of LA", 1, IntRange(0, INT32_MAX) );
-IntOption     opt_laBound           ("MODS", "hlabound",    "max. nr of LAs (-1 == inf)", -1, IntRange(-1, INT32_MAX) );
-IntOption     opt_laTopUnit         ("MODS", "hlaTop",      "allow another LA after learning another nr of top level units (-1 = never)", -1, IntRange(-1, INT32_MAX));
+static BoolOption    dx                    ("MODS", "laHackOutput","output info about LA", false);
+static BoolOption    hk                    ("MODS", "laHack",      "enable lookahead on level 0", false);
+static BoolOption    tb                    ("MODS", "tabu",        "do not perform LA, if all considered LA variables are as before", false);
+static BoolOption    opt_laDyn             ("MODS", "dyn",         "dynamically set the frequency based on success", false);
+static IntOption     opt_laMaxEvery        ("MODS", "hlaMax",      "maximum bound for frequency", 50, IntRange(0, INT32_MAX) );
+static IntOption     opt_laLevel           ("MODS", "hlaLevel",    "level of look ahead", 5, IntRange(0, 5) );
+static IntOption     opt_laEvery           ("MODS", "hlaevery",    "initial frequency of LA", 1, IntRange(0, INT32_MAX) );
+static IntOption     opt_laBound           ("MODS", "hlabound",    "max. nr of LAs (-1 == inf)", -1, IntRange(-1, INT32_MAX) );
+static IntOption     opt_laTopUnit         ("MODS", "hlaTop",      "allow another LA after learning another nr of top level units (-1 = never)", -1, IntRange(-1, INT32_MAX));
+
+static BoolOption    opt_prefetch("MODS", "prefetch", "prefetch watch list, when literal is enqueued", false);
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -779,6 +781,9 @@ void Solver::uncheckedEnqueue(Lit p, CRef from)
     if( opt_hack > 0 )
       trailPos[ var(p) ] = (int)trail.size(); /// modified learning, important: before trail.push()!
 
+    // prefetch watch lists
+    if(opt_prefetch) __builtin_prefetch( & watches[p] );
+      
     trail.push_(p);
 }
 
