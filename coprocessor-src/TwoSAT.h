@@ -52,7 +52,7 @@ class TwoSatSolver : public Technique
   
   void destroy();
   
-    void giveMoreSteps();
+  void giveMoreSteps();
   
 protected:
   

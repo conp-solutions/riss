@@ -388,14 +388,18 @@ lbool Preprocessor::performSimplification()
 	  if( cl.can_be_deleted() ) continue;
 	  int j = 0;
 	  for(  ; j < cl.size(); ++ j ) {
-	    if( twoSAT.isSat(cl[j]) ) break;
+	    if( twoSAT.isSat( cl[j] ) ) break;
 	  }
-	  if( j == cl.size() ) { isNotSat = true; break; }
+	  if( j == cl.size() ) { 
+	    isNotSat = true; 
+	    cerr << "c twosat does not satisfy: " << cl << endl;
+	    break;
+	  }
 	}
 	if( isNotSat ) {
 	  // only set the phase before search!
 	  if( opt_ts_phase && !isInprocessing) {
-	    for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
+	    for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( -1 == twoSAT.getPolarity(v) );
 	  }
 	  cerr // << endl 
 	  << "c ================================" << endl 

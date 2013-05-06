@@ -80,7 +80,7 @@ clean:
 	@cd simp; make clean MROOT=..;
 	@cd coprocessor-src; make clean MROOT=..;
 	@cd qprocessor-src; make clean MROOT=..;
-	@rm -f riss3m coprocessor qprocessor
+	@rm -f riss3m riss3g coprocessor qprocessor
 	@rm -f *~ */*~
 	@rm -rf doc/html
 	@echo Done

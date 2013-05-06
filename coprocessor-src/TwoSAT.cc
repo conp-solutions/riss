@@ -8,9 +8,12 @@ static const char* _cat = "COPROCESSOR 3 - REWRITE";
 
 #if defined CP3VERSION 
 static const int debug_out = 0;
+static const bool useUnits = false;
+static const bool clearQueue = true;
 #else
 static IntOption debug_out                 (_cat, "2sat-debug",  "Debug Output of 2sat", 0, IntRange(0, 4));
 static BoolOption useUnits                 (_cat, "2sat-units",  "If 2SAT finds units, use them!", false);
+static BoolOption clearQueue               (_cat, "2sat-cq",     "do a decision after a unit has been found", true);
 #endif
 
 Coprocessor::TwoSatSolver::TwoSatSolver(ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::CoprocessorData& _data)
@@ -57,9 +60,9 @@ bool Coprocessor::TwoSatSolver::tmpUnitPropagate()
 {
   while (! tmpUnitQueue.empty())
   {
-    Lit x = tmpUnitQueue.front();
-    tmpUnitQueue.pop_front();
-    data.ma.reset(toInt(x));
+    Lit x = tmpUnitQueue.back();
+    tmpUnitQueue.pop_back();
+
 
     if( debug_out > 2 && tmpUnitQueue.size() % 100 == 0 ) cerr << "queue.size() = " << tmpUnitQueue.size() << endl;
     
@@ -68,12 +71,15 @@ bool Coprocessor::TwoSatSolver::tmpUnitPropagate()
     // if found a conflict, propagate the other polarity for real!
     if (tempVal[toInt(x)] == -1)
     {
-      if( debug_out > 1 ) cerr << "c add to propagation queue(out) : " << ~x << endl;
+      if( debug_out > 1 ) cerr << "c add to propagation queue(out) : " << x << endl;
       unitQueue.push_back(x);
-      if (! tmpUnitQueue.empty()) tmpUnitQueue.clear();
-      data.ma.nextStep();
-      permLiterals++;
-      return unitPropagate();
+      if( clearQueue ) {
+	if (! tmpUnitQueue.empty()) tmpUnitQueue.clear();
+
+	return unitPropagate();
+      } else {
+	unitPropagate();
+      }
     }
 
     if( debug_out > 2 ) cerr  << "TEMP: Assign " << x << " " << endl;
@@ -88,20 +94,20 @@ bool Coprocessor::TwoSatSolver::tmpUnitPropagate()
       if (permVal[ toInt(l) ] != 0 || tempVal[toInt(l)] == 1)
         continue;
       else {
-	/* don't care - wait until all literals are added ... FIXME: this can be done faster!
+	/* don't care - wait until all literals are added ... FIXME: this can be done faster! -- not much, because DFS
 	if (tempVal[toInt(l)] == -1) {// conflict!!
 	  if( debug_out > 1 ) cerr << "c add to propagation queue(in) : " << l << " because " << ~x  << " failed" << endl;
 	  unitQueue.push_back(l); // we cannot set x like we do it now, otherwise, we would have to set l and -l
 	  if (! tmpUnitQueue.empty()) tmpUnitQueue.clear();
-	  data.ma.nextStep();
 	  permLiterals++;
 	  return unitPropagate();
 	} 
 	*/
-	if( debug_out > 2 ) cerr  << "TEMP: Assign " << l << " " << endl;
+	// if( debug_out > 2 ) cerr  << "TEMP: Assign " << l << " " << endl;
 	// tempVal[toInt(l)] = 1; tempVal[toInt(~l)] = -1;
-	tmpUnitQueue.push_back(l);
-	data.ma.setCurrentStep(toInt(l));
+
+	  if( debug_out > 2 ) cerr  << "TEMP: Enqueue " << l << " " << endl;
+	  tmpUnitQueue.push_back(l);
       }
     }
   }
@@ -116,21 +122,21 @@ bool Coprocessor::TwoSatSolver::unitPropagate()
     Lit x = unitQueue.front();
     unitQueue.pop_front();
     
-    if(useUnits) {
-      if( debug_out > 0 ) cerr << "c enqeue unit " << x << endl;
-      data.enqueue(x); // if allowed, use the found unit!
-    }
-    
     if (permVal[toInt(x)] == -1)
     {
       if( debug_out > 1 ) cerr << "Prop Unit Conflict " << x  << endl;
       return false;
     }
     
-    if( debug_out > 2 ) cerr  << "PERM: Assign " << x << " " << endl;
     if (permVal[toInt(x)] == 1) {
       assert( tempVal[ toInt(x)] == 1 && "when unit propagated, temporary value should also be fixed!");
       continue;
+    }
+
+    if( debug_out > 2 ) cerr  << "PERM: Assign " << x << " " << endl;
+    if(useUnits) {
+      if( debug_out > 0 ) cerr << "c enqeue unit " << x << endl;
+      data.enqueue(x); // if allowed, use the found unit!
     }
     
  //   if (Debug_Print2SATAssignments.IsSet())
@@ -198,8 +204,6 @@ bool Coprocessor::TwoSatSolver::solve()
   permVal.assign(data.nVars()* 2,0);
   unitQueue.clear();
   tmpUnitQueue.clear();
-  data.ma.resize( data.nVars() *2 );
-  data.ma.nextStep(); // make tmpUnitQueue a set!
   lastSeenIndex = -1;
   
   bool Conflict = !unitPropagate();
@@ -212,8 +216,8 @@ bool Coprocessor::TwoSatSolver::solve()
     decs++;
     if( debug_out > 2 && decs % 100 == 0 ) cerr << "c dec " << decs << "/" << data.nVars() << " mem: " << memUsedPeak() << endl;
     //if (Debug_Print2SATAssignments.IsSet()) std::cout << "DECIDE: " << toNumber(DL) << " ";
+    cerr << "c decide " << DL << endl;
     tmpUnitQueue.push_back(DL);
-    data.ma.setCurrentStep(toInt(DL));
     Conflict = !tmpUnitPropagate();
   }
     
