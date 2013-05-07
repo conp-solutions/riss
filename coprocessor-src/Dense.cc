@@ -211,14 +211,14 @@ void Dense::decompress(vec< lbool >& model)
 
 bool Dense::writeUndoInfo(const string& filename) {
  
-  if( map_stack.size() == 0 ) return true; // nothing to write?
-  
   ofstream file( filename.c_str(), ios_base::out);
   if( ! file ) {
     cerr << "c ERROR: could not open map - undo file " << filename << endl;
     return false;
   }
 
+  if( map_stack.size() == 0 ) return true; // nothing to write?
+  
   // for each mapping, write two lines in the file
   for( int i = 0 ; i < map_stack.size(); ++ i ) {
     Compression& compression = map_stack[i];

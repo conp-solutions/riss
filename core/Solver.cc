@@ -196,6 +196,10 @@ bool Solver::addClause_(vec<Lit>& ps)
     if (ps.size() == 0)
         return ok = false;
     else if (ps.size() == 1){
+	if( opt_hpushUnit ) {
+	  if( value( ps[0] ) == l_False ) return ok = false;
+	  if( value( ps[0] ) == l_True ) return true;
+	}
 	uncheckedEnqueue(ps[0]);
 	if( !opt_hpushUnit ) return ok = (propagate() == CRef_Undef);
 	else return ok;
