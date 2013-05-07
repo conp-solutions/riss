@@ -311,6 +311,8 @@ protected:
   void fm(uint64_t* p, bool mo); // fills current model into variable vector
   bool laHack();	// perform la hack, return false -> unsat instance!
         
+  bool startedSolving;	// inidicate whether solving started already
+  
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;
 public:     bool useCoprocessor;

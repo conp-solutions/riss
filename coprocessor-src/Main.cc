@@ -74,6 +74,7 @@ int main(int argc, char** argv)
 	StringOption undoFile      (_cat, "cp3_undo",   "write information about undoing simplifications into given file (and var map into X.map file)");
 	BoolOption   post          (_cat, "cp3_post",   "perform post processing", false);
 	StringOption modelFile     (_cat, "cp3_model",  "read model from SAT solver from this file");
+	IntOption    opt_search    (_cat, "cp3_search", "perform search until the given number of conflicts", 1, IntRange(0, INT32_MAX));
 	
         parseOptions(argc, argv, true);
         
@@ -183,11 +184,14 @@ int main(int argc, char** argv)
 		return (20);
 #endif
 	    } else {
-	      S.setConfBudget(1); // solve until first conflict!
-	      S.verbosity = 0;
-	      vec<Lit> dummy;
-	      S.useCoprocessor = false;
-	      lbool ret = S.solveLimited(dummy);
+	      lbool ret = l_Undef;
+	      if( opt_search > 0 ) {
+		S.setConfBudget(1); // solve until first conflict!
+		S.verbosity = 0;
+		vec<Lit> dummy;
+		S.useCoprocessor = false;
+		ret = S.solveLimited(dummy);
+	      }
 	      if( ret == l_True ) {
 		preprocessor.extendModel(S.model);
 		if( res != NULL ) {

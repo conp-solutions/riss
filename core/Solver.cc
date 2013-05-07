@@ -50,13 +50,15 @@ static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction o
 static IntOption     opt_allUipHack        ("MODS", "alluiphack", "learn all unit UIPs at any level", 0, IntRange(0, 2) );
 static BoolOption    opt_uipHack           ("MODS", "uiphack", "learn all UIPs at decision level 1", false);
 
-BoolOption    dx                    ("MODS", "laHackOutput","output info about LA", false);
-BoolOption    hk                    ("MODS", "laHack",      "enable lookahead on level 0", false);
-BoolOption    tb                    ("MODS", "tabu",        "do not perform LA, if all considered LA variables are as before", false);
-BoolOption    opt_laDyn             ("MODS", "dyn",         "dynamically set the frequency based on success", false);
-IntOption     opt_laMaxEvery        ("MODS", "hlaMax",      "maximum bound for frequency", 50, IntRange(0, INT32_MAX) );
-IntOption     opt_laLevel           ("MODS", "hlaLevel",    "level of look ahead", 5, IntRange(0, 5) );
-IntOption     opt_laEvery           ("MODS", "hlaevery",    "initial frequency of LA", 1, IntRange(0, INT32_MAX) );
+static BoolOption    dx                    ("MODS", "laHackOutput","output info about LA", false);
+static BoolOption    hk                    ("MODS", "laHack",      "enable lookahead on level 0", false);
+static BoolOption    tb                    ("MODS", "tabu",        "do not perform LA, if all considered LA variables are as before", false);
+static BoolOption    opt_laDyn             ("MODS", "dyn",         "dynamically set the frequency based on success", false);
+static IntOption     opt_laMaxEvery        ("MODS", "hlaMax",      "maximum bound for frequency", 50, IntRange(0, INT32_MAX) );
+static IntOption     opt_laLevel           ("MODS", "hlaLevel",    "level of look ahead", 5, IntRange(0, 5) );
+static IntOption     opt_laEvery           ("MODS", "hlaevery",    "initial frequency of LA", 1, IntRange(0, INT32_MAX) );
+
+static BoolOption    opt_hpushUnit         ("MODS", "delay-units", "does not propagate unit clauses until solving is initialized", false);
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -127,6 +129,8 @@ Solver::Solver() :
   ,laBound(opt_laEvery)
   ,laStart(false)
   
+  ,startedSolving(false)
+  
   // preprocessor
   , coprocessor(0)
   , useCoprocessor(true)
@@ -180,18 +184,21 @@ bool Solver::addClause_(vec<Lit>& ps)
     // Check if clause is satisfied and remove false/duplicate literals:
     sort(ps);
     Lit p; int i, j;
-    for (i = j = 0, p = lit_Undef; i < ps.size(); i++)
-        if (value(ps[i]) == l_True || ps[i] == ~p)
-            return true;
-        else if (value(ps[i]) != l_False && ps[i] != p)
-            ps[j++] = p = ps[i];
-    ps.shrink(i - j);
+    if( !opt_hpushUnit ) { // do not analyzes clauses for being satisfied or simplified
+      for (i = j = 0, p = lit_Undef; i < ps.size(); i++)
+	  if (value(ps[i]) == l_True || ps[i] == ~p)
+	      return true;
+	  else if (value(ps[i]) != l_False && ps[i] != p)
+	      ps[j++] = p = ps[i];
+      ps.shrink(i - j);
+    }
 
     if (ps.size() == 0)
         return ok = false;
     else if (ps.size() == 1){
-        uncheckedEnqueue(ps[0]);
-        return ok = (propagate() == CRef_Undef);
+	uncheckedEnqueue(ps[0]);
+	if( !opt_hpushUnit ) return ok = (propagate() == CRef_Undef);
+	else return ok;
     }else{
         CRef cr = ca.alloc(ps, false);
         clauses.push(cr);
@@ -668,8 +675,10 @@ bool Solver::simplify()
 {
     assert(decisionLevel() == 0);
 
-    if (!ok || propagate() != CRef_Undef)
-        return ok = false;
+    if( !opt_hpushUnit || startedSolving ) { // push the first propagate until solving started
+      if (!ok || propagate() != CRef_Undef)
+	  return ok = false;
+    }
 
     if (nAssigns() == simpDB_assigns || (simpDB_props > 0))
         return true;
@@ -1013,6 +1022,8 @@ static double luby(double y, int x){
 // NOTE: assumptions passed in member-variable 'assumptions'.
 lbool Solver::solve_()
 {
+    startedSolving = true;
+  
     model.clear();
     conflict.clear();
     if (!ok) return l_False;
