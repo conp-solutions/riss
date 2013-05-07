@@ -46,6 +46,7 @@ static StringOption opt_itechs (_cat2, "cp3_itechs", "techniques for inprocessin
 static const int opt_threads = 0;
 static const bool opt_sls = false;       
 static const bool opt_sls_phase = false;    
+static const int opt_sls_flips = 8000000;
 static const bool opt_rew = false;    
 static const bool opt_twosat = false;
 static const bool opt_twosat_init=false;
