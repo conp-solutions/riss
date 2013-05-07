@@ -130,9 +130,7 @@ lbool Preprocessor::performSimplification()
   
   if( isInprocessing ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
   else {ppTime = cpuTime() - ppTime; ppwTime = wallClockTime() - ppwTime;}
-  
-  printFormula("before simplify");
-  
+    
   // first, remove all satisfied clauses
   if( opt_simplify && !solver->simplify() ) { cout.flush(); cerr.flush(); return l_False; }
 
@@ -140,18 +138,12 @@ lbool Preprocessor::performSimplification()
   // delete clauses from solver
   
   if( opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << endl;
-  
-  printFormula("before clean");
-  
+    
   cleanSolver ();
-  
-  printFormula("after clean");
   // initialize techniques
   data.init( solver->nVars() );
   
   if( opt_shuffle ) shuffle();
-  
-  printFormula("after shuffle");
   
   if( opt_check ) checkLists("before initializing");
   initializePreprocessor ();
@@ -450,8 +442,6 @@ lbool Preprocessor::performSimplification()
     dense.compress(); 
   }
   
-  printFormula("after compress");
-  
   if( isInprocessing ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
   else {ppTime = cpuTime() - ppTime; ppwTime = wallClockTime() - ppwTime;}
   
@@ -460,8 +450,6 @@ lbool Preprocessor::performSimplification()
   destroyTechniques();
   
   if ( data.ok() ) reSetupSolver();
-  
-  printFormula("after resetup");
   
   if( opt_verbose > 5 ) printSolver(cerr, 4); // print all details of the solver
   if( opt_verbose > 4 ) printFormula("after full simplification");
