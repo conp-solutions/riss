@@ -4,6 +4,9 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor-src/Coprocessor.h"
 
+#include "coprocessor-src/VarFileParser.h"
+#include "Shuffler.h"
+
 #include <iostream>
 
 static const char* _cat = "COPROCESSOR 3";
@@ -33,6 +36,7 @@ static BoolOption opt_probe       (_cat2, "probe",         "Use Probing/Clause V
 static BoolOption opt_ternResolve (_cat2, "3resolve",      "Use Ternary Clause Resolution", false);
 static BoolOption opt_addRedBins  (_cat2, "addRed2",       "Use Adding Redundant Binary Clauses", false);
 static BoolOption opt_dense       (_cat2, "dense",         "Remove gaps in variables of the formula", false);
+static BoolOption opt_shuffle     (_cat2, "shuffle",       "Shuffle the formula, before the preprocessor is initialized", false);
 
 static StringOption opt_ptechs (_cat2, "cp3_ptechs", "techniques for preprocessing");
 static StringOption opt_itechs (_cat2, "cp3_itechs", "techniques for inprocessing");
@@ -103,6 +107,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , dense( solver->ca, controller, data, propagation)
 , sls ( data, solver->ca, controller )
 , twoSAT( solver->ca, controller, data)
+, shuffleVariable (-1)
 {
   controller.init();
 }
@@ -136,6 +141,8 @@ lbool Preprocessor::performSimplification()
   cleanSolver ();
   // initialize techniques
   data.init( solver->nVars() );
+  
+  if( opt_shuffle ) shuffle();
   
   if( opt_check ) checkLists("before initializing");
   initializePreprocessor ();
@@ -942,15 +949,17 @@ stream << "c [STAT] CP3(2) "
 
 void Preprocessor::extendModel(vec< lbool >& model)
 {
+  cerr << "c extendModel with " << model.size() << " variables" << endl;
   // order is important!
   dense.decompress( model ); // if model has not been compressed before, nothing has to be done!
-  
   cerr << "c formula variables: " << formulaVariables << " model: " << model.size() << endl;
   if( formulaVariables > model.size() ) model.growTo(formulaVariables);
-  cerr << "c run data extend model" << endl;
+  // cerr << "c run data extend model" << endl;
   data.extendModel(model);
   
-
+  // get back the old number of variables inside the model, to be able to unshuffle!
+  if (formulaVariables != - 1 && formulaVariables < model.size() ) model.shrink( model.size() - formulaVariables );
+  if( opt_shuffle ) unshuffle(model);
 }
 
 
@@ -1213,6 +1222,38 @@ void Preprocessor::reSetupSolver()
     }
 
 }
+
+
+void Preprocessor::shuffle()
+{
+  VarShuffler vs;
+  
+  assert( solver->decisionLevel() == 0 && "shuffle only on level 0!" );
+  
+  // clear all assignments, to not being forced of keeping track of shuffled trail
+  for( int i = 0 ; i < solver->trail.size(); ++ i ) {
+    solver->assigns[ var( solver->trail[i] ) ] = l_Undef;
+  }
+  
+  // shuffle trail, clauses and learned clauses
+  shuffleVariable = data.nVars();
+  vs.process( data.getClauses(), data.getLEarnts(), solver->trail, data.nVars(), ca );
+  
+  // set all assignments according to the trail!
+  for( int i = 0 ; i < solver->trail.size(); ++ i ) {
+    solver->assigns[ var( solver->trail[i] ) ] = sign(solver->trail[i]) ? l_False : l_True;
+  }
+}
+
+void Preprocessor::unshuffle(vec< lbool >& model)
+{
+  // setup shuffler, and unshuffle model!
+  VarShuffler vs;
+  
+  assert( (shuffleVariable == -1 || model.size() == shuffleVariable) && "number of variables has to match" );
+  vs.unshuffle(model, model.size() );
+}
+
 
 void Preprocessor::sortClauses()
 {

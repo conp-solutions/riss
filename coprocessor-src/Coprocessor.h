@@ -127,6 +127,8 @@ protected:
   Sls sls;
   TwoSatSolver twoSAT;
 
+  int shuffleVariable;  // number of variables that have been present when the formula has been shuffled
+  
   // do the real work
   lbool performSimplification();
   void printStatistics(ostream& stream);
@@ -138,6 +140,9 @@ protected:
   void destroyTechniques();        // free resources of all preprocessing techniques
 
   void giveMoreSteps();
+  
+  void shuffle();			// shuffle the formula
+  void unshuffle( vec< lbool >& model );	// unshuffle the formula
   
   // small helpers
   void sortClauses();                // sort the literals within all clauses

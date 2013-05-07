@@ -66,6 +66,9 @@ bool Coprocessor::TwoSatSolver::tmpUnitPropagate()
 
     if( debug_out > 2 && tmpUnitQueue.size() % 100 == 0 ) cerr << "queue.size() = " << tmpUnitQueue.size() << endl;
     
+    // this literal has been changed by unitPropagate -> ignore!
+    if (permVal[toInt(x)] != 0) continue;
+    
     touchedLiterals ++;
     
     // if found a conflict, propagate the other polarity for real!
@@ -73,12 +76,12 @@ bool Coprocessor::TwoSatSolver::tmpUnitPropagate()
     {
       if( debug_out > 1 ) cerr << "c add to propagation queue(out) : " << x << endl;
       unitQueue.push_back(x);
+      
       if( clearQueue ) {
 	if (! tmpUnitQueue.empty()) tmpUnitQueue.clear();
-
 	return unitPropagate();
       } else {
-	unitPropagate();
+	return unitPropagate();
       }
     }
 
@@ -94,18 +97,6 @@ bool Coprocessor::TwoSatSolver::tmpUnitPropagate()
       if (permVal[ toInt(l) ] != 0 || tempVal[toInt(l)] == 1)
         continue;
       else {
-	/* don't care - wait until all literals are added ... FIXME: this can be done faster! -- not much, because DFS
-	if (tempVal[toInt(l)] == -1) {// conflict!!
-	  if( debug_out > 1 ) cerr << "c add to propagation queue(in) : " << l << " because " << ~x  << " failed" << endl;
-	  unitQueue.push_back(l); // we cannot set x like we do it now, otherwise, we would have to set l and -l
-	  if (! tmpUnitQueue.empty()) tmpUnitQueue.clear();
-	  permLiterals++;
-	  return unitPropagate();
-	} 
-	*/
-	// if( debug_out > 2 ) cerr  << "TEMP: Assign " << l << " " << endl;
-	// tempVal[toInt(l)] = 1; tempVal[toInt(~l)] = -1;
-
 	  if( debug_out > 2 ) cerr  << "TEMP: Enqueue " << l << " " << endl;
 	  tmpUnitQueue.push_back(l);
       }
@@ -142,18 +133,20 @@ bool Coprocessor::TwoSatSolver::unitPropagate()
  //   if (Debug_Print2SATAssignments.IsSet())
     
     permVal[toInt(x)] = 1; permVal[toInt(~x)] = -1; // actually, this should be the case already
-    tempVal[toInt(x)] = 1; tempVal[toInt(~x)] = -1;
+//    tempVal[toInt(x)] = 1; tempVal[toInt(~x)] = -1;
     permLiterals ++;
     
     const Lit* impliedLiterals = big.getArray(x);
     const uint32_t impliedLiteralsSize = big.getSize(x);  
     
+    if( debug_out > 2 ) cerr  << "literals to propagate: " << impliedLiteralsSize << " " << endl;
+    
     for (int i = 0 ; i < impliedLiteralsSize; ++ i)
     {      
       if( permVal[ toInt(impliedLiterals[i]) ] == 0 ) {
-	permVal[ toInt(impliedLiterals[i]) ] = 1; permVal[ toInt(~impliedLiterals[i]) ] = -1;
-	tempVal[ toInt(impliedLiterals[i]) ] = 1; tempVal[ toInt(~impliedLiterals[i])] = -1;
-	if( debug_out > 2 )  cerr << "c unit propagate " << impliedLiterals[i] << endl;
+//	permVal[ toInt(impliedLiterals[i]) ] = 1; permVal[ toInt(~impliedLiterals[i]) ] = -1;
+//	tempVal[ toInt(impliedLiterals[i]) ] = 1; tempVal[ toInt(~impliedLiterals[i])] = -1;
+	if( debug_out > 2 )  cerr << "c found by unit propagate [" << i << "/" << impliedLiteralsSize << "] " << impliedLiterals[i] << endl;
         unitQueue.push_back( impliedLiterals[i] );
       } else if ( permVal[ toInt(impliedLiterals[i]) ] == -1 )
 	return false;
@@ -216,7 +209,7 @@ bool Coprocessor::TwoSatSolver::solve()
     decs++;
     if( debug_out > 2 && decs % 100 == 0 ) cerr << "c dec " << decs << "/" << data.nVars() << " mem: " << memUsedPeak() << endl;
     //if (Debug_Print2SATAssignments.IsSet()) std::cout << "DECIDE: " << toNumber(DL) << " ";
-    cerr << "c decide " << DL << endl;
+    if( debug_out > 2)  cerr << "c decide " << DL << endl;
     tmpUnitQueue.push_back(DL);
     Conflict = !tmpUnitPropagate();
   }

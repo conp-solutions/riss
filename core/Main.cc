@@ -229,7 +229,7 @@ int main(int argc, char** argv)
             if (ret == l_True){
 		if( opt_modelStyle ) fprintf(res, "SAT\n");
                 else fprintf(res, "s SATISFIABLE\nv ");
-                for (int i = 0; i < S.nVars(); i++)
+                for (int i = 0; i < S.model.size(); i++)
                   //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
                         fprintf(res, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
                 fprintf(res, " 0\n");
@@ -245,7 +245,7 @@ int main(int argc, char** argv)
         // print model to screen
         if(! opt_quiet && ret == l_True && res == NULL ) {
 	  if( !opt_modelStyle ) printf ("v ");
-          for (int i = 0; i < S.nVars(); i++)
+          for (int i = 0; i < S.model.size(); i++)
             //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
               printf( "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
 	  printf(" 0\n");
