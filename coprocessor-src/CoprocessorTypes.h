@@ -492,6 +492,7 @@ struct VarOrderBVEHeapLt {
 	  } else {
 	    assert(false && "In case of random order no heap should be used"); return false;
 	  }
+	  return false;
         }
         VarOrderBVEHeapLt(CoprocessorData & _data, int _heapOption) : data(_data), heapOption(_heapOption) { }
     };

@@ -126,7 +126,7 @@ protected:
   
   Sls sls;
   TwoSatSolver twoSAT;
-
+  
   int shuffleVariable;  // number of variables that have been present when the formula has been shuffled
   
   // do the real work

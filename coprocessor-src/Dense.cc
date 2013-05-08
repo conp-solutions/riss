@@ -211,7 +211,7 @@ void Dense::decompress(vec< lbool >& model)
 
 
 bool Dense::writeUndoInfo(const string& filename) {
-  
+
   ofstream file( filename.c_str(), ios_base::out);
   if( ! file ) {
     cerr << "c ERROR: could not open map - undo file " << filename << endl;

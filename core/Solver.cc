@@ -54,13 +54,13 @@ static const char* _cm = "CORE -- MINIMIZE";
 
 static DoubleOption opt_K                 (_cr, "K",           "The constant used to force restart",            0.8,     DoubleRange(0, false, 1, false));           
 static DoubleOption opt_R                 (_cr, "R",           "The constant used to block restart",            1.4,     DoubleRange(1, false, 5, false));           
-static IntOption     opt_size_lbd_queue     (_cr, "szLBDQueue",      "The size of moving average for LBD (restarts)", 50, IntRange(10, INT32_MAX));
-static IntOption     opt_size_trail_queue     (_cr, "szTrailQueue",      "The size of moving average for trail (block restarts)", 5000, IntRange(10, INT32_MAX));
+static IntOption    opt_size_lbd_queue     (_cr, "szLBDQueue",      "The size of moving average for LBD (restarts)", 50, IntRange(10, INT32_MAX));
+static IntOption    opt_size_trail_queue     (_cr, "szTrailQueue",      "The size of moving average for trail (block restarts)", 5000, IntRange(10, INT32_MAX));
 
 static IntOption     opt_first_reduce_db     (_cred, "firstReduceDB",      "The number of conflicts before the first reduce DB", 4000, IntRange(0, INT32_MAX));
 static IntOption     opt_inc_reduce_db     (_cred, "incReduceDB",      "Increment for reduce DB", 300, IntRange(0, INT32_MAX));
 static IntOption     opt_spec_inc_reduce_db     (_cred, "specialIncReduceDB",      "Special increment for reduce DB", 1000, IntRange(0, INT32_MAX));
-static IntOption    opt_lb_lbd_frozen_clause      (_cred, "minLBDFrozenClause",        "Protect clauses if their LBD decrease and is lower than (for one turn)", 30, IntRange(0, INT32_MAX));
+static IntOption     opt_lb_lbd_frozen_clause      (_cred, "minLBDFrozenClause",        "Protect clauses if their LBD decrease and is lower than (for one turn)", 30, IntRange(0, INT32_MAX));
 
 static IntOption     opt_lb_size_minimzing_clause     (_cm, "minSizeMinimizingClause",      "The min size required to minimize clause", 30, IntRange(3, INT32_MAX));
 static IntOption     opt_lb_lbd_minimzing_clause     (_cm, "minLBDMinimizingClause",      "The min LBD required to minimize clause", 6, IntRange(3, INT32_MAX));
@@ -73,10 +73,11 @@ static DoubleOption  opt_random_seed       (_cat, "rnd-seed",    "Used by the ra
 static IntOption     opt_ccmin_mode        (_cat, "ccmin-mode",  "Controls conflict clause minimization (0=none, 1=basic, 2=deep)", 2, IntRange(0, 2));
 static IntOption     opt_phase_saving      (_cat, "phase-saving", "Controls the level of phase saving (0=none, 1=limited, 2=full)", 2, IntRange(0, 2));
 static BoolOption    opt_rnd_init_act      (_cat, "rnd-init",    "Randomize the initial activity", false);
-/*
+
+static IntOption     opt_restarts_type     (_cat, "rtype",       "Choose type of restart (0=dynamic,1=luby,2=geometric)", 00, IntRange(0, 2));
 static IntOption     opt_restart_first     (_cat, "rfirst",      "The base restart interval", 100, IntRange(1, INT32_MAX));
 static DoubleOption  opt_restart_inc       (_cat, "rinc",        "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false));
-*/
+
 static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction of wasted memory allowed before a garbage collection is triggered",  0.20, DoubleRange(0, false, HUGE_VAL, false));
 
 static IntOption     opt_allUipHack        ("MODS", "alluiphack", "learn all unit UIPs at any level", 0, IntRange(0, 2) );
@@ -89,6 +90,7 @@ static BoolOption    opt_hack_cost         ("REASON",    "hack-cost", "use size 
 static BoolOption    opt_dbg               ("REASON",    "dbg",       "debug hack", false );
 
 static BoolOption    opt_long_conflict     ("REASON",    "longConflict", "if a binary conflict is found, check for a longer one!", false);
+
 
 // extra 
 static IntOption     opt_act               ("INIT", "actIncMode", "how to inc 0=lin, 1=geo", 0, IntRange(0, 1) );
@@ -111,8 +113,8 @@ static IntOption     opt_laLevel           ("MODS", "hlaLevel",    "level of loo
 static IntOption     opt_laEvery           ("MODS", "hlaevery",    "initial frequency of LA", 1, IntRange(0, INT32_MAX) );
 static IntOption     opt_laBound           ("MODS", "hlabound",    "max. nr of LAs (-1 == inf)", -1, IntRange(-1, INT32_MAX) );
 static IntOption     opt_laTopUnit         ("MODS", "hlaTop",      "allow another LA after learning another nr of top level units (-1 = never)", -1, IntRange(-1, INT32_MAX));
-
-static BoolOption    opt_prefetch("MODS", "prefetch", "prefetch watch list, when literal is enqueued", false);
+static BoolOption    opt_prefetch          ("MODS", "prefetch", "prefetch watch list, when literal is enqueued", false);
+static BoolOption    opt_hpushUnit         ("MODS", "delay-units", "does not propagate unit clauses until solving is initialized", false);
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -194,6 +196,8 @@ Solver::Solver() :
   ,laBound(opt_laEvery)
   ,laStart(false)
   
+  ,startedSolving(false)
+  
   // preprocessor
   , coprocessor(0)
   , useCoprocessor(true)
@@ -265,21 +269,24 @@ bool Solver::addClause_(vec<Lit>& ps)
     sort(ps);
 
     // analyze for DRUP - add if necessary!
-    vec<Lit>    oc;
-    oc.clear();
     Lit p; int i, j, flag = 0;
-    for (i = j = 0, p = lit_Undef; i < ps.size(); i++) {
-        oc.push(ps[i]);
-        if (value(ps[i]) == l_True || ps[i] == ~p || value(ps[i]) == l_False)
-          flag = 1;
+    if( output != NULL ) {
+      oc.clear();
+      for (i = j = 0, p = lit_Undef; i < ps.size(); i++) {
+	  oc.push(ps[i]);
+	  if (value(ps[i]) == l_True || ps[i] == ~p || value(ps[i]) == l_False)
+	    flag = 1;
+      }
     }
 
-    for (i = j = 0, p = lit_Undef; i < ps.size(); i++)
-        if (value(ps[i]) == l_True || ps[i] == ~p)
-            return true;
-        else if (value(ps[i]) != l_False && ps[i] != p)
-            ps[j++] = p = ps[i];
-    ps.shrink(i - j);
+    if( !opt_hpushUnit ) { // do not analyzes clauses for being satisfied or simplified
+      for (i = j = 0, p = lit_Undef; i < ps.size(); i++)
+	  if (value(ps[i]) == l_True || ps[i] == ~p)
+	      return true;
+	  else if (value(ps[i]) != l_False && ps[i] != p)
+	      ps[j++] = p = ps[i];
+      ps.shrink(i - j);
+    }
 
     // print to DRUP
     if ( flag && (output != NULL)) {
@@ -296,8 +303,13 @@ bool Solver::addClause_(vec<Lit>& ps)
     if (ps.size() == 0)
         return ok = false;
     else if (ps.size() == 1){
-        uncheckedEnqueue(ps[0]);
-        return ok = (propagate() == CRef_Undef);
+	if( opt_hpushUnit ) {
+	  if( value( ps[0] ) == l_False ) return ok = false;
+	  if( value( ps[0] ) == l_True ) return true;
+	}
+	uncheckedEnqueue(ps[0]);
+	if( !opt_hpushUnit ) return ok = (propagate() == CRef_Undef);
+	else return ok;
     }else{
         CRef cr = ca.alloc(ps, false);
         clauses.push(cr);
@@ -1100,8 +1112,10 @@ bool Solver::simplify()
 {
     assert(decisionLevel() == 0);
 
-    if (!ok || propagate() != CRef_Undef)
-        return ok = false;
+    if( !opt_hpushUnit || startedSolving ) { // push the first propagate until solving started
+      if (!ok || propagate() != CRef_Undef)
+	  return ok = false;
+    }
 
     if (nAssigns() == simpDB_assigns || (simpDB_props > 0))
         return true;
@@ -1319,25 +1333,35 @@ lbool Solver::search(int nof_conflicts)
 	    conflictsSinceLastRestart ++;
            
         }else{
-	  // Our dynamic restart, see the SAT09 competition compagnion paper 
-	  if (
-	      ( lbdQueue.isvalid() && ((lbdQueue.getavg()*K) > (sumLBD / conflicts)))
-	      || (opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound )// if thre have been too many conflicts
-	     ) {
-	    
-	    // increase current limit, if this has been the reason for the restart!!
-	    if( (opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound ) ) { intervalRestart++;conflictsSinceLastRestart = (double)conflictsSinceLastRestart * (double)opt_rMaxInc; }
-	    
-	    conflictsSinceLastRestart = 0;
-	    lbdQueue.fastclear();
-	    progress_estimate = progressEstimate();
-	    cancelUntil(0);
-	    return l_Undef; }
+	  
+	  if( opt_restarts_type == 0 ) {
+	    // Our dynamic restart, see the SAT09 competition compagnion paper 
+	    if (
+		( lbdQueue.isvalid() && ((lbdQueue.getavg()*K) > (sumLBD / conflicts)))
+		|| (opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound )// if thre have been too many conflicts
+	      ) {
+	      
+	      // increase current limit, if this has been the reason for the restart!!
+	      if( (opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound ) ) { intervalRestart++;conflictsSinceLastRestart = (double)conflictsSinceLastRestart * (double)opt_rMaxInc; }
+	      
+	      conflictsSinceLastRestart = 0;
+	      lbdQueue.fastclear();
+	      progress_estimate = progressEstimate();
+	      cancelUntil(0);
+	      return l_Undef;
+	    }
+	  } else { // usual luby or geometric restarts
+            if (nof_conflicts >= 0 && conflictC >= nof_conflicts || !withinBudget()){
+                progress_estimate = progressEstimate();
+                cancelUntil(0);
+		cerr << "c restart after " << conflictC << " conflicts - limit: " << nof_conflicts << endl;
+                return l_Undef; }
+	  }
 
 
            // Simplify the set of problem clauses:
 	  if (decisionLevel() == 0 && !simplify()) {
-	    printf("c last restart ## conflicts  :  %d %d \n",conflictC,decisionLevel());
+	    if( verbosity > 1 ) printf("c last restart ## conflicts  :  %d %d \n",conflictC,decisionLevel());
 	    return l_False;
 	  }
 	    // Perform clause database reduction !
@@ -1557,10 +1581,28 @@ double Solver::progressEstimate() const
     return progress / nVars();
 }
 
+/// to create the luby series
+static double luby(double y, int x){
+
+    // Find the finite subsequence that contains index 'x', and the
+    // size of that subsequence:
+    int size, seq;
+    for (size = 1, seq = 0; size < x+1; seq++, size = 2*size+1);
+
+    while (size-1 != x){
+        size = (size-1)>>1;
+        seq--;
+        x = x % size;
+    }
+
+    return pow(y, seq);
+}
 
 // NOTE: assumptions passed in member-variable 'assumptions'.
 lbool Solver::solve_()
 {
+    startedSolving = true;
+  
     model.clear();
     conflict.clear();
     if (!ok) return l_False;
@@ -1643,7 +1685,12 @@ printf("c ==================================[ Search Statistics (every %6d confl
     // Search:
     int curr_restarts = 0;
     while (status == l_Undef){
-      status = search(0); // the parameter is useless in glucose, kept to allow modifications
+      
+      double rest_base = 0;
+      if( opt_restarts_type != 0 ) // set current restart limit
+	rest_base = opt_restarts_type == 1 ? luby(opt_restart_inc, curr_restarts) : pow(opt_restart_inc, curr_restarts);
+      
+      status = search(rest_base * opt_restart_first); // the parameter is useless in glucose - but interesting for the other restart policies
 
         if (!withinBudget()) break;
         curr_restarts++;

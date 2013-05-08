@@ -14,6 +14,10 @@ const static bool opt_debug = false;
 static BoolOption opt_debug (_cat, "sls-debug", "Print SLS debug output", false);
 #endif
 
+static IntOption  opt_ksat_flips (_cat, "sls-ksat-flips",   "how many flips should be performed, if k-sat is detected (-1 = infinite)", 20000000, IntRange(-1, INT32_MAX));
+static IntOption  opt_rand_walk  (_cat, "sls-rnd-walk",     "probability of random walk (0-10000)", 2000, IntRange(0,10000));
+static BoolOption opt_adopt      (_cat, "sls-adopt-cls",    "reduce nr of flips for large instances", false);
+
 Sls::Sls(CoprocessorData& _data, ClauseAllocator& _ca, ThreadController& _controller)
 : 
 Technique(_ca, _controller)
@@ -77,7 +81,7 @@ Lit Sls::heuristic(){
   } else {
     
     // with 20 percent, select a random variable!
-    if( rand() % 10000 < 2000 ) {
+    if( rand() % 10000 < opt_rand_walk ) {
       tmp = cl[ rand() % cl.size() ]; 
     } else {
       // select one of the variables with the smallest breack count!
@@ -94,6 +98,7 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
 {
 
   MethodTimer mt ( &solveTime );
+  
   // setup main variables
   unsatClauses.reserve(formula.size());
   
@@ -109,11 +114,18 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
   
   createRandomAssignment();
 
+  int minSize = -1;
+  int maxSize = -1; // TODO: detect k -sat, adtopt flips with nr of clauses!
+  int clsCount = 0;
+  
   for( int i = 0 ; i < formula.size(); ++ i ) {
     const int index = i;
     const Clause& c = ca[ formula[i] ];
 
     if( c.can_be_deleted() || c.size() < 2) continue;
+    clsCount ++;
+    minSize = (minSize == -1 ? c.size() : (minSize < c.size() ? minSize : c.size() ) );
+    maxSize = (maxSize == -1 ? c.size() : (maxSize > c.size() ? maxSize : c.size() ) );
     // count sat lits
     int satLits = 0;
     Lit satLit = lit_Undef;
@@ -137,6 +149,12 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
     
     clsData[ index ].satLiterals = satLits;
   }
+
+  // reduce/adopt stepLimit if formula is too large, or ksat
+  if( stepLimit > 0 && opt_adopt && clsCount > 1000000 ) {
+      stepLimit = (stepLimit < 1000000 ? stepLimit : 1000000 ); // reduce to 1 million, if necessary (too many clauses)
+  }
+  if( minSize == maxSize && minSize > 2 && maxSize < 10 ) stepLimit = opt_ksat_flips == -1 ? 0 : opt_ksat_flips;
   
   
       if( opt_debug ) {

@@ -141,7 +141,8 @@ public:
     vec<lbool> model;             // If problem is satisfiable, this vector contains the model (if any).
     vec<Lit>   conflict;          // If problem is unsatisfiable (possibly under assumptions),
                                   // this vector represent the final conflict clause expressed in the assumptions.
-
+    vec<Lit>    oc;               // vector to store clauses for before being added -- for DRUP output
+                                  
     // Mode of operation:
     //
     int       verbosity;
@@ -368,6 +369,8 @@ protected:
   void fm(uint64_t* p, bool mo); // fills current model into variable vector
   bool laHack(Minisat::vec< Minisat::Lit >& toEnqueue);	// perform la hack, return false -> unsat instance!
         
+  bool startedSolving;	// inidicate whether solving started already
+  
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;
 public:     bool useCoprocessor;

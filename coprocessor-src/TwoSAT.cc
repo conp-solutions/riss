@@ -10,6 +10,7 @@ static const char* _cat = "COPROCESSOR 3 - REWRITE";
 static const int debug_out = 0;
 static const bool useUnits = false;
 static const bool clearQueue = true;
+
 #else
 static IntOption debug_out                 (_cat, "2sat-debug",  "Debug Output of 2sat", 0, IntRange(0, 4));
 static BoolOption useUnits                 (_cat, "2sat-units",  "If 2SAT finds units, use them!", false);

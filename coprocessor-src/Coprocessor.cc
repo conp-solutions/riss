@@ -4,8 +4,9 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor-src/Coprocessor.h"
 
+
 #include "coprocessor-src/VarFileParser.h"
-#include "Shuffler.h"
+#include "coprocessor-src/Shuffler.h"
 
 #include <iostream>
 
@@ -37,6 +38,7 @@ static BoolOption opt_ternResolve (_cat2, "3resolve",      "Use Ternary Clause R
 static BoolOption opt_addRedBins  (_cat2, "addRed2",       "Use Adding Redundant Binary Clauses", false);
 static BoolOption opt_dense       (_cat2, "dense",         "Remove gaps in variables of the formula", false);
 static BoolOption opt_shuffle     (_cat2, "shuffle",       "Shuffle the formula, before the preprocessor is initialized", false);
+static BoolOption opt_simplify    (_cat2, "simplify",      "Apply easy simplifications to the formula", true);
 
 static StringOption opt_ptechs (_cat2, "cp3_ptechs", "techniques for preprocessing");
 static StringOption opt_itechs (_cat2, "cp3_itechs", "techniques for inprocessing");
@@ -46,6 +48,7 @@ static StringOption opt_itechs (_cat2, "cp3_itechs", "techniques for inprocessin
 static const int opt_threads = 0;
 static const bool opt_sls = false;       
 static const bool opt_sls_phase = false;    
+static const int opt_sls_flips = 8000000;
 static const bool opt_rew = false;    
 static const bool opt_twosat = false;
 static const bool opt_twosat_init=false;
@@ -129,15 +132,15 @@ lbool Preprocessor::performSimplification()
   
   if( isInprocessing ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
   else {ppTime = cpuTime() - ppTime; ppwTime = wallClockTime() - ppwTime;}
-  
+    
   // first, remove all satisfied clauses
-  if( !solver->simplify() ) { cout.flush(); cerr.flush(); return l_False; }
+  if( opt_simplify && !solver->simplify() ) { cout.flush(); cerr.flush(); return l_False; }
 
   lbool status = l_Undef;
   // delete clauses from solver
   
   if( opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << endl;
-  
+    
   cleanSolver ();
   // initialize techniques
   data.init( solver->nVars() );
@@ -579,6 +582,8 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
   cleanSolver ();
   // initialize techniques
   data.init( solver->nVars() );
+  
+  if( opt_shuffle ) shuffle();
   
   if( opt_check ) checkLists("before initializing");
   initializePreprocessor ();
@@ -1084,6 +1089,12 @@ void Preprocessor::reSetupSolver()
 	      assert( c.mark() == 0 && "only clauses without a mark should be passed back to the solver!" );
 	      if (c.size() > 1)
 	      {
+		  if( ! opt_simplify && solver->qhead == 0 ) { // do not change the clause, if nothing has been propagated yet
+		    solver->attachClause(cr);
+		    solver->clauses[kept_clauses++] = cr; // add original clauss back! 
+		    continue;
+		  }
+		
 		  // do not watch literals that are false!
 		  int j = 1;
 		  for ( int k = 0 ; k < 2; ++ k ) { // ensure that the first two literals are undefined!
@@ -1223,7 +1234,6 @@ void Preprocessor::reSetupSolver()
 
 }
 
-
 void Preprocessor::shuffle()
 {
   VarShuffler vs;
@@ -1253,7 +1263,6 @@ void Preprocessor::unshuffle(vec< lbool >& model)
   assert( (shuffleVariable == -1 || model.size() == shuffleVariable) && "number of variables has to match" );
   vs.unshuffle(model, model.size() );
 }
-
 
 void Preprocessor::sortClauses()
 {
