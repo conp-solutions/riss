@@ -237,6 +237,8 @@ Var Solver::newVar(bool sign, bool dvar, char type)
     trail    .capacity(v+1);
     setDecisionVar(v, dvar);
     
+    if( opt_hack > 0 ) trailPos.push(-1);
+    
     return v;
 }
 

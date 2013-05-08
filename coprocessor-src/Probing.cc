@@ -233,6 +233,11 @@ bool Probing::prAnalyze( CRef confl )
     // do not do analysis -- return that nothing has been learned
     if( pr_uip == 0 && solver.decisionLevel() == 0) return false;
   
+    if( debug_out > 2 ) {
+	for ( Var i = 0 ; i < data.nVars(); ++ i ) 
+	  assert ( solver.seen[ i ] == 0 && "value has to be true!"); 
+    }
+    
     // genereate learnt clause - extract all units!
     int pathC = 0;
     Lit p     = lit_Undef;
@@ -246,6 +251,11 @@ bool Probing::prAnalyze( CRef confl )
     
     int index   = solver.trail.size() - 1;
 
+    if( debug_out > 2 ) {
+      for ( int i = 0 ; i < ca[confl].size(); ++ i ) 
+	assert ( solver.seen[ var( ca[confl][i] ) ] == 0 && "value cannot be true!"); 
+    }
+    
     do{
         if( debug_out > 3 ) cerr << "c next conflict [" << confl << "] with pathC= " << pathC << " and level " << solver.decisionLevel() << endl;
         assert(confl != CRef_Undef); // (otherwise should be UIP)
@@ -262,12 +272,21 @@ bool Probing::prAnalyze( CRef confl )
         
 	  Clause& c = ca[confl];
 
+	  // Special case for binary clauses
+	  // The first one has to be SAT
+	  if( p != lit_Undef && c.size()==2 && solver.value(c[0])==l_False) {
+	    assert(solver.value(c[1])==l_True && "the other literal has to be satisfied!" );
+	    Lit tmp = c[0];
+	    c[0] =  c[1], c[1] = tmp;
+	  }
+	  
 	  for (int j = (p == lit_Undef) ? 0 : 1; j < c.size(); j++){
 	      Lit q = c[j];
 
 	      if (!solver.seen[var(q)] && solver.level(var(q)) > 0){
 		  solver.varBumpActivity(var(q));
-		  solver.seen[var(q)] = 1;
+		  if( debug_out > 2 ) cerr << "c set seen INT for " << var(q) +1<< endl;
+		  solver.seen[var(q)] = 1; // for every variable, which is not on level 0, set seen!
 		  if (solver.level(var(q)) >= solver.decisionLevel())
 		      pathC++;
 		  else
@@ -283,7 +302,9 @@ bool Probing::prAnalyze( CRef confl )
         while (!solver.seen[var(solver.trail[index--])]);
         p     = solver.trail[index+1];
         confl = solver.reason(var(p));
+	assert( solver.seen[var(p)] == 1 && "this variable should have been inside the clause" );
         solver.seen[var(p)] = 0;
+	if( debug_out > 2 ) cerr << "c reset seen INT for " << var(p) +1 << endl;
         pathC--;
 
 	// this works only is the decision level is 1
@@ -295,7 +316,16 @@ bool Probing::prAnalyze( CRef confl )
 	   // learned enough uips - return. if none has been found, return false!
 	   if( pr_uip != -1 && uips > pr_uip ) {
 	     // reset seen literals
-	     for( int i = 0 ; i < data.lits.size(); ++ i ) solver.seen[ var(data.lits[i]) ] = 0;
+	     for( int i = 0 ; i < data.lits.size(); ++ i ){
+	       solver.seen[ var(data.lits[i]) ] = 0;
+	       if( debug_out > 2 ) cerr << "c reset seen ALLUIP for " << var(data.lits[i]) +1 << endl;
+	     }
+	     
+	     if( debug_out > 2 ) {
+		  for ( Var i = 0 ; i < data.nVars(); ++ i ) 
+		    assert ( solver.seen[ i ] == 0 && "value has to be true!"); 
+	     }
+	     
 	     return learntUnits.size() == 0 ? false : true;
 	   }
 	   learntUnits.push(~p);
@@ -310,7 +340,10 @@ bool Probing::prAnalyze( CRef confl )
     data.lits[0] = ~p;
   
     // reset seen literals
-    for( int i = 0 ; i < data.lits.size(); ++ i ) solver.seen[ var(data.lits[i]) ] = 0;
+    for( int i = 0 ; i < data.lits.size(); ++ i ) {
+      solver.seen[ var(data.lits[i]) ] = 0;
+      if( debug_out > 2 ) cerr << "c reset seen EXT for " << var(data.lits[i]) +1 << endl;
+    }
     
     // print learned clause
     if( debug_out > 1 ) {
@@ -319,6 +352,11 @@ bool Probing::prAnalyze( CRef confl )
       cerr << endl;
     }
 
+  if( debug_out > 2 ) {
+      for ( Var i = 0 ; i < data.nVars(); ++ i ) 
+	assert ( solver.seen[ i ] == 0 && "value has to be true!"); 
+  }
+    
   // NOTE no need to add the unit again, has been done in the loop already!
   
   return true;
@@ -393,7 +431,23 @@ bool Probing::prDoubleLook(Lit l1decision)
 	solver.uncheckedEnqueue(data.lits[0], cr);
 	if( debug_out > 0 ) cerr << "c L2 learnt clause: " << ca[cr] << " 0" << endl;
       }
-      if( solver.propagate() != CRef_Undef ) { if( debug_out > 1 ) {cerr << "c l1 propagatin learned clause failed" << endl;} return false; }
+      CRef cClause = solver.propagate() ;
+      if( cClause != CRef_Undef ) { if( debug_out > 1 ) {
+	cerr << "c l1 propagating (" << data.lits << ") learned clause at level " << solver.decisionLevel() << " failed" << endl;} 
+	// perform l1 analysis - as in usual probing routine
+	l1failed++;
+	if( !prAnalyze( cClause ) ) {
+	  learntUnits.push( ~l1decision );
+	}
+	solver.cancelUntil(0);
+	// tell system about new units!
+	for( int i = 0 ; i < learntUnits.size(); ++ i ) data.enqueue( learntUnits[i] );
+	if( !data.ok() ) return true; // interrupt loop, if UNSAT has been found!
+	l1learntUnit+=learntUnits.size();
+	if( solver.propagate() != CRef_Undef ) { data.setFailed(); return true; } // UNSAT has been found - current state is level 0
+	
+	return true; 
+      }
       if( solver.decisionLevel() == 1 ) {i--;continue;}
       else return true;
     }
@@ -445,9 +499,25 @@ bool Probing::prDoubleLook(Lit l1decision)
 	solver.uncheckedEnqueue(data.lits[0], cr);
 	if( debug_out > 0 ) cerr << "c L2 learnt clause: " << ca[cr] << " 0" << endl;
       }
-      if( solver.propagate() != CRef_Undef ) { if( debug_out > 1 ) {cerr << "c l1 propagatin learned clause failed" << endl;} return false; }
+      CRef cClause = solver.propagate() ;
+      if( cClause != CRef_Undef ) { if( debug_out > 1 ) {
+	cerr << "c l1 propagating (" << data.lits << ") learned clause at level " << solver.decisionLevel() << " failed" << endl;} 
+	// perform l1 analysis - as in usual probing routine
+	l1failed++;
+	if( !prAnalyze( cClause ) ) {
+	  learntUnits.push( ~l1decision );
+	}
+	solver.cancelUntil(0);
+	// tell system about new units!
+	for( int i = 0 ; i < learntUnits.size(); ++ i ) data.enqueue( learntUnits[i] );
+	if( !data.ok() ) return true; // interrupt loop, if UNSAT has been found!
+	l1learntUnit+=learntUnits.size();
+	if( solver.propagate() != CRef_Undef ) { data.setFailed(); return true; } // UNSAT has been found - current state is level 0
+	
+	return true; 
+      }
       if( solver.decisionLevel() == 1 ) {i--;continue;}
-      else return true;
+      else return true; // decision level == 0
     }
     // could copy to prNegatie here, but we do not do this, but refer to the vector inside the solver instead
     vec<lbool>& prNegative = solver.assigns;
@@ -507,14 +577,14 @@ bool Probing::prDoubleLook(Lit l1decision)
       // perform l1 analysis - as in usual probing routine
       l1failed++;
       if( !prAnalyze( thisConflict ) ) {
-	learntUnits.push( ~posLit );
+	learntUnits.push( ~l1decision );
       }
       solver.cancelUntil(0);
       // tell system about new units!
       for( int i = 0 ; i < learntUnits.size(); ++ i ) data.enqueue( learntUnits[i] );
-      if( !data.ok() ) break; // interrupt loop, if UNSAT has been found!
+      if( !data.ok() ) return true; // interrupt loop, if UNSAT has been found!
       l1learntUnit+=learntUnits.size();
-      if( solver.propagate() != CRef_Undef ) { data.setFailed(); break; }
+      if( solver.propagate() != CRef_Undef ) { data.setFailed(); return true; } // UNSAT has been found - current state is level 0
       
       return true; 
     }

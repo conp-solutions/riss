@@ -877,7 +877,7 @@ lbool Preprocessor::preprocess()
 {
   isInprocessing = false;
   
-  if( opt_ptechs ) return performSimplificationScheduled( string(opt_ptechs) );
+  if( opt_ptechs && string(opt_ptechs).size() > 0 ) return performSimplificationScheduled( string(opt_ptechs) );
   else return performSimplification();
 }
 
@@ -901,7 +901,7 @@ lbool Preprocessor::inprocess()
     if(opt_inc_inp) giveMoreSteps();
     
     lbool ret = l_Undef;
-    if( opt_itechs ) ret = performSimplificationScheduled( string(opt_itechs) );
+    if( opt_itechs  && string(opt_itechs).size() > 0 ) ret = performSimplificationScheduled( string(opt_itechs) );
     else ret = performSimplification();
     
     lastInpConflicts = solver->conflicts;
