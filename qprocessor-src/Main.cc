@@ -180,7 +180,7 @@ int main(int argc, char** argv)
 		     // print bva variables!
 		     assert( quantifiers[i].kind == 'e' && "this quantifier set needs to be existential" );
 		     for( Var v = beforeVariables; v < S.nVars(); ++v ) {
-			fprintf(res, "%i ", v);
+			fprintf(res, "%i ", v+1);
 		     }
 		   }
 		   fprintf(res, "0\n");
