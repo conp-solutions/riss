@@ -167,7 +167,7 @@ int main(int argc, char** argv)
 		  fprintf(res,"p cnf %u %i\n", vars, cls);
 		  // print all the quantifiers again!
 		  bool lastQisE = quantifiers.size() == 0 ? false : quantifiers[ quantifiers.size() - 1 ].kind == 'e';
-		  for( int i = 0; i + 1 < quantifiers.size(); ++ i ) { // check whether the last quantifier is 'e'. if yes, add BVA variables, if not, add another quantifier sequence
+		  for( int i = 0; i < quantifiers.size(); ++ i ) { // check whether the last quantifier is 'e'. if yes, add BVA variables, if not, add another quantifier sequence
 		   fprintf(res,"%c ", quantifiers[i].kind);
 		   for( int j = 0 ; j < quantifiers[i].lits.size(); ++ j )
 		   { 
@@ -187,7 +187,7 @@ int main(int argc, char** argv)
 		  }
 		  if( ! lastQisE && beforeVariables < S.nVars() ) { // additional variables have been added, add them to the prefix as existential
 		     fprintf(res,"e ");
-		     for( Var v = beforeVariables; v < S.nVars(); ++v ) fprintf(res, "%i ", v);
+		     for( Var v = beforeVariables; v < S.nVars(); ++v ) fprintf(res, "%i ", v+1);
 		     fprintf(res, "0\n");
 		  }
 		  // print the remaining formula!
