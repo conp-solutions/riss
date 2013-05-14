@@ -22,8 +22,8 @@ shift												# reduce the parameters, removed the very first one. remaining 
 # binary of the used qbf solver
 qbfsolver=depqbf						# name of the binary (if not in this directory, give relative path as well)
 
-# default parameters for preprocessor
-cp3params="-enabled_cp3 -cp3_stats -up -subsimp -bva -cp3_strength -probe -no-pr-EE"
+# default parameters for preprocessor -- no dense, no probe!
+cp3params="-enabled_cp3 -cp3_stats -up -subsimp -bva -cp3_strength"
 
 # some temporary files 
 tmpCNF=/tmp/cp3_tmpCNF_$$		# path to temporary file that stores cp3 simplified formula
