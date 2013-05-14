@@ -37,6 +37,7 @@ static BoolOption opt_addRedBins  (_cat2, "addRed2",       "Use Adding Redundant
 static BoolOption opt_dense       (_cat2, "dense",         "Remove gaps in variables of the formula", false);
 static BoolOption opt_shuffle     (_cat2, "shuffle",       "Shuffle the formula, before the preprocessor is initialized", false);
 static BoolOption opt_simplify    (_cat2, "simplify",      "Apply easy simplifications to the formula", true);
+static BoolOption opt_symm        (_cat2, "symm",          "Do local symmetry breaking", true);
 
 static StringOption opt_ptechs (_cat2, "cp3_ptechs", "techniques for preprocessing");
 static StringOption opt_itechs (_cat2, "cp3_itechs", "techniques for inprocessing");
@@ -106,6 +107,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , res( solver->ca, controller, data)
 , rew( solver->ca, controller, data, subsumption )
 , dense( solver->ca, controller, data, propagation)
+, symmetry(solver->ca, controller, data, *solver)
 , sls ( data, solver->ca, controller )
 , twoSAT( solver->ca, controller, data)
 , shuffleVariable (-1)
@@ -869,6 +871,10 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 lbool Preprocessor::preprocess()
 {
   isInprocessing = false;
+  
+  if( opt_symm ) {
+    symmetry.process(); 
+  }
   
   if( opt_ptechs ) return performSimplificationScheduled( string(opt_ptechs) );
   else return performSimplification();

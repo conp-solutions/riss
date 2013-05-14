@@ -101,6 +101,7 @@ Solver::Solver() :
   , var_inc            (1)
   , watches            (WatcherDeleted(ca))
   , qhead              (0)
+  , realHead           (0)
   , simpDB_assigns     (-1)
   , simpDB_props       (0)
   , order_heap         (VarOrderLt(activity))
@@ -267,6 +268,7 @@ void Solver::cancelUntil(int level) {
                 polarity[x] = sign(trail[c]);
             insertVarOrder(x); }
         qhead = trail_lim[level];
+	realHead = qhead;
         trail.shrink(trail.size() - trail_lim[level]);
         trail_lim.shrink(trail_lim.size() - level);
     } }
@@ -554,6 +556,7 @@ CRef Solver::propagate()
 
     while (qhead < trail.size()){
         Lit            p   = trail[qhead++];     // 'p' is enqueued fact to propagate.
+        realHead = qhead;
         vec<Watcher>&  ws  = watches[p];
         Watcher        *i, *j, *end;
         num_props++;
