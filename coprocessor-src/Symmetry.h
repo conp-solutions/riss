@@ -28,6 +28,7 @@ class Symmetry : public Technique {
   int maxOcc;
   int eqs;
   int replaces;
+  int totalConflicts;
   
 public:
   Symmetry( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Solver& _solver);
