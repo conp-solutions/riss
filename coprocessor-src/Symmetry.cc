@@ -168,7 +168,7 @@ bool Symmetry::process() {
 	    
 	    solver.propagate(); // in case of delayed units, get rid of them now!
 	    
-	    for( int m = thisR ; m > k ; -- m ) {
+	    for( int m = thisR - 1 ; m > k ; -- m ) {
 	      if ( freq[ thisIter[i+m].v ] <= opt_hmin || freq[ thisIter[i+m].v ] < ( avgFreq * opt_hratio) ) continue; // do not consider too small literals!
 	      for( int o = 0 ; o < 4; ++ o ) { // check all 4 polarity combinations?
 		if( !opt_hpropA  && ( o == 1 || o == 2 ) ) continue; // just check equivalence
@@ -197,6 +197,7 @@ bool Symmetry::process() {
 		  if( debug_out > 1 ) cerr << "c add clause [" << ~l1 << ", " << ~l2 << "]" << endl;
 		  symmAddClause ++;
 		} else if( opt_conflicts > 0 && totalConflicts < opt_total_conflicts ) {
+		  assert( solver.assumptions.size() == 0 && "apply symmetry breaking only if no assumptions are used" );
 		  bool oldUsePP = solver.useCoprocessor;
 		  int oldVerb = solver.verbosity;
 		  totalConflicts = solver.conflicts - totalConflicts;
@@ -206,6 +207,7 @@ bool Symmetry::process() {
 		  assumptions.clear();
 		  assumptions.push( l1 );assumptions.push( l2 );
 		  lbool ret = solver.solveLimited(assumptions) ;
+		  solver.assumptions.clear();
 		  solver.verbosity = oldVerb;
 		  solver.useCoprocessor = oldUsePP;
 		  totalConflicts = solver.conflicts - totalConflicts;
