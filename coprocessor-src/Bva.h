@@ -59,7 +59,7 @@ class BoundedVariableAddition : public Technique  {
         }
         LitOrderBVAHeapLt(CoprocessorData & _data) : data(_data) {}
   };
-  Heap<LitOrderBVAHeapLt> bvaHeap; // heap that stores the variables according to their frequency (dedicated for BVA)
+  
   // structures that would be created on during functions again and again
   vector< vector< CRef > > bvaMatchingClauses; // found pairs of clauses
   vector< Lit > bvaMatchingLiterals; // literals that stay in the match
@@ -106,10 +106,10 @@ protected:
   * @param right literal that represents the right side
   * @return false, if shrinking a clause to unit led to a failed enqueue (UNSAT)
   */
-  bool bvaHandleComplement( const Lit right );
+  bool bvaHandleComplement( const Lit right, Heap< Coprocessor::LitOrderHeapLt >& bvaHeap );
 
   /** introduce a fresh variable, update the size of all required structures*/
-  Var nextVariable(char type);
+  Var nextVariable(char type, Heap<LitOrderHeapLt>& bvaHeap);
 
   /** check data structures */
   bool checkLists(const string& headline);

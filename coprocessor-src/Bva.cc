@@ -23,6 +23,7 @@ static IntOption  opt_bva_VarLimit         (_cat, "cp3_bva_Vlimit",  "use BVA on
 static IntOption  opt_bva_Alimit           (_cat, "cp3_bva_limit",   "number of steps allowed for AND-BVA", 1200000, IntRange(0, INT32_MAX));
 static BoolOption opt_Abva                 (_cat, "cp3_Abva",        "perform AND-bva", true);
 static IntOption  opt_inpStepInc           (_cat, "cp3_bva_incInp",  "increases of number of steps per inprocessing", 80000, IntRange(0, INT32_MAX));
+static IntOption  opt_Abva_heap            (_cat, "cp3_Abva_heap",   "0: minimum heap, 1: maximum heap, 2: random, 3: ratio pos/neg smaller+less, 4: ratio pos/neg smaller+greater, 5: ratio pos/neg greater+less, 6: ratio pos/neg greater + greater, 7-10: same as 3-6, but inverse measure order", 1, IntRange(0,10));
 
 static BoolOption opt_bvaComplement        (_cat, "cp3_bva_compl",   "treat complementary literals special", true);
 static BoolOption opt_bvaRemoveDubplicates (_cat, "cp3_bva_dupli",   "remove duplicate clauses", true);
@@ -38,15 +39,20 @@ static const bool opt_Ibva = 0;
 static const int opt_bvaAnalysisDebug = 0;
 static const int opt_bva_Xlimit = 100000000;
 static const int opt_bva_Ilimit = 100000000;
+static const int opt_Xbva_heap = 1;
+static const int opt_Ibva_heap = 1;
 #else
 static IntOption  bva_debug                (_cat, "bva-debug",       "Debug Output of BVA", 0, IntRange(0, 4));
 static IntOption  opt_bvaAnalysisDebug     (_cat, "cp3_bva_ad",      "experimental analysis", 0, IntRange(0, 4));
 
-static IntOption  opt_bva_Xlimit            (_cat, "cp3_bva_Xlimit",   "number of steps allowed for XOR-BVA", 100000000, IntRange(0, INT32_MAX));
-static IntOption  opt_bva_Ilimit            (_cat, "cp3_bva_Ilimit",   "number of steps allowed for ITE-BVA", 100000000, IntRange(0, INT32_MAX));
+static IntOption  opt_bva_Xlimit           (_cat, "cp3_bva_Xlimit",   "number of steps allowed for XOR-BVA", 100000000, IntRange(0, INT32_MAX));
+static IntOption  opt_bva_Ilimit           (_cat, "cp3_bva_Ilimit",   "number of steps allowed for ITE-BVA", 100000000, IntRange(0, INT32_MAX));
 
-static IntOption  opt_Xbva          (_cat, "cp3_Xbva",       "perform XOR-bva (1=half gates,2=full gates)", 0, IntRange(0, 2));
-static IntOption  opt_Ibva          (_cat, "cp3_Ibva",       "perform ITE-bva (1=half gates,2=full gates)", 0, IntRange(0, 2));
+static IntOption  opt_Xbva_heap            (_cat, "cp3_Xbva_heap",   "0: minimum heap, 1: maximum heap, 2: random, 3: ratio pos/neg smaller+less, 4: ratio pos/neg smaller+greater, 5: ratio pos/neg greater+less, 6: ratio pos/neg greater + greater, 7-10: same as 3-6, but inverse measure order", 1, IntRange(0,10));
+static IntOption  opt_Ibva_heap            (_cat, "cp3_Ibva_heap",   "0: minimum heap, 1: maximum heap, 2: random, 3: ratio pos/neg smaller+less, 4: ratio pos/neg smaller+greater, 5: ratio pos/neg greater+less, 6: ratio pos/neg greater + greater, 7-10: same as 3-6, but inverse measure order", 1, IntRange(0,10));
+
+static IntOption  opt_Xbva                 (_cat, "cp3_Xbva",       "perform XOR-bva (1=half gates,2=full gates)", 0, IntRange(0, 2));
+static IntOption  opt_Ibva                 (_cat, "cp3_Ibva",       "perform ITE-bva (1=half gates,2=full gates)", 0, IntRange(0, 2));
 #endif
 	
 BoundedVariableAddition::BoundedVariableAddition(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data)
@@ -78,7 +84,6 @@ BoundedVariableAddition::BoundedVariableAddition(ClauseAllocator& _ca, ThreadCon
 , iteTotalReduction(0)
 , iteMatchChecks(0)
 
-, bvaHeap( data )
 , bvaComplement(opt_bvaComplement)
 , bvaPush(opt_bva_push)
 , bvaALimit(opt_bva_Alimit)
@@ -123,6 +128,9 @@ bool BoundedVariableAddition::andBVA() {
   MethodTimer processTimer( &andTime );
   doSort = true;
 
+  LitOrderHeapLt comp(data, opt_Abva_heap);
+  Heap<LitOrderHeapLt> bvaHeap(comp);  // heap that stores the variables according to their frequency (dedicated for BVA)
+  
   // setup own structures
   bvaHeap.addNewElement(data.nVars() * 2);
   for( Var v = 0 ; v < data.nVars(); ++ v ) {
@@ -342,7 +350,7 @@ bool BoundedVariableAddition::andBVA() {
 	  if( left == ~right && bvaComplement ) {
 	    didSomething = true;
 	    if(  bva_debug > 1 ) cerr << "c [BVA] found complement " << left << endl;
-	    if( !bvaHandleComplement( right ) ) {
+	    if( !bvaHandleComplement( right, bvaHeap) ) {
 	      data.setFailed();
 	      return didSomething;
 	    }
@@ -471,7 +479,7 @@ bool BoundedVariableAddition::andBVA() {
 	  }
 	  
 	  // create the new clauses!
-	  const Var newX = nextVariable('a');
+	  const Var newX = nextVariable('a',bvaHeap);
 	  andReplacements++; andTotalReduction += currentReduction;
 	  didSomething = true;
 	  assert( !bvaHeap.inHeap( toInt(right) ) && "by adding new variable, heap should not contain the currently removed variable" );
@@ -714,6 +722,9 @@ bool BoundedVariableAddition::xorBVAhalf()
   const int replacePairs = 3;
   const int smallestSize = 3;
   
+  LitOrderHeapLt comp(data, opt_Xbva_heap);
+  Heap<LitOrderHeapLt> bvaHeap(comp);  // heap that stores the variables according to their frequency (dedicated for BVA)
+  
   // data structures
   bvaHeap.addNewElement(data.nVars() * 2);
   for( Var v = 0 ; v < data.nVars(); ++ v ) {
@@ -833,7 +844,7 @@ bool BoundedVariableAddition::xorBVAhalf()
 	  // TODO: check for implicit full gate
 	  
 	  // apply replacing/rewriting here (right,l1) -> (x); add clauses (-x,right,l1),(-x,-right,-l1)
-	  const Var newX = nextVariable('x'); // done by procedure! bvaHeap.addNewElement();
+	  const Var newX = nextVariable('x',bvaHeap); // done by procedure! bvaHeap.addNewElement();
 	  if( opt_bvaAnalysisDebug ) cerr << "c introduce new variable " << newX + 1 << endl;
 	  
 	  didSomething = true;
@@ -916,6 +927,8 @@ bool BoundedVariableAddition::xorBVAfull()
   const int replacePairs = 5; // number of clauses to result in a reduction
   const int smallestSize = 3; // clause size
   
+  LitOrderHeapLt comp(data, opt_Xbva_heap);
+  Heap<LitOrderHeapLt> bvaHeap(comp);  // heap that stores the variables according to their frequency (dedicated for BVA)
   // data structures
   bvaHeap.addNewElement(data.nVars() * 2); // keeps old values?! - drawback: cannot pre-filter
   for( Var v = 0 ; v < data.nVars(); ++ v ) {
@@ -1120,7 +1133,7 @@ bool BoundedVariableAddition::xorBVAfull()
 	    }
 	  }
 	  // apply replacing/rewriting here (right,l1) -> (x); add clauses (-x,right,l1),(-x,-right,-l1)
-	  const Var newX = nextVariable('x'); // done by procedure! bvaHeap.addNewElement();
+	  const Var newX = nextVariable('x',bvaHeap); // done by procedure! bvaHeap.addNewElement();
 	  if( opt_bvaAnalysisDebug ) cerr << "c introduce new variable " << newX + 1 << endl;
 	  
 	  didSomething = true;
@@ -1253,6 +1266,8 @@ bool BoundedVariableAddition::iteBVAhalf()
   
   bool didSomething = false;;
   
+  LitOrderHeapLt comp(data, opt_Ibva_heap);
+  Heap<LitOrderHeapLt> bvaHeap(comp);  // heap that stores the variables according to their frequency (dedicated for BVA)
   // data structures
   bvaHeap.addNewElement(data.nVars() * 2);
   for( Var v = 0 ; v < data.nVars(); ++ v ) {
@@ -1390,7 +1405,7 @@ bool BoundedVariableAddition::iteBVAhalf()
 	  // TODO: check for implicit full gate
 
 	  // apply replacing/rewriting here (right,l1) -> (x); add clauses (-x,right,l1),(-x,-right,-l1)
-	  const Var newX = nextVariable('i'); // done by procedure! bvaHeap.addNewElement();
+	  const Var newX = nextVariable('i',bvaHeap); // done by procedure! bvaHeap.addNewElement();
 	  if( opt_bvaAnalysisDebug ) cerr << "c introduce new variable " << newX + 1 << endl;
 	  
 	  for( int k = maxI; k < maxJ; ++ k ) {
@@ -1472,6 +1487,8 @@ bool BoundedVariableAddition::iteBVAfull()
   
   // cerr << "c full ITE bva" << endl;
   
+  LitOrderHeapLt comp(data, opt_Ibva_heap);
+  Heap<LitOrderHeapLt> bvaHeap(comp);  // heap that stores the variables according to their frequency (dedicated for BVA)
   // data structures
   bvaHeap.addNewElement(data.nVars() * 2);
   for( Var v = 0 ; v < data.nVars(); ++ v ) {
@@ -1626,7 +1643,7 @@ bool BoundedVariableAddition::iteBVAfull()
 	  // TODO: check for implicit full gate
 
 	  // apply replacing/rewriting here (right,l1) -> (x); add clauses (-x,right,l1),(-x,-right,-l1)
-	  const Var newX = nextVariable('i'); // done by procedure! bvaHeap.addNewElement();
+	  const Var newX = nextVariable('i',bvaHeap); // done by procedure! bvaHeap.addNewElement();
 	  if( opt_bvaAnalysisDebug ) cerr << "c introduce new variable " << newX + 1 << endl;
 	  
 	  for( int k = maxI; k < maxJ; ++ k ) {
@@ -1741,7 +1758,7 @@ bool BoundedVariableAddition::iteBVAfull()
 }
 
 
-bool BoundedVariableAddition::bvaHandleComplement( const Lit right ) {
+bool BoundedVariableAddition::bvaHandleComplement( const Lit right, Heap<LitOrderHeapLt>& bvaHeap ) {
   data.clss.clear();
   const Lit left = ~right;
   for( uint32_t i = 0 ; i < data.list(right).size(); ++i )
@@ -1810,7 +1827,7 @@ bool BoundedVariableAddition::bvaHandleComplement( const Lit right ) {
   return true;
 }
 
-Var BoundedVariableAddition::nextVariable(char type)
+Var BoundedVariableAddition::nextVariable(char type, Heap<LitOrderHeapLt>& bvaHeap)
 {
   Var nextVar = data.nextFreshVariable(type);
   
@@ -1886,7 +1903,6 @@ bool BoundedVariableAddition::checkLists(const string& headline)
 
 void BoundedVariableAddition::destroy()
 {
-  bvaHeap.clear(true);
   vector< vector< CRef > >().swap( bvaMatchingClauses); 
   vector< Lit >().swap( bvaMatchingLiterals); 
   // use general mark array!
