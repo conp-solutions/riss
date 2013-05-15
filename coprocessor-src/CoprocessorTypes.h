@@ -332,6 +332,7 @@ public:
   void addedLiteral( const Lit l, const int32_t diff = 1, Heap<VarOrderBVEHeapLt> * heap = NULL, const Var ignore = var_Undef, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL); // update counter for literal
   void removedLiteral( const Lit l, const int32_t diff = 1, Heap<VarOrderBVEHeapLt> * heap = NULL, const Var ignore = var_Undef, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL); // update counter for literal
   void addedClause (   const CRef cr, Heap<VarOrderBVEHeapLt> * heap = NULL, const Var ignore = var_Undef, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL );			// update counters for literals in the clause
+  
   void removedClause ( const CRef cr, Heap<VarOrderBVEHeapLt> * heap = NULL, const Var ignore = var_Undef, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL );			// update counters for literals in the clause
   void removedClause ( const Lit l1, const Lit l2 );		// update counters for literals in the clause
 
@@ -486,7 +487,7 @@ struct VarOrderBVEHeapLt {
 		    || (rx > ry &&  data[x] == data[y] );
 	    } 
 	    else {
-	      assert( false && "forgot to update all paramete checks!" ); 
+	      assert( false && "forgot to update all parameter checks!" ); 
 	      return false;
 	    }
 	  } else {
@@ -495,6 +496,67 @@ struct VarOrderBVEHeapLt {
 	  return false;
         }
         VarOrderBVEHeapLt(CoprocessorData & _data, int _heapOption) : data(_data), heapOption(_heapOption) { }
+    };
+    
+    struct LitOrderHeapLt {
+        CoprocessorData & data;
+        const int heapOption;
+        bool operator () (int ix, int iy) const 
+        {/* assert (data != NULL && "Please assign a valid data object before heap usage" );*/ 
+          const Lit x = toLit(ix); const Lit y = toLit(iy);
+	  if( heapOption == 0 ) { return data[x] < data[y]; 
+	  } else if( heapOption == 1 ) { return data[x] > data[y]; 
+	  } else if( heapOption > 2 && heapOption < 11 ) {
+	    const double xp =data[x];
+	    const double xn =data[~x];
+	    const double yp =data[y];
+	    const double yn =data[~y];
+	    double rx = 0;
+	    if( xp != 0 || xn != 0 ) rx = xp > xn ?  ( xn != 0 ? xp / xn : xp * 1000 ) : ( xp != 0 ? xn  / xp : xn * 1000 );
+	    double ry = 0;
+	    if( yp != 0 || yn != 0 ) ry = yp > yn ?  ( yn != 0 ? yp / yn : yp * 1000 ) : ( yp != 0 ? yn  / yp : yn * 1000 );
+	    
+	    if( heapOption == 3 ) {
+	      return ( rx < ry )
+		    || ( rx == ry && data[x] < data[y] );
+	    }
+	    else if( heapOption == 4 )  {
+	      return ( rx < ry )
+		    || (rx == ry &&  data[x] > data[y] );
+	    } 
+	    else if( heapOption == 5 )  {
+	      return ( rx > ry )
+		    || (rx == ry &&  data[x] < data[y] );
+	    } 
+	    else if( heapOption == 6 )  {
+	      return ( rx > ry )
+		    || (rx == ry &&  data[x] > data[y] );
+	    } 
+	    else if( heapOption == 7 ) {
+	      return ( data[x] < data[y] )
+		    || ( rx < ry && data[x] == data[y] );
+	    }
+	    else if( heapOption == 8 )  {
+	      return ( data[x] > data[y] )
+		    || (rx < ry &&  data[x] == data[y] );
+	    } 
+	    else if( heapOption == 9 )  {
+	      return ( data[x] < data[y] )
+		    || (rx > ry &&  data[x] == data[y] );
+	    } 
+	    else if( heapOption == 10 )  {
+	      return ( data[x] > data[y] )
+		    || (rx > ry &&  data[x] == data[y] );
+	    } 
+	    else {
+	      assert( false && "forgot to update all parameter checks!" ); 
+	    }
+	  } else {
+	    assert(false && "In case of random order no heap should be used"); return false;
+	  }
+	  return false;
+        }
+        LitOrderHeapLt(CoprocessorData & _data, int _heapOption) : data(_data), heapOption(_heapOption) { }
     };
 
 inline CoprocessorData::CoprocessorData(ClauseAllocator& _ca, Solver* _solver, Coprocessor::Logger& _log, bool _limited, bool _randomized)
@@ -713,7 +775,7 @@ inline void CoprocessorData::addClause ( const CRef cr , Heap<VarOrderBVEHeapLt>
                 heap->increase(var(c[l]));
             else if (heap_updates == 2 && var(c[l]) != ignore)
                 heap->update(var(c[l]));
-      }
+      }	
       if (heap_lock != NULL) 
           heap_lock->unlock();
       numberOfCls ++;
