@@ -26,6 +26,7 @@ static BoolOption    opt_hpropF            (_cat, "sym-propF",    "generate full
 static BoolOption    opt_hpropA            (_cat, "sym-propA",    "test all four casese instead of two", false);
 static BoolOption    opt_cleanLearn        (_cat, "sym-clLearn",  "clean the learned clauses that have been created during symmetry search", false);
 static IntOption     opt_conflicts         (_cat, "sym-cons",     "number of conflicts for looking for being implied", 0, IntRange(0, INT32_MAX) );
+static IntOption     opt_total_conflicts   (_cat, "sym-consT",    "number of total conflicts for looking for being implied", 10000, IntRange(0, INT32_MAX) );
 #if defined CP3VERSION  
 static const int debug_out = 0;
 #else
@@ -42,6 +43,7 @@ Symmetry::Symmetry( ClauseAllocator& _ca, ThreadController& _controller, Coproce
 , maxOcc(0)
 , eqs(0)
 , replaces(0)
+, totalConflicts(0)
 , notYetAnalyzed(true)
 , symmAddClause(0)
 {  
@@ -194,9 +196,10 @@ bool Symmetry::process() {
 		  solver.attachClause(cr); // no data initialization necessary!!
 		  if( debug_out > 1 ) cerr << "c add clause [" << ~l1 << ", " << ~l2 << "]" << endl;
 		  symmAddClause ++;
-		} else if( opt_conflicts > 0 ) {
+		} else if( opt_conflicts > 0 && totalConflicts < opt_total_conflicts ) {
 		  bool oldUsePP = solver.useCoprocessor;
 		  int oldVerb = solver.verbosity;
+		  totalConflicts = solver.conflicts - totalConflicts;
 		  solver.verbosity = 0;
 		  solver.useCoprocessor = false;
 		  solver.setConfBudget( opt_conflicts );
@@ -205,6 +208,7 @@ bool Symmetry::process() {
 		  lbool ret = solver.solveLimited(assumptions) ;
 		  solver.verbosity = oldVerb;
 		  solver.useCoprocessor = oldUsePP;
+		  totalConflicts = solver.conflicts - totalConflicts;
 		  if( ret == l_False ) {
 		    // entailed! 
 		  } else if ( ret == l_True ) {
@@ -265,5 +269,5 @@ bool Symmetry::process() {
 
 void Coprocessor::Symmetry::printStatistics(ostream& stream)
 {
-  stream << "c [STAT] SYMM " << processTime << " s, " << eqs << " symm-cands, " << maxEq << " maxSize, " << addPairs  << " addedPairs " << symmAddClause << " entailedClauses, " << endl;
+  stream << "c [STAT] SYMM " << processTime << " s, " << eqs << " symm-cands, " << maxEq << " maxSize, " << addPairs  << " addedPairs " << symmAddClause << " entailedClauses, " << totalConflicts << " totCons, " << endl;
 }
