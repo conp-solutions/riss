@@ -45,6 +45,7 @@ namespace Coprocessor {
   class Propagation;
   class BoundedVariableElimination;
   class Probing;
+  class Symmetry;
 }
 
 namespace Minisat {
@@ -59,6 +60,7 @@ class Solver {
     friend class Coprocessor::BoundedVariableElimination;
     friend class Coprocessor::CoprocessorData;
     friend class Coprocessor::Probing;
+    friend class Coprocessor::Symmetry;
   
 public:
 
@@ -236,6 +238,7 @@ protected:
     vec<int>            trail_lim;        // Separator indices for different decision levels in 'trail'.
     vec<VarData>        vardata;          // Stores reason and level for each variable.
     int                 qhead;            // Head of queue (as index into the trail -- no more explicit propagation queue in MiniSat).
+    int                 realHead;         // indicate last literal that has been analyzed for unit propagation
     int                 simpDB_assigns;   // Number of top-level assignments since last execution of 'simplify()'.
     int64_t             simpDB_props;     // Remaining number of propagations that must be made before next execution of 'simplify()'.
     vec<Lit>            assumptions;      // Current set of assumptions provided to solve by the user.

@@ -23,6 +23,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/Resolving.h"
 #include "coprocessor-src/Rewriter.h"
 #include "coprocessor-src/Dense.h"
+#include "coprocessor-src/Symmetry.h"
 
 #include "coprocessor-src/sls.h"
 #include "coprocessor-src/TwoSAT.h"
@@ -123,6 +124,7 @@ protected:
   Resolving res;
   Rewriter rew;
   Dense dense;
+  Symmetry symmetry;
   
   Sls sls;
   TwoSatSolver twoSAT;

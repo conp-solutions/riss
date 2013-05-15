@@ -141,8 +141,11 @@ int main(int argc, char** argv)
 	    signal(SIGINT, SIGINT_interrupt);
 	    signal(SIGXCPU,SIGINT_interrupt);
 
+	    unsigned beforeVariables = S.nVars();
 	    Preprocessor preprocessor( &S );
 	    preprocessor.preprocess();
+	    
+	    if( S.nVars() < beforeVariables ) printf("c Warning: Number of variables has been reduced from %d to %d\n", beforeVariables, S.nVars() );
 	    
 	    double simplified_time = cpuTime();
 	    if (S.verbosity > 0){
@@ -155,13 +158,16 @@ int main(int argc, char** argv)
 		if (S.verbosity > 0)
 		    printf("c ==============================[ Writing QDIMACS ]===============================\n");
 		
+		  if( beforeVariables < S.nVars() ) printf("c add %d extra variables to the prefix\n", S.nVars() - beforeVariables);
+		
 		  FILE* res = fopen(dimacs, "wb") ;
 		
 		  int vars = 0; int cls = 0;
 		  preprocessor.getCNFinfo(vars,cls);
 		  fprintf(res,"p cnf %u %i\n", vars, cls);
 		  // print all the quantifiers again!
-		  for( int i = 0 ; i < quantifiers.size(); ++ i ) {
+		  bool lastQisE = quantifiers.size() == 0 ? false : quantifiers[ quantifiers.size() - 1 ].kind == 'e';
+		  for( int i = 0; i < quantifiers.size(); ++ i ) { // check whether the last quantifier is 'e'. if yes, add BVA variables, if not, add another quantifier sequence
 		   fprintf(res,"%c ", quantifiers[i].kind);
 		   for( int j = 0 ; j < quantifiers[i].lits.size(); ++ j )
 		   { 
@@ -169,7 +175,20 @@ int main(int argc, char** argv)
 		     if (l % 2 == 0) fprintf(res, "%i ", (l / 2) + 1);
 		     else fprintf(res, "-%i ", (l/2) + 1);
 		   }
+		   
+		   if( lastQisE && i+1 == quantifiers.size() ) {
+		     // print bva variables!
+		     assert( quantifiers[i].kind == 'e' && "this quantifier set needs to be existential" );
+		     for( Var v = beforeVariables; v < S.nVars(); ++v ) {
+			fprintf(res, "%i ", v+1);
+		     }
+		   }
 		   fprintf(res, "0\n");
+		  }
+		  if( ! lastQisE && beforeVariables < S.nVars() ) { // additional variables have been added, add them to the prefix as existential
+		     fprintf(res,"e ");
+		     for( Var v = beforeVariables; v < S.nVars(); ++v ) fprintf(res, "%i ", v+1);
+		     fprintf(res, "0\n");
 		  }
 		  // print the remaining formula!
 		  preprocessor.printFormula(res, true);

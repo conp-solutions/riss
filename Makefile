@@ -24,6 +24,10 @@ simpd: rissSimpd
 cd: coprocessord
 crs: coprocessorRS
 
+q: qprocessorRS
+qd: qprocessord
+ 
+
 # build the splitter solver
 riss: always
 	cd core;   make INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g ..
