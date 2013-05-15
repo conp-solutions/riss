@@ -81,6 +81,8 @@ public:
     
   void printStatistics(ostream& stream);
 
+  void giveMoreSteps();
+  
   void destroy();
   
 protected:

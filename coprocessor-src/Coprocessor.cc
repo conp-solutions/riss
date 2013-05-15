@@ -473,6 +473,7 @@ lbool Preprocessor::performSimplification()
     if( opt_cce ) cce.printStatistics(cerr);
     if( opt_rew ) rew.printStatistics(cerr);
     if( opt_dense ) dense.printStatistics(cerr);
+    if( opt_symm ) symmetry.printStatistics(cerr);
   }
   
   // destroy preprocessor data
@@ -853,6 +854,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     if( opt_cce ) cce.printStatistics(cerr);
     if( opt_rew ) rew.printStatistics(cerr);
     if( opt_dense ) dense.printStatistics(cerr);
+    if( opt_symm ) symmetry.printStatistics(cerr);
   }
   
   // destroy preprocessor data
@@ -874,6 +876,7 @@ lbool Preprocessor::preprocess()
   
   if( opt_symm ) {
     symmetry.process(); 
+    if( opt_verbose > 1 )  { printStatistics(cerr); symmetry.printStatistics(cerr); }
   }
   
   if( opt_ptechs ) return performSimplificationScheduled( string(opt_ptechs) );

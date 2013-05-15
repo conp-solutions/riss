@@ -24,6 +24,8 @@ static BoolOption    opt_exit              (_cat, "sym-exit",    "exit after ana
 static BoolOption    opt_hprop             (_cat, "sym-prop",    "try to generate symmetry breaking clauses with propagation", false);
 static BoolOption    opt_hpropF            (_cat, "sym-propF",    "generate full clauses", false);
 static BoolOption    opt_hpropA            (_cat, "sym-propA",    "test all four casese instead of two", false);
+static BoolOption    opt_cleanLearn        (_cat, "sym-clLearn",  "clean the learned clauses that have been created during symmetry search", false);
+static IntOption     opt_conflicts         (_cat, "sym-cons",     "number of conflicts for looking for being implied", 0, IntRange(0, INT32_MAX) );
 #if defined CP3VERSION  
 static const int debug_out = 0;
 #else
@@ -59,7 +61,7 @@ bool Symmetry::process() {
   }
   }
   
-  printf("found units: %d, propagated: %d\n", solver.trail.size(), solver.qhead );
+  printf("c found units: %d, propagated: %d\n", solver.trail.size(), solver.qhead );
   
   vec<Lit> cls; cls.growTo(3,lit_Undef);
   Symm* varSymm = new Symm [ solver.nVars() ]; // ( solver.nVars() );
@@ -138,6 +140,7 @@ bool Symmetry::process() {
   // TODO continue her!
   
   vec<ScorePair> scorePairs;
+  vec<Lit> assumptions;
   
   for( int i = 0 ; i < solver.nVars(); ++ i ) {
     int j = i+1;
@@ -160,6 +163,9 @@ bool Symmetry::process() {
 	 
 	 if( opt_hprop ) { // try to add clauses by checking propagation
 	    assert( solver.decisionLevel() == 0 && "can add those clauses only at level 0" );
+	    
+	    solver.propagate(); // in case of delayed units, get rid of them now!
+	    
 	    for( int m = thisR ; m > k ; -- m ) {
 	      if ( freq[ thisIter[i+m].v ] <= opt_hmin || freq[ thisIter[i+m].v ] < ( avgFreq * opt_hratio) ) continue; // do not consider too small literals!
 	      for( int o = 0 ; o < 4; ++ o ) { // check all 4 polarity combinations?
@@ -171,6 +177,8 @@ bool Symmetry::process() {
 		if( solver.value(l1) != l_Undef ) continue; // already top level unit?
 		if( solver.value(l2) != l_Undef ) continue; // already top level unit?
 
+		solver.newDecisionLevel();
+		assert( solver.decisionLevel() == 1 && "can do this only on level 1" );
 		solver.uncheckedEnqueue(l1);solver.uncheckedEnqueue(l2); // double lookahead
 		bool entailed = false;
 		if( CRef_Undef != solver.propagate() ) { // check if conflict, if yes, add new clause!
@@ -179,11 +187,30 @@ bool Symmetry::process() {
 		solver.cancelUntil(0);
 		if( entailed ) {
 		  data.lits.clear();
+		  data.lits.push_back( ~l1 );
+		  data.lits.push_back( ~l2 );
 		  CRef cr = ca.alloc(data.lits, false); // no learnt clause!!
 		  solver.clauses.push(cr);
 		  solver.attachClause(cr); // no data initialization necessary!!
 		  if( debug_out > 1 ) cerr << "c add clause [" << ~l1 << ", " << ~l2 << "]" << endl;
 		  symmAddClause ++;
+		} else if( opt_conflicts > 0 ) {
+		  bool oldUsePP = solver.useCoprocessor;
+		  int oldVerb = solver.verbosity;
+		  solver.verbosity = 0;
+		  solver.useCoprocessor = false;
+		  solver.setConfBudget( opt_conflicts );
+		  assumptions.clear();
+		  assumptions.push( l1 );assumptions.push( l2 );
+		  lbool ret = solver.solveLimited(assumptions) ;
+		  solver.verbosity = oldVerb;
+		  solver.useCoprocessor = oldUsePP;
+		  if( ret == l_False ) {
+		    // entailed! 
+		  } else if ( ret == l_True ) {
+		    // found a model for the formula - handle it! 
+		  }
+		  // do nothing if no result has been found!
 		}
 	      }
 	      if( !opt_hpropF ) break; // stop after first iteration!
@@ -206,6 +233,13 @@ bool Symmetry::process() {
        
     }
     i = j-1; // move pointer forward
+  }
+  
+  // clear all the learned clauses inside the solver!
+  if( opt_cleanLearn ) {
+    for( int i = 0 ; i < solver.learnts.size(); ++ i ) {
+      solver.removeClause( solver.learnts[i] ); 
+    }
   }
   
   if( addPairs > 0 ) solver.rebuildOrderHeap();
@@ -231,5 +265,5 @@ bool Symmetry::process() {
 
 void Coprocessor::Symmetry::printStatistics(ostream& stream)
 {
-  stream << "c [SYMM] " << processTime << " s, " << eqs << " symm-cands, " << maxEq << " maxSize, " << addPairs  << " addedPairs " << symmAddClause << " entailedClauses, " << endl;
+  stream << "c [STAT] SYMM " << processTime << " s, " << eqs << " symm-cands, " << maxEq << " maxSize, " << addPairs  << " addedPairs " << symmAddClause << " entailedClauses, " << endl;
 }

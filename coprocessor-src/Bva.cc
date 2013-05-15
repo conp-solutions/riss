@@ -21,11 +21,14 @@ static const char* _cat = "COPROCESSOR 3 - BVA";
 static IntOption  opt_bva_push             (_cat, "cp3_bva_push",    "push variables back to queue (0=none,1=original,2=all)", 2, IntRange(0, 2));
 static IntOption  opt_bva_VarLimit         (_cat, "cp3_bva_Vlimit",  "use BVA only, if number of variables is below threshold", 3000000, IntRange(-1, INT32_MAX));
 static IntOption  opt_bva_Alimit           (_cat, "cp3_bva_limit",   "number of steps allowed for AND-BVA", 1200000, IntRange(0, INT32_MAX));
-static BoolOption opt_Abva                 (_cat, "cp3_Abva",       "perform XOR-bva", true);
+static BoolOption opt_Abva                 (_cat, "cp3_Abva",        "perform AND-bva", true);
+static IntOption  opt_inpStepInc           (_cat, "cp3_bva_incInp",  "increases of number of steps per inprocessing", 80000, IntRange(0, INT32_MAX));
 
 static BoolOption opt_bvaComplement        (_cat, "cp3_bva_compl",   "treat complementary literals special", true);
 static BoolOption opt_bvaRemoveDubplicates (_cat, "cp3_bva_dupli",   "remove duplicate clauses", true);
 static BoolOption opt_bvaSubstituteOr      (_cat, "cp3_bva_subOr",   "try to also substitus disjunctions", false);
+
+
 
 #if defined CP3VERSION 
 static const int bva_debug = 0;
@@ -87,6 +90,12 @@ BoundedVariableAddition::BoundedVariableAddition(ClauseAllocator& _ca, ThreadCon
 
 }
 
+void BoundedVariableAddition::giveMoreSteps()
+{
+  andMatchChecks = andMatchChecks < opt_inpStepInc ? 0 : andMatchChecks - opt_inpStepInc;
+  xorMatchChecks = xorMatchChecks < opt_inpStepInc ? 0 : xorMatchChecks - opt_inpStepInc;
+  iteMatchChecks = iteMatchChecks < opt_inpStepInc ? 0 : iteMatchChecks - opt_inpStepInc;
+}
 
 bool BoundedVariableAddition::process()
 {
