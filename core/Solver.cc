@@ -83,10 +83,10 @@ static DoubleOption  opt_restart_inc       (_cat, "rinc",        "Restart interv
 
 static DoubleOption  opt_garbage_frac      (_cat, "gc-frac",     "The fraction of wasted memory allowed before a garbage collection is triggered",  0.20, DoubleRange(0, false, HUGE_VAL, false));
 
-static IntOption     opt_allUipHack        ("MODS", "alluiphack", "learn all unit UIPs at any level", 0, IntRange(0, 2) );
+static IntOption     opt_allUipHack        ("MODS", "alluiphack",   "learn all unit UIPs at any level", 0, IntRange(0, 2) );
 static BoolOption    opt_uipHack           ("MODS", "uiphack",      "learn more UIPs at decision level 1", false);
 static IntOption     opt_uips              ("MODS", "uiphack-uips", "learn at most X UIPs at decision level 1 (0=all)", 0, IntRange(0, INT32_MAX));
-
+static BoolOption    opt_vmtf              ("MODS", "vmtf",         "use the vmtf heuristic", false);
 
 static IntOption     opt_hack              ("REASON",    "hack",      "use hack modifications", 0, IntRange(0, 3) );
 static BoolOption    opt_hack_cost         ("REASON",    "hack-cost", "use size cost", true );
@@ -201,6 +201,8 @@ Solver::Solver() :
   ,laStart(false)
   
   ,startedSolving(false)
+  
+  ,useVmtf(opt_vmtf)
   
   // preprocessor
   , coprocessor(0)

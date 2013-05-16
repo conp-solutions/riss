@@ -374,6 +374,8 @@ protected:
         
   bool startedSolving;	// inidicate whether solving started already
   
+  bool useVmtf;		// parameter for using vmtf heuristic
+  
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;
 public:     bool useCoprocessor;
@@ -398,7 +400,8 @@ inline void Solver::insertVarOrder(Var x) {
 inline void Solver::varDecayActivity() { var_inc *= (1 / var_decay); }
 inline void Solver::varBumpActivity(Var v) { varBumpActivity(v, var_inc); }
 inline void Solver::varBumpActivity(Var v, double inc) {
-    if ( (activity[v] += inc) > 1e100 ) {
+    activity[v] = ( useVmtf ? inc : activity[v] + inc );
+    if ( activity[v] > 1e100 ) {
         // Rescale:
         for (int i = 0; i < nVars(); i++)
             activity[i] *= 1e-100;
