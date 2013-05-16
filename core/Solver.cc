@@ -73,8 +73,8 @@ static DoubleOption  opt_random_seed       (_cat, "rnd-seed",    "Used by the ra
 static IntOption     opt_ccmin_mode        (_cat, "ccmin-mode",  "Controls conflict clause minimization (0=none, 1=basic, 2=deep)", 2, IntRange(0, 2));
 static IntOption     opt_phase_saving      (_cat, "phase-saving","Controls the level of phase saving (0=none, 1=limited, 2=full)", 2, IntRange(0, 2));
 static BoolOption    opt_rnd_init_act      (_cat, "rnd-init",    "Randomize the initial activity", false);
-static IntOption     opt_init_act          (_cat, "init-act",    "initialize activities (0=none,1=inc-lin,2=inc-geo,3=dec-lin,4=dec-geo,5=rnd)", 0, IntRange(0, 5));
-static IntOption     opt_init_pol          (_cat, "init-pol",    "initialize polarity   (0=none,1=JW-pol,2=JW-neg,3=MOMS,4=MOMS-neg,5=rnd)", 0, IntRange(0, 5));
+static IntOption     opt_init_act          ("INIT", "init-act",    "initialize activities (0=none,1=inc-lin,2=inc-geo,3=dec-lin,4=dec-geo,5=rnd,6=abs(jw))", 0, IntRange(0, 6));
+static IntOption     opt_init_pol          ("INIT", "init-pol",    "initialize polarity   (0=none,1=JW-pol,2=JW-neg,3=MOMS,4=MOMS-neg,5=rnd)", 0, IntRange(0, 5));
 
 
 static IntOption     opt_restarts_type     (_cat, "rtype",       "Choose type of restart (0=dynamic,1=luby,2=geometric)", 00, IntRange(0, 2));
@@ -1624,11 +1624,31 @@ lbool Solver::solve_()
     solves++;
     
     // initialize activities and polarities
-    if( opt_init_act ) {
-      
-    }
-    if( opt_init_pol ) {
-      
+    if( opt_init_act != 0 || opt_init_pol != 0 ) {
+      double jw [nVars()]; int32_t moms[nVars()];
+      for( int i = 0 ; i < clauses.size(); ++ i ) {
+	const Clause& c = ca[clauses[i]];
+	const double cs = 1 / ( pow(2.0, c.size()) );
+	for( int j = 0 ; j < c.size(); ++ j ) {
+	  jw[ var(c[j]) ] = (sign(c[j]) ? jw[ var(c[j]) ]  - cs : jw[ var(c[j]) ] + cs );
+	  moms[ var(c[j]) ] = (sign(c[j]) ? moms[ var(c[j]) ]  - 1 : moms[ var(c[j]) ] + 1 );
+	}
+      }
+      // set initialization based on calculated values
+      for( Var v = 0 ; v < nVars(); ++ v ) {
+	if( opt_init_act == 1 ) activity[v] = v;
+	else if( opt_init_act == 2 ) activity[v] = pow(1.0 / opt_var_decay, 2*v / nVars() );
+	else if( opt_init_act == 3 ) activity[nVars() - v - 1] = v;
+	else if( opt_init_act == 4 ) activity[nVars() - v - 1] = pow(1.0 / opt_var_decay, 2*v / nVars() );
+	else if( opt_init_act == 5 ) activity[v] = drand(random_seed);
+	else if( opt_init_act == 6 ) activity[v] = jw[v] > 0 ? jw[v] : -jw[v];
+	
+	if( opt_init_pol == 1 ) polarity[v] = jw[v] > 0 ? 0 : 1;
+	else if( opt_init_pol == 2 ) polarity[v] = jw[v] > 0 ? 1 : 0;
+	else if( opt_init_pol == 3 ) polarity[v] = moms[v] > 0 ? 1 : 0;
+	else if( opt_init_pol == 4 ) polarity[v] = moms[v] > 0 ? 0 : 1;
+	else if( opt_init_pol == 5 ) polarity[v] = irand(random_seed,100) > 50 ? 1 : 0;
+      }
     }
     
     lbool   status        = l_Undef;
