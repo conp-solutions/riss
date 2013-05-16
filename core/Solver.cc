@@ -71,8 +71,11 @@ static DoubleOption  opt_clause_decay      (_cat, "cla-decay",   "The clause act
 static DoubleOption  opt_random_var_freq   (_cat, "rnd-freq",    "The frequency with which the decision heuristic tries to choose a random variable", 0, DoubleRange(0, true, 1, true));
 static DoubleOption  opt_random_seed       (_cat, "rnd-seed",    "Used by the random variable selection",         91648253, DoubleRange(0, false, HUGE_VAL, false));
 static IntOption     opt_ccmin_mode        (_cat, "ccmin-mode",  "Controls conflict clause minimization (0=none, 1=basic, 2=deep)", 2, IntRange(0, 2));
-static IntOption     opt_phase_saving      (_cat, "phase-saving", "Controls the level of phase saving (0=none, 1=limited, 2=full)", 2, IntRange(0, 2));
+static IntOption     opt_phase_saving      (_cat, "phase-saving","Controls the level of phase saving (0=none, 1=limited, 2=full)", 2, IntRange(0, 2));
 static BoolOption    opt_rnd_init_act      (_cat, "rnd-init",    "Randomize the initial activity", false);
+static IntOption     opt_init_act          (_cat, "init-act",    "initialize activities (0=none,1=inc-lin,2=inc-geo,3=dec-lin,4=dec-geo,5=rnd)", 0, IntRange(0, 5));
+static IntOption     opt_init_pol          (_cat, "init-pol",    "initialize polarity   (0=none,1=JW-pol,2=JW-neg,3=MOMS,4=MOMS-neg,5=rnd)", 0, IntRange(0, 5));
+
 
 static IntOption     opt_restarts_type     (_cat, "rtype",       "Choose type of restart (0=dynamic,1=luby,2=geometric)", 00, IntRange(0, 2));
 static IntOption     opt_restart_first     (_cat, "rfirst",      "The base restart interval", 100, IntRange(1, INT32_MAX));
@@ -93,7 +96,7 @@ static BoolOption    opt_long_conflict     ("REASON",    "longConflict", "if a b
 
 
 // extra 
-static IntOption     opt_act               ("INIT", "actIncMode", "how to inc 0=lin, 1=geo", 0, IntRange(0, 1) );
+static IntOption     opt_act               ("INIT", "actIncMode", "how to inc 0=lin, 1=geo,2=reverse-lin,3=reverse-geo", 0, IntRange(0, 3) );
 static DoubleOption  opt_actStart          ("INIT", "actStart",   "highest value for first variable", 1024, DoubleRange(0, false, HUGE_VAL, false));
 static DoubleOption  pot_actDec            ("INIT", "actDec",     "decrease per element (sub, or divide)",1/0.95, DoubleRange(0, false, HUGE_VAL, true));
 static StringOption  actFile               ("INIT", "actFile",    "increase activities of those variables");
@@ -1620,6 +1623,13 @@ lbool Solver::solve_()
     
     solves++;
     
+    // initialize activities and polarities
+    if( opt_init_act ) {
+      
+    }
+    if( opt_init_pol ) {
+      
+    }
     
     lbool   status        = l_Undef;
     nbclausesbeforereduce = firstReduceDB;
@@ -1669,11 +1679,13 @@ printf("c ==================================[ Search Statistics (every %6d confl
       vfp.extract(actVars);
       
       double thisValue = opt_actStart;
+      // reverse the order
+      if( opt_act == 2 || opt_act == 3 ) for( int i = 0 ; i < actVars.size()/2; ++ i ) { int tmp = actVars[i]; actVars[i] = actVars[ actVars.size() - i - 1 ]; actVars[ actVars.size() - i - 1 ] = tmp; }
       for( int i = 0 ; i < actVars.size(); ++ i ) {
 	const Var v = actVars[i]-1;
 	if( v >= nVars() ) continue; // other file might contain more variables
 	activity[ v] = thisValue;
-	thisValue = (opt_act == 0 ? thisValue - pot_actDec : thisValue / pot_actDec );
+	thisValue = ( (opt_act == 0 || opt_act == 2 )? thisValue - pot_actDec : thisValue / pot_actDec );
       }
       cerr << "c adopted activity of " << actVars.size() << " variables" << endl;
       rebuildOrderHeap();
