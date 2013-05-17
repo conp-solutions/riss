@@ -372,6 +372,33 @@ bool Solver::addClause_(vec<Lit>& ps)
 }
 
 
+void Solver::addVecToProof(   vec< Lit >& clause, bool deleteFromProof)
+{
+  if (output == NULL) return;
+  
+  if( deleteFromProof ) fprintf(output, "d ");
+  for (int i = 0; i < clause.size(); i++)
+    fprintf(output, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
+  fprintf(output, "0\n");
+}
+
+void Solver::addClauseToProof(Clause&   clause, bool deleteFromProof){
+  if (output == NULL) return;
+  
+  if( deleteFromProof ) fprintf(output, "d ");
+  for (int i = 0; i < clause.size(); i++)
+    fprintf(output, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
+  fprintf(output, "0\n");
+}
+
+void Solver::addUnitToProof(Lit& l, bool deleteFromProof)
+{
+  if (output == NULL) return;
+  
+  if( deleteFromProof ) fprintf(output, "d ");
+  fprintf(output, "%i 0\n", (var(l) + 1) * (-2 * sign(l) + 1));  
+}
+
 void Solver::attachClause(CRef cr) {
     const Clause& c = ca[cr];
     assert(c.size() > 1);
@@ -420,12 +447,7 @@ void Solver::removeClause(CRef cr) {
   Clause& c = ca[cr];
 
   // tell DRUP that clause has been deleted
-  if (output != NULL) {
-    fprintf(output, "d ");
-    for (int i = 0; i < c.size(); i++)
-      fprintf(output, "%i ", (var(c[i]) + 1) * (-2 * sign(c[i]) + 1));
-    fprintf(output, "0\n");
-  }
+  addClauseToProof(c,true);
 
   detachClause(cr);
   // Don't leave pointers to free'd memory!
@@ -1362,8 +1384,7 @@ lbool Solver::search(int nof_conflicts)
           if (output != NULL) {
 	          for( int i = 0 ; i < learnt_clause.size(); ++ i )
               for (int i = 0; i < learnt_clause.size(); i++)
-                fprintf(output, "%i 0\n" , (var(learnt_clause[i]) + 1) *
-                            (-2 * sign(learnt_clause[i]) + 1) );
+		 addUnitToProof( learnt_clause[i] );
           }
 
 
@@ -1384,13 +1405,8 @@ lbool Solver::search(int nof_conflicts)
 		for( int i = 0 ; i < learnt_clause.size(); ++ i ) // add all units to current state
 		  { uncheckedEnqueue(learnt_clause[i]);  }
 		  
-          // write learned unit clauses to DRUP!
-          if (output != NULL) {
-	          for( int i = 0 ; i < learnt_clause.size(); ++ i )
-              for (int i = 0; i < learnt_clause.size(); i++)
-                fprintf(output, "%i 0\n" , (var(learnt_clause[i]) + 1) *
-                            (-2 * sign(learnt_clause[i]) + 1) );
-          }
+		// write learned unit clauses to DRUP!
+		if (output != NULL) addVecToProof( learnt_clause );
 		  
 		multiLearnt = ( learnt_clause.size() > 1 ? multiLearnt + 1 : multiLearnt ); // stats
 		topLevelsSinceLastLa ++;

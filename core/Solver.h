@@ -327,6 +327,11 @@ protected:
     double   progressEstimate ()      const; // DELETE THIS ?? IT'S NOT VERY USEFUL ...
     bool     withinBudget     ()      const;
 
+    // DRUP proof
+    void addVecToProof(   vec<Lit>& clause, bool deleteFromProof=false); // write the given clause to the output, if the output is enabled
+    void addClauseToProof(Clause&   clause, bool deleteFromProof=false); // write the given clause to the output, if the output is enabled
+    void addUnitToProof(  Lit& l, bool deleteFromProof=false);    // write a single unit clause to the proof
+    
     // Static helpers:
     //
 
