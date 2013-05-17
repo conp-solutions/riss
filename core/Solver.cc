@@ -371,8 +371,8 @@ bool Solver::addClause_(vec<Lit>& ps)
     return true;
 }
 
-
-void Solver::addVecToProof(   vec< Lit >& clause, bool deleteFromProof)
+template <class T>
+void Solver::addVecToProof( T& clause, bool deleteFromProof)
 {
   if (output == NULL) return;
   
@@ -1406,7 +1406,9 @@ lbool Solver::search(int nof_conflicts)
 		  { uncheckedEnqueue(learnt_clause[i]);  }
 		  
 		// write learned unit clauses to DRUP!
-		if (output != NULL) addVecToProof( learnt_clause );
+ // write learned unit clauses to DRUP!
+		for (int i = 0; i < learnt_clause.size(); i++)
+		  addUnitToProof(learnt_clause[i]);
 		  
 		multiLearnt = ( learnt_clause.size() > 1 ? multiLearnt + 1 : multiLearnt ); // stats
 		topLevelsSinceLastLa ++;
@@ -1417,13 +1419,8 @@ lbool Solver::search(int nof_conflicts)
 
 		cancelUntil(backtrack_level);
 
-          // write learned clause to DRUP!
-          if (output != NULL) {
-              for (int i = 0; i < learnt_clause.size(); i++)
-                fprintf(output, "%i " , (var(learnt_clause[i]) + 1) *
-                            (-2 * sign(learnt_clause[i]) + 1) );
-              fprintf(output, "0\n");
-          }
+		// write learned clause to DRUP!
+		if (output != NULL) addVecToProof( learnt_clause );
 
 		if (learnt_clause.size() == 1){
 		    topLevelsSinceLastLa ++;
@@ -1655,17 +1652,12 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
       // write all clauses to proof -- including the learned unit
       for( int j = 0; j < clauses.size() ; ++ j ){
 	if(  0  ) cerr << "c write clause [" << j << "] " << clauses[ j ] << endl;
-	for (int i = 0; i < clauses[j].size(); i++)
-	  fprintf(output, "%i " , (var(clauses[j][i]) + 1) * (-2 * sign(clauses[j][i]) + 1) );
-	fprintf(output, "0\n");
+	addVecToProof(clauses[j]);
       }
       // delete all redundant clauses
       for( int j = 0; j+1 < clauses.size() ; ++ j ){
 	assert( clauses[j].size() > 1 && "the only unit clause in the list should not be removed!" );
-	fprintf(output, "d ");
-	for (int i = 0; i < clauses[j].size(); i++)
-	  fprintf(output, "%i " , (var(clauses[j][i]) + 1) * (-2 * sign(clauses[j][i]) + 1) );
-	fprintf(output, "0\n");
+	addVecToProof(clauses[j],true);
       }
     }
     
