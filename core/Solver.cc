@@ -92,6 +92,8 @@ static IntOption     opt_LHBR_max          ("MODS", "lhbr-max",     "max nr of n
 static BoolOption    opt_LHBR_sub          ("MODS", "lhbr-sub",     "check whether new clause subsumes the old clause", false);
 static BoolOption    opt_printLhbr         ("MODS", "lhbr-print",   "print info about lhbr", false);
 
+static BoolOption    opt_updateLearnAct    ("MODS", "updLearnAct",  "UPDATEVARACTIVITY trick (see glucose competition'09 companion paper)", true );
+
 static IntOption     opt_hack              ("REASON",    "hack",      "use hack modifications", 0, IntRange(0, 3) );
 static BoolOption    opt_hack_cost         ("REASON",    "hack-cost", "use size cost", true );
 static BoolOption    opt_dbg               ("REASON",    "dbg",       "debug hack", false );
@@ -510,7 +512,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     int units = 0;
     bool isOnlyUnit = true;
     lastDecisionLevel.clear();  // must clear before loop, because alluip can abort loop and would leave filled vector
-    
+    int currentSize = 0;        // count how many literals are inside the resolvent at the moment! (for otfss)
     
     // Generate conflict clause:
     //
@@ -520,7 +522,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     do{
         assert(confl != CRef_Undef); // (otherwise should be UIP)
         Clause& c = ca[confl];
-
+	
 	// Special case for binary clauses
 	// The first one has to be SAT
 	if( p != lit_Undef && c.size()==2 && value(c[0])==l_False) {
@@ -537,14 +539,17 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
             Lit q = c[j];
 
             if (!seen[var(q)] && level(var(q)) > 0){
+                currentSize ++;
                 varBumpActivity(var(q));
                 seen[var(q)] = 1;
                 if (level(var(q)) >= decisionLevel()) {
                     pathC++;
 #ifdef UPDATEVARACTIVITY
+		if( opt_updateLearnAct ) {
 		    // UPDATEVARACTIVITY trick (see competition'09 companion paper)
 		    if((reason(var(q))!= CRef_Undef)  && ca[reason(var(q))].learnt()) 
 		      lastDecisionLevel.push(q);
+		}
 #endif
 
 		} else {
@@ -556,6 +561,13 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 
         }
         
+	static bool didIt = false;
+	if( currentSize + 1 == c.size() ) {
+	  // TODO: remove literal from the clause, before, output drup, re-arrange watched literals in the clause, enqueue a the unit after backjumping if necessary
+	  if( !didIt ) cerr << "c literal " << p << " can be removed from " << c << " -- implement OTFSS properly!" << endl;
+	  didIt = true;
+	}
+        
         if( !isOnlyUnit && units > 0 ) break; // do not consider the next clause, because we cannot continue with units
         
         // Select next clause to look at:
@@ -565,6 +577,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
         confl = reason(var(p));
         seen[var(p)] = 0;
         pathC--;
+	currentSize --;
 
 	// do unit analysis only, if the clause did not become larger already!
 	if( opt_allUipHack > 0  && pathC <= 0 && isOnlyUnit && out_learnt.size() == 1+units ) { 
@@ -607,6 +620,10 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
       return units;
     }
 
+    currentSize ++; // the literal "~p" has been added additionally
+    if( currentSize != out_learnt.size() ) cerr << "c different sizes: clause=" << out_learnt.size() << ", counted=" << currentSize << endl;
+    assert( currentSize == out_learnt.size() && "counted literals has to be equal to actual clause!" );
+    
     // Simplify conflict clause:
     //
     int i, j;
