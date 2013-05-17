@@ -189,10 +189,11 @@ protected:
     //
 
     struct VarData { CRef reason; int level; 
+      Lit dom;      /// for lhbr
       int32_t cost; /// for hack
     };
-    static inline VarData mkVarData(CRef cr, int l){ VarData d = {cr, l, -1}; return d; }
-    static inline VarData mkVarData(CRef cr, int l, int _cost){ VarData d = {cr, l,_cost}; return d; }  
+    static inline VarData mkVarData(CRef cr, int l){ VarData d = {cr, l, lit_Undef, -1}; return d; }
+    static inline VarData mkVarData(CRef cr, int l, int _cost){ VarData d = {cr, l,lit_Undef,_cost}; return d; }  
     
     struct Watcher {
         CRef cref;
@@ -375,6 +376,15 @@ protected:
   bool startedSolving;	// inidicate whether solving started already
   
   bool useVmtf;		// parameter for using vmtf heuristic
+  
+  int lhbrs;
+  int l1lhbrs;
+  int lhbr_news;
+  int l1lhbr_news;
+  int lhbrtests;
+  int lhbr_sub;
+  
+  int simplifyIterations; // number of visiting level 0 until simplification is to be performed
   
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;

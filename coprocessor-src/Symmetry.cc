@@ -128,7 +128,7 @@ bool Symmetry::process() {
   // sort var structrure, to detect symmetry candidates
   sort<Symm>( thisIter, solver.nVars() );
   
-  int avgFreq = (solver.clauses_literals + solver.nVars() - 1) / solver.nVars();
+  int avgFreq = solver.nVars() == 0 ? 0 : ((solver.clauses_literals + solver.nVars() - 1) / solver.nVars());
   printf("c avg freq: %d\n", avgFreq );
   // have new variable, if dependend variables are sufficiently frequent!
   // have at most the srqt of the size of the class pairs (first-last, seconds-second last, ...)

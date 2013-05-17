@@ -39,6 +39,9 @@ void printStats(Solver& solver)
 
 
 static Solver* solver;
+
+static bool receivedInterupt = false;
+
 // Terminate by notifying the solver and back out gracefully. This is mainly to have a test-case
 // for this feature of the Solver as it may take longer than an immediate call to '_exit()'.
 static void SIGINT_interrupt(int signum) { solver->interrupt(); }
@@ -48,10 +51,13 @@ static void SIGINT_interrupt(int signum) { solver->interrupt(); }
 // functions are guarded by locks for multithreaded use).
 static void SIGINT_exit(int signum) {
     printf("\n"); printf("c *** INTERRUPTED ***\n");
-    if (solver->verbosity > 0){
-        printStats(*solver);
-        printf("\n"); printf("c *** INTERRUPTED ***\n"); }
-    _exit(1); }
+//     if (solver->verbosity > 0){
+//         printStats(*solver);
+//         printf("\n"); printf("c *** INTERRUPTED ***\n"); }
+    solver->interrupt();
+    if( receivedInterupt ) _exit(1);
+    else receivedInterupt = true;
+}
 
 
 //=================================================================================================
@@ -86,8 +92,8 @@ int main(int argc, char** argv)
         solver = &S;
         // Use signal handlers that forcibly quit until the solver will be able to respond to
         // interrupts:
-        // signal(SIGINT, SIGINT_exit);
-        // signal(SIGXCPU,SIGINT_exit);
+        signal(SIGINT, SIGINT_exit);
+        signal(SIGXCPU,SIGINT_exit);
 
         // Set limit on CPU-time:
         if (cpu_lim != INT32_MAX){

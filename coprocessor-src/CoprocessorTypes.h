@@ -27,7 +27,9 @@ namespace Coprocessor {
 
 /// print literals into a stream
 inline ostream& operator<<(ostream& other, const Lit& l ) {
-  other << (sign(l) ? "-" : "") << var(l) + 1;
+  if( l == lit_Undef ) other << "lUndef";
+  else if( l == lit_Error ) other << "lError";
+  else other << (sign(l) ? "-" : "") << var(l) + 1;
   return other;
 }
 

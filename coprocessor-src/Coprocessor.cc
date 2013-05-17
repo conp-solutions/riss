@@ -881,7 +881,7 @@ lbool Preprocessor::preprocess()
 {
   isInprocessing = false;
   
-  if( opt_symm ) {
+  if( opt_symm && opt_enabled ) { // do only if preprocessor is enabled
     symmetry.process(); 
     if( opt_verbose > 1 )  { printStatistics(cerr); symmetry.printStatistics(cerr); }
   }

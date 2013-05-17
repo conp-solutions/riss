@@ -87,6 +87,10 @@ static IntOption     opt_allUipHack        ("MODS", "alluiphack",   "learn all u
 static BoolOption    opt_uipHack           ("MODS", "uiphack",      "learn more UIPs at decision level 1", false);
 static IntOption     opt_uips              ("MODS", "uiphack-uips", "learn at most X UIPs at decision level 1 (0=all)", 0, IntRange(0, INT32_MAX));
 static BoolOption    opt_vmtf              ("MODS", "vmtf",         "use the vmtf heuristic", false);
+static IntOption     opt_LHBR              ("MODS", "lhbr",         "use lhbr (0=no,1=str,2=trans,str,3=new,4=trans,new)", 0, IntRange(0, 4));
+static IntOption     opt_LHBR_max          ("MODS", "lhbr-max",     "max nr of newly created lhbr clauses", INT32_MAX, IntRange(0, INT32_MAX));
+static BoolOption    opt_LHBR_sub          ("MODS", "lhbr-sub",     "check whether new clause subsumes the old clause", false);
+static BoolOption    opt_printLhbr         ("MODS", "lhbr-print",   "print info about lhbr", false);
 
 static IntOption     opt_hack              ("REASON",    "hack",      "use hack modifications", 0, IntRange(0, 3) );
 static BoolOption    opt_hack_cost         ("REASON",    "hack-cost", "use size cost", true );
@@ -116,8 +120,38 @@ static IntOption     opt_laLevel           ("MODS", "hlaLevel",    "level of loo
 static IntOption     opt_laEvery           ("MODS", "hlaevery",    "initial frequency of LA", 1, IntRange(0, INT32_MAX) );
 static IntOption     opt_laBound           ("MODS", "hlabound",    "max. nr of LAs (-1 == inf)", -1, IntRange(-1, INT32_MAX) );
 static IntOption     opt_laTopUnit         ("MODS", "hlaTop",      "allow another LA after learning another nr of top level units (-1 = never)", -1, IntRange(-1, INT32_MAX));
-static BoolOption    opt_prefetch          ("MODS", "prefetch", "prefetch watch list, when literal is enqueued", false);
+static BoolOption    opt_prefetch          ("MODS", "prefetch",    "prefetch watch list, when literal is enqueued", false);
 static BoolOption    opt_hpushUnit         ("MODS", "delay-units", "does not propagate unit clauses until solving is initialized", false);
+static IntOption     opt_simplifyInterval  ("MODS", "sInterval",   "how often to perform simplifications on level 0", 0, IntRange(0, INT32_MAX) );
+
+
+// useful methods
+
+/// print literals into a stream
+inline ostream& operator<<(ostream& other, const Lit& l ) {
+  if( l == lit_Undef ) other << "lUndef";
+  else if( l == lit_Error ) other << "lError";
+  else other << (sign(l) ? "-" : "") << var(l) + 1;
+  return other;
+}
+
+/// print a clause into a stream
+inline ostream& operator<<(ostream& other, const Clause& c ) {
+  other << "[";
+  for( int i = 0 ; i < c.size(); ++ i )
+    other << " " << c[i];
+  other << "]";
+  return other;
+}
+
+/// print elements of a vector
+template <typename T>
+inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data ) 
+{
+  for( int i = 0 ; i < data.size(); ++ i )
+    other << " " << data[i];
+  return other;
+}
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -204,6 +238,14 @@ Solver::Solver() :
   
   ,useVmtf(opt_vmtf)
   
+  ,lhbrs(0)
+  ,l1lhbrs(0)
+  ,lhbr_news(0)
+  ,l1lhbr_news(0)
+  ,lhbrtests(0)
+  ,lhbr_sub(0)
+  
+  ,simplifyIterations(0)
   // preprocessor
   , coprocessor(0)
   , useCoprocessor(true)
@@ -405,6 +447,7 @@ void Solver::cancelUntil(int level) {
         for (int c = trail.size()-1; c >= trail_lim[level]; c--){
             Var      x  = var(trail[c]);
             assigns [x] = l_Undef;
+	    vardata [x].dom = lit_Undef; // reset dominator
             if (phase_saving > 1 || (phase_saving == 1) && c > trail_lim.last())
                 polarity[x] = sign(trail[c]);
             insertVarOrder(x); }
@@ -804,34 +847,11 @@ void Solver::uncheckedEnqueue(Lit p, CRef from)
 
     // prefetch watch lists
     if(opt_prefetch) __builtin_prefetch( & watches[p] );
+    if(opt_printDecisions) {cerr << "c enqueue " << p; if( from != CRef_Undef ) cerr << " because of " <<  ca[from]; cerr << endl;}
       
     trail.push_(p);
 }
 
-
-/// print literals into a stream
-inline ostream& operator<<(ostream& other, const Lit& l ) {
-  other << (sign(l) ? "-" : "") << var(l) + 1;
-  return other;
-}
-
-/// print a clause into a stream
-inline ostream& operator<<(ostream& other, const Clause& c ) {
-  other << "[";
-  for( int i = 0 ; i < c.size(); ++ i )
-    other << " " << c[i];
-  other << "]";
-  return other;
-}
-
-/// print elements of a vector
-template <typename T>
-inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data ) 
-{
-  for( int i = 0 ; i < data.size(); ++ i )
-    other << " " << data[i];
-  return other;
-}
 
 /*_________________________________________________________________________________________________
 |
@@ -857,6 +877,10 @@ CRef Solver::propagate()
         Watcher        *i, *j, *end;
         num_props++;
 
+	if( opt_LHBR > 0 && vardata[var(p)].dom == lit_Undef ) {
+	  vardata[var(p)].dom = p; // literal is its own dominator, if its not implied due to a binary clause
+	  if( opt_printLhbr ) cerr << "c undominated literal " << p << " is dominated by " << p << " (because propagated)" << endl; 
+	}
 	
 	    // First, Propagate binary clauses 
 	vec<Watcher>&  wbin  = watchesBin[p];
@@ -875,6 +899,10 @@ CRef Solver::propagate()
 	  if(value(imp) == l_Undef) {
 	    //printLit(p);printf(" ");printClause(wbin[k].cref);printf("->  ");printLit(imp);printf("\n");
 	    uncheckedEnqueue(imp,wbin[k].cref);
+	    if( opt_LHBR > 0 ) {
+	      vardata[ var(imp) ].dom = (opt_LHBR == 1 || opt_LHBR == 3) ? p : vardata[ var(p) ].dom ; // set dominator
+	      if( opt_printLhbr ) cerr << "c literal " << imp << " is dominated by " << p << " (because propagated in binary)" << endl;  
+	    }
 	  } else {
 	    // hack
 	      // consider variation only, if the improvement options are enabled!
@@ -964,13 +992,25 @@ CRef Solver::propagate()
 	      
 	      *j++ = w; continue; }
 
+	    Lit commonDominator = (opt_LHBR > 0 && lhbrs < opt_LHBR_max) ? vardata[var(false_lit)].dom : lit_Error; // inidicate whether lhbr should still be performed
+	    lhbrtests = commonDominator == lit_Error ? lhbrtests : lhbrtests + 1;
+	    if( opt_printLhbr ) cerr << "c common dominator for clause " << c << " : " << commonDominator << endl; 
             // Look for new watch:
             for (int k = 2; k < c.size(); k++)
                 if (value(c[k]) != l_False){
                     c[1] = c[k]; c[k] = false_lit;
                     watches[~c[1]].push(w);
-                    goto NextClause; }
-
+                    goto NextClause; } // no need to indicate failure of lhbr, because remaining code is skipped in this case!
+                else { // lhbr analysis! - any literal c[k] culd be removed from the clause, because it is not watched at the moment!
+		  assert( value(c[k]) == l_False && "for lhbr all literals in the clause need to be set already" );
+		  if( commonDominator != lit_Error ) { // do only, if its not broken already - and if limit is not reached
+		    // TODO: currently, only lastUIP dominator is used, or "common" dominator, if thre exists any
+		    commonDominator = ( commonDominator == lit_Undef ? vardata[var(c[k])].dom : 
+				( commonDominator != vardata[var(c[k])].dom ? lit_Error : commonDominator ) );
+		    if( opt_printLhbr ) cerr << "c common dominator: " << commonDominator << " after visiting " << c[k] << endl; 
+		  }
+		}
+		
             // Did not find watch -- clause is unit under assignment:
             *j++ = w;
             if (value(first) == l_False){
@@ -981,6 +1021,41 @@ CRef Solver::propagate()
                     *j++ = *i++;
             }else {
                 uncheckedEnqueue(first, cr);
+		if( opt_LHBR > 0 ) vardata[ var(first) ].dom = (opt_LHBR == 1 || opt_LHBR == 3) ? first : vardata[ var(first) ].dom ; // set dominator for this variable!
+		
+	    if( opt_printLhbr ) cerr << "c final common dominator: " << commonDominator << endl;
+	    
+	    // check lhbr!
+	    if( commonDominator != lit_Error && commonDominator != lit_Undef ) {
+	      lhbrs ++;
+	      l1lhbrs = decisionLevel() == 1 ? l1lhbrs + 1 : l1lhbrs;
+	      oc.clear();
+	      oc.push(first);
+	      oc.push(~commonDominator);
+
+	      // if commonDominator is element of the clause itself, delete the clause (hyper-self-subsuming resolution)
+	      bool willSubsume = false;
+	      if( opt_LHBR_sub ) {
+		for( int k = 1; k < c.size(); ++ k ) if ( c[k] == ~commonDominator ) { willSubsume = true; break; }
+	      }
+	      if( willSubsume ) { // created a binary clause that subsumes this clause
+		c.mark(1); // the bigger clause is not needed any more
+		lhbr_sub ++;
+	      } else {
+		lhbr_news ++;
+		l1lhbr_news = decisionLevel() == 1 ? l1lhbr_news + 1 : l1lhbr_news;
+	      }
+	      
+	      bool clearnt = c.learnt();
+	      CRef cr2 = ca.alloc(oc, clearnt ); // add the new clause - now all references could be invalid!
+	      if( clearnt ) { ca[cr2].setLBD(1); learnts.push(cr); }
+	      else clauses.push(cr2);
+	      attachClause(cr2);
+	      vardata[var(first)].reason = cr2; // set the new clause as reason
+	      vardata[ var(first) ].dom = (opt_LHBR == 1 || opt_LHBR == 3) ? commonDominator : vardata[ var(commonDominator) ].dom ; // set NEW dominator for this variable!
+	      if( opt_printLhbr ) cerr << "c added new clause: " << ca[cr2] << ", that is " << (clearnt ? "learned" : "original" ) << endl;
+	      goto NextClause; // do not use references any more, because ca.alloc has been performed!
+	    }
 	  
 #ifdef DYNAMICNBLEVEL		    
 		// DYNAMIC NBLEVEL trick (see competition'09 companion paper)
@@ -1369,11 +1444,16 @@ lbool Solver::search(int nof_conflicts)
 	  }
 
 
-           // Simplify the set of problem clauses:
-	  if (decisionLevel() == 0 && !simplify()) {
+           // Simplify the set of problem clauses - but do not do it each iteration!
+	  if (simplifyIterations > opt_simplifyInterval && decisionLevel() == 0 && !simplify()) {
+	    simplifyIterations = 0;
 	    if( verbosity > 1 ) printf("c last restart ## conflicts  :  %d %d \n",conflictC,decisionLevel());
 	    return l_False;
 	  }
+	  if( decisionLevel() == 0  ) simplifyIterations ++;
+	  
+	  if( !withinBudget() ) return l_Undef;
+	  
 	    // Perform clause database reduction !
 	    if(conflicts>=curRestart* nbclausesbeforereduce) 
 	      {
@@ -1749,6 +1829,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
             printf("c Learnt At Level 1: %d  Multiple: %d Units: %d\n", l1conflicts, multiLearnt,learntUnit);
 	    printf("c LAs: %d laSeconds %lf LA assigned: %d tabus: %d, failedLas: %d, maxEvery %d\n", laTime, las, laAssignments, tabus, failedLAs, maxBound );
 	    printf("c IntervalRestarts: %d\n", intervalRestart);
+	    printf("c lhbr: %d (l1: %d), new: %d (l1: %d), tests: %d, subs: %d\n", lhbrs, l1lhbrs,lhbr_news,l1lhbr_news,lhbrtests,lhbr_sub);
     }
 
     if (status == l_True){
