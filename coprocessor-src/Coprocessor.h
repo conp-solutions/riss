@@ -22,6 +22,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/Probing.h"
 #include "coprocessor-src/Resolving.h"
 #include "coprocessor-src/Rewriter.h"
+#include "coprocessor-src/bce.h"
+#include "coprocessor-src/xor.h"
 #include "coprocessor-src/Dense.h"
 #include "coprocessor-src/Symmetry.h"
 
@@ -125,6 +127,8 @@ protected:
   Rewriter rew;
   Dense dense;
   Symmetry symmetry;
+  XorReasoning xorReasoning;
+  BlockedClauseElimination bce;
   
   Sls sls;
   TwoSatSolver twoSAT;

@@ -24,6 +24,7 @@ static IntOption  opt_inprocessInt(_cat, "cp3_inp_cons",   "Perform Inprocessing
 static BoolOption opt_up          (_cat2, "up",            "Use Unit Propagation during preprocessing", false);
 static BoolOption opt_subsimp     (_cat2, "subsimp",       "Use Subsumption during preprocessing", false);
 static BoolOption opt_hte         (_cat2, "hte",           "Use Hidden Tautology Elimination during preprocessing", false);
+static BoolOption opt_bce         (_cat2, "bce",           "Use Blocked Clause Elimination during preprocessing", false);
 static BoolOption opt_cce         (_cat2, "cce",           "Use (covered) Clause Elimination during preprocessing", false);
 static BoolOption opt_ee          (_cat2, "ee",            "Use Equivalence Elimination during preprocessing", false);
 static BoolOption opt_enabled     (_cat2, "enabled_cp3",   "Use CP3", false);
@@ -50,6 +51,7 @@ static const int opt_threads = 0;
 static const bool opt_sls = false;       
 static const bool opt_sls_phase = false;    
 static const int opt_sls_flips = 8000000;
+static const bool opt_xor = false;    
 static const bool opt_rew = false;    
 static const bool opt_twosat = false;
 static const bool opt_twosat_init=false;
@@ -59,6 +61,7 @@ static IntOption  opt_threads     (_cat, "cp3_threads",    "Number of extra thre
 static BoolOption opt_sls         (_cat2, "sls",           "Use Simple Walksat algorithm to test whether formula is satisfiable quickly", false);
 static BoolOption opt_sls_phase   (_cat2, "sls-phase",     "Use current interpretation of SLS as phase", false);
 static IntOption  opt_sls_flips   (_cat2, "sls-flips",     "Perform given number of SLS flips", 8000000, IntRange(-1, INT32_MAX));
+static BoolOption opt_xor         (_cat2, "xor",           "Reason with XOR constraints", false);
 static BoolOption opt_rew         (_cat2, "rew",           "Rewrite AMO constraints", false);
 static BoolOption opt_twosat      (_cat2, "2sat",          "2SAT algorithm to check satisfiability of binary clauses", false);
 static BoolOption opt_twosat_init (_cat2, "2sat1",         "2SAT before all other algorithms to find units", false);
@@ -110,6 +113,8 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , rew( solver->ca, controller, data, subsumption )
 , dense( solver->ca, controller, data, propagation)
 , symmetry(solver->ca, controller, data, *solver)
+, xorReasoning(solver->ca, controller, data, propagation, ee )
+, bce(solver->ca, controller, data )
 , sls ( data, solver->ca, controller )
 , twoSAT( solver->ca, controller, data)
 , shuffleVariable (-1)
@@ -211,6 +216,21 @@ lbool Preprocessor::performSimplification()
   }
   
   if( opt_debug )  { scanCheck("after SORT"); }  
+  
+  if( opt_xor ) {
+    if( opt_verbose > 0 ) cerr << "c xor ..." << endl;
+    if( opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") XOR" << endl;
+    if( status == l_Undef ) xorReasoning.process();  // cannot change status, can generate new unit clauses
+    if( opt_verbose > 1 )  { printStatistics(cerr); xorReasoning.printStatistics(cerr); }
+    if (! data.ok() )
+        status = l_False;
+  }
+  data.checkGarbage(); // perform garbage collection
+  
+  if( opt_debug ) { checkLists("after XOR"); scanCheck("after XOR"); }
+  if( false  || printREW ) {
+   printFormula("after XOR");
+  }
   
   if( opt_ternResolve ) {
     if( opt_verbose > 0 ) cerr << "c res3 ..." << endl;
@@ -343,6 +363,19 @@ lbool Preprocessor::performSimplification()
   if( false || printBVA  ) {
    printFormula("after BVA");
   }
+
+  if( opt_bce ) {
+    if( opt_verbose > 0 ) cerr << "c bce ..." << endl;
+    if( opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") blocked clause elimination" << endl;
+    if( status == l_Undef ) bce.process();  // cannot change status, can generate new unit clauses
+    if( opt_verbose > 1 )  { printStatistics(cerr); bce.printStatistics(cerr); }
+  }
+  data.checkGarbage(); // perform garbage collection
+  
+  if( opt_debug )  { scanCheck("after BCE"); }  
+  if( false || printCCE ) {
+   printFormula("after BCE");
+  }
   
   if( opt_cce ) {
     if( opt_verbose > 0 ) cerr << "c cce ..." << endl;
@@ -356,6 +389,7 @@ lbool Preprocessor::performSimplification()
   if( false || printCCE ) {
    printFormula("after CCE");
   }
+  
    
   if( opt_addRedBins ) {
     if( opt_verbose > 0 ) cerr << "c add2 ..." << endl;
@@ -475,8 +509,10 @@ lbool Preprocessor::performSimplification()
     if( opt_probe ) probing.printStatistics(cerr);
     if( opt_unhide ) unhiding.printStatistics(cerr);
     if( opt_ternResolve || opt_addRedBins ) res.printStatistics(cerr);
+    if( opt_xor) xorReasoning.printStatistics(cerr);
     if( opt_sls ) sls.printStatistics(cerr);
     if( opt_twosat) twoSAT.printStatistics(cerr);
+    if( opt_bce ) bce.printStatistics(cerr);
     if( opt_cce ) cce.printStatistics(cerr);
     if( opt_rew ) rew.printStatistics(cerr);
     if( opt_dense ) dense.printStatistics(cerr);
@@ -670,6 +706,14 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 	if( opt_verbose > 1 ) cerr << "c TernRes changed formula: " << change << endl;
     }
     
+    // xorReasoning "x"
+    else if( execute == 'x' && opt_xor && status == l_Undef && data.ok() ) {
+	if( opt_verbose > 2 ) cerr << "c xor" << endl;
+	xorReasoning.process();
+	change = xorReasoning.appliedSomething() || change;
+	if( opt_verbose > 1 ) cerr << "c XOR changed formula: " << change << endl;
+    }
+    
     // probing "p"
     else if( execute == 'p' && opt_probe && status == l_Undef && data.ok() ) {
 	if( opt_verbose > 2 ) cerr << "c probing" << endl;
@@ -708,6 +752,14 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 	ee.process(data);
 	change = ee.appliedSomething() || change;
 	if( opt_verbose > 1 ) cerr << "c EE changed formula: " << change << endl;
+    }
+    
+    // cce "b"
+    else if( execute == 'b' && opt_bce && status == l_Undef && data.ok() ) {
+	if( opt_verbose > 2 ) cerr << "c bce" << endl;
+	bce.process();
+	change = bce.appliedSomething() || change;
+	if( opt_verbose > 1 ) cerr << "c BCE changed formula: " << change << endl;
     }
     
     // cce "c"
@@ -856,8 +908,10 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     if( opt_probe ) probing.printStatistics(cerr);
     if( opt_unhide ) unhiding.printStatistics(cerr);
     if( opt_ternResolve || opt_addRedBins ) res.printStatistics(cerr);
+    if( opt_xor) xorReasoning.printStatistics(cerr);
     if( opt_sls ) sls.printStatistics(cerr);
     if( opt_twosat) twoSAT.printStatistics(cerr);
+    if( opt_bce ) bce.printStatistics(cerr);
     if( opt_cce ) cce.printStatistics(cerr);
     if( opt_rew ) rew.printStatistics(cerr);
     if( opt_dense ) dense.printStatistics(cerr);
@@ -1047,8 +1101,10 @@ void Preprocessor::destroyTechniques()
     if( opt_probe ) probing.destroy();
     if( opt_unhide ) unhiding.destroy();
     if( opt_ternResolve || opt_addRedBins ) res.destroy();
+    if( opt_xor) xorReasoning.destroy();
     if( opt_sls ) sls.destroy();
     if( opt_twosat) twoSAT.destroy();
+    if( opt_bce ) bce.destroy();
     if( opt_cce ) cce.destroy();
   
 }
