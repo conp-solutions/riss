@@ -307,6 +307,9 @@ public:
   void updateClauseAfterDelLit(const Minisat::Clause& clause)
   { if( global_debug_out ) cerr << "what to update in clause?! " << clause << endl; }
   
+  // sort
+  void sortClauseLists(bool alsoLearnts = false);
+  
 // delete timers
   /** gives back the current times, increases for the next technique */
   uint32_t getMyDeleteTimer();
@@ -858,6 +861,64 @@ inline void CoprocessorData::cleanOccurrences()
     list( mkLit(v,true) ).clear();
   }
   lit_occurrence_count.assign(0,nVars()*2);
+}
+
+
+inline void CoprocessorData::sortClauseLists(bool alsoLearnts)
+{
+  for( int p = 0 ; p < (alsoLearnts ? 2 : 1); ++ p ) {
+	vec<CRef>& clauseList = (p == 0 ? getClauses() : getLEarnts());
+	int32_t n = clauseList.size();
+	int32_t m, s;
+	// copy elements from vector
+	CRef* tmpA = new CRef[ n ];
+	CRef* a = tmpA;
+	for( int32_t i = 0 ; i < n; i++ ){
+		a[i] = clauseList[i];
+	}
+	CRef *tmpB = new CRef[n];
+	CRef *b = tmpB;
+
+	// size of work fields, power of 2	
+	for (s=1; s<n; s+=s)
+	{
+		m = n;
+		do {
+			m = m - 2*s;	// set begin of working field
+			int32_t hi = (m+s > 0) ? m + s : 0;	// set middle of working field
+			
+			int32_t i = (m > 0) ? m : 0;	// lowest position in field
+			int32_t j = hi;
+			
+			int32_t stopb = m + 2*s;	// upper bound of current work area
+			int32_t currentb = i;			// current position in field for copy
+			
+			// merge two sorted fields into one
+			while( i < hi && j < stopb)
+			{
+				if( ( ca[a[i]] ) < ( ca[a[j]])  )
+					b[currentb++] = a[i++];
+				else
+					b[currentb++] = a[j++];
+			}
+			// copy rest of the elements
+			for( ; i < hi; )
+				b[currentb++] = a[i++];
+				
+			for( ; j< stopb; 	)
+				b[currentb++] = a[j++];
+				
+		} while( m > 0 );
+		
+		// swap fields!
+		CRef* tmp = a;a = b;b = tmp;
+	}
+	// write data back into vector
+	for( int32_t i = 0 ; i < n; i++ ){clauseList[i] = a[i];}
+	
+	delete [] tmpA;
+	delete [] tmpB;
+  }
 }
 
 

@@ -375,6 +375,18 @@ public:
     inline void print_lit(int i) const ;
 #endif
 
+    bool operator<( const Clause& other ) const {
+	const uint32_t clauseSize = size();
+	if( other.can_be_deleted() && !can_be_deleted() ) return true;
+	if( !other.can_be_deleted() && can_be_deleted() ) return false;
+	if( clauseSize > other.size() ) return false;
+	if( clauseSize < other.size() ) return true;
+	for( uint32_t i = 0 ; i < clauseSize; i++ ){
+		if( other[i] < data[i].lit ) return false;
+		if( data[i].lit < other[i] ) return true;
+	}
+	return false;
+    }
 };
 
 //=================================================================================================
