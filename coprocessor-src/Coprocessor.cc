@@ -25,6 +25,7 @@ static BoolOption opt_up          (_cat2, "up",            "Use Unit Propagation
 static BoolOption opt_subsimp     (_cat2, "subsimp",       "Use Subsumption during preprocessing", false);
 static BoolOption opt_hte         (_cat2, "hte",           "Use Hidden Tautology Elimination during preprocessing", false);
 static BoolOption opt_bce         (_cat2, "bce",           "Use Blocked Clause Elimination during preprocessing", false);
+static BoolOption opt_ent         (_cat2, "ent",           "Use checking for entailed redundancy during preprocessing", false);
 static BoolOption opt_cce         (_cat2, "cce",           "Use (covered) Clause Elimination during preprocessing", false);
 static BoolOption opt_ee          (_cat2, "ee",            "Use Equivalence Elimination during preprocessing", false);
 static BoolOption opt_enabled     (_cat2, "enabled_cp3",   "Use CP3", false);
@@ -40,7 +41,7 @@ static BoolOption opt_addRedBins  (_cat2, "addRed2",       "Use Adding Redundant
 static BoolOption opt_dense       (_cat2, "dense",         "Remove gaps in variables of the formula", false);
 static BoolOption opt_shuffle     (_cat2, "shuffle",       "Shuffle the formula, before the preprocessor is initialized", false);
 static BoolOption opt_simplify    (_cat2, "simplify",      "Apply easy simplifications to the formula", true);
-static BoolOption opt_symm        (_cat2, "symm",          "Do local symmetry breaking", true);
+static BoolOption opt_symm        (_cat2, "symm",          "Do local symmetry breaking", false);
 
 static StringOption opt_ptechs (_cat2, "cp3_ptechs", "techniques for preprocessing");
 static StringOption opt_itechs (_cat2, "cp3_itechs", "techniques for inprocessing");
@@ -115,6 +116,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , symmetry(solver->ca, controller, data, *solver)
 , xorReasoning(solver->ca, controller, data, propagation, ee )
 , bce(solver->ca, controller, data )
+, entailedRedundant( solver->ca, controller, data)
 , sls ( data, solver->ca, controller )
 , twoSAT( solver->ca, controller, data)
 , shuffleVariable (-1)
@@ -162,7 +164,7 @@ lbool Preprocessor::performSimplification()
   
   const bool printBVE = false, printBVA = false, printProbe = false, printUnhide = false, 
 	printCCE = false, printEE = false, printREW = false, printHTE = false, printSusi = false, printUP = false,
-	printTernResolve = false, printAddRedBin = false;  
+	printTernResolve = false, printAddRedBin = false, printENT=false, printBCE=false;  
   
   // do preprocessing
   if( opt_up ) {
@@ -230,6 +232,19 @@ lbool Preprocessor::performSimplification()
   if( opt_debug ) { checkLists("after XOR"); scanCheck("after XOR"); }
   if( false  || printREW ) {
    printFormula("after XOR");
+  }
+  
+  if( opt_ent ) {
+    if( opt_verbose > 0 ) cerr << "c ent ..." << endl;
+    if( opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") entailed redundancy" << endl;
+    if( status == l_Undef ) entailedRedundant.process();  // cannot change status, can generate new unit clauses
+    if( opt_verbose > 1 )  { printStatistics(cerr); entailedRedundant.printStatistics(cerr); }
+  }
+  data.checkGarbage(); // perform garbage collection
+  
+  if( opt_debug )  { scanCheck("after ENT"); }  
+  if( false || printENT ) {
+   printFormula("after ENT");
   }
   
   if( opt_ternResolve ) {
@@ -373,7 +388,7 @@ lbool Preprocessor::performSimplification()
   data.checkGarbage(); // perform garbage collection
   
   if( opt_debug )  { scanCheck("after BCE"); }  
-  if( false || printCCE ) {
+  if( false || printBCE ) {
    printFormula("after BCE");
   }
   
@@ -514,6 +529,7 @@ lbool Preprocessor::performSimplification()
     if( opt_twosat) twoSAT.printStatistics(cerr);
     if( opt_bce ) bce.printStatistics(cerr);
     if( opt_cce ) cce.printStatistics(cerr);
+    if( opt_ent ) entailedRedundant.printStatistics(cerr);
     if( opt_rew ) rew.printStatistics(cerr);
     if( opt_dense ) dense.printStatistics(cerr);
     if( opt_symm ) symmetry.printStatistics(cerr);
@@ -754,12 +770,20 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 	if( opt_verbose > 1 ) cerr << "c EE changed formula: " << change << endl;
     }
     
-    // cce "b"
+    // bce "b"
     else if( execute == 'b' && opt_bce && status == l_Undef && data.ok() ) {
 	if( opt_verbose > 2 ) cerr << "c bce" << endl;
 	bce.process();
 	change = bce.appliedSomething() || change;
 	if( opt_verbose > 1 ) cerr << "c BCE changed formula: " << change << endl;
+    }
+    
+    // entailedRedundant "1"
+    else if( execute == '1' && opt_ent && status == l_Undef && data.ok() ) {
+	if( opt_verbose > 2 ) cerr << "c ent" << endl;
+	entailedRedundant.process();
+	change = entailedRedundant.appliedSomething() || change;
+	if( opt_verbose > 1 ) cerr << "c ENT changed formula: " << change << endl;
     }
     
     // cce "c"
@@ -913,6 +937,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     if( opt_twosat) twoSAT.printStatistics(cerr);
     if( opt_bce ) bce.printStatistics(cerr);
     if( opt_cce ) cce.printStatistics(cerr);
+    if( opt_ent ) entailedRedundant.printStatistics(cerr);
     if( opt_rew ) rew.printStatistics(cerr);
     if( opt_dense ) dense.printStatistics(cerr);
     if( opt_symm ) symmetry.printStatistics(cerr);
@@ -1106,6 +1131,7 @@ void Preprocessor::destroyTechniques()
     if( opt_twosat) twoSAT.destroy();
     if( opt_bce ) bce.destroy();
     if( opt_cce ) cce.destroy();
+    if( opt_ent ) entailedRedundant.destroy();
   
 }
 

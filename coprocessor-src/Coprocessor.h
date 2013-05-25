@@ -24,6 +24,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/Rewriter.h"
 #include "coprocessor-src/bce.h"
 #include "coprocessor-src/xor.h"
+#include "coprocessor-src/Entailed.h"
 #include "coprocessor-src/Dense.h"
 #include "coprocessor-src/Symmetry.h"
 
@@ -129,6 +130,7 @@ protected:
   Symmetry symmetry;
   XorReasoning xorReasoning;
   BlockedClauseElimination bce;
+  EntailedRedundant entailedRedundant;
   
   Sls sls;
   TwoSatSolver twoSAT;
