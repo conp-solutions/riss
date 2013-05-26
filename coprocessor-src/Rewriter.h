@@ -53,7 +53,7 @@ class Rewriter : public Technique  {
         }
         LitOrderHeapLt(CoprocessorData & _data) : data(_data) {}
   };
-  Heap<LitOrderHeapLt> rewHeap; // heap that stores the variables according to their frequency (dedicated for BVA)
+  Heap<LitOrderHeapLt> rewHeap; // heap that stores the variables according to their frequency
   
 public:
   

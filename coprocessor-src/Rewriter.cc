@@ -184,7 +184,7 @@ bool Rewriter::process()
       amos[amos.size() -1][i] = ~ (amos[amos.size() -1][i]); // need to negate all!
       
     // check AMO!
-    if( true ) {
+    if( false ) {
 	// find all AMO binary clauses, and replace them with smaller variables!
 	inAmo.nextStep();
 	for( int j = 0 ; j < amos[amos.size() -1].size(); ++ j ) {
@@ -217,7 +217,7 @@ bool Rewriter::process()
   amoTime = cpuTime() - amoTime;
   foundAmos = amos.size();
   
-  cerr << "c finished search AMO --- process ... " << endl;
+  if( debug_out > 0 ) cerr << "c finished search AMO --- process ... " << endl;
   
   rewTime = cpuTime() - rewTime;
  

@@ -22,6 +22,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #define Minisat_Sort_h
 
 #include "mtl/Vec.h"
+#include <vector>
 
 //=================================================================================================
 // Some sorting algorithms for vec's
@@ -91,6 +92,11 @@ template <class T, class LessThan> void sort(vec<T>& v, LessThan lt) {
 template <class T> void sort(vec<T>& v) {
     sort(v, LessThan_default<T>()); }
 
+// Minisat sort for usual vector
+template <class T, class LessThan> void sort(std::vector<T>& v, LessThan lt) {
+    sort((T*)&(v[0]), v.size(), lt); }
+template <class T> void sort(std::vector<T>& v) {
+    sort(v, LessThan_default<T>()); }
 
 //=================================================================================================
 }

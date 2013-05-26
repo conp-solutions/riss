@@ -42,6 +42,8 @@ static BoolOption opt_dense       (_cat2, "dense",         "Remove gaps in varia
 static BoolOption opt_shuffle     (_cat2, "shuffle",       "Shuffle the formula, before the preprocessor is initialized", false);
 static BoolOption opt_simplify    (_cat2, "simplify",      "Apply easy simplifications to the formula", true);
 static BoolOption opt_symm        (_cat2, "symm",          "Do local symmetry breaking", false);
+static BoolOption opt_FM          (_cat2, "fm",            "Use the Fourier Motzkin transformation", false);
+
 
 static StringOption opt_ptechs (_cat2, "cp3_ptechs", "techniques for preprocessing");
 static StringOption opt_itechs (_cat2, "cp3_itechs", "techniques for inprocessing");
@@ -112,6 +114,7 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , probing  ( solver->ca, controller, data, propagation, ee, *solver )
 , res( solver->ca, controller, data)
 , rew( solver->ca, controller, data, subsumption )
+, fourierMotzkin( solver->ca, controller, data, propagation )
 , dense( solver->ca, controller, data, propagation)
 , symmetry(solver->ca, controller, data, *solver)
 , xorReasoning(solver->ca, controller, data, propagation, ee )
@@ -163,8 +166,8 @@ lbool Preprocessor::performSimplification()
   if( opt_verbose > 4 ) cerr << "c coprocessor finished initialization" << endl;
   
   const bool printBVE = false, printBVA = false, printProbe = false, printUnhide = false, 
-	printCCE = false, printEE = false, printREW = false, printHTE = false, printSusi = false, printUP = false,
-	printTernResolve = false, printAddRedBin = false, printENT=false, printBCE=false;  
+	printCCE = false, printEE = false, printREW = false, printFM = false, printHTE = false, printSusi = false, printUP = false,
+	printTernResolve = false, printAddRedBin = false, printXOR = false, printENT=false, printBCE=false;  
   
   // do preprocessing
   if( opt_up ) {
@@ -230,7 +233,7 @@ lbool Preprocessor::performSimplification()
   data.checkGarbage(); // perform garbage collection
   
   if( opt_debug ) { checkLists("after XOR"); scanCheck("after XOR"); }
-  if( false  || printREW ) {
+  if( false  || printXOR ) {
    printFormula("after XOR");
   }
   
@@ -273,6 +276,21 @@ lbool Preprocessor::performSimplification()
   }
   
   if( opt_debug ) { checkLists("after SUSI"); scanCheck("after SUSI"); }
+  
+  if( opt_FM ) {
+    if( opt_verbose > 0 ) cerr << "c FM ..." << endl;
+    if( opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") fourier motzkin" << endl;
+    if( status == l_Undef ) fourierMotzkin.process();  // cannot change status, can generate new unit clauses
+    if( opt_verbose > 1 )  { printStatistics(cerr); fourierMotzkin.printStatistics(cerr); }
+    if (! data.ok() )
+        status = l_False;
+  }
+  data.checkGarbage(); // perform garbage collection
+  
+  if( opt_debug ) { checkLists("after FM"); scanCheck("after FM"); }
+  if( false  || printFM ) {
+   printFormula("after FM");
+  }
   
   if( opt_rew ) {
     if( opt_verbose > 0 ) cerr << "c rew ..." << endl;
@@ -531,6 +549,7 @@ lbool Preprocessor::performSimplification()
     if( opt_cce ) cce.printStatistics(cerr);
     if( opt_ent ) entailedRedundant.printStatistics(cerr);
     if( opt_rew ) rew.printStatistics(cerr);
+    if( opt_FM ) fourierMotzkin.printStatistics(cerr);
     if( opt_dense ) dense.printStatistics(cerr);
     if( opt_symm ) symmetry.printStatistics(cerr);
   }
@@ -810,6 +829,14 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 	if( opt_verbose > 1 ) cerr << "c REW changed formula: " << change << endl;
     }
     
+    // fourier motzkin "f"
+    else if( execute == 'f' && opt_FM && status == l_Undef && data.ok() ) {
+	if( opt_verbose > 2 ) cerr << "c fm" << endl;
+	fourierMotzkin.process();
+	change = fourierMotzkin.appliedSomething() || change;
+	if( opt_verbose > 1 ) cerr << "c FM changed formula: " << change << endl;
+    }
+    
     // none left so far
     else {
       cerr << "c warning: cannot execute technique related to  " << execute << endl;
@@ -939,6 +966,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     if( opt_cce ) cce.printStatistics(cerr);
     if( opt_ent ) entailedRedundant.printStatistics(cerr);
     if( opt_rew ) rew.printStatistics(cerr);
+    if( opt_FM ) fourierMotzkin.printStatistics(cerr);
     if( opt_dense ) dense.printStatistics(cerr);
     if( opt_symm ) symmetry.printStatistics(cerr);
   }
@@ -1013,6 +1041,7 @@ void Preprocessor::giveMoreSteps()
   probing.giveMoreSteps();
   res.giveMoreSteps();
   rew.giveMoreSteps();
+  fourierMotzkin.giveMoreSteps();
 }
 
 
