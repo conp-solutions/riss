@@ -25,13 +25,15 @@ class FourierMotzkin : public Technique  {
   double processTime,amoTime,fmTime;
   int steps;
   int fmLimit;
-  int foundAmos;
+  int foundAmos,newAmos,newAlos,newAlks;
   int sameUnits,deducedUnits,propUnits;
   int addDuplicates;
-  int irregular;
+  int irregular, pureAmoLits;
   int usedClauses;
-  int discardedCards;
+  int cardDiff, discardedCards, discardedNewAmos;
   int removedCards, newCards;
+  int addedBinaryClauses,addedClauses;
+  int detectedDuplicates;
   
   /** represent a (mixed) cardinality constraint*/
   class CardC {
@@ -44,9 +46,11 @@ class FourierMotzkin : public Technique  {
     bool amo() const { return k == 1 && lr.size() == 0 ; }
     bool amt() const { return k == 2 && lr.size() == 0 ; }
     bool amk() const { return k >= 0 && lr.size() == 0 ; }
-    bool isUnit() const { return (k + (int)lr.size()) == 0; }
-    bool failed() const { return ((int)lr.size() + k) < 0; }
-    bool taut() const { return k > (int)ll.size(); } // assume no literal appears both in ll and lr
+    bool alo() const { return k == -1 && ll.size() == 0; }
+    bool alk() const { return k < 0 && ll.size() == 0; }
+    bool isUnit() const { return (k + (int)lr.size()) == 0; } // all literals in ll have to be false, and all literals in lr have to be true
+    bool failed() const { return (((int)lr.size() + k) < 0) ; }
+    bool taut() const { return k >= (int)ll.size(); } // assume no literal appears both in ll and lr
     bool invalid() const { return k==0 && ll.size() == 0 && lr.size() == 0; } // nothing stored in the constraint any more
     void invalidate() { k=0;ll.clear();lr.clear();}
     CardC() : k(0) {} // default constructor
@@ -76,6 +80,14 @@ public:
   void giveMoreSteps();
   
   void destroy();
+  
+protected:
+  /** propagate the literals in unitQueue over all constraints*/
+  bool propagateCards( vec<Lit>& unitQueue, vector< vector<int> >& leftHands, vector< vector<int> >& rightHands, vector<CardC>& cards,MarkArray& inAmo);
+  
+  /** check whether the given clause is already present in the given list */
+  bool hasDuplicate(const vector<Lit>& c);
+  
 };
 
 }

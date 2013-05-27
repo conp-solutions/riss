@@ -426,7 +426,7 @@ public:
   void fillSorted( vector< Lit >& literals, Coprocessor::CoprocessorData& data, bool rootsOnly = true, bool getAll=false);
   void fillSorted(vector<Var>& variables, CoprocessorData& data, bool rootsOnly = true, bool getAll=false);
 
-  /** return true, if the condition "from -> to" holds, based on the stochstic scanned data */
+  /** return true, if the condition "from -> to" holds, based on the stochastic scanned data */
   bool implies(const Lit& from, const Lit& to) const;
 
   /** return whether child occurs in the adjacence list of parent (and thus implied) */

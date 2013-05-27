@@ -8,14 +8,20 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 static const char* _cat = "COPROCESSOR 3 - FOURIERMOTZKIN";
 
-static IntOption  opt_fmLimit        (_cat, "cp3_fm_limit" ,"number of steps allowed for FM", 12000000, IntRange(0, INT32_MAX));
-static IntOption  opt_fmGrow         (_cat, "cp3_fm_grow"  ,"max. grow of number of constraints per step", 10, IntRange(0, INT32_MAX));
+static IntOption  opt_fmLimit        (_cat, "cp3_fm_limit"  ,"number of steps allowed for FM", 12000000, IntRange(0, INT32_MAX));
+static IntOption  opt_fmGrow         (_cat, "cp3_fm_grow"   ,"max. grow of number of constraints per step", 10, IntRange(0, INT32_MAX));
+static IntOption  opt_fmGrowT        (_cat, "cp3_fm_growT"  ,"total grow of number of constraints", 10000, IntRange(0, INT32_MAX));
 
-static BoolOption opt_atMostTwo      (_cat, "cp3_fm_amt"   ,"extract at-most-two", false);
-static BoolOption opt_findUnit       (_cat, "cp3_fm_unit"  ,"check for units first", true);
-static BoolOption opt_merge          (_cat, "cp3_fm_merge" ,"perform AMO merge", true);
-static BoolOption opt_duplicates     (_cat, "cp3_fm_dups"  ,"avoid finding the same AMO multiple times", true);
-static BoolOption opt_cutOff         (_cat, "cp3_fm_cut"   ,"avoid eliminating too expensive variables (>10,10 or >5,15)", true);
+static BoolOption opt_atMostTwo      (_cat, "cp3_fm_amt"     ,"extract at-most-two", false);
+static BoolOption opt_findUnit       (_cat, "cp3_fm_unit"    ,"check for units first", true);
+static BoolOption opt_merge          (_cat, "cp3_fm_merge"   ,"perform AMO merge", true);
+static BoolOption opt_duplicates     (_cat, "cp3_fm_dups"    ,"avoid finding the same AMO multiple times", true);
+static BoolOption opt_cutOff         (_cat, "cp3_fm_cut"     ,"avoid eliminating too expensive variables (>10,10 or >5,15)", true);
+static IntOption opt_newAmo          (_cat, "cp3_fm_newAmo"  ,"encode the newly produced AMOs (with pairwise encoding) 0=no,1=yes,2=try to avoid redundant clauses",  2, IntRange(0, 2));
+static BoolOption opt_keepAllNew     (_cat, "cp3_fm_keepM"   ,"keep all new AMOs (also rejected ones)", true);
+static IntOption opt_newAlo          (_cat, "cp3_fm_newAlo"  ,"create clauses from deduced ALO constraints 0=no,1=from kept,2=keep all ",  2, IntRange(0, 2));
+static IntOption opt_newAlk          (_cat, "cp3_fm_newAlk"  ,"create clauses from deduced ALK constraints 0=no,1=from kept,2=keep all (possibly redundant!)",  2, IntRange(0, 2));
+static BoolOption opt_checkSub       (_cat, "cp3_fm_newSub"  ,"check whether new ALO and ALK subsume other clauses (only if newALO or newALK)", true);
   
 
 #if defined CP3VERSION 
@@ -36,15 +42,24 @@ FourierMotzkin::FourierMotzkin( ClauseAllocator& _ca, ThreadController& _control
 , steps(0)
 , fmLimit(opt_fmLimit)
 , foundAmos(0)
+, newAmos(0)
+, newAlos(0)
+, newAlks(0)
 , sameUnits(0)
 , deducedUnits(0)
 , propUnits(0)
 , addDuplicates(0)
 , irregular(0)
+, pureAmoLits(0)
 , usedClauses(0)
+, cardDiff(0)
 , discardedCards(0)
+, discardedNewAmos(0)
 , removedCards(0)
 , newCards(0)
+, addedBinaryClauses(0)
+, addedClauses(0)
+, detectedDuplicates(0)
 {
   
 }
@@ -69,7 +84,7 @@ bool FourierMotzkin::process()
   Heap<LitOrderHeapLt> heap(data); // heap that stores the literals according to their frequency
   heap.addNewElement(data.nVars() * 2);
   
-  vector< CardC > cards; // all amos that are collected
+  vector< CardC > cards,rejectedNewAmos,rejectedNewAlos,rejectedNewAlks; // storage for constraints
   
   heap.clear();
   for( Var v = 0 ; v < data.nVars(); ++ v ) {
@@ -160,7 +175,7 @@ bool FourierMotzkin::process()
     sort(data.lits);
     cards.push_back( data.lits );
 
-    if( debug_out > 0 ) cerr << "c found AMO (negated, == AllExceptOne): " << data.lits << endl;
+    if( debug_out > 0 ) cerr << "c found AMO: " << data.lits << endl;
   }
  
   amoTime = cpuTime() - amoTime;
@@ -183,7 +198,8 @@ bool FourierMotzkin::process()
     for( int j = 0; j < cards[i].lr.size(); ++ j ) rightHands[ toInt( cards[i].lr[j] ) ].push_back( i );
   }
   
-  vector<Lit> unitQueue;
+  vec<Lit> unitQueue;
+  vector<int> newAMOs,newALOs,newALKs;
   
   // perform FindUnit
   if( opt_findUnit ) {
@@ -204,11 +220,11 @@ bool FourierMotzkin::process()
 	  int n1=0,n2=0;
 	  while( n1 < v1.size() && n2 < v2.size() ) {
 	    if( v1[n1] == v2[n2] ) { // same literal in two amos with a different literal -> have to be unit!
-	      if( ! inAmo.isCurrentStep( toInt(v1[n1]) ) ) { // store each literal only once in the queue
+	      if( ! inAmo.isCurrentStep( toInt(~v1[n1]) ) ) { // store each literal only once in the queue
 		sameUnits ++;
-		inAmo.setCurrentStep( toInt(v1[n1]) );
-		unitQueue.push_back(v1[n1]);
-		if( l_False == data.enqueue( v1[n1] ) ) goto finishedFM; // enqueing this literal failed -> finish!
+		inAmo.setCurrentStep( toInt(~v1[n1]) );
+		unitQueue.push(~v1[n1]);
+		if( l_False == data.enqueue( ~v1[n1] ) ) goto finishedFM; // enqueing this literal failed -> finish!
 	      }
 	      // TODO: enqueue, later remove from all cards!
 	      if( debug_out > 1 ) cerr << "c AMOs entail unit literal " << ~ v1[n1] << endl;
@@ -218,59 +234,13 @@ bool FourierMotzkin::process()
 	  }
 	}
       }
-    }
-    
-    // propagate method
-    while( unitQueue.size() > 0 ) {
-      Lit p = unitQueue.back(); unitQueue.pop_back();
-      for( int p1 = 0; p1 < 2; ++ p1 ) {
-	if( p1 == 1 ) p = ~p;
-	for( int p2 = 0 ; p2 < 2; ++ p2 ) {
-	  vector<int>& indexes = (p2==0 ? leftHands[ toInt(p) ] : rightHands[ toInt(p) ]);
-	  for( int i = 0 ; i < indexes.size(); ++ i ) {
-	    CardC& c = cards[ indexes[i] ];
-	    steps ++;
-	    if( c.invalid() ) continue; // do not consider this constraint any more!
-	    if( debug_out > 2 ) cerr << "c propagate " << c.ll << " <= " << c.k << " + " << c.lr << endl;
-	    // remove all assigned literals and either reduce the ll vector, or "k"
-	    int kc = 0;
-	    for( int j = 0 ; j < c.ll.size(); ++ j ) {
-	      if( data.value(c.ll[j]) == l_True ) c.k --;
-	      else if( data.value(c.ll[j]) == l_Undef ) {
-		c.ll[kc++] = c.ll[j];
-	      }
-	    }
-	    c.ll.resize(kc);
-	    if( debug_out > 2 ) cerr << "c        to " << c.ll << " <= " << c.k << " + " << c.lr << endl;
-	    if(c.isUnit() ) {  // propagate AMOs only!
-	      for( int j = 0 ; j < c.ll.size(); ++ j ) {
-		if( ! inAmo.isCurrentStep( toInt(c.ll[j]) ) ) { // store each literal only once in the queue
-		  propUnits ++;
-		  inAmo.setCurrentStep( toInt(c.ll[j]) );
-		  unitQueue.push_back(c.ll[j]);
-		  if( data.enqueue( c.ll[j] ) == l_False ) {
-		    if( debug_out > 1 ) cerr << "c enquing " << c.ll[j] << " failed" << endl;
-		    goto finishedFM; // enqueing this literal failed -> finish!
-		  }
-		}
-	      }
-	      c.invalidate();
-	    }
-	    if( c.taut() ) c.invalidate();
-	    else if ( c.failed() ) {
-	      if( debug_out > 1 ) cerr << "c resulting constraint cannot be satisfied!" << endl;
-	      data.setFailed(); goto finishedFM;
-	    }
-	  }
-	}
-      }
-      // clear all occurrence lists!
-      leftHands[toInt(p)].clear();leftHands[toInt(~p)].clear();
-      rightHands[toInt(p)].clear();rightHands[toInt(~p)].clear();
+      // if found something, propagate!
+      if(!propagateCards( unitQueue, leftHands, rightHands, cards,inAmo) ) goto finishedFM;
     }
     
   }
   
+   
   // perform merge
   if( opt_merge ) {
     if( debug_out > 0 ) cerr << "c merge AMOs ... " << endl;
@@ -300,7 +270,7 @@ bool FourierMotzkin::process()
 	      if( ! inAmo.isCurrentStep( toInt(v1[n1]) ) ) { // store each literal only once in the queue
 		  sameUnits ++;
 		  inAmo.setCurrentStep( toInt(v1[n1]) );
-		  unitQueue.push_back(v1[n1]);
+		  unitQueue.push(v1[n1]);
 		  if( data.enqueue( v1[n1] ) == l_False ) {
 		    if( debug_out > 1 ) cerr << "c enquing " << v1[n1] << " failed" << endl;
 		    goto finishedFM; // enqueing this literal failed -> finish!
@@ -319,12 +289,34 @@ bool FourierMotzkin::process()
 	  for(; n2 < v2.size(); ++ n2 ) if( v2[n2] != nl ) data.lits.push_back( v2[n2] );
 	  if( debug_out > 0 ) cerr << "c deduced AMO " << data.lits << " from AMO " << card1.ll << " and AMO " << card2.ll << endl;
 	  
+	  // check whether there are similar variables inside the constraint, if so - drop it!
+	  bool hasComplements = false;
+	  for( int k = 0 ; k + 1 < data.lits.size(); ++k ) if( data.lits[k] == ~ data.lits[k+1] ) { 
+	    if( debug_out > 2 ) cerr << "c deduced AMO contains complementary literals - set all others to false!" << endl;
+	    Var uv = var(data.lits[k]);
+	    for( int k = 0 ; k < data.lits.size(); ++ k ) {
+	      if( var(data.lits[k]) == uv ) continue; // do not enqueue complementary literal!
+	      if( ! inAmo.isCurrentStep( toInt(~data.lits[k]) ) ) { // store each literal only once in the queue
+		  sameUnits ++;
+		  inAmo.setCurrentStep( toInt(~data.lits[k]) );
+		  unitQueue.push(~data.lits[k]);
+		  if( data.enqueue( ~data.lits[k] ) == l_False ) {
+		    if( debug_out > 1 ) cerr << "c enquing " << ~data.lits[k] << " failed" << endl;
+		    goto finishedFM; // enqueing this literal failed -> finish!
+		  }
+	      }
+	    }
+	    hasComplements = true; break;
+	  }
+	  if(hasComplements) continue;
+	  
 	  const int index = cards.size();
 	  cards.push_back( CardC(data.lits) ); // create AMO
 	  for( int k = 0 ; k < data.lits.size(); ++ k ) leftHands[ toInt( data.lits[k] ) ].push_back(index);
 	}
       }
-
+      // if found something, propagate!
+      if(!propagateCards( unitQueue, leftHands, rightHands, cards,inAmo) ) goto finishedFM;
     }
   }
   
@@ -352,7 +344,8 @@ bool FourierMotzkin::process()
       }
     }
   }
-  
+
+  if( debug_out > 0 ) cerr << "c apply FM ..." << endl;
   // for l in F
   while (heap.size() > 0 && (data.unlimited() || fmLimit > steps) && !data.isInterupted() ) 
   {
@@ -364,12 +357,15 @@ bool FourierMotzkin::process()
 
     heap.removeMin();
 
-    if( debug_out > 1 ) cerr << "c eliminate literal " << toEliminate << endl;
+    if( debug_out > 1 ) cerr << endl << "c eliminate literal " << toEliminate << endl;
     
-    int oldSize = cards.size();
+    int oldSize = cards.size(),oldNewSize = newAMOs.size(), oldAloSize = newALOs.size(), oldAlkSize = newALKs.size();
     
     // TODO: apply heuristics from BVE (do not increase number of constraints! - first create, afterwards count!
-      if( leftHands[ toInt(toEliminate) ] .size() == 0  || rightHands[ toInt(toEliminate) ] .size() == 0 ) continue; // only if the variable has very few occurrences
+      if( leftHands[ toInt(toEliminate) ] .size() == 0  || rightHands[ toInt(toEliminate) ] .size() == 0 ) {
+	pureAmoLits ++;
+	continue; // only if the variable has very few occurrences. cannot handle pure here, because its also inside the formula at other places!
+      }
       if( opt_cutOff && 
 	 ((leftHands[ toInt(toEliminate) ] .size() > 5 && rightHands[ toInt(toEliminate) ] .size() > 15)
 	 || (leftHands[ toInt(toEliminate) ] .size() > 15 && rightHands[ toInt(toEliminate) ] .size() > 5)
@@ -408,6 +404,7 @@ bool FourierMotzkin::process()
 	  const CardC& card2 = cards[rightHands[toInt(toEliminate)][j]];
 	  assert( !card1.invalid() && !card2.invalid() && "both constraints must not be invalid" );
 
+	  bool hasDuplicates = false; // if true, then the resulting constraint is invalid!
 	  CardC& thisCard = cards[ index ];
 	  for( int p = 0 ; p < 2; ++ p ) {
 	    // first half
@@ -419,7 +416,10 @@ bool FourierMotzkin::process()
 	      if( v1[n1] == v2[n2] ) { // same literal in two amos with a different literal -> have to be unit!
 		addDuplicates ++;
 		// TODO: enqueue, later remove from all cards!
+		data.lits.push_back( v1[n1] ); // keep them
+		hasDuplicates = true;
 		n1++;n2++;
+		break;
 	      } else if( v1[n1] < v2[n2] ) {
 		if( v1[n1] != toEliminate ) data.lits.push_back(v1[n1]);
 		n1 ++;
@@ -428,12 +428,22 @@ bool FourierMotzkin::process()
 		n2 ++;
 	      }
 	    }
-	    for(; n1 < v1.size(); ++ n1 ) if( v1[n1] != toEliminate ) data.lits.push_back( v1[n1] );
-	    for(; n2 < v2.size(); ++ n2 ) if( v2[n2] != toEliminate ) data.lits.push_back( v2[n2] );
+	    if(!hasDuplicates) {
+	      for(; n1 < v1.size(); ++ n1 ) if( v1[n1] != toEliminate ) data.lits.push_back( v1[n1] );
+	      for(; n2 < v2.size(); ++ n2 ) if( v2[n2] != toEliminate ) data.lits.push_back( v2[n2] );
+	    }
 	    if( p == 0 ) thisCard.ll = data.lits;
 	    else thisCard.lr = data.lits;
 	  }
-	  // TODO: remove duplicate literals from lr and ll!
+	  
+	  if( hasDuplicates ) {
+	    if( debug_out > 1 ) cerr << "c new card would have duplicates - drop it (can be fixed with full FM algorithm which uses weights)" << endl
+	         << "c  from " << card1.ll << " <= " << card1.k << " + " << card1.lr << endl
+		 << "c   and " << card2.ll << " <= " << card2.k << " + " << card2.lr << endl << endl;
+	     cards.pop_back(); // remove last card again
+	     continue;
+	  }
+	  
 	  int nl = 0,nr = 0,kl=0,kr=0;
 	  while( nl < thisCard.ll.size() && nr < thisCard.lr.size() ) {
 	    if( thisCard.ll[nl] == thisCard.lr[nr] ) { // do not keep the same literal!
@@ -450,9 +460,9 @@ bool FourierMotzkin::process()
 	  thisCard.ll.resize(kl);
 	  
 	  thisCard.k = card1.k + card2.k;
-	  if( debug_out > 1 ) cerr << "c resolved new card " << thisCard.ll << " <= " << thisCard.k << " + " << thisCard.lr << "  (unit: " << thisCard.isUnit() << " taut: " << thisCard.taut() << ", failed: " << thisCard.failed() << "," << (int)thisCard.lr.size() + thisCard.k << ")" << endl
-				    << " from " << card1.ll << " <= " << card1.k << " + " << card1.lr << endl
-				    << " and  " << card2.ll << " <= " << card2.k << " + " << card2.lr << endl;
+	  if( debug_out > 1 ) cerr << "c resolved new CARD " << thisCard.ll << " <= " << thisCard.k << " + " << thisCard.lr << "  (unit: " << thisCard.isUnit() << " taut: " << thisCard.taut() << ", failed: " << thisCard.failed() << "," << (int)thisCard.lr.size() + thisCard.k << ")" << endl
+				    << "c from " << card1.ll << " <= " << card1.k << " + " << card1.lr << endl
+				    << "c and  " << card2.ll << " <= " << card2.k << " + " << card2.lr << endl << endl;
 	  if( thisCard.taut() ) {
 	     if( debug_out > 1 ) cerr << "c new card is taut! - drop it" << endl;
 	     cards.pop_back(); // remove last card again
@@ -461,43 +471,114 @@ bool FourierMotzkin::process()
 	    if( debug_out > 1 ) cerr << "c new card is failed! - stop procedure!" << endl;
 	    data.setFailed();
 	    goto finishedFM;
-	  }else if( thisCard.isUnit() ) {
-	    deducedUnits += thisCard.ll.size(); 
+	  }else if( thisCard.isUnit() ) { // all literals in ll have to be set to false!
+	    if( debug_out > 1 ) cerr << "c new card is unit - enqueue all literals" << endl;
+	    deducedUnits += thisCard.ll.size() + thisCard.lr.size(); 
 	    for( int k = 0 ; k < thisCard.ll.size(); ++ k ) {
-	      
+		if( ! inAmo.isCurrentStep( toInt(~thisCard.ll[k]) ) ) { // store each literal only once in the queue
+		  inAmo.setCurrentStep( toInt(~thisCard.ll[k]) );
+		  unitQueue.push(~thisCard.ll[k]);
+		  if( data.enqueue( ~thisCard.ll[k] ) == l_False ) {
+		    if( debug_out > 1 ) cerr << "c enquing " << ~thisCard.ll[k] << " failed" << endl;
+		    goto finishedFM;
+		  }
+		}
 	    }
+	    for( int k = 0 ; k < thisCard.lr.size(); ++ k ) { // all literals in lr have to be set to true!
+		if( ! inAmo.isCurrentStep( toInt(thisCard.lr[k]) ) ) { // store each literal only once in the queue
+		  inAmo.setCurrentStep( toInt(thisCard.lr[k]) );
+		  unitQueue.push(thisCard.lr[k]);
+		  if( data.enqueue( thisCard.lr[k] ) == l_False ) {
+		    if( debug_out > 1 ) cerr << "c enquing " << thisCard.ll[k] << " failed" << endl;
+		    goto finishedFM;
+		  }
+		}
+	    }
+	    cards.pop_back(); // remove last card again, because all its information has been used already!
+	    continue;
+	  } else if (thisCard.amo() ) {
+	    if( debug_out > 1 ) cerr << "c new card is NEW amo - memorize it!" << endl;
+	    if(opt_newAmo) newAMOs.push_back( index );
+	    newAmos ++;
+	  } else if (thisCard.alo() && opt_newAlo > 0) {
+	    if( debug_out > 1 ) cerr << "c new card is NEW alo - memorize it!" << endl;
+	    newAlos ++; 
+	    if(opt_newAmo) newALOs.push_back( index );
+	  }  else if (thisCard.alo() && opt_newAlk > 0) {
+	    if( debug_out > 1 ) cerr << "c new card is NEW alk - memorize it!" << endl;
+	    newAlks ++; 
+	    if(opt_newAmo) newALKs.push_back( index );
 	  }
 	}
       }
       
-      if( cards.size() + leftHands[ toInt(toEliminate) ] .size() + rightHands[ toInt(toEliminate) ].size() > oldSize + opt_fmGrow ) {
+      // new constraints > removed constraints + grow -> drop the elimination again!
+      if( (cards.size() - oldSize > leftHands[ toInt(toEliminate) ] .size() + rightHands[ toInt(toEliminate) ].size()  + opt_fmGrow ) // local increase to large
+	|| (cardDiff > opt_fmGrowT ) // global limit hit
+      ) {
 	discardedCards += (cards.size() - oldSize);
-	// remove!
+	// if( rejectedNewAmos
+	if( opt_keepAllNew ) { // copy the new AMOs that should be rejected
+	  for( int p = oldNewSize; p < newAMOs.size(); ++ p ) {
+	    rejectedNewAmos.push_back( cards[ newAMOs[p] ] );
+	  }
+	} else discardedNewAmos += (newAMOs.size() - oldNewSize );
+	if( opt_newAlo > 1  ) { // copy the new AMOs that should be rejected
+	  for( int p = oldAloSize; p < newAMOs.size(); ++ p ) {
+	    rejectedNewAlos.push_back( cards[ newAMOs[p] ] );
+	  }
+	} 
+	if( opt_newAlk > 1 ) { // copy the new AMOs that should be rejected
+	  for( int p = oldAlkSize; p < newAMOs.size(); ++ p ) {
+	    rejectedNewAlks.push_back( cards[ newAMOs[p] ] );
+	  }
+	} 
+	
+	// remove and shrink pointer lists!
 	cards.resize( oldSize );
+	newAMOs.resize( oldNewSize );
+	newALOs.resize( oldAloSize );
+	newALKs.resize( oldAlkSize );
+	assert( (newAMOs.size() == 0 || newAMOs.back() < cards.size()) && "after shrink, no pointer to invalid constraints can be left!" );
 	continue;
       } 
+      
+      cardDiff += ((int)cards.size() - (int)oldSize - (int)leftHands[ toInt(toEliminate) ] .size() + (int)rightHands[ toInt(toEliminate) ].size());
       
       // remove all old constraints, add all new constraints!
       for( int p = 0 ; p < 2; ++ p ) {
 	vector<int>& indexes = p==0 ? leftHands[ toInt(toEliminate) ] : rightHands[ toInt(toEliminate) ];
 	removedCards += indexes.size();
 	while( indexes.size() > 0 ) {
-	  const CardC& card = cards[ indexes[0] ];
+	  int removeIndex = indexes[0]; // copy, because reference of vector will be changed!
+	  const CardC& card = cards[ removeIndex ];
+	  if( debug_out > 2 ) cerr << "c remove  " << card.ll << " <= " << card.k << " + " << card.lr << " ... " << endl;
 	  for( int j = 0 ; j < card.ll.size(); ++ j ) { // remove all lls from left hand!
 	    const Lit l = card.ll[j];
-	    if( !heap.inHeap( toInt(l) ) ) heap.insert( toInt(l) ); // add literal of modified cards to heap again
-	    for( int k = 0 ; k < leftHands[toInt(l)].size(); ++ k ) if( leftHands[toInt(l)][k] == indexes[0] ) {
-	      leftHands[toInt(l)][k] = leftHands[toInt(l)][ leftHands[toInt(l)].size() - 1]; leftHands[toInt(l)].pop_back(); break;
+	    // if( !heap.inHeap( toInt(l) ) ) heap.insert( toInt(l) ); // add literal of modified cards to heap again
+	    if( debug_out > 3 ) cerr << "c check " << removeIndex << " in " << leftHands[toInt(l)] << endl;
+	    for( int k = 0 ; k < leftHands[toInt(l)].size(); ++ k ) {
+	      if( leftHands[toInt(l)][k] == removeIndex ) {
+		if( debug_out > 3 ) cerr << "c from leftHand " << l << "( " << j << "/" << card.ll.size() << "," << k << "/" << leftHands[toInt(l)].size()  << ")" << endl;
+		leftHands[toInt(l)][k] = leftHands[toInt(l)][ leftHands[toInt(l)].size() - 1]; leftHands[toInt(l)].pop_back(); 
+		break;
+	      }
 	    }
+	    if( debug_out > 3 ) cerr << "c finished literal " << l << "( " << j << "/" << card.ll.size() << ")" << endl;
 	  }
 	  for( int j = 0 ; j < card.lr.size(); ++ j ) { // remove all lls from left hand!
 	    const Lit l = card.lr[j];
-	    if( !heap.inHeap( toInt(l) ) ) heap.insert( toInt(l) ); // add literal of modified cards to heap again
-	    for( int k = 0 ; k < rightHands[toInt(l)].size(); ++ k ) if( rightHands[toInt(l)][k] == indexes[0] ) {
-	      rightHands[toInt(l)][k] = rightHands[toInt(l)][ rightHands[toInt(l)].size() - 1]; rightHands[toInt(l)].pop_back(); break;
+	    // if( !heap.inHeap( toInt(l) ) ) heap.insert( toInt(l) ); // add literal of modified cards to heap again
+	    if( debug_out > 3 ) cerr << "c check " << removeIndex << " in " << rightHands[toInt(l)] << endl;
+	    for( int k = 0 ; k < rightHands[toInt(l)].size(); ++ k ) {
+	      if( rightHands[toInt(l)][k] == removeIndex ) {
+		if( debug_out > 3 ) cerr << "c from rightHands " << l << "( " << j << "/" << card.lr.size() << "," << k << "/" << rightHands[toInt(l)].size()  << ")" << endl;
+		rightHands[toInt(l)][k] = rightHands[toInt(l)][ rightHands[toInt(l)].size() - 1]; rightHands[toInt(l)].pop_back(); break;
+	      }
 	    }
+	    if( debug_out > 3 ) cerr << "c finished literal " << l << "( " << j << "/" << card.ll.size() << ")" << endl;
 	  }
-	  if( debug_out > 2 ) cerr << "c removed  " << card.ll << " <= " << card.k << " + " << card.lr << endl;
+	  
 	}
       }
       
@@ -509,19 +590,236 @@ bool FourierMotzkin::process()
       }
       newCards += cards.size() - oldSize;
     
+      // if found something, propagate!
+      if(!propagateCards( unitQueue, leftHands, rightHands, cards,inAmo) ) goto finishedFM;
   }
   
   // propagate found units - if failure, skip next steps
-  if( data.hasToPropagate() )
+  if( data.ok() && data.hasToPropagate() )
+    if( propagation.process(data,true) == l_False ) {data.setFailed(); goto finishedFM; }
+  
+  if( data.ok() && opt_newAmo > 0 && (newAMOs.size() > 0 || rejectedNewAmos.size() > 0) ) {
+    big.recreate( ca, data, data.getClauses() ); 
+    if(opt_newAmo > 1) big.generateImplied(data); // try to avoid adding redundant clauses!
+    for( int p = 0; p<2; ++ p ) {
+      // use both the list of newAMOs, and the rejected new amos!
+      for( int i = 0 ; i < (p == 0 ? newAMOs.size() : rejectedNewAmos.size()) ; ++ i ) {
+	CardC& c = p == 0 ? cards[newAMOs[i]] : rejectedNewAmos[i];
+	if( c.invalid() || !c.amo() ) {
+	  if( debug_out > 1 ) cerr << "c new AMO " << c.ll << " <= " << c.k << " + " << c.lr << " is dropped!" << endl;
+	  continue;
+	}
+	for( int j = 0 ; j < c.ll.size(); ++ j ) {
+	  for( int k = j+1; k < c.ll.size(); ++ k ) {
+	    bool present = false;
+	    if( opt_newAmo == 2 ) present = big.implies(c.ll[j],~c.ll[k]) || big.implies(~c.ll[k],c.ll[j]); // fast stamp check
+	    if(!present) present = big.isChild(c.ll[j],~c.ll[k]) || big.isChild(c.ll[k],~c.ll[j]); // slower list check
+	    if( !present ) { // if the information is not part of the formula yet, add the clause!
+	      if( debug_out > 2 ) cerr << "c create new binary clause " <<  ~c.ll[k] << " , " << ~c.ll[j] << endl;
+	      addedBinaryClauses ++;
+	      unitQueue.clear();
+	      unitQueue.push( ~c.ll[k] < ~c.ll[j] ? ~c.ll[k] : ~c.ll[j] );
+	      unitQueue.push( ~c.ll[k] < ~c.ll[j] ? ~c.ll[j] : ~c.ll[k] );
+	      CRef tmpRef = ca.alloc(unitQueue, false); // no learnt clause!
+	      assert( ca[tmpRef][0] < ca[tmpRef][1] && "the clause has to be sorted!" );
+	      data.addClause( tmpRef );
+	      data.getClauses().push( tmpRef );
+	    }
+	  }
+	}
+	unitQueue.clear();
+      }
+    }
+  }
+  
+  if( data.ok() && opt_newAlo > 0 && (newALOs.size() > 0 || rejectedNewAlos.size() > 0) ) {
+    for( int p = 0; p<2; ++ p ) {
+      for( int i = 0 ; i < (p == 0 ? newALOs.size() : rejectedNewAlos.size()) ; ++ i ) {
+	CardC& c = p == 0 ? cards[newALOs[i]] : rejectedNewAlos[i];
+	if( c.invalid() || !c.alo() ) {
+	  if( debug_out > 1 ) cerr << "c new ALO " << c.ll << " <= " << c.k << " + " << c.lr << " is dropped!" << endl;
+	  continue;
+	}
+	if( c.lr.size() == 1 ) {
+	  if( data.enqueue(c.lr[0]) == l_False ) goto finishedFM;
+	} else if( ! hasDuplicate(c.lr) ) {
+	  CRef tmpRef = ca.alloc(c.lr, false); // no learnt clause!
+	  ca[tmpRef].sort();
+	  assert( ca[tmpRef][0] < ca[tmpRef][1] && "the clause has to be sorted!" );
+	  data.addClause( tmpRef );
+	  data.getClauses().push( tmpRef );
+	  addedClauses++;
+	}
+      }
+    }
+  }
+  
+  // propagate found units - if failure, skip next steps
+  if( data.ok() && data.hasToPropagate() )
+    if( propagation.process(data,true) == l_False ) {data.setFailed(); goto finishedFM; }
+  
+  if( data.ok() && opt_newAlk > 0 && (newALKs.size() > 0 || rejectedNewAlks.size() > 0) ) {
+    for( int p = 0; p<2; ++ p ) {
+      for( int i = 0 ; i < (p == 0 ? newALKs.size() : rejectedNewAlks.size()) ; ++ i ) {
+	CardC& c = p == 0 ? cards[newALKs[i]] : rejectedNewAlks[i];
+	if( c.invalid() || !c.alk() ) {
+	  if( debug_out > 1 ) cerr << "c new ALK " << c.ll << " <= " << c.k << " + " << c.lr << " is dropped!" << endl;
+	  continue;
+	}
+	if( c.lr.size() == 1 ) {
+	  if( data.enqueue(c.ll[0]) == l_False ) goto finishedFM;
+	} else if( ! hasDuplicate(c.lr) ) {
+	  assert( c.lr.size() > 1 && "empty and unit should have been handled before!" );
+	  CRef tmpRef = ca.alloc(c.lr, false); // no learnt clause!
+	  ca[tmpRef].sort();
+	  assert( ca[tmpRef][0] < ca[tmpRef][1] && "the clause has to be sorted!" );
+	  data.addClause( tmpRef );
+	  data.getClauses().push( tmpRef );
+	  addedClauses++;
+	}
+      }
+    }
+  }
+  
+  // propagate found units - if failure, skip next steps
+  if( data.ok() && data.hasToPropagate() )
     if( propagation.process(data,true) == l_False ) {data.setFailed(); goto finishedFM; }
   
   finishedFM:;
-  
   
   fmTime = cpuTime() - fmTime;
   
   return false;
 }
+    
+template <class S, class T>
+static bool ordered_subsumes (const S & c, const T& other)
+{
+    int i = 0, j = 0;
+    while (i < c.size() && j < other.size())
+    {
+        if (c[i] == other[j])
+        {
+            ++i;
+            ++j;
+        }
+        // D does not contain c[i]
+        else if (c[i] < other[j])
+            return false;
+        else
+            ++j;
+    }
+    if (i == c.size())
+        return true;
+    else
+        return false;
+}
+    
+bool FourierMotzkin::hasDuplicate(const vector<Lit>& c)
+{
+  if( c.size() == 0 ) return false;
+  Lit min = c[0];
+  for( int i = 1; i < c.size(); ++ i ) if( data[min] < data[c[i]] ) min = c[i];
+  
+  vector<CRef>& list = data.list(min); 
+  for( int i = 0 ; i < list.size(); ++ i ) {
+    Clause& d = ca[list[i]];
+    if( d.can_be_deleted() ) continue;
+    int j = 0 ;
+    if( d.size() == c.size() ) { // do not remove itself - cannot happen, because one clause is not added yet
+      while( j < c.size() && c[j] == d[j] ) ++j ;
+      if( j == c.size() ) { 
+	if( debug_out > 1 ) cerr << "c clause is equal to [" << list[i] << "] : " << d << endl;
+	detectedDuplicates ++;
+	return true;
+      }
+    }
+    if( opt_checkSub ) { // check each clause for being subsumed -> kick subsumed clauses!
+      if( d.size() < c.size() ) {
+	detectedDuplicates ++;
+	if( ordered_subsumes(d,c) ) {
+	  if( debug_out > 1 ) cerr << "c clause " << c << " is subsumed by [" << list[i] << "] : " << d << endl;
+	  return true; // the other clause subsumes the current clause!
+	}
+      } if( d.size() > c.size() ) { // if size is equal, then either removed before, or not removed at all!
+	if( ordered_subsumes(c,d) ) { 
+	  d.set_delete(true);
+	  data.removedClause(list[i]);
+	  detectedDuplicates++;
+	}
+      }
+    }
+  }
+  return false;
+}
+    
+bool FourierMotzkin::propagateCards(vec< Lit >& unitQueue, vector< std::vector< int > >& leftHands, vector< std::vector< int > >& rightHands, vector< FourierMotzkin::CardC >& cards, MarkArray& inAmo)
+{
+    // propagate method
+    while( unitQueue.size() > 0 ) {
+      Lit p = unitQueue.last(); unitQueue.pop();
+      for( int p1 = 0; p1 < 2; ++ p1 ) {
+	if( p1 == 1 ) p = ~p;
+	for( int p2 = 0 ; p2 < 2; ++ p2 ) {
+	  vector<int>& indexes = (p2==0 ? leftHands[ toInt(p) ] : rightHands[ toInt(p) ]);
+	  for( int i = 0 ; i < indexes.size(); ++ i ) {
+	    CardC& c = cards[ indexes[i] ];
+	    steps ++;
+	    if( c.invalid() ) continue; // do not consider this constraint any more!
+	    if( debug_out > 2 ) cerr << "c propagate " << c.ll << " <= " << c.k << " + " << c.lr << endl;
+	    // remove all assigned literals and either reduce the ll vector, or "k"
+	    int kc = 0;
+	    for( int j = 0 ; j < c.ll.size(); ++ j ) {
+	      if( data.value(c.ll[j]) == l_True ) {
+		if( debug_out > 2 ) cerr << "c since " << c.ll[j] << " == top, reduce k from " << c.k << " to " << c.k - 1 << endl;
+		c.k --;
+	      } else if( data.value(c.ll[j]) == l_Undef ) {
+		if( debug_out > 2 ) cerr << "c keep literal " << c.ll[j] << endl;
+		c.ll[kc++] = c.ll[j];
+	      } else if( debug_out > 2 ) cerr << "c drop unsatisfied literal " << c.ll[j] << endl;
+	    }
+	    c.ll.resize(kc);
+	    if( debug_out > 2 ) cerr << "c        to " << c.ll << " <= " << c.k << " + " << c.lr << endl;
+	    if(c.isUnit() ) {  // propagate AMOs only!
+	      for( int j = 0 ; j < c.ll.size(); ++ j ) { // all literals in ll have to be set to false
+		if( ! inAmo.isCurrentStep( toInt(~c.ll[j]) ) ) { // store each literal only once in the queue
+		  propUnits ++;
+		  inAmo.setCurrentStep( toInt(~c.ll[j]) );
+		  unitQueue.push(~c.ll[j]);
+		  if( data.enqueue( ~c.ll[j] ) == l_False ) {
+		    if( debug_out > 1 ) cerr << "c enquing " << ~c.ll[j] << " failed" << endl;
+		     return false; // enqueing this literal failed -> finish!
+		  }
+		}
+	      }
+	      for( int j = 0 ; j < c.lr.size(); ++ j ) { // al literals in lr have to be set to true
+		if( ! inAmo.isCurrentStep( toInt(c.lr[j]) ) ) { // store each literal only once in the queue
+		  propUnits ++;
+		  inAmo.setCurrentStep( toInt(c.lr[j]) );
+		  unitQueue.push(c.lr[j]);
+		  if( data.enqueue( c.lr[j] ) == l_False ) {
+		    if( debug_out > 1 ) cerr << "c enquing " << c.lr[j] << " failed" << endl;
+		     return false; // enqueing this literal failed -> finish!
+		  }
+		}
+	      }
+	      c.invalidate();
+	    }
+	    if( c.taut() ) c.invalidate();
+	    else if ( c.failed() ) {
+	      if( debug_out > 1 ) cerr << "c resulting constraint cannot be satisfied!" << endl;
+	      data.setFailed(); return false;
+	    }
+	  }
+	}
+      }
+      // clear all occurrence lists!
+      leftHands[toInt(p)].clear();leftHands[toInt(~p)].clear();
+      rightHands[toInt(p)].clear();rightHands[toInt(~p)].clear();
+    }
+    return true;
+}
+    
     
 void FourierMotzkin::printStatistics(ostream& stream)
 {
@@ -538,9 +836,20 @@ void FourierMotzkin::printStatistics(ostream& stream)
   << endl
   << "c [STAT] FM(2) "
   << irregular << " irregulars, " 
+  << pureAmoLits << " pureAmoLits, "
+  << cardDiff << " diff, " 
   << discardedCards << " discards, "
   << newCards << " addedCs, "
   << removedCards << " removedCs, "
+  << newAmos << " newAmos, " 
+  << discardedNewAmos << " discardedNewAmos, " 
+  << endl
+  << "c [STAT] FM(3) "
+  << addedBinaryClauses << " newAmoBinCls, "
+  << addedClauses << " newCls, "
+  << newAlos << " newAlos, "
+  << newAlks << " newAlks, "
+  << detectedDuplicates << " duplicates, " 
   << endl;
 }
 
