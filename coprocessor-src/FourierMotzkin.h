@@ -26,7 +26,7 @@ class FourierMotzkin : public Technique  {
   int steps;
   int fmLimit;
   int foundAmos;
-  int sameUnits,deducedUnits;
+  int sameUnits,deducedUnits,propUnits;
   int addDuplicates;
   int irregular;
   int usedClauses;
@@ -43,9 +43,12 @@ class FourierMotzkin : public Technique  {
     CardC( const Clause& c ) :k(-1) { lr.resize(c.size(),lit_Undef); for(int i = 0 ; i < c.size(); ++i ) lr[i] = c[i]; }// constructor for usual clauses
     bool amo() const { return k == 1 && lr.size() == 0 ; }
     bool amt() const { return k == 2 && lr.size() == 0 ; }
+    bool amk() const { return k >= 0 && lr.size() == 0 ; }
     bool isUnit() const { return (k + (int)lr.size()) == 0; }
     bool failed() const { return ((int)lr.size() + k) < 0; }
     bool taut() const { return k > (int)ll.size(); } // assume no literal appears both in ll and lr
+    bool invalid() const { return k==0 && ll.size() == 0 && lr.size() == 0; } // nothing stored in the constraint any more
+    void invalidate() { k=0;ll.clear();lr.clear();}
     CardC() : k(0) {} // default constructor
   };
   
