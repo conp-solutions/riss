@@ -9,8 +9,8 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 static const char* _cat = "COPROCESSOR 3 - FOURIERMOTZKIN";
 
 static IntOption  opt_fmLimit        (_cat, "cp3_fm_limit"  ,"number of steps allowed for FM", 12000000, IntRange(0, INT32_MAX));
-static IntOption  opt_fmGrow         (_cat, "cp3_fm_grow"   ,"max. grow of number of constraints per step", 10, IntRange(0, INT32_MAX));
-static IntOption  opt_fmGrowT        (_cat, "cp3_fm_growT"  ,"total grow of number of constraints", 10000, IntRange(0, INT32_MAX));
+static IntOption  opt_fmGrow         (_cat, "cp3_fm_grow"   ,"max. grow of number of constraints per step", 40, IntRange(0, INT32_MAX));
+static IntOption  opt_fmGrowT        (_cat, "cp3_fm_growT"  ,"total grow of number of constraints", 100000, IntRange(0, INT32_MAX));
 
 static BoolOption opt_atMostTwo      (_cat, "cp3_fm_amt"     ,"extract at-most-two", false);
 static BoolOption opt_findUnit       (_cat, "cp3_fm_unit"    ,"check for units first", true);
@@ -107,9 +107,6 @@ bool FourierMotzkin::process()
   // for l in F
   while (heap.size() > 0 && (data.unlimited() || fmLimit > steps) && !data.isInterupted() ) 
   {
-    /** garbage collection */
-    data.checkGarbage();
-    
     const Lit right = toLit(heap[0]);
     assert( heap.inHeap( toInt(right) ) && "item from the heap has to be on the heap");
 
@@ -248,11 +245,11 @@ bool FourierMotzkin::process()
       const Lit pl = mkLit(v,false), nl = mkLit(v,true);
       if( leftHands[ toInt(pl) ] .size() > 2 || leftHands[ toInt(nl) ] .size() > 2 ) continue; // only if the variable has very few occurrences
       for( int i = 0 ; i < leftHands[toInt(pl)].size() && steps < fmLimit; ++ i ) { // since all cards are compared, be careful!
-	const CardC& card1 = cards[leftHands[toInt(pl)][i]];
 	steps ++;
-	if( card1.invalid() ) continue;
-	if( !card1.amo() ) continue; // can do this on AMO only
+	if( cards[leftHands[toInt(pl)][i]].invalid() ) continue;
+	if( !cards[leftHands[toInt(pl)][i]].amo() ) continue; // can do this on AMO only
 	for( int j = 0 ; j < leftHands[toInt(nl)].size(); ++ j ) {
+	  const CardC& card1 = cards[leftHands[toInt(pl)][i]]; // get both references here, because otherwise they will become invalid!
 	  const CardC& card2 = cards[leftHands[toInt(nl)][j]];
 	  steps ++;
 	  if( card2.invalid() ) continue;
@@ -267,12 +264,12 @@ bool FourierMotzkin::process()
 	  data.lits.clear();
 	  while( n1 < v1.size() && n2 < v2.size() ) {
 	    if( v1[n1] == v2[n2] ) { // same literal in two amos with a different literal -> have to be unit!
-	      if( ! inAmo.isCurrentStep( toInt(v1[n1]) ) ) { // store each literal only once in the queue
+	      if( ! inAmo.isCurrentStep( toInt(~v1[n1]) ) ) { // store each literal only once in the queue
 		  sameUnits ++;
-		  inAmo.setCurrentStep( toInt(v1[n1]) );
-		  unitQueue.push(v1[n1]);
-		  if( data.enqueue( v1[n1] ) == l_False ) {
-		    if( debug_out > 1 ) cerr << "c enquing " << v1[n1] << " failed" << endl;
+		  inAmo.setCurrentStep( toInt(~v1[n1]) );
+		  unitQueue.push(~v1[n1]);
+		  if( data.enqueue( ~v1[n1] ) == l_False ) {
+		    if( debug_out > 1 ) cerr << "c enquing " << ~v1[n1] << " failed" << endl;
 		    goto finishedFM; // enqueing this literal failed -> finish!
 		  }
 	      }
@@ -489,7 +486,7 @@ bool FourierMotzkin::process()
 		  inAmo.setCurrentStep( toInt(thisCard.lr[k]) );
 		  unitQueue.push(thisCard.lr[k]);
 		  if( data.enqueue( thisCard.lr[k] ) == l_False ) {
-		    if( debug_out > 1 ) cerr << "c enquing " << thisCard.ll[k] << " failed" << endl;
+		    if( debug_out > 1 ) cerr << "c enquing " << thisCard.lr[k] << " failed" << endl;
 		    goto finishedFM;
 		  }
 		}

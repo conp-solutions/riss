@@ -1969,8 +1969,6 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
    
    ee.clear(); // clear the stack, because all EEs have been processed
        
-  }
-  
    // if force, or there has been equis:
        // take care of unit propagation and subsumption / strengthening
     if( data.hasToPropagate() ) { // after each application of equivalent literals perform unit propagation!
@@ -1989,6 +1987,8 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
       if( propagation.process(data,true) == l_False ) return newBinary;
     }
 
+  }
+  
     modifiedFormula = modifiedFormula || propagation.appliedSomething() || subsumption.appliedSomething();
     
     // the formula will change, thus, enqueue everything

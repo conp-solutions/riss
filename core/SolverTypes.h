@@ -381,7 +381,11 @@ public:
 	if( !other.can_be_deleted() && can_be_deleted() ) return false;
 	if( clauseSize > other.size() ) return false;
 	if( clauseSize < other.size() ) return true;
-	for( uint32_t i = 0 ; i < clauseSize; i++ ){
+	for( uint32_t i = 0 ; i < clauseSize; i++ ){ // first criterion: vars
+		if( var(other[i]) < var(data[i].lit) ) return false;
+		if( var(data[i].lit) < var(other[i]) ) return true;
+	}
+	for( uint32_t i = 0 ; i < clauseSize; i++ ){// second criterion: polarity
 		if( other[i] < data[i].lit ) return false;
 		if( data[i].lit < other[i] ) return true;
 	}
