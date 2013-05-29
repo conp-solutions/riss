@@ -1636,10 +1636,12 @@ inline void BIG::create(ClauseAllocator& ca, CoprocessorData& data, vec<CRef>& l
     const Clause& c = ca[list[i]];
     if(c.size() != 2 || c.can_be_deleted() ) continue;
     const Lit l0 = c[0]; const Lit l1 = c[1];
+    
     ( big[ toInt(~l0) ] )[ sizes[toInt(~l0)] ] = l1;
     ( big[ toInt(~l1) ] )[ sizes[toInt(~l1)] ] = l0;
     sizes[toInt(~l0)] ++;
     sizes[toInt(~l1)] ++;
+    nextClause:;
   }
 }
 

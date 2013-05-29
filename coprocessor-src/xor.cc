@@ -196,13 +196,34 @@ bool XorReasoning::process()
 
 bool XorReasoning::propagate(vector< Lit >& unitQueue, MarkArray& ma, vector< std::vector< int > >& occs, vector< XorReasoning::GaussXor >& xorList)
 {
-  // TODO: implement propagation here!
   while( unitQueue.size() > 0 ) {
     const Lit p = unitQueue.back();
     unitQueue.pop_back(); 
     if( l_False == data.enqueue(p) ) return false; // enqueing next literal failed!
     // propagate in all xors that contain var(p)
-    
+    vector<int>& indexes = occs[ var(p) ];
+    for( int i = 0 ; i < indexes.size(); ++ i ) {
+      GaussXor& x = xorList[indexes[i]];
+      int k = 0;
+      for( int j = 0 ; j < x.size(); ++ j ) {
+	if( data.value( mkLit(x.vars[j],false) ) == l_Undef ) {
+	  x.vars[k++] = x.vars[j]; // keep this variable!
+	} else if( data.value( mkLit(x.vars[j],false) ) == l_True ) {
+	  x.k = ! x.k; // remove this variable, memorize that it has been set to true!
+	} // else if( l == l_False) -> remove variable, is done silently
+      }
+      x.vars.resize(k); // shrink vector
+      if( x.failed() ) return false;
+      if( x.unit() ) { // add the newly created unit
+	if( !data.ma.isCurrentStep( toInt(x.getUnitLit()) ) ) {
+	  data.ma.setCurrentStep( toInt(x.getUnitLit()) );
+	  xorDeducedUnits ++;
+	  unitQueue.push_back(x.getUnitLit());
+	  if( debug > 1 ) { cerr << "c created unit " << x.getUnitLit() << " from  XOR " <<  " + "; for( int j = 0 ; j < x.vars.size(); ++ j ) cerr <<x.vars[j] + 1 << " + "; cerr << " == " << (x.k ? 1 : 0) << endl; }
+	}
+      }
+    }
+    indexes.clear(); // there cannot be XORs with this variable any more
   }
   return true;
 }
@@ -307,7 +328,7 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 				const Clause& cl2 = ca[c2];
 				uint32_t o = 0;
 				for( uint32_t k = 0; k < cl2.size(); k ++ )
-					if( sign( cl2[k] ) ) o = o ^ 1;
+					if( !sign( cl2[k] ) ) o = o ^ 1; // count literals that are set to true!
 				if( o == 1 ) { 
 				  data.clss.push_back( table[j] );
 				  data.clss[ data.clss.size() -1 ] = data.clss[ count[0] ];
@@ -385,8 +406,12 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 				  vector<CRef>& cls = data.list(current); // clause list of literal that is currently checked!
 				  for( uint32_t k = 0 ; k < cls.size(); ++ k ) {
 				    const Clause& cclause = ca[cls[k]];
+				    if( cls[k] == data.clss[offset] ) continue; // do not consider the same clause twice!	
 				    if(cclause.can_be_deleted()) continue;
-				    if(cclause.size() > opt_xorMatchLimit || cclause.size() >= cL) continue; // for performance, and it does not make sense to check clauses that are bigger than the current ones
+				    if(cclause.size() > opt_xorMatchLimit  
+				      || ( ! opt_findResolved && cclause.size() >= cL) 
+				      || ( opt_findResolved && cclause.size() > cL) // due to resolution, also bigger clauses are allowed!
+				    ) continue; // for performance, and it does not make sense to check clauses that are bigger than the current ones
 				    if( debug > 4 ) cerr << "c consider clause " << cclause << endl;
 				    
 				    Lit resolveLit = lit_Undef, foundLit = lit_Error; // if only one variable is wrong, the other literal could be resovled in?
@@ -428,6 +453,20 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 				      }
 				    }
 				    if( resolveLit == lit_Error ) continue; // next clause!
+				    int subsumeSize = (resolveLit == lit_Undef || foundLit != lit_Undef ) ? cclause.size() : cclause.size() - 1;
+				    if( subsumeSize == firstClause.size() ) {
+				      int o0 = 0;
+				      for( int m = 0 ; m < cclause.size(); ++ m ) {
+					const Lit ccl = cclause[m] != resolveLit ? cclause[m] : foundLit; // use the resolvedIn literal, instead of the literal that is resolved
+					assert( ccl != lit_Undef && "neither a clause literal, nor foundLit can be undefined!") ;
+					if( !sign(ccl) ) o0 = (o0 ^ 1);
+				      }
+				      if( o0 != o ) {
+					if( debug > 4 ) cerr << "c clause " << cclause << " has all variables, but the odd value is wrong!" << endl;
+					continue; // can consider only smaller clauses, or their odd value is the same as for for the first clause!
+				      }
+				    }
+				    
 				    resolvedInCls = resolveLit != lit_Undef ? resolvedInCls + 1 : resolvedInCls; // stats!
 				    resStrength = (resolveLit != lit_Undef && foundLit == lit_Undef) ? resStrength + 1 : resStrength; // stats!
 				    
@@ -445,7 +484,7 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 					  cerr << "c work on pulled in lit " << ccl << endl;
 					}
 				      }
-				      if( ccl == lit_Undef )continue; // nothing to do here (do not use same literal twice!)
+				      if( ccl == lit_Undef ) continue; // nothing to do here (do not use same literal twice!)
 				      const Var ccv = var(ccl);
 				      bool hitVariable = false;
 				      for( uint32_t mv = 0 ; mv < cL; ++ mv )
@@ -465,6 +504,9 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 				      // skip this xor? no, can still lead to improved reasoning!
 				    }
 				    if( debug > 3){ cerr << "c found subsume clause " << ca[cls[k]] << " with number=" << myNumber << " match=" << myMatch << endl;}
+				    assert( cclause.size() > 1 && "do not consider unit clauses here!");
+				    if( debug > 4 ) cerr << "c size of actual clause: " << subsumeSize << endl;
+				    assert( cL >= cclause.size() && "subsume clauses cannot be greater than the current XOR" );
 				    for( uint32_t match = 0 ; match < 2*shift; ++match ) {
 				      
 				      if( foundByIndex[ match/2 ] == 1 ) {
@@ -475,15 +517,24 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 				      if( (match & myMatch) == myNumber ) {
 					
 					// reject matches that have the wrong polarity!
-					uint32_t o1 = 1; // start with 1, for whatever reason ... (or depends on difference in length of the initial clause and the subsume-clause?! take care of foundLit in this case!)
+					uint32_t o1 = 0; // match has to be odd, as initial clause! and has to contain bits of myNumber!
+					if ( debug > 4 ) cerr << "c initial odd: " << o1 << ", cL: " << cL << ", match: " << match << endl;
 					uint32_t matchBits = match;
 					for( uint32_t km = 0; km < cL; km ++ )
 					{
-					  if( matchBits & 1 == 1 ) o1 = o1 ^ 1;
+					  if( (matchBits & 1) == 1 ) {
+					    if( debug > 4 ) cerr << "c bit " << km << " match, this odd=" << (int)(o1^1) << endl;
+					    o1 = (o1 ^ 1);
+					  } else {
+					     if( debug > 4 ) cerr << "c bit " << km << " does not match, this odd=" << (int)(o1^1) << endl;
+					  }
 					  matchBits = matchBits >> 1;
 					}
 					// wrong polarity -> reject
-					if( o1 != o ) continue;
+					if( o1 != o ) {
+					  if( debug > 4 ) cerr << "c current odd " << o1 << " does not match XOR odd " << o << endl;
+					  continue;
+					}
 					
 					if( debug > 3) cerr << "c current clause subsumes match=" << match/2 << "(" << match << ") - match&myMatch=" << (int)(match & myMatch) << " vs " << myNumber << " with odd=" << o1 << endl;
 					if( foundByIndex[ match/2 ] == 0 ) foundCount++; // only if this clause sets the value from 0 to 1!

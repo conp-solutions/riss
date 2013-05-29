@@ -13,14 +13,14 @@ static const char* _cat = "COPROCESSOR 3 - EE";
 #if defined CP3VERSION  && CP3VERSION < 350
 static const int opt_level            = 0;
 static const int opt_gate_limit       = 0;
-static const bool opt_old_circuit      = false;
+static const int opt_circuit_iters     = 2;
 static const bool opt_eagerEquivalence = false;
 static const bool opt_eeGateBigFirst   = false;
 static const char* aagFile = 0;
 #else
 static IntOption  opt_level            (_cat, "cp3_ee_level",    "EE on BIG, gate probing, structural hashing", 0, IntRange(0, 3));
 static IntOption  opt_gate_limit       (_cat, "cp3_ee_glimit",   "step limit for structural hashing", INT32_MAX, IntRange(0, INT32_MAX));
-static BoolOption opt_old_circuit      (_cat, "cp3_old_circuit", "do old circuit extraction", false);
+static IntOption  opt_circuit_iters    (_cat, "cp3_ee_cIter",    "max. EE iterations for circuit (-1 == inf)", 2, IntRange(-1, INT32_MAX));
 static BoolOption opt_eagerEquivalence (_cat, "cp3_eagerGates",  "do handle gates eagerly", true);
 static BoolOption opt_eeGateBigFirst   (_cat, "cp3_BigThenGate", "detect binary equivalences before going for gates", true);
 static StringOption aagFile            (_cat, "ee_aag", "write final circuit to this file");
@@ -34,13 +34,12 @@ static const bool debug_out = false;
 static BoolOption debug_out            (_cat, "ee_debug", "print debug output to screen",false);
 #endif
 
-static IntOption opt_ee_limit  (_cat, "cp3_ee_limit", "step limit for detecting equivalent literals", 1000000, IntRange(0, INT32_MAX));
-static IntOption  opt_inpStepInc      (_cat, "cp3_ee_inpInc","increase for steps per inprocess call", 200000, IntRange(0, INT32_MAX));
+static BoolOption opt_eeSub            (_cat, "ee_sub", "do subsumption/strengthening during applying equivalent literals?", false);
+static IntOption  opt_ee_limit         (_cat, "cp3_ee_limit", "step limit for detecting equivalent literals", 1000000, IntRange(0, INT32_MAX));
+static IntOption  opt_inpStepInc       (_cat, "cp3_ee_inpInc","increase for steps per inprocess call", 200000, IntRange(0, INT32_MAX));
 
 
 static const int eeLevel = 1;
-/// temporary Boolean flag to quickly enable debug output for the whole file
-/// const static bool debug_out = true; // print output to screen
 
 EquivalenceElimination::EquivalenceElimination(ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation, Coprocessor::Subsumption& _subsumption)
 : Technique(_ca,_controller)
@@ -103,7 +102,7 @@ void EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
       gates.clear();
 
       iter ++;
-      // cerr << "c run " << iter << " round of circuit equivalences" << endl;
+      if( opt_circuit_iters != -1 && iter > opt_circuit_iters ) break;
 
       if( debug_out ) {
 	cerr << endl << "====================================" << endl;
@@ -120,20 +119,19 @@ void EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
       gateExtractTime = cpuTime() - gateExtractTime;
       circ.extractGates(data, gates);
       gateExtractTime = cpuTime() - gateExtractTime;
-      // cerr << "c found " << gates.size() << " gates" << endl ;
       if ( debug_out ) {
 	cerr << endl << "==============================" << endl;
-      data.log.log(eeLevel,"found gates", gates.size());
-      for( int i = 0 ; i < gates.size(); ++ i ) {
-	Circuit::Gate& gate = gates[i];
-	// data.log.log(eeLevel,"gate output",gate.getOutput());
-	if(debug_out) gate.print(cerr);
-      }
-      cerr << "==============================" << endl << endl;
-      cerr << "c equivalences:" << endl;
-      for ( Var v = 0 ; v < data.nVars(); ++v )
-	if( mkLit(v,false) != getReplacement( mkLit(v,false) ) )
-	  cerr << "c " << v+1 << " == " << getReplacement( mkLit(v,false) ) << endl;
+	data.log.log(eeLevel,"found gates", gates.size());
+	for( int i = 0 ; i < gates.size(); ++ i ) {
+	  Circuit::Gate& gate = gates[i];
+	  // data.log.log(eeLevel,"gate output",gate.getOutput());
+	  if(debug_out) gate.print(cerr);
+	}
+	cerr << "==============================" << endl << endl;
+	cerr << "c equivalences:" << endl;
+	for ( Var v = 0 ; v < data.nVars(); ++v )
+	  if( mkLit(v,false) != getReplacement( mkLit(v,false) ) )
+	    cerr << "c " << v+1 << " == " << getReplacement( mkLit(v,false) ) << endl;
       }
 
       vector<Lit> oldReplacedBy = replacedBy;
@@ -147,6 +145,15 @@ void EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
 	if( !data.ok() )
 	  if( debug_out ) cerr << "state of formula is UNSAT!" << endl;
       }
+      
+      if( opt_level > 1 ) {
+	moreEquivalences = moreEquivalences || findGateEquivalences( data, gates );
+	if( moreEquivalences )
+	  if( debug_out ) cerr << "c found new equivalences with the gate method!" << endl;
+	if( !data.ok() )
+	  if( debug_out ) cerr << "state of formula is UNSAT!" << endl;
+      }
+      
       replacedBy = oldReplacedBy;
       
       if( !data.ok() ) { eeTime  = cpuTime() - eeTime; return; }
@@ -615,6 +622,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 
 bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& data, vector< Circuit::Gate > gates)
 {
+  MethodTimer mt(&gateTime);
   int oldEquivalences = data.getEquivalences().size();
   
   /** a variable in a circuit can participate in non-clustered gates only, or also participated in clustered gates */
@@ -676,16 +684,6 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
   }
   
   // TODO: remove clustered gates, if they appear for multiple variables!
-  
-  if( false ) {
-   for( Var v = 0 ; v < data.nVars(); ++ v ) {
-     cerr << "c var " << v+1 << " role: " << ( ((bitType[v]) & 2) != 0 ? "clustered " : "") << ( (bitType[v] & 1) != 0 ? "output" : "") << "("<< (int)bitType[v] << ") with dependend gates: " << endl;
-     for( int i = 0 ; i < varTable[v].size(); ++ i )
-       gates[ varTable[v][i] ].print(cerr);
-   }
-  }
-  
-  return false;
   
   cerr << "c ===== START SCANNING ======= " << endl;
   
@@ -1953,14 +1951,16 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	 resetVariables = true;
        }
 // TODO necessary here?
-//        // take care of unit propagation and subsumption / strengthening
-//        if( data.hasToPropagate() ) { // after each application of equivalent literals perform unit propagation!
-// 	 if( propagation.propagate(data,true) == l_False ) return newBinary;
-//        }
-//        subsumption.subsumeStrength(data);
-//        if( data.hasToPropagate() ) { // after each application of equivalent literals perform unit propagation!
-// 	 if( propagation.propagate(data,true) == l_False ) return newBinary;
-//        }
+       // take care of unit propagation and subsumption / strengthening
+       if( data.hasToPropagate() ) { // after each application of equivalent literals perform unit propagation!
+	 if( propagation.process(data,true) == l_False ) return newBinary;
+       }
+       if( opt_eeSub ){
+	subsumption.process();
+	if( data.hasToPropagate() ) { // after each application of equivalent literals perform unit propagation!
+	  if( propagation.process(data,true) == l_False ) return newBinary;
+	}
+       }
        
      } // finished current class, continue with next EE class!
    }
@@ -1976,15 +1976,15 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	 newBinary = true; // potentially, there are new binary clauses
 	 if( propagation.process(data,true) == l_False ) return newBinary;
     }
-    if( subsumption.hasWork() ) {
-	subsumption.process();
-	newBinary = true; // potentially, there are new binary clauses
-    	resetVariables = true;
-    }
-    if( data.hasToPropagate() ) { // after each application of equivalent literals perform unit propagation!
-      resetVariables = true;
+    if( opt_eeSub && subsumption.hasWork() ) {
+      subsumption.process();
       newBinary = true; // potentially, there are new binary clauses
-      if( propagation.process(data,true) == l_False ) return newBinary;
+      resetVariables = true;
+      if( data.hasToPropagate() ) { // after each application of equivalent literals perform unit propagation!
+	resetVariables = true;
+	newBinary = true; // potentially, there are new binary clauses
+	if( propagation.process(data,true) == l_False ) return newBinary;
+      }
     }
 
   }
