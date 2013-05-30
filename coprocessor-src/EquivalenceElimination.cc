@@ -29,14 +29,16 @@ static StringOption aagFile            (_cat, "ee_aag", "write final circuit to 
 /// enable this parameter only during debug!
 
 #if defined CP3VERSION  
-static const bool debug_out = false;
+static const int debug_out = 0;
 #else
-static BoolOption debug_out            (_cat, "ee_debug", "print debug output to screen",false);
+static IntOption  debug_out            (_cat, "ee_debug", "print debug output to screen", 0, IntRange(0, 3));
 #endif
 
-static BoolOption opt_eeSub            (_cat, "ee_sub", "do subsumption/strengthening during applying equivalent literals?", false);
-static IntOption  opt_ee_limit         (_cat, "cp3_ee_limit", "step limit for detecting equivalent literals", 1000000, IntRange(0, INT32_MAX));
-static IntOption  opt_inpStepInc       (_cat, "cp3_ee_inpInc","increase for steps per inprocess call", 200000, IntRange(0, INT32_MAX));
+static BoolOption opt_eeSub            (_cat, "ee_sub",        "do subsumption/strengthening during applying equivalent literals?", false);
+static IntOption  opt_ee_limit         (_cat, "cp3_ee_limit",  "step limit for detecting equivalent literals", 1000000, IntRange(0, INT32_MAX));
+static IntOption  opt_inpStepInc       (_cat, "cp3_ee_inpInc", "increase for steps per inprocess call", 200000, IntRange(0, INT32_MAX));
+static IntOption  opt_bigIters         (_cat, "cp3_ee_bIter",  "max. iteration to perform EE search on BIG", 3, IntRange(0, INT32_MAX));
+static BoolOption opt_iterative        (_cat, "cp3_ee_it",     "use the iterative BIG-EE algorithm", false);
 
 
 static const int eeLevel = 1;
@@ -104,7 +106,7 @@ void EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
       iter ++;
       if( opt_circuit_iters != -1 && iter > opt_circuit_iters ) break;
 
-      if( debug_out ) {
+      if( debug_out > 2 ) {
 	cerr << endl << "====================================" << endl;
 	cerr << "intermediate formula before gates: " << endl;
 	for( int i = 0 ; i < data.getClauses().size(); ++ i )
@@ -119,13 +121,13 @@ void EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
       gateExtractTime = cpuTime() - gateExtractTime;
       circ.extractGates(data, gates);
       gateExtractTime = cpuTime() - gateExtractTime;
-      if ( debug_out ) {
+      if ( debug_out > 2 ) {
 	cerr << endl << "==============================" << endl;
 	data.log.log(eeLevel,"found gates", gates.size());
 	for( int i = 0 ; i < gates.size(); ++ i ) {
 	  Circuit::Gate& gate = gates[i];
 	  // data.log.log(eeLevel,"gate output",gate.getOutput());
-	  if(debug_out) gate.print(cerr);
+	  if(debug_out > 2) gate.print(cerr);
 	}
 	cerr << "==============================" << endl << endl;
 	cerr << "c equivalences:" << endl;
@@ -138,20 +140,20 @@ void EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
       //vector< vector<Lit> >* externBig
     
       {
-	if( debug_out ) cerr << "c run miter EQ method" << endl;
+	if( debug_out > 2 ) cerr << "c run miter EQ method" << endl;
 	moreEquivalences = findGateEquivalencesNew( data, gates );
 	if( moreEquivalences )
-	  if( debug_out ) cerr << "c found new equivalences with the gate method!" << endl;
+	  if( debug_out > 2 ) cerr << "c found new equivalences with the gate method!" << endl;
 	if( !data.ok() )
-	  if( debug_out ) cerr << "state of formula is UNSAT!" << endl;
+	  if( debug_out > 2 ) cerr << "state of formula is UNSAT!" << endl;
       }
       
       if( opt_level > 1 ) {
 	moreEquivalences = moreEquivalences || findGateEquivalences( data, gates );
 	if( moreEquivalences )
-	  if( debug_out ) cerr << "c found new equivalences with the gate method!" << endl;
+	  if( debug_out > 2 ) cerr << "c found new equivalences with the gate method!" << endl;
 	if( !data.ok() )
-	  if( debug_out ) cerr << "state of formula is UNSAT!" << endl;
+	  if( debug_out > 2 ) cerr << "state of formula is UNSAT!" << endl;
       }
       
       replacedBy = oldReplacedBy;
@@ -172,6 +174,7 @@ void EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
 	doRepeat = applyEquivalencesToFormula(data, (iter == 1 && eeIter == 0) );   // in the first iteration, run subsumption/strengthening and UP!
 	moreEquivalences = doRepeat || moreEquivalences;
 	eeIter ++;
+	if( eeIter >= opt_bigIters ) break;
       } while ( doRepeat && data.ok() );
       // cerr << "c moreEquivalences in iteration " << iter << " : " << moreEquivalences << " with BIGee iterations " << eeIter << endl;
     }
@@ -181,8 +184,11 @@ void EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
   
   //do binary reduction
   if( data.ok() ) {
+    int eeIter = 0;
     do { 
       findEquivalencesOnBig(data);                              // finds SCC based on all literals in the eqDoAnalyze array!
+      eeIter ++;
+      if( eeIter >= opt_bigIters ) break;
     } while ( applyEquivalencesToFormula(data ) 
     && data.ok()
     && !data.isInterupted()  
@@ -194,7 +200,7 @@ void EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
     assert( (!data.ok() || !data.hasToPropagate() )&& "After these operations, all propagation should have been done" );
     
     
-      if( debug_out ) {
+      if( debug_out > 2 ) {
 	cerr << endl << "====================================" << endl;
 	cerr << "FINAL FORMULA after ELIMINATE: " << endl;
 	for( int i = 0 ; i < data.getClauses().size(); ++ i )
@@ -228,12 +234,12 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
   const bool enqOut = true;
   const bool enqInp  = true;
   
-  if( debug_out ) cerr << "c has to Propagate: " << data.hasToPropagate() << endl;
+  if( debug_out > 2 ) cerr << "c has to Propagate: " << data.hasToPropagate() << endl;
   
   int oldEquivalences = data.getEquivalences().size();
   
   if( opt_eeGateBigFirst ) {
-    if( debug_out ) cerr << "c do BIG extraction " << endl;
+    if( debug_out > 2 ) cerr << "c do BIG extraction " << endl;
     do { 
       findEquivalencesOnBig(data);                              // finds SCC based on all literals in the eqDoAnalyze array!
     } while ( applyEquivalencesToFormula(data ) && data.ok() ); // will set literals that have to be analyzed again!
@@ -279,12 +285,12 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
     // Assumption: inside a miter, each pure input variable has to have an even number of gates!
     if( (varTable[v].size() & 1) != 0 ) { 
       isMiter = false;
-      if( debug_out ) cerr << "c the given gate structure cannot be a miter, because variable " << v+1 << " has " << varTable[v].size() << " gates" << endl;
+      if( debug_out > 2 ) cerr << "c the given gate structure cannot be a miter, because variable " << v+1 << " has " << varTable[v].size() << " gates" << endl;
     }
   }
   
   int iter = 0;
-  if( debug_out ) {
+  if( debug_out > 2 ) {
   cerr << "current queue: ";
   for( int i = 0 ; i < currentPtr->size(); ++ i ) cerr << currentVariables[i]+1 << " ";
   cerr << endl;
@@ -303,20 +309,20 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
       currentPtr->pop_front();
       active.reset(v);
       // cerr << "c test variable " << v+1 << endl;
-      if( debug_out ) cerr << "c check variable " << v+1 << " with " << varTable[v].size() << " gates and replace literal " << getReplacement( mkLit(v,false ) ) << endl;
+      if( debug_out > 2 ) cerr << "c check variable " << v+1 << " with " << varTable[v].size() << " gates and replace literal " << getReplacement( mkLit(v,false ) ) << endl;
       // for all gates with this input variable:
       for( int i = 0 ; i < varTable[v].size(); ++ i ) {
 	Circuit::Gate& g = gates[ varTable[v][i] ];
 	if( g.isInvalid() ) continue;
 	// literals of the current gate
-	if( debug_out ) cerr << "c check gate ";
-	if( debug_out ) g.print(cerr);
+	if( debug_out > 2 ) cerr << "c check gate ";
+	if( debug_out > 2 ) g.print(cerr);
 	Lit a = getReplacement( g.a() ); Lit b = getReplacement( g.b() ); Lit x = getReplacement( g.x() ); 
-	if( debug_out ) cerr << "c WHICH is rewritten " << x << " <-> AND(" << a << "," << b << ")" << endl;
+	if( debug_out > 2 ) cerr << "c WHICH is rewritten " << x << " <-> AND(" << a << "," << b << ")" << endl;
 	
 	// assigned value
 	if ( data.value(a) != l_Undef || data.value(b) != l_Undef || data.value(x) != l_Undef) {
-	  if( debug_out ) cerr << "c gate has assigned inputs" << endl;
+	  if( debug_out > 2 ) cerr << "c gate has assigned inputs" << endl;
 	  if ( data.value(a) == l_True ) {
 	    if( opt_eagerEquivalence ) setEquivalent(b,x);
 	    data.addEquivalences( x,b );
@@ -341,31 +347,31 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	}
 	// somehow same inputs
 	if( a == b ) {
-	  if( debug_out ) cerr << "c found equivalence based on equivalent inputs " << x << " <-> AND(" << a << "," << b << ")" << endl; 
+	  if( debug_out > 2 ) cerr << "c found equivalence based on equivalent inputs " << x << " <-> AND(" << a << "," << b << ")" << endl; 
 	  if( opt_eagerEquivalence ) setEquivalent(a,x);
 	  data.addEquivalences(x,a);
 // 	  a = getReplacement( g.a() );
 // 	  x = getReplacement( g.x() );
 	} else if ( a == ~b ) {
-	  if( debug_out ) cerr << "c find an unsatisfiable G-gate based on complementary inputs " << x << " <-> AND(" << a << "," << b << ")" << endl;  
+	  if( debug_out > 2 ) cerr << "c find an unsatisfiable G-gate based on complementary inputs " << x << " <-> AND(" << a << "," << b << ")" << endl;  
 	  if( enqOut )data.enqueue(~x);
 	} 
 // These rules are unsound!
 // 	else if ( x == a ) {
-// 	  if( debug_out ) cerr << "c equi inputs G-gate " << x << " <-> AND(" << a << "," << b << ")" << endl;  
+// 	  if( debug_out > 2 ) cerr << "c equi inputs G-gate " << x << " <-> AND(" << a << "," << b << ")" << endl;  
 // 	  if( opt_eagerEquivalence ) setEquivalent(b,x);
 // // 	  b = getReplacement( g.b() );
 // // 	  x = getReplacement( g.x() );
 // 	  data.addEquivalences(x,b);
 // 	} else if ( x == b ) {
-// 	  if( debug_out ) cerr << "c equi inputs G-gate " << x << " <-> AND(" << a << "," << b << ")" << endl;  
+// 	  if( debug_out > 2 ) cerr << "c equi inputs G-gate " << x << " <-> AND(" << a << "," << b << ")" << endl;  
 // 	  if( opt_eagerEquivalence ) setEquivalent(a,x);
 // // 	  a = getReplacement( g.a() );
 // // 	  x = getReplacement( g.x() );
 // 	  data.addEquivalences(x,a);
 // 	} 
 	else if ( x == ~a || x == ~b) {
-	  if( debug_out ) cerr << "c find an unsatisfiable G-gate based on complementary input to output" << endl; 
+	  if( debug_out > 2 ) cerr << "c find an unsatisfiable G-gate based on complementary input to output" << endl; 
 	  if( enqOut )data.enqueue(~x);
 	} 
 
@@ -375,36 +381,36 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	  Circuit::Gate& other = gates [varTable[v][j]] ;
 	  if( other.isInvalid() ) continue;
 	  if( other.getType() != Circuit::Gate::AND ) continue;
-	  if( debug_out ) cerr << "c with OTHER [" << varTable[v][j] << "," << j << "] ";
-	  if( debug_out ) other.print(cerr);
+	  if( debug_out > 2 ) cerr << "c with OTHER [" << varTable[v][j] << "," << j << "] ";
+	  if( debug_out > 2 ) other.print(cerr);
  	  Lit oa = getReplacement( other.a() ); 
  	  Lit ob = getReplacement( other.b() ); 
  	  Lit ox = getReplacement( other.x() ); 
-	  if( debug_out ) cerr << "c WHICH is rewritten " << ox << " <-> AND(" << oa << "," << ob << ")" << endl;
+	  if( debug_out > 2 ) cerr << "c WHICH is rewritten " << ox << " <-> AND(" << oa << "," << ob << ")" << endl;
 	  // assigned value
 	  if ( data.value(oa) != l_Undef || data.value(ob) != l_Undef || data.value(ox) != l_Undef) {
-	    if( debug_out ) { cerr << "c gate has assigned inputs" << endl; other.print(cerr); }
+	    if( debug_out > 2 ) { cerr << "c gate has assigned inputs" << endl; other.print(cerr); }
 	    if ( data.value(oa) == l_True ) {
-	      if( debug_out ) cerr << "[   0]" << endl;
+	      if( debug_out > 2 ) cerr << "[   0]" << endl;
 	      if( opt_eagerEquivalence ) setEquivalent(ob,ox);
 	      data.addEquivalences( ox,ob );
 // 	      ob = getReplacement( other.b() ); 
 // 	      ox = getReplacement( other.x() );
 	    } else if ( data.value(oa) == l_False ) {
-	      if( debug_out ) cerr << "[   1]" << endl;
+	      if( debug_out > 2 ) cerr << "[   1]" << endl;
 	      if( enqOut )data.enqueue(~ox);  
 	    }
 	    if ( data.value(ob) == l_True ) {
-	      if( debug_out ) cerr << "[   2]" << endl;
+	      if( debug_out > 2 ) cerr << "[   2]" << endl;
 	      if( opt_eagerEquivalence ) setEquivalent(oa,ox);
 	      data.addEquivalences( ox,oa );
 // 	      oa = getReplacement( other.a() ); 
 // 	      ox = getReplacement( other.x() );
 	    } else if ( data.value(ob) == l_False ) {
-	      if( debug_out ) cerr << "[   3]" << endl;
+	      if( debug_out > 2 ) cerr << "[   3]" << endl;
 	      if( enqOut ) data.enqueue(~ox);  
 	    } else if ( data.value(ox) == l_True) {
-	      if( debug_out ) cerr << "[   4]" << endl;
+	      if( debug_out > 2 ) cerr << "[   4]" << endl;
 	      if( enqInp ) data.enqueue(oa);  
 	      if( enqInp ) data.enqueue(ob);  
 	    }
@@ -417,34 +423,34 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	  
 	  /// do simplify gate!
 	  if( oa == ob ) {
-	    if( debug_out ) cerr << "c found equivalence based on equivalent inputs" << endl;
-	    if( debug_out ) cerr << "[   5]" << endl;
+	    if( debug_out > 2 ) cerr << "c found equivalence based on equivalent inputs" << endl;
+	    if( debug_out > 2 ) cerr << "[   5]" << endl;
 	    if( opt_eagerEquivalence ) setEquivalent(oa,ox);
 	    data.addEquivalences(ox,oa);
 // 	    oa = getReplacement( other.a() ); 
 // 	    ox = getReplacement( other.x() );
 	  } else if ( oa == ~ob ) { // this rule holds!
-	    if( debug_out ) cerr << "c find an unsatisfiable O-gate based on complementary inputs " << ox << " <-> AND(" << oa << "," << ob << ")" << endl; 
-	    if( debug_out ) cerr << "[   6]" << endl;
+	    if( debug_out > 2 ) cerr << "c find an unsatisfiable O-gate based on complementary inputs " << ox << " <-> AND(" << oa << "," << ob << ")" << endl; 
+	    if( debug_out > 2 ) cerr << "[   6]" << endl;
 	    if( enqOut ) data.enqueue(~ox);
 	  } 
 // these rules are unsound
 // 	  else if ( ox == oa ) {
-// 	    if( debug_out ) cerr << "[   7]" << endl;
+// 	    if( debug_out > 2 ) cerr << "[   7]" << endl;
 // 	    if( opt_eagerEquivalence ) setEquivalent(ob,ox);
 // // 	    ob = getReplacement( other.b() ); 
 // // 	    ox = getReplacement( other.x() );
 // 	    data.addEquivalences(ox,ob);
 // 	  } else if ( ox == ob ) {
-// 	    if( debug_out ) cerr << "[   8]" << endl;
+// 	    if( debug_out > 2 ) cerr << "[   8]" << endl;
 // 	    if( opt_eagerEquivalence ) setEquivalent(oa,ox);
 // // 	    oa = getReplacement( other.a() ); 
 // // 	    ox = getReplacement( other.x() );
 // 	    data.addEquivalences(ox,oa);
 // 	  }
 	  else if ( ox == ~oa || ox == ~ob) { // this rule holds!
-	    if( debug_out ) cerr << "[   9]" << endl;
-	    if( debug_out ) cerr << "c find an unsatisfiable O-gate based on complementary input to output " << ox << " <-> AND(" << oa << "," << ob << ")" << endl; 
+	    if( debug_out > 2 ) cerr << "[   9]" << endl;
+	    if( debug_out > 2 ) cerr << "c find an unsatisfiable O-gate based on complementary input to output " << ox << " <-> AND(" << oa << "," << ob << ")" << endl; 
 	    if( enqOut ) data.enqueue(~ox);
 	  } 
 
@@ -453,10 +459,10 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	  eeLits.clear(); upLits.clear();
 	  if ( (oa == a && ob == b) || (oa == b && ob == a ) ) {
 	    // usual equivalence of outputs!
-	    if( debug_out ) cerr << "[  10]" << endl;
+	    if( debug_out > 2 ) cerr << "[  10]" << endl;
 	    eeLits.push_back(x); eeLits.push_back(ox);
 	    // both gates are valid -> 
-	    if( debug_out ) { cerr << "c invalidate "; other.print(cerr); }
+	    if( debug_out > 2 ) { cerr << "c invalidate "; other.print(cerr); }
 	    other.invalidate();
 	    
 	  } else if( var(oa) == var(a) || var(oa) == var(b) || var(ob) == var(a) || var(ob) == var(b) ) {
@@ -467,12 +473,12 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	      || (b == ob && a == ox)
 	      || (a == oa && b == ox)
 	      ) {
-	      if( debug_out ) cerr << "[  11] match one input, and output is another input: " << x << " <-> AND(" << a << "," << b << ")  vs " << ox << " <-> AND(" << oa << "," << ob << ")" << endl;
+	      if( debug_out > 2 ) cerr << "[  11] match one input, and output is another input: " << x << " <-> AND(" << a << "," << b << ")  vs " << ox << " <-> AND(" << oa << "," << ob << ")" << endl;
 	      eeLits.push_back(x);eeLits.push_back(ox);
 	    } else if ( ox == ~x && 
 	      ( (oa == ~a && ob==~b ) || (oa == ~b && ob ==~a) )
 	    ) {
-	      if( debug_out ) cerr << "[  12]" << endl;
+	      if( debug_out > 2 ) cerr << "[  12]" << endl;
 	      // x <-> AND(a,b) and -x <-> AND(-a,-b) => x=a=b!
 	      eeLits.push_back(x);eeLits.push_back(a); // every two literals represent an equivalent pair
 	      eeLits.push_back(x);eeLits.push_back(b);
@@ -489,7 +495,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 // 		data.addClause(lc);
 // 		data.getLEarnts().push(lc);
 // 		eeLits.clear();
-// 		if( debug_out ) cerr << "c add clause " << ca[lc] << endl;
+// 		if( debug_out > 2 ) cerr << "c add clause " << ca[lc] << endl;
 // 		if( isToAnalyze[ var(x) ] == 0 ) { eqDoAnalyze.push_back(x); isToAnalyze[ var(x) ] = 1; }
 // 		if( isToAnalyze[ var(ox) ] == 0 ) { eqDoAnalyze.push_back(ox); isToAnalyze[ var(ox) ] = 1; }
 // 	      }
@@ -499,28 +505,28 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	      int oldGates = gates.size();
 	      if( oa == a ) {
 		// constructor expects literals of the ternary representative clause
-		if( debug_out ) cerr << "[  13]" << endl;
+		if( debug_out > 2 ) cerr << "[  13]" << endl;
 		if( x == ~ox ) {
 		  cerr << "c complementary outputs, one complementary input, other input equal " << ox << " <-> AND(" << ob << "," << oa << ")" << endl;
 		  data.enqueue(a); // handle gates where the input would be complementary
 		}
 		else gates.push_back( Circuit::Gate( ~a, x, ox, Circuit::Gate::AND, Circuit::Gate::FULL) );
 	      } else if ( ob == b ) {
-		if( debug_out ) cerr << "[  14]" << endl;
+		if( debug_out > 2 ) cerr << "[  14]" << endl;
 		if( x == ~ox ) {
 		  cerr << "c complementary outputs, one complementary input, other input equal " << ox << " <-> AND(" << ob << "," << oa << ")" << endl;
 		  data.enqueue(b); // handle gates where the input would be complementary
 		}
 		else gates.push_back( Circuit::Gate( ~b, x, ox, Circuit::Gate::AND, Circuit::Gate::FULL) );
 	      } else if ( ob == a ) {
-		if( debug_out ) cerr << "[  15]" << endl;
+		if( debug_out > 2 ) cerr << "[  15]" << endl;
 		if( x == ~ox ) {
 		  cerr << "c complementary outputs, one complementary input, other input equal " << ox << " <-> AND(" << ob << "," << oa << ")" << endl;
 		  data.enqueue(a); // handle gates where the input would be complementary
 		}
 		else gates.push_back( Circuit::Gate( ~a, x, ox, Circuit::Gate::AND, Circuit::Gate::FULL) );
 	      } else if ( oa == b ) {
-		if( debug_out ) cerr << "[  16]" << endl;
+		if( debug_out > 2 ) cerr << "[  16]" << endl;
 		if( x == ~ox ) {
 		  cerr << "c complementary outputs, one complementary input, other input equal " << ox << " <-> AND(" << ob << "," << oa << ")" << endl;
 		  data.enqueue(b); // handle gates where the input would be complementary
@@ -528,13 +534,13 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 		else gates.push_back( Circuit::Gate( ~b, x, ox, Circuit::Gate::AND, Circuit::Gate::FULL) );
 	      }
 	      if( gates.size() > oldGates ) {
-		if( debug_out ) {
+		if( debug_out > 2 ) {
 		  cerr << "c added new gate";
 		  gates[ oldGates ].print(cerr);
 		}
 		// TODO: what to do with the new gate? for now, put it into the lists of the other variables!
 		if( !active.isCurrentStep(var(x)) && !reactivated.isCurrentStep(var(x)) ) { 
-		  if( debug_out ) {
+		  if( debug_out > 2 ) {
 		    cerr << "c reactivate varible " << x << " because of gate ";
 		    gates[ oldGates ].print(cerr);
 		  }
@@ -542,7 +548,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 		  reactivated.setCurrentStep(var(x));
 		}
 		if( !active.isCurrentStep(var(ox)) && !reactivated.isCurrentStep(var(ox)) ) { 
-		  if( debug_out ) {
+		  if( debug_out > 2 ) {
 		    cerr << "c reactivate varible " << ox << " because of gate ";
 		    gates[ oldGates ].print(cerr);
 		  }
@@ -560,12 +566,12 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	       || (x == ob && oa == ~b)
 	      
 	    ) {
-	      if( debug_out ) cerr << "[  17]" << endl;
+	      if( debug_out > 2 ) cerr << "[  17]" << endl;
 	      // the output of a gate together with a complementary input in another gate cannot be satisfied -> other gate is unsat!
 	      data.enqueue(~ox);
 	    }
 	    else {
-	      if( debug_out ) {
+	      if( debug_out > 2 ) {
 		if( var(x) == var(ox) ||
 		  ( (var(a) == var(oa) && var(b) == var(ob)) || (var(b) == var(oa) && var(a) == var(ob)) )
 		|| ( var(x) == var(oa) && (var(a) == var(ob) || var(b) == var(ob) ) )
@@ -588,11 +594,11 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 		// put smaller variable in queue, if not already present
 		Var minV = var(x) < var(ox) ? var(x) : var(ox);
 		Var maxV = (minV ^ var(x) ^ var(ox));
-		if( debug_out ) cerr << "c equi: " << x << " == " << ox << " min=" << minV+1 << " max=" << maxV+1 << endl;
+		if( debug_out > 2 ) cerr << "c equi: " << x << " == " << ox << " min=" << minV+1 << " max=" << maxV+1 << endl;
 		if( !putAllAlways && ! active.isCurrentStep(minV) ) {
 		  active.setCurrentStep(minV);
 		  currentPtr->push_back(minV);
-		  if( debug_out ) cerr << "c re-activate output variable " << minV + 1 << endl;
+		  if( debug_out > 2 ) cerr << "c re-activate output variable " << minV + 1 << endl;
 		}
 		// moves gates from greater to smaller!
 		for( int k = 0 ; k < varTable[maxV].size(); ++k )
@@ -605,7 +611,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 		  gateTime  = cpuTime() - gateTime;
 		  return true;
 		} else {
-		  if( debug_out ) cerr << "c found equivalence " << x << " == " << ox << " again" << endl;
+		  if( debug_out > 2 ) cerr << "c found equivalence " << x << " == " << ox << " again" << endl;
 		}
 	      }
 	    }
@@ -615,7 +621,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
       }
   }
   
-  if( debug_out ) cerr << "c OLD equis: " << oldEquivalences << "  current equis: " << data.getEquivalences().size() << " hasToPropagate" << data.hasToPropagate() << endl;
+  if( debug_out > 2 ) cerr << "c OLD equis: " << oldEquivalences << "  current equis: " << data.getEquivalences().size() << " hasToPropagate" << data.hasToPropagate() << endl;
   gateTime  = cpuTime() - gateTime;
   return (data.getEquivalences().size() - oldEquivalences > 0) || data.hasToPropagate();
 }
@@ -1586,10 +1592,13 @@ void EquivalenceElimination::findEquivalencesOnBigFast(CoprocessorData& data, ve
 {
   int dfs = 0;
   vector<int> start( data.nVars() * 2, -1 );
-  vector<int> min  ( data.nVars() * 2, 0 );
+  vector<int> min  ( data.nVars() * 2, -1 );
   vector<int> seen ( data.nVars() * 2, -1 );
   
   vector<Lit> todo, path; // work queue, temporary SCC candidate
+  
+  data.ma.resize( data.nVars() );
+  data.ma.nextStep();
   
   // create underlying data structure
   BIG big;
@@ -1608,19 +1617,34 @@ void EquivalenceElimination::findEquivalencesOnBigFast(CoprocessorData& data, ve
       eqDoAnalyze.pop_back();
       const Lit l = randL;
       
-      if( seen[ toInt(l) ] != -1 || seen[ toInt(~l) ] != -1 ) continue; // saw this variable already!
+      if( seen[ toInt(l) ] != -1  ) {
+	if( debug_out > 1) cerr << "c do not re-work liteal " << l << endl;
+	continue; // saw this literal already!
+      }
+      if( data.ma.isCurrentStep( var(l) ) ) {
+	if( debug_out > 1) cerr << "c there is already a SCC involving literal " << l << " or its complement" <<  endl;
+	continue; // already found an SCC with this variable (there will be a symmetric one in the big, no need to find it!)
+      }
+      const int size = externBig == 0 ? big.getSize(l) : (*externBig)[toInt(l)].size();
+      if( size == 0 ) { seen[ toInt(l) ] = 0; continue; } // do not process literals without child literals!
 
       // init literal
       start[ toInt(l) ] = dfs ++; min[ toInt(l) ] = start[ toInt(l) ];
       assert( todo.size() == 0  && "there cannot be elements in the todo stack when it is initialized!" );
       todo.push_back(l);path.push_back(l);
+      
+      if( debug_out > 1) cerr << "c start with root " << l << endl;
+      
       // actual iterative algorithm
       while( todo.size() > 0 ) {
 	Lit V = todo.back(); // variable to work on!
-
+	if( debug_out > 1) cerr << "c current stack: " << todo << endl;
+	if( debug_out > 1) cerr << "c continue with " << V << "[" << start[toInt(V)] << " , " << min[toInt(V)] << " , " << seen[toInt(V)] << " / " << ( externBig == 0 ? big.getSize(V) : (*externBig)[toInt(V)].size() ) << "]" << endl;
+	
 	if( seen[ toInt(V) ] != -1 ) { // have been working on this literal before already!
 	  Lit lastSeen = externBig == 0 ? big.getArray(V)[ seen[toInt(V)] ] : (*externBig)[toInt(V)][ seen[toInt(V)] ];
-	  min[ toInt(V) ] = min[ toInt(V) ] < min[ toInt(lastSeen) ]; // set min of "parent node"
+	  min[ toInt(V) ] = min[ toInt(V) ] < min[ toInt(lastSeen) ] ? min[ toInt(V) ] : min[ toInt(lastSeen) ] ; // set min of "parent node"
+	  if( debug_out > 1)  cerr << "c update recursive min(" << V << ") to " << min[ toInt(V) ] << endl;
 	}
 	
 	seen[ toInt(V) ] ++; // start with 0th element / continue with next element after recursion
@@ -1630,30 +1654,40 @@ void EquivalenceElimination::findEquivalencesOnBigFast(CoprocessorData& data, ve
 	for( ; seen[ toInt(V) ] < size; ) { 
 	  const Lit v = externBig == 0 ? big.getArray(V)[ seen[toInt(V)] ] : (*externBig)[toInt(V)][ seen[toInt(V)] ];
 	  if( seen[ toInt(v) ] == -1 ) { // have not seen this node so far, apply recursion on it
+	    if( debug_out > 1) cerr << "c found [" << seen[ toInt(V) ] << "]:  fresh " << v << "[" << start[toInt(v)] << " <= " << dfs + 1 << "]" << endl;
 	    todo.push_back(v);path.push_back(v);
-	    start[ toInt(l) ] = dfs ++; min[ toInt(l) ] = start[ toInt(l) ]; // init the new node!
+	    start[ toInt(v) ] = dfs ++; min[ toInt(v) ] = start[ toInt(v) ]; // init the new node!
 	    goto nextNode;
 	  } else {
-	    min[ toInt(V) ] = min[ toInt(V) ] < min[ toInt(v) ]; // set min of "parent node" // TODO: according to recursive algorithm: use start instead of min!
+	    if( debug_out > 1) cerr << "c found [" << seen[ toInt(V) ] << "]: already analyzed " << v << " [" << start[toInt(v)] << " , " << min[toInt(V)] << "]" << endl;
+	    min[ toInt(V) ] = min[ toInt(V) ] <= start[ toInt(v) ] ? min[ toInt(V) ] : start[ toInt(v) ] ; // set min of "parent node" // TODO: according to recursive algorithm: use start instead of min!
+	    if( debug_out > 1)  cerr << "c update already found min(" << V << ") to " << min[ toInt(V) ] << endl;
 	    seen[ toInt(V) ] ++;
 	  }
 	}
 	
 	// finished all child nodes, check whether a SCC has been found
 	if( start[ toInt(V) ] == min[ toInt(V) ] ) {
+	  if( debug_out > 1) cerr << "c current Node is SCC root " << V << endl;
 	  eqCurrentComponent.clear();
 	  Lit w = lit_Undef;
 	  do { // pop all elements behind V!
 	    assert( path.size() > 0 && "there have to be more elements on the stack!" );
 	    w = path.back(); path.pop_back();
 	    eqCurrentComponent.push_back( w );
+	    data.ma.setCurrentStep( var(w) ); // ensure that the same SCC will not be found twice!
+	    if( debug_out > 1) cerr << "c put " << w << "[" << start[toInt(V)] << "] into the same component!" << endl;
 	  } while( w != V );
-	  if( eqCurrentComponent.size() > 1 ) data.addEquivalences( eqCurrentComponent );
+	  if( eqCurrentComponent.size() > 1 ) { 
+	    if( debug_out > 1) cerr << "c add SCC of size " << eqCurrentComponent.size() << " : " << eqCurrentComponent << endl;
+	    data.addEquivalences( eqCurrentComponent );
+	  }
 	}
 	
 	// finished the current node, continue with its parent node
 	todo.pop_back();
 	
+	if( debug_out > 1) cerr << "c finish working on " << V << "[" << start[toInt(V)] << " , " << min[toInt(V)] << " , " << seen[toInt(V)] << " / " << ( externBig == 0 ? big.getSize(V) : (*externBig)[toInt(V)].size() ) << "]" << endl;
 	nextNode:; // jump here if the next recursion depth should be analyzed!
       }
 
@@ -1662,6 +1696,13 @@ void EquivalenceElimination::findEquivalencesOnBigFast(CoprocessorData& data, ve
 }
 
 void EquivalenceElimination::findEquivalencesOnBig(CoprocessorData& data, vector< vector<Lit> >* externBig)
+{
+  if( opt_iterative ) return findEquivalencesOnBigFast(data,externBig);
+  else return findEquivalencesOnBigRec(data,externBig);
+}
+
+
+void EquivalenceElimination::findEquivalencesOnBigRec(CoprocessorData& data, vector< vector<Lit> >* externBig)
 {
   // create / resize data structures:
   if( eqLitInStack == 0 ) eqLitInStack = (char*) malloc( sizeof( char ) * data.nVars() * 2 );
@@ -1684,12 +1725,12 @@ void EquivalenceElimination::findEquivalencesOnBig(CoprocessorData& data, vector
   
   steps += (data.getClauses().size() / 16); // some initial steps, because BIG was created
   
-  if( debug_out ) {
+  if( debug_out > 2 ) {
      cerr << "c to process: ";
      for( int i = 0 ; i < eqDoAnalyze.size(); ++ i ) {
         cerr << eqDoAnalyze[i] << " ";
      }
-      if( debug_out ) {
+      if( debug_out > 2 ) {
 	cerr << endl << "====================================" << endl;
 	cerr << "intermediate formula before gates: " << endl;
 	for( int i = 0 ; i < data.getClauses().size(); ++ i )
@@ -1748,7 +1789,7 @@ void EquivalenceElimination::eqTarjan(int depth, Lit l, Lit list, CoprocessorDat
     steps ++;
     if( steps > opt_ee_limit ) return;
     
-    if( debug_out ) cerr  << "c run tarjan on " << l << " at depth " << depth << endl;
+    if( debug_out > 2 ) cerr  << "c run tarjan on " << l << " at depth " << depth << endl;
     if( externBig != 0 ) {
       const vector<Lit>& impliedLiterals =  (*externBig)[ toInt(list) ];
       for(uint32_t i = 0 ; i < impliedLiterals.size(); ++i)
@@ -1767,7 +1808,7 @@ void EquivalenceElimination::eqTarjan(int depth, Lit l, Lit list, CoprocessorDat
       for(uint32_t i = 0 ; i < impliedLiteralsSize; ++i)
       {
         const Lit n = impliedLiterals[i];
-	if( debug_out ) cerr << "c next implied lit from " << l << " is " << n << " [" << i << "/" << impliedLiteralsSize << "]" << endl;
+	if( debug_out > 2 ) cerr << "c next implied lit from " << l << " is " << n << " [" << i << "/" << impliedLiteralsSize << "]" << endl;
         if(eqNodeIndex[toInt(n)] == -1){
           eqTarjan(depth+1, n, n, data,big,externBig);
           eqNodeLowLinks[toInt(l)] = MININ( eqNodeLowLinks[toInt(l)], eqNodeLowLinks[toInt(n)]);
@@ -1790,6 +1831,7 @@ void EquivalenceElimination::eqTarjan(int depth, Lit l, Lit list, CoprocessorDat
              eqCurrentComponent.push_back(n);
          } while(n != l);
 	 if( eqCurrentComponent.size() > 1 ) {
+	   if( debug_out > 1 ) cerr << "c ee SCC: " << eqCurrentComponent << endl; 
 	  data.addEquivalences( eqCurrentComponent );
 	 }
      }
@@ -1800,7 +1842,7 @@ Lit EquivalenceElimination::getReplacement( Lit l)
 {
   const Lit startLit = l;
   while ( var(replacedBy[var(l)]) != var(l) ) l = sign(l) ? ~replacedBy[var(l)] : replacedBy[var(l)]; // go down through the whole hierarchy!
-  replacedBy[var(startLit)] = l; // speed up future calculations!
+  // replacedBy[var(startLit)] = l; // speed up future calculations!
   return l;
 }
 
@@ -1809,7 +1851,7 @@ bool EquivalenceElimination::setEquivalent(Lit representative, Lit toReplace)
   const Lit r = getReplacement(representative);
   const Lit s = getReplacement(toReplace);
   if( r == ~s ) return false;
-  if( debug_out ) cerr << "c ee literals: " << representative << " ( -> " << r << ") is representative for " << toReplace << " ( -> " << s << ")" << endl;
+  if( debug_out > 2 ) cerr << "c ee literals: " << representative << " ( -> " << r << ") is representative for " << toReplace << " ( -> " << s << ")" << endl;
   if( r < s ) {
     replacedBy[ var(s) ] = ( sign(s) ? ~r : r ); // propagate forward!  
   } else {
@@ -1839,8 +1881,8 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
     
    vector<Lit>& ee = data.getEquivalences();
    
-   if( debug_out ) {
-      if( debug_out ) {
+   if( debug_out > 2 ) {
+      if( debug_out > 2 ) {
 	cerr << endl << "====================================" << endl;
 	cerr << "intermediate formula before APPLYING Equivalences: " << endl;
 	for( int i = 0 ; i < data.getClauses().size(); ++ i )
@@ -1882,12 +1924,12 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	 if( ! data.ma.isCurrentStep( toInt( myReplace )) )
 	   data.lits.push_back(myReplace); // has to look through that list as well!
 	 if( ! setEquivalent(repr, ee[j] ) ) { 
-	   if( debug_out ) cerr << "c applying EE failed due to setting " << repr << " and " << ee[j] << " equivalent -> UNSAT" << endl;
+	   if( debug_out > 2 ) cerr << "c applying EE failed due to setting " << repr << " and " << ee[j] << " equivalent -> UNSAT" << endl;
 	   data.setFailed(); return newBinary;
 	}
        }
        
-       if(debug_out)
+       if(debug_out > 2)
        for( int j = start ; j < i; ++ j ) {// set all equivalent literals
          cerr << "c replace " << (sign(ee[j]) ? "-" : "" ) << var(ee[j]) + 1 << " by " << (sign(getReplacement(ee[j])) ? "-" : "" ) << var(getReplacement(ee[j])) + 1 << endl;
        }
@@ -1899,12 +1941,12 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	 // first, process all the clauses on the list with old replacement variables
 	 if( j == start && dataElements > 0 ) {
 	   l = data.lits[ --dataElements ]; 
-	   if( debug_out) cerr << "c process old replace literal " << l << endl;
+	   if( debug_out > 2) cerr << "c process old replace literal " << l << endl;
 	   j--;
          }
 	 
 	 if( l == repr ) {
-	   if( debug_out) cerr << "c do not process representative " << l << endl;
+	   if( debug_out > 2) cerr << "c do not process representative " << l << endl;
 	   continue;
 	 }
 	 
@@ -1915,25 +1957,25 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	   (data.list( l ).size() > 0 ||  data.list( ~l ).size() > 0) ) { // only add to extension, if clauses will be rewritten!
 	  data.addToExtension( ~repr , l );
 	  data.addToExtension( repr , ~l);
-	  if( debug_out ) cerr << "c added to extension: " << repr << " <=> " << l << endl;
+	  if( debug_out > 2 ) cerr << "c added to extension: " << repr << " <=> " << l << endl;
 	  data.ma.setCurrentStep(var(l)); // to not add same equivalence twice
 	 } else {
-	   if( debug_out ) cerr << "c do not add to extension: " << repr << " <=> " << l << endl; 
+	   if( debug_out > 2 ) cerr << "c do not add to extension: " << repr << " <=> " << l << endl; 
 	 }
 	 
 	 // if( getReplacement(l) == repr )  continue;
 	 // TODO handle equivalence here (detect inconsistency, replace literal in all clauses, check for clause duplicates!)
 	 for( int pol = 0; pol < 2; ++ pol ) { // do for both polarities!
 	  vector<CRef>& list = pol == 0 ? data.list( l ) : data.list( ~l );
-	  if( debug_out ) cerr << "c rewrite clauses of lit " << ( pol == 0 ? l : ~l )<< endl;
+	  if( debug_out > 2 ) cerr << "c rewrite clauses of lit " << ( pol == 0 ? l : ~l )<< endl;
 	  for( int k = 0 ; k < list.size(); ++ k ) {
 	    Clause& c = ca[list[k]];
 	    if( c.can_be_deleted() ) {
-	      if( debug_out ) cerr << "c skip clause " << c << " it can be deleted already" << endl;
+	      if( debug_out > 2 ) cerr << "c skip clause " << c << " it can be deleted already" << endl;
 	      continue; // do not use deleted clauses!
 	    }
 	    data.log.log(eeLevel,"analyze clause",c);
-	    if( debug_out ) cerr << "c analyze clause " << c << endl;
+	    if( debug_out > 2 ) cerr << "c analyze clause " << c << endl;
 	    bool duplicate  = false;
 	    bool getsNewLiterals = false;
 	    Lit tmp = repr;
@@ -1950,7 +1992,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	    int n = 1,removed=0;
 	    for( int m = 1; m < c.size(); ++ m ) {
 	      if( c[m-1] == ~c[m] ) { 
-		if( debug_out ) cerr << "c ee deletes clause " << c << endl;
+		if( debug_out > 2 ) cerr << "c ee deletes clause " << c << endl;
 		c.set_delete(true); 
 		removedCls++;
 		goto EEapplyNextClause;
@@ -1958,7 +2000,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	      if( c[m-1] != c[m] ) { c[n++] = c[m]; removed ++; }
 	    }
 	    c.shrink(c.size() - n);
-	    if( debug_out ) cerr << "c ee shrinked clause to " << c << endl;
+	    if( debug_out > 2 ) cerr << "c ee shrinked clause to " << c << endl;
 	    modifiedFormula = true;
 	    
 	    if( c.size() == 2 )  { // take care of newly created binary clause for further analysis!
@@ -1966,18 +2008,18 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	      if( isToAnalyze[ var(c[0]) ] == 0 ) {
 		eqDoAnalyze.push_back(~c[0]);
 		isToAnalyze[ var(c[0]) ] = 1;
-		if( debug_out ) cerr << "c EE re-enable ee-variable " << var(c[0])+1 << endl;
+		if( debug_out > 2 ) cerr << "c EE re-enable ee-variable " << var(c[0])+1 << endl;
 	      }
 	      if( isToAnalyze[ var(c[1]) ] == 0 ) {
 		eqDoAnalyze.push_back(~c[1]);
 		isToAnalyze[ var(c[1]) ] = 1;
-		if( debug_out ) cerr << "c EE re-enable ee-variable " << var(c[1])+1 << endl;
+		if( debug_out > 2 ) cerr << "c EE re-enable ee-variable " << var(c[1])+1 << endl;
 	      }
 	    } else if (c.size() == 1 ) {
 	      if( data.enqueue(c[0]) == l_False ) return newBinary; 
 	    } else if (c.size() == 0 ) {
 	      data.setFailed(); 
-	      if( debug_out ) cerr << "c applying EE failed due getting an empty clause" << endl;
+	      if( debug_out > 2 ) cerr << "c applying EE failed due getting an empty clause" << endl;
 	      return newBinary; 
 	    }
 	    data.log.log(eeLevel,"clause after sort",c);
@@ -1990,7 +2032,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 		  if( data.addSubStrengthClause( list[k] ) ) resetVariables = true;
 		}
 	      } else {
-		if( debug_out ) cerr << "c clause[" << list[k] << "] has duplicates: " << c << endl;
+		if( debug_out > 2 ) cerr << "c clause[" << list[k] << "] has duplicates: " << c << endl;
 		removedCls++;
 		c.set_delete(true);
 		data.removedClause(list[k]);
@@ -2009,7 +2051,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	 assert( l != repr && "will not clear list of representative literal!" );
 	 for( int pol = 0; pol < 2; ++ pol ) // clear both occurrence lists!
 	   (pol == 0 ? data.list( l ) : data.list( ~l )).clear();
-	 if( debug_out ) cerr << "c cleared list of var " << var( l ) + 1 << endl;
+	 if( debug_out > 2 ) cerr << "c cleared list of var " << var( l ) + 1 << endl;
 	 
       }
        
@@ -2018,7 +2060,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 // 	 if( ee[j] == repr ) continue;
 // 	 for( int pol = 0; pol < 2; ++ pol ) // clear both occurrence lists!
 // 	   (pol == 0 ? data.list( ee[j] ) : data.list( ~ee[j] )).clear();
-// 	 if( debug_out ) cerr << "c cleared list of var " << var( ee[j] ) + 1 << endl;
+// 	 if( debug_out > 2 ) cerr << "c cleared list of var " << var( ee[j] ) + 1 << endl;
 //        }
 
        // TODO take care of untouchable literals!
@@ -2084,7 +2126,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
       }
     }
   
-  if( debug_out ) cerr << "c APLLYing Equivalences terminated with new binaries: " << newBinary << endl;
+  if( debug_out > 2 ) cerr << "c APLLYing Equivalences terminated with new binaries: " << newBinary << endl;
   return newBinary || force;
 }
 
@@ -2104,7 +2146,7 @@ bool EquivalenceElimination::hasDuplicate(vector<CRef>& list, const Clause& c)
 	d.set_delete(true); // learned clauses are no duplicate for irredundant clauses -> delete learned!
 	return false;
       }
-      if( debug_out ) cerr << "c find duplicate [" << list[i] << "]" << d << " for clause " << c << endl;
+      if( debug_out > 2 ) cerr << "c find duplicate [" << list[i] << "]" << d << " for clause " << c << endl;
       return true;
     }
 //     cerr << "c clause " << c << " is not equal to " << d << endl;

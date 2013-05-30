@@ -92,6 +92,9 @@ protected:
    */
   void findEquivalencesOnBigFast(CoprocessorData& data, vector< vector<Lit> >* externBig = 0);
   
+  /** use the recursive algorithm */
+  void findEquivalencesOnBigRec(CoprocessorData& data, vector< vector<Lit> >* externBig = 0);
+  
   /** return literals that have to be equivalent because of the two gates 
    * @param replacedBy stores for each variable the literal that represents its equivalence class
    */
