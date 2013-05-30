@@ -85,6 +85,12 @@ protected:
    * @param externBig use extern big as basis for tarjan algorithm
    */
   void findEquivalencesOnBig(CoprocessorData& data, vector< vector< Lit > >* externBig = 0);
+
+  /** find all strongly connected components on binary implication graph 
+   * Note: executes iterative tarjan algorithm
+   * @param externBig use extern big as basis 
+   */
+  void findEquivalencesOnBigFast(CoprocessorData& data, vector< vector<Lit> >* externBig = 0);
   
   /** return literals that have to be equivalent because of the two gates 
    * @param replacedBy stores for each variable the literal that represents its equivalence class
@@ -121,7 +127,7 @@ protected:
   void writeAAGfile( CoprocessorData& data );
   
   /** returns the literal, that represents the Equivalence-class of l */
-  Lit getReplacement(Lit l ) const;
+  Lit getReplacement(Lit l ) ;
   
   /** sets literal replacement, fails if not possible 
    * @return false, if this equivalence results in a conflict

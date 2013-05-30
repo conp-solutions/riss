@@ -1582,6 +1582,84 @@ void EquivalenceElimination::processFASUMgate(CoprocessorData& data, Circuit::Ga
   
 }
 
+void EquivalenceElimination::findEquivalencesOnBigFast(CoprocessorData& data, vector< vector<Lit> >* externBig)
+{
+  int dfs = 0;
+  vector<int> start( data.nVars() * 2, -1 );
+  vector<int> min  ( data.nVars() * 2, 0 );
+  vector<int> seen ( data.nVars() * 2, -1 );
+  
+  vector<Lit> todo, path; // work queue, temporary SCC candidate
+  
+  // create underlying data structure
+  BIG big;
+  if( externBig == 0 ) big.create(ca, data, data.getClauses(), data.getLEarnts() );
+  
+  while( !eqDoAnalyze.empty() && !data.isInterupted() && (data.unlimited() || steps < opt_ee_limit) )
+  {
+      // get the literal to start with!
+      Lit randL = eqDoAnalyze[ eqDoAnalyze.size() -1 ];
+      if( data.randomized() ) { // shuffle an element back!
+	uint32_t index = rand() % eqDoAnalyze.size();
+	eqDoAnalyze[ eqDoAnalyze.size() -1 ] = eqDoAnalyze[index];
+	eqDoAnalyze[index] = randL;
+	randL = eqDoAnalyze[ eqDoAnalyze.size() -1 ];
+      }
+      eqDoAnalyze.pop_back();
+      const Lit l = randL;
+      
+      if( seen[ toInt(l) ] != -1 || seen[ toInt(~l) ] != -1 ) continue; // saw this variable already!
+
+      // init literal
+      start[ toInt(l) ] = dfs ++; min[ toInt(l) ] = start[ toInt(l) ];
+      assert( todo.size() == 0  && "there cannot be elements in the todo stack when it is initialized!" );
+      todo.push_back(l);path.push_back(l);
+      // actual iterative algorithm
+      while( todo.size() > 0 ) {
+	Lit V = todo.back(); // variable to work on!
+
+	if( seen[ toInt(V) ] != -1 ) { // have been working on this literal before already!
+	  Lit lastSeen = externBig == 0 ? big.getArray(V)[ seen[toInt(V)] ] : (*externBig)[toInt(V)][ seen[toInt(V)] ];
+	  min[ toInt(V) ] = min[ toInt(V) ] < min[ toInt(lastSeen) ]; // set min of "parent node"
+	}
+	
+	seen[ toInt(V) ] ++; // start with 0th element / continue with next element after recursion
+	
+	// process all child nodes of the current node in the BIG
+	const int size = externBig == 0 ? big.getSize(V) : (*externBig)[toInt(V)].size();
+	for( ; seen[ toInt(V) ] < size; ) { 
+	  const Lit v = externBig == 0 ? big.getArray(V)[ seen[toInt(V)] ] : (*externBig)[toInt(V)][ seen[toInt(V)] ];
+	  if( seen[ toInt(v) ] == -1 ) { // have not seen this node so far, apply recursion on it
+	    todo.push_back(v);path.push_back(v);
+	    start[ toInt(l) ] = dfs ++; min[ toInt(l) ] = start[ toInt(l) ]; // init the new node!
+	    goto nextNode;
+	  } else {
+	    min[ toInt(V) ] = min[ toInt(V) ] < min[ toInt(v) ]; // set min of "parent node" // TODO: according to recursive algorithm: use start instead of min!
+	    seen[ toInt(V) ] ++;
+	  }
+	}
+	
+	// finished all child nodes, check whether a SCC has been found
+	if( start[ toInt(V) ] == min[ toInt(V) ] ) {
+	  eqCurrentComponent.clear();
+	  Lit w = lit_Undef;
+	  do { // pop all elements behind V!
+	    assert( path.size() > 0 && "there have to be more elements on the stack!" );
+	    w = path.back(); path.pop_back();
+	    eqCurrentComponent.push_back( w );
+	  } while( w != V );
+	  if( eqCurrentComponent.size() > 1 ) data.addEquivalences( eqCurrentComponent );
+	}
+	
+	// finished the current node, continue with its parent node
+	todo.pop_back();
+	
+	nextNode:; // jump here if the next recursion depth should be analyzed!
+      }
+
+  }
+  
+}
 
 void EquivalenceElimination::findEquivalencesOnBig(CoprocessorData& data, vector< vector<Lit> >* externBig)
 {
@@ -1644,6 +1722,8 @@ void EquivalenceElimination::findEquivalencesOnBig(CoprocessorData& data, vector
       if( data.doNotTouch( var(l) ) ) continue;
       // compute SCC
       eqCurrentComponent.clear();
+      
+      // TODO: iterative version of tarjan algorithm:
       // if there is any SCC, add it to SCC, if it contains more than one literal
       eqTarjan(1,l,l,data,big,externBig);
   }
@@ -1716,9 +1796,11 @@ void EquivalenceElimination::eqTarjan(int depth, Lit l, Lit list, CoprocessorDat
 }
 
 
-Lit EquivalenceElimination::getReplacement( Lit l) const
+Lit EquivalenceElimination::getReplacement( Lit l) 
 {
+  const Lit startLit = l;
   while ( var(replacedBy[var(l)]) != var(l) ) l = sign(l) ? ~replacedBy[var(l)] : replacedBy[var(l)]; // go down through the whole hierarchy!
+  replacedBy[var(startLit)] = l; // speed up future calculations!
   return l;
 }
 
