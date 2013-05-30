@@ -54,7 +54,6 @@ class Preprocessor {
   CoprocessorData  data;       // all the data that needs to be accessed by other classes (preprocessing methods)
   ThreadController controller; // controller for all threads
 
-  bool isInprocessing;		// control whether current call of the preprocessor should be handled as inprocessing
   double ppTime;		// time to do preprocessing
   double ipTime;		// time to do inpreprocessing
   double ppwTime;		// time to do preprocessing   (wall clock)

@@ -93,7 +93,6 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 , data( solver->ca, solver, log, opt_unlimited, opt_randomized )
 , controller( opt_threads )
 // attributes and all that
-, isInprocessing( false )
 , ppTime( 0 )
 , ipTime( 0 )
 , ppwTime(0)
@@ -142,7 +141,7 @@ lbool Preprocessor::performSimplification()
     formulaVariables = solver->nVars() ;
   }
   
-  if( isInprocessing ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
+  if( data.isInprocessing() ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
   else {ppTime = cpuTime() - ppTime; ppwTime = wallClockTime() - ppwTime;}
     
   // first, remove all satisfied clauses
@@ -194,7 +193,7 @@ lbool Preprocessor::performSimplification()
 	}
 	if( isNotSat ) {
 	  // only set the phase before search!
-	  if( opt_ts_phase && !isInprocessing) {
+	  if( opt_ts_phase && !data.isInprocessing()) {
 	    for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
 	  }
 	} else {
@@ -477,7 +476,7 @@ lbool Preprocessor::performSimplification()
 	}
 	if( isNotSat ) {
 	  // only set the phase before search!
-	  if( opt_ts_phase && !isInprocessing) {
+	  if( opt_ts_phase && !data.isInprocessing()) {
 	    for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( -1 == twoSAT.getPolarity(v) );
 	  }
 	  cerr // << endl 
@@ -518,7 +517,7 @@ lbool Preprocessor::performSimplification()
     dense.compress(); 
   }
   
-  if( isInprocessing ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
+  if( data.isInprocessing() ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
   else {ppTime = cpuTime() - ppTime; ppwTime = wallClockTime() - ppwTime;}
   
   if( opt_check ) fullCheck("final check");
@@ -641,7 +640,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     return status;
   }
   
-  if( isInprocessing ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
+  if( data.isInprocessing() ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
   else {ppTime = cpuTime() - ppTime; ppwTime = wallClockTime() - ppwTime;}
   
   // first, remove all satisfied clauses
@@ -892,7 +891,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 	}
 	if( isNotSat ) {
 	  // only set the phase before search!
-	  if( opt_ts_phase && !isInprocessing) {
+	  if( opt_ts_phase && !data.isInprocessing()) {
 	    for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
 	  }
 	  cerr // << endl 
@@ -935,7 +934,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     dense.compress(); 
   }
   
-  if( isInprocessing ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
+  if( data.isInprocessing() ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
   else {ppTime = cpuTime() - ppTime; ppwTime = wallClockTime() - ppwTime;}
   
   if( opt_check ) fullCheck("final check");
@@ -986,7 +985,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 
 lbool Preprocessor::preprocess()
 {
-  isInprocessing = false;
+  data.preprocessing();
   
   if( opt_symm && opt_enabled ) { // do only if preprocessor is enabled
     symmetry.process(); 
@@ -1011,7 +1010,7 @@ lbool Preprocessor::inprocess()
     }
     
     if( opt_verbose > 3 ) cerr << "c start inprocessing after another " << solver->conflicts - lastInpConflicts << endl;
-    isInprocessing = true;
+    data.inprocessing();
     
     if(opt_randInp) data.randomized();
     if(opt_inc_inp) giveMoreSteps();

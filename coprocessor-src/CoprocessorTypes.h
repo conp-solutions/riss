@@ -202,7 +202,8 @@ class CoprocessorData
 
   bool hasLimit;                        // indicate whether techniques should be executed limited
   bool randomOrder;                     // perform preprocessing with random execution order within techniques
-
+  bool currentlyInprocessing;           // current simplification is during search
+  
   Lock dataLock;                        // lock for parallel algorithms to synchronize access to data structures
 
   MarkArray deleteTimer;                // store for each literal when (by which technique) it has been deleted
@@ -251,6 +252,10 @@ public:
 
   /** tell preprocessor to use randomized search now */
   void randomize() { randomOrder = true; }
+  
+  void preprocessing() { currentlyInprocessing = false; }
+  void inprocessing() { currentlyInprocessing = true; }
+  bool isInprocessing() const { return currentlyInprocessing; }
   
   // free all the resources that are used by this data object,
   void destroy();
@@ -569,6 +574,7 @@ inline CoprocessorData::CoprocessorData(ClauseAllocator& _ca, Solver* _solver, C
 , solver( _solver )
 , hasLimit( _limited )
 , randomOrder(_randomized)
+, currentlyInprocessing(false)
 , log(_log)
 , numberOfVars(0)
 {

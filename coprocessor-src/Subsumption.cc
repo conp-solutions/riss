@@ -7,9 +7,10 @@ using namespace Coprocessor;
 
 static const char* _cat = "COPROCESSOR 3 - SUBSUMPTION";
 // options
-static BoolOption  opt_naivStrength    (_cat, "naive_strength", "use naive strengthening", false);
+static BoolOption  opt_naivStrength    (_cat, "naive_strength",   "use naive strengthening", false);
 static IntOption   opt_allStrengthRes  (_cat, "all_strength_res", "Create all self-subsuming resolvents of clauses less equal given size (prob. slow & blowup, only seq)", 0, IntRange(0,INT32_MAX)); 
-static BoolOption  opt_strength        (_cat, "cp3_strength", "Perform clause strengthening", true); 
+static BoolOption  opt_strength        (_cat, "cp3_strength",     "Perform clause strengthening", true); 
+static BoolOption  opt_preferLearned   (_cat, "cp3_strengthL",    "During inprocessing, check learned clauses first!", true); 
 
 static IntOption   opt_subLimit        (_cat, "cp3_sub_limit", "limit of subsumption steps",   300000000, IntRange(0,INT32_MAX)); 
 static IntOption   opt_strLimit        (_cat, "cp3_str_limit", "limit of strengthening steps", 300000000, IntRange(0,INT32_MAX)); 
@@ -223,6 +224,23 @@ void Subsumption :: subsumption_worker ( unsigned int start, unsigned int end, H
         processTime = cpuTime() - processTime;   
     }   
     if(global_debug_out) cerr << "subsume from " << start << " to " << end << " with size " << data.getSubsumeClauses().size() << endl;
+    
+    if( opt_preferLearned && data.isInprocessing() ) {
+      // move all learned clauses to the back! == original clauses to the front
+      int k = 0;
+      for (int i = 0 ; i < data.getSubsumeClauses().size(); ++ i ) {
+	const CRef cr = data.getSubsumeClauses()[i];
+	Clause &c = ca[cr];
+	if( !c.learnt() ) {
+	  CRef tmp = data.getSubsumeClauses()[i]; 
+	  data.getSubsumeClauses()[i] = data.getSubsumeClauses()[k];
+	  data.getSubsumeClauses()[k] = data.getSubsumeClauses()[tmp];
+	  k++; // move clause to front, increase counter for original variables
+	}
+	// simply ignore learned clauses!
+      }
+    }
+    
     for (; end > start && !data.isInterupted()
       && ( data.unlimited() || (doStatistics && subsumeSteps < subLimit) )
       ;)
@@ -1293,6 +1311,23 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
   int negated_lit_pos;  // index of negative lit, if we find one
   deque<CRef> localQueue; // keep track of all clauses that have been added back to the strengthening queue because they have been strengthened
   vector < OccUpdate > & occ_updates = strength_occ_updates;
+  
+  if( opt_preferLearned && data.isInprocessing() ) {
+      // move all learned clauses to the back! == original clauses to the front
+      int k = 0;
+      for (int i = 0 ; i < data.getSubsumeClauses().size(); ++ i ) {
+	const CRef cr = data.getSubsumeClauses()[i];
+	Clause &c = ca[cr];
+	if( !c.learnt() ) {
+	  CRef tmp = data.getSubsumeClauses()[i]; 
+	  data.getSubsumeClauses()[i] = data.getSubsumeClauses()[k];
+	  data.getSubsumeClauses()[k] = data.getSubsumeClauses()[tmp];
+	  k++; // move clause to front, increase counter for original variables
+	}
+	// simply ignore learned clauses!
+      }
+  }
+  
   for (; end > start && !data.isInterupted()
     && (data.unlimited() || (doStatistics && strengthSteps < strLimit ) )
     ;)
