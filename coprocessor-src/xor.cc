@@ -278,11 +278,11 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 	  big.create(ca,data,data.getClauses()); // create big, so that resolve possibilities can be found
 	}
 	
+	vector<char> foundByIndex; // no need to do this on the stack!
 	// handle only xor between 3 and 63 literals!!
 	while( cP <  table.size() && cL < opt_xorMatchLimit){
 		uint32_t start = cP;
 		cL = ca[ table[cP] ] .size();
-		// TODO perform binary search?
 		while( cP < table.size() && ca[ table[cP] ] .size() == cL ) cP ++;
 		if( debug > 3 ) cerr << "c XOR search size " << cL << " until " << cP << endl;
 		// check for each of the clauses, whether it and its successors could be an xor
@@ -290,6 +290,7 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 		  if( debug > 3 )  cerr << "c start=" << start << endl;
 			const CRef c = table[start];
 			const Clause& cl = ca[c];
+			if( cl.size() > opt_xorMatchLimit ) break; // interrupt before too large size is recognized
 			uint32_t stop = start + 1;
 			// find last clause that contains the same variables as the first clause
 			for ( ; stop < cP; ++stop) {
@@ -312,7 +313,6 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 			
 			const uint32_t diff = stop - start;
 			
-			// if count = 2^(n-1), xor has been found -> create xor-clause, add it to watch lists!
 			uint64_t shift = 1;
 			shift = shift << ( cl.size() -1 );
 
@@ -355,7 +355,7 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 			    uint32_t offset = o == 1 ? 0 : count[0];
 			    if( debug > 3 )  cerr << "c o=" << o << " offset=" << offset << " cL=" << cL << endl;
 			    // check, whether there are clauses that are subsumed
-			    char foundByIndex [ shift ]; memset( foundByIndex, 0, sizeof(char) * shift );
+			    foundByIndex.assign( shift, 0 );
 			    uint32_t foundCount = 0;
 			    // assign the clauses to the numbers they represent
 			    for( uint32_t j = 0 ; j < count[1-o]; ++j){

@@ -126,6 +126,10 @@ static BoolOption    opt_prefetch          ("MODS", "prefetch",    "prefetch wat
 static BoolOption    opt_hpushUnit         ("MODS", "delay-units", "does not propagate unit clauses until solving is initialized", false);
 static IntOption     opt_simplifyInterval  ("MODS", "sInterval",   "how often to perform simplifications on level 0", 0, IntRange(0, INT32_MAX) );
 
+static BoolOption    opt_otfss             ("MODS", "otfss",       "perform otfss during conflict analysis", false);
+static BoolOption    opt_otfssL            ("MODS", "otfssL",      "otfss for learnt clauses", false);
+static IntOption     opt_otfssMaxLBD       ("MODS", "otfssMLDB",   "max. LBD of learnt clauses that are candidates for otfss", 30, IntRange(2, INT32_MAX) );
+static BoolOption    debug_otfss           ("MODS", "otfss-D",     "print debug output", false);
 
 // useful methods
 
@@ -149,6 +153,15 @@ inline ostream& operator<<(ostream& other, const Clause& c ) {
 /// print elements of a vector
 template <typename T>
 inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data ) 
+{
+  for( int i = 0 ; i < data.size(); ++ i )
+    other << " " << data[i];
+  return other;
+}
+
+/// print elements of a vector
+template <typename T>
+inline std::ostream& operator<<(std::ostream& other, const vec<T>& data ) 
 {
   for( int i = 0 ; i < data.size(); ++ i )
     other << " " << data[i];
@@ -248,6 +261,14 @@ Solver::Solver() :
   ,lhbr_sub(0)
   
   ,simplifyIterations(0)
+  
+  ,otfsss(0)
+  ,otfsssL1(0)
+  ,otfssClss(0)
+  ,otfssUnits(0)
+  ,otfssBinaries(0)
+  ,otfssHigherJump(0)
+  
   // preprocessor
   , coprocessor(0)
   , useCoprocessor(true)
@@ -526,7 +547,7 @@ Lit Solver::pickBranchLit()
 |  
 |________________________________________________________________________________________________@*/
 
-int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned int &lbd)
+int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned int &lbd, vec<CRef>& otfssClauses)
 {
     int pathC = 0;
     Lit p     = lit_Undef;
@@ -535,6 +556,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     bool isOnlyUnit = true;
     lastDecisionLevel.clear();  // must clear before loop, because alluip can abort loop and would leave filled vector
     int currentSize = 0;        // count how many literals are inside the resolvent at the moment! (for otfss)
+    CRef lastConfl = CRef_Undef;
     
     // Generate conflict clause:
     //
@@ -544,7 +566,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     do{
         assert(confl != CRef_Undef); // (otherwise should be UIP)
         Clause& c = ca[confl];
-	
+	int clauseReductSize = c.size();
 	// Special case for binary clauses
 	// The first one has to be SAT
 	if( p != lit_Undef && c.size()==2 && value(c[0])==l_False) {
@@ -559,7 +581,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 
         for (int j = (p == lit_Undef) ? 0 : 1; j < c.size(); j++){
             Lit q = c[j];
-
+    
             if (!seen[var(q)] && level(var(q)) > 0){
                 currentSize ++;
                 varBumpActivity(var(q));
@@ -576,18 +598,18 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 
 		} else {
                     out_learnt.push(q);
-		    // if( isOnlyUnit && units > 0 ) printf("c stopUnits because of variable %d\n", var(q) + 1 );
 		    isOnlyUnit = false; // we found a literal from another level, thus the multi-unit clause cannot be learned
 		}
-	    }
+	    } else if( level(var(q)) == 0 ) clauseReductSize --; // this literal does not count into the size of the clause!
 
         }
         
-	static bool didIt = false;
-	if( currentSize + 1 == c.size() ) {
-	  // TODO: remove literal from the clause, before, output drup, re-arrange watched literals in the clause, enqueue a the unit after backjumping if necessary
-	  if( !didIt ) cerr << "c literal " << p << " can be removed from " << c << " -- implement OTFSS properly!" << endl;
-	  didIt = true;
+	if( currentSize + 1 == clauseReductSize ) { // OTFSS, but on the reduct!
+	  if( opt_otfss && ( !c.learnt() // apply otfss only for clauses that are considered to be interesting!
+	      || ( opt_otfssL && c.learnt() && c.lbd() <= opt_otfssMaxLBD ) ) ) {
+	    otfssClauses.push( confl );
+	    if(debug_otfss) cerr << "c can remove literal " << p << " from " << c << endl;
+	  }
 	}
         
         if( !isOnlyUnit && units > 0 ) break; // do not consider the next clause, because we cannot continue with units
@@ -596,6 +618,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
         while (!seen[var(trail[index--])]); // cerr << "c check seen for literal " << (sign(trail[index]) ? "-" : " ") << var(trail[index]) + 1 << " at index " << index << " and level " << level( var( trail[index] ) )<< endl;
         p     = trail[index+1];
 //	cerr << "c get the reason for literal " << (sign(p) ? "-" : " ") << var(p) + 1 << endl;
+	lastConfl = confl;
         confl = reason(var(p));
         seen[var(p)] = 0;
         pathC--;
@@ -643,8 +666,16 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     }
 
     currentSize ++; // the literal "~p" has been added additionally
-    if( currentSize != out_learnt.size() ) cerr << "c different sizes: clause=" << out_learnt.size() << ", counted=" << currentSize << endl;
+    // if( currentSize != out_learnt.size() ) cerr << "c different sizes: clause=" << out_learnt.size() << ", counted=" << currentSize << endl;
     assert( currentSize == out_learnt.size() && "counted literals has to be equal to actual clause!" );
+    
+    if( otfssClauses.size() > 0 && otfssClauses.last() == lastConfl ) {
+      if(debug_otfss) cerr << "c current learnt clause " << out_learnt << " subsumes otfss clause " << ca[otfssClauses.last()] << endl;
+      if( ca[otfssClauses.last()].learnt() ) { 
+	ca[otfssClauses.last()].mark(1); // remove this clause!
+      }
+      otfssClauses.pop(); // do not work on otfss clause, if current learned clause subsumes it anyways!
+    }
     
     // Simplify conflict clause:
     //
@@ -1258,66 +1289,6 @@ bool Solver::simplify()
 }
 
 
-/** modified conflict analysis, which finds all UIPs after level 1 conflicts
- * 
- */
-void Solver::analyzeOne( CRef confl, vec<Lit>& learntUnits)
-{
-    learntUnits.clear();
-    assert( decisionLevel() == 1 && "works only on first decision level!" );
-    // genereate learnt clause - extract selected number of units!
-    int pathC = 0;
-    Lit p     = lit_Undef;
-    unsigned uips = 0;
-    unsigned loops = 0;
-    int index = trail.size() - 1;
-
-    do{
-        assert(confl != CRef_Undef && "the current literal has to have a reason");
-        loops ++;
-        if( confl != CRef_Undef ) {
-	  Clause& c = ca[confl];
-	  for (int j = (p == lit_Undef) ? 0 : 1; j < c.size(); j++){
-	      Lit q = c[j];
-	      if( c.size() == 2 && q == p ) q = c[0]; // in glucose, binary clauses are not ordered!
-	      if (!seen[var(q)] && level(var(q)) > 0){
-		  varBumpActivity(var(q));
-		  seen[var(q)] = 1;
-		  if (level(var(q)) >= decisionLevel()) pathC++;
-	      }
-	  }
-	}
-	assert ( (loops != 1 || pathC > 1) && "in the first iteration there have to be at least 2 literals of the decision level!" );
-	
-        while (!seen[var(trail[index--])]);
-        p     = trail[index+1];
-        confl = reason(var(p));
-        seen[var(p)] = 0;
-        pathC--;
-        // this works only is the decision level is 1
-        if( pathC <= 0 ) {
-          assert( loops > 1 && "learned clause can occur only if already 2 clauses have been resolved!" );
-           uips ++;
-           learntUnits.push(~p);
-
-	   // learned enough uips - return. if none has been found, return false!
-           if( opt_uips != 0 && uips >= opt_uips ) {
-             // reset seen literals - index points to position before current UIP
-             for( int i = 0 ; i < index + 1; ++ i ) seen[ var(trail[i]) ] = 0;
-             return;
-           }
-        }
-
-	
-    }while (index >= trail_lim[0] ); // pathC > 0 finds unit clauses
-
-    // add uip in form of decision!  
-    if( learntUnits.size() == 0 || learntUnits.last() != ~p ) learntUnits.push(~p);
-  
-  assert( learntUnits.size() > 0 && "there has to be at least one UIP (decision literal)" );
-  return;
-}
-
 /*_________________________________________________________________________________________________
 |
 |  search : (nof_conflicts : int) (params : const SearchParams&)  ->  [lbool]
@@ -1367,46 +1338,88 @@ lbool Solver::search(int nof_conflicts)
 
 	    l1conflicts = ( decisionLevel() != 1 ? l1conflicts : l1conflicts + 1 );
 	    
-	    if( decisionLevel() == 1 && opt_uipHack) {
-	      // learn a bunch of unit clauses!
-	      analyzeOne(confl, learnt_clause );
-
-	      nblevels = 1;
-	      lbdQueue.push(nblevels);
-	      sumLBD += nblevels;
-	      cancelUntil(0);
-
-	      for( int i = 0 ; i < learnt_clause.size(); ++ i )
-		uncheckedEnqueue(learnt_clause[i]);
-	      
-
-          // write learned unit clauses to DRUP!
-          if (output != NULL) {
-	          for( int i = 0 ; i < learnt_clause.size(); ++ i )
-              for (int i = 0; i < learnt_clause.size(); i++)
-		 addUnitToProof( learnt_clause[i] );
-          }
-
-
-	      nbUn+=learnt_clause.size(); // stats
-	      if(nblevels<=2) nbDL2++; // stats
-
-	      multiLearnt = ( learnt_clause.size() > 1 ? multiLearnt + 1 : multiLearnt );
-	      topLevelsSinceLastLa ++;
-	      
-	    } else {
 	      learnt_clause.clear();
-
-	      int ret = analyze(confl, learnt_clause, backtrack_level,nblevels);
+	      otfssCls.clear();
+	      
+	      int ret = analyze(confl, learnt_clause, backtrack_level,nblevels,otfssCls);
+	      
+	      // OTFSS - check whether this can be done in an extra method!
+	      if(debug_otfss) cerr << "c conflict at level " << decisionLevel() << " analyze will proceed at level " << backtrack_level << endl;
+	      int otfssBtLevel = backtrack_level;
+	      int enqueueK = 0 ; // number of clauses in the vector that need to be enqueued when jumping to the current otfssBtLevel
+	      otfsss = otfssCls.size() > 0 ? otfsss + 1 : otfsss;
+	      otfsssL1 = (decisionLevel() == 1 && otfssCls.size() > 0) ? otfsssL1 + 1 : otfsssL1;
+	      otfssClss += otfssCls.size();
+	      for( int i = 0 ; i < otfssCls.size() ; ++ i ) {
+		Clause& c = ca[otfssCls[i]]; // when the first literal is removed, all literals of c are falsified! (has been reason for first literal)
+		// TODO: does not work with DRUP yet!
+		const int l1 = decisionLevel();
+		int l2=0, movePosition = 2;
+		assert( level(var(c[1])) == decisionLevel() && "this clause was used at the very last level to become reason for its first literal!" );
+		for( int j = 2 ; j < c.size(); ++ j ) { // get the two highest levels in the clause!
+		  int cl = level(var(c[j])); 
+		  assert( cl <= l1 && "there cannot be a literal with a higher level than the current decision level" );
+		  if(cl > l2) { l2 = cl; movePosition = j;} // found second highest level -> move literal to position
+		}
+		if( movePosition > 2 ) { const Lit tmpL = c[2]; c[2] = c[movePosition]; c[movePosition] = tmpL;} // move literal with second highest level to position 2 (if available)
+		assert( (l1 != 0 || l2 != 0) && "one of the two levels has to be non-zero!" );
+		if( l1 > l2 ) { // this clause is unit at level l2!
+		  if( l2 < otfssBtLevel ) {  if(debug_otfss) cerr << "c clear all memorized clauses, jump to new level " << l2 << endl;
+		    otfssBtLevel = l2; enqueueK = 0; } // we will lower the level now, so none of the previously enqueued clauses is unit any more!
+		    if(debug_otfss) cerr << "c memorize clause " << c << " as unit at level " << l2 << endl;
+		    otfssCls[enqueueK++] = otfssCls[i]; // memorize that this clause has to be enqueued, if the level is not altered!
+		    if(debug_otfss) { cerr << "c clause levels: "; for( int k = 0 ; k < c.size(); ++ k ) cerr << " " << level(var(c[k])); cerr << endl;}
+		} else if( l1 == l2 ) l2 --; // reduce the backtrack level to get this clause right, even if its not a unit clause!
+		if( l2 < otfssBtLevel ) { if(debug_otfss) cerr << "c clear all memorized clauses, jump to new level " << l2 << endl;
+		  otfssBtLevel = l2; enqueueK = 0; }
+		// finally, modify clause and get all watch structures into a good shape again!
+		if( c.size() > 3 ) {
+		  assert( level(var(c[1]) ) == l1 && "if there is a unit literal, this literal is the other watched literal!" );
+		  assert( level(var(c[2]) ) >= l2 && "the second literal can be used as other watched literal for the reduced clause" );
+		  // remove from watch list of first literal
+		  remove(watches[~c[0]], Watcher(otfssCls[i], c[1])); // strict deletion!
+		  // add clause to list of third literal
+		  watches[~c[2]].push(Watcher(otfssCls[i], c[1]));
+		  c[0] = c[1]; c[1] = c[2]; c.removePositionUnsorted(2); // move the two literals with the highest levels forward!
+		} else if( c.size() == 2 ) { // clause becomes unit, no need to attach it again!
+		  assert( otfssBtLevel == 0 && "if we found a single unit, backtracking has to be performed to level 0!" );
+		  detachClause(otfssCls[i],true);
+		  c[0] = c[1]; c.removePositionUnsorted(1);
+		  otfssUnits ++;
+		} else { // c.size() == 3
+		  detachClause(otfssCls[i],true); // remove from watch lists for long clauses!
+		  c[0] = c[1]; c.removePositionUnsorted(1); // shrink clause to binary clause!
+		  attachClause(otfssCls[i]); // add to watch list for binary clauses (no extra constraints on clause literals!)
+		  otfssBinaries++;
+		} 
+		addClauseToProof(c); // for RUP, DRUP not supported here!
+	      }
+	      
+	      otfssHigherJump = otfssBtLevel < backtrack_level ? otfssHigherJump + 1 : otfssHigherJump; // stats
+	      cancelUntil(otfssBtLevel); // backtrack - this level is at least as small as the usual level!
+	      if(debug_otfss) if( enqueueK > 0 ) cerr << "c jump to otfss level " << otfssBtLevel << endl;
+	      
+	      // enqueue all clauses that need to be enqueued!
+	      for( int i = 0; i < enqueueK; ++ i ) {
+		const Clause& c = ca[otfssCls[i]];
+		if(debug_otfss) cerr << "c enqueue literal " << c[0] << " of OTFSS clause " << c << endl;
+		if( value(c[0]) == l_Undef ) uncheckedEnqueue(c[0]); // it can happen that multiple clauses imply the same literal!
+		else if ( decisionLevel() == 0 && value(c[0]) == l_Undef ) return l_False; 
+		// else not necessary, because unit propagation will find the new conflict!
+		if( opt_printDecisions ) cerr << "c enqueue OTFSS literal " << c[0]<< " at level " <<  decisionLevel() << " from clause " << c << endl;
+	      }
+	      
 	      if( ret > 0 ) { // multiple learned clauses
-		assert( backtrack_level == 0 && "found units, have to jump to level 0!" );
-		cancelUntil(backtrack_level);
+		assert( decisionLevel() == 0 && "found units, have to jump to level 0!" );
 		lbdQueue.push(1);sumLBD += 1; // unit clause has one level
 		for( int i = 0 ; i < learnt_clause.size(); ++ i ) // add all units to current state
-		  { uncheckedEnqueue(learnt_clause[i]);  }
+		{ 
+		  if( value(learnt_clause[i]) == l_Undef ) uncheckedEnqueue(learnt_clause[i]);
+		  else if (value(learnt_clause[i]) == l_False ) return l_False; // otherwise, we have a top level conflict here! 
+		  if( opt_printDecisions ) cerr << "c enqueue multi-learned literal " << learnt_clause[i] << " at level " <<  decisionLevel() << endl;
+		}
 		  
 		// write learned unit clauses to DRUP!
- // write learned unit clauses to DRUP!
 		for (int i = 0; i < learnt_clause.size(); i++)
 		  addUnitToProof(learnt_clause[i]);
 		  
@@ -1417,15 +1430,15 @@ lbool Solver::search(int nof_conflicts)
 		lbdQueue.push(nblevels);
 		sumLBD += nblevels;
 
-		cancelUntil(backtrack_level);
-
 		// write learned clause to DRUP!
 		if (output != NULL) addVecToProof( learnt_clause );
 
 		if (learnt_clause.size() == 1){
+		    assert( decisionLevel() == 0 && "enequeue unit clause on decision level 0!" );
 		    topLevelsSinceLastLa ++;
-		    uncheckedEnqueue(learnt_clause[0]);nbUn++;
-		    if( opt_printDecisions ) printf("c enqueue literal $s%d at level %d\n", sign(learnt_clause[0]) ? "-" : "", var(learnt_clause[0]) + 1, decisionLevel() );
+		    if( value(learnt_clause[0]) == l_Undef ) {uncheckedEnqueue(learnt_clause[0]);nbUn++;}
+		    else if (value(learnt_clause[0]) == l_False ) return l_False; // otherwise, we have a top level conflict here!
+		    if( opt_printDecisions ) cerr << "c enqueue learned unit literal " << learnt_clause[0]<< " at level " <<  decisionLevel() << " from clause " << learnt_clause << endl;
 		}else{
 		  CRef cr = ca.alloc(learnt_clause, true);
 		  ca[cr].setLBD(nblevels); 
@@ -1436,12 +1449,12 @@ lbool Solver::search(int nof_conflicts)
 		  attachClause(cr);
 		  
 		  claBumpActivity(ca[cr]);
-		  uncheckedEnqueue(learnt_clause[0], cr);
-		  if( opt_printDecisions ) printf("c enqueue literal %s%d at level %d\n", sign(learnt_clause[0]) ? "-" : "", var(learnt_clause[0]) + 1, decisionLevel() );
+		  if( backtrack_level == otfssBtLevel ) if (value(learnt_clause[0]) == l_Undef) uncheckedEnqueue(learnt_clause[0], cr); // this clause is only unit, if OTFSS jumped to the same level!
+		  if( opt_printDecisions ) cerr << "c enqueue literal " << learnt_clause[0]<< " at level " <<  decisionLevel() << " from learned clause " << learnt_clause << endl;
 		}
 
 	      }
-	    }
+	    
             varDecayActivity();
             claDecayActivity();
 
@@ -1855,6 +1868,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
 	    printf("c LAs: %d laSeconds %lf LA assigned: %d tabus: %d, failedLas: %d, maxEvery %d\n", laTime, las, laAssignments, tabus, failedLAs, maxBound );
 	    printf("c IntervalRestarts: %d\n", intervalRestart);
 	    printf("c lhbr: %d (l1: %d), new: %d (l1: %d), tests: %d, subs: %d\n", lhbrs, l1lhbrs,lhbr_news,l1lhbr_news,lhbrtests,lhbr_sub);
+	    printf("c otfss: %d (l1: %d), cls: %d, units: %d, binaries: %d, jumpedHigher: %d\n", otfsss, otfsssL1,otfssClss,otfssUnits,otfssBinaries,otfssHigherJump);
     }
 
     if (status == l_True){
