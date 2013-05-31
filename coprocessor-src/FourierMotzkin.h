@@ -25,7 +25,7 @@ class FourierMotzkin : public Technique  {
   double processTime,amoTime,fmTime;
   int steps;
   int fmLimit;
-  int foundAmos,newAmos,newAlos,newAlks;
+  int foundAmos,foundAmts,newAmos,newAlos,newAlks;
   int sameUnits,deducedUnits,propUnits;
   int addDuplicates;
   int irregular, pureAmoLits;

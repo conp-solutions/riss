@@ -390,6 +390,7 @@ protected:
   int lhbr_sub;
   
   int simplifyIterations; // number of visiting level 0 until simplification is to be performed
+  int learnedDecisionClauses;
   
   vec<CRef> otfssCls; // store the clauses that can be modified by OTFSS (assume: first literal is to be removed!)
   int otfsss, otfsssL1,otfssClss,otfssUnits,otfssBinaries,otfssHigherJump; // otfss stats!

@@ -19,6 +19,7 @@ static IntOption  opt_rewlimit        (_cat, "cp3_rew_limit","number of steps al
 static IntOption  opt_Varlimit        (_cat, "cp3_rew_Vlimit","max number of variables to still perform REW", 1000000, IntRange(0, INT32_MAX));
 static IntOption  opt_Addlimit        (_cat, "cp3_rew_Addlimit","number of new variables being allowed", 100000, IntRange(0, INT32_MAX));
 
+static BoolOption opt_rem_first       (_cat, "cp3_rew_1st"   ,"how to find AMOs", false);
 static BoolOption opt_rew_avg         (_cat, "cp3_rew_avg"   ,"use AMOs above equal average only?", true);
 static BoolOption opt_rew_ratio       (_cat, "cp3_rew_ratio" ,"allow literals in AMO only, if their complement is not more frequent", true);
 static BoolOption opt_rew_once        (_cat, "cp3_rew_once"  ,"rewrite each variable at most once! (currently: yes only!)", true);
@@ -155,18 +156,41 @@ bool Rewriter::process()
       const uint32_t size2 = big.getSize( ~l );
       Lit* list2 = big.getArray( ~l );
       // if not all, disable this literal, remove it from data.lits
+      
+      if( debug_out > 0 ) cerr << "c check AMO with literal " << l << endl;
+
       inAmo.nextStep(); // new AMO
-      for( int j = 0 ; j < size2; ++ j ) inAmo.setCurrentStep( toInt(list2[j]) );
-      int j = 0;
-      for( ; j<data.lits.size(); ++ j ) 
-	if( i!=j 
-	  && data.lits[j] != lit_Undef 
-	  && !inAmo.isCurrentStep( toInt( data.lits[j] ) ) 
-	) break;
-      if( j != data.lits.size() ) {
-	if( debug_out > 0) cerr << "c reject [" <<i<< "]" << data.lits[i] << ", because failed with [" << j << "]" << data.lits[j] << endl;
-	data.lits[i] = lit_Undef; // if not all literals are covered, disable this literal!
-      } else if( debug_out > 0) cerr << "c keep [" <<i<< "]" << data.lits[i] << " which hits [" << j << "] literas"  << endl;
+      if( opt_rem_first ) {
+	for( int j = 0 ; j < size2; ++ j ) inAmo.setCurrentStep( toInt(list2[j]) );
+	int j = 0;
+	for( ; j<data.lits.size(); ++ j ) 
+	  if( i!=j 
+	    && data.lits[j] != lit_Undef 
+	    && !inAmo.isCurrentStep( toInt( data.lits[j] ) ) 
+	  ) break;
+	if( j != data.lits.size() ) {
+	  if( debug_out > 0) cerr << "c reject [" <<i<< "]" << data.lits[i] << ", because failed with [" << j << "]" << data.lits[j] << endl;
+	  data.lits[i] = lit_Undef; // if not all literals are covered, disable this literal!
+	} else if( debug_out > 0) cerr << "c keep [" <<i<< "]" << data.lits[i] << " which hits [" << j << "] literas"  << endl;
+      } else {
+	for( int j = 0 ; j < size2; ++ j ) {
+	  if( debug_out > 2 ) cerr << "c literal " << l << " hits literal " << list2[j] << endl;
+	  inAmo.setCurrentStep( toInt(list2[j]) );
+	}
+	inAmo.setCurrentStep( toInt(l) ); // set literal itself!
+	int j = i+1; // previous literals have been tested already!
+	for( ; j < data.lits.size(); ++ j ) {
+	  if( data.lits[j] == lit_Undef ) continue; // do not process this literal!
+	  if( debug_out > 2 ) cerr << "c check literal " << data.lits[j] << "[" << j << "]" << endl;
+	  if( !inAmo.isCurrentStep( toInt( data.lits[j] ) ) // not in AMO with current literal
+	  ) {
+	    if( debug_out > 0) cerr << "c reject [" <<j<< "]" << data.lits[j] << ", because failed with [" << i << "]" << data.lits[i] << endl;
+	    data.lits[j] = lit_Undef; // if not all literals are covered, disable this literal!
+	  } else {
+	    if( debug_out > 0) cerr << "c keep [" <<j<< "]" << data.lits[j] << " which is hit by literal " << data.lits[i] << "[" << i << "] "  << endl;    
+	  }
+	}
+      }
     }
     
     // found an AMO!
@@ -339,14 +363,16 @@ bool Rewriter::process()
 	  //
 	  // TODO: handle foundNR1 and foundNR2 here
 	  //
-	  if( foundNR1 && foundNR2 ) { c.shrink(1); if( debug_out > 2 ) cerr << "c into2 pos new [" << ll[k] << "] : " << c << endl; continue; }
+	  if( foundNR1 && foundNR2 ) { c.shrink(1); data.addSubStrengthClause(ll[k]); if( debug_out > 2 ) cerr << "c into2 pos new [" << ll[k] << "] : " << c << endl; continue; }
 	  if( debug_out > 4 )cerr << "c r1" << endl;
 	  bool reuseClause = false;
 	  // have altered the clause, and its not a tautology now, and its not subsumed
 	  if( !foundNR1comp && !foundNR1 ) {c[hitPos] = r1;c.sort();sortCalls++;} // in this clause, have the new literal, if not present already
 	  if( !foundNR1comp && !hasDuplicate( data.list(minL1) , c ) ) { // not there or subsumed -> add clause and test other via vector!
-	    if( foundNR1 ) c.shrink(1); // already sorted!
-	    else {
+	    if( foundNR1 ) {
+	      c.shrink(1); // already sorted!
+	      data.addSubStrengthClause(ll[k]); // afterwards, check for subsumption!
+	    } else {
 	      // add clause c to other lists if not there yet
 	      data[r1] ++; data.list(r1).push_back( ll[k] ); // add the clause to the right list! update stats!
 	      data.addSubStrengthClause(ll[k]); // afterwards, check for subsumption!
@@ -364,8 +390,10 @@ bool Rewriter::process()
 	    if( debug_out > 3 )cerr << "c found " << r1 << " at " << hitPos << endl;
 	    if( !foundNR2comp && !foundNR2 ) {c[hitPos] = r2;c.sort();sortCalls++;} // in this clause, have the new literal, if not present already
 	    if( !foundNR2comp && !hasDuplicate( data.list(minL1) , c ) ) { // not there or subsumed -> add clause and test other via vector!
-	      if( foundNR2 ) c.shrink(1); // already sorted!
-	      else {
+	      if( foundNR2 ) {
+		c.shrink(1); // already sorted!
+		data.addSubStrengthClause(ll[k]);
+	      } else {
 		// add clause c to other lists if not there yet
 		data[r2] ++; data.list(r2).push_back( ll[k] ); // add the clause to the right list! update stats!
 		data.addSubStrengthClause(ll[k]); // afterwards, check for subsumption!
@@ -381,7 +409,7 @@ bool Rewriter::process()
 	    if( !foundNR2comp && !hasDuplicate( data.list(minL2) , clsLits ) ) {
 	      // add clause with clsLits
 	      CRef tmpRef = ca.alloc(clsLits, c.learnt() ); // use learnt flag of other !
-	      data.addSubStrengthClause(tmpRef); // afterwards, check for subsumption!
+	      data.addSubStrengthClause(tmpRef,true); // afterwards, check for subsumption!
 	      if( debug_out > 1 ) cerr << "c into2 pos new [" << tmpRef << "] : " << ca[tmpRef] << endl;
 	      createdClauses ++;
 	      // clause is sorted already!
@@ -467,7 +495,7 @@ bool Rewriter::process()
 	    c.set_delete(true);
 	    data.removedClause( nll[k] );
 	    CRef tmpRef = ca.alloc(clsLits, c.learnt() ); // no learnt clause!
-	    data.addSubStrengthClause(tmpRef); // afterwards, check for subsumption!
+	    data.addSubStrengthClause(tmpRef, true); // afterwards, check for subsumption and strengthening!
 	    if( debug_out > 1 ) cerr << "c into4 neg new [" << tmpRef << "] : " << ca[tmpRef] << endl;
 	    // clause is sorted already!
 	    data.addClause( tmpRef ); // add to all literal lists in the clause
@@ -493,7 +521,7 @@ bool Rewriter::process()
 	clsLits[0] = data.lits[j] < data.lits[k] ? ~data.lits[j] : ~data.lits[k];
 	clsLits[1] = data.lits[j] < data.lits[k] ? ~data.lits[k] : ~data.lits[j];
 	CRef tmpRef = ca.alloc(clsLits, false ); // no learnt clause!
-	data.addSubStrengthClause(tmpRef); // afterwards, check for subsumption!
+	data.addSubStrengthClause(tmpRef,true); // afterwards, check for subsumption!
 	if( debug_out > 2 ) cerr << "c add new AMO [" << tmpRef << "] : " << ca[tmpRef] << endl;
 	// clause is sorted already!
 	data.addClause( tmpRef ); // add to all literal lists in the clause

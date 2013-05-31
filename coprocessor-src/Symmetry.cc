@@ -241,6 +241,10 @@ bool Symmetry::process() {
     i = j-1; // move pointer forward
   }
   
+  solver.conflict_budget = -1;
+  
+  assert( solver.decisionLevel() == 0 && "after symmetry, reach level 0 again!" );
+  
   // clear all the learned clauses inside the solver!
   if( opt_cleanLearn ) {
     for( int i = 0 ; i < solver.learnts.size(); ++ i ) {

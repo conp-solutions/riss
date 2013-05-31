@@ -166,10 +166,12 @@ class DoubleOption : public Option
                 range.end,
                 range.end_inclusive ? ']' : ')', 
                 value);
+#ifndef NOVERBHELP
         if (verbose){
             fprintf(stderr, "\n        %s\n", description);
             fprintf(stderr, "\n");
         }
+#endif
     }
 };
 
@@ -229,10 +231,12 @@ class IntOption : public Option
             fprintf(stderr, "%4d", range.end);
 
         fprintf(stderr, "] (default: %d)\n", value);
+#ifndef NOVERBHELP
         if (verbose){
             fprintf(stderr, "\n        %s\n", description);
             fprintf(stderr, "\n");
         }
+#endif
     }
 };
 
@@ -291,10 +295,12 @@ class Int64Option : public Option
             fprintf(stderr, "%4"PRIi64, range.end);
 
         fprintf(stderr, "] (default: %"PRIi64")\n", value);
+#ifndef NOVERBHELP
         if (verbose){
             fprintf(stderr, "\n        %s\n", description);
             fprintf(stderr, "\n");
         }
+#endif
     }
 };
 #endif
@@ -326,10 +332,12 @@ class StringOption : public Option
 
     virtual void help (bool verbose = false){
         fprintf(stderr, "  -%-10s = %8s\n", name, type_name);
+#ifndef NOVERBHELP
         if (verbose){
             fprintf(stderr, "\n        %s\n", description);
             fprintf(stderr, "\n");
         }
+#endif
     }    
 };
 
@@ -373,10 +381,12 @@ class BoolOption : public Option
 
         fprintf(stderr, " ");
         fprintf(stderr, "(default: %s)\n", value ? "on" : "off");
+#ifndef NOVERBHELP
         if (verbose){
             fprintf(stderr, "\n        %s\n", description);
             fprintf(stderr, "\n");
         }
+#endif
     }
 };
 

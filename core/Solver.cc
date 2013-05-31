@@ -131,6 +131,8 @@ static BoolOption    opt_otfssL            ("MODS", "otfssL",      "otfss for le
 static IntOption     opt_otfssMaxLBD       ("MODS", "otfssMLDB",   "max. LBD of learnt clauses that are candidates for otfss", 30, IntRange(2, INT32_MAX) );
 static BoolOption    debug_otfss           ("MODS", "otfss-D",     "print debug output", false);
 
+static IntOption     opt_learnDecPrecent   ("MODS", "learnDecP",   "if LBD of is > percent of decisionlevel, learn decision Clause (Knuth)", 100, IntRange(1, 100) );
+
 // useful methods
 
 /// print literals into a stream
@@ -261,6 +263,7 @@ Solver::Solver() :
   ,lhbr_sub(0)
   
   ,simplifyIterations(0)
+  ,learnedDecisionClauses(0)
   
   ,otfsss(0)
   ,otfsssL1(0)
@@ -677,6 +680,35 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
       otfssClauses.pop(); // do not work on otfss clause, if current learned clause subsumes it anyways!
     }
     
+    bool doMinimizeClause = true; // created extra learnt clause? yes -> do not minimize
+    if( out_learnt.size() > decisionLevel() ) { // is it worth to check for decisionClause?
+      lbd = 0;
+      MYFLAG++;
+      for(int i=0;i<out_learnt.size();i++) {
+
+	int l = level(var(out_learnt[i]));
+	if (permDiff[l] != MYFLAG) {
+	  permDiff[l] = MYFLAG;
+	  lbd++;
+	}
+      }
+      if( lbd > (opt_learnDecPrecent * decisionLevel() + 99 ) / 100 ) {
+	// instead of learning a very long clause, which migh be deleted very soon (idea by Knuth, already implemented in lingeling(2013)
+	for (int j = 0; j < out_learnt.size(); j++) seen[var(out_learnt[j])] = 0;    // ('seen[]' is now cleared)
+	out_learnt.clear();
+	for( int i = 0; i + 1 < decisionLevel(); ++ i ) {
+	  out_learnt.push( ~ trail[ trail_lim[i] ] );
+	}
+	out_learnt.push( ~p ); // instead of last decision, add UIP!
+	out_learnt[ out_learnt.size() -1 ] = out_learnt[0];
+	out_learnt[0] = ~p; // move 1st UIP literal to the front!
+	learnedDecisionClauses ++;
+	if( opt_printDecisions ) cerr << endl << "c learn decisionClause " << out_learnt << endl << endl;
+	doMinimizeClause = false;
+      }
+    }
+    
+    if( doMinimizeClause ) {
     // Simplify conflict clause:
     //
     int i, j;
@@ -777,6 +809,9 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
       }
     }
     }
+    
+    } // end working on usual learnt clause (minimize etc.)
+    
     // Find correct backtrack level:
     //
     if (out_learnt.size() == 1)
@@ -820,10 +855,9 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
   } 
 #endif	    
 
-
-
     for (int j = 0; j < analyze_toclear.size(); j++) seen[var(analyze_toclear[j])] = 0;    // ('seen[]' is now cleared)
     return 0;
+
 }
 
 
@@ -1482,7 +1516,7 @@ lbool Solver::search(int nof_conflicts)
             if (nof_conflicts >= 0 && conflictC >= nof_conflicts || !withinBudget()){
                 progress_estimate = progressEstimate();
                 cancelUntil(0);
-		cerr << "c restart after " << conflictC << " conflicts - limit: " << nof_conflicts << endl;
+		// cerr << "c restart after " << conflictC << " conflicts - limit: " << nof_conflicts << endl;
                 return l_Undef; }
 	  }
 
@@ -1869,6 +1903,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
 	    printf("c IntervalRestarts: %d\n", intervalRestart);
 	    printf("c lhbr: %d (l1: %d), new: %d (l1: %d), tests: %d, subs: %d\n", lhbrs, l1lhbrs,lhbr_news,l1lhbr_news,lhbrtests,lhbr_sub);
 	    printf("c otfss: %d (l1: %d), cls: %d, units: %d, binaries: %d, jumpedHigher: %d\n", otfsss, otfsssL1,otfssClss,otfssUnits,otfssBinaries,otfssHigherJump);
+	    printf("c decisionClauses: %d\n", learnedDecisionClauses );
     }
 
     if (status == l_True){

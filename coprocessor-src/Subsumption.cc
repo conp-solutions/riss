@@ -10,11 +10,13 @@ static const char* _cat = "COPROCESSOR 3 - SUBSUMPTION";
 static BoolOption  opt_naivStrength    (_cat, "naive_strength",   "use naive strengthening", false);
 static IntOption   opt_allStrengthRes  (_cat, "all_strength_res", "Create all self-subsuming resolvents of clauses less equal given size (prob. slow & blowup, only seq)", 0, IntRange(0,INT32_MAX)); 
 static BoolOption  opt_strength        (_cat, "cp3_strength",     "Perform clause strengthening", true); 
-static BoolOption  opt_preferLearned   (_cat, "cp3_strengthL",    "During inprocessing, check learned clauses first!", true); 
+static BoolOption  opt_preferLearned   (_cat, "cp3_inpPrefL",    "During inprocessing, check learned clauses first!", true); 
 
 static IntOption   opt_subLimit        (_cat, "cp3_sub_limit", "limit of subsumption steps",   300000000, IntRange(0,INT32_MAX)); 
 static IntOption   opt_strLimit        (_cat, "cp3_str_limit", "limit of strengthening steps", 300000000, IntRange(0,INT32_MAX)); 
 static IntOption   opt_callIncrease    (_cat, "cp3_call_inc",  "max. limit increase per process call (subsimp is frequently called from other techniques)", 100, IntRange(0,INT32_MAX)); 
+
+static IntOption  opt_inpStepInc      (_cat, "cp3_sub_inpInc","increase for steps per inprocess call", 40000000, IntRange(0, INT32_MAX));
 
 #if defined CP3VERSION && CP3VERSION < 302
 static const int   opt_par_strength    =1;
@@ -30,7 +32,11 @@ static IntOption   opt_par_subs_counts (_cat, "par_subs_counts" ,  "Updates of c
 static IntOption   opt_chunk_size      (_cat, "susi_chunk_size" ,  "Size of Par SuSi Chunks", 100000, IntRange(1,INT32_MAX));
 #endif
 
-static IntOption  opt_inpStepInc      (_cat, "cp3_sub_inpInc","increase for steps per inprocess call", 40000000, IntRange(0, INT32_MAX));
+#if defined CP3VERSION
+static int opt_debug = 0;
+#else
+static IntOption   opt_debug   (_cat, "susi_debug" , "Debug Output for Subsumption", 0, IntRange(0,3));
+#endif
 
 Subsumption::Subsumption( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation )
 : Technique( _ca, _controller )
@@ -113,6 +119,13 @@ void Subsumption::process(bool doStrengthen, Heap< VarOrderBVEHeapLt >* heap, co
   // increase limits per call if necessary
   if( subsumeSteps + callIncrease > subLimit )  { subLimit = subsumeSteps + callIncrease;  limitIncreases++; }
   if( strengthSteps + callIncrease > strLimit ) { strLimit = strengthSteps + callIncrease; limitIncreases++; }
+  
+  if( opt_debug > 0 ) {
+      cerr << "c check for subsumption: " << endl;
+      for( int i = 0 ; i < data.getSubsumeClauses().size(); ++ i )  cerr << "c [" << i << "] : " << ca[data.getSubsumeClauses()[i]] << endl;
+      cerr << "c check for strengthening: " << endl;
+      for( int i = 0 ; i < data.getStrengthClauses().size(); ++ i )  cerr << "c [" << i << "] : " << ca[data.getStrengthClauses()[i]] << endl;
+  }
   
   while( data.ok() && (hasToSubsume() || hasToStrengthen() ))
   {

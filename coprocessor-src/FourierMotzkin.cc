@@ -22,7 +22,9 @@ static BoolOption opt_keepAllNew     (_cat, "cp3_fm_keepM"   ,"keep all new AMOs
 static IntOption opt_newAlo          (_cat, "cp3_fm_newAlo"  ,"create clauses from deduced ALO constraints 0=no,1=from kept,2=keep all ",  2, IntRange(0, 2));
 static IntOption opt_newAlk          (_cat, "cp3_fm_newAlk"  ,"create clauses from deduced ALK constraints 0=no,1=from kept,2=keep all (possibly redundant!)",  2, IntRange(0, 2));
 static BoolOption opt_checkSub       (_cat, "cp3_fm_newSub"  ,"check whether new ALO and ALK subsume other clauses (only if newALO or newALK)", true);
-  
+static BoolOption opt_rem_first      (_cat, "cp3_fm_1st"     ,"extract first AMO candidate, or last AMO candidate", false);
+
+
 
 #if defined CP3VERSION 
 static const int debug_out = 0;
@@ -42,6 +44,7 @@ FourierMotzkin::FourierMotzkin( ClauseAllocator& _ca, ThreadController& _control
 , steps(0)
 , fmLimit(opt_fmLimit)
 , foundAmos(0)
+, foundAmts(0)
 , newAmos(0)
 , newAlos(0)
 , newAlks(0)
@@ -75,7 +78,7 @@ bool FourierMotzkin::process()
   bool didSomething = false;
 
   // have a slot per variable
-  data.ma.resize( data.nVars() );
+  data.ma.resize( data.nVars() * 2 );
   
   MarkArray inAmo;
   inAmo.create( 2 * data.nVars() );
@@ -143,17 +146,40 @@ bool FourierMotzkin::process()
       Lit* list2 = big.getArray( ~l );
       // if not all, disable this literal, remove it from data.lits
       inAmo.nextStep(); // new AMO
-      for( int j = 0 ; j < size2; ++ j ) inAmo.setCurrentStep( toInt(list2[j]) );
-      int j = 0;
-      for( ; j<data.lits.size(); ++ j ) 
-	if( i!=j 
-	  && data.lits[j] != lit_Undef 
-	  && !inAmo.isCurrentStep( toInt( data.lits[j] ) ) 
-	) break;
-      if( j != data.lits.size() ) {
-	if( debug_out > 1) cerr << "c reject [" <<i<< "]" << data.lits[i] << ", because failed with [" << j << "]" << data.lits[j] << endl;
-	data.lits[i] = lit_Undef; // if not all literals are covered, disable this literal!
-      } else if( debug_out > 1) cerr << "c keep [" <<i<< "]" << data.lits[i] << " which hits [" << j << "] literas"  << endl;
+      
+      if( opt_rem_first ) {
+	for( int j = 0 ; j < size2; ++ j ) inAmo.setCurrentStep( toInt(list2[j]) );
+	int j = 0;
+	for( ; j<data.lits.size(); ++ j ) 
+	  if( i!=j 
+	    && data.lits[j] != lit_Undef 
+	    && !inAmo.isCurrentStep( toInt( data.lits[j] ) ) 
+	  ) break;
+	if( j != data.lits.size() ) {
+	  if( debug_out > 0) cerr << "c reject [" <<i<< "]" << data.lits[i] << ", because failed with [" << j << "]" << data.lits[j] << endl;
+	  data.lits[i] = lit_Undef; // if not all literals are covered, disable this literal!
+	} else if( debug_out > 0) cerr << "c keep [" <<i<< "]" << data.lits[i] << " which hits [" << j << "] literas"  << endl;
+      } else {
+	for( int j = 0 ; j < size2; ++ j ) {
+	  if( debug_out > 2 ) cerr << "c literal " << l << " hits literal " << list2[j] << endl;
+	  inAmo.setCurrentStep( toInt(list2[j]) );
+	}
+	inAmo.setCurrentStep( toInt(l) ); // set literal itself!
+	int j = i+1; // previous literals have been tested already!
+	for( ; j < data.lits.size(); ++ j ) {
+	  if( data.lits[j] == lit_Undef ) continue; // do not process this literal!
+	  if( debug_out > 2 ) cerr << "c check literal " << data.lits[j] << "[" << j << "]" << endl;
+	  if( !inAmo.isCurrentStep( toInt( data.lits[j] ) ) // not in AMO with current literal
+	  ) {
+	    if( debug_out > 0) cerr << "c reject [" <<j<< "]" << data.lits[j] << ", because failed with [" << i << "]" << data.lits[i] << endl;
+	    data.lits[j] = lit_Undef; // if not all literals are covered, disable this literal!
+	  } else {
+	    if( debug_out > 0) cerr << "c keep [" <<j<< "]" << data.lits[j] << " which is hit by literal " << data.lits[i] << "[" << i << "] "  << endl;    
+	  }
+	}
+      }
+      
+      
     }
     
     // found an AMO!
@@ -182,7 +208,59 @@ bool FourierMotzkin::process()
   
   // perform AMT extraction
   if( opt_atMostTwo ) {
-    
+    for( Var v = 0 ; v < data.nVars(); ++ v ) {
+      for( int p = 0 ; p < 1; ++ p ) {
+        const Lit l = mkLit(v,p==1);
+	if( debug_out > 1 ) cerr << "c consider literal " << l << " with " << data.list(l).size() << " clauses" << endl;
+        data.lits.clear(); data.ma.nextStep(); // prepare set!
+	data.lits.push_back(l); data.ma.setCurrentStep( toInt(l) ); // add current literal!
+	for( int i = 0 ; i < data.list(l).size(); ++ i ) { // collect all literals that occur with l in a ternary clause!
+	  const Clause& c = ca[data.list(l)[i]];
+	  if( c.can_be_deleted() || c.size() != 3 ) {
+	    if( c.can_be_deleted() ) {data.list(l)[ i ] = data.list(l)[ data.list(l).size() -1 ]; data.list(l).pop_back(); --i; } // remove can-be-deleted clause!
+	    continue; // look for ternary clauses only!
+	  }
+	  if( c[0] != l ) continue; // consider only clauses, where l is the smallest literal?! (all other AMT's would have been found before!)
+	  for( int j = 1; j < 3; ++ j ) if( c[j] != l && ! data.ma.isCurrentStep( toInt(c[j] ) ) ) { data.lits.push_back(c[j]); data.ma.setCurrentStep(toInt(c[j])); }
+	}
+	sort(data.lits); // sort lits in list!
+	assert( data.lits[0] == l && "current literal has to be the smallest literal!" );
+	
+	for( int i = 0 ; i < data.lits.size(); ++ i ) { // check whether each literal can be found with each pair of other literals!
+	  // setup the map
+	  const Lit l0 = data.lits[i];
+	  for( int j = i+1 ; j < data.lits.size(); ++ j ) {
+	    const Lit l1 = data.lits[j];
+	    for( int k = j+1 ; k < data.lits.size(); ++ k ) { 
+	      const Lit l2 = data.lits[k];
+	      if( debug_out > 2 ) cerr << "c check triple " << l0 << " - " << l1 << " - " << l2 << endl;
+	      int m = 0;
+	      for(  ; m < data.list(l0).size(); ++ m ) { // collect all literals that occur with l in a ternary clause!
+		const Clause& c = ca[data.list(l0)[m]];
+		if( c.can_be_deleted() || c.size() != 3 ) continue; // do not use this clause!
+		if( c[1] == l1 && c[2] == l2 ) break; // found corresponding clause! - l0 < l1 -> needs to be c[0]
+	      }
+	      if( m == data.list(l0).size() ) { // did not find triple l0,l1,l2
+		for( j = i; j + 1 < data.lits.size(); ++ j ) data.lits[j] = data.lits[j+1]; // move all remaining literals one position to front
+		data.lits.pop_back(); // remove last literal => deleted current literal, list still sorted!
+		--i; // reduce pointer in list
+		goto checkNextLiteral;
+	      }
+	    } 
+	  } 
+	  checkNextLiteral:; // jump here, if checking the current literal failed
+	}
+	
+	if( data.lits.size() > 3 ) {
+	  for( int i = 0 ; i < data.lits.size(); ++ i ) data.lits[i] = ~data.lits[i];
+	  foundAmts ++;
+	  if( debug_out > 1 ) cerr << "c found AM2["<<foundAmts<<"]: " << data.lits << endl;
+	  cards.push_back( CardC( data.lits ) ); // use default AMO constructor
+	  cards.back().k = 2; // set k to be 2, since its an at-most-two constraint!
+	}
+	
+      }
+    }
   }
   
   
@@ -321,7 +399,15 @@ bool FourierMotzkin::process()
   if( data.hasToPropagate() )
     if( propagation.process(data,true) == l_False ) {data.setFailed(); goto finishedFM; }
   
+  
   // perform actual Fourier Motzkin method 
+  // set all variables that appeard in cardinality constraints, to collect clauses nexT
+  data.ma.nextStep();
+  for( int i = 0 ; i < cards.size(); ++ i ) {
+    const CardC & c = cards[i];
+    for( int j = 0; j < c.ll.size(); ++j ) data.ma.setCurrentStep( var(c.ll[j] ) );
+    for( int j = 0; j < c.lr.size(); ++j ) data.ma.setCurrentStep( var(c.lr[j] ) );
+  }
   // use all clauses that could be useful
   heap.clear();
   for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
@@ -824,6 +910,7 @@ void FourierMotzkin::printStatistics(ostream& stream)
   << amoTime << " amo-s, " 
   << fmTime << " fm-s, "
   << foundAmos << " amos, " 
+  << foundAmts << " amts, "
   << sameUnits << " sameUnits, " 
   << deducedUnits << " deducedUnits, "
   << propUnits << " propUnits, " 

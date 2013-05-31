@@ -16,10 +16,21 @@ static const char* _cat2 = "PREPROCESSOR TECHNIQUES";
 // options
 static BoolOption opt_unlimited   (_cat, "cp3_limited",    "Limits for preprocessing techniques", true);
 static BoolOption opt_randomized  (_cat, "cp3_randomized", "Steps withing preprocessing techniques are executed in random order", false);
-static IntOption  opt_verbose     (_cat, "cp3_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 5));
 static IntOption  opt_inprocessInt(_cat, "cp3_inp_cons",   "Perform Inprocessing after at least X conflicts", 20000, IntRange(0, INT32_MAX));
+static BoolOption opt_enabled     (_cat, "enabled_cp3",    "Use CP3", false);
+static BoolOption opt_inprocess   (_cat, "inprocess",      "Use CP3 for inprocessing", false);
+static IntOption  opt_exit_pp     (_cat, "cp3-exit-pp",    "terminate after preprocessing (1=exit,2=print formula cerr+exit 3=cout+exit)", 0, IntRange(0, 3));
+static BoolOption opt_randInp     (_cat, "randInp",        "Randomize Inprocessing", true);
+static BoolOption opt_inc_inp     (_cat, "inc-inp",        "increase technique limits per inprocess step", false);
+
+#if defined CP3VERSION && CP3VERSION < 400
+       const bool opt_printStats = false; // do not print stats, if restricted binary is produced
+       const static int opt_verbose = 0;        // do not talk during computation!
+#else
        BoolOption opt_printStats  (_cat, "cp3_stats",      "Print Technique Statistics", false);
-      
+       static IntOption  opt_verbose     (_cat, "cp3_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 5));
+#endif
+
 // techniques
 static BoolOption opt_up          (_cat2, "up",            "Use Unit Propagation during preprocessing", false);
 static BoolOption opt_subsimp     (_cat2, "subsimp",       "Use Subsumption during preprocessing", false);
@@ -28,11 +39,6 @@ static BoolOption opt_bce         (_cat2, "bce",           "Use Blocked Clause E
 static BoolOption opt_ent         (_cat2, "ent",           "Use checking for entailed redundancy during preprocessing", false);
 static BoolOption opt_cce         (_cat2, "cce",           "Use (covered) Clause Elimination during preprocessing", false);
 static BoolOption opt_ee          (_cat2, "ee",            "Use Equivalence Elimination during preprocessing", false);
-static BoolOption opt_enabled     (_cat2, "enabled_cp3",   "Use CP3", false);
-static BoolOption opt_inprocess   (_cat2, "inprocess",     "Use CP3 for inprocessing", false);
-static BoolOption opt_exit_pp     (_cat2, "cp3-exit-pp",   "terminate after preprocessing", false);
-static BoolOption opt_randInp     (_cat2, "randInp",       "Randomize Inprocessing", true);
-static BoolOption opt_inc_inp     (_cat2, "inc-inp",       "increase technique limits per inprocess step", false);
 static BoolOption opt_bve         (_cat2, "bve",           "Use Bounded Variable Elimination during preprocessing", false);
 static BoolOption opt_bva         (_cat2, "bva",           "Use Bounded Variable Addition during preprocessing", false);
 static BoolOption opt_unhide      (_cat2, "unhide",        "Use Unhiding (UHTE, UHLE based on BIG sampling)", false);
@@ -997,8 +1003,25 @@ lbool Preprocessor::preprocess()
   if( opt_ptechs && string(opt_ptechs).size() > 0 ) ret = performSimplificationScheduled( string(opt_ptechs) );
   else ret = performSimplification();
   
-  if( opt_exit_pp ) exit(0);
-  else return ret;
+  if( opt_exit_pp > 0) { // exit?
+    if( opt_exit_pp > 1) { // print?
+      int cls = 0;
+      for( int i = 0 ; i < data.getTrail().size(); ++ i ) cls ++;
+      for( int i = 0 ; i < data.getClauses().size(); ++ i ) if( !ca[data.getClauses()[i]].can_be_deleted() ) cls ++;
+      (opt_exit_pp == 2 ? cerr : cout ) << "p cnf " << data.nVars() << " " << cls << endl;
+      for( int i = 0 ; i < data.getTrail().size(); ++ i ) {
+	(opt_exit_pp == 2 ? cerr : cout ) << data.getTrail() << " 0" << endl;
+      }
+      for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
+	if( ca[data.getClauses()[i]].can_be_deleted() ) continue;
+	for( int j = 0 ; j < ca[data.getClauses()[i]].size(); ++ j ) {
+	  (opt_exit_pp == 2 ? cerr : cout ) << ca[data.getClauses()[i]][j] << " ";
+	}
+	(opt_exit_pp == 2 ? cerr : cout )  << "0" << endl;
+      }
+    }
+    exit(0);
+  }	 else return ret;
 }
 
 lbool Preprocessor::inprocess()

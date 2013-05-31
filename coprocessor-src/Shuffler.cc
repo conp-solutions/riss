@@ -12,11 +12,16 @@ using namespace std;
 using namespace Coprocessor;
 
 
-static const char* _cat = "COPROCESSOR 3 - REWRITE";
+static const char* _cat = "COPROCESSOR 3 - SHUFFLE";
 
-static IntOption debug_out                 (_cat, "shuffle-debug", "Debug Output of Shuffler", 0, IntRange(0, 4));
 static IntOption opt_shuffle_seed          (_cat, "shuffle-seed",  "seed for shuffling",  0, IntRange(0, INT32_MAX));
 static BoolOption opt_shuffle_order        (_cat, "shuffle-order", "shuffle the order of the clauses", true);
+
+#if defined CP3VERSION  
+static const int debug_out = 0;
+#else
+static IntOption debug_out                 (_cat, "shuffle-debug", "Debug Output of Shuffler", 0, IntRange(0, 4));
+#endif
 
 
 VarShuffler::VarShuffler() : variables(0), seed(0) {}

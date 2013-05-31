@@ -4,7 +4,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor-src/TwoSAT.h"
 
-static const char* _cat = "COPROCESSOR 3 - REWRITE";
+static const char* _cat = "COPROCESSOR 3 - TWOSAT";
 
 #if defined CP3VERSION 
 static const int debug_out = 0;

@@ -370,7 +370,7 @@ public:
   /** add a clause to the queues, so that this clause will be checked by the next call to subsumeStrength 
    * @return true, if clause has really been added and was not in both queues before
    */
-  bool addSubStrengthClause( const Minisat::CRef cr );
+  bool addSubStrengthClause( const Minisat::CRef cr , bool isNew = false);
   vector<CRef>& getSubsumeClauses();
   vector<CRef>& getStrengthClauses();
   
@@ -1534,16 +1534,16 @@ inline vector< Lit >& CoprocessorData::getEquivalences()
   return equivalences;
 }
 
-inline bool CoprocessorData::addSubStrengthClause(const Minisat::CRef cr)
+inline bool CoprocessorData::addSubStrengthClause(const Minisat::CRef cr, bool isNew)
 {
   bool ret = false;
   Clause& c = ca[cr];
-  if( !c.can_strengthen() ) {
+  if( !c.can_strengthen() || isNew ) {
     c.set_strengthen(true); 
     strengthening_queue.push_back(cr);
     ret = true;
   }
-  if( !c.can_subsume() ) {
+  if( !c.can_subsume() || isNew) {
     c.set_subsume(true); 
     subsume_queue.push_back(cr);
     ret = true;

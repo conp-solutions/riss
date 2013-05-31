@@ -37,7 +37,14 @@ using namespace std;
  IntOption heap_updates         (_cat_bve, "bve_heap_updates",    "Always update variable heap if clauses / literals are added or removed, 2 add variables, if not in heap", 1, IntRange(0,2));
  BoolOption opt_bce_only        (_cat_bve, "bce_only",    "Only remove blocked clauses but do not resolve variables.", false);
  BoolOption opt_print_progress  (_cat_bve, "bve_progress", "Print bve progress stats.", false);
-extern BoolOption opt_printStats;
+
+#if defined CP3VERSION && CP3VERSION < 400
+ bool opt_printStats = false;
+#else
+ extern BoolOption opt_printStats;
+#endif
+ 
+ 
 
 static IntOption  opt_inpStepInc      (_cat_bve, "cp3_bve_inpInc","increase for steps per inprocess call", 5000000, IntRange(0, INT32_MAX));
 

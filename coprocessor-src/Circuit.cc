@@ -29,7 +29,7 @@ static BoolOption opt_genAND     (_cat, "cp3_genAND",      "extract generic AND 
 static BoolOption opt_FASUM      (_cat, "cp3_extHASUM",    "extract full adder sum bit gates", false);
 
 static BoolOption opt_BLOCKED    (_cat, "cp3_extBlocked",  "extract gates, that can be found by blocked clause addition", false);
-static BoolOption opt_AddBlocked (_cat, "cp3_addBlocked",  "clauses that are used to extract blocked gates will be added eagerly (soundness)", true);
+static BoolOption opt_AddBlocked (_cat, "cp3_addBlocked",  "clauses that are used to extract blocked gates will be added eagerly (soundness)", false);
 static BoolOption opt_NegatedI   (_cat, "cp3_extNgtInput", "extract gates, where inputs come from the same variable", true);
 static BoolOption opt_Implied    (_cat, "cp3_extImplied",  "do search binary clause also in BIG with dfs", true);
 #endif
