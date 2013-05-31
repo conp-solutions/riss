@@ -35,6 +35,7 @@ static IntOption  debug_out            (_cat, "ee_debug", "print debug output to
 #endif
 
 static BoolOption opt_eeSub            (_cat, "ee_sub",        "do subsumption/strengthening during applying equivalent literals?", false);
+static BoolOption opt_eeFullReset      (_cat, "ee_reset",      "after Subs or Up, do full reset?", false);
 static IntOption  opt_ee_limit         (_cat, "cp3_ee_limit",  "step limit for detecting equivalent literals", 1000000, IntRange(0, INT32_MAX));
 static IntOption  opt_inpStepInc       (_cat, "cp3_ee_inpInc", "increase for steps per inprocess call", 200000, IntRange(0, INT32_MAX));
 static IntOption  opt_bigIters         (_cat, "cp3_ee_bIter",  "max. iteration to perform EE search on BIG", 3, IntRange(0, INT32_MAX));
@@ -80,6 +81,7 @@ void EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
   // find SCCs and apply them to the "replacedBy" structure
   for( Var v = 0 ; v < data.nVars(); ++ v ) {
     eqDoAnalyze.push_back( mkLit(v,false) );
+    if( debug_out > 2 ) cerr << "c enable literal " << mkLit(v,false) << endl;
     isToAnalyze[ v ] = 1;
   }
   
@@ -1591,14 +1593,21 @@ void EquivalenceElimination::processFASUMgate(CoprocessorData& data, Circuit::Ga
 void EquivalenceElimination::findEquivalencesOnBigFast(CoprocessorData& data, vector< vector<Lit> >* externBig)
 {
   int dfs = 0;
-  vector<int> start( data.nVars() * 2, -1 );
-  vector<int> min  ( data.nVars() * 2, -1 );
-  vector<int> seen ( data.nVars() * 2, -1 );
+
+  vector<Vertex> vertexes ( data.nVars() * 2 );
   
   vector<Lit> todo, path; // work queue, temporary SCC candidate
   
-  data.ma.resize( data.nVars() );
+  data.ma.resize( data.nVars() * 2);
   data.ma.nextStep();
+  
+  if( debug_out > 1 ) {
+    cerr << "c formula: " << endl;
+    for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
+      cerr << "[" << i << " ] " << ca[ data.getClauses()[i] ] << endl;
+    }
+    cerr << "c to process: " << eqDoAnalyze << endl;
+  }
   
   // create underlying data structure
   BIG big;
@@ -1616,20 +1625,25 @@ void EquivalenceElimination::findEquivalencesOnBigFast(CoprocessorData& data, ve
       }
       eqDoAnalyze.pop_back();
       const Lit l = randL;
+      isToAnalyze[ var(randL) ] = 0;
       
-      if( seen[ toInt(l) ] != -1  ) {
+      if( vertexes[ toInt(l) ].seen != -1  ) {
 	if( debug_out > 1) cerr << "c do not re-work liteal " << l << endl;
 	continue; // saw this literal already!
       }
-      if( data.ma.isCurrentStep( var(l) ) ) {
-	if( debug_out > 1) cerr << "c there is already a SCC involving literal " << l << " or its complement" <<  endl;
-	continue; // already found an SCC with this variable (there will be a symmetric one in the big, no need to find it!)
-      }
+//       if( data.ma.isCurrentStep( toInt(l) ) ) {
+// 	if( debug_out > 1) cerr << "c there is already a SCC involving literal " << l << " or its complement" <<  endl;
+// 	continue; // already found an SCC with this variable (there will be a symmetric one in the big, no need to find it!)
+//       }
       const int size = externBig == 0 ? big.getSize(l) : (*externBig)[toInt(l)].size();
-      if( size == 0 ) { seen[ toInt(l) ] = 0; continue; } // do not process literals without child literals!
+      if( false && size == 0 ) { 
+	if( debug_out > 1 ) cerr << "c literal " << l << " without children is not analyzed" << endl;
+	vertexes[ toInt(l) ].seen = 0; vertexes[ toInt(l) ].min = -2; // set min to invalid!
+	continue;
+      } // do not process literals without child literals!
 
       // init literal
-      start[ toInt(l) ] = dfs ++; min[ toInt(l) ] = start[ toInt(l) ];
+      vertexes[ toInt(l) ].start = dfs ++; vertexes[ toInt(l) ].min = vertexes[ toInt(l) ].start;
       assert( todo.size() == 0  && "there cannot be elements in the todo stack when it is initialized!" );
       todo.push_back(l);path.push_back(l);
       
@@ -1639,47 +1653,52 @@ void EquivalenceElimination::findEquivalencesOnBigFast(CoprocessorData& data, ve
       while( todo.size() > 0 ) {
 	Lit V = todo.back(); // variable to work on!
 	if( debug_out > 1) cerr << "c current stack: " << todo << endl;
-	if( debug_out > 1) cerr << "c continue with " << V << "[" << start[toInt(V)] << " , " << min[toInt(V)] << " , " << seen[toInt(V)] << " / " << ( externBig == 0 ? big.getSize(V) : (*externBig)[toInt(V)].size() ) << "]" << endl;
+	if( debug_out > 1) cerr << "c continue with " << V << "[" << vertexes[toInt(V)].start << " , " << vertexes[toInt(V)].min << " , " << vertexes[toInt(V)].seen << " / " << ( externBig == 0 ? big.getSize(V) : (*externBig)[toInt(V)].size() ) << "]" << endl;
 	
-	if( seen[ toInt(V) ] != -1 ) { // have been working on this literal before already!
-	  Lit lastSeen = externBig == 0 ? big.getArray(V)[ seen[toInt(V)] ] : (*externBig)[toInt(V)][ seen[toInt(V)] ];
-	  min[ toInt(V) ] = min[ toInt(V) ] < min[ toInt(lastSeen) ] ? min[ toInt(V) ] : min[ toInt(lastSeen) ] ; // set min of "parent node"
-	  if( debug_out > 1)  cerr << "c update recursive min(" << V << ") to " << min[ toInt(V) ] << endl;
+	if( vertexes[ toInt(V) ].seen != -1 ) { // have been working on this literal before already!
+	  Lit lastSeen = externBig == 0 ? big.getArray(V)[ vertexes[toInt(V)].seen ] : (*externBig)[toInt(V)][ vertexes[toInt(V)].seen ];
+	  vertexes[toInt(V)].min = vertexes[toInt(V)].min < vertexes[ toInt(lastSeen) ].min ? vertexes[toInt(V)].min : vertexes[ toInt(lastSeen) ].min ; // set min of "parent node"
+	  if( debug_out > 1)  cerr << "c update recursive min(" << V << ") to " << vertexes[toInt(V)].min << endl;
 	}
 	
-	seen[ toInt(V) ] ++; // start with 0th element / continue with next element after recursion
+	vertexes[toInt(V)].seen ++; // start with 0th element / continue with next element after recursion
 	
 	// process all child nodes of the current node in the BIG
 	const int size = externBig == 0 ? big.getSize(V) : (*externBig)[toInt(V)].size();
-	for( ; seen[ toInt(V) ] < size; ) { 
-	  const Lit v = externBig == 0 ? big.getArray(V)[ seen[toInt(V)] ] : (*externBig)[toInt(V)][ seen[toInt(V)] ];
-	  if( seen[ toInt(v) ] == -1 ) { // have not seen this node so far, apply recursion on it
-	    if( debug_out > 1) cerr << "c found [" << seen[ toInt(V) ] << "]:  fresh " << v << "[" << start[toInt(v)] << " <= " << dfs + 1 << "]" << endl;
+	for( ; vertexes[toInt(V)].seen < size; ) { 
+	  const Lit v = externBig == 0 ? big.getArray(V)[ vertexes[toInt(V)].seen ] : (*externBig)[toInt(V)][ vertexes[toInt(V)].seen ];
+	  if( debug_out > 1) cerr << "c check child " << v << " [ seen(" << v << ") =" << vertexes[toInt(v)].seen << " , "  << vertexes[toInt(v)].start << " , " << vertexes[toInt(V)].min << "]" << endl;
+	  if( vertexes[toInt(v)].seen == -1 ) { // have not seen this node so far, apply recursion on it
+	    if( debug_out > 1) cerr << "c found [" << vertexes[toInt(V)].seen << "]:  fresh " << v << "[" << vertexes[toInt(v)].start << " <= " << dfs + 1 << "]" << endl;
 	    todo.push_back(v);path.push_back(v);
-	    start[ toInt(v) ] = dfs ++; min[ toInt(v) ] = start[ toInt(v) ]; // init the new node!
+	    vertexes[toInt(v)].start = dfs ++; vertexes[toInt(v)].min = vertexes[toInt(v)].start; // init the new node!
 	    goto nextNode;
 	  } else {
-	    if( debug_out > 1) cerr << "c found [" << seen[ toInt(V) ] << "]: already analyzed " << v << " [" << start[toInt(v)] << " , " << min[toInt(V)] << "]" << endl;
-	    min[ toInt(V) ] = min[ toInt(V) ] <= start[ toInt(v) ] ? min[ toInt(V) ] : start[ toInt(v) ] ; // set min of "parent node" // TODO: according to recursive algorithm: use start instead of min!
-	    if( debug_out > 1)  cerr << "c update already found min(" << V << ") to " << min[ toInt(V) ] << endl;
-	    seen[ toInt(V) ] ++;
+	    if( debug_out > 1) cerr << "c found [" << vertexes[toInt(V)].seen << "]: already analyzed " << v << " [" << vertexes[toInt(v)].start << " , " << vertexes[toInt(V)].min << "]" << endl;
+	    // check this edge only, if the other vertex has not been completed yet!
+	    if( !data.ma.isCurrentStep( toInt(v) ) ) // this literal does not give a bigger SCC! -> has been removed from path already!
+	      vertexes[toInt(V)].min = vertexes[toInt(V)].min <= vertexes[toInt(v)].start ? vertexes[toInt(V)].min : vertexes[toInt(v)].start ; // set min of "parent node" // TODO: according to recursive algorithm: use start instead of min!
+	    if( debug_out > 1)  cerr << "c update already found min(" << V << ") to " << vertexes[toInt(V)].min << endl;
+	    vertexes[toInt(V)].seen ++;
 	  }
 	}
 	
 	// finished all child nodes, check whether a SCC has been found
-	if( start[ toInt(V) ] == min[ toInt(V) ] ) {
+	if( vertexes[toInt(V)].start == vertexes[toInt(V)].min ) {
 	  if( debug_out > 1) cerr << "c current Node is SCC root " << V << endl;
 	  eqCurrentComponent.clear();
 	  Lit w = lit_Undef;
+	  Lit minLit = path.back();
 	  do { // pop all elements behind V!
 	    assert( path.size() > 0 && "there have to be more elements on the stack!" );
 	    w = path.back(); path.pop_back();
+	    minLit = w < minLit ? w : minLit;
 	    eqCurrentComponent.push_back( w );
-	    data.ma.setCurrentStep( var(w) ); // ensure that the same SCC will not be found twice!
-	    if( debug_out > 1) cerr << "c put " << w << "[" << start[toInt(V)] << "] into the same component!" << endl;
+	    data.ma.setCurrentStep( toInt(w) ); // ensure that the same SCC will not be found twice!
+	    if( debug_out > 1) cerr << "c put " << w << "[" << vertexes[toInt(V)].start << "] into the same component!" << endl;
 	  } while( w != V );
-	  if( eqCurrentComponent.size() > 1 ) { 
-	    if( debug_out > 1) cerr << "c add SCC of size " << eqCurrentComponent.size() << " : " << eqCurrentComponent << endl;
+	  if( eqCurrentComponent.size() > 1 && !sign(minLit) ) { // only add one of the two symmetric SCCs!
+	    if( debug_out > 1) cerr << "c add SCC of size " << eqCurrentComponent.size() << " with smallest lit " << minLit << " : " << eqCurrentComponent << endl;
 	    data.addEquivalences( eqCurrentComponent );
 	  }
 	}
@@ -1687,7 +1706,7 @@ void EquivalenceElimination::findEquivalencesOnBigFast(CoprocessorData& data, ve
 	// finished the current node, continue with its parent node
 	todo.pop_back();
 	
-	if( debug_out > 1) cerr << "c finish working on " << V << "[" << start[toInt(V)] << " , " << min[toInt(V)] << " , " << seen[toInt(V)] << " / " << ( externBig == 0 ? big.getSize(V) : (*externBig)[toInt(V)].size() ) << "]" << endl;
+	if( debug_out > 1) cerr << "c finish working on " << V << "[" << vertexes[toInt(V)].start << " , " << vertexes[toInt(V)].min << " , " << vertexes[toInt(V)].seen << " / " << ( externBig == 0 ? big.getSize(V) : (*externBig)[toInt(V)].size() ) << "]" << endl;
 	nextNode:; // jump here if the next recursion depth should be analyzed!
       }
 
@@ -1697,6 +1716,7 @@ void EquivalenceElimination::findEquivalencesOnBigFast(CoprocessorData& data, ve
 
 void EquivalenceElimination::findEquivalencesOnBig(CoprocessorData& data, vector< vector<Lit> >* externBig)
 {
+  if( debug_out > 1 ) cerr << "c call find EE on BIG" << endl;
   if( opt_iterative ) return findEquivalencesOnBigFast(data,externBig);
   else return findEquivalencesOnBigRec(data,externBig);
 }
@@ -2007,11 +2027,13 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	      newBinary = true;
 	      if( isToAnalyze[ var(c[0]) ] == 0 ) {
 		eqDoAnalyze.push_back(~c[0]);
+		if( debug_out > 2 ) cerr << "c enable literal " << ~c[0] << endl;
 		isToAnalyze[ var(c[0]) ] = 1;
 		if( debug_out > 2 ) cerr << "c EE re-enable ee-variable " << var(c[0])+1 << endl;
 	      }
 	      if( isToAnalyze[ var(c[1]) ] == 0 ) {
 		eqDoAnalyze.push_back(~c[1]);
+		if( debug_out > 2 ) cerr << "c enable literal " << ~c[1] << endl;
 		isToAnalyze[ var(c[1]) ] = 1;
 		if( debug_out > 2 ) cerr << "c EE re-enable ee-variable " << var(c[1])+1 << endl;
 	      }
@@ -2029,7 +2051,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	      if( !hasDuplicate( data.list( (pol == 0 ? repr : ~repr)  ), c )  ) {
 		data.list( (pol == 0 ? repr : ~repr) ).push_back( list[k] );
 		if( getsNewLiterals ) {
-		  if( data.addSubStrengthClause( list[k] ) ) resetVariables = true;
+		  if( data.addSubStrengthClause( list[k] ) && opt_eeSub ) resetVariables = true;
 		}
 	      } else {
 		if( debug_out > 2 ) cerr << "c clause[" << list[k] << "] has duplicates: " << c << endl;
@@ -2071,7 +2093,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
        start = i+1;
        
        // the formula will change, thus, enqueue everything
-       if( data.hasToPropagate() || subsumption.hasWork() ) {
+       if( data.hasToPropagate() || ( opt_eeSub && subsumption.hasWork() ) ) {
 	 resetVariables = true;
        }
 // TODO necessary here?
@@ -2116,11 +2138,12 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
     modifiedFormula = modifiedFormula || propagation.appliedSomething() || subsumption.appliedSomething();
     
     // the formula will change, thus, enqueue everything
-    if( resetVariables ) {
+    if( opt_eeFullReset && resetVariables ) {
     // re-enable all literals (over-approximation) 
       for( Var v = 0 ; v < data.nVars(); ++ v ) {
 	  if( isToAnalyze[ v ] == 0 ) {
 		eqDoAnalyze.push_back( mkLit(v,false) );
+		if( debug_out > 2 ) cerr << "c enable literal " << mkLit(v,false) << endl;
 		isToAnalyze[ v ] = 1;
 	  }
       }

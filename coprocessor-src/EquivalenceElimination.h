@@ -136,6 +136,14 @@ protected:
    * @return false, if this equivalence results in a conflict
    */
   bool setEquivalent(Lit representative, Lit toReplace);
+  
+  /** structure for iterative tarjan */
+  struct Vertex {
+    int start;
+    int min;
+    int seen;
+    Vertex() : start(-1),min(-1),seen(-1) {}
+  };
 };
 
 }

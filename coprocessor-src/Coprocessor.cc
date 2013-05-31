@@ -30,6 +30,7 @@ static BoolOption opt_cce         (_cat2, "cce",           "Use (covered) Clause
 static BoolOption opt_ee          (_cat2, "ee",            "Use Equivalence Elimination during preprocessing", false);
 static BoolOption opt_enabled     (_cat2, "enabled_cp3",   "Use CP3", false);
 static BoolOption opt_inprocess   (_cat2, "inprocess",     "Use CP3 for inprocessing", false);
+static BoolOption opt_exit_pp     (_cat2, "cp3-exit-pp",   "terminate after preprocessing", false);
 static BoolOption opt_randInp     (_cat2, "randInp",       "Randomize Inprocessing", true);
 static BoolOption opt_inc_inp     (_cat2, "inc-inp",       "increase technique limits per inprocess step", false);
 static BoolOption opt_bve         (_cat2, "bve",           "Use Bounded Variable Elimination during preprocessing", false);
@@ -992,8 +993,12 @@ lbool Preprocessor::preprocess()
     if( opt_verbose > 1 )  { printStatistics(cerr); symmetry.printStatistics(cerr); }
   }
   
-  if( opt_ptechs && string(opt_ptechs).size() > 0 ) return performSimplificationScheduled( string(opt_ptechs) );
-  else return performSimplification();
+  lbool ret = l_Undef;
+  if( opt_ptechs && string(opt_ptechs).size() > 0 ) ret = performSimplificationScheduled( string(opt_ptechs) );
+  else ret = performSimplification();
+  
+  if( opt_exit_pp ) exit(0);
+  else return ret;
 }
 
 lbool Preprocessor::inprocess()
