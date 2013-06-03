@@ -366,8 +366,9 @@ protected:
   int failedLAs;
   int maxBound;
   double laTime;
-  int maxLaNumber;		// maximum number of LAs allowed
+  int maxLaNumber;	     // maximum number of LAs allowed
   int topLevelsSinceLastLa; // number of learned top level units since last LA
+  int laEEvars,laEElits;    // number of equivalent literals
   
   // real data
   Lit hstry[5];

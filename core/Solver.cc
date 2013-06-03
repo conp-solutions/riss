@@ -117,11 +117,14 @@ static BoolOption    dx                    ("MODS", "laHackOutput","output info 
 static BoolOption    hk                    ("MODS", "laHack",      "enable lookahead on level 0", false);
 static BoolOption    tb                    ("MODS", "tabu",        "do not perform LA, if all considered LA variables are as before", false);
 static BoolOption    opt_laDyn             ("MODS", "dyn",         "dynamically set the frequency based on success", false);
+static BoolOption    opt_laEEl             ("MODS", "laEEl",       "add EE clauses as learnt clauses", true);
+static IntOption     opt_laEEp             ("MODS", "laEEp",       "add EE clauses, if more than p percent tests succeeded", 100, IntRange(0, 100));
 static IntOption     opt_laMaxEvery        ("MODS", "hlaMax",      "maximum bound for frequency", 50, IntRange(0, INT32_MAX) );
 static IntOption     opt_laLevel           ("MODS", "hlaLevel",    "level of look ahead", 5, IntRange(0, 5) );
 static IntOption     opt_laEvery           ("MODS", "hlaevery",    "initial frequency of LA", 1, IntRange(0, INT32_MAX) );
 static IntOption     opt_laBound           ("MODS", "hlabound",    "max. nr of LAs (-1 == inf)", -1, IntRange(-1, INT32_MAX) );
 static IntOption     opt_laTopUnit         ("MODS", "hlaTop",      "allow another LA after learning another nr of top level units (-1 = never)", -1, IntRange(-1, INT32_MAX));
+
 static BoolOption    opt_prefetch          ("MODS", "prefetch",    "prefetch watch list, when literal is enqueued", false);
 static BoolOption    opt_hpushUnit         ("MODS", "delay-units", "does not propagate unit clauses until solving is initialized", false);
 static IntOption     opt_simplifyInterval  ("MODS", "sInterval",   "how often to perform simplifications on level 0", 0, IntRange(0, INT32_MAX) );
@@ -247,6 +250,8 @@ Solver::Solver() :
   ,laTime(0)
   ,maxLaNumber(opt_laBound)
   ,topLevelsSinceLastLa(0)
+  ,laEEvars(0)
+  ,laEElits(0)
   ,untilLa(opt_laEvery)
   ,laBound(opt_laEvery)
   ,laStart(false)
@@ -1152,7 +1157,7 @@ CRef Solver::propagate()
 	      
 	      bool clearnt = c.learnt();
 	      CRef cr2 = ca.alloc(oc, clearnt ); // add the new clause - now all references could be invalid!
-	      if( clearnt ) { ca[cr2].setLBD(1); learnts.push(cr); }
+	      if( clearnt ) { ca[cr2].setLBD(1); learnts.push(cr); ca[cr2].activity() = c.activity(); }
 	      else clauses.push(cr2);
 	      attachClause(cr2);
 	      vardata[var(first)].reason = cr2; // set the new clause as reason
@@ -1607,13 +1612,18 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   assert(decisionLevel() == opt_laLevel && "can perform LA only, if level is correct" );
   laTime = cpuTime() - laTime;
 
-   uint64_t hit[]={5,10,85,170,21845,43690,1431655765,2863311530,6148914691236517205,12297829382473034410};
+  uint64_t hit[]   ={5,10,  85,170, 21845,43690, 1431655765,2863311530,  6148914691236517205,12297829382473034410}; // compare numbers for lifted literals
+  uint64_t hitEE0[]={9, 6, 153,102, 39321,26214, 2576980377,1717986918, 11068046444225730969, 7378697629483820646}; // compare numbers for l == dec[0] or l != dec[0]
+  uint64_t hitEE1[]={0, 0, 165, 90, 42405,23130, 2779096485,1515870810, 11936128518282651045, 6510615555426900570}; // compare numbers for l == dec[1]
+  uint64_t hitEE2[]={0, 0,   0,  0, 43605,21930, 2857740885,1437226410, 12273903644374837845, 6172840429334713770}; // compare numbers for l == dec[2]
+  uint64_t hitEE3[]={0, 0,   0,  0,     0,    0, 2863289685,1431677610, 12297735558912431445, 6149008514797120170}; // compare numbers for l == dec[3]
+  uint64_t hitEE4[]={0, 0,   0,  0,     0,    0,          0,         0, 12297829381041378645, 6148914692668172970}; // compare numbers for l == dec[4] 
   // TODO: remove white spaces, output, comments and assertions!
   uint64_t p[nVars()];
   memset(p,0,nVars()*sizeof(uint64_t)); // TODO: change sizeof into 4!
   vec<char> bu;
   polarity.copyTo(bu);  
-  uint64_t pt=~0; // everything set -> == 2^32-1
+  uint64_t pt=~0; // everything set -> == 2^64-1
   if(dx) cerr << "c initial pattern: " << pt << endl;
   Lit d[5];
   for(int i=0;i<opt_laLevel;++i) d[i]=trail[ trail_lim[i] ]; // get all decisions into dec array
@@ -1629,39 +1639,106 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   }
   las++;
   
-  int bound=1<<opt_laLevel;
+  int bound=1<<opt_laLevel, failedTries = 0;
   if(dx) cerr << "c do LA until " << bound << " starting at level " << decisionLevel() << endl;
   fm(p,false); // fill current model
   for(uint64_t i=1;i<bound;++i){ // for each combination
     cancelUntil(0);
     newDecisionLevel();
-    for(int j=0;j<opt_laLevel;++j) uncheckedEnqueue((i&(1<<j))!=0?~d[j]:d[j]); // flip polarity of d[j], if corresponding bit in i is set -> enumberate all combinations!
-    bool f=propagate() != CRef_Undef;
-    if(dx) cerr << "c propagated iteration " << i << endl;
+    for(int j=0;j<opt_laLevel;++j) uncheckedEnqueue( (i&(1<<j))!=0 ? ~d[j] : d[j] ); // flip polarity of d[j], if corresponding bit in i is set -> enumerate all combinations!
+    bool f = propagate() != CRef_Undef; // for tests!
+    if(dx) { cerr << "c propagated iteration " << i << " : " ;  for(int j=0;j<opt_laLevel;++j) cerr << " " << ( (i&(1<<j))!=0 ? ~d[j] : d[j] ) ; cerr << endl; }
+    if(dx) { cerr << "c corresponding trail: "; if(f) cerr << " FAILED! "; else  for( int j = trail_lim[0]; j < trail.size(); ++ j ) cerr << " "  << trail[j]; cerr << endl; }
     fm(p,f);
     uint64_t m=3;
-    if(f)pt=(pt&(~(m<<(2*i))));
+    if(f) {pt=(pt&(~(m<<(2*i)))); failedTries ++; }
     if(dx) cerr << "c this propafation [" << i << "] failed: " << f << " current match pattern: " << pt << "(inv: " << ~pt << ")" << endl;
     if(dx) { cerr << "c cut: "; for(int j=0;j<2<<opt_laLevel;++j) cerr << ((pt&(1<<j))  != (uint64_t)0 ); cerr << endl; }
   }
   cancelUntil(0);
+  
+  // for(int i=0;i<opt_laLevel;++i) cerr << "c value for literal[" << i << "] : " << d[i] << " : "<< p[ var(d[i]) ] << endl;
+  
   int t=2*opt_laLevel-2;
   // evaluate result of LA!
   bool foundUnit=false;
   if(dx) cerr << "c pos hit: " << (pt & (hit[t])) << endl;
   if(dx) cerr << "c neg hit: " << (pt & (hit[t+1])) << endl;
   toEnqueue.clear();
+  bool doEE = ( (failedTries * 100)/ bound ) < opt_laEEp; // enough EE candidates?!
+  if( dx) cerr << "c tries: " << bound << " failed: " << failedTries << " percent: " <<  ( (failedTries * 100)/ bound ) << " doEE: " << doEE << " current laEEs: " << laEEvars << endl;
   for(Var v=0; v<nVars(); ++v ){
     if(value(v)==l_Undef){ // l_Undef == 2
       if( (pt & p[v]) == (pt & (hit[t])) ){  foundUnit=true;toEnqueue.push( mkLit(v,false) );laAssignments++;} // pos consequence
-      if( (pt & p[v]) == (pt & (hit[t+1])) ){foundUnit=true;toEnqueue.push( mkLit(v,true)  );laAssignments++;} // neg consequence
+      else if( (pt & p[v]) == (pt & (hit[t+1])) ){foundUnit=true;toEnqueue.push( mkLit(v,true)  );laAssignments++;} // neg consequence
+      else if ( doEE  ) { 
+	analyze_stack.clear(); // get a new set of literals!
+	if( var(d[0]) != v ) {
+	  if( (pt & p[v]) == (pt & (hitEE0[t])) ) analyze_stack.push( ~d[0] );
+	  else if ( (pt & p[v]) == (pt & (hitEE0[t+1])) ) analyze_stack.push( d[0] );
+	}
+	if( var(d[1]) != v && hitEE1[t] != 0 ) { // only if the field is valid!
+	  if( (pt & p[v]) == (pt & (hitEE1[t])) ) analyze_stack.push( ~d[1] );
+	  else if ( (pt & p[v]) == (pt & (hitEE1[t+1])) ) analyze_stack.push( d[1] );
+	}
+	if( var(d[2]) != v && hitEE2[t] != 0 ) { // only if the field is valid!
+	  if( (pt & p[v]) == (pt & (hitEE2[t])) ) analyze_stack.push( ~d[2] );
+	  else if ( (pt & p[v]) == (pt & (hitEE2[t+1])) ) analyze_stack.push( d[2] );
+	}
+	if( var(d[3]) != v && hitEE3[t] != 0 ) { // only if the field is valid!
+	  if( (pt & p[v]) == (pt & (hitEE3[t])) ) analyze_stack.push( ~d[3] );
+	  else if ( (pt & p[v]) == (pt & (hitEE3[t+1])) ) analyze_stack.push( d[3] );
+	}
+	if( var(d[4]) != v && hitEE4[t] != 0 ) { // only if the field is valid!
+	  if( (pt & p[v]) == (pt & (hitEE4[t])) ) analyze_stack.push( ~d[4] );
+	  else if ( (pt & p[v]) == (pt & (hitEE4[t+1])) ) analyze_stack.push( d[4] );
+	}
+	if( analyze_stack.size() > 0 ) {
+	  analyze_toclear.clear();
+	  analyze_toclear.push(lit_Undef);analyze_toclear.push(lit_Undef);
+	  laEEvars++;
+	  laEElits += analyze_stack.size();
+	  for( int i = 0; i < analyze_stack.size(); ++ i ) {
+	    if( dx) {
+	    cerr << "c EE [" << i << "]: " << mkLit(v,false) << " <= " << analyze_stack[i] << ", " << mkLit(v,true) << " <= " << ~analyze_stack[i] << endl;
+	    cerr << "c match: " << var(mkLit(v,false)  )+1 << " : " << p[var(mkLit(v,false)  )] << " wrt. cut: " << (pt & p[var(mkLit(v,false)  )]) << endl;
+	    cerr << "c match: " << var(analyze_stack[i])+1 << " : " << p[var(analyze_stack[i])] << " wrt. cut: " << (pt & p[var(analyze_stack[i])]) << endl;
+	    
+	    cerr << "c == " <<  d[0] << " ^= HIT0 - pos: " <<   hitEE0[t] << " wrt. cut: " << (pt & (  hitEE0[t])) << endl;
+	    cerr << "c == " << ~d[0] << " ^= HIT0 - neg: " << hitEE0[t+1] << " wrt. cut: " << (pt & (hitEE0[t+1])) << endl;
+	    cerr << "c == " <<  d[1] << " ^= HIT1 - pos: " <<   hitEE1[t] << " wrt. cut: " << (pt & (  hitEE1[t])) << endl;
+	    cerr << "c == " << ~d[1] << " ^= HIT1 - neg: " << hitEE1[t+1] << " wrt. cut: " << (pt & (hitEE1[t+1])) << endl;
+	    cerr << "c == " <<  d[2] << " ^= HIT2 - pos: " <<   hitEE2[t] << " wrt. cut: " << (pt & (  hitEE2[t])) << endl;
+	    cerr << "c == " << ~d[2] << " ^= HIT2 - neg: " << hitEE2[t+1] << " wrt. cut: " << (pt & (hitEE2[t+1])) << endl;
+	    cerr << "c == " <<  d[3] << " ^= HIT3 - pos: " <<   hitEE3[t] << " wrt. cut: " << (pt & (  hitEE3[t])) << endl;
+	    cerr << "c == " << ~d[3] << " ^= HIT3 - neg: " << hitEE3[t+1] << " wrt. cut: " << (pt & (hitEE3[t+1])) << endl;
+	    cerr << "c == " <<  d[4] << " ^= HIT4 - pos: " <<   hitEE4[t] << " wrt. cut: " << (pt & (  hitEE4[t])) << endl;
+	    cerr << "c == " << ~d[4] << " ^= HIT4 - neg: " << hitEE4[t+1] << " wrt. cut: " << (pt & (hitEE4[t+1])) << endl;
+	    }
+	    
+	    for( int pol = 0; pol < 2; ++ pol ) { // encode a->b, and b->a
+	      analyze_toclear[0] = pol == 0 ? ~analyze_stack[i]  : analyze_stack[i];
+	      analyze_toclear[1] = pol == 0 ?     mkLit(v,false) :    mkLit(v,true);
+	      CRef cr = ca.alloc(analyze_toclear, opt_laEEl ); // create a learned clause?
+	      if( opt_laEEl ) { ca[cr].setLBD(2); learnts.push(cr); claBumpActivity(ca[cr]); }
+	      else clauses.push(cr);
+	      attachClause(cr);
+	      if( dx) cerr << "c add as clause: " << ca[cr] << endl;
+	    }
+	  }
+	}
+	analyze_stack.clear();
+  //opt_laEEl
+      }
 
       // TODO: can be cut!
-      if(dx) if( (pt & p[v]) == (pt & (hit[t])) )   { cerr << "c pos " << v+1 << endl; }
-      if(dx) if( (pt & p[v]) == (pt & (hit[t+1])) ) { cerr << "c neg " << v+1 << endl; }
-      if(dx) if( p[v] != 0 ) cerr << "p[" << v+1 << "] = " << p[v] << endl;
+//      if(dx) if( (pt & p[v]) == (pt & (hit[t])) )   { cerr << "c pos " << v+1 << endl; }
+//      if(dx) if( (pt & p[v]) == (pt & (hit[t+1])) ) { cerr << "c neg " << v+1 << endl; }
+//      if(dx) if( p[v] != 0 ) cerr << "p[" << v+1 << "] = " << p[v] << endl;
     } // use brackets needs less symbols than writing continue!
   }
+
+  analyze_toclear.clear();
   
   // enqueue new units
   for( int i = 0 ; i < toEnqueue.size(); ++ i ) uncheckedEnqueue( toEnqueue[i] );
@@ -1672,6 +1749,15 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   
   if(  0  ) cerr << "c LA " << las << " write clauses: " << endl;
   if (output != NULL) {
+    
+    if( opt_laLevel != 5 ) {
+      static bool didIT = false;
+      if( ! didIT ) {
+	cerr << "c WARNING: DRUP proof can produced only for la level 5!" << endl;
+	didIT = true;
+      }
+    }
+    
      // construct look-ahead clauses
     for( int i = 0 ; i < toEnqueue.size(); ++ i ){
       // cerr << "c write literal " << i << " from LA " << las << endl;
@@ -1899,7 +1985,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
     
     if (verbosity >= 1) {
             printf("c Learnt At Level 1: %d  Multiple: %d Units: %d\n", l1conflicts, multiLearnt,learntUnit);
-	    printf("c LAs: %d laSeconds %lf LA assigned: %d tabus: %d, failedLas: %d, maxEvery %d\n", laTime, las, laAssignments, tabus, failedLAs, maxBound );
+	    printf("c LAs: %d laSeconds %lf LA assigned: %d tabus: %d, failedLas: %d, maxEvery %d, eeV: %d eeL: %d \n", laTime, las, laAssignments, tabus, failedLAs, maxBound, laEEvars, laEElits );
 	    printf("c IntervalRestarts: %d\n", intervalRestart);
 	    printf("c lhbr: %d (l1: %d), new: %d (l1: %d), tests: %d, subs: %d\n", lhbrs, l1lhbrs,lhbr_news,l1lhbr_news,lhbrtests,lhbr_sub);
 	    printf("c otfss: %d (l1: %d), cls: %d, units: %d, binaries: %d, jumpedHigher: %d\n", otfsss, otfsssL1,otfssClss,otfssUnits,otfssBinaries,otfssHigherJump);
