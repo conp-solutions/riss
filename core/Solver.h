@@ -329,8 +329,8 @@ protected:
 
     // DRUP proof
     template <class T>
-    void addVecToProof(   T& clause, bool deleteFromProof=false); // write the given clause to the output, if the output is enabled
-    void addClauseToProof(Clause&   clause, bool deleteFromProof=false); // write the given clause to the output, if the output is enabled
+    void addVecToProof(   T& clause, bool deleteFromProof=false, const Lit remLit = lit_Undef); // write the given clause to the output, if the output is enabled
+    void addClauseToProof(Clause&   clause, bool deleteFromProof=false, const Lit remLit = lit_Undef); // write the given clause to the output, if the output is enabled
     void addUnitToProof(  Lit& l, bool deleteFromProof=false);    // write a single unit clause to the proof
     
     // Static helpers:

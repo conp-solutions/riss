@@ -118,7 +118,7 @@ static BoolOption    hk                    ("MODS", "laHack",      "enable looka
 static BoolOption    tb                    ("MODS", "tabu",        "do not perform LA, if all considered LA variables are as before", false);
 static BoolOption    opt_laDyn             ("MODS", "dyn",         "dynamically set the frequency based on success", false);
 static BoolOption    opt_laEEl             ("MODS", "laEEl",       "add EE clauses as learnt clauses", true);
-static IntOption     opt_laEEp             ("MODS", "laEEp",       "add EE clauses, if more than p percent tests succeeded", 100, IntRange(0, 100));
+static IntOption     opt_laEEp             ("MODS", "laEEp",       "add EE clauses, if less than p percent tests failed", 0, IntRange(0, 100));
 static IntOption     opt_laMaxEvery        ("MODS", "hlaMax",      "maximum bound for frequency", 50, IntRange(0, INT32_MAX) );
 static IntOption     opt_laLevel           ("MODS", "hlaLevel",    "level of look ahead", 5, IntRange(0, 5) );
 static IntOption     opt_laEvery           ("MODS", "hlaevery",    "initial frequency of LA", 1, IntRange(0, INT32_MAX) );
@@ -371,6 +371,7 @@ bool Solver::addClause_(vec<Lit>& ps)
 
     // print to DRUP
     if ( flag && (output != NULL)) {
+      addVecToProof(ps);
       for (i = j = 0, p = lit_Undef; i < ps.size(); i++)
         fprintf(output, "%i ", (var(ps[i]) + 1) * (-2 * sign(ps[i]) + 1));
       fprintf(output, "0\n");
@@ -401,28 +402,33 @@ bool Solver::addClause_(vec<Lit>& ps)
 }
 
 template <class T>
-void Solver::addVecToProof( T& clause, bool deleteFromProof)
+void Solver::addVecToProof( T& clause, bool deleteFromProof, const Lit remLit)
 {
   if (output == NULL) return;
-  
   if( deleteFromProof ) fprintf(output, "d ");
-  for (int i = 0; i < clause.size(); i++)
+  for (int i = 0; i < clause.size(); i++) {
+    if( clause[i] == lit_Undef ) continue;
     fprintf(output, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
+  }
+  if( deleteFromProof && remLit != lit_Undef ) fprintf(output, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1));
   fprintf(output, "0\n");
 }
 
-void Solver::addClauseToProof(Clause&   clause, bool deleteFromProof){
+void Solver::addClauseToProof(Clause& clause, bool deleteFromProof, const Lit remLit){
   if (output == NULL) return;
   
   if( deleteFromProof ) fprintf(output, "d ");
-  for (int i = 0; i < clause.size(); i++)
+  for (int i = 0; i < clause.size(); i++) {
+    if ( clause[i] == lit_Undef ) continue;
     fprintf(output, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
+  }
+  if( deleteFromProof && remLit != lit_Undef ) fprintf(output, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1));
   fprintf(output, "0\n");
 }
 
-void Solver::addUnitToProof(Lit& l, bool deleteFromProof)
+void Solver::addUnitToProof(Lit& l, bool deleteFromProof, const Lit remLit)
 {
-  if (output == NULL) return;
+  if (output == NULL || l == lit_Undef ) return;
   
   if( deleteFromProof ) fprintf(output, "d ");
   fprintf(output, "%i 0\n", (var(l) + 1) * (-2 * sign(l) + 1));  
