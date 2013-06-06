@@ -34,8 +34,9 @@ void Propagation::reset()
 
 lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHeapLt> * heap, const Var ignore)
 {
-  processTime = cpuTime() - processTime;
   modifiedFormula = false;
+  // not for UP! // if( !performSimplification() ) return l_Undef; // do not execute simplification?
+  processTime = cpuTime() - processTime;
   if( !data.ok() ) return l_False;
   Solver* solver = data.getSolver();
   // propagate all literals that are on the trail but have not been propagated
@@ -51,19 +52,14 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
 
       Clause & satisfied = ca[positive[i]];
       if (ca[ positive[i] ].can_be_deleted()) // only track yet-non-deleted clauses
-          continue;
+          continue; // could remove from list, but list is cleared any ways!
+      else data.addToProof( ca[ positive[i] ], true ); // remove this clause, if this has not been done before
       if( debug_out ) cerr << "c UP remove " << ca[ positive[i] ] << endl;
       ++removedClauses; // = ca[ positive[i] ].can_be_deleted() ? removedClauses : removedClauses + 1;
       ca[ positive[i] ].set_delete(true);
       modifiedFormula = true;
-      //data.removedClause( positive[i] );
       data.removedClause( positive[i], heap, ignore);
-      // TODO : necessary? -> just performance trade-off
-      /*for (int lit = 0; lit < satisfied.size(); ++lit)
-      {
-          if (satisfied[lit] != l)
-            data.removeClauseFrom(positive[i], satisfied[lit]);
-      }*/
+      // remove clauses from structures?
     }
     vector<CRef>().swap(positive); // free physical space of positive
     
@@ -75,26 +71,30 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
     {
       Clause& c = ca[ negative[i] ];
       //what if c can be deleted? -> continue
-      if (c.can_be_deleted())
-          continue;
+      if (c.can_be_deleted())  continue;
       // sorted propagation, no!
-      if ( !c.can_be_deleted() ) 
-      {
-        for ( int j = 0; j < c.size(); ++ j ) 
+      
+        for ( int j = 0; j < c.size(); ++ j ) {
           if ( c[j] == nl ) 
           { 
-	        if( debug_out ) cerr << "c UP remove " << nl << " from " << c << endl;
-	        if (!sort) c.removePositionUnsorted(j);
+	    if( debug_out ) cerr << "c UP remove " << nl << " from " << c << endl;
+	    if (!sort) c.removePositionUnsorted(j);
             else c.removePositionSorted(j);
-	        modifiedFormula = true;
-	        count ++;
-	        break;
-	      }
+	    modifiedFormula = true;
+	    count ++;
+	    break;
+	  }
+	}
 	      // tell subsumption / strengthening about this modified clause
-	      data.addSubStrengthClause(negative[i]);
-      }
+      data.addSubStrengthClause(negative[i]);
+
+      // proof and extra information
+      data.addToProof(c);         // tell proof about modified clause
+      data.addToProof(c,true,nl); // for DRUP store also the old clause, which can be removed now
+      c.updateExtraInformation( data.variableExtraInfo(var(nl)) );
+      
       // unit propagation
-      if ( c.size() == 0 || (c.size() == 1 &&  solver->value( c[0] ) == l_False) ) 
+      if ( c.size() == 0 ) 
       {
         data.setFailed();   // set state to false
         //-> this stops just the inner loop!
@@ -102,12 +102,10 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
         if (debug_out) cerr << "c UNSAT by UP" << endl;
         processTime = cpuTime() - processTime;
         return l_False;
-      } else if( c.size() == 1 ) 
-      {
-         if( solver->value( c[0] ) == l_Undef && debug_out ) 
-             cerr << "c UP enqueue " << c[0] << " with previous value " 
-                  << (solver->value( c[0] ) == l_Undef ? "undef" : (solver->value( c[0] ) == l_False ? "unsat" : " sat ") ) << endl;
-	     if( solver->value( c[0] ) == l_Undef ) solver->uncheckedEnqueue(c[0]);
+      } else if( c.size() == 1 ) {
+         if( solver->value( c[0] ) == l_Undef && debug_out )  cerr << "c UP enqueue " << c[0] << " with previous value "  << (solver->value( c[0] ) == l_Undef ? "undef" : (solver->value( c[0] ) == l_False ? "unsat" : " sat ") ) << endl;
+	 if( solver->value( c[0] ) == l_Undef ) solver->uncheckedEnqueue(c[0]);
+	 else if( solver->value( c[0] ) == l_False ) data.setFailed();
       }
     }
     // update formula data!
@@ -115,21 +113,10 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
     data.removedLiteral(nl, count, heap, ignore);
     removedLiterals += count;
   }
-  
-//    for (int i = 0; i < clause_list.size(); ++i)
-//    {
-//         Clause & c = ca[clause_list[i]];
-//         int k = 0;
-//         for (int l = 0; l < c.size(); ++l)
-//         {
-//             if (value(c[l]) != l_False)
-//                 c[k++] = c[l];
-//         }
-//         c.shrink(c.size() - k);
-//             if (c.has_extra())
-//             c.calcAbstraction();
-//    }
+
   solver->qhead = lastPropagatedLiteral;
+  
+  if( !modifiedFormula ) unsuccessfulSimplification(); // this call did not change anything
   processTime = cpuTime() - processTime;
   return data.ok() ? l_Undef : l_False;
 }

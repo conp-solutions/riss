@@ -362,6 +362,11 @@ public:
   void extendModel(vec<lbool>& model);
   const vector<Lit>& getUndo() const { return undo; }
 
+  /// for DRUP / DRAT proofs
+  template <class T>
+  void addToProof(   T& clause, bool deleteFromProof=false, const Lit remLit = lit_Undef); // write the given clause/vector/vec to the output, if the output is enabled
+  void addUnitToProof(  Lit& l, bool deleteFromProof=false);    // write a single unit clause to the proof
+  
   // handling equivalent literals
   void addEquivalences( const std::vector<Lit>& list );
   void addEquivalences( const Lit& l1, const Lit& l2 );
@@ -382,6 +387,11 @@ public:
   void printTrail(ostream& stream) {
     for( int i = 0 ; i < solver->trail.size(); ++ i ) cerr << " " << solver->trail[i]; 
   }
+  
+  /** for solver extensions, which rely on extra informations per clause (including unit clauses), e.g. the level of the solver in a partition tree*/
+  bool usesExtraInfo() const { return solver->usesExtraInfo(); } 
+  uint64_t defaultExtraInfo() const { return solver->defaultExtraInfo(); }
+  uint64_t variableExtraInfo( const Var& v ) const { return solver->variableExtraInfo(v); }
 };
 
 /** class representing the binary implication graph of the formula */
@@ -1514,6 +1524,18 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
     cerr << endl;
   }
 }
+
+template <class T>
+inline void CoprocessorData::addToProof(T& clause, bool deleteFromProof, const Lit remLit)
+{
+  solver->addToProof(clause,deleteFromProof,remLit);
+}
+
+inline void CoprocessorData::addUnitToProof(Lit& l, bool deleteFromProof)
+{
+  solver->addUnitToProof(l,deleteFromProof);
+}
+
 
 inline void CoprocessorData::addEquivalences(const vector< Lit >& list)
 {

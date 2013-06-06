@@ -391,6 +391,9 @@ public:
 	}
 	return false;
     }
+    
+    uint64_t extraInformation() const { return 0; }                    // adopt this to external needs
+    void updateExtraInformation(const uint64_t& othersExtra) const {}; // update the current extra information with the extra information of another clause used to modify/create this clause
 };
 
 //=================================================================================================

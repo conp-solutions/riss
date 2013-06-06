@@ -174,8 +174,8 @@ int main(int argc, char** argv)
 
         
         // open file for proof
-        S.output = (drupFile) ? fopen( (const char*) drupFile , "wb") : NULL;
-	if( opt_printProofFormat &&  S.output != NULL ) fprintf( S.output, "o proof DRUP\n" ); // we are writing BDRUP proofs
+        S.drupProofFile = (drupFile) ? fopen( (const char*) drupFile , "wb") : NULL;
+	if( opt_printProofFormat &&  S.drupProofFile != NULL ) fprintf( S.drupProofFile, "o proof DRUP\n" ); // we are writing BDRUP proofs
 
         parse_DIMACS(in, S);
         gzclose(in);
@@ -202,7 +202,7 @@ int main(int argc, char** argv)
 	      else fprintf(res, "s UNSATISFIABLE\n"), fclose(res);
 	    }
          // add the empty clause to the proof, close proof file
-         if (S.output != NULL) fprintf(S.output, "0\n"), fclose(S.output);
+         if (S.drupProofFile != NULL) fprintf(S.drupProofFile, "0\n"), fclose(S.drupProofFile);
             if (S.verbosity > 0){
 	        printf("c =========================================================================================================\n");
                 printf("Solved by unit propagation\n");
@@ -227,7 +227,7 @@ int main(int argc, char** argv)
 	    else printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n");
 
         // put empty clause on proof
-        if(ret == l_False && S.output != NULL ) fprintf(S.output, "0\n");
+        if(ret == l_False && S.drupProofFile != NULL ) fprintf(S.drupProofFile, "0\n");
 
         // print solution into file
         if (res != NULL){

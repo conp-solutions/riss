@@ -58,6 +58,7 @@ Subsumption::Subsumption( ClauseAllocator& _ca, ThreadController& _controller, C
 
 void Subsumption::giveMoreSteps()
 {
+  if( !willSimplify() ) return;
   subsumeSteps = subsumeSteps < opt_inpStepInc ? 0 : subsumeSteps - opt_inpStepInc;
   strengthTime = strengthTime < opt_inpStepInc ? 0 : strengthTime - opt_inpStepInc;
 }
@@ -115,7 +116,8 @@ void Subsumption::process(bool doStrengthen, Heap< VarOrderBVEHeapLt >* heap, co
 {
   modifiedFormula = false;
   if( !data.ok() ) return;
-
+  if( !performSimplification() ) return l_Undef; // do not execute simplification?
+  
   // increase limits per call if necessary
   if( subsumeSteps + callIncrease > subLimit )  { subLimit = subsumeSteps + callIncrease;  limitIncreases++; }
   if( strengthSteps + callIncrease > strLimit ) { strLimit = strengthSteps + callIncrease; limitIncreases++; }
@@ -189,6 +191,7 @@ void Subsumption::process(bool doStrengthen, Heap< VarOrderBVEHeapLt >* heap, co
   }
   
   modifiedFormula = modifiedFormula || propagation.appliedSomething();
+  if( !modifiedFormula ) unsuccessfulSimplification();
 }
 
 

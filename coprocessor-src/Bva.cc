@@ -925,6 +925,8 @@ bool BoundedVariableAddition::xorBVAhalf()
 bool BoundedVariableAddition::xorBVAfull()
 {
   xorTime = cpuTime() - xorTime ;
+ 
+  // TODO: use one variable to encode one positive and negative xor!
   
   // setup parameters
   const int replacePairs = 5; // number of clauses to result in a reduction

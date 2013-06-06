@@ -136,7 +136,7 @@ public:
     void    checkGarbage();
 
     // Output for DRUP unsat proof
-    FILE*               output;
+    FILE*               drupProofFile;
 
     // Extra results: (read-only member variable)
     //
@@ -328,9 +328,9 @@ protected:
     bool     withinBudget     ()      const;
 
     // DRUP proof
+    bool outputsProof() const { return drupProofFile != NULL; }
     template <class T>
-    void addVecToProof(   T& clause, bool deleteFromProof=false, const Lit remLit = lit_Undef); // write the given clause to the output, if the output is enabled
-    void addClauseToProof(Clause&   clause, bool deleteFromProof=false, const Lit remLit = lit_Undef); // write the given clause to the output, if the output is enabled
+    void addToProof(   T& clause, bool deleteFromProof=false, const Lit remLit = lit_Undef); // write the given clause to the output, if the output is enabled
     void addUnitToProof(  Lit& l, bool deleteFromProof=false);    // write a single unit clause to the proof
     
     // Static helpers:
@@ -401,6 +401,15 @@ protected:
 protected:  Coprocessor::Preprocessor* coprocessor;
 public:     bool useCoprocessor;
 
+  /** if extra info should be used, this method needs to return true! */
+  bool usesExtraInfo() const { return false; } 
+
+  /** for solver extensions, which rely on extra informations per clause (including unit clauses), e.g. the level of the solver in a partition tree*/
+  uint64_t defaultExtraInfo() const ;
+
+  /** return extra variable information (should be called for top level units only!) */
+  uint64_t variableExtraInfo( const Var& v ) const ;
+  
 /// for qprocessor
 public:
 	    void writeClauses( std::ostream& stream ) {

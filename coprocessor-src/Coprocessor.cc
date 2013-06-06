@@ -1256,8 +1256,10 @@ void Preprocessor::reSetupSolver()
 		  // reduct of clause is empty, or unit
 		  if( solver->value( c[0] ) == l_False ) { data.setFailed(); return; }
 		  else if( solver->value( c[1] ) == l_False ) {
-		    if( data.enqueue(c[0]) == l_False ) { if( opt_debug ) cerr  << "enqueing " << c[0] << " failed." << endl; return; }
-		    else { 
+		    if( data.enqueue(c[0]) == l_False ) {
+		      data.addUnitToProof( c[0] ); // tell drup about this unit (whereever it came from)
+		      if( opt_debug ) cerr  << "enqueing " << c[0] << " failed." << endl; return;
+		    } else { 
 		      if( opt_debug ) cerr << "enqueued " << c[0] << " successfully" << endl; 
 		      c.set_delete(true);
 		    }
@@ -1267,10 +1269,12 @@ void Preprocessor::reSetupSolver()
 		    solver->attachClause(cr);
 		    solver->clauses[kept_clauses++] = cr; // add original clauss back! 
 		  }
-	      }
-	      else {
+	      } else {
 		if (solver->value(c[0]) == l_Undef)
-		  if( data.enqueue(c[0]) == l_False ) { return; }
+		  if( data.enqueue(c[0]) == l_False ) { 
+		    data.addUnitToProof( c[0] ); // tell drup about this unit (whereever it came from)
+		    return;
+		  }
 		else if (solver->value(c[0]) == l_False )
 		{
 		  // assert( false && "This UNSAT case should be recognized before re-setup" );
@@ -1313,8 +1317,6 @@ void Preprocessor::reSetupSolver()
               solver->clauses.push(cr);
             }
  	  }
-	
-	  
 	      assert( c.mark() == 0 && "only clauses without a mark should be passed back to the solver!" );
 	      if (c.size() > 1)
 	      {
@@ -1332,15 +1334,19 @@ void Preprocessor::reSetupSolver()
 		  // reduct of clause is empty, or unit
 		  if( solver->value( c[0] ) == l_False ) { data.setFailed(); return; }
 		  else if( solver->value( c[1] ) == l_False ) {
+		    data.addUnitToProof( c[0] ); // tell drup about this unit (whereever it came from)
 		    if( data.enqueue(c[0]) == l_False ) { if( opt_debug ) cerr  << "enqueing " << c[0] << " failed." << endl; return; }
 		    else { if( opt_debug ) cerr << "enqueued " << c[0] << " successfully" << endl; }
 		    if( solver->propagate() != CRef_Undef ) { data.setFailed(); return; }
 		    c.set_delete(true);
 		  } else solver->attachClause(cr);
 	      }
-	      else if (solver->value(c[0]) == l_Undef)
-		  if( data.enqueue(c[0]) == l_False ) { return; }
-	      else if (solver->value(c[0]) == l_False )
+	      else if (solver->value(c[0]) == l_Undef) {
+		if( data.enqueue(c[0]) == l_False ) { 
+		  data.addUnitToProof( c[0] ); // tell drup about this unit (whereever it came from)
+		  return;
+		}
+	      } else if (solver->value(c[0]) == l_False )
 	      {
 		// assert( false && "This UNSAT case should be recognized before re-setup" );
 		data.setFailed();

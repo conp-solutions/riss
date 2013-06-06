@@ -180,7 +180,7 @@ inline std::ostream& operator<<(std::ostream& other, const vec<T>& data )
 Solver::Solver() :
 
     // DRUP output file
-    output (0)
+    drupProofFile (0)
     // Parameters (user settable):
     //
     , verbosity        (0)
@@ -351,7 +351,7 @@ bool Solver::addClause_(vec<Lit>& ps)
 
     // analyze for DRUP - add if necessary!
     Lit p; int i, j, flag = 0;
-    if( output != NULL ) {
+    if( outputsProof() ) {
       oc.clear();
       for (i = j = 0, p = lit_Undef; i < ps.size(); i++) {
 	  oc.push(ps[i]);
@@ -369,17 +369,10 @@ bool Solver::addClause_(vec<Lit>& ps)
       ps.shrink(i - j);
     }
 
-    // print to DRUP
-    if ( flag && (output != NULL)) {
-      addVecToProof(ps);
-      for (i = j = 0, p = lit_Undef; i < ps.size(); i++)
-        fprintf(output, "%i ", (var(ps[i]) + 1) * (-2 * sign(ps[i]) + 1));
-      fprintf(output, "0\n");
-
-      fprintf(output, "d ");
-      for (i = j = 0, p = lit_Undef; i < oc.size(); i++)
-        fprintf(output, "%i ", (var(oc[i]) + 1) * (-2 * sign(oc[i]) + 1));
-      fprintf(output, "0\n");
+    // add to Proof that the clause has been changed
+    if ( flag &&  outputsProof() ) {
+      addToProof(ps);
+      addToProof(oc,true);
     }
 
     if (ps.size() == 0)
@@ -402,36 +395,23 @@ bool Solver::addClause_(vec<Lit>& ps)
 }
 
 template <class T>
-void Solver::addVecToProof( T& clause, bool deleteFromProof, const Lit remLit)
+void Solver::addToProof( T& clause, bool deleteFromProof, const Lit remLit)
 {
-  if (output == NULL) return;
-  if( deleteFromProof ) fprintf(output, "d ");
+  if (!outputsProof()) return;
+  if( deleteFromProof ) fprintf(drupProofFile, "d ");
   for (int i = 0; i < clause.size(); i++) {
     if( clause[i] == lit_Undef ) continue;
-    fprintf(output, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
+    fprintf(drupProofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
   }
-  if( deleteFromProof && remLit != lit_Undef ) fprintf(output, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1));
-  fprintf(output, "0\n");
+  if( deleteFromProof && remLit != lit_Undef ) fprintf(drupProofFile, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1));
+  fprintf(drupProofFile, "0\n");
 }
 
-void Solver::addClauseToProof(Clause& clause, bool deleteFromProof, const Lit remLit){
-  if (output == NULL) return;
-  
-  if( deleteFromProof ) fprintf(output, "d ");
-  for (int i = 0; i < clause.size(); i++) {
-    if ( clause[i] == lit_Undef ) continue;
-    fprintf(output, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
-  }
-  if( deleteFromProof && remLit != lit_Undef ) fprintf(output, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1));
-  fprintf(output, "0\n");
-}
-
-void Solver::addUnitToProof(Lit& l, bool deleteFromProof, const Lit remLit)
+void Solver::addUnitToProof(Lit& l, bool deleteFromProof)
 {
-  if (output == NULL || l == lit_Undef ) return;
-  
-  if( deleteFromProof ) fprintf(output, "d ");
-  fprintf(output, "%i 0\n", (var(l) + 1) * (-2 * sign(l) + 1));  
+  if (!outputsProof() || l == lit_Undef ) return;
+  if( deleteFromProof ) fprintf(drupProofFile, "d ");
+  fprintf(drupProofFile, "%i 0\n", (var(l) + 1) * (-2 * sign(l) + 1));  
 }
 
 void Solver::attachClause(CRef cr) {
@@ -481,8 +461,8 @@ void Solver::removeClause(CRef cr) {
   
   Clause& c = ca[cr];
 
-  // tell DRUP that clause has been deleted
-  addClauseToProof(c,true);
+  // tell DRUP that clause has been deleted, if this was not done before already!
+  if( c.mark() == 0 ) addToProof(c,true);
 
   detachClause(cr);
   // Don't leave pointers to free'd memory!
@@ -686,7 +666,8 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     if( otfssClauses.size() > 0 && otfssClauses.last() == lastConfl ) {
       if(debug_otfss) cerr << "c current learnt clause " << out_learnt << " subsumes otfss clause " << ca[otfssClauses.last()] << endl;
       if( ca[otfssClauses.last()].learnt() ) { 
-	ca[otfssClauses.last()].mark(1); // remove this clause!
+	if( ca[otfssClauses.last()].mark() == 0 ) addToProof(ca[otfssClauses.last()], true); // add this to proof, if enabled, and clause still known
+	ca[otfssClauses.last()].mark(1);                 // remove this clause!
       }
       otfssClauses.pop(); // do not work on otfss clause, if current learned clause subsumes it anyways!
     }
@@ -955,6 +936,7 @@ void Solver::uncheckedEnqueue(Lit p, CRef from)
 {
     assert(value(p) == l_Undef);
     assigns[var(p)] = lbool(!sign(p));
+    /** include variableExtraInfo here, if required! */
     vardata[var(p)] = mkVarData(from, decisionLevel());
     
     if( opt_hack > 0 )
@@ -1148,12 +1130,15 @@ CRef Solver::propagate()
 	      oc.push(first);
 	      oc.push(~commonDominator);
 
+	      addToProof( oc ); // if drup is enabled, add this clause to the proof!
+	      
 	      // if commonDominator is element of the clause itself, delete the clause (hyper-self-subsuming resolution)
 	      bool willSubsume = false;
 	      if( opt_LHBR_sub ) {
 		for( int k = 1; k < c.size(); ++ k ) if ( c[k] == ~commonDominator ) { willSubsume = true; break; }
 	      }
 	      if( willSubsume ) { // created a binary clause that subsumes this clause
+		if( c.mark() == 0 ) addToProof(c,true); // remove this clause from the proof, if not done already
 		c.mark(1); // the bigger clause is not needed any more
 		lhbr_sub ++;
 	      } else {
@@ -1418,6 +1403,7 @@ lbool Solver::search(int nof_conflicts)
 		if( l2 < otfssBtLevel ) { if(debug_otfss) cerr << "c clear all memorized clauses, jump to new level " << l2 << endl;
 		  otfssBtLevel = l2; enqueueK = 0; }
 		// finally, modify clause and get all watch structures into a good shape again!
+		const Lit remLit = c[0]; // this literal will be removed finally!
 		if( c.size() > 3 ) {
 		  assert( level(var(c[1]) ) == l1 && "if there is a unit literal, this literal is the other watched literal!" );
 		  assert( level(var(c[2]) ) >= l2 && "the second literal can be used as other watched literal for the reduced clause" );
@@ -1437,7 +1423,8 @@ lbool Solver::search(int nof_conflicts)
 		  attachClause(otfssCls[i]); // add to watch list for binary clauses (no extra constraints on clause literals!)
 		  otfssBinaries++;
 		} 
-		addClauseToProof(c); // for RUP, DRUP not supported here!
+		addToProof(c);             // for RUP
+		addToProof(c,true,remLit); // for DRUP
 	      }
 	      
 	      otfssHigherJump = otfssBtLevel < backtrack_level ? otfssHigherJump + 1 : otfssHigherJump; // stats
@@ -1476,7 +1463,7 @@ lbool Solver::search(int nof_conflicts)
 		sumLBD += nblevels;
 
 		// write learned clause to DRUP!
-		if (output != NULL) addVecToProof( learnt_clause );
+		addToProof( learnt_clause );
 
 		if (learnt_clause.size() == 1){
 		    assert( decisionLevel() == 0 && "enequeue unit clause on decision level 0!" );
@@ -1618,7 +1605,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   assert(decisionLevel() == opt_laLevel && "can perform LA only, if level is correct" );
   laTime = cpuTime() - laTime;
 
-  uint64_t hit[]   ={5,10,  85,170, 21845,43690, 1431655765,2863311530,  6148914691236517205,12297829382473034410}; // compare numbers for lifted literals
+  uint64_t hit[]   ={5,10,  85,170, 21845,43690, 1431655765,2863311530,  6148914691236517205, 12297829382473034410}; // compare numbers for lifted literals
   uint64_t hitEE0[]={9, 6, 153,102, 39321,26214, 2576980377,1717986918, 11068046444225730969, 7378697629483820646}; // compare numbers for l == dec[0] or l != dec[0]
   uint64_t hitEE1[]={0, 0, 165, 90, 42405,23130, 2779096485,1515870810, 11936128518282651045, 6510615555426900570}; // compare numbers for l == dec[1]
   uint64_t hitEE2[]={0, 0,   0,  0, 43605,21930, 2857740885,1437226410, 12273903644374837845, 6172840429334713770}; // compare numbers for l == dec[2]
@@ -1754,7 +1741,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   vector<Lit> tmp;
   
   if(  0  ) cerr << "c LA " << las << " write clauses: " << endl;
-  if (output != NULL) {
+  if (outputsProof()) {
     
     if( opt_laLevel != 5 ) {
       static bool didIT = false;
@@ -1791,12 +1778,12 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
       // write all clauses to proof -- including the learned unit
       for( int j = 0; j < clauses.size() ; ++ j ){
 	if(  0  ) cerr << "c write clause [" << j << "] " << clauses[ j ] << endl;
-	addVecToProof(clauses[j]);
+	addToProof(clauses[j]);
       }
       // delete all redundant clauses
       for( int j = 0; j+1 < clauses.size() ; ++ j ){
 	assert( clauses[j].size() > 1 && "the only unit clause in the list should not be removed!" );
-	addVecToProof(clauses[j],true);
+	addToProof(clauses[j],true);
       }
     }
     
@@ -2147,3 +2134,17 @@ void Solver::garbageCollect()
                ca.size()*ClauseAllocator::Unit_Size, to.size()*ClauseAllocator::Unit_Size);
     to.moveTo(ca);
 }
+
+uint64_t Solver::defaultExtraInfo() const 
+{
+  /** overwrite this method! */
+  return 0;
+}
+
+uint64_t Solver::variableExtraInfo(const Var& v) const
+{
+  /** overwrite this method! */
+  return 0;
+}
+
+

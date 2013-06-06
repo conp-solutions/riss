@@ -25,8 +25,14 @@ protected:
   bool isInitialized;           // true, if the structures have been initialized and the technique can be used
   uint32_t myDeleteTimer;       // timer to control which deleted variables have been seen already
   
+  int thisPelalty;              // how many attepts will be blocked, before the technique is allowed to perform preprocessing again
+  int lastMaxPenalty;           // if the next simplification is unsuccessful, block the simplification for more than the given number
+  
   ClauseAllocator& ca;          // clause allocator for direct access to clauses
   ThreadController& controller; // controller for parallel execution
+    
+  bool didPrintCannotDrup;      // store whether the drup warning has been reported already
+  bool didPrintCannotExtraInfo; // store whether the extraInfo warning has been reported already
     
 public:
   
@@ -75,6 +81,21 @@ protected:
   /** update current delete timer */
   void updateDeleteTime( const uint32_t deleteTime );
   
+  /** ask whether a simplification should be performed yet */
+  bool performSimplification();
+  
+  /** return whether next time the simplification will be performed */
+  bool willSimplify() const;
+  
+  /** report that the current simplification was unsuccessful */
+  void unsuccessfulSimplification();
+  
+  /** tell via stream that the technique does not support DRUP proofs */
+  void printDRUPwarning(ostream& stream, const string s);
+
+  /** tell via stream that the technique does not support extra clause info proofs */
+  void printExtraInfowarning(ostream& stream, const string s);
+  
 };
 
 inline void Technique::giveMoreSteps()
@@ -89,6 +110,10 @@ inline Technique::Technique( ClauseAllocator& _ca, Coprocessor::ThreadController
 , myDeleteTimer( 0 )
 , ca( _ca )
 , controller( _controller )
+, thisPelalty(0)
+, lastMaxPenalty(0)
+, didPrintCannotDrup(false)
+, didPrintCannotExtraInfo(false)
 {}
 
 inline bool Technique::appliedSomething()
@@ -147,6 +172,37 @@ inline void Technique::updateDeleteTime(const uint32_t deleteTime)
 {
   myDeleteTimer = deleteTime;
 }
+
+inline bool Technique::performSimplification()
+{
+  bool ret = (thisPelalty == 0);
+  thisPelalty = (thisPelalty == 0 ) ? thisPelalty : thisPelalty - 1; // reduce current wait cycle if necessary!
+  return ret; // if there is no penalty, apply the simplification!
+}
+
+inline bool Technique::willSimplify() const
+{
+  return thisPelalty == 0;
+}
+
+
+inline void Technique::unsuccessfulSimplification()
+{
+  thisPelalty = ++lastMaxPenalty;
+}
+
+inline void Technique::printDRUPwarning(ostream& stream, const string s)
+{
+  if( ! didPrintCannotDrup ) stream << "c [" << s << "] cannot produce DRUP proofs" << endl;
+  didPrintCannotDrup = true;
+}
+
+inline void Technique::printExtraInfowarning(ostream& stream, const string s)
+{
+  if( ! didPrintCannotExtraInfo ) stream << "c [" << s << "] cannot handle clause/variable extra information" << endl;
+  didPrintCannotExtraInfo = true;
+}
+
 
 
 }
