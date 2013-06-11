@@ -187,6 +187,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
        // if no occurrences of v, continue
        if (data[v] <= 0)
            continue;
+       if( data.doNotTouch(v) ) continue; // do not use this variable!
  
         // Heuristic Cutoff
         if (!opt_force_gates && !opt_unlimited_bve 
@@ -1026,6 +1027,9 @@ void* BoundedVariableElimination::runParallelBVE(void* arg)
 
 void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
 {
+  printDRUPwarning(cerr,"parallel BVE"); // warnings that certain things are not supported (yet)
+  printExtraInfowarning(cerr,"parallel BVE");
+  
   if (data.hasToPropagate()) {
     if (propagation.process(data, true) == l_False)
       return;

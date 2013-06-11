@@ -106,8 +106,8 @@ int main(int argc, char** argv)
   IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
   IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
-  StringOption drupFile               ("MAIN", "drup", "Write a proof trace into the given file");
-  BoolOption   opt_printProofFormat   ("MAIN", "proofFormat", "Do print the proof format", true);
+  StringOption drupFile         ("PROOF", "drup", "Write a proof trace into the given file",0);
+  StringOption opt_proofFormat  ("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, should be DRUP)","DRUP");
   
   BoolOption   opt_modelStyle ("MAIN", "oldModel", "present model on screen in old format", false);
   BoolOption   opt_quiet      ("MAIN", "quiet", "Do not print the model", false);
@@ -175,7 +175,7 @@ int main(int argc, char** argv)
         
         // open file for proof
         S.drupProofFile = (drupFile) ? fopen( (const char*) drupFile , "wb") : NULL;
-	if( opt_printProofFormat &&  S.drupProofFile != NULL ) fprintf( S.drupProofFile, "o proof DRUP\n" ); // we are writing BDRUP proofs
+	if( opt_proofFormat &&  S.drupProofFile != NULL ) fprintf( S.drupProofFile, "o proof %s\n", (const char*)opt_proofFormat ); // we are writing proofs of the given format!
 
         parse_DIMACS(in, S);
         gzclose(in);

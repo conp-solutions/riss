@@ -392,8 +392,10 @@ public:
 	return false;
     }
     
-    uint64_t extraInformation() const { return 0; }                    // adopt this to external needs
-    void updateExtraInformation(const uint64_t& othersExtra) const {}; // update the current extra information with the extra information of another clause used to modify/create this clause
+    void setExtraInformation( const uint64_t& info) {}                 /// set the extra info of the clause to the given value
+    uint64_t extraInformation() const { return 0; }                    /// adopt this to external needs
+    void updateExtraInformation(const uint64_t& othersExtra) const {}  /// update the current extra information with the extra information of another clause used to modify/create this clause
+    static uint64_t updateExtraInformation(const uint64_t& a, const uint64_t& b) {return a;}; /// this method will be used if extra information for unit clauses is calculated!
 };
 
 //=================================================================================================

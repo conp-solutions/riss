@@ -24,12 +24,15 @@ static const bool  opt_lock_stats      =false;
 static const int   opt_par_subs        =1;
 static const int   opt_par_subs_counts =false;
 static const int   opt_chunk_size      =100000;
+static const int   opt_par_str_minCls  =250000;
+
 #else
 static IntOption   opt_par_strength    (_cat, "cp3_par_strength", "par strengthening: 0 never, 1 heuristic, 2 always", 1, IntRange(0,2));
 static BoolOption  opt_lock_stats      (_cat, "cp3_lock_stats", "measure time waiting in spin locks", false);
 static IntOption   opt_par_subs        (_cat, "cp3_par_subs", "par subsumption: 0 never, 1 heuristic, 2 always", 1, IntRange(0,2));
 static IntOption   opt_par_subs_counts (_cat, "par_subs_counts" ,  "Updates of counts in par-subs 0: compare_xchange, 1: CRef-vector", 1, IntRange(0,1));
 static IntOption   opt_chunk_size      (_cat, "susi_chunk_size" ,  "Size of Par SuSi Chunks", 100000, IntRange(1,INT32_MAX));
+static IntOption   opt_par_str_minCls  (_cat, "par_str_minCls"  ,  "number of clauses to start parallel strengthening", 250000, IntRange(1,INT32_MAX));
 #endif
 
 #if defined CP3VERSION
@@ -116,7 +119,7 @@ void Subsumption::process(bool doStrengthen, Heap< VarOrderBVEHeapLt >* heap, co
 {
   modifiedFormula = false;
   if( !data.ok() ) return;
-  if( !performSimplification() ) return l_Undef; // do not execute simplification?
+  if( !performSimplification() ) return; // do not execute simplification?
   
   // increase limits per call if necessary
   if( subsumeSteps + callIncrease > subLimit )  { subLimit = subsumeSteps + callIncrease;  limitIncreases++; }
@@ -144,7 +147,7 @@ void Subsumption::process(bool doStrengthen, Heap< VarOrderBVEHeapLt >* heap, co
 	data.getStrengthClauses().clear();
 	continue;
       }
-      if (controller.size() > 0 && (opt_par_strength == 2 || (data.getStrengthClauses().size() > 250000 && opt_par_strength == 1)))
+      if (controller.size() > 0 && (opt_par_strength == 2 || (data.getStrengthClauses().size() > opt_par_str_minCls && opt_par_strength == 1)))
       {
           parallelStrengthening(heap, ignore, doStatistics);
 	  assert( data.getStrengthClauses().size() == 0 && "finished strengthening" );
@@ -170,6 +173,8 @@ void Subsumption::process(bool doStrengthen, Heap< VarOrderBVEHeapLt >* heap, co
               if (!c.can_be_deleted())
               {
                   c.set_delete(true);
+		  data.addCommentToProof("remove from toDelete by strengthening");
+		  data.addToProof(c,true); // delete this clause from the proof!
                   data.removedClause(toDelete[j], heap, ignore);
                   if (doStatistics)
                   {
@@ -239,7 +244,7 @@ void Subsumption :: subsumption_worker ( unsigned int start, unsigned int end, H
     {
         processTime = cpuTime() - processTime;   
     }   
-    if(global_debug_out) cerr << "subsume from " << start << " to " << end << " with size " << data.getSubsumeClauses().size() << endl;
+    if( opt_debug > 1 ) cerr << "subsume from " << start << " to " << end << " with size " << data.getSubsumeClauses().size() << endl;
     
     if( opt_preferLearned && data.isInprocessing() ) {
       // move all learned clauses to the back! == original clauses to the front
@@ -286,8 +291,9 @@ void Subsumption :: subsumption_worker ( unsigned int start, unsigned int end, H
 	        if (ca[list[i]].size() < c.size()) {
 		  continue;
 	        } 
-	        if (ca[list[i]].can_be_deleted()) {
-                continue;
+	        if (ca[list[i]].can_be_deleted()) { // do not use this clause, but remove it from the list!
+		  list[i] = list.back(); list.pop_back(); --i;
+		  continue; 
 	        } else if (c.ordered_subsumes(ca[list[i]])) {
                 
                 if (doStatistics)
@@ -295,15 +301,17 @@ void Subsumption :: subsumption_worker ( unsigned int start, unsigned int end, H
                     ++subsumedClauses;
                     subsumedLiterals += ca[list[i]].size();
                 }
-                ca[list[i]].set_delete(true); 
+                ca[list[i]].set_delete(true);
+		data.addCommentToProof("remove by subsumption");
+		data.addToProof(ca[list[i]],true); // remove this clause from the proof!
 		data.removedClause(list[i]);
 		        didChange(); 
-		        if (global_debug_out) cerr << "c subsumption removed " << (ca[list[i]].learnt() ? "learned" : "" ) << " clause " << ca[list[i]] << " by "  <<  (ca[list[i]].learnt() ? "learned" : "" ) << c << endl;
+		if ( opt_debug > 1 ) cerr << "c subsumption removed " << (ca[list[i]].learnt() ? "learned" : "" ) << " clause " << ca[list[i]] << " by "  <<  (ca[list[i]].learnt() ? "learned" : "" ) << c << endl;
                 occ_updates.push_back(list[i]);
-		        if( global_debug_out ) cerr << "c clause " << ca[list[i]] << " is deleted by " << c << endl;
+		if(  opt_debug > 1  ) cerr << "c clause " << ca[list[i]] << " is deleted by " << c << endl;
                 if (!ca[list[i]].learnt() && c.learnt())
                 {
-		    if (global_debug_out) cerr << "c subsumption turned clause " << c << " from learned in original " << endl;
+		    if ( opt_debug > 1 ) cerr << "c subsumption turned clause " << c << " from learned in original " << endl;
                     c.set_learnt(false);
                 }
             }
@@ -321,10 +329,11 @@ void Subsumption :: subsumption_worker ( unsigned int start, unsigned int end, H
         CRef cr = occ_updates[i];
         Clause & c = ca[cr];
         data.removedClause(cr, heap, ignore);
-        for (int l = 0; l < c.size(); ++l)
-        {
-            data.removeClauseFrom(cr,c[l]);
-        }
+	assert( c.can_be_deleted() && "clauses that are removed have to have the right flag set!" );
+	if( false ) { // be lazy!
+         for (int l = 0; l < c.size(); ++l)
+             data.removeClauseFrom(cr,c[l]);
+	}
     }
     occ_updates.clear();
 }
@@ -645,6 +654,7 @@ void Subsumption::par_strengthening_worker( unsigned int & next_start, unsigned 
                                 localQueue.push_back( list[l_cr] );
                                 d.set_strengthen(true);
                               }
+                            
                             occ_updates.push_back(OccUpdate(list[l_cr] , d[pos]));
                             d.removePositionSortedThreadSafe(pos);
                             // TODO to much overhead? 
@@ -941,13 +951,15 @@ inline lbool Subsumption::par_nn_strength_check(CoprocessorData & data, vector <
           }
           else
           {
-              if( global_debug_out ) cerr << "c remove " << negated_lit_pos << " from clause " << other << endl;
+              if(  opt_debug > 1  ) cerr << "c remove (@" << __LINE__ << ")" << negated_lit_pos << " from clause " << other << endl;
               // keep track of this clause for further strengthening!
               if( !other.can_strengthen() ) {
                 localQueue.push_back( list[j] );
                 other.set_strengthen(true);
               }
               Lit neg = other[negated_lit_pos];
+	      
+	      if( opt_debug > 1 ) cerr << "c add remove info (@" << __LINE__ << ")  [" << occ_updates.size() << "] : " << list[j] << " with clause " << neg << " and ref " << list[j] << endl;
               occ_updates.push_back(OccUpdate(list[j] , neg));
               other.removePositionSortedThreadSafe(negated_lit_pos);
 	          modifiedFormula = true;
@@ -1087,13 +1099,15 @@ inline lbool Subsumption::par_nn_negated_strength_check(CoprocessorData & data, 
           }
           else
           {
-              if( global_debug_out ) cerr << "c remove " << negated_lit_pos << " from clause " << other << endl;
+              if(  opt_debug > 1  ) cerr << "c remove (@" << __LINE__ << ")" << negated_lit_pos << " from clause " << other << endl;
               // keep track of this clause for further strengthening!
               if( !other.can_strengthen() ) {
                 localQueue.push_back( list[j] );
                 other.set_strengthen(true);
               }
               Lit neg = other[negated_lit_pos];
+	      
+	      if( opt_debug > 1 ) cerr << "c add remove info (@" << __LINE__ << ")  [" << occ_updates.size() << "] : " << list[j] << " with clause " << neg << " and ref " << list[j] << endl;
               occ_updates.push_back(OccUpdate(list[j] , neg));
               other.removePositionSortedThreadSafe(negated_lit_pos);
 	          modifiedFormula = true;
@@ -1188,8 +1202,10 @@ lbool Subsumption::fullStrengthening(Heap<VarOrderBVEHeapLt> * heap, const Var i
 		if (doStatistics) ++strengthSteps;
 		
                 Clause & other = ca[list[k]];
-                if (other.can_be_deleted())     // dont check if this clause can be deleted
+                if (other.can_be_deleted()){     // dont check if this clause can be deleted, but remove it from its list
+		    list[k] = list.back(); list.pop_back(); --k;
                     continue;
+		}
                 assert(other.size() > 1 && "Expect other to be > 1");
                 
                 
@@ -1213,17 +1229,19 @@ lbool Subsumption::fullStrengthening(Heap<VarOrderBVEHeapLt> * heap, const Var i
                 if (l1 == c.size() && pos != -1)    
                 {
                     if (doStatistics) ++removedLiterals;
+		    const Lit remLit = other[pos];
                     other.removePositionSorted(pos);     // strengthen clause
+		    data.addCommentToProof("remove literal by strengthening");
+		    data.addToProof(other);data.addToProof(other,true,remLit); // add information to proof!
+		    other.updateExtraInformation( c.extraInformation() ); // update the extra information of this clause!
 		    modifiedFormula = true;
-		            if( global_debug_out ) cerr << "c remove " << neg_lit << " from clause " << other << endl;
-                    //if( global_debug_out ) cerr << "c used strengthener (lit negated) " << c << endl;
+		            if(  opt_debug > 1  ) cerr << "c remove (@" << __LINE__ << ")" << neg_lit << " from clause " << other << endl;
+                    //if(  opt_debug > 1  ) cerr << "c used strengthener (lit negated) " << c << endl;
                     if(other.size() == 1)
                     {
                       // propagate if clause is unit
-                      other.set_delete(true);
-                      data.enqueue(other[0]);
-		      // cerr << "c enqueue unit based on strengthening: " << other[0] << endl;
-                      //propagation.propagate(data, true); -> causes problems if effecting c
+                      other.set_delete(true); 
+                      data.enqueue(other[0],other.extraInformation()); // enqueue the literal with the extraInformation of the unit clause!
                     } 
                     else
                     {
@@ -1241,6 +1259,7 @@ lbool Subsumption::fullStrengthening(Heap<VarOrderBVEHeapLt> * heap, const Var i
 	                    }
 
                         // track occurrence update
+                        if( opt_debug > 1 ) cerr << "c add remove info (@" << __LINE__ << ")  [" << occ_updates.size() << "] : " << list[k] << " with clause " << neg_lit << " and ref " << list[k] << endl;
                         occ_updates.push_back(OccUpdate(list[k],neg_lit));
                         //list[k] = list[list.size() - 1];
                         //list.pop_back();    // shrink vector
@@ -1398,11 +1417,18 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
       && (data.unlimited() || (doStatistics && strengthSteps < strLimit ) )
       ; ++j)
     {
-      Clause& strengthener = ca[cr]; // if opt_allStrengthRes -> realloc possible
+      if ( list[j] == cr) continue; 
       Clause& other = ca[list[j]];
       if (doStatistics) ++strengthSteps;
-      if (other.can_be_deleted() || list[j] == cr || other.size() == 0)
-        continue;
+      if ( other.size() == 0 ) { assert( !data.ok() && "unsat should be found already!" ); break; }  // here, data.ok should be false already -> nothing to be done!
+      if( other.can_be_deleted() ) { // skip, but remove from list!
+	if( opt_debug > 1 ) cerr << "c overwrite for literal " << min << " : list[" << j << "]=" << list[j] << " with list[" << list.size() - 1 << "] = " << list.back() << endl;
+	list[j] = list.back(); list.pop_back(); --j;
+	continue;
+      }
+      
+      Clause& strengthener = ca[cr]; // if opt_allStrengthRes -> realloc possible
+      
       // test if we can strengthen other clause
       si = 0;
       so = 0;
@@ -1433,6 +1459,7 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
         else
           ++so;
       }
+      assert( !other.can_be_deleted() && "the clause that is tested should not be known to be redundant already!" );
       if (negated_lit_pos != -1 && si == strengthener.size()) // TODO if negated_lit_pos == -1 -> normal subsumption case, why not apply  it?
       {
         if (other.size() <= opt_allStrengthRes) // check this only for relevant clauses
@@ -1447,8 +1474,11 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
             data.getSubsumeClauses().push_back(newCRef);
             newClauses.push_back(newCRef);
           }
-          if (global_debug_out) cerr << "c created resolvent while strengthening: " << ca[newCRef] << endl;
-          if (global_debug_out) cerr  << "c origin: " << strengthener << " and " << other << endl;
+          data.addCommentToProof("created by strengthening (allStrengthRes)");
+          data.addToProof( ca[newCRef] ); // add clause to proof!
+	  ca[newCRef].setExtraInformation( strengthener.extraInformation() ); ca[newCRef].updateExtraInformation(other.extraInformation()); // setup extra information
+          if ( opt_debug > 1 ) cerr << "c created resolvent while strengthening: " << ca[newCRef] << endl;
+          if ( opt_debug > 1 ) cerr  << "c origin: " << strengthener << " and " << other << endl;
         }
         else
         {
@@ -1466,9 +1496,14 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
             other.set_strengthen(true);
           }
           didChange();
+	  if( opt_debug > 1 ) cerr << "c add remove info (@" << __LINE__ << ")  [" << occ_updates.size() << "] : " << list[j] << " with clause " << other[negated_lit_pos] << " and ref " << list[j] << endl;
           occ_updates.push_back(OccUpdate(list[j] , other[negated_lit_pos]));
-          if( global_debug_out ) cerr << "c remove " << other[negated_lit_pos] << " from clause " << other << endl;
+          if( opt_debug > 1 ) cerr << "c remove (@" << __LINE__ << ")" << other[negated_lit_pos] << " from clause " << other << " with " << strengthener << endl;
+	  const Lit remLit = other[negated_lit_pos];
           other.removePositionSorted(negated_lit_pos);
+	  data.addCommentToProof("removed literal by strengthening (worker)");
+	  data.addToProof(other);data.addToProof(other,true,remLit); // add clause to proof
+	  other.updateExtraInformation( strengthener.extraInformation() ); // update extra info
           if(other.size() == 1)
           {
             // propagate if clause is only 1 lit big
@@ -1483,6 +1518,8 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
     //propagation only in a valid state 
     if (data.hasToPropagate()) 
     {
+	 if( opt_debug > 1 ) cerr << "c call propagate @ " << __LINE__ << endl;
+	 if( data.outputsProof() ) { updateOccurrences(occ_updates, heap, ignore); }
         if (propagation.process(data, true, heap, ignore) == l_False)
             return l_False;
     }
@@ -1492,11 +1529,15 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
       && (data.unlimited() || (doStatistics && strengthSteps < strLimit ) )
       ; ++j)
     {
-      Clause& strengthener = ca[cr]; // if opt_allStrengthRes -> realloc possible
       Clause& other = ca[list_neg[j]];
       if (doStatistics) ++ strengthSteps;
-      if (other.can_be_deleted())
+      if (other.can_be_deleted()) {
+	if( opt_debug > 1 ) cerr << "c overwrite for literal " << nmin << " : list_neg[" << j << "]=" << list_neg[j] << " with list_neg[" << list_neg.size() - 1 << "] = " << list_neg.back() << endl;
+	list_neg[j] = list_neg.back(); list_neg.pop_back(); --j;
         continue;
+      }
+      
+      Clause& strengthener = ca[cr]; // if opt_allStrengthRes -> realloc possible
       si = 0;
       so = 0;
       negated_lit_pos = -1;
@@ -1531,10 +1572,12 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
           {
             data.getSubsumeClauses().push_back(newCRef);
             newClauses.push_back(newCRef);
-            
           }
-          if (global_debug_out) cerr << "c created resolvent while strengthening: " << ca[newCRef] << endl;
-          if (global_debug_out) cerr  << "c origin: " << strengthener << " and " << other << endl;
+          data.addCommentToProof("created by strengthening (allStrengthRes)");
+          data.addToProof( ca[newCRef] ); // add clause to proof!
+	  ca[newCRef].setExtraInformation( strengthener.extraInformation() ); ca[newCRef].updateExtraInformation(other.extraInformation()); // setup extra information
+          if ( opt_debug > 1 ) cerr << "c created resolvent while strengthening: " << ca[newCRef] << endl;
+          if ( opt_debug > 1 ) cerr  << "c origin: " << strengthener << " and " << other << endl;
         }
         else
         {
@@ -1549,14 +1592,22 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
              
           // keep track of this clause for further strengthening!
           if( !other.can_strengthen() ) {
-       localQueue.push_back( list_neg[j] );
-       other.set_strengthen(true);
-        }
+	    localQueue.push_back( list_neg[j] );
+	    other.set_strengthen(true);
+	  }
           
+          if( opt_debug > 1 ){
+	    cerr << "c add remove info (@" << __LINE__ << ")  [" << occ_updates.size() << "] : " << list_neg[j] << " with clause " << other[negated_lit_pos] << " and ref " << list_neg[j] << endl;
+	    cerr << "c lit " << nmin << " list: " << data.list(nmin) << endl;
+	  }
           occ_updates.push_back(OccUpdate(list_neg[j] , other[negated_lit_pos]));
-          if( global_debug_out ) cerr << "c remove " << other[negated_lit_pos] << " from clause " << other << endl;
+          if(  opt_debug > 1  ) cerr << "c remove (@" << __LINE__ << ")" << other[negated_lit_pos] << " from clause " << other << " with strengthener " << strengthener << " ( via index: " << list_neg[j] << " cls: " << ca[list_neg[j]] << ")" << endl;
           didChange();
+	  const Lit remLit = other[negated_lit_pos];
           other.removePositionSorted(negated_lit_pos);
+	  data.addCommentToProof("removed literal by strengthening");
+	  data.addToProof(other);data.addToProof(other,true,remLit); // add to proof
+	  other.updateExtraInformation( strengthener.extraInformation() ); // update extra info
           
           if(other.size() == 1)
           {
@@ -1571,12 +1622,15 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
     }
     if (data.hasToPropagate()) 
     {
+	if( opt_debug > 1 ) cerr << "c call propagate!" << endl;
+        if( data.outputsProof() ) { updateOccurrences(occ_updates, heap, ignore); }
         if (propagation.process(data, true, heap, ignore) == l_False)
             return l_False;
 	    modifiedFormula = modifiedFormula || propagation.appliedSomething();
     }
     ca[cr].set_strengthen(false);
   }
+
   updateOccurrences( occ_updates, heap, ignore);
   occ_updates.clear();
   if (doStatistics) strengthTime = cpuTime() - strengthTime;
@@ -1584,15 +1638,19 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
   return data.ok() ? l_Undef : l_False;
 }
 
-inline void Subsumption::updateOccurrences(const vector< OccUpdate > & updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore)
+inline void Subsumption::updateOccurrences(vector< OccUpdate > & updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore)
 {
     for (int i = 0; i < updates.size(); ++i)
     {
+        if( opt_debug > 1 ) cerr << "c list for literal " << updates[i].l << " : " << data.list(updates[i].l) << endl;
         // just remove once from stats -> this is consistent with propagation, since propagation will clear occ-lists 
         // and sets occ-stats by itself
-        if (data.removeClauseFrom(updates[i].cr, updates[i].l))
+        if (data.removeClauseFrom(updates[i].cr, updates[i].l)) {
+	  if( opt_debug > 1 ) cerr << "c successfully removed clause [" << i << "/" << updates.size() <<  "] from list for literal " << updates[i].l << " from clause " << ca[updates[i].cr] << " [" << updates[i].cr << "]" << endl;
             data.removedLiteral(updates[i].l, 1, heap, ignore);
+	} else if( opt_debug > 1 ) cerr << "c DID NOT remove clause [" << i << "/" << updates.size() <<  "] from list for literal " << updates[i].l << " from clause " << ca[updates[i].cr] << " [" << updates[i].cr << "]" << endl;
     }
+    updates.clear();
 }
 
 void Subsumption::initClause( const CRef cr )
@@ -1611,6 +1669,7 @@ void Subsumption::parallelSubsumption( const bool doStatistics)
 {
   if (doStatistics) processTime = wallClockTime() - processTime;
   if( false ) cerr << "c parallel subsumption with " << controller.size() << " threads" << endl;
+  printDRUPwarning(cerr,"parallel subsumption");
   SubsumeWorkData workData[ controller.size() ];
   vector<Job> jobs( controller.size() );
   toDeletes.resize(controller.size());
@@ -1684,6 +1743,7 @@ void Subsumption::parallelStrengthening(Heap<VarOrderBVEHeapLt> * heap, const Va
   // assert( !data.isInterupted() && "if interrupted, do not hit this point!" );
   //fullStrengthening(data);
   if( false ) cerr << "c parallel strengthening with " << controller.size() << " threads" << endl;
+  printDRUPwarning(cerr,"parallel strengthening"); // parallel strenghtening cannot produce DRUP proofs!
   if (doStatistics) strengthTime = wallClockTime() - strengthTime;
   SubsumeWorkData workData[ controller.size() ];
   //vector< struct SubsumeStatsData > localStats (controller.size());

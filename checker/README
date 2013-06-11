@@ -1,9 +1,15 @@
-This is the 2009 edition of:
+Compile by running "make" (requires g++)
 
-cnfdd.c - delta debugger for CNFs in DIMACS format
-mtcnfdd.c - multithreaded version (needs -pthread to compile)
-cnfuzz.c - fuzzer for CNFs in DIMACS format
+Usage: 
+./certifiedSAT <instance> <solveroutput>
 
-See our SAT'2010 papers for more details and COPYING for the license.
+Example of usage:
+Run your solver and redirect stdout of the solver to a file <solveroutput>. e.g.: 
+./solver test.cnf >solution.out
 
-Armin Biere, April 2010.
+verify the ouput with
+./certifiedSAT test.cnf solution.out
+
+
+
+

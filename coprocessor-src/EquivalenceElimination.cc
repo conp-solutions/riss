@@ -229,6 +229,8 @@ void EquivalenceElimination::initClause(const CRef cr)
 
 bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorData& data, vector< Circuit::Gate >& gates)
 {
+  printDRUPwarning(cerr,"ee gate algorithm");
+  
   gateTime  = cpuTime() - gateTime;
   vector< vector<int32_t> > varTable ( data.nVars() ); // store for each variable which gates have this variable as input
   vector< unsigned int > bitType ( data.nVars(), 0 );  // upper 4 bits are a counter to count how often this variable has been considered already as output
@@ -1943,6 +1945,13 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	 if( myReplace == ee[j] ) equivalentLits ++; // count how many equal literals
 	 if( ! data.ma.isCurrentStep( toInt( myReplace )) )
 	   data.lits.push_back(myReplace); // has to look through that list as well!
+	   
+	 // add the equivalence to the proof, as single sequential clauses
+	 data.addCommentToProof("add equivalence to proof");
+	 proofClause.clear();proofClause.push_back( ~repr ); proofClause.push_back(ee[j]);
+	 data.addToProof(proofClause);
+	 proofClause[0] = ~proofClause[0];proofClause[1] = ~proofClause[1];
+	   
 	 if( ! setEquivalent(repr, ee[j] ) ) { 
 	   if( debug_out > 2 ) cerr << "c applying EE failed due to setting " << repr << " and " << ee[j] << " equivalent -> UNSAT" << endl;
 	   data.setFailed(); return newBinary;
@@ -1999,6 +2008,12 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	    bool duplicate  = false;
 	    bool getsNewLiterals = false;
 	    Lit tmp = repr;
+	    
+	    if( data.outputsProof()) { // only if we do a proof, copy the clause!
+	      proofClause.clear();
+	      for( int m = 0 ; m < c.size(); ++ m ) proofClause.push_back(c[m]);
+	    }
+	    
 	    // TODO: update counter statistics for all literals of the clause!
 	    for( int m = 0 ; m < c.size(); ++ m ) {
 	      if( c[m] == repr || c[m] == ~repr) { duplicate = true; continue; } // manage that this clause is not pushed into the list of clauses again!
@@ -2015,6 +2030,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 		if( debug_out > 2 ) cerr << "c ee deletes clause " << c << endl;
 		c.set_delete(true); 
 		removedCls++;
+		data.addToProof(proofClause,true); // delete the clause, if we do the proof
 		goto EEapplyNextClause;
 	      } // this clause is a tautology
 	      if( c[m-1] != c[m] ) { c[n++] = c[m]; removed ++; }
@@ -2022,6 +2038,9 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	    c.shrink(c.size() - n);
 	    if( debug_out > 2 ) cerr << "c ee shrinked clause to " << c << endl;
 	    modifiedFormula = true;
+	    
+	    data.addToProof(c); // add the reduced clause to the formula!
+	    data.addToProof(proofClause,true); // delete the clause, if we do the proof
 	    
 	    if( c.size() == 2 )  { // take care of newly created binary clause for further analysis!
 	      newBinary = true;
@@ -2046,7 +2065,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	    }
 	    data.log.log(eeLevel,"clause after sort",c);
 	    
-	    if( !duplicate ) {
+	    if( c.size() > 1 &&  !duplicate ) {
   // 	    cerr << "c give list of literal " << (pol == 0 ? repr : ~repr) << " for duplicate check" << endl;
 	      if( !hasDuplicate( data.list( (pol == 0 ? repr : ~repr)  ), c )  ) {
 		data.list( (pol == 0 ? repr : ~repr) ).push_back( list[k] );
@@ -2056,6 +2075,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	      } else {
 		if( debug_out > 2 ) cerr << "c clause[" << list[k] << "] has duplicates: " << c << endl;
 		removedCls++;
+		data.addToProof(c,true); // delete the clause, since we found duplicates
 		c.set_delete(true);
 		data.removedClause(list[k]);
 		modifiedFormula = true;
@@ -2153,7 +2173,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
   return newBinary || force;
 }
 
-bool EquivalenceElimination::hasDuplicate(vector<CRef>& list, const Clause& c)
+bool EquivalenceElimination::hasDuplicate(CoprocessorData& data, vector<CRef>& list, const Clause& c)
 {
   bool irredundant = !c.learnt();
 //   cerr << "c check for duplicates: " << c << " (" << c.size() << ") against " << list.size() << " candidates" << endl;
@@ -2166,6 +2186,8 @@ bool EquivalenceElimination::hasDuplicate(vector<CRef>& list, const Clause& c)
     if( j == c.size() ) { 
 //       cerr << "c found partner" << endl;
       if( irredundant && d.learnt() ) {
+	data.addCommentToProof("delete duplicate clause");
+	data.addToProof(d,true);
 	d.set_delete(true); // learned clauses are no duplicate for irredundant clauses -> delete learned!
 	return false;
       }

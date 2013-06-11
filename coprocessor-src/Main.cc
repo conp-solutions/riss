@@ -76,6 +76,9 @@ int main(int argc, char** argv)
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
+	StringOption drupFile         ("PROOF", "drup", "Write a proof trace into the given file",0);
+	StringOption opt_proofFormat  ("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, should be DRUP)","DRUP");
+	
 	const char* _cat = "COPROCESSOR 3";
 	StringOption undoFile      (_cat, "cp3_undo",   "write information about undoing simplifications into given file (and var map into X.map file)");
 	BoolOption   post          (_cat, "cp3_post",   "perform post processing", false);
@@ -133,6 +136,11 @@ int main(int argc, char** argv)
 	      printf("c |     Kilian Gebhard: Implementation of BVE, Subsumption, Parallelization                               |\n");
 	      printf("c ============================[ Problem Statistics ]=======================================================\n");
 	      printf("c |                                                                                                       |\n"); }
+	      
+	    // open file for proof
+	    S.drupProofFile = (drupFile) ? fopen( (const char*) drupFile , "wb") : NULL;
+	    if( opt_proofFormat &&  S.drupProofFile != NULL ) fprintf( S.drupProofFile, "o proof %s\n", (const char*)opt_proofFormat ); // we are writing proofs of the given format!
+	      
 	    parse_DIMACS(in, S);
 	    gzclose(in);
 
@@ -174,6 +182,7 @@ int main(int argc, char** argv)
 	    }
 	    
 	    if (!S.okay()){
+	        if (S.drupProofFile != NULL) fprintf(S.drupProofFile, "0\n"), fclose(S.drupProofFile); // tell proof about result!
 		if (res != NULL) { fprintf(res, "s UNSATISFIABLE\n"); fclose(res); cerr << "s UNSATISFIABLE" << endl; }
 		else printf("s UNSATISFIABLE\n");
 		if (S.verbosity > 0){
@@ -198,6 +207,7 @@ int main(int argc, char** argv)
 		ret = S.solveLimited(dummy);
 	      }
 	      if( ret == l_True ) {
+		fclose(S.drupProofFile); // close proof file!
 		preprocessor.extendModel(S.model);
 		if( res != NULL ) {
 		  cerr << "s SATISFIABLE" << endl;
@@ -220,6 +230,7 @@ int main(int argc, char** argv)
 		return (10);
 #endif
 	      } else if ( ret == l_False ) {
+		if (S.drupProofFile != NULL) fprintf(S.drupProofFile, "0\n"), fclose(S.drupProofFile); // tell proof about result!
 		if (res != NULL) fprintf(res, "s UNSATISFIABLE\n"), fclose(res);
 		printf("s UNSATISFIABLE\n");
 		cerr.flush(); cout.flush();

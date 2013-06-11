@@ -1257,6 +1257,7 @@ void Preprocessor::reSetupSolver()
 		  if( solver->value( c[0] ) == l_False ) { data.setFailed(); return; }
 		  else if( solver->value( c[1] ) == l_False ) {
 		    if( data.enqueue(c[0]) == l_False ) {
+		      data.addCommentToProof("learnt unit during resetup solver");
 		      data.addUnitToProof( c[0] ); // tell drup about this unit (whereever it came from)
 		      if( opt_debug ) cerr  << "enqueing " << c[0] << " failed." << endl; return;
 		    } else { 
@@ -1272,6 +1273,7 @@ void Preprocessor::reSetupSolver()
 	      } else {
 		if (solver->value(c[0]) == l_Undef)
 		  if( data.enqueue(c[0]) == l_False ) { 
+		    data.addCommentToProof("learnt unit during resetup solver");
 		    data.addUnitToProof( c[0] ); // tell drup about this unit (whereever it came from)
 		    return;
 		  }
@@ -1334,6 +1336,7 @@ void Preprocessor::reSetupSolver()
 		  // reduct of clause is empty, or unit
 		  if( solver->value( c[0] ) == l_False ) { data.setFailed(); return; }
 		  else if( solver->value( c[1] ) == l_False ) {
+		    data.addCommentToProof("learnt unit during resetup solver");
 		    data.addUnitToProof( c[0] ); // tell drup about this unit (whereever it came from)
 		    if( data.enqueue(c[0]) == l_False ) { if( opt_debug ) cerr  << "enqueing " << c[0] << " failed." << endl; return; }
 		    else { if( opt_debug ) cerr << "enqueued " << c[0] << " successfully" << endl; }
@@ -1343,6 +1346,7 @@ void Preprocessor::reSetupSolver()
 	      }
 	      else if (solver->value(c[0]) == l_Undef) {
 		if( data.enqueue(c[0]) == l_False ) { 
+		  data.addCommentToProof("learnt unit during resetup solver");
 		  data.addUnitToProof( c[0] ); // tell drup about this unit (whereever it came from)
 		  return;
 		}

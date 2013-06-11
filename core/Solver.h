@@ -48,8 +48,13 @@ namespace Coprocessor {
   class Symmetry;
 }
 
+// since template methods need to be in headers ...
+extern Minisat::BoolOption opt_verboseProof;
+extern Minisat::BoolOption opt_rupProofOnly;
+
 namespace Minisat {
 
+ 
 //=================================================================================================
 // Solver -- the main class:
 
@@ -332,6 +337,7 @@ protected:
     template <class T>
     void addToProof(   T& clause, bool deleteFromProof=false, const Lit remLit = lit_Undef); // write the given clause to the output, if the output is enabled
     void addUnitToProof(  Lit& l, bool deleteFromProof=false);    // write a single unit clause to the proof
+    void addCommentToProof( const char* text, bool deleteFromProof=false); // write the text as comment into the proof!
     
     // Static helpers:
     //
@@ -516,6 +522,33 @@ inline void     Solver::toDimacs     (const char* file){ vec<Lit> as; toDimacs(f
 inline void     Solver::toDimacs     (const char* file, Lit p){ vec<Lit> as; as.push(p); toDimacs(file, as); }
 inline void     Solver::toDimacs     (const char* file, Lit p, Lit q){ vec<Lit> as; as.push(p); as.push(q); toDimacs(file, as); }
 inline void     Solver::toDimacs     (const char* file, Lit p, Lit q, Lit r){ vec<Lit> as; as.push(p); as.push(q); as.push(r); toDimacs(file, as); }
+
+
+template <class T>
+inline void Solver::addToProof( T& clause, bool deleteFromProof, const Lit remLit)
+{
+  if (!outputsProof() || (deleteFromProof && opt_rupProofOnly) ) return; // no proof, or delete and noDrup
+  if( deleteFromProof ) fprintf(drupProofFile, "d ");
+  for (int i = 0; i < clause.size(); i++) {
+    if( clause[i] == lit_Undef ) continue;
+    fprintf(drupProofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
+  }
+  if( deleteFromProof && remLit != lit_Undef ) fprintf(drupProofFile, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1));
+  fprintf(drupProofFile, "0\n");
+}
+
+inline void Solver::addUnitToProof(Lit& l, bool deleteFromProof)
+{
+  if (!outputsProof() || (deleteFromProof && opt_rupProofOnly) ) return; // no proof, or delete and noDrup
+  if( deleteFromProof ) fprintf(drupProofFile, "d ");
+  fprintf(drupProofFile, "%i 0\n", (var(l) + 1) * (-2 * sign(l) + 1));  
+}
+
+inline void Solver::addCommentToProof(const char* text, bool deleteFromProof)
+{
+  if (!outputsProof() || (deleteFromProof && opt_rupProofOnly) || !opt_verboseProof) return; // no proof, no Drup, or no comments
+  fprintf(drupProofFile, "c %s\n", text);  
+}
 
 
 //=================================================================================================

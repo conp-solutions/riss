@@ -51,6 +51,8 @@ class EquivalenceElimination : public Technique {
   Propagation& propagation;            /// object that takes care of unit propagation
   Subsumption& subsumption;		/// object that takes care of subsumption and strengthening
   
+  vector<Lit> proofClause;		/// set of literals for outputting proofs
+  
 public:
   
   EquivalenceElimination( ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation, Subsumption& _subsumption  );

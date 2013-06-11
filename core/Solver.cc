@@ -136,6 +136,9 @@ static BoolOption    debug_otfss           ("MODS", "otfss-D",     "print debug 
 
 static IntOption     opt_learnDecPrecent   ("MODS", "learnDecP",   "if LBD of is > percent of decisionlevel, learn decision Clause (Knuth)", 100, IntRange(1, 100) );
 
+BoolOption    opt_verboseProof      ("PROOF", "verb-proof", "also print comments into the proof", false);
+BoolOption    opt_rupProofOnly      ("PROOF", "rup-only",   "do not print delete lines into proof", false);
+
 // useful methods
 
 /// print literals into a stream
@@ -371,8 +374,11 @@ bool Solver::addClause_(vec<Lit>& ps)
 
     // add to Proof that the clause has been changed
     if ( flag &&  outputsProof() ) {
+      addCommentToProof("reduce due to assigned literals, or duplicates");
       addToProof(ps);
       addToProof(oc,true);
+    } else if( outputsProof() && opt_verboseProof ) {
+      cerr << "c added usual clause " << ps << " to solver" << endl; 
     }
 
     if (ps.size() == 0)
@@ -394,25 +400,6 @@ bool Solver::addClause_(vec<Lit>& ps)
     return true;
 }
 
-template <class T>
-void Solver::addToProof( T& clause, bool deleteFromProof, const Lit remLit)
-{
-  if (!outputsProof()) return;
-  if( deleteFromProof ) fprintf(drupProofFile, "d ");
-  for (int i = 0; i < clause.size(); i++) {
-    if( clause[i] == lit_Undef ) continue;
-    fprintf(drupProofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
-  }
-  if( deleteFromProof && remLit != lit_Undef ) fprintf(drupProofFile, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1));
-  fprintf(drupProofFile, "0\n");
-}
-
-void Solver::addUnitToProof(Lit& l, bool deleteFromProof)
-{
-  if (!outputsProof() || l == lit_Undef ) return;
-  if( deleteFromProof ) fprintf(drupProofFile, "d ");
-  fprintf(drupProofFile, "%i 0\n", (var(l) + 1) * (-2 * sign(l) + 1));  
-}
 
 void Solver::attachClause(CRef cr) {
     const Clause& c = ca[cr];
@@ -462,7 +449,10 @@ void Solver::removeClause(CRef cr) {
   Clause& c = ca[cr];
 
   // tell DRUP that clause has been deleted, if this was not done before already!
-  if( c.mark() == 0 ) addToProof(c,true);
+  if( c.mark() == 0 ) {
+    addCommentToProof("delete via clause removal",true);
+    addToProof(c,true);
+  }
 
   detachClause(cr);
   // Don't leave pointers to free'd memory!
@@ -666,7 +656,10 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     if( otfssClauses.size() > 0 && otfssClauses.last() == lastConfl ) {
       if(debug_otfss) cerr << "c current learnt clause " << out_learnt << " subsumes otfss clause " << ca[otfssClauses.last()] << endl;
       if( ca[otfssClauses.last()].learnt() ) { 
-	if( ca[otfssClauses.last()].mark() == 0 ) addToProof(ca[otfssClauses.last()], true); // add this to proof, if enabled, and clause still known
+	if( ca[otfssClauses.last()].mark() == 0 ){
+	  addCommentToProof("remove, because subsumed by otfss clause", true );
+	  addToProof(ca[otfssClauses.last()], true); // add this to proof, if enabled, and clause still known
+	}
 	ca[otfssClauses.last()].mark(1);                 // remove this clause!
       }
       otfssClauses.pop(); // do not work on otfss clause, if current learned clause subsumes it anyways!
@@ -1130,6 +1123,7 @@ CRef Solver::propagate()
 	      oc.push(first);
 	      oc.push(~commonDominator);
 
+	      addCommentToProof("added by LHBR");
 	      addToProof( oc ); // if drup is enabled, add this clause to the proof!
 	      
 	      // if commonDominator is element of the clause itself, delete the clause (hyper-self-subsuming resolution)
@@ -1138,7 +1132,10 @@ CRef Solver::propagate()
 		for( int k = 1; k < c.size(); ++ k ) if ( c[k] == ~commonDominator ) { willSubsume = true; break; }
 	      }
 	      if( willSubsume ) { // created a binary clause that subsumes this clause
-		if( c.mark() == 0 ) addToProof(c,true); // remove this clause from the proof, if not done already
+		if( c.mark() == 0 ){
+		  addCommentToProof("Subsumed by LHBR clause", true);
+		  addToProof(c,true); // remove this clause from the proof, if not done already
+		}
 		c.mark(1); // the bigger clause is not needed any more
 		lhbr_sub ++;
 	      } else {
@@ -1422,7 +1419,8 @@ lbool Solver::search(int nof_conflicts)
 		  c[0] = c[1]; c.removePositionUnsorted(1); // shrink clause to binary clause!
 		  attachClause(otfssCls[i]); // add to watch list for binary clauses (no extra constraints on clause literals!)
 		  otfssBinaries++;
-		} 
+		}
+		addCommentToProof("remove literal by OTFSS");
 		addToProof(c);             // for RUP
 		addToProof(c,true,remLit); // for DRUP
 	      }
@@ -1452,8 +1450,10 @@ lbool Solver::search(int nof_conflicts)
 		}
 		  
 		// write learned unit clauses to DRUP!
-		for (int i = 0; i < learnt_clause.size(); i++)
+		for (int i = 0; i < learnt_clause.size(); i++){
+		  addCommentToProof("learnt unit");
 		  addUnitToProof(learnt_clause[i]);
+		}
 		  
 		multiLearnt = ( learnt_clause.size() > 1 ? multiLearnt + 1 : multiLearnt ); // stats
 		topLevelsSinceLastLa ++;
@@ -1463,6 +1463,7 @@ lbool Solver::search(int nof_conflicts)
 		sumLBD += nblevels;
 
 		// write learned clause to DRUP!
+		addCommentToProof("learnt clause");
 		addToProof( learnt_clause );
 
 		if (learnt_clause.size() == 1){
@@ -1776,11 +1777,13 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
       }
 
       // write all clauses to proof -- including the learned unit
+      addCommentToProof("added by lookahead");
       for( int j = 0; j < clauses.size() ; ++ j ){
 	if(  0  ) cerr << "c write clause [" << j << "] " << clauses[ j ] << endl;
 	addToProof(clauses[j]);
       }
       // delete all redundant clauses
+      addCommentToProof("removed redundant lookahead clauses",true);
       for( int j = 0; j+1 < clauses.size() ; ++ j ){
 	assert( clauses[j].size() > 1 && "the only unit clause in the list should not be removed!" );
 	addToProof(clauses[j],true);

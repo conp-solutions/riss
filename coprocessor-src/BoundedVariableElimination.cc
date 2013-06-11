@@ -193,6 +193,9 @@ bool BoundedVariableElimination::hasToEliminate()
 
 lbool BoundedVariableElimination::runBVE(CoprocessorData& data, const bool doStatistics)
 {
+  if( ! performSimplification() ) return l_Undef; // do not do anything?!
+  modifiedFormula = false;
+  
   initialClauses = data.nCls();
   restarts = 0;
   if (controller.size() > 0)
@@ -217,11 +220,11 @@ lbool BoundedVariableElimination::runBVE(CoprocessorData& data, const bool doSta
   {
     data.getActiveVariables(lastDeleteTime(), variable_queue);
   }
-  //Propagation (TODO Why does omitting the propagation
-  // and no PureLit Propagation cause wrong model extension?)
+
   if (propagation.process(data, true) == l_False)
       return l_False;
-  modifiedFormula = modifiedFormula || propagation.appliedSomething();
+  bool upAppliedSomething = propagation.appliedSomething();
+  
   
   if( false ) {
    cerr << "formula after propagation: " << endl;
@@ -234,16 +237,12 @@ lbool BoundedVariableElimination::runBVE(CoprocessorData& data, const bool doSta
   data.ma.resize( data.nVars() * 2 );
 
   sequentiellBVE(data, newheap, false);
-  if (opt_bve_heap != 2)
-  {
-    newheap.clear();
-  }
-  else 
-  {
-    variable_queue.clear();
-  }
+  if (opt_bve_heap != 2) newheap.clear();
+  else variable_queue.clear();
 
-  if (doStatistics)    processTime = cpuTime() - processTime;   
+  if (doStatistics)    processTime = cpuTime() - processTime;  
+  if (!modifiedFormula)  unsuccessfulSimplification();
+  modifiedFormula = modifiedFormula || upAppliedSomething;
   if (data.getSolver()->okay())
     return l_Undef;
   else 
@@ -298,8 +297,7 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<Var
   modifiedFormula = modifiedFormula || subsumption.appliedSomething();
   if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
  
-  if (!data.ok())
-    return;
+  if (!data.ok()) return;
  
   touched_variables.clear();
 
@@ -321,20 +319,12 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<Var
 
     bve_worker (data, heap, seqBveSteps, force, doStatistics);
 
-    if (!data.ok())
-    {
-      //if (doStatistics) processTime = wallClockTime() - processTime;
-      return;
-    }
+    if (!data.ok()) return;
   
     //propagate units
     if (data.hasToPropagate())
     {
-      if (l_False == propagation.process(data, true))
-      {
-        //if (doStatistics) processTime = wallClockTime() - processTime;
-        return;
-      }
+      if (l_False == propagation.process(data, true)) return;
       modifiedFormula = modifiedFormula || propagation.appliedSomething();
     }
     // perform garbage collection
@@ -349,10 +339,8 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<Var
     if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
     modifiedFormula = modifiedFormula || subsumption.appliedSomething();
 
-    if (opt_bve_heap != 2)
-        heap.clear();
-    else
-        variable_queue.clear();
+    if (opt_bve_heap != 2) heap.clear();
+    else variable_queue.clear();
     
     for (int i = 0; i < touched_variables.size(); ++i)
     {
@@ -397,11 +385,11 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            assert (v != var_Undef && "variable heap or queue failed");
 
            // do not work on this variable, if it will be unit-propagated! if all units are eagerly propagated, this is not necessary
-           if  (data.value(mkLit(v,true)) != l_Undef || data.value(mkLit(v,false)) != l_Undef)
-               continue;
+           if  (data.value(mkLit(v,true)) != l_Undef || data.value(mkLit(v,false)) != l_Undef) continue;
            // do not work on this variable, if it does not occur in the formula (any more)
-           if (data.list(mkLit(v,false)).size() == 0 && data.list(mkLit(v,true)).size() == 0)
-               continue;
+           if (data.list(mkLit(v,false)).size() == 0 && data.list(mkLit(v,true)).size() == 0) continue;
+	   // do not work with this variable, if it is frozen!
+	   if( data.doNotTouch(v) ) continue;
 
            // Heuristic Cutoff Gate-Search
            if (!opt_force_gates && !opt_unlimited_bve && (data[mkLit(v,true)] > 10 && data[mkLit(v,false)] > 10 || data[v] > 15 && (data[mkLit(v,true)] > 5 || data[mkLit(v,false)] > 5)))
@@ -460,23 +448,23 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            for (int i = 0; i < pos.size(); ++i)
            {
                 Clause & c = ca[pos[i]];
-                if (c.can_be_deleted())
-                    continue;
-                if (c.learnt())
-                    lit_learnts_old += c.size();
-                else 
-                    lit_clauses_old += c.size();
+                if (c.can_be_deleted()) { // remove from the list!
+		  pos[i] = pos.back(); pos.pop_back(); --i;
+                  continue;
+		}
+		if (c.learnt()) lit_learnts_old += c.size();
+                else lit_clauses_old += c.size();
                 ++pos_count;
            }      
            for (int i = 0; i < neg.size(); ++i)
            {
                 Clause & c = ca[neg[i]];
-                if (c.can_be_deleted())
-                    continue;
-                if (c.learnt())
-                    lit_learnts_old += c.size();
-                else 
-                    lit_clauses_old += c.size();
+                if (c.can_be_deleted()) {
+		  neg[i] = neg.back(); neg.pop_back(); --i;
+                  continue;
+		}
+                if (c.learnt()) lit_learnts_old += c.size();
+                else lit_clauses_old += c.size();
                 ++neg_count;
            }
            if (opt_bve_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
@@ -544,7 +532,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
 	     
 		if (doStatistics) usedGates = (foundGate ? usedGates + 1 : usedGates ); // statistics
                 if(opt_bve_verbose > 1)  cerr << "c resolveSet" <<endl;
-		
+		data.addCommentToProof("perform BVE");
                 if (resolveSet(data, heap, pos, neg, v, p_limit, n_limit, bveChecks) == l_False)
                     return;
                 if (doStatistics) ++eliminatedVars;
@@ -586,6 +574,7 @@ inline void BoundedVariableElimination::removeClauses(CoprocessorData & data, He
         CRef cr = list[cr_i];
         if (!c.can_be_deleted())
         {
+	    data.addToProof(c,true);
 	    // also updated deleteTimer
             if (heap_updates > 0 && opt_bve_heap != 2)
                 data.removedClause(cr, &heap);
@@ -728,7 +717,12 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& 
                     cerr  << "c     Clause N: ";
                     printClause(n);               
                 }
-                lbool status = data.enqueue(resolvent[0]); //check for level 0 conflict
+
+		data.addToProof(resolvent);
+		uint64_t extraInfo = Clause::updateExtraInformation(p.extraInformation(),n.extraInformation());
+                
+                lbool status = data.enqueue(resolvent[0],extraInfo); //check for level 0 conflict
+
                 if (status == l_False)
                 {
                     didChange();
@@ -781,13 +775,11 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, Heap<VarOrd
 {
     vec<Lit> & ps = resolvent; 
     const bool hasDefinition = (p_limit < positive.size() || n_limit < negative.size() );
-    
   
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p)
     {
         Clause & p = ca[positive[cr_p]];
-        if (p.can_be_deleted())
-            continue;
+        if (p.can_be_deleted()) continue;
         for (int cr_n = 0; cr_n < negative.size(); ++cr_n)
         {
 	    // no need to resolve two clauses that are both not within the variable definition
@@ -840,6 +832,11 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, Heap<VarOrd
                     CRef cr = ca.alloc(ps, p.learnt() || n.learnt()); 
                     // IMPORTANT! dont use p and n in this block, as they could got invalid
                     Clause & resolvent = ca[cr];
+		    
+		    data.addToProof(ca[cr]); // tell proof about the new clause!
+		    ca[cr].setExtraInformation( p.extraInformation() ); // setup extra information for this clause!
+		    ca[cr].updateExtraInformation( n.extraInformation() );
+		    
                     if (heap_updates > 0 && opt_bve_heap != 2)
                         data.addClause(cr, &heap);
                     else 
@@ -877,8 +874,11 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, Heap<VarOrd
                     // | resolvent | == 1  => unit Clause
                     else if (ps.size() == 1)
                     {
+			 data.addToProof(ps); // tell proof about the new clause!
+			 uint64_t extraInfo = Clause::updateExtraInformation(p.extraInformation(), n.extraInformation());
+		      
                         //assert(false && "all units should be discovered before (while strengthening)!");
-                        lbool status = data.enqueue(ps[0]); //check for level 0 conflict
+                        lbool status = data.enqueue(ps[0], extraInfo ); //check for level 0 conflict
                         if (status == l_False)
                             return l_False;
                         else if (status == l_Undef)
@@ -889,11 +889,11 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, Heap<VarOrd
                             if (propagation.process(data, true) == l_False)  //TODO propagate own lits only (parallel)
                                 return l_False;
 			    modifiedFormula = modifiedFormula || propagation.appliedSomething();
-                            if (p.can_be_deleted())
+                            if (p.can_be_deleted()) // now, the next clause might be redundant!
                                 break;
                         }
                         else 
-                            assert (0); //something went wrong
+                            assert ( false && "a case that should not be happen occurred!" ); //something went wrong
                     }
                 }   
 
@@ -923,11 +923,12 @@ inline void BoundedVariableElimination::removeBlockedClauses(CoprocessorData & d
    for (unsigned ci = 0; ci < list.size(); ++ci)
    {    
         Clause & c =  ca[list[ci]];
-        if (c.can_be_deleted())
-            continue;
+        if (c.can_be_deleted()) continue;
         if (stats[ci] == 0)
         { 
             c.set_delete(true);
+	    data.addCommentToProof("blocked clause during BVE");
+	    data.addToProof(c,true);
             if (heap_updates > 0 && opt_bve_heap != 2)
                 data.removedClause(list[ci], &heap);
             else

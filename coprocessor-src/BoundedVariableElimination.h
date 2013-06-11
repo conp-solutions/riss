@@ -103,6 +103,9 @@ protected:
   void sequentiellBVE(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const bool force = false, const bool doStatistics = true);
   void bve_worker (Coprocessor::CoprocessorData& data, Heap< Coprocessor::VarOrderBVEHeapLt >& heap, int64_t& bveChecks, const bool force = false, const bool doStatistics = true);   
   inline void removeClauses(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const vector<CRef> & list, const Lit l, const int limit, const bool doStatistics = true);
+  
+  
+  /** ths method applies unit propagation during resolution, if possible! */
   inline lbool resolveSet(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, vector<CRef> & positive, vector<CRef> & negative
           , const int v, const int p_limit, const int n_limit, int64_t& bveChecks
           , const bool keepLearntResolvents = false, const bool force = false, const bool doStatistics = true);

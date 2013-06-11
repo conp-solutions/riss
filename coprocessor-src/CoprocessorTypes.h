@@ -283,7 +283,7 @@ public:
 // semantic:
   bool ok();                                             // return ok-state of solver
   void setFailed();                                      // found UNSAT, set ok state to false
-  lbool enqueue( const Lit l );                          // enqueue literal l to current solver structures
+  lbool enqueue( const Lit l, const uint64_t extraInfo = 0); // enqueue literal l to current solver structures, adopt to extraInfo of solver, if needed
   lbool value( const Lit l ) const ;                     // return the assignment of a literal
   void resetAssignment( const Var v );                   // set the polarity of a variable to l_Undef -- Note: be careful with this!
   
@@ -366,6 +366,8 @@ public:
   template <class T>
   void addToProof(   T& clause, bool deleteFromProof=false, const Lit remLit = lit_Undef); // write the given clause/vector/vec to the output, if the output is enabled
   void addUnitToProof(  Lit& l, bool deleteFromProof=false);    // write a single unit clause to the proof
+  void addCommentToProof(const char* text, bool deleteFromProof=false);
+  bool outputsProof() const { return solver->outputsProof(); } // return whether the solver outputs the drup proof!
   
   // handling equivalent literals
   void addEquivalences( const std::vector<Lit>& list );
@@ -715,14 +717,16 @@ inline bool CoprocessorData::isInterupted()
 }
 
 
-inline lbool CoprocessorData::enqueue(const Lit l)
+inline lbool CoprocessorData::enqueue(const Lit l, const uint64_t extraInfo)
 {
   if( false || global_debug_out ) cerr << "c enqueue " << l << " with previous value " << (solver->value( l ) == l_Undef ? "undef" : (solver->value( l ) == l_False ? "unsat" : " sat ") ) << endl;
   if( solver->value( l ) == l_False) {
     solver->ok = false; // set state to false
     return l_False;
-  } else if( solver->value( l ) == l_Undef ) solver->uncheckedEnqueue(l);
+  } else if( solver->value( l ) == l_Undef ) {solver->uncheckedEnqueue(l);
+    // if( extraInfo != 0 ) solver.vardata[ var(l) ] ... // make use of extra information!
     return l_True;
+  }
   return l_Undef;
 }
 
@@ -1534,6 +1538,11 @@ inline void CoprocessorData::addToProof(T& clause, bool deleteFromProof, const L
 inline void CoprocessorData::addUnitToProof(Lit& l, bool deleteFromProof)
 {
   solver->addUnitToProof(l,deleteFromProof);
+}
+
+inline void CoprocessorData::addCommentToProof(const char* text, bool deleteFromProof)
+{
+  solver->addCommentToProof(text,deleteFromProof);
 }
 
 

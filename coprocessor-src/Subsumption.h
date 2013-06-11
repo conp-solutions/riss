@@ -110,7 +110,7 @@ public:
   
 protected:
 
-  inline void updateOccurrences(const vector< Coprocessor::Subsumption::OccUpdate >& updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef);
+  inline void updateOccurrences(vector< Coprocessor::Subsumption::OccUpdate >& updates, Heap< Coprocessor::VarOrderBVEHeapLt >* heap, const Var ignore = (-1));
 
   bool hasToSubsume() const ;       // return whether there is something in the subsume queue
   lbool fullSubsumption(Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);   // performs subsumtion until completion

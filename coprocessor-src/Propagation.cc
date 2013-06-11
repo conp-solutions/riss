@@ -53,7 +53,10 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
       Clause & satisfied = ca[positive[i]];
       if (ca[ positive[i] ].can_be_deleted()) // only track yet-non-deleted clauses
           continue; // could remove from list, but list is cleared any ways!
-      else data.addToProof( ca[ positive[i] ], true ); // remove this clause, if this has not been done before
+      else if( ca[ positive[i] ].size() > 1 ) {  // do not remove the unit clause!
+	data.addCommentToProof("removed by positive UP",true );
+	data.addToProof( ca[ positive[i] ], true ); // remove this clause, if this has not been done before
+      }
       if( debug_out ) cerr << "c UP remove " << ca[ positive[i] ] << endl;
       ++removedClauses; // = ca[ positive[i] ].can_be_deleted() ? removedClauses : removedClauses + 1;
       ca[ positive[i] ].set_delete(true);
@@ -89,8 +92,12 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
       data.addSubStrengthClause(negative[i]);
 
       // proof and extra information
-      data.addToProof(c);         // tell proof about modified clause
-      data.addToProof(c,true,nl); // for DRUP store also the old clause, which can be removed now
+      if( c.size() > 1 ) {
+	assert(!c.can_be_deleted() && "clause should not be deleted already" );
+	data.addCommentToProof("removed literal by negative UP" );
+	data.addToProof(c);         // tell proof about modified clause
+	data.addToProof(c,true,nl); // for DRUP store also the old clause, which can be removed now
+      }
       c.updateExtraInformation( data.variableExtraInfo(var(nl)) );
       
       // unit propagation
