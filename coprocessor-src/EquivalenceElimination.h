@@ -109,7 +109,7 @@ protected:
    *  Note: assumes that all clauses are sorted!
    *  @return true, if there are duplicates, so that c can be deleted
    */
-  bool hasDuplicate( vector< Minisat::CRef >& list, const Clause& c );
+  bool hasDuplicate( CoprocessorDatavector< CRef >& list, const Clause& c );
   
   /** check whether this gate can be processed for equivalence checks */
   bool allInputsStamped(Circuit::Gate& g, vector< unsigned int >& bitType);
