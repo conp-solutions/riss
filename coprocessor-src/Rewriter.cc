@@ -686,7 +686,7 @@ bool Rewriter::hasDuplicate(vector<CRef>& list, const Clause& c)
 	  if( debug_out > 1 ) cerr << "c clause " << c << " is subsumed by [" << list[i] << "] : " << d << endl;
 	  return true; // the other clause subsumes the current clause!
 	}
-      } if( d.size() > c.size() ) { // if size is equal, then either removed before, or not removed at all!
+      } else if( d.size() > c.size() ) { // if size is equal, then either removed before, or not removed at all!
 	if( ordered_subsumes(c,d) ) { 
 	  d.set_delete(true);
 	  data.removedClause(list[i]);

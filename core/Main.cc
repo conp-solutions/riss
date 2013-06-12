@@ -175,7 +175,7 @@ int main(int argc, char** argv)
         
         // open file for proof
         S.drupProofFile = (drupFile) ? fopen( (const char*) drupFile , "wb") : NULL;
-	if( opt_proofFormat &&  S.drupProofFile != NULL ) fprintf( S.drupProofFile, "o proof %s\n", (const char*)opt_proofFormat ); // we are writing proofs of the given format!
+	if( opt_proofFormat && strlen(opt_proofFormat) > 0 && S.drupProofFile != NULL ) fprintf( S.drupProofFile, "o proof %s\n", (const char*)opt_proofFormat ); // we are writing proofs of the given format!
 
         parse_DIMACS(in, S);
         gzclose(in);

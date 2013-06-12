@@ -40,6 +40,7 @@ static IntOption  opt_ee_limit         (_cat, "cp3_ee_limit",  "step limit for d
 static IntOption  opt_inpStepInc       (_cat, "cp3_ee_inpInc", "increase for steps per inprocess call", 200000, IntRange(0, INT32_MAX));
 static IntOption  opt_bigIters         (_cat, "cp3_ee_bIter",  "max. iteration to perform EE search on BIG", 3, IntRange(0, INT32_MAX));
 static BoolOption opt_iterative        (_cat, "cp3_ee_it",     "use the iterative BIG-EE algorithm", false);
+static BoolOption opt_EE_checkNewSub   (_cat, "cp3_ee_subNew", "check for new subsumptions immediately when adding new clauses", false);
 
 
 static const int eeLevel = 1;
@@ -52,6 +53,7 @@ EquivalenceElimination::EquivalenceElimination(ClauseAllocator& _ca, ThreadContr
 , eeTime(0)
 , equivalentLits(0)
 , removedCls(0)
+, removedViaSubsubption(0)
 , steps(0)
 , eqLitInStack(0)
 , eqInSCC(0)
@@ -1947,10 +1949,13 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	   data.lits.push_back(myReplace); // has to look through that list as well!
 	   
 	 // add the equivalence to the proof, as single sequential clauses
-	 data.addCommentToProof("add equivalence to proof");
-	 proofClause.clear();proofClause.push_back( ~repr ); proofClause.push_back(ee[j]);
-	 data.addToProof(proofClause);
-	 proofClause[0] = ~proofClause[0];proofClause[1] = ~proofClause[1];
+	 if( repr != ee[j] ) { // do not add trivial clauses to the proof!
+	  data.addCommentToProof("add equivalence to proof");
+	  proofClause.clear();proofClause.push_back( ~repr ); proofClause.push_back(ee[j]);
+	  data.addToProof(proofClause);
+	  proofClause[0] = ~proofClause[0];proofClause[1] = ~proofClause[1];
+	  data.addToProof(proofClause);
+	 }
 	   
 	 if( ! setEquivalent(repr, ee[j] ) ) { 
 	   if( debug_out > 2 ) cerr << "c applying EE failed due to setting " << repr << " and " << ee[j] << " equivalent -> UNSAT" << endl;
@@ -2023,6 +2028,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	    }
 	    
 	    c.sort(); // sort the clause!
+	    c.updateExtraInformation( data.defaultExtraInfo() ); // since it cannot be traced which clauses participated, we assume the worst case to be on the safe side!
 	    
 	    int n = 1,removed=0;
 	    for( int m = 1; m < c.size(); ++ m ) {
@@ -2067,7 +2073,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	    
 	    if( c.size() > 1 &&  !duplicate ) {
   // 	    cerr << "c give list of literal " << (pol == 0 ? repr : ~repr) << " for duplicate check" << endl;
-	      if( !hasDuplicate( data.list( (pol == 0 ? repr : ~repr)  ), c )  ) {
+	      if( !hasDuplicate( data, data.list( (pol == 0 ? repr : ~repr)  ), c )  ) {
 		data.list( (pol == 0 ? repr : ~repr) ).push_back( list[k] );
 		if( getsNewLiterals ) {
 		  if( data.addSubStrengthClause( list[k] ) && opt_eeSub ) resetVariables = true;
@@ -2173,6 +2179,29 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
   return newBinary || force;
 }
 
+/** check whether on of the two clauses subsumes the other ! */
+static bool ordered_subsumes (const Clause& c, const Clause & other) 
+{
+    int i = 0, j = 0;
+    while (i < c.size() && j < other.size())
+    {
+        if (c[i] == other[j])
+        {
+            ++i;
+            ++j;
+        }
+        // D does not contain c[i]
+        else if (c[i] < other[j])
+            return false;
+        else
+            ++j;
+    }
+    if (i == c.size())
+        return true;
+    else
+        return false;
+}
+
 bool EquivalenceElimination::hasDuplicate(CoprocessorData& data, vector<CRef>& list, const Clause& c)
 {
   bool irredundant = !c.learnt();
@@ -2194,7 +2223,23 @@ bool EquivalenceElimination::hasDuplicate(CoprocessorData& data, vector<CRef>& l
       if( debug_out > 2 ) cerr << "c find duplicate [" << list[i] << "]" << d << " for clause " << c << endl;
       return true;
     }
-//     cerr << "c clause " << c << " is not equal to " << d << endl;
+    if( opt_EE_checkNewSub ) { // check each clause for being subsumed -> kick subsumed clauses!
+      if( d.size() < c.size() && (!d.learnt() || c.learnt()) ) { // do not remove a non-learnt clause by a learnt clause!
+	if( ordered_subsumes(d,c) ) {
+	  if( debug_out > 1 ) cerr << "c clause " << c << " is subsumed by [" << list[i] << "] : " << d << endl;
+	  return true; // the other clause subsumes the current clause!
+	}
+      } else if( d.size() > c.size() && (!c.learnt() || d.learnt() )) { // if size is equal, then either removed before, or not removed at all!
+	if( ordered_subsumes(c,d) ) { 
+	  d.set_delete(true);
+	  data.addCommentToProof("delete subsumed clause");
+	  data.addToProof(d,true);
+	  data.removedClause(list[i]);
+	  removedViaSubsubption ++;
+	  list[i] = list.back(); list.pop_back(); --i; // remove clause from list!
+	}
+      }
+    }
   }
   return false;
 }
@@ -2256,7 +2301,7 @@ void EquivalenceElimination::writeAAGfile(CoprocessorData& data)
 
 void EquivalenceElimination::printStatistics(ostream& stream)
 {
-  stream << "c [STAT] EE " << eeTime << " s, " << steps << " steps " << equivalentLits << " ee-lits " << removedCls << " removedCls" << endl;
+  stream << "c [STAT] EE " << eeTime << " s, " << steps << " steps " << equivalentLits << " ee-lits " << removedCls << " removedCls, " << removedViaSubsubption << " removedSubCls," << endl;
   if( opt_level > 0 ) stream << "c [STAT] EE-gate " << gateTime << " s, " << gateSteps << " steps, " << gateExtractTime << " extractGateTime, " << endl;
 }
 

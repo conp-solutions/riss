@@ -32,6 +32,7 @@ class EquivalenceElimination : public Technique {
   double eeTime;
   unsigned equivalentLits;	// number of equivalent literals
   unsigned removedCls;		// number of removed clauses due to rewriting
+  unsigned removedViaSubsubption;       // number of immediate removed clauses due to subsumption
   
   uint64_t steps;                   // how many steps is the worker allowed to do
 
@@ -109,7 +110,7 @@ protected:
    *  Note: assumes that all clauses are sorted!
    *  @return true, if there are duplicates, so that c can be deleted
    */
-  bool hasDuplicate( CoprocessorDatavector< CRef >& list, const Clause& c );
+  bool hasDuplicate( CoprocessorData& data, vector< CRef >& list, const Clause& c );
   
   /** check whether this gate can be processed for equivalence checks */
   bool allInputsStamped(Circuit::Gate& g, vector< unsigned int >& bitType);
