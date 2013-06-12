@@ -1949,15 +1949,20 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	   data.lits.push_back(myReplace); // has to look through that list as well!
 	   
 	 // add the equivalence to the proof, as single sequential clauses
-	 if( repr != ee[j] ) { // do not add trivial clauses to the proof!
+	 if( data.outputsProof() && repr != ee[j] ) { // do not add trivial clauses to the proof!
 	  data.addCommentToProof("add equivalence to proof");
-	  proofClause.clear();proofClause.push_back( ~repr ); proofClause.push_back(ee[j]);
+	  proofClause.clear();proofClause.push_back( ~repr ); if( ee[j] != ~repr ) proofClause.push_back(ee[j]);
 	  data.addToProof(proofClause);
-	  proofClause[0] = ~proofClause[0];proofClause[1] = ~proofClause[1];
+	  proofClause[0] = ~proofClause[0]; if( ee[j] != ~repr ) proofClause[1] = ~proofClause[1];
 	  data.addToProof(proofClause);
 	 }
 	   
 	 if( ! setEquivalent(repr, ee[j] ) ) { 
+	   if( data.outputsProof() ) {
+	     data.addCommentToProof("setting equivalent failed - add a unit to the proof to test this behavior per UP");
+	     proofClause.clear(); proofClause.push_back( repr );
+	     data.addToProof(proofClause);
+	   }
 	   if( debug_out > 2 ) cerr << "c applying EE failed due to setting " << repr << " and " << ee[j] << " equivalent -> UNSAT" << endl;
 	   data.setFailed(); return newBinary;
 	}
