@@ -48,6 +48,7 @@ void HiddenTautologyElimination::process(CoprocessorData& data)
   processTime = cpuTime() - processTime;
   modifiedFormula = false;
   if( !data.ok() ) return;
+  if( !performSimplification() ) return; // do not perform HTE, because of previous failed runs?
   if( ! isInitializedTechnique() ) {
     initializedTechnique(); 
   }
@@ -114,6 +115,8 @@ void HiddenTautologyElimination::process(CoprocessorData& data)
   
   // get delete timer
   updateDeleteTime( data.getMyDeleteTimer() );
+  
+  if( !modifiedFormula ) unsuccessfulSimplification();
   
   // clear queue afterwards
   activeVariables.clear();
@@ -196,7 +199,9 @@ void HiddenTautologyElimination::elimination_worker (CoprocessorData& data, uint
     if( unit != lit_Undef ) {
       if( debug_out > 1 ) cerr << "c fond failed literal " << unit << " during marking" << endl;
       if( doLock ) data.lock();
-      lbool result = data.enqueue(unit);
+      data.addCommentToProof("found during HTE variable array filling");
+      data.addUnitToProof(unit);
+      lbool result = data.enqueue( unit, data.defaultExtraInfo() );
       if( doLock ) data.unlock();
       if( result == l_False ) return;
       continue; // no need to check a variable that is unit!
@@ -224,7 +229,7 @@ void HiddenTautologyElimination::parallelElimination(CoprocessorData& data, BIG&
 {
   static bool didIt = false;
   if( !didIt ) { cerr << "c parallel HTE can result in unsound formulas!" << endl; didIt = true; }
-  
+  printDRUPwarning(cerr,"parallel HTE");
   if( debug_out > 3 ) cerr << "c parallel HTE with " << controller.size() << " threads" << endl;
   EliminationData workData[ controller.size() ];
   vector<Job> jobs( controller.size() );
@@ -274,7 +279,7 @@ bool HiddenTautologyElimination::hiddenTautologyElimination(Var v, CoprocessorDa
     }
     
     // iterate over binary clauses with occurences of the literal i
-    const vector<CRef>& iList = data.list(i);
+    vector<CRef>& iList = data.list(i);
 
 	// transitive reduction of BIG
     if( !doLock ) { 
@@ -282,7 +287,10 @@ bool HiddenTautologyElimination::hiddenTautologyElimination(Var v, CoprocessorDa
         {  
             const CRef clsidx = iList[k];
             Clause& cl = ca[ clsidx ];
-            if ( cl.can_be_deleted() ) continue; // todo have another flag ignored!
+            if ( cl.can_be_deleted() ) { // remove can-be-deleted clause from list!
+	      iList[k] = iList.back(); iList.pop_back(); --k;
+	      continue; // todo have another flag ignored!
+	    }
             if ( cl.size() == 2) {
                 bool remClause = false;
                 for ( uint32_t j = 0; j < 2; j++ ) {
@@ -304,6 +312,8 @@ bool HiddenTautologyElimination::hiddenTautologyElimination(Var v, CoprocessorDa
 		    // TODO: statistics removed clause
 		    if( statistic ) data.removedClause(clsidx);
                     cl.set_delete(true);
+		    data.addCommentToProof("remove redundant binary clause during HTE");
+		    data.addToProof(cl,true);
 		    if( debug_out > 0 ) cerr << "c [HTE] binary removed clause " << cl << endl;
 		    modifiedFormula = true;
                     k--;
@@ -312,16 +322,6 @@ bool HiddenTautologyElimination::hiddenTautologyElimination(Var v, CoprocessorDa
             }
         }
     }
-        
-        if( false ) {
-    fprintf(stderr, "during HTE step (created hla arrays): " );
-    printLit(i);
-    fprintf(stderr, " tagged: " );
-    for( Var v = 0 ; v < data.nVars(); ++v )
-      for( int p = 0 ; p < 2; ++ p )
-	if( hlaArray.isCurrentStep( toInt(mkLit(v,p)) ) ) { printLit( mkLit(v,p)); fprintf(stderr, " "); }
-    fprintf(stderr, "\n");
-	}
         
         // apply HTE to formula
         // set hla array for all the binary clauses
@@ -336,7 +336,7 @@ bool HiddenTautologyElimination::hiddenTautologyElimination(Var v, CoprocessorDa
             {
                 CRef clsidx = iList[k];
                 Clause& cl = ca[ clsidx ];
-                if ( cl.can_be_deleted() ) continue;
+                if ( cl.can_be_deleted() ) continue; // there should not be any clauses left! still, make sure!
                 bool ignClause = false;
 		bool changed = false;
                 if ( cl.size() > 2 ) {
@@ -347,6 +347,8 @@ bool HiddenTautologyElimination::hiddenTautologyElimination(Var v, CoprocessorDa
                         if ( hlaArray.isCurrentStep( toInt( ~clauseLiteral) ) ) {
 			    didSomething = true;
                             ignClause = true;
+			    data.addCommentToProof("this clause is hidden tautology");
+			    data.addToProof(cl,true); // remove clause from proof
                             cl.set_delete(true); // TODO remove from occurence lists?
 			    modifiedFormula = true;
 			    if( !doLock ) removedClauses ++;
@@ -363,7 +365,11 @@ bool HiddenTautologyElimination::hiddenTautologyElimination(Var v, CoprocessorDa
                             // remove the literal
                           changed = true;
 			  if( statistic ) data[ clauseLiteral ] --;
+			    const Lit remLit = cl[j];
 			    cl.removePositionSorted(j);
+			    data.addCommentToProof("remove literal from clause");
+			    data.addToProof(cl);
+			    data.addToProof(cl,true, remLit); // remove clause from proof
 			    modifiedFormula = true;
                            if( !doLock ) removedLits ++;  
 			    // update the index

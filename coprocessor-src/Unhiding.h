@@ -32,7 +32,7 @@ class Unhiding : public Technique {
   
   bool uhdTransitive;	// transitive graph reduction?
   int unhideIter;	// mulitple iterations?
-  bool doUHLE;		// run hidden literal elimination?
+  int  doUHLE;		// run hidden literal elimination?
   bool doUHTE;		// run hidden tautology elimination?
   bool uhdNoShuffle;	// do not perform randomized depth first search in BIG
   bool uhdEE;		// use equivalent literal elimination
@@ -96,9 +96,6 @@ protected:
 	
 	/// linear version of the advanced stamping
 	uint32_t linStamp( const Lit literal, uint32_t stamp, bool& detectedEE );
-	
-	/// recursive version
-	uint32_t recStamp( const Lit literal, uint32_t stamp, bool& detectedEE );
 	
 	/** simplify the formula based on the literal stamps
 	 * 

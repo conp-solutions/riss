@@ -136,45 +136,11 @@ static BoolOption    debug_otfss           ("MODS", "otfss-D",     "print debug 
 
 static IntOption     opt_learnDecPrecent   ("MODS", "learnDecP",   "if LBD of is > percent of decisionlevel, learn decision Clause (Knuth)", 100, IntRange(1, 100) );
 
-BoolOption    opt_verboseProof      ("PROOF", "verb-proof", "also print comments into the proof", false);
-BoolOption    opt_rupProofOnly      ("PROOF", "rup-only",   "do not print delete lines into proof", false);
+IntOption           opt_verboseProof      ("PROOF", "verb-proof", "also print comments into the proof, 2=print proof also to stderr",  1, IntRange(0, 2) );
+BoolOption          opt_rupProofOnly      ("PROOF", "rup-only",   "do not print delete lines into proof", false);
 
 // useful methods
 
-/// print literals into a stream
-inline ostream& operator<<(ostream& other, const Lit& l ) {
-  if( l == lit_Undef ) other << "lUndef";
-  else if( l == lit_Error ) other << "lError";
-  else other << (sign(l) ? "-" : "") << var(l) + 1;
-  return other;
-}
-
-/// print a clause into a stream
-inline ostream& operator<<(ostream& other, const Clause& c ) {
-  other << "[";
-  for( int i = 0 ; i < c.size(); ++ i )
-    other << " " << c[i];
-  other << "]";
-  return other;
-}
-
-/// print elements of a vector
-template <typename T>
-inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data ) 
-{
-  for( int i = 0 ; i < data.size(); ++ i )
-    other << " " << data[i];
-  return other;
-}
-
-/// print elements of a vector
-template <typename T>
-inline std::ostream& operator<<(std::ostream& other, const vec<T>& data ) 
-{
-  for( int i = 0 ; i < data.size(); ++ i )
-    other << " " << data[i];
-  return other;
-}
 
 //=================================================================================================
 // Constructor/Destructor:

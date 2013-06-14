@@ -49,7 +49,7 @@ namespace Coprocessor {
 }
 
 // since template methods need to be in headers ...
-extern Minisat::BoolOption opt_verboseProof;
+extern Minisat::IntOption opt_verboseProof;
 extern Minisat::BoolOption opt_rupProofOnly;
 
 namespace Minisat {
@@ -336,7 +336,7 @@ protected:
     bool outputsProof() const { return drupProofFile != NULL; }
     template <class T>
     void addToProof(   T& clause, bool deleteFromProof=false, const Lit remLit = lit_Undef); // write the given clause to the output, if the output is enabled
-    void addUnitToProof(  Lit& l, bool deleteFromProof=false);    // write a single unit clause to the proof
+    void addUnitToProof( const Lit& l, bool deleteFromProof=false);    // write a single unit clause to the proof
     void addCommentToProof( const char* text, bool deleteFromProof=false); // write the text as comment into the proof!
     
     // Static helpers:
@@ -423,6 +423,42 @@ public:
 	    }
 };
 
+
+
+/// print literals into a stream
+inline ostream& operator<<(ostream& other, const Lit& l ) {
+  if( l == lit_Undef ) other << "lUndef";
+  else if( l == lit_Error ) other << "lError";
+  else other << (sign(l) ? "-" : "") << var(l) + 1;
+  return other;
+}
+
+/// print a clause into a stream
+inline ostream& operator<<(ostream& other, const Clause& c ) {
+  other << "[";
+  for( int i = 0 ; i < c.size(); ++ i )
+    other << " " << c[i];
+  other << "]";
+  return other;
+}
+
+/// print elements of a vector
+template <typename T>
+inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data ) 
+{
+  for( int i = 0 ; i < data.size(); ++ i )
+    other << " " << data[i];
+  return other;
+}
+
+/// print elements of a vector
+template <typename T>
+inline std::ostream& operator<<(std::ostream& other, const vec<T>& data ) 
+{
+  for( int i = 0 ; i < data.size(); ++ i )
+    other << " " << data[i];
+  return other;
+}
 
 //=================================================================================================
 // Implementation of inline methods:
@@ -535,19 +571,35 @@ inline void Solver::addToProof( T& clause, bool deleteFromProof, const Lit remLi
   }
   if( deleteFromProof && remLit != lit_Undef ) fprintf(drupProofFile, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1));
   fprintf(drupProofFile, "0\n");
+  
+  if( opt_verboseProof == 2 ) {
+    cerr << "c [PROOF] ";
+    if( deleteFromProof ) cerr << " d ";
+    for (int i = 0; i < clause.size(); i++) {
+      if( clause[i] == lit_Undef ) continue;
+      cerr << clause[i] << " ";
+    }    
+    if( deleteFromProof && remLit != lit_Undef ) cerr << remLit;
+    cerr << "0" << endl;
+  }
 }
 
-inline void Solver::addUnitToProof(Lit& l, bool deleteFromProof)
+inline void Solver::addUnitToProof(const Lit& l, bool deleteFromProof)
 {
   if (!outputsProof() || (deleteFromProof && opt_rupProofOnly) ) return; // no proof, or delete and noDrup
   if( deleteFromProof ) fprintf(drupProofFile, "d ");
   fprintf(drupProofFile, "%i 0\n", (var(l) + 1) * (-2 * sign(l) + 1));  
+  if( opt_verboseProof == 2 ) {
+    if( deleteFromProof ) cerr << "c [PROOF] d " << l << endl;
+    else cerr << "c [PROOF] " << l << endl;
+  }
 }
 
 inline void Solver::addCommentToProof(const char* text, bool deleteFromProof)
 {
-  if (!outputsProof() || (deleteFromProof && opt_rupProofOnly) || !opt_verboseProof) return; // no proof, no Drup, or no comments
+  if (!outputsProof() || (deleteFromProof && opt_rupProofOnly) || opt_verboseProof == 0) return; // no proof, no Drup, or no comments
   fprintf(drupProofFile, "c %s\n", text);  
+  if( opt_verboseProof == 2 ) cerr << "c [PROOF] c " << text << endl;
 }
 
 

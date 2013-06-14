@@ -34,13 +34,14 @@ static const int debug_out = 0;
 static IntOption  debug_out            (_cat, "ee_debug", "print debug output to screen", 0, IntRange(0, 3));
 #endif
 
-static BoolOption opt_eeSub            (_cat, "ee_sub",        "do subsumption/strengthening during applying equivalent literals?", false);
-static BoolOption opt_eeFullReset      (_cat, "ee_reset",      "after Subs or Up, do full reset?", false);
-static IntOption  opt_ee_limit         (_cat, "cp3_ee_limit",  "step limit for detecting equivalent literals", 1000000, IntRange(0, INT32_MAX));
-static IntOption  opt_inpStepInc       (_cat, "cp3_ee_inpInc", "increase for steps per inprocess call", 200000, IntRange(0, INT32_MAX));
-static IntOption  opt_bigIters         (_cat, "cp3_ee_bIter",  "max. iteration to perform EE search on BIG", 3, IntRange(0, INT32_MAX));
-static BoolOption opt_iterative        (_cat, "cp3_ee_it",     "use the iterative BIG-EE algorithm", false);
-static BoolOption opt_EE_checkNewSub   (_cat, "cp3_ee_subNew", "check for new subsumptions immediately when adding new clauses", false);
+static BoolOption opt_eeSub            (_cat, "ee_sub",          "do subsumption/strengthening during applying equivalent literals?", false);
+static BoolOption opt_eeFullReset      (_cat, "ee_reset",        "after Subs or Up, do full reset?", false);
+static IntOption  opt_ee_limit         (_cat, "cp3_ee_limit",    "step limit for detecting equivalent literals", 1000000, IntRange(0, INT32_MAX));
+static IntOption  opt_inpStepInc       (_cat, "cp3_ee_inpInc",   "increase for steps per inprocess call", 200000, IntRange(0, INT32_MAX));
+static IntOption  opt_bigIters         (_cat, "cp3_ee_bIter",    "max. iteration to perform EE search on BIG", 3, IntRange(0, INT32_MAX));
+static BoolOption opt_iterative        (_cat, "cp3_ee_it",       "use the iterative BIG-EE algorithm", false);
+static BoolOption opt_EE_checkNewSub   (_cat, "cp3_ee_subNew",   "check for new subsumptions immediately when adding new clauses", false);
+static BoolOption opt_eager_frozen     (_cat, "ee_freeze_eager", "exclude frozen variables eagerly from found equivalences", false);
 
 
 static const int eeLevel = 1;
@@ -71,6 +72,7 @@ steps = steps < opt_inpStepInc ? 0 : steps - opt_inpStepInc;
 
 void EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
 {
+  if( !performSimplification() ) return; // do not perform simplification because of presiously failed runs?
   // TODO continue here!!
   eeTime  = cpuTime() - eeTime;
   modifiedFormula = false;
@@ -220,7 +222,7 @@ void EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
      
     
   }
-  
+  if(! modifiedFormula ) unsuccessfulSimplification(); // notify system that nothing has been done here!
   eeTime  = cpuTime() - eeTime;
 }
 
@@ -1697,7 +1699,7 @@ void EquivalenceElimination::findEquivalencesOnBigFast(CoprocessorData& data, ve
 	    assert( path.size() > 0 && "there have to be more elements on the stack!" );
 	    w = path.back(); path.pop_back();
 	    minLit = w < minLit ? w : minLit;
-	    eqCurrentComponent.push_back( w );
+	    if( !opt_eager_frozen || !data.doNotTouch( var(w) ) ) eqCurrentComponent.push_back( w ); // add variable only, if it is not frozen, or if frozen variables should not be treated eagerly
 	    data.ma.setCurrentStep( toInt(w) ); // ensure that the same SCC will not be found twice!
 	    if( debug_out > 1) cerr << "c put " << w << "[" << vertexes[toInt(V)].start << "] into the same component!" << endl;
 	  } while( w != V );
@@ -1852,6 +1854,7 @@ void EquivalenceElimination::eqTarjan(int depth, Lit l, Lit list, CoprocessorDat
              eqStack.pop_back();
              eqLitInStack[ toInt(n) ] = 0;
              eqInSCC[ var(n) ] = 1;
+	     if( !opt_eager_frozen || !data.doNotTouch( var(n) ) ) eqCurrentComponent.push_back( n ); // add variable only, if it is not frozen, or if frozen variables should not be treated eagerly
              eqCurrentComponent.push_back(n);
          } while(n != l);
 	 if( eqCurrentComponent.size() > 1 ) {
@@ -1926,16 +1929,25 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
    }
    
    int start = 0, end = 0;
+   
+   if( opt_eager_frozen ) { // remove all frozen variables from the ee classes!
+    int keep = 0;
+    for( int i = 0 ; i < ee.size(); ++ i ) {
+      if( !data.doNotTouch( var( ee[i] ) ) ) ee[keep++] = ee[i];
+    }
+    ee.resize(keep);
+   }
+   
    for( int i = 0 ; i < ee.size(); ++ i ) {
      if( ee[i] == lit_Undef ) {
        // handle current EE class!
        end = i - 1;
        Lit repr = getReplacement(ee[start]);
+        data.ma.nextStep(); // TODO FIXME check whether this has to be moved before the for loop
 	for( int j = start ; j < i; ++ j ) // select minimum!
-	{
-	  data.ma.nextStep(); // TODO FIXME check whether this has to be moved before the for loop
+	{ 
 	  repr =  repr < getReplacement(ee[j]) ? repr : getReplacement(ee[j]);
-	  data.ma.setCurrentStep( toInt( ee[j] ) );
+//	  data.ma.setCurrentStep( toInt( ee[j] ) );
 	}
 
        // check whether a literal has also an old replacement that has to be re-considered!
@@ -1974,8 +1986,25 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
        }
        
        int dataElements = data.lits.size();
+       
+       data.clss.clear();
+	for( int j = start ; j < i; ++ j ) {
+	  if ( ee[j] == repr ) continue;
+	  data.addCommentToProof("add clauses for doNotTouch variables");
+	  proofClause.clear(); // create repr <-> ee[j] clauses and add them!
+	  proofClause.push_back( ~repr );proofClause.push_back( ee[j] );
+          CRef cr = ca.alloc(proofClause, false); 
+	  data.addToProof(ca[cr]); // tell proof about the new clause!
+	  ca[cr].setExtraInformation( data.defaultExtraInfo() ); // setup extra information for this clause!
+	  data.clss.push_back(cr);
+	  proofClause[0] = repr; proofClause[1] = ~ee[j];
+          cr = ca.alloc(proofClause, false); 
+	  data.addToProof(ca[cr]); // tell proof about the new clause!
+	  ca[cr].setExtraInformation( data.defaultExtraInfo() ); // setup extra information for this clause!
+	}
+       
        data.ma.nextStep();
-       for( int j = start ; j < i; ++ j ) {
+       for( int j = start ; j < i; ++ j ) { // process each element of the class!
 	 Lit l = ee[j];
 	 // first, process all the clauses on the list with old replacement variables
 	 if( j == start && dataElements > 0 ) {
@@ -2068,7 +2097,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 		if( debug_out > 2 ) cerr << "c EE re-enable ee-variable " << var(c[1])+1 << endl;
 	      }
 	    } else if (c.size() == 1 ) {
-	      if( data.enqueue(c[0]) == l_False ) return newBinary; 
+	      if( data.enqueue(c[0], data.defaultExtraInfo() ) == l_False ) return newBinary; 
 	    } else if (c.size() == 0 ) {
 	      data.setFailed(); 
 	      if( debug_out > 2 ) cerr << "c applying EE failed due getting an empty clause" << endl;
@@ -2107,19 +2136,12 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	 if( debug_out > 2 ) cerr << "c cleared list of var " << var( l ) + 1 << endl;
 	 
       }
-       
-       // clear all occurrence lists of certain ee class literals
-//        for( int j = start ; j < i; ++ j ) {
-// 	 if( ee[j] == repr ) continue;
-// 	 for( int pol = 0; pol < 2; ++ pol ) // clear both occurrence lists!
-// 	   (pol == 0 ? data.list( ee[j] ) : data.list( ~ee[j] )).clear();
-// 	 if( debug_out > 2 ) cerr << "c cleared list of var " << var( ee[j] ) + 1 << endl;
-//        }
 
        // TODO take care of untouchable literals!
-       for( int j = start ; j < i; ++ j ) {
-         assert( !data.doNotTouch(var(ee[j]) ) && "equivalent literal elimination cannot handle untouchable literals/variables yet!"  );
-       }
+	for( int j = 0 ; j < data.clss.size(); ++ j ) {
+	  data.addClause( data.clss[j] );
+	  data.getClauses().push( data.clss[j] );
+	}
        
        start = i+1;
        

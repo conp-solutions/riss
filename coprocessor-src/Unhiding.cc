@@ -10,7 +10,7 @@ static const char* _cat = "COPROCESSOR 3 - UNHIDE";
 
 static IntOption  opt_uhdIters     (_cat, "cp3_uhdIters",     "Number of iterations for unhiding", 3, IntRange(0, INT32_MAX));
 static BoolOption opt_uhdTrans     (_cat, "cp3_uhdTrans",     "Use Transitive Graph Reduction (buggy)", false);
-static BoolOption opt_uhdUHLE      (_cat, "cp3_uhdUHLE",      "Use Unhiding+Hidden Literal Elimination", true);
+static IntOption  opt_uhdUHLE      (_cat, "cp3_uhdUHLE",      "Use Unhiding+Hidden Literal Elimination",  3, IntRange(0, 3));
 static BoolOption opt_uhdUHTE      (_cat, "cp3_uhdUHTE",      "Use Unhiding+Hidden Tautology Elimination", true);
 static BoolOption opt_uhdNoShuffle (_cat, "cp3_uhdNoShuffle", "Do not perform randomized graph traversation", false);
 static BoolOption opt_uhdEE        (_cat, "cp3_uhdEE",        "Use equivalent literal elimination (buggy)", false);
@@ -82,13 +82,7 @@ uint32_t Unhiding::linStamp( const Lit literal, uint32_t stamp, bool& detectedEE
     const Lit l = stampQueue.back();
     const Lit* adj = big.getArray(l);
     const int adjSize = big.getSize(l);
-    /*
-    cerr << "c [UHD-A] current literal " << l << " at level " << level << " and index " << stampInfo[ toInt(l) ].index << "/" << adjSize << endl;
-    cerr << "c adj:";
-    for( uint32_t i = 0 ; i < adjSize ; ++ i ) cerr << " " << adj[i];
-    cerr << endl;
-    cerr << "c lastSeen=" << stampInfo[ toInt(l) ].lastSeen << endl;
-    */
+
     
     // recover index, if some element in the adj of l has been removed by transitive edge reduction
     if( adjSize > 0 && stampInfo[ toInt(l) ].lastSeen != lit_Undef && stampInfo[ toInt(l) ].index > 0 && adj[stampInfo[ toInt(l) ].index-1] != stampInfo[ toInt(l) ].lastSeen )
@@ -121,7 +115,8 @@ uint32_t Unhiding::linStamp( const Lit literal, uint32_t stamp, bool& detectedEE
 	Lit lfailed=l;
 	while( stampInfo[ toInt(lfailed) ].dsc > stampInfo[ toInt( ~l1 ) ].obs ) lfailed = stampInfo[ toInt(lfailed) ].parent;
 	if( opt_uhdDebug > 1 ) cerr << "c [UHD-A] found failed literal " << lfailed << " enqueue " << ~lfailed << endl;
-	if( l_False == data.enqueue( ~lfailed ) ) {  return stamp; }
+	data.addCommentToProof("found during stamping in unhiding");data.addUnitToProof(~lfailed);
+	if( l_False == data.enqueue( ~lfailed, data.defaultExtraInfo()  ) ) {  return stamp; }
 	
 	if( stampInfo[ toInt( ~l1 ) ].dsc != 0 && stampInfo[ toInt( ~l1 ) ].fin == 0 ) continue;
       }
@@ -222,69 +217,6 @@ uint32_t Unhiding::linStamp( const Lit literal, uint32_t stamp, bool& detectedEE
 }
 
 
-uint32_t Unhiding::recStamp( const Lit l, uint32_t stamp, bool& detectedEE )
-{
-  stamp ++;
-  stampInfo[ toInt(l) ].dsc = stamp;
-  stampInfo[ toInt(l) ].obs = stamp;
-  bool flag = true;
-  Lit* adj = big.getArray(l);
-  const int adjSize = big.getSize(l);
-  stampEE.push_back(l);
-  
-  for( uint32_t i = 0 ; i < adjSize; ++ i )
-  {
-    const Lit l1 = adj[i];
-    if( stampInfo[ toInt(l) ].dsc < stampInfo[ toInt(l1) ].obs ) {
-      data.removedClause( ~l, l1);
-      big.removeEdge(~l, l1); // automatically done by removeClause
-      modifiedFormula = true;
-      i --;
-      continue;
-    }
-    
-    if( stampInfo[ toInt( stampInfo[ toInt(l) ].root) ].dsc <= stampInfo[ toInt( ~l1 ) ].obs ) {
-      Lit lfailed=l;
-      while( stampInfo[ toInt(lfailed) ].dsc > stampInfo[ toInt( ~l1 ) ].obs ) lfailed = stampInfo[ toInt(lfailed) ].parent;
-      if( l_False == data.enqueue( ~lfailed ) ) {  return stamp; }
-      
-      if( stampInfo[ toInt( ~l1 ) ].dsc != 0 && stampInfo[ toInt( ~l1 ) ].fin == 0 ) continue;
-    }
-    
-    if( stampInfo[ toInt(l1) ].dsc == 0 ) {
-      stampInfo[ toInt(l1) ].parent = l;
-      stampInfo[ toInt(l1) ].root = stampInfo[ toInt(l) ].root;
-      stamp = recStamp( l1, stamp, detectedEE );
-    }
-    
-    if( stampInfo[ toInt(l1) ].fin == 0 && stampInfo[ toInt(l1) ].dsc < stampInfo[ toInt(l) ].dsc ) {
-      stampInfo[ toInt(l) ].dsc = stampInfo[ toInt(l1) ].dsc;
-      flag = false;
-    }
-    
-    stampInfo[ toInt(l1) ].obs = stamp;
-    
-  }
-  
-  stampClassEE.clear();
-  Lit l1 = lit_Undef;
-  if( flag ) {
-    stamp ++;
-    do {
-      l1 = stampEE.back();
-      stampEE.pop_back();
-      stampClassEE.push_back( l1 );
-      stampInfo[ toInt(l1) ].dsc = stampInfo[ toInt(l) ].dsc;
-      stampInfo[ toInt(l1) ].fin = stamp;
-    } while( l1 != l );
-    if( stampClassEE.size() > 1 ) {
-      if( opt_uhdDebug > 1 ) cerr << "c [UHD-A] found eq class of size " << stampClassEE.size() << endl;
-	data.addEquivalences( stampClassEE );
-      }
-  }
-  return stamp;
-}
-
 uint32_t Unhiding::stampLiteral( const Lit literal, uint32_t stamp, bool& detectedEE )
 {
   stampQueue.clear();
@@ -336,7 +268,7 @@ bool Unhiding::unhideSimplify()
       }
     }
   }
-  if( opt_uhdDebug > 1 ) {
+  if( opt_uhdDebug > 2 ) {
     cerr << "c active formula" << endl;
     for( uint32_t i = 0 ; i < data.getClauses().size(); ++ i ) 
     {
@@ -435,6 +367,7 @@ bool Unhiding::unhideSimplify()
       }
 
       if( UHTE ) {
+	data.addToProof(clause,true);
 	clause.set_delete( true );
 	modifiedFormula = true;
 	if( opt_uhdDebug > 1 ){  cerr << "c [UHTE] remove " << clause << cerr << endl; }
@@ -450,8 +383,8 @@ bool Unhiding::unhideSimplify()
 
     if( doUHLE != 0 ) {
       // C = UHLE(C)
-      bool UHLE=false;
-      
+      bool UHLE=false; // if set to true, and doesDrupProof, then original clause is also copied
+      if( data.outputsProof() ) data.lits.clear();
       if( doUHLE == 1 || doUHLE == 3 )
       {
 	pp = cs;
@@ -468,7 +401,9 @@ bool Unhiding::unhideSimplify()
 	    removedLits++;
 	    modifiedFormula = true;
 	    if( clause.size() == 2 ) big.removeEdge(clause[0],clause[1]);
+	    if( !UHLE && data.outputsProof() ) { for( int j = 0 ; j < clause.size(); ++ j ) data.lits.push_back( clause[j] ); } // copy the real clause, so that it can be deleted
 	    clause.remove_lit(l);
+	    data.addToProof(clause);data.addToProof(clause,true, l); // tell proof that a literal has been removed!
 	    // tell subsumption / strengthening about this modified clause
 	    data.addSubStrengthClause(clRef);
 	    // if you did something useful, call
@@ -509,9 +444,11 @@ bool Unhiding::unhideSimplify()
 	    if( opt_uhdDebug > 1 ){  cerr << "c [UHLE-N] remove " << ~l << " because of fin time " << fin << " of " <<  l << " and finLit " << finLit << " [" << finished << "] from " << clause << endl; }
 	    data.removeClauseFrom(clRef,~l);
 	    data.removedLiteral(~l);
+	    if( !UHLE && data.outputsProof() ) { for( int j = 0 ; j < clause.size(); ++ j ) data.lits.push_back( clause[j] ); } // copy the real clause, so that it can be deleted
 	    modifiedFormula = true;
 	    if( clause.size() == 2 ) big.removeEdge(clause[0],clause[1]);
 	    clause.remove_lit( ~l );
+	    data.addToProof(clause);data.addToProof(clause,true,~l); // tell proof that a literal has been removed
 	    removedLits++;
 	    // tell subsumption / strengthening about this modified clause
 	    data.addSubStrengthClause(clRef);
@@ -533,23 +470,23 @@ bool Unhiding::unhideSimplify()
 	  data.setFailed(); return didSomething;
 	} else {
 	  if( clause.size() == 1 ) {
-	    if( l_False == data.enqueue(clause[0] ) ) { return didSomething; }
+	    if( l_False == data.enqueue(clause[0], data.defaultExtraInfo()  ) ) { 
+	      return didSomething;
+	    }
 	  }
 	}
       }
+
     }
     
   } // end for clause in formula
-  
-  // shrink formula again!
-  // cerr << "c UHD reduce to " << j << " from " << formula->size() << endl;
-  // formula->resize(j);
   
   return didSomething;
 }
 
 void Unhiding::process (  )
 {
+  if( !performSimplification() ) return; // do not execute due to previous errors?
   MethodTimer unhideTimer( &unhideTime );
   modifiedFormula = false;
   if( !data.ok() ) return;
@@ -664,6 +601,7 @@ void Unhiding::process (  )
     }
   }
   
+  if( !modifiedFormula ) unsuccessfulSimplification();
   return;
 
 }

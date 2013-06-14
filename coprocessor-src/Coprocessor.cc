@@ -9,6 +9,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/Shuffler.h"
 
 #include <iostream>
+#include <cstring>
 
 static const char* _cat = "COPROCESSOR 3";
 static const char* _cat2 = "PREPROCESSOR TECHNIQUES";
@@ -82,10 +83,12 @@ static BoolOption opt_ts_phase    (_cat2, "2sat-phase",    "use 2SAT model as in
 static const bool opt_debug = false;       
 static const bool opt_check = false;
 static const int  opt_log =0;
+static const char* printAfter = 0;
 #else
-static BoolOption opt_debug       (_cat2, "cp3-debug",     "do more debugging", false);
-static BoolOption opt_check       (_cat2, "cp3-check",     "check solver state before returning control to solver", false);
-static IntOption  opt_log         (_cat, "log",            "Output log messages until given level", 0, IntRange(0, 3));
+static BoolOption opt_debug       (_cat, "cp3-debug",   "do more debugging", false);
+static BoolOption opt_check       (_cat, "cp3-check",   "check solver state before returning control to solver", false);
+static IntOption  opt_log         (_cat,  "cp3-log",    "Output log messages until given level", 0, IntRange(0, 3));
+static StringOption printAfter    (_cat,  "cp3-print",  "print intermediate formula after given technique");
 #endif
 
 
@@ -150,6 +153,8 @@ lbool Preprocessor::performSimplification()
   
   if( data.isInprocessing() ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
   else {ppTime = cpuTime() - ppTime; ppwTime = wallClockTime() - ppwTime;}
+    
+  if( printAfter != 0 ) cerr << "c printAfter " << printAfter << endl;
     
   // first, remove all satisfied clauses
   if( opt_simplify && !solver->simplify() ) { cout.flush(); cerr.flush(); return l_False; }
@@ -222,7 +227,7 @@ lbool Preprocessor::performSimplification()
   // begin clauses have to be sorted here!!
   sortClauses();
   
-  if( false  || printUP  ) {
+  if( printUP || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'u')  ) {
    printFormula("after Sorting");
   }
   
@@ -239,7 +244,7 @@ lbool Preprocessor::performSimplification()
   data.checkGarbage(); // perform garbage collection
   
   if( opt_debug ) { checkLists("after XOR"); scanCheck("after XOR"); }
-  if( false  || printXOR ) {
+  if( printXOR || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'x')) {
    printFormula("after XOR");
   }
   
@@ -252,7 +257,7 @@ lbool Preprocessor::performSimplification()
   data.checkGarbage(); // perform garbage collection
   
   if( opt_debug )  { scanCheck("after ENT"); }  
-  if( false || printENT ) {
+  if( printENT || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 't') ) {
    printFormula("after ENT");
   }
   
@@ -260,7 +265,7 @@ lbool Preprocessor::performSimplification()
     if( opt_verbose > 0 ) cerr << "c res3 ..." << endl;
     res.process(false); 
     if( opt_verbose > 1 )  { printStatistics(cerr); res.printStatistics(cerr); }
-    if( printTernResolve  ) printFormula("after TernResolve");
+    if( printTernResolve || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == '3') ) printFormula("after TernResolve");
   }
   
   // clear subsimp stats
@@ -277,7 +282,7 @@ lbool Preprocessor::performSimplification()
   }
   data.checkGarbage(); // perform garbage collection
   
-  if( false  || printSusi ) {
+  if( printSusi || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 's')) {
    printFormula("after Susi");
   }
   
@@ -294,7 +299,7 @@ lbool Preprocessor::performSimplification()
   data.checkGarbage(); // perform garbage collection
   
   if( opt_debug ) { checkLists("after FM"); scanCheck("after FM"); }
-  if( false  || printFM ) {
+  if( printFM || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'f')) {
    printFormula("after FM");
   }
   
@@ -309,7 +314,7 @@ lbool Preprocessor::performSimplification()
   data.checkGarbage(); // perform garbage collection
   
   if( opt_debug ) { checkLists("after REW"); scanCheck("after REW"); }
-  if( false  || printREW ) {
+  if( printREW || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'r')) {
    printFormula("after REW");
   }
   
@@ -325,7 +330,7 @@ lbool Preprocessor::performSimplification()
   
   if( opt_debug ) { checkLists("after EE"); scanCheck("after EE"); }
 
-  if( false  || printEE ) {
+  if( printEE || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'e') ) {
    printFormula("after EE");
   }
   
@@ -338,7 +343,7 @@ lbool Preprocessor::performSimplification()
   }
   data.checkGarbage(); // perform garbage collection
   
-  if( false  || printUnhide  ) {
+  if( printUnhide || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'g') ) {
    printFormula("after Unhiding");
   }
   if( opt_debug ) {checkLists("after UNHIDING");  scanCheck("after UNHIDING"); }
@@ -352,7 +357,7 @@ lbool Preprocessor::performSimplification()
   data.checkGarbage(); // perform garbage collection
 
   if( opt_debug ) { checkLists("after HTE");  scanCheck("after HTE"); }
-  if( false  || printHTE ) {
+  if( printHTE || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'h')) {
    printFormula("after HTE");
   }
   
@@ -365,16 +370,12 @@ lbool Preprocessor::performSimplification()
   }
 
   if( opt_debug ) { checkLists("after PROBE - before GC");  scanCheck("after PROBE - before GC"); }
-  if( false  || printProbe ) {
+  if( printProbe || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'p') ) {
    printFormula("after Probing");
   }
   
   data.checkGarbage(); // perform garbage collection
-    
-  if( opt_debug ) { checkLists("after PROBE");  scanCheck("after PROBE"); }
-  if( false  || printProbe ) {
-   printFormula("after Probing");
-  }
+
   
   if ( opt_bve ) {
     if( opt_verbose > 0 ) cerr << "c bve ..." << endl;
@@ -385,7 +386,7 @@ lbool Preprocessor::performSimplification()
   data.checkGarbage(); // perform garbage collection
   
   if( opt_debug ) { checkLists("after BVE");  scanCheck("after BVE"); }
-  if( false || printBVE  ) {
+  if( printBVE || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'v')) {
    printFormula("after BVE");
   }
   
@@ -399,7 +400,7 @@ lbool Preprocessor::performSimplification()
   data.checkGarbage(); // perform garbage collection
   
   if( opt_debug ) { checkLists("after BVA");  scanCheck("after BVA"); }
-  if( false || printBVA  ) {
+  if( printBVA || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'w') ) {
    printFormula("after BVA");
   }
 
@@ -412,7 +413,7 @@ lbool Preprocessor::performSimplification()
   data.checkGarbage(); // perform garbage collection
   
   if( opt_debug )  { scanCheck("after BCE"); }  
-  if( false || printBCE ) {
+  if( printBCE || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'b') ) {
    printFormula("after BCE");
   }
   
@@ -425,7 +426,7 @@ lbool Preprocessor::performSimplification()
   data.checkGarbage(); // perform garbage collection
   
   if( opt_debug )  { scanCheck("after CCE"); }  
-  if( false || printCCE ) {
+  if( printCCE || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'c') ) {
    printFormula("after CCE");
   }
   
@@ -434,7 +435,7 @@ lbool Preprocessor::performSimplification()
     if( opt_verbose > 0 ) cerr << "c add2 ..." << endl;
     res.process(true); 
     if( opt_verbose > 1 )  { printStatistics(cerr); res.printStatistics(cerr); }
-    if( printAddRedBin  ) printFormula("after TernResolve");
+    if( printAddRedBin || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'a') ) printFormula("after Add2");
   }
    
 

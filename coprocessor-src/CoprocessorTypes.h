@@ -25,41 +25,6 @@ namespace Coprocessor {
   //forward declaration
   class VarGraphUtils;
 
-/// print literals into a stream
-inline ostream& operator<<(ostream& other, const Lit& l ) {
-  if( l == lit_Undef ) other << "lUndef";
-  else if( l == lit_Error ) other << "lError";
-  else other << (sign(l) ? "-" : "") << var(l) + 1;
-  return other;
-}
-
-/// print a clause into a stream
-inline ostream& operator<<(ostream& other, const Clause& c ) {
-  other << "[";
-  for( int i = 0 ; i < c.size(); ++ i )
-    other << " " << c[i];
-  other << "]";
-  return other;
-}
-
-/// print elements of a vector
-template <typename T>
-inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data ) 
-{
-  for( int i = 0 ; i < data.size(); ++ i )
-    other << " " << data[i];
-  return other;
-}
-
-/// print elements of a vector
-template <typename T>
-inline std::ostream& operator<<(std::ostream& other, const vec<T>& data ) 
-{
-  for( int i = 0 ; i < data.size(); ++ i )
-    other << " " << data[i];
-  return other;
-}
-
 typedef std::vector<std::vector <CRef> > ComplOcc;
 
 /** this object frees a pointer before a method /statementblock is left */
@@ -365,7 +330,7 @@ public:
   /// for DRUP / DRAT proofs
   template <class T>
   void addToProof(   T& clause, bool deleteFromProof=false, const Lit remLit = lit_Undef); // write the given clause/vector/vec to the output, if the output is enabled
-  void addUnitToProof(  Lit& l, bool deleteFromProof=false);    // write a single unit clause to the proof
+  void addUnitToProof(const  Lit& l, bool deleteFromProof=false);    // write a single unit clause to the proof
   void addCommentToProof(const char* text, bool deleteFromProof=false);
   bool outputsProof() const { return solver->outputsProof(); } // return whether the solver outputs the drup proof!
   
@@ -1535,7 +1500,7 @@ inline void CoprocessorData::addToProof(T& clause, bool deleteFromProof, const L
   solver->addToProof(clause,deleteFromProof,remLit);
 }
 
-inline void CoprocessorData::addUnitToProof(Lit& l, bool deleteFromProof)
+inline void CoprocessorData::addUnitToProof(const Lit& l, bool deleteFromProof)
 {
   solver->addUnitToProof(l,deleteFromProof);
 }

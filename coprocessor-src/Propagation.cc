@@ -81,8 +81,14 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
           if ( c[j] == nl ) 
           { 
 	    if( debug_out ) cerr << "c UP remove " << nl << " from " << c << endl;
+	    const Lit remLit = c[j];
 	    if (!sort) c.removePositionUnsorted(j);
             else c.removePositionSorted(j);
+	    
+	    data.addCommentToProof("removed literal by negative UP" );
+	    data.addToProof(c);         // tell proof about modified clause
+	    data.addToProof(c,true,remLit); // for DRUP store also the old clause, which can be removed now
+	    
 	    modifiedFormula = true;
 	    count ++;
 	    break;
@@ -94,9 +100,6 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
       // proof and extra information
       if( c.size() > 1 ) {
 	assert(!c.can_be_deleted() && "clause should not be deleted already" );
-	data.addCommentToProof("removed literal by negative UP" );
-	data.addToProof(c);         // tell proof about modified clause
-	data.addToProof(c,true,nl); // for DRUP store also the old clause, which can be removed now
       }
       c.updateExtraInformation( data.variableExtraInfo(var(nl)) );
       
