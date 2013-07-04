@@ -19,6 +19,8 @@ static IntOption  opt_rewlimit        (_cat, "cp3_rew_limit","number of steps al
 static IntOption  opt_Varlimit        (_cat, "cp3_rew_Vlimit","max number of variables to still perform REW", 1000000, IntRange(0, INT32_MAX));
 static IntOption  opt_Addlimit        (_cat, "cp3_rew_Addlimit","number of new variables being allowed", 100000, IntRange(0, INT32_MAX));
 
+static BoolOption opt_scan_exo        (_cat, "cp3_rew_exo"   ,"scan for encoded exactly once constraints first", false);
+static BoolOption opt_merge_amo       (_cat, "cp3_rew_merge" ,"merge AMO constraints to create larger AMOs (fourier motzkin)", false);
 static BoolOption opt_rem_first       (_cat, "cp3_rew_1st"   ,"how to find AMOs", false);
 static BoolOption opt_rew_avg         (_cat, "cp3_rew_avg"   ,"use AMOs above equal average only?", true);
 static BoolOption opt_rew_ratio       (_cat, "cp3_rew_ratio" ,"allow literals in AMO only, if their complement is not more frequent", true);
@@ -93,12 +95,6 @@ bool Rewriter::process()
   vector< vector<Lit> > amos; // all amos that are collected
   for( int algoIters = 0; algoIters < opt_iter && !data.isInterupted() && (data.unlimited() || steps < rewLimit); ++ algoIters ) {
     
-  rewHeap.clear();
-  for( Var v = 0 ; v < data.nVars(); ++ v ) {
-    if( data[  mkLit(v,false) ] >= opt_min ) if( !rewHeap.inHeap(toInt(mkLit(v,false))) )  rewHeap.insert( toInt(mkLit(v,false)) );
-    if( data[  mkLit(v,true)  ] >= opt_min ) if( !rewHeap.inHeap(toInt(mkLit(v,true))) )   rewHeap.insert( toInt(mkLit(v,true))  );
-  }
-
   amoTime = cpuTime() - amoTime;
   data.ma.nextStep();
   inAmo.nextStep();
@@ -108,6 +104,18 @@ bool Rewriter::process()
   big.create( ca,data,data.getClauses(),data.getLEarnts() );
   
   amos.clear();
+
+  // run throough formula and check for full exacly once constraints
+  if( opt_scan_exo ) {
+    
+  }
+  
+  
+  rewHeap.clear();
+  for( Var v = 0 ; v < data.nVars(); ++ v ) {
+    if( data[  mkLit(v,false) ] >= opt_min ) if( !rewHeap.inHeap(toInt(mkLit(v,false))) )  rewHeap.insert( toInt(mkLit(v,false)) );
+    if( data[  mkLit(v,true)  ] >= opt_min ) if( !rewHeap.inHeap(toInt(mkLit(v,true))) )   rewHeap.insert( toInt(mkLit(v,true))  );
+  }
   
   if( debug_out > 0) cerr << "c run with " << rewHeap.size() << " elements" << endl;
   
@@ -198,7 +206,7 @@ bool Rewriter::process()
       if ( data.lits[i] == lit_Undef ) { data.lits[i] = data.lits[ data.lits.size() - 1 ]; data.lits.pop_back(); --i; }
     
     // use only even sized AMOs -> drop last literal!
-    if( data.lits.size() % 2 == 1 ) data.lits.pop_back();
+    // if( data.lits.size() % 2 == 1 ) data.lits.pop_back();
     
     if( data.lits.size() < opt_minAMO ) continue; // AMO not big enough -> continue!
     
@@ -243,6 +251,11 @@ bool Rewriter::process()
   
   if( debug_out > 0 ) cerr << "c finished search AMO --- process ... " << endl;
   
+  if( opt_merge_amo ) {
+    cerr << "c WARNING: merging AMO not implemented yet" << endl; 
+  }
+  
+  
   rewTime = cpuTime() - rewTime;
  
  // actual rewriting method
@@ -256,8 +269,8 @@ bool Rewriter::process()
     int size = amo.size();
     removedVars +=size;
     assert( size % 2 == 0 && "AMO has to be even!" );
-    int rSize = size / 2;
-    assert( rSize * 2 == size && "AMO has to be even!" );
+    int rSize = (size + 1) / 2;
+    // assert( rSize * 2 == size && "AMO has to be even!" );
     
     if( debug_out > 0 ) cerr << "c process amo " << i << "/" << amos.size() << " with size= " << size << " and half= " << rSize << endl;
     
@@ -304,7 +317,18 @@ bool Rewriter::process()
       //
       
       for( int j = 0 ; j < rSize; ++ j ) {
-	
+	if(half == 1 && (j > size/2)) { // creating the forbidden combination (that does not appear in the input formula this way!
+	  clsLits.clear();
+	  clsLits.push(-newXn);
+	  clsLits.push(-data.lits[j]);
+	  // add this clause!
+	  CRef tmpRef = ca.alloc(clsLits, false ); // is not a learned clause!
+	  data.addSubStrengthClause(tmpRef,true); // afterwards, check for subsumption!
+	  createdClauses ++;
+	  // clause is sorted already!
+	  data.addClause( tmpRef ); // add to all literal lists in the clause
+	  data.getClauses().push( tmpRef );
+	} else
 	{ // to make sure all variables are valid only for positive!
 	// if a clause of l=amo[j] contains the literal l' == ~amo[j+rSize], then in the long run the clause will be dropped!
 	const Lit l =  amo[j + (half==0 ? 0 : rSize) ]; // positive occurrence[amo contains negative occurrences!]:  l is replaced by (newl \land newX); ~l is replaced by (~newL \lor ~newX)

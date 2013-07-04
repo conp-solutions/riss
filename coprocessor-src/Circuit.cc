@@ -256,7 +256,6 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 void Circuit::getExOGates(const Var v, vector< Circuit::Gate >& gates, CoprocessorData& data)
 {
   int oldGates = gates.size();
-  // check for v <-> ITE( s,t,f )
   for( int p = 0; p < 2 ; ++ p ) {
     Lit pos = mkLit( v, p == 1 );
     vector<CRef>& list = data.list(pos);
@@ -271,7 +270,8 @@ void Circuit::getExOGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
       }
       if( cont ) continue;
       
-      if( opt_BLOCKED ) {
+      if( opt_BLOCKED )
+      {
 	// for each variable this clause is the only positive occurrence!
 	bool found = true;
 	int count = 0 ;
