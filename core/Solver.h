@@ -418,9 +418,9 @@ public:     bool useCoprocessor;
   
 /// for qprocessor
 public:
-	    void writeClauses( std::ostream& stream ) {
-	       
-	    }
+// 	    void writeClauses( std::ostream& stream ) {
+// 	       
+// 	    }
 };
 
 

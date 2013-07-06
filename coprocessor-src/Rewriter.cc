@@ -19,12 +19,20 @@ static IntOption  opt_rewlimit        (_cat, "cp3_rew_limit","number of steps al
 static IntOption  opt_Varlimit        (_cat, "cp3_rew_Vlimit","max number of variables to still perform REW", 1000000, IntRange(0, INT32_MAX));
 static IntOption  opt_Addlimit        (_cat, "cp3_rew_Addlimit","number of new variables being allowed", 100000, IntRange(0, INT32_MAX));
 
+static BoolOption opt_rew_amo        (_cat, "cp3_rew_amo"   ,"rewrite amos", true);
+static BoolOption opt_rew_imp        (_cat, "cp3_rew_imp"   ,"rewrite implication chains", false);
+
 static BoolOption opt_scan_exo        (_cat, "cp3_rew_exo"   ,"scan for encoded exactly once constraints first", false);
 static BoolOption opt_merge_amo       (_cat, "cp3_rew_merge" ,"merge AMO constraints to create larger AMOs (fourier motzkin)", false);
 static BoolOption opt_rem_first       (_cat, "cp3_rew_1st"   ,"how to find AMOs", false);
 static BoolOption opt_rew_avg         (_cat, "cp3_rew_avg"   ,"use AMOs above equal average only?", true);
 static BoolOption opt_rew_ratio       (_cat, "cp3_rew_ratio" ,"allow literals in AMO only, if their complement is not more frequent", true);
 static BoolOption opt_rew_once        (_cat, "cp3_rew_once"  ,"rewrite each variable at most once! (currently: yes only!)", true);
+static BoolOption opt_stat_only       (_cat, "cp3_rew_stats" ,"analyze formula, but do not apply rewriting", false );
+
+static IntOption  min_imp_size        (_cat, "cp3_rewI_min"   ,"min size of an inplication chain to be rewritten", 8, IntRange(0, INT32_MAX));
+static BoolOption impl_pref_small     (_cat, "cp3_rewI_small" ,"prefer little imply variables", true);
+
 
 static IntOption  opt_inpStepInc      (_cat, "cp3_rew_inpInc","increase for steps per inprocess call", 60000, IntRange(0, INT32_MAX));
 
@@ -44,6 +52,8 @@ Rewriter::Rewriter(ClauseAllocator& _ca, ThreadController& _controller, Coproces
 : Technique( _ca, _controller )
 , data( _data )
 , processTime(0)
+, rewAmoTime(0)
+, rewImplTime(0)
 , amoTime(0)
 , rewTime(0)
 , rewLimit(opt_rewlimit)
@@ -56,10 +66,14 @@ Rewriter::Rewriter(ClauseAllocator& _ca, ThreadController& _controller, Coproces
 , reuses(0)
 , processedAmos(0)
 , foundAmos(0)
+, exoAMOs(0)
 , maxAmo(0)
 , addedVariables(0)
 , removedVars(0)
 , removedViaSubsubption(0)
+, maxChain(0)
+, minChain(0)
+, foundChains(0)
 , subsumption( _subsumption )
 , rewHeap( data )
 {
@@ -69,11 +83,95 @@ Rewriter::Rewriter(ClauseAllocator& _ca, ThreadController& _controller, Coproces
 bool Rewriter::process()
 {
   MethodTimer mt(&processTime);
-  bool didSomething = false;
-
-  assert( opt_rew_once && "other parameter setting that true is not supported at the moment" );
+  assert( opt_rew_once && "other parameter setting that true is not supported at the moment" );  
+  modifiedFormula = false;
   
+  bool ret = false;
+  if( opt_rew_amo ) ret = ret || rewriteAMO();
+  if( opt_rew_imp ) ret = ret || rewriteImpl();
+  
+  return ret;
+}
+
+bool Rewriter::rewriteImpl()  
+{
   if( data.nVars() > opt_Varlimit ) return false; // do nothing, because too many variables!
+  MethodTimer mt(&rewImplTime);
+  
+  // have a slot per variable
+  data.ma.resize( data.nVars() );
+  data.ma.nextStep();
+  
+  data.lits.clear();
+  
+  rewHeap.clear();
+  for( Var v = 0 ; v < data.nVars(); ++ v ) {
+    if( !rewHeap.inHeap(toInt(mkLit(v,false))) )  rewHeap.insert( toInt(mkLit(v,false)) );
+    if( !rewHeap.inHeap(toInt(mkLit(v,true))) )   rewHeap.insert( toInt(mkLit(v,true))  );
+  }
+  // create full BIG, also rewrite learned clauses, but base operation on real clauses TODO: decide whether other way works as well
+  BIG big;
+  big.create( ca,data,data.getClauses());
+  vector<int> impliesLits ( 2*data.nVars(), 0 );
+  for( Var v = 0; v < data.nVars(); ++v ) {
+    impliesLits[ toInt( mkLit(v,false) ) ] = big.getSize( mkLit(v,false) );
+    impliesLits[ toInt( mkLit(v,true ) ) ] = big.getSize( mkLit(v,true ) );
+  }
+  
+  vector< vector<Lit> > implicationChains;
+  
+  // for l in F
+  while (rewHeap.size() > 0 && (data.unlimited() || rewLimit > steps) && !data.isInterupted() ) 
+  {
+    /** garbage collection */
+    data.checkGarbage();
+    const Lit startLit = toLit(rewHeap[0]); // take next element from heap
+    rewHeap.removeMin();
+    if( data.ma.isCurrentStep( var(startLit) ) ) continue; // do not reuse literals twice
+    Lit current = startLit;
+    data.lits.clear();
+    data.lits.push_back( current );    
+    data.ma.setCurrentStep( var(current) ); // disable this lit for being used again
+    do {
+      const uint32_t size = big.getSize( current );
+      Lit* list = big.getArray( current );
+      for( int i = 0 ; i < size; ++i ) impliesLits[ toInt(~list[i]) ] --; // this literal is not available any more -> decrease counters of lits that that imply this literal
+      int usePos = -1;
+      for( int i = 0 ; i < size; ++i ) { 
+	const Lit l = list[i];
+	if (data.ma.isCurrentStep( var(l) ) ) continue; // do not use variables twice!
+	if( usePos == -1 && impliesLits[toInt(l)] > 0 ) usePos = i;
+	else if( impliesLits[toInt(l)] > 0 && 
+	  (impl_pref_small ? 
+		impliesLits[toInt(l)] < impliesLits[ toInt( list[usePos] ) ] 
+	      : impliesLits[toInt(l)] > impliesLits[ toInt( list[usePos] ) ] 
+	  ) ) usePos = i;
+	if( usePos != -1 && impliesLits[ toInt( list[usePos] ) ] == 1 ) break; // use the first literal which implies only one more literal!
+      }
+      if( usePos == -1 ) break; // did not find a literal
+      data.lits.push_back( list[usePos] );
+      data.ma.setCurrentStep( var(list[usePos]) ); // disable this lit for being used again
+    } while (true);
+    
+    if( data.lits.size() < min_imp_size ) { // do not consider this implication chain
+      for( int i = 0 ; i < data.lits.size(); ++i ) data.ma.reset( var(data.lits[i]) );
+      continue;
+    }
+    
+    if( debug_out > 1 ) cerr << "c found implication with size " << data.lits.size() << endl;
+    implicationChains.push_back( data.lits );
+    minChain = minChain == 0 ? data.lits.size() : (minChain <= data.lits.size() ? minChain : data.lits.size() );
+    maxChain = maxChain >= data.lits.size() ? maxChain : data.lits.size();
+  }
+  if( debug_out > 1 ) cerr << "c found implication chains: " << implicationChains.size() << endl;
+  foundChains += implicationChains.size();
+  if( opt_stat_only ) return modifiedFormula;
+}
+
+bool Rewriter::rewriteAMO()  
+{
+  if( data.nVars() > opt_Varlimit ) return false; // do nothing, because too many variables!
+  MethodTimer mt(&rewAmoTime);
   
   // have a slot per variable
   data.ma.resize( data.nVars() );
@@ -85,8 +183,6 @@ bool Rewriter::process()
   // setup own structures
   rewHeap.addNewElement(data.nVars() * 2);
   
-  
-  int complementDropCount = 0;
   vec<Lit> clsLits; // vector for literals of the rewritten clauses
   
   //
@@ -106,10 +202,42 @@ bool Rewriter::process()
   amos.clear();
 
   // run throough formula and check for full exacly once constraints
-  if( opt_scan_exo ) {
-    
+  if( opt_scan_exo ) 
+  {
+    for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
+      const Clause& c = ca[data.getClauses()[i]]; 
+      if( c.can_be_deleted() || c.size() == 2 ) continue;
+      inAmo.nextStep();
+      bool useVariableTwice = false;
+      for( int j = 0 ; j < c.size() ; ++ j ){ // mark all complements of the literals of this clause
+	inAmo.setCurrentStep( toInt( ~c[j] ) );
+	if( inAmo.isCurrentStep( var(c[j])) ) { useVariableTwice = true; break; }
+      }
+      if( useVariableTwice ) continue; // do not allow AMOs that have the same variable
+      bool found = true;
+      for( int j = 0 ; j < c.size() ; ++ j ) {
+	const Lit& l = c[j];
+	const Lit* lList = big.getArray(l);
+	const int lListSize = big.getSize(l);
+	int count = 0;
+	for( int k = 0 ; k < lListSize; ++ k )
+	  count = (inAmo.isCurrentStep( toInt(lList[k]) ) || big.isChild(l, lList[k]) ) ? count+1 : count;
+	if( count + 1 < c.size() ) { found = false; break; } // not all literals can be found by this literal!
+      }
+      if( !found ) continue;
+      // found ExO constraint
+      else {
+	const int index = amos.size();
+	amos.push_back( vector<Lit>() );
+	for( int j = 0 ; j < c.size(); ++ j ) {
+	  amos[index].push_back( c[j] ); // store AMO
+	  data.ma.setCurrentStep( var(c[j] ) ); // block theses variables for future AMOs
+	}
+	maxAmo = maxAmo >= c.size() ? maxAmo : c.size();
+      }
+    }
+    exoAMOs += amos.size();
   }
-  
   
   rewHeap.clear();
   for( Var v = 0 ; v < data.nVars(); ++ v ) {
@@ -214,31 +342,6 @@ bool Rewriter::process()
     amos.push_back( data.lits );
     for( int i = 0 ; i < data.lits.size(); ++ i )
       amos[amos.size() -1][i] = ~ (amos[amos.size() -1][i]); // need to negate all!
-      
-    // check AMO!
-    if( false ) {
-	// find all AMO binary clauses, and replace them with smaller variables!
-	inAmo.nextStep();
-	for( int j = 0 ; j < amos[amos.size() -1].size(); ++ j ) {
-	  if( debug_out > 0 ) cerr << "c set " << ~amos[amos.size() -1][j] << endl;
-	  inAmo.setCurrentStep( toInt( ~amos[amos.size() -1][j] ) );
-	}
-	
-	int count = 0;
-	for( int j = 0 ; j < amos[amos.size() -1].size(); ++ j ){
-	  const Lit l = ~amos[amos.size() -1][j];
-	  if( debug_out > 1 ) cerr << "c check literal " << l << endl;
-	  vector<CRef>& ll = data.list(l);
-	  for( int k = 0 ; k < ll.size(); ++ k ) {
-	    Clause& c= ca[ ll[k] ];
-	    if( c.can_be_deleted() || c.size() != 2 ) continue; // to not care about these clauses!
-	    if( inAmo.isCurrentStep( toInt(c[0]) ) && inAmo.isCurrentStep( toInt(c[1]) ) ) { count ++;  }
-	    else if( debug_out > 2 ) cerr << "c not matching binary clause: " << c << endl;
-	  }
-	}
-	if( debug_out > 0 )  cerr << "c found " << count << " binary clauses, out of " << (amos[amos.size() -1].size()*(amos[amos.size() -1].size()-1)) / 2 << endl;
-	assert( count >= ((amos[amos.size() -1].size()*(amos[amos.size() -1].size()-1)) / 2) && "not all clauses have been found" );
-    } // end of check!
     
     for( int i = 0 ; i < data.lits.size(); ++ i )
       data.ma.setCurrentStep( var(data.lits[i]) );
@@ -247,7 +350,7 @@ bool Rewriter::process()
   }
  
   amoTime = cpuTime() - amoTime;
-  foundAmos = amos.size();
+  foundAmos += amos.size();
   
   if( debug_out > 0 ) cerr << "c finished search AMO --- process ... " << endl;
   
@@ -255,6 +358,7 @@ bool Rewriter::process()
     cerr << "c WARNING: merging AMO not implemented yet" << endl; 
   }
   
+  if( opt_stat_only ) return modifiedFormula;
   
   rewTime = cpuTime() - rewTime;
  
@@ -279,6 +383,7 @@ bool Rewriter::process()
       data.ma.setCurrentStep( var(amo[j]) ); // for debug only!
     }
     
+    modifiedFormula = true;
     const Var newX = nextVariable('s');addedVariables ++;
     const Lit newXp = mkLit(newX,false); const Lit newXn = mkLit(newX,true); // literals
     data.lits.clear(); // collect all replace literals!
@@ -559,6 +664,7 @@ bool Rewriter::process()
     
     // do subsumption per iteration!
     subsumption.process();
+    modifiedFormula = modifiedFormula || subsumption.appliedSomething();
     
     // do garbage collection, since we do a lot with clauses!
     // actually, variable densing should be done here as well ...
@@ -569,6 +675,7 @@ bool Rewriter::process()
   rewTime = cpuTime() - rewTime;
   
   inAmo.destroy();
+  return appliedSomething();
 }
 
 Var Rewriter::nextVariable(char type)
@@ -584,6 +691,8 @@ Var Rewriter::nextVariable(char type)
 void Rewriter::printStatistics(ostream& stream)
 {
   stream << "c [STAT] REW " << processTime << "s, "
+  << rewAmoTime << " AMOtime, "
+  << rewImplTime << " IMPLtime, "
   << amoTime << " s-amo, "
   << rewTime << " rewTime, "
   << steps << " steps, " << endl;
@@ -595,13 +704,20 @@ void Rewriter::printStatistics(ostream& stream)
   << droppedClauses << " dropped, "
   << removedViaSubsubption << " droped(sub), "<< endl;
  
-  stream << "c [STAT] REW(2) " 
+  stream << "c [STAT] REW(3) " 
   << sortCalls << " sorts, "
   << processedAmos << " amos, "
   << foundAmos << " foundAmos, "
+  << exoAMOs << " exoAMOs, "
   << maxAmo << " maxAmo, " 
   << addedVariables << " addedVars, "
   << removedVars << " removedVars, "
+  << endl;
+  
+  stream << "c [STAT] REW(4) " 
+  << foundChains << " foundChains, "
+  << minChain << " minChain, "
+  << maxChain << " maxChain, "
   << endl;
 }
 

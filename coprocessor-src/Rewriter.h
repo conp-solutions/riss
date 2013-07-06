@@ -23,6 +23,7 @@ class Rewriter : public Technique  {
   
   // statistics
   double processTime;		// seconds of process time
+  double rewAmoTime, rewImplTime; // time per procedure
   double amoTime;	// seconds of process time
   double rewTime;	// seconds of process time
   unsigned rewLimit; // upper limit of steps
@@ -37,10 +38,12 @@ class Rewriter : public Technique  {
   unsigned reuses;
   unsigned processedAmos;
   unsigned foundAmos;
+  unsigned exoAMOs;
   unsigned maxAmo;
   unsigned addedVariables;
   unsigned removedVars;
   unsigned removedViaSubsubption;
+  unsigned maxChain, minChain, foundChains;
   
   Subsumption& subsumption;		/// object that takes care of subsumption and strengthening
   
@@ -76,6 +79,11 @@ protected:
   
   /** take care of creating a new variable */
   Var nextVariable(char type);
+  
+  /** method responsible for rewriting AMO constraints */
+  bool rewriteAMO() ;
+  /** method responsible for rewriting implication chains constraints */
+  bool rewriteImpl() ;
   
   /** check whether the clause represented in the vector c has duplicates, and remove clauses that are subsumed by c */
   bool hasDuplicate(vector<CRef>& list, const vec<Lit>& c);

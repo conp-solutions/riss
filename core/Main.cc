@@ -52,17 +52,17 @@ void printStats(Solver& solver)
     printf("c restarts              : %"PRIu64" (%"PRIu64" conflicts in avg)\n", solver.starts, solver.starts == 0 ? 0 : solver.conflicts/solver.starts );
     printf("c blocked restarts      : %"PRIu64" (multiple: %"PRIu64") \n", solver.nbstopsrestarts,solver.nbstopsrestartssame);
     printf("c last block at restart : %"PRIu64"\n",solver.lastblockatrestart);
-    printf("c nb ReduceDB           : %lld\n", solver.nbReduceDB);
-    printf("c nb removed Clauses    : %lld\n",solver.nbRemovedClauses);
-    printf("c nb learnts DL2        : %lld\n", solver.nbDL2);
-    printf("c nb learnts size 2     : %lld\n", solver.nbBin);
-    printf("c nb learnts size 1     : %lld\n", solver.nbUn);
+    printf("c nb ReduceDB           : %"PRIu64"\n", solver.nbReduceDB);
+    printf("c nb removed Clauses    : %"PRIu64"\n",solver.nbRemovedClauses);
+    printf("c nb learnts DL2        : %"PRIu64"\n", solver.nbDL2);
+    printf("c nb learnts size 2     : %"PRIu64"\n", solver.nbBin);
+    printf("c nb learnts size 1     : %"PRIu64"\n", solver.nbUn);
 
     printf("c conflicts             : %-12"PRIu64"   (%.0f /sec)\n", solver.conflicts   , cpu_time == 0 ? 0 : solver.conflicts / cpu_time);
     printf("c decisions             : %-12"PRIu64"   (%4.2f %% random) (%.0f /sec)\n", solver.decisions, solver.decisions == 0 ? 0 : (float)solver.rnd_decisions*100 / (float)solver.decisions, cpu_time == 0 ? 0 : solver.decisions / cpu_time );
     printf("c propagations          : %-12"PRIu64"   (%.0f /sec)\n", solver.propagations, cpu_time == 0 ? 0 : solver.propagations/cpu_time);
     printf("c conflict literals     : %-12"PRIu64"   (%4.2f %% deleted)\n", solver.tot_literals, solver.max_literals == 0 ? 0 : (solver.max_literals - solver.tot_literals)*100 / (double)solver.max_literals);
-    printf("c nb reduced Clauses    : %lld\n",solver.nbReducedClauses);
+    printf("c nb reduced Clauses    : %"PRIu64"\n",solver.nbReducedClauses);
     
     if (mem_used != 0) printf("Memory used           : %.2f MB\n", mem_used);
 

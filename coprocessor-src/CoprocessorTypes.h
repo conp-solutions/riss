@@ -124,7 +124,7 @@ public:
 	  return mySize;
 	}
 
-	const uint32_t getIndex(uint32_t index) const { return array[index]; }
+	uint32_t getIndex(uint32_t index) const { return array[index]; }
 
 };
 
@@ -552,8 +552,8 @@ inline CoprocessorData::CoprocessorData(ClauseAllocator& _ca, Solver* _solver, C
 , hasLimit( _limited )
 , randomOrder(_randomized)
 , currentlyInprocessing(false)
-, log(_log)
 , numberOfVars(0)
+, log(_log)
 {
 }
 
