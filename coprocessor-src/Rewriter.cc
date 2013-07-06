@@ -12,9 +12,9 @@ using namespace Coprocessor;
 
 static const char* _cat = "COPROCESSOR 3 - REWRITE";
 
-static IntOption  opt_min             (_cat, "cp3_rew_min"  ,"min occurrence to be considered", 7, IntRange(0, INT32_MAX));
+static IntOption  opt_min             (_cat, "cp3_rew_min"  ,"min occurrence to be considered", 3, IntRange(0, INT32_MAX));
 static IntOption  opt_iter            (_cat, "cp3_rew_iter" ,"number of iterations", 1, IntRange(0, INT32_MAX));
-static IntOption  opt_minAMO          (_cat, "cp3_rew_minA" ,"min size of altered AMOs", 8, IntRange(0, INT32_MAX));
+static IntOption  opt_minAMO          (_cat, "cp3_rew_minA" ,"min size of altered AMOs", 3, IntRange(0, INT32_MAX));
 static IntOption  opt_rewlimit        (_cat, "cp3_rew_limit","number of steps allowed for REW", 1200000, IntRange(0, INT32_MAX));
 static IntOption  opt_Varlimit        (_cat, "cp3_rew_Vlimit","max number of variables to still perform REW", 1000000, IntRange(0, INT32_MAX));
 static IntOption  opt_Addlimit        (_cat, "cp3_rew_Addlimit","number of new variables being allowed", 100000, IntRange(0, INT32_MAX));
@@ -268,7 +268,7 @@ bool Rewriter::process()
     
     int size = amo.size();
     removedVars +=size;
-    assert( size % 2 == 0 && "AMO has to be even!" );
+    // assert( size % 2 == 0 && "AMO has to be even!" );
     int rSize = (size + 1) / 2;
     // assert( rSize * 2 == size && "AMO has to be even!" );
     
@@ -309,25 +309,29 @@ bool Rewriter::process()
     if( debug_out > 0 )  cerr << "c found " << count << " binary clauses, out of " << (size*(size-1)) / 2 << endl;
     assert( count >= ((size*(size-1)) / 2) && "not all clauses have been found" );
     
+    
+    if( debug_out > 1 ) cerr << "c rewrite AMO " << amo << " with size " << size << " halfsize " << size/2 << " and rSize " << rSize << endl;
     // replace smaller half of variables
     for( int half = 0; half < 2; ++ half ) {
     
       //
       // do both halfs based on the same code!!
       //
-      
       for( int j = 0 ; j < rSize; ++ j ) {
-	if(half == 1 && (j > size/2)) { // creating the forbidden combination (that does not appear in the input formula this way!
+	if( debug_out > 3 ) cerr << "c process element j=" << j << ", which is " << amo[j + (half==0 ? 0 : rSize)] << " with index " << j + (half==0 ? 0 : rSize) << endl;
+	if(half == 1 && (j + rSize >= size)) { // creating the forbidden combination (that does not appear in the input formula this way!
 	  clsLits.clear();
-	  clsLits.push(-newXn);
-	  clsLits.push(-data.lits[j]);
-	  // add this clause!
+	  clsLits.push(~newXn);
+	  clsLits.push(~data.lits[j]); // FIXME: pick right literal!
+	  // add this clause - since this combination was not possible in the "original" formula
 	  CRef tmpRef = ca.alloc(clsLits, false ); // is not a learned clause!
 	  data.addSubStrengthClause(tmpRef,true); // afterwards, check for subsumption!
 	  createdClauses ++;
 	  // clause is sorted already!
 	  data.addClause( tmpRef ); // add to all literal lists in the clause
 	  data.getClauses().push( tmpRef );
+	  if( debug_out > 1 ) cerr << "c added clause " << ca[tmpRef] << " to disallow last even combination" << endl;
+	  break; // done with this AMO!
 	} else
 	{ // to make sure all variables are valid only for positive!
 	// if a clause of l=amo[j] contains the literal l' == ~amo[j+rSize], then in the long run the clause will be dropped!
@@ -454,7 +458,7 @@ bool Rewriter::process()
 	for( int k = 0 ; k < nll.size(); ++ k ) {
 	  Clause& c= ca[ nll[k] ];
 	  assert(c.size() > 1 && "there should not be unit clauses!" );
-	  if( c.can_be_deleted() ) continue; // to not care about these clauses!
+	  if( c.can_be_deleted() ) continue; // to not care about these clauses - no need to delete from list, will be done later
 	  if( debug_out > 1 ) cerr << endl << "c rewrite NEG [" << nll[k] << "] : " << c << endl;
 	  clsLits.clear();
 	  int hitPos = -1;
@@ -468,7 +472,7 @@ bool Rewriter::process()
 	    minL =  data[cl] < data[minL] ? cl : minL;
 	    foundNR1 = foundNR1 || (cl == nr1); foundNR2 = foundNR2 || (cl == nr2);
 	    foundNR1comp = foundNR1comp || (cl == ~nr1); foundNR2comp = foundNR2comp || (cl == ~nr2);
-	  }
+	  } // second part of above loop without the check - if
 	  for( ; hitPos+1 < c.size(); ++hitPos ) {
 	    c[hitPos] = c[hitPos+1]; // remove literal nl
 	    const Lit cl = c[hitPos];
@@ -514,9 +518,9 @@ bool Rewriter::process()
 	  minL =  data[nr1] < data[minL] ? nr1 : minL;
 	  minL =  data[nr2] < data[minL] ? nr2 : minL;
 	  
+	  c.set_delete(true);
 	  if( !hasDuplicate( data.list(minL), clsLits ) ) {
 	    enlargedClauses ++;
-	    c.set_delete(true);
 	    data.removedClause( nll[k] );
 	    CRef tmpRef = ca.alloc(clsLits, c.learnt() ); // no learnt clause!
 	    data.addSubStrengthClause(tmpRef, true); // afterwards, check for subsumption and strengthening!
@@ -526,7 +530,6 @@ bool Rewriter::process()
 	    data.getClauses().push( tmpRef );
 	  } else {
 	    droppedClauses ++;
-	    c.set_delete(true);
 	    data.removedClause( nll[k] );
 	    if( debug_out > 1 ) cerr << "c into5 redundant dropped clause" << endl;
 	  }
