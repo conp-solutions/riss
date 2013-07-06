@@ -36,7 +36,7 @@ class Rewriter : public Technique  {
   unsigned enlargedClauses;
   unsigned sortCalls;
   unsigned reuses;
-  unsigned processedAmos;
+  unsigned processedAmos,processedChains;
   unsigned foundAmos;
   unsigned exoAMOs;
   unsigned maxAmo;

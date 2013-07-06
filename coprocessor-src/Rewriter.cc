@@ -30,7 +30,7 @@ static BoolOption opt_rew_ratio       (_cat, "cp3_rew_ratio" ,"allow literals in
 static BoolOption opt_rew_once        (_cat, "cp3_rew_once"  ,"rewrite each variable at most once! (currently: yes only!)", true);
 static BoolOption opt_stat_only       (_cat, "cp3_rew_stats" ,"analyze formula, but do not apply rewriting", false );
 
-static IntOption  min_imp_size        (_cat, "cp3_rewI_min"   ,"min size of an inplication chain to be rewritten", 8, IntRange(0, INT32_MAX));
+static IntOption  min_imp_size        (_cat, "cp3_rewI_min"   ,"min size of an inplication chain to be rewritten", 4, IntRange(0, INT32_MAX));
 static BoolOption impl_pref_small     (_cat, "cp3_rewI_small" ,"prefer little imply variables", true);
 
 
@@ -65,6 +65,7 @@ Rewriter::Rewriter(ClauseAllocator& _ca, ThreadController& _controller, Coproces
 , sortCalls(0)
 , reuses(0)
 , processedAmos(0)
+, processedChains(0)
 , foundAmos(0)
 , exoAMOs(0)
 , maxAmo(0)
@@ -103,32 +104,39 @@ bool Rewriter::rewriteImpl()
   data.ma.nextStep();
   
   data.lits.clear();
-  
-  rewHeap.clear();
-  for( Var v = 0 ; v < data.nVars(); ++ v ) {
-    if( !rewHeap.inHeap(toInt(mkLit(v,false))) )  rewHeap.insert( toInt(mkLit(v,false)) );
-    if( !rewHeap.inHeap(toInt(mkLit(v,true))) )   rewHeap.insert( toInt(mkLit(v,true))  );
-  }
+
   // create full BIG, also rewrite learned clauses, but base operation on real clauses TODO: decide whether other way works as well
   BIG big;
   big.create( ca,data,data.getClauses());
   vector<int> impliesLits ( 2*data.nVars(), 0 );
+  vector< Lit > candidates;
+  Lit minCand = lit_Undef;
   for( Var v = 0; v < data.nVars(); ++v ) {
-    impliesLits[ toInt( mkLit(v,false) ) ] = big.getSize( mkLit(v,false) );
-    impliesLits[ toInt( mkLit(v,true ) ) ] = big.getSize( mkLit(v,true ) );
+    const Lit l = mkLit(v,false);
+    impliesLits[ toInt( l ) ] = big.getSize( l );
+    impliesLits[ toInt( ~l ) ] = big.getSize( ~l );
+    minCand = minCand == lit_Undef ? l : (impliesLits[ toInt(minCand) ] <= impliesLits[ toInt(l) ] ? minCand : l );
+    minCand = (impliesLits[ toInt(minCand) ] <= impliesLits[ toInt(~l) ] ? minCand : ~l );
+    if( impliesLits[ toInt(l) ] > 0 ) candidates.push_back( l );
+    if( impliesLits[ toInt(~l) ] > 0 ) candidates.push_back( ~l );
   }
   
   vector< vector<Lit> > implicationChains;
   
   // for l in F
-  while (rewHeap.size() > 0 && (data.unlimited() || rewLimit > steps) && !data.isInterupted() ) 
+  while (candidates.size() > 0 && (data.unlimited() || rewLimit > steps) && !data.isInterupted() ) 
   {
     /** garbage collection */
     data.checkGarbage();
-    const Lit startLit = toLit(rewHeap[0]); // take next element from heap
-    rewHeap.removeMin();
+    const Lit startLit = ((minCand == lit_Undef) ? candidates[0] : minCand); // take next element from heap
+    const int rIndex = rand() % candidates.size();
+    if( minCand == lit_Undef ) { // remove current literal from list, if its not been the minCand
+      candidates[0] = candidates[rIndex]; candidates[rIndex] = candidates[ candidates.size() -1 ]; candidates.pop_back(); // shuffle randomly forward TODO: select min! (e.g. have an extra heap)
+    }
+    minCand = lit_Undef;
     if( data.ma.isCurrentStep( var(startLit) ) ) continue; // do not reuse literals twice
     Lit current = startLit;
+    if( debug_out > 1 ) cerr << "c analyze " << current << " as chain starter with " << big.getSize( current ) << endl;
     data.lits.clear();
     data.lits.push_back( current );    
     data.ma.setCurrentStep( var(current) ); // disable this lit for being used again
@@ -137,20 +145,22 @@ bool Rewriter::rewriteImpl()
       Lit* list = big.getArray( current );
       for( int i = 0 ; i < size; ++i ) impliesLits[ toInt(~list[i]) ] --; // this literal is not available any more -> decrease counters of lits that that imply this literal
       int usePos = -1;
-      for( int i = 0 ; i < size; ++i ) { 
-	const Lit l = list[i];
+      for( int j = 0 ; j < size; ++j ) { 
+	const Lit l = list[j];
+	if( debug_out > 2 ) cerr << "c test follow candidate " << l << " with " << impliesLits[ toInt(l)] << "/" << big.getSize( l ) << endl;
 	if (data.ma.isCurrentStep( var(l) ) ) continue; // do not use variables twice!
-	if( usePos == -1 && impliesLits[toInt(l)] > 0 ) usePos = i;
-	else if( impliesLits[toInt(l)] > 0 && 
+	if( usePos == -1  ) usePos = j;
+	else if( 
 	  (impl_pref_small ? 
 		impliesLits[toInt(l)] < impliesLits[ toInt( list[usePos] ) ] 
 	      : impliesLits[toInt(l)] > impliesLits[ toInt( list[usePos] ) ] 
-	  ) ) usePos = i;
+	  ) ) usePos = j;
 	if( usePos != -1 && impliesLits[ toInt( list[usePos] ) ] == 1 ) break; // use the first literal which implies only one more literal!
       }
       if( usePos == -1 ) break; // did not find a literal
       data.lits.push_back( list[usePos] );
       data.ma.setCurrentStep( var(list[usePos]) ); // disable this lit for being used again
+      current = list[usePos]; // next iteration, work with this literal
     } while (true);
     
     if( data.lits.size() < min_imp_size ) { // do not consider this implication chain
@@ -166,6 +176,295 @@ bool Rewriter::rewriteImpl()
   if( debug_out > 1 ) cerr << "c found implication chains: " << implicationChains.size() << endl;
   foundChains += implicationChains.size();
   if( opt_stat_only ) return modifiedFormula;
+  
+  
+  vec<Lit> clsLits;
+  // rewrite chains
+  for( int i = 0 ; i < implicationChains.size() && !data.isInterupted() && (data.unlimited() || (steps < rewLimit && addedVariables < opt_Addlimit ) ); ++ i )
+  {
+    vector<Lit>& chain = implicationChains[i];
+    processedChains++;
+    int size = chain.size();
+    removedVars +=size;
+    int rSize = (size + 1) / 2;
+    if( debug_out > 0 ) cerr << "c process chain " << i << "/" << implicationChains.size() << " with size= " << size << " and half= " << rSize << endl;
+
+    
+    modifiedFormula = true;
+    const Var newX = nextVariable('s');addedVariables ++;
+    const Lit newXp = mkLit(newX,false); const Lit newXn = mkLit(newX,true); // literals
+    data.lits.clear(); // collect all replace literals!
+    for(  int j = 0 ; j < rSize; ++ j ) {
+      Var newRj = nextVariable('r');addedVariables ++;
+      data.lits.push_back(mkLit(newRj,false) );
+    }
+    
+    // find all chain binary clauses, and replace them with smaller variables!
+    for( int j = 0 ; j + 1 < chain.size(); ++ j ) {
+      const Lit l = ~chain[j];
+      const Lit nextL = chain[j+1];
+      vector<CRef>& ll = data.list(l);
+      for( int k = 0 ; k < ll.size(); ++ k ) {
+	Clause& c= ca[ ll[k] ];
+	if( c.can_be_deleted() || c.size() != 2 ) continue; // to not care about these clauses!
+	if ( c[0] == nextL || c[1] == nextL ) c.set_delete(true);// found clause, set it to delete TODO: keep smaller half, but do not rewrite!
+      }
+    }
+
+    if( debug_out > 1 ) cerr << "c rewrite chain " << chain << " with size " << size << " halfsize " << size/2 << " and rSize " << rSize << endl;
+    // replace smaller half of variables
+    for( int half = 0; half < 2; ++ half ) {
+    
+      //
+      // do both halfs based on the same code!!
+      //
+      for( int j = 0 ; j < rSize; ++ j ) {
+	if( debug_out > 3 ) cerr << "c process element j=" << j << ", which is " << chain[j + (half==0 ? 0 : rSize)] << " with index " << j + (half==0 ? 0 : rSize) << endl;
+	if(half == 1 && (j + rSize >= size)) { // creating the forbidden combination (that does not appear in the input formula this way!
+	  clsLits.clear();
+	  clsLits.push(~newXn);
+	  clsLits.push(~data.lits[j]); // FIXME: pick right literal!
+	  // add this clause - since this combination was not possible in the "original" formula
+	  CRef tmpRef = ca.alloc(clsLits, false ); // is not a learned clause!
+	  data.addSubStrengthClause(tmpRef,true); // afterwards, check for subsumption!
+	  createdClauses ++;
+	  // clause is sorted already!
+	  data.addClause( tmpRef ); // add to all literal lists in the clause
+	  data.getClauses().push( tmpRef );
+	  if( debug_out > 1 ) cerr << "c added clause " << ca[tmpRef] << " to disallow last even combination" << endl;
+	  break; // done with this AMO!
+	} else
+	{ // to make sure all variables are valid only for positive!
+	// if a clause of l=chain[j] contains the literal l' == ~chain[j+rSize], then in the long run the clause will be dropped!
+	const Lit l =  chain[j + (half==0 ? 0 : rSize) ]; // positive occurrence[chain contains negative occurrences!]:  l is replaced by (newl \land newX); ~l is replaced by (~newL \lor ~newX)
+	const Lit r1 = half==0 ? newXp : newXn;		// replace with this literal
+	const Lit r2 = data.lits[j];	// replace with this literal
+	//
+	// store undo info! l <-> (newl \land newX)
+	// 
+	clsLits.clear(); // represent and gate with 3 clauses, push them!
+	clsLits.push(lit_Undef);clsLits.push(l);clsLits.push(~r1);clsLits.push(~r2);
+	clsLits.push(lit_Undef);clsLits.push(~l);clsLits.push(r1);
+	clsLits.push(lit_Undef);clsLits.push(~l);clsLits.push(r2);
+	data.addExtensionToExtension(clsLits);
+	// this code is actually exactly the same as for the rewriting AMOS TODO have a extra method for this?!
+	if( debug_out > 1 ) cerr << endl << endl << "c replace " << l << " with (" << r1 << " and " << r2 << ")" << endl;
+	vector<CRef>& ll = data.list(l);
+	for( int k = 0 ; k < ll.size(); ++ k ) {
+	  Clause& c= ca[ ll[k] ];
+	  assert(c.size() > 1 && "there should not be unit clauses!" );
+	  if( c.can_be_deleted() ) continue; // to not care about these clauses!
+	  if( debug_out > 1 ) cerr << endl << "c rewrite POS [" << ll[k] << "] : " << c << endl;
+	  clsLits.clear();
+	  int hitPos = -1;
+	  Lit minL = c[0];
+	  bool foundNR1 = false, foundNR2 = false, foundNR1comp=false, foundNR2comp = false;
+	  for( hitPos = 0 ; hitPos < c.size(); ++ hitPos ){
+	    assert( var(c[hitPos]) < newX && "newly added variables are always greater" );
+	    if( c[hitPos] == l ) {
+	      break; // look for literal l
+	    }
+	    const Lit cl = c[hitPos];
+	    clsLits.push(cl);
+	    minL =  data[cl] < data[minL] ? c[hitPos] : minL;
+	    foundNR1 = foundNR1 || (cl == r1); foundNR2 = foundNR2 || (cl == r2);
+	    foundNR1comp = foundNR1comp || (cl == ~r1); foundNR2comp = foundNR2comp || (cl == ~r2);
+	  }
+	  for( ; hitPos+1 < c.size(); ++hitPos ) {
+	    c[hitPos] = c[hitPos+1]; // remove literal l
+	    const Lit cl = c[hitPos];
+	    clsLits.push( c[hitPos] );
+	    minL =  data[c[hitPos]] < data[minL] ? c[hitPos] : minL;
+	    foundNR1 = foundNR1 || (cl == r1); foundNR2 = foundNR2 || (cl == r2);
+	    foundNR1comp = foundNR1comp || (cl == ~r1); foundNR2comp = foundNR2comp || (cl == ~r2);
+	  }
+	  assert( hitPos + 1 == c.size() );
+	  if( debug_out > 4 ) cerr << "c hit at " << hitPos << " intermediate clause: " << c << endl;
+	  
+	  if( debug_out > 3 ) cerr << "c found r1: " << foundNR1 << "  r2: " << foundNR2 << " r1c: " <<  foundNR1comp << " rc2: " << foundNR2comp << " " << endl;
+	  
+	  Lit minL1 =  data[r1] < data[minL] ? r1 : minL;
+	  Lit minL2 =  data[r2] < data[minL] ? r2 : minL;
+	  
+	  assert( (!foundNR1 || !foundNR1comp ) && "cannot have both!" );
+	  assert( (!foundNR2 || !foundNR2comp ) && "cannot have both!" );
+	  
+	  //
+	  // TODO: handle foundNR1 and foundNR2 here
+	  //
+	  if( foundNR1 && foundNR2 ) { c.shrink(1); data.addSubStrengthClause(ll[k]); if( debug_out > 2 ) cerr << "c into2 pos new [" << ll[k] << "] : " << c << endl; continue; }
+	  if( debug_out > 4 )cerr << "c r1" << endl;
+	  bool reuseClause = false;
+	  // have altered the clause, and its not a tautology now, and its not subsumed
+	  if( !foundNR1comp && !foundNR1 ) {c[hitPos] = r1;c.sort();sortCalls++;} // in this clause, have the new literal, if not present already
+	  if( !foundNR1comp && !hasDuplicate( data.list(minL1) , c ) ) { // not there or subsumed -> add clause and test other via vector!
+	    if( foundNR1 ) {
+	      c.shrink(1); // already sorted!
+	      data.addSubStrengthClause(ll[k]); // afterwards, check for subsumption!
+	    } else {
+	      // add clause c to other lists if not there yet
+	      data[r1] ++; data.list(r1).push_back( ll[k] ); // add the clause to the right list! update stats!
+	      data.addSubStrengthClause(ll[k]); // afterwards, check for subsumption!
+	    }
+	    if( debug_out > 1 ) cerr << "c into1 pos [" << ll[k] << "] : " << c << endl;
+	  } else {
+	    // TODO could reuse clause here!
+	    reuseClause = true;
+	  }
+	  
+	  if( debug_out > 4 )cerr << "c r2 (reuse=" << reuseClause << ")" << endl;
+	  if( reuseClause ) {
+	    reuses ++;
+	    for( hitPos = 0 ; hitPos + 1 < c.size(); ++ hitPos ) if( c[hitPos] == r1 ) break; // replace r1 with r2 (or overwrite last position!)
+	    if( debug_out > 3 )cerr << "c found " << r1 << " at " << hitPos << endl;
+	    if( !foundNR2comp && !foundNR2 ) {c[hitPos] = r2;c.sort();sortCalls++;} // in this clause, have the new literal, if not present already
+	    if( !foundNR2comp && !hasDuplicate( data.list(minL1) , c ) ) { // not there or subsumed -> add clause and test other via vector!
+	      if( foundNR2 ) {
+		c.shrink(1); // already sorted!
+		data.addSubStrengthClause(ll[k]);
+	      } else {
+		// add clause c to other lists if not there yet
+		data[r2] ++; data.list(r2).push_back( ll[k] ); // add the clause to the right list! update stats!
+		data.addSubStrengthClause(ll[k]); // afterwards, check for subsumption!
+	      }
+	      if( debug_out > 1 ) cerr << "c into2 reuse [" << ll[k] << "] : " << c << endl;
+	    } else {
+	      droppedClauses ++;
+	      c.set_delete(true);
+	      data.removedClause( ll[k] );
+	    }
+	  } else { // do not reuse clause!
+	    if( !foundNR2comp && !foundNR2) { clsLits.push( r2 ); sort(clsLits); sortCalls++;}
+	    if( !foundNR2comp && !hasDuplicate( data.list(minL2) , clsLits ) ) {
+	      // add clause with clsLits
+	      CRef tmpRef = ca.alloc(clsLits, c.learnt() ); // use learnt flag of other !
+	      data.addSubStrengthClause(tmpRef,true); // afterwards, check for subsumption!
+	      if( debug_out > 1 ) cerr << "c into2 pos new [" << tmpRef << "] : " << ca[tmpRef] << endl;
+	      createdClauses ++;
+	      // clause is sorted already!
+	      data.addClause( tmpRef ); // add to all literal lists in the clause
+	      data.getClauses().push( tmpRef );
+	    }
+	  }
+	} // end positive clauses
+	ll.clear(); data[l] = 0; // clear list of positive clauses, update counter of l!
+	} // end environment!
+	
+	// rewrite negative clauses
+	const Lit nl = ~chain[j + (half==0 ? 0 : rSize) ]; 		// negative occurrence [chain contains negative occurrences!]:  ~l is replaced by (~newL \lor ~newX)
+	const Lit nr1 = half==0 ? newXn : newXp;		// replace with this literal
+	const Lit nr2 = ~data.lits[j];	// replace with this literal, always nr2 > nr1!!
+	if( debug_out > 1 ) cerr << endl << endl << "c replace " << nl << " with (" << nr1 << " lor " << nr2 << ")" << endl;
+	vector<CRef>& nll = data.list(nl);
+	for( int k = 0 ; k < nll.size(); ++ k ) {
+	  Clause& c= ca[ nll[k] ];
+	  assert(c.size() > 1 && "there should not be unit clauses!" );
+	  if( c.can_be_deleted() ) continue; // to not care about these clauses - no need to delete from list, will be done later
+	  if( debug_out > 1 ) cerr << endl << "c rewrite NEG [" << nll[k] << "] : " << c << endl;
+	  clsLits.clear();
+	  int hitPos = -1;
+	  Lit minL = c[0];
+	  bool foundNR1 = false, foundNR2 = false, foundNR1comp=false, foundNR2comp = false;
+	  for( hitPos = 0 ; hitPos < c.size(); ++ hitPos ){
+	    assert( var(c[hitPos]) < newX && "newly added variables are always greater" );
+	    if( c[hitPos] == nl ) break; // look for literal nl
+	    const Lit cl = c[hitPos];	    
+	    clsLits.push(cl);
+	    minL =  data[cl] < data[minL] ? cl : minL;
+	    foundNR1 = foundNR1 || (cl == nr1); foundNR2 = foundNR2 || (cl == nr2);
+	    foundNR1comp = foundNR1comp || (cl == ~nr1); foundNR2comp = foundNR2comp || (cl == ~nr2);
+	  } // second part of above loop without the check - if
+	  for( ; hitPos+1 < c.size(); ++hitPos ) {
+	    c[hitPos] = c[hitPos+1]; // remove literal nl
+	    const Lit cl = c[hitPos];
+	    clsLits.push( cl );
+	    minL =  data[cl] < data[minL] ? cl : minL;
+	    foundNR1 = foundNR1 || (cl == nr1); foundNR2 = foundNR2 || (cl == nr2);
+	    foundNR1comp = foundNR1comp || (cl == ~nr1); foundNR2comp = foundNR2comp || (cl == ~nr2);
+	  }
+	  assert( clsLits.size() + 1 == c.size() && "the literal itself should be missing!" );
+	  
+	  if( debug_out > 3 ) cerr << "c found nr1: " << foundNR1 << "  nr2: " << foundNR2 << " nr1c: " <<  foundNR1comp << " nrc2: " << foundNR2comp << " " << endl;
+	  
+	  assert( (!foundNR1 || !foundNR1comp ) && "cannot have both!" );
+	  assert( (!foundNR2 || !foundNR2comp ) && "cannot have both!" );
+	  
+	  if( foundNR1comp || foundNR2comp ) { // found complementary literals -> drop clause!
+	    c.set_delete(true);
+	    data.removedClause(nll[k]);
+	    if( debug_out > 1 ) cerr << "c into tautology " << endl;
+	    continue; // next clause!
+	  } else if (foundNR1 && foundNR2 ) {
+	    c.shrink(1); // sorted already! remove only the one literal!
+	    data.addSubStrengthClause(nll[k]);
+	    if( debug_out > 1 ) cerr << "c into reduced [" << nll[k] << "] : " << c << endl;
+	    continue;
+	  } else if( foundNR1 ) {
+	    c[hitPos] = nr2; data.list(nr2).push_back( nll[k] );
+	    data.addSubStrengthClause(nll[k]); c.sort() ;sortCalls++;
+	    if( debug_out > 1 ) cerr << "c into equal1 [" << nll[k] << "] : " << c << endl;
+	  } else if ( foundNR2 ) {
+	    c[hitPos] = nr1; data.list(nr1).push_back( nll[k] );
+	    data.addSubStrengthClause(nll[k]); c.sort() ;sortCalls++;
+	    if( debug_out > 1 ) cerr << "c into equal2 [" << nll[k] << "] : " << c << endl;
+	  }
+	  
+	  // general case: nothings inside -> enlarge clause!
+	  // check whether nr1 is already inside
+	  clsLits.push( nr1 );
+	  clsLits.push( nr2 );
+	  sort(clsLits);sortCalls++;
+	  if( hitPos > 0 && nr1 < c[hitPos-1]  ) c.sort() ;
+	  
+	  minL =  data[nr1] < data[minL] ? nr1 : minL;
+	  minL =  data[nr2] < data[minL] ? nr2 : minL;
+	  
+	  c.set_delete(true);
+	  if( !hasDuplicate( data.list(minL), clsLits ) ) {
+	    enlargedClauses ++;
+	    data.removedClause( nll[k] );
+	    CRef tmpRef = ca.alloc(clsLits, c.learnt() ); // no learnt clause!
+	    data.addSubStrengthClause(tmpRef, true); // afterwards, check for subsumption and strengthening!
+	    if( debug_out > 1 ) cerr << "c into4 neg new [" << tmpRef << "] : " << ca[tmpRef] << endl;
+	    // clause is sorted already!
+	    data.addClause( tmpRef ); // add to all literal lists in the clause
+	    data.getClauses().push( tmpRef );
+	  } else {
+	    droppedClauses ++;
+	    data.removedClause( nll[k] );
+	    if( debug_out > 1 ) cerr << "c into5 redundant dropped clause" << endl;
+	  }
+	  
+	}
+	nll.clear(); data[nl] = 0; // clear list of positive clauses, update counter of l!
+	  
+      } // end this half!
+    
+    } // finished this AMO
+    // ADD new CHAIN of first half (first most easy!!) + add to subsumption! 
+    clsLits.clear();
+    clsLits.push(lit_Undef);clsLits.push(lit_Undef);
+    for( int j = 0 ; j + 1< rSize; ++ j ) {
+      if( data.lits[j] < data.lits[j+1] ) { clsLits[0] =  ~data.lits[j] ;clsLits[1] = data.lits[j+1] ; }
+      else { clsLits[0] =  data.lits[j+1] ;clsLits[1] = ~data.lits[j] ; }
+	CRef tmpRef = ca.alloc(clsLits, false ); // no learnt clause!
+	data.addSubStrengthClause(tmpRef,true); // afterwards, check for subsumption!
+	if( debug_out > 2 ) cerr << "c add new chain [" << tmpRef << "] : " << ca[tmpRef] << endl;
+	// clause is sorted already!
+	data.addClause( tmpRef ); // add to all literal lists in the clause
+	data.getClauses().push( tmpRef );
+    }
+
+    
+    // do subsumption per iteration!
+    subsumption.process();
+    modifiedFormula = modifiedFormula || subsumption.appliedSomething();
+    
+    // do garbage collection, since we do a lot with clauses!
+    // actually, variable densing should be done here as well ...
+    data.checkGarbage();
+  }
+  return modifiedFormula;
 }
 
 bool Rewriter::rewriteAMO()  
@@ -718,6 +1017,7 @@ void Rewriter::printStatistics(ostream& stream)
   << foundChains << " foundChains, "
   << minChain << " minChain, "
   << maxChain << " maxChain, "
+  << processedChains << " processedChains, "
   << endl;
 }
 
