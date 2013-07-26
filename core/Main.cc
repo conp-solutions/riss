@@ -115,9 +115,10 @@ int main(int argc, char** argv)
     try {
         
 
-        parseOptions(argc, argv, true);
+        CoreConfig coreConfig;
+        coreConfig.parseOptions(argc, argv, true);
 
-        Solver S;
+        Solver S(coreConfig);
         double initial_time = cpuTime();
 
         S.verbosity = verb;

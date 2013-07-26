@@ -76,7 +76,7 @@ cotar: clean
 	tar czvf coprocessor3.tar.gz core LICENSE  Makefile mtl  README  simp  utils coprocessor-src
 
 qtar: clean
-	tar czvf qprocessor3.tar.gz core LICENSE  Makefile mtl  README  simp  utils coprocessor-src qprocessor-src
+	tar czvf qprocessor3.tar.gz core LICENSE Makefile mtl  README  simp  utils coprocessor-src qprocessor-src qp.sh 
 	
 # clean up after solving
 clean:

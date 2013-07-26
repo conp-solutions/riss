@@ -71,6 +71,7 @@ struct Lit {
     bool operator == (Lit p) const { return x == p.x; }
     bool operator != (Lit p) const { return x != p.x; }
     bool operator <  (Lit p) const { return x < p.x;  } // '<' makes p, ~p adjacent in the ordering.
+    bool operator <= (Lit p) const { return x <= p.x; } // '<' makes p, ~p adjacent in the ordering.
 };
 
 

@@ -37,6 +37,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "core/SolverTypes.h"
 #include "core/BoundedQueue.h"
 #include "core/Constants.h"
+#include "core/CoreConfig.h"
 
 // forward declaration
 namespace Coprocessor {
@@ -67,11 +68,12 @@ class Solver {
     friend class Coprocessor::Probing;
     friend class Coprocessor::Symmetry;
   
+    CoreConfig& config;
 public:
 
     // Constructor/Destructor:
     //
-    Solver();
+    Solver(CoreConfig& _config);
     virtual ~Solver();
 
     // Problem specification:
@@ -563,7 +565,7 @@ inline void     Solver::toDimacs     (const char* file, Lit p, Lit q, Lit r){ ve
 template <class T>
 inline void Solver::addToProof( T& clause, bool deleteFromProof, const Lit remLit)
 {
-  if (!outputsProof() || (deleteFromProof && opt_rupProofOnly) ) return; // no proof, or delete and noDrup
+  if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) ) return; // no proof, or delete and noDrup
   if( deleteFromProof ) fprintf(drupProofFile, "d ");
   for (int i = 0; i < clause.size(); i++) {
     if( clause[i] == lit_Undef ) continue;
@@ -572,7 +574,7 @@ inline void Solver::addToProof( T& clause, bool deleteFromProof, const Lit remLi
   if( deleteFromProof && remLit != lit_Undef ) fprintf(drupProofFile, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1));
   fprintf(drupProofFile, "0\n");
   
-  if( opt_verboseProof == 2 ) {
+  if( config.opt_verboseProof == 2 ) {
     cerr << "c [PROOF] ";
     if( deleteFromProof ) cerr << " d ";
     for (int i = 0; i < clause.size(); i++) {
@@ -586,10 +588,10 @@ inline void Solver::addToProof( T& clause, bool deleteFromProof, const Lit remLi
 
 inline void Solver::addUnitToProof(const Lit& l, bool deleteFromProof)
 {
-  if (!outputsProof() || (deleteFromProof && opt_rupProofOnly) ) return; // no proof, or delete and noDrup
+  if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) ) return; // no proof, or delete and noDrup
   if( deleteFromProof ) fprintf(drupProofFile, "d ");
   fprintf(drupProofFile, "%i 0\n", (var(l) + 1) * (-2 * sign(l) + 1));  
-  if( opt_verboseProof == 2 ) {
+  if( config.opt_verboseProof == 2 ) {
     if( deleteFromProof ) cerr << "c [PROOF] d " << l << endl;
     else cerr << "c [PROOF] " << l << endl;
   }
@@ -597,9 +599,9 @@ inline void Solver::addUnitToProof(const Lit& l, bool deleteFromProof)
 
 inline void Solver::addCommentToProof(const char* text, bool deleteFromProof)
 {
-  if (!outputsProof() || (deleteFromProof && opt_rupProofOnly) || opt_verboseProof == 0) return; // no proof, no Drup, or no comments
+  if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) || config.opt_verboseProof == 0) return; // no proof, no Drup, or no comments
   fprintf(drupProofFile, "c %s\n", text);  
-  if( opt_verboseProof == 2 ) cerr << "c [PROOF] c " << text << endl;
+  if( config.opt_verboseProof == 2 ) cerr << "c [PROOF] c " << text << endl;
 }
 
 

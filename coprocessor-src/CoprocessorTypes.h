@@ -1708,7 +1708,10 @@ inline void BIG::recreate( ClauseAllocator& ca, Coprocessor::CoprocessorData& da
   }
   storage = storage == 0 ? (Lit*) malloc( sizeof(Lit) * sum ) : (Lit*) realloc( storage, sizeof(Lit) * sum )  ;
   big = big == 0 ? (Lit**)malloc ( sizeof(Lit*) * data.nVars() * 2 ) : (Lit**)realloc ( big, sizeof(Lit*) * data.nVars() * 2 );
-  // memset(sizes,0, sizeof(Lit*) * data.nVars() * 2 );
+  // should not be necessary!
+  memset(storage,0, sizeof(Lit) * sum );
+  memset(big, 0, sizeof(Lit*) * data.nVars() * 2 ); 
+  
   // set the pointers to the right location and clear the size
   sum = 0 ;
   for ( int i = 0 ; i < data.nVars() * 2; ++ i )
@@ -1732,7 +1735,7 @@ inline void BIG::recreate( ClauseAllocator& ca, Coprocessor::CoprocessorData& da
 
 inline void BIG::recreate( ClauseAllocator& ca, Coprocessor::CoprocessorData& data, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2)
 {
-  
+  assert(false && "not implemented yet"); // this method is not duing anything!
 }
 
 inline void BIG::removeEdge(const Lit l0, const Lit l1)
