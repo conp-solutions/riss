@@ -547,7 +547,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
       for(int i=0;i<out_learnt.size();i++) {
 
 	int l = level(var(out_learnt[i]));
-	if (permDiff[l] != MYFLAG) {
+	if ((!config.opt_lbd_ignore_l0 || l>0) && permDiff[l] != MYFLAG) {
 	  permDiff[l] = MYFLAG;
 	  lbd++;
 	}
@@ -617,7 +617,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
       for(int i=0;i<out_learnt.size();i++) {
 
 	int l = level(var(out_learnt[i]));
-	if (permDiff[l] != MYFLAG) {
+	if ((!config.opt_lbd_ignore_l0 || l>0) &&  permDiff[l] != MYFLAG) {
 	  permDiff[l] = MYFLAG;
 	  lbd++;
 	}
@@ -696,7 +696,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
   for(int i=0;i<out_learnt.size();i++) {
     
     int l = level(var(out_learnt[i]));
-    if (permDiff[l] != MYFLAG) {
+    if ( (!config.opt_lbd_ignore_l0 || l>0) && permDiff[l] != MYFLAG) {
       permDiff[l] = MYFLAG;
       lbd++;
     }
@@ -1036,7 +1036,7 @@ CRef Solver::propagate()
 		  unsigned  int nblevels =0;
 		  for(int i=0;i<c.size();i++) {
 		    int l = level(var(c[i]));
-		    if (permDiff[l] != MYFLAG) {
+		    if ( (!config.opt_lbd_ignore_l0 || l>0) && permDiff[l] != MYFLAG) {
 		      permDiff[l] = MYFLAG;
 		      nblevels++;
 		    }
