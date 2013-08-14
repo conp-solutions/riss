@@ -61,7 +61,7 @@ Solver::Solver(CoreConfig& _config) :
     , drupProofFile (0)
     // Parameters (user settable):
     //
-    , verbosity      (0)
+    , verbosity      (config.opt_verb)
     , K              (config.opt_K)
     , R              (config.opt_R)
     , sizeLBDQueue   (config.opt_size_lbd_queue)
