@@ -42,6 +42,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 // forward declaration
 namespace Coprocessor {
   class Preprocessor;
+  class CP3Config;
   class CoprocessorData;
   class Propagation;
   class BoundedVariableElimination;
@@ -407,7 +408,14 @@ protected:
   
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;
-public:     bool useCoprocessor;
+public:     
+  
+  void setPreprocessor( Coprocessor::Preprocessor* cp );
+  
+  void setPreprocessor( Coprocessor::CP3Config* _config );
+  
+  bool useCoprocessorPP;
+  bool useCoprocessorIP;
 
   /** if extra info should be used, this method needs to return true! */
   bool usesExtraInfo() const { return false; } 

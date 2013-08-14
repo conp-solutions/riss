@@ -87,7 +87,15 @@ int main(int argc, char** argv)
 	
         parseOptions(argc, argv, true);
         
-        Solver  S;
+        CoreConfig coreConfig;
+        coreConfig.parseOptions(argc, argv, true);
+
+	Coprocessor::CP3Config cp3config;
+	coreConfig.parseOptions(argc, argv, true);
+	
+        Solver S(coreConfig);
+	S.setPreprocessor(&cp3config); // tell solver about preprocessor
+	
         double      initial_time = cpuTime();
 
         S.verbosity = verb;

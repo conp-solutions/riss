@@ -39,6 +39,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "core/Dimacs.h"
 #include "core/Solver.h"
 
+#include "coprocessor-src/Coprocessor.h"
+
 using namespace Minisat;
 
 //=================================================================================================
@@ -118,7 +120,12 @@ int main(int argc, char** argv)
         CoreConfig coreConfig;
         coreConfig.parseOptions(argc, argv, true);
 
+	Coprocessor::CP3Config cp3config;
+	coreConfig.parseOptions(argc, argv, true);
+	
         Solver S(coreConfig);
+	S.setPreprocessor(&cp3config); // tell solver about preprocessor
+	
         double initial_time = cpuTime();
 
         S.verbosity = verb;

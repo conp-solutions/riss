@@ -124,6 +124,9 @@ IntOption opt_verboseProof;
 BoolOption opt_rupProofOnly; 
  
  IntOption opt_verb;
+ 
+ BoolOption opt_usePPpp;
+ BoolOption opt_usePPip;
 };
  
 }

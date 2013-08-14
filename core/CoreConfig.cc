@@ -105,7 +105,10 @@ CoreConfig::CoreConfig() // add new options here!
  opt_verboseProof ("PROOF", "verb-proof", "also print comments into the proof, 2=print proof also to stderr", 1, IntRange(0, 2) ),
  opt_rupProofOnly ("PROOF", "rup-only", "do not print delete lines into proof", false), 
  
- opt_verb ("CORE", "solververb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2))
+ opt_verb ("CORE", "solververb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2)),
+ 
+ opt_usePPpp ("CORE", "usePP", "use preprocessor for preprocessing", true),
+ opt_usePPip ("CORE", "useIP", "use preprocessor for inprocessing", true)
 {}
 
 void CoreConfig::parseOptions(int& argc, char** argv, bool strict)

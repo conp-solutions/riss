@@ -157,15 +157,14 @@ Solver::Solver(CoreConfig& _config) :
   
   // preprocessor
   , coprocessor(0)
-  , useCoprocessor(true)
+  , useCoprocessorPP(config.opt_usePPpp)
+  , useCoprocessorIP(config.opt_usePPip)
 {MYFLAG=0;}
 
 
 
 Solver::~Solver()
 {
-    if (coprocessor != 0)
-        delete coprocessor;
 }
 
 
@@ -1820,7 +1819,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
     if( status == l_Undef ) {
 	  // restart, triggered by the solver
 	  // if( coprocessor == 0 && useCoprocessor) coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
-          if( coprocessor != 0 && useCoprocessor) status = coprocessor->preprocess();
+          if( coprocessor != 0 && useCoprocessorPP) status = coprocessor->preprocess();
          if (verbosity >= 1) printf("c =========================================================================================================\n");
     }
     
@@ -1840,7 +1839,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
 	if( status == l_Undef ) {
 	  // restart, triggered by the solver
 	  // if( coprocessor == 0 && useCoprocessor)  coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
-          if( coprocessor != 0 && useCoprocessor) status = coprocessor->inprocess();
+          if( coprocessor != 0 && useCoprocessorIP) status = coprocessor->inprocess();
 	}
 	
     }
@@ -1862,7 +1861,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
         model.growTo(nVars());
         for (int i = 0; i < nVars(); i++) model[i] = value(i);
 	
-	if( coprocessor != 0 && useCoprocessor) coprocessor->extendModel(model);
+	if( coprocessor != 0 && (useCoprocessorPP || useCoprocessorIP) ) coprocessor->extendModel(model);
 	
     }else if (status == l_False && conflict.size() == 0)
         ok = false;
@@ -2019,4 +2018,12 @@ uint64_t Solver::variableExtraInfo(const Var& v) const
   return 0;
 }
 
+void Solver::setPreprocessor(Coprocessor::Preprocessor* cp)
+{
+  if ( coprocessor == 0 ) coprocessor = cp;
+}
 
+void Solver::setPreprocessor(Coprocessor::CP3Config* _config)
+{
+  coprocessor = new Coprocessor::Preprocessor( this, *_config ); 
+}
