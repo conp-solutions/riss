@@ -39,7 +39,7 @@ class Probing : public Technique {
   
   
 public:
-  Probing( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, EquivalenceElimination& _ee, Solver& _solver);
+  Probing( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, EquivalenceElimination& _ee, Solver& _solver);
   
   /** perform probing and clause vivification
    * @return false, if formula is UNSAT

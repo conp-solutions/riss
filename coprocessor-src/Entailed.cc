@@ -18,8 +18,8 @@ static IntOption  debug             (_cat, "ent-debug",       "Debug Output for 
 
 using namespace Coprocessor;
 
-EntailedRedundant::EntailedRedundant( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data )
-: Technique(_ca,_controller)
+EntailedRedundant::EntailedRedundant( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data )
+: Technique(_config, _ca,_controller)
 ,data(_data)
 ,processTime(0)
 ,subsumed(0)

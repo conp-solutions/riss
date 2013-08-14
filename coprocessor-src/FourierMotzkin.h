@@ -66,7 +66,7 @@ class FourierMotzkin : public Technique  {
   };
   
 public:
-  FourierMotzkin( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation );
+  FourierMotzkin( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation );
 
   void reset();
   

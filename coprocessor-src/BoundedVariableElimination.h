@@ -82,7 +82,7 @@ class BoundedVariableElimination : public Technique {
 
 public:
   
-  BoundedVariableElimination( ClauseAllocator& _ca, ThreadController& _controller , Coprocessor::Propagation & _propagation, Coprocessor::Subsumption & _subsumption);
+  BoundedVariableElimination( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller , Coprocessor::Propagation & _propagation, Coprocessor::Subsumption & _subsumption);
  
   lbool process(CoprocessorData & data, const bool doStatistics = true) { modifiedFormula = false; return runBVE(data, doStatistics); }
 

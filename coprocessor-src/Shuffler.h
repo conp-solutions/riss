@@ -9,6 +9,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 #include "core/Solver.h"
 #include "coprocessor-src/CoprocessorTypes.h"
+#include "coprocessor-src/CP3Config.h"
 using namespace Minisat;
 
 namespace Coprocessor {
@@ -34,6 +35,7 @@ namespace Coprocessor {
 
   class VarShuffler 
   {
+    CP3Config& config;
     uint32_t variables;
     vector< Lit > replacedBy;
     uint32_t seed;
@@ -41,7 +43,7 @@ namespace Coprocessor {
     Randomizer randomizer;
     
   public:
-    VarShuffler();
+    VarShuffler(CP3Config &_config);
 
     /** apply full shuffling process to clauses */
     void process(vec< Minisat::CRef >& clauses, vec< Minisat::CRef >& learnts, vec< Lit >& trail, uint32_t vars, ClauseAllocator& ca);

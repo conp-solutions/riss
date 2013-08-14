@@ -20,7 +20,7 @@ class Resolving  : public Technique
   vector<int> seen; // remembers how many clauses per variable have been processed already
   
 public:
-  Resolving(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data);
+  Resolving(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data);
 
   void process( bool post = false);
 

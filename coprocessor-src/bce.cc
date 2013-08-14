@@ -6,8 +6,8 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 using namespace Coprocessor;
 
-BlockedClauseElimination::BlockedClauseElimination( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data )
-: Technique(_ca,_controller),
+BlockedClauseElimination::BlockedClauseElimination( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data )
+: Technique(_config, _ca,_controller),
 data(_data)
 {
   

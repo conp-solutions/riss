@@ -34,8 +34,8 @@ static IntOption debug_out                 (_cat, "fm-debug",       "Debug Outpu
 
 using namespace Coprocessor;
 
-FourierMotzkin::FourierMotzkin( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation )
-: Technique(_ca,_controller)
+FourierMotzkin::FourierMotzkin( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation )
+: Technique(_config, _ca,_controller)
 , data(_data)
 , propagation(_propagation)
 , processTime(0)

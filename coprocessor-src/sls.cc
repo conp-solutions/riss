@@ -18,9 +18,9 @@ static IntOption  opt_ksat_flips (_cat, "sls-ksat-flips",   "how many flips shou
 static IntOption  opt_rand_walk  (_cat, "sls-rnd-walk",     "probability of random walk (0-10000)", 2000, IntRange(0,10000));
 static BoolOption opt_adopt      (_cat, "sls-adopt-cls",    "reduce nr of flips for large instances", false);
 
-Sls::Sls(CoprocessorData& _data, ClauseAllocator& _ca, ThreadController& _controller)
+Sls::Sls(CP3Config &_config, CoprocessorData& _data, ClauseAllocator& _ca, ThreadController& _controller)
 : 
-Technique(_ca, _controller)
+Technique(_config, _ca, _controller)
 , data(_data)
 , ca ( _ca )
 , solveTime(0)

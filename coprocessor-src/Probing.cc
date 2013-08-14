@@ -31,8 +31,8 @@ static const int debug_out = 0;
 static IntOption debug_out        (_cat, "pr-debug", "debug output for probing",0, IntRange(0,4) );
 #endif
 
-Probing::Probing(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, EquivalenceElimination& _ee, Solver& _solver)
-: Technique( _ca, _controller )
+Probing::Probing(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, EquivalenceElimination& _ee, Solver& _solver)
+: Technique( _config, _ca, _controller )
 , data( _data )
 , solver( _solver )
 , propagation ( _propagation )

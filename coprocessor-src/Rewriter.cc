@@ -48,8 +48,8 @@ void Rewriter::giveMoreSteps()
 }
 
 
-Rewriter::Rewriter(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Coprocessor::Subsumption& _subsumption)
-: Technique( _ca, _controller )
+Rewriter::Rewriter(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Coprocessor::Subsumption& _subsumption)
+: Technique( _config, _ca, _controller )
 , data( _data )
 , processTime(0)
 , rewAmoTime(0)

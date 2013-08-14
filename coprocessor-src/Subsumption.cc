@@ -41,8 +41,8 @@ static int opt_debug = 0;
 static IntOption   opt_debug   (_cat, "susi_debug" , "Debug Output for Subsumption", 0, IntRange(0,3));
 #endif
 
-Subsumption::Subsumption( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation )
-: Technique( _ca, _controller )
+Subsumption::Subsumption( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation )
+: Technique( _config, _ca, _controller )
 , data(_data)
 , propagation( _propagation )
 , subsumedClauses(0)

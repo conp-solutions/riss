@@ -10,19 +10,8 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 using namespace std;
 using namespace Coprocessor;
 
-static const char* _cat = "COPROCESSOR 3 - DENSE";
-
-/// enable this parameter only during debug!
-#if defined CP3VERSION  
-static const bool debug_out = false;
-#else
-static BoolOption debug_out         (_cat, "cp3_dense_debug", "print debug output to screen",false);
-#endif
-
-static IntOption  opt_frag  (_cat, "cp3_dense_frag",   "Perform densing, if fragmentation is higher than (percent)", 0, IntRange(0, 100));
-
-Dense::Dense(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation)
-: Technique(_ca,_controller)
+Dense::Dense(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation)
+: Technique(_config, _ca,_controller)
 , data(_data)
 , propagation( _propagation )
 , globalDiff(0)
@@ -48,7 +37,7 @@ void Dense::compress(const char* newWhiteFile)
     for( ; j < clause.size(); ++j ){
       const Lit l = clause[j];
       
-      if( debug_out && l_Undef != data.value(l) ) cerr << "c DENSE found assigned literal " << l << " in clause ["<< data.getClauses()[i] << "] : " << clause << endl ;
+      if( config.dense_debug_out && l_Undef != data.value(l) ) cerr << "c DENSE found assigned literal " << l << " in clause ["<< data.getClauses()[i] << "] : " << clause << endl ;
       assert( l_Undef == data.value(l) && "there cannot be assigned literals");
       assert(var(l) < data.nVars() );
       
@@ -69,11 +58,11 @@ void Dense::compress(const char* newWhiteFile)
   free( count ); // do not need the count array any more
   
   // formula is already compact, or not too loose
-  if( diff == 0 || ( opt_frag > 1 + ( (diff * 100)  / data.nVars()  ) ) ) return;
+  if( diff == 0 || ( config.opt_dense_fragmentation > 1 + ( (diff * 100)  / data.nVars()  ) ) ) return;
   globalDiff += diff;
   
   // replace everything in the clauses
-  if( debug_out > 0 ) cerr << "c [DENSE] compress clauses" << endl;
+  if( config.dense_debug_out > 0 ) cerr << "c [DENSE] compress clauses" << endl;
   for( int s = 0 ; s < 2; ++ s ) {
     vec<CRef>& list = s == 0 ? data.getClauses() : data.getLEarnts();
     for( uint32_t i = 0 ; i < list.size(); ++i ){
@@ -105,7 +94,7 @@ void Dense::compress(const char* newWhiteFile)
   }
   
   // compress trail, so that it can still be used!
-  if( debug_out ) {
+  if( config.dense_debug_out ) {
     cerr << "c before trail: "; 
     for( uint32_t i = 0 ; i < data.getTrail().size(); ++ i ) cerr << " " << data.getTrail()[i];
     cerr << endl;
@@ -119,7 +108,7 @@ void Dense::compress(const char* newWhiteFile)
   data.clearTrail();
   propagation.reset(); // reset propagated literals in UP
 
-  if( debug_out ) {
+  if( config.dense_debug_out ) {
     cerr << "c final trail: "; 
     for( uint32_t i = 0 ; i < data.getTrail().size(); ++ i ) cerr << " " << data.getTrail()[i];
     cerr << endl;
@@ -132,7 +121,7 @@ void Dense::compress(const char* newWhiteFile)
     assert( data.value( mkLit( v, false) ) == l_Undef && "there is no assigned variable allowed " );
 //	    if( v+1 == data.nVars() ) cerr << "c final round with variable " << v+1 << endl;
     if ( compression.mapping[v] != -1 ){
-      if( debug_out ) cerr << "c map " << v+1 << " to " << compression.mapping[v] + 1 << endl;
+      if( config.dense_debug_out ) cerr << "c map " << v+1 << " to " << compression.mapping[v] + 1 << endl;
 //      if( v+1 == data.nVars() ) cerr << "c final round with move" << endl;
       // cerr << "c move intern var " << v << " to " << compression.mapping[v] << endl;
       data.moveVar( v, compression.mapping[v], v+1 == data.nVars() ); // map variable, and if done, re-organise everything
@@ -142,7 +131,7 @@ void Dense::compress(const char* newWhiteFile)
       // only set to 0, if needed afterwards
       if( compression.mapping[ v ] != v ) compression.mapping[ v ] = -1;
     } else {
-      if( debug_out ) cerr << "c remove variable " << v+1  << endl;
+      if( config.dense_debug_out ) cerr << "c remove variable " << v+1  << endl;
 //      if( v+1 == data.nVars() ) cerr << "c final round without move" << endl;
       // any variable that is not replaced should have l_Undef
       if( v+1 == data.nVars() ) data.moveVar( v-diff, v-diff, true ); // compress number of variables!
@@ -162,16 +151,16 @@ void Dense::compress(const char* newWhiteFile)
 
 void Dense::decompress(vec< lbool >& model)
 {
-  if( debug_out ) {
+  if( config.dense_debug_out ) {
     cerr << "c model to work on: ";
     for( int i = 0 ; i < model.size(); ++ i ) cerr << (model[i] == l_True ? i+1 : -i-1) << " ";
     cerr << endl;
   }
-  if( map_stack.size() == 0 && debug_out ) cerr << "c no decompression" << endl;
+  if( map_stack.size() == 0 && config.dense_debug_out ) cerr << "c no decompression" << endl;
   // walk backwards on compression stack!
   for( int i = map_stack.size() - 1; i >= 0; --i ) {
     Compression& compression = map_stack[i];
-    if( debug_out ) cerr << "c [DENSE] change number of variables from " << model.size() << " to " << compression.variables << endl;
+    if( config.dense_debug_out ) cerr << "c [DENSE] change number of variables from " << model.size() << " to " << compression.variables << endl;
     // extend the assignment, so that it is large enough
     if( model.size() < compression.variables ){
       model.growTo( compression.variables, l_False  );
@@ -182,7 +171,7 @@ void Dense::decompress(vec< lbool >& model)
     for( int v = compression.variables-1; v >= 0 ; v-- ){
       // use inverse mapping to restore the already given polarities (including UNDEF)
 	if( compression.mapping[v] != v && compression.mapping[v] != -1 ) {
-	  if( debug_out ) cerr << "c move variable " << v+1 << " to " << compression.mapping[v] + 1  << " -- falsify " << v+1 << endl;
+	  if( config.dense_debug_out ) cerr << "c move variable " << v+1 << " to " << compression.mapping[v] + 1  << " -- falsify " << v+1 << endl;
 	  
 	  model[ compression.mapping[v] ] =  model[ v ];
 	  // set old variable to some value
@@ -190,7 +179,7 @@ void Dense::decompress(vec< lbool >& model)
 	} else {
 	  if( model[v] == l_Undef ) {
 	    model[v] = l_False; 
-	    if( debug_out ) cerr << "c falsify " << v+1 << endl;
+	    if( config.dense_debug_out ) cerr << "c falsify " << v+1 << endl;
 	  }
 	}
     }
@@ -199,10 +188,10 @@ void Dense::decompress(vec< lbool >& model)
     for( int j = 0 ; j < compression.trail.size(); ++ j ) {
       if ( sign( compression.trail[j] ) ) model[ var(compression.trail[j]) ] = l_False;
       else model[ var(compression.trail[j]) ] = l_True;
-      if( debug_out ) cerr << "c satisfy " << compression.trail[j] << endl;
+      if( config.dense_debug_out ) cerr << "c satisfy " << compression.trail[j] << endl;
     }
   }
-  if( debug_out ) {
+  if( config.dense_debug_out ) {
     cerr << "c decompressed model: ";
     for( int i = 0 ; i < model.size(); ++ i ) cerr << (model[i] == l_True ? i+1 : -i-1) << " ";
     cerr << endl;

@@ -20,7 +20,7 @@ class BlockedClauseElimination : public Technique  {
   CoprocessorData& data;
   
 public:
-  BlockedClauseElimination( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data );
+  BlockedClauseElimination( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data );
 
   void reset();
   

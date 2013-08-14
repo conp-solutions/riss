@@ -17,8 +17,8 @@ static BoolOption useUnits                 (_cat, "2sat-units",  "If 2SAT finds 
 static BoolOption clearQueue               (_cat, "2sat-cq",     "do a decision after a unit has been found", true);
 #endif
 
-Coprocessor::TwoSatSolver::TwoSatSolver(ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::CoprocessorData& _data)
-: Technique( _ca, _controller)
+Coprocessor::TwoSatSolver::TwoSatSolver(CP3Config &_config, ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::CoprocessorData& _data)
+: Technique( _config, _ca, _controller)
 , data( _data )
 {
   solveTime = 0;

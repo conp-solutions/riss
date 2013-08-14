@@ -33,8 +33,8 @@ static const int debug_out = 0;
 static IntOption debug_out        (_cat, "sym-debug", "debug output for probing",0, IntRange(0,4) );
 #endif
 
-Symmetry::Symmetry( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Solver& _solver)
-: Technique(_ca, _controller)
+Symmetry::Symmetry( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Solver& _solver)
+: Technique(_config, _ca, _controller)
 , data(_data)
 , solver(_solver)
 , processTime(0)
@@ -198,18 +198,21 @@ bool Symmetry::process() {
 		  symmAddClause ++;
 		} else if( opt_conflicts > 0 && totalConflicts < opt_total_conflicts ) {
 		  assert( solver.assumptions.size() == 0 && "apply symmetry breaking only if no assumptions are used" );
-		  bool oldUsePP = solver.useCoprocessor;
+		  bool oldUsePP = solver.useCoprocessorPP;
+		  bool oldUseIP = solver.useCoprocessorIP;
 		  int oldVerb = solver.verbosity;
 		  totalConflicts = solver.conflicts - totalConflicts;
 		  solver.verbosity = 0;
-		  solver.useCoprocessor = false;
+		  solver.useCoprocessorPP = false;
+		  solver.useCoprocessorIP = false;
 		  solver.setConfBudget( opt_conflicts );
 		  assumptions.clear();
 		  assumptions.push( l1 );assumptions.push( l2 );
 		  lbool ret = solver.solveLimited(assumptions) ;
 		  solver.assumptions.clear();
 		  solver.verbosity = oldVerb;
-		  solver.useCoprocessor = oldUsePP;
+		  solver.useCoprocessorPP = oldUsePP;
+		  solver.useCoprocessorIP = oldUseIP;
 		  totalConflicts = solver.conflicts - totalConflicts;
 		  if( ret == l_False ) {
 		    // entailed! 

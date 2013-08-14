@@ -56,7 +56,7 @@ class EquivalenceElimination : public Technique {
   
 public:
   
-  EquivalenceElimination( ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation, Subsumption& _subsumption  );
+  EquivalenceElimination( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation, Subsumption& _subsumption  );
   
   /** run equivalent literal elimination */
   void process(CoprocessorData& data);

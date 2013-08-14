@@ -114,6 +114,109 @@ public:
  StringOption printAfter ;
 #endif
  
+//
+// BVE
+//
+
+#if defined CP3VERSION && CP3VERSION < 302
+  const bool opt_par_bve    ;
+  const int  opt_bve_verbose;
+#else
+ IntOption opt_par_bve         ;
+ IntOption  opt_bve_verbose     ;
+#endif
+ 
+ IntOption  opt_bve_limit       ;
+ IntOption  opt_learnt_growth   ;
+ IntOption  opt_resolve_learnts ;
+ BoolOption opt_unlimited_bve   ;
+ BoolOption opt_bve_strength    ;
+ IntOption  opt_bve_lits        ;
+ BoolOption opt_bve_findGate    ;
+ BoolOption opt_force_gates     ;
+ // pick order of eliminations
+ IntOption  opt_bve_heap        ;
+ // increasing eliminations
+ IntOption  opt_bve_grow        ;
+ IntOption  opt_bve_growTotal   ;
+ BoolOption opt_totalGrow       ;
+  
+ BoolOption opt_bve_bc          ;
+ IntOption heap_updates         ;
+ BoolOption opt_bce_only        ;
+ BoolOption opt_print_progress  ;
+ IntOption  opt_bveInpStepInc   ;
+
+#if defined CP3VERSION && CP3VERSION < 302
+const int par_bve_threshold ;
+const int postpone_locked_neighbors ;
+const bool opt_minimal_updates ;
+#else
+IntOption  par_bve_threshold; 
+IntOption  postpone_locked_neighbors;
+BoolOption opt_minimal_updates;
+#endif
+
+//
+// BVA
+//
+ IntOption  opt_bva_push             ;
+ IntOption  opt_bva_VarLimit         ;
+ IntOption  opt_bva_Alimit           ;
+ BoolOption opt_Abva                 ;
+ IntOption  opt_bvaInpStepInc        ;
+ IntOption  opt_Abva_heap            ;
+ BoolOption opt_bvaComplement        ;
+ BoolOption opt_bvaRemoveDubplicates ;
+ BoolOption opt_bvaSubstituteOr      ;
+#if defined CP3VERSION  
+ const int bva_debug;
+#else
+ IntOption  bva_debug                ;
+#endif
+
+#if defined CP3VERSION  && CP3VERSION < 350
+ const bool opt_bvaAnalysis = false;
+ const bool opt_Xbva = 0;
+ const bool opt_Ibva = 0;
+ const int opt_bvaAnalysisDebug = 0;
+ const int opt_bva_Xlimit = 100000000;
+ const int opt_bva_Ilimit = 100000000;
+ const int opt_Xbva_heap = 1;
+ const int opt_Ibva_heap = 1;
+#else
+ IntOption  opt_bvaAnalysisDebug     ;
+ IntOption  opt_bva_Xlimit           ;
+ IntOption  opt_bva_Ilimit           ;
+ IntOption  opt_Xbva_heap            ;
+ IntOption  opt_Ibva_heap            ;
+ IntOption  opt_Xbva                 ;
+ IntOption  opt_Ibva                 ;
+#endif
+
+//
+// CCE
+//
+IntOption opt_cceSteps;
+IntOption opt_ccelevel;
+IntOption opt_ccePercent;
+#if defined CP3VERSION  
+const int cce_debug_out;
+#else
+IntOption cce_debug_out;
+#endif
+IntOption  opt_cceInpStepInc;
+
+//
+// Dense
+//
+#if defined CP3VERSION  
+const bool dense_debug_out;
+#else
+BoolOption dense_debug_out;
+#endif
+IntOption  opt_dense_fragmentation;
+
 };
  
 }

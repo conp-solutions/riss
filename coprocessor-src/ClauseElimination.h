@@ -56,7 +56,7 @@ public:
     void reset () { cla.clear(); array.nextStep(); toProcess.clear(); toUndo.clear(); nextAla=0; }
   };
   
-  ClauseElimination( ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation );
+  ClauseElimination( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation );
 
   void process(CoprocessorData& data);
   

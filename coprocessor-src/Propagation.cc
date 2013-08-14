@@ -17,8 +17,8 @@ static const int debug_out = 0;
 static IntOption debug_out        (_cat, "up-debug", "debug output for propagation",0, IntRange(0,4) );
 #endif
 
-Propagation::Propagation( ClauseAllocator& _ca, ThreadController& _controller )
-: Technique( _ca, _controller )
+Propagation::Propagation( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller )
+: Technique( _config, _ca, _controller )
 , lastPropagatedLiteral( 0 )
 , removedClauses(0)
 , removedLiterals(0)

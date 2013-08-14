@@ -28,7 +28,7 @@ class Propagation : public Technique  {
   
 public:
   
-  Propagation( ClauseAllocator& _ca, ThreadController& _controller );
+  Propagation( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller );
   
   void reset();
   

@@ -35,7 +35,7 @@ class TwoSatSolver : public Technique
   int calls;			// number of calls to twosat solver
   
   public:
-    TwoSatSolver(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data);
+    TwoSatSolver(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data);
     ~TwoSatSolver();
     
   bool solve();

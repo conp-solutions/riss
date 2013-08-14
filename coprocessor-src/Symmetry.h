@@ -31,7 +31,7 @@ class Symmetry : public Technique {
   int totalConflicts;
   
 public:
-  Symmetry( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Solver& _solver);
+  Symmetry( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Solver& _solver);
   
   /** perform local symmetry detection
    * @return false, if formula is UNSAT

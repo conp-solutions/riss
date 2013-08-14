@@ -80,7 +80,7 @@ class Subsumption : public Technique {
             
 public:
   
-  Subsumption( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Coprocessor::Propagation& _propagation );
+  Subsumption( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Coprocessor::Propagation& _propagation );
   
   
   /** run subsumption and strengthening until completion 

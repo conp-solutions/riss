@@ -38,7 +38,7 @@ class HiddenTautologyElimination : public Technique {
   
 public:
   
-  HiddenTautologyElimination( ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation );
+  HiddenTautologyElimination( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation );
   
   /** run subsumption and strengthening until completion */
   void process(Coprocessor::CoprocessorData& data);

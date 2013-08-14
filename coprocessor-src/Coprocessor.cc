@@ -114,25 +114,25 @@ config( _config )
 , lastInpConflicts(0)
 , formulaVariables(-1)
 // classes for preprocessing methods
-, propagation( solver->ca, controller )
-, subsumption( solver->ca, controller, data, propagation )
-, hte( solver->ca, controller, propagation )
-, bve( solver->ca, controller, propagation, subsumption )
-, bva( solver->ca, controller, data )
-, cce( solver->ca, controller, propagation )
-, ee ( solver->ca, controller, propagation, subsumption )
-, unhiding ( solver->ca, controller, data, propagation, subsumption, ee )
-, probing  ( solver->ca, controller, data, propagation, ee, *solver )
-, res( solver->ca, controller, data)
-, rew( solver->ca, controller, data, subsumption )
-, fourierMotzkin( solver->ca, controller, data, propagation )
-, dense( solver->ca, controller, data, propagation)
-, symmetry(solver->ca, controller, data, *solver)
-, xorReasoning(solver->ca, controller, data, propagation, ee )
-, bce(solver->ca, controller, data )
-, entailedRedundant( solver->ca, controller, data)
-, sls ( data, solver->ca, controller )
-, twoSAT( solver->ca, controller, data)
+, propagation( config, solver->ca, controller )
+, subsumption( config, solver->ca, controller, data, propagation )
+, hte( config, solver->ca, controller, propagation )
+, bve( config, solver->ca, controller, propagation, subsumption )
+, bva( config, solver->ca, controller, data )
+, cce( config, solver->ca, controller, propagation )
+, ee ( config, solver->ca, controller, propagation, subsumption )
+, unhiding ( config, solver->ca, controller, data, propagation, subsumption, ee )
+, probing  ( config, solver->ca, controller, data, propagation, ee, *solver )
+, res( config, solver->ca, controller, data)
+, rew( config, solver->ca, controller, data, subsumption )
+, fourierMotzkin( config, solver->ca, controller, data, propagation )
+, dense( config, solver->ca, controller, data, propagation)
+, symmetry(config, solver->ca, controller, data, *solver)
+, xorReasoning(config, solver->ca, controller, data, propagation, ee )
+, bce(config, solver->ca, controller, data )
+, entailedRedundant( config, solver->ca, controller, data)
+, sls ( config, data, solver->ca, controller )
+, twoSAT( config, solver->ca, controller, data)
 , shuffleVariable (-1)
 {
   controller.init();
@@ -1396,7 +1396,7 @@ void Preprocessor::reSetupSolver()
 
 void Preprocessor::shuffle()
 {
-  VarShuffler vs;
+  VarShuffler vs(config);
   
   assert( solver->decisionLevel() == 0 && "shuffle only on level 0!" );
   
@@ -1418,7 +1418,7 @@ void Preprocessor::shuffle()
 void Preprocessor::unshuffle(vec< lbool >& model)
 {
   // setup shuffler, and unshuffle model!
-  VarShuffler vs;
+  VarShuffler vs(config);
   
   assert( (shuffleVariable == -1 || model.size() == shuffleVariable) && "number of variables has to match" );
   vs.unshuffle(model, model.size() );

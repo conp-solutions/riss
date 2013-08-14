@@ -17,7 +17,7 @@ class Sls : public Technique
 {
 
 public:
-  Sls(CoprocessorData& _data, ClauseAllocator& _ca, ThreadController& _controller);
+  Sls(CP3Config &_config, CoprocessorData& _data, ClauseAllocator& _ca, ThreadController& _controller);
   ~Sls();
 
   /** run sls algorithm on formula 

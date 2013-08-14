@@ -60,7 +60,7 @@ class Rewriter : public Technique  {
   
 public:
   
-  Rewriter( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::CoprocessorData& _data, Coprocessor::Subsumption& _subsumption );
+  Rewriter( CP3Config &_config, ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::CoprocessorData& _data, Coprocessor::Subsumption& _subsumption );
   
   void reset();
   

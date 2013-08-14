@@ -24,7 +24,10 @@ static IntOption debug_out                 (_cat, "shuffle-debug", "Debug Output
 #endif
 
 
-VarShuffler::VarShuffler() : variables(0), seed(0) {}
+VarShuffler::VarShuffler(CP3Config &_config) 
+: config(_config) 
+, variables(0)
+, seed(0) {}
 
 void VarShuffler::process(vec< Minisat::CRef >& clauses, vec< Minisat::CRef >& learnts, vec< Lit >& trail, uint32_t vars, ClauseAllocator& ca)
 {

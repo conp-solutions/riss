@@ -46,8 +46,8 @@ static BoolOption opt_eager_frozen     (_cat, "ee_freeze_eager", "exclude frozen
 
 static const int eeLevel = 1;
 
-EquivalenceElimination::EquivalenceElimination(ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation, Coprocessor::Subsumption& _subsumption)
-: Technique(_ca,_controller)
+EquivalenceElimination::EquivalenceElimination(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation, Coprocessor::Subsumption& _subsumption)
+: Technique(_config, _ca,_controller)
 , gateSteps(0)
 , gateTime(0)
 , gateExtractTime(0)

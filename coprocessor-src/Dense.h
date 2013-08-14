@@ -38,7 +38,7 @@ class Dense  : public Technique
 
   
 public:
-  Dense(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation);
+  Dense(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation);
 
   
   /** compress the formula - if necessary, output a new whiteFile */

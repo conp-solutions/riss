@@ -25,8 +25,8 @@ static const int debug = 0;
 static IntOption  debug             (_cat, "xor-debug",       "Debug Output of XOR reasoning", 0, IntRange(0, 5));
 #endif
 
-XorReasoning::XorReasoning( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data,  Propagation& _propagation, EquivalenceElimination& _ee  )
-:Technique(_ca,_controller)
+XorReasoning::XorReasoning( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data,  Propagation& _propagation, EquivalenceElimination& _ee  )
+:Technique(_config, _ca,_controller)
 , data(_data)
 , propagation(_propagation)
 , ee(_ee)

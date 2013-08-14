@@ -29,8 +29,8 @@ void Unhiding::giveMoreSteps()
 }
 
 
-Unhiding::Unhiding(ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, Subsumption& _subsumption, EquivalenceElimination& _ee)
-: Technique( _ca, _controller )
+Unhiding::Unhiding(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, Subsumption& _subsumption, EquivalenceElimination& _ee)
+: Technique( _config, _ca, _controller )
 , data( _data )
 , propagation( _propagation )
 , subsumption( _subsumption )

@@ -26,8 +26,8 @@ static IntOption  opt_inpStepInc      (_cat, "cp3_hte_inpInc","increase for step
 
 using namespace Coprocessor;
 
-HiddenTautologyElimination::HiddenTautologyElimination( ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation )
-: Technique( _ca, _controller )
+HiddenTautologyElimination::HiddenTautologyElimination( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation )
+: Technique( _config, _ca, _controller )
 , propagation (_propagation)
 , steps(opt_steps)
 , processTime(0)

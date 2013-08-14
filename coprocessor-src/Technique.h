@@ -9,7 +9,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "utils/System.h"
 
 #include "coprocessor-src/CoprocessorThreads.h"
-
+#include "coprocessor-src/CP3Config.h"
 using namespace Minisat;
 
 namespace Coprocessor {
@@ -20,7 +20,8 @@ namespace Coprocessor {
 class Technique {
  
 protected:
-
+  CP3Config& config;             // store the configuration for the whole preprocessor
+  
   bool modifiedFormula;         // true, if subsumption did something on formula
   bool isInitialized;           // true, if the structures have been initialized and the technique can be used
   uint32_t myDeleteTimer;       // timer to control which deleted variables have been seen already
@@ -36,7 +37,7 @@ protected:
     
 public:
   
-  Technique( ClauseAllocator& _ca, ThreadController& _controller );
+  Technique( CP3Config& _config, ClauseAllocator& _ca, ThreadController& _controller );
   
   /** return whether some changes have been applied since last time
    *  resets the counter after call
@@ -104,8 +105,9 @@ inline void Technique::giveMoreSteps()
 }
 
 
-inline Technique::Technique( ClauseAllocator& _ca, Coprocessor::ThreadController& _controller )
-: modifiedFormula(false)
+inline Technique::Technique( Coprocessor::CP3Config& _config, ClauseAllocator& _ca, Coprocessor::ThreadController& _controller )
+: config( _config )
+, modifiedFormula(false)
 , isInitialized( false )
 , myDeleteTimer( 0 )
 , ca( _ca )

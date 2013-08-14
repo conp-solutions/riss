@@ -96,7 +96,7 @@ class XorReasoning : public Technique  {
   
 public:
 
-  XorReasoning( ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data,  Propagation& _propagation, EquivalenceElimination& _ee  );
+  XorReasoning( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data,  Propagation& _propagation, EquivalenceElimination& _ee  );
 
   void reset();
   
