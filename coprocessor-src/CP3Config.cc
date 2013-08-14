@@ -18,7 +18,16 @@ const char* _cat2 = "PREPROCESSOR TECHNIQUES";
 const char* _cat_bve = "COPROCESSOR 3 - BVE";
 const char* _cat_bva = "COPROCESSOR 3 - BVA";
 const char* _cat_cce = "COPROCESSOR 3 - CCE";
-static const char* _cat_dense = "COPROCESSOR 3 - DENSE";
+const char* _cat_dense = "COPROCESSOR 3 - DENSE";
+const char* _cat_entailed = "COPROCESSOR 3 - ENTAILED";
+const char* _cat_ee = "COPROCESSOR 3 - EQUIVALENCE ELIMINATION";
+const char* _cat_fm = "COPROCESSOR 3 - FOURIERMOTZKIN";
+const char* _cat_hte = "COPROCESSOR 3 - HTE";
+const char* _cat_pr = "COPROCESSOR 3 - PROBING";
+const char* _cat_up = "COPROCESSOR 3 - UP";
+const char* _cat_res = "COPROCESSOR 3 - RES";
+const char* _cat_rew = "COPROCESSOR 3 - REWRITE";
+const char* _cat_shuffle = "COPROCESSOR 3 - SHUFFLE";
 
 CP3Config::CP3Config() // add new options here!
 :
@@ -201,8 +210,184 @@ dense_debug_out (false),
 #else
 dense_debug_out (_cat_dense, "cp3_dense_debug", "print debug output to screen",false),
 #endif
-opt_dense_fragmentation  (_cat_dense, "cp3_dense_frag",   "Perform densing, if fragmentation is higher than (percent)", 0, IntRange(0, 100))
-   
+opt_dense_fragmentation  (_cat_dense, "cp3_dense_frag",   "Perform densing, if fragmentation is higher than (percent)", 0, IntRange(0, 100)),
+
+//
+// Entailed
+//
+opt_entailed_minClsSize  (_cat_entailed, "ent-min",    "minimum clause size that is tested", 2, IntRange(2, INT32_MAX)),
+#if defined CP3VERSION 
+entailed_debug(0),
+#else
+entailed_debug(_cat_entailed, "ent-debug",       "Debug Output for ENT reasoning", 0, IntRange(0, 5)),
+#endif
+
+//
+// Equivalence
+//
+#if defined CP3VERSION  && CP3VERSION < 350
+opt_ee_level            ( 0),
+opt_ee_gate_limit       ( 0),
+opt_ee_circuit_iters    ( 2),
+opt_ee_eagerEquivalence (false),
+opt_eeGateBigFirst   (false),
+opt_ee_aagFile (0),
+#else
+opt_ee_level            (_cat_ee, "cp3_ee_level",    "EE on BIG, gate probing, structural hashing", 0, IntRange(0, 3)),
+opt_ee_gate_limit       (_cat_ee, "cp3_ee_glimit",   "step limit for structural hashing", INT32_MAX, IntRange(0, INT32_MAX)),
+opt_ee_circuit_iters    (_cat_ee, "cp3_ee_cIter",    "max. EE iterations for circuit (-1 == inf)", 2, IntRange(-1, INT32_MAX)),
+opt_ee_eagerEquivalence (_cat_ee, "cp3_eagerGates",  "do handle gates eagerly", true),
+opt_eeGateBigFirst   (_cat_ee, "cp3_BigThenGate", "detect binary equivalences before going for gates", true),
+opt_ee_aagFile            (_cat_ee, "ee_aag", "write final circuit to this file"),
+#endif
+#if defined CP3VERSION  
+ee_debug_out (0),
+#else
+ee_debug_out            (_cat_ee, "ee_debug", "print debug output to screen", 0, IntRange(0, 3)),
+#endif
+opt_eeSub            (_cat_ee, "ee_sub",          "do subsumption/strengthening during applying equivalent literals?", false),
+opt_eeFullReset      (_cat_ee, "ee_reset",        "after Subs or Up, do full reset?", false),
+opt_ee_limit         (_cat_ee, "cp3_ee_limit",    "step limit for detecting equivalent literals", 1000000, IntRange(0, INT32_MAX)),
+opt_ee_inpStepInc       (_cat_ee, "cp3_ee_inpInc",   "increase for steps per inprocess call", 200000, IntRange(0, INT32_MAX)),
+opt_ee_bigIters         (_cat_ee, "cp3_ee_bIter",    "max. iteration to perform EE search on BIG", 3, IntRange(0, INT32_MAX)),
+opt_ee_iterative        (_cat_ee, "cp3_ee_it",       "use the iterative BIG-EE algorithm", false),
+opt_EE_checkNewSub   (_cat_ee, "cp3_ee_subNew",   "check for new subsumptions immediately when adding new clauses", false),
+opt_ee_eager_frozen     (_cat_ee, "ee_freeze_eager", "exclude frozen variables eagerly from found equivalences", false),
+
+//
+// Fourier Motzkin
+//
+opt_fmLimit        (_cat_fm, "cp3_fm_limit"  ,"number of steps allowed for FM", 12000000, IntRange(0, INT32_MAX)),
+opt_fmGrow         (_cat_fm, "cp3_fm_grow"   ,"max. grow of number of constraints per step", 40, IntRange(0, INT32_MAX)),
+opt_fmGrowT        (_cat_fm, "cp3_fm_growT"  ,"total grow of number of constraints", 100000, IntRange(0, INT32_MAX)),
+opt_atMostTwo      (_cat_fm, "cp3_fm_amt"     ,"extract at-most-two", false),
+opt_findUnit       (_cat_fm, "cp3_fm_unit"    ,"check for units first", true),
+opt_merge          (_cat_fm, "cp3_fm_merge"   ,"perform AMO merge", true),
+opt_duplicates     (_cat_fm, "cp3_fm_dups"    ,"avoid finding the same AMO multiple times", true),
+opt_cutOff         (_cat_fm, "cp3_fm_cut"     ,"avoid eliminating too expensive variables (>10,10 or >5,15)", true),
+opt_newAmo          (_cat_fm, "cp3_fm_newAmo"  ,"encode the newly produced AMOs (with pairwise encoding) 0=no,1=yes,2=try to avoid redundant clauses",  2, IntRange(0, 2)),
+opt_keepAllNew     (_cat_fm, "cp3_fm_keepM"   ,"keep all new AMOs (also rejected ones)", true),
+opt_newAlo          (_cat_fm, "cp3_fm_newAlo"  ,"create clauses from deduced ALO constraints 0=no,1=from kept,2=keep all ",  2, IntRange(0, 2)),
+opt_newAlk          (_cat_fm, "cp3_fm_newAlk"  ,"create clauses from deduced ALK constraints 0=no,1=from kept,2=keep all (possibly redundant!)",  2, IntRange(0, 2)),
+opt_checkSub       (_cat_fm, "cp3_fm_newSub"  ,"check whether new ALO and ALK subsume other clauses (only if newALO or newALK)", true),
+opt_rem_first      (_cat_fm, "cp3_fm_1st"     ,"extract first AMO candidate, or last AMO candidate", false),
+#if defined CP3VERSION 
+fm_debug_out (0),
+#else
+fm_debug_out (_cat_fm, "fm-debug",       "Debug Output of Fourier Motzkin", 0, IntRange(0, 4)),
+#endif
+
+//
+// Hidden Tautology Elimination
+//
+opt_hte_steps    (_cat_hte, "cp3_hte_steps",  "Number of steps that are allowed per iteration", INT32_MAX, IntRange(-1, INT32_MAX)),
+#if defined CP3VERSION && CP3VERSION < 302
+opt_par_hte        (false),
+#else
+opt_par_hte         (_cat_hte, "cp3_par_hte",    "Forcing Parallel HTE", false),
+#endif
+#if defined CP3VERSION  
+hte_debug_out (0),
+opt_hteTalk (false),
+#else
+hte_debug_out    (_cat_hte, "cp3_hte_debug",  "print debug output to screen", 0, IntRange(0, 4)),
+opt_hteTalk (_cat_hte, "cp3_hteTalk",    "talk about algorithm execution", false),
+#endif
+opt_hte_inpStepInc      (_cat_hte, "cp3_hte_inpInc","increase for steps per inprocess call", 60000, IntRange(0, INT32_MAX)),
+
+//
+// Probing
+//
+pr_uip            (_cat_pr, "pr-uips",   "perform learning if a conflict occurs up to x-th UIP (-1 = all )", -1, IntRange(-1, INT32_MAX)),
+pr_double        (_cat_pr, "pr-double", "perform double look-ahead",true),
+pr_probe         (_cat_pr, "pr-probe",  "perform probing",true),
+pr_rootsOnly     (_cat_pr, "pr-roots",  "probe only on root literals",true),
+pr_repeat        (_cat_pr, "pr-repeat", "repeat probing if changes have been applied",false),
+pr_clsSize        (_cat_pr, "pr-csize",  "size of clauses that are considered for probing/vivification (propagation)", INT32_MAX,  IntRange(0, INT32_MAX)),
+pr_prLimit        (_cat_pr, "pr-probeL", "step limit for probing", 5000000,  IntRange(0, INT32_MAX)),
+pr_EE            (_cat_pr, "pr-EE",     "run equivalent literal detection",true),
+pr_vivi          (_cat_pr, "pr-vivi",   "perform clause vivification",true),
+pr_keepLearnts    (_cat_pr, "pr-keepL",  "keep conflict clauses in solver (0=no,1=learnt,2=original)", 2, IntRange(0,2)),
+pr_keepImplied    (_cat_pr, "pr-keepI",  "keep clauses that imply on level 1 (0=no,1=learnt,2=original)", 2, IntRange(0,2)),
+pr_viviPercent    (_cat_pr, "pr-viviP",  "percent of max. clause size for clause vivification", 80, IntRange(0,100)),
+pr_viviLimit      (_cat_pr, "pr-viviL",  "step limit for clause vivification", 5000000,  IntRange(0, INT32_MAX)),
+pr_opt_inpStepInc1      (_cat_pr, "cp3_pr_inpInc","increase for steps per inprocess call", 1000000, IntRange(0, INT32_MAX)),
+pr_opt_inpStepInc2      (_cat_pr, "cp3_viv_inpInc","increase for steps per inprocess call", 1000000, IntRange(0, INT32_MAX)),
+#if defined CP3VERSION  
+pr_debug_out (0),
+#else
+pr_debug_out        (_cat_pr, "pr-debug", "debug output for probing",0, IntRange(0,4) ),
+#endif
+
+//
+// Unit Propagation
+//
+#if defined CP3VERSION  
+up_debug_out (0),
+#else
+up_debug_out (_cat_up, "up-debug", "debug output for propagation",0, IntRange(0,4) ),
+#endif
+
+//
+// Resolution and Redundancy Addition
+//
+opt_res3_use_binaries  (_cat_res, "cp3_res_bin",      "resolve with binary clauses", false),
+opt_res3_steps    (_cat_res, "cp3_res3_steps",   "Number of resolution-attempts that are allowed per iteration", 1000000, IntRange(0, INT32_MAX-1)),
+opt_res3_newCls   (_cat_res, "cp3_res3_ncls",    "Max. Number of newly created clauses", 100000, IntRange(0, INT32_MAX-1)),
+opt_res3_reAdd    (_cat_res, "cp3_res3_reAdd",   "Add variables of newly created resolvents back to working queues", false),
+opt_res3_use_subs      (_cat_res, "cp3_res_eagerSub", "perform eager subsumption", true),
+opt_add2_percent   (_cat_res, "cp3_res_percent",  "produce this percent many new clauses out of the total", 0.01, DoubleRange(0, true, 1, true)),
+opt_add2_red       (_cat_res, "cp3_res_add_red",  "add redundant binary clauses", false),
+opt_add2_red_level     (_cat_res, "cp3_res_add_lev",  "calculate added percent based on level", true),
+opt_add2_red_lea   (_cat_res, "cp3_res_add_lea",  "add redundants based on learneds as well?", false),
+opt_add2_red_start (_cat_res, "cp3_res_ars",      "also before preprocessing?", false),
+opt_res3_inpStepInc      (_cat_res, "cp3_res_inpInc","increase for steps per inprocess call", 200000, IntRange(0, INT32_MAX)),
+opt_add2_inpStepInc      (_cat_res, "cp3_add_inpInc","increase for steps per inprocess call", 60000, IntRange(0, INT32_MAX)),
+/// enable this parameter only during debug!
+#if defined CP3VERSION  
+res3_debug_out = false,
+#else
+res3_debug_out         (_cat_res, "cp3_res_debug",   "print debug output to screen",false),
+#endif
+
+
+//
+// Rewriter
+//
+opt_rew_min             (_cat_rew, "cp3_rew_min"  ,"min occurrence to be considered", 3, IntRange(0, INT32_MAX)),
+opt_rew_iter            (_cat_rew, "cp3_rew_iter" ,"number of iterations", 1, IntRange(0, INT32_MAX)),
+opt_rew_minAMO          (_cat_rew, "cp3_rew_minA" ,"min size of altered AMOs", 3, IntRange(0, INT32_MAX)),
+opt_rew_limit        (_cat_rew, "cp3_rew_limit","number of steps allowed for REW", 1200000, IntRange(0, INT32_MAX)),
+opt_rew_Varlimit        (_cat_rew, "cp3_rew_Vlimit","max number of variables to still perform REW", 1000000, IntRange(0, INT32_MAX)),
+opt_rew_Addlimit        (_cat_rew, "cp3_rew_Addlimit","number of new variables being allowed", 100000, IntRange(0, INT32_MAX)),
+opt_rew_amo        (_cat_rew, "cp3_rew_amo"   ,"rewrite amos", true),
+opt_rew_imp        (_cat_rew, "cp3_rew_imp"   ,"rewrite implication chains", false),
+opt_rew_scan_exo        (_cat_rew, "cp3_rew_exo"   ,"scan for encoded exactly once constraints first", false),
+opt_rew_merge_amo       (_cat_rew, "cp3_rew_merge" ,"merge AMO constraints to create larger AMOs (fourier motzkin)", false),
+opt_rew_rem_first       (_cat_rew, "cp3_rew_1st"   ,"how to find AMOs", false),
+opt_rew_avg         (_cat_rew, "cp3_rew_avg"   ,"use AMOs above equal average only?", true),
+opt_rew_ratio       (_cat_rew, "cp3_rew_ratio" ,"allow literals in AMO only, if their complement is not more frequent", true),
+opt_rew_once        (_cat_rew, "cp3_rew_once"  ,"rewrite each variable at most once! (currently: yes only!)", true),
+opt_rew_stat_only       (_cat_rew, "cp3_rew_stats" ,"analyze formula, but do not apply rewriting", false ),
+opt_rew_min_imp_size        (_cat_rew, "cp3_rewI_min"   ,"min size of an inplication chain to be rewritten", 4, IntRange(0, INT32_MAX)),
+opt_rew_impl_pref_small     (_cat_rew, "cp3_rewI_small" ,"prefer little imply variables", true),
+opt_rew_inpStepInc      (_cat_rew, "cp3_rew_inpInc","increase for steps per inprocess call", 60000, IntRange(0, INT32_MAX)),
+#if defined CP3VERSION 
+rew_debug_out = 0,
+#else
+rew_debug_out                 (_cat_rew, "rew-debug",       "Debug Output of Rewriter", 0, IntRange(0, 4)),
+#endif
+
+//
+// Shuffle
+//
+opt_shuffle_seed          (_cat_shuffle, "shuffle-seed",  "seed for shuffling",  0, IntRange(0, INT32_MAX)),
+opt_shuffle_order        (_cat_shuffle, "shuffle-order", "shuffle the order of the clauses", true),
+#if defined CP3VERSION  
+debug_out = 0
+#else
+shuffle_debug_out                 (_cat_shuffle, "shuffle-debug", "Debug Output of Shuffler", 0, IntRange(0, 4))
+#endif
 {}
 
 void CP3Config::parseOptions(int& argc, char** argv, bool strict)

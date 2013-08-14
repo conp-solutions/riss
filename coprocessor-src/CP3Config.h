@@ -217,6 +217,182 @@ BoolOption dense_debug_out;
 #endif
 IntOption  opt_dense_fragmentation;
 
+//
+// Entailed
+//
+IntOption  opt_entailed_minClsSize;
+#if defined CP3VERSION 
+const int entailed_debug;
+#else
+IntOption  entailed_debug;
+#endif
+
+
+//
+// Equivalence
+//
+#if defined CP3VERSION  && CP3VERSION < 350
+const int opt_ee_level            ;
+const int opt_ee_gate_limit       ;
+const int opt_ee_circuit_iters    ;
+const bool opt_ee_eagerEquivalence;
+const bool opt_eeGateBigFirst     ;
+const char* opt_ee_aagFile        ;
+#else
+IntOption  opt_ee_level           ;
+IntOption  opt_ee_gate_limit      ;
+IntOption  opt_ee_circuit_iters   ;
+BoolOption opt_ee_eagerEquivalence;
+BoolOption opt_eeGateBigFirst     ;
+StringOption opt_ee_aagFile       ;
+#endif
+#if defined CP3VERSION  
+const int ee_debug_out;
+#else
+IntOption  ee_debug_out           ;
+#endif
+BoolOption opt_eeSub            ;
+BoolOption opt_eeFullReset      ;
+IntOption  opt_ee_limit         ;
+IntOption  opt_ee_inpStepInc    ;
+IntOption  opt_ee_bigIters      ;
+BoolOption opt_ee_iterative     ;
+BoolOption opt_EE_checkNewSub   ;
+BoolOption opt_ee_eager_frozen  ;
+
+//
+// Fourier Motzkin
+//
+IntOption  opt_fmLimit    ;
+IntOption  opt_fmGrow     ;
+IntOption  opt_fmGrowT    ;
+BoolOption opt_atMostTwo  ;
+BoolOption opt_findUnit   ;
+BoolOption opt_merge      ;
+BoolOption opt_duplicates ;
+BoolOption opt_cutOff     ;
+IntOption opt_newAmo      ;
+BoolOption opt_keepAllNew ;
+IntOption opt_newAlo      ;
+IntOption opt_newAlk      ;
+BoolOption opt_checkSub   ;
+BoolOption opt_rem_first  ;
+#if defined CP3VERSION 
+const int fm_debug_out;
+#else
+IntOption fm_debug_out       ;
+#endif
+
+//
+// Hidden Tautology Elimination
+//
+IntOption opt_hte_steps;
+#if defined CP3VERSION && CP3VERSION < 302
+const bool opt_par_hte;
+#else
+BoolOption opt_par_hte;
+#endif
+#if defined CP3VERSION  
+const int hte_debug_out;
+const bool opt_hteTalk;
+#else
+IntOption hte_debug_out;
+BoolOption opt_hteTalk ;
+#endif
+IntOption  opt_hte_inpStepInc;
+
+//
+// Probing
+//
+IntOption pr_uip;
+BoolOption pr_double     ;
+BoolOption pr_probe      ;
+BoolOption pr_rootsOnly  ;
+BoolOption pr_repeat     ;
+IntOption pr_clsSize     ;
+IntOption pr_prLimit     ;
+BoolOption pr_EE         ;
+BoolOption pr_vivi       ;
+IntOption pr_keepLearnts ;
+IntOption pr_keepImplied ;
+IntOption pr_viviPercent ;
+IntOption pr_viviLimit   ;
+IntOption  pr_opt_inpStepInc1      ;
+IntOption  pr_opt_inpStepInc2      ;
+#if defined CP3VERSION  
+const int pr_debug_out;
+#else
+IntOption pr_debug_out;
+#endif
+
+//
+// Unit Propagation
+//
+#if defined CP3VERSION  
+const int up_debug_out;
+#else
+IntOption up_debug_out;
+#endif
+
+//
+// Resolution and Redundancy Addition
+//
+BoolOption   opt_res3_use_binaries ;
+IntOption    opt_res3_steps    ;
+IntOption    opt_res3_newCls   ;
+BoolOption   opt_res3_reAdd    ;
+BoolOption   opt_res3_use_subs ;
+DoubleOption opt_add2_percent  ;
+BoolOption   opt_add2_red      ;
+BoolOption   opt_add2_red_level;
+BoolOption   opt_add2_red_lea  ;
+BoolOption   opt_add2_red_start;
+IntOption  opt_res3_inpStepInc ;
+IntOption  opt_add2_inpStepInc ;
+/// enable this parameter only during debug!
+#if defined CP3VERSION  
+const bool res3_debug_out (false);
+#else
+BoolOption res3_debug_out      ;
+#endif
+
+//
+// Rewriter
+//
+ IntOption  opt_rew_min   ;   
+ IntOption  opt_rew_iter   ;  
+ IntOption  opt_rew_minAMO ;  
+ IntOption  opt_rew_limit  ;  
+ IntOption  opt_rew_Varlimit ;
+ IntOption  opt_rew_Addlimit ;
+ BoolOption opt_rew_amo    ;  
+ BoolOption opt_rew_imp    ;  
+ BoolOption opt_rew_scan_exo ;
+ BoolOption opt_rew_merge_amo;
+ BoolOption opt_rew_rem_first;
+ BoolOption opt_rew_avg     ; 
+ BoolOption opt_rew_ratio  ;  
+ BoolOption opt_rew_once     ;
+ BoolOption opt_rew_stat_only;
+ IntOption  opt_rew_min_imp_size     ;   
+ BoolOption opt_rew_impl_pref_small   ;  
+ IntOption  opt_rew_inpStepInc     ;
+#if defined CP3VERSION 
+ const int rew_debug_out;
+#else
+ IntOption rew_debug_out;           
+#endif
+ 
+//
+// Shuffle
+//
+IntOption opt_shuffle_seed;
+BoolOption opt_shuffle_order;
+#if defined CP3VERSION  
+const int shuffle_debug_out;
+#else
+IntOption shuffle_debug_out;
+#endif
 };
  
 }

@@ -6,30 +6,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 using namespace Coprocessor;
 
-static const char* _cat = "COPROCESSOR 3 - PROBE";
 
-static IntOption pr_uip            (_cat, "pr-uips",   "perform learning if a conflict occurs up to x-th UIP (-1 = all )", -1, IntRange(-1, INT32_MAX));
-static BoolOption pr_double        (_cat, "pr-double", "perform double look-ahead",true);
-static BoolOption pr_probe         (_cat, "pr-probe",  "perform probing",true);
-static BoolOption pr_rootsOnly     (_cat, "pr-roots",  "probe only on root literals",true);
-static BoolOption pr_repeat        (_cat, "pr-repeat", "repeat probing if changes have been applied",false);
-static IntOption pr_clsSize        (_cat, "pr-csize",  "size of clauses that are considered for probing/vivification (propagation)", INT32_MAX,  IntRange(0, INT32_MAX));
-static IntOption pr_prLimit        (_cat, "pr-probeL", "step limit for probing", 5000000,  IntRange(0, INT32_MAX));
-static BoolOption pr_EE            (_cat, "pr-EE",     "run equivalent literal detection",true);
-static BoolOption pr_vivi          (_cat, "pr-vivi",   "perform clause vivification",true);
-static IntOption pr_keepLearnts    (_cat, "pr-keepL",  "keep conflict clauses in solver (0=no,1=learnt,2=original)", 2, IntRange(0,2));
-static IntOption pr_keepImplied    (_cat, "pr-keepI",  "keep clauses that imply on level 1 (0=no,1=learnt,2=original)", 2, IntRange(0,2));
-static IntOption pr_viviPercent    (_cat, "pr-viviP",  "percent of max. clause size for clause vivification", 80, IntRange(0,100));
-static IntOption pr_viviLimit      (_cat, "pr-viviL",  "step limit for clause vivification", 5000000,  IntRange(0, INT32_MAX));
-
-static IntOption  opt_inpStepInc1      (_cat, "cp3_pr_inpInc","increase for steps per inprocess call", 1000000, IntRange(0, INT32_MAX));
-static IntOption  opt_inpStepInc2      (_cat, "cp3_viv_inpInc","increase for steps per inprocess call", 1000000, IntRange(0, INT32_MAX));
-
-#if defined CP3VERSION  
-static const int debug_out = 0;
-#else
-static IntOption debug_out        (_cat, "pr-debug", "debug output for probing",0, IntRange(0,4) );
-#endif
 
 Probing::Probing(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, EquivalenceElimination& _ee, Solver& _solver)
 : Technique( _config, _ca, _controller )
@@ -37,7 +14,7 @@ Probing::Probing(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _co
 , solver( _solver )
 , propagation ( _propagation )
 , ee ( _ee )
-, probeLimit(pr_prLimit)
+, probeLimit(config.pr_prLimit)
 , probeChecks(0)
 , processTime(0)
 , l1implied(0)
@@ -55,7 +32,7 @@ Probing::Probing(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _co
 , viviLits(0)
 , viviCls(0)
 , viviCands(0)
-, viviLimit(pr_viviLimit)
+, viviLimit(config.pr_viviLimit)
 , viviChecks(0)
 , viviSize(0)
 {
@@ -65,8 +42,8 @@ Probing::Probing(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _co
 
 void Probing::giveMoreSteps()
 {
-probeChecks = probeChecks < opt_inpStepInc1 ? 0 : probeChecks - opt_inpStepInc1;
-viviChecks = viviChecks < opt_inpStepInc2 ? 0 : viviChecks - opt_inpStepInc2;
+probeChecks = probeChecks < config.pr_opt_inpStepInc1 ? 0 : probeChecks - config.pr_opt_inpStepInc1;
+viviChecks = viviChecks < config.pr_opt_inpStepInc2 ? 0 : viviChecks - config.pr_opt_inpStepInc2;
 }
 
 bool Probing::process()
@@ -76,7 +53,7 @@ bool Probing::process()
   if( !data.ok() ) return false;
   
   // do not enter, if already unsatisfiable!
-  if( (! pr_probe && ! pr_vivi) || !data.ok() ) return data.ok();
+  if( (! config.pr_probe && ! config.pr_vivi) || !data.ok() ) return data.ok();
   
   // resetup solver
   reSetupSolver();
@@ -95,14 +72,14 @@ bool Probing::process()
     solver.polarity.copyTo( polarity );
     
     // run probing?
-    if( pr_probe && data.ok()  ) {
-      if( debug_out > 0 ) cerr << "c old trail: " << solver.trail.size() << endl;
+    if( config.pr_probe && data.ok()  ) {
+      if( config.pr_debug_out > 0 ) cerr << "c old trail: " << solver.trail.size() << endl;
       probing();
-      if( debug_out > 0 ) cerr << "c new trail: " << solver.trail.size() << " solver.ok: " << data.ok() << endl;
+      if( config.pr_debug_out > 0 ) cerr << "c new trail: " << solver.trail.size() << " solver.ok: " << data.ok() << endl;
     }
     
     // run clause vivification?
-    if( pr_vivi && data.ok() ) {
+    if( config.pr_vivi && data.ok() ) {
       clauseVivification();
       assert( solver.decisionLevel() == 0 && "after vivification the decision level should be 0!" );
     }
@@ -113,7 +90,7 @@ bool Probing::process()
     // clean solver again!
     cleanSolver();
     
-    if( debug_out > 3 ) {
+    if( config.pr_debug_out > 3 ) {
       for( Var v = 0 ; v < data.nVars(); ++ v ) {
 	for( int p = 0 ; p < 2; ++p ) {
 	  const Lit l = mkLit(v, p==1);
@@ -128,7 +105,7 @@ bool Probing::process()
     
     sortClauses();
     if( propagation.process(data,true) == l_False){
-      if( debug_out > 1 ) cerr << "c propagation failed" << endl;
+      if( config.pr_debug_out > 1 ) cerr << "c propagation failed" << endl;
       data.setFailed();
     }
     modifiedFormula = modifiedFormula || propagation.appliedSomething();
@@ -156,7 +133,7 @@ CRef Probing::prPropagate( bool doDouble )
     int     num_props = 0;
     solver.watches.cleanAll();
 
-    if( debug_out > 1 ) cerr << "c head: " << solver.qhead << " trail elements: " << solver.trail.size() << endl;
+    if( config.pr_debug_out > 1 ) cerr << "c head: " << solver.qhead << " trail elements: " << solver.trail.size() << endl;
     
     while (solver.qhead < solver.trail.size()){
         Lit            p   = solver.trail[solver.qhead++];     // 'p' is enqueued fact to propagate.
@@ -164,7 +141,7 @@ CRef Probing::prPropagate( bool doDouble )
         Solver::Watcher        *i, *j, *end;
         num_props++;
 
-	if( debug_out > 1 ) cerr << "c for lit " << p << " have watch with " << ws.size() << " elements" << endl;
+	if( config.pr_debug_out > 1 ) cerr << "c for lit " << p << " have watch with " << ws.size() << " elements" << endl;
 	
         for (i = j = (Solver::Watcher*)ws, end = i + ws.size();  i != end;){
             // Try to avoid inspecting the clause:
@@ -231,9 +208,9 @@ bool Probing::prAnalyze( CRef confl )
 {
     learntUnits.clear();
     // do not do analysis -- return that nothing has been learned
-    if( pr_uip == 0 && solver.decisionLevel() == 0) return false;
+    if( config.pr_uip == 0 && solver.decisionLevel() == 0) return false;
   
-    if( debug_out > 2 ) {
+    if( config.pr_debug_out > 2 ) {
 	for ( Var i = 0 ; i < data.nVars(); ++ i ) 
 	  assert ( solver.seen[ i ] == 0 && "value has to be true!"); 
     }
@@ -251,16 +228,16 @@ bool Probing::prAnalyze( CRef confl )
     
     int index   = solver.trail.size() - 1;
 
-    if( debug_out > 2 ) {
+    if( config.pr_debug_out > 2 ) {
       for ( int i = 0 ; i < ca[confl].size(); ++ i ) 
 	assert ( solver.seen[ var( ca[confl][i] ) ] == 0 && "value cannot be true!"); 
     }
     
     do{
-        if( debug_out > 3 ) cerr << "c next conflict [" << confl << "] with pathC= " << pathC << " and level " << solver.decisionLevel() << endl;
+        if( config.pr_debug_out > 3 ) cerr << "c next conflict [" << confl << "] with pathC= " << pathC << " and level " << solver.decisionLevel() << endl;
         assert(confl != CRef_Undef); // (otherwise should be UIP)
         
-        if( debug_out > 3 ) {
+        if( config.pr_debug_out > 3 ) {
         cerr << "c use for resolution " ;
 	  for ( int i = 0 ; i < ca[confl].size(); ++ i ) cerr << " " << ca[confl][i] << "@" << solver.level(var(ca[confl][i])) ;
 	  cerr << endl;
@@ -285,7 +262,7 @@ bool Probing::prAnalyze( CRef confl )
 
 	      if (!solver.seen[var(q)] && solver.level(var(q)) > 0){
 		  solver.varBumpActivity(var(q));
-		  if( debug_out > 2 ) cerr << "c set seen INT for " << var(q) +1<< endl;
+		  if( config.pr_debug_out > 2 ) cerr << "c set seen INT for " << var(q) +1<< endl;
 		  solver.seen[var(q)] = 1; // for every variable, which is not on level 0, set seen!
 		  if (solver.level(var(q)) >= solver.decisionLevel())
 		      pathC++;
@@ -304,24 +281,24 @@ bool Probing::prAnalyze( CRef confl )
         confl = solver.reason(var(p));
 	assert( solver.seen[var(p)] == 1 && "this variable should have been inside the clause" );
         solver.seen[var(p)] = 0;
-	if( debug_out > 2 ) cerr << "c reset seen INT for " << var(p) +1 << endl;
+	if( config.pr_debug_out > 2 ) cerr << "c reset seen INT for " << var(p) +1 << endl;
         pathC--;
 
 	// this works only is the decision level is 1
 	if( pathC <= 0 ) {
 	  assert( loops > 1 && "learned clause can occur only if already 2 clauses have been resolved!" );
 	  if( solver.decisionLevel() == 1) {
-	   if( debug_out > 1 ) cerr << "c possible unit: " << ~p << endl;
+	   if( config.pr_debug_out > 1 ) cerr << "c possible unit: " << ~p << endl;
 	   uips ++;
 	   // learned enough uips - return. if none has been found, return false!
-	   if( pr_uip != -1 && uips > pr_uip ) {
+	   if( config.pr_uip != -1 && uips > config.pr_uip ) {
 	     // reset seen literals
 	     for( int i = 0 ; i < data.lits.size(); ++ i ){
 	       solver.seen[ var(data.lits[i]) ] = 0;
-	       if( debug_out > 2 ) cerr << "c reset seen ALLUIP for " << var(data.lits[i]) +1 << endl;
+	       if( config.pr_debug_out > 2 ) cerr << "c reset seen ALLUIP for " << var(data.lits[i]) +1 << endl;
 	     }
 	     
-	     if( debug_out > 2 ) {
+	     if( config.pr_debug_out > 2 ) {
 		  for ( Var i = 0 ; i < data.nVars(); ++ i ) 
 		    assert ( solver.seen[ i ] == 0 && "value has to be true!"); 
 	     }
@@ -342,17 +319,17 @@ bool Probing::prAnalyze( CRef confl )
     // reset seen literals
     for( int i = 0 ; i < data.lits.size(); ++ i ) {
       solver.seen[ var(data.lits[i]) ] = 0;
-      if( debug_out > 2 ) cerr << "c reset seen EXT for " << var(data.lits[i]) +1 << endl;
+      if( config.pr_debug_out > 2 ) cerr << "c reset seen EXT for " << var(data.lits[i]) +1 << endl;
     }
     
     // print learned clause
-    if( debug_out > 1 ) {
+    if( config.pr_debug_out > 1 ) {
       cerr << "c probing returned conflict: ";
       for( int i = 0 ; i < data.lits.size(); ++ i ) cerr << " " << data.lits[i];
       cerr << endl;
     }
 
-  if( debug_out > 2 ) {
+  if( config.pr_debug_out > 2 ) {
       for ( Var i = 0 ; i < data.nVars(); ++ i ) 
 	assert ( solver.seen[ i ] == 0 && "value has to be true!"); 
   }
@@ -365,11 +342,11 @@ bool Probing::prAnalyze( CRef confl )
 bool Probing::prDoubleLook(Lit l1decision)
 {
   // reject double lookahead, if necessary!
-  if( ! pr_double ) return false;
+  if( ! config.pr_double ) return false;
   
   data.ma.nextStep();
   
-  if( debug_out > 0 ) cerr << "c double lookahead after " << l1decision << " at level 1" << endl;
+  if( config.pr_debug_out > 0 ) cerr << "c double lookahead after " << l1decision << " at level 1" << endl;
   
   // TODO: sort literals in double lookahead queue, use only first n literals
   static bool didit = false;
@@ -387,15 +364,15 @@ bool Probing::prDoubleLook(Lit l1decision)
 
     assert( solver.decisionLevel() == 1 && "probing only at level 1!");
     const Lit posLit = doubleLiterals[i];
-    if( debug_out > 0 ) cerr << "c deciding " << posLit << " at level 2" << endl;
+    if( config.pr_debug_out > 0 ) cerr << "c deciding " << posLit << " at level 2" << endl;
     solver.newDecisionLevel();
     solver.uncheckedEnqueue(posLit);
     l2probes++;
     probeChecks++;
     thisConflict = prPropagate();
-    if( debug_out > 1 ) cerr << "c conflict after level 2 propagate " << posLit << " present? " << (thisConflict != CRef_Undef) << " trail elements: " << solver.trail.size() << endl;
+    if( config.pr_debug_out > 1 ) cerr << "c conflict after level 2 propagate " << posLit << " present? " << (thisConflict != CRef_Undef) << " trail elements: " << solver.trail.size() << endl;
     
-    if( debug_out > 1 ) {
+    if( config.pr_debug_out > 1 ) {
       cerr << "c current trail: ";
       for( int k = 0 ; k < solver.trail.size(); ++ k )
 	cerr << " " << solver.trail[k];
@@ -413,7 +390,7 @@ bool Probing::prDoubleLook(Lit l1decision)
 	if( data.lits.size() == 1 ) backtrack_level = 0;
 	else backtrack_level = solver.level( var( data.lits[1] ) );
       }
-      if( debug_out > 0 ){ 
+      if( config.pr_debug_out > 0 ){ 
 	cerr << "c learnt clause at level " << solver.decisionLevel() << " with jump to " << backtrack_level << " after decideing " << l1decision << " and " << posLit << " ";
 	for( int i = 0 ; i < data.lits.size(); ++i ) cerr << " " << data.lits[i];
 	cerr << endl;
@@ -421,18 +398,18 @@ bool Probing::prDoubleLook(Lit l1decision)
       solver.cancelUntil(backtrack_level);
       if (data.lits.size() == 1){
 	solver.enqueue(data.lits[0]);
-	if( debug_out > 0 ) cerr << "c L2 learnt clause: " << data.lits[0] << " 0" << endl;
+	if( config.pr_debug_out > 0 ) cerr << "c L2 learnt clause: " << data.lits[0] << " 0" << endl;
       }else{
-	CRef cr = ca.alloc(data.lits, pr_keepLearnts == 1);
+	CRef cr = ca.alloc(data.lits, config.pr_keepLearnts == 1);
 	// solver.clauses.push(cr);
 	solver.attachClause(cr);
-	data.addClause(cr, debug_out > 0);
+	data.addClause(cr, config.pr_debug_out > 0);
 	l2conflicts.push_back(cr);
 	solver.uncheckedEnqueue(data.lits[0], cr);
-	if( debug_out > 0 ) cerr << "c L2 learnt clause: " << ca[cr] << " 0" << endl;
+	if( config.pr_debug_out > 0 ) cerr << "c L2 learnt clause: " << ca[cr] << " 0" << endl;
       }
       CRef cClause = solver.propagate() ;
-      if( cClause != CRef_Undef ) { if( debug_out > 1 ) {
+      if( cClause != CRef_Undef ) { if( config.pr_debug_out > 1 ) {
 	cerr << "c l1 propagating (" << data.lits << ") learned clause at level " << solver.decisionLevel() << " failed" << endl;} 
 	// perform l1 analysis - as in usual probing routine
 	l1failed++;
@@ -457,14 +434,14 @@ bool Probing::prDoubleLook(Lit l1decision)
     
     assert( solver.decisionLevel() == 1 && "probing only at level 1!");
     const Lit negLit = ~posLit;
-    if( debug_out > 0 )  cerr << "c deciding " << negLit << " at Level 2" << endl;
+    if( config.pr_debug_out > 0 )  cerr << "c deciding " << negLit << " at Level 2" << endl;
     solver.newDecisionLevel();
     solver.uncheckedEnqueue(negLit);
     l2probes++;
     probeChecks++;
     thisConflict = prPropagate();
-    if( debug_out > 1 ) cerr << "c conflict after level 2 propagate " << negLit << " present? " << (thisConflict != CRef_Undef) << " trail elements: " << solver.trail.size() << endl;
-    if( debug_out > 1 ) {
+    if( config.pr_debug_out > 1 ) cerr << "c conflict after level 2 propagate " << negLit << " present? " << (thisConflict != CRef_Undef) << " trail elements: " << solver.trail.size() << endl;
+    if( config.pr_debug_out > 1 ) {
       cerr << "c current trail: ";
       for( int k = 0 ; k < solver.trail.size(); ++ k )
 	cerr << " " << solver.trail[k];
@@ -481,7 +458,7 @@ bool Probing::prDoubleLook(Lit l1decision)
 	if( data.lits.size() == 1 ) backtrack_level = 0;
 	else backtrack_level = solver.level( var( data.lits[1] ) );
       }
-      if( debug_out > 0 ) {
+      if( config.pr_debug_out > 0 ) {
 	cerr << "c learnt clause at level " << solver.decisionLevel() << " with jump to " << backtrack_level << " after decideing " << l1decision << " and " << negLit << " :  ";
 	for( int i = 0 ; i < data.lits.size(); ++i ) cerr << " " << data.lits[i];
 	cerr << endl;
@@ -489,18 +466,18 @@ bool Probing::prDoubleLook(Lit l1decision)
       solver.cancelUntil(backtrack_level);
       if (data.lits.size() == 1){
 	solver.enqueue(data.lits[0]);
-	if( debug_out > 0 ) cerr << "c L2 learnt clause: " << data.lits[0] << " 0" << endl;
+	if( config.pr_debug_out > 0 ) cerr << "c L2 learnt clause: " << data.lits[0] << " 0" << endl;
       }else{
-	CRef cr = ca.alloc(data.lits, pr_keepLearnts == 1);
+	CRef cr = ca.alloc(data.lits, config.pr_keepLearnts == 1);
 	// solver.clauses.push(cr);
 	solver.attachClause(cr);
-	data.addClause(cr, debug_out > 0);
+	data.addClause(cr, config.pr_debug_out > 0);
 	l2conflicts.push_back(cr);
 	solver.uncheckedEnqueue(data.lits[0], cr);
-	if( debug_out > 0 ) cerr << "c L2 learnt clause: " << ca[cr] << " 0" << endl;
+	if( config.pr_debug_out > 0 ) cerr << "c L2 learnt clause: " << ca[cr] << " 0" << endl;
       }
       CRef cClause = solver.propagate() ;
-      if( cClause != CRef_Undef ) { if( debug_out > 1 ) {
+      if( cClause != CRef_Undef ) { if( config.pr_debug_out > 1 ) {
 	cerr << "c l1 propagating (" << data.lits << ") learned clause at level " << solver.decisionLevel() << " failed" << endl;} 
 	// perform l1 analysis - as in usual probing routine
 	l1failed++;
@@ -536,13 +513,13 @@ bool Probing::prDoubleLook(Lit l1decision)
     {
       // check whether same polarity in both trails, or different polarity and in both trails
       const Var tv = var( solver.trail[ i ] );
-      if( debug_out > 1 ) cerr << "c compare variable (level 1)" << tv + 1 << ": pos = " << toInt(prL2Positive[tv]) << " neg = " << toInt(solver.assigns[tv]) << endl;
+      if( config.pr_debug_out > 1 ) cerr << "c compare variable (level 1)" << tv + 1 << ": pos = " << toInt(prL2Positive[tv]) << " neg = " << toInt(solver.assigns[tv]) << endl;
       if( solver.assigns[ tv ] == prL2Positive[tv] ) {
-	if( debug_out > 1 ) cerr << "c l2 implied literal: " << l1decision << " -> " << solver.trail[i] << endl;
+	if( config.pr_debug_out > 1 ) cerr << "c l2 implied literal: " << l1decision << " -> " << solver.trail[i] << endl;
 	learntUnits[0] = solver.trail[ i ];
 	l2implied ++;
-	CRef cr = ca.alloc(learntUnits, pr_keepImplied == 1);
-	data.addClause(cr, debug_out > 0);
+	CRef cr = ca.alloc(learntUnits, config.pr_keepImplied == 1);
+	data.addClause(cr, config.pr_debug_out > 0);
 	l2implieds.push_back(cr);
       } else { // this is for statistics only and is currently not handled!
 // 	if( 
@@ -555,7 +532,7 @@ bool Probing::prDoubleLook(Lit l1decision)
     
     solver.cancelUntil(1);
     
-    if( debug_out > 1 ) {
+    if( config.pr_debug_out > 1 ) {
       cerr << "c current trail: ";
       for( int k = 0 ; k < solver.trail.size(); ++ k )
 	cerr << " " << solver.trail[k];
@@ -566,7 +543,7 @@ bool Probing::prDoubleLook(Lit l1decision)
     for( int i = oldl2implieds ; i < l2implieds.size(); ++i )
     {
       CRef cr = l2implieds[i];
-      if( debug_out > 1 ) cerr << "c add clause " << ca[cr] << endl;
+      if( config.pr_debug_out > 1 ) cerr << "c add clause " << ca[cr] << endl;
       solver.attachClause(cr);
       solver.uncheckedEnqueue(ca[cr][0], cr);
     }
@@ -615,7 +592,7 @@ void Probing::cleanSolver()
   solver.clauses_literals = 0;
   solver.watches.cleanAll();
   
-  if( debug_out > 1 ) {
+  if( config.pr_debug_out > 1 ) {
     cerr << "c formula before resetup: " << endl;
       for( int i = 0 ; i< solver.clauses.size(); ++ i ) {
       const CRef cr = solver.clauses[i];
@@ -630,7 +607,7 @@ void Probing::reSetupSolver()
 {
 int j = 0;
 
-  if( debug_out > 1 ) {
+  if( config.pr_debug_out > 1 ) {
     cerr << "c formula before resetup: " << endl;
       for( int i = 0 ; i< solver.clauses.size(); ++ i ) {
       const CRef cr = solver.clauses[i];
@@ -656,7 +633,7 @@ int j = 0;
 	  const CRef cr = clauses[i];
 	  Clause & c = ca[cr];
 	  assert( c.size() != 0 && "empty clauses should be recognized before re-setup" );
-	  if (!c.can_be_deleted() && c.size() <= pr_clsSize) // reject deleted and too large clauses!
+	  if (!c.can_be_deleted() && c.size() <= config.pr_clsSize) // reject deleted and too large clauses!
 	  {
 	      assert( c.mark() == 0 && "only clauses without a mark should be passed back to the solver!" );
 	      if (c.size() > 1)
@@ -675,9 +652,9 @@ int j = 0;
 		  // reduct of clause is empty, or unit
 		  if( solver.value( c[0] ) == l_False ) { data.setFailed(); return; }
 		  else if( solver.value( c[1] ) == l_False ) {
-		    if( data.enqueue(c[0]) == l_False ) { if( debug_out>2 ) cerr  << "enqueing " << c[0] << " failed." << endl; return; }
+		    if( data.enqueue(c[0]) == l_False ) { if( config.pr_debug_out>2 ) cerr  << "enqueing " << c[0] << " failed." << endl; return; }
 		    else { 
-		      if( debug_out>2 ) cerr << "enqueued " << c[0] << " successfully" << endl;
+		      if( config.pr_debug_out>2 ) cerr << "enqueued " << c[0] << " successfully" << endl;
 		      c.set_delete(true);
 		    }
 		    if( solver.propagate() != CRef_Undef ) { data.setFailed(); return; }
@@ -797,7 +774,7 @@ void Probing::sortClauses()
     }
   }
   
-  if( debug_out > 1 ) {
+  if( config.pr_debug_out > 1 ) {
     cerr << "c formula after sort: " << endl;
       for( int i = 0 ; i< solver.clauses.size(); ++ i ) {
       const CRef cr = solver.clauses[i];
@@ -821,7 +798,7 @@ void Probing::probing()
   BIG big;
   big.create(ca,data,data.getClauses(),data.getLEarnts()); // lets have the full big
   
-  big.fillSorted( variableHeap, data, pr_rootsOnly );
+  big.fillSorted( variableHeap, data, config.pr_rootsOnly );
   // if there are no root variables (or lits implied by roots), consider all variables!
   if( variableHeap.size() == 0 ) big.fillSorted( variableHeap, data, false, true );
   probeCandidates += variableHeap.size();
@@ -853,7 +830,7 @@ void Probing::probing()
       probes++;
       probeChecks++;
       thisConflict = prPropagate();
-      if( debug_out > 1 ) cerr << "c conflict after propagate " << posLit << " present? " << (thisConflict != CRef_Undef) << " trail elements: " << solver.trail.size() << endl;
+      if( config.pr_debug_out > 1 ) cerr << "c conflict after propagate " << posLit << " present? " << (thisConflict != CRef_Undef) << " trail elements: " << solver.trail.size() << endl;
       if( thisConflict != CRef_Undef ) {
 	l1failed++;
 	if( !prAnalyze( thisConflict ) ) {
@@ -869,15 +846,15 @@ void Probing::probing()
       } else {
 	totalL2cand += doubleLiterals.size();
 	if( prDoubleLook(posLit) ) { 
-	  if( debug_out > 1 ) cerr << "c double lookahead returned with true -> repeat " << posLit << endl;
+	  if( config.pr_debug_out > 1 ) cerr << "c double lookahead returned with true -> repeat " << posLit << endl;
 	    repeatLit = posLit; 
 	    continue;
 	} // something has been found, so that second polarity has not to be propagated
-	else if( debug_out > 1 ) cerr << "c double lookahead did not fail" << endl;
+	else if( config.pr_debug_out > 1 ) cerr << "c double lookahead did not fail" << endl;
       }
       solver.assigns.copyTo( prPositive );
       
-      if( debug_out > 0 ) {
+      if( config.pr_debug_out > 0 ) {
 	cerr << "c positive trail: " ;
 	for( int i = 0 ; i < solver.trail.size(); ++ i ) cerr << " " << solver.trail[i];
 	cerr << endl;
@@ -893,7 +870,7 @@ void Probing::probing()
       probes++;
       probeChecks++;
       thisConflict = prPropagate();
-      if( debug_out > 1 ) cerr << "c conflict after propagate " << negLit << " present? " << (thisConflict != CRef_Undef) << " trail elements: " << solver.trail.size() << endl;
+      if( config.pr_debug_out > 1 ) cerr << "c conflict after propagate " << negLit << " present? " << (thisConflict != CRef_Undef) << " trail elements: " << solver.trail.size() << endl;
       if( thisConflict != CRef_Undef ) {
 	l1failed++;
 	if( !prAnalyze( thisConflict ) ) {
@@ -909,11 +886,11 @@ void Probing::probing()
       } else {
 	totalL2cand += doubleLiterals.size();
 	if( prDoubleLook(negLit) ) { 
-	  if( debug_out > 1 ) cerr << "c double lookahead returned with true -> repeat " << negLit << endl;
+	  if( config.pr_debug_out > 1 ) cerr << "c double lookahead returned with true -> repeat " << negLit << endl;
 	    repeatLit = negLit; 
 	    continue;
 	} // something has been found, so that second polarity has not to be propagated
-	else if( debug_out > 1 ) cerr << "c double lookahead did not fail" << endl;
+	else if( config.pr_debug_out > 1 ) cerr << "c double lookahead did not fail" << endl;
       }
       // could copy to prNegatie here, but we do not do this, but refer to the vector inside the solver instead
       vec<lbool>& prNegative = solver.assigns;
@@ -922,7 +899,7 @@ void Probing::probing()
 
       assert( solver.decisionLevel() == 1 && "");
       
-      if( debug_out > 0 ) {
+      if( config.pr_debug_out > 0 ) {
 	cerr << "c negative trail: " ;
 	for( int i = 0 ; i < solver.trail.size(); ++ i ) cerr << " " << solver.trail[i];
 	cerr << endl;
@@ -936,19 +913,19 @@ void Probing::probing()
       {
 	// check whether same polarity in both trails, or different polarity and in both trails
 	const Var tv = var( solver.trail[ i ] );
-	if( debug_out > 1 )cerr << "c compare variable (level 0) " << tv + 1 << ": pos = " << toInt(prPositive[tv]) << " neg = " << toInt(solver.assigns[tv]) << endl;
+	if( config.pr_debug_out > 1 )cerr << "c compare variable (level 0) " << tv + 1 << ": pos = " << toInt(prPositive[tv]) << " neg = " << toInt(solver.assigns[tv]) << endl;
 	if( solver.assigns[ tv ] == prPositive[tv] ) {
-	  if( debug_out > 1 )cerr << "c implied literal " << solver.trail[i] << endl;
+	  if( config.pr_debug_out > 1 )cerr << "c implied literal " << solver.trail[i] << endl;
 	  doubleLiterals.push_back(solver.trail[ i ] );
 	  l1implied ++;
-	} else if( pr_EE ) {
+	} else if( config.pr_EE ) {
 	  if( solver.assigns[ tv ] == l_True && prPositive[tv] == l_False ) {
-	    if( debug_out > 1 )cerr << "c equivalent literals " << negLit << " == " << solver.trail[i] << endl;
+	    if( config.pr_debug_out > 1 )cerr << "c equivalent literals " << negLit << " == " << solver.trail[i] << endl;
 	    data.lits.push_back( solver.trail[ i ] ); // equivalent literals
 	    l1ee++;
 	    modifiedFormula = true;
 	  } else if( solver.assigns[ tv ] == l_False && prPositive[tv] == l_True ) {
-	    if( debug_out > 1 )cerr << "c equivalent literals " << negLit << " == " << solver.trail[i] << endl;
+	    if( config.pr_debug_out > 1 )cerr << "c equivalent literals " << negLit << " == " << solver.trail[i] << endl;
 	    data.lits.push_back( solver.trail[ i ] ); // equivalent literals
 	    l1ee++;
 	    modifiedFormula = true;
@@ -956,7 +933,7 @@ void Probing::probing()
 	}
       }
       
-      if( debug_out > 1 ) {
+      if( config.pr_debug_out > 1 ) {
       cerr << "c trail: " << solver.trail.size() << " trail_lim[0] " << solver.trail_lim[0] << " decisionLevel " << solver.decisionLevel() << endl;
       cerr << "c found implied literals " << doubleLiterals.size() << "  out of " << solver.trail.size() - solver.trail_lim[0] << endl;
       }
@@ -982,16 +959,16 @@ void Probing::probing()
       
     }
     globalModify = globalModify || modifiedFormula;
-  } while( pr_repeat && modifiedFormula );
+  } while( config.pr_repeat && modifiedFormula );
   
   modifiedFormula = globalModify;
   
   // take care of clauses that have been added during probing!
-  if( pr_keepLearnts != 2 ) {
+  if( config.pr_keepLearnts != 2 ) {
     for( int i = 0 ; i < l2conflicts.size(); ++ i ) {
       Clause& c = ca[ l2conflicts[i] ];
-      if( pr_keepLearnts == 0 ) {
-	if( debug_out > 0 ) cerr << "c delete clause [" << l2conflicts[i] << "] : " << c << endl;
+      if( config.pr_keepLearnts == 0 ) {
+	if( config.pr_debug_out > 0 ) cerr << "c delete clause [" << l2conflicts[i] << "] : " << c << endl;
 	c.set_delete(true);
 	solver.detachClause( l2conflicts[i] ); // remove from solver structures -> to be not available for vivification
       } else {
@@ -1007,11 +984,11 @@ void Probing::probing()
   }
   l2conflicts.clear();
   
-  if( pr_keepImplied != 2 ) {
+  if( config.pr_keepImplied != 2 ) {
     for( int i = 0 ; i < l2implieds.size(); ++ i ) {
       Clause& c = ca[ l2implieds[i] ];
-      if( pr_keepImplied == 0) {
-	if( debug_out > 0 ) cerr << "c delete clause [" << l2implieds[i] << "] : " << c << endl;
+      if( config.pr_keepImplied == 0) {
+	if( config.pr_debug_out > 0 ) cerr << "c delete clause [" << l2implieds[i] << "] : " << c << endl;
 	c.set_delete(true);
 	solver.detachClause( l2implieds[i] ); // remove from solver structures -> to be not available for vivification
       } else {
@@ -1036,7 +1013,7 @@ void Probing::clauseVivification()
 {
   MethodTimer vTimer ( &viviTime );
   
-  if( debug_out ) {
+  if( config.pr_debug_out ) {
     for( Var v = 0; v < data.nVars(); ++ v )
     {
       for( int p = 0 ; p < 2; ++ p ) 
@@ -1090,7 +1067,7 @@ void Probing::clauseVivification()
   }
   cerr << "c calculated maxSize: " << maxSize << endl;
   
-  maxSize = (maxSize * pr_viviPercent) / 100;
+  maxSize = (maxSize * config.pr_viviPercent) / 100;
   maxSize = maxSize > 2 ? maxSize : 3;	// do not process binary clauses, because they are used for propagation
   viviSize = maxSize;
   
@@ -1106,7 +1083,7 @@ void Probing::clauseVivification()
     assert( solver.decisionLevel() == 0 && "asymmetric branching only at level 0!" );
     
     viviCands ++;
-    if( debug_out > 1 ) cerr << "c work on clause " << clause << endl;
+    if( config.pr_debug_out > 1 ) cerr << "c work on clause " << clause << endl;
     bool hasAssigned = false;
     data.lits.clear();
     for( int j = 0 ; j < clause.size(); ++ j ) {
@@ -1136,12 +1113,12 @@ void Probing::clauseVivification()
     viviChecks ++;
     
     // detach this clause, so that it cannot be used for unit propagation
-    if( debug_out > 2 ) cerr << "c available watches for " << clause[0] << " : " << solver.watches[ ~clause[0] ].size()
+    if( config.pr_debug_out > 2 ) cerr << "c available watches for " << clause[0] << " : " << solver.watches[ ~clause[0] ].size()
          << " and " << clause[1] << " : " << solver.watches[ ~clause[1] ].size() << endl;
     
     // take care of the size restriction
-    if( clause.size() <= pr_clsSize ) {
-      if( debug_out > 1 ) cerr << "c detach clause [" << ref << "] : " << ca[ref] << endl;
+    if( clause.size() <= config.pr_clsSize ) {
+      if( config.pr_debug_out > 1 ) cerr << "c detach clause [" << ref << "] : " << ca[ref] << endl;
       solver.detachClause(ref, true);
     }
     
@@ -1150,7 +1127,7 @@ void Probing::clauseVivification()
     solver.newDecisionLevel();
     for( int j = 0; j < data.lits.size(); ++ j ) {
       
-      if( debug_out > 1 ) {
+      if( config.pr_debug_out > 1 ) {
       cerr << "c literals to work with (curr=" << j << "): ";
       for( int k = 0 ; k < data.lits.size(); ++ k ) 
 	cerr << " " << data.lits[k] << " @" << toInt(solver.value(data.lits[k]));
@@ -1164,19 +1141,19 @@ void Probing::clauseVivification()
       // check whether one of the other literals is already "broken"
       for( int k = j; k < data.lits.size(); ++ k ) {
 	if( solver.value(data.lits[k]) == l_False ) {
-	  if( debug_out > 1 ) cerr << "c found failing literal " << data.lits[k] << endl;
+	  if( config.pr_debug_out > 1 ) cerr << "c found failing literal " << data.lits[k] << endl;
 	  data.lits[j] = data.lits[k];
 	  subClauseLimit = j+1;
 	  viviConflict = true;
 	  break;
 	} else if ( solver.value(data.lits[k]) == l_True ) {
-	  if( debug_out > 1 ) cerr << "c found satisfied literal " << data.lits[k] << " (" << k << ") " << endl;
+	  if( config.pr_debug_out > 1 ) cerr << "c found satisfied literal " << data.lits[k] << " (" << k << ") " << endl;
 	  data.lits[k] = data.lits[ data.lits.size() - 1 ];
 	  if( j == k ) --j;
 	  --k;
 	  data.lits.pop_back();
 	  subClauseLimit --;
-	  if( debug_out > 1 ) cerr << "c continue with lit(" << j << ") and " << data.lits.size() << " lits" << endl;
+	  if( config.pr_debug_out > 1 ) cerr << "c continue with lit(" << j << ") and " << data.lits.size() << " lits" << endl;
 	  viviNextLit = true;
 	  break; // TODO: performance could be improved by analysing literals from back to front! -> quadratic to linear?!
 	}
@@ -1185,10 +1162,10 @@ void Probing::clauseVivification()
       else if ( viviNextLit ) continue; // found a tautologic literal -> continue with next literal!
       
       const Lit thisLit = data.lits[j];
-      if( debug_out > 1 ) cerr << "c enqueue " << thisLit << endl;
+      if( config.pr_debug_out > 1 ) cerr << "c enqueue " << thisLit << endl;
       solver.uncheckedEnqueue(thisLit);
       
-      if( debug_out > 1 ) {
+      if( config.pr_debug_out > 1 ) {
 	cerr << "c current trail (after enqueue): ";
 	for( int k = 0 ; k < solver.trail.size(); ++ k )
 	  cerr << " " << solver.trail[k];
@@ -1201,7 +1178,7 @@ void Probing::clauseVivification()
       viviChecks += trailDiff; // calculate limit!
       
       if( confl != CRef_Undef ) {
-	if( debug_out > 1 ) {
+	if( config.pr_debug_out > 1 ) {
 	  cerr << "c found conflict [" << confl << "]" << ca[confl] << endl;
 	  cerr << "c current trail (after propagate): ";
 	  for( int k = 0 ; k < solver.trail.size(); ++ k )
@@ -1210,7 +1187,7 @@ void Probing::clauseVivification()
 	}
 	// clauselits[0] AND ... AND data.lits[j] -> false => new sub clause!
 	subClauseLimit = j+1;
-	if( debug_out > 1 )cerr << "c propagation resulted in conflict -> set lits set to " << j << endl;
+	if( config.pr_debug_out > 1 )cerr << "c propagation resulted in conflict -> set lits set to " << j << endl;
 	viviConflict = true;
 	break;
       }
@@ -1228,7 +1205,7 @@ void Probing::clauseVivification()
       
       if( !viviConflict ) data.lits.push_back(removedLit);
       
-      if( debug_out > 1 ) {
+      if( config.pr_debug_out > 1 ) {
       cerr << "c replace clause " << clause << " with ";
       for( int j = 0 ; j < data.lits.size(); ++ j ) 
 	cerr << " " << ~data.lits[j];
@@ -1252,7 +1229,7 @@ void Probing::clauseVivification()
       clause.shrink( clause.size() - keptLits );
       clause.sort();
       modifiedFormula = true;
-      if( debug_out > 1 ) cerr << "c new clause: " << clause << endl;
+      if( config.pr_debug_out > 1 ) cerr << "c new clause: " << clause << endl;
     }
     
     // detach this clause, so that it cannot be used for unit propagation
@@ -1260,12 +1237,12 @@ void Probing::clauseVivification()
       data.setFailed();
     } else if ( clause.size() == 1 ) {
       data.enqueue( clause[0] );
-    } else if( clause.size() <= pr_clsSize ) solver.attachClause(ref);
+    } else if( clause.size() <= config.pr_clsSize ) solver.attachClause(ref);
 
     if( !data.ok() ) break;
   } // end for clause in data.getClauses()
  
-    if( debug_out > 0 ) {
+    if( config.pr_debug_out > 0 ) {
       cerr << "c formula after vivi: " << endl;
       for( int i = 0 ; i< solver.clauses.size(); ++ i ) {
 	const CRef cr = solver.clauses[i];

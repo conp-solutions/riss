@@ -6,29 +6,6 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 using namespace Coprocessor;
 
-static const char* _cat = "COPROCESSOR 3 - RES";
-
-static BoolOption   opt_use_binaries  (_cat, "cp3_res_bin",      "resolve with binary clauses", false);
-static IntOption    opt_res3_steps    (_cat, "cp3_res3_steps",   "Number of resolution-attempts that are allowed per iteration", 1000000, IntRange(0, INT32_MAX-1));
-static IntOption    opt_res3_newCls   (_cat, "cp3_res3_ncls",    "Max. Number of newly created clauses", 100000, IntRange(0, INT32_MAX-1));
-static BoolOption   opt_res3_reAdd    (_cat, "cp3_res3_reAdd",   "Add variables of newly created resolvents back to working queues", false);
-static BoolOption   opt_use_subs      (_cat, "cp3_res_eagerSub", "perform eager subsumption", true);
-static DoubleOption opt_add_percent   (_cat, "cp3_res_percent",  "produce this percent many new clauses out of the total", 0.01, DoubleRange(0, true, 1, true));
-static BoolOption   opt_add_red       (_cat, "cp3_res_add_red",  "add redundant binary clauses", false);
-static BoolOption   opt_red_level     (_cat, "cp3_res_add_lev",  "calculate added percent based on level", true);
-static BoolOption   opt_add_red_lea   (_cat, "cp3_res_add_lea",  "add redundants based on learneds as well?", false);
-static BoolOption   opt_add_red_start (_cat, "cp3_res_ars",      "also before preprocessing?", false);
-// static IntOption    opt_add2_steps    (_cat, "cp3_add2_steps",   "Number of steps that are allowed per iteration", INT32_MAX-2, IntRange(0, INT32_MAX-1));
-
-static IntOption  opt_inpStepInc1      (_cat, "cp3_res_inpInc","increase for steps per inprocess call", 200000, IntRange(0, INT32_MAX));
-static IntOption  opt_inpStepInc2      (_cat, "cp3_add_inpInc","increase for steps per inprocess call", 60000, IntRange(0, INT32_MAX));
-
-/// enable this parameter only during debug!
-#if defined CP3VERSION  
-static const bool debug_out = false;
-#else
-static BoolOption debug_out         (_cat, "cp3_res_debug",   "print debug output to screen",false);
-#endif
 
 Resolving::Resolving(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data)
 : Technique(_config, _ca,_controller)
@@ -48,8 +25,8 @@ Resolving::Resolving(CP3Config &_config, ClauseAllocator& _ca, ThreadController&
 
 void Resolving::giveMoreSteps()
 {
-  res3steps = res3steps < opt_inpStepInc1 ? 0 : res3steps - opt_inpStepInc1;
-  add2steps = add2steps < opt_inpStepInc2 ? 0 : add2steps - opt_inpStepInc2;
+  res3steps = res3steps < config.opt_res3_inpStepInc ? 0 : res3steps - config.opt_res3_inpStepInc;
+  add2steps = add2steps < config.opt_add2_inpStepInc ? 0 : add2steps - config.opt_add2_inpStepInc;
 }
 
 
@@ -60,8 +37,8 @@ void Resolving::process(bool post)
   if( ! post )
     ternaryResolve();
   
-  if( opt_add_red_start || post ) {
-    if( opt_add_red ) {
+  if( config.opt_add2_red_start || post ) {
+    if( config.opt_add2_red ) {
       addRedundantBinaries(); 
     }
   }
@@ -98,7 +75,7 @@ void Resolving::ternaryResolve()
   vector<int> toIgnore( data.nVars() *2 , 0); // how many clauses in the list are ternary
   vec<Lit> resolvent; // store result of resolution here
   
-  const int moveSize =  opt_use_binaries ? 2 : 3;
+  const int moveSize =  config.opt_res3_use_binaries ? 2 : 3;
   
   // setup occurrence lists to work with interesting clauses only in algorithm later
   for( Var v  = 0; v < data.nVars(); ++v ) {
@@ -112,7 +89,7 @@ void Resolving::ternaryResolve()
       if( c.can_be_deleted() ) { // remove clauses that do not belong into the list!
 	cls[i] = cls[ cls.size() ];
 	cls.pop_back(); --i;
-      } else if ( (!opt_add_red_lea && c.learnt() )  // use learnt clauses?
+      } else if ( (!config.opt_add2_red_lea && c.learnt() )  // use learnt clauses?
 	|| (c.size() != 3 && c.size() != moveSize) ) { // if enabled, also move binary clauses to back!
 	CRef tmp = cls[i]; // move nonternary clauses to front!
 	cls[i] = cls[j];
@@ -129,15 +106,15 @@ void Resolving::ternaryResolve()
   // sort activeVariables according to size!
   
   while( resHeap.size() > 0 && !data.isInterupted() 
-    && (data.unlimited() || addedTern2 + addedTern3 < opt_res3_newCls )
-    && (data.unlimited() || res3steps < opt_res3_steps )
+    && (data.unlimited() || addedTern2 + addedTern3 < config.opt_res3_newCls )
+    && (data.unlimited() || res3steps < config.opt_res3_steps )
   )
   {
     // FIXME: garbage collection, cannot be done because of ignore structures!
     const Var v = (Var)resHeap[0];
     resHeap.removeMin();
         
-    if( debug_out ) cerr << "c process variable " << v+1 << " vars[" << data[v] << "]" << endl;
+    if( config.res3_debug_out ) cerr << "c process variable " << v+1 << " vars[" << data[v] << "]" << endl;
     
     const Lit p = mkLit(v,false);
     const Lit n = mkLit(v,true);
@@ -151,9 +128,9 @@ void Resolving::ternaryResolve()
 	const Clause& d = ca[data.list(n)[j]];
 	if( d.can_be_deleted() ) continue;
 	res3steps++;
-	if( !data.unlimited() && res3steps > opt_res3_steps ) goto endTernResolve;
+	if( !data.unlimited() && res3steps > config.opt_res3_steps ) goto endTernResolve;
 	if( resolve( c,d, v, resolvent) ) continue;
-	if( debug_out ) cerr << "c resolved " << c << " with " << d << endl;
+	if( config.res3_debug_out ) cerr << "c resolved " << c << " with " << d << endl;
 	if( resolvent.size() == 0 ) {
 	  data.setFailed(); return; 
 	} else if( resolvent.size() == 1 ){
@@ -163,7 +140,7 @@ void Resolving::ternaryResolve()
 	  // add clause here! 
 	  const bool becomeLearnt = c.learnt() || d.learnt();
 	  CRef cr = ca.alloc(resolvent, becomeLearnt); 
-	  if( debug_out ) cerr << "c add clause " << ca[cr] << endl;
+	  if( config.res3_debug_out ) cerr << "c add clause " << ca[cr] << endl;
 	  data.addClause(cr);
 	  data.addSubStrengthClause(cr);
 	  if( becomeLearnt ) {
@@ -174,7 +151,7 @@ void Resolving::ternaryResolve()
 	  if(resolvent.size() == 2 ) addedTern2 ++;
 	  else addedTern3 ++;
 	  
-	  if( opt_res3_reAdd ) {
+	  if( config.opt_res3_reAdd ) {
 	    // add variables of resolvent back to queue, if not there already
 	    for( int k = 0 ; k < resolvent.size(); ++ k ) {
 	      const Var rv = var(resolvent[k]);
@@ -295,7 +272,7 @@ bool Resolving::hasDuplicate(vector<CRef>& list, const vec<Lit>& c)
 {
   for( int i = 0 ; i < list.size(); ++ i ) {
     Clause& d = ca[list[i]];
-    if( d.can_be_deleted() || (!opt_use_subs && d.size() != c.size()) ) continue;
+    if( d.can_be_deleted() || (!config.opt_res3_use_subs && d.size() != c.size()) ) continue;
     int j = 0 ;
     if( d.size() == c.size() ) {
       while( j < c.size() && c[j] == d[j] ) ++j ;
@@ -304,7 +281,7 @@ bool Resolving::hasDuplicate(vector<CRef>& list, const vec<Lit>& c)
 	return true;
       }
     }
-    if( opt_use_subs ) { // check each clause for being subsumed -> kick subsumed clauses!
+    if( config.opt_res3_use_subs ) { // check each clause for being subsumed -> kick subsumed clauses!
       if( d.size() < c.size() ) {
 	detectedDuplicates ++;
 	if( ordered_subsumes(d,c) ) return true; // the other clause subsumes the current clause!
@@ -327,7 +304,7 @@ void Resolving::addRedundantBinaries()
   data.ma.resize( data.nVars() *2 );
   vector < vector<Lit> > big (data.nVars() *2) ;
   
-  if( debug_out ) cerr << "add redundant binaries" << endl;
+  if( config.res3_debug_out ) cerr << "add redundant binaries" << endl;
   
   // create big
   for( int p = 0 ; p < 2 ; ++ p ) 
@@ -361,12 +338,12 @@ void Resolving::addRedundantBinaries()
 	// not twice!
 	if( data.ma.isCurrentStep( toInt(l) ) ) continue;
 	data.ma.setCurrentStep( toInt(l) );
-	if( debug_out ) cerr << "c found direct " << l << endl;
+	if( config.res3_debug_out ) cerr << "c found direct " << l << endl;
 	data.lits.push_back(l);
       }
       int directLits = data.lits.size();
       
-      if( debug_out ) cerr << "c direct lits: " << directLits << endl;
+      if( config.res3_debug_out ) cerr << "c direct lits: " << directLits << endl;
       // no need to work on "empty" trails (no transitive literals)
       if( data.lits.size() == 0 ) continue;
       int level = 1;
@@ -385,7 +362,7 @@ void Resolving::addRedundantBinaries()
 	  if( data.ma.isCurrentStep( toInt(k) ) ) continue;
 	  data.ma.setCurrentStep( toInt(k) );
 	  data.lits.push_back(k);
-	  if( debug_out ) cerr << "c found transitive " << startLit << " -> " << k  << "  @ " << level << " via " << l << endl;
+	  if( config.res3_debug_out ) cerr << "c found transitive " << startLit << " -> " << k  << "  @ " << level << " via " << l << endl;
 	}
 	
       }
@@ -396,9 +373,9 @@ void Resolving::addRedundantBinaries()
 	  data.lits[i] = data.lits[ data.lits.size() - 1]; data.lits.pop_back(); --i;
 	}
       
-      if( debug_out ) cerr << "c found " << data.lits.size() << " new (" << directLits << " direct) literals for " << startLit << " with " << level << " levels" << endl;
+      if( config.res3_debug_out ) cerr << "c found " << data.lits.size() << " new (" << directLits << " direct) literals for " << startLit << " with " << level << " levels" << endl;
       
-      int use = opt_red_level ? (level * opt_add_percent) : (opt_add_percent * ( data.lits.size() - directLits ) );
+      int use = config.opt_add2_red_level ? (level * config.opt_add2_percent) : (config.opt_add2_percent * ( data.lits.size() - directLits ) );
       
       // cerr << "c use new literals: " << use << endl;
       
@@ -407,7 +384,7 @@ void Resolving::addRedundantBinaries()
       // shuffle some literals to the front!
       for( int i = directLits; i < use+directLits; ++ i ) {
 	int r = i + rand() % (data.lits.size() - i );
-	if( debug_out ) cerr << "c swap " << i << " and " << r << " out of " << data.lits.size() << endl;
+	if( config.res3_debug_out ) cerr << "c swap " << i << " and " << r << " out of " << data.lits.size() << endl;
 	const Lit tmp = data.lits[i];
 	data.lits [ i ] = data.lits [ r ];
 	data.lits[r] = tmp;
@@ -417,8 +394,8 @@ void Resolving::addRedundantBinaries()
       for( int i = directLits; i < use+directLits; ++ i ) {
 	  big[ toInt(startLit) ].push_back( data.lits[i] );
 	  big[ toInt( ~data.lits[i]) ].push_back( ~startLit );
-	  if( debug_out ) cerr  << "c add " << startLit << " -> " << data.lits[i] << endl;
-	  if( debug_out ) cerr  << "c add " << ~data.lits[i] << " -> " << ~startLit << endl;
+	  if( config.res3_debug_out ) cerr  << "c add " << startLit << " -> " << data.lits[i] << endl;
+	  if( config.res3_debug_out ) cerr  << "c add " << ~data.lits[i] << " -> " << ~startLit << endl;
       }
     }
   }
@@ -441,7 +418,7 @@ void Resolving::addRedundantBinaries()
 	  data.addClause(cr);
 	  data.getClauses().push(cr);
 	  modifiedFormula = true;
-	  if( debug_out ) cerr << "c added " << ca[cr] << endl;
+	  if( config.res3_debug_out ) cerr << "c added " << ca[cr] << endl;
       }
     }
   }

@@ -12,18 +12,6 @@ using namespace std;
 using namespace Coprocessor;
 
 
-static const char* _cat = "COPROCESSOR 3 - SHUFFLE";
-
-static IntOption opt_shuffle_seed          (_cat, "shuffle-seed",  "seed for shuffling",  0, IntRange(0, INT32_MAX));
-static BoolOption opt_shuffle_order        (_cat, "shuffle-order", "shuffle the order of the clauses", true);
-
-#if defined CP3VERSION  
-static const int debug_out = 0;
-#else
-static IntOption debug_out                 (_cat, "shuffle-debug", "Debug Output of Shuffler", 0, IntRange(0, 4));
-#endif
-
-
 VarShuffler::VarShuffler(CP3Config &_config) 
 : config(_config) 
 , variables(0)
@@ -31,12 +19,12 @@ VarShuffler::VarShuffler(CP3Config &_config)
 
 void VarShuffler::process(vec< Minisat::CRef >& clauses, vec< Minisat::CRef >& learnts, vec< Lit >& trail, uint32_t vars, ClauseAllocator& ca)
 {
-  setSeed( opt_shuffle_seed );
+  setSeed( config.opt_shuffle_seed );
   setupShuffling(vars);
   
-  shuffle( clauses, ca, opt_shuffle_order );
-  shuffle( learnts, ca, opt_shuffle_order );
-  shuffle( trail, opt_shuffle_order );
+  shuffle( clauses, ca, config.opt_shuffle_order );
+  shuffle( learnts, ca, config.opt_shuffle_order );
+  shuffle( trail, config.opt_shuffle_order );
   
 }
 
@@ -52,7 +40,7 @@ void VarShuffler::setupShuffling(uint32_t vars) {
   replacedBy.resize( vars, lit_Undef );
   for( Var v = 0 ; v < vars; ++v ) replacedBy[v] = mkLit(v,false);
 
-  if( debug_out > 2 ) {
+  if( config.shuffle_debug_out > 2 ) {
     cerr << "c step 1" << endl;
     for( Var v = 0 ; v < vars; ++v ) { 
       cerr << "c " << v+1 << "  => " << replacedBy[v] << endl;
@@ -66,7 +54,7 @@ void VarShuffler::setupShuffling(uint32_t vars) {
     replacedBy[r] = lr;
   }
   
-  if( debug_out > 2 ) {
+  if( config.shuffle_debug_out > 2 ) {
     cerr << "c step 2" << endl;
     for( Var v = 0 ; v < vars; ++v ) { 
       cerr << "c " << v+1 << "  => " << replacedBy[v] << endl;
@@ -79,7 +67,7 @@ void VarShuffler::setupShuffling(uint32_t vars) {
     if( r == 1 ) replacedBy[v] = ~replacedBy[v];
   }
   
-  if( debug_out > 1 ) {
+  if( config.shuffle_debug_out > 1 ) {
     cerr << "c step 3" << endl;
     for( Var v = 0 ; v < vars; ++v ) { 
       cerr << "c " << v+1 << "  => " << replacedBy[v] << endl;
@@ -117,7 +105,7 @@ void VarShuffler::shuffle( vec<CRef>& clauses, ClauseAllocator& ca, bool shuffle
     }
   }
 
-  if( debug_out > 2 ) {
+  if( config.shuffle_debug_out > 2 ) {
     cerr << "c rewritten clauses: " << endl;
     for( uint32_t i = 0 ; i < clauses.size(); ++ i ) {
       Clause& c = ca[ clauses[i] ];
@@ -140,7 +128,7 @@ void VarShuffler::shuffle( vec<Lit>& lits, bool shuffleOrder ) {
 	lits[r] = l;
       }
   }
-  if( debug_out > 2 ) {
+  if( config.shuffle_debug_out > 2 ) {
     cerr << "c rewritten vector: " << lits << endl;
   }
 }
@@ -152,10 +140,10 @@ void VarShuffler::unshuffle( vec<lbool>& model, uint32_t vars )
 
   int max = vars < model.size() ? vars : model.size();
   
-  setSeed( opt_shuffle_seed );
+  setSeed( config.opt_shuffle_seed );
   setupShuffling(vars); // be sure tio setup the full range, such that the replacement matches the one used for creating the shuffling
 
-  if( debug_out > 1 ) {
+  if( config.shuffle_debug_out > 1 ) {
     cerr << "c before unshuffle model: "<< endl;
     for( Var v = 0 ; v < max; ++v ) cerr <<  " " << mkLit(v, model[v] == l_False );
     cerr << endl;
@@ -165,7 +153,7 @@ void VarShuffler::unshuffle( vec<lbool>& model, uint32_t vars )
     model [v] = sign( replacedBy[v]) ? (copy[ var(replacedBy[v]) ] == l_False ? l_True : l_False) :  copy[ var(replacedBy[v]) ];
   }
   
-  if( debug_out > 1 ) {
+  if( config.shuffle_debug_out > 1 ) {
     cerr << "c after unshuffle model: " << endl;
     for( Var v = 0 ; v < max; ++v ) cerr <<  " " << mkLit(v, model[v] == l_False );
     cerr << endl;

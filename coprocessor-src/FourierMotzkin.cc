@@ -6,32 +6,6 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #include "mtl/Sort.h"
 
 
-static const char* _cat = "COPROCESSOR 3 - FOURIERMOTZKIN";
-
-static IntOption  opt_fmLimit        (_cat, "cp3_fm_limit"  ,"number of steps allowed for FM", 12000000, IntRange(0, INT32_MAX));
-static IntOption  opt_fmGrow         (_cat, "cp3_fm_grow"   ,"max. grow of number of constraints per step", 40, IntRange(0, INT32_MAX));
-static IntOption  opt_fmGrowT        (_cat, "cp3_fm_growT"  ,"total grow of number of constraints", 100000, IntRange(0, INT32_MAX));
-
-static BoolOption opt_atMostTwo      (_cat, "cp3_fm_amt"     ,"extract at-most-two", false);
-static BoolOption opt_findUnit       (_cat, "cp3_fm_unit"    ,"check for units first", true);
-static BoolOption opt_merge          (_cat, "cp3_fm_merge"   ,"perform AMO merge", true);
-static BoolOption opt_duplicates     (_cat, "cp3_fm_dups"    ,"avoid finding the same AMO multiple times", true);
-static BoolOption opt_cutOff         (_cat, "cp3_fm_cut"     ,"avoid eliminating too expensive variables (>10,10 or >5,15)", true);
-static IntOption opt_newAmo          (_cat, "cp3_fm_newAmo"  ,"encode the newly produced AMOs (with pairwise encoding) 0=no,1=yes,2=try to avoid redundant clauses",  2, IntRange(0, 2));
-static BoolOption opt_keepAllNew     (_cat, "cp3_fm_keepM"   ,"keep all new AMOs (also rejected ones)", true);
-static IntOption opt_newAlo          (_cat, "cp3_fm_newAlo"  ,"create clauses from deduced ALO constraints 0=no,1=from kept,2=keep all ",  2, IntRange(0, 2));
-static IntOption opt_newAlk          (_cat, "cp3_fm_newAlk"  ,"create clauses from deduced ALK constraints 0=no,1=from kept,2=keep all (possibly redundant!)",  2, IntRange(0, 2));
-static BoolOption opt_checkSub       (_cat, "cp3_fm_newSub"  ,"check whether new ALO and ALK subsume other clauses (only if newALO or newALK)", true);
-static BoolOption opt_rem_first      (_cat, "cp3_fm_1st"     ,"extract first AMO candidate, or last AMO candidate", false);
-
-
-
-#if defined CP3VERSION 
-static const int debug_out = 0;
-#else
-static IntOption debug_out                 (_cat, "fm-debug",       "Debug Output of Fourier Motzkin", 0, IntRange(0, 4));
-#endif
-
 using namespace Coprocessor;
 
 FourierMotzkin::FourierMotzkin( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation )
@@ -42,7 +16,7 @@ FourierMotzkin::FourierMotzkin( CP3Config &_config, ClauseAllocator& _ca, Thread
 , amoTime(0)
 , fmTime(0)
 , steps(0)
-, fmLimit(opt_fmLimit)
+, fmLimit(config.opt_fmLimit)
 , foundAmos(0)
 , foundAmts(0)
 , newAmos(0)
@@ -105,7 +79,7 @@ bool FourierMotzkin::process()
   
   cards.clear();
   
-  if( debug_out > 0) cerr << "c run with " << heap.size() << " elements" << endl;
+  if( config.fm_debug_out > 0) cerr << "c run with " << heap.size() << " elements" << endl;
   
   // for l in F
   while (heap.size() > 0 && (data.unlimited() || fmLimit > steps) && !data.isInterupted() ) 
@@ -117,7 +91,7 @@ bool FourierMotzkin::process()
     
     if( data[ right ] < 2 ) continue; // no enough occurrences -> skip!
     const uint32_t size = big.getSize( ~right );
-    if( debug_out > 2) cerr << "c check " << right << " with " << data[right] << " cls, and " << size << " implieds" << endl;
+    if( config.fm_debug_out > 2) cerr << "c check " << right << " with " << data[right] << " cls, and " << size << " implieds" << endl;
     if( size < 2 ) continue; // cannot result in a AMO of required size -> skip!
     Lit* list = big.getArray( ~right );
 
@@ -133,7 +107,7 @@ bool FourierMotzkin::process()
       inAmo.setCurrentStep( toInt(l ) );
       data.lits.push_back(l); // l is implied by ~right -> canidate for AMO(right,l, ... )
     }
-    if( debug_out > 2) cerr << "c implieds: " << data.lits.size() << endl;
+    if( config.fm_debug_out > 2) cerr << "c implieds: " << data.lits.size() << endl;
     if( data.lits.size() < 3 ) continue; // do not consider this variable, because it does not hit enough literals
     
     // TODO: should sort list according to frequency in binary clauses - ascending, so that small literals are removed first, increasing the chance for this more frequent ones to stay!
@@ -147,7 +121,7 @@ bool FourierMotzkin::process()
       // if not all, disable this literal, remove it from data.lits
       inAmo.nextStep(); // new AMO
       
-      if( opt_rem_first ) {
+      if( config.opt_rem_first ) {
 	for( int j = 0 ; j < size2; ++ j ) inAmo.setCurrentStep( toInt(list2[j]) );
 	int j = 0;
 	for( ; j<data.lits.size(); ++ j ) 
@@ -156,25 +130,25 @@ bool FourierMotzkin::process()
 	    && !inAmo.isCurrentStep( toInt( data.lits[j] ) ) 
 	  ) break;
 	if( j != data.lits.size() ) {
-	  if( debug_out > 0) cerr << "c reject [" <<i<< "]" << data.lits[i] << ", because failed with [" << j << "]" << data.lits[j] << endl;
+	  if( config.fm_debug_out > 0) cerr << "c reject [" <<i<< "]" << data.lits[i] << ", because failed with [" << j << "]" << data.lits[j] << endl;
 	  data.lits[i] = lit_Undef; // if not all literals are covered, disable this literal!
-	} else if( debug_out > 0) cerr << "c keep [" <<i<< "]" << data.lits[i] << " which hits [" << j << "] literas"  << endl;
+	} else if( config.fm_debug_out > 0) cerr << "c keep [" <<i<< "]" << data.lits[i] << " which hits [" << j << "] literas"  << endl;
       } else {
 	for( int j = 0 ; j < size2; ++ j ) {
-	  if( debug_out > 2 ) cerr << "c literal " << l << " hits literal " << list2[j] << endl;
+	  if( config.fm_debug_out > 2 ) cerr << "c literal " << l << " hits literal " << list2[j] << endl;
 	  inAmo.setCurrentStep( toInt(list2[j]) );
 	}
 	inAmo.setCurrentStep( toInt(l) ); // set literal itself!
 	int j = i+1; // previous literals have been tested already!
 	for( ; j < data.lits.size(); ++ j ) {
 	  if( data.lits[j] == lit_Undef ) continue; // do not process this literal!
-	  if( debug_out > 2 ) cerr << "c check literal " << data.lits[j] << "[" << j << "]" << endl;
+	  if( config.fm_debug_out > 2 ) cerr << "c check literal " << data.lits[j] << "[" << j << "]" << endl;
 	  if( !inAmo.isCurrentStep( toInt( data.lits[j] ) ) // not in AMO with current literal
 	  ) {
-	    if( debug_out > 0) cerr << "c reject [" <<j<< "]" << data.lits[j] << ", because failed with [" << i << "]" << data.lits[i] << endl;
+	    if( config.fm_debug_out > 0) cerr << "c reject [" <<j<< "]" << data.lits[j] << ", because failed with [" << i << "]" << data.lits[i] << endl;
 	    data.lits[j] = lit_Undef; // if not all literals are covered, disable this literal!
 	  } else {
-	    if( debug_out > 0) cerr << "c keep [" <<j<< "]" << data.lits[j] << " which is hit by literal " << data.lits[i] << "[" << i << "] "  << endl;    
+	    if( config.fm_debug_out > 0) cerr << "c keep [" <<j<< "]" << data.lits[j] << " which is hit by literal " << data.lits[i] << "[" << i << "] "  << endl;    
 	  }
 	}
       }
@@ -187,7 +161,7 @@ bool FourierMotzkin::process()
       if ( data.lits[i] == lit_Undef ) { data.lits[i] = data.lits[ data.lits.size() - 1 ]; data.lits.pop_back(); --i; }
     
     for( int i = 0 ; i < data.lits.size(); ++ i ){
-      if( opt_duplicates ) { // remove the edges in the big that represent this AMO
+      if( config.opt_duplicates ) { // remove the edges in the big that represent this AMO
 	for( int j = i+1; j < data.lits.size(); ++ j ) big.removeEdge(data.lits[i], data.lits[j] );
       }
       data.lits[i] = ~ data.lits[i]; // need to negate all!
@@ -198,20 +172,20 @@ bool FourierMotzkin::process()
     sort(data.lits);
     cards.push_back( data.lits );
 
-    if( debug_out > 0 ) cerr << "c found AMO: " << data.lits << endl;
+    if( config.fm_debug_out > 0 ) cerr << "c found AMO: " << data.lits << endl;
   }
  
   amoTime = cpuTime() - amoTime;
   foundAmos = cards.size();
   
-  if( debug_out > 0 ) cerr << "c finished search AMO --- process ... " << endl;
+  if( config.fm_debug_out > 0 ) cerr << "c finished search AMO --- process ... " << endl;
   
   // perform AMT extraction
-  if( opt_atMostTwo ) {
+  if( config.opt_atMostTwo ) {
     for( Var v = 0 ; v < data.nVars(); ++ v ) {
       for( int p = 0 ; p < 1; ++ p ) {
         const Lit l = mkLit(v,p==1);
-	if( debug_out > 1 ) cerr << "c consider literal " << l << " with " << data.list(l).size() << " clauses" << endl;
+	if( config.fm_debug_out > 1 ) cerr << "c consider literal " << l << " with " << data.list(l).size() << " clauses" << endl;
         data.lits.clear(); data.ma.nextStep(); // prepare set!
 	data.lits.push_back(l); data.ma.setCurrentStep( toInt(l) ); // add current literal!
 	for( int i = 0 ; i < data.list(l).size(); ++ i ) { // collect all literals that occur with l in a ternary clause!
@@ -233,7 +207,7 @@ bool FourierMotzkin::process()
 	    const Lit l1 = data.lits[j];
 	    for( int k = j+1 ; k < data.lits.size(); ++ k ) { 
 	      const Lit l2 = data.lits[k];
-	      if( debug_out > 2 ) cerr << "c check triple " << l0 << " - " << l1 << " - " << l2 << endl;
+	      if( config.fm_debug_out > 2 ) cerr << "c check triple " << l0 << " - " << l1 << " - " << l2 << endl;
 	      int m = 0;
 	      for(  ; m < data.list(l0).size(); ++ m ) { // collect all literals that occur with l in a ternary clause!
 		const Clause& c = ca[data.list(l0)[m]];
@@ -254,7 +228,7 @@ bool FourierMotzkin::process()
 	if( data.lits.size() > 3 ) {
 	  for( int i = 0 ; i < data.lits.size(); ++ i ) data.lits[i] = ~data.lits[i];
 	  foundAmts ++;
-	  if( debug_out > 1 ) cerr << "c found AM2["<<foundAmts<<"]: " << data.lits << endl;
+	  if( config.fm_debug_out > 1 ) cerr << "c found AM2["<<foundAmts<<"]: " << data.lits << endl;
 	  cards.push_back( CardC( data.lits ) ); // use default AMO constructor
 	  cards.back().k = 2; // set k to be 2, since its an at-most-two constraint!
 	}
@@ -277,9 +251,9 @@ bool FourierMotzkin::process()
   vector<int> newAMOs,newALOs,newALKs;
   
   // perform FindUnit
-  if( opt_findUnit ) {
+  if( config.opt_findUnit ) {
     inAmo.nextStep(); // check for each literal whether its already in the unit queue
-    if( debug_out > 0 ) cerr << "c find units ... " << endl;
+    if( config.fm_debug_out > 0 ) cerr << "c find units ... " << endl;
     for( Var v = 0 ; v < data.nVars(); ++v  ) {
       const Lit pl = mkLit(v,false), nl = mkLit(v,true);
       for( int i = 0 ; i < leftHands[toInt(pl)].size() && steps < fmLimit; ++ i ) { // since all cards are compared, be careful!
@@ -302,7 +276,7 @@ bool FourierMotzkin::process()
 		if( l_False == data.enqueue( ~v1[n1] ) ) goto finishedFM; // enqueing this literal failed -> finish!
 	      }
 	      // TODO: enqueue, later remove from all cards!
-	      if( debug_out > 1 ) cerr << "c AMOs entail unit literal " << ~ v1[n1] << endl;
+	      if( config.fm_debug_out > 1 ) cerr << "c AMOs entail unit literal " << ~ v1[n1] << endl;
 	      n1++;n2++;
 	    } else if( v1[n1] < v2[n2] ) {n1 ++;}
 	    else { n2 ++; }
@@ -317,8 +291,8 @@ bool FourierMotzkin::process()
   
    
   // perform merge
-  if( opt_merge ) {
-    if( debug_out > 0 ) cerr << "c merge AMOs ... " << endl;
+  if( config.opt_merge ) {
+    if( config.fm_debug_out > 0 ) cerr << "c merge AMOs ... " << endl;
     for( Var v = 0 ; v < data.nVars(); ++v  ) {
       const Lit pl = mkLit(v,false), nl = mkLit(v,true);
       if( leftHands[ toInt(pl) ] .size() > 2 || leftHands[ toInt(nl) ] .size() > 2 ) continue; // only if the variable has very few occurrences
@@ -347,7 +321,7 @@ bool FourierMotzkin::process()
 		  inAmo.setCurrentStep( toInt(~v1[n1]) );
 		  unitQueue.push(~v1[n1]);
 		  if( data.enqueue( ~v1[n1] ) == l_False ) {
-		    if( debug_out > 1 ) cerr << "c enquing " << ~v1[n1] << " failed" << endl;
+		    if( config.fm_debug_out > 1 ) cerr << "c enquing " << ~v1[n1] << " failed" << endl;
 		    goto finishedFM; // enqueing this literal failed -> finish!
 		  }
 	      }
@@ -362,12 +336,12 @@ bool FourierMotzkin::process()
 	  }
 	  for(; n1 < v1.size(); ++ n1 ) if( v1[n1] != pl ) data.lits.push_back( v1[n1] );
 	  for(; n2 < v2.size(); ++ n2 ) if( v2[n2] != nl ) data.lits.push_back( v2[n2] );
-	  if( debug_out > 0 ) cerr << "c deduced AMO " << data.lits << " from AMO " << card1.ll << " and AMO " << card2.ll << endl;
+	  if( config.fm_debug_out > 0 ) cerr << "c deduced AMO " << data.lits << " from AMO " << card1.ll << " and AMO " << card2.ll << endl;
 	  
 	  // check whether there are similar variables inside the constraint, if so - drop it!
 	  bool hasComplements = false;
 	  for( int k = 0 ; k + 1 < data.lits.size(); ++k ) if( data.lits[k] == ~ data.lits[k+1] ) { 
-	    if( debug_out > 2 ) cerr << "c deduced AMO contains complementary literals - set all others to false!" << endl;
+	    if( config.fm_debug_out > 2 ) cerr << "c deduced AMO contains complementary literals - set all others to false!" << endl;
 	    Var uv = var(data.lits[k]);
 	    for( int k = 0 ; k < data.lits.size(); ++ k ) {
 	      if( var(data.lits[k]) == uv ) continue; // do not enqueue complementary literal!
@@ -376,7 +350,7 @@ bool FourierMotzkin::process()
 		  inAmo.setCurrentStep( toInt(~data.lits[k]) );
 		  unitQueue.push(~data.lits[k]);
 		  if( data.enqueue( ~data.lits[k] ) == l_False ) {
-		    if( debug_out > 1 ) cerr << "c enquing " << ~data.lits[k] << " failed" << endl;
+		    if( config.fm_debug_out > 1 ) cerr << "c enquing " << ~data.lits[k] << " failed" << endl;
 		    goto finishedFM; // enqueing this literal failed -> finish!
 		  }
 	      }
@@ -417,7 +391,7 @@ bool FourierMotzkin::process()
       if( data.ma.isCurrentStep( var(c[j])) ) { // a literal of this clause took part in an AMO
 	const int index = cards.size();
 	cards.push_back( CardC( c ) );
-	if( debug_out > 1 ) cerr << "c clause " << c << " leads to card " << cards[cards.size() -1 ].ll << " <= " << cards[cards.size() -1 ].k << " + " << cards[cards.size() -1 ].lr << endl;
+	if( config.fm_debug_out > 1 ) cerr << "c clause " << c << " leads to card " << cards[cards.size() -1 ].ll << " <= " << cards[cards.size() -1 ].k << " + " << cards[cards.size() -1 ].lr << endl;
 	for( int j = 0 ; j < c.size(); ++ j ) {
 	  rightHands[toInt(c[j])].push_back(index);
 	  if( !heap.inHeap(toInt(c[j])) ) heap.insert( toInt(c[j]) );
@@ -428,7 +402,7 @@ bool FourierMotzkin::process()
     }
   }
 
-  if( debug_out > 0 ) cerr << "c apply FM ..." << endl;
+  if( config.fm_debug_out > 0 ) cerr << "c apply FM ..." << endl;
   // for l in F
   while (heap.size() > 0 && (data.unlimited() || fmLimit > steps) && !data.isInterupted() ) 
   {
@@ -440,7 +414,7 @@ bool FourierMotzkin::process()
 
     heap.removeMin();
 
-    if( debug_out > 1 ) cerr << endl << "c eliminate literal " << toEliminate << endl;
+    if( config.fm_debug_out > 1 ) cerr << endl << "c eliminate literal " << toEliminate << endl;
     
     int oldSize = cards.size(),oldNewSize = newAMOs.size(), oldAloSize = newALOs.size(), oldAlkSize = newALKs.size();
     
@@ -449,7 +423,7 @@ bool FourierMotzkin::process()
 	pureAmoLits ++;
 	continue; // only if the variable has very few occurrences. cannot handle pure here, because its also inside the formula at other places!
       }
-      if( opt_cutOff && 
+      if( config.opt_cutOff && 
 	 ((leftHands[ toInt(toEliminate) ] .size() > 5 && rightHands[ toInt(toEliminate) ] .size() > 15)
 	 || (leftHands[ toInt(toEliminate) ] .size() > 15 && rightHands[ toInt(toEliminate) ] .size() > 5)
 	 || (leftHands[ toInt(toEliminate) ] .size() > 10 && rightHands[ toInt(toEliminate) ] .size() > 10))
@@ -466,7 +440,7 @@ bool FourierMotzkin::process()
 	
 	for( int j = 0 ; j < rightHands[toInt(toEliminate)].size(); ++ j ) {
 	  if( rightHands[toInt(toEliminate)][j] == leftHands[toInt(toEliminate)][i] ){ 
-	    if( debug_out > 2 ) cerr << "c irregular literal " << toEliminate << " with constraints (" << rightHands[toInt(toEliminate)][j] << " == " << leftHands[toInt(toEliminate)][i] << "): " << endl
+	    if( config.fm_debug_out > 2 ) cerr << "c irregular literal " << toEliminate << " with constraints (" << rightHands[toInt(toEliminate)][j] << " == " << leftHands[toInt(toEliminate)][i] << "): " << endl
 				      << " and  " << cards[rightHands[toInt(toEliminate)][j]].ll << " <= " << cards[rightHands[toInt(toEliminate)][j]].k << " + " << cards[rightHands[toInt(toEliminate)][j]].lr << endl;
 	    irregular++; 
 	    continue;
@@ -520,7 +494,7 @@ bool FourierMotzkin::process()
 	  }
 	  
 	  if( hasDuplicates ) {
-	    if( debug_out > 1 ) cerr << "c new card would have duplicates - drop it (can be fixed with full FM algorithm which uses weights)" << endl
+	    if( config.fm_debug_out > 1 ) cerr << "c new card would have duplicates - drop it (can be fixed with full FM algorithm which uses weights)" << endl
 	         << "c  from " << card1.ll << " <= " << card1.k << " + " << card1.lr << endl
 		 << "c   and " << card2.ll << " <= " << card2.k << " + " << card2.lr << endl << endl;
 	     cards.pop_back(); // remove last card again
@@ -543,26 +517,26 @@ bool FourierMotzkin::process()
 	  thisCard.ll.resize(kl);
 	  
 	  thisCard.k = card1.k + card2.k;
-	  if( debug_out > 1 ) cerr << "c resolved new CARD " << thisCard.ll << " <= " << thisCard.k << " + " << thisCard.lr << "  (unit: " << thisCard.isUnit() << " taut: " << thisCard.taut() << ", failed: " << thisCard.failed() << "," << (int)thisCard.lr.size() + thisCard.k << ")" << endl
+	  if( config.fm_debug_out > 1 ) cerr << "c resolved new CARD " << thisCard.ll << " <= " << thisCard.k << " + " << thisCard.lr << "  (unit: " << thisCard.isUnit() << " taut: " << thisCard.taut() << ", failed: " << thisCard.failed() << "," << (int)thisCard.lr.size() + thisCard.k << ")" << endl
 				    << "c from " << card1.ll << " <= " << card1.k << " + " << card1.lr << endl
 				    << "c and  " << card2.ll << " <= " << card2.k << " + " << card2.lr << endl << endl;
 	  if( thisCard.taut() ) {
-	     if( debug_out > 1 ) cerr << "c new card is taut! - drop it" << endl;
+	     if( config.fm_debug_out > 1 ) cerr << "c new card is taut! - drop it" << endl;
 	     cards.pop_back(); // remove last card again
 	     continue;
 	  } else if( thisCard.failed() ) {
-	    if( debug_out > 1 ) cerr << "c new card is failed! - stop procedure!" << endl;
+	    if( config.fm_debug_out > 1 ) cerr << "c new card is failed! - stop procedure!" << endl;
 	    data.setFailed();
 	    goto finishedFM;
 	  }else if( thisCard.isUnit() ) { // all literals in ll have to be set to false!
-	    if( debug_out > 1 ) cerr << "c new card is unit - enqueue all literals" << endl;
+	    if( config.fm_debug_out > 1 ) cerr << "c new card is unit - enqueue all literals" << endl;
 	    deducedUnits += thisCard.ll.size() + thisCard.lr.size(); 
 	    for( int k = 0 ; k < thisCard.ll.size(); ++ k ) {
 		if( ! inAmo.isCurrentStep( toInt(~thisCard.ll[k]) ) ) { // store each literal only once in the queue
 		  inAmo.setCurrentStep( toInt(~thisCard.ll[k]) );
 		  unitQueue.push(~thisCard.ll[k]);
 		  if( data.enqueue( ~thisCard.ll[k] ) == l_False ) {
-		    if( debug_out > 1 ) cerr << "c enquing " << ~thisCard.ll[k] << " failed" << endl;
+		    if( config.fm_debug_out > 1 ) cerr << "c enquing " << ~thisCard.ll[k] << " failed" << endl;
 		    goto finishedFM;
 		  }
 		}
@@ -572,7 +546,7 @@ bool FourierMotzkin::process()
 		  inAmo.setCurrentStep( toInt(thisCard.lr[k]) );
 		  unitQueue.push(thisCard.lr[k]);
 		  if( data.enqueue( thisCard.lr[k] ) == l_False ) {
-		    if( debug_out > 1 ) cerr << "c enquing " << thisCard.lr[k] << " failed" << endl;
+		    if( config.fm_debug_out > 1 ) cerr << "c enquing " << thisCard.lr[k] << " failed" << endl;
 		    goto finishedFM;
 		  }
 		}
@@ -580,38 +554,38 @@ bool FourierMotzkin::process()
 	    cards.pop_back(); // remove last card again, because all its information has been used already!
 	    continue;
 	  } else if (thisCard.amo() ) {
-	    if( debug_out > 1 ) cerr << "c new card is NEW amo - memorize it!" << endl;
-	    if(opt_newAmo) newAMOs.push_back( index );
+	    if( config.fm_debug_out > 1 ) cerr << "c new card is NEW amo - memorize it!" << endl;
+	    if(config.opt_newAmo) newAMOs.push_back( index );
 	    newAmos ++;
-	  } else if (thisCard.alo() && opt_newAlo > 0) {
-	    if( debug_out > 1 ) cerr << "c new card is NEW alo - memorize it!" << endl;
+	  } else if (thisCard.alo() && config.opt_newAlo > 0) {
+	    if( config.fm_debug_out > 1 ) cerr << "c new card is NEW alo - memorize it!" << endl;
 	    newAlos ++; 
-	    if(opt_newAmo) newALOs.push_back( index );
-	  }  else if (thisCard.alo() && opt_newAlk > 0) {
-	    if( debug_out > 1 ) cerr << "c new card is NEW alk - memorize it!" << endl;
+	    if(config.opt_newAmo) newALOs.push_back( index );
+	  }  else if (thisCard.alo() && config.opt_newAlk > 0) {
+	    if( config.fm_debug_out > 1 ) cerr << "c new card is NEW alk - memorize it!" << endl;
 	    newAlks ++; 
-	    if(opt_newAmo) newALKs.push_back( index );
+	    if(config.opt_newAmo) newALKs.push_back( index );
 	  }
 	}
       }
       
       // new constraints > removed constraints + grow -> drop the elimination again!
-      if( (cards.size() - oldSize > leftHands[ toInt(toEliminate) ] .size() + rightHands[ toInt(toEliminate) ].size()  + opt_fmGrow ) // local increase to large
-	|| (cardDiff > opt_fmGrowT ) // global limit hit
+      if( (cards.size() - oldSize > leftHands[ toInt(toEliminate) ] .size() + rightHands[ toInt(toEliminate) ].size()  + config.opt_fmGrow ) // local increase to large
+	|| (cardDiff > config.opt_fmGrowT ) // global limit hit
       ) {
 	discardedCards += (cards.size() - oldSize);
 	// if( rejectedNewAmos
-	if( opt_keepAllNew ) { // copy the new AMOs that should be rejected
+	if( config.opt_keepAllNew ) { // copy the new AMOs that should be rejected
 	  for( int p = oldNewSize; p < newAMOs.size(); ++ p ) {
 	    rejectedNewAmos.push_back( cards[ newAMOs[p] ] );
 	  }
 	} else discardedNewAmos += (newAMOs.size() - oldNewSize );
-	if( opt_newAlo > 1  ) { // copy the new AMOs that should be rejected
+	if( config.opt_newAlo > 1  ) { // copy the new AMOs that should be rejected
 	  for( int p = oldAloSize; p < newAMOs.size(); ++ p ) {
 	    rejectedNewAlos.push_back( cards[ newAMOs[p] ] );
 	  }
 	} 
-	if( opt_newAlk > 1 ) { // copy the new AMOs that should be rejected
+	if( config.opt_newAlk > 1 ) { // copy the new AMOs that should be rejected
 	  for( int p = oldAlkSize; p < newAMOs.size(); ++ p ) {
 	    rejectedNewAlks.push_back( cards[ newAMOs[p] ] );
 	  }
@@ -635,31 +609,31 @@ bool FourierMotzkin::process()
 	while( indexes.size() > 0 ) {
 	  int removeIndex = indexes[0]; // copy, because reference of vector will be changed!
 	  const CardC& card = cards[ removeIndex ];
-	  if( debug_out > 2 ) cerr << "c remove  " << card.ll << " <= " << card.k << " + " << card.lr << " ... " << endl;
+	  if( config.fm_debug_out > 2 ) cerr << "c remove  " << card.ll << " <= " << card.k << " + " << card.lr << " ... " << endl;
 	  for( int j = 0 ; j < card.ll.size(); ++ j ) { // remove all lls from left hand!
 	    const Lit l = card.ll[j];
 	    // if( !heap.inHeap( toInt(l) ) ) heap.insert( toInt(l) ); // add literal of modified cards to heap again
-	    if( debug_out > 3 ) cerr << "c check " << removeIndex << " in " << leftHands[toInt(l)] << endl;
+	    if( config.fm_debug_out > 3 ) cerr << "c check " << removeIndex << " in " << leftHands[toInt(l)] << endl;
 	    for( int k = 0 ; k < leftHands[toInt(l)].size(); ++ k ) {
 	      if( leftHands[toInt(l)][k] == removeIndex ) {
-		if( debug_out > 3 ) cerr << "c from leftHand " << l << "( " << j << "/" << card.ll.size() << "," << k << "/" << leftHands[toInt(l)].size()  << ")" << endl;
+		if( config.fm_debug_out > 3 ) cerr << "c from leftHand " << l << "( " << j << "/" << card.ll.size() << "," << k << "/" << leftHands[toInt(l)].size()  << ")" << endl;
 		leftHands[toInt(l)][k] = leftHands[toInt(l)][ leftHands[toInt(l)].size() - 1]; leftHands[toInt(l)].pop_back(); 
 		break;
 	      }
 	    }
-	    if( debug_out > 3 ) cerr << "c finished literal " << l << "( " << j << "/" << card.ll.size() << ")" << endl;
+	    if( config.fm_debug_out > 3 ) cerr << "c finished literal " << l << "( " << j << "/" << card.ll.size() << ")" << endl;
 	  }
 	  for( int j = 0 ; j < card.lr.size(); ++ j ) { // remove all lls from left hand!
 	    const Lit l = card.lr[j];
 	    // if( !heap.inHeap( toInt(l) ) ) heap.insert( toInt(l) ); // add literal of modified cards to heap again
-	    if( debug_out > 3 ) cerr << "c check " << removeIndex << " in " << rightHands[toInt(l)] << endl;
+	    if( config.fm_debug_out > 3 ) cerr << "c check " << removeIndex << " in " << rightHands[toInt(l)] << endl;
 	    for( int k = 0 ; k < rightHands[toInt(l)].size(); ++ k ) {
 	      if( rightHands[toInt(l)][k] == removeIndex ) {
-		if( debug_out > 3 ) cerr << "c from rightHands " << l << "( " << j << "/" << card.lr.size() << "," << k << "/" << rightHands[toInt(l)].size()  << ")" << endl;
+		if( config.fm_debug_out > 3 ) cerr << "c from rightHands " << l << "( " << j << "/" << card.lr.size() << "," << k << "/" << rightHands[toInt(l)].size()  << ")" << endl;
 		rightHands[toInt(l)][k] = rightHands[toInt(l)][ rightHands[toInt(l)].size() - 1]; rightHands[toInt(l)].pop_back(); break;
 	      }
 	    }
-	    if( debug_out > 3 ) cerr << "c finished literal " << l << "( " << j << "/" << card.ll.size() << ")" << endl;
+	    if( config.fm_debug_out > 3 ) cerr << "c finished literal " << l << "( " << j << "/" << card.ll.size() << ")" << endl;
 	  }
 	  
 	}
@@ -681,24 +655,24 @@ bool FourierMotzkin::process()
   if( data.ok() && data.hasToPropagate() )
     if( propagation.process(data,true) == l_False ) {data.setFailed(); goto finishedFM; }
   
-  if( data.ok() && opt_newAmo > 0 && (newAMOs.size() > 0 || rejectedNewAmos.size() > 0) ) {
+  if( data.ok() && config.opt_newAmo > 0 && (newAMOs.size() > 0 || rejectedNewAmos.size() > 0) ) {
     big.recreate( ca, data, data.getClauses() ); 
-    if(opt_newAmo > 1) big.generateImplied(data); // try to avoid adding redundant clauses!
+    if(config.opt_newAmo > 1) big.generateImplied(data); // try to avoid adding redundant clauses!
     for( int p = 0; p<2; ++ p ) {
       // use both the list of newAMOs, and the rejected new amos!
       for( int i = 0 ; i < (p == 0 ? newAMOs.size() : rejectedNewAmos.size()) ; ++ i ) {
 	CardC& c = p == 0 ? cards[newAMOs[i]] : rejectedNewAmos[i];
 	if( c.invalid() || !c.amo() ) {
-	  if( debug_out > 1 ) cerr << "c new AMO " << c.ll << " <= " << c.k << " + " << c.lr << " is dropped!" << endl;
+	  if( config.fm_debug_out > 1 ) cerr << "c new AMO " << c.ll << " <= " << c.k << " + " << c.lr << " is dropped!" << endl;
 	  continue;
 	}
 	for( int j = 0 ; j < c.ll.size(); ++ j ) {
 	  for( int k = j+1; k < c.ll.size(); ++ k ) {
 	    bool present = false;
-	    if( opt_newAmo == 2 ) present = big.implies(c.ll[j],~c.ll[k]) || big.implies(~c.ll[k],c.ll[j]); // fast stamp check
+	    if( config.opt_newAmo == 2 ) present = big.implies(c.ll[j],~c.ll[k]) || big.implies(~c.ll[k],c.ll[j]); // fast stamp check
 	    if(!present) present = big.isChild(c.ll[j],~c.ll[k]) || big.isChild(c.ll[k],~c.ll[j]); // slower list check
 	    if( !present ) { // if the information is not part of the formula yet, add the clause!
-	      if( debug_out > 2 ) cerr << "c create new binary clause " <<  ~c.ll[k] << " , " << ~c.ll[j] << endl;
+	      if( config.fm_debug_out > 2 ) cerr << "c create new binary clause " <<  ~c.ll[k] << " , " << ~c.ll[j] << endl;
 	      addedBinaryClauses ++;
 	      unitQueue.clear();
 	      unitQueue.push( ~c.ll[k] < ~c.ll[j] ? ~c.ll[k] : ~c.ll[j] );
@@ -715,12 +689,12 @@ bool FourierMotzkin::process()
     }
   }
   
-  if( data.ok() && opt_newAlo > 0 && (newALOs.size() > 0 || rejectedNewAlos.size() > 0) ) {
+  if( data.ok() && config.opt_newAlo > 0 && (newALOs.size() > 0 || rejectedNewAlos.size() > 0) ) {
     for( int p = 0; p<2; ++ p ) {
       for( int i = 0 ; i < (p == 0 ? newALOs.size() : rejectedNewAlos.size()) ; ++ i ) {
 	CardC& c = p == 0 ? cards[newALOs[i]] : rejectedNewAlos[i];
 	if( c.invalid() || !c.alo() ) {
-	  if( debug_out > 1 ) cerr << "c new ALO " << c.ll << " <= " << c.k << " + " << c.lr << " is dropped!" << endl;
+	  if( config.fm_debug_out > 1 ) cerr << "c new ALO " << c.ll << " <= " << c.k << " + " << c.lr << " is dropped!" << endl;
 	  continue;
 	}
 	if( c.lr.size() == 1 ) {
@@ -741,12 +715,12 @@ bool FourierMotzkin::process()
   if( data.ok() && data.hasToPropagate() )
     if( propagation.process(data,true) == l_False ) {data.setFailed(); goto finishedFM; }
   
-  if( data.ok() && opt_newAlk > 0 && (newALKs.size() > 0 || rejectedNewAlks.size() > 0) ) {
+  if( data.ok() && config.opt_newAlk > 0 && (newALKs.size() > 0 || rejectedNewAlks.size() > 0) ) {
     for( int p = 0; p<2; ++ p ) {
       for( int i = 0 ; i < (p == 0 ? newALKs.size() : rejectedNewAlks.size()) ; ++ i ) {
 	CardC& c = p == 0 ? cards[newALKs[i]] : rejectedNewAlks[i];
 	if( c.invalid() || !c.alk() ) {
-	  if( debug_out > 1 ) cerr << "c new ALK " << c.ll << " <= " << c.k << " + " << c.lr << " is dropped!" << endl;
+	  if( config.fm_debug_out > 1 ) cerr << "c new ALK " << c.ll << " <= " << c.k << " + " << c.lr << " is dropped!" << endl;
 	  continue;
 	}
 	if( c.lr.size() == 1 ) {
@@ -812,16 +786,16 @@ bool FourierMotzkin::hasDuplicate(const vector<Lit>& c)
     if( d.size() == c.size() ) { // do not remove itself - cannot happen, because one clause is not added yet
       while( j < c.size() && c[j] == d[j] ) ++j ;
       if( j == c.size() ) { 
-	if( debug_out > 1 ) cerr << "c clause is equal to [" << list[i] << "] : " << d << endl;
+	if( config.fm_debug_out > 1 ) cerr << "c clause is equal to [" << list[i] << "] : " << d << endl;
 	detectedDuplicates ++;
 	return true;
       }
     }
-    if( opt_checkSub ) { // check each clause for being subsumed -> kick subsumed clauses!
+    if( config.opt_checkSub ) { // check each clause for being subsumed -> kick subsumed clauses!
       if( d.size() < c.size() ) {
 	detectedDuplicates ++;
 	if( ordered_subsumes(d,c) ) {
-	  if( debug_out > 1 ) cerr << "c clause " << c << " is subsumed by [" << list[i] << "] : " << d << endl;
+	  if( config.fm_debug_out > 1 ) cerr << "c clause " << c << " is subsumed by [" << list[i] << "] : " << d << endl;
 	  return true; // the other clause subsumes the current clause!
 	}
       } if( d.size() > c.size() ) { // if size is equal, then either removed before, or not removed at all!
@@ -849,20 +823,20 @@ bool FourierMotzkin::propagateCards(vec< Lit >& unitQueue, vector< std::vector< 
 	    CardC& c = cards[ indexes[i] ];
 	    steps ++;
 	    if( c.invalid() ) continue; // do not consider this constraint any more!
-	    if( debug_out > 2 ) cerr << "c propagate " << c.ll << " <= " << c.k << " + " << c.lr << endl;
+	    if( config.fm_debug_out > 2 ) cerr << "c propagate " << c.ll << " <= " << c.k << " + " << c.lr << endl;
 	    // remove all assigned literals and either reduce the ll vector, or "k"
 	    int kc = 0;
 	    for( int j = 0 ; j < c.ll.size(); ++ j ) {
 	      if( data.value(c.ll[j]) == l_True ) {
-		if( debug_out > 2 ) cerr << "c since " << c.ll[j] << " == top, reduce k from " << c.k << " to " << c.k - 1 << endl;
+		if( config.fm_debug_out > 2 ) cerr << "c since " << c.ll[j] << " == top, reduce k from " << c.k << " to " << c.k - 1 << endl;
 		c.k --;
 	      } else if( data.value(c.ll[j]) == l_Undef ) {
-		if( debug_out > 2 ) cerr << "c keep literal " << c.ll[j] << endl;
+		if( config.fm_debug_out > 2 ) cerr << "c keep literal " << c.ll[j] << endl;
 		c.ll[kc++] = c.ll[j];
-	      } else if( debug_out > 2 ) cerr << "c drop unsatisfied literal " << c.ll[j] << endl;
+	      } else if( config.fm_debug_out > 2 ) cerr << "c drop unsatisfied literal " << c.ll[j] << endl;
 	    }
 	    c.ll.resize(kc);
-	    if( debug_out > 2 ) cerr << "c        to " << c.ll << " <= " << c.k << " + " << c.lr << endl;
+	    if( config.fm_debug_out > 2 ) cerr << "c        to " << c.ll << " <= " << c.k << " + " << c.lr << endl;
 	    if(c.isUnit() ) {  // propagate AMOs only!
 	      for( int j = 0 ; j < c.ll.size(); ++ j ) { // all literals in ll have to be set to false
 		if( ! inAmo.isCurrentStep( toInt(~c.ll[j]) ) ) { // store each literal only once in the queue
@@ -870,7 +844,7 @@ bool FourierMotzkin::propagateCards(vec< Lit >& unitQueue, vector< std::vector< 
 		  inAmo.setCurrentStep( toInt(~c.ll[j]) );
 		  unitQueue.push(~c.ll[j]);
 		  if( data.enqueue( ~c.ll[j] ) == l_False ) {
-		    if( debug_out > 1 ) cerr << "c enquing " << ~c.ll[j] << " failed" << endl;
+		    if( config.fm_debug_out > 1 ) cerr << "c enquing " << ~c.ll[j] << " failed" << endl;
 		     return false; // enqueing this literal failed -> finish!
 		  }
 		}
@@ -881,7 +855,7 @@ bool FourierMotzkin::propagateCards(vec< Lit >& unitQueue, vector< std::vector< 
 		  inAmo.setCurrentStep( toInt(c.lr[j]) );
 		  unitQueue.push(c.lr[j]);
 		  if( data.enqueue( c.lr[j] ) == l_False ) {
-		    if( debug_out > 1 ) cerr << "c enquing " << c.lr[j] << " failed" << endl;
+		    if( config.fm_debug_out > 1 ) cerr << "c enquing " << c.lr[j] << " failed" << endl;
 		     return false; // enqueing this literal failed -> finish!
 		  }
 		}
@@ -890,7 +864,7 @@ bool FourierMotzkin::propagateCards(vec< Lit >& unitQueue, vector< std::vector< 
 	    }
 	    if( c.taut() ) c.invalidate();
 	    else if ( c.failed() ) {
-	      if( debug_out > 1 ) cerr << "c resulting constraint cannot be satisfied!" << endl;
+	      if( config.fm_debug_out > 1 ) cerr << "c resulting constraint cannot be satisfied!" << endl;
 	      data.setFailed(); return false;
 	    }
 	  }

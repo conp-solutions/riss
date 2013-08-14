@@ -4,32 +4,14 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor-src/HiddenTautologyElimination.h"
 
-static const char* _cat = "COPROCESSOR 3 - HTE";
 
-static IntOption opt_steps    (_cat, "cp3_hte_steps",  "Number of steps that are allowed per iteration", INT32_MAX, IntRange(-1, INT32_MAX));
-
-#if defined CP3VERSION && CP3VERSION < 302
- static const bool opt_par_hte        = false;
-#else
- BoolOption opt_par_hte         (_cat, "cp3_par_hte",    "Forcing Parallel HTE", false);
-#endif
-
-#if defined CP3VERSION  
-static const int debug_out = 0;
-static const bool opt_hteTalk = false;
-#else
-static IntOption debug_out    (_cat, "cp3_hte_debug",  "print debug output to screen", 0, IntRange(0, 4));
-static BoolOption opt_hteTalk (_cat, "cp3_hteTalk",    "talk about algorithm execution", false);
-#endif
-
-static IntOption  opt_inpStepInc      (_cat, "cp3_hte_inpInc","increase for steps per inprocess call", 60000, IntRange(0, INT32_MAX));
 
 using namespace Coprocessor;
 
 HiddenTautologyElimination::HiddenTautologyElimination( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation )
 : Technique( _config, _ca, _controller )
 , propagation (_propagation)
-, steps(opt_steps)
+, steps(config.opt_hte_steps)
 , processTime(0)
 , removedClauses(0)
 , removedLits(0)
@@ -39,7 +21,7 @@ HiddenTautologyElimination::HiddenTautologyElimination( CP3Config &_config, Clau
 
 void HiddenTautologyElimination::giveMoreSteps()
 {
- steps = steps < opt_inpStepInc ? 0 : steps - opt_inpStepInc; 
+ steps = steps < config.opt_hte_inpStepInc ? 0 : steps - config.opt_hte_inpStepInc; 
 }
 
 
@@ -62,7 +44,7 @@ void HiddenTautologyElimination::process(CoprocessorData& data)
   // here, use only clauses of the formula handling learnt clauses is more complicated!
   big.create(ca,data,data.getClauses() );
 
-  if( debug_out > 1 ) {
+  if( config.hte_debug_out > 1 ) {
     fprintf(stderr, "implications:\n");
     // debug output - print big
     for( Var v = 0 ; v < data.nVars(); ++v )
@@ -100,7 +82,7 @@ void HiddenTautologyElimination::process(CoprocessorData& data)
   // TODO: define an order?
   
   // run HTE for the whole queue, but parallel only if enabled via flag!
-  if( controller.size() > 0 && opt_par_hte ) {
+  if( controller.size() > 0 && config.opt_par_hte ) {
     parallelElimination(data, big); // use parallel, is some conditions have been met
     data.correctCounters();
   } else {
@@ -146,18 +128,18 @@ void HiddenTautologyElimination::elimination_worker (CoprocessorData& data, uint
   posArray.create( data.nVars() * 2);
   negArray.create( data.nVars() * 2);
   Lit* litQueue = (Lit*) malloc( data.nVars() * 2 * sizeof(Lit) );
-  if( debug_out > 3 ) cerr << "c allocate litQueue for " << data.nVars() * 2 << " elements at " << std::hex << litQueue << std::hex << endl;
+  if( config.hte_debug_out > 3 ) cerr << "c allocate litQueue for " << data.nVars() * 2 << " elements at " << std::hex << litQueue << std::hex << endl;
   MethodFree litQueueFree(litQueue); // will automatically free the resources at a return!
   
-  if( opt_hteTalk ) fprintf(stderr, "c HTE from %d to %d out of %d\n", start, end, activeVariables.size());
+  if( config.opt_hteTalk ) fprintf(stderr, "c HTE from %d to %d out of %d\n", start, end, activeVariables.size());
   
   for (uint32_t index = start; index < end && !data.isInterupted() ; ++index)
   {
     if( steps == 0 && !data.unlimited() ) break; // stop if number of iterations has been reached
     const Var v = activeVariables[index];
-    if( opt_hteTalk )  fprintf(stderr, "c HTE on variable %d\n", v+1);
+    if( config.opt_hteTalk )  fprintf(stderr, "c HTE on variable %d\n", v+1);
     
-  if( debug_out > 1 ) {
+  if( config.hte_debug_out > 1 ) {
     fprintf(stderr, "[HTE] ITERATION implications:\n");
     // debug output - print big
     for( Var v = 0 ; v < data.nVars(); ++v )
@@ -197,7 +179,7 @@ void HiddenTautologyElimination::elimination_worker (CoprocessorData& data, uint
     if( true ) {
     Lit unit = fillHlaArrays(v,big,posArray,negArray,litQueue,doLock);
     if( unit != lit_Undef ) {
-      if( debug_out > 1 ) cerr << "c fond failed literal " << unit << " during marking" << endl;
+      if( config.hte_debug_out > 1 ) cerr << "c fond failed literal " << unit << " during marking" << endl;
       if( doLock ) data.lock();
       data.addCommentToProof("found during HTE variable array filling");
       data.addUnitToProof(unit);
@@ -230,7 +212,7 @@ void HiddenTautologyElimination::parallelElimination(CoprocessorData& data, BIG&
   static bool didIt = false;
   if( !didIt ) { cerr << "c parallel HTE can result in unsound formulas!" << endl; didIt = true; }
   printDRUPwarning(cerr,"parallel HTE");
-  if( debug_out > 3 ) cerr << "c parallel HTE with " << controller.size() << " threads" << endl;
+  if( config.hte_debug_out > 3 ) cerr << "c parallel HTE with " << controller.size() << " threads" << endl;
   EliminationData workData[ controller.size() ];
   vector<Job> jobs( controller.size() );
   
@@ -268,7 +250,7 @@ bool HiddenTautologyElimination::hiddenTautologyElimination(Var v, CoprocessorDa
     const Lit i = mkLit(v,pol == 0 ? false : true );
     MarkArray& hlaArray = (pol == 0 ) ? hlaPositive : hlaNegative;
     
-    if( debug_out > 2 ) {
+    if( config.hte_debug_out > 2 ) {
     fprintf(stderr, "before HTE step (filled hla arrays): " );
     printLit(i);
     fprintf(stderr, " tagged: ");
@@ -314,7 +296,7 @@ bool HiddenTautologyElimination::hiddenTautologyElimination(Var v, CoprocessorDa
                     cl.set_delete(true);
 		    data.addCommentToProof("remove redundant binary clause during HTE");
 		    data.addToProof(cl,true);
-		    if( debug_out > 0 ) cerr << "c [HTE] binary removed clause " << cl << endl;
+		    if( config.hte_debug_out > 0 ) cerr << "c [HTE] binary removed clause " << cl << endl;
 		    modifiedFormula = true;
                     k--;
 		    if( !doLock ) removedClauses ++;
@@ -328,7 +310,7 @@ bool HiddenTautologyElimination::hiddenTautologyElimination(Var v, CoprocessorDa
 	Lit* binaryI = big.getArray( ~i );
 	const uint32_t binaryIsize = big.getSize(~i);
         for ( uint32_t j = 0; j < binaryIsize; j++ ) {
-	  if( opt_hteTalk && debug_out) cerr << "c mark " << toInt( ~binaryI[j] ) << " with " << toInt(i) << endl;
+	  if( config.opt_hteTalk && config.hte_debug_out) cerr << "c mark " << toInt( ~binaryI[j] ) << " with " << toInt(i) << endl;
 	  hlaArray.setCurrentStep( toInt( ~binaryI[j] ) );
 	}
    // TODO: port other code     
@@ -419,7 +401,7 @@ Lit HiddenTautologyElimination::fillHlaArrays(Var v, BIG& big, MarkArray& hlaPos
     const Lit i = mkLit(v, pol == 0 ? false : true);
     MarkArray& hlaArray = (pol == 0 ) ? hlaPositive : hlaNegative;
     hlaArray.nextStep();
-    if( opt_hteTalk ) cerr << "c [HTE] fill hla for " << i << endl;
+    if( config.opt_hteTalk ) cerr << "c [HTE] fill hla for " << i << endl;
     
     hlaArray.setCurrentStep( toInt(i) );
     // process all literals in list (inverse BIG!)
@@ -428,19 +410,19 @@ Lit HiddenTautologyElimination::fillHlaArrays(Var v, BIG& big, MarkArray& hlaPos
     for( uint32_t j = 0 ; j < posSize; ++ j )
     {
       const Lit imp = ~(posList[j]);
-      if( opt_hteTalk ) cerr << "c [HTE] look at literal " << imp << endl;
+      if( config.opt_hteTalk ) cerr << "c [HTE] look at literal " << imp << endl;
       if ( hlaArray.isCurrentStep( toInt(imp) ) ) continue;
       
       head = litQueue; tail = litQueue;
       *(head++) = imp;
-       if( debug_out > 3 ) cerr << "c [HTE] write at litQueue head pos " << headPos ++ << endl;
+       if( config.hte_debug_out > 3 ) cerr << "c [HTE] write at litQueue head pos " << headPos ++ << endl;
        headPos ++; 
       hlaArray.setCurrentStep( toInt(imp ) );
-      if( opt_hteTalk ) cerr << "c [HTE] add to array: " << imp << endl;
+      if( config.opt_hteTalk ) cerr << "c [HTE] add to array: " << imp << endl;
       // process queue
       while( tail < head ) {
 	const Lit lit = *(tail++);
-	if( debug_out > 3 ) cerr << "c [HTE] read from array at " << tailPos << " == " << lit << endl;
+	if( config.hte_debug_out > 3 ) cerr << "c [HTE] read from array at " << tailPos << " == " << lit << endl;
 	tailPos++;
 	steps = ( steps > 0 ) ? steps - 1 : 0;
 	const Lit* kList = big.getArray(~lit);
@@ -449,19 +431,19 @@ Lit HiddenTautologyElimination::fillHlaArrays(Var v, BIG& big, MarkArray& hlaPos
 	  const Lit kLit = ~kList[k];
 	  if( ! hlaArray.isCurrentStep( toInt(kLit) ) ) {
 	    if ( hlaArray.isCurrentStep( toInt( ~kLit) ) ) {
-	      if( opt_hteTalk ) cerr << "c [HTE] failed literal: " << i << endl;
+	      if( config.opt_hteTalk ) cerr << "c [HTE] failed literal: " << i << endl;
 	      return i; // return the failed literal
 	    }
 	    
 	    hlaArray.setCurrentStep( toInt(kLit) );
-	    if( opt_hteTalk ) { cerr << "c [HTE] add to array " << i << " for " << kLit << endl;
+	    if( config.opt_hteTalk ) { cerr << "c [HTE] add to array " << i << " for " << kLit << endl;
 	    }
-	    if( debug_out > 3 )  cerr << "c [HTE] put an element to the queue at position " << (int)(head - litQueue) << " with ptr " << std::hex << head << std::dec << endl;
+	    if( config.hte_debug_out > 3 )  cerr << "c [HTE] put an element to the queue at position " << (int)(head - litQueue) << " with ptr " << std::hex << head << std::dec << endl;
 	    *(head++) = kLit;
 	  }
 	}
       }
-      if( opt_hteTalk ) cerr << "c [HTE] remove from array: " << imp << endl;
+      if( config.opt_hteTalk ) cerr << "c [HTE] remove from array: " << imp << endl;
       hlaArray.reset( toInt(imp) );
     } // end for pos list
   }
