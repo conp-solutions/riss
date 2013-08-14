@@ -7,21 +7,6 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 using namespace Coprocessor;
 
-static const char* _cat = "COPROCESSOR 3 - UNHIDE";
-
-static IntOption  opt_uhdIters     (_cat, "cp3_uhdIters",     "Number of iterations for unhiding", 3, IntRange(0, INT32_MAX));
-static BoolOption opt_uhdTrans     (_cat, "cp3_uhdTrans",     "Use Transitive Graph Reduction (buggy)", false);
-static IntOption  opt_uhdUHLE      (_cat, "cp3_uhdUHLE",      "Use Unhiding+Hidden Literal Elimination",  3, IntRange(0, 3));
-static BoolOption opt_uhdUHTE      (_cat, "cp3_uhdUHTE",      "Use Unhiding+Hidden Tautology Elimination", true);
-static BoolOption opt_uhdNoShuffle (_cat, "cp3_uhdNoShuffle", "Do not perform randomized graph traversation", false);
-static BoolOption opt_uhdEE        (_cat, "cp3_uhdEE",        "Use equivalent literal elimination (buggy)", false);
-static BoolOption opt_uhdTestDbl   (_cat, "cp3_uhdTstDbl",    "Test for duplicate binary clauses", false);
-
-#if defined CP3VERSION  
-static const int opt_uhdDebug = 0;
-#else
-static IntOption  opt_uhdDebug     (_cat, "cp3_uhdDebug",     "Debug Level of Unhiding", 0, IntRange(0, 6));
-#endif
 
 void Unhiding::giveMoreSteps()
 {
@@ -35,12 +20,12 @@ Unhiding::Unhiding(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _
 , propagation( _propagation )
 , subsumption( _subsumption )
 , ee( _ee )
-, uhdTransitive(opt_uhdTrans)
-, unhideIter(opt_uhdIters)
-, doUHLE(opt_uhdUHLE)
-, doUHTE(opt_uhdUHTE)
-, uhdNoShuffle(opt_uhdNoShuffle)
-, uhdEE(opt_uhdEE)
+, uhdTransitive(config.opt_uhd_Trans)
+, unhideIter(config.opt_uhd_Iters)
+, doUHLE(config.opt_uhd_UHLE)
+, doUHTE(config.opt_uhd_UHTE)
+, uhdNoShuffle(config.opt_uhd_NoShuffle)
+, uhdEE(config.opt_uhd_EE)
 , removedClauses(0)
 , removedLiterals(0)
 , removedLits(0)
@@ -104,11 +89,11 @@ uint32_t Unhiding::linStamp( const Lit literal, uint32_t stamp, bool& detectedEE
       ++ stampInfo[ toInt(l) ].index;
       
       if( uhdTransitive && stampInfo[ toInt(l) ].dsc < stampInfo[ toInt(l1) ].obs ) {
-	if( opt_uhdDebug > 4 ) cerr << "c [UHD-A] l.dsc=" << stampInfo[ toInt(l) ].dsc << " l1.obs=" << stampInfo[ toInt(l1) ].obs << endl;
+	if( config.opt_uhd_Debug > 4 ) cerr << "c [UHD-A] l.dsc=" << stampInfo[ toInt(l) ].dsc << " l1.obs=" << stampInfo[ toInt(l1) ].obs << endl;
 	data.removedClause( ~l, l1 );
 	modifiedFormula = true;
 	big.removeEdge(~l, l1);
-	if( opt_uhdDebug > 4 ) { cerr << "c [UHD-A] remove transitive edge " << ~l << "," << l1 << " and reduce index to " << stampInfo[ toInt(l) ].index - 1 << endl; }
+	if( config.opt_uhd_Debug > 4 ) { cerr << "c [UHD-A] remove transitive edge " << ~l << "," << l1 << " and reduce index to " << stampInfo[ toInt(l) ].index - 1 << endl; }
 	-- stampInfo[ toInt(l) ].index;
 	continue;
       }
@@ -116,9 +101,9 @@ uint32_t Unhiding::linStamp( const Lit literal, uint32_t stamp, bool& detectedEE
       if( stampInfo[ toInt( stampInfo[ toInt(l) ].root) ].dsc <= stampInfo[ toInt( ~l1 ) ].obs ) {
 	Lit lfailed=l;
 	while( stampInfo[ toInt(lfailed) ].dsc > stampInfo[ toInt( ~l1 ) ].obs ) lfailed = stampInfo[ toInt(lfailed) ].parent;
-	if( opt_uhdDebug > 4 ) cerr << "c [UHD-A] found failed literal " << lfailed << " enqueue " << ~lfailed << endl;
+	if( config.opt_uhd_Debug > 4 ) cerr << "c [UHD-A] found failed literal " << lfailed << " enqueue " << ~lfailed << endl;
 	data.addCommentToProof("found during stamping in unhiding");data.addUnitToProof(~lfailed);
-	if( opt_uhdDebug > 1 ) cerr << "c derived unit " <<  ~lfailed << " with stamps pos(" << ~lfailed << "):" 
+	if( config.opt_uhd_Debug > 1 ) cerr << "c derived unit " <<  ~lfailed << " with stamps pos(" << ~lfailed << "):" 
 	  << stampInfo[toInt(~lfailed)].dsc << " -- " << stampInfo[toInt(~lfailed)].fin
 	  << " and neg (" << lfailed << "): " << stampInfo[toInt(lfailed)].dsc << " -- " << stampInfo[toInt(lfailed)].fin 
 	  << endl;
@@ -127,7 +112,7 @@ uint32_t Unhiding::linStamp( const Lit literal, uint32_t stamp, bool& detectedEE
 	if( stampInfo[ toInt( ~l1 ) ].dsc != 0 && stampInfo[ toInt( ~l1 ) ].fin == 0 ) continue;
       }
       
-      if( opt_uhdDebug > 4 ) cerr << "c [UHD-A] enqueue " << l1 << " with dsc=" << stampInfo[ toInt(l1) ].dsc << " index=" << stampInfo[ toInt(l1) ].index << " state ok? " << data.ok() << endl;
+      if( config.opt_uhd_Debug > 4 ) cerr << "c [UHD-A] enqueue " << l1 << " with dsc=" << stampInfo[ toInt(l1) ].dsc << " index=" << stampInfo[ toInt(l1) ].index << " state ok? " << data.ok() << endl;
       if( stampInfo[ toInt(l1) ].dsc == 0 ) {
 	stampInfo[ toInt(l) ].lastSeen = l1; // set information if literals are pushed back
 	stampInfo[ toInt(l1) ].parent = l;
@@ -157,10 +142,10 @@ uint32_t Unhiding::linStamp( const Lit literal, uint32_t stamp, bool& detectedEE
 
       // detection of EE is moved to below!
       if( level > 0 ) { // if there are still literals on the queue
-	if( opt_uhdDebug > 4 ) cerr << "c [UHD-A] no special case, check EE and stamp!" << endl;
+	if( config.opt_uhd_Debug > 4 ) cerr << "c [UHD-A] no special case, check EE and stamp!" << endl;
 	if( uhdEE && stampInfo[ toInt(l1) ].fin == 0 && stampInfo[ toInt(l1) ].dsc < stampInfo[ toInt(l) ].dsc  && !data.doNotTouch( var(l) ) && !data.doNotTouch( var(l1) )  ) {
 	  stampInfo[ toInt(l) ].dsc = stampInfo[ toInt(l1) ].dsc;
-	  if( opt_uhdDebug > 4 ) cerr << "c found equivalent literals " << l << " and " << l1 << ", set flag at level " << level << " to 0!" << endl;
+	  if( config.opt_uhd_Debug > 4 ) cerr << "c found equivalent literals " << l << " and " << l1 << ", set flag at level " << level << " to 0!" << endl;
 	  unhideEEflag[level] = 0;
 	  detectedEE = true;
 	}
@@ -174,7 +159,7 @@ uint32_t Unhiding::linStamp( const Lit literal, uint32_t stamp, bool& detectedEE
       stampClassEE.clear();
       Lit l1 = lit_Undef;
       if( unhideEEflag[level] == 1 || level == 1) {
-	if( opt_uhdDebug > 4 ) cerr << "c [UHD-A] collect EE literals" << endl;
+	if( config.opt_uhd_Debug > 4 ) cerr << "c [UHD-A] collect EE literals" << endl;
 	stamp ++;
 	do {
 	  l1 = stampEE.back();
@@ -186,7 +171,7 @@ uint32_t Unhiding::linStamp( const Lit literal, uint32_t stamp, bool& detectedEE
 	} while( l1 != l );
 	if( stampClassEE.size() > 1 ) {
 	  // also collect all the literals from the current path
-	  if( opt_uhdDebug > 4 ) cerr << "c [UHD-A] found eq class of size " << stampClassEE.size() << endl;
+	  if( config.opt_uhd_Debug > 4 ) cerr << "c [UHD-A] found eq class of size " << stampClassEE.size() << endl;
 	  data.addEquivalences( stampClassEE );
 	    
 	  detectedEE = true;
@@ -198,14 +183,14 @@ uint32_t Unhiding::linStamp( const Lit literal, uint32_t stamp, bool& detectedEE
       stampQueue.pop_back(); // pop the current literal
       level --;
       if( level > 0 ) { // if there are still literals on the queue
-	if( opt_uhdDebug > 4 ) cerr << "c [UHD-A] return to level " << level << " and literal " << stampQueue.back() << endl;
+	if( config.opt_uhd_Debug > 4 ) cerr << "c [UHD-A] return to level " << level << " and literal " << stampQueue.back() << endl;
 	Lit parent = stampQueue.back();
 	assert( parent == stampInfo[ toInt(l) ].parent && "parent of the node needs to be previous element in stamp queue" );
 	
 	// do not consider do-not-touch variables for being equivalent!
 	if( uhdEE && stampInfo[ toInt(l) ].fin == 0 && stampInfo[ toInt(l) ].dsc < stampInfo[ toInt(parent) ].dsc && !data.doNotTouch( var(l) ) && !data.doNotTouch( var(parent) ) ) {
 	  stampInfo[ toInt(parent) ].dsc = stampInfo[ toInt(l) ].dsc;
-	  if( opt_uhdDebug > 1 ) cerr << "c found equivalent literals " << parent << " and " << l << ", set flag at level " << level << " to 0!" << endl;
+	  if( config.opt_uhd_Debug > 1 ) cerr << "c found equivalent literals " << parent << " and " << l << ", set flag at level " << level << " to 0!" << endl;
 	  unhideEEflag[level] = 0;
 	  detectedEE = true;
 	}
@@ -260,7 +245,7 @@ bool Unhiding::unhideSimplify()
 {
   bool didSomething = false;
 
-  if( opt_uhdDebug > 4 ) {
+  if( config.opt_uhd_Debug > 4 ) {
     cerr << "c STAMP info: " << endl;
     for( Var v = 0; v < data.nVars(); ++ v ) {
       Lit lit = mkLit(v,false);
@@ -277,7 +262,7 @@ bool Unhiding::unhideSimplify()
       }
     }
   }
-  if( opt_uhdDebug > 5 ) {
+  if( config.opt_uhd_Debug > 5 ) {
     cerr << "c active formula" << endl;
     for( uint32_t i = 0 ; i < data.getClauses().size(); ++ i ) 
     {
@@ -301,7 +286,7 @@ bool Unhiding::unhideSimplify()
     Clause& clause = ca[clRef];
     if( clause.can_be_deleted() ) continue;
 
-    if( opt_uhdDebug > 3 ) { cerr << "c [UHD] work on " << clause << " state ok? " << data.ok() << endl; }
+    if( config.opt_uhd_Debug > 3 ) { cerr << "c [UHD] work on " << clause << " state ok? " << data.ok() << endl; }
     
     const uint32_t cs = clause.size();
     Lit Splus  [cs];
@@ -314,8 +299,8 @@ bool Unhiding::unhideSimplify()
     sortStampTime( Splus , cs );
     sortStampTime( Sminus, cs );
     
-    if( opt_uhdDebug > 4 ) {
-      if( opt_uhdDebug > 4 ) {
+    if( config.opt_uhd_Debug > 4 ) {
+      if( config.opt_uhd_Debug > 4 ) {
 	cerr << "c Splus: " << endl;
 	for(uint32_t p = 0; p < cs; ++ p) {
 	  cerr << p << " " << Splus[p] << " dsc=" << stampInfo[ toInt(Splus[p]) ].dsc << " fin=" << stampInfo[ toInt(Splus[p]) ].fin << endl;
@@ -342,7 +327,7 @@ bool Unhiding::unhideSimplify()
       Lit lpos = Splus [pp];
       Lit lneg = Sminus[pn];
       
-      if( opt_uhdDebug > 4 ) {
+      if( config.opt_uhd_Debug > 4 ) {
 	cerr << "c Splus: " << endl;
 	for(uint32_t p = 0; p < cs; ++ p) {
 	  cerr << p << " " << Splus[p] << " dsc=" << stampInfo[ toInt(Splus[p]) ].dsc << " fin=" << stampInfo[ toInt(Splus[p]) ].fin << endl;
@@ -371,7 +356,7 @@ bool Unhiding::unhideSimplify()
 	  if( pn + 1 == cs ) break;
 	  lneg = Sminus [ ++ pn ];
 	} else { 
-	  if( opt_uhdDebug > 4 ) cerr << "c UHTE: lneg=" << lneg << " lpos=" << lpos << " finStamps (neg<pos): " << stampInfo[ toInt(lneg) ].fin << " < " << stampInfo[ toInt(lpos) ].fin << "  pos=neg.complement: " << lpos << " == " << ~lneg << " or lpos.par == lneg: " << stampInfo[ toInt(lpos) ].parent << " == " << lneg << endl;
+	  if( config.opt_uhd_Debug > 4 ) cerr << "c UHTE: lneg=" << lneg << " lpos=" << lpos << " finStamps (neg<pos): " << stampInfo[ toInt(lneg) ].fin << " < " << stampInfo[ toInt(lpos) ].fin << "  pos=neg.complement: " << lpos << " == " << ~lneg << " or lpos.par == lneg: " << stampInfo[ toInt(lpos) ].parent << " == " << lneg << endl;
 	  UHTE = true; break; 
 	}
       }
@@ -380,12 +365,12 @@ bool Unhiding::unhideSimplify()
 	data.addToProof(clause,true);
 	clause.set_delete( true );
 	modifiedFormula = true;
-	if( opt_uhdDebug > 1 ){  cerr << "c [UHTE] stamps for clause to remove "<< endl; 
+	if( config.opt_uhd_Debug > 1 ){  cerr << "c [UHTE] stamps for clause to remove "<< endl; 
 	  for( int j = 0 ; j < clause.size(); ++ j ) { cerr << "c " << clause[j]  << " s: " << stampInfo[ toInt(clause[j]) ].dsc << " e: " << stampInfo[ toInt(clause[j]) ].fin << " -- and -- "
 	    << ~clause[j]  << " s: " << stampInfo[ toInt(~clause[j]) ].dsc << " e: " << stampInfo[ toInt(~clause[j]) ].fin 
 	    << endl; }
 	}
-	if( opt_uhdDebug > 0 ){  cerr << "c [UHTE] remove " << clause << cerr << endl; }
+	if( config.opt_uhd_Debug > 0 ){  cerr << "c [UHTE] remove " << clause << cerr << endl; }
 	data.removedClause(clRef);
 	if( clause.size() == 2 ) big.removeEdge(clause[0],clause[1]);
 	// if a clause has been removed, call
@@ -410,7 +395,7 @@ bool Unhiding::unhideSimplify()
 	  const Lit l = Splus[ pp - 1];
 	  const uint32_t fin = stampInfo[  toInt(l)  ].fin;
 	  if( fin > finished ) {
-	    if( opt_uhdDebug > 3 ){  cerr << "c [UHLE-P] remove " << l << " because finish time of " << finLit << " from " << clause << endl; }
+	    if( config.opt_uhd_Debug > 3 ){  cerr << "c [UHLE-P] remove " << l << " because finish time of " << finLit << " from " << clause << endl; }
 	    data.removeClauseFrom( clRef, l );
 	    data.removedLiteral(l);
 	    removedLits++;
@@ -442,7 +427,7 @@ bool Unhiding::unhideSimplify()
 	  sortStampTime( Sminus, csn );
 	}
 	
-	if( opt_uhdDebug > 4 ) {
+	if( config.opt_uhd_Debug > 4 ) {
 	 for(pn = 0; pn < csn; ++ pn) {
 	   cerr << pn << " " << Sminus[pn] << " " << stampInfo[ toInt(Sminus[pn]) ].dsc << " - " << stampInfo[ toInt(Sminus[pn]) ].fin << endl;
 	 }
@@ -450,13 +435,13 @@ bool Unhiding::unhideSimplify()
 	
 	pn = 0;
 	uint32_t finished = stampInfo[ toInt(Sminus[0]) ].fin;
-	if( opt_uhdDebug > 4 ) cerr << "c set finished to " << finished << " with lit " << Sminus[0] << endl;
+	if( config.opt_uhd_Debug > 4 ) cerr << "c set finished to " << finished << " with lit " << Sminus[0] << endl;
 	Lit finLit = Sminus[ 0 ];
 	for(pn = 1; pn < csn; ++ pn) {
 	  const Lit l = Sminus[ pn ];
 	  const uint32_t fin = stampInfo[  toInt(l)  ].fin;
 	  if( fin < finished ) {
-	    if( opt_uhdDebug > 4 ){  cerr << "c [UHLE-N] remove " << ~l << " because of fin time " << fin << " of " <<  l << " and finLit " << finLit << " [" << finished << "] from " << clause << endl; }
+	    if( config.opt_uhd_Debug > 4 ){  cerr << "c [UHLE-N] remove " << ~l << " because of fin time " << fin << " of " <<  l << " and finLit " << finLit << " [" << finished << "] from " << clause << endl; }
 	    data.removeClauseFrom(clRef,~l);
 	    data.removedLiteral(~l);
 	    if( !UHLE && data.outputsProof() ) { for( int j = 0 ; j < clause.size(); ++ j ) data.lits.push_back( clause[j] ); } // copy the real clause, so that it can be deleted
@@ -474,7 +459,7 @@ bool Unhiding::unhideSimplify()
 	  } else {
 	    finished = fin;
 	    finLit = l;
-	    if( opt_uhdDebug > 4 ) cerr << "c set finished to " << finished << " with lit " << l << endl;
+	    if( config.opt_uhd_Debug > 4 ) cerr << "c set finished to " << finished << " with lit " << l << endl;
 	  }
 	}
       }
@@ -485,7 +470,7 @@ bool Unhiding::unhideSimplify()
 	  data.setFailed(); return didSomething;
 	} else {
 	  if( clause.size() == 1 ) {
-	    if( opt_uhdDebug > 1 ) cerr << "c derived unit " << clause[0] << endl;
+	    if( config.opt_uhd_Debug > 1 ) cerr << "c derived unit " << clause[0] << endl;
 	    if( l_False == data.enqueue(clause[0], data.defaultExtraInfo()  ) ) { 
 	      return didSomething;
 	    }
@@ -516,7 +501,7 @@ void Unhiding::process (  )
     // be careful here - do not use learned clauses, because they could be removed, and then the whole mechanism breaks
     big.recreate(ca, data, data.getClauses() );    
     
-    if(opt_uhdTestDbl) {
+    if(config.opt_uhd_TestDbl) {
       cerr << "c test for duplicate binary clauses ... " << endl;
       int duplImps = 0;
       for( Var v = 0 ; v < data.nVars(); ++v ) {
@@ -532,7 +517,7 @@ void Unhiding::process (  )
       cerr << "c found " << duplImps << " duplicate implications" << endl;
     }
     
-    if( opt_uhdDebug > 5 ) {
+    if( config.opt_uhd_Debug > 5 ) {
       cerr << "c iteration " << iteration << " formula, state ok? " << data.ok() << endl;
       for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
 	if( !ca[ data.getClauses()[i] ].can_be_deleted() ) cerr << ca[ data.getClauses()[i] ] << endl;
@@ -590,14 +575,14 @@ void Unhiding::process (  )
     }
     for ( uint32_t i = 0 ; i < ts2; ++ i ) 
     {
-      if( opt_uhdDebug > 4 ) cerr << "c [UHD-A] call stamping for literal " << data.lits[i] << ", dsc=" << stampInfo [ toInt(data.lits[i]) ].dsc << endl;
+      if( config.opt_uhd_Debug > 4 ) cerr << "c [UHD-A] call stamping for literal " << data.lits[i] << ", dsc=" << stampInfo [ toInt(data.lits[i]) ].dsc << endl;
       stamp = stampLiteral(data.lits[i],stamp,foundEE);
     }
-    if( opt_uhdDebug > 1 ) cerr << "c stamped " << ts << " roots, and " << ts2 << " remaining lits" << endl;
-    if( opt_uhdDebug > 3 ) cerr << "c [UHD] foundEE: " << foundEE << endl;
+    if( config.opt_uhd_Debug > 1 ) cerr << "c stamped " << ts << " roots, and " << ts2 << " remaining lits" << endl;
+    if( config.opt_uhd_Debug > 3 ) cerr << "c [UHD] foundEE: " << foundEE << endl;
     
     // expensive cross check that each stamp is unique, and there are no 0 stamps
-    if( opt_uhdDebug > 1 ) {
+    if( config.opt_uhd_Debug > 1 ) {
       cerr << "c checking all stamps ... " << endl;
       int min=-1, max = -1;
       vec<uint32_t> starts;
@@ -637,19 +622,19 @@ void Unhiding::process (  )
     if( data.ok() && unhideSimplify() ) {
       if( data.ok() ) {
 	if( data.hasToPropagate() ) {
-	  if( opt_uhdDebug > 4 ) cerr << "c [UHD-A] run UP before simplification" << endl;
+	  if( config.opt_uhd_Debug > 4 ) cerr << "c [UHD-A] run UP before simplification" << endl;
 	  propagation.process(data,true);
 	  modifiedFormula = modifiedFormula || propagation.appliedSomething();
 	}
       } else {
-	if( opt_uhdDebug > 3 ) cerr << "c [UHD] ok: " << data.ok() << endl;
+	if( config.opt_uhd_Debug > 3 ) cerr << "c [UHD] ok: " << data.ok() << endl;
       }
     }
     
     // run independent of simplify method
     
     if( foundEE ) {
-      if( opt_uhdDebug > 4 ) cerr << "c [UHD] call equivalence elimination" << endl;
+      if( config.opt_uhd_Debug > 4 ) cerr << "c [UHD] call equivalence elimination" << endl;
       if( data.getEquivalences().size() > 0 ) {
 	modifiedFormula = modifiedFormula || ee.appliedSomething();
 	ee.applyEquivalencesToFormula(data);
@@ -658,7 +643,7 @@ void Unhiding::process (  )
     
   } // next iteration ?!
 
-  if( opt_uhdDebug > 5 ) {
+  if( config.opt_uhd_Debug > 5 ) {
     cerr << "c final formula with solver state " << data.ok() << endl;
     for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
       if( !ca[ data.getClauses()[i] ].can_be_deleted() ) cerr << "(" << data.getClauses()[i] << ") " << ca[ data.getClauses()[i] ] << endl;

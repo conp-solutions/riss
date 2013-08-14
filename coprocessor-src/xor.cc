@@ -6,24 +6,6 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 using namespace Coprocessor;
 
-static const char* _cat = "COPROCESSOR 3 - XOR";
-
-
-
-static IntOption  opt_xorMatchLimit (_cat, "xorMaxSize",  "Maximum Clause Size for detecting XOrs (high number consume much memory!)", 12, IntRange(3, 63));
-static IntOption  opt_xorFindLimit  (_cat, "xorLimit",    "number of checks for finding xors", 1200000, IntRange(0, INT32_MAX));
-
-static IntOption  opt_selectX       (_cat, "xorSelect",    "how to select next xor 0=first,1=smallest", 0, IntRange(0, 1));
-static BoolOption opt_keepUsed      (_cat, "xorKeepUsed",  "continue to simplify kept xors", true);
-
-static BoolOption opt_findSubsumed  (_cat, "xorFindSubs",  "try to recover XORs that are partially subsumed", true);
-static BoolOption opt_findResolved  (_cat, "xorFindRes",   "try to recover XORs including resolution steps", false);
-
-#if defined CP3VERSION 
-static const int debug = 0;
-#else
-static IntOption  debug             (_cat, "xor-debug",       "Debug Output of XOR reasoning", 0, IntRange(0, 5));
-#endif
 
 XorReasoning::XorReasoning( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data,  Propagation& _propagation, EquivalenceElimination& _ee  )
 :Technique(_config, _ca,_controller)
@@ -41,7 +23,7 @@ XorReasoning::XorReasoning( CP3Config &_config, ClauseAllocator& _ca, ThreadCont
 , resFound(0)
 , resTauts(0)
 , resStrength(0)
-, xorLimit(opt_xorFindLimit)
+, xorLimit(config.opt_xorFindLimit)
 , xorSteps(0)
 , foundEmptyLists(0)
 , xorUnits(0)
@@ -67,7 +49,7 @@ bool XorReasoning::process()
   vector<GaussXor> xorList;
   findXor(xorList); // fills the list with CR of clauses that contains xors
   // perform gauss elimination
-  if( debug > 2 ) {
+  if( config.opt_xor_debug > 2 ) {
     for( int i = 0 ; i < xorList.size(); ++ i ) {cerr << "[" << i << "]: "
       << " + "; for( int j = 0 ; j < xorList[i].vars.size(); ++ j ) cerr << xorList[i].vars[j] + 1 << " + "; cerr << " == " << (xorList[i].k ? 1 : 0) << endl; 
     }
@@ -123,10 +105,10 @@ bool XorReasoning::process()
     while( selectIndex < occs[v].size() && xorList[ occs[v][selectIndex] ].used == true ) selectIndex ++;
     if( selectIndex == occs[v].size() ) {
       allUsed ++;
-      if( debug > 2 ) cerr << "c all XORs with " << v+1 << " are already used!!" << endl;
+      if( config.opt_xor_debug > 2 ) cerr << "c all XORs with " << v+1 << " are already used!!" << endl;
       continue; // do not use an XOR twice!
     }
-    if ( opt_selectX == 1 ) { // select smallest xor
+    if ( config.opt_xor_selectX == 1 ) { // select smallest xor
       for( int i = selectIndex+1 ; i < occs[v].size(); ++ i ) {
 	xorSteps ++;
 	if(xorList[i].used == true) continue;
@@ -140,7 +122,7 @@ bool XorReasoning::process()
     const int xorIndex = occs[v][selectIndex];
     selectedX.used = true; // indicate that this xor was used!
     
-    if( debug > 1 ) { cerr << "c eliminate " << v+1 << " with XOR " <<  " + "; for( int j = 0 ; j < selectedX.vars.size(); ++ j ) cerr <<selectedX.vars[j] + 1 << " + "; cerr << " == " << (selectedX.k ? 1 : 0) << endl; }
+    if( config.opt_xor_debug > 1 ) { cerr << "c eliminate " << v+1 << " with XOR " <<  " + "; for( int j = 0 ; j < selectedX.vars.size(); ++ j ) cerr <<selectedX.vars[j] + 1 << " + "; cerr << " == " << (selectedX.k ? 1 : 0) << endl; }
     
     while( occs[v].size() > 0 ) {
       if( occs[v][0] == xorIndex ) {
@@ -149,10 +131,10 @@ bool XorReasoning::process()
       }
       xorSteps ++;
       GaussXor& simpX = xorList[ occs[v][0] ]; // xor that is simplified
-      if( debug > 1 ) { cerr << "c change XOR " <<  " + "; for( int j = 0 ; j < simpX.vars.size(); ++ j ) cerr <<simpX.vars[j] + 1 << " + "; cerr << " == " << (simpX.k ? 1 : 0) << endl; }
+      if( config.opt_xor_debug > 1 ) { cerr << "c change XOR " <<  " + "; for( int j = 0 ; j < simpX.vars.size(); ++ j ) cerr <<simpX.vars[j] + 1 << " + "; cerr << " == " << (simpX.k ? 1 : 0) << endl; }
       toRemoveVars.clear();tmpVars.clear();
       simpX.add(selectedX,toRemoveVars,tmpVars);
-      if( debug > 1 ) { cerr << "c       into " <<  " + "; for( int j = 0 ; j < simpX.vars.size(); ++ j ) cerr <<simpX.vars[j] + 1 << " + "; cerr << " == " << (simpX.k ? 1 : 0) << endl; 
+      if( config.opt_xor_debug > 1 ) { cerr << "c       into " <<  " + "; for( int j = 0 ; j < simpX.vars.size(); ++ j ) cerr <<simpX.vars[j] + 1 << " + "; cerr << " == " << (simpX.k ? 1 : 0) << endl; 
 	cerr << "c and remove from "; for( int j = 0 ; j < toRemoveVars.size(); ++ j ) cerr << " " << toRemoveVars[j] + 1; cerr << " " << endl;
       }
 
@@ -164,16 +146,16 @@ bool XorReasoning::process()
 	  data.ma.setCurrentStep( toInt(simpX.getUnitLit()) );
 	  xorDeducedUnits ++;
 	  unitQueue.push_back(simpX.getUnitLit());
-	  if( debug > 1 ) { cerr << "c created unit " << simpX.getUnitLit() << " from  XOR " <<  " + "; for( int j = 0 ; j < simpX.vars.size(); ++ j ) cerr <<simpX.vars[j] + 1 << " + "; cerr << " == " << (simpX.k ? 1 : 0) << endl; }
+	  if( config.opt_xor_debug > 1 ) { cerr << "c created unit " << simpX.getUnitLit() << " from  XOR " <<  " + "; for( int j = 0 ; j < simpX.vars.size(); ++ j ) cerr <<simpX.vars[j] + 1 << " + "; cerr << " == " << (simpX.k ? 1 : 0) << endl; }
 	}
       } else if (simpX.size() == 2 ) {
 	eqs ++;
 	data.addEquivalences( mkLit(simpX.vars[0],false), mkLit(simpX.vars[1],simpX.k) ); // add found equivalence!
-	if( debug > 2 ) cerr << "c eq lits: " << mkLit(simpX.vars[0],false) << " == " << mkLit(simpX.vars[1],simpX.k) << endl;
+	if( config.opt_xor_debug > 2 ) cerr << "c eq lits: " << mkLit(simpX.vars[0],false) << " == " << mkLit(simpX.vars[1],simpX.k) << endl;
       }
     }
     
-    if( opt_keepUsed ) {
+    if( config.opt_xor_keepUsed ) {
       occs[v].push_back( selectIndex ); 
     } else {
       dropXor(selectIndex,selectedX.vars,occs);
@@ -219,7 +201,7 @@ bool XorReasoning::propagate(vector< Lit >& unitQueue, MarkArray& ma, vector< st
 	  data.ma.setCurrentStep( toInt(x.getUnitLit()) );
 	  xorDeducedUnits ++;
 	  unitQueue.push_back(x.getUnitLit());
-	  if( debug > 1 ) { cerr << "c created unit " << x.getUnitLit() << " from  XOR " <<  " + "; for( int j = 0 ; j < x.vars.size(); ++ j ) cerr <<x.vars[j] + 1 << " + "; cerr << " == " << (x.k ? 1 : 0) << endl; }
+	  if( config.opt_xor_debug > 1 ) { cerr << "c created unit " << x.getUnitLit() << " from  XOR " <<  " + "; for( int j = 0 ; j < x.vars.size(); ++ j ) cerr <<x.vars[j] + 1 << " + "; cerr << " == " << (x.k ? 1 : 0) << endl; }
 	}
       }
     }
@@ -260,37 +242,37 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 // 	cerr << "c before sort: " << endl;
 // 	for( int i = 0 ; i <data.getClauses().size() ; ++ i ) cerr << ca[ data.getClauses()[i] ] << endl;
 	data.sortClauseLists();
-	if( debug > 3 ) {
+	if( config.opt_xor_debug > 3 ) {
 	  cerr << "c after sort: " << endl;
 	  for( int i = 0 ; i <data.getClauses().size() ; ++ i ) cerr << ca[ data.getClauses()[i] ] << endl;
 	}
 	
 	const vec<CRef>& table = data.getClauses();
-	if( debug > 3 )  cerr << "c relevant clauses: " << table.size() << endl;
+	if( config.opt_xor_debug > 3 )  cerr << "c relevant clauses: " << table.size() << endl;
 	
-	if( debug > 3 ) cerr << "c XOR find start at position " << cP << " with " << cL << endl;
+	if( config.opt_xor_debug > 3 ) cerr << "c XOR find start at position " << cP << " with " << cL << endl;
 	while( cP < table.size() && ca[ table[cP] ] .size() < cL ) cP ++;
 	
-	if( debug > 3 ) cerr << "c XOR continue at position" << cP << endl;
+	if( config.opt_xor_debug > 3 ) cerr << "c XOR continue at position" << cP << endl;
 	
 	BIG big;
-	if( opt_findResolved ) {
+	if( config.opt_xor_findResolved ) {
 	  big.create(ca,data,data.getClauses()); // create big, so that resolve possibilities can be found
 	}
 	
 	vector<char> foundByIndex; // no need to do this on the stack!
 	// handle only xor between 3 and 63 literals!!
-	while( cP <  table.size() && cL < opt_xorMatchLimit){
+	while( cP <  table.size() && cL < config.opt_xorMatchLimit){
 		uint32_t start = cP;
 		cL = ca[ table[cP] ] .size();
 		while( cP < table.size() && ca[ table[cP] ] .size() == cL ) cP ++;
-		if( debug > 3 ) cerr << "c XOR search size " << cL << " until " << cP << endl;
+		if( config.opt_xor_debug > 3 ) cerr << "c XOR search size " << cL << " until " << cP << endl;
 		// check for each of the clauses, whether it and its successors could be an xor
 		for ( ; start < cP-1; ++start) {
-		  if( debug > 3 )  cerr << "c start=" << start << endl;
+		  if( config.opt_xor_debug > 3 )  cerr << "c start=" << start << endl;
 			const CRef c = table[start];
 			const Clause& cl = ca[c];
-			if( cl.size() > opt_xorMatchLimit ) break; // interrupt before too large size is recognized
+			if( cl.size() > config.opt_xorMatchLimit ) break; // interrupt before too large size is recognized
 			uint32_t stop = start + 1;
 			// find last clause that contains the same variables as the first clause
 			for ( ; stop < cP; ++stop) {
@@ -303,7 +285,7 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 				if( k != cl2.size() ) break;
 			}
 			
-			if( debug > 3 ) {
+			if( config.opt_xor_debug > 3 ) {
 			cerr << "c [XOR] begin clauses with same variables and length:" << endl;
 			for( uint32_t j = start; j < stop && j < cP; ++ j ) {
 			  cerr << ca[ table[j] ] << endl;
@@ -316,7 +298,7 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 			uint64_t shift = 1;
 			shift = shift << ( cl.size() -1 );
 
-			if( debug > 4) cerr << "c [XOR] candidate with size " << cl.size() << endl;
+			if( config.opt_xor_debug > 4) cerr << "c [XOR] candidate with size " << cl.size() << endl;
 			
 			// check whether the first clause is odd or even, and go with this value first. Check the other value afterwards
 			uint32_t count[2]; count[0]=0; count[1] = 0;
@@ -339,8 +321,8 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 				  data.clss.push_back( table[j] );
 				}
 			}
-			if( debug > 2 ) cerr << "c sorted according to polarity: o = 0: " << count[1] << " o=1: " << count [0] << endl;
-			if( debug > 4 ) {
+			if( config.opt_xor_debug > 2 ) cerr << "c sorted according to polarity: o = 0: " << count[1] << " o=1: " << count [0] << endl;
+			if( config.opt_xor_debug > 4 ) {
 			  cerr << "c o=1: " << endl;
 			  int k = 0;
 			  for( ; k < count[0]; ++k ) cerr << "c " << ca[ data.clss[k] ] << endl;
@@ -348,12 +330,12 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 			  for( ; k < data.clss.size(); ++k ) cerr << "c " << ca[ data.clss[k] ] << endl;
 			}
 			
-			if( debug > 3 )  cerr << "c collect XORs" << endl;
+			if( config.opt_xor_debug > 3 )  cerr << "c collect XORs" << endl;
 			// try to recover odd and even XORs separately, if the limit can be reached
 			for( uint32_t o = 0 ; o < 2; ++o )
 			{
 			    uint32_t offset = o == 1 ? 0 : count[0];
-			    if( debug > 3 )  cerr << "c o=" << o << " offset=" << offset << " cL=" << cL << endl;
+			    if( config.opt_xor_debug > 3 )  cerr << "c o=" << o << " offset=" << offset << " cL=" << cL << endl;
 			    // check, whether there are clauses that are subsumed
 			    foundByIndex.assign( shift, 0 );
 			    uint32_t foundCount = 0;
@@ -362,22 +344,22 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 				Clause& cl2 = ca[data.clss[j+offset]];
 				const uint32_t nrByPol = numberByPolarity( cl2 );
 				const uint32_t index = nrByPol/2;
-				if( debug > 3 ) { cerr << "c found " << ca[data.clss[j+offset]] << " matchIndex=" << index << "(" << nrByPol << ") original number: " << numberByPolarity( cl2 ) << endl; }
+				if( config.opt_xor_debug > 3 ) { cerr << "c found " << ca[data.clss[j+offset]] << " matchIndex=" << index << "(" << nrByPol << ") original number: " << numberByPolarity( cl2 ) << endl; }
 				foundCount = foundByIndex[ index ] == 0 ? foundCount + 1 : foundCount;
 				foundByIndex[ index ] = 1;
 				findChecks ++;
 			    }
-			    if( debug > 4) cerr << "c final foundCount=" << foundCount << " for o=" << o << endl;
+			    if( config.opt_xor_debug > 4) cerr << "c final foundCount=" << foundCount << " for o=" << o << endl;
 			    
 			    if( foundCount == 0 ) {
-			      if( debug > 2) cerr << "c reject this XOR, since it cannot produce an XOR (there is no large clause! o=" << o << ", found large clauses: " << foundCount << ")" << endl;
+			      if( config.opt_xor_debug > 2) cerr << "c reject this XOR, since it cannot produce an XOR (there is no large clause! o=" << o << ", found large clauses: " << foundCount << ")" << endl;
 			      continue;
 			    }
 			    
 			    // if( offset >= data.clss.size() ) continue;
 			    
 			    // try to find clauses, that subsume parts of the XOR
-			    if( foundCount < shift && opt_findSubsumed ) {
+			    if( foundCount < shift && config.opt_xor_findSubsumed ) {
 			      const Clause& firstClause = ca[ data.clss[offset] ];
 			      assert( cL == firstClause.size() && "current clause needs to have the same size as the current candidate block" );
 			      Var variables [firstClause.size()]; // will be sorted!
@@ -386,11 +368,11 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 				variables[ j ] = var(firstClause[j]);
 				data.ma.setCurrentStep( variables[j] );
 			      }
-			      if( debug > 3){
+			      if( config.opt_xor_debug > 3){
 				cerr << "c [XOR] do expensive search (shift= " << shift << ")" << endl;
 				for( uint32_t match = 0 ; match < 2*shift; ++match ) {
 					if( foundByIndex[ match/2 ] == 1 ) {
-					  if( debug > 3 ) cerr << "c match " << match/2 << " is already covered!" << "(" << match << ") [not yet subsumption checked] " << endl;
+					  if( config.opt_xor_debug > 3 ) cerr << "c match " << match/2 << " is already covered!" << "(" << match << ") [not yet subsumption checked] " << endl;
 					  continue;
 					}
 				}
@@ -399,7 +381,7 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 			      // check all smaller clauses (with limit!) whether they contain all the variables, if so, use them only, if the selected variable is the smallest one!
 			      for( uint32_t j = 0 ; j < cL ; ++ j ) {
 				Var cv = variables[j];
-				if( debug > 3) cerr << "c [XOR] look for variable " << cv + 1 << endl;
+				if( config.opt_xor_debug > 3) cerr << "c [XOR] look for variable " << cv + 1 << endl;
 				for( uint32_t p = 0 ; p < 2; ++ p ) // polarity!
 				{
 				  const Lit current = mkLit(cv, p != 0  ); // 0 -> POS, 1 -> NEG
@@ -408,21 +390,21 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 				    const Clause& cclause = ca[cls[k]];
 				    if( cls[k] == data.clss[offset] ) continue; // do not consider the same clause twice!	
 				    if(cclause.can_be_deleted()) continue;
-				    if(cclause.size() > opt_xorMatchLimit  
-				      || ( ! opt_findResolved && cclause.size() >= cL) 
-				      || ( opt_findResolved && cclause.size() > cL) // due to resolution, also bigger clauses are allowed!
+				    if(cclause.size() > config.opt_xorMatchLimit  
+				      || ( ! config.opt_xor_findResolved && cclause.size() >= cL) 
+				      || ( config.opt_xor_findResolved && cclause.size() > cL) // due to resolution, also bigger clauses are allowed!
 				    ) continue; // for performance, and it does not make sense to check clauses that are bigger than the current ones
-				    if( debug > 4 ) cerr << "c consider clause " << cclause << endl;
+				    if( config.opt_xor_debug > 4 ) cerr << "c consider clause " << cclause << endl;
 				    
 				    Lit resolveLit = lit_Undef, foundLit = lit_Error; // if only one variable is wrong, the other literal could be resovled in?
 				    for( uint32_t m = 0 ; m < cclause.size(); ++ m ) {
 				      const Var ccv = var( cclause[m] );
 				      if( ccv < cv ) { 
-					if( debug > 4 ) cerr << "c reject " << cclause << " ,because currenct variable " << ccv+1 << " is smaller than " << cv+1 << endl;
+					if( config.opt_xor_debug > 4 ) cerr << "c reject " << cclause << " ,because currenct variable " << ccv+1 << " is smaller than " << cv+1 << endl;
 					resolveLit = lit_Error; break;
 				      } // reject clause, if the current variable is not the smallest variable in the matching
 				      if( ! data.ma.isCurrentStep( ccv ) ) { 
-					if( resolveLit == lit_Undef && opt_findResolved ) {
+					if( resolveLit == lit_Undef && config.opt_xor_findResolved ) {
 					   resolveLit = cclause[m]; // this literal is used for resolution
 					   // the literal that should be found to be resolved in has to be in the matching -> check all childs in BIG
 					   const int iSize = big.getSize(resolveLit);
@@ -441,12 +423,12 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 					      }
 					   }
 					   if( foundLit == lit_Error ) { // not found a candidate!
-					     if( debug > 4 ) cerr << "c did not find a literal to pull in for resolveLit " << resolveLit << endl;
+					     if( config.opt_xor_debug > 4 ) cerr << "c did not find a literal to pull in for resolveLit " << resolveLit << endl;
 					     resolveLit = lit_Error; break;
 					   }
-					   if( debug > 3 ) cerr << "c found resolveLit " << resolveLit << ", which can pull " << foundLit << " into the clause!" << endl;
+					   if( config.opt_xor_debug > 3 ) cerr << "c found resolveLit " << resolveLit << ", which can pull " << foundLit << " into the clause!" << endl;
 					} else {
-					  if( debug > 4 ) cerr << "c clause contains non-matching literal " << resolveLit << endl;
+					  if( config.opt_xor_debug > 4 ) cerr << "c clause contains non-matching literal " << resolveLit << endl;
 					  resolveLit = lit_Error; 
 					  break; 
 					}
@@ -462,7 +444,7 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 					if( !sign(ccl) ) o0 = (o0 ^ 1);
 				      }
 				      if( o0 != o ) {
-					if( debug > 4 ) cerr << "c clause " << cclause << " has all variables, but the odd value is wrong!" << endl;
+					if( config.opt_xor_debug > 4 ) cerr << "c clause " << cclause << " has all variables, but the odd value is wrong!" << endl;
 					continue; // can consider only smaller clauses, or their odd value is the same as for for the first clause!
 				      }
 				    }
@@ -477,7 +459,7 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 				    for( uint32_t m = 0 ; m < cclause.size(); ++ m ) {
 				      assert( cclause[m] != lit_Undef && "there should not be a lit_Undef inside a clause!" );
 				      const Lit ccl = cclause[m] != resolveLit ? cclause[m] : foundLit; // use the resolvedIn literal, instead of the literal that is resolved
-				      if( debug > 3 ){
+				      if( config.opt_xor_debug > 3 ){
 					if( ccl == lit_Undef ) {
 					  cerr << "c continue, because pulled in lit must not be handled!" << endl;
 					} else if ( ccl == foundLit ) {
@@ -492,7 +474,7 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 					if (variables[mv] == ccv ) { 
 					  hitVariable = true;
 					  if( ccl != firstClause[mv] ) subsumeOriginalClause = false;
-					  if( debug > 3 ) cerr << "c var " << ccv + 1 << " hits with literal " << ccl << " -> add " << (1 << (cL-mv-1)) << endl;
+					  if( config.opt_xor_debug > 3 ) cerr << "c var " << ccv + 1 << " hits with literal " << ccl << " -> add " << (1 << (cL-mv-1)) << endl;
 					  myNumber = !sign(ccl) ? myNumber + (1 << (cL-mv-1)) : myNumber;
 					  myMatch = myMatch + (1 << (cL-mv-1));
 					  break;
@@ -503,45 +485,45 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 				    if( subsumeOriginalClause ) { // interrupt working on this XOR!
 				      // skip this xor? no, can still lead to improved reasoning!
 				    }
-				    if( debug > 3){ cerr << "c found subsume clause " << ca[cls[k]] << " with number=" << myNumber << " match=" << myMatch << endl;}
+				    if( config.opt_xor_debug > 3){ cerr << "c found subsume clause " << ca[cls[k]] << " with number=" << myNumber << " match=" << myMatch << endl;}
 				    assert( cclause.size() > 1 && "do not consider unit clauses here!");
-				    if( debug > 4 ) cerr << "c size of actual clause: " << subsumeSize << endl;
+				    if( config.opt_xor_debug > 4 ) cerr << "c size of actual clause: " << subsumeSize << endl;
 				    assert( cL >= cclause.size() && "subsume clauses cannot be greater than the current XOR" );
 				    for( uint32_t match = 0 ; match < 2*shift; ++match ) {
 				      
 				      if( foundByIndex[ match/2 ] == 1 ) {
-					if( debug > 3 ) cerr << "c match " << match/2 << " is already covered!" << "(" << match << ") [not yet subsumption checked] " << endl;
-					if( debug == 0 ) continue;
+					if( config.opt_xor_debug > 3 ) cerr << "c match " << match/2 << " is already covered!" << "(" << match << ") [not yet subsumption checked] " << endl;
+					if( config.opt_xor_debug == 0 ) continue;
 				      }
 				      
 				      if( (match & myMatch) == myNumber ) {
 					
 					// reject matches that have the wrong polarity!
 					uint32_t o1 = 0; // match has to be odd, as initial clause! and has to contain bits of myNumber!
-					if ( debug > 4 ) cerr << "c initial odd: " << o1 << ", cL: " << cL << ", match: " << match << endl;
+					if ( config.opt_xor_debug > 4 ) cerr << "c initial odd: " << o1 << ", cL: " << cL << ", match: " << match << endl;
 					uint32_t matchBits = match;
 					for( uint32_t km = 0; km < cL; km ++ )
 					{
 					  if( (matchBits & 1) == 1 ) {
-					    if( debug > 4 ) cerr << "c bit " << km << " match, this odd=" << (int)(o1^1) << endl;
+					    if( config.opt_xor_debug > 4 ) cerr << "c bit " << km << " match, this odd=" << (int)(o1^1) << endl;
 					    o1 = (o1 ^ 1);
 					  } else {
-					     if( debug > 4 ) cerr << "c bit " << km << " does not match, this odd=" << (int)(o1^1) << endl;
+					     if( config.opt_xor_debug > 4 ) cerr << "c bit " << km << " does not match, this odd=" << (int)(o1^1) << endl;
 					  }
 					  matchBits = matchBits >> 1;
 					}
 					// wrong polarity -> reject
 					if( o1 != o ) {
-					  if( debug > 4 ) cerr << "c current odd " << o1 << " does not match XOR odd " << o << endl;
+					  if( config.opt_xor_debug > 4 ) cerr << "c current odd " << o1 << " does not match XOR odd " << o << endl;
 					  continue;
 					}
 					
-					if( debug > 3) cerr << "c current clause subsumes match=" << match/2 << "(" << match << ") - match&myMatch=" << (int)(match & myMatch) << " vs " << myNumber << " with odd=" << o1 << endl;
+					if( config.opt_xor_debug > 3) cerr << "c current clause subsumes match=" << match/2 << "(" << match << ") - match&myMatch=" << (int)(match & myMatch) << " vs " << myNumber << " with odd=" << o1 << endl;
 					if( foundByIndex[ match/2 ] == 0 ) foundCount++; // only if this clause sets the value from 0 to 1!
 					subsFound = resolveLit == lit_Undef ? subsFound + 1 : subsFound; // stats
 					resFound = resolveLit != lit_Undef ? resFound + 1 : resFound;
 					foundByIndex[ match/2 ] = 1;
-					if( debug == 0 && foundCount == shift ) goto XorFoundAll;
+					if( config.opt_xor_debug == 0 && foundCount == shift ) goto XorFoundAll;
 				      }
 				    }
 				    if( foundCount == shift ) goto XorFoundAll;
@@ -551,8 +533,8 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 			      }
 			    }
 			    XorFoundAll:;
-			    if( debug > 3 ) cerr << "c foundCount " << foundCount << " vs shift= " << shift << endl;
-			      if( debug > 4 ) { // check whether really all cases of the xor have been found!
+			    if( config.opt_xor_debug > 3 ) cerr << "c foundCount " << foundCount << " vs shift= " << shift << endl;
+			      if( config.opt_xor_debug > 4 ) { // check whether really all cases of the xor have been found!
 				for( uint32_t match = 0 ; match < 2*shift; ++match ) {
 				  cerr  << "c [" << match/2 << "] == " << (int) foundByIndex[ match/2 ] << endl;
 				}
@@ -561,8 +543,8 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 			    if( foundCount == shift ) {
 			      xorList.push_back( GaussXor( ca[data.clss[offset]]) );
 			      xors ++;
-			      if( debug > 3 ) cerr << "c found " << xors << " XOR" << endl;
-			      if( debug > 0 ) cerr << "c found XOR " << ca[data.clss[offset]] << endl;
+			      if( config.opt_xor_debug > 3 ) cerr << "c found " << xors << " XOR" << endl;
+			      if( config.opt_xor_debug > 0 ) cerr << "c found XOR " << ca[data.clss[offset]] << endl;
 			      didSomething = true;
 			    }
 			}
@@ -572,7 +554,7 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 		cL ++;
 	}
 
-	if( debug > 0 ) cerr << "c [XOR] found " << xors << " non-binary xors encoded with " << xorClauses << " clauses" << endl;
+	if( config.opt_xor_debug > 0 ) cerr << "c [XOR] found " << xors << " non-binary xors encoded with " << xorClauses << " clauses" << endl;
 	return didSomething;
 }
     

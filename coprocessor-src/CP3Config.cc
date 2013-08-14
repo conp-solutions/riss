@@ -28,6 +28,12 @@ const char* _cat_up = "COPROCESSOR 3 - UP";
 const char* _cat_res = "COPROCESSOR 3 - RES";
 const char* _cat_rew = "COPROCESSOR 3 - REWRITE";
 const char* _cat_shuffle = "COPROCESSOR 3 - SHUFFLE";
+const char* _cat_sls = "COPROCESSOR 3 - SLS";
+const char* _cat_sub = "COPROCESSOR 3 - SUBSUMPTION";
+const char* _cat_sym = "COPROCESSOR 3 - SYMMETRY";
+const char* _cat_twosat = "COPROCESSOR 3 - TWOSAT";
+const char* _cat_uhd = "COPROCESSOR 3 - UNHIDE";
+const char* _cat_xor = "COPROCESSOR 3 - XOR";
 
 CP3Config::CP3Config() // add new options here!
 :
@@ -384,10 +390,124 @@ rew_debug_out                 (_cat_rew, "rew-debug",       "Debug Output of Rew
 opt_shuffle_seed          (_cat_shuffle, "shuffle-seed",  "seed for shuffling",  0, IntRange(0, INT32_MAX)),
 opt_shuffle_order        (_cat_shuffle, "shuffle-order", "shuffle the order of the clauses", true),
 #if defined CP3VERSION  
-debug_out = 0
+debug_out = 0,
 #else
-shuffle_debug_out                 (_cat_shuffle, "shuffle-debug", "Debug Output of Shuffler", 0, IntRange(0, 4))
+shuffle_debug_out                 (_cat_shuffle, "shuffle-debug", "Debug Output of Shuffler", 0, IntRange(0, 4)),
 #endif
+
+//
+// Sls
+//
+#if defined CP3VERSION 
+opt_sls_debug (false),
+#else
+opt_sls_debug (_cat_sls, "sls-debug", "Print SLS debug output", false),
+#endif
+opt_sls_ksat_flips (_cat_sls, "sls-ksat-flips",   "how many flips should be performed, if k-sat is detected (-1 = infinite)", 20000000, IntRange(-1, INT32_MAX)),
+opt_sls_rand_walk  (_cat_sls, "sls-rnd-walk",     "probability of random walk (0-10000)", 2000, IntRange(0,10000)),
+opt_sls_adopt      (_cat_sls, "sls-adopt-cls",    "reduce nr of flips for large instances", false),
+
+//
+// Subsumption
+//
+opt_sub_naivStrength    (_cat_sub, "naive_strength",   "use naive strengthening", false),
+opt_sub_allStrengthRes  (_cat_sub, "all_strength_res", "Create all self-subsuming resolvents of clauses less equal given size (prob. slow & blowup, only seq)", 0, IntRange(0,INT32_MAX)), 
+opt_sub_strength        (_cat_sub, "cp3_strength",     "Perform clause strengthening", true), 
+opt_sub_preferLearned   (_cat_sub, "cp3_inpPrefL",    "During inprocessing, check learned clauses first!", true), 
+opt_sub_subLimit        (_cat_sub, "cp3_sub_limit", "limit of subsumption steps",   300000000, IntRange(0,INT32_MAX)), 
+opt_sub_strLimit        (_cat_sub, "cp3_str_limit", "limit of strengthening steps", 300000000, IntRange(0,INT32_MAX)), 
+opt_sub_callIncrease    (_cat_sub, "cp3_call_inc",  "max. limit increase per process call (subsimp is frequently called from other techniques)", 100, IntRange(0,INT32_MAX)), 
+opt_sub_inpStepInc      (_cat_sub, "cp3_sub_inpInc","increase for steps per inprocess call", 40000000, IntRange(0, INT32_MAX)),
+#if defined CP3VERSION && CP3VERSION < 302
+opt_sub_par_strength    (1),
+opt_sub_lock_stats      (false),
+opt_sub_par_subs        (1),
+opt_sub_par_subs_counts (false),
+opt_sub_chunk_size      (100000),
+opt_sub_par_str_minCls  (250000),
+#else
+opt_sub_par_strength    (_cat_sub, "cp3_par_strength", "par strengthening: 0 never, 1 heuristic, 2 always", 1, IntRange(0,2)),
+opt_sub_lock_stats      (_cat_sub, "cp3_lock_stats", "measure time waiting in spin locks", false),
+opt_sub_par_subs        (_cat_sub, "cp3_par_subs", "par subsumption: 0 never, 1 heuristic, 2 always", 1, IntRange(0,2)),
+opt_sub_par_subs_counts (_cat_sub, "par_subs_counts" ,  "Updates of counts in par-subs 0: compare_xchange, 1: CRef-vector", 1, IntRange(0,1)),
+opt_sub_chunk_size      (_cat_sub, "susi_chunk_size" ,  "Size of Par SuSi Chunks", 100000, IntRange(1,INT32_MAX)),
+opt_sub_par_str_minCls  (_cat_sub, "par_str_minCls"  ,  "number of clauses to start parallel strengthening", 250000, IntRange(1,INT32_MAX)),
+#endif
+#if defined CP3VERSION
+opt_sub_debug = 0,
+#else
+opt_sub_debug   (_cat_sub, "susi_debug" , "Debug Output for Subsumption", 0, IntRange(0,3)),
+#endif
+
+//
+// Symmetry Breaker
+//
+sym_opt_hsize             (_cat_sym, "sym-size",    "scale with the size of the clause", false),
+sym_opt_hpol              (_cat_sym, "sym-pol",     "consider the polarity of the occurrences", false),
+sym_opt_hpushUnit         (_cat_sym, "sym-unit",    "ignore unit clauses", false), // there should be a parameter delay-units already!
+sym_opt_hmin              (_cat_sym, "sym-min",     "minimum symmtry to be exploited", 2, IntRange(1, INT32_MAX) ),
+sym_opt_hratio            (_cat_sym, "sym-ratio",   "only consider a variable if it appears close to the average of variable occurrences", 0.4, DoubleRange(0, true, HUGE_VAL, true)),
+sym_opt_iter              (_cat_sym, "sym-iter",    "number of symmetry approximation iterations", 3, IntRange(0, INT32_MAX) ),
+sym_opt_pairs             (_cat_sym, "sym-show",    "show symmetry pairs", false),
+sym_opt_print             (_cat_sym, "sym-print",   "show the data for each variable", false),
+sym_opt_exit              (_cat_sym, "sym-exit",    "exit after analysis", false),
+sym_opt_hprop             (_cat_sym, "sym-prop",    "try to generate symmetry breaking clauses with propagation", false),
+sym_opt_hpropF            (_cat_sym, "sym-propF",    "generate full clauses", false),
+sym_opt_hpropA            (_cat_sym, "sym-propA",    "test all four casese instead of two", false),
+sym_opt_cleanLearn        (_cat_sym, "sym-clLearn",  "clean the learned clauses that have been created during symmetry search", false),
+sym_opt_conflicts         (_cat_sym, "sym-cons",     "number of conflicts for looking for being implied", 0, IntRange(0, INT32_MAX) ),
+sym_opt_total_conflicts   (_cat_sym, "sym-consT",    "number of total conflicts for looking for being implied", 10000, IntRange(0, INT32_MAX) ),
+#if defined CP3VERSION  
+sym_debug_out (0),
+#else
+sym_debug_out        (_cat_sym, "sym-debug", "debug output for probing",0, IntRange(0,4) ),
+#endif
+
+//
+// Twosat
+//
+#if defined CP3VERSION 
+twosat_debug_out (0),
+twosat_useUnits (false),
+twosat_clearQueue( true),
+#else
+twosat_debug_out                 (_cat_twosat, "2sat-debug",  "Debug Output of 2sat", 0, IntRange(0, 4)),
+twosat_useUnits                 (_cat_twosat, "2sat-units",  "If 2SAT finds units, use them!", false),
+twosat_clearQueue               (_cat_twosat, "2sat-cq",     "do a decision after a unit has been found", true),
+#endif
+
+ 
+//
+// Unhide
+//
+opt_uhd_Iters     (_cat_uhd, "cp3_uhdIters",     "Number of iterations for unhiding", 3, IntRange(0, INT32_MAX)),
+opt_uhd_Trans     (_cat_uhd, "cp3_uhdTrans",     "Use Transitive Graph Reduction (buggy)", false),
+opt_uhd_UHLE      (_cat_uhd, "cp3_uhdUHLE",      "Use Unhiding+Hidden Literal Elimination",  3, IntRange(0, 3)),
+opt_uhd_UHTE      (_cat_uhd, "cp3_uhdUHTE",      "Use Unhiding+Hidden Tautology Elimination", true),
+opt_uhd_NoShuffle (_cat_uhd, "cp3_uhdNoShuffle", "Do not perform randomized graph traversation", false),
+opt_uhd_EE        (_cat_uhd, "cp3_uhdEE",        "Use equivalent literal elimination (buggy)", false),
+opt_uhd_TestDbl   (_cat_uhd, "cp3_uhdTstDbl",    "Test for duplicate binary clauses", false),
+#if defined CP3VERSION  
+opt_uhd_Debug(0),
+#else
+opt_uhd_Debug     (_cat_uhd, "cp3_uhdDebug",     "Debug Level of Unhiding", 0, IntRange(0, 6)),
+#endif
+
+
+//
+// Xor
+//
+opt_xorMatchLimit (_cat_xor, "xorMaxSize",  "Maximum Clause Size for detecting XOrs (high number consume much memory!)", 12, IntRange(3, 63)),
+opt_xor_selectX       (_cat_xor, "xorSelect",    "how to select next xor 0=first,1=smallest", 0, IntRange(0, 1)),
+opt_xor_keepUsed      (_cat_xor, "xorKeepUsed",  "continue to simplify kept xors", true),
+opt_xor_findSubsumed  (_cat_xor, "xorFindSubs",  "try to recover XORs that are partially subsumed", true),
+opt_xor_findResolved  (_cat_xor, "xorFindRes",   "try to recover XORs including resolution steps", false),
+#if defined CP3VERSION 
+opt_xor_debug( 0),
+#else
+opt_xor_debug             (_cat_xor, "xor-debug",       "Debug Output of XOR reasoning", 0, IntRange(0, 5)),
+#endif
+opt_xorFindLimit  (_cat_xor, "xorLimit",    "number of checks for finding xors", 1200000, IntRange(0, INT32_MAX))
 {}
 
 void CP3Config::parseOptions(int& argc, char** argv, bool strict)

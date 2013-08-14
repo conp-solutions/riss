@@ -6,18 +6,6 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 using namespace Coprocessor;
 
-static const char* _cat = "COPROCESSOR 3 - SLS";
-
-#if defined CP3VERSION 
-const static bool opt_debug = false;
-#else
-static BoolOption opt_debug (_cat, "sls-debug", "Print SLS debug output", false);
-#endif
-
-static IntOption  opt_ksat_flips (_cat, "sls-ksat-flips",   "how many flips should be performed, if k-sat is detected (-1 = infinite)", 20000000, IntRange(-1, INT32_MAX));
-static IntOption  opt_rand_walk  (_cat, "sls-rnd-walk",     "probability of random walk (0-10000)", 2000, IntRange(0,10000));
-static BoolOption opt_adopt      (_cat, "sls-adopt-cls",    "reduce nr of flips for large instances", false);
-
 Sls::Sls(CP3Config &_config, CoprocessorData& _data, ClauseAllocator& _ca, ThreadController& _controller)
 : 
 Technique(_config, _ca, _controller)
@@ -72,7 +60,7 @@ Lit Sls::heuristic(){
     
   }
 
-  if( opt_debug ) cerr << "smallest break: " << smallestBreak << " candidates: " << data.lits.size() << endl;
+  if( config.opt_sls_debug ) cerr << "smallest break: " << smallestBreak << " candidates: " << data.lits.size() << endl;
 
   Lit tmp = lit_Undef;
   // if literal without break, select smallest such literal!
@@ -81,7 +69,7 @@ Lit Sls::heuristic(){
   } else {
     
     // with 20 percent, select a random variable!
-    if( rand() % 10000 < opt_rand_walk ) {
+    if( rand() % 10000 < config.opt_sls_rand_walk ) {
       tmp = cl[ rand() % cl.size() ]; 
     } else {
       // select one of the variables with the smallest breack count!
@@ -142,7 +130,7 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
     // handle unit/unsat case!
     if( satLits == 0 ) {
       addHeap( index ); 
-      if( opt_debug) cerr << "c added index " << index << " to unsat clauses" << endl;
+      if( config.opt_sls_debug) cerr << "c added index " << index << " to unsat clauses" << endl;
     } else if( satLits == 1 ) {
       varData[ var(satLit) ].breakCount ++;
     }
@@ -151,13 +139,13 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
   }
 
   // reduce/adopt stepLimit if formula is too large, or ksat
-  if( stepLimit > 0 && opt_adopt && clsCount > 1000000 ) {
+  if( stepLimit > 0 && config.opt_sls_adopt && clsCount > 1000000 ) {
       stepLimit = (stepLimit < 1000000 ? stepLimit : 1000000 ); // reduce to 1 million, if necessary (too many clauses)
   }
-  if( minSize == maxSize && minSize > 2 && maxSize < 10 ) stepLimit = opt_ksat_flips == -1 ? 0 : opt_ksat_flips;
+  if( minSize == maxSize && minSize > 2 && maxSize < 10 ) stepLimit = config.opt_sls_ksat_flips == -1 ? 0 : config.opt_sls_ksat_flips;
   
   
-      if( opt_debug ) {
+      if( config.opt_sls_debug ) {
 	for( int i = 0 ; i < formula.size(); ++ i ) {
 	  const Clause& c = ca[ formula[i] ];
 	  if( c.can_be_deleted() || c.size() == 1 ) continue;
@@ -185,13 +173,13 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
   // suche
   for( flips = 0 ; (flips < stepLimit || stepLimit == 0 ) && !data.isInterupted() && unsatClauses.size() > 0 ; ++ flips )
   {
-    if( opt_debug ) {
+    if( config.opt_sls_debug ) {
      for( int i = 0 ; i < unsatClauses.size(); ++ i ) {
        if( clsData[ unsatClauses[i] ].satLiterals != 0 ) cerr << "c unsat clause has sat lits (according to counter) : [" << unsatClauses[i] << "]: " << ca[ formula[unsatClauses[i]] ] << endl;
      }
     }
     
-    if( opt_debug ) {
+    if( config.opt_sls_debug ) {
       cerr << "c sat lits: ";
       for( Var v = 0; v < data.nVars(); ++v ) if( isSat(mkLit(v,false)) ) cerr << " " << v + 1;
       cerr << endl;
@@ -209,7 +197,7 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
     const Var v = var(unsatLit);
     const bool currentPol = varData[v].polarity;
     
-    if( opt_debug ) cerr << "c flip literal " << ~unsatLit << " to " << unsatLit << " , taken from clause " << c << " [left:" << unsatClauses.size() << "]" << endl;
+    if( config.opt_sls_debug ) cerr << "c flip literal " << ~unsatLit << " to " << unsatLit << " , taken from clause " << c << " [left:" << unsatClauses.size() << "]" << endl;
     assert( isUnsat( unsatLit ) && "this literal has to be false" );
     
     const vector<int>& plusClauses = occ[ toInt( unsatLit) ];
@@ -218,7 +206,7 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
     // handle clauses that get one more satisfied literal
     for( int i = 0; i < plusClauses.size(); ++ i ) {
       const int pIndex = plusClauses[i];
-      if( opt_debug ) cerr << "c give this clause one more sat literal: [" << pIndex << "]: " << ca[ formula[pIndex] ] 
+      if( config.opt_sls_debug ) cerr << "c give this clause one more sat literal: [" << pIndex << "]: " << ca[ formula[pIndex] ] 
 	                   << ", current satLits: " << clsData[pIndex].satLiterals 
 	                   << ", watches 1=" << clsData[ pIndex ].watch1 + 1<< " 2=" << clsData[ pIndex ].watch2 + 1<< endl;
       
@@ -236,7 +224,7 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
       }
       clsData[pIndex].satLiterals ++; // after case check!
       
-      if( opt_debug ) {
+      if( config.opt_sls_debug ) {
 	const Clause& c = ca[ formula[pIndex] ];
 	int satLits = 0;
 	for( int j = 0 ; j < c.size(); ++j ) {
@@ -249,7 +237,7 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
     // handle clauses that get one more satisfied literal
     for( int i = 0; i < negClauses.size(); ++ i ) {
       const int nIndex = negClauses[i];
-      if( opt_debug ) cerr << "c give this clause one less sat literal: [" << nIndex << "]: " << ca[ formula[nIndex] ] << ", current satLits: " << clsData[nIndex].satLiterals << endl;
+      if( config.opt_sls_debug ) cerr << "c give this clause one less sat literal: [" << nIndex << "]: " << ca[ formula[nIndex] ] << ", current satLits: " << clsData[nIndex].satLiterals << endl;
       assert( clsData[nIndex].satLiterals > 0 && "was sat before" );
       
       if( clsData[nIndex].satLiterals == 1 ) { // cls became sat
@@ -276,7 +264,7 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
 	      else { clsData[ nIndex ].watch2 = var(l); satLits++; break; }
 	    }
 	  }
-	  if( opt_debug && satLits < 2 ) {
+	  if( config.opt_sls_debug && satLits < 2 ) {
 	    cerr << "c not enough sat lits for [" << nIndex << "]: " << c << " with set watches 1=" << clsData[ nIndex ].watch1 + 1<< " 2=" << clsData[ nIndex ].watch2 + 1<< endl;
 	    cerr << "c sat lits: ";
 	    for( int j = 0; j < c.size(); j ++ ) {
@@ -294,7 +282,7 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
       }
       clsData[nIndex].satLiterals --;
       
-      if( opt_debug ) {
+      if( config.opt_sls_debug ) {
 	const Clause& c = ca[ formula[nIndex] ];
 	int satLits = 0;
 	for( int j = 0 ; j < c.size(); ++j ) {
@@ -328,13 +316,13 @@ bool Sls::solve( const vec<CRef>& formula, uint32_t stepLimit )
 	// init search
 	init();
 	
-	if( opt_debug ) cerr << "c start with " << unsatisfiedClauses << " unsatisfied clauses" << endl;
+	if( config.opt_sls_debug ) cerr << "c start with " << unsatisfiedClauses << " unsatisfied clauses" << endl;
 	// search
 	solution = search(stepLimit);
 	
 	solveTime = cpuTime() - solveTime;
 	
-	if( opt_debug ) {
+	if( config.opt_sls_debug ) {
 	  if( solution) {
 	    bool foundUnsatisfiedClause = false;;
 	    for( int i = 0 ; i < formula.size()  ; ++ i ) {
@@ -346,7 +334,7 @@ bool Sls::solve( const vec<CRef>& formula, uint32_t stepLimit )
 	      }
 	      if( ! thisClauseIsSatisfied ) { 
 		foundUnsatisfiedClause = true;
-		if( opt_debug ) cerr << "the clause " << ca[formula[i]] << " is not satisfied by the SLS model" << endl;
+		if( config.opt_sls_debug ) cerr << "the clause " << ca[formula[i]] << " is not satisfied by the SLS model" << endl;
 		break;
 	      }
 	    }
@@ -356,7 +344,7 @@ bool Sls::solve( const vec<CRef>& formula, uint32_t stepLimit )
 	  }
 	}
 	
-	if( opt_debug ) {
+	if( config.opt_sls_debug ) {
 	  cerr << "SLS model: ";
 	  for( Var v = 0 ; v < data.nVars(); ++ v ) cerr << " " << ((int)assignment[v]) * (v+1);
 	  cerr << endl;

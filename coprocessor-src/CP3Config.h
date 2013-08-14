@@ -393,6 +393,118 @@ const int shuffle_debug_out;
 #else
 IntOption shuffle_debug_out;
 #endif
+
+//
+// Sls
+//
+#if defined CP3VERSION 
+const bool opt_sls_debug;
+#else
+BoolOption opt_sls_debug ;
+#endif
+IntOption  opt_sls_ksat_flips ;
+IntOption  opt_sls_rand_walk  ;
+BoolOption opt_sls_adopt      ;
+
+//
+// Subsumption
+//
+ BoolOption  opt_sub_naivStrength;
+ IntOption   opt_sub_allStrengthRes; 
+ BoolOption  opt_sub_strength     ;
+ BoolOption  opt_sub_preferLearned; 
+ IntOption   opt_sub_subLimit     ; 
+ IntOption   opt_sub_strLimit     ; 
+ IntOption   opt_sub_callIncrease ; 
+ IntOption  opt_sub_inpStepInc    ;
+#if defined CP3VERSION && CP3VERSION < 302
+ const int   opt_sub_par_strength ;
+ const bool  opt_sub_lock_stats   ;
+ const int   opt_sub_par_subs     ;
+ const int   opt_sub_par_subs_counts;
+ const int   opt_sub_chunk_size     ;
+ const int   opt_sub_par_str_minCls ;
+#else
+ IntOption   opt_sub_par_strength   ;
+ BoolOption  opt_sub_lock_stats     ;
+ IntOption   opt_sub_par_subs       ;
+ IntOption   opt_sub_par_subs_counts;
+ IntOption   opt_sub_chunk_size     ;
+ IntOption   opt_sub_par_str_minCls ;
+#endif
+#if defined CP3VERSION
+ const int opt_sub_debug;
+#else
+ IntOption   opt_sub_debug  ;
+#endif
+
+//
+// Symmetry Breaker
+//
+ BoolOption    sym_opt_hsize          ;
+ BoolOption    sym_opt_hpol           ;
+ BoolOption    sym_opt_hpushUnit      ; // there should be a parameter delay-units already!
+ IntOption     sym_opt_hmin           ;
+ DoubleOption  sym_opt_hratio         ;
+ IntOption     sym_opt_iter           ;
+ BoolOption    sym_opt_pairs          ;
+ BoolOption    sym_opt_print          ;
+ BoolOption    sym_opt_exit           ;
+ BoolOption    sym_opt_hprop          ;
+ BoolOption    sym_opt_hpropF         ;
+ BoolOption    sym_opt_hpropA         ;
+ BoolOption    sym_opt_cleanLearn     ;
+ IntOption     sym_opt_conflicts      ;
+ IntOption     sym_opt_total_conflicts;
+#if defined CP3VERSION  
+ const int sym_debug_out;
+#else
+ IntOption sym_debug_out;
+#endif
+ 
+//
+// Twosat
+//
+#if defined CP3VERSION 
+ const int twosat_debug_out;
+ const bool twosat_useUnits;
+ const bool twosat_clearQueue;
+#else
+ IntOption twosat_debug_out  ;
+ BoolOption twosat_useUnits  ;
+ BoolOption twosat_clearQueue;
+#endif
+ 
+//
+// Unhide
+//
+ IntOption  opt_uhd_Iters     ;
+ BoolOption opt_uhd_Trans     ;
+ IntOption  opt_uhd_UHLE      ;
+ BoolOption opt_uhd_UHTE      ;
+ BoolOption opt_uhd_NoShuffle ;
+ BoolOption opt_uhd_EE        ;
+ BoolOption opt_uhd_TestDbl   ;
+#if defined CP3VERSION  
+ const int opt_uhd_Debug;
+#else
+ IntOption  opt_uhd_Debug;
+#endif
+ 
+//
+// Xor
+//
+ IntOption  opt_xorMatchLimit ;
+ IntOption  opt_xorFindLimit  ;
+ IntOption  opt_xor_selectX     ;
+ BoolOption opt_xor_keepUsed    ;
+ BoolOption opt_xor_findSubsumed;
+ BoolOption opt_xor_findResolved;
+#if defined CP3VERSION 
+ const int opt_xor_debug;
+#else
+ IntOption  opt_xor_debug;
+#endif
 };
  
 }

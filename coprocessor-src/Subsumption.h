@@ -129,6 +129,7 @@ lbool createResolvent( const CRef cr, CRef & resolvent, const int negated_lit_po
   
   /** data for parallel execution */
   struct SubsumeWorkData {
+    CP3Config*       config;      // configuration of CP3 instantiation
     Subsumption*     subsumption; // class with code
     CoprocessorData* data;        // formula and maintain lists
     unsigned int *   start;       // partition of the queue
