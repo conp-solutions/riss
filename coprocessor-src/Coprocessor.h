@@ -10,6 +10,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor-src/CoprocessorTypes.h"
 #include "coprocessor-src/CoprocessorThreads.h"
+#include "coprocessor-src/CP3Config.h"
+
 
 #include "coprocessor-src/Propagation.h"
 #include "coprocessor-src/Subsumption.h"
@@ -44,6 +46,9 @@ namespace Coprocessor {
 class Preprocessor {
 
   // friends
+  
+  
+  CP3Config& config;           // configuration of the preprocessor
 
   // attributes
   int32_t threads;             // number of threads that can be used by the preprocessor
@@ -66,7 +71,7 @@ class Preprocessor {
   
 public:
 
-  Preprocessor(Solver* solver, int32_t _threads=-1 );
+  Preprocessor(Solver* solver, CP3Config & _config, int32_t _threads=-1 );
   ~Preprocessor();
 
   // major methods to start preprocessing

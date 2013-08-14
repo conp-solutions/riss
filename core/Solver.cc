@@ -1819,7 +1819,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
 
     if( status == l_Undef ) {
 	  // restart, triggered by the solver
-	  if( coprocessor == 0 && useCoprocessor) coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
+	  // if( coprocessor == 0 && useCoprocessor) coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
           if( coprocessor != 0 && useCoprocessor) status = coprocessor->preprocess();
          if (verbosity >= 1) printf("c =========================================================================================================\n");
     }
@@ -1839,7 +1839,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
 	
 	if( status == l_Undef ) {
 	  // restart, triggered by the solver
-	  if( coprocessor == 0 && useCoprocessor)  coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
+	  // if( coprocessor == 0 && useCoprocessor)  coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
           if( coprocessor != 0 && useCoprocessor) status = coprocessor->inprocess();
 	}
 	

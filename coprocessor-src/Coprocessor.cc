@@ -11,97 +11,99 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include <iostream>
 #include <cstring>
 
-static const char* _cat = "COPROCESSOR 3";
-static const char* _cat2 = "PREPROCESSOR TECHNIQUES";
-
-// options
-static BoolOption opt_unlimited   (_cat, "cp3_limited",    "Limits for preprocessing techniques", true);
-static BoolOption opt_randomized  (_cat, "cp3_randomized", "Steps withing preprocessing techniques are executed in random order", false);
-static IntOption  opt_inprocessInt(_cat, "cp3_inp_cons",   "Perform Inprocessing after at least X conflicts", 20000, IntRange(0, INT32_MAX));
-static BoolOption opt_enabled     (_cat, "enabled_cp3",    "Use CP3", false);
-static BoolOption opt_inprocess   (_cat, "inprocess",      "Use CP3 for inprocessing", false);
-static IntOption  opt_exit_pp     (_cat, "cp3-exit-pp",    "terminate after preprocessing (1=exit,2=print formula cerr+exit 3=cout+exit)", 0, IntRange(0, 3));
-static BoolOption opt_randInp     (_cat, "randInp",        "Randomize Inprocessing", true);
-static BoolOption opt_inc_inp     (_cat, "inc-inp",        "increase technique limits per inprocess step", false);
-
-#if defined CP3VERSION && CP3VERSION < 400
-       const bool opt_printStats = false; // do not print stats, if restricted binary is produced
-       const static int opt_verbose = 0;        // do not talk during computation!
-#else
-       BoolOption opt_printStats  (_cat, "cp3_stats",      "Print Technique Statistics", false);
-       static IntOption  opt_verbose     (_cat, "cp3_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 5));
-#endif
-
-// techniques
-static BoolOption opt_up          (_cat2, "up",            "Use Unit Propagation during preprocessing", false);
-static BoolOption opt_subsimp     (_cat2, "subsimp",       "Use Subsumption during preprocessing", false);
-static BoolOption opt_hte         (_cat2, "hte",           "Use Hidden Tautology Elimination during preprocessing", false);
-static BoolOption opt_bce         (_cat2, "bce",           "Use Blocked Clause Elimination during preprocessing", false);
-static BoolOption opt_ent         (_cat2, "ent",           "Use checking for entailed redundancy during preprocessing", false);
-static BoolOption opt_cce         (_cat2, "cce",           "Use (covered) Clause Elimination during preprocessing", false);
-static BoolOption opt_ee          (_cat2, "ee",            "Use Equivalence Elimination during preprocessing", false);
-static BoolOption opt_bve         (_cat2, "bve",           "Use Bounded Variable Elimination during preprocessing", false);
-static BoolOption opt_bva         (_cat2, "bva",           "Use Bounded Variable Addition during preprocessing", false);
-static BoolOption opt_unhide      (_cat2, "unhide",        "Use Unhiding (UHTE, UHLE based on BIG sampling)", false);
-static BoolOption opt_probe       (_cat2, "probe",         "Use Probing/Clause Vivification", false);
-static BoolOption opt_ternResolve (_cat2, "3resolve",      "Use Ternary Clause Resolution", false);
-static BoolOption opt_addRedBins  (_cat2, "addRed2",       "Use Adding Redundant Binary Clauses", false);
-static BoolOption opt_dense       (_cat2, "dense",         "Remove gaps in variables of the formula", false);
-static BoolOption opt_shuffle     (_cat2, "shuffle",       "Shuffle the formula, before the preprocessor is initialized", false);
-static BoolOption opt_simplify    (_cat2, "simplify",      "Apply easy simplifications to the formula", true);
-static BoolOption opt_symm        (_cat2, "symm",          "Do local symmetry breaking", false);
-static BoolOption opt_FM          (_cat2, "fm",            "Use the Fourier Motzkin transformation", false);
-
-
-static StringOption opt_ptechs (_cat2, "cp3_ptechs", "techniques for preprocessing");
-static StringOption opt_itechs (_cat2, "cp3_itechs", "techniques for inprocessing");
-
-// use 2sat and sls only for high versions!
-#if defined CP3VERSION && CP3VERSION < 301
-static const int opt_threads = 0;
-static const bool opt_sls = false;       
-static const bool opt_sls_phase = false;    
-static const int opt_sls_flips = 8000000;
-static const bool opt_xor = false;    
-static const bool opt_rew = false;    
-static const bool opt_twosat = false;
-static const bool opt_twosat_init=false;
-static const bool  opt_ts_phase =false;    
-#else
-static IntOption  opt_threads     (_cat, "cp3_threads",    "Number of extra threads that should be used for preprocessing", 0, IntRange(0, INT32_MAX));
-static BoolOption opt_sls         (_cat2, "sls",           "Use Simple Walksat algorithm to test whether formula is satisfiable quickly", false);
-static BoolOption opt_sls_phase   (_cat2, "sls-phase",     "Use current interpretation of SLS as phase", false);
-static IntOption  opt_sls_flips   (_cat2, "sls-flips",     "Perform given number of SLS flips", 8000000, IntRange(-1, INT32_MAX));
-static BoolOption opt_xor         (_cat2, "xor",           "Reason with XOR constraints", false);
-static BoolOption opt_rew         (_cat2, "rew",           "Rewrite AMO constraints", false);
-static BoolOption opt_twosat      (_cat2, "2sat",          "2SAT algorithm to check satisfiability of binary clauses", false);
-static BoolOption opt_twosat_init (_cat2, "2sat1",         "2SAT before all other algorithms to find units", false);
-static BoolOption opt_ts_phase    (_cat2, "2sat-phase",    "use 2SAT model as initial phase for SAT solver", false);
-#endif
-
-#if defined CP3VERSION // debug only, if no version is given!
-static const bool opt_debug = false;       
-static const bool opt_check = false;
-static const int  opt_log =0;
-static const char* printAfter = 0;
-#else
-static BoolOption opt_debug       (_cat, "cp3-debug",   "do more debugging", false);
-static BoolOption opt_check       (_cat, "cp3-check",   "check solver state before returning control to solver", false);
-static IntOption  opt_log         (_cat,  "cp3-log",    "Output log messages until given level", 0, IntRange(0, 3));
-static StringOption printAfter    (_cat,  "cp3-print",  "print intermediate formula after given technique");
-#endif
+// static const char* _cat = "COPROCESSOR 3";
+// static const char* _cat2 = "PREPROCESSOR TECHNIQUES";
+// 
+// // options
+// static BoolOption opt_unlimited   (_cat, "cp3_limited",    "Limits for preprocessing techniques", true);
+// static BoolOption opt_randomized  (_cat, "cp3_randomized", "Steps withing preprocessing techniques are executed in random order", false);
+// static IntOption  opt_inprocessInt(_cat, "cp3_inp_cons",   "Perform Inprocessing after at least X conflicts", 20000, IntRange(0, INT32_MAX));
+// static BoolOption opt_enabled     (_cat, "enabled_cp3",    "Use CP3", false);
+// static BoolOption opt_inprocess   (_cat, "inprocess",      "Use CP3 for inprocessing", false);
+// static IntOption  opt_exit_pp     (_cat, "cp3-exit-pp",    "terminate after preprocessing (1=exit,2=print formula cerr+exit 3=cout+exit)", 0, IntRange(0, 3));
+// static BoolOption opt_randInp     (_cat, "randInp",        "Randomize Inprocessing", true);
+// static BoolOption opt_inc_inp     (_cat, "inc-inp",        "increase technique limits per inprocess step", false);
+// 
+// #if defined CP3VERSION && CP3VERSION < 400
+//        const bool opt_printStats = false; // do not print stats, if restricted binary is produced
+//        const static int opt_verbose = 0;        // do not talk during computation!
+// #else
+//        BoolOption opt_printStats  (_cat, "cp3_stats",      "Print Technique Statistics", false);
+//        static IntOption  opt_verbose     (_cat, "cp3_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 5));
+// #endif
+// 
+// // techniques
+// static BoolOption opt_up          (_cat2, "up",            "Use Unit Propagation during preprocessing", false);
+// static BoolOption opt_subsimp     (_cat2, "subsimp",       "Use Subsumption during preprocessing", false);
+// static BoolOption opt_hte         (_cat2, "hte",           "Use Hidden Tautology Elimination during preprocessing", false);
+// static BoolOption opt_bce         (_cat2, "bce",           "Use Blocked Clause Elimination during preprocessing", false);
+// static BoolOption opt_ent         (_cat2, "ent",           "Use checking for entailed redundancy during preprocessing", false);
+// static BoolOption opt_cce         (_cat2, "cce",           "Use (covered) Clause Elimination during preprocessing", false);
+// static BoolOption opt_ee          (_cat2, "ee",            "Use Equivalence Elimination during preprocessing", false);
+// static BoolOption opt_bve         (_cat2, "bve",           "Use Bounded Variable Elimination during preprocessing", false);
+// static BoolOption opt_bva         (_cat2, "bva",           "Use Bounded Variable Addition during preprocessing", false);
+// static BoolOption opt_unhide      (_cat2, "unhide",        "Use Unhiding (UHTE, UHLE based on BIG sampling)", false);
+// static BoolOption opt_probe       (_cat2, "probe",         "Use Probing/Clause Vivification", false);
+// static BoolOption opt_ternResolve (_cat2, "3resolve",      "Use Ternary Clause Resolution", false);
+// static BoolOption opt_addRedBins  (_cat2, "addRed2",       "Use Adding Redundant Binary Clauses", false);
+// static BoolOption opt_dense       (_cat2, "dense",         "Remove gaps in variables of the formula", false);
+// static BoolOption opt_shuffle     (_cat2, "shuffle",       "Shuffle the formula, before the preprocessor is initialized", false);
+// static BoolOption opt_simplify    (_cat2, "simplify",      "Apply easy simplifications to the formula", true);
+// static BoolOption opt_symm        (_cat2, "symm",          "Do local symmetry breaking", false);
+// static BoolOption opt_FM          (_cat2, "fm",            "Use the Fourier Motzkin transformation", false);
+// 
+// 
+// static StringOption opt_ptechs (_cat2, "cp3_ptechs", "techniques for preprocessing");
+// static StringOption opt_itechs (_cat2, "cp3_itechs", "techniques for inprocessing");
+// 
+// // use 2sat and sls only for high versions!
+// #if defined CP3VERSION && CP3VERSION < 301
+// static const int opt_threads = 0;
+// static const bool opt_sls = false;       
+// static const bool opt_sls_phase = false;    
+// static const int opt_sls_flips = 8000000;
+// static const bool opt_xor = false;    
+// static const bool opt_rew = false;    
+// static const bool opt_twosat = false;
+// static const bool opt_twosat_init=false;
+// static const bool  opt_ts_phase =false;    
+// #else
+// static IntOption  opt_threads     (_cat, "cp3_threads",    "Number of extra threads that should be used for preprocessing", 0, IntRange(0, INT32_MAX));
+// static BoolOption opt_sls         (_cat2, "sls",           "Use Simple Walksat algorithm to test whether formula is satisfiable quickly", false);
+// static BoolOption opt_sls_phase   (_cat2, "sls-phase",     "Use current interpretation of SLS as phase", false);
+// static IntOption  opt_sls_flips   (_cat2, "sls-flips",     "Perform given number of SLS flips", 8000000, IntRange(-1, INT32_MAX));
+// static BoolOption opt_xor         (_cat2, "xor",           "Reason with XOR constraints", false);
+// static BoolOption opt_rew         (_cat2, "rew",           "Rewrite AMO constraints", false);
+// static BoolOption opt_twosat      (_cat2, "2sat",          "2SAT algorithm to check satisfiability of binary clauses", false);
+// static BoolOption opt_twosat_init (_cat2, "2sat1",         "2SAT before all other algorithms to find units", false);
+// static BoolOption opt_ts_phase    (_cat2, "2sat-phase",    "use 2SAT model as initial phase for SAT solver", false);
+// #endif
+// 
+// #if defined CP3VERSION // debug only, if no version is given!
+// static const bool opt_debug = false;       
+// static const bool opt_check = false;
+// static const int  opt_log =0;
+// static const char* printAfter = 0;
+// #else
+// static BoolOption opt_debug       (_cat, "cp3-debug",   "do more debugging", false);
+// static BoolOption opt_check       (_cat, "cp3-check",   "check solver state before returning control to solver", false);
+// static IntOption  opt_log         (_cat,  "cp3-log",    "Output log messages until given level", 0, IntRange(0, 3));
+// static StringOption printAfter    (_cat,  "cp3-print",  "print intermediate formula after given technique");
+// #endif
 
 
 using namespace std;
 using namespace Coprocessor;
 
-Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
-: threads( _threads < 0 ? opt_threads : _threads)
+Preprocessor::Preprocessor( Solver* _solver, CP3Config& _config, int32_t _threads)
+: 
+config( _config )
+, threads( _threads < 0 ? config.opt_threads : _threads)
 , solver( _solver )
 , ca( solver->ca )
-, log( opt_log )
-, data( solver->ca, solver, log, opt_unlimited, opt_randomized )
-, controller( opt_threads )
+, log( config.opt_log )
+, data( solver->ca, solver, log, config.opt_unlimited, config.opt_randomized )
+, controller( config.opt_threads )
 // attributes and all that
 , ppTime( 0 )
 , ipTime( 0 )
@@ -138,59 +140,59 @@ Preprocessor::Preprocessor( Solver* _solver, int32_t _threads)
 
 Preprocessor::~Preprocessor()
 {
-  if (opt_verbose > 2) cerr << "c destruct preprocessor" << endl;
+  if (config.opt_verbose > 2) cerr << "c destruct preprocessor" << endl;
 }
 
 lbool Preprocessor::performSimplification()
 {
-  if( ! opt_enabled ) return l_Undef;
-  if( opt_verbose > 4 ) cerr << "c start simplifying with coprocessor" << endl;
+  if( ! config.opt_enabled ) return l_Undef;
+  if( config.opt_verbose > 4 ) cerr << "c start simplifying with coprocessor" << endl;
 
   if( formulaVariables == -1 ) {
-    if( opt_verbose > 2 ) cerr << "c initialize CP3 with " << solver->nVars()  << " variables " << endl;
+    if( config.opt_verbose > 2 ) cerr << "c initialize CP3 with " << solver->nVars()  << " variables " << endl;
     formulaVariables = solver->nVars() ;
   }
   
   if( data.isInprocessing() ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
   else {ppTime = cpuTime() - ppTime; ppwTime = wallClockTime() - ppwTime;}
     
-  if( printAfter != 0 ) cerr << "c printAfter " << printAfter << endl;
+  if( config.printAfter != 0 ) cerr << "c printAfter " << config.printAfter << endl;
     
   // first, remove all satisfied clauses
-  if( opt_simplify && !solver->simplify() ) { cout.flush(); cerr.flush(); return l_False; }
+  if( config.opt_simplify && !solver->simplify() ) { cout.flush(); cerr.flush(); return l_False; }
 
   lbool status = l_Undef;
   // delete clauses from solver
   
-  if( opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << endl;
+  if( config.opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << endl;
     
   cleanSolver ();
   // initialize techniques
   data.init( solver->nVars() );
   
-  if( opt_shuffle ) shuffle();
+  if( config.opt_shuffle ) shuffle();
   
-  if( opt_check ) checkLists("before initializing");
+  if( config.opt_check ) checkLists("before initializing");
   initializePreprocessor ();
-  if( opt_check ) checkLists("after initializing");
+  if( config.opt_check ) checkLists("after initializing");
   
-  if( opt_verbose > 4 ) cerr << "c coprocessor finished initialization" << endl;
+  if( config.opt_verbose > 4 ) cerr << "c coprocessor finished initialization" << endl;
   
   const bool printBVE = false, printBVA = false, printProbe = false, printUnhide = false, 
 	printCCE = false, printEE = false, printREW = false, printFM = false, printHTE = false, printSusi = false, printUP = false,
 	printTernResolve = false, printAddRedBin = false, printXOR = false, printENT=false, printBCE=false;  
   
   // do preprocessing
-  if( opt_up ) {
-    if( opt_verbose > 0 ) cerr << "c up ..." << endl;
-    if( opt_verbose > 4 ) cerr << "c coprocessor(" << data.ok() << ") propagate" << endl;
+  if( config.opt_up ) {
+    if( config.opt_verbose > 0 ) cerr << "c up ..." << endl;
+    if( config.opt_verbose > 4 ) cerr << "c coprocessor(" << data.ok() << ") propagate" << endl;
     if( status == l_Undef ) status = propagation.process(data);
-    if( opt_verbose > 1 )  { printStatistics(cerr); propagation.printStatistics(cerr); }
+    if( config.opt_verbose > 1 )  { printStatistics(cerr); propagation.printStatistics(cerr); }
   }
   
-  if( opt_twosat_init ) {
-    if( opt_verbose > 0 ) cerr << "c 2sat ..." << endl;
-    if( opt_verbose > 4 )cerr << "c coprocessor 2SAT" << endl;
+  if( config.opt_twosat_init ) {
+    if( config.opt_verbose > 0 ) cerr << "c 2sat ..." << endl;
+    if( config.opt_verbose > 4 )cerr << "c coprocessor 2SAT" << endl;
     if( status == l_Undef ) {
       bool solvedBy2SAT = twoSAT.solve();  // cannot change status, can generate new unit clauses
       if( solvedBy2SAT ) {
@@ -205,7 +207,7 @@ lbool Preprocessor::performSimplification()
 	}
 	if( isNotSat ) {
 	  // only set the phase before search!
-	  if( opt_ts_phase && !data.isInprocessing()) {
+	  if( config.opt_ts_phase && !data.isInprocessing()) {
 	    for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
 	  }
 	} else {
@@ -227,223 +229,223 @@ lbool Preprocessor::performSimplification()
   // begin clauses have to be sorted here!!
   sortClauses();
   
-  if( printUP || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'u')  ) {
+  if( printUP || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'u')  ) {
    printFormula("after Sorting");
   }
   
-  if( opt_debug )  { scanCheck("after SORT"); }  
+  if( config.opt_debug )  { scanCheck("after SORT"); }  
   
-  if( opt_xor ) {
-    if( opt_verbose > 0 ) cerr << "c xor ..." << endl;
-    if( opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") XOR" << endl;
+  if( config.opt_xor ) {
+    if( config.opt_verbose > 0 ) cerr << "c xor ..." << endl;
+    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") XOR" << endl;
     if( status == l_Undef ) xorReasoning.process();  // cannot change status, can generate new unit clauses
-    if( opt_verbose > 1 )  { printStatistics(cerr); xorReasoning.printStatistics(cerr); }
+    if( config.opt_verbose > 1 )  { printStatistics(cerr); xorReasoning.printStatistics(cerr); }
     if (! data.ok() )
         status = l_False;
   }
   data.checkGarbage(); // perform garbage collection
   
-  if( opt_debug ) { checkLists("after XOR"); scanCheck("after XOR"); }
-  if( printXOR || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'x')) {
+  if( config.opt_debug ) { checkLists("after XOR"); scanCheck("after XOR"); }
+  if( printXOR || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'x')) {
    printFormula("after XOR");
   }
   
-  if( opt_ent ) {
-    if( opt_verbose > 0 ) cerr << "c ent ..." << endl;
-    if( opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") entailed redundancy" << endl;
+  if( config.opt_ent ) {
+    if( config.opt_verbose > 0 ) cerr << "c ent ..." << endl;
+    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") entailed redundancy" << endl;
     if( status == l_Undef ) entailedRedundant.process();  // cannot change status, can generate new unit clauses
-    if( opt_verbose > 1 )  { printStatistics(cerr); entailedRedundant.printStatistics(cerr); }
+    if( config.opt_verbose > 1 )  { printStatistics(cerr); entailedRedundant.printStatistics(cerr); }
   }
   data.checkGarbage(); // perform garbage collection
   
-  if( opt_debug )  { scanCheck("after ENT"); }  
-  if( printENT || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 't') ) {
+  if( config.opt_debug )  { scanCheck("after ENT"); }  
+  if( printENT || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 't') ) {
    printFormula("after ENT");
   }
   
-  if( opt_ternResolve ) {
-    if( opt_verbose > 0 ) cerr << "c res3 ..." << endl;
+  if( config.opt_ternResolve ) {
+    if( config.opt_verbose > 0 ) cerr << "c res3 ..." << endl;
     res.process(false); 
-    if( opt_verbose > 1 )  { printStatistics(cerr); res.printStatistics(cerr); }
-    if( printTernResolve || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == '3') ) printFormula("after TernResolve");
+    if( config.opt_verbose > 1 )  { printStatistics(cerr); res.printStatistics(cerr); }
+    if( printTernResolve || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == '3') ) printFormula("after TernResolve");
   }
   
   // clear subsimp stats
   if ( true ) 
       subsumption.resetStatistics();
 
-  if( opt_subsimp ) {
-    if( opt_verbose > 0 ) cerr << "c subsimp ..." << endl;
-    if( opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") subsume/strengthen" << endl;
+  if( config.opt_subsimp ) {
+    if( config.opt_verbose > 0 ) cerr << "c subsimp ..." << endl;
+    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") subsume/strengthen" << endl;
     if( status == l_Undef ) subsumption.process();  // cannot change status, can generate new unit clauses
-    if( opt_verbose > 1 )  { printStatistics(cerr); subsumption.printStatistics(cerr); }
+    if( config.opt_verbose > 1 )  { printStatistics(cerr); subsumption.printStatistics(cerr); }
     if (! solver->okay())
         status = l_False;
   }
   data.checkGarbage(); // perform garbage collection
   
-  if( printSusi || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 's')) {
+  if( printSusi || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 's')) {
    printFormula("after Susi");
   }
   
-  if( opt_debug ) { checkLists("after SUSI"); scanCheck("after SUSI"); }
+  if( config.opt_debug ) { checkLists("after SUSI"); scanCheck("after SUSI"); }
   
-  if( opt_FM ) {
-    if( opt_verbose > 0 ) cerr << "c FM ..." << endl;
-    if( opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") fourier motzkin" << endl;
+  if( config.opt_FM ) {
+    if( config.opt_verbose > 0 ) cerr << "c FM ..." << endl;
+    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") fourier motzkin" << endl;
     if( status == l_Undef ) fourierMotzkin.process();  // cannot change status, can generate new unit clauses
-    if( opt_verbose > 1 )  { printStatistics(cerr); fourierMotzkin.printStatistics(cerr); }
+    if( config.opt_verbose > 1 )  { printStatistics(cerr); fourierMotzkin.printStatistics(cerr); }
     if (! data.ok() )
         status = l_False;
   }
   data.checkGarbage(); // perform garbage collection
   
-  if( opt_debug ) { checkLists("after FM"); scanCheck("after FM"); }
-  if( printFM || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'f')) {
+  if( config.opt_debug ) { checkLists("after FM"); scanCheck("after FM"); }
+  if( printFM || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'f')) {
    printFormula("after FM");
   }
   
-  if( opt_rew ) {
-    if( opt_verbose > 0 ) cerr << "c rew ..." << endl;
-    if( opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") rewriting" << endl;
+  if( config.opt_rew ) {
+    if( config.opt_verbose > 0 ) cerr << "c rew ..." << endl;
+    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") rewriting" << endl;
     if( status == l_Undef ) rew.process();  // cannot change status, can generate new unit clauses
-    if( opt_verbose > 1 )  { printStatistics(cerr); rew.printStatistics(cerr); }
+    if( config.opt_verbose > 1 )  { printStatistics(cerr); rew.printStatistics(cerr); }
     if (! data.ok() )
         status = l_False;
   }
   data.checkGarbage(); // perform garbage collection
   
-  if( opt_debug ) { checkLists("after REW"); scanCheck("after REW"); }
-  if( printREW || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'r')) {
+  if( config.opt_debug ) { checkLists("after REW"); scanCheck("after REW"); }
+  if( printREW || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'r')) {
    printFormula("after REW");
   }
   
-  if( opt_ee ) { // before this technique nothing should be run that alters the structure of the formula (e.g. BVE;BVA)
-    if( opt_verbose > 0 ) cerr << "c ee ..." << endl;
-    if( opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") equivalence elimination" << endl;
+  if( config.opt_ee ) { // before this technique nothing should be run that alters the structure of the formula (e.g. BVE;BVA)
+    if( config.opt_verbose > 0 ) cerr << "c ee ..." << endl;
+    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") equivalence elimination" << endl;
     if( status == l_Undef ) ee.process(data);  // cannot change status, can generate new unit clauses
-    if( opt_verbose > 1 )  { printStatistics(cerr); ee.printStatistics(cerr); }
+    if( config.opt_verbose > 1 )  { printStatistics(cerr); ee.printStatistics(cerr); }
     if (! data.ok() )
         status = l_False;
   }
   data.checkGarbage(); // perform garbage collection
   
-  if( opt_debug ) { checkLists("after EE"); scanCheck("after EE"); }
+  if( config.opt_debug ) { checkLists("after EE"); scanCheck("after EE"); }
 
-  if( printEE || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'e') ) {
+  if( printEE || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'e') ) {
    printFormula("after EE");
   }
   
-  if ( opt_unhide ) {
-    if( opt_verbose > 0 ) cerr << "c unhide ..." << endl;
-    if( opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") unhiding" << endl;
+  if ( config.opt_unhide ) {
+    if( config.opt_verbose > 0 ) cerr << "c unhide ..." << endl;
+    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") unhiding" << endl;
     if( status == l_Undef ) unhiding.process(); 
-    if( opt_verbose > 1 )  { printStatistics(cerr); unhiding.printStatistics(cerr); }
+    if( config.opt_verbose > 1 )  { printStatistics(cerr); unhiding.printStatistics(cerr); }
     if( !data.ok() ) status = l_False;
   }
   data.checkGarbage(); // perform garbage collection
   
-  if( printUnhide || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'g') ) {
+  if( printUnhide || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'g') ) {
    printFormula("after Unhiding");
   }
-  if( opt_debug ) {checkLists("after UNHIDING");  scanCheck("after UNHIDING"); }
+  if( config.opt_debug ) {checkLists("after UNHIDING");  scanCheck("after UNHIDING"); }
   
-  if( opt_hte ) {
-    if( opt_verbose > 0 ) cerr << "c hte ..." << endl;
-    if( opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") hidden tautology elimination" << endl;
+  if( config.opt_hte ) {
+    if( config.opt_verbose > 0 ) cerr << "c hte ..." << endl;
+    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") hidden tautology elimination" << endl;
     if( status == l_Undef ) hte.process(data);  // cannot change status, can generate new unit clauses
-    if( opt_verbose > 1 )  { printStatistics(cerr); hte.printStatistics(cerr); }
+    if( config.opt_verbose > 1 )  { printStatistics(cerr); hte.printStatistics(cerr); }
   }
   data.checkGarbage(); // perform garbage collection
 
-  if( opt_debug ) { checkLists("after HTE");  scanCheck("after HTE"); }
-  if( printHTE || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'h')) {
+  if( config.opt_debug ) { checkLists("after HTE");  scanCheck("after HTE"); }
+  if( printHTE || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'h')) {
    printFormula("after HTE");
   }
   
-  if ( opt_probe ) {
-    if( opt_verbose > 0 ) cerr << "c probe ..." << endl;
-    if( opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") probing" << endl;
+  if ( config.opt_probe ) {
+    if( config.opt_verbose > 0 ) cerr << "c probe ..." << endl;
+    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") probing" << endl;
     if( status == l_Undef ) probing.process(); 
     if( !data.ok() ) status = l_False;
-    if( opt_verbose > 1 )  { printStatistics(cerr); probing.printStatistics(cerr); }
+    if( config.opt_verbose > 1 )  { printStatistics(cerr); probing.printStatistics(cerr); }
   }
 
-  if( opt_debug ) { checkLists("after PROBE - before GC");  scanCheck("after PROBE - before GC"); }
-  if( printProbe || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'p') ) {
+  if( config.opt_debug ) { checkLists("after PROBE - before GC");  scanCheck("after PROBE - before GC"); }
+  if( printProbe || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'p') ) {
    printFormula("after Probing");
   }
   
   data.checkGarbage(); // perform garbage collection
 
   
-  if ( opt_bve ) {
-    if( opt_verbose > 0 ) cerr << "c bve ..." << endl;
-    if( opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") bounded variable elimination" << endl;
+  if ( config.opt_bve ) {
+    if( config.opt_verbose > 0 ) cerr << "c bve ..." << endl;
+    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") bounded variable elimination" << endl;
     if( status == l_Undef ) status = bve.runBVE(data);  // can change status, can generate new unit clauses
-    if( opt_verbose > 1 )  { printStatistics(cerr); bve.printStatistics(cerr); }
+    if( config.opt_verbose > 1 )  { printStatistics(cerr); bve.printStatistics(cerr); }
   }
   data.checkGarbage(); // perform garbage collection
   
-  if( opt_debug ) { checkLists("after BVE");  scanCheck("after BVE"); }
-  if( printBVE || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'v')) {
+  if( config.opt_debug ) { checkLists("after BVE");  scanCheck("after BVE"); }
+  if( printBVE || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'v')) {
    printFormula("after BVE");
   }
   
-  if ( opt_bva ) {
-    if( opt_verbose > 0 ) cerr << "c bva ..." << endl;
-    if( opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") blocked variable addition" << endl;
+  if ( config.opt_bva ) {
+    if( config.opt_verbose > 0 ) cerr << "c bva ..." << endl;
+    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") blocked variable addition" << endl;
     if( status == l_Undef ) bva.process(); 
-    if( opt_verbose > 1 )  { printStatistics(cerr); bva.printStatistics(cerr); }
+    if( config.opt_verbose > 1 )  { printStatistics(cerr); bva.printStatistics(cerr); }
     if( !data.ok() ) status = l_False;
   }
   data.checkGarbage(); // perform garbage collection
   
-  if( opt_debug ) { checkLists("after BVA");  scanCheck("after BVA"); }
-  if( printBVA || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'w') ) {
+  if( config.opt_debug ) { checkLists("after BVA");  scanCheck("after BVA"); }
+  if( printBVA || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'w') ) {
    printFormula("after BVA");
   }
 
-  if( opt_bce ) {
-    if( opt_verbose > 0 ) cerr << "c bce ..." << endl;
-    if( opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") blocked clause elimination" << endl;
+  if( config.opt_bce ) {
+    if( config.opt_verbose > 0 ) cerr << "c bce ..." << endl;
+    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") blocked clause elimination" << endl;
     if( status == l_Undef ) bce.process();  // cannot change status, can generate new unit clauses
-    if( opt_verbose > 1 )  { printStatistics(cerr); bce.printStatistics(cerr); }
+    if( config.opt_verbose > 1 )  { printStatistics(cerr); bce.printStatistics(cerr); }
   }
   data.checkGarbage(); // perform garbage collection
   
-  if( opt_debug )  { scanCheck("after BCE"); }  
-  if( printBCE || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'b') ) {
+  if( config.opt_debug )  { scanCheck("after BCE"); }  
+  if( printBCE || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'b') ) {
    printFormula("after BCE");
   }
   
-  if( opt_cce ) {
-    if( opt_verbose > 0 ) cerr << "c cce ..." << endl;
-    if( opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") (covered) clause elimination" << endl;
+  if( config.opt_cce ) {
+    if( config.opt_verbose > 0 ) cerr << "c cce ..." << endl;
+    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") (covered) clause elimination" << endl;
     if( status == l_Undef ) cce.process(data);  // cannot change status, can generate new unit clauses
-    if( opt_verbose > 1 )  { printStatistics(cerr); cce.printStatistics(cerr); }
+    if( config.opt_verbose > 1 )  { printStatistics(cerr); cce.printStatistics(cerr); }
   }
   data.checkGarbage(); // perform garbage collection
   
-  if( opt_debug )  { scanCheck("after CCE"); }  
-  if( printCCE || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'c') ) {
+  if( config.opt_debug )  { scanCheck("after CCE"); }  
+  if( printCCE || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'c') ) {
    printFormula("after CCE");
   }
   
    
-  if( opt_addRedBins ) {
-    if( opt_verbose > 0 ) cerr << "c add2 ..." << endl;
+  if( config.opt_addRedBins ) {
+    if( config.opt_verbose > 0 ) cerr << "c add2 ..." << endl;
     res.process(true); 
-    if( opt_verbose > 1 )  { printStatistics(cerr); res.printStatistics(cerr); }
-    if( printAddRedBin || (printAfter != 0 && strlen(printAfter) > 0 && printAfter[0] == 'a') ) printFormula("after Add2");
+    if( config.opt_verbose > 1 )  { printStatistics(cerr); res.printStatistics(cerr); }
+    if( printAddRedBin || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'a') ) printFormula("after Add2");
   }
    
 
-  if( opt_sls ) {
-    if( opt_verbose > 0 ) cerr << "c sls ..." << endl;
-    if( opt_verbose > 4 )cerr << "c coprocessor sls" << endl;
+  if( config.opt_sls ) {
+    if( config.opt_verbose > 0 ) cerr << "c sls ..." << endl;
+    if( config.opt_verbose > 4 )cerr << "c coprocessor sls" << endl;
     if( status == l_Undef ) {
-      bool solvedBySls = sls.solve( data.getClauses(), opt_sls_flips == -1 ? (uint64_t)4000000000000000 : (uint64_t)opt_sls_flips  );  // cannot change status, can generate new unit clauses
+      bool solvedBySls = sls.solve( data.getClauses(), config.opt_sls_flips == -1 ? (uint64_t)4000000000000000 : (uint64_t)config.opt_sls_flips  );  // cannot change status, can generate new unit clauses
       cerr << "c sls returned " << solvedBySls << endl;
       if( solvedBySls ) {
 	cerr << "c formula was solved with SLS!" << endl;
@@ -452,7 +454,7 @@ lbool Preprocessor::performSimplification()
 	 << "c  use the result of SLS as model " << endl
 	 << "c ================================" << endl;
       }
-      if( solvedBySls || opt_sls_phase ) {
+      if( solvedBySls || config.opt_sls_phase ) {
 	for( Var v= 0 ; v < data.nVars(); ++ v ) solver->polarity[v] = sls.getModelPolarity(v) == 1 ? 1 : 0; // minisat uses sign instead of polarity!
       }
     }
@@ -460,9 +462,9 @@ lbool Preprocessor::performSimplification()
         status = l_False;
   }
   
-  if( opt_twosat ) {
-    if( opt_verbose > 0 ) cerr << "c 2sat ..." << endl;
-    if( opt_verbose > 4 )cerr << "c coprocessor 2SAT" << endl;
+  if( config.opt_twosat ) {
+    if( config.opt_verbose > 0 ) cerr << "c 2sat ..." << endl;
+    if( config.opt_verbose > 4 )cerr << "c coprocessor 2SAT" << endl;
     if( status == l_Undef ) {
       bool solvedBy2SAT = twoSAT.solve();  // cannot change status, can generate new unit clauses
       if( solvedBy2SAT ) {
@@ -484,7 +486,7 @@ lbool Preprocessor::performSimplification()
 	}
 	if( isNotSat ) {
 	  // only set the phase before search!
-	  if( opt_ts_phase && !data.isInprocessing()) {
+	  if( config.opt_ts_phase && !data.isInprocessing()) {
 	    for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( -1 == twoSAT.getPolarity(v) );
 	  }
 	  cerr // << endl 
@@ -511,16 +513,16 @@ lbool Preprocessor::performSimplification()
   
   // clear / update clauses and learnts vectores and statistical counters
   // attach all clauses to their watchers again, call the propagate method to get into a good state again
-  if( opt_verbose > 4 ) cerr << "c coprocessor re-setup solver" << endl;
+  if( config.opt_verbose > 4 ) cerr << "c coprocessor re-setup solver" << endl;
   if ( data.ok() ) {
     if( data.hasToPropagate() ) 
-      if( opt_up ) propagation.process(data);
+      if( config.opt_up ) propagation.process(data);
       else cerr << "c should apply UP" << endl;
   }
 
-  if( opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;
+  if( config.opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;
   
-  if( opt_dense ) {
+  if( config.opt_dense ) {
     // do as very last step -- not nice, if there are units on the trail!
     dense.compress(); 
   }
@@ -528,41 +530,41 @@ lbool Preprocessor::performSimplification()
   if( data.isInprocessing() ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
   else {ppTime = cpuTime() - ppTime; ppwTime = wallClockTime() - ppwTime;}
   
-  if( opt_check ) fullCheck("final check");
+  if( config.opt_check ) fullCheck("final check");
 
   destroyTechniques();
   
   if ( data.ok() ) reSetupSolver();
   
-  if( opt_verbose > 5 ) printSolver(cerr, 4); // print all details of the solver
-  if( opt_verbose > 4 ) printFormula("after full simplification");
+  if( config.opt_verbose > 5 ) printSolver(cerr, 4); // print all details of the solver
+  if( config.opt_verbose > 4 ) printFormula("after full simplification");
 
-  if( opt_printStats ) {
+  if( config.opt_printStats ) {
     
     printStatistics(cerr);
     propagation.printStatistics(cerr);
     subsumption.printStatistics(cerr);
     ee.printStatistics(cerr);
-    if( opt_hte ) hte.printStatistics(cerr);
-    if( opt_bve ) bve.printStatistics(cerr);
-    if( opt_bva ) bva.printStatistics(cerr);
-    if( opt_probe ) probing.printStatistics(cerr);
-    if( opt_unhide ) unhiding.printStatistics(cerr);
-    if( opt_ternResolve || opt_addRedBins ) res.printStatistics(cerr);
-    if( opt_xor) xorReasoning.printStatistics(cerr);
-    if( opt_sls ) sls.printStatistics(cerr);
-    if( opt_twosat) twoSAT.printStatistics(cerr);
-    if( opt_bce ) bce.printStatistics(cerr);
-    if( opt_cce ) cce.printStatistics(cerr);
-    if( opt_ent ) entailedRedundant.printStatistics(cerr);
-    if( opt_rew ) rew.printStatistics(cerr);
-    if( opt_FM ) fourierMotzkin.printStatistics(cerr);
-    if( opt_dense ) dense.printStatistics(cerr);
-    if( opt_symm ) symmetry.printStatistics(cerr);
+    if( config.opt_hte ) hte.printStatistics(cerr);
+    if( config.opt_bve ) bve.printStatistics(cerr);
+    if( config.opt_bva ) bva.printStatistics(cerr);
+    if( config.opt_probe ) probing.printStatistics(cerr);
+    if( config.opt_unhide ) unhiding.printStatistics(cerr);
+    if( config.opt_ternResolve || config.opt_addRedBins ) res.printStatistics(cerr);
+    if( config.opt_xor) xorReasoning.printStatistics(cerr);
+    if( config.opt_sls ) sls.printStatistics(cerr);
+    if( config.opt_twosat) twoSAT.printStatistics(cerr);
+    if( config.opt_bce ) bce.printStatistics(cerr);
+    if( config.opt_cce ) cce.printStatistics(cerr);
+    if( config.opt_ent ) entailedRedundant.printStatistics(cerr);
+    if( config.opt_rew ) rew.printStatistics(cerr);
+    if( config.opt_FM ) fourierMotzkin.printStatistics(cerr);
+    if( config.opt_dense ) dense.printStatistics(cerr);
+    if( config.opt_symm ) symmetry.printStatistics(cerr);
   }
   
   // destroy preprocessor data
-  if( opt_verbose > 4 ) cerr << "c coprocessor free data structures" << endl;
+  if( config.opt_verbose > 4 ) cerr << "c coprocessor free data structures" << endl;
   data.destroy();
 
   if( !data.ok() ) status = l_False; // to fall back, if a technique forgets to do this
@@ -576,11 +578,11 @@ lbool Preprocessor::performSimplification()
 
 lbool Preprocessor::performSimplificationScheduled(string techniques)
 {
-  if( ! opt_enabled ) return l_Undef;
-  if( opt_verbose > 4 ) cerr << "c start simplifying with coprocessor" << endl;
+  if( ! config.opt_enabled ) return l_Undef;
+  if( config.opt_verbose > 4 ) cerr << "c start simplifying with coprocessor" << endl;
 
   if( formulaVariables == -1 ) {
-    if( opt_verbose > 2 ) cerr << "c initialize CP3 with " << solver->nVars()  << " variables " << endl;
+    if( config.opt_verbose > 2 ) cerr << "c initialize CP3 with " << solver->nVars()  << " variables " << endl;
     formulaVariables = solver->nVars() ;
   }
   
@@ -634,7 +636,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
    grammar[line] += c;
   }
   
-  if( opt_verbose > 0 ) {
+  if( config.opt_verbose > 0 ) {
     cerr << "c parsed grammar:" << endl;
     for( uint32_t i = 0 ; i < grammar.size(); ++ i ) 
     {
@@ -656,7 +658,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 
   // delete clauses from solver
   
-  if( opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << endl;
+  if( config.opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << endl;
   thisClauses = solver->clauses.size();
   thisLearnts = solver->learnts.size();
   
@@ -664,13 +666,13 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
   // initialize techniques
   data.init( solver->nVars() );
   
-  if( opt_shuffle ) shuffle();
+  if( config.opt_shuffle ) shuffle();
   
-  if( opt_check ) checkLists("before initializing");
+  if( config.opt_check ) checkLists("before initializing");
   initializePreprocessor ();
-  if( opt_check ) checkLists("after initializing");
+  if( config.opt_check ) checkLists("after initializing");
   
-  if( opt_verbose > 4 ) cerr << "c coprocessor finished initialization" << endl;
+  if( config.opt_verbose > 4 ) cerr << "c coprocessor finished initialization" << endl;
   
   
   //
@@ -686,7 +688,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
   {
     
     char execute = grammar[currentLine][currentPosition];
-    if( opt_verbose > 0 ) cerr << "c current line: " << grammar[currentLine] << " pos: " << currentPosition << " execute=" << execute << endl;
+    if( config.opt_verbose > 0 ) cerr << "c current line: " << grammar[currentLine] << " pos: " << currentPosition << " execute=" << execute << endl;
     if( execute == '+' ) { // if there is a star in a line and there has been change,
       if( change ) {
 	currentPosition = 0;
@@ -697,12 +699,12 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     }
     
     if( currentPosition >= currentSize ) { // start with next line, if current line has been evaluated
-      if( opt_verbose > 1 ) cerr << "c reached end of line " << currentLine << endl;
+      if( config.opt_verbose > 1 ) cerr << "c reached end of line " << currentLine << endl;
       currentLine++;
       if( currentLine < grammar.size() ) {
 	currentSize = grammar[currentLine].size();
 	currentPosition=0;
-	if( opt_verbose > 1 ) cerr << "c new data: current line: " << grammar[currentLine] << " pos: " << currentPosition << " execute=" << execute << endl;
+	if( config.opt_verbose > 1 ) cerr << "c new data: current line: " << grammar[currentLine] << " pos: " << currentPosition << " execute=" << execute << endl;
 	continue;
       }
     }
@@ -717,131 +719,131 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     currentPosition++;
     
     // unit propagation has letter "u"
-    if( execute == 'u' && opt_up && status == l_Undef && data.ok() ) {
-	if( opt_verbose > 2 ) cerr << "c up" << endl;
+    if( execute == 'u' && config.opt_up && status == l_Undef && data.ok() ) {
+	if( config.opt_verbose > 2 ) cerr << "c up" << endl;
 	propagation.process(data,true);
 	change = propagation.appliedSomething() || change;
-	if( opt_verbose > 1 ) cerr << "c UP changed formula: " << change << endl;
+	if( config.opt_verbose > 1 ) cerr << "c UP changed formula: " << change << endl;
     }
 
     // subsumption has letter "s"
-    else if( execute == 's' && opt_subsimp && status == l_Undef && data.ok() ) {
-	if( opt_verbose > 2 ) cerr << "c subsimp" << endl;
+    else if( execute == 's' && config.opt_subsimp && status == l_Undef && data.ok() ) {
+	if( config.opt_verbose > 2 ) cerr << "c subsimp" << endl;
 	subsumption.process();
 	change = subsumption.appliedSomething() || change;
-	if( opt_verbose > 1 ) cerr << "c Subsumption changed formula: " << change << endl;
+	if( config.opt_verbose > 1 ) cerr << "c Subsumption changed formula: " << change << endl;
     }
 
     // addRed2 "a"
-    else if( execute == 'a' && opt_addRedBins && status == l_Undef && data.ok() ) {
-	if( opt_verbose > 2 ) cerr << "c addRed2" << endl;
+    else if( execute == 'a' && config.opt_addRedBins && status == l_Undef && data.ok() ) {
+	if( config.opt_verbose > 2 ) cerr << "c addRed2" << endl;
 	res.process(true);
 	change = res.appliedSomething() || change;
-	if( opt_verbose > 1 ) cerr << "c AddRed2 changed formula: " << change << endl;
+	if( config.opt_verbose > 1 ) cerr << "c AddRed2 changed formula: " << change << endl;
     }
     
     // ternRes "3"
-    else if( execute == '3' && opt_ternResolve && status == l_Undef && data.ok() ) {
-	if( opt_verbose > 2 ) cerr << "c ternRes" << endl;
+    else if( execute == '3' && config.opt_ternResolve && status == l_Undef && data.ok() ) {
+	if( config.opt_verbose > 2 ) cerr << "c ternRes" << endl;
 	res.process(false);
 	change = res.appliedSomething() || change;
-	if( opt_verbose > 1 ) cerr << "c TernRes changed formula: " << change << endl;
+	if( config.opt_verbose > 1 ) cerr << "c TernRes changed formula: " << change << endl;
     }
     
     // xorReasoning "x"
-    else if( execute == 'x' && opt_xor && status == l_Undef && data.ok() ) {
-	if( opt_verbose > 2 ) cerr << "c xor" << endl;
+    else if( execute == 'x' && config.opt_xor && status == l_Undef && data.ok() ) {
+	if( config.opt_verbose > 2 ) cerr << "c xor" << endl;
 	xorReasoning.process();
 	change = xorReasoning.appliedSomething() || change;
-	if( opt_verbose > 1 ) cerr << "c XOR changed formula: " << change << endl;
+	if( config.opt_verbose > 1 ) cerr << "c XOR changed formula: " << change << endl;
     }
     
     // probing "p"
-    else if( execute == 'p' && opt_probe && status == l_Undef && data.ok() ) {
-	if( opt_verbose > 2 ) cerr << "c probing" << endl;
+    else if( execute == 'p' && config.opt_probe && status == l_Undef && data.ok() ) {
+	if( config.opt_verbose > 2 ) cerr << "c probing" << endl;
 	probing.process();
 	change = probing.appliedSomething() || change;
-	if( opt_verbose > 1 ) cerr << "c Probing changed formula: " << change << endl;
+	if( config.opt_verbose > 1 ) cerr << "c Probing changed formula: " << change << endl;
     }
     
     // unhide "g"
-    else if( execute == 'g' && opt_unhide && status == l_Undef && data.ok() ) {
-	if( opt_verbose > 2 ) cerr << "c unhiding" << endl;
+    else if( execute == 'g' && config.opt_unhide && status == l_Undef && data.ok() ) {
+	if( config.opt_verbose > 2 ) cerr << "c unhiding" << endl;
 	unhiding.process();
 	change = unhiding.appliedSomething() || change;
-	if( opt_verbose > 1 ) cerr << "c Unhiding changed formula: " << change << endl;
+	if( config.opt_verbose > 1 ) cerr << "c Unhiding changed formula: " << change << endl;
     }
     
     // bva "w"
-    else if( execute == 'w' && opt_bva && status == l_Undef && data.ok() ) {
-	if( opt_verbose > 2 ) cerr << "c bva" << endl;
+    else if( execute == 'w' && config.opt_bva && status == l_Undef && data.ok() ) {
+	if( config.opt_verbose > 2 ) cerr << "c bva" << endl;
 	bva.process();
 	change = bva.appliedSomething() || change;
-	if( opt_verbose > 1 ) cerr << "c BVA changed formula: " << change << endl;
+	if( config.opt_verbose > 1 ) cerr << "c BVA changed formula: " << change << endl;
     }
     
     // bve "v"
-    else if( execute == 'v' && opt_bve && status == l_Undef && data.ok() ) {
-	if( opt_verbose > 2 ) cerr << "c bve" << endl;
+    else if( execute == 'v' && config.opt_bve && status == l_Undef && data.ok() ) {
+	if( config.opt_verbose > 2 ) cerr << "c bve" << endl;
 	bve.process(data);
 	change = bve.appliedSomething() || change;
-	if( opt_verbose > 1 ) cerr << "c BVE changed formula: " << change << endl;
+	if( config.opt_verbose > 1 ) cerr << "c BVE changed formula: " << change << endl;
     }
     
     // ee "e"
-    else if( execute == 'e' && opt_ee && status == l_Undef && data.ok() ) {
-	if( opt_verbose > 2 ) cerr << "c ee" << endl;
+    else if( execute == 'e' && config.opt_ee && status == l_Undef && data.ok() ) {
+	if( config.opt_verbose > 2 ) cerr << "c ee" << endl;
 	ee.process(data);
 	change = ee.appliedSomething() || change;
-	if( opt_verbose > 1 ) cerr << "c EE changed formula: " << change << endl;
+	if( config.opt_verbose > 1 ) cerr << "c EE changed formula: " << change << endl;
     }
     
     // bce "b"
-    else if( execute == 'b' && opt_bce && status == l_Undef && data.ok() ) {
-	if( opt_verbose > 2 ) cerr << "c bce" << endl;
+    else if( execute == 'b' && config.opt_bce && status == l_Undef && data.ok() ) {
+	if( config.opt_verbose > 2 ) cerr << "c bce" << endl;
 	bce.process();
 	change = bce.appliedSomething() || change;
-	if( opt_verbose > 1 ) cerr << "c BCE changed formula: " << change << endl;
+	if( config.opt_verbose > 1 ) cerr << "c BCE changed formula: " << change << endl;
     }
     
     // entailedRedundant "1"
-    else if( execute == '1' && opt_ent && status == l_Undef && data.ok() ) {
-	if( opt_verbose > 2 ) cerr << "c ent" << endl;
+    else if( execute == '1' && config.opt_ent && status == l_Undef && data.ok() ) {
+	if( config.opt_verbose > 2 ) cerr << "c ent" << endl;
 	entailedRedundant.process();
 	change = entailedRedundant.appliedSomething() || change;
-	if( opt_verbose > 1 ) cerr << "c ENT changed formula: " << change << endl;
+	if( config.opt_verbose > 1 ) cerr << "c ENT changed formula: " << change << endl;
     }
     
     // cce "c"
-    else if( execute == 'c' && opt_cce && status == l_Undef && data.ok() ) {
-	if( opt_verbose > 2 ) cerr << "c cce" << endl;
+    else if( execute == 'c' && config.opt_cce && status == l_Undef && data.ok() ) {
+	if( config.opt_verbose > 2 ) cerr << "c cce" << endl;
 	cce.process(data);
 	change = cce.appliedSomething() || change;
-	if( opt_verbose > 1 ) cerr << "c CCE changed formula: " << change << endl;
+	if( config.opt_verbose > 1 ) cerr << "c CCE changed formula: " << change << endl;
     }
     
     // hte "h"
-    else if( execute == 'h' && opt_hte && status == l_Undef && data.ok() ) {
-	if( opt_verbose > 2 ) cerr << "c hte" << endl;
+    else if( execute == 'h' && config.opt_hte && status == l_Undef && data.ok() ) {
+	if( config.opt_verbose > 2 ) cerr << "c hte" << endl;
 	hte.process(data);
 	change = hte.appliedSomething() || change;
-	if( opt_verbose > 1 ) cerr << "c HTE changed formula: " << change << endl;
+	if( config.opt_verbose > 1 ) cerr << "c HTE changed formula: " << change << endl;
     }
     
     // rewriting "r"
-    else if( execute == 'r' && opt_rew && status == l_Undef && data.ok() ) {
-	if( opt_verbose > 2 ) cerr << "c rew" << endl;
+    else if( execute == 'r' && config.opt_rew && status == l_Undef && data.ok() ) {
+	if( config.opt_verbose > 2 ) cerr << "c rew" << endl;
 	rew.process();
 	change = rew.appliedSomething() || change;
-	if( opt_verbose > 1 ) cerr << "c REW changed formula: " << change << endl;
+	if( config.opt_verbose > 1 ) cerr << "c REW changed formula: " << change << endl;
     }
     
     // fourier motzkin "f"
-    else if( execute == 'f' && opt_FM && status == l_Undef && data.ok() ) {
-	if( opt_verbose > 2 ) cerr << "c fm" << endl;
+    else if( execute == 'f' && config.opt_FM && status == l_Undef && data.ok() ) {
+	if( config.opt_verbose > 2 ) cerr << "c fm" << endl;
 	fourierMotzkin.process();
 	change = fourierMotzkin.appliedSomething() || change;
-	if( opt_verbose > 1 ) cerr << "c FM changed formula: " << change << endl;
+	if( config.opt_verbose > 1 ) cerr << "c FM changed formula: " << change << endl;
     }
     
     // none left so far
@@ -850,18 +852,18 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     }
     
     // perform afte reach call
-    if( opt_debug )  { scanCheck("after iteration"); }   
+    if( config.opt_debug )  { scanCheck("after iteration"); }   
     data.checkGarbage(); // perform garbage collection
-    if( opt_verbose > 3 )  printStatistics(cerr);
+    if( config.opt_verbose > 3 )  printStatistics(cerr);
   }
   
   
   
-  if( false && opt_sls ) { // TODO: decide whether this should be possible!
-    if( opt_verbose > 0 ) cerr << "c sls ..." << endl;
-    if( opt_verbose > 4 )cerr << "c coprocessor sls" << endl;
+  if( false && config.opt_sls ) { // TODO: decide whether this should be possible!
+    if( config.opt_verbose > 0 ) cerr << "c sls ..." << endl;
+    if( config.opt_verbose > 4 )cerr << "c coprocessor sls" << endl;
     if( status == l_Undef ) {
-      bool solvedBySls = sls.solve( data.getClauses(), opt_sls_flips == -1 ? (uint64_t)4000000000000000 : (uint64_t)opt_sls_flips  );  // cannot change status, can generate new unit clauses
+      bool solvedBySls = sls.solve( data.getClauses(), config.opt_sls_flips == -1 ? (uint64_t)4000000000000000 : (uint64_t)config.opt_sls_flips  );  // cannot change status, can generate new unit clauses
       if( solvedBySls ) {
 	cerr << "c formula was solved with SLS!" << endl;
 	cerr // << endl 
@@ -869,7 +871,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 	 << "c  use the result of SLS as model " << endl
 	 << "c ================================" << endl;
       }
-      if( solvedBySls || opt_sls_phase ) {
+      if( solvedBySls || config.opt_sls_phase ) {
 	for( Var v= 0 ; v < data.nVars(); ++ v ) solver->polarity[v] = sls.getModelPolarity(v) == 1 ? 1 : 0; // minisat uses sign instead of polarity!
       }
     }
@@ -877,9 +879,9 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
         status = l_False;
   }
   
-  if( false && opt_twosat ) {// TODO: decide whether this should be possible! -> have a parameter, 2sat seems to be more useful
-    if( opt_verbose > 0 ) cerr << "c 2sat ..." << endl;
-    if( opt_verbose > 4 )cerr << "c coprocessor 2SAT" << endl;
+  if( false && config.opt_twosat ) {// TODO: decide whether this should be possible! -> have a parameter, 2sat seems to be more useful
+    if( config.opt_verbose > 0 ) cerr << "c 2sat ..." << endl;
+    if( config.opt_verbose > 4 )cerr << "c coprocessor 2SAT" << endl;
     if( status == l_Undef ) {
       bool notFailed = twoSAT.solve();  // cannot change status, can generate new unit clauses
       
@@ -899,7 +901,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 	}
 	if( isNotSat ) {
 	  // only set the phase before search!
-	  if( opt_ts_phase && !data.isInprocessing()) {
+	  if( config.opt_ts_phase && !data.isInprocessing()) {
 	    for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
 	  }
 	  cerr // << endl 
@@ -928,16 +930,16 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
   
   // clear / update clauses and learnts vectores and statistical counters
   // attach all clauses to their watchers again, call the propagate method to get into a good state again
-  if( opt_verbose > 4 ) cerr << "c coprocessor re-setup solver" << endl;
+  if( config.opt_verbose > 4 ) cerr << "c coprocessor re-setup solver" << endl;
   if ( data.ok() ) {
     if( data.hasToPropagate() ) 
-      if( opt_up ) propagation.process(data);
+      if( config.opt_up ) propagation.process(data);
       else cerr << "c should apply UP" << endl;
   }
 
-  if( opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;
+  if( config.opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;
   
-  if( opt_dense ) {
+  if( config.opt_dense ) {
     // do as very last step -- not nice, if there are units on the trail!
     dense.compress(); 
   }
@@ -945,41 +947,41 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
   if( data.isInprocessing() ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
   else {ppTime = cpuTime() - ppTime; ppwTime = wallClockTime() - ppwTime;}
   
-  if( opt_check ) fullCheck("final check");
+  if( config.opt_check ) fullCheck("final check");
 
   destroyTechniques();
   
   if ( data.ok() ) reSetupSolver();
   
-  if( opt_verbose > 5 ) printSolver(cerr, 4); // print all details of the solver
-  if( opt_verbose > 4 ) printFormula("after full simplification");
+  if( config.opt_verbose > 5 ) printSolver(cerr, 4); // print all details of the solver
+  if( config.opt_verbose > 4 ) printFormula("after full simplification");
 
-  if( opt_printStats ) {
+  if( config.opt_printStats ) {
     
     printStatistics(cerr);
     propagation.printStatistics(cerr);
     subsumption.printStatistics(cerr);
     ee.printStatistics(cerr);
-    if( opt_hte ) hte.printStatistics(cerr);
-    if( opt_bve ) bve.printStatistics(cerr);
-    if( opt_bva ) bva.printStatistics(cerr);
-    if( opt_probe ) probing.printStatistics(cerr);
-    if( opt_unhide ) unhiding.printStatistics(cerr);
-    if( opt_ternResolve || opt_addRedBins ) res.printStatistics(cerr);
-    if( opt_xor) xorReasoning.printStatistics(cerr);
-    if( opt_sls ) sls.printStatistics(cerr);
-    if( opt_twosat) twoSAT.printStatistics(cerr);
-    if( opt_bce ) bce.printStatistics(cerr);
-    if( opt_cce ) cce.printStatistics(cerr);
-    if( opt_ent ) entailedRedundant.printStatistics(cerr);
-    if( opt_rew ) rew.printStatistics(cerr);
-    if( opt_FM ) fourierMotzkin.printStatistics(cerr);
-    if( opt_dense ) dense.printStatistics(cerr);
-    if( opt_symm ) symmetry.printStatistics(cerr);
+    if( config.opt_hte ) hte.printStatistics(cerr);
+    if( config.opt_bve ) bve.printStatistics(cerr);
+    if( config.opt_bva ) bva.printStatistics(cerr);
+    if( config.opt_probe ) probing.printStatistics(cerr);
+    if( config.opt_unhide ) unhiding.printStatistics(cerr);
+    if( config.opt_ternResolve || config.opt_addRedBins ) res.printStatistics(cerr);
+    if( config.opt_xor) xorReasoning.printStatistics(cerr);
+    if( config.opt_sls ) sls.printStatistics(cerr);
+    if( config.opt_twosat) twoSAT.printStatistics(cerr);
+    if( config.opt_bce ) bce.printStatistics(cerr);
+    if( config.opt_cce ) cce.printStatistics(cerr);
+    if( config.opt_ent ) entailedRedundant.printStatistics(cerr);
+    if( config.opt_rew ) rew.printStatistics(cerr);
+    if( config.opt_FM ) fourierMotzkin.printStatistics(cerr);
+    if( config.opt_dense ) dense.printStatistics(cerr);
+    if( config.opt_symm ) symmetry.printStatistics(cerr);
   }
   
   // destroy preprocessor data
-  if( opt_verbose > 4 ) cerr << "c coprocessor free data structures" << endl;
+  if( config.opt_verbose > 4 ) cerr << "c coprocessor free data structures" << endl;
   data.destroy();
 
   if( !data.ok() ) status = l_False; // to fall back, if a technique forgets to do this
@@ -995,30 +997,30 @@ lbool Preprocessor::preprocess()
 {
   data.preprocessing();
   
-  if( opt_symm && opt_enabled ) { // do only if preprocessor is enabled
+  if( config.opt_symm && config.opt_enabled ) { // do only if preprocessor is enabled
     symmetry.process(); 
-    if( opt_verbose > 1 )  { printStatistics(cerr); symmetry.printStatistics(cerr); }
+    if( config.opt_verbose > 1 )  { printStatistics(cerr); symmetry.printStatistics(cerr); }
   }
   
   lbool ret = l_Undef;
-  if( opt_ptechs && string(opt_ptechs).size() > 0 ) ret = performSimplificationScheduled( string(opt_ptechs) );
+  if( config.opt_ptechs && string(config.opt_ptechs).size() > 0 ) ret = performSimplificationScheduled( string(config.opt_ptechs) );
   else ret = performSimplification();
   
-  if( opt_exit_pp > 0) { // exit?
-    if( opt_exit_pp > 1) { // print?
+  if( config.opt_exit_pp > 0) { // exit?
+    if( config.opt_exit_pp > 1) { // print?
       int cls = 0;
       for( int i = 0 ; i < data.getTrail().size(); ++ i ) cls ++;
       for( int i = 0 ; i < data.getClauses().size(); ++ i ) if( !ca[data.getClauses()[i]].can_be_deleted() ) cls ++;
-      (opt_exit_pp == 2 ? cerr : cout ) << "p cnf " << data.nVars() << " " << cls << endl;
+      (config.opt_exit_pp == 2 ? cerr : cout ) << "p cnf " << data.nVars() << " " << cls << endl;
       for( int i = 0 ; i < data.getTrail().size(); ++ i ) {
-	(opt_exit_pp == 2 ? cerr : cout ) << data.getTrail() << " 0" << endl;
+	(config.opt_exit_pp == 2 ? cerr : cout ) << data.getTrail() << " 0" << endl;
       }
       for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
 	if( ca[data.getClauses()[i]].can_be_deleted() ) continue;
 	for( int j = 0 ; j < ca[data.getClauses()[i]].size(); ++ j ) {
-	  (opt_exit_pp == 2 ? cerr : cout ) << ca[data.getClauses()[i]][j] << " ";
+	  (config.opt_exit_pp == 2 ? cerr : cout ) << ca[data.getClauses()[i]][j] << " ";
 	}
-	(opt_exit_pp == 2 ? cerr : cout )  << "0" << endl;
+	(config.opt_exit_pp == 2 ? cerr : cout )  << "0" << endl;
       }
     }
     exit(0);
@@ -1028,28 +1030,28 @@ lbool Preprocessor::preprocess()
 lbool Preprocessor::inprocess()
 {
   // if no inprocesing enabled, do not do it!
-  if( !opt_inprocess ) return l_Undef;
+  if( !config.opt_inprocess ) return l_Undef;
   // TODO: do something before preprocessing? e.g. some extra things with learned / original clauses
-  if (opt_inprocess) {
+  if (config.opt_inprocess) {
     
     // reject inprocessing here!
-    // cerr << "c check " << lastInpConflicts << " and " << (int)opt_inprocessInt << " vs " << solver->conflicts << endl;
-    if( lastInpConflicts + opt_inprocessInt > solver->conflicts ) {
+    // cerr << "c check " << lastInpConflicts << " and " << (int)config.opt_inprocessInt << " vs " << solver->conflicts << endl;
+    if( lastInpConflicts + config.opt_inprocessInt > solver->conflicts ) {
       return l_Undef;  
     }
     
-    if( opt_verbose > 3 ) cerr << "c start inprocessing after another " << solver->conflicts - lastInpConflicts << endl;
+    if( config.opt_verbose > 3 ) cerr << "c start inprocessing after another " << solver->conflicts - lastInpConflicts << endl;
     data.inprocessing();
     
-    if(opt_randInp) data.randomized();
-    if(opt_inc_inp) giveMoreSteps();
+    if(config.opt_randInp) data.randomized();
+    if(config.opt_inc_inp) giveMoreSteps();
     
     lbool ret = l_Undef;
-    if( opt_itechs  && string(opt_itechs).size() > 0 ) ret = performSimplificationScheduled( string(opt_itechs) );
+    if( config.opt_itechs  && string(config.opt_itechs).size() > 0 ) ret = performSimplificationScheduled( string(config.opt_itechs) );
     else ret = performSimplification();
     
     lastInpConflicts = solver->conflicts;
-    if( opt_verbose > 4 ) cerr << "c finished inprocessing " << endl;
+    if( config.opt_verbose > 4 ) cerr << "c finished inprocessing " << endl;
     return ret;
   }
   else 
@@ -1109,7 +1111,7 @@ void Preprocessor::extendModel(vec< lbool >& model)
   
   // get back the old number of variables inside the model, to be able to unshuffle!
   if (formulaVariables != - 1 && formulaVariables < model.size() ) model.shrink( model.size() - formulaVariables );
-  if( opt_shuffle ) unshuffle(model);
+  if( config.opt_shuffle ) unshuffle(model);
 }
 
 
@@ -1135,7 +1137,7 @@ void Preprocessor::initializePreprocessor()
       c.set_delete(true);
       thisClauses ++;
     } else {
-      data.addClause( cr, opt_check );
+      data.addClause( cr, config.opt_check );
       // TODO: decide for which techniques initClause in not necessary!
       subsumption.initClause( cr );
       propagation.initClause( cr );
@@ -1161,7 +1163,7 @@ void Preprocessor::initializePreprocessor()
       c.set_delete(true);
       thisLearnts++;
     } else {
-      data.addClause( cr, opt_check );
+      data.addClause( cr, config.opt_check );
       // TODO: decide for which techniques initClause in not necessary!
       subsumption.initClause( cr );
       propagation.initClause( cr );
@@ -1177,18 +1179,18 @@ void Preprocessor::destroyTechniques()
     // propagation.destroy();
     subsumption.destroy();
     ee.destroy();
-    if( opt_hte ) hte.destroy();
-    if( opt_bve ) bve.destroy();
-    if( opt_bva ) bva.destroy();
-    if( opt_probe ) probing.destroy();
-    if( opt_unhide ) unhiding.destroy();
-    if( opt_ternResolve || opt_addRedBins ) res.destroy();
-    if( opt_xor) xorReasoning.destroy();
-    if( opt_sls ) sls.destroy();
-    if( opt_twosat) twoSAT.destroy();
-    if( opt_bce ) bce.destroy();
-    if( opt_cce ) cce.destroy();
-    if( opt_ent ) entailedRedundant.destroy();
+    if( config.opt_hte ) hte.destroy();
+    if( config.opt_bve ) bve.destroy();
+    if( config.opt_bva ) bva.destroy();
+    if( config.opt_probe ) probing.destroy();
+    if( config.opt_unhide ) unhiding.destroy();
+    if( config.opt_ternResolve || config.opt_addRedBins ) res.destroy();
+    if( config.opt_xor) xorReasoning.destroy();
+    if( config.opt_sls ) sls.destroy();
+    if( config.opt_twosat) twoSAT.destroy();
+    if( config.opt_bce ) bce.destroy();
+    if( config.opt_cce ) cce.destroy();
+    if( config.opt_ent ) entailedRedundant.destroy();
   
 }
 
@@ -1237,7 +1239,7 @@ void Preprocessor::reSetupSolver()
 	      assert( c.mark() == 0 && "only clauses without a mark should be passed back to the solver!" );
 	      if (c.size() > 1)
 	      {
-		  if( ! opt_simplify && solver->qhead == 0 ) { // do not change the clause, if nothing has been propagated yet
+		  if( ! config.opt_simplify && solver->qhead == 0 ) { // do not change the clause, if nothing has been propagated yet
 		    solver->attachClause(cr);
 		    solver->clauses[kept_clauses++] = cr; // add original clauss back! 
 		    continue;
@@ -1260,9 +1262,9 @@ void Preprocessor::reSetupSolver()
 		    if( data.enqueue(c[0]) == l_False ) {
 		      data.addCommentToProof("learnt unit during resetup solver");
 		      data.addUnitToProof( c[0] ); // tell drup about this unit (whereever it came from)
-		      if( opt_debug ) cerr  << "enqueing " << c[0] << " failed." << endl; return;
+		      if( config.opt_debug ) cerr  << "enqueing " << c[0] << " failed." << endl; return;
 		    } else { 
-		      if( opt_debug ) cerr << "enqueued " << c[0] << " successfully" << endl; 
+		      if( config.opt_debug ) cerr << "enqueued " << c[0] << " successfully" << endl; 
 		      c.set_delete(true);
 		    }
 		    if( solver->propagate() != CRef_Undef ) { data.setFailed(); return; }
@@ -1290,7 +1292,7 @@ void Preprocessor::reSetupSolver()
     int c_old = solver->clauses.size();
     solver->clauses.shrink(solver->clauses.size()-kept_clauses);
 
-    if( opt_verbose > 2 ) fprintf(stderr,"c Subs-STATs: removed clauses: %i of %i,%s" ,c_old - kept_clauses,c_old, (opt_verbose == 1 ? "\n" : ""));
+    if( config.opt_verbose > 2 ) fprintf(stderr,"c Subs-STATs: removed clauses: %i of %i,%s" ,c_old - kept_clauses,c_old, (config.opt_verbose == 1 ? "\n" : ""));
 
     int learntToClause = 0;
     kept_clauses = 0;
@@ -1311,7 +1313,7 @@ void Preprocessor::reSetupSolver()
                 solver->learnts[kept_clauses++] = solver->learnts[i];
             }
           } else { // move subsuming clause from learnts to clauses
-	    if( opt_check ) cerr << "c clause " << c << " moves from learnt to original " << endl;
+	    if( config.opt_check ) cerr << "c clause " << c << " moves from learnt to original " << endl;
 	    c.set_has_extra(true);
             c.calcAbstraction();
             learntToClause ++;
@@ -1339,8 +1341,8 @@ void Preprocessor::reSetupSolver()
 		  else if( solver->value( c[1] ) == l_False ) {
 		    data.addCommentToProof("learnt unit during resetup solver");
 		    data.addUnitToProof( c[0] ); // tell drup about this unit (whereever it came from)
-		    if( data.enqueue(c[0]) == l_False ) { if( opt_debug ) cerr  << "enqueing " << c[0] << " failed." << endl; return; }
-		    else { if( opt_debug ) cerr << "enqueued " << c[0] << " successfully" << endl; }
+		    if( data.enqueue(c[0]) == l_False ) { if( config.opt_debug ) cerr  << "enqueing " << c[0] << " failed." << endl; return; }
+		    else { if( config.opt_debug ) cerr << "enqueued " << c[0] << " successfully" << endl; }
 		    if( solver->propagate() != CRef_Undef ) { data.setFailed(); return; }
 		    c.set_delete(true);
 		  } else solver->attachClause(cr);
@@ -1360,7 +1362,7 @@ void Preprocessor::reSetupSolver()
     }
     int l_old = solver->learnts.size();
     solver->learnts.shrink(solver->learnts.size()-kept_clauses);
-    if( opt_verbose > 3 ) fprintf(stderr, " moved %i and removed %i from %i learnts\n",learntToClause,(l_old - kept_clauses) -learntToClause, l_old);
+    if( config.opt_verbose > 3 ) fprintf(stderr, " moved %i and removed %i from %i learnts\n",learntToClause,(l_old - kept_clauses) -learntToClause, l_old);
 
     
     if( false ) {
