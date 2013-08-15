@@ -8,10 +8,6 @@ Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, All rights reserved.
 using namespace Coprocessor;
 using namespace std;
 
- const char* _cat_bve = "COPROCESSOR 3 - BVE";
-
-
-
 BoundedVariableElimination::BoundedVariableElimination( CP3Config &_config, ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation, Coprocessor::Subsumption & _subsumption )
 : Technique( _config, _ca, _controller )
 , propagation( _propagation)
@@ -507,7 +503,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                 if (config.opt_bve_verbose > 0) cerr << "c Resolved " << v+1 <<endl;
                 //subsumption with new clauses!!
                 if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
-                if (heap_updates > 0 && config.opt_bve_heap != 2)
+                if (config.heap_updates > 0 && config.opt_bve_heap != 2)
                     subsumption.process(config.opt_bve_strength,&heap, v);
                 else 
                     subsumption.process(config.opt_bve_strength);
@@ -540,7 +536,7 @@ inline void BoundedVariableElimination::removeClauses(CoprocessorData & data, He
         {
 	    data.addToProof(c,true);
 	    // also updated deleteTimer
-            if (heap_updates > 0 && config.opt_bve_heap != 2)
+            if (config.heap_updates > 0 && config.opt_bve_heap != 2)
                 data.removedClause(cr, &heap);
             else
                 data.removedClause(cr);
@@ -801,7 +797,7 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, Heap<VarOrd
 		    ca[cr].setExtraInformation( p.extraInformation() ); // setup extra information for this clause!
 		    ca[cr].updateExtraInformation( n.extraInformation() );
 		    
-                    if (heap_updates > 0 && config.opt_bve_heap != 2)
+                    if (config.heap_updates > 0 && config.opt_bve_heap != 2)
                         data.addClause(cr, &heap);
                     else 
                         data.addClause(cr);
@@ -893,7 +889,7 @@ inline void BoundedVariableElimination::removeBlockedClauses(CoprocessorData & d
             c.set_delete(true);
 	    data.addCommentToProof("blocked clause during BVE");
 	    data.addToProof(c,true);
-            if (heap_updates > 0 && config.opt_bve_heap != 2)
+            if (config.heap_updates > 0 && config.opt_bve_heap != 2)
                 data.removedClause(list[ci], &heap);
             else
                 data.removedClause(list[ci]);

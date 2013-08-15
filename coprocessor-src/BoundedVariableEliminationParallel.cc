@@ -639,10 +639,10 @@ inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData 
                     data.deletedVar(var(c[i]));
                 garbageCounter += ca.clauseWord32Size(c.size(), c.has_extra());
             }
-            else if (heap_updates > 0 && config.opt_bve_heap != 2)
-                data.removedClause(cr, &heap, ignore, &data_lock, &heap_lock); // updates stats and deleteTimer
+            else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
+                data.removedClause(cr, &heap, config.heap_updates == 2, ignore, &data_lock, &heap_lock); // updates stats and deleteTimer
             else 
-                data.removedClause(cr, NULL,  ignore, &data_lock, NULL);
+                data.removedClause(cr, NULL, false, ignore, &data_lock, NULL);
 
             if (! c.learnt() /*&& cr < limit*/) {
                 data_lock.lock();
@@ -894,10 +894,10 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, H
                             data.list(resolvent[l]).push_back(cr);
                         data_lock.unlock();
                     }
-                    else if (heap_updates > 0 && config.opt_bve_heap != 2)
-                        data.addClause(cr, &heap, v, &data_lock, &heap_lock);
+                    else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
+                        data.addClause(cr, &heap, config.heap_updates == 2, v, &data_lock, &heap_lock);
                     else 
-                        data.addClause(cr, NULL, var_Undef, &data_lock, NULL);
+                        data.addClause(cr, NULL, false, var_Undef, &data_lock, NULL);
 
                     data_lock.lock();
                     if (resolvent.learnt()) 
@@ -954,10 +954,10 @@ inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(Coprocess
                     data.deletedVar(var(c[i]));
                 garbageCounter += ca.clauseWord32Size(c.size(), c.has_extra());
             }
-            else if (heap_updates > 0 && config.opt_bve_heap != 2)
-                data.removedClause(cr, &heap, ignore, &data_lock, &heap_lock); // updates stats and deleteTimer
+            else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
+                data.removedClause(cr, &heap, config.heap_updates == 2, ignore, &data_lock, &heap_lock); // updates stats and deleteTimer
             else 
-                data.removedClause(cr, NULL, var_Undef, &data_lock, NULL);
+                data.removedClause(cr, NULL, false, var_Undef, &data_lock, NULL);
             if(! c.learnt() /* && cr < limit*/)
             {
                 data_lock.lock();
@@ -1484,10 +1484,10 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData & da
                     data.deletedVar(var(other[i]));
                 garbageCounter += ca.clauseWord32Size(other.size(), other.has_extra());
               }
-              else if (heap_updates > 0 && config.opt_bve_heap != 2)
-                data.removedClause(crO, &heap, ignore, &data_lock, &heap_lock); // updates stats and deleteTimer
+              else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
+                data.removedClause(crO, &heap, config.heap_updates == 2, ignore, &data_lock, &heap_lock); // updates stats and deleteTimer
               else 
-                data.removedClause(crO, NULL, var_Undef, &data_lock, NULL);
+                data.removedClause(crO, NULL, false, var_Undef, &data_lock, NULL);
               if (l_False == state)
               {
                   other.unlock();
@@ -1519,10 +1519,10 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData & da
                   data.deletedVar(var(neg));
                   ++garbageCounter; // do not update data structure
               }
-              else if (heap_updates  > 0 && config.opt_bve_heap != 2)
-                  data.removedLiteral(neg, 1, &heap, ignore, &data_lock, &heap_lock);
+              else if (config.heap_updates  > 0 && config.opt_bve_heap != 2)
+                  data.removedLiteral(neg, 1, &heap, config.heap_updates == 2,ignore, &data_lock, &heap_lock);
               else 
-                  data.removedLiteral(neg, 1, NULL, var_Undef, &data_lock, NULL);
+                  data.removedLiteral(neg, 1, NULL, false, var_Undef, &data_lock, NULL);
 /*              if ( ! other.can_subsume()) 
               {
                   other.set_subsume(true);
@@ -1690,10 +1690,10 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & da
                     data.deletedVar(var(other[i]));
                 garbageCounter += ca.clauseWord32Size(other.size(), other.has_extra());
               }
-              else if (heap_updates > 0 && config.opt_bve_heap != 2)
-                data.removedClause(crO, &heap, ignore, &data_lock, &heap_lock); // updates stats and deleteTimer
+              else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
+                data.removedClause(crO, &heap, config.heap_updates == 2,ignore, &data_lock, &heap_lock); // updates stats and deleteTimer
               else 
-                data.removedClause(crO, NULL, var_Undef, &data_lock, NULL);
+                data.removedClause(crO, NULL, false, var_Undef, &data_lock, NULL);
               if (l_False == state)
               {
                   other.unlock();
@@ -1726,10 +1726,10 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData & da
                   data.deletedVar(var(neg));
                   ++garbageCounter; // do not update data structure
               }
-              else if (heap_updates > 0 && config.opt_bve_heap != 2)
-                  data.removedLiteral(neg, 1, &heap, ignore, &data_lock, &heap_lock);
+              else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
+                  data.removedLiteral(neg, 1, &heap, config.heap_updates == 2,ignore, &data_lock, &heap_lock);
               else 
-                  data.removedLiteral(neg, 1, NULL, var_Undef, &data_lock, NULL);
+                  data.removedLiteral(neg, 1, NULL, false, var_Undef, &data_lock, NULL);
 /*              if ( ! other.can_subsume()) 
               {
                   other.set_subsume(true);
@@ -1840,10 +1840,10 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
             data.deletedVar(var(satisfied[i]));
         garbageCounter += ca.clauseWord32Size(satisfied.size(), satisfied.has_extra());
       }
-      else if (heap_updates > 0 && config.opt_bve_heap != 2)
-        data.removedClause(cr, &heap, ignore, &data_lock, &heap_lock); // updates stats and deleteTimer
+      else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
+        data.removedClause(cr, &heap, config.heap_updates == 2, ignore, &data_lock, &heap_lock); // updates stats and deleteTimer
       else 
-        data.removedClause(cr, NULL, var_Undef, &data_lock, NULL);
+        data.removedClause(cr, NULL, false, var_Undef, &data_lock, NULL);
       
    }
 
@@ -1914,10 +1914,10 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
                 data.deletedVar(var(c[i]));
             garbageCounter += ca.clauseWord32Size(c.size(), c.has_extra());
          }
-         else if (heap_updates > 0 && config.opt_bve_heap != 2)
-            data.removedClause(cr, &heap, ignore, &data_lock, &heap_lock); // updates stats and deleteTimer
+         else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
+            data.removedClause(cr, &heap, config.heap_updates == 2, ignore, &data_lock, &heap_lock); // updates stats and deleteTimer
          else 
-            data.removedClause(cr, NULL, var_Undef, &data_lock, NULL);
+            data.removedClause(cr, NULL, false, var_Undef, &data_lock, NULL);
          if (doStatistics) 
          {
              if (c.learnt())  ++countL; 
@@ -1954,10 +1954,10 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
       data.deletedVar(var(nl));
       garbageCounter += countL + countO; // do not update data structure
     }
-    else if (heap_updates > 0 && config.opt_bve_heap != 2)
-      data.removedLiteral(nl, countL + countO, &heap, ignore, &data_lock, &heap_lock);
+    else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
+      data.removedLiteral(nl, countL + countO, &heap, config.heap_updates == 2,ignore, &data_lock, &heap_lock);
     else 
-      data.removedLiteral(nl, countL + countO, NULL, var_Undef, &data_lock, NULL);
+      data.removedLiteral(nl, countL + countO, NULL, false, var_Undef, &data_lock, NULL);
     
     if (doStatistics) 
     {

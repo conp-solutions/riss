@@ -463,6 +463,11 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         RegionAllocator<uint32_t>::free(clauseWord32Size(c.size(), c.has_extra()));
     }
 
+    /** remove everything from allocator, but keep its space */
+    void clear() {
+      RegionAllocator<uint32_t>::clear();
+    }
+    
     void freeLit(int diff = 1)
     {
         assert(sizeof(Lit) == sizeof(uint32_t));

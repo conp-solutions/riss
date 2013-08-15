@@ -11,87 +11,6 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include <iostream>
 #include <cstring>
 
-// static const char* _cat = "COPROCESSOR 3";
-// static const char* _cat2 = "PREPROCESSOR TECHNIQUES";
-// 
-// // options
-// static BoolOption opt_unlimited   (_cat, "cp3_limited",    "Limits for preprocessing techniques", true);
-// static BoolOption opt_randomized  (_cat, "cp3_randomized", "Steps withing preprocessing techniques are executed in random order", false);
-// static IntOption  opt_inprocessInt(_cat, "cp3_inp_cons",   "Perform Inprocessing after at least X conflicts", 20000, IntRange(0, INT32_MAX));
-// static BoolOption opt_enabled     (_cat, "enabled_cp3",    "Use CP3", false);
-// static BoolOption opt_inprocess   (_cat, "inprocess",      "Use CP3 for inprocessing", false);
-// static IntOption  opt_exit_pp     (_cat, "cp3-exit-pp",    "terminate after preprocessing (1=exit,2=print formula cerr+exit 3=cout+exit)", 0, IntRange(0, 3));
-// static BoolOption opt_randInp     (_cat, "randInp",        "Randomize Inprocessing", true);
-// static BoolOption opt_inc_inp     (_cat, "inc-inp",        "increase technique limits per inprocess step", false);
-// 
-// #if defined CP3VERSION && CP3VERSION < 400
-//        const bool opt_printStats = false; // do not print stats, if restricted binary is produced
-//        const static int opt_verbose = 0;        // do not talk during computation!
-// #else
-//        BoolOption opt_printStats  (_cat, "cp3_stats",      "Print Technique Statistics", false);
-//        static IntOption  opt_verbose     (_cat, "cp3_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 5));
-// #endif
-// 
-// // techniques
-// static BoolOption opt_up          (_cat2, "up",            "Use Unit Propagation during preprocessing", false);
-// static BoolOption opt_subsimp     (_cat2, "subsimp",       "Use Subsumption during preprocessing", false);
-// static BoolOption opt_hte         (_cat2, "hte",           "Use Hidden Tautology Elimination during preprocessing", false);
-// static BoolOption opt_bce         (_cat2, "bce",           "Use Blocked Clause Elimination during preprocessing", false);
-// static BoolOption opt_ent         (_cat2, "ent",           "Use checking for entailed redundancy during preprocessing", false);
-// static BoolOption opt_cce         (_cat2, "cce",           "Use (covered) Clause Elimination during preprocessing", false);
-// static BoolOption opt_ee          (_cat2, "ee",            "Use Equivalence Elimination during preprocessing", false);
-// static BoolOption opt_bve         (_cat2, "bve",           "Use Bounded Variable Elimination during preprocessing", false);
-// static BoolOption opt_bva         (_cat2, "bva",           "Use Bounded Variable Addition during preprocessing", false);
-// static BoolOption opt_unhide      (_cat2, "unhide",        "Use Unhiding (UHTE, UHLE based on BIG sampling)", false);
-// static BoolOption opt_probe       (_cat2, "probe",         "Use Probing/Clause Vivification", false);
-// static BoolOption opt_ternResolve (_cat2, "3resolve",      "Use Ternary Clause Resolution", false);
-// static BoolOption opt_addRedBins  (_cat2, "addRed2",       "Use Adding Redundant Binary Clauses", false);
-// static BoolOption opt_dense       (_cat2, "dense",         "Remove gaps in variables of the formula", false);
-// static BoolOption opt_shuffle     (_cat2, "shuffle",       "Shuffle the formula, before the preprocessor is initialized", false);
-// static BoolOption opt_simplify    (_cat2, "simplify",      "Apply easy simplifications to the formula", true);
-// static BoolOption opt_symm        (_cat2, "symm",          "Do local symmetry breaking", false);
-// static BoolOption opt_FM          (_cat2, "fm",            "Use the Fourier Motzkin transformation", false);
-// 
-// 
-// static StringOption opt_ptechs (_cat2, "cp3_ptechs", "techniques for preprocessing");
-// static StringOption opt_itechs (_cat2, "cp3_itechs", "techniques for inprocessing");
-// 
-// // use 2sat and sls only for high versions!
-// #if defined CP3VERSION && CP3VERSION < 301
-// static const int opt_threads = 0;
-// static const bool opt_sls = false;       
-// static const bool opt_sls_phase = false;    
-// static const int opt_sls_flips = 8000000;
-// static const bool opt_xor = false;    
-// static const bool opt_rew = false;    
-// static const bool opt_twosat = false;
-// static const bool opt_twosat_init=false;
-// static const bool  opt_ts_phase =false;    
-// #else
-// static IntOption  opt_threads     (_cat, "cp3_threads",    "Number of extra threads that should be used for preprocessing", 0, IntRange(0, INT32_MAX));
-// static BoolOption opt_sls         (_cat2, "sls",           "Use Simple Walksat algorithm to test whether formula is satisfiable quickly", false);
-// static BoolOption opt_sls_phase   (_cat2, "sls-phase",     "Use current interpretation of SLS as phase", false);
-// static IntOption  opt_sls_flips   (_cat2, "sls-flips",     "Perform given number of SLS flips", 8000000, IntRange(-1, INT32_MAX));
-// static BoolOption opt_xor         (_cat2, "xor",           "Reason with XOR constraints", false);
-// static BoolOption opt_rew         (_cat2, "rew",           "Rewrite AMO constraints", false);
-// static BoolOption opt_twosat      (_cat2, "2sat",          "2SAT algorithm to check satisfiability of binary clauses", false);
-// static BoolOption opt_twosat_init (_cat2, "2sat1",         "2SAT before all other algorithms to find units", false);
-// static BoolOption opt_ts_phase    (_cat2, "2sat-phase",    "use 2SAT model as initial phase for SAT solver", false);
-// #endif
-// 
-// #if defined CP3VERSION // debug only, if no version is given!
-// static const bool opt_debug = false;       
-// static const bool opt_check = false;
-// static const int  opt_log =0;
-// static const char* printAfter = 0;
-// #else
-// static BoolOption opt_debug       (_cat, "cp3-debug",   "do more debugging", false);
-// static BoolOption opt_check       (_cat, "cp3-check",   "check solver state before returning control to solver", false);
-// static IntOption  opt_log         (_cat,  "cp3-log",    "Output log messages until given level", 0, IntRange(0, 3));
-// static StringOption printAfter    (_cat,  "cp3-print",  "print intermediate formula after given technique");
-// #endif
-
-
 using namespace std;
 using namespace Coprocessor;
 
@@ -574,8 +493,6 @@ lbool Preprocessor::performSimplification()
   return status;
 }
 
-
-
 lbool Preprocessor::performSimplificationScheduled(string techniques)
 {
   if( ! config.opt_enabled ) return l_Undef;
@@ -991,8 +908,6 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
   return status;
 }
 
-
-
 lbool Preprocessor::preprocess()
 {
   data.preprocessing();
@@ -1074,12 +989,44 @@ void Preprocessor::giveMoreSteps()
   fourierMotzkin.giveMoreSteps();
 }
 
-
 lbool Preprocessor::preprocessScheduled()
 {
   // TODO execute preprocessing techniques in specified order
   return l_Undef;
 }
+
+void Preprocessor::freezeExtern(int var)
+{
+  assert( var > 0 && "external variables do not allow to be 0 or smaller" );
+  if( var > 0 ) { 
+    data.setNotTouch(var-1);
+    cerr << "c freeze variable " << var << " (int: " << var-1<< ")" << endl;
+  }
+}
+
+void Preprocessor::dumpFormula(std::vector< int >& outputFormula)
+{
+  outputFormula.clear(); // remove everything that has been there before
+  // top level unit clauses
+  for( int i = 0 ; i < data.getTrail().size(); ++ i ) {
+    const Lit& l =  data.getTrail()[i];
+    const int nl = sign(l) ? ( -var(l) -1 ) : (var(l) +1);
+    cerr << "c turn lit " << l << " into " << nl << endl;
+    outputFormula.push_back( nl );outputFormula.push_back( 0 );
+  }
+  for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
+    const Clause& c = ca[data.getClauses()[i]];
+    if( c.can_be_deleted() ) continue; // do only process valid clauses!
+    for( int j = 0; j < c.size(); ++ j ) {
+      const Lit& l =  c[j];
+      const int nl = sign(l) ? ( -var(l) -1 ) : (var(l) +1);
+      cerr << "c turn lit " << l << " into " << nl << endl;
+      outputFormula.push_back( nl );
+    }
+    outputFormula.push_back( 0 );
+  }
+}
+
 
 void Preprocessor::printStatistics(ostream& stream)
 {

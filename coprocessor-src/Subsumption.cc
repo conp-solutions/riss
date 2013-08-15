@@ -600,7 +600,7 @@ void Subsumption::par_strengthening_worker( unsigned int & next_start, unsigned 
                             if (config.opt_sub_lock_stats) lock_time = cpuTime() - lock_time; 
                             lbool state = data.enqueue(d[(pos + 1) % 2]);
                             data_lock.unlock();  
-                            data.removedClause(list[l_cr],heap, ignore, &data_lock);
+                            data.removedClause(list[l_cr],heap, config.heap_updates == 2,ignore, &data_lock);
                             if (l_False == state)
                             {
                                 var_lock[d_fst].unlock();
@@ -904,7 +904,7 @@ inline lbool Subsumption::par_nn_strength_check(CoprocessorData & data, vector <
               lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
               data_lock.unlock();
 	          modifiedFormula = true;
-              data.removedClause(list[j], heap, ignore, &data_lock);
+              data.removedClause(list[j], heap, config.heap_updates == 2,ignore, &data_lock);
               if (l_False == state)
               {
                   var_lock[other_fst].unlock();
@@ -931,7 +931,7 @@ inline lbool Subsumption::par_nn_strength_check(CoprocessorData & data, vector <
               occ_updates.push_back(OccUpdate(list[j] , neg));
               other.removePositionSortedThreadSafe(negated_lit_pos);
 	          modifiedFormula = true;
-              data.removedLiteral(neg, 1, heap, ignore, &data_lock);
+              data.removedLiteral(neg, 1, heap, config.heap_updates == 2,ignore, &data_lock);
               if ( ! other.can_subsume()) 
               {
                   other.set_subsume(true);
@@ -1052,7 +1052,7 @@ inline lbool Subsumption::par_nn_negated_strength_check(CoprocessorData & data, 
               lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
               data_lock.unlock();
 	          modifiedFormula = true;
-              data.removedClause(list[j],heap, ignore, &data_lock);
+              data.removedClause(list[j],heap, config.heap_updates == 2,ignore, &data_lock);
               if (l_False == state)
               {
                  var_lock[other_fst].unlock();
@@ -1079,7 +1079,7 @@ inline lbool Subsumption::par_nn_negated_strength_check(CoprocessorData & data, 
               occ_updates.push_back(OccUpdate(list[j] , neg));
               other.removePositionSortedThreadSafe(negated_lit_pos);
 	          modifiedFormula = true;
-              data.removedLiteral(neg, 1, heap, ignore, &data_lock);
+              data.removedLiteral(neg, 1, heap, config.heap_updates == 2,ignore, &data_lock);
               if ( ! other.can_subsume()) 
               {
                   other.set_subsume(true);

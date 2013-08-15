@@ -30,9 +30,12 @@ qd: qprocessord
 #
 # build the bmc tool
 #
-aigbmc: 
-	cd aiger-src; make aigbmc;
+aigbmcd: libd
+	cd aiger-src; make aigbmc CFLAGS="-O0 -g";
 
+aigbmcs: libs
+	cd aiger-src; make aigbmc ;
+	
 # build the splitter solver
 riss: always
 	cd core;   make INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g ..
@@ -94,7 +97,7 @@ clean:
 	@cd simp; make clean MROOT=..;
 	@cd coprocessor-src; make clean MROOT=..;
 	@cd qprocessor-src; make clean MROOT=..;
-	@rm -f riss3m riss3g coprocessor qprocessor
+	@rm -f riss3m riss3g coprocessor qprocessor libriss3g.a
 	@rm -f *~ */*~
 	@rm -rf doc/html
 	@echo Done

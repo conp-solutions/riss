@@ -81,7 +81,7 @@ class RegionAllocator
         sz = cap = wasted_ = 0;
     }
 
-
+    void clear() { sz = 0; wasted_ = 0; }
 };
 
 template<class T>

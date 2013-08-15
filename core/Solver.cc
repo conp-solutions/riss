@@ -1219,7 +1219,7 @@ lbool Solver::search(int nof_conflicts)
 	  conflicts++; conflictC++;
 	  if( config.opt_printDecisions ) printf("c conflict at level %d\n", decisionLevel() );
 
-	  if (verbosity >= 1 && conflicts%verbEveryConflicts==0){
+	  if (verbosity >= 1 && (verbEveryConflicts == 0 || conflicts % verbEveryConflicts==0) ){
 	    printf("c | %8d   %7d    %5d | %7d %8d %8d | %5d %8d   %6d %8d | %6.3f %% |\n", 
 		   (int)starts,(int)nbstopsrestarts, (int)(conflicts/starts), 
 		   (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]), nClauses(), (int)clauses_literals, 

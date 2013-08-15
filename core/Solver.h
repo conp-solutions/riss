@@ -56,7 +56,7 @@ extern Minisat::BoolOption opt_rupProofOnly;
 
 namespace Minisat {
 
- 
+ class IncSolver;
 //=================================================================================================
 // Solver -- the main class:
 
@@ -68,6 +68,7 @@ class Solver {
     friend class Coprocessor::CoprocessorData;
     friend class Coprocessor::Probing;
     friend class Coprocessor::Symmetry;
+    friend class Minisat::IncSolver; // for bmc
   
     CoreConfig& config;
 public:
