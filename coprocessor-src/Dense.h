@@ -36,6 +36,8 @@ class Dense  : public Technique
   
   vector< Compression > map_stack;
 
+  /// store to which new variable an old variable has been mapped
+  vector< int > forward_mapping;
   
 public:
   Dense(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation);
@@ -58,6 +60,9 @@ public:
   
   /** read dense information from file */
   bool readUndoInfo(const string& filename);
+  
+  /** return the new variable for the old variable */
+  Lit giveNewLit ( const Lit& l ) const ;
   
 protected:
 

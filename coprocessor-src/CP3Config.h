@@ -216,6 +216,7 @@ const bool dense_debug_out;
 BoolOption dense_debug_out;
 #endif
 IntOption  opt_dense_fragmentation;
+BoolOption opt_dense_store_forward;
 
 //
 // Entailed

@@ -109,7 +109,7 @@ inline void printLit(Lit l)
 #define l_False (lbool((uint8_t)1))
 #define l_Undef (lbool((uint8_t)2))
 
-class lbool {
+class  lbool {
     uint8_t value;
 
 public:

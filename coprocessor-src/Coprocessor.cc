@@ -1011,7 +1011,7 @@ void Preprocessor::dumpFormula(std::vector< int >& outputFormula)
   for( int i = 0 ; i < data.getTrail().size(); ++ i ) {
     const Lit& l =  data.getTrail()[i];
     const int nl = sign(l) ? ( -var(l) -1 ) : (var(l) +1);
-    cerr << "c turn lit " << l << " into " << nl << endl;
+//    cerr << "c turn lit " << l << " into " << nl << endl;
     outputFormula.push_back( nl );outputFormula.push_back( 0 );
   }
   for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
@@ -1020,11 +1020,19 @@ void Preprocessor::dumpFormula(std::vector< int >& outputFormula)
     for( int j = 0; j < c.size(); ++ j ) {
       const Lit& l =  c[j];
       const int nl = sign(l) ? ( -var(l) -1 ) : (var(l) +1);
-      cerr << "c turn lit " << l << " into " << nl << endl;
+//      cerr << "c turn lit " << l << " into " << nl << endl;
       outputFormula.push_back( nl );
     }
     outputFormula.push_back( 0 );
   }
+}
+
+int Preprocessor::giveNewLit(const int& l) const
+{
+  // conversion to inner representation, check move value, return value
+  const Lit lit = l > 0 ? mkLit(l-1,false) : mkLit(-l-1,true);
+  const Lit nl = dense.giveNewLit(lit);
+  return sign(nl) ? ( -var(nl) -1 ) : (var(nl) +1);
 }
 
 

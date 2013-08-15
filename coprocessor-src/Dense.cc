@@ -58,7 +58,7 @@ void Dense::compress(const char* newWhiteFile)
   free( count ); // do not need the count array any more
   
   // formula is already compact, or not too loose
-  if( diff == 0 || ( config.opt_dense_fragmentation > 1 + ( (diff * 100)  / data.nVars()  ) ) ) return;
+  if( diff == 0 || ( config.opt_dense_fragmentation > 1.0 + ( (diff * 100)  / data.nVars()  ) ) ) return;
   globalDiff += diff;
   
   // replace everything in the clauses
@@ -114,6 +114,12 @@ void Dense::compress(const char* newWhiteFile)
     cerr << endl;
   }
 
+  if( config.opt_dense_store_forward ) {
+    forward_mapping.resize( data.nVars(), -1 ); // initially, set to -1 for no mapping (dropped)
+    for( Var v = 0; v < data.nVars() ; v++ )
+      forward_mapping[v] = compression.mapping[v]; // store everything into the new mapping file!
+  }
+  
   // rewriting everything finnished
   // invert mapping - and re-arrange all variable data
   for( Var v = 0; v < data.nVars() ; v++ )
@@ -334,7 +340,17 @@ void Dense::printStatistics( ostream& stream )
 {
   cerr << "c [STAT] DENSE " << globalDiff << " gaps" << endl;
 }
-  
+ 
+Lit Dense::giveNewLit(const Lit& l) const
+{
+  if( forward_mapping.size() == 0 ) return lit_Error;
+  else return 
+    forward_mapping[ var(l) ] == -1 ?
+      lit_Undef : mkLit( forward_mapping[ var(l) ], sign(l) );
+}
+
+ 
+ 
 void Dense::destroy()
 {
   

@@ -128,6 +128,12 @@ public:
    */
   void dumpFormula( vector<int>& outputFormula );
   
+  /** return the literal, to which the specified literal is mapped to
+   * @param l literal in the external world representation
+   * @return the new literal, or lit_Undef if the literal is not present any more, or lit_Error, if the information is not present
+   */
+  int giveNewLit(const int& l) const;
+  
 protected:
   // techniques
   Subsumption subsumption;

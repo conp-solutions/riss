@@ -82,8 +82,9 @@ public:
    */
   int deref (int lit) {
     assert (lit != 0 && "the method cannot hande lit == 0" );
-    const Lit l = lit > 0 ? mkLit( lit-1, false ) : mkLit( -lit-1, true );
-    return solver->value( l ) == l_False ? -1 : 1; // if the value is undefined, map it to true! (important for the output state!)
+    const lbool ret = lit > 0 ? solver->model[ lit-1 ] : (solver->model[ -lit-1 ] ^ true); // second statement should invert the value
+    const int iret = ret == l_False ? -1 : (ret == l_True ? 1 : 0); // if the value is undefined, map it to true! (important for the output state!)
+    return iret;
   }
   
   void setMaxVar( int maxVar ) {

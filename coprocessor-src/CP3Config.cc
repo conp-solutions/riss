@@ -216,8 +216,8 @@ dense_debug_out (false),
 #else
 dense_debug_out (_cat_dense, "cp3_dense_debug", "print debug output to screen",false),
 #endif
-opt_dense_fragmentation  (_cat_dense, "cp3_dense_frag",   "Perform densing, if fragmentation is higher than (percent)", 0, IntRange(0, 100)),
-
+opt_dense_fragmentation  (_cat_dense, "cp3_dense_frag", "Perform densing, if fragmentation is higher than (percent)", 0, IntRange(0, 100)),
+opt_dense_store_forward  (_cat_dense, "cp3_dense_forw", "store forward mapping",false),
 //
 // Entailed
 //
