@@ -350,7 +350,7 @@ bool Probing::prDoubleLook(Lit l1decision)
   
   // TODO: sort literals in double lookahead queue, use only first n literals
   static bool didit = false;
-  if( !didit ) { cerr << "c sort literals in double queue according to some heuristic (occurrences, ... )" << endl; didit = true; }
+  // if( !didit ) { cerr << "c sort literals in double queue according to some heuristic (occurrences, ... )" << endl; didit = true; }
   
   CRef thisConflict = CRef_Undef;
   

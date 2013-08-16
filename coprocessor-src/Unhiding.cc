@@ -557,7 +557,7 @@ void Unhiding::process (  )
       stamp = stampLiteral(data.lits[i],stamp,foundEE);
       assert( stamp > oldStamp && "if new stamp is smaller, there has been an overflow of the stamp!" );
     }
-    cerr << "c stamped " << ts << " root lits" << endl;
+    // cerr << "c stamped " << ts << " root lits" << endl;
     // stamp all remaining literals, after shuffling
     data.lits.clear();
     for ( Var v = 0 ; v < data.nVars(); ++ v ) 

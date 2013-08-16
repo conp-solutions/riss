@@ -706,6 +706,7 @@ int main (int argc, char ** argv) {
     cp3config->opt_enabled = true; cp3config->opt_verbose=0;
     cp3config->opt_bve=true; cp3config->opt_bve_verbose=0; 
     cp3config->opt_printStats = true;
+    cp3config->parseOptions( argc,argv ); // parse the configuration!
     if( denseVariables ) { // enable options for CP3 for densing variables
       cp3config->opt_dense = true; cp3config->opt_dense_store_forward = 1; 
     }
