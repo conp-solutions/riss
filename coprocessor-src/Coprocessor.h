@@ -119,9 +119,9 @@ public:
   void printFormula(FILE* fd, bool clausesOnly = false);
   
   /** disable the specified variable (external representation) for modelset-changing preprocessing (bve,ee,bce,cee,...)
-   * @param var variable in external representation
+   * @param lit literal in external representation (the whole variable will be frozen!)
    */
-  void freezeExtern( int var );
+  void freezeExtern( int lit );
   
   /** returns current (irredundant) formula in one vector, and external variable representation. all clauses are terminated by a '0'
    * @param outputFormula vector that contains the formula afterwards

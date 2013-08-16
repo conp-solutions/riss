@@ -995,13 +995,10 @@ lbool Preprocessor::preprocessScheduled()
   return l_Undef;
 }
 
-void Preprocessor::freezeExtern(int var)
+void Preprocessor::freezeExtern(int lit)
 {
-  assert( var > 0 && "external variables do not allow to be 0 or smaller" );
-  if( var > 0 ) { 
-    data.setNotTouch(var-1);
-    // cerr << "c freeze variable " << var << " (int: " << var-1<< ")" << endl;
-  }
+  if( lit > 0 ) data.setNotTouch(lit-1);
+  else if (lit < 0 ) data.setNotTouch(-lit-1);
 }
 
 void Preprocessor::dumpFormula(std::vector< int >& outputFormula)

@@ -67,6 +67,13 @@ extern "C" { // abc has been compiled with gcc
 }
 #endif 
 
+/**
+ *  For timing
+ */
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <unistd.h>
+#include <time.h>
 
 static aiger * model = 0;
 static const char * name = 0;
@@ -174,6 +181,27 @@ static void wrn (const char *fmt, ...) {
   fputc ('\n', stderr);
   fflush (stderr);
 }
+
+// static inline double cpuTime(void) {
+//     struct rusage ru;
+//     getrusage(RUSAGE_SELF, &ru);
+//     return (double)ru.ru_utime.tv_sec + (double)ru.ru_utime.tv_usec / 1000000; }
+// 
+// 
+// static inline double wallClockTime(void)
+// {
+//     struct timespec timestamp;
+//     clock_gettime(CLOCK_MONOTONIC, &timestamp);
+//     return ((double) timestamp.tv_sec) + ((double) timestamp.tv_nsec / 1000000000);
+// }
+
+/** class that measures the time between creation and destruction of the object, and adds it*/
+class MethodTimer {
+  double* pointer;
+public:
+  MethodTimer( double* timer ) : pointer( timer ) { *pointer = cpuTime() - *pointer;}
+  ~MethodTimer() { *pointer = cpuTime() - *pointer; }
+};
 
 static void add (int lit, bool addToShift = true) { 
   if( addToShift ) shiftFormula.formula.push_back( lit ); // write into formula
@@ -544,19 +572,26 @@ int main (int argc, char ** argv) {
   msg (1, "aigbmc bounded model checker");
   msg (1, "maxk = %d", maxk);
 
+  double ppAigTime = 0, ppCNFtime = 0;
+  vector<double> boundtimes;
+  
   // init solvers, is necessary with command line parameters
   init (argc,argv);
   
+/**
+ *  use ABC for simplification
+ */
 #ifdef USE_ABC
   // simplification with ABC?
   if( useABC ) { // no 0 pointer -> points to the name of the file to write
+    MethodTimer aigTimer ( &ppAigTime );
     if(!name) { // reject reading from stdin
       wrn("will not read from stdin, since ABC ");  
       exit(30);
     }
     // start abc
     void * pAbc;
-    Abc_Start();
+    Abc_Start(); // turn on ABC
     pAbc = Abc_FrameGetGlobalFrame();
     std::string abcmd = std::string("read ") + std::string(name);
     if ( Cmd_CommandExecute( pAbc, abcmd.c_str() ) )
@@ -564,22 +599,22 @@ int main (int argc, char ** argv) {
         wrn( "ABC cannot execute command \"%s\".\n", abcmd.c_str() );
         exit(30);
     }
-    /*
-    if ( Cmd_CommandExecute( pAbc, "dc2" ) )
+    if ( true &&  Cmd_CommandExecute( pAbc, "dc2" ) )
     {
         wrn( "ABC cannot execute command \"dc2\".\n" );
         exit(30);
     }
-    */
     abcmd = std::string("write ") + std::string(useABC);
     if ( Cmd_CommandExecute( pAbc, abcmd.c_str() ) )
     {
         wrn( "ABC cannot execute command \"%s\".\n", abcmd.c_str() );
         exit(30);
     }
-    msg(1,"change the name of the aiger file to read forom %s to %s\n",name,useABC);
+    Abc_Stop(); // turn off ABC
+    msg(1,"change the name of the aiger file to read from %s to %s",name,useABC);
     name = useABC;
   }
+  msg(0,"aig preprocessing tool %lf seconds", ppAigTime);
 #endif
   
   msg (1, "reading from '%s'", name ? name : "<stdin>");
@@ -656,14 +691,16 @@ int main (int argc, char ** argv) {
 
   shiftFormula.clear(); 
   
+  boundtimes.push_back(0);boundtimes[0] = cpuTime() - boundtimes[0]; // start measuring the time for bound 0
   lit = encode ();
+  boundtimes[0] = cpuTime() - boundtimes[0]; // interrupt measuring the time for bound 0
   shiftFormula.currentAssume = lit;
   shiftFormula.initialMaxVar = nvars;
   shiftFormula.afterPPmaxVar = nvars;
   // TODO: here, simplification and compression could be performed!
 
   if( useCP3 ) {
-    
+    MethodTimer cnfTimer( &ppCNFtime );
     cp3config = new Coprocessor::CP3Config;
     // add more options here?
     cp3config->opt_enabled = true; cp3config->opt_verbose=0;
@@ -749,8 +786,10 @@ int main (int argc, char ** argv) {
       riss->printFormula();
     }
   }
+  msg(0,"cnf preprocessing tool %lf seconds", ppCNFtime);
   // TODO after compression, update all the variables/literals lists in the shiftformula structure!
   
+  boundtimes[0] = cpuTime() - boundtimes[0]; // continue measuring the time for bound 0
   lit = shiftFormula.currentAssume; // literal might have changed!
   int shiftDist = shiftFormula.afterPPmaxVar - 1;  // shift depends on the variables that are actually in the formula that is used for solving
   
@@ -779,14 +818,19 @@ int main (int argc, char ** argv) {
 	cerr << " " << shiftFormula.todoEqualities[i]  << " == " <<  shiftFormula.todoEqualities[i+1] << endl;
     }
   }
-  if (sat () == 10) goto finishedSolving;
+  bool foundBadStateFast =  (sat () == 10);
+  boundtimes[0] = cpuTime() - boundtimes[0]; // stop measuring the time for bound 0
+  msg(0,"solved bound %d in %lf seconds", 0, boundtimes[k]);
+  if( foundBadStateFast ) {
+    goto finishedSolving;
+  }
   unit (-lit, false); // do not add this unit to the shift formula!
-  
-
   
   msg (2, "re-encode model");
   if( !useShift ) { // old or new method?
     for (k = 1; k <= maxk; k++) {
+      boundtimes.push_back(0);
+      boundtimes[k] = cpuTime() - boundtimes[k]; // stop measuring the time for bound 0
       shiftFormula.clear(); /// carefully here, since one unit has been added already!
       lit = encode ();
       
@@ -808,11 +852,16 @@ int main (int argc, char ** argv) {
 	  if( shiftFormula.formula[i] == 0 ) cerr << endl;
 	}
       }
-      if (sat () == 10) break;
+      bool foundBad = ( sat () == 10);
+      boundtimes[k] = cpuTime() - boundtimes[k]; // stop measuring the time for bound 0
+      msg(0,"solved bound %d in %lf seconds", k, boundtimes[k]);
+      if( foundBad ) break;
       unit (-lit); // add as unit, since it is ensured that it cannot be satisfied (previous call)
     }
   } else {
     for (k = 1; k <= maxk; k++) {
+      boundtimes.push_back(0);
+      boundtimes[k] = cpuTime() - boundtimes[k]; // stop measuring the time for bound 0
       lit = encode ( false ); // TODO if printing the witness also works without the original structures, this line can be removed!
 
       const int thisShift = k * shiftDist;
@@ -856,7 +905,10 @@ int main (int argc, char ** argv) {
       lit = shiftFormula.currentAssume + thisShift;
       msg(3,"solve iteration %d with assumption literal %d and %d shifted clauses\n",k,lit,thisClauses);
       assume (lit);
-      if (sat () == 10) break;
+      bool foundBad = ( sat () == 10);
+      boundtimes[k] = cpuTime() - boundtimes[k]; // stop measuring the time for bound 0
+      msg(0,"solved bound %d in %lf seconds", k, boundtimes[k]);
+      if( foundBad ) break;
       unit (-lit,false); // add as unit, since it is ensured that it cannot be satisfied (previous call)
     }
   }
@@ -867,7 +919,10 @@ finishedSolving:;
   /**
    *  PRINT MODEL/WITNESS, if necessary
    */
-  
+  cerr << "[aigbmc] pp time summary: aig: " << ppAigTime << " cnf: " << ppCNFtime << endl;
+  cerr << "[aigbmc] solve time summary: ";
+  for( int i = 0 ; i < boundtimes.size(); ++ i ) cerr << " " << boundtimes[i];
+  cerr << endl;
   
   if (quiet) goto DONE;
   if (k <= maxk) {	
