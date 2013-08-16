@@ -1397,7 +1397,7 @@ lbool Solver::search(int nof_conflicts)
            // Simplify the set of problem clauses - but do not do it each iteration!
 	  if (simplifyIterations > config.opt_simplifyInterval && decisionLevel() == 0 && !simplify()) {
 	    simplifyIterations = 0;
-	    if( verbosity > 1 ) printf("c last restart ## conflicts  :  %d %d \n",conflictC,decisionLevel());
+	    if( verbosity > 1 ) fprintf(stderr,"c last restart ## conflicts  :  %d %d \n",conflictC,decisionLevel());
 	    return l_False;
 	  }
 	  if( decisionLevel() == 0  ) simplifyIterations ++;
@@ -1436,7 +1436,7 @@ lbool Solver::search(int nof_conflicts)
                 next = pickBranchLit();
 
                 if (next == lit_Undef){
-		  printf("c last restart ## conflicts  :  %d %d \n",conflictC,decisionLevel());
+		  if(verbosity > 1 ) fprintf(stderr,"c last restart ## conflicts  :  %d %d \n",conflictC,decisionLevel());
 		  // Model found:
 		  return l_True;
 		}

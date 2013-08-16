@@ -46,7 +46,7 @@ install: install-bins # install-objs
 	test -d /usr
 	test -d /usr/local
 	test -d /usr/local/bin
-	install -m 755 -s $(BINS) /usr/łocal/bin/
+	install -m 755 -s $(BINS) /usr/local/bin/
 
 install-bins: $(BINS)
 	
@@ -67,6 +67,9 @@ aigand: aiger.o aigand.o makefile
 
 aigbmc: aiger.c aigbmc.c makefile ../picosat/picosat.o ../libriss3g.a
 	g++ $(CFLAGS) -o $@ -I.. aigbmc.c aiger.c ../picosat/picosat.o ../libriss3g.a -pthread -lrt -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS -fpermissive
+	
+aigbmc-abc: aiger.c aigbmc.c makefile ../picosat/picosat.o ../libriss3g.a libabc.a
+	g++ $(CFLAGS) -o $@ -I.. aigbmc.c aiger.c ../picosat/picosat.o ../libriss3g.a libabc.a -lreadline -ldl -pthread -lrt -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS -fpermissive -D USE_ABC
 	
 aig-plain-bmc: aiger.c aig-plain-bm.c makefile ../picosat/picosat.o
 	g++ $(CFLAGS) -o $@ aig-plain-bm.c aiger.c ../picosat/picosat.o

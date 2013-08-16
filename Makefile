@@ -35,6 +35,12 @@ aigbmcd: libd
 
 aigbmcs: libs
 	cd aiger-src; make aigbmc ;
+
+aigbmc-abcd: libd
+	cd aiger-src; make aigbmc-abc CFLAGS="-O0 -g";
+
+aigbmc-abcs: libs
+	cd aiger-src; make aigbmc-abc ;
 	
 # build the splitter solver
 riss: always

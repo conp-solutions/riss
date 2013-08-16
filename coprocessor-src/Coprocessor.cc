@@ -1000,7 +1000,7 @@ void Preprocessor::freezeExtern(int var)
   assert( var > 0 && "external variables do not allow to be 0 or smaller" );
   if( var > 0 ) { 
     data.setNotTouch(var-1);
-    cerr << "c freeze variable " << var << " (int: " << var-1<< ")" << endl;
+    // cerr << "c freeze variable " << var << " (int: " << var-1<< ")" << endl;
   }
 }
 

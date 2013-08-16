@@ -1,5 +1,9 @@
 /***************************************************************************
+Copyright (c) 2013, Norbert Manthey, All Rights reserved
+
+
 Copyright (c) 2011, Armin Biere, Johannes Kepler University, Austria.
+
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software _and associated documentation files (the "Software"), to
@@ -38,6 +42,8 @@ extern "C" { // we are compiling with G++, however, picosat is C code
  */
 using namespace std;
 #include <vector>
+#include <string>
+#include <cstring>
 #include <iostream>
 
 /**
@@ -45,6 +51,22 @@ using namespace std;
  */
 #include "../core/BMCwrapper.h"
 #include "../coprocessor-src/Coprocessor.h"
+
+/**
+ *  For using abc ...
+ */
+#ifdef USE_ABC
+extern "C" { // abc has been compiled with gcc
+  // procedures to start and stop the ABC framework
+  // (should be called before and after the ABC procedures are called)
+  extern void   Abc_Start();
+  extern void   Abc_Stop();
+  // procedures to get the ABC framework and execute commands in it
+  extern void * Abc_FrameGetGlobalFrame();
+  extern int    Cmd_CommandExecute( void * pAbc, char * sCommand );
+}
+#endif 
+
 
 static aiger * model = 0;
 static const char * name = 0;
@@ -82,8 +104,9 @@ static State * states = 0;
 static int nstates = 0, szstates = 0, * join = 0;
 static char * bad = 0, * justice = 0;
 
-static int verbose = 0, move = 0, quiet = 0, nowitness = 0, lazyEncode = 0,useShift=0, 
-  useRiss = 0, useCP3 = 0, denseVariables = 0, dontFreezeInput = 0, dontFreezeBads = 0; // options
+static int verbose = 0, move = 0, quiet = 0, nowitness = 0, lazyEncode = 0,useShift=0, // options
+  useRiss = 0, useCP3 = 0, denseVariables = 0, dontFreezeInput = 0, dontFreezeBads = 0;
+static char* useABC = 0;   
 static int nvars = 0;
 
 /**
@@ -446,6 +469,9 @@ static const char * usage =
 "-bmc_d    dense after preprocessing (implies using riss and CP3)\n"
 "-bmc_x    modify preprocess (implies using riss and CP3)\n"
 "-bmc_y    modify preprocess (implies using riss and CP3)\n"
+#ifdef USE_ABC
+"-bmc_a    use the ABC tool to simplify the circuit before solving, next parameter has to specify a tmp file location!\n"
+#endif
 "\n\n the model name should be given first, then, the max. bound should be given\n"
 " other options might be given as well. These options are forwarded to the SAT solver\n"
 ;
@@ -475,7 +501,6 @@ int main (int argc, char ** argv) {
   bool noProperties = false, checkProperties = false; // are there any properties inside the circuit?
   
   const char * err;
-  maxk = -1;
   for (i = 1; i < argc; i++) {
     if ( !strcmp (argv[i], "-h") || !strcmp (argv[i], "--help")) {
       // usage for BMC
@@ -497,15 +522,23 @@ int main (int argc, char ** argv) {
     else if (!strcmp (argv[i], "-bmc_x")) { useCP3=1,useRiss = 1;dontFreezeInput=1; }
     else if (!strcmp (argv[i], "-bmc_y")) { useCP3=1,useRiss = 1;dontFreezeBads=1; }
     else if (!strcmp (argv[i], "-bmc_c")) checkProperties = true;
+#ifdef USE_ABC
+    else if (!strcmp (argv[i], "-bmc_a")) {
+      ++i;
+      if( i < argc ) useABC = argv[i];
+      else wrn("not enough parameters to set the tmp directory for ABC files");
+    }
+#endif
     // the other parameters might be for the SAT solver
-    else if (argv[i][0] == '-') {
+    else if (isnum (argv[i]) && maxk == 0) {
+      maxk = atoi (argv[i]);
+    } else if (argv[i][0] == '-') {
       wrn( "unknown bmc parameter '%s'", argv[i] );
       // die ("invalid comm_and line option '%s'", argv[i]);
     } else if (name && maxk >= 0) {
       wrn( "unknown bmc argument '%s'", argv[i] );
       // die ("unexpected argument '%s'", argv[i]);
-    } else if (maxk < 0 && isnum (argv[i]) && maxk == 0) maxk = atoi (argv[i]);
-    else if( !name) name = argv[i];
+    } else if( !name) name = argv[i];
   }
   if (maxk < 0) maxk = 10;
   msg (1, "aigbmc bounded model checker");
@@ -513,6 +546,41 @@ int main (int argc, char ** argv) {
 
   // init solvers, is necessary with command line parameters
   init (argc,argv);
+  
+#ifdef USE_ABC
+  // simplification with ABC?
+  if( useABC ) { // no 0 pointer -> points to the name of the file to write
+    if(!name) { // reject reading from stdin
+      wrn("will not read from stdin, since ABC ");  
+      exit(30);
+    }
+    // start abc
+    void * pAbc;
+    Abc_Start();
+    pAbc = Abc_FrameGetGlobalFrame();
+    std::string abcmd = std::string("read ") + std::string(name);
+    if ( Cmd_CommandExecute( pAbc, abcmd.c_str() ) )
+    {
+        wrn( "ABC cannot execute command \"%s\".\n", abcmd.c_str() );
+        exit(30);
+    }
+    /*
+    if ( Cmd_CommandExecute( pAbc, "dc2" ) )
+    {
+        wrn( "ABC cannot execute command \"dc2\".\n" );
+        exit(30);
+    }
+    */
+    abcmd = std::string("write ") + std::string(useABC);
+    if ( Cmd_CommandExecute( pAbc, abcmd.c_str() ) )
+    {
+        wrn( "ABC cannot execute command \"%s\".\n", abcmd.c_str() );
+        exit(30);
+    }
+    msg(1,"change the name of the aiger file to read forom %s to %s\n",name,useABC);
+    name = useABC;
+  }
+#endif
   
   msg (1, "reading from '%s'", name ? name : "<stdin>");
   if (name) err = aiger_open_and_read_from_file (model, name);
@@ -610,75 +678,76 @@ int main (int argc, char ** argv) {
     preprocessor = new Coprocessor::Preprocessor ( ppSolver, *cp3config );
     for( int i = 0 ; i < shiftFormula.formula.size(); ++i ) incsolver->add( shiftFormula.formula[i] );
     
-    cerr << "c call freeze variables ... " << endl;
+    if( verbose > 1 ) cerr << "c call freeze variables ... " << endl;
     preprocessor->freezeExtern( 1 ); // do not remove the unit (during dense!)
     if( !dontFreezeInput ) for( int i = 0 ; i < shiftFormula.inputs.size(); ++i ) preprocessor->freezeExtern( shiftFormula.inputs[i] );
     for( int i = 0 ; i < shiftFormula.latch.size(); ++i ) preprocessor->freezeExtern( shiftFormula.latch[i] );
     for( int i = 0 ; i < shiftFormula.latchNext.size(); ++i ) preprocessor->freezeExtern( shiftFormula.latchNext[i] );
     preprocessor->freezeExtern( shiftFormula.currentAssume < 0 ? -shiftFormula.currentAssume : shiftFormula.currentAssume );
     if( !dontFreezeBads ) for( int i = 0 ; i < shiftFormula.currentBads.size(); ++i ) preprocessor->freezeExtern( shiftFormula.currentBads[i] );
-    cerr << "c call preprocess ... " << endl;
+    if( verbose > 1 ) cerr << "c call preprocess ... " << endl;
     preprocessor->preprocess();
     // test whether readding works without modifying the formula
-    cerr << "c before formula: " << endl;
-    riss->printFormula();
+    if( verbose > 1 ) { cerr << "c before formula: " << endl; riss->printFormula(); }
     // alles gut!
     riss->clearSolver();
     preprocessor->dumpFormula( shiftFormula.formula ); // actively changing the formula!
-    cerr << "c add formula to riss" << endl;
+    if( verbose > 1 ) cerr << "c add formula to riss" << endl;
     for( int i = 0 ; i < shiftFormula.formula.size(); ++i ) riss->add( shiftFormula.formula[i] );
     // TODO: reduce maxVar according to shrink! ... thus, shift distance will be adopted
     shiftFormula.afterPPmaxVar = ppSolver->nVars();
-    cerr << "c after variables: " << shiftFormula.afterPPmaxVar << endl;
+    if( verbose > 1 ) cerr << "c after variables: " << shiftFormula.afterPPmaxVar << endl;
     // riss->setMaxVar( nvars );
     if( denseVariables ) { // refresh knowledge about the extra literals (input,output/bad,latches,assume)
       int tmpLit = preprocessor->giveNewLit( shiftFormula.currentAssume );
-      cerr << "move assume from " << shiftFormula.currentAssume << " to " << tmpLit << endl;
+      if( verbose > 1 ) cerr << "move assume from " << shiftFormula.currentAssume << " to " << tmpLit << endl;
       shiftFormula.currentAssume = tmpLit;
       if( !dontFreezeInput ) { // no need to shift input bits, if they will be restored properly after a solution has been found
 	for( int i = 0 ; i < shiftFormula.inputs.size(); ++ i ) {
 	  tmpLit = preprocessor->giveNewLit( shiftFormula.inputs[i] );
-	  cerr << "move input from " <<  shiftFormula.inputs[i]   << " to " << tmpLit << endl;
+	  if( verbose > 1 ) cerr << "move input from " <<  shiftFormula.inputs[i]   << " to " << tmpLit << endl;
 	  shiftFormula.inputs[i] = tmpLit;
 	}
       }
       for( int i = 0 ; i < shiftFormula.latch.size(); ++ i ){
 	tmpLit = preprocessor->giveNewLit( shiftFormula.latch[i] );
-	cerr << "move latch from " << shiftFormula.latch[i] << " to " << tmpLit << endl;
+	if( verbose > 1 ) cerr << "move latch from " << shiftFormula.latch[i] << " to " << tmpLit << endl;
 	shiftFormula.latch[i] = tmpLit;
       }
       for( int i = 0 ; i < shiftFormula.latchNext.size(); ++ i ){
 	tmpLit = preprocessor->giveNewLit(shiftFormula.latchNext[i]);
-	cerr << "move latchN from " << shiftFormula.latchNext[i] << " to " << tmpLit << endl;
+	if( verbose > 1 ) cerr << "move latchN from " << shiftFormula.latchNext[i] << " to " << tmpLit << endl;
 	shiftFormula.latchNext[i] = tmpLit;
       }
       if( !dontFreezeBads ) { // dont freeze bad stats, if they are restored after a solution has been found
 	for( int i = 0 ; i < shiftFormula.currentBads.size(); ++ i ){
 	  tmpLit = preprocessor->giveNewLit( shiftFormula.currentBads[i] );
-	  cerr << "move bad from " <<   shiftFormula.currentBads[i]  << " to " << tmpLit << endl;
+	  if( verbose > 1 ) cerr << "move bad from " <<   shiftFormula.currentBads[i]  << " to " << tmpLit << endl;
 	  shiftFormula.currentBads[i] = tmpLit;
 	}
       }
       // also shift equivalences that are not known by the solver and preprocessor yet (but are present during search)
       for( int i = 0 ; i < shiftFormula.todoEqualities.size(); i++ ) {
 	tmpLit = preprocessor->giveNewLit( shiftFormula.todoEqualities[i] );
-	cerr << "move eq from " <<   shiftFormula.todoEqualities[i]  << " to " << tmpLit << endl;
+	if( verbose > 1 ) cerr << "move eq from " <<   shiftFormula.todoEqualities[i]  << " to " << tmpLit << endl;
 	shiftFormula.todoEqualities[i] = tmpLit;
       }
     }
-    cerr << "c maxVar["<<k<<"]:     " << nvars << endl;
-    cerr << "c assume["<<k<<"]:     " << shiftFormula.currentAssume << endl;
-    cerr << "c inputs["<<k<<"]:     " << shiftFormula.inputs.size() << ": "; for( int i = 0 ; i < shiftFormula.inputs.size(); ++ i ) cerr << " " << shiftFormula.inputs[i]; cerr << endl;
-    cerr << "c latches["<<k<<"]:    " << shiftFormula.latch.size() << ": "; for( int i = 0 ; i < shiftFormula.latch.size(); ++ i ) cerr << " " << shiftFormula.latch[i]; cerr << endl;
-    cerr << "c latchNext["<<k<<"]:  " << shiftFormula.latchNext.size() << ": "; for( int i = 0 ; i < shiftFormula.latchNext.size(); ++ i ) cerr << " " << shiftFormula.latchNext[i]; cerr << endl;
-    cerr << "c thisBad["<<k<<"]:  " << shiftFormula.currentBads.size() << ": "; for( int i = 0 ; i < shiftFormula.currentBads.size(); ++ i ) cerr << " " << shiftFormula.currentBads[i]; cerr << endl;
-    cerr << "c formula["<<k<<"]:    " << endl;
-    for( int i = 0 ; i < shiftFormula.formula.size(); ++ i ) {
-      cerr << " " << shiftFormula.formula[i];
-      if( shiftFormula.formula[i] == 0 ) cerr << endl;
+    if( verbose > 1 ) {
+      cerr << "c maxVar["<<k<<"]:     " << nvars << endl;
+      cerr << "c assume["<<k<<"]:     " << shiftFormula.currentAssume << endl;
+      cerr << "c inputs["<<k<<"]:     " << shiftFormula.inputs.size() << ": "; for( int i = 0 ; i < shiftFormula.inputs.size(); ++ i ) cerr << " " << shiftFormula.inputs[i]; cerr << endl;
+      cerr << "c latches["<<k<<"]:    " << shiftFormula.latch.size() << ": "; for( int i = 0 ; i < shiftFormula.latch.size(); ++ i ) cerr << " " << shiftFormula.latch[i]; cerr << endl;
+      cerr << "c latchNext["<<k<<"]:  " << shiftFormula.latchNext.size() << ": "; for( int i = 0 ; i < shiftFormula.latchNext.size(); ++ i ) cerr << " " << shiftFormula.latchNext[i]; cerr << endl;
+      cerr << "c thisBad["<<k<<"]:  " << shiftFormula.currentBads.size() << ": "; for( int i = 0 ; i < shiftFormula.currentBads.size(); ++ i ) cerr << " " << shiftFormula.currentBads[i]; cerr << endl;
+      cerr << "c formula["<<k<<"]:    " << endl;
+      for( int i = 0 ; i < shiftFormula.formula.size(); ++ i ) {
+	cerr << " " << shiftFormula.formula[i];
+	if( shiftFormula.formula[i] == 0 ) cerr << endl;
+      }
+      cerr << "c after formula (inside riss): " << endl;
+      riss->printFormula();
     }
-    cerr << "c after formula (inside riss): " << endl;
-    riss->printFormula();
   }
   // TODO after compression, update all the variables/literals lists in the shiftformula structure!
   
@@ -906,7 +975,7 @@ finishedSolving:;
       for (i = 0; i < model->num_bad; i++) {
 	if (deref (states[k].bad[i]) > 0)
 	  printf ("b%d", i), found++;
-	 cerr << "c check bad state for: " << states[k].bad[i] << endl;
+	 // cerr << "c check bad state for: " << states[k].bad[i] << endl;
       }
       assert (found);
       assert (model->num_bad || model->num_justice);
