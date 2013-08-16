@@ -1413,9 +1413,9 @@ inline void CoprocessorData::addExtensionToExtension(vector< Lit >& lits)
 inline void CoprocessorData::extendModel(vec< lbool >& model)
 {
   const bool local_debug = false;
-  if( global_debug_out || local_debug) {
+  if( false && (global_debug_out || local_debug) ) {
     cerr << "c extend model of size " << model.size() << " with undo information of size " << undo.size() << endl;
-    cerr << "c  in model: ";
+    cerr << "c in model: ";
     for( int i = 0 ; i < model.size(); ++ i ) {
       const Lit satLit = mkLit( i, model[i] == l_True ? false : true );
       cerr << satLit << " ";
@@ -1423,7 +1423,7 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
     cerr << endl;
   }
   
-  if( local_debug ) {
+  if( false && local_debug ) {
     cerr << "extend Stack: " << endl; 
     for( int i = undo.size() - 1; i >= 0 ; --i ) {
       if( undo[i] == lit_Undef ) cerr << endl;

@@ -93,6 +93,15 @@ public:
   
   CoreConfig& getConfig(){ return config; }
   
+  /** give current model on stderr */
+  void printModel () {
+   fprintf(stderr,"s SATISFIABLE\nv ");
+	      for (int i = 0; i < solver->nVars(); i++)
+		if (solver->model[i] != l_Undef)
+		  fprintf(stderr,"%s%s%d", (i==0)?"":" ", (solver->model[i]==l_True)?"":"-", i+1);
+	fprintf(stderr," 0\n");	      
+  }
+  
   /** dump formula to stderr */
   void printFormula() {
     // top level unit clauses

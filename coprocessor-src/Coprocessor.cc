@@ -1056,10 +1056,10 @@ stream << "c [STAT] CP3(2) "
 
 void Preprocessor::extendModel(vec< lbool >& model)
 {
-  cerr << "c extendModel with " << model.size() << " variables" << endl;
+  if( config.opt_verbose > 0 ) cerr << "c extendModel with " << model.size() << " variables" << endl;
   // order is important!
   dense.decompress( model ); // if model has not been compressed before, nothing has to be done!
-  cerr << "c formula variables: " << formulaVariables << " model: " << model.size() << endl;
+  if( config.opt_verbose > 0 ) cerr << "c formula variables: " << formulaVariables << " model: " << model.size() << endl;
   if( formulaVariables > model.size() ) model.growTo(formulaVariables);
   // cerr << "c run data extend model" << endl;
   data.extendModel(model);
