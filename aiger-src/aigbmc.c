@@ -510,7 +510,7 @@ static const char * usage =
 
 #ifdef USE_ABC
 "-bmc_a    use the ABC tool to simplify the circuit before solving, next parameter has to specify a tmp file location!\n"
-"-bmc_ac   give a special command(-sequence, ABC syntax!) to ABC. default is \"dc2\" other possible: dc2, drwsat\n"
+"-bmc_ac   give a special command(-sequence, separated by :) to ABC. default is \"dc2\" other possible: dc2, drwsat\n"
 #endif
 "\n\n the model name should be given first, then, the max. bound should be given\n"
 " other options might be given as well. These options are forwarded to the SAT solver\n"
@@ -630,13 +630,14 @@ int main (int argc, char ** argv) {
 /**
  *  use ABC for simplification
  */
+#define USE_ABC
 #ifdef USE_ABC
   // simplification with ABC?
   if( useABC ) { // no 0 pointer -> points to the name of the file to write
     MethodTimer aigTimer ( &ppAigTime );
     if(!name) { // reject reading from stdin
       wrn("will not read from stdin, since ABC ");  
-      exit(30);
+      exit(30);std::string s;
     }
     // start abc
     void * pAbc;
@@ -652,11 +653,21 @@ int main (int argc, char ** argv) {
       abcCommand = "\"dc2\"";
       msg(1,"set abc command to default command %s", abcCommand.c_str() );
     }
-    msg(1,"execute abc command(s) %s", abcCommand.c_str() );
-    if ( true &&  Cmd_CommandExecute( pAbc, abcCommand.c_str() ) )
-    {
-        wrn( "ABC cannot execute command %s.\n", abcCommand.c_str() );
-        exit(30);
+    while ( abcCommand.size() > 0 ) {
+      std::string thisCommand;
+      if( abcCommand.find(':') != std::string::npos ) {
+        thisCommand =  abcCommand.substr(abcCommand.find(":")+1); // extract first token
+        abcCommand.erase(abcCommand.find(":")); // remove token from the first position
+      } else {
+	thisCommand = abcCommand;
+	abcCommand = "";
+      }
+      msg(1,"execute abc command(s) %s, remaining: %s", thisCommand.c_str(), abcCommand.c_str() );
+      if ( true &&  Cmd_CommandExecute( pAbc, thisCommand.c_str() ) )
+      {
+	  wrn( "ABC cannot execute command %s.\n", thisCommand.c_str() );
+	  exit(30);
+      }
     }
     abcmd = std::string("write ") + std::string(useABC);
     if ( Cmd_CommandExecute( pAbc, abcmd.c_str() ) )
