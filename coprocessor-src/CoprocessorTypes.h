@@ -637,7 +637,7 @@ inline void CoprocessorData::moveVar(Var from, Var to, bool final)
   }
   if( final == true ) {
   
-    cerr << "c compress variables to " << to+1 << endl;
+    // cerr << "c compress variables to " << to+1 << endl;
     solver->assigns.shrink( solver->assigns.size() - to - 1);
     solver->vardata.shrink( solver->vardata.size() - to - 1);
     solver->activity.shrink( solver->activity.size() - to - 1);

@@ -26,6 +26,9 @@ IN THE SOFTWARE.
 
 #include "aiger.h"
 
+// enable this to disable all the output that might tell about the content of the implementation
+// #define TEST_BINARY
+
 extern "C" { // we are compiling with G++, however, picosat is C code
   #include "../picosat/picosat.h"
 }
@@ -112,8 +115,9 @@ static int nstates = 0, szstates = 0, * join = 0;
 static char * bad = 0, * justice = 0;
 
 static int verbose = 0, move = 0, quiet = 0, nowitness = 0, lazyEncode = 0,useShift=0, // options
-  useRiss = 0, useCP3 = 0, denseVariables = 0, dontFreezeInput = 0, dontFreezeBads = 0;
-static char* useABC = 0;   
+  useRiss = 0, useCP3 = 0, denseVariables = 0, dontFreezeInput = 0, dontFreezeBads = 0, printTime=0, checkInitialBad = 0;
+static char* useABC = 0;
+static std::string abcCommand = "";
 static int nvars = 0;
 
 /**
@@ -214,10 +218,11 @@ static void assume (int lit) {
   else picosat_assume (picosat, lit);
 }
 
-static int sat () { 
+/** solve with resource limit */
+static int sat ( int limit = -1 ) { 
   msg (2, "solve time with SAT solver: %d", nstates);
   int ret;
-  if( useRiss ) ret = riss->sat();
+  if( useRiss ) ret = riss->sat(limit);
   else ret = picosat_sat (picosat, -1);
   msg (2, "return code of SAT solver: %d", ret);
   return ret;
@@ -483,22 +488,29 @@ static int isnum (const char * str) {
 static const char * usage =
 "usage: aigbmc [<model>][<maxk>] [OPTIONS]\n"
 "\n"
-"-h       print this comm_and line option summary\n"
-"--help   prints the help of the SAT solver, if riss is used\n"
-"-bmc_v    increase verbose level\n"
-"-bmc_m    use outputs as bad state constraint\n"
-"-bmc_n    do not print witness\n"
-"-bmc_q    be quite (impies '-n')\n"
-"-bmc_c    check whether there are properties (return 1, otherwise 0)\n"
-"-bmc_l    use lazy coding\n"
-"-bmc_s    use shifting instead of reencoding (implies lazy encoding)\n"
-"-bmc_r    use riss as SAT solver\n"
-"-bmc_p    use CP3 as simplifier (implies using riss and shifting)\n"
-"-bmc_d    dense after preprocessing (implies using riss and CP3)\n"
-"-bmc_x    modify preprocess (implies using riss and CP3)\n"
-"-bmc_y    modify preprocess (implies using riss and CP3)\n"
+"-h         print this comm_and line option summary\n"
+"--help     prints the help of the SAT solver, if riss is used\n"
+#ifndef TEST_BINARY
+"-bmc_v     increase verbose level\n"
+#endif
+"-bmc_m     use outputs as bad state constraint\n"
+"-bmc_n     do not print witness\n"
+"-bmc_q     be quite (impies '-n')\n"
+"-bmc_c     check whether there are properties (return 1, otherwise 0)\n"
+"-bmc_l     use lazy coding\n"
+"-bmc_s     use shifting instead of reencoding (implies lazy encoding)\n"
+"-bmc_r     use riss as SAT solver\n"
+"-bmc_p     use CP3 as simplifier (implies using riss and shifting)\n"
+"-bmc_d     dense after preprocessing (implies using riss and CP3)\n"
+"-bmc_x     modify preprocess (implies using riss and CP3)\n"
+"-bmc_y     modify preprocess (implies using riss and CP3)\n"
+"-bmc_z     more reasoning before search\n"
+"-bmc_t     print time needed per bound\n"
+"-bmc_ml X  specify memory limit in MB\n"
+
 #ifdef USE_ABC
 "-bmc_a    use the ABC tool to simplify the circuit before solving, next parameter has to specify a tmp file location!\n"
+"-bmc_ac   give a special command(-sequence, ABC syntax!) to ABC. default is \"dc2\" other possible: dc2, drwsat\n"
 #endif
 "\n\n the model name should be given first, then, the max. bound should be given\n"
 " other options might be given as well. These options are forwarded to the SAT solver\n"
@@ -538,7 +550,10 @@ int main (int argc, char ** argv) {
       reset();
       // terminate program
       exit (0);
-    } else if (!strcmp (argv[i], "-bmc_v")) verbose++;
+    } 
+#ifndef TEST_BINARY
+    else if (!strcmp (argv[i], "-bmc_v")) verbose++;
+#endif
     else if (!strcmp (argv[i], "-bmc_m")) move = 1;
     else if (!strcmp (argv[i], "-bmc_n")) nowitness = 1;
     else if (!strcmp (argv[i], "-bmc_q")) quiet = 1;
@@ -549,13 +564,47 @@ int main (int argc, char ** argv) {
     else if (!strcmp (argv[i], "-bmc_d")) { useCP3=1,useRiss = 1;denseVariables=1; }
     else if (!strcmp (argv[i], "-bmc_x")) { useCP3=1,useRiss = 1;dontFreezeInput=1; }
     else if (!strcmp (argv[i], "-bmc_y")) { useCP3=1,useRiss = 1;dontFreezeBads=1; }
+    else if (!strcmp (argv[i], "-bmc_z")) {
+      ++ i;
+      if( i < argc && isnum(argv[i]) ) { 
+	checkInitialBad = atoi( argv[i] );
+	msg(1,"set bad state analysis resource limit to %d", checkInitialBad );
+      }
+    }
+    else if (!strcmp (argv[i], "-bmc_t")) printTime = 1;
+    else if (!strcmp (argv[i], "-bmc_ml")) { // set a memory limit!!
+      ++i;
+      int memLim = 0;
+      if( i < argc && isnum(argv[i]) ) memLim = atoi( argv[i] );
+    // Set limit on virtual memory:
+        if (memLim != 0){
+            rlim_t new_mem_lim = (rlim_t)memLim * 1024*1024;
+            rlimit rl;
+            getrlimit(RLIMIT_AS, &rl);
+            if (rl.rlim_max == RLIM_INFINITY || new_mem_lim < rl.rlim_max){
+                rl.rlim_cur = new_mem_lim;
+                if (setrlimit(RLIMIT_AS, &rl) == -1)
+                    wrn("could not set resource limit: Virtual memory.");
+            } else {
+	      msg(0,"set memory limit to %d MB", memLim);
+	    }
+	} else {
+	  wrn("no memory limit specified");
+	}
+    }
     else if (!strcmp (argv[i], "-bmc_c")) checkProperties = true;
 #ifdef USE_ABC
     else if (!strcmp (argv[i], "-bmc_a")) {
       ++i;
       if( i < argc ) useABC = argv[i];
-      else wrn("not enough parameters to set the tmp directory for ABC files");
+      else wrn("not enough parameters to set the tmp file for ABC");
     }
+    else if (!strcmp (argv[i], "-bmc_ac")) {
+      ++i;
+      if( i < argc ) abcCommand = std::string(argv[i]);
+      else wrn("not enough parameters to set the command for ABC");
+    }    
+    
 #endif
     // the other parameters might be for the SAT solver
     else if (isnum (argv[i]) && maxk == 0) {
@@ -572,7 +621,7 @@ int main (int argc, char ** argv) {
   msg (1, "aigbmc bounded model checker");
   msg (1, "maxk = %d", maxk);
 
-  double ppAigTime = 0, ppCNFtime = 0;
+  double ppAigTime = 0, ppCNFtime = 0, reasonTime = 0;
   vector<double> boundtimes;
   
   // init solvers, is necessary with command line parameters
@@ -599,9 +648,14 @@ int main (int argc, char ** argv) {
         wrn( "ABC cannot execute command \"%s\".\n", abcmd.c_str() );
         exit(30);
     }
-    if ( true &&  Cmd_CommandExecute( pAbc, "dc2" ) )
+    if( abcCommand.size() == 0 ) {
+      abcCommand = "\"dc2\"";
+      msg(1,"set abc command to default command %s", abcCommand.c_str() );
+    }
+    msg(1,"execute abc command(s) %s", abcCommand.c_str() );
+    if ( true &&  Cmd_CommandExecute( pAbc, abcCommand.c_str() ) )
     {
-        wrn( "ABC cannot execute command \"dc2\".\n" );
+        wrn( "ABC cannot execute command %s.\n", abcCommand.c_str() );
         exit(30);
     }
     abcmd = std::string("write ") + std::string(useABC);
@@ -705,7 +759,7 @@ int main (int argc, char ** argv) {
     // add more options here?
     cp3config->opt_enabled = true; cp3config->opt_verbose=0;
     cp3config->opt_bve=true; cp3config->opt_bve_verbose=0; 
-    cp3config->opt_printStats = true;
+    cp3config->opt_printStats = false;
     cp3config->parseOptions( argc,argv ); // parse the configuration!
     if( denseVariables ) { // enable options for CP3 for densing variables
       cp3config->opt_dense = true; cp3config->opt_dense_store_forward = 1; 
@@ -790,6 +844,49 @@ int main (int argc, char ** argv) {
   msg(0,"cnf preprocessing tool %lf seconds", ppCNFtime);
   // TODO after compression, update all the variables/literals lists in the shiftformula structure!
   
+  // we could check whether the circuit is completely safe, be assuming the top level unit, ignoring the initialization of latches, and assuming the single bad states to be true
+  // if UNSAT, we can unroll the circuit for ever
+  // if SAT, we cannot tell anything, except that a latch initialization was found, which can result in a bad state
+  // TODO what to do with multiple bad states?
+  if( checkInitialBad && !dontFreezeBads && shiftFormula.currentBads.size() == 1 ) // only possible if bad is not frozen!
+  {
+    reasonTime = cpuTime() - reasonTime; // start timer
+    msg(0,"analyze bad state");
+    int satResult = 10;
+    int iterations = 0;
+    do {
+      iterations ++;
+      assume( 1 ); // top level unit is not set yet, but is essential
+      int badlit = shiftFormula.currentAssume; // take care of moving variables around!
+      assume( -badlit ); // check whether this state can be reached
+      satResult  = sat ( checkInitialBad ) ; // give the number of conflicts to search maximally!
+      if( satResult == 10 ) {
+	msg(0,"found a latch configuration for reaching the bad state");
+	// TODO add a clause to the solver that disallows this combination
+	/*
+	add( -badlit, false ); // give to solver, but not to shiftFormula! have extra assumption here! e.g. 2!
+	for( int i = 0 ; i < shiftFormula.latch.size(); ++ i ) {
+	  if( deref(shiftFormula.latch[i]) != 0 ) { // if the latch has no state, there is no need to add it to the clause!
+	    int nl = -1 * shiftFormula.latch[i] * deref(shiftFormula.latch[i] );
+	    msg(1, "latch[%d] = %d has value %d; thus, add lit %d to the clause",i, shiftFormula.latch[i], deref(shiftFormula.latch[i] ), nl );
+	    add( nl, false );
+	  }
+	}
+	add( 0 );
+	*/
+	break;
+      } else if (satResult == 20 ) {
+	if( iterations == 1 ) msg(0,"found no latch configuration for reaching the bad state - can unroll infinitely!");
+	else  msg(0,"there exists exactly %d latch configurations that lead to the bad state", iterations - 1);
+      } else {
+	msg(0,"could not analyze bad state properties completely within resource bounds. So far, found %d potential latch configurations.", iterations - 1);
+      }
+    } while( satResult == 10 );
+    reasonTime = cpuTime() - reasonTime; // stop timer
+    msg(1,"needed %lf seconds for bad state reasoning",reasonTime );
+  }
+  
+  
   boundtimes[0] = cpuTime() - boundtimes[0]; // continue measuring the time for bound 0
   lit = shiftFormula.currentAssume; // literal might have changed!
   int shiftDist = shiftFormula.afterPPmaxVar - 1;  // shift depends on the variables that are actually in the formula that is used for solving
@@ -821,7 +918,7 @@ int main (int argc, char ** argv) {
   }
   bool foundBadStateFast =  (sat () == 10);
   boundtimes[0] = cpuTime() - boundtimes[0]; // stop measuring the time for bound 0
-  msg(0,"solved bound %d in %lf seconds", 0, boundtimes[k]);
+  if( printTime ) msg(0,"solved bound %d in %lf seconds", 0, boundtimes[k]);
   if( foundBadStateFast ) {
     goto finishedSolving;
   }
@@ -855,7 +952,7 @@ int main (int argc, char ** argv) {
       }
       bool foundBad = ( sat () == 10);
       boundtimes[k] = cpuTime() - boundtimes[k]; // stop measuring the time for bound 0
-      msg(0,"solved bound %d in %lf seconds", k, boundtimes[k]);
+      if( printTime ) msg(0,"solved bound %d in %lf seconds", k, boundtimes[k]);
       if( foundBad ) break;
       unit (-lit); // add as unit, since it is ensured that it cannot be satisfied (previous call)
     }
@@ -908,7 +1005,7 @@ int main (int argc, char ** argv) {
       assume (lit);
       bool foundBad = ( sat () == 10);
       boundtimes[k] = cpuTime() - boundtimes[k]; // stop measuring the time for bound 0
-      msg(0,"solved bound %d in %lf seconds", k, boundtimes[k]);
+      if( printTime ) msg(0,"solved bound %d in %lf seconds", k, boundtimes[k]);
       if( foundBad ) break;
       unit (-lit,false); // add as unit, since it is ensured that it cannot be satisfied (previous call)
     }
@@ -921,9 +1018,11 @@ finishedSolving:;
    *  PRINT MODEL/WITNESS, if necessary
    */
   cerr << "[aigbmc] pp time summary: aig: " << ppAigTime << " cnf: " << ppCNFtime << endl;
-  cerr << "[aigbmc] solve time summary: ";
-  for( int i = 0 ; i < boundtimes.size(); ++ i ) cerr << " " << boundtimes[i];
-  cerr << endl;
+  if( printTime ) {
+    cerr << "[aigbmc] solve time summary: ";
+    for( int i = 0 ; i < boundtimes.size(); ++ i ) cerr << " " << boundtimes[i];
+    cerr << endl;
+  }
   
   if (quiet) goto DONE;
   if (k <= maxk) {	

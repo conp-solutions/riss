@@ -69,12 +69,14 @@ public:
 
   /** solve the current formula under the current set of assignments 
    * Note: will clear the assumption vector after the call
+   * @param limit gives the number of conflicts before the call returns (-1 = infinite conflicts )
    */
-  int sat () {
+  int sat (int limit = -1) {
+    if (limit != -1 ) solver->setConfBudget( limit ); // enable budget
     lbool ret = solver->solveLimited( currentAssumptions );
+    if( limit != -1 ) solver->budgetOff(); // disable budget again
     currentAssumptions.clear();
-    assert ( ret != l_Undef && "current sat call did not succeed" );
-    return ret == l_True ? 10 : 20;
+    return ret == l_True ? 10 : ( ret == l_False ? 20 : 0 ); // be able to return unknown
   }
 
   /** returns the truth-value of the specified literal in the current model 
@@ -162,6 +164,7 @@ public:
     solver->trail_lim.clear();
     solver->qhead = 0;
     solver->conflicts = 0;
+    solver->order_heap.clear();
     
     // specifically for glucose 22
     solver->curRestart = 1;
