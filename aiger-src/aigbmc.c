@@ -46,6 +46,8 @@ extern "C" { // we are compiling with G++, however, picosat is C code
 using namespace std;
 #include <vector>
 #include <string>
+#include <sstream>
+#include <fstream>
 #include <cstring>
 #include <iostream>
 
@@ -75,7 +77,8 @@ extern "C" { // abc has been compiled with gcc
  */
 #include <sys/time.h>
 #include <sys/resource.h>
-#include <unistd.h>
+// also for getpid:
+#include <unistd.h> 
 #include <time.h>
 
 static aiger * model = 0;
@@ -115,8 +118,8 @@ static int nstates = 0, szstates = 0, * join = 0;
 static char * bad = 0, * justice = 0;
 
 static int verbose = 0, move = 0, quiet = 0, nowitness = 0, lazyEncode = 0,useShift=0, // options
-  useRiss = 0, useCP3 = 0, denseVariables = 0, dontFreezeInput = 0, dontFreezeBads = 0, printTime=0, checkInitialBad = 0;
-static char* useABC = 0;
+  useRiss = 0, useCP3 = 0, denseVariables = 0, dontFreezeInput = 0, dontFreezeBads = 0, printTime=0, checkInitialBad = 0, abcDir = 0;
+static std::string useABC = "";
 static std::string abcCommand = "";
 static int nvars = 0;
 
@@ -507,10 +510,10 @@ static const char * usage =
 "-bmc_z     more reasoning before search\n"
 "-bmc_t     print time needed per bound\n"
 "-bmc_ml X  specify memory limit in MB\n"
-
 #ifdef USE_ABC
 "-bmc_a    use the ABC tool to simplify the circuit before solving, next parameter has to specify a tmp file location!\n"
-"-bmc_ac   give a special command(-sequence, separated by :) to ABC. default is \"dc2\" other possible: dc2, drwsat\n"
+"-bmc_ad   use the ABC tool to simplify the circuit before solving, next parameter has to specify a tmp directory location!\n"
+"-bmc_ac   give a special command(-sequence, separated by :) to ABC. default is dc2 other possible: dc2, drwsat, scorr\n"
 #endif
 "\n\n the model name should be given first, then, the max. bound should be given\n"
 " other options might be given as well. These options are forwarded to the SAT solver\n"
@@ -596,8 +599,13 @@ int main (int argc, char ** argv) {
 #ifdef USE_ABC
     else if (!strcmp (argv[i], "-bmc_a")) {
       ++i;
-      if( i < argc ) useABC = argv[i];
+      if( i < argc ) { useABC = std::string(argv[i]); abcDir = 0; }
       else wrn("not enough parameters to set the tmp file for ABC");
+    }
+    else if (!strcmp (argv[i], "-bmc_ad")) {
+      ++i;
+      if( i < argc ) { useABC = std::string(argv[i]); abcDir = 1; }
+      else wrn("not enough parameters to set the tmp directory for ABC");
     }
     else if (!strcmp (argv[i], "-bmc_ac")) {
       ++i;
@@ -627,17 +635,47 @@ int main (int argc, char ** argv) {
   // init solvers, is necessary with command line parameters
   init (argc,argv);
   
+  int initialLatchNum = 0; // number of latches in initial file. If ABC changes the number of latches, this number is important to print the right witness!
+  
 /**
  *  use ABC for simplification
  */
-#define USE_ABC
+// #define USE_ABC
 #ifdef USE_ABC
   // simplification with ABC?
-  if( useABC ) { // no 0 pointer -> points to the name of the file to write
+  if( useABC.size() > 0 ) { // there is a file or location
     MethodTimer aigTimer ( &ppAigTime );
     if(!name) { // reject reading from stdin
       wrn("will not read from stdin, since ABC ");  
       exit(30);std::string s;
+    }
+    // setup the command line for abc
+    if( abcCommand.size() == 0 ) {
+      abcCommand = "\"dc2\"";
+      msg(1,"set abc command to default command %s", abcCommand.c_str() );
+    }
+    // if the scorr command is part of the command chain, the initial number of latches has to be set
+    if( abcCommand.find("scorr") != std::string::npos ) {
+      // parse the aig file and read the number of latches!
+      std::ifstream myfile;
+      myfile.open (name);
+      if(!myfile) { wrn("error in opening file %s",name); exit (30); }
+      int fm,fi,fl,fo,fa;
+      std::string sstr;
+      while( sstr != "aag" && sstr != "aig") {
+	if(!myfile) break; // reached end of file?
+	myfile >> sstr;
+	std::cerr << "parsed " << sstr << std::endl;
+      }
+      if( myfile ) {
+	myfile >> fm >> fi >> fl >> fo >> fa;
+	//std::cerr << " parsed MILOA: " << fm << ", " << fi << ", " << fl << ", " << fo << ", " << fa << std::endl;
+	initialLatchNum = fl;
+	msg(1,"set number of initial latches to %d",fl);
+      } else {
+	wrn("could not extract the number of latches from %s",name);
+      }
+      myfile.close();
     }
     // start abc
     void * pAbc;
@@ -649,10 +687,7 @@ int main (int argc, char ** argv) {
         wrn( "ABC cannot execute command \"%s\".\n", abcmd.c_str() );
         exit(30);
     }
-    if( abcCommand.size() == 0 ) {
-      abcCommand = "\"dc2\"";
-      msg(1,"set abc command to default command %s", abcCommand.c_str() );
-    }
+
     while ( abcCommand.size() > 0 ) {
       std::string thisCommand;
       if( abcCommand.find(':') != std::string::npos ) {
@@ -669,6 +704,14 @@ int main (int argc, char ** argv) {
 	  exit(30);
       }
     }
+    // writing to a directory -> create file name based on PID of the current process!
+    if( abcDir == 1 ) {
+      std::stringstream filename;
+      filename << useABC << "tmp-" << getpid() << ".aig";
+      useABC = filename.str();
+      msg(1,"write temporary file %s", useABC.c_str());
+    }
+    
     abcmd = std::string("write ") + std::string(useABC);
     if ( Cmd_CommandExecute( pAbc, abcmd.c_str() ) )
     {
@@ -676,8 +719,8 @@ int main (int argc, char ** argv) {
         exit(30);
     }
     Abc_Stop(); // turn off ABC
-    msg(1,"change the name of the aiger file to read from %s to %s",name,useABC);
-    name = useABC;
+    msg(1,"change the name of the aiger file to read from %s to %s",name,useABC.c_str());
+    name = useABC.c_str(); // do not change useABC after this point any more!
   }
   msg(0,"aig preprocessing tool %lf seconds", ppAigTime);
 #endif
@@ -686,6 +729,17 @@ int main (int argc, char ** argv) {
   if (name) err = aiger_open_and_read_from_file (model, name);
   else err = aiger_read_from_file (model, stdin), name = "<stdin>";
   if (err) die ("parse error reading '%s': %s", name, err);
+  
+#ifdef USE_ABC
+  // delete the temporary file as soon as its not needed any more!
+  if( abcDir == 1 ) {
+    if( 0 != remove( useABC.c_str() ) ) { // delete the temporary file
+      wrn("could not remove temporary file from temporary directory: %s", useABC.c_str() );
+    }
+  }
+#endif
+  
+  
   msg (1, "MILOA = %u %u %u %u %u",
        model->maxvar,
        model->num_inputs,
@@ -1086,8 +1140,13 @@ finishedSolving:;
       nl (); // print new line, to give the initialization of the latches
       
       /// nothing special to do with latches, because those are always frozen, and thus never touched
-      for (i = 0; i < model->num_latches; i++)
+      for (i = 0; i < model->num_latches; i++){
+	if( initialLatchNum > 0 &&  deref(shiftFormula.latch[i]) != -1 ) wrn("latch[%d],var %d is not initialized to 0, but scorr has been used during simplifying the circuit",i,shiftFormula.latch[i]);
 	print ( shiftFormula.latch[i] ); // this function prints 0 or 1 depending on the current assignment of this variable!
+      }
+      for( ; i < initialLatchNum; ++ i ) {
+	printV(-1); // ABC assumes all latches to be initialized to 0!
+      }
       nl (); // print new line to give the sequence of inputs
       
       if( dontFreezeInput && verbose > 3 ) {
@@ -1146,8 +1205,15 @@ finishedSolving:;
       assert (found);
       assert (model->num_bad || model->num_justice);
       nl ();
-      for (i = 0; i < model->num_latches; i++)
+      for (i = 0; i < model->num_latches; i++){
 	print (states[0].latches[i].lit);
+      	if( initialLatchNum > 0 &&  deref(states[0].latches[i].lit) != -1 ) wrn("latch[%d],var %d is not initialized to 0, but scorr has been used during simplifying the circuit",i,shiftFormula.latch[i]);
+      }
+      for( ; i < initialLatchNum; ++ i ) { // take care of missing latches
+	printV(-1); // ABC assumes all latches to be initialized to 0!
+      }
+      nl ();
+
       
       nl ();
       for (i = 0; i <= k; i++) {
