@@ -97,6 +97,9 @@ cotar: clean
 qtar: clean
 	tar czvf qprocessor3.tar.gz core LICENSE Makefile mtl  README  simp  utils coprocessor-src qprocessor-src qp.sh 
 	
+bmctar: clean toolclean
+	tar czvf riss-AbmC.tar.gz core LICENSE  Makefile mtl  README  simp  utils coprocessor-src aiger-src abc picosat
+	
 # clean up after solving
 clean:
 	@cd core; make clean CPDEPEND="" MROOT=..;
@@ -107,3 +110,9 @@ clean:
 	@rm -f *~ */*~
 	@rm -rf doc/html
 	@echo Done
+	
+# clean up aiger and abc as well!
+toolclean:
+	@cd aiger-src; make clean;
+	@cd abc; make clean;
+

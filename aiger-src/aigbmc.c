@@ -81,6 +81,24 @@ extern "C" { // abc has been compiled with gcc
 #include <unistd.h> 
 #include <time.h>
 
+/**
+ * for parallel solving
+ */
+#include <pthread.h>
+
+struct SharedData {
+  Minisat::IncSolver* riss;     // handle to solver, to interrupt it if necessary
+  Minisat::IncSolver* guesser;  // handle to solver, to interrupt it if necessary
+  int upperBound; // here we had the lowest known SAT result
+  int lowerBound; // here we had the highest known UNSAT result
+  int rissFrame, guesserFrame; // frames where the two solvers work on at the moment
+  int rissSolved, guesserSolved; // indicate who has the solution ready
+  pthread_t guesserThread; // thread handle to guesser thread
+  
+  Minisat::vec< Minisat::lbool >* upperBoundModel; // if an upper bound has been found by the guesser, store the model here, to be able to recover
+  SharedData() : riss(0), guesser(0),upperBound(-1),lowerBound(-1),rissFrame(0),guesserFrame(0),rissSolved(0),guesserSolved(0),upperBoundModel(0) {}
+};
+
 static aiger * model = 0;
 static const char * name = 0;
 static PicoSAT * picosat = 0;
@@ -117,8 +135,10 @@ static State * states = 0;
 static int nstates = 0, szstates = 0, * join = 0;
 static char * bad = 0, * justice = 0;
 
+static int maxk=0; // upper bound for search
 static int verbose = 0, move = 0, quiet = 0, nowitness = 0, lazyEncode = 0,useShift=0, // options
   useRiss = 0, useCP3 = 0, denseVariables = 0, dontFreezeInput = 0, dontFreezeBads = 0, printTime=0, checkInitialBad = 0, abcDir = 0;
+static int wildGuesser = 0, wildGuessStart = 10, wildGuessInc = 2, wildGuessIncInc = 1; // guess sequence: 10, 30, 60, ...
 static std::string useABC = "";
 static std::string abcCommand = "";
 static int nvars = 0;
@@ -510,6 +530,10 @@ static const char * usage =
 "-bmc_z     more reasoning before search\n"
 "-bmc_t     print time needed per bound\n"
 "-bmc_ml X  specify memory limit in MB\n"
+"-bmc_w     use wild guesser thread (implies using riss, lazy and shifting)\n"
+"-bmc_ws  X initial guess frame (implies using guesser)\n"
+"-bmc_wi  X initial guess increase (implies using guesser)\n"
+"-bmc_wii X inc/dec of guess distance (implies using guesser)\n"
 #ifdef USE_ABC
 "-bmc_a    use the ABC tool to simplify the circuit before solving, next parameter has to specify a tmp file location!\n"
 "-bmc_ad   use the ABC tool to simplify the circuit before solving, next parameter has to specify a tmp directory location!\n"
@@ -538,8 +562,158 @@ static void printV (int val) {
 
 static void nl () { putc ('\n', stdout); }
 
+/** perform wild guessing according to the given parameter*/
+void* wildGuessMethod (void* threadData) {
+  pthread_attr_t attr;       // create a joinable thread
+  pthread_attr_init (&attr);
+  pthread_attr_setdetachstate (&attr, PTHREAD_CREATE_JOINABLE);
+
+  SharedData& sharedData = * (SharedData*) threadData;
+
+  int encodeFromHereFrame = 0; // so far nothing is in the solver (neede for reset after UNSAT)
+  int currentFrame = sharedData.lowerBound > wildGuessStart ? sharedData.lowerBound : wildGuessStart;
+  if( currentFrame < 1 ) currentFrame = 1; // 0 is proven by the other thread already!
+  
+  assert( lazyEncode && "method does work only with lazy encoding" );
+  
+  Minisat::IncSolver* guessSolver = sharedData.guesser;
+  int lit = shiftFormula.currentAssume;
+  std::vector<int> thisCheckClause; // collect all assumption literals that are not known yet as clause
+  while( true ) {
+    if( currentFrame > maxk ) {
+      if ( sharedData.lowerBound < maxk ) currentFrame = maxk;
+      else break; // lower bound is maxk -> done solving
+    }
+
+    thisCheckClause.clear();
+    const int tmpLB = sharedData.lowerBound;
+    int thisRoundLowerBound = tmpLB < 0 ? 0 : tmpLB; // needed to calculate the real lower bound for later!
+    // give formula to solver
+    if( encodeFromHereFrame == 0 ) { // after full reset, also pass other things to solver!
+      guessSolver->clearSolver(); // reset "everything" inside the solver!
+      guessSolver->add(1);guessSolver->add(0); // since we do not need to do anything else with the formula, we can add the unit clause immediately
+      for( int i = 0 ; i < shiftFormula.formula.size(); ++i ) guessSolver->add( shiftFormula.formula[i] );
+      for( int i = 0 ; i < shiftFormula.todoEqualities.size(); i+=2 ){
+	guessSolver->add(shiftFormula.todoEqualities[i]); guessSolver->add(-shiftFormula.todoEqualities[i+1]);guessSolver->add(0);
+	guessSolver->add(-shiftFormula.todoEqualities[i]); guessSolver->add(shiftFormula.todoEqualities[i+1]);guessSolver->add(0);
+      }
+      guessSolver->add(-lit); guessSolver->add(0); // add unit clause! // TODO has to be enabled!
+    }
+    // encode all following frames!
+    const int shiftDist = shiftFormula.afterPPmaxVar - 1;
+    for( int k = encodeFromHereFrame == 0 ? 1 : encodeFromHereFrame; k <= currentFrame; ++ k )
+    {
+      const int thisShift = k * shiftDist;
+      const int lastShift = (k-1) * shiftDist;
+	// new assume literal - if we want to solve a higher bound, we can add this unit immediately
+        lit = shiftFormula.currentAssume + thisShift;
+	if( k != currentFrame ) {
+	  if( k <= thisRoundLowerBound ) {
+	    guessSolver->add(-lit);guessSolver->add(0); // add the negated unit, if its known already // TODO has to be enabled!
+	  } else {
+	    thisCheckClause.push_back( lit ); // assume this level could be violated
+	  }
+	}
+	
+	// shift the formula!
+	int thisClauses = 0;
+	for( int i = 0 ; i < shiftFormula.formula.size(); ++ i ) {
+	  const int& cl = shiftFormula.formula[i];
+	  if( cl >= -1 && cl <= 1 ) {
+	    guessSolver->add (cl); // handle constant units, and the end of clause symbol
+	    if( cl == 0 ) thisClauses ++;
+	  }
+	  else guessSolver->add( varadd(cl, thisShift));
+	}
+	// ensure that latches behave correctly in the next iteration
+	for( int i = 0 ; i < shiftFormula.latch.size(); ++i ) {
+	  const int lhs = ( shiftFormula.latch[i] == 1 || shiftFormula.latch[i] == -1 ) ? shiftFormula.latch[i] : varadd(shiftFormula.latch[i], thisShift);
+	  const int rhs = ( shiftFormula.latchNext[i] == 1 || shiftFormula.latchNext[i] == -1 ) ? shiftFormula.latchNext[i] : varadd(shiftFormula.latchNext[i], lastShift);
+	  guessSolver->add(-lhs);guessSolver->add(rhs);guessSolver->add(0);
+	  guessSolver->add(lhs);guessSolver->add(-rhs);guessSolver->add(0);
+	}
+      if ( k == currentFrame ) // here we are to solve the current formula, this is the last iteration! have to set "encodeFromHereFrame"
+      {
+	thisCheckClause.push_back( lit );
+	bool foundBad = false; // indicate whether solving resulted in 10!
+	sharedData.guesserFrame = k; // my position
+	// if lower bound is already above k, skip this iteration!
+	if( sharedData.guesserFrame < sharedData.lowerBound ) { // other solver has prooven this lowerbound already!
+	  msg(1,"WG: solving frame %d was already done - set unsat automatically", sharedData.guesserFrame );
+	  foundBad = false;
+	  encodeFromHereFrame = k; // can keep everything, since no assumption clause has been added
+	  continue;
+	} else {
+	  msg(1,"WG: solving frame %d with assumption clause of size %d", sharedData.guesserFrame, thisCheckClause.size() );
+	  assert( thisCheckClause.size() > 0 && "size of the check clause should be larger than 0, otherwise, we add the empty clause immediately!" );
+	  for( int i = 0 ; i < thisCheckClause.size() ; ++i ){
+	    guessSolver->add( thisCheckClause[i] );
+	  }
+	  guessSolver->add(0);
+	  encodeFromHereFrame = 0; // for next iteration
+	  const int retCode = guessSolver->sat ();
+	  foundBad = ( retCode == 10); // otherwise, we need to test the current bound!
+	  if( retCode != 20 && retCode != 10 ) break; // interrupt might have been called
+	}
+	if( foundBad ) {
+	  // one of the bad outputs can be set to true -> find it and set it as upper bound!
+	  // update the other solver!
+	  if( sharedData.lowerBound + 1 == k ) { // this is the result, since k-1 has been shown to be unsat already!
+	    sharedData.guesserSolved = 1;
+	    sharedData.upperBound = k; // lowerst SAT result
+	    msg(1,"WG: found solution at frame %d %d %d", sharedData.guesserFrame,sharedData.upperBound,k);
+	    sharedData.riss->interrupt();
+	    break;
+	  } else { // found upper bound, now get rid of the formula and perform binary search backwards!
+	    bool foundSatLit = false;
+	    for( int i = 0; i < thisCheckClause.size(); ++ i ) {
+	      if( guessSolver->deref(thisCheckClause[i]) == 1 ) {
+		msg(1,"literal for output at level %d is satisfied", thisRoundLowerBound);
+		sharedData.upperBound = thisRoundLowerBound + i + 1; // use the first sat literal as upper bound!
+		foundSatLit = true;
+		break;
+	      }
+	    }
+	    assert(foundSatLit && "one of the literals in the clause has to be satisfied!" );
+	    if( sharedData.upperBoundModel == 0 ) sharedData.upperBoundModel = new Minisat::vec<Minisat::lbool>();
+	    guessSolver->exportModel( sharedData.upperBoundModel ); // export the model for this level, so that it can be used later
+	    thisRoundLowerBound = thisRoundLowerBound < sharedData.lowerBound ? sharedData.lowerBound : thisRoundLowerBound; // update, if the other thread did something there!
+	    currentFrame = (thisRoundLowerBound + sharedData.upperBound) / 2; // binary search - floor the value (no +1)
+	    msg(1,"WG: found SAT result at frame %d which revealed new upper bound %d, try next %d, current lower bound", sharedData.guesserFrame,sharedData.upperBound, currentFrame,sharedData.lowerBound);
+	    assert( currentFrame < sharedData.upperBound && "do not solver same formula twice!" );
+	  }
+	  break;
+	} else {
+	  if( sharedData.lowerBound < k ) sharedData.lowerBound = k; // update the lower bound!
+	  if( sharedData.upperBound == -1 ) {
+	    currentFrame += wildGuessInc; // increase to next level
+	    wildGuessInc += wildGuessIncInc; // increase the increase value!
+	  } else {
+	    if( sharedData.guesserFrame + 1 == sharedData.upperBound ) { // act as if we would have solved this level right now
+	      guessSolver->importModel( sharedData.upperBoundModel ); // export the model for this level, so that it can be used later  
+	      sharedData.guesserFrame = k + 1; // set the according frame
+	      sharedData.guesserSolved = 1;
+	      sharedData.riss->interrupt();
+	      break;
+	    }
+	    currentFrame = (sharedData.lowerBound + sharedData.upperBound) / 2;
+	    assert( currentFrame < sharedData.upperBound && "do not solver same formula twice!" );
+	  }
+	  encodeFromHereFrame = 0; // always need to reset after sat call, because there is the assume clause
+	  msg(1,"WG: found new lower bound %d, try next: %d, current upper bound %d", sharedData.guesserFrame, currentFrame, sharedData.upperBound);
+	}
+	break; // need to reencoded the formula, before it can be solved again
+      } 
+    } // end of encoding for loop
+    if( sharedData.guesserSolved || sharedData.rissSolved ) break; // drop out of the thread here
+    pthread_testcancel(); // check whether we should be aborted
+  }
+  return 0;
+}
+
+
 int main (int argc, char ** argv) {
-  int i=0, j=0, k=0, maxk=0, lit=0, found=0;
+  int i=0, j=0, k=0, lit=0, found=0;
   
   bool noProperties = false, checkProperties = false; // are there any properties inside the circuit?
   
@@ -594,6 +768,21 @@ int main (int argc, char ** argv) {
 	} else {
 	  wrn("no memory limit specified");
 	}
+    }
+    else if (!strcmp (argv[i], "-bmc_w")) {
+      wildGuesser = 1; useRiss = 1; useShift = 1; lazyEncode = 1;
+    }
+    else if (!strcmp (argv[i], "-bmc_ws")) {
+      if( ++i < argc && isnum(argv[i]) ) wildGuessStart = atoi( argv[i] );
+      wildGuesser = 1; useRiss = 1; useShift = 1; lazyEncode = 1;
+    }
+    else if (!strcmp (argv[i], "-bmc_wi")) {
+      if( ++i < argc && isnum(argv[i]) ) wildGuessInc = atoi( argv[i] );
+      wildGuesser = 1; useRiss = 1; useShift = 1; lazyEncode = 1;
+    }
+    else if (!strcmp (argv[i], "-bmc_wii")) {
+      if( ++i < argc && isnum(argv[i]) ) wildGuessIncInc = atoi( argv[i] );
+      wildGuesser = 1; useRiss = 1; useShift = 1; lazyEncode = 1;
     }
     else if (!strcmp (argv[i], "-bmc_c")) checkProperties = true;
 #ifdef USE_ABC
@@ -665,13 +854,12 @@ int main (int argc, char ** argv) {
       while( sstr != "aag" && sstr != "aig") {
 	if(!myfile) break; // reached end of file?
 	myfile >> sstr;
-	std::cerr << "parsed " << sstr << std::endl;
       }
       if( myfile ) {
 	myfile >> fm >> fi >> fl >> fo >> fa;
 	//std::cerr << " parsed MILOA: " << fm << ", " << fi << ", " << fl << ", " << fo << ", " << fa << std::endl;
 	initialLatchNum = fl;
-	msg(1,"set number of initial latches to %d",fl);
+	msg(1,"set number of initial latches to %d - initial MILOA: %d %d %d %d %d",fl,fm,fi,fl,fo,fa);
       } else {
 	wrn("could not extract the number of latches from %s",name);
       }
@@ -691,8 +879,9 @@ int main (int argc, char ** argv) {
     while ( abcCommand.size() > 0 ) {
       std::string thisCommand;
       if( abcCommand.find(':') != std::string::npos ) {
-        thisCommand =  abcCommand.substr(abcCommand.find(":")+1); // extract first token
-        abcCommand.erase(abcCommand.find(":")); // remove token from the first position
+	int findP = abcCommand.find(":");
+        thisCommand =  abcCommand.substr(0,findP); // extract first token
+        abcCommand.erase(0,findP+1); // remove token from the first position
       } else {
 	thisCommand = abcCommand;
 	abcCommand = "";
@@ -707,7 +896,7 @@ int main (int argc, char ** argv) {
     // writing to a directory -> create file name based on PID of the current process!
     if( abcDir == 1 ) {
       std::stringstream filename;
-      filename << useABC << "tmp-" << getpid() << ".aig";
+      filename << useABC << ( useABC[useABC.size()-1] == '/' ? "tmp-" : "/tmp-") << getpid() << ".aig";
       useABC = filename.str();
       msg(1,"write temporary file %s", useABC.c_str());
     }
@@ -950,9 +1139,7 @@ int main (int argc, char ** argv) {
     reasonTime = cpuTime() - reasonTime; // stop timer
     msg(1,"needed %lf seconds for bad state reasoning",reasonTime );
   }
-  
-  
-  boundtimes[0] = cpuTime() - boundtimes[0]; // continue measuring the time for bound 0
+
   lit = shiftFormula.currentAssume; // literal might have changed!
   int shiftDist = shiftFormula.afterPPmaxVar - 1;  // shift depends on the variables that are actually in the formula that is used for solving
   
@@ -960,6 +1147,19 @@ int main (int argc, char ** argv) {
     for( int i = 0 ; i < shiftFormula.todoEqualities.size(); i+=2 )
       _eq( shiftFormula.todoEqualities[i], shiftFormula.todoEqualities[i+1], false );
   
+  SharedData sharedData;
+  if( wildGuesser ) {
+    // spin off extra thread, which performs guessing!
+    sharedData.riss = riss;
+    sharedData.guesser = new Minisat::IncSolver (new Minisat::Solver (riss->getConfig()), riss->getConfig()); // FIXME this causes a memory leak for sure! (cannot delete the solver)
+    pthread_create( & sharedData.guesserThread, 0, wildGuessMethod , &sharedData );
+  }
+  
+  // stay here for 10 seconds - to debug the other thread! TODO remove after debug!
+  usleep(5000000);
+  msg(1,"start solving at frame 0");
+  
+  boundtimes[0] = cpuTime() - boundtimes[0]; // continue measuring the time for bound 0    
   unit ( constantUnit );   // the literal 1 will always be mapped to true!! add only in the very first iteration!
   assume (lit);
   assert ( k == 0 && "the first iteration has to be done first!" );
@@ -985,13 +1185,20 @@ int main (int argc, char ** argv) {
   boundtimes[0] = cpuTime() - boundtimes[0]; // stop measuring the time for bound 0
   if( printTime ) msg(0,"solved bound %d in %lf seconds", 0, boundtimes[k]);
   if( foundBadStateFast ) {
+    sharedData.upperBound = 0; // lowerst SAT result
+    sharedData.rissSolved = 1; // we found the solution!
     goto finishedSolving;
   }
+  sharedData.lowerBound = 0;
   unit (-lit, false); // do not add this unit to the shift formula!
   
   msg (2, "re-encode model");
   if( !useShift ) { // old or new method?
     for (k = 1; k <= maxk; k++) {
+      if( sharedData.guesserSolved ) {
+	msg(1,"stop solving at frame %d because wg solved the formula", k);
+	break; // do not continue, if the guesser thread solved the problem!
+      }
       boundtimes.push_back(0);
       boundtimes[k] = cpuTime() - boundtimes[k]; // stop measuring the time for bound 0
       shiftFormula.clear(); /// carefully here, since one unit has been added already!
@@ -1015,17 +1222,30 @@ int main (int argc, char ** argv) {
 	  if( shiftFormula.formula[i] == 0 ) cerr << endl;
 	}
       }
-      bool foundBad = ( sat () == 10);
+      bool foundBad ; // indicate whether solving resulted in 10!
+      sharedData.rissFrame = k; // my position
+      // if lower bound is already above k, skip this iteration!
+      if( sharedData.rissFrame < sharedData.lowerBound ) { foundBad = false; riss->clearAssumptions(); }
+      else foundBad = ( sat () == 10); // otherwise, we need to test the current bound!
       boundtimes[k] = cpuTime() - boundtimes[k]; // stop measuring the time for bound 0
       if( printTime ) msg(0,"solved bound %d in %lf seconds", k, boundtimes[k]);
-      if( foundBad ) break;
+      if( foundBad ) {
+	sharedData.upperBound = k; // lowerst SAT result
+	sharedData.rissSolved = 1; // we found the solution!
+	break;
+      }
+      if( sharedData.lowerBound < k ) sharedData.lowerBound = k; // update the lower bound!
       unit (-lit); // add as unit, since it is ensured that it cannot be satisfied (previous call)
     }
   } else {
     for (k = 1; k <= maxk; k++) {
+      if( sharedData.guesserSolved ) {
+	msg(1,"stop solving at frame %d because wg solved the formula", k);
+	break; // do not continue, if the guesser thread solved the problem!
+      }
       boundtimes.push_back(0);
       boundtimes[k] = cpuTime() - boundtimes[k]; // stop measuring the time for bound 0
-      lit = encode ( false ); // TODO if printing the witness also works without the original structures, this line can be removed!
+      // lit = encode ( false ); // TODO if printing the witness also works without the original structures, this line can be removed!
 
       const int thisShift = k * shiftDist;
       const int lastShift = (k-1) * shiftDist;
@@ -1068,17 +1288,45 @@ int main (int argc, char ** argv) {
       lit = shiftFormula.currentAssume + thisShift;
       msg(3,"solve iteration %d with assumption literal %d and %d shifted clauses\n",k,lit,thisClauses);
       assume (lit);
-      bool foundBad = ( sat () == 10);
+      bool foundBad ; // indicate whether solving resulted in 10!
+      sharedData.rissFrame = k; // my position
+      // if lower bound is already above k, skip this iteration!
+      if( sharedData.rissFrame < sharedData.lowerBound ) { foundBad = false; riss->clearAssumptions(); }
+      else foundBad = ( sat () == 10); // otherwise, we need to test the current bound!
       boundtimes[k] = cpuTime() - boundtimes[k]; // stop measuring the time for bound 0
       if( printTime ) msg(0,"solved bound %d in %lf seconds", k, boundtimes[k]);
-      if( foundBad ) break;
+      if( foundBad ) {
+	sharedData.upperBound = k; // lowerst SAT result
+	sharedData.rissSolved = 1; // we found the solution!
+	break;
+      }
+      if( sharedData.lowerBound < k ) sharedData.lowerBound = k; // update the lower bound!
       unit (-lit,false); // add as unit, since it is ensured that it cannot be satisfied (previous call)
+      
     }
   }
   
   // jump here if a solution has been found!
 finishedSolving:;
   
+
+  if( wildGuesser ) {
+    if( sharedData.rissSolved && sharedData.guesser != 0 ) sharedData.guesser->interrupt();
+    void* status;
+    pthread_join( sharedData.guesserThread, &status); // wait for the other thread
+    
+    if( !sharedData.rissSolved ) {
+      assert( sharedData.guesserSolved && "one of the two solver has have solved the instance" );
+      Minisat::IncSolver* tmp = riss;
+      riss = sharedData.guesser; // if the other solver solved the instance, swap solvers!
+      sharedData.guesser = tmp;
+    }
+  }
+  if( sharedData.guesserSolved && !sharedData.rissSolved ) {
+    k = sharedData.guesserFrame; // set right bound
+    msg(1,"formula finally solved by results of wg");
+  }
+
   /**
    *  PRINT MODEL/WITNESS, if necessary
    */

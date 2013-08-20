@@ -45,6 +45,25 @@ public:
     if( solver != 0 ) { delete solver; solver = 0 ; } 
   }
   
+  /** interrupt the solver from its current work */
+  void interrupt() {
+    solver->interrupt(); 
+  }
+  
+  /** export the current model into an external one */
+  void exportModel( vec<lbool>* externModel ) {
+    externModel->clear();
+    for( int i = 0 ; i < solver->model.size(); ++ i )  
+      externModel->push( solver->model[i] );
+  }
+  
+  /** imports an external model and overwrites the internal one */
+  void importModel( vec<lbool>* externModel ) {
+    solver->model.clear();
+    for( int i = 0 ; i < externModel->size(); ++ i )  
+      solver->model.push( (*externModel)[i] );
+  }
+  
   /** add a literal to the solver, if lit == 0, end the clause and actually add it */
   void add (int lit) {
     if( lit != 0 ) currentClause.push( lit > 0 ? mkLit( lit-1, false ) : mkLit( -lit-1, true ) );
@@ -67,11 +86,17 @@ public:
     if( lit != 0 ) currentAssumptions.push( lit > 0 ? mkLit( lit-1, false ) : mkLit( -lit-1, true ) );
   }
 
+  /** reset the set assumptions again */
+  void clearAssumptions () {
+    currentAssumptions.clear();
+  }
+  
   /** solve the current formula under the current set of assignments 
    * Note: will clear the assumption vector after the call
    * @param limit gives the number of conflicts before the call returns (-1 = infinite conflicts )
    */
   int sat (int limit = -1) {
+    solver->clearInterrupt();
     if (limit != -1 ) solver->setConfBudget( limit ); // enable budget
     lbool ret = solver->solveLimited( currentAssumptions );
     if( limit != -1 ) solver->budgetOff(); // disable budget again

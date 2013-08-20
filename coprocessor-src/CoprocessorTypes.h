@@ -362,7 +362,8 @@ public:
 };
 
 /** class representing the binary implication graph of the formula */
-class BIG {
+class BIG 
+{
   // TODO implement a weak "implies" check based on the implication graph sampling!
   Lit* storage;
   int* sizes;
@@ -424,7 +425,8 @@ public:
 };
 
 /** Comperator for Variable Heap of BVE */
-struct VarOrderBVEHeapLt {
+struct VarOrderBVEHeapLt 
+{
         CoprocessorData & data;
         const int heapOption;
         bool operator () (Var x, Var y) const 
@@ -485,7 +487,8 @@ struct VarOrderBVEHeapLt {
         VarOrderBVEHeapLt(CoprocessorData & _data, int _heapOption) : data(_data), heapOption(_heapOption) { }
     };
     
-    struct LitOrderHeapLt {
+struct LitOrderHeapLt 
+{
         CoprocessorData & data;
         const int heapOption;
         bool operator () (int ix, int iy) const 

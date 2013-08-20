@@ -66,7 +66,7 @@ aigand: aiger.o aigand.o makefile
 	$(CC) $(CFLAGS) -o $@ aigand.o aiger.o
 
 aigbmc: aiger.c aigbmc.c makefile ../picosat/picosat.o ../libriss3g.a
-	g++ $(CFLAGS) -o $@ -I.. aigbmc.c aiger.c ../picosat/picosat.o ../libriss3g.a -pthread -lrt -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS -fpermissive $(ARGS)
+	g++ $(CFLAGS) -o $@ -I.. aigbmc.c aiger.c ../picosat/picosat.o ../libriss3g.a -pthread -lrt -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS -fpermissive  $(ARGS)
 
 aigbmc-abc: aiger.c aigbmc.c makefile ../picosat/picosat.o ../libriss3g.a libabc.a
 	g++ $(CFLAGS) -o $@ -I.. aigbmc.c aiger.c ../picosat/picosat.o ../libriss3g.a libabc.a -lreadline -ldl -pthread -lrt -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS -fpermissive -D USE_ABC  $(ARGS)

@@ -127,6 +127,15 @@ BoolOption opt_rupProofOnly;
  
  BoolOption opt_usePPpp;
  BoolOption opt_usePPip;
+ 
+//
+// for incremental solving
+//
+ IntOption resetActEvery;
+ IntOption resetPolEvery;
+ IntOption intenseCleaningEvery;
+ IntOption incKeepSize;
+ IntOption incKeepLBD;
 };
  
 }

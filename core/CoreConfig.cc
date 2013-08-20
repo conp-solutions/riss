@@ -108,7 +108,15 @@ CoreConfig::CoreConfig() // add new options here!
  opt_verb ("CORE", "solververb",   "Verbosity level (0=silent, 1=some, 2=more).", 0, IntRange(0, 2)),
  
  opt_usePPpp ("CORE", "usePP", "use preprocessor for preprocessing", true),
- opt_usePPip ("CORE", "useIP", "use preprocessor for inprocessing", true)
+ opt_usePPip ("CORE", "useIP", "use preprocessor for inprocessing", true),
+//
+// for incremental solving
+//
+ resetActEvery        ("INCREMENTAL", "incResAct", "when incrementally called, reset activity every X calls (0=off)", 0, IntRange(0, 100) ),
+ resetPolEvery        ("INCREMENTAL", "incResPol", "when incrementally called, reset polarities every X calls (0=off)", 0, IntRange(0, 100) ),
+ intenseCleaningEvery ("INCREMENTAL", "incClean",  "when incrementally called, extra clean learnt data base every X calls (0=off)", 0, IntRange(0, 100) ),
+ incKeepSize          ("INCREMENTAL", "incClSize", "keep size for extra cleaning (any higher is dropped)", 2, IntRange(1, INT32_MAX) ),
+ incKeepLBD           ("INCREMENTAL", "incClLBD",  "keep lbd for extra cleaning (any higher is dropped)", 2, IntRange(1, INT32_MAX) )
 {}
 
 void CoreConfig::parseOptions(int& argc, char** argv, bool strict)

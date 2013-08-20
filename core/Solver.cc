@@ -1726,32 +1726,43 @@ lbool Solver::solve_()
     sumLBD = 0;
     
     solves++;
+    bool changedActivities = false; // indicate whether the decision heap has to be rebuild
     
     // initialize activities and polarities
     if( config.opt_init_act != 0 || config.opt_init_pol != 0 ) {
-      double jw [nVars()]; int32_t moms[nVars()];
-      for( int i = 0 ; i < clauses.size(); ++ i ) {
-	const Clause& c = ca[clauses[i]];
-	const double cs = 1 / ( pow(2.0, c.size()) );
-	for( int j = 0 ; j < c.size(); ++ j ) {
-	  jw[ var(c[j]) ] = (sign(c[j]) ? jw[ var(c[j]) ]  - cs : jw[ var(c[j]) ] + cs );
-	  moms[ var(c[j]) ] = (sign(c[j]) ? moms[ var(c[j]) ]  - 1 : moms[ var(c[j]) ] + 1 );
+      if( solves == 1
+	|| ( config.resetActEvery != 0 && solves % config.resetActEvery == 0 ) 
+	|| ( config.resetPolEvery != 0 && solves % config.resetPolEvery == 0 )
+      ) {
+	double jw [nVars()]; int32_t moms[nVars()];
+	for( int i = 0 ; i < clauses.size(); ++ i ) {
+	  const Clause& c = ca[clauses[i]];
+	  const double cs = 1 / ( pow(2.0, c.size()) );
+	  for( int j = 0 ; j < c.size(); ++ j ) {
+	    jw[ var(c[j]) ] = (sign(c[j]) ? jw[ var(c[j]) ]  - cs : jw[ var(c[j]) ] + cs );
+	    moms[ var(c[j]) ] = (sign(c[j]) ? moms[ var(c[j]) ]  - 1 : moms[ var(c[j]) ] + 1 );
+	  }
 	}
-      }
-      // set initialization based on calculated values
-      for( Var v = 0 ; v < nVars(); ++ v ) {
-	if( config.opt_init_act == 1 ) activity[v] = v;
-	else if( config.opt_init_act == 2 ) activity[v] = pow(1.0 / config.opt_var_decay, 2*v / nVars() );
-	else if( config.opt_init_act == 3 ) activity[nVars() - v - 1] = v;
-	else if( config.opt_init_act == 4 ) activity[nVars() - v - 1] = pow(1.0 / config.opt_var_decay, 2*v / nVars() );
-	else if( config.opt_init_act == 5 ) activity[v] = drand(random_seed);
-	else if( config.opt_init_act == 6 ) activity[v] = jw[v] > 0 ? jw[v] : -jw[v];
-	
-	if( config.opt_init_pol == 1 ) polarity[v] = jw[v] > 0 ? 0 : 1;
-	else if( config.opt_init_pol == 2 ) polarity[v] = jw[v] > 0 ? 1 : 0;
-	else if( config.opt_init_pol == 3 ) polarity[v] = moms[v] > 0 ? 1 : 0;
-	else if( config.opt_init_pol == 4 ) polarity[v] = moms[v] > 0 ? 0 : 1;
-	else if( config.opt_init_pol == 5 ) polarity[v] = irand(random_seed,100) > 50 ? 1 : 0;
+	// set initialization based on calculated values
+	for( Var v = 0 ; v < nVars(); ++ v ) {
+	  if( solves == 1 || ( config.resetActEvery != 0 && solves % config.resetActEvery == 0 )) {
+	    if( config.opt_init_act == 1 ) activity[v] = v;
+	    else if( config.opt_init_act == 2 ) activity[v] = pow(1.0 / config.opt_var_decay, 2*v / nVars() );
+	    else if( config.opt_init_act == 3 ) activity[nVars() - v - 1] = v;
+	    else if( config.opt_init_act == 4 ) activity[nVars() - v - 1] = pow(1.0 / config.opt_var_decay, 2*v / nVars() );
+	    else if( config.opt_init_act == 5 ) activity[v] = drand(random_seed);
+	    else if( config.opt_init_act == 6 ) activity[v] = jw[v] > 0 ? jw[v] : -jw[v];
+	    changedActivities = true;
+	  }
+	  
+	  if( solves == 1 || ( config.resetPolEvery != 0 && solves % config.resetPolEvery == 0 ) ) {
+	    if( config.opt_init_pol == 1 ) polarity[v] = jw[v] > 0 ? 0 : 1;
+	    else if( config.opt_init_pol == 2 ) polarity[v] = jw[v] > 0 ? 1 : 0;
+	    else if( config.opt_init_pol == 3 ) polarity[v] = moms[v] > 0 ? 1 : 0;
+	    else if( config.opt_init_pol == 4 ) polarity[v] = moms[v] > 0 ? 0 : 1;
+	    else if( config.opt_init_pol == 5 ) polarity[v] = irand(random_seed,100) > 50 ? 1 : 0;
+	  }
+	}
       }
     }
     
@@ -1779,7 +1790,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
     }
     
     // parse for variable polarities from file!
-    if( config.polFile ) { // read polarities from file, initialize phase polarities with this value!
+    if( solves == 1 && config.polFile ) { // read polarities from file, initialize phase polarities with this value!
       string filename = string(config.polFile);
       Coprocessor::VarFileParser vfp( filename );
       vector<int> polLits;
@@ -1796,7 +1807,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
     
     
     // parse for activities from file!
-    if( config.actFile ) { // set initial activities
+    if( solves == 1 && config.actFile ) { // set initial activities
       string filename = string(config.actFile);
       Coprocessor::VarFileParser vfp( filename );
       vector<int> actVars;
@@ -1812,9 +1823,23 @@ printf("c ==================================[ Search Statistics (every %6d confl
 	thisValue = ( (config.opt_act == 0 || config.opt_act == 2 )? thisValue - config.pot_actDec : thisValue / config.pot_actDec );
       }
       cerr << "c adopted activity of " << actVars.size() << " variables" << endl;
-      rebuildOrderHeap();
+      changedActivities = true;
     }
     
+    if( changedActivities ) rebuildOrderHeap();
+    
+    if( config.intenseCleaningEvery != 0 && solves % config.intenseCleaningEvery == 0 ) { // clean the learnt clause data base intensively
+      int i = 0,j = 0;
+      for( ; i < learnts.size(); ++ i ) {
+	Clause& c = ca[ learnts[i] ];
+	if ( c.size() > config.incKeepSize || c.lbd() > config.incKeepLBD && !locked(c) ) { // remove clauses with too large size or lbd
+	  removeClause(learnts[i]);
+	} else {
+	  learnts[j++] = learnts[i]; // move clause forward! 
+	}
+      }
+      learnts.shrink(i - j);
+    }
 
     if( status == l_Undef ) {
 	  // restart, triggered by the solver
