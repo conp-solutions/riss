@@ -1728,6 +1728,17 @@ lbool Solver::solve_()
     solves++;
     bool changedActivities = false; // indicate whether the decision heap has to be rebuild
     
+    // reset the counters that guide the search (and stats)
+    if( config.opt_reset_counters != 0 && solves % config.opt_reset_counters == 0 ) {
+      nbRemovedClauses =0; nbReducedClauses = 0; 
+      nbDL2 = 0; nbBin = 0; nbUn = 0; nbReduceDB = 0;
+      starts = 0; decisions = 0; rnd_decisions = 0;
+      propagations = 0; conflicts = 0; nbstopsrestarts = 0;
+      nbstopsrestartssame = 0; lastblockatrestart = 0;
+      las=0;failedLAs=0;maxBound=0; maxLaNumber=config.opt_laBound;
+      topLevelsSinceLastLa=0; untilLa=config.opt_laEvery;
+    }
+    
     // initialize activities and polarities
     if( config.opt_init_act != 0 || config.opt_init_pol != 0 ) {
       if( solves == 1

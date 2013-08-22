@@ -667,12 +667,12 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
   }
   
   // TODO: remove clustered gates, if they appear for multiple variables!
-  
+  /*
   cerr << "c ===== START SCANNING ======= " << endl;
-  
   for( Var v = 0 ; v < data.nVars(); ++ v ) {
      cerr << "c var " << v+1 << " role: " << "("<< (int)bitType[v] << ")" << endl;
   }
+  */
   
   vector< Var > inputVariables;
   deque< int > queue;
@@ -680,7 +680,7 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
   for( Var v = 0 ; v < data.nVars(); ++ v ) {
     if( 0 == bitType[v] ) {
       if( varTable[v].size() == 0 ) continue; // use only if it helps enqueuing gates!
-      cerr << "c use for initial scanning: " << v+1 << " with " << ((int)bitType[v]) << endl; 
+      //cerr << "c use for initial scanning: " << v+1 << " with " << ((int)bitType[v]) << endl; 
       inputVariables.push_back(v);
       bitType[v] = (bitType[v] | 4); // stamp
       // todo: stamp variable?!
@@ -690,7 +690,7 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
     if( (bitType[v] & 5) == 0  ) { // not yet stamped, and no output
       inputVariables.push_back(v);
       if( varTable[v].size() == 0 ) continue; // use only if it helps enqueuing gates!
-      cerr << "c use for initial clustered scanning: " << v+1 << " with " << ((int)bitType[v]) << endl; 
+      //cerr << "c use for initial clustered scanning: " << v+1 << " with " << ((int)bitType[v]) << endl; 
       bitType[v] = (bitType[v] | 4); // stamp
       // todo: stamp variable?!
     }
@@ -704,7 +704,7 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
       if( !g.isInQueue() ) 
         { queue.push_back( varTable[v][j] ); 
           g.putInQueue();
-	  cerr << "c put gate into queue: ";
+	  //cerr << "c put gate into queue: ";
 	  g.print(cerr);
 	  // mark all inputs for clustered gates!
 	  if( g.getType() == Circuit::Gate::XOR ) {
@@ -732,7 +732,7 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
       if(  g.getType() == Circuit::Gate::XOR || g.getType() == Circuit::Gate::ExO || g.getType() == Circuit::Gate::FA_SUM ) 
         { queue.push_back( i ); 
           g.putInQueue();
-	  cerr << "c put gate into queue: ";
+	  //cerr << "c put gate into queue: ";
 	  g.print(cerr);
 	  if( g.getType() == Circuit::Gate::XOR ) {
 	    bitType[var(g.a())] = (bitType[var(g.a())] | 4); // stamp
@@ -759,7 +759,7 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
       Circuit::Gate& g = gates[ i ]; 
       queue.push_back( i ); 
           g.putInQueue();
-	  cerr << "c put gate into queue: ";
+	  //cerr << "c put gate into queue: ";
 	  g.print(cerr);
     }
     for( Var v = 0 ; v < data.nVars(); ++ v ) {
@@ -775,7 +775,7 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
     queue.pop_front();
     // check number of being touched, do not process a gate too often!
     if( g.touch() > 16 ) {
-      cerr << "c looked at the gate 16 times: ";
+      //cerr << "c looked at the gate 16 times: ";
       g.print(cerr);
       continue; // do not look at the gate too often!
     }
@@ -786,7 +786,7 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
       processGate( data, g, gates, queue, bitType, varTable );
       // enqueueSucessorGates(g,queue,gates,bitType,varTable);
     } else {
-      cerr << "c not all inputs are available for "; g.print(cerr );
+      //cerr << "c not all inputs are available for "; g.print(cerr );
        queue.push_back(gateIndex);
     }
   }
@@ -814,7 +814,7 @@ bool EquivalenceElimination::allInputsStamped(Circuit::Gate& g, std::vector< uns
          if( (bitType[ v ] & 4) == 0 ) 
 	   if ( count != 0 ) return false; else count++;
        }
-       cerr << "c all inputs of ExO are stamped: "; g.print(cerr);
+       //cerr << "c all inputs of ExO are stamped: "; g.print(cerr);
        return true;
      case Circuit::Gate::GenAND:
        for( int j = 0 ; j<g.size() ; ++ j ) {
@@ -978,7 +978,7 @@ void EquivalenceElimination::processANDgate(CoprocessorData& data, Circuit::Gate
     if( var(x) != var(ox) ) {
       setEquivalent(x,ox);
       data.addEquivalences(x,ox);
-      cerr << "c equi: " << x << " == " << ox << endl;
+      //cerr << "c equi: " << x << " == " << ox << endl;
       // old or new method?
       if( active ==0 && activeVariables == 0 ) {
 	// new equivalent gate -> enqueue successors!
@@ -1005,7 +1005,7 @@ void EquivalenceElimination::processANDgate(CoprocessorData& data, Circuit::Gate
     } else {
       if( x == ~ox ) {
 	data.setFailed();
-	cerr << "c failed, because AND procedure found that " << x << " is equivalent to " << ox << endl;
+	//cerr << "c failed, because AND procedure found that " << x << " is equivalent to " << ox << endl;
       } else {
 // 	cerr << "c found equivalence " << x << " == " << ox << " again" << endl;
       }
@@ -1062,7 +1062,7 @@ void EquivalenceElimination::processExOgate(CoprocessorData& data, Circuit::Gate
     if( var( lits[ g.size() -1 ] ) != var( freeLit ) ) {
 	setEquivalent(lits[ g.size() -1 ],freeLit);
 	data.addEquivalences(lits[ g.size() -1 ],freeLit);
-	cerr << "c equi: " << lits[ g.size() -1 ] << " == " << freeLit << endl;
+	//cerr << "c equi: " << lits[ g.size() -1 ] << " == " << freeLit << endl;
 	
 	if( active == 0 && activeVariables == 0 ) {
 	// new equivalent gate -> enqueue successors!
@@ -1093,7 +1093,7 @@ void EquivalenceElimination::processExOgate(CoprocessorData& data, Circuit::Gate
       } else {
 	if( lits[ g.size() -1 ] == ~freeLit ) {
 	  data.setFailed();
-	  cerr << "c failed, because ExO procedure found that " << lits[ g.size() -1 ] << " is equivalent to " << freeLit << endl;
+	  //cerr << "c failed, because ExO procedure found that " << lits[ g.size() -1 ] << " is equivalent to " << freeLit << endl;
 // 	  cerr << "c corresponding gates: " << endl;
 // 	  g.print(cerr);
 // 	  other.print(cerr);
@@ -1148,7 +1148,7 @@ void EquivalenceElimination::processGenANDgate(CoprocessorData& data, Circuit::G
     if( var( g.getOutput() ) != var( other.getOutput() ) ) {
 	setEquivalent(g.getOutput(),other.getOutput());
 	data.addEquivalences(g.getOutput(),other.getOutput());
-	cerr << "c equi: " << g.getOutput() << " == " << other.getOutput() << endl;
+	//cerr << "c equi: " << g.getOutput() << " == " << other.getOutput() << endl;
       if( active == 0 && activeVariables == 0 ) {
 	// new equivalent gate -> enqueue successors!
 	  const Var v = var( other.getOutput() );
@@ -1175,7 +1175,7 @@ void EquivalenceElimination::processGenANDgate(CoprocessorData& data, Circuit::G
       } else {
 	if( g.getOutput() == ~other.getOutput() ) {
 	  data.setFailed();
-	  cerr << "c failed, because GenAND procedure found that " << g.getOutput() << " is equivalent to " << other.getOutput() << endl;
+	  //cerr << "c failed, because GenAND procedure found that " << g.getOutput() << " is equivalent to " << other.getOutput() << endl;
 // 	  cerr << "c corresponding gates: " << endl;
 // 	  g.print(cerr);
 // 	  other.print(cerr);
@@ -1244,7 +1244,7 @@ void EquivalenceElimination::processITEgate(CoprocessorData& data, Circuit::Gate
     if( var(x) != var(ox) ) {
       setEquivalent(x,ox);
       data.addEquivalences(x,ox);
-      cerr << "c equi: " << x << " == " << ox << endl;
+      //cerr << "c equi: " << x << " == " << ox << endl;
       
       if( active == 0 && activeVariables == 0 ) {
 	// new equivalent gate -> enqueue successors!
@@ -1271,7 +1271,7 @@ void EquivalenceElimination::processITEgate(CoprocessorData& data, Circuit::Gate
     } else {
       if( x == ~ox ) {
 	data.setFailed();
-	cerr << "c failed, because ITE procedure found that " << x << " is equivalent to " << ox << endl;
+	//cerr << "c failed, because ITE procedure found that " << x << " is equivalent to " << ox << endl;
 //	cerr << "c equi gate 1: " << x  << " = ITE(" << s  << "," << t  << "," << f  << ")" << endl;
 // 	cerr << "c equi gate 2: " << ox << " = ITE(" << os << "," << ot << "," << of << ")" << endl;
       } else {
@@ -1348,7 +1348,7 @@ void EquivalenceElimination::processXORgate(CoprocessorData& data, Circuit::Gate
       if( var(lits[2]) != var(freeLit) ) {
 	setEquivalent(lits[2],freeLit);
 	data.addEquivalences(lits[2],freeLit);
-	cerr << "c equi: " << lits[2] << " == " << freeLit << endl;
+	//cerr << "c equi: " << lits[2] << " == " << freeLit << endl;
 	
       if (active==0 && activeVariables==0) {
 	// new equivalent gate -> enqueue successors!
@@ -1377,7 +1377,7 @@ void EquivalenceElimination::processXORgate(CoprocessorData& data, Circuit::Gate
       } else {
 	if( lits[2] == ~freeLit ) {
 	  data.setFailed();
-	  cerr << "c failed, because XOR procedure found that " << lits[2] << " is equivalent to " << freeLit << endl;
+	  //cerr << "c failed, because XOR procedure found that " << lits[2] << " is equivalent to " << freeLit << endl;
 	  return;
 	} else {
 	  //cerr << "c found equivalence " << lits[2] << " == " << freeLit << " again" << endl;
@@ -1401,8 +1401,8 @@ void EquivalenceElimination::processXORgate(CoprocessorData& data, Circuit::Gate
       
       if( pol == qPol ) freeLit = ~freeLit;
       if( l_False == data.enqueue(freeLit) ) return;
-      cerr << "c" << endl << "c found the unit " << freeLit << " based on XOR reasoning" << "c NOT HANDLED YET!" << endl << "c" << endl;
-      cerr << "c corresponding gates: " << endl;
+      //cerr << "c" << endl << "c found the unit " << freeLit << " based on XOR reasoning" << "c NOT HANDLED YET!" << endl << "c" << endl;
+      //cerr << "c corresponding gates: " << endl;
       g.print(cerr);
       other.print(cerr);
     }
@@ -1516,14 +1516,14 @@ void EquivalenceElimination::processFASUMgate(CoprocessorData& data, Circuit::Ga
       } else {
 	if( lits[3] == ~freeLit ) {
 	  data.setFailed();
-	  cerr << "c failed, because FASUM procedure found that " << lits[3] << " is equivalent to " << freeLit << endl;
+	  //cerr << "c failed, because FASUM procedure found that " << lits[3] << " is equivalent to " << freeLit << endl;
 	  return;
 	} else {
 	 // cerr << "c found equivalence " << lits[3] << " == " << freeLit << " again" << endl;
 	}
       }
     } else {
-      cerr << " FA_SUM vs XOR: Not implemented yet" << endl;
+      //cerr << " FA_SUM vs XOR: Not implemented yet" << endl;
       // TODO: is the small xor subsumes the big one, the neagtion of the remaining literal has to be unit propagated!
       int hit = 0;
       Lit freeLit = lit_Undef;
@@ -1540,8 +1540,8 @@ void EquivalenceElimination::processFASUMgate(CoprocessorData& data, Circuit::Ga
       
       if( pol ^ sign( freeLit ) == qPol ) freeLit = ~freeLit;
       if( l_False == data.enqueue(freeLit) ) return;
-      cerr << "c" << endl << "c found the unit " << freeLit << " based on XOR reasoning" << "c NOT HANDLED YET!" << endl << "c" << endl;
-      cerr << "corresponding gates:" << endl;
+      //cerr << "c" << endl << "c found the unit " << freeLit << " based on XOR reasoning" << "c NOT HANDLED YET!" << endl << "c" << endl;
+      //cerr << "corresponding gates:" << endl;
       g.print(cerr);
       other.print(cerr);
     }

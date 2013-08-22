@@ -147,10 +147,10 @@ class DoubleOption : public Option
             return false;
         else if (tmp >= range.end && (!range.end_inclusive || tmp != range.end)){
             fprintf(stderr, "ERROR! value <%s> is too large for option \"%s\".\n", span, name);
-            exit(1);
+            exit(2);
         }else if (tmp <= range.begin && (!range.begin_inclusive || tmp != range.begin)){
             fprintf(stderr, "ERROR! value <%s> is too small for option \"%s\".\n", span, name);
-            exit(1); }
+            exit(2); }
 
         value = tmp;
         // fprintf(stderr, "READ VALUE: %g\n", value);
@@ -207,10 +207,10 @@ class IntOption : public Option
             return false;
         else if (tmp > range.end){
             fprintf(stderr, "ERROR! value <%s> is too large for option \"%s\".\n", span, name);
-            exit(1);
+            exit(2);
         }else if (tmp < range.begin){
             fprintf(stderr, "ERROR! value <%s> is too small for option \"%s\".\n", span, name);
-            exit(1); }
+            exit(2); }
 
         value = tmp;
 
@@ -271,10 +271,10 @@ class Int64Option : public Option
             return false;
         else if (tmp > range.end){
             fprintf(stderr, "ERROR! value <%s> is too large for option \"%s\".\n", span, name);
-            exit(1);
+            exit(2);
         }else if (tmp < range.begin){
             fprintf(stderr, "ERROR! value <%s> is too small for option \"%s\".\n", span, name);
-            exit(1); }
+            exit(2); }
 
         value = tmp;
 

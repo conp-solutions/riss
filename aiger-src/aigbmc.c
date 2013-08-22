@@ -130,15 +130,17 @@ typedef struct State {
 
 static int falseLit = -1; /// literal that will be always false, so that it can be used in the initialization of literals
 
+static double totalTime = 0;
 
 static State * states = 0;
 static int nstates = 0, szstates = 0, * join = 0;
 static char * bad = 0, * justice = 0;
 
 static int maxk=0; // upper bound for search
-static int verbose = 0, move = 0, quiet = 0, nowitness = 0, lazyEncode = 0,useShift=0, // options
+static int verbose = 0, move = 0, quiet = 0, nowitness = 0, nowarnings = 0, lazyEncode = 0,useShift=0, // options
   useRiss = 0, useCP3 = 0, denseVariables = 0, dontFreezeInput = 0, dontFreezeBads = 0, printTime=0, checkInitialBad = 0, abcDir = 0;
 static int wildGuesser = 0, wildGuessStart = 10, wildGuessInc = 2, wildGuessIncInc = 1; // guess sequence: 10, 30, 60, ...
+static int tuning = 0, tuneSeed = 0;
 static std::string useABC = "";
 static std::string abcCommand = "";
 static int nvars = 0;
@@ -185,6 +187,25 @@ static void die (const char *fmt, ...) {
   va_end (ap);
   fputc ('\n', stderr);
   fflush (stderr);
+
+  if( tuning ) {
+    std::cout << "Result for ParamILS: " 
+    << "CRASHED" << ", "
+    << cpuTime() - totalTime << ", " // time running until printing this info
+    << 0 << ", "
+    << 10000.0 << ", "
+    << tuneSeed  // seed
+    << std::endl;
+    std::cout.flush();
+    std::cerr << "Result for ParamILS: " 
+    << "CRASHED" << ", "
+    << cpuTime() - totalTime << ", " // time running until printing this info
+    << 0 << ", "
+    << 10000.0 << ", "
+    << tuneSeed  // seed
+    << std::endl;
+    std::cerr.flush();
+  }
   exit (1);
 }
 
@@ -200,6 +221,7 @@ static void msg (int level, const char *fmt, ...) {
 }
 
 static void wrn (const char *fmt, ...) {
+  if( nowarnings ) return; // print only if enabled
   va_list ap;
   fputs ("[aigbmc] WARNING ", stderr);
   va_start (ap, fmt);
@@ -535,10 +557,11 @@ static const char * usage =
 "-bmc_wi  X initial guess increase (implies using guesser)\n"
 "-bmc_wii X inc/dec of guess distance (implies using guesser)\n"
 #ifdef USE_ABC
-"-bmc_a    use the ABC tool to simplify the circuit before solving, next parameter has to specify a tmp file location!\n"
-"-bmc_ad   use the ABC tool to simplify the circuit before solving, next parameter has to specify a tmp directory location!\n"
-"-bmc_ac   give a special command(-sequence, separated by :) to ABC. default is dc2 other possible: dc2, drwsat, scorr\n"
+"-bmc_a     use the ABC tool to simplify the circuit before solving, next parameter has to specify a tmp file location!\n"
+"-bmc_ad    use the ABC tool to simplify the circuit before solving, next parameter has to specify a tmp directory location!\n"
+"-bmc_ac    give a special command(-sequence, separated by :) to ABC. default is dc2 other possible: dc2, drwsat, scorr\n"
 #endif
+"-bmc_tune  enable the output for tuning with paramILS/SMAC\n"
 "\n\n the model name should be given first, then, the max. bound should be given\n"
 " other options might be given as well. These options are forwarded to the SAT solver\n"
 ;
@@ -711,8 +734,8 @@ void* wildGuessMethod (void* threadData) {
   return 0;
 }
 
-
 int main (int argc, char ** argv) {
+  totalTime = cpuTime() - totalTime;
   int i=0, j=0, k=0, lit=0, found=0;
   
   bool noProperties = false, checkProperties = false; // are there any properties inside the circuit?
@@ -734,6 +757,11 @@ int main (int argc, char ** argv) {
     else if (!strcmp (argv[i], "-bmc_m")) move = 1;
     else if (!strcmp (argv[i], "-bmc_n")) nowitness = 1;
     else if (!strcmp (argv[i], "-bmc_q")) quiet = 1;
+    else if (!strcmp (argv[i], "-bmc_nw")) nowarnings = 1;
+    else if (!strcmp (argv[i], "-bmc_tune")) {
+      tuning = 1;
+      if( ++i < argc && isnum(argv[i]) ) tuneSeed = atoi( argv[i] );
+    }
     else if (!strcmp (argv[i], "-bmc_l")) lazyEncode = 1;
     else if (!strcmp (argv[i], "-bmc_s")) { useShift = 1; lazyEncode = 1;} // strong dependency!
     else if (!strcmp (argv[i], "-bmc_r")) useRiss = 1;
@@ -814,7 +842,7 @@ int main (int argc, char ** argv) {
       // die ("unexpected argument '%s'", argv[i]);
     } else if( !name) name = argv[i];
   }
-  if (maxk < 0) maxk = 10;
+  if (maxk <= 0) maxk = 1 << 30; // set a very high bound as default (for 32bit machines)!
   msg (1, "aigbmc bounded model checker");
   msg (1, "maxk = %d", maxk);
 
@@ -1156,7 +1184,6 @@ int main (int argc, char ** argv) {
   }
   
   // stay here for 10 seconds - to debug the other thread! TODO remove after debug!
-  usleep(5000000);
   msg(1,"start solving at frame 0");
   
   boundtimes[0] = cpuTime() - boundtimes[0]; // continue measuring the time for bound 0    
@@ -1461,9 +1488,6 @@ finishedSolving:;
 	printV(-1); // ABC assumes all latches to be initialized to 0!
       }
       nl ();
-
-      
-      nl ();
       for (i = 0; i <= k; i++) {
 	for (j = 0; j < model->num_inputs; j++)
 	  print (states[i].inputs[j]);
@@ -1475,6 +1499,31 @@ finishedSolving:;
   }
   else printf ("2\n"), fflush (stdout);
 DONE:
+ 
+//Result for ParamILS: <solved>, <runtime>, <runlength>, <quality>, <seed>,
+//<additional rundata>
+
+  // print result for Tuner
+  if( tuning ) {
+    std::cout << "Result for ParamILS: " 
+    << ((k <= maxk) ? "SAT" : "ABORT") << ", " // if the limit we are searching for is not high enough, this is a reason to abort!
+    << cpuTime() - totalTime << ", "
+    << k << ", "
+    << 10000.0 / (double)(k+1) << ", " // avoid dividing by 0!
+    << tuneSeed 
+    << std::endl;
+    std::cout.flush();
+    std::cerr << "Result for ParamILS: " 
+    << ((k <= maxk) ? "SAT" : "ABORT") << ", " // if the limit we are searching for is not high enough, this is a reason to abort!
+    << cpuTime() - totalTime << ", "
+    << k << ", "
+    << 10000.0 / (double)(k+1) << ", " // avoid dividing by 0!
+    << tuneSeed
+    << std::endl;
+    std::cerr.flush();
+  }
+  
   reset ();
+  
   return 0;
 }

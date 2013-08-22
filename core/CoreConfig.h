@@ -136,6 +136,7 @@ BoolOption opt_rupProofOnly;
  IntOption intenseCleaningEvery;
  IntOption incKeepSize;
  IntOption incKeepLBD;
+ IntOption opt_reset_counters;
 };
  
 }
