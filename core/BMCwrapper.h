@@ -150,6 +150,10 @@ public:
   // TODO add interface for simplification and all that!
   // remove everything from the solver!
   void clearSolver() {
+    // clear data of this solver
+    currentAssumptions.clear();
+    currentClause.clear();
+    
     // set ok to true
     solver->ok = true;
     // clear all watch lists

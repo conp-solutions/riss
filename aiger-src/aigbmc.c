@@ -143,6 +143,7 @@ static int wildGuesser = 0, wildGuessStart = 10, wildGuessInc = 2, wildGuessIncI
 static int tuning = 0, tuneSeed = 0;
 static std::string useABC = "";
 static std::string abcCommand = "";
+static char* dumpPPformula = 0;
 static int nvars = 0;
 
 /**
@@ -265,7 +266,7 @@ static void assume (int lit) {
 
 /** solve with resource limit */
 static int sat ( int limit = -1 ) { 
-  msg (2, "solve time with SAT solver: %d", nstates);
+  // msg (2, "solve time with SAT solver: %d", nstates);
   int ret;
   if( useRiss ) ret = riss->sat(limit);
   else ret = picosat_sat (picosat, -1);
@@ -546,6 +547,9 @@ static const char * usage =
 "-bmc_s     use shifting instead of reencoding (implies lazy encoding)\n"
 "-bmc_r     use riss as SAT solver\n"
 "-bmc_p     use CP3 as simplifier (implies using riss and shifting)\n"
+#ifndef TEST_BINARY
+"-bmc_dbgp  dump formula and everything else before preprocessing\n"
+#endif
 "-bmc_d     dense after preprocessing (implies using riss and CP3)\n"
 "-bmc_x     modify preprocess (implies using riss and CP3)\n"
 "-bmc_y     modify preprocess (implies using riss and CP3)\n"
@@ -720,7 +724,7 @@ void* wildGuessMethod (void* threadData) {
 	      break;
 	    }
 	    currentFrame = (sharedData.lowerBound + sharedData.upperBound) / 2;
-	    assert( currentFrame < sharedData.upperBound && "do not solver same formula twice!" );
+	    assert( (currentFrame < sharedData.upperBound || sharedData.rissSolved ) && "do not solver same formula twice, if we have not solved it yet!" );
 	  }
 	  encodeFromHereFrame = 0; // always need to reset after sat call, because there is the assume clause
 	  msg(1,"WG: found new lower bound %d, try next: %d, current upper bound %d", sharedData.guesserFrame, currentFrame, sharedData.upperBound);
@@ -765,10 +769,19 @@ int main (int argc, char ** argv) {
     else if (!strcmp (argv[i], "-bmc_l")) lazyEncode = 1;
     else if (!strcmp (argv[i], "-bmc_s")) { useShift = 1; lazyEncode = 1;} // strong dependency!
     else if (!strcmp (argv[i], "-bmc_r")) useRiss = 1;
-    else if (!strcmp (argv[i], "-bmc_p")) { useCP3=1,useRiss = 1; }
-    else if (!strcmp (argv[i], "-bmc_d")) { useCP3=1,useRiss = 1;denseVariables=1; }
-    else if (!strcmp (argv[i], "-bmc_x")) { useCP3=1,useRiss = 1;dontFreezeInput=1; }
-    else if (!strcmp (argv[i], "-bmc_y")) { useCP3=1,useRiss = 1;dontFreezeBads=1; }
+    else if (!strcmp (argv[i], "-bmc_p")) { useCP3=1,useRiss = 1;useShift = 1; lazyEncode = 1; }
+#ifndef TEST_BINARY
+    else if (!strcmp (argv[i], "-bmc_dbgp")) { 
+      ++ i;
+      if( i < argc ) {
+	dumpPPformula = argv[i];
+	msg(0,"set debug PP file to %s",dumpPPformula);
+      }
+    }
+#endif
+    else if (!strcmp (argv[i], "-bmc_d")) { useCP3=1,useRiss = 1;denseVariables=1;  useShift=1; lazyEncode=1; }
+    else if (!strcmp (argv[i], "-bmc_x")) { useCP3=1,useRiss = 1;dontFreezeInput=1; useShift=1; lazyEncode=1; }
+    else if (!strcmp (argv[i], "-bmc_y")) { useCP3=1,useRiss = 1;dontFreezeBads=1;  useShift=1; lazyEncode=1; }
     else if (!strcmp (argv[i], "-bmc_z")) {
       ++ i;
       if( i < argc && isnum(argv[i]) ) { 
@@ -1047,6 +1060,7 @@ int main (int argc, char ** argv) {
       cp3config->opt_dense = true; cp3config->opt_dense_store_forward = 1; 
     }
     Minisat::CoreConfig config = riss->getConfig();
+    config.hk = false; // do not use laHack during preprocessing! (might already infere that the output lit is false -> unroll forever)
     ppSolver = new Minisat::Solver (config);
     incsolver = new Minisat::IncSolver (ppSolver,config);
     preprocessor = new Coprocessor::Preprocessor ( ppSolver, *cp3config );
@@ -1059,8 +1073,37 @@ int main (int argc, char ** argv) {
     for( int i = 0 ; i < shiftFormula.latchNext.size(); ++i ) preprocessor->freezeExtern( shiftFormula.latchNext[i] );
     preprocessor->freezeExtern( shiftFormula.currentAssume < 0 ? -shiftFormula.currentAssume : shiftFormula.currentAssume );
     if( !dontFreezeBads ) for( int i = 0 ; i < shiftFormula.currentBads.size(); ++i ) preprocessor->freezeExtern( shiftFormula.currentBads[i] );
+    // for debugging interference with CP3
+    if( dumpPPformula ) {
+      ofstream formulaFile;
+      formulaFile.open( (string(dumpPPformula) + string(".cnf")).c_str() ); // file for write formula to
+      if(!formulaFile) wrn("could not open formula dump file");
+      else {
+	for( int i = 0 ; i < shiftFormula.formula.size(); ++i ) {
+	  const int l = shiftFormula.formula[i];
+	  if( l == 0 ) formulaFile << "0" << endl;
+	  else formulaFile << l << " ";
+	}
+	formulaFile.close();
+      }
+      ofstream freezeFile;
+      freezeFile.open( (string(dumpPPformula) + string(".freeze")).c_str() ); // file for write formula to
+      if(!freezeFile) wrn("could not open formula dump file");
+      else {
+	if( !dontFreezeInput ) for( int i = 0 ; i < shiftFormula.inputs.size(); ++i ) freezeFile << shiftFormula.inputs[i] << " 0" << endl;
+	for( int i = 0 ; i < shiftFormula.latch.size(); ++i ) freezeFile <<  shiftFormula.latch[i] << " 0" << endl;
+	for( int i = 0 ; i < shiftFormula.latchNext.size(); ++i ) freezeFile << shiftFormula.latchNext[i] << " 0" << endl;
+	freezeFile <<  (shiftFormula.currentAssume < 0 ? -shiftFormula.currentAssume : shiftFormula.currentAssume) << " 0" << endl;
+	freezeFile.close();
+      }
+    }
+    
     if( verbose > 1 ) cerr << "c call preprocess ... " << endl;
     preprocessor->preprocess();
+    if( !ppSolver->okay() ) {
+      msg(0,"initial formula has no bad state (found even without initialization)"); 
+      exit(0);
+    }
     // test whether readding works without modifying the formula
     if( verbose > 1 ) { cerr << "c before formula: " << endl; riss->printFormula(); }
     // alles gut!
@@ -1212,8 +1255,8 @@ int main (int argc, char ** argv) {
   boundtimes[0] = cpuTime() - boundtimes[0]; // stop measuring the time for bound 0
   if( printTime ) msg(0,"solved bound %d in %lf seconds", 0, boundtimes[k]);
   if( foundBadStateFast ) {
-    sharedData.upperBound = 0; // lowerst SAT result
     sharedData.rissSolved = 1; // we found the solution!
+    sharedData.upperBound = 0; // lowerst SAT result
     goto finishedSolving;
   }
   sharedData.lowerBound = 0;
@@ -1257,8 +1300,8 @@ int main (int argc, char ** argv) {
       boundtimes[k] = cpuTime() - boundtimes[k]; // stop measuring the time for bound 0
       if( printTime ) msg(0,"solved bound %d in %lf seconds", k, boundtimes[k]);
       if( foundBad ) {
-	sharedData.upperBound = k; // lowerst SAT result
 	sharedData.rissSolved = 1; // we found the solution!
+	sharedData.upperBound = k; // lowerst SAT result
 	break;
       }
       if( sharedData.lowerBound < k ) sharedData.lowerBound = k; // update the lower bound!
@@ -1323,8 +1366,8 @@ int main (int argc, char ** argv) {
       boundtimes[k] = cpuTime() - boundtimes[k]; // stop measuring the time for bound 0
       if( printTime ) msg(0,"solved bound %d in %lf seconds", k, boundtimes[k]);
       if( foundBad ) {
-	sharedData.upperBound = k; // lowerst SAT result
 	sharedData.rissSolved = 1; // we found the solution!
+	sharedData.upperBound = k; // lowerst SAT result
 	break;
       }
       if( sharedData.lowerBound < k ) sharedData.lowerBound = k; // update the lower bound!
@@ -1397,20 +1440,24 @@ finishedSolving:;
 	  for (j = 0; j < shiftFormula.currentBads.size(); j++) { // print the actual values!
 	    int tlit = shiftFormula.currentBads[j];
 	    int v = 0;
-	    if(tlit>0 && frameModel[ tlit -1 ] == l_True) v = 1;
+	    if(tlit>0 ) {
+	      if( frameModel[ tlit -1 ] == l_True) v = 1;
+	    }
 	    else if(frameModel[ -tlit -1 ] == l_False ) v=1;
 	    if( v = 1 ) {
 	      printf ("b%d", j), found++;
 	    }
+	    assert( (shiftFormula.currentBads.size() > 1 || found > 0) && "only one output -> find immediately" );
 	  }
+	  assert (found && "there has to be found something!");
       } else {
 	for (i = 0; i < model->num_bad; i++) {
 	  int thisBad = shiftFormula.currentBads[i] + thisShift;
 	  if (deref ( thisBad  ) > 0)
 	    printf ("b%d", i), found++;
 	}
+	assert (found && "there has to be found something!");
       }
-      assert (found && "there has to be found something!");
       assert ((model->num_bad || model->num_justice) && "there has to be some property that has been found!" );
       nl (); // print new line, to give the initialization of the latches
       

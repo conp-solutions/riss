@@ -31,16 +31,16 @@ qd: qprocessord
 # build the bmc tool
 #
 aigbmcd: libd
-	cd aiger-src; make aigbmc CFLAGS="-O0 -g" ARGS=$(ARGS);
+	cd aiger-src; make aigbmc CFLAGS="-O0 -g" ARGS=$(ARGS);  mv aigbmc ..
 
 aigbmcs: libs
-	cd aiger-src; make aigbmc ARGS=$(ARGS);
+	cd aiger-src; make aigbmc ARGS=$(ARGS); mv aigbmc ..
 
 aigbmc-abcd: libd
-	cd aiger-src; make aigbmc-abc CFLAGS="-O0 -g" ARGS=$(ARGS);
+	cd aiger-src; make aigbmc-abc CFLAGS="-O0 -g" ARGS=$(ARGS);  mv aigbmc-abc ..
 
 aigbmc-abcs: libs
-	cd aiger-src; make aigbmc-abc ARGS=$(ARGS) ;
+	cd aiger-src; make aigbmc-abc ARGS=$(ARGS) ;  mv aigbmc-abc ..
 	
 # build the splitter solver
 riss: always

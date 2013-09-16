@@ -705,7 +705,7 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
         { queue.push_back( varTable[v][j] ); 
           g.putInQueue();
 	  //cerr << "c put gate into queue: ";
-	  g.print(cerr);
+	  // g.print(cerr); // do not print gate by default!
 	  // mark all inputs for clustered gates!
 	  if( g.getType() == Circuit::Gate::XOR ) {
 	    bitType[var(g.a())] = (bitType[var(g.a())] | 4); // stamp
@@ -733,7 +733,7 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
         { queue.push_back( i ); 
           g.putInQueue();
 	  //cerr << "c put gate into queue: ";
-	  g.print(cerr);
+	  // g.print(cerr);
 	  if( g.getType() == Circuit::Gate::XOR ) {
 	    bitType[var(g.a())] = (bitType[var(g.a())] | 4); // stamp
 	    bitType[var(g.b())] = (bitType[var(g.b())] | 4); // stamp
@@ -760,7 +760,7 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
       queue.push_back( i ); 
           g.putInQueue();
 	  //cerr << "c put gate into queue: ";
-	  g.print(cerr);
+	  // g.print(cerr);
     }
     for( Var v = 0 ; v < data.nVars(); ++ v ) {
 	bitType[v] = (bitType[v] | 4); // stamp
@@ -776,7 +776,7 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
     // check number of being touched, do not process a gate too often!
     if( g.touch() > 16 ) {
       //cerr << "c looked at the gate 16 times: ";
-      g.print(cerr);
+      // g.print(cerr);
       continue; // do not look at the gate too often!
     }
      
@@ -1403,8 +1403,8 @@ void EquivalenceElimination::processXORgate(CoprocessorData& data, Circuit::Gate
       if( l_False == data.enqueue(freeLit) ) return;
       //cerr << "c" << endl << "c found the unit " << freeLit << " based on XOR reasoning" << "c NOT HANDLED YET!" << endl << "c" << endl;
       //cerr << "c corresponding gates: " << endl;
-      g.print(cerr);
-      other.print(cerr);
+      // g.print(cerr);
+      // other.print(cerr);
     }
   }
   
@@ -1542,8 +1542,8 @@ void EquivalenceElimination::processFASUMgate(CoprocessorData& data, Circuit::Ga
       if( l_False == data.enqueue(freeLit) ) return;
       //cerr << "c" << endl << "c found the unit " << freeLit << " based on XOR reasoning" << "c NOT HANDLED YET!" << endl << "c" << endl;
       //cerr << "corresponding gates:" << endl;
-      g.print(cerr);
-      other.print(cerr);
+      //g.print(cerr);
+      //other.print(cerr);
     }
 
   }

@@ -159,7 +159,10 @@ Solver::Solver(CoreConfig& _config) :
   , coprocessor(0)
   , useCoprocessorPP(config.opt_usePPpp)
   , useCoprocessorIP(config.opt_usePPip)
-{MYFLAG=0;}
+{
+  MYFLAG=0;
+  hstry[0]=lit_Undef;hstry[1]=lit_Undef;hstry[2]=lit_Undef;hstry[3]=lit_Undef;hstry[4]=lit_Undef;
+}
 
 
 
@@ -1418,7 +1421,8 @@ lbool Solver::search(int nof_conflicts)
             while (decisionLevel() < assumptions.size()){
                 // Perform user provided assumption:
                 Lit p = assumptions[decisionLevel()];
-                if (value(p) == l_True){
+
+		if (value(p) == l_True){
                     // Dummy decision level:
                     newDecisionLevel();
                 }else if (value(p) == l_False){
@@ -1745,7 +1749,8 @@ lbool Solver::solve_()
 	|| ( config.resetActEvery != 0 && solves % config.resetActEvery == 0 ) 
 	|| ( config.resetPolEvery != 0 && solves % config.resetPolEvery == 0 )
       ) {
-	double jw [nVars()]; int32_t moms[nVars()];
+	double* jw = new double [nVars()]; // todo: could be done in one array with a struct!	
+	int32_t* moms = new int32_t [nVars()];
 	for( int i = 0 ; i < clauses.size(); ++ i ) {
 	  const Clause& c = ca[clauses[i]];
 	  const double cs = 1 / ( pow(2.0, c.size()) );
@@ -1774,6 +1779,8 @@ lbool Solver::solve_()
 	    else if( config.opt_init_pol == 5 ) polarity[v] = irand(random_seed,100) > 50 ? 1 : 0;
 	  }
 	}
+	delete [] moms;
+	delete [] jw;
       }
     }
     

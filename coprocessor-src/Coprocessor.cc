@@ -1077,8 +1077,8 @@ void Preprocessor::initializePreprocessor()
   {
     const CRef cr = solver->clauses[i];
     Clause& c = ca[cr];
-    assert( c.mark() == 0 && "mark of a clause has to be 0 before being put into preprocessor" );
-    // if( ca[cr].mark() != 0  ) continue; // do not use any specially marked clauses!
+    // assert( c.mark() == 0 && "mark of a clause has to be 0 before being put into preprocessor" );
+    if( ca[cr].mark() != 0  ) continue; // do not use any specially marked clauses!
     // cerr << "c process clause " << cr << endl;
 
     if( c.size() == 0 ) {
@@ -1104,9 +1104,9 @@ void Preprocessor::initializePreprocessor()
   {
     const CRef cr = solver->learnts[i];
     Clause& c = ca[cr];
-    assert( c.mark() == 0 && "mark of a clause has to be 0 before being put into preprocessor" );
+    // assert( c.mark() == 0 && "mark of a clause has to be 0 before being put into preprocessor" );
     // cerr << "c process learnt clause " << cr << endl;
-    // if( ca[cr].mark() != 0  ) continue; // do not use any specially marked clauses!
+    if( ca[cr].mark() != 0  ) continue; // do not use any specially marked clauses!
     if( c.size() == 0 ) {
       data.setFailed(); 
       break;

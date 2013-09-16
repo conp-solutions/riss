@@ -191,7 +191,7 @@ bool Symmetry::process() {
 		  solver.useCoprocessorPP = oldUsePP;
 		  solver.useCoprocessorIP = oldUseIP;
 		  totalConflicts = solver.conflicts - totalConflicts;
-		  if( ret == l_False ) {
+		  if( ret == l_False ) { // TODO continue this here!
 		    // entailed! 
 		  } else if ( ret == l_True ) {
 		    // found a model for the formula - handle it! 

@@ -118,10 +118,9 @@ int main(int argc, char** argv)
         
 
         CoreConfig coreConfig;
-        coreConfig.parseOptions(argc, argv, true);
-
 	Coprocessor::CP3Config cp3config;
-	coreConfig.parseOptions(argc, argv, true);
+        coreConfig.parseOptions(argc, argv, true);
+	cp3config.parseOptions(argc, argv, true);
 	
         Solver S(coreConfig);
 	S.setPreprocessor(&cp3config); // tell solver about preprocessor
