@@ -84,6 +84,9 @@ always:
 touch:
 	touch core/Solver.cc coprocessor-src/Coprocessor.cc
 
+strip: always
+	strip  --keep-symbol=cp3add --keep-symbol=cp3destroyPreprocessor --keep-symbol=cp3dumpFormula --keep-symbol=cp3extendModel --keep-symbol=cp3freezeExtern --keep-symbol=cp3giveNewLit --keep-symbol=cp3initPreprocessor --keep-symbol=cp3parseOptions libriss3g.a
+
 doc: clean
 	cd doc; doxygen solver.config
 	touch doc

@@ -1565,6 +1565,7 @@ inline vector<CRef>& CoprocessorData::getStrengthClauses()
 inline void CoprocessorData::setNotTouch(const Var v)
 {
   while( untouchable.size() <= v ) untouchable.push_back(0); // automatic size increase if not yet initialized
+  //cerr << "c untouchable: " << v+1 << endl;
   untouchable[v] = 1;
 }
 

@@ -407,6 +407,9 @@ protected:
   int otfsss, otfsssL1,otfssClss,otfssUnits,otfssBinaries,otfssHigherJump; // otfss stats!
   
   
+  // stats for learning clauses
+  double totalLearnedClauses, sumLearnedClauseSize, sumLearnedClauseLBD, maxLearnedClauseSize;
+  
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;
 public:     

@@ -1441,12 +1441,14 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
           {
             data.getSubsumeClauses().push_back(newCRef);
             newClauses.push_back(newCRef);
+	    // only if clause is actually needed
+	    data.addCommentToProof("created by strengthening (allStrengthRes)");
+	    data.addToProof( ca[newCRef] ); // add clause to proof!
+	    ca[newCRef].setExtraInformation( strengthener.extraInformation() ); ca[newCRef].updateExtraInformation(other.extraInformation()); // setup extra information
+	    if ( config.opt_sub_debug > 1 ) cerr << "c created resolvent while strengthening: " << ca[newCRef] << endl;
+	    if ( config.opt_sub_debug > 1 ) cerr  << "c origin: " << strengthener << " and " << other << endl;
           }
-          data.addCommentToProof("created by strengthening (allStrengthRes)");
-          data.addToProof( ca[newCRef] ); // add clause to proof!
-	  ca[newCRef].setExtraInformation( strengthener.extraInformation() ); ca[newCRef].updateExtraInformation(other.extraInformation()); // setup extra information
-          if ( config.opt_sub_debug > 1 ) cerr << "c created resolvent while strengthening: " << ca[newCRef] << endl;
-          if ( config.opt_sub_debug > 1 ) cerr  << "c origin: " << strengthener << " and " << other << endl;
+
         }
         else
         {
@@ -1540,10 +1542,11 @@ lbool Subsumption::strengthening_worker( unsigned int start, unsigned int end, H
           {
             data.getSubsumeClauses().push_back(newCRef);
             newClauses.push_back(newCRef);
+	    
+	    data.addCommentToProof("created by strengthening (allStrengthRes)");
+	    data.addToProof( ca[newCRef] ); // add clause to proof!
+	    ca[newCRef].setExtraInformation( strengthener.extraInformation() ); ca[newCRef].updateExtraInformation(other.extraInformation()); // setup extra information
           }
-          data.addCommentToProof("created by strengthening (allStrengthRes)");
-          data.addToProof( ca[newCRef] ); // add clause to proof!
-	  ca[newCRef].setExtraInformation( strengthener.extraInformation() ); ca[newCRef].updateExtraInformation(other.extraInformation()); // setup extra information
           if ( config.opt_sub_debug > 1 ) cerr << "c created resolvent while strengthening: " << ca[newCRef] << endl;
           if ( config.opt_sub_debug > 1 ) cerr  << "c origin: " << strengthener << " and " << other << endl;
         }

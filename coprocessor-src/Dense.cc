@@ -50,15 +50,34 @@ void Dense::compress(const char* newWhiteFile)
   uint32_t diff = 0;
   for( Var v = 0 ; v < data.nVars(); v++ ){
     assert( diff <= v && "there cannot be more variables that variables that have been analyzed so far");
-    if( count[v] != 0 || data.doNotTouch(v) ){ // do not rewrite the trail!
+    if( count[v] != 0 || data.doNotTouch(v) || 
+      ( data.value(mkLit(v,false)) != l_Undef && (config.opt_dense_keep_assigned) ) ) // do not drop assigned variables!
+    { // do not rewrite the trail!
       compression.mapping[v] = v - diff;
+      if( config.dense_debug_out && data.doNotTouch(v)) cerr << "c mapping for variable " << v+1 << " is: " << compression.mapping[v]+1 << endl;
     }
-    else { diff++; assert( compression.mapping[v] == -1 ); }
+    else { 
+      diff++; 
+      if ( config.dense_debug_out  ) {
+	if(data.doNotTouch(v)) cerr << "c do not touch variable will be dropped: " << v+1 << " mapping: " << compression.mapping[v]+1 << endl;
+	else cerr << "c variable " << v+1 << " occurrs " << count[v] << " times, and is undefined: " << (data.value(mkLit(v,false)) == l_Undef) << endl;
+      }
+      assert( compression.mapping[v] == -1 );
+    }
   }
-  free( count ); // do not need the count array any more
   
   // formula is already compact, or not too loose
-  if( diff == 0 || ( config.opt_dense_fragmentation > 1.0 + ( (diff * 100)  / data.nVars()  ) ) ) return;
+  if( diff == 0 || ( config.opt_dense_fragmentation > 1.0 + ( (diff * 100)  / data.nVars()  ) ) ) {
+    if( config.dense_debug_out > 0 ) cerr << "c [DENSE] no fragmentation, do not compress!" << endl;
+    if( config.opt_dense_store_forward ) {
+      if( config.dense_debug_out ) cerr << "c store forward mapping " << endl;
+      forward_mapping.resize( data.nVars(), -1 ); // initially, set to -1 for no mapping (dropped)
+      for( Var v = 0; v < data.nVars() ; v++ )
+	forward_mapping[v] = compression.mapping[v]; // store everything into the new mapping file!
+    }
+    free( count ); // do not need the count array any more
+    return;
+  }
   globalDiff += diff;
   
   // replace everything in the clauses
@@ -101,13 +120,25 @@ void Dense::compress(const char* newWhiteFile)
   }
   
   // erase all top level units after backup!
+  // keep the literals that are not removed!
+  int j = 0; // count literals that stay on trail!
   for( int i = 0 ; i < data.getTrail().size(); ++ i ) {
-    compression.trail.push_back(data.getTrail()[i] );
-    data.resetAssignment( var(data.getTrail()[i]) );
+    const Lit l  = data.getTrail()[i];
+    if( count[var(l)] != 0 || data.doNotTouch(var(l)) || config.opt_dense_keep_assigned ) {
+      const bool p = sign(l);
+      const Var v= compression.mapping[ var(l) ];
+      if( config.dense_debug_out ) cerr << "c move literal " << l << " from " << i << " to pos " << j << " as " << mkLit( v, p ) << endl;
+      data.getTrail()[j++] = mkLit( v, p ); // keep the modified literal!
+    } else {
+      compression.trail.push_back(data.getTrail()[i] );
+      data.resetAssignment( var(data.getTrail()[i]) ); 
+    }
   }
-  data.clearTrail();
+  data.getTrail().shrink( data.getTrail().size() - j ); // do not clear, but resize to keep the literals that have been kept!
   propagation.reset(); // reset propagated literals in UP
 
+  free( count ); // do not need the count array any more
+  
   if( config.dense_debug_out ) {
     cerr << "c final trail: "; 
     for( uint32_t i = 0 ; i < data.getTrail().size(); ++ i ) cerr << " " << data.getTrail()[i];
@@ -115,6 +146,7 @@ void Dense::compress(const char* newWhiteFile)
   }
 
   if( config.opt_dense_store_forward ) {
+    if( config.dense_debug_out) cerr << "c store forward mapping " << endl;
     forward_mapping.resize( data.nVars(), -1 ); // initially, set to -1 for no mapping (dropped)
     for( Var v = 0; v < data.nVars() ; v++ )
       forward_mapping[v] = compression.mapping[v]; // store everything into the new mapping file!
@@ -124,14 +156,14 @@ void Dense::compress(const char* newWhiteFile)
   // invert mapping - and re-arrange all variable data
   for( Var v = 0; v < data.nVars() ; v++ )
   {
-    assert( data.value( mkLit( v, false) ) == l_Undef && "there is no assigned variable allowed " );
+    if(! config.opt_dense_keep_assigned ) assert( (count[v] != 0 || data.doNotTouch(v) || data.value( mkLit( v, false) ) == l_Undef) && "there is no assigned variable allowed " );
 //	    if( v+1 == data.nVars() ) cerr << "c final round with variable " << v+1 << endl;
     if ( compression.mapping[v] != -1 ){
       if( config.dense_debug_out ) cerr << "c map " << v+1 << " to " << compression.mapping[v] + 1 << endl;
 //      if( v+1 == data.nVars() ) cerr << "c final round with move" << endl;
       // cerr << "c move intern var " << v << " to " << compression.mapping[v] << endl;
       data.moveVar( v, compression.mapping[v], v+1 == data.nVars() ); // map variable, and if done, re-organise everything
-      assert( data.value( mkLit(compression.mapping[ v ],false) ) == l_Undef && "there is no assigned variable allowed " );
+      if(! config.opt_dense_keep_assigned ) assert( (count[compression.mapping[ v ]] != 0 || data.doNotTouch(compression.mapping[ v ]) || data.value( mkLit(compression.mapping[ v ],false) ) == l_Undef ) && "there is no assigned variable allowed " );
       // invert!
       compression.mapping[ compression.mapping[v] ] = v;
       // only set to 0, if needed afterwards
@@ -144,6 +176,11 @@ void Dense::compress(const char* newWhiteFile)
     }
   }
 
+  // after full compression took place, set known assignments again!
+  for( int i = 0 ; i < data.getTrail().size(); ++ i ) {
+    data.enqueue( data.getTrail()[i] ); // put rewritten literals back on the trail!
+  }
+  
   if( data.nVars() + diff != compression.variables ) {
     cerr << "c number of variables does not match: " << endl
 	 << "c diff= " << diff << " old= " << compression.variables << " new=" << data.nVars() << endl;

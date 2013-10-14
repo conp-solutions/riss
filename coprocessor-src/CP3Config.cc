@@ -218,6 +218,7 @@ dense_debug_out (_cat_dense, "cp3_dense_debug", "print debug output to screen",f
 #endif
 opt_dense_fragmentation  (_cat_dense, "cp3_dense_frag", "Perform densing, if fragmentation is higher than (percent)", 0, IntRange(0, 100)),
 opt_dense_store_forward  (_cat_dense, "cp3_dense_forw", "store forward mapping",false),
+opt_dense_keep_assigned  (_cat_dense, "cp3_keep_set",   "keep already assigned literals",false),
 //
 // Entailed
 //
@@ -351,7 +352,7 @@ opt_res3_inpStepInc      (_cat_res, "cp3_res_inpInc","increase for steps per inp
 opt_add2_inpStepInc      (_cat_res, "cp3_add_inpInc","increase for steps per inprocess call", 60000, IntRange(0, INT32_MAX)),
 /// enable this parameter only during debug!
 #if defined CP3VERSION  
-res3_debug_out = false,
+res3_debug_out (false),
 #else
 res3_debug_out         (_cat_res, "cp3_res_debug",   "print debug output to screen",false),
 #endif
@@ -379,7 +380,7 @@ opt_rew_min_imp_size        (_cat_rew, "cp3_rewI_min"   ,"min size of an inplica
 opt_rew_impl_pref_small     (_cat_rew, "cp3_rewI_small" ,"prefer little imply variables", true),
 opt_rew_inpStepInc      (_cat_rew, "cp3_rew_inpInc","increase for steps per inprocess call", 60000, IntRange(0, INT32_MAX)),
 #if defined CP3VERSION 
-rew_debug_out = 0,
+rew_debug_out (0),
 #else
 rew_debug_out                 (_cat_rew, "rew-debug",       "Debug Output of Rewriter", 0, IntRange(0, 4)),
 #endif
@@ -390,7 +391,7 @@ rew_debug_out                 (_cat_rew, "rew-debug",       "Debug Output of Rew
 opt_shuffle_seed          (_cat_shuffle, "shuffle-seed",  "seed for shuffling",  0, IntRange(0, INT32_MAX)),
 opt_shuffle_order        (_cat_shuffle, "shuffle-order", "shuffle the order of the clauses", true),
 #if defined CP3VERSION  
-debug_out = 0,
+shuffle_debug_out (0),
 #else
 shuffle_debug_out                 (_cat_shuffle, "shuffle-debug", "Debug Output of Shuffler", 0, IntRange(0, 4)),
 #endif
@@ -434,7 +435,7 @@ opt_sub_chunk_size      (_cat_sub, "susi_chunk_size" ,  "Size of Par SuSi Chunks
 opt_sub_par_str_minCls  (_cat_sub, "par_str_minCls"  ,  "number of clauses to start parallel strengthening", 250000, IntRange(1,INT32_MAX)),
 #endif
 #if defined CP3VERSION
-opt_sub_debug = 0,
+opt_sub_debug (0),
 #else
 opt_sub_debug   (_cat_sub, "susi_debug" , "Debug Output for Subsumption", 0, IntRange(0,3)),
 #endif

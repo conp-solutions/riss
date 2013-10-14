@@ -155,6 +155,11 @@ Solver::Solver(CoreConfig& _config) :
   ,otfssBinaries(0)
   ,otfssHigherJump(0)
   
+  ,totalLearnedClauses(0)
+  ,sumLearnedClauseSize(0)
+  ,sumLearnedClauseLBD(0)
+  ,maxLearnedClauseSize(0)
+  
   // preprocessor
   , coprocessor(0)
   , useCoprocessorPP(config.opt_usePPpp)
@@ -1331,7 +1336,10 @@ lbool Solver::search(int nof_conflicts)
 		  addCommentToProof("learnt unit");
 		  addUnitToProof(learnt_clause[i]);
 		}
-		  
+		// store learning stats!
+		totalLearnedClauses += learnt_clause.size(); sumLearnedClauseSize+=learnt_clause.size();sumLearnedClauseLBD+=learnt_clause.size();
+		maxLearnedClauseSize = 1 > maxLearnedClauseSize ? 1 : maxLearnedClauseSize;
+		
 		multiLearnt = ( learnt_clause.size() > 1 ? multiLearnt + 1 : multiLearnt ); // stats
 		topLevelsSinceLastLa ++;
 	      } else { // treat usual learned clause!
@@ -1343,6 +1351,10 @@ lbool Solver::search(int nof_conflicts)
 		addCommentToProof("learnt clause");
 		addToProof( learnt_clause );
 
+		// store learning stats!
+		totalLearnedClauses ++ ; sumLearnedClauseSize+=learnt_clause.size();sumLearnedClauseLBD+=nblevels;
+		maxLearnedClauseSize = learnt_clause.size() > maxLearnedClauseSize ? learnt_clause.size() : maxLearnedClauseSize;
+		
 		if (learnt_clause.size() == 1){
 		    assert( decisionLevel() == 0 && "enequeue unit clause on decision level 0!" );
 		    topLevelsSinceLastLa ++;
@@ -1896,6 +1908,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
 	    printf("c IntervalRestarts: %d\n", intervalRestart);
 	    printf("c lhbr: %d (l1: %d), new: %d (l1: %d), tests: %d, subs: %d\n", lhbrs, l1lhbrs,lhbr_news,l1lhbr_news,lhbrtests,lhbr_sub);
 	    printf("c otfss: %d (l1: %d), cls: %d, units: %d, binaries: %d, jumpedHigher: %d\n", otfsss, otfsssL1,otfssClss,otfssUnits,otfssBinaries,otfssHigherJump);
+	    printf("c learning: %lld cls, %lf avg. size, %lf avg. LBD, %lld maxSize\n", (int64_t)totalLearnedClauses, sumLearnedClauseSize/totalLearnedClauses, sumLearnedClauseLBD/totalLearnedClauses,(int64_t)maxLearnedClauseSize);
 	    printf("c decisionClauses: %d\n", learnedDecisionClauses );
     }
 

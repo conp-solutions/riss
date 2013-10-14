@@ -1,28 +1,30 @@
 /***************************************************************************************[libcp3c.h]
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
+
+ File to work with Coprocessor as a library
+ 
+ Methods provide basic access to the preprocessor
+ 
+ At the moment only a single instance of the preprocessor can be initialized
+ due to the option system, which currently relies on the Minisat option class
 **************************************************************************************************/
 
+// to represent formulas and the data type of truth values
 #include <vector>
-
-
-/** File to work with CP3 as a library
- *  Methods provide basic access to the preprocessor
- *  At the moment only a single instance of the preprocessor can be initialized
- *  due to the option system, which currently relies on the Minisat option class
- */
+#include "stdint.h"
 
 
 // use these values to cpecify the model in extend model
 #ifndef l_True
-#define l_True  (lbool((uint8_t)0)) // gcc does not do constant propagation if these are real constants.
+#define l_True  0 // gcc does not do constant propagation if these are real constants.
 #endif
 
 #ifndef l_False
-#define l_False (lbool((uint8_t)1))
+#define l_False 1
 #endif 
 
 #ifndef l_Undef
-#define l_Undef (lbool((uint8_t)2))
+#define l_Undef 2
 #endif
 
 extern "C" {
@@ -31,7 +33,7 @@ extern "C" {
   extern void* cp3initPreprocessor();
   
   /** call the preprocess method of the preprocessor */
-  extern void cp3preprocess();
+  extern void cp3preprocess(void* preprocessor);
   
   /** destroy the preprocessor and set its value to 0 */
   extern void cp3destroyPreprocessor(void*& preprocessor);
@@ -63,4 +65,15 @@ extern "C" {
    */
   extern void cp3extendModel(void* preprocessor, std::vector<uint8_t>& model );
 
+  /** returns the number of variables of the formula that is inside the preprocessor
+   *  Note: the number of variables can be higher inside the preprocessor, if techniques like
+   *  rewriting or BVA have been used, since these techniques introduce new variables
+   */
+  extern int cp3nVars(void* preprocessor);
+  
+  /** return state of preprocessor */
+  extern bool cp3ok(void* preprocessor);
+  
+  /** return whether a given literal is already mapped to false */
+  extern bool cp3isUnsat(void* preprocessor, int lit);
 }

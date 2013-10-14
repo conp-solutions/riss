@@ -217,6 +217,7 @@ BoolOption dense_debug_out;
 #endif
 IntOption  opt_dense_fragmentation;
 BoolOption opt_dense_store_forward;
+BoolOption opt_dense_keep_assigned;
 
 //
 // Entailed
@@ -352,7 +353,7 @@ IntOption  opt_res3_inpStepInc ;
 IntOption  opt_add2_inpStepInc ;
 /// enable this parameter only during debug!
 #if defined CP3VERSION  
-const bool res3_debug_out (false);
+const bool res3_debug_out;
 #else
 BoolOption res3_debug_out      ;
 #endif
