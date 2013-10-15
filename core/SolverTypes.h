@@ -159,6 +159,9 @@ class Clause {
         unsigned can_subsume : 1;
         unsigned can_strengthen : 1;
         unsigned size      : 32;
+#ifdef CLS_EXTRA_INFO
+	unsigned extra_info : 64;
+#endif
 
         ClauseHeader(void) {} 
         ClauseHeader(volatile ClauseHeader & rhs)
@@ -173,6 +176,9 @@ class Clause {
             can_subsume = rhs.can_subsume;
             can_strengthen = rhs.can_strengthen;
             size = rhs.size;
+#ifdef CLS_EXTRA_INFO
+	    extra_info = rhs.extra_info;
+#endif
         }
 
         ClauseHeader& operator = (volatile ClauseHeader& rhs)
@@ -187,6 +193,9 @@ class Clause {
             can_subsume = rhs.can_subsume;
             can_strengthen = rhs.can_strengthen;
             size = rhs.size;
+#ifdef CLS_EXTRA_INFO
+	    extra_info = rhs.extra_info;
+#endif
             return *this;
         }
 
@@ -205,6 +214,9 @@ class Clause {
         header.has_extra = use_extra;
         header.reloced   = 0;
         header.size      = ps.size();
+#ifdef CLS_EXTRA_INFO
+	header.extra_info = 0
+#endif
 	header.lbd = 0;
 	header.canbedel = 1;
         header.can_subsume = 1;
@@ -393,10 +405,44 @@ public:
 	return false;
     }
     
-    void setExtraInformation( const uint64_t& info) {}                 /// set the extra info of the clause to the given value
-    uint64_t extraInformation() const { return 0; }                    /// adopt this to external needs
-    void updateExtraInformation(const uint64_t& othersExtra) const {}  /// update the current extra information with the extra information of another clause used to modify/create this clause
-    static uint64_t updateExtraInformation(const uint64_t& a, const uint64_t& b) {return a;}; /// this method will be used if extra information for unit clauses is calculated!
+    /// set the extra info of the clause to the given value
+    void setExtraInformation( const uint64_t& info)
+#ifdef CLS_EXTRA_INFO
+    { header.extra_info = info }
+#else
+    {}
+#endif
+    
+    /// adopt this to external needs
+    uint64_t extraInformation() const
+#ifdef CLS_EXTRA_INFO
+    { return header.extra_info; }
+#else
+    { return 0; }
+#endif
+
+
+    /// update the current extra information with the extra information of another clause used to modify/create this clause
+    void updateExtraInformation(const uint64_t& othersExtra) const 
+#ifdef CLS_EXTRA_INFO
+    { 
+      uint64_t max = header.extra_info >= info ? header.extra_info : info;
+      header.extra_info = max + 1;
+    }
+#else
+    {}
+#endif
+
+    /// this method will be used if extra information for unit clauses is calculated!
+    static uint64_t updateExtraInformation(const uint64_t& a, const uint64_t& b)
+#ifdef CLS_EXTRA_INFO
+    { 
+      uint64_t max = a >= b ? a : b;
+      return max+1;;
+    }
+#else
+    {}
+#endif
 };
 
 //=================================================================================================

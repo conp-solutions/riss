@@ -92,7 +92,7 @@ doc: clean
 	touch doc
 
 tar: clean
-	tar czvf riss3m.tar.gz core  HOWTO  LICENSE  Makefile mtl  README  simp utils
+	tar czvf riss3m.tar.gz core   LICENSE  Makefile mtl  README  simp utils
 	
 cotar: clean
 	tar czvf coprocessor3.tar.gz core LICENSE  Makefile mtl  README  simp  utils coprocessor-src

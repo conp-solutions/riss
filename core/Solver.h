@@ -200,9 +200,20 @@ protected:
     struct VarData { CRef reason; int level; 
       Lit dom;      /// for lhbr
       int32_t cost; /// for hack
+#ifdef CLS_EXTRA_INFO
+      uint64_t extraInfo;
+#endif
     };
-    static inline VarData mkVarData(CRef cr, int l){ VarData d = {cr, l, lit_Undef, -1}; return d; }
-    static inline VarData mkVarData(CRef cr, int l, int _cost){ VarData d = {cr, l,lit_Undef,_cost}; return d; }  
+    static inline VarData mkVarData(CRef cr, int l){ VarData d = {cr, l, lit_Undef, -1
+#ifdef CLS_EXTRA_INFO
+      , 0
+#endif
+    }; return d; }
+    static inline VarData mkVarData(CRef cr, int l, int _cost){ VarData d = {cr, l,lit_Undef,_cost
+#ifdef CLS_EXTRA_INFO
+      , 0
+#endif
+    }; return d; }  
     
     struct Watcher {
         CRef cref;
@@ -300,9 +311,9 @@ protected:
     bool     enqueue          (Lit p, CRef from = CRef_Undef);                         // Test if fact 'p' contradicts current state, enqueue otherwise.
     CRef     propagate        ();                                                      // Perform unit propagation. Returns possibly conflicting clause.
     void     cancelUntil      (int level);                                             // Backtrack until a certain level.
-    int      analyze          (CRef confl, vec< Lit >& out_learnt, int& out_btlevel, unsigned int& lbd, vec< CRef >& otfssClauses );    // // (bt = backtrack, return is number of unit clauses in out_learnt. if 0, treat as usual!)
+    int      analyze          (CRef confl, vec< Lit >& out_learnt, int& out_btlevel, unsigned int& lbd, vec< CRef >& otfssClauses, uint64_t& extraInfo );    // // (bt = backtrack, return is number of unit clauses in out_learnt. if 0, treat as usual!)
     void     analyzeFinal     (Lit p, vec<Lit>& out_conflict);                         // COULD THIS BE IMPLEMENTED BY THE ORDINARIY "analyze" BY SOME REASONABLE GENERALIZATION?
-    bool     litRedundant     (Lit p, uint32_t abstract_levels);                       // (helper method for 'analyze()')
+    bool     litRedundant     (Lit p, uint32_t abstract_levels,uint64_t& extraInfo);                       // (helper method for 'analyze()')
     lbool    search           (int nof_conflicts);                                     // Search for a given number of conflicts.
     lbool    solve_           ();                                                      // Main solve method (assumptions given in 'assumptions').
     void     reduceDB         ();                                                      // Reduce the set of learnt clauses.
@@ -409,6 +420,7 @@ protected:
   
   // stats for learning clauses
   double totalLearnedClauses, sumLearnedClauseSize, sumLearnedClauseLBD, maxLearnedClauseSize;
+  uint64_t maxResHeight;
   
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;
@@ -422,7 +434,13 @@ public:
   bool useCoprocessorIP;
 
   /** if extra info should be used, this method needs to return true! */
-  bool usesExtraInfo() const { return false; } 
+  bool usesExtraInfo() const { 
+#ifdef CLS_EXTRA_INFO
+  return true;
+#else
+  return false;
+#endif
+  } 
 
   /** for solver extensions, which rely on extra informations per clause (including unit clauses), e.g. the level of the solver in a partition tree*/
   uint64_t defaultExtraInfo() const ;

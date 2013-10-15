@@ -159,6 +159,7 @@ Solver::Solver(CoreConfig& _config) :
   ,sumLearnedClauseSize(0)
   ,sumLearnedClauseLBD(0)
   ,maxLearnedClauseSize(0)
+  ,maxResHeight(0)
   
   // preprocessor
   , coprocessor(0)
@@ -413,7 +414,7 @@ Lit Solver::pickBranchLit()
 |  
 |________________________________________________________________________________________________@*/
 
-int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned int &lbd, vec<CRef>& otfssClauses)
+int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned int &lbd, vec<CRef>& otfssClauses,uint64_t& extraInfo)
 {
     int pathC = 0;
     Lit p     = lit_Undef;
@@ -436,7 +437,6 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	// Special case for binary clauses
 	// The first one has to be SAT
 	if( p != lit_Undef && c.size()==2 && value(c[0])==l_False) {
-	  
 	  assert(value(c[1])==l_True);
 	  Lit tmp = c[0];
 	  c[0] =  c[1], c[1] = tmp;
@@ -445,6 +445,10 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
        if (c.learnt())
             claBumpActivity(c);
 
+#ifdef CLS_EXTRA_INFO // if resolution is done, then take also care of the participating clause!
+	extraInfo = extraInfo >= c.extraInformation() ? extraInfo : c.extraInformation();
+#endif
+       
         for (int j = (p == lit_Undef) ? 0 : 1; j < c.size(); j++){
             Lit q = c[j];
     
@@ -483,7 +487,6 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
         // Select next clause to look at:
         while (!seen[var(trail[index--])]); // cerr << "c check seen for literal " << (sign(trail[index]) ? "-" : " ") << var(trail[index]) + 1 << " at index " << index << " and level " << level( var( trail[index] ) )<< endl;
         p     = trail[index+1];
-//	cerr << "c get the reason for literal " << (sign(p) ? "-" : " ") << var(p) + 1 << endl;
 	lastConfl = confl;
         confl = reason(var(p));
         seen[var(p)] = 0;
@@ -494,7 +497,6 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	if( config.opt_allUipHack > 0  && pathC <= 0 && isOnlyUnit && out_learnt.size() == 1+units ) { 
 	  learntUnit ++; 
 	  units ++; // count current units
-	  // printf(" c found units: %d, this var: %d\n", units, var(~p)+1 );
 	  out_learnt.push( ~p ); // store unit
 	  if( config.opt_allUipHack == 1 ) break; // for now, stop at the first unit! // TODO collect all units
 	}
@@ -510,7 +512,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     
     assert( out_learnt.size() > 0 && "there has to be some learnt clause" );
     
-        // if we do not use units, add asserting literal to learned clause!
+    // if we do not use units, add asserting literal to learned clause!
     if( units == 0 ) out_learnt[0] = ~p;
     else { 
       // process learnt units!
@@ -579,15 +581,23 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     // Simplify conflict clause:
     //
     int i, j;
+    uint64_t minimize_extra_info = extraInfo;
     out_learnt.copyTo(analyze_toclear);
     if (ccmin_mode == 2){
         uint32_t abstract_level = 0;
         for (i = 1; i < out_learnt.size(); i++)
             abstract_level |= abstractLevel(var(out_learnt[i])); // (maintain an abstraction of levels involved in conflict)
 
-        for (i = j = 1; i < out_learnt.size(); i++)
-            if (reason(var(out_learnt[i])) == CRef_Undef || !litRedundant(out_learnt[i], abstract_level))
-                out_learnt[j++] = out_learnt[i];
+        
+        for (i = j = 1; i < out_learnt.size(); i++) {
+	    minimize_extra_info = extraInfo;
+            if (reason(var(out_learnt[i])) == CRef_Undef ) {
+	      out_learnt[j++] = out_learnt[i]; // keep, since we cannot resolve on decisino literals
+	    } else if ( !litRedundant(out_learnt[i], abstract_level, extraInfo)) {
+	      extraInfo=minimize_extra_info; // not minimized, thus, keep the old value
+              out_learnt[j++] = out_learnt[i]; // keep, since removing the literal would probably introduce new levels
+	    }
+	}
         
     }else if (ccmin_mode == 1){
         for (i = j = 1; i < out_learnt.size(); i++){
@@ -597,10 +607,19 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
                 out_learnt[j++] = out_learnt[i];
             else{
                 Clause& c = ca[reason(var(out_learnt[i]))];
-                for (int k = 1; k < c.size(); k++)
+		int k = 1;
+                for (; k < c.size(); k++)
+		{
                     if (!seen[var(c[k])] && level(var(c[k])) > 0){
                         out_learnt[j++] = out_learnt[i];
-                        break; }
+                        break;
+		    }
+		}
+#ifdef CLS_EXTRA_INFO
+		if( k == c.size() ) {
+		  extraInfo = extraInfo >= c.extraInformation() ? extraInfo : c.extraInformation();
+		}
+#endif
             }
         }
     }else
@@ -651,6 +670,10 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	  */
 	  nb++;
 	  permDiff[var(imp)]= MYFLAG-1;
+
+#ifdef CLS_EXTRA_INFO
+	  extraInfo = extraInfo >= ca[wbin[k].cref].extraInformation() ? extraInfo : ca[wbin[k].cref].extraInformation();
+#endif
 	}
       }
       int l = out_learnt.size()-1;
@@ -723,6 +746,10 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 #endif	    
 
     for (int j = 0; j < analyze_toclear.size(); j++) seen[var(analyze_toclear[j])] = 0;    // ('seen[]' is now cleared)
+
+#ifdef CLS_EXTRA_INFO // current version of extra info measures the height of the proof. height of new clause is max(resolvents)+1
+    extraInfo ++;
+#endif
     return 0;
 
 }
@@ -730,7 +757,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 
 // Check if 'p' can be removed. 'abstract_levels' is used to abort early if the algorithm is
 // visiting literals at levels that cannot be removed later.
-bool Solver::litRedundant(Lit p, uint32_t abstract_levels)
+bool Solver::litRedundant(Lit p, uint32_t abstract_levels,uint64_t& extraInfo)
 {
     analyze_stack.clear(); analyze_stack.push(p);
     int top = analyze_toclear.size();
@@ -742,11 +769,13 @@ bool Solver::litRedundant(Lit p, uint32_t abstract_levels)
 	  Lit tmp = c[0];
 	  c[0] =  c[1], c[1] = tmp;
 	}
-
+#ifdef CLS_EXTRA_INFO // if minimization is done, then take also care of the participating clause!
+	extraInfo = extraInfo >= c.extraInformation() ? extraInfo : c.extraInformation();
+#endif
         for (int i = 1; i < c.size(); i++){
             Lit p  = c[i];
             if (!seen[var(p)] && level(var(p)) > 0){
-                if (reason(var(p)) != CRef_Undef && (abstractLevel(var(p)) & abstract_levels) != 0){
+                if (reason(var(p)) != CRef_Undef && (abstractLevel(var(p)) & abstract_levels) != 0){ // can be used for minimization
                     seen[var(p)] = 1;
                     analyze_stack.push(p);
                     analyze_toclear.push(p);
@@ -1235,7 +1264,6 @@ lbool Solver::search(int nof_conflicts)
 	  }
 	  if (decisionLevel() == 0) {
 	    return l_False;
-	    
 	  }
 
 	  trailQueue.push(trail.size());
@@ -1250,8 +1278,12 @@ lbool Solver::search(int nof_conflicts)
 	      learnt_clause.clear();
 	      otfssCls.clear();
 	      
-	      int ret = analyze(confl, learnt_clause, backtrack_level,nblevels,otfssCls);
-	      
+	      uint64_t extraInfo = 0;
+	      int ret = analyze(confl, learnt_clause, backtrack_level,nblevels,otfssCls,extraInfo);
+#ifdef CLS_EXTRA_INFO
+	      maxResHeight = extraInfo;
+#endif
+     
 	      // OTFSS - check whether this can be done in an extra method!
 	      if(config.debug_otfss) cerr << "c conflict at level " << decisionLevel() << " analyze will proceed at level " << backtrack_level << endl;
 	      int otfssBtLevel = backtrack_level;
@@ -1358,6 +1390,9 @@ lbool Solver::search(int nof_conflicts)
 		if (learnt_clause.size() == 1){
 		    assert( decisionLevel() == 0 && "enequeue unit clause on decision level 0!" );
 		    topLevelsSinceLastLa ++;
+#ifdef CLS_EXTRA_INFO
+		    vardata[var(learnt_clause[0])].extraInfo = extraInfo;
+#endif
 		    if( value(learnt_clause[0]) == l_Undef ) {uncheckedEnqueue(learnt_clause[0]);nbUn++;}
 		    else if (value(learnt_clause[0]) == l_False ) return l_False; // otherwise, we have a top level conflict here!
 		    if( config.opt_printDecisions ) cerr << "c enqueue learned unit literal " << learnt_clause[0]<< " at level " <<  decisionLevel() << " from clause " << learnt_clause << endl;
@@ -1366,7 +1401,9 @@ lbool Solver::search(int nof_conflicts)
 		  ca[cr].setLBD(nblevels); 
 		  if(nblevels<=2) nbDL2++; // stats
 		  if(ca[cr].size()==2) nbBin++; // stats
-
+#ifdef CLS_EXTRA_INFO
+		  ca[cr].setExtraInformation(extraInfo);
+#endif
 		  learnts.push(cr);
 		  attachClause(cr);
 		  
@@ -1908,7 +1945,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
 	    printf("c IntervalRestarts: %d\n", intervalRestart);
 	    printf("c lhbr: %d (l1: %d), new: %d (l1: %d), tests: %d, subs: %d\n", lhbrs, l1lhbrs,lhbr_news,l1lhbr_news,lhbrtests,lhbr_sub);
 	    printf("c otfss: %d (l1: %d), cls: %d, units: %d, binaries: %d, jumpedHigher: %d\n", otfsss, otfsssL1,otfssClss,otfssUnits,otfssBinaries,otfssHigherJump);
-	    printf("c learning: %lld cls, %lf avg. size, %lf avg. LBD, %lld maxSize\n", (int64_t)totalLearnedClauses, sumLearnedClauseSize/totalLearnedClauses, sumLearnedClauseLBD/totalLearnedClauses,(int64_t)maxLearnedClauseSize);
+	    printf("c learning: %lld cls, %lf avg. size, %lf avg. LBD, %lld maxSize, %lld proof-height\n", (int64_t)totalLearnedClauses, sumLearnedClauseSize/totalLearnedClauses, sumLearnedClauseLBD/totalLearnedClauses,(int64_t)maxLearnedClauseSize,(int64_t)maxResHeight);
 	    printf("c decisionClauses: %d\n", learnedDecisionClauses );
     }
 
@@ -2071,7 +2108,11 @@ uint64_t Solver::defaultExtraInfo() const
 uint64_t Solver::variableExtraInfo(const Var& v) const
 {
   /** overwrite this method! */
+#ifdef CLS_EXTRA_INFO
+  return vardata[v].extraInfo;
+#else
   return 0;
+#endif
 }
 
 void Solver::setPreprocessor(Coprocessor::Preprocessor* cp)
