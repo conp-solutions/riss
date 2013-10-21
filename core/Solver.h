@@ -248,7 +248,9 @@ protected:
                         watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
     OccLists<Lit, vec<Watcher>, WatcherDeleted>
                         watchesBin;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
+public: // TODO: set more nicely, or write method!
     vec<CRef>           clauses;          // List of problem clauses.
+protected:
     vec<CRef>           learnts;          // List of learnt clauses.
 
     vec<lbool>          assigns;          // The current assignments.
@@ -273,7 +275,9 @@ protected:
     vec<Lit> lastDecisionLevel; 
 #endif
 
+public: // TODO: set more nicely!
     ClauseAllocator     ca;
+protected:
 
     int nbclausesbeforereduce;            // To know when it is time to reduce clause database
     

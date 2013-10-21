@@ -18,6 +18,9 @@ all: rs
 d: rissd
 rs: rissRS
 
+cld: classifierd
+cls: classifiers
+
 simp: rissSimpRS
 simpd: rissSimpd
 
@@ -72,6 +75,13 @@ coprocessorRS: always
 coprocessord: always
 	cd coprocessor-src;  make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv coprocessor_debug ../coprocessor
 	
+classifierd: always
+	cd classifier-src;  make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv classifier_debug ../classifier
+	
+classifiers: always
+	cd classifier-src;  make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv classifier_static ../classifier
+	
+	
 # simple qbf preprocessor
 qprocessord: always
 	cd qprocessor-src;  make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv qprocessor_debug ../qprocessor
@@ -106,12 +116,13 @@ qtar: clean
 bmctar: clean toolclean
 	tar czvf riss-AbmC.tar.gz core LICENSE  Makefile mtl  README  simp  utils coprocessor-src aiger-src abc picosat
 	
-# clean up after solving
+# clean up after solving - be careful here if some directories are missing!
 clean:
 	@cd core; make clean CPDEPEND="" MROOT=..;
 	@cd simp; make clean MROOT=..;
 	@cd coprocessor-src; make clean MROOT=..;
 	@cd qprocessor-src; make clean MROOT=..;
+	@cd classifier-src; make clean MROOT=..;
 	@rm -f riss3m riss3g coprocessor qprocessor libriss3g.a
 	@rm -f *~ */*~
 	@rm -rf doc/html
