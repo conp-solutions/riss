@@ -92,10 +92,13 @@ doc: clean
 	touch doc
 
 tar: clean
-	tar czvf riss3m.tar.gz core   LICENSE  Makefile mtl  README  simp utils
+	tar czvf riss3g.tar.gz core   LICENSE  Makefile mtl  README  simp utils
 	
 cotar: clean
 	tar czvf coprocessor3.tar.gz core LICENSE  Makefile mtl  README  simp  utils coprocessor-src
+	
+cltar: clean
+	tar czvf classifier.tar.gz core LICENSE  Makefile mtl  README  simp  utils coprocessor-src classifier-src
 
 qtar: clean
 	tar czvf qprocessor3.tar.gz core LICENSE Makefile mtl  README  simp  utils coprocessor-src qprocessor-src qp.sh 
