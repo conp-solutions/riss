@@ -72,7 +72,7 @@ Solver::Solver(CoreConfig& _config) :
     , lbLBDFrozenClause (config.opt_lb_lbd_frozen_clause)
     , lbSizeMinimizingClause (config.opt_lb_size_minimzing_clause)
     , lbLBDMinimizingClause (config.opt_lb_lbd_minimzing_clause)
-  , var_decay        (config.opt_var_decay)
+  , var_decay        (config.opt_var_decay_start)
   , clause_decay     (config.opt_clause_decay)
   , random_var_freq  (config.opt_random_var_freq)
   , random_seed      (config.opt_random_seed)
@@ -136,7 +136,7 @@ Solver::Solver(CoreConfig& _config) :
   
   ,startedSolving(false)
   
-  ,useVmtf(config.opt_vmtf)
+  ,useVSIDS(1.0 - config.opt_vmtf)
   
   ,lhbrs(0)
   ,l1lhbrs(0)
@@ -1255,14 +1255,19 @@ lbool Solver::search(int nof_conflicts)
             // CONFLICT
 	  conflicts++; conflictC++;
 	  if( config.opt_printDecisions ) printf("c conflict at level %d\n", decisionLevel() );
-
+	  
+	  // as in glucose 2.3, increase decay after a certain amount of steps - but have parameters here!
+	  if( var_decay< config.opt_var_decay_stop && conflicts % config.opt_var_decay_dist == 0 ) { // div is the more expensive operation!
+            var_decay += config.opt_var_decay_inc;
+	  }
+	  
 	  if (verbosity >= 1 && (verbEveryConflicts == 0 || conflicts % verbEveryConflicts==0) ){
 	    printf("c | %8d   %7d    %5d | %7d %8d %8d | %5d %8d   %6d %8d | %6.3f %% |\n", 
 		   (int)starts,(int)nbstopsrestarts, (int)(conflicts/starts), 
 		   (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]), nClauses(), (int)clauses_literals, 
 		   (int)nbReduceDB, nLearnts(), (int)nbDL2,(int)nbRemovedClauses, progressEstimate()*100);
 	  }
-	  if (decisionLevel() == 0) {
+	  if (decisionLevel() == 0) { // top level conflict - stop!
 	    return l_False;
 	  }
 
@@ -1812,9 +1817,9 @@ lbool Solver::solve_()
 	for( Var v = 0 ; v < nVars(); ++ v ) {
 	  if( solves == 1 || ( config.resetActEvery != 0 && solves % config.resetActEvery == 0 )) {
 	    if( config.opt_init_act == 1 ) activity[v] = v;
-	    else if( config.opt_init_act == 2 ) activity[v] = pow(1.0 / config.opt_var_decay, 2*v / nVars() );
+	    else if( config.opt_init_act == 2 ) activity[v] = pow(1.0 / config.opt_var_decay_start, 2*v / nVars() );
 	    else if( config.opt_init_act == 3 ) activity[nVars() - v - 1] = v;
-	    else if( config.opt_init_act == 4 ) activity[nVars() - v - 1] = pow(1.0 / config.opt_var_decay, 2*v / nVars() );
+	    else if( config.opt_init_act == 4 ) activity[nVars() - v - 1] = pow(1.0 / config.opt_var_decay_start, 2*v / nVars() );
 	    else if( config.opt_init_act == 5 ) activity[v] = drand(random_seed);
 	    else if( config.opt_init_act == 6 ) activity[v] = jw[v] > 0 ? jw[v] : -jw[v];
 	    changedActivities = true;

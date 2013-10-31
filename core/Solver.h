@@ -406,7 +406,7 @@ protected:
         
   bool startedSolving;	// inidicate whether solving started already
   
-  bool useVmtf;		// parameter for using vmtf heuristic
+  double useVSIDS;	// parameter for interpolating between VSIDS and VMTF
   
   int lhbrs;
   int l1lhbrs;
@@ -508,7 +508,7 @@ inline void Solver::insertVarOrder(Var x) {
 inline void Solver::varDecayActivity() { var_inc *= (1 / var_decay); }
 inline void Solver::varBumpActivity(Var v) { varBumpActivity(v, var_inc); }
 inline void Solver::varBumpActivity(Var v, double inc) {
-    activity[v] = ( useVmtf ? inc : activity[v] + inc );
+    activity[v] = ( useVSIDS * activity[v] ) + inc; // interpolate between VSIDS and VMTF here!
     if ( activity[v] > 1e100 ) {
         // Rescale:
         for (int i = 0; i < nVars(); i++)

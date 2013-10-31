@@ -34,7 +34,11 @@ CoreConfig::CoreConfig() // add new options here!
  opt_lb_size_minimzing_clause (_cm, "minSizeMinimizingClause", "The min size required to minimize clause", 30, IntRange(3, INT32_MAX)),
  opt_lb_lbd_minimzing_clause (_cm, "minLBDMinimizingClause", "The min LBD required to minimize clause", 6, IntRange(3, INT32_MAX)),
 
- opt_var_decay (_cat, "var-decay", "The variable activity decay factor", 0.95, DoubleRange(0, false, 1, false)),
+ opt_var_decay_start(_cat, "var-decay-b", "The variable activity decay factor start value", 0.95, DoubleRange(0, false, 1, false)),
+ opt_var_decay_stop(_cat, "var-decay-e", "The variable activity decay factor stop value", 0.95, DoubleRange(0, false, 1, false)),
+ opt_var_decay_inc(_cat, "var-decay-i",  "The variable activity decay factor increase ", 0.01, DoubleRange(0, false, 1, false)),
+ opt_var_decay_dist(_cat, "var-decay-d", "Nr. of conflicts for activity decay increase", 5000, IntRange(1, INT32_MAX)),
+ 
  opt_clause_decay (_cat, "cla-decay", "The clause activity decay factor", 0.999, DoubleRange(0, false, 1, false)),
  opt_random_var_freq (_cat, "rnd-freq", "The frequency with which the decision heuristic tries to choose a random variable", 0, DoubleRange(0, true, 1, true)),
  opt_random_seed (_cat, "rnd-seed", "Used by the random variable selection", 91648253, DoubleRange(0, false, HUGE_VAL, false)),
@@ -53,7 +57,7 @@ CoreConfig::CoreConfig() // add new options here!
  opt_allUipHack ("MODS", "alluiphack", "learn all unit UIPs at any level", 0, IntRange(0, 2) ),
  opt_uipHack ("MODS", "uiphack", "learn more UIPs at decision level 1", false),
  opt_uips ("MODS", "uiphack-uips", "learn at most X UIPs at decision level 1 (0=all)", 0, IntRange(0, INT32_MAX)),
- opt_vmtf ("MODS", "vmtf", "use the vmtf heuristic", false),
+ opt_vmtf ("MODS", "vmtf", "interpolate between VSIDS and VMTF", 0, DoubleRange(0, true, 1, true)),
  opt_LHBR ("MODS", "lhbr", "use lhbr (0=no,1=str,2=trans,str,3=new,4=trans,new)", 0, IntRange(0, 4)),
  opt_LHBR_max ("MODS", "lhbr-max", "max nr of newly created lhbr clauses", INT32_MAX, IntRange(0, INT32_MAX)),
  opt_LHBR_sub ("MODS", "lhbr-sub", "check whether new clause subsumes the old clause", false),

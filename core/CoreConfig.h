@@ -50,7 +50,11 @@ public:
  IntOption opt_lb_lbd_minimzing_clause;
 
 
- DoubleOption opt_var_decay;
+ DoubleOption opt_var_decay_start; // start value default: 0.95 glucose 2.3: 0.8
+ DoubleOption opt_var_decay_stop;  // stop value  default: 0.95 glucose 2.3: 0.95
+ DoubleOption opt_var_decay_inc;   // increase value default: 0 glucose 2.3: 0.01
+ IntOption opt_var_decay_dist;     // increase after this number of conflicts: default: never, glucose 2.3: 5000
+ 
  DoubleOption opt_clause_decay;
  DoubleOption opt_random_var_freq;
  DoubleOption opt_random_seed;
@@ -70,7 +74,7 @@ public:
  IntOption opt_allUipHack;
  BoolOption opt_uipHack;
  IntOption opt_uips;
- BoolOption opt_vmtf;
+ DoubleOption opt_vmtf; // interpolate between VSIDS and VMTF
  IntOption opt_LHBR;
  IntOption opt_LHBR_max;
  BoolOption opt_LHBR_sub;
