@@ -57,7 +57,11 @@ CoreConfig::CoreConfig() // add new options here!
  opt_allUipHack ("MODS", "alluiphack", "learn all unit UIPs at any level", 0, IntRange(0, 2) ),
  opt_uipHack ("MODS", "uiphack", "learn more UIPs at decision level 1", false),
  opt_uips ("MODS", "uiphack-uips", "learn at most X UIPs at decision level 1 (0=all)", 0, IntRange(0, INT32_MAX)),
- opt_vmtf ("MODS", "vmtf", "interpolate between VSIDS and VMTF", 0, DoubleRange(0, true, 1, true)),
+ opt_vsids_start ("MODS", "vsids-s", "interpolate between VSIDS and VMTF,start value", 1, DoubleRange(0, true, 1, true)),
+ opt_vsids_end("MODS", "vsids-e", "interpolate between VSIDS and VMTF, end value", 1, DoubleRange(0, true, 1, true)),
+ opt_vsids_inc("MODS", "vsids-i", "interpolate between VSIDS and VMTF, inc during update", 1, DoubleRange(0, true, 1, true)),
+ opt_vsids_distance("MODS", "vsids-d", "interpolate between VSIDS and VMTF, numer of conflits until next update", INT32_MAX, IntRange(0, INT32_MAX)),
+ 
  opt_LHBR ("MODS", "lhbr", "use lhbr (0=no,1=str,2=trans,str,3=new,4=trans,new)", 0, IntRange(0, 4)),
  opt_LHBR_max ("MODS", "lhbr-max", "max nr of newly created lhbr clauses", INT32_MAX, IntRange(0, INT32_MAX)),
  opt_LHBR_sub ("MODS", "lhbr-sub", "check whether new clause subsumes the old clause", false),

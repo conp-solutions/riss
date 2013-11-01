@@ -136,7 +136,7 @@ Solver::Solver(CoreConfig& _config) :
   
   ,startedSolving(false)
   
-  ,useVSIDS(1.0 - config.opt_vmtf)
+  ,useVSIDS(config.opt_vsids_start)
   
   ,lhbrs(0)
   ,l1lhbrs(0)
@@ -1266,6 +1266,19 @@ lbool Solver::search(int nof_conflicts)
 	  // as in glucose 2.3, increase decay after a certain amount of steps - but have parameters here!
 	  if( var_decay< config.opt_var_decay_stop && conflicts % config.opt_var_decay_dist == 0 ) { // div is the more expensive operation!
             var_decay += config.opt_var_decay_inc;
+	  }
+	  
+	  // update the mixture between VMTF and VSIDS dynamically, similarly to the decay
+	  if( useVSIDS != config.opt_vsids_end && conflicts % config.opt_vsids_distance == 0 ) {
+	    if( config.opt_vsids_end > config.opt_vsids_start ) {
+	      useVSIDS += config.opt_vsids_inc;
+	      if( useVSIDS >= config.opt_vsids_end ) useVSIDS = config.opt_vsids_end;
+	    } else if (  config.opt_vsids_end < config.opt_vsids_start ) {
+	      useVSIDS -= config.opt_vsids_inc;
+	      if( useVSIDS <= config.opt_vsids_end ) useVSIDS = config.opt_vsids_end;
+	    } else {
+	      useVSIDS = config.opt_vsids_end;
+	    }
 	  }
 	  
 	  if (verbosity >= 1 && (verbEveryConflicts == 0 || conflicts % verbEveryConflicts==0) ){

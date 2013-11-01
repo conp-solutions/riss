@@ -74,7 +74,11 @@ public:
  IntOption opt_allUipHack;
  BoolOption opt_uipHack;
  IntOption opt_uips;
- DoubleOption opt_vmtf; // interpolate between VSIDS and VMTF
+ DoubleOption opt_vsids_start; // interpolate between VSIDS and VMTF, start value
+ DoubleOption opt_vsids_end;   // interpolate between VSIDS and VMTF, end value
+ DoubleOption opt_vsids_inc;   // interpolate between VSIDS and VMTF, increase
+ IntOption opt_vsids_distance; // interpolate between VSIDS and VMTF, update afte rthis number of conflict
+ 
  IntOption opt_LHBR;
  IntOption opt_LHBR_max;
  BoolOption opt_LHBR_sub;
