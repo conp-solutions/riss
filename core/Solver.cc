@@ -155,6 +155,10 @@ Solver::Solver(CoreConfig& _config) :
   ,otfssBinaries(0)
   ,otfssHigherJump(0)
   
+  , agility( config.opt_agility_init )
+  , agility_decay ( config.opt_agility_decay )
+  , agility_rejects(0)
+  
   ,totalLearnedClauses(0)
   ,sumLearnedClauseSize(0)
   ,sumLearnedClauseLBD(0)
@@ -362,7 +366,7 @@ void Solver::cancelUntil(int level) {
             Var      x  = var(trail[c]);
             assigns [x] = l_Undef;
 	    vardata [x].dom = lit_Undef; // reset dominator
-            if (phase_saving > 1 || (phase_saving == 1) && c > trail_lim.last())
+            if (phase_saving > 1  ||   ((phase_saving == 1) && c > trail_lim.last())  ) // TODO: check whether publication said above or below: workaround: have another parameter value for the other case!
                 polarity[x] = sign(trail[c]);
             insertVarOrder(x); }
         qhead = trail_lim[level];
@@ -845,6 +849,12 @@ void Solver::uncheckedEnqueue(Lit p, CRef from)
    *  Note: this code is also executed during extended resolution, so take care of modifications performed there!
    */
   
+    if( config.opt_agility_restart_reject ) { // only if technique is enabled:
+     // cerr << "c old: " << agility << " lit: " << p << " sign: " << sign(p) << " pol: " << polarity[var(p)] << endl;
+      agility = agility * agility_decay + ( sign(p) != polarity[ var(p) ] ? (1.0 - agility_decay) : 0 );
+     // cerr << "c new: " << agility << " ... decay: " << agility_decay << endl;
+    }
+  
     assert(value(p) == l_Undef);
     assigns[var(p)] = lbool(!sign(p));
     /** include variableExtraInfo here, if required! */
@@ -1282,10 +1292,10 @@ lbool Solver::search(int nof_conflicts)
 	  }
 	  
 	  if (verbosity >= 1 && (verbEveryConflicts == 0 || conflicts % verbEveryConflicts==0) ){
-	    printf("c | %8d   %7d    %5d | %7d %8d %8d | %5d %8d   %6d %8d | %6.3f %% |\n", 
+	    printf("c | %8d   %7d    %5d | %7d %8d %8d | %5d %8d   %6d %8d | %6.3f %% %0.3lf | \n", 
 		   (int)starts,(int)nbstopsrestarts, (int)(conflicts/starts), 
 		   (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]), nClauses(), (int)clauses_literals, 
-		   (int)nbReduceDB, nLearnts(), (int)nbDL2,(int)nbRemovedClauses, progressEstimate()*100);
+		   (int)nbReduceDB, nLearnts(), (int)nbDL2,(int)nbRemovedClauses, progressEstimate()*100, agility);
 	  }
 	  if (decisionLevel() == 0) { // top level conflict - stop!
 	    return l_False;
@@ -1449,29 +1459,34 @@ lbool Solver::search(int nof_conflicts)
            
         }else{
 	  
-	  if( config.opt_restarts_type == 0 ) {
-	    // Our dynamic restart, see the SAT09 competition compagnion paper 
-	    if (
-		( lbdQueue.isvalid() && ((lbdQueue.getavg()*K) > (sumLBD / conflicts)))
-		|| (config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound )// if thre have been too many conflicts
-	      ) {
-	      
-	      // increase current limit, if this has been the reason for the restart!!
-	      if( (config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound ) ) { intervalRestart++;conflictsSinceLastRestart = (double)conflictsSinceLastRestart * (double)config.opt_rMaxInc; }
-	      
-	      conflictsSinceLastRestart = 0;
-	      lbdQueue.fastclear();
-	      progress_estimate = progressEstimate();
-	      cancelUntil(0);
-	      return l_Undef;
+	  if( ! config.opt_agility_restart_reject // do not reject restarts
+	     || agility < config.opt_agility_rejectLimit )
+	  { // TODO FIXME: do not reject the restart for now, but until the next planned restart in schedule (clear queue, or increase number of conflicts!)
+	    // dynamic glucose restarts
+	    if( config.opt_restarts_type == 0 ) {
+	      // Our dynamic restart, see the SAT09 competition compagnion paper 
+	      if (
+		  ( lbdQueue.isvalid() && ((lbdQueue.getavg()*K) > (sumLBD / conflicts)))
+		  || (config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound )// if thre have been too many conflicts
+		) {
+		
+		// increase current limit, if this has been the reason for the restart!!
+		if( (config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound ) ) { intervalRestart++;conflictsSinceLastRestart = (double)conflictsSinceLastRestart * (double)config.opt_rMaxInc; }
+		
+		conflictsSinceLastRestart = 0;
+		lbdQueue.fastclear();
+		progress_estimate = progressEstimate();
+		cancelUntil(0);
+		return l_Undef;
+	      }
+	    } else { // usual static luby or geometric restarts
+	      if (nof_conflicts >= 0 && conflictC >= nof_conflicts || !withinBudget()){
+		  progress_estimate = progressEstimate();
+		  cancelUntil(0);
+		  // cerr << "c restart after " << conflictC << " conflicts - limit: " << nof_conflicts << endl;
+		  return l_Undef; }
 	    }
-	  } else { // usual luby or geometric restarts
-            if (nof_conflicts >= 0 && conflictC >= nof_conflicts || !withinBudget()){
-                progress_estimate = progressEstimate();
-                cancelUntil(0);
-		// cerr << "c restart after " << conflictC << " conflicts - limit: " << nof_conflicts << endl;
-                return l_Undef; }
-	  }
+	  } else agility_rejects ++;
 
 
            // Simplify the set of problem clauses - but do not do it each iteration!
@@ -1983,6 +1998,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
 		   extendedLearnedClausesCandidates
 		  );
 	    printf("c decisionClauses: %d\n", learnedDecisionClauses );
+	    printf("c agility restart rejects: %d\n", agility_rejects );
     }
 
     if (status == l_True){
@@ -2308,7 +2324,7 @@ void Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned 
     newAct = a1 * a2; newAct = sqrt( newAct );
   } 
   activity[x] = newAct;
-  // TODO: need to rebuild the heap?
+  // TODO: need to rebuild the heap? - usually yes, but parformance?
   
   // finally, remove last two lits from learned clause and replace them with the negation of the fresh variable!
   currentLearnedClause.shrink(1);

@@ -55,6 +55,11 @@ public:
  DoubleOption opt_var_decay_inc;   // increase value default: 0 glucose 2.3: 0.01
  IntOption opt_var_decay_dist;     // increase after this number of conflicts: default: never, glucose 2.3: 5000
  
+ BoolOption opt_agility_restart_reject; // reject restarts based on search agility?
+ DoubleOption opt_agility_rejectLimit; // agility above this value rejects restarts
+ DoubleOption opt_agility_decay;   // decay that controls the agility of the search (stuck: ag = ag * decay; moving: ag = ag*decay + (1-decay) Biere08)
+ DoubleOption opt_agility_init;	    // initilize agility with this value
+ 
  DoubleOption opt_clause_decay;
  DoubleOption opt_random_var_freq;
  DoubleOption opt_random_seed;

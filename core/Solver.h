@@ -424,6 +424,10 @@ protected:
   vec<CRef> otfssCls; // store the clauses that can be modified by OTFSS (assume: first literal is to be removed!)
   int otfsss, otfsssL1,otfssClss,otfssUnits,otfssBinaries,otfssHigherJump; // otfss stats!
   
+  // for rejecting restarts based on agility
+  double agility;
+  double agility_decay;
+  int agility_rejects;
   
   // stats for learning clauses
   double totalLearnedClauses, sumLearnedClauseSize, sumLearnedClauseLBD, maxLearnedClauseSize;

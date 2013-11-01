@@ -39,6 +39,11 @@ CoreConfig::CoreConfig() // add new options here!
  opt_var_decay_inc(_cat, "var-decay-i",  "The variable activity decay factor increase ", 0.01, DoubleRange(0, false, 1, false)),
  opt_var_decay_dist(_cat, "var-decay-d", "Nr. of conflicts for activity decay increase", 5000, IntRange(1, INT32_MAX)),
  
+ opt_agility_restart_reject("MODS", "agil-r", "reject restarts based on agility", false),
+ opt_agility_rejectLimit("MODS", "agil-limit", "agility above this limit rejects restarts", 0.22, DoubleRange(0, true, 1, true)),
+ opt_agility_decay("MODS", "agil-decay", "search agility decay", 0.9999, DoubleRange(0, true, 1, true)),
+ opt_agility_init("MODS", "agil-init",   "initial agility", 0.11, DoubleRange(0, true, 1, true)),
+ 
  opt_clause_decay (_cat, "cla-decay", "The clause activity decay factor", 0.999, DoubleRange(0, false, 1, false)),
  opt_random_var_freq (_cat, "rnd-freq", "The frequency with which the decision heuristic tries to choose a random variable", 0, DoubleRange(0, true, 1, true)),
  opt_random_seed (_cat, "rnd-seed", "Used by the random variable selection", 91648253, DoubleRange(0, false, HUGE_VAL, false)),
@@ -48,7 +53,7 @@ CoreConfig::CoreConfig() // add new options here!
  opt_init_act ("INIT", "init-act", "initialize activities (0=none,1=inc-lin,2=inc-geo,3=dec-lin,4=dec-geo,5=rnd,6=abs(jw))", 0, IntRange(0, 6)),
  opt_init_pol ("INIT", "init-pol", "initialize polarity (0=none,1=JW-pol,2=JW-neg,3=MOMS,4=MOMS-neg,5=rnd)", 0, IntRange(0, 5)),
 
- opt_restarts_type (_cat, "rtype", "Choose type of restart (0=dynamic,1=luby,2=geometric)", 00, IntRange(0, 2)),
+ opt_restarts_type (_cat, "rtype", "Choose type of restart (0=dynamic,1=luby,2=geometric)", 0, IntRange(0, 2)),
  opt_restart_first (_cat, "rfirst", "The base restart interval", 100, IntRange(1, INT32_MAX)),
  opt_restart_inc (_cat, "rinc", "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false)),
 
