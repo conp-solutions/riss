@@ -106,6 +106,14 @@ CoreConfig::CoreConfig() // add new options here!
 
  opt_learnDecPrecent ("MODS", "learnDecP", "if LBD of is > percent of decisionlevel, learn decision Clause (Knuth)", 100, IntRange(1, 100) ),
 
+ opt_extendedClauseLearning("MODS", "ecl", "perform extended clause learning (alson Huang 2010)", false), 
+ opt_ecl_as_learned("MODS", "ecl-l", "add ecl clauses as learned clauses", false),
+ opt_ecl_full("MODS", "ecl-f", "add full ecl extension?", true), 
+ opt_ecl_minSize ("MOD", "ecl-min-size", "minimum size of learned clause to perform ecl", 1, IntRange(3, INT32_MAX) ),
+ opt_ecl_maxLBD("MOD", "ecl-maxLBD", "maximum LBD to perform ecl", 1, IntRange(2, INT32_MAX) ), 
+ opt_ecl_newAct("MOD", "ecl-new-act", "how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean", 1, IntRange(0, 4) ),
+ opt_ecl_debug("MODS", "ecl-d", "debug output for ECL", false),
+ 
  opt_verboseProof ("PROOF", "verb-proof", "also print comments into the proof, 2=print proof also to stderr", 1, IntRange(0, 2) ),
  opt_rupProofOnly ("PROOF", "rup-only", "do not print delete lines into proof", false), 
  

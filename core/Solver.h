@@ -358,6 +358,9 @@ protected:
     void addUnitToProof( const Lit& l, bool deleteFromProof=false);    // write a single unit clause to the proof
     void addCommentToProof( const char* text, bool deleteFromProof=false); // write the text as comment into the proof!
     
+    // extended clause learning (Huang, 2010)
+    void extendedClauseLearning( vec<Lit>& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo );
+    
     // Static helpers:
     //
 
@@ -424,6 +427,7 @@ protected:
   
   // stats for learning clauses
   double totalLearnedClauses, sumLearnedClauseSize, sumLearnedClauseLBD, maxLearnedClauseSize;
+  int extendedLearnedClauses, extendedLearnedClausesCandidates;
   uint64_t maxResHeight;
   
 /// for coprocessor

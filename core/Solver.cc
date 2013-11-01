@@ -159,6 +159,8 @@ Solver::Solver(CoreConfig& _config) :
   ,sumLearnedClauseSize(0)
   ,sumLearnedClauseLBD(0)
   ,maxLearnedClauseSize(0)
+  ,extendedLearnedClauses(0)
+  ,extendedLearnedClausesCandidates(0)
   ,maxResHeight(0)
   
   // preprocessor
@@ -433,6 +435,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     do{
         assert(confl != CRef_Undef); // (otherwise should be UIP)
         Clause& c = ca[confl];
+	if( config.opt_ecl_debug ) cerr << "c resolve on " << p << "(" << index << ") with [" << confl << "]" << c << endl;
 	int clauseReductSize = c.size();
 	// Special case for binary clauses
 	// The first one has to be SAT
@@ -838,6 +841,10 @@ void Solver::analyzeFinal(Lit p, vec<Lit>& out_conflict)
 
 void Solver::uncheckedEnqueue(Lit p, CRef from)
 {
+  /*
+   *  Note: this code is also executed during extended resolution, so take care of modifications performed there!
+   */
+  
     assert(value(p) == l_Undef);
     assigns[var(p)] = lbool(!sign(p));
     /** include variableExtraInfo here, if required! */
@@ -1380,6 +1387,9 @@ lbool Solver::search(int nof_conflicts)
 		multiLearnt = ( learnt_clause.size() > 1 ? multiLearnt + 1 : multiLearnt ); // stats
 		topLevelsSinceLastLa ++;
 	      } else { // treat usual learned clause!
+
+		// when this method is called, backjumping has been done already!
+		extendedClauseLearning( learnt_clause, nblevels, extraInfo );
 
 		lbdQueue.push(nblevels);
 		sumLBD += nblevels;
@@ -1950,7 +1960,15 @@ printf("c ==================================[ Search Statistics (every %6d confl
 	    printf("c IntervalRestarts: %d\n", intervalRestart);
 	    printf("c lhbr: %d (l1: %d), new: %d (l1: %d), tests: %d, subs: %d\n", lhbrs, l1lhbrs,lhbr_news,l1lhbr_news,lhbrtests,lhbr_sub);
 	    printf("c otfss: %d (l1: %d), cls: %d, units: %d, binaries: %d, jumpedHigher: %d\n", otfsss, otfsssL1,otfssClss,otfssUnits,otfssBinaries,otfssHigherJump);
-	    printf("c learning: %lld cls, %lf avg. size, %lf avg. LBD, %lld maxSize, %lld proof-height\n", (int64_t)totalLearnedClauses, sumLearnedClauseSize/totalLearnedClauses, sumLearnedClauseLBD/totalLearnedClauses,(int64_t)maxLearnedClauseSize,(int64_t)maxResHeight);
+	    printf("c learning: %lld cls, %lf avg. size, %lf avg. LBD, %lld maxSize, %lld proof-height, %d outOf %d ecls\n", 
+		   (int64_t)totalLearnedClauses, 
+		   sumLearnedClauseSize/totalLearnedClauses, 
+		   sumLearnedClauseLBD/totalLearnedClauses,
+		  (int64_t)maxLearnedClauseSize,
+		   (int64_t)maxResHeight, 
+		   extendedLearnedClauses,
+		   extendedLearnedClausesCandidates
+		  );
 	    printf("c decisionClauses: %d\n", learnedDecisionClauses );
     }
 
@@ -2103,6 +2121,194 @@ void Solver::garbageCollect()
                ca.size()*ClauseAllocator::Unit_Size, to.size()*ClauseAllocator::Unit_Size);
     to.moveTo(ca);
 }
+
+
+void Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo )
+{
+  if( ! config.opt_extendedClauseLearning ) return; // not enabled -> do nothing!
+  if( lbd > config.opt_ecl_maxLBD ) return; // do this only for interesting clauses
+  if( currentLearnedClause.size() < config.opt_ecl_minSize ) return; // do this only for clauses, that seem to be relevant to be split! (have a better heuristic here!)
+
+  extendedLearnedClausesCandidates ++;
+
+  // resort the clause, s.t. the smallest two literals are at the back!
+  int smallestLevel = decisionLevel(); // there need to be literals at/below the current level!
+  int litsAtSmallest = 0; // the asserting literals should not have a level at the moment!
+  bool foundUnit = false, assertingClause = true;
+  
+  if( config.opt_ecl_debug) cerr << "c transform current learned clause " << currentLearnedClause << endl;
+  
+  for( int i = 1 ; i < currentLearnedClause.size(); ++ i ) { // assume the level of the very first literal is the highest anyways!
+    const int lev = level( var( currentLearnedClause[i] )) ; 
+    if( lev == -1 ) { // handle literals without levels - there should be only one!
+      if( foundUnit ) { assertingClause = false; } // is it a problem to work with non-asserting clauses?
+      foundUnit = true;
+      continue;
+    } else if(lev < smallestLevel ) {
+      litsAtSmallest = 1; // reached new level!
+      const Lit tmp = currentLearnedClause[i]; // swap the literal to the front!
+      currentLearnedClause[i] = currentLearnedClause[ litsAtSmallest ];
+      currentLearnedClause[ litsAtSmallest ] = tmp;
+      smallestLevel = lev;
+    } else if(lev == smallestLevel )  { // move the smallest literals to the front (except very first), keep track of their number!
+      const Lit tmp = currentLearnedClause[i];
+      litsAtSmallest ++;
+      currentLearnedClause[i] = currentLearnedClause[ litsAtSmallest ];
+      currentLearnedClause[ litsAtSmallest ] = tmp;
+    } else {
+      // literal level is higher -> nothing to be done! 
+    }
+  }
+  // swap last two literals to second and third position
+  // swap literal with second highest level to second position
+  Lit tmp = currentLearnedClause[1];
+  currentLearnedClause[1] = currentLearnedClause[ currentLearnedClause.size() -2 ];
+  currentLearnedClause[ currentLearnedClause.size() -2 ] = tmp;
+  tmp = currentLearnedClause[2];
+  currentLearnedClause[2] = currentLearnedClause[ currentLearnedClause.size() -1 ];
+  currentLearnedClause[ currentLearnedClause.size() -1 ] = tmp;
+  int pos = 1; int lev = level( var(currentLearnedClause[1]) );
+  for( int i = 2 ; i < currentLearnedClause.size(); ++ i ) if( level( var(currentLearnedClause[i])) > lev ) { pos = i; lev = level( var(currentLearnedClause[i])) ; }
+  tmp = currentLearnedClause[1];
+  currentLearnedClause[1] = currentLearnedClause[ pos ];
+  currentLearnedClause[ pos ] = tmp;
+  
+  // process the learned clause!
+  if( config.opt_ecl_debug) cerr << "c into " << currentLearnedClause << " | with listAtSmallest= " << litsAtSmallest << endl;
+  if( config.opt_ecl_debug) cerr << "c detailed: " << endl;
+  for( int i = 0 ; i < currentLearnedClause.size(); ++ i  ) {
+    if( config.opt_ecl_debug) cerr << "c " << i <<  " : " << currentLearnedClause[i] << " @ " << level( var(currentLearnedClause[i] )) << endl;
+  }
+  
+  if( litsAtSmallest < 2 ){
+    if( config.opt_ecl_debug) cerr << "c reject " << endl;
+    return; // do only work on the class, if there are (more than) 2 literals on the smallest level!
+  }
+
+  oc.clear(); // this is the vector for adding the new extension ... still need to think about whether to add the full extension ...
+
+  const Lit l1 = currentLearnedClause[ currentLearnedClause.size() - 1 ];
+  const Lit l2 = currentLearnedClause[ currentLearnedClause.size() - 2 ];
+  if (level(var(l1)) == -1 || level(var(l2)) == -1 ) {
+     if( config.opt_ecl_debug) cerr << "c reject " << endl;
+    return; // perform only, if lowest two literals are still assigned!
+  }
+  
+  const Var x = newVar(true,true,'e'); // this is the fresh variable!
+  vardata[x].level = level(var(l1));
+
+  assigns[x] = lbool(true);
+  
+  oc.push( mkLit(x,false) );
+  oc.push( l1 ); // has to have an order?
+  oc.push( l2 );
+  // this is the first clause, the second and third literals should be mapped to false
+  // thus, this clause is going to be the reason clause for the literal 'x'
+  // and should be assigned directly after the position of the two literals literal! (Huang performed a restart, but this is not wanted here, due to side effects)
+  if( config.opt_ecl_debug) cerr << "c before trail: " << trail << endl;
+  int ui = trail.size() - 1;
+  trail.push(mkLit(x,false));
+  //for( int i = 0 ; i < trail.size(); ++ i ) if( trail[i] == ~l1 ) {cerr << "c found l1(" << l1 << ") at " << i << endl; break;}
+  //for( int i = 0 ; i < trail.size(); ++ i ) if( trail[i] == ~l2 ) {cerr << "c found l2(" << l2 << ") at " << i << endl; break;}
+  
+
+  while( ui > 0 && trail[ui] != ~l1 && trail[ui] != ~l2 ) {
+    const Lit tmp = trail[ui]; trail[ui] = trail[ui+1]; trail[ui+1] = tmp; // swap!
+    if( config.opt_hack > 0 ) trailPos[ var( tmp ) ] ++; // memorize that this literal is pushed up now
+    ui --; // go down trail until one of the two literals is hit
+  } // now, x is on the right position (immediately behind the latter of the two literals
+  if( config.opt_hack > 0 )  trailPos[ x ] = ui + 1; // memorize position of new variable
+  
+  if( config.opt_ecl_debug) {
+    cerr << "c after trail: " ;
+    for( int i = 0 ; i < trail.size(); ++ i ) {
+      cerr << " " << trail[i] << "@" << level(var(trail[i]));
+    }
+    cerr << endl;
+    cerr << "c perform extension, new var " << x+1 << ", added at trail position " << ui << "/" << trail.size() << " and at level " << level( var(l2) ) << " with current jump-level " << decisionLevel() << endl;
+  }
+  
+  if( config.opt_ecl_debug) cerr << "c CONSIDER: the level of the two literals could be differennt, then the LBD of the learned clause would be reduced!" << endl;
+  int ml = level(var(l1)) > level(var(l2)) ? level(var(l1)) : level(var(l2));
+  if( config.opt_ecl_debug) cerr << "c before (extL: " << level(var(l1)) << ", decL: " << decisionLevel() << ") trail lim: " << trail_lim << endl;
+  for( int i = ml; i < decisionLevel(); ++i ) {
+    if( config.opt_ecl_debug) cerr << "c inc dec pos for level " << i << " from " << trail_lim[i] << " to " << trail_lim[i]+1 << endl;
+    trail_lim[i] ++;
+  }
+  if( config.opt_ecl_debug) cerr << "c after trail lim: " << trail_lim << endl;
+  
+  if( config.opt_ecl_debug) cerr << "c add clause " << oc << endl;
+  CRef cr = ca.alloc(oc, config.opt_ecl_as_learned); // add clause as non-learned clause 
+  ca[cr].setLBD(1); // all literals are from the same level!
+  if( config.opt_ecl_debug) cerr << "c add clause " << ca[cr] << endl;
+  nbDL2++; // stats
+#ifdef CLS_EXTRA_INFO
+  ca[cr].setExtraInformation( defaultExtraInfo() );
+#endif
+  if( config.opt_ecl_as_learned ) { // if parameter says its a learned clause ...
+    learnts.push(cr);
+    claBumpActivity(ca[cr]);
+  } else clauses.push(cr);
+  attachClause(cr);
+  // set reason!
+  vardata[x].reason = cr;
+  if( config.opt_ecl_debug ) cerr << "c ref for new reason: " << cr << endl;
+
+  if( config.opt_ecl_full ) { // parameter to add full extension
+    oc.clear(); // for not x, not l1
+    oc.push( mkLit(x,true) );
+    oc.push( ~l1 );
+    CRef icr = ca.alloc(oc, config.opt_ecl_as_learned); // add clause as non-learned clause 
+    ca[icr].setLBD(1); // all literals are from the same level!
+    if( config.opt_ecl_debug) cerr << "c add clause " << ca[icr] << endl;
+    nbDL2++; nbBin ++; // stats
+    if( config.opt_ecl_as_learned ) { // add clause
+      learnts.push(icr);
+      claBumpActivity(ca[icr]);
+    } else clauses.push(icr);
+    attachClause(icr);
+    oc[1] = ~l2; // for not x, not l2
+    CRef cr = ca.alloc(oc, config.opt_ecl_as_learned); // add clause as non-learned clause 
+    ca[cr].setLBD(1); // all literals are from the same level!
+    if( config.opt_ecl_debug) cerr << "c add clause " << ca[cr] << endl;
+    nbDL2++; nbBin ++; // stats
+    if( config.opt_ecl_as_learned ) { // add clause
+      learnts.push(icr);
+      claBumpActivity(ca[icr]);
+    } else clauses.push(icr);
+    attachClause(icr);
+  }
+
+  // set the activity of the fresh variable (Huang used average of the two literals)
+  double newAct = 0;
+  const double& a1 = activity[var(l1)];
+  const double& a2 = activity[var(l2)];
+  if( config.opt_ecl_newAct == 0 ) {
+   newAct =  a1 + a2; newAct /= 2; 
+  } else if( config.opt_ecl_newAct == 1 ) {
+    newAct = ( a1 > a2 ? a1 : a2 );
+  } else if( config.opt_ecl_newAct == 2 ) {
+    newAct = ( a1 > a2 ? a2 : a1 );
+  } else if( config.opt_ecl_newAct == 3 ) {
+    newAct = a1 + a2;
+  } else if( config.opt_ecl_newAct == 4 ) {
+    newAct = a1 * a2; newAct = sqrt( newAct );
+  } 
+  activity[x] = newAct;
+  // TODO: need to rebuild the heap?
+  
+  // finally, remove last two lits from learned clause and replace them with the negation of the fresh variable!
+  currentLearnedClause.shrink(1);
+  currentLearnedClause[ currentLearnedClause.size() -1 ] = mkLit(x,true); // add negated clause
+  
+  if( config.opt_ecl_debug) cerr << "c final learned clause: " << currentLearnedClause << endl;
+  
+  // lbd remains the same
+  // extra info is set to default, because fresh variable has been introduced
+  extraInfo = defaultExtraInfo();
+  extendedLearnedClauses++;
+}
+
 
 uint64_t Solver::defaultExtraInfo() const 
 {
