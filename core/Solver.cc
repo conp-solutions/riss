@@ -167,6 +167,10 @@ Solver::Solver(CoreConfig& _config) :
   ,extendedLearnedClausesCandidates(0)
   ,maxResHeight(0)
   
+  // restricted extended resolution
+  ,rerLearnedClause(0)
+  ,rerLearnedSizeCandidates(0)
+  
   // preprocessor
   , coprocessor(0)
   , useCoprocessorPP(config.opt_usePPpp)
@@ -1152,7 +1156,7 @@ struct reduceDB_lt {
 
 void Solver::reduceDB()
 {
- 
+  resetRestrictedExtendedResolution(); // whenever the clause database is touched, forget about current RER step
   int     i, j;
   nbReduceDB++;
   sort(learnts, reduceDB_lt(ca));
@@ -1260,6 +1264,7 @@ bool Solver::simplify()
 lbool Solver::search(int nof_conflicts)
 {
     assert(ok);
+    resetRestrictedExtendedResolution(); // whenever a restart is done, drop current RER step
     int         backtrack_level;
     int         conflictC = 0;
     vec<Lit>    learnt_clause;
@@ -1412,7 +1417,13 @@ lbool Solver::search(int nof_conflicts)
 	      } else { // treat usual learned clause!
 
 		// when this method is called, backjumping has been done already!
-		extendedClauseLearning( learnt_clause, nblevels, extraInfo );
+		bool ecl = extendedClauseLearning( learnt_clause, nblevels, extraInfo );
+		bool rerClause = false;
+		if( ! ecl ) { // only if not ecl, rer could be tested!
+		  rerClause = restrictedExtendedResolution( learnt_clause, nblevels, extraInfo ); 
+		} else {
+		  resetRestrictedExtendedResolution(); // otherwise, we just failed ... TODO: could simply jump over that clause ...
+		}
 
 		lbdQueue.push(nblevels);
 		sumLBD += nblevels;
@@ -1436,6 +1447,7 @@ lbool Solver::search(int nof_conflicts)
 		    if( config.opt_printDecisions ) cerr << "c enqueue learned unit literal " << learnt_clause[0]<< " at level " <<  decisionLevel() << " from clause " << learnt_clause << endl;
 		}else{
 		  CRef cr = ca.alloc(learnt_clause, true);
+		  if( rerClause ) rerFuseClauses.push( cr ); // memorize thie clause reference for RER
 		  ca[cr].setLBD(nblevels); 
 		  if(nblevels<=2) nbDL2++; // stats
 		  if(ca[cr].size()==2) nbBin++; // stats
@@ -1988,15 +2000,16 @@ printf("c ==================================[ Search Statistics (every %6d confl
 	    printf("c IntervalRestarts: %d\n", intervalRestart);
 	    printf("c lhbr: %d (l1: %d), new: %d (l1: %d), tests: %d, subs: %d\n", lhbrs, l1lhbrs,lhbr_news,l1lhbr_news,lhbrtests,lhbr_sub);
 	    printf("c otfss: %d (l1: %d), cls: %d, units: %d, binaries: %d, jumpedHigher: %d\n", otfsss, otfsssL1,otfssClss,otfssUnits,otfssBinaries,otfssHigherJump);
-	    printf("c learning: %lld cls, %lf avg. size, %lf avg. LBD, %lld maxSize, %lld proof-height, %d outOf %d ecls\n", 
+	    printf("c learning: %lld cls, %lf avg. size, %lf avg. LBD, %lld maxSize, %lld proof-height\n", 
 		   (int64_t)totalLearnedClauses, 
 		   sumLearnedClauseSize/totalLearnedClauses, 
 		   sumLearnedClauseLBD/totalLearnedClauses,
 		  (int64_t)maxLearnedClauseSize,
-		   (int64_t)maxResHeight, 
-		   extendedLearnedClauses,
-		   extendedLearnedClausesCandidates
+		   (int64_t)maxResHeight
 		  );
+	    printf("c ext.res.: %d outOf %d ecls, %d rer, %d rerSizeCands\n",
+		   extendedLearnedClauses,extendedLearnedClausesCandidates,
+		   rerLearnedClause, rerLearnedSizeCandidates );
 	    printf("c decisionClauses: %d\n", learnedDecisionClauses );
 	    printf("c agility restart rejects: %d\n", agility_rejects );
     }
@@ -2152,11 +2165,11 @@ void Solver::garbageCollect()
 }
 
 
-void Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo )
+bool Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo )
 {
-  if( ! config.opt_extendedClauseLearning ) return; // not enabled -> do nothing!
-  if( lbd > config.opt_ecl_maxLBD ) return; // do this only for interesting clauses
-  if( currentLearnedClause.size() < config.opt_ecl_minSize ) return; // do this only for clauses, that seem to be relevant to be split! (have a better heuristic here!)
+  if( ! config.opt_extendedClauseLearning ) return false; // not enabled -> do nothing!
+  if( lbd > config.opt_ecl_maxLBD ) return false; // do this only for interesting clauses
+  if( currentLearnedClause.size() < config.opt_ecl_minSize ) return false; // do this only for clauses, that seem to be relevant to be split! (have a better heuristic here!)
 
   extendedLearnedClausesCandidates ++;
 
@@ -2211,7 +2224,7 @@ void Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned 
   
   if( litsAtSmallest < 2 ){
     if( config.opt_ecl_debug) cerr << "c reject " << endl;
-    return; // do only work on the class, if there are (more than) 2 literals on the smallest level!
+    return false; // do only work on the class, if there are (more than) 2 literals on the smallest level!
   }
 
   oc.clear(); // this is the vector for adding the new extension ... still need to think about whether to add the full extension ...
@@ -2220,7 +2233,7 @@ void Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned 
   const Lit l2 = currentLearnedClause[ currentLearnedClause.size() - 2 ];
   if (level(var(l1)) == -1 || level(var(l2)) == -1 ) {
      if( config.opt_ecl_debug) cerr << "c reject " << endl;
-    return; // perform only, if lowest two literals are still assigned!
+    return false; // perform only, if lowest two literals are still assigned!
   }
   
   const Var x = newVar(true,true,'e'); // this is the fresh variable!
@@ -2336,8 +2349,79 @@ void Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned 
   // extra info is set to default, because fresh variable has been introduced
   extraInfo = defaultExtraInfo();
   extendedLearnedClauses++;
+  return true;
 }
 
+
+bool Solver::restrictedExtendedResolution( vec< Lit >& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo )
+{
+  if( ! config.opt_restrictedExtendedResolution ) return false;
+  if( currentLearnedClause.size() < config.opt_rer_minSize ||
+     currentLearnedClause.size() > config.opt_rer_maxSize ||
+     lbd < config.opt_rer_minLBD ||
+     lbd > config.opt_rer_maxLBD ) return false;
+  
+  // passed the filters
+  if( rerLits.size() == 0 ) { // init 
+    rerCommonLits.clear();
+    for( int i = 1; i < currentLearnedClause.size(); ++ i ) 
+      rerCommonLits.push( currentLearnedClause[i] );
+    rerLits.push( currentLearnedClause[0] );
+    sort( rerCommonLits );
+    // rerFuseClauses is updated in search later!
+    return true; // tell search method to include new clause into list
+  } else {
+    if( currentLearnedClause.size() != 1+rerCommonLits.size() ) {
+      resetRestrictedExtendedResolution();
+      return false; // clauses in a row do not fit the window
+    } else { // size fits, check lits!
+      // sort
+      sort( &( currentLearnedClause[2] ), currentLearnedClause.size() - 2  ); // do not touch the second literal in the clause! check it separately!
+      bool found = false;
+      // check whether all remaining literals are in the clause
+      int i = 0; int j = 2;
+      while ( i < rerCommonLits.size() && j < currentLearnedClause.size() ) {
+	if( rerCommonLits[i] == currentLearnedClause[j] ) {
+	  i++; j++;
+	} else if ( rerCommonLits[i] == currentLearnedClause[1] ) {
+	  ++i;
+	} else { // literal currentLearnedClause[j] is not in common literals!
+	  rerLearnedSizeCandidates ++;
+	  resetRestrictedExtendedResolution();
+	  return false;
+	}
+      }
+      assert( i == j && i == rerCommonLits.size() && "if all literals are present in both sides, this has to be the case!" );
+      // clauses match
+      rerLits.push( currentLearnedClause[0] ); // store literal
+      
+      if( rerLits.size() >= config.opt_rer_windowSize ) {
+	// perform RER step here!
+	// detach all learned clauses from fused clauses
+	// add all the RER clauses with the fresh variable (and set up the new variable properly!
+	// modify the current learned clause accordingly!
+	
+	rerLearnedClause ++;
+      } else {
+	return true; // add the next learned clause to the database as well!
+      }
+    }
+  }
+     
+// available data structures
+//   vec<Lit> rerCommonLits; // literals that are common in the clauses in the window
+//   vec<Lit> rerLits;	// literals that are replaced by the new variable
+//   vec<CRef> rerFuseClauses; // clauses that will be replaced by the new clause -
+//   int rerLearnedClause, rerLearnedSizeCandidates
+  
+}
+
+void Solver::resetRestrictedExtendedResolution()
+{
+  rerCommonLits.clear();
+  rerLits.clear();
+  rerFuseClauses.clear();
+}
 
 uint64_t Solver::defaultExtraInfo() const 
 {

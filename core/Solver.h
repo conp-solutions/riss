@@ -359,7 +359,14 @@ protected:
     void addCommentToProof( const char* text, bool deleteFromProof=false); // write the text as comment into the proof!
     
     // extended clause learning (Huang, 2010)
-    void extendedClauseLearning( vec<Lit>& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo );
+    // @return true, if an extension step has been performed
+    bool extendedClauseLearning( vec<Lit>& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo );
+    
+    // restricted extended resolution (Audemard ea 2010)
+    // @return true, if a clause should be added to rerFuseClauses
+    bool restrictedExtendedResolution( vec<Lit>& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo );
+    // reset current state of restricted Extended Resolution
+    void resetRestrictedExtendedResolution();
     
     // Static helpers:
     //
@@ -433,6 +440,13 @@ protected:
   double totalLearnedClauses, sumLearnedClauseSize, sumLearnedClauseLBD, maxLearnedClauseSize;
   int extendedLearnedClauses, extendedLearnedClausesCandidates;
   uint64_t maxResHeight;
+  
+  
+  vec<Lit> rerCommonLits; // literals that are common in the clauses in the window
+  vec<Lit> rerLits;	// literals that are replaced by the new variable
+  vec<CRef> rerFuseClauses; // clauses that will be replaced by the new clause -
+  int rerLearnedClause, rerLearnedSizeCandidates; // stat counters
+  
   
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;
