@@ -123,6 +123,7 @@ CoreConfig::CoreConfig() // add new options here!
  opt_ecl_maxLBD("EXTENDED RESOLUTION ECL", "ecl-maxLBD", "maximum LBD to perform ecl", 2, IntRange(2, INT32_MAX) ), 
  opt_ecl_newAct("EXTENDED RESOLUTION ECL", "ecl-new-act", "how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean", 0, IntRange(0, 4) ),
  opt_ecl_debug("EXTENDED RESOLUTION ECL", "ecl-d", "debug output for ECL", false),
+ opt_ecl_every("EXTENDED RESOLUTION ECL", "ecl-freq", "how often ecl compared to usual learning", 1, DoubleRange(0, true, 1, true) ),
  
  opt_restrictedExtendedResolution("EXTENDED RESOLUTION RER", "rer", "perform restricted extended resolution (along Audemard ea 2010)", false), 
  opt_rer_as_learned("EXTENDED RESOLUTION RER", "rer-l", "store extensions as learned clauses", false), 
@@ -135,6 +136,7 @@ CoreConfig::CoreConfig() // add new options here!
  opt_rer_windowSize("EXTENDED RESOLUTION RER", "rer-window", "number of clauses to collect before fuse", 2, IntRange(2, INT32_MAX) ), 
  opt_rer_newAct("EXTENDED RESOLUTION RER", "rer-new-act", "how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean", 0, IntRange(0, 4) ),
  opt_rer_debug("EXTENDED RESOLUTION RER", "rer-d", "debug output for RER", false),
+ opt_rer_every("EXTENDED RESOLUTION RER", "rer-freq", "how often rer compared to usual learning", 1, DoubleRange(0, true, 1, true) ),
  
  opt_verboseProof ("PROOF", "verb-proof", "also print comments into the proof, 2=print proof also to stderr", 1, IntRange(0, 2) ),
  opt_rupProofOnly ("PROOF", "rup-only", "do not print delete lines into proof", false), 

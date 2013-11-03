@@ -2183,6 +2183,7 @@ bool Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned 
   if( ! config.opt_extendedClauseLearning ) return false; // not enabled -> do nothing!
   if( lbd > config.opt_ecl_maxLBD ) return false; // do this only for interesting clauses
   if( currentLearnedClause.size() < config.opt_ecl_minSize ) return false; // do this only for clauses, that seem to be relevant to be split! (have a better heuristic here!)
+  if( (double)extendedLearnedClauses * config.opt_ecl_every > conflicts ) return false; // do not consider this clause!
 
   // stats
   extendedLearnedClausesCandidates ++;
@@ -2385,6 +2386,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
      currentLearnedClause.size() > config.opt_rer_maxSize ||
      lbd < config.opt_rer_minLBD ||
      lbd > config.opt_rer_maxLBD ) return rerFailed;
+  if( (double)rerLearnedClause * config.opt_rer_every > conflicts ) return rerFailed; // do not consider this clause!
   
   // passed the filters
   if( rerLits.size() == 0 ) { // init 
@@ -2535,13 +2537,6 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
       }
     }
   }
-     
-// available data structures
-//   vec<Lit> rerCommonLits; // literals that are common in the clauses in the window
-//   vec<Lit> rerLits;	// literals that are replaced by the new variable
-//   vec<CRef> rerFuseClauses; // clauses that will be replaced by the new clause -
-//   int rerLearnedClause, rerLearnedSizeCandidates
-  
   return rerFailed;
 }
 

@@ -141,6 +141,7 @@ public:
  IntOption opt_ecl_maxLBD;  // maximum LBD to perform ecl
  IntOption opt_ecl_newAct;  // how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean
  BoolOption opt_ecl_debug; // enable debug output
+ DoubleOption opt_ecl_every;  // perform ecl at most every n conflicts
  
  BoolOption opt_restrictedExtendedResolution; // perform restricted extended resolution
  BoolOption opt_rer_as_learned; // add rer clauses as learned clauses?
@@ -153,6 +154,7 @@ public:
  IntOption  opt_rer_windowSize;  // number of clauses needed, to perform rer
  IntOption  opt_rer_newAct;  // how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean
  BoolOption opt_rer_debug; // enable debug output
+ DoubleOption opt_rer_every;  // perform rer at most every n conflicts
  
 IntOption opt_verboseProof; 
 BoolOption opt_rupProofOnly; 
