@@ -87,7 +87,7 @@ CoreConfig::CoreConfig() // add new options here!
  actFile ("INIT", "actFile", "increase activities of those variables"),
  opt_pol ("INIT", "polMode", "invert provided polarities", false ),
  polFile ("INIT", "polFile", "use these polarities"),
- opt_printDecisions ("INIT", "printDec", "print decisions", false ),
+ opt_printDecisions ("INIT", "printDec", "1=print decisions, 2=print all enqueues, 3=show clauses", 0, IntRange(0, 3)  ),
 
  opt_rMax ("MODS", "rMax", "initial max. interval between two restarts (-1 = off)", -1, IntRange(-1, INT32_MAX) ),
  opt_rMaxInc ("MODS", "rMaxInc", "increase of the max. restart interval per restart", 1.1, DoubleRange(1, true, HUGE_VAL, false)),

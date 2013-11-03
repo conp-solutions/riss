@@ -105,7 +105,7 @@ public:
  StringOption actFile;
  BoolOption opt_pol;
  StringOption polFile;
- BoolOption opt_printDecisions;
+ IntOption opt_printDecisions;
 
  IntOption opt_rMax;
  DoubleOption opt_rMaxInc;

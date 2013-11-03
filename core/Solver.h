@@ -363,8 +363,13 @@ protected:
     bool extendedClauseLearning( vec<Lit>& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo );
     
     // restricted extended resolution (Audemard ea 2010)
+    enum rerReturnType {	// return type for the rer-implementation
+      rerFailed = 0,		// do nothing special, since rer failed
+      rerMemorizeClause = 1,	// add the current learned clause to the data structure rerFuseClauses
+      rerDontAttachAssertingLit = 2,	// do not enqueue the asserting literal of the current clause
+    };
     // @return true, if a clause should be added to rerFuseClauses
-    bool restrictedExtendedResolution( vec<Lit>& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo );
+    rerReturnType restrictedExtendedResolution( vec<Lit>& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo );
     // reset current state of restricted Extended Resolution
     void resetRestrictedExtendedResolution();
     
@@ -438,14 +443,16 @@ protected:
   
   // stats for learning clauses
   double totalLearnedClauses, sumLearnedClauseSize, sumLearnedClauseLBD, maxLearnedClauseSize;
-  int extendedLearnedClauses, extendedLearnedClausesCandidates;
+  int extendedLearnedClauses, extendedLearnedClausesCandidates,maxECLclause;
+  double totalECLlits; // to calc max and avg
   uint64_t maxResHeight;
   
   
   vec<Lit> rerCommonLits; // literals that are common in the clauses in the window
   vec<Lit> rerLits;	// literals that are replaced by the new variable
   vec<CRef> rerFuseClauses; // clauses that will be replaced by the new clause -
-  int rerLearnedClause, rerLearnedSizeCandidates; // stat counters
+  int rerLearnedClause, rerLearnedSizeCandidates, rerSizeReject, rerPatternReject,maxRERclause; // stat counters
+  double rerOverheadTrailLits,totalRERlits; // stats
   
   
 /// for coprocessor
@@ -531,6 +538,7 @@ inline void Solver::varDecayActivity() { var_inc *= (1 / var_decay); }
 inline void Solver::varBumpActivity(Var v) { varBumpActivity(v, var_inc); }
 inline void Solver::varBumpActivity(Var v, double inc) {
     activity[v] = ( useVSIDS * activity[v] ) + inc; // interpolate between VSIDS and VMTF here!
+    // NOTE this code is also used in extended clause learning, and restricted extended resolution
     if ( activity[v] > 1e100 ) {
         // Rescale:
         for (int i = 0; i < nVars(); i++)
