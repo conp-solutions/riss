@@ -20,7 +20,9 @@ static const char* _cm = "CORE -- MINIMIZE";
 
 CoreConfig::CoreConfig() // add new options here!
 :
- opt_solve_stats (_cred, "solve_stats", "print stats about solving process", false),
+ opt_solve_stats (_cat, "solve_stats", "print stats about solving process", false),
+ opt_learn_debug (_cat, "learn-debug", "print debug information during learning", false),
+ 
 
  opt_K (_cr, "K", "The constant used to force restart", 0.8, DoubleRange(0, false, 1, false)), 
  opt_R (_cr, "R", "The constant used to block restart", 1.4, DoubleRange(1, false, 5, false)), 

@@ -35,6 +35,7 @@ public:
  * List of all used options, public members, can be changed and read directly
  */
  BoolOption opt_solve_stats;
+ BoolOption opt_learn_debug;
  
  DoubleOption opt_K; 
  DoubleOption opt_R; 

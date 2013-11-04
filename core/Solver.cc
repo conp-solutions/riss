@@ -308,6 +308,7 @@ void Solver::attachClause(CRef cr) {
       watchesBin[~c[0]].push(Watcher(cr, c[1]));
       watchesBin[~c[1]].push(Watcher(cr, c[0]));
     } else {
+//      cerr << "c DEBUG-REMOVE watch clause " << c << " in lists for literals " << ~c[0] << " and " << ~c[1] << endl;
       watches[~c[0]].push(Watcher(cr, c[1]));
       watches[~c[1]].push(Watcher(cr, c[0]));
     }
@@ -477,10 +478,11 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
        
         for (int j = (p == lit_Undef) ? 0 : 1; j < c.size(); j++){
             Lit q = c[j];
-    
+	    if( config.opt_learn_debug ) cerr << "c level for " << q << " is " << level(var(q)) << endl;
             if (!seen[var(q)] && level(var(q)) > 0){
                 currentSize ++;
                 varBumpActivity(var(q));
+		if( config.opt_learn_debug ) cerr << "c set seen for " << q << endl;
                 seen[var(q)] = 1;
                 if (level(var(q)) >= decisionLevel()) {
                     pathC++;
@@ -515,6 +517,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
         p     = trail[index+1];
 	lastConfl = confl;
         confl = reason(var(p));
+	if( config.opt_learn_debug ) cerr << "c reset seen for " << p << endl;
         seen[var(p)] = 0;
         pathC--;
 	currentSize --;
@@ -771,7 +774,10 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
   } 
 #endif	    
 
-    for (int j = 0; j < analyze_toclear.size(); j++) seen[var(analyze_toclear[j])] = 0;    // ('seen[]' is now cleared)
+    for (int j = 0; j < analyze_toclear.size(); j++) {
+      if( config.opt_learn_debug ) cerr << "c reset seen for " << analyze_toclear[j] << endl;
+      seen[var(analyze_toclear[j])] = 0;    // ('seen[]' is now cleared)
+    }
 
 #ifdef CLS_EXTRA_INFO // current version of extra info measures the height of the proof. height of new clause is max(resolvents)+1
     extraInfo ++;
@@ -909,6 +915,7 @@ CRef Solver::propagate()
     watchesBin.cleanAll();
     while (qhead < trail.size()){
         Lit            p   = trail[qhead++];     // 'p' is enqueued fact to propagate.
+        if( config.opt_learn_debug ) cerr << "c propagate literal " << p << endl;
         realHead = qhead;
         vec<Watcher>&  ws  = watches[p];
         Watcher        *i, *j, *end;
@@ -926,6 +933,8 @@ CRef Solver::propagate()
 	  
 	  Lit imp = wbin[k].blocker;
 	  
+	  if( config.opt_learn_debug ) cerr << "c checked binary clause " << ca[wbin[k].cref ] << endl;
+	  
 	  if(value(imp) == l_False) {
 	    if( !config.opt_long_conflict ) return wbin[k].cref;
 	    // else
@@ -934,7 +943,6 @@ CRef Solver::propagate()
 	  }
 	  
 	  if(value(imp) == l_Undef) {
-	    //printLit(p);printf(" ");printClause(wbin[k].cref);printf("->  ");printLit(imp);printf("\n");
 	    uncheckedEnqueue(imp,wbin[k].cref);
 	    if( config.opt_LHBR > 0 ) {
 	      vardata[ var(imp) ].dom = (config.opt_LHBR == 1 || config.opt_LHBR == 3) ? p : vardata[ var(p) ].dom ; // set dominator
@@ -976,15 +984,18 @@ CRef Solver::propagate()
 
 
         for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;){
+	  
+	    if( config.opt_learn_debug ) cerr << "c check clause " << ca[i->cref] << endl;
+	  
             // Try to avoid inspecting the clause:
             Lit blocker = i->blocker;
             if (value(blocker) == l_True){
                 *j++ = *i++; continue; }
 
             // Make sure the false literal is data[1]:
-            CRef     cr        = i->cref;
+            const CRef     cr        = i->cref;
             Clause&  c         = ca[cr];
-            Lit      false_lit = ~p;
+            const Lit      false_lit = ~p;
             if (c[0] == false_lit)
                 c[0] = c[1], c[1] = false_lit;
             assert(c[1] == false_lit);
@@ -1036,6 +1047,7 @@ CRef Solver::propagate()
             for (int k = 2; k < c.size(); k++)
                 if (value(c[k]) != l_False){
                     c[1] = c[k]; c[k] = false_lit;
+		    if( config.opt_learn_debug ) cerr << "c new watched literal for clause " << ca[cr] << " is " << c[1] <<endl;
                     watches[~c[1]].push(w);
                     goto NextClause; } // no need to indicate failure of lhbr, because remaining code is skipped in this case!
                 else { // lhbr analysis! - any literal c[k] culd be removed from the clause, because it is not watched at the moment!
@@ -1057,6 +1069,7 @@ CRef Solver::propagate()
                 while (i < end)
                     *j++ = *i++;
             }else {
+		if( config.opt_learn_debug ) cerr << "c current clause is unit clause: " << ca[cr] << endl;
                 uncheckedEnqueue(first, cr);
 		if( config.opt_LHBR > 0 ) vardata[ var(first) ].dom = (config.opt_LHBR == 1 || config.opt_LHBR == 3) ? first : vardata[ var(first) ].dom ; // set dominator for this variable!
 		
@@ -1296,7 +1309,11 @@ lbool Solver::search(int nof_conflicts)
         if (confl != CRef_Undef){
             // CONFLICT
 	  conflicts++; conflictC++;
-	  if( config.opt_printDecisions > 2 ) printf("c conflict at level %d\n", decisionLevel() );
+	  if( config.opt_printDecisions > 2 ) {
+	    printf("c conflict at level %d\n", decisionLevel() );
+	    cerr << "c conflict clause: " << ca[confl] << endl;
+	    cerr << "c trail: " << trail << endl;
+	  }
 	  
 	  // as in glucose 2.3, increase decay after a certain amount of steps - but have parameters here!
 	  if( var_decay< config.opt_var_decay_stop && conflicts % config.opt_var_decay_dist == 0 ) { // div is the more expensive operation!
@@ -1345,6 +1362,7 @@ lbool Solver::search(int nof_conflicts)
 #ifdef CLS_EXTRA_INFO
 	      maxResHeight = extraInfo;
 #endif
+	      if( config.opt_rer_debug ) cerr << "c analyze returns with " << ret << " and set of literals " << learnt_clause << endl;
      
 	      // OTFSS - check whether this can be done in an extra method!
 	      if(config.debug_otfss) cerr << "c conflict at level " << decisionLevel() << " analyze will proceed at level " << backtrack_level << endl;
@@ -1487,7 +1505,7 @@ lbool Solver::search(int nof_conflicts)
 		      if (value(learnt_clause[0]) == l_Undef) uncheckedEnqueue(learnt_clause[0], cr); // this clause is only unit, if OTFSS jumped to the same level!
 		    }
 		  }
-		  if( config.opt_printDecisions > 1  ) cerr << "c enqueue literal " << learnt_clause[0]<< " at level " <<  decisionLevel() << " from learned clause " << learnt_clause << endl;
+		  if( config.opt_printDecisions > 1  ) cerr << "c enqueue literal " << learnt_clause[0] << " at level " <<  decisionLevel() << " from learned clause " << learnt_clause << endl;
 		}
 
 	      }
@@ -2001,6 +2019,18 @@ printf("c ==================================[ Search Statistics (every %6d confl
 	    preprocessTime.stop();
 	  }
          if (verbosity >= 1) printf("c =========================================================================================================\n");
+    }
+    
+    if( config.opt_rer_debug ) {
+      cerr << "c BEGIN FORMULA" << endl;
+      for( int i = 0 ; i < clauses.size(); ++ i ) {
+	cerr << "c [" << i << "] " << ca[clauses[i]] << endl;
+      }
+      cerr << "c END FORMULA" << endl;
+      cerr << "c varcheck ... " << endl;
+      for( Var v = 0 ; v < nVars(); ++ v ) {
+	cerr << "c var " << v+1 << " reason: " << (int)reason(v) << " value: " << toInt(assigns[v]) << " level: " << level(v) << " polarity: " << toInt(polarity[v]) << endl;
+      }
     }
     
     // Search:

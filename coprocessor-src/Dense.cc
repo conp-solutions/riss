@@ -135,7 +135,7 @@ void Dense::compress(const char* newWhiteFile)
     }
   }
   data.getTrail().shrink( data.getTrail().size() - j ); // do not clear, but resize to keep the literals that have been kept!
-  propagation.reset(); // reset propagated literals in UP
+  propagation.reset(data); // reset propagated literals in UP
 
   free( count ); // do not need the count array any more
   

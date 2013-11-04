@@ -17,9 +17,10 @@ Propagation::Propagation( CP3Config &_config, ClauseAllocator& _ca, ThreadContro
 {
 }
 
-void Propagation::reset()
+void Propagation::reset(CoprocessorData& data)
 {
   lastPropagatedLiteral = 0;
+  data.getSolver()->qhead = 0;
 }
 
 

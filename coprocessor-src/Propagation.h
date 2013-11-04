@@ -30,7 +30,8 @@ public:
   
   Propagation( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller );
   
-  void reset();
+  /// will also set back the qhead variable inside the Solver object
+  void reset(CoprocessorData& data);
   
   /** perform usual unit propagation, but shrinks clause sizes also physically
    *  will run over all clauses with satisfied/unsatisfied literals (that have not been done already)
