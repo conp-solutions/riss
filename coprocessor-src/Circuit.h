@@ -85,13 +85,13 @@ public:
     /** Note: this operator does not copy the memory for the external literals, but simply copies the pointer! */
     Gate& operator=(const Gate& other);
     
-    const Type getType() const { return type; }
+    Type getType() const { return type; }
     
     bool isInvalid() const { return (type == INVALID) ; }
     
     bool isFull() const { return encoded == FULL; }
 
-    const Lit getOutput() const { return (type != GenAND && type != ExO ) ? (const Lit) x() : data.e.x; }
+    Lit getOutput() const { return (type != GenAND && type != ExO ) ? (const Lit) x() : data.e.x; }
     
     void print( std::ostream& stream ) const ; // write gate to a stream
     
@@ -121,9 +121,9 @@ public:
     const Lit& t () const {return data.lits[2]; } // ITE true branch
     const Lit& f () const {return data.lits[3]; } // ITE false branch
     const Lit& get( const int index) const { return data.e.externLits[index]; }
-    const int size() const { assert( type == ExO || type == GenAND ); return data.e.size; }
+    int size() const { assert( type == ExO || type == GenAND ); return data.e.size; }
     
-    const bool isInQueue() const { return inQueue; }
+    bool isInQueue() const { return inQueue; }
     void putInQueue() { assert( inQueue == false && "cannot put twice in a queue" ); inQueue = true; }
     void takeFromQueue() { inQueue = false; }
     int touch() { return ++touched; }

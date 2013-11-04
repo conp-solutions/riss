@@ -273,6 +273,7 @@ bool FourierMotzkin::process()
 		sameUnits ++;
 		inAmo.setCurrentStep( toInt(~v1[n1]) );
 		unitQueue.push(~v1[n1]);
+		didSomething = true;
 		if( l_False == data.enqueue( ~v1[n1] ) ) goto finishedFM; // enqueing this literal failed -> finish!
 	      }
 	      // TODO: enqueue, later remove from all cards!
@@ -320,6 +321,7 @@ bool FourierMotzkin::process()
 		  sameUnits ++;
 		  inAmo.setCurrentStep( toInt(~v1[n1]) );
 		  unitQueue.push(~v1[n1]);
+		  didSomething = true;
 		  if( data.enqueue( ~v1[n1] ) == l_False ) {
 		    if( config.fm_debug_out > 1 ) cerr << "c enquing " << ~v1[n1] << " failed" << endl;
 		    goto finishedFM; // enqueing this literal failed -> finish!
@@ -349,6 +351,7 @@ bool FourierMotzkin::process()
 		  sameUnits ++;
 		  inAmo.setCurrentStep( toInt(~data.lits[k]) );
 		  unitQueue.push(~data.lits[k]);
+		  didSomething = true;
 		  if( data.enqueue( ~data.lits[k] ) == l_False ) {
 		    if( config.fm_debug_out > 1 ) cerr << "c enquing " << ~data.lits[k] << " failed" << endl;
 		    goto finishedFM; // enqueing this literal failed -> finish!
@@ -526,6 +529,7 @@ bool FourierMotzkin::process()
 	     continue;
 	  } else if( thisCard.failed() ) {
 	    if( config.fm_debug_out > 1 ) cerr << "c new card is failed! - stop procedure!" << endl;
+	    didSomething = true;
 	    data.setFailed();
 	    goto finishedFM;
 	  }else if( thisCard.isUnit() ) { // all literals in ll have to be set to false!
@@ -535,6 +539,7 @@ bool FourierMotzkin::process()
 		if( ! inAmo.isCurrentStep( toInt(~thisCard.ll[k]) ) ) { // store each literal only once in the queue
 		  inAmo.setCurrentStep( toInt(~thisCard.ll[k]) );
 		  unitQueue.push(~thisCard.ll[k]);
+		  didSomething = true;
 		  if( data.enqueue( ~thisCard.ll[k] ) == l_False ) {
 		    if( config.fm_debug_out > 1 ) cerr << "c enquing " << ~thisCard.ll[k] << " failed" << endl;
 		    goto finishedFM;
@@ -545,6 +550,7 @@ bool FourierMotzkin::process()
 		if( ! inAmo.isCurrentStep( toInt(thisCard.lr[k]) ) ) { // store each literal only once in the queue
 		  inAmo.setCurrentStep( toInt(thisCard.lr[k]) );
 		  unitQueue.push(thisCard.lr[k]);
+		  didSomething = true;
 		  if( data.enqueue( thisCard.lr[k] ) == l_False ) {
 		    if( config.fm_debug_out > 1 ) cerr << "c enquing " << thisCard.lr[k] << " failed" << endl;
 		    goto finishedFM;
@@ -674,6 +680,7 @@ bool FourierMotzkin::process()
 	    if( !present ) { // if the information is not part of the formula yet, add the clause!
 	      if( config.fm_debug_out > 2 ) cerr << "c create new binary clause " <<  ~c.ll[k] << " , " << ~c.ll[j] << endl;
 	      addedBinaryClauses ++;
+	      didSomething = true;
 	      unitQueue.clear();
 	      unitQueue.push( ~c.ll[k] < ~c.ll[j] ? ~c.ll[k] : ~c.ll[j] );
 	      unitQueue.push( ~c.ll[k] < ~c.ll[j] ? ~c.ll[j] : ~c.ll[k] );
@@ -697,6 +704,7 @@ bool FourierMotzkin::process()
 	  if( config.fm_debug_out > 1 ) cerr << "c new ALO " << c.ll << " <= " << c.k << " + " << c.lr << " is dropped!" << endl;
 	  continue;
 	}
+	didSomething = true;
 	if( c.lr.size() == 1 ) {
 	  if( data.enqueue(c.lr[0]) == l_False ) goto finishedFM;
 	} else if( ! hasDuplicate(c.lr) ) {
@@ -723,6 +731,7 @@ bool FourierMotzkin::process()
 	  if( config.fm_debug_out > 1 ) cerr << "c new ALK " << c.ll << " <= " << c.k << " + " << c.lr << " is dropped!" << endl;
 	  continue;
 	}
+	didSomething = true;
 	if( c.lr.size() == 1 ) {
 	  if( data.enqueue(c.ll[0]) == l_False ) goto finishedFM;
 	} else if( ! hasDuplicate(c.lr) ) {
@@ -746,7 +755,7 @@ bool FourierMotzkin::process()
   
   fmTime = cpuTime() - fmTime;
   
-  return false;
+  return didSomething;
 }
     
 template <class S, class T>

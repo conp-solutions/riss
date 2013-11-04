@@ -275,7 +275,6 @@ bool Unhiding::unhideSimplify()
   }
   
   // removes ignored clauses, destroys mark-to-delete clauses
-  uint32_t j = 0;
   
   // TODO implement second for loop to iterate also over learned clauses and check whether one of them is not learned!
   

@@ -20,6 +20,8 @@ static const char* _cm = "CORE -- MINIMIZE";
 
 CoreConfig::CoreConfig() // add new options here!
 :
+ opt_solve_stats (_cred, "solve_stats", "print stats about solving process", false),
+
  opt_K (_cr, "K", "The constant used to force restart", 0.8, DoubleRange(0, false, 1, false)), 
  opt_R (_cr, "R", "The constant used to block restart", 1.4, DoubleRange(1, false, 5, false)), 
  opt_size_lbd_queue (_cr, "szLBDQueue", "The size of moving average for LBD (restarts)", 50, IntRange(10, INT32_MAX)),

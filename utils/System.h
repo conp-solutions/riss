@@ -45,7 +45,8 @@ extern double memUsedPeak();        // Peak-memory in mega bytes (returns 0 for 
 #include <time.h>
 
 static inline double Minisat::cpuTime(void) { return (double)clock() / CLOCKS_PER_SEC; }
-//static inline double Minisat::wallClockTime(void) { return (double) clock() / CLOCKS_PER_SEC; }
+#warning WALLCLOCKTIME NOT SUPPORTED HERE
+static inline double Minisat::wallClockTime(void) { return (double) clock() / CLOCKS_PER_SEC; }
 #else
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -65,5 +66,16 @@ static inline double Minisat::wallClockTime(void)
     return ((double) timestamp.tv_sec) + ((double) timestamp.tv_nsec / 1000000000);
 }
 #endif
+
+/** simple class that combines cpu and wall clock time */
+class Clock {
+  double cTime,wTime;
+public:
+  Clock() : cTime(0), wTime(0) {}
+  void start() { cTime = Minisat::cpuTime() - cTime; wTime = Minisat::wallClockTime() - wTime; }
+  void stop() {  cTime = Minisat::cpuTime() - cTime; wTime = Minisat::wallClockTime() - wTime;  }
+  double getCpuTime() const { return cTime; }
+  double getWallClockTime() const { return wTime; }
+};
 
 #endif

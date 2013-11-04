@@ -1647,7 +1647,6 @@ void Subsumption::parallelSubsumption( const bool doStatistics)
   nonLearnts.resize(controller.size());
   localStats.resize(controller.size());
   unsigned int queueSize = data.getSubsumeClauses().size();
-  unsigned int partitionSize = data.getSubsumeClauses().size() / controller.size();
   unsigned int next_start = 0;
 
   // Setting Chunk Size
@@ -1722,7 +1721,6 @@ void Subsumption::parallelStrengthening(Heap<VarOrderBVEHeapLt> * heap, const Va
   var_locks.resize(data.nVars() + 1); // 1 extra SpinLock for data
   occ_updates.resize(controller.size());
   unsigned int queueSize = data.getStrengthClauses().size();
-  unsigned int partitionSize = data.getStrengthClauses().size() / controller.size();
   unsigned int next_start = 0;
 
   // Setting Chunk Size

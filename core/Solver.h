@@ -34,6 +34,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "mtl/Heap.h"
 #include "mtl/Alg.h"
 #include "utils/Options.h"
+#include "utils/System.h"
 #include "core/SolverTypes.h"
 #include "core/BoundedQueue.h"
 #include "core/Constants.h"
@@ -300,6 +301,8 @@ protected:
     double              learntsize_adjust_confl;
     int                 learntsize_adjust_cnt;
 
+    Clock totalTime, propagationTime, analysisTime, preprocessTime, inprocessTime, extResTime, reduceDBTime;
+    
     // Resource contraints:
     //
     int64_t             conflict_budget;    // -1 means no budget.

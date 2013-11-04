@@ -8,7 +8,7 @@
 CORE      = ../core
 MTL       = ../mtl
 VERSION   = 
-MYCFLAGS    = -I.. -I. -I$(MTL) -I$(CORE) $(ARGS) -Wall -Wextra -ffloat-store -Wno-sign-compare -Wno-parentheses $(VERSION)
+MYCFLAGS    = -I.. -I. -I$(MTL) -I$(CORE) $(ARGS) -Wall -Wextra -ffloat-store -Wno-unused-parameter -Wno-sign-compare -Wno-parentheses $(VERSION)
 MYLFLAGS    = -lpthread -lrt $(ARGS)
 
 COPTIMIZE ?= -O3

@@ -93,7 +93,7 @@ public:
 
   // handle model processing
   
-  const int getFormulaVariables() const { return formulaVariables; }
+  int getFormulaVariables() const { return formulaVariables; }
   
   /** parse model, if no file is specified, read from stdin 
    * @return false, if some error happened
@@ -136,8 +136,8 @@ public:
   
 protected:
   // techniques
-  Subsumption subsumption;
   Propagation propagation;
+  Subsumption subsumption;
   HiddenTautologyElimination hte;
   BoundedVariableElimination bve;
   BoundedVariableAddition bva;

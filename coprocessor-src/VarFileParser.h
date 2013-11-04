@@ -49,8 +49,6 @@ inline int VarFileParser::extract ( std::vector<int>& vars ){
 	file.seekg( 0 );
 	std::string line;
 	int max = 0;
-	uint32_t lines = 0;
-	uint32_t var_cnt = 0;
 	while(getline (file, line))
 	{
 		if( line.size() == 0 ) continue;

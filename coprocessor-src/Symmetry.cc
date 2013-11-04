@@ -70,7 +70,7 @@ bool Symmetry::process() {
   
   if( false ) {
     for( Var v = 0 ; v < solver.nVars(); ++ v ) {
-      printf("c %4d[%4d] : %3d -- %3d %3lld %3lld %3lld %3lld %3lld %3lld \n", v+1,freq[v],varSymm[v].v+1,varSymm[v].c2,varSymm[v].c3,varSymm[v].c4,varSymm[v].c5,varSymm[v].c6,varSymm[v].c7,varSymm[v].cl);
+      printf("c %4d[%4d] : %3d -- %3d %3ld %3ld %3ld %3ld %3ld %3ld \n", v+1,freq[v],varSymm[v].v+1,varSymm[v].c2,varSymm[v].c3,varSymm[v].c4,varSymm[v].c5,varSymm[v].c6,varSymm[v].c7,varSymm[v].cl);
     }
   }
   

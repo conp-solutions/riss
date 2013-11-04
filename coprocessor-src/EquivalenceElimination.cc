@@ -238,7 +238,6 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
   }
   
   // have a queue of the current gates, perform per type
-  Circuit::Gate::Type currentType = Circuit::Gate::AND;
   deque< int > queue;
   vector< Var > equiVariables; // collect all the other equivalent variables in this vector
   deque< Var > currentVariables;
@@ -254,7 +253,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
   
   const bool putAllAlways = true;
   
-  bool isMiter = true;
+  bool isMiter = true; // what to do with this variable?!
   for( Var v = 0; v < data.nVars(); ++ v ) {
     if( !putAllAlways && bitType[v] != 0 ) continue;
     currentPtr->push_back(v); 
@@ -1737,7 +1736,6 @@ void EquivalenceElimination::findEquivalencesOnBigRec(CoprocessorData& data, vec
      cerr << endl;
   }
   
-  int count = 0 ;
   while( !eqDoAnalyze.empty() && !data.isInterupted() && (data.unlimited() || steps < config.opt_ee_limit) )
   {
       Lit randL = eqDoAnalyze[ eqDoAnalyze.size() -1 ];
@@ -1836,7 +1834,6 @@ void EquivalenceElimination::eqTarjan(int depth, Lit l, Lit list, CoprocessorDat
 
 Lit EquivalenceElimination::getReplacement( Lit l) 
 {
-  const Lit startLit = l;
   while ( var(replacedBy[var(l)]) != var(l) ) l = sign(l) ? ~replacedBy[var(l)] : replacedBy[var(l)]; // go down through the whole hierarchy!
   // replacedBy[var(startLit)] = l; // speed up future calculations!
   return l;
@@ -2015,7 +2012,6 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	    if( config.ee_debug_out > 2 ) cerr << "c analyze clause " << c << endl;
 	    bool duplicate  = false;
 	    bool getsNewLiterals = false;
-	    Lit tmp = repr;
 	    
 	    if( data.outputsProof()) { // only if we do a proof, copy the clause!
 	      proofClause.clear();
@@ -2301,67 +2297,6 @@ void EquivalenceElimination::printStatistics(ostream& stream)
   if( config.opt_ee_level > 0 ) stream << "c [STAT] EE-gate " << gateTime << " s, " << gateSteps << " steps, " << gateExtractTime << " extractGateTime, " << endl;
 }
 
-
-/** iterative tarjan algorithm in python
- */
-#if 0
-def G2D(my_DiGraph):
-    """
-    Returns a dictionary mapping nodes to their successors.
-    my_DiGraph should be a networkx.DiGraph graph.
-    """
-    result=dict()
-    for node in my_DiGraph.nodes_iter():
-        result[node]=my_DiGraph.neighbors(node)
-    return result
-
-def Tarjan_ite(G):
-    """
-    Returns a dictionary mapping roots to their irriducible components
-    Ex:
-    d={1: [2], 2: [3], 3: [1, 4], 4: [5], 5: [6], 6: [4]}
-    Tarjan_ite(d)-->{1: [3, 2, 1], 4: [6, 5, 4]}
-    """
-    stack=[]
-    explored=[]
-    todo={}
-    for k,v in G.iteritems(): todo[k]=v[:]
-    component=dict()
-    number=dict()
-    low=dict()
-    for w in todo:
-        if w not in number:
-            explored.append(w)
-            low[w]=number[w]=len(number)
-            stack.append(w)
-            while len(explored)!=0:
-                h=explored[-1]
-                if len(todo[h])!=0:
-                    s=todo[h].pop()
-                    if s not in number:
-                        low[s]=number[s]=len(number)
-                        stack.append(s)
-                        explored.append(s)
-                    elif number[s] < number[h] and s in stack:
-                        low[h]=min(low[h],number[s])
-                else:
-                    explored.pop()
-                    if low[h]==number[h]:
-                        component[h]=[]
-                        while len(stack)!=0 and number[stack[-1]] >= number[h]:
-                            component[h].append(stack.pop())
-                    if len(explored)!=0: low[explored[-1]]=min(low[explored[-1]],low[h])
-    return component
-
-def Tarjanite(my_DiGraph):
-    """
-    Returns a dictionary mapping roots to their irriducible components.
-    my_DiGraph should be a networkx.DiGraph graph.
-    """
-    D=G2D(my_DiGraph)
-    return Tarjan_ite(D)
-    
-#endif
 
 void EquivalenceElimination::destroy()
 {

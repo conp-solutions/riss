@@ -156,7 +156,7 @@ int Preprocessor::parseModel(const string& filename)
  vector<Lit> literals;
  string line;
  
- bool foundS = false, foundV=false;
+ bool foundS = false;
  
   istream* fileptr;
 
@@ -200,14 +200,12 @@ int Preprocessor::parseModel(const string& filename)
     } else if( line.find( "SAT" ) == 0 ) {
       cerr << "c found non-standart SAT answer" << endl;
       solution = 10;
-      foundV = true;
       standartSAT = false;
       foundS = true;
       continue; // do not proceed on this line!
     }
     // check model
     if( line.find( "v" ) == 0 ) {
-      foundV = true;
       literals.clear();
       parseClause( line.substr(2) , literals );
       for( uint32_t i = 0 ; i < literals.size(); ++i ) {

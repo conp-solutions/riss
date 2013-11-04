@@ -110,10 +110,10 @@ inline Technique::Technique( Coprocessor::CP3Config& _config, ClauseAllocator& _
 , modifiedFormula(false)
 , isInitialized( false )
 , myDeleteTimer( 0 )
-, ca( _ca )
-, controller( _controller )
 , thisPelalty(0)
 , lastMaxPenalty(0)
+, ca( _ca )
+, controller( _controller )
 , didPrintCannotDrup(false)
 , didPrintCannotExtraInfo(false)
 {}

@@ -102,7 +102,7 @@ Solver::Solver(CoreConfig& _config) :
   , order_heap         (VarOrderLt(activity))
   , progress_estimate  (0)
   , remove_satisfied   (true)
-
+  
     // Resource constraints:
     //
   , conflict_budget    (-1)
@@ -356,7 +356,10 @@ void Solver::removeClause(CRef cr) {
 
   detachClause(cr);
   // Don't leave pointers to free'd memory!
-  if (locked(c)) vardata[var(c[0])].reason = CRef_Undef;
+  if (locked(c)) {
+    if( config.opt_rer_debug ) cerr << "c remove reason for variable " << var(c[0]) + 1 << ", namely: " << c << endl;
+    vardata[var(c[0])].reason = CRef_Undef;
+  }
   c.mark(1); 
    ca.free(cr);
 }
@@ -449,9 +452,13 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     int index   = trail.size() - 1;
 
     do{
-        assert(confl != CRef_Undef); // (otherwise should be UIP)
+        assert(confl != CRef_Undef && "there needs to be something to be resolved"); // (otherwise should be UIP)
+        if( confl == CRef_Undef ) {
+	  cerr << "c SPECIALLY BUILD-IN FAIL-CHECK in analyze" << endl;
+	  exit( 35 );
+	}
         Clause& c = ca[confl];
-	if( config.opt_ecl_debug ) cerr << "c resolve on " << p << "(" << index << ") with [" << confl << "]" << c << endl;
+	if( config.opt_ecl_debug || config.opt_rer_debug ) cerr << "c resolve on " << p << "(" << index << ") with [" << confl << "]" << c << endl;
 	int clauseReductSize = c.size();
 	// Special case for binary clauses
 	// The first one has to be SAT
@@ -1164,6 +1171,7 @@ struct reduceDB_lt {
 
 void Solver::reduceDB()
 {
+  reduceDBTime.start();
   resetRestrictedExtendedResolution(); // whenever the clause database is touched, forget about current RER step
   int     i, j;
   nbReduceDB++;
@@ -1194,6 +1202,7 @@ void Solver::reduceDB()
   }
   learnts.shrink(i - j);
   checkGarbage();
+  reduceDBTime.stop();
 }
 
 
@@ -1280,7 +1289,10 @@ lbool Solver::search(int nof_conflicts)
     bool blocked=false;
     starts++;
     for (;;){
+	propagationTime.start();
         CRef confl = propagate();
+	propagationTime.stop();
+	
         if (confl != CRef_Undef){
             // CONFLICT
 	  conflicts++; conflictC++;
@@ -1327,7 +1339,9 @@ lbool Solver::search(int nof_conflicts)
 	      otfssCls.clear();
 	      
 	      uint64_t extraInfo = 0;
+	      analysisTime.start();
 	      int ret = analyze(confl, learnt_clause, backtrack_level,nblevels,otfssCls,extraInfo);
+	      analysisTime.stop();
 #ifdef CLS_EXTRA_INFO
 	      maxResHeight = extraInfo;
 #endif
@@ -1425,6 +1439,7 @@ lbool Solver::search(int nof_conflicts)
 	      } else { // treat usual learned clause!
 
 		// when this method is called, backjumping has been done already!
+		extResTime.start();
 		bool ecl = extendedClauseLearning( learnt_clause, nblevels, extraInfo );
 		rerReturnType rerClause = rerFailed;
 		if( ! ecl ) { // only if not ecl, rer could be tested!
@@ -1432,6 +1447,7 @@ lbool Solver::search(int nof_conflicts)
 		} else {
 		  resetRestrictedExtendedResolution(); // otherwise, we just failed ... TODO: could simply jump over that clause ...
 		}
+		extResTime.stop();
 
 		lbdQueue.push(nblevels);
 		sumLBD += nblevels;
@@ -1455,7 +1471,7 @@ lbool Solver::search(int nof_conflicts)
 		    if( config.opt_printDecisions > 1 ) cerr << "c enqueue learned unit literal " << learnt_clause[0]<< " at level " <<  decisionLevel() << " from clause " << learnt_clause << endl;
 		}else{
 		  CRef cr = ca.alloc(learnt_clause, true);
-		  if( rerClause == rerMemorizeClause ) rerFuseClauses.push( cr ); // memorize thie clause reference for RER
+		  if( rerClause == rerMemorizeClause ) rerFuseClauses.push( cr ); // memorize this clause reference for RER
 		  ca[cr].setLBD(nblevels); 
 		  if(nblevels<=2) nbDL2++; // stats
 		  if(ca[cr].size()==2) nbBin++; // stats
@@ -1594,12 +1610,12 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   assert(decisionLevel() == config.opt_laLevel && "can perform LA only, if level is correct" );
   laTime = cpuTime() - laTime;
 
-  uint64_t hit[]   ={5,10,  85,170, 21845,43690, 1431655765,2863311530,  6148914691236517205, 12297829382473034410}; // compare numbers for lifted literals
-  uint64_t hitEE0[]={9, 6, 153,102, 39321,26214, 2576980377,1717986918, 11068046444225730969, 7378697629483820646}; // compare numbers for l == dec[0] or l != dec[0]
-  uint64_t hitEE1[]={0, 0, 165, 90, 42405,23130, 2779096485,1515870810, 11936128518282651045, 6510615555426900570}; // compare numbers for l == dec[1]
-  uint64_t hitEE2[]={0, 0,   0,  0, 43605,21930, 2857740885,1437226410, 12273903644374837845, 6172840429334713770}; // compare numbers for l == dec[2]
-  uint64_t hitEE3[]={0, 0,   0,  0,     0,    0, 2863289685,1431677610, 12297735558912431445, 6149008514797120170}; // compare numbers for l == dec[3]
-  uint64_t hitEE4[]={0, 0,   0,  0,     0,    0,          0,         0, 12297829381041378645, 6148914692668172970}; // compare numbers for l == dec[4] 
+  uint64_t hit[]   ={5,10,  85,170, 21845,43690, 1431655765,2863311530,  6148914691236517205, 12297829382473034410ull}; // compare numbers for lifted literals
+  uint64_t hitEE0[]={9, 6, 153,102, 39321,26214, 2576980377,1717986918, 11068046444225730969ull, 7378697629483820646}; // compare numbers for l == dec[0] or l != dec[0]
+  uint64_t hitEE1[]={0, 0, 165, 90, 42405,23130, 2779096485,1515870810, 11936128518282651045ull, 6510615555426900570}; // compare numbers for l == dec[1]
+  uint64_t hitEE2[]={0, 0,   0,  0, 43605,21930, 2857740885,1437226410, 12273903644374837845ull, 6172840429334713770}; // compare numbers for l == dec[2]
+  uint64_t hitEE3[]={0, 0,   0,  0,     0,    0, 2863289685,1431677610, 12297735558912431445ull, 6149008514797120170}; // compare numbers for l == dec[3]
+  uint64_t hitEE4[]={0, 0,   0,  0,     0,    0,          0,         0, 12297829381041378645ull, 6148914692668172970}; // compare numbers for l == dec[4] 
   // TODO: remove white spaces, output, comments and assertions!
   uint64_t p[nVars()];
   memset(p,0,nVars()*sizeof(uint64_t)); // TODO: change sizeof into 4!
@@ -1833,6 +1849,7 @@ static double luby(double y, int x){
 // NOTE: assumptions passed in member-variable 'assumptions'.
 lbool Solver::solve_()
 {
+    totalTime.start();
     startedSolving = true;
   
     model.clear();
@@ -1978,7 +1995,11 @@ printf("c ==================================[ Search Statistics (every %6d confl
     if( status == l_Undef ) {
 	  // restart, triggered by the solver
 	  // if( coprocessor == 0 && useCoprocessor) coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
-          if( coprocessor != 0 && useCoprocessorPP) status = coprocessor->preprocess();
+          if( coprocessor != 0 && useCoprocessorPP){
+	    preprocessTime.start();
+	    status = coprocessor->preprocess();
+	    preprocessTime.stop();
+	  }
          if (verbosity >= 1) printf("c =========================================================================================================\n");
     }
     
@@ -1998,21 +2019,36 @@ printf("c ==================================[ Search Statistics (every %6d confl
 	if( status == l_Undef ) {
 	  // restart, triggered by the solver
 	  // if( coprocessor == 0 && useCoprocessor)  coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
-          if( coprocessor != 0 && useCoprocessorIP) status = coprocessor->inprocess();
+          if( coprocessor != 0 && useCoprocessorIP) {
+	    inprocessTime.start();
+	    status = coprocessor->inprocess();
+	    inprocessTime.stop();
+	  }
 	}
 	
     }
-
+    totalTime.stop();
+    
     if (verbosity >= 1)
       printf("c =========================================================================================================\n");
     
-    if (verbosity >= 1) {
+    if (verbosity >= 1 || config.opt_solve_stats) {
+	    const double overheadC = totalTime.getCpuTime() - ( propagationTime.getCpuTime() + analysisTime.getCpuTime() + extResTime.getCpuTime() + preprocessTime.getCpuTime() + inprocessTime.getCpuTime() ); 
+	    const double overheadW = totalTime.getWallClockTime() - ( propagationTime.getWallClockTime() + analysisTime.getWallClockTime() + extResTime.getWallClockTime() + preprocessTime.getWallClockTime() + inprocessTime.getWallClockTime() );
+	    printf("c Tinimt-Ratios: ratioCpW: %.2lf ,overhead/Total %.2lf %.2lf \n", 
+		   totalTime.getCpuTime()/totalTime.getWallClockTime(), overheadC / totalTime.getCpuTime(), overheadW / totalTime.getWallClockTime() );
+	    printf("c Timing(cpu,wall, in s): total: %.2lf %.2lf ,prop: %.2lf %.2lf ,analysis: %.2lf %.2lf ,ext.Res.: %.2lf %.2lf ,reduce: %.2lf %.2lf ,overhead %.2lf %.2lf\n",
+		   totalTime.getCpuTime()/totalTime.getWallClockTime(),
+		   totalTime.getCpuTime(), totalTime.getWallClockTime(), propagationTime.getCpuTime(), propagationTime.getWallClockTime(), analysisTime.getCpuTime(), analysisTime.getWallClockTime(), extResTime.getCpuTime(), extResTime.getWallClockTime(), reduceDBTime.getCpuTime(), reduceDBTime.getWallClockTime(),
+		   overheadC, overheadW );
+	    printf("c PP-Timing(cpu,wall, in s): preprocessing: %.2lf %.2lf ,inprocessing: %.2lf %.2lf\n",
+		   preprocessTime.getCpuTime(), preprocessTime.getWallClockTime(), inprocessTime.getCpuTime(), inprocessTime.getWallClockTime() );
             printf("c Learnt At Level 1: %d  Multiple: %d Units: %d\n", l1conflicts, multiLearnt,learntUnit);
-	    printf("c LAs: %d laSeconds %lf LA assigned: %d tabus: %d, failedLas: %d, maxEvery %d, eeV: %d eeL: %d \n", laTime, las, laAssignments, tabus, failedLAs, maxBound, laEEvars, laEElits );
+	    printf("c LAs: %lf laSeconds %d LA assigned: %d tabus: %d, failedLas: %d, maxEvery %d, eeV: %d eeL: %d \n", laTime, las, laAssignments, tabus, failedLAs, maxBound, laEEvars, laEElits );
 	    printf("c IntervalRestarts: %d\n", intervalRestart);
 	    printf("c lhbr: %d (l1: %d), new: %d (l1: %d), tests: %d, subs: %d\n", lhbrs, l1lhbrs,lhbr_news,l1lhbr_news,lhbrtests,lhbr_sub);
 	    printf("c otfss: %d (l1: %d), cls: %d, units: %d, binaries: %d, jumpedHigher: %d\n", otfsss, otfsssL1,otfssClss,otfssUnits,otfssBinaries,otfssHigherJump);
-	    printf("c learning: %lld cls, %lf avg. size, %lf avg. LBD, %lld maxSize, %lld proof-height\n", 
+	    printf("c learning: %ld cls, %lf avg. size, %lf avg. LBD, %ld maxSize, %ld proof-height\n", 
 		   (int64_t)totalLearnedClauses, 
 		   sumLearnedClauseSize/totalLearnedClauses, 
 		   sumLearnedClauseLBD/totalLearnedClauses,
@@ -2442,20 +2478,33 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	
 	// delete the current decision level as well, so that the order of the reason clauses can be set right!
 	assert( decisionLevel() > 0 && "can undo a decision only, if it didnt occur at level 0" );
-// 	cerr << "c trail: " << trail << endl;
-// 	cerr << "c trail_lim: " << trail_lim << endl;
-// 	cerr << "c decision level: " << decisionLevel() << endl;
-// 	for( int i = 0 ; i < decisionLevel() ; ++i ) cerr << "c dec [" << i << "] = " << trail[ trail_lim[i] ] << endl;
+	if( true && config.opt_rer_debug ) {
+	  cerr << "c trail: " << trail << endl;
+	  cerr << "c trail_lim: " << trail_lim << endl;
+	  cerr << "c decision level: " << decisionLevel() << endl;
+	  for( int i = 0 ; i < decisionLevel() ; ++i ) cerr << "c dec [" << i << "] = " << trail[ trail_lim[i] ] << endl;
+	}
 	const Lit lastDecisoin = trail [ trail_lim[ decisionLevel() - 1 ] ];
 	if( config.opt_rer_debug ) cerr << "c undo decision level " << decisionLevel() << ", and re-add the related decision literal " << lastDecisoin << endl;
 	rerOverheadTrailLits += trail.size(); // store how many literals have been removed from the trail to set the order right!
 	cancelUntil( decisionLevel() - 1 );
+	if( config.opt_rer_debug ) {
+	  if( config.opt_rer_debug ) cerr << "c intermediate decision level " << decisionLevel() << endl;
+	  for( int i = 0 ; i < decisionLevel() ; ++i ) cerr << "c dec [" << i << "] = " << trail[ trail_lim[i] ] << endl;
+	}
+	// code from search method
+	newDecisionLevel();
 	uncheckedEnqueue( lastDecisoin ); // this is the decision that has been done on this level before!
+	if( config.opt_rer_debug ) {
+	  cerr << "c new decision level " << decisionLevel() << endl;
+	  for( int i = 0 ; i < decisionLevel() ; ++i ) cerr << "c dec [" << i << "] = " << trail[ trail_lim[i] ] << endl;
+	}
 	rerOverheadTrailLits -= trail.size();
 	// detach all learned clauses from fused clauses
 	for( int i = 0; i < rerFuseClauses.size(); ++ i ) {
 	  assert( rerFuseClauses[i] != reason( var( ca[rerFuseClauses[i]][0] ) ) && "from a RER-CDCL point of view, these clauses cannot be reason clause" );
-	  ca[rerFuseClauses[i]].mark(1); // mark to be deleted!
+	  assert( rerFuseClauses[i] != reason( var( ca[rerFuseClauses[i]][1] ) ) && "from a RER-CDCL point of view, these clauses cannot be reason clause" );
+	  // ca[rerFuseClauses[i]].mark(1); // mark to be deleted!
 	  removeClause(rerFuseClauses[i]); // drop this clause!
 	}
 	
@@ -2523,7 +2572,11 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	// modify the current learned clause accordingly!
 	currentLearnedClause[0] = mkLit(x,false);
 	// stats
-	if( config.opt_rer_debug ) cerr << "c close with [ " << rerLits.size() << " ] candidate [" << rerLearnedSizeCandidates << "] : " << currentLearnedClause << endl;
+	if( config.opt_rer_debug ) {
+	  cerr << "c close with [ " << rerLits.size() << " ] candidate [" << rerLearnedSizeCandidates << "] : ";
+	  for( int i =0; i < currentLearnedClause.size(); ++i ) cerr << " " << currentLearnedClause[i] << "@" << level(var(currentLearnedClause[i]));
+	  cerr << endl;
+	}
 	if( config.opt_rer_debug ) cerr << endl << "c accepted current pattern with lits " << rerLits << " - start over" << endl << endl;
 	rerLearnedClause ++; rerLearnedSizeCandidates ++; 
 	resetRestrictedExtendedResolution(); // done with the current pattern

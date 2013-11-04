@@ -349,7 +349,7 @@ bool Probing::prDoubleLook(Lit l1decision)
   if( config.pr_debug_out > 0 ) cerr << "c double lookahead after " << l1decision << " at level 1" << endl;
   
   // TODO: sort literals in double lookahead queue, use only first n literals
-  static bool didit = false;
+  // static bool didit = false;
   // if( !didit ) { cerr << "c sort literals in double queue according to some heuristic (occurrences, ... )" << endl; didit = true; }
   
   CRef thisConflict = CRef_Undef;
@@ -497,8 +497,7 @@ bool Probing::prDoubleLook(Lit l1decision)
       else return true; // decision level == 0
     }
     // could copy to prNegatie here, but we do not do this, but refer to the vector inside the solver instead
-    vec<lbool>& prNegative = solver.assigns;
-    
+   
     if( solver.decisionLevel() != 2 ) cerr << "c L2 lookahead resulted in decision level " << solver.decisionLevel() << endl;
     assert( solver.decisionLevel() == 2 && "double look-ahead can only be continued at level 1!");
     assert( solver.trail_lim.size() == 2 && "there have to be 2 decisions!" );
@@ -605,7 +604,6 @@ void Probing::cleanSolver()
 
 void Probing::reSetupSolver()
 {
-int j = 0;
 
   if( config.pr_debug_out > 1 ) {
     cerr << "c formula before resetup: " << endl;
@@ -893,8 +891,6 @@ void Probing::probing()
 	else if( config.pr_debug_out > 1 ) cerr << "c double lookahead did not fail" << endl;
       }
       // could copy to prNegatie here, but we do not do this, but refer to the vector inside the solver instead
-      vec<lbool>& prNegative = solver.assigns;
-
       if(!data.ok() ) break;
 
       assert( solver.decisionLevel() == 1 && "");
@@ -1036,7 +1032,6 @@ void Probing::clauseVivification()
       cerr << "[" << cr << "] : " << c << endl;
       
       
-      void  *end = 0;
       if( c.size() == 1 ) cerr << "there should not be unit clauses! [" << cr << "]" << c << endl;
       else {
 	for( int j = 0 ; j < 2; ++ j ) {

@@ -441,7 +441,7 @@ public:
       return max+1;;
     }
 #else
-    {}
+    { return 0; }
 #endif
 };
 

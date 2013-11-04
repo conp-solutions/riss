@@ -293,8 +293,6 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 			cerr << "c [XOR] end" << endl;
 			}
 			
-			const uint32_t diff = stop - start;
-			
 			uint64_t shift = 1;
 			shift = shift << ( cl.size() -1 );
 

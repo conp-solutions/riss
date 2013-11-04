@@ -499,16 +499,17 @@ opt_uhd_Debug     (_cat_uhd, "cp3_uhdDebug",     "Debug Level of Unhiding", 0, I
 // Xor
 //
 opt_xorMatchLimit (_cat_xor, "xorMaxSize",  "Maximum Clause Size for detecting XOrs (high number consume much memory!)", 12, IntRange(3, 63)),
+opt_xorFindLimit  (_cat_xor, "xorLimit",    "number of checks for finding xors", 1200000, IntRange(0, INT32_MAX)),
 opt_xor_selectX       (_cat_xor, "xorSelect",    "how to select next xor 0=first,1=smallest", 0, IntRange(0, 1)),
 opt_xor_keepUsed      (_cat_xor, "xorKeepUsed",  "continue to simplify kept xors", true),
 opt_xor_findSubsumed  (_cat_xor, "xorFindSubs",  "try to recover XORs that are partially subsumed", true),
 opt_xor_findResolved  (_cat_xor, "xorFindRes",   "try to recover XORs including resolution steps", false),
 #if defined CP3VERSION 
-opt_xor_debug( 0),
+opt_xor_debug( 0)
 #else
-opt_xor_debug             (_cat_xor, "xor-debug",       "Debug Output of XOR reasoning", 0, IntRange(0, 5)),
+opt_xor_debug             (_cat_xor, "xor-debug",       "Debug Output of XOR reasoning", 0, IntRange(0, 5))
 #endif
-opt_xorFindLimit  (_cat_xor, "xorLimit",    "number of checks for finding xors", 1200000, IntRange(0, INT32_MAX))
+
 {}
 
 void CP3Config::parseOptions(int& argc, char** argv, bool strict)

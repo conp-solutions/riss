@@ -270,7 +270,7 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<Var
 
     updateDeleteTime(data.getMyDeleteTimer());
     
-    uint32_t timer = dirtyOccs.nextStep();
+    dirtyOccs.nextStep();
     progressStats(data, true);
     
     if( config.opt_bve_verbose > 0 )

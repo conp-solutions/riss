@@ -72,6 +72,7 @@ bool BoundedVariableAddition::process()
   }
   
   processTime = cpuTime() - processTime;
+  return didSomething;
 }
 
 
@@ -99,8 +100,6 @@ bool BoundedVariableAddition::andBVA() {
 	vector<Lit> stack;
 	
 	int32_t currentReduction = 0;
-	
-	bool addedNewAndGate = false;
 	
 	// for l in F
 	while (bvaHeap.size() > 0 && (data.unlimited() || bvaALimit > andMatchChecks) && !data.isInterupted() ) {
@@ -359,8 +358,6 @@ bool BoundedVariableAddition::andBVA() {
 	    currentReduction = newReduction;
 	    bvaMatchingLiterals.push_back( left );
 	  } else break;
-	  
-	  const uint32_t matches = bvaCountCount[ toInt(left) ];
 
 	  // get vector for the literal that will be added now
 	  while ( bvaMatchingClauses.size() < bvaMatchingLiterals.size() ) bvaMatchingClauses.push_back( vector<CRef>() );
@@ -609,7 +606,6 @@ bool BoundedVariableAddition::andBVA() {
 	      // add and-clause only once
 	      if( !addedAnd ) {
 		addedAnd = true;
-		addedNewAndGate = true;
 		clauseLits.clear();
 		for( uint32_t j = 0 ; j < bvaMatchingLiterals.size(); ++j )
 		  clauseLits.push( ~bvaMatchingLiterals[j] );
@@ -651,19 +647,6 @@ bool BoundedVariableAddition::andBVA() {
 	  if( config.bva_debug > 1 && bvaHeap.size() > 0 ) cerr << "c [BVA] heap(" << bvaHeap.size() << ") with at 0: " << toLit(bvaHeap[0]) << endl;
 	  
 	} // end for l in F
-  endBVA:;
-  
-// 	  if( config.bva_debug > 2 )
-// 	  {
-// 	    for( Var v = 1 ; v <= search.var_cnt; ++v ) {
-// 	      Lit r = mkLit(v,false);
-// 	      cerr << "c " << r << " list: " << endl;
-// 	      for( uint32_t ti = 0 ; ti < data.list( r ).size(); ti ++ ) { printClause( search, data.list( r )[ti] ); cerr  << " i:" << search.gsa.get(data.list( r )[ti]).can_be_deleted() << endl; }
-// 	      cerr << "c " << ~r << " list: " << endl;
-// 	      for( uint32_t ti = 0 ; ti < data.list( ~r ).size(); ti ++ ) { printClause( search, data.list( ~r )[ti] ); cerr << " i:" << search.gsa.get(data.list(~r)[ti]).can_be_deleted() << endl; }
-// 	    }
-// 	  }
-  
   
   return didSomething;
 }
@@ -710,7 +693,6 @@ bool BoundedVariableAddition::xorBVAhalf()
       if( config.opt_bvaAnalysisDebug  > 3 ) cerr << "c work on clause " << c << endl;
       data.ma.nextStep();
       for( int k = 0 ; k < c.size(); ++ k ) {
-	const Lit l1 = c[k];
 	data.ma.setCurrentStep( toInt( c[k] ) ); // mark all lits in C to check "C == D" fast
       }
       data.ma.reset( toInt(right) );
@@ -922,7 +904,6 @@ bool BoundedVariableAddition::xorBVAfull()
       if( config.opt_bvaAnalysisDebug  > 3 ) cerr << "c work on clause " << c << endl;
       data.ma.nextStep();
       for( int k = 0 ; k < c.size(); ++ k ) {
-	const Lit l1 = c[k];
 	data.ma.setCurrentStep( toInt( c[k] ) ); // mark all lits in C to check "C == D" fast
       }
       data.ma.reset( toInt(right) );
@@ -987,7 +968,6 @@ bool BoundedVariableAddition::xorBVAfull()
       if( config.opt_bvaAnalysisDebug  > 3 ) cerr << "c work on clause " << c << endl;
       data.ma.nextStep();
       for( int k = 0 ; k < c.size(); ++ k ) {
-	const Lit l1 = c[k];
 	data.ma.setCurrentStep( toInt( c[k] ) ); // mark all lits in C to check "C == D" fast
       }
       data.ma.reset( toInt(nRight) );

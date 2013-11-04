@@ -33,11 +33,11 @@ cp3destroyPreprocessor(void*& preprocessor)
   delete cp3->cp3config;
   delete cp3->solver;
   delete cp3->solverconfig;
-  delete preprocessor;
+  delete cp3;
   preprocessor = 0;
 }
 
-extern "C" void* __attribute__ ((visibility ("default"))) 
+extern "C" void __attribute__ ((visibility ("default"))) 
 cp3preprocess(void* preprocessor) {
   libcp3* cp3 = (libcp3*) preprocessor;
   cp3->cp3->preprocess();
@@ -73,7 +73,7 @@ extern "C" int  __attribute__ ((visibility ("default")))
 cp3giveNewLit(void* preprocessor, int oldLit)
 {
   libcp3* cp3 = (libcp3*) preprocessor;
-  cp3->cp3->giveNewLit(oldLit);
+  return cp3->cp3->giveNewLit(oldLit);
 }
 
 extern "C" void  __attribute__ ((visibility ("default"))) 

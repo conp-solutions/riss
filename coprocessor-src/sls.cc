@@ -195,7 +195,6 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
 
     // update flip
     const Var v = var(unsatLit);
-    const bool currentPol = varData[v].polarity;
     
     if( config.opt_sls_debug ) cerr << "c flip literal " << ~unsatLit << " to " << unsatLit << " , taken from clause " << c << " [left:" << unsatClauses.size() << "]" << endl;
     assert( isUnsat( unsatLit ) && "this literal has to be false" );

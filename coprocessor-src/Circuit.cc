@@ -120,7 +120,6 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
   for( int p = 0; p < 2 ; ++ p ) {
     data.ma.nextStep();
     data.lits.clear();
-    int blockedSize = -1; // size of the AND gate that has been found with a blocked gate
     Lit pos = mkLit( v, p == 1 ); // pos -> a AND b AND ... => binary clauses [-pos, a],[-pos,b], ...
     Lit* list = big->getArray(pos);
     const int listSize = big->getSize(pos);
@@ -255,7 +254,6 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 
 void Circuit::getExOGates(const Var v, vector< Circuit::Gate >& gates, CoprocessorData& data)
 {
-  int oldGates = gates.size();
   for( int p = 0; p < 2 ; ++ p ) {
     Lit pos = mkLit( v, p == 1 );
     vector<CRef>& list = data.list(pos);
@@ -361,7 +359,7 @@ void Circuit::getExOGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
       assert( (!found || count + 1== data.lits.size()) && "if for the current literal the situation for blocked has been found, exactly the n binary clauses have to be found!" );
     }
     if( found ) {
-      for( int j = 0 ; j < data.lits.size() ; ) data.lits[j] = ~data.lits[j++];
+      for( int j = 0 ; j < data.lits.size() ; j++ ) data.lits[j] = ~data.lits[j];
       gates.push_back( Gate( data.lits, Gate::ExO, Gate::POS_BLOCKED ) );
     }
   }
@@ -510,9 +508,6 @@ HASUMnextJ:;
 	  gates.push_back( Gate(data.lits, Gate::FA_SUM, found[0] ? Gate::NEG_BLOCKED : Gate::POS_BLOCKED) );
 	}
       }
-      
-      
-HASUMnextCandidate:;
     }
       
   }
@@ -561,7 +556,6 @@ void Circuit::getITEGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
   // check for v <-> ITE( s,t,f )
   for( int p = 0; p < 2 ; ++ p ) {
     data.ma.nextStep();
-    int blockedSize = -1; // size of the AND gate that has been found with a blocked gate
     Lit pos = mkLit( v, p == 1 ); // pos -> a AND b AND ... => binary clauses [-pos, a],[-pos,b], ...
     const vector<ternary>& cList = ternaries[ toInt(pos) ]; // all clauses C with pos \in C
     for( int i = 0 ; i < cList.size(); ++i ) {  // there can be multiple gates per variable
@@ -970,6 +964,7 @@ void Circuit::Gate::print(ostream& stream) const
 	stream << " )" << endl;
         break;
       case ITE:    stream << "ITE( " << s() << " , " << t() << " , " << f() << " )" << endl; break;
+      default: break; // nothing to be done here ...
     }
   } else if( type == XOR ) {
     stream << "XOR( " << a() << " , " << b() << " " << c() << " )" << endl;

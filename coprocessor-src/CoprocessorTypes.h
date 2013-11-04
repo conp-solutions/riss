@@ -395,7 +395,7 @@ public:
 
   Lit* getArray(const Lit l);
   const Lit* getArray(const Lit l) const;
-  const int getSize(const Lit l) const;
+  int getSize(const Lit l) const;
 
   /** will travers the BIG and generate the start and stop indexes to check whether a literal implies another literal
    * @return false, if BIG is not initialized yet
@@ -552,10 +552,10 @@ struct LitOrderHeapLt
 inline CoprocessorData::CoprocessorData(ClauseAllocator& _ca, Solver* _solver, Coprocessor::Logger& _log, bool _limited, bool _randomized)
 : ca ( _ca )
 , solver( _solver )
+, numberOfVars(0)
 , hasLimit( _limited )
 , randomOrder(_randomized)
 , currentlyInprocessing(false)
-, numberOfVars(0)
 , log(_log)
 {
 }
@@ -1649,7 +1649,6 @@ inline void BIG::create(ClauseAllocator& ca, CoprocessorData& data, vec<CRef>& l
     ( big[ toInt(~l1) ] )[ sizes[toInt(~l1)] ] = l0;
     sizes[toInt(~l0)] ++;
     sizes[toInt(~l1)] ++;
-    nextClause:;
   }
 }
 
@@ -1781,7 +1780,7 @@ inline const Lit* BIG::getArray(const Lit l) const
   return big[ toInt(l) ];
 }
 
-inline const int BIG::getSize(const Lit l) const
+inline int BIG::getSize(const Lit l) const
 {
   return sizes[ toInt(l) ];
 }
@@ -1954,7 +1953,6 @@ inline uint32_t BIG::stampLiteral( const Lit literal, uint32_t stamp, int32_t* i
   while( ! stampQueue.empty() )
     {
       const Lit current = stampQueue.back();
-      const Lit* adj =   getArray(current);
       const int adjSize = getSize(current);
 
       if( index[toInt(current)] == adjSize ) {

@@ -34,6 +34,7 @@ public:
  /** 
  * List of all used options, public members, can be changed and read directly
  */
+ BoolOption opt_solve_stats;
  
  DoubleOption opt_K; 
  DoubleOption opt_R; 
