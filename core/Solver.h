@@ -452,9 +452,10 @@ protected:
   
   
   vec<Lit> rerCommonLits; // literals that are common in the clauses in the window
+  int64_t rerCommonLitsSum; // sum of the current common literals - to Bloom-Filter common lits
   vec<Lit> rerLits;	// literals that are replaced by the new variable
   vec<CRef> rerFuseClauses; // clauses that will be replaced by the new clause -
-  int rerLearnedClause, rerLearnedSizeCandidates, rerSizeReject, rerPatternReject,maxRERclause; // stat counters
+  int rerLearnedClause, rerLearnedSizeCandidates, rerSizeReject, rerPatternReject,rerPatternBloomReject,maxRERclause; // stat counters
   double rerOverheadTrailLits,totalRERlits; // stats
   
   

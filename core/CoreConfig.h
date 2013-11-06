@@ -143,6 +143,7 @@ public:
  IntOption opt_ecl_maxLBD;  // maximum LBD to perform ecl
  IntOption opt_ecl_newAct;  // how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean
  BoolOption opt_ecl_debug; // enable debug output
+ DoubleOption opt_ecl_smallLevel; // add ecl clauses only, if smallest two literals are from this level or below ( negative -> relativ, positive -> absolute! )
  DoubleOption opt_ecl_every;  // perform ecl at most every n conflicts
  
  BoolOption opt_restrictedExtendedResolution; // perform restricted extended resolution

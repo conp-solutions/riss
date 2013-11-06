@@ -339,6 +339,7 @@ void ClauseElimination::parallelElimination(CoprocessorData& data)
 void* ClauseElimination::runParallelElimination(void* arg)
 {
   assert( false && "Method not yet implemented" );
+  return 0;
 }
 
 void ClauseElimination::printStatistics(ostream& stream)

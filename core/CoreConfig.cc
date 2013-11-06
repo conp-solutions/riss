@@ -127,6 +127,7 @@ CoreConfig::CoreConfig() // add new options here!
  opt_ecl_maxLBD("EXTENDED RESOLUTION ECL", "ecl-maxLBD", "maximum LBD to perform ecl", 2, IntRange(2, INT32_MAX) ), 
  opt_ecl_newAct("EXTENDED RESOLUTION ECL", "ecl-new-act", "how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean", 0, IntRange(0, 4) ),
  opt_ecl_debug("EXTENDED RESOLUTION ECL", "ecl-d", "debug output for ECL", false),
+ opt_ecl_smallLevel("EXTENDED RESOLUTION ECL", "ecl-smL", "ecl only, if smallest lit level is below the given (negative=neg.ratio from bj. level,positive=absolute)", 1, DoubleRange(-1, true, HUGE_VAL, true) ),
  opt_ecl_every("EXTENDED RESOLUTION ECL", "ecl-freq", "how often ecl compared to usual learning", 1, DoubleRange(0, true, 1, true) ),
  
  opt_restrictedExtendedResolution("EXTENDED RESOLUTION RER", "rer", "perform restricted extended resolution (along Audemard ea 2010)", false), 

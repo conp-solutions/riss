@@ -170,10 +170,12 @@ Solver::Solver(CoreConfig& _config) :
   ,maxResHeight(0)
   
   // restricted extended resolution
+  ,rerCommonLitsSum(0)
   ,rerLearnedClause(0)
   ,rerLearnedSizeCandidates(0)
   ,rerSizeReject(0)
   ,rerPatternReject(0)
+  ,rerPatternBloomReject(0)
   ,maxRERclause(0)
   ,rerOverheadTrailLits(0)
   ,totalRERlits(0)
@@ -2087,8 +2089,8 @@ printf("c ==================================[ Search Statistics (every %6d confl
 		  );
 	    printf("c ext.cl.l.: %d outOf %d ecls, %d maxSize, %.2lf avgSize, %.2lf totalLits\n",
 		   extendedLearnedClauses,extendedLearnedClausesCandidates,maxECLclause, extendedLearnedClauses == 0 ? 0 : ( totalECLlits / (double)extendedLearnedClauses), totalECLlits);
-	    printf("c res.ext.res.: %d rer, %d rerSizeCands, %d sizeReject, %d patternReject, %d maxSize, %.2lf avgSize, %.2lf totalLits\n",
-		   rerLearnedClause, rerLearnedSizeCandidates, rerSizeReject, rerPatternReject, maxRERclause, rerLearnedClause == 0 ? 0 : (totalRERlits / (double) rerLearnedClause), totalRERlits );
+	    printf("c res.ext.res.: %d rer, %d rerSizeCands, %d sizeReject, %d patternReject, %d bloomReject, %d maxSize, %.2lf avgSize, %.2lf totalLits\n",
+		   rerLearnedClause, rerLearnedSizeCandidates, rerSizeReject, rerPatternReject, rerPatternBloomReject, maxRERclause, rerLearnedClause == 0 ? 0 : (totalRERlits / (double) rerLearnedClause), totalRERlits );
 	    printf("c decisionClauses: %d\n", learnedDecisionClauses );
 	    printf("c agility restart rejects: %d\n", agility_rejects );
     }
@@ -2298,6 +2300,11 @@ bool Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned 
   currentLearnedClause[1] = currentLearnedClause[ pos ];
   currentLearnedClause[ pos ] = tmp;
   
+  // do not process this clause further, if the smallest level is not low enough!
+  // either, compared to the absolute parameter
+  // or (relativ) compared to the current decision level
+  if( (config.opt_ecl_smallLevel > 0) ? (smallestLevel > config.opt_ecl_smallLevel) : ( - config.opt_ecl_smallLevel < (double)smallestLevel / (double)decisionLevel()  ) ) return false;
+  
   // process the learned clause!
   if( config.opt_ecl_debug) cerr << "c into " << currentLearnedClause << " | with listAtSmallest= " << litsAtSmallest << endl;
   if( config.opt_ecl_debug) cerr << "c detailed: " << endl;
@@ -2456,9 +2463,11 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
   
   // passed the filters
   if( rerLits.size() == 0 ) { // init 
-    rerCommonLits.clear();
-    for( int i = 1; i < currentLearnedClause.size(); ++ i ) 
+    rerCommonLits.clear();rerCommonLitsSum=0;
+    for( int i = 1; i < currentLearnedClause.size(); ++ i ) {
       rerCommonLits.push( currentLearnedClause[i] );
+      rerCommonLitsSum += toInt(currentLearnedClause[i]);
+    }
     rerLits.push( currentLearnedClause[0] );
     sort( rerCommonLits ); // TODO: have insertionsort/mergesort here!
     // rerFuseClauses is updated in search later!
@@ -2474,14 +2483,26 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
       // sort, if more than 2 literals
       if( currentLearnedClause.size() > 2 ) sort( &( currentLearnedClause[2] ), currentLearnedClause.size() - 2  ); // do not touch the second literal in the clause! check it separately!
       bool found = false;
-      for( int i = 0 ; i < rerCommonLits.size(); ++ i ) if ( rerCommonLits[i] == currentLearnedClause[1] ) { found = true; break; }
+      for( int i = 0 ; i < rerCommonLits.size(); ++ i ) {
+	if ( rerCommonLits[i] == currentLearnedClause[1] ) { found = true; break;}
+      }
       if( ! found ) {
 	resetRestrictedExtendedResolution();
 	//cerr << "c reject patter" << endl;
 	rerPatternReject ++;
 	return rerFailed;
       }
-      found = false; // for the other literals
+      // Bloom-Filter
+      int64_t thisLitSum = 0;
+      for( int i = 0 ; i < currentLearnedClause.size(); ++ i ) {
+	thisLitSum += toInt( currentLearnedClause[i] );
+      }
+      if( thisLitSum != rerCommonLitsSum ) {
+	resetRestrictedExtendedResolution();
+	rerPatternBloomReject ++;
+	return rerFailed;
+      }
+      found = false; // for the other literals pattern
       // check whether all remaining literals are in the clause
       int i = 0; int j = 2;
       while ( i < rerCommonLits.size() && j < currentLearnedClause.size() ) {
@@ -2626,6 +2647,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 void Solver::resetRestrictedExtendedResolution()
 {
   rerCommonLits.clear();
+  rerCommonLitsSum = 0;
   rerLits.clear();
   rerFuseClauses.clear();
 }
