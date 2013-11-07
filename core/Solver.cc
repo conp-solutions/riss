@@ -935,7 +935,7 @@ CRef Solver::propagate()
 	  
 	  Lit imp = wbin[k].blocker;
 	  
-	  if( config.opt_learn_debug ) cerr << "c checked binary clause " << ca[wbin[k].cref ] << endl;
+	  if( config.opt_learn_debug ) cerr << "c checked binary clause " << ca[wbin[k].cref ] << " with implied literal having value " << toInt(value(imp)) << endl;
 	  
 	  if(value(imp) == l_False) {
 	    if( !config.opt_long_conflict ) return wbin[k].cref;
@@ -1314,7 +1314,10 @@ lbool Solver::search(int nof_conflicts)
 	  if( config.opt_printDecisions > 2 ) {
 	    printf("c conflict at level %d\n", decisionLevel() );
 	    cerr << "c conflict clause: " << ca[confl] << endl;
-	    cerr << "c trail: " << trail << endl;
+	    cerr << "c trail: " ;
+	    for( int i = 0 ; i < trail.size(); ++ i ) {
+	      cerr << " " << trail[i] << "@" << level(var(trail[i])) << "?"; if( reason(var(trail[i]) ) == CRef_Undef ) cerr << "U"; else cerr <<reason(var(trail[i]));
+	    } cerr << endl;
 	  }
 	  
 	  // as in glucose 2.3, increase decay after a certain amount of steps - but have parameters here!
@@ -1504,10 +1507,13 @@ lbool Solver::search(int nof_conflicts)
 		  claBumpActivity(ca[cr]);
 		  if( rerClause != rerDontAttachAssertingLit ) { // attach unit only, if  rer does allow it
 		    if( backtrack_level == otfssBtLevel ) {	// attach the unit only, if the backjumping level is the same as otfss level
-		      if (value(learnt_clause[0]) == l_Undef) uncheckedEnqueue(learnt_clause[0], cr); // this clause is only unit, if OTFSS jumped to the same level!
+		      if (value(learnt_clause[0]) == l_Undef) {
+			uncheckedEnqueue(learnt_clause[0], cr); // this clause is only unit, if OTFSS jumped to the same level!
+			if( config.opt_printDecisions > 1  ) cerr << "c enqueue literal " << learnt_clause[0] << " at level " <<  decisionLevel() << " from learned clause " << learnt_clause << endl;
+		      }
 		    }
 		  }
-		  if( config.opt_printDecisions > 1  ) cerr << "c enqueue literal " << learnt_clause[0] << " at level " <<  decisionLevel() << " from learned clause " << learnt_clause << endl;
+		  
 		}
 
 	      }
@@ -2026,7 +2032,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
     if( config.opt_rer_debug ) {
       cerr << "c BEGIN FORMULA" << endl;
       for( int i = 0 ; i < clauses.size(); ++ i ) {
-	cerr << "c [" << i << "] " << ca[clauses[i]] << endl;
+	cerr << "c [" << i << "]?["<< clauses[i] << "] " << ca[clauses[i]] << endl;
       }
       cerr << "c END FORMULA" << endl;
       cerr << "c varcheck ... " << endl;
@@ -2070,7 +2076,6 @@ printf("c ==================================[ Search Statistics (every %6d confl
 	    printf("c Tinimt-Ratios: ratioCpW: %.2lf ,overhead/Total %.2lf %.2lf \n", 
 		   totalTime.getCpuTime()/totalTime.getWallClockTime(), overheadC / totalTime.getCpuTime(), overheadW / totalTime.getWallClockTime() );
 	    printf("c Timing(cpu,wall, in s): total: %.2lf %.2lf ,prop: %.2lf %.2lf ,analysis: %.2lf %.2lf ,ext.Res.: %.2lf %.2lf ,reduce: %.2lf %.2lf ,overhead %.2lf %.2lf\n",
-		   totalTime.getCpuTime()/totalTime.getWallClockTime(),
 		   totalTime.getCpuTime(), totalTime.getWallClockTime(), propagationTime.getCpuTime(), propagationTime.getWallClockTime(), analysisTime.getCpuTime(), analysisTime.getWallClockTime(), extResTime.getCpuTime(), extResTime.getWallClockTime(), reduceDBTime.getCpuTime(), reduceDBTime.getWallClockTime(),
 		   overheadC, overheadW );
 	    printf("c PP-Timing(cpu,wall, in s): preprocessing: %.2lf %.2lf ,inprocessing: %.2lf %.2lf\n",
@@ -2369,6 +2374,11 @@ bool Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned 
   }
   if( config.opt_ecl_debug) cerr << "c after trail lim: " << trail_lim << endl;
   
+  if( config.opt_ecl_full && !config.opt_ecl_as_learned) {
+    // here, the disjunction could also by replaced by ~x in the whole formula
+    disjunctionReplace( l1, l2, mkLit(x,true), false);
+  }
+  
   if( config.opt_ecl_debug) cerr << "c add clause " << oc << endl;
   CRef cr = ca.alloc(oc, config.opt_ecl_as_learned); // add clause as non-learned clause 
   ca[cr].setLBD(1); // all literals are from the same level!
@@ -2409,9 +2419,6 @@ bool Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned 
       claBumpActivity(ca[icr]);
     } else clauses.push(icr);
     attachClause(icr);
-    if( !config.opt_ecl_as_learned && false) {
-      // here, the disjunction could also by replaced by ~x in the whole formula // TODO
-    }
   }
 
   // set the activity of the fresh variable (Huang used average of the two literals)
@@ -2525,12 +2532,15 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	// add all the RER clauses with the fresh variable (and set up the new variable properly!
 	const Var x = newVar(true,true,'r');
 	vardata[x].level = level(var(currentLearnedClause[0]));
-	assigns[x] = lbool(true);
+	// do not assign a value, because it will be undone anyways!
 	
 	// delete the current decision level as well, so that the order of the reason clauses can be set right!
 	assert( decisionLevel() > 0 && "can undo a decision only, if it didnt occur at level 0" );
 	if( true && config.opt_rer_debug ) {
-	  cerr << "c trail: " << trail << endl;
+	  cerr << "c trail: " ;
+	  for( int i = 0 ; i < trail.size(); ++ i ) {
+	      cerr << " " << trail[i] << "@" << level(var(trail[i])) << "?"; if( reason(var(trail[i]) ) == CRef_Undef ) cerr << "U"; else cerr <<reason(var(trail[i]));
+	    } cerr << endl;
 	  cerr << "c trail_lim: " << trail_lim << endl;
 	  cerr << "c decision level: " << decisionLevel() << endl;
 	  for( int i = 0 ; i < decisionLevel() ; ++i ) cerr << "c dec [" << i << "] = " << trail[ trail_lim[i] ] << endl;
@@ -2543,13 +2553,6 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	  if( config.opt_rer_debug ) cerr << "c intermediate decision level " << decisionLevel() << endl;
 	  for( int i = 0 ; i < decisionLevel() ; ++i ) cerr << "c dec [" << i << "] = " << trail[ trail_lim[i] ] << endl;
 	}
-	// code from search method
-	newDecisionLevel();
-	uncheckedEnqueue( lastDecisoin ); // this is the decision that has been done on this level before!
-	if( config.opt_rer_debug ) {
-	  cerr << "c new decision level " << decisionLevel() << endl;
-	  for( int i = 0 ; i < decisionLevel() ; ++i ) cerr << "c dec [" << i << "] = " << trail[ trail_lim[i] ] << endl;
-	}
 	rerOverheadTrailLits -= trail.size();
 	// detach all learned clauses from fused clauses
 	for( int i = 0; i < rerFuseClauses.size(); ++ i ) {
@@ -2560,7 +2563,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	}
 	
 	// we do not need a reason here, the new learned clause will do!
-	oc.clear(); oc.push( mkLit(x,false) ); oc.push(lit_Undef);
+	oc.clear(); oc.push( mkLit(x,true) ); oc.push(lit_Undef);
 	for( int i = 0 ; i < rerLits.size(); ++ i ) {
 	  oc[1] = rerLits[i];
 	  CRef icr = ca.alloc(oc, config.opt_rer_as_learned); // add clause as non-learned clause 
@@ -2571,24 +2574,25 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	    learnts.push(icr);
 	    claBumpActivity(ca[icr]);
 	  } else clauses.push(icr);
-	  attachClause(icr);
+	  attachClause(icr); // all literals should be unassigned
 	}
 	if( config.opt_rer_full ) { // also add the other clause?
-	  oc.clear(); oc.push(mkLit(x,true));
-	  for( int i = 0; i < rerLits.size(); ++i ) oc.push( rerLits[i] );
+	  oc.clear(); oc.push(mkLit(x,false));
+	  for( int i = 0; i < rerLits.size(); ++i ) oc.push( ~rerLits[i] );
 	  int pos = 1;
 	  for( int i = 2; i < oc.size(); ++ i ) if ( level(var(oc[i])) > level(var(oc[pos])) ) pos = i; // get second highest level!
 	  { const Lit tmp = oc[pos]; oc[pos] = oc[1]; oc[1] = tmp; } // swap highest level literal to second position
 	  CRef icr = ca.alloc(oc, config.opt_rer_as_learned); // add clause as non-learned clause 
-	  ca[icr].setLBD(rerLits.size()); // hard to say, would have to be calculated ... FIXME
+	  ca[icr].setLBD(rerLits.size()); // hard to say, would have to be calculated ... TODO
 	  if( config.opt_rer_debug) cerr << "c add clause " << ca[icr] << endl;
 	  if( config.opt_rer_as_learned ) { // add clause
 	    learnts.push(icr);
 	    claBumpActivity(ca[icr]);
 	  } else clauses.push(icr);
-	  attachClause(icr);
-	  if( !config.opt_rer_as_learned && false) {
-	    // here, the disjunction could also by replaced by ~x in the whole formula // TODO
+	  attachClause(icr); // at least the first two literals should be unassigned!
+	  if( !config.opt_rer_as_learned ) {
+	    // here, the disjunction could also by replaced by ~x in the whole formula, if the window is binary
+	    if ( config.opt_rer_as_replaceAll > 0 && rerLits.size() == 2 ) disjunctionReplace( ~rerLits[0], ~rerLits[1], ~x, config.opt_rer_as_replaceAll > 1, false); // if there would be a binary clause, this case would not happen
 	  }
 	}
 	// set the activity of the new variable
@@ -2620,6 +2624,14 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	// Update order_heap with respect to new activity:
 	if (order_heap.inHeap(x)) order_heap.decrease(x);
 	
+	// code from search method - enqueue the last decision again!
+	newDecisionLevel();
+	uncheckedEnqueue( lastDecisoin ); // this is the decision that has been done on this level before!
+	if( config.opt_rer_debug ) {
+	  cerr << "c new decision level " << decisionLevel() << endl;
+	  for( int i = 0 ; i < decisionLevel() ; ++i ) cerr << "c dec [" << i << "] = " << trail[ trail_lim[i] ] << endl;
+	}
+	
 	// modify the current learned clause accordingly!
 	currentLearnedClause[0] = mkLit(x,false);
 	// stats
@@ -2628,8 +2640,14 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	  for( int i =0; i < currentLearnedClause.size(); ++i ) cerr << " " << currentLearnedClause[i] << "@" << level(var(currentLearnedClause[i]));
 	  cerr << endl;
 	}
-	if( config.opt_rer_debug ) cerr << endl << "c accepted current pattern with lits " << rerLits << " - start over" << endl << endl;
 	rerLearnedClause ++; rerLearnedSizeCandidates ++; 
+	if( config.opt_rer_debug ) {
+	  cerr << endl << "c accepted current pattern with lits " << rerLits << " - start over" << endl << endl;
+	  cerr << "c trail: " ;
+	  for( int i = 0 ; i < trail.size(); ++ i ) {
+	      cerr << " " << trail[i] << "@" << level(var(trail[i])) << "?"; if( reason(var(trail[i]) ) == CRef_Undef ) cerr << "U"; else cerr <<reason(var(trail[i]));
+	  } cerr << endl;
+	}
 	resetRestrictedExtendedResolution(); // done with the current pattern
 	maxRERclause = maxRERclause >= currentLearnedClause.size() ? maxRERclause : currentLearnedClause.size();
 	totalRERlits += currentLearnedClause.size();
@@ -2651,6 +2669,60 @@ void Solver::resetRestrictedExtendedResolution()
   rerLits.clear();
   rerFuseClauses.clear();
 }
+
+void Solver::disjunctionReplace( Lit p, Lit q, const Lit x, bool inLearned, bool inBinary)
+{
+  
+  for( int m = 0 ; m < (inLearned?2:1); ++ m ) {
+    const vec<CRef>& cls = (m==0 ? clauses : learnts );
+    
+    for( int i = 0 ; i < cls.size(); ++ i ) { // check all clauses of the current set
+      Clause& c = ca[cls[i]];
+      if( c.mark() != 0 ) continue; // do not handle clauses that are marked for being deleted!
+      if( !inBinary && c.size() <= 2 ) continue; // skip binary clauses, if doable -- TODO: for rer check whether it is relevant to check binary clauses! for ecl its not!
+      int firstHit = 0;
+      for(  ; firstHit < c.size(); ++ firstHit ) {
+	const Lit& l = c[firstHit];
+	if( l == p || l == q ) break;
+	else if( l == ~p || l == ~q ) { firstHit = -1; break;}
+      }
+      if( firstHit == -1 ) continue; // do not handle this clause - tautology found
+
+      if( c[firstHit] == q ) { const Lit tmp = q; q = p; p = tmp; }
+      int secondHit = firstHit + 1;
+      for( ; secondHit < c.size(); ++ secondHit ) {
+	const Lit& l = c[secondHit];
+	if( l == q ) break;
+	else if( l == ~q ) {secondHit == -1; break; }
+      }
+      if( secondHit == -1 || secondHit == c.size() ) continue; // second literal not found, or complement of other second literal found
+
+      // found both literals in the clause ...
+      bool needReattach = false;
+      if( c.size() == 2 ) {
+	assert( decisionLevel() == 0 && "can add a unit only permanently, if we are currently on level 0!" );
+	removeClause( cls[i] );
+	uncheckedEnqueue( x );
+	continue; // nothing more to be done!
+      } else { // TODO: could be implemented better (less watch moving!)
+	// rewrite clause
+	// reattach clause if neccesary
+	assert( (firstHit != 0 || decisionLevel () == 0 ) && "a reason clause should not be rewritten, such that the first literal is moved!" );
+	if( firstHit < 2 ) detachClause( cls[i], true ); // not always necessary to remove the watches!
+	else {
+	  if( c.learnt() ) learnts_literals --;
+	  else clauses_literals--;
+	}
+	c[firstHit] = x;
+	c[secondHit] = c[ c.size() - 1 ];
+	c.shrink(1);
+	if( firstHit < 2 ) attachClause( cls[i] );
+      }
+
+    }
+  }
+}
+
 
 uint64_t Solver::defaultExtraInfo() const 
 {

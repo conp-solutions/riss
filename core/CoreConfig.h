@@ -137,7 +137,7 @@ public:
 
  BoolOption opt_extendedClauseLearning; // perform extended clause learning
  BoolOption opt_ecl_as_learned; // add ecl clauses as learned clauses?
- BoolOption opt_ecl_as_replaceAll; // run through formula/learned clauses and replace all the disjunctions (if not reason/watched ... )
+ IntOption opt_ecl_as_replaceAll; // run through formula/learned clauses and replace all the disjunctions (if not reason/watched ... )
  BoolOption opt_ecl_full; // add full ecl extension?
  IntOption opt_ecl_minSize; // minimum size of learned clause to perform ecl
  IntOption opt_ecl_maxLBD;  // maximum LBD to perform ecl
@@ -148,7 +148,7 @@ public:
  
  BoolOption opt_restrictedExtendedResolution; // perform restricted extended resolution
  BoolOption opt_rer_as_learned; // add rer clauses as learned clauses?
- BoolOption opt_rer_as_replaceAll; // run through formula/learned clauses and replace all the disjunctions (if not reason/watched ... )
+ IntOption opt_rer_as_replaceAll; // run through formula/learned clauses and replace all the disjunctions (if not reason/watched ... )
  BoolOption opt_rer_full; // add full rer extension?
  IntOption  opt_rer_minSize; // minimum size of learned clause to perform rer
  IntOption  opt_rer_maxSize; // minimum size of learned clause to perform rer

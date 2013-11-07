@@ -361,20 +361,24 @@ protected:
     void addUnitToProof( const Lit& l, bool deleteFromProof=false);    // write a single unit clause to the proof
     void addCommentToProof( const char* text, bool deleteFromProof=false); // write the text as comment into the proof!
     
-    // extended clause learning (Huang, 2010)
-    // @return true, if an extension step has been performed
+    /** extended clause learning (Huang, 2010)
+     * @return true, if an extension step has been performed
+     */
     bool extendedClauseLearning( vec<Lit>& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo );
     
-    // restricted extended resolution (Audemard ea 2010)
+    /// restricted extended resolution (Audemard ea 2010)
     enum rerReturnType {	// return type for the rer-implementation
       rerFailed = 0,		// do nothing special, since rer failed
       rerMemorizeClause = 1,	// add the current learned clause to the data structure rerFuseClauses
       rerDontAttachAssertingLit = 2,	// do not enqueue the asserting literal of the current clause
     };
-    // @return true, if a clause should be added to rerFuseClauses
+    /// @return true, if a clause should be added to rerFuseClauses
     rerReturnType restrictedExtendedResolution( vec<Lit>& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo );
-    // reset current state of restricted Extended Resolution
+    /// reset current state of restricted Extended Resolution
     void resetRestrictedExtendedResolution();
+    
+    /// replace the disjunction p \lor q with x
+    void disjunctionReplace( Minisat::Lit p, Minisat::Lit q, const Minisat::Lit x, bool inLearned, bool inBina );
     
     // Static helpers:
     //
