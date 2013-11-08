@@ -79,6 +79,8 @@ bool Probing::process()
     }
     
     // run clause vivification?
+    const int beforeClauses = data.getClauses().size();
+    const int beforeLClauses = data.getLEarnts().size();
     if( config.pr_vivi && data.ok() ) {
       clauseVivification();
       assert( solver.decisionLevel() == 0 && "after vivification the decision level should be 0!" );
@@ -89,6 +91,36 @@ bool Probing::process()
 
     // clean solver again!
     cleanSolver();
+    
+    if( beforeClauses < data.getClauses().size() ) {
+      // if the solver created more clauses during propagate calls, handle them!
+      if( config.pr_keepLHBRs > 2 ) {
+	if( config.pr_debug_out ) cerr << "c add another " << data.getClauses().size() - beforeClauses << " new clauses to the formula" << endl;
+	for( int i = beforeClauses; i < data.getClauses().size(); ++ i ) {
+	  data.addClause( data.getClauses()[i] );
+	}
+      } else {
+	if( config.pr_debug_out ) cerr << "c remove " << data.getClauses().size() - beforeClauses << " new clauses from the formula" << endl;
+	for( int i = beforeClauses; i < data.getClauses().size(); ++ i ) {
+	  ca.free( data.getClauses()[i] );
+	}
+	data.getClauses().shrink( data.getClauses().size() - beforeClauses);
+      }
+    }
+    if( beforeLClauses < data.getLEarnts().size() ) {
+      if( config.pr_keepLHBRs > 2 ) {
+	if( config.pr_debug_out ) cerr << "c add another " << data.getLEarnts().size() - beforeLClauses << " new learnt clauses to the formula" << endl;
+	for( int i = beforeLClauses; i < data.getLEarnts().size(); ++ i ) {
+	  data.addClause( data.getLEarnts()[i] );
+	}
+      } else {
+	if( config.pr_debug_out ) cerr << "c remove " << data.getLEarnts().size() - beforeLClauses << " new learnt clauses to the formula" << endl;
+	for( int i = beforeLClauses; i < data.getLEarnts().size(); ++ i ) {
+	  ca.free( data.getLEarnts()[i] ); // these clauses never made it into CP3 ... could also be added, parameter!
+	}
+	data.getLEarnts().shrink( data.getLEarnts().size() - beforeLClauses ); // if added, then do not remove!
+      }
+    }
     
     if( config.pr_debug_out > 3 ) {
       for( Var v = 0 ; v < data.nVars(); ++ v ) {
@@ -631,11 +663,12 @@ void Probing::reSetupSolver()
 	  const CRef cr = clauses[i];
 	  Clause & c = ca[cr];
 	  assert( c.size() != 0 && "empty clauses should be recognized before re-setup" );
-	  if (!c.can_be_deleted() && c.size() <= config.pr_clsSize) // reject deleted and too large clauses!
+	  if ( !c.can_be_deleted() ) // all clauses are neccesary for re-setup!
 	  {
 	      assert( c.mark() == 0 && "only clauses without a mark should be passed back to the solver!" );
 	      if (c.size() > 1)
 	      {
+		  if( config.pr_debug_out > 1 ) cerr << "c resetup clause " << c << endl;
 		  // do not watch literals that are false!
 		  int j = 1;
 		  for ( int k = 0 ; k < 2; ++ k ) { // ensure that the first two literals are undefined!
@@ -1042,6 +1075,11 @@ void Probing::clauseVivification()
 	      CRef     wcr        = ws[j].cref;
 	      if( wcr  == cr ) { didFind = true; break; }
 	  }
+	  vec<Solver::Watcher>& ws2  = solver.watchesBin[l];
+	  for ( int j = 0 ; j < ws2.size(); ++ j){
+	      CRef     wcr        = ws2[j].cref;
+	      if( wcr  == cr ) { didFind = true; break; }
+	  }
 	  if( ! didFind ) cerr << "could not find clause[" << cr << "] " << c << " in watcher for lit " << l << endl;
 	}
 	
@@ -1052,7 +1090,7 @@ void Probing::clauseVivification()
   
   uint32_t maxSize = 0;
   if( (data.unlimited() || viviLimit > viviChecks) ) {
-    cerr << "c calculate maxSize based on " << data.getClauses().size() << " clauses" << endl;
+    if( config.pr_debug_out ) cerr << "c calculate maxSize based on " << data.getClauses().size() << " clauses" << endl;
     for( uint32_t i = 0 ; i< data.getClauses().size(); ++ i ) {
       const CRef ref = data.getClauses()[i];
       Clause& clause = ca[ ref ];
@@ -1060,13 +1098,13 @@ void Probing::clauseVivification()
       maxSize = clause.size() > maxSize ? clause.size() : maxSize;
     }
   }
-  cerr << "c calculated maxSize: " << maxSize << endl;
+  if( config.pr_debug_out ) cerr << "c calculated maxSize: " << maxSize << endl;
   
   maxSize = (maxSize * config.pr_viviPercent) / 100;
   maxSize = maxSize > 2 ? maxSize : 3;	// do not process binary clauses, because they are used for propagation
   viviSize = maxSize;
   
-  cerr << "c final viviSize: " << viviSize << endl;
+  if( config.pr_debug_out )cerr << "c final viviSize: " << viviSize << endl;
   
   for( uint32_t i = 0 ; i< data.getClauses().size() && (data.unlimited() || viviLimit > viviChecks)  && !data.isInterupted() ; ++ i ) {
     const CRef ref = data.getClauses()[i];

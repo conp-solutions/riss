@@ -321,6 +321,7 @@ IntOption pr_viviPercent ;
 IntOption pr_viviLimit   ;
 IntOption  pr_opt_inpStepInc1      ;
 IntOption  pr_opt_inpStepInc2      ;
+IntOption  pr_keepLHBRs  ;
 #if defined CP3VERSION  
 const int pr_debug_out;
 #else

@@ -87,7 +87,7 @@ void Resolving::ternaryResolve()
     for( int i = 0 ; i < cls.size(); ++ i ) {
       const Clause& c = ca[cls[i]];
       if( c.can_be_deleted() ) { // remove clauses that do not belong into the list!
-	cls[i] = cls[ cls.size() ];
+	cls[i] = cls[ cls.size() - 1 ];
 	cls.pop_back(); --i;
       } else if ( (!config.opt_add2_red_lea && c.learnt() )  // use learnt clauses?
 	|| (c.size() != 3 && c.size() != moveSize) ) { // if enabled, also move binary clauses to back!

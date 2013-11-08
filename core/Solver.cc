@@ -2374,9 +2374,9 @@ bool Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned 
   }
   if( config.opt_ecl_debug) cerr << "c after trail lim: " << trail_lim << endl;
   
-  if( config.opt_ecl_full && !config.opt_ecl_as_learned) {
+  if( config.opt_ecl_full && !config.opt_ecl_as_learned && config.opt_ecl_as_replaceAll > 0 ) { // replace disjunction everywhere in the formula
     // here, the disjunction could also by replaced by ~x in the whole formula
-    disjunctionReplace( l1, l2, mkLit(x,true), false);
+    disjunctionReplace( l1, l2, mkLit(x,true), config.opt_ecl_as_replaceAll > 1, false);
   }
   
   if( config.opt_ecl_debug) cerr << "c add clause " << oc << endl;
@@ -2592,7 +2592,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	  attachClause(icr); // at least the first two literals should be unassigned!
 	  if( !config.opt_rer_as_learned ) {
 	    // here, the disjunction could also by replaced by ~x in the whole formula, if the window is binary
-	    if ( config.opt_rer_as_replaceAll > 0 && rerLits.size() == 2 ) disjunctionReplace( ~rerLits[0], ~rerLits[1], ~x, config.opt_rer_as_replaceAll > 1, false); // if there would be a binary clause, this case would not happen
+	    if ( config.opt_rer_as_replaceAll > 0 && rerLits.size() == 2 ) disjunctionReplace( ~rerLits[0], ~rerLits[1], mkLit(x,true), (config.opt_rer_as_replaceAll > 1), false); // if there would be a binary clause, this case would not happen
 	  }
 	}
 	// set the activity of the new variable
