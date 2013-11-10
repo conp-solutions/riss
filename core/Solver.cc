@@ -470,7 +470,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	  exit( 35 );
 	}
         Clause& c = ca[confl];
-	if( config.opt_ecl_debug || config.opt_rer_debug ) cerr << "c resolve on " << p << "(" << index << ") with [" << confl << "]" << c << endl;
+	if( config.opt_ecl_debug || config.opt_rer_debug ) cerr << "c resolve on " << p << "(" << index << ") with [" << confl << "]" << c << " -- calculated currentSize: " << currentSize <<  endl;
 	int clauseReductSize = c.size();
 	// Special case for binary clauses
 	// The first one has to be SAT
@@ -574,7 +574,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     }
 
     currentSize ++; // the literal "~p" has been added additionally
-    // if( currentSize != out_learnt.size() ) cerr << "c different sizes: clause=" << out_learnt.size() << ", counted=" << currentSize << endl;
+    if( currentSize != out_learnt.size() ) cerr << "c different sizes: clause=" << out_learnt.size() << ", counted=" << currentSize << " and collected vector: " << out_learnt << endl;
     assert( currentSize == out_learnt.size() && "counted literals has to be equal to actual clause!" );
     
     if( otfssClauses.size() > 0 && otfssClauses.last() == lastConfl ) {
@@ -885,13 +885,13 @@ void Solver::uncheckedEnqueue(Lit p, CRef from)
    *  Note: this code is also executed during extended resolution, so take care of modifications performed there!
    */
   
-    if( config.opt_agility_restart_reject ) { // only if technique is enabled:
+    if( !dynamicDataUpdates && config.opt_agility_restart_reject ) { // only if technique is enabled:
      // cerr << "c old: " << agility << " lit: " << p << " sign: " << sign(p) << " pol: " << polarity[var(p)] << endl;
       agility = agility * agility_decay + ( sign(p) != polarity[ var(p) ] ? (1.0 - agility_decay) : 0 );
      // cerr << "c new: " << agility << " ... decay: " << agility_decay << endl;
     }
   
-    assert(value(p) == l_Undef);
+    assert(value(p) == l_Undef && "cannot enqueue a wrong value");
     assigns[var(p)] = lbool(!sign(p));
     /** include variableExtraInfo here, if required! */
     vardata[var(p)] = mkVarData(from, decisionLevel());
@@ -1009,6 +1009,7 @@ CRef Solver::propagate()
             const Lit      false_lit = ~p;
             if (c[0] == false_lit)
                 c[0] = c[1], c[1] = false_lit;
+	    if( c[1] != false_lit ) cerr << "c wrong literal order in clause " << c << endl;
             assert(c[1] == false_lit);
             i++;
 
@@ -2790,16 +2791,30 @@ bool Solver::interleavedClauseStrengthening()
     icsCandidates ++; // stats - store how many learned clauses have been tested
     if(config.opt_ics_debug) cerr << "c ICS on " << c << endl;
     if(config.opt_ics_debug) cerr << "c current trail: " << trail << endl;
-    detachClause( learnts[i] ); // remove the clause from the solver, to be able to rewrite it
+    detachClause( learnts[i], true ); // remove the clause from the solver, to be able to rewrite it
+    for( int j = 0 ; j < c.size(); ++ j ) {
+      if( value( c[j] ) == l_True ) { c.mark(1); break; } // do not use clauses that are satisfied!
+    }
+    if( c.mark() != 0 ) continue; // this clause is removed from the solver!
     // TODO: could sort the literals somehow here ...
     int k = 0; // number of literals to keep in the clause
-    for( int j = 0 ; j < c.size(); ++ j ) {	// check each literal and enqueue it negated
-      if( value( c[j] ) != l_Undef ) continue; // this literals does not need to be kept! // TODO: what if the clause is already satisfied, could be stopped as well!
+    int j = 0;
+    for( ; j + 1 < c.size(); ++ j ) {	// check each literal and enqueue it negated
+      if( config.opt_ics_debug ) cerr << "c check lit " << j << "/" << c.size() << ": " << c[j] << " with value " << toInt( value(c[j]) ) << endl;
+      if( value( c[j] ) == l_True ) { // just need to keep all previous and this literal
+	c[k++] = c[j];
+	cerr << "c interrupt because of sat.lit, current trail: " << trail << endl;
+	break; // this literals does not need to be kept! // TODO: what if the clause is already satisfied, could be stopped as well!
+      } else if ( value( c[j] ) == l_False ) {
+	cerr << "c jump over false lit: " << c[j] << endl;
+	continue; // can drop this literal
+      }
       c[k++] = c[j]; // keep the current literal!
       newDecisionLevel(); // we are working on decision level 1, so nothing breaks
-      uncheckedEnqueue( c[j] );
+      uncheckedEnqueue( ~c[j] );
       CRef confl = propagate();
       if( confl != CRef_Undef ) { // found a conflict, handle it (via usual, simple, conflict analysis)
+	learnt_clause.clear(); otfssCls.clear(); // prepare for analysis
 	int ret = analyze(confl, learnt_clause, backtrack_level,nblevels,otfssCls,extraInfo);	
 	cancelUntil( 0 );
 	if( ret == 0 ) {
@@ -2825,25 +2840,28 @@ bool Solver::interleavedClauseStrengthening()
   #endif
 	    learnts.push(cr); // this is the learned clause only, has nothing to do with the other clause!
 	    attachClause(cr); // for now, we'll also use this clause!
+	    if(config.opt_ics_debug) cerr << "c ICS learn clause " << ca[cr] << endl;
 	  }
 	}
 	break; // we're done for this clause for now. ... what happens if we added the current learned clause now and repeat the process for the clause? there might be more reduction! -> TODO: shuffe clause and have parameter!
       } // end if conflict during propagate
     } // have checked all literals of the current clause ...
+    // refresh reference! there might have been a ca.alloc!
+    Clause& d = ca[ learnts[i] ];
     cancelUntil( 0 ); // to be on the safe side, if there has not been a conflict before
     // shrink the clause and add it back again!
-    if( k != c.size() ) { // actually, something has been done
-      icsShrinks ++; icsShrinkedLits += (c.size() - k ); // stats -- store the success of shrinking
-      c.shrink( c.size() - k );
-      if(config.opt_ics_debug) cerr << "c ICS return modified clause: " << c << endl;
+    if( (j == d.size() || (j == d.size() -1 && value( c[j] ) == l_False ) ) && k != d.size() ) { // actually, something has been done without just not looking at the very last literal
+      icsShrinks ++; icsShrinkedLits += (d.size() - k ); // stats -- store the success of shrinking
+      d.shrink( d.size() - k );
+      if(config.opt_ics_debug) cerr << "c ICS return modified clause: " << d << endl;
     }
-    if( c.size() > 1 ) attachClause( learnts[i] ); // unit clauses do not need to be added!
-    else if( c.size() == 1  ) { // if not already done, propagate this new clause!
-      if( value( c[0] ) == l_Undef ) {
-      uncheckedEnqueue(c[0]);
+    if( d.size() > 1 ) attachClause( learnts[i] ); // unit clauses do not need to be added!
+    else if( d.size() == 1  ) { // if not already done, propagate this new clause!
+      if( value( d[0] ) == l_Undef ) {
+      uncheckedEnqueue(d[0]);
       if( propagate() != CRef_Undef ) return false;
-      } else if ( value( c[0] ) == l_False ) return false; // should not happen!
-    } else if( c.size() == 0 )  return false; // unsat, since c is empty
+      } else if ( value( d[0] ) == l_False ) return false; // should not happen!
+    } else if( d.size() == 0 )  return false; // unsat, since c is empty
   }
 
   // remove the newly learned clauses
@@ -2858,7 +2876,8 @@ bool Solver::interleavedClauseStrengthening()
   for( int i = 0 ; i < trailLimCopy.size(); ++i ) {
     newDecisionLevel();
     if(config.opt_ics_debug) cerr << "c enqueue " << trailCopy[ trailLimCopy[i] ]  << "@" << i+1 << endl;
-    uncheckedEnqueue( trailCopy[ trailLimCopy[i] ] );
+    if( value( trailCopy[ trailLimCopy[i] ] ) == l_False ) break; // stop here, because the next decision has to be different! (and the search will take care of that!)
+    else if( value( trailCopy[ trailLimCopy[i] ] ) == l_Undef ) uncheckedEnqueue( trailCopy[ trailLimCopy[i] ] );
     CRef confl = propagate();
     if( confl != CRef_Undef ) { // handle conflict. conflict at top-level -> return false!, else backjump, and continue with good state!
       if( i > 0 ) cancelUntil( decisionLevel () - 1 );
@@ -2869,6 +2888,7 @@ bool Solver::interleavedClauseStrengthening()
   dynamicDataUpdates = true;
   lastICSconflicts = conflicts;
   // return as if nothing has happened
+  if( config.opt_ics_debug ) cerr << "c finished ICS" << endl;
   return true;
 }
 
