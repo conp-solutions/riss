@@ -301,7 +301,7 @@ protected:
     double              learntsize_adjust_confl;
     int                 learntsize_adjust_cnt;
 
-    Clock totalTime, propagationTime, analysisTime, preprocessTime, inprocessTime, extResTime, reduceDBTime;
+    Clock totalTime, propagationTime, analysisTime, preprocessTime, inprocessTime, extResTime, reduceDBTime, icsTime; // times for methods during search
     
     // Resource contraints:
     //
@@ -380,6 +380,19 @@ protected:
     /// replace the disjunction p \lor q with x
     void disjunctionReplace( Minisat::Lit p, Minisat::Lit q, const Minisat::Lit x, bool inLearned, bool inBina );
     
+    /** fill the current variable assignment into the given vector */
+    void fm(uint64_t* p, bool mo); // fills current model into variable vector
+    
+    /** perform la hack, return false -> unsat instance!
+     * @return false, instance is unsatisfable
+     */
+    bool laHack(Minisat::vec< Minisat::Lit >& toEnqueue);
+    
+    /** concurrent clause strengthening, but interleaved instead of concurrent ...
+    *  @return false, if the formula is proven to be unsatisfiable
+    */
+    bool interleavedClauseStrengthening();
+    
     // Static helpers:
     //
 
@@ -422,9 +435,6 @@ protected:
   int untilLa;		// count until  next LA is performed
   int laBound;		// current bound for l5-LA
   bool laStart;		// when reached the la level, perform la
-  
-  void fm(uint64_t* p, bool mo); // fills current model into variable vector
-  bool laHack(Minisat::vec< Minisat::Lit >& toEnqueue);	// perform la hack, return false -> unsat instance!
         
   bool startedSolving;	// inidicate whether solving started already
   
@@ -462,6 +472,12 @@ protected:
   int rerLearnedClause, rerLearnedSizeCandidates, rerSizeReject, rerPatternReject,rerPatternBloomReject,maxRERclause; // stat counters
   double rerOverheadTrailLits,totalRERlits; // stats
   
+  // interleaved clause strengthening (ics)
+  bool dynamicDataUpdates;	// apply activity updates during search?
+  int lastICSconflicts;		// number of conflicts for last ICS
+  int icsCalls, icsCandidates, icsDroppedCandidates, icsShrinks, icsShrinkedLits; // stats
+  
+
   
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;

@@ -159,6 +159,15 @@ public:
  BoolOption opt_rer_debug; // enable debug output
  DoubleOption opt_rer_every;  // perform rer at most every n conflicts
  
+ BoolOption opt_interleavedClauseStrengthening; // enable interleaved clause strengthening
+ IntOption opt_ics_interval; // run ICS after another N conflicts
+ IntOption opt_ics_processLast; // process this number of learned clauses (analyse, reject if quality too bad!)
+ BoolOption opt_ics_keepLearnts; // keep the learned clauses that have been produced during the ICS
+ BoolOption opt_ics_shrinkNew; // shrink the kept learned clauses in the very same run?! (makes only sense if the other clauses are kept!)
+ DoubleOption opt_ics_LBDpercent;  // only look at a clause if its LBD is less than this percent of the average of the clauses that are looked at
+ DoubleOption opt_ics_SIZEpercent; // only look at a clause if its size is less than this percent of the average size of the clauses that are looked at
+ BoolOption opt_ics_debug; // enable interleaved clause strengthening debug output
+ 
 IntOption opt_verboseProof; 
 BoolOption opt_rupProofOnly; 
  

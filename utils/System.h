@@ -67,6 +67,7 @@ static inline double Minisat::wallClockTime(void)
 }
 #endif
 
+
 /** simple class that combines cpu and wall clock time */
 class Clock {
   double cTime,wTime;
@@ -76,6 +77,15 @@ public:
   void stop() {  cTime = Minisat::cpuTime() - cTime; wTime = Minisat::wallClockTime() - wTime;  }
   double getCpuTime() const { return cTime; }
   double getWallClockTime() const { return wTime; }
+};
+
+/** Method clock - class that stopes the time from the call until the focus is lost */
+class MethodClock {
+private:
+    Clock& clock;
+public:
+    MethodClock( Clock&c ) : clock(c) { clock.start(); };
+    ~MethodClock() { clock.stop(); }
 };
 
 #endif

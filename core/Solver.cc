@@ -180,6 +180,15 @@ Solver::Solver(CoreConfig& _config) :
   ,rerOverheadTrailLits(0)
   ,totalRERlits(0)
   
+  // interleaved clause strengthening
+  ,dynamicDataUpdates(true)
+  ,lastICSconflicts(-1)
+  ,icsCalls(0)
+  ,icsCandidates(0)
+  ,icsDroppedCandidates(0)
+  ,icsShrinks(0)
+  ,icsShrinkedLits(0)
+  
   // preprocessor
   , coprocessor(0)
   , useCoprocessorPP(config.opt_usePPpp)
@@ -471,7 +480,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	  c[0] =  c[1], c[1] = tmp;
 	}
 	
-       if (c.learnt())
+       if (c.learnt() && dynamicDataUpdates)
             claBumpActivity(c);
 
 #ifdef CLS_EXTRA_INFO // if resolution is done, then take also care of the participating clause!
@@ -483,7 +492,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	    if( config.opt_learn_debug ) cerr << "c level for " << q << " is " << level(var(q)) << endl;
             if (!seen[var(q)] && level(var(q)) > 0){
                 currentSize ++;
-                varBumpActivity(var(q));
+                if( dynamicDataUpdates ) varBumpActivity(var(q));
 		if( config.opt_learn_debug ) cerr << "c set seen for " << q << endl;
                 seen[var(q)] = 1;
                 if (level(var(q)) >= decisionLevel()) {
@@ -767,7 +776,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
   
 #ifdef UPDATEVARACTIVITY
   // UPDATEVARACTIVITY trick (see competition'09 companion paper)
-  if(lastDecisionLevel.size()>0) {
+  if(lastDecisionLevel.size()>0 && dynamicDataUpdates) {
     for(int i = 0;i<lastDecisionLevel.size();i++) {
       if(ca[reason(var(lastDecisionLevel[i]))].lbd()<lbd)
 	varBumpActivity(var(lastDecisionLevel[i]));
@@ -1118,7 +1127,7 @@ CRef Solver::propagate()
 	  
 #ifdef DYNAMICNBLEVEL		    
 		// DYNAMIC NBLEVEL trick (see competition'09 companion paper)
-		if(c.learnt()  && c.lbd()>2) { 
+		if(c.learnt()  && c.lbd()>2 && dynamicDataUpdates) { 
 		  MYFLAG++;
 		  unsigned  int nblevels =0;
 		  for(int i=0;i<c.size();i++) {
@@ -1504,7 +1513,7 @@ lbool Solver::search(int nof_conflicts)
 		  learnts.push(cr);
 		  attachClause(cr);
 		  
-		  claBumpActivity(ca[cr]);
+		  if( dynamicDataUpdates ) claBumpActivity(ca[cr]);
 		  if( rerClause != rerDontAttachAssertingLit ) { // attach unit only, if  rer does allow it
 		    if( backtrack_level == otfssBtLevel ) {	// attach the unit only, if the backjumping level is the same as otfss level
 		      if (value(learnt_clause[0]) == l_Undef) {
@@ -1518,12 +1527,14 @@ lbool Solver::search(int nof_conflicts)
 
 	      }
 	    
-            varDecayActivity();
-            claDecayActivity();
+	    if( dynamicDataUpdates ) {
+	      varDecayActivity();
+	      claDecayActivity();
+	    }
 
 	    conflictsSinceLastRestart ++;
            
-        }else{
+        }else{ // there has not been a conflict
 	  
 	  if( ! config.opt_agility_restart_reject // do not reject restarts
 	     || agility < config.opt_agility_rejectLimit )
@@ -1574,6 +1585,13 @@ lbool Solver::search(int nof_conflicts)
 		reduceDB();
 		nbclausesbeforereduce += incReduceDB;
 	      }
+	      
+	    // if this point is reached, check whether interleaved Clause Strengthening could be scheduled (have heuristics!)
+	    if( config.opt_interleavedClauseStrengthening && conflicts != lastICSconflicts && conflicts % config.opt_ics_interval == 0 ) {
+	      if( !interleavedClauseStrengthening () ) { // TODO: have some schedule here!
+		return l_False;
+	      }
+	    }
 	    
             Lit next = lit_Undef;
             while (decisionLevel() < assumptions.size()){
@@ -1744,7 +1762,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
 	      analyze_toclear[0] = pol == 0 ? ~analyze_stack[i]  : analyze_stack[i];
 	      analyze_toclear[1] = pol == 0 ?     mkLit(v,false) :    mkLit(v,true);
 	      CRef cr = ca.alloc(analyze_toclear, config.opt_laEEl ); // create a learned clause?
-	      if( config.opt_laEEl ) { ca[cr].setLBD(2); learnts.push(cr); claBumpActivity(ca[cr]); }
+	      if( config.opt_laEEl ) { ca[cr].setLBD(2); learnts.push(cr); if(dynamicDataUpdates) claBumpActivity(ca[cr]); }
 	      else clauses.push(cr);
 	      attachClause(cr);
 	      if( config.dx) cerr << "c add as clause: " << ca[cr] << endl;
@@ -2096,6 +2114,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
 		   extendedLearnedClauses,extendedLearnedClausesCandidates,maxECLclause, extendedLearnedClauses == 0 ? 0 : ( totalECLlits / (double)extendedLearnedClauses), totalECLlits);
 	    printf("c res.ext.res.: %d rer, %d rerSizeCands, %d sizeReject, %d patternReject, %d bloomReject, %d maxSize, %.2lf avgSize, %.2lf totalLits\n",
 		   rerLearnedClause, rerLearnedSizeCandidates, rerSizeReject, rerPatternReject, rerPatternBloomReject, maxRERclause, rerLearnedClause == 0 ? 0 : (totalRERlits / (double) rerLearnedClause), totalRERlits );
+	    printf("c i.cls.strengthening: %d calls, %.2lf s, %d candidates, %d droppedBefore, %d shrinked, %d shrinkedLits\n", icsTime.getCpuTime(), icsCalls, icsCandidates, icsDroppedCandidates, icsShrinks, icsShrinkedLits );
 	    printf("c decisionClauses: %d\n", learnedDecisionClauses );
 	    printf("c agility restart rejects: %d\n", agility_rejects );
     }
@@ -2389,7 +2408,7 @@ bool Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned 
 #endif
   if( config.opt_ecl_as_learned ) { // if parameter says its a learned clause ...
     learnts.push(cr);
-    claBumpActivity(ca[cr]);
+    if(dynamicDataUpdates) claBumpActivity(ca[cr]);
   } else clauses.push(cr);
   attachClause(cr);
   // set reason!
@@ -2406,7 +2425,7 @@ bool Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned 
     nbDL2++; nbBin ++; // stats
     if( config.opt_ecl_as_learned ) { // add clause
       learnts.push(icr);
-      claBumpActivity(ca[icr]);
+      if( dynamicDataUpdates ) claBumpActivity(ca[icr]);
     } else clauses.push(icr);
     attachClause(icr);
     oc[1] = ~l2; // for not x, not l2
@@ -2416,7 +2435,7 @@ bool Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned 
     nbDL2++; nbBin ++; // stats
     if( config.opt_ecl_as_learned ) { // add clause
       learnts.push(icr);
-      claBumpActivity(ca[icr]);
+      if( dynamicDataUpdates ) claBumpActivity(ca[icr]);
     } else clauses.push(icr);
     attachClause(icr);
   }
@@ -2572,7 +2591,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	  nbDL2++; nbBin ++; // stats
 	  if( config.opt_rer_as_learned ) { // add clause
 	    learnts.push(icr);
-	    claBumpActivity(ca[icr]);
+	    if( dynamicDataUpdates ) claBumpActivity(ca[icr]);
 	  } else clauses.push(icr);
 	  attachClause(icr); // all literals should be unassigned
 	}
@@ -2587,7 +2606,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	  if( config.opt_rer_debug) cerr << "c add clause " << ca[icr] << endl;
 	  if( config.opt_rer_as_learned ) { // add clause
 	    learnts.push(icr);
-	    claBumpActivity(ca[icr]);
+	    if( dynamicDataUpdates ) claBumpActivity(ca[icr]);
 	  } else clauses.push(icr);
 	  attachClause(icr); // at least the first two literals should be unassigned!
 	  if( !config.opt_rer_as_learned ) {
@@ -2721,6 +2740,136 @@ void Solver::disjunctionReplace( Lit p, Lit q, const Lit x, bool inLearned, bool
 
     }
   }
+}
+
+bool Solver::interleavedClauseStrengthening()
+{
+  // TODO: have dynamic updates of the limits, so that a good time/result ratio can be reached!
+  icsCalls ++;
+  MethodClock thisMethodTime( icsTime ); // clock that measures how long the procedure took
+  // freeze current state
+  vec<Lit> trailCopy;
+  trail.copyTo( trailCopy );
+  vec<int> trailLimCopy;
+  trail_lim.copyTo( trailLimCopy );
+  vec<char> polarityCopy;
+  polarity.copyTo(polarityCopy);
+  const int oldVars = nVars();
+  const int oldLearntsSize = learnts.size();
+  // backtrack to level 0
+  if(config.opt_ics_debug) for( int i = 0 ; i < trailLimCopy.size(); ++i ) cerr << "c decision " << trailCopy[ trailLimCopy[i] ]  << "@" << i+1 << endl;
+  cancelUntil( 0 );
+  
+  // disable dynamic updates (clause activities, variable activities, lbd, ... )
+  dynamicDataUpdates = false;
+  
+  // perform reducer algorithm for some of the last good learned clauses - also adding the newly learnt clauses
+  int backtrack_level; unsigned int nblevels;	// helper variable (more or less borrowed from search method
+  uint64_t extraInfo;			// helper variable (more or less borrowed from search method
+  vec<Lit> learnt_clause;		// helper variable (more or less borrowed from search method
+  // do the loop
+  const int end = learnts.size();
+  int start = 0, count = 0;
+  double lbdSum = 0, sizeSum = 0;
+  // calculate avgs. to be able to  reject clauses -- drop clauses that are not "usual" (mark() != 0)
+  for( int i = learnts.size() - 1; i >= 0; -- i ) {
+    const Clause& c = ca [ learnts[i] ];
+    if( c.mark() != 0 ) continue; // do not consider this clause (seems to be deleted already, must not be part of a watched list any more ... )
+    lbdSum += c.lbd();
+    sizeSum += c.size();
+    if( ++count > config.opt_ics_processLast ) { start = i; break; } // stop the scan here, and start ICS with this clause!
+  }
+  const double lbdCount = count;
+  const double sizeLimit = (sizeSum / lbdCount ) * config.opt_ics_SIZEpercent; // clauses with a size smaller than this are dropped
+  const double lbdLimit = (lbdSum / lbdCount ) * config.opt_ics_LBDpercent; // clauses with an LBD smaller than this are dropped
+  
+  for( int i = start; i < (config.opt_ics_shrinkNew ? learnts.size() : end) ; ++ i ) { // do not process the new clauses, nor keep them ... 
+    Clause& c = ca [ learnts[i] ];
+    if( c.mark() != 0 ) continue; // do not consider this clause (seems to be deleted already, must not be part of a watched list any more ... )
+    if( c.size() > sizeLimit || c.lbd() > lbdLimit ){ icsDroppedCandidates++; continue; } // do not consider this clause!
+    icsCandidates ++; // stats - store how many learned clauses have been tested
+    if(config.opt_ics_debug) cerr << "c ICS on " << c << endl;
+    if(config.opt_ics_debug) cerr << "c current trail: " << trail << endl;
+    detachClause( learnts[i] ); // remove the clause from the solver, to be able to rewrite it
+    // TODO: could sort the literals somehow here ...
+    int k = 0; // number of literals to keep in the clause
+    for( int j = 0 ; j < c.size(); ++ j ) {	// check each literal and enqueue it negated
+      if( value( c[j] ) != l_Undef ) continue; // this literals does not need to be kept! // TODO: what if the clause is already satisfied, could be stopped as well!
+      c[k++] = c[j]; // keep the current literal!
+      newDecisionLevel(); // we are working on decision level 1, so nothing breaks
+      uncheckedEnqueue( c[j] );
+      CRef confl = propagate();
+      if( confl != CRef_Undef ) { // found a conflict, handle it (via usual, simple, conflict analysis)
+	int ret = analyze(confl, learnt_clause, backtrack_level,nblevels,otfssCls,extraInfo);	
+	cancelUntil( 0 );
+	if( ret == 0 ) {
+	  addCommentToProof("learnt clause");
+	  addToProof( learnt_clause );
+	  if (learnt_clause.size() == 1){
+	      assert( decisionLevel() == 0 && "enequeue unit clause on decision level 0!" );
+	      topLevelsSinceLastLa ++;
+  #ifdef CLS_EXTRA_INFO
+		      vardata[var(learnt_clause[0])].extraInfo = extraInfo;
+  #endif
+	      if( value(learnt_clause[0]) == l_Undef ) { // propagate unit clause!
+		uncheckedEnqueue(learnt_clause[0]);
+		if( propagate() != CRef_Undef ) return false;
+		nbUn ++;
+	      }
+	      else if (value(learnt_clause[0]) == l_False ) return false; // otherwise, we have a top level conflict here!
+	  }else{
+	    CRef cr = ca.alloc(learnt_clause, true);
+	    ca[cr].setLBD(nblevels); 
+  #ifdef CLS_EXTRA_INFO
+	    ca[cr].setExtraInformation(extraInfo);
+  #endif
+	    learnts.push(cr); // this is the learned clause only, has nothing to do with the other clause!
+	    attachClause(cr); // for now, we'll also use this clause!
+	  }
+	}
+	break; // we're done for this clause for now. ... what happens if we added the current learned clause now and repeat the process for the clause? there might be more reduction! -> TODO: shuffe clause and have parameter!
+      } // end if conflict during propagate
+    } // have checked all literals of the current clause ...
+    cancelUntil( 0 ); // to be on the safe side, if there has not been a conflict before
+    // shrink the clause and add it back again!
+    if( k != c.size() ) { // actually, something has been done
+      icsShrinks ++; icsShrinkedLits += (c.size() - k ); // stats -- store the success of shrinking
+      c.shrink( c.size() - k );
+      if(config.opt_ics_debug) cerr << "c ICS return modified clause: " << c << endl;
+    }
+    if( c.size() > 1 ) attachClause( learnts[i] ); // unit clauses do not need to be added!
+    else if( c.size() == 1  ) { // if not already done, propagate this new clause!
+      if( value( c[0] ) == l_Undef ) {
+      uncheckedEnqueue(c[0]);
+      if( propagate() != CRef_Undef ) return false;
+      } else if ( value( c[0] ) == l_False ) return false; // should not happen!
+    } else if( c.size() == 0 )  return false; // unsat, since c is empty
+  }
+
+  // remove the newly learned clauses
+  if( !config.opt_ics_keepLearnts ) {
+    for( int i = oldLearntsSize; i < learnts.size(); ++ i ) removeClause( learnts[i] );
+    learnts.shrink( learnts.size() - oldLearntsSize );
+  }
+  
+  // role back solver state again
+  assert( oldVars == nVars() && "no variables should have been added during executing this algorithm!" );
+  
+  for( int i = 0 ; i < trailLimCopy.size(); ++i ) {
+    newDecisionLevel();
+    if(config.opt_ics_debug) cerr << "c enqueue " << trailCopy[ trailLimCopy[i] ]  << "@" << i+1 << endl;
+    uncheckedEnqueue( trailCopy[ trailLimCopy[i] ] );
+    CRef confl = propagate();
+    if( confl != CRef_Undef ) { // handle conflict. conflict at top-level -> return false!, else backjump, and continue with good state!
+      if( i > 0 ) cancelUntil( decisionLevel () - 1 );
+      else return false;
+    }
+  }
+  polarityCopy.copyTo( polarity );
+  dynamicDataUpdates = true;
+  lastICSconflicts = conflicts;
+  // return as if nothing has happened
+  return true;
 }
 
 

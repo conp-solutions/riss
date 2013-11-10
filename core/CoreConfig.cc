@@ -143,6 +143,15 @@ CoreConfig::CoreConfig() // add new options here!
  opt_rer_debug("EXTENDED RESOLUTION RER", "rer-d", "debug output for RER", false),
  opt_rer_every("EXTENDED RESOLUTION RER", "rer-freq", "how often rer compared to usual learning", 1, DoubleRange(0, true, 1, true) ),
  
+ opt_interleavedClauseStrengthening("INTERLEAVED CLAUSE STRENGTHENING", "ics", "perform interleaved clause strengthening (along Wieringa ea 2013)", false), 
+ opt_ics_interval("INTERLEAVED CLAUSE STRENGTHENING", "ics_window" ,"run ICS after another N conflicts", 5000, IntRange(0, INT32_MAX) ),
+ opt_ics_processLast("INTERLEAVED CLAUSE STRENGTHENING", "ics_processLast" ,"process this number of learned clauses (analyse, reject if quality too bad!)", 5050, IntRange(0, INT32_MAX) ),
+ opt_ics_keepLearnts("INTERLEAVED CLAUSE STRENGTHENING", "ics_keepNew" ,"keep the learned clauses that have been produced during the ICS", false ),
+ opt_ics_shrinkNew("INTERLEAVED CLAUSE STRENGTHENING", "ics_shrinkNew" ,"shrink the kept learned clauses in the very same run?! (makes only sense if the other clauses are kept!)", false ),
+ opt_ics_LBDpercent("INTERLEAVED CLAUSE STRENGTHENING", "ics_relLBD" ,"only look at a clause if its LBD is less than this percent of the average of the clauses that are looked at, 1=100%",1, DoubleRange(0, true, HUGE_VAL, true) ), 
+ opt_ics_SIZEpercent("INTERLEAVED CLAUSE STRENGTHENING", "ics_relSIZE" ,"only look at a clause if its size is less than this percent of the average size of the clauses that are looked at, 1=100%",1, DoubleRange(0, true, HUGE_VAL, true) ),
+ opt_ics_debug("INTERLEAVED CLAUSE STRENGTHENING", "ics_debug","debug output for ICS",false),
+ 
  opt_verboseProof ("PROOF", "verb-proof", "also print comments into the proof, 2=print proof also to stderr", 1, IntRange(0, 2) ),
  opt_rupProofOnly ("PROOF", "rup-only", "do not print delete lines into proof", false), 
  
