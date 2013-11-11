@@ -517,7 +517,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	  if( config.opt_otfss && ( !c.learnt() // apply otfss only for clauses that are considered to be interesting!
 	      || ( config.opt_otfssL && c.learnt() && c.lbd() <= config.opt_otfssMaxLBD ) ) ) {
 	    otfssClauses.push( confl );
-	    if(config.debug_otfss) cerr << "c can remove literal " << p << " from " << c << endl;
+	    if(config.debug_otfss) cerr << "c OTFSS can remove literal " << p << " from " << c << endl;
 	  }
 	}
         
@@ -1400,11 +1400,14 @@ lbool Solver::search(int nof_conflicts)
 		if( movePosition > 2 ) { const Lit tmpL = c[2]; c[2] = c[movePosition]; c[movePosition] = tmpL;} // move literal with second highest level to position 2 (if available)
 		assert( (l1 != 0 || l2 != 0) && "one of the two levels has to be non-zero!" );
 		if( l1 > l2 ) { // this clause is unit at level l2!
-		  if( l2 < otfssBtLevel ) {  if(config.debug_otfss) cerr << "c clear all memorized clauses, jump to new level " << l2 << endl;
-		    otfssBtLevel = l2; enqueueK = 0; } // we will lower the level now, so none of the previously enqueued clauses is unit any more!
-		    if(config.debug_otfss) cerr << "c memorize clause " << c << " as unit at level " << l2 << endl;
+		  if( l2 < otfssBtLevel || l2 == 0) {  
+		    if(config.debug_otfss) cerr << "c clear all memorized clauses, jump to new level " << l2 << "( from " << otfssBtLevel << ")" << endl;
+		    otfssBtLevel = l2; enqueueK = 0; 
+		   // we will lower the level now, so none of the previously enqueued clauses is unit any more!
+		    if(config.debug_otfss) cerr << "c memorize clause " << c << " as unit at level " << l2 << " current BTlevel: " << otfssBtLevel << endl;
 		    otfssCls[enqueueK++] = otfssCls[i]; // memorize that this clause has to be enqueued, if the level is not altered!
 		    if(config.debug_otfss) { cerr << "c clause levels: "; for( int k = 0 ; k < c.size(); ++ k ) cerr << " " << level(var(c[k])); cerr << endl;}
+		  }
 		} else if( l1 == l2 ) l2 --; // reduce the backtrack level to get this clause right, even if its not a unit clause!
 		if( l2 < otfssBtLevel ) { if(config.debug_otfss) cerr << "c clear all memorized clauses, jump to new level " << l2 << endl;
 		  otfssBtLevel = l2; enqueueK = 0; }
@@ -1520,7 +1523,7 @@ lbool Solver::search(int nof_conflicts)
 		      if (value(learnt_clause[0]) == l_Undef) {
 			uncheckedEnqueue(learnt_clause[0], cr); // this clause is only unit, if OTFSS jumped to the same level!
 			if( config.opt_printDecisions > 1  ) cerr << "c enqueue literal " << learnt_clause[0] << " at level " <<  decisionLevel() << " from learned clause " << learnt_clause << endl;
-		      }
+		      } else if ( value(learnt_clause[0]) == l_False ) return l_False; // due to OTFSS there might arose a conflict already ...
 		    }
 		  }
 		  
@@ -2828,10 +2831,16 @@ bool Solver::interleavedClauseStrengthening()
   #endif
 	      if( value(learnt_clause[0]) == l_Undef ) { // propagate unit clause!
 		uncheckedEnqueue(learnt_clause[0]);
-		if( propagate() != CRef_Undef ) return false;
+		if( propagate() != CRef_Undef ) {
+		  cerr << "c ICS cannot propagate the unit of a learned unit clause " << learnt_clause[0] << endl;
+		  return false;
+		}
 		nbUn ++;
 	      }
-	      else if (value(learnt_clause[0]) == l_False ) return false; // otherwise, we have a top level conflict here!
+	      else if (value(learnt_clause[0]) == l_False ) {
+		cerr << "c ICS learned a falsified unit clause " << learnt_clause[0] << endl;
+		return false; // otherwise, we have a top level conflict here!
+	      }
 	  }else{
 	    CRef cr = ca.alloc(learnt_clause, true);
 	    ca[cr].setLBD(nblevels); 
@@ -2858,10 +2867,19 @@ bool Solver::interleavedClauseStrengthening()
     if( d.size() > 1 ) attachClause( learnts[i] ); // unit clauses do not need to be added!
     else if( d.size() == 1  ) { // if not already done, propagate this new clause!
       if( value( d[0] ) == l_Undef ) {
-      uncheckedEnqueue(d[0]);
-      if( propagate() != CRef_Undef ) return false;
-      } else if ( value( d[0] ) == l_False ) return false; // should not happen!
-    } else if( d.size() == 0 )  return false; // unsat, since c is empty
+	uncheckedEnqueue(d[0]);
+	if( propagate() != CRef_Undef ) {
+	  cerr << "c ICS return false, because unit " << d[0] << " cannot be propagated" << endl;
+	  return false;
+	}
+      } else if ( value( d[0] ) == l_False ) {
+	cerr << "c ICS learned falsified unit " << d[0]<< endl;
+	return false; // should not happen!
+      }
+    } else if( d.size() == 0 ) {
+      cerr << "c ICS learned an empty clause [" << learnts[i] << "]" << endl;
+      return false; // unsat, since c is empty
+    }
   }
 
   // remove the newly learned clauses
@@ -2880,8 +2898,11 @@ bool Solver::interleavedClauseStrengthening()
     else if( value( trailCopy[ trailLimCopy[i] ] ) == l_Undef ) uncheckedEnqueue( trailCopy[ trailLimCopy[i] ] );
     CRef confl = propagate();
     if( confl != CRef_Undef ) { // handle conflict. conflict at top-level -> return false!, else backjump, and continue with good state!
-      if( i > 0 ) cancelUntil( decisionLevel () - 1 );
-      else return false;
+      cancelUntil( decisionLevel () - 1 );
+//       else {
+// 	cerr << "c during creating the trail again, an error has been found - cannot set level below the current value -- tried to enqueue decision literal " << trailCopy[ trailLimCopy[i] ] << " as " << i + 1 << "th decision " << endl;
+// 	return false;
+//       }
     }
   }
   polarityCopy.copyTo( polarity );
