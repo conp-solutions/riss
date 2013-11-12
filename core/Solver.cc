@@ -167,7 +167,7 @@ Solver::Solver(CoreConfig& _config) :
   ,extendedLearnedClausesCandidates(0)
   ,maxECLclause(0)
   ,totalECLlits(0)
-  ,maxResHeight(0)
+  ,maxResDepth(0)
   
   // restricted extended resolution
   ,rerCommonLitsSum(0)
@@ -2107,18 +2107,18 @@ printf("c ==================================[ Search Statistics (every %6d confl
 	    printf("c IntervalRestarts: %d\n", intervalRestart);
 	    printf("c lhbr: %d (l1: %d), new: %d (l1: %d), tests: %d, subs: %d\n", lhbrs, l1lhbrs,lhbr_news,l1lhbr_news,lhbrtests,lhbr_sub);
 	    printf("c otfss: %d (l1: %d), cls: %d, units: %d, binaries: %d, jumpedHigher: %d\n", otfsss, otfsssL1,otfssClss,otfssUnits,otfssBinaries,otfssHigherJump);
-	    printf("c learning: %ld cls, %lf avg. size, %lf avg. LBD, %ld maxSize, %ld proof-height\n", 
+	    printf("c learning: %ld cls, %lf avg. size, %lf avg. LBD, %ld maxSize, %ld proof-depth\n", 
 		   (int64_t)totalLearnedClauses, 
 		   sumLearnedClauseSize/totalLearnedClauses, 
 		   sumLearnedClauseLBD/totalLearnedClauses,
 		  (int64_t)maxLearnedClauseSize,
-		   (int64_t)maxResHeight
+		   (int64_t)maxResDepth
 		  );
 	    printf("c ext.cl.l.: %d outOf %d ecls, %d maxSize, %.2lf avgSize, %.2lf totalLits\n",
 		   extendedLearnedClauses,extendedLearnedClausesCandidates,maxECLclause, extendedLearnedClauses == 0 ? 0 : ( totalECLlits / (double)extendedLearnedClauses), totalECLlits);
 	    printf("c res.ext.res.: %d rer, %d rerSizeCands, %d sizeReject, %d patternReject, %d bloomReject, %d maxSize, %.2lf avgSize, %.2lf totalLits\n",
 		   rerLearnedClause, rerLearnedSizeCandidates, rerSizeReject, rerPatternReject, rerPatternBloomReject, maxRERclause, rerLearnedClause == 0 ? 0 : (totalRERlits / (double) rerLearnedClause), totalRERlits );
-	    printf("c i.cls.strengthening: %d calls, %.2lf s, %d candidates, %d droppedBefore, %d shrinked, %d shrinkedLits\n", icsTime.getCpuTime(), icsCalls, icsCandidates, icsDroppedCandidates, icsShrinks, icsShrinkedLits );
+	    printf("c i.cls.strengthening: %.2lf seconds, %d calls, %d candidates, %d droppedBefore, %d shrinked, %d shrinkedLits\n", icsTime.getCpuTime(), icsCalls, icsCandidates, icsDroppedCandidates, icsShrinks, icsShrinkedLits );
 	    printf("c decisionClauses: %d\n", learnedDecisionClauses );
 	    printf("c agility restart rejects: %d\n", agility_rejects );
     }
@@ -2716,12 +2716,11 @@ void Solver::disjunctionReplace( Lit p, Lit q, const Lit x, bool inLearned, bool
       for( ; secondHit < c.size(); ++ secondHit ) {
 	const Lit& l = c[secondHit];
 	if( l == q ) break;
-	else if( l == ~q ) {secondHit == -1; break; }
+	else if( l == ~q ) {secondHit = -1; break; }
       }
       if( secondHit == -1 || secondHit == c.size() ) continue; // second literal not found, or complement of other second literal found
 
       // found both literals in the clause ...
-      bool needReattach = false;
       if( c.size() == 2 ) {
 	assert( decisionLevel() == 0 && "can add a unit only permanently, if we are currently on level 0!" );
 	removeClause( cls[i] );

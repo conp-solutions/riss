@@ -876,6 +876,11 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, H
                // | resolvent | > 1
                if (ps.size()>1)
                {
+                data_lock.lock();
+                lbool status = data.enqueue(resolvent[0]); //check for level 0 conflict
+                data_lock.unlock();
+	       } else if (ps.size()>1)
+               {
                     if ((p.learnt() || n.learnt()) && ps.size() > max(p.size(),n.size()) + config.opt_learnt_growth)
                         continue;
                     resolvents++;

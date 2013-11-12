@@ -16,6 +16,8 @@ COBJS      = $(CSRCS:.cc=.o) $(DSRCS:.cc=.o)
 PCOBJS     = $(addsuffix p,  $(COBJS))
 DCOBJS     = $(addsuffix d,  $(COBJS))
 RCOBJS     = $(addsuffix r,  $(COBJS))
+LIBSCOBJS  = $(addsuffix s,  $(COBJS))
+LINKSCOBJS = $(filter-out */Main.os, $(LIBSCOBJS))
 
 
 CXX       ?= g++
@@ -35,6 +37,7 @@ d:	$(EXEC)_debug
 r:	$(EXEC)_release
 rs:	$(EXEC)_static
 
+libso:	lib$(LIB)_release.so
 libs:	lib$(LIB)_standard.a
 libp:	lib$(LIB)_profile.a
 libd:	lib$(LIB)_debug.a
@@ -45,6 +48,7 @@ libr:	lib$(LIB)_release.a
 %.op:			CFLAGS +=$(COPTIMIZE) -pg -g -D NDEBUG
 %.od:			CFLAGS +=-O0 -g -D DEBUG
 %.or:			CFLAGS +=$(COPTIMIZE) -g -D NDEBUG
+%.os:			CFLAGS +=$(COPTIMIZE) -g -D NDEBUG
 
 ## Link options
 $(EXEC):		LFLAGS += -g
@@ -60,16 +64,27 @@ $(EXEC)_debug:		$(DCOBJS)
 $(EXEC)_release:	$(RCOBJS)
 $(EXEC)_static:		$(RCOBJS)
 
+## static library without main file
 lib$(LIB)_standard.a:	$(filter-out */Main.o,  $(COBJS))
 lib$(LIB)_profile.a:	$(filter-out */Main.op, $(PCOBJS))
 lib$(LIB)_debug.a:	$(filter-out */Main.od, $(DCOBJS))
 lib$(LIB)_release.a:	$(filter-out */Main.or, $(RCOBJS))
 
+## dynamic library without main file
+lib$(LIB)_release.so:	$(filter-out */Main.os, $(LIBSCOBJS))
 
 ## Build rule
 %.o %.op %.od %.or:	%.cc
 	@echo Compiling: $(subst $(MROOT)/,,$@)
 	@$(CXX) $(CFLAGS) -c -o $@ $<
+
+#../coprocessor-src/libcp3c.os:	../coprocessor-src/libcp3c.cc
+#	@echo Compiling: $(subst $(MROOT)/,,$@)
+#	@$(CXX) $(CFLAGS) -fPIC -c -o $@ $<
+
+%.os:	%.cc
+	@echo Compiling: $(subst $(MROOT)/,,$@)
+	@$(CXX) $(CFLAGS) -c -o $@ $< -fPIC #-fvisibility=hidden -fvisibility-inlines-hidden 
 
 ## Linking rules (standard/profile/debug/release)
 $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static:
@@ -81,6 +96,11 @@ lib$(LIB)_standard.a lib$(LIB)_profile.a lib$(LIB)_release.a lib$(LIB)_debug.a:
 	@echo Making library: "$@ ( $(foreach f,$^,$(subst $(MROOT)/,,$f)) )"
 	@$(AR) -rcsv $@ $^
 
+## Library rules (standard/profile/debug/release)
+lib$(LIB)_release.so:
+	@echo Making shared library: "$@ ( $(foreach f,$^,$(subst $(MROOT)/,,$f)) )"
+	g++ -shared -o $@ $(LINKSCOBJS) -lc #-fvisibility=hidden -fvisibility-inlines-hidden  #-Wl,-fvisibility=hidden -Wl,-fvisibility-inlines-hidden -Wl,--version-script=$(MROOT)/exports.version 
+
 ## Library Soft Link rule:
 libs libp libd libr:
 	@echo "Making Soft Link: $^ -> lib$(LIB).a"
@@ -89,7 +109,7 @@ libs libp libd libr:
 ## Clean rule
 clean:
 	@rm -f $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static \
-	  $(COBJS) $(PCOBJS) $(DCOBJS) $(RCOBJS) *.core depend.mk 
+	  $(COBJS) $(PCOBJS) $(DCOBJS) $(RCOBJS) $(LIBSCOBJS) *.core depend.mk 
 
 ## Make dependencies
 depend.mk: $(CSRCS) $(CHDRS)

@@ -1,12 +1,21 @@
 /***************************************************************************************[libcp3c.h]
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
- File to work with Coprocessor as a library
+ Headerffile to work with Coprocessor as a library
  
  Methods provide basic access to the preprocessor
  
  At the moment only a single instance of the preprocessor can be initialized
  due to the option system, which currently relies on the Minisat option class
+ 
+ 
+ NOTE: Building a tool with the dynamic library:
+ 1) make sure, the file libcp3.so is located in the right directory (here, in '.')
+ 2) to the usual link command of your tool add the following parameters:
+  -L . -lcp3 -lpthread -lz -lrt
+  
+ NOTE: Running your tool with the dynamic library:
+ 1) make sure the file libcp3.so is located at a place where it can be found
 **************************************************************************************************/
 
 // to represent formulas and the data type of truth values
@@ -27,6 +36,10 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #define l_Undef 2
 #endif
 
+// #pragma GCC visibility push(hidden)
+// #pragma GCC visibility push(default)
+// #pragma GCC visibility pop // now we should have default!
+
 extern "C" {
 
   /** initialize a preprocessor instance, and return a pointer to the maintain structure */
@@ -40,6 +53,12 @@ extern "C" {
   
   /** parse the options of the command line and pass them to the preprocessor */
   extern void cp3parseOptions (void* preprocessor, int& argc, char** argv, bool strict = false);
+  
+  /** set CP3 to simulate predefined behavior 
+   * 1: SAT Competition 2013 (be careful, because it contains the dense-option)
+   * 2: BVA only
+   */
+  extern void cp3setConfig (void* preprocessor, int configNr);
   
   /** add a literal to the solver, if lit == 0, end the clause and actually add it */
   extern void cp3add (void* preprocessor, int lit);
@@ -77,3 +96,5 @@ extern "C" {
   /** return whether a given literal is already mapped to false */
   extern bool cp3isUnsat(void* preprocessor, int lit);
 }
+
+// #pragma GCC visibility pop // back to what we had before

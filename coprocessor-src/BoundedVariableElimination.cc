@@ -445,6 +445,9 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                    if (anticipateElimination(data, pos, neg,  v, p_limit, n_limit, pos_stats, neg_stats, lit_clauses, lit_learnts, resolvents, bveChecks) == l_False) 
                        return;  // level 0 conflict found while anticipation TODO ABORT
                }
+               
+               
+               
                if (config.opt_bve_bc)
                {
                    //mark Clauses without resolvents for deletion
@@ -581,7 +584,7 @@ inline void BoundedVariableElimination::removeClauses(CoprocessorData & data, He
  */
 inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& data, vector< CRef >& positive, vector< CRef >& negative, const int v, const int p_limit, const int n_limit, vec<int32_t> & pos_stats, vec<int32_t> & neg_stats, int& lit_clauses, int& lit_learnts, int& resolvents, int64_t& bveChecks, const bool doStatistics)
 {
-    if(config.opt_bve_verbose > 2)  cerr << "c starting anticipate BVE" << endl;
+    if(config.opt_bve_verbose > 2)  cerr << "c starting anticipate BVE -- with pLim= " << p_limit << " nLim= " << n_limit <<  endl;
     // Clean the stats
     lit_clauses=0;
     lit_learnts=0;
@@ -597,6 +600,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& 
                 cerr << "c    skipped p " << p << endl;
             continue;
         }
+        if( config.opt_bve_verbose > 2 ) cerr << "c [" << cr_p << "/" << positive.size() << "] : " << p << endl;
         for (int cr_n = 0; cr_n < negative.size(); ++cr_n)
         {
 	    // do not check resolvents, which would touch two clauses out of the variable definition
@@ -615,7 +619,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& 
                 continue;
             }
             int newLits = tryResolve(p, n, v);
-            
+            if( config.opt_bve_verbose > 2 ) cerr << "c vs [" << cr_n << "/" << negative.size() << "] : " << n << endl;
 
             if(config.opt_bve_verbose > 2) cerr << "c    resolvent size " << newLits << endl;
 
@@ -699,8 +703,10 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& 
                     if (propagation.process(data, true) == l_False)
                         return l_False;  
 		    modifiedFormula = modifiedFormula || propagation.appliedSomething();
-                    if (p.can_be_deleted())
+                    if (p.can_be_deleted()) {
+			if( config.opt_bve_verbose > 1 ) cerr << "c stop working on clause " << p << ", because it can be deleted" << endl;
                         break;
+		    }
                 }
                 else 
                     assert (0); //something went wrong
@@ -763,8 +769,25 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, Heap<VarOrd
             ps.clear();
             if (!resolve(p, n, v, ps))
             {
-               // | resolvent | > 1
-               if (ps.size()>1)
+               if( ps.size() == 1 ) {
+			 data.addToProof(ps); // tell proof about the new clause!
+			 uint64_t extraInfo = Clause::updateExtraInformation(p.extraInformation(), n.extraInformation());
+
+                        lbool status = data.enqueue(ps[0], extraInfo ); //check for level 0 conflict
+                        if (status == l_False)
+                            return l_False;
+                        else if (status == l_Undef)
+                             ; // variable already assigned
+                        else if (status == l_True)
+                        {
+                            if (doStatistics) ++ unitsEnqueued;
+                            if (propagation.process(data, true) == l_False)  //TODO propagate own lits only (parallel)
+                                return l_False;
+			    modifiedFormula = modifiedFormula || propagation.appliedSomething();
+                            if (p.can_be_deleted()) // now, the next clause might be redundant!
+                                break;
+                        }
+	       } else if (ps.size()>1)
                {
                     // Depending on config.opt_resovle_learnts, skip clause creation
                     if (force)
@@ -777,22 +800,25 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, Heap<VarOrd
                     if ((p.learnt() || n.learnt()) && ps.size() > max(p.size(),n.size()) + config.opt_learnt_growth)
                         continue;
 		    
-		    for( int i = 0 ; i < ps.size(); ++ i ) {
-		      for( int j =  i+1; j < ps.size(); ++ j ) {
-			if( ps[i] == ps[j] ) {
-			  cerr << "c resolvent of clauses " << p << " and " << n << " result in duplicate lits clause! (" << i << "," << j << "): " << endl;
-			  for(i = 0 ; i < ps.size(); ++ i ) cerr << " " << ps[i];
-			  cerr << endl;
-			  break;
+		    if( config.opt_bve_verbose > 2 ) { // expensive!
+		      for( int i = 0 ; i < ps.size(); ++ i ) {
+			for( int j =  i+1; j < ps.size(); ++ j ) {
+			  if( ps[i] == ps[j] ) {
+			    cerr << "c resolvent of clauses " << p << " and " << n << " result in duplicate lits clause! (" << i << "," << j << "): " << endl;
+			    for(i = 0 ; i < ps.size(); ++ i ) cerr << " " << ps[i];
+			    cerr << endl;
+			    break;
+			  }
 			}
 		      }
 		    }
 		    
 		    
+		    if( config.opt_bve_verbose > 1 ) cerr << "c from resolution with" << p << " and " << n << endl;
                     CRef cr = ca.alloc(ps, p.learnt() || n.learnt()); 
                     // IMPORTANT! dont use p and n in this block, as they could got invalid
                     Clause & resolvent = ca[cr];
-		    
+		    if( config.opt_bve_verbose > 1 ) cerr << "c add resolvent " << resolvent << endl;
 		    data.addToProof(ca[cr]); // tell proof about the new clause!
 		    ca[cr].setExtraInformation( p.extraInformation() ); // setup extra information for this clause!
 		    ca[cr].updateExtraInformation( n.extraInformation() );
@@ -894,8 +920,10 @@ inline void BoundedVariableElimination::removeBlockedClauses(CoprocessorData & d
             else
                 data.removedClause(list[ci]);
             didChange();
-            if (!c.learnt() /*&& ci < limit*/) 
+            if (!c.learnt() /*&& ci < limit*/) {
+		if(config.opt_bve_verbose > 2) cerr << "c remove blocked clause " << ca[list[ci]] << endl;
                 data.addToExtension(list[ci], l);
+	    }
             if (doStatistics)
             {
                 if (c.learnt())
@@ -990,7 +1018,7 @@ bool BoundedVariableElimination::findGates(CoprocessorData & data, const Var v, 
     // check binary of pos variable
     markArray.nextStep();
     for( uint32_t i = 0 ; i < pList.size(); ++ i ) {
-      CRef cr = pList[i]; 
+      const CRef cr = pList[i]; 
       if (CRef_Undef == cr) continue;
       const Clause& clause = ca[ cr ];
       if( clause.can_be_deleted() || clause.learnt() || clause.size() != 2 ) continue; // NOTE: do not use learned clauses for gate detection!

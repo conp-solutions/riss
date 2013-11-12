@@ -462,7 +462,7 @@ protected:
   double totalLearnedClauses, sumLearnedClauseSize, sumLearnedClauseLBD, maxLearnedClauseSize;
   int extendedLearnedClauses, extendedLearnedClausesCandidates,maxECLclause;
   double totalECLlits; // to calc max and avg
-  uint64_t maxResHeight;
+  uint64_t maxResDepth;
   
   
   vec<Lit> rerCommonLits; // literals that are common in the clauses in the window

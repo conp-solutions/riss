@@ -70,7 +70,7 @@ bool Symmetry::process() {
   
   if( false ) {
     for( Var v = 0 ; v < solver.nVars(); ++ v ) {
-      printf("c %4d[%4d] : %3d -- %3d %3ld %3ld %3ld %3ld %3ld %3ld \n", v+1,freq[v],varSymm[v].v+1,varSymm[v].c2,varSymm[v].c3,varSymm[v].c4,varSymm[v].c5,varSymm[v].c6,varSymm[v].c7,varSymm[v].cl);
+      printf("c %4d[%4d] : %3d -- %3ld %3ld %3ld %3ld %3ld %3ld %3ld \n", v+1,freq[v],varSymm[v].v+1,varSymm[v].c2,varSymm[v].c3,varSymm[v].c4,varSymm[v].c5,varSymm[v].c6,varSymm[v].c7,varSymm[v].cl);
     }
   }
   
@@ -96,7 +96,7 @@ bool Symmetry::process() {
     if( false ) {
     printf("c iteration %d\n",iter);
     for( Var v = 0 ; v < solver.nVars(); ++ v ) {
-      printf("c %4d[%4d] : %3d -- %3d %3d %3d %3d %3d %3d %3d \n", v+1,freq[v],varSymm[v].v+1,varSymm[v].c2,varSymm[v].c3,varSymm[v].c4,varSymm[v].c5,varSymm[v].c6,varSymm[v].c7,varSymm[v].cl);
+      printf("c %4d[%4d] : %3d -- %3ld %3ld %3ld %3ld %3ld %3ld %3ld \n", v+1,freq[v],varSymm[v].v+1,varSymm[v].c2,varSymm[v].c3,varSymm[v].c4,varSymm[v].c5,varSymm[v].c6,varSymm[v].c7,varSymm[v].cl);
     }
     }
     
@@ -112,7 +112,7 @@ bool Symmetry::process() {
   
   if( false ) {
     for( Var v = 0 ; v < solver.nVars(); ++ v ) {
-      printf("c %d : %3d -- %3d %3d %3d %3d %3d %3d %3d \n", v+1,thisIter[v].v+1,thisIter[v].c2,thisIter[v].c3,thisIter[v].c4,thisIter[v].c5,thisIter[v].c6,thisIter[v].c7,thisIter[v].cl);
+      printf("c %d : %3ld -- %3ld %3ld %3ld %3ld %3ld %3ld %3ld \n", v+1,thisIter[v].v+1,thisIter[v].c2,thisIter[v].c3,thisIter[v].c4,thisIter[v].c5,thisIter[v].c6,thisIter[v].c7,thisIter[v].cl);
     }
   }
   

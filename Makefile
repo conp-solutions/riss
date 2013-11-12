@@ -15,6 +15,7 @@ COPTIMIZE ?= -O3
 
 all: rs
 
+# shortcuts
 d: rissd
 rs: rissRS
 
@@ -45,7 +46,7 @@ aigbmc-abcd: libd
 aigbmc-abcs: libs
 	cd aiger-src; make aigbmc-abc ARGS=$(ARGS) ;  mv aigbmc-abc ..
 	
-# build the splitter solver
+# build the solver
 riss: always
 	cd core;   make INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g ..
 
@@ -61,11 +62,16 @@ rissSimpd: always
 rissd: always
 	cd core;   make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g_debug ../riss3g
 
+# libraries
 libd: always
 	cd core;   make libd INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; rm lib.a; mv lib_debug.a ../libriss3g.a
 libs: always
 	cd core;   make libs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; rm lib.a; mv lib_standard.a ../libriss3g.a
-	
+libso: always
+	cd core;   make libso INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv lib_release.so ../libcp3.so
+#	strip -g -S -d --strip-debug -X -w --strip-symbol=*Coprocessor* --strip-symbol=*Minisat* libcp3.so
+
+# coprocessor
 coprocessor: always
 	cd coprocessor-src;  make INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv coprocessor ..
 
@@ -94,6 +100,9 @@ always:
 touch:
 	touch core/Solver.cc coprocessor-src/Coprocessor.cc
 
+touchos:
+	touch */*.os
+
 strip: always
 	strip  --keep-symbol=cp3add --keep-symbol=cp3destroyPreprocessor --keep-symbol=cp3dumpFormula --keep-symbol=cp3extendModel --keep-symbol=cp3freezeExtern --keep-symbol=cp3giveNewLit --keep-symbol=cp3initPreprocessor --keep-symbol=cp3parseOptions libriss3g.a
 
@@ -101,6 +110,7 @@ doc: clean
 	cd doc; doxygen solver.config
 	touch doc
 
+# tar balls
 tar: clean
 	tar czvf riss3g.tar.gz core   LICENSE  Makefile mtl  README  simp utils
 	
@@ -123,7 +133,7 @@ clean:
 	@cd coprocessor-src; make clean MROOT=..;
 	@cd qprocessor-src; make clean MROOT=..;
 	@cd classifier-src; make clean MROOT=..;
-	@rm -f riss3m riss3g coprocessor qprocessor libriss3g.a
+	@rm -f riss3m riss3g coprocessor qprocessor libriss3g.a libcp3.so
 	@rm -f *~ */*~
 	@rm -rf doc/html
 	@echo Done

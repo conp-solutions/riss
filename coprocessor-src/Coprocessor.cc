@@ -772,6 +772,11 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     if( config.opt_debug )  { scanCheck("after iteration"); }   
     data.checkGarbage(); // perform garbage collection
     if( config.opt_verbose > 3 )  printStatistics(cerr);
+    if( config.opt_verbose > 4 )  {
+      cerr << "c intermediate formula: " << endl;
+      for( int i = 0 ; i < solver->trail.size(); ++ i ) cerr << " " <<solver->trail[i] << endl;
+      for( int i = 0 ; i < data.getClauses().size(); ++ i ) cerr << " " << ca[ data.getClauses()[i] ] << endl;
+    }
   }
   
   
