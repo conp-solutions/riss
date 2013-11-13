@@ -343,6 +343,10 @@ protected:
     bool     locked           (const Clause& c) const; // Returns TRUE if a clause is a reason for some implication in the current state.
     bool     satisfied        (const Clause& c) const; // Returns TRUE if a clause is satisfied in the current state.
 
+    unsigned int computeLBD(const vec<Lit> & lits);
+    unsigned int computeLBD(const Clause &c);
+    void minimisationWithBinaryResolution(vec<Lit> &out_learnt);
+
     void     relocAll         (ClauseAllocator& to);
 
     // Misc:

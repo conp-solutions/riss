@@ -51,6 +51,7 @@ public:
  IntOption opt_spec_inc_reduce_db;
  IntOption opt_lb_lbd_frozen_clause;
  BoolOption opt_lbd_ignore_l0; // do not consider literals that have toplevel assignments for LBD calculation
+ BoolOption opt_quick_reduce; // check clause for being satisfied based on the first two literals only!
 
  IntOption opt_lb_size_minimzing_clause;
  IntOption opt_lb_lbd_minimzing_clause;

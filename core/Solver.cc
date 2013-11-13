@@ -378,11 +378,87 @@ void Solver::removeClause(CRef cr) {
 
 
 bool Solver::satisfied(const Clause& c) const {
+
+    // quick-reduce option
+      if(config.opt_quick_reduce)  // Check clauses with many literals is time consuming
+        return (value(c[0]) == l_True) || (value(c[1]) == l_True);
+
     for (int i = 0; i < c.size(); i++)
         if (value(c[i]) == l_True)
             return true;
     return false; }
 
+/************************************************************
+ * Compute LBD functions
+ *************************************************************/
+
+inline unsigned int Solver::computeLBD(const vec<Lit> & lits) {
+  int nblevels = 0;
+  MYFLAG++;
+    for(int i=0;i<lits.size();i++) {
+      int l = level(var(lits[i]));
+      if (permDiff[l] != MYFLAG) {
+	permDiff[l] = MYFLAG;
+	nblevels++;
+      }
+    }
+  return nblevels;
+}
+
+inline unsigned int Solver::computeLBD(const Clause &c) {
+  int nblevels = 0;
+  MYFLAG++;
+
+    for(int i=0;i<c.size();i++) {
+      int l = level(var(c[i]));
+      if (permDiff[l] != MYFLAG) {
+	permDiff[l] = MYFLAG;
+	nblevels++;
+      }
+    }
+  return nblevels;
+}
+
+
+/******************************************************************
+ * Minimisation with binary reolution
+ ******************************************************************/
+void Solver::minimisationWithBinaryResolution(vec<Lit> &out_learnt) {
+  
+  // Find the LBD measure                                                                                                         
+  const unsigned int lbd = computeLBD(out_learnt);
+  const Lit p = ~out_learnt[0];
+
+      if(lbd<=lbLBDMinimizingClause){
+      MYFLAG++;
+      for(int i = 1;i<out_learnt.size();i++) permDiff[var(out_learnt[i])] = MYFLAG;
+      vec<Watcher>&  wbin  = watchesBin[p];
+      int nb = 0;
+      for(int k = 0;k<wbin.size();k++) {
+	const Lit imp = wbin[k].blocker;
+	if(permDiff[var(imp)]==MYFLAG && value(imp)==l_True) {
+	  nb++;
+	  permDiff[var(imp)]= MYFLAG-1;
+#ifdef CLS_EXTRA_INFO
+	  extraInfo = extraInfo >= ca[wbin[k].cref].extraInformation() ? extraInfo : ca[wbin[k].cref].extraInformation();
+#endif
+	}
+      }
+      int l = out_learnt.size()-1;
+      if(nb>0) {
+	nbReducedClauses++;
+	for(int i = 1;i<out_learnt.size()-nb;i++) {
+	  if(permDiff[var(out_learnt[i])]!=MYFLAG) {
+	    const Lit p = out_learnt[l];
+	    out_learnt[l] = out_learnt[i];
+	    out_learnt[i] = p;
+	    l--;i--;
+	  }
+	}
+	out_learnt.shrink(nb);
+      }
+    }
+}
 
 // Revert to the state at given level (keeping all assignment at 'level' but not beyond).
 //
@@ -482,6 +558,20 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	
        if (c.learnt() && dynamicDataUpdates)
             claBumpActivity(c);
+
+#ifdef DYNAMICNBLEVEL		    
+	// DYNAMIC NBLEVEL trick (see competition'09 companion paper)
+	if(c.learnt()  && c.lbd()>2) { 
+	  unsigned int nblevels = computeLBD(c);
+	  if(nblevels+1<c.lbd() ) { // improve the LBD
+	    if(c.lbd()<=lbLBDFrozenClause) {
+	      c.setCanBeDel(false); 
+	    }
+	    // seems to be interesting : keep it for the next round
+	    c.setLBD(nblevels); // Update it
+	  }
+	}
+#endif
 
 #ifdef CLS_EXTRA_INFO // if resolution is done, then take also care of the participating clause!
 	extraInfo = extraInfo >= c.extraInformation() ? extraInfo : c.extraInformation();
@@ -647,7 +737,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
                 out_learnt[j++] = out_learnt[i];
             else{
                 Clause& c = ca[reason(var(out_learnt[i]))];
-		int k = 1;
+		int k = k = ((c.size()==2) ? 0:1); // bugfix by Siert Wieringa
                 for (; k < c.size(); k++)
 		{
                     if (!seen[var(c[k])] && level(var(c[k])) > 0){
@@ -676,68 +766,8 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
       Then, we reduce clauses with small LBD.
       Otherwise, this can be useless
      */
-    if(out_learnt.size()<=lbSizeMinimizingClause) {
-      // Find the LBD measure                                                                                                         
-      lbd = 0;
-      MYFLAG++;
-      for(int i=0;i<out_learnt.size();i++) {
-
-	int l = level(var(out_learnt[i]));
-	if ((!config.opt_lbd_ignore_l0 || l>0) &&  permDiff[l] != MYFLAG) {
-	  permDiff[l] = MYFLAG;
-	  lbd++;
-	}
-      }
-
-
-      if(lbd<=lbLBDMinimizingClause){
-      MYFLAG++;
-      
-      for(int i = 1;i<out_learnt.size();i++) {
-	permDiff[var(out_learnt[i])] = MYFLAG;
-      }
-
-      vec<Watcher>&  wbin  = watchesBin[p];
-      int nb = 0;
-      for(int k = 0;k<wbin.size();k++) {
-	Lit imp = wbin[k].blocker;
-	if(permDiff[var(imp)]==MYFLAG && value(imp)==l_True) {
-	  /*      printf("---\n");
-		  printClause(out_learnt);
-		  printf("\n");
-		  
-		  printClause(*(wbin[k].clause));printf("\n");
-	  */
-	  nb++;
-	  permDiff[var(imp)]= MYFLAG-1;
-
-#ifdef CLS_EXTRA_INFO
-	  extraInfo = extraInfo >= ca[wbin[k].cref].extraInformation() ? extraInfo : ca[wbin[k].cref].extraInformation();
-#endif
-	}
-      }
-      int l = out_learnt.size()-1;
-      if(nb>0) {
-	nbReducedClauses++;
-	for(int i = 1;i<out_learnt.size()-nb;i++) {
-	  if(permDiff[var(out_learnt[i])]!=MYFLAG) {
-	    Lit p = out_learnt[l];
-	    out_learnt[l] = out_learnt[i];
-	    out_learnt[i] = p;
-	    l--;i--;
-	  }
-	}
-	
-	//    printClause(out_learnt);
-	//printf("\n");
-	out_learnt.shrink(nb);
-      
-	/*printf("nb=%d\n",nb);
-	  printClause(out_learnt);
-	  printf("\n");
-	*/
-      }
-    }
+    if( out_learnt.size()<=lbSizeMinimizingClause ) {
+      minimisationWithBinaryResolution(out_learnt); // code in this method should execute below code until determining correct backtrack level
     }
     
     } // end working on usual learnt clause (minimize etc.)
@@ -760,17 +790,8 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     }
 
 
-  // Find the LBD measure 
-  lbd = 0;
-  MYFLAG++;
-  for(int i=0;i<out_learnt.size();i++) {
-    
-    int l = level(var(out_learnt[i]));
-    if ( (!config.opt_lbd_ignore_l0 || l>0) && permDiff[l] != MYFLAG) {
-      permDiff[l] = MYFLAG;
-      lbd++;
-    }
-  }
+// Compute LBD
+    lbd = computeLBD(out_learnt);
 
 
   
@@ -1009,8 +1030,7 @@ CRef Solver::propagate()
             const Lit      false_lit = ~p;
             if (c[0] == false_lit)
                 c[0] = c[1], c[1] = false_lit;
-	    if( c[1] != false_lit ) cerr << "c wrong literal order in clause " << c << endl;
-            assert(c[1] == false_lit);
+            assert(c[1] == false_lit && "wrong literal order in the clause!");
             i++;
 
             // If 0th watch is true, then clause is already satisfied.
@@ -1125,30 +1145,7 @@ CRef Solver::propagate()
 	      if( config.opt_printLhbr ) cerr << "c added new clause: " << ca[cr2] << ", that is " << (clearnt ? "learned" : "original" ) << endl;
 	      goto NextClause; // do not use references any more, because ca.alloc has been performed!
 	    }
-	  
-#ifdef DYNAMICNBLEVEL		    
-		// DYNAMIC NBLEVEL trick (see competition'09 companion paper)
-		if(c.learnt()  && c.lbd()>2 && dynamicDataUpdates) { 
-		  MYFLAG++;
-		  unsigned  int nblevels =0;
-		  for(int i=0;i<c.size();i++) {
-		    int l = level(var(c[i]));
-		    if ( (!config.opt_lbd_ignore_l0 || l>0) && permDiff[l] != MYFLAG) {
-		      permDiff[l] = MYFLAG;
-		      nblevels++;
-		    }
-		    
-		    
-		  }
-		  if(nblevels+1<c.lbd() ) { // improve the LBD
-		    if(c.lbd()<=lbLBDFrozenClause) {
-		      c.setCanBeDel(false); 
-		    }
-		      // seems to be interesting : keep it for the next round
-		    c.setLBD(nblevels); // Update it
-		  }
-		}
-#endif
+
 		
 	    }
         NextClause:;
@@ -1237,7 +1234,7 @@ void Solver::removeSatisfied(vec<CRef>& cs)
     int i, j;
     for (i = j = 0; i < cs.size(); i++){
         Clause& c = ca[cs[i]];
-        if (c.size()>=2 && satisfied(c)) // A bug if we remove size ==2, We need to correct it, but later.
+        if (satisfied(c)) 
             removeClause(cs[i]);
         else
             cs[j++] = cs[i];
