@@ -23,7 +23,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include <string.h>
+#include <cstring>
+#include <string>
+#include <sstream>
 
 #include "mtl/IntTypes.h"
 #include "mtl/Vec.h"
@@ -81,6 +83,7 @@ class Option
 
     virtual bool parse             (const char* str)      = 0;
     virtual void help              (bool verbose = false) = 0;
+    virtual void giveRndValue      (std::string& optionText ) = 0; // return a valid option-specification as it could appear on the command line
 
     friend  void parseOptions      (int& argc, char** argv, bool strict);
     friend  void printUsageAndExit (int  argc, char** argv, bool verbose);
@@ -173,6 +176,15 @@ class DoubleOption : public Option
         }
 #endif
     }
+    
+    void giveRndValue (std::string& optionText ) {
+      double rndV = range.begin_inclusive ? range.begin : range.begin + 0.000001;
+      rndV += rand();
+      while( rndV > range.end ) rndV -= range.end - range.begin;
+      std::ostringstream strs;
+      strs << rndV;
+      optionText = "-" + optionText + "=" + strs.str();
+    }
 };
 
 
@@ -238,6 +250,16 @@ class IntOption : public Option
         }
 #endif
     }
+    
+    
+    void giveRndValue (std::string& optionText ) {
+      int rndV = range.begin;
+      rndV += rand();
+      while( rndV > range.end ) rndV -= range.end - range.begin;
+      std::ostringstream strs;
+      strs << rndV;
+      optionText = "-" + optionText + "=" + strs.str();
+    }
 };
 
 
@@ -302,6 +324,16 @@ class Int64Option : public Option
         }
 #endif
     }
+    
+    
+    void giveRndValue (std::string& optionText ) {
+      int64_t rndV = range.begin;
+      rndV += rand();
+      while( rndV > range.end ) rndV -= range.end - range.begin;
+      std::ostringstream strs;
+      strs << rndV;
+      optionText = "-" + optionText + "=" + strs.str();
+    }
 };
 #endif
 
@@ -339,6 +371,11 @@ class StringOption : public Option
         }
 #endif
     }    
+    
+    
+    void giveRndValue (std::string& optionText ) {
+      optionText = ""; // NOTE: this could be files or any other thing, so do not consider this (for now - for special strings, another way might be found...)
+    }
 };
 
 
@@ -388,6 +425,18 @@ class BoolOption : public Option
         }
 #endif
     }
+    
+    
+    void giveRndValue (std::string& optionText ) {
+      int r = rand();
+      if( r % 5 > 1 ) { // more likely to be enabled
+	optionText = "-" + std::string(name);
+      } else {
+	optionText = "-no-" + std::string(name);
+      }
+      
+    }
+    
 };
 
 //=================================================================================================
