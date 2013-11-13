@@ -81,11 +81,11 @@ uint32_t Unhiding::linStamp( const Lit literal, uint32_t stamp, bool& detectedEE
       assert( adj[stampInfo[ toInt(l) ].index-1] == stampInfo[ toInt(l) ].lastSeen );
     }
     
-    for( ; stampInfo[ toInt(l) ].index < adjSize; )
+    for( ; stampInfo[ toInt(l) ].index < big.getSize(l); ) // size might change by removing transitive edges!
     {
       
       const Lit l1 = adj[stampInfo[ toInt(l) ].index];
-      // cerr <<"c [UHD-A] child: " << l1 << " @" <<  stampInfo[ toInt(l) ].index << "/" << adjSize << endl;
+      // cerr <<"c [UHD-A] child: " << l1 << " @" <<  stampInfo[ toInt(l) ].index << "/" << big.getSize(l) << endl;
       ++ stampInfo[ toInt(l) ].index;
       
       if( uhdTransitive && stampInfo[ toInt(l) ].dsc < stampInfo[ toInt(l1) ].obs ) {
@@ -153,7 +153,7 @@ uint32_t Unhiding::linStamp( const Lit literal, uint32_t stamp, bool& detectedEE
       stampInfo[ toInt(l) ].obs = stamp;
     }
     
-    if( stampInfo[ toInt(l) ].index >= adjSize )
+    if( stampInfo[ toInt(l) ].index >= big.getSize(l) )
     {
       // do EE detection on current level
       stampClassEE.clear();

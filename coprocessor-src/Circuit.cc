@@ -8,7 +8,7 @@ static const char* _cat = "CP3 CIRCUIT";
 
 // options
 
-#if defined CP3VERSION  && CP3VERSION < 350
+#if defined TOOLVERSION  && TOOLVERSION < 350
 static const bool opt_AND        = false;
 static const bool opt_ITE        = false;
 static const bool opt_XOR        = false;
@@ -36,7 +36,7 @@ static BoolOption opt_Implied    (_cat, "cp3_extImplied",  "do search binary cla
 
 
 /// temporary Boolean flag to quickly enable debug output for the whole file
-#if defined CP3VERSION  
+#if defined TOOLVERSION  
 static const bool debug_out = false;
 #else
   static BoolOption debug_out      (_cat, "cp3_circ_debug",  "print debug output for circuitextraction", false);

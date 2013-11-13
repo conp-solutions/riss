@@ -1753,7 +1753,7 @@ inline void BIG::removeEdge(const Lit l0, const Lit l1)
     if( list[i] == l1 ) {
       list[i] = list[ size - 1 ];
       sizes[ toInt(~l0) ] --;
-      // cerr << "c removed edge " << ~l0 << " -> " << l1 << endl;
+       //cerr << "c removed edge " << ~l0 << " -> " << l1 << endl;
       break;
     }
   }
@@ -1764,7 +1764,7 @@ inline void BIG::removeEdge(const Lit l0, const Lit l1)
     if( list2[i] == l0 ) {
       list2[i] = list2[ size2 - 1 ];
       sizes[ toInt(~l1) ] --;
-      // cerr << "c removed edge " << ~l1 << " -> " << l0 << endl;
+//        //cerr << "c removed edge " << ~l1 << " -> " << l0 << endl;
       break;
     }
   }

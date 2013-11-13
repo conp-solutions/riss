@@ -23,7 +23,7 @@ struct libcp3 {
 extern "C" {
   
     void* 
-  cp3initPreprocessor() {
+  CPinit() {
     libcp3* cp3 = new libcp3;
     cp3->solverconfig = new Minisat::CoreConfig();
     cp3->solverconfig->hk = false; // do not use laHack during preprocessing! (might already infere that the output lit is false -> unroll forever)
@@ -34,7 +34,7 @@ extern "C" {
   }
 
   void  
-  cp3destroyPreprocessor(void*& preprocessor)
+  CPdestroy(void*& preprocessor)
   {
     libcp3* cp3 = (libcp3*) preprocessor;
     delete cp3->cp3;
@@ -46,20 +46,20 @@ extern "C" {
   }
 
   void 
-  cp3preprocess(void* preprocessor) {
+  CPpreprocess(void* preprocessor) {
     libcp3* cp3 = (libcp3*) preprocessor;
     cp3->cp3->preprocess();
   }
 
   void  
-  cp3dumpFormula(void* preprocessor, std::vector< int >& formula)
+  CPwriteFormula(void* preprocessor, std::vector< int >& formula)
   {
     libcp3* cp3 = (libcp3*) preprocessor;
     cp3->cp3->dumpFormula(formula);
   }
 
     void  
-  cp3extendModel(void* preprocessor, std::vector< uint8_t >& model)
+  CPpostprocessModel(void* preprocessor, std::vector< uint8_t >& model)
   {
     libcp3* cp3 = (libcp3*) preprocessor;
     // dangerous line, since the size of the elements inside the vector might be different
@@ -71,28 +71,28 @@ extern "C" {
   }
 
     void  
-  cp3freezeExtern(void* preprocessor, int variable)
+  CPfreezeVariable(void* preprocessor, int variable)
   {
     libcp3* cp3 = (libcp3*) preprocessor;
     cp3->cp3->freezeExtern(variable);
   }
 
     int  
-  cp3giveNewLit(void* preprocessor, int oldLit)
+  CPgetReplaceLiteral(void* preprocessor, int oldLit)
   {
     libcp3* cp3 = (libcp3*) preprocessor;
     return cp3->cp3->giveNewLit(oldLit);
   }
 
     void  
-  cp3parseOptions(void* preprocessor, int& argc, char** argv, bool strict)
+  CPparseOptions(void* preprocessor, int& argc, char** argv, bool strict)
   {
     libcp3* cp3 = (libcp3*) preprocessor;
     cp3->cp3config->parseOptions(argc,argv,strict);
   }
 
    void 
-  cp3setConfig (void* preprocessor, int configNr) {
+  CPsetConfig (void* preprocessor, int configNr) {
     libcp3* cp3 = (libcp3*) preprocessor;
     if( configNr == 1 ) {
       cp3->cp3config->opt_enabled = true;
@@ -119,7 +119,7 @@ extern "C" {
   }
   
     void  
-  cp3add(void* preprocessor, int lit)
+  CPaddLit(void* preprocessor, int lit)
   {
     libcp3* cp3 = (libcp3*) preprocessor;
       if( lit != 0 ) cp3->currentClause.push( lit > 0 ? mkLit( lit-1, false ) : mkLit( -lit-1, true ) );
@@ -135,20 +135,32 @@ extern "C" {
       }
   }
 
+
+   float 
+  CPversion(void* preprocessor)
+  {
+#ifdef TOOLVERSION
+    return TOOLVERSION / 100; // the number in TOOLVERSION gives the current version times 100
+#else
+    return -1;
+#endif
+  }
+
+  
     int 
-  cp3nVars(void* preprocessor) {
+  CPnVars(void* preprocessor) {
     libcp3* cp3 = (libcp3*) preprocessor;
     return cp3->solver->nVars();
   }
 
     bool  
-  cp3ok(void* preprocessor) {
+  CPok(void* preprocessor) {
     libcp3* cp3 = (libcp3*) preprocessor;
     return cp3->solver->okay();
   }
 
     bool  
-  cp3isUnsat(void* preprocessor, int lit) {
+  CPlitFalsified(void* preprocessor, int lit) {
     libcp3* cp3 = (libcp3*) preprocessor;
     return cp3->solver->value( lit > 0 ? mkLit( lit-1, false ) : mkLit( -lit-1, true ) ) == l_False;
   }

@@ -35,7 +35,11 @@ public:
  * List of all used options, public members, can be changed and read directly
  */
  BoolOption opt_solve_stats;
+#if defined TOOLVERSION
+ const opt_learn_debug = false;
+#else
  BoolOption opt_learn_debug;
+#endif
  
  DoubleOption opt_K; 
  DoubleOption opt_R; 
@@ -95,7 +99,11 @@ public:
 
  IntOption opt_hack;
  BoolOption opt_hack_cost;
+#if defined TOOLVERSION
+ const bool opt_dbg;
+#else
  BoolOption opt_dbg;
+#endif
 
  BoolOption opt_long_conflict;
 
@@ -131,10 +139,50 @@ public:
  BoolOption opt_otfss;
  BoolOption opt_otfssL;
  IntOption opt_otfssMaxLBD;
+#if defined TOOLVERSION
+ const bool debug_otfss = false;
+#else
  BoolOption debug_otfss;
+#endif
 
  IntOption opt_learnDecPrecent;
 
+ // these features become available with version 4
+#if defined TOOLVERSION && TOOLVERSION < 400
+  const bool opt_extendedClauseLearning; // perform extended clause learning
+ const bool opt_ecl_as_learned; // add ecl clauses as learned clauses?
+ const int opt_ecl_as_replaceAll; // run through formula/learned clauses and replace all the disjunctions (if not reason/watched ... )
+ const bool opt_ecl_full; // add full ecl extension?
+ const int opt_ecl_minSize; // minimum size of learned clause to perform ecl
+ const int opt_ecl_maxLBD;  // maximum LBD to perform ecl
+ const int opt_ecl_newAct;  // how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean
+ const bool opt_ecl_debug;
+ const double opt_ecl_smallLevel; // add ecl clauses only, if smallest two literals are from this level or below ( negative -> relativ, positive -> absolute! )
+ const double opt_ecl_every;  // perform ecl at most every n conflicts
+ 
+ const bool opt_restrictedExtendedResolution; // perform restricted extended resolution
+ const bool opt_rer_as_learned; // add rer clauses as learned clauses?
+ const int opt_rer_as_replaceAll; // run through formula/learned clauses and replace all the disjunctions (if not reason/watched ... )
+ const bool opt_rer_full; // add full rer extension?
+ const int  opt_rer_minSize; // minimum size of learned clause to perform rer
+ const int  opt_rer_maxSize; // minimum size of learned clause to perform rer
+ const int  opt_rer_minLBD;  // minimum LBD to perform rer
+ const int  opt_rer_maxLBD;  // maximum LBD to perform rer
+ const int  opt_rer_windowSize;  // number of clauses needed, to perform rer
+ const int  opt_rer_newAct;  // how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean
+ const bool opt_rer_debug; // enable debug output
+ const double opt_rer_every;  // perform rer at most every n conflicts
+ 
+ const bool opt_interleavedClauseStrengthening; // enable interleaved clause strengthening
+ const int opt_ics_interval; // run ICS after another N conflicts
+ const int opt_ics_processLast; // process this number of learned clauses (analyse, reject if quality too bad!)
+ const bool opt_ics_keepLearnts; // keep the learned clauses that have been produced during the ICS
+ const bool opt_ics_shrinkNew; // shrink the kept learned clauses in the very same run?! (makes only sense if the other clauses are kept!)
+ const double opt_ics_LBDpercent;  // only look at a clause if its LBD is less than this percent of the average of the clauses that are looked at
+ const double opt_ics_SIZEpercent; // only look at a clause if its size is less than this percent of the average size of the clauses that are looked at
+ const bool opt_ics_debug = false;
+
+#else // version > 400
  BoolOption opt_extendedClauseLearning; // perform extended clause learning
  BoolOption opt_ecl_as_learned; // add ecl clauses as learned clauses?
  IntOption opt_ecl_as_replaceAll; // run through formula/learned clauses and replace all the disjunctions (if not reason/watched ... )
@@ -142,7 +190,11 @@ public:
  IntOption opt_ecl_minSize; // minimum size of learned clause to perform ecl
  IntOption opt_ecl_maxLBD;  // maximum LBD to perform ecl
  IntOption opt_ecl_newAct;  // how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean
+#if defined TOOLVERSION
+ const bool opt_ecl_debug = false;
+#else
  BoolOption opt_ecl_debug; // enable debug output
+#endif
  DoubleOption opt_ecl_smallLevel; // add ecl clauses only, if smallest two literals are from this level or below ( negative -> relativ, positive -> absolute! )
  DoubleOption opt_ecl_every;  // perform ecl at most every n conflicts
  
@@ -156,7 +208,11 @@ public:
  IntOption  opt_rer_maxLBD;  // maximum LBD to perform rer
  IntOption  opt_rer_windowSize;  // number of clauses needed, to perform rer
  IntOption  opt_rer_newAct;  // how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean
+#if defined TOOLVERSION
+ const bool opt_rer_debug = false;
+#else
  BoolOption opt_rer_debug; // enable debug output
+#endif
  DoubleOption opt_rer_every;  // perform rer at most every n conflicts
  
  BoolOption opt_interleavedClauseStrengthening; // enable interleaved clause strengthening
@@ -166,7 +222,12 @@ public:
  BoolOption opt_ics_shrinkNew; // shrink the kept learned clauses in the very same run?! (makes only sense if the other clauses are kept!)
  DoubleOption opt_ics_LBDpercent;  // only look at a clause if its LBD is less than this percent of the average of the clauses that are looked at
  DoubleOption opt_ics_SIZEpercent; // only look at a clause if its size is less than this percent of the average size of the clauses that are looked at
+#if defined TOOLVERSION
+ const bool opt_ics_debug = false;
+#else
  BoolOption opt_ics_debug; // enable interleaved clause strengthening debug output
+#endif
+#endif // version < 400
  
 IntOption opt_verboseProof; 
 BoolOption opt_rupProofOnly; 

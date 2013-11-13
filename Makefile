@@ -16,6 +16,11 @@ COPTIMIZE ?= -O3
 all: rs
 
 # shortcuts
+
+# make a std binary
+riss3g: MYCFLAGS += -DTOOLVERSION=300 -DNOVERBHELP
+riss3g: rs
+
 d: rissd
 rs: rissRS
 

@@ -21,7 +21,11 @@ static const char* _cm = "CORE -- MINIMIZE";
 CoreConfig::CoreConfig() // add new options here!
 :
  opt_solve_stats (_cat, "solve_stats", "print stats about solving process", false),
+#if defined TOOLVERSION
+ opt_learn_debug(false),
+#else
  opt_learn_debug (_cat, "learn-debug", "print debug information during learning", false),
+#endif
  
 
  opt_K (_cr, "K", "The constant used to force restart", 0.8, DoubleRange(0, false, 1, false)), 
@@ -80,7 +84,13 @@ CoreConfig::CoreConfig() // add new options here!
 
  opt_hack ("REASON", "hack", "use hack modifications", 0, IntRange(0, 3) ),
  opt_hack_cost ("REASON", "hack-cost", "use size cost", true ),
+#if defined TOOLVERSION
+ opt_dbg(false),
+#else
  opt_dbg ("REASON", "dbg", "debug hack", false ),
+#endif
+
+ 
 
  opt_long_conflict ("REASON", "longConflict", "if a binary conflict is found, check for a longer one!", false),
 
@@ -115,10 +125,49 @@ CoreConfig::CoreConfig() // add new options here!
  opt_otfss ("MODS", "otfss", "perform otfss during conflict analysis", false),
  opt_otfssL ("MODS", "otfssL", "otfss for learnt clauses", false),
  opt_otfssMaxLBD ("MODS", "otfssMLDB", "max. LBD of learnt clauses that are candidates for otfss", 30, IntRange(2, INT32_MAX) ),
+#if defined TOOLVERSION
+
+#else
  debug_otfss ("MODS", "otfss-d", "print debug output", false),
+#endif
 
  opt_learnDecPrecent ("MODS", "learnDecP", "if LBD of is > percent of decisionlevel, learn decision Clause (Knuth)", 100, IntRange(1, 100) ),
 
+#if defined TOOLVERSION && TOOLVERSION < 400
+  const bool opt_extendedClauseLearning(false),
+ const bool opt_ecl_as_learned(false),
+ const int opt_ecl_as_replaceAll(0),
+ const bool opt_ecl_full(false),
+ const int opt_ecl_minSize(0),
+ const int opt_ecl_maxLBD(0),
+ const int opt_ecl_newAct(0),
+ const bool opt_ecl_debug(false),
+ const double opt_ecl_smallLevel(0),
+ const double opt_ecl_every(0),
+ 
+ const bool opt_restrictedExtendedResolution(false),
+ const bool opt_rer_as_learned(false),
+ const int opt_rer_as_replaceAll(0),
+ const bool opt_rer_full(false),
+ const int  opt_rer_minSize(0),
+ const int  opt_rer_maxSize(0),
+ const int  opt_rer_minLBD(0),
+ const int  opt_rer_maxLBD(0),
+ const int  opt_rer_windowSize(0),
+ const int  opt_rer_newAct(0),
+ const bool opt_rer_debug(false),
+ const double opt_rer_every(0),
+ 
+ const bool opt_interleavedClauseStrengthening(false),
+ const int opt_ics_interval(0),
+ const int opt_ics_processLast(0),
+ const bool opt_ics_keepLearnts(false),
+ const bool opt_ics_shrinkNew(false),
+ const double opt_ics_LBDpercent(0),
+ const double opt_ics_SIZEpercent(0),
+ const bool opt_ics_debug(false),
+
+#else // version > 400 
  opt_extendedClauseLearning("EXTENDED RESOLUTION ECL", "ecl", "perform extended clause learning (along Huang 2010)", false), 
  opt_ecl_as_learned("EXTENDED RESOLUTION ECL", "ecl-l", "add ecl clauses as learned clauses", true),
  opt_ecl_as_replaceAll("EXTENDED RESOLUTION ECL", "ecl-r", "run through formula and replace all disjunctions in the ECL (only if not added as learned) 0=no,1=formula,2=formula+learned", 0, IntRange(0, 2)),
@@ -126,7 +175,11 @@ CoreConfig::CoreConfig() // add new options here!
  opt_ecl_minSize ("EXTENDED RESOLUTION ECL", "ecl-min-size", "minimum size of learned clause to perform ecl", 3, IntRange(3, INT32_MAX) ),
  opt_ecl_maxLBD("EXTENDED RESOLUTION ECL", "ecl-maxLBD", "maximum LBD to perform ecl", 4, IntRange(2, INT32_MAX) ), 
  opt_ecl_newAct("EXTENDED RESOLUTION ECL", "ecl-new-act", "how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean", 0, IntRange(0, 4) ),
+#if defined TOOLVERSION
+ opt_ecl_debug(false);
+#else
  opt_ecl_debug("EXTENDED RESOLUTION ECL", "ecl-d", "debug output for ECL", false),
+#endif
  opt_ecl_smallLevel("EXTENDED RESOLUTION ECL", "ecl-smL", "ecl only, if smallest lit level is below the given (negative=neg.ratio from bj. level,positive=absolute)", -1, DoubleRange(-1, true, HUGE_VAL, true) ),
  opt_ecl_every("EXTENDED RESOLUTION ECL", "ecl-freq", "how often ecl compared to usual learning", 1, DoubleRange(0, true, 1, true) ),
  
@@ -140,7 +193,11 @@ CoreConfig::CoreConfig() // add new options here!
  opt_rer_maxLBD("EXTENDED RESOLUTION RER", "rer-maxLBD", "maximum LBD to perform rer", INT32_MAX, IntRange(1, INT32_MAX) ), 
  opt_rer_windowSize("EXTENDED RESOLUTION RER", "rer-window", "number of clauses to collect before fuse", 2, IntRange(2, INT32_MAX) ), 
  opt_rer_newAct("EXTENDED RESOLUTION RER", "rer-new-act", "how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean", 0, IntRange(0, 4) ),
+#if defined TOOLVERSION
+ opt_ecl_debug(false);
+#else
  opt_rer_debug("EXTENDED RESOLUTION RER", "rer-d", "debug output for RER", false),
+#endif
  opt_rer_every("EXTENDED RESOLUTION RER", "rer-freq", "how often rer compared to usual learning", 1, DoubleRange(0, true, 1, true) ),
  
  opt_interleavedClauseStrengthening("INTERLEAVED CLAUSE STRENGTHENING", "ics", "perform interleaved clause strengthening (along Wieringa ea 2013)", false), 
@@ -150,7 +207,13 @@ CoreConfig::CoreConfig() // add new options here!
  opt_ics_shrinkNew("INTERLEAVED CLAUSE STRENGTHENING", "ics_shrinkNew" ,"shrink the kept learned clauses in the very same run?! (makes only sense if the other clauses are kept!)", false ),
  opt_ics_LBDpercent("INTERLEAVED CLAUSE STRENGTHENING", "ics_relLBD" ,"only look at a clause if its LBD is less than this percent of the average of the clauses that are looked at, 1=100%",1, DoubleRange(0, true, HUGE_VAL, true) ), 
  opt_ics_SIZEpercent("INTERLEAVED CLAUSE STRENGTHENING", "ics_relSIZE" ,"only look at a clause if its size is less than this percent of the average size of the clauses that are looked at, 1=100%",1, DoubleRange(0, true, HUGE_VAL, true) ),
+#if defined TOOLVERSION
+ opt_ics_debug(false);
+#else
  opt_ics_debug("INTERLEAVED CLAUSE STRENGTHENING", "ics-debug","debug output for ICS",false),
+#endif
+#endif
+ 
  
  opt_verboseProof ("PROOF", "verb-proof", "also print comments into the proof, 2=print proof also to stderr", 1, IntRange(0, 2) ),
  opt_rupProofOnly ("PROOF", "rup-only", "do not print delete lines into proof", false), 

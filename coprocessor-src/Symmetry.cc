@@ -112,7 +112,7 @@ bool Symmetry::process() {
   
   if( false ) {
     for( Var v = 0 ; v < solver.nVars(); ++ v ) {
-      printf("c %d : %3ld -- %3ld %3ld %3ld %3ld %3ld %3ld %3ld \n", v+1,thisIter[v].v+1,thisIter[v].c2,thisIter[v].c3,thisIter[v].c4,thisIter[v].c5,thisIter[v].c6,thisIter[v].c7,thisIter[v].cl);
+      printf("c %d : %3d -- %3ld %3ld %3ld %3ld %3ld %3ld %3ld \n", v+1,thisIter[v].v+1,thisIter[v].c2,thisIter[v].c3,thisIter[v].c4,thisIter[v].c5,thisIter[v].c6,thisIter[v].c7,thisIter[v].cl);
     }
   }
   
@@ -132,7 +132,7 @@ bool Symmetry::process() {
        
        if( config.sym_opt_print ) {
        for( int k = 0; k < thisR; ++k ) {
-	 if( freq[ thisIter[i+k].v ] > 0) printf("c %4d[%4d] : %3d -- %3ulld %3ulld %3ulld %3ulld %3ulld %3ulld %3ulld \n", thisIter[i+k].v+1,freq[thisIter[i+k].v],thisIter[i+k].v+1,thisIter[i+k].c2,thisIter[i+k].c3,thisIter[i+k].c4,thisIter[i+k].c5,thisIter[i+k].c6,thisIter[i+k].c7,thisIter[i+k].cl);
+	 if( freq[ thisIter[i+k].v ] > 0) printf("c %4d[%4d] : %3d -- %3ld %3ld %3ld %3ld %3ld %3ld %3ld \n", thisIter[i+k].v+1,freq[thisIter[i+k].v],thisIter[i+k].v+1,thisIter[i+k].c2,thisIter[i+k].c3,thisIter[i+k].c4,thisIter[i+k].c5,thisIter[i+k].c6,thisIter[i+k].c7,thisIter[i+k].cl);
        } }
        
        
@@ -238,7 +238,7 @@ bool Symmetry::process() {
   
   if( config.sym_opt_pairs ) {
     for( int i = 0 ; i < scorePairs.size(); ++ i ) {
-      printf( "c %d : %d == %d , sc= %f\n", i, scorePairs[i].v1 + 1 , scorePairs[i].v2, + 1, scorePairs[i].score ); 
+      printf( "c %d : %d == %d , sc= %lf \n", i, scorePairs[i].v1 + 1 , scorePairs[i].v2 + 1, scorePairs[i].score ); 
     }
   }
  
@@ -251,6 +251,8 @@ bool Symmetry::process() {
     printStatistics(cerr);
     exit(0);
   }
+  
+  return modifiedFormula;
 }
 
 void Coprocessor::Symmetry::printStatistics(ostream& stream)
