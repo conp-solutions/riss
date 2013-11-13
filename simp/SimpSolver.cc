@@ -608,7 +608,13 @@ bool SimpSolver::eliminate(bool turn_off_elim)
 
     // Main simplification loop:
     //
-    while (n_touched > 0 || bwdsub_assigns < trail.size() || elim_heap.size() > 0){
+    int toPerform = clauses.size()<=4800000; // some heuristic cut off to keep elimination time small
+    
+    if(!toPerform) {
+      printf("c Too many clauses... No preprocessing\n");
+    }
+
+    while (toPerform && (n_touched > 0 || bwdsub_assigns < trail.size() || elim_heap.size() > 0)){
 
         gatherTouchedClauses();
         // printf("  ## (time = %6.2f s) BWD-SUB: queue = %d, trail = %d\n", cpuTime(), subsumption_queue.size(), trail.size() - bwdsub_assigns);
