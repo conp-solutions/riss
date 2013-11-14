@@ -330,10 +330,10 @@ protected:
     // Maintaining Variable/Clause activity:
     //
     void     varDecayActivity ();                      // Decay all variables with the specified factor. Implemented by increasing the 'bump' value instead.
-    void     varBumpActivity  (Var v, double inc);     // Increase a variable with the current 'bump' value.
-    void     varBumpActivity  (Var v);                 // Increase a variable with the current 'bump' value.
+    void     varBumpActivityD (Var v, double inc);     // Increase a variable with the current 'bump' value.
+    void     varBumpActivity  (Var v, double inverseRatio = 1) ;      // Increase a variable with the current 'bump' value, multiplied by 1 / (inverseRatio).
     void     claDecayActivity ();                      // Decay all clauses with the specified factor. Implemented by increasing the 'bump' value instead.
-    void     claBumpActivity  (Clause& c);             // Increase a clause with the current 'bump' value.
+    void     claBumpActivity  (Clause& c, double inverseRatio = 1);   // Increase a clause with the current 'bump' value, multiplied by 1 / (inverseRatio).
 
     // Operations on clauses:
     //
@@ -481,7 +481,9 @@ protected:
   int lastICSconflicts;		// number of conflicts for last ICS
   int icsCalls, icsCandidates, icsDroppedCandidates, icsShrinks, icsShrinkedLits; // stats
   
-
+  // modified activity bumping
+  vec<Var> varsToBump; // memorize the variables that need to be bumped in that order
+  vec<CRef> clssToBump; // memorize the clauses that need to be bumped in that order
   
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;
@@ -563,8 +565,8 @@ inline void Solver::insertVarOrder(Var x) {
     if (!order_heap.inHeap(x) && decision[x]) order_heap.insert(x); }
 
 inline void Solver::varDecayActivity() { var_inc *= (1 / var_decay); }
-inline void Solver::varBumpActivity(Var v) { varBumpActivity(v, var_inc); }
-inline void Solver::varBumpActivity(Var v, double inc) {
+inline void Solver::varBumpActivity(Var v, double inverseRatio) { varBumpActivityD(v, var_inc / (double) inverseRatio); }
+inline void Solver::varBumpActivityD(Var v, double inc) {
     activity[v] = ( useVSIDS * activity[v] ) + inc; // interpolate between VSIDS and VMTF here!
     // NOTE this code is also used in extended clause learning, and restricted extended resolution
     if ( activity[v] > 1e100 ) {
@@ -578,8 +580,8 @@ inline void Solver::varBumpActivity(Var v, double inc) {
         order_heap.decrease(v); }
 
 inline void Solver::claDecayActivity() { cla_inc *= (1 / clause_decay); }
-inline void Solver::claBumpActivity (Clause& c) {
-        if ( (c.activity() += cla_inc) > 1e20 ) {
+inline void Solver::claBumpActivity (Clause& c, double inverseRatio) {
+        if ( (c.activity() += cla_inc / inverseRatio) > 1e20 ) {
             // Rescale:
             for (int i = 0; i < learnts.size(); i++)
                 ca[learnts[i]].activity() *= 1e-20;

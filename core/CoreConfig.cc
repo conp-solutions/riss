@@ -39,6 +39,7 @@ CoreConfig::CoreConfig() // add new options here!
  opt_lb_lbd_frozen_clause (_cred, "minLBDFrozenClause", "Protect clauses if their LBD decrease and is lower than (for one turn)", 30, IntRange(0, INT32_MAX)),
  opt_lbd_ignore_l0 (_cred, "lbdIgnL0", "ignore top level literals for LBD calculation", false),
  opt_quick_reduce(_cred,"quickRed","check only first two literals for being satisfied",false),
+ opt_keep_worst_ratio(_cred,"keeWorst","keep this (relative to all learned) number of worst learned clauses during removal", 0, DoubleRange(0, true, 1, true)), 
  
  opt_lb_size_minimzing_clause (_cm, "minSizeMinimizingClause", "The min size required to minimize clause", 30, IntRange(3, INT32_MAX)),
  opt_lb_lbd_minimzing_clause (_cm, "minLBDMinimizingClause", "The min LBD required to minimize clause", 6, IntRange(3, INT32_MAX)),
@@ -75,6 +76,8 @@ CoreConfig::CoreConfig() // add new options here!
  opt_vsids_end("MODS", "vsids-e", "interpolate between VSIDS and VMTF, end value", 1, DoubleRange(0, true, 1, true)),
  opt_vsids_inc("MODS", "vsids-i", "interpolate between VSIDS and VMTF, inc during update", 1, DoubleRange(0, true, 1, true)),
  opt_vsids_distance("MODS", "vsids-d", "interpolate between VSIDS and VMTF, numer of conflits until next update", INT32_MAX, IntRange(0, INT32_MAX)),
+ opt_var_act_bump_mode("MODS", "varActB", "bump activity of a variable (0 as usual, 1 relativ to cls size, 2 relative to LBD)", 0, IntRange(0, 2)),
+ opt_cls_act_bump_mode("MODS", "clsActB", "bump activity of a clause (0 as usual, 1 relativ to cls size, 2 relative to LBD)", 0, IntRange(0, 2)),
  
  opt_LHBR ("MODS", "lhbr", "use lhbr (0=no,1=str,2=trans,str,3=new,4=trans,new)", 0, IntRange(0, 4)),
  opt_LHBR_max ("MODS", "lhbr-max", "max nr of newly created lhbr clauses", INT32_MAX, IntRange(0, INT32_MAX)),

@@ -52,6 +52,7 @@ public:
  IntOption opt_lb_lbd_frozen_clause;
  BoolOption opt_lbd_ignore_l0; // do not consider literals that have toplevel assignments for LBD calculation
  BoolOption opt_quick_reduce; // check clause for being satisfied based on the first two literals only!
+ DoubleOption opt_keep_worst_ratio; // keep this (relative to all learnt clauses) number of worst learnt clauses
 
  IntOption opt_lb_size_minimzing_clause;
  IntOption opt_lb_lbd_minimzing_clause;
@@ -90,6 +91,9 @@ public:
  DoubleOption opt_vsids_end;   // interpolate between VSIDS and VMTF, end value
  DoubleOption opt_vsids_inc;   // interpolate between VSIDS and VMTF, increase
  IntOption opt_vsids_distance; // interpolate between VSIDS and VMTF, update afte rthis number of conflict
+ IntOption opt_var_act_bump_mode; // bump activity of a variable based on the size/LBD of the generated learned clause
+ IntOption opt_cls_act_bump_mode; // bump activity of a learned clause based on the size/LBD of the generated learned clause
+ 
  
  IntOption opt_LHBR;
  IntOption opt_LHBR_max;

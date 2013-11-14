@@ -534,6 +534,9 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     int currentSize = 0;        // count how many literals are inside the resolvent at the moment! (for otfss)
     CRef lastConfl = CRef_Undef;
     
+    varsToBump.clear();clssToBump.clear(); // store info for bumping
+    
+    
     // Generate conflict clause:
     //
     out_learnt.push();      // (leave room for the asserting literal)
@@ -541,10 +544,10 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 
     do{
         assert(confl != CRef_Undef && "there needs to be something to be resolved"); // (otherwise should be UIP)
-        if( confl == CRef_Undef ) {
-	  cerr << "c SPECIALLY BUILD-IN FAIL-CHECK in analyze" << endl;
-	  exit( 35 );
-	}
+//         if( confl == CRef_Undef ) {
+// 	  cerr << "c SPECIALLY BUILD-IN FAIL-CHECK in analyze" << endl;
+// 	  exit( 35 );
+// 	}
         Clause& c = ca[confl];
 	if( config.opt_ecl_debug || config.opt_rer_debug ) cerr << "c resolve on " << p << "(" << index << ") with [" << confl << "]" << c << " -- calculated currentSize: " << currentSize <<  endl;
 	int clauseReductSize = c.size();
@@ -556,8 +559,10 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	  c[0] =  c[1], c[1] = tmp;
 	}
 	
-       if (c.learnt() && dynamicDataUpdates)
-            claBumpActivity(c);
+       if (c.learnt() && dynamicDataUpdates){
+	    if( config.opt_cls_act_bump_mode == 0 ) claBumpActivity(c);
+	    else clssToBump.push( confl );
+       }
 
 #ifdef DYNAMICNBLEVEL		    
 	// DYNAMIC NBLEVEL trick (see competition'09 companion paper)
@@ -582,7 +587,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	    if( config.opt_learn_debug ) cerr << "c level for " << q << " is " << level(var(q)) << endl;
             if (!seen[var(q)] && level(var(q)) > 0){
                 currentSize ++;
-                if( dynamicDataUpdates ) varBumpActivity(var(q));
+                if( dynamicDataUpdates ) varsToBump.push( var(q) );
 		if( config.opt_learn_debug ) cerr << "c set seen for " << q << endl;
                 seen[var(q)] = 1;
                 if (level(var(q)) >= decisionLevel()) {
@@ -737,7 +742,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
                 out_learnt[j++] = out_learnt[i];
             else{
                 Clause& c = ca[reason(var(out_learnt[i]))];
-		int k = k = ((c.size()==2) ? 0:1); // bugfix by Siert Wieringa
+		int k = ((c.size()==2) ? 0:1); // bugfix by Siert Wieringa
                 for (; k < c.size(); k++)
 		{
                     if (!seen[var(c[k])] && level(var(c[k])) > 0){
@@ -800,7 +805,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
   if(lastDecisionLevel.size()>0 && dynamicDataUpdates) {
     for(int i = 0;i<lastDecisionLevel.size();i++) {
       if(ca[reason(var(lastDecisionLevel[i]))].lbd()<lbd)
-	varBumpActivity(var(lastDecisionLevel[i]));
+	varsToBump.push( var(lastDecisionLevel[i]) ) ;
     }
     lastDecisionLevel.clear();
   } 
@@ -811,6 +816,14 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
       seen[var(analyze_toclear[j])] = 0;    // ('seen[]' is now cleared)
     }
 
+  // bump the used clauses!
+  for( int i = 0 ; i < clssToBump.size(); ++ i ) {
+    claBumpActivity( ca[ clssToBump[i] ], config.opt_cls_act_bump_mode == 1 ? out_learnt.size() : lbd );
+  }
+  for( int i = 0 ; i < varsToBump.size(); ++ i ) {
+    varBumpActivity( varsToBump[i], config.opt_var_act_bump_mode == 0 ? 1 : (config.opt_var_act_bump_mode == 1 ? out_learnt.size() : lbd) );
+  }
+    
 #ifdef CLS_EXTRA_INFO // current version of extra info measures the height of the proof. height of new clause is max(resolvents)+1
     extraInfo ++;
 #endif
@@ -1197,7 +1210,8 @@ void Solver::reduceDB()
   resetRestrictedExtendedResolution(); // whenever the clause database is touched, forget about current RER step
   int     i, j;
   nbReduceDB++;
-  sort(learnts, reduceDB_lt(ca));
+  
+  sort(learnts, reduceDB_lt(ca) ); // sort size 2 and lbd 2 to the back!
 
   // We have a lot of "good" clauses, it is difficult to compare them. Keep more !
   if(ca[learnts[learnts.size() / RATIOREMOVECLAUSES]].lbd()<=3) nbclausesbeforereduce +=specialIncReduceDB; 
@@ -1210,9 +1224,10 @@ void Solver::reduceDB()
 
   int limit = learnts.size() / 2;
 
+  const int delStart = (int) (config.opt_keep_worst_ratio * (double)learnts.size()); // keep some of the bad clauses!
   for (i = j = 0; i < learnts.size(); i++){
     Clause& c = ca[learnts[i]];
-    if (c.lbd()>2 && c.size() > 2 && c.canBeDel() &&  !locked(c) && (i < limit)) {
+    if (i >= delStart && c.lbd()>2 && c.size() > 2 && c.canBeDel() &&  !locked(c) && (i < limit)) {
       removeClause(learnts[i]);
       nbRemovedClauses++;
     }
@@ -1514,7 +1529,7 @@ lbool Solver::search(int nof_conflicts)
 		  learnts.push(cr);
 		  attachClause(cr);
 		  
-		  if( dynamicDataUpdates ) claBumpActivity(ca[cr]);
+		  if( dynamicDataUpdates ) claBumpActivity(ca[cr], (config.opt_cls_act_bump_mode == 0 ? 1 : (config.opt_cls_act_bump_mode == 1) ? learnt_clause.size() : nblevels )  ); // bump activity based on its size
 		  if( rerClause != rerDontAttachAssertingLit ) { // attach unit only, if  rer does allow it
 		    if( backtrack_level == otfssBtLevel ) {	// attach the unit only, if the backjumping level is the same as otfss level
 		      if (value(learnt_clause[0]) == l_Undef) {
@@ -1763,7 +1778,11 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
 	      analyze_toclear[0] = pol == 0 ? ~analyze_stack[i]  : analyze_stack[i];
 	      analyze_toclear[1] = pol == 0 ?     mkLit(v,false) :    mkLit(v,true);
 	      CRef cr = ca.alloc(analyze_toclear, config.opt_laEEl ); // create a learned clause?
-	      if( config.opt_laEEl ) { ca[cr].setLBD(2); learnts.push(cr); if(dynamicDataUpdates) claBumpActivity(ca[cr]); }
+	      if( config.opt_laEEl ) { 
+		ca[cr].setLBD(2);
+		learnts.push(cr);
+		if(dynamicDataUpdates) claBumpActivity(ca[cr], (config.opt_cls_act_bump_mode == 0 ? 1 : (config.opt_cls_act_bump_mode == 1) ? analyze_toclear.size() : 2 )  ); // bump activity based on its size); }
+	      }
 	      else clauses.push(cr);
 	      attachClause(cr);
 	      if( config.dx) cerr << "c add as clause: " << ca[cr] << endl;
@@ -1773,12 +1792,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
 	analyze_stack.clear();
   //opt_laEEl
       }
-
-      // TODO: can be cut!
-//      if(dx) if( (pt & p[v]) == (pt & (hit[t])) )   { cerr << "c pos " << v+1 << endl; }
-//      if(dx) if( (pt & p[v]) == (pt & (hit[t+1])) ) { cerr << "c neg " << v+1 << endl; }
-//      if(dx) if( p[v] != 0 ) cerr << "p[" << v+1 << "] = " << p[v] << endl;
-    } // use brackets needs less symbols than writing continue!
+    } 
   }
 
   analyze_toclear.clear();
@@ -1787,11 +1801,9 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   for( int i = 0 ; i < toEnqueue.size(); ++ i ) uncheckedEnqueue( toEnqueue[i] );
 
   // TODO: apply schema to have all learned unit clauses in DRUP! -> have an extra vector!
-  vector< vector< Lit > > clauses;
-  vector<Lit> tmp;
-  
-  if(  0  ) cerr << "c LA " << las << " write clauses: " << endl;
   if (outputsProof()) {
+    vector< vector< Lit > > clauses;
+    vector<Lit> tmp;
     
     if( config.opt_laLevel != 5 ) {
       static bool didIT = false;
@@ -2409,7 +2421,7 @@ bool Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned 
 #endif
   if( config.opt_ecl_as_learned ) { // if parameter says its a learned clause ...
     learnts.push(cr);
-    if(dynamicDataUpdates) claBumpActivity(ca[cr]);
+    if(dynamicDataUpdates) claBumpActivity(ca[cr], (config.opt_cls_act_bump_mode == 1 ? oc.size() : 1 ) ); // LBD is also always 1 !
   } else clauses.push(cr);
   attachClause(cr);
   // set reason!
@@ -2426,7 +2438,7 @@ bool Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned 
     nbDL2++; nbBin ++; // stats
     if( config.opt_ecl_as_learned ) { // add clause
       learnts.push(icr);
-      if( dynamicDataUpdates ) claBumpActivity(ca[icr]);
+      if( dynamicDataUpdates ) claBumpActivity(ca[icr], (config.opt_cls_act_bump_mode == 1 ? oc.size() : 1 ) ); // LBD is also always 1 !
     } else clauses.push(icr);
     attachClause(icr);
     oc[1] = ~l2; // for not x, not l2
@@ -2435,10 +2447,10 @@ bool Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned 
     if( config.opt_ecl_debug) cerr << "c add clause " << ca[cr] << endl;
     nbDL2++; nbBin ++; // stats
     if( config.opt_ecl_as_learned ) { // add clause
-      learnts.push(icr);
-      if( dynamicDataUpdates ) claBumpActivity(ca[icr]);
-    } else clauses.push(icr);
-    attachClause(icr);
+      learnts.push(cr);
+      if( dynamicDataUpdates ) claBumpActivity(ca[cr], (config.opt_cls_act_bump_mode == 1 ? oc.size() : 1 ) ); // LBD is also always 1 !);
+    } else clauses.push(cr);
+    attachClause(cr);
   }
 
   // set the activity of the fresh variable (Huang used average of the two literals)
@@ -2592,7 +2604,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	  nbDL2++; nbBin ++; // stats
 	  if( config.opt_rer_as_learned ) { // add clause
 	    learnts.push(icr);
-	    if( dynamicDataUpdates ) claBumpActivity(ca[icr]);
+	    if( dynamicDataUpdates ) claBumpActivity(ca[icr], (config.opt_cls_act_bump_mode == 1 ? oc.size() : 1 ));
 	  } else clauses.push(icr);
 	  attachClause(icr); // all literals should be unassigned
 	}
@@ -2607,7 +2619,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	  if( config.opt_rer_debug) cerr << "c add clause " << ca[icr] << endl;
 	  if( config.opt_rer_as_learned ) { // add clause
 	    learnts.push(icr);
-	    if( dynamicDataUpdates ) claBumpActivity(ca[icr]);
+	    if( dynamicDataUpdates ) claBumpActivity(ca[icr], (config.opt_cls_act_bump_mode == 0 ? 1 : ( config.opt_cls_act_bump_mode == 1 ? oc.size() : rerLits.size() )) );
 	  } else clauses.push(icr);
 	  attachClause(icr); // at least the first two literals should be unassigned!
 	  if( !config.opt_rer_as_learned ) {
