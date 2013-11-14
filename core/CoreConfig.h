@@ -36,7 +36,7 @@ public:
  */
  BoolOption opt_solve_stats;
 #if defined TOOLVERSION
- const opt_learn_debug = false;
+ const bool opt_learn_debug;
 #else
  BoolOption opt_learn_debug;
 #endif
@@ -145,7 +145,7 @@ public:
  BoolOption opt_otfssL;
  IntOption opt_otfssMaxLBD;
 #if defined TOOLVERSION
- const bool debug_otfss = false;
+ const bool debug_otfss;
 #else
  BoolOption debug_otfss;
 #endif
@@ -185,7 +185,7 @@ public:
  const bool opt_ics_shrinkNew; // shrink the kept learned clauses in the very same run?! (makes only sense if the other clauses are kept!)
  const double opt_ics_LBDpercent;  // only look at a clause if its LBD is less than this percent of the average of the clauses that are looked at
  const double opt_ics_SIZEpercent; // only look at a clause if its size is less than this percent of the average size of the clauses that are looked at
- const bool opt_ics_debug = false;
+ const bool opt_ics_debug;
 
 #else // version > 400
  BoolOption opt_extendedClauseLearning; // perform extended clause learning
@@ -196,7 +196,7 @@ public:
  IntOption opt_ecl_maxLBD;  // maximum LBD to perform ecl
  IntOption opt_ecl_newAct;  // how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean
 #if defined TOOLVERSION
- const bool opt_ecl_debug = false;
+ const bool opt_ecl_debug;
 #else
  BoolOption opt_ecl_debug; // enable debug output
 #endif
@@ -214,7 +214,7 @@ public:
  IntOption  opt_rer_windowSize;  // number of clauses needed, to perform rer
  IntOption  opt_rer_newAct;  // how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean
 #if defined TOOLVERSION
- const bool opt_rer_debug = false;
+ const bool opt_rer_debug;
 #else
  BoolOption opt_rer_debug; // enable debug output
 #endif
@@ -228,7 +228,7 @@ public:
  DoubleOption opt_ics_LBDpercent;  // only look at a clause if its LBD is less than this percent of the average of the clauses that are looked at
  DoubleOption opt_ics_SIZEpercent; // only look at a clause if its size is less than this percent of the average size of the clauses that are looked at
 #if defined TOOLVERSION
- const bool opt_ics_debug = false;
+ const bool opt_ics_debug;
 #else
  BoolOption opt_ics_debug; // enable interleaved clause strengthening debug output
 #endif

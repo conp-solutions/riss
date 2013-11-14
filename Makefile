@@ -20,6 +20,8 @@ all: rs
 # make a std binary
 riss3g: MYCFLAGS += -DTOOLVERSION=300 -DNOVERBHELP
 riss3g: rs
+riss3gExt: MYCFLAGS += -DTOOLVERSION=351 -DNOVERBHELP 
+riss3gExt: rs
 
 d: rissd
 rs: rissRS

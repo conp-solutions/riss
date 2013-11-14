@@ -332,7 +332,11 @@ void Solver::attachClause(CRef cr) {
 void Solver::detachClause(CRef cr, bool strict) {
     const Clause& c = ca[cr];
     
-    assert(c.size() > 1);
+    // assert(c.size() > 1 && "there should not be unit clauses - on the other hand, LHBR and OTFSS could create unit clauses");
+//     if( c.size() == 1 ) {
+//       cerr << "c extra bug - unit clause is removed" << endl;
+//       exit( 36 );
+//     }
     if(c.size()==2) {
       if (strict){
         remove(watchesBin[~c[0]], Watcher(cr, c[1]));
@@ -978,6 +982,8 @@ CRef Solver::propagate()
 	  
 	  Lit imp = wbin[k].blocker;
 	  
+	  assert( ca[ wbin[k].cref ].size() == 2 && "in this list there can only be binary clauses" );
+	  
 	  if( config.opt_learn_debug ) cerr << "c checked binary clause " << ca[wbin[k].cref ] << " with implied literal having value " << toInt(value(imp)) << endl;
 	  
 	  if(value(imp) == l_False) {
@@ -1032,6 +1038,8 @@ CRef Solver::propagate()
 	  
 	    if( config.opt_learn_debug ) cerr << "c check clause " << ca[i->cref] << endl;
 	  
+	    assert( ca[ i->cref ].size() > 2 && "in this list there can only be clauses with more than 2 literals" );
+	    
             // Try to avoid inspecting the clause:
             Lit blocker = i->blocker;
             if (value(blocker) == l_True){
@@ -1435,9 +1443,16 @@ lbool Solver::search(int nof_conflicts)
 		  c[0] = c[1]; c[1] = c[2]; c.removePositionUnsorted(2); // move the two literals with the highest levels forward!
 		} else if( c.size() == 2 ) { // clause becomes unit, no need to attach it again!
 		  assert( otfssBtLevel == 0 && "if we found a single unit, backtracking has to be performed to level 0!" );
-		  detachClause(otfssCls[i],true);
-		  c[0] = c[1]; c.removePositionUnsorted(1);
+		  const Lit tmp = c[0]; c[0] = c[1]; c[1] = tmp; // set the clause to be able to be removed adequately - unit will be enqued anyways!
+		  c.mark(1);
 		  otfssUnits ++;
+		  // the clause is a unit, handle it!!
+		  // assert( c.size() == 1 && "this has to be a unit clause");
+		  assert( otfssBtLevel == 0 && "if its abinary clause, we need to jump back to level 0!" );
+		  if( otfssBtLevel != 0 ) {
+		    cerr << "c build in bug-check -- otfss backjump level set wrong" << endl;
+		    exit(36);
+		  }
 		} else { // c.size() == 3
 		  detachClause(otfssCls[i],true); // remove from watch lists for long clauses!
 		  c[0] = c[1]; c.removePositionUnsorted(1); // shrink clause to binary clause!
@@ -2102,6 +2117,9 @@ printf("c ==================================[ Search Statistics (every %6d confl
       printf("c =========================================================================================================\n");
     
     if (verbosity >= 1 || config.opt_solve_stats) {
+#if defined TOOLVERSION && TOOLVERSION < 400
+
+#else
 	    const double overheadC = totalTime.getCpuTime() - ( propagationTime.getCpuTime() + analysisTime.getCpuTime() + extResTime.getCpuTime() + preprocessTime.getCpuTime() + inprocessTime.getCpuTime() ); 
 	    const double overheadW = totalTime.getWallClockTime() - ( propagationTime.getWallClockTime() + analysisTime.getWallClockTime() + extResTime.getWallClockTime() + preprocessTime.getWallClockTime() + inprocessTime.getWallClockTime() );
 	    printf("c Tinimt-Ratios: ratioCpW: %.2lf ,overhead/Total %.2lf %.2lf \n", 
@@ -2130,6 +2148,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
 	    printf("c i.cls.strengthening: %.2lf seconds, %d calls, %d candidates, %d droppedBefore, %d shrinked, %d shrinkedLits\n", icsTime.getCpuTime(), icsCalls, icsCandidates, icsDroppedCandidates, icsShrinks, icsShrinkedLits );
 	    printf("c decisionClauses: %d\n", learnedDecisionClauses );
 	    printf("c agility restart rejects: %d\n", agility_rejects );
+#endif
     }
 
     if (status == l_True){
@@ -2479,6 +2498,7 @@ bool Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned 
   
   // finally, remove last two lits from learned clause and replace them with the negation of the fresh variable!
   currentLearnedClause.shrink(1);
+  assert( currentLearnedClause.size() > 1 && "we do not want to work on unit clauses" );
   currentLearnedClause[ currentLearnedClause.size() -1 ] = mkLit(x,true); // add negated clause
   
   if( config.opt_ecl_debug) cerr << "c final learned clause: " << currentLearnedClause << endl;
@@ -2747,6 +2767,7 @@ void Solver::disjunctionReplace( Lit p, Lit q, const Lit x, bool inLearned, bool
 	c[firstHit] = x;
 	c[secondHit] = c[ c.size() - 1 ];
 	c.shrink(1);
+	assert( c.size() > 1 && "do not produce unit clauses!" );
 	if( firstHit < 2 ) attachClause( cls[i] );
       }
 

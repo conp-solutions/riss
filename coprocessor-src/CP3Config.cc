@@ -59,8 +59,16 @@ CP3Config::CP3Config() // add new options here!
   opt_up          (_cat2, "up",            "Use Unit Propagation during preprocessing", false),
   opt_subsimp     (_cat2, "subsimp",       "Use Subsumption during preprocessing", false),
   opt_hte         (_cat2, "hte",           "Use Hidden Tautology Elimination during preprocessing", false),
+#if defined TOOLVERSION && TOOLVERSION < 355
+  opt_bce ( false ),
+#else
   opt_bce         (_cat2, "bce",           "Use Blocked Clause Elimination during preprocessing", false),
+#endif
+#if defined TOOLVERSION && TOOLVERSION < 360
+  opt_ent ( false ),
+#else
   opt_ent         (_cat2, "ent",           "Use checking for entailed redundancy during preprocessing", false),
+#endif
   opt_cce         (_cat2, "cce",           "Use (covered) Clause Elimination during preprocessing", false),
   opt_ee          (_cat2, "ee",            "Use Equivalence Elimination during preprocessing", false),
   opt_bve         (_cat2, "bve",           "Use Bounded Variable Elimination during preprocessing", false),
@@ -179,8 +187,8 @@ bva_debug (_cat_bva, "bva-debug",       "Debug Output of BVA", 0, IntRange(0, 4)
 
 #if defined TOOLVERSION  && TOOLVERSION < 350
 opt_bvaAnalysis (false),
-opt_Xbva (0),
-opt_Ibva (0),
+opt_Xbva (false),
+opt_Ibva (false),
 opt_bvaAnalysisDebug (0),
 opt_bva_Xlimit (100000000),
 opt_bva_Ilimit (100000000),
@@ -226,7 +234,11 @@ opt_dense_keep_assigned  (_cat_dense, "cp3_keep_set",   "keep already assigned l
 //
 // Entailed
 //
+#if defined TOOLVERSION && TOOLVERSION < 360
+opt_entailed_minClsSize (INT32_MAX),
+#else
 opt_entailed_minClsSize  (_cat_entailed, "ent-min",    "minimum clause size that is tested", 2, IntRange(2, INT32_MAX)),
+#endif
 #if defined TOOLVERSION 
 entailed_debug(0),
 #else
@@ -510,11 +522,11 @@ opt_xor_keepUsed      (_cat_xor, "xorKeepUsed",  "continue to simplify kept xors
 opt_xor_findSubsumed  (_cat_xor, "xorFindSubs",  "try to recover XORs that are partially subsumed", true),
 opt_xor_findResolved  (_cat_xor, "xorFindRes",   "try to recover XORs including resolution steps", false),
 #if defined TOOLVERSION 
-opt_xor_debug( 0)
+opt_xor_debug(0),
 #else
-opt_xor_debug             (_cat_xor, "xor-debug",       "Debug Output of XOR reasoning", 0, IntRange(0, 5))
+opt_xor_debug             (_cat_xor, "xor-debug",       "Debug Output of XOR reasoning", 0, IntRange(0, 5)),
 #endif
-
+ dummy (0)
 {}
 
 void CP3Config::parseOptions(int& argc, char** argv, bool strict)

@@ -59,8 +59,16 @@ public:
  BoolOption opt_up          ;
  BoolOption opt_subsimp     ;
  BoolOption opt_hte         ;
+#if defined TOOLVERSION && TOOLVERSION < 355
+ const bool opt_bce;
+#else
  BoolOption opt_bce         ;
- BoolOption opt_ent         ;
+#endif
+#if defined TOOLVERSION && TOOLVERSION < 360
+  const bool opt_ent;
+#else
+  BoolOption opt_ent        ;
+#endif
  BoolOption opt_cce         ;
  BoolOption opt_ee          ;
  BoolOption opt_bve         ;
@@ -119,7 +127,7 @@ public:
 //
 
 #if defined TOOLVERSION && TOOLVERSION < 302
-  const bool opt_par_bve    ;
+  const int opt_par_bve    ;
   const int  opt_bve_verbose;
 #else
  IntOption opt_par_bve         ;
@@ -226,7 +234,12 @@ BoolOption opt_dense_keep_assigned;
 //
 // Entailed
 //
-IntOption  opt_entailed_minClsSize;
+#if defined TOOLVERSION && TOOLVERSION < 360
+const int opt_entailed_minClsSize;
+#else
+IntOption opt_entailed_minClsSize;
+#endif
+
 #if defined TOOLVERSION 
 const int entailed_debug;
 #else
@@ -507,11 +520,14 @@ BoolOption opt_sls_adopt      ;
  BoolOption opt_xor_keepUsed    ;
  BoolOption opt_xor_findSubsumed;
  BoolOption opt_xor_findResolved;
-#if defined TOOLVERSION 
+ 
+#if defined TOOLVERSION
  const int opt_xor_debug;
 #else
  IntOption  opt_xor_debug;
 #endif
+private:
+ int dummy;
 };
  
 }
