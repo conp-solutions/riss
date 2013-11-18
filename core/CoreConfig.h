@@ -35,6 +35,7 @@ public:
  * List of all used options, public members, can be changed and read directly
  */
  BoolOption opt_solve_stats;
+ BoolOption ppOnly; // interrupt after preprocessing
 #if defined TOOLVERSION
  const bool opt_learn_debug;
 #else

@@ -874,7 +874,7 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData & data, H
             if (!resolve(p, n, v, ps))
             {
                // | resolvent | > 1
-               if (ps.size()>1)
+               if (ps.size()==1)
                {
                 data_lock.lock();
                 lbool status = data.enqueue(resolvent[0]); //check for level 0 conflict

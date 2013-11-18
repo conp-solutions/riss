@@ -623,7 +623,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
         if( !isOnlyUnit && units > 0 ) break; // do not consider the next clause, because we cannot continue with units
         
         // Select next clause to look at:
-        while (!seen[var(trail[index--])]); // cerr << "c check seen for literal " << (sign(trail[index]) ? "-" : " ") << var(trail[index]) + 1 << " at index " << index << " and level " << level( var( trail[index] ) )<< endl;
+        while (!seen[var(trail[index--])]) {} // cerr << "c check seen for literal " << (sign(trail[index]) ? "-" : " ") << var(trail[index]) + 1 << " at index " << index << " and level " << level( var( trail[index] ) )<< endl;
         p     = trail[index+1];
 	lastConfl = confl;
         confl = reason(var(p));
@@ -2073,6 +2073,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
 	    preprocessTime.stop();
 	  }
          if (verbosity >= 1) printf("c =========================================================================================================\n");
+	 if( config.ppOnly ) return l_Undef; 
     }
     
     if( config.opt_rer_debug ) {
@@ -2966,5 +2967,6 @@ void Solver::setPreprocessor(Coprocessor::Preprocessor* cp)
 
 void Solver::setPreprocessor(Coprocessor::CP3Config* _config)
 {
+  assert( coprocessor == 0 && "there should not exist a preprocessor when this method is called" );
   coprocessor = new Coprocessor::Preprocessor( this, *_config ); 
 }

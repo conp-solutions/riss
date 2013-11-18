@@ -91,7 +91,7 @@ int main(int argc, char** argv)
         coreConfig.parseOptions(argc, argv, true);
 
 	Coprocessor::CP3Config cp3config;
-	coreConfig.parseOptions(argc, argv, true);
+	cp3config.parseOptions(argc, argv, true);
 	
         Solver S(coreConfig);
 	S.setPreprocessor(&cp3config); // tell solver about preprocessor
@@ -165,7 +165,7 @@ int main(int argc, char** argv)
 	    signal(SIGINT, SIGINT_interrupt);
 	    signal(SIGXCPU,SIGINT_interrupt);
 
-	    Preprocessor preprocessor( &S );
+	    Preprocessor preprocessor( &S , cp3config);
 	    preprocessor.preprocess();
 	    
 	    double simplified_time = cpuTime();
@@ -211,7 +211,8 @@ int main(int argc, char** argv)
 		S.setConfBudget(1); // solve until first conflict!
 		S.verbosity = 0;
 		vec<Lit> dummy;
-		S.useCoprocessor = false;
+		S.useCoprocessorPP = false;
+		S.useCoprocessorIP = false;
 		ret = S.solveLimited(dummy);
 	      }
 	      if( ret == l_True ) {
@@ -253,7 +254,7 @@ int main(int argc, char** argv)
 //
 // process undo here!
 //
-	  Preprocessor preprocessor( &S );
+	  Preprocessor preprocessor( &S , cp3config );
 	  if( undoFile == 0) {
 	    cerr << "c ERROR: no undo file specified" << endl;
 	    exit(1);

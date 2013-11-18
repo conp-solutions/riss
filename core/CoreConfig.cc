@@ -21,6 +21,7 @@ static const char* _cm = "CORE -- MINIMIZE";
 CoreConfig::CoreConfig() // add new options here!
 :
  opt_solve_stats (_cat, "solve_stats", "print stats about solving process", false),
+ ppOnly (_cat, "ppOnly", "interrupts search after preprocessing", false),
 #if defined TOOLVERSION
  opt_learn_debug(false),
 #else
