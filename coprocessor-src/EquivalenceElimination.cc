@@ -1775,7 +1775,7 @@ void EquivalenceElimination::eqTarjan(int depth, Lit l, Lit list, CoprocessorDat
     
     if( depth > 32000 ) {
       static bool didit = false;
-      if( !didit ) { cerr << "c recursive EE algorithm reached depth 32K, get the iterative SCC version!" << endl; didit = true; }
+      if( !didit ) { cerr << "c recursive EE algorithm reached depth 32K, use the iterative version!" << endl; didit = true; }
       return; // stop recursion here, because it can break things when too many recursive calls are done!
     }
     
@@ -1956,6 +1956,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
        data.clss.clear();
 	for( int j = start ; j < i; ++ j ) {
 	  if ( ee[j] == repr ) continue;
+	  if( !data.doNotTouch( var(ee[j]) ) ) continue; // only create these clauses for the "do not touch" literals
 	  data.addCommentToProof("add clauses for doNotTouch variables");
 	  proofClause.clear(); // create repr <-> ee[j] clauses and add them!
 	  proofClause.push_back( ~repr );proofClause.push_back( ee[j] );
@@ -1966,6 +1967,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	  proofClause[0] = repr; proofClause[1] = ~ee[j];
           cr = ca.alloc(proofClause, false); 
 	  data.addToProof(ca[cr]); // tell proof about the new clause!
+	  data.clss.push_back(cr);
 	  ca[cr].setExtraInformation( data.defaultExtraInfo() ); // setup extra information for this clause!
 	}
        
@@ -2104,6 +2106,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 
        // TODO take care of untouchable literals!
 	for( int j = 0 ; j < data.clss.size(); ++ j ) {
+	  if( config.ee_debug_out > 2 ) cerr << "c clause added back: " << ca[data.clss[j]] << endl;
 	  data.addClause( data.clss[j] );
 	  data.getClauses().push( data.clss[j] );
 	}

@@ -48,7 +48,7 @@ CP3Config::CP3Config() // add new options here!
   opt_inc_inp     (_cat, "inc-inp",        "increase technique limits per inprocess step", false),
 
 #if defined TOOLVERSION && TOOLVERSION < 400
-        opt_printStats ( false), // do not print stats, if restricted binary is produced
+        opt_printStats ( true ), // do not print stats, if restricted binary is produced
         opt_verbose ( 0),        // do not talk during computation!
 #else
         opt_printStats  (_cat, "cp3_stats",      "Print Technique Statistics", false),

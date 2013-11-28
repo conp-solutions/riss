@@ -19,7 +19,6 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
 // to represent formulas and the data type of truth values
-#include <vector>
 #include "stdint.h"
 
 
@@ -40,6 +39,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 // #pragma GCC visibility push(default)
 // #pragma GCC visibility pop // now we should have default!
 
+// only if compiling with g++! -> has to be a way with defines!
 extern "C" {
 
   /** initialize a preprocessor instance, and return a pointer to the maintain structure */
@@ -49,10 +49,10 @@ extern "C" {
   extern void CPpreprocess(void* preprocessor);
   
   /** destroy the preprocessor and set its value to 0 */
-  extern void CPdestroy(void*& preprocessor);
+  extern void CPdestroy(void** preprocessor);
   
   /** parse the options of the command line and pass them to the preprocessor */
-  extern void CPparseOptions (void* preprocessor, int& argc, char** argv, bool strict = false);
+  extern void CPparseOptions (void* preprocessor, int* argc, char** argv, int strict);
   
   /** set CP3 to simulate predefined behavior 
    * 1: SAT Competition 2013 (be careful, because it contains the dense-option)
@@ -66,10 +66,14 @@ extern "C" {
   /** return the version of the library verison */
   extern float CPversion (void* preprocessor);
   
-  /** output the current internal formula into the specified variable
-   * Note: the separation symbols between single clauses is the integer 0
-   */
-  extern void CPwriteFormula(void* preprocessor, std::vector<int>& formula );
+  /** there is another literal inside the sat solver */
+  extern int CPhasNextOutputLit(void* preprocessor);
+  
+  /** give the actual next literal */
+  extern int CPnextOutputLit(void* preprocessor);
+  
+  /** start output from the beginning */
+  extern void CPresetOutput(void* preprocessor);
   
   /** freeze the given variable, so that it is not altered semantically 
    * Note: the variable might still be pushed, so that it is necessary to call giveNewLit()
@@ -85,7 +89,22 @@ extern "C" {
   /** recreate the variables of the given model from the state of the preprocessor 
    *  Note: will copy the model twice to be able to change the data type of the model into minisat vector Minisat::Vec
    */
-  extern void CPpostprocessModel(void* preprocessor, std::vector<uint8_t>& model );
+  // extern void CPpostprocessModel(void* preprocessor, std::vector<uint8_t>& model );
+  
+  /** reset the model input procedure, and the postprocessing procedure */
+  extern void CPresetModel(void* preprocessor);
+  
+  /** pass a (satisfied) literal of the current model to the preprocessor */
+  extern void CPgiveModelLit(void* preprocessor, int literal);
+  
+  /** pass a (satisfied) literal of the current model to the preprocessor */
+  extern void CPpostprocessModel(void* preprocessor);
+  
+  /** extract the next model literal from the postprocessed model*/
+  extern int CPgetFinalModelLit(void* preprocessor);
+  
+  /** return the number of variables in the postprocessed model */
+  extern int CPmodelVariables(void* preprocessor);
 
   /** returns the number of variables of the formula that is inside the preprocessor
    *  Note: the number of variables can be higher inside the preprocessor, if techniques like
@@ -93,11 +112,17 @@ extern "C" {
    */
   extern int CPnVars(void* preprocessor);
   
+  /** return the number of clauses that are inside the solver */
+  extern int CPnClss(void* preprocessor);
+  
+  /** return the number of actual literals inside the formula */
+  extern int CPnLits(void* preprocessor);
+  
   /** return state of preprocessor */
-  extern bool CPok(void* preprocessor);
+  extern int CPok(void* preprocessor);
   
   /** return whether a given literal is already mapped to false */
-  extern bool CPlitFalsified(void* preprocessor, int lit);
+  extern int CPlitFalsified(void* preprocessor, int lit);
 }
 
 // #pragma GCC visibility pop // back to what we had before

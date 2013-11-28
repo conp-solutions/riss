@@ -53,12 +53,25 @@ static inline double Minisat::wallClockTime(void) { return (double) clock() / CL
 #include <unistd.h>
 #include <time.h>
 
+#ifdef __APPLE__
+#include <mach/clock.h>
+#include <mach/mach.h>
+#endif
+
 static inline double Minisat::cpuTime(void) {
     struct rusage ru;
     getrusage(RUSAGE_SELF, &ru);
     return (double)ru.ru_utime.tv_sec + (double)ru.ru_utime.tv_usec / 1000000; }
 
 
+#ifndef __APPLE__ // Mac OS does not support the linux wall clock
+static inline double Minisat::wallClockTime(void)
+{
+    struct timespec timestamp;
+    clock_gettime(CLOCK_MONOTONIC, &timestamp);
+    return ((double) timestamp.tv_sec) + ((double) timestamp.tv_nsec / 1000000000);
+}
+#else // use the Mac wall clock instead 
 static inline double Minisat::wallClockTime(void)
 {
     struct timespec timestamp;
@@ -67,6 +80,9 @@ static inline double Minisat::wallClockTime(void)
 }
 #endif
 
+#endif
+
+// implement clocks independent on the operating system
 
 /** simple class that combines cpu and wall clock time */
 class Clock {

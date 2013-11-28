@@ -257,8 +257,10 @@ protected:
     vec<lbool>          assigns;          // The current assignments.
     vec<char>           polarity;         // The preferred polarity of each variable.
     vec<char>           decision;         // Declares if a variable is eligible for selection in the decision heuristic.
+public:
     vec<Lit>            trail;            // Assignment stack; stores all assigments made in the order they were made.
-        vec<int>            nbpos;
+protected:
+    vec<int>            nbpos;
     vec<int>            trail_lim;        // Separator indices for different decision levels in 'trail'.
     vec<VarData>        vardata;          // Stores reason and level for each variable.
     int                 qhead;            // Head of queue (as index into the trail -- no more explicit propagation queue in MiniSat).
@@ -461,6 +463,9 @@ protected:
   double agility;
   double agility_decay;
   int agility_rejects;
+  
+  // from CSP solver heuristics
+  int dontTrustPolarity; // at which level should the given polarity be negated?
   
   // stats for learning clauses
   double totalLearnedClauses, sumLearnedClauseSize, sumLearnedClauseLBD, maxLearnedClauseSize;

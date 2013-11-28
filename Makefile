@@ -8,8 +8,9 @@
 CORE      = ../core
 MTL       = ../mtl
 VERSION   = 
-MYCFLAGS    = -I.. -I. -I$(MTL) -I$(CORE) $(ARGS) -Wall -Wextra -ffloat-store -Wno-unused-parameter -Wno-sign-compare -Wno-parentheses $(VERSION)
-MYLFLAGS    = -lpthread -lrt $(ARGS)
+MYCFLAGS  = -I.. -I. -I$(MTL) -I$(CORE) $(ARGS) -Wall -Wextra -ffloat-store -Wno-unused-parameter -Wno-sign-compare -Wno-parentheses $(VERSION)
+LIBRT     = -lrt
+MYLFLAGS  = -lpthread $(LIBRT) $(ARGS)
 
 COPTIMIZE ?= -O3
 
@@ -17,12 +18,18 @@ all: rs
 
 # shortcuts
 
-# make a std binary
+# make a std binary of riss3g, riss3gext or the related preprocessor
 riss3g: MYCFLAGS += -DTOOLVERSION=300 -DNOVERBHELP
 riss3g: rs
 riss3gExt: MYCFLAGS += -DTOOLVERSION=351 -DNOVERBHELP 
 riss3gExt: rs
+cp3Ext: MYCFLAGS += -DTOOLVERSION=351 -DNOVERBHELP 
+cp3Ext: crs
+libsoExt: MYCFLAGS += -DTOOLVERSION=351 -DNOVERBHELP 
+libsoExt: libso
 
+
+# shortcuts to build some targets
 d: rissd
 rs: rissRS
 
@@ -37,7 +44,9 @@ crs: coprocessorRS
 
 q: qprocessorRS
 qd: qprocessord
- 
+
+#
+# actual commands for building stuff
 #
 # build the bmc tool
 #
@@ -55,7 +64,7 @@ aigbmc-abcs: libs
 	
 # build the solver
 riss: always
-	cd core;   make INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g ..
+	cd core; make r INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g ..
 
 rissRS: always
 	cd core; make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g_static ../riss3g
@@ -76,11 +85,11 @@ libs: always
 	cd core;   make libs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; rm lib.a; mv lib_standard.a ../libriss3g.a
 libso: always
 	cd core;   make libso INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv lib_release.so ../libcp3.so
-#	strip -g -S -d --strip-debug -X -w --strip-symbol=*Coprocessor* --strip-symbol=*Minisat* libcp3.so
+	strip -g -S -d --strip-debug -X -w --strip-symbol=*Coprocessor* --strip-symbol=*Minisat* libcp3.so
 
 # coprocessor
 coprocessor: always
-	cd coprocessor-src;  make INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv coprocessor ..
+	cd coprocessor-src;  make r INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv coprocessor ..
 
 coprocessorRS: always
 	cd coprocessor-src;  make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv coprocessor_static ../coprocessor
@@ -98,6 +107,9 @@ classifiers: always
 # simple qbf preprocessor
 qprocessord: always
 	cd qprocessor-src;  make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv qprocessor_debug ../qprocessor
+
+qprocessor: always
+	cd qprocessor-src;  make r INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv qprocessor_debug ../qprocessor
 	
 qprocessorRS: always
 	cd qprocessor-src;  make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv qprocessor_static ../qprocessor

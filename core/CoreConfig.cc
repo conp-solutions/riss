@@ -80,6 +80,8 @@ CoreConfig::CoreConfig() // add new options here!
  opt_var_act_bump_mode("MODS", "varActB", "bump activity of a variable (0 as usual, 1 relativ to cls size, 2 relative to LBD)", 0, IntRange(0, 2)),
  opt_cls_act_bump_mode("MODS", "clsActB", "bump activity of a clause (0 as usual, 1 relativ to cls size, 2 relative to LBD)", 0, IntRange(0, 2)),
  
+ opt_dontTrustPolarity("MODS", "dontTrust", "change decision literal polarity once in a while", false),
+ 
  opt_LHBR ("MODS", "lhbr", "use lhbr (0=no,1=str,2=trans,str,3=new,4=trans,new)", 0, IntRange(0, 4)),
  opt_LHBR_max ("MODS", "lhbr-max", "max nr of newly created lhbr clauses", INT32_MAX, IntRange(0, INT32_MAX)),
  opt_LHBR_sub ("MODS", "lhbr-sub", "check whether new clause subsumes the old clause", false),

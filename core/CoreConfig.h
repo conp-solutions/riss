@@ -95,6 +95,7 @@ public:
  IntOption opt_var_act_bump_mode; // bump activity of a variable based on the size/LBD of the generated learned clause
  IntOption opt_cls_act_bump_mode; // bump activity of a learned clause based on the size/LBD of the generated learned clause
  
+ BoolOption opt_dontTrustPolarity; // negate returned literals polarity once in a while
  
  IntOption opt_LHBR;
  IntOption opt_LHBR_max;

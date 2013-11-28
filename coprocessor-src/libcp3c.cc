@@ -12,6 +12,12 @@ struct libcp3 {
   Minisat::Solver* solver;
   Coprocessor::CP3Config* cp3config;
   Coprocessor::Preprocessor* cp3;
+  // for outputting stuff:
+  int outputCls; // current clause that is printed
+  int outputLit; // current literal of current clause that is printed
+  int modelLit; // current literal of model that is printed
+  vec<lbool> model; // current model
+  libcp3 () : outputCls(0), outputLit(0), modelLit(0) {} // default constructor to ensure everything is set to 0
 };
 
 // #pragma GCC visibility push(hidden)
@@ -34,15 +40,15 @@ extern "C" {
   }
 
   void  
-  CPdestroy(void*& preprocessor)
+  CPdestroy(void** preprocessor)
   {
-    libcp3* cp3 = (libcp3*) preprocessor;
-    delete cp3->cp3;
-    delete cp3->cp3config;
-    delete cp3->solver;
-    delete cp3->solverconfig;
-    delete cp3;
-    preprocessor = 0;
+    libcp3** cp3 = (libcp3**) preprocessor;
+    delete (*cp3)->cp3config;
+    delete (*cp3)->solver;
+    // delete (*cp3)->cp3; // not necessary, because solver is already killing it
+    delete (*cp3)->solverconfig;
+    delete (*cp3);
+    (*cp3) = 0;
   }
 
   void 
@@ -51,23 +57,108 @@ extern "C" {
     cp3->cp3->preprocess();
   }
 
-  void  
-  CPwriteFormula(void* preprocessor, std::vector< int >& formula)
-  {
+  int 
+  CPhasNextOutputLit(void* preprocessor) { 
     libcp3* cp3 = (libcp3*) preprocessor;
-    cp3->cp3->dumpFormula(formula);
+    if( cp3->outputCls < cp3->solver->clauses.size() + cp3->solver->trail.size() ) return 1; // there are more clauses to go
+    if( cp3->outputCls >= cp3->solver->clauses.size() + cp3->solver->trail.size() ) return 0; // all clauses have been skipped
+    // here, only the very last clause needs to be considered!
+    if( cp3->outputCls == cp3->solver->trail.size() + cp3->solver->clauses.size() && cp3->outputLit <= 1 ) return 1; // have seen at most one literal of the very last clause yet (there is at least the termination literal)
+    if( cp3->outputCls > cp3->solver->trail.size() && // there is a longer clause
+      cp3->outputLit <= cp3->solver->ca[ cp3->solver->clauses[ cp3->solver->clauses.size() - 1 ] ].size() // have seen all its literals, but not the termination symbol
+    ) return 1;
+    return 0;
+  }
+  
+  int 
+  CPnextOutputLit(void* preprocessor) {   
+    if( !CPhasNextOutputLit(preprocessor) ) return 0;
+    libcp3* cp3 = (libcp3*) preprocessor;
+    //cerr << "c ask for literal " << cp3->outputLit << " if cls " << cp3->outputCls << " (trail: " << cp3->solver->trail.size() << ", clss: " << cp3->solver->clauses.size() << ")" << endl;
+    if( cp3->outputCls < cp3->solver->trail.size() ) { // currently reading the trail
+      if( cp3->outputLit >= 1 ) { // reached end of unit clause?
+	cp3->outputLit = 0;
+	cp3->outputCls ++;
+	return 0; // terminate current clause
+      } 
+      const Lit l = cp3->solver->trail[ cp3->outputCls ];
+      cp3->outputLit ++;
+      return sign(l) ? ( -var(l) -1 ) : (var(l) +1);
+    }
+    
+    if( cp3->outputCls >= cp3->solver->trail.size() + cp3->solver->clauses.size() ) return 2 << 31; // undefined behavior!
+    
+    // reading the clauses - jumping over the trail
+    const Clause& c = cp3->solver->ca[  cp3->solver->clauses[cp3->outputCls - cp3->solver->trail.size()] ];
+    if (c.size() <= cp3->outputLit) { // reached end of the clause
+	cp3->outputLit = 0; cp3->outputCls ++;
+	return 0; // terminate current clause
+    }
+    const Lit l = c[ cp3->outputLit ]; 
+    cp3->outputLit ++;
+    return sign(l) ? ( -var(l) -1 ) : (var(l) +1);
+  }
+  
+  void 
+  CPresetOutput(void* preprocessor) {
+    libcp3* cp3 = (libcp3*) preprocessor;
+    cp3->outputCls = 0; cp3->outputLit = 0;
   }
 
-    void  
-  CPpostprocessModel(void* preprocessor, std::vector< uint8_t >& model)
-  {
+//     void  
+//   CPpostprocessModel(void* preprocessor, std::vector< uint8_t >& model)
+//   {
+//     libcp3* cp3 = (libcp3*) preprocessor;
+//     // dangerous line, since the size of the elements inside the vector might be different
+//     
+//     for( int i = 0 ; i < model.size(); ++ i ) cp3model.push( Minisat::toLbool(model[i]) );
+//     cp3->cp3->extendModel(cp3model);
+//     model.clear();
+//     for( int i = 0 ; i < cp3model.size(); ++ i ) model.push_back( toInt(cp3model[i]) );
+//   }
+  
+  /** reset the model input procedure, and the postprocessing procedure */
+  void 
+  CPresetModel(void* preprocessor) {
     libcp3* cp3 = (libcp3*) preprocessor;
-    // dangerous line, since the size of the elements inside the vector might be different
-    vec<lbool> cp3model;
-    for( int i = 0 ; i < model.size(); ++ i ) cp3model.push( Minisat::toLbool(model[i]) );
-    cp3->cp3->extendModel(cp3model);
-    model.clear();
-    for( int i = 0 ; i < cp3model.size(); ++ i ) model.push_back( toInt(cp3model[i]) );
+    cp3->model.clear();
+    cp3->modelLit = 0;
+  }
+  
+  /** pass a (satisfied) literal of the current model to the preprocessor */
+  void 
+  CPgiveModelLit(void* preprocessor, int literal) {
+    libcp3* cp3 = (libcp3*) preprocessor;
+    const Lit l = mkLit( literal < 0 ? - literal + 1 : literal - 1, literal < 0 );
+    const Var v = var(l);
+    while ( cp3->model.size() <= v ) cp3->model.push( l_Undef ); // make sure there is enough room
+    cp3->model[ v ] = literal > 0 ? l_True : l_False; // add the information
+  }
+  
+  /** pass a (satisfied) literal of the current model to the preprocessor */
+  void 
+  CPpostprocessModel(void* preprocessor) {
+    libcp3* cp3 = (libcp3*) preprocessor;
+    cp3->cp3->extendModel(cp3->model);
+  }
+  
+  /** extract the next model literal from the postprocessed model*/
+  int 
+  CPgetFinalModelLit(void* preprocessor) {
+    libcp3* cp3 = (libcp3*) preprocessor;
+    if( cp3->modelLit < cp3->model.size() ) {
+      lbool s = cp3->model[ cp3->modelLit ];
+      int ret = s == l_True ? cp3->modelLit + 1 : - cp3->modelLit - 1;
+      cp3->modelLit ++;
+      return ret;
+    } else return 0;
+  }
+  
+  /** return the number of variables in the postprocessed model */
+  int 
+  CPmodelVariables(void* preprocessor) {
+    libcp3* cp3 = (libcp3*) preprocessor;
+    return cp3->model.size();
   }
 
     void  
@@ -85,10 +176,10 @@ extern "C" {
   }
 
     void  
-  CPparseOptions(void* preprocessor, int& argc, char** argv, bool strict)
+  CPparseOptions(void* preprocessor, int* argc, char** argv, int strict)
   {
     libcp3* cp3 = (libcp3*) preprocessor;
-    cp3->cp3config->parseOptions(argc,argv,strict);
+    cp3->cp3config->parseOptions(*argc,argv,strict != 0 );
   }
 
    void 
@@ -152,14 +243,33 @@ extern "C" {
     libcp3* cp3 = (libcp3*) preprocessor;
     return cp3->solver->nVars();
   }
+  
+  /** return the number of clauses that are inside the solver */
+  int
+  CPnClss(void* preprocessor) {
+    libcp3* cp3 = (libcp3*) preprocessor;
+    return cp3->solver->clauses.size() + cp3->solver->trail.size();
+  }
+  
+  /** return the number of actual literals inside the formula */
+  int 
+  CPnLits(void* preprocessor) {
+    libcp3* cp3 = (libcp3*) preprocessor;
+    int sum = 0;
+    for( int i = 0 ; i < cp3->solver->clauses.size(); ++i ) {
+      sum += cp3->solver->ca[ cp3->solver->clauses[i] ].size();
+    }
+    sum += cp3->solver->trail.size();
+    return sum;
+  }
 
-    bool  
+    int  
   CPok(void* preprocessor) {
     libcp3* cp3 = (libcp3*) preprocessor;
     return cp3->solver->okay();
   }
 
-    bool  
+    int  
   CPlitFalsified(void* preprocessor, int lit) {
     libcp3* cp3 = (libcp3*) preprocessor;
     return cp3->solver->value( lit > 0 ? mkLit( lit-1, false ) : mkLit( -lit-1, true ) ) == l_False;

@@ -159,6 +159,8 @@ Solver::Solver(CoreConfig& _config) :
   , agility_decay ( config.opt_agility_decay )
   , agility_rejects(0)
   
+  , dontTrustPolarity(0)
+  
   ,totalLearnedClauses(0)
   ,sumLearnedClauseSize(0)
   ,sumLearnedClauseLBD(0)
@@ -202,6 +204,7 @@ Solver::Solver(CoreConfig& _config) :
 
 Solver::~Solver()
 {
+  if( coprocessor != 0 ) delete coprocessor;
 }
 
 
@@ -505,7 +508,9 @@ Lit Solver::pickBranchLit()
         }else
             next = order_heap.removeMin();
 
-    return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
+    const Lit returnLit =  next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
+    if( decisionLevel() == 0 ) dontTrustPolarity ++;
+    return (config.opt_dontTrustPolarity && decisionLevel() == dontTrustPolarity) ? ~returnLit : returnLit;
 }
 
 
@@ -1351,8 +1356,9 @@ lbool Solver::search(int nof_conflicts)
 	  }
 	  
 	  // as in glucose 2.3, increase decay after a certain amount of steps - but have parameters here!
-	  if( var_decay< config.opt_var_decay_stop && conflicts % config.opt_var_decay_dist == 0 ) { // div is the more expensive operation!
+	  if( var_decay < config.opt_var_decay_stop && conflicts % config.opt_var_decay_dist == 0 ) { // div is the more expensive operation!
             var_decay += config.opt_var_decay_inc;
+	    var_decay = var_decay >= config.opt_var_decay_stop ? config.opt_var_decay_stop : var_decay; // set upper boung
 	  }
 	  
 	  // update the mixture between VMTF and VSIDS dynamically, similarly to the decay
@@ -1399,7 +1405,7 @@ lbool Solver::search(int nof_conflicts)
 #endif
 	      if( config.opt_rer_debug ) cerr << "c analyze returns with " << ret << " and set of literals " << learnt_clause << endl;
      
-	      // OTFSS - check whether this can be done in an extra method!
+	      // OTFSS TODO put into extra method!
 	      if(config.debug_otfss) cerr << "c conflict at level " << decisionLevel() << " analyze will proceed at level " << backtrack_level << endl;
 	      int otfssBtLevel = backtrack_level;
 	      int enqueueK = 0 ; // number of clauses in the vector that need to be enqueued when jumping to the current otfssBtLevel
@@ -1465,8 +1471,10 @@ lbool Solver::search(int nof_conflicts)
 	      }
 	      
 	      otfssHigherJump = otfssBtLevel < backtrack_level ? otfssHigherJump + 1 : otfssHigherJump; // stats
-	      cancelUntil(otfssBtLevel); // backtrack - this level is at least as small as the usual level!
 	      if(config.debug_otfss) if( enqueueK > 0 ) cerr << "c jump to otfss level " << otfssBtLevel << endl;
+	      
+	      
+	      cancelUntil(otfssBtLevel); // backtrack - this level is at least as small as the usual level!
 	      
 	      // enqueue all clauses that need to be enqueued!
 	      for( int i = 0; i < enqueueK; ++ i ) {
