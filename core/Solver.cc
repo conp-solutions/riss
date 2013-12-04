@@ -144,6 +144,7 @@ Solver::Solver(CoreConfig& _config) :
   ,l1lhbr_news(0)
   ,lhbrtests(0)
   ,lhbr_sub(0)
+  ,learnedLHBRs(0)
   
   ,simplifyIterations(0)
   ,learnedDecisionClauses(0)
@@ -160,6 +161,8 @@ Solver::Solver(CoreConfig& _config) :
   , agility_rejects(0)
   
   , dontTrustPolarity(0)
+  
+  , doAddVariablesViaER(true)
   
   ,totalLearnedClauses(0)
   ,sumLearnedClauseSize(0)
@@ -537,7 +540,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     int pathC = 0;
     Lit p     = lit_Undef;
 
-    int units = 0;
+    int units = 0, resolvedWithLarger = 0; // stats
     bool isOnlyUnit = true;
     lastDecisionLevel.clear();  // must clear before loop, because alluip can abort loop and would leave filled vector
     int currentSize = 0;        // count how many literals are inside the resolvent at the moment! (for otfss)
@@ -553,10 +556,10 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 
     do{
         assert(confl != CRef_Undef && "there needs to be something to be resolved"); // (otherwise should be UIP)
-//         if( confl == CRef_Undef ) {
-// 	  cerr << "c SPECIALLY BUILD-IN FAIL-CHECK in analyze" << endl;
-// 	  exit( 35 );
-// 	}
+         if( confl == CRef_Undef ) {
+ 	  cerr << "c SPECIALLY BUILD-IN FAIL-CHECK in analyze" << endl;
+ 	  exit( 35 );
+ 	}
         Clause& c = ca[confl];
 	if( config.opt_ecl_debug || config.opt_rer_debug ) cerr << "c resolve on " << p << "(" << index << ") with [" << confl << "]" << c << " -- calculated currentSize: " << currentSize <<  endl;
 	int clauseReductSize = c.size();
@@ -567,6 +570,8 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	  Lit tmp = c[0];
 	  c[0] =  c[1], c[1] = tmp;
 	}
+	
+	resolvedWithLarger = (c.size() == 2) ? resolvedWithLarger : resolvedWithLarger + 1; // how often do we resolve with a clause whose size is larger than 2?
 	
        if (c.learnt() && dynamicDataUpdates){
 	    if( config.opt_cls_act_bump_mode == 0 ) claBumpActivity(c);
@@ -655,6 +660,8 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     );
     
     assert( out_learnt.size() > 0 && "there has to be some learnt clause" );
+    learnedLHBRs = (resolvedWithLarger > 1) ? learnedLHBRs : learnedLHBRs + 1; // count the number of clauses that would have been hyper binary resolvents
+    
     
     // if we do not use units, add asserting literal to learned clause!
     if( units == 0 ) out_learnt[0] = ~p;
@@ -963,6 +970,9 @@ void Solver::uncheckedEnqueue(Lit p, CRef from)
 |________________________________________________________________________________________________@*/
 CRef Solver::propagate()
 {
+    if( config.opt_printLhbr ) cerr << endl << "c called propagate" << endl;
+  
+  
     CRef    confl     = CRef_Undef;
     int     num_props = 0;
     watches.cleanAll();
@@ -1037,9 +1047,19 @@ CRef Solver::propagate()
 	    
 	}
     
+	if( config.opt_printLhbr ) { // debug output for lhbr
+	  cerr << "c watch list before propagating literal " << p << endl;
+	  int count = 0;
+	  for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;) {
+	    const CRef     cr        = i->cref;
+            Clause&  c         = ca[cr];
+	    cerr << "c [" << count << "] (" << cr << ") " << c << endl;
+	    ++ count; ++i;
+	  }
+	}
 
-
-        for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;){
+        for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;)
+	{
 	  
 	    if( config.opt_learn_debug ) cerr << "c check clause " << ca[i->cref] << endl;
 	  
@@ -1051,9 +1071,9 @@ CRef Solver::propagate()
                 *j++ = *i++; continue; }
 
             // Make sure the false literal is data[1]:
-            const CRef     cr        = i->cref;
-            Clause&  c         = ca[cr];
-            const Lit      false_lit = ~p;
+            const CRef cr = i->cref;
+            Clause&  c = ca[cr];
+            const Lit false_lit = ~p;
             if (c[0] == false_lit)
                 c[0] = c[1], c[1] = false_lit;
             assert(c[1] == false_lit && "wrong literal order in the clause!");
@@ -1062,8 +1082,8 @@ CRef Solver::propagate()
             // If 0th watch is true, then clause is already satisfied.
             Lit     first = c[0];
             Watcher w     = Watcher(cr, first);
-            if (first != blocker && value(first) == l_True){
-	      
+            if (first != blocker && value(first) == l_True) // satisfied clause
+	    {
 	      // consider variation only, if the improvement options are enabled!
 	      if( (config.opt_hack > 0 ) && reason(var(first)) != CRef_Undef) { // if its not a decision
 		const int implicantPosition = trailPos[ var(first) ];
@@ -1089,25 +1109,29 @@ CRef Solver::propagate()
 		      vardata[var(first)].cost = thisCost;
 		    }
 		  }
-		  
-		   
 		} else {
 		  // could be a cycle here, or this clause is satisfied, but not a reason clause!
 		}
+	      } else { // could do inverse arcs here!
+		
 	      }
 	      
-	      *j++ = w; continue; }
+	      *j++ = w; continue; } // same as goto NextClause;
 
+	      
 	    Lit commonDominator = (config.opt_LHBR > 0 && lhbrs < config.opt_LHBR_max) ? vardata[var(false_lit)].dom : lit_Error; // inidicate whether lhbr should still be performed
 	    lhbrtests = commonDominator == lit_Error ? lhbrtests : lhbrtests + 1;
 	    if( config.opt_printLhbr ) cerr << "c common dominator for clause " << c << " : " << commonDominator << endl; 
+	    
             // Look for new watch:
             for (int k = 2; k < c.size(); k++)
-                if (value(c[k]) != l_False){
+                if (value(c[k]) != l_False)
+		{
                     c[1] = c[k]; c[k] = false_lit;
 		    if( config.opt_learn_debug ) cerr << "c new watched literal for clause " << ca[cr] << " is " << c[1] <<endl;
                     watches[~c[1]].push(w);
-                    goto NextClause; } // no need to indicate failure of lhbr, because remaining code is skipped in this case!
+                    goto NextClause; 
+		} // no need to indicate failure of lhbr, because remaining code is skipped in this case!
                 else { // lhbr analysis! - any literal c[k] culd be removed from the clause, because it is not watched at the moment!
 		  assert( value(c[k]) == l_False && "for lhbr all literals in the clause need to be set already" );
 		  if( commonDominator != lit_Error ) { // do only, if its not broken already - and if limit is not reached
@@ -1119,64 +1143,80 @@ CRef Solver::propagate()
 		}
 		
             // Did not find watch -- clause is unit under assignment:
-            *j++ = w;
-            if (value(first) == l_False){
+            *j++ = w; // do not do this here so that LHBR can be done right!
+            if( config.opt_printLhbr ) cerr << "c keep clause (" << cr << ")" << c << " in watch list while propagating " << p << endl;
+            if ( value(first) == l_False ) {
                 confl = cr; // independent of opt_long_conflict -> overwrite confl!
                 qhead = trail.size();
                 // Copy the remaining watches:
                 while (i < end)
                     *j++ = *i++;
-            }else {
+            } else {
 		if( config.opt_learn_debug ) cerr << "c current clause is unit clause: " << ca[cr] << endl;
                 uncheckedEnqueue(first, cr);
 		if( config.opt_LHBR > 0 ) vardata[ var(first) ].dom = (config.opt_LHBR == 1 || config.opt_LHBR == 3) ? first : vardata[ var(first) ].dom ; // set dominator for this variable!
 		
-	    if( config.opt_printLhbr ) cerr << "c final common dominator: " << commonDominator << endl;
-	    
-	    // check lhbr!
-	    if( commonDominator != lit_Error && commonDominator != lit_Undef ) {
-	      lhbrs ++;
-	      l1lhbrs = decisionLevel() == 1 ? l1lhbrs + 1 : l1lhbrs;
-	      oc.clear();
-	      oc.push(first);
-	      oc.push(~commonDominator);
-
-	      addCommentToProof("added by LHBR");
-	      addToProof( oc ); // if drup is enabled, add this clause to the proof!
-	      
-	      // if commonDominator is element of the clause itself, delete the clause (hyper-self-subsuming resolution)
-	      bool willSubsume = false;
-	      if( config.opt_LHBR_sub ) {
-		for( int k = 1; k < c.size(); ++ k ) if ( c[k] == ~commonDominator ) { willSubsume = true; break; }
-	      }
-	      if( willSubsume ) { // created a binary clause that subsumes this clause
-		if( c.mark() == 0 ){
-		  addCommentToProof("Subsumed by LHBR clause", true);
-		  addToProof(c,true); // remove this clause from the proof, if not done already
-		}
-		c.mark(1); // the bigger clause is not needed any more
-		lhbr_sub ++;
-	      } else {
-		lhbr_news ++;
-		l1lhbr_news = decisionLevel() == 1 ? l1lhbr_news + 1 : l1lhbr_news;
-	      }
-	      
-	      bool clearnt = c.learnt();
-	      CRef cr2 = ca.alloc(oc, clearnt ); // add the new clause - now all references could be invalid!
-	      if( clearnt ) { ca[cr2].setLBD(1); learnts.push(cr); ca[cr2].activity() = c.activity(); }
-	      else clauses.push(cr2);
-	      attachClause(cr2);
-	      vardata[var(first)].reason = cr2; // set the new clause as reason
-	      vardata[ var(first) ].dom = (config.opt_LHBR == 1 || config.opt_LHBR == 3) ? commonDominator : vardata[ var(commonDominator) ].dom ; // set NEW dominator for this variable!
-	      if( config.opt_printLhbr ) cerr << "c added new clause: " << ca[cr2] << ", that is " << (clearnt ? "learned" : "original" ) << endl;
-	      goto NextClause; // do not use references any more, because ca.alloc has been performed!
-	    }
-
+		if( config.opt_printLhbr ) cerr << "c final common dominator: " << commonDominator << endl;
 		
+		// check lhbr!
+		if( commonDominator != lit_Error && commonDominator != lit_Undef ) {
+		  lhbrs ++;
+		  l1lhbrs = decisionLevel() == 1 ? l1lhbrs + 1 : l1lhbrs;
+		  oc.clear();
+		  oc.push(first);
+		  oc.push(~commonDominator);
+
+		  addCommentToProof("added by LHBR");
+		  addToProof( oc ); // if drup is enabled, add this clause to the proof!
+		  
+		  // if commonDominator is element of the clause itself, delete the clause (hyper-self-subsuming resolution)
+		  bool willSubsume = false;
+		  if( config.opt_LHBR_sub ) { // check whether the new clause subsumes the other
+		    for( int k = 1; k < c.size(); ++ k ) if ( c[k] == ~commonDominator ) { willSubsume = true; break; }
+		  }
+		  if( willSubsume )
+		  { // created a binary clause that subsumes this clause  FIXME: actually replace this clause here instead of creating a new one! adapt code below!
+		    if( c.mark() == 0 ){
+		      addCommentToProof("Subsumed by LHBR clause", true);
+		      addToProof(c,true);  // remove this clause from the proof, if not done already
+		    }
+		    c.mark(1); 
+		    // the bigger clause is not needed any more
+		    lhbr_sub ++;
+		  } else { // no subsumption
+		    // continue with LHBR!
+		    lhbr_news ++;
+		    l1lhbr_news = decisionLevel() == 1 ? l1lhbr_news + 1 : l1lhbr_news;
+		  }
+		  // a new clause is required
+		  bool clearnt = c.learnt();
+		  CRef cr2 = ca.alloc(oc, clearnt ); // add the new clause - now all references could be invalid!
+		  if( clearnt ) { ca[cr2].setLBD(1); learnts.push(cr); ca[cr2].activity() = c.activity(); }
+		  else clauses.push(cr2);
+		  attachClause(cr2);
+		  vardata[var(first)].reason = cr2; // set the new clause as reason
+		  vardata[ var(first) ].dom = (config.opt_LHBR == 1 || config.opt_LHBR == 3) ? commonDominator : vardata[ var(commonDominator) ].dom ; // set NEW dominator for this variable!
+		  if( config.opt_printLhbr ) {
+		    cerr << "c added new clause: " << ca[cr2] << ", that is " << (clearnt ? "learned" : "original" )  << " as position " << (clearnt ? clauses.size() - 1: learnts.size() - 1  ) << " with reference " << cr2 << endl;
+		    cerr << "cls: " << clauses.size() << " vs. ls: " << learnts.size() << endl;
+		  }
+		  goto NextClause; // do not use references any more, because ca.alloc has been performed!
+		} 
 	    }
         NextClause:;
         }
-        ws.shrink(i - j);
+        ws.shrink(i - j); // remove all duplciate clauses!
+	
+	if( config.opt_printLhbr ) {
+	  cerr << "c watch list before propagating literal " << p << endl;
+	  int count = 0;
+	  for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;) {
+	    const CRef     cr        = i->cref;
+            Clause&  c         = ca[cr];
+	    cerr << "c [" << count << "] (" << cr << ") " << c << endl;
+	    ++ count; ++i;
+	  }
+	}
     }
     propagations += num_props;
     simpDB_props -= num_props;
@@ -1510,15 +1550,18 @@ lbool Solver::search(int nof_conflicts)
 	      } else { // treat usual learned clause!
 
 		// when this method is called, backjumping has been done already!
-		extResTime.start();
-		bool ecl = extendedClauseLearning( learnt_clause, nblevels, extraInfo );
+		
 		rerReturnType rerClause = rerFailed;
-		if( ! ecl ) { // only if not ecl, rer could be tested!
-		  rerClause = restrictedExtendedResolution( learnt_clause, nblevels, extraInfo ); 
-		} else {
-		  resetRestrictedExtendedResolution(); // otherwise, we just failed ... TODO: could simply jump over that clause ...
+		if( doAddVariablesViaER ) { // be able to block adding variables during search by the solver itself
+		  extResTime.start();
+		  bool ecl = extendedClauseLearning( learnt_clause, nblevels, extraInfo );
+		  if( ! ecl ) { // only if not ecl, rer could be tested!
+		    rerClause = restrictedExtendedResolution( learnt_clause, nblevels, extraInfo ); 
+		  } else {
+		    resetRestrictedExtendedResolution(); // otherwise, we just failed ... TODO: could simply jump over that clause ...
+		  }
+		  extResTime.stop();
 		}
-		extResTime.stop();
 
 		lbdQueue.push(nblevels);
 		sumLBD += nblevels;
@@ -2141,8 +2184,8 @@ printf("c ==================================[ Search Statistics (every %6d confl
             printf("c Learnt At Level 1: %d  Multiple: %d Units: %d\n", l1conflicts, multiLearnt,learntUnit);
 	    printf("c LAs: %lf laSeconds %d LA assigned: %d tabus: %d, failedLas: %d, maxEvery %d, eeV: %d eeL: %d \n", laTime, las, laAssignments, tabus, failedLAs, maxBound, laEEvars, laEElits );
 	    printf("c IntervalRestarts: %d\n", intervalRestart);
-	    printf("c lhbr: %d (l1: %d), new: %d (l1: %d), tests: %d, subs: %d\n", lhbrs, l1lhbrs,lhbr_news,l1lhbr_news,lhbrtests,lhbr_sub);
-	    printf("c otfss: %d (l1: %d), cls: %d, units: %d, binaries: %d, jumpedHigher: %d\n", otfsss, otfsssL1,otfssClss,otfssUnits,otfssBinaries,otfssHigherJump);
+	    printf("c lhbr: %d (l1: %d ),new: %d (l1: %d ),tests: %d ,subs: %d ,byLearning: %d\n", lhbrs, l1lhbrs,lhbr_news,l1lhbr_news,lhbrtests,lhbr_sub, learnedLHBRs);
+	    printf("c otfss: %d (l1: %d ),cls: %d ,units: %d ,binaries: %d ,jumpedHigher: %d\n", otfsss, otfsssL1,otfssClss,otfssUnits,otfssBinaries,otfssHigherJump);
 	    printf("c learning: %ld cls, %lf avg. size, %lf avg. LBD, %ld maxSize, %ld proof-depth\n", 
 		   (int64_t)totalLearnedClauses, 
 		   sumLearnedClauseSize/totalLearnedClauses, 

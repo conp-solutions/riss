@@ -16,6 +16,7 @@ Probing::Probing(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _co
 , ee ( _ee )
 , probeLimit(config.pr_prLimit)
 , probeChecks(0)
+, probeLHBRs(0)
 , processTime(0)
 , l1implied(0)
 , l1failed(0)
@@ -71,6 +72,11 @@ bool Probing::process()
     vec<char> polarity;
     solver.polarity.copyTo( polarity );
     
+    if( config.pr_debug_out > 0 ) cerr << "c brefore probing: cls: " << data.getClauses().size() << " vs. ls: " << data.getLEarnts().size() << endl;
+
+    const int beforeClauses = data.getClauses().size();
+    const int beforeLClauses = data.getLEarnts().size();
+    
     // run probing?
     if( config.pr_probe && data.ok()  ) {
       if( config.pr_debug_out > 0 ) cerr << "c old trail: " << solver.trail.size() << endl;
@@ -78,37 +84,28 @@ bool Probing::process()
       if( config.pr_debug_out > 0 ) cerr << "c new trail: " << solver.trail.size() << " solver.ok: " << data.ok() << endl;
     }
     
+    if( config.pr_debug_out > 0 ) cerr << "c after probing: cls: " << data.getClauses().size() << " vs. ls: " << data.getLEarnts().size() << endl;
+    
     // run clause vivification?
-    const int beforeClauses = data.getClauses().size();
-    const int beforeLClauses = data.getLEarnts().size();
+    const int beforeVivClauses = data.getClauses().size();
     if( config.pr_vivi && data.ok() ) {
       clauseVivification();
       assert( solver.decisionLevel() == 0 && "after vivification the decision level should be 0!" );
     }
 
+    if( config.pr_debug_out > 0 ) cerr << "c after vivification: cls: " << data.getClauses().size() << " vs. ls: " << data.getLEarnts().size() << endl;
+    
     // restore the polarity for phase saving
     polarity.copyTo(solver.polarity);
 
     // clean solver again!
     cleanSolver();
     
-    if( beforeClauses < data.getClauses().size() ) {
-      // if the solver created more clauses during propagate calls, handle them!
-      if( config.pr_keepLHBRs > 2 ) {
-	if( config.pr_debug_out ) cerr << "c add another " << data.getClauses().size() - beforeClauses << " new clauses to the formula" << endl;
-	for( int i = beforeClauses; i < data.getClauses().size(); ++ i ) {
-	  data.addClause( data.getClauses()[i] );
-	}
-      } else {
-	if( config.pr_debug_out ) cerr << "c remove " << data.getClauses().size() - beforeClauses << " new clauses from the formula" << endl;
-	for( int i = beforeClauses; i < data.getClauses().size(); ++ i ) {
-	  ca.free( data.getClauses()[i] );
-	}
-	data.getClauses().shrink( data.getClauses().size() - beforeClauses);
-      }
-    }
+    for( int i = beforeClauses; i < data.getClauses().size(); ++ i ) data.addClause( data.getClauses()[i] ); // incorporate new clauses into the solver
+    probeLHBRs = probeLHBRs + data.getClauses().size() - beforeVivClauses; // stats
+    
     if( beforeLClauses < data.getLEarnts().size() ) {
-      if( config.pr_keepLHBRs > 2 ) {
+      if( config.pr_keepLHBRs > 0 ) {
 	if( config.pr_debug_out ) cerr << "c add another " << data.getLEarnts().size() - beforeLClauses << " new learnt clauses to the formula" << endl;
 	for( int i = beforeLClauses; i < data.getLEarnts().size(); ++ i ) {
 	  data.addClause( data.getLEarnts()[i] );
@@ -745,6 +742,7 @@ void Probing::printStatistics( ostream& stream )
   <<  l2implied << " l2implied "
   <<  l2failed << " l2Fail "
   <<  l2ee  << " l2EE "
+  <<  probeLHBRs << " lhbrs "
   << endl;   
   
   stream << "c [STAT] PROBING(2) " 
@@ -1093,7 +1091,7 @@ void Probing::clauseVivification()
     if( config.pr_debug_out ) cerr << "c calculate maxSize based on " << data.getClauses().size() << " clauses" << endl;
     for( uint32_t i = 0 ; i< data.getClauses().size(); ++ i ) {
       const CRef ref = data.getClauses()[i];
-      Clause& clause = ca[ ref ];
+      const Clause& clause = ca[ ref ];
       if( clause.can_be_deleted() ) continue;
       maxSize = clause.size() > maxSize ? clause.size() : maxSize;
     }
@@ -1134,7 +1132,7 @@ void Probing::clauseVivification()
 	  data.lits[tmp] = tmpL;
 	}
     } else {
-      // TODO: find a nice heuristic here!! 
+      // TODO: find a nice heuristic here!! e.g. RWH!
     }
     
     // remove one literal, because otherwise this would fail always!
@@ -1150,10 +1148,8 @@ void Probing::clauseVivification()
          << " and " << clause[1] << " : " << solver.watches[ ~clause[1] ].size() << endl;
     
     // take care of the size restriction
-    if( clause.size() <= config.pr_clsSize ) {
-      if( config.pr_debug_out > 1 ) cerr << "c detach clause [" << ref << "] : " << ca[ref] << endl;
-      solver.detachClause(ref, true);
-    }
+    if( config.pr_debug_out > 1 ) cerr << "c detach clause [" << ref << "] : " << ca[ref] << endl;
+    solver.detachClause(ref, true);
     
     bool viviConflict = false;
     bool viviNextLit = false;
@@ -1206,7 +1202,7 @@ void Probing::clauseVivification()
       }
       
       int trailDiff = solver.trail.size();
-      CRef confl = solver.propagate();
+      CRef confl = solver.propagate(); // careful, can change and re-alloc clause data structures!
       trailDiff = solver.trail.size() - trailDiff;
       viviChecks += trailDiff; // calculate limit!
       
@@ -1229,9 +1225,10 @@ void Probing::clauseVivification()
     // jump back to clean trail
     solver.cancelUntil(0);
     
-    if( subClauseLimit != clause.size() ) {
+    Clause& sameClause = ca[ ref ]; // update the reference, because it could have changed in the mean time!
+    if( subClauseLimit != sameClause.size() ) {
       // TODO: remove clause and data structures so that they meet the sub clause! 
-      viviLits += clause.size() - subClauseLimit;
+      viviLits += sameClause.size() - subClauseLimit;
       viviCls ++;
       
       data.lits.resize(subClauseLimit);
@@ -1239,7 +1236,7 @@ void Probing::clauseVivification()
       if( !viviConflict ) data.lits.push_back(removedLit);
       
       if( config.pr_debug_out > 1 ) {
-      cerr << "c replace clause " << clause << " with ";
+      cerr << "c replace clause " << sameClause << " with ";
       for( int j = 0 ; j < data.lits.size(); ++ j ) 
 	cerr << " " << ~data.lits[j];
       cerr << endl;
@@ -1250,27 +1247,27 @@ void Probing::clauseVivification()
 	data.ma.setCurrentStep( toInt( ~data.lits[j] ) );
       
       int keptLits = 0;
-      for( int j = 0 ; j < clause.size(); ++ j ) {
+      for( int j = 0 ; j < sameClause.size(); ++ j ) {
 	// if literal is not there any more, remove clause index from structure
-	if( !data.ma.isCurrentStep( toInt(clause[j]) ) ) {
-	  data.removeClauseFrom(ref, clause[j]) ;
+	if( !data.ma.isCurrentStep( toInt(sameClause[j]) ) ) {
+	  data.removeClauseFrom(ref, sameClause[j]) ;
 	} else {
 	  // otherwise, keep literal inside clause
-	  clause[keptLits++] = clause[j]; 
+	  sameClause[keptLits++] = sameClause[j]; 
 	}
       }
-      clause.shrink( clause.size() - keptLits );
-      clause.sort();
+      sameClause.shrink( sameClause.size() - keptLits );
+      sameClause.sort();
       modifiedFormula = true;
-      if( config.pr_debug_out > 1 ) cerr << "c new clause: " << clause << endl;
+      if( config.pr_debug_out > 1 ) cerr << "c new clause: " << sameClause << endl;
     }
     
     // detach this clause, so that it cannot be used for unit propagation
-    if( clause.size() == 0 ) {
+    if( sameClause.size() == 0 ) {
       data.setFailed();
-    } else if ( clause.size() == 1 ) {
-      data.enqueue( clause[0] );
-    } else if( clause.size() <= config.pr_clsSize ) solver.attachClause(ref);
+    } else if ( sameClause.size() == 1 ) {
+      data.enqueue( sameClause[0] );
+    } else solver.attachClause(ref);
 
     if( !data.ok() ) break;
   } // end for clause in data.getClauses()

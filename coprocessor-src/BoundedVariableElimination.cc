@@ -253,7 +253,7 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<Var
 {
   //Subsumption / Strengthening
   if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
-  subsumption.process(config.opt_bve_strength); 
+  subsumption.process(config.opt_bve_strength); // here, use penalty!
   modifiedFormula = modifiedFormula || subsumption.appliedSomething();
   if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
  
@@ -295,7 +295,7 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData & data, Heap<Var
     touchedVarsForSubsumption(data, touched_variables);
 
     if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
-    subsumption.process(config.opt_bve_strength);
+    subsumption.process(config.opt_bve_strength); // have an option to avoid penalty!
     if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
     modifiedFormula = modifiedFormula || subsumption.appliedSomething();
 
@@ -496,8 +496,10 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
 		if (doStatistics) usedGates = (foundGate ? usedGates + 1 : usedGates ); // statistics
                 if(config.opt_bve_verbose > 1)  cerr << "c resolveSet" <<endl;
 		data.addCommentToProof("perform BVE");
-                if (resolveSet(data, heap, pos, neg, v, p_limit, n_limit, bveChecks) == l_False)
+                if (resolveSet(data, heap, pos, neg, v, p_limit, n_limit, bveChecks) == l_False) {
+		  assert( !data.ok() && "here, the data object should already know that nothing can be done" );
                     return;
+		}
                 if (doStatistics) ++eliminatedVars;
                 removeClauses(data, heap, pos, mkLit(v,false), p_limit, doStatistics);
                 removeClauses(data, heap, neg, mkLit(v,true),  n_limit, doStatistics);
@@ -507,7 +509,7 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                 //subsumption with new clauses!!
                 if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  
                 if (config.heap_updates > 0 && config.opt_bve_heap != 2)
-                    subsumption.process(config.opt_bve_strength,&heap, v);
+                    subsumption.process(config.opt_bve_strength, &heap, v);
                 else 
                     subsumption.process(config.opt_bve_strength);
                 if (doStatistics) subsimpTime = cpuTime() - subsimpTime;  

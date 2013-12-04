@@ -336,7 +336,7 @@ pr_viviPercent    (_cat_pr, "pr-viviP",  "percent of max. clause size for clause
 pr_viviLimit      (_cat_pr, "pr-viviL",  "step limit for clause vivification", 5000000,  IntRange(0, INT32_MAX)),
 pr_opt_inpStepInc1      (_cat_pr, "cp3_pr_inpInc","increase for steps per inprocess call", 1000000, IntRange(0, INT32_MAX)),
 pr_opt_inpStepInc2      (_cat_pr, "cp3_viv_inpInc","increase for steps per inprocess call", 1000000, IntRange(0, INT32_MAX)),
-pr_keepLHBRs    (_cat_pr, "pr-keepLHBR",  "keep clauses that have been created during LHBR during probing/vivification (0=no,1=learnt,2=original,3=both)", 2, IntRange(0,3)),
+pr_keepLHBRs    (_cat_pr, "pr-keepLHBR",  "keep clauses that have been created during LHBR during probing/vivification (0=no,1=learnt)", 0, IntRange(0,1)),
 #if defined TOOLVERSION  
 pr_debug_out (0),
 #else

@@ -88,6 +88,7 @@ protected:
   // staistics
   unsigned probeLimit;		// step limit for probing
   unsigned probeChecks;		// number of performed steps
+  unsigned probeLHBRs;		// number of clauses that have been added by LHBR
   double processTime;		// seconds for probing
   unsigned l1implied;		// number of found l1 implied literals
   unsigned l1failed;		// number of found l1 failed literals

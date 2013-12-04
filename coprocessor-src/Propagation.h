@@ -43,6 +43,9 @@ public:
   
   void printStatistics(ostream& stream);
   
+  /** give more steps for inprocessing - nothing to be done for UP*/
+  void giveMoreSteps() {}
+  
 protected:
 };
 

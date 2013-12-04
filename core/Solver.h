@@ -446,12 +446,7 @@ protected:
   
   double useVSIDS;	// parameter for interpolating between VSIDS and VMTF
   
-  int lhbrs;
-  int l1lhbrs;
-  int lhbr_news;
-  int l1lhbr_news;
-  int lhbrtests;
-  int lhbr_sub;
+  int lhbrs,l1lhbrs,lhbr_news,l1lhbr_news,lhbrtests,lhbr_sub,learnedLHBRs; // stats about lhbr
   
   int simplifyIterations; // number of visiting level 0 until simplification is to be performed
   int learnedDecisionClauses;
@@ -466,6 +461,8 @@ protected:
   
   // from CSP solver heuristics
   int dontTrustPolarity; // at which level should the given polarity be negated?
+  
+  bool doAddVariablesViaER; // indicator for allowing ER or not
   
   // stats for learning clauses
   double totalLearnedClauses, sumLearnedClauseSize, sumLearnedClauseLBD, maxLearnedClauseSize;
@@ -515,6 +512,12 @@ public:
 
   /** return extra variable information (should be called for top level units only!) */
   uint64_t variableExtraInfo( const Var& v ) const ;
+  
+  /** temporarly enable or disable extended resolution, to ensure that the number of variables remains the same */
+  void setExtendedResolution( bool enabled ) { doAddVariablesViaER = enabled; }
+  
+  /** query whether extended resolution is enabled or not */
+  bool getExtendedResolution() const { return doAddVariablesViaER; }
   
 /// for qprocessor
 public:

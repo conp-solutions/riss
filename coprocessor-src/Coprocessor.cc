@@ -604,26 +604,26 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
   while( status == l_Undef && (currentLine < grammar.size() || currentPosition < currentSize ) )
   {
     
-    char execute = grammar[currentLine][currentPosition];
-    if( config.opt_verbose > 0 ) cerr << "c current line: " << grammar[currentLine] << " pos: " << currentPosition << " execute=" << execute << endl;
-    if( execute == '+' ) { // if there is a star in a line and there has been change,
-      if( change ) {
-	currentPosition = 0;
-	continue; // start current line in grammar again!
-      } else {
-	currentPosition ++;
-      }
-    }
-    
     if( currentPosition >= currentSize ) { // start with next line, if current line has been evaluated
       if( config.opt_verbose > 1 ) cerr << "c reached end of line " << currentLine << endl;
       currentLine++;
       if( currentLine < grammar.size() ) {
 	currentSize = grammar[currentLine].size();
 	currentPosition=0;
-	if( config.opt_verbose > 1 ) cerr << "c new data: current line: " << grammar[currentLine] << " pos: " << currentPosition << " execute=" << execute << endl;
+	if( config.opt_verbose > 1 ) cerr << "c new data: current line: " << grammar[currentLine] << " pos: " << currentPosition << endl;
 	continue;
+      } else break;
+    }
+    
+    char execute = grammar[currentLine][currentPosition];
+    if( config.opt_verbose > 0 ) cerr << "c current line: " << grammar[currentLine] << " pos: " << currentPosition << " execute=" << execute << endl;
+    if( execute == '+' ) { // if there is a star in a line and there has been change,
+      if( change ) {
+	currentPosition = 0;
+      } else {
+	currentPosition ++;
       }
+      continue; // start current line in grammar again!
     }
     
     if( currentLine >= grammar.size() ) break; // stop if all lines of the grammar have been evaluated
@@ -775,10 +775,25 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     if( config.opt_verbose > 4 )  {
       cerr << "c intermediate formula: " << endl;
       for( int i = 0 ; i < solver->trail.size(); ++ i ) cerr << " " <<solver->trail[i] << endl;
-      for( int i = 0 ; i < data.getClauses().size(); ++ i ) cerr << " " << ca[ data.getClauses()[i] ] << endl;
+      for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
+	cerr << "(" << i << ") (" << data.getClauses()[i] << ")" ;
+	if( ca[data.getClauses()[i]].mark() != 0 ) cerr << " (ign) ";
+	if( ca[data.getClauses()[i]].can_be_deleted() != 0 ) cerr << " (del) ";
+	cerr << " " << ca[ data.getClauses()[i] ] << endl;
+      }
     }
   }
-  
+
+  if( config.opt_verbose > 4 )  {
+      cerr << "c final formula: " << endl;
+      for( int i = 0 ; i < solver->trail.size(); ++ i ) cerr << " " <<solver->trail[i] << endl;
+      for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
+	cerr << "(" << i << ") (" << data.getClauses()[i] << ")" ;
+	if( ca[data.getClauses()[i]].mark() != 0 ) cerr << " (ign) ";
+	if( ca[data.getClauses()[i]].can_be_deleted() != 0 ) cerr << " (del) ";
+	cerr << " " << ca[ data.getClauses()[i] ] << endl;
+      }
+  }
   
   
   if( false && config.opt_sls ) { // TODO: decide whether this should be possible!
@@ -916,6 +931,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 lbool Preprocessor::preprocess()
 {
   data.preprocessing();
+  const bool wasDoingER = solver->getExtendedResolution();
   
   if( config.opt_symm && config.opt_enabled ) { // do only if preprocessor is enabled
     symmetry.process(); 
@@ -944,7 +960,10 @@ lbool Preprocessor::preprocess()
       }
     }
     exit(0);
-  }	 else return ret;
+  } else {
+    solver->setExtendedResolution( wasDoingER );
+    return ret;
+  }
 }
 
 lbool Preprocessor::inprocess()
@@ -962,6 +981,8 @@ lbool Preprocessor::inprocess()
     
     if( config.opt_verbose > 3 ) cerr << "c start inprocessing after another " << solver->conflicts - lastInpConflicts << endl;
     data.inprocessing();
+    const bool wasDoingER = solver->getExtendedResolution();
+    
     
     if(config.opt_randInp) data.randomized();
     if(config.opt_inc_inp) giveMoreSteps();
@@ -972,6 +993,8 @@ lbool Preprocessor::inprocess()
     
     lastInpConflicts = solver->conflicts;
     if( config.opt_verbose > 4 ) cerr << "c finished inprocessing " << endl;
+    
+    solver->setExtendedResolution( wasDoingER );
     return ret;
   }
   else 
@@ -1069,7 +1092,11 @@ void Preprocessor::extendModel(vec< lbool >& model)
   data.extendModel(model);
   
   // get back the old number of variables inside the model, to be able to unshuffle!
-  if (formulaVariables != - 1 && formulaVariables < model.size() ) model.shrink( model.size() - formulaVariables );
+  if (formulaVariables != - 1 && formulaVariables < model.size() ) {
+    cerr << "c model size before: " << model.size() << " with formula variables: " << formulaVariables << " and shrink: " << model.size() - formulaVariables << endl;
+    model.shrink( model.size() - formulaVariables );
+    cerr << "c model size afterwards: " << model.size() << endl;
+  }
   if( config.opt_shuffle ) unshuffle(model);
 }
 
@@ -1521,6 +1548,28 @@ void Preprocessor::scanCheck(const string& headline) {
     }
     
   }
+  
+  // all clauses in a list of literal l should contain that literal!
+  for( Var v = 0 ; v < data.nVars(); ++v ) {
+    for( int p = 0 ; p < 2; ++ p ) 
+    {
+      const Lit l = mkLit(v,p==0);
+      vector<CRef>& list = data.list(l);
+      for( int i = 0 ; i < list.size(); ++ i )
+      {
+	const Clause& c = ca[ list[i] ];
+	bool found=false;
+	for( int j = 0 ; j < c.size(); ++ j ) {
+	  if( c[j] == l ) { found = true; break; }
+	}
+	if(!found) {
+	  cerr << "c clause " << c << " is present in list for literal " << l << " but does not contain it!" << endl;
+	}
+      }
+      
+    }
+  }
+  
   cerr << "c finished check " << endl;
 }
 

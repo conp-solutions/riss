@@ -74,9 +74,12 @@ static inline double Minisat::wallClockTime(void)
 #else // use the Mac wall clock instead 
 static inline double Minisat::wallClockTime(void)
 {
-    struct timespec timestamp;
-    clock_gettime(CLOCK_MONOTONIC, &timestamp);
-    return ((double) timestamp.tv_sec) + ((double) timestamp.tv_nsec / 1000000000);
+    clock_serv_t cclock;
+    mach_timespec_t mts;
+    host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
+    clock_get_time(cclock, &mts);
+    mach_port_deallocate(mach_task_self(), cclock);
+    return ((double) mts.tv_sec) + ((double) mts.tv_nsec / 1000000000);
 }
 #endif
 

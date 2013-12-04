@@ -86,8 +86,17 @@ void Subsumption::resetStatistics()
 void Subsumption::process(bool doStrengthen, Heap< VarOrderBVEHeapLt >* heap, const Var ignore, const bool doStatistics)
 {
   modifiedFormula = false;
+  
+  if( config.opt_sub_debug > 1 ) cerr << "c call susi process with subs: " << data.getSubsumeClauses() << " and str: " <<  data.getStrengthClauses() << endl;
+  
   if( !data.ok() ) return;
-  if( !performSimplification() ) return; // do not execute simplification?
+  if( !performSimplification() ) { // if nothing to be done, at least clean all the lists!
+    for( int i = 0 ; i < data.getSubsumeClauses().size(); ++ i ) ca[ data.getSubsumeClauses()[i] ].set_strengthen(false);
+    data.getSubsumeClauses().clear();
+    for( int i = 0 ; i < data.getStrengthClauses().size(); ++ i ) ca[ data.getStrengthClauses()[i] ].set_strengthen(false);
+    data.getStrengthClauses().clear();
+    return; // do not execute simplification?
+  }
   
   // increase limits per call if necessary
   if( subsumeSteps + callIncrease > subLimit )  { subLimit = subsumeSteps + callIncrease;  limitIncreases++; }
@@ -1624,13 +1633,13 @@ inline void Subsumption::updateOccurrences(vector< OccUpdate > & updates, Heap<V
     updates.clear();
 }
 
-void Subsumption::initClause( const CRef cr )
+void Subsumption::initClause( const Minisat::CRef cr, bool addToStrengthen )
 {
   const Clause& c = ca[cr];
   if( !c.can_be_deleted() ) {
     if (c.can_subsume() )
       data.getSubsumeClauses().push_back(cr);
-    if (c.can_strengthen())
+    if (addToStrengthen && c.can_strengthen()) // only if the clause should be added to the strengthening queue
       data.getStrengthClauses().push_back(cr);
   }
 }
