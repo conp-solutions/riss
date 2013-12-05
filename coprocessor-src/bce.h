@@ -8,6 +8,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #include "core/Solver.h"
 #include "coprocessor-src/Technique.h"
 #include "coprocessor-src/CoprocessorTypes.h"
+#include "coprocessor-src/Propagation.h"
 
 using namespace Minisat;
 
@@ -18,6 +19,7 @@ namespace Coprocessor {
 class BlockedClauseElimination : public Technique  {
     
   CoprocessorData& data;
+  Coprocessor::Propagation& propagation;
   
   /// compare two literals
   struct LitOrderBCEHeapLt { // sort according to number of occurrences of complement!
@@ -29,7 +31,7 @@ class BlockedClauseElimination : public Technique  {
   };
   
 public:
-  BlockedClauseElimination( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data );
+  BlockedClauseElimination( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Coprocessor::Propagation& _propagation  );
 
   void reset();
   

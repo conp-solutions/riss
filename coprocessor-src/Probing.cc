@@ -665,7 +665,7 @@ void Probing::reSetupSolver()
 	      assert( c.mark() == 0 && "only clauses without a mark should be passed back to the solver!" );
 	      if (c.size() > 1)
 	      {
-		  if( config.pr_debug_out > 1 ) cerr << "c resetup clause " << c << endl;
+		  if( config.pr_debug_out > 1 ) cerr << "c resetup clause [" << i << "]("<< cr <<")" << c << endl;
 		  // do not watch literals that are false!
 		  int j = 1;
 		  for ( int k = 0 ; k < 2; ++ k ) { // ensure that the first two literals are undefined!
@@ -1056,33 +1056,38 @@ void Probing::clauseVivification()
     }
     
     cerr << "c formula before vivi: " << endl;
-    for( int i = 0 ; i< solver.clauses.size(); ++ i ) {
-      const CRef cr = solver.clauses[i];
-      const Clause& c = ca[cr];
-      if( c.can_be_deleted() ) continue;
-      cerr << "[" << cr << "] : " << c << endl;
-      
-      
-      if( c.size() == 1 ) cerr << "there should not be unit clauses! [" << cr << "]" << c << endl;
-      else {
-	for( int j = 0 ; j < 2; ++ j ) {
-	  const Lit l = ~c[j];
-	  vec<Solver::Watcher>&  ws  = solver.watches[l];
-	  bool didFind = false;
-	  for ( int j = 0 ; j < ws.size(); ++ j){
-	      CRef     wcr        = ws[j].cref;
-	      if( wcr  == cr ) { didFind = true; break; }
+    for( int p = 0 ; p < 2; ++ p ) {
+      vec<CRef>& clList = (p == 0 ? solver.clauses : solver.learnts);
+      for( int i = 0 ; i< clList.size(); ++ i ) {
+	const CRef cr = clList[i];
+	const Clause& c = ca[cr];
+	
+	if( c.can_be_deleted() )  cerr << "[" << i << "](ign)";
+	else cerr << "c [" << i << "]";
+	cerr << "(" << cr << ") : " << c << endl;
+	if( c.can_be_deleted() ) continue;
+	
+	if( c.size() == 1 ) cerr << "there should not be unit clauses! [" << cr << "]" << c << endl;
+	else {
+	  for( int j = 0 ; j < 2; ++ j ) {
+	    const Lit l = ~c[j];
+	    vec<Solver::Watcher>&  ws  = solver.watches[l];
+	    bool didFind = false;
+	    for ( int j = 0 ; j < ws.size(); ++ j){
+		CRef     wcr        = ws[j].cref;
+		if( wcr  == cr ) { didFind = true; break; }
+	    }
+	    vec<Solver::Watcher>& ws2  = solver.watchesBin[l];
+	    for ( int j = 0 ; j < ws2.size(); ++ j){
+		CRef     wcr        = ws2[j].cref;
+		if( wcr  == cr ) { didFind = true; break; }
+	    }
+	    if( ! didFind ) cerr << "could not find clause[" << cr << "] " << c << " in watcher for lit " << l << endl;
 	  }
-	  vec<Solver::Watcher>& ws2  = solver.watchesBin[l];
-	  for ( int j = 0 ; j < ws2.size(); ++ j){
-	      CRef     wcr        = ws2[j].cref;
-	      if( wcr  == cr ) { didFind = true; break; }
-	  }
-	  if( ! didFind ) cerr << "could not find clause[" << cr << "] " << c << " in watcher for lit " << l << endl;
+	  
 	}
 	
       }
-      
     }
   }
   

@@ -1061,6 +1061,8 @@ CRef Solver::propagate()
         for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;)
 	{
 	  
+	    if( i->cref == 522478 ) cerr << "c visit clause (" << i->cref << ")" << ca[i->cref] << " during propagation" << endl;
+	  
 	    if( config.opt_learn_debug ) cerr << "c check clause " << ca[i->cref] << endl;
 	  
 	    assert( ca[ i->cref ].size() > 2 && "in this list there can only be clauses with more than 2 literals" );
@@ -1076,6 +1078,12 @@ CRef Solver::propagate()
             const Lit false_lit = ~p;
             if (c[0] == false_lit)
                 c[0] = c[1], c[1] = false_lit;
+	    if( c[1] != false_lit ) { // build in exit
+	      cerr << "c wrong literal order in the clause!" << endl;
+	      cerr << "c clause (" << cr << "): " << c << endl;
+	      assert(c[1] == false_lit && "wrong literal order in the clause!");
+	      exit(37);
+	    }
             assert(c[1] == false_lit && "wrong literal order in the clause!");
             i++;
 
