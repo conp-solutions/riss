@@ -83,7 +83,6 @@ public:
  BoolOption opt_symm        ;
  BoolOption opt_FM          ;
 
-
  StringOption opt_ptechs ;
  StringOption opt_itechs ;
 
@@ -206,6 +205,28 @@ BoolOption opt_minimal_updates;
  IntOption  opt_Ibva                 ;
 #endif
 
+//
+// BCE
+//
+BoolOption orderComplements; // sort the heap based on the occurrence of complementary literals
+BoolOption bceBinary; // remove binary clauses during BCE
+IntOption bceLimit;
+BoolOption opt_bce_bce; // actually remove blocked clauses
+BoolOption opt_bce_cle; // perform covered literal elimination
+BoolOption opt_bce_cla; // perform covered literal addition
+BoolOption opt_bce_cle_conservative; // perform CLE conservative and cheap, if tautological resolvents occur
+IntOption opt_bceInpStepInc; // add to limit for inprocessing
+IntOption claStepSize; // number of extension literals so that literals are removed randomly
+IntOption claStepMax; // number of first extension literals that are considered (should be smaller then size!)
+#if defined TOOLVERSION  
+const int opt_bce_verbose;
+const bool opt_cle_debug; 
+#else
+IntOption opt_bce_verbose; // output operation steps
+BoolOption opt_bce_debug; // debug output
+#endif
+
+ 
 //
 // CCE
 //

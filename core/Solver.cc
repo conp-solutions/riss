@@ -1060,11 +1060,8 @@ CRef Solver::propagate()
 
         for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;)
 	{
-	  
-	    if( i->cref == 522478 ) cerr << "c visit clause (" << i->cref << ")" << ca[i->cref] << " during propagation" << endl;
-	  
+	    // if( i->cref == 522478 ) cerr << "c visit clause (" << i->cref << ")" << ca[i->cref] << " during propagation" << endl;
 	    if( config.opt_learn_debug ) cerr << "c check clause " << ca[i->cref] << endl;
-	  
 	    assert( ca[ i->cref ].size() > 2 && "in this list there can only be clauses with more than 2 literals" );
 	    
             // Try to avoid inspecting the clause:

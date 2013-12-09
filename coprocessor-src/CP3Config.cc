@@ -17,6 +17,7 @@ const char* _cat = "COPROCESSOR 3";
 const char* _cat2 = "PREPROCESSOR TECHNIQUES";
 const char* _cat_bve = "COPROCESSOR 3 - BVE";
 const char* _cat_bva = "COPROCESSOR 3 - BVA";
+const char* _cat_bce = "COPROCESSOR 3 - BCE";
 const char* _cat_cce = "COPROCESSOR 3 - CCE";
 const char* _cat_dense = "COPROCESSOR 3 - DENSE";
 const char* _cat_entailed = "COPROCESSOR 3 - ENTAILED";
@@ -207,6 +208,27 @@ opt_Ibva_heap            (_cat_bva, "cp3_Ibva_heap",   "0: minimum heap, 1: maxi
 opt_Xbva                 (_cat_bva, "cp3_Xbva",       "perform XOR-bva (1=half gates,2=full gates)", 0, IntRange(0, 2)),
 opt_Ibva                 (_cat_bva, "cp3_Ibva",       "perform ITE-bva (1=half gates,2=full gates)", 0, IntRange(0, 2)),
 #endif  
+//
+// BCE
+//
+orderComplements (_cat_bce,"bce-compl", "test literals for BCE based on the number of occurrences of the complementary literal", true) ,
+bceBinary (_cat_bce,"bce-bin", "allow to remove binary clauses during BCE", false) ,
+bceLimit (_cat_bce,"bce-limit", "number of pairwise clause comparisons before interrupting BCE", 100000000, IntRange(0, INT32_MAX) ),
+opt_bce_bce(_cat_bce,"bce-bce", "actually perform BCE", true) ,
+opt_bce_cle(_cat_bce,"bce-cle", "perform covered literal elimination (CLE)", false),
+opt_bce_cla(_cat_bce,"bce-cla", "perform covered literal addition (CLA)", false),
+opt_bce_cle_conservative(_cat_bce,"bce-cle-cons", "conservative cle if taut. resolvents are present", false),
+opt_bceInpStepInc (_cat_bce,"bce-incInp", "number of steps given to BCE for another inprocessign round", 10000, IntRange(0, INT32_MAX) ),
+claStepSize(_cat_bce,"bce-claStep", "number of extension literals per step so that literals are removed randomly", 4, IntRange(1, INT32_MAX) ), 
+claStepMax(_cat_bce,"bce-claMax", "number of extension literals per step so that literals are removed randomly", 2, IntRange(1, INT32_MAX) ), 
+#if defined TOOLVERSION
+opt_bce_verbose (0),
+opt_cle_debug(false),
+#else
+opt_bce_verbose (_cat_bce, "bce-verbose", "be verbose during BCE", 0, IntRange(0, 3)) ,
+opt_bce_debug (_cat_bce, "bce-debug", "output debug info during BCE", false) ,
+#endif
+
 //
 // CCE
 //

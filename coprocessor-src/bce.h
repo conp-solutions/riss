@@ -23,12 +23,31 @@ class BlockedClauseElimination : public Technique  {
   
   /// compare two literals
   struct LitOrderBCEHeapLt { // sort according to number of occurrences of complement!
-        CoprocessorData & data;
+        CoprocessorData & data; // data to use for sorting
+	bool useComplements; // sort according to occurrences of complement, or actual literal
         bool operator () (int& x, int& y) const {
-	    return data[ ~toLit(x)] > data[ ~toLit(y) ]; 
+	  if( useComplements ) return data[ ~toLit(x)] > data[ ~toLit(y) ]; 
+	  else return data[ toLit(x)] > data[ toLit(y) ]; 
         }
-        LitOrderBCEHeapLt(CoprocessorData & _data) : data(_data) {}
+        LitOrderBCEHeapLt(CoprocessorData & _data, bool _useComplements) : data(_data), useComplements(_useComplements) {}
   };
+  
+  /// store steps of CLA
+  struct ClaStore {
+    CRef oldClause;
+    CRef newClause;
+    Lit claLit;
+    ClaStore( CRef o, CRef n, Lit l ) : oldClause( o ), newClause( n ), claLit( l ) {}
+  };
+  
+  // attributes
+  int bceSteps, testedLits;
+  int cleCandidates; // number of clauses that have been checked for cle
+  int remBCE, remCLE, cleUnits; // how many clauses / literals have been removed
+  Clock bceTime,claTime; // clocks for the two methods
+  
+  int claTestedLits, claSteps, claExtendedClauses, claExtensions;
+  int64_t possibleClaExtensions; // cla stats
   
 public:
   BlockedClauseElimination( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Coprocessor::Propagation& _propagation  );
@@ -51,6 +70,12 @@ protected:
    * Note: method assumes c and d to be sorted
    */
   bool tautologicResolvent( const Clause& c, const Clause& d, const Lit l );
+  
+  /** run blocked clause elimination, and covered literal elimination */
+  void blockedClauseElimination();
+  
+  /** run a covered literal addition to increase the size of clauses */
+  void coverdLiteralAddition();
 };
 
 }
