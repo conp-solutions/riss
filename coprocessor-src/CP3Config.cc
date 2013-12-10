@@ -18,6 +18,7 @@ const char* _cat2 = "PREPROCESSOR TECHNIQUES";
 const char* _cat_bve = "COPROCESSOR 3 - BVE";
 const char* _cat_bva = "COPROCESSOR 3 - BVA";
 const char* _cat_bce = "COPROCESSOR 3 - BCE";
+const char* _cat_la = "COPROCESSOR 3 - LA";
 const char* _cat_cce = "COPROCESSOR 3 - CCE";
 const char* _cat_dense = "COPROCESSOR 3 - DENSE";
 const char* _cat_entailed = "COPROCESSOR 3 - ENTAILED";
@@ -70,6 +71,7 @@ CP3Config::CP3Config() // add new options here!
 #else
   opt_ent         (_cat2, "ent",           "Use checking for entailed redundancy during preprocessing", false),
 #endif
+  opt_la          (_cat2, "la",            "Use (covered/asymmetric) Literal Addition during preprocessing", false),
   opt_cce         (_cat2, "cce",           "Use (covered) Clause Elimination during preprocessing", false),
   opt_ee          (_cat2, "ee",            "Use Equivalence Elimination during preprocessing", false),
   opt_bve         (_cat2, "bve",           "Use Bounded Variable Elimination during preprocessing", false),
@@ -216,11 +218,8 @@ bceBinary (_cat_bce,"bce-bin", "allow to remove binary clauses during BCE", fals
 bceLimit (_cat_bce,"bce-limit", "number of pairwise clause comparisons before interrupting BCE", 100000000, IntRange(0, INT32_MAX) ),
 opt_bce_bce(_cat_bce,"bce-bce", "actually perform BCE", true) ,
 opt_bce_cle(_cat_bce,"bce-cle", "perform covered literal elimination (CLE)", false),
-opt_bce_cla(_cat_bce,"bce-cla", "perform covered literal addition (CLA)", false),
 opt_bce_cle_conservative(_cat_bce,"bce-cle-cons", "conservative cle if taut. resolvents are present", false),
 opt_bceInpStepInc (_cat_bce,"bce-incInp", "number of steps given to BCE for another inprocessign round", 10000, IntRange(0, INT32_MAX) ),
-claStepSize(_cat_bce,"bce-claStep", "number of extension literals per step so that literals are removed randomly", 4, IntRange(1, INT32_MAX) ), 
-claStepMax(_cat_bce,"bce-claMax", "number of extension literals per step so that literals are removed randomly", 2, IntRange(1, INT32_MAX) ), 
 #if defined TOOLVERSION
 opt_bce_verbose (0),
 opt_cle_debug(false),
@@ -228,6 +227,15 @@ opt_cle_debug(false),
 opt_bce_verbose (_cat_bce, "bce-verbose", "be verbose during BCE", 0, IntRange(0, 3)) ,
 opt_bce_debug (_cat_bce, "bce-debug", "output debug info during BCE", false) ,
 #endif
+
+//
+// Literal Addition
+//
+laLimit (_cat_la,"la-limit", "number of pairwise clause comparisons before interrupting LA", 100000000, IntRange(0, INT32_MAX) ),
+opt_la_cla(_cat_la,"la-cla", "perform covered literal addition (CLA)", true),
+claStepSize(_cat_la,"la-claStep", "number of extension literals per step so that literals are removed randomly", 4, IntRange(1, INT32_MAX) ), 
+claStepMax(_cat_la,"la-claMax", "number of extension literals per step so that literals are removed randomly", 2, IntRange(1, INT32_MAX) ), 
+claIterations(_cat_la,"la-claIter", "number of extension literals per step so that literals are removed randomly", 1, IntRange(1, INT32_MAX) ), 
 
 //
 // CCE

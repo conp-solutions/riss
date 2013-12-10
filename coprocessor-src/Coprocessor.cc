@@ -49,6 +49,7 @@ config( _config )
 , symmetry(config, solver->ca, controller, data, *solver)
 , xorReasoning(config, solver->ca, controller, data, propagation, ee )
 , bce(config, solver->ca, controller, data, propagation )
+, la(config, solver->ca, controller, data, propagation )
 , entailedRedundant( config, solver->ca, controller, data)
 , sls ( config, data, solver->ca, controller )
 , twoSAT( config, solver->ca, controller, data)
@@ -99,7 +100,7 @@ lbool Preprocessor::performSimplification()
   
   const bool printBVE = false, printBVA = false, printProbe = false, printUnhide = false, 
 	printCCE = false, printEE = false, printREW = false, printFM = false, printHTE = false, printSusi = false, printUP = false,
-	printTernResolve = false, printAddRedBin = false, printXOR = false, printENT=false, printBCE=false;  
+	printTernResolve = false, printAddRedBin = false, printXOR = false, printENT=false, printBCE=false, printLA=false;  
   
   // do preprocessing
   if( config.opt_up ) {
@@ -338,6 +339,19 @@ lbool Preprocessor::performSimplification()
    printFormula("after BCE");
   }
   
+  if( config.opt_la ) {
+    if( config.opt_verbose > 0 ) cerr << "c la ..." << endl;
+    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") blocked clause elimination" << endl;
+    if( status == l_Undef ) la.process();  // cannot change status, can generate new unit clauses
+    if( config.opt_verbose > 1 )  { printStatistics(cerr); la.printStatistics(cerr); }
+  }
+  data.checkGarbage(); // perform garbage collection
+  
+  if( config.opt_debug )  { scanCheck("after BCE"); }  
+  if( printBCE || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'b') ) {
+   printFormula("after BCE");
+  }
+  
   if( config.opt_cce ) {
     if( config.opt_verbose > 0 ) cerr << "c cce ..." << endl;
     if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") (covered) clause elimination" << endl;
@@ -474,6 +488,7 @@ lbool Preprocessor::performSimplification()
     if( config.opt_sls ) sls.printStatistics(cerr);
     if( config.opt_twosat) twoSAT.printStatistics(cerr);
     if( config.opt_bce ) bce.printStatistics(cerr);
+    if( config.opt_la ) la.printStatistics(cerr);
     if( config.opt_cce ) cce.printStatistics(cerr);
     if( config.opt_ent ) entailedRedundant.printStatistics(cerr);
     if( config.opt_rew ) rew.printStatistics(cerr);
@@ -722,6 +737,14 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 	change = bce.appliedSomething() || change;
 	if( config.opt_verbose > 1 ) cerr << "c BCE changed formula: " << change << endl;
     }
+
+    // literaladdition "l"
+    else if( execute == 'l' && config.opt_la && status == l_Undef && data.ok() ) {
+	if( config.opt_verbose > 2 ) cerr << "c la" << endl;
+	la.process();
+	change = la.appliedSomething() || change;
+	if( config.opt_verbose > 1 ) cerr << "c LA changed formula: " << change << endl;
+    }
     
     // entailedRedundant "1"
     else if( execute == '1' && config.opt_ent && status == l_Undef && data.ok() ) {
@@ -909,6 +932,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     if( config.opt_sls ) sls.printStatistics(cerr);
     if( config.opt_twosat) twoSAT.printStatistics(cerr);
     if( config.opt_bce ) bce.printStatistics(cerr);
+    if( config.opt_la ) la.printStatistics(cerr);
     if( config.opt_cce ) cce.printStatistics(cerr);
     if( config.opt_ent ) entailedRedundant.printStatistics(cerr);
     if( config.opt_rew ) rew.printStatistics(cerr);
@@ -1175,6 +1199,7 @@ void Preprocessor::destroyTechniques()
     if( config.opt_sls ) sls.destroy();
     if( config.opt_twosat) twoSAT.destroy();
     if( config.opt_bce ) bce.destroy();
+    if( config.opt_la ) la.destroy();
     if( config.opt_cce ) cce.destroy();
     if( config.opt_ent ) entailedRedundant.destroy();
   

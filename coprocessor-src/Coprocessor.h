@@ -26,6 +26,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/Rewriter.h"
 #include "coprocessor-src/FourierMotzkin.h"
 #include "coprocessor-src/bce.h"
+#include "coprocessor-src/LiteralAddition.h"
 #include "coprocessor-src/xor.h"
 #include "coprocessor-src/Entailed.h"
 #include "coprocessor-src/Dense.h"
@@ -118,7 +119,7 @@ public:
    */
   void printFormula(FILE* fd, bool clausesOnly = false);
   
-  /** disable the specified variable (external representation) for modelset-changing preprocessing (bve,ee,bce,cee,...)
+  /** disable the specified variable (external representation) for modelset-changing preprocessing (bve,ee,bce,cce,la,...)
    * @param lit literal in external representation (the whole variable will be frozen!)
    */
   void freezeExtern( int lit );
@@ -152,6 +153,7 @@ protected:
   Symmetry symmetry;
   XorReasoning xorReasoning;
   BlockedClauseElimination bce;
+  LiteralAddition la;
   EntailedRedundant entailedRedundant;
   
   Sls sls;

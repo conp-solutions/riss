@@ -32,22 +32,11 @@ class BlockedClauseElimination : public Technique  {
         LitOrderBCEHeapLt(CoprocessorData & _data, bool _useComplements) : data(_data), useComplements(_useComplements) {}
   };
   
-  /// store steps of CLA
-  struct ClaStore {
-    CRef oldClause;
-    CRef newClause;
-    Lit claLit;
-    ClaStore( CRef o, CRef n, Lit l ) : oldClause( o ), newClause( n ), claLit( l ) {}
-  };
-  
   // attributes
   int bceSteps, testedLits;
   int cleCandidates; // number of clauses that have been checked for cle
   int remBCE, remCLE, cleUnits; // how many clauses / literals have been removed
-  Clock bceTime,claTime; // clocks for the two methods
-  
-  int claTestedLits, claSteps, claExtendedClauses, claExtensions;
-  int64_t possibleClaExtensions; // cla stats
+  Clock bceTime; // clocks for the two methods
   
 public:
   BlockedClauseElimination( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Coprocessor::Propagation& _propagation  );
@@ -73,9 +62,6 @@ protected:
   
   /** run blocked clause elimination, and covered literal elimination */
   void blockedClauseElimination();
-  
-  /** run a covered literal addition to increase the size of clauses */
-  void coverdLiteralAddition();
 };
 
 }
