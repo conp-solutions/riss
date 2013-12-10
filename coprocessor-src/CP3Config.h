@@ -214,6 +214,7 @@ BoolOption bceBinary; // remove binary clauses during BCE
 IntOption bceLimit;
 BoolOption opt_bce_bce; // actually remove blocked clauses
 BoolOption opt_bce_cle; // perform covered literal elimination
+BoolOption opt_bce_cla; // perform covered literal addition
 BoolOption opt_bce_cle_conservative; // perform CLE conservative and cheap, if tautological resolvents occur
 IntOption opt_bceInpStepInc; // add to limit for inprocessing
 #if defined TOOLVERSION  
@@ -227,11 +228,23 @@ BoolOption opt_bce_debug; // debug output
 //
 // LiteralAddition
 //
-IntOption laLimit; // number of steps before aborting LA
 BoolOption opt_la_cla; // perform covered literal addition
+BoolOption opt_la_ala; // perform asymmetric literal addition
+
+IntOption claLimit; // number of steps before aborting LA
 IntOption claStepSize; // number of extension literals so that literals are removed randomly
 IntOption claStepMax; // number of first extension literals that are considered (should be smaller then size!)
 IntOption claIterations; // number of iterations to do for CLA
+
+IntOption alaLimit; // number of steps for limits
+IntOption alaIterations; // number of iterations to do for ALA
+BoolOption ala_binary; // perform ALA with binary clauses
+#if defined TOOLVERSION  
+const bool opt_la_debug; 
+#else
+BoolOption opt_la_debug; // debug output
+#endif
+
  
 //
 // CCE

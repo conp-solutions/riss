@@ -218,6 +218,7 @@ bceBinary (_cat_bce,"bce-bin", "allow to remove binary clauses during BCE", fals
 bceLimit (_cat_bce,"bce-limit", "number of pairwise clause comparisons before interrupting BCE", 100000000, IntRange(0, INT32_MAX) ),
 opt_bce_bce(_cat_bce,"bce-bce", "actually perform BCE", true) ,
 opt_bce_cle(_cat_bce,"bce-cle", "perform covered literal elimination (CLE)", false),
+opt_bce_cla(_cat_bce,"bce-cla", "perform covered literal elimination (CLA)", false),
 opt_bce_cle_conservative(_cat_bce,"bce-cle-cons", "conservative cle if taut. resolvents are present", false),
 opt_bceInpStepInc (_cat_bce,"bce-incInp", "number of steps given to BCE for another inprocessign round", 10000, IntRange(0, INT32_MAX) ),
 #if defined TOOLVERSION
@@ -231,11 +232,21 @@ opt_bce_debug (_cat_bce, "bce-debug", "output debug info during BCE", false) ,
 //
 // Literal Addition
 //
-laLimit (_cat_la,"la-limit", "number of pairwise clause comparisons before interrupting LA", 100000000, IntRange(0, INT32_MAX) ),
 opt_la_cla(_cat_la,"la-cla", "perform covered literal addition (CLA)", true),
+opt_la_ala(_cat_la,"la-ala", "perform asymmetric literal addition (ALA)", false),
+claLimit (_cat_la,"cla-limit", "number of pairwise clause comparisons before interrupting LA", 100000000, IntRange(0, INT32_MAX) ),
 claStepSize(_cat_la,"la-claStep", "number of extension literals per step so that literals are removed randomly", 4, IntRange(1, INT32_MAX) ), 
 claStepMax(_cat_la,"la-claMax", "number of extension literals per step so that literals are removed randomly", 2, IntRange(1, INT32_MAX) ), 
 claIterations(_cat_la,"la-claIter", "number of extension literals per step so that literals are removed randomly", 1, IntRange(1, INT32_MAX) ), 
+
+alaLimit(_cat_la,"ala-limit", "number of pairwise clause comparisons before interrupting LA", 100000000, IntRange(0, INT32_MAX) ),
+alaIterations(_cat_la,"la-alaIter", "number of extension literals per step so that literals are removed randomly", 1, IntRange(1, INT32_MAX) ), 
+ala_binary(_cat_la, "la-alaBin", "use binary clauses for ALA", false),
+#if defined TOOLVERSION
+opt_la_debug(false),
+#else
+opt_la_debug (_cat_la, "la-debug", "output debug info during LA", false),
+#endif
 
 //
 // CCE

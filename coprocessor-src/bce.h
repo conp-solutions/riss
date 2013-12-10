@@ -36,7 +36,10 @@ class BlockedClauseElimination : public Technique  {
   int bceSteps, testedLits;
   int cleCandidates; // number of clauses that have been checked for cle
   int remBCE, remCLE, cleUnits; // how many clauses / literals have been removed
-  Clock bceTime; // clocks for the two methods
+  Clock bceTime, claTime; // clocks for the two methods
+  
+  int claTestedLits, claSteps, claExtendedClauses, claExtensions;
+  int64_t possibleClaExtensions; // cla stats
   
 public:
   BlockedClauseElimination( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Coprocessor::Propagation& _propagation  );
@@ -62,6 +65,9 @@ protected:
   
   /** run blocked clause elimination, and covered literal elimination */
   void blockedClauseElimination();
+  
+  /** run a covered literal addition to increase the size of clauses */
+  void coverdLiteralAddition();
 };
 
 }
