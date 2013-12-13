@@ -7,6 +7,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor-src/VarFileParser.h"
 #include "coprocessor-src/Shuffler.h"
+#include "mtl/Sort.h"
 
 #include <iostream>
 #include <cstring>
@@ -1531,7 +1532,7 @@ bool Preprocessor::checkLists(const string& headline)
     const Clause& c = ca[data.getClauses()[i]];
     if( c.can_be_deleted() ) continue;
     for( int j = i+1 ; j < data.getClauses().size(); ++ j ) {
-      if( data.getClauses()[i] == data.getClauses()[j] ) cerr << "c found clause " << data.getClauses()[i] << " in both vectors" << endl;
+      if( data.getClauses()[i] == data.getClauses()[j] ) cerr << "c found clause " << data.getClauses()[i] << " in clause vector twice" << endl;
     }
   }
   
@@ -1539,7 +1540,7 @@ bool Preprocessor::checkLists(const string& headline)
     const Clause& c = ca[data.getLEarnts()[i]];
     if( c.can_be_deleted() ) continue;
     for( int j = i+1 ; j < data.getLEarnts().size(); ++ j ) {
-      if( data.getLEarnts()[i] == data.getLEarnts()[j] ) cerr << "c found clause " << data.getLEarnts()[i] << " in both vectors" << endl;
+      if( data.getLEarnts()[i] == data.getLEarnts()[j] ) cerr << "c found clause " << data.getLEarnts()[i] << " in learnts vector twice" << endl;
     }
   }
   }

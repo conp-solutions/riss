@@ -1057,7 +1057,7 @@ void Probing::clauseVivification()
     
     cerr << "c formula before vivi: " << endl;
     for( int p = 0 ; p < 2; ++ p ) {
-      vec<CRef>& clList = (p == 0 ? solver.clauses : solver.learnts);
+      const vec<CRef>& clList = (p == 0 ? solver.clauses : solver.learnts);
       for( int i = 0 ; i< clList.size(); ++ i ) {
 	const CRef cr = clList[i];
 	const Clause& c = ca[cr];
@@ -1119,7 +1119,7 @@ void Probing::clauseVivification()
     assert( solver.decisionLevel() == 0 && "asymmetric branching only at level 0!" );
     
     viviCands ++;
-    if( config.pr_debug_out > 1 ) cerr << "c work on clause " << clause << endl;
+    if( config.pr_debug_out > 1 ) cerr << "c work on clause ("<< ref << ") " << clause << endl;
     bool hasAssigned = false;
     data.lits.clear();
     for( int j = 0 ; j < clause.size(); ++ j ) {

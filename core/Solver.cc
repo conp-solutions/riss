@@ -970,7 +970,7 @@ void Solver::uncheckedEnqueue(Lit p, CRef from)
 |________________________________________________________________________________________________@*/
 CRef Solver::propagate()
 {
-    if( config.opt_printLhbr ) cerr << endl << "c called propagate" << endl;
+    // if( config.opt_printLhbr ) cerr << endl << "c called propagate" << endl;
   
   
     CRef    confl     = CRef_Undef;
@@ -987,7 +987,7 @@ CRef Solver::propagate()
 
 	if( config.opt_LHBR > 0 && vardata[var(p)].dom == lit_Undef ) {
 	  vardata[var(p)].dom = p; // literal is its own dominator, if its not implied due to a binary clause
-	  if( config.opt_printLhbr ) cerr << "c undominated literal " << p << " is dominated by " << p << " (because propagated)" << endl; 
+	  // if( config.opt_printLhbr ) cerr << "c undominated literal " << p << " is dominated by " << p << " (because propagated)" << endl; 
 	}
 	
 	    // First, Propagate binary clauses 
@@ -1012,7 +1012,7 @@ CRef Solver::propagate()
 	    uncheckedEnqueue(imp,wbin[k].cref);
 	    if( config.opt_LHBR > 0 ) {
 	      vardata[ var(imp) ].dom = (config.opt_LHBR == 1 || config.opt_LHBR == 3) ? p : vardata[ var(p) ].dom ; // set dominator
-	      if( config.opt_printLhbr ) cerr << "c literal " << imp << " is dominated by " << p << " (because propagated in binary)" << endl;  
+	      // if( config.opt_printLhbr ) cerr << "c literal " << imp << " is dominated by " << p << " (because propagated in binary)" << endl;  
 	    }
 	  } else {
 	    // hack
@@ -1047,20 +1047,20 @@ CRef Solver::propagate()
 	    
 	}
     
-	if( config.opt_printLhbr ) { // debug output for lhbr
+	if( false && config.opt_printLhbr ) { // debug output for lhbr
 	  cerr << "c watch list before propagating literal " << p << endl;
 	  int count = 0;
-	  for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;) {
-	    const CRef     cr        = i->cref;
+	  Watcher        *wi, *wend;
+	  for (wi = (Watcher*)ws, wend = wi + ws.size();  wi != end;) {
+	    const CRef     cr        = wi->cref;
             Clause&  c         = ca[cr];
 	    cerr << "c [" << count << "] (" << cr << ") " << c << endl;
-	    ++ count; ++i;
+	    ++ count; wi ++;
 	  }
 	}
 
         for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;)
 	{
-	    // if( i->cref == 522478 ) cerr << "c visit clause (" << i->cref << ")" << ca[i->cref] << " during propagation" << endl;
 	    if( config.opt_learn_debug ) cerr << "c check clause " << ca[i->cref] << endl;
 	    assert( ca[ i->cref ].size() > 2 && "in this list there can only be clauses with more than 2 literals" );
 	    
@@ -1126,7 +1126,7 @@ CRef Solver::propagate()
 	      
 	    Lit commonDominator = (config.opt_LHBR > 0 && lhbrs < config.opt_LHBR_max) ? vardata[var(false_lit)].dom : lit_Error; // inidicate whether lhbr should still be performed
 	    lhbrtests = commonDominator == lit_Error ? lhbrtests : lhbrtests + 1;
-	    if( config.opt_printLhbr ) cerr << "c common dominator for clause " << c << " : " << commonDominator << endl; 
+	    // if( config.opt_printLhbr ) cerr << "c common dominator for clause " << c << " : " << commonDominator << endl; 
 	    
             // Look for new watch:
             for (int k = 2; k < c.size(); k++)
@@ -1143,13 +1143,13 @@ CRef Solver::propagate()
 		    // TODO: currently, only lastUIP dominator is used, or "common" dominator, if thre exists any
 		    commonDominator = ( commonDominator == lit_Undef ? vardata[var(c[k])].dom : 
 				( commonDominator != vardata[var(c[k])].dom ? lit_Error : commonDominator ) );
-		    if( config.opt_printLhbr ) cerr << "c common dominator: " << commonDominator << " after visiting " << c[k] << endl; 
+		    // if( config.opt_printLhbr ) cerr << "c common dominator: " << commonDominator << " after visiting " << c[k] << endl; 
 		  }
 		}
 		
             // Did not find watch -- clause is unit under assignment:
-            *j++ = w; // do not do this here so that LHBR can be done right!
-            if( config.opt_printLhbr ) cerr << "c keep clause (" << cr << ")" << c << " in watch list while propagating " << p << endl;
+            *j++ = w; 
+            // if( config.opt_printLhbr ) cerr << "c keep clause (" << cr << ")" << c << " in watch list while propagating " << p << endl;
             if ( value(first) == l_False ) {
                 confl = cr; // independent of opt_long_conflict -> overwrite confl!
                 qhead = trail.size();
@@ -1161,7 +1161,7 @@ CRef Solver::propagate()
                 uncheckedEnqueue(first, cr);
 		if( config.opt_LHBR > 0 ) vardata[ var(first) ].dom = (config.opt_LHBR == 1 || config.opt_LHBR == 3) ? first : vardata[ var(first) ].dom ; // set dominator for this variable!
 		
-		if( config.opt_printLhbr ) cerr << "c final common dominator: " << commonDominator << endl;
+		// if( config.opt_printLhbr ) cerr << "c final common dominator: " << commonDominator << endl;
 		
 		// check lhbr!
 		if( commonDominator != lit_Error && commonDominator != lit_Undef ) {
@@ -1170,7 +1170,7 @@ CRef Solver::propagate()
 		  oc.clear();
 		  oc.push(first);
 		  oc.push(~commonDominator);
-
+		  
 		  addCommentToProof("added by LHBR");
 		  addToProof( oc ); // if drup is enabled, add this clause to the proof!
 		  
@@ -1196,7 +1196,7 @@ CRef Solver::propagate()
 		  // a new clause is required
 		  bool clearnt = c.learnt();
 		  CRef cr2 = ca.alloc(oc, clearnt ); // add the new clause - now all references could be invalid!
-		  if( clearnt ) { ca[cr2].setLBD(1); learnts.push(cr); ca[cr2].activity() = c.activity(); }
+		  if( clearnt ) { ca[cr2].setLBD(1); learnts.push(cr2); ca[cr2].activity() = c.activity(); }
 		  else clauses.push(cr2);
 		  attachClause(cr2);
 		  vardata[var(first)].reason = cr2; // set the new clause as reason
@@ -1212,8 +1212,8 @@ CRef Solver::propagate()
         }
         ws.shrink(i - j); // remove all duplciate clauses!
 	
-	if( config.opt_printLhbr ) {
-	  cerr << "c watch list before propagating literal " << p << endl;
+	if( false && config.opt_printLhbr ) {
+	  cerr << "c watch list after propagating literal " << p << endl;
 	  int count = 0;
 	  for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;) {
 	    const CRef     cr        = i->cref;
