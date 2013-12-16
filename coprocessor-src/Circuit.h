@@ -10,6 +10,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "core/Solver.h"
 
 #include "coprocessor-src/CoprocessorTypes.h"
+#include "coprocessor-src/CP3Config.h"
 
 #include <vector>
 
@@ -21,6 +22,7 @@ namespace Coprocessor {
 /** This class implement hidden tautology elimination
  */
 class Circuit {
+  CP3Config& config;
   ClauseAllocator& ca;
   
   struct ternary{ Lit l1,l2;
@@ -44,7 +46,7 @@ class Circuit {
 
 public:
   
-  Circuit (ClauseAllocator& _ca );
+  Circuit (CP3Config &_config, ClauseAllocator& _ca );
   
   class Gate {
     union {

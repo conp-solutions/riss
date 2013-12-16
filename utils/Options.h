@@ -49,16 +49,18 @@ extern void setHelpPrefixStr (const char* str);
 
 class Option
 {
- protected:
+ public:
     const char* name;
     const char* description;
     const char* category;
     const char* type_name;
 
+ 
     static vec<Option*>& getOptionList () { static vec<Option*> options; return options; }
     static const char*&  getUsageString() { static const char* usage_str; return usage_str; }
     static const char*&  getHelpPrefixString() { static const char* help_prefix_str = ""; return help_prefix_str; }
 
+ 
     struct OptionLt {
         bool operator()(const Option* x, const Option* y) {
             int test1 = strcmp(x->category, y->category);
@@ -69,13 +71,15 @@ class Option
     Option(const char* name_, 
            const char* desc_,
            const char* cate_,
-           const char* type_) : 
+           const char* type_,
+	   vec<Option*>* externOptionList ) : // push to this list, if present!
       name       (name_)
     , description(desc_)
     , category   (cate_)
     , type_name  (type_)
     { 
-        getOptionList().push(this); 
+      if( externOptionList == 0 ) getOptionList().push(this); 
+      else externOptionList->push( this );
     }
 
  public:
@@ -128,8 +132,8 @@ class DoubleOption : public Option
     double      value;
 
  public:
-    DoubleOption(const char* c, const char* n, const char* d, double def = double(), DoubleRange r = DoubleRange(-HUGE_VAL, false, HUGE_VAL, false))
-        : Option(n, d, c, "<double>"), range(r), value(def) {
+    DoubleOption(const char* c, const char* n, const char* d, double def = double(), DoubleRange r = DoubleRange(-HUGE_VAL, false, HUGE_VAL, false), vec<Option*>* externOptionList = 0)
+        : Option(n, d, c, "<double>", externOptionList), range(r), value(def) {
         // FIXME: set LC_NUMERIC to "C" to make sure that strtof/strtod parses decimal point correctly.
     }
 
@@ -199,8 +203,8 @@ class IntOption : public Option
     int32_t  value;
 
  public:
-    IntOption(const char* c, const char* n, const char* d, int32_t def = int32_t(), IntRange r = IntRange(INT32_MIN, INT32_MAX))
-        : Option(n, d, c, "<int32>"), range(r), value(def) {}
+    IntOption(const char* c, const char* n, const char* d, int32_t def = int32_t(), IntRange r = IntRange(INT32_MIN, INT32_MAX), vec<Option*>* externOptionList = 0)
+        : Option(n, d, c, "<int32>", externOptionList), range(r), value(def) {}
  
     operator   int32_t   (void) const { return value; }
     operator   int32_t&  (void)       { return value; }
@@ -273,8 +277,8 @@ class Int64Option : public Option
     int64_t  value;
 
  public:
-    Int64Option(const char* c, const char* n, const char* d, int64_t def = int64_t(), Int64Range r = Int64Range(INT64_MIN, INT64_MAX))
-        : Option(n, d, c, "<int64>"), range(r), value(def) {}
+    Int64Option(const char* c, const char* n, const char* d, int64_t def = int64_t(), Int64Range r = Int64Range(INT64_MIN, INT64_MAX), vec<Option*>* externOptionList = 0)
+        : Option(n, d, c, "<int64>", externOptionList), range(r), value(def) {}
  
     operator     int64_t   (void) const { return value; }
     operator     int64_t&  (void)       { return value; }
@@ -345,8 +349,8 @@ class StringOption : public Option
 {
     const char* value;
  public:
-    StringOption(const char* c, const char* n, const char* d, const char* def = NULL) 
-        : Option(n, d, c, "<string>"), value(def) {}
+    StringOption(const char* c, const char* n, const char* d, const char* def = NULL, vec<Option*>* externOptionList = 0) 
+        : Option(n, d, c, "<string>", externOptionList), value(def) {}
 
     operator      const char*  (void) const     { return value; }
     operator      const char*& (void)           { return value; }
@@ -388,8 +392,8 @@ class BoolOption : public Option
     bool value;
 
  public:
-    BoolOption(const char* c, const char* n, const char* d, bool v) 
-        : Option(n, d, c, "<bool>"), value(v) {}
+    BoolOption(const char* c, const char* n, const char* d, bool v, vec<Option*>* externOptionList = 0) 
+        : Option(n, d, c, "<bool>", externOptionList), value(v) {}
 
     operator    bool     (void) const { return value; }
     operator    bool&    (void)       { return value; }

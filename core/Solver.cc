@@ -2335,13 +2335,24 @@ void Solver::relocAll(ClauseAllocator& to)
 
     // All learnt:
     //
+    int keptClauses = 0;
     for (int i = 0; i < learnts.size(); i++)
+    {
         ca.reloc(learnts[i], to);
+	if( !to[ learnts[i]].mark() ) learnts[keptClauses++] = learnts[i]; // keep the clause only if its not marked!
+    }
+    learnts.shrink ( learnts.size() - keptClauses );
 
     // All original:
     //
-    for (int i = 0; i < clauses.size(); i++)
+    keptClauses = 0;
+    for (int i = 0; i < clauses.size(); i++) 
+    {
         ca.reloc(clauses[i], to);
+	if( !to[ clauses[i]].mark() ) clauses[keptClauses++] = clauses[i]; // keep the clause only if its not marked!
+    }
+    clauses.shrink ( clauses.size() - keptClauses );
+
 }
 
 
@@ -2352,7 +2363,7 @@ void Solver::garbageCollect()
     ClauseAllocator to(ca.size() >= ca.wasted() ? ca.size() - ca.wasted() : 0); //FIXME security-workaround, for CP3 (due to inconsistend wasted-bug)
 
     relocAll(to);
-    if (verbosity >= 2)
+    // if (verbosity >= 2)
         printf("|  Garbage collection:   %12d bytes => %12d bytes             |\n", 
                ca.size()*ClauseAllocator::Unit_Size, to.size()*ClauseAllocator::Unit_Size);
     to.moveTo(ca);

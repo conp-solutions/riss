@@ -419,16 +419,20 @@ bool Probing::prDoubleLook(Lit l1decision)
 	if( data.lits.size() == 1 ) backtrack_level = 0;
 	else backtrack_level = solver.level( var( data.lits[1] ) );
       }
+      
       if( config.pr_debug_out > 0 ){ 
 	cerr << "c learnt clause at level " << solver.decisionLevel() << " with jump to " << backtrack_level << " after decideing " << l1decision << " and " << posLit << " ";
 	for( int i = 0 ; i < data.lits.size(); ++i ) cerr << " " << data.lits[i];
 	cerr << endl;
       }
+      
       solver.cancelUntil(backtrack_level);
       if (data.lits.size() == 1){
+	// cerr << "c unit lit is unsat: " << (data.value( data.lits[0] ) == l_False) << endl;
 	solver.enqueue(data.lits[0]);
+	// cerr << "c return value for enqueing lit " << data.lits[0] << " is " << ret << endl;
 	if( config.pr_debug_out > 0 ) cerr << "c L2 learnt clause: " << data.lits[0] << " 0" << endl;
-      }else{
+      } else {
 	CRef cr = ca.alloc(data.lits, config.pr_keepLearnts == 1);
 	// solver.clauses.push(cr);
 	solver.attachClause(cr);
@@ -437,9 +441,15 @@ bool Probing::prDoubleLook(Lit l1decision)
 	solver.uncheckedEnqueue(data.lits[0], cr);
 	if( config.pr_debug_out > 0 ) cerr << "c L2 learnt clause: " << ca[cr] << " 0" << endl;
       }
+      
       CRef cClause = solver.propagate() ;
-      if( cClause != CRef_Undef ) { if( config.pr_debug_out > 1 ) {
-	cerr << "c l1 propagating (" << data.lits << ") learned clause at level " << solver.decisionLevel() << " failed" << endl;} 
+      if( cClause != CRef_Undef ) { 
+	if( solver.decisionLevel() == 0 ) {
+	   data.setFailed(); return true;
+	}
+	if( config.pr_debug_out > 1 ) {
+	  cerr << "c l1 propagating (" << data.lits << ") learned clause at level " << solver.decisionLevel() << " failed" << endl;
+	} 
 	// perform l1 analysis - as in usual probing routine
 	l1failed++;
 	if( !prAnalyze( cClause ) ) {
@@ -508,6 +518,9 @@ bool Probing::prDoubleLook(Lit l1decision)
       CRef cClause = solver.propagate() ;
       if( cClause != CRef_Undef ) { if( config.pr_debug_out > 1 ) {
 	cerr << "c l1 propagating (" << data.lits << ") learned clause at level " << solver.decisionLevel() << " failed" << endl;} 
+	if( solver.decisionLevel() == 0 ) { // reached UNSAT here!
+	  data.setFailed(); return true;
+	}
 	// perform l1 analysis - as in usual probing routine
 	l1failed++;
 	if( !prAnalyze( cClause ) ) {
@@ -1031,7 +1044,9 @@ void Probing::probing()
   }
   l2implieds.clear();
   
-  solver.watches.cleanAll(); // clean data structures
+  // clean data structures
+  solver.watches.cleanAll(); 
+  solver.watchesBin.cleanAll(); 
 }
 
 

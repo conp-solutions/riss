@@ -466,6 +466,7 @@ bool FourierMotzkin::process()
 
 	  bool hasDuplicates = false; // if true, then the resulting constraint is invalid!
 	  CardC& thisCard = cards[ index ];
+	  int extraK = 0; // if during reasoning the K value needs to be adopted
 	  for( int p = 0 ; p < 2; ++ p ) {
 	    // first half
 	    const vector<Lit>& v1 = p == 0 ? card1.ll : card1.lr;
@@ -473,6 +474,7 @@ bool FourierMotzkin::process()
 	    int n1=0,n2=0;
 	    data.lits.clear();
 	    while( n1 < v1.size() && n2 < v2.size() ) {
+	      if( config.fm_debug_out ) cerr  << "c [FM] compare " << v1[n1] << " with " << v2[n2] << endl;
 	      if( v1[n1] == v2[n2] ) { // same literal in two amos with a different literal -> have to be unit!
 		addDuplicates ++;
 		// TODO: enqueue, later remove from all cards!
@@ -480,6 +482,9 @@ bool FourierMotzkin::process()
 		hasDuplicates = true;
 		n1++;n2++;
 		break;
+	      } else if (v1[n1] == ~v2[n2] ) { // complementary literal, remove both, increase counting variable
+		extraK = (p == 0) ? extraK - 1: extraK + 1; // depending on whether the complementary pair is removed on the left or the right side of the <= operator, decrease or increase!
+		n1++;n2++;
 	      } else if( v1[n1] < v2[n2] ) {
 		if( v1[n1] != toEliminate ) data.lits.push_back(v1[n1]);
 		n1 ++;
@@ -488,7 +493,7 @@ bool FourierMotzkin::process()
 		n2 ++;
 	      }
 	    }
-	    if(!hasDuplicates) {
+	    if(!hasDuplicates) { // add the remaining elements of one of the vectors!
 	      for(; n1 < v1.size(); ++ n1 ) if( v1[n1] != toEliminate ) data.lits.push_back( v1[n1] );
 	      for(; n2 < v2.size(); ++ n2 ) if( v2[n2] != toEliminate ) data.lits.push_back( v2[n2] );
 	    }
@@ -508,6 +513,8 @@ bool FourierMotzkin::process()
 	  while( nl < thisCard.ll.size() && nr < thisCard.lr.size() ) {
 	    if( thisCard.ll[nl] == thisCard.lr[nr] ) { // do not keep the same literal!
 	       nr ++; nl ++;
+	    } else if( thisCard.ll[nl] == ~thisCard.lr[nr] ) { // approximate, keep only the literal on the left side of the operator!
+	      thisCard.ll[kl++] = thisCard.ll[nl]; nl ++; // keep literal on the left side
 	    } else if( thisCard.ll[nl] < thisCard.lr[nr] ) {
 	      thisCard.ll[kl++] = thisCard.ll[nl]; nl ++; // keep this literal on the left side!
 	    } else {
@@ -519,7 +526,8 @@ bool FourierMotzkin::process()
 	  thisCard.lr.resize(kr);
 	  thisCard.ll.resize(kl);
 	  
-	  thisCard.k = card1.k + card2.k;
+	  thisCard.k = card1.k + card2.k + extraK; // do not forget the extra cardinality value!	  
+	  
 	  if( config.fm_debug_out > 1 ) cerr << "c resolved new CARD " << thisCard.ll << " <= " << thisCard.k << " + " << thisCard.lr << "  (unit: " << thisCard.isUnit() << " taut: " << thisCard.taut() << ", failed: " << thisCard.failed() << "," << (int)thisCard.lr.size() + thisCard.k << ")" << endl
 				    << "c from " << card1.ll << " <= " << card1.k << " + " << card1.lr << endl
 				    << "c and  " << card2.ll << " <= " << card2.k << " + " << card2.lr << endl << endl;

@@ -92,7 +92,7 @@ void EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
 	cerr << "====================================" << endl << endl;
       }
 
-      Circuit circ(ca); 
+      Circuit circ(config,ca); 
       gateExtractTime = cpuTime() - gateExtractTime;
       circ.extractGates(data, gates);
       gateExtractTime = cpuTime() - gateExtractTime;
@@ -2244,7 +2244,7 @@ void EquivalenceElimination::writeAAGfile(CoprocessorData& data)
 {
   // get the circuit!
   vector<Circuit::Gate> gates;
-  Circuit circ(ca); 
+  Circuit circ(config,ca); 
   circ.extractGates(data, gates);
   unsigned char type [ data.nVars() ];
   memset( type,0, sizeof(unsigned char) * data.nVars() );

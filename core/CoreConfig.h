@@ -21,12 +21,22 @@ namespace Minisat {
  */
 class CoreConfig {
  
+  
+  /** pointer to all options in this object - used for parsing and printing the help! */
+  vec<Option*> configOptions;
+  vec<Option*>* optionListPtr;
+  
 public:
  /** default constructor, which sets up all options in their standard format */
  CoreConfig ();
 
- /** parse all options from the command line */
- void parseOptions (int& argc, char** argv, bool strict = false);
+ /** parse all options from the command line 
+  * @return true, if "help" has been found in the parameters
+  */
+ bool parseOptions (int& argc, char** argv, bool strict = false);
+ 
+ /** show print for the options of this object */
+ void printUsageAndExit(int  argc, char** argv, bool verbose = false);
  
  /** checks all specified constraints */
  bool checkConfiguration();

@@ -23,6 +23,10 @@ namespace Coprocessor {
  */
 class CP3Config {
  
+  /** pointer to all options in this object - used for parsing and printing the help! */
+  vec<Option*> configOptions;
+  vec<Option*>* optionListPtr;
+  
 public:
  /** default constructor, which sets up all options in their standard format */
  CP3Config ();
@@ -318,6 +322,40 @@ IntOption  opt_ee_bigIters      ;
 BoolOption opt_ee_iterative     ;
 BoolOption opt_EE_checkNewSub   ;
 BoolOption opt_ee_eager_frozen  ;
+//
+// Structural hashing options
+//
+#if defined TOOLVERSION  && TOOLVERSION < 350
+const bool circ_AND       ;
+const bool circ_ITE       ;
+const bool circ_XOR       ;
+const bool circ_ExO       ;
+const bool circ_genAND    ;
+const bool circ_FASUM     ;
+const bool circ_BLOCKED   ;
+const bool circ_AddBlocked;
+const bool circ_NegatedI  ;
+const bool circ_Implied   ;
+#else
+BoolOption circ_AND;
+BoolOption circ_ITE;
+BoolOption circ_XOR;
+BoolOption circ_ExO;
+BoolOption circ_genAND;
+BoolOption circ_FASUM;
+
+BoolOption circ_BLOCKED;
+BoolOption circ_AddBlocked;
+BoolOption circ_NegatedI;
+BoolOption circ_Implied;
+#endif
+/// temporary Boolean flag to quickly enable debug output for the whole file
+#if defined TOOLVERSION  
+  const bool circ_debug_out;
+#else
+  BoolOption circ_debug_out;
+#endif
+
 
 //
 // Fourier Motzkin
