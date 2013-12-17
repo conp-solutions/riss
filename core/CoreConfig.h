@@ -88,7 +88,7 @@ public:
  IntOption opt_init_act;
  IntOption opt_init_pol;
 
-
+ IntOption opt_restart_level;
  IntOption opt_restarts_type;
  IntOption opt_restart_first;
  DoubleOption opt_restart_inc;

@@ -91,7 +91,7 @@ void Subsumption::process(bool doStrengthen, Heap< VarOrderBVEHeapLt >* heap, co
   
   if( !data.ok() ) return;
   if( !performSimplification() ) { // if nothing to be done, at least clean all the lists!
-    for( int i = 0 ; i < data.getSubsumeClauses().size(); ++ i ) ca[ data.getSubsumeClauses()[i] ].set_strengthen(false);
+    for( int i = 0 ; i < data.getSubsumeClauses().size(); ++ i ) ca[ data.getSubsumeClauses()[i] ].set_subsume(false);
     data.getSubsumeClauses().clear();
     for( int i = 0 ; i < data.getStrengthClauses().size(); ++ i ) ca[ data.getStrengthClauses()[i] ].set_strengthen(false);
     data.getStrengthClauses().clear();
@@ -104,9 +104,9 @@ void Subsumption::process(bool doStrengthen, Heap< VarOrderBVEHeapLt >* heap, co
   
   if( config.opt_sub_debug > 0 ) {
       cerr << "c check for subsumption: " << endl;
-      for( int i = 0 ; i < data.getSubsumeClauses().size(); ++ i )  cerr << "c [" << i << "] : " << ca[data.getSubsumeClauses()[i]] << endl;
+      for( int i = 0 ; i < data.getSubsumeClauses().size(); ++ i )  cerr << "c [" << i << "]("<<data.getSubsumeClauses()[i]<<") : " << ca[data.getSubsumeClauses()[i]] << endl;
       cerr << "c check for strengthening: " << endl;
-      for( int i = 0 ; i < data.getStrengthClauses().size(); ++ i )  cerr << "c [" << i << "] : " << ca[data.getStrengthClauses()[i]] << endl;
+      for( int i = 0 ; i < data.getStrengthClauses().size(); ++ i )  cerr << "c [" << i << "]("<<data.getStrengthClauses()[i]<<") : " << ca[data.getStrengthClauses()[i]] << endl;
   }
   
   while( data.ok() && (hasToSubsume() || hasToStrengthen() ))
@@ -230,7 +230,7 @@ void Subsumption :: subsumption_worker ( unsigned int start, unsigned int end, H
 	const CRef cr = data.getSubsumeClauses()[i];
 	Clause &c = ca[cr];
 	if( !c.learnt() ) {
-	  CRef tmp = data.getSubsumeClauses()[i]; 
+	  const CRef tmp = i; // pointer to old clause
 	  data.getSubsumeClauses()[i] = data.getSubsumeClauses()[k];
 	  data.getSubsumeClauses()[k] = data.getSubsumeClauses()[tmp];
 	  k++; // move clause to front, increase counter for original variables
@@ -1635,6 +1635,7 @@ inline void Subsumption::updateOccurrences(vector< OccUpdate > & updates, Heap<V
 
 void Subsumption::initClause( const Minisat::CRef cr, bool addToStrengthen )
 {
+  if( cr == 426 ) cerr << "c init clause 426" << endl;
   const Clause& c = ca[cr];
   if( !c.can_be_deleted() ) {
     if (c.can_subsume() )

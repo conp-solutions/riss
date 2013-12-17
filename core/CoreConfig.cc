@@ -73,6 +73,7 @@ CoreConfig::CoreConfig() // add new options here!
  opt_init_act ("INIT", "init-act", "initialize activities (0=none,1=inc-lin,2=inc-geo,3=dec-lin,4=dec-geo,5=rnd,6=abs(jw))", 0, IntRange(0, 6), optionListPtr ),
  opt_init_pol ("INIT", "init-pol", "initialize polarity (0=none,1=JW-pol,2=JW-neg,3=MOMS,4=MOMS-neg,5=rnd)", 0, IntRange(0, 5), optionListPtr ),
 
+ opt_restart_level (_cat, "rlevel", "Choose to which level to jump to: 0=0, 1=ReusedTrail, 2=MatchingTrail", 0, IntRange(0, 2), optionListPtr ),
  opt_restarts_type (_cat, "rtype", "Choose type of restart (0=dynamic,1=luby,2=geometric)", 0, IntRange(0, 2), optionListPtr ),
  opt_restart_first (_cat, "rfirst", "The base restart interval", 100, IntRange(1, INT32_MAX), optionListPtr ),
  opt_restart_inc (_cat, "rinc", "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false), optionListPtr ),

@@ -488,6 +488,11 @@ protected:
   vec<Var> varsToBump; // memorize the variables that need to be bumped in that order
   vec<CRef> clssToBump; // memorize the clauses that need to be bumped in that order
   
+  /** based no the current values of the solver attributes, return a decision level to jump to as restart 
+   * @return the decision level to jump to
+   */
+  int getRestartLevel();
+  
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;
 public:     

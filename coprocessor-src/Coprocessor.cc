@@ -101,7 +101,7 @@ lbool Preprocessor::performSimplification()
   
   const bool printBVE = false, printBVA = false, printProbe = false, printUnhide = false, 
 	printCCE = false, printEE = false, printREW = false, printFM = false, printHTE = false, printSusi = false, printUP = true,
-	printTernResolve = false, printAddRedBin = false, printXOR = true, printENT=false, printBCE=false, printLA=false;  
+	printTernResolve = false, printAddRedBin = false, printXOR = false, printENT=false, printBCE=false, printLA=false;  
   
   // do preprocessing
   if( config.opt_up ) {
@@ -157,7 +157,6 @@ lbool Preprocessor::performSimplification()
   if( config.opt_debug )  { scanCheck("after SORT"); }  
   
   if( config.opt_xor ) {
-    cerr << "c subsume clauses: " << data.getSubsumeClauses().size() << " str-clss: " << data.getStrengthClauses().size() << endl;
     if( config.opt_verbose > 0 ) cerr << "c xor ..." << endl;
     if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") XOR" << endl;
     if( status == l_Undef ) xorReasoning.process();  // cannot change status, can generate new unit clauses
@@ -213,7 +212,6 @@ lbool Preprocessor::performSimplification()
   if( config.opt_debug ) { checkLists("after SUSI"); scanCheck("after SUSI"); }
   
   if( config.opt_FM ) {
-    cerr << "c subsume clauses: " << data.getSubsumeClauses().size() << " str-clss: " << data.getStrengthClauses().size() << endl;
     if( config.opt_verbose > 0 ) cerr << "c FM ..." << endl;
     if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") fourier motzkin" << endl;
     if( status == l_Undef ) fourierMotzkin.process();  // cannot change status, can generate new unit clauses
@@ -287,7 +285,6 @@ lbool Preprocessor::performSimplification()
   }
   
   if ( config.opt_probe ) {
-    cerr << "c subsume clauses: " << data.getSubsumeClauses().size() << " str-clss: " << data.getStrengthClauses().size() << endl;
     if( config.opt_verbose > 0 ) cerr << "c probe ..." << endl;
     if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") probing" << endl;
     if( status == l_Undef ) probing.process(); 
@@ -304,7 +301,6 @@ lbool Preprocessor::performSimplification()
 
   
   if ( config.opt_bve ) {
-    cerr << "c subsume clauses: " << data.getSubsumeClauses().size() << " str-clss: " << data.getStrengthClauses().size() << endl;
     if( config.opt_verbose > 0 ) cerr << "c bve ..." << endl;
     if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") bounded variable elimination" << endl;
     if( status == l_Undef ) status = bve.runBVE(data);  // can change status, can generate new unit clauses
@@ -959,8 +955,6 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 
 lbool Preprocessor::preprocess()
 {
-  cerr << "c subsume clauses: " << data.getSubsumeClauses().size() << " str-clss: " << data.getStrengthClauses().size() << endl;
-  
   data.preprocessing();
   const bool wasDoingER = solver->getExtendedResolution();
   
@@ -972,8 +966,6 @@ lbool Preprocessor::preprocess()
   lbool ret = l_Undef;
   if( config.opt_ptechs && string(config.opt_ptechs).size() > 0 ) ret = performSimplificationScheduled( string(config.opt_ptechs) );
   else ret = performSimplification();
-  
-  cerr << "c subsume clauses: " << data.getSubsumeClauses().size() << " str-clss: " << data.getStrengthClauses().size() << endl;
   
   if( config.opt_exit_pp > 0) { // exit?
     if( config.opt_exit_pp > 1) { // print?
@@ -1006,13 +998,14 @@ lbool Preprocessor::inprocess()
   // TODO: do something before preprocessing? e.g. some extra things with learned / original clauses
   if (config.opt_inprocess) {
     
-    cerr << "c subsume clauses: " << data.getSubsumeClauses().size() << " str-clss: " << data.getStrengthClauses().size() << endl;
-    
     // reject inprocessing here!
     // cerr << "c check " << lastInpConflicts << " and " << (int)config.opt_inprocessInt << " vs " << solver->conflicts << endl;
     if( lastInpConflicts + config.opt_inprocessInt > solver->conflicts ) {
       return l_Undef;  
     }
+    
+    /** make sure the solver is at level 0 - not guarantueed with partial restarts!*/
+    solver->cancelUntil(0);
     
     if( config.opt_verbose > 3 ) cerr << "c start inprocessing after another " << solver->conflicts - lastInpConflicts << endl;
     data.inprocessing();
@@ -1030,8 +1023,6 @@ lbool Preprocessor::inprocess()
     if( config.opt_verbose > 4 ) cerr << "c finished inprocessing " << endl;
     
     solver->setExtendedResolution( wasDoingER );
-    
-    cerr << "c subsume clauses: " << data.getSubsumeClauses().size() << " str-clss: " << data.getStrengthClauses().size() << endl;
     
     return ret;
   }

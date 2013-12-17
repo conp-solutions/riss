@@ -101,14 +101,14 @@ bool Probing::process()
     // clean solver again!
     cleanSolver();
     
-    for( int i = beforeClauses; i < data.getClauses().size(); ++ i ) data.addClause( data.getClauses()[i] ); // incorporate new clauses into the solver
+    for( int i = beforeClauses; i < data.getClauses().size(); ++ i ) data.addClause( data.getClauses()[i], config.pr_debug_out > 0 ); // incorporate new clauses into the solver
     probeLHBRs = probeLHBRs + data.getClauses().size() - beforeVivClauses; // stats
     
     if( beforeLClauses < data.getLEarnts().size() ) {
       if( config.pr_keepLHBRs > 0 ) {
 	if( config.pr_debug_out ) cerr << "c add another " << data.getLEarnts().size() - beforeLClauses << " new learnt clauses to the formula" << endl;
 	for( int i = beforeLClauses; i < data.getLEarnts().size(); ++ i ) {
-	  data.addClause( data.getLEarnts()[i] );
+	  data.addClause( data.getLEarnts()[i], config.pr_debug_out > 0 );
 	}
       } else {
 	if( config.pr_debug_out ) cerr << "c remove " << data.getLEarnts().size() - beforeLClauses << " new learnt clauses to the formula" << endl;
@@ -436,10 +436,9 @@ bool Probing::prDoubleLook(Lit l1decision)
 	CRef cr = ca.alloc(data.lits, config.pr_keepLearnts == 1);
 	// solver.clauses.push(cr);
 	solver.attachClause(cr);
-	data.addClause(cr, config.pr_debug_out > 0);
 	l2conflicts.push_back(cr);
 	solver.uncheckedEnqueue(data.lits[0], cr);
-	if( config.pr_debug_out > 0 ) cerr << "c L2 learnt clause: " << ca[cr] << " 0" << endl;
+	if( config.pr_debug_out > 0 ) cerr << "c L2 learnt clause, adding to l2conflicts: ("<<cr<<")" << ca[cr] << " 0" << endl;
       }
       
       CRef cClause = solver.propagate() ;
@@ -510,10 +509,9 @@ bool Probing::prDoubleLook(Lit l1decision)
 	CRef cr = ca.alloc(data.lits, config.pr_keepLearnts == 1);
 	// solver.clauses.push(cr);
 	solver.attachClause(cr);
-	data.addClause(cr, config.pr_debug_out > 0);
 	l2conflicts.push_back(cr);
 	solver.uncheckedEnqueue(data.lits[0], cr);
-	if( config.pr_debug_out > 0 ) cerr << "c L2 learnt clause: " << ca[cr] << " 0" << endl;
+	if( config.pr_debug_out > 0 ) cerr << "c L2 learnt clause, adding to l2conflicts: ("<<cr<<")" << ca[cr] << " 0" << endl;
       }
       CRef cClause = solver.propagate() ;
       if( cClause != CRef_Undef ) { if( config.pr_debug_out > 1 ) {
@@ -560,7 +558,6 @@ bool Probing::prDoubleLook(Lit l1decision)
 	learntUnits[0] = solver.trail[ i ];
 	l2implied ++;
 	CRef cr = ca.alloc(learntUnits, config.pr_keepImplied == 1);
-	data.addClause(cr, config.pr_debug_out > 0);
 	l2implieds.push_back(cr);
       } else { // this is for statistics only and is currently not handled!
 // 	if( 

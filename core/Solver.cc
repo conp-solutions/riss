@@ -1623,6 +1623,11 @@ lbool Solver::search(int nof_conflicts)
            
         }else{ // there has not been a conflict
 	  
+
+	  //
+	  // Handle Restarts Here!
+	  //
+
 	  if( ! config.opt_agility_restart_reject // do not reject restarts
 	     || agility < config.opt_agility_rejectLimit )
 	  { // TODO FIXME: do not reject the restart for now, but until the next planned restart in schedule (clear queue, or increase number of conflicts!)
@@ -1640,18 +1645,23 @@ lbool Solver::search(int nof_conflicts)
 		conflictsSinceLastRestart = 0;
 		lbdQueue.fastclear();
 		progress_estimate = progressEstimate();
-		cancelUntil(0);
+	        const int restartLevel = config.opt_restart_level == 0 ? 0 : getRestartLevel(); // use matching trail, or reused trail mechanism!
+		cancelUntil(restartLevel);
 		return l_Undef;
 	      }
 	    } else { // usual static luby or geometric restarts
 	      if (nof_conflicts >= 0 && conflictC >= nof_conflicts || !withinBudget()){
 		  progress_estimate = progressEstimate();
-		  cancelUntil(0);
+		  const int restartLevel = config.opt_restart_level == 0 ? 0 : getRestartLevel(); // use matching trail, or reused trail mechanism!
+		  cancelUntil(restartLevel);
 		  // cerr << "c restart after " << conflictC << " conflicts - limit: " << nof_conflicts << endl;
 		  return l_Undef; }
 	    }
 	  } else agility_rejects ++;
 
+	  //
+	  // Handle Simplification Here!
+	  //
 
            // Simplify the set of problem clauses - but do not do it each iteration!
 	  if (simplifyIterations > config.opt_simplifyInterval && decisionLevel() == 0 && !simplify()) {
@@ -1663,7 +1673,9 @@ lbool Solver::search(int nof_conflicts)
 	  
 	  if( !withinBudget() ) return l_Undef;
 	  
+	    //
 	    // Perform clause database reduction !
+	    //
 	    if(conflicts>=curRestart* nbclausesbeforereduce) 
 	      {
 	
@@ -1673,6 +1685,9 @@ lbool Solver::search(int nof_conflicts)
 		nbclausesbeforereduce += incReduceDB;
 	      }
 	      
+	    //
+	    // Simple Inprocessing (deduction techniques that use the solver object
+	    //
 	    // if this point is reached, check whether interleaved Clause Strengthening could be scheduled (have heuristics!)
 	    if( config.opt_interleavedClauseStrengthening && conflicts != lastICSconflicts && conflicts % config.opt_ics_interval == 0 ) {
 	      if( !interleavedClauseStrengthening () ) { // TODO: have some schedule here!
@@ -2107,6 +2122,9 @@ printf("c ==================================[ Search Statistics (every %6d confl
     
     if( changedActivities ) rebuildOrderHeap();
     
+    //
+    // incremental sat solver calls
+    //
     if( config.intenseCleaningEvery != 0 && solves % config.intenseCleaningEvery == 0 ) { // clean the learnt clause data base intensively
       int i = 0,j = 0;
       for( ; i < learnts.size(); ++ i ) {
@@ -2120,6 +2138,9 @@ printf("c ==================================[ Search Statistics (every %6d confl
       learnts.shrink(i - j);
     }
 
+    //
+    // preprocess
+    //
     if( status == l_Undef ) {
 	  // restart, triggered by the solver
 	  // if( coprocessor == 0 && useCoprocessor) coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
@@ -2144,7 +2165,9 @@ printf("c ==================================[ Search Statistics (every %6d confl
       }
     }
     
+    //
     // Search:
+    //
     int curr_restarts = 0;
     while (status == l_Undef){
       
@@ -2170,6 +2193,9 @@ printf("c ==================================[ Search Statistics (every %6d confl
     }
     totalTime.stop();
     
+    //
+    // print statistic output
+    //
     if (verbosity >= 1)
       printf("c =========================================================================================================\n");
     
@@ -2363,7 +2389,7 @@ void Solver::garbageCollect()
     ClauseAllocator to(ca.size() >= ca.wasted() ? ca.size() - ca.wasted() : 0); //FIXME security-workaround, for CP3 (due to inconsistend wasted-bug)
 
     relocAll(to);
-    // if (verbosity >= 2)
+    if (verbosity >= 2)
         printf("|  Garbage collection:   %12d bytes => %12d bytes             |\n", 
                ca.size()*ClauseAllocator::Unit_Size, to.size()*ClauseAllocator::Unit_Size);
     to.moveTo(ca);
@@ -2578,6 +2604,31 @@ bool Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned 
   return true;
 }
 
+
+int Solver::getRestartLevel()
+{
+  if( config.opt_restart_level == 0 ) return 0;
+  else {
+    // get decision literal that would be decided next:
+    
+    // Activity based decision:
+    Var next = var_Undef;
+    while (next == var_Undef || value(next) != l_Undef || !decision[next])
+        if (order_heap.empty()){
+            next = var_Undef;
+            break;
+        }else
+            next = order_heap.removeMin();
+    
+    // based on variable next, either check for reusedTrail, or matching Trail!
+	
+    // TODO 
+    // config.opt_restart_level == 1 -> reusedTrail
+    // config.opt_restart_level == 2 -> matchingTrail
+    
+    return 0;
+  }
+}
 
 Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo )
 {
