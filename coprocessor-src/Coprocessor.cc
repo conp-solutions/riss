@@ -100,8 +100,8 @@ lbool Preprocessor::performSimplification()
   if( config.opt_verbose > 4 ) cerr << "c coprocessor finished initialization" << endl;
   
   const bool printBVE = false, printBVA = false, printProbe = false, printUnhide = false, 
-	printCCE = false, printEE = false, printREW = false, printFM = false, printHTE = false, printSusi = false, printUP = false,
-	printTernResolve = false, printAddRedBin = false, printXOR = false, printENT=false, printBCE=false, printLA=false;  
+	printCCE = false, printEE = false, printREW = false, printFM = false, printHTE = false, printSusi = false, printUP = true,
+	printTernResolve = false, printAddRedBin = false, printXOR = true, printENT=false, printBCE=false, printLA=false;  
   
   // do preprocessing
   if( config.opt_up ) {
@@ -1144,7 +1144,39 @@ void Preprocessor::initializePreprocessor()
   thisClauses = 0;
   thisLearnts = 0;
   
+  for( int p = 0; p < 2; ++ p ) {
+    vec<CRef>& clss = (p == 0) ? data.getClauses() : data.getLEarnts();
+    int& thisClss = (p == 0 ) ? thisClauses : thisLearnts;
+
+    for (int i = 0; i < clss.size(); ++i)
+    {
+      const CRef cr = clss[i];
+      Clause& c = ca[cr];
+      // assert( c.mark() == 0 && "mark of a clause has to be 0 before being put into preprocessor" );
+      if( ca[cr].mark() != 0  ) continue; // do not use any specially marked clauses!
+      // cerr << "c process clause " << cr << endl;
+
+      if( c.size() == 0 ) {
+	data.setFailed(); 
+	break;
+      } else if (c.size() == 1 ) {
+	if( data.enqueue(c[0]) == l_False ) break;
+	c.set_delete(true);
+	thisClss ++;
+      } else {
+	data.addClause( cr, config.opt_check );
+	// TODO: decide for which techniques initClause in not necessary!
+	subsumption.initClause( cr );
+	propagation.initClause( cr );
+	hte.initClause( cr );
+	cce.initClause( cr );
+	thisClss ++;
+      }
+    }
+  }
+  /*
   uint32_t clausesSize = (*solver).clauses.size();
+
   for (int i = 0; i < clausesSize; ++i)
   {
     const CRef cr = solver->clauses[i];
@@ -1196,6 +1228,7 @@ void Preprocessor::initializePreprocessor()
       thisLearnts++;
     }
   }
+  */
 }
 
 void Preprocessor::destroyTechniques()
@@ -1503,10 +1536,17 @@ void Preprocessor::printFormula(const string& headline)
    for( int i = 0 ; i < data.getSolver()->trail.size(); ++i )
        cerr << "[" << data.getSolver()->trail[i] << "]" << endl;   
    cerr << "c clauses " << endl;
-   for( int i = 0 ; i < data.getClauses().size() && !data.isInterupted(); ++ i )
-     if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getClauses()[i] ] << endl;
+   for( int i = 0 ; i < data.getClauses().size() && !data.isInterupted(); ++ i ) {
+     cerr << "(" << data.getClauses()[i] << ")";
+     if( ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << "(ign)";
+     cerr << ca[  data.getClauses()[i] ] << endl;
+   }
    for( int i = 0 ; i < data.getLEarnts().size() && !data.isInterupted(); ++ i )
-     if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getLEarnts()[i] ] << endl;    
+   {
+     cerr << "(" << data.getLEarnts()[i] << ")";
+     if( ca[  data.getLEarnts()[i] ].can_be_deleted() ) cerr << "(ign)";
+     cerr << ca[  data.getLEarnts()[i] ] << endl;    
+   }
    cerr << "==================== " << endl;
 }
 
