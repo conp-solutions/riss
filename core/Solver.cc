@@ -194,6 +194,12 @@ Solver::Solver(CoreConfig& _config) :
   ,icsShrinks(0)
   ,icsShrinkedLits(0)
   
+  // for partial restarts
+  , rs_partialRestarts(0)
+  , rs_savedDecisions(0)
+  , rs_savedPropagations(0)
+  , rs_recursiveRefinements(0)
+  
   // preprocessor
   , coprocessor(0)
   , useCoprocessorPP(config.opt_usePPpp)
@@ -1517,8 +1523,7 @@ lbool Solver::search(int nof_conflicts)
 	      
 	      otfssHigherJump = otfssBtLevel < backtrack_level ? otfssHigherJump + 1 : otfssHigherJump; // stats
 	      if(config.debug_otfss) if( enqueueK > 0 ) cerr << "c jump to otfss level " << otfssBtLevel << endl;
-	      
-	      
+	      	      
 	      cancelUntil(otfssBtLevel); // backtrack - this level is at least as small as the usual level!
 	      
 	      // enqueue all clauses that need to be enqueued!
@@ -1622,8 +1627,6 @@ lbool Solver::search(int nof_conflicts)
 	    conflictsSinceLastRestart ++;
            
         }else{ // there has not been a conflict
-	  
-
 	  //
 	  // Handle Restarts Here!
 	  //
@@ -1640,7 +1643,9 @@ lbool Solver::search(int nof_conflicts)
 		) {
 		
 		// increase current limit, if this has been the reason for the restart!!
-		if( (config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound ) ) { intervalRestart++;conflictsSinceLastRestart = (double)conflictsSinceLastRestart * (double)config.opt_rMaxInc; }
+		if( (config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound ) ) { 
+		  intervalRestart++;conflictsSinceLastRestart = (double)conflictsSinceLastRestart * (double)config.opt_rMaxInc; 
+		}
 		
 		conflictsSinceLastRestart = 0;
 		lbdQueue.fastclear();
@@ -2214,7 +2219,6 @@ printf("c ==================================[ Search Statistics (every %6d confl
 		   preprocessTime.getCpuTime(), preprocessTime.getWallClockTime(), inprocessTime.getCpuTime(), inprocessTime.getWallClockTime() );
             printf("c Learnt At Level 1: %d  Multiple: %d Units: %d\n", l1conflicts, multiLearnt,learntUnit);
 	    printf("c LAs: %lf laSeconds %d LA assigned: %d tabus: %d, failedLas: %d, maxEvery %d, eeV: %d eeL: %d \n", laTime, las, laAssignments, tabus, failedLAs, maxBound, laEEvars, laEElits );
-	    printf("c IntervalRestarts: %d\n", intervalRestart);
 	    printf("c lhbr: %d (l1: %d ),new: %d (l1: %d ),tests: %d ,subs: %d ,byLearning: %d\n", lhbrs, l1lhbrs,lhbr_news,l1lhbr_news,lhbrtests,lhbr_sub, learnedLHBRs);
 	    printf("c otfss: %d (l1: %d ),cls: %d ,units: %d ,binaries: %d ,jumpedHigher: %d\n", otfsss, otfsssL1,otfssClss,otfssUnits,otfssBinaries,otfssHigherJump);
 	    printf("c learning: %ld cls, %lf avg. size, %lf avg. LBD, %ld maxSize, %ld proof-depth\n", 
@@ -2230,6 +2234,8 @@ printf("c ==================================[ Search Statistics (every %6d confl
 		   rerLearnedClause, rerLearnedSizeCandidates, rerSizeReject, rerPatternReject, rerPatternBloomReject, maxRERclause, rerLearnedClause == 0 ? 0 : (totalRERlits / (double) rerLearnedClause), totalRERlits );
 	    printf("c i.cls.strengthening: %.2lf seconds, %d calls, %d candidates, %d droppedBefore, %d shrinked, %d shrinkedLits\n", icsTime.getCpuTime(), icsCalls, icsCandidates, icsDroppedCandidates, icsShrinks, icsShrinkedLits );
 	    printf("c decisionClauses: %d\n", learnedDecisionClauses );
+	    printf("c IntervalRestarts: %d\n", intervalRestart);
+	    printf("c partial restarts: %d saved decisions: %d saved propagations: %d recursives: %d\n", rs_partialRestarts, rs_savedDecisions, rs_savedPropagations, rs_recursiveRefinements );
 	    printf("c agility restart rejects: %d\n", agility_rejects );
 #endif
     }
@@ -2611,21 +2617,66 @@ int Solver::getRestartLevel()
   else {
     // get decision literal that would be decided next:
     
-    // Activity based decision:
-    Var next = var_Undef;
-    while (next == var_Undef || value(next) != l_Undef || !decision[next])
-        if (order_heap.empty()){
-            next = var_Undef;
-            break;
-        }else
-            next = order_heap.removeMin();
-    
-    // based on variable next, either check for reusedTrail, or matching Trail!
+    if( config.opt_restart_level >= 1 ) {
+      
+      bool repeatReusedTrail = false;
+      Var next = var_Undef;
+      int restartLevel = 0;
+      do {
+	repeatReusedTrail = false; // get it right this time?
 	
-    // TODO 
-    // config.opt_restart_level == 1 -> reusedTrail
-    // config.opt_restart_level == 2 -> matchingTrail
-    
+	// Activity based selection
+	while (next == var_Undef || value(next) != l_Undef || !decision[next])
+	    if (order_heap.empty()){
+		next = var_Undef;
+		break;
+	    } else
+		next = order_heap.removeMin();
+	
+	// based on variable next, either check for reusedTrail, or matching Trail!
+	// activity of the next decision literal
+	const double cmpActivity = activity[ next ];
+	restartLevel = 0;
+	for( int i = 0 ; i < decisionLevel() ; ++i )
+	{
+	  if( activity[ var( trail[ trail_lim[i] ] ) ] < cmpActivity ) {
+	    restartLevel = i;
+	    break;
+	  }
+	}
+	order_heap.insert( next ); // put the decision literal back, so that it can be used for the next decision
+	
+	if( config.opt_restart_level > 1 && restartLevel > 0 ) { // check whether jumping higher would be "more correct"
+	  cancelUntil( restartLevel );
+	  Var more = var_Undef;
+	  while (more == var_Undef || value(more) != l_Undef || !decision[more])
+	      if (order_heap.empty()){
+		  more = var_Undef;
+		  break;
+	      }else
+		  more = order_heap.removeMin();
+
+	  // actually, would have to jump higher than the current level!
+	  if( more != var_Undef && activity[more] > var( trail[ trail_lim[ restartLevel - 1 ] ] ) ) 
+	  {
+	    repeatReusedTrail = true;
+	    next = more; // no need to insert, and get back afterwards again!
+	    rs_recursiveRefinements ++;
+	  } else {
+	    order_heap.insert( more ); 
+	  }
+	}
+      } while ( repeatReusedTrail );
+      // stats
+      if( restartLevel > 0 ) { // if a partial restart is done 
+	rs_savedDecisions += restartLevel;
+	const int thisPropSize = restartLevel == decisionLevel() ? trail.size() : trail_lim[ restartLevel ];
+	rs_savedPropagations += (thisPropSize - trail_lim[ 0 ]); // number of literals that do not need to be propagated
+	rs_partialRestarts ++;
+      } 
+      // return restart level
+      return restartLevel;
+    } 
     return 0;
   }
 }

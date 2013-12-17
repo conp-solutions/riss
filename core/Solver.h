@@ -488,6 +488,8 @@ protected:
   vec<Var> varsToBump; // memorize the variables that need to be bumped in that order
   vec<CRef> clssToBump; // memorize the clauses that need to be bumped in that order
   
+  
+  int rs_partialRestarts, rs_savedDecisions, rs_savedPropagations, rs_recursiveRefinements; // stats for partial restarts
   /** based no the current values of the solver attributes, return a decision level to jump to as restart 
    * @return the decision level to jump to
    */
