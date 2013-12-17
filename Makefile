@@ -19,10 +19,10 @@ all: rs
 # shortcuts
 
 # make a std binary of riss3g, riss3gext or the related preprocessor
-riss3g: MYCFLAGS += -DTOOLVERSION=300 -DNOVERBHELP
-riss3g: rs
-riss3gExt: MYCFLAGS += -DTOOLVERSION=351 -DNOVERBHELP 
-riss3gExt: rs
+riss: MYCFLAGS += -DTOOLVERSION=300 -DNOVERBHELP
+riss: rs
+rissExt: MYCFLAGS += -DTOOLVERSION=351 -DNOVERBHELP 
+rissExt: rs
 cp3Ext: MYCFLAGS += -DTOOLVERSION=351 -DNOVERBHELP 
 cp3Ext: crs
 libsoExt: MYCFLAGS += -DTOOLVERSION=351 -DNOVERBHELP 
@@ -64,28 +64,28 @@ aigbmc-abcs: libs
 	
 # build the solver
 riss: always
-	cd core; make r INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g_release ../riss3g
+	cd core; make r INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g_release ../riss
 
 rissRS: always
-	cd core; make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g_static ../riss3g
+	cd core; make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g_static ../riss
 
 rissSimpRS: always
-	cd simp; make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g_static ../riss3g
+	cd simp; make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g_static ../riss
 
 rissSimpd: always
-	cd simp; make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g_debug ../riss3g
+	cd simp; make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g_debug ../riss
 
 rissd: always
-	cd core;   make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g_debug ../riss3g
+	cd core;   make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g_debug ../riss
 
 # libraries
 libd: always
-	cd core;   make libd INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; rm lib.a; mv lib_debug.a ../libriss3g.a
+	cd core;   make libd INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; rm lib.a; mv lib_debug.a ../libriss.a
 libs: always
-	cd core;   make libs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; rm lib.a; mv lib_standard.a ../libriss3g.a
+	cd core;   make libs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; rm lib.a; mv lib_standard.a ../libriss.a
 libso: always
-	cd core;   make libso INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv lib_release.so ../libcp3.so
-	strip -g -S -d --strip-debug -X -w --strip-symbol=*Coprocessor* --strip-symbol=*Minisat* libcp3.so
+	cd core;   make libso INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv lib_release.so ../libcp.so
+	strip -g -S -d --strip-debug -X -w --strip-symbol=*Coprocessor* --strip-symbol=*Minisat* libcp.so
 
 # coprocessor
 coprocessor: always
@@ -131,16 +131,16 @@ doc: clean
 
 # tar balls
 tar: clean
-	tar czvf riss3g.tar.gz core   LICENSE  Makefile mtl  README  simp utils
+	tar czvf riss.tar.gz core   LICENSE  Makefile mtl  README  simp utils
 	
 cotar: clean
-	tar czvf coprocessor3.tar.gz core LICENSE  Makefile mtl  README  simp  utils coprocessor-src
+	tar czvf coprocessor.tar.gz core LICENSE  Makefile mtl  README  simp  utils coprocessor-src
 	
 cltar: clean
 	tar czvf classifier.tar.gz core LICENSE  Makefile mtl  README  simp  utils coprocessor-src classifier-src
 
 qtar: clean
-	tar czvf qprocessor3.tar.gz core LICENSE Makefile mtl  README  simp  utils coprocessor-src qprocessor-src qp.sh 
+	tar czvf qprocessor.tar.gz core LICENSE Makefile mtl  README  simp  utils coprocessor-src qprocessor-src qp.sh 
 	
 bmctar: clean toolclean
 	tar czvf riss-AbmC.tar.gz core LICENSE  Makefile mtl  README  simp  utils coprocessor-src aiger-src abc picosat
@@ -152,7 +152,7 @@ clean:
 	@cd coprocessor-src; make clean MROOT=..;
 	@cd qprocessor-src; make clean MROOT=..;
 	@cd classifier-src; make clean MROOT=..;
-	@rm -f riss3m riss3g coprocessor qprocessor libriss3g.a libcp3.so
+	@rm -f riss coprocessor qprocessor libriss.a libcp.so
 	@rm -f *~ */*~
 	@rm -rf doc/html
 	@echo Done

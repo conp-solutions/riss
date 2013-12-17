@@ -100,7 +100,7 @@ lbool Preprocessor::performSimplification()
   if( config.opt_verbose > 4 ) cerr << "c coprocessor finished initialization" << endl;
   
   const bool printBVE = false, printBVA = false, printProbe = false, printUnhide = false, 
-	printCCE = false, printEE = false, printREW = false, printFM = false, printHTE = false, printSusi = false, printUP = true,
+	printCCE = false, printEE = false, printREW = false, printFM = false, printHTE = false, printSusi = false, printUP = false,
 	printTernResolve = false, printAddRedBin = false, printXOR = false, printENT=false, printBCE=false, printLA=false;  
   
   // do preprocessing

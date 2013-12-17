@@ -20,6 +20,8 @@ Copyright (c) 2013,      Norbert Manthey, All rights reserved.
 
 #include "qprocessor-src/QDimacs.h"
 
+#include "VERSION" // include the file that defines the solver version
+
 using namespace Minisat;
 using namespace Coprocessor;
 
@@ -114,7 +116,7 @@ int main(int argc, char** argv)
 	      printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
 	  
 	  if (S.verbosity > 0) {
-	      printf("c ===============================[    Qprocessor    ]============================\n");
+	      printf("c ===============================[ Qprocessor %5.2f ]============================\n", solverVersion);
 	      printf("c | Norbert Manthey. The use of the tool is limited to research only!           |\n");
 	  }
 	  
