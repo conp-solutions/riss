@@ -1675,7 +1675,7 @@ void EquivalenceElimination::findEquivalencesOnBigFast(CoprocessorData& data, ve
 	  } while( w != V );
 	  if( eqCurrentComponent.size() > 1 && !sign(minLit) ) { // only add one of the two symmetric SCCs!
 	    if( config.ee_debug_out > 1) cerr << "c add SCC of size " << eqCurrentComponent.size() << " with smallest lit " << minLit << " : " << eqCurrentComponent << endl;
-	    data.addEquivalences( eqCurrentComponent );
+	    if( steps < config.opt_ee_limit ) data.addEquivalences( eqCurrentComponent ); // do only add the current component, if its guaranteed to be correct
 	  }
 	}
 	
