@@ -1,7 +1,7 @@
 # Makefile for riss
 # Copyright (c) 2012-2013, Norbert Manthey
 
-EXEC      = riss3g
+EXEC      = riss
 
 DEPDIR    = mtl utils 
 

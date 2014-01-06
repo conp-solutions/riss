@@ -1635,7 +1635,6 @@ inline void Subsumption::updateOccurrences(vector< OccUpdate > & updates, Heap<V
 
 void Subsumption::initClause( const Minisat::CRef cr, bool addToStrengthen )
 {
-  if( cr == 426 ) cerr << "c init clause 426" << endl;
   const Clause& c = ca[cr];
   if( !c.can_be_deleted() ) {
     if (c.can_subsume() )

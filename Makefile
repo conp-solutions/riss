@@ -18,7 +18,7 @@ all: rs
 
 # shortcuts
 
-# make a std binary of riss3g, riss3gext or the related preprocessor
+# make a std binary of riss, rissext or the related preprocessor
 riss: MYCFLAGS += -DTOOLVERSION=300 -DNOVERBHELP
 riss: rs
 rissExt: MYCFLAGS += -DTOOLVERSION=351 -DNOVERBHELP 
@@ -64,19 +64,19 @@ aigbmc-abcs: libs
 	
 # build the solver
 riss: always
-	cd core; make r INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g_release ../riss
+	cd core; make r INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss_release ../riss
 
 rissRS: always
-	cd core; make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g_static ../riss
+	cd core; make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss_static ../riss
 
 rissSimpRS: always
-	cd simp; make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g_static ../riss
+	cd simp; make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss_static ../riss
 
 rissSimpd: always
-	cd simp; make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g_debug ../riss
+	cd simp; make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss_debug ../riss
 
 rissd: always
-	cd core;   make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss3g_debug ../riss
+	cd core;   make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv riss_debug ../riss
 
 # libraries
 libd: always
@@ -123,7 +123,7 @@ touchos:
 	touch */*.os
 
 strip: always
-	strip  --keep-symbol=cp3add --keep-symbol=cp3destroyPreprocessor --keep-symbol=cp3dumpFormula --keep-symbol=cp3extendModel --keep-symbol=cp3freezeExtern --keep-symbol=cp3giveNewLit --keep-symbol=cp3initPreprocessor --keep-symbol=cp3parseOptions libriss3g.a
+	strip  --keep-symbol=cp3add --keep-symbol=cp3destroyPreprocessor --keep-symbol=cp3dumpFormula --keep-symbol=cp3extendModel --keep-symbol=cp3freezeExtern --keep-symbol=cp3giveNewLit --keep-symbol=cp3initPreprocessor --keep-symbol=cp3parseOptions libriss.a
 
 doc: clean
 	cd doc; doxygen solver.config
@@ -131,19 +131,19 @@ doc: clean
 
 # tar balls
 tar: clean
-	tar czvf riss.tar.gz core   LICENSE  Makefile mtl  README  simp utils
+	tar czvf riss.tar.gz core   LICENSE  Makefile mtl  README  simp utils VERSION
 	
 cotar: clean
-	tar czvf coprocessor.tar.gz core LICENSE  Makefile mtl  README  simp  utils coprocessor-src
+	tar czvf coprocessor.tar.gz core LICENSE  Makefile mtl  README  simp  utils coprocessor-src VERSION
 	
 cltar: clean
-	tar czvf classifier.tar.gz core LICENSE  Makefile mtl  README  simp  utils coprocessor-src classifier-src
+	tar czvf classifier.tar.gz core LICENSE  Makefile mtl  README  simp  utils coprocessor-src classifier-src VERSION
 
 qtar: clean
-	tar czvf qprocessor.tar.gz core LICENSE Makefile mtl  README  simp  utils coprocessor-src qprocessor-src qp.sh 
+	tar czvf qprocessor.tar.gz core LICENSE Makefile mtl  README  simp  utils coprocessor-src qprocessor-src qp.sh VERSION 
 	
 bmctar: clean toolclean
-	tar czvf riss-AbmC.tar.gz core LICENSE  Makefile mtl  README  simp  utils coprocessor-src aiger-src abc picosat
+	tar czvf riss-AbmC.tar.gz core LICENSE  Makefile mtl  README  simp  utils coprocessor-src aiger-src abc picosat VERSION
 	
 # clean up after solving - be careful here if some directories are missing!
 clean:

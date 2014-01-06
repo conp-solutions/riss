@@ -327,6 +327,12 @@ bool Solver::addClause_(vec<Lit>& ps)
 void Solver::attachClause(CRef cr) {
     const Clause& c = ca[cr];
     assert(c.size() > 1);
+    
+    // check for duplicates here!
+//     for (int i = 0; i < c.size(); i++)
+//       for (int j = i+1; j < c.size(); j++)
+// 	assert( c[i] != c[j] && "have no duplicate literals in clauses!" );
+    
     if(c.size()==2) {
       watchesBin[~c[0]].push(Watcher(cr, c[1]));
       watchesBin[~c[1]].push(Watcher(cr, c[0]));
@@ -1694,7 +1700,7 @@ lbool Solver::search(int nof_conflicts)
 	    // Simple Inprocessing (deduction techniques that use the solver object
 	    //
 	    // if this point is reached, check whether interleaved Clause Strengthening could be scheduled (have heuristics!)
-	    if( config.opt_interleavedClauseStrengthening && conflicts != lastICSconflicts && conflicts % config.opt_ics_interval == 0 ) {
+	    if( getExtendedResolution() && config.opt_interleavedClauseStrengthening && conflicts != lastICSconflicts && conflicts % config.opt_ics_interval == 0 ) {
 	      if( !interleavedClauseStrengthening () ) { // TODO: have some schedule here!
 		return l_False;
 	      }
@@ -3001,14 +3007,16 @@ bool Solver::interleavedClauseStrengthening()
     // TODO: could sort the literals somehow here ...
     int k = 0; // number of literals to keep in the clause
     int j = 0;
+    bool droppedLit = false;
     for( ; j + 1 < c.size(); ++ j ) {	// check each literal and enqueue it negated
       if( config.opt_ics_debug ) cerr << "c check lit " << j << "/" << c.size() << ": " << c[j] << " with value " << toInt( value(c[j]) ) << endl;
       if( value( c[j] ) == l_True ) { // just need to keep all previous and this literal
 	c[k++] = c[j];
-	cerr << "c interrupt because of sat.lit, current trail: " << trail << endl;
+	if( config.opt_ics_debug ) cerr << "c interrupt because of sat.lit, current trail: " << trail << endl;
 	break; // this literals does not need to be kept! // TODO: what if the clause is already satisfied, could be stopped as well!
       } else if ( value( c[j] ) == l_False ) {
-	cerr << "c jump over false lit: " << c[j] << endl;
+	droppedLit = true;
+	if( config.opt_ics_debug ) cerr << "c jump over false lit: " << c[j] << endl;
 	continue; // can drop this literal
       }
       c[k++] = c[j]; // keep the current literal!
@@ -3031,13 +3039,13 @@ bool Solver::interleavedClauseStrengthening()
 	      if( value(learnt_clause[0]) == l_Undef ) { // propagate unit clause!
 		uncheckedEnqueue(learnt_clause[0]);
 		if( propagate() != CRef_Undef ) {
-		  cerr << "c ICS cannot propagate the unit of a learned unit clause " << learnt_clause[0] << endl;
+		  if( config.opt_ics_debug ) cerr << "c ICS cannot propagate the unit of a learned unit clause " << learnt_clause[0] << endl;
 		  return false;
 		}
 		nbUn ++;
 	      }
 	      else if (value(learnt_clause[0]) == l_False ) {
-		cerr << "c ICS learned a falsified unit clause " << learnt_clause[0] << endl;
+		if( config.opt_ics_debug ) cerr << "c ICS learned a falsified unit clause " << learnt_clause[0] << endl;
 		return false; // otherwise, we have a top level conflict here!
 	      }
 	  }else{
@@ -3050,6 +3058,9 @@ bool Solver::interleavedClauseStrengthening()
 	    attachClause(cr); // for now, we'll also use this clause!
 	    if(config.opt_ics_debug) cerr << "c ICS learn clause " << ca[cr] << endl;
 	  }
+	} else {
+	  // what to do here?
+	  assert( false && "this method is not handled properly!" );
 	}
 	break; // we're done for this clause for now. ... what happens if we added the current learned clause now and repeat the process for the clause? there might be more reduction! -> TODO: shuffe clause and have parameter!
       } // end if conflict during propagate
@@ -3058,25 +3069,27 @@ bool Solver::interleavedClauseStrengthening()
     Clause& d = ca[ learnts[i] ];
     cancelUntil( 0 ); // to be on the safe side, if there has not been a conflict before
     // shrink the clause and add it back again!
-    if( (j == d.size() || (j == d.size() -1 && value( c[j] ) == l_False ) ) && k != d.size() ) { // actually, something has been done without just not looking at the very last literal
+    if(config.opt_ics_debug) cerr << "c ICS looked at " << j << " literals, and kept " << k << " with a size of " << d.size() << endl; 
+    if( droppedLit || (k < j && j+1 != d.size()) ) { // actually, something has been done without just not looking at the very last literal
       icsShrinks ++; icsShrinkedLits += (d.size() - k ); // stats -- store the success of shrinking
       d.shrink( d.size() - k );
-      if(config.opt_ics_debug) cerr << "c ICS return modified clause: " << d << endl;
     }
+    if(config.opt_ics_debug) cerr << "c ICS return modified clause: " << d << endl;
+    
     if( d.size() > 1 ) attachClause( learnts[i] ); // unit clauses do not need to be added!
     else if( d.size() == 1  ) { // if not already done, propagate this new clause!
       if( value( d[0] ) == l_Undef ) {
 	uncheckedEnqueue(d[0]);
 	if( propagate() != CRef_Undef ) {
-	  cerr << "c ICS return false, because unit " << d[0] << " cannot be propagated" << endl;
+	  if( config.opt_ics_debug ) cerr << "c ICS return false, because unit " << d[0] << " cannot be propagated" << endl;
 	  return false;
 	}
       } else if ( value( d[0] ) == l_False ) {
-	cerr << "c ICS learned falsified unit " << d[0]<< endl;
+	if( config.opt_ics_debug ) cerr << "c ICS learned falsified unit " << d[0]<< endl;
 	return false; // should not happen!
       }
     } else if( d.size() == 0 ) {
-      cerr << "c ICS learned an empty clause [" << learnts[i] << "]" << endl;
+      if( config.opt_ics_debug ) cerr << "c ICS learned an empty clause [" << learnts[i] << "]" << endl;
       return false; // unsat, since c is empty
     }
   }

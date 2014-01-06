@@ -169,7 +169,9 @@ void EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
     && !data.isInterupted()  
     && (data.unlimited() || steps < config.opt_ee_limit )
     ); // will set literals that have to be analyzed again!
-  
+    
+    // if( config.ee_debug_out > 1 && )
+    if (steps > config.opt_ee_limit ) { cerr  << "c abort global EE round, because step limit has been reached " << endl; }
     
     // cerr << "c ok=" << data.ok() << " toPropagate=" << data.hasToPropagate() <<endl;
     assert( (!data.ok() || !data.hasToPropagate() )&& "After these operations, all propagation should have been done" );
@@ -1686,6 +1688,9 @@ void EquivalenceElimination::findEquivalencesOnBigFast(CoprocessorData& data, ve
 
   }
   
+  //if( config.ee_debug_out > 1 &&
+  if( steps > config.opt_ee_limit ) 
+  { cerr  << "c abort rewriting equivalences, because step limit has been reached " << endl; }
 }
 
 void EquivalenceElimination::findEquivalencesOnBig(CoprocessorData& data, vector< vector<Lit> >* externBig)
@@ -1780,7 +1785,11 @@ void EquivalenceElimination::eqTarjan(int depth, Lit l, Lit list, CoprocessorDat
     }
     
     steps ++;
-    if( steps > config.opt_ee_limit ) return;
+    if( steps > config.opt_ee_limit ) {
+      //if( config.ee_debug_out > 1 ) 
+	cerr  << "c reject analyzing SSCs further, because step limit is reached " << endl;
+      return;
+    }
     
     if( config.ee_debug_out > 2 ) cerr  << "c run tarjan on " << l << " at depth " << depth << endl;
     if( externBig != 0 ) {
@@ -1826,7 +1835,7 @@ void EquivalenceElimination::eqTarjan(int depth, Lit l, Lit list, CoprocessorDat
          } while(n != l);
 	 if( eqCurrentComponent.size() > 1 ) {
 	   if( config.ee_debug_out > 1 ) cerr << "c ee SCC: " << eqCurrentComponent << endl; 
-	  data.addEquivalences( eqCurrentComponent );
+	   if( steps < config.opt_ee_limit ) data.addEquivalences( eqCurrentComponent ); // do add elements to the equivalence class only, if scanning completed!
 	 }
      }
 }
