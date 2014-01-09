@@ -8,6 +8,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "core/Solver.h"
 
 #include "utils/System.h"
+#include "mtl/Sort.h"
 
 #include "coprocessor-src/LockCollection.h"
 
@@ -393,6 +394,9 @@ public:
   /** removes an edge from the graph again */
   void removeEdge(const Lit l0, const Lit l1 );
 
+  /** check all implication lists for duplicates and remove the duplicates */
+  void removeDuplicateEdges(const uint32_t nVars);
+  
   Lit* getArray(const Lit l);
   const Lit* getArray(const Lit l) const;
   int getSize(const Lit l) const;
@@ -1742,7 +1746,24 @@ inline void BIG::recreate( ClauseAllocator& ca, Coprocessor::CoprocessorData& da
 
 inline void BIG::recreate( ClauseAllocator& ca, Coprocessor::CoprocessorData& data, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2)
 {
-  assert(false && "not implemented yet"); // this method is not duing anything!
+  assert(false && "not implemented yet"); // this method is not doing anything!
+}
+
+inline void BIG::removeDuplicateEdges(const uint32_t nVars)
+{
+  for( Var v = 0 ; v < nVars; ++v ) {
+    for( int p = 0 ;p < 2 ; ++ p ) {
+      const Lit l = mkLit(v,p==1);
+      if( getSize(l) == 0 ) continue; // not for empty lists!
+      sort( getArray(l), getSize(l) );
+      int j = 0;
+      for( int i = 1; i < getSize(l); ++i ) {
+	assert( getArray(l)[i-1] <= getArray(l)[i] && "implication list should be ordered" );
+	if( getArray(l)[i] != getArray(l)[j] ) getArray(l)[++j] = getArray(l)[i]; // keep elements, if they are not equal to the last element!
+      }
+      sizes[ toInt(l) ] = j+1; // update size information
+    }
+  }
 }
 
 inline void BIG::removeEdge(const Lit l0, const Lit l1)

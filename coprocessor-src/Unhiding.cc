@@ -30,6 +30,13 @@ Unhiding::Unhiding(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _
 , removedLiterals(0)
 , removedLits(0)
 , unhideTime(0)
+, uhdProbeSteps(0)
+, uhdProbeL1Units(0)
+, uhdProbeL2Units(0)
+, uhdProbeL3Units(0)
+, uhdProbeL4Units(0)
+, uhdProbeL5Units(0)
+, unhideProbeTime(0)
 {
 
 }
@@ -241,7 +248,7 @@ void Unhiding::sortStampTime( Lit* literalArray, const uint32_t size )
   }
 }
 
-bool Unhiding::unhideSimplify()
+bool Unhiding::unhideSimplify(bool borderIteration)
 {
   bool didSomething = false;
 
@@ -476,7 +483,121 @@ bool Unhiding::unhideSimplify()
 	  }
 	}
       }
-
+    }
+    
+    if( config.opt_uhd_probe > 0 && clause.size() == 2 && !clause.can_be_deleted() ) {
+	unhideProbeTime = cpuTime() - unhideProbeTime; // start timer
+	// helper variables
+	// clause of size two is considered to be C = (a \lor b)
+	const uint32_t& as = stampInfo[ toInt(clause[0]) ].dsc;
+	const uint32_t& ae = stampInfo[ toInt(clause[0]) ].fin;
+	const uint32_t& nas = stampInfo[ toInt(~clause[0]) ].dsc;
+	const uint32_t& nae = stampInfo[ toInt(~clause[0]) ].fin;
+	const uint32_t& bs = stampInfo[ toInt(clause[1]) ].dsc;
+	const uint32_t& be = stampInfo[ toInt(clause[1]) ].fin;
+	const uint32_t& nbs = stampInfo[ toInt(~clause[1]) ].dsc;
+	const uint32_t& nbe = stampInfo[ toInt(~clause[1]) ].fin;
+	// simple case, one of the two literals is entailed due to this clause
+	uhdProbeSteps += 2;
+	if( (as < bs && be < ae)  // a -> b
+	  || (nbs < nas && nae < nbe ) ) // -b -> -a == a -> b
+	{ // then F -> b
+	    if( data.value( clause[1] ) == l_Undef ) uhdProbeL1Units ++;
+	    if( l_False == data.enqueue(clause[1], data.defaultExtraInfo()  ) ) { 
+	      return didSomething;
+	    }
+	} else if ( (bs < as && ae < be)  // b -> a
+	  || (nas < nbs && nbe < nae ) ) // -a -> -b == b -> a
+	{ // then F -> a
+	    if( data.value( clause[0] ) == l_Undef ) uhdProbeL1Units ++;
+	    if( l_False == data.enqueue(clause[0], data.defaultExtraInfo()  ) ) { 
+	      return didSomething;
+	    }
+	} else if ( config.opt_uhd_probe > 1 ) { // more expensive method
+	  const Lit* aList = big.getArray( clause[0] );
+	  const Lit* bList = big.getArray( clause[1] );
+	  const int aSize = big.getSize( clause[0] ) + 1;
+	  const int bSize = big.getSize( clause[1] ) + 1;
+	  for( int j = 0 ; j < aSize; ++ j ) {
+	    const Lit aLit = j == 0 ? clause[0] : aList[ j - 1];
+	    for( int k = 0; k < (( config.opt_uhd_probe > 2 || j == 0 ) ? bSize : 1); ++ k ) // even more expensive method
+	    {
+	      uhdProbeSteps ++;
+	      const Lit bLit = k == 0 ? clause[1] : bList[ k - 1];
+	      // a -> aLit -> bLit, and b -> bLit ; thus F \land (a \lor b) -> bLit, and bLit is a backbone!
+	      if( ( stampInfo[  toInt( aLit ) ].dsc < stampInfo[ toInt(  bLit ) ].dsc && stampInfo[ toInt(  bLit ) ].fin < stampInfo[ toInt(  aLit ) ].fin ) 
+	      // a -> aLit, b -> bLit, -bLit -> -aLit = aLit -> bLit -> F -> bLit
+	      ||  ( stampInfo[ toInt( ~bLit ) ].dsc < stampInfo[ toInt( ~aLit ) ].dsc && stampInfo[ toInt( ~aLit ) ].fin < stampInfo[ toInt( ~bLit ) ].fin ) ){
+		if( data.value( bLit ) == l_Undef && ( j == 0 || k == 0) ) uhdProbeL2Units ++; else uhdProbeL3Units ++;
+		if( l_False == data.enqueue( bLit, data.defaultExtraInfo() ) ) { 
+		  return didSomething;
+		}
+	      } else {
+		if( ( stampInfo[  toInt( bLit ) ].dsc < stampInfo[ toInt(  aLit ) ].dsc && stampInfo[ toInt(  aLit ) ].fin < stampInfo[ toInt(  bLit ) ].fin ) 
+		||  ( stampInfo[ toInt( ~aLit ) ].dsc < stampInfo[ toInt( ~bLit ) ].dsc && stampInfo[ toInt( ~bLit ) ].fin < stampInfo[ toInt( ~aLit ) ].fin ) ){
+		  if( data.value( aLit ) == l_Undef && (j == 0 || k == 0) ) uhdProbeL2Units ++; else uhdProbeL3Units ++;
+		  if( l_False == data.enqueue( aLit, data.defaultExtraInfo() ) ) { 
+		    return didSomething;
+		  }
+		}
+	      }
+	      
+	    }
+	  }
+	}
+	unhideProbeTime = cpuTime() - unhideProbeTime; // stop timer
+    } else if ( (borderIteration || config.opt_uhd_fullBorder ) && clause.size() > 2 && clause.size() < config.opt_uhd_fullProbe ) { // approximate probing for larger clauses
+      bool oneDoesNotImply = false;
+      for( int j = 0 ; j < clause.size(); ++ j ) {
+	if( big.getSize( clause[j] ) == 0 ) { oneDoesNotImply = true; break; }
+      }
+      if( !oneDoesNotImply ) 
+      {
+	currentPosition.assign( clause.size(), 0 ); // initialize position of all big lists for the literals in the clause 
+	currentLimits.assign( clause.size(), 0 );
+	bool oneDoesNotImply = false;
+	for( int j = 0 ; j < clause.size(); ++ j ) {
+	  currentLimits[j] = big.getSize( clause[j] ); // initialize current imply test lits
+	  sort( big.getArray(clause[j]), big.getSize( clause[j] ) ); // sort all arrays (might be expensive)
+	  uhdProbeSteps += clause.size();
+	}
+	
+	bool allInLimit = true;
+	
+	// this implementation does not cover the case that all literals of a clause except one imply this one literal!
+	while( allInLimit ) {
+	  
+	  // find minimum literal
+	  bool allEqual = true;
+	  Lit minLit = big.getArray( clause[0] )[ currentPosition[0] ];
+	  int minPosition = 0;
+	  
+	  for( int j = 1 ; j < clause.size(); ++ j ) {
+	    uhdProbeSteps ++;
+	    if( big.getArray( clause[j] )[ currentPosition[j] ] < minLit ) {
+	      minLit = big.getArray( clause[j] )[ currentPosition[j] ];
+	      minPosition = j;
+	    }
+	    if( big.getArray( clause[j] )[ currentPosition[j] ] != big.getArray( clause[j-1] )[ currentPosition[j-1] ] ) allEqual = false;
+	  }
+	  
+	  if( allEqual ) { // there is a commonly implied literal
+	    if( data.value( minLit ) == l_Undef ) uhdProbeL4Units ++;
+	    if( l_False == data.enqueue( minLit, data.defaultExtraInfo() ) ) { 
+	      return didSomething;
+	    }
+	    for( int j = 0 ; j < clause.size(); ++ j ) {
+	      currentPosition[j] ++;
+	      if( currentPosition[j] > currentLimits[j] ) allInLimit = false; // stop if we dropped out of the list of implied literals! 
+	    }
+	  } else { // only move the literal of the minimum!
+	    currentPosition[minPosition] ++;
+	    if( currentPosition[minPosition] > currentLimits[minPosition] ) allInLimit = false; // stop if we dropped out of the list of implied literals!
+	  }
+	}
+	
+      }
+    
     }
     
   } // end for clause in formula
@@ -515,6 +636,8 @@ void Unhiding::process (  )
       }
       cerr << "c found " << duplImps << " duplicate implications" << endl;
     }
+    // remove duplicate edges from BIG (while not removing the redundant binary clauses from the formula)
+    big.removeDuplicateEdges( data.nVars() );
     
     if( config.opt_uhd_Debug > 5 ) {
       cerr << "c iteration " << iteration << " formula, state ok? " << data.ok() << endl;
@@ -554,7 +677,7 @@ void Unhiding::process (  )
     {
       uint32_t oldStamp = stamp;
       stamp = stampLiteral(data.lits[i],stamp,foundEE);
-      assert( stamp > oldStamp && "if new stamp is smaller, there has been an overflow of the stamp!" );
+      assert( stamp >= oldStamp && "if new stamp is smaller, there has been an overflow of the stamp!" );
     }
     // cerr << "c stamped " << ts << " root lits" << endl;
     // stamp all remaining literals, after shuffling
@@ -618,7 +741,7 @@ void Unhiding::process (  )
     }
     
     // TODO check whether unit propagation reduces the clauses that are eliminated afterwards (should not)
-    if( data.ok() && unhideSimplify() ) {
+    if( data.ok() && unhideSimplify( iteration == 0 || iteration + 1 == unhideIter ) ) {
       if( data.ok() ) {
 	if( data.hasToPropagate() ) {
 	  if( config.opt_uhd_Debug > 4 ) cerr << "c [UHD-A] run UP before simplification" << endl;
@@ -663,6 +786,15 @@ void Unhiding::printStatistics( ostream& stream )
   << removedLiterals << " totalLits, "
   << removedLits << " lits "
   << endl;   
+  stream << "c [STAT] UNHIDE(2) " 
+  << unhideProbeTime << " prSecs, "
+  << uhdProbeSteps   << " prSteps, "
+  << uhdProbeL1Units << " L1units, "
+  << uhdProbeL2Units << " L2units, "
+  << uhdProbeL3Units << " L3units, "
+  << uhdProbeL4Units << " L4units, "
+  << uhdProbeL5Units << " L5units, "
+  << endl;  
 }
 
 

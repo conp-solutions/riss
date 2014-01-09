@@ -41,6 +41,14 @@ class Unhiding : public Technique {
   unsigned removedLiterals;	// number of removed literals
   unsigned removedLits;		// number of literals that are removed by unhiding
   double unhideTime;		// seconds for unhiding
+  
+  uint64_t uhdProbeSteps;	// steps for probing during unhiding
+  unsigned uhdProbeL1Units;	// unit clauses found during weak uhd probe
+  unsigned uhdProbeL2Units;	// unit clauses found during weak uhd probe
+  unsigned uhdProbeL3Units;	// unit clauses found during weak uhd probe
+  unsigned uhdProbeL4Units;	// units that have been found by larger clause
+  unsigned uhdProbeL5Units;	// units that have been found by larger clause
+  double unhideProbeTime;	// seconds for uhd probe
  
 	/// structure that store all necessary stamp information of the paper for each literal
 	struct literalData {
@@ -63,6 +71,10 @@ class Unhiding : public Technique {
   vector< Lit > stampEE;
   vector< Lit > stampClassEE;
   vector< char > unhideEEflag;
+  
+  vector< int > currentPosition; // fur full probing approximation
+  vector< Lit > currentLits; // current literals for full probing approximation
+  vector< int > currentLimits; // all combination limits for full probing
  
 public:
   
@@ -100,7 +112,7 @@ protected:
 	/** simplify the formula based on the literal stamps
 	 * 
 	 */
-	bool unhideSimplify();
+	bool unhideSimplify(bool borderIteration);
 };
 
 

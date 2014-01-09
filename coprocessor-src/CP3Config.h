@@ -583,6 +583,9 @@ BoolOption opt_sls_adopt      ;
  BoolOption opt_uhd_NoShuffle ;
  BoolOption opt_uhd_EE        ;
  BoolOption opt_uhd_TestDbl   ;
+ IntOption  opt_uhd_probe ;
+ IntOption  opt_uhd_fullProbe;
+ BoolOption opt_uhd_fullBorder;
 #if defined TOOLVERSION  
  const int opt_uhd_Debug;
 #else
