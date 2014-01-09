@@ -36,6 +36,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 // to be able to use the preprocessor
 #include "coprocessor-src/Coprocessor.h"
+#include "coprocessor-src/CoprocessorTypes.h"
 
 // to be able to read var files
 #include "coprocessor-src/VarFileParser.h"
@@ -199,6 +200,12 @@ Solver::Solver(CoreConfig& _config) :
   , rs_savedDecisions(0)
   , rs_savedPropagations(0)
   , rs_recursiveRefinements(0)
+  
+  // probing during learning
+  , big(0)
+  , lastReshuffleRestart(0)
+  , L2units(0)
+  , L3units(0)
   
   // preprocessor
   , coprocessor(0)
@@ -1281,6 +1288,12 @@ void Solver::reduceDB()
   int     i, j;
   nbReduceDB++;
   
+  if( big != 0 ) {  // build a new BIG that is valid on the current
+    big->recreate( ca, nVars(), clauses, learnts );
+    big->removeDuplicateEdges( nVars() );
+    big->generateImplied( nVars(), add_tmp );
+  }
+  
   sort(learnts, reduceDB_lt(ca) ); // sort size 2 and lbd 2 to the back!
 
   // We have a lot of "good" clauses, it is difficult to compare them. Keep more !
@@ -1621,6 +1634,12 @@ lbool Solver::search(int nof_conflicts)
 		    }
 		  }
 		  
+		  if( analyzeNewLearnedClause( cr ) )   // check whether this clause can be used to imply new backbone literals!
+		  {
+		    ok = false; // found a contradtion
+		    break;	// interupt search!
+		  }
+		  
 		}
 
 	      }
@@ -1752,7 +1771,59 @@ lbool Solver::search(int nof_conflicts)
             uncheckedEnqueue(next);
         }
     }
+    return l_Undef;
 }
+
+bool Solver::analyzeNewLearnedClause(const CRef newLearnedClause)
+{
+  if( config.opt_uhdProbe == 0 ) return false;
+  
+  if( decisionLevel() == 0 ) return false; // no need to analyze the clause, if its satisfied on the top level already!
+
+  const Clause& clause = ca[ newLearnedClause ];
+  if( clause.size() != 2 ) return false;
+
+  MethodClock mc( bigBackboneTime );
+  
+  const Lit* aList = big->getArray( clause[0] );
+  const Lit* bList = big->getArray( clause[1] );
+  const int aSize = big->getSize( clause[0] ) + 1;
+  const int bSize = big->getSize( clause[1] ) + 1;
+  
+  for( int j = 0 ; j < aSize; ++ j ) 
+  {
+    const Lit aLit = j == 0 ? clause[0] : aList[ j - 1];
+    for( int k = 0; k < (( config.opt_uhdProbe > 1 || j == 0 ) ? bSize : 1); ++ k ) // even more expensive method
+    {
+      const Lit bLit = k == 0 ? clause[1] : bList[ k - 1];
+      // a -> aLit -> bLit, and b -> bLit ; thus F \land (a \lor b) -> bLit, and bLit is a backbone!
+      
+      if( ( big->getStart(aLit) < big->getStart(bLit) && big->getStop(bLit) < big->getStop(aLit) ) 
+      // a -> aLit, b -> bLit, -bLit -> -aLit = aLit -> bLit -> F -> bLit
+      ||  ( big->getStart(~bLit) < big->getStart(~aLit) && big->getStop(~aLit) < big->getStop(~bLit) ) ){
+	if( value( bLit ) == l_Undef ) { // only if not set already
+	  if ( j == 0 || k == 0) L2units ++; else L3units ++; // stats
+	  if( decisionLevel() != 0 ) cancelUntil(0);
+	  uncheckedEnqueue( bLit );
+	  addCommentToProof("added by uhd probing:"); addUnitToProof(bLit); // not sure whether DRUP can always find this
+	} else if (value( bLit ) == l_False ) return true; // found a contradiction
+      } else {
+	if( ( big->getStart(bLit) < big->getStart(aLit) && big->getStop(aLit) < big->getStop(bLit) ) 
+	||  ( big->getStart(~aLit) < big->getStart(~bLit) && big->getStop(~bLit) < big->getStop(~aLit) ) ){
+	  if( value( aLit ) == l_Undef ) { // only if not set already
+	  if ( j == 0 || k == 0) L2units ++; else L3units ++; // stats
+	  if( decisionLevel() != 0 ) cancelUntil(0);
+	  uncheckedEnqueue( aLit);
+	  addCommentToProof("added by uhd probing:"); addUnitToProof(aLit);
+	} else if (value( aLit ) == l_False ) return true; // found a contradiction
+	}
+      }
+      
+    }
+  }
+  return false;
+}
+
 
 
 void Solver::fm(uint64_t*p,bool mo){ // for negative, add bit patter 10, for positive, add bit pattern 01!
@@ -2176,15 +2247,31 @@ printf("c ==================================[ Search Statistics (every %6d confl
       }
     }
     
+    // probing during search:
+    if( config.opt_uhdProbe > 0 ) {
+      assert( big == 0 && "cannot be initialized already" );
+      big = new Coprocessor::BIG();
+      big->create( ca, nVars(), clauses, learnts );
+      big->removeDuplicateEdges( nVars() );
+      big->generateImplied( nVars(), add_tmp );
+    }
+    
     //
     // Search:
     //
-    int curr_restarts = 0;
+    int curr_restarts = 0; 
+    lastReshuffleRestart = 0;
     while (status == l_Undef){
       
       double rest_base = 0;
       if( config.opt_restarts_type != 0 ) // set current restart limit
 	rest_base = config.opt_restarts_type == 1 ? luby(config.opt_restart_inc, curr_restarts) : pow(config.opt_restart_inc, curr_restarts);
+      
+      // re-shuffle BIG, if a sufficient number of restarts is reached
+      if( big != 0 && config.opt_uhdRestartReshuffle > 0 && curr_restarts - lastReshuffleRestart >= config.opt_uhdRestartReshuffle ) {
+	big->generateImplied( nVars(), add_tmp );
+	lastReshuffleRestart = curr_restarts; // update number of last restart
+      }
       
       status = search(rest_base * config.opt_restart_first); // the parameter is useless in glucose - but interesting for the other restart policies
 
@@ -2195,14 +2282,23 @@ printf("c ==================================[ Search Statistics (every %6d confl
 	  // restart, triggered by the solver
 	  // if( coprocessor == 0 && useCoprocessor)  coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
           if( coprocessor != 0 && useCoprocessorIP) {
-	    inprocessTime.start();
-	    status = coprocessor->inprocess();
-	    inprocessTime.stop();
+	    if( coprocessor->wantsToInprocess() ) {
+	      inprocessTime.start();
+	      status = coprocessor->inprocess();
+	      inprocessTime.stop();
+	      if( big != 0 ) {
+		big->recreate( ca, nVars(), clauses, learnts ); // build a new BIG that is valid on the given data!
+		big->removeDuplicateEdges( nVars() );
+		big->generateImplied( nVars(), add_tmp );
+	      }
+	    }
 	  }
 	}
 	
     }
     totalTime.stop();
+    
+    if( big != 0 ) { big->BIG::~BIG(); big = 0; } // clean up!
     
     //
     // print statistic output
@@ -2243,6 +2339,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
 	    printf("c IntervalRestarts: %d\n", intervalRestart);
 	    printf("c partial restarts: %d saved decisions: %d saved propagations: %d recursives: %d\n", rs_partialRestarts, rs_savedDecisions, rs_savedPropagations, rs_recursiveRefinements );
 	    printf("c agility restart rejects: %d\n", agility_rejects );
+	    printf("c uhd probe: %lf s, %d L2units, %d L3units\n", bigBackboneTime.getCpuTime(), L2units, L3units );
 #endif
     }
 

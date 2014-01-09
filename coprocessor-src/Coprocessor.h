@@ -76,7 +76,17 @@ public:
   ~Preprocessor();
 
   // major methods to start preprocessing
+  /** perform preprocessing
+   * @return status of the formula l_False for UNSAT, l_Undef for unknown, l_True so satisfiable.
+   */
   lbool preprocess();
+  
+  /** method to determine whether inprocessing should be done, according to the preprocessors heurisics*/
+  bool wantsToInprocess();
+  
+  /** perform inprocessing 
+   * @return status of the formula l_False for UNSAT, l_Undef for unknown, l_True so satisfiable.
+   */
   lbool inprocess();
   lbool preprocessScheduled();
   lbool performSimplificationScheduled(string techniques);

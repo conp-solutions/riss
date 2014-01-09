@@ -246,6 +246,12 @@ public:
 #endif
 #endif // version < 400
  
+
+IntOption opt_uhdProbe;  // non, linear, or quadratic analysis
+BoolOption opt_uhdCleanRebuild; // rebuild BIG always before clause database is cleaned next
+IntOption opt_uhdRestartReshuffle; // travers the BIG again during every i-th restart 0=off
+
+ 
 IntOption opt_verboseProof; 
 BoolOption opt_rupProofOnly; 
  

@@ -991,18 +991,24 @@ lbool Preprocessor::preprocess()
   }
 }
 
+bool Preprocessor::wantsToInprocess () 
+{
+  // if no inprocesing enabled, do not do it!
+  if( !config.opt_inprocess ) return false;
+  
+  // cerr << "c check " << lastInpConflicts << " and " << (int)config.opt_inprocessInt << " vs " << solver->conflicts << endl;
+  if( lastInpConflicts + config.opt_inprocessInt > solver->conflicts ) {
+    return false;  
+  }
+  return true;
+}
+
 lbool Preprocessor::inprocess()
 {
   // if no inprocesing enabled, do not do it!
   if( !config.opt_inprocess ) return l_Undef;
   // TODO: do something before preprocessing? e.g. some extra things with learned / original clauses
   if (config.opt_inprocess) {
-    
-    // reject inprocessing here!
-    // cerr << "c check " << lastInpConflicts << " and " << (int)config.opt_inprocessInt << " vs " << solver->conflicts << endl;
-    if( lastInpConflicts + config.opt_inprocessInt > solver->conflicts ) {
-      return l_Undef;  
-    }
     
     /** make sure the solver is at level 0 - not guarantueed with partial restarts!*/
     solver->cancelUntil(0);

@@ -405,6 +405,7 @@ public:
    * @return false, if BIG is not initialized yet
    */
   void generateImplied(Coprocessor::CoprocessorData& data);
+  void generateImplied( uint32_t nVars, vec<Lit>& tmpLits ); // alternative interface, to be able to use it during search!
   
   /** fill the literals in the order they would appear in a BFS in the big, starting with root nodes 
    *  NOTE: will pollute the data.ma MarkArray
@@ -1746,7 +1747,49 @@ inline void BIG::recreate( ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CR
 
 inline void BIG::recreate( ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2)
 {
-  assert(false && "not implemented yet"); // this method is not doing anything!
+  sizes = sizes == 0 ? (int*) malloc( sizeof(int) * nVars * 2 ) : (int*) realloc( sizes, sizeof(int) * nVars * 2 );
+  memset(sizes,0, sizeof(int) * nVars * 2 );
+
+  int sum = 0;
+  // count occurrences of literals in binary clauses of the given list
+  for( int p = 0 ; p < 2; ++ p ) {
+    const vec<CRef>& list = (p==0 ? list1 : list2 );
+    for( int i = 0 ; i < list.size(); ++i ) {
+      const Clause& c = ca[list[i]];
+      if(c.size() != 2 || c.can_be_deleted() ) continue;
+      sizes[ toInt( ~c[0] )  ] ++;
+      sizes[ toInt( ~c[1] )  ] ++;
+      sum += 2;
+    }
+  }
+  storage = storage == 0 ? (Lit*) malloc( sizeof(Lit) * sum ) : (Lit*) realloc( storage, sizeof(Lit) * sum )  ;
+  big = big == 0 ? (Lit**)malloc ( sizeof(Lit*) * nVars * 2 ) : (Lit**)realloc ( big, sizeof(Lit*) * nVars * 2 );
+  // should not be necessary!
+  memset(storage,0, sizeof(Lit) * sum );
+  memset(big, 0, sizeof(Lit*) * nVars * 2 ); 
+  
+  // set the pointers to the right location and clear the size
+  sum = 0 ;
+  for ( int i = 0 ; i < nVars * 2; ++ i )
+  {
+    big[i] = &(storage[sum]);
+    sum += sizes[i];
+    sizes[i] = 0;
+  }
+
+  // add all binary clauses to graph
+  for( int p = 0 ; p < 2; ++ p ) {
+    const vec<CRef>& list = (p==0 ? list1 : list2 );
+    for( int i = 0 ; i < list.size(); ++i ) {
+      const Clause& c = ca[list[i]];
+      if(c.size() != 2 || c.can_be_deleted() ) continue;
+      const Lit l0 = c[0]; const Lit l1 = c[1];
+      ( big[ toInt(~l0) ] )[ sizes[toInt(~l0)] ] = l1;
+      ( big[ toInt(~l1) ] )[ sizes[toInt(~l1)] ] = l0;
+      sizes[toInt(~l0)] ++;
+      sizes[toInt(~l1)] ++;
+    }
+  }
 }
 
 inline void BIG::removeDuplicateEdges(const uint32_t nVars)
@@ -1858,6 +1901,60 @@ inline void BIG::generateImplied( CoprocessorData& data )
     for( uint32_t i = 0 ; i < ts2; i++ ) { const uint32_t rnd=rand()%ts2; const Lit tmp = data.lits[i]; data.lits[i] = data.lits[rnd]; data.lits[rnd]=tmp; }
     for ( uint32_t i = 0 ; i < ts2; ++ i )
       stamp = stampLiteral(data.lits[i],stamp,index,stampQueue);
+}
+
+inline void BIG::generateImplied( uint32_t nVars, vec<Lit>& tmpLits )
+{
+    uint32_t stamp = 1 ;
+
+    if( start == 0 ) start = (uint32_t*) malloc( nVars * sizeof(uint32_t) * 2 );
+    else start = (uint32_t*)realloc( start, nVars * sizeof(uint32_t) * 2 );
+
+    if( stop == 0 ) stop = (uint32_t*) malloc( nVars * sizeof(uint32_t) * 2 );
+    else stop = (uint32_t*)realloc( stop, nVars * sizeof(int32_t) * 2 );
+
+    int32_t* index = (int32_t*)malloc( nVars * sizeof(int32_t) * 2 );
+
+    // set everything to 0!
+    memset( start, 0, nVars * sizeof(uint32_t) * 2 );
+    memset( stop, 0, nVars * sizeof(uint32_t) * 2 );
+    memset( index, 0, nVars * sizeof(int32_t) * 2 );
+
+
+    deque< Lit > stampQueue;
+
+    tmpLits.clear();
+    // reset all present variables, collect all roots in binary implication graph
+    for ( Var v = 0 ; v < nVars; ++ v )
+    {
+      const Lit pos =  mkLit(v,false);
+      // a literal is a root, if its complement does not imply a literal
+      if( getSize(pos) == 0 ) tmpLits.push(~pos);
+      if( getSize(~pos) == 0 ) tmpLits.push(pos);
+    }
+
+    // do stamping for all roots, shuffle first
+    const uint32_t ts = tmpLits.size();
+    for( uint32_t i = 0 ; i < ts; i++ ) { const uint32_t rnd=rand()%ts; const Lit tmp = tmpLits[i]; tmpLits[i] = tmpLits[rnd]; tmpLits[rnd]=tmp; }
+    // stamp shuffled tmpLits
+    for ( uint32_t i = 0 ; i < ts; ++ i )
+      stamp = stampLiteral(tmpLits[i],stamp,index,stampQueue);
+
+    // stamp all remaining literals, after shuffling
+    tmpLits.clear();
+    for ( Var v = 0 ; v < nVars; ++ v )
+    {
+      const Lit pos =  mkLit(v,false);
+      if( start[ toInt(pos) ] == 0 ) tmpLits.push(pos);
+      if( start[ toInt(~pos) ] == 0 ) tmpLits.push(~pos);
+    }
+    // stamp shuffled tmpLits
+    const uint32_t ts2 = tmpLits.size();
+    for( uint32_t i = 0 ; i < ts2; i++ ) { const uint32_t rnd=rand()%ts2; const Lit tmp = tmpLits[i]; tmpLits[i] = tmpLits[rnd]; tmpLits[rnd]=tmp; }
+    for ( uint32_t i = 0 ; i < ts2; ++ i )
+      stamp = stampLiteral(tmpLits[i],stamp,index,stampQueue);
+    
+    tmpLits.clear(); // clean up
 }
 
 inline void BIG::fillSorted(vector<Lit>& literals, CoprocessorData& data, bool rootsOnly, bool getAll)

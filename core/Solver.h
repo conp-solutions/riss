@@ -49,6 +49,7 @@ namespace Coprocessor {
   class BoundedVariableElimination;
   class Probing;
   class Symmetry;
+  class BIG;
 }
 
 // since template methods need to be in headers ...
@@ -494,6 +495,17 @@ protected:
    * @return the decision level to jump to
    */
   int getRestartLevel();
+  
+  // for improved backbone finding
+  Coprocessor::BIG* big;
+  Clock bigBackboneTime;
+  unsigned lastReshuffleRestart;
+  unsigned L2units,L3units;
+  /** if the new learned clause is binary, C = (a \lor b), 
+   *  then it is checked whether a literal l is implied by both a and b in the formula. 
+   *  @return true, if a contrdiction has been found, so that the result is UNSAT
+   */
+  bool analyzeNewLearnedClause( const CRef newLearnedClause );
   
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;
