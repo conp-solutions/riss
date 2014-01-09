@@ -564,9 +564,19 @@ bool Unhiding::unhideSimplify(bool borderIteration)
 	
 	bool allInLimit = true;
 	
+	if( config.opt_uhd_Debug > 1 ) {
+	  cerr << "c work on clause " << clause << endl;
+	  for( int j = 0 ; j < clause.size(); ++ j ) {
+	    cerr << "c " << clause[j] << " ->";
+	    for( int k= 0 ; k < big.getSize( clause[j] ); ++ k ) cerr << " " << big.getArray(clause[j])[k];
+	    cerr << endl;
+	  }  
+	}
+	
 	// this implementation does not cover the case that all literals of a clause except one imply this one literal!
+	int whileIteration = 0;
 	while( allInLimit ) {
-	  
+	  whileIteration ++;
 	  // find minimum literal
 	  bool allEqual = true;
 	  Lit minLit = big.getArray( clause[0] )[ currentPosition[0] ];
@@ -579,20 +589,24 @@ bool Unhiding::unhideSimplify(bool borderIteration)
 	      minPosition = j;
 	    }
 	    if( big.getArray( clause[j] )[ currentPosition[j] ] != big.getArray( clause[j-1] )[ currentPosition[j-1] ] ) allEqual = false;
+	    else if( config.opt_uhd_Debug > 2 ) {
+	      cerr << "c [" << whileIteration << "] the two implied literals are equal (" << j << " vs " << j-1 << ") [" << clause[j] << " vs " << clause[j-1] << "]: " << big.getArray( clause[j] )[ currentPosition[j] ] << " vs-1 " << big.getArray( clause[j-1] )[ currentPosition[j-1] ] << endl;
+	    }
 	  }
 	  
 	  if( allEqual ) { // there is a commonly implied literal
+	    if( config.opt_uhd_Debug > 1 )  cerr << "c found unit during large clause probing: " << minLit << endl;
 	    if( data.value( minLit ) == l_Undef ) uhdProbeL4Units ++;
 	    if( l_False == data.enqueue( minLit, data.defaultExtraInfo() ) ) { 
 	      return didSomething;
 	    }
 	    for( int j = 0 ; j < clause.size(); ++ j ) {
 	      currentPosition[j] ++;
-	      if( currentPosition[j] > currentLimits[j] ) allInLimit = false; // stop if we dropped out of the list of implied literals! 
+	      if( currentPosition[j] >= currentLimits[j] ) allInLimit = false; // stop if we dropped out of the list of implied literals! 
 	    }
 	  } else { // only move the literal of the minimum!
 	    currentPosition[minPosition] ++;
-	    if( currentPosition[minPosition] > currentLimits[minPosition] ) allInLimit = false; // stop if we dropped out of the list of implied literals!
+	    if( currentPosition[minPosition] >= currentLimits[minPosition] ) allInLimit = false; // stop if we dropped out of the list of implied literals!
 	  }
 	}
 	
