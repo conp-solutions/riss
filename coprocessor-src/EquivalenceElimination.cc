@@ -1587,7 +1587,7 @@ void EquivalenceElimination::findEquivalencesOnBigFast(CoprocessorData& data, ve
   
   // create underlying data structure
   BIG big;
-  if( externBig == 0 ) big.create(ca, data, data.getClauses(), data.getLEarnts() );
+  if( externBig == 0 ) big.create(ca, data.nVars(), data.getClauses(), data.getLEarnts() );
   
   while( !eqDoAnalyze.empty() && !data.isInterupted() && (data.unlimited() || steps < config.opt_ee_limit) )
   {
@@ -1720,7 +1720,7 @@ void EquivalenceElimination::findEquivalencesOnBigRec(CoprocessorData& data, vec
   eqStack.clear();
   
   BIG big;
-  if( externBig == 0 ) big.create(ca, data, data.getClauses(), data.getLEarnts() );
+  if( externBig == 0 ) big.create(ca, data.nVars(), data.getClauses(), data.getLEarnts() );
   
   steps += (data.getClauses().size() / 16); // some initial steps, because BIG was created
   

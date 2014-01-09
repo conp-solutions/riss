@@ -384,12 +384,12 @@ public:
   ~BIG();
 
   /** adds binary clauses */
-  void create( ClauseAllocator& ca, Coprocessor::CoprocessorData& data, vec< Minisat::CRef >& list);
-  void create( ClauseAllocator& ca, Coprocessor::CoprocessorData& data, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2);
+  void create( ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list);
+  void create( ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2);
 
   /** recreate the big after the formula changed */
-  void recreate( ClauseAllocator& ca, Coprocessor::CoprocessorData& data, vec< Minisat::CRef >& list);
-  void recreate( ClauseAllocator& ca, Coprocessor::CoprocessorData& data, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2);
+  void recreate( ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list);
+  void recreate( ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2);
   
   /** removes an edge from the graph again */
   void removeEdge(const Lit l0, const Lit l1 );
@@ -1619,10 +1619,10 @@ inline BIG::~BIG()
  if( sizes != 0 )  { free( sizes ); sizes = 0 ; }
 }
 
-inline void BIG::create(ClauseAllocator& ca, CoprocessorData& data, vec<CRef>& list)
+inline void BIG::create(ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list)
 {
-  sizes = (int*) malloc( sizeof(int) * data.nVars() * 2 );
-  memset(sizes,0, sizeof(int) * data.nVars() * 2 );
+  sizes = (int*) malloc( sizeof(int) * nVars * 2 );
+  memset(sizes,0, sizeof(int) * nVars * 2 );
 
   int sum = 0;
   // count occurrences of literals in binary clauses of the given list
@@ -1634,11 +1634,11 @@ inline void BIG::create(ClauseAllocator& ca, CoprocessorData& data, vec<CRef>& l
     sum += 2;
   }
   storage = (Lit*) malloc( sizeof(Lit) * sum );
-  big =  (Lit**)malloc ( sizeof(Lit*) * data.nVars() * 2 );
-  // memset(sizes,0, sizeof(Lit*) * data.nVars() * 2 );
+  big =  (Lit**)malloc ( sizeof(Lit*) * nVars * 2 );
+  // memset(sizes,0, sizeof(Lit*) * nVars * 2 );
   // set the pointers to the right location and clear the size
   sum = 0 ;
-  for ( int i = 0 ; i < data.nVars() * 2; ++ i )
+  for ( int i = 0 ; i < nVars * 2; ++ i )
   {
     big[i] = &(storage[sum]);
     sum += sizes[i];
@@ -1658,10 +1658,10 @@ inline void BIG::create(ClauseAllocator& ca, CoprocessorData& data, vec<CRef>& l
   }
 }
 
-inline void BIG::create(ClauseAllocator& ca, CoprocessorData& data, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2)
+inline void BIG::create(ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2)
 {
-  sizes = (int*) malloc( sizeof(int) * data.nVars() * 2 );
-  memset(sizes,0, sizeof(int) * data.nVars() * 2 );
+  sizes = (int*) malloc( sizeof(int) * nVars * 2 );
+  memset(sizes,0, sizeof(int) * nVars * 2 );
 
   int sum = 0;
   // count occurrences of literals in binary clauses of the given list
@@ -1676,11 +1676,11 @@ inline void BIG::create(ClauseAllocator& ca, CoprocessorData& data, vec< Minisat
     }
   }
   storage = (Lit*) malloc( sizeof(Lit) * sum );
-  big =  (Lit**)malloc ( sizeof(Lit*) * data.nVars() * 2 );
-  // memset(sizes,0, sizeof(Lit*) * data.nVars() * 2 );
+  big =  (Lit**)malloc ( sizeof(Lit*) * nVars * 2 );
+  // memset(sizes,0, sizeof(Lit*) * nVars * 2 );
   // set the pointers to the right location and clear the size
   sum = 0 ;
-  for ( int i = 0 ; i < data.nVars() * 2; ++ i )
+  for ( int i = 0 ; i < nVars * 2; ++ i )
   {
     big[i] = &(storage[sum]);
     sum += sizes[i];
@@ -1703,10 +1703,10 @@ inline void BIG::create(ClauseAllocator& ca, CoprocessorData& data, vec< Minisat
 }
 
 
-inline void BIG::recreate( ClauseAllocator& ca, Coprocessor::CoprocessorData& data, vec< Minisat::CRef >& list)
+inline void BIG::recreate( ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list)
 {
-  sizes = sizes == 0 ? (int*) malloc( sizeof(int) * data.nVars() * 2 ) : (int*) realloc( sizes, sizeof(int) * data.nVars() * 2 );
-  memset(sizes,0, sizeof(int) * data.nVars() * 2 );
+  sizes = sizes == 0 ? (int*) malloc( sizeof(int) * nVars * 2 ) : (int*) realloc( sizes, sizeof(int) * nVars * 2 );
+  memset(sizes,0, sizeof(int) * nVars * 2 );
 
   int sum = 0;
   // count occurrences of literals in binary clauses of the given list
@@ -1718,14 +1718,14 @@ inline void BIG::recreate( ClauseAllocator& ca, Coprocessor::CoprocessorData& da
     sum += 2;
   }
   storage = storage == 0 ? (Lit*) malloc( sizeof(Lit) * sum ) : (Lit*) realloc( storage, sizeof(Lit) * sum )  ;
-  big = big == 0 ? (Lit**)malloc ( sizeof(Lit*) * data.nVars() * 2 ) : (Lit**)realloc ( big, sizeof(Lit*) * data.nVars() * 2 );
+  big = big == 0 ? (Lit**)malloc ( sizeof(Lit*) * nVars * 2 ) : (Lit**)realloc ( big, sizeof(Lit*) * nVars * 2 );
   // should not be necessary!
   memset(storage,0, sizeof(Lit) * sum );
-  memset(big, 0, sizeof(Lit*) * data.nVars() * 2 ); 
+  memset(big, 0, sizeof(Lit*) * nVars * 2 ); 
   
   // set the pointers to the right location and clear the size
   sum = 0 ;
-  for ( int i = 0 ; i < data.nVars() * 2; ++ i )
+  for ( int i = 0 ; i < nVars * 2; ++ i )
   {
     big[i] = &(storage[sum]);
     sum += sizes[i];
@@ -1744,7 +1744,7 @@ inline void BIG::recreate( ClauseAllocator& ca, Coprocessor::CoprocessorData& da
   }
 }
 
-inline void BIG::recreate( ClauseAllocator& ca, Coprocessor::CoprocessorData& data, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2)
+inline void BIG::recreate( ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2)
 {
   assert(false && "not implemented yet"); // this method is not doing anything!
 }

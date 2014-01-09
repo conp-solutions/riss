@@ -76,7 +76,7 @@ bool Rewriter::rewriteImpl()
 
   // create full BIG, also rewrite learned clauses, but base operation on real clauses TODO: decide whether other way works as well
   BIG big;
-  big.create( ca,data,data.getClauses());
+  big.create( ca,data.nVars(),data.getClauses());
   vector<int> impliesLits ( 2*data.nVars(), 0 );
   vector< Lit > candidates;
   Lit minCand = lit_Undef;
@@ -465,7 +465,7 @@ bool Rewriter::rewriteAMO()
   
   // create full BIG, also rewrite learned clauses!!
   BIG big;
-  big.create( ca,data,data.getClauses(),data.getLEarnts() );
+  big.create( ca,data.nVars(),data.getClauses(),data.getLEarnts() );
   
   amos.clear();
 

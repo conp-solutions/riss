@@ -835,7 +835,7 @@ void Probing::probing()
   
   
   BIG big;
-  big.create(ca,data,data.getClauses(),data.getLEarnts()); // lets have the full big
+  big.create(ca,data.nVars(),data.getClauses(),data.getLEarnts()); // lets have the full big
   
   big.fillSorted( variableHeap, data, config.pr_rootsOnly );
   // if there are no root variables (or lits implied by roots), consider all variables!

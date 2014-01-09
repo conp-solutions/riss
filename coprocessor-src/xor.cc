@@ -257,7 +257,7 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 	
 	BIG big;
 	if( config.opt_xor_findResolved ) {
-	  big.create(ca,data,data.getClauses()); // create big, so that resolve possibilities can be found
+	  big.create(ca,data.nVars(),data.getClauses()); // create big, so that resolve possibilities can be found
 	}
 	
 	vector<char> foundByIndex; // no need to do this on the stack!

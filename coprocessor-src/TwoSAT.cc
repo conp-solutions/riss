@@ -180,7 +180,7 @@ Lit Coprocessor::TwoSatSolver::getDecisionVariable()
 bool Coprocessor::TwoSatSolver::solve()
 {
   solveTime = cpuTime() - solveTime;
-  big.create(ca, data, data.getClauses() );
+  big.create(ca, data.nVars(), data.getClauses() );
   
   calls ++;
   tempVal.assign(data.nVars()* 2,0);

@@ -75,7 +75,7 @@ bool FourierMotzkin::process()
   
   // create full BIG, also rewrite learned clauses!!
   BIG big;
-  big.create( ca,data,data.getClauses(),data.getLEarnts() );
+  big.create( ca,data.nVars(),data.getClauses(),data.getLEarnts() );
   
   cards.clear();
   
@@ -670,7 +670,7 @@ bool FourierMotzkin::process()
     if( propagation.process(data,true) == l_False ) {data.setFailed(); goto finishedFM; }
   
   if( data.ok() && config.opt_newAmo > 0 && (newAMOs.size() > 0 || rejectedNewAmos.size() > 0) ) {
-    big.recreate( ca, data, data.getClauses() ); 
+    big.recreate( ca, data.nVars(), data.getClauses() ); 
     if(config.opt_newAmo > 1) big.generateImplied(data); // try to avoid adding redundant clauses!
     for( int p = 0; p<2; ++ p ) {
       // use both the list of newAMOs, and the rejected new amos!

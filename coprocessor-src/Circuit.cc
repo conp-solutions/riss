@@ -15,7 +15,7 @@ void Circuit::extractGates(CoprocessorData& data, vector< Gate >& gates)
 {
   // create BIG
   big = new BIG( );
-  big->create(ca,data,data.getClauses(),data.getLEarnts());
+  big->create(ca,data.nVars(),data.getClauses(),data.getLEarnts());
   
   if( config.circ_Implied ) big->generateImplied(data);
   

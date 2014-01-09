@@ -633,7 +633,7 @@ void Unhiding::process (  )
   {
     // TODO: either re-create BIG, or do clause modifications after algorithm finished
     // be careful here - do not use learned clauses, because they could be removed, and then the whole mechanism breaks
-    big.recreate(ca, data, data.getClauses() );    
+    big.recreate(ca, data.nVars(), data.getClauses() );    
     
     if(config.opt_uhd_TestDbl) {
       cerr << "c test for duplicate binary clauses ... " << endl;

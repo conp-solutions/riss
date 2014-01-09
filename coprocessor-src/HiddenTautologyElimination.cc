@@ -42,7 +42,7 @@ void HiddenTautologyElimination::process(CoprocessorData& data)
   // TODO: collect flags from clauses that are binary and not modified?
   
   // here, use only clauses of the formula handling learnt clauses is more complicated!
-  big.create(ca,data,data.getClauses() );
+  big.create(ca,data.nVars(),data.getClauses() );
 
   if( config.hte_debug_out > 1 ) {
     fprintf(stderr, "implications:\n");
