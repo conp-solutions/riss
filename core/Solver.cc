@@ -206,6 +206,7 @@ Solver::Solver(CoreConfig& _config) :
   , lastReshuffleRestart(0)
   , L2units(0)
   , L3units(0)
+  , L4units(0)
   
   // preprocessor
   , coprocessor(0)
@@ -1292,6 +1293,7 @@ void Solver::reduceDB()
     big->recreate( ca, nVars(), clauses, learnts );
     big->removeDuplicateEdges( nVars() );
     big->generateImplied( nVars(), add_tmp );
+    if( config.opt_uhdProbe > 2 ) big->sort( nVars() ); // sort all the lists once
   }
   
   sort(learnts, reduceDB_lt(ca) ); // sort size 2 and lbd 2 to the back!
@@ -1781,45 +1783,97 @@ bool Solver::analyzeNewLearnedClause(const CRef newLearnedClause)
   if( decisionLevel() == 0 ) return false; // no need to analyze the clause, if its satisfied on the top level already!
 
   const Clause& clause = ca[ newLearnedClause ];
-  if( clause.size() != 2 ) return false;
-
+  
   MethodClock mc( bigBackboneTime );
   
-  const Lit* aList = big->getArray( clause[0] );
-  const Lit* bList = big->getArray( clause[1] );
-  const int aSize = big->getSize( clause[0] ) + 1;
-  const int bSize = big->getSize( clause[1] ) + 1;
-  
-  for( int j = 0 ; j < aSize; ++ j ) 
-  {
-    const Lit aLit = j == 0 ? clause[0] : aList[ j - 1];
-    for( int k = 0; k < (( config.opt_uhdProbe > 1 || j == 0 ) ? bSize : 1); ++ k ) // even more expensive method
+  if( clause.size() == 2 ){ // perform the probing algorithm based on a binary clause
+    const Lit* aList = big->getArray( clause[0] );
+    const Lit* bList = big->getArray( clause[1] );
+    const int aSize = big->getSize( clause[0] ) + 1;
+    const int bSize = big->getSize( clause[1] ) + 1;
+    
+    for( int j = 0 ; j < aSize; ++ j ) 
     {
-      const Lit bLit = k == 0 ? clause[1] : bList[ k - 1];
-      // a -> aLit -> bLit, and b -> bLit ; thus F \land (a \lor b) -> bLit, and bLit is a backbone!
-      
-      if( ( big->getStart(aLit) < big->getStart(bLit) && big->getStop(bLit) < big->getStop(aLit) ) 
-      // a -> aLit, b -> bLit, -bLit -> -aLit = aLit -> bLit -> F -> bLit
-      ||  ( big->getStart(~bLit) < big->getStart(~aLit) && big->getStop(~aLit) < big->getStop(~bLit) ) ){
-	if( value( bLit ) == l_Undef ) { // only if not set already
-	  if ( j == 0 || k == 0) L2units ++; else L3units ++; // stats
-	  if( decisionLevel() != 0 ) cancelUntil(0);
-	  uncheckedEnqueue( bLit );
-	  addCommentToProof("added by uhd probing:"); addUnitToProof(bLit); // not sure whether DRUP can always find this
-	} else if (value( bLit ) == l_False ) return true; // found a contradiction
-      } else {
-	if( ( big->getStart(bLit) < big->getStart(aLit) && big->getStop(aLit) < big->getStop(bLit) ) 
-	||  ( big->getStart(~aLit) < big->getStart(~bLit) && big->getStop(~bLit) < big->getStop(~aLit) ) ){
-	  if( value( aLit ) == l_Undef ) { // only if not set already
-	  if ( j == 0 || k == 0) L2units ++; else L3units ++; // stats
-	  if( decisionLevel() != 0 ) cancelUntil(0);
-	  uncheckedEnqueue( aLit);
-	  addCommentToProof("added by uhd probing:"); addUnitToProof(aLit);
-	} else if (value( aLit ) == l_False ) return true; // found a contradiction
+      const Lit aLit = j == 0 ? clause[0] : aList[ j - 1];
+      for( int k = 0; k < (( config.opt_uhdProbe > 1 || j == 0 ) ? bSize : 1); ++ k ) // even more expensive method
+      {
+	const Lit bLit = k == 0 ? clause[1] : bList[ k - 1];
+	// a -> aLit -> bLit, and b -> bLit ; thus F \land (a \lor b) -> bLit, and bLit is a backbone!
+	
+	if( ( big->getStart(aLit) < big->getStart(bLit) && big->getStop(bLit) < big->getStop(aLit) ) 
+	// a -> aLit, b -> bLit, -bLit -> -aLit = aLit -> bLit -> F -> bLit
+	||  ( big->getStart(~bLit) < big->getStart(~aLit) && big->getStop(~aLit) < big->getStop(~bLit) ) ){
+	  if( value( bLit ) == l_Undef ) { // only if not set already
+	    if ( j == 0 || k == 0) L2units ++; else L3units ++; // stats
+	    if( decisionLevel() != 0 ) cancelUntil(0);
+	    uncheckedEnqueue( bLit );
+	    addCommentToProof("added by uhd probing:"); addUnitToProof(bLit); // not sure whether DRUP can always find this
+	  } else if (value( bLit ) == l_False ) return true; // found a contradiction
+	} else {
+	  if( ( big->getStart(bLit) < big->getStart(aLit) && big->getStop(aLit) < big->getStop(bLit) ) 
+	  ||  ( big->getStart(~aLit) < big->getStart(~bLit) && big->getStop(~bLit) < big->getStop(~aLit) ) ){
+	    if( value( aLit ) == l_Undef ) { // only if not set already
+	    if ( j == 0 || k == 0) L2units ++; else L3units ++; // stats
+	    if( decisionLevel() != 0 ) cancelUntil(0);
+	    uncheckedEnqueue( aLit);
+	    addCommentToProof("added by uhd probing:"); addUnitToProof(aLit);
+	  } else if (value( aLit ) == l_False ) return true; // found a contradiction
+	  }
 	}
+	
       }
-      
     }
+  } else if (clause.size() > 2 && clause.size() <= config.opt_uhdProbe ) {
+      bool oneDoesNotImply = false;
+      for( int j = 0 ; j < clause.size(); ++ j ) {
+	if( big->getSize( clause[j] ) == 0 ) { oneDoesNotImply = true; break; }
+      }
+      if( !oneDoesNotImply ) 
+      {
+	analyzePosition.assign( clause.size(), 0 ); // initialize position of all big lists for the literals in the clause 
+	analyzeLimits.assign( clause.size(), 0 );
+	bool oneDoesNotImply = false;
+	for( int j = 0 ; j < clause.size(); ++ j ) {
+	  analyzeLimits[j] = big->getSize( clause[j] ); // initialize current imply test lits
+	  sort( big->getArray(clause[j]), big->getSize( clause[j] ) ); // sort all arrays (might be expensive)
+	}
+	
+	bool allInLimit = true;
+	
+	// this implementation does not cover the case that all literals of a clause except one imply this one literal!
+	int whileIteration = 0;
+	while( allInLimit ) {
+	  whileIteration ++;
+	  // find minimum literal
+	  bool allEqual = true;
+	  Lit minLit = big->getArray( clause[0] )[ analyzePosition[0] ];
+	  int minPosition = 0;
+	  
+	  for( int j = 1 ; j < clause.size(); ++ j ) {
+	    if( big->getArray( clause[j] )[ analyzePosition[j] ] < minLit ) {
+	      minLit = big->getArray( clause[j] )[ analyzePosition[j] ];
+	      minPosition = j;
+	    }
+	    if( big->getArray( clause[j] )[ analyzePosition[j] ] != big->getArray( clause[j-1] )[ analyzePosition[j-1] ] ) allEqual = false;
+	  }
+	  
+	  if( allEqual ) { // there is a commonly implied literal
+	    
+	    if( value( minLit ) == l_Undef ) {
+	      L4units ++;
+	      uncheckedEnqueue( minLit );
+	    } else if (value(minLit) == l_False ) return true;
+	    for( int j = 0 ; j < clause.size(); ++ j ) {
+	      analyzePosition[j] ++;
+	      if( analyzePosition[j] >= analyzeLimits[j] ) allInLimit = false; // stop if we dropped out of the list of implied literals! 
+	    }
+	  } else { // only move the literal of the minimum!
+	    analyzePosition[minPosition] ++;
+	    if( analyzePosition[minPosition] >= analyzeLimits[minPosition] ) allInLimit = false; // stop if we dropped out of the list of implied literals!
+	  }
+	}
+	
+      }
   }
   return false;
 }
@@ -2254,6 +2308,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
       big->create( ca, nVars(), clauses, learnts );
       big->removeDuplicateEdges( nVars() );
       big->generateImplied( nVars(), add_tmp );
+      if( config.opt_uhdProbe > 2 ) big->sort( nVars() ); // sort all the lists once
     }
     
     //
@@ -2270,6 +2325,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
       // re-shuffle BIG, if a sufficient number of restarts is reached
       if( big != 0 && config.opt_uhdRestartReshuffle > 0 && curr_restarts - lastReshuffleRestart >= config.opt_uhdRestartReshuffle ) {
 	big->generateImplied( nVars(), add_tmp );
+	if( config.opt_uhdProbe > 2 ) big->sort( nVars() ); // sort all the lists once
 	lastReshuffleRestart = curr_restarts; // update number of last restart
       }
       
@@ -2290,6 +2346,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
 		big->recreate( ca, nVars(), clauses, learnts ); // build a new BIG that is valid on the given data!
 		big->removeDuplicateEdges( nVars() );
 		big->generateImplied( nVars(), add_tmp );
+		if( config.opt_uhdProbe > 2 ) big->sort( nVars() ); // sort all the lists once
 	      }
 	    }
 	  }
@@ -2339,7 +2396,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
 	    printf("c IntervalRestarts: %d\n", intervalRestart);
 	    printf("c partial restarts: %d saved decisions: %d saved propagations: %d recursives: %d\n", rs_partialRestarts, rs_savedDecisions, rs_savedPropagations, rs_recursiveRefinements );
 	    printf("c agility restart rejects: %d\n", agility_rejects );
-	    printf("c uhd probe: %lf s, %d L2units, %d L3units\n", bigBackboneTime.getCpuTime(), L2units, L3units );
+	    printf("c uhd probe: %lf s, %d L2units, %d L3units, %d L4units\n", bigBackboneTime.getCpuTime(), L2units, L3units, L4units );
 #endif
     }
 

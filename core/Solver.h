@@ -500,12 +500,16 @@ protected:
   Coprocessor::BIG* big;
   Clock bigBackboneTime;
   unsigned lastReshuffleRestart;
-  unsigned L2units,L3units;
+  unsigned L2units,L3units,L4units;
   /** if the new learned clause is binary, C = (a \lor b), 
    *  then it is checked whether a literal l is implied by both a and b in the formula. 
    *  @return true, if a contrdiction has been found, so that the result is UNSAT
    */
   bool analyzeNewLearnedClause( const CRef newLearnedClause );
+
+  // helper data structures
+  vector< int > analyzePosition; // fur full probing approximation
+  vector< int > analyzeLimits; // all combination limits for full probing
   
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;
