@@ -236,6 +236,9 @@ CoreConfig::CoreConfig() // add new options here!
  opt_uhdCleanRebuild     ("SEARCH UNHIDE PROBING", "sUhdPrRb", "rebuild BIG before cleaning the formula" ,true, optionListPtr ),
  opt_uhdRestartReshuffle ("SEARCH UNHIDE PROBING", "sUhdPrSh", "travers the BIG again during every i-th restart 0=off" ,0, IntRange(0,INT32_MAX), optionListPtr ),
  
+ opt_maxSDcalls("SUBSTITUTE DISJUNCTIONS", "sdCalls", "number of calls of assumptions, before solving original formula" ,0, IntRange(0,INT32_MAX), optionListPtr ),
+ opt_sdLimit("SUBSTITUTE DISJUNCTIONS",    "sdSteps", "number of steps for subsitute disjunctions" ,10000, IntRange(0,INT32_MAX), optionListPtr ),
+ 
  opt_verboseProof ("PROOF", "verb-proof", "also print comments into the proof, 2=print proof also to stderr", 1, IntRange(0, 2) , optionListPtr ),
  opt_rupProofOnly ("PROOF", "rup-only", "do not print delete lines into proof", false, optionListPtr ), 
  

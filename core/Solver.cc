@@ -208,6 +208,11 @@ Solver::Solver(CoreConfig& _config) :
   , L3units(0)
   , L4units(0)
   
+  // replace disjunctions methods
+  , sdSteps(0)  
+  , sdAssumptions(0) 
+  , sdFailedCalls(0) 
+  
   // preprocessor
   , coprocessor(0)
   , useCoprocessorPP(config.opt_usePPpp)
@@ -2125,25 +2130,9 @@ static double luby(double y, int x){
     return pow(y, seq);
 }
 
-// NOTE: assumptions passed in member-variable 'assumptions'.
-lbool Solver::solve_()
+lbool Solver::initSolve(int solves)
 {
-    totalTime.start();
-    startedSolving = true;
-  
-    model.clear();
-    conflict.clear();
-    if (!ok) return l_False;
-
-    lbdQueue.initSize(sizeLBDQueue);
-
-
-    trailQueue.initSize(sizeTrailQueue);
-    sumLBD = 0;
-    
-    solves++;
     bool changedActivities = false; // indicate whether the decision heap has to be rebuild
-    
     // reset the counters that guide the search (and stats)
     if( config.opt_reset_counters != 0 && solves % config.opt_reset_counters == 0 ) {
       nbRemovedClauses =0; nbReducedClauses = 0; 
@@ -2196,28 +2185,6 @@ lbool Solver::solve_()
       }
     }
     
-    lbool   status        = l_Undef;
-    nbclausesbeforereduce = firstReduceDB;
-    if(verbosity>=1) {
-      printf("c ========================================[ MAGIC CONSTANTS ]==============================================\n");
-      printf("c | Constants are supposed to work well together :-)                                                      |\n");
-      printf("c | however, if you find better choices, please let us known...                                           |\n");
-      printf("c |-------------------------------------------------------------------------------------------------------|\n");
-    printf("c |                                |                                |                                     |\n"); 
-    printf("c | - Restarts:                    | - Reduce Clause DB:            | - Minimize Asserting:               |\n");
-    printf("c |   * LBD Queue    : %6d      |   * First     : %6d         |    * size < %3d                     |\n",lbdQueue.maxSize(),firstReduceDB,lbSizeMinimizingClause);
-    printf("c |   * Trail  Queue : %6d      |   * Inc       : %6d         |    * lbd  < %3d                     |\n",trailQueue.maxSize(),incReduceDB,lbLBDMinimizingClause);
-    printf("c |   * K            : %6.2f      |   * Special   : %6d         |                                     |\n",K,specialIncReduceDB);
-    printf("c |   * R            : %6.2f      |   * Protected :  (lbd)< %2d     |                                     |\n",R,lbLBDFrozenClause);
-    printf("c |                                |                                |                                     |\n"); 
-printf("c ==================================[ Search Statistics (every %6d conflicts) ]=========================\n",verbEveryConflicts);
-      printf("c |                                                                                                       |\n"); 
-
-      printf("c |          RESTARTS           |          ORIGINAL         |              LEARNT              | Progress |\n");
-      printf("c |       NB   Blocked  Avg Cfc |    Vars  Clauses Literals |   Red   Learnts    LBD2  Removed |          |\n");
-      printf("c =========================================================================================================\n");
-
-    }
     
     // parse for variable polarities from file!
     if( solves == 1 && config.polFile ) { // read polarities from file, initialize phase polarities with this value!
@@ -2258,6 +2225,8 @@ printf("c ==================================[ Search Statistics (every %6d confl
     
     if( changedActivities ) rebuildOrderHeap();
     
+
+    
     //
     // incremental sat solver calls
     //
@@ -2273,11 +2242,53 @@ printf("c ==================================[ Search Statistics (every %6d confl
       }
       learnts.shrink(i - j);
     }
+    
+    return l_Undef;
+}
+
+// NOTE: assumptions passed in member-variable 'assumptions'.
+lbool Solver::solve_()
+{
+    totalTime.start();
+    startedSolving = true;
+    model.clear();
+    conflict.clear();
+    if (!ok) return l_False;
+    lbdQueue.initSize(sizeLBDQueue);
+    trailQueue.initSize(sizeTrailQueue);
+    sumLBD = 0;
+    solves++;
+    
+    lbool initValue = initSolve(solves);
+    if( initValue != l_Undef )  return initValue;
+
+    lbool   status        = l_Undef;
+    nbclausesbeforereduce = firstReduceDB;
+    
+    if(verbosity>=1) {
+      printf("c ========================================[ MAGIC CONSTANTS ]==============================================\n");
+      printf("c | Constants are supposed to work well together :-)                                                      |\n");
+      printf("c | however, if you find better choices, please let us known...                                           |\n");
+      printf("c |-------------------------------------------------------------------------------------------------------|\n");
+      printf("c |                                |                                |                                     |\n"); 
+      printf("c | - Restarts:                    | - Reduce Clause DB:            | - Minimize Asserting:               |\n");
+      printf("c |   * LBD Queue    : %6d      |   * First     : %6d         |    * size < %3d                     |\n",lbdQueue.maxSize(),firstReduceDB,lbSizeMinimizingClause);
+      printf("c |   * Trail  Queue : %6d      |   * Inc       : %6d         |    * lbd  < %3d                     |\n",trailQueue.maxSize(),incReduceDB,lbLBDMinimizingClause);
+      printf("c |   * K            : %6.2f      |   * Special   : %6d         |                                     |\n",K,specialIncReduceDB);
+      printf("c |   * R            : %6.2f      |   * Protected :  (lbd)< %2d     |                                     |\n",R,lbLBDFrozenClause);
+      printf("c |                                |                                |                                     |\n"); 
+      printf("c ==================================[ Search Statistics (every %6d conflicts) ]=========================\n",verbEveryConflicts);
+      printf("c |                                                                                                       |\n"); 
+      printf("c |          RESTARTS           |          ORIGINAL         |              LEARNT              | Progress |\n");
+      printf("c |       NB   Blocked  Avg Cfc |    Vars  Clauses Literals |   Red   Learnts    LBD2  Removed |          |\n");
+      printf("c =========================================================================================================\n");
+    }
+
 
     //
     // preprocess
     //
-    if( status == l_Undef ) {
+    if( status == l_Undef ) { // TODO: freeze variables of assumptions!
 	  // restart, triggered by the solver
 	  // if( coprocessor == 0 && useCoprocessor) coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
           if( coprocessor != 0 && useCoprocessorPP){
@@ -2287,18 +2298,6 @@ printf("c ==================================[ Search Statistics (every %6d confl
 	  }
          if (verbosity >= 1) printf("c =========================================================================================================\n");
 	 if( config.ppOnly ) return l_Undef; 
-    }
-    
-    if( config.opt_rer_debug ) {
-      cerr << "c BEGIN FORMULA" << endl;
-      for( int i = 0 ; i < clauses.size(); ++ i ) {
-	cerr << "c [" << i << "]?["<< clauses[i] << "] " << ca[clauses[i]] << endl;
-      }
-      cerr << "c END FORMULA" << endl;
-      cerr << "c varcheck ... " << endl;
-      for( Var v = 0 ; v < nVars(); ++ v ) {
-	cerr << "c var " << v+1 << " reason: " << (int)reason(v) << " value: " << toInt(assigns[v]) << " level: " << level(v) << " polarity: " << toInt(polarity[v]) << endl;
-      }
     }
     
     // probing during search:
@@ -2316,43 +2315,63 @@ printf("c ==================================[ Search Statistics (every %6d confl
     //
     int curr_restarts = 0; 
     lastReshuffleRestart = 0;
-    while (status == l_Undef){
-      
-      double rest_base = 0;
-      if( config.opt_restarts_type != 0 ) // set current restart limit
-	rest_base = config.opt_restarts_type == 1 ? luby(config.opt_restart_inc, curr_restarts) : pow(config.opt_restart_inc, curr_restarts);
-      
-      // re-shuffle BIG, if a sufficient number of restarts is reached
-      if( big != 0 && config.opt_uhdRestartReshuffle > 0 && curr_restarts - lastReshuffleRestart >= config.opt_uhdRestartReshuffle ) {
-	big->generateImplied( nVars(), add_tmp );
-	if( config.opt_uhdProbe > 2 ) big->sort( nVars() ); // sort all the lists once
-	lastReshuffleRestart = curr_restarts; // update number of last restart
-      }
-      
-      status = search(rest_base * config.opt_restart_first); // the parameter is useless in glucose - but interesting for the other restart policies
-
-        if (!withinBudget()) break;
-        curr_restarts++;
+    
+    // substitueDisjunctions
+    // for now, works only if there are no assumptions!
+    int currentSDassumptions = 0;
+    if( assumptions.size() == 0 && solves == 1 && config.opt_maxSDcalls > 0 ) {
+      substituteDisjunctions( assumptions );
+      currentSDassumptions = assumptions.size();
+    }
+    
+    do {
+      while (status == l_Undef){
 	
-	if( status == l_Undef ) {
-	  // restart, triggered by the solver
-	  // if( coprocessor == 0 && useCoprocessor)  coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
-          if( coprocessor != 0 && useCoprocessorIP) {
-	    if( coprocessor->wantsToInprocess() ) {
-	      inprocessTime.start();
-	      status = coprocessor->inprocess();
-	      inprocessTime.stop();
-	      if( big != 0 ) {
-		big->recreate( ca, nVars(), clauses, learnts ); // build a new BIG that is valid on the given data!
-		big->removeDuplicateEdges( nVars() );
-		big->generateImplied( nVars(), add_tmp );
-		if( config.opt_uhdProbe > 2 ) big->sort( nVars() ); // sort all the lists once
+	double rest_base = 0;
+	if( config.opt_restarts_type != 0 ) // set current restart limit
+	  rest_base = config.opt_restarts_type == 1 ? luby(config.opt_restart_inc, curr_restarts) : pow(config.opt_restart_inc, curr_restarts);
+	
+	// re-shuffle BIG, if a sufficient number of restarts is reached
+	if( big != 0 && config.opt_uhdRestartReshuffle > 0 && curr_restarts - lastReshuffleRestart >= config.opt_uhdRestartReshuffle ) {
+	  big->generateImplied( nVars(), add_tmp );
+	  if( config.opt_uhdProbe > 2 ) big->sort( nVars() ); // sort all the lists once
+	  lastReshuffleRestart = curr_restarts; // update number of last restart
+	}
+	
+	status = search(rest_base * config.opt_restart_first); // the parameter is useless in glucose - but interesting for the other restart policies
+
+	  if (!withinBudget()) break;
+	  curr_restarts++;
+	  
+	  if( status == l_Undef ) {
+	    // restart, triggered by the solver
+	    // if( coprocessor == 0 && useCoprocessor)  coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
+	    if( coprocessor != 0 && useCoprocessorIP) {
+	      if( coprocessor->wantsToInprocess() ) {
+		inprocessTime.start();
+		status = coprocessor->inprocess();
+		inprocessTime.stop();
+		if( big != 0 ) {
+		  big->recreate( ca, nVars(), clauses, learnts ); // build a new BIG that is valid on the given data!
+		  big->removeDuplicateEdges( nVars() );
+		  big->generateImplied( nVars(), add_tmp );
+		  if( config.opt_uhdProbe > 2 ) big->sort( nVars() ); // sort all the lists once
+		}
 	      }
 	    }
 	  }
-	}
-	
-    }
+	  
+      }
+      
+      // check whether UNSAT answer is unsound, due to assumptions that have been added
+      if( currentSDassumptions > 0 && status == l_False ) { // this UNSAT result might be due to the added assumptions
+	giveNewSDAssumptions( assumptions, conflict ); // calculate the new set of assumptions due to current conflict
+	currentSDassumptions = assumptions.size();
+	sdFailedCalls ++;
+	continue;
+      }
+      
+    } while ( false ); // if nothing special happens, a single search call is sufficient
     totalTime.stop();
     
     if( big != 0 ) { big->BIG::~BIG(); big = 0; } // clean up!
@@ -2397,6 +2416,7 @@ printf("c ==================================[ Search Statistics (every %6d confl
 	    printf("c partial restarts: %d saved decisions: %d saved propagations: %d recursives: %d\n", rs_partialRestarts, rs_savedDecisions, rs_savedPropagations, rs_recursiveRefinements );
 	    printf("c agility restart rejects: %d\n", agility_rejects );
 	    printf("c uhd probe: %lf s, %d L2units, %d L3units, %d L4units\n", bigBackboneTime.getCpuTime(), L2units, L3units, L4units );
+	    printf("c OGS rewrite: %lf s, %d steps, %d assumptions, %d failedCalls\n", sdTime.getCpuTime(), sdSteps, sdAssumptions, sdFailedCalls );
 #endif
     }
 
@@ -3305,4 +3325,283 @@ void Solver::setPreprocessor(Coprocessor::CP3Config* _config)
 {
   assert( coprocessor == 0 && "there should not exist a preprocessor when this method is called" );
   coprocessor = new Coprocessor::Preprocessor( this, *_config ); 
+}
+
+
+void Solver::giveNewSDAssumptions(vec< Lit >& assumptions, vec< Lit >& conflict_clause)
+{
+  sort( conflict_clause );
+  int i = 0, j = 0;
+  int keptLits = 0;
+  while ( i < assumptions.size() && j < conflict_clause.size() ) 
+  {
+    if( assumptions[i] == conflict_clause[j] ) {
+      j++;
+    } else if ( assumptions[i] < conflict_clause[j] ) {
+      assumptions[ keptLits ++ ] = assumptions[i];
+      ++i ;
+    } else if ( conflict_clause[j] < assumptions [i] ) {
+      j++;
+    }
+  }
+  // remove all the literals that occur in the conflict clause
+  assumptions.shrink(  assumptions.size() - keptLits );
+}
+
+void Solver::substituteDisjunctions(vec< Lit >& assumptions)
+{
+  cerr << "c start substituteDisjunctions" << endl;
+  
+  assert( decisionLevel() == 0 && "should only be done on level 0" );
+  
+  int rewrittenClauses = 0;
+  const bool methodDebug = false;
+  
+  assumptions.clear();
+  MethodClock methodTime( sdTime );
+
+  // occurrences of literals in clauses, and related counters
+  vector< vector<CRef> > occs;
+  vec<int> occ;
+  
+  // get space for extra data structures
+  occ.growTo( nVars() * 2, 0 );
+  occs.resize( nVars() * 2 );
+  
+  // setup structures for the formula
+  for( int i = 0 ; i < clauses.size(); ++ i ) {
+    const Clause& c = ca [ clauses[i] ];
+    for( int j = 0 ; j < c.size(); ++ j ) {
+      occ[ toInt(c[j]) ] ++;
+      occs[ toInt( c[j] ) ].push_back( clauses[i] );
+    }
+  }
+  
+  Heap<occHeapLt> literalHeap( occ );  // heap that has literals ordered according to their number of occurrence
+  uint32_t index = literalHeap.size();
+  // init
+  for( Var v = 0 ; v < nVars(); ++ v ) // only add literals that could lead to reduction
+  {
+    if( occ[ toInt( mkLit(v,false)) ] > 3 ) if( !literalHeap.inHeap(toInt(mkLit(v,false))) ) literalHeap.insert( toInt( mkLit(v,false) ));
+    if( occ[ toInt( mkLit(v,true) ) ] > 3 ) if( !literalHeap.inHeap(toInt(mkLit(v,true))) )  literalHeap.insert( toInt( mkLit(v,true)  ));
+  }
+  //markArray
+  Coprocessor::MarkArray markArray;
+  markArray.resize( nVars() * 2 );
+  vec<Lit> tmpLiterals;
+  uint32_t* lCount = new uint32_t[ 2 * nVars() ];
+  
+  while (literalHeap.size() > 0 && sdSteps < config.opt_sdLimit && !asynch_interrupt ) // as long as there is something to do
+  {
+
+    const Lit literal = toLit(literalHeap[0]);
+    assert( literalHeap.inHeap( toInt(literal) ) && "item from the heap has to be on the heap");
+    literalHeap.removeMin();
+    
+    if( occs[ toInt(literal) ].size() < 4 ) {
+      if( methodDebug ) if( occs[ toInt(literal) ].size() > 0 ) cerr << "c reject lit " << literal << " with " << occs[ toInt(literal) ].size() << " occurrences" << endl;
+      continue;	// results in reduction only if the literal occurs more than 4 times!
+    }
+
+    markArray.nextStep();
+    tmpLiterals. clear();
+    markArray.setCurrentStep( toInt(literal) );
+    tmpLiterals.push(literal);
+    vector< CRef >& Fliteral = occs[ toInt(literal) ];
+
+    // remove all satisfied clauses from the formula
+    for( uint32_t i = 0 ; i < Fliteral.size(); ++ i ) 
+    {
+      const Clause& clause = ca[ Fliteral[i] ];
+      if( clause.mark() != 0 ) { // can only happen in the very first iteration
+	Fliteral[i] = Fliteral[Fliteral.size()-1];
+	Fliteral.pop_back();
+	--i;
+      }
+    }
+    
+    uint32_t orLiterals = 1;			// number of literals that participate in the OR-pattern == n
+    uint32_t usedClauses = Fliteral.size(); 	// first clauses in list that have the OR-pattern == k
+    
+    // while find more!
+    while( true ) 
+    {
+      memset( lCount, 0, sizeof( uint32_t ) * 2 * nVars() ); // reset to 0
+      
+      // get all partner literals!
+      for( uint32_t i = 0 ; i < usedClauses; ++ i ) 
+      {
+	const Clause& clause = ca[ Fliteral[i] ];
+	if( clause.mark() != 0 ) { // can only happen in the very first iteration
+	  Fliteral[i] = Fliteral[usedClauses-1];
+	}
+	if( orLiterals > 1 ) { // no need to check for the first literal, because it has to be in the list
+	  // remove the clause from the work-set, because it does not contain the used pair any more
+	  uint32_t presentLiterals = 0;
+	  for( uint32_t j = 0 ; j<clause.size(); ++j )
+	  {
+	    const Lit& l = clause[j];
+	    if( markArray.isCurrentStep( toInt(l) ) ) presentLiterals++;
+	  }
+	  if( presentLiterals < orLiterals ) {
+	    CRef tmp = Fliteral[i];
+	    Fliteral[i] = Fliteral[usedClauses-1];
+	    Fliteral[usedClauses-1] = tmp;
+	    usedClauses --;
+	    i--;
+	    continue;
+	  }
+	}
+	
+	for( uint32_t j = 0 ; j<clause.size(); ++j )
+	{
+	  sdSteps ++;
+	  const Lit& l = clause[j];
+	  if( occs[ toInt(l) ].size() < 3 ) continue; // this line guarantees, that each found matching occurs at least 3 times!
+	  // do not count literals that already belong to the OR-gate
+	  if( markArray.isCurrentStep( toInt(l) ) ) continue;
+	  // count occurrence
+	  tmpLiterals.push( l );
+	  lCount[ toInt(l) ] ++;
+	}
+      }
+      
+      // sort tmp-literals according to count
+      for( uint32_t i = orLiterals ; i < tmpLiterals.size(); ++ i ) {
+	Lit ref = tmpLiterals[i];
+	uint32_t j = i + 1;
+	for( ; j < tmpLiterals.size(); ++ j ) {
+	  const Lit lj = tmpLiterals[j];
+	  if( lj == ref ) { tmpLiterals[j] = tmpLiterals[tmpLiterals.size()-1]; tmpLiterals.pop(); j--; continue; }
+	  if( lCount[ toInt(ref) ] < lCount[ toInt(lj)] )
+	  {
+	    ref = lj;
+	  }
+	}
+      }
+      if( tmpLiterals.size() == orLiterals ) break; // no more partners
+      if( lCount[ toInt(tmpLiterals[orLiterals]) ] < 3 ) break; // ensure that the matching appears at least 4 times
+
+      // add the next literal to the or-gate
+      if( methodDebug ) cerr << "c [CP2-ROR] add literal " << tmpLiterals[orLiterals] << "[" << lCount[ toInt(tmpLiterals[orLiterals])] << "] to OR-gate" << endl;
+      markArray.setCurrentStep( toInt( tmpLiterals[orLiterals] ) );
+      orLiterals ++;
+      tmpLiterals.growTo( orLiterals, lit_Undef );
+    } // end while more literals
+    
+    // TODO: introduce parameter that controls whether larger pairs should be replaced?
+    if( orLiterals == 1 ) {
+      if( methodDebug ) cerr << "c reject literal " << literal << " because of orLit: " << orLiterals << endl;
+      continue; // there is no OR-gate that can be introduced
+    } else if( methodDebug ) cerr << "c usedClauses for " << literal << " : " << usedClauses << endl;
+
+    // check reduction, abort if there is no reduction
+    int32_t n = orLiterals;
+    int32_t k = usedClauses;
+    if( (k*n) - (n+1+3*k) <= 0 ) continue;
+    
+    if( methodDebug ) cerr << "c [CP2-ROR] found matching with reduction: " << (k*n) - (n+1+3*k) << endl;
+    if( methodDebug ) cerr << "c [CP2-ROR] used clauses for current OR-gate: " << usedClauses << endl;
+
+    // get next variable
+    Var newVariable = newVar();
+    if( methodDebug ) cerr << "c added variable " << newVariable << endl;
+    occs.push_back( vector<CRef>() ); occs.push_back( vector<CRef>() );
+    occ.push(0);occ.push(0);
+    literalHeap.addNewElement(nVars() * 2);
+    
+    // replace OR-gate in all the participating clauses
+    for( uint32_t i = 0 ; i < usedClauses; ++ i )
+    {
+      detachClause( occs[ toInt(literal) ][i], true ); // remove clause from watch lists
+      Clause& clause = ca[ occs[ toInt(literal) ][i] ];
+      if( clause.mark() != 0 ) continue;
+      if( methodDebug ){ cerr << "c [CP2-ROR] rewrite clause " << ca [ occs[ toInt(literal) ][i]] << endl; }
+      const Lit posNew = Lit( mkLit(newVariable,false) ); // new literal
+      int replacsInClause = 0;
+      for( uint32_t j = 0 ; j < clause.size(); ++ j )
+      {
+	const Lit tj = clause[j] ;
+	if( markArray.isCurrentStep( toInt(tj) ) ) {
+	  if( tj != literal ) {
+	    if( methodDebug ){ cerr << "c [CP2-ROR] remove " << ca[ occs[ toInt(literal) ][i] ] << " from list of literal " << tj << " position " << j << endl; }
+	    // delete the current clause from the list
+	    for( int k = 0; k < occs[ toInt(tj) ].size(); k++ ) {
+	      if( occs[ toInt(tj) ][k] == occs[ toInt(literal) ][i] ) {
+		occs[ toInt(tj) ][k] = occs[ toInt(tj) ][ occs[ toInt(tj) ].size() - 1 ];
+		occs[ toInt(tj) ].pop_back();
+		break;
+	      }
+	    }
+	  }
+	  if( replacsInClause == 0 ) {
+	    clause[j] = posNew;
+	    replacsInClause ++;
+	  } else {
+	    clause.removePositionUnsorted(j);
+	  }
+	  occ[ toInt(tj) ] --; 
+	  if( occ[ toInt(tj) ] > 0 ) literalHeap.update( toInt(tj) ); 
+	  j--;
+	}
+      }
+      
+      if( ca[ occs[ toInt(literal) ][i] ].size() == 1 ) {
+	uncheckedEnqueue( ca[ occs[ toInt(literal) ][i] ][0] ); // enqueue the unit clause
+      } else {
+	attachClause( occs[ toInt(literal) ][i] ); // add the clause to the watch lists again
+	if( literalHeap.inHeap( toInt( posNew ) ) ) literalHeap.update( toInt(posNew) );
+	else literalHeap.insert( toInt(posNew) );
+      }
+      
+      // add new literal to clause, add clause to list of new literal
+      occ[ toInt( posNew ) ] ++;
+      occs[ toInt(posNew) ].push_back( occs[ toInt(literal) ][i] ); // store clause in the new list
+      if( methodDebug ){ cerr << "c [CP2-ROR] final clause: "<< ca [ occs[ toInt(literal)][i] ] << endl; }
+    }
+    // remove that clauses also from the list of the literal
+    for( uint32_t i = 0 ; i < usedClauses; ++ i ){
+      occs[ toInt(literal) ][index] = occs[ toInt(literal) ][ occs[ toInt(literal) ].size() - 1 ];
+      occs[ toInt(literal) ].pop_back();
+    }
+    rewrittenClauses = (int32_t)(usedClauses * orLiterals);
+
+    
+    // collect the literals, that could be set to true to try the CEGAR rewriting
+    assumptions.push( mkLit(newVariable, false) ); // 
+    
+    // add the new clauses
+    tmpLiterals.push( mkLit(newVariable, true) );
+    CRef ref = ca.alloc(tmpLiterals, false); // no learnt clause!
+
+    clauses.push( ref );
+    for( int i = 0 ; i < ca[ ref ].size() ; ++ i ) {
+      const Lit tl = ca[ ref ][i];
+      occs[ toInt(tl) ] . push_back ( ref );
+      if( literalHeap.inHeap( toInt( tl ) ) ) literalHeap.update( toInt(tl) );
+      else literalHeap.insert( toInt(tl) );
+    }
+    if( methodDebug ) { cerr << "c added clause " << ca[ref] << endl; }
+    
+//     if( !rOrNoBlocked )
+//     {
+//       Lit lits[2];
+//       lits[0] = Lit(newVariable, POS);
+//       for( uint32_t i = 0 ; i < orLiterals; ++ i ) {
+// 	lits[1] = tmpLiterals[i].complement();
+// 	CL_REF ref = search.gsa.create(  lits, 2, false  );
+// 	if( !addClause( ref ) ) { solution = UNSAT; return didSomething; }  
+// 	formula->push_back(ref);
+//       }
+//     }
+    
+    if( methodDebug ) {
+      cerr << "c [CP2-ROR] replaced OR-gate with " << orLiterals << " elements:";
+      for( uint32_t i = 0 ; i < orLiterals; ++ i ) cerr << " " << tmpLiterals[i];
+      cerr << endl;
+    }
+  }
+  
+  if( methodDebug ) cerr << "c finish SD with " << sdSteps << " steps" << endl;
+  sdAssumptions = assumptions.size();
 }

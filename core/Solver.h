@@ -362,6 +362,10 @@ protected:
     double   progressEstimate ()      const; // DELETE THIS ?? IT'S NOT VERY USEFUL ...
     bool     withinBudget     ()      const;
 
+    // better code
+    lbool initSolve( int solves ); // set up the next call to solve
+    
+    
     // DRUP proof
     bool outputsProof() const { return drupProofFile != NULL; }
     template <class T>
@@ -510,6 +514,40 @@ protected:
   // helper data structures
   vector< int > analyzePosition; // fur full probing approximation
   vector< int > analyzeLimits; // all combination limits for full probing
+  
+  
+  /*
+   *  method that replaces common shared disjunctions with fresh variables,
+   *  and then tries the formula by first assuming that these disjunctoins 
+   *  are satisfied. If not, another solver call is executed, until a solution
+   *  or unsatisfiablility can be shown.
+   */
+  
+  /** replaces disjunctions with fresh variables 
+   * the assumptions will be sorted
+   * NOTE: kind of expensive
+   */
+  void substituteDisjunctions( vec<Lit>& assumptions );
+  
+  /** gives the next assumtions, based on the old assumptions and the new conflict clause 
+   * NOTE: assumes that the old assumptions are sorted, will sort the conflict clause
+   */
+  void giveNewSDAssumptions( vec<Lit>& assumptions, vec<Lit>& conflict_clause );
+  Clock sdTime; // seconds that are used during substituteDisjunctions
+  unsigned sdSteps; // steps that are used during substituteDisjunctions
+  unsigned sdAssumptions; // size of the assumptions
+  unsigned sdFailedCalls; // number of calls for SD
+  
+  /// compare two literals
+  struct occHeapLt { // sort according to number of occurrences of complement!
+        vec<int>& occ; // data to use for sorting
+        bool operator () (int& x, int& y) const {
+	  return occ[ x ] > occ[ y ]; 
+        }
+        occHeapLt(vec<int>& _occ) : occ( _occ ) {}
+  };
+
+  
   
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;

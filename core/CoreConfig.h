@@ -251,6 +251,9 @@ IntOption opt_uhdProbe;  // non, linear, or quadratic analysis
 BoolOption opt_uhdCleanRebuild; // rebuild BIG always before clause database is cleaned next
 IntOption opt_uhdRestartReshuffle; // travers the BIG again during every i-th restart 0=off
 
+IntOption opt_maxSDcalls; // number of substitution calls
+IntOption opt_sdLimit; // number of steps for substituteDisjunciton
+
  
 IntOption opt_verboseProof; 
 BoolOption opt_rupProofOnly; 
