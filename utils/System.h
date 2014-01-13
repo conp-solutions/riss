@@ -96,6 +96,7 @@ public:
   void stop() {  cTime = Minisat::cpuTime() - cTime; wTime = Minisat::wallClockTime() - wTime;  }
   double getCpuTime() const { return cTime; }
   double getWallClockTime() const { return wTime; }
+  void reset() { cTime = 0; wTime = 0; }
 };
 
 /** Method clock - class that stopes the time from the call until the focus is lost */

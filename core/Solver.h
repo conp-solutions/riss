@@ -533,10 +533,12 @@ protected:
    * NOTE: assumes that the old assumptions are sorted, will sort the conflict clause
    */
   void giveNewSDAssumptions( vec<Lit>& assumptions, vec<Lit>& conflict_clause );
-  Clock sdTime; // seconds that are used during substituteDisjunctions
+  Clock sdTime, sdLastIterTime, sdSearchTime; // seconds that are used during substituteDisjunctions, and time to solve wrongly assumed formulas
   unsigned sdSteps; // steps that are used during substituteDisjunctions
   unsigned sdAssumptions; // size of the assumptions
   unsigned sdFailedCalls; // number of calls for SD
+  unsigned sdClauses, sdLits; // number of clauses/literals that have been used for rewriting
+  unsigned sdFailedAssumptions; // number of wrongly assumed literals
   
   /// compare two literals
   struct occHeapLt { // sort according to number of occurrences of complement!

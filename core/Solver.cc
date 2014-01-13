@@ -212,6 +212,9 @@ Solver::Solver(CoreConfig& _config) :
   , sdSteps(0)  
   , sdAssumptions(0) 
   , sdFailedCalls(0) 
+  , sdClauses(0)
+  , sdLits(0)
+  , sdFailedAssumptions(0)
   
   // preprocessor
   , coprocessor(0)
@@ -2318,13 +2321,17 @@ lbool Solver::solve_()
     
     // substitueDisjunctions
     // for now, works only if there are no assumptions!
+    int solveVariables = nVars();
     int currentSDassumptions = 0;
     if( assumptions.size() == 0 && solves == 1 && config.opt_maxSDcalls > 0 ) {
       substituteDisjunctions( assumptions );
       currentSDassumptions = assumptions.size();
+      sdLastIterTime.start();
     }
     
+    sdSearchTime.start();
     do {
+      sdLastIterTime.reset(); sdLastIterTime.start();
       while (status == l_Undef){
 	
 	double rest_base = 0;
@@ -2362,16 +2369,25 @@ lbool Solver::solve_()
 	  }
 	  
       }
-      
+      sdLastIterTime.stop();
       // check whether UNSAT answer is unsound, due to assumptions that have been added
       if( currentSDassumptions > 0 && status == l_False ) { // this UNSAT result might be due to the added assumptions
-	giveNewSDAssumptions( assumptions, conflict ); // calculate the new set of assumptions due to current conflict
-	currentSDassumptions = assumptions.size();
 	sdFailedCalls ++;
+	if( sdFailedCalls >= config.opt_maxSDcalls ) { // do not "guess" any more, but solve the actual formula properly
+	  assumptions.clear();
+	  sdFailedAssumptions += currentSDassumptions;
+	  currentSDassumptions = 0;
+	} else { // prepare another SD call
+	  giveNewSDAssumptions( assumptions, conflict ); // calculate the new set of assumptions due to current conflict
+	  int oldSDassumptions = currentSDassumptions;
+	  currentSDassumptions = assumptions.size();
+	  sdFailedAssumptions += oldSDassumptions - currentSDassumptions;
+	}
 	continue;
       }
       
     } while ( false ); // if nothing special happens, a single search call is sufficient
+    sdSearchTime.stop();
     totalTime.stop();
     
     if( big != 0 ) { big->BIG::~BIG(); big = 0; } // clean up!
@@ -2416,7 +2432,7 @@ lbool Solver::solve_()
 	    printf("c partial restarts: %d saved decisions: %d saved propagations: %d recursives: %d\n", rs_partialRestarts, rs_savedDecisions, rs_savedPropagations, rs_recursiveRefinements );
 	    printf("c agility restart rejects: %d\n", agility_rejects );
 	    printf("c uhd probe: %lf s, %d L2units, %d L3units, %d L4units\n", bigBackboneTime.getCpuTime(), L2units, L3units, L4units );
-	    printf("c OGS rewrite: %lf s, %d steps, %d assumptions, %d failedCalls\n", sdTime.getCpuTime(), sdSteps, sdAssumptions, sdFailedCalls );
+	    printf("c OGS rewrite: %lf s, %d steps, %d assumptions, %d sdClauses, %d sdLits, %d failedCalls, %d failedAssumptions, %lf searchTime, %lf lastIterTime, \n", sdTime.getCpuTime(), sdSteps, sdAssumptions, sdClauses, sdLits, sdFailedCalls, sdFailedAssumptions, sdSearchTime.getCpuTime(), sdLastIterTime.getCpuTime() );
 #endif
     }
 
@@ -2424,6 +2440,7 @@ lbool Solver::solve_()
         // Extend & copy model:
         model.growTo(nVars());
         for (int i = 0; i < nVars(); i++) model[i] = value(i);
+	if( model.size() > solveVariables ) model.shrink( model.size() - solveVariables ); // if SD has been used, nobody knows about these variables, so remove them before doing anything else next
 	
 	if( coprocessor != 0 && (useCoprocessorPP || useCoprocessorIP) ) coprocessor->extendModel(model);
 	
@@ -3335,12 +3352,12 @@ void Solver::giveNewSDAssumptions(vec< Lit >& assumptions, vec< Lit >& conflict_
   int keptLits = 0;
   while ( i < assumptions.size() && j < conflict_clause.size() ) 
   {
-    if( assumptions[i] == conflict_clause[j] ) {
-      j++;
-    } else if ( assumptions[i] < conflict_clause[j] ) {
+    if( var(assumptions[i]) == var(conflict_clause[j]) ) {
+      j++; ++i;
+    } else if ( var(assumptions[i]) < var(conflict_clause[j]) ) {
       assumptions[ keptLits ++ ] = assumptions[i];
       ++i ;
-    } else if ( conflict_clause[j] < assumptions [i] ) {
+    } else if ( var(conflict_clause[j]) < var(assumptions [i]) ) {
       j++;
     }
   }
@@ -3354,7 +3371,6 @@ void Solver::substituteDisjunctions(vec< Lit >& assumptions)
   
   assert( decisionLevel() == 0 && "should only be done on level 0" );
   
-  int rewrittenClauses = 0;
   const bool methodDebug = false;
   
   assumptions.clear();
@@ -3389,7 +3405,7 @@ void Solver::substituteDisjunctions(vec< Lit >& assumptions)
   Coprocessor::MarkArray markArray;
   markArray.resize( nVars() * 2 );
   vec<Lit> tmpLiterals;
-  uint32_t* lCount = new uint32_t[ 2 * nVars() ];
+  uint32_t* lCount = (uint32_t*) malloc( sizeof( uint32_t ) * 2 * nVars() );
   
   while (literalHeap.size() > 0 && sdSteps < config.opt_sdLimit && !asynch_interrupt ) // as long as there is something to do
   {
@@ -3398,11 +3414,11 @@ void Solver::substituteDisjunctions(vec< Lit >& assumptions)
     assert( literalHeap.inHeap( toInt(literal) ) && "item from the heap has to be on the heap");
     literalHeap.removeMin();
     
-    if( occs[ toInt(literal) ].size() < 4 ) {
+    if( occ[ toInt(literal) ] < 4 ) {
       if( methodDebug ) if( occs[ toInt(literal) ].size() > 0 ) cerr << "c reject lit " << literal << " with " << occs[ toInt(literal) ].size() << " occurrences" << endl;
       continue;	// results in reduction only if the literal occurs more than 4 times!
     }
-
+    
     markArray.nextStep();
     tmpLiterals. clear();
     markArray.setCurrentStep( toInt(literal) );
@@ -3486,7 +3502,10 @@ void Solver::substituteDisjunctions(vec< Lit >& assumptions)
       if( methodDebug ) cerr << "c [CP2-ROR] add literal " << tmpLiterals[orLiterals] << "[" << lCount[ toInt(tmpLiterals[orLiterals])] << "] to OR-gate" << endl;
       markArray.setCurrentStep( toInt( tmpLiterals[orLiterals] ) );
       orLiterals ++;
-      tmpLiterals.growTo( orLiterals, lit_Undef );
+      if( methodDebug ) cerr << "c before orLits: " << orLiterals << " tmpLits: " << tmpLiterals.size() << endl;
+      assert( tmpLiterals.size() >= orLiterals && "there needs to be at least one more literal in the literals");
+      tmpLiterals.shrink_( tmpLiterals.size() - orLiterals ); // do not call destructor!
+      if( methodDebug ) cerr << "c after  orLits: " << orLiterals << " tmpLits: " << tmpLiterals.size() << endl;
     } // end while more literals
     
     // TODO: introduce parameter that controls whether larger pairs should be replaced?
@@ -3506,9 +3525,12 @@ void Solver::substituteDisjunctions(vec< Lit >& assumptions)
     // get next variable
     Var newVariable = newVar();
     if( methodDebug ) cerr << "c added variable " << newVariable << endl;
+    // reserve space for the new variable in all the data structures
     occs.push_back( vector<CRef>() ); occs.push_back( vector<CRef>() );
     occ.push(0);occ.push(0);
     literalHeap.addNewElement(nVars() * 2);
+    markArray.resize( nVars() * 2 );
+    lCount = (uint32_t*) realloc( lCount, sizeof( uint32_t ) * nVars() * 2 );
     
     // replace OR-gate in all the participating clauses
     for( uint32_t i = 0 ; i < usedClauses; ++ i )
@@ -3516,6 +3538,7 @@ void Solver::substituteDisjunctions(vec< Lit >& assumptions)
       detachClause( occs[ toInt(literal) ][i], true ); // remove clause from watch lists
       Clause& clause = ca[ occs[ toInt(literal) ][i] ];
       if( clause.mark() != 0 ) continue;
+      assert( clause.size() >= orLiterals && "can only rewrite clauses where all the literals occur" );
       if( methodDebug ){ cerr << "c [CP2-ROR] rewrite clause " << ca [ occs[ toInt(literal) ][i]] << endl; }
       const Lit posNew = Lit( mkLit(newVariable,false) ); // new literal
       int replacsInClause = 0;
@@ -3564,14 +3587,16 @@ void Solver::substituteDisjunctions(vec< Lit >& assumptions)
       occs[ toInt(literal) ][index] = occs[ toInt(literal) ][ occs[ toInt(literal) ].size() - 1 ];
       occs[ toInt(literal) ].pop_back();
     }
-    rewrittenClauses = (int32_t)(usedClauses * orLiterals);
-
+    sdClauses += usedClauses;
+    sdLits += orLiterals;
     
     // collect the literals, that could be set to true to try the CEGAR rewriting
     assumptions.push( mkLit(newVariable, false) ); // 
     
     // add the new clauses
-    tmpLiterals.push( mkLit(newVariable, true) );
+    if( methodDebug ) cerr << "c create clause with orLits: " << tmpLiterals << endl;
+    tmpLiterals.shrink_( tmpLiterals.size() - orLiterals ); // remove all the literals from the last iteration
+    tmpLiterals.push( mkLit(newVariable, true) ); // add the new variable
     CRef ref = ca.alloc(tmpLiterals, false); // no learnt clause!
 
     clauses.push( ref );

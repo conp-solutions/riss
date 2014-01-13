@@ -156,14 +156,14 @@ void Dense::compress(const char* newWhiteFile)
   // invert mapping - and re-arrange all variable data
   for( Var v = 0; v < data.nVars() ; v++ )
   {
-    if(! config.opt_dense_keep_assigned ) assert( (count[v] != 0 || data.doNotTouch(v) || data.value( mkLit( v, false) ) == l_Undef) && "there is no assigned variable allowed " );
+    if(! config.opt_dense_keep_assigned ) assert( (data.doNotTouch(v) || data.value( mkLit( v, false) ) == l_Undef) && "there is no assigned variable allowed " );
 //	    if( v+1 == data.nVars() ) cerr << "c final round with variable " << v+1 << endl;
     if ( compression.mapping[v] != -1 ){
       if( config.dense_debug_out ) cerr << "c map " << v+1 << " to " << compression.mapping[v] + 1 << endl;
 //      if( v+1 == data.nVars() ) cerr << "c final round with move" << endl;
       // cerr << "c move intern var " << v << " to " << compression.mapping[v] << endl;
       data.moveVar( v, compression.mapping[v], v+1 == data.nVars() ); // map variable, and if done, re-organise everything
-      if(! config.opt_dense_keep_assigned ) assert( (count[compression.mapping[ v ]] != 0 || data.doNotTouch(compression.mapping[ v ]) || data.value( mkLit(compression.mapping[ v ],false) ) == l_Undef ) && "there is no assigned variable allowed " );
+      if(! config.opt_dense_keep_assigned ) assert( (data.doNotTouch(compression.mapping[ v ]) || data.value( mkLit(compression.mapping[ v ],false) ) == l_Undef ) && "there is no assigned variable allowed " );
       // invert!
       compression.mapping[ compression.mapping[v] ] = v;
       // only set to 0, if needed afterwards
