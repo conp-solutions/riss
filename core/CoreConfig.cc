@@ -236,12 +236,20 @@ CoreConfig::CoreConfig() // add new options here!
  opt_uhdCleanRebuild     ("SEARCH UNHIDE PROBING", "sUhdPrRb", "rebuild BIG before cleaning the formula" ,true, optionListPtr ),
  opt_uhdRestartReshuffle ("SEARCH UNHIDE PROBING", "sUhdPrSh", "travers the BIG again during every i-th restart 0=off" ,0, IntRange(0,INT32_MAX), optionListPtr ),
  
+ // CEGAR
  opt_maxSDcalls("SUBSTITUTE DISJUNCTIONS", "sdCalls", "number of calls of assumptions, before solving original formula" ,0, IntRange(0,INT32_MAX), optionListPtr ),
  opt_sdLimit("SUBSTITUTE DISJUNCTIONS",    "sdSteps", "number of steps for subsitute disjunctions" ,250000, IntRange(0,INT32_MAX), optionListPtr ),
  
+ opt_maxCBcalls("CEGAR BVA", "cbCalls", "number of calls to cegar bva iterations" ,        0, IntRange(0,INT32_MAX), optionListPtr ),
+ opt_cbLimit("CEGAR BVA",    "cbSteps", "number of steps for subsitute disjunctions" ,2500000, IntRange(0,INT32_MAX), optionListPtr ),
+ opt_cbLeast("CEGAR BVA",    "cbLeast", "use least frequent lit for matching (otherwise, most freq.) " ,true ),
+ opt_cbStrict("CEGAR BVA",  "cbStrict", "only use cegar BVA for patterns that always lead to reduction" ,true ),
+ 
+ 
+ // DRUP
  opt_verboseProof ("PROOF", "verb-proof", "also print comments into the proof, 2=print proof also to stderr", 1, IntRange(0, 2) , optionListPtr ),
  opt_rupProofOnly ("PROOF", "rup-only", "do not print delete lines into proof", false, optionListPtr ), 
- 
+
  opt_verb ("CORE", "solververb",   "Verbosity level (0=silent, 1=some, 2=more).", 0, IntRange(0, 2), optionListPtr ),
  
  opt_usePPpp ("CORE", "usePP", "use preprocessor for preprocessing", true, optionListPtr ),

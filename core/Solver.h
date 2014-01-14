@@ -517,6 +517,39 @@ protected:
   
   
   /*
+   * 
+   *  things that have to do with CEGAR methods
+   * 
+   */
+  
+  /// setup data structures for cegar
+  void initCegarDS();
+  
+  /// free space of cegar data structures
+  void destroyCegarDS();
+  
+  // data structures that might be used by multiple cegar methods
+  struct occHeapLt { // sort according to number of occurrences of complement!
+        vec<int>& occ; // data to use for sorting
+        bool operator () (int& x, int& y) const {
+	  return occ[ x ] > occ[ y ]; 
+        }
+        occHeapLt(vec<int>& _occ) : occ( _occ ) {}
+  };
+  Heap<occHeapLt>* cegarLiteralHeap; // heap for literals
+  vector< vector<CRef> > cegarOccs; // literal to clause map
+  vec<int> cegarOcc; // number of occurrences of literals in formula
+  
+  struct CegarBVAlitMatch{
+    Lit match;
+    CRef refC, refD;
+    CegarBVAlitMatch(Lit _match, CRef _refC, CRef _refD) : match(_match), refC(_refC), refD(_refD) {}
+    CegarBVAlitMatch() : match(lit_Undef), refC( CRef_Undef ), refD( CRef_Undef ) {}
+    // for comparisons
+    bool operator <  (const CegarBVAlitMatch p) const { return match < p.match;  }
+    bool operator <= (const CegarBVAlitMatch p) const { return match <= p.match; }
+  };
+  /*
    *  method that replaces common shared disjunctions with fresh variables,
    *  and then tries the formula by first assuming that these disjunctoins 
    *  are satisfied. If not, another solver call is executed, until a solution
@@ -540,16 +573,22 @@ protected:
   unsigned sdClauses, sdLits; // number of clauses/literals that have been used for rewriting
   unsigned sdFailedAssumptions; // number of wrongly assumed literals
   
-  /// compare two literals
-  struct occHeapLt { // sort according to number of occurrences of complement!
-        vec<int>& occ; // data to use for sorting
-        bool operator () (int& x, int& y) const {
-	  return occ[ x ] > occ[ y ]; 
-        }
-        occHeapLt(vec<int>& _occ) : occ( _occ ) {}
-  };
-
+  /** tries to perform incomplete BVA (if no BVA possible, try to add a literal to some clause)
+   *  then, run solver in CEGAR mode, until all clauses are satisfied
+   *  @return vector of literals, which contains lit_Undef separated CEGAR clauses
+   */
+  void cegarBVA( vec<Lit>& cegarClauses );
   
+  /** based on the current model check whether all the CEGAR clauses are satisfied
+   *  if not, add all the clauses that are not satisfied yet back to the formula.
+   *  Method will update the literal vector
+   *  @return number of clauses that have been added to the solver
+   */
+  int checkCEGARclauses( vec<Lit>& cegarClauses, bool addAll = false );
+  
+  Clock cbTime;  // time for cegar BVA
+  vec<Lit> cegarClauseLits; // literals of the clauses that have been deleted (loosened) due to cegar BVA
+  unsigned cbSteps, cbClauses, cbFailedCalls, cbLits, cbReduction, cbReintroducedClauses; // stats about cegar bva
   
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;

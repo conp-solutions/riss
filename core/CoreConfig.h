@@ -254,6 +254,10 @@ IntOption opt_uhdRestartReshuffle; // travers the BIG again during every i-th re
 IntOption opt_maxSDcalls; // number of substitution calls
 IntOption opt_sdLimit; // number of steps for substituteDisjunciton
 
+IntOption opt_maxCBcalls; // number of cegarBVA iterations
+IntOption opt_cbLimit; // number of steps for cegarBVA
+BoolOption opt_cbLeast; // use least frequent lit, or most frequent lit
+BoolOption opt_cbStrict; // cegar reduction has to be strict
  
 IntOption opt_verboseProof; 
 BoolOption opt_rupProofOnly; 

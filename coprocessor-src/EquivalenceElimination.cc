@@ -1831,7 +1831,7 @@ void EquivalenceElimination::eqTarjan(int depth, Lit l, Lit list, CoprocessorDat
              eqLitInStack[ toInt(n) ] = 0;
              eqInSCC[ var(n) ] = 1;
 	     if( !config.opt_ee_eager_frozen || !data.doNotTouch( var(n) ) ) eqCurrentComponent.push_back( n ); // add variable only, if it is not frozen, or if frozen variables should not be treated eagerly
-             eqCurrentComponent.push_back(n);
+             //eqCurrentComponent.push_back(n);
          } while(n != l);
 	 if( eqCurrentComponent.size() > 1 ) {
 	   if( config.ee_debug_out > 1 ) cerr << "c ee SCC: " << eqCurrentComponent << endl; 

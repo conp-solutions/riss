@@ -208,6 +208,9 @@ Solver::Solver(CoreConfig& _config) :
   , L3units(0)
   , L4units(0)
   
+  // cegar
+  , cegarLiteralHeap(0)
+  
   // replace disjunctions methods
   , sdSteps(0)  
   , sdAssumptions(0) 
@@ -2323,10 +2326,13 @@ lbool Solver::solve_()
     // for now, works only if there are no assumptions!
     int solveVariables = nVars();
     int currentSDassumptions = 0;
-    if( assumptions.size() == 0 && solves == 1 && config.opt_maxSDcalls > 0 ) {
-      substituteDisjunctions( assumptions );
+    if( assumptions.size() == 0 && solves == 1 && (config.opt_maxSDcalls > 0 || config.opt_maxCBcalls > 0 ) )
+    {
+      initCegarDS(); // setup cegar data structures
+      if( config.opt_maxSDcalls > 0 ) substituteDisjunctions( assumptions );
+      if( config.opt_maxCBcalls > 0 ) cegarBVA( cegarClauseLits );
       currentSDassumptions = assumptions.size();
-      sdLastIterTime.start();
+      destroyCegarDS(); // free resources
     }
     
     sdSearchTime.start();
@@ -2372,6 +2378,7 @@ lbool Solver::solve_()
       sdLastIterTime.stop();
       // check whether UNSAT answer is unsound, due to assumptions that have been added
       if( currentSDassumptions > 0 && status == l_False ) { // this UNSAT result might be due to the added assumptions
+	if (verbosity >= 1) printf("c == new abstraction round (SD) ===========================================================================\n");
 	sdFailedCalls ++;
 	if( sdFailedCalls >= config.opt_maxSDcalls ) { // do not "guess" any more, but solve the actual formula properly
 	  assumptions.clear();
@@ -2384,6 +2391,17 @@ lbool Solver::solve_()
 	  sdFailedAssumptions += oldSDassumptions - currentSDassumptions;
 	}
 	continue;
+      }
+      
+      if( status == l_True && cegarClauseLits.size() > 0 ) {
+	if (verbosity >= 1) printf("c == new abstraction round (CB) ===========================================================================\n");
+	cbFailedCalls ++;
+	// add all cegar clauses, if limit has been reached. Otherwise add only the falsified clauses. 
+	int unsatClauses = checkCEGARclauses( cegarClauseLits, cbFailedCalls >= config.opt_maxCBcalls ); // force cegarBVA to add all clauses back
+	cbReintroducedClauses += unsatClauses;
+	if( unsatClauses > 0 ) {
+	  continue; // there have been clauses that are not satisfied yet
+	} else cbFailedCalls --; // done here
       }
       
     } while ( false ); // if nothing special happens, a single search call is sufficient
@@ -2433,6 +2451,7 @@ lbool Solver::solve_()
 	    printf("c agility restart rejects: %d\n", agility_rejects );
 	    printf("c uhd probe: %lf s, %d L2units, %d L3units, %d L4units\n", bigBackboneTime.getCpuTime(), L2units, L3units, L4units );
 	    printf("c OGS rewrite: %lf s, %d steps, %d assumptions, %d sdClauses, %d sdLits, %d failedCalls, %d failedAssumptions, %lf searchTime, %lf lastIterTime, \n", sdTime.getCpuTime(), sdSteps, sdAssumptions, sdClauses, sdLits, sdFailedCalls, sdFailedAssumptions, sdSearchTime.getCpuTime(), sdLastIterTime.getCpuTime() );
+	    printf("c cegarBVA : %lf s, %d steps, %d cbVariables, %d cbReduction, %d cbFailedCalls, %d cegarClauses, %d cbReaddCls\n", cbTime.getCpuTime(), cbSteps, cbLits, cbReduction, cbFailedCalls, cbClauses, cbReintroducedClauses);
 #endif
     }
 
@@ -3376,46 +3395,29 @@ void Solver::substituteDisjunctions(vec< Lit >& assumptions)
   assumptions.clear();
   MethodClock methodTime( sdTime );
 
-  // occurrences of literals in clauses, and related counters
-  vector< vector<CRef> > occs;
-  vec<int> occ;
-  
-  // get space for extra data structures
-  occ.growTo( nVars() * 2, 0 );
-  occs.resize( nVars() * 2 );
-  
-  // setup structures for the formula
-  for( int i = 0 ; i < clauses.size(); ++ i ) {
-    const Clause& c = ca [ clauses[i] ];
-    for( int j = 0 ; j < c.size(); ++ j ) {
-      occ[ toInt(c[j]) ] ++;
-      occs[ toInt( c[j] ) ].push_back( clauses[i] );
-    }
-  }
-  
-  Heap<occHeapLt> literalHeap( occ );  // heap that has literals ordered according to their number of occurrence
-  uint32_t index = literalHeap.size();
-  // init
-  for( Var v = 0 ; v < nVars(); ++ v ) // only add literals that could lead to reduction
-  {
-    if( occ[ toInt( mkLit(v,false)) ] > 3 ) if( !literalHeap.inHeap(toInt(mkLit(v,false))) ) literalHeap.insert( toInt( mkLit(v,false) ));
-    if( occ[ toInt( mkLit(v,true) ) ] > 3 ) if( !literalHeap.inHeap(toInt(mkLit(v,true))) )  literalHeap.insert( toInt( mkLit(v,true)  ));
-  }
-  //markArray
+  // fill local data structures
   Coprocessor::MarkArray markArray;
   markArray.resize( nVars() * 2 );
   vec<Lit> tmpLiterals;
   uint32_t* lCount = (uint32_t*) malloc( sizeof( uint32_t ) * 2 * nVars() );
   
-  while (literalHeap.size() > 0 && sdSteps < config.opt_sdLimit && !asynch_interrupt ) // as long as there is something to do
+  uint32_t index = cegarLiteralHeap->size();
+  // init
+  for( Var v = 0 ; v < nVars(); ++ v ) // only add literals that could lead to reduction
+  {
+    if( cegarOcc[ toInt( mkLit(v,false)) ] > 3 ) if( !cegarLiteralHeap->inHeap(toInt(mkLit(v,false))) ) cegarLiteralHeap->insert( toInt( mkLit(v,false) ));
+    if( cegarOcc[ toInt( mkLit(v,true) ) ] > 3 ) if( !cegarLiteralHeap->inHeap(toInt(mkLit(v,true))) )  cegarLiteralHeap->insert( toInt( mkLit(v,true)  ));
+  }
+  
+  while (cegarLiteralHeap->size() > 0 && sdSteps < config.opt_sdLimit && !asynch_interrupt ) // as long as there is something to do
   {
 
-    const Lit literal = toLit(literalHeap[0]);
-    assert( literalHeap.inHeap( toInt(literal) ) && "item from the heap has to be on the heap");
-    literalHeap.removeMin();
+    const Lit literal = toLit( (*cegarLiteralHeap)[0] );
+    assert( cegarLiteralHeap->inHeap( toInt(literal) ) && "item from the heap has to be on the heap");
+    cegarLiteralHeap->removeMin();
     
-    if( occ[ toInt(literal) ] < 4 ) {
-      if( methodDebug ) if( occs[ toInt(literal) ].size() > 0 ) cerr << "c reject lit " << literal << " with " << occs[ toInt(literal) ].size() << " occurrences" << endl;
+    if( cegarOcc[ toInt(literal) ] < 4 ) {
+      if( methodDebug ) if( cegarOccs[ toInt(literal) ].size() > 0 ) cerr << "c reject lit " << literal << " with " << cegarOccs[ toInt(literal) ].size() << " occurrences" << endl;
       continue;	// results in reduction only if the literal occurs more than 4 times!
     }
     
@@ -3423,7 +3425,7 @@ void Solver::substituteDisjunctions(vec< Lit >& assumptions)
     tmpLiterals. clear();
     markArray.setCurrentStep( toInt(literal) );
     tmpLiterals.push(literal);
-    vector< CRef >& Fliteral = occs[ toInt(literal) ];
+    vector< CRef >& Fliteral = cegarOccs[ toInt(literal) ];
 
     // remove all satisfied clauses from the formula
     for( uint32_t i = 0 ; i < Fliteral.size(); ++ i ) 
@@ -3473,7 +3475,7 @@ void Solver::substituteDisjunctions(vec< Lit >& assumptions)
 	{
 	  sdSteps ++;
 	  const Lit& l = clause[j];
-	  if( occs[ toInt(l) ].size() < 3 ) continue; // this line guarantees, that each found matching occurs at least 3 times!
+	  if( cegarOccs[ toInt(l) ].size() < 3 ) continue; // this line guarantees, that each found matching occurs at least 3 times!
 	  // do not count literals that already belong to the OR-gate
 	  if( markArray.isCurrentStep( toInt(l) ) ) continue;
 	  // count occurrence
@@ -3526,20 +3528,20 @@ void Solver::substituteDisjunctions(vec< Lit >& assumptions)
     Var newVariable = newVar();
     if( methodDebug ) cerr << "c added variable " << newVariable << endl;
     // reserve space for the new variable in all the data structures
-    occs.push_back( vector<CRef>() ); occs.push_back( vector<CRef>() );
-    occ.push(0);occ.push(0);
-    literalHeap.addNewElement(nVars() * 2);
+    cegarOccs.push_back( vector<CRef>() ); cegarOccs.push_back( vector<CRef>() );
+    cegarOcc.push(0);cegarOcc.push(0);
+    cegarLiteralHeap->addNewElement(nVars() * 2);
     markArray.resize( nVars() * 2 );
     lCount = (uint32_t*) realloc( lCount, sizeof( uint32_t ) * nVars() * 2 );
     
     // replace OR-gate in all the participating clauses
     for( uint32_t i = 0 ; i < usedClauses; ++ i )
     {
-      detachClause( occs[ toInt(literal) ][i], true ); // remove clause from watch lists
-      Clause& clause = ca[ occs[ toInt(literal) ][i] ];
+      detachClause( cegarOccs[ toInt(literal) ][i], true ); // remove clause from watch lists
+      Clause& clause = ca[ cegarOccs[ toInt(literal) ][i] ];
       if( clause.mark() != 0 ) continue;
       assert( clause.size() >= orLiterals && "can only rewrite clauses where all the literals occur" );
-      if( methodDebug ){ cerr << "c [CP2-ROR] rewrite clause " << ca [ occs[ toInt(literal) ][i]] << endl; }
+      if( methodDebug ){ cerr << "c [CP2-ROR] rewrite clause " << ca [ cegarOccs[ toInt(literal) ][i]] << endl; }
       const Lit posNew = Lit( mkLit(newVariable,false) ); // new literal
       int replacsInClause = 0;
       for( uint32_t j = 0 ; j < clause.size(); ++ j )
@@ -3547,12 +3549,12 @@ void Solver::substituteDisjunctions(vec< Lit >& assumptions)
 	const Lit tj = clause[j] ;
 	if( markArray.isCurrentStep( toInt(tj) ) ) {
 	  if( tj != literal ) {
-	    if( methodDebug ){ cerr << "c [CP2-ROR] remove " << ca[ occs[ toInt(literal) ][i] ] << " from list of literal " << tj << " position " << j << endl; }
+	    if( methodDebug ){ cerr << "c [CP2-ROR] remove " << ca[ cegarOccs[ toInt(literal) ][i] ] << " from list of literal " << tj << " position " << j << endl; }
 	    // delete the current clause from the list
-	    for( int k = 0; k < occs[ toInt(tj) ].size(); k++ ) {
-	      if( occs[ toInt(tj) ][k] == occs[ toInt(literal) ][i] ) {
-		occs[ toInt(tj) ][k] = occs[ toInt(tj) ][ occs[ toInt(tj) ].size() - 1 ];
-		occs[ toInt(tj) ].pop_back();
+	    for( int k = 0; k < cegarOccs[ toInt(tj) ].size(); k++ ) {
+	      if( cegarOccs[ toInt(tj) ][k] == cegarOccs[ toInt(literal) ][i] ) {
+		cegarOccs[ toInt(tj) ][k] = cegarOccs[ toInt(tj) ][ cegarOccs[ toInt(tj) ].size() - 1 ];
+		cegarOccs[ toInt(tj) ].pop_back();
 		break;
 	      }
 	    }
@@ -3563,29 +3565,29 @@ void Solver::substituteDisjunctions(vec< Lit >& assumptions)
 	  } else {
 	    clause.removePositionUnsorted(j);
 	  }
-	  occ[ toInt(tj) ] --; 
-	  if( occ[ toInt(tj) ] > 0 ) literalHeap.update( toInt(tj) ); 
+	  cegarOcc[ toInt(tj) ] --; 
+	  if( cegarOcc[ toInt(tj) ] > 0 ) cegarLiteralHeap->update( toInt(tj) ); 
 	  j--;
 	}
       }
       
-      if( ca[ occs[ toInt(literal) ][i] ].size() == 1 ) {
-	uncheckedEnqueue( ca[ occs[ toInt(literal) ][i] ][0] ); // enqueue the unit clause
+      if( ca[ cegarOccs[ toInt(literal) ][i] ].size() == 1 ) {
+	uncheckedEnqueue( ca[ cegarOccs[ toInt(literal) ][i] ][0] ); // enqueue the unit clause
       } else {
-	attachClause( occs[ toInt(literal) ][i] ); // add the clause to the watch lists again
-	if( literalHeap.inHeap( toInt( posNew ) ) ) literalHeap.update( toInt(posNew) );
-	else literalHeap.insert( toInt(posNew) );
+	attachClause( cegarOccs[ toInt(literal) ][i] ); // add the clause to the watch lists again
+	if( cegarLiteralHeap->inHeap( toInt( posNew ) ) ) cegarLiteralHeap->update( toInt(posNew) );
+	else cegarLiteralHeap->insert( toInt(posNew) );
       }
       
       // add new literal to clause, add clause to list of new literal
-      occ[ toInt( posNew ) ] ++;
-      occs[ toInt(posNew) ].push_back( occs[ toInt(literal) ][i] ); // store clause in the new list
-      if( methodDebug ){ cerr << "c [CP2-ROR] final clause: "<< ca [ occs[ toInt(literal)][i] ] << endl; }
+      cegarOcc[ toInt( posNew ) ] ++;
+      cegarOccs[ toInt(posNew) ].push_back( cegarOccs[ toInt(literal) ][i] ); // store clause in the new list
+      if( methodDebug ){ cerr << "c [CP2-ROR] final clause: "<< ca [ cegarOccs[ toInt(literal)][i] ] << endl; }
     }
     // remove that clauses also from the list of the literal
     for( uint32_t i = 0 ; i < usedClauses; ++ i ){
-      occs[ toInt(literal) ][index] = occs[ toInt(literal) ][ occs[ toInt(literal) ].size() - 1 ];
-      occs[ toInt(literal) ].pop_back();
+      cegarOccs[ toInt(literal) ][index] = cegarOccs[ toInt(literal) ][ cegarOccs[ toInt(literal) ].size() - 1 ];
+      cegarOccs[ toInt(literal) ].pop_back();
     }
     sdClauses += usedClauses;
     sdLits += orLiterals;
@@ -3598,13 +3600,14 @@ void Solver::substituteDisjunctions(vec< Lit >& assumptions)
     tmpLiterals.shrink_( tmpLiterals.size() - orLiterals ); // remove all the literals from the last iteration
     tmpLiterals.push( mkLit(newVariable, true) ); // add the new variable
     CRef ref = ca.alloc(tmpLiterals, false); // no learnt clause!
-
+    // add clause to formula, and solver structures
+    attachClause( ref );
     clauses.push( ref );
     for( int i = 0 ; i < ca[ ref ].size() ; ++ i ) {
       const Lit tl = ca[ ref ][i];
-      occs[ toInt(tl) ] . push_back ( ref );
-      if( literalHeap.inHeap( toInt( tl ) ) ) literalHeap.update( toInt(tl) );
-      else literalHeap.insert( toInt(tl) );
+      cegarOccs[ toInt(tl) ] . push_back ( ref );
+      if( cegarLiteralHeap->inHeap( toInt( tl ) ) ) cegarLiteralHeap->update( toInt(tl) );
+      else cegarLiteralHeap->insert( toInt(tl) );
     }
     if( methodDebug ) { cerr << "c added clause " << ca[ref] << endl; }
     
@@ -3627,6 +3630,9 @@ void Solver::substituteDisjunctions(vec< Lit >& assumptions)
     }
   }
   
+  free( lCount );
   if( methodDebug ) cerr << "c finish SD with " << sdSteps << " steps" << endl;
   sdAssumptions = assumptions.size();
 }
+
+
