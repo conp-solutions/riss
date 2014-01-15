@@ -14,6 +14,55 @@
 
 using namespace Minisat;
 
+void Solver::initCegar(vec< Lit >& assumptions, int& currentSDassumptions, int solveCalls)
+{
+    if( assumptions.size() == 0 && solveCalls == 1 && (config.opt_maxSDcalls > 0 || config.opt_maxCBcalls > 0 ) )
+    {
+      initCegarDS(); // setup cegar data structures
+      if( config.opt_maxSDcalls > 0 ) substituteDisjunctions( assumptions );
+      if( config.opt_maxCBcalls > 0 ) cegarBVA( cegarClauseLits );
+      currentSDassumptions = assumptions.size();
+      destroyCegarDS(); // free resources
+    }
+}
+
+bool Solver::cegarNextIteration(vec< Lit >& assumptions, int& currentSDassumptions, lbool& status)
+{
+      // check whether UNSAT answer is unsound, due to assumptions that have been added
+      if( currentSDassumptions > 0 && status == l_False ) { // this UNSAT result might be due to the added assumptions
+	if (verbosity >= 1) printf("c == new abstraction round (SD) ===========================================================================\n");
+	sdFailedCalls ++;
+	if( sdFailedCalls >= config.opt_maxSDcalls ) { // do not "guess" any more, but solve the actual formula properly
+	  assumptions.clear();
+	  sdFailedAssumptions += currentSDassumptions;
+	  currentSDassumptions = 0;
+	} else { // prepare another SD call
+	  giveNewSDAssumptions( assumptions, conflict ); // calculate the new set of assumptions due to current conflict
+	  int oldSDassumptions = currentSDassumptions;
+	  currentSDassumptions = assumptions.size();
+	  sdFailedAssumptions += oldSDassumptions - currentSDassumptions;
+	}
+	cancelUntil( 0 ); // reset state of the solver!
+	status = l_Undef;
+	return true;
+      }
+      
+      // check whether SAT answer is "sound", otherwise, add missing clauses
+      if( status == l_True && cegarClauseLits.size() > 0 ) {
+	cbFailedCalls ++;
+	// add all cegar clauses, if limit has been reached. Otherwise add only the falsified clauses. 
+	int unsatClauses = checkCEGARclauses( cegarClauseLits, cbFailedCalls >= config.opt_maxCBcalls ); // force cegarBVA to add all clauses back
+	cbReintroducedClauses += unsatClauses;
+	if( unsatClauses > 0 ) {
+	  if (verbosity >= 1) printf("c == new abstraction round (CB) ===========================================================================\n");
+	  cancelUntil( 0 ); // reset state of the solver!
+	  status = l_Undef;
+	  return true; // there have been clauses that are not satisfied yet
+	} else cbFailedCalls --; // done here (all cegar clauses are also satisfied!
+      }
+      return false;
+}
+
 
 /// setup data structures for cegar
 void Solver::initCegarDS()

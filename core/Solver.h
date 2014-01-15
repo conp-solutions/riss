@@ -362,9 +362,40 @@ protected:
     double   progressEstimate ()      const; // DELETE THIS ?? IT'S NOT VERY USEFUL ...
     bool     withinBudget     ()      const;
 
-    // better code
+    // for a better code style
+    // for solve procedure:
+    lbool preprocess(); // preprocessing code
+    lbool inprocess(lbool status); // inprocessing code
     lbool initSolve( int solves ); // set up the next call to solve
     
+    void printHeader();
+    void printSearchHeader();
+    
+    // for search procedure
+    void printConflictTrail(Minisat::CRef confl);
+    void printSearchProgress();
+    void updateDecayAndVMTF();
+    /** from all the OTFSS clauses that have been collected during the last call to the method analyze
+     *  this method removes the otfss literals, backtracks, and enqueues the new relevant unit clauses
+     *  @return l_False, if the solver state is UNSAT; l_True, if backtracking beyond the learned clause asserting level has been done; l_Undef otherwise
+     */
+    lbool otfssProcessClauses(int backtrack_level);
+    
+    /** takes care of the vector of entailed unit clauses, DRUP, ... 
+     * @return l_False, if adding the learned unit clause(s) results in UNSAT of the formula
+     */
+    lbool handleMultipleUnits(vec< Lit >& learnt_clause);
+    
+    /** handle learned clause, perform RER,ECL, extra analysis, DRUP, ...
+     * @return l_False, if adding the learned unit clause(s) results in UNSAT of the formula
+     */
+    lbool handleLearntClause(Minisat::vec< Minisat::Lit >& learnt_clause, bool backtrackedBeyond, unsigned int nblevels, uint64_t extraInfo);
+    
+    /** check whether a restart should be performed (return true, if restart) */
+    bool restartSearch(int nof_conflicts, int conflictC);
+    
+    /** remove learned clauses during search */
+    void clauseRemoval();
     
     // DRUP proof
     bool outputsProof() const { return drupProofFile != NULL; }
@@ -521,6 +552,14 @@ protected:
    *  things that have to do with CEGAR methods
    * 
    */
+  
+  /// rewrite formula for CEGAR
+  void initCegar(vec<Lit>& assumptions, int& currentSDassumptions, int solveCalls);
+  
+  /** check whether another CEGAR iteration is required
+   *  @return true, if another search-iteration is necessary
+   */
+  bool cegarNextIteration(vec< Lit >& assumptions, int& currentSDassumptions, lbool& status);
   
   /// setup data structures for cegar
   void initCegarDS();

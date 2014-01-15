@@ -1397,7 +1397,6 @@ bool Solver::simplify()
     return true;
 }
 
-
 /*_________________________________________________________________________________________________
 |
 |  search : (nof_conflicts : int) (params : const SearchParams&)  ->  [lbool]
@@ -1429,40 +1428,11 @@ lbool Solver::search(int nof_conflicts)
         if (confl != CRef_Undef){
             // CONFLICT
 	  conflicts++; conflictC++;
-	  if( config.opt_printDecisions > 2 ) {
-	    printf("c conflict at level %d\n", decisionLevel() );
-	    cerr << "c conflict clause: " << ca[confl] << endl;
-	    cerr << "c trail: " ;
-	    for( int i = 0 ; i < trail.size(); ++ i ) {
-	      cerr << " " << trail[i] << "@" << level(var(trail[i])) << "?"; if( reason(var(trail[i]) ) == CRef_Undef ) cerr << "U"; else cerr <<reason(var(trail[i]));
-	    } cerr << endl;
-	  }
+	  printConflictTrail(confl);
+
+	  updateDecayAndVMTF(); // update dynamic parameters
+	  printSearchProgress(); // print current progress
 	  
-	  // as in glucose 2.3, increase decay after a certain amount of steps - but have parameters here!
-	  if( var_decay < config.opt_var_decay_stop && conflicts % config.opt_var_decay_dist == 0 ) { // div is the more expensive operation!
-            var_decay += config.opt_var_decay_inc;
-	    var_decay = var_decay >= config.opt_var_decay_stop ? config.opt_var_decay_stop : var_decay; // set upper boung
-	  }
-	  
-	  // update the mixture between VMTF and VSIDS dynamically, similarly to the decay
-	  if( useVSIDS != config.opt_vsids_end && conflicts % config.opt_vsids_distance == 0 ) {
-	    if( config.opt_vsids_end > config.opt_vsids_start ) {
-	      useVSIDS += config.opt_vsids_inc;
-	      if( useVSIDS >= config.opt_vsids_end ) useVSIDS = config.opt_vsids_end;
-	    } else if (  config.opt_vsids_end < config.opt_vsids_start ) {
-	      useVSIDS -= config.opt_vsids_inc;
-	      if( useVSIDS <= config.opt_vsids_end ) useVSIDS = config.opt_vsids_end;
-	    } else {
-	      useVSIDS = config.opt_vsids_end;
-	    }
-	  }
-	  
-	  if (verbosity >= 1 && (verbEveryConflicts == 0 || conflicts % verbEveryConflicts==0) ){
-	    printf("c | %8d   %7d    %5d | %7d %8d %8d | %5d %8d   %6d %8d | %6.3f %% %0.3lf | \n", 
-		   (int)starts,(int)nbstopsrestarts, (int)(conflicts/starts), 
-		   (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]), nClauses(), (int)clauses_literals, 
-		   (int)nbReduceDB, nLearnts(), (int)nbDL2,(int)nbRemovedClauses, progressEstimate()*100, agility);
-	  }
 	  if (decisionLevel() == 0) { // top level conflict - stop!
 	    return l_False;
 	  }
@@ -1481,6 +1451,7 @@ lbool Solver::search(int nof_conflicts)
 	      
 	      uint64_t extraInfo = 0;
 	      analysisTime.start();
+	      // perform learnt clause derivation
 	      int ret = analyze(confl, learnt_clause, backtrack_level,nblevels,otfssCls,extraInfo);
 	      analysisTime.stop();
 #ifdef CLS_EXTRA_INFO
@@ -1489,172 +1460,15 @@ lbool Solver::search(int nof_conflicts)
 	      if( config.opt_rer_debug ) cerr << "c analyze returns with " << ret << " and set of literals " << learnt_clause << endl;
      
 	      // OTFSS TODO put into extra method!
-	      if(config.debug_otfss) cerr << "c conflict at level " << decisionLevel() << " analyze will proceed at level " << backtrack_level << endl;
-	      int otfssBtLevel = backtrack_level;
-	      int enqueueK = 0 ; // number of clauses in the vector that need to be enqueued when jumping to the current otfssBtLevel
-	      otfsss = otfssCls.size() > 0 ? otfsss + 1 : otfsss;
-	      otfsssL1 = (decisionLevel() == 1 && otfssCls.size() > 0) ? otfsssL1 + 1 : otfsssL1;
-	      otfssClss += otfssCls.size();
-	      for( int i = 0 ; i < otfssCls.size() ; ++ i ) {
-		Clause& c = ca[otfssCls[i]]; // when the first literal is removed, all literals of c are falsified! (has been reason for first literal)
-		// TODO: does not work with DRUP yet!
-		const int l1 = decisionLevel();
-		int l2=0, movePosition = 2;
-		assert( level(var(c[1])) == decisionLevel() && "this clause was used at the very last level to become reason for its first literal!" );
-		for( int j = 2 ; j < c.size(); ++ j ) { // get the two highest levels in the clause!
-		  int cl = level(var(c[j])); 
-		  assert( cl <= l1 && "there cannot be a literal with a higher level than the current decision level" );
-		  if(cl > l2) { l2 = cl; movePosition = j;} // found second highest level -> move literal to position
-		}
-		if( movePosition > 2 ) { const Lit tmpL = c[2]; c[2] = c[movePosition]; c[movePosition] = tmpL;} // move literal with second highest level to position 2 (if available)
-		assert( (l1 != 0 || l2 != 0) && "one of the two levels has to be non-zero!" );
-		if( l1 > l2 ) { // this clause is unit at level l2!
-		  if( l2 < otfssBtLevel || l2 == 0) {  
-		    if(config.debug_otfss) cerr << "c clear all memorized clauses, jump to new level " << l2 << "( from " << otfssBtLevel << ")" << endl;
-		    otfssBtLevel = l2; enqueueK = 0; 
-		   // we will lower the level now, so none of the previously enqueued clauses is unit any more!
-		    if(config.debug_otfss) cerr << "c memorize clause " << c << " as unit at level " << l2 << " current BTlevel: " << otfssBtLevel << endl;
-		    otfssCls[enqueueK++] = otfssCls[i]; // memorize that this clause has to be enqueued, if the level is not altered!
-		    if(config.debug_otfss) { cerr << "c clause levels: "; for( int k = 0 ; k < c.size(); ++ k ) cerr << " " << level(var(c[k])); cerr << endl;}
-		  }
-		} else if( l1 == l2 ) l2 --; // reduce the backtrack level to get this clause right, even if its not a unit clause!
-		if( l2 < otfssBtLevel ) { if(config.debug_otfss) cerr << "c clear all memorized clauses, jump to new level " << l2 << endl;
-		  otfssBtLevel = l2; enqueueK = 0; }
-		// finally, modify clause and get all watch structures into a good shape again!
-		const Lit remLit = c[0]; // this literal will be removed finally!
-		if( c.size() > 3 ) {
-		  assert( level(var(c[1]) ) == l1 && "if there is a unit literal, this literal is the other watched literal!" );
-		  assert( level(var(c[2]) ) >= l2 && "the second literal can be used as other watched literal for the reduced clause" );
-		  // remove from watch list of first literal
-		  remove(watches[~c[0]], Watcher(otfssCls[i], c[1])); // strict deletion!
-		  // add clause to list of third literal
-		  watches[~c[2]].push(Watcher(otfssCls[i], c[1]));
-		  c[0] = c[1]; c[1] = c[2]; c.removePositionUnsorted(2); // move the two literals with the highest levels forward!
-		} else if( c.size() == 2 ) { // clause becomes unit, no need to attach it again!
-		  assert( otfssBtLevel == 0 && "if we found a single unit, backtracking has to be performed to level 0!" );
-		  const Lit tmp = c[0]; c[0] = c[1]; c[1] = tmp; // set the clause to be able to be removed adequately - unit will be enqued anyways!
-		  c.mark(1);
-		  otfssUnits ++;
-		  // the clause is a unit, handle it!!
-		  // assert( c.size() == 1 && "this has to be a unit clause");
-		  assert( otfssBtLevel == 0 && "if its abinary clause, we need to jump back to level 0!" );
-		  if( otfssBtLevel != 0 ) {
-		    cerr << "c build in bug-check -- otfss backjump level set wrong" << endl;
-		    exit(36);
-		  }
-		} else { // c.size() == 3
-		  detachClause(otfssCls[i],true); // remove from watch lists for long clauses!
-		  c[0] = c[1]; c.removePositionUnsorted(1); // shrink clause to binary clause!
-		  attachClause(otfssCls[i]); // add to watch list for binary clauses (no extra constraints on clause literals!)
-		  otfssBinaries++;
-		}
-		addCommentToProof("remove literal by OTFSS");
-		addToProof(c);             // for RUP
-		addToProof(c,true,remLit); // for DRUP
-	      }
+	      lbool otfssResult = otfssProcessClauses(backtrack_level); // takes care of cancelUntil backtracking!
+	      if( otfssResult == l_False ) return l_False; // during reducing an OTFSS clause, UNSAT could be shown
+	      bool backTrackedBeyondAsserting = (otfssResult == l_True);
 	      
-	      otfssHigherJump = otfssBtLevel < backtrack_level ? otfssHigherJump + 1 : otfssHigherJump; // stats
-	      if(config.debug_otfss) if( enqueueK > 0 ) cerr << "c jump to otfss level " << otfssBtLevel << endl;
-	      	      
-	      cancelUntil(otfssBtLevel); // backtrack - this level is at least as small as the usual level!
-	      
-	      // enqueue all clauses that need to be enqueued!
-	      for( int i = 0; i < enqueueK; ++ i ) {
-		const Clause& c = ca[otfssCls[i]];
-		if(config.debug_otfss) cerr << "c enqueue literal " << c[0] << " of OTFSS clause " << c << endl;
-		if( value(c[0]) == l_Undef ) uncheckedEnqueue(c[0]); // it can happen that multiple clauses imply the same literal!
-		else if ( decisionLevel() == 0 && value(c[0]) == l_Undef ) return l_False; 
-		// else not necessary, because unit propagation will find the new conflict!
-		if( config.opt_printDecisions > 2 ) cerr << "c enqueue OTFSS literal " << c[0]<< " at level " <<  decisionLevel() << " from clause " << c << endl;
-	      }
-	      
+	      // add the new clause(s) to the solver, perform more analysis on them
 	      if( ret > 0 ) { // multiple learned clauses
-		assert( decisionLevel() == 0 && "found units, have to jump to level 0!" );
-		lbdQueue.push(1);sumLBD += 1; // unit clause has one level
-		for( int i = 0 ; i < learnt_clause.size(); ++ i ) // add all units to current state
-		{ 
-		  if( value(learnt_clause[i]) == l_Undef ) uncheckedEnqueue(learnt_clause[i]);
-		  else if (value(learnt_clause[i]) == l_False ) return l_False; // otherwise, we have a top level conflict here! 
-		  if( config.opt_printDecisions > 1 ) cerr << "c enqueue multi-learned literal " << learnt_clause[i] << " at level " <<  decisionLevel() << endl;
-		}
-		  
-		// write learned unit clauses to DRUP!
-		for (int i = 0; i < learnt_clause.size(); i++){
-		  addCommentToProof("learnt unit");
-		  addUnitToProof(learnt_clause[i]);
-		}
-		// store learning stats!
-		totalLearnedClauses += learnt_clause.size(); sumLearnedClauseSize+=learnt_clause.size();sumLearnedClauseLBD+=learnt_clause.size();
-		maxLearnedClauseSize = 1 > maxLearnedClauseSize ? 1 : maxLearnedClauseSize;
-		
-		multiLearnt = ( learnt_clause.size() > 1 ? multiLearnt + 1 : multiLearnt ); // stats
-		topLevelsSinceLastLa ++;
+		if( l_False == handleMultipleUnits( learnt_clause ) ) return l_False;
 	      } else { // treat usual learned clause!
-
-		// when this method is called, backjumping has been done already!
-		
-		rerReturnType rerClause = rerFailed;
-		if( doAddVariablesViaER ) { // be able to block adding variables during search by the solver itself
-		  extResTime.start();
-		  bool ecl = extendedClauseLearning( learnt_clause, nblevels, extraInfo );
-		  if( ! ecl ) { // only if not ecl, rer could be tested!
-		    rerClause = restrictedExtendedResolution( learnt_clause, nblevels, extraInfo ); 
-		  } else {
-		    resetRestrictedExtendedResolution(); // otherwise, we just failed ... TODO: could simply jump over that clause ...
-		  }
-		  extResTime.stop();
-		}
-
-		lbdQueue.push(nblevels);
-		sumLBD += nblevels;
-
-		// write learned clause to DRUP!
-		addCommentToProof("learnt clause");
-		addToProof( learnt_clause );
-
-		// store learning stats!
-		totalLearnedClauses ++ ; sumLearnedClauseSize+=learnt_clause.size();sumLearnedClauseLBD+=nblevels;
-		maxLearnedClauseSize = learnt_clause.size() > maxLearnedClauseSize ? learnt_clause.size() : maxLearnedClauseSize;
-		
-		if (learnt_clause.size() == 1){
-		    assert( decisionLevel() == 0 && "enequeue unit clause on decision level 0!" );
-		    topLevelsSinceLastLa ++;
-#ifdef CLS_EXTRA_INFO
-		    vardata[var(learnt_clause[0])].extraInfo = extraInfo;
-#endif
-		    if( value(learnt_clause[0]) == l_Undef ) {uncheckedEnqueue(learnt_clause[0]);nbUn++;}
-		    else if (value(learnt_clause[0]) == l_False ) return l_False; // otherwise, we have a top level conflict here!
-		    if( config.opt_printDecisions > 1 ) cerr << "c enqueue learned unit literal " << learnt_clause[0]<< " at level " <<  decisionLevel() << " from clause " << learnt_clause << endl;
-		}else{
-		  CRef cr = ca.alloc(learnt_clause, true);
-		  if( rerClause == rerMemorizeClause ) rerFuseClauses.push( cr ); // memorize this clause reference for RER
-		  ca[cr].setLBD(nblevels); 
-		  if(nblevels<=2) nbDL2++; // stats
-		  if(ca[cr].size()==2) nbBin++; // stats
-#ifdef CLS_EXTRA_INFO
-		  ca[cr].setExtraInformation(extraInfo);
-#endif
-		  learnts.push(cr);
-		  attachClause(cr);
-		  
-		  if( dynamicDataUpdates ) claBumpActivity(ca[cr], (config.opt_cls_act_bump_mode == 0 ? 1 : (config.opt_cls_act_bump_mode == 1) ? learnt_clause.size() : nblevels )  ); // bump activity based on its size
-		  if( rerClause != rerDontAttachAssertingLit ) { // attach unit only, if  rer does allow it
-		    if( backtrack_level == otfssBtLevel ) {	// attach the unit only, if the backjumping level is the same as otfss level
-		      if (value(learnt_clause[0]) == l_Undef) {
-			uncheckedEnqueue(learnt_clause[0], cr); // this clause is only unit, if OTFSS jumped to the same level!
-			if( config.opt_printDecisions > 1  ) cerr << "c enqueue literal " << learnt_clause[0] << " at level " <<  decisionLevel() << " from learned clause " << learnt_clause << endl;
-		      } else if ( value(learnt_clause[0]) == l_False ) return l_False; // due to OTFSS there might arose a conflict already ...
-		    }
-		  }
-		  
-		  if( analyzeNewLearnedClause( cr ) )   // check whether this clause can be used to imply new backbone literals!
-		  {
-		    ok = false; // found a contradtion
-		    break;	// interupt search!
-		  }
-		  
-		}
-
+		if( l_False == handleLearntClause( learnt_clause, backTrackedBeyondAsserting, nblevels, extraInfo ) ) return l_False;
 	      }
 	    
 	    if( dynamicDataUpdates ) {
@@ -1665,48 +1479,11 @@ lbool Solver::search(int nof_conflicts)
 	    conflictsSinceLastRestart ++;
            
         }else{ // there has not been a conflict
-	  //
-	  // Handle Restarts Here!
-	  //
+	  if( restartSearch(nof_conflicts, conflictC) ) return l_Undef; // perform a restart
 
-	  if( ! config.opt_agility_restart_reject // do not reject restarts
-	     || agility < config.opt_agility_rejectLimit )
-	  { // TODO FIXME: do not reject the restart for now, but until the next planned restart in schedule (clear queue, or increase number of conflicts!)
-	    // dynamic glucose restarts
-	    if( config.opt_restarts_type == 0 ) {
-	      // Our dynamic restart, see the SAT09 competition compagnion paper 
-	      if (
-		  ( lbdQueue.isvalid() && ((lbdQueue.getavg()*K) > (sumLBD / conflicts)))
-		  || (config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound )// if thre have been too many conflicts
-		) {
-		
-		// increase current limit, if this has been the reason for the restart!!
-		if( (config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound ) ) { 
-		  intervalRestart++;conflictsSinceLastRestart = (double)conflictsSinceLastRestart * (double)config.opt_rMaxInc; 
-		}
-		
-		conflictsSinceLastRestart = 0;
-		lbdQueue.fastclear();
-		progress_estimate = progressEstimate();
-	        const int restartLevel = config.opt_restart_level == 0 ? 0 : getRestartLevel(); // use matching trail, or reused trail mechanism!
-		cancelUntil(restartLevel);
-		return l_Undef;
-	      }
-	    } else { // usual static luby or geometric restarts
-	      if (nof_conflicts >= 0 && conflictC >= nof_conflicts || !withinBudget()){
-		  progress_estimate = progressEstimate();
-		  const int restartLevel = config.opt_restart_level == 0 ? 0 : getRestartLevel(); // use matching trail, or reused trail mechanism!
-		  cancelUntil(restartLevel);
-		  // cerr << "c restart after " << conflictC << " conflicts - limit: " << nof_conflicts << endl;
-		  return l_Undef; }
-	    }
-	  } else agility_rejects ++;
-
-	  //
 	  // Handle Simplification Here!
 	  //
-
-           // Simplify the set of problem clauses - but do not do it each iteration!
+          // Simplify the set of problem clauses - but do not do it each iteration!
 	  if (simplifyIterations > config.opt_simplifyInterval && decisionLevel() == 0 && !simplify()) {
 	    simplifyIterations = 0;
 	    if( verbosity > 1 ) fprintf(stderr,"c last restart ## conflicts  :  %d %d \n",conflictC,decisionLevel());
@@ -1714,21 +1491,12 @@ lbool Solver::search(int nof_conflicts)
 	  }
 	  if( decisionLevel() == 0  ) simplifyIterations ++;
 	  
-	  if( !withinBudget() ) return l_Undef;
+	  if( !withinBudget() ) return l_Undef; // check whether we can still do conflicts
 	  
-	    //
-	    // Perform clause database reduction !
-	    //
-	    if(conflicts>=curRestart* nbclausesbeforereduce) 
-	      {
-	
-		assert(learnts.size()>0);
-		curRestart = (conflicts/ nbclausesbeforereduce)+1;
-		reduceDB();
-		nbclausesbeforereduce += incReduceDB;
-	      }
+	  // Perform clause database reduction !
+	  //
+	  clauseRemoval(); // check whether learned clauses should be removed
 	      
-	    //
 	    // Simple Inprocessing (deduction techniques that use the solver object
 	    //
 	    // if this point is reached, check whether interleaved Clause Strengthening could be scheduled (have heuristics!)
@@ -1786,6 +1554,56 @@ lbool Solver::search(int nof_conflicts)
     }
     return l_Undef;
 }
+
+void Solver::clauseRemoval()
+{
+  if(conflicts>=curRestart* nbclausesbeforereduce && learnts.size() > 0) // perform only if learnt clauses are present
+  {
+    curRestart = (conflicts/ nbclausesbeforereduce)+1;
+    reduceDB();
+    nbclausesbeforereduce += incReduceDB;
+  }
+}
+
+
+bool Solver::restartSearch(int nof_conflicts, int conflictC)
+{
+  if( ! config.opt_agility_restart_reject // do not reject restarts
+     || agility < config.opt_agility_rejectLimit )
+  { // TODO FIXME: do not reject the restart for now, but until the next planned restart in schedule (clear queue, or increase number of conflicts!)
+    // dynamic glucose restarts
+    if( config.opt_restarts_type == 0 ) {
+      // Our dynamic restart, see the SAT09 competition compagnion paper 
+      if (
+	  ( lbdQueue.isvalid() && ((lbdQueue.getavg()*K) > (sumLBD / conflicts)))
+	  || (config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound )// if thre have been too many conflicts
+	) {
+	
+	// increase current limit, if this has been the reason for the restart!!
+	if( (config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound ) ) { 
+	  intervalRestart++;conflictsSinceLastRestart = (double)conflictsSinceLastRestart * (double)config.opt_rMaxInc; 
+	}
+	
+	conflictsSinceLastRestart = 0;
+	lbdQueue.fastclear();
+	progress_estimate = progressEstimate();
+        const int restartLevel = config.opt_restart_level == 0 ? 0 : getRestartLevel(); // use matching trail, or reused trail mechanism!
+	cancelUntil(restartLevel);
+	return true;
+      }
+    } else { // usual static luby or geometric restarts
+      if (nof_conflicts >= 0 && conflictC >= nof_conflicts || !withinBudget()){
+	  progress_estimate = progressEstimate();
+	  const int restartLevel = config.opt_restart_level == 0 ? 0 : getRestartLevel(); // use matching trail, or reused trail mechanism!
+	  cancelUntil(restartLevel);
+	  // cerr << "c restart after " << conflictC << " conflicts - limit: " << nof_conflicts << endl;
+	  return true;
+      }
+    }
+  } else agility_rejects ++;
+  return false;
+}
+
 
 bool Solver::analyzeNewLearnedClause(const CRef newLearnedClause)
 {
@@ -2271,39 +2089,12 @@ lbool Solver::solve_()
     lbool   status        = l_Undef;
     nbclausesbeforereduce = firstReduceDB;
     
-    if(verbosity>=1) {
-      printf("c ========================================[ MAGIC CONSTANTS ]==============================================\n");
-      printf("c | Constants are supposed to work well together :-)                                                      |\n");
-      printf("c | however, if you find better choices, please let us known...                                           |\n");
-      printf("c |-------------------------------------------------------------------------------------------------------|\n");
-      printf("c |                                |                                |                                     |\n"); 
-      printf("c | - Restarts:                    | - Reduce Clause DB:            | - Minimize Asserting:               |\n");
-      printf("c |   * LBD Queue    : %6d      |   * First     : %6d         |    * size < %3d                     |\n",lbdQueue.maxSize(),firstReduceDB,lbSizeMinimizingClause);
-      printf("c |   * Trail  Queue : %6d      |   * Inc       : %6d         |    * lbd  < %3d                     |\n",trailQueue.maxSize(),incReduceDB,lbLBDMinimizingClause);
-      printf("c |   * K            : %6.2f      |   * Special   : %6d         |                                     |\n",K,specialIncReduceDB);
-      printf("c |   * R            : %6.2f      |   * Protected :  (lbd)< %2d     |                                     |\n",R,lbLBDFrozenClause);
-      printf("c |                                |                                |                                     |\n"); 
-      printf("c ==================================[ Search Statistics (every %6d conflicts) ]=========================\n",verbEveryConflicts);
-      printf("c |                                                                                                       |\n"); 
-      printf("c |          RESTARTS           |          ORIGINAL         |              LEARNT              | Progress |\n");
-      printf("c |       NB   Blocked  Avg Cfc |    Vars  Clauses Literals |   Red   Learnts    LBD2  Removed |          |\n");
-      printf("c =========================================================================================================\n");
-    }
+    printHeader();
 
-
-    //
     // preprocess
-    //
     if( status == l_Undef ) { // TODO: freeze variables of assumptions!
-	  // restart, triggered by the solver
-	  // if( coprocessor == 0 && useCoprocessor) coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
-          if( coprocessor != 0 && useCoprocessorPP){
-	    preprocessTime.start();
-	    status = coprocessor->preprocess();
-	    preprocessTime.stop();
-	  }
-         if (verbosity >= 1) printf("c =========================================================================================================\n");
-	 if( config.ppOnly ) return l_Undef; 
+	status = preprocess();
+	if( config.ppOnly ) return l_Undef; 
     }
     
     // probing during search:
@@ -2326,18 +2117,15 @@ lbool Solver::solve_()
     // for now, works only if there are no assumptions!
     int solveVariables = nVars();
     int currentSDassumptions = 0;
-    if( assumptions.size() == 0 && solves == 1 && (config.opt_maxSDcalls > 0 || config.opt_maxCBcalls > 0 ) )
-    {
-      initCegarDS(); // setup cegar data structures
-      if( config.opt_maxSDcalls > 0 ) substituteDisjunctions( assumptions );
-      if( config.opt_maxCBcalls > 0 ) cegarBVA( cegarClauseLits );
-      currentSDassumptions = assumptions.size();
-      destroyCegarDS(); // free resources
-    }
+    
+    initCegar(assumptions, currentSDassumptions, solves);
+    
+    printSearchHeader();
     
     sdSearchTime.start();
     do {
       sdLastIterTime.reset(); sdLastIterTime.start();
+      // if (verbosity >= 1) printf("c start solving with %d assumptions\n", assumptions.size() );
       while (status == l_Undef){
 	
 	double rest_base = 0;
@@ -2356,55 +2144,14 @@ lbool Solver::solve_()
 	  if (!withinBudget()) break;
 	  curr_restarts++;
 	  
-	  if( status == l_Undef ) {
-	    // restart, triggered by the solver
-	    // if( coprocessor == 0 && useCoprocessor)  coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
-	    if( coprocessor != 0 && useCoprocessorIP) {
-	      if( coprocessor->wantsToInprocess() ) {
-		inprocessTime.start();
-		status = coprocessor->inprocess();
-		inprocessTime.stop();
-		if( big != 0 ) {
-		  big->recreate( ca, nVars(), clauses, learnts ); // build a new BIG that is valid on the given data!
-		  big->removeDuplicateEdges( nVars() );
-		  big->generateImplied( nVars(), add_tmp );
-		  if( config.opt_uhdProbe > 2 ) big->sort( nVars() ); // sort all the lists once
-		}
-	      }
-	    }
-	  }
-	  
+	  status = inprocess(status);
       }
       sdLastIterTime.stop();
-      // check whether UNSAT answer is unsound, due to assumptions that have been added
-      if( currentSDassumptions > 0 && status == l_False ) { // this UNSAT result might be due to the added assumptions
-	if (verbosity >= 1) printf("c == new abstraction round (SD) ===========================================================================\n");
-	sdFailedCalls ++;
-	if( sdFailedCalls >= config.opt_maxSDcalls ) { // do not "guess" any more, but solve the actual formula properly
-	  assumptions.clear();
-	  sdFailedAssumptions += currentSDassumptions;
-	  currentSDassumptions = 0;
-	} else { // prepare another SD call
-	  giveNewSDAssumptions( assumptions, conflict ); // calculate the new set of assumptions due to current conflict
-	  int oldSDassumptions = currentSDassumptions;
-	  currentSDassumptions = assumptions.size();
-	  sdFailedAssumptions += oldSDassumptions - currentSDassumptions;
-	}
-	continue;
-      }
       
-      if( status == l_True && cegarClauseLits.size() > 0 ) {
-	if (verbosity >= 1) printf("c == new abstraction round (CB) ===========================================================================\n");
-	cbFailedCalls ++;
-	// add all cegar clauses, if limit has been reached. Otherwise add only the falsified clauses. 
-	int unsatClauses = checkCEGARclauses( cegarClauseLits, cbFailedCalls >= config.opt_maxCBcalls ); // force cegarBVA to add all clauses back
-	cbReintroducedClauses += unsatClauses;
-	if( unsatClauses > 0 ) {
-	  continue; // there have been clauses that are not satisfied yet
-	} else cbFailedCalls --; // done here
-      }
-      
-    } while ( false ); // if nothing special happens, a single search call is sufficient
+      // another cegr iteration
+      if( cegarNextIteration( assumptions, currentSDassumptions, status ) ) continue;
+      break; // if non of the cegar methods found something, stop here!
+    } while ( true ); // if nothing special happens, a single search call is sufficient
     sdSearchTime.stop();
     totalTime.stop();
     
@@ -3636,3 +3383,285 @@ void Solver::substituteDisjunctions(vec< Lit >& assumptions)
 }
 
 
+void Solver::printHeader()
+{
+    if(verbosity>=1) {
+      printf("c ========================================[ MAGIC CONSTANTS ]==============================================\n");
+      printf("c | Constants are supposed to work well together :-)                                                      |\n");
+      printf("c | however, if you find better choices, please let us known...                                           |\n");
+      printf("c |-------------------------------------------------------------------------------------------------------|\n");
+      printf("c |                                |                                |                                     |\n"); 
+      printf("c | - Restarts:                    | - Reduce Clause DB:            | - Minimize Asserting:               |\n");
+      printf("c |   * LBD Queue    : %6d      |   * First     : %6d         |    * size < %3d                     |\n",lbdQueue.maxSize(),firstReduceDB,lbSizeMinimizingClause);
+      printf("c |   * Trail  Queue : %6d      |   * Inc       : %6d         |    * lbd  < %3d                     |\n",trailQueue.maxSize(),incReduceDB,lbLBDMinimizingClause);
+      printf("c |   * K            : %6.2f      |   * Special   : %6d         |                                     |\n",K,specialIncReduceDB);
+      printf("c |   * R            : %6.2f      |   * Protected :  (lbd)< %2d     |                                     |\n",R,lbLBDFrozenClause);
+      printf("c |                                |                                |                                     |\n"); 
+      printf("c =========================================================================================================\n");
+    }
+}
+
+void Solver::printSearchHeader()
+{
+    if(verbosity>=1) {
+      printf("c ==================================[ Search Statistics (every %6d conflicts) ]=========================\n",verbEveryConflicts);
+      printf("c |                                                                                                       |\n"); 
+      printf("c |          RESTARTS           |          ORIGINAL         |              LEARNT              | Progress |\n");
+      printf("c |       NB   Blocked  Avg Cfc |    Vars  Clauses Literals |   Red   Learnts    LBD2  Removed |          |\n");
+      printf("c =========================================================================================================\n");
+    }
+}
+
+lbool Solver::preprocess()
+{
+  lbool status = l_Undef;
+  // restart, triggered by the solver
+  // if( coprocessor == 0 && useCoprocessor) coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
+  if( coprocessor != 0 && useCoprocessorPP){
+    preprocessTime.start();
+    status = coprocessor->preprocess();
+    preprocessTime.stop();
+  }
+  if (verbosity >= 1) printf("c =========================================================================================================\n");
+  return status;
+}
+
+
+lbool Solver::inprocess(lbool status)
+{
+  if( status == l_Undef ) {
+    // restart, triggered by the solver
+    // if( coprocessor == 0 && useCoprocessor)  coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
+    if( coprocessor != 0 && useCoprocessorIP) {
+      if( coprocessor->wantsToInprocess() ) {
+	inprocessTime.start();
+	status = coprocessor->inprocess();
+	inprocessTime.stop();
+	if( big != 0 ) {
+	  big->recreate( ca, nVars(), clauses, learnts ); // build a new BIG that is valid on the "new" formula!
+	  big->removeDuplicateEdges( nVars() );
+	  big->generateImplied( nVars(), add_tmp );
+	  if( config.opt_uhdProbe > 2 ) big->sort( nVars() ); // sort all the lists once
+	}
+      }
+    }
+  }
+}
+
+
+void Solver::printConflictTrail(CRef confl)
+{
+  if( config.opt_printDecisions > 2 ) {
+    printf("c conflict at level %d\n", decisionLevel() );
+    cerr << "c conflict clause: " << ca[confl] << endl;
+    cerr << "c trail: " ;
+    for( int i = 0 ; i < trail.size(); ++ i ) {
+      cerr << " " << trail[i] << "@" << level(var(trail[i])) << "?"; if( reason(var(trail[i]) ) == CRef_Undef ) cerr << "U"; else cerr <<reason(var(trail[i]));
+    } cerr << endl;
+  }
+}
+
+void Solver::updateDecayAndVMTF()
+{
+	  // as in glucose 2.3, increase decay after a certain amount of steps - but have parameters here!
+	  if( var_decay < config.opt_var_decay_stop && conflicts % config.opt_var_decay_dist == 0 ) { // div is the more expensive operation!
+            var_decay += config.opt_var_decay_inc;
+	    var_decay = var_decay >= config.opt_var_decay_stop ? config.opt_var_decay_stop : var_decay; // set upper boung
+	  }
+	  
+	  // update the mixture between VMTF and VSIDS dynamically, similarly to the decay
+	  if( useVSIDS != config.opt_vsids_end && conflicts % config.opt_vsids_distance == 0 ) {
+	    if( config.opt_vsids_end > config.opt_vsids_start ) {
+	      useVSIDS += config.opt_vsids_inc;
+	      if( useVSIDS >= config.opt_vsids_end ) useVSIDS = config.opt_vsids_end;
+	    } else if (  config.opt_vsids_end < config.opt_vsids_start ) {
+	      useVSIDS -= config.opt_vsids_inc;
+	      if( useVSIDS <= config.opt_vsids_end ) useVSIDS = config.opt_vsids_end;
+	    } else {
+	      useVSIDS = config.opt_vsids_end;
+	    }
+	  }
+}
+
+lbool Solver::handleMultipleUnits(vec< Lit >& learnt_clause)
+{
+  assert( decisionLevel() == 0 && "found units, have to jump to level 0!" );
+  lbdQueue.push(1);sumLBD += 1; // unit clause has one level
+  for( int i = 0 ; i < learnt_clause.size(); ++ i ) // add all units to current state
+  { 
+    if( value(learnt_clause[i]) == l_Undef ) uncheckedEnqueue(learnt_clause[i]);
+    else if (value(learnt_clause[i]) == l_False ) return l_False; // otherwise, we have a top level conflict here! 
+    if( config.opt_printDecisions > 1 ) cerr << "c enqueue multi-learned literal " << learnt_clause[i] << " at level " <<  decisionLevel() << endl;
+  }
+    
+  // write learned unit clauses to DRUP!
+  for (int i = 0; i < learnt_clause.size(); i++){
+    addCommentToProof("learnt unit");
+    addUnitToProof(learnt_clause[i]);
+  }
+  // store learning stats!
+  totalLearnedClauses += learnt_clause.size(); sumLearnedClauseSize+=learnt_clause.size();sumLearnedClauseLBD+=learnt_clause.size();
+  maxLearnedClauseSize = 1 > maxLearnedClauseSize ? 1 : maxLearnedClauseSize;
+
+  multiLearnt = ( learnt_clause.size() > 1 ? multiLearnt + 1 : multiLearnt ); // stats
+  topLevelsSinceLastLa ++;
+  return l_Undef;
+}
+
+lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyond, unsigned int nblevels, uint64_t extraInfo)
+{
+  // when this method is called, backjumping has been done already!
+  rerReturnType rerClause = rerFailed;
+  if( doAddVariablesViaER ) { // be able to block adding variables during search by the solver itself
+    extResTime.start();
+    bool ecl = extendedClauseLearning( learnt_clause, nblevels, extraInfo );
+    if( ! ecl ) { // only if not ecl, rer could be tested!
+      rerClause = restrictedExtendedResolution( learnt_clause, nblevels, extraInfo ); 
+    } else {
+      resetRestrictedExtendedResolution(); // otherwise, we just failed ... TODO: could simply jump over that clause ...
+    }
+    extResTime.stop();
+  }
+
+  lbdQueue.push(nblevels);
+  sumLBD += nblevels;
+  // write learned clause to DRUP!
+  addCommentToProof("learnt clause");
+  addToProof( learnt_clause );
+  // store learning stats!
+  totalLearnedClauses ++ ; sumLearnedClauseSize+=learnt_clause.size();sumLearnedClauseLBD+=nblevels;
+  maxLearnedClauseSize = learnt_clause.size() > maxLearnedClauseSize ? learnt_clause.size() : maxLearnedClauseSize;
+
+  if (learnt_clause.size() == 1){
+      assert( decisionLevel() == 0 && "enequeue unit clause on decision level 0!" );
+      topLevelsSinceLastLa ++;
+  #ifdef CLS_EXTRA_INFO
+      vardata[var(learnt_clause[0])].extraInfo = extraInfo;
+  #endif
+      if( value(learnt_clause[0]) == l_Undef ) {uncheckedEnqueue(learnt_clause[0]);nbUn++;}
+      else if (value(learnt_clause[0]) == l_False ) return l_False; // otherwise, we have a top level conflict here!
+      if( config.opt_printDecisions > 1 ) cerr << "c enqueue learned unit literal " << learnt_clause[0]<< " at level " <<  decisionLevel() << " from clause " << learnt_clause << endl;
+  }else{
+    CRef cr = ca.alloc(learnt_clause, true);
+    if( rerClause == rerMemorizeClause ) rerFuseClauses.push( cr ); // memorize this clause reference for RER
+    ca[cr].setLBD(nblevels); 
+    if(nblevels<=2) nbDL2++; // stats
+    if(ca[cr].size()==2) nbBin++; // stats
+  #ifdef CLS_EXTRA_INFO
+    ca[cr].setExtraInformation(extraInfo);
+  #endif
+    learnts.push(cr);
+    attachClause(cr);
+    
+    if( dynamicDataUpdates ) claBumpActivity(ca[cr], (config.opt_cls_act_bump_mode == 0 ? 1 : (config.opt_cls_act_bump_mode == 1) ? learnt_clause.size() : nblevels )  ); // bump activity based on its size
+    if( rerClause != rerDontAttachAssertingLit ) { // attach unit only, if  rer does allow it
+      if( !backtrackedBeyond ) {	// attach the unit only, if the backjumping level is the same as otfss level (s.t. we are still on the asserting level)
+	if (value(learnt_clause[0]) == l_Undef) {
+	  uncheckedEnqueue(learnt_clause[0], cr); // this clause is only unit, if OTFSS jumped to the same level!
+	  if( config.opt_printDecisions > 1  ) cerr << "c enqueue literal " << learnt_clause[0] << " at level " <<  decisionLevel() << " from learned clause " << learnt_clause << endl;
+	} else if ( value(learnt_clause[0]) == l_False ) return l_False; // due to OTFSS there might arose a conflict already ...
+      }
+    }
+    
+    if( analyzeNewLearnedClause( cr ) )   // check whether this clause can be used to imply new backbone literals!
+    {
+      ok = false; // found a contradtion
+      return l_False;	// interupt search!
+    }
+    
+  }
+  return l_Undef;
+}
+
+lbool Solver::otfssProcessClauses(int backtrack_level)
+{
+      if(config.debug_otfss) cerr << "c conflict at level " << decisionLevel() << " analyze will proceed at level " << backtrack_level << endl;
+      int otfssBtLevel = backtrack_level;
+      int enqueueK = 0 ; // number of clauses in the vector that need to be enqueued when jumping to the current otfssBtLevel
+      otfsss = otfssCls.size() > 0 ? otfsss + 1 : otfsss;
+      otfsssL1 = (decisionLevel() == 1 && otfssCls.size() > 0) ? otfsssL1 + 1 : otfsssL1;
+      otfssClss += otfssCls.size();
+      for( int i = 0 ; i < otfssCls.size() ; ++ i ) {
+	Clause& c = ca[otfssCls[i]]; // when the first literal is removed, all literals of c are falsified! (has been reason for first literal)
+	// TODO: does not work with DRUP yet!
+	const int l1 = decisionLevel();
+	int l2=0, movePosition = 2;
+	assert( level(var(c[1])) == decisionLevel() && "this clause was used at the very last level to become reason for its first literal!" );
+	for( int j = 2 ; j < c.size(); ++ j ) { // get the two highest levels in the clause!
+	  int cl = level(var(c[j])); 
+	  assert( cl <= l1 && "there cannot be a literal with a higher level than the current decision level" );
+	  if(cl > l2) { l2 = cl; movePosition = j;} // found second highest level -> move literal to position
+	}
+	if( movePosition > 2 ) { const Lit tmpL = c[2]; c[2] = c[movePosition]; c[movePosition] = tmpL;} // move literal with second highest level to position 2 (if available)
+	assert( (l1 != 0 || l2 != 0) && "one of the two levels has to be non-zero!" );
+	if( l1 > l2 ) { // this clause is unit at level l2!
+	  if( l2 < otfssBtLevel || l2 == 0) {  
+	    if(config.debug_otfss) cerr << "c clear all memorized clauses, jump to new level " << l2 << "( from " << otfssBtLevel << ")" << endl;
+	    otfssBtLevel = l2; enqueueK = 0; 
+	   // we will lower the level now, so none of the previously enqueued clauses is unit any more!
+	    if(config.debug_otfss) cerr << "c memorize clause " << c << " as unit at level " << l2 << " current BTlevel: " << otfssBtLevel << endl;
+	    otfssCls[enqueueK++] = otfssCls[i]; // memorize that this clause has to be enqueued, if the level is not altered!
+	    if(config.debug_otfss) { cerr << "c clause levels: "; for( int k = 0 ; k < c.size(); ++ k ) cerr << " " << level(var(c[k])); cerr << endl;}
+	  }
+	} else if( l1 == l2 ) l2 --; // reduce the backtrack level to get this clause right, even if its not a unit clause!
+	if( l2 < otfssBtLevel ) { if(config.debug_otfss) cerr << "c clear all memorized clauses, jump to new level " << l2 << endl;
+	  otfssBtLevel = l2; enqueueK = 0; }
+	// finally, modify clause and get all watch structures into a good shape again!
+	const Lit remLit = c[0]; // this literal will be removed finally!
+	if( c.size() > 3 ) {
+	  assert( level(var(c[1]) ) == l1 && "if there is a unit literal, this literal is the other watched literal!" );
+	  assert( level(var(c[2]) ) >= l2 && "the second literal can be used as other watched literal for the reduced clause" );
+	  // remove from watch list of first literal
+	  remove(watches[~c[0]], Watcher(otfssCls[i], c[1])); // strict deletion!
+	  // add clause to list of third literal
+	  watches[~c[2]].push(Watcher(otfssCls[i], c[1]));
+	  c[0] = c[1]; c[1] = c[2]; c.removePositionUnsorted(2); // move the two literals with the highest levels forward!
+	} else if( c.size() == 2 ) { // clause becomes unit, no need to attach it again!
+	  assert( otfssBtLevel == 0 && "if we found a single unit, backtracking has to be performed to level 0!" );
+	  const Lit tmp = c[0]; c[0] = c[1]; c[1] = tmp; // set the clause to be able to be removed adequately - unit will be enqued anyways!
+	  c.mark(1);
+	  otfssUnits ++;
+	  // the clause is a unit, handle it!!
+	  // assert( c.size() == 1 && "this has to be a unit clause");
+	  assert( otfssBtLevel == 0 && "if its abinary clause, we need to jump back to level 0!" );
+	  if( otfssBtLevel != 0 ) {
+	    cerr << "c build in bug-check -- otfss backjump level set wrong" << endl;
+	    exit(36);
+	  }
+	} else { // c.size() == 3
+	  detachClause(otfssCls[i],true); // remove from watch lists for long clauses!
+	  c[0] = c[1]; c.removePositionUnsorted(1); // shrink clause to binary clause!
+	  attachClause(otfssCls[i]); // add to watch list for binary clauses (no extra constraints on clause literals!)
+	  otfssBinaries++;
+	}
+	addCommentToProof("remove literal by OTFSS");
+	addToProof(c);             // for RUP
+	addToProof(c,true,remLit); // for DRUP
+      }
+      
+      otfssHigherJump = otfssBtLevel < backtrack_level ? otfssHigherJump + 1 : otfssHigherJump; // stats
+      if(config.debug_otfss) if( enqueueK > 0 ) cerr << "c jump to otfss level " << otfssBtLevel << endl;
+      
+      cancelUntil(otfssBtLevel); // backtrack - this level is at least as small as the usual level!
+      
+      // enqueue all clauses that need to be enqueued!
+      for( int i = 0; i < enqueueK; ++ i ) {
+	const Clause& c = ca[otfssCls[i]];
+	if(config.debug_otfss) cerr << "c enqueue literal " << c[0] << " of OTFSS clause " << c << endl;
+	if( value(c[0]) == l_Undef ) uncheckedEnqueue(c[0]); // it can happen that multiple clauses imply the same literal!
+	else if ( decisionLevel() == 0 && value(c[0]) == l_Undef ) return l_False; 
+	// else not necessary, because unit propagation will find the new conflict!
+	if( config.opt_printDecisions > 2 ) cerr << "c enqueue OTFSS literal " << c[0]<< " at level " <<  decisionLevel() << " from clause " << c << endl;
+      }
+  return backtrack_level > otfssBtLevel ? l_True : l_Undef; // not yet backtracked, 
+}
+
+void Solver::printSearchProgress()
+{
+	if (verbosity >= 1 && (verbEveryConflicts == 0 || conflicts % verbEveryConflicts==0) ){
+	    printf("c | %8d   %7d    %5d | %7d %8d %8d | %5d %8d   %6d %8d | %6.3f %% %0.3lf | \n", 
+		   (int)starts,(int)nbstopsrestarts, (int)(conflicts/starts), 
+		   (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]), nClauses(), (int)clauses_literals, 
+		   (int)nbReduceDB, nLearnts(), (int)nbDL2,(int)nbRemovedClauses, progressEstimate()*100, agility);
+	  }
+}
