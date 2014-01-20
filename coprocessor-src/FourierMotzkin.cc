@@ -93,7 +93,7 @@ bool FourierMotzkin::process()
     const uint32_t size = big.getSize( ~right );
     if( config.fm_debug_out > 2) cerr << "c check " << right << " with " << data[right] << " cls, and " << size << " implieds" << endl;
     if( size < 2 ) continue; // cannot result in a AMO of required size -> skip!
-    Lit* list = big.getArray( ~right );
+    const Lit* list = big.getArray( ~right );
 
     // create first list right -> X == -right \lor X, ==
     inAmo.nextStep(); // new AMO
@@ -107,7 +107,7 @@ bool FourierMotzkin::process()
       inAmo.setCurrentStep( toInt(l ) );
       data.lits.push_back(l); // l is implied by ~right -> canidate for AMO(right,l, ... )
     }
-    if( config.fm_debug_out > 2) cerr << "c implieds: " << data.lits.size() << endl;
+    if( config.fm_debug_out > 2) cerr << "c implieds: " << data.lits.size() << ", namely " << data.lits << endl;
     if( data.lits.size() < 3 ) continue; // do not consider this variable, because it does not hit enough literals
     
     // TODO: should sort list according to frequency in binary clauses - ascending, so that small literals are removed first, increasing the chance for this more frequent ones to stay!
@@ -117,7 +117,7 @@ bool FourierMotzkin::process()
       const Lit l = data.lits[i];
       if( l == lit_Undef ) continue; // do not handle removed literals!
       const uint32_t size2 = big.getSize( ~l );
-      Lit* list2 = big.getArray( ~l );
+      const Lit* list2 = big.getArray( ~l );
       // if not all, disable this literal, remove it from data.lits
       inAmo.nextStep(); // new AMO
       
@@ -174,6 +174,9 @@ bool FourierMotzkin::process()
 
     if( config.fm_debug_out > 0 ) cerr << "c found AMO: " << data.lits << endl;
   }
+  
+  if( config.opt_duplicates && cards.size() > 0 )
+    big.recreate( ca,data.nVars(),data.getClauses(),data.getLEarnts() );
  
   amoTime = cpuTime() - amoTime;
   foundAmos = cards.size();
@@ -237,8 +240,7 @@ bool FourierMotzkin::process()
     }
   }
   
-  
-  fmTime = cpuTime() - fmTime;
+  MethodTimer fmt( &fmTime );
   // setup all data structures
   
   vector< vector<int> > leftHands(data.nVars() * 2 ),rightHands(data.nVars() * 2 ); // indexes into the cards list
@@ -274,7 +276,7 @@ bool FourierMotzkin::process()
 		inAmo.setCurrentStep( toInt(~v1[n1]) );
 		unitQueue.push(~v1[n1]);
 		didSomething = true;
-		if( l_False == data.enqueue( ~v1[n1] ) ) goto finishedFM; // enqueing this literal failed -> finish!
+		if( l_False == data.enqueue( ~v1[n1] ) ) return didSomething; // enqueing this literal failed -> finish!
 	      }
 	      // TODO: enqueue, later remove from all cards!
 	      if( config.fm_debug_out > 1 ) cerr << "c AMOs entail unit literal " << ~ v1[n1] << endl;
@@ -285,7 +287,7 @@ bool FourierMotzkin::process()
 	}
       }
       // if found something, propagate!
-      if(!propagateCards( unitQueue, leftHands, rightHands, cards,inAmo) ) goto finishedFM;
+      if(!propagateCards( unitQueue, leftHands, rightHands, cards,inAmo) ) return didSomething;
     }
     
   }
@@ -324,7 +326,7 @@ bool FourierMotzkin::process()
 		  didSomething = true;
 		  if( data.enqueue( ~v1[n1] ) == l_False ) {
 		    if( config.fm_debug_out > 1 ) cerr << "c enquing " << ~v1[n1] << " failed" << endl;
-		    goto finishedFM; // enqueing this literal failed -> finish!
+		    return didSomething; // enqueing this literal failed -> finish!
 		  }
 	      }
 	      n1++;n2++;
@@ -354,7 +356,7 @@ bool FourierMotzkin::process()
 		  didSomething = true;
 		  if( data.enqueue( ~data.lits[k] ) == l_False ) {
 		    if( config.fm_debug_out > 1 ) cerr << "c enquing " << ~data.lits[k] << " failed" << endl;
-		    goto finishedFM; // enqueing this literal failed -> finish!
+		    return didSomething; // enqueing this literal failed -> finish!
 		  }
 	      }
 	    }
@@ -368,17 +370,25 @@ bool FourierMotzkin::process()
 	}
       }
       // if found something, propagate!
-      if(!propagateCards( unitQueue, leftHands, rightHands, cards,inAmo) ) goto finishedFM;
+      if(!propagateCards( unitQueue, leftHands, rightHands, cards,inAmo) ) return didSomething;
     }
   }
   
   // propagate found units - if failure, skip next steps
   if( data.hasToPropagate() )
-    if( propagation.process(data,true) == l_False ) {data.setFailed(); goto finishedFM; }
+    if( propagation.process(data,true) == l_False ) {data.setFailed(); return didSomething; }
+
+  // perform find 2product encoding
+  findTwoProduct( cards, big, leftHands );
   
+  // remove duplicate or subsumed AMOs!
+  removeSubsumedAMOs( cards, leftHands );
+  
+  // try to deduce ALO constraints from a AMO-ALO matrix
+  deduceALOfromAmoAloMatrix(cards, leftHands);
   
   // perform actual Fourier Motzkin method 
-  // set all variables that appeard in cardinality constraints, to collect clauses nexT
+  // set all variables that appeard in cardinality constraints, to collect clauses next
   data.ma.nextStep();
   for( int i = 0 ; i < cards.size(); ++ i ) {
     const CardC & c = cards[i];
@@ -539,7 +549,7 @@ bool FourierMotzkin::process()
 	    if( config.fm_debug_out > 1 ) cerr << "c new card is failed! - stop procedure!" << endl;
 	    didSomething = true;
 	    data.setFailed();
-	    goto finishedFM;
+	    return didSomething;
 	  }else if( thisCard.isUnit() ) { // all literals in ll have to be set to false!
 	    if( config.fm_debug_out > 1 ) cerr << "c new card is unit - enqueue all literals" << endl;
 	    deducedUnits += thisCard.ll.size() + thisCard.lr.size(); 
@@ -550,7 +560,7 @@ bool FourierMotzkin::process()
 		  didSomething = true;
 		  if( data.enqueue( ~thisCard.ll[k] ) == l_False ) {
 		    if( config.fm_debug_out > 1 ) cerr << "c enquing " << ~thisCard.ll[k] << " failed" << endl;
-		    goto finishedFM;
+		    return didSomething;
 		  }
 		}
 	    }
@@ -561,7 +571,7 @@ bool FourierMotzkin::process()
 		  didSomething = true;
 		  if( data.enqueue( thisCard.lr[k] ) == l_False ) {
 		    if( config.fm_debug_out > 1 ) cerr << "c enquing " << thisCard.lr[k] << " failed" << endl;
-		    goto finishedFM;
+		    return didSomething;
 		  }
 		}
 	    }
@@ -662,12 +672,12 @@ bool FourierMotzkin::process()
       newCards += cards.size() - oldSize;
     
       // if found something, propagate!
-      if(!propagateCards( unitQueue, leftHands, rightHands, cards,inAmo) ) goto finishedFM;
+      if(!propagateCards( unitQueue, leftHands, rightHands, cards,inAmo) ) return didSomething;
   }
   
   // propagate found units - if failure, skip next steps
   if( data.ok() && data.hasToPropagate() )
-    if( propagation.process(data,true) == l_False ) {data.setFailed(); goto finishedFM; }
+    if( propagation.process(data,true) == l_False ) {data.setFailed(); return didSomething; }
   
   if( data.ok() && config.opt_newAmo > 0 && (newAMOs.size() > 0 || rejectedNewAmos.size() > 0) ) {
     big.recreate( ca, data.nVars(), data.getClauses() ); 
@@ -714,7 +724,7 @@ bool FourierMotzkin::process()
 	}
 	didSomething = true;
 	if( c.lr.size() == 1 ) {
-	  if( data.enqueue(c.lr[0]) == l_False ) goto finishedFM;
+	  if( data.enqueue(c.lr[0]) == l_False ) return didSomething;
 	} else if( ! hasDuplicate(c.lr) ) {
 	  CRef tmpRef = ca.alloc(c.lr, false); // no learnt clause!
 	  ca[tmpRef].sort();
@@ -729,7 +739,7 @@ bool FourierMotzkin::process()
   
   // propagate found units - if failure, skip next steps
   if( data.ok() && data.hasToPropagate() )
-    if( propagation.process(data,true) == l_False ) {data.setFailed(); goto finishedFM; }
+    if( propagation.process(data,true) == l_False ) {data.setFailed(); return didSomething; }
   
   if( data.ok() && config.opt_newAlk > 0 && (newALKs.size() > 0 || rejectedNewAlks.size() > 0) ) {
     for( int p = 0; p<2; ++ p ) {
@@ -741,7 +751,7 @@ bool FourierMotzkin::process()
 	}
 	didSomething = true;
 	if( c.lr.size() == 1 ) {
-	  if( data.enqueue(c.ll[0]) == l_False ) goto finishedFM;
+	  if( data.enqueue(c.ll[0]) == l_False ) return didSomething;
 	} else if( ! hasDuplicate(c.lr) ) {
 	  assert( c.lr.size() > 1 && "empty and unit should have been handled before!" );
 	  CRef tmpRef = ca.alloc(c.lr, false); // no learnt clause!
@@ -757,7 +767,7 @@ bool FourierMotzkin::process()
   
   // propagate found units - if failure, skip next steps
   if( data.ok() && data.hasToPropagate() )
-    if( propagation.process(data,true) == l_False ) {data.setFailed(); goto finishedFM; }
+    if( propagation.process(data,true) == l_False ) {data.setFailed(); return didSomething; }
   
   finishedFM:;
   
@@ -765,6 +775,278 @@ bool FourierMotzkin::process()
   
   return didSomething;
 }
+
+
+void FourierMotzkin::removeSubsumedAMOs(vector< FourierMotzkin::CardC >& cards, vector< std::vector< int > >& leftHands)
+{
+  for( int i = 0 ; i < cards.size(); ++ i )
+  {
+    CardC& c = cards[ i ];
+    if( !c.amo() ) continue; // do only for AMOs
+    
+    Lit min = c.ll[0];
+    for( int j = 1; j < c.ll.size(); ++ j )
+      if( leftHands[ toInt( c.ll[j] ) ] < leftHands[ toInt( min ) ] ) min = c.ll[j];
+    
+    // check whether an AMO, or a bigger AMO can be found in the list of min
+    for( int m = 0 ; m < leftHands[ toInt(min) ].size(); ++ m ) {
+      const CardC& ref = cards[ leftHands[ toInt(min) ] [m] ];
+      if( !ref.amo() || leftHands[ toInt(min) ] [m] == i ) continue; // look only for amos, and do not compare itself with the current AMO
+      
+      int j = 0, k = 0; // loop over both amos!
+      const vector<Lit>& rl = ref.ll;
+      while( j < c.ll.size() && k < rl.size() )
+      {
+	if( c.ll[j] < rl[k] ) break; // the new AMO is new
+	else if ( rl[k] < c.ll[j] ) k ++; // simply jump over lits that are in ref, but not in lits
+	else { ++j; ++k; }
+      }
+      if( j == c.ll.size() ) c.invalidate(); // invalidate each AMO that has been found to be redundant
+    }
+    
+  }
+}
+
+
+void FourierMotzkin::deduceALOfromAmoAloMatrix(vector< FourierMotzkin::CardC >& cards, vector< std::vector< int > >& leftHands)
+{
+  if( config.fm_debug_out > 0 ) cerr << "c run deduceAlo method" << endl;
+  
+  vector<int> amoCands;
+  vector<int> amoCandsLocal;
+  for( int i = 0 ; i < cards.size(); ++ i ) 
+  {
+    const CardC& A = cards[i]; 	// cardinality constraints are sorted
+    if( !cards[i].amo() ) continue;	// not an AMO, test next AMO, use only AMOs with size > 2 (heuristic!)
+    const Lit a = cards[i].ll[0];	// since sorted, the first literal in ll is the smallest literal
+   
+    if( config.fm_debug_out > 2 ) cerr << "c work on AMO " << A.ll << endl;
+   
+    const int listAsize = data.list( a ).size();
+    for( int j = 0 ; j < listAsize; ++ j ) // for B in ALO_l
+    {
+      const Clause& B = ca[ data.list(a)[j] ];
+      if( B.size() > A.ll.size() ) continue; // |B| <= |A| !
+
+      if( config.fm_debug_out > 2 ) cerr << "c test with clause  " << B << endl;
+
+      bool isMin = true;
+      for( int k = 0 ; k < B.size(); ++ k )
+	if( B[k] < a ) { isMin = false; break; }
+      if( !isMin ) continue;	// do not use the current clause, because it contains a smaller literal!
+
+      // check whether all ALOs for the current B are present
+      data.clss.clear();	// ALO candidates for matrix!
+      data.ma.nextStep();
+      for( int k = 0 ; k < A.ll.size(); ++ k ) {	// for kLit in A, each lit in A should hit an ALO that hits als AMOs
+	const Lit kLit = A.ll[k];
+	bool foundAlo = true;
+	for( int m = 0 ; m < data.list( kLit ).size(); ++ m ) {
+	  const Clause& ALOk = ca[ data.list( kLit )[m] ];
+	  if( ALOk.size() != B.size() ) continue;
+	  bool hitAlready = false;
+	  for( int n = 0 ; n < ALOk.size(); ++ n ) {
+	    if (data.ma.isCurrentStep( toInt( ALOk[n] ) ) ) { hitAlready = true; break; }
+	  }
+	  if( hitAlready ) continue;
+	  data.clss.push_back( data.list( kLit )[m] );
+	  for( int n = 0 ; n < ALOk.size(); ++ n ) // avoid duplicates!
+	    data.ma.setCurrentStep( toInt( ALOk[n] ) );
+	  break;	// sufficient to find one!
+	}
+      }
+      if( config.fm_debug_out > 2 ) cerr << "c collected " << data.clss.size() << " ALOs" << endl;
+      if( data.clss.size() < A.ll.size() ) continue;
+      
+      // check whether sufficiently many AMOs are present (size of AMO might be larger than required!)
+      amoCands.clear();
+      data.ma.nextStep();
+      bool nextB = false;
+      for( int k = 0 ; k < B.size(); ++ k ) {
+	const Lit bLit = B[k];
+	for( int m = 0; m < leftHands[ toInt( bLit )] .size(); ++ m ) {
+	  const CardC& C = cards[ leftHands[ toInt( bLit )][m] ];
+	  if( !C.amo() ) continue; // not this card!
+	  if( C.ll.size() != A.ll.size() ) continue; // not a good size!
+	  bool hitAlready = false;
+	  for( int n = 0 ; n < C.ll.size(); ++ n ) {
+	    if (data.ma.isCurrentStep( toInt( C.ll[n] ) ) ) { hitAlready = true; break; }
+	  }
+	  if( hitAlready ) continue;
+	  // use this AMO! mark its lits to avoid duplicates in AMO!
+	  amoCands.push_back( leftHands[ toInt( bLit )][m] );
+	  for( int n = 0 ; n < C.ll.size(); ++ n )
+	    data.ma.setCurrentStep( toInt( C.ll[n] ) );
+	  break;
+	}
+      }
+      if( config.fm_debug_out > 2 ) cerr << "c collected " << amoCands.size() << " AMOs" << endl;
+      if( nextB ) continue;
+      
+      // have the two sets for AMOs and ALOs to try to construct the matrix!
+      data.ma.nextStep();
+      for( int k = 0 ; k < data.clss.size(); ++ k ) 
+      {
+	const Clause& C = ca[ data.clss[k] ];
+	amoCandsLocal =  amoCands; // add all these literals to the vector
+	for( int m = 0 ; m < C.size(); ++ m ) {
+	  const Lit mLit = C[m];
+	  if( data.ma.isCurrentStep( toInt(mLit) ) ) { nextB = true; break; }
+	  data.ma.setCurrentStep( toInt( mLit) );
+	  for( int n = 0; n < amoCandsLocal.size(); ++n ) {
+	    bool containsMLit = false;
+	    const CardC& D = cards[ amoCandsLocal[n] ];	// current AMO D
+	    for( int o = 0 ; o < D.ll.size(); ++o )
+	      if( D.ll[o] == mLit ) { containsMLit = true; break; }
+	    if( containsMLit ) {	// if m \in D
+	      amoCandsLocal[n] = amoCandsLocal[ amoCandsLocal.size() - 1 ];
+	      amoCandsLocal.pop_back();
+	      break;
+	    }
+	  }
+	}
+	if( amoCandsLocal.size() == 0 || nextB ) break; // if S != 0, goto next B
+      }
+      if( nextB ) continue;
+      
+      // here, the new AMOs can be added!
+      for( int k = 0 ; k < amoCands.size(); ++ k ) {
+	if( config.fm_debug_out > 0 ) cerr << "c can add ALO " << cards[amoCands[k]].ll << endl;
+	CRef cr = ca.alloc( cards[amoCands[k]].ll , false); 
+	data.addClause(cr);
+	data.getClauses().push(cr);
+      }
+      
+    }
+   
+   
+  }
+}
+
+
+void FourierMotzkin::findTwoProduct(vector< FourierMotzkin::CardC >& cards, BIG& big, vector< std::vector< int > >& leftHands)
+{
+  if( config.fm_debug_out > 0 ) cerr << "c run find two product" << endl;
+  MarkArray newAmoLits;
+  newAmoLits.create(2*data.nVars());
+  
+  for( int i = 0 ; i < cards.size(); ++ i ) 
+  {
+    CardC& A = cards[i]; 	// cardinality constraints are sorted
+    if( !cards[i].amo() ) continue;	// not an AMO, test next AMO, use only AMOs with size > 2 (heuristic!)
+    const Lit a = cards[i].ll[0];	// since sorted, the first literal in ll is the smallest literal
+    
+    if( config.fm_debug_out > 2 ) cerr << "c work on AMO " << cards[i].ll << " with smallest lit " << a << endl;
+    
+    Lit* aList = big.getArray( ~a);
+    if( big.getSize( ~a) == 0 ) continue; // not this AMO, because the smallest literal does not imply other literals
+    Lit l = ~ aList[0];
+    for( int j = 1 ; j < big.getSize( ~a); ++ j ) // get the smallest literal, but negated!
+      if( ~aList[j] < l ) l = ~aList[j];
+      
+    if( config.fm_debug_out > 2 ) cerr << "c min lit = " << l << " that implies " << big.getSize(l) << endl;
+    for( int j = 0 ; j < big.getSize( l ); ++ j ) // for b in BIG(l), b!=a
+    {
+      const Lit b = big.getArray(l)[j];	// literal hit by the literal l.
+      if( b == a ) continue;
+      if( config.fm_debug_out > 2 ) cerr << "c current implied: " << b << endl;
+      
+      for( int k = 0 ; k < leftHands[ toInt(b) ].size(); ++k ) // for B in AMOs_b, A != B
+      {
+	if( leftHands[ toInt(b) ][k] <= i ) {
+	  if( config.fm_debug_out > 3 ) cerr << "c reject AMO " << cards[ leftHands[ toInt(b) ][k] ].ll << " because of position " << endl;
+	  continue;		// A != B, and check each pair only once!
+	}
+	CardC& B = cards[ leftHands[ toInt(b) ][k] ];		// turn index into CardC
+	if( ! B.amo() ) continue; // work only on pairs of amo!
+	// if( b != B.ll[0] ) continue; // use this AMO B only, if b is its smallest literal (avoid duplicates)
+	// TODO: check sizes of A and B, use them only, if they differ with max 1
+	data.lits.clear();	// global AMO P, sufficient since there won't be local ones!
+	newAmoLits.nextStep();	// new set of literals
+	if( config.fm_debug_out > 3 ) cerr << "c check AMOs " << cards[i].ll << " and " << B.ll << endl;
+	for( int m = 0 ; m < B.ll.size(); ++m ) // for literal k in B
+	{
+	  const Lit bLit = B.ll[m]; // each literal in B should imply a set of literals, where each of these literals hits a different lit in A
+
+	  if( config.fm_debug_out > 3 ) cerr << "c current lit in B: " << bLit << endl;
+	  
+	  data.ma.nextStep();	// prepare for count different hits
+	  for( int n = 0 ; n < cards[i].ll.size(); ++ n )  // mark all literals from AMO A for becoming hit in this iteration
+	    data.ma.setCurrentStep( toInt( cards[i].ll[n] ) );
+	  
+	  for( int n = 0 ; n < big.getSize( ~bLit ); ++ n ) // check whether this literal implies a set of literal, which hit all different literals from A
+	  {
+	    const Lit hitLit = ~ big.getArray( ~bLit )[n];
+	    if( newAmoLits.isCurrentStep( toInt(hitLit) ) ) continue; // do not collect such a literal twice!
+	    
+	    if( config.fm_debug_out > 3 ) cerr << "c test hitLit " << hitLit << " which implies " << big.getSize( hitLit ) << " lits"  << endl;
+
+	    for( int o = 0 ; o < big.getSize( hitLit ); ++o ) { // check whether this literal hits a literal from A
+	      const Lit targetLit = big.getArray( hitLit )[o];
+	      if( data.ma.isCurrentStep( toInt( targetLit ) ) ) {
+		if( config.fm_debug_out > 3 ) cerr << "c target lit " << targetLit << endl;
+		data.ma.reset( toInt( targetLit ) );	// count hit, reset current variable
+		data.lits.push_back( hitLit );
+		newAmoLits.setCurrentStep( toInt(hitLit) );	// do not add this lit twice to the current set
+		break;					// take the first best literal that is hit! NOTE approximation!
+	      } else {
+		if( config.fm_debug_out > 3 ) cerr << "c re-hit target lit " << targetLit << endl;
+	      }
+	    }
+	  }  // end collecting literals that hit lits in A
+	  
+	} // end for lits in B
+	// add the global set of lits as new AMO
+	if( data.lits.size() > 0 ) { // if there is a global AMO
+	  sort( data.lits );
+	  // TODO check for complementary literals! or being unit
+	  if( !amoExistsAlready(data.lits, leftHands, cards ) ) {
+	    if( config.fm_debug_out > 0 ) cerr << "c found new AMO " << data.lits << endl;
+	    if( config.fm_debug_out > 2 ) cerr << "c   based on " << cards[i].ll << " and AMO " << B.ll << endl; // here, the reference is still working
+	    for( int n = 0 ; n < data.lits.size(); ++ n )
+	      leftHands[ toInt( data.lits[n] ) ].push_back( cards.size() );	// register new AMO in data structures
+	    cards.push_back( CardC( data.lits ) ); // actually add new AMO
+	  }
+	}
+      } // select next B
+
+    } // end looping over implied lits from A's smallest literal
+    
+  } // end looping over cardinality constraints
+  
+}
+
+bool FourierMotzkin::amoExistsAlready(const vector< Lit >& lits, vector< std::vector< int > >& leftHands, vector< FourierMotzkin::CardC >& cards)
+{
+  // check whether the sorted set of literals is already present as AMO (or larger AMO!)
+  // implement with while loop, running over two constraints at the same time, for all constraints with the least frequent literal
+  
+  if ( lits.size() == 0 ) return true; // amo() is always true!
+
+  Lit min = lits[0];
+  for( int i = 1; i < lits.size(); ++ i )
+    if( leftHands[ toInt( lits[i] ) ] < leftHands[ toInt( min ) ] ) min = lits[i];
+  
+  // check whether an AMO, or a bigger AMO can be found in the list of min
+  for( int i = 0 ; i < leftHands[ toInt(min) ].size(); ++ i ) {
+    const CardC& ref = cards[ leftHands[ toInt(min) ] [i] ];
+    if( !ref.amo() ) continue; // look only for amos
+    
+    int j = 0, k = 0; // loop over both amos!
+    const vector<Lit>& rl = ref.ll;
+    while( j < lits.size() && k < rl.size() )
+    {
+      if( lits[j] < rl[k] ) break; // the new AMO is new
+      else if ( rl[k] < lits[j] ) k ++; // simply jump over lits that are in ref, but not in lits
+      else { ++j; ++k; }
+    }
+    if( j == lits.size() ) return true; // found a AMO that is at least as strong as the current one (might contain more lits!)
+  }
+  
+  return false;
+}
+
+
     
 template <class S, class T>
 static bool ordered_subsumes (const S & c, const T& other)

@@ -2125,7 +2125,7 @@ lbool Solver::solve_()
     sdSearchTime.start();
     do {
       sdLastIterTime.reset(); sdLastIterTime.start();
-      // if (verbosity >= 1) printf("c start solving with %d assumptions\n", assumptions.size() );
+      if (verbosity >= 1) printf("c start solving with %d assumptions\n", assumptions.size() );
       while (status == l_Undef){
 	
 	double rest_base = 0;
@@ -2140,8 +2140,7 @@ lbool Solver::solve_()
 	}
 	
 	status = search(rest_base * config.opt_restart_first); // the parameter is useless in glucose - but interesting for the other restart policies
-
-	  if (!withinBudget()) break;
+	if (!withinBudget()) break;
 	  curr_restarts++;
 	  
 	  status = inprocess(status);
@@ -3446,6 +3445,7 @@ lbool Solver::inprocess(lbool status)
       }
     }
   }
+  return status;
 }
 
 

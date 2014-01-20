@@ -28,8 +28,13 @@ void Solver::initCegar(vec< Lit >& assumptions, int& currentSDassumptions, int s
 
 bool Solver::cegarNextIteration(vec< Lit >& assumptions, int& currentSDassumptions, lbool& status)
 {
+      if (verbosity >= 1) printf("c CEGAR handle current iteration with %s\n", status == l_True ? "true " : (status == l_Undef ? "undef": "false"));
       // check whether UNSAT answer is unsound, due to assumptions that have been added
       if( currentSDassumptions > 0 && status == l_False ) { // this UNSAT result might be due to the added assumptions
+	if (verbosity >= 1) printf("c CEGAR wrong assumptions: %d\n", conflict.size());
+	if( conflict.size() == 0 ) { // if the conflict does not depend on the assumptions, return false!
+	  return false;
+	}
 	if (verbosity >= 1) printf("c == new abstraction round (SD) ===========================================================================\n");
 	sdFailedCalls ++;
 	if( sdFailedCalls >= config.opt_maxSDcalls ) { // do not "guess" any more, but solve the actual formula properly
@@ -340,6 +345,7 @@ int Solver::checkCEGARclauses(vec< Lit >& cegarClauses, bool addAll)
   }
   int unsatClauses = 0;
   vec<Lit> tmpLit; // TODO should be possible to use a global vector here!
+  if (verbosity >= 1) printf("c add all CEGAR clauses %d\n", addAll ? 1 : 0);
   if( addAll ) { // add all clauses to the formula, independent of their state (SAT/UNSAT)
     for( int i = 0; i < cegarClauses.size(); ++ i ) {
       if( cegarClauses[i] == lit_Undef ) {
@@ -350,6 +356,7 @@ int Solver::checkCEGARclauses(vec< Lit >& cegarClauses, bool addAll)
 	}
 	unsatClauses = (isSat ? unsatClauses : unsatClauses + 1 );
 	// add clause
+	// if (verbosity >= 1) cerr << "c re-add CEGAR clause " << tmpLit << endl;
 	CRef ref = ca.alloc(tmpLit, false); // no learnt clause!
 	assert( tmpLit.size() > 1 && "there should not be unit clauses" );
 	// add clause to formula, and solver structures

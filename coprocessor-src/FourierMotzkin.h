@@ -81,13 +81,29 @@ public:
   
   void destroy();
   
+  
 protected:
   /** propagate the literals in unitQueue over all constraints*/
   bool propagateCards( vec<Lit>& unitQueue, vector< vector<int> >& leftHands, vector< vector<int> >& rightHands, vector<CardC>& cards,MarkArray& inAmo);
   
   /** check whether the given clause is already present in the given list */
   bool hasDuplicate(const vector<Lit>& c);
+
+  /** given a set of cardinality constraints, and a BIG, try to deduce more AMOs following the two product encoding */
+  void findTwoProduct(vector< CardC >& cards, BIG& big, vector< vector<int> >& leftHands);
+
+  /** return whether a current set of literals already exists as AMO, or is subsumed by an existing one 
+   * Note: assumes the literal lits to be sorted, and all AMOs inside cards as well
+   */
+  bool amoExistsAlready(const vector< Lit >& lits, vector< std::vector< int > >& leftHands, vector<CardC>& cards);
+
+  /** try to deduce ALO constraints
+   *  if something like a board is encoded, then try to add additional ALO constraints (from dangerous reductions paper)
+   */
+  void deduceALOfromAmoAloMatrix(vector< CardC >& cards, vector< std::vector< int > >& leftHands);
   
+  /** remove all the AMOs, whose effect is already covered by some other AMO */
+  void removeSubsumedAMOs(vector< CardC >& cards, vector< std::vector< int > >& leftHands);
 };
 
 }
