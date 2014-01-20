@@ -14,7 +14,10 @@ FourierMotzkin::FourierMotzkin( CP3Config &_config, ClauseAllocator& _ca, Thread
 , propagation(_propagation)
 , processTime(0)
 , amoTime(0)
+, amtTime(0)
 , fmTime(0)
+, twoPrTime(0)
+, deduceAloTime(0)
 , steps(0)
 , fmLimit(config.opt_fmLimit)
 , foundAmos(0)
@@ -37,6 +40,9 @@ FourierMotzkin::FourierMotzkin( CP3Config &_config, ClauseAllocator& _ca, Thread
 , addedBinaryClauses(0)
 , addedClauses(0)
 , detectedDuplicates(0)
+, twoPrAmos(0)
+, twoPrAmoLits(0)
+, dedAlos(0)
 {
   
 }
@@ -184,6 +190,7 @@ bool FourierMotzkin::process()
   if( config.fm_debug_out > 0 ) cerr << "c finished search AMO --- process ... " << endl;
   
   // perform AMT extraction
+  amtTime = cpuTime() - amtTime;
   if( config.opt_atMostTwo ) {
     for( Var v = 0 ; v < data.nVars(); ++ v ) {
       for( int p = 0 ; p < 1; ++ p ) {
@@ -239,6 +246,7 @@ bool FourierMotzkin::process()
       }
     }
   }
+  amtTime = cpuTime() - amtTime;
   
   MethodTimer fmt( &fmTime );
   // setup all data structures
@@ -327,6 +335,8 @@ bool FourierMotzkin::process()
 		  if( data.enqueue( ~v1[n1] ) == l_False ) {
 		    if( config.fm_debug_out > 1 ) cerr << "c enquing " << ~v1[n1] << " failed" << endl;
 		    return didSomething; // enqueing this literal failed -> finish!
+		  } else {
+		    cerr << "c found unit, enqued " << ~v1[n1] << "" << endl;
 		  }
 	      }
 	      n1++;n2++;
@@ -340,6 +350,7 @@ bool FourierMotzkin::process()
 	  }
 	  for(; n1 < v1.size(); ++ n1 ) if( v1[n1] != pl ) data.lits.push_back( v1[n1] );
 	  for(; n2 < v2.size(); ++ n2 ) if( v2[n2] != nl ) data.lits.push_back( v2[n2] );
+	  if( data.lits.size() == 0 ) continue; // no AMO, if there are no literals inside!
 	  if( config.fm_debug_out > 0 ) cerr << "c deduced AMO " << data.lits << " from AMO " << card1.ll << " and AMO " << card2.ll << endl;
 	  
 	  // check whether there are similar variables inside the constraint, if so - drop it!
@@ -387,7 +398,6 @@ bool FourierMotzkin::process()
   // try to deduce ALO constraints from a AMO-ALO matrix
   deduceALOfromAmoAloMatrix(cards, leftHands);
   
-  // perform actual Fourier Motzkin method 
   // set all variables that appeard in cardinality constraints, to collect clauses next
   data.ma.nextStep();
   for( int i = 0 ; i < cards.size(); ++ i ) {
@@ -415,6 +425,7 @@ bool FourierMotzkin::process()
     }
   }
 
+  // perform actual Fourier Motzkin method 
   if( config.fm_debug_out > 0 ) cerr << "c apply FM ..." << endl;
   // for l in F
   while (heap.size() > 0 && (data.unlimited() || fmLimit > steps) && !data.isInterupted() ) 
@@ -810,6 +821,7 @@ void FourierMotzkin::removeSubsumedAMOs(vector< FourierMotzkin::CardC >& cards, 
 
 void FourierMotzkin::deduceALOfromAmoAloMatrix(vector< FourierMotzkin::CardC >& cards, vector< std::vector< int > >& leftHands)
 {
+  MethodTimer mt( &deduceAloTime );
   if( config.fm_debug_out > 0 ) cerr << "c run deduceAlo method" << endl;
   
   vector<int> amoCands;
@@ -881,23 +893,32 @@ void FourierMotzkin::deduceALOfromAmoAloMatrix(vector< FourierMotzkin::CardC >& 
 	}
       }
       if( config.fm_debug_out > 2 ) cerr << "c collected " << amoCands.size() << " AMOs" << endl;
-      if( nextB ) continue;
+      if( nextB || amoCands.size() != B.size() ) continue; // has to find enough AMOs
       
       // have the two sets for AMOs and ALOs to try to construct the matrix!
       data.ma.nextStep();
       for( int k = 0 ; k < data.clss.size(); ++ k ) 
       {
 	const Clause& C = ca[ data.clss[k] ];
+	if( config.fm_debug_out > 2 ) cerr << "c hit check with clause " << C << endl;
 	amoCandsLocal =  amoCands; // add all these literals to the vector
 	for( int m = 0 ; m < C.size(); ++ m ) {
 	  const Lit mLit = C[m];
-	  if( data.ma.isCurrentStep( toInt(mLit) ) ) { nextB = true; break; }
+	  if( data.ma.isCurrentStep( toInt(mLit) ) ) { 
+	    if( config.fm_debug_out > 2 ) cerr << "c found lit that was hit already: " << mLit << endl;
+	    nextB = true; break;
+	  }
 	  data.ma.setCurrentStep( toInt( mLit) );
 	  for( int n = 0; n < amoCandsLocal.size(); ++n ) {
 	    bool containsMLit = false;
 	    const CardC& D = cards[ amoCandsLocal[n] ];	// current AMO D
-	    for( int o = 0 ; o < D.ll.size(); ++o )
-	      if( D.ll[o] == mLit ) { containsMLit = true; break; }
+	    for( int o = 0 ; o < D.ll.size(); ++o ){
+	      if( D.ll[o] == mLit ) { 
+		if( config.fm_debug_out > 2 ) cerr << "c lit " << mLit << " from ALO hits lit " << D.ll[o] << " from AMO" << endl;
+		containsMLit = true; 
+		break; // hit exactly one literal in each constraint!
+	      }
+	    }
 	    if( containsMLit ) {	// if m \in D
 	      amoCandsLocal[n] = amoCandsLocal[ amoCandsLocal.size() - 1 ];
 	      amoCandsLocal.pop_back();
@@ -905,16 +926,26 @@ void FourierMotzkin::deduceALOfromAmoAloMatrix(vector< FourierMotzkin::CardC >& 
 	    }
 	  }
 	}
-	if( amoCandsLocal.size() == 0 || nextB ) break; // if S != 0, goto next B
+	if( config.fm_debug_out > 3 ) cerr << "c non-hit amos: " << amoCandsLocal.size() << endl;
+	if( amoCandsLocal.size() != 0 || nextB ) break; // if S != 0, goto next B
       }
-      if( nextB ) continue;
+      if( nextB || amoCandsLocal.size() != 0) continue; // did not hit all lits in last iteration
       
       // here, the new AMOs can be added!
+      if( config.fm_debug_out > 2 ) {
+	cerr << "c can add the following ALOs, due to" << endl;
+	for( int k = 0 ; k < data.clss.size(); ++ k ) cerr << "c ALO " << ca[ data.clss[k] ] << endl;
+	for( int k = 0 ; k < amoCands.size(); ++ k ) cerr << "c AMO " << cards[ amoCands[k] ].ll << endl;
+      }
       for( int k = 0 ; k < amoCands.size(); ++ k ) {
 	if( config.fm_debug_out > 0 ) cerr << "c can add ALO " << cards[amoCands[k]].ll << endl;
-	CRef cr = ca.alloc( cards[amoCands[k]].ll , false); 
-	data.addClause(cr);
-	data.getClauses().push(cr);
+	
+	if( ! hasDuplicate( cards[amoCands[k]].ll ) ) { // if there is not already a clause that is subsumed by the current clause
+	  CRef cr = ca.alloc( cards[amoCands[k]].ll , false); 
+	  data.addClause(cr);
+	  data.getClauses().push(cr);
+	  dedAlos ++; // stats
+	}
       }
       
     }
@@ -926,6 +957,7 @@ void FourierMotzkin::deduceALOfromAmoAloMatrix(vector< FourierMotzkin::CardC >& 
 
 void FourierMotzkin::findTwoProduct(vector< FourierMotzkin::CardC >& cards, BIG& big, vector< std::vector< int > >& leftHands)
 {
+  MethodTimer mt( &twoPrTime );
   if( config.fm_debug_out > 0 ) cerr << "c run find two product" << endl;
   MarkArray newAmoLits;
   newAmoLits.create(2*data.nVars());
@@ -933,7 +965,7 @@ void FourierMotzkin::findTwoProduct(vector< FourierMotzkin::CardC >& cards, BIG&
   for( int i = 0 ; i < cards.size(); ++ i ) 
   {
     CardC& A = cards[i]; 	// cardinality constraints are sorted
-    if( !cards[i].amo() ) continue;	// not an AMO, test next AMO, use only AMOs with size > 2 (heuristic!)
+    if( !cards[i].amo() || cards[i].invalid() ) continue;	// not an AMO, test next AMO, use only AMOs with size > 2 (heuristic!)
     const Lit a = cards[i].ll[0];	// since sorted, the first literal in ll is the smallest literal
     
     if( config.fm_debug_out > 2 ) cerr << "c work on AMO " << cards[i].ll << " with smallest lit " << a << endl;
@@ -1006,6 +1038,8 @@ void FourierMotzkin::findTwoProduct(vector< FourierMotzkin::CardC >& cards, BIG&
 	    for( int n = 0 ; n < data.lits.size(); ++ n )
 	      leftHands[ toInt( data.lits[n] ) ].push_back( cards.size() );	// register new AMO in data structures
 	    cards.push_back( CardC( data.lits ) ); // actually add new AMO
+	    twoPrAmos ++;
+	    twoPrAmoLits += data.lits.size();
 	  }
 	}
       } // select next B
@@ -1182,6 +1216,7 @@ void FourierMotzkin::printStatistics(ostream& stream)
   stream << "c [STAT] FM " << processTime << " s, " 
   << amoTime << " amo-s, " 
   << fmTime << " fm-s, "
+  << amtTime << " amt-s, "
   << foundAmos << " amos, " 
   << foundAmts << " amts, "
   << sameUnits << " sameUnits, " 
@@ -1207,6 +1242,13 @@ void FourierMotzkin::printStatistics(ostream& stream)
   << newAlos << " newAlos, "
   << newAlks << " newAlks, "
   << detectedDuplicates << " duplicates, " 
+  << endl
+  << "c [STAT] FM(4) "
+  << twoPrTime << " 2PrdTime, "
+  << twoPrAmos << " 2PrAmos, "
+  << twoPrAmoLits << " 2PrLits, "
+  << deduceAloTime << " dedAloTime, "
+  << dedAlos << " dedAlos, "
   << endl;
 }
 

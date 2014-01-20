@@ -22,7 +22,7 @@ class FourierMotzkin : public Technique  {
   CoprocessorData& data;
   Propagation& propagation;
   
-  double processTime,amoTime,fmTime;
+  double processTime,amoTime,amtTime,fmTime,twoPrTime,deduceAloTime;
   int steps;
   int fmLimit;
   int foundAmos,foundAmts,newAmos,newAlos,newAlks;
@@ -34,6 +34,9 @@ class FourierMotzkin : public Technique  {
   int removedCards, newCards;
   int addedBinaryClauses,addedClauses;
   int detectedDuplicates;
+  
+  int twoPrAmos, twoPrAmoLits; // stats for two pr amo lits
+  int dedAlos;
   
   /** represent a (mixed) cardinality constraint*/
   class CardC {

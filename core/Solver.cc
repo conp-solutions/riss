@@ -219,6 +219,13 @@ Solver::Solver(CoreConfig& _config) :
   , sdLits(0)
   , sdFailedAssumptions(0)
   
+  , cbSteps(0)
+  , cbClauses(0)
+  , cbFailedCalls(0)
+  , cbLits(0)
+  , cbReduction(0)
+  , cbReintroducedClauses(0)
+  
   // preprocessor
   , coprocessor(0)
   , useCoprocessorPP(config.opt_usePPpp)
@@ -2197,7 +2204,13 @@ lbool Solver::solve_()
 	    printf("c agility restart rejects: %d\n", agility_rejects );
 	    printf("c uhd probe: %lf s, %d L2units, %d L3units, %d L4units\n", bigBackboneTime.getCpuTime(), L2units, L3units, L4units );
 	    printf("c OGS rewrite: %lf s, %d steps, %d assumptions, %d sdClauses, %d sdLits, %d failedCalls, %d failedAssumptions, %lf searchTime, %lf lastIterTime, \n", sdTime.getCpuTime(), sdSteps, sdAssumptions, sdClauses, sdLits, sdFailedCalls, sdFailedAssumptions, sdSearchTime.getCpuTime(), sdLastIterTime.getCpuTime() );
-	    printf("c cegarBVA : %lf s, %d steps, %d cbVariables, %d cbReduction, %d cbFailedCalls, %d cegarClauses, %d cbReaddCls\n", cbTime.getCpuTime(), cbSteps, cbLits, cbReduction, cbFailedCalls, cbClauses, cbReintroducedClauses);
+	    printf("c cegarBVA : %lf s, %d steps, %d cbVariables, %d cbReduction, %d cbFailedCalls, %d cegarClauses, %d cbReaddCls\n", cbTime.getCpuTime(), 
+		   cbSteps, 
+	    cbLits, 
+	    cbReduction, 
+	    cbFailedCalls, 
+	    cbClauses, 
+	    cbReintroducedClauses);
 #endif
     }
 
