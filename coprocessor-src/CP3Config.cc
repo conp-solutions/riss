@@ -360,13 +360,16 @@ circ_debug_out      (_cat_ee_hash, "cp3_circ_debug",  "print debug output for ci
 //
 // Fourier Motzkin
 //
-opt_fmLimit        (_cat_fm, "cp3_fm_limit"  ,"number of steps allowed for FM", 12000000, IntRange(0, INT32_MAX), optionListPtr ),
+opt_fmLimit        (_cat_fm, "cp3_fm_limit"  ,"number of steps allowed for FM", 6000000, Int64Range(0, INT64_MAX), optionListPtr ),
+opt_fmSearchLimit  (_cat_fm, "cp3_fm_Slimit" ,"number of steps allowed for searching AMOs for FM", 12000000, Int64Range(0, INT64_MAX), optionListPtr ),
+opt_fmMaxAMO       (_cat_fm, "cp3_fm_maxA"   ,"largest AMO that will be found during search", 200, IntRange(3, INT32_MAX), optionListPtr ),
 opt_fmGrow         (_cat_fm, "cp3_fm_grow"   ,"max. grow of number of constraints per step", 40, IntRange(0, INT32_MAX), optionListPtr ),
 opt_fmGrowT        (_cat_fm, "cp3_fm_growT"  ,"total grow of number of constraints", 100000, IntRange(0, INT32_MAX), optionListPtr ),
 opt_atMostTwo      (_cat_fm, "cp3_fm_amt"     ,"extract at-most-two", false, optionListPtr ),
 opt_findUnit       (_cat_fm, "cp3_fm_unit"    ,"check for units first", true, optionListPtr ),
 opt_merge          (_cat_fm, "cp3_fm_merge"   ,"perform AMO merge", true, optionListPtr ),
-opt_duplicates     (_cat_fm, "cp3_fm_dups"    ,"avoid finding the same AMO multiple times", true, optionListPtr ),
+opt_fm_avoid_duplicates     (_cat_fm, "cp3_fm_dups"    ,"avoid finding the same AMO multiple times", true, optionListPtr ),
+opt_fm_multiVarAMO (_cat_fm, "cp3_fm_vMulA"   ,"try to find multiple AMOs per variable", true, optionListPtr ),
 opt_cutOff         (_cat_fm, "cp3_fm_cut"     ,"avoid eliminating too expensive variables (>10,10 or >5,15)", true, optionListPtr ),
 opt_newAmo          (_cat_fm, "cp3_fm_newAmo"  ,"encode the newly produced AMOs (with pairwise encoding) 0=no,1=yes,2=try to avoid redundant clauses",  2, IntRange(0, 2), optionListPtr ),
 opt_keepAllNew     (_cat_fm, "cp3_fm_keepM"   ,"keep all new AMOs (also rejected ones)", true, optionListPtr ),

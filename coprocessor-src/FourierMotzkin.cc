@@ -4,6 +4,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 #include "coprocessor-src/FourierMotzkin.h"
 #include "mtl/Sort.h"
+#include <bits/algorithmfwd.h>
 
 
 using namespace Coprocessor;
@@ -19,6 +20,7 @@ FourierMotzkin::FourierMotzkin( CP3Config &_config, ClauseAllocator& _ca, Thread
 , twoPrTime(0)
 , deduceAloTime(0)
 , steps(0)
+, searchSteps(0)
 , fmLimit(config.opt_fmLimit)
 , foundAmos(0)
 , foundAmts(0)
@@ -87,8 +89,8 @@ bool FourierMotzkin::process()
   
   if( config.fm_debug_out > 0) cerr << "c run with " << heap.size() << " elements" << endl;
   
-  // for l in F
-  while (heap.size() > 0 && (data.unlimited() || fmLimit > steps) && !data.isInterupted() ) 
+  // for l in F, and only if not interrupted, and not limits are reached or active
+  while (heap.size() > 0 && (data.unlimited() || (fmLimit > steps && config.opt_fmSearchLimit > searchSteps ) ) && !data.isInterupted() ) 
   {
     const Lit right = toLit(heap[0]);
     assert( heap.inHeap( toInt(right) ) && "item from the heap has to be on the heap");
@@ -106,15 +108,17 @@ bool FourierMotzkin::process()
     data.lits.clear(); // new AMO
     data.lits.push_back(right); // contains list of negated AMO!
     for( int i = 0 ; i < size; ++ i ) {
+      searchSteps ++;
       const Lit& l = list[i];
       if( data[ l ] < 2 ) continue; // cannot become part of AMO!
       if( big.getSize( ~l ) < 2 ) continue; // cannot become part of AMO!
       if( inAmo.isCurrentStep( toInt(l) ) ) continue; // avoid duplicates!
       inAmo.setCurrentStep( toInt(l ) );
       data.lits.push_back(l); // l is implied by ~right -> canidate for AMO(right,l, ... )
+      if( data.lits.size() > config.opt_fmMaxAMO ) break; // do not collect more literals for the AMO (heuristic cut off...)
     }
     if( config.fm_debug_out > 2) cerr << "c implieds: " << data.lits.size() << ", namely " << data.lits << endl;
-    if( data.lits.size() < 3 ) continue; // do not consider this variable, because it does not hit enough literals
+    if( data.lits.size() < 3 || config.opt_fmSearchLimit <= searchSteps ) continue; // do not consider this variable, because it does not hit enough literals
     
     // TODO: should sort list according to frequency in binary clauses - ascending, so that small literals are removed first, increasing the chance for this more frequent ones to stay!
     
@@ -122,19 +126,27 @@ bool FourierMotzkin::process()
     for( int i = 0 ; i < data.lits.size(); ++ i ) { // keep the very first, since it created the list!
       const Lit l = data.lits[i];
       if( l == lit_Undef ) continue; // do not handle removed literals!
+
+      if( config.opt_fmSearchLimit <= searchSteps ) { // if limit is reached, invalidate current AMO candidate
+	data.lits.clear();
+	break;
+      }
+
       const uint32_t size2 = big.getSize( ~l );
       const Lit* list2 = big.getArray( ~l );
       // if not all, disable this literal, remove it from data.lits
       inAmo.nextStep(); // new AMO
       
       if( config.opt_rem_first ) {
-	for( int j = 0 ; j < size2; ++ j ) inAmo.setCurrentStep( toInt(list2[j]) );
+	for( int j = 0 ; j < size2; ++ j ) {inAmo.setCurrentStep( toInt(list2[j]) );searchSteps++;}
 	int j = 0;
-	for( ; j<data.lits.size(); ++ j ) 
+	for( ; j<data.lits.size(); ++ j ) {
 	  if( i!=j 
 	    && data.lits[j] != lit_Undef 
 	    && !inAmo.isCurrentStep( toInt( data.lits[j] ) ) 
 	  ) break;
+	  searchSteps++;
+	}
 	if( j != data.lits.size() ) {
 	  if( config.fm_debug_out > 0) cerr << "c reject [" <<i<< "]" << data.lits[i] << ", because failed with [" << j << "]" << data.lits[j] << endl;
 	  data.lits[i] = lit_Undef; // if not all literals are covered, disable this literal!
@@ -143,11 +155,13 @@ bool FourierMotzkin::process()
 	for( int j = 0 ; j < size2; ++ j ) {
 	  if( config.fm_debug_out > 2 ) cerr << "c literal " << l << " hits literal " << list2[j] << endl;
 	  inAmo.setCurrentStep( toInt(list2[j]) );
+	  searchSteps++;
 	}
 	inAmo.setCurrentStep( toInt(l) ); // set literal itself!
 	int j = i+1; // previous literals have been tested already!
 	for( ; j < data.lits.size(); ++ j ) {
 	  if( data.lits[j] == lit_Undef ) continue; // do not process this literal!
+	  searchSteps++;
 	  if( config.fm_debug_out > 2 ) cerr << "c check literal " << data.lits[j] << "[" << j << "]" << endl;
 	  if( !inAmo.isCurrentStep( toInt( data.lits[j] ) ) // not in AMO with current literal
 	  ) {
@@ -167,8 +181,11 @@ bool FourierMotzkin::process()
       if ( data.lits[i] == lit_Undef ) { data.lits[i] = data.lits[ data.lits.size() - 1 ]; data.lits.pop_back(); --i; }
     
     for( int i = 0 ; i < data.lits.size(); ++ i ){
-      if( config.opt_duplicates ) { // remove the edges in the big that represent this AMO
-	for( int j = i+1; j < data.lits.size(); ++ j ) big.removeEdge(data.lits[i], data.lits[j] );
+      if( config.opt_fm_avoid_duplicates ) { // remove the edges in the big that represent this AMO
+	for( int j = i+1; j < data.lits.size(); ++ j ) {
+	  searchSteps+=big.getSize(data.lits[i]); // approximate the number of memory hits here
+	  big.removeEdge(data.lits[i], data.lits[j] );
+	}
       }
       data.lits[i] = ~ data.lits[i]; // need to negate all!
       data.ma.setCurrentStep( var(data.lits[i]) ); // memorize that this variable is part of an AMO
@@ -178,10 +195,12 @@ bool FourierMotzkin::process()
     sort(data.lits);
     cards.push_back( data.lits );
 
+    if( config.opt_fm_multiVarAMO && data.lits.size() > 1 && config.opt_fm_avoid_duplicates && big.getSize( right ) > 0 ) heap.insert( toInt( right ) ); // this literal might have more cliques
+    
     if( config.fm_debug_out > 0 ) cerr << "c found AMO: " << data.lits << endl;
   }
   
-  if( config.opt_duplicates && cards.size() > 0 )
+  if( config.opt_fm_avoid_duplicates && cards.size() > 0 )
     big.recreate( ca,data.nVars(),data.getClauses(),data.getLEarnts() );
  
   amoTime = cpuTime() - amoTime;
@@ -193,19 +212,34 @@ bool FourierMotzkin::process()
   amtTime = cpuTime() - amtTime;
   if( config.opt_atMostTwo ) {
     for( Var v = 0 ; v < data.nVars(); ++ v ) {
-      for( int p = 0 ; p < 1; ++ p ) {
+      if( config.opt_fmSearchLimit <= searchSteps ) { // if limit is reached, invalidate current AMO candidate
+	data.lits.clear();
+	break;
+      }
+      for( int p = 0 ; p < 1; ++ p ) { // for both polarities
+	if( config.opt_fmSearchLimit <= searchSteps ) { // if limit is reached, invalidate current AMO candidate
+	  data.lits.clear();
+	  break;
+	}
         const Lit l = mkLit(v,p==1);
 	if( config.fm_debug_out > 1 ) cerr << "c consider literal " << l << " with " << data.list(l).size() << " clauses" << endl;
         data.lits.clear(); data.ma.nextStep(); // prepare set!
 	data.lits.push_back(l); data.ma.setCurrentStep( toInt(l) ); // add current literal!
+	
 	for( int i = 0 ; i < data.list(l).size(); ++ i ) { // collect all literals that occur with l in a ternary clause!
 	  const Clause& c = ca[data.list(l)[i]];
+	  searchSteps++;
 	  if( c.can_be_deleted() || c.size() != 3 ) {
 	    if( c.can_be_deleted() ) {data.list(l)[ i ] = data.list(l)[ data.list(l).size() -1 ]; data.list(l).pop_back(); --i; } // remove can-be-deleted clause!
 	    continue; // look for ternary clauses only!
 	  }
 	  if( c[0] != l ) continue; // consider only clauses, where l is the smallest literal?! (all other AMT's would have been found before!)
-	  for( int j = 1; j < 3; ++ j ) if( c[j] != l && ! data.ma.isCurrentStep( toInt(c[j] ) ) ) { data.lits.push_back(c[j]); data.ma.setCurrentStep(toInt(c[j])); }
+	  for( int j = 1; j < 3; ++ j ) {
+	    searchSteps++;
+	    if( c[j] != l && ! data.ma.isCurrentStep( toInt(c[j] ) ) ) { 
+	      data.lits.push_back(c[j]); data.ma.setCurrentStep(toInt(c[j]));
+	    }
+	  }
 	}
 	sort(data.lits); // sort lits in list!
 	assert( data.lits[0] == l && "current literal has to be the smallest literal!" );
@@ -216,6 +250,7 @@ bool FourierMotzkin::process()
 	  for( int j = i+1 ; j < data.lits.size(); ++ j ) {
 	    const Lit l1 = data.lits[j];
 	    for( int k = j+1 ; k < data.lits.size(); ++ k ) { 
+	      searchSteps++;
 	      const Lit l2 = data.lits[k];
 	      if( config.fm_debug_out > 2 ) cerr << "c check triple " << l0 << " - " << l1 << " - " << l2 << endl;
 	      int m = 0;
@@ -831,13 +866,14 @@ void FourierMotzkin::deduceALOfromAmoAloMatrix(vector< FourierMotzkin::CardC >& 
     const CardC& A = cards[i]; 	// cardinality constraints are sorted
     if( !cards[i].amo() ) continue;	// not an AMO, test next AMO, use only AMOs with size > 2 (heuristic!)
     const Lit a = cards[i].ll[0];	// since sorted, the first literal in ll is the smallest literal
-   
+    searchSteps ++;
     if( config.fm_debug_out > 2 ) cerr << "c work on AMO " << A.ll << endl;
    
     const int listAsize = data.list( a ).size();
     for( int j = 0 ; j < listAsize; ++ j ) // for B in ALO_l
     {
       const Clause& B = ca[ data.list(a)[j] ];
+      searchSteps ++;
       if( B.size() > A.ll.size() ) continue; // |B| <= |A| !
 
       if( config.fm_debug_out > 2 ) cerr << "c test with clause  " << B << endl;
@@ -854,6 +890,7 @@ void FourierMotzkin::deduceALOfromAmoAloMatrix(vector< FourierMotzkin::CardC >& 
 	const Lit kLit = A.ll[k];
 	bool foundAlo = true;
 	for( int m = 0 ; m < data.list( kLit ).size(); ++ m ) {
+	  searchSteps ++;
 	  const Clause& ALOk = ca[ data.list( kLit )[m] ];
 	  if( ALOk.size() != B.size() ) continue;
 	  bool hitAlready = false;
@@ -868,6 +905,7 @@ void FourierMotzkin::deduceALOfromAmoAloMatrix(vector< FourierMotzkin::CardC >& 
 	}
       }
       if( config.fm_debug_out > 2 ) cerr << "c collected " << data.clss.size() << " ALOs" << endl;
+      if( searchSteps > config.opt_fmSearchLimit ) break;
       if( data.clss.size() < A.ll.size() ) continue;
       
       // check whether sufficiently many AMOs are present (size of AMO might be larger than required!)
@@ -877,6 +915,7 @@ void FourierMotzkin::deduceALOfromAmoAloMatrix(vector< FourierMotzkin::CardC >& 
       for( int k = 0 ; k < B.size(); ++ k ) {
 	const Lit bLit = B[k];
 	for( int m = 0; m < leftHands[ toInt( bLit )] .size(); ++ m ) {
+	  searchSteps ++;
 	  const CardC& C = cards[ leftHands[ toInt( bLit )][m] ];
 	  if( !C.amo() ) continue; // not this card!
 	  if( C.ll.size() != A.ll.size() ) continue; // not a good size!
@@ -894,6 +933,7 @@ void FourierMotzkin::deduceALOfromAmoAloMatrix(vector< FourierMotzkin::CardC >& 
       }
       if( config.fm_debug_out > 2 ) cerr << "c collected " << amoCands.size() << " AMOs" << endl;
       if( nextB || amoCands.size() != B.size() ) continue; // has to find enough AMOs
+      if( searchSteps > config.opt_fmSearchLimit ) break;
       
       // have the two sets for AMOs and ALOs to try to construct the matrix!
       data.ma.nextStep();
@@ -903,6 +943,7 @@ void FourierMotzkin::deduceALOfromAmoAloMatrix(vector< FourierMotzkin::CardC >& 
 	if( config.fm_debug_out > 2 ) cerr << "c hit check with clause " << C << endl;
 	amoCandsLocal =  amoCands; // add all these literals to the vector
 	for( int m = 0 ; m < C.size(); ++ m ) {
+	  searchSteps ++;
 	  const Lit mLit = C[m];
 	  if( data.ma.isCurrentStep( toInt(mLit) ) ) { 
 	    if( config.fm_debug_out > 2 ) cerr << "c found lit that was hit already: " << mLit << endl;
@@ -954,9 +995,9 @@ void FourierMotzkin::deduceALOfromAmoAloMatrix(vector< FourierMotzkin::CardC >& 
   }
 }
 
-
 void FourierMotzkin::findTwoProduct(vector< FourierMotzkin::CardC >& cards, BIG& big, vector< std::vector< int > >& leftHands)
 {
+  if( config.opt_fmSearchLimit <= searchSteps ) return; // if limit is reached, invalidate current AMO candidate
   MethodTimer mt( &twoPrTime );
   if( config.fm_debug_out > 0 ) cerr << "c run find two product" << endl;
   MarkArray newAmoLits;
@@ -964,6 +1005,9 @@ void FourierMotzkin::findTwoProduct(vector< FourierMotzkin::CardC >& cards, BIG&
   
   for( int i = 0 ; i < cards.size(); ++ i ) 
   {
+    if( config.opt_fmSearchLimit <= searchSteps ) { // if limit is reached, invalidate current AMO candidate
+      break;
+    }
     CardC& A = cards[i]; 	// cardinality constraints are sorted
     if( !cards[i].amo() || cards[i].invalid() ) continue;	// not an AMO, test next AMO, use only AMOs with size > 2 (heuristic!)
     const Lit a = cards[i].ll[0];	// since sorted, the first literal in ll is the smallest literal
@@ -973,12 +1017,15 @@ void FourierMotzkin::findTwoProduct(vector< FourierMotzkin::CardC >& cards, BIG&
     Lit* aList = big.getArray( ~a);
     if( big.getSize( ~a) == 0 ) continue; // not this AMO, because the smallest literal does not imply other literals
     Lit l = ~ aList[0];
-    for( int j = 1 ; j < big.getSize( ~a); ++ j ) // get the smallest literal, but negated!
+    for( int j = 1 ; j < big.getSize( ~a); ++ j ){ // get the smallest literal, but negated!
       if( ~aList[j] < l ) l = ~aList[j];
+      searchSteps++;
+    }
       
     if( config.fm_debug_out > 2 ) cerr << "c min lit = " << l << " that implies " << big.getSize(l) << endl;
     for( int j = 0 ; j < big.getSize( l ); ++ j ) // for b in BIG(l), b!=a
     {
+      if( config.opt_fmSearchLimit <= searchSteps ) break; // if limit is reached, invalidate current AMO candidate
       const Lit b = big.getArray(l)[j];	// literal hit by the literal l.
       if( b == a ) continue;
       if( config.fm_debug_out > 2 ) cerr << "c current implied: " << b << endl;
@@ -989,6 +1036,7 @@ void FourierMotzkin::findTwoProduct(vector< FourierMotzkin::CardC >& cards, BIG&
 	  if( config.fm_debug_out > 3 ) cerr << "c reject AMO " << cards[ leftHands[ toInt(b) ][k] ].ll << " because of position " << endl;
 	  continue;		// A != B, and check each pair only once!
 	}
+	searchSteps++;
 	CardC& B = cards[ leftHands[ toInt(b) ][k] ];		// turn index into CardC
 	if( ! B.amo() ) continue; // work only on pairs of amo!
 	// if( b != B.ll[0] ) continue; // use this AMO B only, if b is its smallest literal (avoid duplicates)
@@ -998,8 +1046,9 @@ void FourierMotzkin::findTwoProduct(vector< FourierMotzkin::CardC >& cards, BIG&
 	if( config.fm_debug_out > 3 ) cerr << "c check AMOs " << cards[i].ll << " and " << B.ll << endl;
 	for( int m = 0 ; m < B.ll.size(); ++m ) // for literal k in B
 	{
+	  if( config.opt_fmSearchLimit <= searchSteps ) { data.lits.clear(); break; } // reached limit?
 	  const Lit bLit = B.ll[m]; // each literal in B should imply a set of literals, where each of these literals hits a different lit in A
-
+	  searchSteps++;
 	  if( config.fm_debug_out > 3 ) cerr << "c current lit in B: " << bLit << endl;
 	  
 	  data.ma.nextStep();	// prepare for count different hits
@@ -1008,12 +1057,14 @@ void FourierMotzkin::findTwoProduct(vector< FourierMotzkin::CardC >& cards, BIG&
 	  
 	  for( int n = 0 ; n < big.getSize( ~bLit ); ++ n ) // check whether this literal implies a set of literal, which hit all different literals from A
 	  {
+	    searchSteps++;
 	    const Lit hitLit = ~ big.getArray( ~bLit )[n];
 	    if( newAmoLits.isCurrentStep( toInt(hitLit) ) ) continue; // do not collect such a literal twice!
 	    
 	    if( config.fm_debug_out > 3 ) cerr << "c test hitLit " << hitLit << " which implies " << big.getSize( hitLit ) << " lits"  << endl;
 
 	    for( int o = 0 ; o < big.getSize( hitLit ); ++o ) { // check whether this literal hits a literal from A
+	      searchSteps++;
 	      const Lit targetLit = big.getArray( hitLit )[o];
 	      if( data.ma.isCurrentStep( toInt( targetLit ) ) ) {
 		if( config.fm_debug_out > 3 ) cerr << "c target lit " << targetLit << endl;
@@ -1031,6 +1082,7 @@ void FourierMotzkin::findTwoProduct(vector< FourierMotzkin::CardC >& cards, BIG&
 	// add the global set of lits as new AMO
 	if( data.lits.size() > 0 ) { // if there is a global AMO
 	  sort( data.lits );
+	  searchSteps+= data.lits.size(); // approximate sorting
 	  // TODO check for complementary literals! or being unit
 	  if( !amoExistsAlready(data.lits, leftHands, cards ) ) {
 	    if( config.fm_debug_out > 0 ) cerr << "c found new AMO " << data.lits << endl;
@@ -1065,7 +1117,7 @@ bool FourierMotzkin::amoExistsAlready(const vector< Lit >& lits, vector< std::ve
   for( int i = 0 ; i < leftHands[ toInt(min) ].size(); ++ i ) {
     const CardC& ref = cards[ leftHands[ toInt(min) ] [i] ];
     if( !ref.amo() ) continue; // look only for amos
-    
+    steps ++;
     int j = 0, k = 0; // loop over both amos!
     const vector<Lit>& rl = ref.ll;
     while( j < lits.size() && k < rl.size() )
@@ -1224,6 +1276,7 @@ void FourierMotzkin::printStatistics(ostream& stream)
   << propUnits << " propUnits, " 
   << usedClauses << " cls, " 
   << steps << " steps, " 
+  << searchSteps << " searchSteps, "
   << addDuplicates << " addDups, " 
   << endl
   << "c [STAT] FM(2) "

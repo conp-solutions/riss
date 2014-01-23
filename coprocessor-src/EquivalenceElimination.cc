@@ -123,7 +123,7 @@ void EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
 	  if( config.ee_debug_out > 2 ) cerr << "state of formula is UNSAT!" << endl;
       }
       
-      if( config.opt_ee_level > 1 ) {
+      if( config.opt_ee_level > 2 ) {
 	moreEquivalences = moreEquivalences || findGateEquivalences( data, gates );
 	if( moreEquivalences )
 	  if( config.ee_debug_out > 2 ) cerr << "c found new equivalences with the gate method!" << endl;

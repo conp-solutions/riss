@@ -23,7 +23,7 @@ class FourierMotzkin : public Technique  {
   Propagation& propagation;
   
   double processTime,amoTime,amtTime,fmTime,twoPrTime,deduceAloTime;
-  int steps;
+  int64_t steps, searchSteps;
   int fmLimit;
   int foundAmos,foundAmts,newAmos,newAlos,newAlks;
   int sameUnits,deducedUnits,propUnits;

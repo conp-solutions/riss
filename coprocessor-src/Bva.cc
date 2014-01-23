@@ -716,7 +716,7 @@ bool BoundedVariableAddition::xorBVAhalf()
 	  doesMatch = true;	  
 	  for( int r = 0 ; r < d.size(); ++ r ) {
 	    const Lit dl = d[r];
-	    if( var(dl) == var(l1) || var(dl) == var(right) ) continue;
+	    if( var(dl) == var(l1) || dl == ~right ) continue;
 	    if( ! data.ma.isCurrentStep  ( toInt(dl) ) ) { doesMatch = false; break; }
 	  }
 	  
@@ -927,7 +927,9 @@ bool BoundedVariableAddition::xorBVAfull()
 	  doesMatch = true;	  
 	  for( int r = 0 ; r < d.size(); ++ r ) {
 	    const Lit dl = d[r];
-	    if( var(dl) == var(l1) || var(dl) == var(right) ) continue;
+	    if( var(dl) == var(l1) || dl == ~right ) { // polarity is important here!
+	      continue;
+	    }
 	    if( ! data.ma.isCurrentStep  ( toInt(dl) ) ) { doesMatch = false; break; }
 	  }
 	  
@@ -991,7 +993,7 @@ bool BoundedVariableAddition::xorBVAfull()
 	  doesMatch = true;	  
 	  for( int r = 0 ; r < d.size(); ++ r ) {
 	    const Lit dl = d[r];
-	    if( var(dl) == var(l1) || var(dl) == var(nRight) ) continue;
+	    if( var(dl) == var(l1) || dl == nRight ) continue;
 	    if( ! data.ma.isCurrentStep  ( toInt(dl) ) ) { doesMatch = false; break; }
 	  }
 	  
@@ -1063,7 +1065,9 @@ bool BoundedVariableAddition::xorBVAfull()
 	    if( config.opt_bvaAnalysisDebug > 1) {
 	      for( int k = maxI; k < maxJ; ++ k ) cerr << "c p " << k - maxI << " : " << ca[ xorPairs[k].c1 ] << " and " << ca[ xorPairs[k].c2 ] << endl;
 	    }
-	    cerr << "c found XOR matching with " << nCount[ toInt(~l2)] << " pairs for (" << nxorPairs[nmaxI].l1 << " -- " << nxorPairs[nmaxI].l2 << ")" << endl;
+	    cerr << "c found XOR matching with " << nCount[ toInt(~l2)] << " pairs for ";
+	    if( nxorPairs.size() > 0 ) cerr << "(" << nxorPairs[nmaxI].l1 << " -- " << nxorPairs[nmaxI].l2 << ")";
+	    cerr << endl;
 	    if( config.opt_bvaAnalysisDebug > 1) {
 	      for( int k = maxI; k < maxJ; ++ k ) cerr << "c p " << k - maxI << " : " << ca[ nxorPairs[k].c1 ] << " and " << ca[ nxorPairs[k].c2 ] << endl;
 	    }
@@ -1073,6 +1077,7 @@ bool BoundedVariableAddition::xorBVAfull()
 	  if( config.opt_bvaAnalysisDebug ) cerr << "c introduce new variable " << newX + 1 << endl;
 	  
 	  didSomething = true;
+	  if( config.opt_bvaAnalysisDebug ) cerr << "positive occurrences ... " << endl;
 	  for( int k = maxI; k < maxJ; ++ k ) {
 	    ca[ xorPairs[k].c2 ].set_delete(true); // all second clauses will be deleted, all first clauses will be rewritten
 	    if( config.opt_bvaAnalysisDebug ) cerr  << "c XOR-BVA deleted " << ca[xorPairs[k].c2] << endl;
@@ -1095,6 +1100,7 @@ bool BoundedVariableAddition::xorBVAfull()
 	    data.list(mkLit(newX,false)).push_back( xorPairs[k].c1 );
 	  }
 	  
+	  if( config.opt_bvaAnalysisDebug ) cerr << "negative occurrences ... " << endl;
 	  for( int k = nmaxI; k < nmaxJ; ++ k ) {
 	    ca[ nxorPairs[k].c2 ].set_delete(true); // all second clauses will be deleted, all first clauses will be rewritten
 	    if( config.opt_bvaAnalysisDebug ) cerr  << "c XOR-BVA deleted " << ca[nxorPairs[k].c2] << endl;

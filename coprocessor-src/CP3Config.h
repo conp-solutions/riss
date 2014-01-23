@@ -360,13 +360,16 @@ BoolOption circ_Implied;
 //
 // Fourier Motzkin
 //
-IntOption  opt_fmLimit    ;
+Int64Option opt_fmLimit    ;
+Int64Option opt_fmSearchLimit    ;
+IntOption  opt_fmMaxAMO   ;
 IntOption  opt_fmGrow     ;
 IntOption  opt_fmGrowT    ;
 BoolOption opt_atMostTwo  ;
 BoolOption opt_findUnit   ;
 BoolOption opt_merge      ;
-BoolOption opt_duplicates ;
+BoolOption opt_fm_avoid_duplicates ;
+BoolOption opt_fm_multiVarAMO ;
 BoolOption opt_cutOff     ;
 IntOption opt_newAmo      ;
 BoolOption opt_keepAllNew ;
