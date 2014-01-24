@@ -106,7 +106,7 @@ bool BoundedVariableAddition::andBVA() {
 	  
 	  if( config.bva_debug > 1 ) cerr << "c next major loop iteration with heapSize " << bvaHeap.size() << endl;
 	  
-	  if( config.bva_debug > 2 )
+	  if( config.bva_debug > 3 )
 	    if( checkLists("check data structure integrity") )
 	      assert( false && "there cannot be duplicate clause entries in clause lists!" );
 	  
@@ -840,7 +840,7 @@ bool BoundedVariableAddition::xorBVAhalf()
       if( !bvaHeap.inHeap( toInt(right)) ) bvaHeap.insert( toInt(right) );
     }
     
-    if(config.opt_bvaAnalysisDebug && checkLists("XOR: check data structure integrity") ){
+    if(config.opt_bvaAnalysisDebug > 3 && checkLists("XOR: check data structure integrity") ){
       assert( false && "integrity of data structures has to be ensured" ); 
     }
     
@@ -878,7 +878,7 @@ bool BoundedVariableAddition::xorBVAfull()
   vector<xorHalfPair> xorPairs;		// positive occurrences
   vector<xorHalfPair> nxorPairs;	// negative occurrences
   
-  vector<int> nCount; // hit count per positive literal
+  vector<int> posLitCount; // hit count per positive literal
   
   bool didSomething = false;
   
@@ -894,12 +894,14 @@ bool BoundedVariableAddition::xorBVAfull()
     if( data.value( right ) != l_Undef ) continue;
     // TODO: how to do symmetry breaking; avoid redundant work?
 
-    nCount.assign(data.nVars() * 2, 0 ); // reset literal counts!
+    posLitCount.assign(data.nVars() * 2, 0 ); // reset literal counts!
 
+    xorPairs.clear();
+    // cerr << "c collect for pos. lit " << right << endl;
     if( config.opt_bvaAnalysisDebug > 2 ) cerr << "c analysis on " << right << endl;
     for( uint32_t j = 0 ; j < data.list( right ).size() && !data.isInterupted() && (data.unlimited() || bvaXLimit > xorMatchChecks); ++j ) { // iterate over all candidates for C
-      const Clause & c = ca[ data.list(right)[j] ] ;
-      if( c.can_be_deleted() || c.size() < smallestSize ) continue;
+      const Clause & c = ca[ data.list(right)[j] ] ;	// clause C that contains the variable right
+      if( c.can_be_deleted() || c.size() < smallestSize || c.learnt() ) continue;
     
       if( config.opt_bvaAnalysisDebug  > 3 ) cerr << "c work on clause " << c << endl;
       data.ma.nextStep();
@@ -910,7 +912,7 @@ bool BoundedVariableAddition::xorBVAfull()
       
       Lit min = lit_Undef;
       for( int k = 0 ; k < c.size(); ++ k ) {
-	const Lit l1 = c[k];
+	const Lit l1 = c[k];	// clause contains also literal l1, l1 > right
 	if( toInt(l1) <= toInt(right) ) continue; // only bigger literals!
 	data.ma.reset( toInt(l1) );
 
@@ -920,14 +922,14 @@ bool BoundedVariableAddition::xorBVAfull()
 	  if( data.list( ~l1 )[m] == data.list(right)[j] ) continue; // C != D
 	  if( data.list(right)[j] > data.list( ~l1 )[m] ) continue; // find each case only once!
 
-	  const Clause & d = ca[ data.list( ~l1 )[m] ] ;
+	  const Clause & d = ca[ data.list( ~l1 )[m] ] ;  // each clause D, with -l1 \in D
 	  xorMatchChecks ++;
-	  if( d.can_be_deleted() || d.size() != c.size() ) continue; // |D| == |C|
+	  if( d.can_be_deleted() || d.size() != c.size() || d.learnt() ) continue; // |D| == |C|
 
 	  doesMatch = true;	  
 	  for( int r = 0 ; r < d.size(); ++ r ) {
 	    const Lit dl = d[r];
-	    if( var(dl) == var(l1) || dl == ~right ) { // polarity is important here!
+	    if( var(dl) == var(l1) || dl == ~right ) { // polarity is important here! check whether ~right is also in D!
 	      continue;
 	    }
 	    if( ! data.ma.isCurrentStep  ( toInt(dl) ) ) { doesMatch = false; break; }
@@ -963,9 +965,11 @@ bool BoundedVariableAddition::xorBVAfull()
     }
     
     const Lit nRight = ~right;
+    nxorPairs.clear();
+    // cerr << "c collect for neg. lit " << nRight << endl;
     for( uint32_t j = 0 ; j < data.list( nRight ).size() && !data.isInterupted() && (data.unlimited() || bvaXLimit > xorMatchChecks); ++j ) { // iterate over all candidates for C
-      const Clause & c = ca[ data.list(nRight)[j] ] ;
-      if( c.can_be_deleted() || c.size() < smallestSize ) continue;
+      const Clause & c = ca[ data.list(nRight)[j] ] ; // clause with ~right \in clause
+      if( c.can_be_deleted() || c.size() < smallestSize || c.learnt() ) continue;
     
       if( config.opt_bvaAnalysisDebug  > 3 ) cerr << "c work on clause " << c << endl;
       data.ma.nextStep();
@@ -988,18 +992,18 @@ bool BoundedVariableAddition::xorBVAfull()
 
 	  const Clause & d = ca[ data.list( ~l1 )[m] ] ;
 	  xorMatchChecks ++;
-	  if( d.can_be_deleted() || d.size() != c.size() ) continue; // |D| == |C|
+	  if( d.can_be_deleted() || d.size() != c.size() || d.learnt() ) continue; // |D| == |C|
 
 	  doesMatch = true;	  
 	  for( int r = 0 ; r < d.size(); ++ r ) {
 	    const Lit dl = d[r];
-	    if( var(dl) == var(l1) || dl == nRight ) continue;
+	    if( var(dl) == var(l1) || dl == ~nRight ) continue; // has to be complement of nRight!
 	    if( ! data.ma.isCurrentStep  ( toInt(dl) ) ) { doesMatch = false; break; }
 	  }
 	  
 	  if( !doesMatch ) continue; // check next candidate for D!
 	  if( config.opt_bvaAnalysisDebug > 3 ) cerr << "c data.ma with clause " << d << endl;
-	  // cerr << "c match for (" << nRight << "," << l1 << ") -- (" << ~nRight << "," << ~l1 << "): " << c << " and " << d << endl;
+	  if( config.opt_bvaAnalysisDebug > 2) cerr << "c match for (" << nRight << "," << l1 << ") -- (" << ~nRight << "," << ~l1 << "): " << c << " and " << d << endl;
 	  nxorPairs.push_back( xorHalfPair(nRight,l1, data.list(nRight)[j], data.list( ~l1 )[m]) );
 	  break; // do not try to find more clauses that match C!
 	}
@@ -1011,15 +1015,20 @@ bool BoundedVariableAddition::xorBVAfull()
     }
     // evaluate matches here!
     // sort based on second literal -- TODO: use improved sort!
-    for( int i = 0 ; i < nxorPairs.size(); ++ i ) {
-      for( int j = i+1; j < nxorPairs.size(); ++ j ) {
-	if ( toInt(nxorPairs[i].l2) > toInt(nxorPairs[j].l2) ) {
-	  const xorHalfPair tmp =  nxorPairs[i];
-	  nxorPairs[i] = nxorPairs[j];
-	  nxorPairs[j] = tmp;
+    if( nxorPairs.size() > 20 ) 
+      mergesort( &(nxorPairs[0]), nxorPairs.size());
+    else {
+      for( int i = 0 ; i < nxorPairs.size(); ++ i ) {
+	for( int j = i+1; j < nxorPairs.size(); ++ j ) {
+	  if ( toInt(nxorPairs[i].l2) > toInt(nxorPairs[j].l2) ) {
+	    const xorHalfPair tmp =  nxorPairs[i];
+	    nxorPairs[i] = nxorPairs[j];
+	    nxorPairs[j] = tmp;
+	  }
 	}
       }
     }
+
     
     // generate negative counts!
     // positive: check whether one literal matches multiple clauses; get counters per literal l2!
@@ -1028,10 +1037,12 @@ bool BoundedVariableAddition::xorBVAfull()
       int j = i;
       while ( j < nxorPairs.size() && toInt(nxorPairs[i].l2) == toInt(nxorPairs[j].l2) ) ++j ;
       assert(j>=i);
-      nCount[ toInt(nxorPairs[i].l2) ] += (j-i); // store the value!
+      posLitCount[ toInt(nxorPairs[i].l2) ] += (j-i); // store the value!
       nmaxR = nmaxR > (j-i) ? nmaxR : j-i;
       i = j - 1; // jump to next matching
-    }
+     }
+      
+    if( config.opt_bvaAnalysisDebug > 1) cerr << "c found nagetaive: " << nmaxR << " for " << right << endl;
     
     // check whether one literal matches multiple clauses for positive
     int maxR = 0; int maxI = 0; int maxJ = 0;
@@ -1040,7 +1051,7 @@ bool BoundedVariableAddition::xorBVAfull()
       int j = i;
       while ( j < xorPairs.size() && toInt(xorPairs[i].l2) == toInt(xorPairs[j].l2) ) ++j ;
       assert(j>=i);
-      int thisR = j-i + nCount[ toInt(~xorPairs[i].l2) ]; // this matching plus the clauses of the opposite polarity!
+      int thisR = j-i + posLitCount[ toInt(~xorPairs[i].l2) ]; // this matching plus the clauses of the opposite polarity!
       if( j - i >= replacePairs ) {
 	multipleMatches = maxR > 0; // set to true, if multiple matchings could be found
 	if( thisR > maxR ) {
@@ -1050,26 +1061,32 @@ bool BoundedVariableAddition::xorBVAfull()
       i = j - 1; // jump to next matching
     }
 
+    if( config.opt_bvaAnalysisDebug > 1) cerr << "c found positive: " << maxR << " /" << replacePairs << " for " << right << endl;
+    
     if( maxR >= replacePairs ) {
+      
+
       
       // find bounds in negative list!
       int nmaxI = 0;
       const Lit l2 = xorPairs[maxI].l2;
-      for( ; nmaxI < nxorPairs.size(); ++ nmaxI ) if( nxorPairs[nmaxI].l2 == ~l2 ) break;
-      int nmaxJ = nmaxI + nCount[ toInt(~l2) ];
+      for( ; nmaxI < nxorPairs.size(); ++ nmaxI ) if( nxorPairs[nmaxI].l2 == l2 ) break; // first literal has different polarity, hence, second needs same polarity!
+      int nmaxJ = nmaxI > nxorPairs.size() ? nxorPairs.size() : nmaxI ; // to find "upper bound"
+      for( ; nmaxJ < nxorPairs.size(); ++ nmaxJ ) if( nxorPairs[nmaxJ].l2 != l2 ) break; // upper bound
+      assert( nmaxJ - nmaxI == posLitCount[ toInt( l2 ) ] && "has to have the same number ... " );
       
     // apply rewriting for the biggest matching!
-	  xorMaxPairs = xorMaxPairs > maxJ-maxI + nCount[ toInt(~l2)] ? xorMaxPairs : maxJ - maxI  + nCount[ toInt(~l2) ];
+	  xorMaxPairs = xorMaxPairs > maxJ-maxI + posLitCount[ toInt(~l2)] ? xorMaxPairs : maxJ - maxI  + posLitCount[ toInt(~l2) ];
 	  if( config.opt_bvaAnalysisDebug > 0) {
-	    cerr << "c found XOR matching with " << maxJ-maxI  << " pairs for (" << xorPairs[maxI].l1 << " -- " << xorPairs[maxI].l2 << ")" << endl;
+	    cerr << "c found pos XOR matching with " << maxJ-maxI  << " pairs for (" << xorPairs[maxI].l1 << " -- " << xorPairs[maxI].l2 << ")" << endl;
 	    if( config.opt_bvaAnalysisDebug > 1) {
-	      for( int k = maxI; k < maxJ; ++ k ) cerr << "c p " << k - maxI << " : " << ca[ xorPairs[k].c1 ] << " and " << ca[ xorPairs[k].c2 ] << endl;
+	      for( int k = maxI; k < maxJ; ++ k ) cerr << "c p " << k - maxI << " : [" << xorPairs[k].c1 << "]" << ca[ xorPairs[k].c1 ] << " and [" << xorPairs[k].c2 << "] " << ca[ xorPairs[k].c2 ] << endl;
 	    }
-	    cerr << "c found XOR matching with " << nCount[ toInt(~l2)] << " pairs for ";
+	    cerr << "c found neg XOR matching with " << nmaxJ - nmaxI << "(vs. " << nxorPairs.size() << ") pairs for ";
 	    if( nxorPairs.size() > 0 ) cerr << "(" << nxorPairs[nmaxI].l1 << " -- " << nxorPairs[nmaxI].l2 << ")";
 	    cerr << endl;
 	    if( config.opt_bvaAnalysisDebug > 1) {
-	      for( int k = maxI; k < maxJ; ++ k ) cerr << "c p " << k - maxI << " : " << ca[ nxorPairs[k].c1 ] << " and " << ca[ nxorPairs[k].c2 ] << endl;
+	      for( int k = nmaxI; k < nmaxJ; ++ k ) cerr << "c p " << k - maxI << " : ["<< nxorPairs[k].c1 <<"]" << ca[ nxorPairs[k].c1 ] << " and ["<< nxorPairs[k].c2 <<"]" << ca[ nxorPairs[k].c2 ] << endl;
 	    }
 	  }
 	  // apply replacing/rewriting here (right,l1) -> (x); add clauses (-x,right,l1),(-x,-right,-l1)
@@ -1080,11 +1097,11 @@ bool BoundedVariableAddition::xorBVAfull()
 	  if( config.opt_bvaAnalysisDebug ) cerr << "positive occurrences ... " << endl;
 	  for( int k = maxI; k < maxJ; ++ k ) {
 	    ca[ xorPairs[k].c2 ].set_delete(true); // all second clauses will be deleted, all first clauses will be rewritten
-	    if( config.opt_bvaAnalysisDebug ) cerr  << "c XOR-BVA deleted " << ca[xorPairs[k].c2] << endl;
+	    if( config.opt_bvaAnalysisDebug ) cerr  << "c XOR-BVA deleted [" << xorPairs[k].c2 << "] " << ca[xorPairs[k].c2] << endl;
 	    data.removedClause( xorPairs[k].c2 );
 	    Clause& c = ca[ xorPairs[k].c1 ];
 	    if( !ca[ xorPairs[k].c2 ].learnt() && c.learnt() ) c.set_learnt(false); // during inprocessing, do not remove other important clauses!
-	    if( config.opt_bvaAnalysisDebug ) cerr << "c XOR-BVA rewrite " << c << endl;
+	    if( config.opt_bvaAnalysisDebug ) cerr << "c XOR-BVA rewrite [" << xorPairs[k].c1 << "] " << c << endl;
 	    for( int ci = 0 ; ci < c.size(); ++ ci ) { // rewrite clause
 	      if( c[ci] == xorPairs[k].l1 ) c[ci] = mkLit(newX,false);
 	      else if (c[ci] == xorPairs[k].l2) {
@@ -1103,11 +1120,11 @@ bool BoundedVariableAddition::xorBVAfull()
 	  if( config.opt_bvaAnalysisDebug ) cerr << "negative occurrences ... " << endl;
 	  for( int k = nmaxI; k < nmaxJ; ++ k ) {
 	    ca[ nxorPairs[k].c2 ].set_delete(true); // all second clauses will be deleted, all first clauses will be rewritten
-	    if( config.opt_bvaAnalysisDebug ) cerr  << "c XOR-BVA deleted " << ca[nxorPairs[k].c2] << endl;
+	    if( config.opt_bvaAnalysisDebug ) cerr  << "c XOR-BVA deleted [" << nxorPairs[k].c2 << "] " << ca[nxorPairs[k].c2] << endl;
 	    data.removedClause( nxorPairs[k].c2 );
 	    Clause& c = ca[ nxorPairs[k].c1 ];
 	    if( !ca[ nxorPairs[k].c2 ].learnt() && c.learnt() ) c.set_learnt(false); // during inprocessing, do not remove other important clauses!
-	    if( config.opt_bvaAnalysisDebug ) cerr << "c XOR-BVA rewrite " << c << endl;
+	    if( config.opt_bvaAnalysisDebug ) cerr << "c XOR-BVA rewrite [" << nxorPairs[k].c1 << "]" << c << endl;
 	    for( int ci = 0 ; ci < c.size(); ++ ci ) { // rewrite clause
 	      if( c[ci] == nxorPairs[k].l1 ) c[ci] = mkLit(newX,true);
 	      else if (c[ci] == nxorPairs[k].l2) {
@@ -1116,7 +1133,7 @@ bool BoundedVariableAddition::xorBVAfull()
 	      }
 	    }
 	    c.sort();
-	    if( config.opt_bvaAnalysisDebug ) cerr << "c XOR-BVA into " << c << endl;
+	    if( config.opt_bvaAnalysisDebug ) cerr << "c XOR-BVA into [" << nxorPairs[k].c1 << "] " << c << endl;
 	    data.removeClauseFrom(nxorPairs[k].c1,nxorPairs[k].l1);
 	    data.removeClauseFrom(nxorPairs[k].c1,nxorPairs[k].l2);
 	    data.removedLiteral(nxorPairs[k].l1); data.removedLiteral(nxorPairs[k].l2); data.addedLiteral(mkLit(newX,true));
@@ -1141,11 +1158,11 @@ bool BoundedVariableAddition::xorBVAfull()
 	    data.getClauses().push( tmpRef );
 	    if( config.opt_bvaAnalysisDebug ) cerr << "c XOR-BVA added " << ca[tmpRef] << endl;
 	  }
-	  if( nCount[toInt(~l2)] > 0 ) { // there are clauses for the negative to be introduced
+	  if( nmaxI < nmaxJ  ) { // there are clauses for the negative to be introduced
 	    data.lits.clear();
 	    data.lits.push_back( mkLit(newX,false) );
 	    data.lits.push_back( nxorPairs[maxI].l1 );
-	    data.lits.push_back( nxorPairs[maxI].l2 );
+	    data.lits.push_back( ~nxorPairs[maxI].l2 );
 	    CRef tmpRef = ca.alloc(data.lits, false); // no learnt clause!
 	    ca[tmpRef].sort();
 	    data.addClause( tmpRef );
@@ -1160,7 +1177,7 @@ bool BoundedVariableAddition::xorBVAfull()
 	  }	  
 	  
 	  // depending on which clauses have been created
-	  xorTotalReduction += (maxR ) - (maxI < maxJ ? 2 : 0 ) - (nCount[toInt(~l2)] > 0 ? 2 : 0 );
+	  xorTotalReduction += (maxR ) - (maxI < maxJ ? 2 : 0 ) - (posLitCount[toInt(~l2)] > 0 ? 2 : 0 );
 	  
 	  // occurrences of l1 and l2 are only reduced; do not check!
 	  if( config.opt_bva_push > 1 && data[mkLit(newX,false)] > replacePairs ) {
@@ -1171,7 +1188,7 @@ bool BoundedVariableAddition::xorBVAfull()
 	  }
 	  // stats
 	  xorfoundMatchings ++;
-	  xorMatchSize += (maxJ-maxI) + nCount[ toInt(~l2)];
+	  xorMatchSize += (maxJ-maxI) + posLitCount[ toInt(~l2)];
     }
     
     if( multipleMatches ) xorMultiMatchings ++;
@@ -1181,7 +1198,7 @@ bool BoundedVariableAddition::xorBVAfull()
       if( !bvaHeap.inHeap( toInt(right)) ) bvaHeap.insert( toInt(right) );
     }
     
-    if(config.opt_bvaAnalysisDebug && checkLists("XOR: check data structure integrity") ){
+    if(config.opt_bvaAnalysisDebug > 3 && checkLists("XOR: check data structure integrity") ){
       assert( false && "integrity of data structures has to be ensured" ); 
     }
     
@@ -1405,7 +1422,7 @@ bool BoundedVariableAddition::iteBVAhalf()
       if( !bvaHeap.inHeap( toInt(right)) ) bvaHeap.insert( toInt(right) );
     }
     
-    if(config.opt_bvaAnalysisDebug && checkLists("ITE: check data structure integrity") ) {
+    if(config.opt_bvaAnalysisDebug > 3 && checkLists("ITE: check data structure integrity") ) {
       assert( false && "integrity of data structures has to be ensured" ); 
     }
     
@@ -1688,7 +1705,7 @@ bool BoundedVariableAddition::iteBVAfull()
       if( !bvaHeap.inHeap( toInt(right)) ) bvaHeap.insert( toInt(right) );
     }
     
-    if(config.opt_bvaAnalysisDebug && checkLists("ITE: check data structure integrity") ) {
+    if(config.opt_bvaAnalysisDebug > 3 && checkLists("ITE: check data structure integrity") ) {
       assert( false && "integrity of data structures has to be ensured" ); 
     }
     
