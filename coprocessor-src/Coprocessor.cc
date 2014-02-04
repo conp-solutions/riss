@@ -102,271 +102,278 @@ lbool Preprocessor::performSimplification()
   const bool printBVE = false, printBVA = false, printProbe = false, printUnhide = false, 
 	printCCE = false, printEE = false, printREW = false, printFM = false, printHTE = false, printSusi = false, printUP = false,
 	printTernResolve = false, printAddRedBin = false, printXOR = false, printENT=false, printBCE=false, printLA=false;  
-  
-  // do preprocessing
-  if( config.opt_up ) {
-    if( config.opt_verbose > 0 ) cerr << "c up ..." << endl;
-    if( config.opt_verbose > 4 ) cerr << "c coprocessor(" << data.ok() << ") propagate" << endl;
-    if( status == l_Undef ) status = propagation.process(data);
-    if( config.opt_verbose > 1 )  { printStatistics(cerr); propagation.printStatistics(cerr); }
-  }
-  
-  if( config.opt_twosat_init ) {
-    if( config.opt_verbose > 0 ) cerr << "c 2sat ..." << endl;
-    if( config.opt_verbose > 4 )cerr << "c coprocessor 2SAT" << endl;
-    if( status == l_Undef ) {
-      bool solvedBy2SAT = twoSAT.solve();  // cannot change status, can generate new unit clauses
-      if( solvedBy2SAT ) {
-	bool isNotSat = false;
-	for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
-	  const Clause& cl = ca[ data.getClauses()[i] ];
-	  int j = 0;
-	  for(  ; j < cl.size(); ++ j ) {
-	    if( twoSAT.isSat(cl[j]) ) break;
+
+  // begin clauses have to be sorted here!!
+  sortClauses();
+	
+  for( int ppIteration = 0; data.isInprocessing() ? 1 : ppIteration < config.opt_simplifyRounds ; ++ ppIteration )
+  {
+    double iterTime = cpuTime();
+    if( config.opt_verbose > 0 || config.opt_debug || true) cerr << "c pp iteration " << ppIteration << endl;
+    // do preprocessing
+    if( config.opt_up ) {
+      if( config.opt_verbose > 0 ) cerr << "c up ..." << endl;
+      if( config.opt_verbose > 4 ) cerr << "c coprocessor(" << data.ok() << ") propagate" << endl;
+      if( status == l_Undef ) status = propagation.process(data, true);
+      if( config.opt_verbose > 1 )  { printStatistics(cerr); propagation.printStatistics(cerr); }
+    }
+    
+    if( config.opt_twosat_init ) {
+      if( config.opt_verbose > 0 ) cerr << "c 2sat ..." << endl;
+      if( config.opt_verbose > 4 )cerr << "c coprocessor 2SAT" << endl;
+      if( status == l_Undef ) {
+	bool solvedBy2SAT = twoSAT.solve();  // cannot change status, can generate new unit clauses
+	if( solvedBy2SAT ) {
+	  bool isNotSat = false;
+	  for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
+	    const Clause& cl = ca[ data.getClauses()[i] ];
+	    int j = 0;
+	    for(  ; j < cl.size(); ++ j ) {
+	      if( twoSAT.isSat(cl[j]) ) break;
+	    }
+	    if( j == cl.size() ) { isNotSat = true; break; }
 	  }
-	  if( j == cl.size() ) { isNotSat = true; break; }
-	}
-	if( isNotSat ) {
-	  // only set the phase before search!
-	  if( config.opt_ts_phase && !data.isInprocessing()) {
+	  if( isNotSat ) {
+	    // only set the phase before search!
+	    if( config.opt_ts_phase && !data.isInprocessing()) {
+	      for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
+	    }
+	  } else {
+	    cerr // << endl 
+	    << "c =================================" << endl 
+	    << "c  use the result of 2SAT as model " << endl 
+	    << "c =================================" << endl;
+	    // initial twosat model should always be used as a model!
 	    for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
 	  }
 	} else {
-	  cerr // << endl 
-	  << "c =================================" << endl 
-	  << "c  use the result of 2SAT as model " << endl 
-	  << "c =================================" << endl;
-	  // initial twosat model should always be used as a model!
-	  for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
+	  data.setFailed();
 	}
-      } else {
-	data.setFailed();
       }
-    }
-    if (! solver->okay())
-        status = l_False;
-  }  
-  
-  // begin clauses have to be sorted here!!
-  sortClauses();
-  
-  if( printUP || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'u')  ) {
-   printFormula("after Sorting");
-  }
-  
-  if( config.opt_debug )  { scanCheck("after SORT"); }  
-  
-  if( config.opt_xor ) {
-    if( config.opt_verbose > 0 ) cerr << "c xor ..." << endl;
-    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") XOR" << endl;
-    if( status == l_Undef ) xorReasoning.process();  // cannot change status, can generate new unit clauses
-    if( config.opt_verbose > 1 )  { printStatistics(cerr); xorReasoning.printStatistics(cerr); }
-    if (! data.ok() )
-        status = l_False;
-  }
-  data.checkGarbage(); // perform garbage collection
-  
-  if( config.opt_debug ) { checkLists("after XOR"); scanCheck("after XOR"); }
-  if( printXOR || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'x')) {
-   printFormula("after XOR");
-  }
-  
-  if( config.opt_ent ) {
-    if( config.opt_verbose > 0 ) cerr << "c ent ..." << endl;
-    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") entailed redundancy" << endl;
-    if( status == l_Undef ) entailedRedundant.process();  // cannot change status, can generate new unit clauses
-    if( config.opt_verbose > 1 )  { printStatistics(cerr); entailedRedundant.printStatistics(cerr); }
-  }
-  data.checkGarbage(); // perform garbage collection
-  
-  if( config.opt_debug )  { scanCheck("after ENT"); }  
-  if( printENT || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 't') ) {
-   printFormula("after ENT");
-  }
-  
-  if( config.opt_ternResolve ) {
-    if( config.opt_verbose > 0 ) cerr << "c res3 ..." << endl;
-    res.process(false); 
-    if( config.opt_verbose > 1 )  { printStatistics(cerr); res.printStatistics(cerr); }
-    if( printTernResolve || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == '3') ) printFormula("after TernResolve");
-  }
-  
-  // clear subsimp stats
-  if ( true ) 
-      subsumption.resetStatistics();
-
-  if( config.opt_subsimp ) {
-    if( config.opt_verbose > 0 ) cerr << "c subsimp ..." << endl;
-    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") subsume/strengthen" << endl;
-    if( status == l_Undef ) subsumption.process();  // cannot change status, can generate new unit clauses
-    if( config.opt_verbose > 1 )  { printStatistics(cerr); subsumption.printStatistics(cerr); }
-    if (! solver->okay())
-        status = l_False;
-  }
-  data.checkGarbage(); // perform garbage collection
-  
-  if( printSusi || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 's')) {
-   printFormula("after Susi");
-  }
-  
-  if( config.opt_debug ) { checkLists("after SUSI"); scanCheck("after SUSI"); }
-  
-  if( config.opt_FM ) {
-    if( config.opt_verbose > 0 ) cerr << "c FM ..." << endl;
-    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") fourier motzkin" << endl;
-    if( status == l_Undef ) fourierMotzkin.process();  // cannot change status, can generate new unit clauses
-    if( config.opt_verbose > 1 )  { printStatistics(cerr); fourierMotzkin.printStatistics(cerr); }
-    if (! data.ok() )
-        status = l_False;
-  }
-  data.checkGarbage(); // perform garbage collection
-  
-  if( config.opt_debug ) { checkLists("after FM"); scanCheck("after FM"); }
-  if( printFM || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'f')) {
-   printFormula("after FM");
-  }
-  
-  if( config.opt_rew ) {
-    if( config.opt_verbose > 0 ) cerr << "c rew ..." << endl;
-    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") rewriting" << endl;
-    if( status == l_Undef ) rew.process();  // cannot change status, can generate new unit clauses
-    if( config.opt_verbose > 1 )  { printStatistics(cerr); rew.printStatistics(cerr); }
-    if (! data.ok() )
-        status = l_False;
-  }
-  data.checkGarbage(); // perform garbage collection
-  
-  if( config.opt_debug ) { checkLists("after REW"); scanCheck("after REW"); }
-  if( printREW || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'r')) {
-   printFormula("after REW");
-  }
-  
-  if( config.opt_ee ) { // before this technique nothing should be run that alters the structure of the formula (e.g. BVE;BVA)
-    if( config.opt_verbose > 0 ) cerr << "c ee ..." << endl;
-    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") equivalence elimination" << endl;
-    if( status == l_Undef ) ee.process(data);  // cannot change status, can generate new unit clauses
-    if( config.opt_verbose > 1 )  { printStatistics(cerr); ee.printStatistics(cerr); }
-    if (! data.ok() )
-        status = l_False;
-  }
-  data.checkGarbage(); // perform garbage collection
-  
-  if( config.opt_debug ) { checkLists("after EE"); scanCheck("after EE"); }
-
-  if( printEE || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'e') ) {
-   printFormula("after EE");
-  }
-  
-  if ( config.opt_unhide ) {
-    if( config.opt_verbose > 0 ) cerr << "c unhide ..." << endl;
-    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") unhiding" << endl;
-    if( status == l_Undef ) unhiding.process(); 
-    if( config.opt_verbose > 1 )  { printStatistics(cerr); unhiding.printStatistics(cerr); }
-    if( !data.ok() ) status = l_False;
-  }
-  data.checkGarbage(); // perform garbage collection
-  
-  if( printUnhide || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'g') ) {
-   printFormula("after Unhiding");
-  }
-  if( config.opt_debug ) {checkLists("after UNHIDING");  scanCheck("after UNHIDING"); }
-  
-  if( config.opt_hte ) {
-    if( config.opt_verbose > 0 ) cerr << "c hte ..." << endl;
-    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") hidden tautology elimination" << endl;
-    if( status == l_Undef ) hte.process(data);  // cannot change status, can generate new unit clauses
-    if( config.opt_verbose > 1 )  { printStatistics(cerr); hte.printStatistics(cerr); }
-  }
-  data.checkGarbage(); // perform garbage collection
-
-  if( config.opt_debug ) { checkLists("after HTE");  scanCheck("after HTE"); }
-  if( printHTE || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'h')) {
-   printFormula("after HTE");
-  }
-  
-  if ( config.opt_probe ) {
-    if( config.opt_verbose > 0 ) cerr << "c probe ..." << endl;
-    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") probing" << endl;
-    if( status == l_Undef ) probing.process(); 
-    if( !data.ok() ) status = l_False;
-    if( config.opt_verbose > 1 )  { printStatistics(cerr); probing.printStatistics(cerr); }
-  }
-
-  if( config.opt_debug ) { checkLists("after PROBE - before GC");  scanCheck("after PROBE - before GC"); }
-  if( printProbe || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'p') ) {
-   printFormula("after Probing");
-  }
-  
-  data.checkGarbage(); // perform garbage collection
-
-  
-  if ( config.opt_bve ) {
-    if( config.opt_verbose > 0 ) cerr << "c bve ..." << endl;
-    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") bounded variable elimination" << endl;
-    if( status == l_Undef ) status = bve.runBVE(data);  // can change status, can generate new unit clauses
-    if( config.opt_verbose > 1 )  { printStatistics(cerr); bve.printStatistics(cerr); }
-  }
-  data.checkGarbage(); // perform garbage collection
-  
-  if( config.opt_debug ) { checkLists("after BVE");  scanCheck("after BVE"); }
-  if( printBVE || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'v')) {
-   printFormula("after BVE");
-  }
-  
-  if ( config.opt_bva ) {
-    if( config.opt_verbose > 0 ) cerr << "c bva ..." << endl;
-    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") blocked variable addition" << endl;
-    if( status == l_Undef ) bva.process(); 
-    if( config.opt_verbose > 1 )  { printStatistics(cerr); bva.printStatistics(cerr); }
-    if( !data.ok() ) status = l_False;
-  }
-  data.checkGarbage(); // perform garbage collection
-  
-  if( config.opt_debug ) { checkLists("after BVA");  scanCheck("after BVA"); }
-  if( printBVA || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'w') ) {
-   printFormula("after BVA");
-  }
-
-  if( config.opt_bce ) {
-    if( config.opt_verbose > 0 ) cerr << "c bce ..." << endl;
-    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") blocked clause elimination" << endl;
-    if( status == l_Undef ) bce.process();  // cannot change status, can generate new unit clauses
-    if( config.opt_verbose > 1 )  { printStatistics(cerr); bce.printStatistics(cerr); }
-  }
-  data.checkGarbage(); // perform garbage collection
-  
-  if( config.opt_debug )  { scanCheck("after BCE"); }  
-  if( printBCE || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'b') ) {
-   printFormula("after BCE");
-  }
-  
-  if( config.opt_la ) {
-    if( config.opt_verbose > 0 ) cerr << "c la ..." << endl;
-    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") blocked clause elimination" << endl;
-    if( status == l_Undef ) la.process();  // cannot change status, can generate new unit clauses
-    if( config.opt_verbose > 1 )  { printStatistics(cerr); la.printStatistics(cerr); }
-  }
-  data.checkGarbage(); // perform garbage collection
-  
-  if( config.opt_debug )  { scanCheck("after BCE"); }  
-  if( printBCE || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'b') ) {
-   printFormula("after BCE");
-  }
-  
-  if( config.opt_cce ) {
-    if( config.opt_verbose > 0 ) cerr << "c cce ..." << endl;
-    if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") (covered) clause elimination" << endl;
-    if( status == l_Undef ) cce.process(data);  // cannot change status, can generate new unit clauses
-    if( config.opt_verbose > 1 )  { printStatistics(cerr); cce.printStatistics(cerr); }
-  }
-  data.checkGarbage(); // perform garbage collection
-  
-  if( config.opt_debug )  { scanCheck("after CCE"); }  
-  if( printCCE || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'c') ) {
-   printFormula("after CCE");
-  }
-  
+      if (! solver->okay())
+	  status = l_False;
+    }  
    
+    if( printUP || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'u')  ) {
+    printFormula("after Sorting");
+    }
+    
+    if( config.opt_debug )  { scanCheck("after SORT"); }  
+    
+    if( config.opt_xor ) {
+      if( config.opt_verbose > 0 ) cerr << "c xor ..." << endl;
+      if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") XOR" << endl;
+      if( status == l_Undef ) xorReasoning.process();  // cannot change status, can generate new unit clauses
+      if( config.opt_verbose > 1 )  { printStatistics(cerr); xorReasoning.printStatistics(cerr); }
+      if (! data.ok() )
+	  status = l_False;
+    }
+    data.checkGarbage(); // perform garbage collection
+    
+    if( config.opt_debug ) { checkLists("after XOR"); scanCheck("after XOR"); }
+    if( printXOR || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'x')) {
+    printFormula("after XOR");
+    }
+    
+    if( config.opt_ent ) {
+      if( config.opt_verbose > 0 ) cerr << "c ent ..." << endl;
+      if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") entailed redundancy" << endl;
+      if( status == l_Undef ) entailedRedundant.process();  // cannot change status, can generate new unit clauses
+      if( config.opt_verbose > 1 )  { printStatistics(cerr); entailedRedundant.printStatistics(cerr); }
+    }
+    data.checkGarbage(); // perform garbage collection
+    
+    if( config.opt_debug )  { scanCheck("after ENT"); }  
+    if( printENT || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 't') ) {
+    printFormula("after ENT");
+    }
+    
+    if( config.opt_ternResolve ) {
+      if( config.opt_verbose > 0 ) cerr << "c res3 ..." << endl;
+      res.process(false); 
+      if( config.opt_verbose > 1 )  { printStatistics(cerr); res.printStatistics(cerr); }
+      if( printTernResolve || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == '3') ) printFormula("after TernResolve");
+    }
+    
+    // clear subsimp stats
+    if ( true ) 
+	subsumption.resetStatistics();
+
+    if( config.opt_subsimp ) {
+      if( config.opt_verbose > 0 ) cerr << "c subsimp ..." << endl;
+      if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") subsume/strengthen" << endl;
+      if( status == l_Undef ) subsumption.process();  // cannot change status, can generate new unit clauses
+      if( config.opt_verbose > 1 )  { printStatistics(cerr); subsumption.printStatistics(cerr); }
+      if (! solver->okay())
+	  status = l_False;
+    }
+    data.checkGarbage(); // perform garbage collection
+    
+    if( printSusi || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 's')) {
+    printFormula("after Susi");
+    }
+    
+    if( config.opt_debug ) { checkLists("after SUSI"); scanCheck("after SUSI"); }
+    
+    if( config.opt_FM ) {
+      if( config.opt_verbose > 0 ) cerr << "c FM ..." << endl;
+      if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") fourier motzkin" << endl;
+      if( status == l_Undef ) fourierMotzkin.process();  // cannot change status, can generate new unit clauses
+      if( config.opt_verbose > 1 )  { printStatistics(cerr); fourierMotzkin.printStatistics(cerr); }
+      if (! data.ok() )
+	  status = l_False;
+    }
+    data.checkGarbage(); // perform garbage collection
+    
+    if( config.opt_debug ) { checkLists("after FM"); scanCheck("after FM"); }
+    if( printFM || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'f')) {
+    printFormula("after FM");
+    }
+    
+    if( config.opt_rew ) {
+      if( config.opt_verbose > 0 ) cerr << "c rew ..." << endl;
+      if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") rewriting" << endl;
+      if( status == l_Undef ) rew.process();  // cannot change status, can generate new unit clauses
+      if( config.opt_verbose > 1 )  { printStatistics(cerr); rew.printStatistics(cerr); }
+      if (! data.ok() )
+	  status = l_False;
+    }
+    data.checkGarbage(); // perform garbage collection
+    
+    if( config.opt_debug ) { checkLists("after REW"); scanCheck("after REW"); }
+    if( printREW || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'r')) {
+    printFormula("after REW");
+    }
+    
+    if( config.opt_ee ) { // before this technique nothing should be run that alters the structure of the formula (e.g. BVE;BVA)
+      if( config.opt_verbose > 0 ) cerr << "c ee ..." << endl;
+      if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") equivalence elimination" << endl;
+      if( status == l_Undef ) ee.process(data);  // cannot change status, can generate new unit clauses
+      if( config.opt_verbose > 1 )  { printStatistics(cerr); ee.printStatistics(cerr); }
+      if (! data.ok() )
+	  status = l_False;
+    }
+    data.checkGarbage(); // perform garbage collection
+    
+    if( config.opt_debug ) { checkLists("after EE"); scanCheck("after EE"); }
+
+    if( printEE || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'e') ) {
+    printFormula("after EE");
+    }
+    
+    if ( config.opt_unhide ) {
+      if( config.opt_verbose > 0 ) cerr << "c unhide ..." << endl;
+      if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") unhiding" << endl;
+      if( status == l_Undef ) unhiding.process(); 
+      if( config.opt_verbose > 1 )  { printStatistics(cerr); unhiding.printStatistics(cerr); }
+      if( !data.ok() ) status = l_False;
+    }
+    data.checkGarbage(); // perform garbage collection
+    
+    if( printUnhide || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'g') ) {
+    printFormula("after Unhiding");
+    }
+    if( config.opt_debug ) {checkLists("after UNHIDING");  scanCheck("after UNHIDING"); }
+    
+    if( config.opt_hte ) {
+      if( config.opt_verbose > 0 ) cerr << "c hte ..." << endl;
+      if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") hidden tautology elimination" << endl;
+      if( status == l_Undef ) hte.process(data);  // cannot change status, can generate new unit clauses
+      if( config.opt_verbose > 1 )  { printStatistics(cerr); hte.printStatistics(cerr); }
+    }
+    data.checkGarbage(); // perform garbage collection
+
+    if( config.opt_debug ) { checkLists("after HTE");  scanCheck("after HTE"); }
+    if( printHTE || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'h')) {
+    printFormula("after HTE");
+    }
+    
+    if ( config.opt_probe ) {
+      if( config.opt_verbose > 0 ) cerr << "c probe ..." << endl;
+      if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") probing" << endl;
+      if( status == l_Undef ) probing.process(); 
+      if( !data.ok() ) status = l_False;
+      if( config.opt_verbose > 1 )  { printStatistics(cerr); probing.printStatistics(cerr); }
+    }
+
+    if( config.opt_debug ) { checkLists("after PROBE - before GC");  scanCheck("after PROBE - before GC"); }
+    if( printProbe || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'p') ) {
+    printFormula("after Probing");
+    }
+    
+    data.checkGarbage(); // perform garbage collection
+
+    
+    if ( config.opt_bve ) {
+      if( config.opt_verbose > 0 ) cerr << "c bve ..." << endl;
+      if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") bounded variable elimination" << endl;
+      if( status == l_Undef ) status = bve.runBVE(data);  // can change status, can generate new unit clauses
+      if( config.opt_verbose > 1 )  { printStatistics(cerr); bve.printStatistics(cerr); }
+    }
+    data.checkGarbage(); // perform garbage collection
+    
+    if( config.opt_debug ) { checkLists("after BVE");  scanCheck("after BVE"); }
+    if( printBVE || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'v')) {
+    printFormula("after BVE");
+    }
+    
+    if ( config.opt_bva ) {
+      if( config.opt_verbose > 0 ) cerr << "c bva ..." << endl;
+      if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") blocked variable addition" << endl;
+      if( status == l_Undef ) bva.process(); 
+      if( config.opt_verbose > 1 )  { printStatistics(cerr); bva.printStatistics(cerr); }
+      if( !data.ok() ) status = l_False;
+    }
+    data.checkGarbage(); // perform garbage collection
+    
+    if( config.opt_debug ) { checkLists("after BVA");  scanCheck("after BVA"); }
+    if( printBVA || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'w') ) {
+    printFormula("after BVA");
+    }
+
+    if( config.opt_bce ) {
+      if( config.opt_verbose > 0 ) cerr << "c bce ..." << endl;
+      if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") blocked clause elimination" << endl;
+      if( status == l_Undef ) bce.process();  // cannot change status, can generate new unit clauses
+      if( config.opt_verbose > 1 )  { printStatistics(cerr); bce.printStatistics(cerr); }
+    }
+    data.checkGarbage(); // perform garbage collection
+    
+    if( config.opt_debug )  { scanCheck("after BCE"); }  
+    if( printBCE || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'b') ) {
+    printFormula("after BCE");
+    }
+    
+    if( config.opt_la ) {
+      if( config.opt_verbose > 0 ) cerr << "c la ..." << endl;
+      if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") blocked clause elimination" << endl;
+      if( status == l_Undef ) la.process();  // cannot change status, can generate new unit clauses
+      if( config.opt_verbose > 1 )  { printStatistics(cerr); la.printStatistics(cerr); }
+    }
+    data.checkGarbage(); // perform garbage collection
+    
+    if( config.opt_debug )  { scanCheck("after LA"); }  
+    if( printBCE || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'b') ) {
+    printFormula("after BCE");
+    }
+    
+    if( config.opt_cce ) {
+      if( config.opt_verbose > 0 ) cerr << "c cce ..." << endl;
+      if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") (covered) clause elimination" << endl;
+      if( status == l_Undef ) cce.process(data);  // cannot change status, can generate new unit clauses
+      if( config.opt_verbose > 1 )  { printStatistics(cerr); cce.printStatistics(cerr); }
+    }
+    data.checkGarbage(); // perform garbage collection
+    
+    if( config.opt_debug )  { scanCheck("after CCE"); }  // perform only if BCE finished the whole formula?!
+    if( printCCE || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'c') ) {
+    printFormula("after CCE");
+    }
+    
+    iterTime = cpuTime() - iterTime;
+    if( config.opt_verbose > 0 || config.opt_debug || true) cerr << "c used time in interation " << ppIteration << "  : " << iterTime << " s" << endl;
+  }
+  
   if( config.opt_addRedBins ) {
     if( config.opt_verbose > 0 ) cerr << "c add2 ..." << endl;
     res.process(true); 

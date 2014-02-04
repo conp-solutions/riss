@@ -49,10 +49,11 @@ CP3Config::CP3Config() // add new options here!
  //
   opt_unlimited   (_cat, "cp3_limited",    "Limits for preprocessing techniques", true, optionListPtr ),
   opt_randomized  (_cat, "cp3_randomized", "Steps withing preprocessing techniques are executed in random order", false, optionListPtr ),
-   opt_inprocessInt(_cat, "cp3_inp_cons",   "Perform Inprocessing after at least X conflicts", 20000, IntRange(0, INT32_MAX), optionListPtr ),
+  opt_inprocessInt(_cat, "cp3_inp_cons",   "Perform Inprocessing after at least X conflicts", 20000, IntRange(0, INT32_MAX), optionListPtr ),
+  opt_simplifyRounds(_cat, "cp3_iters",    "simplification rounds in preprocessing", 1, IntRange(0, INT32_MAX), optionListPtr ),
   opt_enabled     (_cat, "enabled_cp3",    "Use CP3", false, optionListPtr ),
   opt_inprocess   (_cat, "inprocess",      "Use CP3 for inprocessing", false, optionListPtr ),
-   opt_exit_pp     (_cat, "cp3-exit-pp",    "terminate after preprocessing (1=exit,2=print formula cerr+exit 3=cout+exit)", 0, IntRange(0, 3), optionListPtr ),
+   opt_exit_pp     (_cat, "cp3-exit-pp",   "terminate after preprocessing (1=exit,2=print formula cerr+exit 3=cout+exit)", 0, IntRange(0, 3), optionListPtr ),
   opt_randInp     (_cat, "randInp",        "Randomize Inprocessing", true, optionListPtr ),
   opt_inc_inp     (_cat, "inc-inp",        "increase technique limits per inprocess step", false, optionListPtr ),
 

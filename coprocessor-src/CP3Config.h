@@ -45,6 +45,7 @@ public:
  BoolOption opt_unlimited  ;
  BoolOption opt_randomized  ;
  IntOption  opt_inprocessInt;
+ IntOption  opt_simplifyRounds;
  BoolOption opt_enabled     ;
  BoolOption opt_inprocess   ;
  IntOption  opt_exit_pp     ;
