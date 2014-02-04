@@ -628,7 +628,7 @@ protected:
   Clock cbTime;  // time for cegar BVA
   vec<Lit> cegarClauseLits; // literals of the clauses that have been deleted (loosened) due to cegar BVA
   unsigned cbSteps, cbClauses, cbFailedCalls, cbLits, cbReduction, cbReintroducedClauses; // stats about cegar bva
-  
+
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;
 public:     

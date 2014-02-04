@@ -216,7 +216,7 @@ bool FourierMotzkin::process()
 	data.lits.clear();
 	break;
       }
-      for( int p = 0 ; p < 1; ++ p ) { // for both polarities
+      for( int p = 0 ; p < 2; ++ p ) { // for both polarities
 	if( config.opt_fmSearchLimit <= searchSteps ) { // if limit is reached, invalidate current AMO candidate
 	  data.lits.clear();
 	  break;
@@ -229,10 +229,7 @@ bool FourierMotzkin::process()
 	for( int i = 0 ; i < data.list(l).size(); ++ i ) { // collect all literals that occur with l in a ternary clause!
 	  const Clause& c = ca[data.list(l)[i]];
 	  searchSteps++;
-	  if( c.can_be_deleted() || c.size() != 3 ) {
-	    if( c.can_be_deleted() ) {data.list(l)[ i ] = data.list(l)[ data.list(l).size() -1 ]; data.list(l).pop_back(); --i; } // remove can-be-deleted clause!
-	    continue; // look for ternary clauses only!
-	  }
+	  if( c.can_be_deleted() || c.size() != 3 ) continue; // look for interesting, ternary clauses only!
 	  if( c[0] != l ) continue; // consider only clauses, where l is the smallest literal?! (all other AMT's would have been found before!)
 	  for( int j = 1; j < 3; ++ j ) {
 	    searchSteps++;
@@ -244,6 +241,7 @@ bool FourierMotzkin::process()
 	sort(data.lits); // sort lits in list!
 	assert( data.lits[0] == l && "current literal has to be the smallest literal!" );
 	
+	const int oldDataClsSize = data.clss.size();
 	for( int i = 0 ; i < data.lits.size(); ++ i ) { // check whether each literal can be found with each pair of other literals!
 	  // setup the map
 	  const Lit l0 = data.lits[i];
@@ -260,11 +258,11 @@ bool FourierMotzkin::process()
 		if( c[1] == l1 && c[2] == l2 ) break; // found corresponding clause! - l0 < l1 -> needs to be c[0]
 	      }
 	      if( m == data.list(l0).size() ) { // did not find triple l0,l1,l2
-		for( j = i; j + 1 < data.lits.size(); ++ j ) data.lits[j] = data.lits[j+1]; // move all remaining literals one position to front
+		for( j = i; j + 1 < data.lits.size(); ++ j ) data.lits[j] = data.lits[j+1]; // move all remaining literals one position to front // TODO: can be implemented faster!
 		data.lits.pop_back(); // remove last literal => deleted current literal, list still sorted!
 		--i; // reduce pointer in list
 		goto checkNextLiteral;
-	      }
+	      } 
 	    } 
 	  } 
 	  checkNextLiteral:; // jump here, if checking the current literal failed
@@ -828,8 +826,10 @@ void FourierMotzkin::removeSubsumedAMOs(vector< FourierMotzkin::CardC >& cards, 
   for( int i = 0 ; i < cards.size(); ++ i )
   {
     CardC& c = cards[ i ];
+    if( c.taut() ) c.invalidate(); // do not use this constraint any more!
     if( !c.amo() ) continue; // do only for AMOs
-    
+    if( c.ll.size() == 0 ) continue; // safe side
+
     Lit min = c.ll[0];
     for( int j = 1; j < c.ll.size(); ++ j )
       if( leftHands[ toInt( c.ll[j] ) ] < leftHands[ toInt( min ) ] ) min = c.ll[j];
@@ -837,7 +837,7 @@ void FourierMotzkin::removeSubsumedAMOs(vector< FourierMotzkin::CardC >& cards, 
     // check whether an AMO, or a bigger AMO can be found in the list of min
     for( int m = 0 ; m < leftHands[ toInt(min) ].size(); ++ m ) {
       const CardC& ref = cards[ leftHands[ toInt(min) ] [m] ];
-      if( !ref.amo() || leftHands[ toInt(min) ] [m] == i ) continue; // look only for amos, and do not compare itself with the current AMO
+      if( !ref.amo()  || ref.taut() || leftHands[ toInt(min) ] [m] == i ) continue; // look only for amos, and do not compare itself with the current AMO
       
       int j = 0, k = 0; // loop over both amos!
       const vector<Lit>& rl = ref.ll;

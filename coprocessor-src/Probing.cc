@@ -305,7 +305,7 @@ bool Probing::prAnalyze( CRef confl )
 	assert ( (loops != 1 || pathC > 1) && "in the first iteration there have to be at least 2 literals of the decision level!" );
 	
         // Select next clause to look at:
-        while (!solver.seen[var(solver.trail[index--])]);
+        while (!solver.seen[var(solver.trail[index--])]) ;
         p     = solver.trail[index+1];
         confl = solver.reason(var(p));
 	assert( solver.seen[var(p)] == 1 && "this variable should have been inside the clause" );
