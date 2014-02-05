@@ -2955,7 +2955,7 @@ bool Solver::interleavedClauseStrengthening()
   const int oldVars = nVars();
   const int oldLearntsSize = learnts.size();
   // backtrack to level 0
-  if(config.opt_ics_debug) for( int i = 0 ; i < trailLimCopy.size(); ++i ) cerr << "c decision " << trailCopy[ trailLimCopy[i] ]  << "@" << i+1 << endl;
+  //if(config.opt_ics_debug) for( int i = 0 ; i < trailLimCopy.size(); ++i ) cerr << "c decision " << trailCopy[ trailLimCopy[i] ]  << "@" << i+1 << endl;
   cancelUntil( 0 );
   
   // disable dynamic updates (clause activities, variable activities, lbd, ... )
@@ -2987,7 +2987,7 @@ bool Solver::interleavedClauseStrengthening()
     if( c.size() > sizeLimit || c.lbd() > lbdLimit ){ icsDroppedCandidates++; continue; } // do not consider this clause!
     icsCandidates ++; // stats - store how many learned clauses have been tested
     if(config.opt_ics_debug) cerr << "c ICS on " << c << endl;
-    if(config.opt_ics_debug) cerr << "c current trail: " << trail << endl;
+    // if(config.opt_ics_debug) cerr << "c current trail: " << trail << endl;
     detachClause( learnts[i], true ); // remove the clause from the solver, to be able to rewrite it
     for( int j = 0 ; j < c.size(); ++ j ) {
       if( value( c[j] ) == l_True ) { c.mark(1); break; } // do not use clauses that are satisfied!
@@ -2997,7 +2997,8 @@ bool Solver::interleavedClauseStrengthening()
     int k = 0; // number of literals to keep in the clause
     int j = 0;
     bool droppedLit = false;
-    for( ; j + 1 < c.size(); ++ j ) {	// check each literal and enqueue it negated
+    int dropPosition = -1;
+    for( ; j < c.size(); ++ j ) {	// check each literal and enqueue it negated
       if( config.opt_ics_debug ) cerr << "c check lit " << j << "/" << c.size() << ": " << c[j] << " with value " << toInt( value(c[j]) ) << endl;
       if( value( c[j] ) == l_True ) { // just need to keep all previous and this literal
 	c[k++] = c[j];
@@ -3005,6 +3006,7 @@ bool Solver::interleavedClauseStrengthening()
 	break; // this literals does not need to be kept! // TODO: what if the clause is already satisfied, could be stopped as well!
       } else if ( value( c[j] ) == l_False ) {
 	droppedLit = true;
+	dropPosition = j; // dropped the literal here
 	if( config.opt_ics_debug ) cerr << "c jump over false lit: " << c[j] << endl;
 	continue; // can drop this literal
       }
@@ -3059,7 +3061,7 @@ bool Solver::interleavedClauseStrengthening()
     cancelUntil( 0 ); // to be on the safe side, if there has not been a conflict before
     // shrink the clause and add it back again!
     if(config.opt_ics_debug) cerr << "c ICS looked at " << j << " literals, and kept " << k << " with a size of " << d.size() << endl; 
-    if( droppedLit || (k < j && j+1 != d.size()) ) { // actually, something has been done without just not looking at the very last literal
+    if( droppedLit || k < j ) { // actually, something has been done
       icsShrinks ++; icsShrinkedLits += (d.size() - k ); // stats -- store the success of shrinking
       d.shrink( d.size() - k );
     }
@@ -3094,7 +3096,7 @@ bool Solver::interleavedClauseStrengthening()
   
   for( int i = 0 ; i < trailLimCopy.size(); ++i ) {
     newDecisionLevel();
-    if(config.opt_ics_debug) cerr << "c enqueue " << trailCopy[ trailLimCopy[i] ]  << "@" << i+1 << endl;
+   // if(config.opt_ics_debug) cerr << "c enqueue " << trailCopy[ trailLimCopy[i] ]  << "@" << i+1 << endl;
     if( value( trailCopy[ trailLimCopy[i] ] ) == l_False ) break; // stop here, because the next decision has to be different! (and the search will take care of that!)
     else if( value( trailCopy[ trailLimCopy[i] ] ) == l_Undef ) uncheckedEnqueue( trailCopy[ trailLimCopy[i] ] );
     CRef confl = propagate();
