@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: certifiedSAT stc drup-check brup2drup verify cnfdd cnfuzz precochk lgl #mtcnfdd
+all: certifiedSAT stc drup-check brup2drup verify cnfdd cnfuzz precochk lgl mtcnfdd
 
 certifiedSAT: certifiedSAT.cc 
 	g++ certifiedSAT.cc -o certifiedSAT -O0 -g
@@ -16,16 +16,16 @@ brup2drup: brup2drup.c
 
 
 cnfdd: cnfdd.c Makefile
-	g++ -o cnfdd cnfdd.c -Wall -O0
+	gcc -o cnfdd cnfdd.c -Wall -O0
 	
 cnfuzz: cnfuzz.c Makefile
-	g++ -o cnfuzz cnfuzz.c -Wall -O0
+	gcc -o cnfuzz cnfuzz.c -Wall -O0
 
 mtcnfdd: mtcnfdd.c Makefile
-	g++ -o mtcnfdd mtcnfdd.c -Wall -O3 -lpthread
+	gcc -o mtcnfdd mtcnfdd.c -Wall -O3 -lpthread
 
 precochk:
-	g++ precochk.c -o precochk -lz
+	gcc precochk.c -o precochk -lz
 
 lgl:
 	cd lingeling; ./configure && make; cp lingeling ../lgl

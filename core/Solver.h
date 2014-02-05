@@ -391,8 +391,10 @@ protected:
      */
     lbool handleLearntClause(Minisat::vec< Minisat::Lit >& learnt_clause, bool backtrackedBeyond, unsigned int nblevels, uint64_t extraInfo);
     
-    /** check whether a restart should be performed (return true, if restart) */
-    bool restartSearch(int nof_conflicts, int conflictC);
+    /** check whether a restart should be performed (return true, if restart) 
+     * @param nof_conflicts limit can be increased by the method, if an agility reject has been applied
+     */
+    bool restartSearch(int& nof_conflicts, const int conflictC);
     
     /** remove learned clauses during search */
     void clauseRemoval();

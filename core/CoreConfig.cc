@@ -63,6 +63,7 @@ CoreConfig::CoreConfig() // add new options here!
  opt_agility_rejectLimit("MODS", "agil-limit", "agility above this limit rejects restarts", 0.22, DoubleRange(0, true, 1, true), optionListPtr ),
  opt_agility_decay("MODS", "agil-decay", "search agility decay", 0.9999, DoubleRange(0, true, 1, true), optionListPtr ),
  opt_agility_init("MODS", "agil-init",   "initial agility", 0.11, DoubleRange(0, true, 1, true), optionListPtr ),
+ opt_agility_limit_increase("MODS", "agil-add",   "number of conflicts until the next restart is allowed (for static schedules)", 128, IntRange(1, INT32_MAX), optionListPtr ),
  
  opt_clause_decay (_cat, "cla-decay", "The clause activity decay factor", 0.999, DoubleRange(0, false, 1, false), optionListPtr ),
  opt_random_var_freq (_cat, "rnd-freq", "The frequency with which the decision heuristic tries to choose a random variable", 0, DoubleRange(0, true, 1, true), optionListPtr ),

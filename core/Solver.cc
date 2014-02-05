@@ -973,7 +973,7 @@ void Solver::uncheckedEnqueue(Lit p, CRef from)
    *  Note: this code is also executed during extended resolution, so take care of modifications performed there!
    */
   
-    if( !dynamicDataUpdates && config.opt_agility_restart_reject ) { // only if technique is enabled:
+    if( dynamicDataUpdates && config.opt_agility_restart_reject ) { // only if technique is enabled:
      // cerr << "c old: " << agility << " lit: " << p << " sign: " << sign(p) << " pol: " << polarity[var(p)] << endl;
       agility = agility * agility_decay + ( sign(p) != polarity[ var(p) ] ? (1.0 - agility_decay) : 0 );
      // cerr << "c new: " << agility << " ... decay: " << agility_decay << endl;
@@ -1573,11 +1573,11 @@ void Solver::clauseRemoval()
 }
 
 
-bool Solver::restartSearch(int nof_conflicts, int conflictC)
+bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
 {
-  if( ! config.opt_agility_restart_reject // do not reject restarts
-     || agility < config.opt_agility_rejectLimit )
-  { // TODO FIXME: do not reject the restart for now, but until the next planned restart in schedule (clear queue, or increase number of conflicts!)
+  const bool agilityReject = (config.opt_agility_restart_reject && agility > config.opt_agility_rejectLimit); // would reject if a restart is done now?
+
+  { 
     // dynamic glucose restarts
     if( config.opt_restarts_type == 0 ) {
       // Our dynamic restart, see the SAT09 competition compagnion paper 
@@ -1586,28 +1586,39 @@ bool Solver::restartSearch(int nof_conflicts, int conflictC)
 	  || (config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound )// if thre have been too many conflicts
 	) {
 	
-	// increase current limit, if this has been the reason for the restart!!
-	if( (config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound ) ) { 
-	  intervalRestart++;conflictsSinceLastRestart = (double)conflictsSinceLastRestart * (double)config.opt_rMaxInc; 
-	}
-	
-	conflictsSinceLastRestart = 0;
-	lbdQueue.fastclear();
-	progress_estimate = progressEstimate();
-        const int restartLevel = config.opt_restart_level == 0 ? 0 : getRestartLevel(); // use matching trail, or reused trail mechanism!
-	cancelUntil(restartLevel);
-	return true;
-      }
-    } else { // usual static luby or geometric restarts
-      if (nof_conflicts >= 0 && conflictC >= nof_conflicts || !withinBudget()){
+	// reject by agility?
+	if( agilityReject ) {
+	  agility_rejects ++;
+	  lbdQueue.fastclear(); // force solver to wait for another lbdQueue.maxsize conflicts!
+	} else {
+	  // increase current limit, if this has been the reason for the restart!!
+	  if( (config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound ) ) { 
+	    intervalRestart++;conflictsSinceLastRestart = (double)conflictsSinceLastRestart * (double)config.opt_rMaxInc; 
+	  }
+	  conflictsSinceLastRestart = 0;
+	  lbdQueue.fastclear();
 	  progress_estimate = progressEstimate();
 	  const int restartLevel = config.opt_restart_level == 0 ? 0 : getRestartLevel(); // use matching trail, or reused trail mechanism!
 	  cancelUntil(restartLevel);
-	  // cerr << "c restart after " << conflictC << " conflicts - limit: " << nof_conflicts << endl;
 	  return true;
+	}
+      }
+    } else { // usual static luby or geometric restarts
+      if (nof_conflicts >= 0 && conflictC >= nof_conflicts || !withinBudget()) {
+	
+	  if( withinBudget() && agilityReject ) {
+	    agility_rejects ++;
+	    nof_conflicts += config.opt_agility_limit_increase;
+	  } else {
+	    progress_estimate = progressEstimate();
+	    const int restartLevel = config.opt_restart_level == 0 ? 0 : getRestartLevel(); // use matching trail, or reused trail mechanism!
+	    cancelUntil(restartLevel);
+	    // cerr << "c restart after " << conflictC << " conflicts - limit: " << nof_conflicts << endl;
+	    return true;
+	  }
       }
     }
-  } else agility_rejects ++;
+  }
   return false;
 }
 

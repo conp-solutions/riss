@@ -78,6 +78,7 @@ public:
  DoubleOption opt_agility_rejectLimit; // agility above this value rejects restarts
  DoubleOption opt_agility_decay;   // decay that controls the agility of the search (stuck: ag = ag * decay; moving: ag = ag*decay + (1-decay) Biere08)
  DoubleOption opt_agility_init;	    // initilize agility with this value
+ IntOption opt_agility_limit_increase;	// number of conflicts to be added in case of a restart reject
  
  DoubleOption opt_clause_decay;
  DoubleOption opt_random_var_freq;
