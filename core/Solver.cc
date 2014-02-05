@@ -616,11 +616,10 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	    else clssToBump.push( confl );
        }
 
-#ifdef DYNAMICNBLEVEL		    
-	// DYNAMIC NBLEVEL trick (see competition'09 companion paper)
-	if(c.learnt()  && c.lbd()>2) { 
+    if( config.opt_update_lbd == 1 ) { // update lbd during analysis
+	if(c.learnt()  && c.lbd()>2 ) { 
 	  unsigned int nblevels = computeLBD(c);
-	  if(nblevels+1<c.lbd() ) { // improve the LBD
+	  if(nblevels+1<c.lbd() || config.opt_lbd_inc ) { // improve the LBD (either LBD decreased,or option is set)
 	    if(c.lbd()<=lbLBDFrozenClause) {
 	      c.setCanBeDel(false); 
 	    }
@@ -628,7 +627,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	    c.setLBD(nblevels); // Update it
 	  }
 	}
-#endif
+    }
 
 #ifdef CLS_EXTRA_INFO // if resolution is done, then take also care of the participating clause!
 	extraInfo = extraInfo >= c.extraInformation() ? extraInfo : c.extraInformation();
@@ -1245,6 +1244,16 @@ CRef Solver::propagate()
 		  }
 		  goto NextClause; // do not use references any more, because ca.alloc has been performed!
 		} 
+		
+		if( c.mark() == 0 && config.opt_update_lbd == 0) { // if LHBR did not remove this clause
+		  int newLbd = computeLBD( c );
+		  if( newLbd < c.lbd() || config.opt_lbd_inc ) { // improve the LBD (either LBD decreased,or option is set)
+		    if( c.lbd() <= lbLBDFrozenClause ) {
+		      c.setCanBeDel( false ); // LBD of clause improved, so that its not considered for deletion
+		    }
+		    c.setLBD(newLbd);
+		  }
+		}
 	    }
         NextClause:;
         }
