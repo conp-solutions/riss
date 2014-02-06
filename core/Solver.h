@@ -548,6 +548,15 @@ protected:
   vector< int > analyzePosition; // fur full probing approximation
   vector< int > analyzeLimits; // all combination limits for full probing
   
+  /** replaces disjunctions with fresh variables 
+   * the assumptions will be sorted
+   * NOTE: kind of expensive
+   */
+  void substituteDisjunctions( vec<Lit>& assumptions );
+  
+  /// for generating bi-asserting clauses instead of first UIP clauses
+  bool isBiAsserting;		// indicate whether the current learned clause is bi-asserting or not
+  uint64_t biAssertingPostCount, biAssertingPreCount;	// count number of biasserting clauses (after minimization, before minimization)
   
   /*
    * 
@@ -596,12 +605,6 @@ protected:
    *  are satisfied. If not, another solver call is executed, until a solution
    *  or unsatisfiablility can be shown.
    */
-  
-  /** replaces disjunctions with fresh variables 
-   * the assumptions will be sorted
-   * NOTE: kind of expensive
-   */
-  void substituteDisjunctions( vec<Lit>& assumptions );
   
   /** gives the next assumtions, based on the old assumptions and the new conflict clause 
    * NOTE: assumes that the old assumptions are sorted, will sort the conflict clause

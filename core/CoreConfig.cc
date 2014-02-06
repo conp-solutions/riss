@@ -53,6 +53,7 @@ CoreConfig::CoreConfig() // add new options here!
  opt_quick_reduce(_cred,"quickRed","check only first two literals for being satisfied",false, optionListPtr ),
  opt_keep_worst_ratio(_cred,"keeWorst","keep this (relative to all learned) number of worst learned clauses during removal", 0, DoubleRange(0, true, 1, true), optionListPtr ), 
  
+ opt_biAsserting (_cat, "biAsserting", "Learn bi-asserting clauses, if possible (do not learn asserting clause!)", false, optionListPtr),
  opt_lb_size_minimzing_clause (_cm, "minSizeMinimizingClause", "The min size required to minimize clause", 30, IntRange(3, INT32_MAX), optionListPtr ),
  opt_lb_lbd_minimzing_clause (_cm, "minLBDMinimizingClause", "The min LBD required to minimize clause", 6, IntRange(3, INT32_MAX), optionListPtr ),
 

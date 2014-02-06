@@ -67,6 +67,7 @@ public:
  BoolOption opt_quick_reduce; // check clause for being satisfied based on the first two literals only!
  DoubleOption opt_keep_worst_ratio; // keep this (relative to all learnt clauses) number of worst learnt clauses
 
+ BoolOption opt_biAsserting;	// learn bi-asserting clauses instead of UIP clauses
  IntOption opt_lb_size_minimzing_clause;
  IntOption opt_lb_lbd_minimzing_clause;
 

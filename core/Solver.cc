@@ -208,6 +208,10 @@ Solver::Solver(CoreConfig& _config) :
   , L3units(0)
   , L4units(0)
   
+  , isBiAsserting      (false)
+  , biAssertingPostCount (0)
+  , biAssertingPreCount  (0)
+  
   // cegar
   , cegarLiteralHeap(0)
   
@@ -575,8 +579,10 @@ Lit Solver::pickBranchLit()
 
 int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned int &lbd, vec<CRef>& otfssClauses,uint64_t& extraInfo)
 {
+    isBiAsserting = false; // yet, the currently learned clause is not bi-asserting
     int pathC = 0;
     Lit p     = lit_Undef;
+    int pathLimit = 0; // for bi-asserting clauses
 
     int units = 0, resolvedWithLarger = 0; // stats
     bool isOnlyUnit = true;
@@ -611,23 +617,23 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	
 	resolvedWithLarger = (c.size() == 2) ? resolvedWithLarger : resolvedWithLarger + 1; // how often do we resolve with a clause whose size is larger than 2?
 	
-       if (c.learnt() && dynamicDataUpdates){
+	if (c.learnt() && dynamicDataUpdates){
 	    if( config.opt_cls_act_bump_mode == 0 ) claBumpActivity(c);
 	    else clssToBump.push( confl );
        }
 
-    if( config.opt_update_lbd == 1 ) { // update lbd during analysis
-	if(c.learnt()  && c.lbd()>2 ) { 
-	  unsigned int nblevels = computeLBD(c);
-	  if(nblevels+1<c.lbd() || config.opt_lbd_inc ) { // improve the LBD (either LBD decreased,or option is set)
-	    if(c.lbd()<=lbLBDFrozenClause) {
-	      c.setCanBeDel(false); 
+	if( config.opt_update_lbd == 1 ) { // update lbd during analysis
+	    if(c.learnt()  && c.lbd()>2 ) { 
+	      unsigned int nblevels = computeLBD(c);
+	      if(nblevels+1<c.lbd() || config.opt_lbd_inc ) { // improve the LBD (either LBD decreased,or option is set)
+		if(c.lbd()<=lbLBDFrozenClause) {
+		  c.setCanBeDel(false); 
+		}
+		// seems to be interesting : keep it for the next round
+		c.setLBD(nblevels); // Update it
+	      }
 	    }
-	    // seems to be interesting : keep it for the next round
-	    c.setLBD(nblevels); // Update it
-	  }
 	}
-    }
 
 #ifdef CLS_EXTRA_INFO // if resolution is done, then take also care of the participating clause!
 	extraInfo = extraInfo >= c.extraInformation() ? extraInfo : c.extraInformation();
@@ -655,7 +661,13 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
                     out_learnt.push(q);
 		    isOnlyUnit = false; // we found a literal from another level, thus the multi-unit clause cannot be learned
 		}
-	    } else if( level(var(q)) == 0 ) clauseReductSize --; // this literal does not count into the size of the clause!
+	    } else { 
+	      if( level(var(q)) == 0 ) clauseReductSize --; // this literal does not count into the size of the clause!
+		if (units == 0 && seen[var(q)] && config.opt_biAsserting ) { 
+		  if( pathLimit == 0 ) biAssertingPreCount ++;	// count how often learning produced a bi-asserting clause
+		  pathLimit = 1; // store that the current learnt clause is a biasserting clause!
+		}
+	    }
 
         }
         
@@ -685,24 +697,31 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	  units ++; // count current units
 	  out_learnt.push( ~p ); // store unit
 	  if( config.opt_allUipHack == 1 ) break; // for now, stop at the first unit! // TODO collect all units
+	  pathLimit = 0;	// do not use bi-asserting learning once we found one unit clause
 	}
 	
 	// do stop here
     } while (
-       //if no unit clause is learned, and the first UIP is hit
-         (units == 0 && pathC > 0)
+       //if no unit clause is learned, and the first UIP is hit, or a bi-asserting clause is hit
+         (units == 0 && pathC > pathLimit)
       // or 1stUIP is unit, but the current learned clause would be bigger, and there are still literals on the current level
       || (isOnlyUnit && units > 0 && index >= trail_lim[ decisionLevel() - 1] ) 
-      
     );
-    
+    assert( (units == 0 || pathLimit == 0) && "there cannot be a bi-asserting clause that is a unit clause!" );
     assert( out_learnt.size() > 0 && "there has to be some learnt clause" );
     learnedLHBRs = (resolvedWithLarger > 1) ? learnedLHBRs : learnedLHBRs + 1; // count the number of clauses that would have been hyper binary resolvents
     
     
     // if we do not use units, add asserting literal to learned clause!
-    if( units == 0 ) out_learnt[0] = ~p;
-    else { 
+    if( units == 0 ) {
+      out_learnt[0] = ~p; // add the last literal to the clause
+      if( pathC > 0 ) { // in case of bi-asserting clauses, the remaining literals have to be collected
+	// look for second literal of this level
+	while (!seen[var(trail[index--])]);
+	p = trail[index+1];
+	out_learnt.push( ~p );
+      }
+    } else { 
       // process learnt units!
       // clear seen
       for( int i = units+1; i < out_learnt.size() ; ++ i ) seen[ var(out_learnt[i]) ] = 0;
@@ -718,7 +737,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
       if( !isOnlyUnit ) while (index >= trail_lim[ decisionLevel() - 1 ] ) seen[ var(trail[index--]) ] = 0;
       
       lbd = 1; // for glucoses LBD score
-      return units;
+      return units; // for unit clauses no minimization is necessary
     }
 
     currentSize ++; // the literal "~p" has been added additionally
@@ -739,16 +758,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     
     bool doMinimizeClause = true; // created extra learnt clause? yes -> do not minimize
     if( out_learnt.size() > decisionLevel() ) { // is it worth to check for decisionClause?
-      lbd = 0;
-      MYFLAG++;
-      for(int i=0;i<out_learnt.size();i++) {
-
-	int l = level(var(out_learnt[i]));
-	if ((!config.opt_lbd_ignore_l0 || l>0) && permDiff[l] != MYFLAG) {
-	  permDiff[l] = MYFLAG;
-	  lbd++;
-	}
-      }
+      lbd = computeLBD(out_learnt);
       if( lbd > (config.opt_learnDecPrecent * decisionLevel() + 99 ) / 100 ) {
 	// instead of learning a very long clause, which migh be deleted very soon (idea by Knuth, already implemented in lingeling(2013)
 	for (int j = 0; j < out_learnt.size(); j++) seen[var(out_learnt[j])] = 0;    // ('seen[]' is now cleared)
@@ -832,25 +842,36 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     
     // Find correct backtrack level:
     //
+    // yet, the currently learned clause is not bi-asserting (bi-asserting ones could be turned into asserting ones by minimization
     if (out_learnt.size() == 1)
         out_btlevel = 0;
     else{
         int max_i = 1;
         // Find the first literal assigned at the next-highest level:
-        for (int i = 2; i < out_learnt.size(); i++)
-            if (level(var(out_learnt[i])) > level(var(out_learnt[max_i])))
-                max_i = i;
+	if( config.opt_biAsserting ) {
+	  for (int i = 1; i < out_learnt.size(); i++){
+	    if( level(var(out_learnt[i])) == decisionLevel() ) { // if there is another literal of the decision level (other than the first one), then the clause is bi-asserting
+	      isBiAsserting = true;
+	    } // the level of the literals of the current level should not become the backtracking level, hence, this literal is not moved to this position
+	    else if (level(var(out_learnt[i])) > level(var(out_learnt[max_i]))) max_i = i;
+	  }
+	} else {
+	  for (int i = 2; i < out_learnt.size(); i++){
+	    if (level(var(out_learnt[i])) > level(var(out_learnt[max_i])))
+	      max_i = i;
+	  }
+	}
         // Swap-in this literal at index 1:
-        Lit p             = out_learnt[max_i];
+        const Lit p             = out_learnt[max_i];
         out_learnt[max_i] = out_learnt[1];
         out_learnt[1]     = p;
-        out_btlevel       = level(var(p));
+	if( out_learnt.size() == 2 && isBiAsserting ) out_btlevel = 0; // for binary bi-asserting clauses, jump back to level 0 always!
+        else out_btlevel       = level(var(p));	// otherwise, use the level of the variable that is moved to the front!
     }
 
-
-// Compute LBD
+    // Compute LBD
     lbd = computeLBD(out_learnt);
-
+    lbd = isBiAsserting ? lbd + 1 : lbd; // for bi-asserting clauses the LBD has to be one larger (approximation), because it is not known whether the one literal would glue the other one
 
   
 #ifdef UPDATEVARACTIVITY
@@ -2218,6 +2239,10 @@ lbool Solver::solve_()
 	    printf("c res.ext.res.: %d rer, %d rerSizeCands, %d sizeReject, %d patternReject, %d bloomReject, %d maxSize, %.2lf avgSize, %.2lf totalLits\n",
 		   rerLearnedClause, rerLearnedSizeCandidates, rerSizeReject, rerPatternReject, rerPatternBloomReject, maxRERclause, rerLearnedClause == 0 ? 0 : (totalRERlits / (double) rerLearnedClause), totalRERlits );
 	    printf("c i.cls.strengthening: %.2lf seconds, %d calls, %d candidates, %d droppedBefore, %d shrinked, %d shrinkedLits\n", icsTime.getCpuTime(), icsCalls, icsCandidates, icsDroppedCandidates, icsShrinks, icsShrinkedLits );
+	    printf("c bi-asserting: %d pre-Mini, %d post-Mini, %.3lf rel-pre, %.3lf rel-post\n", biAssertingPreCount, biAssertingPostCount, 
+		   totalLearnedClauses == 0 ? 0 : (double) biAssertingPreCount / (double)totalLearnedClauses,
+		   totalLearnedClauses == 0 ? 0 : (double) biAssertingPostCount / (double)totalLearnedClauses
+		  );
 	    printf("c decisionClauses: %d\n", learnedDecisionClauses );
 	    printf("c IntervalRestarts: %d\n", intervalRestart);
 	    printf("c partial restarts: %d saved decisions: %d saved propagations: %d recursives: %d\n", rs_partialRestarts, rs_savedDecisions, rs_savedPropagations, rs_recursiveRefinements );
@@ -3547,7 +3572,7 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
 {
   // when this method is called, backjumping has been done already!
   rerReturnType rerClause = rerFailed;
-  if( doAddVariablesViaER ) { // be able to block adding variables during search by the solver itself
+  if( doAddVariablesViaER && !isBiAsserting ) { // be able to block adding variables during search by the solver itself, do not apply rewriting to biasserting clauses!
     extResTime.start();
     bool ecl = extendedClauseLearning( learnt_clause, nblevels, extraInfo );
     if( ! ecl ) { // only if not ecl, rer could be tested!
@@ -3590,11 +3615,17 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
     
     if( dynamicDataUpdates ) claBumpActivity(ca[cr], (config.opt_cls_act_bump_mode == 0 ? 1 : (config.opt_cls_act_bump_mode == 1) ? learnt_clause.size() : nblevels )  ); // bump activity based on its size
     if( rerClause != rerDontAttachAssertingLit ) { // attach unit only, if  rer does allow it
-      if( !backtrackedBeyond ) {	// attach the unit only, if the backjumping level is the same as otfss level (s.t. we are still on the asserting level)
-	if (value(learnt_clause[0]) == l_Undef) {
-	  uncheckedEnqueue(learnt_clause[0], cr); // this clause is only unit, if OTFSS jumped to the same level!
-	  if( config.opt_printDecisions > 1  ) cerr << "c enqueue literal " << learnt_clause[0] << " at level " <<  decisionLevel() << " from learned clause " << learnt_clause << endl;
-	} else if ( value(learnt_clause[0]) == l_False ) return l_False; // due to OTFSS there might arose a conflict already ...
+      if( !backtrackedBeyond ) {	// attach the unit only, if the backjumping level is the same as otfss level (s.t. we are still on the asserting level), and if not biasserting!
+
+	if( !isBiAsserting ) {
+	  if (value(learnt_clause[0]) == l_Undef) {
+	    uncheckedEnqueue(learnt_clause[0], cr); // this clause is only unit, if OTFSS jumped to the same level!
+	    if( config.opt_printDecisions > 1  ) cerr << "c enqueue literal " << learnt_clause[0] << " at level " <<  decisionLevel() << " from learned clause " << learnt_clause << endl;
+	  } else if ( value(learnt_clause[0]) == l_False ) return l_False; // due to OTFSS there might arose a conflict already ...
+	} else { 
+	  biAssertingPostCount++;
+	  isBiAsserting = false; // handled the current conflict clause, set this flag to false again
+	}
       }
     }
     
