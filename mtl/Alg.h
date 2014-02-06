@@ -42,6 +42,18 @@ static inline void remove(V& ts, const T& t)
     ts.pop();
 }
 
+/// remove but do not keep the order (push last element to deleted position
+template<class V, class T>
+static inline void removeUnSort(V& ts, const T& t)
+{
+    int j = 0;
+    for (; j < ts.size() && ts[j] != t; j++) {};
+    assert(j < ts.size() && "item must appear in vector");
+    ts[j] = ts[ts.size() - 1];
+    ts.pop();
+}
+
+
 
 template<class V, class T>
 static inline bool find(V& ts, const T& t)

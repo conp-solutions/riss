@@ -43,6 +43,7 @@ config( _config )
 , ee ( config, solver->ca, controller, propagation, subsumption )
 , unhiding ( config, solver->ca, controller, data, propagation, subsumption, ee )
 , probing  ( config, solver->ca, controller, data, propagation, ee, *solver )
+, rate  ( config, solver->ca, controller, data, *solver, propagation )
 , res( config, solver->ca, controller, data)
 , rew( config, solver->ca, controller, data, subsumption )
 , fourierMotzkin( config, solver->ca, controller, data, propagation )
@@ -100,7 +101,7 @@ lbool Preprocessor::performSimplification()
   if( config.opt_verbose > 4 ) cerr << "c coprocessor finished initialization" << endl;
   
   const bool printBVE = false, printBVA = false, printProbe = false, printUnhide = false, 
-	printCCE = false, printEE = false, printREW = false, printFM = false, printHTE = false, printSusi = false, printUP = false,
+	printCCE = false, printRATE = false, printEE = false, printREW = false, printFM = false, printHTE = false, printSusi = false, printUP = false,
 	printTernResolve = false, printAddRedBin = false, printXOR = false, printENT=false, printBCE=false, printLA=false;  
 
   // begin clauses have to be sorted here!!
@@ -184,7 +185,7 @@ lbool Preprocessor::performSimplification()
     data.checkGarbage(); // perform garbage collection
     
     if( config.opt_debug )  { scanCheck("after ENT"); }  
-    if( printENT || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 't') ) {
+    if( printENT || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == '1') ) {
     printFormula("after ENT");
     }
     
@@ -370,8 +371,24 @@ lbool Preprocessor::performSimplification()
     printFormula("after CCE");
     }
     
+    if( config.opt_rate ) {
+      if( config.opt_verbose > 0 ) cerr << "c rate ..." << endl;
+      if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") resolution asymmetric tautology elimination" << endl;
+      if( status == l_Undef ) rate.process();  // cannot change status, can generate new unit clauses
+      if( config.opt_verbose > 1 )  { printStatistics(cerr); rate.printStatistics(cerr); }
+    }
+    data.checkGarbage(); // perform garbage collection
+    
+    if( config.opt_debug )  { scanCheck("after RATE"); }  // perform only if BCE finished the whole formula?!
+    if( printRATE || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 't') ) {
+    printFormula("after RATE");
+    }
+
+    //
+    // end of simplification iteration
+    //
     iterTime = cpuTime() - iterTime;
-    if( config.opt_verbose > 0 || config.opt_debug || true) cerr << "c used time in interation " << ppIteration << "  : " << iterTime << " s" << endl;
+    if( config.opt_verbose > 0 || config.opt_debug || true) cerr << "c used time in interation " << ppIteration << "  : " << iterTime << " s" << endl;    
   }
   
   if( config.opt_addRedBins ) {
@@ -498,6 +515,7 @@ lbool Preprocessor::performSimplification()
     if( config.opt_bce ) bce.printStatistics(cerr);
     if( config.opt_la ) la.printStatistics(cerr);
     if( config.opt_cce ) cce.printStatistics(cerr);
+    if( config.opt_rate ) rate.printStatistics(cerr);
     if( config.opt_ent ) entailedRedundant.printStatistics(cerr);
     if( config.opt_rew ) rew.printStatistics(cerr);
     if( config.opt_FM ) fourierMotzkin.printStatistics(cerr);
@@ -770,6 +788,14 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 	if( config.opt_verbose > 1 ) cerr << "c CCE changed formula: " << change << endl;
     }
     
+    // rate "t"
+    else if( execute == 't' && config.opt_rate && status == l_Undef && data.ok() ) {
+	if( config.opt_verbose > 2 ) cerr << "c rate" << endl;
+	rate.process();
+	change = rate.appliedSomething() || change;
+	if( config.opt_verbose > 1 ) cerr << "c RATE changed formula: " << change << endl;
+    }    
+    
     // hte "h"
     else if( execute == 'h' && config.opt_hte && status == l_Undef && data.ok() ) {
 	if( config.opt_verbose > 2 ) cerr << "c hte" << endl;
@@ -942,6 +968,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     if( config.opt_bce ) bce.printStatistics(cerr);
     if( config.opt_la ) la.printStatistics(cerr);
     if( config.opt_cce ) cce.printStatistics(cerr);
+    if( config.opt_rate ) rate.printStatistics(cerr);
     if( config.opt_ent ) entailedRedundant.printStatistics(cerr);
     if( config.opt_rew ) rew.printStatistics(cerr);
     if( config.opt_FM ) fourierMotzkin.printStatistics(cerr);
@@ -1051,6 +1078,7 @@ void Preprocessor::giveMoreSteps()
   bve.giveMoreSteps();
   bva.giveMoreSteps();
   cce.giveMoreSteps();
+  rate.giveMoreSteps();
   ee.giveMoreSteps();
   unhiding.giveMoreSteps();
   probing.giveMoreSteps();
@@ -1252,6 +1280,7 @@ void Preprocessor::destroyTechniques()
     if( config.opt_bce ) bce.destroy();
     if( config.opt_la ) la.destroy();
     if( config.opt_cce ) cce.destroy();
+    if( config.opt_rate ) rate.destroy();
     if( config.opt_ent ) entailedRedundant.destroy();
   
 }

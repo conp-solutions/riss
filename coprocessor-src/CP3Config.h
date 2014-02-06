@@ -76,6 +76,7 @@ public:
 #endif
  BoolOption opt_la          ;
  BoolOption opt_cce         ;
+ BoolOption opt_rate        ;
  BoolOption opt_ee          ;
  BoolOption opt_bve         ;
  BoolOption opt_bva         ;
@@ -263,6 +264,11 @@ const int cce_debug_out;
 IntOption cce_debug_out;
 #endif
 IntOption  opt_cceInpStepInc;
+
+//
+// Options for rat elimination
+//
+ BoolOption rate_orderComplements;
 
 //
 // Dense

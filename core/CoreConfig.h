@@ -45,6 +45,7 @@ public:
  * List of all used options, public members, can be changed and read directly
  */
  BoolOption opt_solve_stats;
+ BoolOption opt_fast_rem; // remove elements on watch list faster, but unsorted
  BoolOption ppOnly; // interrupt after preprocessing
 #if defined TOOLVERSION
  const bool opt_learn_debug;
@@ -240,6 +241,7 @@ public:
  IntOption opt_ics_interval; // run ICS after another N conflicts
  IntOption opt_ics_processLast; // process this number of learned clauses (analyse, reject if quality too bad!)
  BoolOption opt_ics_keepLearnts; // keep the learned clauses that have been produced during the ICS
+ BoolOption opt_ics_dynUpdate; // change activity of variables during ICS?
  BoolOption opt_ics_shrinkNew; // shrink the kept learned clauses in the very same run?! (makes only sense if the other clauses are kept!)
  DoubleOption opt_ics_LBDpercent;  // only look at a clause if its LBD is less than this percent of the average of the clauses that are looked at
  DoubleOption opt_ics_SIZEpercent; // only look at a clause if its size is less than this percent of the average size of the clauses that are looked at

@@ -387,8 +387,13 @@ void Solver::detachClause(CRef cr, bool strict) {
 //     }
     if(c.size()==2) {
       if (strict){
-        remove(watchesBin[~c[0]], Watcher(cr, c[1]));
-        remove(watchesBin[~c[1]], Watcher(cr, c[0]));
+	if( config.opt_fast_rem ) {
+	  removeUnSort(watchesBin[~c[0]], Watcher(cr, c[1])); 
+	  removeUnSort(watchesBin[~c[1]], Watcher(cr, c[0])); 
+	} else {
+	  remove(watchesBin[~c[0]], Watcher(cr, c[1])); // linear (touchs all elements)!
+	  remove(watchesBin[~c[1]], Watcher(cr, c[0])); // linear (touchs all elements)!
+	}
       }else{
         // Lazy detaching: (NOTE! Must clean all watcher lists before garbage collecting this clause)
         watchesBin.smudge(~c[0]);
@@ -396,8 +401,13 @@ void Solver::detachClause(CRef cr, bool strict) {
       }
     } else {
       if (strict){
-        remove(watches[~c[0]], Watcher(cr, c[1]));
-        remove(watches[~c[1]], Watcher(cr, c[0]));
+	if( config.opt_fast_rem ) {
+	  removeUnSort(watches[~c[0]], Watcher(cr, c[1])); 
+	  removeUnSort(watches[~c[1]], Watcher(cr, c[0])); 
+	} else {
+	  remove(watches[~c[0]], Watcher(cr, c[1])); // linear (touchs all elements)!
+	  remove(watches[~c[1]], Watcher(cr, c[0])); // linear (touchs all elements)!
+	}
       }else{
         // Lazy detaching: (NOTE! Must clean all watcher lists before garbage collecting this clause)
         watches.smudge(~c[0]);
@@ -408,7 +418,7 @@ void Solver::detachClause(CRef cr, bool strict) {
     else            clauses_literals -= c.size(); }
 
 
-void Solver::removeClause(CRef cr) {
+void Solver::removeClause(Minisat::CRef cr, bool strict) {
   
   Clause& c = ca[cr];
 
@@ -418,7 +428,7 @@ void Solver::removeClause(CRef cr) {
     addToProof(c,true);
   }
 
-  detachClause(cr);
+  detachClause(cr, strict); 
   // Don't leave pointers to free'd memory!
   if (locked(c)) {
     if( config.opt_rer_debug ) cerr << "c remove reason for variable " << var(c[0]) + 1 << ", namely: " << c << endl;
@@ -432,7 +442,7 @@ void Solver::removeClause(CRef cr) {
 bool Solver::satisfied(const Clause& c) const {
 
     // quick-reduce option
-      if(config.opt_quick_reduce)  // Check clauses with many literals is time consuming
+    if(config.opt_quick_reduce)  // Check clauses with many literals is time consuming
         return (value(c[0]) == l_True) || (value(c[1]) == l_True);
 
     for (int i = 0; i < c.size(); i++)
@@ -622,7 +632,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	    else clssToBump.push( confl );
        }
 
-	if( config.opt_update_lbd == 1 ) { // update lbd during analysis
+	if( config.opt_update_lbd == 1 && dynamicDataUpdates ) { // update lbd during analysis, if allowed
 	    if(c.learnt()  && c.lbd()>2 ) { 
 	      unsigned int nblevels = computeLBD(c);
 	      if(nblevels+1<c.lbd() || config.opt_lbd_inc ) { // improve the LBD (either LBD decreased,or option is set)
@@ -849,11 +859,12 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
         int max_i = 1;
         // Find the first literal assigned at the next-highest level:
 	if( config.opt_biAsserting ) {
+	  int currentLevel = level(var(out_learnt[max_i]));
 	  for (int i = 1; i < out_learnt.size(); i++){
 	    if( level(var(out_learnt[i])) == decisionLevel() ) { // if there is another literal of the decision level (other than the first one), then the clause is bi-asserting
 	      isBiAsserting = true;
 	    } // the level of the literals of the current level should not become the backtracking level, hence, this literal is not moved to this position
-	    else if (level(var(out_learnt[i])) > level(var(out_learnt[max_i]))) max_i = i;
+	    else if (level(var(out_learnt[max_i])) == decisionLevel() || level(var(out_learnt[i])) > level(var(out_learnt[max_i]))) max_i = i; // use any literal, as long as the backjump level is the same as the current level
 	  }
 	} else {
 	  for (int i = 2; i < out_learnt.size(); i++){
@@ -869,6 +880,8 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
         else out_btlevel       = level(var(p));	// otherwise, use the level of the variable that is moved to the front!
     }
 
+    assert( out_btlevel < decisionLevel() && "there should be some backjumping" );
+    
     // Compute LBD
     lbd = computeLBD(out_learnt);
     lbd = isBiAsserting ? lbd + 1 : lbd; // for bi-asserting clauses the LBD has to be one larger (approximation), because it is not known whether the one literal would glue the other one
@@ -1266,7 +1279,7 @@ CRef Solver::propagate()
 		  goto NextClause; // do not use references any more, because ca.alloc has been performed!
 		} 
 		
-		if( c.mark() == 0 && config.opt_update_lbd == 0) { // if LHBR did not remove this clause
+		if( c.mark() == 0 && dynamicDataUpdates && config.opt_update_lbd == 0) { // if LHBR did not remove this clause
 		  int newLbd = computeLBD( c );
 		  if( newLbd < c.lbd() || config.opt_lbd_inc ) { // improve the LBD (either LBD decreased,or option is set)
 		    if( c.lbd() <= lbLBDFrozenClause ) {
@@ -1382,7 +1395,7 @@ void Solver::removeSatisfied(vec<CRef>& cs)
     int i, j;
     for (i = j = 0; i < cs.size(); i++){
         Clause& c = ca[cs[i]];
-        if (satisfied(c)) 
+        if (c.size() > 1 && satisfied(c)) // do not remove unit clauses!
             removeClause(cs[i]);
         else
             cs[j++] = cs[i];
@@ -1411,6 +1424,10 @@ void Solver::rebuildOrderHeap()
 |________________________________________________________________________________________________@*/
 bool Solver::simplify()
 {
+    // clean watches
+    watches.cleanAll();
+    watchesBin.cleanAll();
+    
     assert(decisionLevel() == 0);
 
     if( !config.opt_hpushUnit || startedSolving ) { // push the first propagate until solving started
@@ -1494,7 +1511,7 @@ lbool Solver::search(int nof_conflicts)
 #ifdef CLS_EXTRA_INFO
 	      maxResHeight = extraInfo;
 #endif
-	      if( config.opt_rer_debug ) cerr << "c analyze returns with " << ret << " and set of literals " << learnt_clause << endl;
+	      if( config.opt_rer_debug ) cerr << "c analyze returns with " << ret << " , jumpLevel " << backtrack_level << " and set of literals " << learnt_clause<< endl;
      
 	      // OTFSS TODO put into extra method!
 	      lbool otfssResult = otfssProcessClauses(backtrack_level); // takes care of cancelUntil backtracking!
@@ -2391,7 +2408,9 @@ void Solver::relocAll(ClauseAllocator& to)
     for (int i = 0; i < learnts.size(); i++)
     {
         ca.reloc(learnts[i], to);
-	if( !to[ learnts[i]].mark() ) learnts[keptClauses++] = learnts[i]; // keep the clause only if its not marked!
+	if( !to[ learnts[i]].mark() ){
+	  learnts[keptClauses++] = learnts[i]; // keep the clause only if its not marked!
+	}
     }
     learnts.shrink ( learnts.size() - keptClauses );
 
@@ -2401,10 +2420,11 @@ void Solver::relocAll(ClauseAllocator& to)
     for (int i = 0; i < clauses.size(); i++) 
     {
         ca.reloc(clauses[i], to);
-	if( !to[ clauses[i]].mark() ) clauses[keptClauses++] = clauses[i]; // keep the clause only if its not marked!
+	if( !to[ clauses[i]].mark() ) {
+	  clauses[keptClauses++] = clauses[i]; // keep the clause only if its not marked!
+	}
     }
     clauses.shrink ( clauses.size() - keptClauses );
-
 }
 
 
@@ -2416,7 +2436,7 @@ void Solver::garbageCollect()
 
     relocAll(to);
     if (verbosity >= 2)
-        printf("|  Garbage collection:   %12d bytes => %12d bytes             |\n", 
+        printf("c |  Garbage collection:   %12d bytes => %12d bytes                                        |\n", 
                ca.size()*ClauseAllocator::Unit_Size, to.size()*ClauseAllocator::Unit_Size);
     to.moveTo(ca);
 }
@@ -2983,8 +3003,11 @@ bool Solver::interleavedClauseStrengthening()
   //if(config.opt_ics_debug) for( int i = 0 ; i < trailLimCopy.size(); ++i ) cerr << "c decision " << trailCopy[ trailLimCopy[i] ]  << "@" << i+1 << endl;
   cancelUntil( 0 );
   
-  // disable dynamic updates (clause activities, variable activities, lbd, ... )
-  dynamicDataUpdates = false;
+  // disable dynamic updates via parameter?
+  const bool oldDynUpdates = dynamicDataUpdates;
+  if( !config.opt_ics_dynUpdate ) {
+    dynamicDataUpdates = false;
+  }
   
   // perform reducer algorithm for some of the last good learned clauses - also adding the newly learnt clauses
   int backtrack_level; unsigned int nblevels;	// helper variable (more or less borrowed from search method
@@ -3018,6 +3041,7 @@ bool Solver::interleavedClauseStrengthening()
       if( value( c[j] ) == l_True ) { c.mark(1); break; } // do not use clauses that are satisfied!
     }
     if( c.mark() != 0 ) continue; // this clause is removed from the solver!
+
     // TODO: could sort the literals somehow here ...
     int k = 0; // number of literals to keep in the clause
     int j = 0;
@@ -3065,14 +3089,14 @@ bool Solver::interleavedClauseStrengthening()
 		return false; // otherwise, we have a top level conflict here!
 	      }
 	  }else{
-	    CRef cr = ca.alloc(learnt_clause, true);
+	    const CRef cr = ca.alloc(learnt_clause, true);
 	    ca[cr].setLBD(nblevels); 
   #ifdef CLS_EXTRA_INFO
 	    ca[cr].setExtraInformation(extraInfo);
   #endif
 	    learnts.push(cr); // this is the learned clause only, has nothing to do with the other clause!
 	    attachClause(cr); // for now, we'll also use this clause!
-	    if(config.opt_ics_debug) cerr << "c ICS learn clause " << ca[cr] << endl;
+	    if(config.opt_ics_debug) cerr << "c ICS learn clause [" << cr << "] " << ca[cr] << endl;
 	  }
 	} else {
 	  // what to do here?
@@ -3109,11 +3133,14 @@ bool Solver::interleavedClauseStrengthening()
       return false; // unsat, since c is empty
     }
   }
-
+  
   // remove the newly learned clauses
   if( !config.opt_ics_keepLearnts ) {
-    for( int i = oldLearntsSize; i < learnts.size(); ++ i ) removeClause( learnts[i] );
+    for( int j = oldLearntsSize; j < learnts.size(); ++ j ) {
+      removeClause( learnts[j], true ); // remvoes a clause "lazily"
+    }
     learnts.shrink( learnts.size() - oldLearntsSize );
+    assert( learnts.size() == oldLearntsSize && "remove exactly all the clauses that have been added before" );
   }
   
   // role back solver state again
@@ -3134,7 +3161,7 @@ bool Solver::interleavedClauseStrengthening()
     }
   }
   polarityCopy.copyTo( polarity );
-  dynamicDataUpdates = true;
+  dynamicDataUpdates = oldDynUpdates; // reverse the state!
   lastICSconflicts = conflicts;
   // return as if nothing has happened
   if( config.opt_ics_debug ) cerr << "c finished ICS" << endl;
@@ -3678,7 +3705,8 @@ lbool Solver::otfssProcessClauses(int backtrack_level)
 	  assert( level(var(c[1]) ) == l1 && "if there is a unit literal, this literal is the other watched literal!" );
 	  assert( level(var(c[2]) ) >= l2 && "the second literal can be used as other watched literal for the reduced clause" );
 	  // remove from watch list of first literal
-	  remove(watches[~c[0]], Watcher(otfssCls[i], c[1])); // strict deletion!
+	  if( config.opt_fast_rem ) removeUnSort(watches[~c[0]], Watcher(otfssCls[i], c[1])); // strict fast deletion?
+	  else remove(watches[~c[0]], Watcher(otfssCls[i], c[1])); // strict deletion!
 	  // add clause to list of third literal
 	  watches[~c[2]].push(Watcher(otfssCls[i], c[1]));
 	  c[0] = c[1]; c[1] = c[2]; c.removePositionUnsorted(2); // move the two literals with the highest levels forward!

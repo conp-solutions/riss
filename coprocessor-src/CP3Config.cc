@@ -81,6 +81,7 @@ CP3Config::CP3Config() // add new options here!
 #endif
   opt_la          (_cat2, "la",            "Use (covered/asymmetric) Literal Addition during preprocessing", false, optionListPtr ),
   opt_cce         (_cat2, "cce",           "Use (covered) Clause Elimination during preprocessing", false, optionListPtr ),
+  opt_rate        (_cat2, "rate",          "Use resolution asymmetric tautologye limination during preprocessing", false, optionListPtr ),
   opt_ee          (_cat2, "ee",            "Use Equivalence Elimination during preprocessing", false, optionListPtr ),
   opt_bve         (_cat2, "bve",           "Use Bounded Variable Elimination during preprocessing", false, optionListPtr ),
   opt_bva         (_cat2, "bva",           "Use Bounded Variable Addition during preprocessing", false, optionListPtr ),
@@ -268,7 +269,12 @@ opt_la_debug (_cat_la, "la-debug", "output debug info during LA", false, optionL
   cce_debug_out (_cat_cce, "cce-debug", "debug output for clause elimination",0, IntRange(0,4) , optionListPtr ),
 #endif
    opt_cceInpStepInc      (_cat_cce, "cp3_cce_inpInc","increase for steps per inprocess call", 60000, IntRange(0, INT32_MAX), optionListPtr ),
-   
+
+//
+// RAT Elimination
+//
+  rate_orderComplements("RAT Elimination", "rat-compl", "sort according to nr. of complements", true, optionListPtr ),
+
 //
 // Dense
 //

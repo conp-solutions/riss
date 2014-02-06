@@ -30,6 +30,9 @@ CoreConfig::CoreConfig() // add new options here!
  // all the options for the object
  //
  opt_solve_stats (_cat, "solve_stats", "print stats about solving process", false, optionListPtr ),
+ opt_fast_rem (_cat, "rmf", "use fast remove", false, optionListPtr ),
+ 
+ 
  ppOnly (_cat, "ppOnly", "interrupts search after preprocessing", false, optionListPtr ),
 #if defined TOOLVERSION
  opt_learn_debug(false) ,
@@ -225,6 +228,7 @@ CoreConfig::CoreConfig() // add new options here!
  opt_ics_interval("INTERLEAVED CLAUSE STRENGTHENING", "ics_window" ,"run ICS after another N conflicts", 5000, IntRange(0, INT32_MAX) , optionListPtr ),
  opt_ics_processLast("INTERLEAVED CLAUSE STRENGTHENING", "ics_processLast" ,"process this number of learned clauses (analyse, reject if quality too bad!)", 5050, IntRange(0, INT32_MAX) , optionListPtr ),
  opt_ics_keepLearnts("INTERLEAVED CLAUSE STRENGTHENING", "ics_keepNew" ,"keep the learned clauses that have been produced during the ICS", false , optionListPtr ),
+ opt_ics_dynUpdate("INTERLEAVED CLAUSE STRENGTHENING", "ics_dyn" ,"update variable/clause activities during ICS", false , optionListPtr ),
  opt_ics_shrinkNew("INTERLEAVED CLAUSE STRENGTHENING", "ics_shrinkNew" ,"shrink the kept learned clauses in the very same run?! (makes only sense if the other clauses are kept!)", false , optionListPtr ),
  opt_ics_LBDpercent("INTERLEAVED CLAUSE STRENGTHENING", "ics_relLBD" ,"only look at a clause if its LBD is less than this percent of the average of the clauses that are looked at, 1=100%",1, DoubleRange(0, true, HUGE_VAL, true) , optionListPtr ), 
  opt_ics_SIZEpercent("INTERLEAVED CLAUSE STRENGTHENING", "ics_relSIZE" ,"only look at a clause if its size is less than this percent of the average size of the clauses that are looked at, 1=100%",1, DoubleRange(0, true, HUGE_VAL, true) , optionListPtr ),

@@ -18,6 +18,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/HiddenTautologyElimination.h"
 #include "coprocessor-src/BoundedVariableElimination.h"
 #include "coprocessor-src/ClauseElimination.h"
+#include "coprocessor-src/rate.h"
 #include "coprocessor-src/EquivalenceElimination.h"
 #include "coprocessor-src/Bva.h"
 #include "coprocessor-src/Unhiding.h"
@@ -156,6 +157,7 @@ protected:
   EquivalenceElimination ee;
   Unhiding unhiding;
   Probing probing;
+  RATElimination rate;
   Resolving res;
   Rewriter rew;
   FourierMotzkin fourierMotzkin;
