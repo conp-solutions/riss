@@ -65,9 +65,9 @@ FourierMotzkin::FourierMotzkin( CP3Config &_config, ClauseAllocator& _ca, Thread
 
 /** this number returns the next bigger number with the same number of set bits
  */
-uint64_t FourierMotzkin::nextNbitNumber(uint64_t x) const
+LONG_INT FourierMotzkin::nextNbitNumber(LONG_INT x) const
 {
-     uint64_t smallest, ripple, new_smallest, ones;
+     LONG_INT smallest, ripple, new_smallest, ones;
 
      if (x == 0) return 0;
      smallest     = (x & -x);
@@ -906,7 +906,6 @@ bool FourierMotzkin::process()
   return didSomething;
 }
 
-
 void FourierMotzkin::findCardsSemantic( vector< FourierMotzkin::CardC >& cards, vector< std::vector< int > >& leftHands ) 
 {
   
@@ -1033,9 +1032,9 @@ void FourierMotzkin::findCardsSemantic( vector< FourierMotzkin::CardC >& cards, 
 	  const int origDegree = degree;	// memorize original degree
 	  origCC = cc;
 	  
-	  if( degree > 63 ) {	// data structures do not support constraints with more than 63 bits
+	  if( degree > USEABLE_BITS ) {	// data structures do not support constraints with more than USEABLE_BITS bits (127 or 63)
 	    static bool didPrint = false;
-	    if( !didPrint ) { cerr << "c cannot handle constraints with more than 63 literals!" << endl; didPrint = false; } // print this error message once!
+	    if( !didPrint ) { cerr << "c cannot handle constraints with more than USEABLE_BITS literals!" << endl; didPrint = false; } // print this error message once!
 	    continue;
 	  }
 	  
@@ -1048,9 +1047,9 @@ void FourierMotzkin::findCardsSemantic( vector< FourierMotzkin::CardC >& cards, 
 	  
 	  do {	// try to extend the card constraint with new literals by unit propagation
 
-	    if( cc.size() > 62 ) {
+	    if( cc.size() > USEABLE_BITS ) {
 	      static bool didPrint = false;
-	      if( !didPrint ) { cerr << "c cannot handle constraints with more than 63 literals!" << endl; didPrint = false; } // print this error message once!
+	      if( !didPrint ) { cerr << "c cannot handle constraints with more than USEABLE_BITS literals!" << endl; didPrint = false; } // print this error message once!
 	      break;
 	    }
 
@@ -1059,17 +1058,17 @@ void FourierMotzkin::findCardsSemantic( vector< FourierMotzkin::CardC >& cards, 
 	    extendLit = lit_Undef;
   
 	    // for the "new" "degree" subsets of "degree" literals, check how many other literals are entailed as well
-	    uint64_t bitField = 0;
+	    LONG_INT bitField = 0;
 	    for( int j = 0 ; j < degree; ++j ) { bitField = bitField << 1; bitField = (bitField | 1); } // set degree bits in the number, make sure the least siginificant bit is always set!
 	    
-	    if( config.opt_semDebug ) cerr << "c start with number " << bitField << " for assign - bits ..." << endl;
+//	    if( config.opt_semDebug ) cerr << "c start with number " << bitField << " for assign - bits ..." << endl;
 	    int probes = 0, failedProbes = 0; // stats for number of propagations and failed propagations (to detect unsat)
 	    while( true  ) { // find another k-bit number, until all possible combinations inside the range have been tested
 	      if( firstIteration || (bitField & 1 != 0) ) { // consider this combination if its either the first iteration, or if the least siginificant bit is set
-		if( config.opt_semDebug ) cerr << "c probe " << probes << "  with bitfield " << bitField << " and with trail: " << solver.trail << endl;
+// 		if( config.opt_semDebug ) cerr << "c probe " << probes << "  with bitfield " << bitField << " and with trail: " << solver.trail << endl;
 		solver.newDecisionLevel(); // go to decision level 1!
 		for( int j = 0 ; j < cc.size(); ++ j ) {	// add all literals where a bit in "bitField" is set
-		  const uint64_t testPos = cc.size() - j - 1; // to hit least significant bit more easily
+		  const LONG_INT testPos = cc.size() - j - 1; // to hit least significant bit more easily
 		  if( (bitField & (1ull << testPos)) != 0ull ) { // if the right bit is set
 		    if( config.opt_semDebug ) cerr << "c assume lit " << cc[j] << " , undefined: " << (solver.value( cc[j] ) == l_Undef) << endl;
 		    semUnits ++;
@@ -1077,7 +1076,7 @@ void FourierMotzkin::findCardsSemantic( vector< FourierMotzkin::CardC >& cards, 
 		  }
 		}
 		probes ++;	// count number of propagations
-		if( config.opt_semDebug ) cerr << "c call propagate [" << bitField << "] " << probes << " with decL " << solver.decisionLevel() << " and trail size " << solver.trail.size() << endl;
+// 		if( config.opt_semDebug ) cerr << "c call propagate [" << bitField << "] " << probes << " with decL " << solver.decisionLevel() << " and trail size " << solver.trail.size() << endl;
 		CRef confl = solver.propagate(); // propagate, check for conflict
 		semSteps += solver.trail.size() - solver.trail_lim[0];	// appeoximate propagation effort
 		if( config.opt_semDebug ) cerr << "c propagate [ " << confl << " ] implied " << solver.trail << endl;
@@ -1110,9 +1109,9 @@ void FourierMotzkin::findCardsSemantic( vector< FourierMotzkin::CardC >& cards, 
 
 	      if( ! data.unlimited() && semSteps >= config.opt_semSearchLimit ) { data.lits.clear(); break; } // add no more extension!
 	      bitField = nextNbitNumber( bitField );
-	      uint64_t tmp = 1, shift = cc.size();
+	      LONG_INT tmp = 1, shift = cc.size();
 	      tmp = (tmp << shift);
-	      if( config.opt_semDebug ) cerr << "c continue with bitfield " << bitField  << "( cmp. to. " << ( (uint64_t)1 << (uint64_t)cc.size()) << " == " << tmp << ") and cc.size: " << cc.size() << endl;
+//	      if( config.opt_semDebug ) cerr << "c continue with bitfield " << bitField  << "( cmp. to. " << ( (LONG_INT)1 << (LONG_INT)cc.size()) << " == " << tmp << ") and cc.size: " << cc.size() << endl;
 	      if( bitField >= tmp ) break;
 	    }
 	    

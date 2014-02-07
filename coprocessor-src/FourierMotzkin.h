@@ -140,7 +140,7 @@ protected:
   void findCardsSemantic( vector<CardC>& cards,  vector< vector<int> >& leftHands );
   
   /** given a number x with n bits set, then the procedure returns the next number */
-  uint64_t nextNbitNumber(uint64_t x) const;
+  LONG_INT nextNbitNumber(LONG_INT x) const;
   
   /** add all clauses to solver object -- code taken from @see Preprocessor::reSetupSolver, but without deleting clauses */
   void reSetupSolver();

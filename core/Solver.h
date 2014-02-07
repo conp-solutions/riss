@@ -40,7 +40,22 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "core/Constants.h"
 #include "core/CoreConfig.h"
 
+
+//
+// choose which bit width should be used
+// (used in level-X-look-ahead and FM)
+//
+#ifndef DONT_USE_128_BIT
+  #define LONG_INT __uint128_t
+  #define USEABLE_BITS 127
+#else
+  #define LONG_INT uint64_t
+  #define USEABLE_BITS 63
+#endif
+
+//
 // forward declaration
+//
 namespace Coprocessor {
   class Preprocessor;
   class CP3Config;
@@ -430,7 +445,7 @@ protected:
     void disjunctionReplace( Minisat::Lit p, Minisat::Lit q, const Minisat::Lit x, bool inLearned, bool inBina );
     
     /** fill the current variable assignment into the given vector */
-    void fm(uint64_t* p, bool mo); // fills current model into variable vector
+    void fm(LONG_INT* p, bool mo); // fills current model into variable vector
     
     /** perform la hack, return false -> unsat instance!
      * @return false, instance is unsatisfable

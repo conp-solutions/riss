@@ -1774,7 +1774,7 @@ bool Solver::analyzeNewLearnedClause(const CRef newLearnedClause)
 
 
 
-void Solver::fm(uint64_t*p,bool mo){ // for negative, add bit patter 10, for positive, add bit pattern 01!
+void Solver::fm( LONG_INT *p,bool mo){ // for negative, add bit patter 10, for positive, add bit pattern 01!
   for(Var v=0;v<nVars();++v) p[v]=(p[v]<<2); // move two bits, so that the next assignment can be put there
 if(!mo) for(int i=trail_lim[0];i<trail.size();++i){
     Lit l=trail[i];
@@ -1786,19 +1786,19 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   assert(decisionLevel() == config.opt_laLevel && "can perform LA only, if level is correct" );
   laTime = cpuTime() - laTime;
 
-  uint64_t hit[]   ={5,10,  85,170, 21845,43690, 1431655765,2863311530,  6148914691236517205, 12297829382473034410ull}; // compare numbers for lifted literals
-  uint64_t hitEE0[]={9, 6, 153,102, 39321,26214, 2576980377,1717986918, 11068046444225730969ull, 7378697629483820646}; // compare numbers for l == dec[0] or l != dec[0]
-  uint64_t hitEE1[]={0, 0, 165, 90, 42405,23130, 2779096485,1515870810, 11936128518282651045ull, 6510615555426900570}; // compare numbers for l == dec[1]
-  uint64_t hitEE2[]={0, 0,   0,  0, 43605,21930, 2857740885,1437226410, 12273903644374837845ull, 6172840429334713770}; // compare numbers for l == dec[2]
-  uint64_t hitEE3[]={0, 0,   0,  0,     0,    0, 2863289685,1431677610, 12297735558912431445ull, 6149008514797120170}; // compare numbers for l == dec[3]
-  uint64_t hitEE4[]={0, 0,   0,  0,     0,    0,          0,         0, 12297829381041378645ull, 6148914692668172970}; // compare numbers for l == dec[4] 
+  LONG_INT hit[]   ={5,10,  85,170, 21845,43690, 1431655765,2863311530,  6148914691236517205, 12297829382473034410ull}; // compare numbers for lifted literals
+  LONG_INT hitEE0[]={9, 6, 153,102, 39321,26214, 2576980377,1717986918, 11068046444225730969ull, 7378697629483820646}; // compare numbers for l == dec[0] or l != dec[0]
+  LONG_INT hitEE1[]={0, 0, 165, 90, 42405,23130, 2779096485,1515870810, 11936128518282651045ull, 6510615555426900570}; // compare numbers for l == dec[1]
+  LONG_INT hitEE2[]={0, 0,   0,  0, 43605,21930, 2857740885,1437226410, 12273903644374837845ull, 6172840429334713770}; // compare numbers for l == dec[2]
+  LONG_INT hitEE3[]={0, 0,   0,  0,     0,    0, 2863289685,1431677610, 12297735558912431445ull, 6149008514797120170}; // compare numbers for l == dec[3]
+  LONG_INT hitEE4[]={0, 0,   0,  0,     0,    0,          0,         0, 12297829381041378645ull, 6148914692668172970}; // compare numbers for l == dec[4] 
   // TODO: remove white spaces, output, comments and assertions!
-  uint64_t p[nVars()];
-  memset(p,0,nVars()*sizeof(uint64_t)); // TODO: change sizeof into 4!
+  LONG_INT p[nVars()];
+  memset(p,0,nVars()*sizeof(LONG_INT)); // TODO: change sizeof into 4!
   vec<char> bu;
   polarity.copyTo(bu);  
-  uint64_t pt=~0; // everything set -> == 2^64-1
-  if(config.dx) cerr << "c initial pattern: " << pt << endl;
+  LONG_INT pt=~0; // everything set -> == 2^64-1
+//  if(config.dx) cerr << "c initial pattern: " << pt << endl;
   Lit d[5];
   for(int i=0;i<config.opt_laLevel;++i) d[i]=trail[ trail_lim[i] ]; // get all decisions into dec array
 
@@ -1816,18 +1816,18 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   int bound=1<<config.opt_laLevel, failedTries = 0;
   if(config.dx) cerr << "c do LA until " << bound << " starting at level " << decisionLevel() << endl;
   fm(p,false); // fill current model
-  for(uint64_t i=1;i<bound;++i){ // for each combination
+  for(LONG_INT i=1;i<bound;++i){ // for each combination
     cancelUntil(0);
     newDecisionLevel();
     for(int j=0;j<config.opt_laLevel;++j) uncheckedEnqueue( (i&(1<<j))!=0 ? ~d[j] : d[j] ); // flip polarity of d[j], if corresponding bit in i is set -> enumerate all combinations!
     bool f = propagate() != CRef_Undef; // for tests!
-    if(config.dx) { cerr << "c propagated iteration " << i << " : " ;  for(int j=0;j<config.opt_laLevel;++j) cerr << " " << ( (i&(1<<j))!=0 ? ~d[j] : d[j] ) ; cerr << endl; }
+//    if(config.dx) { cerr << "c propagated iteration " << i << " : " ;  for(int j=0;j<config.opt_laLevel;++j) cerr << " " << ( (i&(1<<j))!=0 ? ~d[j] : d[j] ) ; cerr << endl; }
     if(config.dx) { cerr << "c corresponding trail: "; if(f) cerr << " FAILED! "; else  for( int j = trail_lim[0]; j < trail.size(); ++ j ) cerr << " "  << trail[j]; cerr << endl; }
     fm(p,f);
-    uint64_t m=3;
+    LONG_INT m=3;
     if(f) {pt=(pt&(~(m<<(2*i)))); failedTries ++; }
-    if(config.dx) cerr << "c this propafation [" << i << "] failed: " << f << " current match pattern: " << pt << "(inv: " << ~pt << ")" << endl;
-    if(config.dx) { cerr << "c cut: "; for(int j=0;j<2<<config.opt_laLevel;++j) cerr << ((pt&(1<<j))  != (uint64_t)0 ); cerr << endl; }
+//    if(config.dx) cerr << "c this propafation [" << i << "] failed: " << f << " current match pattern: " << pt << "(inv: " << ~pt << ")" << endl;
+    if(config.dx) { cerr << "c cut: "; for(int j=0;j<2<<config.opt_laLevel;++j) cerr << ((pt&(1<<j))  != (LONG_INT)0 ); cerr << endl; }
   }
   cancelUntil(0);
   
@@ -1836,8 +1836,8 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   int t=2*config.opt_laLevel-2;
   // evaluate result of LA!
   bool foundUnit=false;
-  if(config.dx) cerr << "c pos hit: " << (pt & (hit[t])) << endl;
-  if(config.dx) cerr << "c neg hit: " << (pt & (hit[t+1])) << endl;
+//  if(config.dx) cerr << "c pos hit: " << (pt & (hit[t])) << endl;
+//  if(config.dx) cerr << "c neg hit: " << (pt & (hit[t+1])) << endl;
   toEnqueue.clear();
   bool doEE = ( (failedTries * 100)/ bound ) < config.opt_laEEp; // enough EE candidates?!
   if( config.dx) cerr << "c tries: " << bound << " failed: " << failedTries << " percent: " <<  ( (failedTries * 100)/ bound ) << " doEE: " << doEE << " current laEEs: " << laEEvars << endl;
@@ -1875,6 +1875,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
 	  for( int i = 0; i < analyze_stack.size(); ++ i ) {
 	    if( config.dx) {
 	    cerr << "c EE [" << i << "]: " << mkLit(v,false) << " <= " << analyze_stack[i] << ", " << mkLit(v,true) << " <= " << ~analyze_stack[i] << endl;
+/*
 	    cerr << "c match: " << var(mkLit(v,false)  )+1 << " : " << p[var(mkLit(v,false)  )] << " wrt. cut: " << (pt & p[var(mkLit(v,false)  )]) << endl;
 	    cerr << "c match: " << var(analyze_stack[i])+1 << " : " << p[var(analyze_stack[i])] << " wrt. cut: " << (pt & p[var(analyze_stack[i])]) << endl;
 	    
@@ -1888,6 +1889,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
 	    cerr << "c == " << ~d[3] << " ^= HIT3 - neg: " << hitEE3[t+1] << " wrt. cut: " << (pt & (hitEE3[t+1])) << endl;
 	    cerr << "c == " <<  d[4] << " ^= HIT4 - pos: " <<   hitEE4[t] << " wrt. cut: " << (pt & (  hitEE4[t])) << endl;
 	    cerr << "c == " << ~d[4] << " ^= HIT4 - neg: " << hitEE4[t+1] << " wrt. cut: " << (pt & (hitEE4[t+1])) << endl;
+*/
 	    }
 	    
 	    for( int pol = 0; pol < 2; ++ pol ) { // encode a->b, and b->a

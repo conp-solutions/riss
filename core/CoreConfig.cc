@@ -137,7 +137,11 @@ CoreConfig::CoreConfig() // add new options here!
  opt_laEEl ("MODS", "laEEl", "add EE clauses as learnt clauses", true, optionListPtr ),
  opt_laEEp ("MODS", "laEEp", "add EE clauses, if less than p percent tests failed", 0, IntRange(0, 100), optionListPtr ),
  opt_laMaxEvery ("MODS", "hlaMax", "maximum bound for frequency", 50, IntRange(0, INT32_MAX) , optionListPtr ),
+#ifdef DONT_USE_128_BIT
  opt_laLevel ("MODS", "hlaLevel", "level of look ahead", 5, IntRange(0, 5) , optionListPtr ),
+#else
+ opt_laLevel ("MODS", "hlaLevel", "level of look ahead", 5, IntRange(0, 6) , optionListPtr ), 
+#endif
  opt_laEvery ("MODS", "hlaevery", "initial frequency of LA", 1, IntRange(0, INT32_MAX) , optionListPtr ),
  opt_laBound ("MODS", "hlabound", "max. nr of LAs (-1 == inf)", -1, IntRange(-1, INT32_MAX) , optionListPtr ),
  opt_laTopUnit ("MODS", "hlaTop", "allow another LA after learning another nr of top level units (-1 = never)", -1, IntRange(-1, INT32_MAX), optionListPtr ),
