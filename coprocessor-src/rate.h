@@ -34,9 +34,9 @@ class RATElimination : public Technique  {
   };
   
   // attributes
-  int rateSteps;
+  int64_t rateSteps;
   int rateCandidates; // number of clauses that have been checked for cle
-  int remRAT, remAT, remHRAT; // how many clauses 
+  int remRAT, remAT, remHRAT, remBCE; // how many clauses 
   Clock rateTime; // clocks for the two methods
   
 public:
@@ -56,11 +56,15 @@ public:
   void destroy();
   
 protected:
-  /** check whether resolving c and d on literal l results in a tautology 
-   * Note: method assumes c and d to be sorted
-   */
-  bool tautologicResolvent( const Clause& c, const Clause& d, const Lit l );
 
+  /** resolve clause D, ~l \in D, with existing literals in resolvent on literal l */
+  bool resolveUnsortedStamped( const Lit l, const Clause& d, MarkArray& ma, vector<Lit>& resolvent );
+
+  /** add all clauses to solver object -- code taken from @see Preprocessor::reSetupSolver, but without deleting clauses */
+  void reSetupSolver();
+  
+  /** remove all clauses from the watch lists inside the solver */
+  void cleanSolver();
 };
 
 }

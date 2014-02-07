@@ -49,6 +49,7 @@ namespace Coprocessor {
   class BoundedVariableElimination;
   class Probing;
   class Symmetry;
+  class RATElimination;
   class BIG;
 }
 
@@ -70,6 +71,7 @@ class Solver {
     friend class Coprocessor::CoprocessorData;
     friend class Coprocessor::Probing;
     friend class Coprocessor::Symmetry;
+    friend class Coprocessor::RATElimination;
     friend class Minisat::IncSolver; // for bmc
   
     CoreConfig& config;

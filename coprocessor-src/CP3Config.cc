@@ -273,7 +273,10 @@ opt_la_debug (_cat_la, "la-debug", "output debug info during LA", false, optionL
 //
 // RAT Elimination
 //
-  rate_orderComplements("RAT Elimination", "rat-compl", "sort according to nr. of complements", true, optionListPtr ),
+rate_orderComplements("RAT Elimination", "rat-compl", "sort according to nr. of complements", true, optionListPtr ),
+rate_Limit("RAT Elimination","rate-limit", "number of pairwise clause comparisons before interrupting RATE", 1000000000, Int64Range(0, INT32_MAX) , optionListPtr ),
+opt_rate_debug ("RAT Elimination", "rate-debug", "debug output for RAT elimination",0, IntRange(0,4) , optionListPtr ),
+rate_minSize("RAT Elimination","rate-min", "minimal clause size for RAT elimination", 3, IntRange(2, INT32_MAX) , optionListPtr ),
 
 //
 // Dense

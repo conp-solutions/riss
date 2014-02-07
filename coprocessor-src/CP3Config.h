@@ -268,8 +268,11 @@ IntOption  opt_cceInpStepInc;
 //
 // Options for rat elimination
 //
- BoolOption rate_orderComplements;
-
+BoolOption rate_orderComplements;
+Int64Option rate_Limit;
+IntOption opt_rate_debug;
+IntOption rate_minSize;
+ 
 //
 // Dense
 //

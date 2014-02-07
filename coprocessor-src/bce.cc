@@ -243,6 +243,7 @@ void BlockedClauseElimination::blockedClauseElimination()
     // re-init heap
     for( int i = 0 ; i < nextRoundLits.size(); ++ i ) {
       const Lit l = nextRoundLits[i];
+      if( ! nextRound.isCurrentStep( toInt(l) ) ) continue; // has been processed before already
       assert( !bceHeap.inHeap(toInt(l)) && "literal should not be in the heap already!" );
       bceHeap.insert( toInt(l) );
     }

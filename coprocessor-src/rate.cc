@@ -17,6 +17,7 @@ RATElimination::RATElimination( CP3Config& _config, ClauseAllocator& _ca, Thread
 , remRAT(0)
 , remAT(0)
 , remHRAT(0)
+, remBCE(0)
 {
   
 }
@@ -42,6 +43,12 @@ bool RATElimination::process()
   MarkArray nextRound;
   vector<Lit> nextRoundLits;
   nextRound.create(2*data.nVars());
+  
+  // make sure that all clauses in the formula do not contain assigned literals
+  if( l_False == propagation.process(data,true) ) {
+    return true;
+  }
+  
   // init
   for( Var v = 0 ; v < data.nVars(); ++ v )
   {
@@ -52,20 +59,23 @@ bool RATElimination::process()
   data.ma.resize(2*data.nVars());
   data.ma.nextStep();
   
+  // re-setup solver!
+  reSetupSolver();
+  
   do {
     
     // re-init heap
     for( int i = 0 ; i < nextRoundLits.size(); ++ i ) {
       const Lit l = nextRoundLits[i];
+      if( ! nextRound.isCurrentStep( toInt(l) ) ) continue; // has been processed before already
       assert( !rateHeap.inHeap(toInt(l)) && "literal should not be in the heap already!" );
       rateHeap.insert( toInt(l) );
     }
     nextRoundLits.clear();
     nextRound.nextStep();
     
-    
-    // do BCE on all the literals of the heap
-    while (rateHeap.size() > 0 && (data.unlimited() || config.bceLimit > rateSteps) && !data.isInterupted() )
+    // do RAT Elimination on all the literals of the heap
+    while (rateHeap.size() > 0 && (data.unlimited() || config.rate_Limit > rateSteps) && !data.isInterupted() )
     {
       // interupted ?
       if( data.isInterupted() ) break;
@@ -78,58 +88,132 @@ bool RATElimination::process()
 
       // check whether a clause is a tautology wrt. the other clauses
       const Lit left = ~right; // complement
-      if( config.opt_bce_debug ) cerr << "c BCE work on literal " << right << " with " << data.list(right).size() << " clauses " << endl;
+      if( config.opt_rate_debug > 0 ) cerr << "c RATE work on literal " << right << " with " << data.list(right).size() << " clauses " << endl;
       data.lits.clear(); // used for covered literal elimination
       for( int i = 0 ; i < data.list(right).size(); ++ i ) 
       {
 	Clause& c = ca[ data.list(right)[i] ];
-	if( c.can_be_deleted() || (!config.bceBinary && c.size() == 2 && !config.opt_bce_cle ) ) continue; // do not work on uninteresting clauses!
+	if( c.can_be_deleted() ) continue; 
+	if( c.size() < config.rate_minSize ) continue; // ignore "small" clauses
 	
-	if( config.opt_bce_cle ) {
-	  data.lits.clear(); // collect the literals that could be removed by CLE
-	  for( int k = 0 ; k < c.size(); ++k ) if( right != c[k] ) data.lits.push_back( c[k] );
+	rateCandidates ++;
+	if( config.opt_rate_debug > 0 ) cerr << "c test clause " << c << endl;
+	// literals to propagate
+	data.lits.clear();
+	for( int j = 0 ; j < c.size(); ++ j) if( c[j] != right ) data.lits.push_back( c[j] );
+	const int defaultLits = data.lits.size(); // number of lits that can be kept for each resolvent
+	
+	data.lits.push_back(right); // to test whether c is AT, and hence can be removed by ATE
+	
+	solver.detachClause( data.list(right)[i], true ); // detach the clause eagerly
+	assert( solver.decisionLevel() == 0 && "check can only be done on level 0" );
+	solver.newDecisionLevel();
+	if( config.opt_rate_debug > 2 ) cerr << "c enqueue complements in " << data.lits << endl;
+	for( int j = 0 ; j < data.lits.size(); ++ j ) solver.uncheckedEnqueue( ~data.lits[j] ); // enqueue all complements
+	CRef confl = solver.propagate(); // check whether unit propagation finds a conflict for (F \ C) \land \ngt{C}, and hence C would be AT
+	rateSteps += solver.trail.size(); // approximate effort for propagation
+	solver.cancelUntil(0); // backtrack
+	if( confl != CRef_Undef ) {
+	  if( config.opt_rate_debug > 1 ) cerr << "c RATE eliminate AT clause " << c << endl;
+	  data.removedClause( data.list(right)[i] );
+	  c.set_delete(true);
+	  remAT++;
+	  for( int j = 0 ; j < c.size(); ++ j ) { // all complementary literals can be tested again
+	    if( ! nextRound.isCurrentStep(toInt(~c[j]) ) ) {
+	      nextRoundLits.push_back( ~c[j] );
+	      nextRound.setCurrentStep( toInt(~c[j]) );
+	    }
+	  }
+	  continue;
 	}
 	
-	bool canCle = false; // yet, no resolvent has been produced -> cannot perform CLE
-	bool isBlocked = (c.size() > 2 || config.bceBinary); // yet, no resolvent has been produced -> has to be blocked
 	
-	if(! isBlocked && !config.opt_bce_cle ) break; // early abort
+	data.lits.resize(defaultLits);
+	// data.lits contains the complements of the clause C, except literal right.
+	data.ma.nextStep();
+	for( int j = 0 ; j < data.lits.size(); ++ j ) {
+	  data.ma.setCurrentStep( toInt( ~data.lits[j] ) ); // mark all literals of c except right, for fast resolution checks
+	}
 	
-	for( int j = 0 ; j < data.list(left).size(); ++ j )
+	bool allResolventsAT = true;
+	bool allTaut = true;
+	for( int j = 0 ; allResolventsAT && j < data.list(left).size(); ++ j ) // for all clauses D \in F_{\ngt{l}}
 	{
 	  Clause& d = ca[ data.list(left)[j] ];
-	  if( d.can_be_deleted() ) continue; // do not work on uninteresting clauses!
+	  if( d.can_be_deleted() ) continue; // no resolvent required
 	  rateSteps ++;
+	  if( config.opt_rate_debug > 2 ) cerr << "c RATE resolve with clause " << d << endl;
+	  bool isTaut = resolveUnsortedStamped( right, d, data.ma, data.lits ); // data.lits contains the resolvent
+	  rateSteps += d.size(); // approximate effort for resolution
+	  if( config.opt_rate_debug > 2 ) cerr << "c RATE resolvent (taut=" << isTaut << ") : " << data.lits << endl;
 	  
+	  if( isTaut ) { data.lits.resize( defaultLits ); continue; } // if resolvent is a tautology, then the its also AT (simulates BCE). remove the literals from D from the resolvent again
+	  else allTaut = false;
+
+	  // test whether the resolvent is AT
+	  solver.newDecisionLevel();
+	  if( config.opt_rate_debug > 2 ) cerr << "c enqueue complements in " << data.lits << endl;
+	  for( int j = 0 ; j < data.lits.size(); ++ j ) solver.uncheckedEnqueue( ~data.lits[j] );	// enqueue all complements
+	  CRef confl = solver.propagate();	// check whether unit propagation finds a conflict for (F \ C) \land \ngt{C}, and hence C would be AT
+	  rateSteps += solver.trail.size(); // approximate effort for propagation
+	  if( config.opt_rate_debug > 2 ) cerr << "c propagate with conflict " << (confl != CRef_Undef ? "yes" : " no") << endl;
+	  solver.cancelUntil(0);	// backtrack
+	  if( confl == CRef_Undef ) allResolventsAT = false;	// not AT
+	  data.lits.resize(defaultLits);	// remove the literals from D again
+	  
+	  if( !data.unlimited() && config.rate_Limit <= rateSteps) {	// check step limits
+	    allResolventsAT = false; break; 
+	  }
 	}
-	
-	// if cle took place, there might be something to be propagated
-	if( data.hasToPropagate() ) {
-	  int prevSize = data.list(right).size();
-	  propagation.process(data, true); // propagate, if there's something to be propagated
-	  modifiedFormula = modifiedFormula  || propagation.appliedSomething();
-	  if( !data.ok() ) return modifiedFormula;
-	  if( prevSize != data.list( right ).size() ) i = -1; // start the current list over, if propagation did something to the list size (do not check all clauses of the list!)!
-	} 
-	
+	if( allResolventsAT ) {	// clause C is RAT, remove it!
+	  data.addToExtension(data.list(right)[i], right); 
+	  data.removedClause( data.list(right)[i] );
+	  if( config.opt_rate_debug > 1 ) cerr << "c RATE eliminate RAT clause " << c << endl;
+	  c.set_delete(true);
+	  remRAT = (!allTaut) ? remRAT+1 : remRAT;
+	  remBCE = ( allTaut) ? remBCE+1 : remBCE;
+	  for( int j = 0 ; j < c.size(); ++ j ) {	// all complementary literals can be tested again
+	    if( ! nextRound.isCurrentStep(toInt(~c[j]) ) ) {
+	      nextRoundLits.push_back( ~c[j] );
+	      nextRound.setCurrentStep( toInt(~c[j]) );
+	    }
+	  }
+	  data.addCommentToProof("rat clause during RATE");
+	  data.addToProof(c,true);
+	} else {
+	  solver.attachClause( data.list(right)[i] ); // if clause cannot be removed by RAT Elimination, attach it again!
+	}
       } // end iterating over all clauses that contain (right)
     }
   
-    // perform garbage collection
-    data.checkGarbage();  
-  
-  } while ( nextRoundLits.size() > 0 && (data.unlimited() || config.bceLimit > rateSteps) && !data.isInterupted() ); // repeat until all literals have been seen until a fixed point is reached!
+  } while ( nextRoundLits.size() > 0 && (data.unlimited() || config.rate_Limit > rateSteps) && !data.isInterupted() ); // repeat until all literals have been seen until a fixed point is reached!
+
+  // clean solver!
+  cleanSolver();
   
   return modifiedFormula;
 }
 
-  
+bool RATElimination::resolveUnsortedStamped( const Lit l, const Clause& d, MarkArray& ma, vector<Lit>& resolvent )
+{
+    for( int i = 0 ; i < d.size(); ++ i ) {
+      const Lit& dl = d[i];
+      if( dl == ~l) continue; // on this literal we currently resolve
+      if( ma.isCurrentStep( toInt( ~dl ) ) ) return true; // complementary literals in the resolvent
+      if( ! ma.isCurrentStep( toInt(dl) ) ) {
+	resolvent.push_back( dl );	// literal not yet present in resolvent, add it
+      }
+    }
+    return false;
+}
+
 void RATElimination::printStatistics(ostream& stream)
 {
   cerr << "c [STAT] RATE "  << rateTime.getCpuTime() << " seconds, " << rateSteps << " steps, "
   << rateCandidates << " checked, "
-  << remRAT << " rem-RAT, "
-  << remAT << "rem-AT, "
+  << remRAT  << " rem-RAT, "
+  << remBCE  << " rem-BCE, "
+  << remAT   << " rem-AT, "
   << remHRAT << " rem-HRAT," << endl;
 }
 
@@ -142,3 +226,83 @@ void RATElimination::destroy()
 {
   
 }
+
+void RATElimination::cleanSolver()
+{
+  // clear all watches!
+  solver.watches.cleanAll();
+  solver.watchesBin.cleanAll();
+  
+  // clear all watches!
+  for (int v = 0; v < solver.nVars(); v++)
+    for (int s = 0; s < 2; s++)
+      solver.watches[ mkLit(v, s) ].clear();
+    
+  // for glucose, also clean binary clauses!
+  for (int v = 0; v < solver.nVars(); v++)
+    for (int s = 0; s < 2; s++)
+      solver.watchesBin[ mkLit(v, s) ].clear();
+
+  solver.learnts_literals = 0;
+  solver.clauses_literals = 0;
+  solver.watches.cleanAll();
+}
+
+void RATElimination::reSetupSolver()
+{
+  assert( solver.decisionLevel() == 0 && "solver can be re-setup only at level 0!" );
+    // check whether reasons of top level literals are marked as deleted. in this case, set reason to CRef_Undef!
+    if( solver.trail_lim.size() > 0 )
+      for( int i = 0 ; i < solver.trail_lim[0]; ++ i )
+        if( solver.reason( var(solver.trail[i]) ) != CRef_Undef )
+          if( ca[ solver.reason( var(solver.trail[i]) ) ].can_be_deleted() )
+            solver.vardata[ var(solver.trail[i]) ].reason = CRef_Undef;
+
+    // give back into solver
+    for( int p = 0 ; p < 2; ++ p ) {
+      vec<CRef>& clauses = (p == 0 ? solver.clauses : solver.learnts );
+      for (int i = 0; i < clauses.size(); ++i)
+      {
+	  const CRef cr = clauses[i];
+	  Clause & c = ca[cr];
+	  assert( c.size() != 0 && "empty clauses should be recognized before re-setup" );
+	  if ( !c.can_be_deleted() ) // all clauses are neccesary for re-setup!
+	  {
+	      assert( c.mark() == 0 && "only clauses without a mark should be passed back to the solver!" );
+	      if (c.size() > 1)
+	      {
+		  // do not watch literals that are false!
+		  int j = 1;
+		  for ( int k = 0 ; k < 2; ++ k ) { // ensure that the first two literals are undefined!
+		    if( solver.value( c[k] ) == l_False ) {
+		      for( ; j < c.size() ; ++j )
+			if( solver.value( c[j] ) != l_False ) 
+			  { const Lit tmp = c[k]; c[k] = c[j]; c[j] = tmp; break; }
+		    }
+		  }
+		  // assert( (solver.value( c[0] ) != l_False || solver.value( c[1] ) != l_False) && "Cannot watch falsified literals" );
+		  
+		  // reduct of clause is empty, or unit
+		  if( solver.value( c[0] ) == l_False ) { data.setFailed(); return; }
+		  else if( solver.value( c[1] ) == l_False ) {
+		    if( data.enqueue(c[0]) == l_False ) { return; }
+		    else { 
+		      c.set_delete(true);
+		    }
+		    if( solver.propagate() != CRef_Undef ) { data.setFailed(); return; }
+		    c.set_delete(true);
+		  } else solver.attachClause(cr);
+	      }
+	      else if (solver.value(c[0]) == l_Undef)
+		  if( data.enqueue(c[0]) == l_False ) { return; }
+	      else if (solver.value(c[0]) == l_False )
+	      {
+		// assert( false && "This UNSAT case should be recognized before re-setup" );
+		data.setFailed();
+	      }
+	  }
+      }
+    }
+}
+
+
