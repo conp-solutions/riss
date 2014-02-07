@@ -526,6 +526,7 @@ void Solver::minimisationWithBinaryResolution(vec<Lit> &out_learnt) {
 //
 void Solver::cancelUntil(int level) {
     if (decisionLevel() > level){
+      if( config.opt_learn_debug) cerr << "c call cancel until " << level << " move propagation head from " << qhead << " to " << trail_lim[level] << endl;
         for (int c = trail.size()-1; c >= trail_lim[level]; c--){
             Var      x  = var(trail[c]);
             assigns [x] = l_Undef;
@@ -535,7 +536,7 @@ void Solver::cancelUntil(int level) {
                 polarity[x] = sign(trail[c]);
             insertVarOrder(x); }
         qhead = trail_lim[level];
-	realHead = qhead;
+	realHead = trail_lim[level];
         trail.shrink(trail.size() - trail_lim[level]);
         trail_lim.shrink(trail_lim.size() - level);
     } }
@@ -602,20 +603,20 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     
     varsToBump.clear();clssToBump.clear(); // store info for bumping
     
-    
     // Generate conflict clause:
     //
     out_learnt.push();      // (leave room for the asserting literal)
     int index   = trail.size() - 1;
 
     do{
+	if( config.opt_learn_debug ) cerr << "c enter loop with lit " << p << endl;
         assert(confl != CRef_Undef && "there needs to be something to be resolved"); // (otherwise should be UIP)
          if( confl == CRef_Undef ) {
  	  cerr << "c SPECIALLY BUILD-IN FAIL-CHECK in analyze" << endl;
  	  exit( 35 );
  	}
         Clause& c = ca[confl];
-	if( config.opt_ecl_debug || config.opt_rer_debug ) cerr << "c resolve on " << p << "(" << index << ") with [" << confl << "]" << c << " -- calculated currentSize: " << currentSize <<  endl;
+	if( config.opt_ecl_debug || config.opt_rer_debug ) cerr << "c resolve on " << p << "(" << index << "/" << trail.size() << ") with [" << confl << "]" << c << " -- calculated currentSize: " << currentSize << " pathLimit: " << pathLimit <<  endl;
 	int clauseReductSize = c.size();
 	// Special case for binary clauses
 	// The first one has to be SAT
@@ -706,6 +707,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	  learntUnit ++; 
 	  units ++; // count current units
 	  out_learnt.push( ~p ); // store unit
+	  if( config.opt_learn_debug ) cerr << "c learn unit clause " << ~p << " with pathLimit=" << pathLimit << endl;
 	  if( config.opt_allUipHack == 1 ) break; // for now, stop at the first unit! // TODO collect all units
 	  pathLimit = 0;	// do not use bi-asserting learning once we found one unit clause
 	}
@@ -857,12 +859,19 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
         out_btlevel = 0;
     else{
         int max_i = 1;
+	int decLevelLits = 1;
         // Find the first literal assigned at the next-highest level:
 	if( config.opt_biAsserting ) {
 	  int currentLevel = level(var(out_learnt[max_i]));
 	  for (int i = 1; i < out_learnt.size(); i++){
 	    if( level(var(out_learnt[i])) == decisionLevel() ) { // if there is another literal of the decision level (other than the first one), then the clause is bi-asserting
 	      isBiAsserting = true;
+	      // move this literal to the next free position at the front!
+	      const Lit tmp = out_learnt[i]; 
+	      out_learnt[i] = out_learnt[decLevelLits];
+	      out_learnt[decLevelLits] = tmp;
+	      if( max_i == decLevelLits ) max_i = i; // move the literal with the second highest level correctly
+	      decLevelLits ++;
 	    } // the level of the literals of the current level should not become the backtracking level, hence, this literal is not moved to this position
 	    else if (level(var(out_learnt[max_i])) == decisionLevel() || level(var(out_learnt[i])) > level(var(out_learnt[max_i]))) max_i = i; // use any literal, as long as the backjump level is the same as the current level
 	  }
@@ -1022,7 +1031,7 @@ void Solver::uncheckedEnqueue(Lit p, CRef from)
 
     // prefetch watch lists
     if(config.opt_prefetch) __builtin_prefetch( & watches[p] );
-    if(config.opt_printDecisions > 1 ) {cerr << "c enqueue " << p; if( from != CRef_Undef ) cerr << " because of " <<  ca[from]; cerr << endl;}
+    if(config.opt_printDecisions > 1 ) {cerr << "c uncheched enqueue " << p; if( from != CRef_Undef ) cerr << " because of " <<  ca[from]; cerr << endl;}
       
     trail.push_(p);
 }
@@ -1042,7 +1051,7 @@ void Solver::uncheckedEnqueue(Lit p, CRef from)
 CRef Solver::propagate()
 {
     // if( config.opt_printLhbr ) cerr << endl << "c called propagate" << endl;
-  
+    if( config.opt_learn_debug ) cerr << "c call propagate with " << qhead << " for " <<  trail.size() << " lits" << endl;
   
     CRef    confl     = CRef_Undef;
     int     num_props = 0;
@@ -1132,7 +1141,7 @@ CRef Solver::propagate()
 
         for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;)
 	{
-	    if( config.opt_learn_debug ) cerr << "c check clause " << ca[i->cref] << endl;
+	    if( config.opt_learn_debug ) cerr << "c check clause [" << i->cref << "]" << ca[i->cref] << endl;
 	    assert( ca[ i->cref ].size() > 2 && "in this list there can only be clauses with more than 2 literals" );
 	    
             // Try to avoid inspecting the clause:
@@ -1475,6 +1484,7 @@ lbool Solver::search(int nof_conflicts)
     bool blocked=false;
     starts++;
     for (;;){
+	cerr << "c enter search loop again" << endl;
 	propagationTime.start();
         CRef confl = propagate();
 	propagationTime.stop();
@@ -1511,6 +1521,14 @@ lbool Solver::search(int nof_conflicts)
 #ifdef CLS_EXTRA_INFO
 	      maxResHeight = extraInfo;
 #endif
+	      assert( (!isBiAsserting || ret == 0) && "cannot be multi unit and bi asserting at the same time" );
+	      if( isBiAsserting && ret == 0) {
+		cerr << "c confl:     " << ca[confl] << endl;
+		printConflictTrail(confl);
+		cerr << "c learn:     " << learnt_clause << endl;
+		cerr << "c jumpLevel: " << backtrack_level << endl;
+	      }
+	      
 	      if( config.opt_rer_debug ) cerr << "c analyze returns with " << ret << " , jumpLevel " << backtrack_level << " and set of literals " << learnt_clause<< endl;
      
 	      // OTFSS TODO put into extra method!
@@ -1792,14 +1810,14 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   LONG_INT hitEE2[]={0, 0,   0,  0, 43605,21930, 2857740885,1437226410, 12273903644374837845ull, 6172840429334713770}; // compare numbers for l == dec[2]
   LONG_INT hitEE3[]={0, 0,   0,  0,     0,    0, 2863289685,1431677610, 12297735558912431445ull, 6149008514797120170}; // compare numbers for l == dec[3]
   LONG_INT hitEE4[]={0, 0,   0,  0,     0,    0,          0,         0, 12297829381041378645ull, 6148914692668172970}; // compare numbers for l == dec[4] 
-  // TODO: remove white spaces, output, comments and assertions!
+  // FIXME have another line for level 6 here!
   LONG_INT p[nVars()];
-  memset(p,0,nVars()*sizeof(LONG_INT)); // TODO: change sizeof into 4!
+  memset(p,0,nVars()*sizeof(LONG_INT)); 
   vec<char> bu;
   polarity.copyTo(bu);  
   LONG_INT pt=~0; // everything set -> == 2^64-1
 //  if(config.dx) cerr << "c initial pattern: " << pt << endl;
-  Lit d[5];
+  Lit d[6];
   for(int i=0;i<config.opt_laLevel;++i) d[i]=trail[ trail_lim[i] ]; // get all decisions into dec array
 
   if(config.tb){ // use tabu
@@ -2989,6 +3007,7 @@ void Solver::disjunctionReplace( Lit p, Lit q, const Lit x, bool inLearned, bool
 
 bool Solver::interleavedClauseStrengthening()
 {
+  cerr << "c enter interleaved clause strengthening" << endl;
   // TODO: have dynamic updates of the limits, so that a good time/result ratio can be reached!
   icsCalls ++;
   MethodClock thisMethodTime( icsTime ); // clock that measures how long the procedure took
@@ -3067,6 +3086,7 @@ bool Solver::interleavedClauseStrengthening()
       CRef confl = propagate();
       if( confl != CRef_Undef ) { // found a conflict, handle it (via usual, simple, conflict analysis)
 	learnt_clause.clear(); otfssCls.clear(); // prepare for analysis
+	printConflictTrail( confl );
 	int ret = analyze(confl, learnt_clause, backtrack_level,nblevels,otfssCls,extraInfo);	
 	cancelUntil( 0 );
 	if( ret == 0 ) {
@@ -3101,8 +3121,12 @@ bool Solver::interleavedClauseStrengthening()
 	    if(config.opt_ics_debug) cerr << "c ICS learn clause [" << cr << "] " << ca[cr] << endl;
 	  }
 	} else {
-	  // what to do here?
-	  handleMultipleUnits( learnt_clause ); // learn multiple units here!
+	  if( l_False == handleMultipleUnits( learnt_clause ) ) { 
+	    // learn multiple units here!
+	    if(config.opt_ics_debug) cerr << "c learned UNSAT with multi units!" << endl;
+	    return false;
+	  }
+	  if( propagate() != CRef_Undef ) return false;
 	}
 	break; // we're done for this clause for now. ... what happens if we added the current learned clause now and repeat the process for the clause? there might be more reduction! -> TODO: shuffe clause and have parameter!
       } // end if conflict during propagate
@@ -3580,7 +3604,8 @@ lbool Solver::handleMultipleUnits(vec< Lit >& learnt_clause)
   { 
     if( value(learnt_clause[i]) == l_Undef ) uncheckedEnqueue(learnt_clause[i]);
     else if (value(learnt_clause[i]) == l_False ) return l_False; // otherwise, we have a top level conflict here! 
-    if( config.opt_printDecisions > 1 ) cerr << "c enqueue multi-learned literal " << learnt_clause[i] << " at level " <<  decisionLevel() << endl;
+    else if( config.opt_learn_debug) cerr << "c tried to enqueue a unit clause that was already a unit clause ... " << endl;
+    if( config.opt_printDecisions > 1 ) cerr << "c enqueue multi-learned literal " << learnt_clause[i] << "(" << i << "/" << learnt_clause.size() << ") at level " <<  decisionLevel() << endl;
   }
     
   // write learned unit clauses to DRUP!

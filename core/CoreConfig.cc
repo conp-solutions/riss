@@ -132,7 +132,7 @@ CoreConfig::CoreConfig() // add new options here!
 
  dx ("MODS", "laHackOutput","output info about LA", false, optionListPtr ),
  hk ("MODS", "laHack", "enable lookahead on level 0", false, optionListPtr ),
- tb ("MODS", "tabu", "do not perform LA, if all considered LA variables are as before", false, optionListPtr ),
+ tb ("MODS", "tabu", "do not perform LA, if all considered LA variables are as before", true, optionListPtr ),
  opt_laDyn ("MODS", "dyn", "dynamically set the frequency based on success", false, optionListPtr ),
  opt_laEEl ("MODS", "laEEl", "add EE clauses as learnt clauses", true, optionListPtr ),
  opt_laEEp ("MODS", "laEEp", "add EE clauses, if less than p percent tests failed", 0, IntRange(0, 100), optionListPtr ),
@@ -140,10 +140,10 @@ CoreConfig::CoreConfig() // add new options here!
 #ifdef DONT_USE_128_BIT
  opt_laLevel ("MODS", "hlaLevel", "level of look ahead", 5, IntRange(0, 5) , optionListPtr ),
 #else
- opt_laLevel ("MODS", "hlaLevel", "level of look ahead", 5, IntRange(0, 6) , optionListPtr ), 
+ opt_laLevel ("MODS", "hlaLevel", "level of look ahead", 5, IntRange(0, 5) , optionListPtr ), 
 #endif
  opt_laEvery ("MODS", "hlaevery", "initial frequency of LA", 1, IntRange(0, INT32_MAX) , optionListPtr ),
- opt_laBound ("MODS", "hlabound", "max. nr of LAs (-1 == inf)", -1, IntRange(-1, INT32_MAX) , optionListPtr ),
+ opt_laBound ("MODS", "hlabound", "max. nr of LAs (-1 == inf)", 4096, IntRange(-1, INT32_MAX) , optionListPtr ),
  opt_laTopUnit ("MODS", "hlaTop", "allow another LA after learning another nr of top level units (-1 = never)", -1, IntRange(-1, INT32_MAX), optionListPtr ),
 
  opt_prefetch ("MODS", "prefetch", "prefetch watch list, when literal is enqueued", false, optionListPtr ),

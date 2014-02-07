@@ -45,6 +45,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 // choose which bit width should be used
 // (used in level-X-look-ahead and FM)
 //
+#define DONT_USE_128_BIT
 #ifndef DONT_USE_128_BIT
   #define LONG_INT __uint128_t
   #define USEABLE_BITS 127
@@ -781,7 +782,7 @@ inline bool     Solver::addClause       (Lit p, Lit q, Lit r)   { add_tmp.clear(
      || 
      (value(c[1]) == l_True && reason(var(c[1])) != CRef_Undef && ca.lea(reason(var(c[1]))) == &c);
  }
-inline void     Solver::newDecisionLevel()                      { trail_lim.push(trail.size()); }
+inline void     Solver::newDecisionLevel()                      { trail_lim.push(trail.size()); cerr << "c enter decision level " << trail_lim.size() << endl;}
 
 inline int      Solver::decisionLevel ()      const   { return trail_lim.size(); }
 inline uint32_t Solver::abstractLevel (Var x) const   { return 1 << (level(x) & 31); }
