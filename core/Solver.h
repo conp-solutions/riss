@@ -782,7 +782,7 @@ inline bool     Solver::addClause       (Lit p, Lit q, Lit r)   { add_tmp.clear(
      || 
      (value(c[1]) == l_True && reason(var(c[1])) != CRef_Undef && ca.lea(reason(var(c[1]))) == &c);
  }
-inline void     Solver::newDecisionLevel()                      { trail_lim.push(trail.size()); cerr << "c enter decision level " << trail_lim.size() << endl;}
+inline void     Solver::newDecisionLevel()                      { trail_lim.push(trail.size());}
 
 inline int      Solver::decisionLevel ()      const   { return trail_lim.size(); }
 inline uint32_t Solver::abstractLevel (Var x) const   { return 1 << (level(x) & 31); }

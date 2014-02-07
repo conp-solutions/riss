@@ -1484,7 +1484,6 @@ lbool Solver::search(int nof_conflicts)
     bool blocked=false;
     starts++;
     for (;;){
-	cerr << "c enter search loop again" << endl;
 	propagationTime.start();
         CRef confl = propagate();
 	propagationTime.stop();
