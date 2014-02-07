@@ -370,16 +370,20 @@ BoolOption circ_Implied;
 //
 // Fourier Motzkin
 //
+IntOption  opt_fm_max_constraints;
 Int64Option opt_fmLimit    ;
 Int64Option opt_fmSearchLimit    ;
 IntOption  opt_fmMaxAMO   ;
 IntOption  opt_fmGrow     ;
 IntOption  opt_fmGrowT    ;
 BoolOption opt_atMostTwo  ;
+BoolOption opt_fm_twoPr   ;
+BoolOption opt_fm_sem     ;
 BoolOption opt_findUnit   ;
 BoolOption opt_merge      ;
 BoolOption opt_fm_avoid_duplicates ;
 BoolOption opt_fm_multiVarAMO ;
+BoolOption opt_multiVarAMT;
 BoolOption opt_cutOff     ;
 IntOption opt_newAmo      ;
 BoolOption opt_keepAllNew ;
@@ -387,6 +391,13 @@ IntOption opt_newAlo      ;
 IntOption opt_newAlk      ;
 BoolOption opt_checkSub   ;
 BoolOption opt_rem_first  ;
+IntOption opt_minCardClauseSize;
+IntOption opt_maxCardClauseSize; 
+IntOption opt_maxCardSize      ;
+Int64Option opt_semSearchLimit ;
+BoolOption opt_semDebug        ;
+BoolOption opt_noReduct        ;
+
 #if defined TOOLVERSION 
 const int fm_debug_out;
 #else

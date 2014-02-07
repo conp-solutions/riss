@@ -3100,7 +3100,7 @@ bool Solver::interleavedClauseStrengthening()
 	  }
 	} else {
 	  // what to do here?
-	  assert( false && "this method is not handled properly!" );
+	  handleMultipleUnits( learnt_clause ); // learn multiple units here!
 	}
 	break; // we're done for this clause for now. ... what happens if we added the current learned clause now and repeat the process for the clause? there might be more reduction! -> TODO: shuffe clause and have parameter!
       } // end if conflict during propagate

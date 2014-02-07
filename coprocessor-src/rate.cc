@@ -132,7 +132,7 @@ bool RATElimination::process()
 	// data.lits contains the complements of the clause C, except literal right.
 	data.ma.nextStep();
 	for( int j = 0 ; j < data.lits.size(); ++ j ) {
-	  data.ma.setCurrentStep( toInt( ~data.lits[j] ) ); // mark all literals of c except right, for fast resolution checks
+	  data.ma.setCurrentStep( toInt( data.lits[j] ) ); // mark all literals of c except right, for fast resolution checks
 	}
 	
 	bool allResolventsAT = true;
@@ -246,6 +246,11 @@ void RATElimination::cleanSolver()
   solver.learnts_literals = 0;
   solver.clauses_literals = 0;
   solver.watches.cleanAll();
+  
+  for( int i = 0 ; i < solver.learnts.size(); ++ i ) 
+    ca[ solver.learnts[i] ].sort();
+  for( int i = 0 ; i < solver.clauses.size(); ++ i ) 
+    ca[ solver.clauses[i] ].sort(); 
 }
 
 void RATElimination::reSetupSolver()

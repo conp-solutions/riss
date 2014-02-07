@@ -9,16 +9,19 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 using namespace Coprocessor;
 
-FourierMotzkin::FourierMotzkin( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation )
+FourierMotzkin::FourierMotzkin( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, Solver& _solver )
 : Technique(_config, _ca,_controller)
 , data(_data)
 , propagation(_propagation)
+, solver( _solver )
+
 , processTime(0)
 , amoTime(0)
 , amtTime(0)
 , fmTime(0)
 , twoPrTime(0)
 , deduceAloTime(0)
+, semTime(0)
 , steps(0)
 , searchSteps(0)
 , fmLimit(config.opt_fmLimit)
@@ -45,8 +48,33 @@ FourierMotzkin::FourierMotzkin( CP3Config &_config, ClauseAllocator& _ca, Thread
 , twoPrAmos(0)
 , twoPrAmoLits(0)
 , dedAlos(0)
+
+, semExtendedCards(0)
+, semFailedExtendTries(0)
+, semExtendLits(0)
+, semReducedDegrees(0)
+, semTotalProbes(0)
+, semTotalFailedProbes(0)
+, semNrDisabledClauses(0)
+, semNrPreDisabledClauses(0)
+, semUnits(0)
+, semSteps(0)
 {
   
+}
+
+/** this number returns the next bigger number with the same number of set bits
+ */
+uint64_t FourierMotzkin::nextNbitNumber(uint64_t x) const
+{
+     uint64_t smallest, ripple, new_smallest, ones;
+
+     if (x == 0) return 0;
+     smallest     = (x & -x);
+     ripple       = x + smallest;
+     new_smallest = (ripple & -ripple);
+     ones         = ((new_smallest/smallest) >> 1) - 1;
+     return ripple | ones;
 }
 
 void FourierMotzkin::reset()
@@ -194,6 +222,7 @@ bool FourierMotzkin::process()
     // remember that these literals have been used in an amo already!
     sort(data.lits);
     cards.push_back( data.lits );
+    if( cards.size() >= config.opt_fm_max_constraints ) break;
 
     if( config.opt_fm_multiVarAMO && data.lits.size() > 1 && config.opt_fm_avoid_duplicates && big.getSize( right ) > 0 ) heap.insert( toInt( right ) ); // this literal might have more cliques
     
@@ -211,6 +240,7 @@ bool FourierMotzkin::process()
   // perform AMT extraction
   amtTime = cpuTime() - amtTime;
   if( config.opt_atMostTwo ) {
+    inAmo.nextStep(); // use it to detect whether already used in AM2 constraint as well!
     for( Var v = 0 ; v < data.nVars(); ++ v ) {
       if( config.opt_fmSearchLimit <= searchSteps ) { // if limit is reached, invalidate current AMO candidate
 	data.lits.clear();
@@ -222,6 +252,7 @@ bool FourierMotzkin::process()
 	  break;
 	}
         const Lit l = mkLit(v,p==1);
+	if( !config.opt_multiVarAMT && inAmo.isCurrentStep( toInt(l) ) ) continue; // each literal has the chance to be in one constraint!
 	if( config.fm_debug_out > 1 ) cerr << "c consider literal " << l << " with " << data.list(l).size() << " clauses" << endl;
         data.lits.clear(); data.ma.nextStep(); // prepare set!
 	data.lits.push_back(l); data.ma.setCurrentStep( toInt(l) ); // add current literal!
@@ -231,6 +262,7 @@ bool FourierMotzkin::process()
 	  searchSteps++;
 	  if( c.can_be_deleted() || c.size() != 3 ) continue; // look for interesting, ternary clauses only!
 	  if( c[0] != l ) continue; // consider only clauses, where l is the smallest literal?! (all other AMT's would have been found before!)
+	  if( !config.opt_multiVarAMT && (inAmo.isCurrentStep( toInt(c[1]) ) || inAmo.isCurrentStep( toInt(c[2]) ) ) ) continue; // do not use this ternary clause any more!
 	  for( int j = 1; j < 3; ++ j ) {
 	    searchSteps++;
 	    if( c[j] != l && ! data.ma.isCurrentStep( toInt(c[j] ) ) ) { 
@@ -269,15 +301,20 @@ bool FourierMotzkin::process()
 	}
 	
 	if( data.lits.size() > 3 ) {
-	  for( int i = 0 ; i < data.lits.size(); ++ i ) data.lits[i] = ~data.lits[i];
+	  for( int i = 0 ; i < data.lits.size(); ++ i ) {
+	    data.lits[i] = ~data.lits[i];
+	    if( !config.opt_multiVarAMT ) inAmo.setCurrentStep( toInt( data.lits[i] ) ); // disallow the current literal to participate in another constraint as well!
+	  }
 	  foundAmts ++;
 	  if( config.fm_debug_out > 1 ) cerr << "c found AM2["<<foundAmts<<"]: " << data.lits << endl;
 	  cards.push_back( CardC( data.lits ) ); // use default AMO constructor
 	  cards.back().k = 2; // set k to be 2, since its an at-most-two constraint!
+	  if( cards.size() >= config.opt_fm_max_constraints ) goto finishAMT;
 	}
 	
-      }
+       }
     }
+    finishAMT:; // jump here if we found too many cardinality constraints
   }
   amtTime = cpuTime() - amtTime;
   
@@ -290,7 +327,7 @@ bool FourierMotzkin::process()
     for( int j = 0; j < cards[i].lr.size(); ++ j ) rightHands[ toInt( cards[i].lr[j] ) ].push_back( i );
   }
   
-  vec<Lit> unitQueue;
+  unitQueue.clear();
   vector<int> newAMOs,newALOs,newALKs;
   
   // perform FindUnit
@@ -333,7 +370,6 @@ bool FourierMotzkin::process()
     
   }
   
-   
   // perform merge
   if( config.opt_merge ) {
     if( config.fm_debug_out > 0 ) cerr << "c merge AMOs ... " << endl;
@@ -411,10 +447,13 @@ bool FourierMotzkin::process()
 	  const int index = cards.size();
 	  cards.push_back( CardC(data.lits) ); // create AMO
 	  for( int k = 0 ; k < data.lits.size(); ++ k ) leftHands[ toInt( data.lits[k] ) ].push_back(index);
+	  if( cards.size() >= config.opt_fm_max_constraints ) break;
 	}
+	if( cards.size() >= config.opt_fm_max_constraints ) break;
       }
       // if found something, propagate!
       if(!propagateCards( unitQueue, leftHands, rightHands, cards,inAmo) ) return didSomething;
+      if( cards.size() >= config.opt_fm_max_constraints ) break;
     }
   }
   
@@ -423,7 +462,15 @@ bool FourierMotzkin::process()
     if( propagation.process(data,true) == l_False ) {data.setFailed(); return didSomething; }
 
   // perform find 2product encoding
-  findTwoProduct( cards, big, leftHands );
+  if( config.opt_fm_twoPr ) findTwoProduct( cards, big, leftHands );
+  
+  // semantic search
+  if( config.opt_fm_sem ) findCardsSemantic( cards, leftHands );
+  
+  if(!propagateCards( unitQueue, leftHands, rightHands, cards,inAmo) ) return didSomething;
+  // propagate found units - if failure, skip next steps
+  if( data.hasToPropagate() )
+    if( propagation.process(data,true) == l_False ) {data.setFailed(); return didSomething; }
   
   // remove duplicate or subsumed AMOs!
   removeSubsumedAMOs( cards, leftHands );
@@ -461,10 +508,44 @@ bool FourierMotzkin::process()
   // perform actual Fourier Motzkin method 
   if( config.fm_debug_out > 0 ) cerr << "c apply FM ..." << endl;
   // for l in F
-  while (heap.size() > 0 && (data.unlimited() || fmLimit > steps) && !data.isInterupted() ) 
+  int iter = 0;
+  int needsGarbageCollect = -1; // iteration in which garbage collection should be done
+  bool sizeAbort = false;
+  while (heap.size() > 0 && (data.unlimited() || (fmLimit > steps && !sizeAbort) ) && !data.isInterupted() ) 
   {
     /** garbage collection */
+    if ( needsGarbageCollect == iter ) {
+      if( config.opt_verbose > 0 || true ) cerr << "c fm garbage collect" << endl;
+      vector<int> rewrite( cards.size(), 0 ); // vector that memorizes position
+      // perform card garbage collection
+      int keptCards = 0;
+      for( int i = 0 ; i < cards.size(); ++ i ) {
+	if( !cards[i].invalid() ) {
+	  rewrite[i] = keptCards; // memorize where this card has been put
+	  if( i > keptCards ) { // only if its not the same position
+	    cards[keptCards].swap( cards[i] ); // swap the two cards (not copy to not copy the memory!)
+	    keptCards++; // increase number of kept cards
+	  }
+	}
+      }
+      cerr << "c keep " << keptCards << " out of " << cards.size() << endl;
+      cards.resize( keptCards );
+      // rewrite all other index vectors!
+      for( Var v = 0; v < data.nVars(); ++v ) {
+	for( int p = 0 ; p < 2; ++ p ) {
+	  for( int i = 0 ; i < leftHands[ toInt( mkLit(v, p==0) ) ].size(); ++i ) leftHands[ toInt( mkLit(v, p==0) ) ][i] = rewrite[ leftHands[ toInt( mkLit(v, p==0) ) ][i] ];
+	  for( int i = 0 ; i < rightHands[ toInt( mkLit(v, p==0) ) ].size(); ++i ) rightHands[ toInt( mkLit(v, p==0) ) ][i] = rewrite[ rightHands[ toInt( mkLit(v, p==0) ) ][i] ];
+	}
+      }
+      for( int i = 0 ; i < newAMOs.size(); ++ i) newAMOs[i] = rewrite[ newAMOs[i] ];
+      for( int i = 0 ; i < newALOs.size(); ++ i) newALOs[i] = rewrite[ newALOs[i] ];
+      for( int i = 0 ; i < newALKs.size(); ++ i) newALKs[i] = rewrite[ newALKs[i] ];
+      if( data.unlimited() ) needsGarbageCollect = -1; // if unlimited, reset garbage collection
+    }
     data.checkGarbage();
+    
+    /* algorithm */
+    iter ++;
     
     const Lit toEliminate = toLit(heap[0]);
     assert( heap.inHeap( toInt(toEliminate) ) && "item from the heap has to be on the heap");
@@ -486,7 +567,7 @@ bool FourierMotzkin::process()
 	 || (leftHands[ toInt(toEliminate) ] .size() > 10 && rightHands[ toInt(toEliminate) ] .size() > 10))
       ) continue; // do not eliminate this variable, if it looks too expensive
 
-      for( int i = 0 ; i < leftHands[toInt(toEliminate)].size() && steps < fmLimit; ++ i ) { // since all cards are compared, be careful!
+      for( int i = 0 ; i < leftHands[toInt(toEliminate)].size() && steps < fmLimit && !sizeAbort; ++ i ) { // since all cards are compared, be careful!
 	steps ++;
 	if( cards[leftHands[toInt(toEliminate)][i]].invalid() ) { // drop invalid constraints from list!
 	  leftHands[toInt(toEliminate)][i] = leftHands[toInt(toEliminate)][ leftHands[toInt(toEliminate)].size() -1 ];
@@ -495,7 +576,7 @@ bool FourierMotzkin::process()
 	  continue; // do not work with invalid constraints!
 	}
 	
-	for( int j = 0 ; j < rightHands[toInt(toEliminate)].size(); ++ j ) {
+	for( int j = 0 ; j < rightHands[toInt(toEliminate)].size() && !sizeAbort; ++ j ) {
 	  if( rightHands[toInt(toEliminate)][j] == leftHands[toInt(toEliminate)][i] ){ 
 	    if( config.fm_debug_out > 2 ) cerr << "c irregular literal " << toEliminate << " with constraints (" << rightHands[toInt(toEliminate)][j] << " == " << leftHands[toInt(toEliminate)][i] << "): " << endl
 				      << " and  " << cards[rightHands[toInt(toEliminate)][j]].ll << " <= " << cards[rightHands[toInt(toEliminate)][j]].k << " + " << cards[rightHands[toInt(toEliminate)][j]].lr << endl;
@@ -512,7 +593,11 @@ bool FourierMotzkin::process()
 	  }
 	  
 	  const int index = cards.size();
-	  cards.push_back( CardC() );
+	  cards.push_back( CardC() ); 
+	  if( cards.size() >= config.opt_fm_max_constraints ) {
+	    if( needsGarbageCollect == -1 ) needsGarbageCollect = iter;
+	    else if( iter > needsGarbageCollect ) sizeAbort = true;
+	  }
 	  // get references here, because push could change memory locations!
 	  const CardC& card1 = cards[leftHands[toInt(toEliminate)][i]];
 	  const CardC& card2 = cards[rightHands[toInt(toEliminate)][j]];
@@ -532,7 +617,8 @@ bool FourierMotzkin::process()
 	      if( v1[n1] == v2[n2] ) { // same literal in two amos with a different literal -> have to be unit!
 		addDuplicates ++;
 		// TODO: enqueue, later remove from all cards!
-		data.lits.push_back( v1[n1] ); // keep them
+		data.lits.push_back( v1[n1] ); // keep them // FIXME: duplicate literal is dropped, is this a problem? yes on the right side!
+		// if( p > 0 ) extraK ++; // keep one literal only, but for the right side assume that the other literal is set (approximation)
 		hasDuplicates = true;
 		n1++;n2++;
 		break;
@@ -556,7 +642,7 @@ bool FourierMotzkin::process()
 	  }
 	  
 	  if( hasDuplicates ) {
-	    if( config.fm_debug_out > 1 ) cerr << "c new card would have duplicates - drop it (can be fixed with full FM algorithm which uses weights)" << endl
+	    if( config.fm_debug_out > 0 ) cerr << "c new card would have duplicates - drop it (can be fixed with full FM algorithm which uses weights)" << endl
 	         << "c  from " << card1.ll << " <= " << card1.k << " + " << card1.lr << endl
 		 << "c   and " << card2.ll << " <= " << card2.k << " + " << card2.lr << endl << endl;
 	     cards.pop_back(); // remove last card again
@@ -676,7 +762,7 @@ bool FourierMotzkin::process()
 	removedCards += indexes.size();
 	while( indexes.size() > 0 ) {
 	  int removeIndex = indexes[0]; // copy, because reference of vector will be changed!
-	  const CardC& card = cards[ removeIndex ];
+	  CardC& card = cards[ removeIndex ];
 	  if( config.fm_debug_out > 2 ) cerr << "c remove  " << card.ll << " <= " << card.k << " + " << card.lr << " ... " << endl;
 	  for( int j = 0 ; j < card.ll.size(); ++ j ) { // remove all lls from left hand!
 	    const Lit l = card.ll[j];
@@ -703,7 +789,7 @@ bool FourierMotzkin::process()
 	    }
 	    if( config.fm_debug_out > 3 ) cerr << "c finished literal " << l << "( " << j << "/" << card.ll.size() << ")" << endl;
 	  }
-	  
+	  card.invalidate(); // free resources of this vector!
 	}
       }
       
@@ -820,6 +906,297 @@ bool FourierMotzkin::process()
   return didSomething;
 }
 
+
+void FourierMotzkin::findCardsSemantic( vector< FourierMotzkin::CardC >& cards, vector< std::vector< int > >& leftHands ) 
+{
+  
+	assert( solver.decisionLevel() == 0 && "will look for card constraints only at level 0!" );
+
+	// merge-sort clauses according to size. smallest first
+	MethodTimer mv( &semTime ); // time measurement
+	
+	reSetupSolver();
+
+	vec<CRef> disabledClauses;	// memorize which clauses have been set to "mark() != 0", so that this change can be undone after the method!
+	
+	const int32_t n = data.getClauses().size();
+	int32_t m, s;
+	// copy elements from vector
+	CRef* tmpA = new CRef[ n ];
+	CRef* a = tmpA;
+	for( int32_t i = 0 ; i < n; i++ ){
+		a[i] = data.getClauses()[i];
+	}
+	CRef *tmpB = new CRef[n];
+	CRef *b = tmpB;
+
+	// size of work fields, power of 2	
+	for (s=1; s<n; s+=s)
+	{
+		m = n;
+		do {
+			m = m - 2*s;	// set begin of working field
+			int32_t hi = (m+s > 0) ? m + s : 0;	// set middle of working field
+			
+			int32_t i = (m > 0) ? m : 0;	// lowest position in field
+			int32_t j = hi;
+			
+			int32_t stopb = m + 2*s;	// upper bound of current work area
+			int32_t currentb = i;			// current position in field for copy
+			
+			// merge two sorted fields into one
+			while( i < hi && j < stopb)
+			{
+				if( ( ca[a[i]].size() ) < ( ca[a[j]].size()  )  ) // compare size!
+					b[currentb++] = a[i++];
+				else
+					b[currentb++] = a[j++];
+			}
+			// copy rest of the elements
+			for( ; i < hi; )
+				b[currentb++] = a[i++];
+				
+			for( ; j< stopb; 	)
+				b[currentb++] = a[j++];
+				
+		} while( m > 0 );
+		
+		// swap fields!
+		CRef* tmp = a;a = b;b = tmp;
+	}
+	delete [] tmpB;
+
+	// create occ lists, for each clause watch the smallest literal (should be sufficient)
+	vector< vector<CRef> > occ ( 2 * data.nVars() );
+	for( int i = 0 ; i < n; ++ i ) {
+	  Clause& c = ca[ tmpA[i] ];	// not ensured to be sorted, hence check smallest literal
+	  if( c.mark() || c.size() == 0 ) continue;
+	  Lit minLit = c[0];
+	  for( int j = 1; j < c.size(); ++ j ) if( c[0] < minLit ) minLit = c[0]; // if its the minimum, later disabling clauses is cheaper
+	  occ [ toInt( minLit ) ]. push_back( tmpA[i] );
+	}
+	semSteps += n;	// approximate sorting
+	
+	for( int i = 0 ; i < cards.size(); ++ i ) {
+	    const CardC& thisCard = cards[i];
+	    if( !thisCard.amk() ) continue; // disable only clauses of constraints 
+	    data.ma.nextStep();
+	    for( int j = 0 ; j < thisCard.ll.size(); ++ j ) data.ma.setCurrentStep( toInt(~thisCard.ll[j]) ); // mark all complements of the current constraint
+	    // disable all clauses that would lead to the same constraint!
+	    for( int j = 0 ; j < thisCard.ll.size(); ++ j ) {	// for all the literals in at least the original constraint, but also in its extension
+	      for( int k = 0 ; k < occ[toInt(~thisCard.ll[j])].size(); ++ k ) {	// and all the clauses that have this literal as smallest literal (watch 1 scheme, each clause only once)
+		Clause& candidate = ca[ occ[toInt(~thisCard.ll[j])][k] ];	// current delete candidate
+		if( candidate.mark() != 0 ) continue; // candidate contains more literals than have been marked
+		if( config.opt_noReduct && candidate.size() > thisCard.ll.size() ) continue; // there cannot be falsified literals inside the clauses
+		bool failed = false;
+		for( int m = 0 ; m < candidate.size(); ++ m ) {	// check whether the current clause has all the necessary literals
+		  if( !config.opt_noReduct && solver.value( candidate[m] ) == l_False ) continue;	// do not care about disabled literals (if there are no units around)
+		  if( !data.ma.isCurrentStep( toInt( candidate[m] ) ) ) { failed = true; break; }	// another literal was found, keep this clause!
+		}
+		if( ! failed ) {
+		  if( config.opt_semDebug ) cerr << "c disable with literal " << thisCard.ll[j] << " clause[" << occ[toInt(~thisCard.ll[j])][k] << "] " << candidate << endl;
+		  candidate.mark(1);	// set this clause to "can be deleted"
+		  semNrPreDisabledClauses ++;
+		  disabledClauses.push( occ[toInt(~thisCard.ll[j])][k] );
+		}
+	      }
+	    }
+	}
+	
+	
+	vector<Lit> cc; // literals for the cardinality constraints
+	vector<Lit> origCC; // literals of original CC
+
+	int degree = 0; // threshold for the constraint
+	MarkArray intersection;
+	intersection.create( 2 * data.nVars() ); // set a flag for each literal
+	intersection.nextStep();
+	// work on array tmpA with current clauses
+	for( int i = 0 ; i < n && (data.unlimited() || (semSteps < config.opt_semSearchLimit) ); ++ i ) { // for all the clauses (all of them are still watched), and within the limits
+	  Clause& c = ca[ tmpA[i] ];
+	  semSteps ++;
+	  if( c.mark() != 0 ) continue; // this clause has been used for a card constraint already
+// propagated already	  if( solver.satisfied(c) ) continue;	// do not use clauses, which are already satisfied by units in the solver
+
+	  if( ! data.unlimited() && (c.size() < config.opt_minCardClauseSize || c.size() > config.opt_maxCardClauseSize )) continue; // reject certain sizes of cardinality constraints!
+
+	  // otherwise, setup the current constraint ...
+	  // for a clause C = (a,b,c,d,e), the card constraint is -a,-b,-c,-d,-e <= 4 generated, since at most 4 out of these complements can be satisfied 
+	  cc.clear(); // new constraint
+	  degree = -1; // from the negated literals of the clause, at most |C| - 1 literals can be true at the same time, because otherwise the clause falsifies them again
+	  for( int j = 0 ; j < c.size(); ++ j ) {
+	    if(  solver.value( c[j] ) == l_Undef ) {	// handle only literals, that are not falsified yet already (or where the parameter says it does not care)
+	      cc.push_back( ~c[j] ); // the complementary literals build the cardinality constraint!
+	      degree ++;
+	    }
+	  }
+	  const int origDegree = degree;	// memorize original degree
+	  origCC = cc;
+	  
+	  if( degree > 63 ) {	// data structures do not support constraints with more than 63 bits
+	    static bool didPrint = false;
+	    if( !didPrint ) { cerr << "c cannot handle constraints with more than 63 literals!" << endl; didPrint = false; } // print this error message once!
+	    continue;
+	  }
+	  
+	  Lit extendLit = lit_Undef;
+	  bool firstIteration = true; 
+	  bool firstProbe = true;
+	  intersection.nextStep();	// markArray the remembers the literals for the intersection
+	  
+	  if( config.opt_semDebug ) cerr << endl << endl << "c start with card constraint " << cc << " <= " << degree  << "  --- by clause [" << tmpA[i] << "] " << c << endl;
+	  
+	  do {	// try to extend the card constraint with new literals by unit propagation
+
+	    if( cc.size() > 62 ) {
+	      static bool didPrint = false;
+	      if( !didPrint ) { cerr << "c cannot handle constraints with more than 63 literals!" << endl; didPrint = false; } // print this error message once!
+	      break;
+	    }
+
+	    if( !data.unlimited() && semSteps >= config.opt_semSearchLimit) break; // stop with the current state of the current cardinality constraint
+
+	    extendLit = lit_Undef;
+  
+	    // for the "new" "degree" subsets of "degree" literals, check how many other literals are entailed as well
+	    uint64_t bitField = 0;
+	    for( int j = 0 ; j < degree; ++j ) { bitField = bitField << 1; bitField = (bitField | 1); } // set degree bits in the number, make sure the least siginificant bit is always set!
+	    
+	    if( config.opt_semDebug ) cerr << "c start with number " << bitField << " for assign - bits ..." << endl;
+	    int probes = 0, failedProbes = 0; // stats for number of propagations and failed propagations (to detect unsat)
+	    while( true  ) { // find another k-bit number, until all possible combinations inside the range have been tested
+	      if( firstIteration || (bitField & 1 != 0) ) { // consider this combination if its either the first iteration, or if the least siginificant bit is set
+		if( config.opt_semDebug ) cerr << "c probe " << probes << "  with bitfield " << bitField << " and with trail: " << solver.trail << endl;
+		solver.newDecisionLevel(); // go to decision level 1!
+		for( int j = 0 ; j < cc.size(); ++ j ) {	// add all literals where a bit in "bitField" is set
+		  const uint64_t testPos = cc.size() - j - 1; // to hit least significant bit more easily
+		  if( (bitField & (1ull << testPos)) != 0ull ) { // if the right bit is set
+		    if( config.opt_semDebug ) cerr << "c assume lit " << cc[j] << " , undefined: " << (solver.value( cc[j] ) == l_Undef) << endl;
+		    semUnits ++;
+		    solver.uncheckedEnqueue( cc[j] ); // add all the literals, that should be propagated
+		  }
+		}
+		probes ++;	// count number of propagations
+		if( config.opt_semDebug ) cerr << "c call propagate [" << bitField << "] " << probes << " with decL " << solver.decisionLevel() << " and trail size " << solver.trail.size() << endl;
+		CRef confl = solver.propagate(); // propagate, check for conflict
+		semSteps += solver.trail.size() - solver.trail_lim[0];	// appeoximate propagation effort
+		if( config.opt_semDebug ) cerr << "c propagate [ " << confl << " ] implied " << solver.trail << endl;
+		if( confl == CRef_Undef ) { // no conflict -> build intersection
+		  const int startTrail = solver.trail_lim[0];
+		  data.lits.clear(); // literals can be removed, because intersection is still in markArray
+		  if( firstProbe ) {	// first probe -> initialize intersection
+		    for( int j = solver.trail_lim[0] + degree ; j < solver.trail.size(); ++ j ) { intersection.setCurrentStep( toInt( solver.trail[j] ) ); } // build intersection with vector and markArray wrt. the implied literals (not the "degree" enqueued ones)
+		    for( int j = 0 ; j < cc.size(); ++ j ) {
+		      if( config.opt_semDebug ) cerr << "c reset lit " << ~cc[j] << " (set before " << intersection.isCurrentStep( toInt(~cc[j]) ) << ")" << endl;
+		      intersection.reset( toInt( ~cc[j] ) ); // do not add literals of the constraint to the intersection
+		    }
+		    firstProbe = false;
+		  } 
+		  // build intersection
+		  for( int j = solver.trail_lim[0] ; j < solver.trail.size(); ++ j ) {	// put only data.lits from the trail into data.lits, if they are already in the intersection (markArray)
+		    if( intersection.isCurrentStep( toInt( solver.trail[j] ) ) ) data.lits.push_back(solver.trail[j]); 
+		  } 
+		  intersection.nextStep(); // update markArray to new intersection
+		  for( int j = 0 ; j < data.lits.size(); ++ j ) intersection.setCurrentStep( toInt( data.lits[j] ) ); // set flag for all literals in the "new" intersection
+		  if( config.opt_semDebug ) cerr << "c kept " << data.lits.size() << " literals in the intersection: " << data.lits << endl;
+		  
+		} else { 
+		  if( config.opt_semDebug ) cerr << "c probe failed" << endl;
+		  failedProbes ++;	// conflict -> everything is implied -> no intersection to be done!
+		}
+		solver.cancelUntil( 0 );
+		if( !firstProbe && data.lits.size() == 0 ) break; // intersection has been initialized, but became empty -> no commonly implied literal -> finished with the current constraint
+	      }	// end probing current combination
+
+	      if( ! data.unlimited() && semSteps >= config.opt_semSearchLimit ) { data.lits.clear(); break; } // add no more extension!
+	      bitField = nextNbitNumber( bitField );
+	      uint64_t tmp = 1, shift = cc.size();
+	      tmp = (tmp << shift);
+	      if( config.opt_semDebug ) cerr << "c continue with bitfield " << bitField  << "( cmp. to. " << ( (uint64_t)1 << (uint64_t)cc.size()) << " == " << tmp << ") and cc.size: " << cc.size() << endl;
+	      if( bitField >= tmp ) break;
+	    }
+	    
+	    semTotalProbes += probes; semTotalFailedProbes += failedProbes;	// stats
+	    if( firstProbe && (probes == failedProbes) ) {	// works only when nothing has been propagated yet! // TODO: what happens if this occurs after a literal has been added?
+	      if( config.opt_semDebug ) cerr << "c none of the configurations succeeds -> decrease degree by one to " << degree - 1 << endl;
+	      degree --;	// decrease degree
+	      semReducedDegrees ++;	//stats
+	      data.lits.clear();	// clear constraint and literals
+	      break;		// TODO: could also continue here!
+	    }
+	    
+	    // if the intersection of all of those is not empty, choose one literal (heuristically), and add it to the constraint -> next iteration!
+	    if( data.lits.size() != 0 ) {
+	      extendLit = data.lits[0];
+	      cc.push_back( ~extendLit ); // add complement of current literal to card constraint
+	      intersection.reset( toInt(~extendLit) );	// the complement is blocked, since it is inside CC now
+	      if( config.opt_semDebug ) cerr << "c add as [" << cc.size() << "] " << extendLit << " to CC" << endl;
+	      data.lits.clear();
+	    }
+	    
+	    firstIteration = false;	// in the next iteration, use only combinations with the new literal -> half the work
+	    if( ! data.unlimited() && semSteps >= config.opt_semSearchLimit ) { data.lits.clear(); break; } // stop here due to limits
+	  } while ( extendLit != lit_Undef && ( data.unlimited() || data.lits.size() < config.opt_maxCardSize) ); // repeat as long as something has been found and the card.constraint is not too long
+
+	  if( config.opt_semDebug ) {
+	    cerr << "c return from find with cc " << cc << " <= " << degree << " and maxSize: " << config.opt_maxCardSize << endl;
+	  }
+	  
+	  if( !data.ok() ) {
+	    cerr << "c prooved unsatisfiability" << endl;
+	    break;	// if unsat has been found, stop searching for more cardinality constraints!
+	  }
+	  
+	  if( cc.size() > c.size() || degree < origDegree ) { // if this constraint is not simply a clause, but something has been added or changed
+	    sort(cc);	// necessary in Coprocessor
+	    cards.push_back( CardC(cc, degree) ); // add the constraint to the data base
+	    for( int j = 0 ; j < cards[ cards.size() - 1 ].ll.size(); ++ j ) leftHands[ toInt(cards[ cards.size() - 1 ].ll[j] ) ].push_back( cards.size() - 1 ); // register card constraint in data structures
+	    if( config.opt_semDebug ) cerr << "c found card constraint " << cc << "  <= " << degree << endl;
+	    intersection.nextStep();
+	    semExtendedCards ++; semExtendLits += (cc.size() - c.size());	// stats
+	    data.lits.clear();	// collect all literals that have to occur in clauses to be disabled
+	    for( int j = 0 ; j < cc.size(); ++ j ) {
+	      intersection.setCurrentStep( toInt( ~cc[j] ) ); // mark all complements of the constraint
+	      data.lits.push_back( cc[j] );
+	    }
+	    for( int j = 0 ; j < origCC.size(); ++ j ) {
+	      if( !intersection.isCurrentStep( toInt(~origCC[j] ))) {
+		intersection.setCurrentStep( toInt( ~origCC[j] ) ); // mark all complements of the constraint#
+		data.lits.push_back( origCC[j] );
+	      }
+	    }
+
+	    // disable all clauses that would lead to the same constraint!
+	    for( int j = 0 ; j < data.lits.size(); ++ j ) {	// for all the literals in at least the original constraint, but also in its extension
+	      for( int k = 0 ; k < occ[toInt(~data.lits[j])].size(); ++ k ) {	// and all the clauses that have this literal as smallest literal (watch 1 scheme, each clause only once)
+		Clause& candidate = ca[ occ[toInt(~data.lits[j])][k] ];	// current delete candidate
+		if( candidate.mark() != 0 ) continue; // candidate contains more literals than have been marked
+		if( config.opt_noReduct && candidate.size() > data.lits.size() ) continue; // there cannot be falsified literals inside the clauses
+		bool failed = false;
+		for( int m = 0 ; m < candidate.size(); ++ m ) {	// check whether the current clause has all the necessary literals
+		  if( !config.opt_noReduct && solver.value( candidate[m] ) == l_False ) continue;	// do not care about disabled literals (if there are no units around)
+		  if( !intersection.isCurrentStep( toInt( candidate[m] ) ) ) { failed = true; break; }	// another literal was found, keep this clause!
+		}
+		if( ! failed ) {
+		  if( config.opt_semDebug ) cerr << "c disable with literal " << data.lits[j] << " clause[" << occ[toInt(~data.lits[j])][k] << "] " << candidate << endl;
+		  candidate.mark(1);	// set this clause to "can be deleted"
+		  semNrDisabledClauses ++;
+		  disabledClauses.push( occ[toInt(~data.lits[j])][k] );
+		}
+	      }
+	    }
+	  } else semFailedExtendTries ++;
+	  
+	} // end iterating over the clauses
+	
+	delete [] tmpA;
+	
+	for( int i = 0 ; i < disabledClauses.size(); ++ i ) { // enabled disabled clauses again!
+	  ca[ disabledClauses[i] ].mark(0);
+	}
+	
+	cleanSolver();
+}
 
 void FourierMotzkin::removeSubsumedAMOs(vector< FourierMotzkin::CardC >& cards, vector< std::vector< int > >& leftHands)
 {
@@ -1092,12 +1469,14 @@ void FourierMotzkin::findTwoProduct(vector< FourierMotzkin::CardC >& cards, BIG&
 	    cards.push_back( CardC( data.lits ) ); // actually add new AMO
 	    twoPrAmos ++;
 	    twoPrAmoLits += data.lits.size();
+	    
 	  }
 	}
+	if( cards.size() >= config.opt_fm_max_constraints ) break;
       } // select next B
-
+      if( cards.size() >= config.opt_fm_max_constraints ) break;
     } // end looping over implied lits from A's smallest literal
-    
+    if( cards.size() >= config.opt_fm_max_constraints ) break;
   } // end looping over cardinality constraints
   
 }
@@ -1302,7 +1681,20 @@ void FourierMotzkin::printStatistics(ostream& stream)
   << twoPrAmoLits << " 2PrLits, "
   << deduceAloTime << " dedAloTime, "
   << dedAlos << " dedAlos, "
+  << endl
+  << "c [STAT] FM(5)"
+  << " time: " << semTime << " s," << "steps: " << semSteps 
+  << " cards: " <<  semExtendedCards 
+  << " failed: " << semFailedExtendTries
+  << " extLits: " << semExtendLits 
+  << " redDegree: " << semReducedDegrees
+  << " probes: " << semTotalProbes 
+  << " conflictProbes: " << semTotalFailedProbes 
+  << " savedPreCls: " << semNrPreDisabledClauses 
+  << " savedPostCls: " << semNrDisabledClauses 
+  << " units: " << semUnits
   << endl;
+  
 }
 
 void FourierMotzkin::giveMoreSteps()
@@ -1314,3 +1706,88 @@ void FourierMotzkin::destroy()
 {
   
 }
+
+
+void FourierMotzkin::cleanSolver()
+{
+  // clear all watches!
+  solver.watches.cleanAll();
+  solver.watchesBin.cleanAll();
+  
+  // clear all watches!
+  for (int v = 0; v < solver.nVars(); v++)
+    for (int s = 0; s < 2; s++)
+      solver.watches[ mkLit(v, s) ].clear();
+    
+  // for glucose, also clean binary clauses!
+  for (int v = 0; v < solver.nVars(); v++)
+    for (int s = 0; s < 2; s++)
+      solver.watchesBin[ mkLit(v, s) ].clear();
+
+  solver.learnts_literals = 0;
+  solver.clauses_literals = 0;
+  solver.watches.cleanAll();
+  
+  for( int i = 0 ; i < solver.learnts.size(); ++ i ) 
+    ca[ solver.learnts[i] ].sort();
+  for( int i = 0 ; i < solver.clauses.size(); ++ i ) 
+    ca[ solver.clauses[i] ].sort();  
+}
+
+void FourierMotzkin::reSetupSolver()
+{
+  assert( solver.decisionLevel() == 0 && "solver can be re-setup only at level 0!" );
+    // check whether reasons of top level literals are marked as deleted. in this case, set reason to CRef_Undef!
+    if( solver.trail_lim.size() > 0 )
+      for( int i = 0 ; i < solver.trail_lim[0]; ++ i )
+        if( solver.reason( var(solver.trail[i]) ) != CRef_Undef )
+          if( ca[ solver.reason( var(solver.trail[i]) ) ].can_be_deleted() )
+            solver.vardata[ var(solver.trail[i]) ].reason = CRef_Undef;
+
+    // give back into solver
+    for( int p = 0 ; p < 2; ++ p ) {
+      vec<CRef>& clauses = (p == 0 ? solver.clauses : solver.learnts );
+      for (int i = 0; i < clauses.size(); ++i)
+      {
+	  const CRef cr = clauses[i];
+	  Clause & c = ca[cr];
+	  assert( c.size() != 0 && "empty clauses should be recognized before re-setup" );
+	  if ( !c.can_be_deleted() ) // all clauses are neccesary for re-setup!
+	  {
+	      assert( c.mark() == 0 && "only clauses without a mark should be passed back to the solver!" );
+	      if (c.size() > 1)
+	      {
+		  // do not watch literals that are false!
+		  int j = 1;
+		  for ( int k = 0 ; k < 2; ++ k ) { // ensure that the first two literals are undefined!
+		    if( solver.value( c[k] ) == l_False ) {
+		      for( ; j < c.size() ; ++j )
+			if( solver.value( c[j] ) != l_False ) 
+			  { const Lit tmp = c[k]; c[k] = c[j]; c[j] = tmp; break; }
+		    }
+		  }
+		  // assert( (solver.value( c[0] ) != l_False || solver.value( c[1] ) != l_False) && "Cannot watch falsified literals" );
+		  
+		  // reduct of clause is empty, or unit
+		  if( solver.value( c[0] ) == l_False ) { data.setFailed(); return; }
+		  else if( solver.value( c[1] ) == l_False ) {
+		    if( data.enqueue(c[0]) == l_False ) { return; }
+		    else { 
+		      c.set_delete(true);
+		    }
+		    if( solver.propagate() != CRef_Undef ) { data.setFailed(); return; }
+		    c.set_delete(true);
+		  } else solver.attachClause(cr);
+	      }
+	      else if (solver.value(c[0]) == l_Undef)
+		  if( data.enqueue(c[0]) == l_False ) { return; }
+	      else if (solver.value(c[0]) == l_False )
+	      {
+		// assert( false && "This UNSAT case should be recognized before re-setup" );
+		data.setFailed();
+	      }
+	  }
+      }
+    }
+}
+

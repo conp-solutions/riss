@@ -50,6 +50,7 @@ namespace Coprocessor {
   class Probing;
   class Symmetry;
   class RATElimination;
+  class FourierMotzkin;
   class BIG;
 }
 
@@ -72,6 +73,7 @@ class Solver {
     friend class Coprocessor::Probing;
     friend class Coprocessor::Symmetry;
     friend class Coprocessor::RATElimination;
+    friend class Coprocessor::FourierMotzkin;
     friend class Minisat::IncSolver; // for bmc
   
     CoreConfig& config;

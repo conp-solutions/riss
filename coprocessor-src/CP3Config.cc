@@ -274,7 +274,7 @@ opt_la_debug (_cat_la, "la-debug", "output debug info during LA", false, optionL
 // RAT Elimination
 //
 rate_orderComplements("RAT Elimination", "rat-compl", "sort according to nr. of complements", true, optionListPtr ),
-rate_Limit("RAT Elimination","rate-limit", "number of pairwise clause comparisons before interrupting RATE", 1000000000, Int64Range(0, INT32_MAX) , optionListPtr ),
+rate_Limit("RAT Elimination","rate-limit", "number of pairwise clause comparisons before interrupting RATE", 9000000000, Int64Range(0, INT64_MAX) , optionListPtr ),
 opt_rate_debug ("RAT Elimination", "rate-debug", "debug output for RAT elimination",0, IntRange(0,4) , optionListPtr ),
 rate_minSize("RAT Elimination","rate-min", "minimal clause size for RAT elimination", 3, IntRange(2, INT32_MAX) , optionListPtr ),
 
@@ -370,23 +370,35 @@ circ_debug_out      (_cat_ee_hash, "cp3_circ_debug",  "print debug output for ci
 //
 // Fourier Motzkin
 //
-opt_fmLimit        (_cat_fm, "cp3_fm_limit"  ,"number of steps allowed for FM", 6000000, Int64Range(0, INT64_MAX), optionListPtr ),
-opt_fmSearchLimit  (_cat_fm, "cp3_fm_Slimit" ,"number of steps allowed for searching AMOs for FM", 12000000, Int64Range(0, INT64_MAX), optionListPtr ),
-opt_fmMaxAMO       (_cat_fm, "cp3_fm_maxA"   ,"largest AMO that will be found during search", 200, IntRange(3, INT32_MAX), optionListPtr ),
-opt_fmGrow         (_cat_fm, "cp3_fm_grow"   ,"max. grow of number of constraints per step", 40, IntRange(0, INT32_MAX), optionListPtr ),
-opt_fmGrowT        (_cat_fm, "cp3_fm_growT"  ,"total grow of number of constraints", 100000, IntRange(0, INT32_MAX), optionListPtr ),
-opt_atMostTwo      (_cat_fm, "cp3_fm_amt"     ,"extract at-most-two", false, optionListPtr ),
-opt_findUnit       (_cat_fm, "cp3_fm_unit"    ,"check for units first", true, optionListPtr ),
-opt_merge          (_cat_fm, "cp3_fm_merge"   ,"perform AMO merge", true, optionListPtr ),
-opt_fm_avoid_duplicates     (_cat_fm, "cp3_fm_dups"    ,"avoid finding the same AMO multiple times", true, optionListPtr ),
-opt_fm_multiVarAMO (_cat_fm, "cp3_fm_vMulA"   ,"try to find multiple AMOs per variable", true, optionListPtr ),
-opt_cutOff         (_cat_fm, "cp3_fm_cut"     ,"avoid eliminating too expensive variables (>10,10 or >5,15)", true, optionListPtr ),
+opt_fm_max_constraints(_cat_fm, "cp3_fm_maxConstraints", "number of constraints that are allows", 200000, IntRange(0, INT32_MAX), optionListPtr ),
+opt_fmLimit        (_cat_fm, "cp3_fm_limit"    ,"number of steps allowed for FM", 6000000, Int64Range(0, INT64_MAX), optionListPtr ),
+opt_fmSearchLimit  (_cat_fm, "cp3_fm_Slimit"   ,"number of steps allowed for searching AMOs for FM", 12000000, Int64Range(0, INT64_MAX), optionListPtr ),
+opt_fmMaxAMO       (_cat_fm, "cp3_fm_maxA"     ,"largest AMO that will be found during search", 200, IntRange(3, INT32_MAX), optionListPtr ),
+opt_fmGrow         (_cat_fm, "cp3_fm_grow"     ,"max. grow of number of constraints per step", 40, IntRange(0, INT32_MAX), optionListPtr ),
+opt_fmGrowT        (_cat_fm, "cp3_fm_growT"    ,"total grow of number of constraints", 100000, IntRange(0, INT32_MAX), optionListPtr ),
+opt_atMostTwo      (_cat_fm, "cp3_fm_amt"      ,"extract at-most-two", true, optionListPtr ),
+opt_fm_twoPr       (_cat_fm, "cp3_fm_twoPr"    ,"extract AMO using two product structures", true, optionListPtr ),
+opt_fm_sem         (_cat_fm, "cp3_fm_sem"      ,"extract Card constraints using UP", true, optionListPtr ),
+opt_findUnit       (_cat_fm, "cp3_fm_unit"     ,"check for units first", true, optionListPtr ),
+opt_merge          (_cat_fm, "cp3_fm_merge"    ,"perform AMO merge", true, optionListPtr ),
+opt_fm_avoid_duplicates(_cat_fm, "cp3_fm_dups" ,"avoid finding the same AMO multiple times", true, optionListPtr ),
+opt_fm_multiVarAMO (_cat_fm, "cp3_fm_vMulAMO"  ,"try to find multiple AMOs per variable", true, optionListPtr ),
+opt_multiVarAMT    (_cat_fm, "cp3_fm_vMulAMT"  ,"try to find multiple AMTs per variable", false, optionListPtr ),
+opt_cutOff         (_cat_fm, "cp3_fm_cut"      ,"avoid eliminating too expensive variables (>10,10 or >5,15)", true, optionListPtr ),
 opt_newAmo          (_cat_fm, "cp3_fm_newAmo"  ,"encode the newly produced AMOs (with pairwise encoding) 0=no,1=yes,2=try to avoid redundant clauses",  2, IntRange(0, 2), optionListPtr ),
-opt_keepAllNew     (_cat_fm, "cp3_fm_keepM"   ,"keep all new AMOs (also rejected ones)", true, optionListPtr ),
+opt_keepAllNew     (_cat_fm, "cp3_fm_keepM"    ,"keep all new AMOs (also rejected ones)", true, optionListPtr ),
 opt_newAlo          (_cat_fm, "cp3_fm_newAlo"  ,"create clauses from deduced ALO constraints 0=no,1=from kept,2=keep all ",  2, IntRange(0, 2), optionListPtr ),
 opt_newAlk          (_cat_fm, "cp3_fm_newAlk"  ,"create clauses from deduced ALK constraints 0=no,1=from kept,2=keep all (possibly redundant!)",  2, IntRange(0, 2), optionListPtr ),
-opt_checkSub       (_cat_fm, "cp3_fm_newSub"  ,"check whether new ALO and ALK subsume other clauses (only if newALO or newALK)", true, optionListPtr ),
-opt_rem_first      (_cat_fm, "cp3_fm_1st"     ,"extract first AMO candidate, or last AMO candidate", false, optionListPtr ),
+opt_checkSub       (_cat_fm, "cp3_fm_newSub"   ,"check whether new ALO and ALK subsume other clauses (only if newALO or newALK)", true, optionListPtr ),
+opt_rem_first      (_cat_fm, "cp3_fm_1st"      ,"extract first AMO candidate, or last AMO candidate", false, optionListPtr ),
+
+opt_minCardClauseSize (_cat_fm, "card_minC"    ,"min clause size to find cards", 3, IntRange(2, INT32_MAX)),
+opt_maxCardClauseSize (_cat_fm, "card_maxC"    ,"max clause size to find cards", 6, IntRange(2, INT32_MAX)),
+opt_maxCardSize       (_cat_fm, "card_max"     ,"max card size that will be looked for", 12, IntRange(2, INT32_MAX)),
+opt_semSearchLimit    (_cat_fm, "card_Elimit"  ,"number of steps allowed for searching AMOs semantically", 1200000, Int64Range(0, INT64_MAX)),
+opt_semDebug          (_cat_fm, "card_debug"   ,"print info during running semantic card find", false),
+opt_noReduct          (_cat_fm, "card_noUnits" ,"assume there are no unit clauses inside the formula (otherwise, more expensive)", false),
+
 #if defined TOOLVERSION 
 fm_debug_out (0),
 #else
