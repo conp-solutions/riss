@@ -1289,18 +1289,12 @@ void Preprocessor::destroyTechniques()
 void Preprocessor::cleanSolver()
 {
   solver->watches.cleanAll();
-  solver->watchesBin.cleanAll();
   
   // clear all watches!
   for (int v = 0; v < solver->nVars(); v++)
     for (int s = 0; s < 2; s++)
       solver->watches[ mkLit(v, s) ].clear();
     
-  // for glucose, also clean binary clauses!
-  for (int v = 0; v < solver->nVars(); v++)
-    for (int s = 0; s < 2; s++)
-      solver->watchesBin[ mkLit(v, s) ].clear();
-
   solver->learnts_literals = 0;
   solver->clauses_literals = 0;
 }
@@ -1478,7 +1472,7 @@ void Preprocessor::reSetupSolver()
 	    const Lit l = mkLit(v, s == 0 ? false : true );
 	    cerr << "c watch for " << l << endl;
 	    for( int i = 0; i < solver->watches[ l ].size(); ++ i ) {
-	      cerr << ca[solver->watches[l][i].cref] << endl;
+	      cerr << ca[solver->watches[l][i].cref()] << endl;
 	    }
 	  }
     }
@@ -1707,7 +1701,7 @@ void Preprocessor::fullCheck(const string& headline)
 	  vec<Solver::Watcher>&  ws  = solver->watches[l];
 	  bool didFind = false;
 	  for ( int j = 0 ; j < ws.size(); ++ j){
-	      CRef     wcr        = ws[j].cref;
+	      CRef     wcr        = ws[j].cref();
 	      if( wcr  == cr ) { didFind = true; break; }
 	  }
 	  if( ! didFind ) cerr << "could not find clause[" << cr << "] " << c << " in watcher for lit " << l << endl;
@@ -1725,7 +1719,7 @@ void Preprocessor::fullCheck(const string& headline)
       const Lit l = mkLit(v, p==1);
       vec<Solver::Watcher>&  ws  = solver->watches[l];
       for ( int j = 0 ; j < ws.size(); ++ j){
-	      CRef     wcr        = ws[j].cref;
+	      CRef     wcr        = ws[j].cref();
 	      const Clause& c = ca[wcr];
 	      if( c[0] != ~l && c[1] != ~l ) cerr << "wrong literals for clause [" << wcr << "] " << c << " are watched. Found in list for " << l << endl;
 	  }
@@ -1782,8 +1776,8 @@ void Preprocessor::printSolver(ostream& s, int verbose)
       vec<Minisat::Solver::Watcher>&  ws  = solver->watches[p];
       
       for (int i = 0 ; i <  ws.size();  i ++){
-            CRef     cr        = ws[i].cref;
-	cerr << "c watch for " << p << " clause " << ca[cr] << " with blocker " << ws[i].blocker << endl;
+            CRef     cr        = ws[i].cref();
+	cerr << "c watch for " << p << " clause " << ca[cr] << " with blocker " << ws[i].blocker() << endl;
       }
     }
   }

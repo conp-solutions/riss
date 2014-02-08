@@ -1711,17 +1711,11 @@ void FourierMotzkin::cleanSolver()
 {
   // clear all watches!
   solver.watches.cleanAll();
-  solver.watchesBin.cleanAll();
   
   // clear all watches!
   for (int v = 0; v < solver.nVars(); v++)
     for (int s = 0; s < 2; s++)
       solver.watches[ mkLit(v, s) ].clear();
-    
-  // for glucose, also clean binary clauses!
-  for (int v = 0; v < solver.nVars(); v++)
-    for (int s = 0; s < 2; s++)
-      solver.watchesBin[ mkLit(v, s) ].clear();
 
   solver.learnts_literals = 0;
   solver.clauses_literals = 0;

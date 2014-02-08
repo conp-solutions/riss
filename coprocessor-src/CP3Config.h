@@ -426,6 +426,7 @@ IntOption  opt_hte_inpStepInc;
 // Probing
 //
 IntOption pr_uip;
+BoolOption opt_pr_probeBinary ;
 BoolOption pr_double     ;
 BoolOption pr_probe      ;
 BoolOption pr_rootsOnly  ;
