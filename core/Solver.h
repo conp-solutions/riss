@@ -303,7 +303,7 @@ protected:
     vec<lbool>          assigns;          // The current assignments.
 //     vec<char>           polarity;         // The preferred polarity of each variable.
 //     vec<char>           decision;         // Declares if a variable is eligible for selection in the decision heuristic.
-    vec<char>           seen;
+//      vec<char>           seen;
     
 public:
     vec<Lit>            trail;            // Assignment stack; stores all assigments made in the order they were made.

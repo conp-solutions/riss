@@ -266,7 +266,7 @@ Var Solver::newVar(bool sign, bool dvar, char type)
     vardata  .push(mkVarData(CRef_Undef, 0));
     //activity .push(0);
     activity .push(rnd_init_act ? drand(random_seed) * 0.00001 : 0);
-    seen     .push(0);
+//     seen     .push(0);
     permDiff  .push(0);
 
     trail    .capacity(v+1);
@@ -288,7 +288,7 @@ void Solver::reserveVars(Var v)
     vardata  .capacity(v+1);
     //activity .push(0);
     activity .capacity(v+1);
-    seen     .capacity(v+1);
+//     seen     .capacity(v+1);
     permDiff  .capacity(v+1);
     varFlags. capacity(v+1);
     trail    .capacity(v+1);
@@ -635,11 +635,11 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
         for (int j = (p == lit_Undef) ? 0 : 1; j < c.size(); j++){
             Lit q = c[j];
 	    if( config.opt_learn_debug ) cerr << "c level for " << q << " is " << level(var(q)) << endl;
-            if (!seen[var(q)] && level(var(q)) > 0){
+            if (!varFlags[var(q)].seen && level(var(q)) > 0){
                 currentSize ++;
                 if( dynamicDataUpdates ) varsToBump.push( var(q) );
 		if( config.opt_learn_debug ) cerr << "c set seen for " << q << endl;
-                seen[var(q)] = 1;
+                varFlags[var(q)].seen = 1;
                 if (level(var(q)) >= decisionLevel()) {
                     pathC++;
 #ifdef UPDATEVARACTIVITY
@@ -656,7 +656,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 		}
 	    } else { 
 	      if( level(var(q)) == 0 ) clauseReductSize --; // this literal does not count into the size of the clause!
-		if (units == 0 && seen[var(q)] && config.opt_biAsserting ) { 
+		if (units == 0 && varFlags[var(q)].seen && config.opt_biAsserting ) { 
 		  if( pathLimit == 0 ) biAssertingPreCount ++;	// count how often learning produced a bi-asserting clause
 		  pathLimit = 1; // store that the current learnt clause is a biasserting clause!
 		}
@@ -675,12 +675,12 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
         if( !isOnlyUnit && units > 0 ) break; // do not consider the next clause, because we cannot continue with units
         
         // Select next clause to look at:
-        while (!seen[var(trail[index--])]) {} // cerr << "c check seen for literal " << (sign(trail[index]) ? "-" : " ") << var(trail[index]) + 1 << " at index " << index << " and level " << level( var( trail[index] ) )<< endl;
+        while (! varFlags[var(trail[index--])].seen ) {} // cerr << "c check seen for literal " << (sign(trail[index]) ? "-" : " ") << var(trail[index]) + 1 << " at index " << index << " and level " << level( var( trail[index] ) )<< endl;
         p     = trail[index+1];
 	lastConfl = confl;
         confl = reason(var(p));
 	if( config.opt_learn_debug ) cerr << "c reset seen for " << p << endl;
-        seen[var(p)] = 0;
+        varFlags[var(p)].seen = 0;
         pathC--;
 	currentSize --;
 
@@ -711,14 +711,14 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
       out_learnt[0] = ~p; // add the last literal to the clause
       if( pathC > 0 ) { // in case of bi-asserting clauses, the remaining literals have to be collected
 	// look for second literal of this level
-	while (!seen[var(trail[index--])]);
+	while (! varFlags[var(trail[index--])].seen);
 	p = trail[index+1];
 	out_learnt.push( ~p );
       }
     } else { 
       // process learnt units!
       // clear seen
-      for( int i = units+1; i < out_learnt.size() ; ++ i ) seen[ var(out_learnt[i]) ] = 0;
+      for( int i = units+1; i < out_learnt.size() ; ++ i ) varFlags[ var(out_learnt[i]) ].seen = 0;
       out_learnt.shrink( out_learnt.size() - 1 - units );  // keep units+1 elements!
       
       assert( out_learnt.size() > 1 && "there should have been a unit" );
@@ -728,7 +728,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
       out_btlevel = 0; // jump back to level 0!
       
       // clean seen, if more literals have been added
-      if( !isOnlyUnit ) while (index >= trail_lim[ decisionLevel() - 1 ] ) seen[ var(trail[index--]) ] = 0;
+      if( !isOnlyUnit ) while (index >= trail_lim[ decisionLevel() - 1 ] ) varFlags[ var(trail[index--]) ].seen = 0;
       
       lbd = 1; // for glucoses LBD score
       return units; // for unit clauses no minimization is necessary
@@ -755,7 +755,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
       lbd = computeLBD(out_learnt);
       if( lbd > (config.opt_learnDecPrecent * decisionLevel() + 99 ) / 100 ) {
 	// instead of learning a very long clause, which migh be deleted very soon (idea by Knuth, already implemented in lingeling(2013)
-	for (int j = 0; j < out_learnt.size(); j++) seen[var(out_learnt[j])] = 0;    // ('seen[]' is now cleared)
+	for (int j = 0; j < out_learnt.size(); j++) varFlags[var(out_learnt[j])].seen = 0;    // ('seen[]' is now cleared)
 	out_learnt.clear();
 	for( int i = 0; i + 1 < decisionLevel(); ++ i ) {
 	  out_learnt.push( ~ trail[ trail_lim[i] ] );
@@ -802,7 +802,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 		int k = ((c.size()==2) ? 0:1); // bugfix by Siert Wieringa
                 for (; k < c.size(); k++)
 		{
-                    if (!seen[var(c[k])] && level(var(c[k])) > 0){
+                    if (! varFlags[var(c[k])].seen && level(var(c[k])) > 0){
                         out_learnt[j++] = out_learnt[i];
                         break;
 		    }
@@ -891,7 +891,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 
     for (int j = 0; j < analyze_toclear.size(); j++) {
       if( config.opt_learn_debug ) cerr << "c reset seen for " << analyze_toclear[j] << endl;
-      seen[var(analyze_toclear[j])] = 0;    // ('seen[]' is now cleared)
+      varFlags[var(analyze_toclear[j])].seen = 0;    // ('seen[]' is now cleared)
     }
 
   // bump the used clauses!
@@ -929,14 +929,14 @@ bool Solver::litRedundant(Lit p, uint32_t abstract_levels,uint64_t& extraInfo)
 #endif
         for (int i = 1; i < c.size(); i++){
             Lit p  = c[i];
-            if (!seen[var(p)] && level(var(p)) > 0){
+            if (!varFlags[var(p)].seen && level(var(p)) > 0){
                 if (reason(var(p)) != CRef_Undef && (abstractLevel(var(p)) & abstract_levels) != 0){ // can be used for minimization
-                    seen[var(p)] = 1;
+                    varFlags[var(p)].seen = 1;
                     analyze_stack.push(p);
                     analyze_toclear.push(p);
                 }else{
                     for (int j = top; j < analyze_toclear.size(); j++)
-                        seen[var(analyze_toclear[j])] = 0;
+                        varFlags[var(analyze_toclear[j])].seen = 0;
                     analyze_toclear.shrink(analyze_toclear.size() - top);
                     return false;
                 }
@@ -965,11 +965,11 @@ void Solver::analyzeFinal(Lit p, vec<Lit>& out_conflict)
     if (decisionLevel() == 0)
         return;
 
-    seen[var(p)] = 1;
+    varFlags[var(p)].seen = 1;
 
     for (int i = trail.size()-1; i >= trail_lim[0]; i--){
         Var x = var(trail[i]);
-        if (seen[x]){
+        if (varFlags[x].seen){
             if (reason(x) == CRef_Undef){
                 assert(level(x) > 0);
                 out_conflict.push(~trail[i]);
@@ -980,14 +980,14 @@ void Solver::analyzeFinal(Lit p, vec<Lit>& out_conflict)
 		// Many thanks to Sam Bayless (sbayless@cs.ubc.ca) for discover this bug.
 		for (int j = ((c.size()==2) ? 0:1); j < c.size(); j++)
                     if (level(var(c[j])) > 0)
-                        seen[var(c[j])] = 1;
+                        varFlags[var(c[j])].seen = 1;
             }  
 
-            seen[x] = 0;
+            varFlags[x].seen = 0;
         }
     }
 
-    seen[var(p)] = 0;
+    varFlags[var(p)].seen = 0;
 }
 
 

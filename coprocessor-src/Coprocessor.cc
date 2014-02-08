@@ -1724,7 +1724,7 @@ void Preprocessor::fullCheck(const string& headline)
 	      if( c[0] != ~l && c[1] != ~l ) cerr << "wrong literals for clause [" << wcr << "] " << c << " are watched. Found in list for " << l << endl;
 	  }
     }
-    if( solver->seen[ v ] != 0 ) cerr << "c seen for variable " << v << " is not 0, but " << (int) solver->seen[v] << endl;
+    if( solver->varFlags[ v ].seen != 0 ) cerr << "c seen for variable " << v << " is not 0, but " << (int) solver->varFlags[v].seen << endl;
   }
 }
 
@@ -1747,7 +1747,7 @@ void Preprocessor::printSolver(ostream& s, int verbose)
   
   cerr << "c seen variables:";
   for( Var v = 0 ; v < solver->nVars(); ++ v )
-    if( solver->seen[v] != 0 ) cerr << " " << v+1;
+    if( solver->varFlags[v].seen != 0 ) cerr << " " << v+1;
   cerr << endl;
   
   cerr << "c assigned variables:";

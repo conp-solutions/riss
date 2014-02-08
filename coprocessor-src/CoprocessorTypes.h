@@ -637,7 +637,7 @@ inline void CoprocessorData::moveVar(Var from, Var to, bool final)
     solver->assigns[to] = solver->assigns[from]; solver->assigns[from] = l_Undef;
     solver->vardata[to] = solver->vardata[from]; solver->vardata[from] = Solver::VarData();
     solver->activity[to] = solver->activity[from]; solver->activity[from] = 0;
-    solver->seen[to] = solver->seen[from]; solver->seen[from] = 0;
+    solver->varFlags[to].seen = solver->varFlags[to].seen; solver->varFlags[to].seen = 0;
     solver->varFlags[to].polarity = solver->varFlags[from].polarity; solver->varFlags[from].polarity = 0;
     solver->varFlags[to].decision = solver->varFlags[from].decision; solver->varFlags[from].decision = false;
     
@@ -654,7 +654,7 @@ inline void CoprocessorData::moveVar(Var from, Var to, bool final)
     solver->assigns.shrink( solver->assigns.size() - to - 1);
     solver->vardata.shrink( solver->vardata.size() - to - 1);
     solver->activity.shrink( solver->activity.size() - to - 1);
-    solver->seen.shrink( solver->seen.size() - to - 1);
+//    solver->seen.shrink( solver->seen.size() - to - 1);
     solver->varFlags.shrink( solver->varFlags.size() - to - 1);
     
     solver->rebuildOrderHeap();

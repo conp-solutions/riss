@@ -260,7 +260,7 @@ bool Probing::prAnalyze( CRef confl )
   
     if( config.pr_debug_out > 2 ) {
 	for ( Var i = 0 ; i < data.nVars(); ++ i ) 
-	  assert ( solver.seen[ i ] == 0 && "value has to be true!"); 
+	  assert ( solver.varFlags[ i ].seen == 0 && "value has to be true!"); 
     }
     
     // genereate learnt clause - extract all units!
@@ -278,7 +278,7 @@ bool Probing::prAnalyze( CRef confl )
 
     if( config.pr_debug_out > 2 ) {
       for ( int i = 0 ; i < ca[confl].size(); ++ i ) 
-	assert ( solver.seen[ var( ca[confl][i] ) ] == 0 && "value cannot be true!"); 
+	assert ( solver.varFlags[ var( ca[confl][i] ) ].seen == 0 && "value cannot be true!"); 
     }
     
     do{
@@ -308,10 +308,10 @@ bool Probing::prAnalyze( CRef confl )
 	  for (int j = (p == lit_Undef) ? 0 : 1; j < c.size(); j++){
 	      Lit q = c[j];
 
-	      if (!solver.seen[var(q)] && solver.level(var(q)) > 0){
+	      if (!solver.varFlags[var(q)].seen && solver.level(var(q)) > 0){
 		  solver.varBumpActivity(var(q));
 		  if( config.pr_debug_out > 2 ) cerr << "c set seen INT for " << var(q) +1<< endl;
-		  solver.seen[var(q)] = 1; // for every variable, which is not on level 0, set seen!
+		  solver.varFlags[var(q)].seen = 1; // for every variable, which is not on level 0, set seen!
 		  if (solver.level(var(q)) >= solver.decisionLevel())
 		      pathC++;
 		  else
@@ -324,11 +324,11 @@ bool Probing::prAnalyze( CRef confl )
 	assert ( (loops != 1 || pathC > 1) && "in the first iteration there have to be at least 2 literals of the decision level!" );
 	
         // Select next clause to look at:
-        while (!solver.seen[var(solver.trail[index--])]) ;
+        while (!solver.varFlags[var(solver.trail[index--])].seen ) ;
         p     = solver.trail[index+1];
         confl = solver.reason(var(p));
-	assert( solver.seen[var(p)] == 1 && "this variable should have been inside the clause" );
-        solver.seen[var(p)] = 0;
+	assert( solver.varFlags[var(p)].seen == 1 && "this variable should have been inside the clause" );
+        solver.varFlags[var(p)].seen = 0;
 	if( config.pr_debug_out > 2 ) cerr << "c reset seen INT for " << var(p) +1 << endl;
         pathC--;
 
@@ -342,13 +342,13 @@ bool Probing::prAnalyze( CRef confl )
 	   if( config.pr_uip != -1 && uips > config.pr_uip ) {
 	     // reset seen literals
 	     for( int i = 0 ; i < data.lits.size(); ++ i ){
-	       solver.seen[ var(data.lits[i]) ] = 0;
+	       solver.varFlags[ var(data.lits[i]) ].seen = 0;
 	       if( config.pr_debug_out > 2 ) cerr << "c reset seen ALLUIP for " << var(data.lits[i]) +1 << endl;
 	     }
 	     
 	     if( config.pr_debug_out > 2 ) {
 		  for ( Var i = 0 ; i < data.nVars(); ++ i ) 
-		    assert ( solver.seen[ i ] == 0 && "value has to be true!"); 
+		    assert ( solver.varFlags[ i ].seen == 0 && "value has to be true!"); 
 	     }
 	     
 	     return learntUnits.size() == 0 ? false : true;
@@ -366,7 +366,7 @@ bool Probing::prAnalyze( CRef confl )
   
     // reset seen literals
     for( int i = 0 ; i < data.lits.size(); ++ i ) {
-      solver.seen[ var(data.lits[i]) ] = 0;
+      solver.varFlags[ var(data.lits[i]) ].seen = 0;
       if( config.pr_debug_out > 2 ) cerr << "c reset seen EXT for " << var(data.lits[i]) +1 << endl;
     }
     
@@ -379,7 +379,7 @@ bool Probing::prAnalyze( CRef confl )
 
   if( config.pr_debug_out > 2 ) {
       for ( Var i = 0 ; i < data.nVars(); ++ i ) 
-	assert ( solver.seen[ i ] == 0 && "value has to be true!"); 
+	assert ( solver.varFlags[ i ].seen == 0 && "value has to be true!"); 
   }
     
   // NOTE no need to add the unit again, has been done in the loop already!
