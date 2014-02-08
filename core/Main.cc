@@ -68,7 +68,7 @@ void printStats(Solver& solver)
     printf("c conflict literals     : %-12"PRIu64"   (%4.2f %% deleted)\n", solver.tot_literals, solver.max_literals == 0 ? 0 : (solver.max_literals - solver.tot_literals)*100 / (double)solver.max_literals);
     printf("c nb reduced Clauses    : %"PRIu64"\n",solver.nbReducedClauses);
     
-    printf("Memory used           : %.2f MB\n", mem_used);
+    printf("c Memory used           : %.2f MB\n", mem_used);
 
     printf("c CPU time              : %g s\n", cpu_time);
 }
