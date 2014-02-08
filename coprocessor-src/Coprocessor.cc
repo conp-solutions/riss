@@ -1487,7 +1487,7 @@ void Preprocessor::shuffle()
   
   // clear all assignments, to not being forced of keeping track of shuffled trail
   for( int i = 0 ; i < solver->trail.size(); ++ i ) {
-    solver->assigns[ var( solver->trail[i] ) ] = l_Undef;
+    solver->varFlags[ var( solver->trail[i] ) ].assigns = l_Undef;
   }
   
   // shuffle trail, clauses and learned clauses
@@ -1496,7 +1496,7 @@ void Preprocessor::shuffle()
   
   // set all assignments according to the trail!
   for( int i = 0 ; i < solver->trail.size(); ++ i ) {
-    solver->assigns[ var( solver->trail[i] ) ] = sign(solver->trail[i]) ? l_False : l_True;
+    solver->varFlags[ var( solver->trail[i] ) ].assigns = sign(solver->trail[i]) ? l_False : l_True;
   }
 }
 
@@ -1752,7 +1752,7 @@ void Preprocessor::printSolver(ostream& s, int verbose)
   
   cerr << "c assigned variables:";
   for( Var v = 0 ; v < solver->nVars(); ++ v )
-    if( solver->assigns[v] != l_Undef ) cerr << " " << v+1;
+    if( solver->varFlags[v].assigns != l_Undef ) cerr << " " << v+1;
   cerr << endl;
   
   if( verbose == 1 ) return;

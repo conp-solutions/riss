@@ -29,8 +29,8 @@ class Probing : public Technique {
   
   // necessary local variables
   vector<Var> variableHeap;
-  vec<lbool> prPositive;
-  vec<lbool> prL2Positive;
+  vec<Solver::VarFlags> prPositive;
+  vec<Solver::VarFlags> prL2Positive;
   
   vec<Lit> learntUnits;
   vector<Lit> doubleLiterals;

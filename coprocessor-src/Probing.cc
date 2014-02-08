@@ -485,7 +485,7 @@ bool Probing::prDoubleLook(Lit l1decision)
       if( solver.decisionLevel() == 1 ) {i--;continue;}
       else return true;
     }
-    solver.assigns.copyTo( prL2Positive );
+    solver.varFlags.copyTo( prL2Positive );
     // other polarity
     solver.cancelUntil(1);
     
@@ -571,8 +571,8 @@ bool Probing::prDoubleLook(Lit l1decision)
     {
       // check whether same polarity in both trails, or different polarity and in both trails
       const Var tv = var( solver.trail[ i ] );
-      if( config.pr_debug_out > 1 ) cerr << "c compare variable (level 1)" << tv + 1 << ": pos = " << toInt(prL2Positive[tv]) << " neg = " << toInt(solver.assigns[tv]) << endl;
-      if( solver.assigns[ tv ] == prL2Positive[tv] ) {
+      if( config.pr_debug_out > 1 ) cerr << "c compare variable (level 1)" << tv + 1 << ": pos = " << toInt(prL2Positive[tv].assigns) << " neg = " << toInt(solver.varFlags[tv].assigns) << endl;
+      if( solver.varFlags[ tv ].assigns == prL2Positive[tv].assigns ) {
 	if( config.pr_debug_out > 1 ) cerr << "c l2 implied literal: " << l1decision << " -> " << solver.trail[i] << endl;
 	learntUnits[0] = solver.trail[ i ];
 	l2implied ++;
@@ -904,7 +904,7 @@ void Probing::probing()
 	} // something has been found, so that second polarity has not to be propagated
 	else if( config.pr_debug_out > 1 ) cerr << "c double lookahead did not fail" << endl;
       }
-      solver.assigns.copyTo( prPositive );
+      solver.varFlags.copyTo( prPositive );
       
       if( config.pr_debug_out > 0 ) {
 	cerr << "c positive trail: " ;
@@ -963,18 +963,18 @@ void Probing::probing()
       {
 	// check whether same polarity in both trails, or different polarity and in both trails
 	const Var tv = var( solver.trail[ i ] );
-	if( config.pr_debug_out > 1 )cerr << "c compare variable (level 0) " << tv + 1 << ": pos = " << toInt(prPositive[tv]) << " neg = " << toInt(solver.assigns[tv]) << endl;
-	if( solver.assigns[ tv ] == prPositive[tv] ) {
+	if( config.pr_debug_out > 1 )cerr << "c compare variable (level 0) " << tv + 1 << ": pos = " << toInt(prPositive[tv].assigns) << " neg = " << toInt(solver.varFlags[tv].assigns) << endl;
+	if( solver.varFlags[ tv ].assigns == prPositive[tv].assigns ) {
 	  if( config.pr_debug_out > 1 )cerr << "c implied literal " << solver.trail[i] << endl;
 	  doubleLiterals.push_back(solver.trail[ i ] );
 	  l1implied ++;
 	} else if( config.pr_EE ) {
-	  if( solver.assigns[ tv ] == l_True && prPositive[tv] == l_False ) {
+	  if( solver.varFlags[ tv ].assigns == l_True && prPositive[tv].assigns == l_False ) {
 	    if( config.pr_debug_out > 1 )cerr << "c equivalent literals " << negLit << " == " << solver.trail[i] << endl;
 	    data.lits.push_back( solver.trail[ i ] ); // equivalent literals
 	    l1ee++;
 	    modifiedFormula = true;
-	  } else if( solver.assigns[ tv ] == l_False && prPositive[tv] == l_True ) {
+	  } else if( solver.varFlags[ tv ].assigns == l_False && prPositive[tv].assigns == l_True ) {
 	    if( config.pr_debug_out > 1 )cerr << "c equivalent literals " << negLit << " == " << solver.trail[i] << endl;
 	    data.lits.push_back( solver.trail[ i ] ); // equivalent literals
 	    l1ee++;

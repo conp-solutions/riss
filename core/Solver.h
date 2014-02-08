@@ -300,7 +300,7 @@ protected:
     };
     vec<VarFlags> varFlags;
     
-    vec<lbool>          assigns;          // The current assignments.
+//     vec<lbool>          assigns;          // The current assignments.
 //     vec<char>           polarity;         // The preferred polarity of each variable.
 //     vec<char>           decision;         // Declares if a variable is eligible for selection in the decision heuristic.
 //      vec<char>           seen;
@@ -811,8 +811,8 @@ inline void     Solver::newDecisionLevel()                      { trail_lim.push
 
 inline int      Solver::decisionLevel ()      const   { return trail_lim.size(); }
 inline uint32_t Solver::abstractLevel (Var x) const   { return 1 << (level(x) & 31); }
-inline lbool    Solver::value         (Var x) const   { return assigns[x]; }
-inline lbool    Solver::value         (Lit p) const   { return assigns[var(p)] ^ sign(p); }
+inline lbool    Solver::value         (Var x) const   { return varFlags[x].assigns; }
+inline lbool    Solver::value         (Lit p) const   { return varFlags[var(p)].assigns ^ sign(p); }
 inline lbool    Solver::modelValue    (Var x) const   { return model[x]; }
 inline lbool    Solver::modelValue    (Lit p) const   { return model[var(p)] ^ sign(p); }
 inline int      Solver::nAssigns      ()      const   { return trail.size(); }

@@ -262,7 +262,7 @@ Var Solver::newVar(bool sign, bool dvar, char type)
 
     varFlags. push( VarFlags( sign ) );
     
-    assigns  .push(l_Undef);
+//     assigns  .push(l_Undef);
     vardata  .push(mkVarData(CRef_Undef, 0));
     //activity .push(0);
     activity .push(rnd_init_act ? drand(random_seed) * 0.00001 : 0);
@@ -284,7 +284,7 @@ void Solver::reserveVars(Var v)
 //    watchesBin  .init(mkLit(v, false));
 //    watchesBin  .init(mkLit(v, true ));
     
-    assigns  .capacity(v+1);
+//     assigns  .capacity(v+1);
     vardata  .capacity(v+1);
     //activity .push(0);
     activity .capacity(v+1);
@@ -516,7 +516,7 @@ void Solver::cancelUntil(int level) {
       if( config.opt_learn_debug) cerr << "c call cancel until " << level << " move propagation head from " << qhead << " to " << trail_lim[level] << endl;
         for (int c = trail.size()-1; c >= trail_lim[level]; c--){
             Var      x  = var(trail[c]);
-            assigns [x] = l_Undef;
+            varFlags [x].assigns = l_Undef;
 	    vardata [x].dom = lit_Undef; // reset dominator
 	    vardata [x].reason = CRef_Undef; // TODO for performance this is not necessary, but for assertions and all that!
             if (phase_saving > 1  ||   ((phase_saving == 1) && c > trail_lim.last())  ) // TODO: check whether publication said above or below: workaround: have another parameter value for the other case!
@@ -1004,7 +1004,7 @@ void Solver::uncheckedEnqueue(Lit p, CRef from)
     }
   
     assert(value(p) == l_Undef && "cannot enqueue a wrong value");
-    assigns[var(p)] = lbool(!sign(p));
+    varFlags[var(p)].assigns = lbool(!sign(p));
     /** include variableExtraInfo here, if required! */
     vardata[var(p)] = mkVarData(from, decisionLevel());
     
@@ -2500,7 +2500,7 @@ bool Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned 
   const Var x = newVar(true,true,'e'); // this is the fresh variable!
   vardata[x].level = level(var(l1));
 
-  assigns[x] = lbool(true);
+  varFlags[x].assigns = lbool(true);
   
   oc.push( mkLit(x,false) );
   oc.push( l1 ); // has to have an order?

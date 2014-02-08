@@ -634,7 +634,7 @@ inline Var CoprocessorData::nextFreshVariable(char type)
 inline void CoprocessorData::moveVar(Var from, Var to, bool final)
 {
   if( from != to ) { // move data only if necessary
-    solver->assigns[to] = solver->assigns[from]; solver->assigns[from] = l_Undef;
+    solver->varFlags[to].assigns = solver->varFlags[from].assigns; solver->varFlags[from].assigns = l_Undef;
     solver->vardata[to] = solver->vardata[from]; solver->vardata[from] = Solver::VarData();
     solver->activity[to] = solver->activity[from]; solver->activity[from] = 0;
     solver->varFlags[to].seen = solver->varFlags[to].seen; solver->varFlags[to].seen = 0;
@@ -651,7 +651,7 @@ inline void CoprocessorData::moveVar(Var from, Var to, bool final)
   if( final == true ) {
   
     // cerr << "c compress variables to " << to+1 << endl;
-    solver->assigns.shrink( solver->assigns.size() - to - 1);
+//     solver->assigns.shrink( solver->assigns.size() - to - 1);
     solver->vardata.shrink( solver->vardata.size() - to - 1);
     solver->activity.shrink( solver->activity.size() - to - 1);
 //    solver->seen.shrink( solver->seen.size() - to - 1);
@@ -714,7 +714,7 @@ inline lbool CoprocessorData::value(const Lit l) const
 
 inline void CoprocessorData::resetAssignment(const Var v)
 {
-  solver->assigns[ v ] = l_Undef;
+  solver->varFlags[ v ].assigns = l_Undef;
 }
 
 
