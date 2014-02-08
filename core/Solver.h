@@ -290,9 +290,21 @@ public: // TODO: set more nicely, or write method!
 protected:
     vec<CRef>           learnts;          // List of learnt clauses.
 
+    struct VarFlags {
+      lbool assigns;
+      char polarity;
+      char decision;
+      char seen;
+      VarFlags( char _polarity ) : assigns(l_Undef), polarity(_polarity), decision(0), seen(0) {}
+      VarFlags () : assigns(l_Undef), polarity(1), decision(0), seen(0) {}
+    };
+    vec<VarFlags> varFlags;
+    
     vec<lbool>          assigns;          // The current assignments.
-    vec<char>           polarity;         // The preferred polarity of each variable.
-    vec<char>           decision;         // Declares if a variable is eligible for selection in the decision heuristic.
+//     vec<char>           polarity;         // The preferred polarity of each variable.
+//     vec<char>           decision;         // Declares if a variable is eligible for selection in the decision heuristic.
+    vec<char>           seen;
+    
 public:
     vec<Lit>            trail;            // Assignment stack; stores all assigments made in the order they were made.
 protected:
@@ -327,7 +339,6 @@ protected:
     // Temporaries (to reduce allocation overhead). Each variable is prefixed by the method in which it is
     // used, exept 'seen' wich is used in several places.
     //
-    vec<char>           seen;
     vec<Lit>            analyze_stack;
     vec<Lit>            analyze_toclear;
     vec<Lit>            add_tmp;
@@ -751,7 +762,7 @@ inline CRef Solver::reason(Var x) const { return vardata[x].reason; }
 inline int  Solver::level (Var x) const { return vardata[x].level; }
 
 inline void Solver::insertVarOrder(Var x) {
-    if (!order_heap.inHeap(x) && decision[x]) order_heap.insert(x); }
+    if (!order_heap.inHeap(x) && varFlags[x].decision) order_heap.insert(x); }
 
 inline void Solver::varDecayActivity() { var_inc *= (1 / var_decay); }
 inline void Solver::varBumpActivity(Var v, double inverseRatio) { varBumpActivityD(v, var_inc / (double) inverseRatio); }
@@ -809,13 +820,13 @@ inline int      Solver::nClauses      ()      const   { return clauses.size(); }
 inline int      Solver::nLearnts      ()      const   { return learnts.size(); }
 inline int      Solver::nVars         ()      const   { return vardata.size(); }
 inline int      Solver::nFreeVars     ()      const   { return (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]); }
-inline void     Solver::setPolarity   (Var v, bool b) { polarity[v] = b; }
+inline void     Solver::setPolarity   (Var v, bool b) { varFlags[v].polarity = b; }
 inline void     Solver::setDecisionVar(Var v, bool b) 
 { 
-    if      ( b && !decision[v]) dec_vars++;
-    else if (!b &&  decision[v]) dec_vars--;
+    if      ( b && !varFlags[v].decision) dec_vars++;
+    else if (!b &&  varFlags[v].decision) dec_vars--;
 
-    decision[v] = b;
+    varFlags[v].decision = b;
     insertVarOrder(v);
 }
 inline void     Solver::setConfBudget(int64_t x){ conflict_budget    = conflicts    + x; }

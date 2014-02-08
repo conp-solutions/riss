@@ -69,8 +69,8 @@ bool Probing::process()
     // run probing / vivi only, if the formula is not UNSAT before
     
     // safe the polarity for phase saving
-    vec<char> polarity;
-    solver.polarity.copyTo( polarity );
+    vec<Solver::VarFlags> polarity;
+    solver.varFlags.copyTo( polarity );
     
     if( config.pr_debug_out > 0 ) cerr << "c brefore probing: cls: " << data.getClauses().size() << " vs. ls: " << data.getLEarnts().size() << endl;
 
@@ -96,7 +96,7 @@ bool Probing::process()
     if( config.pr_debug_out > 0 ) cerr << "c after vivification: cls: " << data.getClauses().size() << " vs. ls: " << data.getLEarnts().size() << endl;
     
     // restore the polarity for phase saving
-    polarity.copyTo(solver.polarity);
+    for( int i = 0 ; i < solver.varFlags.size(); ++ i ) solver.varFlags[i].polarity = polarity[i].polarity;
 
     // clean solver again!
     cleanSolver();

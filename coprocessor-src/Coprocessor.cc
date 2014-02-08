@@ -137,7 +137,7 @@ lbool Preprocessor::performSimplification()
 	  if( isNotSat ) {
 	    // only set the phase before search!
 	    if( config.opt_ts_phase && !data.isInprocessing()) {
-	      for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
+	      for( Var v = 0; v < data.nVars(); ++ v ) solver->varFlags[v].polarity = ( 1 == twoSAT.getPolarity(v) );
 	    }
 	  } else {
 	    cerr // << endl 
@@ -145,7 +145,7 @@ lbool Preprocessor::performSimplification()
 	    << "c  use the result of 2SAT as model " << endl 
 	    << "c =================================" << endl;
 	    // initial twosat model should always be used as a model!
-	    for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
+	    for( Var v = 0; v < data.nVars(); ++ v ) solver->varFlags[v].polarity = ( 1 == twoSAT.getPolarity(v) );
 	  }
 	} else {
 	  data.setFailed();
@@ -413,7 +413,7 @@ lbool Preprocessor::performSimplification()
 	 << "c ================================" << endl;
       }
       if( solvedBySls || config.opt_sls_phase ) {
-	for( Var v= 0 ; v < data.nVars(); ++ v ) solver->polarity[v] = sls.getModelPolarity(v) == 1 ? 1 : 0; // minisat uses sign instead of polarity!
+	for( Var v= 0 ; v < data.nVars(); ++ v ) solver->varFlags[v].polarity = sls.getModelPolarity(v) == 1 ? 1 : 0; // minisat uses sign instead of polarity!
       }
     }
     if (! solver->okay())
@@ -445,7 +445,7 @@ lbool Preprocessor::performSimplification()
 	if( isNotSat ) {
 	  // only set the phase before search!
 	  if( config.opt_ts_phase && !data.isInprocessing()) {
-	    for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( -1 == twoSAT.getPolarity(v) );
+	    for( Var v = 0; v < data.nVars(); ++ v ) solver->varFlags[v].polarity = ( -1 == twoSAT.getPolarity(v) );
 	  }
 	  cerr // << endl 
 	  << "c ================================" << endl 
@@ -866,7 +866,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 	 << "c ================================" << endl;
       }
       if( solvedBySls || config.opt_sls_phase ) {
-	for( Var v= 0 ; v < data.nVars(); ++ v ) solver->polarity[v] = sls.getModelPolarity(v) == 1 ? 1 : 0; // minisat uses sign instead of polarity!
+	for( Var v= 0 ; v < data.nVars(); ++ v ) solver->varFlags[v].polarity = sls.getModelPolarity(v) == 1 ? 1 : 0; // minisat uses sign instead of polarity!
       }
     }
     if (! solver->okay())
@@ -896,7 +896,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 	if( isNotSat ) {
 	  // only set the phase before search!
 	  if( config.opt_ts_phase && !data.isInprocessing()) {
-	    for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
+	    for( Var v = 0; v < data.nVars(); ++ v ) solver->varFlags[v].polarity = ( 1 == twoSAT.getPolarity(v) );
 	  }
 	  cerr // << endl 
 	  << "c ================================" << endl 
@@ -908,7 +908,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 	  << "c  use the result of 2SAT as model " << endl 
 	  << "c =================================" << endl;
 	  // next, search would be called, and then a model will be generated!
-	  for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
+	  for( Var v = 0; v < data.nVars(); ++ v ) solver->varFlags[v].polarity = ( 1 == twoSAT.getPolarity(v) );
 	}
       } else {
 	cerr // << endl 

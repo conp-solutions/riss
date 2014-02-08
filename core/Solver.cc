@@ -259,16 +259,16 @@ Var Solver::newVar(bool sign, bool dvar, char type)
     int v = nVars();
     watches  .init(mkLit(v, false));
     watches  .init(mkLit(v, true ));
-//    watchesBin  .init(mkLit(v, false));
-//    watchesBin  .init(mkLit(v, true ));
+
+    varFlags. push( VarFlags( sign ) );
+    
     assigns  .push(l_Undef);
     vardata  .push(mkVarData(CRef_Undef, 0));
     //activity .push(0);
     activity .push(rnd_init_act ? drand(random_seed) * 0.00001 : 0);
     seen     .push(0);
     permDiff  .push(0);
-    polarity .push(sign);
-    decision .push();
+
     trail    .capacity(v+1);
     setDecisionVar(v, dvar);
     
@@ -290,8 +290,7 @@ void Solver::reserveVars(Var v)
     activity .capacity(v+1);
     seen     .capacity(v+1);
     permDiff  .capacity(v+1);
-    polarity .capacity(v+1);
-    decision .capacity(v+1);
+    varFlags. capacity(v+1);
     trail    .capacity(v+1);
 }
 
@@ -521,7 +520,7 @@ void Solver::cancelUntil(int level) {
 	    vardata [x].dom = lit_Undef; // reset dominator
 	    vardata [x].reason = CRef_Undef; // TODO for performance this is not necessary, but for assertions and all that!
             if (phase_saving > 1  ||   ((phase_saving == 1) && c > trail_lim.last())  ) // TODO: check whether publication said above or below: workaround: have another parameter value for the other case!
-                polarity[x] = sign(trail[c]);
+                varFlags[x].polarity = sign(trail[c]);
             insertVarOrder(x); }
         qhead = trail_lim[level];
 	realHead = trail_lim[level];
@@ -541,18 +540,18 @@ Lit Solver::pickBranchLit()
     // Random decision:
     if (drand(random_seed) < random_var_freq && !order_heap.empty()){
         next = order_heap[irand(random_seed,order_heap.size())];
-        if (value(next) == l_Undef && decision[next])
+        if (value(next) == l_Undef && varFlags[next].decision)
             rnd_decisions++; }
 
     // Activity based decision:
-    while (next == var_Undef || value(next) != l_Undef || !decision[next])
+    while (next == var_Undef || value(next) != l_Undef || ! varFlags[next].decision)
         if (order_heap.empty()){
             next = var_Undef;
             break;
         }else
             next = order_heap.removeMin();
 
-    const Lit returnLit =  next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
+    const Lit returnLit =  next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : varFlags[next].polarity );
     if( decisionLevel() == 0 ) dontTrustPolarity ++;
     return (config.opt_dontTrustPolarity && decisionLevel() == dontTrustPolarity) ? ~returnLit : returnLit;
 }
@@ -1000,7 +999,7 @@ void Solver::uncheckedEnqueue(Lit p, CRef from)
   
     if( dynamicDataUpdates && config.opt_agility_restart_reject ) { // only if technique is enabled:
      // cerr << "c old: " << agility << " lit: " << p << " sign: " << sign(p) << " pol: " << polarity[var(p)] << endl;
-      agility = agility * agility_decay + ( sign(p) != polarity[ var(p) ] ? (1.0 - agility_decay) : 0 );
+      agility = agility * agility_decay + ( sign(p) != varFlags[ var(p) ]. polarity ? (1.0 - agility_decay) : 0 );
      // cerr << "c new: " << agility << " ... decay: " << agility_decay << endl;
     }
   
@@ -1379,7 +1378,7 @@ void Solver::rebuildOrderHeap()
 {
     vec<Var> vs;
     for (Var v = 0; v < nVars(); v++)
-        if (decision[v] && value(v) == l_Undef)
+        if ( varFlags[v].decision && value(v) == l_Undef)
             vs.push(v);
     order_heap.build(vs);
 }
@@ -1773,8 +1772,8 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   // FIXME have another line for level 6 here!
   LONG_INT p[nVars()];
   memset(p,0,nVars()*sizeof(LONG_INT)); 
-  vec<char> bu;
-  polarity.copyTo(bu);  
+  vec<VarFlags> bu;
+  varFlags.copyTo(bu);  
   LONG_INT pt=~0; // everything set -> == 2^64-1
 //  if(config.dx) cerr << "c initial pattern: " << pt << endl;
   Lit d[6];
@@ -1954,7 +1953,8 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   if( propagate() != CRef_Undef ){laTime = cpuTime() - laTime; return false;}
   
   // done with la, continue usual search, until next time something is done
-  bu.copyTo(polarity); // restore polarities from before!
+  for( int i = 0 ; i < bu.size(); ++ i ) varFlags[i].polarity = bu[i].polarity;
+  
   if(config.opt_laDyn){
     if(foundUnit)laBound=config.opt_laEvery; 		// reset down to specified minimum
     else {if(laBound<config.opt_laMaxEvery)laBound++;}	// increase by one!
@@ -2042,11 +2042,11 @@ lbool Solver::initSolve(int solves)
 	  }
 	  
 	  if( solves == 1 || ( config.resetPolEvery != 0 && solves % config.resetPolEvery == 0 ) ) {
-	    if( config.opt_init_pol == 1 ) polarity[v] = jw[v] > 0 ? 0 : 1;
-	    else if( config.opt_init_pol == 2 ) polarity[v] = jw[v] > 0 ? 1 : 0;
-	    else if( config.opt_init_pol == 3 ) polarity[v] = moms[v] > 0 ? 1 : 0;
-	    else if( config.opt_init_pol == 4 ) polarity[v] = moms[v] > 0 ? 0 : 1;
-	    else if( config.opt_init_pol == 5 ) polarity[v] = irand(random_seed,100) > 50 ? 1 : 0;
+	    if( config.opt_init_pol == 1 ) varFlags[v].polarity = jw[v] > 0 ? 0 : 1;
+	    else if( config.opt_init_pol == 2 ) varFlags[v].polarity = jw[v] > 0 ? 1 : 0;
+	    else if( config.opt_init_pol == 3 ) varFlags[v].polarity = moms[v] > 0 ? 1 : 0;
+	    else if( config.opt_init_pol == 4 ) varFlags[v].polarity = moms[v] > 0 ? 0 : 1;
+	    else if( config.opt_init_pol == 5 ) varFlags[v].polarity = irand(random_seed,100) > 50 ? 1 : 0;
 	  }
 	}
 	delete [] moms;
@@ -2066,7 +2066,7 @@ lbool Solver::initSolve(int solves)
 	if( v - 1 >= nVars() ) continue; // other file might contain more variables
 	Lit thisL = mkLit(v-1, polLits[i] < 0 );
 	if( config.opt_pol ) thisL = ~thisL;
-	polarity[ v-1 ] = sign(thisL);
+	varFlags[v-1].polarity = sign(thisL);
       }
       cerr << "c adopted poarity of " << polLits.size() << " variables" << endl;
     }
@@ -2641,7 +2641,7 @@ int Solver::getRestartLevel()
 	repeatReusedTrail = false; // get it right this time?
 	
 	// Activity based selection
-	while (next == var_Undef || value(next) != l_Undef || !decision[next])
+	while (next == var_Undef || value(next) != l_Undef || ! varFlags[next].decision)
 	    if (order_heap.empty()){
 		next = var_Undef;
 		break;
@@ -2664,7 +2664,7 @@ int Solver::getRestartLevel()
 	if( config.opt_restart_level > 1 && restartLevel > 0 ) { // check whether jumping higher would be "more correct"
 	  cancelUntil( restartLevel );
 	  Var more = var_Undef;
-	  while (more == var_Undef || value(more) != l_Undef || !decision[more])
+	  while (more == var_Undef || value(more) != l_Undef || ! varFlags[more].decision)
 	      if (order_heap.empty()){
 		  more = var_Undef;
 		  break;
@@ -2971,8 +2971,8 @@ bool Solver::interleavedClauseStrengthening()
   trail.copyTo( trailCopy );
   vec<int> trailLimCopy;
   trail_lim.copyTo( trailLimCopy );
-  vec<char> polarityCopy;
-  polarity.copyTo(polarityCopy);
+  vec<VarFlags> polarityCopy;
+  varFlags.copyTo(polarityCopy);
   const int oldVars = nVars();
   const int oldLearntsSize = learnts.size();
   // backtrack to level 0
@@ -3141,7 +3141,7 @@ bool Solver::interleavedClauseStrengthening()
 //       }
     }
   }
-  polarityCopy.copyTo( polarity );
+  for( int i = 0 ; i < polarityCopy.size(); ++i ) varFlags[i].polarity = polarityCopy[i].polarity;
   dynamicDataUpdates = oldDynUpdates; // reverse the state!
   lastICSconflicts = conflicts;
   // return as if nothing has happened

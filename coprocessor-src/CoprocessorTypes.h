@@ -638,8 +638,8 @@ inline void CoprocessorData::moveVar(Var from, Var to, bool final)
     solver->vardata[to] = solver->vardata[from]; solver->vardata[from] = Solver::VarData();
     solver->activity[to] = solver->activity[from]; solver->activity[from] = 0;
     solver->seen[to] = solver->seen[from]; solver->seen[from] = 0;
-    solver->polarity[to] = solver->polarity[from]; solver->polarity[from] = 0;
-    solver->decision[to] = solver->decision[from]; solver->decision[from] = false;
+    solver->varFlags[to].polarity = solver->varFlags[from].polarity; solver->varFlags[from].polarity = 0;
+    solver->varFlags[to].decision = solver->varFlags[from].decision; solver->varFlags[from].decision = false;
     
     // cp3 structures
     lit_occurrence_count[toInt( mkLit(to, false ))] = lit_occurrence_count[toInt( mkLit(from, false ))];
@@ -655,8 +655,7 @@ inline void CoprocessorData::moveVar(Var from, Var to, bool final)
     solver->vardata.shrink( solver->vardata.size() - to - 1);
     solver->activity.shrink( solver->activity.size() - to - 1);
     solver->seen.shrink( solver->seen.size() - to - 1);
-    solver->polarity.shrink( solver->polarity.size() - to - 1);
-    solver->decision.shrink( solver->decision.size() - to - 1);
+    solver->varFlags.shrink( solver->varFlags.size() - to - 1);
     
     solver->rebuildOrderHeap();
     
