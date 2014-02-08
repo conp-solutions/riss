@@ -292,11 +292,12 @@ protected:
 
     struct VarFlags {
       lbool assigns;
-      char polarity;
-      char decision;
-      char seen;
-      VarFlags( char _polarity ) : assigns(l_Undef), polarity(_polarity), decision(0), seen(0) {}
-      VarFlags () : assigns(l_Undef), polarity(1), decision(0), seen(0) {}
+      unsigned polarity:2;
+      unsigned decision:2;
+      unsigned seen:2;
+      unsigned extra:2;
+      VarFlags( char _polarity ) : assigns(l_Undef), polarity(_polarity), decision(0), seen(0), extra(0) {}
+      VarFlags () : assigns(l_Undef), polarity(1), decision(0), seen(0), extra(0) {}
     };
     vec<VarFlags> varFlags;
     
