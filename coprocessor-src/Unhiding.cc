@@ -172,7 +172,7 @@ uint32_t Unhiding::linStamp( const Lit literal, uint32_t stamp, bool& detectedEE
 	  l1 = stampEE.back();
 	  stampEE.pop_back();
 	  stampClassEE.push_back( l1 );
-	  if( l1 != l ) cerr << "c collect EE literals " << l << " and " << l1 << endl;
+	  // if( l1 != l ) cerr << "c collect EE literals " << l << " and " << l1 << endl;
 	  stampInfo[ toInt(l1) ].dsc = stampInfo[ toInt(l) ].dsc;
 	  stampInfo[ toInt(l1) ].fin = stamp;
 	} while( l1 != l );
@@ -636,7 +636,7 @@ void Unhiding::process (  )
     big.recreate(ca, data.nVars(), data.getClauses() );    
     
     if(config.opt_uhd_TestDbl) {
-      cerr << "c test for duplicate binary clauses ... " << endl;
+      // cerr << "c test for duplicate binary clauses ... " << endl;
       int duplImps = 0;
       for( Var v = 0 ; v < data.nVars(); ++v ) {
 	for( int p = 0 ;p < 2 ; ++ p ) {
@@ -648,7 +648,7 @@ void Unhiding::process (  )
 	  }
 	}
       }
-      cerr << "c found " << duplImps << " duplicate implications" << endl;
+      // cerr << "c found " << duplImps << " duplicate implications" << endl;
     }
     // remove duplicate edges from BIG (while not removing the redundant binary clauses from the formula)
     big.removeDuplicateEdges( data.nVars() );
