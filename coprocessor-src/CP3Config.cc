@@ -427,6 +427,7 @@ opt_hte_inpStepInc      (_cat_hte, "cp3_hte_inpInc","increase for steps per inpr
 // Probing
 //
 pr_uip            (_cat_pr, "pr-uips",   "perform learning if a conflict occurs up to x-th UIP (-1 = all )", -1, IntRange(-1, INT32_MAX), optionListPtr ),
+opt_pr_probeBinary(_cat_pr, "pr-bins",   "use binary clauses for probing",false, optionListPtr ),
 pr_double        (_cat_pr, "pr-double", "perform double look-ahead",true, optionListPtr ),
 pr_probe         (_cat_pr, "pr-probe",  "perform probing",true, optionListPtr ),
 pr_rootsOnly     (_cat_pr, "pr-roots",  "probe only on root literals",true, optionListPtr ),

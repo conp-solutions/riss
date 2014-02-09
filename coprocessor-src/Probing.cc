@@ -170,6 +170,23 @@ CRef Probing::prPropagate( bool doDouble )
         Solver::Watcher        *i, *j, *end;
         num_props++;
 
+	// First, Propagate binary clauses 
+	if( config.opt_pr_probeBinary ) { // option to disable propagating binary clauses in probing
+	  const vec<Solver::Watcher>&  wbin  = solver.watchesBin[p]; // this code needs to be added to the usual probing version!
+	  
+	  for(int k = 0;k<wbin.size();k++)
+	  {
+	    const Lit& imp = wbin[k].blocker();
+	    assert( ca[ wbin[k].cref() ].size() == 2 && "in this list there can only be binary clauses" );
+	    if(solver.value(imp) == l_False) {
+	      return wbin[k].cref();
+	    }
+	    if(solver.value(imp) == l_Undef) {
+	      solver.uncheckedEnqueue(imp,wbin[k].cref());
+	    }
+	  }
+	}
+	
 	if( config.pr_debug_out > 1 ) cerr << "c for lit " << p << " have watch with " << ws.size() << " elements" << endl;
 	
         for (i = j = (Solver::Watcher*)ws, end = i + ws.size();  i != end;){
