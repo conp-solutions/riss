@@ -176,13 +176,13 @@ CRef Probing::prPropagate( bool doDouble )
 	  
 	  for(int k = 0;k<wbin.size();k++)
 	  {
-	    const Lit& imp = wbin[k].blocker();
-	    assert( ca[ wbin[k].cref() ].size() == 2 && "in this list there can only be binary clauses" );
+	    const Lit& imp = wbin[k].blocker;
+	    assert( ca[ wbin[k].cref ].size() == 2 && "in this list there can only be binary clauses" );
 	    if(solver.value(imp) == l_False) {
-	      return wbin[k].cref();
+	      return wbin[k].cref;
 	    }
 	    if(solver.value(imp) == l_Undef) {
-	      solver.uncheckedEnqueue(imp,wbin[k].cref());
+	      solver.uncheckedEnqueue(imp,wbin[k].cref);
 	    }
 	  }
 	}
