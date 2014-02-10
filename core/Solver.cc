@@ -95,7 +95,7 @@ Solver::Solver(CoreConfig& _config) :
   , cla_inc            (1)
   , var_inc            (1)
   , watches            (WatcherDeleted(ca))
-  , watchesBin            (WatcherDeleted(ca))
+//  , watchesBin            (WatcherDeleted(ca))
   , qhead              (0)
   , realHead           (0)
   , simpDB_assigns     (-1)
@@ -139,6 +139,7 @@ Solver::Solver(CoreConfig& _config) :
   
   ,useVSIDS(config.opt_vsids_start)
   
+  ,lhbrAllowed(true)
   ,lhbrs(0)
   ,l1lhbrs(0)
   ,lhbr_news(0)
@@ -262,8 +263,8 @@ Var Solver::newVar(bool sign, bool dvar, char type)
     int v = nVars();
     watches  .init(mkLit(v, false));
     watches  .init(mkLit(v, true ));
-    watchesBin  .init(mkLit(v, false));
-    watchesBin  .init(mkLit(v, true ));
+//    watchesBin  .init(mkLit(v, false));
+//    watchesBin  .init(mkLit(v, true ));
     assigns  .push(l_Undef);
     vardata  .push(mkVarData(CRef_Undef, 0));
     //activity .push(0);
@@ -284,8 +285,8 @@ void Solver::reserveVars(Var v)
 {
     watches  .init(mkLit(v, false));
     watches  .init(mkLit(v, true ));
-    watchesBin  .init(mkLit(v, false));
-    watchesBin  .init(mkLit(v, true ));
+//    watchesBin  .init(mkLit(v, false));
+//    watchesBin  .init(mkLit(v, true ));
     
     assigns  .capacity(v+1);
     vardata  .capacity(v+1);
@@ -359,7 +360,7 @@ bool Solver::addClause_(vec<Lit>& ps)
 
 void Solver::attachClause(CRef cr) {
     const Clause& c = ca[cr];
-    assert(c.size() > 1);
+    assert(c.size() > 1 && "cannot watch unit clauses!");
     
     // check for duplicates here!
 //     for (int i = 0; i < c.size(); i++)
@@ -367,8 +368,8 @@ void Solver::attachClause(CRef cr) {
 // 	assert( c[i] != c[j] && "have no duplicate literals in clauses!" );
     
     if(c.size()==2) {
-      watchesBin[~c[0]].push(Watcher(cr, c[1]));
-      watchesBin[~c[1]].push(Watcher(cr, c[0]));
+      watches[~c[0]].push(Watcher(cr, c[1], 0)); // add watch element for binary clause
+      watches[~c[1]].push(Watcher(cr, c[0], 0)); // add watch element for binary clause
     } else {
 //      cerr << "c DEBUG-REMOVE watch clause " << c << " in lists for literals " << ~c[0] << " and " << ~c[1] << endl;
       watches[~c[0]].push(Watcher(cr, c[1]));
@@ -388,35 +389,22 @@ void Solver::detachClause(CRef cr, bool strict) {
 //       cerr << "c extra bug - unit clause is removed" << endl;
 //       exit( 36 );
 //     }
-    if(c.size()==2) {
-      if (strict){
+
+    const int watchType = c.size()==2 ? 0 : 1; // have the same code only for different watch types!
+    if (strict){
 	if( config.opt_fast_rem ) {
-	  removeUnSort(watchesBin[~c[0]], Watcher(cr, c[1])); 
-	  removeUnSort(watchesBin[~c[1]], Watcher(cr, c[0])); 
+	  removeUnSort(watches[~c[0]], Watcher(cr, c[1],watchType)); 
+	  removeUnSort(watches[~c[1]], Watcher(cr, c[0],watchType)); 
 	} else {
-	  remove(watchesBin[~c[0]], Watcher(cr, c[1])); // linear (touchs all elements)!
-	  remove(watchesBin[~c[1]], Watcher(cr, c[0])); // linear (touchs all elements)!
+	  remove(watches[~c[0]], Watcher(cr, c[1],watchType)); // linear (touchs all elements)!
+	  remove(watches[~c[1]], Watcher(cr, c[0],watchType)); // linear (touchs all elements)!
 	}
-      }else{
-        // Lazy detaching: (NOTE! Must clean all watcher lists before garbage collecting this clause)
-        watchesBin.smudge(~c[0]);
-        watchesBin.smudge(~c[1]);
-      }
-    } else {
-      if (strict){
-	if( config.opt_fast_rem ) {
-	  removeUnSort(watches[~c[0]], Watcher(cr, c[1])); 
-	  removeUnSort(watches[~c[1]], Watcher(cr, c[0])); 
-	} else {
-	  remove(watches[~c[0]], Watcher(cr, c[1])); // linear (touchs all elements)!
-	  remove(watches[~c[1]], Watcher(cr, c[0])); // linear (touchs all elements)!
-	}
-      }else{
-        // Lazy detaching: (NOTE! Must clean all watcher lists before garbage collecting this clause)
-        watches.smudge(~c[0]);
-        watches.smudge(~c[1]);
-      }
+    }else{
+      // Lazy detaching: (NOTE! Must clean all watcher lists before garbage collecting this clause)
+      watches.smudge(~c[0]);
+      watches.smudge(~c[1]);
     }
+
     if (c.learnt()) learnts_literals -= c.size();
     else            clauses_literals -= c.size(); }
 
@@ -497,15 +485,16 @@ void Solver::minimisationWithBinaryResolution(vec<Lit> &out_learnt) {
       if(lbd<=lbLBDMinimizingClause){
       MYFLAG++;
       for(int i = 1;i<out_learnt.size();i++) permDiff[var(out_learnt[i])] = MYFLAG;
-      vec<Watcher>&  wbin  = watchesBin[p];
+      const vec<Watcher>&  wbin  = watches[p]; // const!
       int nb = 0;
       for(int k = 0;k<wbin.size();k++) {
-	const Lit imp = wbin[k].blocker;
+	if( !wbin[k].isBinary() ) continue; // has been looping on binary clauses only before!
+	const Lit imp = wbin[k].blocker();
 	if(permDiff[var(imp)]==MYFLAG && value(imp)==l_True) {
 	  nb++;
 	  permDiff[var(imp)]= MYFLAG-1;
 #ifdef CLS_EXTRA_INFO
-	  extraInfo = extraInfo >= ca[wbin[k].cref].extraInformation() ? extraInfo : ca[wbin[k].cref].extraInformation();
+	  extraInfo = extraInfo >= ca[wbin[k].cref()].extraInformation() ? extraInfo : ca[wbin[k].cref()].extraInformation();
 #endif
 	}
       }
@@ -613,11 +602,6 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 
     do{
 	if( config.opt_learn_debug ) cerr << "c enter loop with lit " << p << endl;
-        assert(confl != CRef_Undef && "there needs to be something to be resolved"); // (otherwise should be UIP)
-         if( confl == CRef_Undef ) {
- 	  cerr << "c SPECIALLY BUILD-IN FAIL-CHECK in analyze" << endl;
- 	  exit( 35 );
- 	}
         Clause& c = ca[confl];
 	if( config.opt_ecl_debug || config.opt_rer_debug ) cerr << "c resolve on " << p << "(" << index << "/" << trail.size() << ") with [" << confl << "]" << c << " -- calculated currentSize: " << currentSize << " pathLimit: " << pathLimit <<  endl;
 	int clauseReductSize = c.size();
@@ -1058,8 +1042,7 @@ CRef Solver::propagate()
   
     CRef    confl     = CRef_Undef;
     int     num_props = 0;
-    watches.cleanAll();
-    watchesBin.cleanAll();
+    watches.cleanAll(); clssToBump.clear();
     while (qhead < trail.size()){
         Lit            p   = trail[qhead++];     // 'p' is enqueued fact to propagate.
         if( config.opt_learn_debug ) cerr << "c propagate literal " << p << endl;
@@ -1068,32 +1051,28 @@ CRef Solver::propagate()
         Watcher        *i, *j, *end;
         num_props++;
 
-	if( config.opt_LHBR > 0 && vardata[var(p)].dom == lit_Undef ) {
+	if(lhbrAllowed && config.opt_LHBR > 0 && vardata[var(p)].dom == lit_Undef ) {
 	  vardata[var(p)].dom = p; // literal is its own dominator, if its not implied due to a binary clause
 	  // if( config.opt_printLhbr ) cerr << "c undominated literal " << p << " is dominated by " << p << " (because propagated)" << endl; 
 	}
 	
 	    // First, Propagate binary clauses 
-	vec<Watcher>&  wbin  = watchesBin[p];
+	const vec<Watcher>&  wbin  = watches[p];
 	
 	for(int k = 0;k<wbin.size();k++) {
-	  
-	  Lit imp = wbin[k].blocker;
-	  
-	  assert( ca[ wbin[k].cref ].size() == 2 && "in this list there can only be binary clauses" );
-	  
-	  if( config.opt_learn_debug ) cerr << "c checked binary clause " << ca[wbin[k].cref ] << " with implied literal having value " << toInt(value(imp)) << endl;
-	  
+	  if( !wbin[k].isBinary() ) continue;
+	  const Lit& imp = wbin[k].blocker();
+	  assert( ca[ wbin[k].cref() ].size() == 2 && "in this list there can only be binary clauses" );
+	  if( config.opt_learn_debug ) cerr << "c checked binary clause " << ca[wbin[k].cref() ] << " with implied literal having value " << toInt(value(imp)) << endl;
 	  if(value(imp) == l_False) {
-	    if( !config.opt_long_conflict ) return wbin[k].cref;
-	    // else
-	    confl = wbin[k].cref;
+	    if( !config.opt_long_conflict ) return wbin[k].cref();
+	    confl = wbin[k].cref();
 	    break;
 	  }
 	  
 	  if(value(imp) == l_Undef) {
-	    uncheckedEnqueue(imp,wbin[k].cref);
-	    if( config.opt_LHBR > 0 ) {
+	    uncheckedEnqueue(imp,wbin[k].cref());
+	    if( lhbrAllowed && config.opt_LHBR > 0 ) {
 	      vardata[ var(imp) ].dom = (config.opt_LHBR == 1 || config.opt_LHBR == 3) ? p : vardata[ var(p) ].dom ; // set dominator
 	      // if( config.opt_printLhbr ) cerr << "c literal " << imp << " is dominated by " << p << " (because propagated in binary)" << endl;  
 	    }
@@ -1109,16 +1088,16 @@ CRef Solver::propagate()
 		if( !fail ) {
 		  if( config.opt_hack_cost ) { // size based cost
 		    if( vardata[var(imp)].cost > 2  ) { // 2 is smaller than old reasons size
-		      if( config.opt_dbg ) cerr << "c for literal " << imp << " replace reason " << vardata[var(imp)].reason << " with " << wbin[k].cref << endl;
-		      vardata[var(imp)].reason = wbin[k].cref;
+		      if( config.opt_dbg ) cerr << "c for literal " << imp << " replace reason " << vardata[var(imp)].reason << " with " << wbin[k].cref() << endl;
+		      vardata[var(imp)].reason = wbin[k].cref();
 		      vardata[var(imp)].cost = 2;
 		      
 		    } 
 		  } else { // lbd based cost
-		    int thisCost = ca[wbin[k].cref].lbd();
+		    int thisCost = ca[wbin[k].cref()].lbd();
 		    if( vardata[var(imp)].cost > thisCost  ) { // 2 is smaller than old reasons size
-		      if( config.opt_dbg ) cerr << "c for literal " << imp << " replace reason " << vardata[var(imp)].reason << " with " << wbin[k].cref << endl;
-		      vardata[var(imp)].reason = wbin[k].cref;
+		      if( config.opt_dbg ) cerr << "c for literal " << imp << " replace reason " << vardata[var(imp)].reason << " with " << wbin[k].cref() << endl;
+		      vardata[var(imp)].reason = wbin[k].cref();
 		      vardata[var(imp)].cost = thisCost;
 		    } 
 		  }
@@ -1129,41 +1108,25 @@ CRef Solver::propagate()
 	  }
 	    
 	}
-    
-	if( false && config.opt_printLhbr ) { // debug output for lhbr
-	  cerr << "c watch list before propagating literal " << p << endl;
-	  int count = 0;
-	  Watcher        *wi, *wend;
-	  for (wi = (Watcher*)ws, wend = wi + ws.size();  wi != end;) {
-	    const CRef     cr        = wi->cref;
-            Clause&  c         = ca[cr];
-	    cerr << "c [" << count << "] (" << cr << ") " << c << endl;
-	    ++ count; wi ++;
-	  }
-	}
 
         for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;)
 	{
-	    if( config.opt_learn_debug ) cerr << "c check clause [" << i->cref << "]" << ca[i->cref] << endl;
-	    assert( ca[ i->cref ].size() > 2 && "in this list there can only be clauses with more than 2 literals" );
+	    if( i->isBinary() ) { *j++ = *i++; continue; } // skip binary clauses (have been propagated before already!}
+	    
+	    if( config.opt_learn_debug ) cerr << "c check clause [" << i->cref() << "]" << ca[i->cref()] << endl;
+	    assert( ca[ i->cref() ].size() > 2 && "in this list there can only be clauses with more than 2 literals" );
 	    
             // Try to avoid inspecting the clause:
-            Lit blocker = i->blocker;
-            if (value(blocker) == l_True){
+            const Lit blocker = i->blocker();
+            if (value(blocker) == l_True){ // keep binary clauses, and clauses where the blocking literal is satisfied
                 *j++ = *i++; continue; }
 
             // Make sure the false literal is data[1]:
-            const CRef cr = i->cref;
+            const CRef cr = i->cref();
             Clause&  c = ca[cr];
             const Lit false_lit = ~p;
             if (c[0] == false_lit)
                 c[0] = c[1], c[1] = false_lit;
-	    if( c[1] != false_lit ) { // build in exit
-	      cerr << "c wrong literal order in the clause!" << endl;
-	      cerr << "c clause (" << cr << "): " << c << endl;
-	      assert(c[1] == false_lit && "wrong literal order in the clause!");
-	      exit(37);
-	    }
             assert(c[1] == false_lit && "wrong literal order in the clause!");
             i++;
 
@@ -1207,7 +1170,7 @@ CRef Solver::propagate()
 	      *j++ = w; continue; } // same as goto NextClause;
 
 	      
-	    Lit commonDominator = (config.opt_LHBR > 0 && lhbrs < config.opt_LHBR_max) ? vardata[var(false_lit)].dom : lit_Error; // inidicate whether lhbr should still be performed
+	    Lit commonDominator = (lhbrAllowed && config.opt_LHBR > 0 && lhbrs < config.opt_LHBR_max) ? vardata[var(false_lit)].dom : lit_Error; // inidicate whether lhbr should still be performed
 	    lhbrtests = commonDominator == lit_Error ? lhbrtests : lhbrtests + 1;
 	    // if( config.opt_printLhbr ) cerr << "c common dominator for clause " << c << " : " << commonDominator << endl; 
 	    
@@ -1242,12 +1205,12 @@ CRef Solver::propagate()
             } else {
 		if( config.opt_learn_debug ) cerr << "c current clause is unit clause: " << ca[cr] << endl;
                 uncheckedEnqueue(first, cr);
-		if( config.opt_LHBR > 0 ) vardata[ var(first) ].dom = (config.opt_LHBR == 1 || config.opt_LHBR == 3) ? first : vardata[ var(first) ].dom ; // set dominator for this variable!
+		if( lhbrAllowed && config.opt_LHBR > 0 ) vardata[ var(first) ].dom = (config.opt_LHBR == 1 || config.opt_LHBR == 3) ? first : vardata[ var(first) ].dom ; // set dominator for this variable!
 		
 		// if( config.opt_printLhbr ) cerr << "c final common dominator: " << commonDominator << endl;
 		
 		// check lhbr!
-		if( commonDominator != lit_Error && commonDominator != lit_Undef ) {
+		if( commonDominator != lit_Error && commonDominator != lit_Undef ) { // no need to ask for permission, because commonDominator would be lit_Error anyways
 		  lhbrs ++;
 		  l1lhbrs = decisionLevel() == 1 ? l1lhbrs + 1 : l1lhbrs;
 		  oc.clear();
@@ -1281,7 +1244,11 @@ CRef Solver::propagate()
 		  CRef cr2 = ca.alloc(oc, clearnt ); // add the new clause - now all references could be invalid!
 		  if( clearnt ) { ca[cr2].setLBD(1); learnts.push(cr2); ca[cr2].activity() = c.activity(); }
 		  else clauses.push(cr2);
-		  attachClause(cr2);
+		  
+		  //if( ws.capacity() > ws.size() + 1 ) attachClause(cr2); // if not causes problems!
+		  //else 
+		    clssToBump.push(cr2); // otherwise add lazily!
+		  
 		  vardata[var(first)].reason = cr2; // set the new clause as reason
 		  vardata[ var(first) ].dom = (config.opt_LHBR == 1 || config.opt_LHBR == 3) ? commonDominator : vardata[ var(commonDominator) ].dom ; // set NEW dominator for this variable!
 		  if( config.opt_printLhbr ) {
@@ -1304,12 +1271,18 @@ CRef Solver::propagate()
         NextClause:;
         }
         ws.shrink(i - j); // remove all duplciate clauses!
+	if( lhbrAllowed ) {
+	  for( int k = 0 ; k < clssToBump.size(); ++k ) attachClause(clssToBump[k]); // add lazily
+	  clssToBump.clear();
+	}
+	// push lhbr clauses here!
+	
 	
 	if( false && config.opt_printLhbr ) {
 	  cerr << "c watch list after propagating literal " << p << endl;
 	  int count = 0;
 	  for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;) {
-	    const CRef     cr        = i->cref;
+	    const CRef     cr        = i->cref();
             Clause&  c         = ca[cr];
 	    cerr << "c [" << count << "] (" << cr << ") " << c << endl;
 	    ++ count; ++i;
@@ -1438,7 +1411,6 @@ bool Solver::simplify()
 {
     // clean watches
     watches.cleanAll();
-    watchesBin.cleanAll();
     
     assert(decisionLevel() == 0);
 
@@ -2402,18 +2374,13 @@ void Solver::relocAll(ClauseAllocator& to)
     //
     // for (int i = 0; i < watches.size(); i++)
     watches.cleanAll();
-    watchesBin.cleanAll();
     for (int v = 0; v < nVars(); v++)
         for (int s = 0; s < 2; s++){
             Lit p = mkLit(v, s);
             // printf(" >>> RELOCING: %s%d\n", sign(p)?"-":"", var(p)+1);
             vec<Watcher>& ws = watches[p];
             for (int j = 0; j < ws.size(); j++)
-                ca.reloc(ws[j].cref, to);
-	    
-            vec<Watcher>& ws2 = watchesBin[p];
-            for (int j = 0; j < ws2.size(); j++)
-                ca.reloc(ws2[j].cref, to);
+                ca.reloc(ws[j].cref(), to);
         }
 
     // All reasons:
@@ -3012,7 +2979,7 @@ void Solver::disjunctionReplace( Lit p, Lit q, const Lit x, bool inLearned, bool
 
 bool Solver::interleavedClauseStrengthening()
 {
-  cerr << "c enter interleaved clause strengthening" << endl;
+  // cerr << "c enter interleaved clause strengthening" << endl;
   // TODO: have dynamic updates of the limits, so that a good time/result ratio can be reached!
   icsCalls ++;
   MethodClock thisMethodTime( icsTime ); // clock that measures how long the procedure took
@@ -3754,10 +3721,6 @@ lbool Solver::otfssProcessClauses(int backtrack_level)
 	  // the clause is a unit, handle it!!
 	  // assert( c.size() == 1 && "this has to be a unit clause");
 	  assert( otfssBtLevel == 0 && "if its abinary clause, we need to jump back to level 0!" );
-	  if( otfssBtLevel != 0 ) {
-	    cerr << "c build in bug-check -- otfss backjump level set wrong" << endl;
-	    exit(36);
-	  }
 	} else { // c.size() == 3
 	  detachClause(otfssCls[i],true); // remove from watch lists for long clauses!
 	  c[0] = c[1]; c.removePositionUnsorted(1); // shrink clause to binary clause!

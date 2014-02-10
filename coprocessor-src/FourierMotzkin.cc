@@ -1015,6 +1015,9 @@ void FourierMotzkin::findCardsSemantic( vector< FourierMotzkin::CardC >& cards, 
 	MarkArray intersection;
 	intersection.create( 2 * data.nVars() ); // set a flag for each literal
 	intersection.nextStep();
+	const int oldClauses = data.getClauses().size(); // to be able to add the clauses that have been added by LHBR
+	const bool oldLhbrAllow = solver.lhbrAllowed;
+	solver.lhbrAllowed = false;
 	// work on array tmpA with current clauses
 	for( int i = 0 ; i < n && (data.unlimited() || (semSteps < config.opt_semSearchLimit) ); ++ i ) { // for all the clauses (all of them are still watched), and within the limits
 	  Clause& c = ca[ tmpA[i] ];
@@ -1082,7 +1085,7 @@ void FourierMotzkin::findCardsSemantic( vector< FourierMotzkin::CardC >& cards, 
 		}
 		probes ++;	// count number of propagations
 // 		if( config.opt_semDebug ) cerr << "c call propagate [" << bitField << "] " << probes << " with decL " << solver.decisionLevel() << " and trail size " << solver.trail.size() << endl;
-		CRef confl = solver.propagate(); // propagate, check for conflict
+		CRef confl = solver.propagate(); // propagate, check for conflict -- attention, ca.alloc can be called here!
 		semSteps += solver.trail.size() - solver.trail_lim[0];	// appeoximate propagation effort
 		if( config.opt_semDebug ) cerr << "c propagate [ " << confl << " ] implied " << solver.trail << endl;
 		if( confl == CRef_Undef ) { // no conflict -> build intersection
@@ -1151,13 +1154,14 @@ void FourierMotzkin::findCardsSemantic( vector< FourierMotzkin::CardC >& cards, 
 	    break;	// if unsat has been found, stop searching for more cardinality constraints!
 	  }
 	  
-	  if( cc.size() > c.size() || degree < origDegree ) { // if this constraint is not simply a clause, but something has been added or changed
+	  // do not use the reference c here any longer!
+	  if( cc.size() > ca[ tmpA[i] ].size() || degree < origDegree ) { // if this constraint is not simply a clause, but something has been added or changed
 	    sort(cc);	// necessary in Coprocessor
 	    cards.push_back( CardC(cc, degree) ); // add the constraint to the data base
 	    for( int j = 0 ; j < cards[ cards.size() - 1 ].ll.size(); ++ j ) leftHands[ toInt(cards[ cards.size() - 1 ].ll[j] ) ].push_back( cards.size() - 1 ); // register card constraint in data structures
 	    if( config.opt_semDebug ) cerr << "c found card constraint " << cc << "  <= " << degree << endl;
 	    intersection.nextStep();
-	    semExtendedCards ++; semExtendLits += (cc.size() - c.size());	// stats
+	    semExtendedCards ++; semExtendLits += (cc.size() - ca[ tmpA[i] ].size());	// stats
 	    data.lits.clear();	// collect all literals that have to occur in clauses to be disabled
 	    for( int j = 0 ; j < cc.size(); ++ j ) {
 	      intersection.setCurrentStep( toInt( ~cc[j] ) ); // mark all complements of the constraint
@@ -1192,7 +1196,7 @@ void FourierMotzkin::findCardsSemantic( vector< FourierMotzkin::CardC >& cards, 
 	  } else semFailedExtendTries ++;
 	  
 	} // end iterating over the clauses
-	
+
 	delete [] tmpA;
 	
 	for( int i = 0 ; i < disabledClauses.size(); ++ i ) { // enabled disabled clauses again!
@@ -1200,6 +1204,14 @@ void FourierMotzkin::findCardsSemantic( vector< FourierMotzkin::CardC >& cards, 
 	}
 	
 	cleanSolver();
+	
+	solver.lhbrAllowed = oldLhbrAllow; // set back -- TODO: check where the error comes from!
+	if( data.getClauses().size() > oldClauses ) { // added clauses by LHBR
+	    for( int j = oldClauses; j < data.getClauses().size(); ++ j ) {
+	     // cerr << "c add newly generated clause " << data.getClauses()[j] << " : " << ca[data.getClauses()[j]] << endl;
+	      data.addClause( data.getClauses()[j] ); // add newly created clauses to the set of known clauses
+	    }
+	}
 }
 
 void FourierMotzkin::removeSubsumedAMOs(vector< FourierMotzkin::CardC >& cards, vector< std::vector< int > >& leftHands)
@@ -1716,17 +1728,11 @@ void FourierMotzkin::cleanSolver()
 {
   // clear all watches!
   solver.watches.cleanAll();
-  solver.watchesBin.cleanAll();
   
   // clear all watches!
   for (int v = 0; v < solver.nVars(); v++)
     for (int s = 0; s < 2; s++)
       solver.watches[ mkLit(v, s) ].clear();
-    
-  // for glucose, also clean binary clauses!
-  for (int v = 0; v < solver.nVars(); v++)
-    for (int s = 0; s < 2; s++)
-      solver.watchesBin[ mkLit(v, s) ].clear();
 
   solver.learnts_literals = 0;
   solver.clauses_literals = 0;

@@ -145,7 +145,7 @@ CoreConfig::CoreConfig() // add new options here!
  opt_laBound ("MODS", "hlabound", "max. nr of LAs (-1 == inf)", 4096, IntRange(-1, INT32_MAX) , optionListPtr ),
  opt_laTopUnit ("MODS", "hlaTop", "allow another LA after learning another nr of top level units (-1 = never)", -1, IntRange(-1, INT32_MAX), optionListPtr ),
 
- opt_prefetch ("MODS", "prefetch", "prefetch watch list, when literal is enqueued", false, optionListPtr ),
+ opt_prefetch ("MODS", "prefetch", "prefetch watch list, when literal is enqueued", true, optionListPtr ),
  opt_hpushUnit ("MODS", "delay-units", "does not propagate unit clauses until solving is initialized", false, optionListPtr ),
  opt_simplifyInterval ("MODS", "sInterval", "how often to perform simplifications on level 0", 0, IntRange(0, INT32_MAX) , optionListPtr ),
 

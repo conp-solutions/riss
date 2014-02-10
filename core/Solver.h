@@ -238,18 +238,33 @@ protected:
     }; return d; }  
     
     struct Watcher {
-        CRef cref;
-        Lit  blocker;
-        Watcher(CRef cr, Lit p) : cref(cr), blocker(p) {}
-        bool operator==(const Watcher& w) const { return cref == w.cref; }
-        bool operator!=(const Watcher& w) const { return cref != w.cref; }
+	// payload
+	CRef clauseReference;
+	unsigned blockingLit:30;
+	unsigned watchType:2; // 0 = binary, 1 = long clause, 2= 3=
+	// wrapper
+        const CRef& cref() const { return clauseReference; };
+	CRef& cref() { return clauseReference; };
+        Lit  blocker() const { return toLit(blockingLit); };
+	void cref( const CRef& newRef ) { clauseReference = newRef; }
+	void blocker( const Lit& newBlocker ) { assert( toInt(newBlocker) < (1 << 30) && "can only handle 30 bits here" ); blockingLit = toInt(newBlocker); }
+	
+	bool isBinary() const { return watchType == 0; }
+	bool isLong()   const { return watchType == 1; }
+	bool matchWatchType( const int type ) const { return watchType == type; }
+	
+	// constructor and comparators
+	/// by default, the watch holds a long clause
+        Watcher(CRef cr, Lit p, int type = 1) : clauseReference(cr), blockingLit( toInt(p) ), watchType(type) {}
+        bool operator==(const Watcher& w) const { return clauseReference == w.clauseReference; }
+        bool operator!=(const Watcher& w) const { return clauseReference != w.clauseReference; }
     };
 
     struct WatcherDeleted
     {
         const ClauseAllocator& ca;
         WatcherDeleted(const ClauseAllocator& _ca) : ca(_ca) {}
-        bool operator()(const Watcher& w) const { return ca[w.cref].mark() == 1; }
+        bool operator()(const Watcher& w) const { return ca[w.clauseReference].mark() == 1; }
     };
 
     struct VarOrderLt {
@@ -269,8 +284,7 @@ protected:
 public: // TODO FIXME undo after debugging!
     OccLists<Lit, vec<Watcher>, WatcherDeleted>
                         watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
-    OccLists<Lit, vec<Watcher>, WatcherDeleted>
-                        watchesBin;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
+    // no watchesBin, incorporated into watches
 public: // TODO: set more nicely, or write method!
     vec<CRef>           clauses;          // List of problem clauses.
 protected:
@@ -505,6 +519,7 @@ protected:
   
   double useVSIDS;	// parameter for interpolating between VSIDS and VMTF
   
+  bool lhbrAllowed;	// control from the outside whether lhbr is allowed or not
   int lhbrs,l1lhbrs,lhbr_news,l1lhbr_news,lhbrtests,lhbr_sub,learnedLHBRs; // stats about lhbr
   
   int simplifyIterations; // number of visiting level 0 until simplification is to be performed
@@ -544,7 +559,7 @@ protected:
   
   // modified activity bumping
   vec<Var> varsToBump; // memorize the variables that need to be bumped in that order
-  vec<CRef> clssToBump; // memorize the clauses that need to be bumped in that order
+  vec<CRef> clssToBump; // memorize the clauses that need to be bumped in that order, also used during propagate
   
   
   int rs_partialRestarts, rs_savedDecisions, rs_savedPropagations, rs_recursiveRefinements; // stats for partial restarts

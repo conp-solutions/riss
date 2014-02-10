@@ -173,35 +173,36 @@ CRef Probing::prPropagate( bool doDouble )
         vec<Solver::Watcher>&  ws  = solver.watches[p];
         Solver::Watcher        *i, *j, *end;
         num_props++;
-
-	// First, Propagate binary clauses 
+	
+	if( config.pr_debug_out > 1 ) cerr << "c for lit " << p << " have watch with " << ws.size() << " elements" << endl;
+	
+	    // First, Propagate binary clauses 
 	if( config.opt_pr_probeBinary ) { // option to disable propagating binary clauses in probing
-	  const vec<Solver::Watcher>&  wbin  = solver.watchesBin[p]; // this code needs to be added to the usual probing version!
-
-	  probeChecks ++;
+	  const vec<Solver::Watcher>&  wbin  = solver.watches[p]; // this code needs to be added to the usual probing version!
+	  
 	  for(int k = 0;k<wbin.size();k++)
 	  {
-	    const Lit& imp = wbin[k].blocker;
-	    assert( ca[ wbin[k].cref ].size() == 2 && "in this list there can only be binary clauses" );
+	    if( !wbin[k].isBinary() ) continue;
+	    const Lit& imp = wbin[k].blocker();
+	    assert( ca[ wbin[k].cref() ].size() == 2 && "in this list there can only be binary clauses" );
 	    if(solver.value(imp) == l_False) {
-	      return wbin[k].cref;
+	      return wbin[k].cref();
 	    }
 	    if(solver.value(imp) == l_Undef) {
-	      solver.uncheckedEnqueue(imp,wbin[k].cref);
+	      solver.uncheckedEnqueue(imp,wbin[k].cref());
 	    }
 	  }
 	}
 	
-	if( config.pr_debug_out > 1 ) cerr << "c for lit " << p << " have watch with " << ws.size() << " elements" << endl;
-	
         for (i = j = (Solver::Watcher*)ws, end = i + ws.size();  i != end;){
+	    if( i->isBinary() ) { *j++ = *i++; continue; } // skip binary clauses (have been propagated before already!}
             // Try to avoid inspecting the clause:
-            Lit blocker = i->blocker;
+            const Lit blocker = i->blocker();
             if (solver.value(blocker) == l_True){
                 *j++ = *i++; continue; }
 
             // Make sure the false literal is data[1]:
-            CRef     cr        = i->cref;
+            const CRef     cr        = i->cref();
             Clause&  c         = ca[cr];
 	    // more fine grained probe limit
 	    probeChecks++;
@@ -636,18 +637,12 @@ void Probing::cleanSolver()
 {
   // clear all watches!
   solver.watches.cleanAll();
-  solver.watchesBin.cleanAll();
   
   // clear all watches!
   for (int v = 0; v < solver.nVars(); v++)
     for (int s = 0; s < 2; s++)
       solver.watches[ mkLit(v, s) ].clear();
     
-  // for glucose, also clean binary clauses!
-  for (int v = 0; v < solver.nVars(); v++)
-    for (int s = 0; s < 2; s++)
-      solver.watchesBin[ mkLit(v, s) ].clear();
-
   solver.learnts_literals = 0;
   solver.clauses_literals = 0;
   solver.watches.cleanAll();
@@ -755,7 +750,7 @@ void Probing::reSetupSolver()
 	    const Lit l = mkLit(v, s == 0 ? false : true );
 	    cerr << "c watch for " << l << endl;
 	    for( int i = 0; i < solver.watches[ l ].size(); ++ i ) {
-	      cerr << ca[solver.watches[l][i].cref] << endl;
+	      cerr << ca[solver.watches[l][i].cref()] << endl;
 	    }
 	  }
     }
@@ -1065,7 +1060,6 @@ void Probing::probing()
   
   // clean data structures
   solver.watches.cleanAll(); 
-  solver.watchesBin.cleanAll(); 
 }
 
 
@@ -1082,7 +1076,7 @@ void Probing::clauseVivification()
 	const Lit l = mkLit(v, p==1);
 	vec<Solver::Watcher>&  ws  = solver.watches[l];
 	for ( int j = 0 ; j < ws.size(); ++ j){
-		CRef     wcr        = ws[j].cref;
+		CRef     wcr        = ws[j].cref();
 		const Clause& c = ca[wcr];
 		if( c[0] != ~l && c[1] != ~l ) cerr << "wrong literals for clause [" << wcr << "] " << c << " are watched. Found in list for " << l << endl;
 	    }
@@ -1108,12 +1102,7 @@ void Probing::clauseVivification()
 	    vec<Solver::Watcher>&  ws  = solver.watches[l];
 	    bool didFind = false;
 	    for ( int j = 0 ; j < ws.size(); ++ j){
-		CRef     wcr        = ws[j].cref;
-		if( wcr  == cr ) { didFind = true; break; }
-	    }
-	    vec<Solver::Watcher>& ws2  = solver.watchesBin[l];
-	    for ( int j = 0 ; j < ws2.size(); ++ j){
-		CRef     wcr        = ws2[j].cref;
+		CRef     wcr        = ws[j].cref();
 		if( wcr  == cr ) { didFind = true; break; }
 	    }
 	    if( ! didFind ) cerr << "could not find clause[" << cr << "] " << c << " in watcher for lit " << l << endl;
