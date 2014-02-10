@@ -208,7 +208,10 @@ Solver::Solver(CoreConfig& _config) :
   , L3units(0)
   , L4units(0)
   
-  , isBiAsserting      (false)
+  // bi-asserting learned clauses
+  , isBiAsserting        (false)
+  , allowBiAsserting     (false)
+  , lastBiAsserting      (0)
   , biAssertingPostCount (0)
   , biAssertingPreCount  (0)
   
@@ -674,7 +677,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 		}
 	    } else { 
 	      if( level(var(q)) == 0 ) clauseReductSize --; // this literal does not count into the size of the clause!
-		if (units == 0 && seen[var(q)] && config.opt_biAsserting ) { 
+		if (allowBiAsserting && units == 0 && seen[var(q)] ) { 
 		  if( pathLimit == 0 ) biAssertingPreCount ++;	// count how often learning produced a bi-asserting clause
 		  pathLimit = 1; // store that the current learnt clause is a biasserting clause!
 		}
@@ -1512,11 +1515,14 @@ lbool Solver::search(int nof_conflicts)
 	      learnt_clause.clear();
 	      otfssCls.clear();
 	      
+	      if( config.opt_biAsserting && lastBiAsserting + config.opt_biAssiMaxEvery <= conflicts ) allowBiAsserting = true; // use bi-asserting only once in a while!
+	      
 	      uint64_t extraInfo = 0;
 	      analysisTime.start();
 	      // perform learnt clause derivation
 	      int ret = analyze(confl, learnt_clause, backtrack_level,nblevels,otfssCls,extraInfo);
 	      analysisTime.stop();
+	      allowBiAsserting = false;
 #ifdef CLS_EXTRA_INFO
 	      maxResHeight = extraInfo;
 #endif
@@ -3680,6 +3686,7 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
 	  } else if ( value(learnt_clause[0]) == l_False ) return l_False; // due to OTFSS there might arose a conflict already ...
 	} else { 
 	  biAssertingPostCount++;
+	  lastBiAsserting = conflicts; // store number of conflicts for the last occurred bi-asserting clause so that the distance can be calculated
 	  isBiAsserting = false; // handled the current conflict clause, set this flag to false again
 	}
       }
