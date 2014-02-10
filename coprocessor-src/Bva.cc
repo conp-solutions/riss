@@ -891,10 +891,8 @@ bool BoundedVariableAddition::xorBVAfull()
     assert( bvaHeap.inHeap( toInt(right) ) && "item from the heap has to be on the heap");
 
     bvaHeap.removeMin();
-    if( data.value( right ) != l_Undef ) continue;
+    if( data.value( right ) != l_Undef || data.list(right).size() <= 3) continue; // abort iterations where there are not enough clauses
     // TODO: how to do symmetry breaking; avoid redundant work?
-
-    posLitCount.assign(data.nVars() * 2, 0 ); // reset literal counts!
 
     xorPairs.clear();
     // cerr << "c collect for pos. lit " << right << endl;
@@ -1029,7 +1027,7 @@ bool BoundedVariableAddition::xorBVAfull()
       }
     }
 
-    
+    posLitCount.assign(data.nVars() * 2, 0 ); // reset literal counts! // TODO: have memset here?
     // generate negative counts!
     // positive: check whether one literal matches multiple clauses; get counters per literal l2!
     int nmaxR = 0; // to check whether this literal could be removed
@@ -1086,7 +1084,7 @@ bool BoundedVariableAddition::xorBVAfull()
 	    if( nxorPairs.size() > 0 ) cerr << "(" << nxorPairs[nmaxI].l1 << " -- " << nxorPairs[nmaxI].l2 << ")";
 	    cerr << endl;
 	    if( config.opt_bvaAnalysisDebug > 1) {
-	      for( int k = nmaxI; k < nmaxJ; ++ k ) cerr << "c p " << k - maxI << " : ["<< nxorPairs[k].c1 <<"]" << ca[ nxorPairs[k].c1 ] << " and ["<< nxorPairs[k].c2 <<"]" << ca[ nxorPairs[k].c2 ] << endl;
+	      for( int k = nmaxI; k < nmaxJ; ++ k ) cerr << "c p " << k - nmaxI << " : ["<< nxorPairs[k].c1 <<"]" << ca[ nxorPairs[k].c1 ] << " and ["<< nxorPairs[k].c2 <<"]" << ca[ nxorPairs[k].c2 ] << endl;
 	    }
 	  }
 	  // apply replacing/rewriting here (right,l1) -> (x); add clauses (-x,right,l1),(-x,-right,-l1)
@@ -1142,6 +1140,7 @@ bool BoundedVariableAddition::xorBVAfull()
 	  
 	  // add new clauses (only the ones needed!)
 	  if( maxI < maxJ ) { // there are clauses for the positive to be introduced
+	    if( config.opt_bvaAnalysisDebug ) cerr << "c introduce positive XBVA ... " << endl;
 	    data.lits.clear();
 	    data.lits.push_back( mkLit(newX,true) );
 	    data.lits.push_back( xorPairs[maxI].l1 );
@@ -1159,10 +1158,11 @@ bool BoundedVariableAddition::xorBVAfull()
 	    if( config.opt_bvaAnalysisDebug ) cerr << "c XOR-BVA added " << ca[tmpRef] << endl;
 	  }
 	  if( nmaxI < nmaxJ  ) { // there are clauses for the negative to be introduced
+	    if( config.opt_bvaAnalysisDebug ) cerr << "c introduce negative XBVA ... " << endl;
 	    data.lits.clear();
 	    data.lits.push_back( mkLit(newX,false) );
-	    data.lits.push_back( nxorPairs[maxI].l1 );
-	    data.lits.push_back( ~nxorPairs[maxI].l2 );
+	    data.lits.push_back( xorPairs[maxI].l1 );
+	    data.lits.push_back( ~xorPairs[maxI].l2 );
 	    CRef tmpRef = ca.alloc(data.lits, false); // no learnt clause!
 	    ca[tmpRef].sort();
 	    data.addClause( tmpRef );
@@ -1468,7 +1468,7 @@ bool BoundedVariableAddition::iteBVAfull()
     assert( bvaHeap.inHeap( toInt(right) ) && "item from the heap has to be on the heap");
 
     bvaHeap.removeMin();
-    if( data.value( right ) != l_Undef ) continue;
+    if( data.value( right ) != l_Undef || data.list(right).size() <= 3 ) continue;
 
     // x <-> ITE(s,t,f) in cls:
     // s  and  t ->  x  == -s,-t,x

@@ -37,6 +37,9 @@ Unhiding::Unhiding(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _
 , uhdProbeL4Units(0)
 , uhdProbeL5Units(0)
 , unhideProbeTime(0)
+, uhdProbeEEChecks(0)
+, uhdProbeEECandss(0)
+, uhdProbeEE(0)
 {
 
 }
@@ -541,7 +544,38 @@ bool Unhiding::unhideSimplify(bool borderIteration)
 		  }
 		}
 	      }
-	      
+
+	      // handle the case  (a \lor b) and that literal a \to l, and b \to ~l, then a \to ~b, hence, have another clause (~a \lor ~b) if not already present
+	      if( config.opt_uhd_probeEE ) {
+		uhdProbeSteps ++;
+		const Lit bLit = k == 0 ? ~clause[1] : ~bList[ k - 1]; // pick the complement here, so that complementary implied literals can be found
+		uhdProbeEEChecks ++; // tested another pair
+		// a -> aLit -> bLit, and b -> bLit ; thus F \land (a \lor b) -> bLit, and bLit is a backbone!
+		if( ( stampInfo[  toInt( aLit ) ].dsc < stampInfo[ toInt(  bLit ) ].dsc && stampInfo[ toInt(  bLit ) ].fin < stampInfo[ toInt(  aLit ) ].fin ) 
+		// a -> aLit, b -> bLit, -bLit -> -aLit = aLit -> bLit -> F -> bLit
+		||  ( stampInfo[ toInt( ~bLit ) ].dsc < stampInfo[ toInt( ~aLit ) ].dsc && stampInfo[ toInt( ~aLit ) ].fin < stampInfo[ toInt( ~bLit ) ].fin ) ){
+		  // found the clause (~a \lor ~b) do something with it
+		  if( config.opt_uhd_Debug > 1 ) cerr << "c formula implies by " << clause << " with lits " << aLit << " -> " << bLit << " clause: [" << ~clause[0] << ", " << ~clause[1] << "]" << endl;
+		  uhdProbeEECandss ++;
+		  // check in BIG whether clause already exists
+		  if(! big.implies(clause[0], ~clause[1]) ) {
+		      uhdProbeEE ++;
+		      exit(37); // sample exit code to cnfdd
+		  }
+		} else {
+		  if( ( stampInfo[  toInt( ~bLit ) ].dsc < stampInfo[ toInt(  ~aLit ) ].dsc && stampInfo[ toInt(  ~aLit ) ].fin < stampInfo[ toInt(  ~bLit ) ].fin ) 
+		  ||  ( stampInfo[ toInt( aLit ) ].dsc < stampInfo[ toInt( bLit ) ].dsc && stampInfo[ toInt( bLit ) ].fin < stampInfo[ toInt( aLit ) ].fin ) ){
+		    // found the clause (~a \lor ~b) do something with it!
+		    if( config.opt_uhd_Debug > 1 ) cerr << "c formula implies by " << clause << " with lits " << bLit << " -> " << aLit << " clause: [" << ~clause[0] << ", " << ~clause[1] << "]" << endl;
+		    uhdProbeEECandss ++;
+		    // check in BIG whether clause already exists
+		    if(! big.implies(clause[0], ~clause[1]) ) {
+			uhdProbeEE ++;
+			exit(37); // sample exit code to cnfdd
+		    }
+		  }
+		}
+	      }
 	    }
 	  }
 	}
@@ -809,6 +843,11 @@ void Unhiding::printStatistics( ostream& stream )
   << uhdProbeL4Units << " L4units, "
   << uhdProbeL5Units << " L5units, "
   << endl;  
+  stream << "c [STAT] UNHIDE(3) " 
+  << uhdProbeEEChecks << " EE-checks, "
+  << uhdProbeEECandss << " EE-cands, "
+  << uhdProbeEE << " EEs "
+  << endl;
 }
 
 

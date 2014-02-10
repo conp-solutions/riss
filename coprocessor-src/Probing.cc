@@ -173,7 +173,8 @@ CRef Probing::prPropagate( bool doDouble )
 	// First, Propagate binary clauses 
 	if( config.opt_pr_probeBinary ) { // option to disable propagating binary clauses in probing
 	  const vec<Solver::Watcher>&  wbin  = solver.watchesBin[p]; // this code needs to be added to the usual probing version!
-	  
+
+	  probeChecks ++;
 	  for(int k = 0;k<wbin.size();k++)
 	  {
 	    const Lit& imp = wbin[k].blocker;

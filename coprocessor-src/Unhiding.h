@@ -49,6 +49,8 @@ class Unhiding : public Technique {
   unsigned uhdProbeL4Units;	// units that have been found by larger clause
   unsigned uhdProbeL5Units;	// units that have been found by larger clause
   double unhideProbeTime;	// seconds for uhd probe
+  
+  unsigned uhdProbeEEChecks, uhdProbeEECandss, uhdProbeEE; // stats about probe EE
  
 	/// structure that store all necessary stamp information of the paper for each literal
 	struct literalData {
