@@ -653,12 +653,15 @@ bool Unhiding::unhideSimplify(bool borderIteration)
   return didSomething;
 }
 
-void Unhiding::process (  )
+bool Unhiding::process (  )
 {
-  if( !performSimplification() ) return; // do not execute due to previous errors?
+  if( !performSimplification() ) return false; // do not execute due to previous errors?
   MethodTimer unhideTimer( &unhideTime );
   modifiedFormula = false;
-  if( !data.ok() ) return;
+  if( !data.ok() ) return false;
+
+  // do not simplify, if the formula is considered to be too large!
+  if( !data.unlimited() && ( data.nVars() > config.opt_unhide_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_unhide_cls ) ) return false;
   
   stampInfo.resize( 2*data.nVars() );
   unhideEEflag.resize( 2*data.nVars() );
@@ -821,7 +824,7 @@ void Unhiding::process (  )
   }
   
   if( !modifiedFormula ) unsuccessfulSimplification();
-  return;
+  return modifiedFormula;
 
 }
 

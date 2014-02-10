@@ -28,18 +28,24 @@ void ClauseElimination::giveMoreSteps()
 }
 
 
-void ClauseElimination::process(CoprocessorData& data)
+bool ClauseElimination::process(CoprocessorData& data)
 {
   processTime = cpuTime() - processTime;
+  
+  if( ! performSimplification() ) return false; // do not do anything?!
   modifiedFormula = false;
-  if( !data.ok() ) return;
+  
+  // do not simplify, if the formula is considered to be too large!
+  if( !data.unlimited() && ( data.nVars() > config.opt_cce_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_cce_cls ) ) return false;
+  if( !data.ok() ) return modifiedFormula;
+  
   // TODO: have a better scheduling here! (if a clause has been removed, potentially other clauses with those variables can be eliminated as well!!, similarly to BCE!)
-  if( config.opt_ccelevel == 0 ) return; // do not run anything!
+  if( config.opt_ccelevel == 0 ) return modifiedFormula; // do not run anything!
 
   if( propagation.process(data,true) == l_False){
     if( config.cce_debug_out > 0 ) cerr << "c propagation failed" << endl;
     data.setFailed();
-    return;
+    return modifiedFormula;
   }
   modifiedFormula = modifiedFormula || propagation.appliedSomething();
 
@@ -70,6 +76,7 @@ void ClauseElimination::process(CoprocessorData& data)
   removedClauses += wData.removedClauses;
   removedNonEEClauses += wData.removedNonEEClauses;
   processTime = cpuTime() - processTime;
+  return modifiedFormula;
 }
 
 bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::WorkData& wData, Minisat::CRef cr)

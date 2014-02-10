@@ -30,15 +30,24 @@ void Resolving::giveMoreSteps()
 }
 
 
-void Resolving::process(bool post)
+bool Resolving::process(bool post)
 {
   MethodTimer mt( &processTime );
+  
+  if( ! performSimplification() ) return false; // do not do anything?!
   modifiedFormula = false;
-  if( ! post )
+  
+ 
+  if( ! post ) {
+    // do not simplify, if the formula is considered to be too large!
+    if( !data.unlimited() && ( data.nVars() > config.opt_ternResolve_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_ternResolve_cls ) ) return false;
     ternaryResolve();
+  }
   
   if( config.opt_add2_red_start || post ) {
     if( config.opt_add2_red ) {
+      // do not simplify, if the formula is considered to be too large!
+      if( !data.unlimited() && ( data.nVars() > config.opt_addRedBins_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_addRedBins_cls ) ) return false;
       addRedundantBinaries(); 
     }
   }

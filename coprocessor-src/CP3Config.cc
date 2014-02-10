@@ -47,6 +47,12 @@ CP3Config::CP3Config() // add new options here!
  //
  // all the options for the object
  //
+  
+ opt_cp3_vars  (_cat, "cp3_vars",   "variable limit to enable CP3", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_cp3_cls   (_cat, "cp3_cls",    "clause limit to enable CP3",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
+ opt_cp3_ipvars(_cat, "cp3_ipvars", "variable limit to enable CP3 inprocessing", 1, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_cp3_ipcls (_cat, "cp3_ipcls",  "clause limit to enable CP3 inprocessing", 1, IntRange(0, INT32_MAX), optionListPtr ), 
+  
   opt_unlimited   (_cat, "cp3_limited",    "Limits for preprocessing techniques", true, optionListPtr ),
   opt_randomized  (_cat, "cp3_randomized", "Steps withing preprocessing techniques are executed in random order", false, optionListPtr ),
   opt_inprocessInt(_cat, "cp3_inp_cons",   "Perform Inprocessing after at least X conflicts", 20000, IntRange(0, INT32_MAX), optionListPtr ),
@@ -95,7 +101,6 @@ CP3Config::CP3Config() // add new options here!
   opt_symm        (_cat2, "symm",          "Do local symmetry breaking", false, optionListPtr ),
   opt_FM          (_cat2, "fm",            "Use the Fourier Motzkin transformation", false, optionListPtr ),
 
-
   opt_ptechs (_cat2, "cp3_ptechs", "techniques for preprocessing",0, optionListPtr ),
   opt_itechs (_cat2, "cp3_itechs", "techniques for inprocessing",0, optionListPtr ),
 
@@ -121,6 +126,51 @@ CP3Config::CP3Config() // add new options here!
   opt_twosat_init (_cat2, "2sat1",         "2SAT before all other algorithms to find units", false, optionListPtr ),
   opt_ts_phase    (_cat2, "2sat-phase",    "use 2SAT model as initial phase for SAT solver", false, optionListPtr ),
 #endif
+
+// 
+// Var and Cls LIMTS
+// 
+
+ opt_subsimp_vars(_cat, "cp3_susi_vars",     "variable limit to enable CP3", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_subsimp_cls (_cat, "cp3_susi_cls",      "clause limit to enable CP3",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_hte_vars    (_cat, "cp3_hte_vars",      "variable limit to enable CP3", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_hte_cls     (_cat, "cp3_hte_cls",       "clause limit to enable CP3",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
+ opt_bce_vars    (_cat, "cp3_bce_vars",      "variable limit to enable CP3", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_bce_cls     (_cat, "cp3_bce_cls",       "clause limit to enable CP3",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
+ opt_ent_vars    (_cat, "cp3_ent_vars",      "variable limit to enable CP3", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_ent_cls     (_cat, "cp3_ent_cls",       "clause limit to enable CP3",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
+ opt_la_vars     (_cat, "cp3_la_cls",        "clause limit to enable CP3",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
+ opt_la_cls      (_cat, "cp3_la_cls",        "clause limit to enable CP3",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
+ opt_cce_vars    (_cat, "cp3_cce_vars",      "variable limit to enable CP3", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_cce_cls     (_cat, "cp3_cce_cls",       "clause limit to enable CP3",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
+ opt_rate_vars   (_cat, "cp3_rate_vars",     "variable limit to enable CP3", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_rate_cls    (_cat, "cp3_rate_cls",      "clause limit to enable CP3",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
+ opt_ee_vars     (_cat, "cp3_ee_vars",       "variable limit to enable CP3", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_ee_cls      (_cat, "cp3_ee_cls",        "clause limit to enable CP3",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
+ opt_bve_vars    (_cat, "cp3_bve_vars",      "variable limit to enable CP3", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_bve_cls     (_cat, "cp3_bve_cls",       "clause limit to enable CP3",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
+ opt_bva_vars    (_cat, "cp3_bva_vars",      "variable limit to enable CP3", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_bva_cls     (_cat, "cp3_bva_cls",       "clause limit to enable CP3",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
+ opt_unhide_vars (_cat, "cp3_unhide_vars",   "variable limit to enable CP3", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_unhide_cls  (_cat, "cp3_unhide_cls",    "clause limit to enable CP3",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
+ opt_probe_vars  (_cat, "cp3_probe_vars",    "variable limit to enable CP3", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_probe_cls   (_cat, "cp3_probe_cls",     "clause limit to enable CP3",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
+ opt_ternResolve_vars(_cat, "cp3_tRes_vars", "variable limit to enable CP3", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_ternResolve_cls (_cat, "cp3_tRes_cls",  "clause limit to enable CP3",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
+ opt_addRedBins_vars (_cat, "cp3_aBin_vars", "variable limit to enable CP3", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_addRedBins_cls  (_cat, "cp3_aBin_cls",  "clause limit to enable CP3",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
+ opt_symm_vars   (_cat, "cp3_symm_vars",     "variable limit to enable CP3", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_symm_cls    (_cat, "cp3_symm_cls",      "clause limit to enable CP3",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
+ opt_fm_vars     (_cat, "cp3_fm_vars",       "variable limit to enable CP3", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_fm_cls      (_cat, "cp3_fm_cls",        "clause limit to enable CP3",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
+ opt_xor_vars    (_cat, "cp3_xor_vars",      "variable limit to enable CP3", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_xor_cls     (_cat, "cp3_xor_cls",       "clause limit to enable CP3",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
+ opt_sls_vars    (_cat, "cp3_sls_vars",      "variable limit to enable CP3", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_sls_cls     (_cat, "cp3_sls_cls",       "clause limit to enable CP3",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
+ opt_rew_vars    (_cat, "cp3_rew_vars",      "variable limit to enable CP3", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_rew_cls     (_cat, "cp3_rew_cls",       "clause limit to enable CP3",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
+ 
+ 
 
 #if defined TOOLVERSION // debug only, if no version is given!
   opt_debug ( false),       

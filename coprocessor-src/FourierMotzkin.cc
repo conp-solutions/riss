@@ -85,8 +85,13 @@ void FourierMotzkin::reset()
 bool FourierMotzkin::process()
 {
   MethodTimer mt(&processTime);
-  bool didSomething = false;
 
+  if( ! performSimplification() ) return false; // do not do anything?!
+  modifiedFormula = false;
+  
+  // do not simplify, if the formula is considered to be too large!
+  if( !data.unlimited() && ( data.nVars() > config.opt_fm_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_fm_cls ) ) return false;
+  
   // have a slot per variable
   data.ma.resize( data.nVars() * 2 );
   
@@ -353,8 +358,8 @@ bool FourierMotzkin::process()
 		sameUnits ++;
 		inAmo.setCurrentStep( toInt(~v1[n1]) );
 		unitQueue.push(~v1[n1]);
-		didSomething = true;
-		if( l_False == data.enqueue( ~v1[n1] ) ) return didSomething; // enqueing this literal failed -> finish!
+		modifiedFormula = true;
+		if( l_False == data.enqueue( ~v1[n1] ) ) return modifiedFormula; // enqueing this literal failed -> finish!
 	      }
 	      // TODO: enqueue, later remove from all cards!
 	      if( config.fm_debug_out > 1 ) cerr << "c AMOs entail unit literal " << ~ v1[n1] << endl;
@@ -365,7 +370,7 @@ bool FourierMotzkin::process()
 	}
       }
       // if found something, propagate!
-      if(!propagateCards( unitQueue, leftHands, rightHands, cards,inAmo) ) return didSomething;
+      if(!propagateCards( unitQueue, leftHands, rightHands, cards,inAmo) ) return modifiedFormula;
     }
     
   }
@@ -400,10 +405,10 @@ bool FourierMotzkin::process()
 		  sameUnits ++;
 		  inAmo.setCurrentStep( toInt(~v1[n1]) );
 		  unitQueue.push(~v1[n1]);
-		  didSomething = true;
+		  modifiedFormula = true;
 		  if( data.enqueue( ~v1[n1] ) == l_False ) {
 		    if( config.fm_debug_out > 1 ) cerr << "c enquing " << ~v1[n1] << " failed" << endl;
-		    return didSomething; // enqueing this literal failed -> finish!
+		    return modifiedFormula; // enqueing this literal failed -> finish!
 		  } else {
 		    cerr << "c found unit, enqued " << ~v1[n1] << "" << endl;
 		  }
@@ -433,10 +438,10 @@ bool FourierMotzkin::process()
 		  sameUnits ++;
 		  inAmo.setCurrentStep( toInt(~data.lits[k]) );
 		  unitQueue.push(~data.lits[k]);
-		  didSomething = true;
+		  modifiedFormula = true;
 		  if( data.enqueue( ~data.lits[k] ) == l_False ) {
 		    if( config.fm_debug_out > 1 ) cerr << "c enquing " << ~data.lits[k] << " failed" << endl;
-		    return didSomething; // enqueing this literal failed -> finish!
+		    return modifiedFormula; // enqueing this literal failed -> finish!
 		  }
 	      }
 	    }
@@ -452,14 +457,14 @@ bool FourierMotzkin::process()
 	if( cards.size() >= config.opt_fm_max_constraints ) break;
       }
       // if found something, propagate!
-      if(!propagateCards( unitQueue, leftHands, rightHands, cards,inAmo) ) return didSomething;
+      if(!propagateCards( unitQueue, leftHands, rightHands, cards,inAmo) ) return modifiedFormula;
       if( cards.size() >= config.opt_fm_max_constraints ) break;
     }
   }
   
   // propagate found units - if failure, skip next steps
   if( data.hasToPropagate() )
-    if( propagation.process(data,true) == l_False ) {data.setFailed(); return didSomething; }
+    if( propagation.process(data,true) == l_False ) {data.setFailed(); return modifiedFormula; }
 
   // perform find 2product encoding
   if( config.opt_fm_twoPr ) findTwoProduct( cards, big, leftHands );
@@ -467,10 +472,10 @@ bool FourierMotzkin::process()
   // semantic search
   if( config.opt_fm_sem ) findCardsSemantic( cards, leftHands );
   
-  if(!propagateCards( unitQueue, leftHands, rightHands, cards,inAmo) ) return didSomething;
+  if(!propagateCards( unitQueue, leftHands, rightHands, cards,inAmo) ) return modifiedFormula;
   // propagate found units - if failure, skip next steps
   if( data.hasToPropagate() )
-    if( propagation.process(data,true) == l_False ) {data.setFailed(); return didSomething; }
+    if( propagation.process(data,true) == l_False ) {data.setFailed(); return modifiedFormula; }
   
   // remove duplicate or subsumed AMOs!
   removeSubsumedAMOs( cards, leftHands );
@@ -677,9 +682,9 @@ bool FourierMotzkin::process()
 	     continue;
 	  } else if( thisCard.failed() ) {
 	    if( config.fm_debug_out > 1 ) cerr << "c new card is failed! - stop procedure!" << endl;
-	    didSomething = true;
+	    modifiedFormula = true;
 	    data.setFailed();
-	    return didSomething;
+	    return modifiedFormula;
 	  }else if( thisCard.isUnit() ) { // all literals in ll have to be set to false!
 	    if( config.fm_debug_out > 1 ) cerr << "c new card is unit - enqueue all literals" << endl;
 	    deducedUnits += thisCard.ll.size() + thisCard.lr.size(); 
@@ -687,10 +692,10 @@ bool FourierMotzkin::process()
 		if( ! inAmo.isCurrentStep( toInt(~thisCard.ll[k]) ) ) { // store each literal only once in the queue
 		  inAmo.setCurrentStep( toInt(~thisCard.ll[k]) );
 		  unitQueue.push(~thisCard.ll[k]);
-		  didSomething = true;
+		  modifiedFormula = true;
 		  if( data.enqueue( ~thisCard.ll[k] ) == l_False ) {
 		    if( config.fm_debug_out > 1 ) cerr << "c enquing " << ~thisCard.ll[k] << " failed" << endl;
-		    return didSomething;
+		    return modifiedFormula;
 		  }
 		}
 	    }
@@ -698,10 +703,10 @@ bool FourierMotzkin::process()
 		if( ! inAmo.isCurrentStep( toInt(thisCard.lr[k]) ) ) { // store each literal only once in the queue
 		  inAmo.setCurrentStep( toInt(thisCard.lr[k]) );
 		  unitQueue.push(thisCard.lr[k]);
-		  didSomething = true;
+		  modifiedFormula = true;
 		  if( data.enqueue( thisCard.lr[k] ) == l_False ) {
 		    if( config.fm_debug_out > 1 ) cerr << "c enquing " << thisCard.lr[k] << " failed" << endl;
-		    return didSomething;
+		    return modifiedFormula;
 		  }
 		}
 	    }
@@ -802,12 +807,12 @@ bool FourierMotzkin::process()
       newCards += cards.size() - oldSize;
     
       // if found something, propagate!
-      if(!propagateCards( unitQueue, leftHands, rightHands, cards,inAmo) ) return didSomething;
+      if(!propagateCards( unitQueue, leftHands, rightHands, cards,inAmo) ) return modifiedFormula;
   }
   
   // propagate found units - if failure, skip next steps
   if( data.ok() && data.hasToPropagate() )
-    if( propagation.process(data,true) == l_False ) {data.setFailed(); return didSomething; }
+    if( propagation.process(data,true) == l_False ) {data.setFailed(); return modifiedFormula; }
   
   if( data.ok() && config.opt_newAmo > 0 && (newAMOs.size() > 0 || rejectedNewAmos.size() > 0) ) {
     big.recreate( ca, data.nVars(), data.getClauses() ); 
@@ -828,7 +833,7 @@ bool FourierMotzkin::process()
 	    if( !present ) { // if the information is not part of the formula yet, add the clause!
 	      if( config.fm_debug_out > 2 ) cerr << "c create new binary clause " <<  ~c.ll[k] << " , " << ~c.ll[j] << endl;
 	      addedBinaryClauses ++;
-	      didSomething = true;
+	      modifiedFormula = true;
 	      unitQueue.clear();
 	      unitQueue.push( ~c.ll[k] < ~c.ll[j] ? ~c.ll[k] : ~c.ll[j] );
 	      unitQueue.push( ~c.ll[k] < ~c.ll[j] ? ~c.ll[j] : ~c.ll[k] );
@@ -852,9 +857,9 @@ bool FourierMotzkin::process()
 	  if( config.fm_debug_out > 1 ) cerr << "c new ALO " << c.ll << " <= " << c.k << " + " << c.lr << " is dropped!" << endl;
 	  continue;
 	}
-	didSomething = true;
+	modifiedFormula = true;
 	if( c.lr.size() == 1 ) {
-	  if( data.enqueue(c.lr[0]) == l_False ) return didSomething;
+	  if( data.enqueue(c.lr[0]) == l_False ) return modifiedFormula;
 	} else if( ! hasDuplicate(c.lr) ) {
 	  CRef tmpRef = ca.alloc(c.lr, false); // no learnt clause!
 	  ca[tmpRef].sort();
@@ -869,7 +874,7 @@ bool FourierMotzkin::process()
   
   // propagate found units - if failure, skip next steps
   if( data.ok() && data.hasToPropagate() )
-    if( propagation.process(data,true) == l_False ) {data.setFailed(); return didSomething; }
+    if( propagation.process(data,true) == l_False ) {data.setFailed(); return modifiedFormula; }
   
   if( data.ok() && config.opt_newAlk > 0 && (newALKs.size() > 0 || rejectedNewAlks.size() > 0) ) {
     for( int p = 0; p<2; ++ p ) {
@@ -879,9 +884,9 @@ bool FourierMotzkin::process()
 	  if( config.fm_debug_out > 1 ) cerr << "c new ALK " << c.ll << " <= " << c.k << " + " << c.lr << " is dropped!" << endl;
 	  continue;
 	}
-	didSomething = true;
+	modifiedFormula = true;
 	if( c.lr.size() == 1 ) {
-	  if( data.enqueue(c.ll[0]) == l_False ) return didSomething;
+	  if( data.enqueue(c.ll[0]) == l_False ) return modifiedFormula;
 	} else if( ! hasDuplicate(c.lr) ) {
 	  assert( c.lr.size() > 1 && "empty and unit should have been handled before!" );
 	  CRef tmpRef = ca.alloc(c.lr, false); // no learnt clause!
@@ -897,13 +902,13 @@ bool FourierMotzkin::process()
   
   // propagate found units - if failure, skip next steps
   if( data.ok() && data.hasToPropagate() )
-    if( propagation.process(data,true) == l_False ) {data.setFailed(); return didSomething; }
+    if( propagation.process(data,true) == l_False ) {data.setFailed(); return modifiedFormula; }
   
   finishedFM:;
   
   fmTime = cpuTime() - fmTime;
   
-  return didSomething;
+  return modifiedFormula;
 }
 
 void FourierMotzkin::findCardsSemantic( vector< FourierMotzkin::CardC >& cards, vector< std::vector< int > >& leftHands ) 

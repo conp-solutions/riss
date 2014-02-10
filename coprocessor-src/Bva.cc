@@ -58,21 +58,24 @@ void BoundedVariableAddition::giveMoreSteps()
 
 bool BoundedVariableAddition::process()
 {
-  processTime = cpuTime() - processTime;
-  bool didSomething = false;
-
+  MethodTimer mv(&processTime);
+  if( ! performSimplification() ) return false; // do not do anything?!
+  modifiedFormula = false;
+  
+  // do not simplify, if the formula is considered to be too large!
+  if( !data.unlimited() && ( data.nVars() > config.opt_bva_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_bva_cls ) ) return false;
+  
   // use BVA only, if number of variables is not too large 
   if( data.nVars() < config.opt_bva_VarLimit || !data.unlimited() ) {
     // run all three types of bva - could even re-run?
-    if( config.opt_Abva ) didSomething = andBVA();
-    if( config.opt_Xbva == 1) didSomething = xorBVAhalf() || didSomething;
-    else if( config.opt_Xbva == 2) didSomething = xorBVAfull() || didSomething;
-    if( config.opt_Ibva == 1) didSomething = iteBVAhalf() || didSomething;
-    else if( config.opt_Ibva == 2) didSomething = iteBVAfull() || didSomething;
+    if( config.opt_Abva ) modifiedFormula = andBVA();
+    if( config.opt_Xbva == 1) modifiedFormula = xorBVAhalf() || modifiedFormula;
+    else if( config.opt_Xbva == 2) modifiedFormula = xorBVAfull() || modifiedFormula;
+    if( config.opt_Ibva == 1) modifiedFormula = iteBVAhalf() || modifiedFormula;
+    else if( config.opt_Ibva == 2) modifiedFormula = iteBVAfull() || modifiedFormula;
   }
   
-  processTime = cpuTime() - processTime;
-  return didSomething;
+  return modifiedFormula;
 }
 
 
@@ -1805,7 +1808,7 @@ Var BoundedVariableAddition::nextVariable(char type, Heap<LitOrderHeapLt>& bvaHe
 
 void BoundedVariableAddition::printStatistics(ostream& stream)
 {
-stream << "c [STAT] BVA " << processTime << "s, "
+stream << "c [STAT] BVA " << processTime << " s, "
 << andTotalReduction + xorTotalReduction + iteTotalReduction << " reducedClauses, "
 << andReplacements + xorfoundMatchings + iteFoundMatchings << " freshVariables, "
 << endl;

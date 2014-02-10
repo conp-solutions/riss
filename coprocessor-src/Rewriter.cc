@@ -54,7 +54,12 @@ bool Rewriter::process()
 {
   MethodTimer mt(&processTime);
   assert( config.opt_rew_once && "other parameter setting that true is not supported at the moment" );  
+
+  if( ! performSimplification() ) return false; // do not do anything?!
   modifiedFormula = false;
+  
+  // do not simplify, if the formula is considered to be too large!
+  if( !data.unlimited() && ( data.nVars() > config.opt_rew_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_rew_cls ) ) return false;
   
   bool ret = false;
   if( config.opt_rew_amo ) ret = ret || rewriteAMO();

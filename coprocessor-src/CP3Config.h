@@ -42,6 +42,10 @@ public:
  */
  
 // options
+ IntOption opt_cp3_vars; 	// variable limit to enable CP3
+ IntOption opt_cp3_cls;  	// clause limit to enable CP3
+ IntOption opt_cp3_ipvars;  	// variable limit to enable CP3 inprocessing
+ IntOption opt_cp3_ipcls;  	// clause limit to enable CP3 inprocessing
  BoolOption opt_unlimited  ;
  BoolOption opt_randomized  ;
  IntOption  opt_inprocessInt;
@@ -90,6 +94,7 @@ public:
  BoolOption opt_symm        ;
  BoolOption opt_FM          ;
 
+ 
  StringOption opt_ptechs ;
  StringOption opt_itechs ;
 
@@ -116,6 +121,48 @@ public:
  BoolOption opt_ts_phase    ;
 #endif
 
+ 
+
+ IntOption opt_subsimp_vars; 	// variable limit to enable 
+ IntOption opt_subsimp_cls;  	// clause limit to enable 
+ IntOption opt_hte_vars; 	// variable limit to enable 
+ IntOption opt_hte_cls;  	// clause limit to enable 
+ IntOption opt_bce_vars; 	// variable limit to enable 
+ IntOption opt_bce_cls;  	// clause limit to enable 
+ IntOption opt_ent_vars; 	// variable limit to enable 
+ IntOption opt_ent_cls;  	// clause limit to enable 
+ IntOption opt_la_vars; 	// variable limit to enable 
+ IntOption opt_la_cls;  	// clause limit to enable 
+ IntOption opt_cce_vars; 	// variable limit to enable 
+ IntOption opt_cce_cls;  	// clause limit to enable 
+ IntOption opt_rate_vars; 	// variable limit to enable 
+ IntOption opt_rate_cls;  	// clause limit to enable 
+ IntOption opt_ee_vars; 	// variable limit to enable 
+ IntOption opt_ee_cls;  	// clause limit to enable 
+ IntOption opt_bve_vars; 	// variable limit to enable 
+ IntOption opt_bve_cls;  	// clause limit to enable 
+ IntOption opt_bva_vars; 	// variable limit to enable 
+ IntOption opt_bva_cls;  	// clause limit to enable 
+ IntOption opt_unhide_vars; 	// variable limit to enable 
+ IntOption opt_unhide_cls;  	// clause limit to enable 
+ IntOption opt_probe_vars; 	// variable limit to enable 
+ IntOption opt_probe_cls;  	// clause limit to enable 
+ IntOption opt_ternResolve_vars; 	// variable limit to enable 
+ IntOption opt_ternResolve_cls;  	// clause limit to enable 
+ IntOption opt_addRedBins_vars; 	// variable limit to enable 
+ IntOption opt_addRedBins_cls;  	// clause limit to enable 
+ IntOption opt_symm_vars; 	// variable limit to enable 
+ IntOption opt_symm_cls;  	// clause limit to enable 
+ IntOption opt_fm_vars; 	// variable limit to enable 
+ IntOption opt_fm_cls;  	// clause limit to enable  
+ 
+ IntOption opt_xor_vars; 	// variable limit to enable 
+ IntOption opt_xor_cls;  	// clause limit to enable  
+ IntOption opt_sls_vars; 	// variable limit to enable 
+ IntOption opt_sls_cls;  	// clause limit to enable  
+ IntOption opt_rew_vars; 	// variable limit to enable 
+ IntOption opt_rew_cls;  	// clause limit to enable  
+ 
 #if defined TOOLVERSION // debug only, if no version is given!
  const bool opt_debug;       
  const bool opt_check;

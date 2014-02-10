@@ -83,20 +83,23 @@ void Subsumption::resetStatistics()
 
 }
 
-void Subsumption::process(bool doStrengthen, Heap< VarOrderBVEHeapLt >* heap, const Var ignore, const bool doStatistics)
+bool Subsumption::process(bool doStrengthen, Heap< VarOrderBVEHeapLt >* heap, const Var ignore, const bool doStatistics)
 {
   modifiedFormula = false;
   
   if( config.opt_sub_debug > 1 ) cerr << "c call susi process with subs: " << data.getSubsumeClauses() << " and str: " <<  data.getStrengthClauses() << endl;
   
-  if( !data.ok() ) return;
+  if( !data.ok() ) return false;
   if( !performSimplification() ) { // if nothing to be done, at least clean all the lists!
     for( int i = 0 ; i < data.getSubsumeClauses().size(); ++ i ) ca[ data.getSubsumeClauses()[i] ].set_subsume(false);
     data.getSubsumeClauses().clear();
     for( int i = 0 ; i < data.getStrengthClauses().size(); ++ i ) ca[ data.getStrengthClauses()[i] ].set_strengthen(false);
     data.getStrengthClauses().clear();
-    return; // do not execute simplification?
+    return false; // do not execute simplification?
   }
+  
+  // do not simplify, if the formula is considered to be too large!
+  if( !data.unlimited() && ( data.nVars() > config.opt_subsimp_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_subsimp_cls ) ) return false;
   
   // increase limits per call if necessary
   if( subsumeSteps + callIncrease > subLimit )  { subLimit = subsumeSteps + callIncrease;  limitIncreases++; }

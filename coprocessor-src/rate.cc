@@ -32,6 +32,12 @@ bool RATElimination::process()
 {
   MethodClock mc( rateTime );
   
+  if( ! performSimplification() ) return false; // do not do anything?!
+  modifiedFormula = false;
+  
+  // do not simplify, if the formula is considered to be too large!
+  if( !data.unlimited() && ( data.nVars() > config.opt_rate_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_rate_cls ) ) return false;
+  
   LitOrderRATEHeapLt comp(data, config.rate_orderComplements); // use this sort criteria!
   Heap<LitOrderRATEHeapLt> rateHeap(comp);  // heap that stores the variables according to their frequency (dedicated for BCE)
   

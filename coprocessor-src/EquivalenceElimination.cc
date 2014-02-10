@@ -39,13 +39,16 @@ steps = steps < config.opt_ee_inpStepInc ? 0 : steps - config.opt_ee_inpStepInc;
 }
 
 
-void EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
+bool EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
 {
-  if( !performSimplification() ) return; // do not perform simplification because of presiously failed runs?
-  // TODO continue here!!
-  eeTime  = cpuTime() - eeTime;
+  if( !performSimplification() ) return false; // do not perform simplification because of presiously failed runs?
+
+  MethodTimer mv(&eeTime);
   modifiedFormula = false;
-  if( !data.ok() ) return;
+  if( !data.ok() ) return false;
+  
+  // do not simplify, if the formula is considered to be too large!
+  if( !data.unlimited() && ( data.nVars() > config.opt_ee_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_ee_cls ) ) return false;
   
   isToAnalyze.resize( data.nVars(), 0 );
     
@@ -133,7 +136,7 @@ void EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
       
       replacedBy = oldReplacedBy;
       
-      if( !data.ok() ) { eeTime  = cpuTime() - eeTime; return; }
+      if( !data.ok() ) { return modifiedFormula; }
       // after we extracted more information from the gates, we can apply these additional equivalences to the forula!
       if ( !moreEquivalences && iter > 1 ) {
 	// cerr << "c no more gate equivalences found" << endl;
@@ -190,11 +193,9 @@ void EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
 	cerr << endl << "====================================" << endl << endl;
 	cerr << endl;
       }
-     
-    
   }
   if(! modifiedFormula ) unsuccessfulSimplification(); // notify system that nothing has been done here!
-  eeTime  = cpuTime() - eeTime;
+  return modifiedFormula;
 }
 
 void EquivalenceElimination::initClause(const CRef cr)

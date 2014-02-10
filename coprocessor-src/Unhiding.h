@@ -83,7 +83,7 @@ public:
   Unhiding( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data,  Propagation& _propagation, Subsumption& _subsumption, EquivalenceElimination& _ee  );
   
   /** perform unhiding algorithm */
-  void process();
+  bool process();
   
   /** This method should be used to print the statistics of the technique that inherits from this class */
   void printStatistics( ostream& stream );

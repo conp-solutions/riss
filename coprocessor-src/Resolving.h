@@ -22,7 +22,7 @@ class Resolving  : public Technique
 public:
   Resolving(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data);
 
-  void process( bool post = false);
+  bool process( bool post = false);
 
   /** inherited from @see Technique */
   void printStatistics( ostream& stream );

@@ -86,7 +86,7 @@ public:
   /** run subsumption and strengthening until completion 
    * @param doStrengthen use strengthening in this call?
    */
-  void process(bool doStrengthen = true, Heap<VarOrderBVEHeapLt> * heap = NULL, const Var ignore = var_Undef, const bool doStatistics = true);
+  bool process(bool doStrengthen = true, Heap<VarOrderBVEHeapLt> * heap = NULL, const Var ignore = var_Undef, const bool doStatistics = true);
 
   void initClause(const CRef cr, bool addToStrengthen=true); // inherited from Technique
   

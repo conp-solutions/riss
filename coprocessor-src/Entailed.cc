@@ -28,6 +28,12 @@ bool EntailedRedundant::process()
   if( config.entailed_debug > 0 ) cerr << "c run ENT process" << endl;
   MethodTimer mt(&processTime);
   
+  if( ! performSimplification() ) return false; // do not do anything?!
+  modifiedFormula = false;
+  
+  // do not simplify, if the formula is considered to be too large!
+  if( !data.unlimited() && ( data.nVars() > config.opt_ent_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_ent_cls ) ) return false;
+  
   data.ma.resize( 2*data.nVars() );
   data.lits.clear();
   data.clss.clear();

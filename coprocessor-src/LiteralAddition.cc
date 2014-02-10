@@ -407,6 +407,12 @@ bool LiteralAddition::process()
   assert( (config.opt_la_cla || config.opt_la_ala ) && "something should be done in this method!" );
   
   MethodClock mc (laTime);
+  
+  if( ! performSimplification() ) return false; // do not do anything?!
+  modifiedFormula = false;
+  
+  // do not simplify, if the formula is considered to be too large!
+  if( !data.unlimited() && ( data.nVars() > config.opt_la_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_la_cls ) ) return false;
 
   // run UP first!
   if( config.opt_la_debug ) cerr << "c LA run unit propagation" << endl;

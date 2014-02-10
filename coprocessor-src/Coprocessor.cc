@@ -474,8 +474,9 @@ lbool Preprocessor::performSimplification()
   if( config.opt_verbose > 4 ) cerr << "c coprocessor re-setup solver" << endl;
   if ( data.ok() ) {
     if( data.hasToPropagate() ) 
-      if( config.opt_up ) propagation.process(data);
-      else cerr << "c should apply UP" << endl;
+      //if( config.opt_up ) 
+	propagation.process(data);
+      //else cerr << "c should apply UP" << endl;
   }
 
   if( config.opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;
@@ -927,8 +928,9 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
   if( config.opt_verbose > 4 ) cerr << "c coprocessor re-setup solver" << endl;
   if ( data.ok() ) {
     if( data.hasToPropagate() ) 
-      if( config.opt_up ) propagation.process(data);
-      else cerr << "c should apply UP" << endl;
+      //if( config.opt_up ) 
+	propagation.process(data);
+      //else cerr << "c should apply UP" << endl;
   }
 
   if( config.opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;
@@ -992,6 +994,9 @@ lbool Preprocessor::preprocess()
   data.preprocessing();
   const bool wasDoingER = solver->getExtendedResolution();
   
+  // do not preprocess, if the formula is considered to be too large!
+  if( !data.unlimited() && ( data.nVars() > config.opt_cp3_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_cp3_cls ) ) return l_Undef;
+  
   if( config.opt_symm && config.opt_enabled ) { // do only if preprocessor is enabled
     symmetry.process(); 
     if( config.opt_verbose > 1 )  { printStatistics(cerr); symmetry.printStatistics(cerr); }
@@ -1041,10 +1046,14 @@ lbool Preprocessor::inprocess()
 {
   // if no inprocesing enabled, do not do it!
   if( !config.opt_inprocess ) return l_Undef;
+  
+  // do not preprocess, if the formula is considered to be too large!
+  if( !data.unlimited() && ( (data.nVars() > config.opt_cp3_ipvars) || ((data.getClauses().size() + data.getLEarnts().size()) > config.opt_cp3_ipcls) ) ) return l_Undef;
+  
   // TODO: do something before preprocessing? e.g. some extra things with learned / original clauses
   if (config.opt_inprocess) {
     
-    /** make sure the solver is at level 0 - not guarantueed with partial restarts!*/
+    /* make sure the solver is at level 0 - not guarantueed with partial restarts!*/
     solver->cancelUntil(0);
     
     if( config.opt_verbose > 3 ) cerr << "c start inprocessing after another " << solver->conflicts - lastInpConflicts << endl;

@@ -27,19 +27,14 @@ Symmetry::Symmetry( CP3Config &_config, ClauseAllocator& _ca, ThreadController& 
 }
 
 bool Symmetry::process() {
-  MethodTimer mt( &processTime );
-  if( false ) {
-  printf("formula:\n");
-  for( int i = 0 ; i < solver.clauses.size(); ++i ) {
-      printf("c clause %3d / %3d  :",i,solver.clauses.size() );
-      const Clause& c = ca[solver.clauses[i]];
-      for( int j = 0 ; j < c.size(); ++ j ) {
-	printf("%s%d ", sign(c[i]) ? "-" : "", var(c[i])+1);
-      }
-      printf("\n");	
-  }
-  }
   
+  if( ! performSimplification() ) return true; // do not do anything?!
+  modifiedFormula = false;
+  
+  // do not simplify, if the formula is considered to be too large!
+  if( !data.unlimited() && ( data.nVars() > config.opt_symm_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_symm_cls ) ) return true;  
+  
+  MethodTimer mt( &processTime );
   printf("c found units: %d, propagated: %d\n", solver.trail.size(), solver.qhead );
   
   vec<Lit> cls; cls.growTo(3,lit_Undef);

@@ -156,6 +156,9 @@ lbool BoundedVariableElimination::runBVE(CoprocessorData& data, const bool doSta
   if( ! performSimplification() ) return l_Undef; // do not do anything?!
   modifiedFormula = false;
   
+  // do not simplify, if the formula is considered to be too large!
+  if( !data.unlimited() && ( data.nVars() > config.opt_bve_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_bve_cls ) ) return l_Undef;
+  
   initialClauses = data.nCls();
   restarts = 0;
   if (controller.size() > 0)

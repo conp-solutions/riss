@@ -59,7 +59,7 @@ public:
   EquivalenceElimination( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation, Subsumption& _subsumption  );
   
   /** run equivalent literal elimination */
-  void process(CoprocessorData& data);
+  bool process(CoprocessorData& data);
 
   void initClause(const CRef cr); // inherited from Technique
 

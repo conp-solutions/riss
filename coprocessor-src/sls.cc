@@ -84,7 +84,9 @@ Lit Sls::heuristic(){
 
 bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
 {
-
+  // do not simplify, if the formula is considered to be too large!
+  if( !data.unlimited() && ( data.nVars() > config.opt_sls_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_sls_cls ) ) return false;
+  
   MethodTimer mt ( &solveTime );
   
   // setup main variables

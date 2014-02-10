@@ -424,6 +424,12 @@ bool BlockedClauseElimination::process()
   
   MethodClock mc (bceTime);
 
+  if( ! performSimplification() ) return false; // do not do anything?!
+  modifiedFormula = false;
+  
+  // do not simplify, if the formula is considered to be too large!
+  if( !data.unlimited() && ( data.nVars() > config.opt_bce_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_bce_cls ) ) return false;
+  
   // run UP first!
   if( config.opt_bce_debug ) cerr << "c BCE run unit propagation" << endl;
   propagation.process(data, true); // propagate, if there's something to be propagated

@@ -27,10 +27,12 @@ void HiddenTautologyElimination::giveMoreSteps()
 
 void HiddenTautologyElimination::process(CoprocessorData& data)
 {
-  processTime = cpuTime() - processTime;
-  modifiedFormula = false;
+  MethodTimer mv(&processTime);
+  
   if( !data.ok() ) return;
   if( !performSimplification() ) return; // do not perform HTE, because of previous failed runs?
+  modifiedFormula = false;
+  
   if( ! isInitializedTechnique() ) {
     initializedTechnique(); 
   }
@@ -102,7 +104,6 @@ void HiddenTautologyElimination::process(CoprocessorData& data)
   
   // clear queue afterwards
   activeVariables.clear();
-  processTime = cpuTime() - processTime;
 }
 
 

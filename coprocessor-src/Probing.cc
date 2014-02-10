@@ -50,8 +50,12 @@ viviChecks = viviChecks < config.pr_opt_inpStepInc2 ? 0 : viviChecks - config.pr
 bool Probing::process()
 {
   MethodTimer mt( &processTime );
+  if( ! performSimplification() ) return false; // do not do anything?!
   modifiedFormula = false;
   if( !data.ok() ) return false;
+  // do not simplify, if the formula is considered to be too large!
+  if( !data.unlimited() && ( data.nVars() > config.opt_probe_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_probe_cls ) ) return false;
+  
   
   // do not enter, if already unsatisfiable!
   if( (! config.pr_probe && ! config.pr_vivi) || !data.ok() ) return data.ok();
