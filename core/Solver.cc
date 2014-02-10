@@ -1521,7 +1521,7 @@ lbool Solver::search(int nof_conflicts)
 	      maxResHeight = extraInfo;
 #endif
 	      assert( (!isBiAsserting || ret == 0) && "cannot be multi unit and bi asserting at the same time" );
-	      if( isBiAsserting && ret == 0) {
+	      if( false &&  isBiAsserting && ret == 0) {
 		cerr << "c confl:     " << ca[confl] << endl;
 		printConflictTrail(confl);
 		cerr << "c learn:     " << learnt_clause << endl;
@@ -3054,7 +3054,7 @@ bool Solver::interleavedClauseStrengthening()
     if( c.mark() != 0 ) continue; // do not consider this clause (seems to be deleted already, must not be part of a watched list any more ... )
     if( c.size() > sizeLimit || c.lbd() > lbdLimit ){ icsDroppedCandidates++; continue; } // do not consider this clause!
     icsCandidates ++; // stats - store how many learned clauses have been tested
-    if(config.opt_ics_debug) cerr << "c ICS on " << c << endl;
+    if(config.opt_ics_debug) cerr << "c ICS on [ " << i << " / " << learnts.size() << " = " << learnts[i] << " / " << ca.size() << " ]: lits= " << c.size() << " : " << c << endl;
     // if(config.opt_ics_debug) cerr << "c current trail: " << trail << endl;
     detachClause( learnts[i], true ); // remove the clause from the solver, to be able to rewrite it
     for( int j = 0 ; j < c.size(); ++ j ) {
@@ -3067,21 +3067,24 @@ bool Solver::interleavedClauseStrengthening()
     int j = 0;
     bool droppedLit = false;
     int dropPosition = -1;
-    for( ; j < c.size(); ++ j ) {	// check each literal and enqueue it negated
-      if( config.opt_ics_debug ) cerr << "c check lit " << j << "/" << c.size() << ": " << c[j] << " with value " << toInt( value(c[j]) ) << endl;
-      if( value( c[j] ) == l_True ) { // just need to keep all previous and this literal
-	c[k++] = c[j];
-	if( config.opt_ics_debug ) cerr << "c interrupt because of sat.lit, current trail: " << trail << endl;
+    for( ; j < ca[learnts[i]].size(); ++ j ) {	// check each literal and enqueue it negated -- do not use the reference, because lhbr in propagate can make it invalid
+      if( config.opt_ics_debug ) cerr << "c check lit " << j << "/" << c.size() << ": " << ca[learnts[i]][j] << " with value " << toInt( value(ca[learnts[i]][j]) ) << endl;
+      if( value( ca[learnts[i]][j] ) == l_True ) { // just need to keep all previous and this literal
+	if( config.opt_ics_debug ) {
+	  cerr << "c interrupt because of sat.lit, current trail: " << trail << endl;
+	  cerr << "c write to " << k << " / " << c.size() << " literal from " << j << " / " << c.size() << endl;
+	}
+	ca[learnts[i]][k++] = ca[learnts[i]][j];
 	break; // this literals does not need to be kept! // TODO: what if the clause is already satisfied, could be stopped as well!
-      } else if ( value( c[j] ) == l_False ) {
+      } else if ( value( ca[learnts[i]][j] ) == l_False ) {
 	droppedLit = true;
 	dropPosition = j; // dropped the literal here
-	if( config.opt_ics_debug ) cerr << "c jump over false lit: " << c[j] << endl;
+	if( config.opt_ics_debug ) cerr << "c jump over false lit: " << ca[learnts[i]][j] << endl;
 	continue; // can drop this literal
       }
-      c[k++] = c[j]; // keep the current literal!
+      ca[learnts[i]][k++] = ca[learnts[i]][j]; // keep the current literal!
       newDecisionLevel(); // we are working on decision level 1, so nothing breaks
-      uncheckedEnqueue( ~c[j] );
+      uncheckedEnqueue( ~ca[learnts[i]][j] );
       CRef confl = propagate();
       if( confl != CRef_Undef ) { // found a conflict, handle it (via usual, simple, conflict analysis)
 	learnt_clause.clear(); otfssCls.clear(); // prepare for analysis
@@ -3139,7 +3142,7 @@ bool Solver::interleavedClauseStrengthening()
       icsShrinks ++; icsShrinkedLits += (d.size() - k ); // stats -- store the success of shrinking
       d.shrink( d.size() - k );
     }
-    if(config.opt_ics_debug) cerr << "c ICS return modified clause: " << d << endl;
+    if(config.opt_ics_debug) cerr << "c ICS return (modified) clause: " << d << endl;
     
     if( d.size() > 1 ) attachClause( learnts[i] ); // unit clauses do not need to be added!
     else if( d.size() == 1  ) { // if not already done, propagate this new clause!
