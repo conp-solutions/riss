@@ -102,8 +102,6 @@ public:
  DoubleOption opt_garbage_frac;
 
  IntOption opt_allUipHack;
- BoolOption opt_uipHack;
- IntOption opt_uips;
  DoubleOption opt_vsids_start; // interpolate between VSIDS and VMTF, start value
  DoubleOption opt_vsids_end;   // interpolate between VSIDS and VMTF, end value
  DoubleOption opt_vsids_inc;   // interpolate between VSIDS and VMTF, increase

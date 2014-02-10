@@ -14,7 +14,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 using namespace Coprocessor;
 
 const char* _cat = "COPROCESSOR 3";
-const char* _cat2 = "PREPROCESSOR TECHNIQUES";
+const char* _cat2 = "COPROCESSOR  TECHNIQUES";
 const char* _cat_bve = "COPROCESSOR 3 - BVE";
 const char* _cat_bva = "COPROCESSOR 3 - BVA";
 const char* _cat_bce = "COPROCESSOR 3 - BCE";
@@ -37,6 +37,7 @@ const char* _cat_sym = "COPROCESSOR 3 - SYMMETRY";
 const char* _cat_twosat = "COPROCESSOR 3 - TWOSAT";
 const char* _cat_uhd = "COPROCESSOR 3 - UNHIDE";
 const char* _cat_xor = "COPROCESSOR 3 - XOR";
+const char* _cat_rat = "COPROCESSOR 3 - RAT Elimination";
 
 CP3Config::CP3Config() // add new options here!
 :
@@ -323,10 +324,10 @@ opt_la_debug (_cat_la, "la-debug", "output debug info during LA", false, optionL
 //
 // RAT Elimination
 //
-rate_orderComplements("RAT Elimination", "rat-compl", "sort according to nr. of complements", true, optionListPtr ),
-rate_Limit("RAT Elimination","rate-limit", "number of pairwise clause comparisons before interrupting RATE", 9000000000, Int64Range(0, INT64_MAX) , optionListPtr ),
-opt_rate_debug ("RAT Elimination", "rate-debug", "debug output for RAT elimination",0, IntRange(0,4) , optionListPtr ),
-rate_minSize("RAT Elimination","rate-min", "minimal clause size for RAT elimination", 3, IntRange(2, INT32_MAX) , optionListPtr ),
+rate_orderComplements(_cat_rat, "rat-compl", "sort according to nr. of complements", true, optionListPtr ),
+rate_Limit(_cat_rat,"rate-limit", "number of pairwise clause comparisons before interrupting RATE", 9000000000, Int64Range(0, INT64_MAX) , optionListPtr ),
+opt_rate_debug (_cat_rat, "rate-debug", "debug output for RAT elimination",0, IntRange(0,4) , optionListPtr ),
+rate_minSize(_cat_rat,"rate-min", "minimal clause size for RAT elimination", 3, IntRange(2, INT32_MAX) , optionListPtr ),
 
 //
 // Dense
@@ -542,7 +543,7 @@ opt_rew_Varlimit        (_cat_rew, "cp3_rew_Vlimit","max number of variables to 
 opt_rew_Addlimit        (_cat_rew, "cp3_rew_Addlimit","number of new variables being allowed", 100000, IntRange(0, INT32_MAX), optionListPtr ),
 opt_rew_amo        (_cat_rew, "cp3_rew_amo"   ,"rewrite amos", true, optionListPtr ),
 opt_rew_imp        (_cat_rew, "cp3_rew_imp"   ,"rewrite implication chains", false, optionListPtr ),
-opt_rew_scan_exo        (_cat_rew, "cp3_rew_exo"   ,"scan for encoded exactly once constraints first", false, optionListPtr ),
+opt_rew_scan_exo        (_cat_rew, "cp3_rew_exo"   ,"scan for encoded exactly once constraints first", true, optionListPtr ),
 opt_rew_merge_amo       (_cat_rew, "cp3_rew_merge" ,"merge AMO constraints to create larger AMOs (fourier motzkin)", false, optionListPtr ),
 opt_rew_rem_first       (_cat_rew, "cp3_rew_1st"   ,"how to find AMOs", false, optionListPtr ),
 opt_rew_avg         (_cat_rew, "cp3_rew_avg"   ,"use AMOs above equal average only?", true, optionListPtr ),
@@ -590,7 +591,7 @@ opt_sub_strength        (_cat_sub, "cp3_strength",     "Perform clause strengthe
 opt_sub_preferLearned   (_cat_sub, "cp3_inpPrefL",    "During inprocessing, check learned clauses first!", true, optionListPtr ), 
 opt_sub_subLimit        (_cat_sub, "cp3_sub_limit", "limit of subsumption steps",   300000000, IntRange(0,INT32_MAX), optionListPtr ), 
 opt_sub_strLimit        (_cat_sub, "cp3_str_limit", "limit of strengthening steps", 300000000, IntRange(0,INT32_MAX), optionListPtr ), 
-opt_sub_callIncrease    (_cat_sub, "cp3_call_inc",  "max. limit increase per process call (subsimp is frequently called from other techniques)", 100, IntRange(0,INT32_MAX), optionListPtr ), 
+opt_sub_callIncrease    (_cat_sub, "cp3_call_inc",  "max. limit increase per process call (subsimp is frequently called from other techniques)", 200, IntRange(0,INT32_MAX), optionListPtr ), 
 opt_sub_inpStepInc      (_cat_sub, "cp3_sub_inpInc","increase for steps per inprocess call", 40000000, IntRange(0, INT32_MAX), optionListPtr ),
 #if defined TOOLVERSION && TOOLVERSION < 302
 opt_sub_par_strength    (1),

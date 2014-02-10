@@ -54,7 +54,7 @@ CoreConfig::CoreConfig() // add new options here!
  opt_update_lbd (_cred, "lbdupd", "update LBD during (0=propagation,1=learning,2=never),",1, IntRange(0, 2), optionListPtr ),
  opt_lbd_inc(_cred,"incLBD","allow to increment lbd of clauses dynamically",false, optionListPtr ),
  opt_quick_reduce(_cred,"quickRed","check only first two literals for being satisfied",false, optionListPtr ),
- opt_keep_worst_ratio(_cred,"keeWorst","keep this (relative to all learned) number of worst learned clauses during removal", 0, DoubleRange(0, true, 1, true), optionListPtr ), 
+ opt_keep_worst_ratio(_cred,"keepWorst","keep this (relative to all learned) number of worst learned clauses during removal", 0, DoubleRange(0, true, 1, true), optionListPtr ), 
  
  opt_biAsserting (_cm, "biAsserting", "Learn bi-asserting clauses, if possible (do not learn asserting clause!)", false, optionListPtr),
  opt_biAssiMaxEvery (_cm, "biAsFreq", "The min nr. of clauses between two learned bi-asserting clauses", 0, IntRange(0, INT32_MAX), optionListPtr ),
@@ -89,8 +89,6 @@ CoreConfig::CoreConfig() // add new options here!
  opt_garbage_frac (_cat, "gc-frac", "The fraction of wasted memory allowed before a garbage collection is triggered", 0.20, DoubleRange(0, false, HUGE_VAL, false), optionListPtr ),
 
  opt_allUipHack ("MODS", "alluiphack", "learn all unit UIPs at any level", 0, IntRange(0, 2) , optionListPtr ),
- opt_uipHack ("MODS", "uiphack", "learn more UIPs at decision level 1", false, optionListPtr ),
- opt_uips ("MODS", "uiphack-uips", "learn at most X UIPs at decision level 1 (0=all)", 0, IntRange(0, INT32_MAX), optionListPtr ),
  opt_vsids_start ("MODS", "vsids-s", "interpolate between VSIDS and VMTF,start value", 1, DoubleRange(0, true, 1, true), optionListPtr ),
  opt_vsids_end("MODS", "vsids-e", "interpolate between VSIDS and VMTF, end value", 1, DoubleRange(0, true, 1, true), optionListPtr ),
  opt_vsids_inc("MODS", "vsids-i", "interpolate between VSIDS and VMTF, inc during update", 1, DoubleRange(0, true, 1, true), optionListPtr ),
@@ -245,7 +243,7 @@ CoreConfig::CoreConfig() // add new options here!
 #endif
  
  
- opt_uhdProbe     (       "SEARCH UNHIDE PROBING", "sUhdProbe",         "perform probing based on learned clauses (off,linear,quadratic,larger)", 0, IntRange(0,INT32_MAX), optionListPtr ),
+ opt_uhdProbe     (       "SEARCH UNHIDE PROBING", "sUhdProbe",         "perform probing based on learned clauses (off,linear,quadratic,larger)", 0, IntRange(0,3), optionListPtr ),
  opt_uhdCleanRebuild     ("SEARCH UNHIDE PROBING", "sUhdPrRb", "rebuild BIG before cleaning the formula" ,true, optionListPtr ),
  opt_uhdRestartReshuffle ("SEARCH UNHIDE PROBING", "sUhdPrSh", "travers the BIG again during every i-th restart 0=off" ,0, IntRange(0,INT32_MAX), optionListPtr ),
  
