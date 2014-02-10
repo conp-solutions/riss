@@ -166,13 +166,23 @@ class DoubleOption : public Option
     }
 
     virtual void help (bool verbose = false){
-        fprintf(stderr, "  -%-12s = %-8s %c%4.2g .. %4.2g%c (default: %g)\n", 
-                name, type_name, 
-                range.begin_inclusive ? '[' : '(', 
-                range.begin,
-                range.end,
-                range.end_inclusive ? ']' : ')', 
-                value);
+      // print help in paramILS format
+      fprintf( stderr, "%s{%lf,%lf}[%lf]       # %s  %s\n",
+	       name,
+	       range.begin,
+	       range.end,
+	       value,
+	       description, 
+	       (!range.begin_inclusive || !range.end_inclusive ) ? "TODO!" : " " 
+	     );
+      
+//         fprintf(stderr, "  -%-12s = %-8s %c%4.2g .. %4.2g%c (default: %g)\n", 
+//                 name, type_name, 
+//                 range.begin_inclusive ? '[' : '(', 
+//                 range.begin,
+//                 range.end,
+//                 range.end_inclusive ? ']' : ')', 
+//                 value);
 #ifndef NOVERBHELP
         if (verbose){
             fprintf(stderr, "\n        %s\n", description);
@@ -234,25 +244,35 @@ class IntOption : public Option
     }
 
     virtual void help (bool verbose = false){
-        fprintf(stderr, "  -%-12s = %-8s [", name, type_name);
-        if (range.begin == INT32_MIN)
-            fprintf(stderr, "imin");
-        else
-            fprintf(stderr, "%4d", range.begin);
-
-        fprintf(stderr, " .. ");
-        if (range.end == INT32_MAX)
-            fprintf(stderr, "imax");
-        else
-            fprintf(stderr, "%4d", range.end);
-
-        fprintf(stderr, "] (default: %d)\n", value);
-#ifndef NOVERBHELP
-        if (verbose){
-            fprintf(stderr, "\n        %s\n", description);
-            fprintf(stderr, "\n");
-        }
-#endif
+      
+      fprintf( stderr, "%s{%d,%d}[%d]       # %s\n",
+	       name,
+	       range.begin,
+	       range.end,
+	       value,
+	       description
+	     );
+      
+      
+//         fprintf(stderr, "  -%-12s = %-8s [", name, type_name);
+//         if (range.begin == INT32_MIN)
+//             fprintf(stderr, "imin");
+//         else
+//             fprintf(stderr, "%4d", range.begin);
+// 
+//         fprintf(stderr, " .. ");
+//         if (range.end == INT32_MAX)
+//             fprintf(stderr, "imax");
+//         else
+//             fprintf(stderr, "%4d", range.end);
+// 
+//         fprintf(stderr, "] (default: %d)\n", value);
+// #ifndef NOVERBHELP
+//         if (verbose){
+//             fprintf(stderr, "\n        %s\n", description);
+//             fprintf(stderr, "\n");
+//         }
+// #endif
     }
     
     
@@ -308,25 +328,34 @@ class Int64Option : public Option
     }
 
     virtual void help (bool verbose = false){
-        fprintf(stderr, "  -%-12s = %-8s [", name, type_name);
-        if (range.begin == INT64_MIN)
-            fprintf(stderr, "imin");
-        else
-            fprintf(stderr, "%4"PRIi64, range.begin);
-
-        fprintf(stderr, " .. ");
-        if (range.end == INT64_MAX)
-            fprintf(stderr, "imax");
-        else
-            fprintf(stderr, "%4"PRIi64, range.end);
-
-        fprintf(stderr, "] (default: %"PRIi64")\n", value);
-#ifndef NOVERBHELP
-        if (verbose){
-            fprintf(stderr, "\n        %s\n", description);
-            fprintf(stderr, "\n");
-        }
-#endif
+      
+      fprintf( stderr, "%s{%lld,%lld}[%lld]       # %s\n",
+	       name,
+	       range.begin,
+	       range.end,
+	       value,
+	       description
+	     );
+      
+//         fprintf(stderr, "  -%-12s = %-8s [", name, type_name);
+//         if (range.begin == INT64_MIN)
+//             fprintf(stderr, "imin");
+//         else
+//             fprintf(stderr, "%4"PRIi64, range.begin);
+// 
+//         fprintf(stderr, " .. ");
+//         if (range.end == INT64_MAX)
+//             fprintf(stderr, "imax");
+//         else
+//             fprintf(stderr, "%4"PRIi64, range.end);
+// 
+//         fprintf(stderr, "] (default: %"PRIi64")\n", value);
+// #ifndef NOVERBHELP
+//         if (verbose){
+//             fprintf(stderr, "\n        %s\n", description);
+//             fprintf(stderr, "\n");
+//         }
+// #endif
     }
     
     
@@ -367,13 +396,21 @@ class StringOption : public Option
     }
 
     virtual void help (bool verbose = false){
-        fprintf(stderr, "  -%-10s = %8s\n", name, type_name);
-#ifndef NOVERBHELP
-        if (verbose){
-            fprintf(stderr, "\n        %s\n", description);
-            fprintf(stderr, "\n");
-        }
-#endif
+      
+      fprintf( stderr, "%s{\"\",%s}[%s]       # %s\n",
+	       name,
+	       value == 0 ? "" : value,
+	       value == 0 ? "" : value,
+	       description
+	     );
+      
+//         fprintf(stderr, "  -%-10s = %8s\n", name, type_name);
+// #ifndef NOVERBHELP
+//         if (verbose){
+//             fprintf(stderr, "\n        %s\n", description);
+//             fprintf(stderr, "\n");
+//         }
+// #endif
     }    
     
     
@@ -415,19 +452,25 @@ class BoolOption : public Option
 
     virtual void help (bool verbose = false){
 
-        fprintf(stderr, "  -%s, -no-%s", name, name);
-
-        for (uint32_t i = 0; i < 32 - strlen(name)*2; i++)
-            fprintf(stderr, " ");
-
-        fprintf(stderr, " ");
-        fprintf(stderr, "(default: %s)\n", value ? "on" : "off");
-#ifndef NOVERBHELP
-        if (verbose){
-            fprintf(stderr, "\n        %s\n", description);
-            fprintf(stderr, "\n");
-        }
-#endif
+      fprintf( stderr, "%s{yes,no}[%s]       # %s\n",
+	       name,
+	       value ? "yes" : "no",
+	       description
+	     );
+      
+//         fprintf(stderr, "  -%s, -no-%s", name, name);
+// 
+//         for (uint32_t i = 0; i < 32 - strlen(name)*2; i++)
+//             fprintf(stderr, " ");
+// 
+//         fprintf(stderr, " ");
+//         fprintf(stderr, "(default: %s)\n", value ? "on" : "off");
+// #ifndef NOVERBHELP
+//         if (verbose){
+//             fprintf(stderr, "\n        %s\n", description);
+//             fprintf(stderr, "\n");
+//         }
+// #endif
     }
     
     

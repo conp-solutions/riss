@@ -72,7 +72,7 @@ void Minisat::printUsageAndExit (int argc, char** argv, bool verbose)
         const char* type = Option::getOptionList()[i]->type_name;
 
         if (cat != prev_cat)
-            fprintf(stderr, "\n%s OPTIONS:\n\n", cat);
+            fprintf(stderr, "#\n#  %s OPTIONS:\n#\n", cat);
         else if (type != prev_type)
             fprintf(stderr, "\n");
 
