@@ -2770,9 +2770,9 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
       return rerFailed; // clauses in a row do not fit the window
     } else { // size fits, check lits!
       // sort, if more than 2 literals
-      cerr << "current learnt clause before sort: " << currentLearnedClause << endl;
+//       cerr << "current learnt clause before sort: " << currentLearnedClause << endl;
       if( currentLearnedClause.size() > 2 ) sort( &( currentLearnedClause[2] ), currentLearnedClause.size() - 2  ); // do not touch the second literal in the clause! check it separately!
-      cerr << "current learnt clause after  sort: " << currentLearnedClause << endl;
+//       cerr << "current learnt clause after  sort: " << currentLearnedClause << endl;
       bool found = false;
       for( int i = 0 ; i < rerCommonLits.size(); ++ i ) {
 	if ( rerCommonLits[i] == currentLearnedClause[1] ) { found = true; break;}
@@ -2783,7 +2783,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	rerPatternReject ++;
 	return rerFailed;
       }
-      cerr << "c found match - check with more details" << endl;
+//       cerr << "c found match - check with more details" << endl;
       // Bloom-Filter
       int64_t thisLitSum = 0;
       for( int i = 0 ; i < currentLearnedClause.size(); ++ i ) {
@@ -2794,12 +2794,12 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	rerPatternBloomReject ++;
 	return rerFailed;
       }
-      cerr << "c found match - passed bloom filter" << endl;
+//       cerr << "c found match - passed bloom filter" << endl;
       found = false; // for the other literals pattern
       // check whether all remaining literals are in the clause
       int i = 0; int j = 2;
       while ( i < rerCommonLits.size() && j < currentLearnedClause.size() ) {
-	cerr << "c compare " << rerCommonLits << " to " << currentLearnedClause[j] << " (or " << currentLearnedClause[1] << ")" << endl;
+// 	cerr << "c compare " << rerCommonLits << " to " << currentLearnedClause[j] << " (or " << currentLearnedClause[1] << ")" << endl;
 	if( rerCommonLits[i] == currentLearnedClause[j] ) {
 	  i++; j++;
 	} else if ( rerCommonLits[i] == currentLearnedClause[1] ) {
@@ -2811,7 +2811,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	  return rerFailed;
 	}
       }
-      cerr << "c the two clauses match!" << endl;
+//       cerr << "c the two clauses match!" << endl;
       // clauses match
       rerLits.push( currentLearnedClause[0] ); // store literal
       
@@ -2847,7 +2847,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	  assert( rerFuseClauses[i] != reason( var( ca[rerFuseClauses[i]][0] ) ) && "from a RER-CDCL point of view, these clauses cannot be reason clause" );
 	  assert( rerFuseClauses[i] != reason( var( ca[rerFuseClauses[i]][1] ) ) && "from a RER-CDCL point of view, these clauses cannot be reason clause" );
 	  // ca[rerFuseClauses[i]].mark(1); // mark to be deleted!
-	  cerr << "c remove clause (" << i << ")[" << rerFuseClauses[i] << "] " << ca[ rerFuseClauses[i] ] << endl;
+// 	  cerr << "c remove clause (" << i << ")[" << rerFuseClauses[i] << "] " << ca[ rerFuseClauses[i] ] << endl;
 	  removeClause(rerFuseClauses[i]); // drop this clause!
 	}
 	
@@ -2987,9 +2987,9 @@ void Solver::disjunctionReplace( Lit p, Lit q, const Lit x, bool inLearned, bool
       if( secondHit == -1 || secondHit == c.size() ) continue; // second literal not found, or complement of other second literal found
 
       // found both literals in the clause ...
-      cerr << "c rewrite clause [" << cls[i] << "] : " << c << endl;
-      cerr << "c hit1: " << c[firstHit] << endl;
-      cerr << "c hit2: " << c[secondHit] << endl;
+       if( config.opt_rer_debug ) cerr << "c rewrite clause [" << cls[i] << "]@" << decisionLevel() << " : " << c << endl;
+       if( config.opt_rer_debug ) cerr << "c hit1: " << c[firstHit] << "=" << (l_True == value(c[firstHit])) << "@" << level(var(c[firstHit])) << endl;
+       if( config.opt_rer_debug ) cerr << "c hit2: " << c[secondHit] << "=" << (l_True == value(c[secondHit])) << "@" << level(var(c[secondHit])) << endl;
       if( c.size() == 2 ) {
 	assert( decisionLevel() == 0 && "can add a unit only permanently, if we are currently on level 0!" );
 	removeClause( cls[i] );
@@ -2998,7 +2998,7 @@ void Solver::disjunctionReplace( Lit p, Lit q, const Lit x, bool inLearned, bool
       } else { // TODO: could be implemented better (less watch moving!)
 	// rewrite clause
 	// reattach clause if neccesary
-	assert( (firstHit != 0 || decisionLevel () == 0 ) && "a reason clause should not be rewritten, such that the first literal is moved!" );
+	// assert( (leve(var(firstHit)) > decisionLevel() || decisionLevel () == 0 ) && "a reason clause should not be rewritten, such that the first literal is moved!" );
 	if( firstHit < 2 || c.size() == 3 ) detachClause( cls[i], true ); // not always necessary to remove the watches!
 	else {
 	  if( c.learnt() ) learnts_literals --;
@@ -3007,7 +3007,7 @@ void Solver::disjunctionReplace( Lit p, Lit q, const Lit x, bool inLearned, bool
 	c[firstHit] = x;
 	c[secondHit] = c[ c.size() - 1 ];
 	c.shrink(1);
-	cerr << "c rewrite clause into " << c << endl;
+// 	cerr << "c rewrite clause into " << c << endl;
 	assert( c.size() > 1 && "do not produce unit clauses!" );
 	if( firstHit < 2 || c.size() == 2 ) attachClause( cls[i] ); // attach the clause again with the corrected watcher
       }
