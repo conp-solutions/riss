@@ -772,9 +772,9 @@ bool Unhiding::process (  )
       assert ( starts.size() == ends.size() && "there has to be the same number of stamps" );
       for( int i = 0 ; i + 1 < starts.size(); ++ i ) {
 	assert( starts [i] != 0 && "start literal must have been handled" );
-	assert( starts [i] != starts [i+1] && "there should not be to equi start stamps" );
+	assert( (config.opt_uhd_EE || starts [i] != starts [i+1]) && "there should not be to equi start stamps if not EE" );
 	assert( ends [i] != 0 && "end literal must have been handled" );
-	assert( ends [i] != ends [i+1] && "there should not be to equi end stamps" );
+	assert( (config.opt_uhd_EE || ends [i] != ends [i+1]) && "there should not be to equi end stamps if not EE" );
 	min = min == -1 ? stampInfo[i].dsc : (min <stampInfo[i].dsc ? min : stampInfo[i].dsc);
 	min = min == -1 ? stampInfo[i].fin : (min <stampInfo[i].fin ? min : stampInfo[i].fin);
 	max = max == -1 ? stampInfo[i].dsc : (max >stampInfo[i].dsc ? max : stampInfo[i].dsc);
@@ -791,6 +791,15 @@ bool Unhiding::process (  )
 	}
       }
       cerr << "c stamps are fine, ranging from " << min << " to " << max << endl;
+    }
+    
+    if( foundEE ) {
+      if( config.opt_uhd_Debug > 4 ) cerr << "c [UHD] call equivalence elimination" << endl;
+      if( data.getEquivalences().size() > 0 ) {
+	modifiedFormula = modifiedFormula || ee.appliedSomething();
+	ee.applyEquivalencesToFormula(data);
+      }
+      foundEE = false;
     }
     
     // TODO check whether unit propagation reduces the clauses that are eliminated afterwards (should not)

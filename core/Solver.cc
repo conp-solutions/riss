@@ -755,8 +755,10 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
       otfssClauses.pop(); // do not work on otfss clause, if current learned clause subsumes it anyways!
     }
     
+    if( config.opt_ecl_debug || config.opt_rer_debug ) cerr << "c learned clause (before mini): " << out_learnt << endl;
+    
     bool doMinimizeClause = true; // created extra learnt clause? yes -> do not minimize
-    if( out_learnt.size() > decisionLevel() ) { // is it worth to check for decisionClause?
+    if( out_learnt.size() > decisionLevel() && config.opt_learnDecPrecent != -1) { // is it worth to check for decisionClause?
       lbd = computeLBD(out_learnt);
       if( lbd > (config.opt_learnDecPrecent * decisionLevel() + 99 ) / 100 ) {
 	// instead of learning a very long clause, which migh be deleted very soon (idea by Knuth, already implemented in lingeling(2013)
@@ -769,10 +771,12 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	out_learnt[ out_learnt.size() -1 ] = out_learnt[0];
 	out_learnt[0] = ~p; // move 1st UIP literal to the front!
 	learnedDecisionClauses ++;
-	if( config.opt_printDecisions > 2) cerr << endl << "c learn decisionClause " << out_learnt << endl << endl;
+	if( config.opt_printDecisions > 2 || config.opt_ecl_debug || config.opt_rer_debug) cerr << endl << "c learn decisionClause " << out_learnt << endl << endl;
 	doMinimizeClause = false;
       }
     }
+    
+    if( config.opt_ecl_debug || config.opt_rer_debug ) cerr << "c learned clause (after decision clause): " << out_learnt << endl;
     
     if( doMinimizeClause ) {
     // Simplify conflict clause:
@@ -839,6 +843,8 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     
     } // end working on usual learnt clause (minimize etc.)
     
+    
+    if( config.opt_ecl_debug || config.opt_rer_debug ) cerr << "c learned clause (after minimize): " << out_learnt << endl;
     // Find correct backtrack level:
     //
     // yet, the currently learned clause is not bi-asserting (bi-asserting ones could be turned into asserting ones by minimization
@@ -1534,6 +1540,7 @@ lbool Solver::search(int nof_conflicts)
 	  //
           // Simplify the set of problem clauses - but do not do it each iteration!
 	  if (simplifyIterations > config.opt_simplifyInterval && decisionLevel() == 0 && !simplify()) {
+	    if(config.opt_printDecisions > 0) cerr << "c ran simplify" << endl;
 	    simplifyIterations = 0;
 	    if( verbosity > 1 ) fprintf(stderr,"c last restart ## conflicts  :  %d %d \n",conflictC,decisionLevel());
 	    return l_False;
@@ -1550,6 +1557,7 @@ lbool Solver::search(int nof_conflicts)
 	    //
 	    // if this point is reached, check whether interleaved Clause Strengthening could be scheduled (have heuristics!)
 	    if( getExtendedResolution() && config.opt_interleavedClauseStrengthening && conflicts != lastICSconflicts && conflicts % config.opt_ics_interval == 0 ) {
+	      if(config.opt_printDecisions > 0) cerr << "c run ICS" << endl;
 	      if( !interleavedClauseStrengthening () ) { // TODO: have some schedule here!
 		return l_False;
 	      }
@@ -1587,6 +1595,7 @@ lbool Solver::search(int nof_conflicts)
             // if sufficiently many new top level units have been learned, trigger another LA!
 	    if( config.opt_laTopUnit != -1 && topLevelsSinceLastLa >= config.opt_laTopUnit && maxLaNumber != -1) { maxLaNumber ++; topLevelsSinceLastLa = 0 ; }
             if(config.hk && (maxLaNumber == -1 || (las < maxLaNumber)) ) { // perform LA hack -- only if max. nr is not reached?
+	      if(config.opt_printDecisions > 0) cerr << "c run LA" << endl;
 	      int hl = decisionLevel();
 	      if( hl == 0 ) if( --untilLa == 0 ) {laStart = true; if(config.dx)cerr << "c startLA" << endl;}
 	      if( laStart && hl == config.opt_laLevel ) {
@@ -3134,8 +3143,15 @@ bool Solver::interleavedClauseStrengthening()
     }
     if(config.opt_ics_debug) cerr << "c ICS return (modified) clause: " << d << endl;
     
-    if( d.size() > 1 ) attachClause( learnts[i] ); // unit clauses do not need to be added!
-    else if( d.size() == 1  ) { // if not already done, propagate this new clause!
+    if( d.size() > 1 ) {
+      if( config.opt_ics_debug ) {
+	d.sort();
+	for( int j = 0 ; j < d.size(); ++ j ) {
+	  for( int k = j+1; k < d.size(); ++ k ) assert( d[j] != d[k] && "do not have clauses with a duplicate literal!" );
+	}
+      }
+      attachClause( learnts[i] ); // unit clauses do not need to be added!
+    } else if( d.size() == 1  ) { // if not already done, propagate this new clause!
       if( value( d[0] ) == l_Undef ) {
 	uncheckedEnqueue(d[0]);
 	if( propagate() != CRef_Undef ) {
@@ -3163,12 +3179,20 @@ bool Solver::interleavedClauseStrengthening()
   
   // role back solver state again
   assert( oldVars == nVars() && "no variables should have been added during executing this algorithm!" );
+  assert( decisionLevel() == 0 && "after ICS should be on level 0" );
   
   for( int i = 0 ; i < trailLimCopy.size(); ++i ) {
     newDecisionLevel();
    // if(config.opt_ics_debug) cerr << "c enqueue " << trailCopy[ trailLimCopy[i] ]  << "@" << i+1 << endl;
-    if( value( trailCopy[ trailLimCopy[i] ] ) == l_False ) break; // stop here, because the next decision has to be different! (and the search will take care of that!)
-    else if( value( trailCopy[ trailLimCopy[i] ] ) == l_Undef ) uncheckedEnqueue( trailCopy[ trailLimCopy[i] ] );
+    if( value( trailCopy[ trailLimCopy[i] ] ) == l_False ) {
+      cancelUntil( decisionLevel () - 1 );
+      break; // stop here, because the next decision has to be different! (and the search will take care of that!)
+    } else if( value( trailCopy[ trailLimCopy[i] ] ) == l_Undef ) {
+      // cerr << "c enqueue next decision(" << i << ") idx=" << trailLimCopy[i] << " : "  << trailCopy[ trailLimCopy[i] ] << endl;
+      uncheckedEnqueue( trailCopy[ trailLimCopy[i] ] );
+      cancelUntil( decisionLevel () - 1 );	// do not add the same literal multiple times on the decision vector!
+      continue; // no need to propagate here!
+    }
     CRef confl = propagate();
     if( confl != CRef_Undef ) { // handle conflict. conflict at top-level -> return false!, else backjump, and continue with good state!
       cancelUntil( decisionLevel () - 1 );
@@ -3176,9 +3200,19 @@ bool Solver::interleavedClauseStrengthening()
 // 	cerr << "c during creating the trail again, an error has been found - cannot set level below the current value -- tried to enqueue decision literal " << trailCopy[ trailLimCopy[i] ] << " as " << i + 1 << "th decision " << endl;
 // 	return false;
 //       }
+      break; // interrupt re-building the trail
     }
   }
   polarityCopy.copyTo( polarity );
+  
+  if( config.opt_ics_debug ) {
+    cerr << "c after ICS decision levels" << endl;
+    for( int i = 0 ; i < trail_lim.size(); ++i ) {
+	cerr << "c dec[" << i + 1<< "] : " << trail[ trail_lim[i] ] << endl;
+    }
+    cerr << endl;
+  }
+  
   dynamicDataUpdates = oldDynUpdates; // reverse the state!
   lastICSconflicts = conflicts;
   // return as if nothing has happened

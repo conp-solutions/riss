@@ -447,7 +447,7 @@ rMaxInc  {1.05,1.1,1.2}[1.1]       # increase of the max. restart interval per r
 
 sInterval  {0,1,2,3}[0]           # how often to perform simplifications on level 0
 otfssMLDB  {2,16,30,64}[30]       # max. LBD of learnt clauses that are candidates for otfss
-learnDecP  {1,50,66,100}[100]       # if LBD of is > percent of decisionlevel, learn decision Clause (Knuth)
+learnDecP  {-1,50,66,100}[-1]       # if LBD of is > percent of decisionlevel, learn decision Clause (Knuth)
 hlaLevel  {1,5}[5]       # level of look ahead
 hlaMax  {25,50,75,256,1000}[50]       # maximum bound for frequency
 laEEp  {0,50,66,100}[0]       # add EE clauses, if less than p percent tests failed
