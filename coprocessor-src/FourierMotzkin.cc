@@ -655,11 +655,16 @@ bool FourierMotzkin::process()
 	  }
 	  
 	  int nl = 0,nr = 0,kl=0,kr=0;
+	  if( config.fm_debug_out > 2 ) cerr << "c compare literals on the right and the left!" << endl;
 	  while( nl < thisCard.ll.size() && nr < thisCard.lr.size() ) {
+	    if( config.fm_debug_out > 2 ) cerr << "c compare ll[" << nl << "] = " << thisCard.ll[nl] << " << with lr[" << nr << "]" << thisCard.lr[nr] << endl;
 	    if( thisCard.ll[nl] == thisCard.lr[nr] ) { // do not keep the same literal!
 	       nr ++; nl ++;
+	       if( config.fm_debug_out > 2 ) cerr << "c same - drop both!" << endl;
 	    } else if( thisCard.ll[nl] == ~thisCard.lr[nr] ) { // approximate, keep only the literal on the left side of the operator!
-	      thisCard.ll[kl++] = thisCard.ll[nl]; nl ++; // keep literal on the left side
+	      if( config.fm_debug_out > 2 ) cerr << "c complementary - keep right" << endl; // should keep the one on the right!
+	      thisCard.lr[kr++] = thisCard.lr[nr]; // keep literal on the left side
+	      nl ++; nr ++; // push both, because there are no complementary literals on one side only
 	    } else if( thisCard.ll[nl] < thisCard.lr[nr] ) {
 	      thisCard.ll[kl++] = thisCard.ll[nl]; nl ++; // keep this literal on the left side!
 	    } else {
@@ -782,7 +787,7 @@ bool FourierMotzkin::process()
 	    }
 	    if( config.fm_debug_out > 3 ) cerr << "c finished literal " << l << "( " << j << "/" << card.ll.size() << ")" << endl;
 	  }
-	  for( int j = 0 ; j < card.lr.size(); ++ j ) { // remove all lls from left hand!
+	  for( int j = 0 ; j < card.lr.size(); ++ j ) { // remove all lls from right hand!
 	    const Lit l = card.lr[j];
 	    // if( !heap.inHeap( toInt(l) ) ) heap.insert( toInt(l) ); // add literal of modified cards to heap again
 	    if( config.fm_debug_out > 3 ) cerr << "c check " << removeIndex << " in " << rightHands[toInt(l)] << endl;
@@ -1297,7 +1302,10 @@ void FourierMotzkin::deduceALOfromAmoAloMatrix(vector< FourierMotzkin::CardC >& 
 	  break;	// sufficient to find one!
 	}
       }
-      if( config.fm_debug_out > 2 ) cerr << "c collected " << data.clss.size() << " ALOs" << endl;
+      if( config.fm_debug_out > 2 ) { 
+	cerr << "c collected " << data.clss.size() << " relevant ALOs" << endl;
+	for( int k = 0; k < data.clss.size(); ++ k ) cerr << "c [" << k << "]: " << ca[data.clss[k]] << endl;
+      }
       if( searchSteps > config.opt_fmSearchLimit ) break;
       if( data.clss.size() < A.ll.size() ) continue;
       
