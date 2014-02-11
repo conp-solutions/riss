@@ -558,7 +558,7 @@ Lit Solver::pickBranchLit()
 
     const Lit returnLit =  next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
     if( decisionLevel() == 0 ) dontTrustPolarity ++;
-    return (config.opt_dontTrustPolarity && decisionLevel() == dontTrustPolarity) ? ~returnLit : returnLit;
+    return ( (returnLit != lit_Undef && config.opt_dontTrustPolarity && decisionLevel() == dontTrustPolarity) ? ~returnLit : returnLit );
 }
 
 
@@ -1594,6 +1594,18 @@ lbool Solver::search(int nof_conflicts)
 		topLevelsSinceLastLa = 0;
 	      }
 	    }
+	    
+            if (value(next) != l_Undef) { // LA might have set the value for the current decision variable, hence, have another decision here
+		next = lit_Undef;
+                // New variable decision:
+                decisions++;
+                next = pickBranchLit();
+                if (next == lit_Undef){
+		  if(verbosity > 1 ) fprintf(stderr,"c last restart ## conflicts  :  %d %d \n",conflictC,decisionLevel());
+		  // Model found:
+		  return l_True;
+		}
+            }
             
             // Increase decision level and enqueue 'next'
             newDecisionLevel();
@@ -1771,7 +1783,9 @@ bool Solver::analyzeNewLearnedClause(const CRef newLearnedClause)
 
 void Solver::fm( LONG_INT *p,bool mo){ // for negative, add bit patter 10, for positive, add bit pattern 01!
   for(Var v=0;v<nVars();++v) p[v]=(p[v]<<2); // move two bits, so that the next assignment can be put there
-if(!mo) for(int i=trail_lim[0];i<trail.size();++i){
+  int startValue = 0;
+  if( trail_lim.size() > 0 ) startValue = trail_lim[0]; // cannot be done with "?" operator!
+  if(!mo) for(int i=startValue;i<trail.size();++i){
     Lit l=trail[i];
     p[var(l)]+=(sign(l)?2:1);
   }
@@ -2038,6 +2052,9 @@ lbool Solver::initSolve(int solves)
       ) {
 	double* jw = new double [nVars()]; // todo: could be done in one array with a struct!	
 	int32_t* moms = new int32_t [nVars()];
+	memset( jw, 0, sizeof( double ) * nVars() );
+	memset( moms, 0, sizeof( int32_t ) * nVars() );
+	
 	for( int i = 0 ; i < clauses.size(); ++ i ) {
 	  const Clause& c = ca[clauses[i]];
 	  const double cs = 1 / ( pow(2.0, c.size()) );

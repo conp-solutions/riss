@@ -114,7 +114,7 @@ protected:
 	/** simplify the formula based on the literal stamps
 	 * 
 	 */
-	bool unhideSimplify(bool borderIteration);
+	bool unhideSimplify(bool borderIteration, bool& foundEE);
 };
 
 

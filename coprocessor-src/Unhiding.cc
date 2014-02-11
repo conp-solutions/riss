@@ -251,7 +251,7 @@ void Unhiding::sortStampTime( Lit* literalArray, const uint32_t size )
   }
 }
 
-bool Unhiding::unhideSimplify(bool borderIteration)
+bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
 {
   bool didSomething = false;
 
@@ -560,7 +560,8 @@ bool Unhiding::unhideSimplify(bool borderIteration)
 		  // check in BIG whether clause already exists
 		  if(! big.implies(clause[0], ~clause[1]) ) {
 		      uhdProbeEE ++;
-		      exit(37); // sample exit code to cnfdd
+		      data.addEquivalences(clause[0],~clause[1]); // do not add the clause, but the EE information!
+		      foundEE = true;
 		  }
 		} else {
 		  if( ( stampInfo[  toInt( ~bLit ) ].dsc < stampInfo[ toInt(  ~aLit ) ].dsc && stampInfo[ toInt(  ~aLit ) ].fin < stampInfo[ toInt(  ~bLit ) ].fin ) 
@@ -571,7 +572,8 @@ bool Unhiding::unhideSimplify(bool borderIteration)
 		    // check in BIG whether clause already exists
 		    if(! big.implies(clause[0], ~clause[1]) ) {
 			uhdProbeEE ++;
-			exit(37); // sample exit code to cnfdd
+			data.addEquivalences(clause[0],~clause[1]); // do not add the clause, but the EE information!
+			foundEE = true;
 		    }
 		  }
 		}
@@ -792,7 +794,7 @@ bool Unhiding::process (  )
     }
     
     // TODO check whether unit propagation reduces the clauses that are eliminated afterwards (should not)
-    if( data.ok() && unhideSimplify( iteration == 0 || iteration + 1 == unhideIter ) ) {
+    if( data.ok() && unhideSimplify( iteration == 0 || iteration + 1 == unhideIter, foundEE ) ) {
       if( data.ok() ) {
 	if( data.hasToPropagate() ) {
 	  if( config.opt_uhd_Debug > 4 ) cerr << "c [UHD-A] run UP before simplification" << endl;

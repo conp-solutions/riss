@@ -51,8 +51,8 @@ CP3Config::CP3Config() // add new options here!
   
  opt_cp3_vars  (_cat, "cp3_vars",   "variable limit to enable CP3", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
  opt_cp3_cls   (_cat, "cp3_cls",    "clause limit to enable CP3",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
- opt_cp3_ipvars(_cat, "cp3_ipvars", "variable limit to enable CP3 inprocessing", 1, IntRange(0, INT32_MAX), optionListPtr ),
- opt_cp3_ipcls (_cat, "cp3_ipcls",  "clause limit to enable CP3 inprocessing", 1, IntRange(0, INT32_MAX), optionListPtr ), 
+ opt_cp3_ipvars(_cat, "cp3_ipvars", "variable limit to enable CP3 inprocessing", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_cp3_ipcls (_cat, "cp3_ipcls",  "clause limit to enable CP3 inprocessing", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
   
   opt_unlimited   (_cat, "cp3_limited",    "Limits for preprocessing techniques", true, optionListPtr ),
   opt_randomized  (_cat, "cp3_randomized", "Steps withing preprocessing techniques are executed in random order", false, optionListPtr ),

@@ -92,7 +92,7 @@ CoreConfig::CoreConfig() // add new options here!
  opt_vsids_start ("MODS", "vsids-s", "interpolate between VSIDS and VMTF,start value", 1, DoubleRange(0, true, 1, true), optionListPtr ),
  opt_vsids_end("MODS", "vsids-e", "interpolate between VSIDS and VMTF, end value", 1, DoubleRange(0, true, 1, true), optionListPtr ),
  opt_vsids_inc("MODS", "vsids-i", "interpolate between VSIDS and VMTF, inc during update", 1, DoubleRange(0, true, 1, true), optionListPtr ),
- opt_vsids_distance("MODS", "vsids-d", "interpolate between VSIDS and VMTF, numer of conflits until next update", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_vsids_distance("MODS", "vsids-d", "interpolate between VSIDS and VMTF, numer of conflits until next update", INT32_MAX, IntRange(1, INT32_MAX), optionListPtr ),
  opt_var_act_bump_mode("MODS", "varActB", "bump activity of a variable (0 as usual, 1 relativ to cls size, 2 relative to LBD)", 0, IntRange(0, 2), optionListPtr ),
  opt_cls_act_bump_mode("MODS", "clsActB", "bump activity of a clause (0 as usual, 1 relativ to cls size, 2 relative to LBD)", 0, IntRange(0, 2), optionListPtr ),
  
@@ -137,9 +137,9 @@ CoreConfig::CoreConfig() // add new options here!
  opt_laEEp ("MODS", "laEEp", "add EE clauses, if less than p percent tests failed", 0, IntRange(0, 100), optionListPtr ),
  opt_laMaxEvery ("MODS", "hlaMax", "maximum bound for frequency", 50, IntRange(0, INT32_MAX) , optionListPtr ),
 #ifdef DONT_USE_128_BIT
- opt_laLevel ("MODS", "hlaLevel", "level of look ahead", 5, IntRange(0, 5) , optionListPtr ),
+ opt_laLevel ("MODS", "hlaLevel", "level of look ahead", 5, IntRange(1, 5) , optionListPtr ),
 #else
- opt_laLevel ("MODS", "hlaLevel", "level of look ahead", 5, IntRange(0, 5) , optionListPtr ), 
+ opt_laLevel ("MODS", "hlaLevel", "level of look ahead", 5, IntRange(1, 5) , optionListPtr ), 
 #endif
  opt_laEvery ("MODS", "hlaevery", "initial frequency of LA", 1, IntRange(0, INT32_MAX) , optionListPtr ),
  opt_laBound ("MODS", "hlabound", "max. nr of LAs (-1 == inf)", 4096, IntRange(-1, INT32_MAX) , optionListPtr ),

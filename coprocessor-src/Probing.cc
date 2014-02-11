@@ -345,14 +345,14 @@ bool Probing::prAnalyze( CRef confl )
 	   // learned enough uips - return. if none has been found, return false!
 	   if( config.pr_uip != -1 && uips > config.pr_uip ) {
 	     // reset seen literals
-	     for( int i = 0 ; i < data.lits.size(); ++ i ){
+	     for( int i = 1 ; i < data.lits.size(); ++ i ){
 	       solver.seen[ var(data.lits[i]) ] = 0;
 	       if( config.pr_debug_out > 2 ) cerr << "c reset seen ALLUIP for " << var(data.lits[i]) +1 << endl;
 	     }
 	     
 	     if( config.pr_debug_out > 2 ) {
 		  for ( Var i = 0 ; i < data.nVars(); ++ i ) 
-		    assert ( solver.seen[ i ] == 0 && "value has to be true!"); 
+		    assert ( solver.seen[ i ] == 0 && "value has to be false!"); 
 	     }
 	     
 	     return learntUnits.size() == 0 ? false : true;
