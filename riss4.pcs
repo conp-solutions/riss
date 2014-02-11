@@ -901,6 +901,6 @@ ics_window  {5050,10000,40000,80000,200000}[5050]       # run ICS after another 
 #
 # Execute to test:
 #
-# ./configurators/smac-v2.04.01-master-415/smac --numRun 0 --executionMode ROAR --wallClockLimit 100 --doValidation false --abortOnCrash true --scenarioFile ./scenarios/regressiontests-5s-1h.txt --algo "ruby ../scripts/generic_solver_wrapper.rb riss" --paramfile solvers/riss4/riss4.pcss
+#clear && clear && ./configurators/smac-v2.04.01-master-415/smac --numRun 0 --executionMode ROAR --wallClockLimit 100 --doValidation false --abortOnCrash true --scenarioFile ./scenarios/regressiontests-5s-1h.txt --algo "ruby ../scripts/generic_solver_wrapper.rb riss4" --paramfile solvers/riss4/riss4.pcs
 #
-
+#

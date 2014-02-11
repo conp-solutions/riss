@@ -255,7 +255,7 @@ protected:
 	
 	// constructor and comparators
 	/// by default, the watch holds a long clause
-        Watcher(CRef cr, Lit p, int type = 1) : clauseReference(cr), blockingLit( toInt(p) ), watchType(type) {}
+        Watcher(CRef cr, Lit p, int type) : clauseReference(cr), blockingLit( toInt(p) ), watchType(type) {}
         bool operator==(const Watcher& w) const { return clauseReference == w.clauseReference; }
         bool operator!=(const Watcher& w) const { return clauseReference != w.clauseReference; }
     };

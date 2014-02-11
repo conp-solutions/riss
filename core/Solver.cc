@@ -372,8 +372,8 @@ void Solver::attachClause(CRef cr) {
       watches[~c[1]].push(Watcher(cr, c[0], 0)); // add watch element for binary clause
     } else {
 //      cerr << "c DEBUG-REMOVE watch clause " << c << " in lists for literals " << ~c[0] << " and " << ~c[1] << endl;
-      watches[~c[0]].push(Watcher(cr, c[1]));
-      watches[~c[1]].push(Watcher(cr, c[0]));
+      watches[~c[0]].push(Watcher(cr, c[1], 1));
+      watches[~c[1]].push(Watcher(cr, c[0], 1));
     }
     if (c.learnt()) learnts_literals += c.size();
     else            clauses_literals += c.size(); }
@@ -1115,6 +1115,7 @@ CRef Solver::propagate()
 	    
 	}
 
+        // propagate longer clauses here!
         for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;)
 	{
 	    if( i->isBinary() ) { *j++ = *i++; continue; } // skip binary clauses (have been propagated before already!}
@@ -1138,15 +1139,16 @@ CRef Solver::propagate()
 
             // If 0th watch is true, then clause is already satisfied.
             Lit     first = c[0];
-            Watcher w     = Watcher(cr, first);
+	    assert( c.size() > 2 && "at this point, only larger clauses should be handled!" );
+            const Watcher& w     = Watcher(cr, first, 1); // updates the blocking literal
             if (first != blocker && value(first) == l_True) // satisfied clause
 	    {
 	      // consider variation only, if the improvement options are enabled!
 	      if( (config.opt_hack > 0 ) && reason(var(first)) != CRef_Undef) { // if its not a decision
 		const int implicantPosition = trailPos[ var(first) ];
 		bool fail = false;
-		for( int i = 1; i < c.size(); ++ i ) {
-		  if( value( c[i] ) != l_False || trailPos[ var(c[i]) ] > implicantPosition ) { fail = true; break; }
+		for( int k = 1; k < c.size(); ++ k ) {
+		  if( value( c[k] ) != l_False || trailPos[ var(c[k]) ] > implicantPosition ) { fail = true; break; }
 		}
 
 		// consider change only, if the order of positions is correct, e.g. impl realy implies p, otherwise, we found a cycle
@@ -1823,7 +1825,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   if(config.tb){ // use tabu
     bool same = true;
     for( int i = 0 ; i < config.opt_laLevel; ++i ){
-      for( int j = 0 ; j < config.opt_laEvery; ++j )
+      for( int j = 0 ; j < config.opt_laLevel; ++j )
 	if(var(d[i])!=var(hstry[j]) ) same = false; 
     }
     if( same ) { laTime = cpuTime() - laTime; return true; }
@@ -2768,7 +2770,9 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
       return rerFailed; // clauses in a row do not fit the window
     } else { // size fits, check lits!
       // sort, if more than 2 literals
+      cerr << "current learnt clause before sort: " << currentLearnedClause << endl;
       if( currentLearnedClause.size() > 2 ) sort( &( currentLearnedClause[2] ), currentLearnedClause.size() - 2  ); // do not touch the second literal in the clause! check it separately!
+      cerr << "current learnt clause after  sort: " << currentLearnedClause << endl;
       bool found = false;
       for( int i = 0 ; i < rerCommonLits.size(); ++ i ) {
 	if ( rerCommonLits[i] == currentLearnedClause[1] ) { found = true; break;}
@@ -2779,6 +2783,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	rerPatternReject ++;
 	return rerFailed;
       }
+      cerr << "c found match - check with more details" << endl;
       // Bloom-Filter
       int64_t thisLitSum = 0;
       for( int i = 0 ; i < currentLearnedClause.size(); ++ i ) {
@@ -2789,10 +2794,12 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	rerPatternBloomReject ++;
 	return rerFailed;
       }
+      cerr << "c found match - passed bloom filter" << endl;
       found = false; // for the other literals pattern
       // check whether all remaining literals are in the clause
       int i = 0; int j = 2;
       while ( i < rerCommonLits.size() && j < currentLearnedClause.size() ) {
+	cerr << "c compare " << rerCommonLits << " to " << currentLearnedClause[j] << " (or " << currentLearnedClause[1] << ")" << endl;
 	if( rerCommonLits[i] == currentLearnedClause[j] ) {
 	  i++; j++;
 	} else if ( rerCommonLits[i] == currentLearnedClause[1] ) {
@@ -2804,6 +2811,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	  return rerFailed;
 	}
       }
+      cerr << "c the two clauses match!" << endl;
       // clauses match
       rerLits.push( currentLearnedClause[0] ); // store literal
       
@@ -2839,6 +2847,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	  assert( rerFuseClauses[i] != reason( var( ca[rerFuseClauses[i]][0] ) ) && "from a RER-CDCL point of view, these clauses cannot be reason clause" );
 	  assert( rerFuseClauses[i] != reason( var( ca[rerFuseClauses[i]][1] ) ) && "from a RER-CDCL point of view, these clauses cannot be reason clause" );
 	  // ca[rerFuseClauses[i]].mark(1); // mark to be deleted!
+	  cerr << "c remove clause (" << i << ")[" << rerFuseClauses[i] << "] " << ca[ rerFuseClauses[i] ] << endl;
 	  removeClause(rerFuseClauses[i]); // drop this clause!
 	}
 	
@@ -2848,7 +2857,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	  oc[1] = rerLits[i];
 	  CRef icr = ca.alloc(oc, config.opt_rer_as_learned); // add clause as non-learned clause 
 	  ca[icr].setLBD(1); // all literals are from the same level!
-	  if( config.opt_rer_debug) cerr << "c add clause " << ca[icr] << endl;
+	  if( config.opt_rer_debug) cerr << "c add clause [" << icr << "]" << ca[icr] << endl;
 	  nbDL2++; nbBin ++; // stats
 	  if( config.opt_rer_as_learned ) { // add clause
 	    learnts.push(icr);
@@ -2864,7 +2873,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	  { const Lit tmp = oc[pos]; oc[pos] = oc[1]; oc[1] = tmp; } // swap highest level literal to second position
 	  CRef icr = ca.alloc(oc, config.opt_rer_as_learned); // add clause as non-learned clause 
 	  ca[icr].setLBD(rerLits.size()); // hard to say, would have to be calculated ... TODO
-	  if( config.opt_rer_debug) cerr << "c add clause " << ca[icr] << endl;
+	  if( config.opt_rer_debug) cerr << "c add clause [" << icr << "] " << ca[icr] << endl;
 	  if( config.opt_rer_as_learned ) { // add clause
 	    learnts.push(icr);
 	    if( dynamicDataUpdates ) claBumpActivity(ca[icr], (config.opt_cls_act_bump_mode == 0 ? 1 : ( config.opt_cls_act_bump_mode == 1 ? oc.size() : rerLits.size() )) );
@@ -2966,7 +2975,7 @@ void Solver::disjunctionReplace( Lit p, Lit q, const Lit x, bool inLearned, bool
 	if( l == p || l == q ) break;
 	else if( l == ~p || l == ~q ) { firstHit = -1; break;}
       }
-      if( firstHit == -1 ) continue; // do not handle this clause - tautology found
+      if( firstHit == -1 || firstHit == c.size() ) continue; // do not handle this clause - tautology found, or no hit
 
       if( c[firstHit] == q ) { const Lit tmp = q; q = p; p = tmp; }
       int secondHit = firstHit + 1;
@@ -2978,6 +2987,9 @@ void Solver::disjunctionReplace( Lit p, Lit q, const Lit x, bool inLearned, bool
       if( secondHit == -1 || secondHit == c.size() ) continue; // second literal not found, or complement of other second literal found
 
       // found both literals in the clause ...
+      cerr << "c rewrite clause [" << cls[i] << "] : " << c << endl;
+      cerr << "c hit1: " << c[firstHit] << endl;
+      cerr << "c hit2: " << c[secondHit] << endl;
       if( c.size() == 2 ) {
 	assert( decisionLevel() == 0 && "can add a unit only permanently, if we are currently on level 0!" );
 	removeClause( cls[i] );
@@ -2987,7 +2999,7 @@ void Solver::disjunctionReplace( Lit p, Lit q, const Lit x, bool inLearned, bool
 	// rewrite clause
 	// reattach clause if neccesary
 	assert( (firstHit != 0 || decisionLevel () == 0 ) && "a reason clause should not be rewritten, such that the first literal is moved!" );
-	if( firstHit < 2 ) detachClause( cls[i], true ); // not always necessary to remove the watches!
+	if( firstHit < 2 || c.size() == 3 ) detachClause( cls[i], true ); // not always necessary to remove the watches!
 	else {
 	  if( c.learnt() ) learnts_literals --;
 	  else clauses_literals--;
@@ -2995,8 +3007,9 @@ void Solver::disjunctionReplace( Lit p, Lit q, const Lit x, bool inLearned, bool
 	c[firstHit] = x;
 	c[secondHit] = c[ c.size() - 1 ];
 	c.shrink(1);
+	cerr << "c rewrite clause into " << c << endl;
 	assert( c.size() > 1 && "do not produce unit clauses!" );
-	if( firstHit < 2 ) attachClause( cls[i] );
+	if( firstHit < 2 || c.size() == 2 ) attachClause( cls[i] ); // attach the clause again with the corrected watcher
       }
 
     }
@@ -3653,6 +3666,7 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
   // when this method is called, backjumping has been done already!
   rerReturnType rerClause = rerFailed;
   if( doAddVariablesViaER && !isBiAsserting ) { // be able to block adding variables during search by the solver itself, do not apply rewriting to biasserting clauses!
+    assert( !isBiAsserting && "does not work if isBiasserting is changing something afterwards!" );
     extResTime.start();
     bool ecl = extendedClauseLearning( learnt_clause, nblevels, extraInfo );
     if( ! ecl ) { // only if not ecl, rer could be tested!
@@ -3661,7 +3675,8 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
       resetRestrictedExtendedResolution(); // otherwise, we just failed ... TODO: could simply jump over that clause ...
     }
     extResTime.stop();
-  }
+  } else if ( isBiAsserting ) resetRestrictedExtendedResolution(); // do not have two clauses in a row for rer, if one of them is bi-asserting!
+  
 
   lbdQueue.push(nblevels);
   sumLBD += nblevels;
@@ -3759,11 +3774,12 @@ lbool Solver::otfssProcessClauses(int backtrack_level)
 	  assert( level(var(c[1]) ) == l1 && "if there is a unit literal, this literal is the other watched literal!" );
 	  assert( level(var(c[2]) ) >= l2 && "the second literal can be used as other watched literal for the reduced clause" );
 	  // remove from watch list of first literal
-	  if( config.opt_fast_rem ) removeUnSort(watches[~c[0]], Watcher(otfssCls[i], c[1])); // strict fast deletion?
-	  else remove(watches[~c[0]], Watcher(otfssCls[i], c[1])); // strict deletion!
+	  if( config.opt_fast_rem ) removeUnSort(watches[~c[0]], Watcher(otfssCls[i], c[1],1)); // strict fast deletion?
+	  else remove(watches[~c[0]], Watcher(otfssCls[i], c[1], 1)); // strict deletion, type of watcher is not important
 	  // add clause to list of third literal
-	  watches[~c[2]].push(Watcher(otfssCls[i], c[1]));
 	  c[0] = c[1]; c[1] = c[2]; c.removePositionUnsorted(2); // move the two literals with the highest levels forward!
+	  // move the two literals from the two highest levels forward!
+	  watches[~c[1]].push( Watcher(otfssCls[i], c[0], 1) ); // this clause is always a long clause
 	} else if( c.size() == 2 ) { // clause becomes unit, no need to attach it again!
 	  assert( otfssBtLevel == 0 && "if we found a single unit, backtracking has to be performed to level 0!" );
 	  const Lit tmp = c[0]; c[0] = c[1]; c[1] = tmp; // set the clause to be able to be removed adequately - unit will be enqued anyways!
@@ -3775,7 +3791,7 @@ lbool Solver::otfssProcessClauses(int backtrack_level)
 	} else { // c.size() == 3
 	  detachClause(otfssCls[i],true); // remove from watch lists for long clauses!
 	  c[0] = c[1]; c.removePositionUnsorted(1); // shrink clause to binary clause!
-	  attachClause(otfssCls[i]); // add to watch list for binary clauses (no extra constraints on clause literals!)
+	  attachClause(otfssCls[i]); // add to watch list for binary clauses (no extra constraints on clause literals!) // TODO: could be improved
 	  otfssBinaries++;
 	}
 	addCommentToProof("remove literal by OTFSS");

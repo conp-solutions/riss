@@ -214,7 +214,7 @@ CRef Probing::prPropagate( bool doDouble )
 
             // If 0th watch is true, then clause is already satisfied.
             Lit     first = c[0];
-            Solver::Watcher w     = Solver::Watcher(cr, first);
+            const Solver::Watcher w     = Solver::Watcher(cr, first, 1); // always a large clause
             if (first != blocker && solver.value(first) == l_True){
                 *j++ = w; continue; }
 
