@@ -8,6 +8,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/CoprocessorTypes.h"
 
 #include "coprocessor-src/Technique.h"
+#include "coprocessor-src/Propagation.h"
 
 using namespace Minisat;
 using namespace std;
@@ -17,10 +18,12 @@ namespace Coprocessor {
 class Resolving  : public Technique
 {
   CoprocessorData& data;
+  Propagation& propagation;            /// object that takes care of unit propagation
+  
   vector<int> seen; // remembers how many clauses per variable have been processed already
   
 public:
-  Resolving(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data);
+  Resolving(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation);
 
   bool process( bool post = false);
 

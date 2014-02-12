@@ -7,9 +7,10 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 using namespace Coprocessor;
 
 
-Resolving::Resolving(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data)
+Resolving::Resolving(CP3Config& _config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation)
 : Technique(_config, _ca,_controller)
 , data(_data)
+, propagation(_propagation)
 , processTime(0)
 , addedTern2(0)
 , addedTern3(0)
@@ -50,6 +51,11 @@ bool Resolving::process(bool post)
       if( !data.unlimited() && ( data.nVars() > config.opt_addRedBins_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_addRedBins_cls ) ) return false;
       addRedundantBinaries(); 
     }
+  }
+  
+  if( data.hasToPropagate() ) {
+    propagation.process(data,true);
+    modifiedFormula = modifiedFormula || propagation.appliedSomething(); 
   }
 }
 

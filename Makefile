@@ -8,7 +8,7 @@
 CORE      = ../core
 MTL       = ../mtl
 VERSION   = 
-MYCFLAGS  = -I.. -I. -I$(MTL) -I$(CORE) $(ARGS) -Wall -Wextra -ffloat-store -Wno-unused-parameter -Wno-sign-compare -Wno-parentheses $(VERSION)
+MYCFLAGS  = -I.. -I. -I$(MTL) -I$(CORE) $(ARGS) -Wall -Wextra -ffloat-store -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unused-parameter -Wno-sign-compare -Wno-parentheses $(VERSION)
 LIBRT     = -lrt
 MYLFLAGS  = -lpthread $(LIBRT) $(ARGS)
 

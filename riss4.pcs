@@ -391,7 +391,7 @@ rer-window  {2,3}[2]       # number of clauses to collect before fuse
 rer-maxLBD  {1,6,15,30,2147483647}[2147483647]       # maximum LBD to perform rer
 rer-minLBD  {1,6,15,30}[1]       # minimum LBD to perform rer
 rer-max-size  {2,15,30,2147483647}[2147483647]       # maximum size of learned clause to perform rer
-rer-min-size  {2,15,30}[2]       # minimum size of learned clause to perform rer
+rer-min-size  {2,6,15,30}[2]       # minimum size of learned clause to perform rer
 rer-new-act  {0,1,2,3,4}[0]       # how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean
 
 
@@ -564,8 +564,6 @@ rer-new-act   | rer in   {yes}
 #
 #
 
-inc-inp        | enabled_cp3 in   {yes}
-randInp        | enabled_cp3 in   {yes}
 inprocess      | enabled_cp3 in   {yes}
 cp3_randomized | enabled_cp3 in   {yes}
 cp3_limited    | enabled_cp3 in   {yes}
@@ -573,6 +571,8 @@ cp3_inp_cons   | enabled_cp3 in   {yes}
 cp3_iters      | enabled_cp3 in   {yes}
 cp3_vars       | enabled_cp3 in   {yes}
 cp3_cls        | enabled_cp3 in   {yes}
+inc-inp        | inprocess in   {yes}
+randInp        | inprocess in   {yes}
 cp3_ipvars     | inprocess in   {yes}
 cp3_ipcls      | inprocess in   {yes}
 
@@ -874,8 +874,47 @@ xorMaxSize   | xor in {yes}
 #  FF       OOOO0  RR   RR BBBBBB  IIIII DDDDDD  DDDDDD  EEEEEEE NN   NN 
 #
 
-ics_processLast  {5050,10000,20000,50000}[5050]       # process this number of learned clauses (analyse, reject if quality too bad!)
-ics_window  {5050,10000,40000,80000,200000}[5050]       # run ICS after another N conflicts
+{vsids-s=1.0,vsids-e=0.9} 		               # start should be less than end
+{vsids-s=0.9,vsids-e=0.9,vsids-i=0.0001}     # should not tune vsids-i, if start and end are equal
+{vsids-s=0.9,vsids-e=0.9,vsids-i=0.001}      #
+{vsids-s=0.9,vsids-e=0.9,vsids-d=1000}       #
+{vsids-s=0.9,vsids-e=0.9,vsids-d=5000}       #
+{vsids-s=0.9,vsids-e=0.9,vsids-d=20000}      #
+{vsids-s=0.9,vsids-e=0.9,vsids-d=2147483647} #
+
+
+{var-decay-b=0.75, var-decay-e=0.6}          # start value should be less equal
+{var-decay-b=0.85 , var-decay-e=0.6     }          # start value should be less equal
+{var-decay-b=0.85 , var-decay-e=0.75     }          # start value should be less equal
+{var-decay-b=0.95     , var-decay-e=0.6  }          # start value should be less equal
+{var-decay-b=0.95     , var-decay-e=0.75 }          # start value should be less equal
+{var-decay-b=0.95     , var-decay-e=0.85 }          # start value should be less equal
+{var-decay-b=0.99 , var-decay-e=0.6  }          # start value should be less equal
+{var-decay-b=0.99 , var-decay-e=0.75 }          # start value should be less equal
+{var-decay-b=0.99 , var-decay-e=0.85 }          # start value should be less equal
+{var-decay-b=0.99 , var-decay-e=0.95 }          # start value should be less equal
+
+{var-decay-b=0.99 , var-decay-e=0.99, var-decay-i=0.001} # do not tune -i if the others are equal!
+{var-decay-b=0.95 , var-decay-e=0.95, var-decay-i=0.001}
+{var-decay-b=0.85 , var-decay-e=0.85, var-decay-i=0.001}
+{var-decay-b=0.75 , var-decay-e=0.75, var-decay-i=0.001}
+{var-decay-b=0.6 , var-decay-e=0.6  , var-decay-i=0.001}
+{var-decay-b=0.99 , var-decay-e=0.99, var-decay-i=0.99}
+{var-decay-b=0.95 , var-decay-e=0.95, var-decay-i=0.99}
+{var-decay-b=0.85 , var-decay-e=0.85, var-decay-i=0.99}
+{var-decay-b=0.75 , var-decay-e=0.75, var-decay-i=0.99}
+{var-decay-b=0.6 , var-decay-e=0.6  , var-decay-i=0.99}
+
+{var-decay-b=0.99 , var-decay-e=0.99, var-decay-d=10000} # do not tune -d if the others are equal!
+{var-decay-b=0.95 , var-decay-e=0.95, var-decay-d=10000}
+{var-decay-b=0.85 , var-decay-e=0.85, var-decay-d=10000}
+{var-decay-b=0.75 , var-decay-e=0.75, var-decay-d=10000}
+{var-decay-b=0.6 , var-decay-e=0.6  , var-decay-d=10000}
+{var-decay-b=0.99 , var-decay-e=0.99, var-decay-d=15000}
+{var-decay-b=0.95 , var-decay-e=0.95, var-decay-d=15000}
+{var-decay-b=0.85 , var-decay-e=0.85, var-decay-d=15000}
+{var-decay-b=0.75 , var-decay-e=0.75, var-decay-d=15000}
+{var-decay-b=0.6 , var-decay-e=0.6  , var-decay-d=15000}
 
 {pr-probe=no,pr-vivi=no,probe=yes} # if probing is enabled, at least probing or vivification have to be used!
 

@@ -564,7 +564,7 @@ protected:
   
   int rs_partialRestarts, rs_savedDecisions, rs_savedPropagations, rs_recursiveRefinements; // stats for partial restarts
   /** based no the current values of the solver attributes, return a decision level to jump to as restart 
-   * @return the decision level to jump to
+   * @return the decision level to jump to, or -1, if we have actually solved the problem already
    */
   int getRestartLevel();
   

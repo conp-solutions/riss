@@ -8,12 +8,13 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 using namespace Coprocessor;
 
 Circuit::Circuit(CP3Config& _config, ClauseAllocator& _ca)
-: config( _config), ca (_ca)
+: config( _config), ca (_ca), big(0)
 {}
 
 void Circuit::extractGates(CoprocessorData& data, vector< Gate >& gates)
 {
   // create BIG
+  if( big != 0 ) delete big;
   big = new BIG( );
   big->create(ca,data.nVars(),data.getClauses(),data.getLEarnts());
   
@@ -25,6 +26,14 @@ void Circuit::extractGates(CoprocessorData& data, vector< Gate >& gates)
       for ( int p = 0 ; p < 2; ++ p ) {
 	const Lit l = mkLit( v, p==1 );
 	cerr << "c " << l << "  [" << big->getStart(l) << ", " << big->getStop(l) << "]" << endl;
+      }
+    }
+    for( Var v =  0 ; v < data.nVars(); ++ v ) {
+      for ( int p = 0 ; p < 2; ++ p ) {
+	const Lit l = mkLit( v, p==1 );
+	cerr << "c " << l << " -> ";
+	for( int i = 0 ; i < big->getSize(l); ++ i ) cerr << " " << big->getArray(l)[i] ;
+	cerr << endl;
       }
     }
   }

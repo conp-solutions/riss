@@ -1240,6 +1240,7 @@ CRef Solver::propagate()
 		      addToProof(c,true);  // remove this clause from the proof, if not done already
 		    }
 		    c.mark(1); 
+		    if( config.opt_printLhbr ) cerr << "c LHBR deletes clause " << c << " because its subsumed by another clause" << endl;
 		    // the bigger clause is not needed any more
 		    lhbr_sub ++;
 		  } else { // no subsumption
@@ -1663,8 +1664,18 @@ bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
 	  conflictsSinceLastRestart = 0;
 	  lbdQueue.fastclear();
 	  progress_estimate = progressEstimate();
-	  const int restartLevel = config.opt_restart_level == 0 ? 0 : getRestartLevel(); // use matching trail, or reused trail mechanism!
-	  cancelUntil(restartLevel);
+	  int partialLevel = 0;
+	  if( config.opt_restart_level != 0 ) {
+	    partialLevel = getRestartLevel();
+	    if( partialLevel == -1 ) {
+	      if( verbosity > 0 ) {
+		static bool didIt = false;
+		if( !didIt ) { cerr << "c prevent search from restarting while we have SAT" << endl; didIt = false;}
+	      }
+	      return false; // we found that we should not restart, because we have a (partial) model
+	    }
+	  }
+	  cancelUntil(partialLevel);
 	  return true;
 	}
       }
@@ -1676,9 +1687,18 @@ bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
 	    nof_conflicts += config.opt_agility_limit_increase;
 	  } else {
 	    progress_estimate = progressEstimate();
-	    const int restartLevel = config.opt_restart_level == 0 ? 0 : getRestartLevel(); // use matching trail, or reused trail mechanism!
-	    cancelUntil(restartLevel);
-	    // cerr << "c restart after " << conflictC << " conflicts - limit: " << nof_conflicts << endl;
+	    int partialLevel = 0;
+	    if( config.opt_restart_level != 0 ) {
+	      partialLevel = getRestartLevel();
+	      if( partialLevel == -1 ) {
+		if( verbosity > 0 ) {
+		  static bool didIt = false;
+		  if( !didIt ) { cerr << "c prevent search from restarting while we have SAT" << endl; didIt = false;}
+		}
+		return false; // we found that we should not restart, because we have a (partial) model
+	      }
+	    }
+	    cancelUntil(partialLevel);
 	    return true;
 	  }
       }
@@ -2585,7 +2605,8 @@ bool Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned 
   }
   if( config.opt_ecl_debug) cerr << "c after trail lim: " << trail_lim << endl;
   
-  if( config.opt_ecl_full && !config.opt_ecl_as_learned && config.opt_ecl_as_replaceAll > 0 ) { // replace disjunction everywhere in the formula
+  // replace disjunction everywhere in the formula, before adding the definition of the gate
+  if( config.opt_ecl_full && !config.opt_ecl_as_learned && config.opt_ecl_as_replaceAll > 0 ) { 
     // here, the disjunction could also by replaced by ~x in the whole formula
     disjunctionReplace( l1, l2, mkLit(x,true), config.opt_ecl_as_replaceAll > 1, false);
   }
@@ -2686,13 +2707,14 @@ int Solver::getRestartLevel()
 	repeatReusedTrail = false; // get it right this time?
 	
 	// Activity based selection
-	while (next == var_Undef || value(next) != l_Undef || !decision[next])
+	while (next == var_Undef || value(next) != l_Undef || !decision[next]) // found a yet unassigned variable with the highest activity among the unassigned variables
 	    if (order_heap.empty()){
 		next = var_Undef;
 		break;
 	    } else
-		next = order_heap.removeMin();
+		next = order_heap.removeMin(); // get next element
 	
+	if( next == var_Undef ) return -1; // we cannot compare to any other variable, hence, we have SAT already
 	// based on variable next, either check for reusedTrail, or matching Trail!
 	// activity of the next decision literal
 	const double cmpActivity = activity[ next ];
@@ -2851,6 +2873,12 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	  removeClause(rerFuseClauses[i]); // drop this clause!
 	}
 	
+	// rewrite the current formula before adding the definition of the new variable!
+	if( config.opt_rer_full && !config.opt_rer_as_learned ) {
+	  // here, the disjunction could also by replaced by ~x in the whole formula, if the window is binary
+	  if ( config.opt_rer_as_replaceAll > 0 && rerLits.size() == 2 ) disjunctionReplace( ~rerLits[0], ~rerLits[1], mkLit(x,true), (config.opt_rer_as_replaceAll > 1), false); // if there would be a binary clause, this case would not happen
+	}
+	
 	// we do not need a reason here, the new learned clause will do!
 	oc.clear(); oc.push( mkLit(x,true) ); oc.push(lit_Undef);
 	for( int i = 0 ; i < rerLits.size(); ++ i ) {
@@ -2879,10 +2907,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	    if( dynamicDataUpdates ) claBumpActivity(ca[icr], (config.opt_cls_act_bump_mode == 0 ? 1 : ( config.opt_cls_act_bump_mode == 1 ? oc.size() : rerLits.size() )) );
 	  } else clauses.push(icr);
 	  attachClause(icr); // at least the first two literals should be unassigned!
-	  if( !config.opt_rer_as_learned ) {
-	    // here, the disjunction could also by replaced by ~x in the whole formula, if the window is binary
-	    if ( config.opt_rer_as_replaceAll > 0 && rerLits.size() == 2 ) disjunctionReplace( ~rerLits[0], ~rerLits[1], mkLit(x,true), (config.opt_rer_as_replaceAll > 1), false); // if there would be a binary clause, this case would not happen
-	  }
+	  
 	}
 	// set the activity of the new variable
 	double newAct = 0;
@@ -2986,10 +3011,11 @@ void Solver::disjunctionReplace( Lit p, Lit q, const Lit x, bool inLearned, bool
       }
       if( secondHit == -1 || secondHit == c.size() ) continue; // second literal not found, or complement of other second literal found
 
+      assert( firstHit < secondHit && "if the clause will be rewritten, then the first position has to be before the second" );
       // found both literals in the clause ...
        if( config.opt_rer_debug ) cerr << "c rewrite clause [" << cls[i] << "]@" << decisionLevel() << " : " << c << endl;
-       if( config.opt_rer_debug ) cerr << "c hit1: " << c[firstHit] << "=" << (l_True == value(c[firstHit])) << "@" << level(var(c[firstHit])) << endl;
-       if( config.opt_rer_debug ) cerr << "c hit2: " << c[secondHit] << "=" << (l_True == value(c[secondHit])) << "@" << level(var(c[secondHit])) << endl;
+       if( config.opt_rer_debug ) cerr << "c hit1: " << c[firstHit] << " undef=" << (l_Undef == value(c[firstHit])) << "@" << level(var(c[firstHit])) << endl;
+       if( config.opt_rer_debug ) cerr << "c hit2: " << c[secondHit] << " undef=" << (l_Undef == value(c[secondHit])) << "@" << level(var(c[secondHit])) << endl;
       if( c.size() == 2 ) {
 	assert( decisionLevel() == 0 && "can add a unit only permanently, if we are currently on level 0!" );
 	removeClause( cls[i] );
@@ -2999,7 +3025,10 @@ void Solver::disjunctionReplace( Lit p, Lit q, const Lit x, bool inLearned, bool
 	// rewrite clause
 	// reattach clause if neccesary
 	// assert( (leve(var(firstHit)) > decisionLevel() || decisionLevel () == 0 ) && "a reason clause should not be rewritten, such that the first literal is moved!" );
-	if( firstHit < 2 || c.size() == 3 ) detachClause( cls[i], true ); // not always necessary to remove the watches!
+	if( firstHit < 2 || c.size() == 3 ) { 
+	  if( config.opt_rer_debug ) cerr << "c dettach clause [" << cls[i] << "] : " << ca[cls[i]] << endl;
+	  detachClause( cls[i], true ); // not always necessary to remove the watches!
+	}
 	else {
 	  if( c.learnt() ) learnts_literals --;
 	  else clauses_literals--;
@@ -3007,9 +3036,12 @@ void Solver::disjunctionReplace( Lit p, Lit q, const Lit x, bool inLearned, bool
 	c[firstHit] = x;
 	c[secondHit] = c[ c.size() - 1 ];
 	c.shrink(1);
-// 	cerr << "c rewrite clause into " << c << endl;
+	if( config.opt_rer_debug ) cerr << "c rewrite clause into " << c << endl;
 	assert( c.size() > 1 && "do not produce unit clauses!" );
-	if( firstHit < 2 || c.size() == 2 ) attachClause( cls[i] ); // attach the clause again with the corrected watcher
+	if( firstHit < 2 || c.size() == 2 ) {
+	  if( config.opt_rer_debug ) cerr << "c attach clause [" << cls[i] << "] : " << ca[cls[i]] << endl;
+	  attachClause( cls[i] ); // attach the clause again with the corrected watcher
+	}
       }
 
     }

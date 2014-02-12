@@ -66,6 +66,8 @@ bool RATElimination::process()
   data.ma.nextStep();
   
   // re-setup solver!
+  const bool oldLhbrAllow = solver.lhbrAllowed;
+  solver.lhbrAllowed = false;
   reSetupSolver();
   
   do {
@@ -94,7 +96,7 @@ bool RATElimination::process()
 
       // check whether a clause is a tautology wrt. the other clauses
       const Lit left = ~right; // complement
-      if( config.opt_rate_debug > 0 ) cerr << "c RATE work on literal " << right << " with " << data.list(right).size() << " clauses " << endl;
+      if( config.opt_rate_debug > 0 ) cerr << endl << "c RATE work on literal " << right << " with " << data.list(right).size() << " clauses " << endl;
       data.lits.clear(); // used for covered literal elimination
       for( int i = 0 ; i < data.list(right).size(); ++ i ) 
       {
@@ -103,7 +105,7 @@ bool RATElimination::process()
 	if( c.size() < config.rate_minSize ) continue; // ignore "small" clauses
 	
 	rateCandidates ++;
-	if( config.opt_rate_debug > 0 ) cerr << "c test clause " << c << endl;
+	if( config.opt_rate_debug > 0 ) cerr << endl << "c test clause " << c << endl;
 	// literals to propagate
 	data.lits.clear();
 	for( int j = 0 ; j < c.size(); ++ j) if( c[j] != right ) data.lits.push_back( c[j] );
@@ -194,6 +196,7 @@ bool RATElimination::process()
   
   } while ( nextRoundLits.size() > 0 && (data.unlimited() || config.rate_Limit > rateSteps) && !data.isInterupted() ); // repeat until all literals have been seen until a fixed point is reached!
 
+  solver.lhbrAllowed = oldLhbrAllow; // restore lhbr state!
   // clean solver!
   cleanSolver();
   
