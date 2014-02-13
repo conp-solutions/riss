@@ -375,6 +375,8 @@ class BIG
    */
   uint32_t *start; // when has to literal been touch when scanning the BIG
   uint32_t *stop;  // when has to literal been finished during scanning
+  
+  uint32_t duringCreationVariables; // number of variables for the last construction call
 
   uint32_t stampLiteral( const Lit literal, uint32_t stamp, int32_t* index, deque< Lit >& stampQueue );
   void shuffle( Lit* adj, int size ) const;
@@ -390,6 +392,9 @@ public:
   /** recreate the big after the formula changed */
   void recreate( ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list);
   void recreate( ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2);
+  
+  /** return the number of variables that are known by the BIG */
+  uint32_t getVars() const { return duringCreationVariables; }
   
   /** removes an edge from the graph again */
   void removeEdge(const Lit l0, const Lit l1 );
@@ -1627,6 +1632,7 @@ inline BIG::~BIG()
 
 inline void BIG::create(ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list)
 {
+  duringCreationVariables = nVars; // memorize the number of present variables
   sizes = (int*) malloc( sizeof(int) * nVars * 2 );
   memset(sizes,0, sizeof(int) * nVars * 2 );
 
@@ -1666,6 +1672,7 @@ inline void BIG::create(ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef 
 
 inline void BIG::create(ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2)
 {
+  duringCreationVariables = nVars; // memorize the number of present variables
   sizes = (int*) malloc( sizeof(int) * nVars * 2 );
   memset(sizes,0, sizeof(int) * nVars * 2 );
 
@@ -1711,6 +1718,7 @@ inline void BIG::create(ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef 
 
 inline void BIG::recreate( ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list)
 {
+  duringCreationVariables = nVars; // memorize the number of present variables
   sizes = sizes == 0 ? (int*) malloc( sizeof(int) * nVars * 2 ) : (int*) realloc( sizes, sizeof(int) * nVars * 2 );
   memset(sizes,0, sizeof(int) * nVars * 2 );
 
@@ -1752,6 +1760,7 @@ inline void BIG::recreate( ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CR
 
 inline void BIG::recreate( ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2)
 {
+  duringCreationVariables = nVars; // memorize the number of present variables
   sizes = sizes == 0 ? (int*) malloc( sizeof(int) * nVars * 2 ) : (int*) realloc( sizes, sizeof(int) * nVars * 2 );
   memset(sizes,0, sizeof(int) * nVars * 2 );
 
@@ -1799,7 +1808,8 @@ inline void BIG::recreate( ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CR
 
 inline void BIG::removeDuplicateEdges(const uint32_t nVars)
 {
-  for( Var v = 0 ; v < nVars; ++v ) {
+  const uint32_t maxVar = duringCreationVariables < nVars ? duringCreationVariables : nVars; // use only known variables
+  for( Var v = 0 ; v < maxVar; ++v ) {
     for( int p = 0 ;p < 2 ; ++ p ) {
       const Lit l = mkLit(v,p==1);
       if( getSize(l) == 0 ) continue; // not for empty lists!
@@ -1815,7 +1825,8 @@ inline void BIG::removeDuplicateEdges(const uint32_t nVars)
 }
 
 inline void BIG::sort(const uint32_t nVars){
-  for( Var v = 0 ; v < nVars; ++v ) {
+  const uint32_t maxVar = duringCreationVariables < nVars ? duringCreationVariables : nVars; // use only known variables
+  for( Var v = 0 ; v < maxVar; ++v ) {
     for( int p = 0 ;p < 2 ; ++ p ) {
       const Lit l = mkLit(v,p==1);
       if( getSize(l) == 0 ) continue; // not for empty lists!
@@ -1853,42 +1864,43 @@ inline void BIG::removeEdge(const Lit l0, const Lit l1)
 
 inline Lit* BIG::getArray(const Lit l)
 {
-  return big[ toInt(l) ];
+  return var(l) < duringCreationVariables ? big[ toInt(l) ] : 0;
 }
 
 inline const Lit* BIG::getArray(const Lit l) const
 {
-  return big[ toInt(l) ];
+  return var(l) < duringCreationVariables ? big[ toInt(l) ] : 0;
 }
 
 inline int BIG::getSize(const Lit l) const
 {
-  return sizes[ toInt(l) ];
+  return var(l) < duringCreationVariables ? sizes[ toInt(l) ] : 0;
 }
 
 inline void BIG::generateImplied( CoprocessorData& data )
 {
     uint32_t stamp = 1 ;
+    const uint32_t maxVar = duringCreationVariables < data.nVars() ? duringCreationVariables : data.nVars(); // use only known variables
 
-    if( start == 0 ) start = (uint32_t*) malloc( data.nVars() * sizeof(uint32_t) * 2 );
-    else start = (uint32_t*)realloc( start, data.nVars() * sizeof(uint32_t) * 2 );
+    if( start == 0 ) start = (uint32_t*) malloc( maxVar * sizeof(uint32_t) * 2 );
+    else start = (uint32_t*)realloc( start, maxVar * sizeof(uint32_t) * 2 );
 
-    if( stop == 0 ) stop = (uint32_t*) malloc( data.nVars() * sizeof(uint32_t) * 2 );
-    else stop = (uint32_t*)realloc( stop, data.nVars() * sizeof(int32_t) * 2 );
+    if( stop == 0 ) stop = (uint32_t*) malloc( maxVar * sizeof(uint32_t) * 2 );
+    else stop = (uint32_t*)realloc( stop, maxVar * sizeof(int32_t) * 2 );
 
-    int32_t* index = (int32_t*)malloc( data.nVars() * sizeof(int32_t) * 2 );
+    int32_t* index = (int32_t*)malloc( maxVar * sizeof(int32_t) * 2 );
 
     // set everything to 0!
-    memset( start, 0, data.nVars() * sizeof(uint32_t) * 2 );
-    memset( stop, 0, data.nVars() * sizeof(uint32_t) * 2 );
-    memset( index, 0, data.nVars() * sizeof(int32_t) * 2 );
+    memset( start, 0, maxVar * sizeof(uint32_t) * 2 );
+    memset( stop, 0, maxVar * sizeof(uint32_t) * 2 );
+    memset( index, 0, maxVar * sizeof(int32_t) * 2 );
 
 
     deque< Lit > stampQueue;
 
     data.lits.clear();
     // reset all present variables, collect all roots in binary implication graph
-    for ( Var v = 0 ; v < data.nVars(); ++ v )
+    for ( Var v = 0 ; v < maxVar; ++ v )
     {
       const Lit pos =  mkLit(v,false);
       // a literal is a root, if its complement does not imply a literal
@@ -1905,7 +1917,7 @@ inline void BIG::generateImplied( CoprocessorData& data )
 
     // stamp all remaining literals, after shuffling
     data.lits.clear();
-    for ( Var v = 0 ; v < data.nVars(); ++ v )
+    for ( Var v = 0 ; v < maxVar; ++ v )
     {
       const Lit pos =  mkLit(v,false);
       if( start[ toInt(pos) ] == 0 ) data.lits.push_back(pos);
@@ -1921,26 +1933,27 @@ inline void BIG::generateImplied( CoprocessorData& data )
 inline void BIG::generateImplied( uint32_t nVars, vec<Lit>& tmpLits )
 {
     uint32_t stamp = 1 ;
+    const uint32_t maxVar = duringCreationVariables < nVars ? duringCreationVariables : nVars; // use only known variables
+    
+    if( start == 0 ) start = (uint32_t*) malloc( maxVar * sizeof(uint32_t) * 2 );
+    else start = (uint32_t*)realloc( start, maxVar * sizeof(uint32_t) * 2 );
 
-    if( start == 0 ) start = (uint32_t*) malloc( nVars * sizeof(uint32_t) * 2 );
-    else start = (uint32_t*)realloc( start, nVars * sizeof(uint32_t) * 2 );
+    if( stop == 0 ) stop = (uint32_t*) malloc( maxVar * sizeof(uint32_t) * 2 );
+    else stop = (uint32_t*)realloc( stop, maxVar * sizeof(int32_t) * 2 );
 
-    if( stop == 0 ) stop = (uint32_t*) malloc( nVars * sizeof(uint32_t) * 2 );
-    else stop = (uint32_t*)realloc( stop, nVars * sizeof(int32_t) * 2 );
-
-    int32_t* index = (int32_t*)malloc( nVars * sizeof(int32_t) * 2 );
+    int32_t* index = (int32_t*)malloc( maxVar * sizeof(int32_t) * 2 );
 
     // set everything to 0!
-    memset( start, 0, nVars * sizeof(uint32_t) * 2 );
-    memset( stop, 0, nVars * sizeof(uint32_t) * 2 );
-    memset( index, 0, nVars * sizeof(int32_t) * 2 );
+    memset( start, 0, maxVar * sizeof(uint32_t) * 2 );
+    memset( stop, 0, maxVar * sizeof(uint32_t) * 2 );
+    memset( index, 0, maxVar * sizeof(int32_t) * 2 );
 
 
     deque< Lit > stampQueue;
 
     tmpLits.clear();
     // reset all present variables, collect all roots in binary implication graph
-    for ( Var v = 0 ; v < nVars; ++ v )
+    for ( Var v = 0 ; v < maxVar; ++ v )
     {
       const Lit pos =  mkLit(v,false);
       // a literal is a root, if its complement does not imply a literal
@@ -1957,7 +1970,7 @@ inline void BIG::generateImplied( uint32_t nVars, vec<Lit>& tmpLits )
 
     // stamp all remaining literals, after shuffling
     tmpLits.clear();
-    for ( Var v = 0 ; v < nVars; ++ v )
+    for ( Var v = 0 ; v < maxVar; ++ v )
     {
       const Lit pos =  mkLit(v,false);
       if( start[ toInt(pos) ] == 0 ) tmpLits.push(pos);
@@ -1975,11 +1988,12 @@ inline void BIG::generateImplied( uint32_t nVars, vec<Lit>& tmpLits )
 inline void BIG::fillSorted(vector<Lit>& literals, CoprocessorData& data, bool rootsOnly, bool getAll)
 {
   literals.clear();
-  data.ma.resize( data.nVars() *2 );
+  const uint32_t maxVar = duringCreationVariables < data.nVars() ? duringCreationVariables : data.nVars(); // use only known variables
+  data.ma.resize( maxVar *2 );
   data.ma.nextStep();
   
   // put root nodes in queue
-  for( Var v = 0 ; v < data.nVars(); ++ v )
+  for( Var v = 0 ; v < maxVar; ++ v )
   {
     if( getSize( mkLit(v,false) ) == 0 )
       if( getSize( mkLit(v,true) ) == 0 ) continue;
@@ -2022,7 +2036,7 @@ inline void BIG::fillSorted(vector<Lit>& literals, CoprocessorData& data, bool r
   if( !getAll ) return;
   
   unsigned seenSoFar = literals.size();
-  for( Var v = 0 ; v < data.nVars(); ++ v ) {
+  for( Var v = 0 ; v < maxVar; ++ v ) {
     for( int p = 0 ; p < 2; ++ p ) {
       const Lit l = mkLit(v,p==1);
       if( data.ma.isCurrentStep(toInt(l)) ) continue; // literal already in heap
@@ -2114,7 +2128,7 @@ inline uint32_t BIG::stampLiteral( const Lit literal, uint32_t stamp, int32_t* i
 
 inline bool BIG::implies(const Lit& from, const Lit& to) const
 {
-  if( start == 0 || stop == 0 ) return false;
+  if( start == 0 || stop == 0 || var(from) >= duringCreationVariables || var(to) >= duringCreationVariables ) return false;
   return ( start[ toInt(from) ] < start[ toInt(to) ] && stop[ toInt(from) ] > stop[ toInt(to) ] )
    || ( start[ toInt(~to) ] < start[ toInt(~from) ] && stop[ toInt(~to) ] > stop[ toInt(~from) ] );
 }

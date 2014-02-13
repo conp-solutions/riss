@@ -481,7 +481,7 @@ lbool Preprocessor::performSimplification()
 
   if( config.opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;
   
-  if( config.opt_dense ) {
+  if( config.opt_dense && !data.isInprocessing() ) {
     // do as very last step -- not nice, if there are units on the trail!
     dense.compress(); 
   }
@@ -935,7 +935,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 
   if( config.opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;
   
-  if( config.opt_dense ) {
+  if( config.opt_dense  && !data.isInprocessing() ) {
     // do as very last step -- not nice, if there are units on the trail!
     dense.compress(); 
   }
@@ -1035,7 +1035,7 @@ bool Preprocessor::wantsToInprocess ()
   // if no inprocesing enabled, do not do it!
   if( !config.opt_inprocess ) return false;
   
-  // cerr << "c check " << lastInpConflicts << " and " << (int)config.opt_inprocessInt << " vs " << solver->conflicts << endl;
+  cerr << "c check " << lastInpConflicts << " and " << (int)config.opt_inprocessInt << " vs " << solver->conflicts << endl;
   if( lastInpConflicts + config.opt_inprocessInt > solver->conflicts ) {
     return false;  
   }

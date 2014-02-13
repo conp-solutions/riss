@@ -166,7 +166,9 @@ public:
  BoolOption debug_otfss;
 #endif
 
- IntOption opt_learnDecPrecent;
+ IntOption opt_learnDecPrecent; // learn decision clauses instead of others
+ IntOption opt_learnDecMinSize; // min size of a learned clause so that its turned into an decision clause
+ BoolOption opt_learnDecRER;	// use decision learned clauses for restricted extended resolution?
 
  // these features become available with version 4
 #if defined TOOLVERSION && TOOLVERSION < 400

@@ -104,6 +104,9 @@ Solver::Solver(CoreConfig& _config) :
   , progress_estimate  (0)
   , remove_satisfied   (true)
   
+  , preprocessCalls (0)
+  , inprocessCalls (0)
+  
     // Resource constraints:
     //
   , conflict_budget    (-1)
@@ -758,21 +761,22 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     if( config.opt_ecl_debug || config.opt_rer_debug ) cerr << "c learned clause (before mini): " << out_learnt << endl;
     
     bool doMinimizeClause = true; // created extra learnt clause? yes -> do not minimize
-    if( out_learnt.size() > decisionLevel() && config.opt_learnDecPrecent != -1) { // is it worth to check for decisionClause?
+    if( decisionLevel() > 0 && out_learnt.size() > decisionLevel() && out_learnt.size() > config.opt_learnDecMinSize && config.opt_learnDecPrecent != -1) { // is it worth to check for decisionClause?
       lbd = computeLBD(out_learnt);
       if( lbd > (config.opt_learnDecPrecent * decisionLevel() + 99 ) / 100 ) {
 	// instead of learning a very long clause, which migh be deleted very soon (idea by Knuth, already implemented in lingeling(2013)
 	for (int j = 0; j < out_learnt.size(); j++) seen[var(out_learnt[j])] = 0;    // ('seen[]' is now cleared)
 	out_learnt.clear();
-	for( int i = 0; i + 1 < decisionLevel(); ++ i ) {
+	for( int i = 0; i  < decisionLevel(); ++ i ) {
 	  out_learnt.push( ~ trail[ trail_lim[i] ] );
 	}
-	out_learnt.push( ~p ); // instead of last decision, add UIP!
+	// out_learnt.push( ~p ); // instead of last decision, add UIP!
 	out_learnt[ out_learnt.size() -1 ] = out_learnt[0];
-	out_learnt[0] = ~p; // move 1st UIP literal to the front!
+	out_learnt[0] = ~ trail[ trail_lim[ decisionLevel() - 1 ] ]; // move 1st UIP literal to the front!
 	learnedDecisionClauses ++;
 	if( config.opt_printDecisions > 2 || config.opt_ecl_debug || config.opt_rer_debug) cerr << endl << "c learn decisionClause " << out_learnt << endl << endl;
 	doMinimizeClause = false;
+	if( !config.opt_learnDecRER ) resetRestrictedExtendedResolution(); // do not use this clause for RER!
       }
     }
     
@@ -1572,12 +1576,14 @@ lbool Solver::search(int nof_conflicts)
                 Lit p = assumptions[decisionLevel()];
 
 		if (value(p) == l_True){
-                    // Dummy decision level:
+                    // Dummy decision level: // do not have a dummy level here!!
+                    if(config.opt_printDecisions > 0) cerr << "c have dummy decision level for assumptions" << endl;
                     newDecisionLevel();
                 }else if (value(p) == l_False){
                     analyzeFinal(~p, conflict);
                     return l_False;
                 }else{
+		    if(config.opt_printDecisions > 0) cerr << "c use assumptoin as next decision : " << p << endl;
                     next = p;
                     break;
                 }
@@ -1840,40 +1846,52 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   LONG_INT pt=~0; // everything set -> == 2^64-1
 //  if(config.dx) cerr << "c initial pattern: " << pt << endl;
   Lit d[6];
-  for(int i=0;i<config.opt_laLevel;++i) d[i]=trail[ trail_lim[i] ]; // get all decisions into dec array
+  int j = 0;
+  for(int i=0;i<config.opt_laLevel;++i) {
+    if( i == 0 || trail_lim[i] != trail_lim[i-1] ) // no dummy level caused by assumptions ...
+      d[j++]=trail[ trail_lim[i] ]; // get all decisions into dec array
+  }
+  const int actualLAlevel = j;
+
+  if( config.dx ) {
+    cerr << "c LA decisions: "; 
+    for( int i = 0 ; i< actualLAlevel; ++ i ) cerr << " " << d[i] << " (vs. [" << trail_lim[i] << "] " << trail[ trail_lim[i] ] << " ) ";
+    cerr << endl;
+  }
 
   if(config.tb){ // use tabu
     bool same = true;
-    for( int i = 0 ; i < config.opt_laLevel; ++i ){
-      for( int j = 0 ; j < config.opt_laLevel; ++j )
+    for( int i = 0 ; i < actualLAlevel; ++i ){
+      for( int j = 0 ; j < actualLAlevel; ++j )
 	if(var(d[i])!=var(hstry[j]) ) same = false; 
     }
     if( same ) { laTime = cpuTime() - laTime; return true; }
-    for( int i = 0 ; i < config.opt_laLevel; ++i ) hstry[i]=d[i];
+    for( int i = 0 ; i < actualLAlevel; ++i ) hstry[i]=d[i];
+    for( int i = actualLAlevel; i < config.opt_laLevel; ++i ) hstry[i] = lit_Undef;
   }
   las++;
   
-  int bound=1<<config.opt_laLevel, failedTries = 0;
+  int bound=1<<actualLAlevel, failedTries = 0;
   if(config.dx) cerr << "c do LA until " << bound << " starting at level " << decisionLevel() << endl;
   fm(p,false); // fill current model
   for(LONG_INT i=1;i<bound;++i){ // for each combination
     cancelUntil(0);
     newDecisionLevel();
-    for(int j=0;j<config.opt_laLevel;++j) uncheckedEnqueue( (i&(1<<j))!=0 ? ~d[j] : d[j] ); // flip polarity of d[j], if corresponding bit in i is set -> enumerate all combinations!
+    for(int j=0;j<actualLAlevel;++j) uncheckedEnqueue( (i&(1<<j))!=0 ? ~d[j] : d[j] ); // flip polarity of d[j], if corresponding bit in i is set -> enumerate all combinations!
     bool f = propagate() != CRef_Undef; // for tests!
-//    if(config.dx) { cerr << "c propagated iteration " << i << " : " ;  for(int j=0;j<config.opt_laLevel;++j) cerr << " " << ( (i&(1<<j))!=0 ? ~d[j] : d[j] ) ; cerr << endl; }
+//    if(config.dx) { cerr << "c propagated iteration " << i << " : " ;  for(int j=0;j<actualLAlevel;++j) cerr << " " << ( (i&(1<<j))!=0 ? ~d[j] : d[j] ) ; cerr << endl; }
     if(config.dx) { cerr << "c corresponding trail: "; if(f) cerr << " FAILED! "; else  for( int j = trail_lim[0]; j < trail.size(); ++ j ) cerr << " "  << trail[j]; cerr << endl; }
     fm(p,f);
     LONG_INT m=3;
     if(f) {pt=(pt&(~(m<<(2*i)))); failedTries ++; }
 //    if(config.dx) cerr << "c this propafation [" << i << "] failed: " << f << " current match pattern: " << pt << "(inv: " << ~pt << ")" << endl;
-    if(config.dx) { cerr << "c cut: "; for(int j=0;j<2<<config.opt_laLevel;++j) cerr << ((pt&(1<<j))  != (LONG_INT)0 ); cerr << endl; }
+    if(config.dx) { cerr << "c cut: "; for(int j=0;j<2<<actualLAlevel;++j) cerr << ((pt&(1<<j))  != (LONG_INT)0 ); cerr << endl; }
   }
   cancelUntil(0);
   
   // for(int i=0;i<opt_laLevel;++i) cerr << "c value for literal[" << i << "] : " << d[i] << " : "<< p[ var(d[i]) ] << endl;
   
-  int t=2*config.opt_laLevel-2;
+  int t=2*actualLAlevel-2;
   // evaluate result of LA!
   bool foundUnit=false;
 //  if(config.dx) cerr << "c pos hit: " << (pt & (hit[t])) << endl;
@@ -1963,7 +1981,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
     vector< vector< Lit > > clauses;
     vector<Lit> tmp;
     
-    if( config.opt_laLevel != 5 ) {
+    if( actualLAlevel != 5 ) {
       static bool didIT = false;
       if( ! didIT ) {
 	cerr << "c WARNING: DRUP proof can produced only for la level 5!" << endl;
@@ -1981,7 +1999,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
       int litList[] = {0,1,2,3,4,5,-1,0,1,2,3,5,-1,0,1,2,4,5,-1,0,1,2,5,-1,0,1,3,4,5,-1,0,1,3,5,-1,0,1,4,5,-1,0,1,5,-1,0,2,3,4,5,-1,0,2,3,5,-1,0,2,4,5,-1,0,2,5,-1,0,3,4,5,-1,0,3,5,-1,0,4,5,-1,0,5,-1,1,2,3,4,5,-1,1,2,3,5,-1,1,2,4,5,-1,1,2,5,-1,1,3,4,5,-1,1,3,5,-1,1,4,5,-1,1,5,-1,2,3,4,5,-1,2,3,5,-1,2,4,5,-1,2,5,-1,3,4,5,-1,3,5,-1,4,5,-1,5,-1};
       int cCount = 0 ;
       tmp.clear();
-      assert(config.opt_laLevel == 5 && "current proof generation only works for level 5!" );
+      assert(actualLAlevel == 5 && "current proof generation only works for level 5!" );
       for ( int j = 0; true; ++ j ) { // TODO: count literals!
 	int k = litList[j];
 	if( k == -1 ) { clauses.push_back(tmp);
@@ -2244,6 +2262,10 @@ lbool Solver::solve_()
 	
 	// re-shuffle BIG, if a sufficient number of restarts is reached
 	if( big != 0 && config.opt_uhdRestartReshuffle > 0 && curr_restarts - lastReshuffleRestart >= config.opt_uhdRestartReshuffle ) {
+	  if( nVars() > big->getVars() ) { // rebuild big, if new variables are present
+	    big->recreate( ca, nVars(), clauses, learnts ); // build a new BIG that is valid on the "new" formula!
+	    big->removeDuplicateEdges( nVars() );
+	  }
 	  big->generateImplied( nVars(), add_tmp );
 	  if( config.opt_uhdProbe > 2 ) big->sort( nVars() ); // sort all the lists once
 	  lastReshuffleRestart = curr_restarts; // update number of last restart
@@ -2283,8 +2305,8 @@ lbool Solver::solve_()
 	    printf("c Timing(cpu,wall, in s): total: %.2lf %.2lf ,prop: %.2lf %.2lf ,analysis: %.2lf %.2lf ,ext.Res.: %.2lf %.2lf ,reduce: %.2lf %.2lf ,overhead %.2lf %.2lf\n",
 		   totalTime.getCpuTime(), totalTime.getWallClockTime(), propagationTime.getCpuTime(), propagationTime.getWallClockTime(), analysisTime.getCpuTime(), analysisTime.getWallClockTime(), extResTime.getCpuTime(), extResTime.getWallClockTime(), reduceDBTime.getCpuTime(), reduceDBTime.getWallClockTime(),
 		   overheadC, overheadW );
-	    printf("c PP-Timing(cpu,wall, in s): preprocessing: %.2lf %.2lf ,inprocessing: %.2lf %.2lf\n",
-		   preprocessTime.getCpuTime(), preprocessTime.getWallClockTime(), inprocessTime.getCpuTime(), inprocessTime.getWallClockTime() );
+	    printf("c PP-Timing(cpu,wall, in s): preprocessing( %d ): %.2lf %.2lf ,inprocessing (%d ): %.2lf %.2lf\n",
+		   preprocessCalls, preprocessTime.getCpuTime(), preprocessTime.getWallClockTime(), inprocessCalls, inprocessTime.getCpuTime(), inprocessTime.getWallClockTime() );
             printf("c Learnt At Level 1: %d  Multiple: %d Units: %d\n", l1conflicts, multiLearnt,learntUnit);
 	    printf("c LAs: %lf laSeconds %d LA assigned: %d tabus: %d, failedLas: %d, maxEvery %d, eeV: %d eeL: %d \n", laTime, las, laAssignments, tabus, failedLAs, maxBound, laEEvars, laEElits );
 	    printf("c lhbr: %d (l1: %d ),new: %d (l1: %d ),tests: %d ,subs: %d ,byLearning: %d\n", lhbrs, l1lhbrs,lhbr_news,l1lhbr_news,lhbrtests,lhbr_sub, learnedLHBRs);
@@ -3601,6 +3623,7 @@ lbool Solver::preprocess()
   // restart, triggered by the solver
   // if( coprocessor == 0 && useCoprocessor) coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
   if( coprocessor != 0 && useCoprocessorPP){
+    preprocessCalls++;
     preprocessTime.start();
     status = coprocessor->preprocess();
     preprocessTime.stop();
@@ -3617,6 +3640,7 @@ lbool Solver::inprocess(lbool status)
     // if( coprocessor == 0 && useCoprocessor)  coprocessor = new Coprocessor::Preprocessor(this); // use number of threads from coprocessor
     if( coprocessor != 0 && useCoprocessorIP) {
       if( coprocessor->wantsToInprocess() ) {
+	inprocessCalls ++;
 	inprocessTime.start();
 	status = coprocessor->inprocess();
 	inprocessTime.stop();

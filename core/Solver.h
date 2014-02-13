@@ -340,6 +340,7 @@ protected:
     int                 learntsize_adjust_cnt;
 
     Clock totalTime, propagationTime, analysisTime, preprocessTime, inprocessTime, extResTime, reduceDBTime, icsTime; // times for methods during search
+    int preprocessCalls, inprocessCalls;	// stats
     
     // Resource contraints:
     //

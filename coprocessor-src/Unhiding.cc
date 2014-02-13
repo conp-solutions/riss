@@ -175,7 +175,7 @@ uint32_t Unhiding::linStamp( const Lit literal, uint32_t stamp, bool& detectedEE
 	  l1 = stampEE.back();
 	  stampEE.pop_back();
 	  stampClassEE.push_back( l1 );
-	  // if( l1 != l ) cerr << "c collect EE literals " << l << " and " << l1 << endl;
+	  if( config.opt_uhd_Debug > 1 &&  l1 != l ) cerr << "c collect EE literals " << l << " and " << l1 << endl;
 	  stampInfo[ toInt(l1) ].dsc = stampInfo[ toInt(l) ].dsc;
 	  stampInfo[ toInt(l1) ].fin = stamp;
 	} while( l1 != l );
@@ -295,7 +295,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
     Clause& clause = ca[clRef];
     if( clause.can_be_deleted() ) continue;
 
-    if( config.opt_uhd_Debug > 3 ) { cerr << "c [UHD] work on " << clause << " state ok? " << data.ok() << endl; }
+    if( config.opt_uhd_Debug > 3 ) { cerr << "c [UHD] work on [" << clRef << "]" << clause << " state ok? " << data.ok() << endl; }
     
     const uint32_t cs = clause.size();
     Lit Splus  [cs];

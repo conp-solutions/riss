@@ -179,7 +179,9 @@ bool Symmetry::process() {
 		  solver.useCoprocessorIP = false;
 		  solver.setConfBudget( config.sym_opt_conflicts );
 		  assumptions.clear();
+		  assert( var(l1) != var(l2) && "assumptions should be different!" );
 		  assumptions.push( l1 );assumptions.push( l2 );
+		  if( config.sym_debug_out > 1 ) cerr << "c search with assumptions [" << l1 << ", " << l2 << "] starting at level " << solver.decisionLevel() << endl;
 		  lbool ret = solver.solveLimited(assumptions) ;
 		  solver.assumptions.clear();
 		  solver.verbosity = oldVerb;

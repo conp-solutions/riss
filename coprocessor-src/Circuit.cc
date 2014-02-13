@@ -501,7 +501,7 @@ HASUMnextJ:;
 	  gates.pop_back();
 	  --i; break;
 	} else {
-	  cerr << "c pair of unsatisfiable gates: " << endl;
+	  cerr << "c pair of unsatisfiable FASUM gates: " << endl;
 	  gates[i].print(cerr);
 	  gates[j].print(cerr);
 	  data.setFailed();
@@ -675,7 +675,7 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
     for( int i = 0 ; i < cList.size(); ++ i ) 
     {
       found[1] = found[2] = found[3] = false;
-      cerr << "c check [" << i << "/" << cList.size() << "] for " << a << endl;
+      // cerr << "c check [" << i << "/" << cList.size() << "] for " << a << endl;
       bool binary = false;
       const Lit b = cList[i].l1; const Lit c = cList[i].l2;
       if( var(b) == var(c) || var(b) == var(a) || var(a) == var(c) ) continue; // just to make sure!
@@ -685,7 +685,7 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	if( (tern.l1 == ~b || tern.l2 == ~b) && ( tern.l1 == ~c || tern.l2 == ~c ) )
 	  { found[1] = true; break; }
       }
-      if( found[1] ) cerr << "c found first clause as ternary" << endl;
+      // if( found[1] ) cerr << "c found first clause as ternary" << endl;
       if ( !found[1] ) { // check for 2nd clause in implications
 	if( big->implies(a,~b) || big->implies(a,~c)  ) found[1] = true;
 	else { // not found in big
@@ -763,11 +763,16 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
       }
     }
   }
+  
   // remove redundant gates!
   for( int i = oldGates + 1; i < gates.size(); ++ i ) {
     for( int j = oldGates ; j < i; ++ j ) {
-      if(  (var(gates[i].b()) == var(gates[j].b()) || var(gates[i].b()) == var(gates[j].c()) )
-	&& (var(gates[i].c()) == var(gates[j].b()) || var(gates[i].c()) == var(gates[j].c()) ) )
+      if( // all variables are the same
+	var(gates[i].a()) == var(gates[j].a()) && (
+	     ( var(gates[i].b()) == var(gates[j].b()) && var(gates[i].c()) == var(gates[j].c())  )
+	  || ( var(gates[i].c()) == var(gates[j].b()) && var(gates[i].b()) == var(gates[j].c()) )
+	)
+      )
       {
 	// gates have same variables, check for same polarity. if true, kick later gate out!
 	bool pol = sign( gates[i].a() ) ^ sign( gates[i].b() ) ^ sign( gates[i].c() );
@@ -779,7 +784,7 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	  --i; break;
 	} else {
 	  // if different pol, combining both gates leads to UNSAT!
-	  cerr << "c pair of unsatisfiable gates: " << endl;
+	  cerr << "c pair of unsatisfiable XOR gates: " << endl;
 	  gates[i].print(cerr);
 	  gates[j].print(cerr);
 	  data.setFailed();

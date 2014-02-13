@@ -157,7 +157,7 @@ cp3_ee_it  {yes,no}[no]       # use the iterative BIG-EE algorithm
 cp3_ee_subNew  {yes,no}[no]       # check for new subsumptions immediately when adding new clauses
 cp3_ee_glimit  {1000,10000,100000,1000000}[100000]       # step limit for structural hashing
 cp3_ee_cIter  {-1,1,2,3}[2]       # max. EE iterations for circuit (-1 == inf)
-cp3_ee_level  {0,2,3}[0]       # EE on BIG, gate probing, structural hashing
+cp3_ee_level  {0,2}[0]       # EE on BIG, gate probing, structural hashing
 cp3_ee_limit  {100000,1000000,2000000}[1000000]       # step limit for detecting equivalent literals
 cp3_ee_inpInc  {2000,20000,200000}[200000]       # increase for steps per inprocess call
 cp3_ee_bIter   {1,5,10,400000000}[400000000]       # max. iteration to perform EE search on BIG
@@ -447,7 +447,7 @@ rMaxInc  {1.05,1.1,1.2}[1.1]       # increase of the max. restart interval per r
 
 sInterval  {0,1,2,3}[0]           # how often to perform simplifications on level 0
 otfssMLDB  {2,16,30,64}[30]       # max. LBD of learnt clauses that are candidates for otfss
-learnDecP  {-1,50,66,100}[-1]       # if LBD of is > percent of decisionlevel, learn decision Clause (Knuth)
+learnDecP  {-1,50,66,80,100}[-1]       # if LBD of is > percent of decisionlevel, learn decision Clause (Knuth)
 hlaLevel  {1,5}[5]       # level of look ahead
 hlaMax  {25,50,75,256,1000}[50]       # maximum bound for frequency
 laEEp  {0,50,66,100}[0]       # add EE clauses, if less than p percent tests failed
@@ -705,22 +705,22 @@ cp3_ee_limit       | ee in {yes}
 cp3_ee_bIter       | ee in {yes}
 cp3_ee_inpInc      | ee in {yes}
 cp3_ee_inpInc      | inprocess in {yes}
-cp3_BigThenGate    | cp3_ee_level in {2,3}
-cp3_eagerGates     | cp3_ee_level in {2,3}
-cp3_ee_glimit      | cp3_ee_level in {2,3}
-cp3_ee_cIter       | cp3_ee_level in {2,3}
+cp3_BigThenGate    | cp3_ee_level in {2}
+cp3_eagerGates     | cp3_ee_level in {2}
+cp3_ee_glimit      | cp3_ee_level in {2}
+cp3_ee_cIter       | cp3_ee_level in {2}
 
 #
 #  COPROCESSOR 3 - EQUIVALENCE ELIMINATION - HASHING OPTIONS:
 #
-cp3_extAND  | cp3_ee_level in {2,3}
-cp3_extITE  | cp3_ee_level in {2,3}
-cp3_extXOR  | cp3_ee_level in {2,3}
-cp3_extExO  | cp3_ee_level in {2,3}
-cp3_genAND  | cp3_ee_level in {2,3}
-cp3_extHASUM     | cp3_ee_level in {2,3}
-cp3_extNgtInput  | cp3_ee_level in {2,3}
-cp3_extImplied   | cp3_ee_level in {2,3}
+cp3_extAND  | cp3_ee_level in {2}
+cp3_extITE  | cp3_ee_level in {2}
+cp3_extXOR  | cp3_ee_level in {2}
+cp3_extExO  | cp3_ee_level in {2}
+cp3_genAND  | cp3_ee_level in {2}
+cp3_extHASUM     | cp3_ee_level in {2}
+cp3_extNgtInput  | cp3_ee_level in {2}
+cp3_extImplied   | cp3_ee_level in {2}
 
 #
 #  COPROCESSOR 3 - FOURIERMOTZKIN OPTIONS:

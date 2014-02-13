@@ -87,7 +87,7 @@ void Dense::compress(const char* newWhiteFile)
     for( uint32_t i = 0 ; i < list.size(); ++i ){
       Clause& clause = ca[ list[i] ];
       if( clause.can_be_deleted() ) continue;
-      
+      if( config.dense_debug_out > 1 ) cerr << "c [DENSE] rewrite clause [" << list[i] << "] " << clause << endl;
       for( uint32_t j = 0 ; j < clause.size(); ++j ){
 	const Lit l = clause[j];
 	// if( debug > 1 ) cerr << "c compress literal " << l.nr() << endl;
@@ -98,6 +98,7 @@ void Dense::compress(const char* newWhiteFile)
 	// polarity of literal has to be kept
 	assert( sign(clause[j]) == p && "sign of literal should not change" );
       }
+      if( config.dense_debug_out > 1 ) cerr << "c [DENSE] into [" << list[i] << "]           " << clause << endl;
     }
   }
   

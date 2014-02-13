@@ -158,7 +158,9 @@ CoreConfig::CoreConfig() // add new options here!
  debug_otfss ("MODS", "otfss-d", "print debug output", false, optionListPtr ),
 #endif
 
- opt_learnDecPrecent ("MODS", "learnDecP", "if LBD of is > percent of decisionlevel, learn decision Clause (Knuth), -1 = off", -1, IntRange(-1, 100) , optionListPtr ),
+ opt_learnDecPrecent ("MODS", "learnDecP",   "if LBD of is > percent of decisionlevel, learn decision Clause (Knuth), -1 = off", -1, IntRange(-1, 100) , optionListPtr ),
+ opt_learnDecMinSize ("MODS", "learnDecMS",  "min size so that decision clauses are learned, -1 = off", 2, IntRange(2, INT32_MAX) , optionListPtr ),
+ opt_learnDecRER     ("MODS", "learnDecRER", "consider decision clauses for RER?",false , optionListPtr ),
 
 #if defined TOOLVERSION && TOOLVERSION < 400
  opt_extendedClauseLearning(false) ,

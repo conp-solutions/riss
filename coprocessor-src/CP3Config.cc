@@ -333,9 +333,9 @@ rate_minSize(_cat_rat,"rate-min", "minimal clause size for RAT elimination", 3, 
 // Dense
 //
 #if defined TOOLVERSION  
-dense_debug_out (false),
+dense_debug_out (0),
 #else
-dense_debug_out (_cat_dense, "cp3_dense_debug", "print debug output to screen",false, optionListPtr ),
+dense_debug_out (_cat_dense, "cp3_dense_debug", "print debug output to screen",0, IntRange(0,2) , optionListPtr ),
 #endif
 opt_dense_fragmentation  (_cat_dense, "cp3_dense_frag", "Perform densing, if fragmentation is higher than (percent)", 0, IntRange(0, 100), optionListPtr ),
 opt_dense_store_forward  (_cat_dense, "cp3_dense_forw", "store forward mapping",false, optionListPtr ),

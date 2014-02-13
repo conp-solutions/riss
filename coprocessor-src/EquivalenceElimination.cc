@@ -86,7 +86,7 @@ bool EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
 
       if( config.ee_debug_out > 2 ) {
 	cerr << endl << "====================================" << endl;
-	cerr << "intermediate formula before gates: " << endl;
+	cerr << "intermediate formula before gates: [ok?: " << data.ok() << "]" << endl;
 	for( int i = 0 ; i < data.getTrail().size(); ++ i ) cerr << "[" << data.getTrail()[i] << "]" << endl;
 	for( int i = 0 ; i < data.getClauses().size(); ++ i )
 	  if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << "[" << data.getClauses()[i] << "]" << ca[  data.getClauses()[i] ] << endl;
@@ -127,15 +127,16 @@ bool EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
 	if( config.ee_debug_out > 2 ) cerr << "c run miter EQ method" << endl;
 	moreEquivalences = findGateEquivalencesNew( data, gates );
 	if( moreEquivalences )
-	  if( config.ee_debug_out > 2 ) cerr << "c found new equivalences with the gate method!" << endl;
+	  if( config.ee_debug_out > 2 ) cerr << "c found new equivalences with the gate method! [ok?: " << data.ok() << "]" << endl;
 	if( !data.ok() )
 	  if( config.ee_debug_out > 2 ) cerr << "state of formula is UNSAT!" << endl;
       }
       
       if( config.opt_ee_level > 2 ) {
+	if( config.ee_debug_out > 2 ) cerr << "c run gate method" << endl;
 	moreEquivalences = moreEquivalences || findGateEquivalences( data, gates );
 	if( moreEquivalences )
-	  if( config.ee_debug_out > 2 ) cerr << "c found new equivalences with the gate method!" << endl;
+	  if( config.ee_debug_out > 2 ) cerr << "c found new equivalences with the gate method! [ok?: " << data.ok() << "]" << endl;
 	if( !data.ok() )
 	  if( config.ee_debug_out > 2 ) cerr << "state of formula is UNSAT!" << endl;
       }
@@ -232,7 +233,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
   }
   
   
-  if( config.ee_debug_out > 2 ) cerr << "c work with " << gates.size() << " gates" << endl;
+  if( config.ee_debug_out > 2 ) cerr << "c work with " << gates.size() << " gates [ok?: " << data.ok() << "]" << endl;
   // have gates per variable
   for( int i = 0 ; i < gates.size() ; ++ i ) {
    const Circuit::Gate& g = gates[i];
@@ -296,7 +297,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
       currentPtr->pop_front();
       active.reset(v);
       // cerr << "c test variable " << v+1 << endl;
-      if( config.ee_debug_out > 2 ) cerr << "c check variable " << v+1 << " with " << varTable[v].size() << " gates and replace literal " << getReplacement( mkLit(v,false ) ) << endl;
+      if( config.ee_debug_out > 2 ) cerr << "c check variable " << v+1 << " with " << varTable[v].size() << " gates and replace literal " << getReplacement( mkLit(v,false ) ) << " [ok?: " << data.ok() << "]" << endl;
       // for all gates with this input variable:
       for( int i = 0 ; i < varTable[v].size(); ++ i ) {
 	Circuit::Gate& g = gates[ varTable[v][i] ];
@@ -625,6 +626,9 @@ bool EquivalenceElimination::findGateEquivalences(Coprocessor::CoprocessorData& 
 {
   MethodTimer mt(&gateTime);
   int oldEquivalences = data.getEquivalences().size();
+  
+  cerr << "c this algorithm is not final yet, and might produce incorrect results" << endl;
+  return false; // do not execute this algorithm!
   
   /** a variable in a circuit can participate in non-clustered gates only, or also participated in clustered gates */
   vector< vector<int32_t> > varTable ( data.nVars() ); // store for each variable which gates have this variable as input
@@ -1748,7 +1752,7 @@ void EquivalenceElimination::findEquivalencesOnBigRec(CoprocessorData& data, vec
      }
       if( config.ee_debug_out > 2 ) {
 	cerr << endl << "====================================" << endl;
-	cerr << "intermediate formula before gates: " << endl;
+	cerr << "intermediate formula before gates: [ok?: " << data.ok() << "]" << endl;
 	for( int i = 0 ; i < data.getTrail().size(); ++ i ) cerr << "[" << data.getTrail()[i] << "]" << endl;
 	for( int i = 0 ; i < data.getClauses().size(); ++ i )
 	  if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getClauses()[i] ] << endl;
@@ -1904,7 +1908,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
    if( config.ee_debug_out > 2 ) {
       if( config.ee_debug_out > 2 ) {
 	cerr << endl << "====================================" << endl;
-	cerr << "intermediate formula before APPLYING Equivalences: " << endl;
+	cerr << "intermediate formula before APPLYING Equivalences: [ok?: " << data.ok() << "]" << endl;
 	for( int i = 0 ; i < data.getTrail().size(); ++ i ) cerr << "[" << data.getTrail()[i] << "]" << endl;
 	for( int i = 0 ; i < data.getClauses().size(); ++ i )
 	  if( !ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << ca[  data.getClauses()[i] ] << endl;

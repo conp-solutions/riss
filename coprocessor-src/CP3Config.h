@@ -324,9 +324,9 @@ IntOption rate_minSize;
 // Dense
 //
 #if defined TOOLVERSION  
-const bool dense_debug_out;
+const int dense_debug_out;
 #else
-BoolOption dense_debug_out;
+IntOption dense_debug_out;
 #endif
 IntOption  opt_dense_fragmentation;
 BoolOption opt_dense_store_forward;
