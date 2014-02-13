@@ -137,7 +137,7 @@ lbool Preprocessor::performSimplification()
 	  if( isNotSat ) {
 	    // only set the phase before search!
 	    if( config.opt_ts_phase && !data.isInprocessing()) {
-	      for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
+	      for( Var v = 0; v < data.nVars(); ++ v ) solver->varFlags[v].polarity = ( 1 == twoSAT.getPolarity(v) );
 	    }
 	  } else {
 	    cerr // << endl 
@@ -145,7 +145,7 @@ lbool Preprocessor::performSimplification()
 	    << "c  use the result of 2SAT as model " << endl 
 	    << "c =================================" << endl;
 	    // initial twosat model should always be used as a model!
-	    for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
+	    for( Var v = 0; v < data.nVars(); ++ v ) solver->varFlags[v].polarity = ( 1 == twoSAT.getPolarity(v) );
 	  }
 	} else {
 	  data.setFailed();
@@ -413,7 +413,7 @@ lbool Preprocessor::performSimplification()
 	 << "c ================================" << endl;
       }
       if( solvedBySls || config.opt_sls_phase ) {
-	for( Var v= 0 ; v < data.nVars(); ++ v ) solver->polarity[v] = sls.getModelPolarity(v) == 1 ? 1 : 0; // minisat uses sign instead of polarity!
+	for( Var v= 0 ; v < data.nVars(); ++ v ) solver->varFlags[v].polarity = sls.getModelPolarity(v) == 1 ? 1 : 0; // minisat uses sign instead of polarity!
       }
     }
     if (! solver->okay())
@@ -445,7 +445,7 @@ lbool Preprocessor::performSimplification()
 	if( isNotSat ) {
 	  // only set the phase before search!
 	  if( config.opt_ts_phase && !data.isInprocessing()) {
-	    for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( -1 == twoSAT.getPolarity(v) );
+	    for( Var v = 0; v < data.nVars(); ++ v ) solver->varFlags[v].polarity = ( -1 == twoSAT.getPolarity(v) );
 	  }
 	  cerr // << endl 
 	  << "c ================================" << endl 
@@ -867,7 +867,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 	 << "c ================================" << endl;
       }
       if( solvedBySls || config.opt_sls_phase ) {
-	for( Var v= 0 ; v < data.nVars(); ++ v ) solver->polarity[v] = sls.getModelPolarity(v) == 1 ? 1 : 0; // minisat uses sign instead of polarity!
+	for( Var v= 0 ; v < data.nVars(); ++ v ) solver->varFlags[v].polarity = sls.getModelPolarity(v) == 1 ? 1 : 0; // minisat uses sign instead of polarity!
       }
     }
     if (! solver->okay())
@@ -897,7 +897,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 	if( isNotSat ) {
 	  // only set the phase before search!
 	  if( config.opt_ts_phase && !data.isInprocessing()) {
-	    for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
+	    for( Var v = 0; v < data.nVars(); ++ v ) solver->varFlags[v].polarity = ( 1 == twoSAT.getPolarity(v) );
 	  }
 	  cerr // << endl 
 	  << "c ================================" << endl 
@@ -909,7 +909,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 	  << "c  use the result of 2SAT as model " << endl 
 	  << "c =================================" << endl;
 	  // next, search would be called, and then a model will be generated!
-	  for( Var v = 0; v < data.nVars(); ++ v ) solver->polarity[v] = ( 1 == twoSAT.getPolarity(v) );
+	  for( Var v = 0; v < data.nVars(); ++ v ) solver->varFlags[v].polarity = ( 1 == twoSAT.getPolarity(v) );
 	}
       } else {
 	cerr // << endl 
@@ -1496,7 +1496,7 @@ void Preprocessor::shuffle()
   
   // clear all assignments, to not being forced of keeping track of shuffled trail
   for( int i = 0 ; i < solver->trail.size(); ++ i ) {
-    solver->assigns[ var( solver->trail[i] ) ] = l_Undef;
+    solver->varFlags[ var( solver->trail[i] ) ].assigns = l_Undef;
   }
   
   // shuffle trail, clauses and learned clauses
@@ -1505,7 +1505,7 @@ void Preprocessor::shuffle()
   
   // set all assignments according to the trail!
   for( int i = 0 ; i < solver->trail.size(); ++ i ) {
-    solver->assigns[ var( solver->trail[i] ) ] = sign(solver->trail[i]) ? l_False : l_True;
+    solver->varFlags[ var( solver->trail[i] ) ].assigns = sign(solver->trail[i]) ? l_False : l_True;
   }
 }
 
@@ -1733,7 +1733,7 @@ void Preprocessor::fullCheck(const string& headline)
 	      if( c[0] != ~l && c[1] != ~l ) cerr << "wrong literals for clause [" << wcr << "] " << c << " are watched. Found in list for " << l << endl;
 	  }
     }
-    if( solver->seen[ v ] != 0 ) cerr << "c seen for variable " << v << " is not 0, but " << (int) solver->seen[v] << endl;
+    if( solver->varFlags[ v ].seen != 0 ) cerr << "c seen for variable " << v << " is not 0, but " << (int) solver->varFlags[v].seen << endl;
   }
 }
 
@@ -1756,12 +1756,12 @@ void Preprocessor::printSolver(ostream& s, int verbose)
   
   cerr << "c seen variables:";
   for( Var v = 0 ; v < solver->nVars(); ++ v )
-    if( solver->seen[v] != 0 ) cerr << " " << v+1;
+    if( solver->varFlags[v].seen != 0 ) cerr << " " << v+1;
   cerr << endl;
   
   cerr << "c assigned variables:";
   for( Var v = 0 ; v < solver->nVars(); ++ v )
-    if( solver->assigns[v] != l_Undef ) cerr << " " << v+1;
+    if( solver->varFlags[v].assigns != l_Undef ) cerr << " " << v+1;
   cerr << endl;
   
   if( verbose == 1 ) return;

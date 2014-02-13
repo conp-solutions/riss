@@ -73,8 +73,8 @@ bool Probing::process()
     // run probing / vivi only, if the formula is not UNSAT before
     
     // safe the polarity for phase saving
-    vec<char> polarity;
-    solver.polarity.copyTo( polarity );
+    vec<Solver::VarFlags> polarity;
+    solver.varFlags.copyTo( polarity );
     
     if( config.pr_debug_out > 0 ) cerr << "c brefore probing: cls: " << data.getClauses().size() << " vs. ls: " << data.getLEarnts().size() << endl;
 
@@ -100,7 +100,7 @@ bool Probing::process()
     if( config.pr_debug_out > 0 ) cerr << "c after vivification: cls: " << data.getClauses().size() << " vs. ls: " << data.getLEarnts().size() << endl;
     
     // restore the polarity for phase saving
-    polarity.copyTo(solver.polarity);
+    for( int i = 0 ; i < solver.varFlags.size(); ++ i ) solver.varFlags[i].polarity = polarity[i].polarity;
 
     // clean solver again!
     cleanSolver();
@@ -264,7 +264,7 @@ bool Probing::prAnalyze( CRef confl )
   
     if( config.pr_debug_out > 2 ) {
 	for ( Var i = 0 ; i < data.nVars(); ++ i ) 
-	  assert ( solver.seen[ i ] == 0 && "value has to be true!"); 
+	  assert ( solver.varFlags[ i ].seen == 0 && "value has to be true!"); 
     }
     
     // genereate learnt clause - extract all units!
@@ -282,7 +282,7 @@ bool Probing::prAnalyze( CRef confl )
 
     if( config.pr_debug_out > 2 ) {
       for ( int i = 0 ; i < ca[confl].size(); ++ i ) 
-	assert ( solver.seen[ var( ca[confl][i] ) ] == 0 && "value cannot be true!"); 
+	assert ( solver.varFlags[ var( ca[confl][i] ) ].seen == 0 && "value cannot be true!"); 
     }
     
     do{
@@ -312,10 +312,10 @@ bool Probing::prAnalyze( CRef confl )
 	  for (int j = (p == lit_Undef) ? 0 : 1; j < c.size(); j++){
 	      Lit q = c[j];
 
-	      if (!solver.seen[var(q)] && solver.level(var(q)) > 0){
+	      if (!solver.varFlags[var(q)].seen && solver.level(var(q)) > 0){
 		  solver.varBumpActivity(var(q));
 		  if( config.pr_debug_out > 2 ) cerr << "c set seen INT for " << var(q) +1<< endl;
-		  solver.seen[var(q)] = 1; // for every variable, which is not on level 0, set seen!
+		  solver.varFlags[var(q)].seen = 1; // for every variable, which is not on level 0, set seen!
 		  if (solver.level(var(q)) >= solver.decisionLevel())
 		      pathC++;
 		  else
@@ -328,11 +328,11 @@ bool Probing::prAnalyze( CRef confl )
 	assert ( (loops != 1 || pathC > 1) && "in the first iteration there have to be at least 2 literals of the decision level!" );
 	
         // Select next clause to look at:
-        while (!solver.seen[var(solver.trail[index--])]) ;
+        while (!solver.varFlags[var(solver.trail[index--])].seen ) ;
         p     = solver.trail[index+1];
         confl = solver.reason(var(p));
-	assert( solver.seen[var(p)] == 1 && "this variable should have been inside the clause" );
-        solver.seen[var(p)] = 0;
+	assert( solver.varFlags[var(p)].seen == 1 && "this variable should have been inside the clause" );
+        solver.varFlags[var(p)].seen = 0;
 	if( config.pr_debug_out > 2 ) cerr << "c reset seen INT for " << var(p) +1 << endl;
         pathC--;
 
@@ -345,14 +345,14 @@ bool Probing::prAnalyze( CRef confl )
 	   // learned enough uips - return. if none has been found, return false!
 	   if( config.pr_uip != -1 && uips > config.pr_uip ) {
 	     // reset seen literals
-	     for( int i = 1 ; i < data.lits.size(); ++ i ){
-	       solver.seen[ var(data.lits[i]) ] = 0;
+	     for( int i = 0 ; i < data.lits.size(); ++ i ){
+	       solver.varFlags[ var(data.lits[i]) ].seen = 0;
 	       if( config.pr_debug_out > 2 ) cerr << "c reset seen ALLUIP for " << var(data.lits[i]) +1 << endl;
 	     }
 	     
 	     if( config.pr_debug_out > 2 ) {
 		  for ( Var i = 0 ; i < data.nVars(); ++ i ) 
-		    assert ( solver.seen[ i ] == 0 && "value has to be false!"); 
+		    assert ( solver.varFlags[ i ].seen == 0 && "value has to be true!"); 
 	     }
 	     
 	     return learntUnits.size() == 0 ? false : true;
@@ -370,7 +370,7 @@ bool Probing::prAnalyze( CRef confl )
   
     // reset seen literals
     for( int i = 0 ; i < data.lits.size(); ++ i ) {
-      solver.seen[ var(data.lits[i]) ] = 0;
+      solver.varFlags[ var(data.lits[i]) ].seen = 0;
       if( config.pr_debug_out > 2 ) cerr << "c reset seen EXT for " << var(data.lits[i]) +1 << endl;
     }
     
@@ -383,7 +383,7 @@ bool Probing::prAnalyze( CRef confl )
 
   if( config.pr_debug_out > 2 ) {
       for ( Var i = 0 ; i < data.nVars(); ++ i ) 
-	assert ( solver.seen[ i ] == 0 && "value has to be true!"); 
+	assert ( solver.varFlags[ i ].seen == 0 && "value has to be true!"); 
   }
     
   // NOTE no need to add the unit again, has been done in the loop already!
@@ -489,7 +489,7 @@ bool Probing::prDoubleLook(Lit l1decision)
       if( solver.decisionLevel() == 1 ) {i--;continue;}
       else return true;
     }
-    solver.assigns.copyTo( prL2Positive );
+    solver.varFlags.copyTo( prL2Positive );
     // other polarity
     solver.cancelUntil(1);
     
@@ -575,8 +575,8 @@ bool Probing::prDoubleLook(Lit l1decision)
     {
       // check whether same polarity in both trails, or different polarity and in both trails
       const Var tv = var( solver.trail[ i ] );
-      if( config.pr_debug_out > 1 ) cerr << "c compare variable (level 1)" << tv + 1 << ": pos = " << toInt(prL2Positive[tv]) << " neg = " << toInt(solver.assigns[tv]) << endl;
-      if( solver.assigns[ tv ] == prL2Positive[tv] ) {
+      if( config.pr_debug_out > 1 ) cerr << "c compare variable (level 1)" << tv + 1 << ": pos = " << toInt(prL2Positive[tv].assigns) << " neg = " << toInt(solver.varFlags[tv].assigns) << endl;
+      if( solver.varFlags[ tv ].assigns == prL2Positive[tv].assigns ) {
 	if( config.pr_debug_out > 1 ) cerr << "c l2 implied literal: " << l1decision << " -> " << solver.trail[i] << endl;
 	learntUnits[0] = solver.trail[ i ];
 	l2implied ++;
@@ -908,7 +908,7 @@ void Probing::probing()
 	} // something has been found, so that second polarity has not to be propagated
 	else if( config.pr_debug_out > 1 ) cerr << "c double lookahead did not fail" << endl;
       }
-      solver.assigns.copyTo( prPositive );
+      solver.varFlags.copyTo( prPositive );
       
       if( config.pr_debug_out > 0 ) {
 	cerr << "c positive trail: " ;
@@ -967,18 +967,18 @@ void Probing::probing()
       {
 	// check whether same polarity in both trails, or different polarity and in both trails
 	const Var tv = var( solver.trail[ i ] );
-	if( config.pr_debug_out > 1 )cerr << "c compare variable (level 0) " << tv + 1 << ": pos = " << toInt(prPositive[tv]) << " neg = " << toInt(solver.assigns[tv]) << endl;
-	if( solver.assigns[ tv ] == prPositive[tv] ) {
+	if( config.pr_debug_out > 1 )cerr << "c compare variable (level 0) " << tv + 1 << ": pos = " << toInt(prPositive[tv].assigns) << " neg = " << toInt(solver.varFlags[tv].assigns) << endl;
+	if( solver.varFlags[ tv ].assigns == prPositive[tv].assigns ) {
 	  if( config.pr_debug_out > 1 )cerr << "c implied literal " << solver.trail[i] << endl;
 	  doubleLiterals.push_back(solver.trail[ i ] );
 	  l1implied ++;
 	} else if( config.pr_EE ) {
-	  if( solver.assigns[ tv ] == l_True && prPositive[tv] == l_False ) {
+	  if( solver.varFlags[ tv ].assigns == l_True && prPositive[tv].assigns == l_False ) {
 	    if( config.pr_debug_out > 1 )cerr << "c equivalent literals " << negLit << " == " << solver.trail[i] << endl;
 	    data.lits.push_back( solver.trail[ i ] ); // equivalent literals
 	    l1ee++;
 	    modifiedFormula = true;
-	  } else if( solver.assigns[ tv ] == l_False && prPositive[tv] == l_True ) {
+	  } else if( solver.varFlags[ tv ].assigns == l_False && prPositive[tv].assigns == l_True ) {
 	    if( config.pr_debug_out > 1 )cerr << "c equivalent literals " << negLit << " == " << solver.trail[i] << endl;
 	    data.lits.push_back( solver.trail[ i ] ); // equivalent literals
 	    l1ee++;
