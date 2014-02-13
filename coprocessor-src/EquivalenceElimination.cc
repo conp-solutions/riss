@@ -124,7 +124,7 @@ bool EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
       //vector< vector<Lit> >* externBig
     
       {
-	if( config.ee_debug_out > 2 ) cerr << "c run miter EQ method" << endl;
+	if( config.ee_debug_out > 2 ) cerr << "c run miter EQ method [ok?: " << data.ok() << "]" << endl;
 	moreEquivalences = findGateEquivalencesNew( data, gates );
 	if( moreEquivalences )
 	  if( config.ee_debug_out > 2 ) cerr << "c found new equivalences with the gate method! [ok?: " << data.ok() << "]" << endl;

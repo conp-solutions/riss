@@ -675,27 +675,34 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
     for( int i = 0 ; i < cList.size(); ++ i ) 
     {
       found[1] = found[2] = found[3] = false;
-      // cerr << "c check [" << i << "/" << cList.size() << "] for " << a << endl;
       bool binary = false;
       const Lit b = cList[i].l1; const Lit c = cList[i].l2;
+      if( config.circ_debug_out ) cerr << "c check [" << i << "/" << cList.size() << "] for " << a << "," << b << "," << c <<  endl;
       if( var(b) == var(c) || var(b) == var(a) || var(a) == var(c) ) continue; // just to make sure!
       //test whether all the other clauses can be found as well
       for( int j = i+1; j < cList.size(); ++ j ) {
 	const ternary& tern = cList[j];
 	if( (tern.l1 == ~b || tern.l2 == ~b) && ( tern.l1 == ~c || tern.l2 == ~c ) )
-	  { found[1] = true; break; }
+	  { found[1] = true; 
+	    if( config.circ_debug_out ) cerr << "c found 1 with " << a << "," << tern.l1 << "," << tern.l2 << endl;
+	    break; }
       }
-      // if( found[1] ) cerr << "c found first clause as ternary" << endl;
+      if( config.circ_debug_out )  if( found[1] ) cerr << "c found first clause as ternary" << endl;
       if ( !found[1] ) { // check for 2nd clause in implications
 	if( big->implies(a,~b) || big->implies(a,~c)  ) found[1] = true;
 	else { // not found in big
 	  if( big->isOneChild(~a,~b,~c ) )
-	    { found[1] = true; binary=true;break; }
+	    { found[1] = true; binary=true;
+	      if( config.circ_debug_out ) cerr << "c found 1 with " << ~a << " ->" << ~b << " or " << ~c << endl;
+	      break; }
 	  else  { // found[1] is still false!
 	    if( big->implies(b,~c) ) found[1] = true;
 	    else {
 		if( big->isChild(b,~c) )
-		  { found[1] = true; binary=true;break; }
+		  { found[1] = true; 
+		    if( config.circ_debug_out ) cerr << "c found 1 with " << b << " ->" << ~c << endl;
+		    binary=true;break; 
+		  }
 	    }
 	  }
 	}
@@ -714,6 +721,7 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	  if(  countPos == 2 ) {
 	    if( config.circ_debug_out ) cerr << "c current XOR gate is implied with blocked clauses! ternaries: " << countPos << endl; 
 	    // Lit x, Lit s, Lit t, Lit f, const Coprocessor::Circuit::Gate::Type _type, const Coprocessor::Circuit::Gate::Encoded e
+	    if( config.circ_debug_out ) cerr << "c blocked XOR gate " << a << "," << b << "," << c << endl;
 	    gates.push_back( Gate(a,b,c, Gate::XOR, Gate::POS_BLOCKED) );
 	    continue;
 	  }
@@ -723,34 +731,51 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
      for( int j = 0; j < naList.size(); ++ j ) {
 	const ternary& tern = naList[j];
 	if( (tern.l1 == ~b || tern.l2 == ~b) && ( tern.l1 == c || tern.l2 == c ) ) // found [-a,-b,c]
-	  { found[2] = true; }
+	  { 
+	    found[2] = true; 
+	    if( config.circ_debug_out ) cerr << "c found 2 with " << ~a << "," << tern.l1 << "," << tern.l2 << endl;
+	  }
 	else if( (tern.l1 == b || tern.l2 == b) && ( tern.l1 == ~c || tern.l2 == ~c ) ) // found [-a,b,-c]
-	  { found[3] = true; }
+	  { found[3] = true;
+	    if( config.circ_debug_out ) cerr << "c found 3 with " << ~a << "," << tern.l1 << "," << tern.l2 << endl;
+	  }
      }
-     // cerr << "c found in ternaries: 3rd: " << (int)found[2] << " 4th: " << (int)found[3] << endl;
+     if( config.circ_debug_out )  cerr << "c found in ternaries: 3rd: " << (int)found[2] << " 4th: " << (int)found[3] << endl;
      if ( !found[2] ) { // check for 2nd clause in implications
 	if( big->implies(~a,~b) || big->implies(~a,c) ) { binary=true; found[2] = true; }
 	else {
 	  if( big->isOneChild(a,~b,c) )
 	    { found[2] = true; binary=true;break; }
 	  else { // found[2] is still false!
-	    if( big->implies(~b,c) ) { binary=true; found[2] = true; }
+	    if( big->implies(b,c) ) { binary=true; found[2] = true; 
+	      if( config.circ_debug_out ) cerr << "c found 2 with " << b << " -> " << c << endl;
+	    }
 	    else {
-	      if( big->isChild(b,c) ){ found[2] = true; binary=true;break; }
+	      if( big->isChild(b,c) ){ found[2] = true; binary=true;
+	      if( config.circ_debug_out ) cerr << "c found 2 with " << b << " ->* " << c << endl;
+	      break; }
 	    }
 	  }
 	}
      }
      if( !found[2] ) continue; // clause [-a,-b,c] not found
      if ( !found[3] ) { // check for 2nd clause in implications
-	if( big->implies(~a,b) || big->implies(~a,~c) ) { binary=true; found[3] = true; }
+	if( big->implies(~a,b) || big->implies(~a,~c) ) { binary=true; found[3] = true; 
+	  if( config.circ_debug_out ) cerr << "c found 3 with " << ~a << " -> " << ~c << endl;
+	}
 	else {
-	  if( big->isOneChild(a,b,~c)){ found[3] = true; binary=true;break; }
+	  if( big->isOneChild(a,b,~c)){ found[3] = true; binary=true;
+	  if( config.circ_debug_out ) cerr << "c found 3 with " << ~a << " -> " << b << " or " << ~c << endl;
+	  break; }
 	  else {
-	    if( big->implies(b,~c) ) { binary=true; found[3] = true; }
+	    if( big->implies(~b,~c) ) { binary=true; found[3] = true; 
+	      if( config.circ_debug_out ) cerr << "c found 3 with " << ~b << " -> " << ~c << endl;
+	    }
 	    else {
 	      if( big->isChild(~b,~c) )
-	      { found[3] = true; binary=true;break; }
+	      { found[3] = true; binary=true;
+	      if( config.circ_debug_out ) cerr << "c found 3 with " << ~b << " ->* " << ~c << endl;
+	      break; }
 	    }
 	  }
 	}

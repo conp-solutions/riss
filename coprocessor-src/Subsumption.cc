@@ -177,6 +177,7 @@ bool Subsumption::process(bool doStrengthen, Heap< VarOrderBVEHeapLt >* heap, co
   
   modifiedFormula = modifiedFormula || propagation.appliedSomething();
   if( !modifiedFormula ) unsuccessfulSimplification();
+  return modifiedFormula;
 }
 
 

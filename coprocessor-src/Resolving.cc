@@ -57,6 +57,7 @@ bool Resolving::process(bool post)
     propagation.process(data,true);
     modifiedFormula = modifiedFormula || propagation.appliedSomething(); 
   }
+  return modifiedFormula;
 }
 
 void Resolving::printStatistics(ostream& stream)

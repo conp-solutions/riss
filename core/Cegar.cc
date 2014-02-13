@@ -369,7 +369,7 @@ int Solver::checkCEGARclauses(vec< Lit >& cegarClauses, bool addAll)
     }
     cegarClauses.clear();
   } else {
-    int keptLits;
+    int keptLits = 0;
     for( int i = 0; i < cegarClauses.size(); ++ i ) {
       if( cegarClauses[i] == lit_Undef ) {
 	// check whether the current clause is satisfied:

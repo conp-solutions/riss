@@ -909,8 +909,6 @@ bool FourierMotzkin::process()
   if( data.ok() && data.hasToPropagate() )
     if( propagation.process(data,true) == l_False ) {data.setFailed(); return modifiedFormula; }
   
-  finishedFM:;
-  
   fmTime = cpuTime() - fmTime;
   
   return modifiedFormula;
