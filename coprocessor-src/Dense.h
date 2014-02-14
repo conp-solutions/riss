@@ -43,17 +43,24 @@ public:
   Dense(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation);
 
   
-  /** compress the formula - if necessary, output a new whiteFile */
+  /** compress the formula - if necessary, output a new whiteFile 
+   * calls adoptUndoStack before it actually modifies the formula
+   */
   void compress(const char *newWhiteFile = 0);
 
-  /** undo variable mapping, so that model is a model for the original formula*/
+  /** decompress the most recent additions of the extend model vector, 
+   *  does not touch lit_Undefs */
+  void adoptUndoStack();
+  
+  /** undo variable mapping, so that model is a model for the original formula
+   * adoptUndoStack should be called before this method!
+   */
   void decompress(vec< lbool >& model);
   
   /** inherited from @see Technique */
   void printStatistics( ostream& stream );
   
   void destroy();
-  
   
   /** write dense information to file, so that it can be loaded afterwards again */
   bool writeUndoInfo(const string& filename);
@@ -67,6 +74,7 @@ public:
 protected:
 
   unsigned globalDiff;
+
 };
 
 

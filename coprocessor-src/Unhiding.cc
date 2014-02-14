@@ -175,13 +175,14 @@ uint32_t Unhiding::linStamp( const Lit literal, uint32_t stamp, bool& detectedEE
 	  l1 = stampEE.back();
 	  stampEE.pop_back();
 	  stampClassEE.push_back( l1 );
-	  if( config.opt_uhd_Debug > 1 &&  l1 != l ) cerr << "c collect EE literals " << l << " and " << l1 << endl;
+	  if( config.opt_uhd_Debug > 1 &&  l1 != l ) cerr << "c collect EE literals " << l << " and " << l1 << " at level " << level << endl;
 	  stampInfo[ toInt(l1) ].dsc = stampInfo[ toInt(l) ].dsc;
 	  stampInfo[ toInt(l1) ].fin = stamp;
 	} while( l1 != l );
+	stampClassEE.push_back( l ); // add the literal itself to the class!
 	if( stampClassEE.size() > 1 ) {
 	  // also collect all the literals from the current path
-	  if( config.opt_uhd_Debug > 4 ) cerr << "c [UHD-A] found eq class of size " << stampClassEE.size() << endl;
+	  if( config.opt_uhd_Debug > 1 ) cerr << "c [UHD-A] found eq class of size " << stampClassEE.size() << endl;
 	  data.addEquivalences( stampClassEE );
 	    
 	  detectedEE = true;

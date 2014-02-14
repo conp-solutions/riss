@@ -69,15 +69,20 @@ void Dense::compress(const char* newWhiteFile)
   // formula is already compact, or not too loose
   if( diff == 0 || ( config.opt_dense_fragmentation > 1.0 + ( (diff * 100)  / data.nVars()  ) ) ) {
     if( config.dense_debug_out > 0 ) cerr << "c [DENSE] no fragmentation, do not compress!" << endl;
+    
     if( config.opt_dense_store_forward ) {
       if( config.dense_debug_out ) cerr << "c store forward mapping " << endl;
       forward_mapping.resize( data.nVars(), -1 ); // initially, set to -1 for no mapping (dropped)
       for( Var v = 0; v < data.nVars() ; v++ )
 	forward_mapping[v] = compression.mapping[v]; // store everything into the new mapping file!
     }
+    
     free( count ); // do not need the count array any more
     return;
   }
+  
+  // first, take care of the undo stack that has been created until this compression
+  adoptUndoStack();
   globalDiff += diff;
   
   // replace everything in the clauses
@@ -153,6 +158,7 @@ void Dense::compress(const char* newWhiteFile)
       forward_mapping[v] = compression.mapping[v]; // store everything into the new mapping file!
   }
   
+  
   // rewriting everything finnished
   // invert mapping - and re-arrange all variable data
   for( Var v = 0; v < data.nVars() ; v++ )
@@ -189,6 +195,8 @@ void Dense::compress(const char* newWhiteFile)
   assert( data.nVars() + diff == compression.variables  && "number of variables has to be reduced" );
   
   map_stack.push_back( compression );
+  
+  data.didCompress(); // notify data about compression!
   
   return; 
 }
@@ -242,6 +250,37 @@ void Dense::decompress(vec< lbool >& model)
   }
 }
 
+void Dense::adoptUndoStack()
+{
+  vector< Lit >& extend = data.getUndo();
+  const int compressed = data.getLastCompressUndoLits();
+  if( compressed == -1 ){
+    if( config.dense_debug_out ) cerr << "c no compression yet, so no need to decompress undo info" << endl;
+    return; // nothing to be done, because no compression yet!
+  }
+
+  if( config.dense_debug_out > 1 ) cerr << "stack: " << extend << endl;
+  
+  int start = data.getLastDecompressUndoLits();
+  if( start == -1 ) start = data.getLastCompressUndoLits();
+  assert( start >= 0 && "at least one compress or adopt has been done already" );
+  if( config.dense_debug_out ) cerr << "c rewrite undo stack from " << start << " to " << extend.size() << endl;
+  for( uint32_t i = start; i < extend.size(); ++ i ) {
+    if( extend[i] != lit_Undef ) { // rewrite each literal of the extension step
+	if( config.dense_debug_out ) cerr << "c rewrite " << extend[i] << endl;
+	Var v = var(extend[i]);
+	for( int j = map_stack.size() - 1; j >= 0; --j ) {
+	  Compression& compression = map_stack[j];
+	  v = compression.mapping[v];
+	}
+	extend[i] = mkLit( v, sign(extend [i]) );
+	if( config.dense_debug_out ) cerr << "c             into " << extend[i] << endl;
+    }
+  }
+  if( config.dense_debug_out > 1 ) cerr << "stack: " << extend << endl;
+  // store that this decompression has been done
+  data.didDecompressUndo();  
+}
 
 bool Dense::writeUndoInfo(const string& filename) {
 

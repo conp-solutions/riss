@@ -481,7 +481,8 @@ lbool Preprocessor::performSimplification()
 
   if( config.opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;
   
-  if( config.opt_dense && !data.isInprocessing() ) {
+  // if( config.opt_dense && !data.isInprocessing() ) {
+  if( config.opt_dense ) {
     // do as very last step -- not nice, if there are units on the trail!
     dense.compress(); 
   }
@@ -935,7 +936,8 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 
   if( config.opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;
   
-  if( config.opt_dense  && !data.isInprocessing() ) {
+  //if( config.opt_dense && !data.isInprocessing() ) {
+  if( config.opt_dense ) {
     // do as very last step -- not nice, if there are units on the trail!
     dense.compress(); 
   }
@@ -1163,7 +1165,10 @@ stream << "c [STAT] CP3(2) "
 void Preprocessor::extendModel(vec< lbool >& model)
 {
   if( config.opt_verbose > 0 ) cerr << "c extendModel with " << model.size() << " variables" << endl;
-  // order is important!
+
+  // for the most recent changes that have not reached a dense.compress yet
+  dense.adoptUndoStack(); // necessary here!
+  // order is important! 
   dense.decompress( model ); // if model has not been compressed before, nothing has to be done!
   if( config.opt_verbose > 0 ) cerr << "c formula variables: " << formulaVariables << " model: " << model.size() << endl;
   if( formulaVariables > model.size() ) model.growTo(formulaVariables);

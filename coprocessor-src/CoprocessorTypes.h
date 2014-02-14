@@ -175,7 +175,12 @@ class CoprocessorData
   MarkArray deleteTimer;                // store for each literal when (by which technique) it has been deleted
   vector<char> untouchable;             // store all variables that should not be touched (altering presence in models)
 
+ 
   vector<Lit> undo;                     // store clauses that have to be undone for extending the model
+  int lastCompressUndoLits;             // number of literals when the last compression took place
+  int decompressedUndoLits;             // number of literals on the decompressedUndoLits stack
+
+private:
   vector<Lit> equivalences;             // stack of literal classes that represent equivalent literals
   vector<CRef> subsume_queue; // queue of clause references that potentially can subsume other clauses
   vector<CRef> strengthening_queue;     // vector of clausereferences, which potentially can strengthen
@@ -246,6 +251,27 @@ public:
    */
   void moveVar( Var from, Var to, bool final = false );
 
+  /// notify about variable renaming
+  void didCompress() {
+    if( lastCompressUndoLits != -1 &&  // if there has been a  compression,
+      decompressedUndoLits != undo.size() ) { // then the complete undo-stack has to be adopted
+      cerr << "c variable renaming went wrong - abort. lastCom: " << lastCompressUndoLits << " decomp: " << decompressedUndoLits << " undo: " << undo.size() << endl;
+      exit(14);
+    }
+    lastCompressUndoLits = undo.size();
+  }
+  
+  /// memorize that the undo info has been adopted until this size already
+  void didDecompressUndo() {
+    decompressedUndoLits = undo.size();
+  }
+  
+  /** return number of literals that have already been uncompressed 
+   * will return -1, if no compression took place yet
+   */
+  int getLastCompressUndoLits() const { return lastCompressUndoLits; }
+  int getLastDecompressUndoLits() const { return decompressedUndoLits; }
+  
 // semantic:
   bool ok();                                             // return ok-state of solver
   void setFailed();                                      // found UNSAT, set ok state to false
@@ -326,7 +352,8 @@ public:
   void addExtensionToExtension(vector< Lit >& lits);
 
   void extendModel(vec<lbool>& model);
-  const vector<Lit>& getUndo() const { return undo; }
+  /// careful, should not be altered other than be the Dense object
+  vector<Lit>& getUndo() { return undo; }
 
   /// for DRUP / DRAT proofs
   template <class T>
@@ -571,6 +598,8 @@ inline CoprocessorData::CoprocessorData(ClauseAllocator& _ca, Solver* _solver, C
 , hasLimit( _limited )
 , randomOrder(_randomized)
 , currentlyInprocessing(false)
+, lastCompressUndoLits(-1)
+, decompressedUndoLits(-1)
 , log(_log)
 {
 }
@@ -1431,6 +1460,12 @@ inline void CoprocessorData::addExtensionToExtension(vector< Lit >& lits)
 
 inline void CoprocessorData::extendModel(vec< lbool >& model)
 {
+  if( lastCompressUndoLits != -1 &&  // if there has been a  compression,
+      decompressedUndoLits != undo.size() ) { // then the complete undo-stack has to be adopted
+    cerr << "c variable renaming went wrong - abort. lastCom: " << lastCompressUndoLits << " decomp: " << decompressedUndoLits << " undo: " << undo.size() << endl;
+    exit(13);
+  }
+  
   const bool local_debug = false;
   if( false && (global_debug_out || local_debug) ) {
     cerr << "c extend model of size " << model.size() << " with undo information of size " << undo.size() << endl;
