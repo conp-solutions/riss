@@ -308,6 +308,8 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	Lit a = getReplacement( g.a() ); Lit b = getReplacement( g.b() ); Lit x = getReplacement( g.x() ); 
 	if( config.ee_debug_out > 2 ) cerr << "c WHICH is rewritten " << x << " <-> AND(" << a << "," << b << ")" << endl;
 	
+	if( var(x) == var(a) || var(x) == var(b) || var(a) == var(b) ) continue; // such a gate would not be found during analysis ...
+	
 	// assigned value
 	if ( data.value(a) != l_Undef || data.value(b) != l_Undef || data.value(x) != l_Undef) {
 	  if( config.ee_debug_out > 2 ) cerr << "c gate has assigned inputs" << endl;
@@ -340,14 +342,16 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	  data.addEquivalences(x,a);
 // 	  a = getReplacement( g.a() );
 // 	  x = getReplacement( g.x() );
-	} else if ( a == ~b ) {
-	  if( config.ee_debug_out > 2 ) cerr << "c find an unsatisfiable G-gate based on complementary inputs " << x << " <-> AND(" << a << "," << b << ")" << endl;  
-	  if( enqOut ) {
-	    if( config.ee_debug_out > 2 ) cerr << "c enqueue literal " << ~x << endl;
-	    data.enqueue(~x);
-	  }
 	} 
+
 // These rules are unsound!
+// 	else if ( a == ~b ) {
+// 	  if( config.ee_debug_out > 2 ) cerr << "c find an unsatisfiable G-gate based on complementary inputs " << x << " <-> AND(" << a << "," << b << ")" << endl;  
+// 	  if( enqOut ) {
+// 	    if( config.ee_debug_out > 2 ) cerr << "c enqueue literal " << ~x << endl;
+// 	    data.enqueue(~x);
+// 	  }
+// 	} 
 // 	else if ( x == a ) {
 // 	  if( config.ee_debug_out > 2 ) cerr << "c equi inputs G-gate " << x << " <-> AND(" << a << "," << b << ")" << endl;  
 // 	  if( config.opt_ee_eagerEquivalence ) setEquivalent(b,x);
@@ -361,10 +365,10 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 // // 	  x = getReplacement( g.x() );
 // 	  data.addEquivalences(x,a);
 // 	} 
-	else if ( x == ~a || x == ~b) {
-	  if( config.ee_debug_out > 2 ) cerr << "c find an unsatisfiable G-gate based on complementary input to output" << endl; 
-	  if( enqOut )data.enqueue(~x);
-	} 
+// 	else if ( x == ~a || x == ~b) {
+// 	  if( config.ee_debug_out > 2 ) cerr << "c find an unsatisfiable G-gate based on complementary input to output" << endl; 
+// 	  if( enqOut )data.enqueue(~x);
+// 	} 
 
 	
 	// compare to all other gates of this variable:
@@ -378,6 +382,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
  	  Lit ob = getReplacement( other.b() ); 
  	  Lit ox = getReplacement( other.x() ); 
 	  if( config.ee_debug_out > 2 ) cerr << "c WHICH is rewritten " << ox << " <-> AND(" << oa << "," << ob << ")" << endl;
+	  if( var(ox) == var(oa) || var(ox) == var(ob) || var(oa) == var(ob) ) continue; // such a gate would not be found during analysis ...
 	  // assigned value
 	  if ( data.value(oa) != l_Undef || data.value(ob) != l_Undef || data.value(ox) != l_Undef) {
 	    if( config.ee_debug_out > 2 ) { 
@@ -425,12 +430,11 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	    data.addEquivalences(ox,oa);
 // 	    oa = getReplacement( other.a() ); 
 // 	    ox = getReplacement( other.x() );
-	  } else if ( oa == ~ob ) { // this rule holds!
-	    if( config.ee_debug_out > 2 ) cerr << "c find an unsatisfiable O-gate based on complementary inputs " << ox << " <-> AND(" << oa << "," << ob << ")" << endl; 
-	    if( config.ee_debug_out > 2 ) cerr << "[   6]" << endl;
-	    if( enqOut ) data.enqueue(~ox);
 	  } 
 // these rules are unsound
+	  else if ( oa == ~ob ) { // this rule holds!
+	    continue; // this kind of gate should not be used!
+	  } 
 // 	  else if ( ox == oa ) {
 // 	    if( config.ee_debug_out > 2 ) cerr << "[   7]" << endl;
 // 	    if( config.opt_ee_eagerEquivalence ) setEquivalent(ob,ox);
@@ -445,9 +449,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 // 	    data.addEquivalences(ox,oa);
 // 	  }
 	  else if ( ox == ~oa || ox == ~ob) { // this rule holds!
-	    if( config.ee_debug_out > 2 ) cerr << "[   9]" << endl;
-	    if( config.ee_debug_out > 2 ) cerr << "c find an unsatisfiable O-gate based on complementary input to output " << ox << " <-> AND(" << oa << "," << ob << ")" << endl; 
-	    if( enqOut ) data.enqueue(~ox);
+	    continue; // this gate should not be used!
 	  } 
 
 	  

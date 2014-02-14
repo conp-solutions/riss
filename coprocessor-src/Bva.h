@@ -8,6 +8,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "core/Solver.h"
 #include "coprocessor-src/Technique.h"
 #include "coprocessor-src/CoprocessorTypes.h"
+#include "coprocessor-src/Propagation.h"
 
 using namespace Minisat;
 
@@ -18,6 +19,7 @@ namespace Coprocessor {
 class BoundedVariableAddition : public Technique  {
     
   CoprocessorData& data;
+  Propagation propagation;
   
   // attributes for current run
   bool doSort;			// ensure that all clauses are sorted afterwards (assume, they are sorted before)
@@ -70,7 +72,7 @@ class BoundedVariableAddition : public Technique  {
   vec<Lit> clauseLits;			// vector that is added for clause definitions
  
 public:
-  BoundedVariableAddition( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data );
+  BoundedVariableAddition( Coprocessor::CP3Config& _config, ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::CoprocessorData& _data, Coprocessor::Propagation& _propagation );
   
   void reset();
   

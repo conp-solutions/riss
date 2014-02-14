@@ -1232,6 +1232,9 @@ CRef Solver::propagate()
 		  addToProof( oc ); // if drup is enabled, add this clause to the proof!
 		  
 		  // if commonDominator is element of the clause itself, delete the clause (hyper-self-subsuming resolution)
+		  const bool clearnt = c.learnt();
+		  float cactivity = 0;
+		  if( clearnt ) cactivity = c.activity();
 		  bool willSubsume = false;
 		  if( config.opt_LHBR_sub ) { // check whether the new clause subsumes the other
 		    for( int k = 1; k < c.size(); ++ k ) if ( c[k] == ~commonDominator ) { willSubsume = true; break; }
@@ -1252,9 +1255,8 @@ CRef Solver::propagate()
 		    l1lhbr_news = decisionLevel() == 1 ? l1lhbr_news + 1 : l1lhbr_news;
 		  }
 		  // a new clause is required
-		  bool clearnt = c.learnt();
 		  CRef cr2 = ca.alloc(oc, clearnt ); // add the new clause - now all references could be invalid!
-		  if( clearnt ) { ca[cr2].setLBD(1); learnts.push(cr2); ca[cr2].activity() = c.activity(); }
+		  if( clearnt ) { ca[cr2].setLBD(1); learnts.push(cr2); ca[cr2].activity() = cactivity; }
 		  else clauses.push(cr2);
 		  
 		  //if( ws.capacity() > ws.size() + 1 ) attachClause(cr2); // if not causes problems!

@@ -9,9 +9,10 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 using namespace Coprocessor;
 
 	
-BoundedVariableAddition::BoundedVariableAddition( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data)
+BoundedVariableAddition::BoundedVariableAddition( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data,   Propagation& _propagation)
 : Technique( _config, _ca, _controller )
 , data( _data )
+, propagation(_propagation)
 , doSort( true )
 , processTime(0)
 , andTime(0)
@@ -64,6 +65,11 @@ bool BoundedVariableAddition::process()
   
   // do not simplify, if the formula is considered to be too large!
   if( !data.unlimited() && ( data.nVars() > config.opt_bva_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_bva_cls ) ) return false;
+  
+   // make sure there are no unit clauses!
+  if( data.hasToPropagate() ) {
+    if( l_False == propagation.process(data,true) ) return modifiedFormula;
+  }
   
   // use BVA only, if number of variables is not too large 
   if( data.nVars() < config.opt_bva_VarLimit || !data.unlimited() ) {
@@ -309,6 +315,8 @@ bool BoundedVariableAddition::andBVA() {
 	    if( !bvaHandleComplement( right, bvaHeap) ) {
 	      data.setFailed();
 	      return didSomething;
+	    } else if( data.hasToPropagate() ) { // eagerly propagate units that have been found!
+	      if( l_False == propagation.process(data,true) ) return didSomething; // this destroys the properties of the BVA heap!
 	    }
 	    andComplementCount ++;
 	    if( !bvaHeap.inHeap( toInt(right) ) ) bvaHeap.insert( toInt(right) ) ;

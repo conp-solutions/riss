@@ -866,6 +866,7 @@ bool FourierMotzkin::process()
 	if( c.lr.size() == 1 ) {
 	  if( data.enqueue(c.lr[0]) == l_False ) return modifiedFormula;
 	} else if( ! hasDuplicate(c.lr) ) {
+	  if( config.fm_debug_out > 2 ) cerr << "c create new clause " <<  c.lr << endl;
 	  CRef tmpRef = ca.alloc(c.lr, false); // no learnt clause!
 	  ca[tmpRef].sort();
 	  assert( ca[tmpRef][0] < ca[tmpRef][1] && "the clause has to be sorted!" );
@@ -1481,17 +1482,35 @@ void FourierMotzkin::findTwoProduct(vector< FourierMotzkin::CardC >& cards, BIG&
 	// add the global set of lits as new AMO
 	if( data.lits.size() > 0 ) { // if there is a global AMO
 	  sort( data.lits );
-	  searchSteps+= data.lits.size(); // approximate sorting
-	  // TODO check for complementary literals! or being unit
-	  if( !amoExistsAlready(data.lits, leftHands, cards ) ) {
-	    if( config.fm_debug_out > 0 ) cerr << "c found new AMO " << data.lits << endl;
-	    if( config.fm_debug_out > 2 ) cerr << "c   based on " << cards[i].ll << " and AMO " << B.ll << endl; // here, the reference is still working
-	    for( int n = 0 ; n < data.lits.size(); ++ n )
-	      leftHands[ toInt( data.lits[n] ) ].push_back( cards.size() );	// register new AMO in data structures
-	    cards.push_back( CardC( data.lits ) ); // actually add new AMO
-	    twoPrAmos ++;
-	    twoPrAmoLits += data.lits.size();
-	    
+	  bool doUseConstraint = true;
+	  // check for being redundant, or for containing units
+	  for( int m = 0 ; m + 1 < data.lits.size(); ++ m ) {
+	    if( data.lits[m] == ~data.lits[m+1]) { // all complements of the remaining literals inside this AMO are units
+	      for( int o = 0; o < m; ++ o ) { 
+		unitQueue.push( ~data.lits[o] ); 
+		if( l_False == data.enqueue( ~data.lits[o] ) ) return;
+	      }
+	      for( int o = m+2; o < data.lits.size(); ++ o ) { 
+		unitQueue.push( ~data.lits[o] ); 
+		if( l_False == data.enqueue( ~data.lits[o] ) ) return;
+	      }
+	      doUseConstraint = false;
+	    }
+	    assert( data[m] != data[m+1] && "these should not be duplicate literals!" );
+	  }
+	  if( doUseConstraint ) { // the constraint that is added is not redundant
+	    searchSteps+= data.lits.size(); // approximate sorting
+	    // TODO check for complementary literals! or being unit
+	    if( !amoExistsAlready(data.lits, leftHands, cards ) ) {
+	      if( config.fm_debug_out > 0 ) cerr << "c found new AMO " << data.lits << endl;
+	      if( config.fm_debug_out > 2 ) cerr << "c   based on " << cards[i].ll << " and AMO " << B.ll << endl; // here, the reference is still working
+	      for( int n = 0 ; n < data.lits.size(); ++ n )
+		leftHands[ toInt( data.lits[n] ) ].push_back( cards.size() );	// register new AMO in data structures
+	      cards.push_back( CardC( data.lits ) ); // actually add new AMO
+	      twoPrAmos ++;
+	      twoPrAmoLits += data.lits.size();
+	      
+	    }
 	  }
 	}
 	if( cards.size() >= config.opt_fm_max_constraints ) break;
