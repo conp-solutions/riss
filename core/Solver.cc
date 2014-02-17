@@ -1745,6 +1745,7 @@ bool Solver::analyzeNewLearnedClause(const CRef newLearnedClause)
 	  if( value( bLit ) == l_Undef ) { // only if not set already
 	    if ( j == 0 || k == 0) L2units ++; else L3units ++; // stats
 	    if( decisionLevel() != 0 ) cancelUntil(0);
+	    if( config.opt_learn_debug ) cerr << "c uhdPR bin(b) enqueue " << bLit << "@" << decisionLevel() << endl;
 	    uncheckedEnqueue( bLit );
 	    addCommentToProof("added by uhd probing:"); addUnitToProof(bLit); // not sure whether DRUP can always find this
 	  } else if (value( bLit ) == l_False ) return true; // found a contradiction
@@ -1754,6 +1755,7 @@ bool Solver::analyzeNewLearnedClause(const CRef newLearnedClause)
 	    if( value( aLit ) == l_Undef ) { // only if not set already
 	    if ( j == 0 || k == 0) L2units ++; else L3units ++; // stats
 	    if( decisionLevel() != 0 ) cancelUntil(0);
+	    if( config.opt_learn_debug ) cerr << "c uhdPR bin(a) enqueue " << aLit << "@" << decisionLevel() << endl;
 	    uncheckedEnqueue( aLit);
 	    addCommentToProof("added by uhd probing:"); addUnitToProof(aLit);
 	  } else if (value( aLit ) == l_False ) return true; // found a contradiction
@@ -1800,6 +1802,8 @@ bool Solver::analyzeNewLearnedClause(const CRef newLearnedClause)
 	    
 	    if( value( minLit ) == l_Undef ) {
 	      L4units ++;
+	      if( decisionLevel() != 0 ) cancelUntil(0);
+	      if( config.opt_learn_debug ) cerr << "c uhdPR long enqueue " << minLit << "@" << decisionLevel() << endl;
 	      uncheckedEnqueue( minLit );
 	    } else if (value(minLit) == l_False ) return true;
 	    for( int j = 0 ; j < clause.size(); ++ j ) {

@@ -588,6 +588,7 @@ protected:
   unsigned L2units,L3units,L4units;
   /** if the new learned clause is binary, C = (a \lor b), 
    *  then it is checked whether a literal l is implied by both a and b in the formula. 
+   *  Should be called after eventually enqueuing the asserting literal of the current learned clause
    *  @return true, if a contrdiction has been found, so that the result is UNSAT
    */
   bool analyzeNewLearnedClause( const CRef newLearnedClause );
