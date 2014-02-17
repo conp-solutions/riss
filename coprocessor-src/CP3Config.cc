@@ -369,7 +369,7 @@ opt_ee_level            (_cat_ee, "cp3_ee_level",    "EE on BIG, gate probing, s
 opt_ee_gate_limit       (_cat_ee, "cp3_ee_glimit",   "step limit for structural hashing", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
 opt_ee_circuit_iters    (_cat_ee, "cp3_ee_cIter",    "max. EE iterations for circuit (-1 == inf)", 2, IntRange(-1, INT32_MAX), optionListPtr ),
 opt_ee_eagerEquivalence (_cat_ee, "cp3_eagerGates",  "do handle gates eagerly", true, optionListPtr ),
-opt_eeGateBigFirst   (_cat_ee, "cp3_BigThenGate", "detect binary equivalences before going for gates", true, optionListPtr ),
+opt_eeGateBigFirst   (_cat_ee, "cp3_BigThenGate", "detect binary equivalences before going for gates [should not be disabled!]", true, optionListPtr ),
 opt_ee_aagFile            (_cat_ee, "ee_aag", "write final circuit to this file",0, optionListPtr ),
 #endif
 #if defined TOOLVERSION  

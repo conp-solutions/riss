@@ -250,6 +250,13 @@ public:
    * @param final if true, decision heap will be re-build, and the set of variables will be shrinked to the given to variable
    */
   void moveVar( Var from, Var to, bool final = false );
+  
+  /** merge the solver data from one literal to another literal
+   * two variants, one for two literals, one for many literals
+   * @param final if true, decision heap will be re-build, and the set of variables will be shrinked to the given to variable
+   */
+  void mergeVar( Lit from, Lit to, bool final = false );
+  void mergeVar( vector<Lit>& from, Lit to, bool final = false );
 
   /// notify about variable renaming
   void didCompress() {

@@ -30,21 +30,25 @@ void Dense::compress(const char* newWhiteFile)
   uint32_t* count = (uint32_t*)malloc( (data.nVars()) * sizeof(uint32_t) );
   memset( count, 0, sizeof( uint32_t) * (data.nVars()) );
   // count literals occuring in clauses
-  for( uint32_t i = 0 ; i < data.getClauses().size(); ++i ){
-    Clause& clause = ca[ data.getClauses()[i] ];
-    if( clause.can_be_deleted() ) continue;
-    uint32_t j = 0 ;
-    for( ; j < clause.size(); ++j ){
-      const Lit l = clause[j];
-      
-      if( config.dense_debug_out && l_Undef != data.value(l) ) cerr << "c DENSE found assigned literal " << l << " in clause ["<< data.getClauses()[i] << "] : " << clause << " learned?: " << clause.learnt() << endl ;
-      assert( l_Undef == data.value(l) && "there cannot be assigned literals");
-      assert(var(l) < data.nVars() );
-      
-      count[ var(l) ] ++;
+  
+  for( int s = 0 ; s < 2; ++ s ) {
+    vec<CRef>& list = s == 0 ? data.getClauses() : data.getLEarnts();
+    for( uint32_t i = 0 ; i < list.size(); ++i ) {
+      Clause& clause = ca[ list[i] ];
+      if( clause.can_be_deleted() || clause.learnt() ) continue; // consider only clauses in the formula!
+      uint32_t j = 0 ;
+      for( ; j < clause.size(); ++j ){
+	const Lit l = clause[j];
+	
+	if( config.dense_debug_out && l_Undef != data.value(l) ) cerr << "c DENSE found assigned literal " << l << " in clause ["<< data.getClauses()[i] << "] : " << clause << " learned?: " << clause.learnt() << endl ;
+	assert( l_Undef == data.value(l) && "there cannot be assigned literals");
+	assert(var(l) < data.nVars() );
+	
+	count[ var(l) ] ++;
+      }
+      // found empty clause?
+      if( clause.size() == 0 ) { data.setFailed(); }
     }
-    // found empty clause?
-    if( clause.size() == 0 ) { data.setFailed(); }
   }
  
   uint32_t diff = 0;

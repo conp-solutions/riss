@@ -149,7 +149,6 @@ cp3_cce_steps  {100000,2000000,3000000}[2000000]       # Number of steps that ar
 #
 #  COPROCESSOR 3 - EQUIVALENCE ELIMINATION OPTIONS:
 #
-cp3_BigThenGate  {yes,no}[yes]       # detect binary equivalences before going for gates
 cp3_eagerGates  {yes,no}[yes]       # do handle gates eagerly
 ee_sub  {yes,no}[no]       # do subsumption/strengthening during applying equivalent literals?
 ee_reset  {yes,no}[no]       # after Subs or Up, do full reset?
@@ -676,6 +675,7 @@ bve_force_gates     | bve_gates in {yes}
 cp3_bve_resolve_learnts    | bve in {yes} 
 cp3_bve_learnt_growth      | bve in {yes} 
 cp3_bve_limit    | bve in {yes} 
+cp3_bve_limit    | cp3_limited in {yes}
 bve_red_lits     | bve in {yes} 
 cp3_bve_heap     | bve in {yes}
 bve_cgrow        | bve in {yes} 
@@ -702,12 +702,13 @@ cp3_ee_it          | ee in {yes}
 cp3_ee_subNew      | ee in {yes}
 cp3_ee_level       | ee in {yes}
 cp3_ee_limit       | ee in {yes}
+cp3_ee_limit       | cp3_limited in {yes}
 cp3_ee_bIter       | ee in {yes}
 cp3_ee_inpInc      | ee in {yes}
 cp3_ee_inpInc      | inprocess in {yes}
-cp3_BigThenGate    | cp3_ee_level in {2}
 cp3_eagerGates     | cp3_ee_level in {2}
 cp3_ee_glimit      | cp3_ee_level in {2}
+cp3_ee_glimit      | cp3_limited in {yes}
 cp3_ee_cIter       | cp3_ee_level in {2}
 
 #
@@ -745,14 +746,17 @@ cp3_fm_maxConstraints  | fm in {yes}
 cp3_fm_maxA    | fm in {yes} 
 cp3_fm_grow    | fm in {yes} 
 cp3_fm_Slimit  | fm in {yes} 
+cp3_fm_Slimit  | cp3_limited in {yes}
 cp3_fm_limit   | fm in {yes} 
+cp3_fm_limit   | cp3_limited in {yes}
 
 cp3_fm_sem      | fm in {yes} 
 card_noUnits    | cp3_fm_sem in {yes} 
 card_max        | cp3_fm_sem in {yes} 
 card_minC       | cp3_fm_sem in {yes} 
 card_maxC       | cp3_fm_sem in {yes} 
-card_Elimit     | cp3_fm_sem in {yes} 
+card_Elimit     | cp3_fm_sem in {yes}
+card_Elimit     | cp3_limited in {yes} 
 
 #
 #  COPROCESSOR 3 - HTE OPTIONS:
@@ -793,6 +797,7 @@ cp3_viv_inpInc | inprocess in {yes}
 rat-compl  | rate in {yes}
 rate-min   | rate in {yes} 
 rate-limit | rate in {yes} 
+rate-limit | cp3_limited in {yes} 
 
 #
 #  COPROCESSOR 3 - RES OPTIONS:
@@ -818,7 +823,9 @@ sls-rnd-walk     | sls in {yes}
 cp3_strength       | subsimp in {yes} 
 cp3_call_inc       | subsimp in {yes} 
 cp3_str_limit      | cp3_strength in {yes} 
+cp3_str_limit      | cp3_limited in {yes} 
 cp3_sub_limit      | subsimp in {yes} 
+cp3_sub_limit      | cp3_limited in {yes} 
 all_strength_res   | cp3_strength in {yes} 
 cp3_inpPrefL       | subsimp in {yes} 
 cp3_inpPrefL       | inprocess in {yes} 
@@ -864,6 +871,7 @@ xorFindRes   | xorFindSubs in {yes}
 
 xorSelect    | xor in {yes} 
 xorLimit     | xor in {yes} 
+xorLimit     | cp3_limited in {yes} 
 xorMaxSize   | xor in {yes} 
 
 #

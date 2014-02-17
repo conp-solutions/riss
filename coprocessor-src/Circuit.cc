@@ -85,7 +85,7 @@ void Circuit::getGatesWithOutput(const Var v, vector< Circuit::Gate >& gates, Co
 
 void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, CoprocessorData& data)
 {
-  if( config.circ_debug_out ) cerr << "c try to find AND gate for variable " <<  v + 1 <<  " (found so far:" << gates.size() << ")" << endl;
+  if( config.circ_debug_out ) cerr << "c try to find AND gate for variable " <<  v + 1 <<  " (found so far:" << gates.size() << ")[ok?: " << data.ok() << "]" << endl;
   vec<Lit> learnt_clause;
   // check for v <-> A and B
   // cerr << "c check AND gates with variable " << v+1 << endl;
