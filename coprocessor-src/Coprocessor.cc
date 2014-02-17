@@ -626,6 +626,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
   cleanSolver ();
   // initialize techniques
   data.init( solver->nVars() );
+  data.resetPPhead(); // to see all unit propagations also in CP, even if they have been processed inside the solver already
   
   if( config.opt_shuffle ) shuffle();
   
