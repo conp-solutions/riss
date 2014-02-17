@@ -32,6 +32,7 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
   if( !data.ok() ) return l_False;
   Solver* solver = data.getSolver();
   // propagate all literals that are on the trail but have not been propagated
+  if (config.up_debug_out > 0) cerr << "c call propagate. already propagated: " << lastPropagatedLiteral << ", total to proapgate: " << solver->trail.size() << endl;
   for( ; lastPropagatedLiteral < solver->trail.size(); lastPropagatedLiteral ++ )
   {
     const Lit l = solver->trail[lastPropagatedLiteral];

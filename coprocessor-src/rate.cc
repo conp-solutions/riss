@@ -97,6 +97,7 @@ bool RATElimination::process()
       // check whether a clause is a tautology wrt. the other clauses
       const Lit left = ~right; // complement
       if( config.opt_rate_debug > 0 ) cerr << endl << "c RATE work on literal " << right << " with " << data.list(right).size() << " clauses " << endl;
+      if( config.opt_rate_debug > 3 ) cerr << "current trail: " << data.getTrail() << endl;
       data.lits.clear(); // used for covered literal elimination
       for( int i = 0 ; i < data.list(right).size(); ++ i ) 
       {

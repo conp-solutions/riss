@@ -240,6 +240,7 @@ public:
   vec<CRef>& getLEarnts();           // return the vector of learnt clauses in the solver object
   vec<Lit>&  getTrail();             // return trail
   void clearTrail();                 // remove all variables from the trail, and reset qhead in the solver
+  void resetPPhead();                // set the pointer to the next element to be propagated to 0
 
   uint32_t nCls()  const { return numberOfCls; }
   uint32_t nVars() const { return numberOfVars; }
@@ -652,6 +653,10 @@ inline void CoprocessorData::clearTrail()
   solver->qhead = 0;
 }
 
+inline void CoprocessorData::resetPPhead()
+{
+  solver->qhead = 0;  
+}
 
 
 inline Var CoprocessorData::nextFreshVariable(char type)

@@ -92,6 +92,13 @@ bool FourierMotzkin::process()
   // do not simplify, if the formula is considered to be too large!
   if( !data.unlimited() && ( data.nVars() > config.opt_fm_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_fm_cls ) ) return false;
   
+  if( data.hasToPropagate() ) { // needs to perform propagation here!
+    if( config.fm_debug_out > 0) cerr << "c FM propagate before FM ..." << endl;
+    if ( l_False == propagation.process(data,true) ) {
+      return modifiedFormula;
+    }
+  }
+  
   // have a slot per variable
   data.ma.resize( data.nVars() * 2 );
   

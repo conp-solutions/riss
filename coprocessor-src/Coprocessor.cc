@@ -87,10 +87,11 @@ lbool Preprocessor::performSimplification()
   // delete clauses from solver
   
   if( config.opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << endl;
-    
+  
   cleanSolver ();
   // initialize techniques
   data.init( solver->nVars() );
+  data.resetPPhead(); // to see all unit propagations also in CP, even if they have been processed inside the solver already
   
   if( config.opt_shuffle ) shuffle();
   
