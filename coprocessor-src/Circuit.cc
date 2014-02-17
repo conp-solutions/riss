@@ -93,10 +93,11 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
     data.ma.nextStep();
     data.lits.clear();
     Lit pos = mkLit( v, p == 1 ); // pos -> a AND b AND ... => binary clauses [-pos, a],[-pos,b], ...
+    if( config.circ_debug_out ) cerr << "c with lit " << pos << endl;
     Lit* list = big->getArray(pos);
     const int listSize = big->getSize(pos);
     data.ma.setCurrentStep( toInt(~pos) ); 
-    //cerr << "c mark literal " << ~pos << endl;
+    if( config.circ_debug_out ) cerr << "c mark literal " << ~pos << endl;
     // find all binary clauses for gate with positive output "pos"
     for( int i = 0 ; i < listSize; ++i ) {
      data.ma.setCurrentStep( toInt(list[i]) ); 
@@ -113,11 +114,17 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	for( int i = 0 ; i < cList.size(); ++i ) {   // there can be multiple full encoded gates per variable
 	  const Clause& c = ca[ cList[i] ];
 	  if( c.can_be_deleted() || c.size () < 3 || c.size() > data.lits.size()+1 ) continue; // new clauses that provide not too much literals
-	  // cerr << "c considere clause " << c << endl;
+	  if( config.circ_debug_out ) cerr << "c consider clause " << c << endl;
 	  int marked = 0;
 	  for ( int j = 0 ; j < c.size(); ++j ) 
-	    if( data.ma.isCurrentStep( toInt(~c[j]) ) 
-	      || big->implies( pos, c[j] ) ) marked ++; // check whether all literals inside the clause are marked
+	    if( data.ma.isCurrentStep( toInt(~c[j]) )) {
+	      marked ++; // check whether all literals inside the clause are marked
+	      if( config.circ_debug_out ) cerr << "c hit literal " << ~c[j] << endl;
+	    }
+	    else if ( big->implies( pos, ~c[j] ) ) { 
+	      marked ++;  
+	      if( config.circ_debug_out ) cerr << "c imply literal " << pos << " -> "  << ~c[j] << endl;
+	    }
 	    else {
 	  //    cerr << "literal " << ~c[j] << " is not marked, and literal " << c[j] << " is not implied by literal " << pos << endl;
 	      break;

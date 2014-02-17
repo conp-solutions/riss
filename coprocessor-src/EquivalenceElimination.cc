@@ -316,21 +316,32 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	  if ( data.value(a) == l_True ) {
 	    if( config.opt_ee_eagerEquivalence ) setEquivalent(b,x);
 	    data.addEquivalences( x,b );
+	    if( config.ee_debug_out > 2 ) cerr << "c found equi " << x << " <=> " << b << endl;
 // 	    b = getReplacement( g.b() );
 // 	    x = getReplacement( g.x() );
 	  } else if ( data.value(a) == l_False ) {
-	    if( enqOut )data.enqueue(~x);  
+	    if( enqOut ) {
+	      data.enqueue(~x);  
+	      if( config.ee_debug_out > 2 ) cerr << "c found imply " << ~x << endl;
+	    }
 	  }
 	  if ( data.value(b) == l_True ) {
 	    if( config.opt_ee_eagerEquivalence ) setEquivalent(a,x);
 	    data.addEquivalences( x,a );
+	    if( config.ee_debug_out > 2 ) cerr << "c found equi " << x << " <=> " << a << endl;
 // 	    a = getReplacement( g.a() );
 // 	    x = getReplacement( g.x() );
 	  } else if ( data.value(b) == l_False ) {
-	    if( enqOut )data.enqueue(~x);  
+	    if( enqOut ) {
+	      data.enqueue(~x);  
+	      if( config.ee_debug_out > 2 ) cerr << "c found imply " << ~x << endl;
+	    }
 	  } else if ( data.value(x) == l_True) {
-	    if( enqInp ) data.enqueue(a);  
-	    if( enqInp ) data.enqueue(b);  
+	    if( enqInp ) {
+	      data.enqueue(a);  
+	      data.enqueue(b);  
+	      if( config.ee_debug_out > 2 ) cerr << "c found imply " << a << " and " << b << endl;
+	    }
 	  }
 	  // do not reason with assigned gates!
 	  continue;
@@ -564,7 +575,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	       || (x == ob && oa == ~b)
 	      
 	    ) {
-	      if( config.ee_debug_out > 2 ) cerr << "[  17]" << endl;
+	      if( config.ee_debug_out > 2 ) cerr << "[  17] entail " << ~ox << endl;
 	      // the output of a gate together with a complementary input in another gate cannot be satisfied -> other gate is unsat!
 	      data.enqueue(~ox);
 	    }
@@ -1718,7 +1729,7 @@ void EquivalenceElimination::findEquivalencesOnBigFast(CoprocessorData& data, ve
 
 void EquivalenceElimination::findEquivalencesOnBig(CoprocessorData& data, vector< vector<Lit> >* externBig)
 {
-  if( config.ee_debug_out > 1 ) cerr << "c call find EE on BIG" << endl;
+  if( config.ee_debug_out > 1 ) cerr << "c call find EE on BIG [ok?: " << data.ok() << "]" << endl;
   if( config.opt_ee_iterative ) return findEquivalencesOnBigFast(data,externBig);
   else return findEquivalencesOnBigRec(data,externBig);
 }

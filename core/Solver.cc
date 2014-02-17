@@ -1742,23 +1742,29 @@ bool Solver::analyzeNewLearnedClause(const CRef newLearnedClause)
 	if( ( big->getStart(aLit) < big->getStart(bLit) && big->getStop(bLit) < big->getStop(aLit) ) 
 	// a -> aLit, b -> bLit, -bLit -> -aLit = aLit -> bLit -> F -> bLit
 	||  ( big->getStart(~bLit) < big->getStart(~aLit) && big->getStop(~aLit) < big->getStop(~bLit) ) ){
+	  if( decisionLevel() != 0 ) cancelUntil(0); // go to level 0, because a unit is added next
 	  if( value( bLit ) == l_Undef ) { // only if not set already
 	    if ( j == 0 || k == 0) L2units ++; else L3units ++; // stats
-	    if( decisionLevel() != 0 ) cancelUntil(0);
 	    if( config.opt_learn_debug ) cerr << "c uhdPR bin(b) enqueue " << bLit << "@" << decisionLevel() << endl;
 	    uncheckedEnqueue( bLit );
 	    addCommentToProof("added by uhd probing:"); addUnitToProof(bLit); // not sure whether DRUP can always find this
-	  } else if (value( bLit ) == l_False ) return true; // found a contradiction
+	  } else if (value( bLit ) == l_False ) {
+	    if( config.opt_learn_debug ) cerr << "c contradiction on literal bin(b) " << bLit << "@" << decisionLevel() << " when checking clause " << clause << endl;
+	    return true; // found a contradiction on level 0! on higher decision levels this is not known!
+	  }
 	} else {
 	  if( ( big->getStart(bLit) < big->getStart(aLit) && big->getStop(aLit) < big->getStop(bLit) ) 
 	  ||  ( big->getStart(~aLit) < big->getStart(~bLit) && big->getStop(~bLit) < big->getStop(~aLit) ) ){
+	    if( decisionLevel() != 0 ) cancelUntil(0); // go to level 0, because a unit is added next
 	    if( value( aLit ) == l_Undef ) { // only if not set already
-	    if ( j == 0 || k == 0) L2units ++; else L3units ++; // stats
-	    if( decisionLevel() != 0 ) cancelUntil(0);
-	    if( config.opt_learn_debug ) cerr << "c uhdPR bin(a) enqueue " << aLit << "@" << decisionLevel() << endl;
-	    uncheckedEnqueue( aLit);
-	    addCommentToProof("added by uhd probing:"); addUnitToProof(aLit);
-	  } else if (value( aLit ) == l_False ) return true; // found a contradiction
+	      if ( j == 0 || k == 0) L2units ++; else L3units ++; // stats
+	      if( config.opt_learn_debug ) cerr << "c uhdPR bin(a) enqueue " << aLit << "@" << decisionLevel() << endl;
+	      uncheckedEnqueue( aLit);
+	      addCommentToProof("added by uhd probing:"); addUnitToProof(aLit);
+	    } else if (value( aLit ) == l_False ) {
+	      if( config.opt_learn_debug ) cerr << "c contradiction on literal bin(a) " << aLit << "@" << decisionLevel() << " when checking clause " << clause << endl;
+	      return true; // found a contradiction
+	    }
 	  }
 	}
 	
@@ -1799,13 +1805,15 @@ bool Solver::analyzeNewLearnedClause(const CRef newLearnedClause)
 	  }
 	  
 	  if( allEqual ) { // there is a commonly implied literal
-	    
+	    if( decisionLevel() != 0 ) cancelUntil(0); // go to level 0, because a unit clause in added next
 	    if( value( minLit ) == l_Undef ) {
 	      L4units ++;
-	      if( decisionLevel() != 0 ) cancelUntil(0);
 	      if( config.opt_learn_debug ) cerr << "c uhdPR long enqueue " << minLit << "@" << decisionLevel() << endl;
 	      uncheckedEnqueue( minLit );
-	    } else if (value(minLit) == l_False ) return true;
+	    } else if (value(minLit) == l_False ){
+	      if( config.opt_learn_debug ) cerr << "c contradiction on commonly implied liteal " << minLit << "@" << decisionLevel() << " when checking clause " << clause << endl;
+	      return true;
+	    }
 	    for( int j = 0 ; j < clause.size(); ++ j ) {
 	      analyzePosition[j] ++;
 	      if( analyzePosition[j] >= analyzeLimits[j] ) allInLimit = false; // stop if we dropped out of the list of implied literals! 
