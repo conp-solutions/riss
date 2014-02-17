@@ -1582,6 +1582,7 @@ void Preprocessor::printFormula(const string& headline)
      if( ca[  data.getClauses()[i] ].can_be_deleted() ) cerr << "(ign)";
      cerr << ca[  data.getClauses()[i] ] << endl;
    }
+   cerr << "c learnts" << endl;
    for( int i = 0 ; i < data.getLEarnts().size() && !data.isInterupted(); ++ i )
    {
      cerr << "(" << data.getLEarnts()[i] << ")";

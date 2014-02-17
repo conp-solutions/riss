@@ -667,7 +667,6 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 {
   // cerr << "c find XOR for variable " << v+1 << endl;
   int oldGates = gates.size();
-  // check for v <-> ITE( s,t,f )
   for( int p = 0; p < 2 ; ++ p ) {
     Lit a = mkLit( v, p == 1 ); // XOR(a,b,c) = 1
     const vector<ternary>& cList = ternaries[ toInt(a) ]; // all clauses C with pos \in C
@@ -677,7 +676,13 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
       found[1] = found[2] = found[3] = false;
       bool binary = false;
       const Lit b = cList[i].l1; const Lit c = cList[i].l2;
-      if( config.circ_debug_out ) cerr << "c check [" << i << "/" << cList.size() << "] for " << a << "," << b << "," << c <<  endl;
+      if( config.circ_debug_out ) { 
+	cerr << endl << "c check [" << i << "/" << cList.size() << "] for "
+	<< "[0](" <<  a << "," <<  b << "," <<  c << ")" << endl
+	<< "[1](" <<  a << "," << ~b << "," << ~c << ")" << endl
+	<< "[2](" << ~a << "," << ~b << "," <<  c << ")" << endl
+	<< "[3](" << ~a << "," <<  b << "," << ~c << ")" << endl;
+      }
       if( var(b) == var(c) || var(b) == var(a) || var(a) == var(c) ) continue; // just to make sure!
       //test whether all the other clauses can be found as well
       for( int j = i+1; j < cList.size(); ++ j ) {
@@ -689,14 +694,20 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
       }
       if( config.circ_debug_out )  if( found[1] ) cerr << "c found first clause as ternary" << endl;
       if ( !found[1] ) { // check for 2nd clause in implications
-	if( big->implies(a,~b) || big->implies(a,~c)  ) found[1] = true;
+	if( big->implies(~a,~b) || big->implies(~a,~c)  ) {
+	  found[1] = true;
+	  if( config.circ_debug_out ) cerr << "c found 1 with " << ~a << " ->" << ~b << " or " << ~c << endl;
+	}
 	else { // not found in big
 	  if( big->isOneChild(~a,~b,~c ) )
 	    { found[1] = true; binary=true;
-	      if( config.circ_debug_out ) cerr << "c found 1 with " << ~a << " ->" << ~b << " or " << ~c << endl;
+	      if( config.circ_debug_out ) cerr << "c found 1 with oneChild " << ~a << " ->" << ~b << " or " << ~c << endl;
 	      break; }
 	  else  { // found[1] is still false!
-	    if( big->implies(b,~c) ) found[1] = true;
+	    if( big->implies(b,~c) ) {
+	      if( config.circ_debug_out ) cerr << "c found 1 with " << b << " ->" << ~c << endl;
+	      found[1] = true;
+	    }
 	    else {
 		if( big->isChild(b,~c) )
 		  { found[1] = true; 
@@ -742,10 +753,18 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
      }
      if( config.circ_debug_out )  cerr << "c found in ternaries: 3rd: " << (int)found[2] << " 4th: " << (int)found[3] << endl;
      if ( !found[2] ) { // check for 2nd clause in implications
-	if( big->implies(~a,~b) || big->implies(~a,c) ) { binary=true; found[2] = true; }
+	if( big->implies(a,~b) || big->implies(a,c) ) { 
+	  binary=true; 
+	  found[2] = true; 
+	  if( config.circ_debug_out ) cerr << "c found 2 with " << a << "->" << ~b << " or " << c << endl;
+	}
 	else {
 	  if( big->isOneChild(a,~b,c) )
-	    { found[2] = true; binary=true;break; }
+	    { 
+	      found[2] = true; binary=true;
+	      if( config.circ_debug_out ) cerr << "c found 2 with oneChild" << a << "->" << ~b << " or " << c << endl;
+	      break; 
+	    }
 	  else { // found[2] is still false!
 	    if( big->implies(b,c) ) { binary=true; found[2] = true; 
 	      if( config.circ_debug_out ) cerr << "c found 2 with " << b << " -> " << c << endl;
@@ -759,13 +778,13 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	}
      }
      if( !found[2] ) continue; // clause [-a,-b,c] not found
-     if ( !found[3] ) { // check for 2nd clause in implications
-	if( big->implies(~a,b) || big->implies(~a,~c) ) { binary=true; found[3] = true; 
-	  if( config.circ_debug_out ) cerr << "c found 3 with " << ~a << " -> " << ~c << endl;
+     if ( !found[3] ) { // check for 2nd clause in implications for [-a,b,-c]
+	if( big->implies(a,b) || big->implies(a,~c) ) { binary=true; found[3] = true; 
+	  if( config.circ_debug_out ) cerr << "c found 3 with " << a << " -> " << b << " or " << ~c << endl;
 	}
 	else {
 	  if( big->isOneChild(a,b,~c)){ found[3] = true; binary=true;
-	  if( config.circ_debug_out ) cerr << "c found 3 with " << ~a << " -> " << b << " or " << ~c << endl;
+	  if( config.circ_debug_out ) cerr << "c found 3 with one child" << a << " -> " << b << " or " << ~c << endl;
 	  break; }
 	  else {
 	    if( big->implies(~b,~c) ) { binary=true; found[3] = true; 
@@ -783,7 +802,7 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
       if( !found[3] ) continue; // clause [-a,b,-c] not found
       if( var(a) < var(c) && var(a) < var(b))
       { // for fully encoded gates we do not need to add all, but only one representation
-        // cerr << "c current XOR gate is fully encodeds: " << endl; 
+        if( config.circ_debug_out ) cerr << "c current XOR gate is fully encodeds: " << found[0] << "," << found[1] << "," << found[2] << "," << found[3] << "," << endl; 
         gates.push_back( Gate(a,b,c, Gate::XOR, Gate::FULL) );
       }
     }

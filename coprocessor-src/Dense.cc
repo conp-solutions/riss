@@ -92,9 +92,14 @@ void Dense::compress(const char* newWhiteFile)
     for( uint32_t i = 0 ; i < list.size(); ++i ){
       Clause& clause = ca[ list[i] ];
       if( clause.can_be_deleted() ) continue;
+      assert( clause.size() > 1 && "do not rewrite unit clauses!" );
       if( config.dense_debug_out > 1 ) cerr << "c [DENSE] rewrite clause [" << list[i] << "] " << clause << endl;
       for( uint32_t j = 0 ; j < clause.size(); ++j ){
 	const Lit l = clause[j];
+	if( clause.learnt() && compression.mapping[ var(l) ] == -1 ) { // drop this clause because the current variable is not present in the formula any more!
+	  if( config.dense_debug_out > 1 ) cerr << "c [DENSE] into deleted clause, because variable " << var(l) << " does not occur in non-learned clauses" << endl;
+	  clause.set_delete(true); break;
+	}
 	// if( debug > 1 ) cerr << "c compress literal " << l.nr() << endl;
 	assert( compression.mapping[ var(l) ] != -1 && "only move variable, if its not moved to -1" );
 	const bool p = sign(l);
