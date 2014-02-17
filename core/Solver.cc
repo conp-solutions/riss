@@ -3252,7 +3252,7 @@ bool Solver::interleavedClauseStrengthening()
   // remove the newly learned clauses
   if( !config.opt_ics_keepLearnts ) {
     for( int j = oldLearntsSize; j < learnts.size(); ++ j ) {
-      removeClause( learnts[j], true ); // remvoes a clause "lazily"
+      if( ca[learnts[j]].mark() == 0 ) removeClause( learnts[j], true ); // remvoes a clause "lazily"
     }
     learnts.shrink( learnts.size() - oldLearntsSize );
     assert( learnts.size() == oldLearntsSize && "remove exactly all the clauses that have been added before" );

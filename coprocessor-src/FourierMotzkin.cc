@@ -1503,7 +1503,7 @@ void FourierMotzkin::findTwoProduct(vector< FourierMotzkin::CardC >& cards, BIG&
 	      }
 	      doUseConstraint = false;
 	    }
-	    assert( data[m] != data[m+1] && "these should not be duplicate literals!" );
+	    assert( data.lits[m] != data.lits[m+1] && "these should not be duplicate literals!" );
 	  }
 	  if( doUseConstraint ) { // the constraint that is added is not redundant
 	    searchSteps+= data.lits.size(); // approximate sorting
