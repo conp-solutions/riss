@@ -117,7 +117,7 @@ bool XorReasoning::process()
     if ( config.opt_xor_selectX == 1 ) { // select smallest xor
       for( int i = selectIndex+1 ; i < occs[v].size(); ++ i ) {
 	xorSteps ++;
-	if(xorList[i].used == true) continue;
+	if( xorList[ occs[v][i] ].used == true) continue;
 	if( xorList[ occs[v][selectIndex] ].size() > xorList[occs[v][i]].size() ) selectIndex = i;
       }
     } // TODO: other strategies to select the XOR?!

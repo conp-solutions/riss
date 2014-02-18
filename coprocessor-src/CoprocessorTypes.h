@@ -784,7 +784,7 @@ inline void CoprocessorData::addClause(const Minisat::CRef cr, bool check)
   if( c.can_be_deleted() ) return;
   for (int l = 0; l < c.size(); ++l)
   {
-    cerr << "c add clause " << cr << " to list for " << c[l] << endl;
+    // cerr << "c add clause " << cr << " to list for " << c[l] << endl;
     if( check ) {
       for( int i = 0 ; i < occs[toInt(c[l])].size(); ++ i ) {
 	if( occs[toInt(c[l])][i] == cr ) {
