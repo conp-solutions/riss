@@ -278,7 +278,7 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 		  if( config.opt_xor_debug > 3 )  cerr << "c start=" << start << endl;
 			const CRef c = table[start];
 			const Clause& cl = ca[c];
-			if( cl.size() > config.opt_xorMatchLimit ) break; // interrupt before too large size is recognized
+			if( cl.size() > config.opt_xorMatchLimit || cl.can_be_deleted()) break; // interrupt before too large size is recognized, or if the first ignored clause pops up
 			uint32_t stop = start + 1;
 			// find last clause that contains the same variables as the first clause
 			for ( ; stop < cP; ++stop) {

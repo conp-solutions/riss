@@ -1039,7 +1039,7 @@ bool Preprocessor::wantsToInprocess ()
   // if no inprocesing enabled, do not do it!
   if( !config.opt_inprocess ) return false;
   
-  cerr << "c check " << lastInpConflicts << " and " << (int)config.opt_inprocessInt << " vs " << solver->conflicts << endl;
+  if( config.opt_verbose > 3 ) cerr << "c check " << lastInpConflicts << " and " << (int)config.opt_inprocessInt << " vs " << solver->conflicts << endl;
   if( lastInpConflicts + config.opt_inprocessInt > solver->conflicts ) {
     return false;  
   }
@@ -1646,7 +1646,7 @@ bool Preprocessor::checkLists(const string& headline)
 }
 
 void Preprocessor::scanCheck(const string& headline) {
-   cerr << "c perform scan check " << headline << endl;
+   cerr << "c perform scan check " << headline << " [ok?: " << data.ok() << "]" << endl;
   // check whether clause is in solver in the right watch lists
   for( int p = 0 ; p < 2; ++ p ) {
   

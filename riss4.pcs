@@ -360,7 +360,7 @@ quickRed  {yes,no}[no]       # check only first two literals for being satisfied
 incLBD  {yes,no}[no]       # allow to increment lbd of clauses dynamically
 lbdIgnL0  {yes,no}[no]       # ignore top level literals for LBD calculation
 
-keepWorst  {0.000000,1.000000}[0.000000]       # keep this (relative to all learned) number of worst learned clauses during removal   
+keepWorst  {0.0,0.001,0.01,0.05,0.1,0.2,1.0}[0.0]       # keep this (relative to all learned) number of worst learned clauses during removal   
 
 firstReduceDB  {2000,4000,8000,16000}[4000]       # The number of conflicts before the first reduce DB
 incReduceDB   {200,300,450}[300]       # Increment for reduce DB
