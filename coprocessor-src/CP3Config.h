@@ -165,12 +165,12 @@ public:
  
 #if defined TOOLVERSION // debug only, if no version is given!
  const bool opt_debug;       
- const bool opt_check;
+ const int opt_check;
  const int  opt_log;
  const char* printAfter;
 #else
  BoolOption opt_debug    ;
- BoolOption opt_check    ;
+ IntOption opt_check    ;
  IntOption  opt_log      ;
  StringOption printAfter ;
 #endif

@@ -91,6 +91,7 @@ bool Subsumption::process(bool doStrengthen, Heap< VarOrderBVEHeapLt >* heap, co
   
   if( !data.ok() ) return false;
   if( !performSimplification() ) { // if nothing to be done, at least clean all the lists!
+    if( config.opt_sub_debug > 1 ) cerr << "c reject susi due to penalty" << endl;
     for( int i = 0 ; i < data.getSubsumeClauses().size(); ++ i ) ca[ data.getSubsumeClauses()[i] ].set_subsume(false);
     data.getSubsumeClauses().clear();
     for( int i = 0 ; i < data.getStrengthClauses().size(); ++ i ) ca[ data.getStrengthClauses()[i] ].set_strengthen(false);

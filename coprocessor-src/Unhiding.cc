@@ -673,7 +673,13 @@ bool Unhiding::process (  )
   {
     // TODO: either re-create BIG, or do clause modifications after algorithm finished
     // be careful here - do not use learned clauses, because they could be removed, and then the whole mechanism breaks
-    big.recreate(ca, data.nVars(), data.getClauses() );    
+    if( config.opt_uhd_UHTE || config.opt_uhd_Trans ) {
+      if( config.opt_uhd_Debug ) cerr << "c do not use learned clauses for creating the BIG" << endl;
+      big.recreate(ca, data.nVars(), data.getClauses() ); // since clauses can be eliminated, do not use learned clauses!
+    } else {
+      if( config.opt_uhd_Debug ) cerr << "c DO USE learned clauses for creating the BIG (be careful with clause elimination techniques here!) " << endl;
+      big.recreate(ca, data.nVars(), data.getClauses(), data.getLEarnts() );  // the used techniques only reduce the size of clauses, so that using learned clauses is safe!
+    }
     
     if(config.opt_uhd_TestDbl) {
       // cerr << "c test for duplicate binary clauses ... " << endl;

@@ -106,7 +106,25 @@ bool RATElimination::process()
 	if( c.size() < config.rate_minSize ) continue; // ignore "small" clauses
 	
 	rateCandidates ++;
-	if( config.opt_rate_debug > 0 ) cerr << endl << "c test clause " << c << endl;
+	if( config.opt_rate_debug > 0 ) cerr << endl << "c test clause [" << data.list(right)[i] << "] " << c << endl;
+	
+	if( config.opt_rate_debug > 3 ) {
+	  cerr << "c current formula: " << endl;
+	  for( int t = 0 ; t < data.getClauses().size(); ++ t ) {
+	    if( ! ca[data.getClauses()[t]].can_be_deleted() ) cerr << "[" << data.getClauses()[t] << "] "<< ca[data.getClauses()[t]] << endl;
+	  }
+	  for( Var v = 0 ; v < data.nVars(); ++v ) {
+	    for ( int p = 0 ; p < 2; ++ p ) {
+	      const Lit l = mkLit(v,p==0);
+	      if( data.list(l).size() > 0 ) {
+		cerr << "c list(" << l << "): " << endl;
+		for( int t = 0 ; t < data.list(l).size(); ++t ) if( !ca[ data.list(l)[t] ].can_be_deleted() ) cerr << "[" << data.list(l)[t] << "] " << ca[ data.list(l)[t] ] << endl;
+		cerr << endl;
+	      }
+	    }
+	  }
+	}
+	
 	// literals to propagate
 	data.lits.clear();
 	for( int j = 0 ; j < c.size(); ++ j) if( c[j] != right ) data.lits.push_back( c[j] );
@@ -123,16 +141,17 @@ bool RATElimination::process()
 	rateSteps += solver.trail.size(); // approximate effort for propagation
 	solver.cancelUntil(0); // backtrack
 	if( confl != CRef_Undef ) {
-	  if( config.opt_rate_debug > 1 ) cerr << "c RATE eliminate AT clause " << c << endl;
-	  data.removedClause( data.list(right)[i] );
-	  c.set_delete(true);
 	  remAT++;
-	  for( int j = 0 ; j < c.size(); ++ j ) { // all complementary literals can be tested again
-	    if( ! nextRound.isCurrentStep(toInt(~c[j]) ) ) {
-	      nextRoundLits.push_back( ~c[j] );
-	      nextRound.setCurrentStep( toInt(~c[j]) );
+	  for( int j = 0 ; j < ca[ data.list(right)[i]].size(); ++ j ) { // all complementary literals can be tested again
+	    if( ! nextRound.isCurrentStep(toInt(~ca[ data.list(right)[i]][j]) ) ) {
+	      nextRoundLits.push_back( ~ca[ data.list(right)[i]][j] );
+	      nextRound.setCurrentStep( toInt(~ca[ data.list(right)[i]][j]) );
 	    }
 	  }
+
+	  if( config.opt_rate_debug > 1 ) cerr << "c RATE eliminate AT clause [" << data.list(right)[i] << "] " << ca[data.list(right)[i]] << endl;
+	  ca[ data.list(right)[i]] .set_delete(true);
+	  data.removedClause( data.list(right)[i] );
 	  continue;
 	}
 	
@@ -144,6 +163,15 @@ bool RATElimination::process()
 	  data.ma.setCurrentStep( toInt( data.lits[j] ) ); // mark all literals of c except right, for fast resolution checks
 	}
 	
+	if( config.opt_rate_debug > 3 ) {
+	  cerr << "c current formula: " << endl;
+	  for( int t = 0 ; t < data.getClauses().size(); ++ t ) {
+	    if( ! ca[data.getClauses()[t]].can_be_deleted() ) cerr << "[" << data.getClauses()[t] << "] "<< ca[data.getClauses()[t]] << endl;
+	  }
+	}
+	
+	
+	if( config.opt_rate_debug > 2 ) cerr << "c RATE resolve with " << data.list(left).size() << " clauses" << endl;
 	bool allResolventsAT = true;
 	bool allTaut = true;
 	for( int j = 0 ; allResolventsAT && j < data.list(left).size(); ++ j ) // for all clauses D \in F_{\ngt{l}}
@@ -151,7 +179,7 @@ bool RATElimination::process()
 	  Clause& d = ca[ data.list(left)[j] ];
 	  if( d.can_be_deleted() ) continue; // no resolvent required
 	  rateSteps ++;
-	  if( config.opt_rate_debug > 2 ) cerr << "c RATE resolve with clause " << d << endl;
+	  if( config.opt_rate_debug > 2 ) cerr << "c RATE resolve with clause [" << data.list(left)[j] << "]" << d << endl;
 	  bool isTaut = resolveUnsortedStamped( right, d, data.ma, data.lits ); // data.lits contains the resolvent
 	  rateSteps += d.size(); // approximate effort for resolution
 	  if( config.opt_rate_debug > 2 ) cerr << "c RATE resolvent (taut=" << isTaut << ") : " << data.lits << endl;
@@ -162,7 +190,7 @@ bool RATElimination::process()
 	  // test whether the resolvent is AT
 	  solver.newDecisionLevel();
 	  if( config.opt_rate_debug > 2 ) cerr << "c enqueue complements in " << data.lits << endl;
-	  for( int j = 0 ; j < data.lits.size(); ++ j ) solver.uncheckedEnqueue( ~data.lits[j] );	// enqueue all complements
+	  for( int k = 0 ; k < data.lits.size(); ++ k ) solver.uncheckedEnqueue( ~data.lits[k] );	// enqueue all complements
 	  CRef confl = solver.propagate();	// check whether unit propagation finds a conflict for (F \ C) \land \ngt{C}, and hence C would be AT
 	  rateSteps += solver.trail.size(); // approximate effort for propagation
 	  if( config.opt_rate_debug > 2 ) cerr << "c propagate with conflict " << (confl != CRef_Undef ? "yes" : " no") << endl;
@@ -176,19 +204,19 @@ bool RATElimination::process()
 	}
 	if( allResolventsAT ) {	// clause C is RAT, remove it!
 	  data.addToExtension(data.list(right)[i], right); 
-	  data.removedClause( data.list(right)[i] );
-	  if( config.opt_rate_debug > 1 ) cerr << "c RATE eliminate RAT clause " << c << endl;
+	  if( config.opt_rate_debug > 1 ) cerr << "c RATE eliminate RAT clause [" << data.list(right)[i] << "] " << c << endl;
 	  c.set_delete(true);
 	  remRAT = (!allTaut) ? remRAT+1 : remRAT;
 	  remBCE = ( allTaut) ? remBCE+1 : remBCE;
-	  for( int j = 0 ; j < c.size(); ++ j ) {	// all complementary literals can be tested again
-	    if( ! nextRound.isCurrentStep(toInt(~c[j]) ) ) {
-	      nextRoundLits.push_back( ~c[j] );
-	      nextRound.setCurrentStep( toInt(~c[j]) );
+	  for( int k = 0 ; k < c.size(); ++ k ) {	// all complementary literals can be tested again
+	    if( ! nextRound.isCurrentStep(toInt(~c[k]) ) ) {
+	      nextRoundLits.push_back( ~c[k] );
+	      nextRound.setCurrentStep( toInt(~c[k]) );
 	    }
 	  }
 	  data.addCommentToProof("rat clause during RATE");
 	  data.addToProof(c,true);
+	  data.removedClause( data.list(right)[i] );
 	} else {
 	  solver.attachClause( data.list(right)[i] ); // if clause cannot be removed by RAT Elimination, attach it again!
 	}

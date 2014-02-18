@@ -58,7 +58,7 @@ namespace Minisat {
 // NOTE! Variables are just integers. No abstraction here. They should be chosen from 0..N,
 // so that they can be used as array indices.
 
-typedef int Var;
+typedef int32_t Var; // be explicit here about the number of bits!
 #define var_Undef (-1)
 
 

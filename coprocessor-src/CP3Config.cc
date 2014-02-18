@@ -175,12 +175,12 @@ CP3Config::CP3Config() // add new options here!
 
 #if defined TOOLVERSION // debug only, if no version is given!
   opt_debug ( false),       
-  opt_check ( false),
+  opt_check ( 0),
    opt_log (0),
   printAfter ( 0),
 #else
   opt_debug       (_cat, "cp3-debug",   "do more debugging", false, optionListPtr ),
-  opt_check       (_cat, "cp3-check",   "check solver state before returning control to solver", false, optionListPtr ),
+  opt_check       (_cat, "cp3-check",   "check solver state during simplification and before returning control to solver",  0, IntRange(0, 3), optionListPtr ),
    opt_log         (_cat,  "cp3-log",    "Output log messages until given level", 0, IntRange(0, 3), optionListPtr ),
   printAfter    (_cat,  "cp3-print",  "print intermediate formula after given technique", 0, optionListPtr ),
 #endif

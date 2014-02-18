@@ -169,6 +169,7 @@ class CoprocessorData
   bool hasLimit;                        // indicate whether techniques should be executed limited
   bool randomOrder;                     // perform preprocessing with random execution order within techniques
   bool currentlyInprocessing;           // current simplification is during search
+  bool debugging;                       // current version works in debugging mode
   
   Lock dataLock;                        // lock for parallel algorithms to synchronize access to data structures
 
@@ -216,7 +217,7 @@ public:
   vector<Lit> lits;                      // temporary literal vector
   vector<CRef> clss;                     // temporary literal vector
 
-  CoprocessorData(ClauseAllocator& _ca, Solver* _solver, Logger& _log, bool _limited = true, bool _randomized = false);
+  CoprocessorData(ClauseAllocator& _ca, Solver* _solver, Coprocessor::Logger& _log, bool _limited = true, bool _randomized = false, bool _debug = false);
 
   // init all data structures for being used for nVars variables
   void init( uint32_t nVars );
@@ -599,13 +600,14 @@ struct LitOrderHeapLt
         LitOrderHeapLt(CoprocessorData & _data, int _heapOption) : data(_data), heapOption(_heapOption) { }
     };
 
-inline CoprocessorData::CoprocessorData(ClauseAllocator& _ca, Solver* _solver, Coprocessor::Logger& _log, bool _limited, bool _randomized)
+inline CoprocessorData::CoprocessorData(ClauseAllocator& _ca, Solver* _solver, Coprocessor::Logger& _log, bool _limited, bool _randomized,  bool _debug)
 : ca ( _ca )
 , solver( _solver )
 , numberOfVars(0)
 , hasLimit( _limited )
 , randomOrder(_randomized)
 , currentlyInprocessing(false)
+, debugging( _debug )
 , lastCompressUndoLits(-1)
 , decompressedUndoLits(-1)
 , log(_log)
@@ -782,6 +784,7 @@ inline void CoprocessorData::addClause(const Minisat::CRef cr, bool check)
   if( c.can_be_deleted() ) return;
   for (int l = 0; l < c.size(); ++l)
   {
+    cerr << "c add clause " << cr << " to list for " << c[l] << endl;
     if( check ) {
       for( int i = 0 ; i < occs[toInt(c[l])].size(); ++ i ) {
 	if( occs[toInt(c[l])][i] == cr ) {
@@ -810,25 +813,24 @@ inline void CoprocessorData::addClause ( const CRef cr , Heap<VarOrderBVEHeapLt>
   }
   else 
   {
-      if (data_lock != NULL)
-          data_lock->lock();
-      if (heap_lock != NULL)
-          heap_lock->lock();
+      if (data_lock != NULL) data_lock->lock();
+      if (heap_lock != NULL) heap_lock->lock();
       for (int l = 0; l < c.size(); ++l)
       {
         occs[toInt(c[l])].push_back(cr);
         lit_occurrence_count[toInt(c[l])] += 1;
-        if (heap != NULL)
-            if (heap->inHeap(var(c[l])))
+        if (heap != NULL) {
+            if (heap->inHeap(var(c[l]))) {
                 heap->increase(var(c[l]));
-            else if (update && var(c[l]) != ignore)
+	    } else {
+	      if (update && var(c[l]) != ignore)
                 heap->update(var(c[l]));
+	    }
+	}
       }	
-      if (heap_lock != NULL) 
-          heap_lock->unlock();
+      if (heap_lock != NULL) heap_lock->unlock();
       numberOfCls ++;
-      if (data_lock != NULL) 
-          data_lock->unlock();
+      if (data_lock != NULL) data_lock->unlock();
   }
 }
 
@@ -1197,6 +1199,10 @@ inline void CoprocessorData::correctCounters()
 
 inline void CoprocessorData::garbageCollect(vector<CRef> ** updateVectors, int size) 
 {
+  if( debugging ) {
+    cerr << "c check garbage collection [REJECTED DUE TO DEBUGGING] " << endl;
+    return;
+  }
     ClauseAllocator to((ca.size() >= ca.wasted()) ? ca.size() - ca.wasted() : 0);  //FIXME just a workaround
                                                                                    // correct add / remove would be nicer
     

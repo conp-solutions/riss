@@ -1731,6 +1731,7 @@ bool BoundedVariableAddition::iteBVAfull()
 bool BoundedVariableAddition::bvaHandleComplement( const Lit right, Heap<LitOrderHeapLt>& bvaHeap ) {
   data.clss.clear();
   const Lit left = ~right;
+  if( config.bva_debug > 2 ) cerr << "c [BVA] handle complements for literal " << right << endl;
   for( uint32_t i = 0 ; i < data.list(right).size(); ++i )
   {
     const CRef C = data.list(right)[i];
@@ -1885,6 +1886,7 @@ void BoundedVariableAddition::destroy()
 
 void BoundedVariableAddition::removeDuplicateClauses( const Lit literal )
 {
+  
   for( uint32_t i = 0 ; i < data.list(literal).size() ; ++ i ) 
   {
     Clause& clause = ca[ data.list(literal)[i]];
@@ -1906,7 +1908,9 @@ void BoundedVariableAddition::removeDuplicateClauses( const Lit literal )
       for( uint32_t k = 0 ; k < clauseI.size(); ++k ) {
 	if( clauseI[k] != clauseJ[k] ) goto duplicateNextJ;
       }
-      data.removedClause( removeCandidate );
+      ca[removeCandidate].set_delete(true); // set removed flag
+      if( !ca[removeCandidate].learnt() ) clauseI.set_learnt(false); // take care of the learned flag
+      data.removedClause( removeCandidate ); // actually remove the clause
       data.list(literal)[j] = data.list(literal)[ data.list(literal).size() -1 ];
       data.list(literal).pop_back();
       j--;

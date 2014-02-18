@@ -520,7 +520,24 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
 
                 if (!data.ok())
                     return;
-           }
+           } else {
+	      if( config. opt_bve_verbose > 2 ) {
+		cerr << "c current formula: " << endl;
+		for( int t = 0 ; t < data.getClauses().size(); ++ t ) {
+		  if( ! ca[data.getClauses()[t]].can_be_deleted() ) cerr << "[" << data.getClauses()[t] << "] "<< ca[data.getClauses()[t]] << endl;
+		}
+		for( Var v = 0 ; v < data.nVars(); ++v ) {
+		  for ( int p = 0 ; p < 2; ++ p ) {
+		    const Lit l = mkLit(v,p==0);
+		    if( data.list(l).size() > 0 ) {
+		      cerr << "c list(" << l << "): " << endl;
+		      for( int t = 0 ; t < data.list(l).size(); ++t ) if( !ca[ data.list(l)[t] ].can_be_deleted() ) cerr << "[" << data.list(l)[t] << "] " << ca[ data.list(l)[t] ] << endl;
+		      cerr << endl;
+		    }
+		  }
+		}
+	      } 
+	   }
            pos_stats.clear();
            neg_stats.clear();
 
@@ -820,18 +837,20 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData & data, Heap<VarOrd
 		    
 		    
 		    if( config.opt_bve_verbose > 1 ) cerr << "c from resolution with" << p << " and " << n << endl;
+		    const uint64_t pinfo = p.extraInformation(), ninfo = n.extraInformation();
                     CRef cr = ca.alloc(ps, p.learnt() || n.learnt()); 
                     // IMPORTANT! dont use p and n in this block, as they could got invalid
                     Clause & resolvent = ca[cr];
-		    if( config.opt_bve_verbose > 1 ) cerr << "c add resolvent " << resolvent << endl;
+		    if( config.opt_bve_verbose > 1 ) cerr << "c add resolvent [" << cr << "] " << resolvent << endl;
 		    data.addToProof(ca[cr]); // tell proof about the new clause!
-		    ca[cr].setExtraInformation( p.extraInformation() ); // setup extra information for this clause!
-		    ca[cr].updateExtraInformation( n.extraInformation() );
+		    ca[cr].setExtraInformation( pinfo ); // setup extra information for this clause!
+		    ca[cr].updateExtraInformation( ninfo );
 		    
                     if (config.heap_updates > 0 && config.opt_bve_heap != 2)
                         data.addClause(cr, &heap);
                     else 
                         data.addClause(cr);
+		    
                     if (resolvent.learnt()) 
                         data.getLEarnts().push(cr);
                     else 
