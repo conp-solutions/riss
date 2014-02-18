@@ -102,7 +102,7 @@ bool RATElimination::process()
       for( int i = 0 ; i < data.list(right).size(); ++ i ) 
       {
 	Clause& c = ca[ data.list(right)[i] ];
-	if( c.can_be_deleted() ) continue; 
+	if( c.can_be_deleted() || c.learnt() ) continue; 
 	if( c.size() < config.rate_minSize ) continue; // ignore "small" clauses
 	
 	rateCandidates ++;
@@ -268,7 +268,7 @@ void RATElimination::reSetupSolver()
             solver.vardata[ var(solver.trail[i]) ].reason = CRef_Undef;
 
     // give back into solver
-    for( int p = 0 ; p < 2; ++ p ) {
+    for( int p = 0 ; p < 1; ++ p ) { // do not use learned clauses, because they might be dropped without any notice later again
       vec<CRef>& clauses = (p == 0 ? solver.clauses : solver.learnts );
       for (int i = 0; i < clauses.size(); ++i)
       {
