@@ -54,6 +54,13 @@ bool EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
     
   data.ma.resize(2*data.nVars());
   
+  if( data.hasToPropagate() ) {
+    if( l_False == propagation.process(data,true) ) {
+      return modifiedFormula;
+    }
+    modifiedFormula = propagation.appliedSomething() || modifiedFormula;
+  }
+  
   // find SCCs and apply them to the "replacedBy" structure
   for( Var v = 0 ; v < data.nVars(); ++ v ) {
     eqDoAnalyze.push_back( mkLit(v,false) );

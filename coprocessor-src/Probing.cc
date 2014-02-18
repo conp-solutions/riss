@@ -345,7 +345,8 @@ bool Probing::prAnalyze( CRef confl )
 	   // learned enough uips - return. if none has been found, return false!
 	   if( config.pr_uip != -1 && uips > config.pr_uip ) {
 	     // reset seen literals
-	     for( int i = 0 ; i < data.lits.size(); ++ i ){
+	     assert( data.lits[0] == lit_Undef && "so far the lit_undef from the first position should not be overwritten" );
+	     for( int i = 1 ; i < data.lits.size(); ++ i ){
 	       solver.varFlags[ var(data.lits[i]) ].seen = 0;
 	       if( config.pr_debug_out > 2 ) cerr << "c reset seen ALLUIP for " << var(data.lits[i]) +1 << endl;
 	     }

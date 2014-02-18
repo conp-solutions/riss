@@ -115,7 +115,7 @@ bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::Work
       for( int j = 0 ; j < lList.size(); ++ j ) { // TODO: add step counter here!
         if( lList[j] == cr ) continue;                                            // to not work on the same clause twice!
 	const Clause& cj = ca[lList[j]];
-	if( cj.can_be_deleted() ) continue;                                       // act as the clause is not here
+	if( cj.can_be_deleted() || cj.learnt() ) continue;                                       // act as the clause is not here
 	wData.steps ++;
 	if( config.cce_debug_out > 1 ) cerr << "c analyze " << cj << endl;
 	if( cj.size() > wData.toProcess.size() + 1 ) continue;                    // larger clauses cannot add a contribution to the array!
@@ -175,7 +175,7 @@ bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::Work
       int beforeCla = wData.cla.size();
       for( int j = 0 ; j < lList.size(); ++ j ) { // TODO: add step counter here!
         const Clause& cj = ca[lList[j]];
-	if( cj.can_be_deleted() ) continue;                                       // act as the clause is not here
+	if( cj.can_be_deleted()  || cj.learnt() ) continue;                                       // act as the clause is not here
 	wData.steps ++;
 	if( firstClause ) {                                                       // first clause fills the array, the other shrink it again
           if( config.cce_debug_out > 1 ) cerr << "c analyze as first " << cj << endl;

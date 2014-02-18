@@ -108,7 +108,7 @@ lbool Preprocessor::performSimplification()
   // begin clauses have to be sorted here!!
   sortClauses();
 	
-  for( int ppIteration = 0; data.isInprocessing() ? 1 : ppIteration < config.opt_simplifyRounds ; ++ ppIteration )
+  for( int ppIteration = 0; ppIteration < ( data.isInprocessing() ? 1 : config.opt_simplifyRounds ); ++ ppIteration )
   {
     double iterTime = cpuTime();
     if( config.opt_verbose > 0 || config.opt_debug || true) cerr << "c pp iteration " << ppIteration << endl;
