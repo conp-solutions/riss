@@ -747,8 +747,8 @@ bool BoundedVariableAddition::xorBVAhalf()
     // sort based on second literal -- TODO: use improved sort!
     
     // sort( xorPairs.begin(), xorPairs.end() );
-    if( xorPairs.size() > 20 ) 
-      mergesort( &(xorPairs[0]), xorPairs.size());
+    if(  xorPairs.size() > 20 ) 
+      sort( &(xorPairs[0]), xorPairs.size());
     else {
       for( int i = 0 ; i < xorPairs.size(); ++ i ) {
 	for( int j = i+1; j < xorPairs.size(); ++ j ) {
@@ -959,8 +959,8 @@ bool BoundedVariableAddition::xorBVAfull()
     // evaluate matches here!
     // sort based on second literal -- TODO: use improved sort!
     // sort( xorPairs.begin(), xorPairs.end() );
-    if( xorPairs.size() > 20 ) 
-      mergesort( &(xorPairs[0]), xorPairs.size());
+    if(  xorPairs.size() > 20 ) 
+      sort( &(xorPairs[0]), xorPairs.size());
     else {
       for( int i = 0 ; i < xorPairs.size(); ++ i ) {
 	for( int j = i+1; j < xorPairs.size(); ++ j ) {
@@ -1024,8 +1024,16 @@ bool BoundedVariableAddition::xorBVAfull()
     }
     // evaluate matches here!
     // sort based on second literal -- TODO: use improved sort!
+    
+    if( config.opt_bvaAnalysisDebug > 2) {
+      cerr << "c negative match pairs (presort)[" << nxorPairs.size() << " ]: " << endl;
+      for( int i = 0 ; i < nxorPairs.size(); ++ i ) {
+	cerr << "[" << i << "]: " << nxorPairs[i].l1 << " -- " << ca[nxorPairs[i].c1] << "  VS "  << nxorPairs[i].l2 << " -- " << ca[nxorPairs[i].c2] << endl;
+      }
+    }
+    
     if( nxorPairs.size() > 20 ) 
-      mergesort( &(nxorPairs[0]), nxorPairs.size());
+      sort( &(nxorPairs[0]), nxorPairs.size());
     else {
       for( int i = 0 ; i < nxorPairs.size(); ++ i ) {
 	for( int j = i+1; j < nxorPairs.size(); ++ j ) {
@@ -1037,6 +1045,13 @@ bool BoundedVariableAddition::xorBVAfull()
 	}
       }
     }
+    
+    if( config.opt_bvaAnalysisDebug > 2) {
+      cerr << "c negative match pairs (postsort): " << endl;
+      for( int i = 0 ; i < nxorPairs.size(); ++ i ) {
+	cerr << "[" << i << "]: " << nxorPairs[i].l1 << " -- " << ca[nxorPairs[i].c1] << "  VS "  << nxorPairs[i].l2 << " -- " << ca[nxorPairs[i].c2] << endl;
+      }
+    }
 
     posLitCount.assign(data.nVars() * 2, 0 ); // reset literal counts! // TODO: have memset here?
     // generate negative counts!
@@ -1046,6 +1061,7 @@ bool BoundedVariableAddition::xorBVAfull()
       int j = i;
       while ( j < nxorPairs.size() && toInt(nxorPairs[i].l2) == toInt(nxorPairs[j].l2) ) ++j ;
       assert(j>=i);
+      if( config.opt_bvaAnalysisDebug > 1) cerr << "c for literal " << nxorPairs[i].l2 << " add value " << (j-i) << endl;
       posLitCount[ toInt(nxorPairs[i].l2) ] += (j-i); // store the value!
       nmaxR = nmaxR > (j-i) ? nmaxR : j-i;
       i = j - 1; // jump to next matching
@@ -1082,6 +1098,9 @@ bool BoundedVariableAddition::xorBVAfull()
       for( ; nmaxI < nxorPairs.size(); ++ nmaxI ) if( nxorPairs[nmaxI].l2 == l2 ) break; // first literal has different polarity, hence, second needs same polarity!
       int nmaxJ = nmaxI > nxorPairs.size() ? nxorPairs.size() : nmaxI ; // to find "upper bound"
       for( ; nmaxJ < nxorPairs.size(); ++ nmaxJ ) if( nxorPairs[nmaxJ].l2 != l2 ) break; // upper bound
+      if( nmaxJ - nmaxI != posLitCount[ toInt( l2 ) ] ) {
+	if( config.opt_bvaAnalysisDebug > 0) cerr << "c numbers do not match for lit " << l2 << " s=" << nmaxI << " e=" << nmaxJ << " count= " << posLitCount[ toInt( l2 ) ] << " complCount= " << posLitCount[ toInt( ~l2 ) ] << endl;
+      }
       assert( nmaxJ - nmaxI == posLitCount[ toInt( l2 ) ] && "has to have the same number ... " );
       
     // apply rewriting for the biggest matching!
@@ -1332,9 +1351,9 @@ bool BoundedVariableAddition::iteBVAhalf()
       
     }
     // evaluate matches here!
-    // sort based on second literal -- TODO: use improved sort!
-    if( itePairs.size() > 20 ) 
-      mergesort( &(itePairs[0]), itePairs.size());
+    // sort based on second literal -- TODO: use improved sort! merge sort is broken!
+    if(  itePairs.size() > 20 ) 
+      sort( &(itePairs[0]), itePairs.size());
     else {
       for( int i = 0 ; i < itePairs.size(); ++ i ) {
 	for( int j = i+1; j < itePairs.size(); ++ j ) {
@@ -1552,8 +1571,8 @@ bool BoundedVariableAddition::iteBVAfull()
     }
     // evaluate matches here!
     // sort based on second literal -- TODO: use improved sort!
-    if( itePairs.size() > 20 ) 
-      mergesort( &(itePairs[0]), itePairs.size());
+    if(  itePairs.size() > 20 ) 
+      sort( &(itePairs[0]), itePairs.size());
     else {
       for( int i = 0 ; i < itePairs.size(); ++ i ) {
 	for( int j = i+1; j < itePairs.size(); ++ j ) {

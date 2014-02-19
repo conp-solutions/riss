@@ -2268,62 +2268,6 @@ inline void Logger::log(int level, const string& s, const Clause& c, const Lit& 
     << endl;
 }
 
-template <typename T>
-inline void mergesort(T* a, int32_t n)
-{
-	int32_t m, s;
-	// if copying is enabled, only half of the elements are needed
-	T* b=new T[ n ];
-	const T* original = a;
-	// size of work fields, power of 2	
-	for (s=1; s<n; s+=s)
-	{
-		m = n;
-		do {
-			m = m - 2*s;	// set begin of working field
-			int32_t hi = (m+s > 0) ? m + s : 0;	// set middle of working field
-			
-			int32_t i = (m > 0) ? m : 0;	// lowest position in field
-			int32_t j = hi;
-			
-			int32_t stopb = m + 2*s;	// upper bound of current work area
-			int32_t currentb = i;			// current position in field for copy
-			
-			// merge two sorted fields into one
-			while( i < hi && j < stopb)
-			{
-				if( a[i] < a[j] )
-					b[currentb++] = a[i++];
-				else
-					b[currentb++] = a[j++];
-			}
-			// copy rest of the elements
-			for( ; i < hi; )
-				b[currentb++] = a[i++];
-				
-			for( ; j< stopb; 	)
-				b[currentb++] = a[j++];
-				
-		} while( m > 0 );
-		
-		// swap fields!
-		T* tmp = a;
-		a = b;
-		b = tmp;
-	}
-	
-	if( a != original ) { // copy back original data into original vector!
-	  memcpy(a,b, sizeof(T) * n ); 
-	  T* tmp = a;
-	  a = b;
-	  b = tmp;
-	}
-	
-	// free space
-	delete [] b;
-}
-
-
 }
 
 #endif
