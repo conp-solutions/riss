@@ -420,7 +420,7 @@ void BlockedClauseElimination::blockedClauseElimination()
   
 bool BlockedClauseElimination::process()
 {
-  assert( (config.opt_bce_bce || config.opt_bce_cle || config.opt_bce_cla ) && "something should be done in this method!" );
+  if( !config.opt_bce_bce && !config.opt_bce_cle && !config.opt_bce_cla ) return false; // return that nothing has been done
   
   MethodClock mc (bceTime);
 

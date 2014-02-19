@@ -1607,7 +1607,7 @@ lbool Solver::search(int nof_conflicts)
             if(config.hk && (maxLaNumber == -1 || (las < maxLaNumber)) ) { // perform LA hack -- only if max. nr is not reached?
 	      if(config.opt_printDecisions > 0) cerr << "c run LA" << endl;
 	      int hl = decisionLevel();
-	      if( hl == 0 ) if( --untilLa == 0 ) {laStart = true; if(config.dx)cerr << "c startLA" << endl;}
+	      if( hl == 0 ) if( --untilLa == 0 ) { laStart = true; if(config.dx)cerr << "c startLA" << endl;}
 	      if( laStart && hl == config.opt_laLevel ) {
 		if( !laHack(learnt_clause) ) return l_False;
 		topLevelsSinceLastLa = 0;
@@ -1861,7 +1861,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   Lit d[6];
   int j = 0;
   for(int i=0;i<config.opt_laLevel;++i) {
-    if( i == 0 || trail_lim[i] != trail_lim[i-1] ) // no dummy level caused by assumptions ...
+    if( (i == 0 || trail_lim[i] != trail_lim[i-1]) && trail_lim[i] < trail.size() ) // no dummy level caused by assumptions ...
       d[j++]=trail[ trail_lim[i] ]; // get all decisions into dec array
   }
   const int actualLAlevel = j;

@@ -918,10 +918,7 @@ bool FourierMotzkin::process()
       }
   }
   
-  // propagate found units - if failure, skip next steps
-  if( data.ok() && data.hasToPropagate() )
-    if( propagation.process(data,true) == l_False ) {data.setFailed(); return modifiedFormula; }
-  
+  // add all the clauses, perform unit propagation afterwards
   if( data.ok() && config.opt_newAmo > 0 && (newAMOs.size() > 0 || rejectedNewAmos.size() > 0) ) {
     big.recreate( ca, data.nVars(), data.getClauses() ); 
     if(config.opt_newAmo > 1) big.generateImplied(data); // try to avoid adding redundant clauses!
@@ -947,6 +944,7 @@ bool FourierMotzkin::process()
 	      unitQueue.push( ~c.ll[k] < ~c.ll[j] ? ~c.ll[j] : ~c.ll[k] );
 	      CRef tmpRef = ca.alloc(unitQueue, false); // no learnt clause!
 	      assert( ca[tmpRef][0] < ca[tmpRef][1] && "the clause has to be sorted!" );
+	      if( config.fm_debug_out > 0 ) cerr << "c add clause (" << __LINE__ << ")[" << tmpRef << "]" << ca[tmpRef] << endl;
 	      data.addClause( tmpRef );
 	      data.getClauses().push( tmpRef );
 	    }
@@ -973,6 +971,7 @@ bool FourierMotzkin::process()
 	  CRef tmpRef = ca.alloc(c.lr, false); // no learnt clause!
 	  ca[tmpRef].sort();
 	  assert( ca[tmpRef][0] < ca[tmpRef][1] && "the clause has to be sorted!" );
+	  if( config.fm_debug_out > 0 ) cerr << "c added clause (" << __LINE__ << ")[" << tmpRef << "] " << ca[tmpRef] << endl;
 	  data.addClause( tmpRef );
 	  data.getClauses().push( tmpRef );
 	  addedClauses++;
@@ -980,10 +979,6 @@ bool FourierMotzkin::process()
       }
     }
   }
-  
-  // propagate found units - if failure, skip next steps
-  if( data.ok() && data.hasToPropagate() )
-    if( propagation.process(data,true) == l_False ) {data.setFailed(); return modifiedFormula; }
   
   if( data.ok() && config.opt_newAlk > 0 && (newALKs.size() > 0 || rejectedNewAlks.size() > 0) ) {
     for( int p = 0; p<2; ++ p ) {
@@ -994,13 +989,24 @@ bool FourierMotzkin::process()
 	  continue;
 	}
 	modifiedFormula = true;
-	if( c.lr.size() == 1 ) {
+	int k = 0; // number of kept literals
+	bool isSat = false;
+	for( int j = 0 ; j < c.lr.size(); ++ j ) {
+	  if( data.value( c.lr[j] ) == l_True ){ isSat = true; break; }
+	  else if ( data.value( c.lr[j] ) == l_Undef ) c.lr[k++] = c.lr[j]; // keep only undefined literals!
+	}
+	if( isSat ) continue; // do not consider satisfied constraints!
+	c.lr.resize( k ); // keep only unassigned literals!
+	if( c.lr.size() == 0 ) {
+	  data.setFailed(); return modifiedFormula;
+	} else if( c.lr.size() == 1 ) {
 	  if( data.enqueue(c.ll[0]) == l_False ) return modifiedFormula;
 	} else if( ! hasDuplicate(c.lr) ) {
 	  assert( c.lr.size() > 1 && "empty and unit should have been handled before!" );
 	  CRef tmpRef = ca.alloc(c.lr, false); // no learnt clause!
 	  ca[tmpRef].sort();
 	  assert( ca[tmpRef][0] < ca[tmpRef][1] && "the clause has to be sorted!" );
+	  if( config.fm_debug_out > 0 ) cerr << "c added clause (" << __LINE__ << ")[" << tmpRef << "] " << ca[tmpRef] << endl;
 	  data.addClause( tmpRef );
 	  data.getClauses().push( tmpRef );
 	  addedClauses++;
@@ -1494,6 +1500,7 @@ void FourierMotzkin::deduceALOfromAmoAloMatrix(vector< FourierMotzkin::CardC >& 
 	
 	if( ! hasDuplicate( cards[amoCands[k]].ll ) ) { // if there is not already a clause that is subsumed by the current clause
 	  CRef cr = ca.alloc( cards[amoCands[k]].ll , false); 
+	  if( config.fm_debug_out > 0 ) cerr << "c add clause (" << __LINE__ << ") [" << cr << "]" << ca[cr] << endl;
 	  data.addClause(cr);
 	  data.getClauses().push(cr);
 	  dedAlos ++; // stats
