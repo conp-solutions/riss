@@ -57,7 +57,7 @@ static void parse_DIMACS_main(B& in, Solver& S) {
             if (eagerMatch(in, "p cnf")){
                 vars    = parseInt(in);
                 clauses = parseInt(in);
-		S.reserveVars(vars);
+		S.reserveVars(vars); // reserve space for the variables, so that there is less fragmentation
 		
                 // SATRACE'06 hack
                 // if (clauses > 4000000)
@@ -85,6 +85,47 @@ static void parse_DIMACS(gzFile input_stream, Solver& S) {
     StreamBuffer in(input_stream);
     parse_DIMACS_main(in, S); }
 
+/** check whether the given model satisfies the given file
+ *  @return true, if the model satisfies all clauses in the formula
+ */
+bool check_DIMACS( gzFile input_stream, vec<lbool>& model ) {
+  StreamBuffer in(input_stream);
+  vec<Lit> lits;
+  int cnt = 0;
+  for (;;){
+        skipWhitespace(in);
+        if (*in == EOF) break;
+        else if (*in == 'c' || *in == 'p')
+            skipLine(in);
+        else{
+	    // read clause
+            int parsed_lit, variable;
+	    cnt ++;
+	    lits.clear();
+	    bool satisfied = false;
+	    for (;;){
+		parsed_lit = parseInt(in);
+		if (parsed_lit == 0) break;
+		variable = abs(parsed_lit)-1;
+		const Lit l = (parsed_lit > 0) ? mkLit(variable) : ~mkLit(variable);
+		lits.push( l );
+		if( variable < model.size() )
+		  satisfied = satisfied || ( (model[ variable ] == l_True && !sign(l)) || (model[ variable ] == l_False && sign(l)) ) ;
+	    }
+	    if( !satisfied ) {
+	      printf("c no model -- does not satisfy clause [%d] ",cnt);
+	      for( int i =  0 ; i < lits.size(); ++ i ) printf(" %d", sign( lits[i] ) ? - var(lits[i]) - 1 : var(lits[i]) + 1);
+	      printf("\n");
+	      break;
+	    }
+	    
+	}
+            
+    }
+  
+  return true;
+}
+    
 //=================================================================================================
 }
 

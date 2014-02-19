@@ -46,7 +46,31 @@ class FourierMotzkin : public Technique  {
   
   vec<Lit> unitQueue; // store literals that should be propagated on the card constraints
   
+  /// compare two literals
+  struct LitOrderHeapLt {
+        CoprocessorData & data;
+        bool operator () (int& x, int& y) const {
+	    return data[ toLit(x)] > data[toLit(y)]; 
+        }
+        LitOrderHeapLt(CoprocessorData & _data) : data(_data) {}
+  };
+  
+  /// struct to handle ternary clauses efficiently
+  struct Ternary {
+    Lit lit [3];
+    Ternary ( const Lit a, const Lit b, const Lit c )
+    {
+      lit[0] = ( a > b ? ( b > c ? c : b ) : ( a > c ? c : a ) ); // min
+      lit[2] = ( a > b ? ( a > c ? a : c ) : ( b > c ? b : c)  ); // max
+      lit[1] = toLit( toInt(a) ^ toInt(b) ^ toInt(c) ^ toInt( lit[0] ) ^ toInt( lit[2] ) ); // xor all three lits and min and max (the middle remains)
+    }
+    Lit operator[](const int position) const {
+      return lit[position];
+    }
+  };
+
   /** represent a (mixed) cardinality constraint*/
+  public:
   class CardC {
   public:
     vector<Lit> ll;
@@ -70,29 +94,6 @@ class FourierMotzkin : public Technique  {
       const int t = other.k; other.k = k; k = t;
       ll.swap( other.ll );
       lr.swap( other.lr );
-    }
-  };
-  
-  /// compare two literals
-  struct LitOrderHeapLt {
-        CoprocessorData & data;
-        bool operator () (int& x, int& y) const {
-	    return data[ toLit(x)] > data[toLit(y)]; 
-        }
-        LitOrderHeapLt(CoprocessorData & _data) : data(_data) {}
-  };
-  
-  /// struct to handle ternary clauses efficiently
-  struct Ternary {
-    Lit lit [3];
-    Ternary ( const Lit a, const Lit b, const Lit c )
-    {
-      lit[0] = ( a > b ? ( b > c ? c : b ) : ( a > c ? c : a ) ); // min
-      lit[2] = ( a > b ? ( a > c ? a : c ) : ( b > c ? b : c)  ); // max
-      lit[1] = toLit( toInt(a) ^ toInt(b) ^ toInt(c) ^ toInt( lit[0] ) ^ toInt( lit[2] ) ); // xor all three lits and min and max (the middle remains)
-    }
-    Lit operator[](const int position) const {
-      return lit[position];
     }
   };
   
@@ -148,6 +149,11 @@ protected:
   /** remove all clauses from the watch lists inside the solver */
   void cleanSolver();
 };
+
+//   inline ostream& operator<<( ostream& stream, const FourierMotzkin::CardC& card ) {
+//       stream << "(" << card.ll << " <= " << card.k << " + " << card.lr << ")";
+//       return stream;
+//   }
 
 }
 

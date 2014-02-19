@@ -113,8 +113,10 @@ int main(int argc, char** argv)
   StringOption drupFile         ("PROOF", "drup", "Write a proof trace into the given file",0);
   StringOption opt_proofFormat  ("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, should be DRUP)","DRUP");
   
-  BoolOption   opt_modelStyle ("MAIN", "oldModel", "present model on screen in old format", false);
-  BoolOption   opt_quiet      ("MAIN", "quiet", "Do not print the model", false);
+  
+  BoolOption   opt_checkModel ("MAIN", "checkModel", "verify model inside the solver before printing (if input is a file)", false);
+  BoolOption   opt_modelStyle ("MAIN", "oldModel",   "present model on screen in old format", false);
+  BoolOption   opt_quiet      ("MAIN", "quiet",      "Do not print the model", false);
   
     try {
         
@@ -238,6 +240,11 @@ int main(int argc, char** argv)
         // put empty clause on proof
         if(ret == l_False && S.drupProofFile != NULL ) fprintf(S.drupProofFile, "0\n");
 
+	// check model of the formula
+	if( ret == l_True && opt_checkModel && argc != 1 ) { // check the model if the formla was given via a file!
+	  check_DIMACS(in, S.model);
+	}
+	
         // print solution into file
         if (res != NULL){
             if (ret == l_True){

@@ -394,7 +394,8 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 				    const Clause& cclause = ca[cls[k]];
 				    if( cls[k] == data.clss[offset] ) continue; // do not consider the same clause twice!	
 				    if(cclause.can_be_deleted()) continue;
-				    if(cclause.size() > config.opt_xorMatchLimit  
+				    if(cclause.size() > config.opt_xorMatchLimit                  // ignore too large clauses
+				      || cclause.size() == 1                                      // ignore unit clauses
 				      || ( ! config.opt_xor_findResolved && cclause.size() >= cL) 
 				      || ( config.opt_xor_findResolved && cclause.size() > cL) // due to resolution, also bigger clauses are allowed!
 				    ) continue; // for performance, and it does not make sense to check clauses that are bigger than the current ones

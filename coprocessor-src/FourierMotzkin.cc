@@ -127,8 +127,8 @@ bool FourierMotzkin::process()
   
   cards.clear();
   
-  if( config.fm_debug_out > 0) cerr << "c run with " << heap.size() << " elements" << endl;
-  
+  if( config.fm_debug_out > 0) cerr << "c scan for AMOs with " << heap.size() << " elements" << endl;
+
   // for l in F, and only if not interrupted, and not limits are reached or active
   while (heap.size() > 0 && (data.unlimited() || (fmLimit > steps && config.opt_fmSearchLimit > searchSteps ) ) && !data.isInterupted() ) 
   {
@@ -220,6 +220,8 @@ bool FourierMotzkin::process()
     for( int i = 0 ; i < data.lits.size(); ++ i )
       if ( data.lits[i] == lit_Undef ) { data.lits[i] = data.lits[ data.lits.size() - 1 ]; data.lits.pop_back(); --i; }
     
+    // if( data.lits.size() == 2 ) continue; // do not consider trivial constraints!
+    
     for( int i = 0 ; i < data.lits.size(); ++ i ){
       if( config.opt_fm_avoid_duplicates ) { // remove the edges in the big that represent this AMO
 	for( int j = i+1; j < data.lits.size(); ++ j ) {
@@ -233,12 +235,11 @@ bool FourierMotzkin::process()
 
     // remember that these literals have been used in an amo already!
     sort(data.lits);
+    if( config.fm_debug_out > 0 ) cerr << "c found AMO: " << data.lits << endl;
     cards.push_back( data.lits );
     if( cards.size() >= config.opt_fm_max_constraints ) break;
 
     if( config.opt_fm_multiVarAMO && data.lits.size() > 1 && config.opt_fm_avoid_duplicates && big.getSize( right ) > 0 ) heap.insert( toInt( right ) ); // this literal might have more cliques
-    
-    if( config.fm_debug_out > 0 ) cerr << "c found AMO: " << data.lits << endl;
   }
   
   if( config.opt_fm_avoid_duplicates && cards.size() > 0 )
@@ -247,11 +248,12 @@ bool FourierMotzkin::process()
   amoTime = cpuTime() - amoTime;
   foundAmos = cards.size();
   
-  if( config.fm_debug_out > 0 ) cerr << "c finished search AMO --- process ... " << endl;
+  if( config.fm_debug_out > 0 ) cerr << "c finished search AMO with " << cards.size() << " constraints --- process ... " << endl;
   
   // perform AMT extraction
   amtTime = cpuTime() - amtTime;
   if( config.opt_atMostTwo ) {
+    if( config.fm_debug_out > 0 ) cerr << "c scan for AMT constraints" << endl;
     inAmo.nextStep(); // use it to detect whether already used in AM2 constraint as well!
     for( Var v = 0 ; v < data.nVars(); ++ v ) {
       if( config.opt_fmSearchLimit <= searchSteps ) { // if limit is reached, invalidate current AMO candidate
@@ -345,7 +347,7 @@ bool FourierMotzkin::process()
   // perform FindUnit
   if( config.opt_findUnit ) {
     inAmo.nextStep(); // check for each literal whether its already in the unit queue
-    if( config.fm_debug_out > 0 ) cerr << "c find units ... " << endl;
+    if( config.fm_debug_out > 0 ) cerr << "c find units  with " << cards.size() << " constraints ... " << endl;
     for( Var v = 0 ; v < data.nVars(); ++v  ) {
       const Lit pl = mkLit(v,false), nl = mkLit(v,true);
       for( int i = 0 ; i < leftHands[toInt(pl)].size() && steps < fmLimit; ++ i ) { // since all cards are compared, be careful!
@@ -384,7 +386,7 @@ bool FourierMotzkin::process()
   
   // perform merge
   if( config.opt_merge ) {
-    if( config.fm_debug_out > 0 ) cerr << "c merge AMOs ... " << endl;
+    if( config.fm_debug_out > 0 ) cerr << "c merge AMOs with " << cards.size() << " constraints ... " << endl;
     for( Var v = 0 ; v < data.nVars(); ++v  ) {
       const Lit pl = mkLit(v,false), nl = mkLit(v,true);
       if( leftHands[ toInt(pl) ] .size() > 2 || leftHands[ toInt(nl) ] .size() > 2 ) continue; // only if the variable has very few occurrences
@@ -518,17 +520,39 @@ bool FourierMotzkin::process()
   }
 
   // perform actual Fourier Motzkin method 
-  if( config.fm_debug_out > 0 ) cerr << "c apply FM ..." << endl;
+  if( config.fm_debug_out > 0 ) cerr << "c apply FM with " << cards.size() << " constraints..." << endl;
+  
+  if( config.fm_debug_out > 3 ) {
+    cerr << "c lists of all constraints: " << endl;
+    for( Var v = 0 ; v < data.nVars(); ++v ) {
+      for( int p = 0 ; p < 2; ++ p ) {
+	const Lit l = mkLit(v,p==0);
+	cerr << "left  ("<< l << "): " << endl;
+ 	for( int i = 0 ; i < leftHands[ toInt(l) ].size(); ++ i ){
+	  const CardC& card = cards[ leftHands[ toInt(l) ][i] ];
+	  cerr << "(" << card.ll << " <= " << card.k << " + " << card.lr << ")" << endl;
+	}
+	cerr << "right ("<< l << "): " << endl;
+	for( int i = 0 ; i < rightHands[ toInt(l) ].size(); ++ i ) {
+	  const CardC& card = cards[ rightHands[ toInt(l) ][i] ];
+	  cerr << "(" << card.ll << " <= " << card.k << " + " << card.lr << ")" << endl;
+	}
+	cerr << endl;
+      }
+    }
+  }
+  
   // for l in F
   int iter = 0;
   int needsGarbageCollect = -1; // iteration in which garbage collection should be done
   bool sizeAbort = false;
+  vector<int> rewrite; // for garbage collection
   while (heap.size() > 0 && (data.unlimited() || (fmLimit > steps && !sizeAbort) ) && !data.isInterupted() ) 
   {
     /** garbage collection */
     if ( needsGarbageCollect == iter ) {
-      if( config.opt_verbose > 0 || true ) cerr << "c fm garbage collect" << endl;
-      vector<int> rewrite( cards.size(), 0 ); // vector that memorizes position
+      if( config.fm_debug_out > 0 ) cerr << "c fm garbage collect" << endl;
+      rewrite.assign( cards.size(), -1 ); // vector that memorizes new position
       // perform card garbage collection
       int keptCards = 0;
       for( int i = 0 ; i < cards.size(); ++ i ) {
@@ -536,23 +560,45 @@ bool FourierMotzkin::process()
 	  rewrite[i] = keptCards; // memorize where this card has been put
 	  if( i > keptCards ) { // only if its not the same position
 	    cards[keptCards].swap( cards[i] ); // swap the two cards (not copy to not copy the memory!)
+	    if( config.fm_debug_out > 2 ) cerr << "c moved index from " << i << " to " << keptCards << endl;
 	    keptCards++; // increase number of kept cards
 	  }
 	}
       }
-      cerr << "c keep " << keptCards << " out of " << cards.size() << endl;
+      if( config.fm_debug_out > 0 ) cerr << "c keep " << keptCards << " out of " << cards.size() << endl;
       cards.resize( keptCards );
       // rewrite all other index vectors!
       for( Var v = 0; v < data.nVars(); ++v ) {
 	for( int p = 0 ; p < 2; ++ p ) {
-	  for( int i = 0 ; i < leftHands[ toInt( mkLit(v, p==0) ) ].size(); ++i ) leftHands[ toInt( mkLit(v, p==0) ) ][i] = rewrite[ leftHands[ toInt( mkLit(v, p==0) ) ][i] ];
-	  for( int i = 0 ; i < rightHands[ toInt( mkLit(v, p==0) ) ].size(); ++i ) rightHands[ toInt( mkLit(v, p==0) ) ][i] = rewrite[ rightHands[ toInt( mkLit(v, p==0) ) ][i] ];
+	  const Lit l = mkLit(v, p==0);
+	  int k = 0; // number of kept constraints
+	  for( int i = 0 ; i < leftHands[ toInt(l ) ].size(); ++i ) { 
+	    if( rewrite[ leftHands[ toInt(l ) ][i] ] != -1 ) { 
+	      cerr << "c move lefthands[" << toInt(l) << "][" << k << "] to " << rewrite[ leftHands[ toInt(l ) ][i] ] << endl;
+	      leftHands[ toInt(l ) ][k++] = rewrite[ leftHands[ toInt(l ) ][i] ];
+	    }
+	  }
+	  leftHands[ toInt(l ) ].resize(k); // remove constraints that are not used
+	  k = 0;
+	  for( int i = 0 ; i < rightHands[ toInt(l ) ].size(); ++i ) {
+	    if( rewrite[ leftHands[ toInt(l ) ][i] ] != -1 ) {
+	      cerr << "c move rightHands[" << toInt(l) << "][" << k << "] to " << rewrite[ rightHands[ toInt(l ) ][i] ] << endl;
+	      rightHands[ toInt(l ) ][k++] = rewrite[ rightHands[ toInt(l ) ][i] ];
+	    }
+	  }
+	  rightHands[ toInt(l ) ].resize(k); // remove constraints that are not used
 	}
       }
-      for( int i = 0 ; i < newAMOs.size(); ++ i) newAMOs[i] = rewrite[ newAMOs[i] ];
-      for( int i = 0 ; i < newALOs.size(); ++ i) newALOs[i] = rewrite[ newALOs[i] ];
-      for( int i = 0 ; i < newALKs.size(); ++ i) newALKs[i] = rewrite[ newALKs[i] ];
+      int k = 0 ; // number of kept constraints
+      for( int i = 0 ; i < newAMOs.size(); ++ i) if( rewrite[ newAMOs[i] ] != -1 ) newAMOs[k++] = rewrite[ newAMOs[i] ];
+      newAMOs.resize(k); k=0; // remove unused constraints!
+      for( int i = 0 ; i < newALOs.size(); ++ i) if( rewrite[ newALOs[i] ] != -1 ) newALOs[k++] = rewrite[ newALOs[i] ];
+      newALOs.resize(k); k=0; // remove unused constraints!
+      for( int i = 0 ; i < newALKs.size(); ++ i) if( rewrite[ newALKs[i] ] != -1 ) newALKs[k++] = rewrite[ newALKs[i] ];
+      newALKs.resize(k); // remove unused constraints!
       if( data.unlimited() ) needsGarbageCollect = -1; // if unlimited, reset garbage collection
+    } else {
+      if( config.fm_debug_out > 0 ) cerr << "c no garbage collect" << endl;
     }
     data.checkGarbage();
     
@@ -579,6 +625,21 @@ bool FourierMotzkin::process()
 	 || (leftHands[ toInt(toEliminate) ] .size() > 10 && rightHands[ toInt(toEliminate) ] .size() > 10))
       ) continue; // do not eliminate this variable, if it looks too expensive
 
+      if( config.fm_debug_out > 3 ) {
+	cerr << "c lists before elimination of literal " << toEliminate << endl;
+	cerr << "left  ("<< toEliminate << "): " << endl;
+ 	for( int i = 0 ; i < leftHands[ toInt(toEliminate) ].size(); ++ i ){
+	  const CardC& card = cards[ leftHands[ toInt(toEliminate) ][i] ];
+	  cerr << "(" << card.ll << " <= " << card.k << " + " << card.lr << ")" << endl;
+	}
+	cerr << "right ("<< toEliminate << "): " << endl;
+	for( int i = 0 ; i < rightHands[ toInt(toEliminate) ].size(); ++ i ) {
+	  const CardC& card = cards[ rightHands[ toInt(toEliminate) ][i] ];
+	  cerr << "(" << card.ll << " <= " << card.k << " + " << card.lr << ")" << endl;
+	}
+	cerr << endl;
+      }
+      
       for( int i = 0 ; i < leftHands[toInt(toEliminate)].size() && steps < fmLimit && !sizeAbort; ++ i ) { // since all cards are compared, be careful!
 	steps ++;
 	if( cards[leftHands[toInt(toEliminate)][i]].invalid() ) { // drop invalid constraints from list!
@@ -620,6 +681,7 @@ bool FourierMotzkin::process()
 	  int extraK = 0; // if during reasoning the K value needs to be adopted
 	  for( int p = 0 ; p < 2; ++ p ) {
 	    // first half
+	    if( config.fm_debug_out ) cerr << "c compare " << (p == 0 ? "left " : "right") << " side" << endl;
 	    const vector<Lit>& v1 = p == 0 ? card1.ll : card1.lr;
 	    const vector<Lit>& v2 = p == 0 ? card2.ll : card2.lr;
 	    int n1=0,n2=0;
@@ -639,15 +701,23 @@ bool FourierMotzkin::process()
 		n1++;n2++;
 	      } else if( v1[n1] < v2[n2] ) {
 		if( v1[n1] != toEliminate ) data.lits.push_back(v1[n1]);
+		else if( config.fm_debug_out ) cerr << "c drop " << v1[n1] << endl;
 		n1 ++;
 	      } else { 
 		if( v2[n2] != toEliminate ) data.lits.push_back(v2[n2]);
+		else if( config.fm_debug_out ) cerr << "c drop " << v2[n2] << endl;
 		n2 ++;
 	      }
 	    }
 	    if(!hasDuplicates) { // add the remaining elements of one of the vectors!
-	      for(; n1 < v1.size(); ++ n1 ) if( v1[n1] != toEliminate ) data.lits.push_back( v1[n1] );
-	      for(; n2 < v2.size(); ++ n2 ) if( v2[n2] != toEliminate ) data.lits.push_back( v2[n2] );
+	      for(; n1 < v1.size(); ++ n1 ) {
+		if( v1[n1] != toEliminate ) data.lits.push_back( v1[n1] );
+		else if( config.fm_debug_out ) cerr << "c drop " << v1[n1] << endl;
+	      }
+	      for(; n2 < v2.size(); ++ n2 ) {
+		if( v2[n2] != toEliminate ) data.lits.push_back( v2[n2] );
+		else if( config.fm_debug_out ) cerr << "c drop " << v2[n2] << endl;
+	      }
 	    }
 	    if( p == 0 ) thisCard.ll = data.lits;
 	    else thisCard.lr = data.lits;
@@ -820,6 +890,26 @@ bool FourierMotzkin::process()
     
       // if found something, propagate!
       if(!propagateCards( unitQueue, leftHands, rightHands, cards,inAmo) ) return modifiedFormula;
+      
+      if( config.fm_debug_out > 3 ) {
+	cerr << "c lists of all constraints after complete elimination step: " << endl;
+	for( Var v = 0 ; v < data.nVars(); ++v ) {
+	  for( int p = 0 ; p < 2; ++ p ) {
+	    const Lit l = mkLit(v,p==0);
+	    cerr << "left  ("<< l << "): " << endl;
+	    for( int i = 0 ; i < leftHands[ toInt(l) ].size(); ++ i ){
+	      const CardC& card = cards[ leftHands[ toInt(l) ][i] ];
+	      cerr << "(" << card.ll << " <= " << card.k << " + " << card.lr << ")" << endl;
+	    }
+	    cerr << "right ("<< l << "): " << endl;
+	    for( int i = 0 ; i < rightHands[ toInt(l) ].size(); ++ i ) {
+	      const CardC& card = cards[ rightHands[ toInt(l) ][i] ];
+	      cerr << "(" << card.ll << " <= " << card.k << " + " << card.lr << ")" << endl;
+	    }
+	    cerr << endl;
+	  }
+	}
+      }
   }
   
   // propagate found units - if failure, skip next steps
@@ -927,6 +1017,8 @@ void FourierMotzkin::findCardsSemantic( vector< FourierMotzkin::CardC >& cards, 
   
 	assert( solver.decisionLevel() == 0 && "will look for card constraints only at level 0!" );
 
+	if( config.fm_debug_out > 0 ) cerr << "c find cards semantically with " << cards.size() << " constraints" << endl;
+	
 	// merge-sort clauses according to size. smallest first
 	MethodTimer mv( &semTime ); // time measurement
 	
@@ -1120,6 +1212,10 @@ void FourierMotzkin::findCardsSemantic( vector< FourierMotzkin::CardC >& cards, 
 		  
 		} else { 
 		  if( config.opt_semDebug ) cerr << "c probe failed" << endl;
+		  if( degree == 1 ) {
+		    static bool didit = false;
+		    if( !didit) { cerr << "c found a failed literal! use it!" << endl; didit = true; }
+		  }
 		  failedProbes ++;	// conflict -> everything is implied -> no intersection to be done!
 		}
 		solver.cancelUntil( 0 );
@@ -1227,6 +1323,8 @@ void FourierMotzkin::findCardsSemantic( vector< FourierMotzkin::CardC >& cards, 
 
 void FourierMotzkin::removeSubsumedAMOs(vector< FourierMotzkin::CardC >& cards, vector< std::vector< int > >& leftHands)
 {
+  if( config.fm_debug_out > 0 ) cerr << "c remove subsumed cards with " << cards.size() << " constraints" << endl;
+  
   for( int i = 0 ; i < cards.size(); ++ i )
   {
     CardC& c = cards[ i ];
@@ -1236,7 +1334,7 @@ void FourierMotzkin::removeSubsumedAMOs(vector< FourierMotzkin::CardC >& cards, 
 
     Lit min = c.ll[0];
     for( int j = 1; j < c.ll.size(); ++ j )
-      if( leftHands[ toInt( c.ll[j] ) ] < leftHands[ toInt( min ) ] ) min = c.ll[j];
+      if( leftHands[ toInt( c.ll[j] ) ].size() < leftHands[ toInt( min ) ].size() ) min = c.ll[j];
     
     // check whether an AMO, or a bigger AMO can be found in the list of min
     for( int m = 0 ; m < leftHands[ toInt(min) ].size(); ++ m ) {
@@ -1261,7 +1359,7 @@ void FourierMotzkin::removeSubsumedAMOs(vector< FourierMotzkin::CardC >& cards, 
 void FourierMotzkin::deduceALOfromAmoAloMatrix(vector< FourierMotzkin::CardC >& cards, vector< std::vector< int > >& leftHands)
 {
   MethodTimer mt( &deduceAloTime );
-  if( config.fm_debug_out > 0 ) cerr << "c run deduceAlo method" << endl;
+  if( config.fm_debug_out > 0 ) cerr << "c run deduceAlo method  with " << cards.size() << " constraints" << endl;
   
   vector<int> amoCands;
   vector<int> amoCandsLocal;
@@ -1406,7 +1504,7 @@ void FourierMotzkin::findTwoProduct(vector< FourierMotzkin::CardC >& cards, BIG&
 {
   if( config.opt_fmSearchLimit <= searchSteps ) return; // if limit is reached, invalidate current AMO candidate
   MethodTimer mt( &twoPrTime );
-  if( config.fm_debug_out > 0 ) cerr << "c run find two product" << endl;
+  if( config.fm_debug_out > 0 ) cerr << "c run find two product  with " << cards.size() << " constraints" << endl;
   MarkArray newAmoLits;
   newAmoLits.create(2*data.nVars());
   
