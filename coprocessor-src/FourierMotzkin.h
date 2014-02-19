@@ -35,6 +35,7 @@ class FourierMotzkin : public Technique  {
   int removedCards, newCards;
   int addedBinaryClauses,addedClauses;
   int detectedDuplicates;
+  int garbageCollects;
   
   int twoPrAmos, twoPrAmoLits; // stats for two pr amo lits
   int dedAlos;

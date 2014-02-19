@@ -45,6 +45,7 @@ FourierMotzkin::FourierMotzkin( CP3Config &_config, ClauseAllocator& _ca, Thread
 , addedBinaryClauses(0)
 , addedClauses(0)
 , detectedDuplicates(0)
+, garbageCollects(0)
 , twoPrAmos(0)
 , twoPrAmoLits(0)
 , dedAlos(0)
@@ -547,11 +548,13 @@ bool FourierMotzkin::process()
   int needsGarbageCollect = -1; // iteration in which garbage collection should be done
   bool sizeAbort = false;
   vector<int> rewrite; // for garbage collection
+  int validCards = cards.size(), invalidCards = 0;
   while (heap.size() > 0 && (data.unlimited() || (fmLimit > steps && !sizeAbort) ) && !data.isInterupted() ) 
   {
     /** garbage collection */
-    if ( needsGarbageCollect == iter ) {
+    if ( needsGarbageCollect == iter && invalidCards * 4 > validCards ) { // perform garbage collection only if at least 25% are garbage
       if( config.fm_debug_out > 0 ) cerr << "c fm garbage collect" << endl;
+      garbageCollects ++;
       rewrite.assign( cards.size(), -1 ); // vector that memorizes new position
       // perform card garbage collection
       int keptCards = 0;
@@ -597,6 +600,7 @@ bool FourierMotzkin::process()
       for( int i = 0 ; i < newALKs.size(); ++ i) if( rewrite[ newALKs[i] ] != -1 ) newALKs[k++] = rewrite[ newALKs[i] ];
       newALKs.resize(k); // remove unused constraints!
       if( data.unlimited() ) needsGarbageCollect = -1; // if unlimited, reset garbage collection
+      validCards = cards.size(); invalidCards = 0; // reset counters
     } else {
       if( config.fm_debug_out > 0 ) cerr << "c no garbage collect" << endl;
     }
@@ -877,6 +881,7 @@ bool FourierMotzkin::process()
 	    if( config.fm_debug_out > 3 ) cerr << "c finished literal " << l << "( " << j << "/" << card.ll.size() << ")" << endl;
 	  }
 	  card.invalidate(); // free resources of this vector!
+	  invalidCards ++; validCards --; // garbage collection counters
 	}
       }
       
@@ -887,6 +892,7 @@ bool FourierMotzkin::process()
 	for( int j = 0 ; j < card.lr.size(); ++ j ) rightHands[ toInt(card.lr[j]) ].push_back(i);
       }
       newCards += cards.size() - oldSize;
+      validCards += cards.size() - oldSize; // garbage collection counters
     
       // if found something, propagate!
       if(!propagateCards( unitQueue, leftHands, rightHands, cards,inAmo) ) return modifiedFormula;
@@ -1820,6 +1826,7 @@ void FourierMotzkin::printStatistics(ostream& stream)
   << newAlos << " newAlos, "
   << newAlks << " newAlks, "
   << detectedDuplicates << " duplicates, " 
+  << garbageCollects << " garbageCollecst, "
   << endl
   << "c [STAT] FM(4) "
   << twoPrTime << " 2PrdTime, "
