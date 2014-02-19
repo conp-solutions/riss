@@ -479,6 +479,7 @@ BoolOption pr_probe      ;
 BoolOption pr_rootsOnly  ;
 BoolOption pr_repeat     ;
 IntOption pr_clsSize     ;
+BoolOption pr_LHBR       ; // LHBR during probing
 IntOption pr_prLimit     ;
 BoolOption pr_EE         ;
 BoolOption pr_vivi       ;

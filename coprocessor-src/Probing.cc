@@ -36,6 +36,7 @@ Probing::Probing(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _co
 , viviLimit(config.pr_viviLimit)
 , viviChecks(0)
 , viviSize(0)
+, lhbr_news(0)
 {
 
 }
@@ -167,7 +168,7 @@ CRef Probing::prPropagate( bool doDouble )
     solver.watches.cleanAll();
 
     if( config.pr_debug_out > 1 ) cerr << "c head: " << solver.qhead << " trail elements: " << solver.trail.size() << endl;
-    
+    solver.clssToBump.clear();
     while (solver.qhead < solver.trail.size()){
         Lit            p   = solver.trail[solver.qhead++];     // 'p' is enqueued fact to propagate.
         vec<Solver::Watcher>&  ws  = solver.watches[p];
@@ -175,6 +176,12 @@ CRef Probing::prPropagate( bool doDouble )
         num_props++;
 	
 	if( config.pr_debug_out > 1 ) cerr << "c for lit " << p << " have watch with " << ws.size() << " elements" << endl;
+	
+	// probing should perform LHBR?
+	if( config.pr_LHBR > 0 && solver.vardata[var(p)].dom == lit_Undef ) {
+	  solver.vardata[var(p)].dom = p; // literal is its own dominator, if its not implied due to a binary clause
+	  // if( config.opt_printLhbr ) cerr << "c undominated literal " << p << " is dominated by " << p << " (because propagated)" << endl; 
+	}
 	
 	    // First, Propagate binary clauses 
 	if( config.opt_pr_probeBinary ) { // option to disable propagating binary clauses in probing
@@ -190,6 +197,7 @@ CRef Probing::prPropagate( bool doDouble )
 	    }
 	    if(solver.value(imp) == l_Undef) {
 	      solver.uncheckedEnqueue(imp,wbin[k].cref());
+	      solver.vardata[ var(imp) ].dom = solver.vardata[ var(p) ].dom ; // set dominator
 	    }
 	  }
 	}
@@ -218,6 +226,7 @@ CRef Probing::prPropagate( bool doDouble )
             if (first != blocker && solver.value(first) == l_True){
                 *j++ = w; continue; }
 
+            Lit commonDominator = (config.pr_LHBR ? solver.vardata[var(false_lit)].dom : lit_Error); // inidicate whether lhbr should still be performed
             // Look for new watch:
             for (int k = 2; k < c.size(); k++)
                 if (solver.value(c[k]) != l_False){
@@ -234,7 +243,16 @@ CRef Probing::prPropagate( bool doDouble )
 			data.ma.setCurrentStep(toInt(c[1]));
 		      }
 		    }
-                    goto NextClause; }
+                    goto NextClause;
+		} // no need to indicate failure of lhbr, because remaining code is skipped in this case!
+                else { // lhbr analysis! - any literal c[k] culd be removed from the clause, because it is not watched at the moment!
+		  assert( data.value(c[k]) == l_False && "for lhbr all literals in the clause need to be set already" );
+		  if( commonDominator != lit_Error ) { // do only, if its not broken already - and if limit is not reached
+		    commonDominator = ( commonDominator == lit_Undef ? 
+				solver.vardata[var(c[k])].dom : 
+				( commonDominator != solver.vardata[var(c[k])].dom ? lit_Error : commonDominator ) );
+		  }
+		}
 
             // Did not find watch -- clause is unit under assignment:
             *j++ = w;
@@ -244,12 +262,53 @@ CRef Probing::prPropagate( bool doDouble )
                 // Copy the remaining watches:
                 while (i < end)
                     *j++ = *i++;
-            }else
+            } else { // the current clause is a unit clause, hence, LHBR might also be possible!
                 solver.uncheckedEnqueue(first, cr);
+		
+		if( config.pr_LHBR ) solver.vardata[ var(first) ].dom = solver.vardata[ var(first) ].dom ; // set dominator for this variable!
+		
+		// check lhbr!
+		if( commonDominator != lit_Error && commonDominator != lit_Undef ) { // no need to ask for permission, because commonDominator would be lit_Error anyways
+		  solver.oc.clear();
+		  solver.oc.push(first);
+		  solver.oc.push(~commonDominator);
+		  
+		  data.addCommentToProof("added by LHBR");
+		  data.addToProof( solver.oc ); // if drup is enabled, add this clause to the proof!
+		  
+		  // if commonDominator is element of the clause itself, delete the clause (hyper-self-subsuming resolution)
+		  const bool clearnt = c.learnt();
+		  float cactivity = 0;
+		  if( clearnt ) cactivity = c.activity();
+		  bool willSubsume = false;
+		  if( true ) { // check whether the new clause subsumes the other
+		    for( int k = 1; k < c.size(); ++ k ) if ( c[k] == ~commonDominator ) { willSubsume = true; break; }
+		  }
+		  lhbr_news ++;
+		  if( willSubsume )
+		  { // created a binary clause that subsumes this clause  FIXME: actually replace this clause here instead of creating a new one! adapt code below!
+		    if( c.mark() == 0 ){
+		      data.addCommentToProof("Subsumed by LHBR clause", true);
+		      data.addToProof(c,true);  // remove this clause from the proof, if not done already
+		    }
+		    c.mark(1); // the bigger clause is not needed any more
+		  } 
+		  // a new clause is required
+		  CRef cr2 = ca.alloc(solver.oc, clearnt ); // add the new clause - now all references could be invalid!
+		  if( clearnt ) { ca[cr2].setLBD(1); solver.learnts.push(cr2); ca[cr2].activity() = cactivity; }
+		  else solver.clauses.push(cr2);
+		  solver.clssToBump.push(cr2); // add clause to solver lazily!
+		  solver.vardata[var(first)].reason = cr2; // set the new clause as reason
+		  solver.vardata[ var(first) ].dom = solver.vardata[ var(commonDominator) ].dom ; // set NEW dominator for this variable!
+		  goto NextClause; // do not use references any more, because ca.alloc has been performed!
+		} 
+	    }
 
         NextClause:;
         }
         ws.shrink(i - j);
+	for( int k = 0 ; k < solver.clssToBump.size(); ++k ) solver.attachClause(solver.clssToBump[k]); // add lhbr clauses lazily
+	solver.clssToBump.clear();
     }
 
 
@@ -770,7 +829,8 @@ void Probing::printStatistics( ostream& stream )
   <<  l2implied << " l2implied "
   <<  l2failed << " l2Fail "
   <<  l2ee  << " l2EE "
-  <<  probeLHBRs << " lhbrs "
+  <<  lhbr_news << " pr-lhbrs, "
+  <<  probeLHBRs << " vivi-lhbrs "
   << endl;   
   
   stream << "c [STAT] PROBING(2) " 

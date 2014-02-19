@@ -218,7 +218,7 @@ int main(int argc, char** argv)
 	        printf("c =========================================================================================================\n");
                 printf("Solved by unit propagation\n");
                 printStats(S);
-                printf("\n"); }
+            }
                 
                 // choose among output formats!
                 if( opt_modelStyle ) printf("UNSAT");
@@ -231,7 +231,7 @@ int main(int argc, char** argv)
         lbool ret = S.solveLimited(dummy);
         if (S.verbosity > 0){
             printStats(S);
-            printf("\n"); }
+        }
 
 	// check model of the formula
 	if( ret == l_True && opt_checkModel && argc != 1 ) { // check the model if the formla was given via a file!

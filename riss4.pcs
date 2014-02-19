@@ -220,6 +220,7 @@ pr-roots  {yes,no}[yes]       # probe only on root literals
 pr-probe  {yes,no}[yes]       # perform probing
 pr-double  {yes,no}[yes]       # perform double look-ahead
 pr-bins  {yes,no}[no]       # use binary clauses for probing
+pr-lhbr  {yes,no}[no]       # perform LHBR during probing
 
 pr-keepLHBR  {0,1}[0]       # keep clauses that have been created during LHBR during probing/vivification (0=no,1=learnt)
 cp3_viv_inpInc  {10000,100000,1000000}[1000000]       # increase for steps per inprocess call
@@ -774,8 +775,10 @@ pr-vivi     | probe in {yes}
 pr-probe    | probe in {yes}
 pr-bins     | probe in {yes}
 
+
 pr-csize       | probe in {yes}
 pr-keepLHBR    | probe in {yes}
+pr-lhbr        | pr-probe in {yes}
 pr-double      | pr-probe in {yes}
 pr-repeat      | pr-probe in {yes}
 pr-roots       | pr-probe in {yes}

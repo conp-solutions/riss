@@ -108,6 +108,7 @@ protected:
   unsigned viviLimit;		// step limit for vivification
   unsigned viviChecks;		// number of steps performed by vivification
   unsigned viviSize;		// size of clauses that are vivified
+  unsigned lhbr_news;		// number of clauses that have been added by lhbr
 };
   
 };
