@@ -233,17 +233,22 @@ int main(int argc, char** argv)
             printStats(S);
             printf("\n"); }
 
+	// check model of the formula
+	if( ret == l_True && opt_checkModel && argc != 1 ) { // check the model if the formla was given via a file!
+	  if( check_DIMACS(in, S.model) ) {
+	    printf("c verified model\n");
+	  } else {
+	    printf("c model invalid -- turn answer into UNKNOWN\n");
+	    ret = l_Undef; // turn result into unknown, because the model is not correct
+	  }
+	}
+            
         // print solution to screen
             if( opt_modelStyle ) printf(ret == l_True ? "SAT\n" : ret == l_False ? "UNSAT\n" : "UNKNOWN\n");
 	    else printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n");
 
         // put empty clause on proof
         if(ret == l_False && S.drupProofFile != NULL ) fprintf(S.drupProofFile, "0\n");
-
-	// check model of the formula
-	if( ret == l_True && opt_checkModel && argc != 1 ) { // check the model if the formla was given via a file!
-	  check_DIMACS(in, S.model);
-	}
 	
         // print solution into file
         if (res != NULL){
