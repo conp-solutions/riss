@@ -1429,6 +1429,7 @@ inline void CoprocessorData::mark2(Var x, MarkArray& array, MarkArray& tmp)
 inline void CoprocessorData::addToExtension(const Minisat::CRef cr, const Lit l)
 {
   const Clause& c = ca[cr];
+  if( undo.size() > 0 ) assert( undo[ undo.size() - 1] != lit_Undef && "an empty clause should not be put on the undo stack" );
   undo.push_back(lit_Undef);
   if( l != lit_Error ) undo.push_back(l);
   for( int i = 0 ; i < c.size(); ++ i ) {
@@ -1438,6 +1439,7 @@ inline void CoprocessorData::addToExtension(const Minisat::CRef cr, const Lit l)
 
 inline void CoprocessorData::addToExtension(vec< Lit >& lits, const Lit l)
 {
+  if( undo.size() > 0 ) assert( undo[ undo.size() - 1] != lit_Undef && "an empty clause should not be put on the undo stack" );
   undo.push_back(lit_Undef);
   if( l != lit_Error ) undo.push_back(l);
   for( int i = 0 ; i < lits.size(); ++ i ) {
@@ -1447,6 +1449,7 @@ inline void CoprocessorData::addToExtension(vec< Lit >& lits, const Lit l)
 
 inline void CoprocessorData::addToExtension(vector< Lit >& lits, const Lit l)
 {
+  if( undo.size() > 0 ) assert( undo[ undo.size() - 1] != lit_Undef && "an empty clause should not be put on the undo stack" );
   undo.push_back(lit_Undef);
   if( l != lit_Error ) undo.push_back(l);
   for( int i = 0 ; i < lits.size(); ++ i ) {
@@ -1456,6 +1459,7 @@ inline void CoprocessorData::addToExtension(vector< Lit >& lits, const Lit l)
 
 inline void CoprocessorData::addToExtension(const Lit dontTouch, const Lit l)
 {
+  if( undo.size() > 0 ) assert( undo[ undo.size() - 1] != lit_Undef && "an empty clause should not be put on the undo stack" );
   undo.push_back(lit_Undef);
   if( l != lit_Error) undo.push_back(l);
   undo.push_back(dontTouch);
@@ -1540,7 +1544,7 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
        }
        continue;
      }
-     if( var(c) >= model.size() ) model.growTo( var(c) + 1, l_True ); // model is too small?
+     if( var(c) >= model.size() ) model.growTo( var(c) + 1, l_True ); // model is too small? this will also take care of extended resolution variables!
      if (model[var(c)] == (sign(c) ? l_False : l_True) ) // satisfied
      {
        isSat = true; // redundant -- will be reset in the next loop iteration immediately

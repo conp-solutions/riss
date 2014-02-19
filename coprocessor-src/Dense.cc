@@ -203,6 +203,7 @@ void Dense::compress(const char* newWhiteFile)
   }
   assert( data.nVars() + diff == compression.variables  && "number of variables has to be reduced" );
   
+  compression.postvariables = data.nVars(); // store number of post-variables
   map_stack.push_back( compression );
   
   data.didCompress(); // notify data about compression!
@@ -268,7 +269,10 @@ void Dense::adoptUndoStack()
     return; // nothing to be done, because no compression yet!
   }
 
-  if( config.dense_debug_out > 1 ) cerr << "stack: " << extend << endl;
+  if( config.dense_debug_out > 1 ){
+    cerr << "c adopt undo stack" << endl;
+    cerr << "stack: " << extend << endl;
+  }
   
   int start = data.getLastDecompressUndoLits();
   if( start == -1 ) start = data.getLastCompressUndoLits();
@@ -280,7 +284,8 @@ void Dense::adoptUndoStack()
 	Var v = var(extend[i]);
 	for( int j = map_stack.size() - 1; j >= 0; --j ) {
 	  Compression& compression = map_stack[j];
-	  v = compression.mapping[v];
+	  if( v < compression.postvariables ) v = compression.mapping[v];
+	  else v = compression.variables + v - compression.postvariables; // v is a fresh variable since the last compression, hence, handle this variable as such!
 	}
 	extend[i] = mkLit( v, sign(extend [i]) );
 	if( config.dense_debug_out ) cerr << "c             into " << extend[i] << endl;

@@ -24,9 +24,10 @@ class Dense  : public Technique
     // mapping from old variables to new ones
     int* mapping;
     uint32_t variables;	// number of variables before compression
+    uint32_t postvariables;	// number of variables before compression
     vector<Lit> trail;	// already assigned literals
     
-    Compression() : mapping(0), variables(0) {};
+    Compression() : mapping(0), variables(0), postvariables(0) {};
     /// free the used resources again
     void destroy() {
       if(mapping!=0) delete[] mapping;
