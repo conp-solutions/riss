@@ -748,7 +748,7 @@ bool BoundedVariableAddition::xorBVAhalf()
     
     // sort( xorPairs.begin(), xorPairs.end() );
     if(  xorPairs.size() > 20 ) 
-      sort( &(xorPairs[0]), xorPairs.size());
+      mergesort( &(xorPairs[0]), xorPairs.size());
     else {
       for( int i = 0 ; i < xorPairs.size(); ++ i ) {
 	for( int j = i+1; j < xorPairs.size(); ++ j ) {
@@ -960,7 +960,7 @@ bool BoundedVariableAddition::xorBVAfull()
     // sort based on second literal -- TODO: use improved sort!
     // sort( xorPairs.begin(), xorPairs.end() );
     if(  xorPairs.size() > 20 ) 
-      sort( &(xorPairs[0]), xorPairs.size());
+      mergesort( &(xorPairs[0]), xorPairs.size());
     else {
       for( int i = 0 ; i < xorPairs.size(); ++ i ) {
 	for( int j = i+1; j < xorPairs.size(); ++ j ) {
@@ -1033,7 +1033,7 @@ bool BoundedVariableAddition::xorBVAfull()
     }
     
     if( nxorPairs.size() > 20 ) 
-      sort( &(nxorPairs[0]), nxorPairs.size());
+      mergesort( &(nxorPairs[0]), nxorPairs.size());
     else {
       for( int i = 0 ; i < nxorPairs.size(); ++ i ) {
 	for( int j = i+1; j < nxorPairs.size(); ++ j ) {
@@ -1353,7 +1353,7 @@ bool BoundedVariableAddition::iteBVAhalf()
     // evaluate matches here!
     // sort based on second literal -- TODO: use improved sort! merge sort is broken!
     if(  itePairs.size() > 20 ) 
-      sort( &(itePairs[0]), itePairs.size());
+      mergesort( &(itePairs[0]), itePairs.size());
     else {
       for( int i = 0 ; i < itePairs.size(); ++ i ) {
 	for( int j = i+1; j < itePairs.size(); ++ j ) {
@@ -1572,7 +1572,7 @@ bool BoundedVariableAddition::iteBVAfull()
     // evaluate matches here!
     // sort based on second literal -- TODO: use improved sort!
     if(  itePairs.size() > 20 ) 
-      sort( &(itePairs[0]), itePairs.size());
+      mergesort( &(itePairs[0]), itePairs.size());
     else {
       for( int i = 0 ; i < itePairs.size(); ++ i ) {
 	for( int j = i+1; j < itePairs.size(); ++ j ) {

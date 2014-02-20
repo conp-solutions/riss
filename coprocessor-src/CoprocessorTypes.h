@@ -715,6 +715,13 @@ inline void CoprocessorData::moveVar(Var from, Var to, bool final)
   }
 }
 
+inline void CoprocessorData::mergeVar( Lit from, Lit to, bool final ){
+  
+}
+
+inline void CoprocessorData::mergeVar( vector<Lit>& from, Lit to, bool final ){
+  
+}
 
 inline bool CoprocessorData::ok()
 {

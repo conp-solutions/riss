@@ -221,7 +221,7 @@ bool FourierMotzkin::process()
     for( int i = 0 ; i < data.lits.size(); ++ i )
       if ( data.lits[i] == lit_Undef ) { data.lits[i] = data.lits[ data.lits.size() - 1 ]; data.lits.pop_back(); --i; }
     
-    // if( data.lits.size() == 2 ) continue; // do not consider trivial constraints!
+    if( data.lits.size() == 2 ) continue; // do not consider trivial constraints!
     
     for( int i = 0 ; i < data.lits.size(); ++ i ){
       if( config.opt_fm_avoid_duplicates ) { // remove the edges in the big that represent this AMO
