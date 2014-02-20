@@ -172,6 +172,13 @@ bool EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
     }
     if( ((const char*)config.opt_ee_aagFile) != 0  )
       writeAAGfile(data);
+    
+    if( data.hasToPropagate() ) {
+      if( l_False == propagation.process(data,true) ) {
+	return modifiedFormula;
+      }
+      modifiedFormula = propagation.appliedSomething() || modifiedFormula;
+    }
   }
   
   //do binary reduction
