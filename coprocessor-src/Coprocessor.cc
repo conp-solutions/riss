@@ -25,10 +25,6 @@ config( _config )
 , data( solver->ca, solver, log, config.opt_unlimited, config.opt_randomized, config.opt_debug )
 , controller( config.opt_threads )
 // attributes and all that
-, ppTime( 0 )
-, ipTime( 0 )
-, ppwTime(0)
-, ipwTime(0)
 , thisClauses( 0 )
 , thisLearnts( 0 )
 , lastInpConflicts(0)
@@ -75,9 +71,8 @@ lbool Preprocessor::performSimplification()
     formulaVariables = solver->nVars() ;
   }
   
-  if( data.isInprocessing() ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
-  else {ppTime = cpuTime() - ppTime; ppwTime = wallClockTime() - ppwTime;}
-    
+  MethodClock mc ( data.isInprocessing() ? ipTime : ppTime ); // measure the time for this iteration!
+  MethodClock moh( overheadTime ); // measure overhead
   if( config.printAfter != 0 ) cerr << "c printAfter " << config.printAfter << endl;
     
   // first, remove all satisfied clauses
@@ -107,6 +102,7 @@ lbool Preprocessor::performSimplification()
 
   // begin clauses have to be sorted here!!
   sortClauses();
+  moh.stop();
 	
   for( int ppIteration = 0; ppIteration < ( data.isInprocessing() ? 1 : config.opt_simplifyRounds ); ++ ppIteration )
   {
@@ -488,8 +484,7 @@ lbool Preprocessor::performSimplification()
     dense.compress(); 
   }
   
-  if( data.isInprocessing() ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
-  else {ppTime = cpuTime() - ppTime; ppwTime = wallClockTime() - ppwTime;}
+  moh.cont();
   
   if( config.opt_check ) fullCheck("final check");
 
@@ -500,6 +495,9 @@ lbool Preprocessor::performSimplification()
   if( config.opt_verbose > 5 ) printSolver(cerr, 4); // print all details of the solver
   if( config.opt_verbose > 4 ) printFormula("after full simplification");
 
+  mc.stop();
+  moh.stop();
+  
   if( config.opt_printStats ) {
     
     printStatistics(cerr);
@@ -611,8 +609,8 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     return status;
   }
   
-  if( data.isInprocessing() ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
-  else {ppTime = cpuTime() - ppTime; ppwTime = wallClockTime() - ppwTime;}
+  MethodClock mc ( data.isInprocessing() ? ipTime : ppTime ); // measure the time for this iteration!
+  MethodClock moh (overheadTime); 
   
   // first, remove all satisfied clauses
   if( !solver->simplify() ) { cout.flush(); cerr.flush(); return l_False; }
@@ -636,6 +634,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
   
   if( config.opt_verbose > 4 ) cerr << "c coprocessor finished initialization" << endl;
   
+  moh.stop();
   
   //
   //  perform scheduled preprocessing
@@ -944,9 +943,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     dense.compress(); 
   }
   
-  if( data.isInprocessing() ) { ipTime = cpuTime() - ipTime; ipwTime = wallClockTime() - ipwTime;}
-  else {ppTime = cpuTime() - ppTime; ppwTime = wallClockTime() - ppwTime;}
-  
+  moh.cont();
   if( config.opt_check ) fullCheck("final check");
 
   destroyTechniques();
@@ -955,7 +952,9 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
   
   if( config.opt_verbose > 5 ) printSolver(cerr, 4); // print all details of the solver
   if( config.opt_verbose > 4 ) printFormula("after full simplification");
-
+  moh.stop();
+  mc.stop();
+  
   if( config.opt_printStats ) {
     
     printStatistics(cerr);
@@ -1148,12 +1147,13 @@ int Preprocessor::giveNewLit(const int& l) const
 void Preprocessor::printStatistics(ostream& stream)
 {
 stream << "c [STAT] CP3 "
-<< ppTime << " s-ppTime, " 
-<< ipTime << " s-ipTime, "
-<< ppwTime << " s-ppwTime, " 
-<< ipwTime << " s-ipwTime, "
+<< ppTime.getCpuTime() << " s-ppTime, " 
+<< ipTime.getCpuTime() << " s-ipTime, "
+<< ppTime.getWallClockTime() << " s-ppwTime, " 
+<< ipTime.getWallClockTime() << " s-ipwTime, "
 << memUsedPeak() << " MB, "
 << (data.ok() ? "ok ":"notok ")
+<< overheadTime.getCpuTime() << " s-ohTime, "
 << endl;
 
 stream << "c [STAT] CP3(2) "

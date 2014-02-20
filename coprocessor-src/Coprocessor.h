@@ -61,10 +61,9 @@ class Preprocessor {
   CoprocessorData  data;       // all the data that needs to be accessed by other classes (preprocessing methods)
   ThreadController controller; // controller for all threads
 
-  double ppTime;		// time to do preprocessing
-  double ipTime;		// time to do inpreprocessing
-  double ppwTime;		// time to do preprocessing   (wall clock)
-  double ipwTime;		// time to do inpreprocessing (wall clock)
+  Clock ppTime;		// time to do preprocessing
+  Clock ipTime;		// time to do inpreprocessing
+  Clock overheadTime;		// time for pp overhead (init and all that)
   int thisClauses;		// number of original clauses before current run
   int thisLearnts;		// number of learnt clauses before current run
   
