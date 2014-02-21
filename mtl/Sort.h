@@ -50,7 +50,7 @@ static inline void mergesort(T* field, const int32_t arraySize, LessThan lt)
     int swaps = 0;
 	
     int rightHead, rightEnd;
-    int leftRead,rightRead,writeHead;
+    int leftRead,rightRead,writeHead=0;
 
     for (int windowSize=1; windowSize < arraySize; windowSize *= 2 ) {
         for (int left=0; left+windowSize < arraySize; left += windowSize*2 ) {

@@ -363,6 +363,7 @@ bool Solver::addClause_(vec<Lit>& ps)
 void Solver::attachClause(CRef cr) {
     const Clause& c = ca[cr];
     assert(c.size() > 1 && "cannot watch unit clauses!");
+    assert( c.mark() == 0 && "satisfied clauses should not be attached!" );
     
     // check for duplicates here!
 //     for (int i = 0; i < c.size(); i++)
@@ -766,14 +767,17 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	// instead of learning a very long clause, which migh be deleted very soon (idea by Knuth, already implemented in lingeling(2013)
 	for (int j = 0; j < out_learnt.size(); j++) varFlags[var(out_learnt[j])].seen = 0;    // ('seen[]' is now cleared)
 	out_learnt.clear();
-	for( int i = 0; i  < decisionLevel(); ++ i ) {
-	  out_learnt.push( ~ trail[ trail_lim[i] ] );
+	
+	for(int i=0; i<decisionLevel(); ++i) {
+	  if( (i == 0 || trail_lim[i] != trail_lim[i-1]) && trail_lim[i] < trail.size() ) // no dummy level caused by assumptions ...
+	    out_learnt.push( trail[ trail_lim[i] ] ); // get all decisions into dec array
 	}
-	// out_learnt.push( ~p ); // instead of last decision, add UIP!
+	if( config.opt_printDecisions > 2 || config.opt_learn_debug || config.opt_ecl_debug || config.opt_rer_debug) cerr << endl << "c current decision stack: " << out_learnt << endl ;
+	const Lit tmpLit = out_learnt[ out_learnt.size() -1 ];
 	out_learnt[ out_learnt.size() -1 ] = out_learnt[0];
-	out_learnt[0] = ~ trail[ trail_lim[ decisionLevel() - 1 ] ]; // move 1st UIP literal to the front!
+	out_learnt[0] = ~tmpLit; // new implied literal is the negation of the last decision literal
 	learnedDecisionClauses ++;
-	if( config.opt_printDecisions > 2 || config.opt_ecl_debug || config.opt_rer_debug) cerr << endl << "c learn decisionClause " << out_learnt << endl << endl;
+	if( config.opt_printDecisions > 2 || config.opt_learn_debug || config.opt_ecl_debug || config.opt_rer_debug) cerr << endl << "c learn decisionClause " << out_learnt << endl << endl;
 	doMinimizeClause = false;
 	if( !config.opt_learnDecRER ) resetRestrictedExtendedResolution(); // do not use this clause for RER!
       }

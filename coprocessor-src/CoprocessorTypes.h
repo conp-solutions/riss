@@ -1683,7 +1683,7 @@ bool inline CoprocessorData::removeClauseThreadSafe (const CRef cr)
 }
 
 inline BIG::BIG()
-: storage(0), sizes(0), big(0), start(0), stop(0)
+: storage(0), sizes(0), big(0), start(0), stop(0), duringCreationVariables(0)
 {}
 
 inline BIG::~BIG()
