@@ -1918,8 +1918,12 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   if( config.localLookaheadDebug) cerr << "c tries: " << bound << " failed: " << failedTries << " percent: " <<  ( (failedTries * 100)/ bound ) << " doEE: " << doEE << " current laEEs: " << laEEvars << endl;
   for(Var v=0; v<nVars(); ++v ){
     if(value(v)==l_Undef){ // l_Undef == 2
-      if( (pt & p[v]) == (pt & (hit[t])) ){  foundUnit=true;toEnqueue.push( mkLit(v,false) );laAssignments++;} // pos consequence
-      else if( (pt & p[v]) == (pt & (hit[t+1])) ){foundUnit=true;toEnqueue.push( mkLit(v,true)  );laAssignments++;} // neg consequence
+      if( (pt & p[v]) == (pt & (hit[t])) ){  foundUnit=true;toEnqueue.push( mkLit(v,false) );laAssignments++;
+	cerr << "c LA enqueue " << mkLit(v,false) << " (pat=" << hit[t] << ")" << endl;
+      } // pos consequence
+      else if( (pt & p[v]) == (pt & (hit[t+1])) ){foundUnit=true;toEnqueue.push( mkLit(v,true)  );laAssignments++;
+	cerr << "c LA enqueue " << mkLit(v,true) << " (pat=" << hit[t] << ")" << endl;
+      } // neg consequence
       else if ( doEE  ) { 
 	analyze_stack.clear(); // get a new set of literals!
 	if( var(d[0]) != v ) {
