@@ -244,13 +244,15 @@ Solver::Solver(CoreConfig& _config) :
 {
   MYFLAG=0;
   hstry[0]=lit_Undef;hstry[1]=lit_Undef;hstry[2]=lit_Undef;hstry[3]=lit_Undef;hstry[4]=lit_Undef;
+  permDiff.push(0); // there needs to be one more level, in case all variables are on the trail and each variable is on its own decision level (in usual search this should not happen .. )
 }
 
 
 
 Solver::~Solver()
 {
-  if( coprocessor != 0 ) delete coprocessor;
+  if( big != 0 )         { big->BIG::~BIG(); big = 0; } // clean up! TODO: bad for incremental search!
+  if( coprocessor != 0 ) { delete coprocessor; coprocessor = 0; }
 }
 
 
@@ -421,6 +423,7 @@ void Solver::removeClause(Minisat::CRef cr, bool strict) {
     addCommentToProof("delete via clause removal",true);
     addToProof(c,true);
   }
+  if( config.opt_rer_debug || config.opt_learn_debug) cerr << "c remove clause [" << cr << "]: " << c << endl;
 
   detachClause(cr, strict); 
   // Don't leave pointers to free'd memory!
@@ -590,6 +593,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     Lit p     = lit_Undef;
     int pathLimit = 0; // for bi-asserting clauses
 
+    bool foundFirstLearnedClause = false;
     int units = 0, resolvedWithLarger = 0; // stats
     bool isOnlyUnit = true;
     lastDecisionLevel.clear();  // must clear before loop, because alluip can abort loop and would leave filled vector
@@ -618,6 +622,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	
 	resolvedWithLarger = (c.size() == 2) ? resolvedWithLarger : resolvedWithLarger + 1; // how often do we resolve with a clause whose size is larger than 2?
 	
+	if(!foundFirstLearnedClause ) { // dynamic adoption only until first learned clause!
 	if (c.learnt() && dynamicDataUpdates){
 	    if( config.opt_cls_act_bump_mode == 0 ) claBumpActivity(c);
 	    else clssToBump.push( confl );
@@ -635,6 +640,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	      }
 	    }
 	}
+	}
 
 #ifdef CLS_EXTRA_INFO // if resolution is done, then take also care of the participating clause!
 	extraInfo = extraInfo >= c.extraInformation() ? extraInfo : c.extraInformation();
@@ -645,13 +651,13 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	    if( config.opt_learn_debug ) cerr << "c level for " << q << " is " << level(var(q)) << endl;
             if (!varFlags[var(q)].seen && level(var(q)) > 0){
                 currentSize ++;
-                if( dynamicDataUpdates ) varsToBump.push( var(q) );
+                if( !foundFirstLearnedClause &&  dynamicDataUpdates ) varsToBump.push( var(q) );
 		if( config.opt_learn_debug ) cerr << "c set seen for " << q << endl;
                 varFlags[var(q)].seen = 1;
                 if (level(var(q)) >= decisionLevel()) {
                     pathC++;
 #ifdef UPDATEVARACTIVITY
-		if( config.opt_updateLearnAct ) {
+		if( !foundFirstLearnedClause && config.opt_updateLearnAct ) {
 		    // UPDATEVARACTIVITY trick (see competition'09 companion paper)
 		    if((reason(var(q))!= CRef_Undef)  && ca[reason(var(q))].learnt()) 
 		      lastDecisionLevel.push(q);
@@ -672,7 +678,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 
         }
         
-	if( currentSize + 1 == clauseReductSize ) { // OTFSS, but on the reduct!
+	if( !foundFirstLearnedClause && currentSize + 1 == clauseReductSize ) { // OTFSS, but on the reduct!
 	  if( config.opt_otfss && ( !c.learnt() // apply otfss only for clauses that are considered to be interesting!
 	      || ( config.opt_otfssL && c.learnt() && c.lbd() <= config.opt_otfssMaxLBD ) ) ) {
 	    otfssClauses.push( confl );
@@ -700,6 +706,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	  if( config.opt_learn_debug ) cerr << "c learn unit clause " << ~p << " with pathLimit=" << pathLimit << endl;
 	  if( config.opt_allUipHack == 1 ) break; // for now, stop at the first unit! // TODO collect all units
 	  pathLimit = 0;	// do not use bi-asserting learning once we found one unit clause
+	  foundFirstLearnedClause = true; // we found a first clause, hence, stop all heuristical updates for the following steps
 	}
 	
 	// do stop here
@@ -848,6 +855,14 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
       minimisationWithBinaryResolution(out_learnt); // code in this method should execute below code until determining correct backtrack level
     }
     
+    if( out_learnt.size() <= config.uhle_minimizing_size ) {
+      // TODO: implement simplification with UHLE here!
+      static bool didIt = false;
+      if( ! didIt ) {
+	didIt = true;
+	cerr << "c ANALYZE: search UHLE not implemented yet" << endl;
+      }
+    }
     } // end working on usual learnt clause (minimize etc.)
     
     
@@ -1250,7 +1265,7 @@ CRef Solver::propagate()
 		      addToProof(c,true);  // remove this clause from the proof, if not done already
 		    }
 		    c.mark(1); 
-		    if( config.opt_printLhbr ) cerr << "c LHBR deletes clause " << c << " because its subsumed by another clause" << endl;
+		    if( config.opt_printLhbr ) cerr << "c LHBR deletes clause [" << cr << "]" << c << " because its subsumed by another clause" << endl;
 		    // the bigger clause is not needed any more
 		    lhbr_sub ++;
 		  } else { // no subsumption
@@ -2247,11 +2262,11 @@ lbool Solver::solve_()
 	if( config.ppOnly ) return l_Undef; 
     }
     
-    // probing during search:
-    if( config.opt_uhdProbe > 0 ) {
+    // probing during search, or UHLE for learnt clauses
+    if( config.opt_uhdProbe > 0 || config.uhle_minimizing_size > 0 ) {
       assert( big == 0 && "cannot be initialized already" );
-      big = new Coprocessor::BIG();
-      big->create( ca, nVars(), clauses, learnts );
+      if( big == 0 ) big = new Coprocessor::BIG(); // if there is no big yet, create it!
+      big->recreate( ca, nVars(), clauses, learnts );
       big->removeDuplicateEdges( nVars() );
       big->generateImplied( nVars(), add_tmp );
       if( config.opt_uhdProbe > 2 ) big->sort( nVars() ); // sort all the lists once
@@ -2308,7 +2323,6 @@ lbool Solver::solve_()
     sdSearchTime.stop();
     totalTime.stop();
     
-    if( big != 0 ) { big->BIG::~BIG(); big = 0; } // clean up!
     
     //
     // print statistic output
@@ -2316,7 +2330,8 @@ lbool Solver::solve_()
     if (verbosity >= 1)
       printf("c =========================================================================================================\n");
     
-    if (verbosity >= 1 || config.opt_solve_stats) {
+    if (verbosity >= 1 || config.opt_solve_stats)
+    {
 #if defined TOOLVERSION && TOOLVERSION < 400
 
 #else
@@ -2913,7 +2928,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	  assert( rerFuseClauses[i] != reason( var( ca[rerFuseClauses[i]][0] ) ) && "from a RER-CDCL point of view, these clauses cannot be reason clause" );
 	  assert( rerFuseClauses[i] != reason( var( ca[rerFuseClauses[i]][1] ) ) && "from a RER-CDCL point of view, these clauses cannot be reason clause" );
 	  // ca[rerFuseClauses[i]].mark(1); // mark to be deleted!
-// 	  cerr << "c remove clause (" << i << ")[" << rerFuseClauses[i] << "] " << ca[ rerFuseClauses[i] ] << endl;
+ 	  if( config.opt_rer_debug ) cerr << "c remove clause (" << i << ")[" << rerFuseClauses[i] << "] " << ca[ rerFuseClauses[i] ] << endl;
 	  removeClause(rerFuseClauses[i]); // drop this clause!
 	}
 	
