@@ -1608,10 +1608,10 @@ lbool Solver::search(int nof_conflicts)
             
             // if sufficiently many new top level units have been learned, trigger another LA!
 	    if( config.opt_laTopUnit != -1 && topLevelsSinceLastLa >= config.opt_laTopUnit && maxLaNumber != -1) { maxLaNumber ++; topLevelsSinceLastLa = 0 ; }
-            if(config.hk && (maxLaNumber == -1 || (las < maxLaNumber)) ) { // perform LA hack -- only if max. nr is not reached?
+            if(config.localLookAhead && (maxLaNumber == -1 || (las < maxLaNumber)) ) { // perform LA hack -- only if max. nr is not reached?
 	      if(config.opt_printDecisions > 0) cerr << "c run LA" << endl;
 	      int hl = decisionLevel();
-	      if( hl == 0 ) if( --untilLa == 0 ) { laStart = true; if(config.dx)cerr << "c startLA" << endl;}
+	      if( hl == 0 ) if( --untilLa == 0 ) { laStart = true; if(config.localLookaheadDebug)cerr << "c startLA" << endl;}
 	      if( laStart && hl == config.opt_laLevel ) {
 		if( !laHack(learnt_clause) ) return l_False;
 		topLevelsSinceLastLa = 0;
@@ -1861,7 +1861,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   vec<VarFlags> bu;
   varFlags.copyTo(bu);  
   LONG_INT pt=~0; // everything set -> == 2^64-1
-//  if(config.dx) cerr << "c initial pattern: " << pt << endl;
+//  if(config.localLookaheadDebug) cerr << "c initial pattern: " << pt << endl;
   Lit d[6];
   int j = 0;
   for(int i=0;i<config.opt_laLevel;++i) {
@@ -1870,7 +1870,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   }
   const int actualLAlevel = j;
 
-  if( config.dx ) {
+  if( config.localLookaheadDebug ) {
     cerr << "c LA decisions: "; 
     for( int i = 0 ; i< actualLAlevel; ++ i ) cerr << " " << d[i] << " (vs. [" << trail_lim[i] << "] " << trail[ trail_lim[i] ] << " ) ";
     cerr << endl;
@@ -1889,20 +1889,20 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   las++;
   
   int bound=1<<actualLAlevel, failedTries = 0;
-  if(config.dx) cerr << "c do LA until " << bound << " starting at level " << decisionLevel() << endl;
+  if(config.localLookaheadDebug) cerr << "c do LA until " << bound << " starting at level " << decisionLevel() << endl;
   fm(p,false); // fill current model
   for(LONG_INT i=1;i<bound;++i){ // for each combination
     cancelUntil(0);
     newDecisionLevel();
     for(int j=0;j<actualLAlevel;++j) uncheckedEnqueue( (i&(1<<j))!=0 ? ~d[j] : d[j] ); // flip polarity of d[j], if corresponding bit in i is set -> enumerate all combinations!
     bool f = propagate() != CRef_Undef; // for tests!
-//    if(config.dx) { cerr << "c propagated iteration " << i << " : " ;  for(int j=0;j<actualLAlevel;++j) cerr << " " << ( (i&(1<<j))!=0 ? ~d[j] : d[j] ) ; cerr << endl; }
-    if(config.dx) { cerr << "c corresponding trail: "; if(f) cerr << " FAILED! "; else  for( int j = trail_lim[0]; j < trail.size(); ++ j ) cerr << " "  << trail[j]; cerr << endl; }
+//    if(config.localLookaheadDebug) { cerr << "c propagated iteration " << i << " : " ;  for(int j=0;j<actualLAlevel;++j) cerr << " " << ( (i&(1<<j))!=0 ? ~d[j] : d[j] ) ; cerr << endl; }
+    if(config.localLookaheadDebug) { cerr << "c corresponding trail: "; if(f) cerr << " FAILED! "; else  for( int j = trail_lim[0]; j < trail.size(); ++ j ) cerr << " "  << trail[j]; cerr << endl; }
     fm(p,f);
     LONG_INT m=3;
     if(f) {pt=(pt&(~(m<<(2*i)))); failedTries ++; }
-//    if(config.dx) cerr << "c this propafation [" << i << "] failed: " << f << " current match pattern: " << pt << "(inv: " << ~pt << ")" << endl;
-    if(config.dx) { cerr << "c cut: "; for(int j=0;j<2<<actualLAlevel;++j) cerr << ((pt&(1<<j))  != (LONG_INT)0 ); cerr << endl; }
+//    if(config.localLookaheadDebug) cerr << "c this propafation [" << i << "] failed: " << f << " current match pattern: " << pt << "(inv: " << ~pt << ")" << endl;
+    if(config.localLookaheadDebug) { cerr << "c cut: "; for(int j=0;j<2<<actualLAlevel;++j) cerr << ((pt&(1<<j))  != (LONG_INT)0 ); cerr << endl; }
   }
   cancelUntil(0);
   
@@ -1911,11 +1911,11 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   int t=2*actualLAlevel-2;
   // evaluate result of LA!
   bool foundUnit=false;
-//  if(config.dx) cerr << "c pos hit: " << (pt & (hit[t])) << endl;
-//  if(config.dx) cerr << "c neg hit: " << (pt & (hit[t+1])) << endl;
+//  if(config.localLookaheadDebug) cerr << "c pos hit: " << (pt & (hit[t])) << endl;
+//  if(config.localLookaheadDebug) cerr << "c neg hit: " << (pt & (hit[t+1])) << endl;
   toEnqueue.clear();
   bool doEE = ( (failedTries * 100)/ bound ) < config.opt_laEEp; // enough EE candidates?!
-  if( config.dx) cerr << "c tries: " << bound << " failed: " << failedTries << " percent: " <<  ( (failedTries * 100)/ bound ) << " doEE: " << doEE << " current laEEs: " << laEEvars << endl;
+  if( config.localLookaheadDebug) cerr << "c tries: " << bound << " failed: " << failedTries << " percent: " <<  ( (failedTries * 100)/ bound ) << " doEE: " << doEE << " current laEEs: " << laEEvars << endl;
   for(Var v=0; v<nVars(); ++v ){
     if(value(v)==l_Undef){ // l_Undef == 2
       if( (pt & p[v]) == (pt & (hit[t])) ){  foundUnit=true;toEnqueue.push( mkLit(v,false) );laAssignments++;} // pos consequence
@@ -1948,7 +1948,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
 	  laEEvars++;
 	  laEElits += analyze_stack.size();
 	  for( int i = 0; i < analyze_stack.size(); ++ i ) {
-	    if( config.dx) {
+	    if( config.localLookaheadDebug) {
 	    cerr << "c EE [" << i << "]: " << mkLit(v,false) << " <= " << analyze_stack[i] << ", " << mkLit(v,true) << " <= " << ~analyze_stack[i] << endl;
 /*
 	    cerr << "c match: " << var(mkLit(v,false)  )+1 << " : " << p[var(mkLit(v,false)  )] << " wrt. cut: " << (pt & p[var(mkLit(v,false)  )]) << endl;
@@ -1978,7 +1978,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
 	      }
 	      else clauses.push(cr);
 	      attachClause(cr);
-	      if( config.dx) cerr << "c add as clause: " << ca[cr] << endl;
+	      if( config.localLookaheadDebug) cerr << "c add as clause: " << ca[cr] << endl;
 	    }
 	  }
 	}

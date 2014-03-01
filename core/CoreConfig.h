@@ -141,8 +141,8 @@ public:
  IntOption opt_rMax;
  DoubleOption opt_rMaxInc;
 
- BoolOption dx; 
- BoolOption hk; 
+ BoolOption localLookaheadDebug; 
+ BoolOption localLookAhead; 
  BoolOption tb; 
  BoolOption opt_laDyn;
  BoolOption opt_laEEl;
@@ -257,6 +257,7 @@ public:
 IntOption opt_uhdProbe;  // non, linear, or quadratic analysis
 BoolOption opt_uhdCleanRebuild; // rebuild BIG always before clause database is cleaned next
 IntOption opt_uhdRestartReshuffle; // travers the BIG again during every i-th restart 0=off
+IntOption uhle_minimizing_size;		// maximal clause size so that uhle minimization is applied
 
 IntOption opt_maxSDcalls; // number of substitution calls
 IntOption opt_sdLimit; // number of steps for substituteDisjunciton

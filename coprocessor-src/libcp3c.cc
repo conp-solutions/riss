@@ -32,7 +32,7 @@ extern "C" {
   CPinit() {
     libcp3* cp3 = new libcp3;
     cp3->solverconfig = new Minisat::CoreConfig();
-    cp3->solverconfig->hk = false; // do not use laHack during preprocessing! (might already infere that the output lit is false -> unroll forever)
+    cp3->solverconfig->localLookAhead = false; // do not use laHack during preprocessing! (might already infere that the output lit is false -> unroll forever)
     cp3->cp3config = new Coprocessor::CP3Config();
     cp3->solver = new Minisat::Solver (*(cp3->solverconfig));
     cp3->cp3 = new Coprocessor::Preprocessor ( cp3->solver, *(cp3->cp3config) );

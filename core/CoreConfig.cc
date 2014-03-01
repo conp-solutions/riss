@@ -129,8 +129,8 @@ CoreConfig::CoreConfig() // add new options here!
  opt_rMax ("MODS", "rMax", "initial max. interval between two restarts (-1 = off)", -1, IntRange(-1, INT32_MAX) , optionListPtr ),
  opt_rMaxInc ("MODS", "rMaxInc", "increase of the max. restart interval per restart", 1.1, DoubleRange(1, true, HUGE_VAL, false), optionListPtr ),
 
- dx ("MODS", "laHackOutput","output info about LA", false, optionListPtr ),
- hk ("MODS", "laHack", "enable lookahead on level 0", false, optionListPtr ),
+ localLookaheadDebug ("MODS", "laHackOutput","output info about LA", false, optionListPtr ),
+ localLookAhead ("MODS", "laHack", "enable lookahead on level 0", false, optionListPtr ),
  tb ("MODS", "tabu", "do not perform LA, if all considered LA variables are as before", true, optionListPtr ),
  opt_laDyn ("MODS", "dyn", "dynamically set the frequency based on success", false, optionListPtr ),
  opt_laEEl ("MODS", "laEEl", "add EE clauses as learnt clauses", true, optionListPtr ),
@@ -244,10 +244,11 @@ CoreConfig::CoreConfig() // add new options here!
 #endif
 #endif
  
- 
- opt_uhdProbe     (       "SEARCH UNHIDE PROBING", "sUhdProbe",         "perform probing based on learned clauses (off,linear,quadratic,larger)", 0, IntRange(0,3), optionListPtr ),
- opt_uhdCleanRebuild     ("SEARCH UNHIDE PROBING", "sUhdPrRb", "rebuild BIG before cleaning the formula" ,true, optionListPtr ),
- opt_uhdRestartReshuffle ("SEARCH UNHIDE PROBING", "sUhdPrSh", "travers the BIG again during every i-th restart 0=off" ,0, IntRange(0,INT32_MAX), optionListPtr ),
+ // USING BIG information during search
+ opt_uhdProbe     (       "SEARCH UNHIDE PROBING", "sUhdProbe", "perform probing based on learned clauses (off,linear,quadratic,larger)", 0, IntRange(0,3), optionListPtr ),
+ opt_uhdCleanRebuild     ("SEARCH UNHIDE PROBING", "sUhdPrRb",  "rebuild BIG before cleaning the formula" ,true, optionListPtr ),
+ opt_uhdRestartReshuffle ("SEARCH UNHIDE PROBING", "sUhdPrSh",  "travers the BIG again during every i-th restart 0=off" ,0, IntRange(0,INT32_MAX), optionListPtr ),
+ uhle_minimizing_size    ("SEARCH UNHIDE PROBING", "sUHLEsize", "maximal clause size for UHLE for learnt clauses (0=off)" ,0, IntRange(0,INT32_MAX), optionListPtr ),
  
  // CEGAR
  opt_maxSDcalls("SUBSTITUTE DISJUNCTIONS", "sdCalls", "number of calls of assumptions, before solving original formula" ,0, IntRange(0,INT32_MAX), optionListPtr ),
