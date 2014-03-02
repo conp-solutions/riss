@@ -1,17 +1,16 @@
 *~
 *.cnf
 *.o
+*.od
+*.or
+*.os
+*.d
 *.log
 *.dat
-
+*.mk
 *.swp
 
-
-tags
-debug
-minisat
-cnfdd
-coprocessor
-Coprocessor
-
-Subsumption*
+checker/*
+miters/*
+.kdev4/*
+.kdev*
