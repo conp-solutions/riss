@@ -249,6 +249,7 @@ CoreConfig::CoreConfig() // add new options here!
  opt_uhdCleanRebuild     ("SEARCH UNHIDE PROBING", "sUhdPrRb",  "rebuild BIG before cleaning the formula" ,true, optionListPtr ),
  opt_uhdRestartReshuffle ("SEARCH UNHIDE PROBING", "sUhdPrSh",  "travers the BIG again during every i-th restart 0=off" ,0, IntRange(0,INT32_MAX), optionListPtr ),
  uhle_minimizing_size    ("SEARCH UNHIDE PROBING", "sUHLEsize", "maximal clause size for UHLE for learnt clauses (0=off)" ,0, IntRange(0,INT32_MAX), optionListPtr ),
+ uhle_minimizing_lbd     ("SEARCH UNHIDE PROBING", "sUHLElbd",  "maximal LBD for UHLE for learnt clauses (0=off)", 6, IntRange(0,INT32_MAX), optionListPtr ),
  
  // CEGAR
  opt_maxSDcalls("SUBSTITUTE DISJUNCTIONS", "sdCalls", "number of calls of assumptions, before solving original formula" ,0, IntRange(0,INT32_MAX), optionListPtr ),

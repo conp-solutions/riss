@@ -612,6 +612,13 @@ protected:
   uint32_t lastBiAsserting;	// store number of conflicts when the last bi-asserting clause has been learnd
   uint64_t biAssertingPostCount, biAssertingPreCount;	// count number of biasserting clauses (after minimization, before minimization)
   
+  // UHLE during search with learnt clauses:
+  uint32_t searchUHLEs, searchUHLElits;
+  
+  /** reduce the literals inside the clause with the help of the information of the binary implication graph (UHLE only) */
+  void searchUHLE(vec<Lit>& learned_clause );
+  
+  
   /*
    * 
    *  things that have to do with CEGAR methods

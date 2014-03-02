@@ -219,6 +219,10 @@ Solver::Solver(CoreConfig& _config) :
   , biAssertingPostCount (0)
   , biAssertingPreCount  (0)
   
+  // UHLE for learnt clauses
+  , searchUHLEs(0)
+  , searchUHLElits(0)
+  
   // cegar
   , cegarLiteralHeap(0)
   
@@ -520,6 +524,98 @@ void Solver::minimisationWithBinaryResolution(vec<Lit> &out_learnt) {
     }
 }
 
+
+/******************************************************************
+ * Minimisation with binary implication graph
+ ******************************************************************/
+void Solver::searchUHLE(vec<Lit>& learned_clause ) {
+    // Find the LBD measure                                                                                                         
+  const unsigned int lbd = computeLBD(learned_clause);
+  if(lbd<=config.uhle_minimizing_lbd){ // should not touch the very first literal!
+      const Lit p = learned_clause[0]; // this literal cannot be removed!
+      const uint32_t cs = learned_clause.size(); // store the size of the initial clause
+      Lit Splus  [cs];		// store sorted literals of the clause
+      for( uint32_t ci = 0 ; ci  < cs; ++ ci ) Splus [ci] = learned_clause[ci];
+      
+      { // sort the literals according to the time stamp they have been found
+	const uint32_t s = cs;
+	for (uint32_t j = 1; j < s; ++j)
+	{
+	      const Lit key = Splus[j];
+	      const uint32_t keyDsc = big->getStart(key);
+	      int32_t i = j - 1;
+	      while ( i >= 0 && big->getStart( Splus[i]) > keyDsc )
+	      {
+		  Splus[i+1] = Splus[i]; i--;
+	      }
+	      Splus[i+1] = key;
+	}
+      }
+
+      // apply UHLE for the literals of the clause
+	uint32_t pp = cs;
+	uint32_t finished = big->getStop(Splus[cs-1]);
+	Lit finLit = Splus[cs-1];
+	for(pp = cs-1 ; pp > 0; -- pp ) {
+	  const Lit l = Splus[ pp - 1];
+	  const uint32_t fin = big->getStop(l);
+	  if( fin > finished ) {
+	    for( int i = 0 ; i < learned_clause.size(); ++ i ) { // remove the literal l from the current learned clause
+	      if( learned_clause[i] == l ) {
+		learned_clause[i] = learned_clause[ learned_clause.size() - 1]; learned_clause.pop();
+	      }
+	    }
+	  } else {
+	    finished = fin;
+	    finLit = l;
+	  }
+	}
+
+      
+      // do UHLE for the complementary literals in the clause
+	const uint32_t csn = learned_clause.size();
+	Lit Sminus [csn];	// store the complementary literals sorted to their discovery in the BIG
+	for( uint32_t ci = 0 ; ci < csn; ++ ci ) {
+	  Sminus[ci] = ~learned_clause[ci];
+	}
+	{ // insertion sort for discovery of complementary literals
+	  const uint32_t s = csn;
+	  for (uint32_t j = 1; j < s; ++j)
+	  {
+		const Lit key = Sminus[j];
+		const uint32_t keyDsc = big->getStart(key);
+		int32_t i = j - 1;
+		while ( i >= 0 && big->getStart( Sminus[i]) > keyDsc )
+		{
+		    Sminus[i+1] = Sminus[i]; i--;
+		}
+		Sminus[i+1] = key;
+	  }
+	}
+	
+	// run UHLE for the complementary literals
+	finished = big->getStop( Sminus[0] );
+	finLit = Sminus[ 0 ];
+	for(uint32_t pn = 1; pn < csn; ++ pn) {
+	  const Lit l = Sminus[ pn ];
+	  const uint32_t fin = big->getStop(l);
+	  if( fin < finished ) { // remove the complementary literal from the clause!
+	    for( int i = 0 ; i < learned_clause.size(); ++ i ) { // remove the literal l from the current learned clause
+	      if( learned_clause[i] == ~l ) {
+		learned_clause[i] = learned_clause[ learned_clause.size() - 1]; learned_clause.pop();
+	      }
+	    }
+	  } else {
+	    finished = fin;
+	    finLit = l;
+	  }
+	}
+      // do some stats!
+      searchUHLEs ++;
+      searchUHLElits += ( cs - learned_clause.size() );
+  }
+}
+
 // Revert to the state at given level (keeping all assignment at 'level' but not beyond).
 //
 void Solver::cancelUntil(int level) {
@@ -623,23 +719,23 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	resolvedWithLarger = (c.size() == 2) ? resolvedWithLarger : resolvedWithLarger + 1; // how often do we resolve with a clause whose size is larger than 2?
 	
 	if(!foundFirstLearnedClause ) { // dynamic adoption only until first learned clause!
-	if (c.learnt() && dynamicDataUpdates){
-	    if( config.opt_cls_act_bump_mode == 0 ) claBumpActivity(c);
-	    else clssToBump.push( confl );
-       }
+	  if (c.learnt() && dynamicDataUpdates){
+	      if( config.opt_cls_act_bump_mode == 0 ) claBumpActivity(c);
+	      else clssToBump.push( confl );
+	  }
 
-	if( config.opt_update_lbd == 1 && dynamicDataUpdates ) { // update lbd during analysis, if allowed
-	    if(c.learnt()  && c.lbd()>2 ) { 
-	      unsigned int nblevels = computeLBD(c);
-	      if(nblevels+1<c.lbd() || config.opt_lbd_inc ) { // improve the LBD (either LBD decreased,or option is set)
-		if(c.lbd()<=lbLBDFrozenClause) {
-		  c.setCanBeDel(false); 
+	  if( config.opt_update_lbd == 1 && dynamicDataUpdates ) { // update lbd during analysis, if allowed
+	      if(c.learnt()  && c.lbd()>2 ) { 
+		unsigned int nblevels = computeLBD(c);
+		if(nblevels+1<c.lbd() || config.opt_lbd_inc ) { // improve the LBD (either LBD decreased,or option is set)
+		  if(c.lbd()<=lbLBDFrozenClause) {
+		    c.setCanBeDel(false); 
+		  }
+		  // seems to be interesting : keep it for the next round
+		  c.setLBD(nblevels); // Update it
 		}
-		// seems to be interesting : keep it for the next round
-		c.setLBD(nblevels); // Update it
 	      }
-	    }
-	}
+	  }
 	}
 
 #ifdef CLS_EXTRA_INFO // if resolution is done, then take also care of the participating clause!
@@ -719,7 +815,6 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     assert( (units == 0 || pathLimit == 0) && "there cannot be a bi-asserting clause that is a unit clause!" );
     assert( out_learnt.size() > 0 && "there has to be some learnt clause" );
     learnedLHBRs = (resolvedWithLarger > 1) ? learnedLHBRs : learnedLHBRs + 1; // count the number of clauses that would have been hyper binary resolvents
-    
     
     // if we do not use units, add asserting literal to learned clause!
     if( units == 0 ) {
@@ -856,12 +951,11 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     }
     
     if( out_learnt.size() <= config.uhle_minimizing_size ) {
-      // TODO: implement simplification with UHLE here!
-      static bool didIt = false;
-      if( ! didIt ) {
-	didIt = true;
-	cerr << "c ANALYZE: search UHLE not implemented yet" << endl;
-      }
+      searchUHLE( out_learnt );
+      
+      
+      
+      
     }
     } // end working on usual learnt clause (minimize etc.)
     
@@ -2396,6 +2490,7 @@ lbool Solver::solve_()
 		   totalLearnedClauses == 0 ? 0 : (double) biAssertingPreCount / (double)totalLearnedClauses,
 		   totalLearnedClauses == 0 ? 0 : (double) biAssertingPostCount / (double)totalLearnedClauses
 		  );
+	    printf("c search-UHLE: %d attempts, %d rem-lits\n", searchUHLEs, searchUHLElits );
 	    printf("c decisionClauses: %d\n", learnedDecisionClauses );
 	    printf("c IntervalRestarts: %d\n", intervalRestart);
 	    printf("c partial restarts: %d saved decisions: %d saved propagations: %d recursives: %d\n", rs_partialRestarts, rs_savedDecisions, rs_savedPropagations, rs_recursiveRefinements );
