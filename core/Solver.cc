@@ -243,7 +243,7 @@ Solver::Solver(CoreConfig& _config) :
   , useCoprocessorIP(config.opt_usePPip)
 {
   MYFLAG=0;
-  hstry[0]=lit_Undef;hstry[1]=lit_Undef;hstry[2]=lit_Undef;hstry[3]=lit_Undef;hstry[4]=lit_Undef;
+  hstry[0]=lit_Undef;hstry[1]=lit_Undef;hstry[2]=lit_Undef;hstry[3]=lit_Undef;hstry[4]=lit_Undef;hstry[5]=lit_Undef;
   permDiff.push(0); // there needs to be one more level, in case all variables are on the trail and each variable is on its own decision level (in usual search this should not happen .. )
 }
 
@@ -1624,7 +1624,7 @@ lbool Solver::search(int nof_conflicts)
             // if sufficiently many new top level units have been learned, trigger another LA!
 	    if( config.opt_laTopUnit != -1 && topLevelsSinceLastLa >= config.opt_laTopUnit && maxLaNumber != -1) { maxLaNumber ++; topLevelsSinceLastLa = 0 ; }
             if(config.localLookAhead && (maxLaNumber == -1 || (las < maxLaNumber)) ) { // perform LA hack -- only if max. nr is not reached?
-	      if(config.opt_printDecisions > 0) cerr << "c run LA" << endl;
+	      if(config.opt_printDecisions > 0) cerr << "c run LA (lev=" << decisionLevel() << ", untilLA=" << untilLa << endl;
 	      int hl = decisionLevel();
 	      if( hl == 0 ) if( --untilLa == 0 ) { laStart = true; if(config.localLookaheadDebug)cerr << "c startLA" << endl;}
 	      if( laStart && hl == config.opt_laLevel ) {
@@ -1850,13 +1850,24 @@ bool Solver::analyzeNewLearnedClause(const CRef newLearnedClause)
 
 
 
-void Solver::fm( LONG_INT *p,bool mo){ // for negative, add bit patter 10, for positive, add bit pattern 01!
-  for(Var v=0;v<nVars();++v) p[v]=(p[v]<<2); // move two bits, so that the next assignment can be put there
-  int startValue = 0;
-  if( trail_lim.size() > 0 ) startValue = trail_lim[0]; // cannot be done with "?" operator!
-  if(!mo) for(int i=startValue;i<trail.size();++i){
-    Lit l=trail[i];
-    p[var(l)]+=(sign(l)?2:1);
+void Solver::fillLAmodel( vec<LONG_INT>& pattern, const int steps, vec<Var>& relevantVariables, const bool moveOnly){ // for negative, add bit patter 10, for positive, add bit pattern 01!
+  if( !moveOnly ) { // move and add pattern
+    int keepVariables = 0;  // number of variables that are kept
+    for( int i = 0 ; i < relevantVariables.size(); ++ i ) {
+      if( value( relevantVariables[i] ) != l_Undef ) { // only if the variable is kept, move and add!
+	relevantVariables[ keepVariables++ ] = relevantVariables[i];
+	const Var& v = relevantVariables[i];	// the current kept variable
+	const Lit l = mkLit( v, value(v) == l_False ); // the actual literal on the trail
+	pattern[v] = (pattern[v]<< (2 * steps ) ); // move the variables according to the number of failed propagations
+	pattern[v] +=(sign(l)?2:1);	// add the pattern for the kept variable
+      }
+    }
+    relevantVariables.shrink( relevantVariables.size() - keepVariables ); // remove the variables that are not needed any more
+  } else { // only move all the relevant variables
+    for( int i = 0 ; i < relevantVariables.size(); ++ i ) {
+	const Var& v = relevantVariables[i];	// the current kept variable
+	pattern[v] = (pattern[v]<< (2 * steps ) ); // move the variables according to the number of failed propagations
+    }
   }
 }
 
@@ -1871,11 +1882,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   LONG_INT hitEE3[]={0, 0,   0,  0,     0,    0, 2863289685,1431677610, 12297735558912431445ull, 6149008514797120170}; // compare numbers for l == dec[3]
   LONG_INT hitEE4[]={0, 0,   0,  0,     0,    0,          0,         0, 12297829381041378645ull, 6148914692668172970}; // compare numbers for l == dec[4] 
   // FIXME have another line for level 6 here!
-  LONG_INT p[nVars()];
-  memset(p,0,nVars()*sizeof(LONG_INT)); 
-  vec<VarFlags> bu;
-  varFlags.copyTo(bu);  
-  LONG_INT pt=~0; // everything set -> == 2^64-1
+ 
 //  if(config.localLookaheadDebug) cerr << "c initial pattern: " << pt << endl;
   Lit d[6];
   int j = 0;
@@ -1904,8 +1911,23 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   las++;
   
   int bound=1<<actualLAlevel, failedTries = 0;
+  
+  variablesPattern.growTo(nVars());	// have a pattern for all variables
+  memset(&(variablesPattern[0]),0,nVars()*sizeof(LONG_INT)); // initialized to 0
+  varFlags.copyTo(backupSolverState);	// backup the current solver state
+  LONG_INT patternMask=~0; // current pattern mask, everything set -> == 2^64-1
+  
+  relevantLAvariables.clear();	// the current set of relevant variables is empty
+  int start = 0; // first literal that has been used during propagation
+  if( trail_lim.size() > 0 ) start = trail_lim[0];
+  // collect all the variables that are put on the trail here
+  for( ; start < trail.size(); ++start ) relevantLAvariables.push( var(trail[start]) ); // only these variables are relevant for LA, because more cannot be in the intersection
+  start = 0;
+
+
   if(config.localLookaheadDebug) cerr << "c do LA until " << bound << " starting at level " << decisionLevel() << endl;
-  fm(p,false); // fill current model
+  fillLAmodel(variablesPattern,0,relevantLAvariables); // fill current model
+  int failedProbesInARow = 0;
   for(LONG_INT i=1;i<bound;++i){ // for each combination
     cancelUntil(0);
     newDecisionLevel();
@@ -1913,12 +1935,20 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
     bool f = propagate() != CRef_Undef; // for tests!
 //    if(config.localLookaheadDebug) { cerr << "c propagated iteration " << i << " : " ;  for(int j=0;j<actualLAlevel;++j) cerr << " " << ( (i&(1<<j))!=0 ? ~d[j] : d[j] ) ; cerr << endl; }
     if(config.localLookaheadDebug) { cerr << "c corresponding trail: "; if(f) cerr << " FAILED! "; else  for( int j = trail_lim[0]; j < trail.size(); ++ j ) cerr << " "  << trail[j]; cerr << endl; }
-    fm(p,f);
-    LONG_INT m=3;
-    if(f) {pt=(pt&(~(m<<(2*i)))); failedTries ++; }
+    
+    if(f) {
+      LONG_INT m=3;
+      patternMask=(patternMask&(~(m<<(2*i)))); 
+      failedTries ++; // global counter
+      failedProbesInARow ++; // local counter
+    } else {
+      fillLAmodel(variablesPattern,failedProbesInARow + 1, relevantLAvariables);
+      failedProbesInARow = 0;
+    }
 //    if(config.localLookaheadDebug) cerr << "c this propafation [" << i << "] failed: " << f << " current match pattern: " << pt << "(inv: " << ~pt << ")" << endl;
-    if(config.localLookaheadDebug) { cerr << "c cut: "; for(int j=0;j<2<<actualLAlevel;++j) cerr << ((pt&(1<<j))  != (LONG_INT)0 ); cerr << endl; }
+    if(config.localLookaheadDebug) { cerr << "c cut: "; for(int j=0;j<2<<actualLAlevel;++j) cerr << ((patternMask&(1<<j))  != (LONG_INT)0 ); cerr << endl; }
   }
+  if( failedProbesInARow > 0 ) fillLAmodel(variablesPattern,failedProbesInARow,relevantLAvariables,true); // finally, moving all variables right
   cancelUntil(0);
   
   // for(int i=0;i<opt_laLevel;++i) cerr << "c value for literal[" << i << "] : " << d[i] << " : "<< p[ var(d[i]) ] << endl;
@@ -1931,35 +1961,37 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   toEnqueue.clear();
   bool doEE = ( (failedTries * 100)/ bound ) < config.opt_laEEp; // enough EE candidates?!
   if( config.localLookaheadDebug) cerr << "c tries: " << bound << " failed: " << failedTries << " percent: " <<  ( (failedTries * 100)/ bound ) << " doEE: " << doEE << " current laEEs: " << laEEvars << endl;
-  for(Var v=0; v<nVars(); ++v ){
+  for(int variableIndex = 0 ; variableIndex < relevantLAvariables.size(); ++ variableIndex) // loop only over the relevant variables
+  { 
+    const Var& v = relevantLAvariables[variableIndex];
     if(value(v)==l_Undef){ // l_Undef == 2
-      if( (pt & p[v]) == (pt & (hit[t])) ){  foundUnit=true;toEnqueue.push( mkLit(v,false) );laAssignments++;
-	cerr << "c LA enqueue " << mkLit(v,false) << " (pat=" << hit[t] << ")" << endl;
+      if( (patternMask & variablesPattern[v]) == (patternMask & (hit[t])) ){  foundUnit=true;toEnqueue.push( mkLit(v,false) );laAssignments++;
+	// cerr << "c LA enqueue " << mkLit(v,false) << " (pat=" << hit[t] << ")" << endl;
       } // pos consequence
-      else if( (pt & p[v]) == (pt & (hit[t+1])) ){foundUnit=true;toEnqueue.push( mkLit(v,true)  );laAssignments++;
-	cerr << "c LA enqueue " << mkLit(v,true) << " (pat=" << hit[t] << ")" << endl;
+      else if( (patternMask & variablesPattern[v]) == (patternMask & (hit[t+1])) ){foundUnit=true;toEnqueue.push( mkLit(v,true)  );laAssignments++;
+	// cerr << "c LA enqueue " << mkLit(v,true) << " (pat=" << hit[t] << ")" << endl;
       } // neg consequence
       else if ( doEE  ) { 
 	analyze_stack.clear(); // get a new set of literals!
 	if( var(d[0]) != v ) {
-	  if( (pt & p[v]) == (pt & (hitEE0[t])) ) analyze_stack.push( ~d[0] );
-	  else if ( (pt & p[v]) == (pt & (hitEE0[t+1])) ) analyze_stack.push( d[0] );
+	  if( (patternMask & variablesPattern[v]) == (patternMask & (hitEE0[t])) ) analyze_stack.push( ~d[0] );
+	  else if ( (patternMask & variablesPattern[v]) == (patternMask & (hitEE0[t+1])) ) analyze_stack.push( d[0] );
 	}
 	if( var(d[1]) != v && hitEE1[t] != 0 ) { // only if the field is valid!
-	  if( (pt & p[v]) == (pt & (hitEE1[t])) ) analyze_stack.push( ~d[1] );
-	  else if ( (pt & p[v]) == (pt & (hitEE1[t+1])) ) analyze_stack.push( d[1] );
+	  if( (patternMask & variablesPattern[v]) == (patternMask & (hitEE1[t])) ) analyze_stack.push( ~d[1] );
+	  else if ( (patternMask & variablesPattern[v]) == (patternMask & (hitEE1[t+1])) ) analyze_stack.push( d[1] );
 	}
 	if( var(d[2]) != v && hitEE2[t] != 0 ) { // only if the field is valid!
-	  if( (pt & p[v]) == (pt & (hitEE2[t])) ) analyze_stack.push( ~d[2] );
-	  else if ( (pt & p[v]) == (pt & (hitEE2[t+1])) ) analyze_stack.push( d[2] );
+	  if( (patternMask & variablesPattern[v]) == (patternMask & (hitEE2[t])) ) analyze_stack.push( ~d[2] );
+	  else if ( (patternMask & variablesPattern[v]) == (patternMask & (hitEE2[t+1])) ) analyze_stack.push( d[2] );
 	}
 	if( var(d[3]) != v && hitEE3[t] != 0 ) { // only if the field is valid!
-	  if( (pt & p[v]) == (pt & (hitEE3[t])) ) analyze_stack.push( ~d[3] );
-	  else if ( (pt & p[v]) == (pt & (hitEE3[t+1])) ) analyze_stack.push( d[3] );
+	  if( (patternMask & variablesPattern[v]) == (patternMask & (hitEE3[t])) ) analyze_stack.push( ~d[3] );
+	  else if ( (patternMask & variablesPattern[v]) == (patternMask & (hitEE3[t+1])) ) analyze_stack.push( d[3] );
 	}
 	if( var(d[4]) != v && hitEE4[t] != 0 ) { // only if the field is valid!
-	  if( (pt & p[v]) == (pt & (hitEE4[t])) ) analyze_stack.push( ~d[4] );
-	  else if ( (pt & p[v]) == (pt & (hitEE4[t+1])) ) analyze_stack.push( d[4] );
+	  if( (patternMask & variablesPattern[v]) == (patternMask & (hitEE4[t])) ) analyze_stack.push( ~d[4] );
+	  else if ( (patternMask & variablesPattern[v]) == (patternMask & (hitEE4[t+1])) ) analyze_stack.push( d[4] );
 	}
 	if( analyze_stack.size() > 0 ) {
 	  analyze_toclear.clear();
@@ -2070,7 +2102,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   if( propagate() != CRef_Undef ){laTime = cpuTime() - laTime; return false;}
   
   // done with la, continue usual search, until next time something is done
-  for( int i = 0 ; i < bu.size(); ++ i ) varFlags[i].polarity = bu[i].polarity;
+  for( int i = 0 ; i < backupSolverState.size(); ++ i ) varFlags[i].polarity = backupSolverState[i].polarity;
   
   if(config.opt_laDyn){
     if(foundUnit)laBound=config.opt_laEvery; 		// reset down to specified minimum
@@ -3118,8 +3150,7 @@ bool Solver::interleavedClauseStrengthening()
   trail.copyTo( trailCopy );
   vec<int> trailLimCopy;
   trail_lim.copyTo( trailLimCopy );
-  vec<VarFlags> polarityCopy;
-  varFlags.copyTo(polarityCopy);
+  varFlags.copyTo(backupSolverState);
   const int oldVars = nVars();
   const int oldLearntsSize = learnts.size();
   // backtrack to level 0
@@ -3308,7 +3339,7 @@ bool Solver::interleavedClauseStrengthening()
     }
   }
 
-  for( int i = 0 ; i < polarityCopy.size(); ++i ) varFlags[i].polarity = polarityCopy[i].polarity;
+  for( int i = 0 ; i < backupSolverState.size(); ++i ) varFlags[i].polarity = backupSolverState[i].polarity;
   if( config.opt_ics_debug ) {
     cerr << "c after ICS decision levels" << endl;
     for( int i = 0 ; i < trail_lim.size(); ++i ) {

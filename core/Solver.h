@@ -473,7 +473,7 @@ protected:
     void disjunctionReplace( Minisat::Lit p, Minisat::Lit q, const Minisat::Lit x, bool inLearned, bool inBina );
     
     /** fill the current variable assignment into the given vector */
-    void fm(LONG_INT* p, bool mo); // fills current model into variable vector
+    void fillLAmodel(vec<LONG_INT>& pattern, const int steps, vec<Var>& relevantVariables ,const bool moveOnly = false); // fills current model into variable vector
     
     /** perform la hack, return false -> unsat instance!
      * @return false, instance is unsatisfable
@@ -523,7 +523,10 @@ protected:
   int laEEvars,laEElits;    // number of equivalent literals
   
   // real data
-  Lit hstry[5];
+  Lit hstry[6];
+  vec<VarFlags> backupSolverState;	// vector to hold the solver state
+  vec<LONG_INT> variablesPattern;	// vector for variable patterns
+  vec<Var> relevantLAvariables;		// vector that stores the variables that are relevant for local LA
   int untilLa;		// count until  next LA is performed
   int laBound;		// current bound for l5-LA
   bool laStart;		// when reached the la level, perform la
