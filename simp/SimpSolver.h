@@ -31,10 +31,12 @@ namespace Minisat {
 
 
 class SimpSolver : public Solver {
+    
+    CoreConfig& config;
  public:
     // Constructor/Destructor:
     //
-    SimpSolver();
+    SimpSolver(CoreConfig& _config);
     ~SimpSolver();
 
     // Problem specification:

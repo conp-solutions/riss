@@ -2416,7 +2416,7 @@ lbool Solver::solve_()
     sdSearchTime.start();
     do {
       sdLastIterTime.reset(); sdLastIterTime.start();
-      if (verbosity >= 1) printf("c start solving with %d assumptions\n", assumptions.size() );
+      //if (verbosity >= 1) printf("c start solving with %d assumptions\n", assumptions.size() );
       while (status == l_Undef){
 	
 	double rest_base = 0;

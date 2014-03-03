@@ -216,7 +216,7 @@ int main(int argc, char** argv)
          if (S.drupProofFile != NULL) fprintf(S.drupProofFile, "0\n"), fclose(S.drupProofFile);
             if (S.verbosity > 0){
 	        printf("c =========================================================================================================\n");
-                printf("Solved by unit propagation\n");
+                printf("c Solved by unit propagation\n");
                 printStats(S);
             }
                 

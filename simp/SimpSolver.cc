@@ -43,8 +43,10 @@ static DoubleOption opt_simp_garbage_frac(_cat, "simp-gc-frac", "The fraction of
 // Constructor/Destructor:
 
 
-SimpSolver::SimpSolver() :
-    grow               (opt_grow)
+SimpSolver::SimpSolver(CoreConfig& _config) :
+    Solver( _config )
+  , config( _config )
+  , grow               (opt_grow)
   , clause_lim         (opt_clause_lim)
   , subsumption_lim    (opt_subsumption_lim)
   , simp_garbage_frac  (opt_simp_garbage_frac)
@@ -148,10 +150,9 @@ bool SimpSolver::addClause_(vec<Lit>& ps)
         return false;
 
     // add clause to DRUP
-    if(!parsing && output != NULL) {
-      for (int i = 0; i < ps.size(); i++)
-        fprintf(output, "%i " , (var(ps[i]) + 1) * (-2 * sign(ps[i]) + 1) );
-      fprintf(output, "0\n");
+    if ( !parsing &&  outputsProof() ) {
+      addCommentToProof("add new clause to drup");
+      addToProof(ps);
     }
 
     if (use_simplification && clauses.size() == nclauses + 1){
@@ -205,23 +206,14 @@ bool SimpSolver::strengthenClause(CRef cr, Lit l)
     subsumption_queue.insert(cr);
 
     // the new clause is added to the proof
-    if (output != NULL) {
-      for (int i = 0; i < c.size(); i++)
-        if (c[i] != l) fprintf(output, "%i " , (var(c[i]) + 1) * (-2 * sign(c[i]) + 1) );
-      fprintf(output, "0\n");
-    }
+    addToProof( c, false, l ); // add the clause c to the proof, but do not write the literal l (literal l is deleted from the clause)
 
     if (c.size() == 2){
         removeClause(cr);
         c.strengthen(l);
     }else{
         // this clause can be deleted from the proof
-        if (output != NULL) {
-          fprintf(output, "d ");
-          for (int i = 0; i < c.size(); i++)
-            fprintf(output, "%i " , (var(c[i]) + 1) * (-2 * sign(c[i]) + 1) );
-          fprintf(output, "0\n");
-        }
+        addToProof( c, true ); // delete the full clause from the proof
 
         detachClause(cr, true);
         c.strengthen(l);

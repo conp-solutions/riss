@@ -28,7 +28,7 @@ void Solver::initCegar(vec< Lit >& assumptions, int& currentSDassumptions, int s
 
 bool Solver::cegarNextIteration(vec< Lit >& assumptions, int& currentSDassumptions, lbool& status)
 {
-      if (verbosity >= 1) printf("c CEGAR handle current iteration with %s\n", status == l_True ? "true " : (status == l_Undef ? "undef": "false"));
+      //if (verbosity >= 1) printf("c CEGAR handle current iteration with %s\n", status == l_True ? "true " : (status == l_Undef ? "undef": "false"));
       // check whether UNSAT answer is unsound, due to assumptions that have been added
       if( currentSDassumptions > 0 && status == l_False ) { // this UNSAT result might be due to the added assumptions
 	if (verbosity >= 1) printf("c CEGAR wrong assumptions: %d\n", conflict.size());
