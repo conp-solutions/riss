@@ -98,15 +98,15 @@ CoreConfig::CoreConfig() // add new options here!
  
  opt_dontTrustPolarity("MODS", "dontTrust", "change decision literal polarity once in a while", false, optionListPtr ),
  
- opt_LHBR ("MODS", "lhbr", "use lhbr (0=no,1=str,2=trans,str,3=new,4=trans,new)", 0, IntRange(0, 4), optionListPtr ),
- opt_LHBR_max ("MODS", "lhbr-max", "max nr of newly created lhbr clauses", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
- opt_LHBR_sub ("MODS", "lhbr-sub", "check whether new clause subsumes the old clause", false, optionListPtr ),
- opt_printLhbr ("MODS", "lhbr-print", "print info about lhbr", false, optionListPtr ),
+ opt_LHBR ("SEARCH - LHBR", "lhbr", "use lhbr (0=no,1=str,2=trans,str,3=new,4=trans,new)", 0, IntRange(0, 4), optionListPtr ),
+ opt_LHBR_max ("SEARCH - LHBR", "lhbr-max", "max nr of newly created lhbr clauses", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_LHBR_sub ("SEARCH - LHBR", "lhbr-sub", "check whether new clause subsumes the old clause", false, optionListPtr ),
+ opt_printLhbr ("SEARCH - LHBR", "lhbr-print", "print info about lhbr", false, optionListPtr ),
 
  opt_updateLearnAct ("MODS", "updLearnAct", "UPDATEVARACTIVITY trick (see glucose competition'09 companion paper)", true , optionListPtr ),
 
- opt_hack ("REASON", "hack", "use hack modifications", 0, IntRange(0, 3) , optionListPtr ),
- opt_hack_cost ("REASON", "hack-cost", "use size cost", true , optionListPtr ),
+ opt_hack ("SEARCH - REASON", "hack", "use hack modifications", 0, IntRange(0, 3) , optionListPtr ),
+ opt_hack_cost ("SEARCH - REASON", "hack-cost", "use size cost", true , optionListPtr ),
 #if defined TOOLVERSION
  opt_dbg(false) ,
 #else
@@ -129,38 +129,38 @@ CoreConfig::CoreConfig() // add new options here!
  opt_rMax ("MODS", "rMax", "initial max. interval between two restarts (-1 = off)", -1, IntRange(-1, INT32_MAX) , optionListPtr ),
  opt_rMaxInc ("MODS", "rMaxInc", "increase of the max. restart interval per restart", 1.1, DoubleRange(1, true, HUGE_VAL, false), optionListPtr ),
 
- localLookaheadDebug ("MODS", "laHackOutput","output info about LA", false, optionListPtr ),
- localLookAhead ("MODS", "laHack", "enable lookahead on level 0", false, optionListPtr ),
- tb ("MODS", "tabu", "do not perform LA, if all considered LA variables are as before", true, optionListPtr ),
- opt_laDyn ("MODS", "dyn", "dynamically set the frequency based on success", false, optionListPtr ),
- opt_laEEl ("MODS", "laEEl", "add EE clauses as learnt clauses", true, optionListPtr ),
- opt_laEEp ("MODS", "laEEp", "add EE clauses, if less than p percent tests failed", 0, IntRange(0, 100), optionListPtr ),
- opt_laMaxEvery ("MODS", "hlaMax", "maximum bound for frequency", 50, IntRange(0, INT32_MAX) , optionListPtr ),
+ localLookaheadDebug ("SEARCH - LOCAL LOOK AHEAD", "laHackOutput","output info about LA", false, optionListPtr ),
+ localLookAhead ("SEARCH - LOCAL LOOK AHEAD", "laHack", "enable lookahead on level 0", false, optionListPtr ),
+ tb ("SEARCH - LOCAL LOOK AHEAD", "tabu", "do not perform LA, if all considered LA variables are as before", true, optionListPtr ),
+ opt_laDyn ("SEARCH - LOCAL LOOK AHEAD", "dyn", "dynamically set the frequency based on success", false, optionListPtr ),
+ opt_laEEl ("SEARCH - LOCAL LOOK AHEAD", "laEEl", "add EE clauses as learnt clauses", true, optionListPtr ),
+ opt_laEEp ("SEARCH - LOCAL LOOK AHEAD", "laEEp", "add EE clauses, if less than p percent tests failed", 0, IntRange(0, 100), optionListPtr ),
+ opt_laMaxEvery ("SEARCH - LOCAL LOOK AHEAD", "hlaMax", "maximum bound for frequency", 50, IntRange(0, INT32_MAX) , optionListPtr ),
 #ifdef DONT_USE_128_BIT
- opt_laLevel ("MODS", "hlaLevel", "level of look ahead", 5, IntRange(1, 5) , optionListPtr ),
+ opt_laLevel ("SEARCH - LOCAL LOOK AHEAD", "hlaLevel", "level of look ahead", 5, IntRange(1, 5) , optionListPtr ),
 #else
- opt_laLevel ("MODS", "hlaLevel", "level of look ahead", 5, IntRange(1, 5) , optionListPtr ), 
+ opt_laLevel ("SEARCH - LOCAL LOOK AHEAD", "hlaLevel", "level of look ahead", 5, IntRange(1, 5) , optionListPtr ), 
 #endif
- opt_laEvery ("MODS", "hlaevery", "initial frequency of LA", 1, IntRange(0, INT32_MAX) , optionListPtr ),
- opt_laBound ("MODS", "hlabound", "max. nr of LAs (-1 == inf)", 4096, IntRange(-1, INT32_MAX) , optionListPtr ),
- opt_laTopUnit ("MODS", "hlaTop", "allow another LA after learning another nr of top level units (-1 = never)", -1, IntRange(-1, INT32_MAX), optionListPtr ),
+ opt_laEvery ("SEARCH - LOCAL LOOK AHEAD", "hlaevery", "initial frequency of LA", 1, IntRange(0, INT32_MAX) , optionListPtr ),
+ opt_laBound ("SEARCH - LOCAL LOOK AHEAD", "hlabound", "max. nr of LAs (-1 == inf)", 4096, IntRange(-1, INT32_MAX) , optionListPtr ),
+ opt_laTopUnit ("SEARCH - LOCAL LOOK AHEAD", "hlaTop", "allow another LA after learning another nr of top level units (-1 = never)", -1, IntRange(-1, INT32_MAX), optionListPtr ),
 
  opt_prefetch ("MODS", "prefetch", "prefetch watch list, when literal is enqueued", true, optionListPtr ),
  opt_hpushUnit ("MODS", "delay-units", "does not propagate unit clauses until solving is initialized", false, optionListPtr ),
  opt_simplifyInterval ("MODS", "sInterval", "how often to perform simplifications on level 0", 0, IntRange(0, INT32_MAX) , optionListPtr ),
 
- opt_otfss ("MODS", "otfss", "perform otfss during conflict analysis", false, optionListPtr ),
- opt_otfssL ("MODS", "otfssL", "otfss for learnt clauses", false, optionListPtr ),
- opt_otfssMaxLBD ("MODS", "otfssMLDB", "max. LBD of learnt clauses that are candidates for otfss", 30, IntRange(2, INT32_MAX) , optionListPtr ),
+ opt_otfss ("SEARCH - OTFSS", "otfss", "perform otfss during conflict analysis", false, optionListPtr ),
+ opt_otfssL ("SEARCH - OTFSS", "otfssL", "otfss for learnt clauses", false, optionListPtr ),
+ opt_otfssMaxLBD ("SEARCH - OTFSS", "otfssMLDB", "max. LBD of learnt clauses that are candidates for otfss", 30, IntRange(2, INT32_MAX) , optionListPtr ),
 #if defined TOOLVERSION
  debug_otfss ( false , optionListPtr ),
 #else
- debug_otfss ("MODS", "otfss-d", "print debug output", false, optionListPtr ),
+ debug_otfss ("SEARCH - OTFSS", "otfss-d", "print debug output", false, optionListPtr ),
 #endif
 
- opt_learnDecPrecent ("MODS", "learnDecP",   "if LBD of is > percent of decisionlevel, learn decision Clause (Knuth), -1 = off", -1, IntRange(-1, 100) , optionListPtr ),
- opt_learnDecMinSize ("MODS", "learnDecMS",  "min size so that decision clauses are learned, -1 = off", 2, IntRange(2, INT32_MAX) , optionListPtr ),
- opt_learnDecRER     ("MODS", "learnDecRER", "consider decision clauses for RER?",false , optionListPtr ),
+ opt_learnDecPrecent ("SEARCH - DECISION CLAUSES", "learnDecP",   "if LBD of is > percent of decisionlevel, learn decision Clause (Knuth), -1 = off", -1, IntRange(-1, 100) , optionListPtr ),
+ opt_learnDecMinSize ("SEARCH - DECISION CLAUSES", "learnDecMS",  "min size so that decision clauses are learned, -1 = off", 2, IntRange(2, INT32_MAX) , optionListPtr ),
+ opt_learnDecRER     ("SEARCH - DECISION CLAUSES", "learnDecRER", "consider decision clauses for RER?",false , optionListPtr ),
 
 #if defined TOOLVERSION && TOOLVERSION < 400
  opt_extendedClauseLearning(false) ,

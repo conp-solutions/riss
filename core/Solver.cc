@@ -2389,7 +2389,7 @@ lbool Solver::solve_()
     }
     
     // probing during search, or UHLE for learnt clauses
-    if( config.opt_uhdProbe > 0 || config.uhle_minimizing_size > 0 ) {
+    if( config.opt_uhdProbe > 0 || (config.uhle_minimizing_size > 0 && config.uhle_minimizing_lbd > 0) ) {
       assert( big == 0 && "cannot be initialized already" );
       if( big == 0 ) big = new Coprocessor::BIG(); // if there is no big yet, create it!
       big->recreate( ca, nVars(), clauses, learnts );

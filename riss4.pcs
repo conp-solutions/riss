@@ -30,10 +30,10 @@ cp3_limited  {yes,no}[yes]       # Limits for preprocessing techniques
 cp3_inp_cons  {0,20000,200000,500000,1000000}[500000]       # Perform Inprocessing after at least X conflicts
 cp3_iters  {1,2,3,4}[1]       # simplification rounds in preprocessing
 
-cp3_vars  {0,1000000,2000000,2147483647}[2147483647]       # variable limit to enable CP3
-cp3_cls  {0,2000000,4000000,6000000,2147483647}[2147483647]       # clause limit to enable CP3
-cp3_ipvars  {0,1000000,2000000,2147483647}[2147483647]       # variable limit to enable CP3 inprocessing
-cp3_ipcls  {0,2000000,4000000,6000000,2147483647}[2147483647]       # clause limit to enable CP3 inprocessing
+cp3_vars  {0,1000000,2000000,5000000}[5000000]       # variable limit to enable CP3
+cp3_cls  {0,2000000,4000000,6000000,30000000}[30000000]       # clause limit to enable CP3
+cp3_ipvars  {0,1000000,2000000,5000000}[5000000]       # variable limit to enable CP3 inprocessing
+cp3_ipcls  {0,2000000,4000000,6000000,30000000}[30000000]       # clause limit to enable CP3 inprocessing
 
 #
 #  PREPROCESSOR TECHNIQUES OPTIONS:
@@ -61,36 +61,42 @@ sls-flips  {-1,800000,8000000}[8000000]       # Perform given number of SLS flip
 cp3_ptechs  {"","u3sghpvwc","u3svghpwc","u3svghpwcv"}[""]       # techniques for preprocessing
 cp3_itechs  {"","us","usv","usw","ug","up","ux","uf","usxf","ugsxf"}[""]       # techniques for inprocessing
 
-cp3_ee_vars  {0,1000000,2000000,2147483647}[2147483647]       # variable limit to enable CP3
-cp3_ee_cls  {0,2000000,4000000,6000000,2147483647}[2147483647]       # clause limit to enable CP3
-cp3_bve_vars  {0,1000000,2000000,2147483647}[2147483647]       # variable limit to enable CP3
-cp3_bve_cls  {0,2000000,4000000,6000000,2147483647}[2147483647]       # clause limit to enable CP3
-cp3_bva_vars  {0,1000000,2000000,2147483647}[2147483647]       # variable limit to enable CP3
-cp3_bva_cls  {0,2000000,4000000,6000000,2147483647}[2147483647]       # clause limit to enable CP3
-cp3_unhide_vars  {0,1000000,2000000,2147483647}[2147483647]       # variable limit to enable CP3
-cp3_unhide_cls  {0,2000000,4000000,6000000,2147483647}[2147483647]       # clause limit to enable CP3
-cp3_probe_vars  {0,1000000,2000000,2147483647}[2147483647]       # variable limit to enable CP3
-cp3_probe_cls  {0,2000000,4000000,6000000,2147483647}[2147483647]       # clause limit to enable CP3
-cp3_tRes_vars  {0,1000000,2000000,2147483647}[2147483647]       # variable limit to enable CP3
-cp3_tRes_cls  {0,2000000,4000000,6000000,2147483647}[2147483647]       # clause limit to enable CP3
-cp3_symm_vars  {0,1000000,2000000,2147483647}[2147483647]       # variable limit to enable CP3
-cp3_xor_cls  {0,2000000,4000000,6000000,2147483647}[2147483647]       # clause limit to enable CP3
-cp3_xor_vars  {0,1000000,2000000,2147483647}[2147483647]       # variable limit to enable CP3
-cp3_fm_cls  {0,2000000,4000000,6000000,2147483647}[2147483647]       # clause limit to enable CP3
+cp3_ee_vars  {0,1000000,2000000,5000000}[5000000]       # variable limit to enable CP3
+cp3_ee_cls  {0,2000000,4000000,6000000,20000000}[20000000]       # clause limit to enable CP3
+cp3_bve_vars  {0,1000000,2000000,5000000}[5000000]       # variable limit to enable CP3
+cp3_bve_cls  {0,2000000,4000000,6000000,20000000}[20000000]       # clause limit to enable CP3
+cp3_bva_vars  {0,1000000,2000000,3000000}[3000000]       # variable limit to enable CP3
+cp3_bva_cls  {0,2000000,4000000,6000000,20000000}[20000000]       # clause limit to enable CP3
+cp3_Ibva_vars  {0,1000000,2000000}[1000000]       # variable limit to enable CP3
+cp3_Ibva_cls{0,2000000,4000000,6000000,10000000}[10000000]       # clause limit to enable CP3
+cp3_Xbva_vars  {0,1000000,2000000}[1000000]       # variable limit to enable CP3
+cp3_Xbva_cls{0,2000000,4000000,6000000,5000000}[5000000]       # clause limit to enable CP3
+cp3_unhide_vars  {0,1000000,2000000,3000000}[3000000]       # variable limit to enable CP3
+cp3_unhide_cls  {0,2000000,4000000,6000000,10000000}[10000000]       # clause limit to enable CP3
+cp3_probe_vars  {0,1000000,2000000,3000000}[3000000]       # variable limit to enable CP3
+cp3_probe_cls  {0,2000000,4000000,6000000,3000000}[3000000]       # clause limit to enable CP3
+cp3_viv_vars   {0,1000000,2000000,5000000}[5000000]       # variable limit to enable CP3
+cp3_viv_cls    {0,2000000,4000000,6000000,10000000}[10000000]       # clause limit to enable CP3
+cp3_tRes_vars  {0,1000000,2000000}[1000000]       # variable limit to enable CP3
+cp3_tRes_cls  {0,2000000,4000000,6000000,20000000}[20000000]       # clause limit to enable CP3
+cp3_xor_cls  {0,2000000,4000000,6000000,3000000}[3000000]       # clause limit to enable CP3
+cp3_xor_vars  {0,1000000,2000000,700000}[700000]       # variable limit to enable CP3
+cp3_symm_vars  {0,1000000,2000000,3000000}[3000000]       # variable limit to enable CP3
 cp3_symm_cls  {0,2000000,4000000,6000000,2147483647}[2147483647]       # clause limit to enable CP3
-cp3_fm_vars  {0,1000000,2000000,2147483647}[2147483647]       # variable limit to enable CP3
-cp3_susi_vars  {0,1000000,2000000,2147483647}[2147483647]       # variable limit to enable CP3
-cp3_susi_cls  {0,2000000,4000000,6000000,2147483647}[2147483647]       # clause limit to enable CP3
-cp3_hte_vars  {0,1000000,2000000,2147483647}[2147483647]       # variable limit to enable CP3
+cp3_fm_vars  {0,1000000,2000000}[2000000]       # variable limit to enable CP3
+cp3_fm_cls  {0,2000000,4000000,6000000,10000000}[10000000]       # clause limit to enable CP3
+cp3_susi_vars  {0,1000000,2000000,5000000}[5000000]       # variable limit to enable CP3
+cp3_susi_cls  {0,2000000,4000000,6000000,5000000}[5000000]       # clause limit to enable CP3
+cp3_hte_vars  {0,1000000,2000000}[1000000]       # variable limit to enable CP3
 cp3_hte_cls  {0,2000000,4000000,6000000,2147483647}[2147483647]       # clause limit to enable CP3
-cp3_bce_vars  {0,1000000,2000000,2147483647}[2147483647]       # variable limit to enable CP3
-cp3_bce_cls  {0,2000000,4000000,6000000,2147483647}[2147483647]       # clause limit to enable CP3
-cp3_cce_vars  {0,1000000,2000000,2147483647}[2147483647]       # variable limit to enable CP3
-cp3_cce_cls  {0,2000000,4000000,6000000,2147483647}[2147483647]       # clause limit to enable CP3
-cp3_rate_vars  {0,1000000,2000000,2147483647}[2147483647]       # variable limit to enable CP3
-cp3_rate_cls  {0,2000000,4000000,6000000,2147483647}[2147483647]       # clause limit to enable CP3
-cp3_sls_vars  {0,1000000,2000000,2147483647}[2147483647]       # variable limit to enable CP3
-cp3_sls_cls  {0,2000000,4000000,6000000,2147483647}[2147483647]       # clause limit to enable CP3
+cp3_bce_vars  {0,1000000,2000000,3000000}[3000000]       # variable limit to enable CP3
+cp3_bce_cls  {0,2000000,4000000,6000000,10000000}[10000000]       # clause limit to enable CP3
+cp3_cce_vars  {0,1000000,2000000,5000000}[5000000]       # variable limit to enable CP3
+cp3_cce_cls  {0,2000000,4000000,6000000,30000000}[30000000]       # clause limit to enable CP3
+cp3_rate_vars  {0,1000000,2000000}[1000000]       # variable limit to enable CP3
+cp3_rate_cls  {0,2000000,4000000,6000000}[2000000]       # clause limit to enable CP3
+cp3_sls_vars  {0,1000000,2000000,500000}[500000]       # variable limit to enable CP3
+cp3_sls_cls  {0,2000000,4000000,6000000,500000}[500000]       # clause limit to enable CP3
 
 #
 #  COPROCESSOR 3 - BCE OPTIONS:
@@ -474,7 +480,9 @@ hack  {0,1,2,3}[0]       # use hack modifications
 #
 sUhdPrRb  {yes,no}[yes]       # rebuild BIG before cleaning the formula
 sUhdProbe  {0,1,2,3}[0]       # perform probing based on learned clauses (off,linear,quadratic,larger)
-sUhdPrSh  {0,2,4,8}[0]       # travers the BIG again during every i-th restart 0=off
+sUhdPrSh  {0,2,4,8}[0]        # travers the BIG again during every i-th restart 0=off
+sUHLEsize {0,8,30,64}[0]      # perform UHLE with the learnt clause, if a smaller or equal size is present
+sUHLElbd  {0,2,6,12}[0]       # perform UHLE with the learnt clause, if current LBD is less equal
 
   
 #
@@ -526,6 +534,7 @@ lhbr-sub | lhbr in   {3,4}
 
 sUhdPrRb  | sUhdProbe in   {1,2,3}
 sUhdPrSh  | sUhdProbe in   {1,2,3}
+sUHLElbd  | sUHLEsize in   {8,30,64}
 
 biAsFreq  | biAsserting  in   {yes}
 
@@ -608,10 +617,16 @@ cp3_bve_vars   | bve in   {yes}
 cp3_bve_cls    | bve in   {yes} 
 cp3_bva_vars   | bva in   {yes} 
 cp3_bva_cls    | bva in   {yes} 
+cp3_Ibva_vars   | cp3_Ibva in   {2} 
+cp3_Ibva_cls    | cp3_Ibva in   {2} 
+cp3_Xbva_vars   | cp3_Xbva in   {2} 
+cp3_Xbva_cls    | cp3_Xbva in   {2} 
 cp3_unhide_vars | unhide in   {yes}
 cp3_unhide_cls | unhide in   {yes} 
 cp3_probe_vars | probe in   {yes} 
 cp3_probe_cls  | probe in   {yes}
+cp3_viv_vars   | pr-vivi in   {yes} 
+cp3_viv_cls    | pr-vivi in   {yes}
 cp3_tRes_vars  | 3resolve in   {yes}
 cp3_tRes_cls   | 3resolve in   {yes}
 cp3_symm_vars  | symm in   {yes}

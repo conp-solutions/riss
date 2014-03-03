@@ -143,10 +143,16 @@ public:
  IntOption opt_bve_cls;  	// clause limit to enable 
  IntOption opt_bva_vars; 	// variable limit to enable 
  IntOption opt_bva_cls;  	// clause limit to enable 
+ IntOption opt_Ibva_vars; 	// variable limit to enable 
+ IntOption opt_Ibva_cls;  	// clause limit to enable 
+ IntOption opt_Xbva_vars; 	// variable limit to enable 
+ IntOption opt_Xbva_cls;  	// clause limit to enable 
  IntOption opt_unhide_vars; 	// variable limit to enable 
  IntOption opt_unhide_cls;  	// clause limit to enable 
  IntOption opt_probe_vars; 	// variable limit to enable 
  IntOption opt_probe_cls;  	// clause limit to enable 
+ IntOption opt_viv_vars; 	// variable limit to enable 
+ IntOption opt_viv_cls;  	// clause limit to enable 
  IntOption opt_ternResolve_vars; 	// variable limit to enable 
  IntOption opt_ternResolve_cls;  	// clause limit to enable 
  IntOption opt_addRedBins_vars; 	// variable limit to enable 
