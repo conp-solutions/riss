@@ -51,10 +51,10 @@ CP3Config::CP3Config() // add new options here!
   
  opt_cp3_vars  (_cat, "cp3_vars",   "variable limit to enable CP3", 5000000, IntRange(0, INT32_MAX), optionListPtr ),
  opt_cp3_cls   (_cat, "cp3_cls",    "clause limit to enable CP3",   30000000, IntRange(0, INT32_MAX), optionListPtr ), 
- opt_cp3_lits  (_cat, "cp3_lits",   "total literal limit to enable CP3",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
+ opt_cp3_lits  (_cat, "cp3_lits",   "total literal limit to enable CP3",   50000000, IntRange(0, INT32_MAX), optionListPtr ), 
  opt_cp3_ipvars(_cat, "cp3_ipvars", "variable limit to enable CP3 inprocessing", 5000000, IntRange(0, INT32_MAX), optionListPtr ),
  opt_cp3_ipcls (_cat, "cp3_ipcls",  "clause limit to enable CP3 inprocessing", 30000000, IntRange(0, INT32_MAX), optionListPtr ), 
- opt_cp3_iplits(_cat, "cp3_iplits", "total literal limit to enable CP3 inprocessing", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
+ opt_cp3_iplits(_cat, "cp3_iplits", "total literal limit to enable CP3 inprocessing", 50000000, IntRange(0, INT32_MAX), optionListPtr ), 
   
   opt_unlimited   (_cat, "cp3_limited",    "Limits for preprocessing techniques", true, optionListPtr ),
   opt_randomized  (_cat, "cp3_randomized", "Steps withing preprocessing techniques are executed in random order", false, optionListPtr ),
@@ -184,7 +184,7 @@ CP3Config::CP3Config() // add new options here!
  opt_ternResolve_lits(_cat, "cp3_tRes_lits", "total literal limit to enable 3RES",   50000000, IntRange(0, INT32_MAX), optionListPtr ), 
  opt_addRedBins_vars (_cat, "cp3_aBin_vars", "variable limit to enable ADD2", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
  opt_addRedBins_cls  (_cat, "cp3_aBin_cls",  "clause limit to enable ADD2",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
- opt_addRedBin_lits  (_cat, "cp3_aBin_lits", "total literal limit to enable ADD2",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
+ opt_addRedBins_lits  (_cat, "cp3_aBin_lits", "total literal limit to enable ADD2",   INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ), 
  opt_symm_vars   (_cat, "cp3_symm_vars",     "variable limit to enable SYMM", 3000000, IntRange(0, INT32_MAX), optionListPtr ),
  opt_symm_cls    (_cat, "cp3_symm_cls",      "clause limit to enable SYMM",   20000000, IntRange(0, INT32_MAX), optionListPtr ), 
  opt_symm_lits(_cat, "cp3_symm_lits",        "total literal limit to enable SYMM",   15000000, IntRange(0, INT32_MAX), optionListPtr ), 

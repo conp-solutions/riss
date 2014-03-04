@@ -175,7 +175,7 @@ public:
  IntOption opt_ternResolve_lits;	// total literals limit to enable 
  IntOption opt_addRedBins_vars; 	// variable limit to enable 
  IntOption opt_addRedBins_cls;  	// clause limit to enable 
- IntOption opt_addRedBin_lits;	// total literals limit to enable 
+ IntOption opt_addRedBins_lits;	// total literals limit to enable 
  IntOption opt_symm_vars; 	// variable limit to enable 
  IntOption opt_symm_cls;  	// clause limit to enable 
  IntOption opt_symm_lits;	// total literals limit to enable 

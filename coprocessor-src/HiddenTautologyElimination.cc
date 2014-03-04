@@ -33,7 +33,7 @@ void HiddenTautologyElimination::process(CoprocessorData& data)
   if( !performSimplification() ) return; // do not perform HTE, because of previous failed runs?
   modifiedFormula = false;
   
-  if( !data.unlimited() && ( data.nVars() > config.opt_hte_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_hte_cls  || data.nTotLits() > config.opt_hte_lits ) ) return false;
+  if( !data.unlimited() && ( data.nVars() > config.opt_hte_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_hte_cls  || data.nTotLits() > config.opt_hte_lits ) ) return ;
   
   if( ! isInitializedTechnique() ) {
     initializedTechnique(); 
