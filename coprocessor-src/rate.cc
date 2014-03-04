@@ -36,7 +36,7 @@ bool RATElimination::process()
   modifiedFormula = false;
   
   // do not simplify, if the formula is considered to be too large!
-  if( !data.unlimited() && ( data.nVars() > config.opt_rate_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_rate_cls ) ) return false;
+  if( !data.unlimited() && ( data.nVars() > config.opt_rate_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_rate_cls   || data.nTotLits() <= config.opt_rate_lits) ) return false;
   
   LitOrderRATEHeapLt comp(data, config.rate_orderComplements); // use this sort criteria!
   Heap<LitOrderRATEHeapLt> rateHeap(comp);  // heap that stores the variables according to their frequency (dedicated for BCE)

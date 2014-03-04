@@ -59,7 +59,7 @@ bool Rewriter::process()
   modifiedFormula = false;
   
   // do not simplify, if the formula is considered to be too large!
-  if( !data.unlimited() && ( data.nVars() > config.opt_rew_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_rew_cls ) ) return false;
+  if( !data.unlimited() && ( data.nVars() > config.opt_rew_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_rew_cls  || data.nTotLits() > config.opt_rew_lits ) ) return false;
   
   bool ret = false;
   if( config.opt_rew_amo ) ret = ret || rewriteAMO();

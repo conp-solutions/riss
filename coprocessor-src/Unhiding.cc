@@ -664,7 +664,7 @@ bool Unhiding::process (  )
   if( !data.ok() ) return false;
 
   // do not simplify, if the formula is considered to be too large!
-  if( !data.unlimited() && ( data.nVars() > config.opt_unhide_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_unhide_cls ) ) return false;
+  if( !data.unlimited() && ( data.nVars() > config.opt_unhide_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_unhide_cls  || data.nTotLits() > config.opt_unhide_lits ) ) return false;
   
   stampInfo.resize( 2*data.nVars() );
   unhideEEflag.resize( 2*data.nVars() );

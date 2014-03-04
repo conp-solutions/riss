@@ -98,6 +98,27 @@ cp3_rate_cls  {0,2000000,4000000,6000000}[2000000]       # clause limit to enabl
 cp3_sls_vars  {0,1000000,2000000,500000}[500000]       # variable limit to enable CP3
 cp3_sls_cls  {0,2000000,4000000,6000000,500000}[500000]       # clause limit to enable CP3
 
+cp3_susi_lits {0,1000000,5000000,10000000}[10000000]       # total literals limit to enable
+cp3_hte_lits {0,1000000,5000000,20000000}[20000000]       # total literals limit to enable
+cp3_bce_lits {0,1000000,5000000,30000000}[30000000]       # total literals limit to enable
+cp3_ent_lits {0,1000000,5000000,2147483647}[2147483647]       # total literals limit to enable
+cp3_la_lits {0,1000000,5000000,2147483647}[2147483647]       # total literals limit to enable
+cp3_cce_lits {0,1000000,5000000,50000000}[50000000]       # total literals limit to enable
+cp3_rate_lits {0,1000000,5000000,10000000}[10000000]       # total literals limit to enable
+cp3_ee_lits {0,1000000,5000000,40000000}[40000000]       # total literals limit to enable
+cp3_bve_lits {0,1000000,5000000,50000000}[50000000]       # total literals limit to enable
+cp3_bva_lits {0,1000000,5000000,40000000}[40000000]       # total literals limit to enable
+cp3_Ibva_lits {0,1000000,5000000,40000000}[40000000]       # total literals limit to enable
+cp3_Xbva_lits {0,1000000,5000000,10000000}[10000000]       # total literals limit to enable
+cp3_unhide_lits {0,1000000,5000000,7000000}[7000000]       # total literals limit to enable
+cp3_probe_lits {0,1000000,5000000,30000000}[30000000]       # total literals limit to enable
+cp3_viv_lits {0,1000000,5000000,15000000}[15000000]       # total literals limit to enable
+cp3_tRes_lits {0,1000000,5000000,50000000}[50000000]       # total literals limit to enable
+cp3_symm_lits {0,1000000,5000000,15000000}[15000000]       # total literals limit to enable
+cp3_fm_lits {0,1000000,5000000,20000000}[20000000]       # total literals limit to enable
+cp3_xor_lits {0,1000000,5000000,5000000}[5000000]       # total literals limit to enable
+cp3_sls_lits {0,1000000,5000000,4000000}[4000000]       # total literals limit to enable
+
 #
 #  COPROCESSOR 3 - BCE OPTIONS:
 #
@@ -637,16 +658,38 @@ cp3_fm_cls     | fm in   {yes}
 cp3_fm_vars    | fm in   {yes}
 cp3_susi_vars  | subsimp in   {yes}
 cp3_susi_cls   | subsimp in   {yes}
-cp3_hte_vars   | hte in   {yes}
-cp3_hte_cls    | hte in   {yes}
-cp3_bce_vars   | bce in   {yes}
-cp3_bce_cls    | bce in   {yes}
-cp3_cce_vars   | cce in   {yes}
-cp3_cce_cls    | cce in   {yes}
+cp3_hte_vars   | hte in    {yes}
+cp3_hte_cls    | hte in    {yes}
+cp3_bce_vars   | bce in    {yes}
+cp3_bce_cls    | bce in    {yes}
+cp3_cce_vars   | cce in    {yes}
+cp3_cce_cls    | cce in    {yes}
 cp3_rate_vars  | rate in   {yes}
 cp3_rate_cls   | rate in   {yes}
-cp3_sls_vars   | sls in   {yes}
-cp3_sls_cls    | sls in   {yes}
+cp3_sls_vars   | sls in    {yes}
+cp3_sls_cls    | sls in    {yes}
+cp3_susi_lits   | subsimp in {yes}
+cp3_hte_lits    | hte in   {yes}
+cp3_bce_lits    | bce in   {yes}
+cp3_ent_lits    | ent in   {yes}
+cp3_la_lits     | la in    {yes}
+cp3_cce_lits    | cce in   {yes}
+cp3_rate_lits   | rate in  {yes}
+cp3_ee_lits     | ee in    {yes}
+cp3_bve_lits    | bve in   {yes}
+cp3_bva_lits    | bva in   {yes} 
+cp3_Ibva_lits   | cp3_Ibva in {2} 
+cp3_Xbva_lits   | cp3_Xbva in {2} 
+cp3_unhide_lits | unhide in   {yes} 
+cp3_probe_lits  | probe in    {yes} 
+cp3_viv_lits    | pr-vivi in  {yes} 
+cp3_tRes_lits   | 3resolve in {yes}
+cp3_symm_lits   | symm in {yes}
+cp3_fm_lits     | fm in   {yes}
+cp3_xor_lits    | xor in  {yes}
+cp3_sls_lits    | sls in  {yes}
+
+
 
 #
 #  COPROCESSOR 3 - BCE OPTIONS:

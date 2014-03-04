@@ -100,7 +100,7 @@ bool Subsumption::process(bool doStrengthen, Heap< VarOrderBVEHeapLt >* heap, co
   }
   
   // do not simplify, if the formula is considered to be too large!
-  if( !data.unlimited() && ( data.nVars() > config.opt_subsimp_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_subsimp_cls ) ) return false;
+  if( !data.unlimited() && ( data.nVars() > config.opt_subsimp_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_subsimp_cls  || data.nTotLits() > config.opt_subsimp_lits ) ) return false;
   
   // increase limits per call if necessary
   if( subsumeSteps + callIncrease > subLimit )  { subLimit = subsumeSteps + callIncrease;  limitIncreases++; }

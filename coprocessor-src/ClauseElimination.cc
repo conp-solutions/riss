@@ -36,7 +36,7 @@ bool ClauseElimination::process(CoprocessorData& data)
   modifiedFormula = false;
   
   // do not simplify, if the formula is considered to be too large!
-  if( !data.unlimited() && ( data.nVars() > config.opt_cce_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_cce_cls ) ) return false;
+  if( !data.unlimited() && ( data.nVars() > config.opt_cce_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_cce_cls  || data.nTotLits() > config.opt_cce_lits ) ) return false;
   if( !data.ok() ) return modifiedFormula;
   
   // TODO: have a better scheduling here! (if a clause has been removed, potentially other clauses with those variables can be eliminated as well!!, similarly to BCE!)

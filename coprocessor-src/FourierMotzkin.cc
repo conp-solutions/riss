@@ -91,7 +91,7 @@ bool FourierMotzkin::process()
   modifiedFormula = false;
   
   // do not simplify, if the formula is considered to be too large!
-  if( !data.unlimited() && ( data.nVars() > config.opt_fm_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_fm_cls ) ) return false;
+  if( !data.unlimited() && ( data.nVars() > config.opt_fm_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_fm_cls || data.nTotLits() > config.opt_fm_lits ) ) return false;
   
   if( data.hasToPropagate() ) { // needs to perform propagation here!
     if( config.fm_debug_out > 0) cerr << "c FM propagate before FM ..." << endl;

@@ -46,7 +46,7 @@ bool XorReasoning::process()
   modifiedFormula = false;
   
   // do not simplify, if the formula is considered to be too large!
-  if( !data.unlimited() && ( data.nVars() > config.opt_xor_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_xor_cls ) ) return false;
+  if( !data.unlimited() && ( data.nVars() > config.opt_xor_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_xor_cls  || data.nTotLits() > config.opt_xor_lits  ) ) return false;
   
   data.ma.resize( 2* data.nVars() ); // TODO: check whether only for variables!
   

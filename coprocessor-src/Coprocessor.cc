@@ -998,7 +998,7 @@ lbool Preprocessor::preprocess()
   const bool wasDoingER = solver->getExtendedResolution();
   
   // do not preprocess, if the formula is considered to be too large!
-  if( !data.unlimited() && ( data.nVars() > config.opt_cp3_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_cp3_cls ) ) return l_Undef;
+  if( !data.unlimited() && ( data.nVars() > config.opt_cp3_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_cp3_cls || data.nTotLits() > config.opt_cp3_lits ) ) return l_Undef;
   
   if( config.opt_symm && config.opt_enabled ) { // do only if preprocessor is enabled
     symmetry.process(); 
@@ -1051,7 +1051,7 @@ lbool Preprocessor::inprocess()
   if( !config.opt_inprocess ) return l_Undef;
   
   // do not preprocess, if the formula is considered to be too large!
-  if( !data.unlimited() && ( (data.nVars() > config.opt_cp3_ipvars) || ((data.getClauses().size() + data.getLEarnts().size()) > config.opt_cp3_ipcls) ) ) return l_Undef;
+  if( !data.unlimited() && ( (data.nVars() > config.opt_cp3_ipvars) || ((data.getClauses().size() + data.getLEarnts().size()) > config.opt_cp3_ipcls) || data.nTotLits() > config.opt_cp3_iplits ) ) return l_Undef;
   
   // TODO: do something before preprocessing? e.g. some extra things with learned / original clauses
   if (config.opt_inprocess) {

@@ -32,7 +32,7 @@ bool Symmetry::process() {
   modifiedFormula = false;
   
   // do not simplify, if the formula is considered to be too large!
-  if( !data.unlimited() && ( data.nVars() > config.opt_symm_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_symm_cls ) ) return true;  
+  if( !data.unlimited() && ( data.nVars() > config.opt_symm_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_symm_cls || data.nTotLits() > config.opt_symm_lits  ) ) return true;  
   
   MethodTimer mt( &processTime );
   printf("c found units: %d, propagated: %d\n", solver.trail.size(), solver.qhead );
