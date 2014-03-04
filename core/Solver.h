@@ -296,7 +296,7 @@ protected:
       unsigned polarity:2;
       unsigned decision:2;
       unsigned seen:2;
-      unsigned extra:2;
+      unsigned extra:2; // TODO: use for special variable (not in LBD) and do not touch!
       VarFlags( char _polarity ) : assigns(l_Undef), polarity(_polarity), decision(0), seen(0), extra(0) {}
       VarFlags () : assigns(l_Undef), polarity(1), decision(0), seen(0), extra(0) {}
     };
@@ -397,7 +397,12 @@ protected:
 
     unsigned int computeLBD(const vec<Lit> & lits);
     unsigned int computeLBD(const Clause &c);
-    void minimisationWithBinaryResolution(vec<Lit> &out_learnt);
+    
+    /** perform minimization with binary clauses of the formula
+     *  @param lbd the current calculated LBD score of the clause
+     *  @return true, if the clause has been shrinked
+     */
+    bool minimisationWithBinaryResolution(vec<Lit> &out_learnt, unsigned int& lbd);
 
     void     relocAll         (ClauseAllocator& to);
 
@@ -472,6 +477,14 @@ protected:
     
     /// replace the disjunction p \lor q with x
     void disjunctionReplace( Minisat::Lit p, Minisat::Lit q, const Minisat::Lit x, bool inLearned, bool inBina );
+    
+    /// structure to store for each literal the literal for rewriting new learned clauses after an RER extension
+    struct LitPair {
+      Lit otherMatch, replaceWith;
+      LitPair( const Lit& l1, const Lit& l2 ) : otherMatch(l1), replaceWith(l2) {};
+      LitPair() :otherMatch(lit_Undef), replaceWith(lit_Undef) {}
+    };
+    vec< LitPair > erRewriteInfo; /// vector that stores the information to rewrite new learned clauses
     
     /** fill the current variable assignment into the given vector */
     void fillLAmodel(vec<LONG_INT>& pattern, const int steps, vec<Var>& relevantVariables ,const bool moveOnly = false); // fills current model into variable vector
@@ -561,6 +574,7 @@ protected:
   double totalECLlits; // to calc max and avg
   uint64_t maxResDepth;
   
+  int erRewriteRemovedLits,erRewriteClauses; // stats for ER rewriting
   
   vec<Lit> rerCommonLits; // literals that are common in the clauses in the window
   int64_t rerCommonLitsSum; // sum of the current common literals - to Bloom-Filter common lits
@@ -616,8 +630,11 @@ protected:
   // UHLE during search with learnt clauses:
   uint32_t searchUHLEs, searchUHLElits;
   
-  /** reduce the literals inside the clause with the help of the information of the binary implication graph (UHLE only) */
-  void searchUHLE(vec<Lit>& learned_clause );
+  /** reduce the literals inside the clause with the help of the information of the binary implication graph (UHLE only) 
+   * @param lbd current lbd value of the given clause
+   * @return true, if the clause has been shrinked, false otherwise (then, the LBD also stays the same)
+   */
+  bool searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd );
   
   
   /*

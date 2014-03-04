@@ -179,6 +179,10 @@ Solver::Solver(CoreConfig& _config) :
   ,totalECLlits(0)
   ,maxResDepth(0)
   
+  // extended resolution rewrite
+  ,erRewriteRemovedLits(0)
+  ,erRewriteClauses(0)
+  
   // restricted extended resolution
   ,rerCommonLitsSum(0)
   ,rerLearnedClause(0)
@@ -286,6 +290,10 @@ Var Solver::newVar(bool sign, bool dvar, char type)
     setDecisionVar(v, dvar);
     
     if( config.opt_hack > 0 ) trailPos.push(-1);
+    
+    if( config.opt_ecl_rewriteNew || config.opt_rer_rewriteNew ) {
+      erRewriteInfo. push ( LitPair() ); erRewriteInfo. push ( LitPair() ); // for the two new literals, add empty infos
+    }
     
     return v;
 }
@@ -486,10 +494,10 @@ inline unsigned int Solver::computeLBD(const Clause &c) {
 /******************************************************************
  * Minimisation with binary reolution
  ******************************************************************/
-void Solver::minimisationWithBinaryResolution(vec<Lit> &out_learnt) {
+bool Solver::minimisationWithBinaryResolution(vec< Lit >& out_learnt, unsigned int& lbd) {
   
   // Find the LBD measure                                                                                                         
-  const unsigned int lbd = computeLBD(out_learnt);
+  // const unsigned int lbd = computeLBD(out_learnt);
   const Lit p = ~out_learnt[0];
 
       if(lbd<=lbLBDMinimizingClause){
@@ -520,17 +528,16 @@ void Solver::minimisationWithBinaryResolution(vec<Lit> &out_learnt) {
 	  }
 	}
 	out_learnt.shrink(nb);
-      }
-    }
+	return true; // literals have been removed from the clause
+      } else return false; // no literals have been removed
+    } else return false; // no literals have been removed
 }
 
 
 /******************************************************************
  * Minimisation with binary implication graph
  ******************************************************************/
-void Solver::searchUHLE(vec<Lit>& learned_clause ) {
-    // Find the LBD measure                                                                                                         
-  const unsigned int lbd = computeLBD(learned_clause);
+bool Solver::searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd ) {
   if(lbd<=config.uhle_minimizing_lbd){ // should not touch the very first literal!
       const Lit p = learned_clause[0]; // this literal cannot be removed!
       const uint32_t cs = learned_clause.size(); // store the size of the initial clause
@@ -613,7 +620,9 @@ void Solver::searchUHLE(vec<Lit>& learned_clause ) {
       // do some stats!
       searchUHLEs ++;
       searchUHLElits += ( cs - learned_clause.size() );
-  }
+      if( cs != learned_clause.size() ) return true; // some literals have been removed
+      else return false; // no literals have been removed
+  } else return false;// no literals have been removed
 }
 
 // Revert to the state at given level (keeping all assignment at 'level' but not beyond).
@@ -863,8 +872,9 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     if( config.opt_ecl_debug || config.opt_rer_debug ) cerr << "c learned clause (before mini): " << out_learnt << endl;
     
     bool doMinimizeClause = true; // created extra learnt clause? yes -> do not minimize
+    lbd = computeLBD(out_learnt);
+    bool recomputeLBD = false; // current lbd is valid
     if( decisionLevel() > 0 && out_learnt.size() > decisionLevel() && out_learnt.size() > config.opt_learnDecMinSize && config.opt_learnDecPrecent != -1) { // is it worth to check for decisionClause?
-      lbd = computeLBD(out_learnt);
       if( lbd > (config.opt_learnDecPrecent * decisionLevel() + 99 ) / 100 ) {
 	// instead of learning a very long clause, which migh be deleted very soon (idea by Knuth, already implemented in lingeling(2013)
 	for (int j = 0; j < out_learnt.size(); j++) varFlags[var(out_learnt[j])].seen = 0;    // ('seen[]' is now cleared)
@@ -938,25 +948,65 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     max_literals += out_learnt.size();
     out_learnt.shrink(i - j);
     tot_literals += out_learnt.size();
+    if( i != j ) recomputeLBD = true; // necessary to recompute LBD here!
 
 
-    /* ***************************************
-      Minimisation with binary clauses of the asserting clause
-      First of all : we look for small clauses
-      Then, we reduce clauses with small LBD.
-      Otherwise, this can be useless
-     */
-    if( out_learnt.size()<=lbSizeMinimizingClause ) {
-      minimisationWithBinaryResolution(out_learnt); // code in this method should execute below code until determining correct backtrack level
-    }
-    
-    if( out_learnt.size() <= config.uhle_minimizing_size ) {
-      searchUHLE( out_learnt );
+      /* ***************************************
+	Minimisation with binary clauses of the asserting clause
+	First of all : we look for small clauses
+	Then, we reduce clauses with small LBD.
+	Otherwise, this can be useless
+      */
+
+      if( out_learnt.size()<=lbSizeMinimizingClause ) {
+	if( recomputeLBD ) lbd = computeLBD(out_learnt); // update current lbd
+	recomputeLBD = minimisationWithBinaryResolution(out_learnt, lbd); // code in this method should execute below code until determining correct backtrack level
+      }
       
+      if( out_learnt.size() <= config.uhle_minimizing_size ) {
+	if( recomputeLBD ) lbd = computeLBD(out_learnt); // update current lbd
+	recomputeLBD = searchUHLE( out_learnt, lbd );
+      }
       
-      
-      
-    }
+      // rewrite clause only, if one of the two systems added information
+      if( out_learnt.size() <= config.erRewrite_size ) {
+	if( recomputeLBD ) lbd = computeLBD(out_learnt); // update current lbd
+	recomputeLBD = false;
+	
+	// TODO: put into extra method
+	if(lbd<=config.erRewrite_lbd)
+	
+	if( (config.opt_rer_rewriteNew && config.opt_rer_windowSize == 2) || config.opt_ecl_rewriteNew ) { 
+	  if(  (config.opt_rer_rewriteNew && !config.opt_rer_as_learned) 
+	    || (config.opt_ecl_rewriteNew && !config.opt_ecl_as_learned)
+	  ) {
+	    // rewrite the learned clause by replacing a disjunction of two literals with the
+	    // corresponding ER-literal (has to be falsified as well)
+	    const int cs = out_learnt.size();
+	    // seen vector is still valid
+	    for( int i = 1; i < out_learnt.size(); ++ i ) {
+	      const Lit& l1 = out_learnt[i];
+	      const Lit& otherLit = erRewriteInfo[ toInt(l1) ].otherMatch;
+	      if( otherLit == lit_Undef ) continue; // there has been no rewriting with this literal yet
+	      if( ! varFlags[ var( otherLit ) ].seen ) continue; // the literal for rewriting is not present in the clause, because the variable is not present
+	      // check whether the other literal is present
+	      for( int j = 1; j < out_learnt.size(); ++ j ) {
+		if( i == j ) continue; // do not check the literal with itself
+		if( out_learnt[j] == otherLit ) { // found the other match
+		  out_learnt[i] = erRewriteInfo[ toInt(l1) ].replaceWith; // replace
+		  out_learnt[j] = out_learnt[ out_learnt.size() - 1 ]; // delete the other literal
+		  out_learnt.pop(); // by pushing forward, and pop_back
+		  erRewriteRemovedLits ++;
+		  break;
+		  // TODO: continue here!
+		}
+	      }
+	    }
+	    if( cs > out_learnt.size() ) erRewriteClauses ++;
+	  }
+	  
+	}
+      }
     } // end working on usual learnt clause (minimize etc.)
     
     
@@ -1000,8 +1050,8 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 
     assert( out_btlevel < decisionLevel() && "there should be some backjumping" );
     
-    // Compute LBD
-    lbd = computeLBD(out_learnt);
+    // Compute LBD, if the current value is not the right value
+    if( recomputeLBD ) lbd = computeLBD(out_learnt);
     lbd = isBiAsserting ? lbd + 1 : lbd; // for bi-asserting clauses the LBD has to be one larger (approximation), because it is not known whether the one literal would glue the other one
 
   
@@ -1139,7 +1189,7 @@ void Solver::uncheckedEnqueue(Lit p, CRef from)
       trailPos[ var(p) ] = (int)trail.size(); /// modified learning, important: before trail.push()!
 
     // prefetch watch lists
-    if(config.opt_prefetch) __builtin_prefetch( & watches[p] );
+    __builtin_prefetch( & watches[p] );
     if(config.opt_printDecisions > 1 ) {cerr << "c uncheched enqueue " << p; if( from != CRef_Undef ) cerr << " because of " <<  ca[from]; cerr << endl;}
       
     trail.push_(p);
@@ -2485,6 +2535,7 @@ lbool Solver::solve_()
 		   extendedLearnedClauses,extendedLearnedClausesCandidates,maxECLclause, extendedLearnedClauses == 0 ? 0 : ( totalECLlits / (double)extendedLearnedClauses), totalECLlits);
 	    printf("c res.ext.res.: %d rer, %d rerSizeCands, %d sizeReject, %d patternReject, %d bloomReject, %d maxSize, %.2lf avgSize, %.2lf totalLits\n",
 		   rerLearnedClause, rerLearnedSizeCandidates, rerSizeReject, rerPatternReject, rerPatternBloomReject, maxRERclause, rerLearnedClause == 0 ? 0 : (totalRERlits / (double) rerLearnedClause), totalRERlits );
+	    printf("c ER rewrite: %d cls, %d lits\n", erRewriteClauses, erRewriteRemovedLits );
 	    printf("c i.cls.strengthening: %.2lf seconds, %d calls, %d candidates, %d droppedBefore, %d shrinked, %d shrinkedLits\n", icsTime.getCpuTime(), icsCalls, icsCandidates, icsDroppedCandidates, icsShrinks, icsShrinkedLits );
 	    printf("c bi-asserting: %ld pre-Mini, %ld post-Mini, %.3lf rel-pre, %.3lf rel-post\n", biAssertingPreCount, biAssertingPostCount, 
 		   totalLearnedClauses == 0 ? 0 : (double) biAssertingPreCount / (double)totalLearnedClauses,
@@ -2839,6 +2890,11 @@ bool Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned 
     attachClause(cr);
   }
 
+  if( config.opt_ecl_rewriteNew && ! config.opt_ecl_as_learned ) { // add nfo for rewriting!
+    erRewriteInfo[ toInt( l1 ) ].otherMatch = l2;
+    erRewriteInfo[ toInt( l1 ) ].replaceWith =  mkLit(x,true);
+  }
+  
   // set the activity of the fresh variable (Huang used average of the two literals)
   double newAct = 0;
   const double& a1 = activity[var(l1)];
@@ -3123,6 +3179,12 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	}
 	// Update order_heap with respect to new activity:
 	if (order_heap.inHeap(x)) order_heap.decrease(x);
+	
+	// is rewrite enabled, then add information
+	if( config.opt_rer_rewriteNew && config.opt_rer_full && !config.opt_rer_as_learned && config.opt_rer_windowSize == 2) { // as real clause, and full extension, and two ltis
+	  erRewriteInfo[ toInt( ~rerLits[0] ) ].otherMatch = ~rerLits[1];
+	  erRewriteInfo[ toInt( ~rerLits[0] ) ].replaceWith = mkLit(x,true);
+	}
 	
 	// code from search method - enqueue the last decision again!
 	newDecisionLevel();
@@ -3812,6 +3874,13 @@ lbool Solver::inprocess(lbool status)
 	  big->generateImplied( nVars(), add_tmp );
 	  if( config.opt_uhdProbe > 2 ) big->sort( nVars() ); // sort all the lists once
 	}
+	
+	// actually, only necessary if the variables got removed or anything like that ...
+	if( config.opt_ecl_rewriteNew || (config.opt_rer_rewriteNew &&  config.opt_rer_windowSize == 2) ){
+	  erRewriteInfo.clear();
+	  erRewriteInfo.growTo( 2*nVars(), LitPair() );
+	}
+	
       }
     }
   }

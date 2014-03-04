@@ -414,6 +414,7 @@ rer-f  {yes,no}[yes]       # add full rer extension?
 rer-freq  {0.1,0.5,1.0}[1.0]       # how often rer compared to usual learning   
 
 rer-r  {0,1,2}[0]       # replace all disjunctions of the RER extension (only, if not added as learned, and if full - RER adds a conjunction, optionListPtr ), 0=no,1=formula,2=formula+learned
+rer-rn {no,yes}[no]			# rewrite new learned clauses
 rer-window  {2,3}[2]       # number of clauses to collect before fuse
 rer-maxLBD  {1,6,15,30,2147483647}[2147483647]       # maximum LBD to perform rer
 rer-minLBD  {1,6,15,30}[1]       # minimum LBD to perform rer
@@ -421,6 +422,8 @@ rer-max-size  {2,15,30,2147483647}[2147483647]       # maximum size of learned c
 rer-min-size  {2,6,15,30}[2]       # minimum size of learned clause to perform rer
 rer-new-act  {0,1,2,3,4}[0]       # how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean
 
+er-size     {8,16,30,64}[30] # size of a clause so that it is checked for being rewritten
+er-lbd      {6,12,18}[6]		 # lbd  of a clause so that it is checked for being rewritten
 
 #
 #  INIT OPTIONS:
@@ -576,6 +579,9 @@ rer-l         | rer in   {yes}
 rer-f         | rer in   {yes}
 rer-freq      | rer in   {yes}
 rer-r         | rer in   {yes}
+rer-rn        | rer-l in {no}
+rer-rn        | rer-f in {yes}
+rer-rn        | rer-window in {2}
 rer-window    | rer in   {yes}
 rer-maxLBD    | rer in   {yes}
 rer-minLBD    | rer in   {yes}

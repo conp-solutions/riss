@@ -153,7 +153,6 @@ public:
  IntOption opt_laBound;
  IntOption opt_laTopUnit;
 
- BoolOption opt_prefetch; 
  BoolOption opt_hpushUnit; 
  IntOption opt_simplifyInterval; 
 
@@ -170,45 +169,11 @@ public:
  IntOption opt_learnDecMinSize; // min size of a learned clause so that its turned into an decision clause
  BoolOption opt_learnDecRER;	// use decision learned clauses for restricted extended resolution?
 
- // these features become available with version 4
-#if defined TOOLVERSION && TOOLVERSION < 400
-  const bool opt_extendedClauseLearning; // perform extended clause learning
- const bool opt_ecl_as_learned; // add ecl clauses as learned clauses?
- const int opt_ecl_as_replaceAll; // run through formula/learned clauses and replace all the disjunctions (if not reason/watched ... )
- const bool opt_ecl_full; // add full ecl extension?
- const int opt_ecl_minSize; // minimum size of learned clause to perform ecl
- const int opt_ecl_maxLBD;  // maximum LBD to perform ecl
- const int opt_ecl_newAct;  // how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean
- const bool opt_ecl_debug;
- const double opt_ecl_smallLevel; // add ecl clauses only, if smallest two literals are from this level or below ( negative -> relativ, positive -> absolute! )
- const double opt_ecl_every;  // perform ecl at most every n conflicts
- 
- const bool opt_restrictedExtendedResolution; // perform restricted extended resolution
- const bool opt_rer_as_learned; // add rer clauses as learned clauses?
- const int opt_rer_as_replaceAll; // run through formula/learned clauses and replace all the disjunctions (if not reason/watched ... )
- const bool opt_rer_full; // add full rer extension?
- const int  opt_rer_minSize; // minimum size of learned clause to perform rer
- const int  opt_rer_maxSize; // minimum size of learned clause to perform rer
- const int  opt_rer_minLBD;  // minimum LBD to perform rer
- const int  opt_rer_maxLBD;  // maximum LBD to perform rer
- const int  opt_rer_windowSize;  // number of clauses needed, to perform rer
- const int  opt_rer_newAct;  // how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean
- const bool opt_rer_debug; // enable debug output
- const double opt_rer_every;  // perform rer at most every n conflicts
- 
- const bool opt_interleavedClauseStrengthening; // enable interleaved clause strengthening
- const int opt_ics_interval; // run ICS after another N conflicts
- const int opt_ics_processLast; // process this number of learned clauses (analyse, reject if quality too bad!)
- const bool opt_ics_keepLearnts; // keep the learned clauses that have been produced during the ICS
- const bool opt_ics_shrinkNew; // shrink the kept learned clauses in the very same run?! (makes only sense if the other clauses are kept!)
- const double opt_ics_LBDpercent;  // only look at a clause if its LBD is less than this percent of the average of the clauses that are looked at
- const double opt_ics_SIZEpercent; // only look at a clause if its size is less than this percent of the average size of the clauses that are looked at
- const bool opt_ics_debug;
 
-#else // version > 400
  BoolOption opt_extendedClauseLearning; // perform extended clause learning
  BoolOption opt_ecl_as_learned; // add ecl clauses as learned clauses?
  IntOption opt_ecl_as_replaceAll; // run through formula/learned clauses and replace all the disjunctions (if not reason/watched ... )
+ BoolOption opt_ecl_rewriteNew; // rewrite upcoming learned clauses (only, if not as learned clauses!)
  BoolOption opt_ecl_full; // add full ecl extension?
  IntOption opt_ecl_minSize; // minimum size of learned clause to perform ecl
  IntOption opt_ecl_maxLBD;  // maximum LBD to perform ecl
@@ -224,6 +189,7 @@ public:
  BoolOption opt_restrictedExtendedResolution; // perform restricted extended resolution
  BoolOption opt_rer_as_learned; // add rer clauses as learned clauses?
  IntOption opt_rer_as_replaceAll; // run through formula/learned clauses and replace all the disjunctions (if not reason/watched ... )
+ BoolOption opt_rer_rewriteNew; // rewrite upcoming learned clauses (only, if full extension, and not as learned clauses!)
  BoolOption opt_rer_full; // add full rer extension?
  IntOption  opt_rer_minSize; // minimum size of learned clause to perform rer
  IntOption  opt_rer_maxSize; // minimum size of learned clause to perform rer
@@ -238,6 +204,9 @@ public:
 #endif
  DoubleOption opt_rer_every;  // perform rer at most every n conflicts
  
+ IntOption erRewrite_size;	// size of clauses, so that it is tested whether they can be rewritten with ER
+ IntOption erRewrite_lbd;	// LBD of clauses, so that it is tested whether they can be rewritten with ER
+ 
  BoolOption opt_interleavedClauseStrengthening; // enable interleaved clause strengthening
  IntOption opt_ics_interval; // run ICS after another N conflicts
  IntOption opt_ics_processLast; // process this number of learned clauses (analyse, reject if quality too bad!)
@@ -251,7 +220,6 @@ public:
 #else
  BoolOption opt_ics_debug; // enable interleaved clause strengthening debug output
 #endif
-#endif // version < 400
  
 
 IntOption opt_uhdProbe;  // non, linear, or quadratic analysis

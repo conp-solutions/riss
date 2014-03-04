@@ -145,7 +145,6 @@ CoreConfig::CoreConfig() // add new options here!
  opt_laBound ("SEARCH - LOCAL LOOK AHEAD", "hlabound", "max. nr of LAs (-1 == inf)", 4096, IntRange(-1, INT32_MAX) , optionListPtr ),
  opt_laTopUnit ("SEARCH - LOCAL LOOK AHEAD", "hlaTop", "allow another LA after learning another nr of top level units (-1 = never)", -1, IntRange(-1, INT32_MAX), optionListPtr ),
 
- opt_prefetch ("MODS", "prefetch", "prefetch watch list, when literal is enqueued", true, optionListPtr ),
  opt_hpushUnit ("MODS", "delay-units", "does not propagate unit clauses until solving is initialized", false, optionListPtr ),
  opt_simplifyInterval ("MODS", "sInterval", "how often to perform simplifications on level 0", 0, IntRange(0, INT32_MAX) , optionListPtr ),
 
@@ -162,44 +161,11 @@ CoreConfig::CoreConfig() // add new options here!
  opt_learnDecMinSize ("SEARCH - DECISION CLAUSES", "learnDecMS",  "min size so that decision clauses are learned, -1 = off", 2, IntRange(2, INT32_MAX) , optionListPtr ),
  opt_learnDecRER     ("SEARCH - DECISION CLAUSES", "learnDecRER", "consider decision clauses for RER?",false , optionListPtr ),
 
-#if defined TOOLVERSION && TOOLVERSION < 400
- opt_extendedClauseLearning(false) ,
- opt_ecl_as_learned(false) ,
- opt_ecl_as_replaceAll(0) ,
- opt_ecl_full(false) ,
- opt_ecl_minSize(0) ,
- opt_ecl_maxLBD(0) ,
- opt_ecl_newAct(0) ,
- opt_ecl_debug(false) ,
- opt_ecl_smallLevel(0) ,
- opt_ecl_every(0) ,
- 
- opt_restrictedExtendedResolution(false) ,
- opt_rer_as_learned(false) ,
- opt_rer_as_replaceAll(0) ,
- opt_rer_full(false) ,
- opt_rer_minSize(0) ,
- opt_rer_maxSize(0) ,
- opt_rer_minLBD(0) ,
- opt_rer_maxLBD(0) ,
- opt_rer_windowSize(0) ,
- opt_rer_newAct(0) ,
- opt_rer_debug(false) ,
- opt_rer_every(0) ,
- 
- opt_interleavedClauseStrengthening(false) ,
- opt_ics_interval(0) ,
- opt_ics_processLast(0) ,
- opt_ics_keepLearnts(false) ,
- opt_ics_shrinkNew(false) ,
- opt_ics_LBDpercent(0) ,
- opt_ics_SIZEpercent(0) ,
- opt_ics_debug(false) ,
 
-#else // version > 400 
  opt_extendedClauseLearning("EXTENDED RESOLUTION ECL", "ecl", "perform extended clause learning (along Huang 2010)", false, optionListPtr ), 
  opt_ecl_as_learned("EXTENDED RESOLUTION ECL", "ecl-l", "add ecl clauses as learned clauses", true, optionListPtr ),
  opt_ecl_as_replaceAll("EXTENDED RESOLUTION ECL", "ecl-r", "run through formula and replace all disjunctions in the ECL (only if not added as learned) 0=no,1=formula,2=formula+learned", 0, IntRange(0, 2), optionListPtr ),
+ opt_ecl_rewriteNew("EXTENDED RESOLUTION ECL", "ecl-rn", "rewrite upcoming learned clauses as well (only, if not added as learned)", false, optionListPtr ),
  opt_ecl_full("EXTENDED RESOLUTION ECL", "ecl-f", "add full ecl extension?", true, optionListPtr ), 
  opt_ecl_minSize ("EXTENDED RESOLUTION ECL", "ecl-min-size", "minimum size of learned clause to perform ecl", 3, IntRange(3, INT32_MAX) , optionListPtr ),
  opt_ecl_maxLBD("EXTENDED RESOLUTION ECL", "ecl-maxLBD", "maximum LBD to perform ecl", 4, IntRange(2, INT32_MAX) , optionListPtr ), 
@@ -215,6 +181,7 @@ CoreConfig::CoreConfig() // add new options here!
  opt_restrictedExtendedResolution("EXTENDED RESOLUTION RER", "rer", "perform restricted extended resolution (along Audemard ea 2010)", false, optionListPtr ), 
  opt_rer_as_learned("EXTENDED RESOLUTION RER", "rer-l", "store extensions as learned clauses", true, optionListPtr ), 
  opt_rer_as_replaceAll("EXTENDED RESOLUTION RER", "rer-r", "replace all disjunctions of the RER extension (only, if not added as learned, and if full - RER adds a conjunction, optionListPtr ), 0=no,1=formula,2=formula+learned", 0, IntRange(0, 2), optionListPtr ), 
+ opt_rer_rewriteNew("EXTENDED RESOLUTION RER", "rer-rn", "rewrite new learned clauses, only if full and not added as learned", false, optionListPtr ), 
  opt_rer_full("EXTENDED RESOLUTION RER", "rer-f", "add full rer extension?", true, optionListPtr ), 
  opt_rer_minSize ("EXTENDED RESOLUTION RER", "rer-min-size", "minimum size of learned clause to perform rer", 2, IntRange(2, INT32_MAX) , optionListPtr ),
  opt_rer_maxSize("EXTENDED RESOLUTION RER", "rer-max-size", "maximum size of learned clause to perform rer", INT32_MAX, IntRange(2, INT32_MAX) , optionListPtr ),
@@ -229,6 +196,9 @@ CoreConfig::CoreConfig() // add new options here!
 #endif
  opt_rer_every("EXTENDED RESOLUTION RER", "rer-freq", "how often rer compared to usual learning", 1, DoubleRange(0, true, 1, true) , optionListPtr ),
  
+ erRewrite_size("EXTENDED RESOLUTION", "er-size", "rewrite new learned clauses with ER, if size is small enough", 30, IntRange(0, INT32_MAX), optionListPtr ),
+ erRewrite_lbd( "EXTENDED RESOLUTION", "er-lbd" , "rewrite new learned clauses with ER, if lbd is small enough",  6,  IntRange(0, INT32_MAX), optionListPtr ),
+ 
  opt_interleavedClauseStrengthening("INTERLEAVED CLAUSE STRENGTHENING", "ics", "perform interleaved clause strengthening (along Wieringa ea 2013)", false, optionListPtr ), 
  opt_ics_interval("INTERLEAVED CLAUSE STRENGTHENING", "ics_window" ,"run ICS after another N conflicts", 5000, IntRange(0, INT32_MAX) , optionListPtr ),
  opt_ics_processLast("INTERLEAVED CLAUSE STRENGTHENING", "ics_processLast" ,"process this number of learned clauses (analyse, reject if quality too bad!)", 5050, IntRange(0, INT32_MAX) , optionListPtr ),
@@ -241,7 +211,6 @@ CoreConfig::CoreConfig() // add new options here!
  opt_ics_debug(false),
 #else
  opt_ics_debug("INTERLEAVED CLAUSE STRENGTHENING", "ics-debug","debug output for ICS",false, optionListPtr ),
-#endif
 #endif
  
  // USING BIG information during search
