@@ -86,7 +86,6 @@ bool BoundedVariableAddition::process()
 	modifiedFormula = andBVA();
       }
     }
-    {
     if( data.unlimited() || ( data.nVars() <= config.opt_Xbva_vars && data.getClauses().size() + data.getLEarnts().size() <= config.opt_Xbva_cls ) ) { // apply only if limits are not reached
       if( config.opt_Xbva == 1) modifiedFormula = xorBVAhalf() || modifiedFormula;
       else if( config.opt_Xbva == 2) modifiedFormula = xorBVAfull() || modifiedFormula;
