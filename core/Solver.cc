@@ -625,6 +625,46 @@ bool Solver::searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd ) {
   } else return false;// no literals have been removed
 }
 
+
+bool Solver::erRewrite(vec<Lit>& learned_clause, unsigned int& lbd ){
+	// TODO: put into extra method
+	if(lbd<=config.erRewrite_lbd){
+	  if( (config.opt_rer_rewriteNew && config.opt_rer_windowSize == 2) || config.opt_ecl_rewriteNew ) {
+	    if(  (config.opt_rer_rewriteNew && !config.opt_rer_as_learned) 
+	      || (config.opt_ecl_rewriteNew && !config.opt_ecl_as_learned)
+	    ) {
+	      // rewrite the learned clause by replacing a disjunction of two literals with the
+	      // corresponding ER-literal (has to be falsified as well)
+	      const int cs = learned_clause.size();
+	      // seen vector is still valid
+	      for( int i = 1; i < learned_clause.size(); ++ i ) {
+		const Lit& l1 = learned_clause[i];
+		const Lit& otherLit = erRewriteInfo[ toInt(l1) ].otherMatch;
+		if( otherLit == lit_Undef ) continue; // there has been no rewriting with this literal yet
+		if( ! varFlags[ var( otherLit ) ].seen ) continue; // the literal for rewriting is not present in the clause, because the variable is not present
+		// check whether the other literal is present
+		for( int j = 1; j < learned_clause.size(); ++ j ) {
+		  if( i == j ) continue; // do not check the literal with itself
+		  if( learned_clause[j] == otherLit ) { // found the other match
+		    learned_clause[i] = erRewriteInfo[ toInt(l1) ].replaceWith; // replace
+		    learned_clause[j] = learned_clause[ learned_clause.size() - 1 ]; // delete the other literal
+		    learned_clause.pop(); // by pushing forward, and pop_back
+		    erRewriteRemovedLits ++;
+		    --i; // repeat current literal, moved in literal might be a replacable literal as well!
+		    break; // done with the current literal!
+		  }
+		}
+	      }
+	      if( cs > learned_clause.size() ) {
+		erRewriteClauses ++;
+		return true;
+	      } else return false;
+	    }
+	  }
+	}
+	return false;
+}
+
 // Revert to the state at given level (keeping all assignment at 'level' but not beyond).
 //
 void Solver::cancelUntil(int level) {
@@ -971,41 +1011,9 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
       // rewrite clause only, if one of the two systems added information
       if( out_learnt.size() <= config.erRewrite_size ) {
 	if( recomputeLBD ) lbd = computeLBD(out_learnt); // update current lbd
-	recomputeLBD = false;
+	recomputeLBD = erRewrite(out_learnt, lbd);
 	
-	// TODO: put into extra method
-	if(lbd<=config.erRewrite_lbd)
-	
-	if( (config.opt_rer_rewriteNew && config.opt_rer_windowSize == 2) || config.opt_ecl_rewriteNew ) { 
-	  if(  (config.opt_rer_rewriteNew && !config.opt_rer_as_learned) 
-	    || (config.opt_ecl_rewriteNew && !config.opt_ecl_as_learned)
-	  ) {
-	    // rewrite the learned clause by replacing a disjunction of two literals with the
-	    // corresponding ER-literal (has to be falsified as well)
-	    const int cs = out_learnt.size();
-	    // seen vector is still valid
-	    for( int i = 1; i < out_learnt.size(); ++ i ) {
-	      const Lit& l1 = out_learnt[i];
-	      const Lit& otherLit = erRewriteInfo[ toInt(l1) ].otherMatch;
-	      if( otherLit == lit_Undef ) continue; // there has been no rewriting with this literal yet
-	      if( ! varFlags[ var( otherLit ) ].seen ) continue; // the literal for rewriting is not present in the clause, because the variable is not present
-	      // check whether the other literal is present
-	      for( int j = 1; j < out_learnt.size(); ++ j ) {
-		if( i == j ) continue; // do not check the literal with itself
-		if( out_learnt[j] == otherLit ) { // found the other match
-		  out_learnt[i] = erRewriteInfo[ toInt(l1) ].replaceWith; // replace
-		  out_learnt[j] = out_learnt[ out_learnt.size() - 1 ]; // delete the other literal
-		  out_learnt.pop(); // by pushing forward, and pop_back
-		  erRewriteRemovedLits ++;
-		  break;
-		  // TODO: continue here!
-		}
-	      }
-	    }
-	    if( cs > out_learnt.size() ) erRewriteClauses ++;
-	  }
-	  
-	}
+
       }
     } // end working on usual learnt clause (minimize etc.)
     

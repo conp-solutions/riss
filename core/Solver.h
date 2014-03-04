@@ -636,6 +636,11 @@ protected:
    */
   bool searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd );
   
+  /** reduce the learned clause by replacing pairs of literals with their previously created extended resolution literal
+   * @param lbd current lbd value of the given clause
+   * @return true, if the clause has been shrinked, false otherwise (then, the LBD also stays the same)
+   */
+  bool erRewrite(vec<Lit>& learned_clause, unsigned int& lbd );
   
   /*
    * 
