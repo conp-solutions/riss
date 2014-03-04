@@ -90,7 +90,7 @@ bool Probing::process()
     if( config.pr_probe && data.ok()  ) {
       
       // do not probe, if the formula is considered to be too large!
-      if( !data.unlimited() && ( data.nVars() > config.opt_probe_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_probe_cls ) ) {
+      if( data.unlimited() || ( data.nVars() <= config.opt_probe_vars || data.getClauses().size() + data.getLEarnts().size() <= config.opt_probe_cls ) ) {
 	if( config.pr_debug_out > 0 ) cerr << "c old trail: " << solver.trail.size() << endl;
 	probing();
 	if( config.pr_debug_out > 0 ) cerr << "c new trail: " << solver.trail.size() << " solver.ok: " << data.ok() << endl;
@@ -102,7 +102,7 @@ bool Probing::process()
     // run clause vivification?
     const int beforeVivClauses = data.getClauses().size();
     if( config.pr_vivi && data.ok() ) {
-      if( !data.unlimited() && ( data.nVars() > config.opt_viv_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_viv_cls ) ) {
+      if( data.unlimited() || ( data.nVars() <= config.opt_viv_vars || data.getClauses().size() + data.getLEarnts().size() <= config.opt_viv_cls ) ) {
 	clauseVivification();
       }
       assert( solver.decisionLevel() == 0 && "after vivification the decision level should be 0!" );
