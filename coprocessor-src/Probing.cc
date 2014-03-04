@@ -54,12 +54,16 @@ bool Probing::process()
   if( ! performSimplification() ) return false; // do not do anything?!
   modifiedFormula = false;
   if( !data.ok() ) return false;
-  // do not simplify, if the formula is considered to be too large!
-  if( !data.unlimited() && ( data.nVars() > config.opt_probe_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_probe_cls ) ) return false;
-  
   
   // do not enter, if already unsatisfiable!
   if( (! config.pr_probe && ! config.pr_vivi) || !data.ok() ) return data.ok();
+  
+  // if all limits are reached, do not continue!
+  if( !data.unlimited() && ( data.nVars() > config.opt_probe_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_probe_cls ) ) {
+    if( !data.unlimited() && ( data.nVars() > config.opt_viv_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_viv_cls ) ) {
+      return false;
+    }
+  }
   
   // resetup solver
   reSetupSolver();
@@ -84,9 +88,13 @@ bool Probing::process()
     
     // run probing?
     if( config.pr_probe && data.ok()  ) {
-      if( config.pr_debug_out > 0 ) cerr << "c old trail: " << solver.trail.size() << endl;
-      probing();
-      if( config.pr_debug_out > 0 ) cerr << "c new trail: " << solver.trail.size() << " solver.ok: " << data.ok() << endl;
+      
+      // do not probe, if the formula is considered to be too large!
+      if( !data.unlimited() && ( data.nVars() > config.opt_probe_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_probe_cls ) ) {
+	if( config.pr_debug_out > 0 ) cerr << "c old trail: " << solver.trail.size() << endl;
+	probing();
+	if( config.pr_debug_out > 0 ) cerr << "c new trail: " << solver.trail.size() << " solver.ok: " << data.ok() << endl;
+      }
     }
     
     if( config.pr_debug_out > 0 ) cerr << "c after probing: cls: " << data.getClauses().size() << " vs. ls: " << data.getLEarnts().size() << endl;
@@ -94,7 +102,9 @@ bool Probing::process()
     // run clause vivification?
     const int beforeVivClauses = data.getClauses().size();
     if( config.pr_vivi && data.ok() ) {
-      clauseVivification();
+      if( !data.unlimited() && ( data.nVars() > config.opt_viv_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_viv_cls ) ) {
+	clauseVivification();
+      }
       assert( solver.decisionLevel() == 0 && "after vivification the decision level should be 0!" );
     }
 

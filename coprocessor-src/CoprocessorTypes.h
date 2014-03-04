@@ -162,7 +162,8 @@ class CoprocessorData
    * no statistical counters for each method, should be provided by each method!
    */
   uint32_t numberOfVars;                // number of variables
-  uint32_t numberOfCls;                 // number of clauses
+  uint32_t numberOfCls;                 // number of clauses during initialization
+  uint32_t numberOfTotalLiterals;       // number of total literals in the formula during initialization
   ComplOcc occs;                        // list of clauses, per literal
   vector<int32_t> lit_occurrence_count; // number of literal occurrences in the formula
 
@@ -245,6 +246,7 @@ public:
 
   uint32_t nCls()  const { return numberOfCls; }
   uint32_t nVars() const { return numberOfVars; }
+  uint32_t nTotLits() const { return solver->nTotLits(); }
   Var nextFreshVariable(char type);
   
   /** overwrite data of variable to with data of variable from 
@@ -604,6 +606,8 @@ inline CoprocessorData::CoprocessorData(ClauseAllocator& _ca, Solver* _solver, C
 : ca ( _ca )
 , solver( _solver )
 , numberOfVars(0)
+, numberOfCls(0)
+, numberOfTotalLiterals( _solver->tot_literals )
 , hasLimit( _limited )
 , randomOrder(_randomized)
 , currentlyInprocessing(false)

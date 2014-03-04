@@ -118,6 +118,7 @@ int main(int argc, char** argv)
   BoolOption   opt_checkModel ("MAIN", "checkModel", "verify model inside the solver before printing (if input is a file)", false);
         BoolOption   opt_modelStyle ("MAIN", "oldModel", "present model on screen in old format", false);
         BoolOption   opt_quiet      ("MAIN", "quiet", "Do not print the model", false);
+	BoolOption   opt_parseOnly  ("MAIN", "parseOnly", "abort after parsing", false);
   
   try {
         CoreConfig coreConfig;
@@ -195,15 +196,16 @@ int main(int argc, char** argv)
         gzclose(in);
         FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
 
-        if (S.verbosity > 0){
-            printf("c |  Number of variables:  %12d                                                                   |\n", S.nVars());
-            printf("c |  Number of clauses:    %12d                                                                   |\n", S.nClauses()); }
-        
         double parsed_time = cpuTime();
-        if (S.verbosity > 0){
-            printf("c |  Parse time:           %12.2f s                                                                 |\n", parsed_time - initial_time);
+	if (S.verbosity > 0){
+            printf("c |  Number of variables:       %12d                                                              |\n", S.nVars());
+            printf("c |  Number of clauses:         %12d                                                              |\n", S.nClauses());
+            printf("c |  Number of total literals:  %12d                                                              |\n", S.nTotLits());
+            printf("c |  Parse time:                %12.2f s                                                            |\n", parsed_time - initial_time);
             printf("c |                                                                                                       |\n"); }
 
+        if( opt_parseOnly ) exit(0); // simply stop here!
+            
         // Change to signal-handlers that will only notify the solver and allow it to terminate
         // voluntarily:
         //signal(SIGINT, SIGINT_interrupt);
