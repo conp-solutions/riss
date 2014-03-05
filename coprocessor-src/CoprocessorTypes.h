@@ -48,7 +48,7 @@ public:
 /** class that is used as mark array */
 class MarkArray {
 private:
-	vec<uint32_t> array;
+	vector<uint32_t> array;
 	uint32_t step;
 
 public:
@@ -62,18 +62,18 @@ public:
 	}
 
 	void destroy() {
-	  array.clear(true);
+	  vector<uint32_t>().swap(array);
 	  step = 0;
 	}
 
 	void create(const uint32_t newSize){
-	  array.growTo(newSize);
+	  array.resize(newSize);
 	  memset( &(array[0]), 0 , sizeof( uint32_t) * newSize );
 	}
 
 	void resize(const uint32_t newSize) {
 	  if( newSize > array.size() ) {
-	    array.growTo(newSize);
+	    array.resize(newSize);
 	    memset( &(array[0]), 0 , sizeof( uint32_t) * (newSize) );
 	  }
 	}
