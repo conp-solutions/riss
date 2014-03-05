@@ -922,12 +922,12 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	
 	for(int i=0; i<decisionLevel(); ++i) {
 	  if( (i == 0 || trail_lim[i] != trail_lim[i-1]) && trail_lim[i] < trail.size() ) // no dummy level caused by assumptions ...
-	    out_learnt.push( ~trail[ trail_lim[i] ] ); // get all decisions into dec array
+	    out_learnt.push( ~trail[ trail_lim[i] ] ); // get the complements of all decisions into dec array
 	}
 	if( config.opt_printDecisions > 2 || config.opt_learn_debug || config.opt_ecl_debug || config.opt_rer_debug) cerr << endl << "c current decision stack: " << out_learnt << endl ;
-	const Lit tmpLit = out_learnt[ out_learnt.size() -1 ];
-	out_learnt[ out_learnt.size() -1 ] = out_learnt[0];
-	out_learnt[0] = ~tmpLit; // new implied literal is the negation of the last decision literal
+	// const Lit tmpLit = out_learnt[ out_learnt.size() -1 ]; // 
+	out_learnt[ out_learnt.size() -1 ] = out_learnt[0]; // have first decision as last literal
+	out_learnt[0] = ~p; // new implied literal is the negation of the asserting literal ( could also be the last decision literal, then the learned clause is a decision clause)
 	learnedDecisionClauses ++;
 	if( config.opt_printDecisions > 2 || config.opt_learn_debug || config.opt_ecl_debug || config.opt_rer_debug) cerr << endl << "c learn decisionClause " << out_learnt << endl << endl;
 	doMinimizeClause = false;
@@ -4038,6 +4038,7 @@ lbool Solver::otfssProcessClauses(int backtrack_level)
       otfssClss += otfssCls.size();
       for( int i = 0 ; i < otfssCls.size() ; ++ i ) {
 	Clause& c = ca[otfssCls[i]]; // when the first literal is removed, all literals of c are falsified! (has been reason for first literal)
+	if( c.mark() != 0 ) continue; // do not handle a clause that is already satisfied!
 	// TODO: does not work with DRUP yet!
 	const int l1 = decisionLevel();
 	int l2=0, movePosition = 2;
