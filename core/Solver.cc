@@ -922,7 +922,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	
 	for(int i=0; i<decisionLevel(); ++i) {
 	  if( (i == 0 || trail_lim[i] != trail_lim[i-1]) && trail_lim[i] < trail.size() ) // no dummy level caused by assumptions ...
-	    out_learnt.push( trail[ trail_lim[i] ] ); // get all decisions into dec array
+	    out_learnt.push( ~trail[ trail_lim[i] ] ); // get all decisions into dec array
 	}
 	if( config.opt_printDecisions > 2 || config.opt_learn_debug || config.opt_ecl_debug || config.opt_rer_debug) cerr << endl << "c current decision stack: " << out_learnt << endl ;
 	const Lit tmpLit = out_learnt[ out_learnt.size() -1 ];
@@ -1012,8 +1012,6 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
       if( out_learnt.size() <= config.erRewrite_size ) {
 	if( recomputeLBD ) lbd = computeLBD(out_learnt); // update current lbd
 	recomputeLBD = erRewrite(out_learnt, lbd);
-	
-
       }
     } // end working on usual learnt clause (minimize etc.)
     

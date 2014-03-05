@@ -48,15 +48,12 @@ public:
 /** class that is used as mark array */
 class MarkArray {
 private:
-	uint32_t* array;
+	vec<uint32_t> array;
 	uint32_t step;
-	uint32_t mySize;
 
 public:
 	MarkArray ():
-	 array(0),
-	 step(0),
-	 mySize(0)
+	 step(0)
 	 {}
 
 	~MarkArray ()
@@ -65,22 +62,19 @@ public:
 	}
 
 	void destroy() {
-	  if( array != 0 ) free( array );
-	  mySize = 0; step = 0; array = 0;
+	  array.clear(true);
+	  step = 0;
 	}
 
 	void create(const uint32_t newSize){
-	  assert( array == 0 );
-	  array = (uint32_t * ) malloc( sizeof( uint32_t) * newSize );
-	  memset( array, 0 , sizeof( uint32_t) * newSize );
-	  mySize = newSize;
+	  array.growTo(newSize);
+	  memset( &(array[0]), 0 , sizeof( uint32_t) * newSize );
 	}
 
 	void resize(const uint32_t newSize) {
-	  if( newSize > mySize ) {
-	    array = (uint32_t * ) realloc( array, sizeof( uint32_t) * newSize );
-	    memset( &(array[mySize]), 0 , sizeof( uint32_t) * (newSize - mySize) );
-	    mySize = newSize;
+	  if( newSize > array.size() ) {
+	    array.growTo(newSize);
+	    memset( &(array[0]), 0 , sizeof( uint32_t) * (newSize) );
 	  }
 	}
 
@@ -93,7 +87,7 @@ public:
 	/** reset the marks of the whole array
 	 */
 	void reset() {
-	  memset( array, 0 , sizeof( uint32_t) * mySize );
+	  memset( &(array[0]), 0 , sizeof( uint32_t) * array.size() );
 	  step = 0;
 	}
 
@@ -122,7 +116,7 @@ public:
 	}
 
 	uint32_t size() const {
-	  return mySize;
+	  return array.size();
 	}
 
 	uint32_t getIndex(uint32_t index) const { return array[index]; }
