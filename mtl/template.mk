@@ -20,7 +20,7 @@ LIBSCOBJS  = $(addsuffix s,  $(COBJS))
 LINKSCOBJS = $(filter-out */Main.os, $(LIBSCOBJS))
 
 
-CXX       ?= g++
+CXX       ?= g++ -std=c++11
 CFLAGS    ?= -Wall -Wno-parentheses
 LFLAGS    ?= -Wall
 

@@ -30,7 +30,13 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #else
 
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+#	include <cstdint>
+#else
 #   include <stdint.h>
+#endif
+
+
 #   include <inttypes.h>
 
 #endif
