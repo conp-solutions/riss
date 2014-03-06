@@ -169,9 +169,7 @@ class CoprocessorData
   Lock dataLock;                        // lock for parallel algorithms to synchronize access to data structures
 
   MarkArray deleteTimer;                // store for each literal when (by which technique) it has been deleted
-  vector<char> untouchable;             // store all variables that should not be touched (altering presence in models)
 
- 
   vector<Lit> undo;                     // store clauses that have to be undone for extending the model
   int lastCompressUndoLits;             // number of literals when the last compression took place
   int decompressedUndoLits;             // number of literals on the decompressedUndoLits stack
@@ -380,8 +378,8 @@ public:
   vector<CRef>& getStrengthClauses();
   
   // checking whether a literal can be altered - TODO: use the frozen information from the solver object!
-  void setNotTouch(const Var v);
-  bool doNotTouch (const Var v) const ;
+  void setNotTouch(const Var& v);
+  bool doNotTouch (const Var& v) const ;
   
   // TODO: remove after debug
   void printTrail(ostream& stream) {
@@ -618,7 +616,6 @@ inline void CoprocessorData::init(uint32_t nVars)
   lit_occurrence_count.resize( nVars * 2, 0 );
   numberOfVars = nVars;
   deleteTimer.create( nVars );
-  untouchable.resize(nVars);
   
   //if there is still something in the queues, get rid of it!
   getStrengthClauses().clear();
@@ -672,7 +669,6 @@ inline Var CoprocessorData::nextFreshVariable(char type)
   // cerr << "c resize occs to " << occs.size() << endl;
   lit_occurrence_count.resize( 2 * nVars() );
   
-  untouchable.push_back(0);
   // cerr << "c new fresh variable: " << nextVar+1 << endl;
   return nextVar;
 }
@@ -686,13 +682,13 @@ inline void CoprocessorData::moveVar(Var from, Var to, bool final)
     solver->varFlags[to].seen = solver->varFlags[to].seen; solver->varFlags[to].seen = 0;
     solver->varFlags[to].polarity = solver->varFlags[from].polarity; solver->varFlags[from].polarity = 0;
     solver->varFlags[to].decision = solver->varFlags[from].decision; solver->varFlags[from].decision = false;
+    solver->varFlags[to].frozen = solver->varFlags[from].frozen; solver->varFlags[from].frozen = false;
     
     // cp3 structures
     lit_occurrence_count[toInt( mkLit(to, false ))] = lit_occurrence_count[toInt( mkLit(from, false ))];
     lit_occurrence_count[toInt( mkLit(to, true  ))] = lit_occurrence_count[toInt( mkLit(from, true  ))];
     occs[toInt( mkLit(to, false ))].swap( occs[toInt( mkLit(from, false ))] );
     occs[toInt( mkLit(to, true  ))].swap( occs[toInt( mkLit(from, true  ))] );
-    untouchable[to] = untouchable[from];
   }
   if( final == true ) {
   
@@ -709,7 +705,6 @@ inline void CoprocessorData::moveVar(Var from, Var to, bool final)
     numberOfVars = solver->nVars();
     lit_occurrence_count.resize( nVars() * 2 );
     occs.resize(nVars() * 2);
-    untouchable.resize( nVars() );
   }
 }
 
@@ -1640,17 +1635,14 @@ inline vector<CRef>& CoprocessorData::getStrengthClauses()
 }
 
 
-inline void CoprocessorData::setNotTouch(const Var v)
+inline void CoprocessorData::setNotTouch(const Var& v)
 {
-  while( untouchable.size() <= v ) untouchable.push_back(0); // automatic size increase if not yet initialized
-  //cerr << "c untouchable: " << v+1 << endl;
-  untouchable[v] = 1;
+  solver->freezeVariable(v,true);
 }
 
-inline bool CoprocessorData::doNotTouch(const Var v) const
+inline bool CoprocessorData::doNotTouch(const Var& v) const
 {
-  assert( untouchable.size() > v && "the data for being untouchable should be stored somewhere" );
-  return untouchable[v] == 1;
+  return solver->isFrozen(v);
 }
 
 bool inline CoprocessorData::removeClauseThreadSafe (const CRef cr)
