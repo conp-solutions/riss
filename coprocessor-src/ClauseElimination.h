@@ -76,7 +76,7 @@ protected:
   /** check whether all clauses with literal ~l result in a tautology when resolved with l based on the mark-array
    * @return true, if l is blocking literal wrt. array
    */
-  bool markedBCE(const Coprocessor::CoprocessorData& data, const Lit& l, const Coprocessor::MarkArray& array);
+  bool markedBCE(const Coprocessor::CoprocessorData& data, const Lit& l, const MarkArray& array);
   
   /** check whether the clause resolved with the array results in a tautology */
   bool markedBCE(const Lit& l, const Clause& c, const MarkArray& array);

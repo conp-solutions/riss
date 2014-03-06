@@ -314,6 +314,7 @@ ClaNextClause:;
 bool ClauseElimination::markedBCE(const CoprocessorData& data, const Lit& l, const MarkArray& array)
 {
   const Lit nl = ~l;
+  if( data.doNotTouch( var(nl) ) ) return false; // not allowed to perform BCE on the current literal!
   for( int i = 0 ; i < data.list(nl).size(); ++ i )
     if( ! markedBCE(~l, ca[ data.list(nl)[i] ], array ) ) return false;
   return true;

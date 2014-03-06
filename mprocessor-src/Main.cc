@@ -198,7 +198,7 @@ int main(int argc, char** argv)
 		    {
 			fprintf(wcnfFile,"%ld ",top);
 			fprintf(wcnfFile,"%s%d", sign(S.trail[i]) ? "-" : "", var(S.trail[i])+1);
-			fprintf(wcnfFile,"0\n");
+			fprintf(wcnfFile," 0\n");
 		    }
 		}
 		// print clauses

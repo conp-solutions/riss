@@ -40,7 +40,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "core/Constants.h"
 #include "core/CoreConfig.h"
 
-
 //
 // choose which bit width should be used
 // (used in level-X-look-ahead and FM)
@@ -76,6 +75,7 @@ extern Minisat::BoolOption opt_rupProofOnly;
 
 namespace Minisat {
 
+ class OnlineProofChecker; 
  class IncSolver;
 //=================================================================================================
 // Solver -- the main class:
@@ -238,6 +238,7 @@ protected:
 #endif
     }; return d; }  
     
+public:
     struct Watcher {
 	// payload
 	CRef clauseReference;
@@ -274,7 +275,7 @@ protected:
         VarOrderLt(const vec<double>&  act) : activity(act) { }
     };
 
-
+protected:
     // Solver state:
     //
     int lastIndexRed;
@@ -522,6 +523,10 @@ public: static inline int irand(double& seed, int size) {
         return (int)(drand(seed) * size); }
 
 protected:
+  
+  OnlineProofChecker* onlineDratChecker;
+  
+  
   // UIP hack
   int l1conflicts; // number of conflicts at level 1
   int multiLearnt; // number of multiple learnt units at level 1

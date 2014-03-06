@@ -114,7 +114,7 @@ static unsigned parse_WCNF_main(B& in, Solver& S, vec<Weight>& literalWeights ) 
             readWCNFClause(in, S, lits, original_vars);
 	    
 	    if( weight > 0 ) { // if the weight is 0, then noghting has to be done!
-	      cerr << "c found clause " << lits << " with weight " << weight << "(max=" << top << ") vars=" << vars <<endl;
+	      // cerr << "c found clause " << lits << " with weight " << weight << "(max=" << top << ") vars=" << vars <<endl;
 	      if (weight != top || !isWcnf ) // this clause is weighted, or the instance is not a WCNF
 	      {
 		if( lits.size() != 1 ) { // what happens to empty clauses?
@@ -133,7 +133,7 @@ static unsigned parse_WCNF_main(B& in, Solver& S, vec<Weight>& literalWeights ) 
 		  S.freezeVariable( relaxVariables, true ); // set this variable as frozen!
 		  S.addClause(lits);
 		} else {
-		  literalWeights[ toInt( ~lits[0] ) ] += weight;	// if variable is true, then the clause is false, henec pay the cost!
+		  literalWeights[ toInt( lits[0] ) ] += weight;	// if variable is true, then the clause is false, henec pay the cost!
 		  S.freezeVariable( var(lits[0]), true ); // set this variable as frozen!
 		}
 	      }

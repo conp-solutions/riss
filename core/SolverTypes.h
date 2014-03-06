@@ -32,6 +32,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #define Minisat_SolverTypes_h
 
 #include <cstdio>
+#include <cstring>
 #include <assert.h>
 
 #include "mtl/IntTypes.h"
@@ -852,6 +853,87 @@ inline void Clause::strengthen(Lit p)
     calcAbstraction();
 }
 //=================================================================================================
+
+
+/** class that is used as mark array */
+class MarkArray {
+private:
+	vector<uint32_t> array;
+	uint32_t step;
+
+public:
+	MarkArray ():
+	 step(0)
+	 {}
+
+	~MarkArray ()
+	{
+	  destroy();
+	}
+
+	void destroy() {
+	  vector<uint32_t>().swap(array);
+	  step = 0;
+	}
+
+	void create(const uint32_t newSize){
+	  array.resize(newSize);
+	  memset( &(array[0]), 0 , sizeof( uint32_t) * newSize );
+	}
+
+	void resize(const uint32_t newSize) {
+	  if( newSize > array.size() ) {
+	    array.resize(newSize);
+	    memset( &(array[0]), 0 , sizeof( uint32_t) * (newSize) );
+	  }
+	}
+
+	/** reset the mark of a single item
+	 */
+	void reset( const uint32_t index ) {
+	  array[index] = 0;
+	}
+
+	/** reset the marks of the whole array
+	 */
+	void reset() {
+	  memset( &(array[0]), 0 , sizeof( uint32_t) * array.size() );
+	  step = 0;
+	}
+
+	/** give number of next step. if value becomes critical, array will be reset
+	 */
+	uint32_t nextStep() {
+	  if( step >= 1 << 30 ) reset();
+	  return ++step;
+	}
+
+	/** returns whether an item has been marked at the current step
+	 */
+	bool isCurrentStep( const uint32_t index ) const {
+	  return array[index] == step;
+	}
+
+	/** set an item to the current step value
+	 */
+	void setCurrentStep( const uint32_t index ) {
+	  array[index] = step;
+	}
+
+	/** check whether a given index has the wanted index */ 
+	bool hasSameIndex( const uint32_t index, const uint32_t comparestep ) const { //TODO name is confusing hasSameStep ??
+	  return array[index] == comparestep;
+	}
+
+	uint32_t size() const {
+	  return array.size();
+	}
+
+	uint32_t getIndex(uint32_t index) const { return array[index]; }
+
+};
+
+  
 }
 
  

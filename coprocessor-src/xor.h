@@ -117,7 +117,7 @@ public:
   /** propagate found units in all related xors 
    * @return true if no conflict was found, false if a conflict was found
    */
-  bool propagate(vector< Lit >& unitQueue, Coprocessor::MarkArray& ma, vector< std::vector< int > >& occs, vector< GaussXor >& xorList);
+  bool propagate(vector< Lit >& unitQueue, MarkArray& ma, vector< std::vector< int > >& occs, vector< GaussXor >& xorList);
 
 protected:
   

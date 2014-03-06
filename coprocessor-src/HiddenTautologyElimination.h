@@ -48,21 +48,21 @@ public:
   void printStatistics(ostream& stream);
   
   /** fills the mark arrays for a certain variable */
-  Lit fillHlaArrays(Var v, Coprocessor::BIG& big, Coprocessor::MarkArray& hlaPositive, Coprocessor::MarkArray& hlaNegative, Lit* litQueue, bool doLock = false);
+  Lit fillHlaArrays(Var v, Coprocessor::BIG& big, MarkArray& hlaPositive, MarkArray& hlaNegative, Lit* litQueue, bool doLock = false);
   
   /** mark all literals that would appear in HLA(C) 
    * @return true, if clause can be removed by HTE
    */
-  bool hlaMarkClause(const Minisat::CRef cr, Coprocessor::BIG& big, Coprocessor::MarkArray& markArray, Lit* litQueue );
+  bool hlaMarkClause(const Minisat::CRef cr, Coprocessor::BIG& big, MarkArray& markArray, Lit* litQueue );
   /// same as above, but can add literals to the vector, so that the vector represents the real HLA(C) clause
-  bool hlaMarkClause(vec< Lit >& clause, Coprocessor::BIG& big, Coprocessor::MarkArray& markArray, Lit* litQueue, bool addLits = false);
+  bool hlaMarkClause(vec< Lit >& clause, Coprocessor::BIG& big, MarkArray& markArray, Lit* litQueue, bool addLits = false);
   
   /** mark all literals that would appear in ALA(C) 
    * @return true, if clause can be removed by ATE
    */
-  bool alaMarkClause(const Minisat::CRef cr, Coprocessor::CoprocessorData& data, Coprocessor::MarkArray& markArray, Coprocessor::MarkArray& helpArray);
+  bool alaMarkClause(const Minisat::CRef cr, Coprocessor::CoprocessorData& data, MarkArray& markArray, MarkArray& helpArray);
   /// same as above, but can add literals to the vector, so that the vector represents the real ALA(C) clause
-  bool alaMarkClause(vec< Lit >& clause, Coprocessor::CoprocessorData& data, Coprocessor::MarkArray& markArray, Coprocessor::MarkArray& helpArray, bool addLits = false);
+  bool alaMarkClause(vec< Lit >& clause, Coprocessor::CoprocessorData& data, MarkArray& markArray, MarkArray& helpArray, bool addLits = false);
   
   void destroy();
   
@@ -77,7 +77,7 @@ protected:
   void elimination_worker (CoprocessorData& data, uint32_t start, uint32_t end, BIG& big, bool doStatistics = true, bool doLock = false); // subsume certain set of elements of the processing queue, does not write to the queue
   
   /** run hte for the specified variable */
-  bool hiddenTautologyElimination(Var v, Coprocessor::CoprocessorData& data, Coprocessor::BIG& big, Coprocessor::MarkArray& hlaPositive, Coprocessor::MarkArray& hlaNegative, bool statistic = true, bool doLock = false);
+  bool hiddenTautologyElimination(Var v, Coprocessor::CoprocessorData& data, Coprocessor::BIG& big, MarkArray& hlaPositive, MarkArray& hlaNegative, bool statistic = true, bool doLock = false);
   
   /** data for parallel execution of HTE */
   struct EliminationData {

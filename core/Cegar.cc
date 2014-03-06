@@ -110,7 +110,7 @@ void Solver::cegarBVA(vec< Lit >& cegarClauseLits)
   MethodClock methodTime( cbTime );
 
   // fill local data structures
-  Coprocessor::MarkArray markArray;
+  MarkArray markArray;
   markArray.resize( nVars() * 2 );
   vector<CegarBVAlitMatch> stack;
   vec<Lit> tmpLiterals;

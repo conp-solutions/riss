@@ -41,6 +41,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 // to be able to read var files
 #include "coprocessor-src/VarFileParser.h"
 
+// check generation of DRUP/DRAT proof on the fly
+#include "core/OnlineProofChecker.h"
+
 using namespace Minisat;
 
 //=================================================================================================
@@ -3578,7 +3581,7 @@ void Solver::substituteDisjunctions(vec< Lit >& assumptions)
   MethodClock methodTime( sdTime );
 
   // fill local data structures
-  Coprocessor::MarkArray markArray;
+  Minisat::MarkArray markArray;
   markArray.resize( nVars() * 2 );
   vec<Lit> tmpLiterals;
   uint32_t* lCount = (uint32_t*) malloc( sizeof( uint32_t ) * 2 * nVars() );
