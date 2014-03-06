@@ -287,7 +287,7 @@ bool Preprocessor::parseUndoInfo(const string& filename) {
  return true;
 }
 
-bool Preprocessor::writeUndoInfo(const string& filename) {
+bool Preprocessor::writeUndoInfo(const string& filename, int originalVariables) {
  
   assert( solver->decisionLevel() == 0 && "cannot write undo information during search!" );
   
@@ -308,8 +308,12 @@ bool Preprocessor::writeUndoInfo(const string& filename) {
  cerr << "c write undo for " << promisedClauses << " clauses and " <<  solver->trail.size() << " units" << endl;
    
  promisedClauses += solver->trail.size();
-   
- file << "p cnf " << formulaVariables << " " << promisedClauses << endl;
+ 
+ if( originalVariables == -1 || ( formulaVariables < originalVariables ) ) { // use the formula variables, if they are smaller
+  file << "p cnf " << formulaVariables << " " << promisedClauses << endl;
+ } else {
+  file << "p cnf " << formulaVariables << " " << promisedClauses << endl;
+ }
 
  assert( (undo.size() == 0 || undo[0] == lit_Undef) && "first undo symbol has to be a lit_Undef");
  

@@ -293,12 +293,13 @@ protected:
 
     struct VarFlags {
       lbool assigns;
-      unsigned polarity:2;
-      unsigned decision:2;
-      unsigned seen:2;
-      unsigned extra:2; // TODO: use for special variable (not in LBD) and do not touch!
-      VarFlags( char _polarity ) : assigns(l_Undef), polarity(_polarity), decision(0), seen(0), extra(0) {}
-      VarFlags () : assigns(l_Undef), polarity(1), decision(0), seen(0), extra(0) {}
+      unsigned polarity:1;
+      unsigned decision:1;
+      unsigned seen:1;
+      unsigned extra:4; // TODO: use for special variable (not in LBD) and do not touch!
+      unsigned frozen:1; // indicate that this variable cannot be used for simplification techniques that do not preserve equivalence
+      VarFlags( char _polarity ) : assigns(l_Undef), polarity(_polarity), decision(0), seen(0), extra(0), frozen(0) {}
+      VarFlags () : assigns(l_Undef), polarity(1), decision(0), seen(0), extra(0), frozen(0) {}
     };
     vec<VarFlags> varFlags;
     
@@ -307,7 +308,14 @@ protected:
 //     vec<char>           decision;         // Declares if a variable is eligible for selection in the decision heuristic.
 //      vec<char>           seen;
     
+
 public:
+    /// set whether a variable can be used for simplification techniques that do not preserve equivalence
+    void freezeVariable( const Var&v, const bool& frozen ) { varFlags[v].frozen = frozen; }
+    /// indicates that this variable cannot be used for simplification techniques that do not preserve equivalence
+    bool isFrozen( const Var&v ) const { return varFlags[v].frozen; }
+    
+
     vec<Lit>            trail;            // Assignment stack; stores all assigments made in the order they were made.
 protected:
     vec<int>            nbpos;

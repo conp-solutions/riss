@@ -109,8 +109,8 @@ static double parseDouble(B& in) { // only in the form X.XXXXXe-XX
 
 
 template<class B>
-static int parseInt(B& in) {
-    int     val = 0;
+static int64_t parseInt(B& in) {
+    int64_t     val = 0;
     bool    neg = false;
     skipWhitespace(in);
     if      (*in == '-') neg = true, ++in;

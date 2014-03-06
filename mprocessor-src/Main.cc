@@ -1,7 +1,7 @@
 /*****************************************************************************************[Main.cc]
 Copyright (c) 2003-2006, Niklas Een, Niklas Sorensson
 Copyright (c) 2007,      Niklas Sorensson
-Copyright (c) 2012, Norbert Manthey, All rights reserved.
+Copyright (c) 2013,      Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
 #include <errno.h>
@@ -17,6 +17,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "simp/SimpSolver.h"
 
 #include "coprocessor-src/Coprocessor.h"
+
+#include "mprocessor-src/WDimacs.h"
 
 #include "VERSION" // include the file that defines the solver version
 
@@ -41,9 +43,6 @@ void printStats(Solver& solver)
 
 
 static Solver* solver;
-
-static bool receivedInterupt = false;
-
 // Terminate by notifying the solver and back out gracefully. This is mainly to have a test-case
 // for this feature of the Solver as it may take longer than an immediate call to '_exit()'.
 static void SIGINT_interrupt(int signum) { solver->interrupt(); }
@@ -53,13 +52,10 @@ static void SIGINT_interrupt(int signum) { solver->interrupt(); }
 // functions are guarded by locks for multithreaded use).
 static void SIGINT_exit(int signum) {
     printf("\n"); printf("c *** INTERRUPTED ***\n");
-//     if (solver->verbosity > 0){
-//         printStats(*solver);
-//         printf("\n"); printf("c *** INTERRUPTED ***\n"); }
-    solver->interrupt();
-    if( receivedInterupt ) _exit(1);
-    else receivedInterupt = true;
-}
+    if (solver->verbosity > 0){
+        printStats(*solver);
+        printf("\n"); printf("c *** INTERRUPTED ***\n"); }
+    _exit(1); }
 
 
 //=================================================================================================
@@ -77,9 +73,6 @@ int main(int argc, char** argv)
         StringOption dimacs ("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
-
-	StringOption drupFile         ("PROOF", "drup", "Write a proof trace into the given file",0);
-	StringOption opt_proofFormat  ("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, should be DRUP)","DRUP");
 	
 	const char* _cat = "COPROCESSOR 3";
 	StringOption undoFile      (_cat, "undo",   "write information about undoing simplifications into given file (and var map into X.map file)");
@@ -87,12 +80,12 @@ int main(int argc, char** argv)
 	StringOption modelFile     (_cat, "model",  "read model from SAT solver from this file");
 	IntOption    opt_search    (_cat, "search", "perform search until the given number of conflicts", 1, IntRange(0, INT32_MAX));
 	
-        parseOptions(argc, argv, true);
-        
         CoreConfig coreConfig;
-        coreConfig.parseOptions(argc, argv, true);
-
 	Coprocessor::CP3Config cp3config;
+	
+	
+	parseOptions(argc, argv, true);
+	coreConfig.parseOptions(argc, argv, true);
 	cp3config.parseOptions(argc, argv, true);
 	
         Solver S(coreConfig);
@@ -140,22 +133,22 @@ int main(int argc, char** argv)
 	      printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
 	  
 	  if (S.verbosity > 0) {
-  	      printf("c ================================[ Coprocessor %5.2f ]====================================================\n", solverVersion);
-	      printf("c|  Norbert Manthey. The use of the tool is limited to research only!                                     |\n");
+  	      printf("c ================================[  Mprocessor %5.2f ]====================================================\n", solverVersion);
+	      printf("c |  Norbert Manthey. The use of the tool is limited to research only!                                    |\n");
   	      printf("c | Contributors:                                                                                         |\n");
 	      printf("c |     Kilian Gebhard: Implementation of BVE, Subsumption, Parallelization                               |\n");
 	      printf("c ============================[ Problem Statistics ]=======================================================\n");
 	      printf("c |                                                                                                       |\n"); }
 	      
-	    // open file for proof
-	    S.drupProofFile = (drupFile) ? fopen( (const char*) drupFile , "wb") : NULL;
-	    if( opt_proofFormat && strlen(opt_proofFormat) > 0 &&  S.drupProofFile != NULL ) fprintf( S.drupProofFile, "o proof %s\n", (const char*)opt_proofFormat ); // we are writing proofs of the given format!
-	      
-	    parse_DIMACS(in, S);
+	    
+	    // parse the formula, and furthermore also freeze all relaxation literals!
+	    vec<Weight> literalWeights; // have a vector that knows the weights for all the (relaxation) variables
+	    unsigned int originalVariables = parse_WCNF(in, S,literalWeights);
+	    
 	    gzclose(in);
 
 	    if (S.verbosity > 0){
-		printf("c |  Number of variables:  %12d                                                                  |\n", S.nVars());
+		printf("c |  Number of variables:  %12d                                                                   |\n", S.nVars());
 		printf("c |  Number of clauses:    %12d                                                                   |\n", S.nClauses()); }
 	    
 	    double parsed_time = cpuTime();
@@ -175,32 +168,78 @@ int main(int argc, char** argv)
 		printf("c |  Simplification time:  %12.2f s                                                                 |\n", simplified_time - parsed_time);
 		printf("c |                                                                                                       |\n"); }
 
-	    // do coprocessing here!
-
 	    // TODO: do not reduce the variables withing the formula!
 	    if (dimacs){
 		if (S.verbosity > 0)
 		    printf("c ==============================[ Writing DIMACS ]=========================================================\n");
 		//S.toDimacs((const char*)dimacs);
-		preprocessor.outputFormula((const char*) dimacs);
+		FILE* wcnfFile = fopen((const char*) dimacs, "wb");
+		if( wcnfFile == NULL ) {
+		  cerr << "c WARNING: could not open file " << (const char*) dimacs << " to write the formula" << endl;
+		  exit(3);
+		}
+		// calculate the header
+		int vars = S.nVars();
+		int cls = S.trail.size() + S.clauses.size();
+		Weight top = 0;
+		for( Var v = 0 ; v < S.nVars(); ++ v ) { // for each weighted literal, have an extra clause!
+		  cls = (literalWeights[toInt(mkLit(v))] != 0 ? cls + 1 : cls);
+		  cls = (literalWeights[toInt(~mkLit(v))] != 0 ? cls + 1 : cls);
+		  top += literalWeights[toInt(mkLit(v))] + literalWeights[toInt(~mkLit(v))];
+		}
+		top ++;
+		
+		// write header
+		fprintf(wcnfFile, "p wcnf %d %d %ld\n", vars, cls, top );
+		// write the hard clauses into the formula!
+		// print assignments
+		for (int i = 0; i < S.trail.size(); ++i)
+		{
+		    {
+			fprintf(wcnfFile,"%ld ",top);
+			fprintf(wcnfFile,"%s%d", sign(S.trail[i]) ? "-" : "", var(S.trail[i])+1);
+			fprintf(wcnfFile,"0\n");
+		    }
+		}
+		// print clauses
+		for (int i = 0; i < S.clauses.size(); ++i)
+		{
+		  const Clause & c = S.ca[S.clauses[i]];
+		  if (c.mark()) continue;
+		  stringstream s;
+		  for (int i = 0; i < c.size(); ++i)
+		    s << c[i] << " ";
+		  s << "0" << endl;
+		  fprintf(wcnfFile, "%ld %s",top , s.str().c_str() );
+		}  
+		// write all the soft clauses (write after hard clauses, because there might be units that can have positive effects on the next tool in the chain!)
+		for( Var v = 0 ; v < S.nVars(); ++ v ) { // for each weighted literal, have an extra clause!
+		  if( literalWeights[toInt(mkLit(v))] != 0 ) { // setting literal mkLit(v) to true ha a cost, hence have unit!
+		    fprintf(wcnfFile, "%ld %d 0\n", literalWeights[toInt(mkLit(v))], v+1 );
+		  }
+		  if( literalWeights[toInt(~mkLit(v))] != 0 ) { // setting literal ~mkLit(v) to true ha a cost, hence have unit!
+		    fprintf(wcnfFile, "%ld %d 0\n", literalWeights[toInt(~mkLit(v))], -v-1 );
+		  }
+		}
+		// close the file
+		fclose(wcnfFile);
 	    }
 	    
 	    if(  (const char*)undoFile != 0  ) {
 		if (S.verbosity > 0)
 		    printf("c =============================[ Writing Undo Info ]=======================================================\n");
-	      preprocessor.writeUndoInfo( string(undoFile) );
+	      preprocessor.writeUndoInfo( string(undoFile), originalVariables );
 	    }
 	    
 	    if (!S.okay()){
-	        if (S.drupProofFile != NULL) fprintf(S.drupProofFile, "0\n"), fclose(S.drupProofFile); // tell proof about result!
 		if (res != NULL) { fprintf(res, "s UNSATISFIABLE\n"); fclose(res); cerr << "s UNSATISFIABLE" << endl; }
 		else printf("s UNSATISFIABLE\n");
 		if (S.verbosity > 0){
 		    printf("c =========================================================================================================\n");
 		    printf("c Solved by simplification\n");
 		    printStats(S);
-		    printf("\n"); }
-		
+		    printf("\n");
+		}
 		cerr.flush(); cout.flush();
 #ifdef NDEBUG
 		exit(20);     // (faster than "return", which will invoke the destructor for 'Solver')
@@ -208,49 +247,12 @@ int main(int argc, char** argv)
 		return (20);
 #endif
 	    } else {
-	      lbool ret = l_Undef;
-	      if( opt_search > 0 ) {
-		S.setConfBudget(1); // solve until first conflict!
-		S.verbosity = 0;
-		vec<Lit> dummy;
-		S.useCoprocessorPP = false;
-		S.useCoprocessorIP = false;
-		ret = S.solveLimited(dummy);
-	      }
-	      if( ret == l_True ) {
-		fclose(S.drupProofFile); // close proof file!
-		preprocessor.extendModel(S.model);
-		if( res != NULL ) {
-		  cerr << "s SATISFIABLE" << endl;
-		  fprintf(res, "s SATISFIABLE\nv ");
-		  for (int i = 0; i < preprocessor.getFormulaVariables(); i++)
-		    if (S.model[i] != l_Undef)
-		      fprintf(res, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
-		  fprintf(res, " 0\n");
-		} else {
-		  printf("s SATISFIABLE\nv ");
-		  for (int i = 0; i < preprocessor.getFormulaVariables(); i++)
-		    if (S.model[i] != l_Undef)
-		      printf("%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
-		  printf(" 0\n");
-		}
-		cerr.flush(); cout.flush();
+	      if (res != NULL) { fprintf(res, "s UNKNOWN\n"); fclose(res); cerr << "s UNKNOWN" << endl; }
 #ifdef NDEBUG
-		exit(10);     // (faster than "return", which will invoke the destructor for 'Solver')
+		exit(0);     // (faster than "return", which will invoke the destructor for 'Solver')
 #else
-		return (10);
+		return (0);
 #endif
-	      } else if ( ret == l_False ) {
-		if (S.drupProofFile != NULL) fprintf(S.drupProofFile, "0\n"), fclose(S.drupProofFile); // tell proof about result!
-		if (res != NULL) fprintf(res, "s UNSATISFIABLE\n"), fclose(res);
-		printf("s UNSATISFIABLE\n");
-		cerr.flush(); cout.flush();
-#ifdef NDEBUG
-		exit(20);     // (faster than "return", which will invoke the destructor for 'Solver')
-#else
-		return (20);
-#endif
-	      }
 	    }
 	} else {
 //

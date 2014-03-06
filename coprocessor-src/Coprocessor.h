@@ -117,9 +117,10 @@ public:
   bool parseUndoInfo(const string& filename);
 
   /** write model extend information to specified file 
+   * @param originalVariables variables that are present in the actual problem (tool might have added variables from the outside)
    * @return false, if some error happened
    */
-  bool writeUndoInfo(const string& filename);
+  bool writeUndoInfo(const string& filename, int originalVariables = -1);
   
   /** return info about formula to be writtern*/
   void getCNFinfo(int& vars, int& cls);

@@ -51,16 +51,16 @@ qd: qprocessord
 # build the bmc tool
 #
 aigbmcd: libd
-	cd aiger-src; make aigbmc CFLAGS="-O0 -g" ARGS=$(ARGS);  mv aigbmc ..
+	cd shiftbmc-src; make aigbmc CFLAGS="-O0 -g" ARGS=$(ARGS);  mv aigbmc ..
 
 aigbmcs: libs
-	cd aiger-src; make aigbmc ARGS=$(ARGS); mv aigbmc ..
+	cd shiftbmc-src; make aigbmc ARGS=$(ARGS); mv aigbmc ..
 
 aigbmc-abcd: libd
-	cd aiger-src; make aigbmc-abc CFLAGS="-O0 -g" ARGS=$(ARGS);  mv aigbmc-abc ..
+	cd shiftbmc-src; make aigbmc-abc CFLAGS="-O0 -g" ARGS=$(ARGS);  mv aigbmc-abc ..
 
 aigbmc-abcs: libs
-	cd aiger-src; make aigbmc-abc ARGS=$(ARGS) ;  mv aigbmc-abc ..
+	cd shiftbmc-src; make aigbmc-abc ARGS=$(ARGS) ;  mv aigbmc-abc ..
 	
 # build the solver
 riss: always
@@ -97,13 +97,26 @@ coprocessorRS: always
 coprocessord: always
 	cd coprocessor-src;  make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv coprocessor_debug ../coprocessor
 	
+
+	
 classifierd: always
 	cd classifier-src;  make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv classifier_debug ../classifier
 	
 classifiers: always
 	cd classifier-src;  make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv classifier_static ../classifier
+
+
+# simple MaxSAT preprocessor
+mprocessord: always
+	cd mprocessor-src;  make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv mprocessor_debug ../mprocessor
+
+mprocessor: always
+	cd mprocessor-src;  make r INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv mprocessor_release ../mprocessor
 	
-	
+mprocessorRS: always
+	cd mprocessor-src;  make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv mprocessor_static ../mprocessor
+
+
 # simple qbf preprocessor
 qprocessord: always
 	cd qprocessor-src;  make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv qprocessor_debug ../qprocessor
@@ -149,9 +162,11 @@ bmctar: clean toolclean
 clean:
 	@cd core; make clean CPDEPEND="" MROOT=..;
 	@cd simp; make clean MROOT=..;
-	@cd coprocessor-src; make clean MROOT=..;
-	@cd qprocessor-src; make clean MROOT=..;
-	@cd classifier-src; make clean MROOT=..;
+	@if [ -d "coprocessor-src" ]; then cd coprocessor-src; make clean MROOT=..; fi
+	@if [ -d "qprocessor-src" ]; then cd qprocessor-src; make clean MROOT=..; fi
+	@if [ -d "mprocessor-src" ]; then cd mprocessor-src; make clean MROOT=..; fi
+	@if [ -d "classifier-src" ]; then cd classifier-src; make clean MROOT=..; fi
+	@if [ -d "shiftbmc-src" ]; then cd shiftbmc-src; make clean MROOT=..; fi
 	@rm -f riss coprocessor qprocessor libriss.a libcp.so
 	@rm -f *~ */*~
 	@rm -rf doc/html
