@@ -123,8 +123,8 @@ int main(int argc, char** argv)
   try {
         CoreConfig coreConfig;
 	Coprocessor::CP3Config cp3config;
-        coreConfig.parseOptions(argc, argv, true);
-	cp3config.parseOptions(argc, argv, true);
+        coreConfig.parseOptions(argc, argv);
+	cp3config.parseOptions(argc, argv);
 	
         SimpSolver S(coreConfig);
 	S.setPreprocessor(&cp3config); // tell solver about preprocessor

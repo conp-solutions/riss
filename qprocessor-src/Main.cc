@@ -76,8 +76,8 @@ int main(int argc, char** argv)
 	
         CoreConfig coreConfig;
 	Coprocessor::CP3Config cp3config;
-	bool foundHelp = coreConfig.parseOptions(argc, argv, true);
-	foundHelp = cp3config.parseOptions(argc, argv, true) || foundHelp;
+	bool foundHelp = coreConfig.parseOptions(argc, argv);
+	foundHelp = cp3config.parseOptions(argc, argv) || foundHelp;
 	::parseOptions (argc, argv ); // parse all global options
 	if( foundHelp ) exit(0); // stop after printing the help information
 	
