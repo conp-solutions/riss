@@ -11,6 +11,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "coprocessor-src/CP3Config.h"
 
+#include "mtl/Sort.h"
+
 using namespace Coprocessor;
 
 const char* _cat = "COPROCESSOR 3";
@@ -42,7 +44,7 @@ const char* _cat_rat = "COPROCESSOR 3 - RAT Elimination";
 CP3Config::CP3Config() // add new options here!
 :
  // to easily debug options!
- optionListPtr ( false ? &configOptions : 0 ),
+ optionListPtr ( true ? &configOptions : 0 ),
 
  
  //
@@ -473,12 +475,12 @@ opt_newAlk          (_cat_fm, "cp3_fm_newAlk"  ,"create clauses from deduced ALK
 opt_checkSub       (_cat_fm, "cp3_fm_newSub"   ,"check whether new ALO and ALK subsume other clauses (only if newALO or newALK)", true, optionListPtr ),
 opt_rem_first      (_cat_fm, "cp3_fm_1st"      ,"extract first AMO candidate, or last AMO candidate", false, optionListPtr ),
 
-opt_minCardClauseSize (_cat_fm, "card_minC"    ,"min clause size to find cards", 3, IntRange(2, INT32_MAX)),
-opt_maxCardClauseSize (_cat_fm, "card_maxC"    ,"max clause size to find cards", 6, IntRange(2, INT32_MAX)),
-opt_maxCardSize       (_cat_fm, "card_max"     ,"max card size that will be looked for", 12, IntRange(2, INT32_MAX)),
-opt_semSearchLimit    (_cat_fm, "card_Elimit"  ,"number of steps allowed for searching AMOs semantically", 1200000, Int64Range(0, INT64_MAX)),
-opt_semDebug          (_cat_fm, "card_debug"   ,"print info during running semantic card find", false),
-opt_noReduct          (_cat_fm, "card_noUnits" ,"assume there are no unit clauses inside the formula (otherwise, more expensive)", false),
+opt_minCardClauseSize (_cat_fm, "card_minC"    ,"min clause size to find cards", 3, IntRange(2, INT32_MAX), optionListPtr),
+opt_maxCardClauseSize (_cat_fm, "card_maxC"    ,"max clause size to find cards", 6, IntRange(2, INT32_MAX), optionListPtr),
+opt_maxCardSize       (_cat_fm, "card_max"     ,"max card size that will be looked for", 12, IntRange(2, INT32_MAX), optionListPtr),
+opt_semSearchLimit    (_cat_fm, "card_Elimit"  ,"number of steps allowed for searching AMOs semantically", 1200000, Int64Range(0, INT64_MAX), optionListPtr),
+opt_semDebug          (_cat_fm, "card_debug"   ,"print info during running semantic card find", false, optionListPtr),
+opt_noReduct          (_cat_fm, "card_noUnits" ,"assume there are no unit clauses inside the formula (otherwise, more expensive)", false, optionListPtr),
 
 #if defined TOOLVERSION 
 fm_debug_out (0),
@@ -695,8 +697,8 @@ opt_uhd_EE        (_cat_uhd, "cp3_uhdEE",        "Use equivalent literal elimina
 opt_uhd_TestDbl   (_cat_uhd, "cp3_uhdTstDbl",    "Test for duplicate binary clauses", false, optionListPtr ),
 opt_uhd_probe     (_cat_uhd, "cp3_uhdProbe",     "Approximate probing (bin cls) with stamp info (off,constant,linear,quadratic,exponential)", 0, IntRange(0, 4), optionListPtr ),
 opt_uhd_fullProbe (_cat_uhd, "cp3_uhdPrSize",    "Enable unhide probing for larger clauses, size <= given parameter", 2, IntRange(2, INT32_MAX), optionListPtr ),
-opt_uhd_probeEE   (_cat_uhd, "cp3_uhdPrEE",      "Find Equivalences during uhd probing (requ. uhdProbe > 1)", false ),
-opt_uhd_fullBorder(_cat_uhd, "cp3_uhdPrSiBo",    "Check larger clauses only in first and last iteration", true ),
+opt_uhd_probeEE   (_cat_uhd, "cp3_uhdPrEE",      "Find Equivalences during uhd probing (requ. uhdProbe > 1)", false, optionListPtr  ),
+opt_uhd_fullBorder(_cat_uhd, "cp3_uhdPrSiBo",    "Check larger clauses only in first and last iteration", true, optionListPtr  ),
 #if defined TOOLVERSION  
 opt_uhd_Debug(0),
 #else
@@ -721,9 +723,76 @@ opt_xor_debug             (_cat_xor, "xor-debug",       "Debug Output of XOR rea
  dummy (0)
 {}
 
-void CP3Config::parseOptions(int& argc, char** argv, bool strict)
+bool CP3Config::parseOptions(int& argc, char** argv, bool strict)
 {
- ::parseOptions (argc, argv, strict ); // simply parse all options
+// debug
+//   if( optionListPtr == 0 ) {
+//     ::parseOptions (argc, argv, strict ); // simply parse all options
+//     return false;
+//   }
+  
+  // usual way to parse options
+    int i, j;
+    bool ret = false; // printed help?
+    for (i = j = 1; i < argc; i++){
+        const char* str = argv[i];
+        if (match(str, "--") && match(str, Option::getHelpPrefixString()) && match(str, "help")){
+            if (*str == '\0') {
+                this->printUsageAndExit(argc, argv);
+		ret = true;
+	    } else if (match(str, "-verb")) {
+                this->printUsageAndExit(argc, argv, true);
+		ret = true;
+	    }
+	    argv[j++] = argv[i]; // keep -help in parameters!
+        } else {
+            bool parsed_ok = false;
+        
+            for (int k = 0; !parsed_ok && k < optionListPtr->size(); k++){
+                parsed_ok = (*optionListPtr)[k]->parse(argv[i]);
+
+                // fprintf(stderr, "checking %d: %s against flag <%s> (%s)\n", i, argv[i], Option::getOptionList()[k]->name, parsed_ok ? "ok" : "skip");
+            }
+
+            if (!parsed_ok)
+                if (strict && match(argv[i], "-"))
+                    fprintf(stderr, "ERROR! Unknown flag \"%s\". Use '--%shelp' for help.\n", argv[i], Option::getHelpPrefixString()), exit(1);
+                else
+                    argv[j++] = argv[i];
+        }
+    }
+
+    argc -= (i - j);
+    return ret; // return indicates whether a parameter "help" has been found
+}
+
+void CP3Config::printUsageAndExit(int  argc, char** argv, bool verbose)
+{
+    const char* usage = Option::getUsageString();
+    if (usage != NULL) {
+	fprintf(stderr, "\n");
+        fprintf(stderr, usage, argv[0]);
+    }
+
+    sort( (*optionListPtr) , Option::OptionLt());
+
+    const char* prev_cat  = NULL;
+    const char* prev_type = NULL;
+
+    for (int i = 0; i < (*optionListPtr).size(); i++){
+        const char* cat  = (*optionListPtr)[i]->category;
+        const char* type = (*optionListPtr)[i]->type_name;
+
+        if (cat != prev_cat)
+            fprintf(stderr, "\n%s OPTIONS:\n\n", cat);
+        else if (type != prev_type)
+            fprintf(stderr, "\n");
+
+        (*optionListPtr)[i]->help(verbose);
+
+        prev_cat  = (*optionListPtr)[i]->category;
+        prev_type = (*optionListPtr)[i]->type_name;
+    }
 }
 
 bool CP3Config::checkConfiguration()

@@ -101,8 +101,6 @@ cp3_sls_cls  {0,2000000,4000000,6000000,500000}[500000]       # clause limit to 
 cp3_susi_lits {0,1000000,5000000,10000000}[10000000]       # total literals limit to enable
 cp3_hte_lits {0,1000000,5000000,20000000}[20000000]       # total literals limit to enable
 cp3_bce_lits {0,1000000,5000000,30000000}[30000000]       # total literals limit to enable
-cp3_ent_lits {0,1000000,5000000,2147483647}[2147483647]       # total literals limit to enable
-cp3_la_lits {0,1000000,5000000,2147483647}[2147483647]       # total literals limit to enable
 cp3_cce_lits {0,1000000,5000000,50000000}[50000000]       # total literals limit to enable
 cp3_rate_lits {0,1000000,5000000,10000000}[10000000]       # total literals limit to enable
 cp3_ee_lits {0,1000000,5000000,40000000}[40000000]       # total literals limit to enable
@@ -116,7 +114,7 @@ cp3_viv_lits {0,1000000,5000000,15000000}[15000000]       # total literals limit
 cp3_tRes_lits {0,1000000,5000000,50000000}[50000000]       # total literals limit to enable
 cp3_symm_lits {0,1000000,5000000,15000000}[15000000]       # total literals limit to enable
 cp3_fm_lits {0,1000000,5000000,20000000}[20000000]       # total literals limit to enable
-cp3_xor_lits {0,1000000,5000000,5000000}[5000000]       # total literals limit to enable
+cp3_xor_lits {0,1000000,5000000}[5000000]       # total literals limit to enable
 cp3_sls_lits {0,1000000,5000000,4000000}[4000000]       # total literals limit to enable
 
 #
@@ -677,8 +675,6 @@ cp3_sls_cls    | sls in    {yes}
 cp3_susi_lits   | subsimp in {yes}
 cp3_hte_lits    | hte in   {yes}
 cp3_bce_lits    | bce in   {yes}
-cp3_ent_lits    | ent in   {yes}
-cp3_la_lits     | la in    {yes}
 cp3_cce_lits    | cce in   {yes}
 cp3_rate_lits   | rate in  {yes}
 cp3_ee_lits     | ee in    {yes}

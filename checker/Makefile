@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: certifiedSAT stc drup-check brup2drup verify cnfdd cnfuzz precochk lgl mtcnfdd
+all: certifiedSAT stc drup-check brup2drup verify cnfdd cnfuzz precochk lgl mtcnfdd wcnfuzz
 
 certifiedSAT: certifiedSAT.cc 
 	g++ certifiedSAT.cc -o certifiedSAT -O0 -g
@@ -33,8 +33,12 @@ lgl:
 verify: 
 	g++ verify_model.c -o verify -O3 
 
+wcnfuzz: wcnfuzz.cc
+	g++ wcnfuzz.cc -o wcnfuzz -lrt
+
 clean:
 	rm -f mtcnfdd cnfuzz cnfdd precochk lgl verify
 	cd lingeling; make clean
 	rm -f *.o
 	rm -f certifiedSAT stc drup-check brup2drup
+

@@ -57,7 +57,10 @@ int main(int argc, char** argv)
         parseOptions(argc, argv, true);
         
         CoreConfig coreConfig;
-        coreConfig.parseOptions(argc, argv, true);
+	Coprocessor::CP3Config cp3config;
+	bool foundHelp = coreConfig.parseOptions(argc, argv, true);
+	::parseOptions (argc, argv ); // parse all global options
+	if( foundHelp ) exit(0); // stop after printing the help information
 
 	
         Solver S(coreConfig);

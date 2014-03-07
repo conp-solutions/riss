@@ -31,8 +31,13 @@ public:
  /** default constructor, which sets up all options in their standard format */
  CP3Config ();
 
- /** parse all options from the command line */
- void parseOptions (int& argc, char** argv, bool strict = false);
+ /** parse all options from the command line 
+  * @return true, if "-help" was found as a parameter
+  */
+ bool parseOptions (int& argc, char** argv, bool strict = false);
+ 
+ /** show print for the options of this object */
+ void printUsageAndExit(int  argc, char** argv, bool verbose = false);
  
  /** checks all specified constraints */
  bool checkConfiguration();

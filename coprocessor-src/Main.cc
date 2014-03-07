@@ -87,13 +87,13 @@ int main(int argc, char** argv)
 	StringOption modelFile     (_cat, "model",  "read model from SAT solver from this file");
 	IntOption    opt_search    (_cat, "search", "perform search until the given number of conflicts", 1, IntRange(0, INT32_MAX));
 	
-        parseOptions(argc, argv, true);
-        
-        CoreConfig coreConfig;
-        coreConfig.parseOptions(argc, argv, true);
-
+    CoreConfig coreConfig;
 	Coprocessor::CP3Config cp3config;
-	cp3config.parseOptions(argc, argv, true);
+
+	bool foundHelp = coreConfig.parseOptions(argc, argv, true);
+	foundHelp = cp3config.parseOptions(argc, argv, true) || foundHelp;
+	::parseOptions (argc, argv ); // parse all global options
+	if( foundHelp ) exit(0); // stop after printing the help information
 	
         Solver S(coreConfig);
 	S.setPreprocessor(&cp3config); // tell solver about preprocessor

@@ -74,9 +74,15 @@ int main(int argc, char** argv)
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 	
-        parseOptions(argc, argv, true);
-        
-        Solver  S;
+        CoreConfig coreConfig;
+	Coprocessor::CP3Config cp3config;
+	bool foundHelp = coreConfig.parseOptions(argc, argv, true);
+	foundHelp = cp3config.parseOptions(argc, argv, true) || foundHelp;
+	::parseOptions (argc, argv ); // parse all global options
+	if( foundHelp ) exit(0); // stop after printing the help information
+	
+        Solver S(coreConfig);
+	S.setPreprocessor(&cp3config); // tell solver about preprocessor
         double      initial_time = cpuTime();
 
         S.verbosity = verb;

@@ -59,8 +59,6 @@ void Minisat::setHelpPrefixStr  (const char* str){ Option::getHelpPrefixString()
 void Minisat::printUsageAndExit (int argc, char** argv, bool verbose)
 {
     const char* usage = Option::getUsageString();
-    if (usage != NULL)
-        fprintf(stderr, usage, argv[0]);
 
     sort(Option::getOptionList(), Option::OptionLt());
 
@@ -82,6 +80,13 @@ void Minisat::printUsageAndExit (int argc, char** argv, bool verbose)
         prev_type = Option::getOptionList()[i]->type_name;
     }
 
+    if (usage != NULL) {
+      fprintf(stderr, "\n");
+      fprintf(stderr, usage, argv[0]);
+    }
+	
+    
+    fprintf(stderr, "\n");
     fprintf(stderr, "\nHELP OPTIONS:\n\n");
     fprintf(stderr, "  --%shelp        Print help message.\n", Option::getHelpPrefixString());
     fprintf(stderr, "  --%shelp-verb   Print verbose help message.\n", Option::getHelpPrefixString());

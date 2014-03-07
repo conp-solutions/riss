@@ -23,7 +23,7 @@ static const char* _cm = "CORE -- MINIMIZE";
 CoreConfig::CoreConfig() // add new options here!
 :
  // to easily debug options!
- optionListPtr ( false ? &configOptions : 0 ),
+ optionListPtr ( true ? &configOptions : 0 ),
 
  
  //
@@ -251,11 +251,7 @@ CoreConfig::CoreConfig() // add new options here!
 
 bool CoreConfig::parseOptions(int& argc, char** argv, bool strict)
 {
-  // debug
-  if( optionListPtr == 0 ) {
-    ::parseOptions (argc, argv, strict ); // simply parse all options
-    return false;
-  }
+    if( optionListPtr == 0 ) return false; // the options will not be parsed
   
   // usual way to parse options
     int i, j;
@@ -264,17 +260,18 @@ bool CoreConfig::parseOptions(int& argc, char** argv, bool strict)
         const char* str = argv[i];
         if (match(str, "--") && match(str, Option::getHelpPrefixString()) && match(str, "help")){
             if (*str == '\0') {
-                printUsageAndExit(argc, argv);
+                this->printUsageAndExit(argc, argv);
 		ret = true;
 	    } else if (match(str, "-verb")) {
-                printUsageAndExit(argc, argv, true);
+                this->printUsageAndExit(argc, argv, true);
 		ret = true;
 	    }
+	    argv[j++] = argv[i]; // keep -help in parameters!
         } else {
             bool parsed_ok = false;
         
-            for (int k = 0; !parsed_ok && k < Option::getOptionList().size(); k++){
-                parsed_ok = Option::getOptionList()[k]->parse(argv[i]);
+            for (int k = 0; !parsed_ok && k < optionListPtr->size(); k++){
+                parsed_ok = (*optionListPtr)[k]->parse(argv[i]);
 
                 // fprintf(stderr, "checking %d: %s against flag <%s> (%s)\n", i, argv[i], Option::getOptionList()[k]->name, parsed_ok ? "ok" : "skip");
             }
@@ -294,27 +291,29 @@ bool CoreConfig::parseOptions(int& argc, char** argv, bool strict)
 void CoreConfig::printUsageAndExit(int  argc, char** argv, bool verbose)
 {
     const char* usage = Option::getUsageString();
-    if (usage != NULL)
-        fprintf(stderr, usage, argv[0]);
+    if (usage != NULL) {
+      fprintf(stderr, "\n");
+      fprintf(stderr, usage, argv[0]);
+    }
 
-    sort(Option::getOptionList(), Option::OptionLt());
+    sort((*optionListPtr), Option::OptionLt());
 
     const char* prev_cat  = NULL;
     const char* prev_type = NULL;
 
-    for (int i = 0; i < Option::getOptionList().size(); i++){
-        const char* cat  = Option::getOptionList()[i]->category;
-        const char* type = Option::getOptionList()[i]->type_name;
+    for (int i = 0; i < (*optionListPtr).size(); i++){
+        const char* cat  = (*optionListPtr)[i]->category;
+        const char* type = (*optionListPtr)[i]->type_name;
 
         if (cat != prev_cat)
             fprintf(stderr, "\n%s OPTIONS:\n\n", cat);
         else if (type != prev_type)
             fprintf(stderr, "\n");
 
-        Option::getOptionList()[i]->help(verbose);
+        (*optionListPtr)[i]->help(verbose);
 
-        prev_cat  = Option::getOptionList()[i]->category;
-        prev_type = Option::getOptionList()[i]->type_name;
+        prev_cat  = (*optionListPtr)[i]->category;
+        prev_type = (*optionListPtr)[i]->type_name;
     }
 }
 

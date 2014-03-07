@@ -12,12 +12,6 @@ Copyright (c) 2003-2006, Niklas Een, Niklas Sorensson
 Copyright (c) 2007-2010, Niklas Sorensson
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
-associated documentation files (the "Software"), to deal in the Software without restriction,
-including without limitation the rights to use, copy, modify, merge, publish, distribute,
-sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
 The above copyright notice and this permission notice shall be included in all copies or
 substantial portions of the Software.
 
@@ -124,8 +118,10 @@ int main(int argc, char** argv)
 
         CoreConfig coreConfig;
 	Coprocessor::CP3Config cp3config;
-        coreConfig.parseOptions(argc, argv, true);
-	cp3config.parseOptions(argc, argv, true);
+	bool foundHelp = coreConfig.parseOptions(argc, argv, true);
+	foundHelp = cp3config.parseOptions(argc, argv, true) || foundHelp;
+	::parseOptions (argc, argv ); // parse all global options
+	if( foundHelp ) exit(0); // stop after printing the help information
 	
         Solver S(coreConfig);
 	S.setPreprocessor(&cp3config); // tell solver about preprocessor
