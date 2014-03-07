@@ -69,6 +69,8 @@ namespace Coprocessor {
   class BIG;
 }
 
+class Communicator;
+
 // since template methods need to be in headers ...
 extern Minisat::IntOption opt_verboseProof;
 extern Minisat::BoolOption opt_rupProofOnly;
@@ -289,9 +291,8 @@ public: // TODO FIXME undo after debugging!
     // no watchesBin, incorporated into watches
 public: // TODO: set more nicely, or write method!
     vec<CRef>           clauses;          // List of problem clauses.
-protected:
     vec<CRef>           learnts;          // List of learnt clauses.
-
+protected:
     struct VarFlags {
       lbool assigns;
       unsigned polarity:1;
@@ -768,6 +769,65 @@ public:
 // 	    void writeClauses( std::ostream& stream ) {
 // 	       
 // 	    }
+
+
+// [BEGIN] modifications for parallel assumption based solver
+public: 
+    /** setup the communication object
+     * @param comm pointer to the communication object that should be used by this thread
+     */
+    void setCommunication( Communicator* comm );
+private: 
+    Communicator* communication; /// communication with the outside, and control of this solver
+
+    /** goto sleep, wait until master did updates, wakeup, process the updates
+     * @param toSend if not 0, send the (learned) clause, if 0, receive shared clauses
+     * note: can also interrupt search and incorporate new assumptions etc.
+     * @return -1 = abort, 0=everythings nice, 1=conflict/false result
+     */
+    int updateSleep(vec<Lit>* toSend, bool multiUnits = false);
+    
+    /** add a learned clause to the solver
+     * @param bump increases the activity of the current clause to the last seen value
+     * note: behaves like the addClause structure
+     */
+    bool addLearnedClause(Minisat::vec< Minisat::Lit >& ps, bool bump);
+    
+    /** update the send limits based on whether a current clause could have been send or not
+     * @param failed sending current clause failed because of limits
+     * @param sizeOnly update only size information
+     */
+    void updateDynamicLimits( bool failed, bool sizeOnly = false );
+    
+    /** inits the protection environment for variables
+     */
+    void initVariableProtection();
+    
+    /** set send limits once!
+     */
+    void initLimits();
+    
+    /*
+     * temporary structures
+     */
+    vec<Lit> receiveClause;			/// temporary placeholder for receiving clause
+    std::vector< CRef > receiveClauses;	/// temporary placeholder indexes of the clauses that have been received by communication
+    int currentTries;                          /// current number of waits
+    int receiveEvery;                          /// do receive every n tries
+    
+    float currentSendSizeLimit;                /// dynamic limit to control send size
+    float currentSendLbdLimit;                 /// dynamic limit to control send lbd
+    int succesfullySend;                       /// number of clauses that have been sucessfully transmitted
+    float sendSize;                            /// Minimum Lbd of clauses to send  (also start value)
+    float sendLbd;                             /// Minimum size of clauses to send (also start value)
+    float sendMaxSize;                         /// Maximum size of clauses to send
+    float sendMaxLbd;                          /// Maximum Lbd of clauses to send
+    float sizeChange;                          /// How fast should size send limit be adopted?
+    float lbdChange;                           /// How fast should lbd send limit be adopted?
+    float sendRatio;                           /// How big should the ratio of send clauses be?
+    
+// [END] modifications for parallel assumption based solver
+
 };
 
 
@@ -973,5 +1033,10 @@ inline void Solver::printClause(CRef cr)
 
 //=================================================================================================
 }
+
+//
+// for parallel portfolio communication, have code in header, so that the code can be inlined!
+//
+#include "SolverCommunication.h"
 
 #endif

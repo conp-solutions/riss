@@ -105,6 +105,15 @@ classifierd: always
 classifiers: always
 	cd classifier-src;  make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv classifier_static ../classifier
 
+# simple portfolio solver
+prissd: always
+	cd pfolio-src;  make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv priss_debug ../priss
+
+priss: always
+	cd pfolio-src;  make r INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv priss_release ../priss
+	
+prissRS: always
+	cd pfolio-src;  make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv priss_static ../priss
 
 # simple MaxSAT preprocessor
 mprocessord: always
@@ -162,12 +171,13 @@ bmctar: clean toolclean
 clean:
 	@cd core; make clean CPDEPEND="" MROOT=..;
 	@cd simp; make clean MROOT=..;
+	@rm -f riss coprocessor qprocessor libriss.a libcp.so priss
 	@if [ -d "coprocessor-src" ]; then cd coprocessor-src; make clean MROOT=..; fi
 	@if [ -d "qprocessor-src" ]; then cd qprocessor-src; make clean MROOT=..; fi
 	@if [ -d "mprocessor-src" ]; then cd mprocessor-src; make clean MROOT=..; fi
 	@if [ -d "classifier-src" ]; then cd classifier-src; make clean MROOT=..; fi
 	@if [ -d "shiftbmc-src" ]; then cd shiftbmc-src; make clean MROOT=..; fi
-	@rm -f riss coprocessor qprocessor libriss.a libcp.so
+	@if [ -d "pfolio-src" ]; then cd pfolio-src; make clean MROOT=..; fi
 	@rm -f *~ */*~
 	@rm -rf doc/html
 	@echo Done

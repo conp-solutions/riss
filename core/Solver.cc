@@ -1702,6 +1702,7 @@ lbool Solver::search(int nof_conflicts)
 	      // add the new clause(s) to the solver, perform more analysis on them
 	      if( ret > 0 ) { // multiple learned clauses
 		if( l_False == handleMultipleUnits( learnt_clause ) ) return l_False;
+		updateSleep( &learnt_clause, true ); // share multiple unit clauses!
 	      } else { // treat usual learned clause!
 		if( l_False == handleLearntClause( learnt_clause, backTrackedBeyondAsserting, nblevels, extraInfo ) ) return l_False;
 	      }
@@ -1729,6 +1730,16 @@ lbool Solver::search(int nof_conflicts)
 	  
 	  if( !withinBudget() ) return l_Undef; // check whether we can still do conflicts
 	  
+	  int result = updateSleep(0);
+	  if( -1 == result ) {
+	    // interrupt via communication
+	    return l_Undef;
+	  } else if( result == 1 ) {
+	    // interrupt received a clause that leads to a conflict on level 0
+	    conflict.clear();
+	    return l_False;
+	  }
+            
 	  // Perform clause database reduction !
 	  //
 	  clauseRemoval(); // check whether learned clauses should be removed
@@ -3983,6 +3994,9 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
   totalLearnedClauses ++ ; sumLearnedClauseSize+=learnt_clause.size();sumLearnedClauseLBD+=nblevels;
   maxLearnedClauseSize = learnt_clause.size() > maxLearnedClauseSize ? learnt_clause.size() : maxLearnedClauseSize;
 
+  // parallel portfolio: send the learned clause!
+  updateSleep(&learnt_clause);
+  
   if (learnt_clause.size() == 1){
       assert( decisionLevel() == 0 && "enequeue unit clause on decision level 0!" );
       topLevelsSinceLastLa ++;
