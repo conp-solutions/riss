@@ -12,6 +12,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef CPConfig_h
 #define CPConfig_h
 
+#include "utils/Config.h"
 #include "utils/Options.h"
 
 using namespace Minisat;
@@ -21,26 +22,14 @@ namespace Coprocessor {
 /** This class should contain all options that can be specified for the solver, and its tools.
  * Furthermore, constraints/assertions on parameters can be specified, and checked.
  */
-class CP3Config {
+class CP3Config : public Config {
  
   /** pointer to all options in this object - used for parsing and printing the help! */
   vec<Option*> configOptions;
-  vec<Option*>* optionListPtr;
   
 public:
  /** default constructor, which sets up all options in their standard format */
- CP3Config ();
-
- /** parse all options from the command line 
-  * @return true, if "-help" was found as a parameter
-  */
- bool parseOptions (int& argc, char** argv, bool strict = false);
- 
- /** show print for the options of this object */
- void printUsageAndExit(int  argc, char** argv, bool verbose = false);
- 
- /** checks all specified constraints */
- bool checkConfiguration();
+ CP3Config (const std::string & presetOptions = "");
  
  /** 
  * List of all used options, public members, can be changed and read directly

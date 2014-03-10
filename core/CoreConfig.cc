@@ -20,11 +20,9 @@ static const char* _cr = "CORE -- RESTART";
 static const char* _cred = "CORE -- REDUCE";
 static const char* _cm = "CORE -- MINIMIZE";
 
-CoreConfig::CoreConfig() // add new options here!
+CoreConfig::CoreConfig(const std::string & presetOptions) // add new options here!
 :
- // to easily debug options!
- optionListPtr ( true ? &configOptions : 0 ),
-
+ Config( &configOptions, presetOptions ),
  
  //
  // all the options for the object
@@ -249,75 +247,3 @@ CoreConfig::CoreConfig() // add new options here!
  opt_reset_counters   ("INCREMENTAL", "incResCnt", "reset solving counters every X start (0=off)", 100000, IntRange(0, INT32_MAX) , optionListPtr )
 {}
 
-bool CoreConfig::parseOptions(int& argc, char** argv, bool strict)
-{
-    if( optionListPtr == 0 ) return false; // the options will not be parsed
-  
-  // usual way to parse options
-    int i, j;
-    bool ret = false; // printed help?
-    for (i = j = 1; i < argc; i++){
-        const char* str = argv[i];
-        if (match(str, "--") && match(str, Option::getHelpPrefixString()) && match(str, "help")){
-            if (*str == '\0') {
-                this->printUsageAndExit(argc, argv);
-		ret = true;
-	    } else if (match(str, "-verb")) {
-                this->printUsageAndExit(argc, argv, true);
-		ret = true;
-	    }
-	    argv[j++] = argv[i]; // keep -help in parameters!
-        } else {
-            bool parsed_ok = false;
-        
-            for (int k = 0; !parsed_ok && k < optionListPtr->size(); k++){
-                parsed_ok = (*optionListPtr)[k]->parse(argv[i]);
-
-                // fprintf(stderr, "checking %d: %s against flag <%s> (%s)\n", i, argv[i], Option::getOptionList()[k]->name, parsed_ok ? "ok" : "skip");
-            }
-
-            if (!parsed_ok)
-                if (strict && match(argv[i], "-"))
-                    fprintf(stderr, "ERROR! Unknown flag \"%s\". Use '--%shelp' for help.\n", argv[i], Option::getHelpPrefixString()), exit(1);
-                else
-                    argv[j++] = argv[i];
-        }
-    }
-
-    argc -= (i - j);
-    return ret; // return indicates whether a parameter "help" has been found
-}
-
-void CoreConfig::printUsageAndExit(int  argc, char** argv, bool verbose)
-{
-    const char* usage = Option::getUsageString();
-    if (usage != NULL) {
-      fprintf(stderr, "\n");
-      fprintf(stderr, usage, argv[0]);
-    }
-
-    sort((*optionListPtr), Option::OptionLt());
-
-    const char* prev_cat  = NULL;
-    const char* prev_type = NULL;
-
-    for (int i = 0; i < (*optionListPtr).size(); i++){
-        const char* cat  = (*optionListPtr)[i]->category;
-        const char* type = (*optionListPtr)[i]->type_name;
-
-        if (cat != prev_cat)
-            fprintf(stderr, "\n%s OPTIONS:\n\n", cat);
-        else if (type != prev_type)
-            fprintf(stderr, "\n");
-
-        (*optionListPtr)[i]->help(verbose);
-
-        prev_cat  = (*optionListPtr)[i]->category;
-        prev_type = (*optionListPtr)[i]->type_name;
-    }
-}
-
-bool CoreConfig::checkConfiguration()
-{
-  return true;
-}

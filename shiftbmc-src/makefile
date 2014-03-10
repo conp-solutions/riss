@@ -65,14 +65,14 @@ link:
 aigand: aiger.o aigand.o makefile
 	$(CC) $(CFLAGS) -o $@ aigand.o aiger.o
 
-aigbmc: aiger.c aigbmc-picosat.c makefile ../picosat/picosat.o ../libriss3g.a
-	g++ $(CFLAGS) -o $@ -I.. aigbmc-picosat.c aiger.c ../picosat/picosat.o ../libriss3g.a -pthread -lrt -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS -fpermissive  $(ARGS)
+shiftbmc: aiger.c shiftbmc-picosat.c makefile ./picosat/picosat.o ../libriss.a
+	g++ $(CFLAGS) -o $@ -I.. shiftbmc-picosat.c aiger.c ./picosat/picosat.o ../libriss.a -pthread -lrt -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS -fpermissive  $(ARGS)
 
-aigbmc-abc: aiger.c aigbmc-picosat.c makefile ../picosat/picosat.o ../libriss3g.a libabc.a
-	g++ $(CFLAGS) -o $@ -I.. aigbmc-picosat.c aiger.c ../picosat/picosat.o ../libriss3g.a libabc.a -lreadline -ldl -pthread -lrt -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS -fpermissive -D USE_ABC  $(ARGS)
+shiftbmc-abc: aiger.c shiftbmc-picosat.c makefile ./picosat/picosat.o ../libriss.a libabc.a
+	g++ $(CFLAGS) -o $@ -I.. shiftbmc-picosat.c aiger.c ./picosat/picosat.o ../libriss.a libabc.a -lreadline -ldl -pthread -lrt -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS -fpermissive -D USE_ABC  $(ARGS)
 	
-aig-plain-bmc: aiger.c aig-plain-bm.c makefile ../picosat/picosat.o
-	g++ $(CFLAGS) -o $@ aig-plain-bm.c aiger.c ../picosat/picosat.o -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS
+aig-plain-bmc: aiger.c aig-plain-bm.c makefile ./picosat/picosat.o
+	g++ $(CFLAGS) -o $@ aig-plain-bm.c aiger.c ./picosat/picosat.o -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS
 	
 aigdd: aiger.o aigdd.o makefile
 	$(CC) $(CFLAGS) -o $@ aigdd.o aiger.o

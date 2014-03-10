@@ -12,6 +12,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef CoreConfig_h
 #define CoreConfig_h
 
+#include "utils/Config.h"
 #include "utils/Options.h"
 
 namespace Minisat {
@@ -19,27 +20,15 @@ namespace Minisat {
 /** This class should contain all options that can be specified for the solver, and its tools.
  * Furthermore, constraints/assertions on parameters can be specified, and checked.
  */
-class CoreConfig {
- 
-  
+class CoreConfig : public Config {
   /** pointer to all options in this object - used for parsing and printing the help! */
   vec<Option*> configOptions;
-  vec<Option*>* optionListPtr;
+
   
 public:
  /** default constructor, which sets up all options in their standard format */
- CoreConfig ();
-
- /** parse all options from the command line 
-  * @return true, if "help" has been found in the parameters
-  */
- bool parseOptions (int& argc, char** argv, bool strict = false);
+ CoreConfig (const std::string & presetOptions = "");
  
- /** show print for the options of this object */
- void printUsageAndExit(int  argc, char** argv, bool verbose = false);
- 
- /** checks all specified constraints */
- bool checkConfiguration();
  
  /** 
  * List of all used options, public members, can be changed and read directly

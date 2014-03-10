@@ -50,17 +50,17 @@ qd: qprocessord
 #
 # build the bmc tool
 #
-aigbmcd: libd
-	cd shiftbmc-src; make aigbmc CFLAGS="-O0 -g" ARGS=$(ARGS);  mv aigbmc ..
+shiftbmcd: libd
+	cd shiftbmc-src; make shiftbmc CFLAGS="-O0 -g" ARGS=$(ARGS);  mv shiftbmc ..
 
-aigbmcs: libs
-	cd shiftbmc-src; make aigbmc ARGS=$(ARGS); mv aigbmc ..
+shiftbmcs: libs
+	cd shiftbmc-src; make shiftbmc ARGS=$(ARGS); mv shiftbmc ..
 
-aigbmc-abcd: libd
-	cd shiftbmc-src; make aigbmc-abc CFLAGS="-O0 -g" ARGS=$(ARGS);  mv aigbmc-abc ..
+shiftbmc-abcd: libd
+	cd shiftbmc-src; make shiftbmc-abc CFLAGS="-O0 -g" ARGS=$(ARGS);  mv shiftbmc-abc ..
 
-aigbmc-abcs: libs
-	cd shiftbmc-src; make aigbmc-abc ARGS=$(ARGS) ;  mv aigbmc-abc ..
+shiftbmc-abcs: libs
+	cd shiftbmc-src; make shiftbmc-abc ARGS=$(ARGS) ;  mv shiftbmc-abc ..
 	
 # build the solver
 riss: always
