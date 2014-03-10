@@ -73,6 +73,7 @@ int main(int argc, char** argv)
         StringOption dimacs ("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
+	StringOption opt_config     ("MAIN", "config", "Use a preset configuration",0);
 	
 	const char* _cat = "COPROCESSOR 3";
 	StringOption undoFile      (_cat, "undo",   "write information about undoing simplifications into given file (and var map into X.map file)");
@@ -88,6 +89,8 @@ int main(int argc, char** argv)
 	foundHelp = cp3config.parseOptions(argc, argv,) || foundHelp;
 	::parseOptions (argc, argv ); // parse all global options
 	if( foundHelp ) exit(0); // stop after printing the help information
+	coreConfig.setPreset(string(opt_config));
+	cp3config.setPreset(string(opt_config));
 	
         Solver S(coreConfig);
 	S.setPreprocessor(&cp3config); // tell solver about preprocessor

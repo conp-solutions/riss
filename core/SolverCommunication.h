@@ -24,11 +24,6 @@ on the Communicator implementation.
 
 using namespace Minisat;
 
-
-static const char* _cat = "COMMUNICATE";
-
-static BoolOption communicate(_cat, "communicate" ,"Do communication among threads", true);
-
 inline
 void Solver::setCommunication( Communicator* comm )
 {

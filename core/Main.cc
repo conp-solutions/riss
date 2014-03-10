@@ -108,6 +108,7 @@ int main(int argc, char** argv)
   StringOption opt_proofFormat  ("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, should be DRUP)","DRUP");
   
   
+  StringOption opt_config     ("MAIN", "config", "Use a preset configuration",0);
   BoolOption   opt_checkModel ("MAIN", "checkModel", "verify model inside the solver before printing (if input is a file)", false);
   BoolOption   opt_modelStyle ("MAIN", "oldModel",   "present model on screen in old format", false);
   BoolOption   opt_quiet      ("MAIN", "quiet",      "Do not print the model", false);
@@ -122,6 +123,8 @@ int main(int argc, char** argv)
 	foundHelp = cp3config.parseOptions(argc, argv) || foundHelp;
 	::parseOptions (argc, argv ); // parse all global options
 	if( foundHelp ) exit(0); // stop after printing the help information
+	coreConfig.setPreset(string(opt_config));
+	cp3config.setPreset(string(opt_config));
 	
         Solver S(coreConfig);
 	S.setPreprocessor(&cp3config); // tell solver about preprocessor

@@ -24,12 +24,13 @@ namespace Minisat {
 /** class that implements most of the configuration features */
 class Config {
 protected:
-    vec<Option*>* optionListPtr;
+    vec<Option*>* optionListPtr;	// list of options used in the instance of the configuration
+    bool parsePreset; 			// set to true if the method addPreset is calling the parse-Option method
+    std::string defaultPreset;		// default preset configuration
     
 public:
   
-    Config (vec<Option*>* ptr = 0);
-    Config (vec<Option*>* ptr, const std::string & presetOptions);
+    Config (vec<Option*>* ptr, const std::string & presetOptions = "");
     
     /** parse all options from the command line 
       * @return true, if "help" has been found in the parameters
@@ -44,8 +45,10 @@ public:
     /** set all the options of the specified preset option sets (multiple separated with : possible) */
     void setPreset( const std::string& optionSet );
     
-    /** set options of the specified preset option set (only one possible!)*/
-    void addPreset( const std::string& optionSet );
+    /** set options of the specified preset option set (only one possible!)
+     *  @return true, if the option set is known and has been set!
+     */
+    bool addPreset( const std::string& optionSet );
     
     /** show print for the options of this object */
     void printUsageAndExit(int  argc, char** argv, bool verbose = false);
@@ -54,16 +57,11 @@ public:
     bool checkConfiguration();
 };
 
-inline
-Config::Config(vec<Option*>* ptr)
-: optionListPtr(ptr)
-{
-
-}
-
 inline 
 Config::Config(vec<Option*>* ptr, const std::string & presetOptions)
 : optionListPtr(ptr)
+, parsePreset(false)
+, defaultPreset( presetOptions )
 {
 
 }
@@ -71,13 +69,46 @@ Config::Config(vec<Option*>* ptr, const std::string & presetOptions)
 inline 
 void Config::setPreset(const std::string& optionSet)
 {
-  assert( false && "needs to be implemented" );
+  assert( false && "needs to be implemented in each sub method!" );
+  
+  // split string into sub strings, separated by ':'
+  std::vector<std::string> optionList;
+  int lastStart = 0;
+  int findP = 0;
+  while ( findP < optionSet.size() ) { // tokenize string
+      findP = optionSet.find(":", lastStart);
+      if( findP == std::string::npos ) { findP = optionSet.size(); }
+      
+      if( findP - lastStart - 1 > 0 ) {
+	addPreset( optionSet.substr(lastStart ,findP - lastStart)  );
+      }
+      lastStart = findP + 1;
+  }
 }
 
 inline
-void Config::addPreset(const std::string& optionSet)
+bool Config::addPreset(const std::string& optionSet)
 {
-  assert( false && "needs to be implemented" );
+  assert( false && "needs to be implemented in each sub method!" );
+  
+  parsePreset = true;
+  bool ret = true;
+  
+  if( optionSet == "PLAIN" ) {
+    parseOptions(" ",false);
+  }
+  
+  /* // copy this block to add another preset option set!
+  else if( optionSet == "" ) {
+    parseOptions(" ",false);
+  }
+  */
+  
+  else {
+    ret = false; // indicate that no configuration has been found here!
+  }
+  parsePreset = false;
+  return ret; // return whether a preset configuration has been found
 }
 
 
@@ -115,6 +146,14 @@ bool Config::parseOptions(int& argc, char** argv, bool strict)
 {
     if( optionListPtr == 0 ) return false; // the options will not be parsed
   
+    if( !parsePreset ) {
+      if( defaultPreset.size() != 0 ) { // parse default preset instead of actual options!
+	setPreset( defaultPreset );	// setup the preset configuration
+	defaultPreset = "" ;		// now, nothing is preset any longer
+	return false;
+      }
+    }
+
   // usual way to parse options
     int i, j;
     bool ret = false; // printed help?
