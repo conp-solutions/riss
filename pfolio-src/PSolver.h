@@ -89,7 +89,6 @@ public:
   
   void interrupt(); // Trigger a (potentially asynchronous) interruption of the solver.
   
-  
 protected:
 
   /** initialize all the threads 
@@ -98,10 +97,8 @@ protected:
   bool initializeThreads();
     
   /** start solving all tasks with the given number of threads
-   * @param sleep calling thread will sleep until all work is done, if set to true
-   * note: wil not sleep if one of the threads already signalled that it is done with its part of the work
    */
-  void start(const bool sleep);
+  void start();
   
   /** the master thread sleeps until some thread is done
    * @param waitState wait until the given condition is met

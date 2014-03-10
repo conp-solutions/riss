@@ -252,6 +252,22 @@ Solver::Solver(CoreConfig& _config) :
   , coprocessor(0)
   , useCoprocessorPP(config.opt_usePPpp)
   , useCoprocessorIP(config.opt_usePPip)
+  
+  // communication to other solvers that might be run in parallel
+  , communication (0)
+  , currentTries(0)
+  , receiveEvery(0)
+  , currentSendSizeLimit(0)
+  , currentSendLbdLimit(0)
+  , succesfullySend(0)
+  , succesfullyReceived(0)
+  , sendSize(0)
+  , sendLbd(0)
+  , sendMaxSize(0)
+  , sendMaxLbd(0)
+  , sizeChange(0)
+  , lbdChange(0)
+  , sendRatio(0)
 {
   MYFLAG=0;
   hstry[0]=lit_Undef;hstry[1]=lit_Undef;hstry[2]=lit_Undef;hstry[3]=lit_Undef;hstry[4]=lit_Undef;hstry[5]=lit_Undef;
@@ -370,6 +386,28 @@ bool Solver::addClause_(vec<Lit>& ps)
     }else{
         CRef cr = ca.alloc(ps, false);
         clauses.push(cr);
+        attachClause(cr);
+    }
+
+    return true;
+}
+
+bool Solver::addClause(const Clause& ps)
+{
+    if (ps.size() == 0)
+        return ok = false;
+    else if (ps.size() == 1){
+	if( config.opt_hpushUnit ) {
+	  if( value( ps[0] ) == l_False ) return ok = false;
+	  if( value( ps[0] ) == l_True ) return true;
+	}
+	uncheckedEnqueue(ps[0]);
+	if( !config.opt_hpushUnit ) return ok = (propagate() == CRef_Undef);
+	else return ok;
+    }else{
+        CRef cr = ca.alloc(ps, ps.learnt() );
+	if( !ps.learnt() ) clauses.push(cr);
+        else learnts.push( cr );
         attachClause(cr);
     }
 

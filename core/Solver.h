@@ -39,6 +39,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "core/BoundedQueue.h"
 #include "core/Constants.h"
 #include "core/CoreConfig.h"
+#include <pfoliodOld-src/Solver.h>
 
 //
 // choose which bit width should be used
@@ -108,6 +109,7 @@ public:
     void    reserveVars( Var v );
 
     bool    addClause (const vec<Lit>& ps);                     /// Add a clause to the solver. 
+    bool    addClause (const Clause& ps);                       /// Add a clause to the solver (all clause invariants do not need to be checked) 
     bool    addEmptyClause();                                   /// Add the empty clause, making the solver contradictory.
     bool    addClause (Lit p);                                  /// Add a unit clause to the solver. 
     bool    addClause (Lit p, Lit q);                           /// Add a binary clause to the solver. 
@@ -404,7 +406,9 @@ protected:
     void     removeClause     (CRef cr, bool strict = false); // Detach and free a clause.
     bool     locked           (const Clause& c) const; // Returns TRUE if a clause is a reason for some implication in the current state.
     bool     satisfied        (const Clause& c) const; // Returns TRUE if a clause is satisfied in the current state.
-
+public:
+    bool addUnitClauses( const vec< Lit >& other );		// use the given trail as starting point, return true, if fails!
+protected:
     unsigned int computeLBD(const vec<Lit> & lits);
     unsigned int computeLBD(const Clause &c);
     
@@ -427,7 +431,10 @@ protected:
 
     // for a better code style
     // for solve procedure:
-    lbool preprocess(); // preprocessing code
+public:
+    /// use the set preprocessor (if present) to simplify the current formula
+    lbool preprocess();
+protected:
     lbool inprocess(lbool status); // inprocessing code
     lbool initSolve( int solves ); // set up the next call to solve
     
@@ -808,16 +815,18 @@ private:
     void initLimits();
     
     /*
-     * temporary structures
+     * stats and limits for communication
      */
     vec<Lit> receiveClause;			/// temporary placeholder for receiving clause
     std::vector< CRef > receiveClauses;	/// temporary placeholder indexes of the clauses that have been received by communication
     int currentTries;                          /// current number of waits
     int receiveEvery;                          /// do receive every n tries
-    
     float currentSendSizeLimit;                /// dynamic limit to control send size
     float currentSendLbdLimit;                 /// dynamic limit to control send lbd
+public:
     int succesfullySend;                       /// number of clauses that have been sucessfully transmitted
+    int succesfullyReceived;                   /// number of clauses that have been sucessfully transmitted
+private:
     float sendSize;                            /// Minimum Lbd of clauses to send  (also start value)
     float sendLbd;                             /// Minimum size of clauses to send (also start value)
     float sendMaxSize;                         /// Maximum size of clauses to send
@@ -967,6 +976,20 @@ inline void     Solver::toDimacs     (const char* file){ vec<Lit> as; toDimacs(f
 inline void     Solver::toDimacs     (const char* file, Lit p){ vec<Lit> as; as.push(p); toDimacs(file, as); }
 inline void     Solver::toDimacs     (const char* file, Lit p, Lit q){ vec<Lit> as; as.push(p); as.push(q); toDimacs(file, as); }
 inline void     Solver::toDimacs     (const char* file, Lit p, Lit q, Lit r){ vec<Lit> as; as.push(p); as.push(q); as.push(r); toDimacs(file, as); }
+
+inline
+bool Solver::addUnitClauses(const vec< Lit >& other)
+{
+  assert( decisionLevel() == 0 && "init trail can only be done at level 0" );
+  for( int i = 0 ; i < other.size(); ++ i ) {
+    if( value( other[i] ) == l_Undef ) {
+      uncheckedEnqueue( other[i] );
+    } else if ( value( other[i] ) == l_False ) {
+      ok = false; return true;
+    }
+  }
+  return propagate() != CRef_Undef;
+}
 
 
 template <class T>

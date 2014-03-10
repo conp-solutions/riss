@@ -13,6 +13,7 @@ Copyright (c) 2012, All rights reserved, Norbert Manthey
 #include <iostream>
 
 using namespace std;
+using namespace Minisat;
 
 // own files
 #include "coprocessor-src/LockCollection.h"
@@ -217,8 +218,8 @@ public:
 
   public:
 
-    CommunicationData () :
-      ringbuffer(1024)
+    CommunicationData (const int buffersize) :
+      ringbuffer(buffersize)
     {
 
     }
@@ -281,8 +282,14 @@ public:
       finishedReceiving,   // thread is finished with receiving!
     };
 
+    Minisat::vec<Minisat::Lit> assumptions;	// vector with assumptions for this thread
+    
   private:
 
+    bool winner;	// this thread solved the problem
+    int originalVars;	// number of variables that is present (without new ER variables)
+    Minisat::lbool returnValue; // value that is returned by the solver after a solving call
+    
     Minisat::Solver * solver;  // pointer to the used solver object
     int id;                    // id of this thread
 
@@ -303,6 +310,9 @@ public:
     Communicator(const int id, CommunicationData* communicationData) :
       ownLock( new SleepLock() )
     ,data( communicationData) 
+    ,winner(false)
+    ,originalVars(-1)
+    ,returnValue(l_Undef)
     ,solver(0) 
     ,id(id) 
     ,state(idle) 
@@ -343,11 +353,30 @@ public:
       return state;
     }
 
-    const bool getDoSend() { return doSend; }
+    bool getDoSend() const  { return doSend; }
     void setDoSend(bool ds) { doSend = ds; }
-    const bool getDoReceive() { return doReceive; }
+    bool getDoReceive() const  { return doReceive; }
     void setDoReceive(bool dr) { doReceive = dr; }
 
+    /// tell the number of shared variables
+    void setFormulaVariables( const int formulaVariables ) { originalVars = formulaVariables; }
+    
+    /// set whether this thread is the winner
+    bool setWinner( const bool newWinner ) {
+      return winner = newWinner;
+    }
+    /// check whether this thread solved the problem
+    bool isWinner() const {
+      return winner;
+    }
+    
+    /// tell return value of solver
+    Minisat::lbool getReturnValue() const { return returnValue; }
+    /// set return value of this thread (should be done by the solver, or by the solving thread!)
+    Minisat::lbool setReturnValue( const Minisat::lbool newReturnValue ) {
+      return returnValue = newReturnValue;
+    }    
+    
     /** update the state of the thread (define what will happen next)
      * @param s future state
      * note: when this method is called, the lock ownlock should be locked first!

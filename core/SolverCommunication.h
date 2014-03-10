@@ -212,13 +212,12 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
     // if( communication->
 
     // not at level 0? nothing to do
-    if( decisionLevel() != 0 ) return 0;
+    if( decisionLevel() != 0 ) return 0; // receive clauses only at level 0!
 
     receiveClauses.clear();
     communication->receiveClauses( ca, receiveClauses );
-    
     // if( receiveClauses.size()  > 5 ) cerr << "c [THREAD] " << communication->getID() << " received " << receiveClauses.size() << " clauses." << endl;
-
+    succesfullySend += receiveClauses.size();
     for( unsigned i = 0 ; i < receiveClauses.size(); ++ i ) {
       Clause& c = ca[ receiveClauses[i] ]; // take the clause and propagate / enqueue it
       
@@ -238,7 +237,10 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
 	  cerr << "c empty clause has been shared!" << endl;
 	  ok = false; return 1; 
 	}
-        uncheckedEnqueue(c[0]);
+	if( value( c[0] ) == l_Undef ) uncheckedEnqueue(c[0]);
+	else if(value( c[0] ) == l_False ) {
+	  ok = false; return 1; 
+	}
 	c.mark();
         ok = (propagate() == CRef_Undef);
 	if( !ok ) { // adding this clause failed?
@@ -255,18 +257,23 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
 	  else if ( value( c[j] ) == l_False ) { c[j] = c[ c.size() -1 ]; c.shrink(1); } // this literal is mapped to false -> remove it!
 	}
 	// TODO: here could be more filters for received clauses to be rejected (e.g. PSM?!)
-	if( !c.mark() ) communication->nrReceivedCls ++;
-        if( c.size() == 0 ) { ok = false; return 1; }
-        else if ( c.size() == 1 ) {
-          uncheckedEnqueue(c[0]);
-	  c.mark();
-          ok = (propagate() == CRef_Undef);
-	  if( !ok ) return 1; 
-	} else { // attach the clause, if its not a unit clause!
-          learnts.push(receiveClauses[i]);
-	  if( communication->doBumpClauseActivity )
-	    ca[receiveClauses[i]].activity() += cla_inc; // increase activity of clause
-          attachClause(receiveClauses[i]);
+	if( !c.mark() ) {
+	  communication->nrReceivedCls ++;
+	  if( c.size() == 0 ) { ok = false; return 1; }
+	  else if ( c.size() == 1 ) {
+	    if( value( c[0] ) == l_Undef ) uncheckedEnqueue(c[0]);
+	    else if(value( c[0] ) == l_False ) {
+	      ok = false; return 1; 
+	    }
+	    c.mark();
+	    ok = (propagate() == CRef_Undef);
+	    if( !ok ) return 1; 
+	  } else { // attach the clause, if its not a unit clause!
+	    learnts.push(receiveClauses[i]);
+	    if( communication->doBumpClauseActivity )
+	      ca[receiveClauses[i]].activity() += cla_inc; // increase activity of clause
+	    attachClause(receiveClauses[i]);
+	  }
 	}
       }
     }

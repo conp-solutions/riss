@@ -18,8 +18,9 @@ PSolver::PSolver(const int threadsToUse)
 , verbEveryConflicts(0)
 {
     // setup the default configuration for all the solvers!
-    configs   = new CoreConfig [ threads ];
-    ppconfigs = new CP3Config  [ threads ];
+    configs   = new CoreConfig        [ threads ];
+    ppconfigs = new CP3Config         [ threads ];
+    communicators = new Communicator* [ threads ];
     
     // setup the first solver!
     solvers.push( new Solver( configs[0] ) ); // from this point on the address of this configuration is not allowed to be changed any more!
@@ -27,8 +28,18 @@ PSolver::PSolver(const int threadsToUse)
 }
 
 PSolver::~PSolver() {
+  
   kill();
+  
+  sleep(0.2);
+  
   for( int i = 0 ; i < solvers.size(); ++ i ) delete solvers[i]; // free all solvers
+  delete [] communicators;
+  delete [] ppconfigs;
+  delete [] configs;
+  
+  if( threadIDs != 0 ) { delete [] threadIDs; threadIDs = 0; }
+  if( data != 0 ) { delete data; data = 0; }
 }
 
 CoreConfig& PSolver::getConfig(const int solverID)
@@ -89,24 +100,26 @@ bool PSolver::addClause_(vec< Lit >& ps)
 
 lbool PSolver::solveLimited(const vec< Lit >& assumps)
 {
-  // for now, simply let the first solver solve the formula!
-  lbool ret = solvers[0]->solveLimited( assumps );
+//   // for now, simply let the first solver solve the formula!
+//   lbool ret = solvers[0]->solveLimited( assumps );
+//   
+//   int winningSolver = 0;
+//   if( ret == l_True ) {
+//     model.clear();
+//     model.capacity( solvers[winningSolver]->model.size() );
+//     for( int i = 0 ; i < solvers[winningSolver]->model.size(); ++ i ) model.push(solvers[winningSolver]->model[i]);
+//   } else if ( ret == l_False ) {
+//     conflict.clear();
+//     conflict.capacity( solvers[winningSolver]->conflict.size() );
+//     for( int i = 0 ; i < solvers[winningSolver]->model.size(); ++ i ) conflict.push(solvers[winningSolver]->conflict[i]);    
+//   } else {
+//     
+//   }
+//   
+//   return ret;
   
   int winningSolver = 0;
-  if( ret == l_True ) {
-    model.clear();
-    model.capacity( solvers[winningSolver]->model.size() );
-    for( int i = 0 ; i < solvers[winningSolver]->model.size(); ++ i ) model.push(solvers[winningSolver]->model[i]);
-  } else if ( ret == l_False ) {
-    conflict.clear();
-    conflict.capacity( solvers[winningSolver]->conflict.size() );
-    for( int i = 0 ; i < solvers[winningSolver]->model.size(); ++ i ) conflict.push(solvers[winningSolver]->conflict[i]);    
-  } else {
-    
-  }
-  
-  return ret;
-  
+  lbool ret = l_Undef;
   /* TODO
    * 
    * preprocess the formula with the preprocessor of the first solver
@@ -134,27 +147,31 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
    if( ! initialized ) { // distribute the formula, if this is the first call to this method!
     for( int i = 1; i < solvers.size(); ++ i ) {
       solvers[i]->reserveVars( solvers[0]->nVars() );
+      while( solvers[i]->nVars() < solvers[0]->nVars() ) solvers[i]->newVar();
       communicators[i]->setFormulaVariables( solvers[0]->nVars() ); // tell which variables can be shared
-      for( int j = 0 ; j < solvers[0]->trail.size(); ++ j ) solvers[i]->trail.push( solvers[0]->trail[j] ); // copy all the unit clauses
       for( int j = 0 ; j < solvers[0]->clauses.size(); ++ j ) {
-	solvers[i].addClause( solvers[0]->ca[ solvers[0]->clauses[j] ] ); // import the clause of solver 0 into solver i
+	solvers[i]->addClause( solvers[0]->ca[ solvers[0]->clauses[j] ] ); // import the clause of solver 0 into solver i
       }
       for( int j = 0 ; j < solvers[0]->learnts.size(); ++ j ) {
-	solvers[i].addClause( solvers[0]->ca[ solvers[0]->learnts[j] ] ); // import the learnt clause of solver 0 into solver i
+	solvers[i]->addClause( solvers[0]->ca[ solvers[0]->learnts[j] ] ); // import the learnt clause of solver 0 into solver i
       }
+      solvers[i]->addUnitClauses( solvers[0]->trail ); // copy all the unit clauses
+      cerr << "c Solver[" << i << "] has " << solvers[i]->nVars() << " vars, " << solvers[i]->clauses.size() << " cls, " << solvers[i]->learnts.size() << " learnts" << endl;
     }
     initialized = true;
    }
 
    /*
+    * reset solvers from previous call,
     * run the solvers on the formula
     */
    // add assumptions to all solvers
    for( int i = 0 ; i < threads; ++i ) {
-      solvers[i]->clearAssumptions();
-      solvers[i]->addAssumptions( assumps );
+     assumps.copyTo( communicators[i]->assumptions );
+     communicators[i]->setWinner( false );
    }
-   start(true); // allow all solvers to start, and wait until the first solver finishes
+   start(); // allow all solvers to start, and wait until the first solver finishes
+   waitFor( oneFinished );
    
    /* interrupt all other solvers
    * clear all interrupts (for incremental solving)
@@ -170,18 +187,51 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
    */
    winningSolver = 0;
    for( int i = 0 ; i < threads; ++ i ) {
-      
+      if( communicators[i]->isWinner() && communicators[i]->getReturnValue() != l_Undef ) { winningSolver = i; break; }
    }
    
-   /* 
-   * return the result state
-   */
+   cerr << "c MASTER found winning thread (" << communicators[winningSolver]->isWinner() << ") " << winningSolver << " / " << threads << " model= " << solvers[winningSolver]->model.size() << endl;
+
+   // return model, if there is a winning thread!
+   if( winningSolver < threads ) {
+    /* 
+    * return the result state
+    */
+      ret = communicators[ winningSolver ]->getReturnValue();
+      if( ret == l_True ) {
+	model.clear();
+	model.capacity( solvers[winningSolver]->model.size() );
+	for( int i = 0 ; i < solvers[winningSolver]->model.size(); ++ i ) model.push(solvers[winningSolver]->model[i]);
+      } else if ( ret == l_False ) {
+	conflict.clear();
+	conflict.capacity( solvers[winningSolver]->conflict.size() );
+	for( int i = 0 ; i < solvers[winningSolver]->model.size(); ++ i ) conflict.push(solvers[winningSolver]->conflict[i]);    
+      } else {
+	
+      }
+   } else ret = l_Undef;
    
+   if( true ) {
+     cerr << "c thread sent \t|\t received \t|\t sizeRej \t|\t lbdRej \t|" << endl;
+     for( int i = 0 ; i < threads; ++ i ) {
+	cerr << "c " << i << " : " << communicators[i]->nrSendCls 
+	     <<  "  \t|\t" << communicators[i]->nrReceivedCls
+	     <<  "  \t|\t" << communicators[i]->nrRejectSendSizeCls 
+	     <<  "  \t|\t" << communicators[i]->nrRejectSendLbdCls <<  "  \t|"
+	     << endl;
+     }
+     
+// nrSendCls;           // how many clauses have been send via this communicator
+//     unsigned nrRejectSendSizeCls; // how many clauses have been rejected to be send because of size
+//     unsigned nrRejectSendLbdCls;  // how many clauses have been rejected to be send because of lbd
+//     unsigned nrReceivedCls;
+     
+   }
+   
+   
+   
+   return ret;
 }
-
-
-};
-
 
 bool PSolver::initializeThreads()
 {
@@ -189,13 +239,18 @@ bool PSolver::initializeThreads()
   // get space for thread ids
   threadIDs = new pthread_t [threads];
 
+  data = new CommunicationData( 16000 ); // space for 16K clauses
+  
   // create all solvers and threads
   for( unsigned i = 0 ; i < threads; ++ i )
   {
     communicators[i] = new Communicator(i, data);
 
     // create the solver
-    if( i > 0 ) solvers[i] = new Solver( configs[i] ); // solver 0 should exist already!
+    if( i > 0 ) { 
+      assert( solvers.size() == i && "next solver is not already created!" );
+      solvers.push(  new Solver( configs[i] ) ); // solver 0 should exist already!
+    }
 
     // tell the communication system about the solver
     communicators[i]->setSolver( solvers[i] );
@@ -223,8 +278,73 @@ bool PSolver::initializeThreads()
   return failed;
 }
 
+void PSolver::start()
+{
+// set all threads to working (they'll have a look for new work on their own)
+  for( unsigned i = 0 ; i<threads; ++ i )
+  {
+    communicators[i]->ownLock->lock();
+    if( verbosity > 1 ) cerr << "c [MASTER] set thread " << i << " state to working" << endl;
+    communicators[i]->setState( Communicator::working );
+    communicators[i]->ownLock->unlock();
+    if( verbosity > 1 ) cerr << "c [MASTER] awake thread " << i << endl;
+    communicators[i]->ownLock->awake();
+  }
+}
+
+void PSolver::waitFor(const WaitState waitState)
+{
+ // evaluate the state of all the threads
+  data->getMasterLock().lock();
+  // repeat until there is some thread with the state finished
+  while( true )
+  {
+    // check whether there are free threads
+    unsigned finishedThread = threads;
+    for( unsigned i = 0 ; i < threads; ++ i )
+    {
+      cerr << "c MASTER checks thread " << i << endl;
+      if( waitState == oneIdle ) {
+	if( communicators[i]->isIdle() ) { finishedThread = i; break; }
+      } else if ( waitState == oneFinished ) {
+	if( communicators[i]->isFinished() ) { 
+	  finishedThread = i; 
+	  communicators[i]->setState( Communicator::waiting );
+	  break;
+	}
+      } else if ( waitState == allFinished ) {
+	if( ! communicators[i]->isFinished() && ! communicators[i]->isIdle() ) { // be careful with (! communicators[i]->isWaiting() &&)
+	  cerr << "Thread " << i << " is not finished and not idle" << endl;
+	  break; 
+	}
+      } else {
+	assert(false && "Wait case for the given state has not been implemented" );
+      }
+    }
+    if( waitState == allFinished ) {
+      if( finishedThread == threads ) {
+	data->getMasterLock().unlock(); // leave critical section
+	return;                         // there is a free thread - use it!
+      }
+    } else {
+      if( finishedThread != threads ) {
+	data->getMasterLock().unlock(); // leave critical section
+	return;                         // there is a free thread - use it!
+      }
+    }
+    
+    cerr << "c MASTER sleeps" << endl;
+    data->getMasterLock().sleep();  // wait until some thread notifies the master
+  }
+  data->getMasterLock().unlock(); // leave critical section
+}
+
 void PSolver::kill()
 {
+  return;
+  
+  
+  cerr << "c MASTER kills all child threads ..." << endl;
   // set all threads to working (they'll have a look for new work on their own)
   for( unsigned i = 0 ; i<threads; ++ i )
   {
@@ -234,14 +354,14 @@ void PSolver::kill()
     communicators[i]->ownLock->awake();
   }
   
-  // interrupt all threads!
-  for( unsigned i = 0 ; i<threads; ++ i )
-  {
-    int* status = 0;
-    int err = 0;
-    err = pthread_kill(threadIDs[i], 15);
-    if( err != 0) cerr << "c killing a thread resulted in a failure" << endl;
-  }
+//   // interrupt all threads!
+//   for( unsigned i = 0 ; i<threads; ++ i )
+//   {
+//     int* status = 0;
+//     int err = 0;
+//     err = pthread_kill(threadIDs[i], 15);
+//     if( err != 0) cerr << "c killing a thread resulted in a failure" << endl;
+//   }
   
   // join all threads!
   for( unsigned i = 0 ; i<threads; ++ i )
@@ -249,15 +369,14 @@ void PSolver::kill()
     int* status = 0;
     int err = 0;
     err = pthread_join(threadIDs[i], (void**)&status);
-    if( err != 0) cerr << "c joining a thread resulted in a failure" << endl;
+    if( err != 0) cerr << "c joining a thread resulted in a failure with status " << *status << endl;
   }
+  cerr << "c finished killing" << endl;
 }
-
-
 
 void* runWorkerSolver(void* data)
 {
-const bool verbose = true;
+  const bool verbose = false;
   
   /* Algorithm:
    */
@@ -287,13 +406,16 @@ const bool verbose = true;
     
     // solve with assumptions!
     assumptions.clear();
-    info.assumptions->copyTo( assumptions ); // get the current assumptions
+    info.assumptions.copyTo( assumptions ); // get the current assumptions
     if( verbose ) cerr << "c [THREAD] " << info.getID() << " solve task with " << assumptions.size() << " assumed literals" << endl;
       
     // do work
-    lbool result = info.getSolver()->solveLimited( assumptions );
+    lbool result l_Undef; 
+    result = info.getSolver()->solveLimited( assumptions );
+
+    info.setReturnValue( result );
     if( verbose ) cerr << "c [THREAD] " << info.getID() << " result " << toInt(result) << endl;
-      
+    
     if( result != l_Undef ) // solved the formula
     {
       info.setWinner(true); // indicate that this solver has a solution
@@ -314,7 +436,11 @@ const bool verbose = true;
     if( verbose ) cerr << "c [THREAD] " << info.getID() << " wait for next round (sleep)" << endl;
     // wait until master changes the state again to working!
     info.ownLock->lock();
-    while( ! info.isWorking() ) info.ownLock->sleep();
+    while( ! info.isWorking() ) { 
+      if( verbose ) cerr << "c [THREAD] " << info.getID() << " sleeps until next work ... " << endl;
+      info.ownLock->sleep();
+      if( verbose ) cerr << "c [THREAD] " << info.getID() << " awakes after work-sleep ... " << endl;
+    }
     info.ownLock->unlock();
   }
   
@@ -322,14 +448,4 @@ const bool verbose = true;
 }
 
 
-/*
-  
-  
-
-
-        CoreConfig coreConfig;
-	Coprocessor::CP3Config cp3config;
-	bool foundHelp = coreConfig.parseOptions(argc, argv);
-	foundHelp = cp3config.parseOptions(argc, argv) || foundHelp;
-  
-  */
+};
