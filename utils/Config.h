@@ -88,23 +88,25 @@ bool Config::parseOptions(const std::string& options, bool strict)
   std::vector<std::string> optionList;
   int lastStart = 0;
   int findP = 0;
-    while ( findP < options.size() ) { // tokenize string
-      findP = options.find(" ", lastStart+1);
-      if( findP != std::string::npos ) {
-      } else {
-	findP = options.size();
-      }
+  while ( findP < options.size() ) { // tokenize string
+      findP = options.find(" ", lastStart);
+      if( findP == std::string::npos ) { findP = options.size(); }
+      
       if( findP - lastStart - 1 > 0 ) {
-	std::cerr << "c add to option: " << options.substr(lastStart + 1,findP) << std::endl;
-	optionList.push_back( options.substr(lastStart + 1,findP) );
+	optionList.push_back( options.substr(lastStart ,findP - lastStart) );
       }
-    }
-  
+      lastStart = findP + 1;
+  }
   // create argc - argv combination
+  char* argv[ options.size() + 1]; // one dummy in front!
+  for( int i = 0; i < options.size(); ++ i ) {
+    argv[i+1] = (char*)optionList[i].c_str();
+  }
+  int argc = optionList.size() + 1;
   
   // call conventional method
-  
-  return false;
+  bool ret = parseOptions(argc, argv, strict);
+  return ret;
 }
 
 
