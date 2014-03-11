@@ -123,8 +123,8 @@ int main(int argc, char** argv)
 	foundHelp = cp3config.parseOptions(argc, argv) || foundHelp;
 	::parseOptions (argc, argv ); // parse all global options
 	if( foundHelp ) exit(0); // stop after printing the help information
-	coreConfig.setPreset(string(opt_config));
-	cp3config.setPreset(string(opt_config));
+	coreConfig.setPreset(string(opt_config == 0 ? "" : opt_config));
+	cp3config.setPreset( string(opt_config == 0 ? "" : opt_config));
 	
         Solver S(coreConfig);
 	S.setPreprocessor(&cp3config); // tell solver about preprocessor

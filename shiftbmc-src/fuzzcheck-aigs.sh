@@ -33,7 +33,7 @@ do
 	
 	# solve circuit in at most 90 seconds, check properties
 	# echo "solve ..."
-	timeout 90 $* $tmpAIG 150 > $tmpOut 2> $tmpErr
+	timeout 90 $* $tmpAIG 250 > $tmpOut 2> $tmpErr
 	ecode=$?
 	
 	if [ "$ecode" -eq "1" ] 
