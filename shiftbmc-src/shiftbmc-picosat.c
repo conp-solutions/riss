@@ -23,6 +23,7 @@ IN THE SOFTWARE.
 
 extern "C" { // we are compiling with G++, however, picosat is C code
   #include "./picosat/picosat.h"
+  #include "librissc.h" 
 }
 
 #include <assert.h>
@@ -74,7 +75,10 @@ extern "C" { // abc has been compiled with gcc
 
 static aiger * model = 0;
 static const char * name = 0;
+
+// these two SAT solvers can be used
 static PicoSAT * picosat = 0;
+static void* riss = 0;
 
 // structures that are necessary for preprocessing, and if x or y parameter are set also for postprocessing
 static void* preprocessor;
@@ -113,6 +117,7 @@ static char * bad = 0, * justice = 0;
 static int maxk=0; // upper bound for search
 static int verbose = 0, move = 0, processNoProperties = 0 ,quiet = 0, nowitness = 0, nowarnings = 0, lazyEncode = 0,useShift=0, // options
   useRiss = 0, useCP3 = 0, denseVariables = 0, dontFreezeInput = 0, dontFreezeBads = 0, printTime=0, checkInitialBad = 0, abcDir = 0, stats_only = 0;
+static char* rissPresetConf = 0;
 static int wildGuesser = 0, wildGuessStart = 10, wildGuessInc = 2, wildGuessIncInc = 1; // guess sequence: 10, 30, 60, ...
 static int tuning = 0, tuneSeed = 0;
 static std::string useABC = "";
@@ -230,28 +235,32 @@ public:
 
 static void add (int lit, bool addToShift = true) { 
   if( addToShift ) shiftFormula.formula.push_back( lit ); // write into formula
-  picosat_add (picosat, lit);
+  if( riss != 0 ) riss_add( riss, lit );
+  else picosat_add (picosat, lit);
 //  fprintf(stderr, "%d ", lit );
 //  if( lit == 0 ) fprintf(stderr,"\n");
 }
 
 static void assume (int lit) { 
 //  fprintf(stderr, "assume literal: %d ", lit );
-picosat_assume (picosat, lit);
+  if( riss != 0 ) riss_assume( riss, lit );
+  else picosat_assume (picosat, lit);
 }
 
 /** solve with resource limit */
 static int sat ( int limit = -1 ) { 
   // msg (2, "solve time with SAT solver: %d", nstates);
   int ret;
-  ret = picosat_sat (picosat, -1);
+  if( riss != 0 ) ret = riss_sat( riss, limit );
+  else ret = picosat_sat (picosat, limit);
   msg (2, "return code of SAT solver: %d", ret);
   return ret;
 }
 
 static int deref (int lit) { 
   int ret;
-ret = picosat_deref (picosat, lit);
+  if( riss != 0 ) ret = riss_deref( riss, lit );
+  else ret = picosat_deref (picosat, lit);
   msg(3,"deref lit %d to value %d", lit, ret);
   return ret;
 }
@@ -259,7 +268,8 @@ ret = picosat_deref (picosat, lit);
 /** initialize everything, give solvers the possibility to read the parameters! */
 static void init ( int& argc, char **& argv ) {
   msg (2, "init SAT solver");
-  picosat = picosat_init ();
+  if( useRiss ) riss = riss_init(rissPresetConf);
+  else picosat = picosat_init ();
   model = aiger_init ();
 }
 
@@ -281,7 +291,8 @@ static void reset () {
   free (bad);
   free (justice);
   free (join);
-  picosat_reset (picosat);
+  if( riss != 0 ) riss_destroy( riss );
+  else picosat_reset (picosat);
   aiger_reset (model);
 }
 
@@ -514,12 +525,14 @@ static const char * usage =
 "-bmc_m     use outputs as bad state constraint\n"
 "-bmc_np    still process, even if there are no properties given (might be buggy)\n"
 "-bmc_n     do not print witness\n"
-"-bmc_q     be quite (impies '-n')\n"
+"-bmc_q     be quite (implies '-n')\n"
 "-bmc_c     check whether there are properties (return 1, otherwise 0)\n"
 "-bmc_so    output formula stats only\n"
 "-bmc_l     use lazy coding\n"
 "-bmc_s     use shifting instead of reencoding (implies lazy encoding)\n"
 "-bmc_p     use CP3 as simplifier (implies using shifting)\n"
+"bmc_r      use Riss as SAT solver (default is PicoSAT)\n"
+"bmc_rpc    use given preset configuration for Riss (implies using Riss)\n"
 #ifndef TEST_BINARY
 "-bmc_dbgp  dump formula and everything else before preprocessing\n"
 #endif
@@ -592,7 +605,10 @@ int main (int argc, char ** argv) {
     else if (!strcmp (argv[i], "-bmc_l")) lazyEncode = 1;
     else if (!strcmp (argv[i], "-bmc_s")) { useShift = 1; lazyEncode = 1;} // strong dependency!
     else if (!strcmp (argv[i], "-bmc_r")) useRiss = 1;
-    else if (!strcmp (argv[i], "-bmc_p")) { useCP3=1,useRiss = 1;useShift = 1; lazyEncode = 1; }
+    else if (!strcmp (argv[i], "-bmc_rpc")) { // use preset configuration for riss
+      useRiss = 1;
+      if( ++i < argc ) rissPresetConf = argv[i];
+    } else if (!strcmp (argv[i], "-bmc_p")) { useCP3=1,useShift = 1; lazyEncode = 1; }
 #ifndef TEST_BINARY
     else if (!strcmp (argv[i], "-bmc_dbgp")) { 
       ++ i;
@@ -602,9 +618,9 @@ int main (int argc, char ** argv) {
       }
     }
 #endif
-    else if (!strcmp (argv[i], "-bmc_d")) { useCP3=1, useRiss = 1; denseVariables=1;  useShift=1; lazyEncode=1; }
-    else if (!strcmp (argv[i], "-bmc_x")) { useCP3=1, useRiss = 1; dontFreezeInput=1; useShift=1; lazyEncode=1; }
-    else if (!strcmp (argv[i], "-bmc_y")) { useCP3=1, useRiss = 1; dontFreezeBads=1;  useShift=1; lazyEncode=1; }
+    else if (!strcmp (argv[i], "-bmc_d")) { useCP3=1,  denseVariables=1;  useShift=1; lazyEncode=1; }
+    else if (!strcmp (argv[i], "-bmc_x")) { useCP3=1,  dontFreezeInput=1; useShift=1; lazyEncode=1; }
+    else if (!strcmp (argv[i], "-bmc_y")) { useCP3=1,  dontFreezeBads=1;  useShift=1; lazyEncode=1; }
     else if (!strcmp (argv[i], "-bmc_z")) {
       ++ i;
       if( i < argc && isnum(argv[i]) ) { 
@@ -634,19 +650,19 @@ int main (int argc, char ** argv) {
 	}
     }
     else if (!strcmp (argv[i], "-bmc_w")) {
-      wildGuesser = 1; useRiss = 1; useShift = 1; lazyEncode = 1;
+      wildGuesser = 1;  useShift = 1; lazyEncode = 1;
     }
     else if (!strcmp (argv[i], "-bmc_ws")) {
       if( ++i < argc && isnum(argv[i]) ) wildGuessStart = atoi( argv[i] );
-      wildGuesser = 1; useRiss = 1; useShift = 1; lazyEncode = 1;
+      wildGuesser = 1;  useShift = 1; lazyEncode = 1;
     }
     else if (!strcmp (argv[i], "-bmc_wi")) {
       if( ++i < argc && isnum(argv[i]) ) wildGuessInc = atoi( argv[i] );
-      wildGuesser = 1; useRiss = 1; useShift = 1; lazyEncode = 1;
+      wildGuesser = 1;  useShift = 1; lazyEncode = 1;
     }
     else if (!strcmp (argv[i], "-bmc_wii")) {
       if( ++i < argc && isnum(argv[i]) ) wildGuessIncInc = atoi( argv[i] );
-      wildGuesser = 1; useRiss = 1; useShift = 1; lazyEncode = 1;
+      wildGuesser = 1;  useShift = 1; lazyEncode = 1;
     }
     else if (!strcmp (argv[i], "-bmc_c")) checkProperties = true;
     else if (!strcmp (argv[i], "-bmc_so")) stats_only = true;
@@ -960,8 +976,13 @@ int main (int argc, char ** argv) {
       exit(0);
     }
     // alles gut!
-    picosat_reset (picosat); // restart the solver!
-    picosat = picosat_init();
+    if( riss != 0 ) {
+      riss_destroy (riss); // restart the solver!
+      riss = riss_init(rissPresetConf);
+    } else {
+      picosat_reset (picosat); // restart the solver!
+      picosat = picosat_init();
+    }
 
     // get formula back from preprocessor
     shiftFormula.formula.clear(); // actively changing the formula!

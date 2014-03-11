@@ -18,6 +18,9 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
  1) make sure the file libcp3.so is located at a place where it can be found
 **************************************************************************************************/
 
+#ifndef LIBCPH_H
+#define LIBCPH_H
+
 // to represent formulas and the data type of truth values
 #include "stdint.h"
 
@@ -131,3 +134,5 @@ extern "C" {
 }
 
 // #pragma GCC visibility pop // back to what we had before
+
+#endif
