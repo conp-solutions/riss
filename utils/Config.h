@@ -69,8 +69,6 @@ Config::Config(vec<Option*>* ptr, const std::string & presetOptions)
 inline 
 void Config::setPreset(const std::string& optionSet)
 {
-  assert( false && "needs to be implemented in each sub method!" );
-  
   // split string into sub strings, separated by ':'
   std::vector<std::string> optionList;
   int lastStart = 0;
@@ -89,8 +87,6 @@ void Config::setPreset(const std::string& optionSet)
 inline
 bool Config::addPreset(const std::string& optionSet)
 {
-  assert( false && "needs to be implemented in each sub method!" );
-  
   parsePreset = true;
   bool ret = true;
   

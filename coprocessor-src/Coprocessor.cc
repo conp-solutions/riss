@@ -1143,6 +1143,12 @@ int Preprocessor::giveNewLit(const int& l) const
   return sign(nl) ? ( -var(nl) -1 ) : (var(nl) +1);
 }
 
+Lit Preprocessor::giveNewLit(const Lit& l) const
+{
+  const Lit nl = dense.giveNewLit(l);
+  return nl;
+}
+
 
 void Preprocessor::printStatistics(ostream& stream)
 {

@@ -93,6 +93,11 @@ extern "C" {
   
   /** reset the model input procedure, and the postprocessing procedure */
   extern void CPresetModel(void* preprocessor);
+
+  /** pass a (satisfied) literal of the current model to the preprocessor 
+   * @param pol polarity of the next variable in the model (0=false, 1=true)
+   */
+  extern void CPpushModelBool(void* preprocessor, int pol);
   
   /** pass a (satisfied) literal of the current model to the preprocessor */
   extern void CPgiveModelLit(void* preprocessor, int literal);

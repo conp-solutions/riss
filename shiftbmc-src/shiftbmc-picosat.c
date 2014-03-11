@@ -1305,11 +1305,11 @@ finishedSolving:;
 				}
 				// extend model without copying current model twice
 				CPresetModel( preprocessor ); // reset current internal model
-				for( int j = 0 ; j < frameModel.size(); ++ j ) CPgiveModelLit( preprocessor, frameModel[j] );
+				for( int j = 0 ; j < frameModel.size(); ++ j ) CPpushModelBool( preprocessor, frameModel[j] > 0 ? 1 : 0);
 				CPpostprocessModel( preprocessor );
 				const int modelVars = CPmodelVariables( preprocessor );
 				frameModel.clear(); // reset current model, so that it can be filled with data from the preprocessor
-				for( int j = 0 ; j < modelVars; ++ j ) frameModel.push_back( CPgetFinalModelLit(preprocessor) );
+				for( int j = 0 ; j < modelVars; ++ j ) frameModel.push_back( CPgetFinalModelLit(preprocessor) > 0 ? 1 : 0 );
 
 				// continue as usual
 				if( verbose > 3 ) { // print extra info for debugging
@@ -1375,11 +1375,11 @@ finishedSolving:;
 			
 					// extend model without copying current model twice
 					CPresetModel( preprocessor ); // reset current internal model
-					for( int j = 0 ; j < frameModel.size(); ++ j ) CPgiveModelLit( preprocessor, frameModel[j] );
+					for( int j = 0 ; j < frameModel.size(); ++ j ) CPpushModelBool( preprocessor, frameModel[j] > 0 ? 1 : 0 );
 					CPpostprocessModel( preprocessor );
 					const int modelVars = CPmodelVariables( preprocessor );
 					frameModel.clear(); // reset current model, so that it can be filled with data from the preprocessor
-					for( int j = 0 ; j < modelVars; ++ j ) frameModel.push_back( CPgetFinalModelLit(preprocessor) );
+					for( int j = 0 ; j < modelVars; ++ j ) frameModel.push_back(CPgetFinalModelLit(preprocessor) > 0 ? 1 : 0);
 
 					if( verbose > 3 ) { // print extra info for debugging
 						cerr << "c after extendModel (model size: " << frameModel.size() << ")" << endl;
@@ -1466,3 +1466,4 @@ DONE:
   if( k <= maxk) return 1; // found a bug
   else return 0;
 }
+  

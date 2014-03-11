@@ -135,6 +135,16 @@ extern "C" {
     cp3->model[ v ] = literal > 0 ? l_True : l_False; // add the information
   }
   
+  /** pass a (satisfied) literal of the current model to the preprocessor 
+   * @param pol polarity of the next variable in the model (0=false, 1=true)
+   */
+  void 
+  CPpushModelBool(void* preprocessor, int pol) {
+    libcp3* cp3 = (libcp3*) preprocessor;
+    if( pol == 0 ) cp3->model.push( l_False );
+    else cp3->model.push( l_True );
+  }
+  
   /** pass a (satisfied) literal of the current model to the preprocessor */
   void 
   CPpostprocessModel(void* preprocessor) {
@@ -153,6 +163,7 @@ extern "C" {
       return ret;
     } else return 0;
   }
+
   
   /** return the number of variables in the postprocessed model */
   int 

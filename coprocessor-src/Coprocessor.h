@@ -145,6 +145,7 @@ public:
    * @return the new literal, or lit_Undef if the literal is not present any more, or lit_Error, if the information is not present
    */
   int giveNewLit(const int& l) const;
+  Lit giveNewLit(const Lit& l) const;
   
 protected:
   // techniques
