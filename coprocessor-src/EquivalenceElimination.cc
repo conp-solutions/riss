@@ -1955,7 +1955,8 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
    
    int start = 0, end = 0;
    
-   if( config.opt_ee_eager_frozen ) { // remove all frozen variables from the ee classes!
+   if( config.opt_ee_eager_frozen )
+   { // remove all frozen variables from the ee classes!
     int keep = 0;
     for( int i = 0 ; i < ee.size(); ++ i ) {
       if( !data.doNotTouch( var( ee[i] ) ) ) ee[keep++] = ee[i];
@@ -1963,7 +1964,8 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
     ee.resize(keep);
    }
    
-   for( int i = 0 ; i < ee.size(); ++ i ) {
+   for( int i = 0 ; i < ee.size(); ++ i )
+   {
      if( ee[i] == lit_Undef ) {
        // handle current EE class!
        end = i - 1;
@@ -2013,7 +2015,13 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
        int dataElements = data.lits.size();
        
        data.clss.clear();
-	for( int j = start ; j < i; ++ j ) {
+        // check whether one of the EE-class literals is already assigned, if yes, enqueue the remaining literals!
+       lbool setValue=l_Undef;
+       for( int j = start ; j < i; ++ j ) {
+	 if( data.value( ee[j] ) != l_Undef ) { setValue = data.value( ee[j] ); break; } // found one assigned literal
+       }
+       if( setValue == l_Undef ) {
+	for( int j = start ; j < i; ++ j ) { // nothing set, simply add back the clauses as before!
 	  if ( ee[j] == repr ) continue;
 	  if( !data.doNotTouch( var(ee[j]) ) ) continue; // only create these clauses for the "do not touch" literals
 	  data.addCommentToProof("add clauses for doNotTouch variables");
@@ -2029,6 +2037,30 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	  data.clss.push_back(cr);
 	  ca[cr].setExtraInformation( data.defaultExtraInfo() ); // setup extra information for this clause!
 	}
+       } else {
+	 if( setValue == l_True ) {
+	   for( int j = start ; j < i; ++ j ) {
+	     if( data.value( ee[j] ) == l_True ) continue;
+	     else if( data.value( ee[j] ) == l_False ) { data.setFailed(); break; }
+	     else { 
+	       data.enqueue( ee[j], data.defaultExtraInfo() ); // enqueue the literal itself!
+	       data.addCommentToProof("added by EE class");
+	       data.addUnitToProof( ee[j] );
+	     }
+	   }
+	 } else {
+	   assert( setValue == l_False && "all complements of the class literals have to be satisfied, because set above!" );
+	   for( int j = start ; j < i; ++ j ) {
+	     if( data.value( ee[j] ) == l_False ) continue;
+	     else if( data.value( ee[j] ) == l_True ) { data.setFailed(); break; }
+	     else {
+	       data.enqueue( ~ee[j], data.defaultExtraInfo() ); // enqueue the complement!
+	       data.addCommentToProof("added by EE class");
+	       data.addUnitToProof( ~ee[j] );
+	     }
+	   }
+	 }
+       }
        
        data.ma.nextStep();
        for( int j = start ; j < i; ++ j ) { // process each element of the class!

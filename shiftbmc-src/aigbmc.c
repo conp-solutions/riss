@@ -107,7 +107,7 @@ static Minisat::IncSolver* riss = 0;
 // structures that are necessary for preprocessing, and if x or y parameter are set also for postprocessing
 static Minisat::Solver* ppSolver;
 static Minisat::IncSolver* incsolver;
-static Coprocessor::Preprocessor* preprocessor;
+static Coprocessor::Preprocessor* outerPreprocessor;
 static Coprocessor::CP3Config* cp3config;
 
 static unsigned firstlatchidx = 0, first_andidx = 0;
@@ -1063,16 +1063,16 @@ int main (int argc, char ** argv) {
     config.hk = false; // do not use laHack during preprocessing! (might already infere that the output lit is false -> unroll forever)
     ppSolver = new Minisat::Solver (config);
     incsolver = new Minisat::IncSolver (ppSolver,config);
-    preprocessor = new Coprocessor::Preprocessor ( ppSolver, *cp3config );
+    outerPreprocessor = new Coprocessor::Preprocessor ( ppSolver, *cp3config );
     for( int i = 0 ; i < shiftFormula.formula.size(); ++i ) incsolver->add( shiftFormula.formula[i] );
     
     if( verbose > 1 ) cerr << "c call freeze variables ... " << endl;
-    preprocessor->freezeExtern( 1 ); // do not remove the unit (during dense!)
-    if( !dontFreezeInput ) for( int i = 0 ; i < shiftFormula.inputs.size(); ++i ) preprocessor->freezeExtern( shiftFormula.inputs[i] );
-    for( int i = 0 ; i < shiftFormula.latch.size(); ++i ) preprocessor->freezeExtern( shiftFormula.latch[i] );
-    for( int i = 0 ; i < shiftFormula.latchNext.size(); ++i ) preprocessor->freezeExtern( shiftFormula.latchNext[i] );
-    preprocessor->freezeExtern( shiftFormula.currentAssume < 0 ? -shiftFormula.currentAssume : shiftFormula.currentAssume );
-    if( !dontFreezeBads ) for( int i = 0 ; i < shiftFormula.currentBads.size(); ++i ) preprocessor->freezeExtern( shiftFormula.currentBads[i] );
+    outerPreprocessor->freezeExtern( 1 ); // do not remove the unit (during dense!)
+    if( !dontFreezeInput ) for( int i = 0 ; i < shiftFormula.inputs.size(); ++i ) outerPreprocessor->freezeExtern( shiftFormula.inputs[i] );
+    for( int i = 0 ; i < shiftFormula.latch.size(); ++i ) outerPreprocessor->freezeExtern( shiftFormula.latch[i] );
+    for( int i = 0 ; i < shiftFormula.latchNext.size(); ++i ) outerPreprocessor->freezeExtern( shiftFormula.latchNext[i] );
+    outerPreprocessor->freezeExtern( shiftFormula.currentAssume < 0 ? -shiftFormula.currentAssume : shiftFormula.currentAssume );
+    if( !dontFreezeBads ) for( int i = 0 ; i < shiftFormula.currentBads.size(); ++i ) outerPreprocessor->freezeExtern( shiftFormula.currentBads[i] );
     // for debugging interference with CP3
     if( dumpPPformula ) {
       ofstream formulaFile;
@@ -1099,7 +1099,7 @@ int main (int argc, char ** argv) {
     }
     
     if( verbose > 1 ) cerr << "c call preprocess ... " << endl;
-    preprocessor->preprocess();
+    outerPreprocessor->preprocess();
     if( !ppSolver->okay() ) {
       msg(0,"initial formula has no bad state (found even without initialization)"); 
       exit(0);
@@ -1108,7 +1108,7 @@ int main (int argc, char ** argv) {
     if( verbose > 1 ) { cerr << "c before formula: " << endl; riss->printFormula(); }
     // alles gut!
     riss->clearSolver();
-    preprocessor->dumpFormula( shiftFormula.formula ); // actively changing the formula!
+    outerPreprocessor->dumpFormula( shiftFormula.formula ); // actively changing the formula!
     if( verbose > 1 ) cerr << "c add formula to riss" << endl;
     for( int i = 0 ; i < shiftFormula.formula.size(); ++i ) riss->add( shiftFormula.formula[i] );
     // TODO: reduce maxVar according to shrink! ... thus, shift distance will be adopted
@@ -1116,36 +1116,36 @@ int main (int argc, char ** argv) {
     if( verbose > 1 ) cerr << "c after variables: " << shiftFormula.afterPPmaxVar << endl;
     // riss->setMaxVar( nvars );
     if( denseVariables ) { // refresh knowledge about the extra literals (input,output/bad,latches,assume)
-      int tmpLit = preprocessor->giveNewLit( shiftFormula.currentAssume );
+      int tmpLit = outerPreprocessor->giveNewLit( shiftFormula.currentAssume );
       if( verbose > 1 ) cerr << "move assume from " << shiftFormula.currentAssume << " to " << tmpLit << endl;
       shiftFormula.currentAssume = tmpLit;
       if( !dontFreezeInput ) { // no need to shift input bits, if they will be restored properly after a solution has been found
 	for( int i = 0 ; i < shiftFormula.inputs.size(); ++ i ) {
-	  tmpLit = preprocessor->giveNewLit( shiftFormula.inputs[i] );
+	  tmpLit = outerPreprocessor->giveNewLit( shiftFormula.inputs[i] );
 	  if( verbose > 1 ) cerr << "move input from " <<  shiftFormula.inputs[i]   << " to " << tmpLit << endl;
 	  shiftFormula.inputs[i] = tmpLit;
 	}
       }
       for( int i = 0 ; i < shiftFormula.latch.size(); ++ i ){
-	tmpLit = preprocessor->giveNewLit( shiftFormula.latch[i] );
+	tmpLit = outerPreprocessor->giveNewLit( shiftFormula.latch[i] );
 	if( verbose > 1 ) cerr << "move latch from " << shiftFormula.latch[i] << " to " << tmpLit << endl;
 	shiftFormula.latch[i] = tmpLit;
       }
       for( int i = 0 ; i < shiftFormula.latchNext.size(); ++ i ){
-	tmpLit = preprocessor->giveNewLit(shiftFormula.latchNext[i]);
+	tmpLit = outerPreprocessor->giveNewLit(shiftFormula.latchNext[i]);
 	if( verbose > 1 ) cerr << "move latchN from " << shiftFormula.latchNext[i] << " to " << tmpLit << endl;
 	shiftFormula.latchNext[i] = tmpLit;
       }
       if( !dontFreezeBads ) { // dont freeze bad stats, if they are restored after a solution has been found
 	for( int i = 0 ; i < shiftFormula.currentBads.size(); ++ i ){
-	  tmpLit = preprocessor->giveNewLit( shiftFormula.currentBads[i] );
+	  tmpLit = outerPreprocessor->giveNewLit( shiftFormula.currentBads[i] );
 	  if( verbose > 1 ) cerr << "move bad from " <<   shiftFormula.currentBads[i]  << " to " << tmpLit << endl;
 	  shiftFormula.currentBads[i] = tmpLit;
 	}
       }
       // also shift equivalences that are not known by the solver and preprocessor yet (but are present during search)
       for( int i = 0 ; i < shiftFormula.todoEqualities.size(); i++ ) {
-	tmpLit = preprocessor->giveNewLit( shiftFormula.todoEqualities[i] );
+	tmpLit = outerPreprocessor->giveNewLit( shiftFormula.todoEqualities[i] );
 	if( verbose > 1 ) cerr << "move eq from " <<   shiftFormula.todoEqualities[i]  << " to " << tmpLit << endl;
 	shiftFormula.todoEqualities[i] = tmpLit;
       }
@@ -1426,7 +1426,7 @@ finishedSolving:;
 	    if( verbose > 3 ) cerr << "c var " << (j==1 ? 1 : j + frameShift) << " with value " << v << endl;
 	    frameModel[j-1] = v < 0 ? l_False : l_True; // model does not treat field 0!
 	  }
-	  preprocessor->extendModel( frameModel ); // recover the original model for this frame, and also the inputs
+	  outerPreprocessor->extendModel( frameModel ); // recover the original model for this frame, and also the inputs
 	  if( verbose > 3 ) { // print extra info for debugging
 	    cerr << "c after extendModel (model size: " << frameModel.size() << ")" << endl;
 	    for( int j = 1 ; j <= shiftFormula.initialMaxVar; ++ j ) { // get the right part of the actual model
@@ -1489,7 +1489,7 @@ finishedSolving:;
 	    frameModel[j-1] = v < 0 ? l_False : l_True; // model does not treat field 0!
 	  }
 	  
-	  preprocessor->extendModel( frameModel ); // recover the original model for this frame, and also the inputs
+	  outerPreprocessor->extendModel( frameModel ); // recover the original model for this frame, and also the inputs
 
 	  if( verbose > 3 ) { // print extra info for debugging
 	    cerr << "c after extendModel (model size: " << frameModel.size() << ")" << endl;

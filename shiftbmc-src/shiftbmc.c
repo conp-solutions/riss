@@ -26,7 +26,7 @@ static PicoSAT * picosat = 0;
 static void* riss = 0, *priss = 0; // handles to SAT solver libraries
 
 // structures that are necessary for preprocessing, and if x or y parameter are set also for postprocessing
-static void* preprocessor;
+static void* outerPreprocessor, *innerPreprocessor;
 
 static unsigned firstlatchidx = 0, first_andidx = 0;
 
@@ -42,6 +42,7 @@ static int maxk=0; // upper bound for search
 static int verbose = 0, move = 0, processNoProperties = 0 ,quiet = 0, nowitness = 0, nowarnings = 0, lazyEncode = 0,useShift=0, // options
   useRiss = 0, usePriss = 0, useCP3 = 0, denseVariables = 0, dontFreezeInput = 0, dontFreezeBads = 0, printTime=0, checkInitialBad = 0, abcDir = 0, stats_only = 0;
 static char* rissPresetConf = 0;
+static char* innerPPConf = 0;
 static int wildGuesser = 0, wildGuessStart = 10, wildGuessInc = 2, wildGuessIncInc = 1; // guess sequence: 10, 30, 60, ...
 static int tuning = 0, tuneSeed = 0;
 static bool checkProperties = false;
@@ -472,6 +473,13 @@ int parseOptions(int argc, char ** argv)
 	msg(1,"merge multiple frames, namely %d", mergeFrames );
       }
     }
+    else if (!strcmp (argv[i], "-bmc_mp")) {
+      ++ i;
+      if( i < argc ) { 
+	innerPPConf = argv[i];
+	msg(1,"pp inner frame with config %s", innerPPConf );
+      }
+    }
     else if (!strcmp (argv[i], "-bmc_fc")) {
       ++ i;
       if( i < argc && isnum(argv[i]) ) { 
@@ -683,54 +691,39 @@ void printState(int k)
     } 
 }
 
-int simplifyCNF(int &k, int& argc, char* argv[], double& ppCNFtime) 
+int simplifyCNF(int &k, void* preprocessorToUse, double& ppCNFtime) 
 {
 
-  if( useCP3 ) {
-    MethodTimer cnfTimer( &ppCNFtime );
-    preprocessor = CPinit();
-    // add more options here?
-    
-    CPparseOptions( preprocessor,&argc,argv, 0 ); // parse the configuration!
-//     if( denseVariables ) { // enable options for CP3 for densing variables
-//       int myargc = 8; // number of elements of parameters
-//       const char * myargv [] = {"pseudobinary","-enabled_cp3","-up","-subsimp","-bve","-dense","-cp3_dense_debug"};
-//       // cp3parseOptions( preprocessor,argc,argv ); // parse the configuration!
-//     } else {
-//       int myargc = 6; // number of elements of parameters
-//       const char * myargv [] = {"pseudobinary","-enabled_cp3","-up","-subsimp","-bve"};
-//       // cp3parseOptions( preprocessor,argc,argv ); // parse the configuration!      
-//     }
     // add formula to preprocessor!
-    for( int i = 0 ; i < shiftFormula.formula.size(); ++i ) CPaddLit( preprocessor, shiftFormula.formula[i] );
+    for( int i = 0 ; i < shiftFormula.formula.size(); ++i ) CPaddLit( preprocessorToUse, shiftFormula.formula[i] );
     
     if( verbose > 1 ) cerr << "c call freeze variables ... " << endl;
-    CPfreezeVariable( preprocessor,  1 ); // do not remove the unit (during dense!)
-    if( !dontFreezeInput ) for( int i = 0 ; i < shiftFormula.inputs.size(); ++i ) CPfreezeVariable( preprocessor,  shiftFormula.inputs[i] );
-    for( int i = 0 ; i < shiftFormula.latch.size(); ++i ) CPfreezeVariable( preprocessor,  shiftFormula.latch[i] );
-    for( int i = 0 ; i < shiftFormula.latchNext.size(); ++i ) CPfreezeVariable( preprocessor,  shiftFormula.latchNext[i] );
+    CPfreezeVariable( preprocessorToUse,  1 ); // do not remove the unit (during dense!)
+    if( !dontFreezeInput ) for( int i = 0 ; i < shiftFormula.inputs.size(); ++i ) CPfreezeVariable( preprocessorToUse,  shiftFormula.inputs[i] );
+    for( int i = 0 ; i < shiftFormula.latch.size(); ++i ) CPfreezeVariable( preprocessorToUse,  shiftFormula.latch[i] );
+    for( int i = 0 ; i < shiftFormula.latchNext.size(); ++i ) CPfreezeVariable( preprocessorToUse,  shiftFormula.latchNext[i] );
     msg(2,"freeze assumption literal %d", shiftFormula.currentAssume);
-    CPfreezeVariable( preprocessor,  shiftFormula.currentAssume < 0 ? -shiftFormula.currentAssume : shiftFormula.currentAssume ); // do not alter the assumption variable!
+    CPfreezeVariable( preprocessorToUse,  shiftFormula.currentAssume < 0 ? -shiftFormula.currentAssume : shiftFormula.currentAssume ); // do not alter the assumption variable!
     
     if( !dontFreezeBads ) {// should not be done!
-    	for( int i = 0 ; i < shiftFormula.currentBads.size(); ++i ) CPfreezeVariable( preprocessor,  shiftFormula.currentBads[i] );
-    	for( int i = 0 ; i < shiftFormula.mergeBads.size(); ++i ) CPfreezeVariable( preprocessor,  shiftFormula.mergeBads[i] );
+    	for( int i = 0 ; i < shiftFormula.currentBads.size(); ++i ) CPfreezeVariable( preprocessorToUse,  shiftFormula.currentBads[i] );
+    	for( int i = 0 ; i < shiftFormula.mergeBads.size(); ++i ) CPfreezeVariable( preprocessorToUse,  shiftFormula.mergeBads[i] );
     }
 	
     // freez input equalitiy variables!
     for( int i = 0 ; i < shiftFormula.initEqualities.size(); i++ ) { 
-      if(shiftFormula.initEqualities[i] > 0 ) CPfreezeVariable( preprocessor, shiftFormula.initEqualities[i] );
-      else  CPfreezeVariable( preprocessor, - shiftFormula.initEqualities[i] );
+      if(shiftFormula.initEqualities[i] > 0 ) CPfreezeVariable( preprocessorToUse, shiftFormula.initEqualities[i] );
+      else  CPfreezeVariable( preprocessorToUse, - shiftFormula.initEqualities[i] );
     }
     // freez loop equalitiy variables!
     for( int i = 0 ; i < shiftFormula.loopEqualities.size(); i++ ) { 
-      if(shiftFormula.loopEqualities[i] > 0 ) CPfreezeVariable( preprocessor, shiftFormula.loopEqualities[i] );
-      else  CPfreezeVariable( preprocessor, - shiftFormula.loopEqualities[i] );
+      if(shiftFormula.loopEqualities[i] > 0 ) CPfreezeVariable( preprocessorToUse, shiftFormula.loopEqualities[i] );
+      else  CPfreezeVariable( preprocessorToUse, - shiftFormula.loopEqualities[i] );
     }
     
     if( verbose > 1 ) cerr << "c call preprocess ... " << endl;
-    CPpreprocess(preprocessor);
-    if( !CPok(preprocessor) ) {
+    CPpreprocess(preprocessorToUse);
+    if( !CPok(preprocessorToUse) ) {
       msg(0,"initial formula has no bad state (found even without initialization)"); 
       printf( "0\nb0\n.\n" ); // print witness, and terminate!
       fflush( stdout );
@@ -752,17 +745,17 @@ int simplifyCNF(int &k, int& argc, char* argv[], double& ppCNFtime)
 
     // get formula back from preprocessor
     shiftFormula.formula.clear(); // actively changing the formula!
-    while ( CPhasNextOutputLit( preprocessor ) ) {
-      shiftFormula.formula.push_back( CPnextOutputLit(preprocessor) );
+    while ( CPhasNextOutputLit( preprocessorToUse ) ) {
+      shiftFormula.formula.push_back( CPnextOutputLit(preprocessorToUse) );
     }
 
     if( verbose > 1 ) cerr << "c add formula to SAT solver" << endl;
     for( int i = 0 ; i < shiftFormula.formula.size(); ++i ) add( shiftFormula.formula[i], false );
-    shiftFormula.afterPPmaxVar = CPnVars(preprocessor);
+    shiftFormula.afterPPmaxVar = CPnVars(preprocessorToUse);
     if( verbose > 1 ) cerr << "c after variables: " << shiftFormula.afterPPmaxVar << endl;
     
     if( denseVariables ) { // refresh knowledge about the extra literals (input,output/bad,latches,assume)
-      int tmpLit = CPgetReplaceLiteral( preprocessor,  shiftFormula.currentAssume );
+      int tmpLit = CPgetReplaceLiteral( preprocessorToUse,  shiftFormula.currentAssume );
       if( verbose > 0 ) { 
 				if( shiftFormula.currentAssume > 0 && tmpLit == 0 ) {
 					cerr << "WARNING: assumption literal does not play a role in the formula - abort!" << endl;
@@ -779,12 +772,12 @@ int simplifyCNF(int &k, int& argc, char* argv[], double& ppCNFtime)
 // 	}
 //       }
       for( int i = 0 ; i < shiftFormula.latch.size(); ++ i ){
-	tmpLit = CPgetReplaceLiteral( preprocessor,  shiftFormula.latch[i] );
+	tmpLit = CPgetReplaceLiteral( preprocessorToUse,  shiftFormula.latch[i] );
 	if( verbose > 1 ) cerr << "move latch from " << shiftFormula.latch[i] << " to " << tmpLit << endl;
 	shiftFormula.latch[i] = tmpLit;
       }
       for( int i = 0 ; i < shiftFormula.latchNext.size(); ++ i ){
-	tmpLit = CPgetReplaceLiteral( preprocessor, shiftFormula.latchNext[i]);
+	tmpLit = CPgetReplaceLiteral( preprocessorToUse, shiftFormula.latchNext[i]);
 	if( verbose > 1 ) cerr << "move latchN from " << shiftFormula.latchNext[i] << " to " << tmpLit << endl;
 	shiftFormula.latchNext[i] = tmpLit;
       }
@@ -805,17 +798,17 @@ int simplifyCNF(int &k, int& argc, char* argv[], double& ppCNFtime)
       
       // also shift equivalences that are not known by the solver and preprocessor yet (but are present during search)
       for( int i = 0 ; i < shiftFormula.initEqualities.size(); i++ ) {
-				tmpLit = CPgetReplaceLiteral( preprocessor,  shiftFormula.initEqualities[i] );
+				tmpLit = CPgetReplaceLiteral( preprocessorToUse,  shiftFormula.initEqualities[i] );
 				shiftFormula.initEqualities[i] = tmpLit;
       }
       for( int i = 0 ; i < shiftFormula.loopEqualities.size(); i++ ) {
-				tmpLit = CPgetReplaceLiteral( preprocessor,  shiftFormula.loopEqualities[i] );
+				tmpLit = CPgetReplaceLiteral( preprocessorToUse,  shiftFormula.loopEqualities[i] );
 				shiftFormula.loopEqualities[i] = tmpLit;
       }
     }
     
     // check whether single output is already set to false ...
-    if( CPlitFalsified(preprocessor, shiftFormula.currentAssume ) ) {
+    if( CPlitFalsified(preprocessorToUse, shiftFormula.currentAssume ) ) {
       msg(1, "current bad is already falsified! - circuit has to be safe!" );
 	printf( "0\n" );
 	for( int i = 0 ; i < model->num_bad; ++ i ) printf("b%d",i);
@@ -825,18 +818,18 @@ int simplifyCNF(int &k, int& argc, char* argv[], double& ppCNFtime)
 
     }
     if( verbose > 1 ) printState(k);
-  }
-   
+
 }
 
-int restoreSimplifyModel( void* usedPreprocessor, std::vector<uint8_t>& model) {
+int restoreSimplifyModel( void* usedPreprocessor, std::vector<uint8_t>& model)
+{
   // extend model without copying current model twice
-  CPresetModel( preprocessor ); // reset current internal model
-  for( int j = 0 ; j < model.size(); ++ j ) CPpushModelBool( preprocessor, model[j] > 0 ? 1 : 0 );
-  CPpostprocessModel( preprocessor );
-  const int modelVars = CPmodelVariables( preprocessor );
+  CPresetModel( outerPreprocessor ); // reset current internal model
+  for( int j = 0 ; j < model.size(); ++ j ) CPpushModelBool( outerPreprocessor, model[j] > 0 ? 1 : 0 );
+  CPpostprocessModel( outerPreprocessor );
+  const int modelVars = CPmodelVariables( outerPreprocessor );
   model.clear(); // reset current model, so that it can be filled with data from the preprocessor
-  for( int j = 0 ; j < modelVars; ++ j ) model.push_back(CPgetFinalModelLit(preprocessor) > 0 ? 1 : 0);
+  for( int j = 0 ; j < modelVars; ++ j ) model.push_back(CPgetFinalModelLit(outerPreprocessor) > 0 ? 1 : 0);
 }
 
 void 
@@ -870,7 +863,7 @@ printWitness(int k, int shiftDist, int initialLatchNum)
 	//
 	// extend model for global frame  (without copying current model twice)
 	//
-	const int modelVars = restoreSimplifyModel( preprocessor, fullFrameModel);
+	const int modelVars = restoreSimplifyModel( outerPreprocessor, fullFrameModel);
 	cerr << "c last (multi-) frame has " << modelVars << " variables" << endl;
 	const int mergeFrameSize = shiftFormula.mergeShiftDist;  // == ( fullFrameModel.size()  ) / mergeFrames;
 	assert( mergeFrames * mergeFrameSize == fullFrameModel.size() && "an exact number of frames has been merged, hence the model sizes should also fit!" );
@@ -939,7 +932,7 @@ printWitness(int k, int shiftDist, int initialLatchNum)
 	    const int v = deref(j==1 ? 1 : j + globalFrameShift); // treat very first value always special, because its not moved!
 	    fullFrameModel[j-1] = v < 0 ? l_False : l_True; // model does not treat field 0!
 	  }
-	  const int modelVars = restoreSimplifyModel( preprocessor, fullFrameModel);
+	  const int modelVars = restoreSimplifyModel( outerPreprocessor, fullFrameModel);
 	  const int mergeFrameSize = shiftFormula.mergeShiftDist;  // == ( fullFrameModel.size()  ) / mergeFrames;
 	  assert( mergeFrames * mergeFrameSize == fullFrameModel.size() && "an exact number of frames has been merged, hence the model sizes should also fit!" );
 	  
@@ -1146,6 +1139,14 @@ int main (int argc, char ** argv) {
       shiftFormula.initialMaxVar = nvars;
       shiftFormula.afterPPmaxVar = nvars;
       
+      msg(1,"simplify inner frame\n");
+      
+      // setup the preprocessor for the inner frame
+      if( innerPPConf != 0 ) {
+	innerPreprocessor = CPinit();
+	CPsetConfig(innerPreprocessor, innerPPConf );
+      }
+      
       msg(1,"merge multiple frames, namely %d\n", mergeFrames);
 
       const int shiftDist = shiftFormula.afterPPmaxVar - 1;  // shift depends on the variables that are actually in the formula that is used for solving
@@ -1243,7 +1244,24 @@ int main (int argc, char ** argv) {
       if( verbose > 2 ){ cerr << "c after merge:" << endl; printState(0); }
   }
   
-  simplifyCNF(k,argc,argv,ppCNFtime);
+
+  if( useCP3 ) {
+    MethodTimer cnfTimer( &ppCNFtime );
+    outerPreprocessor = CPinit();
+    // add more options here?
+    
+    CPparseOptions( outerPreprocessor,&argc,argv, 0 ); // parse the configuration!
+//     if( denseVariables ) { // enable options for CP3 for densing variables
+//       int myargc = 8; // number of elements of parameters
+//       const char * myargv [] = {"pseudobinary","-enabled_cp3","-up","-subsimp","-bve","-dense","-cp3_dense_debug"};
+//       // cp3parseOptions( preprocessor,argc,argv ); // parse the configuration!
+//     } else {
+//       int myargc = 6; // number of elements of parameters
+//       const char * myargv [] = {"pseudobinary","-enabled_cp3","-up","-subsimp","-bve"};
+//       // cp3parseOptions( preprocessor,argc,argv ); // parse the configuration!      
+//     }
+    simplifyCNF(k,outerPreprocessor,ppCNFtime);
+  }
   
   msg(0,"cnf preprocessing tool %lf seconds", ppCNFtime);
   // TODO after compression, update all the variables/literals lists in the shiftformula structure!
