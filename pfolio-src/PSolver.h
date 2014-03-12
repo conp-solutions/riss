@@ -85,12 +85,23 @@ public:
   /// Add a new variable with parameters specifying variable mode to all solvers
   Var  newVar (bool polarity = true, bool dvar = true, char type = 'o'); 
   
-  bool addClause_(vec<Lit>& ps); // Add a clause to the solver without making superflous internal copy. Will change the passed vector 'ps'.
+  /** Add a clause to the solver without making superflous internal copy. Will change the passed vector 'ps'.
+   *  @return false, if the addition of the clause results in an unsatisfiable formula
+   */
+  bool addClause_(vec<Lit>& ps);
   
   void interrupt(); // Trigger a (potentially asynchronous) interruption of the solver.
   
+  void setConfBudget(int64_t x); // set number of conflicts for the next search run
+  
+  void budgetOff(); // reset the search bugdet
+  
 protected:
 
+  /** initialize all the thread configurations
+   */
+  void createThreadConfigs();
+  
   /** initialize all the threads 
    * @return false, if the initialization failed
    */

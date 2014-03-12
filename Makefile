@@ -80,11 +80,11 @@ rissd: always
 
 # libraries
 libd: always
-	cd core;   make libd INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; rm lib.a; mv lib_debug.a ../libriss.a
+	cd core;   make libd INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src pfolio-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; rm lib.a; mv lib_debug.a ../libriss.a
 libs: always
-	cd core;   make libs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; rm lib.a; mv lib_standard.a ../libriss.a
+	cd core;   make libs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src pfolio-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; rm lib.a; mv lib_standard.a ../libriss.a
 libso: always
-	cd core;   make libso INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv lib_release.so ../libcp.so
+	cd core;   make libso INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src pfolio-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv lib_release.so ../libcp.so
 	strip -g -S -d --strip-debug -X -w --strip-symbol=*Coprocessor* --strip-symbol=*Minisat* libcp.so
 
 # coprocessor

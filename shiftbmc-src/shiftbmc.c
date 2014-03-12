@@ -23,7 +23,7 @@ static const char * name = 0;
 
 // these two SAT solvers can be used
 static PicoSAT * picosat = 0;
-static void* riss = 0;
+static void* riss = 0, *priss = 0; // handles to SAT solver libraries
 
 // structures that are necessary for preprocessing, and if x or y parameter are set also for postprocessing
 static void* preprocessor;
@@ -40,7 +40,7 @@ static char * bad = 0, * justice = 0;
 
 static int maxk=0; // upper bound for search
 static int verbose = 0, move = 0, processNoProperties = 0 ,quiet = 0, nowitness = 0, nowarnings = 0, lazyEncode = 0,useShift=0, // options
-  useRiss = 0, useCP3 = 0, denseVariables = 0, dontFreezeInput = 0, dontFreezeBads = 0, printTime=0, checkInitialBad = 0, abcDir = 0, stats_only = 0;
+  useRiss = 0, usePriss = 0, useCP3 = 0, denseVariables = 0, dontFreezeInput = 0, dontFreezeBads = 0, printTime=0, checkInitialBad = 0, abcDir = 0, stats_only = 0;
 static char* rissPresetConf = 0;
 static int wildGuesser = 0, wildGuessStart = 10, wildGuessInc = 2, wildGuessIncInc = 1; // guess sequence: 10, 30, 60, ...
 static int tuning = 0, tuneSeed = 0;
@@ -113,6 +113,7 @@ static void wrn (const char *fmt, ...) {
 static void add (int lit, bool addToShift = true) { 
   if( addToShift ) shiftFormula.formula.push_back( lit ); // write into formula
   if( riss != 0 ) riss_add( riss, lit );
+  else if( priss != 0 ) priss_add( priss, lit );
   else picosat_add (picosat, lit);
 //  fprintf(stderr, "%d ", lit );
 //  if( lit == 0 ) fprintf(stderr,"\n");
@@ -121,6 +122,7 @@ static void add (int lit, bool addToShift = true) {
 static void assume (int lit) { 
 //  fprintf(stderr, "assume literal: %d ", lit );
   if( riss != 0 ) riss_assume( riss, lit );
+  else if( priss != 0 ) priss_assume( priss, lit );
   else picosat_assume (picosat, lit);
 }
 
@@ -129,6 +131,7 @@ static int sat ( int limit = -1 ) {
   // msg (2, "solve time with SAT solver: %d", nstates);
   int ret;
   if( riss != 0 ) ret = riss_sat( riss, limit );
+  else if( priss != 0 ) ret = priss_sat( priss, limit );
   else ret = picosat_sat (picosat, limit);
   msg (2, "return code of SAT solver: %d", ret);
   return ret;
@@ -137,6 +140,7 @@ static int sat ( int limit = -1 ) {
 static int deref (int lit) { 
   int ret;
   if( riss != 0 ) ret = riss_deref( riss, lit );
+  else if( priss != 0 ) ret = priss_deref(priss, lit );
   else ret = picosat_deref (picosat, lit);
   msg(3,"deref lit %d to value %d", lit, ret);
   return ret;
@@ -146,6 +150,10 @@ static int deref (int lit) {
 static void init ( int& argc, char **& argv ) {
   msg (2, "init SAT solver");
   if( useRiss ) riss = riss_init(rissPresetConf);
+  else if ( usePriss > 0 ) {
+    cerr << "c init priss with " << usePriss << " threads" << endl ;
+    priss = priss_init( usePriss );
+  }
   else picosat = picosat_init ();
   model = aiger_init ();
 }
@@ -169,6 +177,7 @@ static void reset () {
   free (justice);
   free (join);
   if( riss != 0 ) riss_destroy( riss );
+  else if ( priss != 0 ) priss_destroy( priss );
   else picosat_reset (picosat);
   aiger_reset (model);
 }
@@ -421,11 +430,18 @@ int parseOptions(int argc, char ** argv)
     }
     else if (!strcmp (argv[i], "-bmc_l")) lazyEncode = 1;
     else if (!strcmp (argv[i], "-bmc_s")) { useShift = 1; lazyEncode = 1;} // strong dependency!
-    else if (!strcmp (argv[i], "-bmc_r")) useRiss = 1;
+    else if (!strcmp (argv[i], "-bmc_r")) { useRiss = 1; usePriss = 0; }
     else if (!strcmp (argv[i], "-bmc_rpc")) { // use preset configuration for riss
       useRiss = 1;
       if( ++i < argc ) rissPresetConf = argv[i];
-    } else if (!strcmp (argv[i], "-bmc_p")) { useCP3=1,useShift = 1; lazyEncode = 1; }
+    } 
+    else if (!strcmp (argv[i], "-bmc_pr")) { 
+      usePriss = 1; 
+      if( ++i < argc ) usePriss = atoi( argv[i] );
+      if( usePriss == 0 ) usePriss = 1;
+      useRiss = 0; 
+    }
+    else if (!strcmp (argv[i], "-bmc_p")) { useCP3=1,useShift = 1; lazyEncode = 1; }
 #ifndef TEST_BINARY
     else if (!strcmp (argv[i], "-bmc_dbgp")) { 
       ++ i;
@@ -637,6 +653,28 @@ int ABC_cleanup()
 #endif
 };
 
+void printState(int k)
+{
+    cerr << "c maxVar["<<k<<"]:     " << nvars << endl;
+    cerr << "c assume["<<k<<"]:     " << shiftFormula.currentAssume << endl;
+    cerr << "c inputs["<<k<<"]:     " << shiftFormula.inputs.size() << ": "; for( int i = 0 ; i < shiftFormula.inputs.size(); ++ i ) cerr << " " << shiftFormula.inputs[i]; cerr << endl;
+    cerr << "c latches["<<k<<"]:    " << shiftFormula.latch.size() << ": "; for( int i = 0 ; i < shiftFormula.latch.size(); ++ i ) cerr << " " << shiftFormula.latch[i]; cerr << endl;
+    cerr << "c latchNext["<<k<<"]:  " << shiftFormula.latchNext.size() << ": "; for( int i = 0 ; i < shiftFormula.latchNext.size(); ++ i ) cerr << " " << shiftFormula.latchNext[i]; cerr << endl;
+    cerr << "c thisBad["<<k<<"]:  " << shiftFormula.currentBads.size() << ": "; for( int i = 0 ; i < shiftFormula.currentBads.size(); ++ i ) cerr << " " << shiftFormula.currentBads[i]; cerr << endl;
+    cerr << "c formula["<<k<<"]:    " << endl;
+    for( int i = 0 ; i < shiftFormula.formula.size(); ++ i ) {
+      cerr << " " << shiftFormula.formula[i];
+      if( shiftFormula.formula[i] == 0 ) cerr << endl;
+    }
+    cerr << "c equis: " << endl;
+      // ensure that latches behave correctly in the next iteration
+    for( int i = 0 ; i < shiftFormula.loopEqualities.size(); i+=2 ) {
+	cerr << " " << shiftFormula.loopEqualities[i]  << " == " <<  shiftFormula.loopEqualities[i+1] << endl;
+    }
+    for( int i = 0 ; i < shiftFormula.initEqualities.size(); i+=2 ) {
+	cerr << " " << shiftFormula.initEqualities[i]  << " == " <<  shiftFormula.initEqualities[i+1] << endl;
+    } 
+}
 
 int simplifyCNF(int &k, int& argc, char* argv[], double& ppCNFtime) 
 {
@@ -672,8 +710,6 @@ int simplifyCNF(int &k, int& argc, char* argv[], double& ppCNFtime)
     	for( int i = 0 ; i < shiftFormula.mergeBads.size(); ++i ) CPfreezeVariable( preprocessor,  shiftFormula.mergeBads[i] );
     }
 	
-
-// not necessary!!    
     // freez input equalitiy variables!
     for( int i = 0 ; i < shiftFormula.initEqualities.size(); i++ ) { 
       if(shiftFormula.initEqualities[i] > 0 ) CPfreezeVariable( preprocessor, shiftFormula.initEqualities[i] );
@@ -685,31 +721,6 @@ int simplifyCNF(int &k, int& argc, char* argv[], double& ppCNFtime)
       else  CPfreezeVariable( preprocessor, - shiftFormula.loopEqualities[i] );
     }
     
-    // for debugging interference with CP3
-    if( dumpPPformula ) {
-      ofstream formulaFile;
-      formulaFile.open( (string(dumpPPformula) + string(".pre.cnf")).c_str() ); // file for write formula to
-      if(!formulaFile) wrn("could not open formula dump file");
-      else {
-				for( int i = 0 ; i < shiftFormula.formula.size(); ++i ) {
-					const int l = shiftFormula.formula[i];
-					if( l == 0 ) formulaFile << "0" << endl;
-					else formulaFile << l << " ";
-				}
-				formulaFile.close();
-      }
-      ofstream freezeFile;
-      freezeFile.open( (string(dumpPPformula) + string(".freeze")).c_str() ); // file for write formula to
-      if(!freezeFile) wrn("could not open formula dump file");
-      else {
-	if( !dontFreezeInput ) for( int i = 0 ; i < shiftFormula.inputs.size(); ++i ) freezeFile << shiftFormula.inputs[i] << " 0" << endl;
-	for( int i = 0 ; i < shiftFormula.latch.size(); ++i ) freezeFile <<  shiftFormula.latch[i] << " 0" << endl;
-	for( int i = 0 ; i < shiftFormula.latchNext.size(); ++i ) freezeFile << shiftFormula.latchNext[i] << " 0" << endl;
-	freezeFile <<  (shiftFormula.currentAssume < 0 ? -shiftFormula.currentAssume : shiftFormula.currentAssume) << " 0" << endl;
-	freezeFile.close();
-      }
-    }
-    
     if( verbose > 1 ) cerr << "c call preprocess ... " << endl;
     CPpreprocess(preprocessor);
     if( !CPok(preprocessor) ) {
@@ -718,10 +729,15 @@ int simplifyCNF(int &k, int& argc, char* argv[], double& ppCNFtime)
       fflush( stdout );
       exit(1);
     }
+    
     // everything ok, re-setup the SAT solver!
     if( riss != 0 ) {
       riss_destroy (riss); // restart the solver!
       riss = riss_init(rissPresetConf);
+    } else if ( priss != 0 ) {
+      priss_destroy( priss );
+      cerr << "c init priss with " << usePriss << " threads" << endl ;
+      priss = priss_init(usePriss);
     } else {
       picosat_reset (picosat); // restart the solver!
       picosat = picosat_init();
@@ -738,20 +754,6 @@ int simplifyCNF(int &k, int& argc, char* argv[], double& ppCNFtime)
     shiftFormula.afterPPmaxVar = CPnVars(preprocessor);
     if( verbose > 1 ) cerr << "c after variables: " << shiftFormula.afterPPmaxVar << endl;
     
-    if( dumpPPformula ) { // dump formula once more, after preprocessing
-      ofstream formulaFile;
-      formulaFile.open( (string(dumpPPformula) + string(".post.cnf")).c_str() ); // file for write formula to
-      if(!formulaFile) wrn("could not open formula dump file");
-      else {
-	for( int i = 0 ; i < shiftFormula.formula.size(); ++i ) {
-	  const int l = shiftFormula.formula[i];
-	  if( l == 0 ) formulaFile << "0" << endl;
-	  else formulaFile << l << " ";
-	}
-	formulaFile.close();
-      }
-    }
-    
     if( denseVariables ) { // refresh knowledge about the extra literals (input,output/bad,latches,assume)
       int tmpLit = CPgetReplaceLiteral( preprocessor,  shiftFormula.currentAssume );
       if( verbose > 0 ) { 
@@ -761,13 +763,14 @@ int simplifyCNF(int &k, int& argc, char* argv[], double& ppCNFtime)
 				}
       }
       shiftFormula.currentAssume = tmpLit; // what happens if this literal is removed?
-      if( !dontFreezeInput ) { // no need to shift input bits, if they will be restored properly after a solution has been found
-	for( int i = 0 ; i < shiftFormula.inputs.size(); ++ i ) {
-	  tmpLit = CPgetReplaceLiteral( preprocessor,  shiftFormula.inputs[i] );
-	  if( verbose > 1 ) cerr << "move input from " <<  shiftFormula.inputs[i]   << " to " << tmpLit << endl;
-	  shiftFormula.inputs[i] = tmpLit;
-	}
-      }
+// should not be necessary to know anything about the intermediate inputs
+//       if( !dontFreezeInput ) { // no need to shift input bits, if they will be restored properly after a solution has been found
+// 	for( int i = 0 ; i < shiftFormula.inputs.size(); ++ i ) {
+// 	  tmpLit = CPgetReplaceLiteral( preprocessor,  shiftFormula.inputs[i] );
+// 	  if( verbose > 1 ) cerr << "move input from " <<  shiftFormula.inputs[i]   << " to " << tmpLit << endl;
+// 	  shiftFormula.inputs[i] = tmpLit;
+// 	}
+//       }
       for( int i = 0 ; i < shiftFormula.latch.size(); ++ i ){
 	tmpLit = CPgetReplaceLiteral( preprocessor,  shiftFormula.latch[i] );
 	if( verbose > 1 ) cerr << "move latch from " << shiftFormula.latch[i] << " to " << tmpLit << endl;
@@ -778,19 +781,21 @@ int simplifyCNF(int &k, int& argc, char* argv[], double& ppCNFtime)
 	if( verbose > 1 ) cerr << "move latchN from " << shiftFormula.latchNext[i] << " to " << tmpLit << endl;
 	shiftFormula.latchNext[i] = tmpLit;
       }
+   
+// should not be necessary to know anything about the intermediate bad state variables
+//       if( !dontFreezeBads ) { // dont freeze bad stats, if they are restored after a solution has been found
+// 	for( int i = 0 ; i < shiftFormula.currentBads.size(); ++ i ) {
+// 		tmpLit = CPgetReplaceLiteral( preprocessor,  shiftFormula.currentBads[i] );
+// 		if( verbose > 1 ) cerr << "move bad from " <<   shiftFormula.currentBads[i]  << " to " << tmpLit << endl;
+// 		shiftFormula.currentBads[i] = tmpLit;
+// 	}
+// 	for( int i = 0 ; i < shiftFormula.mergeBads.size(); ++ i ) {
+// 		tmpLit = CPgetReplaceLiteral( preprocessor,  shiftFormula.mergeBads[i] );
+// 		if( verbose > 1 ) cerr << "move bad from " <<   shiftFormula.mergeBads[i]  << " to " << tmpLit << endl;
+// 		shiftFormula.mergeBads[i] = tmpLit;
+// 	}
+//       }
       
-      if( !dontFreezeBads ) { // dont freeze bad stats, if they are restored after a solution has been found
-	for( int i = 0 ; i < shiftFormula.currentBads.size(); ++ i ) {
-		tmpLit = CPgetReplaceLiteral( preprocessor,  shiftFormula.currentBads[i] );
-		if( verbose > 1 ) cerr << "move bad from " <<   shiftFormula.currentBads[i]  << " to " << tmpLit << endl;
-		shiftFormula.currentBads[i] = tmpLit;
-	}
-	for( int i = 0 ; i < shiftFormula.mergeBads.size(); ++ i ) {
-		tmpLit = CPgetReplaceLiteral( preprocessor,  shiftFormula.mergeBads[i] );
-		if( verbose > 1 ) cerr << "move bad from " <<   shiftFormula.mergeBads[i]  << " to " << tmpLit << endl;
-		shiftFormula.mergeBads[i] = tmpLit;
-	}
-      }
       // also shift equivalences that are not known by the solver and preprocessor yet (but are present during search)
       for( int i = 0 ; i < shiftFormula.initEqualities.size(); i++ ) {
 				tmpLit = CPgetReplaceLiteral( preprocessor,  shiftFormula.initEqualities[i] );
@@ -803,55 +808,209 @@ int simplifyCNF(int &k, int& argc, char* argv[], double& ppCNFtime)
     }
     
     // check whether single output is already set to false ...
-    if( CPlitFalsified(preprocessor, shiftFormula.currentBads[0] ) ) {
+    if( CPlitFalsified(preprocessor, shiftFormula.currentAssume ) ) {
       msg(1, "current bad is already falsified! - circuit has to be safe!" );
-      
-      printf( "0\nb0\n.\n" ); // print witness, and terminate!
-      fflush( stdout );
-      exit(1);
-      
+	printf( "0\n" );
+	for( int i = 0 ; i < model->num_bad; ++ i ) printf("b%d",i);
+	printf("\n.\n" ); // print witness, and terminate!
+	fflush( stdout );
+	exit(1);
+
     }
-    // msg(1,"moved first bad variable to %d", shiftFormula.currentBads[0] );
-    if( verbose > 1 ) {
-      cerr << "c maxVar["<<k<<"]:     " << nvars << endl;
-      cerr << "c assume["<<k<<"]:     " << shiftFormula.currentAssume << endl;
-      cerr << "c inputs["<<k<<"]:     " << shiftFormula.inputs.size() << ": "; for( int i = 0 ; i < shiftFormula.inputs.size(); ++ i ) cerr << " " << shiftFormula.inputs[i]; cerr << endl;
-      cerr << "c latches["<<k<<"]:    " << shiftFormula.latch.size() << ": "; for( int i = 0 ; i < shiftFormula.latch.size(); ++ i ) cerr << " " << shiftFormula.latch[i]; cerr << endl;
-      cerr << "c latchNext["<<k<<"]:  " << shiftFormula.latchNext.size() << ": "; for( int i = 0 ; i < shiftFormula.latchNext.size(); ++ i ) cerr << " " << shiftFormula.latchNext[i]; cerr << endl;
-      cerr << "c thisBad["<<k<<"]:  " << shiftFormula.currentBads.size() << ": "; for( int i = 0 ; i < shiftFormula.currentBads.size(); ++ i ) cerr << " " << shiftFormula.currentBads[i]; cerr << endl;
-      cerr << "c formula["<<k<<"]:    " << endl;
-      for( int i = 0 ; i < shiftFormula.formula.size(); ++ i ) {
-	cerr << " " << shiftFormula.formula[i];
-	if( shiftFormula.formula[i] == 0 ) cerr << endl;
-      }
-    }
+    if( verbose > 1 ) printState(k);
   }
    
 }
 
 
-void printState(int k)
+void 
+printWitness(int k, int shiftDist, int initialLatchNum)
 {
-    cerr << "c maxVar["<<k<<"]:     " << nvars << endl;
-    cerr << "c assume["<<k<<"]:     " << shiftFormula.currentAssume << endl;
-    cerr << "c inputs["<<k<<"]:     " << shiftFormula.inputs.size() << ": "; for( int i = 0 ; i < shiftFormula.inputs.size(); ++ i ) cerr << " " << shiftFormula.inputs[i]; cerr << endl;
-    cerr << "c latches["<<k<<"]:    " << shiftFormula.latch.size() << ": "; for( int i = 0 ; i < shiftFormula.latch.size(); ++ i ) cerr << " " << shiftFormula.latch[i]; cerr << endl;
-    cerr << "c latchNext["<<k<<"]:  " << shiftFormula.latchNext.size() << ": "; for( int i = 0 ; i < shiftFormula.latchNext.size(); ++ i ) cerr << " " << shiftFormula.latchNext[i]; cerr << endl;
-    cerr << "c thisBad["<<k<<"]:  " << shiftFormula.currentBads.size() << ": "; for( int i = 0 ; i < shiftFormula.currentBads.size(); ++ i ) cerr << " " << shiftFormula.currentBads[i]; cerr << endl;
-    cerr << "c formula["<<k<<"]:    " << endl;
-    for( int i = 0 ; i < shiftFormula.formula.size(); ++ i ) {
-      cerr << " " << shiftFormula.formula[i];
-      if( shiftFormula.formula[i] == 0 ) cerr << endl;
-    }
-    cerr << "c equis: " << endl;
-      // ensure that latches behave correctly in the next iteration
-    for( int i = 0 ; i < shiftFormula.loopEqualities.size(); i+=2 ) {
-	cerr << " " << shiftFormula.loopEqualities[i]  << " == " <<  shiftFormula.loopEqualities[i+1] << endl;
-    }
-    for( int i = 0 ; i < shiftFormula.initEqualities.size(); i+=2 ) {
-	cerr << " " << shiftFormula.initEqualities[i]  << " == " <<  shiftFormula.initEqualities[i+1] << endl;
+ 
+    int found = 0;
+    
+    std::vector<uint8_t> fullFrameModel;
+    std::vector<uint8_t> mergeFrameModel;
+    
+    // calculated buggy frame
+    int actualFaultyFrame = (k * mergeFrames); // this frame has been proven to be good
+    
+    if( useShift ) {
+      const int thisShift = k * shiftDist;
+      const int lastShift = (k-1) * shiftDist;
+      //
+      // print the line that states the bad outputs, that have been reached
+      //
+      if( dontFreezeBads || true ) { // always uncover the whole model, to be able to split it into the inner frames!
+	
+	// if inputs have not been frozen, we need to recover them per frame before printing their value!
+	const int frameShift = k * shiftDist; // want to access the very last frame
+	fullFrameModel.assign ( shiftFormula.afterPPmaxVar, l_False );
+	for( int j = 1 ; j <= shiftFormula.afterPPmaxVar; ++ j ) { // get the right part of the actual model
+		const int v = deref(j==1 ? 1 : j + frameShift); // treat very first value always special, because its not moved!
+		fullFrameModel[j-1] = v < 0 ? l_False : l_True; // model does not treat field 0!
+	}
+
+	//
+	// extend model for global frame  (without copying current model twice)
+	//
+	CPresetModel( preprocessor ); // reset current internal model
+	for( int j = 0 ; j < fullFrameModel.size(); ++ j ) CPpushModelBool( preprocessor, fullFrameModel[j] > 0 ? 1 : 0);
+	CPpostprocessModel( preprocessor );
+	const int modelVars = CPmodelVariables( preprocessor );
+	fullFrameModel.clear(); // reset current model, so that it can be filled with data from the preprocessor
+	for( int j = 0 ; j < modelVars; ++ j ) fullFrameModel.push_back( CPgetFinalModelLit(preprocessor) > 0 ? 1 : 0 );
+	cerr << "c last (multi-) frame has " << modelVars << " variables" << endl;
+	
+	//
+	// if frames have been merged, process each single frame now
+	//
+	const int mergeFrameSize = ( fullFrameModel.size() - 1 ) / mergeFrames;
+	assert( mergeFrames * mergeFrameSize + 1 == fullFrameModel && "an exact number of frames has been merged, hence the model sizes should also fit!" );
+	for( int i = 0; i < mergeFrames; ++i ) { // find the smallest frame that is actually broken! 
+	    if( mergeFrames == 1 ) mergeFrameModel.swap( fullFrameModel );  // nothing has been merged, simply use the fullFrameModel
+	    else {
+	      mergeFrameModel.clear();
+	      mergeFrameModel.push_back( fullFrameModel[0] ); // copy the constant unit
+	      for( int j = 1; j <= mergeFrameSize; ++ j )
+		mergeFrameModel.push_back( fullFrameModel[ i*mergeFrameSize + j] ); // copy all the other variables for the current (inner) frame
+	      // has an inner simplifier been used? then undo its simplifications as well!
+
+	    }
+	    
+	    // check whether any bad variable is set
+	    for (int j = 0; j < shiftFormula.currentBads.size(); j++) {
+		int tlit = shiftFormula.currentBads[j];
+		int v = 0; // by default the bad state is false
+		if(tlit>0 ) { if( fullFrameModel[ tlit -1 ] == l_True) v = 1; } 
+		else { if(fullFrameModel[ -tlit -1 ] == l_False ) v=1; }
+		if( v = 1 ) { printf ("b%d", j), found++;} // print the current bad state
+		assert( (shiftFormula.currentBads.size() > 1 || found > 0) && "only one output -> find immediately" );
+	    }
+	    if( found > 0 ) { // this inner frame is the first frame where things brake
+	      actualFaultyFrame += i;
+	      break;	// as soon as one bad state has been printed, stop printing bad states!
+	    }
+	}
+	cerr << "c found bad state at " << actualFaultyFrame << endl;
+
+      } else { // bad variables have been frozen, hance simply use the moved value!
+	assert( false && "this code should never be reached!");
+	int i = 0;
+	for (i = 0; i < model->num_bad; i++) {
+	    bool buggyFrame = false;
+	    int smallShift = shiftDist / mergeFrames;
+	    cerr << "c numBad " << model->num_bad << " shiftDist: " << shiftDist << " mFs: " << mergeFrames << " smallShift: " << smallShift << endl;
+	    assert( smallShift * mergeFrames == shiftDist && "the shiftDistance must be dividable by the number of merged frames without remainder" );
+	    for( int j = 1 ; j <= mergeFrames; ++ j ) {
+		int thisBad = shiftFormula.currentBads[i] + lastShift + smallShift;
+		if (deref ( thisBad  ) > 0) {
+		  printf ("b%d", i), found++;
+		  buggyFrame = true;
+		}
+	    }
+	    if( buggyFrame ) {
+	      actualFaultyFrame =  j - 1 + (k * mergeFrames);
+	      break; // no need to print bugggs in the next frames!
+	    }
+	}
+	assert (found && "there has to be found something!");
+      }
+      assert ((model->num_bad || model->num_justice) && "there has to be some property that has been found!" );
+      nl (); // print new line, to give the initialization of the latches
+      
+      
+      
+      //
+      // print initial Latch configuration
+      //
+      
+      /// nothing special to do with latches, because those are always frozen, and thus never touched
+      for (i = 0; i < model->num_latches; i++){
+				if( initialLatchNum > 0 &&  deref(shiftFormula.latch[i]) != -1 ) wrn("latch[%d],var %d is not initialized to 0, but scorr has been used during simplifying the circuit",i,shiftFormula.latch[i]);
+				print ( shiftFormula.latch[i] ); // this function prints 0 or 1 depending on the current assignment of this variable!
+      }
+      for( ; i < initialLatchNum; ++ i ) { // print the latches that might be removed by ABC
+				printV(-1); // ABC and HWMCC assumes all latches to be initialized to 0!
+      }
+      nl (); // print new line to give the sequence of inputs
+
+      
+      for (i = 0; i <= k; i++) { // for each step give the inputs that lead to the bad state
+				if( dontFreezeInput ) { // if inputs have not been frozen, we need to recover them per frame before printing their value!
+					const int frameShift = i * shiftDist;
+					std::vector<uint8_t> frameModel ( shiftFormula.afterPPmaxVar, l_False ); // TODO put this vector higher!
+
+					for( int j = 1 ; j <= shiftFormula.afterPPmaxVar; ++ j ) { // get the right part of the actual model
+						const int v = deref(j==1 ? 1 : j + frameShift); // treat very first value always special, because its not moved!
+						if( verbose > 3 ) cerr << "c var " << (j==1 ? 1 : j + frameShift) << " with value " << v << endl;
+						frameModel[j-1] = v < 0 ? l_False : l_True; // model does not treat field 0!
+					}
+			
+					// extend model without copying current model twice
+					CPresetModel( preprocessor ); // reset current internal model
+					for( int j = 0 ; j < frameModel.size(); ++ j ) CPpushModelBool( preprocessor, frameModel[j] > 0 ? 1 : 0 );
+					CPpostprocessModel( preprocessor );
+					const int modelVars = CPmodelVariables( preprocessor );
+					frameModel.clear(); // reset current model, so that it can be filled with data from the preprocessor
+					for( int j = 0 ; j < modelVars; ++ j ) frameModel.push_back(CPgetFinalModelLit(preprocessor) > 0 ? 1 : 0);
+
+					if( verbose > 3 ) { // print extra info for debugging
+						cerr << "c after extendModel (model size: " << frameModel.size() << ")" << endl;
+						for( int j = 1 ; j <= shiftFormula.initialMaxVar; ++ j ) { // get the right part of the actual model
+							cerr << "c var " << (j==1 ? 1 : j + frameShift) << " with value " << (frameModel[j-1] == l_True ? 1 : -1) << endl;
+						}
+						for (int j = 0; j < shiftFormula.inputs.size(); j++) { // show numbers of literals that will be accessed
+							int tlit = shiftFormula.inputs[j];
+							cerr << "c input[" << j << "] = " << tlit << endl;
+						}
+					}
+			
+					for (int j = 0; j < shiftFormula.inputs.size(); j++) { // print the actual values!
+						int tlit = shiftFormula.inputs[j];
+						if(tlit>0) printV ( frameModel[ tlit -1 ] == l_False ? -1 : 1  ); // print input j of iteration i
+						else  printV ( frameModel[ -tlit -1 ] == l_True ? -1 : 1  ); // or complementary literal
+					}
+			
+				} else { // if inputs have been frozen, their is no need to treat them special
+					for (int j = 0; j < model->num_inputs; j++)
+						print ( shiftFormula.inputs[j] + shiftDist * i ); // print input j of iteration i
+				}
+				nl ();
+      }
+      printf (".\n"); // indicate end of witness
+      fflush (stdout);
+    } else {
+      int i = 0;
+      // "old" way of printing the witness with all structures from the tool
+      assert (nstates == k + 1);
+      for (i = 0; i < model->num_bad; i++) {
+				if (deref (states[k].bad[i]) > 0)
+					printf ("b%d", i), found++;
+				 // cerr << "c check bad state for: " << states[k].bad[i] << endl;
+      }
+      assert (found);
+      assert (model->num_bad || model->num_justice);
+      nl ();
+      for (i = 0; i < model->num_latches; i++){
+				print (states[0].latches[i].lit);
+      	if( initialLatchNum > 0 &&  deref(states[0].latches[i].lit) != -1 ) wrn("latch[%d],var %d is not initialized to 0, but scorr has been used during simplifying the circuit",i,shiftFormula.latch[i]);
+      }
+      for( ; i < initialLatchNum; ++ i ) { // take care of missing latches
+				printV(-1); // ABC assumes all latches to be initialized to 0!
+      }
+      nl ();
+      for (i = 0; i <= k; i++) {
+				for (int j = 0; j < model->num_inputs; j++)
+					print (states[i].inputs[j]);
+				nl ();
+      }
+      printf (".\n");
+      fflush (stdout);
     } 
+    
 }
+  
 
 
 
@@ -1255,171 +1414,11 @@ finishedSolving:;
     printf ("1\n");
     fflush (stdout);
     if (nowitness) goto DONE;
-    found = 0;
-    
-    std::vector<uint8_t> frameModel;
-    
-    // calculated buggy frame
-    int actualFaultyFrame = (k * mergeFrames); 
-    
-    if( useShift ) {
-      const int thisShift = k * shiftDist;
-      const int lastShift = (k-1) * shiftDist;
-      // print the line that states the bad outputs, that have been reached
-      if( dontFreezeBads ) { 
-	// if inputs have not been frozen, we need to recover them per frame before printing their value!
-	const int frameShift = k * shiftDist; // want to access the very last frame
-	frameModel.assign ( shiftFormula.afterPPmaxVar, l_False ); // TODO put this vector higher!
-	for( int j = 1 ; j <= shiftFormula.afterPPmaxVar; ++ j ) { // get the right part of the actual model
-		const int v = deref(j==1 ? 1 : j + frameShift); // treat very first value always special, because its not moved!
-		if( verbose > 3 ) cerr << "c var " << (j==1 ? 1 : j + frameShift) << " with value " << v << endl;
-		frameModel[j-1] = v < 0 ? l_False : l_True; // model does not treat field 0!
-	}
-	// extend model without copying current model twice
-	CPresetModel( preprocessor ); // reset current internal model
-	for( int j = 0 ; j < frameModel.size(); ++ j ) CPpushModelBool( preprocessor, frameModel[j] > 0 ? 1 : 0);
-	CPpostprocessModel( preprocessor );
-	const int modelVars = CPmodelVariables( preprocessor );
-	frameModel.clear(); // reset current model, so that it can be filled with data from the preprocessor
-	for( int j = 0 ; j < modelVars; ++ j ) frameModel.push_back( CPgetFinalModelLit(preprocessor) > 0 ? 1 : 0 );
-
-	cerr << "c last (multi-) frame has " << modelVars << " variables" << endl;
-	// continue as usual
-	if( verbose > 3 ) { // print extra info for debugging
-		cerr << "c after extendModel (model size: " << frameModel.size() << ")" << endl;
-		for( int j = 1 ; j <= shiftFormula.initialMaxVar; ++ j ) { // get the right part of the actual model
-		  cerr << "c var " << (j==1 ? 1 : j + frameShift) << " with value " << (frameModel[j-1] == l_True ? 1 : -1) << endl;
-		}
-		for (int j = 0; j < shiftFormula.currentBads.size(); j++) { // show numbers of literals that will be accessed
-		  int tlit = shiftFormula.currentBads[j];
-		  cerr << "c bad[" << j << "] = " << tlit << endl;
-		}
-	}
-	for (int j = 0; j < shiftFormula.currentBads.size(); j++) { // print the actual values!
-		int tlit = shiftFormula.currentBads[j];
-		int v = 0;
-		if(tlit>0 ) {
-		  if( frameModel[ tlit -1 ] == l_True) v = 1;
-		}
-		else if(frameModel[ -tlit -1 ] == l_False ) v=1;
-		if( v = 1 ) {
-		  printf ("b%d", j), found++;
-		}
-		assert( (shiftFormula.currentBads.size() > 1 || found > 0) && "only one output -> find immediately" );
-	}
-	assert (found && "there has to be found something!");
-      } else { // bad variables have been frozen, hance simply use the moved value!
-	for (i = 0; i < model->num_bad; i++) {
-	    bool buggyFrame = false;
-	    int smallShift = shiftDist / mergeFrames;
-	    cerr << "c numBad " << model->num_bad << " shiftDist: " << shiftDist << " mFs: " << mergeFrames << " smallShift: " << smallShift << endl;
-	    assert( smallShift * mergeFrames == shiftDist && "the shiftDistance must be dividable by the number of merged frames without remainder" );
-	    for( int j = 1 ; j <= mergeFrames; ++ j ) {
-		int thisBad = shiftFormula.currentBads[i] + lastShift + smallShift;
-		if (deref ( thisBad  ) > 0) {
-		  printf ("b%d", i), found++;
-		  buggyFrame = true;
-		}
-	    }
-	    if( buggyFrame ) {
-	      actualFaultyFrame =  j - 1 + (k * mergeFrames);
-	      break; // no need to print bugggs in the next frames!
-	    }
-	}
-	assert (found && "there has to be found something!");
-      }
-      assert ((model->num_bad || model->num_justice) && "there has to be some property that has been found!" );
-      nl (); // print new line, to give the initialization of the latches
-      
-      /// nothing special to do with latches, because those are always frozen, and thus never touched
-      for (i = 0; i < model->num_latches; i++){
-				if( initialLatchNum > 0 &&  deref(shiftFormula.latch[i]) != -1 ) wrn("latch[%d],var %d is not initialized to 0, but scorr has been used during simplifying the circuit",i,shiftFormula.latch[i]);
-				print ( shiftFormula.latch[i] ); // this function prints 0 or 1 depending on the current assignment of this variable!
-      }
-      for( ; i < initialLatchNum; ++ i ) { // print the latches that might be removed by ABC
-				printV(-1); // ABC and HWMCC assumes all latches to be initialized to 0!
-      }
-      nl (); // print new line to give the sequence of inputs
-      
-      if( dontFreezeInput && verbose > 3 ) {
-				cerr << "c frame offset: 1" << endl
-						 << "c solve frame size: " << shiftFormula.afterPPmaxVar - 1 << endl
-						 << "c before pp frame size: " << shiftFormula.initialMaxVar - 1 << endl;
-      }
-      
-      for (i = 0; i <= k; i++) { // for each step give the inputs that lead to the bad state
-				if( dontFreezeInput ) { // if inputs have not been frozen, we need to recover them per frame before printing their value!
-					const int frameShift = i * shiftDist;
-					std::vector<uint8_t> frameModel ( shiftFormula.afterPPmaxVar, l_False ); // TODO put this vector higher!
-
-					for( int j = 1 ; j <= shiftFormula.afterPPmaxVar; ++ j ) { // get the right part of the actual model
-						const int v = deref(j==1 ? 1 : j + frameShift); // treat very first value always special, because its not moved!
-						if( verbose > 3 ) cerr << "c var " << (j==1 ? 1 : j + frameShift) << " with value " << v << endl;
-						frameModel[j-1] = v < 0 ? l_False : l_True; // model does not treat field 0!
-					}
-			
-					// extend model without copying current model twice
-					CPresetModel( preprocessor ); // reset current internal model
-					for( int j = 0 ; j < frameModel.size(); ++ j ) CPpushModelBool( preprocessor, frameModel[j] > 0 ? 1 : 0 );
-					CPpostprocessModel( preprocessor );
-					const int modelVars = CPmodelVariables( preprocessor );
-					frameModel.clear(); // reset current model, so that it can be filled with data from the preprocessor
-					for( int j = 0 ; j < modelVars; ++ j ) frameModel.push_back(CPgetFinalModelLit(preprocessor) > 0 ? 1 : 0);
-
-					if( verbose > 3 ) { // print extra info for debugging
-						cerr << "c after extendModel (model size: " << frameModel.size() << ")" << endl;
-						for( int j = 1 ; j <= shiftFormula.initialMaxVar; ++ j ) { // get the right part of the actual model
-							cerr << "c var " << (j==1 ? 1 : j + frameShift) << " with value " << (frameModel[j-1] == l_True ? 1 : -1) << endl;
-						}
-						for (int j = 0; j < shiftFormula.inputs.size(); j++) { // show numbers of literals that will be accessed
-							int tlit = shiftFormula.inputs[j];
-							cerr << "c input[" << j << "] = " << tlit << endl;
-						}
-					}
-			
-					for (int j = 0; j < shiftFormula.inputs.size(); j++) { // print the actual values!
-						int tlit = shiftFormula.inputs[j];
-						if(tlit>0) printV ( frameModel[ tlit -1 ] == l_False ? -1 : 1  ); // print input j of iteration i
-						else  printV ( frameModel[ -tlit -1 ] == l_True ? -1 : 1  ); // or complementary literal
-					}
-			
-				} else { // if inputs have been frozen, their is no need to treat them special
-					for (int j = 0; j < model->num_inputs; j++)
-						print ( shiftFormula.inputs[j] + shiftDist * i ); // print input j of iteration i
-				}
-				nl ();
-      }
-      printf (".\n"); // indicate end of witness
-      fflush (stdout);
-    } else {
-      // "old" way of printing the witness with all structures from the tool
-      assert (nstates == k + 1);
-      for (i = 0; i < model->num_bad; i++) {
-				if (deref (states[k].bad[i]) > 0)
-					printf ("b%d", i), found++;
-				 // cerr << "c check bad state for: " << states[k].bad[i] << endl;
-      }
-      assert (found);
-      assert (model->num_bad || model->num_justice);
-      nl ();
-      for (i = 0; i < model->num_latches; i++){
-				print (states[0].latches[i].lit);
-      	if( initialLatchNum > 0 &&  deref(states[0].latches[i].lit) != -1 ) wrn("latch[%d],var %d is not initialized to 0, but scorr has been used during simplifying the circuit",i,shiftFormula.latch[i]);
-      }
-      for( ; i < initialLatchNum; ++ i ) { // take care of missing latches
-				printV(-1); // ABC assumes all latches to be initialized to 0!
-      }
-      nl ();
-      for (i = 0; i <= k; i++) {
-				for (int j = 0; j < model->num_inputs; j++)
-					print (states[i].inputs[j]);
-				nl ();
-      }
-      printf (".\n");
-      fflush (stdout);
-    } 
+    printWitness(k, shiftDist, initialLatchNum);
+  } else {
+    printf ("2\n");
+    fflush (stdout);  
   }
-  else printf ("2\n"), fflush (stdout);
 DONE:
  
 //Result for ParamILS: <solved>, <runtime>, <runlength>, <quality>, <seed>,

@@ -40,6 +40,15 @@ void Solver::setCommunication( Communicator* comm )
   sendRatio = communication->sendRatio;
 }
 
+inline 
+void Solver::resetLastSolve()
+{
+  clearInterrupt();
+  cancelUntil(0);
+  budgetOff();
+}
+
+
 /** add a learned clause to the solver
  */
 inline

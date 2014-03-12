@@ -92,7 +92,7 @@ public:
 
   ~ClauseRingBuffer()
   {
-
+    if( pool != 0 ) { delete [] pool; pool = 0; }
   }
 
   unsigned size() const { return poolSize; }

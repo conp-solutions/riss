@@ -319,7 +319,6 @@ public:
     /// indicates that this variable cannot be used for simplification techniques that do not preserve equivalence
     bool isFrozen( const Var&v ) const { return varFlags[v].frozen; }
     
-
     vec<Lit>            trail;            // Assignment stack; stores all assigments made in the order they were made.
 protected:
     vec<int>            nbpos;
@@ -784,9 +783,15 @@ public:
      * @param comm pointer to the communication object that should be used by this thread
      */
     void setCommunication( Communicator* comm );
+    
+    /** reset the state of an possibly interrupted solver 
+     * clear interrupt, jump to level 0
+     */
+    void resetLastSolve();
+    
 private: 
     Communicator* communication; /// communication with the outside, and control of this solver
-
+    
     /** goto sleep, wait until master did updates, wakeup, process the updates
      * @param toSend if not 0, send the (learned) clause, if 0, receive shared clauses
      * note: can also interrupt search and incorporate new assumptions etc.

@@ -47,6 +47,7 @@ riss_destroy(void*& riss)
   delete solver->solver;
   delete solver->cp3config;
   delete solver->solverconfig;
+  delete solver;
   riss = 0;
 }
   
@@ -63,7 +64,7 @@ int riss_add (void* riss, const int& lit)
       const Var v = var(l2);
       while ( solver->solver->nVars() <= v ) solver->solver->newVar();
     }
-    ret = solver->solver->addClause( solver->currentClause );
+    ret = solver->solver->addClause_( solver->currentClause );
     solver->currentClause.clear();
   }
   return ret ? 1 : 0;

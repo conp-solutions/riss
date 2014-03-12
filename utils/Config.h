@@ -182,7 +182,7 @@ else if( optionSet == "AUIP" ) {
     parseOptions(" -alluiphack=2",false);
 }
 else if( optionSet == "LLA" ) {
-    parseOptions("	-laHack -tabu -hlabound=-1",false);
+    parseOptions(" -laHack -tabu -hlabound=-1",false);
 }
 else if( optionSet == "SUHD" ) {
     parseOptions(" -sUhdProbe=3",false);
@@ -235,6 +235,7 @@ else if( optionSet == "LIGHT" ) {
 inline
 bool Config::parseOptions(const std::string& options, bool strict)
 {
+  if( options.size() == 0 ) return false;
   // split string into sub strings, separated by ':'
   std::vector<std::string> optionList;
   int lastStart = 0;
@@ -248,9 +249,11 @@ bool Config::parseOptions(const std::string& options, bool strict)
       }
       lastStart = findP + 1;
   }
+//  std::cerr << "c work on option string " << options << std::endl;
   // create argc - argv combination
-  char* argv[ options.size() + 1]; // one dummy in front!
-  for( int i = 0; i < options.size(); ++ i ) {
+  char* argv[ optionList.size() + 1]; // one dummy in front!
+  for( int i = 0; i < optionList.size(); ++ i ) {
+//    std::cerr << "add option " << optionList[i] << std::endl;
     argv[i+1] = (char*)optionList[i].c_str();
   }
   int argc = optionList.size() + 1;

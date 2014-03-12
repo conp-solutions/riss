@@ -1603,6 +1603,9 @@ inline BIG::~BIG()
  if( big != 0 )    { free( big ); big = 0; }
  if( storage != 0 ){ free( storage ); storage = 0; }
  if( sizes != 0 )  { free( sizes ); sizes = 0 ; }
+ if( start != 0 ) { free( start ); start = 0; }
+ if( stop != 0 ) { free( stop ); stop = 0; }
+ 
 }
 
 inline void BIG::create(ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list)
@@ -1903,6 +1906,7 @@ inline void BIG::generateImplied( CoprocessorData& data )
     for( uint32_t i = 0 ; i < ts2; i++ ) { const uint32_t rnd=rand()%ts2; const Lit tmp = data.lits[i]; data.lits[i] = data.lits[rnd]; data.lits[rnd]=tmp; }
     for ( uint32_t i = 0 ; i < ts2; ++ i )
       stamp = stampLiteral(data.lits[i],stamp,index,stampQueue);
+    free(index);
 }
 
 inline void BIG::generateImplied( uint32_t nVars, vec<Lit>& tmpLits )
@@ -1958,6 +1962,7 @@ inline void BIG::generateImplied( uint32_t nVars, vec<Lit>& tmpLits )
       stamp = stampLiteral(tmpLits[i],stamp,index,stampQueue);
     
     tmpLits.clear(); // clean up
+    free(index);
 }
 
 inline void BIG::fillSorted(vector<Lit>& literals, CoprocessorData& data, bool rootsOnly, bool getAll)

@@ -66,6 +66,7 @@ Solver::Solver(CoreConfig& _config) :
     // Parameters (user settable):
     //
     , verbosity      (config.opt_verb)
+    , verbEveryConflicts (100000)
     , K              (config.opt_K)
     , R              (config.opt_R)
     , sizeLBDQueue   (config.opt_size_lbd_queue)
@@ -278,7 +279,7 @@ Solver::Solver(CoreConfig& _config) :
 
 Solver::~Solver()
 {
-  if( big != 0 )         { big->BIG::~BIG(); big = 0; } // clean up! TODO: bad for incremental search!
+  if( big != 0 )         { big->BIG::~BIG(); delete big; big = 0; } // clean up! 
   if( coprocessor != 0 ) { delete coprocessor; coprocessor = 0; }
 }
 
@@ -2498,7 +2499,6 @@ lbool Solver::solve_()
     
     // probing during search, or UHLE for learnt clauses
     if( config.opt_uhdProbe > 0 || (config.uhle_minimizing_size > 0 && config.uhle_minimizing_lbd > 0) ) {
-      assert( big == 0 && "cannot be initialized already" );
       if( big == 0 ) big = new Coprocessor::BIG(); // if there is no big yet, create it!
       big->recreate( ca, nVars(), clauses, learnts );
       big->removeDuplicateEdges( nVars() );
@@ -2509,9 +2509,10 @@ lbool Solver::solve_()
     if( false ) {
       cerr << "c units: " ; for( int i = 0 ; i < trail.size(); ++ i ) cerr << " " << trail[i]; cerr << endl;
       cerr << "c clauses: " << endl; for( int i = 0 ; i < clauses.size(); ++ i ) cerr << "c " << ca[clauses[i]] << endl;
-      cerr << "c assumptions: "; for ( int i = 0 ; i < assumptions.size(); ++ i ) cerr << " " << assumptions[i]; cerr << endl;
     }
-    
+
+    if( true )
+      cerr << "c assumptions: "; for ( int i = 0 ; i < assumptions.size(); ++ i ) cerr << " " << assumptions[i]; cerr << endl;
     
     //
     // Search:
