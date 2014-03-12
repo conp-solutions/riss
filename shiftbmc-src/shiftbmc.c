@@ -1123,7 +1123,7 @@ int main (int argc, char ** argv) {
       if( innerPPConf != 0 ) {
 	msg(1,"init PP with %s", innerPPConf);
 	innerPreprocessor = CPinit(innerPPConf);
-	CPparseOptions( innerPreprocessor,&argc,argv, 0 ); // TODO: remove after debug!
+	// CPparseOptions( innerPreprocessor,&argc,argv, 0 ); // TODO: remove after debug!
 	//CPparseOptionString( innerPreprocessor, "-cp3_dense_forw -cp3_dense_debug=2" );
 	msg(1,"simplify");
 	// currentAssume
