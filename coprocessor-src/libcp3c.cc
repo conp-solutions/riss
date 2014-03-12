@@ -29,11 +29,13 @@ struct libcp3 {
 extern "C" {
   
     void* 
-  CPinit() {
+    CPinit(const char* presetConfig) {
     libcp3* cp3 = new libcp3;
     cp3->solverconfig = new Minisat::CoreConfig("");
+    if( presetConfig  != 0 ) cp3->solverconfig->setPreset(presetConfig );
 //     cp3->solverconfig->localLookAhead = false; // do not use laHack during preprocessing! (might already infere that the output lit is false -> unroll forever)
-    cp3->cp3config = new Coprocessor::CP3Config("");
+    cp3->cp3config = new Coprocessor::CP3Config(presetConfig == 0 ? "" : presetConfig);
+    if( presetConfig  != 0 ) cp3->cp3config->setPreset(presetConfig );
     cp3->solver = new Minisat::Solver (*(cp3->solverconfig));
     cp3->cp3 = new Coprocessor::Preprocessor ( cp3->solver, *(cp3->cp3config) );
     return cp3;
@@ -192,10 +194,18 @@ extern "C" {
     libcp3* cp3 = (libcp3*) preprocessor;
     cp3->cp3config->parseOptions(*argc,argv,strict != 0 );
   }
+  
+  void 
+  CPparseOptionString (void* preprocessor, char* argv)
+  {
+    libcp3* cp3 = (libcp3*) preprocessor;
+    cp3->cp3config->parseOptions(argv);
+  }
 
    void 
-  CPsetConfig (void* preprocessor, int configNr) {
+   CPsetPresetConfig (void* preprocessor, const char* presetConfig) {
     libcp3* cp3 = (libcp3*) preprocessor;
+    /*
     if( configNr == 1 ) {
       cp3->cp3config->opt_enabled = true;
       cp3->cp3config->opt_up = true;
@@ -218,6 +228,9 @@ extern "C" {
       cp3->cp3config->opt_enabled = true;
       cp3->cp3config->opt_bva = true;
     }
+    */
+    cp3->solverconfig->setPreset(presetConfig);
+    cp3->cp3config->setPreset(presetConfig);
   }
   
     void  

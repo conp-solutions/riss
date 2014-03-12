@@ -46,7 +46,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 extern "C" {
 
   /** initialize a preprocessor instance, and return a pointer to the maintain structure */
-  extern void* CPinit();
+  extern void* CPinit( const char* presetConfig = 0);
   
   /** call the preprocess method of the preprocessor */
   extern void CPpreprocess(void* preprocessor);
@@ -56,12 +56,11 @@ extern "C" {
   
   /** parse the options of the command line and pass them to the preprocessor */
   extern void CPparseOptions (void* preprocessor, int* argc, char** argv, int strict);
+  extern void CPparseOptionString (void* preprocessor, char* argv);
   
   /** set CP3 to simulate predefined behavior 
-   * 1: SAT Competition 2013 (be careful, because it contains the dense-option)
-   * 2: BVA only
    */
-  extern void CPsetConfig (void* preprocessor, int configNr);
+  extern void CPsetPresetConfig (void* preprocessor, const char* presetConfig);
   
   /** add a literal to the solver, if lit == 0, end the clause and actually add it */
   extern void CPaddLit (void* preprocessor, int lit);

@@ -720,14 +720,17 @@ int simplifyCNF(int &k, void* preprocessorToUse, double& ppCNFtime)
       if(shiftFormula.loopEqualities[i] > 0 ) CPfreezeVariable( preprocessorToUse, shiftFormula.loopEqualities[i] );
       else  CPfreezeVariable( preprocessorToUse, - shiftFormula.loopEqualities[i] );
     }
-    
+
+    // perform simplification on the formula
     if( verbose > 1 ) cerr << "c call preprocess ... " << endl;
     CPpreprocess(preprocessorToUse);
     if( !CPok(preprocessorToUse) ) {
-      msg(0,"initial formula has no bad state (found even without initialization)"); 
-      printf( "0\nb0\n.\n" ); // print witness, and terminate!
-      fflush( stdout );
-      exit(1);
+	msg(0,"initial formula has no bad state (found even without initialization)"); 
+	printf( "0\n" );
+	for( int i = 0 ; i < model->num_bad; ++ i ) printf("b%d",i);
+	printf("\n.\n" ); // print witness, and terminate!
+	fflush( stdout );
+	exit(1);
     }
     
     // everything ok, re-setup the SAT solver!
@@ -751,59 +754,33 @@ int simplifyCNF(int &k, void* preprocessorToUse, double& ppCNFtime)
 
     if( verbose > 1 ) cerr << "c add formula to SAT solver" << endl;
     for( int i = 0 ; i < shiftFormula.formula.size(); ++i ) add( shiftFormula.formula[i], false );
-    shiftFormula.afterPPmaxVar = CPnVars(preprocessorToUse);
-    if( verbose > 1 ) cerr << "c after variables: " << shiftFormula.afterPPmaxVar << endl;
+    const int afterPPmaxVar = CPnVars(preprocessorToUse);
+    if( verbose > 1 ) cerr << "c after variables: " << afterPPmaxVar << endl;
     
     if( denseVariables ) { // refresh knowledge about the extra literals (input,output/bad,latches,assume)
       int tmpLit = CPgetReplaceLiteral( preprocessorToUse,  shiftFormula.currentAssume );
-      if( verbose > 0 ) { 
-				if( shiftFormula.currentAssume > 0 && tmpLit == 0 ) {
-					cerr << "WARNING: assumption literal does not play a role in the formula - abort!" << endl;
-					exit(30);
-				}
-      }
-      shiftFormula.currentAssume = tmpLit; // what happens if this literal is removed?
-// should not be necessary to know anything about the intermediate inputs
-//       if( !dontFreezeInput ) { // no need to shift input bits, if they will be restored properly after a solution has been found
-// 	for( int i = 0 ; i < shiftFormula.inputs.size(); ++ i ) {
-// 	  tmpLit = CPgetReplaceLiteral( preprocessor,  shiftFormula.inputs[i] );
-// 	  if( verbose > 1 ) cerr << "move input from " <<  shiftFormula.inputs[i]   << " to " << tmpLit << endl;
-// 	  shiftFormula.inputs[i] = tmpLit;
-// 	}
-//       }
+      if( verbose > 1 ) cerr << "c current assume translated from " << shiftFormula.currentAssume << " to " << tmpLit <<endl;
+      if( tmpLit != 0 ) shiftFormula.currentAssume = tmpLit; // if the shift literal is 0, then no dense information is present (or the literal is missing, which would be more complicated to track...)
+
       for( int i = 0 ; i < shiftFormula.latch.size(); ++ i ){
 	tmpLit = CPgetReplaceLiteral( preprocessorToUse,  shiftFormula.latch[i] );
 	if( verbose > 1 ) cerr << "move latch from " << shiftFormula.latch[i] << " to " << tmpLit << endl;
-	shiftFormula.latch[i] = tmpLit;
+	if( tmpLit != 0 ) shiftFormula.latch[i] = tmpLit;
       }
+
       for( int i = 0 ; i < shiftFormula.latchNext.size(); ++ i ){
 	tmpLit = CPgetReplaceLiteral( preprocessorToUse, shiftFormula.latchNext[i]);
 	if( verbose > 1 ) cerr << "move latchN from " << shiftFormula.latchNext[i] << " to " << tmpLit << endl;
-	shiftFormula.latchNext[i] = tmpLit;
+	if( tmpLit != 0 ) shiftFormula.latchNext[i] = tmpLit;
       }
-   
-// should not be necessary to know anything about the intermediate bad state variables
-//       if( !dontFreezeBads ) { // dont freeze bad stats, if they are restored after a solution has been found
-// 	for( int i = 0 ; i < shiftFormula.currentBads.size(); ++ i ) {
-// 		tmpLit = CPgetReplaceLiteral( preprocessor,  shiftFormula.currentBads[i] );
-// 		if( verbose > 1 ) cerr << "move bad from " <<   shiftFormula.currentBads[i]  << " to " << tmpLit << endl;
-// 		shiftFormula.currentBads[i] = tmpLit;
-// 	}
-// 	for( int i = 0 ; i < shiftFormula.mergeBads.size(); ++ i ) {
-// 		tmpLit = CPgetReplaceLiteral( preprocessor,  shiftFormula.mergeBads[i] );
-// 		if( verbose > 1 ) cerr << "move bad from " <<   shiftFormula.mergeBads[i]  << " to " << tmpLit << endl;
-// 		shiftFormula.mergeBads[i] = tmpLit;
-// 	}
-//       }
-      
       // also shift equivalences that are not known by the solver and preprocessor yet (but are present during search)
       for( int i = 0 ; i < shiftFormula.initEqualities.size(); i++ ) {
 				tmpLit = CPgetReplaceLiteral( preprocessorToUse,  shiftFormula.initEqualities[i] );
-				shiftFormula.initEqualities[i] = tmpLit;
+				if( tmpLit != 0 ) shiftFormula.initEqualities[i] = tmpLit;
       }
       for( int i = 0 ; i < shiftFormula.loopEqualities.size(); i++ ) {
 				tmpLit = CPgetReplaceLiteral( preprocessorToUse,  shiftFormula.loopEqualities[i] );
-				shiftFormula.loopEqualities[i] = tmpLit;
+				if( tmpLit != 0 ) shiftFormula.loopEqualities[i] = tmpLit;
       }
     }
     
@@ -818,6 +795,8 @@ int simplifyCNF(int &k, void* preprocessorToUse, double& ppCNFtime)
 
     }
     if( verbose > 1 ) printState(k);
+    
+    return afterPPmaxVar;
 
 }
 
@@ -835,7 +814,6 @@ int restoreSimplifyModel( void* usedPreprocessor, std::vector<uint8_t>& model)
 void 
 printWitness(int k, int shiftDist, int initialLatchNum)
 {
- 
     int found = 0;
     
     std::vector<uint8_t> fullFrameModel;
@@ -844,7 +822,8 @@ printWitness(int k, int shiftDist, int initialLatchNum)
     // calculated buggy frame
     int actualFaultyFrame = (k * mergeFrames); // this frame has been proven to be good
     
-    if( useShift ) {
+    if( useShift )
+    {
       const int thisShift = k * shiftDist;
       const int lastShift = (k-1) * shiftDist;
       //
@@ -873,6 +852,7 @@ printWitness(int k, int shiftDist, int initialLatchNum)
 	//
 	
 	for( int localFrame = 0; localFrame < mergeFrames; ++localFrame ) { // find the smallest frame that is actually broken! 
+	    int innerModelVars  = mergeFrameModel.size();
 	    if( mergeFrames == 1 ) mergeFrameModel.swap( fullFrameModel );  // nothing has been merged, simply use the fullFrameModel
 	    else {
 	      mergeFrameModel.clear();
@@ -880,7 +860,7 @@ printWitness(int k, int shiftDist, int initialLatchNum)
 	      for( int j = 1; j <= mergeFrameSize; ++ j )
 		mergeFrameModel.push_back( fullFrameModel[ localFrame*mergeFrameSize + j] ); // copy all the other variables for the current (inner) frame
 	      // has an inner simplifier been used? then undo its simplifications as well!
-
+	      if( innerPreprocessor != 0 ) restoreSimplifyModel( innerPreprocessor, mergeFrameModel); // restore model from the inner preprocessor, if an inner preprocessor has been used
 	    }
 	    
 	    // check whether any bad variable is set
@@ -948,7 +928,7 @@ printWitness(int k, int shiftDist, int initialLatchNum)
 		for( int j = 1; j <= mergeFrameSize; ++ j )
 		  mergeFrameModel.push_back( fullFrameModel[ localFrame*mergeFrameSize + j] ); // copy all the other variables for the current (inner) frame
 		// has an inner simplifier been used? then undo its simplifications as well!
-
+		if( innerPreprocessor != 0 ) restoreSimplifyModel( innerPreprocessor, mergeFrameModel); // restore model from the inner preprocessor, if an inner preprocessor has been used
 	      }
 	      // print the actual values
 	      for (int j = 0; j < shiftFormula.inputs.size(); j++) { // print the actual values!
@@ -1012,7 +992,7 @@ int main (int argc, char ** argv) {
   if (maxk <= 0) maxk = 1 << 30; // set a very high bound as default (for 32bit machines)!
   msg (1, "maxk = %d", maxk);
 
-  double ppAigTime = 0, ppCNFtime = 0, reasonTime = 0;
+  double ppAigTime = 0, outerPPtime = 0, innerPPtime = 0, reasonTime = 0;
   vector<double> boundtimes;
   
   // init solvers, is necessary with command line parameters
@@ -1132,22 +1112,31 @@ int main (int argc, char ** argv) {
   // merge multiple frames
   //
   //
+  int newMaxVar  = nvars;
+  msg(1,"[1] transition-formula stats: %d vars, %d inputs, %d latch-vars(sum input and output)", newMaxVar, shiftFormula.inputs.size(), shiftFormula.latch.size()+shiftFormula.latchNext.size());
   if( mergeFrames > 1 ) {
-      // if merging is activated, then we need one extra variable (which is then shifted as well ... 
-      shiftFormula.mergeAssumes.push_back( shiftFormula.currentAssume );	// memorize for frame 0
-      const int mergeAssume = newvar(); // fresh variable for combined bad-state
-      shiftFormula.initialMaxVar = nvars;
-      shiftFormula.afterPPmaxVar = nvars;
       
-      msg(1,"simplify inner frame\n");
+      msg(1,"simplify inner frame");
       
       // setup the preprocessor for the inner frame
       if( innerPPConf != 0 ) {
-	innerPreprocessor = CPinit();
-	CPsetConfig(innerPreprocessor, innerPPConf );
+	msg(1,"init PP with %s", innerPPConf);
+	innerPreprocessor = CPinit(innerPPConf);
+	CPparseOptionString( innerPreprocessor, "-cp3_dense_forw" );
+	msg(1,"simplify");
+	// currentAssume
+	newMaxVar = simplifyCNF(k, innerPreprocessor, innerPPtime);
+	msg(0,"inner CNF preprocessing tool %lf seconds", innerPPtime);
       }
+      msg(1,"[2] transition-formula stats: %d vars, %d inputs, %d latch-vars(sum input and output)", newMaxVar, shiftFormula.inputs.size(), shiftFormula.latch.size()+shiftFormula.latchNext.size());
       
       msg(1,"merge multiple frames, namely %d\n", mergeFrames);
+      // if merging is activated, then we need one extra variable (which is then shifted as well ... 
+      shiftFormula.mergeAssumes.push_back( shiftFormula.currentAssume );	// memorize for frame 0
+      const int mergeAssume = newMaxVar; // newvar(); // fresh variable for combined bad-state
+      newMaxVar ++;
+      shiftFormula.initialMaxVar = newMaxVar;
+      shiftFormula.afterPPmaxVar = newMaxVar;
 
       const int shiftDist = shiftFormula.afterPPmaxVar - 1;  // shift depends on the variables that are actually in the formula that is used for solving
       shiftFormula.mergeShiftDist = shiftDist;
@@ -1238,15 +1227,16 @@ int main (int argc, char ** argv) {
       }
       
       // tell system about new variables
-      nvars = 1 + nvars * mergeFrames; // + 1 - mergeFrames; // because there is the extra unit variable
-      shiftFormula.initialMaxVar = nvars;
-      shiftFormula.afterPPmaxVar = nvars;
+      newMaxVar = 1 + newMaxVar * mergeFrames; // + 1 - mergeFrames; // because there is the extra unit variable
+      shiftFormula.initialMaxVar = newMaxVar;
+      shiftFormula.afterPPmaxVar = newMaxVar;
       if( verbose > 2 ){ cerr << "c after merge:" << endl; printState(0); }
+      msg(1,"[3] transition-formula stats: %d vars, %d inputs, %d latch-vars(sum input and output)", newMaxVar, mergeFrames * shiftFormula.inputs.size(), shiftFormula.latch.size()+shiftFormula.latchNext.size());
   }
   
 
   if( useCP3 ) {
-    MethodTimer cnfTimer( &ppCNFtime );
+    MethodTimer cnfTimer( &outerPPtime );
     outerPreprocessor = CPinit();
     // add more options here?
     
@@ -1260,10 +1250,10 @@ int main (int argc, char ** argv) {
 //       const char * myargv [] = {"pseudobinary","-enabled_cp3","-up","-subsimp","-bve"};
 //       // cp3parseOptions( preprocessor,argc,argv ); // parse the configuration!      
 //     }
-    simplifyCNF(k,outerPreprocessor,ppCNFtime);
+    shiftFormula.afterPPmaxVar = simplifyCNF(k,outerPreprocessor,outerPPtime);
   }
   
-  msg(0,"cnf preprocessing tool %lf seconds", ppCNFtime);
+  msg(0,"outer CNF preprocessing tool %lf seconds", outerPPtime);
   // TODO after compression, update all the variables/literals lists in the shiftformula structure!
   
 /*
@@ -1272,7 +1262,7 @@ int main (int argc, char ** argv) {
  *
  */
 
-  msg(1,"transition-formula stats: %d vars, %d inputs, %d latch-vars(sum input and output)", nvars, shiftFormula.inputs.size(), shiftFormula.latch.size()+shiftFormula.latchNext.size());
+  msg(1,"[4] transition-formula stats: %d vars, %d inputs, %d latch-vars(sum input and output)", newMaxVar, mergeFrames * shiftFormula.inputs.size(), shiftFormula.latch.size()+shiftFormula.latchNext.size());
   if( stats_only ) exit(0);
 
   lit = shiftFormula.currentAssume; // literal might have changed!
@@ -1410,7 +1400,7 @@ finishedSolving:;
   /**
    *  PRINT MODEL/WITNESS, if necessary
    */
-  cerr << "[shift-bmc] pp time summary: aig: " << ppAigTime << " cnf: " << ppCNFtime << endl;
+  cerr << "[shift-bmc] pp time summary: aig: " << ppAigTime << " inner-cnf: " << innerPPtime << " outer-cnf: " << outerPPtime << endl;
   if( printTime ) {
     cerr << "[shift-bmc] solve time summary: ";
     for( int i = 0 ; i < boundtimes.size(); ++ i ) cerr << " " << boundtimes[i];
@@ -1439,18 +1429,18 @@ DONE:
   // print result for Tuner
   if( tuning ) {
     std::cout << "Result for ParamILS: " 
-    << ((k <= maxk) ? "SAT" : "ABORT") << ", " // if the limit we are searching for is not high enough, this is a reason to abort!
+    << ((mergeFrames - 1 + (k * mergeFrames) <= maxk) ? "SAT" : "ABORT") << ", " // if the limit we are searching for is not high enough, this is a reason to abort!
     << cpuTime() - totalTime << ", "
-    << k << ", "
-    << 10000.0 / (double)(k+1) << ", " // avoid dividing by 0!
+    << mergeFrames - 1 + (k * mergeFrames) << ", "
+    << 10000.0 / (double)(mergeFrames - 1 + (k * mergeFrames)+1) << ", " // avoid dividing by 0!
     << tuneSeed 
     << std::endl;
     std::cout.flush();
     std::cerr << "Result for ParamILS: " 
-    << ((k <= maxk) ? "SAT" : "ABORT") << ", " // if the limit we are searching for is not high enough, this is a reason to abort!
+    << ((mergeFrames - 1 + (k * mergeFrames) <= maxk) ? "SAT" : "ABORT") << ", " // if the limit we are searching for is not high enough, this is a reason to abort!
     << cpuTime() - totalTime << ", "
-    << k << ", "
-    << 10000.0 / (double)(k+1) << ", " // avoid dividing by 0!
+    << mergeFrames - 1 + (k * mergeFrames) << ", "
+    << 10000.0 / (double)(mergeFrames - 1 + (k * mergeFrames)+1) << ", " // avoid dividing by 0!
     << tuneSeed
     << std::endl;
     std::cerr.flush();

@@ -172,6 +172,9 @@ else if( optionSet == "SYMM" ) {
 else if( optionSet == "DENSE" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -dense",false);
 }
+else if( optionSet == "DENSEFORW" ) {
+    parseOptions(" -enabled_cp3 -cp3_stats -cp3_dense_forw -dense",false);
+}
 else if( optionSet == "LHBR" ) {
     parseOptions(" -lhbr=3 -lhbr-sub",false);
 }
