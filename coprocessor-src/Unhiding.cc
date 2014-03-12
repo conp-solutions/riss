@@ -179,7 +179,7 @@ uint32_t Unhiding::linStamp( const Lit literal, uint32_t stamp, bool& detectedEE
 	  stampInfo[ toInt(l1) ].dsc = stampInfo[ toInt(l) ].dsc;
 	  stampInfo[ toInt(l1) ].fin = stamp;
 	} while( l1 != l );
-	stampClassEE.push_back( l ); // add the literal itself to the class!
+	// stampClassEE.push_back( l ); // add the literal itself to the class! // not necessary, its added in the last loop!
 	if( stampClassEE.size() > 1 ) {
 	  // also collect all the literals from the current path
 	  if( config.opt_uhd_Debug > 1 ) cerr << "c [UHD-A] found eq class of size " << stampClassEE.size() << endl;
@@ -760,7 +760,7 @@ bool Unhiding::process (  )
       if( config.opt_uhd_Debug > 4 ) cerr << "c [UHD-A] call stamping for literal " << data.lits[i] << ", dsc=" << stampInfo [ toInt(data.lits[i]) ].dsc << endl;
       stamp = stampLiteral(data.lits[i],stamp,foundEE);
     }
-    if( config.opt_uhd_Debug > 1 ) cerr << "c stamped " << ts << " roots, and " << ts2 << " remaining lits" << endl;
+    if( config.opt_uhd_Debug > 1 ) cerr << "c stamped " << ts << " roots, and " << ts2 << " remaining lits HTP:" << data.hasToPropagate() << "" << endl;
     if( config.opt_uhd_Debug > 3 ) cerr << "c [UHD] foundEE: " << foundEE << endl;
     
     // expensive cross check that each stamp is unique, and there are no 0 stamps
@@ -801,7 +801,7 @@ bool Unhiding::process (  )
     }
     
     if( foundEE ) {
-      if( config.opt_uhd_Debug > 4 ) cerr << "c [UHD] call equivalence elimination" << endl;
+      if( config.opt_uhd_Debug > 4 ) cerr << "c [UHD] call equivalence elimination HTP:" << data.hasToPropagate() << "" << endl;
       if( data.getEquivalences().size() > 0 ) {
 	modifiedFormula = modifiedFormula || ee.appliedSomething();
 	ee.applyEquivalencesToFormula(data);
@@ -810,22 +810,20 @@ bool Unhiding::process (  )
     }
     
     // TODO check whether unit propagation reduces the clauses that are eliminated afterwards (should not)
-    if( data.ok() && unhideSimplify( iteration == 0 || iteration + 1 == unhideIter, foundEE ) ) {
-      if( data.ok() ) {
-	if( data.hasToPropagate() ) {
-	  if( config.opt_uhd_Debug > 4 ) cerr << "c [UHD-A] run UP before simplification" << endl;
-	  propagation.process(data,true);
-	  modifiedFormula = modifiedFormula || propagation.appliedSomething();
-	}
-      } else {
-	if( config.opt_uhd_Debug > 3 ) cerr << "c [UHD] ok: " << data.ok() << endl;
-      }
+    if( config.opt_uhd_Debug > 3 ) cerr << "c [UHD] data ok: " << data.ok() << " HTP:" << data.hasToPropagate() << endl;
+    if( data.ok() ) {	// do the simplification only, if the state is still ok
+      unhideSimplify( iteration == 0 || iteration + 1 == unhideIter, foundEE );
+    }
+    if( data.hasToPropagate() ) {
+      if( config.opt_uhd_Debug > 2 ) cerr << "c [UHD-A] run UP after simplification HTP:" << data.hasToPropagate() << "" << endl;
+      propagation.process(data,true);
+      modifiedFormula = modifiedFormula || propagation.appliedSomething();
     }
     
     // run independent of simplify method
     
     if( foundEE ) {
-      if( config.opt_uhd_Debug > 4 ) cerr << "c [UHD] call equivalence elimination" << endl;
+      if( config.opt_uhd_Debug > 4 ) cerr << "c [UHD] call equivalence elimination HTP:" << data.hasToPropagate() << "" << endl;
       if( data.getEquivalences().size() > 0 ) {
 	modifiedFormula = modifiedFormula || ee.appliedSomething();
 	ee.applyEquivalencesToFormula(data);

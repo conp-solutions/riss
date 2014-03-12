@@ -1511,12 +1511,14 @@ inline void CoprocessorData::addCommentToProof(const char* text, bool deleteFrom
 
 inline void CoprocessorData::addEquivalences(const vector< Lit >& list)
 {
+  assert( (list.size() != 2 || list[0] != list[1]) && "do not allow to add a pair of the same literals" );
   for( int i = 0 ; i < list.size(); ++ i ) equivalences.push_back(list[i]);
   equivalences.push_back( lit_Undef ); // termination symbol!
 }
 
 inline void CoprocessorData::addEquivalences(const Lit& l1, const Lit& l2)
 {
+  assert( l1 != l2 && "do not state that the same literal is equivalent to itself" );
   if( global_debug_out ) cerr << "c [DATA] set equi: " << l1 << " == " << l2 << endl;
   equivalences.push_back(l1);
   equivalences.push_back(l2);

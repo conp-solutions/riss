@@ -2016,9 +2016,15 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
        
        data.clss.clear();
         // check whether one of the EE-class literals is already assigned, if yes, enqueue the remaining literals!
-       lbool setValue=l_Undef;
-       for( int j = start ; j < i; ++ j ) {
-	 if( data.value( ee[j] ) != l_Undef ) { setValue = data.value( ee[j] ); break; } // found one assigned literal
+       lbool setValue =  data.value(repr);
+       if( setValue == l_Undef ) {
+	setValue =  data.value(getReplacement(repr));
+	if( setValue == l_Undef ) {
+	  for( int j = start ; j < i; ++ j ) {
+	    if( data.value( ee[j] ) != l_Undef ) { setValue = data.value( ee[j] ); break; } // found one assigned literal
+	    if( data.value( getReplacement(ee[j]) ) != l_Undef ) { setValue = data.value( getReplacement(ee[j]) ); break; } // found one assigned literal
+	  }
+	}
        }
        if( setValue == l_Undef ) {
 	for( int j = start ; j < i; ++ j ) { // nothing set, simply add back the clauses as before!
@@ -2060,7 +2066,14 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	     }
 	   }
 	 }
+	 
+	 // go to next EE class!
+	 
        }
+       
+       // rewrite formula only if the EE class is not yet set as units
+       if( setValue == l_Undef )
+       {
        
        data.ma.nextStep();
        for( int j = start ; j < i; ++ j ) { // process each element of the class!
@@ -2195,6 +2208,8 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	 if( config.ee_debug_out > 2 ) cerr << "c cleared list of var " << var( l ) + 1 << endl;
 	 
       }
+      
+       } // finished rewriting
 
        // TODO take care of untouchable literals!
 	for( int j = 0 ; j < data.clss.size(); ++ j ) {
