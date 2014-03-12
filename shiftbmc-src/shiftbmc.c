@@ -418,6 +418,10 @@ int parseOptions(int argc, char ** argv)
 #ifndef TEST_BINARY
     else if (!strcmp (argv[i], "-bmc_v")) verbose++;
 #endif
+    
+    else if (!strcmp (argv[i], "-bmc_k")) {
+      if( ++i < argc && isnum(argv[i]) ) maxk = atoi( argv[i] );
+    }
     else if (!strcmp (argv[i], "-bmc_m")) move = 1;
     else if (!strcmp (argv[i], "-bmc_np")) processNoProperties = 1;
     else if (!strcmp (argv[i], "-bmc_n")) nowitness = 1;
@@ -661,6 +665,9 @@ void printState(int k)
     cerr << "c latches["<<k<<"]:    " << shiftFormula.latch.size() << ": "; for( int i = 0 ; i < shiftFormula.latch.size(); ++ i ) cerr << " " << shiftFormula.latch[i]; cerr << endl;
     cerr << "c latchNext["<<k<<"]:  " << shiftFormula.latchNext.size() << ": "; for( int i = 0 ; i < shiftFormula.latchNext.size(); ++ i ) cerr << " " << shiftFormula.latchNext[i]; cerr << endl;
     cerr << "c thisBad["<<k<<"]:  " << shiftFormula.currentBads.size() << ": "; for( int i = 0 ; i < shiftFormula.currentBads.size(); ++ i ) cerr << " " << shiftFormula.currentBads[i]; cerr << endl;
+    cerr << "c initial max var: " << shiftFormula.initialMaxVar << endl;
+    cerr << "c initial after pp max var: " << shiftFormula.afterPPmaxVar << endl;
+    cerr << "c merge shift dist: " << shiftFormula.mergeShiftDist << endl;
     cerr << "c formula["<<k<<"]:    " << endl;
     for( int i = 0 ; i < shiftFormula.formula.size(); ++ i ) {
       cerr << " " << shiftFormula.formula[i];
@@ -822,6 +829,15 @@ int simplifyCNF(int &k, int& argc, char* argv[], double& ppCNFtime)
    
 }
 
+int restoreSimplifyModel( void* usedPreprocessor, std::vector<uint8_t>& model) {
+  // extend model without copying current model twice
+  CPresetModel( preprocessor ); // reset current internal model
+  for( int j = 0 ; j < model.size(); ++ j ) CPpushModelBool( preprocessor, model[j] > 0 ? 1 : 0 );
+  CPpostprocessModel( preprocessor );
+  const int modelVars = CPmodelVariables( preprocessor );
+  model.clear(); // reset current model, so that it can be filled with data from the preprocessor
+  for( int j = 0 ; j < modelVars; ++ j ) model.push_back(CPgetFinalModelLit(preprocessor) > 0 ? 1 : 0);
+}
 
 void 
 printWitness(int k, int shiftDist, int initialLatchNum)
@@ -846,34 +862,30 @@ printWitness(int k, int shiftDist, int initialLatchNum)
 	// if inputs have not been frozen, we need to recover them per frame before printing their value!
 	const int frameShift = k * shiftDist; // want to access the very last frame
 	fullFrameModel.assign ( shiftFormula.afterPPmaxVar, l_False );
-	for( int j = 1 ; j <= shiftFormula.afterPPmaxVar; ++ j ) { // get the right part of the actual model
-		const int v = deref(j==1 ? 1 : j + frameShift); // treat very first value always special, because its not moved!
-		fullFrameModel[j-1] = v < 0 ? l_False : l_True; // model does not treat field 0!
+	for( int j = 0 ; j < shiftFormula.afterPPmaxVar; ++ j ) { // get the right part of the actual model
+		const int v = deref(j==0 ? 1 : j + frameShift + 1); // treat very first value always special, because its not moved!
+		fullFrameModel[j] = v < 0 ? l_False : l_True; // model does not treat field 0!
 	}
 
 	//
 	// extend model for global frame  (without copying current model twice)
 	//
-	CPresetModel( preprocessor ); // reset current internal model
-	for( int j = 0 ; j < fullFrameModel.size(); ++ j ) CPpushModelBool( preprocessor, fullFrameModel[j] > 0 ? 1 : 0);
-	CPpostprocessModel( preprocessor );
-	const int modelVars = CPmodelVariables( preprocessor );
-	fullFrameModel.clear(); // reset current model, so that it can be filled with data from the preprocessor
-	for( int j = 0 ; j < modelVars; ++ j ) fullFrameModel.push_back( CPgetFinalModelLit(preprocessor) > 0 ? 1 : 0 );
+	const int modelVars = restoreSimplifyModel( preprocessor, fullFrameModel);
 	cerr << "c last (multi-) frame has " << modelVars << " variables" << endl;
+	const int mergeFrameSize = shiftFormula.mergeShiftDist;  // == ( fullFrameModel.size()  ) / mergeFrames;
+	assert( mergeFrames * mergeFrameSize == fullFrameModel.size() && "an exact number of frames has been merged, hence the model sizes should also fit!" );
 	
 	//
 	// if frames have been merged, process each single frame now
 	//
-	const int mergeFrameSize = ( fullFrameModel.size() - 1 ) / mergeFrames;
-	assert( mergeFrames * mergeFrameSize + 1 == fullFrameModel && "an exact number of frames has been merged, hence the model sizes should also fit!" );
-	for( int i = 0; i < mergeFrames; ++i ) { // find the smallest frame that is actually broken! 
+	
+	for( int localFrame = 0; localFrame < mergeFrames; ++localFrame ) { // find the smallest frame that is actually broken! 
 	    if( mergeFrames == 1 ) mergeFrameModel.swap( fullFrameModel );  // nothing has been merged, simply use the fullFrameModel
 	    else {
 	      mergeFrameModel.clear();
 	      mergeFrameModel.push_back( fullFrameModel[0] ); // copy the constant unit
 	      for( int j = 1; j <= mergeFrameSize; ++ j )
-		mergeFrameModel.push_back( fullFrameModel[ i*mergeFrameSize + j] ); // copy all the other variables for the current (inner) frame
+		mergeFrameModel.push_back( fullFrameModel[ localFrame*mergeFrameSize + j] ); // copy all the other variables for the current (inner) frame
 	      // has an inner simplifier been used? then undo its simplifications as well!
 
 	    }
@@ -882,13 +894,13 @@ printWitness(int k, int shiftDist, int initialLatchNum)
 	    for (int j = 0; j < shiftFormula.currentBads.size(); j++) {
 		int tlit = shiftFormula.currentBads[j];
 		int v = 0; // by default the bad state is false
-		if(tlit>0 ) { if( fullFrameModel[ tlit -1 ] == l_True) v = 1; } 
-		else { if(fullFrameModel[ -tlit -1 ] == l_False ) v=1; }
+		if(tlit>0 ) { if( mergeFrameModel[ tlit -1 ] == l_True) v = 1; } 
+		else { if(mergeFrameModel[ -tlit -1 ] == l_False ) v=1; }
 		if( v = 1 ) { printf ("b%d", j), found++;} // print the current bad state
 		assert( (shiftFormula.currentBads.size() > 1 || found > 0) && "only one output -> find immediately" );
 	    }
 	    if( found > 0 ) { // this inner frame is the first frame where things brake
-	      actualFaultyFrame += i;
+	      actualFaultyFrame += localFrame;
 	      break;	// as soon as one bad state has been printed, stop printing bad states!
 	    }
 	}
@@ -896,87 +908,66 @@ printWitness(int k, int shiftDist, int initialLatchNum)
 
       } else { // bad variables have been frozen, hance simply use the moved value!
 	assert( false && "this code should never be reached!");
-	int i = 0;
-	for (i = 0; i < model->num_bad; i++) {
-	    bool buggyFrame = false;
-	    int smallShift = shiftDist / mergeFrames;
-	    cerr << "c numBad " << model->num_bad << " shiftDist: " << shiftDist << " mFs: " << mergeFrames << " smallShift: " << smallShift << endl;
-	    assert( smallShift * mergeFrames == shiftDist && "the shiftDistance must be dividable by the number of merged frames without remainder" );
-	    for( int j = 1 ; j <= mergeFrames; ++ j ) {
-		int thisBad = shiftFormula.currentBads[i] + lastShift + smallShift;
-		if (deref ( thisBad  ) > 0) {
-		  printf ("b%d", i), found++;
-		  buggyFrame = true;
-		}
-	    }
-	    if( buggyFrame ) {
-	      actualFaultyFrame =  j - 1 + (k * mergeFrames);
-	      break; // no need to print bugggs in the next frames!
-	    }
-	}
-	assert (found && "there has to be found something!");
       }
       assert ((model->num_bad || model->num_justice) && "there has to be some property that has been found!" );
       nl (); // print new line, to give the initialization of the latches
-      
-      
       
       //
       // print initial Latch configuration
       //
       
       /// nothing special to do with latches, because those are always frozen, and thus never touched
-      for (i = 0; i < model->num_latches; i++){
-				if( initialLatchNum > 0 &&  deref(shiftFormula.latch[i]) != -1 ) wrn("latch[%d],var %d is not initialized to 0, but scorr has been used during simplifying the circuit",i,shiftFormula.latch[i]);
-				print ( shiftFormula.latch[i] ); // this function prints 0 or 1 depending on the current assignment of this variable!
+      int latchNumber = 0;
+      for (latchNumber = 0; latchNumber < model->num_latches; latchNumber++){
+	if( initialLatchNum > 0 &&  deref(shiftFormula.latch[latchNumber]) != -1 ) wrn("latch[%d],var %d is not initialized to 0, but scorr has been used during simplifying the circuit",latchNumber,shiftFormula.latch[latchNumber]);
+	print ( shiftFormula.latch[latchNumber] ); // this function prints 0 or 1 depending on the current assignment of this variable!
       }
-      for( ; i < initialLatchNum; ++ i ) { // print the latches that might be removed by ABC
-				printV(-1); // ABC and HWMCC assumes all latches to be initialized to 0!
+      for( ; latchNumber < initialLatchNum; ++ latchNumber ) { // print the latches that might be removed by ABC
+	printV(-1); // ABC and HWMCC assumes all latches to be initialized to 0!
       }
       nl (); // print new line to give the sequence of inputs
 
-      
-      for (i = 0; i <= k; i++) { // for each step give the inputs that lead to the bad state
-				if( dontFreezeInput ) { // if inputs have not been frozen, we need to recover them per frame before printing their value!
-					const int frameShift = i * shiftDist;
-					std::vector<uint8_t> frameModel ( shiftFormula.afterPPmaxVar, l_False ); // TODO put this vector higher!
+      //
+      // print the inputs for all iterations
+      //
+      for (int globalFrame = 0; globalFrame <= k; globalFrame++) { // for each step give the inputs that lead to the bad state
+	if( true || dontFreezeInput ) { // if inputs have not been frozen, we need to recover them per frame before printing their value!
+	  const int globalFrameShift = globalFrame * shiftDist;
+	  
+	  fullFrameModel.assign ( shiftFormula.afterPPmaxVar, l_False );
+	  for( int j = 1 ; j <= shiftFormula.afterPPmaxVar; ++ j ) { // get the right part of the actual model
+	    const int v = deref(j==1 ? 1 : j + globalFrameShift); // treat very first value always special, because its not moved!
+	    fullFrameModel[j-1] = v < 0 ? l_False : l_True; // model does not treat field 0!
+	  }
+	  const int modelVars = restoreSimplifyModel( preprocessor, fullFrameModel);
+	  const int mergeFrameSize = shiftFormula.mergeShiftDist;  // == ( fullFrameModel.size()  ) / mergeFrames;
+	  assert( mergeFrames * mergeFrameSize == fullFrameModel.size() && "an exact number of frames has been merged, hence the model sizes should also fit!" );
+	  
+	  for( int localFrame = 0; localFrame < mergeFrames; ++localFrame ) { // find the smallest frame that is actually broken! 
 
-					for( int j = 1 ; j <= shiftFormula.afterPPmaxVar; ++ j ) { // get the right part of the actual model
-						const int v = deref(j==1 ? 1 : j + frameShift); // treat very first value always special, because its not moved!
-						if( verbose > 3 ) cerr << "c var " << (j==1 ? 1 : j + frameShift) << " with value " << v << endl;
-						frameModel[j-1] = v < 0 ? l_False : l_True; // model does not treat field 0!
-					}
-			
-					// extend model without copying current model twice
-					CPresetModel( preprocessor ); // reset current internal model
-					for( int j = 0 ; j < frameModel.size(); ++ j ) CPpushModelBool( preprocessor, frameModel[j] > 0 ? 1 : 0 );
-					CPpostprocessModel( preprocessor );
-					const int modelVars = CPmodelVariables( preprocessor );
-					frameModel.clear(); // reset current model, so that it can be filled with data from the preprocessor
-					for( int j = 0 ; j < modelVars; ++ j ) frameModel.push_back(CPgetFinalModelLit(preprocessor) > 0 ? 1 : 0);
+	      // no need to print the input for the other frames that have been used for the calculation
+	      if( globalFrame * mergeFrames + localFrame > actualFaultyFrame ) break;
+	      // setup the model for this local frame
+	      if( mergeFrames == 1 ) mergeFrameModel.swap( fullFrameModel );  // nothing has been merged, simply use the fullFrameModel
+	      else {
+		mergeFrameModel.clear();
+		mergeFrameModel.push_back( fullFrameModel[0] ); // copy the constant unit
+		for( int j = 1; j <= mergeFrameSize; ++ j )
+		  mergeFrameModel.push_back( fullFrameModel[ localFrame*mergeFrameSize + j] ); // copy all the other variables for the current (inner) frame
+		// has an inner simplifier been used? then undo its simplifications as well!
 
-					if( verbose > 3 ) { // print extra info for debugging
-						cerr << "c after extendModel (model size: " << frameModel.size() << ")" << endl;
-						for( int j = 1 ; j <= shiftFormula.initialMaxVar; ++ j ) { // get the right part of the actual model
-							cerr << "c var " << (j==1 ? 1 : j + frameShift) << " with value " << (frameModel[j-1] == l_True ? 1 : -1) << endl;
-						}
-						for (int j = 0; j < shiftFormula.inputs.size(); j++) { // show numbers of literals that will be accessed
-							int tlit = shiftFormula.inputs[j];
-							cerr << "c input[" << j << "] = " << tlit << endl;
-						}
-					}
-			
-					for (int j = 0; j < shiftFormula.inputs.size(); j++) { // print the actual values!
-						int tlit = shiftFormula.inputs[j];
-						if(tlit>0) printV ( frameModel[ tlit -1 ] == l_False ? -1 : 1  ); // print input j of iteration i
-						else  printV ( frameModel[ -tlit -1 ] == l_True ? -1 : 1  ); // or complementary literal
-					}
-			
-				} else { // if inputs have been frozen, their is no need to treat them special
-					for (int j = 0; j < model->num_inputs; j++)
-						print ( shiftFormula.inputs[j] + shiftDist * i ); // print input j of iteration i
-				}
-				nl ();
+	      }
+	      // print the actual values
+	      for (int j = 0; j < shiftFormula.inputs.size(); j++) { // print the actual values!
+		int tlit = shiftFormula.inputs[j];
+		if(tlit>0) printV ( mergeFrameModel[ tlit -1 ] == l_False ? -1 : 1  ); // print input j of iteration i
+		else  printV ( mergeFrameModel[ -tlit -1 ] == l_True ? -1 : 1  ); // or complementary literal
+	      }
+	      nl ();
+	  }
+	} else { // if inputs have been frozen, their is no need to treat them special
+	  assert( false && "all models have to be uncovered always!" );
+	}
       }
       printf (".\n"); // indicate end of witness
       fflush (stdout);
@@ -1196,6 +1187,8 @@ int main (int argc, char ** argv) {
 	  }
 	  shiftFormula.mergeAssumes.push_back( shiftFormula.currentAssume + thisShift ); // memorize for frame k
 	  
+	  // no need to memorize inputs or bad state variables!
+	  /*
 	  for( int i = 0 ; i < initialInputs; ++ i ) {
 	    int inputI = ( shiftFormula.inputs[i] == 1 || shiftFormula.inputs[i] == -1 ) ? shiftFormula.inputs[i] : varadd(shiftFormula.inputs[i], thisShift);
 	    shiftFormula.inputs.push_back( inputI ); // add the inputs of this frame to the merged frame!
@@ -1205,6 +1198,7 @@ int main (int argc, char ** argv) {
   	    int badI = ( shiftFormula.currentBads[i] == 1 || shiftFormula.currentBads[i] == -1 ) ? shiftFormula.currentBads[i] : varadd(shiftFormula.currentBads[i], thisShift);
   	    shiftFormula.mergeBads.push_back( badI  ); // add the currentBads of this frame to the merged frame!
    	  }
+   	  */
 
 	  // also shift constant unit ...
 // 	  shiftFormula.formula.push_back( thisShift  );add( thisShift,false );
@@ -1447,7 +1441,7 @@ DONE:
   reset ();
   
   // if( k == 0 ) return 20; // initial circuit is faulty already (without using any latches and unrolling)
-  if( k <= maxk) return 1; // found a bug
+  if( mergeFrames - 1 + (k * mergeFrames) <= maxk) return 1; // found a bug
   else return 0;
 }
   

@@ -108,7 +108,8 @@ riss_deref (const void* riss, const int& lit)
   const Var v = lit > 0 ? lit - 1 : -lit - 1;
   libriss* solver = (libriss*) riss;
   assert( solver->lastResult == l_True && "can deref literals only after SAT result" );
-  lbool vValue = solver->solver->model[v];
+  lbool vValue = l_Undef;
+  if( v < solver->solver->model.size() ) vValue = solver->solver->model[v];
   return ( lit < 0 ) ? (vValue == l_False ? 1 : (vValue == l_True ? -1 : 0) ) : (vValue == l_False ? -1 : (vValue == l_True ? 1 : 0) );
 }
 
