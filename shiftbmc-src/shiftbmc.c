@@ -444,6 +444,7 @@ int parseOptions(int argc, char ** argv)
       usePriss = 1; 
       if( ++i < argc ) usePriss = atoi( argv[i] );
       if( usePriss == 0 ) usePriss = 1;
+      msg(0,"set parallel solver with %d threads",usePriss);
       useRiss = 0; 
     }
     else if (!strcmp (argv[i], "-bmc_p")) { useCP3=1,useShift = 1; lazyEncode = 1; }

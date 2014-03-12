@@ -23,6 +23,9 @@ PSolver::PSolver(const int threadsToUse)
     configs   = new CoreConfig        [ threads ];
     ppconfigs = new CP3Config         [ threads ];
     communicators = new Communicator* [ threads ];
+    for( int i = 0 ; i < threads; ++ i ) {
+      communicators[i] = 0;
+    }
 
     // set preset configs here
     createThreadConfigs();
@@ -41,9 +44,9 @@ PSolver::~PSolver()
   
   for( int i = 0 ; i < solvers.size(); ++ i ) {
     delete solvers[i]; // free all solvers
-    delete communicators[i];
+    if( communicators != 0 && communicators[i] != 0 ) delete communicators[i];
   }
-  delete [] communicators; communicators = 0;
+  if( communicators != 0 ) { delete [] communicators; communicators = 0; }
   delete [] ppconfigs; ppconfigs = 0;
   delete [] configs; configs = 0;
   solvers.clear(true);
@@ -430,6 +433,7 @@ void PSolver::waitFor(const WaitState waitState)
 
 void PSolver::kill()
 {
+  if( !initialized ) return; // child threads have never been created - no need to kill them
   
   cerr << "c MASTER kills all child threads ..." << endl;
   // set all threads to working (they'll have a look for new work on their own)
@@ -479,7 +483,7 @@ void* runWorkerSolver(void* data)
   // initially, wait until master provides work!
   info.ownLock->lock();
   if( verbose ) cerr << "c thread id " << info.getID() << " state= " << ( info.isIdle() ? "idle" : "nonIdle" )<< endl;
-  if( info.isIdle() )
+  if( info.isIdle() || info.isWaiting() )
   {
     info.ownLock->sleep();
   }

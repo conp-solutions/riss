@@ -315,7 +315,7 @@ public:
     ,returnValue(l_Undef)
     ,solver(0) 
     ,id(id) 
-    ,state(idle) 
+    ,state(waiting) 
     ,myLastTaskID(-1) 
     ,lastSeenIndex(0)
     ,doSend(true)               // should this thread send clauses

@@ -1794,59 +1794,57 @@ lbool Solver::search(int nof_conflicts)
 	    }
 	    
             Lit next = lit_Undef;
-            while (decisionLevel() < assumptions.size()){
-                // Perform user provided assumption:
-                Lit p = assumptions[decisionLevel()];
+	    bool checkedLookaheadAlready = false;
+	    while( next == lit_Undef )
+	    {
+	      while (decisionLevel() < assumptions.size()){
+		  // Perform user provided assumption:
+		  Lit p = assumptions[decisionLevel()];
 
-		if (value(p) == l_True){
-                    // Dummy decision level: // do not have a dummy level here!!
-                    if(config.opt_printDecisions > 0) cerr << "c have dummy decision level for assumptions" << endl;
-                    newDecisionLevel();
-                }else if (value(p) == l_False){
-                    analyzeFinal(~p, conflict);
-                    return l_False;
-                }else{
-		    if(config.opt_printDecisions > 0) cerr << "c use assumptoin as next decision : " << p << endl;
-                    next = p;
-                    break;
-                }
-            }
-
-            if (next == lit_Undef){
-                // New variable decision:
-                decisions++;
-                next = pickBranchLit();
-
-                if (next == lit_Undef){
-		  if(verbosity > 1 ) fprintf(stderr,"c last restart ## conflicts  :  %d %d \n",conflictC,decisionLevel());
-		  // Model found:
-		  return l_True;
-		}
-            }
-            
-            // if sufficiently many new top level units have been learned, trigger another LA!
-	    if( config.opt_laTopUnit != -1 && topLevelsSinceLastLa >= config.opt_laTopUnit && maxLaNumber != -1) { maxLaNumber ++; topLevelsSinceLastLa = 0 ; }
-            if(config.localLookAhead && (maxLaNumber == -1 || (las < maxLaNumber)) ) { // perform LA hack -- only if max. nr is not reached?
-	      if(config.opt_printDecisions > 0) cerr << "c run LA (lev=" << decisionLevel() << ", untilLA=" << untilLa << endl;
-	      int hl = decisionLevel();
-	      if( hl == 0 ) if( --untilLa == 0 ) { laStart = true; if(config.localLookaheadDebug)cerr << "c startLA" << endl;}
-	      if( laStart && hl == config.opt_laLevel ) {
-		if( !laHack(learnt_clause) ) return l_False;
-		topLevelsSinceLastLa = 0;
+		  if (value(p) == l_True){
+		      // Dummy decision level: // do not have a dummy level here!!
+		      if(config.opt_printDecisions > 0) cerr << "c have dummy decision level for assumptions" << endl;
+		      newDecisionLevel();
+		  }else if (value(p) == l_False){
+		      analyzeFinal(~p, conflict);
+		      return l_False;
+		  }else{
+		      if(config.opt_printDecisions > 0) cerr << "c use assumptoin as next decision : " << p << endl;
+		      next = p;
+		      break;
+		  }
 	      }
-	    }
-	    
-            if (value(next) != l_Undef) { // LA might have set the value for the current decision variable, hence, have another decision here
-		next = lit_Undef;
-                // New variable decision:
-                decisions++;
-                next = pickBranchLit();
-                if (next == lit_Undef){
-		  if(verbosity > 1 ) fprintf(stderr,"c last restart ## conflicts  :  %d %d \n",conflictC,decisionLevel());
-		  // Model found:
-		  return l_True;
+
+	      if (next == lit_Undef){
+		  // New variable decision:
+		  decisions++;
+		  next = pickBranchLit();
+
+		  if (next == lit_Undef){
+		    if(verbosity > 1 ) fprintf(stderr,"c last restart ## conflicts  :  %d %d \n",conflictC,decisionLevel());
+		    // Model found:
+		    return l_True;
+		  }
+	      }
+	      
+	      // if sufficiently many new top level units have been learned, trigger another LA!
+	      if( !checkedLookaheadAlready ) {
+		checkedLookaheadAlready = true; // memorize that we did the check in the first iteration
+		if( config.opt_laTopUnit != -1 && topLevelsSinceLastLa >= config.opt_laTopUnit && maxLaNumber != -1) { maxLaNumber ++; topLevelsSinceLastLa = 0 ; }
+		if(config.localLookAhead && (maxLaNumber == -1 || (las < maxLaNumber)) ) { // perform LA hack -- only if max. nr is not reached?
+		  if(config.opt_printDecisions > 0) cerr << "c run LA (lev=" << decisionLevel() << ", untilLA=" << untilLa << endl;
+		  int hl = decisionLevel();
+		  if( hl == 0 ) if( --untilLa == 0 ) { laStart = true; if(config.localLookaheadDebug)cerr << "c startLA" << endl;}
+		  if( laStart && hl == config.opt_laLevel ) {
+		    if( !laHack(learnt_clause) ) return l_False;
+		    topLevelsSinceLastLa = 0;
+		    next = lit_Undef;
+		    continue; // after local look-ahead re-check the assumptions
+		  }
 		}
-            }
+	      }
+	      assert( next != lit_Undef && value( next ) == l_Undef && "the literal that is picked exists, and is unassigned" );
+	    }
             
             // Increase decision level and enqueue 'next'
             newDecisionLevel();
@@ -2078,12 +2076,12 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   assert(decisionLevel() == config.opt_laLevel && "can perform LA only, if level is correct" );
   laTime = cpuTime() - laTime;
 
-  LONG_INT hit[]   ={5,10,  85,170, 21845,43690, 1431655765,2863311530,  6148914691236517205, 12297829382473034410ull}; // compare numbers for lifted literals
-  LONG_INT hitEE0[]={9, 6, 153,102, 39321,26214, 2576980377,1717986918, 11068046444225730969ull, 7378697629483820646}; // compare numbers for l == dec[0] or l != dec[0]
-  LONG_INT hitEE1[]={0, 0, 165, 90, 42405,23130, 2779096485,1515870810, 11936128518282651045ull, 6510615555426900570}; // compare numbers for l == dec[1]
-  LONG_INT hitEE2[]={0, 0,   0,  0, 43605,21930, 2857740885,1437226410, 12273903644374837845ull, 6172840429334713770}; // compare numbers for l == dec[2]
-  LONG_INT hitEE3[]={0, 0,   0,  0,     0,    0, 2863289685,1431677610, 12297735558912431445ull, 6149008514797120170}; // compare numbers for l == dec[3]
-  LONG_INT hitEE4[]={0, 0,   0,  0,     0,    0,          0,         0, 12297829381041378645ull, 6148914692668172970}; // compare numbers for l == dec[4] 
+  const LONG_INT hit[]   ={5,10,  85,170, 21845,43690, 1431655765,2863311530,  6148914691236517205, 12297829382473034410ull}; // compare numbers for lifted literals
+  const LONG_INT hitEE0[]={9, 6, 153,102, 39321,26214, 2576980377,1717986918, 11068046444225730969ull, 7378697629483820646}; // compare numbers for l == dec[0] or l != dec[0]
+  const LONG_INT hitEE1[]={0, 0, 165, 90, 42405,23130, 2779096485,1515870810, 11936128518282651045ull, 6510615555426900570}; // compare numbers for l == dec[1]
+  const LONG_INT hitEE2[]={0, 0,   0,  0, 43605,21930, 2857740885,1437226410, 12273903644374837845ull, 6172840429334713770}; // compare numbers for l == dec[2]
+  const LONG_INT hitEE3[]={0, 0,   0,  0,     0,    0, 2863289685,1431677610, 12297735558912431445ull, 6149008514797120170}; // compare numbers for l == dec[3]
+  const LONG_INT hitEE4[]={0, 0,   0,  0,     0,    0,          0,         0, 12297829381041378645ull, 6148914692668172970}; // compare numbers for l == dec[4] 
   // FIXME have another line for level 6 here!
  
 //  if(config.localLookaheadDebug) cerr << "c initial pattern: " << pt << endl;
@@ -2249,8 +2247,6 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
 
   // TODO: apply schema to have all learned unit clauses in DRUP! -> have an extra vector!
   if (outputsProof()) {
-    vector< vector< Lit > > clauses;
-    vector<Lit> tmp;
     
     if( actualLAlevel != 5 ) {
       static bool didIT = false;
@@ -2264,37 +2260,37 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
     for( int i = 0 ; i < toEnqueue.size(); ++ i ){
       // cerr << "c write literal " << i << " from LA " << las << endl;
       const Lit l = toEnqueue[i];
-      clauses.clear();
-      tmp.clear();
+      localLookAheadProofClauses.clear();
+      localLookAheadTmpClause.clear();
 
-      int litList[] = {0,1,2,3,4,5,-1,0,1,2,3,5,-1,0,1,2,4,5,-1,0,1,2,5,-1,0,1,3,4,5,-1,0,1,3,5,-1,0,1,4,5,-1,0,1,5,-1,0,2,3,4,5,-1,0,2,3,5,-1,0,2,4,5,-1,0,2,5,-1,0,3,4,5,-1,0,3,5,-1,0,4,5,-1,0,5,-1,1,2,3,4,5,-1,1,2,3,5,-1,1,2,4,5,-1,1,2,5,-1,1,3,4,5,-1,1,3,5,-1,1,4,5,-1,1,5,-1,2,3,4,5,-1,2,3,5,-1,2,4,5,-1,2,5,-1,3,4,5,-1,3,5,-1,4,5,-1,5,-1};
+      const int litList[] = {0,1,2,3,4,5,-1,0,1,2,3,5,-1,0,1,2,4,5,-1,0,1,2,5,-1,0,1,3,4,5,-1,0,1,3,5,-1,0,1,4,5,-1,0,1,5,-1,0,2,3,4,5,-1,0,2,3,5,-1,0,2,4,5,-1,0,2,5,-1,0,3,4,5,-1,0,3,5,-1,0,4,5,-1,0,5,-1,1,2,3,4,5,-1,1,2,3,5,-1,1,2,4,5,-1,1,2,5,-1,1,3,4,5,-1,1,3,5,-1,1,4,5,-1,1,5,-1,2,3,4,5,-1,2,3,5,-1,2,4,5,-1,2,5,-1,3,4,5,-1,3,5,-1,4,5,-1,5,-1};
       int cCount = 0 ;
-      tmp.clear();
+      localLookAheadTmpClause.clear();
       assert(actualLAlevel == 5 && "current proof generation only works for level 5!" );
       for ( int j = 0; true; ++ j ) { // TODO: count literals!
 	int k = litList[j];
-	if( k == -1 ) { clauses.push_back(tmp);
+	if( k == -1 ) { localLookAheadProofClauses.push_back(localLookAheadTmpClause);
 	  // cerr << "c write " << tmp << endl;
-	  tmp.clear(); 
+	  localLookAheadTmpClause.clear(); 
 	  cCount ++;
 	  if( cCount == 32 ) break;
 	  continue; 
 	}
-	if( k == 5 ) tmp.push_back( l );
-	else tmp.push_back( d[k] );
+	if( k == 5 ) localLookAheadTmpClause.push_back( l );
+	else localLookAheadTmpClause.push_back( d[k] );
       }
 
       // write all clauses to proof -- including the learned unit
       addCommentToProof("added by lookahead");
-      for( int j = 0; j < clauses.size() ; ++ j ){
-	if(  0  ) cerr << "c write clause [" << j << "] " << clauses[ j ] << endl;
-	addToProof(clauses[j]);
+      for( int j = 0; j < localLookAheadProofClauses.size() ; ++ j ){
+	if(  0  ) cerr << "c write clause [" << j << "] " << localLookAheadProofClauses[ j ] << endl;
+	addToProof(localLookAheadProofClauses[j]);
       }
       // delete all redundant clauses
       addCommentToProof("removed redundant lookahead clauses",true);
-      for( int j = 0; j+1 < clauses.size() ; ++ j ){
-	assert( clauses[j].size() > 1 && "the only unit clause in the list should not be removed!" );
-	addToProof(clauses[j],true);
+      for( int j = 0; j+1 < localLookAheadProofClauses.size() ; ++ j ){
+	assert( localLookAheadProofClauses[j].size() > 1 && "the only unit clause in the list should not be removed!" );
+	addToProof(localLookAheadProofClauses[j],true);
       }
     }
     
