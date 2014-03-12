@@ -792,8 +792,7 @@ int simplifyCNF(int &k, void* preprocessorToUse, double& ppCNFtime)
 	for( int i = 0 ; i < model->num_bad; ++ i ) printf("b%d",i);
 	printf("\n.\n" ); // print witness, and terminate!
 	fflush( stdout );
-	exit(1);
-
+	exit(0);
     }
     if( verbose > 1 ) printState(k);
     

@@ -23,14 +23,17 @@ do
 
 	printf "gen: %d / %d / %d / %d  :      %d  --  %d     --     %6d  --  %6d               \r" "$i" "$solved" "$used" "$t" "$ands" "$latches" "$outputs" "$bads"
 
+	sleep 0.015
   # generate another circuit, if this one does not match size expectations
-	if [ $ands -gt "3000" -o $latches -lt 2 -o $latches -gt 50 -o $outputs -gt 1 ]
+	if [ $ands -gt "5000" -o $latches -lt 2 -o $latches -gt 60 -o $outputs -gt 1 -o $outputs -eq 0 ]
 	then
 	  continue;
 	fi
 	
 	let "used=$used+1"
 	
+	sleep 0.02
+
 	# solve circuit in at most 90 seconds, check properties
 	# echo "solve ..."
 	timeout 90 $* $tmpAIG 250 > $tmpOut 2> $tmpErr
