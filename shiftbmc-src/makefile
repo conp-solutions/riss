@@ -1,6 +1,16 @@
+#
+#
+# Makefile for the aiger tools by Biere
+# modified to build shiftbmc as well
+#
+#
+
 
 CC=gcc
 CFLAGS=-O3 -DNDEBUG
+
+PICOSATDIRECTORY=/home/norbert/projects/BMC/hwmcc/picosat
+ABCDIRECTORY=/home/norbert/projects/BMC/hwmcc/abc
 
 .c.o:
 	$(CC) $(CFLAGS) -c $<
@@ -65,14 +75,14 @@ link:
 aigand: aiger.o aigand.o makefile
 	$(CC) $(CFLAGS) -o $@ aigand.o aiger.o
 
-shiftbmc: aiger.c shiftbmc.c makefile ./picosat/picosat.o ../libriss.a
-	g++ $(CFLAGS) -o $@ -I.. shiftbmc.c aiger.c ./picosat/picosat.o ../libriss.a -pthread -lrt -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS -fpermissive  $(ARGS)
+shiftbmc: aiger.c shiftbmc.c makefile $(PICOSATDIRECTORY)/picosat.o ../libriss.a
+	g++ $(CFLAGS) -o $@ -I.. -I$(PICOSATDIRECTORY) shiftbmc.c aiger.c $(PICOSATDIRECTORY)/picosat.o ../libriss.a -pthread -lrt -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS -fpermissive  $(ARGS) 
 
-shiftbmc-abc: aiger.c shiftbmc.c makefile ./picosat/picosat.o ../libriss.a libabc.a
-	g++ $(CFLAGS) -o $@ -I.. shiftbmc.c aiger.c ./picosat/picosat.o ../libriss.a libabc.a -lreadline -ldl -pthread -lrt -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS -fpermissive -D USE_ABC  $(ARGS)
+shiftbmc-abc: aiger.c shiftbmc.c makefile $(PICOSATDIRECTORY) ../libriss.a $(ABCDIRECTORY)/libabc.a
+	g++ $(CFLAGS) -o $@ -I.. -I$(PICOSATDIRECTORY) shiftbmc.c aiger.c $(PICOSATDIRECTORY)/picosat.o ../libriss.a $(ABCDIRECTORY)/libabc.a -lreadline -ldl -pthread -lrt -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS -fpermissive -D USE_ABC  $(ARGS)
 	
-aig-plain-bmc: aiger.c aig-plain-bmc.c makefile ./picosat/picosat.o
-	gcc $(CFLAGS) -o $@ aig-plain-bmc.c aiger.c ./picosat/picosat.o -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS -fpermissive
+aig-plain-bmc: aiger.c aig-plain-bmc.c makefile $(PICOSATDIRECTORY)/picosat.o
+	gcc $(CFLAGS) -o $@ aig-plain-bmc.c aiger.c -I$(PICOSATDIRECTORY) $(PICOSATDIRECTORY)/picosat.o -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS -fpermissive
 	
 aigdd: aiger.o aigdd.o makefile
 	$(CC) $(CFLAGS) -o $@ aigdd.o aiger.o
@@ -156,6 +166,6 @@ wrapstim.o: wrapstim.c aiger.h makefile
 clean:
 	rm -f *.o 
 	rm -f $(TARGETS)
-
+	rm -f makefile
 
 .PHONY: all clean link install install-objs install-bins

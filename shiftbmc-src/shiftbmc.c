@@ -565,24 +565,40 @@ int parseOptions(int argc, char ** argv)
 }
 
 
-int ABC_simplify()
+int ABC_simplify(double& ppAigTime, int& initialLatchNum)
 {
 // #define USE_ABC
 #ifdef USE_ABC
+
+//
+// possible commands for ABC that have been recommended:
+//
+// drwsat
+//
+// dc2
+// &get; &syn2; &put
+// &get; &syn3; &put
+// &get; &syn4; &put
+//
+// scorr
+// &get; &scorr; &put
+//
+
+
   // simplification with ABC?
   if( useABC.size() > 0 ) { // there is a file or location
     MethodTimer aigTimer ( &ppAigTime );
     if(!name) { // reject reading from stdin
       wrn("will not read from stdin, since ABC ");  
-      exit(30);std::string s;
+      exit(30);
     }
     // setup the command line for abc
     if( abcCommand.size() == 0 ) {
-      abcCommand = "\"dc2\"";
+      abcCommand = "\"dc2\""; // default is dc2
       msg(1,"set abc command to default command %s", abcCommand.c_str() );
     }
     // if the scorr command is part of the command chain, the initial number of latches has to be set
-    if( abcCommand.find("scorr") != std::string::npos ) {
+    if( true ) { // always extract the info about the original file!
       // parse the aig file and read the number of latches!
       std::ifstream myfile;
       myfile.open (name);
@@ -596,8 +612,10 @@ int ABC_simplify()
       if( myfile ) {
 	myfile >> fm >> fi >> fl >> fo >> fa;
 	//std::cerr << " parsed MILOA: " << fm << ", " << fi << ", " << fl << ", " << fo << ", " << fa << std::endl;
-	initialLatchNum = fl;
-	msg(1,"set number of initial latches to %d - initial MILOA: %d %d %d %d %d",fl,fm,fi,fl,fo,fa);
+	if( abcCommand.find("scorr") != std::string::npos ) {
+	  initialLatchNum = fl;
+	}
+	msg(0,"initial MILOA: %d %d %d %d %d  -- set number of initial latches to %d - ",fm,fi,fl,fo,fa,fl);
       } else {
 	wrn("could not extract the number of latches from %s",name);
       }
@@ -694,7 +712,7 @@ void printState(int k)
 
 int simplifyCNF(int &k, void* preprocessorToUse, double& ppCNFtime) 
 {
-
+    MethodTimer cnfTimer( &ppCNFtime );
     // add formula to preprocessor!
     for( int i = 0 ; i < shiftFormula.formula.size(); ++i ) CPaddLit( preprocessorToUse, shiftFormula.formula[i] );
     
@@ -1003,7 +1021,7 @@ int main (int argc, char ** argv) {
 /**
  *  use ABC for simplification
  */
-  ABC_simplify();
+  ABC_simplify(ppAigTime, initialLatchNum); // measure CPU time, get number of latches in the initial AIG problem
 
   msg (1, "reading from '%s'", name ? name : "<stdin>");
   if (name) err = aiger_open_and_read_from_file (model, name);
@@ -1013,8 +1031,8 @@ int main (int argc, char ** argv) {
   ABC_cleanup();
   
   // print stats
-  msg (1, "MILOA = %u %u %u %u %u",model->maxvar,model->num_inputs,model->num_latches,model->num_outputs,model->num_ands);
-  msg (1, "BCJF = %u %u %u %u",model->num_bad,model->num_constraints,model->num_justice,model->num_fairness);
+  msg (0, "encode MILOA = %u %u %u %u %u",model->maxvar,model->num_inputs,model->num_latches,model->num_outputs,model->num_ands);
+  msg (1, "encode BCJF = %u %u %u %u",model->num_bad,model->num_constraints,model->num_justice,model->num_fairness);
        
   if( doNotAllowToSmallCircuits ) { // here aigdd cannot produce too small circuits
     if( model->num_inputs < 2 || model->num_latches < 2 || model->num_outputs != 1 || model->num_ands <2 ) exit (30);
@@ -1237,7 +1255,6 @@ int main (int argc, char ** argv) {
   
 
   if( useCP3 ) {
-    MethodTimer cnfTimer( &outerPPtime );
     outerPreprocessor = CPinit();
     // add more options here?
     
@@ -1257,15 +1274,18 @@ int main (int argc, char ** argv) {
   msg(0,"outer CNF preprocessing tool %lf seconds", outerPPtime);
   // TODO after compression, update all the variables/literals lists in the shiftformula structure!
   
+
+
+  msg(1,"[4] transition-formula stats: %d vars, %d inputs, %d latch-vars(sum input and output)", newMaxVar, mergeFrames * shiftFormula.inputs.size(), shiftFormula.latch.size()+shiftFormula.latchNext.size());
+  cerr << "[shift-bmc] pp time summary: aig: " << ppAigTime << " inner-cnf: " << innerPPtime << " outer-cnf: " << outerPPtime << endl;
+  if( stats_only ) exit(0);
+
 /*
  *
  *  solve the initial state here!
  *
  */
-
-  msg(1,"[4] transition-formula stats: %d vars, %d inputs, %d latch-vars(sum input and output)", newMaxVar, mergeFrames * shiftFormula.inputs.size(), shiftFormula.latch.size()+shiftFormula.latchNext.size());
-  if( stats_only ) exit(0);
-
+  
   lit = shiftFormula.currentAssume; // literal might have changed!
   const int shiftDist = shiftFormula.afterPPmaxVar - 1;  // shift depends on the variables that are actually in the formula that is used for solving
   
@@ -1401,7 +1421,7 @@ finishedSolving:;
   /**
    *  PRINT MODEL/WITNESS, if necessary
    */
-  cerr << "[shift-bmc] pp time summary: aig: " << ppAigTime << " inner-cnf: " << innerPPtime << " outer-cnf: " << outerPPtime << endl;
+  
   if( printTime ) {
     cerr << "[shift-bmc] solve time summary: ";
     for( int i = 0 ; i < boundtimes.size(); ++ i ) cerr << " " << boundtimes[i];

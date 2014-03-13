@@ -99,7 +99,10 @@ bool Config::addPreset(const std::string& optionSet)
     parseOptions(" ",false);
   }
   */
-  
+
+else if( optionSet == "QUIET" ) {
+    parseOptions(" -no-cp3_stats -solververb=0",false);
+}
 else if( optionSet == "SUSI" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -subsimp",false);
 }
