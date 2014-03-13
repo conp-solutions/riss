@@ -592,18 +592,14 @@ int ABC_simplify(double& ppAigTime, int& initialLatchNum)
       wrn("will not read from stdin, since ABC ");  
       exit(30);
     }
-    // setup the command line for abc
-    if( abcCommand.size() == 0 ) {
-      abcCommand = "\"dc2\""; // default is dc2
-      msg(1,"set abc command to default command %s", abcCommand.c_str() );
-    }
     // if the scorr command is part of the command chain, the initial number of latches has to be set
+    bool foundScorr = false;
+    int fm,fi,fl,fo,fa;
     if( true ) { // always extract the info about the original file!
       // parse the aig file and read the number of latches!
       std::ifstream myfile;
       myfile.open (name);
       if(!myfile) { wrn("error in opening file %s",name); exit (30); }
-      int fm,fi,fl,fo,fa;
       std::string sstr;
       while( sstr != "aag" && sstr != "aig") {
 				if(!myfile) break; // reached end of file?
@@ -611,16 +607,52 @@ int ABC_simplify(double& ppAigTime, int& initialLatchNum)
       }
       if( myfile ) {
 	myfile >> fm >> fi >> fl >> fo >> fa;
-	//std::cerr << " parsed MILOA: " << fm << ", " << fi << ", " << fl << ", " << fo << ", " << fa << std::endl;
-	if( abcCommand.find("scorr") != std::string::npos ) {
-	  initialLatchNum = fl;
-	}
 	msg(0,"initial MILOA: %d %d %d %d %d  -- set number of initial latches to %d - ",fm,fi,fl,fo,fa,fl);
       } else {
 	wrn("could not extract the number of latches from %s",name);
       }
       myfile.close();
     }
+    
+
+    // setup the command line for abc
+    if( abcCommand.size() == 0 || abcCommand == "AUTO" ) {
+      const int maxABCTime = 25; // alternative is 10
+      msg(0,"select ABC commands to take at most %d seconds (on known circuits)", maxABCTime);
+      if( maxABCTime == 10 ) {
+	     if( fa <=  20000  && fl <=   100 ) abcCommand = "dc2:scorr";
+	else if( fa <=  30000  && fl <=   200 ) abcCommand = "dc2:&get; &scorr; &put";
+	else if( fa <= 100000  && fl <=  2000 ) abcCommand = "dc2";
+	else if( fa <= 250000  && fl <= 15000 ) abcCommand = "&get;&syn2;&put:&get;&syn3;&put:&get;&syn4;&put";
+	else { 
+	  abcCommand = ""; // instsance is too large to select an automatic command!
+	  msg(0,"combination of latches and AND-gates is assumed to consume too much AIG simplification time");
+	}	
+      } else if (maxABCTime == 25 ) { // TODO: substitute!
+	     if( fa <=  30000  && fl <=   200 ) abcCommand = "dc2:scorr";
+	else if( fa <=  90000  && fl <=  3500 ) abcCommand = "dc2:&get; &scorr; &put";
+	else if( fa <=  75000  && fl <=  7000 ) abcCommand = "&get;&syn2;&put:&get;&syn3;&put:&get;&syn4;&put:scorr";
+	else if( fa <= 100000  && fl <=  7000 ) abcCommand = "&get;&syn2;&put:&get;&syn3;&put:&get;&syn4;&put:&get; &scorr; &put";
+	else if( fa <= 125000  && fl <= 15000 ) abcCommand = "dc2";
+	else if( fa <= 400000  && fl <= 50000 ) abcCommand = "&get;&syn2;&put:&get;&syn3;&put:&get;&syn4;&put";
+	else if( fa <= 600000  && fl <= 70000 ) abcCommand = "DRWSAT";
+	else { 
+	  abcCommand = ""; // instsance is too large to select an automatic command!
+	  msg(0,"combination of latches and AND-gates is assumed to consume too much AIG simplification time");
+	}
+      }
+      msg(1,"set abc command to default command %s", abcCommand.c_str() );
+    }
+    
+    
+    
+    
+    
+    
+    if( foundScorr || abcCommand.find("scorr") != std::string::npos ) {
+      initialLatchNum = fl;
+    }
+    
     // start abc
     void * pAbc;
     Abc_Start(); // turn on ABC
