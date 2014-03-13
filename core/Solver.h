@@ -39,7 +39,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "core/BoundedQueue.h"
 #include "core/Constants.h"
 #include "core/CoreConfig.h"
-#include <pfoliodOld-src/Solver.h>
 
 //
 // choose which bit width should be used

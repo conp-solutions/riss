@@ -166,6 +166,6 @@ wrapstim.o: wrapstim.c aiger.h makefile
 clean:
 	rm -f *.o 
 	rm -f $(TARGETS)
-	rm -f makefile
+#	rm -f makefile # keep the makefile, so that calls to make clean do not destroy the make infra structure
 
 .PHONY: all clean link install install-objs install-bins
