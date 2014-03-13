@@ -6,11 +6,11 @@
 #
 
 
-CC=gcc
-CFLAGS=-O3 -DNDEBUG
+CC=@CC@
+CFLAGS=@CFLAGS@
 
-PICOSATDIRECTORY=/home/norbert/projects/BMC/hwmcc/picosat
-ABCDIRECTORY=/home/norbert/projects/BMC/hwmcc/abc
+PICOSATDIRECTORY=@PDIR@
+ABCDIRECTORY=@ABCDIR@
 
 .c.o:
 	$(CC) $(CFLAGS) -c $<
@@ -46,7 +46,7 @@ smvtoaig \
 soltostim \
 wrapstim \
 aig-plain-bmc \
-aigbmc
+@AIGBMCTARGET@
 
 TARGETS=$(OBJS) $(BINS)
 
