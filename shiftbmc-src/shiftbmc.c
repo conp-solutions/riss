@@ -112,7 +112,10 @@ static void wrn (const char *fmt, ...) {
 
 
 static void add (int lit, bool addToShift = true) { 
-  if( addToShift ) shiftFormula.formula.push_back( lit ); // write into formula
+  if( addToShift ) { 
+    shiftFormula.formula.push_back( lit ); // write into formula
+    if( lit == 0) shiftFormula.clauses ++;
+  }
   if( riss != 0 ) riss_add( riss, lit );
   else if( priss != 0 ) priss_add( priss, lit );
   else picosat_add (picosat, lit);
@@ -747,7 +750,9 @@ int simplifyCNF(int &k, void* preprocessorToUse, double& ppCNFtime)
 {
     MethodTimer cnfTimer( &ppCNFtime );
     // add formula to preprocessor!
-    for( int i = 0 ; i < shiftFormula.formula.size(); ++i ) CPaddLit( preprocessorToUse, shiftFormula.formula[i] );
+    for( int i = 0 ; i < shiftFormula.formula.size(); ++i ) {
+      CPaddLit( preprocessorToUse, shiftFormula.formula[i] );
+    }
     
     if( verbose > 1 ) cerr << "c call freeze variables ... " << endl;
     CPfreezeVariable( preprocessorToUse,  1 ); // do not remove the unit (during dense!)
@@ -799,9 +804,11 @@ int simplifyCNF(int &k, void* preprocessorToUse, double& ppCNFtime)
     }
 
     // get formula back from preprocessor
-    shiftFormula.formula.clear(); // actively changing the formula!
+    shiftFormula.clearFormula(); // actively changing the formula!
     while ( CPhasNextOutputLit( preprocessorToUse ) ) {
-      shiftFormula.formula.push_back( CPnextOutputLit(preprocessorToUse) );
+      const int nextLit = CPnextOutputLit(preprocessorToUse);
+      shiftFormula.formula.push_back( nextLit );
+      shiftFormula.clauses = (nextLit == 0 ? shiftFormula.clauses + 1 : shiftFormula.clauses );
     }
 
     if( verbose > 1 ) cerr << "c add formula to SAT solver" << endl;
@@ -1164,7 +1171,7 @@ int main (int argc, char ** argv) {
   //
   //
   int newMaxVar  = nvars;
-  msg(1,"[1] transition-formula stats: %d vars, %d inputs, %d latch-vars(sum input and output)", newMaxVar, shiftFormula.inputs.size(), shiftFormula.latch.size()+shiftFormula.latchNext.size());
+  msg(1,"[1] transition-formula stats: %d clauses, %d vars, %d inputs, %d latch-vars(sum input and output)", shiftFormula.clauses, newMaxVar, shiftFormula.inputs.size(), shiftFormula.latch.size()+shiftFormula.latchNext.size());
   if( mergeFrames > 1 ) {
       
       msg(1,"simplify inner frame");
@@ -1180,7 +1187,7 @@ int main (int argc, char ** argv) {
 	newMaxVar = simplifyCNF(k, innerPreprocessor, innerPPtime);
 	msg(0,"inner CNF preprocessing tool %lf seconds", innerPPtime);
       }
-      msg(1,"[2] transition-formula stats: %d vars, %d inputs, %d latch-vars(sum input and output)", newMaxVar, shiftFormula.inputs.size(), shiftFormula.latch.size()+shiftFormula.latchNext.size());
+      msg(1,"[2] transition-formula stats: %d clauses, %d vars, %d inputs, %d latch-vars(sum input and output)", shiftFormula.clauses, newMaxVar, shiftFormula.inputs.size(), shiftFormula.latch.size()+shiftFormula.latchNext.size());
       
       msg(1,"merge multiple frames, namely %d\n", mergeFrames);
       // if merging is activated, then we need one extra variable (which is then shifted as well ... 
@@ -1208,7 +1215,7 @@ int main (int argc, char ** argv) {
 	    const int cl = shiftFormula.formula[i]; // literal to be shifted
 	    if( cl >= -1 && cl <= 1 ) {
 	      shiftFormula.formula.push_back( cl ); add(cl,false); // handle constant units, and the end of clause symbol
-	      if( cl == 0 ) thisClauses ++;
+	      if( cl == 0 ) { thisClauses ++; shiftFormula.clauses ++; }
 	    }
 	    else { 
 	      int newLit = varadd(cl, thisShift);
@@ -1222,10 +1229,10 @@ int main (int argc, char ** argv) {
 	    // encode lhs <-> rhs as two binary clauses
 	    shiftFormula.formula.push_back( lhs  );add( lhs,false );
 	    shiftFormula.formula.push_back( -rhs );add( -rhs,false );
-	    shiftFormula.formula.push_back( 0    );add( 0,false );
+	    shiftFormula.formula.push_back( 0    );add( 0,false );shiftFormula.clauses ++;
 	    shiftFormula.formula.push_back( -lhs );add( -lhs,false );
 	    shiftFormula.formula.push_back( rhs  );add( rhs,false );
-	    shiftFormula.formula.push_back( 0    );add( 0,false );
+	    shiftFormula.formula.push_back( 0    );add( 0,false );shiftFormula.clauses ++;
 	  }
 	  shiftFormula.mergeAssumes.push_back( shiftFormula.currentAssume + thisShift ); // memorize for frame k
 	  
@@ -1262,12 +1269,12 @@ int main (int argc, char ** argv) {
 	shiftFormula.formula.push_back(  shiftFormula.mergeAssumes[i] ); 
 	add( shiftFormula.mergeAssumes[i], false );
       }
-      shiftFormula.formula.push_back( 0 );add( 0, false );
+      shiftFormula.formula.push_back( 0 );add( 0, false );shiftFormula.clauses ++;
       
       for( int i = 0; i < shiftFormula.mergeAssumes.size(); ++ i ) {
 	shiftFormula.formula.push_back( - shiftFormula.mergeAssumes[i] ); add( - shiftFormula.mergeAssumes[i], false );
 	shiftFormula.formula.push_back( shiftFormula.currentAssume ); add( shiftFormula.currentAssume, false );
-	shiftFormula.formula.push_back( 0 ); add( 0,false );
+	shiftFormula.formula.push_back( 0 ); add( 0,false );shiftFormula.clauses ++;
       }
       
       // rewrite the latchNext variables to be the latchNext variables of the last frame
@@ -1283,7 +1290,7 @@ int main (int argc, char ** argv) {
       shiftFormula.initialMaxVar = newMaxVar;
       shiftFormula.afterPPmaxVar = newMaxVar;
       if( verbose > 2 ){ cerr << "c after merge:" << endl; printState(0); }
-      msg(1,"[3] transition-formula stats: %d vars, %d inputs, %d latch-vars(sum input and output)", newMaxVar, mergeFrames * shiftFormula.inputs.size(), shiftFormula.latch.size()+shiftFormula.latchNext.size());
+      msg(1,"[3] transition-formula stats: %d clauses, %d vars, %d inputs, %d latch-vars(sum input and output)", shiftFormula.clauses, newMaxVar, mergeFrames * shiftFormula.inputs.size(), shiftFormula.latch.size()+shiftFormula.latchNext.size());
   }
   
 
@@ -1309,7 +1316,7 @@ int main (int argc, char ** argv) {
   
 
 
-  msg(1,"[4] transition-formula stats: %d vars, %d inputs, %d latch-vars(sum input and output)", newMaxVar, mergeFrames * shiftFormula.inputs.size(), shiftFormula.latch.size()+shiftFormula.latchNext.size());
+  msg(1,"[4] transition-formula stats: %d clauses, %d vars, %d inputs, %d latch-vars(sum input and output)", shiftFormula.clauses, shiftFormula.afterPPmaxVar, mergeFrames * shiftFormula.inputs.size(), shiftFormula.latch.size()+shiftFormula.latchNext.size());
   cerr << "[shift-bmc] pp time summary: aig: " << ppAigTime << " inner-cnf: " << innerPPtime << " outer-cnf: " << outerPPtime << endl;
   if( stats_only ) exit(0);
 
