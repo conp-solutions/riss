@@ -624,19 +624,23 @@ int ABC_simplify(double& ppAigTime, int& initialLatchNum)
       msg(0,"select ABC commands to take at most %d seconds (on known circuits)", maxABCTime);
       // set a technique NOT, if both bounds are reached (hence, if one is not reached, set the best technique!)
       if( maxABCTime == 10 ) {
-	     if( fa <=  20000  || fl <=   100 ) abcCommand = "dc2:scorr";
-	else if( fa <=  30000  || fl <=   200 ) abcCommand = "dc2:&get; &scorr; &put";
+	     if( fa <=  10000  || fl <=    90 ) abcCommand = "dc2:dc2:scorr";
+	else if( fa <=  20000  || fl <=   100 ) abcCommand = "dc2:scorr";
+	else if( fa <=  30000  || fl <=   180 ) abcCommand = "dc2:&get; &scorr; &put";
+	else if( fa <=  40000  || fl <=  1500 ) abcCommand = "dc2:dc2";
 	else if( fa <= 100000  || fl <=  2000 ) abcCommand = "dc2";
 	else if( fa <= 250000  || fl <= 15000 ) abcCommand = "&get;&syn2;&put:&get;&syn3;&put:&get;&syn4;&put";
 	else { 
 	  abcCommand = ""; // instsance is too large to select an automatic command!
 	  msg(0,"combination of latches and AND-gates is assumed to consume too much AIG simplification time");
 	}	
-      } else if (maxABCTime == 25 ) { // TODO: substitute!
-	     if( fa <=  30000  || fl <=   200 ) abcCommand = "dc2:scorr";
+      } else if (maxABCTime == 25 ) { 
+	     if( fa <=  11000  || fl <=   180 ) abcCommand = "dc2:dc2:scorr";
+	else if( fa <=  30000  || fl <=   180 ) abcCommand = "dc2:scorr";
 	else if( fa <=  90000  || fl <=  3500 ) abcCommand = "dc2:&get; &scorr; &put";
 	else if( fa <=  75000  || fl <=  7000 ) abcCommand = "&get;&syn2;&put:&get;&syn3;&put:&get;&syn4;&put:scorr";
 	else if( fa <= 100000  || fl <=  7000 ) abcCommand = "&get;&syn2;&put:&get;&syn3;&put:&get;&syn4;&put:&get; &scorr; &put";
+	else if( fa <= 115000  || fl <= 10000 ) abcCommand = "dc2:dc2";
 	else if( fa <= 125000  || fl <= 15000 ) abcCommand = "dc2";
 	else if( fa <= 400000  || fl <= 50000 ) abcCommand = "&get;&syn2;&put:&get;&syn3;&put:&get;&syn4;&put";
 	else if( fa <= 600000  || fl <= 70000 ) abcCommand = "DRWSAT";
