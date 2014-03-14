@@ -119,10 +119,14 @@ public:
   int mergeShiftDist;			// use this value for freezing extra variables
   vector<int> mergeBads;		// bad state literals of merged formula
   
+  int clauses; // count the number of clauses that are present in the current formula
+  
   int initialMaxVar;	// use to reconstruct inputs and all that
   int afterPPmaxVar;   // use to shift the formula
   
-  ShiftFormula () {}
+  void clearFormula() { formula.clear(); clauses = 0; }
+  
+  ShiftFormula () : clauses(0) {}
   
   /// clear current state
   void clear() { formula.clear(); inputs.clear(); latch.clear(); currentBads.clear(); initEqualities.clear(); loopEqualities.clear(); }
