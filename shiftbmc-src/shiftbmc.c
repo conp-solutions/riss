@@ -643,7 +643,7 @@ int ABC_simplify(double& ppAigTime, int& initialLatchNum)
 	else if( fa <= 115000  || fl <= 10000 ) abcCommand = "dc2:dc2";
 	else if( fa <= 125000  || fl <= 15000 ) abcCommand = "dc2";
 	else if( fa <= 400000  || fl <= 50000 ) abcCommand = "&get;&syn2;&put:&get;&syn3;&put:&get;&syn4;&put";
-	else if( fa <= 600000  || fl <= 70000 ) abcCommand = "DRWSAT";
+	else if( fa <= 600000  || fl <= 70000 ) abcCommand = "drwsat";
 	else { 
 	  abcCommand = ""; // instsance is too large to select an automatic command!
 	  msg(0,"combination of latches and AND-gates is assumed to consume too much AIG simplification time");
@@ -651,11 +651,6 @@ int ABC_simplify(double& ppAigTime, int& initialLatchNum)
       }
       msg(1,"set abc command to default command %s", abcCommand.c_str() );
     }
-    
-    
-    
-    
-    
     
     if( foundScorr || abcCommand.find("scorr") != std::string::npos ) {
       initialLatchNum = fl;
