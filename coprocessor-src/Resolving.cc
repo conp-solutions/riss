@@ -41,14 +41,14 @@ bool Resolving::process(bool post)
  
   if( ! post ) {
     // do not simplify, if the formula is considered to be too large!
-    if( !data.unlimited() && ( data.nVars() > config.opt_ternResolve_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_ternResolve_cls   || data.nTotLits() > config.opt_ternResolve_lits) ) return false;
+    if( !data.unlimited() && ( data.nVars() > config.opt_ternResolve_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_ternResolve_cls && data.nTotLits() > config.opt_ternResolve_lits) ) return false;
     ternaryResolve();
   }
   
   if( config.opt_add2_red_start || post ) {
     if( config.opt_add2_red ) {
       // do not simplify, if the formula is considered to be too large!
-      if( !data.unlimited() && ( data.nVars() > config.opt_addRedBins_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_addRedBins_cls  || data.nTotLits() > config.opt_addRedBins_lits) ) return false;
+      if( !data.unlimited() && ( data.nVars() > config.opt_addRedBins_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_addRedBins_cls && data.nTotLits() > config.opt_addRedBins_lits) ) return false;
       addRedundantBinaries(); 
     }
   }

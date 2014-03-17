@@ -48,7 +48,7 @@ bool EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
   if( !data.ok() ) return false;
   
   // do not simplify, if the formula is considered to be too large!
-  if( !data.unlimited() && ( data.nVars() > config.opt_ee_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_ee_cls || data.nTotLits() > config.opt_ee_lits) ) return false;
+  if( !data.unlimited() && ( data.nVars() > config.opt_ee_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_ee_cls && data.nTotLits() > config.opt_ee_lits) ) return false;
   
   isToAnalyze.resize( data.nVars(), 0 );
     

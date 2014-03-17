@@ -59,8 +59,8 @@ bool Probing::process()
   if( (! config.pr_probe && ! config.pr_vivi) || !data.ok() ) return data.ok();
   
   // if all limits are reached, do not continue!
-  if( !data.unlimited() && ( data.nVars() > config.opt_probe_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_probe_cls   || data.nTotLits() > config.opt_probe_lits) ) {
-    if( !data.unlimited() && ( data.nVars() > config.opt_viv_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_viv_cls   || data.nTotLits() > config.opt_viv_lits) ) {
+  if( !data.unlimited() && ( data.nVars() > config.opt_probe_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_probe_cls && data.nTotLits() > config.opt_probe_lits) ) {
+    if( !data.unlimited() && ( data.nVars() > config.opt_viv_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_viv_cls   && data.nTotLits() > config.opt_viv_lits) ) {
       return false;
     }
   }

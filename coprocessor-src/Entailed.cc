@@ -32,7 +32,7 @@ bool EntailedRedundant::process()
   modifiedFormula = false;
   
   // do not simplify, if the formula is considered to be too large!
-  if( !data.unlimited() && ( data.nVars() > config.opt_ent_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_ent_cls || data.nTotLits() > config.opt_ent_lits ) ) return false;
+  if( !data.unlimited() && ( data.nVars() > config.opt_ent_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_ent_cls && data.nTotLits() > config.opt_ent_lits ) ) return false;
   
   data.ma.resize( 2*data.nVars() );
   data.lits.clear();

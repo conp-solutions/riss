@@ -412,7 +412,7 @@ bool LiteralAddition::process()
   modifiedFormula = false;
   
   // do not simplify, if the formula is considered to be too large!
-  if( !data.unlimited() && ( data.nVars() > config.opt_la_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_la_cls   || data.nTotLits() > config.opt_la_lits) ) return false;
+  if( !data.unlimited() && ( data.nVars() > config.opt_la_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_la_cls && data.nTotLits() > config.opt_la_lits) ) return false;
 
   // run UP first!
   if( config.opt_la_debug ) cerr << "c LA run unit propagation" << endl;
