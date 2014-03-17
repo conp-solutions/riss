@@ -514,6 +514,7 @@ IntOption pr_viviLimit   ;
 IntOption  pr_opt_inpStepInc1      ;
 IntOption  pr_opt_inpStepInc2      ;
 IntOption  pr_keepLHBRs  ;
+BoolOption pr_necBinaries  ;
 #if defined TOOLVERSION  
 const int pr_debug_out;
 #else

@@ -254,6 +254,7 @@ pr-viviL      {500000,5000000,7500000}[5000000]       # step limit for clause vi
 pr-viviP      {40,60,80}[80]       # percent of max. clause size for clause vivification
 pr-keepI  {0,2}[2]       # keep clauses that imply on level 1 (0=no,1=learnt,2=original)
 pr-keepL  {0,2}[2]       # keep conflict clauses in solver (0=no,1=learnt,2=original)
+pr-nce        {yes,no}[yes]       # keep necessary assignments for level 2 as binary clauses
 pr-uips       {-1,0,1}[-1]       # perform learning if a conflict occurs up to x-th UIP (-1 = all )
 pr-csize      {2,3,4,2147483647}[2147483647]       # size of clauses that are considered for probing/vivification (propagation)
 pr-probeL     {500000,5000000,7500000}[5000000]       # step limit for probing
@@ -844,6 +845,7 @@ pr-repeat      | pr-probe in {yes}
 pr-roots       | pr-probe in {yes}
 pr-keepI       | pr-probe in {yes}
 pr-keepL       | pr-probe in {yes}
+pr-nce         | pr-probe in {yes}
 pr-uips        | pr-probe in {yes}
 pr-probeL      | pr-probe in {yes}
 cp3_pr_inpInc  | pr-probe in {yes}

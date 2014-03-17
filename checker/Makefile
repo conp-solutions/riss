@@ -1,9 +1,12 @@
 .PHONY: all clean
 
-all: certifiedSAT stc drup-check brup2drup verify cnfdd cnfuzz precochk lgl mtcnfdd wcnfuzz
+all: certifiedSAT stc drup-check brup2drup verify cnfdd cnfuzz precochk lgl mtcnfdd wcnfuzz dratcheck 
 
 certifiedSAT: certifiedSAT.cc 
 	g++ certifiedSAT.cc -o certifiedSAT -O0 -g
+
+drat-trim: drat-trim.c
+	gcc -Wall -o drat-trim -O3 drat-trim.c -std=c99
 	
 stc: stc.c
 	gcc stc.c -o stc -O2 -static

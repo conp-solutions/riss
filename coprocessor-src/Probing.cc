@@ -641,24 +641,26 @@ bool Probing::prDoubleLook(Lit l1decision)
     learntUnits.push( ~l1decision );
     unsigned oldl2implieds = l2implieds.size();
     // look for necessary literals, and equivalent literals (do not add literal itself)
-    for( int i = solver.trail_lim[1] + 1; i < solver.trail.size(); ++ i )
-    {
-      // check whether same polarity in both trails, or different polarity and in both trails
-      const Var tv = var( solver.trail[ i ] );
-      if( config.pr_debug_out > 1 ) cerr << "c compare variable (level 1)" << tv + 1 << ": pos = " << toInt(prL2Positive[tv].assigns) << " neg = " << toInt(solver.varFlags[tv].assigns) << endl;
-      if( solver.varFlags[ tv ].assigns == prL2Positive[tv].assigns ) {
-	if( config.pr_debug_out > 1 ) cerr << "c l2 implied literal: " << l1decision << " -> " << solver.trail[i] << endl;
-	learntUnits[0] = solver.trail[ i ];
-	l2implied ++;
-	CRef cr = ca.alloc(learntUnits, config.pr_keepImplied == 1);
-	l2implieds.push_back(cr);
-      } else { // this is for statistics only and is currently not handled!
-// 	if( 
-// 	  (solver.assigns[ tv ] == l_True && prPositive[tv] == l_False)
-// 	  || (solver.assigns[ tv ] == l_False && prPositive[tv] == l_True)
-// 	) l2ee ++;
+    if( config.pr_necBinaries ) { // if necessary assignments should be generated during probing, do it here!
+      for( int i = solver.trail_lim[1] + 1; i < solver.trail.size(); ++ i )
+      {
+	// check whether same polarity in both trails, or different polarity and in both trails
+	const Var tv = var( solver.trail[ i ] );
+	if( config.pr_debug_out > 1 ) cerr << "c compare variable (level 1)" << tv + 1 << ": pos = " << toInt(prL2Positive[tv].assigns) << " neg = " << toInt(solver.varFlags[tv].assigns) << endl;
+	if( solver.varFlags[ tv ].assigns == prL2Positive[tv].assigns ) {
+	  if( config.pr_debug_out > 1 ) cerr << "c l2 implied literal: " << l1decision << " -> " << solver.trail[i] << endl;
+	  learntUnits[0] = solver.trail[ i ];
+	  l2implied ++;
+	  CRef cr = ca.alloc(learntUnits, config.pr_keepImplied == 1);
+	  l2implieds.push_back(cr);
+	} else { // this is for statistics only and is currently not handled!
+  // 	if( 
+  // 	  (solver.assigns[ tv ] == l_True && prPositive[tv] == l_False)
+  // 	  || (solver.assigns[ tv ] == l_False && prPositive[tv] == l_True)
+  // 	) l2ee ++;
+	}
+	
       }
-      
     }
     
     solver.cancelUntil(1);
