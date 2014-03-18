@@ -226,7 +226,7 @@ void EquivalenceElimination::initClause(const CRef cr)
 
 bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorData& data, vector< Circuit::Gate >& gates)
 {
-  printDRUPwarning(cerr,"ee gate algorithm");
+  // printDRUPwarning(cerr,"ee gate algorithm");
   
   gateTime  = cpuTime() - gateTime;
   vector< vector<int32_t> > varTable ( data.nVars() ); // store for each variable which gates have this variable as input
@@ -635,6 +635,9 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	      } else {
 		if( x == ~ox ) {
 		  data.setFailed();
+		  data.addCommentToProof("structural hashing found that a variable has to be equivalent to its complement");
+		  data.addUnitToProof(x);
+		  data.addUnitToProof(ox);
 		  cerr << "c failed, because AND miter procedure found that " << x << " is equivalent to " << ox << endl;
 		  gateTime  = cpuTime() - gateTime;
 		  return true;
@@ -1059,6 +1062,9 @@ void EquivalenceElimination::processANDgate(CoprocessorData& data, Circuit::Gate
     } else {
       if( x == ~ox ) {
 	data.setFailed();
+	data.addCommentToProof("structural hashing found that a variable has to be equivalent to its complement");
+	data.addUnitToProof(x);
+	data.addUnitToProof(ox);
 	//cerr << "c failed, because AND procedure found that " << x << " is equivalent to " << ox << endl;
       } else {
 // 	cerr << "c found equivalence " << x << " == " << ox << " again" << endl;
@@ -1147,6 +1153,9 @@ void EquivalenceElimination::processExOgate(CoprocessorData& data, Circuit::Gate
       } else {
 	if( lits[ g.size() -1 ] == ~freeLit ) {
 	  data.setFailed();
+	  data.addCommentToProof("structural hashing found that a variable has to be equivalent to its complement");
+	  data.addUnitToProof(lits[ g.size() -1 ]);
+	  data.addUnitToProof(freeLit);
 	  //cerr << "c failed, because ExO procedure found that " << lits[ g.size() -1 ] << " is equivalent to " << freeLit << endl;
 // 	  cerr << "c corresponding gates: " << endl;
 // 	  g.print(cerr);
@@ -1228,7 +1237,11 @@ void EquivalenceElimination::processGenANDgate(CoprocessorData& data, Circuit::G
 	
       } else {
 	if( g.getOutput() == ~other.getOutput() ) {
+	  
 	  data.setFailed();
+	  data.addCommentToProof("structural hashing found that a variable has to be equivalent to its complement");
+	  data.addUnitToProof(g.getOutput());
+	  data.addUnitToProof(other.getOutput());
 	  //cerr << "c failed, because GenAND procedure found that " << g.getOutput() << " is equivalent to " << other.getOutput() << endl;
 // 	  cerr << "c corresponding gates: " << endl;
 // 	  g.print(cerr);
@@ -1325,6 +1338,9 @@ void EquivalenceElimination::processITEgate(CoprocessorData& data, Circuit::Gate
     } else {
       if( x == ~ox ) {
 	data.setFailed();
+	data.addCommentToProof("structural hashing found that a variable has to be equivalent to its complement");
+	data.addUnitToProof(x);
+	data.addUnitToProof(ox);
 	//cerr << "c failed, because ITE procedure found that " << x << " is equivalent to " << ox << endl;
 //	cerr << "c equi gate 1: " << x  << " = ITE(" << s  << "," << t  << "," << f  << ")" << endl;
 // 	cerr << "c equi gate 2: " << ox << " = ITE(" << os << "," << ot << "," << of << ")" << endl;
@@ -1431,6 +1447,9 @@ void EquivalenceElimination::processXORgate(CoprocessorData& data, Circuit::Gate
       } else {
 	if( lits[2] == ~freeLit ) {
 	  data.setFailed();
+	  data.addCommentToProof("structural hashing found that a variable has to be equivalent to its complement");
+	  data.addUnitToProof(lits[2]);
+	  data.addUnitToProof(freeLit);
 	  //cerr << "c failed, because XOR procedure found that " << lits[2] << " is equivalent to " << freeLit << endl;
 	  return;
 	} else {
@@ -1571,6 +1590,9 @@ void EquivalenceElimination::processFASUMgate(CoprocessorData& data, Circuit::Ga
       } else {
 	if( lits[3] == ~freeLit ) {
 	  data.setFailed();
+	  data.addCommentToProof("structural hashing found that a variable has to be equivalent to its complement");
+	  data.addUnitToProof(lits[3]);
+	  data.addUnitToProof(freeLit);
 	  //cerr << "c failed, because FASUM procedure found that " << lits[3] << " is equivalent to " << freeLit << endl;
 	  return;
 	} else {

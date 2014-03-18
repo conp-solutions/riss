@@ -379,6 +379,8 @@ void BlockedClauseElimination::blockedClauseElimination()
 	    for( ; k < c.size(); ++ k ) c[keptLiterals ++] = c[k]; // keep the remaining literals as well!
 	    assert( (keptLiterals + data.lits.size() == c.size()) && "the size of the clause should not shrink without a reason" );
 	    c.shrink(  data.lits.size() ); // remvoe the other literals from this clause!
+	    data.addCommentToProof("apply CLE to a clause - yet the previous clause is not deleted ... "); // TODO also delete the original clause!
+	    data.addToProof( c ); // add the new clause after c[k] has been removed 
 	    if( config.opt_bce_debug ) cerr << "c into clause " << c << " by removing " << data.lits.size() << " literals, namely: " << data.lits << endl;
 	    if( c.size() == 1 ) {
 	      cleUnits ++;

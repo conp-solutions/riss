@@ -372,6 +372,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
       }
 
       if( UHTE ) {
+	data.addCommentToProof("clause removed by UHTE");
 	data.addToProof(clause,true);
 	clause.set_delete( true );
 	modifiedFormula = true;
@@ -394,7 +395,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
     if( doUHLE != 0 ) {
       // C = UHLE(C)
       bool UHLE=false; // if set to true, and doesDrupProof, then original clause is also copied
-      if( data.outputsProof() ) data.lits.clear();
+      // if( data.outputsProof() ) data.lits.clear();
       if( doUHLE == 1 || doUHLE == 3 )
       {
 	pp = cs;
@@ -411,7 +412,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
 	    removedLits++;
 	    modifiedFormula = true;
 	    if( clause.size() == 2 ) big.removeEdge(clause[0],clause[1]);
-	    if( !UHLE && data.outputsProof() ) { for( int j = 0 ; j < clause.size(); ++ j ) data.lits.push_back( clause[j] ); } // copy the real clause, so that it can be deleted
+	    //if( !UHLE && data.outputsProof() ) { for( int j = 0 ; j < clause.size(); ++ j ) data.lits.push_back( clause[j] ); } // copy the real clause, so that it can be deleted
 	    clause.remove_lit(l);
 	    data.addToProof(clause);data.addToProof(clause,true, l); // tell proof that a literal has been removed!
 	    // tell subsumption / strengthening about this modified clause
@@ -454,7 +455,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
 	    if( config.opt_uhd_Debug > 4 ){  cerr << "c [UHLE-N] remove " << ~l << " because of fin time " << fin << " of " <<  l << " and finLit " << finLit << " [" << finished << "] from " << clause << endl; }
 	    data.removeClauseFrom(clRef,~l);
 	    data.removedLiteral(~l);
-	    if( !UHLE && data.outputsProof() ) { for( int j = 0 ; j < clause.size(); ++ j ) data.lits.push_back( clause[j] ); } // copy the real clause, so that it can be deleted
+	    // if( !UHLE && data.outputsProof() ) { for( int j = 0 ; j < clause.size(); ++ j ) data.lits.push_back( clause[j] ); } // copy the real clause, so that it can be deleted
 	    modifiedFormula = true;
 	    if( clause.size() == 2 ) big.removeEdge(clause[0],clause[1]);
 	    clause.remove_lit( ~l );

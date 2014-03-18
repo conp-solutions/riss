@@ -974,9 +974,9 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	    out_learnt.push( ~trail[ trail_lim[i] ] ); // get the complements of all decisions into dec array
 	}
 	if( config.opt_printDecisions > 2 || config.opt_learn_debug || config.opt_ecl_debug || config.opt_rer_debug) cerr << endl << "c current decision stack: " << out_learnt << endl ;
-	// const Lit tmpLit = out_learnt[ out_learnt.size() -1 ]; // 
+	const Lit tmpLit = out_learnt[ out_learnt.size() -1 ]; // 
 	out_learnt[ out_learnt.size() -1 ] = out_learnt[0]; // have first decision as last literal
-	out_learnt[0] = ~p; // new implied literal is the negation of the asserting literal ( could also be the last decision literal, then the learned clause is a decision clause)
+	out_learnt[0] = tmpLit; // ~p; // new implied literal is the negation of the asserting literal ( could also be the last decision literal, then the learned clause is a decision clause) somehow buggy ...
 	learnedDecisionClauses ++;
 	if( config.opt_printDecisions > 2 || config.opt_learn_debug || config.opt_ecl_debug || config.opt_rer_debug) cerr << endl << "c learn decisionClause " << out_learnt << endl << endl;
 	doMinimizeClause = false;
