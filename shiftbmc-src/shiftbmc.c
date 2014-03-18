@@ -42,7 +42,7 @@ static int maxk=0; // upper bound for search
 static int verbose = 0, move = 0, processNoProperties = 0 ,quiet = 0, nowitness = 0, nowarnings = 0, lazyEncode = 0,useShift=0, // options
   useRiss = 0, usePriss = 0, useCP3 = 0, denseVariables = 0, dontFreezeInput = 0, dontFreezeBads = 0, printTime=0, checkInitialBad = 0, abcDir = 0, stats_only = 0;
 static char* rissPresetConf = 0;
-static char* innerPPConf = 0, outerPPConf = 0;
+static char* innerPPConf = 0, *outerPPConf = 0;
 static int wildGuesser = 0, wildGuessStart = 10, wildGuessInc = 2, wildGuessIncInc = 1; // guess sequence: 10, 30, 60, ...
 static int tuning = 0, tuneSeed = 0;
 static bool checkProperties = false;
@@ -1341,6 +1341,7 @@ int main (int argc, char ** argv) {
     //}
     
     if( outerPPConf != 0 ) {
+      msg(0,"init outer CNF simplification with configuration %s", outerPPConf );
       outerPreprocessor = CPinit(outerPPConf);
     // add more options here?
     

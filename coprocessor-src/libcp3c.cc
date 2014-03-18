@@ -33,7 +33,6 @@ extern "C" {
     libcp3* cp3 = new libcp3;
     cp3->solverconfig = new Minisat::CoreConfig("");
     if( presetConfig  != 0 ) cp3->solverconfig->setPreset(presetConfig );
-//     cp3->solverconfig->localLookAhead = false; // do not use laHack during preprocessing! (might already infere that the output lit is false -> unroll forever)
     cp3->cp3config = new Coprocessor::CP3Config("");
     if( presetConfig  != 0 ) cp3->cp3config->setPreset(presetConfig );
     cp3->solver = new Minisat::Solver (*(cp3->solverconfig));
