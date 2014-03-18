@@ -63,6 +63,7 @@ protected:
   void cancelUntil ();  // Backtrack until a certain level.
   
   vec<Lit> tmpLits; // for temporary addidion
+  int verbose;
   
 public:
   
@@ -85,6 +86,8 @@ public:
   void removeClause( const Lit& l ) ;
   template <class T>
   void removeClause( const T& cls ) ;
+  template <class T>
+  void removeClause( const T& cls, const Lit& rmLit ) ;
   
   /// plot the current unit clauses and the current formula
   void printState();
@@ -92,12 +95,20 @@ public:
   /// check whether all clauses in the online checker are correctly in the data structures!
   void fullCheck();
   
+  /// set verbosity of the checker
+  void setVerbosity( int newVerbosity );
+  
 };
 
 inline
 OnlineProofChecker::OnlineProofChecker(OnlineProofChecker::ProofStyle proofStyle) 
-: ok(true), proof(proofStyle), watches (Solver::WatcherDeleted(ca)), qhead(0)
+: ok(true), proof(proofStyle), watches (Solver::WatcherDeleted(ca)), qhead(0), verbose(0)
 {}
+
+inline
+void OnlineProofChecker::setVerbosity( int newVerbosity ) {
+  verbose = newVerbosity;
+}
 
 inline 
 void OnlineProofChecker::attachClause(CRef cr)
@@ -272,6 +283,20 @@ void OnlineProofChecker::removeClause( const Lit& l )
 
 template <class T>
 inline 
+void OnlineProofChecker::removeClause(const T& cls, const Lit& remLit)
+{
+  tmpLits.clear();
+  if( remLit != lit_Undef ) tmpLits.push( remLit );
+  for( int i = 0 ; i < cls.size(); ++ i ) {
+    if( cls[i] != remLit ) tmpLits.push( cls[i] );
+  }
+  // remove this clause in the usual way
+  return removeClause( tmpLits );
+}
+
+
+template <class T>
+inline 
 void OnlineProofChecker::removeClause(const T& cls)
 {
   if( cls.size() == 0 || !ok ) return; // do not handle empty clauses here!
@@ -285,7 +310,7 @@ void OnlineProofChecker::removeClause(const T& cls)
       }
     }
     if( i == unitClauses.size() ) assert( false && "the unit clause should be inside the vector of units" );
-    cerr << "c [DRAT-OTFC] removed clause " << cls << endl;
+    if( verbose > 1 ) cerr << "c [DRAT-OTFC] removed clause " << cls << endl;
     return;
   } 
   // find correct CRef ...
@@ -319,7 +344,7 @@ void OnlineProofChecker::removeClause(const T& cls)
     break;
   }
   if( i == occ[ toInt(smallest) ].size() || ref == CRef_Undef ) {
-    cerr << "c [DRAT-OTFC] could not remove clause " << cls << " from list of literal " << smallest << endl;
+    if( verbose > 1 ) cerr << "c [DRAT-OTFC] could not remove clause " << cls << " from list of literal " << smallest << endl;
     printState();
     assert(false && "clause should be in the data structures" );
   }
@@ -330,10 +355,21 @@ void OnlineProofChecker::removeClause(const T& cls)
     vector<CRef>& list = occ[ toInt(cls[i]) ];
     int j = 0;
     for(  ; j < list.size(); ++ j ) {
-      if( list[j] == ref ) { list[j] = list[ list.size() -1 ]; list.pop_back(); }
-      break;
+      if( list[j] == ref ) { 
+	list[j] = list[ list.size() -1 ]; list.pop_back(); // remove the element
+	j = -1; // point somewhere invalid
+	break;
+      }
     }
-    if( j == list.size() ) cerr << "c could not remove clause " << cls << " from list of literal " << cls[i] << endl;
+    if( j == list.size() ) { 
+      if( verbose > 1 )  cerr << "c could not remove clause " << cls << " from list of literal " << cls[i] << endl;
+      printState();
+      if( verbose > 2 ) { 
+	cerr << "c list for " << cls[i] << " : ";
+	for( int k = 0 ; k < list.size(); ++k ) cerr << "c " << ca[ list[k] ] << endl;
+      }
+      assert( false && "should be able to remove the clause from all lists" );
+    }
   }
     
   // remove the clause from the two watched literal structures!
@@ -343,7 +379,7 @@ void OnlineProofChecker::removeClause(const T& cls)
   ca[ref].mark(1); 
   ca.free(ref);
   
-  cerr << "c [DRAT-OTFC] removed clause " << cls << " which is internally " << ca[ref] << endl;
+  if( verbose > 1 ) cerr << "c [DRAT-OTFC] removed clause " << cls << " which is internally " << ca[ref] << endl;
   // check garbage collection once in a while!
   // TODO
 }
@@ -416,8 +452,8 @@ bool OnlineProofChecker::addClause(const vec< Lit >& cls)
   cancelUntil();
   for( int i = 0 ; i < cls.size() ; ++ i ) {
     if( value( cls[i] ) == l_Undef ) { 
-      uncheckedEnqueue( cls[i] );
-    } else if( value(cls[i]) == l_False ) { conflict = true; break; }
+      uncheckedEnqueue( ~cls[i] );
+    } else if( value(~cls[i]) == l_False ) { conflict = true; break; }
   }
   
   if( ! conflict ) {
@@ -457,12 +493,12 @@ bool OnlineProofChecker::addClause(const vec< Lit >& cls)
 	  cancelUntil();
 	  for( int k = 0 ; k < lits.size() ; ++ k ) {
 	    if( value( lits[k] ) == l_Undef ) { 
-	      uncheckedEnqueue( lits[k] );
-	    } else if( value(lits[k]) == l_False ) { resovleConflict = true; break; } // the clause itself is tautological ...
+	      uncheckedEnqueue( ~lits[k] );
+	    } else if( value(~lits[k]) == l_False ) { resovleConflict = true; break; } // the clause itself is tautological ...
 	  }
 	  if( !propagate() ) {
 	    conflict = false; // not DRAT, the current resolvent does not lead to a conflict!
-	    cerr << "c [DRAT-OTFC] the clause " << cls << " is not a DRAT clause -- resolution on " << resolveLit << " with " << d << " failed! (does not result in a conflict with UP)" << endl;
+	    if( verbose > 1 ) cerr << "c [DRAT-OTFC] the clause " << cls << " is not a DRAT clause -- resolution on " << resolveLit << " with " << d << " failed! (does not result in a conflict with UP)" << endl;
 	    printState();
 	    assert( false && "added clause has to be a DRAT clause" );
 	    break;
@@ -470,7 +506,7 @@ bool OnlineProofChecker::addClause(const vec< Lit >& cls)
 	}
       } else conflict = true;
     } else {
-      cerr << "c [DRAT-OTFC] the clause " << cls << " is not a DRUP clause" << endl;
+      if( verbose > 1 ) cerr << "c [DRAT-OTFC] the clause " << cls << " is not a DRUP clause" << endl;
       printState();
       assert( false && "added clause has to be a DRUP clause" );
     }
@@ -490,13 +526,17 @@ bool OnlineProofChecker::addClause(const vec< Lit >& cls)
     attachClause( ref );
     clauses.push( ref );
   } else unitClauses.push( cls[0] );
-  cerr << "c [DRAT-OTFC] added the clause " << cls << endl;
+  if( verbose > 1 ) cerr << "c [DRAT-OTFC] added the clause " << cls << endl;
   return true;
 }
 
 inline
 void OnlineProofChecker::printState()
 {
+  if( verbose < 2 ) return;
+  
+  fullCheck();
+  
   cerr << "c [DRAT-OTFC] STATE:" << endl;
   for( int i = 0 ; i < unitClauses.size(); ++ i ) {
     cerr << unitClauses[i] << " 0" << endl;

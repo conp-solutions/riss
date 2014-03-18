@@ -119,7 +119,7 @@ Solver::Solver(CoreConfig& _config) :
   , asynch_interrupt   (false)
   
   // Online proof checking class
-  , onlineDratChecker( config.opt_checkProofOnline ? new OnlineProofChecker(OnlineProofChecker::drat) : 0)
+  , onlineDratChecker( config.opt_checkProofOnline != 0 ? new OnlineProofChecker(OnlineProofChecker::drat) : 0)
   
   // UIP hack
   , l1conflicts(0)
@@ -277,6 +277,9 @@ Solver::Solver(CoreConfig& _config) :
   MYFLAG=0;
   hstry[0]=lit_Undef;hstry[1]=lit_Undef;hstry[2]=lit_Undef;hstry[3]=lit_Undef;hstry[4]=lit_Undef;hstry[5]=lit_Undef;
   permDiff.push(0); // there needs to be one more level, in case all variables are on the trail and each variable is on its own decision level (in usual search this should not happen .. )
+  
+  if( onlineDratChecker != 0 ) onlineDratChecker->setVerbosity( config.opt_checkProofOnline );
+  
 }
 
 
@@ -386,7 +389,7 @@ bool Solver::addClause_(vec<Lit>& ps)
 	  if( value( ps[0] ) == l_True ) return true;
 	}
 	uncheckedEnqueue(ps[0]);
-	if( !config.opt_hpushUnit ) return ok = (propagate() == CRef_Undef);
+	if( !config.opt_hpushUnit ) return ok = (propagate(true) == CRef_Undef);
 	else return ok;
     }else{
         CRef cr = ca.alloc(ps, false);
@@ -1220,11 +1223,17 @@ void Solver::analyzeFinal(Lit p, vec<Lit>& out_conflict)
 }
 
 
-void Solver::uncheckedEnqueue(Lit p, CRef from)
+void Solver::uncheckedEnqueue(Lit p, Minisat::CRef from, bool addToProof)
 {
   /*
    *  Note: this code is also executed during extended resolution, so take care of modifications performed there!
    */
+    if( addToProof ) {
+      assert( decisionLevel() == 0 && "proof can contain only unit clauses, which have to be created on level 0" );
+      addCommentToProof("add unit clause that is created during adding the formula");
+      addUnitToProof( p );
+    }
+  
   
     if( dynamicDataUpdates && config.opt_agility_restart_reject ) { // only if technique is enabled:
      // cerr << "c old: " << agility << " lit: " << p << " sign: " << sign(p) << " pol: " << polarity[var(p)] << endl;
@@ -1259,8 +1268,9 @@ void Solver::uncheckedEnqueue(Lit p, CRef from)
 |    Post-conditions:
 |      * the propagation queue is empty, even if there was a conflict.
 |________________________________________________________________________________________________@*/
-CRef Solver::propagate()
+CRef Solver::propagate(bool duringAddingClauses)
 {
+    assert( ( decisionLevel() == 0 || !duringAddingClauses ) && "clauses can only be added at level 0!" );
     // if( config.opt_printLhbr ) cerr << endl << "c called propagate" << endl;
     if( config.opt_learn_debug ) cerr << "c call propagate with " << qhead << " for " <<  trail.size() << " lits" << endl;
   
@@ -1295,7 +1305,7 @@ CRef Solver::propagate()
 	  }
 	  
 	  if(value(imp) == l_Undef) {
-	    uncheckedEnqueue(imp,wbin[k].cref());
+	    uncheckedEnqueue(imp,wbin[k].cref(), duringAddingClauses);
 	    if( lhbrAllowed && config.opt_LHBR > 0 ) {
 	      vardata[ var(imp) ].dom = (config.opt_LHBR == 1 || config.opt_LHBR == 3) ? p : vardata[ var(p) ].dom ; // set dominator
 	      // if( config.opt_printLhbr ) cerr << "c literal " << imp << " is dominated by " << p << " (because propagated in binary)" << endl;  
@@ -1430,7 +1440,7 @@ CRef Solver::propagate()
                     *j++ = *i++;
             } else {
 		if( config.opt_learn_debug ) cerr << "c current clause is unit clause: " << ca[cr] << endl;
-                uncheckedEnqueue(first, cr);
+                uncheckedEnqueue(first, cr, duringAddingClauses);
 		if( lhbrAllowed && config.opt_LHBR > 0 ) vardata[ var(first) ].dom = (config.opt_LHBR == 1 || config.opt_LHBR == 3) ? first : vardata[ var(first) ].dom ; // set dominator for this variable!
 		
 		// if( config.opt_printLhbr ) cerr << "c final common dominator: " << commonDominator << endl;

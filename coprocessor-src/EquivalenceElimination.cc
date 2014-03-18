@@ -335,7 +335,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 // 	    x = getReplacement( g.x() );
 	  } else if ( data.value(a) == l_False ) {
 	    if( enqOut ) {
-	      data.enqueue(~x);  
+	      data.enqueue(~x);  data.addUnitToProof(~x);
 	      if( config.ee_debug_out > 2 ) cerr << "c found imply " << ~x << endl;
 	    }
 	  }
@@ -347,13 +347,13 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 // 	    x = getReplacement( g.x() );
 	  } else if ( data.value(b) == l_False ) {
 	    if( enqOut ) {
-	      data.enqueue(~x);  
+	      data.enqueue(~x);  data.addUnitToProof(~x);
 	      if( config.ee_debug_out > 2 ) cerr << "c found imply " << ~x << endl;
 	    }
 	  } else if ( data.value(x) == l_True) {
 	    if( enqInp ) {
-	      data.enqueue(a);  
-	      data.enqueue(b);  
+	      data.enqueue(a);  data.addUnitToProof(a);
+	      data.enqueue(b);  data.addUnitToProof(b);
 	      if( config.ee_debug_out > 2 ) cerr << "c found imply " << a << " and " << b << endl;
 	    }
 	  }
@@ -424,7 +424,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 // 	      ox = getReplacement( other.x() );
 	    } else if ( data.value(oa) == l_False ) {
 	      if( config.ee_debug_out > 2 ) cerr << "[   1] enqueue " << ~ox << endl;
-	      if( enqOut )data.enqueue(~ox);  
+	      if( enqOut ) { data.enqueue(~ox);  data.addUnitToProof(~ox); }
 	    }
 	    if ( data.value(ob) == l_True ) {
 	      if( config.ee_debug_out > 2 ) cerr << "[   2] add equivalence " << ox << " == " << oa << endl;
@@ -434,11 +434,11 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 // 	      ox = getReplacement( other.x() );
 	    } else if ( data.value(ob) == l_False ) {
 	      if( config.ee_debug_out > 2 ) cerr << "[   3] enqueue " << ~ox << endl;
-	      if( enqOut ) data.enqueue(~ox);  
+	      if( enqOut ) {data.enqueue(~ox);  data.addUnitToProof(~ox); }
 	    } else if ( data.value(ox) == l_True) {
 	      if( config.ee_debug_out > 2 ) cerr << "[   4] enqueue " << oa << " and " << ob << endl;
-	      if( enqInp ) data.enqueue(oa);  
-	      if( enqInp ) data.enqueue(ob);  
+	      if( enqInp ) { data.enqueue(oa);   data.addUnitToProof(oa);}
+	      if( enqInp ) { data.enqueue(ob);  data.addUnitToProof(ob);}
 	    }
 	    // do not reason with assigned gates!
 	    continue;
@@ -531,6 +531,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 		if( config.ee_debug_out > 2 ) cerr << "[  13]" << endl;
 		if( x == ~ox ) {
 		  cerr << "c complementary outputs, one complementary input, other input equal " << ox << " <-> AND(" << ob << "," << oa << ")" << endl;
+		  data.addUnitToProof(a);
 		  data.enqueue(a); // handle gates where the input would be complementary
 		}
 		else gates.push_back( Circuit::Gate( ~a, x, ox, Circuit::Gate::AND, Circuit::Gate::FULL) );
@@ -538,6 +539,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 		if( config.ee_debug_out > 2 ) cerr << "[  14]" << endl;
 		if( x == ~ox ) {
 		  cerr << "c complementary outputs, one complementary input, other input equal " << ox << " <-> AND(" << ob << "," << oa << ")" << endl;
+		  data.addUnitToProof(b);
 		  data.enqueue(b); // handle gates where the input would be complementary
 		}
 		else gates.push_back( Circuit::Gate( ~b, x, ox, Circuit::Gate::AND, Circuit::Gate::FULL) );
@@ -545,6 +547,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 		if( config.ee_debug_out > 2 ) cerr << "[  15]" << endl;
 		if( x == ~ox ) {
 		  cerr << "c complementary outputs, one complementary input, other input equal " << ox << " <-> AND(" << ob << "," << oa << ")" << endl;
+		  data.addUnitToProof(a);
 		  data.enqueue(a); // handle gates where the input would be complementary
 		}
 		else gates.push_back( Circuit::Gate( ~a, x, ox, Circuit::Gate::AND, Circuit::Gate::FULL) );
@@ -552,6 +555,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 		if( config.ee_debug_out > 2 ) cerr << "[  16]" << endl;
 		if( x == ~ox ) {
 		  cerr << "c complementary outputs, one complementary input, other input equal " << ox << " <-> AND(" << ob << "," << oa << ")" << endl;
+		  data.addUnitToProof(b);
 		  data.enqueue(b); // handle gates where the input would be complementary
 		}
 		else gates.push_back( Circuit::Gate( ~b, x, ox, Circuit::Gate::AND, Circuit::Gate::FULL) );
@@ -591,6 +595,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	    ) {
 	      if( config.ee_debug_out > 2 ) cerr << "[  17] entail " << ~ox << endl;
 	      // the output of a gate together with a complementary input in another gate cannot be satisfied -> other gate is unsat!
+	      data.addUnitToProof(~ox);
 	      data.enqueue(~ox);
 	    }
 	    else {
@@ -1449,6 +1454,7 @@ void EquivalenceElimination::processXORgate(CoprocessorData& data, Circuit::Gate
       if( freeLit == lit_Error ) continue; // these gates do not match!
       
       if( pol == qPol ) freeLit = ~freeLit;
+      data.addUnitToProof(freeLit);
       if( l_False == data.enqueue(freeLit) ) return;
       //cerr << "c" << endl << "c found the unit " << freeLit << " based on XOR reasoning" << "c NOT HANDLED YET!" << endl << "c" << endl;
       //cerr << "c corresponding gates: " << endl;
@@ -1588,6 +1594,7 @@ void EquivalenceElimination::processFASUMgate(CoprocessorData& data, Circuit::Ga
       freeLit = lits[3];
       
       if( pol ^ sign( freeLit ) == qPol ) freeLit = ~freeLit;
+      data.addUnitToProof(freeLit);
       if( l_False == data.enqueue(freeLit) ) return;
       //cerr << "c" << endl << "c found the unit " << freeLit << " based on XOR reasoning" << "c NOT HANDLED YET!" << endl << "c" << endl;
       //cerr << "corresponding gates:" << endl;
