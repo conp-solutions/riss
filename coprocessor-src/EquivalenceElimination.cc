@@ -1959,7 +1959,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
    { // remove all frozen variables from the ee classes!
     int keep = 0;
     for( int i = 0 ; i < ee.size(); ++ i ) {
-      if( !data.doNotTouch( var( ee[i] ) ) ) ee[keep++] = ee[i];
+      if( ee[i] == lit_Undef || !data.doNotTouch( var( ee[i] ) ) ) ee[keep++] = ee[i]; // keep all literals that are not frozen, and keep the "lit_Undef" separators!
     }
     ee.resize(keep);
    }
