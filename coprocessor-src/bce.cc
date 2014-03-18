@@ -365,6 +365,10 @@ void BlockedClauseElimination::blockedClauseElimination()
 	    int k = 0, l = 0; // data.lits is a sub set of c, both c and data.lits are ordered!
 	    int keptLiterals = 0;
 	    if( config.opt_bce_debug ) cerr << "c cle turns clause " << c << endl;
+	    if( data.outputsProof() ) { // store the original clause for deleting it from the proof
+	      data.getSolver()->oc.clear();
+	      for( int m = 0 ; m < c.size(); ++m ) data.getSolver()->oc.push( c[m] ); 
+	    }
 	    while( k < c.size() && l < data.lits.size() ) {
 	      if( c[k] == data.lits[l] ) {
 		// remove the literal from the clause and remove the clause from that literals structures, as well as decrease the occurrence counter
@@ -379,8 +383,9 @@ void BlockedClauseElimination::blockedClauseElimination()
 	    for( ; k < c.size(); ++ k ) c[keptLiterals ++] = c[k]; // keep the remaining literals as well!
 	    assert( (keptLiterals + data.lits.size() == c.size()) && "the size of the clause should not shrink without a reason" );
 	    c.shrink(  data.lits.size() ); // remvoe the other literals from this clause!
-	    data.addCommentToProof("apply CLE to a clause - yet the previous clause is not deleted ... "); // TODO also delete the original clause!
+	    data.addCommentToProof("apply CLE to a clause"); // TODO also delete the original clause!
 	    data.addToProof( c, false, right ); // add the new clause after c[k] has been removed - has been resolved on literal "right", hence, do write that literal to the first position!
+	    data.addToProof( data.getSolver()->oc, true ); // remove the clause of the shape it had before
 	    if( config.opt_bce_debug ) cerr << "c into clause " << c << " by removing " << data.lits.size() << " literals, namely: " << data.lits << endl;
 	    if( c.size() == 1 ) {
 	      cleUnits ++;

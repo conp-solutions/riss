@@ -482,7 +482,7 @@ void Solver::removeClause(Minisat::CRef cr, bool strict) {
   // tell DRUP that clause has been deleted, if this was not done before already!
   if( c.mark() == 0 ) {
     addCommentToProof("delete via clause removal",true);
-    addToProof(c,true);
+    addToProof(c,true);	// clause has not been removed yet
   }
   if( config.opt_rer_debug || config.opt_learn_debug) cerr << "c remove clause [" << cr << "]: " << c << endl;
 
@@ -1228,7 +1228,7 @@ void Solver::uncheckedEnqueue(Lit p, Minisat::CRef from, bool addToProof)
   /*
    *  Note: this code is also executed during extended resolution, so take care of modifications performed there!
    */
-    if( addToProof ) {
+    if( addToProof  ) { // whenever we are at level 0, add the unit to the proof (might introduce duplicates, but this way all units are covered
       assert( decisionLevel() == 0 && "proof can contain only unit clauses, which have to be created on level 0" );
       addCommentToProof("add unit clause that is created during adding the formula");
       addUnitToProof( p );
@@ -1697,10 +1697,16 @@ lbool Solver::search(int nof_conflicts)
     unsigned int nblevels;
     bool blocked=false;
     starts++;
+    int proofTopLevels = 0;
+    if( trail_lim.size() == 0 ) proofTopLevels = trail.size(); else proofTopLevels  = trail_lim[0]; 
     for (;;){
 	propagationTime.start();
         CRef confl = propagate();
 	propagationTime.stop();
+	
+	if( decisionLevel() == 0 && outputsProof() ) { // add the units to the proof that have been added by being propagated on level 0
+	  for( ; proofTopLevels < trail.size(); ++ proofTopLevels ) addUnitToProof( trail[ proofTopLevels ] );
+	}
 	
         if (confl != CRef_Undef){
             // CONFLICT
@@ -2516,7 +2522,8 @@ lbool Solver::solve_()
       if( config.opt_uhdProbe > 2 ) big->sort( nVars() ); // sort all the lists once
     }
     
-    if( false ) {
+    if( true ) {
+      cerr << "c solver state after preprocessing" << endl;
       cerr << "c units: " ; for( int i = 0 ; i < trail.size(); ++ i ) cerr << " " << trail[i]; cerr << endl;
       cerr << "c clauses: " << endl; for( int i = 0 ; i < clauses.size(); ++ i ) cerr << "c " << ca[clauses[i]] << endl;
       cerr << "c assumptions: "; for ( int i = 0 ; i < assumptions.size(); ++ i ) cerr << " " << assumptions[i]; cerr << endl;
