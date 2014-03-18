@@ -1027,11 +1027,11 @@ inline void Solver::addToProof( const T& clause, bool deleteFromProof, const Lit
   }
   // actually print the clause into the file
   if( deleteFromProof ) fprintf(drupProofFile, "d ");
+  if( remLit != lit_Undef ) fprintf(drupProofFile, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1)); // print this literal first (e.g. for DRAT clauses)
   for (int i = 0; i < clause.size(); i++) {
-    if( clause[i] == lit_Undef ) continue;
+    if( clause[i] == lit_Undef || clause[i] == remLit ) continue;	// print the remaining literal, if they have not been printed yet
     fprintf(drupProofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
   }
-  if( deleteFromProof && remLit != lit_Undef ) fprintf(drupProofFile, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1));
   fprintf(drupProofFile, "0\n");
   
   if( config.opt_verboseProof == 2 ) {

@@ -522,11 +522,15 @@ bool Probing::prDoubleLook(Lit l1decision)
       solver.cancelUntil(backtrack_level);
       if (data.lits.size() == 1){
 	// cerr << "c unit lit is unsat: " << (data.value( data.lits[0] ) == l_False) << endl;
+	data.addCommentToProof("found unit during doubble look ahead");
+	data.addUnitToProof( data.lits[0] );
 	solver.enqueue(data.lits[0]);
 	// cerr << "c return value for enqueing lit " << data.lits[0] << " is " << ret << endl;
 	if( config.pr_debug_out > 0 ) cerr << "c L2 learnt clause: " << data.lits[0] << " 0" << endl;
       } else {
 	CRef cr = ca.alloc(data.lits, config.pr_keepLearnts == 1);
+	data.addCommentToProof("add learned clause that is added during double look ahead");
+	data.addToProof(data.lits);
 	// solver.clauses.push(cr);
 	solver.attachClause(cr);
 	l2conflicts.push_back(cr);
@@ -549,7 +553,10 @@ bool Probing::prDoubleLook(Lit l1decision)
 	}
 	solver.cancelUntil(0);
 	// tell system about new units!
-	for( int i = 0 ; i < learntUnits.size(); ++ i ) data.enqueue( learntUnits[i] );
+	for( int i = 0 ; i < learntUnits.size(); ++ i ) {
+	  data.addUnitToProof( learntUnits[i] );
+	  data.enqueue( learntUnits[i] );
+	}
 	if( !data.ok() ) return true; // interrupt loop, if UNSAT has been found!
 	l1learntUnit+=learntUnits.size();
 	if( solver.propagate() != CRef_Undef ) { data.setFailed(); return true; } // UNSAT has been found - current state is level 0
@@ -597,10 +604,14 @@ bool Probing::prDoubleLook(Lit l1decision)
       solver.cancelUntil(backtrack_level);
       if (data.lits.size() == 1){
 	solver.enqueue(data.lits[0]);
+	data.addCommentToProof("add clause during double look ahead");
+	data.addUnitToProof( data.lits[0] );
 	if( config.pr_debug_out > 0 ) cerr << "c L2 learnt clause: " << data.lits[0] << " 0" << endl;
       }else{
 	CRef cr = ca.alloc(data.lits, config.pr_keepLearnts == 1);
 	// solver.clauses.push(cr);
+	data.addCommentToProof("add clause during double look ahead");
+	data.addToProof( data.lits );
 	solver.attachClause(cr);
 	l2conflicts.push_back(cr);
 	solver.uncheckedEnqueue(data.lits[0], cr);
@@ -653,6 +664,8 @@ bool Probing::prDoubleLook(Lit l1decision)
 	  l2implied ++;
 	  CRef cr = ca.alloc(learntUnits, config.pr_keepImplied == 1);
 	  l2implieds.push_back(cr);
+	  data.addCommentToProof("learn implications for L2 necessary assignments");
+	  data.addToProof( ca[cr] );
 	} else { // this is for statistics only and is currently not handled!
   // 	if( 
   // 	  (solver.assigns[ tv ] == l_True && prPositive[tv] == l_False)
@@ -691,7 +704,10 @@ bool Probing::prDoubleLook(Lit l1decision)
       }
       solver.cancelUntil(0);
       // tell system about new units!
-      for( int i = 0 ; i < learntUnits.size(); ++ i ) data.enqueue( learntUnits[i] );
+      for( int i = 0 ; i < learntUnits.size(); ++ i ) {
+	data.addUnitToProof( learntUnits[i] );
+	data.enqueue( learntUnits[i] );
+      }
       if( !data.ok() ) return true; // interrupt loop, if UNSAT has been found!
       l1learntUnit+=learntUnits.size();
       if( solver.propagate() != CRef_Undef ) { data.setFailed(); return true; } // UNSAT has been found - current state is level 0
@@ -967,7 +983,8 @@ void Probing::probing()
 	}
 	solver.cancelUntil(0);
 	// tell system about new units!
-	for( int i = 0 ; i < learntUnits.size(); ++ i ) data.enqueue( learntUnits[i] );
+	data.addCommentToProof("unit clauses that have been learned on level 1 during probing");
+	for( int i = 0 ; i < learntUnits.size(); ++ i ) { data.enqueue( learntUnits[i] ); data.addUnitToProof(learntUnits[i]); }
 	if( !data.ok() ) break; // interrupt loop, if UNSAT has been found!
 	l1learntUnit+=learntUnits.size();
 	if( solver.propagate() != CRef_Undef ) { data.setFailed(); break; }
@@ -1007,7 +1024,8 @@ void Probing::probing()
 	}
 	solver.cancelUntil(0);
 	// tell system about new units!
-	for( int i = 0 ; i < learntUnits.size(); ++ i ) data.enqueue( learntUnits[i] );
+	data.addCommentToProof("unit clauses that have been learned on level 1 during probing");
+	for( int i = 0 ; i < learntUnits.size(); ++ i ) { data.enqueue( learntUnits[i] ); data.addUnitToProof( learntUnits[i] ); }
 	l1learntUnit+=learntUnits.size();
 	if( !data.ok() ) break; // interrupt loop, if UNSAT has been found!
 	if( solver.propagate() != CRef_Undef ) { data.setFailed(); break; }
@@ -1032,6 +1050,7 @@ void Probing::probing()
 	cerr << endl;
       }
       
+      if( data.outputsProof() ) printDRUPwarning(cerr,"necessary assignments and equivalences from Probing cannot be handled easily with DRAT");
       data.lits.clear();
       data.lits.push_back(negLit); // equivalent literals
       doubleLiterals.clear();	  // NOTE re-use for unit literals!
@@ -1067,12 +1086,14 @@ void Probing::probing()
       
       solver.cancelUntil(0);
       // add all found implied literals!
+      if( doubleLiterals.size() > 0 ) data.addCommentToProof("literals that have been implied during double look ahead");
       for( int i = 0 ; i < doubleLiterals.size(); ++i )
       {
 	const Lit l = doubleLiterals[i];
 	if( solver.value( l ) == l_False ) { data.setFailed(); break; }
 	else if ( solver.value(l) == l_Undef ) {
 	  solver.uncheckedEnqueue(l);
+	  data.addUnitToProof( l ); // might not be DRAT immediately
 	}
       }
 
@@ -1096,6 +1117,7 @@ void Probing::probing()
       Clause& c = ca[ l2conflicts[i] ];
       if( config.pr_keepLearnts == 0 ) {
 	if( config.pr_debug_out > 0 ) cerr << "c delete clause [" << l2conflicts[i] << "] : " << c << endl;
+	if( !c.can_be_deleted()) data.addToProof( ca[ l2conflicts[i] ], true ); // delete from proof
 	c.set_delete(true);
 	solver.detachClause( l2conflicts[i] ); // remove from solver structures -> to be not available for vivification
       } else {
@@ -1116,6 +1138,7 @@ void Probing::probing()
       Clause& c = ca[ l2implieds[i] ];
       if( config.pr_keepImplied == 0) {
 	if( config.pr_debug_out > 0 ) cerr << "c delete clause [" << l2implieds[i] << "] : " << c << endl;
+	if( !c.can_be_deleted()) data.addToProof( ca[ l2conflicts[i] ] , true ); // delete from proof
 	c.set_delete(true);
 	solver.detachClause( l2implieds[i] ); // remove from solver structures -> to be not available for vivification
       } else {
@@ -1342,6 +1365,13 @@ void Probing::clauseVivification()
 	cerr << " " << ~data.lits[j];
       cerr << endl;
       }
+      data.addCommentToProof("shrinked by vivification"); // delete clause that has been shrinked by vivification
+      if( data.outputsProof() ) {
+	for( int j = 0 ; j < data.lits.size(); ++ j ) data.lits[j] = ~data.lits[j];
+	data.addToProof( data.lits ); // delete clause that has been shrinked by vivification
+	for( int j = 0 ; j < data.lits.size(); ++ j ) data.lits[j] = ~data.lits[j];
+      }
+      data.addToProof( sameClause, true ); // delete clause that has been shrinked by vivification
       
       data.ma.nextStep();
       for( int j = 0 ; j < data.lits.size(); ++ j )

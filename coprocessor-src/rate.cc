@@ -152,6 +152,8 @@ bool RATElimination::process()
 	  if( config.opt_rate_debug > 1 ) cerr << "c RATE eliminate AT clause [" << data.list(right)[i] << "] " << ca[data.list(right)[i]] << endl;
 	  ca[ data.list(right)[i]] .set_delete(true);
 	  data.removedClause( data.list(right)[i] );
+	  data.addCommentToProof("AT clause during RATE");
+	  data.addToProof(c,true);
 	  continue;
 	}
 	
