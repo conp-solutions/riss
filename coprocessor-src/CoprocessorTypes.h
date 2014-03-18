@@ -150,7 +150,7 @@ public:
   int32_t& operator[] (const Lit l ); // return the number of occurrences of literal l
   int32_t operator[] (const Var v ) const; // return the number of occurrences of variable v
   vector<CRef>& list( const Lit l ); // return the list of clauses, which have literal l
-  const vector< Minisat::CRef >& list( const Lit l ) const; // return the list of clauses, which have literal l
+  const vector< CRef >& list( const Lit l ) const; // return the list of clauses, which have literal l
 
   vec<CRef>& getClauses();           // return the vector of clauses in the solver object
   vec<CRef>& getLEarnts();           // return the vector of learnt clauses in the solver object
@@ -212,11 +212,11 @@ public:
   bool isInterupted();					  // has received signal from the outside
 
 // adding, removing clauses and literals =======
-  void addClause (      const Minisat::CRef cr, bool check = false );                 // add clause to data structures, update counters
+  void addClause (      const CRef cr, bool check = false );                 // add clause to data structures, update counters
   void addClause (      const CRef cr , Heap<VarOrderBVEHeapLt> * heap, const bool update = false, const Var ignore = var_Undef, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL);     // add clause to data structures, update counters
-  bool removeClauseFrom (const Minisat::CRef cr, const Lit l); // remove clause reference from list of clauses for literal l, returns true, if successful
-  void removeClauseFrom (const Minisat::CRef cr, const Lit l, const int index); // remove clause reference from list of clauses for literal l, returns true, if successful
-  inline bool removeClauseFromThreadSafe (const Minisat::CRef cr, const Lit l); // replaces clause reference from clause list by CRef_Undef, returns true, if successful
+  bool removeClauseFrom (const CRef cr, const Lit l); // remove clause reference from list of clauses for literal l, returns true, if successful
+  void removeClauseFrom (const CRef cr, const Lit l, const int index); // remove clause reference from list of clauses for literal l, returns true, if successful
+  inline bool removeClauseFromThreadSafe (const CRef cr, const Lit l); // replaces clause reference from clause list by CRef_Undef, returns true, if successful
   inline void cleanUpOccurrences(const MarkArray & dirtyOccs, const uint32_t timer); // removes CRef_Undef from all dirty occurrences
   void cleanOccurrences();				// remove all clauses and set counters to 0
 
@@ -226,7 +226,7 @@ public:
   void checkGarbage(vector<CRef> ** updateVectors = 0, int size = 0) { return checkGarbage(solver->garbage_frac, updateVectors, size); }
   void checkGarbage(double gf, vector<CRef> ** updateVectors = 0, int size = 0){  if (ca.wasted() > ca.size() * gf) garbageCollect(updateVectors, size); }
 
-  void updateClauseAfterDelLit(const Minisat::Clause& clause)
+  void updateClauseAfterDelLit(const Clause& clause)
   { if( global_debug_out ) cerr << "what to update in clause?! " << clause << endl; }
   
   // sort
@@ -267,7 +267,7 @@ public:
   void correctCounters();
 
   // extending model after clause elimination procedures - l will be put first in list to be undone if necessary!
-  void addToExtension( const Minisat::CRef cr, const Lit l = lit_Error );
+  void addToExtension( const CRef cr, const Lit l = lit_Error );
   void addToExtension( vec< Lit >& lits, const Lit l = lit_Error );
   void addToExtension( vector< Lit >& lits, const Lit l = lit_Error );
   void addToExtension( const Lit dontTouch, const Lit l = lit_Error );
@@ -295,7 +295,7 @@ public:
   /** add a clause to the queues, so that this clause will be checked by the next call to subsumeStrength 
    * @return true, if clause has really been added and was not in both queues before
    */
-  bool addSubStrengthClause( const Minisat::CRef cr , bool isNew = false);
+  bool addSubStrengthClause( const CRef cr , bool isNew = false);
   vector<CRef>& getSubsumeClauses();
   vector<CRef>& getStrengthClauses();
   
@@ -338,12 +338,12 @@ public:
   ~BIG();
 
   /** adds binary clauses */
-  void create( ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list);
-  void create( ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2);
+  void create( ClauseAllocator& ca, uint32_t nVars, vec< CRef >& list);
+  void create( ClauseAllocator& ca, uint32_t nVars, vec< CRef >& list1, vec< CRef >& list2);
 
   /** recreate the big after the formula changed */
-  void recreate( ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list);
-  void recreate( ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2);
+  void recreate( ClauseAllocator& ca, uint32_t nVars, vec< CRef >& list);
+  void recreate( ClauseAllocator& ca, uint32_t nVars, vec< CRef >& list1, vec< CRef >& list2);
   
   /** return the number of variables that are known by the BIG */
   uint32_t getVars() const { return duringCreationVariables; }
@@ -551,12 +551,12 @@ inline void CoprocessorData::destroy()
   deleteTimer.destroy();
 }
 
-inline vec< Minisat::CRef >& CoprocessorData::getClauses()
+inline vec< CRef >& CoprocessorData::getClauses()
 {
   return solver->clauses;
 }
 
-inline vec< Minisat::CRef >& CoprocessorData::getLEarnts()
+inline vec< CRef >& CoprocessorData::getLEarnts()
 {
   return solver->learnts;
 }
@@ -700,7 +700,7 @@ inline bool CoprocessorData::hasToPropagate()
 }
 
 
-inline void CoprocessorData::addClause(const Minisat::CRef cr, bool check)
+inline void CoprocessorData::addClause(const CRef cr, bool check)
 {
   const Clause & c = ca[cr];
   if( c.can_be_deleted() ) return;
@@ -756,7 +756,7 @@ inline void CoprocessorData::addClause ( const CRef cr , Heap<VarOrderBVEHeapLt>
   }
 }
 
-inline bool CoprocessorData::removeClauseFrom(const Minisat::CRef cr, const Lit l)
+inline bool CoprocessorData::removeClauseFrom(const CRef cr, const Lit l)
 {
   vector<CRef>& list = occs[toInt(l)];
   for( int i = 0 ; i < list.size(); ++ i )
@@ -770,7 +770,7 @@ inline bool CoprocessorData::removeClauseFrom(const Minisat::CRef cr, const Lit 
   return false;
 }
 
-inline void CoprocessorData::removeClauseFrom(const Minisat::CRef cr, const Lit l, const int index)
+inline void CoprocessorData::removeClauseFrom(const CRef cr, const Lit l, const int index)
 {
   vector<CRef>& list = occs[toInt(l)];
   assert( list[index] == cr );
@@ -781,7 +781,7 @@ inline void CoprocessorData::removeClauseFrom(const Minisat::CRef cr, const Lit 
 /** replaces clause reference from clause list by CRef_Undef, returns true, if successful
  *  asynchronous list modification
  */
-inline bool CoprocessorData::removeClauseFromThreadSafe (const Minisat::CRef cr, const Lit l) 
+inline bool CoprocessorData::removeClauseFromThreadSafe (const CRef cr, const Lit l) 
 {
   assert( cr != CRef_Undef);
   vector<CRef>& list = occs[toInt(l)];
@@ -1033,7 +1033,7 @@ inline void CoprocessorData::addedClause (   const CRef cr, Heap<VarOrderBVEHeap
           data_lock->unlock();
   }
 }
-inline void CoprocessorData::removedClause ( const Minisat::CRef cr, Heap< Coprocessor::VarOrderBVEHeapLt >* heap, const bool update, const Var ignore, SpinLock* data_lock, SpinLock* heap_lock)			// update counters for literals in the clause
+inline void CoprocessorData::removedClause ( const CRef cr, Heap< Coprocessor::VarOrderBVEHeapLt >* heap, const bool update, const Var ignore, SpinLock* data_lock, SpinLock* heap_lock)			// update counters for literals in the clause
 {
   const Clause & c = ca[cr];
   if (heap == NULL && data_lock == NULL && heap_lock == NULL)
@@ -1086,12 +1086,12 @@ inline int32_t CoprocessorData::operator[](const Var v) const
   return lit_occurrence_count[toInt(mkLit(v,0))] + lit_occurrence_count[toInt(mkLit(v,1))];
 }
 
-inline vector< Minisat::CRef >& CoprocessorData::list(const Lit l)
+inline vector< CRef >& CoprocessorData::list(const Lit l)
 {
    return occs[ toInt(l) ];
 }
 
-inline const vector< Minisat::CRef >& CoprocessorData::list(const Lit l) const
+inline const vector< CRef >& CoprocessorData::list(const Lit l) const
 {
    return occs[ toInt(l) ];
 }
@@ -1283,7 +1283,7 @@ inline void CoprocessorData::relocAll(ClauseAllocator& to, vector<CRef> ** updat
  */
 inline void CoprocessorData::mark1(Var x, MarkArray& array)
 {
-  std::vector<CRef> & clauses = occs[Minisat::toInt( mkLit(x,true))];
+  std::vector<CRef> & clauses = occs[toInt( mkLit(x,true))];
   for( int i = 0; i < clauses.size(); ++i)
   {
     CRef cr = clauses[i];
@@ -1293,7 +1293,7 @@ inline void CoprocessorData::mark1(Var x, MarkArray& array)
       array.setCurrentStep(var(c[j]));
     }
   }
-  clauses = occs[Minisat::toInt( mkLit(x,false) )];
+  clauses = occs[toInt( mkLit(x,false) )];
   for( int i = 0; i < clauses.size(); ++i)
   {
     CRef cr = clauses[i];
@@ -1318,7 +1318,7 @@ inline void CoprocessorData::mark2(Var x, MarkArray& array, MarkArray& tmp)
 {
   tmp.nextStep();
   // for negative literal
-  std::vector<CRef> & clauses = occs[Minisat::toInt( mkLit(x,true))];
+  std::vector<CRef> & clauses = occs[toInt( mkLit(x,true))];
   for( int i = 0; i < clauses.size(); ++i)
   {
     Clause &c = ca[clauses[i]];
@@ -1333,7 +1333,7 @@ inline void CoprocessorData::mark2(Var x, MarkArray& array, MarkArray& tmp)
     }
   }
   // for positive literal
-  clauses = occs[Minisat::toInt( mkLit(x,false))];
+  clauses = occs[toInt( mkLit(x,false))];
   for( int i = 0; i < clauses.size(); ++i)
   {
     Clause &c = ca[clauses[i]];
@@ -1348,7 +1348,7 @@ inline void CoprocessorData::mark2(Var x, MarkArray& array, MarkArray& tmp)
   }
 }
 
-inline void CoprocessorData::addToExtension(const Minisat::CRef cr, const Lit l)
+inline void CoprocessorData::addToExtension(const CRef cr, const Lit l)
 {
   const Clause& c = ca[cr];
   if( undo.size() > 0 ) assert( undo[ undo.size() - 1] != lit_Undef && "an empty clause should not be put on the undo stack" );
@@ -1530,7 +1530,7 @@ inline vector< Lit >& CoprocessorData::getEquivalences()
   return equivalences;
 }
 
-inline bool CoprocessorData::addSubStrengthClause(const Minisat::CRef cr, bool isNew)
+inline bool CoprocessorData::addSubStrengthClause(const CRef cr, bool isNew)
 {
   bool ret = false;
   Clause& c = ca[cr];
@@ -1547,7 +1547,7 @@ inline bool CoprocessorData::addSubStrengthClause(const Minisat::CRef cr, bool i
   return ret;
 }
 
-inline vector< Minisat::CRef >& CoprocessorData::getSubsumeClauses()
+inline vector< CRef >& CoprocessorData::getSubsumeClauses()
 {
   return subsume_queue;
 }
@@ -1610,7 +1610,7 @@ inline BIG::~BIG()
  
 }
 
-inline void BIG::create(ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list)
+inline void BIG::create(ClauseAllocator& ca, uint32_t nVars, vec< CRef >& list)
 {
   duringCreationVariables = nVars; // memorize the number of present variables
   sizes = (int*) malloc( sizeof(int) * nVars * 2 );
@@ -1650,7 +1650,7 @@ inline void BIG::create(ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef 
   }
 }
 
-inline void BIG::create(ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2)
+inline void BIG::create(ClauseAllocator& ca, uint32_t nVars, vec< CRef >& list1, vec< CRef >& list2)
 {
   duringCreationVariables = nVars; // memorize the number of present variables
   sizes = (int*) malloc( sizeof(int) * nVars * 2 );
@@ -1696,7 +1696,7 @@ inline void BIG::create(ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef 
 }
 
 
-inline void BIG::recreate( ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list)
+inline void BIG::recreate( ClauseAllocator& ca, uint32_t nVars, vec< CRef >& list)
 {
   duringCreationVariables = nVars; // memorize the number of present variables
   sizes = sizes == 0 ? (int*) malloc( sizeof(int) * nVars * 2 ) : (int*) realloc( sizes, sizeof(int) * nVars * 2 );
@@ -1738,7 +1738,7 @@ inline void BIG::recreate( ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CR
   }
 }
 
-inline void BIG::recreate( ClauseAllocator& ca, uint32_t nVars, vec< Minisat::CRef >& list1, vec< Minisat::CRef >& list2)
+inline void BIG::recreate( ClauseAllocator& ca, uint32_t nVars, vec< CRef >& list1, vec< CRef >& list2)
 {
   duringCreationVariables = nVars; // memorize the number of present variables
   sizes = sizes == 0 ? (int*) malloc( sizeof(int) * nVars * 2 ) : (int*) realloc( sizes, sizeof(int) * nVars * 2 );

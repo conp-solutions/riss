@@ -70,6 +70,7 @@ static void parse_DIMACS_main(B& in, Solver& S) {
         else{
             cnt++;
             readClause(in, S, lits);
+	    S.addInputClause_(lits); // tell the solver that this clause is an input clause (used only for proof verification)
             S.addClause_(lits); }
     }
     if (vars != S.nVars())

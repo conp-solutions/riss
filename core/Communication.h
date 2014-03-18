@@ -19,6 +19,7 @@ using namespace Minisat;
 #include "coprocessor-src/LockCollection.h"
 //#include "Controller.h"
 // minisat files
+#include "core/SolverTypes.h"
 #include "core/Solver.h"
 
 /** collection of some wait states */

@@ -6,10 +6,13 @@ on the Communicator implementation.
 
 **************************************************************************************************/
 
+#ifndef Minisat_SolverCommunication_h
+#define Minisat_SolverCommunication_h
+
 #include <math.h>
 
 #include "mtl/Sort.h"
-#include "core/Solver.h"
+// #include "core/Solver.h"
 #include "utils/System.h"
 
 // to avoid cyclic dependencies
@@ -22,7 +25,7 @@ on the Communicator implementation.
 #define DBG(x)
 // #define DBG(x) x
 
-using namespace Minisat;
+namespace Minisat {
 
 inline
 void Solver::setCommunication( Communicator* comm )
@@ -331,3 +334,7 @@ void Solver::initLimits() {
   currentSendSizeLimit = communication->sendSize;
   currentSendLbdLimit  = communication->sendLbd;
 }
+
+}
+
+#endif

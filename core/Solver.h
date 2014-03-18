@@ -77,8 +77,9 @@ extern Minisat::BoolOption opt_rupProofOnly;
 
 namespace Minisat {
 
- class OnlineProofChecker; 
- class IncSolver;
+class OnlineProofChecker; 
+class IncSolver;
+ 
 //=================================================================================================
 // Solver -- the main class:
 
@@ -115,7 +116,8 @@ public:
     bool    addClause (Lit p, Lit q, Lit r);                    /// Add a ternary clause to the solver. 
     bool    addClause_(      vec<Lit>& ps);                     /// Add a clause to the solver without making superflous internal copy. Will
                                                                 /// change the passed vector 'ps'.
-
+    void    addInputClause_( vec<Lit>& ps);                     /// Add a clause to the online proof checker
+    
     // Solving:
     //
     bool    simplify     ();                        /// Removes already satisfied clauses.
@@ -470,7 +472,7 @@ protected:
     // DRUP proof
     bool outputsProof() const { return drupProofFile != NULL; }
     template <class T>
-    void addToProof(   T& clause, bool deleteFromProof=false, const Lit remLit = lit_Undef); // write the given clause to the output, if the output is enabled
+    void addToProof(   const T& clause, bool deleteFromProof = false, const Lit remLit = lit_Undef); // write the given clause to the output, if the output is enabled
     void addUnitToProof( const Lit& l, bool deleteFromProof=false);    // write a single unit clause to the proof
     void addCommentToProof( const char* text, bool deleteFromProof=false); // write the text as comment into the proof!
     
@@ -845,7 +847,9 @@ private:
 
 };
 
-
+//
+// implementation of frequently used small methods that should be inlined
+//
 
 /// print literals into a stream
 inline ostream& operator<<(ostream& other, const Lit& l ) {
@@ -998,10 +1002,30 @@ bool Solver::addUnitClauses(const vec< Lit >& other)
 }
 
 
+
+//
+// SECTION FOR DRAT PROOFS
+//
+// includes to avoid cyclic dependencies
+//
+}  // close namespace for include
+// check generation of DRUP/DRAT proof on the fly
+#include "core/OnlineProofChecker.h"
+
+namespace Minisat { // open namespace again!
+
 template <class T>
-inline void Solver::addToProof( T& clause, bool deleteFromProof, const Lit remLit)
+inline void Solver::addToProof( const T& clause, bool deleteFromProof, const Lit remLit)
 {
   if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) ) return; // no proof, or delete and noDrup
+  // check before actually using the clause 
+  if( onlineDratChecker != 0 ) {
+    if( deleteFromProof ) onlineDratChecker->removeClause( clause );
+    else {
+      onlineDratChecker->addClause( clause, remLit );
+    }
+  }
+  // actually print the clause into the file
   if( deleteFromProof ) fprintf(drupProofFile, "d ");
   for (int i = 0; i < clause.size(); i++) {
     if( clause[i] == lit_Undef ) continue;
@@ -1025,6 +1049,14 @@ inline void Solver::addToProof( T& clause, bool deleteFromProof, const Lit remLi
 inline void Solver::addUnitToProof(const Lit& l, bool deleteFromProof)
 {
   if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) ) return; // no proof, or delete and noDrup
+  // check before actually using the clause 
+  if( onlineDratChecker != 0 ) {
+    if( deleteFromProof ) onlineDratChecker->removeClause(l);
+    else {
+      onlineDratChecker->addClause(l);
+    }
+  }
+  // actually print the clause into the file
   if( deleteFromProof ) fprintf(drupProofFile, "d ");
   fprintf(drupProofFile, "%i 0\n", (var(l) + 1) * (-2 * sign(l) + 1));  
   if( config.opt_verboseProof == 2 ) {
@@ -1039,6 +1071,16 @@ inline void Solver::addCommentToProof(const char* text, bool deleteFromProof)
   fprintf(drupProofFile, "c %s\n", text);  
   if( config.opt_verboseProof == 2 ) cerr << "c [PROOF] c " << text << endl;
 }
+
+inline
+void Solver::addInputClause_(vec< Lit >& ps)
+{
+  if( onlineDratChecker != 0 ) {
+    cerr << "c add parsed clause to DRAT-OTFC: " << ps << endl;
+    onlineDratChecker->addParsedclause( ps );
+  }
+}
+
 
 
 //=================================================================================================
@@ -1066,6 +1108,7 @@ inline void Solver::printClause(CRef cr)
 //
 // for parallel portfolio communication, have code in header, so that the code can be inlined!
 //
-#include "SolverCommunication.h"
+#include "core/Communication.h"
+#include "core/SolverCommunication.h"
 
 #endif

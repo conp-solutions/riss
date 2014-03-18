@@ -163,7 +163,7 @@ const char * usage =
 "-bmc_dd    do not allow too small circuit\n"
 "-bmc_l     use lazy coding\n"
 "-bmc_s     use shifting instead of reencoding (implies lazy encoding)\n"
-"-bmc_p     use CP3 as simplifier (implies using shifting)\n"
+"-bmc_p X   use CP3 as simplifier (implies using shifting) with the given configuration X\n"
 "bmc_r      use Riss as SAT solver (default is PicoSAT) (disables previous Priss)\n"
 "bmc_pr X   use Priss as SAT solver with X threads (1..64) (default is PicoSAT) (disables previous Riss)\n"
 "bmc_rpc    use given preset configuration for Riss (implies using Riss)\n"
@@ -175,7 +175,7 @@ const char * usage =
 "-bmc_y     dont freeze bad-state variables (implies using CP3)\n"
 // merge, and budget solving
 "-bmc_mf X  merge X frames into one\n"
-"-bmc_mp X  use CNF simplification before merging with preset configuration X\n"
+"-bmc_mp X  use CNF simplification before merging with preset configuration X (e.g. AUTO for automatic selection)\n"
 "-bmc_fc X  number of conflicts to be allowed for one frame\n"
 "-bmc_fi X  increase of number of conflicts, if a frame cannot be solved\n"
 "-bmc_t     print time needed per bound\n"
@@ -183,7 +183,7 @@ const char * usage =
 #ifdef USE_ABC
 "-bmc_a     use the ABC tool to simplify the circuit before solving, next parameter has to specify a tmp file location!\n"
 "-bmc_ad    use the ABC tool to simplify the circuit before solving, next parameter has to specify a tmp directory location!\n"
-"-bmc_ac    give a special command(-sequence, separated by ':') to ABC. default is dc2 other possible: dc2, drwsat, scorr,dc2:scorr,...\n"
+"-bmc_ac    give a special command(-sequence, separated by ':') to ABC. default is AUTO other possible: AUTO, dc2, drwsat, scorr,dc2:scorr,...\n"
 #endif
 "-bmc_tune  enable the output for tuning with paramILS/SMAC\n"
 "\n\n the model name should be given first, then, the max. bound should be given\n"

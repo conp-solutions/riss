@@ -41,8 +41,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 // to be able to read var files
 #include "coprocessor-src/VarFileParser.h"
 
-// check generation of DRUP/DRAT proof on the fly
-#include "core/OnlineProofChecker.h"
+
+
+
 
 using namespace Minisat;
 
@@ -116,6 +117,9 @@ Solver::Solver(CoreConfig& _config) :
   , conflict_budget    (-1)
   , propagation_budget (-1)
   , asynch_interrupt   (false)
+  
+  // Online proof checking class
+  , onlineDratChecker( config.opt_checkProofOnline ? new OnlineProofChecker(OnlineProofChecker::drat) : 0)
   
   // UIP hack
   , l1conflicts(0)

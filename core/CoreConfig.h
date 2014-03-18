@@ -227,6 +227,7 @@ BoolOption opt_cbStrict; // cegar reduction has to be strict
  
 IntOption opt_verboseProof; 
 BoolOption opt_rupProofOnly; 
+BoolOption opt_checkProofOnline;
  
  IntOption opt_verb;
  

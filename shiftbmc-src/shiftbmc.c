@@ -42,7 +42,7 @@ static int maxk=0; // upper bound for search
 static int verbose = 0, move = 0, processNoProperties = 0 ,quiet = 0, nowitness = 0, nowarnings = 0, lazyEncode = 0,useShift=0, // options
   useRiss = 0, usePriss = 0, useCP3 = 0, denseVariables = 0, dontFreezeInput = 0, dontFreezeBads = 0, printTime=0, checkInitialBad = 0, abcDir = 0, stats_only = 0;
 static char* rissPresetConf = 0;
-static char* innerPPConf = 0;
+static char* innerPPConf = 0, outerPPConf = 0;
 static int wildGuesser = 0, wildGuessStart = 10, wildGuessInc = 2, wildGuessIncInc = 1; // guess sequence: 10, 30, 60, ...
 static int tuning = 0, tuneSeed = 0;
 static bool checkProperties = false;
@@ -54,6 +54,7 @@ static int mergeFrames = 1; // number of time frames that should be merged toget
 static int frameConflictBudget = -1 ; // number of conflicts that are allowed to be used per time frame
 static int doNotAllowToSmallCircuits = 0;	// useful when tool is analyzed with a delta debugger
 static float frameConflictsInc = 4;	// factor how initialFrameConflicts grow when a frame cannot be solved
+static int simplifiedCNF = 0; // count how often the CNF has been simplified already
 
 /// base structure for performing the shift operation with the (simplified) formula
 static ShiftFormula shiftFormula;
@@ -450,7 +451,14 @@ int parseOptions(int argc, char ** argv)
       msg(0,"set parallel solver with %d threads",usePriss);
       useRiss = 0; 
     }
-    else if (!strcmp (argv[i], "-bmc_p")) { useCP3=1,useShift = 1; lazyEncode = 1; }
+    else if (!strcmp (argv[i], "-bmc_p")) { 
+      useCP3=1,useShift = 1; lazyEncode = 1; 
+      ++ i;
+      if( i < argc ) { 
+	outerPPConf = argv[i];
+	msg(1,"pp outer frame with config %s", innerPPConf );
+      }
+    }
 #ifndef TEST_BINARY
     else if (!strcmp (argv[i], "-bmc_dbgp")) { 
       ++ i;
@@ -748,6 +756,7 @@ void printState(int k)
 int simplifyCNF(int &k, void* preprocessorToUse, double& ppCNFtime) 
 {
     MethodTimer cnfTimer( &ppCNFtime );
+    simplifiedCNF ++;
     // add formula to preprocessor!
     for( int i = 0 ; i < shiftFormula.formula.size(); ++i ) {
       CPaddLit( preprocessorToUse, shiftFormula.formula[i] );
@@ -1171,20 +1180,39 @@ int main (int argc, char ** argv) {
   //
   int newMaxVar  = nvars;
   msg(1,"[1] transition-formula stats: %d clauses, %d vars, %d inputs, %d latch-vars(sum input and output)", shiftFormula.clauses, newMaxVar, shiftFormula.inputs.size(), shiftFormula.latch.size()+shiftFormula.latchNext.size());
+  
+  // have an "AUTO" in form of -1 here as well!
+  
   if( mergeFrames > 1 ) {
       
       msg(1,"simplify inner frame");
       
       // setup the preprocessor for the inner frame
       if( innerPPConf != 0 ) {
-	msg(1,"init PP with %s", innerPPConf);
-	innerPreprocessor = CPinit(innerPPConf);
-	// CPparseOptions( innerPreprocessor,&argc,argv, 0 ); // TODO: remove after debug!
-	//CPparseOptionString( innerPreprocessor, "-cp3_dense_forw -cp3_dense_debug=2" );
-	msg(1,"simplify");
-	// currentAssume
-	newMaxVar = simplifyCNF(k, innerPreprocessor, innerPPtime);
-	msg(0,"inner CNF preprocessing tool %lf seconds", innerPPtime);
+	if( string(innerPPConf) == "AUTO" ) {
+	  const int ands = model->num_ands, clss = shiftFormula.clauses; // use number of and gates and clauses to select the technique
+	       if( clss <   75000   || ands <   28000 ) innerPPConf = "BMC_FULL";
+	  else if( clss <  100000   || ands <   35000 ) innerPPConf = "BMC_BVEPRBAST";
+	  else if( clss <  180000   || ands <   60000 ) innerPPConf = "BMC_FULLNOPRB";
+	  else if( clss <  275000   || ands <  100000 ) innerPPConf = "BMC_BVEUHDAST";
+	  else if( clss <  390000   || ands <  150000 ) innerPPConf = "BMC_BVEBVAAST";
+	  else if( clss < 2000000   || ands <  850000 ) innerPPConf = "BMC_BVECLE";
+	  else if( clss < 2500000   || ands < 1200000 ) innerPPConf = "BMC_BEBE";
+	  else innerPPConf = 0; // if the formula is too large, disable innerPPconf
+	}
+	
+	if( innerPPConf != 0 ) {
+	  msg(1,"init PP with %s", innerPPConf);
+	  innerPreprocessor = CPinit(innerPPConf);
+	  // CPparseOptions( innerPreprocessor,&argc,argv, 0 ); // TODO: remove after debug!
+	  //CPparseOptionString( innerPreprocessor, "-cp3_dense_forw -cp3_dense_debug=2" );
+	  msg(1,"simplify");
+	  // currentAssume
+	  newMaxVar = simplifyCNF(k, innerPreprocessor, innerPPtime);
+	  msg(0,"inner CNF preprocessing tool %lf seconds", innerPPtime);
+	} else {
+	  msg(0,"no inner preprocessing due to too large formula");
+	}
       }
       msg(1,"[2] transition-formula stats: %d clauses, %d vars, %d inputs, %d latch-vars(sum input and output)", shiftFormula.clauses, newMaxVar, shiftFormula.inputs.size(), shiftFormula.latch.size()+shiftFormula.latchNext.size());
       
@@ -1294,10 +1322,29 @@ int main (int argc, char ** argv) {
   
 
   if( useCP3 ) {
-    outerPreprocessor = CPinit();
+    
+    
+    // if( simplifiedCNF == 0 ) { // use preprocessing setup for inner frame
+	if( outerPPConf == 0 || string(outerPPConf) == "AUTO" ) {
+	  const int vars = newMaxVar, clss = shiftFormula.clauses; // use number of and gates and clauses to select the technique
+	       if( clss <   75000   || vars <   28000 ) outerPPConf = "BMC_FULL";
+	  else if( clss <  100000   || vars <   35000 ) outerPPConf = "BMC_BVEPRBAST";
+	  else if( clss <  180000   || vars <   70000 ) outerPPConf = "BMC_FULLNOPRB";
+	  else if( clss <  275000   || vars <  125000 ) outerPPConf = "BMC_BVEUHDAST";
+	  else if( clss <  390000   || vars <  160000 ) outerPPConf = "BMC_BVEBVAAST";
+	  else if( clss < 2000000   || vars <  840000 ) outerPPConf = "BMC_BVECLE";
+	  else if( clss < 2500000   || vars < 1100000 ) outerPPConf = "BMC_BEBE";
+	  else outerPPConf = 0; // if the formula is too large, disable innerPPconf
+	}
+    //} else {
+    // and have something different otherwise
+    //}
+    
+    if( outerPPConf != 0 ) {
+      outerPreprocessor = CPinit(outerPPConf);
     // add more options here?
     
-    CPparseOptions( outerPreprocessor,&argc,argv, 0 ); // parse the configuration!
+//    CPparseOptions( outerPreprocessor,&argc,argv, 0 ); // parse the configuration!
 //     if( denseVariables ) { // enable options for CP3 for densing variables
 //       int myargc = 8; // number of elements of parameters
 //       const char * myargv [] = {"pseudobinary","-enabled_cp3","-up","-subsimp","-bve","-dense","-cp3_dense_debug"};
@@ -1307,7 +1354,10 @@ int main (int argc, char ** argv) {
 //       const char * myargv [] = {"pseudobinary","-enabled_cp3","-up","-subsimp","-bve"};
 //       // cp3parseOptions( preprocessor,argc,argv ); // parse the configuration!      
 //     }
-    shiftFormula.afterPPmaxVar = simplifyCNF(k,outerPreprocessor,outerPPtime);
+      shiftFormula.afterPPmaxVar = simplifyCNF(k,outerPreprocessor,outerPPtime);
+    } else {
+      msg(0,"no outer preprocessing due to too large formula");
+    }
   }
   
   msg(0,"outer CNF preprocessing tool %lf seconds", outerPPtime);
