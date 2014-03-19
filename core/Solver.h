@@ -1042,7 +1042,7 @@ inline void Solver::addToProof( const T& clause, bool deleteFromProof, const Lit
       cerr << clause[i] << " ";
     }    
     if( deleteFromProof && remLit != lit_Undef ) cerr << remLit;
-    cerr << "0" << endl;
+    cerr << " 0" << endl;
   }
 }
 

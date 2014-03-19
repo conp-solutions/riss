@@ -2019,10 +2019,12 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	 // add the equivalence to the proof, as single sequential clauses
 	 if( data.outputsProof() && repr != ee[j] ) { // do not add trivial clauses to the proof!
 	  data.addCommentToProof("add equivalence to proof");
-	  proofClause.clear();proofClause.push_back( ~repr ); if( ee[j] != ~repr ) proofClause.push_back(ee[j]);
-	  data.addToProof(proofClause);
-	  proofClause[0] = ~proofClause[0]; if( ee[j] != ~repr ) proofClause[1] = ~proofClause[1];
-	  data.addToProof(proofClause);
+	  if( ee[j] != ~repr ) { // added equivalences should have different literals, and not complementarly literals (although this case exists)
+	    proofClause.clear();proofClause.push_back( ~repr ); proofClause.push_back(ee[j]);
+	    data.addToProof(proofClause, false,  ee[j]); // the literal that is not kept should be the first literal, because this way the same equivalence can be added multiple times
+	    proofClause[0] = ~proofClause[0]; if( ee[j] != ~repr ) proofClause[1] = ~proofClause[1];
+	    data.addToProof(proofClause, false, ~ee[j]); // the literal that is not kept should be the first literal, because this way the same equivalence can be added multiple times
+	  }
 	 }
 	   
 	 if( ! setEquivalent(repr, ee[j] ) ) { 
@@ -2246,6 +2248,18 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 	  data.addClause( data.clss[j] );
 	  data.getClauses().push( data.clss[j] );
 	}
+       
+       for( int j = start ; j < i; ++ j ) {// set all equivalent literals
+	 const Lit myReplace = getReplacement(ee[j]);
+	 // add the equivalence to the proof, as single sequential clauses
+	 if( data.outputsProof() && repr != ee[j] ) { // do not add trivial clauses to the proof!
+	  data.addCommentToProof("remove equivalences from proof again");
+	  proofClause.clear();proofClause.push_back( ~repr ); if( ee[j] != ~repr ) proofClause.push_back(ee[j]);
+	  data.addToProof(proofClause, true);
+	  proofClause[0] = ~proofClause[0]; if( ee[j] != ~repr ) proofClause[1] = ~proofClause[1];
+	  data.addToProof(proofClause, true);
+	 }
+       }
        
        start = i+1;
        

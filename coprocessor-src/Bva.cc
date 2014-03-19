@@ -455,6 +455,31 @@ bool BoundedVariableAddition::andBVA() {
 	    continue;
 	  }
 	  
+	  // if inprocessing, check whether there are enough learned clauses among all the clauses
+	  if( data.isInprocessing() )
+	  {
+	    int learnRows = 0;
+	    {
+	      assert( bvaMatchingClauses.size() > 0 && "there have to be clauses" );
+	      vector<CRef>& iClauses = bvaMatchingClauses[0];
+	      int learntCol = 0;
+	      // clauses of right literal, alter, so that they will be kept
+	      for( uint32_t j = 0 ; j < iClauses.size(); ++ j )
+	      {
+		if( iClauses[j] == CRef_Undef ) continue; // don't bvaHeap with 0-pointers
+		const Clause& clauseI = ca[ iClauses[j] ];
+		if( clauseI.can_be_deleted() ) continue;
+		learntCol = clauseI.learnt() ? learntCol : learntCol + 1;
+		// take care of learned clauses (if the replace clause is learned and any matching clause is original, keep this clause!)
+		for( uint32_t k = 1; k< bvaMatchingLiterals.size(); ++ k ) {
+		  if ( !ca[ bvaMatchingClauses[k][j] ].learnt() ) { learntCol ++; if ( learntCol >= 2 ) break; } // count number of nice replacements
+		}
+		if( learntCol >= 2 ) learnRows ++;
+	      }
+	    }
+	    if( learnRows < 3 ) continue; // do not rewrite this literal, if the current matching without learned clauses would not work. Note: might end in infinite loop, if unlimited
+	  }
+	  
 	  // create the new clauses!
 	  const Var newX = nextVariable('a',bvaHeap);
 	  andReplacements++; andTotalReduction += currentReduction;
@@ -470,6 +495,17 @@ bool BoundedVariableAddition::andBVA() {
 	    cerr << "c [BVA] matching literals:";
 	    for( uint32_t i = 0 ; i < bvaMatchingLiterals.size(); ++ i ) cerr << " " << bvaMatchingLiterals[i];
 	    cerr << endl;
+	  }
+	  
+	  // add proof clauses here for one sided implication
+	  if( data.outputsProof() ) {
+	    data.addCommentToProof( "BVA one side implication clauses" );
+	    clauseLits.clear(); clauseLits.push( ~replaceLit ); clauseLits.push( lit_Undef );
+	    
+	    for( uint32_t i = 0; i < bvaMatchingLiterals.size(); ++i ) {
+	      clauseLits[1] = bvaMatchingLiterals[i];
+	      data.addToProof( clauseLits ); // add BVA clause with replaceLit on the first position
+	    }
 	  }
 	  
 	  for( uint32_t i = 0 ; i < bvaMatchingLiterals.size(); ++ i ) {
@@ -493,10 +529,16 @@ bool BoundedVariableAddition::andBVA() {
 		assert( ! clauseI.can_be_deleted() && "matching clause is ignored" );
 		
 		if( config.bva_debug > 2 )cerr << "c rewrite clause[ " << iClauses[j] << " ]= " << clauseI << endl;
+		if( data.outputsProof() ) { // memorize original clause to be able to delete it afterwards
+		  clauseLits.clear(); 
+		  for( uint32_t k = 0; k < clauseI.size(); ++ k  ) clauseLits.push( clauseI[k] );
+		}
 		
 		// take care of learned clauses (if the replace clause is learned and any matching clause is original, keep this clause!)
-		for( uint32_t k = 1; k< bvaMatchingLiterals.size(); ++ k ) {
-		  if( !ca[ bvaMatchingClauses[k][j] ].learnt() ) { clauseI.set_learnt(false); break; }
+		if( clauseI.learnt() ) { // if the clause is learned, check whether it has to stay learned
+		  for( uint32_t k = 1; k< bvaMatchingLiterals.size(); ++ k ) {
+		    if( !ca[ bvaMatchingClauses[k][j] ].learnt() ) { clauseI.set_learnt(false); break; }
+		  }
 		}
 		for( uint32_t k = 0 ; k< clauseI.size(); ++k ) {
 		  if( clauseI[k] == right ) { 
@@ -508,6 +550,9 @@ bool BoundedVariableAddition::andBVA() {
 		    break;
 		  }
 		}
+		data.addToProof( clauseI, false, replaceLit );		// add the new clause to the proof
+		data.addToProof( clauseLits, true );	// delete the old clause from the proof
+		
 		if( clauseI.size() == 1 ) {
 		  if( l_False == data.enqueue( replaceLit ) ) {
 		    return didSomething;
@@ -553,7 +598,7 @@ bool BoundedVariableAddition::andBVA() {
 	  assert( bvaMatchingLiterals.size() > 1 && "too few matching literals");
 	  
 	  // and-gate needs to be written explicitely -> add the one missing clause, if something has been found
-	  if( config.bva_debug > 2 ) cerr << "c [BVA] current reduction: " << currentReduction << endl;
+	  if( config.bva_debug > 2 ) cerr << "c [BVA] current reduction: " << currentReduction << " subOr: " << bvaSubstituteOr << endl;
 	  if( bvaSubstituteOr && currentReduction > 1 ) // -newX = (a AND b), thus newX = (-a OR -b). replace all occurrences!
 	  {
 	    data.ma.nextStep();
@@ -563,12 +608,14 @@ bool BoundedVariableAddition::andBVA() {
 	    uint32_t minO = data[min];
 	    for( uint32_t i = 0 ; i < bvaMatchingLiterals.size(); ++ i ) {
 	      const Lit& literal = ~bvaMatchingLiterals[i];
+	      if( config.bva_debug > 3 ) cerr << "c [BVA] mark literal for subOr:  " << literal << endl;
 	      data.ma.setCurrentStep( toInt(literal) );
 	      if( data[literal] < minO ) {
 		min = literal; minO = data[ min ];
 	      }
 	    }
-	    bool addedAnd = false;
+	    if( config.bva_debug > 2 ) cerr << "c [BVA] smallest Or literal: " << min << endl;
+	    bool addedAnd = false, addedProofAnd = false;
 	    bool isNotFirst = false; // for statistics
 	    for( uint32_t i = data.list(min).size() ; i > 0; --i ) {
 	      const CRef clRef = data.list(min)[i-1];
@@ -576,13 +623,27 @@ bool BoundedVariableAddition::andBVA() {
 	      // clause cannot contain all matching literals
 	      if( clause.can_be_deleted() || clause.size() < bvaMatchingLiterals.size() ) continue;
 	      // check whether all literals are matched!
+	      if( config.bva_debug > 2 ) cerr << "c [BVA] SubOr check clause " << clause << endl;
 	      uint32_t count = 0;
 	      for( uint32_t j = 0 ; j < clause.size(); ++ j ) {
 		if( data.ma.isCurrentStep( toInt( clause[j] ) ) ) count ++;
 	      }
+	      if( config.bva_debug > 2 ) cerr << "c [BVA] SubOr found matching literals " << count << endl;
 	      // reject current clause
 	      if( count != bvaMatchingLiterals.size() ) continue;
+	      
+	      if( !addedProofAnd && data.outputsProof() ) { // add the clause that is necessary for the proof and. yet, the rewrite literal is pure in the formula.
+		addedProofAnd = true;
+		clauseLits.clear();
+		clauseLits.push( replaceLit ); // new literal has to be the first literal
+		for( uint32_t j = 0 ; j < bvaMatchingLiterals.size(); ++j )
+		  clauseLits.push( ~bvaMatchingLiterals[j] );
+		data.addCommentToProof("add BVA and clause");
+		data.addToProof( clauseLits );
+	      }
+	      
 	      // rewrite current clause
+	      // addedAnd = true;
 	      {
 		if( config.bva_debug > 2 ) cerr << "c rewrite clause[ " << clRef << " ]= " << clause << endl;
 		andReplacedOrs ++;
@@ -1783,6 +1844,8 @@ bool BoundedVariableAddition::bvaHandleComplement( const Lit right, Heap<LitOrde
     data.ma.reset( toInt(right) );
     data.ma.setCurrentStep( toInt(left) );
     
+    bool addedCalready = false; // use to add the clause C only once for being reduced
+    
     for( uint32_t j = 0 ; j < data.list(left).size(); ++j ) {
       CRef D = data.list(left)[j];
       Clause& clauseD = ca[ D ];
@@ -1796,11 +1859,21 @@ bool BoundedVariableAddition::bvaHandleComplement( const Lit right, Heap<LitOrde
 	}
       }
       // remember to remove literal "right" from theses clauses
-      data.clss.push_back(C);
+      if( !addedCalready ) { // if C did not yet result in a clause
+	addedCalready = true;
+	data.clss.push_back(C);
+	if( data.outputsProof() ) {
+	  data.addCommentToProof("remove literal by handling complement in BVA");
+	  data.getSolver()->oc.clear();
+	  for( int k = 0 ; k < clauseC.size(); ++ k ) if( clauseC[k] != right ) data.getSolver()->oc.push( clauseC[k] );
+	  data.addToProof( data.getSolver()->oc ); // add the reduced clause
+	}
+      }
 
-      // remove D completely
+      // remove D completely from the formula
       clauseD.set_delete(true);
       data.removedClause( D );
+      data.addToProof( clauseD, true ); // remove the larger clause
       
       // remove C from list
       data.removeClauseFrom( C, right, i);
@@ -1816,6 +1889,7 @@ bool BoundedVariableAddition::bvaHandleComplement( const Lit right, Heap<LitOrde
   // remove literal right from clauses
   for( uint32_t i = 0; i < data.clss.size(); ++i ) {
     Clause& clause = ca[data.clss[i]];
+    data.addToProof( clause, true ); // remove the full clause -- the reduced clause is already removed
     if( config.bva_debug > 1 ) { cerr << "c [CP2-BVAC] remove " << right << " from (" << i << "/"<< data.clss.size() << ")" << ca[data.clss[i]] << endl; }
     clause.remove_lit( right );
     data.removedLiteral( right );

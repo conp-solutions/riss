@@ -112,11 +112,13 @@ uint32_t Unhiding::linStamp( const Lit literal, uint32_t stamp, bool& detectedEE
 	Lit lfailed=l;
 	while( stampInfo[ toInt(lfailed) ].dsc > stampInfo[ toInt( ~l1 ) ].obs ) lfailed = stampInfo[ toInt(lfailed) ].parent;
 	if( config.opt_uhd_Debug > 4 ) cerr << "c [UHD-A] found failed literal " << lfailed << " enqueue " << ~lfailed << endl;
-	data.addCommentToProof("found during stamping in unhiding");data.addUnitToProof(~lfailed);
-	if( config.opt_uhd_Debug > 1 ) cerr << "c derived unit " <<  ~lfailed << " with stamps pos(" << ~lfailed << "):" 
-	  << stampInfo[toInt(~lfailed)].dsc << " -- " << stampInfo[toInt(~lfailed)].fin
-	  << " and neg (" << lfailed << "): " << stampInfo[toInt(lfailed)].dsc << " -- " << stampInfo[toInt(lfailed)].fin 
-	  << endl;
+	if( data.value( ~lfailed ) == l_Undef ) {
+	  data.addCommentToProof("found during stamping in unhiding");data.addUnitToProof(~lfailed);
+	  if( config.opt_uhd_Debug > 1 ) cerr << "c derived unit " <<  ~lfailed << " with stamps pos(" << ~lfailed << "):" 
+	    << stampInfo[toInt(~lfailed)].dsc << " -- " << stampInfo[toInt(~lfailed)].fin
+	    << " and neg (" << lfailed << "): " << stampInfo[toInt(lfailed)].dsc << " -- " << stampInfo[toInt(lfailed)].fin 
+	    << endl;
+	}
 	if( l_False == data.enqueue( ~lfailed, data.defaultExtraInfo()  ) ) {  return stamp; }
 	
 	if( stampInfo[ toInt( ~l1 ) ].dsc != 0 && stampInfo[ toInt( ~l1 ) ].fin == 0 ) continue;
@@ -414,6 +416,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
 	    if( clause.size() == 2 ) big.removeEdge(clause[0],clause[1]);
 	    //if( !UHLE && data.outputsProof() ) { for( int j = 0 ; j < clause.size(); ++ j ) data.lits.push_back( clause[j] ); } // copy the real clause, so that it can be deleted
 	    clause.remove_lit(l);
+	    data.addCommentToProof("remove literal by first UHLE");
 	    data.addToProof(clause);data.addToProof(clause,true, l); // tell proof that a literal has been removed!
 	    // tell subsumption / strengthening about this modified clause
 	    data.addSubStrengthClause(clRef);
@@ -459,6 +462,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
 	    modifiedFormula = true;
 	    if( clause.size() == 2 ) big.removeEdge(clause[0],clause[1]);
 	    clause.remove_lit( ~l );
+	    data.addCommentToProof("remove literal by second UHLE");
 	    data.addToProof(clause);data.addToProof(clause,true,~l); // tell proof that a literal has been removed
 	    removedLits++;
 	    // tell subsumption / strengthening about this modified clause
@@ -507,14 +511,22 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
 	if( (as < bs && be < ae)  // a -> b
 	  || (nbs < nas && nae < nbe ) ) // -b -> -a == a -> b
 	{ // then F -> b
-	    if( data.value( clause[1] ) == l_Undef ) uhdProbeL1Units ++;
+	    if( data.value( clause[1] ) == l_Undef ) {
+	      uhdProbeL1Units ++;
+	      data.addCommentToProof("implied by unhiding probing");
+	      data.addUnitToProof( clause[1] );
+	    }
 	    if( l_False == data.enqueue(clause[1], data.defaultExtraInfo()  ) ) { 
 	      return didSomething;
 	    }
 	} else if ( (bs < as && ae < be)  // b -> a
 	  || (nas < nbs && nbe < nae ) ) // -a -> -b == b -> a
 	{ // then F -> a
-	    if( data.value( clause[0] ) == l_Undef ) uhdProbeL1Units ++;
+	    if( data.value( clause[0] ) == l_Undef ) {
+	      uhdProbeL1Units ++;
+	      data.addCommentToProof("implied by unhiding probing");
+	      data.addUnitToProof( clause[0] );
+	    }
 	    if( l_False == data.enqueue(clause[0], data.defaultExtraInfo()  ) ) { 
 	      return didSomething;
 	    }
@@ -533,14 +545,22 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
 	      if( ( stampInfo[  toInt( aLit ) ].dsc < stampInfo[ toInt(  bLit ) ].dsc && stampInfo[ toInt(  bLit ) ].fin < stampInfo[ toInt(  aLit ) ].fin ) 
 	      // a -> aLit, b -> bLit, -bLit -> -aLit = aLit -> bLit -> F -> bLit
 	      ||  ( stampInfo[ toInt( ~bLit ) ].dsc < stampInfo[ toInt( ~aLit ) ].dsc && stampInfo[ toInt( ~aLit ) ].fin < stampInfo[ toInt( ~bLit ) ].fin ) ){
-		if( data.value( bLit ) == l_Undef && ( j == 0 || k == 0) ) uhdProbeL2Units ++; else uhdProbeL3Units ++;
+		if( data.value( bLit ) == l_Undef ) {
+		  if ( j == 0 || k == 0) uhdProbeL2Units ++; else uhdProbeL3Units ++;
+		  data.addCommentToProof("implied by unhiding probing");
+		  data.addUnitToProof( bLit );
+		}
 		if( l_False == data.enqueue( bLit, data.defaultExtraInfo() ) ) { 
 		  return didSomething;
 		}
 	      } else {
 		if( ( stampInfo[  toInt( bLit ) ].dsc < stampInfo[ toInt(  aLit ) ].dsc && stampInfo[ toInt(  aLit ) ].fin < stampInfo[ toInt(  bLit ) ].fin ) 
 		||  ( stampInfo[ toInt( ~aLit ) ].dsc < stampInfo[ toInt( ~bLit ) ].dsc && stampInfo[ toInt( ~bLit ) ].fin < stampInfo[ toInt( ~aLit ) ].fin ) ){
-		  if( data.value( aLit ) == l_Undef && (j == 0 || k == 0) ) uhdProbeL2Units ++; else uhdProbeL3Units ++;
+		  if( data.value( aLit ) == l_Undef ) {
+		    if (j == 0 || k == 0 ) uhdProbeL2Units ++; else uhdProbeL3Units ++;
+		    data.addCommentToProof("implied by unhiding probing");
+		    data.addUnitToProof( aLit );
+		  }
 		  if( l_False == data.enqueue( aLit, data.defaultExtraInfo() ) ) { 
 		    return didSomething;
 		  }
@@ -634,7 +654,11 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
 	  
 	  if( allEqual ) { // there is a commonly implied literal
 	    if( config.opt_uhd_Debug > 1 )  cerr << "c found unit during large clause probing: " << minLit << endl;
-	    if( data.value( minLit ) == l_Undef ) uhdProbeL4Units ++;
+	    if( data.value( minLit ) == l_Undef ) {
+	      uhdProbeL4Units ++;
+	      data.addCommentToProof("implied by unhiding probing");
+	      data.addUnitToProof( minLit );
+	    }
 	    if( l_False == data.enqueue( minLit, data.defaultExtraInfo() ) ) { 
 	      return didSomething;
 	    }
@@ -703,7 +727,9 @@ bool Unhiding::process (  )
     if( config.opt_uhd_Debug > 5 ) {
       cerr << "c iteration " << iteration << " formula, state ok? " << data.ok() << endl;
       for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
-	if( !ca[ data.getClauses()[i] ].can_be_deleted() ) cerr << ca[ data.getClauses()[i] ] << endl;
+	if( ca[ data.getClauses()[i] ].can_be_deleted() ) cerr << "c (ign) ";
+	else cerr << "c ";
+	cerr << ca[ data.getClauses()[i] ] << endl;
       }
     }
     
@@ -764,6 +790,15 @@ bool Unhiding::process (  )
     if( config.opt_uhd_Debug > 1 ) cerr << "c stamped " << ts << " roots, and " << ts2 << " remaining lits HTP:" << data.hasToPropagate() << "" << endl;
     if( config.opt_uhd_Debug > 3 ) cerr << "c [UHD] foundEE: " << foundEE << endl;
     
+    if( config.opt_uhd_Debug > 5 ) {
+      cerr << "c after Stamping in iteration " << iteration << " formula, state ok? " << data.ok() << endl;
+      for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
+	if( ca[ data.getClauses()[i] ].can_be_deleted() ) cerr << "c (ign) ";
+	else cerr << "c ";
+	cerr << ca[ data.getClauses()[i] ] << endl;
+      }
+    }
+    
     // expensive cross check that each stamp is unique, and there are no 0 stamps
     if( config.opt_uhd_Debug > 1 ) {
       cerr << "c checking all stamps ... " << endl;
@@ -808,6 +843,15 @@ bool Unhiding::process (  )
 	ee.applyEquivalencesToFormula(data);
       }
       foundEE = false;
+    }
+    
+    if( config.opt_uhd_Debug > 5 ) {
+      cerr << "c after EE in iteration " << iteration << " formula, state ok? " << data.ok() << endl;
+      for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
+	if( ca[ data.getClauses()[i] ].can_be_deleted() ) cerr << "c (ign) ";
+	else cerr << "c ";
+	cerr << ca[ data.getClauses()[i] ] << endl;
+      }
     }
     
     // TODO check whether unit propagation reduces the clauses that are eliminated afterwards (should not)

@@ -935,6 +935,8 @@ inline void CoprocessorData::removedClause(const Lit l1, const Lit l2)
     if( cl.can_be_deleted() || cl.size() != 2 ) continue;
     if( cl[0] == secondLit || cl[1] == secondLit ) {
       cl.set_delete(true);
+      addCommentToProof("remove binary clause");
+      addToProof( cl, true );
       break;
     }
   }

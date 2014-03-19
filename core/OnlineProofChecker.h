@@ -303,6 +303,11 @@ template <class T>
 inline 
 void OnlineProofChecker::removeClause(const T& cls)
 {
+  if( verbose > 3 ) {
+    cerr << "c [DRAT-OTFC] remove clause " << cls << endl;
+    printState();
+  }
+  
   if( cls.size() == 0 || !ok ) return; // do not handle empty clauses here!
   if( cls.size() == 1 ) {
     const Lit l = cls[0];
@@ -449,7 +454,12 @@ bool OnlineProofChecker::addClause(const vec< Lit >& cls)
   
   // have enough variables present
   for( int i = 0 ; i < cls.size(); ++ i ) { 
-    while( nVars() < var(cls[i]) ) newVar();
+    while( nVars() <= var(cls[i]) ) newVar();
+  }
+  
+  if( verbose > 3 ) {
+    cerr << "c [DRAT-OTFC] add clause " << cls << endl;
+    printState();
   }
   
   // enqueue all complementary literals!
