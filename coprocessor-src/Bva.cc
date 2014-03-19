@@ -589,6 +589,7 @@ bool BoundedVariableAddition::andBVA() {
 		if( bvaMatchingClauses[0][j] != CRef_Undef && iClauses[j] != CRef_Undef ) {
 		  Clause& clauseI = ca[ iClauses[j] ];
 		  // cerr << "c delete clause[" << iClauses[j] << "]= " << clauseI << endl;
+		  data.addToProof(clauseI, true); // remove the clause from the proof
 		  clauseI.set_delete(true);
 		  data.removedClause( iClauses[j] );
 		}
@@ -650,6 +651,10 @@ bool BoundedVariableAddition::andBVA() {
 		andReplacedMultipleOrs = (isNotFirst ? andReplacedMultipleOrs + 1 : andReplacedMultipleOrs );
 		isNotFirst = true; // each next clause is not the first clause
 		uint32_t j = 0;
+		if( data.outputsProof() ) { 
+		  clauseLits.clear(); // store the original clause
+		  for( int k = 0 ; k < clause.size(); ++ k ) clauseLits.push( clause[k] ); // memorize clause
+		}
 		for(  ; j < clause.size(); ++ j ) {
 		  const Lit literal = clause[j];
 		  if( data.ma.isCurrentStep( toInt(literal) ) ) {
@@ -686,6 +691,10 @@ bool BoundedVariableAddition::andBVA() {
 		  }
 		}
 		clause.sort();
+		data.addCommentToProof("BVA substitute OR");
+		data.addToProof( clause );		// add new clause
+		data.addToProof( clauseLits, true );	// remove old clause
+		
 		assert( count == 0 && "all matching literals have to be replaced/removed!" );
 		if( config.bva_debug > 2 ) cerr << "c into clause[ " << clRef << " ]= " << clause << endl;
 	      }
@@ -2018,6 +2027,8 @@ void BoundedVariableAddition::removeDuplicateClauses( const Lit literal )
       }
       ca[removeCandidate].set_delete(true); // set removed flag
       if( !ca[removeCandidate].learnt() ) clauseI.set_learnt(false); // take care of the learned flag
+      data.addCommentToProof("remove duplicate during BVA");
+      data.addToProof( ca[removeCandidate], true ); // remove the clause from the proof
       data.removedClause( removeCandidate ); // actually remove the clause
       data.list(literal)[j] = data.list(literal)[ data.list(literal).size() -1 ];
       data.list(literal).pop_back();

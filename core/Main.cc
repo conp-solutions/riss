@@ -213,7 +213,11 @@ int main(int argc, char** argv)
 	      else fprintf(res, "s UNSATISFIABLE\n"), fclose(res);
 	    }
          // add the empty clause to the proof, close proof file
-         if (S.drupProofFile != NULL) fprintf(S.drupProofFile, "0\n"), fclose(S.drupProofFile);
+         if (S.drupProofFile != NULL) { 
+	   bool validProof = S.checkProof(); // check the proof that is generated inside the solver
+	   if( verb > 0 ) cerr << "c checked proof, valid= " << validProof << endl;
+	   fprintf(S.drupProofFile, "0\n"), fclose(S.drupProofFile);
+	 }
             if (S.verbosity > 0){
 	        printf("c =========================================================================================================\n");
                 printf("c Solved by unit propagation\n");
@@ -248,7 +252,11 @@ int main(int argc, char** argv)
 	    else printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n");
 
         // put empty clause on proof
-        if(ret == l_False && S.drupProofFile != NULL ) fprintf(S.drupProofFile, "0\n");
+        if(ret == l_False && S.drupProofFile != NULL ) {
+	  bool validProof = S.checkProof(); // check the proof that is generated inside the solver
+	  if( verb > 0 ) cerr << "c checked proof, valid= " << validProof << endl;
+	  fprintf(S.drupProofFile, "0\n");
+	}
 	
         // print solution into file
         if (res != NULL){

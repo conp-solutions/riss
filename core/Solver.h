@@ -475,6 +475,9 @@ protected:
     void addToProof(   const T& clause, bool deleteFromProof = false, const Lit remLit = lit_Undef); // write the given clause to the output, if the output is enabled
     void addUnitToProof( const Lit& l, bool deleteFromProof=false);    // write a single unit clause to the proof
     void addCommentToProof( const char* text, bool deleteFromProof=false); // write the text as comment into the proof!
+public:
+    bool checkProof(); // if online checker is used, return whether the current proof is valid
+protected:
     
     /** extended clause learning (Huang, 2010)
      * @return true, if an extension step has been performed
@@ -1056,6 +1059,7 @@ inline void Solver::addUnitToProof(const Lit& l, bool deleteFromProof)
       onlineDratChecker->addClause(l);
     }
   }
+  if( l == lit_Undef ) return; // no need to check this literal, however, routine can be used to check whether the empty clause is in the proof
   // actually print the clause into the file
   if( deleteFromProof ) fprintf(drupProofFile, "d ");
   fprintf(drupProofFile, "%i 0\n", (var(l) + 1) * (-2 * sign(l) + 1));  
@@ -1070,6 +1074,16 @@ inline void Solver::addCommentToProof(const char* text, bool deleteFromProof)
   if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) || config.opt_verboseProof == 0) return; // no proof, no Drup, or no comments
   fprintf(drupProofFile, "c %s\n", text);  
   if( config.opt_verboseProof == 2 ) cerr << "c [PROOF] c " << text << endl;
+}
+
+inline
+bool Solver::checkProof () 
+{
+  if( onlineDratChecker != 0 ) {
+    return onlineDratChecker->addClause(lit_Undef);
+  } else {
+    return true; // here, we simply do not know
+  }
 }
 
 inline

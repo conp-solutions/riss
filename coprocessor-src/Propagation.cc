@@ -78,9 +78,11 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
 	    if (!sort) c.removePositionUnsorted(j);
             else c.removePositionSorted(j);
 	    
-	    data.addCommentToProof("removed literal by negative UP" );
-	    data.addToProof(c);         // tell proof about modified clause
-	    data.addToProof(c,true,remLit); // for DRUP store also the old clause, which can be removed now
+	    if( c.size() > 1 ) { // keep unit clauses on the proof!
+	      data.addCommentToProof("removed literal by negative UP" );
+	      data.addToProof(c);         // tell proof about modified clause
+	      data.addToProof(c,true,remLit); // for DRUP store also the old clause, which can be removed now
+	    }
 	    
 	    modifiedFormula = true;
 	    count ++;

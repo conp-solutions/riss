@@ -439,7 +439,7 @@ bool OnlineProofChecker::addClause(const  Lit& l )
 {
   // create a clause with l
   tmpLits.clear();
-  tmpLits.push( l );
+  if( l != lit_Undef ) tmpLits.push( l );
   // add this clause in the usual way
   return addClause( tmpLits );
 }
