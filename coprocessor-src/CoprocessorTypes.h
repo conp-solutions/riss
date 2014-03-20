@@ -10,7 +10,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "utils/System.h"
 #include "mtl/Sort.h"
 
-#include "coprocessor-src/LockCollection.h"
+#include "utils/LockCollection.h"
 
 #include <vector>
 #include <iostream>

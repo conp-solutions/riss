@@ -16,7 +16,7 @@ using namespace std;
 using namespace Minisat;
 
 // own files
-#include "coprocessor-src/LockCollection.h"
+#include "utils/LockCollection.h"
 //#include "Controller.h"
 // minisat files
 #include "core/SolverTypes.h"

@@ -43,7 +43,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 // for parallel stuff
 #include <pthread.h>
-#include "coprocessor-src/LockCollection.h"
+#include "utils/LockCollection.h"
 
 /// TODO remove after debug
 #include <iostream>

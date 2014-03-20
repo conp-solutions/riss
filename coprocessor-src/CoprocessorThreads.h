@@ -7,7 +7,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor-src/CoprocessorTypes.h"
 
-#include "coprocessor-src/LockCollection.h"
+#include "utils/LockCollection.h"
 
 #include <vector>
 #include <iostream>

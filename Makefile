@@ -115,6 +115,16 @@ priss: always
 prissRS: always
 	cd pfolio-src;  make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv priss_static ../priss
 
+# search space partitinoing solver
+pcassod: always
+	cd pcasso-src;  make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv pcasso_debug ../pcasso
+
+pcasso: always
+	cd pcasso-src;  make r INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv pcasso_release ../pcasso
+	
+pcassoRS: always
+	cd pcasso-src;  make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv pcasso_static ../pcasso
+	
 # simple MaxSAT preprocessor
 mprocessord: always
 	cd mprocessor-src;  make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv mprocessor_debug ../mprocessor
@@ -178,6 +188,7 @@ clean:
 	@if [ -d "classifier-src" ]; then cd classifier-src; make clean MROOT=..; fi
 	@if [ -d "shiftbmc-src" ]; then cd shiftbmc-src; make clean MROOT=..; fi
 	@if [ -d "pfolio-src" ]; then cd pfolio-src; make clean MROOT=..; fi
+	@if [ -d "pcasso-src" ]; then cd pcasso-src; make clean MROOT=..; fi
 	@rm -f *~ */*~
 	@rm -rf doc/html
 	@echo Done
