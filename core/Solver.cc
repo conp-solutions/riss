@@ -3439,6 +3439,7 @@ bool Solver::interleavedClauseStrengthening()
     int j = 0;
     bool droppedLit = false;
     int dropPosition = -1;
+    if( outputsProof() ) { oc.clear(); for ( int j = 0 ; j < c.size(); ++ j ) oc.push( c[j] ); } // copy original clause
     for( ; j < ca[learnts[i]].size(); ++ j ) {	// check each literal and enqueue it negated -- do not use the reference, because lhbr in propagate can make it invalid
       if( config.opt_ics_debug ) cerr << "c check lit " << j << "/" << c.size() << ": " << ca[learnts[i]][j] << " with value " << toInt( value(ca[learnts[i]][j]) ) << endl;
       if( value( ca[learnts[i]][j] ) == l_True ) { // just need to keep all previous and this literal
@@ -3511,11 +3512,10 @@ bool Solver::interleavedClauseStrengthening()
     // shrink the clause and add it back again!
     if(config.opt_ics_debug) cerr << "c ICS looked at " << j << " literals, and kept " << k << " with a size of " << d.size() << endl; 
     if( droppedLit || k < j ) { // actually, something has been done
-      if( outputsProof() ) { oc.clear(); for ( int j = 0 ; j < d.size(); ++ j ) oc.push( d[j] ); } // copy original clause
       icsShrinks ++; icsShrinkedLits += (d.size() - k ); // stats -- store the success of shrinking
+      d.shrink( d.size() - k );
       addCommentToProof("shrinked by ICS");
       addToProof(d); addToProof(oc,true); // add shorter clause, remove longer clause
-      d.shrink( d.size() - k );
     }
     if(config.opt_ics_debug) cerr << "c ICS return (modified) clause: " << d << endl;
     
