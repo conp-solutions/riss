@@ -415,7 +415,7 @@ void OnlineProofChecker::addParsedclause(const vec< Lit >& cls)
     clauses.push( ref );
   } else unitClauses.push( cls[0] );
 
-  cerr << "c added clause " << cls << endl;
+  if( verbose > 1 ) cerr << "c added clause " << cls << endl;
   // here, do not check whether the clause is entailed, because its still input!
 }
 

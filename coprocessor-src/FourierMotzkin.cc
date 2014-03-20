@@ -90,6 +90,8 @@ bool FourierMotzkin::process()
   if( ! performSimplification() ) return false; // do not do anything?!
   modifiedFormula = false;
   
+  if( data.outputsProof() ) printDRUPwarning( cerr, "FM cannot produce DRUP/DRAT proofs yet" );
+  
   // do not simplify, if the formula is considered to be too large!
   if( !data.unlimited() && ( data.nVars() > config.opt_fm_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_fm_cls && data.nTotLits() > config.opt_fm_lits ) ) return false;
   

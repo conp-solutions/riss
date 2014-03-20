@@ -38,7 +38,7 @@ static inline void remove(V& ts, const T& t)
     int j = 0;
     for (; j < ts.size() && ts[j] != t; j++) {};
     assert(j < ts.size() && "item must appear in vector");
-    if( j >= ts.size() ) exit (47 ); // todo remove after debug!
+    //if( j >= ts.size() ) exit (47 ); // todo remove after debug!
     for (; j < ts.size()-1; j++) ts[j] = ts[j+1];
     ts.pop();
 }

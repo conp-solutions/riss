@@ -3511,7 +3511,10 @@ bool Solver::interleavedClauseStrengthening()
     // shrink the clause and add it back again!
     if(config.opt_ics_debug) cerr << "c ICS looked at " << j << " literals, and kept " << k << " with a size of " << d.size() << endl; 
     if( droppedLit || k < j ) { // actually, something has been done
+      if( outputsProof() ) { oc.clear(); for ( int j = 0 ; j < d.size(); ++ j ) oc.push( d[j] ); } // copy original clause
       icsShrinks ++; icsShrinkedLits += (d.size() - k ); // stats -- store the success of shrinking
+      addCommentToProof("shrinked by ICS");
+      addToProof(d); addToProof(oc,true); // add shorter clause, remove longer clause
       d.shrink( d.size() - k );
     }
     if(config.opt_ics_debug) cerr << "c ICS return (modified) clause: " << d << endl;

@@ -35,6 +35,8 @@ bool ClauseElimination::process(CoprocessorData& data)
   if( ! performSimplification() ) return false; // do not do anything?!
   modifiedFormula = false;
   
+  if( data.outputsProof() ) printDRUPwarning( cerr, "CCE cannot produce DRUP/DRAT proofs yet" );
+  
   // do not simplify, if the formula is considered to be too large!
   if( !data.unlimited() && ( data.nVars() > config.opt_cce_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_cce_cls  && data.nTotLits() > config.opt_cce_lits ) ) return false;
   if( !data.ok() ) return modifiedFormula;
@@ -269,7 +271,6 @@ ClaNextClause:;
   } // end: while(true)
   
   // take care of the ALA vector, check for ATE, done already above
-    
   // if not ATE, try to check BCE with mark array!
   if( ! doRemoveClause && config.opt_ccelevel > 2) {
     // TODO: go for ABCE 

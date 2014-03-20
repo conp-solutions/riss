@@ -1090,7 +1090,7 @@ inline
 void Solver::addInputClause_(vec< Lit >& ps)
 {
   if( onlineDratChecker != 0 ) {
-    cerr << "c add parsed clause to DRAT-OTFC: " << ps << endl;
+    // cerr << "c add parsed clause to DRAT-OTFC: " << ps << endl;
     onlineDratChecker->addParsedclause( ps );
   }
 }
