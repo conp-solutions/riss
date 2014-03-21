@@ -89,7 +89,7 @@ namespace Splitter {
         vec<double> posHScore;
         vec<unsigned> watcherNegLitSize;
         vec<unsigned> watcherPosLitSize;
-        vec<char> phaseSaving;
+	vec<VarFlags> phaseSaving; // to not change the solver
         int maxClauseSize;
         MarkArray markArray;
         vec<unsigned> learntsLimit;

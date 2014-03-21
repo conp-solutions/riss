@@ -1,15 +1,47 @@
-You can receive the latest copy of the riss and coprocessor tool collection from
+You can receive the latest copy of the Riss and Coprocessor tool collection from
 http://tools.computational-logic.org
 Please send bug reports to norbert.manthey@tu-dresden.de
 
 ================================================================================
+
+
+
+
+
 BUILDING: 
 
-To build riss:
+Usually, when a tool has been build and another tool should be build as well, then
+the next build call can be executed. However, some tool require additional build 
+flags, so that an intermediate "make clean" should be executed. This holds especially
+when building Pcasso.
+
+To build Riss (by default without constructing DRAT-proofs):
 make rissRS
 
-To build coprocessor:
+With producing DRAT proofs:
+make rissRS ARGS="DRATPROOF"
+
+To build Coprocessor:
 make coprocessorRS
+
+To build Qprocessor:
+make qprocessorRS
+
+To build Mprocessor:
+make mprocessorRS
+
+To build Priss:
+make prissRS
+
+To build Pcasso:
+make pcassoRS
+
+To build ShiftBMC (by default without ABC library):
+make shiftbmcs
+
+To build ShiftBMC with ABC library:
+make shiftbmc-abcs
+
 
 To get help, run
 <tool> --help

@@ -28,6 +28,9 @@ cp3Ext: crs
 libsoExt: MYCFLAGS += -DTOOLVERSION=351 -DNOVERBHELP 
 libsoExt: libso
 
+pcasso:   MYCFLAGS += -DPCASSO
+pcassod:  MYCFLAGS += -DPCASSO
+pcassoRS: MYCFLAGS += -DPCASSO
 
 # shortcuts to build some targets
 d: rissd

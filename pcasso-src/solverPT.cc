@@ -156,8 +156,7 @@ bool SolverPT::addClause_(vec<Lit>& ps, unsigned int pt_level) // Davide> pt_lev
 		uncheckedEnqueue(ps[0], CRef_Undef, pt_level); // Davide> attach pt_level info
 		return ok = (propagate() == CRef_Undef);
 	}else{
-		CRef cr;
-		cr = ca.alloc(ps,false);
+		const CRef cr = ca.alloc(ps,false);
 		ca[cr].setPTLevel(pt_level); // Davide> Setting the pt_level
 
 		clauses.push(cr);

@@ -92,7 +92,7 @@ void LookaheadSplitting::setTimeOut(double to){
 
 lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<vec<Lit>* > **valid)
 {
-    polarity.copyTo(phaseSaving);
+    varFlags.copyTo(phaseSaving);
     
     tabuList.growTo(nVars(),false);
     numNegLitTerClause.growTo(nVars(),0);
@@ -824,7 +824,7 @@ void LookaheadSplitting::preselectionHeuristic()
             vec<double> constant;
             constant.growTo(opt_hscore_maxclause+1,0.0f);
             for(int j=2;j<=opt_hscore_maxclause;j++){
-                constant[j]=pow(opt_hscore_clause_weight,opt_hscore_maxclause-j)/(pow(avg,j-1));
+                constant[j] = pow( (int)opt_hscore_clause_weight, (int)opt_hscore_maxclause-j) / (pow(avg,(double)j-1));
             }
             for (int k=0; k < clauses.size(); k++){
                 Clause& c = ca[clauses[k]];

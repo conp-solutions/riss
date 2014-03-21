@@ -378,7 +378,8 @@ protected:
     void     insertVarOrder   (Var x);                                                 // Insert a variable in the decision order priority queue.
     Lit      pickBranchLit    ();                                                      // Return the next decision variable.
     void     newDecisionLevel ();                                                      // Begins a new decision level.
-    void     uncheckedEnqueue (Lit p, CRef from = CRef_Undef, bool addToProof = false);// Enqueue a literal. Assumes value of literal is undefined.
+    void     uncheckedEnqueue (Lit p, CRef from = CRef_Undef,                          // Enqueue a literal. Assumes value of literal is undefined.
+			       bool addToProof = false, const uint64_t extraInfo = 0);     // decide whether the method should furthermore add the literal to the proof, and whether the literal has an extra information (interegsting for decision level 0)
     bool     enqueue          (Lit p, CRef from = CRef_Undef);                         // Test if fact 'p' contradicts current state, enqueue otherwise.
     CRef     propagate        (bool duringAddingClauses = false );                     // Perform unit propagation. Returns possibly conflicting clause (during adding clauses, to add proof infos, if necessary)
     void     cancelUntil      (int level);                                             // Backtrack until a certain level.

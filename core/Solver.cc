@@ -1223,7 +1223,7 @@ void Solver::analyzeFinal(Lit p, vec<Lit>& out_conflict)
 }
 
 
-void Solver::uncheckedEnqueue(Lit p, Minisat::CRef from, bool addToProof)
+void Solver::uncheckedEnqueue(Lit p, Minisat::CRef from, bool addToProof, const uint64_t extraInfo)
 {
   /*
    *  Note: this code is also executed during extended resolution, so take care of modifications performed there!
@@ -2527,7 +2527,10 @@ lbool Solver::solve_()
       cerr << "c units: " ; for( int i = 0 ; i < trail.size(); ++ i ) cerr << " " << trail[i]; cerr << endl;
       cerr << "c clauses: " << endl; for( int i = 0 ; i < clauses.size(); ++ i ) cerr << "c " << ca[clauses[i]] << endl;
       cerr << "c assumptions: "; for ( int i = 0 ; i < assumptions.size(); ++ i ) cerr << " " << assumptions[i]; cerr << endl;
+      cerr << "c solve with " << config.presetConfig() << endl;
     }
+    
+    
     
     //
     // Search:
@@ -3428,6 +3431,7 @@ bool Solver::interleavedClauseStrengthening()
     icsCandidates ++; // stats - store how many learned clauses have been tested
     if(config.opt_ics_debug) cerr << "c ICS on [ " << i << " / " << learnts.size() << " = " << learnts[i] << " / " << ca.size() << " ]: lits= " << c.size() << " : " << c << endl;
     // if(config.opt_ics_debug) cerr << "c current trail: " << trail << endl;
+    if( c.size() == 1 || satisfied(c) ) continue; // do not work on satisfied clauses, and not on unit clauses!
     detachClause( learnts[i], true ); // remove the clause from the solver, to be able to rewrite it
     for( int j = 0 ; j < c.size(); ++ j ) {
       if( value( c[j] ) == l_True ) { c.mark(1); break; } // do not use clauses that are satisfied!
