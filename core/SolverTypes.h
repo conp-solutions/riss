@@ -151,6 +151,7 @@ typedef RegionAllocator<uint32_t>::Ref CRef;
 class Clause {
 
     struct ClauseHeader {
+
         unsigned mark      : 1; // TODO: for what is this mark used? its set to 1, if the clause can be deleted (by simplify) we could do the same thing!
         unsigned locked    : 1; // if set to 1, some thread has locked the clause
 
@@ -158,11 +159,24 @@ class Clause {
         // + write get_method()
         unsigned has_extra : 1;
         unsigned reloced   : 1;
+#ifndef PCASSO
+#warning DO_NOT_COMPILE_PCASSO
         unsigned lbd       : 24;
         unsigned canbedel  : 1;
         unsigned can_subsume : 1;
         unsigned can_strengthen : 1;
-        unsigned size      : 32;
+        unsigned size      : 32;	
+#else
+        unsigned lbd       : 20;
+        unsigned canbedel  : 1;
+        unsigned can_subsume : 1;
+        unsigned can_strengthen : 1;
+        unsigned pt_level   : 9;     // level of the clause in the decision tree
+        unsigned shared     : 1;
+        unsigned shCleanDelay : 1;
+        unsigned size      : 27;
+#endif
+	
 #ifdef CLS_EXTRA_INFO
 	unsigned extra_info : 64;
 #endif
@@ -180,6 +194,11 @@ class Clause {
             can_subsume = rhs.can_subsume;
             can_strengthen = rhs.can_strengthen;
             size = rhs.size;
+#ifdef PCASSO
+        pt_level = rhs.pt_level;
+        shared = rhs.shared;
+        shCleanDelay = rhs.shCleanDelay;
+#endif
 #ifdef CLS_EXTRA_INFO
 	    extra_info = rhs.extra_info;
 #endif
@@ -197,6 +216,11 @@ class Clause {
             can_subsume = rhs.can_subsume;
             can_strengthen = rhs.can_strengthen;
             size = rhs.size;
+#ifdef PCASSO
+        pt_level = rhs.pt_level;
+        shared = rhs.shared;
+        shCleanDelay = rhs.shCleanDelay;
+#endif
 #ifdef CLS_EXTRA_INFO
 	    extra_info = rhs.extra_info;
 #endif
@@ -225,6 +249,11 @@ class Clause {
 	header.canbedel = 1;
         header.can_subsume = 1;
         header.can_strengthen = 1;
+#ifdef PCASSO
+        header.pt_level = 0;
+        header.shared = 0; // Non-shared
+        header.shCleanDelay = 0;
+#endif
 
 	for (int i = 0; i < ps.size(); i++)
 	  for (int j = i+1; j < ps.size(); j++) {
@@ -411,6 +440,24 @@ public:
 	return false;
     }
     
+// For PCASSO:
+    /** Davide> Sets the clause pt_level */
+    void setPTLevel(unsigned int _pt_level){
+      header.pt_level = _pt_level;
+    }
+
+    /** Davide: Returns the level of the clause */
+    unsigned int getPTLevel(void) const{ return header.pt_level; }
+    
+    /** Davihmed Is it shared ? */
+    bool isShared(){      return header.shared == 0 ? false : true;    }
+    //setting the shared to true... means the clause is shared or coming from a shared pool
+    void setShared(){        header.shared=1;    }
+    void initShCleanDelay(unsigned i){        i>1 ? header.shCleanDelay=1: header.shCleanDelay=i;    }
+    void decShCleanDelay(){        if(header.shCleanDelay>0)     header.shCleanDelay--;    }
+    unsigned getShCleanDelay(){       return header.shCleanDelay;    }
+
+
     /// set the extra info of the clause to the given value
     void setExtraInformation( const uint64_t& info)
 #ifdef CLS_EXTRA_INFO
@@ -552,8 +599,16 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
 	  to[cr].activity() = c.activity();
 	  to[cr].setLBD(c.lbd());
 	  to[cr].setCanBeDel(c.canBeDel());
+#ifdef PCASSO
+      to[cr].header.shCleanDelay = c.getShCleanDelay();
+      to[cr].header.shared = c.isShared() ? 1: 0;
+#endif
 	}
         else if (to[cr].has_extra()) to[cr].calcAbstraction();
+#ifdef PCASSO
+    to[cr].header.pt_level = c.getPTLevel();
+#endif
+
     }
 
     // Methods for threadsafe parallel allocation in BVE / subsimp context of CP3

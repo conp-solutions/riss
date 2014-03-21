@@ -16,8 +16,13 @@
 #include "pcasso-src/SplitterSolver.h"
 #include "utils/Debug.h"
 
-namespace Splitter {
+namespace Pcasso {
     class LookaheadSplitting : public SplitterSolver {
+    // more global data structures
+    vec<Lit> learnt_clause;
+    vec<CRef> otfssClauses;
+    uint64_t extraInfo;
+      
     public:
         LookaheadSplitting();
         ~LookaheadSplitting();
@@ -38,7 +43,7 @@ namespace Splitter {
                 return (score < vs.score);
             }
         };
-        CRef     propagate        (); 
+//        CRef     propagate        (); 
         void     removeSatisfied  (vec<CRef>& cs);                                         // Shrink 'cs' to contain only non-satisfied clauses.
         /// local version of the statistics object
         Statistics localStat; // Norbert> Local Statistics
@@ -94,7 +99,7 @@ namespace Splitter {
         MarkArray markArray;
         vec<unsigned> learntsLimit;
         
-        Lock communicationLock;
+        ComplexLock communicationLock;
         //helper methods
         void shrinkClauses(); //shrink the constraint clauses in solver
         bool checkSolution();

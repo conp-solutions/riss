@@ -69,6 +69,12 @@ namespace Coprocessor {
   class BIG;
 }
 
+#ifdef PCASSO 
+namespace Pcasso {
+  class PcassoClient;
+}
+#endif
+
 class Communicator;
 
 // since template methods need to be in headers ...
@@ -94,7 +100,11 @@ class Solver {
     friend class Coprocessor::RATElimination;
     friend class Coprocessor::FourierMotzkin;
     friend class Minisat::IncSolver; // for bmc
-  
+
+#ifdef PCASSO 
+    friend class Pcasso::PcassoClient; // PcassoClient is allowed to access all the solver data structures
+#endif
+    
     CoreConfig& config;
 public:
 
@@ -303,8 +313,19 @@ protected:
       unsigned seen:1;
       unsigned extra:4; // TODO: use for special variable (not in LBD) and do not touch!
       unsigned frozen:1; // indicate that this variable cannot be used for simplification techniques that do not preserve equivalence
-      VarFlags( char _polarity ) : assigns(l_Undef), polarity(_polarity), decision(0), seen(0), extra(0), frozen(0) {}
-      VarFlags () : assigns(l_Undef), polarity(1), decision(0), seen(0), extra(0), frozen(0) {}
+#ifdef PCASSO
+      unsigned varPT:16; // partition tree level for this variable
+#endif
+      VarFlags( char _polarity ) : assigns(l_Undef), polarity(_polarity), decision(0), seen(0), extra(0), frozen(0) 
+#ifdef PCASSO
+      , varPT(0)
+#endif
+      {}
+      VarFlags () : assigns(l_Undef), polarity(1), decision(0), seen(0), extra(0), frozen(0) 
+#ifdef PCASSO
+      , varPT(0)
+#endif
+      {}
     };
     vec<VarFlags> varFlags;
     
@@ -848,6 +869,14 @@ private:
     float sendRatio;                           /// How big should the ratio of send clauses be?
     
 // [END] modifications for parallel assumption based solver
+
+// Modifications for Pcasso
+#ifdef PCASSO
+    Pcasso::PcassoClient* pcassoClient;
+
+#endif
+// END modifications for Pcasso
+
 
 };
 

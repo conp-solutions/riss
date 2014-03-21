@@ -17,6 +17,7 @@ Copyright (c) 2012, All rights reserved, Norbert Manthey
 
 // for parallel stuff
 #include <pthread.h>
+#include <semaphore.h>
 
 /** usual lock
  */
@@ -43,6 +44,65 @@ public:
   // give the method lock access to the mutex that is inside of a lock class
   friend class MethodLock;
   
+};
+
+/** Lock that offers more tricks, basd on a semaphore */
+class ComplexLock{
+private:
+
+	sem_t _lock;	// actual semaphore
+	int _max;	// users for the semaphore (threads that are allowed to share the semaphore at the same time)
+public:
+
+	/** create an unlocked lock
+	*
+	* @param max specify number of maximal threads that have entered the semaphore
+	*/
+	ComplexLock(int max = 1)
+	 : _max( max )
+	{
+		// create semaphore with no space in it
+		sem_init(&(_lock), 0, max);
+	}
+	
+	/** release all used resources (nothing to do -> semaphore becomes invalid)
+	*/
+	~ComplexLock(){
+	}
+	
+	/** tries to lock
+	* @return true, if locking was successful
+	*/
+	bool trylock(){
+		int err = sem_trywait( &_lock );
+		return err == 0;
+	}
+	//@param transitive allow multiple locking of the same thread ?
+	
+	/** releases one lock again
+	*
+	* should only be called by the thread that is currently owns the lock
+	*/
+	void unlock(){
+		sem_post( &_lock );
+		//fprintf( stderr, "\n\nreleased lock %d\n\n" , (int)*(int*)(void*)&_lock );
+	}
+
+	/** waits until the lock is given to the calling thread
+	*/	
+	void wait(){
+		//fprintf( stderr, "\n\nwait for lock %d\n\n" , (int)*(int*)(void*)&_lock );
+		sem_wait( &_lock );
+		//fprintf( stderr, "\n\nblog lock %d\n\n" , (int)*(int*)(void*)&_lock );
+	}
+
+	/** return numbers of waiters in the semaphore
+	*/
+	int getWaiters(){
+	  int ret = 0;
+	  sem_getvalue(&_lock, &ret);
+	  return ret;
+	}
 };
 
 /** This class can be created the begin of each method and will be automatically destroyed before the method is left

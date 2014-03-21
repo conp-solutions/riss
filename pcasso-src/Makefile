@@ -1,4 +1,15 @@
-EXEC      = pcasso
-DEPDIR    = mtl core simp utils solverPT
+# Makefile for riss
+# Copyright (c) 2012-2013, Norbert Manthey
 
-include ../mtl/template.mk
+EXEC      = pcasso
+
+DEPDIR    = mtl core utils
+
+# extern control whether coprocessor should be integrated
+DEPDIR    += $(CPDEPEND)
+
+CFLAGS    += $(INCFLAGS)
+LFLAGS    += $(INLDFLAGS)
+
+
+include $(MROOT)/mtl/template.mk

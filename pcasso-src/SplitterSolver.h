@@ -12,7 +12,7 @@
 
 using namespace Minisat;
 
-namespace Splitter {
+namespace Pcasso {
     class SplitterSolver : public Solver {
       
       CoreConfig coreConfig;

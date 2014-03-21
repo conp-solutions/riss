@@ -37,7 +37,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "pcasso-src/ToString.h"
 #include "pcasso-src/LevelPool.h"
 
-//using namespace Splitter;
+//using namespace Pcasso;
 using namespace std;
 
 class Master;
@@ -87,7 +87,7 @@ private:
 	unsigned int pt_level;
 
 	/// lock to prevent threads to read on data that is update at the moment
-	static Lock unitLock;
+	static ComplexLock unitLock;
 
 	void setup(const vector< vector<Lit>* >& localConstraints, TreeNode* parent = 0);
 

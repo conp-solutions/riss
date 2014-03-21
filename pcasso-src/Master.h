@@ -46,7 +46,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <algorithm>    // std::sort
 
 using namespace std;
-using namespace Splitter;
+using namespace Pcasso;
 using namespace Minisat;
 
 
@@ -119,9 +119,9 @@ private:
 	ThreadData* threadData;	// data for each thread
 
 	// to lock whenever some critical section has to be executed
-	Lock communicationLock;
+	ComplexLock communicationLock;
 	// to wake up the master / to let the master sleep if there is no work to do
-	Lock sleepLock;
+	ComplexLock sleepLock;
 	// state of the master thread
 	volatile state masterState;
 

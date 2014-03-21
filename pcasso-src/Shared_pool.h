@@ -27,7 +27,7 @@ using namespace std;
 
 namespace davide{
    
-  static Lock shared_pool_lock = Lock();
+  static ComplexLock shared_pool_lock = ComplexLock(); // library can be build with this?
    
    class Shared_pool {
    public:

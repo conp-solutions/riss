@@ -14,8 +14,13 @@
 #include "core/Solver.h"
 #include "pcasso-src/SplitterSolver.h"
 
-namespace Splitter {
+namespace Pcasso {
     class VSIDSSplitting : public SplitterSolver {
+      // more global data structure
+      vec<Lit>    learnt_clause; 
+      vec<CRef> otfssClauses; 
+      uint64_t extraInfo;
+      
     public:
         VSIDSSplitting();
         ~VSIDSSplitting();

@@ -38,7 +38,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <semaphore.h>
 #include <errno.h>
 
-using namespace Splitter;
+using namespace Pcasso;
 
 //=================================================================================================
 

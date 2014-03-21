@@ -13,7 +13,7 @@
 #include "mtl/Vec.h"
 #include "core/SolverTypes.h"
 
-using namespace Splitter;
+using namespace Pcasso;
 
 static const char* _cat = "LOOKAHEADSPLITTING";
 static DoubleOption     opt_preselection_factor  (_cat, "presel-fac",             "Factor for Preselection variables", 0.15, DoubleRange(0, false, 1, true));
@@ -938,9 +938,11 @@ bool LookaheadSplitting::lookahead(Lit p, vec<Lit>& lookaheadTrail, vec<Lit>& un
         if(opt_clause_learning>0){
             int backtrack_level;
             unsigned nbscore;
-            vec<Lit> learnt_clause;
+	    learnt_clause.clear(); otfssClauses.clear(); extraInfo = 0; // reset global structures
 
-            analyze(confl, learnt_clause, backtrack_level, nbscore);
+            int ret = analyze(confl, learnt_clause, backtrack_level, nbscore, otfssClauses, extraInfo);
+	    assert( ret == 0 && "can handle only usually learnt clauses" );
+	    if( ret != 0 ) _exit(1); // abort, if learning is set up wrong
 
              cancelUntil(decisionLevel()-1);
                 if(learnt_clause[0]!=~p && value(learnt_clause[0])==l_Undef){
@@ -1360,8 +1362,8 @@ Lit LookaheadSplitting::pickBranchLiteral(vec<vec<Lit>* > **valid){
                         score[i]=1024*posScore[bestKList[i]]*negScore[bestKList[i]]+posScore[bestKList[i]]+negScore[bestKList[i]];
                         break;
                     case 7:
-                        negScore[bestKList[i]]=pow(opt_hscore_clause_weight,opt_hscore_maxclause-1)*(sizeNegativeLookahead)+(negScore[bestKList[i]]);
-                        posScore[bestKList[i]]=pow(opt_hscore_clause_weight,opt_hscore_maxclause-1)*(sizePositiveLookahead)+(posScore[bestKList[i]]);
+                        negScore[bestKList[i]]=pow((int)opt_hscore_clause_weight,opt_hscore_maxclause-1)*(sizeNegativeLookahead)+(negScore[bestKList[i]]);
+                        posScore[bestKList[i]]=pow((int)opt_hscore_clause_weight,opt_hscore_maxclause-1)*(sizePositiveLookahead)+(posScore[bestKList[i]]);
                         score[i]=1024*posScore[bestKList[i]]*negScore[bestKList[i]]+posScore[bestKList[i]]+negScore[bestKList[i]];
                         break;
                    }
@@ -1410,7 +1412,7 @@ Lit LookaheadSplitting::pickBranchLiteral(vec<vec<Lit>* > **valid){
             case 4:
                 pol=drand(random_seed) < 0.5;                   break;
             case 5:
-                pol=phaseSaving[bestKList[bestVarIndex]];                   break;
+                pol=phaseSaving[bestKList[bestVarIndex]].polarity;                   break;
             case 6:
                 pol=negScore[bestKList[bestVarIndex]]/posScore[bestKList[bestVarIndex]] <=1/opt_child_direction_adaptive_factor && 
                         negScore[bestKList[bestVarIndex]]/posScore[bestKList[bestVarIndex]] >=opt_child_direction_adaptive_factor ? 
@@ -1725,6 +1727,8 @@ void LookaheadSplitting::learntsLimitPop() {
     checkGarbage();
 }
 
+
+#if 0
 /*_________________________________________________________________________________________________
 |
 |  propagate : [void]  ->  [Clause*]
@@ -1842,6 +1846,8 @@ CRef LookaheadSplitting::propagate()
     
     return confl;
 }
+#endif
+
 
 void LookaheadSplitting::removeSatisfied(vec<CRef>& cs)
 {

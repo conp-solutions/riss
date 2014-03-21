@@ -6,7 +6,7 @@
 #include "pcasso-src/LevelPool.h"
 #include <stdexcept>
 
-using namespace Splitter;
+using namespace Pcasso;
 
 // Davide> Options
 
@@ -35,7 +35,7 @@ static BoolOption opt_sharing_var_bump("SPLITTER + SHARING", "shvar-bump", "Enab
 static BoolOption opt_unit_sharing("SPLITTER + SHARING", "unit-sharing", "Enable sharing decision level0 units\n", false);
 //static IntOption opt_unit_sharing_ptlevel_limit("SPLITTER + SHARING", "unitptlvl-lim", "sharing greater or equal than pt level \n", 1, IntRange(0,64));
 static IntOption opt_update_act_pol("SPLITTER + SHARING", "upd-actpol", "Update Activity and polarity in treenode: 0 - disable, 1 activity only, 2 polarity only, 3 activity and polarity \n", 3, IntRange(0,3));
-static BoolOption opt_init_random_act_pol("SPLITTER + SHARING", "rnd-actpol", "Initialize random polarity and activity, except for the root\n", false);
+// static BoolOption opt_init_random_act_pol("SPLITTER + SHARING", "rnd-actpol", "Initialize random polarity and activity, except for the root\n", false);
 static IntOption opt_pull_learnts_interval("SPLITTER + SHARING", "pull-int", "learnt pull interval - zero to check on restart only \n", 0, IntRange(0,INT32_MAX));
 static BoolOption    diversification   ("SPLITTER + SHARING", "split-diver", "If only one child formula is unsolved, then stop the solver of that node.\n", false);
 static IntOption opt_max_tree_height("SPLITTER + SHARING", "max-tree", "Max tree height for diversification option, such that it does not go beyond that\n", 512, IntRange(8,512));
@@ -193,45 +193,6 @@ bool SolverPT::addClause_(vec<Lit>& ps, unsigned int pt_level) // Davide> pt_lev
 	return true;
 }
 
-Var SolverPT::newVar(bool sign, bool dvar)
-{
-	assert(varPT.size() == nVars());
-	varPT.push(0);//adding PT level of the new variable
-	int v = nVars();
-	watches  .init(mkLit(v, false));
-	watches  .init(mkLit(v, true ));
-	watchesBin  .init(mkLit(v, false));
-	watchesBin  .init(mkLit(v, true ));
-	assigns  .push(l_Undef);
-	vardata  .push(mkVarData(CRef_Undef, 0));
-	//activity .push(0);
-	if(opt_init_random_act_pol ){
-		//double rseed = random_seed + tnode->id();
-		if(opt_update_act_pol>0 && curPTLevel==1){
-			//activity.push(drand(random_seed) * 0.00001);
-			polarity .push(irand(random_seed,2));
-		}else if(opt_update_act_pol==0 && curPTLevel >0){
-			activity.push(drand(random_seed) * 0.00001);
-			polarity .push(irand(random_seed,2));
-		}
-	}
-	activity .push(rnd_init_act ? drand(random_seed) * 0.00001 : 0);
-	seen     .push(0);
-	permDiff  .push(0);
-	polarity .push(sign);
-	decision .push();
-	trail    .capacity(v+1);
-	setDecisionVar(v, dvar);
-}
-
-void SolverPT::setLiteralPTLevel(const Lit& l, unsigned pt){
-	varPT[var(l)] = pt;
-}
-
-unsigned SolverPT::getLiteralPTLevel(const Lit& l) const {
-	assert(var(l) < varPT.size());
-	return varPT[var(l)];
-}
 
 /*_________________________________________________________________________________________________
 |

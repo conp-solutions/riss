@@ -4,7 +4,7 @@
 #include "pthread.h"
 #include <time.h>
 
-using namespace Splitter;
+using namespace Pcasso;
 
 static const char* _cat = "VSIDSSCATTERING";
 static IntOption     opt_scatter_fact  (_cat, "sc-fact",             "The number of derived instances produced in a split", 8, IntRange(0, INT_MAX));
@@ -180,7 +180,6 @@ lbool VSIDSSplitting::scatterSeach(int nof_conflicts, void* data)
     assert(ok);
     int         backtrack_level;
     int         conflictC = 0;
-    vec<Lit>    learnt_clause;
     starts++;
 
     // Change this to scatter mode
@@ -205,9 +204,12 @@ lbool VSIDSSplitting::scatterSeach(int nof_conflicts, void* data)
                 else { interrupt(); return l_Undef; }
             }
 
-            learnt_clause.clear();
+            learnt_clause.clear();otfssClauses.clear(); extraInfo=0;
             unsigned lbd=0;
-            analyze(confl, learnt_clause, backtrack_level,lbd); // Davide> scatt !! my invention
+            int ret = analyze(confl, learnt_clause, backtrack_level,lbd, otfssClauses, extraInfo); // Davide> scatt !! my invention
+	    
+	    assert( ret == 0 && "can handle only usually learnt clauses" );
+	    if( ret != 0 ) _exit(1); // abort, if learning is set up wrong
 
             cancelUntil(backtrack_level);
 

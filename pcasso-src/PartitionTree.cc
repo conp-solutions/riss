@@ -24,7 +24,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 unsigned int TreeNode::runningID = 0;
 
-Lock TreeNode::unitLock = Lock();
+ComplexLock TreeNode::unitLock = ComplexLock();
 
 TreeNode::TreeNode()
 : parent(0),
@@ -64,7 +64,7 @@ TreeNode::TreeNode(const vector< vector<Lit>* >& localConstraints, TreeNode* par
   onlyChildScenario(false),
   onlyChildScenarioChildNode(0)
 {
-	// unitLock.wait();
+	// unitLock.lock();
 	additionalConstraints = localConstraints;
 	// unitLock.unlock();
 }
@@ -80,7 +80,7 @@ TreeNode::setup(const vector< vector<Lit>* >& localConstraints, TreeNode* parent
 	expanded=false;
 	level = (parent != 0 ) ? parent->level+1 : 0;
 	s=unknown;
-	// unitLock.wait();
+	// unitLock.lock();
 	additionalConstraints = localConstraints;
 	// unitLock.unlock();
 }
@@ -409,14 +409,14 @@ TreeNode::setExpanded(bool value){
 }
 //ahmed
 void TreeNode::activityCopyTo(vec<double>& act) {
-	unitLock.lock();
+	unitLock.wait();
 	if(activity.size()>0)
 		activity.copyTo(act);
 	unitLock.unlock();
 }
 
 void TreeNode::phaseCopyTo(vec<char>& ph) {
-	unitLock.lock();
+	unitLock.wait();
 	if(phase.size()>0)
 		phase.copyTo(ph);
 	unitLock.unlock();
@@ -452,7 +452,7 @@ void TreeNode::updateActivityPolarity(vec<double>& act, vec<char>& ph, int optio
 		}
 	}
 	if(pt_level>0 && size()>0) {
-                        unitLock.lock();
+                        unitLock.wait();
                         if(childrenActPolUpdCount<size()) {
                             if(option>0) act.copyTo(activity);
                             if(option>1) ph.copyTo(phase);
@@ -463,7 +463,7 @@ void TreeNode::updateActivityPolarity(vec<double>& act, vec<char>& ph, int optio
 
 //incrementing the count of the children which has updated the activity and polarity
 void TreeNode::incChildrenActPolUpdCount() {
-    unitLock.lock();
+    unitLock.wait();
     childrenActPolUpdCount++;
     unitLock.unlock();
 }
