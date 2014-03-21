@@ -160,7 +160,6 @@ class Clause {
         unsigned has_extra : 1;
         unsigned reloced   : 1;
 #ifndef PCASSO
-#warning DO_NOT_COMPILE_PCASSO
         unsigned lbd       : 24;
         unsigned canbedel  : 1;
         unsigned can_subsume : 1;
@@ -440,6 +439,7 @@ public:
 	return false;
     }
     
+#ifdef PCASSO
 // For PCASSO:
     /** Davide> Sets the clause pt_level */
     void setPTLevel(unsigned int _pt_level){
@@ -456,7 +456,7 @@ public:
     void initShCleanDelay(unsigned i){        i>1 ? header.shCleanDelay=1: header.shCleanDelay=i;    }
     void decShCleanDelay(){        if(header.shCleanDelay>0)     header.shCleanDelay--;    }
     unsigned getShCleanDelay(){       return header.shCleanDelay;    }
-
+#endif
 
     /// set the extra info of the clause to the given value
     void setExtraInformation( const uint64_t& info)
