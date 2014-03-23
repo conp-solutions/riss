@@ -48,7 +48,7 @@ extern "C" {
   /** initialize a solver instance, and return a pointer to the maintain structure 
    * @param threads number of threads that should be used (1 <= threads <= 64), will be adjusted if not in these bounds!
    */
-  extern void* priss_init(int& threads);
+  extern void* priss_init(int& threads, const char* configName);
   
   /** free the resources of the solver, set the pointer to 0 afterwards */
   extern void priss_destroy(void*& priss);

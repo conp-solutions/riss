@@ -2524,13 +2524,12 @@ lbool Solver::solve_()
     
     if( false ) {
       cerr << "c solver state after preprocessing" << endl;
+      cerr << "c start solving with " << nVars() << " vars, " << nClauses() << " clauses and " << nLearnts() << " learnts" << endl;
       cerr << "c units: " ; for( int i = 0 ; i < trail.size(); ++ i ) cerr << " " << trail[i]; cerr << endl;
       cerr << "c clauses: " << endl; for( int i = 0 ; i < clauses.size(); ++ i ) cerr << "c " << ca[clauses[i]] << endl;
       cerr << "c assumptions: "; for ( int i = 0 ; i < assumptions.size(); ++ i ) cerr << " " << assumptions[i]; cerr << endl;
       cerr << "c solve with " << config.presetConfig() << endl;
     }
-    
-    
     
     //
     // Search:
@@ -2583,6 +2582,7 @@ lbool Solver::solve_()
     sdSearchTime.stop();
     totalTime.stop();
     
+    // cerr << "c finish solving with " << nVars() << " vars, " << nClauses() << " clauses and " << nLearnts() << " learnts and status " << (status == l_Undef ? "UNKNOWN" : ( status == l_True ? "SAT" : "UNSAT" ) ) << endl;
     
     //
     // print statistic output
@@ -2653,6 +2653,9 @@ lbool Solver::solve_()
     }else if (status == l_False && conflict.size() == 0)
         ok = false;
     cancelUntil(0);
+    
+    // cerr << "c finish solving with " << nVars() << " vars, " << nClauses() << " clauses and " << nLearnts() << " learnts and status " << (status == l_Undef ? "UNKNOWN" : ( status == l_True ? "SAT" : "UNSAT" ) ) << endl;
+    
     return status;
 }
 

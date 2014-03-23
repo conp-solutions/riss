@@ -17,7 +17,7 @@ PSolver::PSolver(const int threadsToUse, const char* configName)
 , data(0)
 , threadIDs( 0 )
 , defaultConfig( configName == 0 ? "" : string(configName) ) // setup the configuration
-, verbosity(3)
+, verbosity(0)
 , verbEveryConflicts(0)
 {
     // setup the default configuration for all the solvers!
@@ -239,7 +239,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
       if( communicators[i]->isWinner() && communicators[i]->getReturnValue() != l_Undef ) { winningSolver = i; break; }
    }
    
-   cerr << "c MASTER found winning thread (" << communicators[winningSolver]->isWinner() << ") " << winningSolver << " / " << threads << " model= " << solvers[winningSolver]->model.size() << endl;
+   if( verbosity > 0 ) cerr << "c MASTER found winning thread (" << communicators[winningSolver]->isWinner() << ") " << winningSolver << " / " << threads << " model= " << solvers[winningSolver]->model.size() << endl;
 
    // return model, if there is a winning thread!
    if( winningSolver < threads ) {
@@ -410,19 +410,19 @@ void PSolver::waitFor(const WaitState waitState)
     unsigned threadOfInterest = threads;
     for( unsigned i = 0 ; i < threads; ++ i )
     {
-      cerr << "c [WFI" << waitForIterations << "] MASTER checks thread " << i << " / " << threads << " finished: " << communicators[i]->isFinished() << endl;
+      if( verbosity > 2 ) cerr  << "c [WFI" << waitForIterations << "] MASTER checks thread " << i << " / " << threads << " finished: " << communicators[i]->isFinished() << endl;
       if( waitState == oneIdle ) {
 	if( communicators[i]->isIdle() ) { threadOfInterest = i; break; }
       } else if ( waitState == oneFinished ) {
 	if( communicators[i]->isFinished() ) { 
 	  threadOfInterest = i; 
-	  cerr << "c [WFI" << waitForIterations << "] Thread " << i << " finished" << endl;
+	  if( verbosity > 2 ) cerr << "c [WFI" << waitForIterations << "] Thread " << i << " finished" << endl;
 	  // communicators[i]->setState( Communicator::waiting );
 	  break;
 	}
       } else if ( waitState == allFinished ) {
 	if( ! communicators[i]->isFinished() && ! communicators[i]->isIdle() ) { // be careful with (! communicators[i]->isWaiting() &&)
-	  cerr << "c [WFI" << waitForIterations << "] Thread " << i << " is not finished and not idle" << endl;
+	  if( verbosity > 2 ) cerr << "c [WFI" << waitForIterations << "] Thread " << i << " is not finished and not idle" << endl;
 	  threadOfInterest = i; // notify that there is a thread that is not finished with this index
 	  break; 
 	}
@@ -443,7 +443,7 @@ void PSolver::waitFor(const WaitState waitState)
       }
     }
     
-    cerr << "c [WFI" << waitForIterations << "] MASTER sleeps" << endl;
+    if( verbosity > 2 ) cerr << "c [WFI" << waitForIterations << "] MASTER sleeps" << endl;
     data->getMasterLock().sleep();  // wait until some thread notifies the master
   }
   data->getMasterLock().unlock(); // leave critical section
@@ -453,7 +453,7 @@ void PSolver::kill()
 {
   if( !initialized ) return; // child threads have never been created - no need to kill them
   
-  cerr << "c MASTER kills all child threads ..." << endl;
+  if( verbosity > 0 )  cerr << "c MASTER kills all child threads ..." << endl;
   // set all threads to working (they'll have a look for new work on their own)
   for( unsigned i = 0 ; i<threads; ++ i )
   {
@@ -485,7 +485,7 @@ void PSolver::kill()
 
 void* runWorkerSolver(void* data)
 {
-  const bool verbose = true;
+  const bool verbose = false;
   
   /* Algorithm:
    */

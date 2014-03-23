@@ -32,7 +32,7 @@ priss_init(int& threads, const char* presetConfig)
     if( threads < 1 ) threads = 1; // make sure that the number of available threads makes sense ...
     else if ( threads > 64 ) threads = 64;
     libpriss* priss = new libpriss;
-    priss->solver = new Minisat::PSolver (threads);
+    priss->solver = new Minisat::PSolver (threads, presetConfig);
     return priss;
 }
   

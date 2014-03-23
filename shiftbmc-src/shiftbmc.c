@@ -157,7 +157,7 @@ static void init ( int& argc, char **& argv ) {
   if( useRiss ) riss = riss_init(rissPresetConf);
   else if ( usePriss > 0 ) {
     cerr << "c init priss with " << usePriss << " threads" << endl ;
-    priss = priss_init( usePriss );
+    priss = priss_init( usePriss, "BMC" );
   }
   else picosat = picosat_init ();
   model = aiger_init ();
@@ -805,7 +805,7 @@ int simplifyCNF(int &k, void* preprocessorToUse, double& ppCNFtime)
     } else if ( priss != 0 ) {
       priss_destroy( priss );
       cerr << "c init priss with " << usePriss << " threads" << endl ;
-      priss = priss_init(usePriss);
+      priss = priss_init(usePriss, "BMC" );
     } else {
       picosat_reset (picosat); // restart the solver!
       picosat = picosat_init();
