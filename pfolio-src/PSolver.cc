@@ -12,10 +12,11 @@ namespace Minisat {
 /** main method that is executed by all worker threads */
 static void* runWorkerSolver (void* data);
   
-PSolver::PSolver(const int threadsToUse)
+PSolver::PSolver(const int threadsToUse, const char* configName)
 : initialized( false ), threads( threadsToUse )
 , data(0)
 , threadIDs( 0 )
+, defaultConfig( configName == 0 ? "" : string(configName) ) // setup the configuration
 , verbosity(3)
 , verbEveryConflicts(0)
 {
@@ -313,10 +314,27 @@ void PSolver::createThreadConfigs()
     "","","","","","","","","","","","","","","","", // 48 - 63
   };
 
-  for( int t = 0 ; t < threads; ++ t ) {
-    configs[t].setPreset( Configs[t] );
-    // configs[t].parseOptions("-solververb=2"); // set all solvers very verbose
+  if( defaultConfig.size() == 0 ) {
+    for( int t = 0 ; t < threads; ++ t ) {
+      configs[t].setPreset( Configs[t] );
+      // configs[t].parseOptions("-solververb=2"); // set all solvers very verbose
+    }
+  } else if ( defaultConfig == "BMC" ) {
+    // thread 1 runs with empty (default) configurations
+    if( threads > 1 ) configs[1].setPreset("DECLEARN");
+    if( threads > 2 ) configs[2].setPreset("FASTRESTART");
+    if( threads > 3 ) configs[3].setPreset("SUHLE");
+    for( int t = 4 ; t < threads; ++ t ) {
+      configs[t].setPreset( Configs[t] );
+      // configs[t].parseOptions("-solververb=2"); // set all solvers very verbose
+    }
   }
+}
+
+void PSolver::addInputClause_(vec< Lit >& ps)
+{
+#warning ADD_INPUT_CLAUSE_NOT_IMPLEMENTED_FOR_PRISS
+  return;
 }
 
 

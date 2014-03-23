@@ -30,9 +30,11 @@ class PSolver {
   Communicator** communicators;		// interface between controller and SAT solvers
   pthread_t* threadIDs;			// pthread handles for the threads
   
+  string defaultConfig;			// name of the configuration that should be used
+  
 public:
   
-  PSolver(const int threadsToUse) ;
+  PSolver(const int threadsToUse, const char* configName = 0) ;
   
   ~PSolver();
   
@@ -89,6 +91,9 @@ public:
    *  @return false, if the addition of the clause results in an unsatisfiable formula
    */
   bool addClause_(vec<Lit>& ps);
+  
+  /// Add a clause to the online proof checker.. Not implemented for parallel solver
+  void    addInputClause_( vec<Lit>& ps);                     
   
   void interrupt(); // Trigger a (potentially asynchronous) interruption of the solver.
   
