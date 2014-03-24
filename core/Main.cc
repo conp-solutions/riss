@@ -113,6 +113,7 @@ int main(int argc, char** argv)
   BoolOption   opt_modelStyle ("MAIN", "oldModel",   "present model on screen in old format", false);
   BoolOption   opt_quiet      ("MAIN", "quiet",      "Do not print the model", false);
   BoolOption   opt_parseOnly  ("MAIN", "parseOnly", "abort after parsing", false);
+  BoolOption   opt_cmdLine    ("MAIN", "cmd", "print the relevant options", false);
   
     try {
         
@@ -125,6 +126,15 @@ int main(int argc, char** argv)
 	if( foundHelp ) exit(0); // stop after printing the help information
 	coreConfig.setPreset(string(opt_config == 0 ? "" : opt_config));
 	cp3config.setPreset( string(opt_config == 0 ? "" : opt_config));
+	
+	if( opt_cmdLine ) { // print the command line options
+	  std::stringstream s;
+	  coreConfig.configCall(s);
+	  cp3config.configCall(s);
+	  configCall(argc, argv, s);
+	  cerr << "c tool-parameters: " << s.str() << endl;
+	  exit(0);
+	}
 	
         Solver S(coreConfig);
 	S.setPreprocessor(&cp3config); // tell solver about preprocessor

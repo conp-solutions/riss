@@ -78,6 +78,7 @@ int main(int argc, char** argv)
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 	StringOption opt_config     ("MAIN", "config", "Use a preset configuration",0);
+	BoolOption   opt_cmdLine    ("MAIN", "cmd", "print the relevant options", false);
 	
 	StringOption drupFile         ("PROOF", "drup", "Write a proof trace into the given file",0);
 	StringOption opt_proofFormat  ("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, should be DRUP)","DRUP");
@@ -98,6 +99,16 @@ int main(int argc, char** argv)
 	coreConfig.setPreset(string(opt_config));
 	cp3config.setPreset(string(opt_config));	
 
+	
+	if( opt_cmdLine ) { // print the command line options
+	  std::stringstream s;
+	  coreConfig.configCall(s);
+	  cp3config.configCall(s);
+	  configCall(argc, argv, s);
+	  cerr << "c tool-parameters: " << s.str() << endl;
+	  exit(0);
+	}
+	
         Solver S(coreConfig);
 	S.setPreprocessor(&cp3config); // tell solver about preprocessor
 	

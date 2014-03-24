@@ -43,6 +43,7 @@ extern void printUsageAndExit(int  argc, char** argv, bool verbose = false);
 extern void setUsageHelp     (const char* str);
 extern void setHelpPrefixStr (const char* str);
 
+extern void configCall(int argc, char** argv, std::stringstream& s);
 
 //==================================================================================================
 // Options is an abstract class that gives the interface for all types options:
@@ -89,6 +90,9 @@ class Option
     virtual bool parse             (const char* str)      = 0;
     virtual void help              (bool verbose = false) = 0;
     virtual void giveRndValue      (std::string& optionText ) = 0; // return a valid option-specification as it could appear on the command line
+    
+    virtual bool hasDefaultValue   () = 0; 				// check whether the current value corresponds to the default value of the option
+    virtual void printOptionCall   (std::stringstream& strean ) = 0; 	// print the call that is required to obtain that this option is set
 
     friend  void parseOptions      (int& argc, char** argv, bool strict);
     friend  void printUsageAndExit (int  argc, char** argv, bool verbose);
@@ -131,10 +135,11 @@ class DoubleOption : public Option
  protected:
     DoubleRange range;
     double      value;
+    double      defaultValue; // the value that is given to this option during construction
 
  public:
     DoubleOption(const char* c, const char* n, const char* d, double def = double(), DoubleRange r = DoubleRange(-HUGE_VAL, false, HUGE_VAL, false), vec<Option*>* externOptionList = 0)
-        : Option(n, d, c, "<double>", externOptionList), range(r), value(def) {
+        : Option(n, d, c, "<double>", externOptionList), range(r), value(def), defaultValue(def) {
         // FIXME: set LC_NUMERIC to "C" to make sure that strtof/strtod parses decimal point correctly.
     }
 
@@ -142,6 +147,11 @@ class DoubleOption : public Option
     operator      double&  (void)       { return value; }
     DoubleOption& operator=(double x)   { value = x; return *this; }
 
+    virtual bool hasDefaultValue ( ) { return value == defaultValue; }
+    virtual void printOptionCall (std::stringstream& s ) {
+      s << "-" << name << "=" << value;
+    }
+    
     virtual bool parse(const char* str){
         const char* span = str; 
 
@@ -202,15 +212,21 @@ class IntOption : public Option
  protected:
     IntRange range;
     int32_t  value;
+    int32_t  defaultValue;
 
  public:
     IntOption(const char* c, const char* n, const char* d, int32_t def = int32_t(), IntRange r = IntRange(INT32_MIN, INT32_MAX), vec<Option*>* externOptionList = 0)
-        : Option(n, d, c, "<int32>", externOptionList), range(r), value(def) {}
+        : Option(n, d, c, "<int32>", externOptionList), range(r), value(def), defaultValue(def) {}
  
     operator   int32_t   (void) const { return value; }
     operator   int32_t&  (void)       { return value; }
     IntOption& operator= (int32_t x)  { value = x; return *this; }
 
+    virtual bool hasDefaultValue ( ) { return value == defaultValue; }
+    virtual void printOptionCall (std::stringstream& s ) {
+      s << "-" << name << "=" << value;
+    }
+    
     virtual bool parse(const char* str){
         const char* span = str; 
 
@@ -276,15 +292,21 @@ class Int64Option : public Option
  protected:
     Int64Range range;
     int64_t  value;
+    int64_t  defaultValue;
 
  public:
     Int64Option(const char* c, const char* n, const char* d, int64_t def = int64_t(), Int64Range r = Int64Range(INT64_MIN, INT64_MAX), vec<Option*>* externOptionList = 0)
-        : Option(n, d, c, "<int64>", externOptionList), range(r), value(def) {}
+        : Option(n, d, c, "<int64>", externOptionList), range(r), value(def), defaultValue(def) {}
  
     operator     int64_t   (void) const { return value; }
     operator     int64_t&  (void)       { return value; }
     Int64Option& operator= (int64_t x)  { value = x; return *this; }
 
+    virtual bool hasDefaultValue ( ) { return value == defaultValue; }
+    virtual void printOptionCall (std::stringstream& s ) {
+      s << "-" << name << "=" << value;
+    }
+    
     virtual bool parse(const char* str){
         const char* span = str; 
 
@@ -349,14 +371,21 @@ class Int64Option : public Option
 class StringOption : public Option
 {
     const char* value;
+    const char* defaultValue;
  public:
     StringOption(const char* c, const char* n, const char* d, const char* def = NULL, vec<Option*>* externOptionList = 0) 
-        : Option(n, d, c, "<string>", externOptionList), value(def) {}
+        : Option(n, d, c, "<string>", externOptionList), value(def), defaultValue(def) {}
 
     operator      const char*  (void) const     { return value; }
     operator      const char*& (void)           { return value; }
     StringOption& operator=    (const char* x)  { value = x; return *this; }
 
+    virtual bool hasDefaultValue ( ) { return value == defaultValue; }
+    virtual void printOptionCall (std::stringstream& s ) {
+      if( value != 0 ) s << "-" << name << "=" << value;
+      else  s << "-" << name << "=\"\"";
+    }
+    
     virtual bool parse(const char* str){
         const char* span = str; 
 
@@ -391,15 +420,22 @@ class StringOption : public Option
 class BoolOption : public Option
 {
     bool value;
+    bool defaultValue;
 
  public:
     BoolOption(const char* c, const char* n, const char* d, bool v, vec<Option*>* externOptionList = 0) 
-        : Option(n, d, c, "<bool>", externOptionList), value(v) {}
+        : Option(n, d, c, "<bool>", externOptionList), value(v), defaultValue(v) {}
 
     operator    bool     (void) const { return value; }
     operator    bool&    (void)       { return value; }
     BoolOption& operator=(bool b)     { value = b; return *this; }
 
+    virtual bool hasDefaultValue ( ) { return value == defaultValue; }
+    virtual void printOptionCall (std::stringstream& s ) {
+      if( value ) s << "-" << name ;
+      else s << "-no-" << name ;
+    }
+    
     virtual bool parse(const char* str){
         const char* span = str; 
         

@@ -94,3 +94,24 @@ void Minisat::printUsageAndExit (int argc, char** argv, bool verbose)
     exit(0);
 }
 
+
+void Minisat::configCall(int argc, char** argv, std::stringstream& s)
+{
+  // print all options that are left over
+  int i, j;
+  for (i = j = 1; i < argc; i++){
+    const char* str = argv[i];
+    s << argv[i] << " ";
+  }
+  
+  // fill the stream for all the options
+  for (int i = 0; i < Option::getOptionList().size(); i++) {
+    // skip the option "-cmd", because this option is responsible to print the command line
+    if( Option::getOptionList()[i]->name != 0 && strcmp( Option::getOptionList()[i]->name, "cmd" ) == 0 ) continue;
+    // if there is an option that has not its default value, print its call
+    if( ! Option::getOptionList()[i]->hasDefaultValue() ) {
+      Option::getOptionList()[i]->printOptionCall(s);
+      s << " ";
+    }
+  }
+}

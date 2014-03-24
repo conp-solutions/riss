@@ -74,6 +74,7 @@ int main(int argc, char** argv)
         IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 	StringOption opt_config     ("MAIN", "config", "Use a preset configuration",0);
+	BoolOption   opt_cmdLine    ("MAIN", "cmd", "print the relevant options", false);
 	
 	const char* _cat = "COPROCESSOR 3";
 	StringOption undoFile      (_cat, "undo",   "write information about undoing simplifications into given file (and var map into X.map file)");
@@ -84,13 +85,21 @@ int main(int argc, char** argv)
         CoreConfig coreConfig;
 	Coprocessor::CP3Config cp3config;
 	
-	
 	bool foundHelp = coreConfig.parseOptions(argc, argv);
 	foundHelp = cp3config.parseOptions(argc, argv) || foundHelp;
 	::parseOptions (argc, argv ); // parse all global options
 	if( foundHelp ) exit(0); // stop after printing the help information
 	coreConfig.setPreset(string(opt_config == 0 ? "" : opt_config));
 	cp3config.setPreset(string(opt_config == 0 ? "" : opt_config));
+	
+	if( opt_cmdLine ) { // print the command line options
+	  std::stringstream s;
+	  coreConfig.configCall(s);
+	  cp3config.configCall(s);
+	  configCall(argc, argv, s);
+	  cerr << "c tool-parameters: " << s.str() << endl;
+	  exit(0);
+	}
 	
         Solver S(coreConfig);
 	S.setPreprocessor(&cp3config); // tell solver about preprocessor

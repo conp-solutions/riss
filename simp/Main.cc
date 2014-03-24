@@ -41,6 +41,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "coprocessor-src/Coprocessor.h"
 
+#include <iostream>
+
 #include "VERSION" // include the file that defines the solver version
 
 using namespace Minisat;
@@ -119,12 +121,22 @@ int main(int argc, char** argv)
         BoolOption   opt_modelStyle ("MAIN", "oldModel", "present model on screen in old format", false);
         BoolOption   opt_quiet      ("MAIN", "quiet", "Do not print the model", false);
 	BoolOption   opt_parseOnly  ("MAIN", "parseOnly", "abort after parsing", false);
+	BoolOption   opt_cmdLine    ("MAIN", "cmd", "print the relevant options", false);
   
   try {
         CoreConfig coreConfig;
 	Coprocessor::CP3Config cp3config;
         coreConfig.parseOptions(argc, argv);
 	cp3config.parseOptions(argc, argv);
+	
+	if( opt_cmdLine ) { // print the command line options
+	  std::stringstream s;
+	  coreConfig.configCall(s);
+	  cp3config.configCall(s);
+	  configCall(argc, argv, s);
+	  cerr << "c tool-parameters: " << s.str() << endl;
+	  exit(0);
+	}
 	
         SimpSolver S(coreConfig);
 	S.setPreprocessor(&cp3config); // tell solver about preprocessor

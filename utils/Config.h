@@ -58,6 +58,9 @@ public:
     
     /** return preset string */
     std::string presetConfig() const { return defaultPreset; }
+    
+    /** fill the string stream with the command that is necessary to obtain the current configuration */
+    void configCall( std::stringstream& s );
 };
 
 inline 
@@ -455,7 +458,21 @@ bool Config::checkConfiguration()
   return true;
 }
 
+inline 
+void Config::configCall(std::stringstream& s)
+{
+  if( optionListPtr == 0 ) return;
+  // fill the stream for all the options
+  for (int i = 0; i < optionListPtr->size(); i++) {
+    // if there is an option that has not its default value, print its call
+    if( ! (*optionListPtr)[i]->hasDefaultValue() ) {
+      (*optionListPtr)[i]->printOptionCall(s);
+      s << " ";
+    }
+  }
+}
 
 };
+
 
 #endif
