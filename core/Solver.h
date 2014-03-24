@@ -491,6 +491,7 @@ protected:
     /** remove learned clauses during search */
     void clauseRemoval();
     
+#ifdef DRATPROOF
     // DRUP proof
     bool outputsProof() const { return drupProofFile != NULL; }
     template <class T>
@@ -500,7 +501,18 @@ protected:
 public:
     bool checkProof(); // if online checker is used, return whether the current proof is valid
 protected:
-    
+#else // have empty dummy functions
+    bool outputsProof() const { return false; }
+    template <class T>
+    void addToProof(   const T& clause, bool deleteFromProof = false, const Lit remLit = lit_Undef) const {};
+    void addUnitToProof( const Lit& l, bool deleteFromProof=false) const {};    
+    void addCommentToProof( const char* text, bool deleteFromProof=false) const {}; 
+public:
+    bool checkProof() const { return true; } // if online checker is used, return whether the current proof is valid
+protected:
+#endif
+
+
     /** extended clause learning (Huang, 2010)
      * @return true, if an extension step has been performed
      */
@@ -1047,6 +1059,8 @@ bool Solver::addUnitClauses(const vec< Lit >& other)
 
 namespace Minisat { // open namespace again!
 
+#ifdef DRATPROOF
+
 template <class T>
 inline void Solver::addToProof( const T& clause, bool deleteFromProof, const Lit remLit)
 {
@@ -1116,13 +1130,17 @@ bool Solver::checkProof ()
   }
 }
 
+#endif
+
 inline
 void Solver::addInputClause_(vec< Lit >& ps)
 {
+#ifdef DRATPROOF
   if( onlineDratChecker != 0 ) {
     // cerr << "c add parsed clause to DRAT-OTFC: " << ps << endl;
     onlineDratChecker->addParsedclause( ps );
   }
+#endif
 }
 
 

@@ -1138,7 +1138,7 @@ void Probing::probing()
       Clause& c = ca[ l2implieds[i] ];
       if( config.pr_keepImplied == 0) {
 	if( config.pr_debug_out > 0 ) cerr << "c delete clause [" << l2implieds[i] << "] : " << c << endl;
-	if( !c.can_be_deleted()) data.addToProof( ca[ l2conflicts[i] ] , true ); // delete from proof
+	if( !c.can_be_deleted()) data.addToProof( ca[ l2implieds[i] ] , true ); // delete from proof
 	c.set_delete(true);
 	solver.detachClause( l2implieds[i] ); // remove from solver structures -> to be not available for vivification
       } else {

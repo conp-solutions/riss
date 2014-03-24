@@ -281,11 +281,19 @@ public:
   vector<Lit>& getUndo() { return undo; }
 
   /// for DRUP / DRAT proofs
+#ifdef DRATPROOF
   template <class T>
   void addToProof(   T& clause, bool deleteFromProof=false, const Lit remLit = lit_Undef); // write the given clause/vector/vec to the output, if the output is enabled
   void addUnitToProof(const  Lit& l, bool deleteFromProof=false);    // write a single unit clause to the proof
   void addCommentToProof(const char* text, bool deleteFromProof=false);
   bool outputsProof() const { return solver->outputsProof(); } // return whether the solver outputs the drup proof!
+#else // no DRAT proofs
+  template <class T>
+  void addToProof(   T& clause, bool deleteFromProof=false, const Lit remLit = lit_Undef) const {}; // write the given clause/vector/vec to the output, if the output is enabled
+  void addUnitToProof(const  Lit& l, bool deleteFromProof=false) const {};    // write a single unit clause to the proof
+  void addCommentToProof(const char* text, bool deleteFromProof=false) const {};
+  bool outputsProof() const { return false; } // return whether the solver outputs the drup proof!
+#endif
   
   // handling equivalent literals
   void addEquivalences( const std::vector<Lit>& list );
@@ -1494,6 +1502,7 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
   }
 }
 
+#ifdef DRATPROOF
 template <class T>
 inline void CoprocessorData::addToProof(T& clause, bool deleteFromProof, const Lit remLit)
 {
@@ -1509,7 +1518,7 @@ inline void CoprocessorData::addCommentToProof(const char* text, bool deleteFrom
 {
   solver->addCommentToProof(text,deleteFromProof);
 }
-
+#endif
 
 inline void CoprocessorData::addEquivalences(const vector< Lit >& list)
 {

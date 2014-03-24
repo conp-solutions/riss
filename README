@@ -19,7 +19,7 @@ To build Riss (by default without constructing DRAT-proofs):
 make rissRS
 
 With producing DRAT proofs:
-make rissRS ARGS="DRATPROOF"
+make rissRS ARGS="-DDRATPROOF"
 
 To build Coprocessor:
 make coprocessorRS
