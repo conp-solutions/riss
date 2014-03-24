@@ -869,12 +869,12 @@ int simplifyCNF(int &k, void* preprocessorToUse, double& ppCNFtime)
 int restoreSimplifyModel( void* usedPreprocessor, std::vector<uint8_t>& model)
 {
   // extend model without copying current model twice
-  CPresetModel( outerPreprocessor ); // reset current internal model
-  for( int j = 0 ; j < model.size(); ++ j ) CPpushModelBool( outerPreprocessor, model[j] > 0 ? 1 : 0 );
-  CPpostprocessModel( outerPreprocessor );
-  const int modelVars = CPmodelVariables( outerPreprocessor );
+  CPresetModel( usedPreprocessor ); // reset current internal model
+  for( int j = 0 ; j < model.size(); ++ j ) CPpushModelBool( usedPreprocessor, model[j] > 0 ? 1 : 0 );
+  CPpostprocessModel( usedPreprocessor );
+  const int modelVars = CPmodelVariables( usedPreprocessor );
   model.clear(); // reset current model, so that it can be filled with data from the preprocessor
-  for( int j = 0 ; j < modelVars; ++ j ) model.push_back(CPgetFinalModelLit(outerPreprocessor) > 0 ? 1 : 0);
+  for( int j = 0 ; j < modelVars; ++ j ) model.push_back(CPgetFinalModelLit(usedPreprocessor) > 0 ? 1 : 0);
 }
 
 void 
@@ -908,10 +908,12 @@ printWitness(int k, int shiftDist, int initialLatchNum)
 	//
 	// extend model for global frame  (without copying current model twice)
 	//
-	const int modelVars = restoreSimplifyModel( outerPreprocessor, fullFrameModel);
-	cerr << "c last (multi-) frame has " << modelVars << " variables" << endl;
+	if( outerPreprocessor != 0 ) {
+	  const int modelVars = restoreSimplifyModel( outerPreprocessor, fullFrameModel);
+	  cerr << "c last (multi-) frame has " << modelVars << " variables" << endl;
+	}
 	const int mergeFrameSize = shiftFormula.mergeShiftDist;  // == ( fullFrameModel.size()  ) / mergeFrames;
-	assert( mergeFrames * mergeFrameSize == fullFrameModel.size() && "an exact number of frames has been merged, hence the model sizes should also fit!" );
+	assert( mergeFrames * mergeFrameSize <= fullFrameModel.size() && "an exact number of frames has been merged, hence the model sizes should also fit!" );
 	
 	//
 	// if frames have been merged, process each single frame now
@@ -978,9 +980,14 @@ printWitness(int k, int shiftDist, int initialLatchNum)
 	    const int v = deref(j==1 ? 1 : j + globalFrameShift); // treat very first value always special, because its not moved!
 	    fullFrameModel[j-1] = v < 0 ? l_False : l_True; // model does not treat field 0!
 	  }
-	  const int modelVars = restoreSimplifyModel( outerPreprocessor, fullFrameModel);
-	  const int mergeFrameSize = shiftFormula.mergeShiftDist;  // == ( fullFrameModel.size()  ) / mergeFrames;
-	  assert( mergeFrames * mergeFrameSize == fullFrameModel.size() && "an exact number of frames has been merged, hence the model sizes should also fit!" );
+	  int mergeFrameSize =0;
+	  if( outerPreprocessor != 0 ) {
+	    const int modelVars = restoreSimplifyModel( outerPreprocessor, fullFrameModel);
+	    mergeFrameSize = shiftFormula.mergeShiftDist;  // == ( fullFrameModel.size()  ) / mergeFrames;
+	    assert( mergeFrames * mergeFrameSize <= fullFrameModel.size() && "an exact number of frames has been merged, hence the model sizes should also fit!" );
+	  } else {
+	    mergeFrameSize = shiftDist;
+	  }
 	  
 	  for( int localFrame = 0; localFrame < mergeFrames; ++localFrame ) { // find the smallest frame that is actually broken! 
 
