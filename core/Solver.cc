@@ -1349,7 +1349,9 @@ CRef Solver::propagate(bool duringAddingClauses)
 	    if( i->isBinary() ) { *j++ = *i++; continue; } // skip binary clauses (have been propagated before already!}
 	    
 	    if( config.opt_learn_debug ) cerr << "c check clause [" << i->cref() << "]" << ca[i->cref()] << endl;
+#ifndef PCASSO // PCASS reduces clauses during search without updating the watch lists ...
 	    assert( ca[ i->cref() ].size() > 2 && "in this list there can only be clauses with more than 2 literals" );
+#endif
 	    
             // Try to avoid inspecting the clause:
             const Lit blocker = i->blocker();
@@ -1367,7 +1369,9 @@ CRef Solver::propagate(bool duringAddingClauses)
 
             // If 0th watch is true, then clause is already satisfied.
             Lit     first = c[0];
+#ifndef PCASSO // Pcasso reduces clauses without updating the watch lists
 	    assert( c.size() > 2 && "at this point, only larger clauses should be handled!" );
+#endif
             const Watcher& w     = Watcher(cr, first, 1); // updates the blocking literal
             if (first != blocker && value(first) == l_True) // satisfied clause
 	    {
@@ -1895,7 +1899,7 @@ bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
     if( config.opt_restarts_type == 0 ) {
       // Our dynamic restart, see the SAT09 competition compagnion paper 
       if (
-	  ( lbdQueue.isvalid() && ((lbdQueue.getavg()*K) > (sumLBD / conflicts)))
+	  ( lbdQueue.isvalid() && ((lbdQueue.getavg()*K) > (sumLBD / (conflicts > 0 ? conflicts : 1 ) )))
 	  || (config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound )// if thre have been too many conflicts
 	) {
 	

@@ -59,7 +59,11 @@ unsigned LookaheadSplitting::dSeq[]={4,4,4,4,4,3,3,3,3,3,3,2,2,2,1,0};
 unsigned LookaheadSplitting::countFailedLiterals = 0;
 unsigned LookaheadSplitting::countLookaheadDecisions = 0;
 
-LookaheadSplitting::LookaheadSplitting():
+LookaheadSplitting::LookaheadSplitting(CoreConfig& config):
+
+SplitterSolver(config) ,
+coreConfig(config), 
+
                 timeOut(-1),
                 maxClauseSize(0),
                 optNumChild(opt_children_count),
@@ -991,7 +995,8 @@ void LookaheadSplitting::constraintResolvent(const vec<Lit>& t)
     vec<Lit> clause;
     for(int i=1; i<t.size(); i++){
         //if(binVarScore[var(t[i])]==0){
-        if(ca[reason(var(t[i]))].size()>=clauseLimit){    // check if value is not already in trail //reason clause for propagated literal..... if its size is greater than 2 ... then we add a binary learnt clause
+        if( value( var(t[i]) ) != l_Undef // only check for the reason clause if it exists
+	  && ca[reason(var(t[i]))].size()>=clauseLimit){    // check if value is not already in trail //reason clause for propagated literal..... if its size is greater than 2 ... then we add a binary learnt clause
             clause.clear();
             clause.push(~t[0]);
             clause.push(t[i]);

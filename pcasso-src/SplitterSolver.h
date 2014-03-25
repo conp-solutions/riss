@@ -15,11 +15,12 @@ using namespace Minisat;
 namespace Pcasso {
     class SplitterSolver : public Solver {
       
-      CoreConfig coreConfig;
+      CoreConfig& coreConfig;
       
     public:
-	SplitterSolver ()
-	 : Solver(coreConfig) 
+	SplitterSolver (CoreConfig& config)
+	 : Solver(config) 
+	 , coreConfig( config )
 	 {}
       
       

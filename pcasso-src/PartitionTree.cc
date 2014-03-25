@@ -422,7 +422,7 @@ void TreeNode::phaseCopyTo(vec<char>& ph) {
 	unitLock.unlock();
 }
 
-void TreeNode::updateActivityPolarity(vec<double>& act, vec<char>& ph, int option) {
+void TreeNode::updateActivityPolarity(vec<double>& act, vec<Solver::VarFlags>& ph, int option) {
 	if(!inheritedActPol && parent!=NULL && pt_level>1) {//level 1 nodes do not receive act & polarity from parents
 		vec<double> parentActivity;
 		vec<char> parentPhase;
@@ -433,7 +433,7 @@ void TreeNode::updateActivityPolarity(vec<double>& act, vec<char>& ph, int optio
 			if(option>0) assert(act.size() <= parentActivity.size());
 			if(option==3){
                                                         for(int i=0; i<ph.size() && i<act.size(); i++) {
-                                                                ph[i] =parentPhase[i];
+                                                                ph[i].polarity =parentPhase[i];
                                                                 act[i] = parentActivity[i];
                                                         }
                                                     }
@@ -444,7 +444,7 @@ void TreeNode::updateActivityPolarity(vec<double>& act, vec<char>& ph, int optio
                                                     }
                                                     else if(option==2){
                                                         for(int i=0; i<ph.size() && i<act.size(); i++) {
-                                                                ph[i] =parentPhase[i];
+                                                                ph[i].polarity =parentPhase[i];
                                                         }
                                                     }
                                         inheritedActPol=true;
@@ -455,7 +455,10 @@ void TreeNode::updateActivityPolarity(vec<double>& act, vec<char>& ph, int optio
                         unitLock.wait();
                         if(childrenActPolUpdCount<size()) {
                             if(option>0) act.copyTo(activity);
-                            if(option>1) ph.copyTo(phase);
+                            if(option>1) {
+			      phase.growTo( ph.size() );
+			      for( int i = 0 ; i < ph.size(); ++ i ) phase[i] = ph[i].polarity;
+			    }
                         }
                         unitLock.unlock();
                 }

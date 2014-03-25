@@ -573,7 +573,7 @@ bool BoundedVariableAddition::andBVA() {
 		// add clause into occurrenceList list of new variable
 		data.list( replaceLit ). push_back(iClauses[j]);
 		if( config.bva_debug > 2 )cerr << "c into pre-sort clause[ " << iClauses[j] << " ]= " << clauseI << endl;
-	        clauseI.sort();
+	        //clauseI.sort();
 		if( config.bva_debug > 2 )cerr << "c into clause[ " << iClauses[j] << " ]= " << clauseI << endl;
 		
 		if( config.bva_debug > 3 ) {

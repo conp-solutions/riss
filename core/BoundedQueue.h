@@ -46,7 +46,7 @@ public:
 	
 	void push(T x) {
 	  expComputed = false;
-		if (queuesize==maxsize) {
+		if (queuesize==maxsize && elems.size() != 0) {
 			assert(last==first); // The queue is full, next value to enter will replace oldest one
 			sumofqueue -= elems[last];
 			if ((++last) == maxsize) last = 0;
@@ -61,7 +61,7 @@ public:
 	void pop() {sumofqueue-=elems[last]; queuesize--; if ((++last) == maxsize) last = 0;}
 	
 	unsigned long long getsum() const {return sumofqueue;}
-	unsigned int getavg() const {return (unsigned int)(sumofqueue/((unsigned long long)queuesize));}
+	unsigned int getavg() const {return queuesize != 0 ? (unsigned int)(sumofqueue/((unsigned long long)queuesize)) : 0 ;}
 	int maxSize() const {return maxsize;}
 	double getavgDouble() const {
 	  double tmp = 0;

@@ -35,7 +35,7 @@ static BoolOption opt_sharing_var_bump("SPLITTER + SHARING", "shvar-bump", "Enab
 static BoolOption opt_unit_sharing("SPLITTER + SHARING", "unit-sharing", "Enable sharing decision level0 units\n", false);
 //static IntOption opt_unit_sharing_ptlevel_limit("SPLITTER + SHARING", "unitptlvl-lim", "sharing greater or equal than pt level \n", 1, IntRange(0,64));
 static IntOption opt_update_act_pol("SPLITTER + SHARING", "upd-actpol", "Update Activity and polarity in treenode: 0 - disable, 1 activity only, 2 polarity only, 3 activity and polarity \n", 3, IntRange(0,3));
-// static BoolOption opt_init_random_act_pol("SPLITTER + SHARING", "rnd-actpol", "Initialize random polarity and activity, except for the root\n", false);
+static BoolOption opt_init_random_act_pol("SPLITTER + SHARING", "rnd-actpol", "Initialize random polarity and activity, except for the root\n", false);
 static IntOption opt_pull_learnts_interval("SPLITTER + SHARING", "pull-int", "learnt pull interval - zero to check on restart only \n", 0, IntRange(0,INT32_MAX));
 static BoolOption    diversification   ("SPLITTER + SHARING", "split-diver", "If only one child formula is unsolved, then stop the solver of that node.\n", false);
 static IntOption opt_max_tree_height("SPLITTER + SHARING", "max-tree", "Max tree height for diversification option, such that it does not go beyond that\n", 512, IntRange(8,512));
@@ -49,8 +49,10 @@ static BoolOption    opt_lbd_minimization  ("SPLITTER + SHARING", "lbd-min", "En
 static BoolOption opt_simulate_portfolio ("SPLITTER + SHARING", "sim-port", "Enable Simulation of Portfolio.\n", false);
 //=================================================================================================
 
-SolverPT::SolverPT() :
-        								tOut( 0 )
+SolverPT::SolverPT(CoreConfig& config) :
+  SplitterSolver(config)
+, coreConfig(config)
+, tOut( 0 )
 // Davide> Options
 , learnt_unary_res(opt_learnt_unary_res)
 , addClause_FalseRemoval(opt_addClause_FalseRemoval)
@@ -156,7 +158,8 @@ bool SolverPT::addClause_(vec<Lit>& ps, unsigned int pt_level) // Davide> pt_lev
 		uncheckedEnqueue(ps[0], CRef_Undef, pt_level); // Davide> attach pt_level info
 		return ok = (propagate() == CRef_Undef);
 	}else{
-		const CRef cr = ca.alloc(ps,false);
+		CRef cr;
+		cr = ca.alloc(ps,false);
 		ca[cr].setPTLevel(pt_level); // Davide> Setting the pt_level
 
 		clauses.push(cr);
@@ -193,6 +196,43 @@ bool SolverPT::addClause_(vec<Lit>& ps, unsigned int pt_level) // Davide> pt_lev
 	return true;
 }
 
+Var SolverPT::newVar(bool sign, bool dvar, char type )
+{
+	assert(varPT.size() == nVars());
+	varPT.push(0);//adding PT level of the new variable
+	int v = nVars();
+	watches  .init(mkLit(v, false));
+	watches  .init(mkLit(v, true ));
+	
+	varFlags. push( VarFlags( sign ) );
+	
+	vardata  .push(mkVarData(CRef_Undef, 0));
+	//activity .push(0);
+	activity .push(rnd_init_act ? drand(random_seed) * 0.00001 : 0);
+	if(opt_init_random_act_pol ){
+		//double rseed = random_seed + tnode->id();
+		if(opt_update_act_pol>0 && curPTLevel==1){
+			//activity.push(drand(random_seed) * 0.00001);
+			varFlags[v].polarity = (irand(random_seed,2));
+		}else if(opt_update_act_pol==0 && curPTLevel >0){
+			activity[v] = (drand(random_seed) * 0.00001);
+			varFlags[v].polarity = (irand(random_seed,2));
+		}
+	}
+	
+	permDiff  .push(0);
+	trail    .capacity(v+1);
+	setDecisionVar(v, dvar);
+}
+
+void SolverPT::setLiteralPTLevel(const Lit& l, unsigned pt){
+	varPT[var(l)] = pt;
+}
+
+unsigned SolverPT::getLiteralPTLevel(const Lit& l) const {
+	assert(var(l) < varPT.size());
+	return varPT[var(l)];
+}
 
 /*_________________________________________________________________________________________________
 |
@@ -242,10 +282,10 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsign
 		for (int j = (p == lit_Undef) ? 0 : 1; j < c.size(); j++){
 			Lit q = c[j];
 
-			if (!seen[var(q)]){
+			if (!varFlags[var(q)].seen){
 				if(level(var(q)) > 0){
 					varBumpActivity(var(q));
-					seen[var(q)] = 1;
+					varFlags[var(q)].seen = 1;
 					if (level(var(q)) >= decisionLevel()) {
 						pathC++;
 #ifdef UPDATEVARACTIVITY
@@ -267,7 +307,7 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsign
 				//
 				else // Davide> level(var(q)) == 0
 					if( !learnt_unary_res && getLiteralPTLevel(q) > PTLevel ){ // Davide> This PTLevel is temporary, it could increase ( that is, we could simplify more the clause ) as we continue to analyze the relevant clauses
-						seen[var(q)] = 1;
+						varFlags[var(q)].seen = 1;
 						out_learnt.push(q);
 
 						max_bad_literal = max_bad_literal >= getLiteralPTLevel(q) ? max_bad_literal : getLiteralPTLevel(q);
@@ -287,10 +327,10 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsign
 		}
 
 		// Select next clause to look at:
-		while (!seen[var(trail[index--])]);
+		while (!varFlags[var(trail[index--])].seen);
 		p     = trail[index+1];
 		confl = reason(var(p));
-		seen[var(p)] = 0;
+		varFlags[var(p)].seen = 0;
 		pathC--;
 
 	}while (pathC > 0);
@@ -347,7 +387,7 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsign
 				Clause& c = ca[reason(x)];
 				if( c.getPTLevel() <= PTLevel ){ // Davide> the clause is safe
 					for (int k = 1; k < c.size(); k++)
-						if ( !seen[var(c[k])] )
+						if ( !varFlags[var(c[k])].seen )
 							if( level(var(c[k])) > 0 || (getLiteralPTLevel(c[k]) > PTLevel ) ){ // Davide> literals
 								out_learnt[j++] = out_learnt[i];
 								break;
@@ -405,16 +445,17 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsign
 
 			// Davide>
 			// The binary clauses watched by ~out_learnt[0]
-			vec<Watcher>&  wbin  = watchesBin[p];//p is ~outlearnt[0]
+			vec<Watcher>&  wbin  = watches[p];//p is ~outlearnt[0]
 			Debug::PRINTLN_DEBUG("WBIN IS: ");
 			int nb = 0;
 			for(int k = 0;k<wbin.size();k++) {
-				Lit imp = wbin[k].blocker;
+				if( !wbin[k].isBinary() ) continue;
+				Lit imp = wbin[k].blocker();
 				//Debug::DEBUG_PRINTLN("imp is:");
 				//Debug::DEBUG_PRINTLN(imp);
 				if(permDiff[var(imp)]==MYFLAG && value(imp)==l_True) {
 					// Davide> Similar to self-resolution, so I handle in a similar way
-					Clause&  c         = ca[wbin[k].cref];
+					Clause&  c         = ca[wbin[k].cref()];
 					PTLevel = PTLevel >= c.getPTLevel() ? PTLevel : c.getPTLevel();
 					//					if( c.getPTLevel() > PTLevel ){
 					//						//Debug::PRINTLN("WORSENING!!");
@@ -496,7 +537,7 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsign
 
 
 
-	for (int j = 0; j < analyze_toclear.size(); j++) seen[var(analyze_toclear[j])] = 0;    // ('seen[]' is now cleared)
+	for (int j = 0; j < analyze_toclear.size(); j++) varFlags[var(analyze_toclear[j])].seen = 0;    // ('seen[]' is now cleared)
 
 	if( tnode->lv_pool->max_size == 0 ) return; // Davide> Sharing disabled
 	if( flag_based && PTLevel != 0 ) return;    // Davide> Only safe clauses can be shared
@@ -681,14 +722,14 @@ bool SolverPT::litRedundant(Lit p, uint32_t abstract_levels)
 
 		for (int i = 1; i < c.size(); i++){
 			Lit p  = c[i];
-			if (!seen[var(p)] && level(var(p)) > 0){
+			if (!varFlags[var(p)].seen && level(var(p)) > 0){
 				if (reason(var(p)) != CRef_Undef && (abstractLevel(var(p)) & abstract_levels) != 0){
-					seen[var(p)] = 1;
+					varFlags[var(p)].seen = 1;
 					analyze_stack.push(p);
 					analyze_toclear.push(p);
 				}else{
 					for (int j = top; j < analyze_toclear.size(); j++)
-						seen[var(analyze_toclear[j])] = 0;
+						varFlags[var(analyze_toclear[j])].seen = 0;
 					analyze_toclear.shrink(analyze_toclear.size() - top);
 					return false;
 				}
@@ -710,7 +751,7 @@ bool SolverPT::litRedundant(Lit p, uint32_t abstract_levels)
 			}
 			else{
 				for (int j = top; j < analyze_toclear.size(); j++)
-					seen[var(analyze_toclear[j])] = 0;
+					varFlags[var(analyze_toclear[j])].seen = 0;
 				analyze_toclear.shrink(analyze_toclear.size() - top);
 				return false;
 			}
@@ -732,18 +773,18 @@ Lit SolverPT::pickBranchLit()
 	// Random decision:
 	if (((rndDecLevel0 && decisionLevel()==0) || drand(random_seed) < random_var_freq) && !order_heap.empty()){
 		next = order_heap[irand(random_seed,order_heap.size())];
-		if (value(next) == l_Undef && decision[next])
+		if (value(next) == l_Undef && varFlags[next].decision)
 			rnd_decisions++; }
 
 	// Activity based decision:
-	while (next == var_Undef || value(next) != l_Undef || !decision[next])
+	while (next == var_Undef || value(next) != l_Undef || !varFlags[next].decision)
 		if (order_heap.empty()){
 			next = var_Undef;
 			break;
 		}else
 			next = order_heap.removeMin();
 
-	return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : polarity[next]);
+	return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : varFlags[next].polarity);
 }
 
 /*_________________________________________________________________________________________________
@@ -762,7 +803,6 @@ CRef SolverPT::propagate()
 	CRef    confl     = CRef_Undef;
 	int     num_props = 0;
 	watches.cleanAll();
-	watchesBin.cleanAll();
 	while (qhead < trail.size()){
 		Lit            p   = trail[qhead++];     // 'p' is enqueued fact to propagate.
 		vec<Watcher>&  ws  = watches[p];
@@ -771,14 +811,14 @@ CRef SolverPT::propagate()
 
 
 		// First, Propagate binary clauses
-		vec<Watcher>&  wbin  = watchesBin[p];
+		const vec<Watcher>&  wbin  = watches[p];
 
 		for(int k = 0;k<wbin.size();k++) {
-
-			Lit imp = wbin[k].blocker;
+			if( ! wbin[k].isBinary() ) continue;
+			Lit imp = wbin[k].blocker();
 
 			if(value(imp) == l_False) {
-				return wbin[k].cref;
+				return wbin[k].cref();
 			}
 
 			if(value(imp) == l_Undef) {
@@ -787,7 +827,7 @@ CRef SolverPT::propagate()
 					// Davide> I want the "most constraining" literal to be
 					// found out
 					unsigned int max_bad_pt_level = 0;
-					Clause& c = ca[wbin[k].cref];
+					Clause& c = ca[wbin[k].cref()];
 					for( int i = 0; i < c.size(); i++ )
 						max_bad_pt_level = max_bad_pt_level >= getLiteralPTLevel(c[i]) ? max_bad_pt_level : getLiteralPTLevel(c[i]);
 					//						if( getLiteralPTLevel(c[i]) > max_bad_pt_level ){
@@ -795,13 +835,13 @@ CRef SolverPT::propagate()
 					//							// break; Davide> Unfortunately, I cannot break now here
 					//						}
 					if( c.getPTLevel() > max_bad_pt_level )
-						uncheckedEnqueue(imp, wbin[k].cref, c.getPTLevel());
+						uncheckedEnqueue(imp, wbin[k].cref(), c.getPTLevel());
 					else
-						uncheckedEnqueue(imp, wbin[k].cref, max_bad_pt_level);
+						uncheckedEnqueue(imp, wbin[k].cref(), max_bad_pt_level);
 				} // Davide> End of my Part
 				else{
 					//printLit(p);printf(" ");printClause(wbin[k].cref);printf("->  ");printLit(imp);printf("\n");
-					uncheckedEnqueue(imp,wbin[k].cref);
+					uncheckedEnqueue(imp,wbin[k].cref() );
 				}
 			}
 		}
@@ -809,13 +849,14 @@ CRef SolverPT::propagate()
 
 
 		for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;){
+			if( !i->isLong() ) { *j++ = *i++; continue; } // skip binary clauses (have been propagated before already!}
 			// Try to avoid inspecting the clause:
-			Lit blocker = i->blocker;
+			Lit blocker = i->blocker();
 			if (value(blocker) == l_True){
 				*j++ = *i++; continue; }
 
 			// Make sure the false literal is data[1]:
-			CRef     cr        = i->cref;
+			CRef     cr        = i->cref();
 			Clause&  c         = ca[cr];
 			Lit      false_lit = ~p;
 			if (c[0] == false_lit)
@@ -825,7 +866,7 @@ CRef SolverPT::propagate()
 
 			// If 0th watch is true, then clause is already satisfied.
 			Lit     first = c[0];
-			Watcher w     = Watcher(cr, first);
+			Watcher w     = Watcher(cr, first, 1); // its a longer clause
 			if (first != blocker && value(first) == l_True){
 
 				*j++ = w; continue; }
@@ -942,7 +983,7 @@ lbool SolverPT::search(int nof_conflicts)
 	if(!ok)  return l_False;
 	//ahmed> updating activity and polarity in treenode
 	if(update_act_pol>0){
-                        tnode->updateActivityPolarity(activity, polarity,update_act_pol);
+                        tnode->updateActivityPolarity(activity, varFlags,update_act_pol);
                   }
 	if(opt_pull_learnts_interval==0) {
 		pull_learnts(starts);

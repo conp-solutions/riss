@@ -13,7 +13,7 @@
 #include "pcasso-src/SplitterSolver.h"
 
 // Davide> Beginning of my includes
-#include "utils/LockCollection.h" 
+#include "utils/LockCollection.h"
 #include "pcasso-src/LevelPool.h"
 #include "pcasso-src/PartitionTree.h"
 
@@ -21,8 +21,11 @@
 
 namespace Pcasso {        
     class SolverPT : public SplitterSolver {
+      
+      CoreConfig& coreConfig;
+      
     public:
-        SolverPT();
+        SolverPT(CoreConfig& config);
         ~SolverPT();
 
         void dummy(){
@@ -69,6 +72,7 @@ namespace Pcasso {
         unsigned n_tot_reduceDB_calls_ID;
         //unsigned sharing_time_ID;
         
+         Var newVar(bool polarity = true, bool dvar = true, char type = 'o');
          /** Davide> adds a clause, toghether with its pt_level, to the clauses
 	of the current formula. False literals of level zero will be 
 	removed from the clause only if their pt_level is equal to zero, 
@@ -84,6 +88,16 @@ namespace Pcasso {
         lbool    search           (int nof_conflicts);                                     // Search for a given number of conflicts.
         lbool    solve_           ();                                                      // Main solve method (assumptions given in 'assumptions').
         void reduceDB();
+        /** 
+            Davide> Returns the level of the current node in the Partition Tree
+        **/
+        inline unsigned int getNodePTLevel(void) const{
+        	return curPTLevel;
+        }
+
+        // Davide> Returns the pt_level associated to the literal l
+        unsigned getLiteralPTLevel(const Lit& l) const;//get PT level of literal
+        void setLiteralPTLevel(const Lit& l, unsigned pt);
                 
         // Davide> Shares all the learnts that have to be shared
         void push_units();     
@@ -135,20 +149,8 @@ namespace Pcasso {
 
         /// return a specifit literal from the trail
         Lit trailGet( const unsigned int index );
-	
-
-	/** Davide> Returns the level of the current node in the Partition Tree **/
-	unsigned int getNodePTLevel(void) const { return curPTLevel; }
-
-	void setLiteralPTLevel(const Lit& l, unsigned pt){ varFlags[var(l)].varPT = pt;}
-
-	unsigned getLiteralPTLevel(const Lit& l) const {
-		assert(var(l) < varFlags.size() && "there have to be enough elements");
-		return varFlags[var(l)].varPT;
-	}
-	
     private:
-//         vec<unsigned> varPT; //storing the PT level of each variable  // implemented in solvers varFlags
+        vec<unsigned> varPT; //storing the PT level of each variable
         //CMap<unsigned> clausePT; //storing the PT level of each clause
         //int lbd_lt(vec<Lit>&);
      //different restart strategy settings for sat and unsat

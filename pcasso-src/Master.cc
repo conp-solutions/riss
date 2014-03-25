@@ -79,6 +79,8 @@ static BoolOption    UseHardwareCores  ("SPLITTER", "usehw",  "Use Hardware, pin
 
 static vector<unsigned short int> hardwareCores; // set of available hardware cores
 
+CoreConfig Master::defaultSolverConfig;
+
 Master::Master(Parameter p)
 :
 maxVar(0),
@@ -701,7 +703,7 @@ Master::solveInstance (void* data)
 
 	// create a solver object
 	//bool simp = solve_mode;
-	SolverPT* slvr = new SolverPT();
+	SolverPT* slvr = new SolverPT(defaultSolverConfig);
 	assert(tData.solver == NULL);
 	tData.solver = slvr;
 	SolverPT& S = *slvr;
@@ -938,11 +940,11 @@ Master::splitInstance (void* data)
 	// create a solver object
 	SplitterSolver* S;
                   if(split_mode==1){
-                      S= new VSIDSSplitting();
+                      S= new VSIDSSplitting(defaultSolverConfig);
                       //((VSIDSSplitting *)S)->setTimeOut(split_timeout);
                   }
                   if(split_mode==2){
-                        S= new LookaheadSplitting();
+                        S= new LookaheadSplitting(defaultSolverConfig);
                         ((LookaheadSplitting *)S)->setTimeOut(split_timeout);
                     }
         	tData.solver = S;

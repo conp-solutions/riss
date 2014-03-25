@@ -59,6 +59,9 @@ public: // Davide
 	//void removeUnsatNodesFromQueues();
 	//void killUnsatChildren(int tDataIndex);
 
+	/// configuration with which each solver is initialized
+static	CoreConfig defaultSolverConfig;
+	
 public:
 	struct Parameter {
 		int    verb;

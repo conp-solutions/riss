@@ -16,13 +16,16 @@
 
 namespace Pcasso {
     class VSIDSSplitting : public SplitterSolver {
+      
+    CoreConfig& coreConfig;
+      
       // more global data structure
       vec<Lit>    learnt_clause; 
       vec<CRef> otfssClauses; 
       uint64_t extraInfo;
       
     public:
-        VSIDSSplitting();
+        VSIDSSplitting(CoreConfig& config);
         ~VSIDSSplitting();
         void dummy(){
         }

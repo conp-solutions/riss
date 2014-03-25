@@ -54,6 +54,15 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #endif
 
 //
+// if PCASSO is compiled, use virtual methods
+//
+#ifdef PCASSO
+#define PCASSOVIRTUAL virtual
+#else
+#define PCASSOVIRTUAL 
+#endif
+
+//
 // forward declaration
 //
 namespace Coprocessor {
@@ -111,19 +120,26 @@ public:
     // Constructor/Destructor:
     //
     Solver(CoreConfig& _config);
-    virtual ~Solver();
+
+    PCASSOVIRTUAL
+    ~Solver();
 
     // Problem specification:
     //
+    PCASSOVIRTUAL
     Var     newVar    (bool polarity = true, bool dvar = true, char type = 'o'); // Add a new variable with parameters specifying variable mode.
     void    reserveVars( Var v );
 
+    PCASSOVIRTUAL
     bool    addClause (const vec<Lit>& ps);                     /// Add a clause to the solver. 
+    
     bool    addClause (const Clause& ps);                       /// Add a clause to the solver (all clause invariants do not need to be checked) 
     bool    addEmptyClause();                                   /// Add the empty clause, making the solver contradictory.
     bool    addClause (Lit p);                                  /// Add a unit clause to the solver. 
     bool    addClause (Lit p, Lit q);                           /// Add a binary clause to the solver. 
     bool    addClause (Lit p, Lit q, Lit r);                    /// Add a ternary clause to the solver. 
+    
+    PCASSOVIRTUAL
     bool    addClause_(      vec<Lit>& ps);                     /// Add a clause to the solver without making superflous internal copy. Will
                                                                 /// change the passed vector 'ps'.
     void    addInputClause_( vec<Lit>& ps);                     /// Add a clause to the online proof checker
@@ -305,7 +321,7 @@ public: // TODO FIXME undo after debugging!
 public: // TODO: set more nicely, or write method!
     vec<CRef>           clauses;          // List of problem clauses.
     vec<CRef>           learnts;          // List of learnt clauses.
-protected:
+
     struct VarFlags {
       lbool assigns;
       unsigned polarity:1;
@@ -327,6 +343,8 @@ protected:
 #endif
       {}
     };
+    
+protected:
     vec<VarFlags> varFlags;
     
 //     vec<lbool>          assigns;          // The current assignments.
@@ -397,18 +415,25 @@ protected:
     // Main internal methods:
     //
     void     insertVarOrder   (Var x);                                                 // Insert a variable in the decision order priority queue.
+    PCASSOVIRTUAL
     Lit      pickBranchLit    ();                                                      // Return the next decision variable.
     void     newDecisionLevel ();                                                      // Begins a new decision level.
+    PCASSOVIRTUAL
     void     uncheckedEnqueue (Lit p, CRef from = CRef_Undef,                          // Enqueue a literal. Assumes value of literal is undefined.
 			       bool addToProof = false, const uint64_t extraInfo = 0);     // decide whether the method should furthermore add the literal to the proof, and whether the literal has an extra information (interegsting for decision level 0)
     bool     enqueue          (Lit p, CRef from = CRef_Undef);                         // Test if fact 'p' contradicts current state, enqueue otherwise.
+    PCASSOVIRTUAL
     CRef     propagate        (bool duringAddingClauses = false );                     // Perform unit propagation. Returns possibly conflicting clause (during adding clauses, to add proof infos, if necessary)
     void     cancelUntil      (int level);                                             // Backtrack until a certain level.
+    PCASSOVIRTUAL
     int      analyze          (CRef confl, vec< Lit >& out_learnt, int& out_btlevel, unsigned int& lbd, vec< CRef >& otfssClauses, uint64_t& extraInfo );    // // (bt = backtrack, return is number of unit clauses in out_learnt. if 0, treat as usual!)
     void     analyzeFinal     (Lit p, vec<Lit>& out_conflict);                         // COULD THIS BE IMPLEMENTED BY THE ORDINARIY "analyze" BY SOME REASONABLE GENERALIZATION?
     bool     litRedundant     (Lit p, uint32_t abstract_levels,uint64_t& extraInfo);                       // (helper method for 'analyze()')
+    PCASSOVIRTUAL
     lbool    search           (int nof_conflicts);                                     // Search for a given number of conflicts.
+    PCASSOVIRTUAL
     lbool    solve_           ();                                                      // Main solve method (assumptions given in 'assumptions').
+    PCASSOVIRTUAL
     void     reduceDB         ();                                                      // Reduce the set of learnt clauses.
     void     removeSatisfied  (vec<CRef>& cs);                                         // Shrink 'cs' to contain only non-satisfied clauses.
     void     rebuildOrderHeap ();
@@ -425,6 +450,7 @@ protected:
     //
     void     attachClause     (CRef cr);               // Attach a clause to watcher lists.
     void     detachClause     (CRef cr, bool strict = false); // Detach a clause to watcher lists.
+    PCASSOVIRTUAL
     void     removeClause     (CRef cr, bool strict = false); // Detach and free a clause.
     bool     locked           (const Clause& c) const; // Returns TRUE if a clause is a reason for some implication in the current state.
     bool     satisfied        (const Clause& c) const; // Returns TRUE if a clause is satisfied in the current state.
@@ -440,6 +466,7 @@ protected:
      */
     bool minimisationWithBinaryResolution(vec<Lit> &out_learnt, unsigned int& lbd);
 
+    PCASSOVIRTUAL
     void     relocAll         (ClauseAllocator& to);
 
     // Misc:

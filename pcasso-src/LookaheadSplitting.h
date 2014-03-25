@@ -18,13 +18,16 @@
 
 namespace Pcasso {
     class LookaheadSplitting : public SplitterSolver {
+      
+    CoreConfig& coreConfig;
+      
     // more global data structures
     vec<Lit> learnt_clause;
     vec<CRef> otfssClauses;
     uint64_t extraInfo;
       
     public:
-        LookaheadSplitting();
+        LookaheadSplitting(CoreConfig& config);
         ~LookaheadSplitting();
         void dummy(){
         }

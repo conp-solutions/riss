@@ -23,6 +23,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 // Minisat
 #include "../mtl/Vec.h"
 #include "../core/SolverTypes.h"
+#include "../core/Solver.h"
 
 // read and write constraints
 #include "utils/LockCollection.h"
@@ -180,7 +181,7 @@ public:
 	}
 	void activityCopyTo(vec<double>& act);
 	void phaseCopyTo(vec<char>& ph);
-	void updateActivityPolarity(vec<double>& act, vec<char>& pol, int option);
+	void updateActivityPolarity(vec<double>& act, vec<Minisat::Solver::VarFlags>& pol, int option);
                   void incChildrenActPolUpdCount();
 	// Remove the pool associated to the node
 	void removePoolRecursive(bool recursive);
