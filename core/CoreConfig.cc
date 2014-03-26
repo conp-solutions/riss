@@ -131,7 +131,7 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  localLookAhead ("SEARCH - LOCAL LOOK AHEAD", "laHack", "enable lookahead on level 0", false, optionListPtr ),
  tb ("SEARCH - LOCAL LOOK AHEAD", "tabu", "do not perform LA, if all considered LA variables are as before", true, optionListPtr ),
  opt_laDyn ("SEARCH - LOCAL LOOK AHEAD", "dyn", "dynamically set the frequency based on success", false, optionListPtr ),
- opt_laEEl ("SEARCH - LOCAL LOOK AHEAD", "laEEl", "add EE clauses as learnt clauses", true, optionListPtr ),
+ opt_laEEl ("SEARCH - LOCAL LOOK AHEAD", "laEEl", "add EE clauses as learnt clauses", false, optionListPtr ),
  opt_laEEp ("SEARCH - LOCAL LOOK AHEAD", "laEEp", "add EE clauses, if less than p percent tests failed", 0, IntRange(0, 100), optionListPtr ),
  opt_laMaxEvery ("SEARCH - LOCAL LOOK AHEAD", "hlaMax", "maximum bound for frequency", 50, IntRange(0, INT32_MAX) , optionListPtr ),
 #ifdef DONT_USE_128_BIT
