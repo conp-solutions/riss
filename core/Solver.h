@@ -556,7 +556,7 @@ protected:
     /// reset current state of restricted Extended Resolution
     void resetRestrictedExtendedResolution();
     /// check whether the new learned clause produces an ITE pattern with the previously learned clause (assumption, previousClause is sorted, currentClause is sorted starting from the 3rd literal)
-    bool restrictedERITE(const Lit& previousFirst, const vec<Lit>& previousPartialClause, const vec<Lit>& currentClause);
+    bool restrictedERITE(const Lit& previousFirst, const vec<Lit>& previousPartialClause, vec<Lit>& currentClause);
     
     /// replace the disjunction p \lor q with x
     void disjunctionReplace( Minisat::Lit p, Minisat::Lit q, const Minisat::Lit x, bool inLearned, bool inBina );

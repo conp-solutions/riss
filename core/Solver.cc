@@ -3332,7 +3332,7 @@ void Solver::resetRestrictedExtendedResolution()
   rerFuseClauses.clear();
 }
 
-bool Solver::restrictedERITE( const Lit& previousFirst, const vec< Lit >& previousPartialClause, const vec< Lit >& currentClause)
+bool Solver::restrictedERITE( const Lit& previousFirst, const vec< Lit >& previousPartialClause, vec< Lit >& currentClause)
 {
   // the first literal of currentClause cannot be in rerIteLits
   // however, its complement could be present
@@ -3437,9 +3437,119 @@ bool Solver::restrictedERITE( const Lit& previousFirst, const vec< Lit >& previo
   cerr << "c with previous " << rerIteLits << endl;
   cerr << "c and current   " << currentClause << endl;
    
-  
-  
-  return true;
+  // vector that holds the clauses that have been considered for RER
+  // rerFuseClauses;
+	// perform RER step 
+	// add all the RER clauses with the fresh variable (and set up the new variable properly!
+	Var usedVars [ 3]; usedVars[0] = var(complementLit); usedVars[1] = var(previousFailLit); usedVars[2] = var(currentFailLit);
+	const Var x = newVar(true,true,'r'); // do not assign a value, because it will be undone anyways!
+	
+	// select level to jump to:
+	int jumpLevel = level( usedVars[0] );
+	jumpLevel = level( usedVars[1] ) < jumpLevel ? level( usedVars[1] ) : jumpLevel;
+	jumpLevel = level( usedVars[2] ) < jumpLevel ? level( usedVars[2] ) : jumpLevel;
+	jumpLevel --;
+	
+	// delete the current decision level as well, so that the order of the reason clauses can be set right!
+	assert( decisionLevel() > 0 && "can undo a decision only, if it didnt occur at level 0" );
+	const Lit lastDecisoin = trail [ trail_lim[ jumpLevel ] ];
+	if( config.opt_rer_debug ) cerr << "c undo decision level " << decisionLevel() << ", jump to " << jumpLevel << endl; 
+	rerOverheadTrailLits += trail.size(); // store how many literals have been removed from the trail to set the order right!
+	cancelUntil( jumpLevel );
+	rerOverheadTrailLits -= trail.size();
+	
+	// detach all learned clauses from fused clauses
+	{// its one clause here!
+	  assert( rerFuseClauses[0] != reason( var( ca[rerFuseClauses[0]][0] ) ) && "from a RER-CDCL point of view, these clauses cannot be reason clause" );
+	  assert( rerFuseClauses[0] != reason( var( ca[rerFuseClauses[0]][1] ) ) && "from a RER-CDCL point of view, these clauses cannot be reason clause" );
+	  // ca[rerFuseClauses[i]].mark(1); // mark to be deleted!
+ 	  if( config.opt_rer_debug ) cerr << "c remove clause (" << 0 << ")[" << rerFuseClauses[0] << "] " << ca[ rerFuseClauses[0] ] << endl;
+	  removeClause(rerFuseClauses[0]); // drop this clause!
+	}
+	
+	// we do not need a reason here, the new learned clause will do!
+	// ITE(" << complementLit << " , " <<  ~previousFailLit << " , " <<  ~currentFailLit << " ) " << endl;
+	// clauses: x, -s, -t AND x,s,-f
+	oc.clear(); oc.push( mkLit(x,false) ); oc.push(~complementLit); oc.push(previousFailLit); // first clause
+	for( int i = 0 ; i < 2; ++ i ) {
+	  if( i == 1 ) { oc[0] = mkLit(x,false); oc[1] = complementLit; oc[2] = currentFailLit;  } // setup the second clause
+	  CRef icr = ca.alloc(oc, config.opt_rer_as_learned); // add clause as non-learned clause 
+	  ca[icr].setLBD(1); // all literals are from the same level!
+	  if( config.opt_rer_debug) cerr << "c add clause [" << icr << "]" << ca[icr] << endl;
+	  nbDL2++; nbBin ++; // stats
+	  if( config.opt_rer_as_learned ) { // add clause
+	    learnts.push(icr);
+	    if( dynamicDataUpdates ) claBumpActivity(ca[icr], (config.opt_cls_act_bump_mode == 1 ? oc.size() : 1 ));
+	  } else clauses.push(icr);
+	  attachClause(icr); // all literals should be unassigned
+	}
+
+
+	// set the activity of the new variable
+	double newAct = 0;
+	if( config.opt_ecl_newAct == 0 ) {
+	  for( int i = 0; i < 3; ++ i ) newAct += activity[ usedVars[i] ];
+	  newAct /= (double)3; 
+	} else if( config.opt_ecl_newAct == 1 ) {
+	  for( int i = 0; i < 3; ++ i ) // max
+	    newAct = newAct >= activity[ usedVars[i] ] ? newAct : activity[  usedVars[i] ];
+	} else if( config.opt_ecl_newAct == 2 ) {
+	  newAct = activity[ usedVars[0]  ];
+	  for( int i = 1; i < 3; ++ i ) // min
+	    newAct = newAct > activity[ usedVars[i] ] ? activity[ usedVars[i] ] : newAct ;
+	} else if( config.opt_ecl_newAct == 3 ) {
+	  for( int i = 0; i < 3; ++ i ) // sumcurrentLearnedClause
+	    newAct += activity[ usedVars[i] ];
+	} else if( config.opt_ecl_newAct == 4 ) {
+	  for( int i = 0; i < 3; ++ i ) // geo mean
+	    newAct += activity[ usedVars[i] ];
+	  newAct = pow(newAct,1.0/(double)3);
+	} 
+	activity[x] = newAct;
+	// from bump activity code - scale and insert/update
+	if ( newAct > 1e100 ) {
+	    for (int i = 0; i < nVars(); i++) activity[i] *= 1e-100;
+	    var_inc *= 1e-100; 
+	}
+	// Update order_heap with respect to new activity:
+	if (order_heap.inHeap(x)) order_heap.decrease(x);
+	
+	// code from search method - enqueue the last decision again!
+	newDecisionLevel();
+	uncheckedEnqueue( lastDecisoin ); // this is the decision that has been done on this level before! search loop will propagate this next ... 
+	if( config.opt_rer_debug ) {
+	  cerr << "c new decision level " << decisionLevel() << endl;
+	  for( int i = 0 ; i < decisionLevel() ; ++i ) cerr << "c dec [" << i << "] = " << trail[ trail_lim[i] ] << endl;
+	}
+	
+	// modify the current learned clause according to the ITE gate
+	currentClause[0] = mkLit(x,false);
+	for( int i = 1 ; i < currentClause.size(); ++i ) {
+	  if( currentClause[i] == currentFailLit || currentClause[i] == complementLit ) { // delete the other literal from the clause!
+	    currentClause[i] = currentClause[ currentClause.size() - 1 ]; currentClause.pop(); // fast remove without keeping order
+	    break;
+	  }
+	}
+	// make sure that two unassigned literals are at the front
+	assert( value( currentClause[0] ) == l_Undef && "the first literal (new variable) has to be unassigned" );
+	if( value( currentClause[1])  != l_Undef ){
+	  for( int i = 2 ; i < currentClause.size(); ++i ) { // find another unassigned literal!
+	    if( value( currentClause[i] ) == l_Undef ) { const Lit tmp = currentClause[i]; currentClause[i] = currentClause[1]; currentClause[1] = tmp; break; } // swap literals
+	    else assert( value(currentClause[i]) == l_False && "there cannot be satisfied literals in the current learned clause" );
+	  }
+	}
+	if( value( currentClause[1]) != l_Undef ) {
+	  assert( decisionLevel() == 0 && "can only happen at level 0, then the new variable is a unit" );
+	  currentClause.shrink( currentClause.size() - 1 ); // remove all literals except the very first (which is the newly introduced one)
+	}
+	
+	// stats
+	rerLearnedClause ++; rerLearnedSizeCandidates ++; 
+	
+	resetRestrictedExtendedResolution(); // done with the current pattern
+	maxRERclause = maxRERclause >= currentClause.size() ? maxRERclause : currentClause.size();
+	totalRERlits += currentClause.size();
+	return true;
 }
 
 
