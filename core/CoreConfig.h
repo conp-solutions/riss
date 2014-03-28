@@ -186,6 +186,7 @@ public:
  IntOption  opt_rer_maxLBD;  // maximum LBD to perform rer
  IntOption  opt_rer_windowSize;  // number of clauses needed, to perform rer
  IntOption  opt_rer_newAct;  // how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean
+ BoolOption opt_rer_ite;	// test for ITE pattern?
 #if defined TOOLVERSION
  const bool opt_rer_debug;
 #else

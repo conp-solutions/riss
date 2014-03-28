@@ -10,7 +10,7 @@ Glucose are exactly the same as Minisat on which it is based on. (see below).
 
 Copyright (c) 2003-2006, Niklas Een, Niklas Sorensson
 Copyright (c) 2007-2010, Niklas Sorensson
-Copyright (c) 2012-2013, Norbert Manthey
+Copyright (c) 2012-2013, Norbert MantheyF
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -3133,6 +3133,9 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	if ( rerCommonLits[i] == currentLearnedClause[1] ) { found = true; break;}
       }
       if( ! found ) {
+	if( config.opt_rer_ite && rerLits.size() == 1 ) { // check whether half an ITE pattern can be matched
+	  restrictedERITE( rerLits[0], rerCommonLits, currentLearnedClause );
+	}
 	resetRestrictedExtendedResolution();
 	//cerr << "c reject patter" << endl;
 	rerPatternReject ++;
@@ -3145,6 +3148,9 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	thisLitSum += toInt( currentLearnedClause[i] );
       }
       if( thisLitSum != rerCommonLitsSum ) {
+	if( config.opt_rer_ite && rerLits.size() == 1 ) { // check whether half an ITE pattern can be matched
+	  restrictedERITE( rerLits[0], rerCommonLits, currentLearnedClause );
+	}
 	resetRestrictedExtendedResolution();
 	rerPatternBloomReject ++;
 	return rerFailed;
@@ -3160,6 +3166,9 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	} else if ( rerCommonLits[i] == currentLearnedClause[1] ) {
 	  ++i;
 	} else { // literal currentLearnedClause[j] is not in common literals!
+	if( config.opt_rer_ite && rerLits.size() == 1 ) { // check whether half an ITE pattern can be matched
+	  restrictedERITE( rerLits[0], rerCommonLits, currentLearnedClause );
+	}
 	  resetRestrictedExtendedResolution();
 	  //cerr << "c reject patter" << endl;
 	  rerPatternReject ++;
@@ -3322,6 +3331,117 @@ void Solver::resetRestrictedExtendedResolution()
   rerLits.clear();
   rerFuseClauses.clear();
 }
+
+bool Solver::restrictedERITE( const Lit& previousFirst, const vec< Lit >& previousPartialClause, const vec< Lit >& currentClause)
+{
+  // the first literal of currentClause cannot be in rerIteLits
+  // however, its complement could be present
+  // hence, check for the other literals whether there is a complementary pair, or whether there is another literal present
+  
+  if( currentClause.size() <= 2 ) return false; // perform this check only with clauses that are larger than binary
+
+  // construct vector for this check! (there might be a more performant implementation, but reconstructing the previously learned clause complemely is the more easy approach!)
+  rerIteLits.clear();
+  previousPartialClause.copyTo(rerIteLits);
+  rerIteLits.push( previousFirst );
+  sort( rerIteLits );
+
+  // 1) check whether the first literal of currentClause is present negated
+  bool firstNegated=false;
+  const Lit& first = currentClause[0];
+  const Lit& second = currentClause[1];
+  for( int i = 0 ; i < rerIteLits.size(); ++ i ) {
+    if( rerIteLits[i] == ~first ) { firstNegated = true; break; } // found the literal, stop
+  }
+  
+  Lit complementLit = lit_Undef, currentFailLit = lit_Undef, previousFailLit = lit_Undef; // store the literals theat build the ITE
+  
+  if( firstNegated ) {	// then there is only a single literal allowed to not match 
+    int failedCurrent  = 1; // the second literal does not match?
+    int failedPrevious = 0;
+    complementLit = first, currentFailLit = second, previousFailLit = lit_Undef; // store the literals theat build the ITE
+    for( int i = 0 ; i < rerIteLits.size(); ++ i ) { // repair faulty assumption of line above?
+      if( rerIteLits[i] == second ) { failedCurrent = 0; currentFailLit = lit_Undef; break; } // found the literal, repair, break
+    }
+    // in the remaining literals there is only a single literal that does not match (in each clause)
+    // check whether all remaining literals are in the clause
+    int i = 0; int j = 2;
+    while ( i < rerIteLits.size() && j < currentClause.size() ) {
+// 	cerr << "c compare " << rerIteLits << " to " << currentClause[j] << " (or " << currentClause[1] << " or " << currentClause[2] << ")" << endl;
+	if( rerIteLits[i] == currentClause[j] ) { // the two current literals match
+	  i++; j++;
+	} else if ( rerIteLits[i] == ~currentClause[1] ) { // found the negation of the first literal (has to be there!)
+	  ++i;
+	} else if ( rerIteLits[i] == currentClause[2] ) { // found the second literal
+	  ++i;
+	} else if ( rerIteLits[i] < currentClause[j] ) { // literal rerIteLits[i] is not in current clause
+	  previousFailLit = rerIteLits[i++]; // store the literal that is not commonly present (but present in rerIteLits)
+	  if( ++failedPrevious > 1 ) return false; // more than one literal fails
+	} else if ( rerIteLits[i] > currentClause[j] ) { // literal currentClause[J] is not in previous clause
+	  currentFailLit = currentClause[j++]; // store the literal that is not commonly present (but present in currentClause)
+	  if( ++failedCurrent > 1 ) return false; // more than one literal fails
+	}
+    }
+    for( ; i < rerIteLits.size(); ++ i ) { // finish the previous clause! there are only literals that are larger than the last literal of current!
+      previousFailLit = rerIteLits[i]; // store the literal that is not commonly present (but present in rerIteLits)
+      if( ++failedPrevious > 1 ) return false; // more than one literal fails
+    }
+    for( ; j < rerIteLits.size(); ++ j ) { // finish the current clause! there are only literals that are larger than the last literal of previous!
+      currentFailLit = currentClause[j]; // store the literal that is not commonly present (but present in currentClause)
+      if( ++failedCurrent > 1 ) return false; // more than one literal fails
+    }
+    assert( failedCurrent > 0 && failedPrevious > 0 && "otherwise, the current pair would represent an AND pattern, which should be handled in the AND pattern method" );
+  } else { // there has to be a complementary literal in the two clauses and the remaining literals to match
+    int failedCurrent  = 2; // the second literal does not match? (the first does not match, so this is a problem
+    int failedPrevious = 0;
+    complementLit = lit_Undef, currentFailLit = first, previousFailLit = lit_Undef; // store the literals theat build the ITE
+
+    for( int i = 0 ; i < rerIteLits.size(); ++ i ) { // repair faulty assumption of line above?
+      if( rerIteLits[i] == second ) { failedCurrent = 1; break; } // found the literal, repair, break
+      else if ( rerIteLits[i] == ~second ) { complementLit = second; failedCurrent = 1; break;} // store complement literal as it appears in the currentClause!
+    }
+    if( failedCurrent > 1 ) return false; // the two clauses do not match enough!
+
+    int i = 0; int j = 2;
+    while ( i < rerIteLits.size() && j < currentClause.size() ) {
+// 	cerr << "c compare " << rerIteLits << " to " << currentClause[j] << " (or " << currentClause[1] << " or " << currentClause[2] << ")" << endl;
+	if( rerIteLits[i] == currentClause[j] ) { // the two current literals match
+	  i++; j++;
+	} else if ( rerIteLits[i] == ~complementLit ) { // found the complement literal (again)
+	  ++i;
+	} else if ( rerIteLits[i] == currentClause[2] ) { // found the second literal
+	  ++i;
+	} else if ( rerIteLits[i] < currentClause[j] ) { // literal rerIteLits[i] is not in current clause
+	  previousFailLit = rerIteLits[i++]; // store the literal that is not commonly present (but present in rerIteLits)
+	  if( ++failedPrevious > 1 ) return false; // more than one literal fails
+	} else if ( rerIteLits[i] > currentClause[j] ) { // literal currentClause[J] is not in previous clause
+	  currentFailLit = currentClause[j++]; // store the literal that is not commonly present (but present in currentClause)
+	  if( ++failedCurrent > 1 ) return false; // more than one literal fails
+	}
+    }
+    for( ; i < rerIteLits.size(); ++ i ) { // finish the previous clause! there are only literals that are larger than the last literal of current!
+      previousFailLit = rerIteLits[i]; // store the literal that is not commonly present (but present in rerIteLits)
+      if( ++failedPrevious > 1 ) return false; // more than one literal fails
+    }
+    for( ; j < rerIteLits.size(); ++ j ) { // finish the current clause! there are only literals that are larger than the last literal of previous!
+      currentFailLit = currentClause[j]; // store the literal that is not commonly present (but present in currentClause)
+      if( ++failedCurrent > 1 ) return false; // more than one literal fails
+    }
+    assert( failedCurrent > 0 && failedPrevious > 0 && "otherwise, the current pair would represent an AND pattern, which should be handled in the AND pattern method" );
+  }
+  //exit(40);
+  
+  // if we reach here, then we found half an ITE gate
+  assert( complementLit != lit_Undef && currentFailLit != lit_Undef && previousFailLit != lit_Undef && "if all remaining literals would match, then an and gate would have been found!" );
+  cerr << "c found ITE(" << complementLit << " , " <<  ~previousFailLit << " , " <<  ~currentFailLit << " ) gate " << endl;
+  cerr << "c with previous " << rerIteLits << endl;
+  cerr << "c and current   " << currentClause << endl;
+   
+  
+  
+  return true;
+}
+
 
 void Solver::disjunctionReplace( Lit p, Lit q, const Lit x, bool inLearned, bool inBinary)
 {

@@ -341,14 +341,14 @@ init-pol  {0,1,2,3,4,5}[0]       # initialize polarity (0=none,1=JW-pol,2=JW-neg
 #
 #  INTERLEAVED CLAUSE STRENGTHENING OPTIONS (not all bugs seem to be removed from this technique yet)
 #
-ics  {no}[no]       # perform interleaved clause strengthening (along Wieringa ea 2013)
-#ics_keepNew  {yes,no}[no]       # keep the learned clauses that have been produced during the ICS
-#ics_dyn  {yes,no}[no]       # update variable/clause activities during ICS
-#ics_shrinkNew  {yes,no}[no]       # shrink the kept learned clauses in the very same run?! (makes only sense if the other clauses are kept!)
-#ics_relLBD  {0.01,0.5,1.0,1.2}[1.0]       # only look at a clause if its LBD is less than this percent of the average of the clauses that are looked at, 1=100%   
-#ics_relSIZE  {0.01,0.5,1.0,1.2}[1.0]       # only look at a clause if its size is less than this percent of the average size of the clauses that are looked at, 1=100%   
-#ics_processLast  {5050,10000,20000,50000}[5050]       # process this number of learned clauses (analyse, reject if quality too bad!)
-#ics_window  {5050,10000,40000,80000,200000}[5050]       # run ICS after another N conflicts
+ics  {yes,no}[no]       # perform interleaved clause strengthening (along Wieringa ea 2013)
+ics_keepNew  {yes,no}[no]       # keep the learned clauses that have been produced during the ICS
+ics_dyn  {yes,no}[no]       # update variable/clause activities during ICS
+ics_shrinkNew  {yes,no}[no]       # shrink the kept learned clauses in the very same run?! (makes only sense if the other clauses are kept!)
+ics_relLBD  {0.01,0.5,1.0,1.2}[1.0]       # only look at a clause if its LBD is less than this percent of the average of the clauses that are looked at, 1=100%   
+ics_relSIZE  {0.01,0.5,1.0,1.2}[1.0]       # only look at a clause if its size is less than this percent of the average size of the clauses that are looked at, 1=100%   
+ics_processLast  {5050,10000,20000,50000}[5050]       # process this number of learned clauses (analyse, reject if quality too bad!)
+ics_window  {5050,10000,40000,80000,200000}[5050]       # run ICS after another N conflicts
 
 #
 #  MODS OPTIONS:

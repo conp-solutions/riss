@@ -555,6 +555,8 @@ protected:
     rerReturnType restrictedExtendedResolution( vec<Lit>& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo );
     /// reset current state of restricted Extended Resolution
     void resetRestrictedExtendedResolution();
+    /// check whether the new learned clause produces an ITE pattern with the previously learned clause (assumption, previousClause is sorted, currentClause is sorted starting from the 3rd literal)
+    bool restrictedERITE(const Lit& previousFirst, const vec<Lit>& previousPartialClause, const vec<Lit>& currentClause);
     
     /// replace the disjunction p \lor q with x
     void disjunctionReplace( Minisat::Lit p, Minisat::Lit q, const Minisat::Lit x, bool inLearned, bool inBina );
@@ -663,7 +665,7 @@ protected:
   
   int erRewriteRemovedLits,erRewriteClauses; // stats for ER rewriting
   
-  vec<Lit> rerCommonLits; // literals that are common in the clauses in the window
+  vec<Lit> rerCommonLits, rerIteLits; // literals that are common in the clauses in the window
   int64_t rerCommonLitsSum; // sum of the current common literals - to Bloom-Filter common lits
   vec<Lit> rerLits;	// literals that are replaced by the new variable
   vec<CRef> rerFuseClauses; // clauses that will be replaced by the new clause -
