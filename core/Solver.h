@@ -547,16 +547,17 @@ protected:
     
     /// restricted extended resolution (Audemard ea 2010)
     enum rerReturnType {	// return type for the rer-implementation
-      rerFailed = 0,		// do nothing special, since rer failed
+      rerUsualProcedure = 0,	// do nothing special, since rer failed -- or attach the current clause because its unit on the current level
       rerMemorizeClause = 1,	// add the current learned clause to the data structure rerFuseClauses
       rerDontAttachAssertingLit = 2,	// do not enqueue the asserting literal of the current clause
+      rerAttemptFailed = 3,	// some extra method failed (e.g. find RER-ITE)
     };
     /// @return true, if a clause should be added to rerFuseClauses
     rerReturnType restrictedExtendedResolution( vec<Lit>& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo );
     /// reset current state of restricted Extended Resolution
     void resetRestrictedExtendedResolution();
     /// check whether the new learned clause produces an ITE pattern with the previously learned clause (assumption, previousClause is sorted, currentClause is sorted starting from the 3rd literal)
-    bool restrictedERITE(const Lit& previousFirst, const vec<Lit>& previousPartialClause, vec<Lit>& currentClause);
+    rerReturnType restrictedERITE(const Lit& previousFirst, const vec<Lit>& previousPartialClause, vec<Lit>& currentClause);
     
     /// replace the disjunction p \lor q with x
     void disjunctionReplace( Minisat::Lit p, Minisat::Lit q, const Minisat::Lit x, bool inLearned, bool inBina );

@@ -3098,12 +3098,12 @@ int Solver::getRestartLevel()
 
 Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo )
 {
-  if( ! config.opt_restrictedExtendedResolution ) return rerFailed;
+  if( ! config.opt_restrictedExtendedResolution ) return rerUsualProcedure;
   if( currentLearnedClause.size() < config.opt_rer_minSize ||
      currentLearnedClause.size() > config.opt_rer_maxSize ||
      lbd < config.opt_rer_minLBD ||
-     lbd > config.opt_rer_maxLBD ) return rerFailed;
-  if( (double)rerLearnedClause * config.opt_rer_every > conflicts ) return rerFailed; // do not consider this clause!
+     lbd > config.opt_rer_maxLBD ) return rerUsualProcedure;
+  if( (double)rerLearnedClause * config.opt_rer_every > conflicts ) return rerUsualProcedure; // do not consider this clause!
   
   // passed the filters
   if( rerLits.size() == 0 ) { // init 
@@ -3122,7 +3122,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
       //cerr << "c reject size" << endl;
       rerSizeReject ++;
       resetRestrictedExtendedResolution();
-      return rerFailed; // clauses in a row do not fit the window
+      return rerUsualProcedure; // clauses in a row do not fit the window
     } else { // size fits, check lits!
       // sort, if more than 2 literals
 //       cerr << "current learnt clause before sort: " << currentLearnedClause << endl;
@@ -3133,13 +3133,16 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	if ( rerCommonLits[i] == currentLearnedClause[1] ) { found = true; break;}
       }
       if( ! found ) {
+	rerReturnType thisReturn = rerUsualProcedure;
 	if( config.opt_rer_ite && rerLits.size() == 1 ) { // check whether half an ITE pattern can be matched
-	  restrictedERITE( rerLits[0], rerCommonLits, currentLearnedClause );
+	  if( restrictedERITE( rerLits[0], rerCommonLits, currentLearnedClause ) == rerDontAttachAssertingLit ){ // independent of the return value
+	    thisReturn = rerDontAttachAssertingLit; // RER-ITE had success and found a clause that is implied on the decision level
+	  }
 	}
 	resetRestrictedExtendedResolution();
 	//cerr << "c reject patter" << endl;
 	rerPatternReject ++;
-	return rerFailed;
+	return thisReturn;
       }
 //       cerr << "c found match - check with more details" << endl;
       // Bloom-Filter
@@ -3148,12 +3151,15 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	thisLitSum += toInt( currentLearnedClause[i] );
       }
       if( thisLitSum != rerCommonLitsSum ) {
+	rerReturnType thisReturn = rerUsualProcedure;
 	if( config.opt_rer_ite && rerLits.size() == 1 ) { // check whether half an ITE pattern can be matched
-	  restrictedERITE( rerLits[0], rerCommonLits, currentLearnedClause );
+	  if( restrictedERITE( rerLits[0], rerCommonLits, currentLearnedClause ) == rerDontAttachAssertingLit ){ // independent of the return value
+	    thisReturn = rerDontAttachAssertingLit; // RER-ITE had success and found a clause that is implied on the decision level
+	  }
 	}
 	resetRestrictedExtendedResolution();
 	rerPatternBloomReject ++;
-	return rerFailed;
+	return thisReturn;
       }
 //       cerr << "c found match - passed bloom filter" << endl;
       found = false; // for the other literals pattern
@@ -3166,13 +3172,16 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	} else if ( rerCommonLits[i] == currentLearnedClause[1] ) {
 	  ++i;
 	} else { // literal currentLearnedClause[j] is not in common literals!
-	if( config.opt_rer_ite && rerLits.size() == 1 ) { // check whether half an ITE pattern can be matched
-	  restrictedERITE( rerLits[0], rerCommonLits, currentLearnedClause );
-	}
+	  rerReturnType thisReturn = rerUsualProcedure;
+	  if( config.opt_rer_ite && rerLits.size() == 1 ) { // check whether half an ITE pattern can be matched
+	    if( restrictedERITE( rerLits[0], rerCommonLits, currentLearnedClause ) == rerDontAttachAssertingLit ){ // independent of the return value
+	      thisReturn = rerDontAttachAssertingLit; // RER-ITE had success and found a clause that is implied on the decision level
+	    }
+	  }
 	  resetRestrictedExtendedResolution();
 	  //cerr << "c reject patter" << endl;
 	  rerPatternReject ++;
-	  return rerFailed;
+	  return thisReturn;
 	}
       }
 //       cerr << "c the two clauses match!" << endl;
@@ -3321,7 +3330,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
       }
     }
   }
-  return rerFailed;
+  return rerUsualProcedure;
 }
 
 void Solver::resetRestrictedExtendedResolution()
@@ -3332,13 +3341,13 @@ void Solver::resetRestrictedExtendedResolution()
   rerFuseClauses.clear();
 }
 
-bool Solver::restrictedERITE( const Lit& previousFirst, const vec< Lit >& previousPartialClause, vec< Lit >& currentClause)
+Solver::rerReturnType Solver::restrictedERITE( const Lit& previousFirst, const vec< Lit >& previousPartialClause, vec< Lit >& currentClause)
 {
   // the first literal of currentClause cannot be in rerIteLits
   // however, its complement could be present
   // hence, check for the other literals whether there is a complementary pair, or whether there is another literal present
   
-  if( currentClause.size() <= 2 ) return false; // perform this check only with clauses that are larger than binary
+  if( currentClause.size() <= 2 ) return rerAttemptFailed; // perform this check only with clauses that are larger than binary
 
   // construct vector for this check! (there might be a more performant implementation, but reconstructing the previously learned clause complemely is the more easy approach!)
   rerIteLits.clear();
@@ -3376,19 +3385,19 @@ bool Solver::restrictedERITE( const Lit& previousFirst, const vec< Lit >& previo
 	  ++i;
 	} else if ( rerIteLits[i] < currentClause[j] ) { // literal rerIteLits[i] is not in current clause
 	  previousFailLit = rerIteLits[i++]; // store the literal that is not commonly present (but present in rerIteLits)
-	  if( ++failedPrevious > 1 ) return false; // more than one literal fails
+	  if( ++failedPrevious > 1 ) return rerAttemptFailed; // more than one literal fails
 	} else if ( rerIteLits[i] > currentClause[j] ) { // literal currentClause[J] is not in previous clause
 	  currentFailLit = currentClause[j++]; // store the literal that is not commonly present (but present in currentClause)
-	  if( ++failedCurrent > 1 ) return false; // more than one literal fails
+	  if( ++failedCurrent > 1 ) return rerAttemptFailed; // more than one literal fails
 	}
     }
     for( ; i < rerIteLits.size(); ++ i ) { // finish the previous clause! there are only literals that are larger than the last literal of current!
       previousFailLit = rerIteLits[i]; // store the literal that is not commonly present (but present in rerIteLits)
-      if( ++failedPrevious > 1 ) return false; // more than one literal fails
+      if( ++failedPrevious > 1 ) return rerAttemptFailed; // more than one literal fails
     }
     for( ; j < rerIteLits.size(); ++ j ) { // finish the current clause! there are only literals that are larger than the last literal of previous!
       currentFailLit = currentClause[j]; // store the literal that is not commonly present (but present in currentClause)
-      if( ++failedCurrent > 1 ) return false; // more than one literal fails
+      if( ++failedCurrent > 1 ) return rerAttemptFailed; // more than one literal fails
     }
     assert( failedCurrent > 0 && failedPrevious > 0 && "otherwise, the current pair would represent an AND pattern, which should be handled in the AND pattern method" );
   } else { // there has to be a complementary literal in the two clauses and the remaining literals to match
@@ -3400,7 +3409,7 @@ bool Solver::restrictedERITE( const Lit& previousFirst, const vec< Lit >& previo
       if( rerIteLits[i] == second ) { failedCurrent = 1; break; } // found the literal, repair, break
       else if ( rerIteLits[i] == ~second ) { complementLit = second; failedCurrent = 1; break;} // store complement literal as it appears in the currentClause!
     }
-    if( failedCurrent > 1 ) return false; // the two clauses do not match enough!
+    if( failedCurrent > 1 ) return rerAttemptFailed; // the two clauses do not match enough!
 
     int i = 0; int j = 2;
     while ( i < rerIteLits.size() && j < currentClause.size() ) {
@@ -3413,19 +3422,19 @@ bool Solver::restrictedERITE( const Lit& previousFirst, const vec< Lit >& previo
 	  ++i;
 	} else if ( rerIteLits[i] < currentClause[j] ) { // literal rerIteLits[i] is not in current clause
 	  previousFailLit = rerIteLits[i++]; // store the literal that is not commonly present (but present in rerIteLits)
-	  if( ++failedPrevious > 1 ) return false; // more than one literal fails
+	  if( ++failedPrevious > 1 ) return rerAttemptFailed; // more than one literal fails
 	} else if ( rerIteLits[i] > currentClause[j] ) { // literal currentClause[J] is not in previous clause
 	  currentFailLit = currentClause[j++]; // store the literal that is not commonly present (but present in currentClause)
-	  if( ++failedCurrent > 1 ) return false; // more than one literal fails
+	  if( ++failedCurrent > 1 ) return rerAttemptFailed; // more than one literal fails
 	}
     }
     for( ; i < rerIteLits.size(); ++ i ) { // finish the previous clause! there are only literals that are larger than the last literal of current!
       previousFailLit = rerIteLits[i]; // store the literal that is not commonly present (but present in rerIteLits)
-      if( ++failedPrevious > 1 ) return false; // more than one literal fails
+      if( ++failedPrevious > 1 ) return rerAttemptFailed; // more than one literal fails
     }
     for( ; j < rerIteLits.size(); ++ j ) { // finish the current clause! there are only literals that are larger than the last literal of previous!
       currentFailLit = currentClause[j]; // store the literal that is not commonly present (but present in currentClause)
-      if( ++failedCurrent > 1 ) return false; // more than one literal fails
+      if( ++failedCurrent > 1 ) return rerAttemptFailed; // more than one literal fails
     }
     assert( failedCurrent > 0 && failedPrevious > 0 && "otherwise, the current pair would represent an AND pattern, which should be handled in the AND pattern method" );
   }
@@ -3448,6 +3457,7 @@ bool Solver::restrictedERITE( const Lit& previousFirst, const vec< Lit >& previo
 	int jumpLevel = level( usedVars[0] );
 	jumpLevel = level( usedVars[1] ) < jumpLevel ? level( usedVars[1] ) : jumpLevel;
 	jumpLevel = level( usedVars[2] ) < jumpLevel ? level( usedVars[2] ) : jumpLevel;
+	if( jumpLevel == 0 ) return rerAttemptFailed; // there is an assigned literal among the ITE literals, hence, do not use RER!
 	jumpLevel --;
 	
 	// delete the current decision level as well, so that the order of the reason clauses can be set right!
@@ -3514,13 +3524,13 @@ bool Solver::restrictedERITE( const Lit& previousFirst, const vec< Lit >& previo
 	// Update order_heap with respect to new activity:
 	if (order_heap.inHeap(x)) order_heap.decrease(x);
 	
-	// code from search method - enqueue the last decision again!
-	newDecisionLevel();
-	uncheckedEnqueue( lastDecisoin ); // this is the decision that has been done on this level before! search loop will propagate this next ... 
-	if( config.opt_rer_debug ) {
-	  cerr << "c new decision level " << decisionLevel() << endl;
-	  for( int i = 0 ; i < decisionLevel() ; ++i ) cerr << "c dec [" << i << "] = " << trail[ trail_lim[i] ] << endl;
-	}
+// 	// code from search method - enqueue the last decision again!
+// 	newDecisionLevel();
+// 	uncheckedEnqueue( lastDecisoin ); // this is the decision that has been done on this level before! search loop will propagate this next ... 
+// 	if( config.opt_rer_debug ) {
+// 	  cerr << "c new decision level " << decisionLevel() << endl;
+// 	  for( int i = 0 ; i < decisionLevel() ; ++i ) cerr << "c dec [" << i << "] = " << trail[ trail_lim[i] ] << endl;
+// 	}
 	
 	// modify the current learned clause according to the ITE gate
 	currentClause[0] = mkLit(x,false);
@@ -3538,9 +3548,14 @@ bool Solver::restrictedERITE( const Lit& previousFirst, const vec< Lit >& previo
 	    else assert( value(currentClause[i]) == l_False && "there cannot be satisfied literals in the current learned clause" );
 	  }
 	}
+	bool propagateAndAttach = false;
 	if( value( currentClause[1]) != l_Undef ) {
-	  assert( decisionLevel() == 0 && "can only happen at level 0, then the new variable is a unit" );
-	  currentClause.shrink( currentClause.size() - 1 ); // remove all literals except the very first (which is the newly introduced one)
+	  // sort second highest level at second position, change return value to "attach and propagate"!
+	  int highest = 1;
+	  for( int i = 2; i < currentClause.size(); ++ i ) 
+	    if( level( var(currentClause[i] ) ) > level(var(currentClause[highest])) ) highest = i;
+	  const Lit tmp = currentClause[highest]; currentClause[highest] = currentClause[1]; currentClause[1] = tmp; 
+	  propagateAndAttach = true;
 	}
 	
 	// stats
@@ -3549,7 +3564,8 @@ bool Solver::restrictedERITE( const Lit& previousFirst, const vec< Lit >& previo
 	resetRestrictedExtendedResolution(); // done with the current pattern
 	maxRERclause = maxRERclause >= currentClause.size() ? maxRERclause : currentClause.size();
 	totalRERlits += currentClause.size();
-	return true;
+	if( propagateAndAttach ) return rerUsualProcedure;
+	else return rerDontAttachAssertingLit;
 }
 
 
@@ -4276,7 +4292,7 @@ lbool Solver::handleMultipleUnits(vec< Lit >& learnt_clause)
 lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyond, unsigned int nblevels, uint64_t extraInfo)
 {
   // when this method is called, backjumping has been done already!
-  rerReturnType rerClause = rerFailed;
+  rerReturnType rerClause = rerUsualProcedure;
   if( doAddVariablesViaER && !isBiAsserting ) { // be able to block adding variables during search by the solver itself, do not apply rewriting to biasserting clauses!
     assert( !isBiAsserting && "does not work if isBiasserting is changing something afterwards!" );
     extResTime.start();
