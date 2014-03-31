@@ -50,6 +50,7 @@ static void readQuantifier(B& in, Solver& S, quantification& quantifier) {
         while (var >= S.nVars()) S.newVar();
         quantifier.lits.push_back( (parsed_lit > 0) ? mkLit(var) : ~mkLit(var) );
     }
+    /*
     cerr << "c parsed quantifier: " << quantifier.kind << endl;
     
     for( int i=0; i < quantifier.lits.size(); ++ i ) {
@@ -58,6 +59,7 @@ static void readQuantifier(B& in, Solver& S, quantification& quantifier) {
 	else cerr << " " << - (l/2) - 1;
     }
     cerr << endl;
+    */
 }
 
 template<class B, class Solver>
