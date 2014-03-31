@@ -95,7 +95,7 @@ int main(int argc, char** argv)
 	}
 	
         Solver S(coreConfig);
-	S.setPreprocessor(&cp3config); // tell solver about preprocessor
+//	S.setPreprocessor(&cp3config); // tell solver about preprocessor
         double      initial_time = cpuTime();
 
         S.verbosity = verb;
@@ -163,7 +163,7 @@ int main(int argc, char** argv)
 	    signal(SIGXCPU,SIGINT_interrupt);
 
 	    unsigned beforeVariables = S.nVars();
-	    Preprocessor preprocessor( &S );
+	    Preprocessor preprocessor( &S, cp3config ); // build preprocessor with 1 thread 
 	    preprocessor.preprocess();
 	    
 	    if( S.nVars() < beforeVariables ) printf("c Warning: Number of variables has been reduced from %d to %d\n", beforeVariables, S.nVars() );
