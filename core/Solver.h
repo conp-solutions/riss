@@ -661,8 +661,10 @@ protected:
   // stats for learning clauses
   double totalLearnedClauses, sumLearnedClauseSize, sumLearnedClauseLBD, maxLearnedClauseSize;
   int extendedLearnedClauses, extendedLearnedClausesCandidates,maxECLclause;
+  int rerITEtries, rerITEsuccesses; // how often tried RER-ITE, and how often succeeded
   double totalECLlits; // to calc max and avg
   uint64_t maxResDepth;
+  Clock rerITEcputime; // timer for RER-ITE
   
   int erRewriteRemovedLits,erRewriteClauses; // stats for ER rewriting
   

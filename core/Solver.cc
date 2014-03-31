@@ -184,6 +184,8 @@ Solver::Solver(CoreConfig& _config) :
   ,extendedLearnedClauses(0)
   ,extendedLearnedClausesCandidates(0)
   ,maxECLclause(0)
+  ,rerITEtries(0)
+  ,rerITEsuccesses(0)
   ,totalECLlits(0)
   ,maxResDepth(0)
   
@@ -2624,6 +2626,7 @@ lbool Solver::solve_()
 	    printf("c res.ext.res.: %d rer, %d rerSizeCands, %d sizeReject, %d patternReject, %d bloomReject, %d maxSize, %.2lf avgSize, %.2lf totalLits\n",
 		   rerLearnedClause, rerLearnedSizeCandidates, rerSizeReject, rerPatternReject, rerPatternBloomReject, maxRERclause, rerLearnedClause == 0 ? 0 : (totalRERlits / (double) rerLearnedClause), totalRERlits );
 	    printf("c ER rewrite: %d cls, %d lits\n", erRewriteClauses, erRewriteRemovedLits );
+	    printf("c ER-ITE: %lf cpu-s %lf wall-s %d tries %d successes\n", rerITEcputime.getCpuTime(), rerITEcputime.getWallClockTime(), rerITEtries, rerITEsuccesses );
 	    printf("c i.cls.strengthening: %.2lf seconds, %d calls, %d candidates, %d droppedBefore, %d shrinked, %d shrinkedLits\n", icsTime.getCpuTime(), icsCalls, icsCandidates, icsDroppedCandidates, icsShrinks, icsShrinkedLits );
 	    printf("c bi-asserting: %ld pre-Mini, %ld post-Mini, %.3lf rel-pre, %.3lf rel-post\n", biAssertingPreCount, biAssertingPostCount, 
 		   totalLearnedClauses == 0 ? 0 : (double) biAssertingPreCount / (double)totalLearnedClauses,
@@ -3349,6 +3352,9 @@ Solver::rerReturnType Solver::restrictedERITE( const Lit& previousFirst, const v
   
   if( currentClause.size() <= 2 ) return rerAttemptFailed; // perform this check only with clauses that are larger than binary
 
+  MethodClock mc(rerITEcputime); // measure the time spend in this method!
+  rerITEtries ++;
+
   // construct vector for this check! (there might be a more performant implementation, but reconstructing the previously learned clause complemely is the more easy approach!)
   rerIteLits.clear();
   previousPartialClause.copyTo(rerIteLits);
@@ -3442,9 +3448,9 @@ Solver::rerReturnType Solver::restrictedERITE( const Lit& previousFirst, const v
   
   // if we reach here, then we found half an ITE gate
   assert( complementLit != lit_Undef && currentFailLit != lit_Undef && previousFailLit != lit_Undef && "if all remaining literals would match, then an and gate would have been found!" );
-  cerr << "c found ITE(" << complementLit << " , " <<  ~previousFailLit << " , " <<  ~currentFailLit << " ) gate " << endl;
-  cerr << "c with previous " << rerIteLits << endl;
-  cerr << "c and current   " << currentClause << endl;
+  // cerr << "c found ITE(" << complementLit << " , " <<  ~previousFailLit << " , " <<  ~currentFailLit << " ) gate " << endl;
+  // cerr << "c with previous " << rerIteLits << endl;
+  // cerr << "c and current   " << currentClause << endl;
    
   // vector that holds the clauses that have been considered for RER
   // rerFuseClauses;
@@ -3564,6 +3570,9 @@ Solver::rerReturnType Solver::restrictedERITE( const Lit& previousFirst, const v
 	resetRestrictedExtendedResolution(); // done with the current pattern
 	maxRERclause = maxRERclause >= currentClause.size() ? maxRERclause : currentClause.size();
 	totalRERlits += currentClause.size();
+	
+	rerITEsuccesses ++;
+	
 	if( propagateAndAttach ) return rerUsualProcedure;
 	else return rerDontAttachAssertingLit;
 }
