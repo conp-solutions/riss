@@ -11,6 +11,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "mtl/Sort.h"
 
 #include "utils/LockCollection.h"
+#include "utils/AutoDelete.h"
 
 #include <vector>
 #include <iostream>
@@ -27,14 +28,6 @@ namespace Coprocessor {
   class VarGraphUtils;
 
 typedef std::vector<std::vector <CRef> > ComplOcc;
-
-/** this object frees a pointer before a method /statementblock is left */
-class MethodFree {
-  void* pointer;
-public:
-  MethodFree( void* ptr ) : pointer( ptr ) {}
-  ~MethodFree() { free( pointer ); }
-};
 
 /** class that measures the time between creation and destruction of the object, and adds it*/
 class MethodTimer {

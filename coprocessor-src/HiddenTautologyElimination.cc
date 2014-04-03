@@ -132,7 +132,7 @@ void HiddenTautologyElimination::elimination_worker (CoprocessorData& data, uint
   negArray.create( data.nVars() * 2);
   Lit* litQueue = (Lit*) malloc( data.nVars() * 2 * sizeof(Lit) );
   if( config.hte_debug_out > 3 ) cerr << "c allocate litQueue for " << data.nVars() * 2 << " elements at " << std::hex << litQueue << std::hex << endl;
-  MethodFree litQueueFree(litQueue); // will automatically free the resources at a return!
+  MethodFree litQueueFree((void*&)litQueue); // will automatically free the resources at a return!
   
   if( config.opt_hteTalk ) fprintf(stderr, "c HTE from %d to %d out of %lud\n", start, end, activeVariables.size());
   
