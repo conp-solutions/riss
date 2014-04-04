@@ -2620,7 +2620,7 @@ lbool Solver::solve_()
 		   (int64_t)totalLearnedClauses, 
 		   sumLearnedClauseSize/totalLearnedClauses, 
 		   sumLearnedClauseLBD/totalLearnedClauses,
-		  (int64_t)maxLearnedClauseSize,
+		   (int64_t)maxLearnedClauseSize,
 		   (int64_t)maxResDepth
 		  );
 	    printf("c ext.cl.l.: %d outOf %d ecls, %d maxSize, %.2lf avgSize, %.2lf totalLits\n",
@@ -3194,6 +3194,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
       rerLits.push( currentLearnedClause[0] ); // store literal
       
       if( rerLits.size() >= config.opt_rer_windowSize ) {
+
 	// perform RER step 
 	// add all the RER clauses with the fresh variable (and set up the new variable properly!
 	const Var x = newVar(true,true,'r');
@@ -3416,7 +3417,7 @@ Solver::rerReturnType Solver::restrictedERITE( const Lit& previousFirst, const v
   }
 
 
-  // ITE(" << iteS << " , " <<  iteT << " , " <<  iteF << " ) " << endl;
+//   cerr << "c ITE(" << iteS << " , " <<  iteT << " , " <<  iteF << " ) " << endl;
   // rerFuseClauses;
 
 	// perform RER step 
