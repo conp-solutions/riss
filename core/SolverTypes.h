@@ -936,10 +936,17 @@ public:
 	  memset( &(array[0]), 0 , sizeof( uint32_t) * newSize );
 	}
 
+	void capacity(const uint32_t newSize) {
+	  if( newSize > array.size() ) {
+	    array.resize(newSize, 0); // add 0 as element
+	    // memset( &(array[0]), 0 , sizeof( uint32_t) * (newSize) );
+	  }
+	}
+	
 	void resize(const uint32_t newSize) {
 	  if( newSize > array.size() ) {
-	    array.resize(newSize);
-	    memset( &(array[0]), 0 , sizeof( uint32_t) * (newSize) );
+	    array.resize(newSize, 0); // add 0 as element
+	    // memset( &(array[0]), 0 , sizeof( uint32_t) * (newSize) );
 	  }
 	}
 

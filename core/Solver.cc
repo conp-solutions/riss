@@ -186,6 +186,9 @@ Solver::Solver(CoreConfig& _config) :
   ,maxECLclause(0)
   ,rerITEtries(0)
   ,rerITEsuccesses(0)
+  ,rerITErejectS(0)
+  ,rerITErejectT(0)
+  ,rerITErejectF(0)
   ,totalECLlits(0)
   ,maxResDepth(0)
   
@@ -278,7 +281,6 @@ Solver::Solver(CoreConfig& _config) :
 {
   MYFLAG=0;
   hstry[0]=lit_Undef;hstry[1]=lit_Undef;hstry[2]=lit_Undef;hstry[3]=lit_Undef;hstry[4]=lit_Undef;hstry[5]=lit_Undef;
-  permDiff.push(0); // there needs to be one more level, in case all variables are on the trail and each variable is on its own decision level (in usual search this should not happen .. )
   
   if( onlineDratChecker != 0 ) onlineDratChecker->setVerbosity( config.opt_checkProofOnline );
   
@@ -313,7 +315,7 @@ Var Solver::newVar(bool sign, bool dvar, char type)
     //activity .push(0);
     activity .push(rnd_init_act ? drand(random_seed) * 0.00001 : 0);
 //     seen     .push(0);
-    permDiff  .push(0);
+    permDiff  .resize(2*v+2); // add space for the next variable
 
     trail    .capacity(v+1);
     setDecisionVar(v, dvar);
@@ -339,7 +341,7 @@ void Solver::reserveVars(Var v)
     //activity .push(0);
     activity .capacity(v+1);
 //     seen     .capacity(v+1);
-    permDiff  .capacity(v+1);
+    permDiff  .capacity(2*v+2);
     varFlags. capacity(v+1);
     trail    .capacity(v+1);
 }
@@ -516,11 +518,11 @@ bool Solver::satisfied(const Clause& c) const {
 
 inline unsigned int Solver::computeLBD(const vec<Lit> & lits) {
   int nblevels = 0;
-  MYFLAG++;
+  permDiff.nextStep();
     for(int i=0;i<lits.size();i++) {
       int l = level(var(lits[i]));
-      if (permDiff[l] != MYFLAG) {
-	permDiff[l] = MYFLAG;
+      if ( ! permDiff.isCurrentStep(l) ) {
+	permDiff.setCurrentStep(l);
 	nblevels++;
       }
     }
@@ -529,12 +531,12 @@ inline unsigned int Solver::computeLBD(const vec<Lit> & lits) {
 
 inline unsigned int Solver::computeLBD(const Clause &c) {
   int nblevels = 0;
-  MYFLAG++;
+  permDiff.nextStep();
 
     for(int i=0;i<c.size();i++) {
       int l = level(var(c[i]));
-      if (permDiff[l] != MYFLAG) {
-	permDiff[l] = MYFLAG;
+      if ( ! permDiff.isCurrentStep(l) ) {
+	permDiff.setCurrentStep(l);
 	nblevels++;
       }
     }
@@ -552,16 +554,16 @@ bool Solver::minimisationWithBinaryResolution(vec< Lit >& out_learnt, unsigned i
   const Lit p = ~out_learnt[0];
 
       if(lbd<=lbLBDMinimizingClause){
-      MYFLAG++;
-      for(int i = 1;i<out_learnt.size();i++) permDiff[var(out_learnt[i])] = MYFLAG;
+      permDiff.nextStep();
+      for(int i = 1;i<out_learnt.size();i++) permDiff.setCurrentStep( var(out_learnt[i]) );
       const vec<Watcher>&  wbin  = watches[p]; // const!
       int nb = 0;
       for(int k = 0;k<wbin.size();k++) {
 	if( !wbin[k].isBinary() ) continue; // has been looping on binary clauses only before!
 	const Lit imp = wbin[k].blocker();
-	if(permDiff[var(imp)]==MYFLAG && value(imp)==l_True) {
+	if(  permDiff.isCurrentStep(var(imp)) && value(imp)==l_True) {
 	  nb++;
-	  permDiff[var(imp)]= MYFLAG-1;
+	  permDiff.reset( var(imp) );
 #ifdef CLS_EXTRA_INFO
 	  extraInfo = extraInfo >= ca[wbin[k].cref()].extraInformation() ? extraInfo : ca[wbin[k].cref()].extraInformation();
 #endif
@@ -571,7 +573,7 @@ bool Solver::minimisationWithBinaryResolution(vec< Lit >& out_learnt, unsigned i
       if(nb>0) {
 	nbReducedClauses++;
 	for(int i = 1;i<out_learnt.size()-nb;i++) {
-	  if(permDiff[var(out_learnt[i])]!=MYFLAG) {
+	  if( ! permDiff.isCurrentStep( var(out_learnt[i])) ) {
 	    const Lit p = out_learnt[l];
 	    out_learnt[l] = out_learnt[i];
 	    out_learnt[i] = p;
@@ -2626,7 +2628,7 @@ lbool Solver::solve_()
 	    printf("c res.ext.res.: %d rer, %d rerSizeCands, %d sizeReject, %d patternReject, %d bloomReject, %d maxSize, %.2lf avgSize, %.2lf totalLits\n",
 		   rerLearnedClause, rerLearnedSizeCandidates, rerSizeReject, rerPatternReject, rerPatternBloomReject, maxRERclause, rerLearnedClause == 0 ? 0 : (totalRERlits / (double) rerLearnedClause), totalRERlits );
 	    printf("c ER rewrite: %d cls, %d lits\n", erRewriteClauses, erRewriteRemovedLits );
-	    printf("c ER-ITE: %lf cpu-s %lf wall-s %d tries %d successes\n", rerITEcputime.getCpuTime(), rerITEcputime.getWallClockTime(), rerITEtries, rerITEsuccesses );
+	    printf("c ER-ITE: %lf cpu-s %lf wall-s %d tries %d successes, %d rejS, %d rejT, %d rejF\n", rerITEcputime.getCpuTime(), rerITEcputime.getWallClockTime(), rerITEtries, rerITEsuccesses, rerITErejectS, rerITErejectT, rerITErejectF );
 	    printf("c i.cls.strengthening: %.2lf seconds, %d calls, %d candidates, %d droppedBefore, %d shrinked, %d shrinkedLits\n", icsTime.getCpuTime(), icsCalls, icsCandidates, icsDroppedCandidates, icsShrinks, icsShrinkedLits );
 	    printf("c bi-asserting: %ld pre-Mini, %ld post-Mini, %.3lf rel-pre, %.3lf rel-post\n", biAssertingPreCount, biAssertingPostCount, 
 		   totalLearnedClauses == 0 ? 0 : (double) biAssertingPreCount / (double)totalLearnedClauses,
@@ -3355,108 +3357,71 @@ Solver::rerReturnType Solver::restrictedERITE( const Lit& previousFirst, const v
   MethodClock mc(rerITEcputime); // measure the time spend in this method!
   rerITEtries ++;
 
-  // construct vector for this check! (there might be a more performant implementation, but reconstructing the previously learned clause complemely is the more easy approach!)
-  rerIteLits.clear();
-  previousPartialClause.copyTo(rerIteLits);
-  rerIteLits.push( previousFirst );
-  sort( rerIteLits );
+  if( currentClause.size() != 1 + previousPartialClause.size() ) return rerAttemptFailed; // the two clauses do not match
 
-  // 1) check whether the first literal of currentClause is present negated
-  bool firstNegated=false;
-  const Lit& first = currentClause[0];
-  const Lit& second = currentClause[1];
-  for( int i = 0 ; i < rerIteLits.size(); ++ i ) {
-    if( rerIteLits[i] == ~first ) { firstNegated = true; break; } // found the literal, stop
+
+  // first, scan for literal 's', hence mark all literals of the current learned clause
+  permDiff.nextStep();
+  for ( int i = 0 ; i < currentClause.size(); ++ i ) 
+    permDiff.setCurrentStep( toInt( currentClause[i] ) );
+  
+  Lit iteS = lit_Undef;
+  if( permDiff.isCurrentStep( toInt( ~previousFirst ) ) ) iteS = ~previousFirst; // check first literal
+
+  for( int i = 0 ; i < previousPartialClause.size(); ++ i ) {
+    if( permDiff.isCurrentStep( toInt( ~previousPartialClause[i] ) ) ) {
+      if( iteS == lit_Undef ) iteS = ~previousPartialClause[i];
+      else { iteS= lit_Error; break; }
+    }
   }
-  
-  Lit complementLit = lit_Undef, currentFailLit = lit_Undef, previousFailLit = lit_Undef; // store the literals theat build the ITE
-  
-  if( firstNegated ) {	// then there is only a single literal allowed to not match 
-    int failedCurrent  = 1; // the second literal does not match?
-    int failedPrevious = 0;
-    complementLit = first, currentFailLit = second, previousFailLit = lit_Undef; // store the literals theat build the ITE
-    for( int i = 0 ; i < rerIteLits.size(); ++ i ) { // repair faulty assumption of line above?
-      if( rerIteLits[i] == second ) { failedCurrent = 0; currentFailLit = lit_Undef; break; } // found the literal, repair, break
-    }
-    // in the remaining literals there is only a single literal that does not match (in each clause)
-    // check whether all remaining literals are in the clause
-    int i = 0; int j = 2;
-    while ( i < rerIteLits.size() && j < currentClause.size() ) {
-// 	cerr << "c compare " << rerIteLits << " to " << currentClause[j] << " (or " << currentClause[1] << " or " << currentClause[2] << ")" << endl;
-	if( rerIteLits[i] == currentClause[j] ) { // the two current literals match
-	  i++; j++;
-	} else if ( rerIteLits[i] == ~currentClause[1] ) { // found the negation of the first literal (has to be there!)
-	  ++i;
-	} else if ( rerIteLits[i] == currentClause[2] ) { // found the second literal
-	  ++i;
-	} else if ( rerIteLits[i] < currentClause[j] ) { // literal rerIteLits[i] is not in current clause
-	  previousFailLit = rerIteLits[i++]; // store the literal that is not commonly present (but present in rerIteLits)
-	  if( ++failedPrevious > 1 ) return rerAttemptFailed; // more than one literal fails
-	} else if ( rerIteLits[i] > currentClause[j] ) { // literal currentClause[J] is not in previous clause
-	  currentFailLit = currentClause[j++]; // store the literal that is not commonly present (but present in currentClause)
-	  if( ++failedCurrent > 1 ) return rerAttemptFailed; // more than one literal fails
-	}
-    }
-    for( ; i < rerIteLits.size(); ++ i ) { // finish the previous clause! there are only literals that are larger than the last literal of current!
-      previousFailLit = rerIteLits[i]; // store the literal that is not commonly present (but present in rerIteLits)
-      if( ++failedPrevious > 1 ) return rerAttemptFailed; // more than one literal fails
-    }
-    for( ; j < rerIteLits.size(); ++ j ) { // finish the current clause! there are only literals that are larger than the last literal of previous!
-      currentFailLit = currentClause[j]; // store the literal that is not commonly present (but present in currentClause)
-      if( ++failedCurrent > 1 ) return rerAttemptFailed; // more than one literal fails
-    }
-    assert( failedCurrent > 0 && failedPrevious > 0 && "otherwise, the current pair would represent an AND pattern, which should be handled in the AND pattern method" );
-  } else { // there has to be a complementary literal in the two clauses and the remaining literals to match
-    int failedCurrent  = 2; // the second literal does not match? (the first does not match, so this is a problem
-    int failedPrevious = 0;
-    complementLit = lit_Undef, currentFailLit = first, previousFailLit = lit_Undef; // store the literals theat build the ITE
-
-    for( int i = 0 ; i < rerIteLits.size(); ++ i ) { // repair faulty assumption of line above?
-      if( rerIteLits[i] == second ) { failedCurrent = 1; break; } // found the literal, repair, break
-      else if ( rerIteLits[i] == ~second ) { complementLit = second; failedCurrent = 1; break;} // store complement literal as it appears in the currentClause!
-    }
-    if( failedCurrent > 1 ) return rerAttemptFailed; // the two clauses do not match enough!
-
-    int i = 0; int j = 2;
-    while ( i < rerIteLits.size() && j < currentClause.size() ) {
-// 	cerr << "c compare " << rerIteLits << " to " << currentClause[j] << " (or " << currentClause[1] << " or " << currentClause[2] << ")" << endl;
-	if( rerIteLits[i] == currentClause[j] ) { // the two current literals match
-	  i++; j++;
-	} else if ( rerIteLits[i] == ~complementLit ) { // found the complement literal (again)
-	  ++i;
-	} else if ( rerIteLits[i] == currentClause[2] ) { // found the second literal
-	  ++i;
-	} else if ( rerIteLits[i] < currentClause[j] ) { // literal rerIteLits[i] is not in current clause
-	  previousFailLit = rerIteLits[i++]; // store the literal that is not commonly present (but present in rerIteLits)
-	  if( ++failedPrevious > 1 ) return rerAttemptFailed; // more than one literal fails
-	} else if ( rerIteLits[i] > currentClause[j] ) { // literal currentClause[J] is not in previous clause
-	  currentFailLit = currentClause[j++]; // store the literal that is not commonly present (but present in currentClause)
-	  if( ++failedCurrent > 1 ) return rerAttemptFailed; // more than one literal fails
-	}
-    }
-    for( ; i < rerIteLits.size(); ++ i ) { // finish the previous clause! there are only literals that are larger than the last literal of current!
-      previousFailLit = rerIteLits[i]; // store the literal that is not commonly present (but present in rerIteLits)
-      if( ++failedPrevious > 1 ) return rerAttemptFailed; // more than one literal fails
-    }
-    for( ; j < rerIteLits.size(); ++ j ) { // finish the current clause! there are only literals that are larger than the last literal of previous!
-      currentFailLit = currentClause[j]; // store the literal that is not commonly present (but present in currentClause)
-      if( ++failedCurrent > 1 ) return rerAttemptFailed; // more than one literal fails
-    }
-    assert( failedCurrent > 0 && failedPrevious > 0 && "otherwise, the current pair would represent an AND pattern, which should be handled in the AND pattern method" );
+  if( iteS == lit_Error || iteS == lit_Undef ) {
+    rerITErejectS ++;	// stats
+    return rerAttemptFailed; // there are more complementary literals, or there is no complementary literal
   }
-  //exit(40);
+
+  // scan for literal t
+  permDiff.setCurrentStep( toInt(~iteS) ); // add this literal to the set of literals that cannot be the literal ~t
+  Lit iteT = lit_Undef;
+  // TODO: this loop might be joined with the above loop?
+  if( ! permDiff.isCurrentStep( toInt( ~previousFirst ) ) ) iteT = ~previousFirst; // check first literal. if its not marked, than its a candidate for being literal t
+  for( int i = 0 ; i < previousPartialClause.size(); ++ i ) {
+    if( ! permDiff.isCurrentStep( toInt( ~previousPartialClause[i] ) ) ) {
+      if( iteT == lit_Undef ) iteT = ~previousPartialClause[i];
+      else { iteT = lit_Error; break; }
+    }
+  }
+  if( iteT == lit_Error || iteT == lit_Undef ) {
+    rerITErejectT ++;	// stats
+    return rerAttemptFailed; // there are more literals that are not present in the other clause (and -s), or there is not enough literals present in the other clause
+  }
+
   
-  // if we reach here, then we found half an ITE gate
-  assert( complementLit != lit_Undef && currentFailLit != lit_Undef && previousFailLit != lit_Undef && "if all remaining literals would match, then an and gate would have been found!" );
-  // cerr << "c found ITE(" << complementLit << " , " <<  ~previousFailLit << " , " <<  ~currentFailLit << " ) gate " << endl;
-  // cerr << "c with previous " << rerIteLits << endl;
-  // cerr << "c and current   " << currentClause << endl;
-   
-  // vector that holds the clauses that have been considered for RER
+  // scan for literal 'f', hence mark all literals of the previously learned clause, as well as the literal s
+  permDiff.nextStep();
+  permDiff.setCurrentStep( toInt(previousFirst) );
+  permDiff.setCurrentStep( toInt(iteS) );
+  for ( int i = 0 ; i < previousPartialClause.size(); ++ i ) 
+    permDiff.setCurrentStep( toInt( previousPartialClause[i] ) );
+
+  Lit iteF = lit_Undef;
+  for( int i = 0 ; i < currentClause.size(); ++ i ) {
+    if( ! permDiff.isCurrentStep( toInt( ~currentClause[i] ) ) ) {
+      if( iteF == lit_Undef ) iteF = ~currentClause[i];
+      else { iteF = lit_Error; break; }
+    }
+  }
+  if( iteF == lit_Error || iteF == lit_Undef ) {
+    rerITErejectF ++;	// stats
+    return rerAttemptFailed; // there are more literals that are not present in the other clause (and s), or there is not enough literals present in the other clause
+  }
+
+
+  // ITE(" << iteS << " , " <<  iteT << " , " <<  iteF << " ) " << endl;
   // rerFuseClauses;
+
 	// perform RER step 
 	// add all the RER clauses with the fresh variable (and set up the new variable properly!
-	Var usedVars [ 3]; usedVars[0] = var(complementLit); usedVars[1] = var(previousFailLit); usedVars[2] = var(currentFailLit);
+	Var usedVars [ 3]; usedVars[0] = var(iteS); usedVars[1] = var(~iteT); usedVars[2] = var(~iteF);
 	const Var x = newVar(true,true,'r'); // do not assign a value, because it will be undone anyways!
 	
 	// select level to jump to:
@@ -3484,11 +3449,11 @@ Solver::rerReturnType Solver::restrictedERITE( const Lit& previousFirst, const v
 	}
 	
 	// we do not need a reason here, the new learned clause will do!
-	// ITE(" << complementLit << " , " <<  ~previousFailLit << " , " <<  ~currentFailLit << " ) " << endl;
+	// ITE(" << iteS << " , " <<  iteT << " , " <<  iteF << " ) " << endl;
 	// clauses: x, -s, -t AND x,s,-f
-	oc.clear(); oc.push( mkLit(x,false) ); oc.push(~complementLit); oc.push(previousFailLit); // first clause
+	oc.clear(); oc.push( mkLit(x,false) ); oc.push(~iteS); oc.push(~iteT); // first clause
 	for( int i = 0 ; i < 2; ++ i ) {
-	  if( i == 1 ) { oc[0] = mkLit(x,false); oc[1] = complementLit; oc[2] = currentFailLit;  } // setup the second clause
+	  if( i == 1 ) { oc[0] = mkLit(x,false); oc[1] = iteS; oc[2] = ~iteF;  } // setup the second clause
 	  CRef icr = ca.alloc(oc, config.opt_rer_as_learned); // add clause as non-learned clause 
 	  ca[icr].setLBD(1); // all literals are from the same level!
 	  if( config.opt_rer_debug) cerr << "c add clause [" << icr << "]" << ca[icr] << endl;
@@ -3541,7 +3506,7 @@ Solver::rerReturnType Solver::restrictedERITE( const Lit& previousFirst, const v
 	// modify the current learned clause according to the ITE gate
 	currentClause[0] = mkLit(x,false);
 	for( int i = 1 ; i < currentClause.size(); ++i ) {
-	  if( currentClause[i] == currentFailLit || currentClause[i] == complementLit ) { // delete the other literal from the clause!
+	  if( currentClause[i] == ~iteF || currentClause[i] == iteS ) { // delete the other literal from the clause!
 	    currentClause[i] = currentClause[ currentClause.size() - 1 ]; currentClause.pop(); // fast remove without keeping order
 	    break;
 	  }

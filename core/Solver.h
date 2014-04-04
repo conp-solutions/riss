@@ -372,7 +372,8 @@ protected:
     Heap<VarOrderLt>    order_heap;       // A priority queue of variables ordered with respect to the variable activity.
     double              progress_estimate;// Set by 'search()'.
     bool                remove_satisfied; // Indicates whether possibly inefficient linear scan for satisfied clauses should be performed in 'simplify'.
-    vec<unsigned long> permDiff;      // permDiff[var] contains the current conflict number... Used to count the number of  LBD
+    MarkArray permDiff;
+    //vec<unsigned long>  permDiff;         // permDiff[var] contains the current conflict number... Used to count the number of  LBD
     
 #ifdef UPDATEVARACTIVITY
     // UPDATEVARACTIVITY trick (see competition'09 companion paper)
@@ -661,7 +662,7 @@ protected:
   // stats for learning clauses
   double totalLearnedClauses, sumLearnedClauseSize, sumLearnedClauseLBD, maxLearnedClauseSize;
   int extendedLearnedClauses, extendedLearnedClausesCandidates,maxECLclause;
-  int rerITEtries, rerITEsuccesses; // how often tried RER-ITE, and how often succeeded
+  int rerITEtries, rerITEsuccesses, rerITErejectS, rerITErejectT, rerITErejectF; // how often tried RER-ITE, and how often succeeded
   double totalECLlits; // to calc max and avg
   uint64_t maxResDepth;
   Clock rerITEcputime; // timer for RER-ITE

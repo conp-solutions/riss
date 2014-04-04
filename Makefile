@@ -56,13 +56,13 @@ qd: qprocessord
 shiftbmcd: libd
 	cd shiftbmc-src; make shiftbmc CFLAGS="-O0 -g" ARGS=$(ARGS);  mv shiftbmc ..
 
-shiftbmcs: libs
+shiftbmcs: libr
 	cd shiftbmc-src; make shiftbmc ARGS=$(ARGS); mv shiftbmc ..
 
 shiftbmc-abcd: libd
 	cd shiftbmc-src; make shiftbmc-abc CFLAGS="-O0 -g" ARGS=$(ARGS);  mv shiftbmc-abc ..
 
-shiftbmc-abcs: libs
+shiftbmc-abcs: libr
 	cd shiftbmc-src; make shiftbmc-abc ARGS=$(ARGS) ;  mv shiftbmc-abc ..
 	
 # build the solver
@@ -86,6 +86,8 @@ libd: always
 	cd core;   make libd INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src pfolio-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; rm lib.a; mv lib_debug.a ../libriss.a
 libs: always
 	cd core;   make libs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src pfolio-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; rm lib.a; mv lib_standard.a ../libriss.a
+libr: always
+	cd core;   make libr INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src pfolio-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; rm lib.a; mv lib_release.a ../libriss.a
 libso: always
 	cd core;   make libso INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src pfolio-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv lib_release.so ../libcp.so
 	strip -g -S -d --strip-debug -X -w --strip-symbol=*Coprocessor* --strip-symbol=*Minisat* libcp.so
