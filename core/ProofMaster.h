@@ -27,7 +27,7 @@ class ProofMaster
   FILE* drupProofFile; // Output for DRUP unsat proof
   int threads;		// number of used threads
   int HASHMAX;		// constant used for hashing
-  
+  bool useCounting;	// use the counting mechanism instead of producing a very large proof
   
   /** temporal storage for clauses for the proof for each thread until a clause is shared (one more for the proof master
    *  lit_Undef is used to separate clauses
@@ -46,8 +46,14 @@ class ProofMaster
   
 public:
 
-  /** set up a proof master class with a handle to a file, and a number of threads */
-  ProofMaster( FILE* drupFile, const int nrOfThreads, const int nVars, const int hashTableSize = 100000);
+  /** set up a proof master class with a handle to a file, and a number of threads 
+   * @param drupFile pointer to an already opened file for writing the proof to
+   * @param nrOfThreads number of threads in the portfolio solver
+   * @param nVars number of variables in the formula
+   * @param counting use the build-in counting mechanism (smaller proof, more memory usage)
+   * @param hashTableSize size of the hash table (higher value -> less collisions -> faster computatation, but more memory
+   */
+  ProofMaster( FILE* drupFile, const int nrOfThreads, const int nVars, bool counting, const int hashTableSize = 100000);
   
   /** add clauses to the proof (if not local, a lock is used before the global proof is updated)
    * Note: that added clause should not be an original clause from the CNF formula! this has to be ensured by the calling thread!
@@ -63,9 +69,14 @@ public:
   /** add a single unit clause to the proof */
   void addUnitToProof( const Lit& unit, int ownerID, bool local = true); 
 
-  /** add the clause directly to the proof-data without writing to FILE, and without a check. Sets the number of occurrences to the given number */
+  /** add the clause directly to the proof-data without writing to FILE, and without a check. Sets the number of occurrences to the given number 
+   * Note: does not lock the global proof
+   * @param clause the clause to be added
+   * @param numberOfOccurrence number of times that clause is added
+   * @param isNewClause is it known that these clauses are already present, if not, then this parameter can be set to true
+   */
   template <class T>
-  void addInputToProof(const T& clause, int numberOfOccurrence = 1); 
+  void addInputToProof(const T& clause, int numberOfOccurrence, bool isNewClause = true); 
   
   /** delete a clause from the proof (if not local, a lock is used before the global proof is updated)
    * @param clause clause that should be added (can be vector or clause)
@@ -86,34 +97,88 @@ public:
 private:
   
   template <class T>
-  unsigned long long getHash (const T& clause, const Lit& extraClauseLit = lit_Undef); // hash function for a single clause, extraLit might be present in clause again
+  unsigned long long getHash (const T& clause, const Lit& extraClauseLit, int startIndex, int endIndex); // hash function for a single clause, extraLit might be present in clause again
   unsigned long long getHash (const Lit& unit); // hash function for a unit literal (speciallizes the above method)
   
   /** add a unit clause to the proof without locking (locking has been done by the caller) */
   void addUnitToGlobalProof( const Lit& unit );
   
+  /** add a clause to the global proof
+   * @param clause container of literals
+   * @param extraClauseLit extra literal that is contained in the clause (if it is not lit_Undef)
+   * @param start index where the clause to add starts
+   * @param end index to element behind last literal of the clause
+   */
+  template <class T>
+  void addGlobalClause( const T& clause, const Lit& extraClauseLit, int startIndex, int endIndex );
+  
+  /** add a clause to the global proof
+   * @param clause container of literals
+   * @param extraClauseLit extra literal that is contained in the clause (if it is not lit_Undef)
+   * @param start index where the clause to add starts
+   * @param end index to element behind last literal of the clause
+   */
+  template <class T>
+  void removeGlobalClause( const T& clause, const Lit& extraClauseLit, int startIndex, int endIndex );
+  
 };
 
-inline ProofMaster::ProofMaster(FILE* drupFile, const int nrOfThreads, const int nVars, const int hashTableSize)
+inline ProofMaster::ProofMaster(FILE* drupFile, const int nrOfThreads, const int nVars, bool counting, const int hashTableSize)
 : drupProofFile( drupFile )
 , threads( nrOfThreads )
 , HASHMAX( hashTableSize )
+, useCounting( counting )
 {
   localClauses.resize( nrOfThreads+1 ); // one for each thread, and the last one for the clause sharing pool
   matchArray.create( nVars * 2 ); // one for each literal
+  if( useCounting ) hashTable.resize( HASHMAX );
 }
+
+
+
+inline void ProofMaster::updateGlobalProof(int ownerID, bool useExtraLock)
+{
+    // lock
+    if( useExtraLock ) ownLock.lock();
+    vector<Lit>& currentList = localClauses[ownerID];
+    
+    // iterate over the whole clause list
+    int start = 0, end = 0;
+    bool deleteClause = false;
+    for( int i = 0 ; i < currentList.size(); ++ i ) {
+      if( currentList[i] == lit_Undef ) // found the next clause
+      {
+	end = i;	// store pointer to the position behind last literal
+	deleteClause = false;
+	if( currentList[start] == lit_Error ) {deleteClause = true; start ++; } // check whether this clause should be deleted, update start pointer
+	
+	// add the clause to the global proof
+	if( deleteClause ) removeGlobalClause( currentList, lit_Undef, start, end );
+	else addGlobalClause( currentList, lit_Undef, start, end );
+      }
+      
+    }
+    currentList.clear(); 
+    
+    // unlock
+    if( useExtraLock ) ownLock.unlock();
+}
+
 
 inline void ProofMaster::addUnitToGlobalProof(const Lit& unit)
 {
     unsigned long long thisHash = getHash( unit );
-    vector<CRef>& list = hashTable[ thisHash ];
     CRef hashClause = CRef_Undef;
-    if( list.size() > 0 ) { // there are clauses that have to be matched
-      matchArray.nextStep();
-      for( int i = 0 ; i < list.size(); ++ i ) {
-	const Clause& c = ca[ list[i] ];
-	if( c.size() != 1 || c[0] != unit ) continue; // not the same clause, if the size check fails
-	hashClause = list[i]; break;	// store current reference, stop loop
+
+    if( useCounting ) { // only if the counting feature is enabled
+      vector<CRef>& list = hashTable[ thisHash ];
+      if( list.size() > 0 ) { // there are clauses that have to be matched
+	matchArray.nextStep();
+	for( int i = 0 ; i < list.size(); ++ i ) {
+	  const Clause& c = ca[ list[i] ];
+	  if( c.size() != 1 || c[0] != unit ) continue; // not the same clause, if the size check fails
+	  hashClause = list[i]; break;	// store current reference, stop loop
+	}
       }
     }
     // if not present, write clause to proof
@@ -121,14 +186,148 @@ inline void ProofMaster::addUnitToGlobalProof(const Lit& unit)
       // write to file
       fprintf(drupProofFile, "%i 0\n", (var(unit) + 1) * (-2 * sign(unit) + 1));
       
-      // add to clause storage
-      tmpCls.clear(); tmpCls.push(unit);
-      CRef ref = ca.alloc( tmpCls , false );
-      ca[ref].setLBD(1); // the clause is currently present once in the proof
-      // add to hash table
-      hashTable[thisHash].push_back( ref );
+      if( useCounting ) {
+	// add to clause storage
+	tmpCls.clear(); tmpCls.push(unit);
+	CRef ref = ca.alloc( tmpCls , false );
+	ca[ref].setLBD(1); // the clause is currently present once in the proof
+	// add to hash table
+	hashTable[thisHash].push_back( ref );
+      }
     } else { // else increase the counter of that clause by 1
-      ca[ hashClause ].setLBD(ca[ hashClause ].lbd() + 1); // re-use LBD
+      if( useCounting ) ca[ hashClause ].setLBD(ca[ hashClause ].lbd() + 1); // re-use LBD
+    }
+}
+
+
+template <class T>
+inline void ProofMaster::addGlobalClause(const T& clause, const Lit& extraClauseLit, int startIndex, int endIndex)
+{
+    CRef hashClause = CRef_Undef;
+    unsigned long long thisHash = 0;
+    
+    if( useCounting ) { // check whether the clause already exists
+      thisHash = getHash( clause, extraClauseLit, startIndex, endIndex ); // get hash for the current clause
+      vector<CRef>& list = hashTable[ thisHash ];
+      if( list.size() > 0 ) { // there are clauses that have to be matched
+	matchArray.nextStep();
+	int clauseSize = 0 ;
+	if( extraClauseLit != lit_Undef ) { clauseSize ++; matchArray.setCurrentStep( toInt ( extraClauseLit ) ); } // mark all literals of the current clause
+	for( int i = startIndex ; i < endIndex; ++ i ) {
+	  if( extraClauseLit != clause[i] ) {
+	    clauseSize ++;
+	    matchArray.setCurrentStep( toInt ( clause[i] ) ); // mark all literals of the current clause
+	  }
+	}
+	for( int i = 0 ; i < list.size(); ++ i ) {
+	  const Clause& c = ca[ list[i] ];
+	  if( c.size() != clauseSize ) continue; // not the same clause, if the size check fails
+	  int j = 0;
+	  for( ; j < c.size(); ++ j ) { // try to find all literals of the current clause in the matchArray
+	    if( ! matchArray.isCurrentStep( toInt(c[j] ) ) ) {
+	      break;
+	    }
+	  }
+	  if( j == c.size() ) { // found all literals -> same clause! (because also same size)
+	    hashClause = list[i]; break;	// store current reference, stop loop
+	  }
+	}
+      }
+    }
+    // if not present, write clause to proof
+    if( hashClause == CRef_Undef ) {
+      // write to file
+      if( extraClauseLit != lit_Undef ) fprintf(drupProofFile, "%i ", (var(extraClauseLit) + 1) * (-2 * sign(extraClauseLit) + 1)); // print this literal first (e.g. for DRAT clauses)
+      for (int i = startIndex; i < endIndex; i++) {
+	if( clause[i] == lit_Undef || clause[i] == extraClauseLit ) continue;	// print the remaining literal, if they have not been printed yet
+	fprintf(drupProofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
+      }
+      fprintf(drupProofFile, "0\n");
+      
+      if( useCounting ) {
+	// add to clause storage
+	CRef ref = ca.alloc( clause , false );
+	ca[ref].setLBD(1); // the clause is currently present once in the proof
+	// add to hash table
+	hashTable[thisHash].push_back( ref );
+      }
+    } else { // else increase the counter of that clause by 1
+      if( useCounting ) ca[ hashClause ].setLBD(ca[ hashClause ].lbd() + 1); // re-use LBD
+    }
+  
+}
+
+
+template <class T>
+inline void ProofMaster::removeGlobalClause(const T& clause, const Lit& extraClauseLit, int startIndex, int endIndex)
+{
+  CRef hashClause = CRef_Undef;  
+  int hashListEntry = -1;
+  unsigned long long thisHash = 0;
+  
+  if( useCounting ) { // check whether the clause is in the proof multiple times 
+    thisHash = getHash( clause, extraClauseLit, 0, clause.size() );
+    const vector<CRef>& list = hashTable[ thisHash ];
+    
+    if( list.size() > 0 ) { // there are clauses that have to be matched
+      matchArray.nextStep();
+      int clauseSize = 0 ;
+      if( extraClauseLit != lit_Undef ) { clauseSize ++; matchArray.setCurrentStep( toInt ( extraClauseLit ) ); } // mark all literals of the current clause
+      for( int i = 0 ; i < clause.size(); ++ i ) {
+	if( extraClauseLit != clause[i] ) {
+	  clauseSize ++;
+	  matchArray.setCurrentStep( toInt ( clause[i] ) ); // mark all literals of the current clause
+	}
+      }
+      for( int i = 0 ; i < list.size(); ++ i ) {
+	const Clause& c = ca[ list[i] ];
+	if( c.size() != clauseSize ) continue; // not the same clause, if the size check fails
+	int j = 0;
+	for(  ; j < c.size(); ++ j ) { // try to find all literals of the current clause in the matchArray
+	  if( ! matchArray.isCurrentStep( toInt(c[j] ) ) ) {
+	    break;
+	  }
+	}
+	if( j == c.size() ) { // found all literals -> same clause! (because also same size)
+	  hashListEntry = i; hashClause = list[i]; break;	// store current reference, stop loop
+	}
+      }
+    }
+  }
+  // if not present, write clause to proof
+  assert( !useCounting && hashClause != CRef_Undef && "a clause that is deleted should be present in the proof, at least if counting is used" );
+  
+  if( !useCounting ||  hashClause != CRef_Undef ) { // for the safety of the proof do not remove clauses that are not present!
+      assert( !useCounting && ca[ hashClause ].lbd() > 0 && "all clauses in the proof should be present at least once" );
+      if( useCounting ) ca[ hashClause ].setLBD(ca[ hashClause ].lbd() - 1); // re-use LBD, decrease presence of clause
+      if( !useCounting || ca[ hashClause ].lbd() == 0 ) {
+	// write to file
+	fprintf(drupProofFile, "d "); // clause should be deleted
+	if( extraClauseLit != lit_Undef ) fprintf(drupProofFile, "%i ", (var(extraClauseLit) + 1) * (-2 * sign(extraClauseLit) + 1)); // print this literal first (e.g. for DRAT clauses)
+	for (int i = 0; i < clause.size(); i++) {
+	  if( clause[i] == lit_Undef || clause[i] == extraClauseLit ) continue;	// print the remaining literal, if they have not been printed yet
+	  fprintf(drupProofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
+	}
+	fprintf(drupProofFile, "0\n");
+	
+	if( useCounting ) {
+	  vector<CRef>& list = hashTable[ thisHash ];
+	  // remove entry from hashTable (fast, unsorted)
+	  list[ hashListEntry ] = list[ list.size() - 1 ];
+	  list.pop_back();
+	  
+	  // remove clause from storage TODO: garbage collect? (remove from hash table before garbage collect!)
+	  ca[ hashClause ].mark(1);
+	  ca.free(hashClause);	
+	}
+      }
+
+    } else if( useCounting ) {
+      static bool didit = false; // will be printed at most once
+      if( !didit ) {
+	cerr << "c should delete a clause that is not present: " << clause << endl;
+	didit = true;
+      }
     }
 }
 
@@ -179,51 +378,8 @@ inline void ProofMaster::addToProof(const T& clause, const Lit& extraClauseLit, 
   } else { // interesting part, write to global proof
     // lock
     ownLock.lock();
-    unsigned long long thisHash = getHash( clause, extraClauseLit );
-    vector<CRef>& list = hashTable[ thisHash ];
-    CRef hashClause = CRef_Undef;
-    if( list.size() > 0 ) { // there are clauses that have to be matched
-      matchArray.nextStep();
-      int clauseSize = 0 ;
-      if( extraClauseLit != lit_Undef ) { clauseSize ++; matchArray.setCurrentStep( toInt ( extraClauseLit ) ); } // mark all literals of the current clause
-      for( int i = 0 ; i < clause.size(); ++ i ) {
-	if( extraClauseLit != clause[i] ) {
-	  clauseSize ++;
-	  matchArray.setCurrentStep( toInt ( clause[i] ) ); // mark all literals of the current clause
-	}
-      }
-      for( int i = 0 ; i < list.size(); ++ i ) {
-	const Clause& c = ca[ list[i] ];
-	if( c.size() != clauseSize ) continue; // not the same clause, if the size check fails
-	int j = 0;
-	for( ; j < c.size(); ++ j ) { // try to find all literals of the current clause in the matchArray
-	  if( ! matchArray.isCurrentStep( toInt(c[j] ) ) ) {
-	    break;
-	  }
-	}
-	if( j == c.size() ) { // found all literals -> same clause! (because also same size)
-	  hashClause = list[i]; break;	// store current reference, stop loop
-	}
-      }
-    }
-    // if not present, write clause to proof
-    if( hashClause == CRef_Undef ) {
-      // write to file
-      if( extraClauseLit != lit_Undef ) fprintf(drupProofFile, "%i ", (var(extraClauseLit) + 1) * (-2 * sign(extraClauseLit) + 1)); // print this literal first (e.g. for DRAT clauses)
-      for (int i = 0; i < clause.size(); i++) {
-	if( clause[i] == lit_Undef || clause[i] == extraClauseLit ) continue;	// print the remaining literal, if they have not been printed yet
-	fprintf(drupProofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
-      }
-      fprintf(drupProofFile, "0\n");
-      
-      // add to clause storage
-      CRef ref = ca.alloc( clause , false );
-      ca[ref].setLBD(1); // the clause is currently present once in the proof
-      // add to hash table
-      hashTable[thisHash].push_back( ref );
-    } else { // else increase the counter of that clause by 1
-      ca[ hashClause ].setLBD(ca[ hashClause ].lbd() + 1); // re-use LBD
-    }
+    // add the clause to the global proof (or increase the counter of an existing clause)
+    addGlobalClause( clause, extraClauseLit, 0, clause.size() );
     // unlock
     ownLock.unlock();
   }
@@ -231,14 +387,55 @@ inline void ProofMaster::addToProof(const T& clause, const Lit& extraClauseLit, 
 
 
 template <class T>
-inline void ProofMaster::addInputToProof(const T& clause, int numberOfOccurrence)
+inline void ProofMaster::addInputToProof(const T& clause, int numberOfOccurrence, bool isNewClause)
 {
-  unsigned long long thisHash = getHash( clause );
-  // add to clause storage
-  CRef ref = ca.alloc( clause , false );
-  ca[ref].setLBD(numberOfOccurrence); // the clause is currently present once in the proof
-  // add to hash table
-  hashTable[thisHash].push_back( ref );
+    CRef hashClause = CRef_Undef;
+    unsigned long long thisHash = 0;
+    
+    if( useCounting && !isNewClause ) { // check whether the clause already exists
+      thisHash = getHash( clause, lit_Undef, 0, clause.size() ); // get hash for the current clause
+      vector<CRef>& list = hashTable[ thisHash ];
+      if( list.size() > 0 ) { // there are clauses that have to be matched
+	matchArray.nextStep();
+	int clauseSize = 0 ;
+	for( int i = 0 ; i < clause.size(); ++ i ) {
+	  clauseSize ++;
+	  matchArray.setCurrentStep( toInt ( clause[i] ) ); // mark all literals of the current clause
+	}
+	for( int i = 0 ; i < list.size(); ++ i ) {
+	  const Clause& c = ca[ list[i] ];
+	  if( c.size() != clauseSize ) continue; // not the same clause, if the size check fails
+	  int j = 0;
+	  for( ; j < c.size(); ++ j ) { // try to find all literals of the current clause in the matchArray
+	    if( ! matchArray.isCurrentStep( toInt(c[j] ) ) ) {
+	      break;
+	    }
+	  }
+	  if( j == c.size() ) { // found all literals -> same clause! (because also same size)
+	    hashClause = list[i]; break;	// store current reference, stop loop
+	  }
+	}
+      }
+    }
+    // if not present, write clause to proof
+    if( hashClause == CRef_Undef ) {
+      // write to file
+      for (int i = 0; i < clause.size(); i++) {
+	if( clause[i] == lit_Undef ) continue;	// print the remaining literal, if they have not been printed yet
+	fprintf(drupProofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
+      }
+      fprintf(drupProofFile, "0\n");
+      
+      if( useCounting ) {
+	// add to clause storage
+	CRef ref = ca.alloc( clause , false );
+	ca[ref].setLBD( numberOfOccurrence ); // the clause is currently present once in the proof
+	// add to hash table
+	hashTable[thisHash].push_back( ref );
+      }
+    } else { // else increase the counter of that clause by 1
+      if( useCounting ) ca[ hashClause ].setLBD(ca[ hashClause ].lbd() + 1); // re-use LBD
+    }
 }
 
 
@@ -306,75 +503,16 @@ inline void ProofMaster::delFromProof(const T& clause, const Lit& extraClauseLit
   } else { // interesting part, write to global proof
     // lock
     ownLock.lock();
-    unsigned long long thisHash = getHash( clause, extraClauseLit );
-    vector<CRef>& list = hashTable[ thisHash ];
-    CRef hashClause = CRef_Undef;
-    int hashListEntry = -1;
-    if( list.size() > 0 ) { // there are clauses that have to be matched
-      matchArray.nextStep();
-      int clauseSize = 0 ;
-      if( extraClauseLit != lit_Undef ) { clauseSize ++; matchArray.setCurrentStep( toInt ( extraClauseLit ) ); } // mark all literals of the current clause
-      for( int i = 0 ; i < clause.size(); ++ i ) {
-	if( extraClauseLit != clause[i] ) {
-	  clauseSize ++;
-	  matchArray.setCurrentStep( toInt ( clause[i] ) ); // mark all literals of the current clause
-	}
-      }
-      for( int i = 0 ; i < list.size(); ++ i ) {
-	const Clause& c = ca[ list[i] ];
-	if( c.size() != clauseSize ) continue; // not the same clause, if the size check fails
-	int j = 0;
-	for(  ; j < c.size(); ++ j ) { // try to find all literals of the current clause in the matchArray
-	  if( ! matchArray.isCurrentStep( toInt(c[j] ) ) ) {
-	    break;
-	  }
-	}
-	if( j == c.size() ) { // found all literals -> same clause! (because also same size)
-	  hashListEntry = i; hashClause = list[i]; break;	// store current reference, stop loop
-	}
-      }
-    }
-    // if not present, write clause to proof
-    assert( hashClause != CRef_Undef && "a clause that is deleted should be present in the proof" );
-    if( hashClause != CRef_Undef ) { // for the safety of the proof do not remove clauses that are not present!
-      assert( ca[ hashClause ].lbd() > 0 && "all clauses in the proof should be present at least once" );
-      ca[ hashClause ].setLBD(ca[ hashClause ].lbd() - 1); // re-use LBD, decrease presence of clause
-      if( ca[ hashClause ].lbd() == 0 ) {
-	// write to file
-	fprintf(drupProofFile, "d "); // clause should be deleted
-	if( extraClauseLit != lit_Undef ) fprintf(drupProofFile, "%i ", (var(extraClauseLit) + 1) * (-2 * sign(extraClauseLit) + 1)); // print this literal first (e.g. for DRAT clauses)
-	for (int i = 0; i < clause.size(); i++) {
-	  if( clause[i] == lit_Undef || clause[i] == extraClauseLit ) continue;	// print the remaining literal, if they have not been printed yet
-	  fprintf(drupProofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
-	}
-	fprintf(drupProofFile, "0\n");
-	
-	// remove entry from hashTable (fast, unsorted)
-	list[ hashListEntry ] = list[ list.size() - 1 ];
-	list.pop_back();
-	
-	// remove clause from storage TODO: garbage collect? (remove from hash table before garbage collect!)
-	ca[ hashClause ].mark(1);
-	ca.free(hashClause);	
-      }
-
-    } else {
-      static bool didit = false; // will be printed at most once
-      if( !didit ) {
-	cerr << "c owner[" << ownerID << "] should delete a clause that is not present: " << clause << endl;
-	didit = true;
-      }
-    }
-
+    // remove the clause from the global proof (or decrease the counter)
+    removeGlobalClause(clause,extraClauseLit,0,clause.size());
     // unlock
     ownLock.unlock();
-
   }
 }
 
 
 template <class T>
-inline unsigned long long ProofMaster::getHash(const T& clause, const Lit& extraClauseLit)
+inline unsigned long long ProofMaster::getHash(const T& clause, const Lit& extraClauseLit, int startIndex, int endIndex)
 {
     unsigned long long sum = 0, prod = 1, X = 0;
     // process extra lit
@@ -383,7 +521,7 @@ inline unsigned long long ProofMaster::getHash(const T& clause, const Lit& extra
       prod *= l; sum += l; X ^= l;
     }
     
-    for( int i = 0 ; i < clause.size(); ++ i ) 
+    for( int i = startIndex ; i < endIndex; ++ i ) 
     { 
       if( clause[i] != extraClauseLit ) { // but do not process the extraLit twice!
 	const int l = toInt( clause[i] );
