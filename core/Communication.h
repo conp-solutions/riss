@@ -22,6 +22,8 @@ using namespace Minisat;
 #include "core/SolverTypes.h"
 #include "core/Solver.h"
 
+
+#include "core/ProofMaster.h"
 /** collection of some wait states */
 enum WaitState {
   oneIdle = 0,
@@ -268,6 +270,8 @@ public:
 
     CommunicationData* data;	// pointer to the data, that is shared among all threads
 
+    ProofMaster* proofMaster;	// class to take care of the proof
+    
     // TODO: think about read and write. master writes, client polls, could set back to poll again
     enum State {
       idle, // has no work at the moment
@@ -311,6 +315,7 @@ public:
     Communicator(const int id, CommunicationData* communicationData) :
       ownLock( new SleepLock() )
     ,data( communicationData) 
+    ,proofMaster(0)
     ,winner(false)
     ,originalVars(-1)
     ,returnValue(l_Undef)
@@ -350,6 +355,18 @@ public:
       solver = s;
     }
 
+    /** tell the communicator about the proof master, so that it can be used */
+    void setProofMaster( ProofMaster* pm ) {
+      assert( proofMaster == 0 && "will not overwrite handle to another proof master" );
+      proofMaster = pm;
+    }
+    
+    /** a parallel proof is constructed, if there is a proof master */
+    bool generateProof() const { return proofMaster != 0; }
+    
+    /** forward the API of the proof master to the solver (or other callers) */
+    ProofMaster* getPM() { return proofMaster ; }
+    
     State getState() const {
       return state;
     }
