@@ -41,6 +41,7 @@ class ClauseRingBuffer
   struct poolItem {
     std::vector<Minisat::Lit> data;	/// the actual clause
     int author;		/// the author of the clause
+    poolItem() : author(-1) {}	/// the initial author is invalid, so that it can be seen whether a clause in the ringbuffer has been added by solver
   };
 
   Lock dataLock;		/// lock that protects the access to the task data structures
@@ -48,6 +49,7 @@ class ClauseRingBuffer
   unsigned poolSize;		/// size of the pool
   unsigned addHereNext;		/// index of the position where the next clause will be added in the buffer
 
+  ProofMaster* proofMaster;	/// handle to the proof master, to handle shared clauses of the shared clauses pool
 
   /** get the author of the clause of the given position in the pool
    * @param position index of the clause that should be received
@@ -86,8 +88,9 @@ public:
    */
   ClauseRingBuffer( const unsigned size )
   :
-    poolSize(size),
-    addHereNext(1) // initially, last seen is set to 0 for each thread. to not incorporate non-initialized clauses, start at 1
+    poolSize( size )
+  , addHereNext( 1 ) // initially, last seen is set to 0 for each thread. to not incorporate non-initialized clauses, start at 1
+  , proofMaster( 0 )
   {
     pool = new poolItem [size];
     poolSize = size;
@@ -98,6 +101,9 @@ public:
     if( pool != 0 ) { delete [] pool; pool = 0; }
   }
 
+  /// set the handle for the proof master
+  void setProofMaster( ProofMaster *pm ) { proofMaster = pm; }
+  
   unsigned size() const { return poolSize; }
   
   /** return the position of the clause that has been deleted last
@@ -114,11 +120,18 @@ public:
 
     // cerr << "[COMM] thread " << authorID << " adds clause to " << addHereNext << endl;
     // overwrite current position (starts with 0)
-    pool[addHereNext].author = authorID;
     std::vector<Minisat::Lit>& poolClause = pool[addHereNext].data;
+    // if there has been a clause at this position before, then this clause is removed right now ...
+    if( pool[addHereNext].author != -1 && proofMaster != 0 ) proofMaster->delFromProof( poolClause, lit_Undef, -1, false ); // can work only on the global proof
+    
+    pool[addHereNext].author = authorID;
+
+    
     poolClause.resize( clause.size() );
     for( int i = 0 ; i < clause.size(); ++i ) poolClause[i] = clause[i];
 
+    if( proofMaster != 0 ) proofMaster->addToProof( poolClause, lit_Undef, -1, false ); // can work only on the global proof 
+    
     // push pointer to the next position
     // stay in the pool!
     addHereNext ++;
@@ -138,10 +151,12 @@ public:
     for( size_t i = 0 ; i < units.size(); ++ i ) {
       // cerr << "[COMM] thread " << authorID << " adds clause to " << addHereNext << endl;
       // overwrite current position (starts with 0)
-      pool[addHereNext].author = authorID;
       std::vector<Minisat::Lit>& poolClause = pool[addHereNext].data;
+      if( pool[addHereNext].author != -1 && proofMaster != 0 ) proofMaster->delFromProof( poolClause, lit_Undef, -1, false ); // can work only on the global proof
+      pool[addHereNext].author = authorID;      
       poolClause.resize( 1 );
       poolClause[0] = units[i];
+      if( proofMaster != 0 ) proofMaster->addToProof( poolClause, lit_Undef, -1, false ); // can work only on the global proof 
 
       // push pointer to the next position
       // stay in the pool!
@@ -218,7 +233,7 @@ public:
     SleepLock masterLock;		/// lock that enables the master thread to sleep during waiting for child threads
 
     Minisat::vec <Minisat::Lit> sendUnits;	/// vector that stores the unit clauses that should be send to all clients as clauses (not learned!)
-
+    
   public:
 
     CommunicationData (const int buffersize) :
@@ -229,7 +244,10 @@ public:
 
     SleepLock& getMasterLock() { return masterLock; };
 
-
+    /// set the handle for the proof master in the ringbuffer
+    void setProofMaster( ProofMaster *pm ) { ringbuffer.setProofMaster(pm); }
+    
+    
     /** return a reference to the ringbuffer
      */
     ClauseRingBuffer& getBuffer() { return ringbuffer; }

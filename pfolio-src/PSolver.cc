@@ -16,7 +16,9 @@ PSolver::PSolver(const int threadsToUse, const char* configName)
 : initialized( false ), threads( threadsToUse )
 , data(0)
 , threadIDs( 0 )
+, proofMaster( 0 )
 , defaultConfig( configName == 0 ? "" : string(configName) ) // setup the configuration
+, drupProofFile(0)
 , verbosity(0)
 , verbEveryConflicts(0)
 {
@@ -153,10 +155,11 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
   
   int winningSolver = 0;
   lbool ret = l_Undef;
-  /* TODO
-   * 
+  /* 
    * preprocess the formula with the preprocessor of the first solver
+   * but only in the very first iteration!
    */
+  if( !initialized ) {
    ret = solvers[0]->preprocess();
    // solved by simplification?
    if( ret == l_False ){ return ret; }
@@ -165,7 +168,9 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
      model.clear();
      model.capacity( solvers[winningSolver]->model.size() );
      for( int i = 0 ; i < solvers[winningSolver]->model.size(); ++ i ) model.push(solvers[winningSolver]->model[i]);
+     return ret;
    }
+  }
   
    if( ! initialized ) { // distribute the formula, if this is the first call to this method!
 
@@ -186,14 +191,27 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
       while( solvers[i]->nVars() < solvers[0]->nVars() ) solvers[i]->newVar();
       communicators[i]->setFormulaVariables( solvers[0]->nVars() ); // tell which variables can be shared
       for( int j = 0 ; j < solvers[0]->clauses.size(); ++ j ) {
-	solvers[i]->addClause( solvers[0]->ca[ solvers[0]->clauses[j] ] ); // import the clause of solver 0 into solver i
+	solvers[i]->addClause( solvers[0]->ca[ solvers[0]->clauses[j] ] ); // import the clause of solver 0 into solver i; does not add to the proof
       }
       for( int j = 0 ; j < solvers[0]->learnts.size(); ++ j ) {
-	solvers[i]->addClause( solvers[0]->ca[ solvers[0]->learnts[j] ] ); // import the learnt clause of solver 0 into solver i
+	solvers[i]->addClause( solvers[0]->ca[ solvers[0]->learnts[j] ] ); // import the learnt clause of solver 0 into solver i; does not add to the proof
       }
-      solvers[i]->addUnitClauses( solvers[0]->trail ); // copy all the unit clauses
+      solvers[i]->addUnitClauses( solvers[0]->trail ); // copy all the unit clauses, adds to the proof
       cerr << "c Solver[" << i << "] has " << solvers[i]->nVars() << " vars, " << solvers[i]->clauses.size() << " cls, " << solvers[i]->learnts.size() << " learnts" << endl;
     }
+    
+    // copy the formula of the solver 0 number of thread times
+    if( proofMaster != 0 ) { // if a proof is generated, add all clauses that are currently present in solvers[0]
+      for( int j = 0 ; j < solvers[0]->clauses.size(); ++ j ) {
+	proofMaster->addInputToProof( solvers[0]->ca[ solvers[0]->clauses[j] ], threads, true ); // so far, work on global proof
+      }
+      for( int j = 0 ; j < solvers[0]->learnts.size(); ++ j ) {
+	proofMaster->addInputToProof( solvers[0]->ca[ solvers[0]->learnts[j] ], threads, true ); // so far, work on global proof
+      }
+      proofMaster->addUnitsToProof( solvers[0]->trail, 0, false ); // incorporate all the units once more
+    }
+    
+    
     initialized = true;
    } else {
      // already initialized -- simply print the summary
@@ -276,12 +294,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
 	     <<  "  \t|\t" << communicators[i]->nrRejectSendLbdCls <<  "  \t|"
 	     << endl;
      }
-     
-// nrSendCls;           // how many clauses have been send via this communicator
-//     unsigned nrRejectSendSizeCls; // how many clauses have been rejected to be send because of size
-//     unsigned nrRejectSendLbdCls;  // how many clauses have been rejected to be send because of lbd
-//     unsigned nrReceivedCls;
-     
+    
    }
    
    
@@ -346,6 +359,12 @@ bool PSolver::initializeThreads()
 
   data = new CommunicationData( 16000 ); // space for 16K clauses
   
+  // the portfolio should print proofs
+  if( drupProofFile != 0 ) {
+    proofMaster = new ProofMaster(drupProofFile, threads, nVars(), false ); // use a counting proof master
+    data->setProofMaster( proofMaster ); 	// tell shared clauses pool about proof master (so that it adds shared clauses)
+  }
+  
   // create all solvers and threads
   for( unsigned i = 0 ; i < threads; ++ i )
   {
@@ -359,6 +378,8 @@ bool PSolver::initializeThreads()
 
     // tell the communication system about the solver
     communicators[i]->setSolver( solvers[i] );
+    // tell the communicator about the proof master
+    communicators[i]->setProofMaster( proofMaster );
     // tell solver about its communication interface
     solvers[i]->setCommunication( communicators[i] );
     
@@ -380,6 +401,7 @@ bool PSolver::initializeThreads()
       }
       pthread_attr_destroy(&attr);
   }
+  solvers[0]->drupProofFile = 0; // set to 0, independently of the previous value
   return failed;
 }
 
@@ -556,6 +578,15 @@ void* runWorkerSolver(void* data)
   }
   
   return 0;
+}
+
+void PSolver::setDrupFile(FILE* drupFile)
+{
+  // set file for the first solver
+  if( !initialized && solvers.size() > 0 ) 
+    solvers[0]->drupProofFile = drupFile;
+  // set own file handle to initialize the proof master afterwards
+  drupProofFile = drupFile;
 }
 
 

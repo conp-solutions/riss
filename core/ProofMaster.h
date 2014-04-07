@@ -10,7 +10,8 @@ Copyright (c) 2014, All rights reserved, Norbert Manthey
 #include "mtl/Vec.h"
 #include "core/SolverTypes.h"
 #include "utils/LockCollection.h"
-#include <mprocessor-src/open-wbo/open-wbo/solvers/glucored/utils/ParseUtils.h>
+
+#include "core/OnlineProofChecker.h"
 
 #include <cstdio>
 #include <iostream>
@@ -25,6 +26,9 @@ class ProofMaster
 {
   SleepLock ownLock;	// lock for the proof file
   FILE* drupProofFile; // Output for DRUP unsat proof
+  
+  OnlineProofChecker* opc;	// check the proof on the fly during its creation
+  
   int threads;		// number of used threads
   int HASHMAX;		// constant used for hashing
   bool useCounting;	// use the counting mechanism instead of producing a very large proof
@@ -94,6 +98,10 @@ public:
    */
   void updateGlobalProof( int ownerID , bool useExtraLock = false);
 
+  
+  /** set up the online proof checker for the parallel proof to continue the work that has been done so far already */
+  void setOnlineProofChecker( OnlineProofChecker* setUpChecker );
+  
 private:
   
   template <class T>
@@ -125,6 +133,7 @@ private:
 
 inline ProofMaster::ProofMaster(FILE* drupFile, const int nrOfThreads, const int nVars, bool counting, const int hashTableSize)
 : drupProofFile( drupFile )
+, opc (0)
 , threads( nrOfThreads )
 , HASHMAX( hashTableSize )
 , useCounting( counting )
@@ -138,6 +147,8 @@ inline ProofMaster::ProofMaster(FILE* drupFile, const int nrOfThreads, const int
 
 inline void ProofMaster::updateGlobalProof(int ownerID, bool useExtraLock)
 {
+    if( ownerID == -1 ) ownerID = threads; // correct owner ID
+    if( localClauses[ownerID].size() == 0 ) return;	// if there is nothing to do, return, and do not lock!
     // lock
     if( useExtraLock ) ownLock.lock();
     vector<Lit>& currentList = localClauses[ownerID];
@@ -266,14 +277,14 @@ inline void ProofMaster::removeGlobalClause(const T& clause, const Lit& extraCla
   unsigned long long thisHash = 0;
   
   if( useCounting ) { // check whether the clause is in the proof multiple times 
-    thisHash = getHash( clause, extraClauseLit, 0, clause.size() );
+    thisHash = getHash( clause, extraClauseLit, startIndex, endIndex );
     const vector<CRef>& list = hashTable[ thisHash ];
     
     if( list.size() > 0 ) { // there are clauses that have to be matched
       matchArray.nextStep();
       int clauseSize = 0 ;
       if( extraClauseLit != lit_Undef ) { clauseSize ++; matchArray.setCurrentStep( toInt ( extraClauseLit ) ); } // mark all literals of the current clause
-      for( int i = 0 ; i < clause.size(); ++ i ) {
+      for( int i = startIndex ; i < endIndex; ++ i ) {
 	if( extraClauseLit != clause[i] ) {
 	  clauseSize ++;
 	  matchArray.setCurrentStep( toInt ( clause[i] ) ); // mark all literals of the current clause
@@ -295,16 +306,16 @@ inline void ProofMaster::removeGlobalClause(const T& clause, const Lit& extraCla
     }
   }
   // if not present, write clause to proof
-  assert( !useCounting && hashClause != CRef_Undef && "a clause that is deleted should be present in the proof, at least if counting is used" );
+  assert( (!useCounting || hashClause != CRef_Undef) && "a clause that is deleted should be present in the proof, at least if counting is used" );
   
   if( !useCounting ||  hashClause != CRef_Undef ) { // for the safety of the proof do not remove clauses that are not present!
-      assert( !useCounting && ca[ hashClause ].lbd() > 0 && "all clauses in the proof should be present at least once" );
+      assert( (!useCounting || ca[ hashClause ].lbd() > 0) && "all clauses in the proof should be present at least once" );
       if( useCounting ) ca[ hashClause ].setLBD(ca[ hashClause ].lbd() - 1); // re-use LBD, decrease presence of clause
       if( !useCounting || ca[ hashClause ].lbd() == 0 ) {
 	// write to file
 	fprintf(drupProofFile, "d "); // clause should be deleted
 	if( extraClauseLit != lit_Undef ) fprintf(drupProofFile, "%i ", (var(extraClauseLit) + 1) * (-2 * sign(extraClauseLit) + 1)); // print this literal first (e.g. for DRAT clauses)
-	for (int i = 0; i < clause.size(); i++) {
+	for (int i = startIndex; i < endIndex; i++) {
 	  if( clause[i] == lit_Undef || clause[i] == extraClauseLit ) continue;	// print the remaining literal, if they have not been printed yet
 	  fprintf(drupProofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
 	}
@@ -335,6 +346,7 @@ inline void ProofMaster::removeGlobalClause(const T& clause, const Lit& extraCla
 inline void ProofMaster::addUnitToProof(const Lit& unit, int ownerID, bool local)
 {
   if( local ) { // simply extend the local pool
+    if( ownerID == -1 ) ownerID = threads; // correct owner ID
     localClauses[ownerID].push_back( unit ); // do not add the extra lit twice!
     localClauses[ownerID].push_back( lit_Undef ); // mark the end of the clause with "lit_Undef"
   } else {
@@ -351,6 +363,7 @@ inline void ProofMaster::addUnitToProof(const Lit& unit, int ownerID, bool local
 inline void ProofMaster::addUnitsToProof(const vec< Lit >& units, int ownerID, bool local)
 {
   if( local ) { // simply extend the local pool
+    if( ownerID == -1 ) ownerID = threads; // correct owner ID
     for( int i = 0 ; i < units.size(); ++ i ) {
       localClauses[ownerID].push_back( units[i] ); // do not add the extra lit twice!
       localClauses[ownerID].push_back( lit_Undef ); // mark the end of the clause with "lit_Undef"
@@ -376,6 +389,7 @@ inline void ProofMaster::addToProof(const T& clause, const Lit& extraClauseLit, 
       if( clause[i] != extraClauseLit ) localClauses[ownerID].push_back( clause[i] ); // do not add the extra lit twice!
     localClauses[ownerID].push_back( lit_Undef ); // mark the end of the clause with "lit_Undef"
   } else { // interesting part, write to global proof
+    cerr << "c PM [" << ownerID << "] adds clause " << clause << endl;
     // lock
     ownLock.lock();
     // add the clause to the global proof (or increase the counter of an existing clause)
@@ -391,6 +405,8 @@ inline void ProofMaster::addInputToProof(const T& clause, int numberOfOccurrence
 {
     CRef hashClause = CRef_Undef;
     unsigned long long thisHash = 0;
+    
+    cerr << "c PM add input clause (" << numberOfOccurrence << " times): " << clause << endl;
     
     if( useCounting && !isNewClause ) { // check whether the clause already exists
       thisHash = getHash( clause, lit_Undef, 0, clause.size() ); // get hash for the current clause
@@ -442,27 +458,31 @@ inline void ProofMaster::addInputToProof(const T& clause, int numberOfOccurrence
 inline void ProofMaster::delFromProof(const Lit& unit, int ownerID, bool local)
 {
   if( local ) { // simply extend the local pool
+    if( ownerID == -1 ) ownerID = threads; // correct owner ID
     localClauses[ownerID].push_back( lit_Error ); // define that this clause is to be deleted!
     localClauses[ownerID].push_back( unit );	    // add unit literal
     localClauses[ownerID].push_back( lit_Undef ); // mark the end of the clause with "lit_Undef"
   } else { // interesting part, write to global proof
     // lock
     ownLock.lock();
-    
-    unsigned long long thisHash = getHash( unit );
-    vector<CRef>& list = hashTable[ thisHash ];
+    cerr << "c PM [" << ownerID << "] deletes unit clause " << unit << endl;
     CRef hashClause = CRef_Undef;
     int hashListEntry = -1;
-    if( list.size() > 0 ) { // there are clauses that have to be matched
-      for( int i = 0 ; i < list.size(); ++ i ) {
-	const Clause& c = ca[ list[i] ];
-	if( c.size() != 1 || c[0] != unit ) continue; // not the same clause, if the size check fails
-	hashListEntry = i; hashClause = list[i]; 	// store current reference
-	break;	// stop loop
+    unsigned long long thisHash = 0;
+    if( useCounting ) {
+      thisHash = getHash( unit );
+      const vector<CRef>& list = hashTable[ thisHash ];
+      if( list.size() > 0 ) { // there are clauses that have to be matched
+	for( int i = 0 ; i < list.size(); ++ i ) {
+	  const Clause& c = ca[ list[i] ];
+	  if( c.size() != 1 || c[0] != unit ) continue; // not the same clause, if the size check fails
+	  hashListEntry = i; hashClause = list[i]; 	// store current reference
+	  break;	// stop loop
+	}
       }
     }
     // if not present, write clause to proof
-    assert( hashClause != CRef_Undef && "a clause that is deleted should be present in the proof" );
+    assert( (!useCounting || hashClause != CRef_Undef ) && "a clause that is deleted should be present in the proof" );
     if( hashClause != CRef_Undef ) { // for the safety of the proof do not remove clauses that are not present!
       assert( ca[ hashClause ].lbd() > 0 && "all clauses in the proof should be present at least once" );
       ca[ hashClause ].setLBD(ca[ hashClause ].lbd() - 1); // re-use LBD, decrease presence of clause
@@ -471,6 +491,7 @@ inline void ProofMaster::delFromProof(const Lit& unit, int ownerID, bool local)
 	fprintf(drupProofFile, "d %i 0\n", (var(unit) + 1) * (-2 * sign(unit) + 1));
 	
 	// remove entry from hashTable (fast, unsorted)
+	vector<CRef>& list = hashTable[ thisHash ];
 	list[ hashListEntry ] = list[ list.size() - 1 ];
 	list.pop_back();
 	
@@ -479,10 +500,14 @@ inline void ProofMaster::delFromProof(const Lit& unit, int ownerID, bool local)
 	ca.free(hashClause);
       }
     } else {
-      static bool didit = false; // will be printed at most once
-      if( !didit ) {
-	cerr << "c owner[" << ownerID << "] should delete a unit clause that is not present: " << unit << endl;
-	didit = true;
+      if( useCounting ) {
+	static bool didit = false; // will be printed at most once
+	if( !didit ) {
+	  cerr << "c owner[" << ownerID << "] should delete a unit clause that is not present: " << unit << endl;
+	  didit = true;
+	}
+      } else { // no counting, print all deletions
+	fprintf(drupProofFile, "d %i 0\n", (var(unit) + 1) * (-2 * sign(unit) + 1));
       }
     }
 
@@ -495,6 +520,7 @@ template <class T>
 inline void ProofMaster::delFromProof(const T& clause, const Lit& extraClauseLit, int ownerID, bool local)
 {
   if( local ) { // simply extend the local pool
+    if( ownerID == -1 ) ownerID = threads; // correct owner ID
     localClauses[ownerID].push_back( lit_Error ); // define that this clause is to be deleted!
     if( extraClauseLit != lit_Undef ) localClauses[ownerID].push_back( extraClauseLit ); // have the extra literal first!
     for( int i = 0 ; i < clause.size(); ++ i ) 
@@ -503,6 +529,8 @@ inline void ProofMaster::delFromProof(const T& clause, const Lit& extraClauseLit
   } else { // interesting part, write to global proof
     // lock
     ownLock.lock();
+    cerr << "c PM [" << ownerID << "] remove clause " << extraClauseLit << " " << clause << endl;
+    if( clause.size() == 0 ) assert(false && "empty clauses should not be removed");
     // remove the clause from the global proof (or decrease the counter)
     removeGlobalClause(clause,extraClauseLit,0,clause.size());
     // unlock
@@ -541,6 +569,14 @@ inline long long unsigned int ProofMaster::getHash(const Lit& unit)
     }
     return (1023 * sum + prod ^ (31 * X)) % HASHMAX; 
 }
+
+inline void ProofMaster::setOnlineProofChecker(OnlineProofChecker* setUpChecker)
+{
+  assert( opc == 0 && "do not overwrite previous handle" );
+  opc = setUpChecker;
+#error use_OPS_all_over_the_place
+}
+
 
 
 #endif

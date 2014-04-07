@@ -521,7 +521,7 @@ protected:
     
 #ifdef DRATPROOF
     // DRUP proof
-    bool outputsProof() const { return drupProofFile != NULL; }
+    bool outputsProof() const ;
     template <class T>
     void addToProof(   const T& clause, bool deleteFromProof = false, const Lit remLit = lit_Undef); // write the given clause to the output, if the output is enabled
     void addUnitToProof( const Lit& l, bool deleteFromProof=false);    // write a single unit clause to the proof
@@ -1070,6 +1070,7 @@ bool Solver::addUnitClauses(const vec< Lit >& other)
 {
   assert( decisionLevel() == 0 && "init trail can only be done at level 0" );
   for( int i = 0 ; i < other.size(); ++ i ) {
+    addUnitToProof( other[i] ); // add the unit clause to the proof
     if( value( other[i] ) == l_Undef ) {
       uncheckedEnqueue( other[i] );
     } else if ( value( other[i] ) == l_False ) {
@@ -1091,92 +1092,6 @@ bool Solver::addUnitClauses(const vec< Lit >& other)
 #include "core/OnlineProofChecker.h"
 
 namespace Minisat { // open namespace again!
-
-#ifdef DRATPROOF
-
-template <class T>
-inline void Solver::addToProof( const T& clause, bool deleteFromProof, const Lit remLit)
-{
-  if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) ) return; // no proof, or delete and noDrup
-  // check before actually using the clause 
-  if( onlineDratChecker != 0 ) {
-    if( deleteFromProof ) onlineDratChecker->removeClause( clause, remLit );
-    else {
-      onlineDratChecker->addClause( clause, remLit );
-    }
-  }
-  // actually print the clause into the file
-  if( deleteFromProof ) fprintf(drupProofFile, "d ");
-  if( remLit != lit_Undef ) fprintf(drupProofFile, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1)); // print this literal first (e.g. for DRAT clauses)
-  for (int i = 0; i < clause.size(); i++) {
-    if( clause[i] == lit_Undef || clause[i] == remLit ) continue;	// print the remaining literal, if they have not been printed yet
-    fprintf(drupProofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
-  }
-  fprintf(drupProofFile, "0\n");
-  
-  if( config.opt_verboseProof == 2 ) {
-    cerr << "c [PROOF] ";
-    if( deleteFromProof ) cerr << " d ";
-    for (int i = 0; i < clause.size(); i++) {
-      if( clause[i] == lit_Undef ) continue;
-      cerr << clause[i] << " ";
-    }    
-    if( deleteFromProof && remLit != lit_Undef ) cerr << remLit;
-    cerr << " 0" << endl;
-  }
-}
-
-inline void Solver::addUnitToProof(const Lit& l, bool deleteFromProof)
-{
-  if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) ) return; // no proof, or delete and noDrup
-  // check before actually using the clause 
-  if( onlineDratChecker != 0 ) {
-    if( deleteFromProof ) onlineDratChecker->removeClause(l);
-    else {
-      onlineDratChecker->addClause(l);
-    }
-  }
-  if( l == lit_Undef ) return; // no need to check this literal, however, routine can be used to check whether the empty clause is in the proof
-  // actually print the clause into the file
-  if( deleteFromProof ) fprintf(drupProofFile, "d ");
-  fprintf(drupProofFile, "%i 0\n", (var(l) + 1) * (-2 * sign(l) + 1));  
-  if( config.opt_verboseProof == 2 ) {
-    if( deleteFromProof ) cerr << "c [PROOF] d " << l << endl;
-    else cerr << "c [PROOF] " << l << endl;
-  }
-}
-
-inline void Solver::addCommentToProof(const char* text, bool deleteFromProof)
-{
-  if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) || config.opt_verboseProof == 0) return; // no proof, no Drup, or no comments
-  fprintf(drupProofFile, "c %s\n", text);  
-  if( config.opt_verboseProof == 2 ) cerr << "c [PROOF] c " << text << endl;
-}
-
-inline
-bool Solver::checkProof () 
-{
-  if( onlineDratChecker != 0 ) {
-    return onlineDratChecker->addClause(lit_Undef);
-  } else {
-    return true; // here, we simply do not know
-  }
-}
-
-#endif
-
-inline
-void Solver::addInputClause_(vec< Lit >& ps)
-{
-#ifdef DRATPROOF
-  if( onlineDratChecker != 0 ) {
-    // cerr << "c add parsed clause to DRAT-OTFC: " << ps << endl;
-    onlineDratChecker->addParsedclause( ps );
-  }
-#endif
-}
-
-
 
 //=================================================================================================
 // Debug etc:
@@ -1205,5 +1120,112 @@ inline void Solver::printClause(CRef cr)
 //
 #include "core/Communication.h"
 #include "core/SolverCommunication.h"
+
+
+namespace Minisat { // open namespace again!
+  #ifdef DRATPROOF
+
+  inline void Solver::outputsProof () const { 
+    // either there is a local file, or there is a parallel build proof
+    return drupProofFile != NULL || (communication != 0 && communication->getPM() != 0 );
+  }
+
+  template <class T>
+  inline void Solver::addToProof( const T& clause, bool deleteFromProof, const Lit remLit)
+  {
+    if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) ) return; // no proof, or delete and noDrup
+
+    if( communication != 0 ) { // if the solver is part of a portfolio, then produce a global proof!
+      if( deleteFromProof ) communcation->getPM()->remFromProof(clause, remLit, communcation->getID(), false ); // first version: work on global proof only! TODO: change to local!
+      else communcation->getPM()->addToProof(clause, remLit, communcation->getID(), false ); // first version: work on global proof only!
+      return;
+    }
+
+    // check before actually using the clause 
+    if( onlineDratChecker != 0 ) {
+      if( deleteFromProof ) onlineDratChecker->removeClause( clause, remLit );
+      else {
+	onlineDratChecker->addClause( clause, remLit );
+      }
+    }
+    // actually print the clause into the file
+    if( deleteFromProof ) fprintf(drupProofFile, "d ");
+    if( remLit != lit_Undef ) fprintf(drupProofFile, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1)); // print this literal first (e.g. for DRAT clauses)
+    for (int i = 0; i < clause.size(); i++) {
+      if( clause[i] == lit_Undef || clause[i] == remLit ) continue;	// print the remaining literal, if they have not been printed yet
+      fprintf(drupProofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
+    }
+    fprintf(drupProofFile, "0\n");
+    
+    if( config.opt_verboseProof == 2 ) {
+      cerr << "c [PROOF] ";
+      if( deleteFromProof ) cerr << " d ";
+      for (int i = 0; i < clause.size(); i++) {
+	if( clause[i] == lit_Undef ) continue;
+	cerr << clause[i] << " ";
+      }    
+      if( deleteFromProof && remLit != lit_Undef ) cerr << remLit;
+      cerr << " 0" << endl;
+    }
+  }
+
+  inline void Solver::addUnitToProof(const Lit& l, bool deleteFromProof)
+  {
+    if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) ) return; // no proof, or delete and noDrup
+
+    if( communication != 0 ) { // if the solver is part of a portfolio, then produce a global proof!
+      if( deleteFromProof ) communcation->getPM()->delFromProof(l, communcation->getID(), false ); // first version: work on global proof only! TODO: change to local!
+      else communcation->getPM()->addUnitToProof(l, communcation->getID(), false ); // first version: work on global proof only!
+      return;
+    }
+
+    // check before actually using the clause 
+    if( onlineDratChecker != 0 ) {
+      if( deleteFromProof ) onlineDratChecker->removeClause(l);
+      else {
+	onlineDratChecker->addClause(l);
+      }
+    }
+    if( l == lit_Undef ) return; // no need to check this literal, however, routine can be used to check whether the empty clause is in the proof
+    // actually print the clause into the file
+    if( deleteFromProof ) fprintf(drupProofFile, "d ");
+    fprintf(drupProofFile, "%i 0\n", (var(l) + 1) * (-2 * sign(l) + 1));  
+    if( config.opt_verboseProof == 2 ) {
+      if( deleteFromProof ) cerr << "c [PROOF] d " << l << endl;
+      else cerr << "c [PROOF] " << l << endl;
+    }
+  }
+
+  inline void Solver::addCommentToProof(const char* text, bool deleteFromProof)
+  {
+    if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) || config.opt_verboseProof == 0) return; // no proof, no Drup, or no comments
+    fprintf(drupProofFile, "c %s\n", text);  
+    if( config.opt_verboseProof == 2 ) cerr << "c [PROOF] c " << text << endl;
+  }
+
+  inline
+  bool Solver::checkProof () 
+  {
+    if( onlineDratChecker != 0 ) {
+      return onlineDratChecker->addClause(lit_Undef);
+    } else {
+      return true; // here, we simply do not know
+    }
+  }
+
+  #endif
+
+  inline
+  void Solver::addInputClause_(vec< Lit >& ps)
+  {
+  #ifdef DRATPROOF
+    if( onlineDratChecker != 0 ) {
+      // cerr << "c add parsed clause to DRAT-OTFC: " << ps << endl;
+      onlineDratChecker->addParsedclause( ps );
+    }
+  #endif
+  }
+
+};
 
 #endif

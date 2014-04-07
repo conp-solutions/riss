@@ -86,7 +86,7 @@ bool Solver::addLearnedClause(vec<Lit>& ps, bool bump)
 inline
 int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
 {
-  if( communication == 0 ) return 0;
+  if( communication == 0 ) return 0;	// no communication -> do nothing!
   
   // nothing to send, do only receive every reveiceEvery tries!
   if( toSend == 0 && currentTries++ < receiveEvery) return 0;
@@ -124,7 +124,7 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
         // add unit clauses from master as clauses of the formula!!
         communication->data->receiveUnits( receiveClause );
         for( int i = 0 ; i < receiveClause.size(); ++ i ) {
-          if( !addClause (receiveClause[i]) ) {
+          if( !addClause (receiveClause[i]) ) {	// this methods adds the units to the proof as well!
             assert( false && "case that send unit clause makes the whole formula unsatisfiable is not handled - can this happen?");
             break;                                  // Add a unit clause to the solver.
           }
@@ -166,6 +166,7 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
 
     if( s > 0 ) {
       // calculate LBD value
+#if 0	// if variables should be protected
       if( communication->variableProtection() ) {
         int j = 0;
 	for( int i = 0 ; i < toSend->size(); ++ i )
@@ -175,8 +176,6 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
         for( int i = 0 ; i < toSend->size(); ++ i )
           levels[i] = level( var((*toSend)[i]));
       }
-
-
       // insertionsort
       for( int i = 1; i < s; ++i ) {
         unsigned p = i; int l = levels[i];
@@ -187,11 +186,13 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
         }
         int ltmp = levels[i]; levels[i] = levels[p]; levels[p] = ltmp;
       }
-
       int lbd = 1;
       for( int i = 1; i < s; ++ i ) {
         lbd = ( levels[i-1] == levels[i] ) ? lbd : lbd + 1;
       }
+#endif 
+      int lbd = computeLBD( *toSend );
+      
       if( lbd > currentSendLbdLimit ) {
 	updateDynamicLimits ( true ); // update failed limits!
 	communication->nrRejectSendLbdCls++;
@@ -201,17 +202,6 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
     communication->addClause(*toSend);
     updateDynamicLimits(false); // a clause could be send
     communication->nrSendCls++;
-    // +ANTON - adjust the DBG macro to enable this ...
-    DBG(
-        cerr << "c [THREAD] " << communication->getID() << " sending: ";
-        for (size_t i = 0; i < toSend->size(); i++) {
-          Lit l = (*toSend)[i];
-          cerr << (sign(l) ? "-" : "") << var(l) << " ";
-        }
-        cerr << "0" << endl;
-    );
-    // -ANTON
-
 
   } else if( communication->getDoReceive() ) {        // receive (only at level 0)
 
@@ -228,23 +218,14 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
     for( unsigned i = 0 ; i < receiveClauses.size(); ++ i ) {
       Clause& c = ca[ receiveClauses[i] ]; // take the clause and propagate / enqueue it
       
-      // +ANTON
-      DBG(
-            cerr << "c [THREAD] " << communication->getID() << " received (length=" << c.size() << ") [" << i << "/" << receiveClauses.size() << "] : ";
-            for (size_t i = 0; i < c.size(); i++) {
-              Lit l = c[i];
-              cerr << (sign(l) ? "-" : "") << var(l) << " ";
-            }
-            cerr << "0" << endl;
-      );
-      // -ANTON
-      
       if (c.size() < 2) {
 	if( c.size() == 0 ) {
 	  cerr << "c empty clause has been shared!" << endl;
 	  ok = false; return 1; 
 	}
-	if( value( c[0] ) == l_Undef ) uncheckedEnqueue(c[0]);
+	// has to be unit clause!
+	addUnitToProof(c[0]); // add the clause to the proof
+	if( value( c[0] ) == l_Undef ) uncheckedEnqueue(c[0]); 
 	else if(value( c[0] ) == l_False ) {
 	  ok = false; return 1; 
 	}
@@ -268,6 +249,7 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
 	  communication->nrReceivedCls ++;
 	  if( c.size() == 0 ) { ok = false; return 1; }
 	  else if ( c.size() == 1 ) {
+	    addUnitToProof(c[0]); // add the clause to the proof
 	    if( value( c[0] ) == l_Undef ) uncheckedEnqueue(c[0]);
 	    else if(value( c[0] ) == l_False ) {
 	      ok = false; return 1; 
@@ -276,6 +258,7 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
 	    ok = (propagate() == CRef_Undef);
 	    if( !ok ) return 1; 
 	  } else { // attach the clause, if its not a unit clause!
+	    addToProof( receiveClauses[i] ); // the shared clause stays in the solver, hence add this clause to the proof!
 	    learnts.push(receiveClauses[i]);
 	    if( communication->doBumpClauseActivity )
 	      ca[receiveClauses[i]].activity() += cla_inc; // increase activity of clause
@@ -315,10 +298,6 @@ void Solver::updateDynamicLimits( bool failed, bool sizeOnly )
   // check bound
   currentSendLbdLimit = currentSendLbdLimit < sendLbd    ? sendLbd    : currentSendLbdLimit;  
   currentSendLbdLimit = currentSendLbdLimit > sendMaxLbd ? sendMaxLbd : currentSendLbdLimit;  
-  
-  DBG(
-    cerr << "c [THREAD] " << communication->getID() << " fail=" << failed << " ratio: " << succesfullySend / (double)conflicts << " limits: " << currentSendSizeLimit << " | " << currentSendLbdLimit << endl;
-  );
   
   return;
 }

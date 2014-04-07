@@ -30,7 +30,12 @@ class PSolver {
   Communicator** communicators;		// interface between controller and SAT solvers
   pthread_t* threadIDs;			// pthread handles for the threads
   
+  ProofMaster* proofMaster;		// in a portfolio setup, use the proof master for generating DRUP proofs
+  
   string defaultConfig;			// name of the configuration that should be used
+
+  // Output for DRUP unsat proof
+  FILE* drupProofFile;
   
 public:
   
@@ -38,8 +43,11 @@ public:
   
   ~PSolver();
   
-  // Output for DRUP unsat proof
-  FILE* drupProofFile;
+  /** return the handle for the drup file */
+  FILE* getDrupFile();
+  
+  /** set the handle for the global DRUP file */
+  void setDrupFile( FILE* drupFile );
   
   int verbosity, verbEveryConflicts; // how much information to be printed
   
@@ -138,6 +146,12 @@ protected:
    */
   void kill();
 };
+
+inline FILE* PSolver::getDrupFile()
+{
+ return drupProofFile;
+}
+
 
 };
 
