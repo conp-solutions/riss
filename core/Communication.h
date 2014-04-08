@@ -472,6 +472,7 @@ public:
      */
     void receiveClauses ( Minisat::ClauseAllocator& ca, std::vector< Minisat::CRef >& clauses )
     {
+      if( !doReceive ) return;
       //unsigned int oldLastSeen = lastSeenIndex;
       lastSeenIndex = data->getBuffer().receiveClauses( id, lastSeenIndex, ca, clauses );
     }

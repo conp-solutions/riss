@@ -17,6 +17,7 @@ PSolver::PSolver(const int threadsToUse, const char* configName)
 , data(0)
 , threadIDs( 0 )
 , proofMaster( 0 )
+, opc( 0 )
 , defaultConfig( configName == 0 ? "" : string(configName) ) // setup the configuration
 , drupProofFile(0)
 , verbosity(0)
@@ -32,6 +33,11 @@ PSolver::PSolver(const int threadsToUse, const char* configName)
 
     // set preset configs here
     createThreadConfigs();
+    
+    // here, DRUP proofs are created!
+    if( defaultConfig == "" ) { // check proofs only, if the portfolio solver is not used differently (e.g. BMC)
+      opc = new OnlineProofChecker(OnlineProofChecker::drup);
+    }
     
     // setup the first solver!
     solvers.push( new Solver( configs[0] ) ); // from this point on the address of this configuration is not allowed to be changed any more!
@@ -128,6 +134,7 @@ bool PSolver::addClause_(vec< Lit >& ps)
       while( solvers[i]->nVars() <= var(ps[j]) ) solvers[i]->newVar();
     }
     bool ret2 = solvers[i]->addClause_(ps); // if a solver failed adding the clause, then the state for all solvers is bad as well
+    if( i == 0 ) cerr << "c parsed clause " << ps << endl;	// TODO remove after debug
     ret = ret2 && ret; 
   }
   return ret;
@@ -202,12 +209,15 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
     
     // copy the formula of the solver 0 number of thread times
     if( proofMaster != 0 ) { // if a proof is generated, add all clauses that are currently present in solvers[0]
+      proofMaster->addCommentToProof("add irredundant clauses multiple times",-1);
       for( int j = 0 ; j < solvers[0]->clauses.size(); ++ j ) {
 	proofMaster->addInputToProof( solvers[0]->ca[ solvers[0]->clauses[j] ], threads, true ); // so far, work on global proof
       }
+      proofMaster->addCommentToProof("add redundant clauses multiple times",-1);
       for( int j = 0 ; j < solvers[0]->learnts.size(); ++ j ) {
 	proofMaster->addInputToProof( solvers[0]->ca[ solvers[0]->learnts[j] ], threads, true ); // so far, work on global proof
       }
+      proofMaster->addCommentToProof("add unit clauses of solver 0",-1);
       proofMaster->addUnitsToProof( solvers[0]->trail, 0, false ); // incorporate all the units once more
     }
     
@@ -341,12 +351,24 @@ void PSolver::createThreadConfigs()
       configs[t].setPreset( Configs[t] );
       // configs[t].parseOptions("-solververb=2"); // set all solvers very verbose
     }
+  } else if ( defaultConfig == "PLAIN" ) {
+    for( int t = 4 ; t < threads; ++ t ) {
+      configs[t].setPreset( "" ); // do not set anything
+    }
+  } else if ( defaultConfig == "DRUP" ) {
+    for( int t = 4 ; t < threads; ++ t ) {
+      configs[t].opt_verboseProof = 2;
+      configs[t].opt_verboseProof = true;
+    }
   }
 }
 
 void PSolver::addInputClause_(vec< Lit >& ps)
 {
-#warning ADD_INPUT_CLAUSE_NOT_IMPLEMENTED_FOR_PRISS
+  if( opc != 0 ) {
+    // cerr << "c add parsed clause to DRAT-OTFC: " << ps << endl;
+    opc->addParsedclause( ps );
+  }
   return;
 }
 
@@ -359,9 +381,11 @@ bool PSolver::initializeThreads()
 
   data = new CommunicationData( 16000 ); // space for 16K clauses
   
+  
   // the portfolio should print proofs
   if( drupProofFile != 0 ) {
     proofMaster = new ProofMaster(drupProofFile, threads, nVars(), false ); // use a counting proof master
+    proofMaster->setOnlineProofChecker( opc );	// tell proof master about the online proof checker
     data->setProofMaster( proofMaster ); 	// tell shared clauses pool about proof master (so that it adds shared clauses)
   }
   
@@ -378,6 +402,11 @@ bool PSolver::initializeThreads()
 
     // tell the communication system about the solver
     communicators[i]->setSolver( solvers[i] );
+    if( proofMaster != 0 ) { // for now, we do not use sharing
+      cerr << "c for DRUP proofs, yet, sharing is disabled" << endl;
+      communicators[i]->setDoReceive( false ); // no receive
+      communicators[i]->setDoSend( false ); // no sending
+    }
     // tell the communicator about the proof master
     communicators[i]->setProofMaster( proofMaster );
     // tell solver about its communication interface
@@ -583,8 +612,10 @@ void* runWorkerSolver(void* data)
 void PSolver::setDrupFile(FILE* drupFile)
 {
   // set file for the first solver
-  if( !initialized && solvers.size() > 0 ) 
+  if( !initialized && solvers.size() > 0 ) {
+    cerr << "c set DRUP file for solver 0" << endl;
     solvers[0]->drupProofFile = drupFile;
+  }
   // set own file handle to initialize the proof master afterwards
   drupProofFile = drupFile;
 }

@@ -47,6 +47,7 @@ class ProofMaster
   MarkArray matchArray;	// array to match two clauses
   
   vec<Lit> tmpCls;	// helper vector to create unit clauses in allocator
+  vec<Lit> opcTmpCls;	// to check clauses, a "real" clause is necessary for the online proof checker
   
 public:
 
@@ -98,6 +99,9 @@ public:
    */
   void updateGlobalProof( int ownerID , bool useExtraLock = false);
 
+  /** add a comment to the global proof (cannot be added to the local proof ... */
+  void addCommentToProof( const char* text, int ownerID); // write the text as comment into the proof!
+  
   
   /** set up the online proof checker for the parallel proof to continue the work that has been done so far already */
   void setOnlineProofChecker( OnlineProofChecker* setUpChecker );
@@ -194,6 +198,11 @@ inline void ProofMaster::addUnitToGlobalProof(const Lit& unit)
     }
     // if not present, write clause to proof
     if( hashClause == CRef_Undef ) {
+      
+      if( opc != 0 ) {	// check proof 
+	if( ! opc->addClause(unit) ) { cerr << "c adding unit clause " << unit << " to global proof fails" << endl; assert(false); exit(13); }
+      }
+      
       // write to file
       fprintf(drupProofFile, "%i 0\n", (var(unit) + 1) * (-2 * sign(unit) + 1));
       
@@ -247,6 +256,14 @@ inline void ProofMaster::addGlobalClause(const T& clause, const Lit& extraClause
     }
     // if not present, write clause to proof
     if( hashClause == CRef_Undef ) {
+      
+      if( opc != 0 ) { // perform check for the global proof only
+	opcTmpCls.clear();
+	if( extraClauseLit != lit_Undef ) opcTmpCls.push( extraClauseLit );
+	for (int i = startIndex; i < endIndex; i++) { if( clause[i] != lit_Undef && clause[i] != extraClauseLit ) opcTmpCls.push( clause[i] ); }
+	if( ! opc->addClause( opcTmpCls ) ) { cerr << "c adding clause " << opcTmpCls << " to global proof fails" << endl; assert(false); exit(13); }
+      }
+      
       // write to file
       if( extraClauseLit != lit_Undef ) fprintf(drupProofFile, "%i ", (var(extraClauseLit) + 1) * (-2 * sign(extraClauseLit) + 1)); // print this literal first (e.g. for DRAT clauses)
       for (int i = startIndex; i < endIndex; i++) {
@@ -312,6 +329,14 @@ inline void ProofMaster::removeGlobalClause(const T& clause, const Lit& extraCla
       assert( (!useCounting || ca[ hashClause ].lbd() > 0) && "all clauses in the proof should be present at least once" );
       if( useCounting ) ca[ hashClause ].setLBD(ca[ hashClause ].lbd() - 1); // re-use LBD, decrease presence of clause
       if( !useCounting || ca[ hashClause ].lbd() == 0 ) {
+	
+	if( opc != 0 ) { // perform check for the global proof only
+	  opcTmpCls.clear();
+	  if( extraClauseLit != lit_Undef ) opcTmpCls.push( extraClauseLit );
+	  for (int i = startIndex; i < endIndex; i++) { if( clause[i] != lit_Undef && clause[i] != extraClauseLit ) opcTmpCls.push( clause[i] ); }
+	  opc->removeClause( opcTmpCls );
+	}
+	
 	// write to file
 	fprintf(drupProofFile, "d "); // clause should be deleted
 	if( extraClauseLit != lit_Undef ) fprintf(drupProofFile, "%i ", (var(extraClauseLit) + 1) * (-2 * sign(extraClauseLit) + 1)); // print this literal first (e.g. for DRAT clauses)
@@ -435,6 +460,13 @@ inline void ProofMaster::addInputToProof(const T& clause, int numberOfOccurrence
     }
     // if not present, write clause to proof
     if( hashClause == CRef_Undef ) {
+      
+      if( opc != 0 ) { // perform check for the global proof only
+	opcTmpCls.clear();
+	for (int i = 0; i < clause.size(); i++) { if( clause[i] != lit_Undef ) opcTmpCls.push( clause[i] ); }
+	if( !opc->addClause( opcTmpCls ) ) { cerr << "c adding clause " << opcTmpCls << " to global proof fails" << endl; assert(false); exit(13); }
+      }
+      
       // write to file
       for (int i = 0; i < clause.size(); i++) {
 	if( clause[i] == lit_Undef ) continue;	// print the remaining literal, if they have not been printed yet
@@ -487,6 +519,11 @@ inline void ProofMaster::delFromProof(const Lit& unit, int ownerID, bool local)
       assert( ca[ hashClause ].lbd() > 0 && "all clauses in the proof should be present at least once" );
       ca[ hashClause ].setLBD(ca[ hashClause ].lbd() - 1); // re-use LBD, decrease presence of clause
       if( ca[ hashClause ].lbd() == 0 ) {
+	
+	if( opc != 0 ) {	// check proof 
+	  opc->removeClause(unit);
+	}
+	
 	// write to file
 	fprintf(drupProofFile, "d %i 0\n", (var(unit) + 1) * (-2 * sign(unit) + 1));
 	
@@ -507,6 +544,9 @@ inline void ProofMaster::delFromProof(const Lit& unit, int ownerID, bool local)
 	  didit = true;
 	}
       } else { // no counting, print all deletions
+	if( opc != 0 ) {	// check proof 
+	  opc->removeClause(unit);
+	}
 	fprintf(drupProofFile, "d %i 0\n", (var(unit) + 1) * (-2 * sign(unit) + 1));
       }
     }
@@ -574,7 +614,14 @@ inline void ProofMaster::setOnlineProofChecker(OnlineProofChecker* setUpChecker)
 {
   assert( opc == 0 && "do not overwrite previous handle" );
   opc = setUpChecker;
-#error use_OPS_all_over_the_place
+}
+
+inline void ProofMaster::addCommentToProof(const char* text, int ownerID)
+{
+  ownLock.lock();
+  if( ownerID == -1 ) ownerID = threads;
+  fprintf(drupProofFile, "c [by %d] %s\n", ownerID, text);  
+  ownLock.unlock();
 }
 
 

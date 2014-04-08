@@ -258,7 +258,7 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
 	    ok = (propagate() == CRef_Undef);
 	    if( !ok ) return 1; 
 	  } else { // attach the clause, if its not a unit clause!
-	    addToProof( receiveClauses[i] ); // the shared clause stays in the solver, hence add this clause to the proof!
+	    addToProof( ca[receiveClauses[i]] ); // the shared clause stays in the solver, hence add this clause to the proof!
 	    learnts.push(receiveClauses[i]);
 	    if( communication->doBumpClauseActivity )
 	      ca[receiveClauses[i]].activity() += cla_inc; // increase activity of clause

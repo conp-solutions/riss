@@ -119,7 +119,7 @@ int main(int argc, char** argv)
         
 	::parseOptions (argc, argv ); // parse all global options
 	
-        PSolver S(threads);
+        PSolver S(threads, "DRUP"); // set up a portfolio solver for DRUP proofs
 	
         double initial_time = cpuTime();
 

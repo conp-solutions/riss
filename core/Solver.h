@@ -1125,7 +1125,7 @@ inline void Solver::printClause(CRef cr)
 namespace Minisat { // open namespace again!
   #ifdef DRATPROOF
 
-  inline void Solver::outputsProof () const { 
+  inline bool Solver::outputsProof () const { 
     // either there is a local file, or there is a parallel build proof
     return drupProofFile != NULL || (communication != 0 && communication->getPM() != 0 );
   }
@@ -1136,8 +1136,8 @@ namespace Minisat { // open namespace again!
     if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) ) return; // no proof, or delete and noDrup
 
     if( communication != 0 ) { // if the solver is part of a portfolio, then produce a global proof!
-      if( deleteFromProof ) communcation->getPM()->remFromProof(clause, remLit, communcation->getID(), false ); // first version: work on global proof only! TODO: change to local!
-      else communcation->getPM()->addToProof(clause, remLit, communcation->getID(), false ); // first version: work on global proof only!
+      if( deleteFromProof ) communication->getPM()->delFromProof(clause, remLit, communication->getID(), false ); // first version: work on global proof only! TODO: change to local!
+      else communication->getPM()->addToProof(clause, remLit, communication->getID(), false ); // first version: work on global proof only!
       return;
     }
 
@@ -1174,8 +1174,8 @@ namespace Minisat { // open namespace again!
     if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) ) return; // no proof, or delete and noDrup
 
     if( communication != 0 ) { // if the solver is part of a portfolio, then produce a global proof!
-      if( deleteFromProof ) communcation->getPM()->delFromProof(l, communcation->getID(), false ); // first version: work on global proof only! TODO: change to local!
-      else communcation->getPM()->addUnitToProof(l, communcation->getID(), false ); // first version: work on global proof only!
+      if( deleteFromProof ) communication->getPM()->delFromProof(l, communication->getID(), false ); // first version: work on global proof only! TODO: change to local!
+      else communication->getPM()->addUnitToProof(l, communication->getID(), false ); // first version: work on global proof only!
       return;
     }
 
@@ -1199,6 +1199,11 @@ namespace Minisat { // open namespace again!
   inline void Solver::addCommentToProof(const char* text, bool deleteFromProof)
   {
     if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) || config.opt_verboseProof == 0) return; // no proof, no Drup, or no comments
+
+    if( communication != 0 && communication->getPM() != 0) {
+      communication->getPM()->addCommentToProof(text, communication->getID() );
+      return;
+    }
     fprintf(drupProofFile, "c %s\n", text);  
     if( config.opt_verboseProof == 2 ) cerr << "c [PROOF] c " << text << endl;
   }

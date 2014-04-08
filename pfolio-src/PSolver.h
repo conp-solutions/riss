@@ -31,6 +31,7 @@ class PSolver {
   pthread_t* threadIDs;			// pthread handles for the threads
   
   ProofMaster* proofMaster;		// in a portfolio setup, use the proof master for generating DRUP proofs
+  OnlineProofChecker* opc;		// check the proof on the fly during its creation
   
   string defaultConfig;			// name of the configuration that should be used
 
