@@ -579,7 +579,7 @@ bool FourierMotzkin::process()
 	  int k = 0; // number of kept constraints
 	  for( int i = 0 ; i < leftHands[ toInt(l ) ].size(); ++i ) { 
 	    if( rewrite[ leftHands[ toInt(l ) ][i] ] != -1 ) { 
-	      cerr << "c move lefthands[" << toInt(l) << "][" << k << "] to " << rewrite[ leftHands[ toInt(l ) ][i] ] << endl;
+	      // cerr << "c move lefthands[" << toInt(l) << "][" << k << "] to " << rewrite[ leftHands[ toInt(l ) ][i] ] << endl;
 	      leftHands[ toInt(l ) ][k++] = rewrite[ leftHands[ toInt(l ) ][i] ];
 	    }
 	  }
@@ -587,7 +587,7 @@ bool FourierMotzkin::process()
 	  k = 0;
 	  for( int i = 0 ; i < rightHands[ toInt(l ) ].size(); ++i ) {
 	    if( rewrite[ rightHands[ toInt(l ) ][i] ] != -1 ) {
-	      cerr << "c move rightHands[" << toInt(l) << "][" << k << "] to " << rewrite[ rightHands[ toInt(l ) ][i] ] << endl;
+	      // cerr << "c move rightHands[" << toInt(l) << "][" << k << "] to " << rewrite[ rightHands[ toInt(l ) ][i] ] << endl;
 	      rightHands[ toInt(l ) ][k++] = rewrite[ rightHands[ toInt(l ) ][i] ];
 	    }
 	  }
