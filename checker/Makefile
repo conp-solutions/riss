@@ -6,7 +6,7 @@ certifiedSAT: certifiedSAT.cc
 	g++ certifiedSAT.cc -o certifiedSAT -O0 -g
 
 drat-trim: drat-trim.c
-	gcc -Wall -o drat-trim -O0 -g drat-trim.c -std=c99
+	gcc -Wall -o drat-trim -O0 -g drat-trim.c -std=c99 -static
 	
 stc: stc.c
 	gcc stc.c -o stc -O2 -static

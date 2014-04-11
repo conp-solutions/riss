@@ -1136,6 +1136,8 @@ namespace Minisat { // open namespace again!
     if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) ) return; // no proof, or delete and noDrup
 
     if( communication != 0 ) { // if the solver is part of a portfolio, then produce a global proof!
+      if( deleteFromProof ) cerr << "c [" << communication->getID() << "] remove clause " << clause << " to proof" << endl;
+      else cerr << "c [" << communication->getID() << "] add clause " << clause << " to proof" << endl;
       if( deleteFromProof ) communication->getPM()->delFromProof(clause, remLit, communication->getID(), false ); // first version: work on global proof only! TODO: change to local!
       else communication->getPM()->addToProof(clause, remLit, communication->getID(), false ); // first version: work on global proof only!
       return;

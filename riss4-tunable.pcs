@@ -548,7 +548,7 @@ bce-limit | bce in   {yes}
 # 
 cp3_Abva       | bva in   {yes}
 cp3_bva_subOr  | bva in   {yes}
-cp3_bva_limit  | cp3_Abva in   {yes}
+cp3_bva_limit  | cp3_Abva in {yes}
 cp3_bva_Vlimit | bva in   {yes}
 cp3_Xbva       | bva in   {yes}
 cp3_Ibva       | bva in   {yes}

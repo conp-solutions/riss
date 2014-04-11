@@ -9,6 +9,8 @@ Copyright (c) 2014,      Norbert Manthey, All rights reserved.
 #include "core/CoreConfig.h"
 #include "coprocessor-src/CP3Config.h"
 
+#include "pfolio-src/PfolioConfig.h"
+
 #include "core/Communication.h"
 
 #include "pthread.h"

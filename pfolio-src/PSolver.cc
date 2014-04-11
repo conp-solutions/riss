@@ -7,7 +7,11 @@ Copyright (c) 2014,      Norbert Manthey, All rights reserved.
 #include <assert.h>
 
 namespace Minisat {
+
   
+BoolOption opt_share(        "PFOLIO", "ps", "enable clause sharing for all clients", true, 0 );
+BoolOption opt_proofCounting("PFOLIO", "pc", "enable avoiding duplicate clauses in the pfolio DRUP proof", true, 0 );
+BoolOption opt_verboseProof ("PFOLIO", "pv", "verbose proof with comments to clause authors", false, 0 );
 
 /** main method that is executed by all worker threads */
 static void* runWorkerSolver (void* data);
@@ -188,6 +192,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
       cerr << "c initialization of " << threads << " threads failed" << endl;
       return l_Undef;
     }
+    if( proofMaster != 0 ) proofMaster->addCommentToProof("c initialized parallel solvers", -1);
    
    /* 
     * copy the formula from the first solver to all the other solvers
@@ -243,6 +248,8 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
      communicators[i]->setWinner( false );
      assert( (communicators[i]->isFinished() || communicators[i]->isWaiting() ) && "all solvers should not touch anything!" );
    }
+   
+   if( proofMaster != 0 ) proofMaster->addCommentToProof("c start all solvers", -1);
    start(); // allow all solvers to start, 
    waitFor( oneFinished ); // and wait until the first solver finishes
    
@@ -384,7 +391,7 @@ bool PSolver::initializeThreads()
   
   // the portfolio should print proofs
   if( drupProofFile != 0 ) {
-    proofMaster = new ProofMaster(drupProofFile, threads, nVars(), false ); // use a counting proof master
+    proofMaster = new ProofMaster(drupProofFile, threads, nVars(), opt_proofCounting, opt_verboseProof ); // use a counting proof master
     proofMaster->setOnlineProofChecker( opc );	// tell proof master about the online proof checker
     data->setProofMaster( proofMaster ); 	// tell shared clauses pool about proof master (so that it adds shared clauses)
   }
@@ -404,8 +411,10 @@ bool PSolver::initializeThreads()
     communicators[i]->setSolver( solvers[i] );
     if( proofMaster != 0 ) { // for now, we do not use sharing
       cerr << "c for DRUP proofs, yet, sharing is disabled" << endl;
-      communicators[i]->setDoReceive( false ); // no receive
-      communicators[i]->setDoSend( false ); // no sending
+      if( ! opt_share ) {
+	communicators[i]->setDoReceive( false ); // no receive
+	communicators[i]->setDoSend( false ); // no sending
+      }
     }
     // tell the communicator about the proof master
     communicators[i]->setProofMaster( proofMaster );
