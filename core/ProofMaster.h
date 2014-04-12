@@ -212,16 +212,16 @@ inline void ProofMaster::addUnitToGlobalProof(const Lit& unit, int ownerID)
       if( useCounting ) {
 	// add to clause storage
 	tmpCls.clear(); tmpCls.push(unit);
-	CRef ref = ca.alloc( tmpCls , false );
+	CRef ref = ca.alloc( tmpCls , false ); // ok, unit is handled
 	ca[ref].setLBD(1); // the clause is currently present once in the proof
 	// add to hash table
 	hashTable[thisHash].push_back( ref );
-	cerr << "c add clause " << ca[ref] << " to hash table " << " (hash(" << thisHash << "): " << getHash( unit ) << " ) list:" << hashTable[thisHash] << endl;
+	if(opt_verboseProof) cerr << "c add clause " << ca[ref] << " to hash table " << " (hash(" << thisHash << "): " << getHash( unit ) << " ) list:" << hashTable[thisHash] << endl;
       }
     } else { // else increase the counter of that clause by 1
       if( useCounting ) { 
 	ca[ hashClause ].setLBD(ca[ hashClause ].lbd() + 1); // re-use LBD
-	cerr << "c set counter of " << ca[ hashClause ] << " to " << ca[ hashClause ].lbd() << " (hash: " << getHash( unit ) << " ) list:" << hashTable[thisHash] << endl;
+	if(opt_verboseProof)cerr << "c set counter of " << ca[ hashClause ] << " to " << ca[ hashClause ].lbd() << " (hash: " << getHash( unit ) << " ) list:" << hashTable[thisHash] << endl;
       }
     }
 }
@@ -231,7 +231,7 @@ template <class T>
 inline void ProofMaster::addGlobalClause(const T& clause, const Lit& extraClauseLit, int ownerID, int startIndex, int endIndex)
 {
     CRef hashClause = CRef_Undef;
-    unsigned long long thisHash = 0;
+    unsigned long long thisHash = HASHMAX;
     
     if( useCounting ) { // check whether the clause already exists
       thisHash = getHash( clause, extraClauseLit, startIndex, endIndex ); // get hash for the current clause
@@ -285,20 +285,20 @@ inline void ProofMaster::addGlobalClause(const T& clause, const Lit& extraClause
 	tmpCls.clear(); 
 	if( extraClauseLit != lit_Undef ) tmpCls.push( extraClauseLit );
 	for( int i = 0 ; i < clause.size(); ++ i ) if( clause[i] != extraClauseLit ) tmpCls.push( clause [i] );
-	CRef ref = ca.alloc( tmpCls , false );
+	CRef ref = ca.alloc( tmpCls , false ); // ok, extraLit is handled
 	ca[ref].setLBD(1); // the clause is currently present once in the proof
 	// add to hash table
 	hashTable[thisHash].push_back( ref );
-	cerr << "c add clause " << ca[ref] << " to hash table "  << " (hash(" << thisHash << "): " << getHash( clause, extraClauseLit, startIndex, endIndex ) << " ) list:" << hashTable[thisHash] << endl;
+	if(opt_verboseProof)cerr << "c add clause " << ca[ref] << " to hash table "  << " (hash(" << thisHash << "): " << getHash( clause, extraClauseLit, startIndex, endIndex ) << " ) list:" << hashTable[thisHash] << endl;
       } else {
-	cerr << "c do not add to hash table" << endl;
+	if(opt_verboseProof)cerr << "c do not add to hash table" << endl;
       }
     } else { // else increase the counter of that clause by 1
       if( useCounting ) {
 	ca[ hashClause ].setLBD(ca[ hashClause ].lbd() + 1); // re-use LBD
-	cerr << "c set counter of clause " << ca[ hashClause ] << " to " << ca[ hashClause ].lbd() << " (hash(" << thisHash << ": " << getHash( clause, extraClauseLit, startIndex, endIndex ) << " ) list:"  << hashTable[thisHash] << endl;
+	if(opt_verboseProof)cerr << "c set counter of clause " << ca[ hashClause ] << " to " << ca[ hashClause ].lbd() << " (hash(" << thisHash << ": " << getHash( clause, extraClauseLit, startIndex, endIndex ) << " ) list:"  << hashTable[thisHash] << endl;
       } else {
-	cerr << "c do not add to hash table" << endl;
+	if(opt_verboseProof)cerr << "c do not add to hash table" << endl;
       }
     }
   
@@ -310,12 +310,12 @@ inline void ProofMaster::removeGlobalClause(const T& clause, const Lit& extraCla
 {
   CRef hashClause = CRef_Undef;  
   int hashListEntry = -1;
-  unsigned long long thisHash = 0;
+  unsigned long long thisHash = HASHMAX;
   
   if( useCounting ) { // check whether the clause is in the proof multiple times 
     thisHash = getHash( clause, extraClauseLit, startIndex, endIndex );
     const vector<CRef>& list = hashTable[ thisHash ];
-    cerr << "c list with hash " << thisHash << ": " << list << endl;
+    if(opt_verboseProof)cerr << "c list with hash " << thisHash << ": " << list << endl;
     if( list.size() > 0 ) { // there are clauses that have to be matched
       matchArray.nextStep();
       int clauseSize = 0 ;
@@ -349,7 +349,7 @@ inline void ProofMaster::removeGlobalClause(const T& clause, const Lit& extraCla
       assert( (!useCounting || ca[ hashClause ].lbd() > 0) && "all clauses in the proof should be present at least once" );
       if( useCounting ) {
 	ca[ hashClause ].setLBD(ca[ hashClause ].lbd() - 1); // re-use LBD, decrease presence of clause
-	cerr << "c decrease counter of clause " << ca[ hashClause ] << " to " << ca[ hashClause ].lbd() << " (hash: " << getHash( clause, extraClauseLit, startIndex, endIndex ) << " )" << endl;
+	if(opt_verboseProof)cerr << "c decrease counter of clause " << ca[ hashClause ] << " to " << ca[ hashClause ].lbd() << " (hash: " << getHash( clause, extraClauseLit, startIndex, endIndex ) << " )" << endl;
       }
       if( !useCounting || ca[ hashClause ].lbd() == 0 ) {
 	
@@ -373,7 +373,7 @@ inline void ProofMaster::removeGlobalClause(const T& clause, const Lit& extraCla
 	if( useCounting ) {
 	  vector<CRef>& list = hashTable[ thisHash ];
 	  // remove entry from hashTable (fast, unsorted)
-	  cerr << "c remove clause " << ca[ list[hashListEntry] ] << " from hash table " << " (hash: " << getHash( clause, extraClauseLit, startIndex, endIndex ) << " )" << endl;
+	  if(opt_verboseProof)cerr << "c remove clause " << ca[ list[hashListEntry] ] << " from hash table " << " (hash: " << getHash( clause, extraClauseLit, startIndex, endIndex ) << " )" << endl;
 	  list[ hashListEntry ] = list[ list.size() - 1 ];
 	  list.pop_back();
 	  
@@ -443,7 +443,7 @@ inline void ProofMaster::addToProof(const T& clause, const Lit& extraClauseLit, 
       if( clause[i] != extraClauseLit ) localClauses[ownerID].push_back( clause[i] ); // do not add the extra lit twice!
     localClauses[ownerID].push_back( lit_Undef ); // mark the end of the clause with "lit_Undef"
   } else { // interesting part, write to global proof
-    cerr << "c PM [" << ownerID << "] adds clause " << clause << endl;
+    if(opt_verboseProof)cerr << "c PM [" << ownerID << "] adds clause " << clause << endl;
     // lock
     ownLock.lock();
     // add the clause to the global proof (or increase the counter of an existing clause)
@@ -458,12 +458,13 @@ template <class T>
 inline void ProofMaster::addInputToProof(const T& clause, int ownerID, int numberOfOccurrence, bool isNewClause)
 {
     CRef hashClause = CRef_Undef;
-    unsigned long long thisHash = 0;
+    unsigned long long thisHash = HASHMAX;
     
-    cerr << "c PM add input clause (" << numberOfOccurrence << " times): " << clause << endl;
+    if(opt_verboseProof)cerr << "c PM add input clause (" << numberOfOccurrence << " times): " << clause << endl;
+    
+    if( useCounting ) thisHash = getHash( clause, lit_Undef, 0, clause.size() ); // get hash for the current clause
     
     if( useCounting && !isNewClause ) { // check whether the clause already exists
-      thisHash = getHash( clause, lit_Undef, 0, clause.size() ); // get hash for the current clause
       const vector<CRef>& list = hashTable[ thisHash ];
       if( list.size() > 0 ) { // there are clauses that have to be matched
 	matchArray.nextStep();
@@ -506,22 +507,22 @@ inline void ProofMaster::addInputToProof(const T& clause, int ownerID, int numbe
       
       if( useCounting ) {
 	// add to clause storage
-	CRef ref = ca.alloc( clause , false );
+	CRef ref = ca.alloc( clause , false ); // ok, no need for an extra literal!
 	ca[ref].setLBD( numberOfOccurrence ); // the clause is currently present once in the proof
 	// add to hash table
-	cerr << "c add clause " << ca[ ref ] << " to hash table" << endl;
-	assert( thisHash != 0 && "the hash cannot be 0 if counting is used");
+	if(opt_verboseProof)cerr << "c add clause " << ca[ ref ] << " to hash table" << endl;
+	assert( thisHash != HASHMAX && "the hash cannot be HASHMAX if counting is used");
 	hashTable[thisHash].push_back( ref );
-	cerr << "c set counter of clause " << ca[ ref ] << " to " << ca[ref].lbd() << " (hash: " << getHash( clause, lit_Undef, 0, clause.size() ) << " ) list:" << hashTable[thisHash] << endl;
+	if(opt_verboseProof)cerr << "c set counter of clause " << ca[ ref ] << " to " << ca[ref].lbd() << " (hash: " << getHash( clause, lit_Undef, 0, clause.size() ) << " ) list:" << hashTable[thisHash] << endl;
       } else {
-	cerr << "c do not add to hash table" << endl;
+	if(opt_verboseProof)cerr << "c do not add to hash table" << endl;
       }
     } else { // else increase the counter of that clause
       if( useCounting ) {
 	ca[ hashClause ].setLBD(ca[ hashClause ].lbd() + numberOfOccurrence); // re-use LBD
-	cerr << "c set counter of clause " << ca[ hashClause ] << " to " << ca[ hashClause ].lbd() << " (hash(" << thisHash << "): " << getHash( clause, lit_Undef, 0, clause.size() ) << " )" << endl;
+	if(opt_verboseProof)cerr << "c set counter of clause " << ca[ hashClause ] << " to " << ca[ hashClause ].lbd() << " (hash(" << thisHash << "): " << getHash( clause, lit_Undef, 0, clause.size() ) << " )" << endl;
       } else {
-	cerr << "c do not add to hash table" << endl;
+	if(opt_verboseProof)cerr << "c do not add to hash table" << endl;
       }
     }
 }
@@ -538,10 +539,10 @@ inline void ProofMaster::delFromProof(const Lit& unit, int ownerID, bool local)
   } else { // interesting part, write to global proof
     // lock
     ownLock.lock();
-    cerr << "c PM [" << ownerID << "] deletes unit clause " << unit << endl;
+    if(opt_verboseProof)cerr << "c PM [" << ownerID << "] deletes unit clause " << unit << endl;
     CRef hashClause = CRef_Undef;
     int hashListEntry = -1;
-    unsigned long long thisHash = 0;
+    unsigned long long thisHash = HASHMAX;
     if( useCounting ) {
       thisHash = getHash( unit );
       const vector<CRef>& list = hashTable[ thisHash ];
@@ -562,7 +563,7 @@ inline void ProofMaster::delFromProof(const Lit& unit, int ownerID, bool local)
       assert( useCounting && "can find a hash clause only, if counting is enabled" );
       assert( ca[ hashClause ].lbd() > 0 && "all clauses in the proof should be present at least once" );
       ca[ hashClause ].setLBD(ca[ hashClause ].lbd() - 1); // re-use LBD, decrease presence of clause
-      cerr << "c decrease the counter of clause " << ca[ hashClause ] << " to " << ca[ hashClause ].lbd() << endl;
+      if(opt_verboseProof)cerr << "c decrease the counter of clause " << ca[ hashClause ] << " to " << ca[ hashClause ].lbd() << endl;
       if( ca[ hashClause ].lbd() == 0 ) {
 	
 	if( opc != 0 ) {	// check proof 
@@ -575,7 +576,7 @@ inline void ProofMaster::delFromProof(const Lit& unit, int ownerID, bool local)
 	
 	// remove entry from hashTable (fast, unsorted)
 	vector<CRef>& list = hashTable[ thisHash ];
-	cerr << "c remove clause from hash table: " << ca[ list[ hashListEntry ]] << " (hash: " << getHash( unit ) << " )" << endl;
+	if(opt_verboseProof)cerr << "c remove clause from hash table: " << ca[ list[ hashListEntry ]] << " (hash (" << thisHash<< "): " << getHash( unit ) << " )" << endl;
 	list[ hashListEntry ] = list[ list.size() - 1 ];
 	list.pop_back();
 	
@@ -587,7 +588,7 @@ inline void ProofMaster::delFromProof(const Lit& unit, int ownerID, bool local)
       if( useCounting ) {
 	static bool didit = false; // will be printed at most once
 	if( !didit ) {
-	  cerr << "c owner[" << ownerID << "] should delete a unit clause that is not present: " << unit << endl;
+	  if(opt_verboseProof)cerr << "c owner[" << ownerID << "] should delete a unit clause that is not present: " << unit << endl;
 	  didit = true;
 	  assert( false && "remove non-existing clause" );
 	}
@@ -619,7 +620,7 @@ inline void ProofMaster::delFromProof(const T& clause, const Lit& extraClauseLit
   } else { // interesting part, write to global proof
     // lock
     ownLock.lock();
-    cerr << "c PM [" << ownerID << "] remove clause " << extraClauseLit << " " << clause << endl;
+    if(opt_verboseProof)cerr << "c PM [" << ownerID << "] remove clause " << extraClauseLit << " " << clause << endl;
     if( clause.size() == 0 ) assert(false && "empty clauses should not be removed");
     // remove the clause from the global proof (or decrease the counter)
     removeGlobalClause(clause,extraClauseLit,ownerID, 0,clause.size());
@@ -646,7 +647,7 @@ inline unsigned long long ProofMaster::getHash(const T& clause, const Lit& extra
 	prod *= l; sum += l; X ^= l;
       }
     }
-    return (1023 * sum + prod ^ (31 * X)) % HASHMAX; 
+    return ((1023 * sum + prod ^ (31 * X)) % HASHMAX); 
 }
 
 inline long long unsigned int ProofMaster::getHash(const Lit& unit)
