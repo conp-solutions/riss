@@ -347,6 +347,10 @@ void PSolver::createThreadConfigs()
     "","","","","","","","","","","","","","","","", // 48 - 63
   };
 
+  if( defaultConfig.size() > 0 ) {
+    cerr << "c setup pfolio with config " << defaultConfig << endl;
+  }
+  
   if( defaultConfig.size() == 0 ) {
     for( int t = 0 ; t < threads; ++ t ) {
       configs[t].setPreset( Configs[t] );
@@ -372,6 +376,12 @@ void PSolver::createThreadConfigs()
       //configs[t].opt_verboseProof = true;
       }
     }
+  } else if ( defaultConfig == "RESTART" ) {
+    //configs[1].parseOptions("");
+    if( threads > 1 ) configs[1].parseOptions("-K=0.7 -R=1.5");
+    if( threads > 2 ) configs[2].parseOptions("-var-decay-b=0.85 var-decay-e=0.85");
+    if( threads > 3 ) configs[3].parseOptions("-K=0.7 -R=1.5 -var-decay-b=0.85 var-decay-e=0.85");
+    // TODO: set more for higher numbers
   }
 }
 

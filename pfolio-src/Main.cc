@@ -34,6 +34,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "pfolio-src/PSolver.h"
 
 #include "coprocessor-src/Coprocessor.h"
+#include <string>
 
 #include "VERSION" // include the file that defines the solver version
 
@@ -114,12 +115,13 @@ int main(int argc, char** argv)
   BoolOption   opt_modelStyle ("MAIN", "oldModel",   "present model on screen in old format", false);
   BoolOption   opt_quiet      ("MAIN", "quiet",      "Do not print the model", false);
   BoolOption   opt_parseOnly  ("MAIN", "parseOnly", "abort after parsing", false);
+  StringOption opt_config     ("MAIN", "config", "the configuration to be used for the portfolio solver","DRUP");
   
     try {
         
 	::parseOptions (argc, argv ); // parse all global options
 	
-        PSolver S(threads, "DRUP"); // set up a portfolio solver for DRUP proofs
+        PSolver S(threads, opt_config); // set up a portfolio solver for DRUP proofs
 	
         double initial_time = cpuTime();
 
