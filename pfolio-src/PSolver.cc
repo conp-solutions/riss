@@ -12,6 +12,7 @@ namespace Minisat {
 BoolOption opt_share(        "PFOLIO", "ps", "enable clause sharing for all clients", true, 0 );
 BoolOption opt_proofCounting("PFOLIO", "pc", "enable avoiding duplicate clauses in the pfolio DRUP proof", true, 0 );
 BoolOption opt_verboseProof ("PFOLIO", "pv", "verbose proof with comments to clause authors", false, 0 );
+BoolOption opt_verbosePfolio ("PFOLIO", "ppv", "verbose pfolio execution", false, 0 );
 
 /** main method that is executed by all worker threads */
 static void* runWorkerSolver (void* data);
@@ -138,7 +139,7 @@ bool PSolver::addClause_(vec< Lit >& ps)
       while( solvers[i]->nVars() <= var(ps[j]) ) solvers[i]->newVar();
     }
     bool ret2 = solvers[i]->addClause_(ps); // if a solver failed adding the clause, then the state for all solvers is bad as well
-    if( i == 0 ) cerr << "c parsed clause " << ps << endl;	// TODO remove after debug
+    if(opt_verbosePfolio) if( i == 0 ) cerr << "c parsed clause " << ps << endl;	// TODO remove after debug
     ret = ret2 && ret; 
   }
   return ret;
@@ -365,7 +366,7 @@ void PSolver::createThreadConfigs()
       configs[t].setPreset( "" ); // do not set anything
     }
   } else if ( defaultConfig == "DRUP" ) {
-    for( int t = 4 ; t < threads; ++ t ) {
+    for( int t = 0 ; t < threads; ++ t ) {
       if( opt_verboseProof ){
       configs[t].opt_verboseProof = 2;
       //configs[t].opt_verboseProof = true;
@@ -413,12 +414,12 @@ bool PSolver::initializeThreads()
 
     // tell the communication system about the solver
     communicators[i]->setSolver( solvers[i] );
-    if( proofMaster != 0 ) { // for now, we do not use sharing
-      cerr << "c for DRUP proofs, yet, sharing is disabled" << endl;
-      if( ! opt_share ) {
+//     if( proofMaster != 0 ) { // for now, we do not use sharing
+//       cerr << "c for DRUP proofs, yet, sharing is disabled" << endl;
+//     }
+    if( ! opt_share ) {
 	communicators[i]->setDoReceive( false ); // no receive
 	communicators[i]->setDoSend( false ); // no sending
-      }
     }
     // tell the communicator about the proof master
     communicators[i]->setProofMaster( proofMaster );
