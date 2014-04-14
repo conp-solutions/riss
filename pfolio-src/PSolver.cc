@@ -351,6 +351,10 @@ void PSolver::createThreadConfigs()
     cerr << "c setup pfolio with config " << defaultConfig << endl;
   }
   
+    for( int t = 0 ; t < threads; ++ t ) {
+      configs[t].opt_verboseProof = 0; // do not print to the proof by default
+    }
+  
   if( defaultConfig.size() == 0 ) {
     for( int t = 0 ; t < threads; ++ t ) {
       configs[t].setPreset( Configs[t] );
@@ -366,13 +370,13 @@ void PSolver::createThreadConfigs()
       // configs[t].parseOptions("-solververb=2"); // set all solvers very verbose
     }
   } else if ( defaultConfig == "PLAIN" ) {
-    for( int t = 4 ; t < threads; ++ t ) {
+    for( int t = 0 ; t < threads; ++ t ) {
       configs[t].setPreset( "" ); // do not set anything
     }
   } else if ( defaultConfig == "DRUP" ) {
     for( int t = 0 ; t < threads; ++ t ) {
       if( opt_verboseProof ){
-      configs[t].opt_verboseProof = 2;
+      configs[t].opt_verboseProof = 1;
       //configs[t].opt_verboseProof = true;
       }
     }

@@ -34,6 +34,8 @@ class ProofMaster
   bool useCounting;	// use the counting mechanism instead of producing a very large proof
   bool opt_verboseProof;	// print additional comments to the proof?
   
+  const bool debugOutput;	// enable for bug hunting
+  
   /** temporal storage for clauses for the proof for each thread until a clause is shared (one more for the proof master
    *  lit_Undef is used to separate clauses
    *  lit_Error is used to indicate deletion of clauses
@@ -143,6 +145,7 @@ inline ProofMaster::ProofMaster(FILE* drupFile, const int nrOfThreads, const int
 , HASHMAX( hashTableSize )
 , useCounting( counting )
 , opt_verboseProof(verboseProof)
+, debugOutput(false) // enable for bug hunting
 {
   localClauses.resize( nrOfThreads+1 ); // one for each thread, and the last one for the clause sharing pool
   matchArray.create( nVars * 2 ); // one for each literal
