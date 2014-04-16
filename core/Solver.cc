@@ -3118,7 +3118,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
       rerCommonLitsSum += toInt(currentLearnedClause[i]);
     }
     rerLits.push( currentLearnedClause[0] );
-    // sort( rerCommonLits ); // TODO: have insertionsort/mergesort here!
+    sort( rerCommonLits ); // TODO: have insertionsort/mergesort here!
     // rerFuseClauses is updated in search later!
     //cerr << "c init as [ " << rerLits.size() << " ] candidate [" << rerLearnedSizeCandidates << "] : " << currentLearnedClause << endl;
     return rerMemorizeClause; // tell search method to include new clause into list
@@ -3131,9 +3131,25 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
     } else { // size fits, check lits!
       // sort, if more than 2 literals
 //       cerr << "current learnt clause before sort: " << currentLearnedClause << endl;
-      // if( currentLearnedClause.size() > 2 ) sort( &( currentLearnedClause[2] ), currentLearnedClause.size() - 2  ); // do not touch the second literal in the clause! check it separately!
+      if( currentLearnedClause.size() > 2 ) sort( &( currentLearnedClause[2] ), currentLearnedClause.size() - 2  ); // do not touch the second literal in the clause! check it separately!
 //       cerr << "current learnt clause after  sort: " << currentLearnedClause << endl;
 
+      bool found = false;
+      for( int i = 0 ; i < rerCommonLits.size(); ++ i ) {
+	if ( rerCommonLits[i] == currentLearnedClause[1] ) { found = true; break;}
+      }
+      if( ! found ) {
+	rerReturnType thisReturn = rerUsualProcedure;
+	if( config.opt_rer_ite && rerLits.size() == 1 ) { // check whether half an ITE pattern can be matched
+	  if( restrictedERITE( rerLits[0], rerCommonLits, currentLearnedClause ) == rerDontAttachAssertingLit ){ // independent of the return value
+	    thisReturn = rerDontAttachAssertingLit; // RER-ITE had success and found a clause that is implied on the decision level
+	  }
+	}
+	resetRestrictedExtendedResolution();
+	//cerr << "c reject patter" << endl;
+	rerPatternReject ++;
+	return thisReturn;
+      }
 //       cerr << "c found match - check with more details" << endl;
       // Bloom-Filter
       int64_t thisLitSum = 0;
@@ -3153,26 +3169,18 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
       }
 //       cerr << "c found match - passed bloom filter" << endl;
       
+      found = false; // for the other literals pattern
       // check whether all remaining literals are in the clause
       
       
-      //
-      // use mark arrays
-      //
-      
-      permDiff.nextStep();
-      for( int i = 0 ; i < rerCommonLits.size(); ++ i ) // mark all literals
-	permDiff.setCurrentStep( toInt( rerCommonLits[i] ) );
-
-      bool matched = true;
-      for( int i = 1 ; i < currentLearnedClause.size(); ++ i ){ // check literals. first has not to be checked, hence start with i=2
-	if( ! permDiff.isCurrentStep( toInt( rerCommonLits[i] ) ) ) { // literal sets do not match
-	  matched=false;
-	  break;
-	}
-      }
-      
-      if( !matched ) {
+      int i = 0; int j = 2;
+      while ( i < rerCommonLits.size() && j < currentLearnedClause.size() ) {
+// 	cerr << "c compare " << rerCommonLits << " to " << currentLearnedClause[j] << " (or " << currentLearnedClause[1] << ")" << endl;
+	if( rerCommonLits[i] == currentLearnedClause[j] ) {
+	  i++; j++;
+	} else if ( rerCommonLits[i] == currentLearnedClause[1] ) {
+	  ++i;
+	} else { // literal currentLearnedClause[j] is not in common literals!
 	  rerReturnType thisReturn = rerUsualProcedure;
 	  if( config.opt_rer_ite && rerLits.size() == 1 ) { // check whether half an ITE pattern can be matched
 	    if( restrictedERITE( rerLits[0], rerCommonLits, currentLearnedClause ) == rerDontAttachAssertingLit ){ // independent of the return value
@@ -3185,6 +3193,7 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	  return thisReturn;
       }
 
+      }
 //       cerr << "c the two clauses match!" << endl;
       // clauses match
       rerLits.push( currentLearnedClause[0] ); // store literal
