@@ -537,7 +537,6 @@ rinc      | rtype in   {2}                     # only if static restarts are sch
 tabu      | laHack in   {yes}                  # only if LA is used
 dyn       | laHack in   {yes}                  # only if LA is used
 hlaMax    | laHack in   {yes}                  # only if LA and DYN is used
-hlaMax    | dyn in   {yes}                     # only if LA and DYN is used
 hlaLevel  | laHack in   {yes}                  # only if LA is used
 hlaevery  | laHack in   {yes}                  # only if LA is used
 hlabound  | laHack in   {yes}                  # only if LA is used

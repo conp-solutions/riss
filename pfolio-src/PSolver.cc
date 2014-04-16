@@ -219,11 +219,11 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
     if( proofMaster != 0 ) { // if a proof is generated, add all clauses that are currently present in solvers[0]
       proofMaster->addCommentToProof("add irredundant clauses multiple times",-1);
       for( int j = 0 ; j < solvers[0]->clauses.size(); ++ j ) {
-	proofMaster->addInputToProof( solvers[0]->ca[ solvers[0]->clauses[j] ], -1,threads, true ); // so far, work on global proof
+	proofMaster->addInputToProof( solvers[0]->ca[ solvers[0]->clauses[j] ], -1,threads); // so far, work on global proof
       }
       proofMaster->addCommentToProof("add redundant clauses multiple times",-1);
       for( int j = 0 ; j < solvers[0]->learnts.size(); ++ j ) {
-	proofMaster->addInputToProof( solvers[0]->ca[ solvers[0]->learnts[j] ], -1, threads, true ); // so far, work on global proof
+	proofMaster->addInputToProof( solvers[0]->ca[ solvers[0]->learnts[j] ], -1, threads); // so far, work on global proof
       }
       proofMaster->addCommentToProof("add unit clauses of solver 0",-1);
       proofMaster->addUnitsToProof( solvers[0]->trail, 0, false ); // incorporate all the units once more
