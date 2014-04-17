@@ -502,11 +502,16 @@ inline void ProofMaster::addInputToProof(const T& clause, int ownerID, int numbe
       
       // write to file
       if( opt_verboseProof ) fprintf(drupProofFile, "c add clause by %i\n", ownerID);
-      for (int i = 0; i < clause.size(); i++) {
-	if( clause[i] == lit_Undef ) continue;	// print the remaining literal, if they have not been printed yet
-	fprintf(drupProofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
+      
+      // add enough copies of the clause to the proof!
+      for( int nrCopy = 0; nrCopy < numberOfOccurrence; ++ nrCopy ) {
+	for (int i = 0; i < clause.size(); i++) {
+	  if( clause[i] == lit_Undef ) continue;	// print the remaining literal, if they have not been printed yet
+	  fprintf(drupProofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
+	}
+	fprintf(drupProofFile, "0\n");
+	if( useCounting ) break; // if use counting, then stop after the first copy!
       }
-      fprintf(drupProofFile, "0\n");
       
       if( useCounting ) {
 	// add to clause storage

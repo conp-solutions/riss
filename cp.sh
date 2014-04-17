@@ -23,12 +23,12 @@ shift												# reduce the parameters, removed the very first one. remaining 
 satsolver=glucose_static						# name of the binary (if not in this directory, give relative path as well)
 
 # default parameters for preprocessor
-cp3params="-enabled_cp3 -cp3_stats"
+cpParams="-enabled_cp3 -cp3_stats"
 
 # some temporary files 
-undo=/tmp/cp3_undo_$$				# path to temporary file that stores cp3 undo information
-tmpCNF=/tmp/cp3_tmpCNF_$$		# path to temporary file that stores cp3 simplified formula
-model=/tmp/cp3_model_$$			# path to temporary file that model of the preprocessor (stdout)
+undo=/tmp/undo_$$				# path to temporary file that stores cp3 undo information
+tmpCNF=/tmp/tmpCNF_$$		# path to temporary file that stores cp3 simplified formula
+model=/tmp/model_$$			# path to temporary file that model of the preprocessor (stdout)
 realModel=/tmp/model_$$			# path to temporary file that model of the SAT solver (stdout)
 echo "c undo: $undo tmpCNF: $tmpCNF model: $model realModel: $realModel"  1>&2
 
@@ -42,7 +42,7 @@ solveEnd=0
 # and output to stdout of the preprocessor is redirected to stderr
 #
 ppStart=`date +%s`
-./cp3 $file $realModel -enabled_cp3 -cp3_undo=$undo -dimacs=$tmpCNF $cp3params $@  1>&2
+./coprocessor $file $realModel -enabled_cp3 -undo=$undo -dimacs=$tmpCNF $cpParams $@  1>&2
 exitCode=$?
 ppEnd=`date +%s`
 echo "c preprocessed $(( $ppEnd - $ppStart)) seconds with exit code $exitCode" 1>&2
@@ -77,7 +77,7 @@ else
 		# coprocessor can also handle "s UNSATISFIABLE"
 		#
 		echo "c post-process with cp3" 1>&2
-		./cp3 -cp3_post -cp3_undo=$undo -cp3_model=$model $cp3params > $realModel
+		./coprocessor -post -undo=$undo -model=$model $cpParams > $realModel
 	
 		#
 		# verify final output if SAT?
