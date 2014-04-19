@@ -8,7 +8,7 @@
 # usage
 #
 if [ "x$1" = "x" ]; then
-  echo "USAGE: cp3.sh <input CNF> [arguments for cp3]"
+  echo "USAGE: cp.sh <input CNF> [arguments for cp3]"
   exit 1
 fi
 
@@ -23,7 +23,7 @@ shift												# reduce the parameters, removed the very first one. remaining 
 satsolver=glucose_static						# name of the binary (if not in this directory, give relative path as well)
 
 # default parameters for preprocessor
-cpParams="-enabled_cp3 -cp3_stats"
+cpParams="-enabled_cp3 -cp3_stats -enabled_cp3 -cp3_stats -up -subsimp -bve -no-bve_gates -no-bve_strength -bve_red_lits=1 -cp3_bve_heap=1 -bve_heap_updates=1 -bve_totalG -bve_cgrow_t=1000 -bve_cgrow=10 "
 
 # some temporary files 
 undo=/tmp/undo_$$				# path to temporary file that stores cp3 undo information
@@ -42,6 +42,7 @@ solveEnd=0
 # and output to stdout of the preprocessor is redirected to stderr
 #
 ppStart=`date +%s`
+#echo "call: ./coprocessor $file $realModel -enabled_cp3 -undo=$undo -dimacs=$tmpCNF $cpParams $@"
 ./coprocessor $file $realModel -enabled_cp3 -undo=$undo -dimacs=$tmpCNF $cpParams $@  1>&2
 exitCode=$?
 ppEnd=`date +%s`

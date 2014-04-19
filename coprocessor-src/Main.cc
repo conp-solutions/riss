@@ -232,7 +232,7 @@ int main(int argc, char** argv)
 		ret = S.solveLimited(dummy);
 	      }
 	      if( ret == l_True ) {
-		fclose(S.drupProofFile); // close proof file!
+		if( S.drupProofFile != 0 ) fclose(S.drupProofFile); // close proof file!
 		preprocessor.extendModel(S.model);
 		if( res != NULL ) {
 		  cerr << "s SATISFIABLE" << endl;

@@ -349,7 +349,7 @@ lbool Preprocessor::performSimplification()
       data.checkGarbage(); // perform garbage collection
       
       if( config.opt_debug )  { checkLists("after LA");  scanCheck("after LA"); }  
-      if( printBCE || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'b') ) {
+      if( printBCE || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'l') ) {
       printFormula("after BCE");
       }
     }
