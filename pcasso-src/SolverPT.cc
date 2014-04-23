@@ -220,7 +220,7 @@ Var SolverPT::newVar(bool sign, bool dvar, char type )
 		}
 	}
 	
-	permDiff  .push(0);
+	permDiff  .resize(v+1); // add space for the next variable
 	trail    .capacity(v+1);
 	setDecisionVar(v, dvar);
 }
@@ -425,22 +425,22 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsign
 		Debug::PRINTLN_DEBUG(out_learnt);
 		// Find the LBD measure
 		lbd = 0;
-		MYFLAG++;
+		permDiff.nextStep();
 		for(int i=0;i<out_learnt.size();i++) {
 
 			int l = level(var(out_learnt[i]));
-			if (permDiff[l] != MYFLAG) {
-				permDiff[l] = MYFLAG;
+			if (!permDiff.isCurrentStep(l)) {
+				permDiff.setCurrentStep(l);
 				lbd++;
 			}
 		}
 
 
 		if(lbd<=lbLBDMinimizingClause){
-			MYFLAG++;
+			permDiff.nextStep();
 
 			for(int i = 1;i<out_learnt.size();i++) {
-				permDiff[var(out_learnt[i])] = MYFLAG;
+				permDiff.setCurrentStep( var(out_learnt[i]) );
 			}
 
 			// Davide>
@@ -453,7 +453,7 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsign
 				Lit imp = wbin[k].blocker();
 				//Debug::DEBUG_PRINTLN("imp is:");
 				//Debug::DEBUG_PRINTLN(imp);
-				if(permDiff[var(imp)]==MYFLAG && value(imp)==l_True) {
+				if(permDiff.isCurrentStep(var(imp)) && value(imp)==l_True) {
 					// Davide> Similar to self-resolution, so I handle in a similar way
 					Clause&  c         = ca[wbin[k].cref()];
 					PTLevel = PTLevel >= c.getPTLevel() ? PTLevel : c.getPTLevel();
@@ -470,14 +470,14 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsign
 						PTLevel = PTLevel > tmp_lt_ptlevel ? PTLevel : tmp_lt_ptlevel;
 					}
 					nb++;
-					permDiff[var(imp)]= MYFLAG-1;
+					permDiff.reset(var(imp));
 				}
 			}
 			int l = out_learnt.size()-1;
 			if(nb>0) {
 				nbReducedClauses++;
 				for(int i = 1;i<out_learnt.size()-nb;i++) {
-					if(permDiff[var(out_learnt[i])]!=MYFLAG) {
+					if( ! permDiff.isCurrentStep(var(out_learnt[i])) ) {
 						// PTLevel = PTLevel >= getLiteralPTLevel(out_learnt[i]) ? PTLevel : getLiteralPTLevel(out_learnt[i]);
 						Lit p = out_learnt[l];
 						out_learnt[l] = out_learnt[i];
@@ -513,12 +513,12 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsign
 
 	// Find the LBD measure
 	lbd = 0;
-	MYFLAG++;
+	permDiff.nextStep();
 	for(int i=0;i<out_learnt.size();i++) {
 
 		int l = level(var(out_learnt[i]));
-		if (permDiff[l] != MYFLAG) {
-			permDiff[l] = MYFLAG;
+		if ( !permDiff.isCurrentStep(l) ) {
+			permDiff.setCurrentStep(l);
 			lbd++;
 		}
 	}
@@ -918,12 +918,12 @@ CRef SolverPT::propagate()
 #ifdef DYNAMICNBLEVEL		    
 				// DYNAMIC NBLEVEL trick (see competition'09 companion paper)
 				if(c.learnt()  && c.lbd()>2) {
-					MYFLAG++;
+					permDiff.nextStep();
 					unsigned  int nblevels =0;
 					for(int i=0;i<c.size();i++) {
 						int l = level(var(c[i]));
-						if (permDiff[l] != MYFLAG) {
-							permDiff[l] = MYFLAG;
+						if ( ! permDiff.isCurrentStep(l) ) {
+							permDiff.setCurrentStep(l);
 							nblevels++;
 						}
 

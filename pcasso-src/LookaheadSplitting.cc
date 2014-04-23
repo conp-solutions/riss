@@ -1443,11 +1443,12 @@ Lit LookaheadSplitting::pickBranchLiteral(vec<vec<Lit>* > **valid){
         unlock();
         statistics.changeI(splitterPenaltyID,1);*/
     }
-    MYFLAG++;//using to see if a literal has been already put as partition constraint
+    //using to see if a literal has been already put as partition constraint
+    permDiff.nextStep();
     vec<Lit>* clause;
     if(opt_failed_literals==2) {
         for(int i=0; i<failedLiterals.size(); i++){
-            permDiff[var(failedLiterals[i])]=MYFLAG;
+            permDiff.setCurrentStep( var(failedLiterals[i]) );
             clause = new vec<Lit>();
             clause->push(~failedLiterals[i]);
             (*valid)->push(clause);
@@ -1456,7 +1457,7 @@ Lit LookaheadSplitting::pickBranchLiteral(vec<vec<Lit>* > **valid){
     }
     if(opt_nec_assign==2){
         for(int i=0; i<necAssign.size(); i++){
-            permDiff[var(necAssign[i])]=MYFLAG;
+            permDiff.setCurrentStep( var(necAssign[i]) );
             clause = new vec<Lit>();
             clause->push(necAssign[i]);
             (*valid)->push(clause);
@@ -1465,7 +1466,7 @@ Lit LookaheadSplitting::pickBranchLiteral(vec<vec<Lit>* > **valid){
     }
     if(opt_clause_learning==2){
         for(int i=0; i<unitLearnts.size(); i++){
-            permDiff[var(unitLearnts[i])]=MYFLAG;
+            permDiff.setCurrentStep( var(unitLearnts[i]) );
             clause = new vec<Lit>();
             clause->push(unitLearnts[i]);
             (*valid)->push(clause);
@@ -1476,17 +1477,17 @@ Lit LookaheadSplitting::pickBranchLiteral(vec<vec<Lit>* > **valid){
         Lit eqLit;
         for(int i=0; i<varEq.size()-1; i=i+2){
             eqLit = lit_Undef;
-            if(value(varEq[i])==l_True && permDiff[var(varEq[i])]==MYFLAG)
+            if(value(varEq[i])==l_True && permDiff.isCurrentStep(var(varEq[i])) )
                 eqLit = varEq[i+1];
-            else if(value(~varEq[i])==l_True && permDiff[var(varEq[i])]==MYFLAG)
+            else if(value(~varEq[i])==l_True && permDiff.isCurrentStep(var(varEq[i])) )
                 eqLit = ~varEq[i+1];
-            if(value(varEq[i+1])==l_True && permDiff[var(varEq[i+1])]==MYFLAG)
+            if(value(varEq[i+1])==l_True && permDiff.isCurrentStep( var(varEq[i+1])) )
                 eqLit = varEq[i];
-            else if(value(~varEq[i+1])==l_True && permDiff[var(varEq[i+1])]==MYFLAG)
+            else if(value(~varEq[i+1])==l_True && permDiff.isCurrentStep( var(varEq[i+1])) )
                 eqLit = ~varEq[i];
             
-            if(eqLit!=lit_Undef && permDiff[var(eqLit)]!=MYFLAG){
-                permDiff[var(eqLit)]=MYFLAG;
+            if(eqLit!=lit_Undef &&  ! permDiff.isCurrentStep(var(eqLit)) ){
+                permDiff.setCurrentStep( var(eqLit) );
                 clause = new vec<Lit>();
                 clause->push(eqLit);
                 (*valid)->push(clause);
@@ -1497,14 +1498,14 @@ Lit LookaheadSplitting::pickBranchLiteral(vec<vec<Lit>* > **valid){
         for(int i=0,j=0; i<binaryForcedClauses.size()-1; i=i+2){
             if((value(binaryForcedClauses[i])==l_True) || value(binaryForcedClauses[i+1])==l_True)
                 continue;
-            if(permDiff[var(binaryForcedClauses[i])]==MYFLAG && value(binaryForcedClauses[i])==l_False && value(binaryForcedClauses[i+1])==l_Undef)
+            if(permDiff.isCurrentStep( var(binaryForcedClauses[i]) ) && value(binaryForcedClauses[i])==l_False && value(binaryForcedClauses[i+1])==l_Undef)
                 j=i+1;
-            else if(permDiff[var(binaryForcedClauses[i+1])]==MYFLAG && value(binaryForcedClauses[i+1])==l_False && value(binaryForcedClauses[i])==l_Undef)
+            else if(permDiff.isCurrentStep( var(binaryForcedClauses[i+1]) ) && value(binaryForcedClauses[i+1])==l_False && value(binaryForcedClauses[i])==l_Undef)
                 j=i;
             else
                 continue;
-            if(permDiff[var(binaryForcedClauses[j])]!=MYFLAG){
-                permDiff[var(binaryForcedClauses[j])]=MYFLAG;
+            if( ! permDiff.isCurrentStep( var(binaryForcedClauses[j])) ){
+                permDiff.setCurrentStep(var(binaryForcedClauses[j]) );
                 clause = new vec<Lit>();
                 clause->push(binaryForcedClauses[j]);
                 (*valid)->push(clause);
