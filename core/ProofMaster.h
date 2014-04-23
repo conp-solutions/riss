@@ -318,7 +318,7 @@ inline void ProofMaster::removeGlobalClause(const T& clause, const Lit& extraCla
   if( useCounting ) { // check whether the clause is in the proof multiple times 
     thisHash = getHash( clause, extraClauseLit, startIndex, endIndex );
     const vector<CRef>& list = hashTable[ thisHash ];
-    if(opt_verboseProof)cerr << "c list with hash " << thisHash << ": " << list << endl;
+    if(opt_verboseProof) cerr << "c list with hash " << thisHash << ": " << list << endl;
     if( list.size() > 0 ) { // there are clauses that have to be matched
       matchArray.nextStep();
       int clauseSize = 0 ;

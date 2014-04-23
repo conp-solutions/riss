@@ -598,6 +598,9 @@ protected:
 public: static inline int irand(double& seed, int size) {
         return (int)(drand(seed) * size); }
 
+        /// build reduct wrt current unit clauses
+	void buildReduct(); 
+        
 protected:
   
   OnlineProofChecker* onlineDratChecker;

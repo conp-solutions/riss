@@ -2814,6 +2814,30 @@ void Solver::garbageCollect()
     to.moveTo(ca);
 }
 
+void Solver::buildReduct() {
+    cancelUntil( 0 );
+    int keptClauses = 0;
+    uint64_t remLits = 0;
+    for ( int j = 0; j < clauses.size(); ++ j ) {
+      int keptLits = 0;
+      bool isSat = false;
+      Clause& c = ca[ clauses[j] ];
+      for( int k = 0 ; k < c.size(); ++ k ) {
+	if( value( c[k] ) == l_True ) { isSat = true; break; }
+	else if (value( c[k] ) != l_False ) {
+	  c[ keptLits ++ ] = c[k];
+	} else remLits ++; // literal is falsified
+      }
+      if( !isSat ) {
+	c.shrink(c.size() - keptLits);
+	assert( c.size() != 1 && "propagation should have found this unit already" );
+	clauses[ keptClauses++ ] = clauses [j];
+      }
+    }
+    cerr << "c removed lits during reduct: " << remLits << " removed cls: " << clauses.size() - keptClauses << endl;
+    clauses.shrink( clauses.size() - keptClauses );
+    
+}
 
 bool Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo )
 {
