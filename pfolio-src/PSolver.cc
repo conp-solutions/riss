@@ -12,6 +12,7 @@ namespace Minisat {
 BoolOption opt_share(        "PFOLIO", "ps", "enable clause sharing for all clients", true, 0 );
 BoolOption opt_proofCounting("PFOLIO", "pc", "enable avoiding duplicate clauses in the pfolio DRUP proof", true, 0 );
 BoolOption opt_verboseProof ("PFOLIO", "pv", "verbose proof with comments to clause authors", false, 0 );
+BoolOption opt_internalProofCheck ("PFOLIO", "pic", "use internal proof checker during run time", false, 0 );
 BoolOption opt_verbosePfolio ("PFOLIO", "ppv", "verbose pfolio execution", false, 0 );
 
 /** main method that is executed by all worker threads */
@@ -40,7 +41,7 @@ PSolver::PSolver(const int threadsToUse, const char* configName)
     createThreadConfigs();
     
     // here, DRUP proofs are created!
-    if( defaultConfig == "" ) { // check proofs only, if the portfolio solver is not used differently (e.g. BMC)
+    if( opt_internalProofCheck ) { 
       opc = new OnlineProofChecker(OnlineProofChecker::drup);
     }
     
