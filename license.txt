@@ -1,7 +1,7 @@
 MiniSat     -- Copyright (c) 2003-2006, Niklas Een, Niklas Sorensson
                Copyright (c) 2007-2010  Niklas Sorensson
 Glucose     -- Copyright (c) 2009-2012, Gilles Audemard, Laurent Simon
-Riss3g      -- Copyright (c) 2012-2013, Norbert Manthey
+Riss3g      -- Copyright (c) 2012-2014, Norbert Manthey
 
 Permission is hereby granted, free of charge, to use this software for
 evaluation and research purposes.
@@ -9,9 +9,9 @@ evaluation and research purposes.
 This license does not allow this software to be used in a commercial context.
 
 It is further prohibited to use this software or a substantial portion of it
-in a competition or a similar competetive event, such as the SAT, SMT or QBF
-competitions or evaluations, without explicit written permission by the
-copyright holder.
+in a competition or a similar competetive event, such as the SAT, SMT or QBF, 
+MaxSAT or HWMCC competitions or evaluations, without explicit written 
+permission by the copyright holder.
 
 However, competition organizers are allowed to use this software as part of
 the evaluation process of a particular competition, evaluation or

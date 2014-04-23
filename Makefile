@@ -168,19 +168,19 @@ doc: clean
 
 # tar balls
 tar: clean
-	tar czvf riss.tar.gz core   LICENSE  Makefile mtl  README  simp utils VERSION
+	tar czvf riss.tar.gz core   license.txt  Makefile mtl  README  simp utils VERSION
 	
 cotar: clean
-	tar czvf coprocessor.tar.gz core LICENSE  Makefile mtl  README  simp  utils coprocessor-src VERSION
+	tar czvf coprocessor.tar.gz core license.txt  Makefile mtl  README  simp  utils coprocessor-src VERSION
 	
 cltar: clean
-	tar czvf classifier.tar.gz core LICENSE  Makefile mtl  README  simp  utils coprocessor-src classifier-src VERSION
+	tar czvf classifier.tar.gz core license.txt  Makefile mtl  README  simp  utils coprocessor-src classifier-src VERSION
 
 qtar: clean
-	tar czvf qprocessor.tar.gz core LICENSE Makefile mtl  README  simp  utils coprocessor-src qprocessor-src qp.sh VERSION 
+	tar czvf qprocessor.tar.gz core license.txt Makefile mtl  README  simp  utils coprocessor-src qprocessor-src qp.sh VERSION 
 	
-bmctar: clean toolclean
-	tar czvf riss-AbmC.tar.gz core LICENSE  Makefile mtl  README  simp  utils coprocessor-src aiger-src abc picosat VERSION
+bmctar: clean 
+	tar czvf shiftbmc.tar.gz core license.txt  Makefile mtl  README  simp  utils coprocessor-src shiftbmc-src VERSION
 	
 # clean up after solving - be careful here if some directories are missing!
 clean:
@@ -197,9 +197,4 @@ clean:
 	@rm -f *~ */*~
 	@rm -rf doc/html
 	@echo Done
-	
-# clean up aiger and abc as well!
-toolclean:
-	@cd aiger-src; make clean;
-	@cd abc; make clean;
 
