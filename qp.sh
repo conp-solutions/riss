@@ -4,6 +4,11 @@
 # solve (Q)CNF formula $1 by simplifying first with qprocessor, then run a QBF solver
 #
 
+# To be set by the use:
+#
+# binary of the used qbf solver
+qbfsolver=depqbf						# name of the binary (if not in this directory, give relative path as well)
+
 #
 # usage
 #
@@ -15,12 +20,8 @@ fi
 #
 # variables for the script
 #
-
 file=$1											# first argument is CNF instance to be solved
 shift												# reduce the parameters, removed the very first one. remaining $@ parameters are arguments
-
-# binary of the used qbf solver
-qbfsolver=depqbf						# name of the binary (if not in this directory, give relative path as well)
 
 # default parameters for preprocessor -- no dense, no probe!
 cp3params="-enabled_cp3 -cp3_stats -up -subsimp -bva -cp3_strength"

@@ -1,8 +1,11 @@
 #!/bin/bash
-# cp3.sh, Norbert Manthey, 2013
+# cp3.sh, Norbert Manthey, 2014
 #
 # solve CNF formula $1 by simplifying first with coprocessor, then run a SAT solver, and finally, reconstruct the model
 #
+
+# binary of the used SAT solver
+satsolver=./glucose_static						# name of the binary (if not in this directory, give full path)
 
 #
 # usage
@@ -18,9 +21,6 @@ fi
 
 file=$1											# first argument is CNF instance to be solved
 shift												# reduce the parameters, removed the very first one. remaining $@ parameters are arguments
-
-# binary of the used SAT solver
-satsolver=glucose_static						# name of the binary (if not in this directory, give relative path as well)
 
 # default parameters for preprocessor
 cpParams="-enabled_cp3 -cp3_stats -enabled_cp3 -cp3_stats -up -subsimp -bve -no-bve_gates -no-bve_strength -bve_red_lits=1 -cp3_bve_heap=1 -bve_heap_updates=1 -bve_totalG -bve_cgrow_t=1000 -bve_cgrow=10 "
@@ -68,7 +68,7 @@ else
 		# and output to stdout of the sat solver is redirected to stderr
 		#
 		solveStart=`date +%s`
-		./$satsolver $tmpCNF $model 1>&2
+		$satsolver $tmpCNF $model 1>&2
 		exitCode=$?
 		solveEnd=`date +%s`
 		echo "c solved $(( $solveEnd - $solveStart )) seconds" 1>&2
@@ -98,7 +98,7 @@ else
 		# and output to stdout of the sat solver is redirected to stderr
 		#
 		solveStart=`date +%s`
-		./$satsolver $file $realModel  1>&2
+		$satsolver $file $realModel  1>&2
 		exitCode=$?
 		solveEnd=`date +%s`
 		echo "c solved $(( $solveEnd - $solveStart )) seconds" 1>&2
