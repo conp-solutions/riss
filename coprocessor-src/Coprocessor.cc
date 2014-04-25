@@ -1475,7 +1475,7 @@ void Preprocessor::reSetupSolver()
     if( config.opt_verbose > 3 ) fprintf(stderr, " moved %i and removed %i from %i learnts\n",learntToClause,(l_old - kept_clauses) -learntToClause, l_old);
 
     
-    if( true ) {
+    if( false) {
       cerr << "c trail after cp3: ";
       for( int i = 0 ; i< solver->trail.size(); ++i ) 
       {

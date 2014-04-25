@@ -1238,7 +1238,6 @@ void Solver::uncheckedEnqueue(Lit p, Minisat::CRef from, bool addToProof, const 
       addUnitToProof( p );
     }
   
-  
     if( dynamicDataUpdates && config.opt_agility_restart_reject ) { // only if technique is enabled:
      // cerr << "c old: " << agility << " lit: " << p << " sign: " << sign(p) << " pol: " << polarity[var(p)] << endl;
       agility = agility * agility_decay + ( sign(p) != varFlags[ var(p) ]. polarity ? (1.0 - agility_decay) : 0 );
@@ -1255,7 +1254,7 @@ void Solver::uncheckedEnqueue(Lit p, Minisat::CRef from, bool addToProof, const 
 
     // prefetch watch lists
     __builtin_prefetch( & watches[p] );
-    if(config.opt_printDecisions > 1 ) {cerr << "c uncheched enqueue " << p; if( from != CRef_Undef ) cerr << " because of " <<  ca[from]; cerr << endl;}
+    if(config.opt_printDecisions > 1 ) {cerr << "c uncheched enqueue " << p; if( from != CRef_Undef ) cerr << " because of [" << from << "] " <<  ca[from]; cerr << endl;}
       
     trail.push_(p);
 }
@@ -1860,12 +1859,14 @@ lbool Solver::search(int nof_conflicts)
 		checkedLookaheadAlready = true; // memorize that we did the check in the first iteration
 		if( config.opt_laTopUnit != -1 && topLevelsSinceLastLa >= config.opt_laTopUnit && maxLaNumber != -1) { maxLaNumber ++; topLevelsSinceLastLa = 0 ; }
 		if(config.localLookAhead && (maxLaNumber == -1 || (las < maxLaNumber)) ) { // perform LA hack -- only if max. nr is not reached?
-		  if(config.opt_printDecisions > 0) cerr << "c run LA (lev=" << decisionLevel() << ", untilLA=" << untilLa << endl;
+		  // if(config.opt_printDecisions > 0) cerr << "c run LA (lev=" << decisionLevel() << ", untilLA=" << untilLa << endl;
 		  int hl = decisionLevel();
 		  if( hl == 0 ) if( --untilLa == 0 ) { laStart = true; if(config.localLookaheadDebug)cerr << "c startLA" << endl;}
 		  if( laStart && hl == config.opt_laLevel ) {
 		    if( !laHack(learnt_clause) ) return l_False;
 		    topLevelsSinceLastLa = 0;
+// 		    cerr << "c drop decision literal " << next << endl;
+		    order_heap.insert( var(next) ); // add the literal back to the heap!
 		    next = lit_Undef;
 		    continue; // after local look-ahead re-check the assumptions
 		  }
@@ -2521,6 +2522,7 @@ lbool Solver::solve_()
 	if( config.ppOnly ) return l_Undef; 
     }
     
+    
     // probing during search, or UHLE for learnt clauses
     if( config.opt_uhdProbe > 0 || (config.uhle_minimizing_size > 0 && config.uhle_minimizing_lbd > 0) ) {
       if( big == 0 ) big = new Coprocessor::BIG(); // if there is no big yet, create it!
@@ -2530,9 +2532,9 @@ lbool Solver::solve_()
       if( config.opt_uhdProbe > 2 ) big->sort( nVars() ); // sort all the lists once
     }
     
-    if( true ) {
+    if( false ) {
       cerr << "c solver state after preprocessing" << endl;
-      cerr << "c start solving with " << nVars() << " vars, " << nClauses() << " clauses and " << nLearnts() << " learnts" << endl;
+      cerr << "c start solving with " << nVars() << " vars, " << nClauses() << " clauses and " << nLearnts() << " learnts decision vars: " << order_heap.size() << endl;
       cerr << "c units: " ; for( int i = 0 ; i < trail.size(); ++ i ) cerr << " " << trail[i]; cerr << endl;
       cerr << "c clauses: " << endl; for( int i = 0 ; i < clauses.size(); ++ i ) cerr << "c [" << clauses[i] << "]m: " << ca[clauses[i]].mark() << " == " << ca[clauses[i]] << endl;
       cerr << "c assumptions: "; for ( int i = 0 ; i < assumptions.size(); ++ i ) cerr << " " << assumptions[i]; cerr << endl;
@@ -2657,7 +2659,7 @@ lbool Solver::solve_()
         for (int i = 0; i < nVars(); i++) model[i] = value(i);
 	if( model.size() > solveVariables ) model.shrink( model.size() - solveVariables ); // if SD has been used, nobody knows about these variables, so remove them before doing anything else next
 	
-    if( true ) {
+    if( false ) {
       cerr << "c solver state after solving with solution" << endl;
       cerr << "c check clauses: " << endl; 
       for( int i = 0 ; i < clauses.size(); ++ i ) {
