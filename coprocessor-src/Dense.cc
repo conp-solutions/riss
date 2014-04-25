@@ -21,6 +21,10 @@ void Dense::compress(const char* newWhiteFile)
 {
   if( propagation.process(data) == l_False ) data.setFailed();
   if( !data.ok() ) return;
+ 
+  if( config.dense_debug_out ) {
+    cerr << "c dense compress" << endl;
+  }
   
   Compression compression;
   compression.variables = data.nVars();
@@ -214,7 +218,7 @@ void Dense::compress(const char* newWhiteFile)
 void Dense::decompress(vec< lbool >& model)
 {
   if( config.dense_debug_out ) {
-    cerr << "c model to work on: ";
+    cerr << "c dense decompress, model to work on: ";
     for( int i = 0 ; i < model.size(); ++ i ) cerr << (model[i] == l_True ? i+1 : -i-1) << " ";
     cerr << endl;
   }
@@ -262,6 +266,10 @@ void Dense::decompress(vec< lbool >& model)
 
 void Dense::adoptUndoStack()
 {
+  if( config.dense_debug_out ) {
+    cerr << "c dense adopt undo stack" << endl;
+  }
+  
   vector< Lit >& extend = data.getUndo();
   const int compressed = data.getLastCompressUndoLits();
   if( compressed == -1 ){
@@ -298,6 +306,10 @@ void Dense::adoptUndoStack()
 
 bool Dense::writeUndoInfo(const string& filename) {
 
+  if( config.dense_debug_out ) {
+    cerr << "c write undo info" << endl;
+  }
+  
   ofstream file( filename.c_str(), ios_base::out);
   if( ! file ) {
     cerr << "c ERROR: could not open map - undo file " << filename << endl;

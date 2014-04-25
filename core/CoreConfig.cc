@@ -247,5 +247,7 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  incKeepSize          ("INCREMENTAL", "incClSize", "keep size for extra cleaning (any higher is dropped)", 5, IntRange(1, INT32_MAX) , optionListPtr ),
  incKeepLBD           ("INCREMENTAL", "incClLBD",  "keep lbd for extra cleaning (any higher is dropped)", 10, IntRange(1, INT32_MAX) , optionListPtr ),
  opt_reset_counters   ("INCREMENTAL", "incResCnt", "reset solving counters every X start (0=off)", 100000, IntRange(0, INT32_MAX) , optionListPtr )
-{}
+{
+  if( defaultPreset.size() != 0 ) setPreset( defaultPreset ); // set configuration options immediately
+}
 

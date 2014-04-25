@@ -612,7 +612,9 @@ void Subsumption::par_strengthening_worker( unsigned int & next_start, unsigned 
                             if (config.opt_sub_lock_stats) lock_time = cpuTime() - lock_time; 
                             data_lock.lock();
                             if (config.opt_sub_lock_stats) lock_time = cpuTime() - lock_time; 
-                            lbool state = data.enqueue(d[(pos + 1) % 2]);
+			     const Lit& unitLit = d[(pos + 1) % 2];
+			     data.addCommentToProof("found during strengthening");data.addUnitToProof(unitLit); // add the unit
+                            lbool state = data.enqueue(unitLit);
                             data_lock.unlock();  
                             data.removedClause(list[l_cr],heap, config.heap_updates == 2,ignore, &data_lock);
                             if (l_False == state)
@@ -749,7 +751,8 @@ void Subsumption::par_nn_strengthening_worker( unsigned int & next_start, unsign
             if( strengthener.size() == 1 ) 
             {
                 data_lock.lock();
-                    lbool status = data.enqueue(strengthener[0]); 
+		data.addCommentToProof("found during strengthening");data.addUnitToProof(strengthener[0]); // add the unit
+                lbool status = data.enqueue(strengthener[0]); 
                 data_lock.unlock();
 
                 var_lock[fst].unlock(); // unlock fst var
@@ -915,7 +918,9 @@ inline lbool Subsumption::par_nn_strength_check(CoprocessorData & data, vector <
           {
               other.set_delete(true);
               data_lock.lock();
-              lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
+	      const Lit& unitLit = other[(negated_lit_pos + 1) % 2];
+	      data.addCommentToProof("found during strengthening");data.addUnitToProof(unitLit); // add the unit
+              lbool state = data.enqueue(unitLit);
               data_lock.unlock();
 	          modifiedFormula = true;
               data.removedClause(list[j], heap, config.heap_updates == 2,ignore, &data_lock);
@@ -1063,7 +1068,9 @@ inline lbool Subsumption::par_nn_negated_strength_check(CoprocessorData & data, 
           {
               other.set_delete(true);
               data_lock.lock();
-              lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
+	      const Lit& unitLit = other[(negated_lit_pos + 1) % 2];
+	      data.addCommentToProof("found during strengthening");data.addUnitToProof(unitLit); // add the unit
+              lbool state = data.enqueue( unitLit );
               data_lock.unlock();
 	          modifiedFormula = true;
               data.removedClause(list[j],heap, config.heap_updates == 2,ignore, &data_lock);
@@ -1282,7 +1289,9 @@ lbool Subsumption::createResolvent( const CRef cr, CRef & resolvent, const int n
     assert (!origin.can_be_deleted());
     if (origin.size() == 2)
     {
-        lbool state = data.enqueue(origin[(negated_lit_pos + 1) % 2]);
+	const Lit& unitLit = origin[(negated_lit_pos + 1) % 2];
+	 data.addCommentToProof("found by strengthening"); data.addUnitToProof( unitLit ); 
+        lbool state = data.enqueue( unitLit );
         if (l_False == state)
             return l_False;
         else

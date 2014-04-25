@@ -69,7 +69,6 @@ Config::Config(vec<Option*>* ptr, const std::string & presetOptions)
 , parsePreset(false)
 , defaultPreset( presetOptions )
 {
-
 }
 
 inline 
@@ -385,13 +384,13 @@ bool Config::parseOptions(int& argc, char** argv, bool strict)
 {
     if( optionListPtr == 0 ) return false; // the options will not be parsed
   
-    if( !parsePreset ) {
-      if( defaultPreset.size() != 0 ) { // parse default preset instead of actual options!
-	setPreset( defaultPreset );	// setup the preset configuration
-	defaultPreset = "" ;		// now, nothing is preset any longer
-	return false;
-      }
-    }
+//     if( !parsePreset ) {
+//       if( defaultPreset.size() != 0 ) { // parse default preset instead of actual options!
+// 	setPreset( defaultPreset );	// setup the preset configuration
+// 	defaultPreset = "" ;		// now, nothing is preset any longer
+// 	return false;
+//       }
+//     }
 
   // usual way to parse options
     int i, j;

@@ -1413,15 +1413,22 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
     exit(13);
   }
   
-  const bool local_debug = false;
-  if( false && (global_debug_out || local_debug) ) {
+  for( int j = 0 ; j < model.size(); ++ j ) {
+	  if( model[j] == l_Undef ) model[j] = l_True; // set free variables to some value
+  }
+  
+  const bool local_debug = true;
+  if( true && (global_debug_out || local_debug) ) {
     cerr << "c extend model of size " << model.size() << " with undo information of size " << undo.size() << endl;
     cerr << "c in model: ";
-    for( int i = 0 ; i < model.size(); ++ i ) {
-      const Lit satLit = mkLit( i, model[i] == l_True ? false : true );
-      cerr << satLit << " ";
-    }
-    cerr << endl;
+	for( int j = 0 ; j < model.size(); ++ j ) {
+	  if( model[j] == l_Undef ) cerr << "? ";
+	  else {
+	    const Lit satLit = mkLit( j, model[j] == l_True ? false : true );
+	    cerr << satLit << " ";
+	  }
+	}
+	cerr << endl;
   }
   
   if( false && local_debug ) {
@@ -1459,8 +1466,11 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
        if( local_debug ) { // print intermediate state!
        cerr << "c current model: ";
 	for( int j = 0 ; j < model.size(); ++ j ) {
-	  const Lit satLit = mkLit( j, model[j] == l_True ? false : true );
-	  cerr << satLit << " ";
+	  if( model[j] == l_Undef ) cerr << "? ";
+	  else {
+	    const Lit satLit = mkLit( j, model[j] == l_True ? false : true );
+	    cerr << satLit << " ";
+	  }
 	}
 	cerr << endl;
         cerr << "next clause: ";

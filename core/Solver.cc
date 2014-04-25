@@ -10,7 +10,7 @@ Glucose are exactly the same as Minisat on which it is based on. (see below).
 
 Copyright (c) 2003-2006, Niklas Een, Niklas Sorensson
 Copyright (c) 2007-2010, Niklas Sorensson
-Copyright (c) 2012-2013, Norbert MantheyF
+Copyright (c) 2012-2014, Norbert Manthey
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -381,7 +381,7 @@ bool Solver::addClause_(vec<Lit>& ps)
       addCommentToProof("reduce due to assigned literals, or duplicates");
       addToProof(ps);
       addToProof(oc,true);
-    } else if( outputsProof() && config.opt_verboseProof ) {
+    } else if( outputsProof() && config.opt_verboseProof == 2 ) {
       cerr << "c added usual clause " << ps << " to solver" << endl; 
     }
 
@@ -2530,11 +2530,11 @@ lbool Solver::solve_()
       if( config.opt_uhdProbe > 2 ) big->sort( nVars() ); // sort all the lists once
     }
     
-    if( false ) {
+    if( true ) {
       cerr << "c solver state after preprocessing" << endl;
       cerr << "c start solving with " << nVars() << " vars, " << nClauses() << " clauses and " << nLearnts() << " learnts" << endl;
       cerr << "c units: " ; for( int i = 0 ; i < trail.size(); ++ i ) cerr << " " << trail[i]; cerr << endl;
-      cerr << "c clauses: " << endl; for( int i = 0 ; i < clauses.size(); ++ i ) cerr << "c " << ca[clauses[i]] << endl;
+      cerr << "c clauses: " << endl; for( int i = 0 ; i < clauses.size(); ++ i ) cerr << "c [" << clauses[i] << "]m: " << ca[clauses[i]].mark() << " == " << ca[clauses[i]] << endl;
       cerr << "c assumptions: "; for ( int i = 0 ; i < assumptions.size(); ++ i ) cerr << " " << assumptions[i]; cerr << endl;
       cerr << "c solve with " << config.presetConfig() << endl;
     }
@@ -2657,6 +2657,20 @@ lbool Solver::solve_()
         for (int i = 0; i < nVars(); i++) model[i] = value(i);
 	if( model.size() > solveVariables ) model.shrink( model.size() - solveVariables ); // if SD has been used, nobody knows about these variables, so remove them before doing anything else next
 	
+    if( true ) {
+      cerr << "c solver state after solving with solution" << endl;
+      cerr << "c check clauses: " << endl; 
+      for( int i = 0 ; i < clauses.size(); ++ i ) {
+	int j = 0;
+	const Clause& c = ca[clauses[i]];
+	for( ; j < c.size(); j++ ) {
+	  if( model[ var(c[j]) ] == l_True && !sign(c[j] ) ) break;
+	  else if (  model[ var(c[j]) ] == l_False && sign(c[j] ) ) break;
+	}
+	if( j == c.size() ) cerr << "c unsatisfied clause [" << clauses[i] << "] m: " << ca[clauses[i]].mark() << " == " << ca[clauses[i]] << endl;
+      }
+    }
+
 	if( coprocessor != 0 && (useCoprocessorPP || useCoprocessorIP) ) coprocessor->extendModel(model);
 	
     }else if (status == l_False && conflict.size() == 0)

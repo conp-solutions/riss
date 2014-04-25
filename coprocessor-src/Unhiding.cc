@@ -113,12 +113,12 @@ uint32_t Unhiding::linStamp( const Lit literal, uint32_t stamp, bool& detectedEE
 	while( stampInfo[ toInt(lfailed) ].dsc > stampInfo[ toInt( ~l1 ) ].obs ) lfailed = stampInfo[ toInt(lfailed) ].parent;
 	if( config.opt_uhd_Debug > 4 ) cerr << "c [UHD-A] found failed literal " << lfailed << " enqueue " << ~lfailed << endl;
 	if( data.value( ~lfailed ) == l_Undef ) {
-	  data.addCommentToProof("found during stamping in unhiding");data.addUnitToProof(~lfailed);
 	  if( config.opt_uhd_Debug > 1 ) cerr << "c derived unit " <<  ~lfailed << " with stamps pos(" << ~lfailed << "):" 
 	    << stampInfo[toInt(~lfailed)].dsc << " -- " << stampInfo[toInt(~lfailed)].fin
 	    << " and neg (" << lfailed << "): " << stampInfo[toInt(lfailed)].dsc << " -- " << stampInfo[toInt(lfailed)].fin 
 	    << endl;
 	}
+	if( data.value( ~lfailed ) != l_True ) { data.addCommentToProof("found during stamping in unhiding");data.addUnitToProof(~lfailed); } // add the unit twice?
 	if( l_False == data.enqueue( ~lfailed, data.defaultExtraInfo()  ) ) {  return stamp; }
 	
 	if( stampInfo[ toInt( ~l1 ) ].dsc != 0 && stampInfo[ toInt( ~l1 ) ].fin == 0 ) continue;
@@ -511,7 +511,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
 	if( (as < bs && be < ae)  // a -> b
 	  || (nbs < nas && nae < nbe ) ) // -b -> -a == a -> b
 	{ // then F -> b
-	    if( data.value( clause[1] ) == l_Undef ) {
+	    if( data.value( clause[1] ) != l_True ) {
 	      uhdProbeL1Units ++;
 	      data.addCommentToProof("implied by unhiding probing");
 	      data.addUnitToProof( clause[1] );
@@ -522,7 +522,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
 	} else if ( (bs < as && ae < be)  // b -> a
 	  || (nas < nbs && nbe < nae ) ) // -a -> -b == b -> a
 	{ // then F -> a
-	    if( data.value( clause[0] ) == l_Undef ) {
+	    if( data.value( clause[0] ) != l_True ) {
 	      uhdProbeL1Units ++;
 	      data.addCommentToProof("implied by unhiding probing");
 	      data.addUnitToProof( clause[0] );
@@ -547,9 +547,8 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
 	      ||  ( stampInfo[ toInt( ~bLit ) ].dsc < stampInfo[ toInt( ~aLit ) ].dsc && stampInfo[ toInt( ~aLit ) ].fin < stampInfo[ toInt( ~bLit ) ].fin ) ){
 		if( data.value( bLit ) == l_Undef ) {
 		  if ( j == 0 || k == 0) uhdProbeL2Units ++; else uhdProbeL3Units ++;
-		  data.addCommentToProof("implied by unhiding probing");
-		  data.addUnitToProof( bLit );
 		}
+		if( data.value( bLit ) != l_True ) { data.addCommentToProof("implied by unhiding probing");data.addUnitToProof( bLit ); }
 		if( l_False == data.enqueue( bLit, data.defaultExtraInfo() ) ) { 
 		  return didSomething;
 		}
@@ -561,6 +560,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
 		    data.addCommentToProof("implied by unhiding probing");
 		    data.addUnitToProof( aLit );
 		  }
+		  if( data.value( aLit ) != l_True ) {data.addCommentToProof("implied by unhiding probing"); data.addUnitToProof( aLit ); }
 		  if( l_False == data.enqueue( aLit, data.defaultExtraInfo() ) ) { 
 		    return didSomething;
 		  }
@@ -659,6 +659,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
 	      data.addCommentToProof("implied by unhiding probing");
 	      data.addUnitToProof( minLit );
 	    }
+	    if( data.value( minLit ) != l_True ) { data.addCommentToProof("implied by unhiding probing"); data.addUnitToProof( minLit ); }
 	    if( l_False == data.enqueue( minLit, data.defaultExtraInfo() ) ) { 
 	      return didSomething;
 	    }

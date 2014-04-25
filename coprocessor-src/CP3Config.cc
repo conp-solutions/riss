@@ -720,4 +720,6 @@ opt_xor_debug(0),
 opt_xor_debug             (_cat_xor, "xor-debug",       "Debug Output of XOR reasoning", 0, IntRange(0, 5), optionListPtr ),
 #endif
  dummy (0)
-{}
+{
+  if( defaultPreset.size() != 0 ) setPreset( defaultPreset ); // set configuration options immediately
+}

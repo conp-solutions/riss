@@ -228,14 +228,12 @@ int main(int argc, char** argv)
 	  //
 	  // here the solver starts with its actual work ...
 	  //	  
-	  CoreConfig coreConfig;
-	  Coprocessor::CP3Config cp3config;
+	  ::parseOptions (argc, argv ); // parse all global options
+	  CoreConfig coreConfig(string(opt_config == 0 ? "" : opt_config));
+	  Coprocessor::CP3Config cp3config(string(opt_config == 0 ? "" : opt_config));
 	  bool foundHelp = coreConfig.parseOptions(argc, argv);
 	  foundHelp = cp3config.parseOptions(argc, argv) || foundHelp;
-	  ::parseOptions (argc, argv ); // parse all global options
 	  if( foundHelp ) exit(0); // stop after printing the help information
-	  coreConfig.setPreset(string(opt_config == 0 ? "" : opt_config));
-	  cp3config.setPreset( string(opt_config == 0 ? "" : opt_config));
 	  
 	  if( opt_cmdLine ) { // print the command line options
 	    std::stringstream s;

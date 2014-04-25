@@ -1175,9 +1175,12 @@ void Preprocessor::extendModel(vec< lbool >& model)
   if( config.opt_verbose > 0 ) cerr << "c extendModel with " << model.size() << " variables" << endl;
 
   // for the most recent changes that have not reached a dense.compress yet
-  dense.adoptUndoStack(); // necessary here!
-  // order is important! 
-  dense.decompress( model ); // if model has not been compressed before, nothing has to be done!
+  if( config.opt_dense ) {
+    dense.adoptUndoStack(); // necessary here!
+    // order is important! 
+    dense.decompress( model ); // if model has not been compressed before, nothing has to be done!
+  }
+  
   if( config.opt_verbose > 0 ) cerr << "c formula variables: " << formulaVariables << " model: " << model.size() << endl;
   if( formulaVariables > model.size() ) model.growTo(formulaVariables);
   // cerr << "c run data extend model" << endl;
@@ -1472,7 +1475,7 @@ void Preprocessor::reSetupSolver()
     if( config.opt_verbose > 3 ) fprintf(stderr, " moved %i and removed %i from %i learnts\n",learntToClause,(l_old - kept_clauses) -learntToClause, l_old);
 
     
-    if( false ) {
+    if( true ) {
       cerr << "c trail after cp3: ";
       for( int i = 0 ; i< solver->trail.size(); ++i ) 
       {
