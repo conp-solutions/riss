@@ -92,7 +92,8 @@ vector<int>& Classifier::classifyJava(const char* wekaFile) {
 	cerr << "c call java, current used memory: " << Minisat::memUsed() << " MB, peak: " << Minisat::memUsedPeak() << " MB" << endl;
 	stringstream scmd;
 	// -cp "./predictor.jar":"/usr/share/java/weka.jar" predicor.Predictor
-	scmd << "java -Xmx1600M -cp \""<< predictorLocation.c_str() << "\":\"" << wekaLocation.c_str() << "\" predictor.Predictor ";
+	//scmd << "java -Xmx1600M -cp \""<< predictorLocation.c_str() << "\":\"" << wekaLocation.c_str() << "\" predictor.Predictor ";
+	scmd << "java -cp \""<< predictorLocation.c_str() << "\":\"" << wekaLocation.c_str() << "\" predictor.Predictor ";
 	scmd << "\"" << wekaFile << "\" ";
 	scmd << "\"" << prefix << "\" ";
 	scmd << "\"" << configurations.getDefinitionsFilename() << "\" ";
@@ -133,7 +134,8 @@ vector<int>& Classifier::classify(const char* wekaFile) {
 	for  (int config=0; config<configurations.getSize(); config++ ){
 		stringstream scmd;
 		int index = configurations.getClassIndexes()[config];
-		scmd << "java -Xmx1600M -cp \"" << wekaLocation << "\" weka.classifiers.meta.FilteredClassifier -l " << classifiersNames[config];
+		//scmd << "java -Xmx1600M -cp \"" << wekaLocation << "\" weka.classifiers.meta.FilteredClassifier -l " << classifiersNames[config];
+		scmd << "java -cp \"" << wekaLocation << "\" weka.classifiers.meta.FilteredClassifier -l " << classifiersNames[config];
 		scmd << " -T " << wekaFile;
 		scmd << " -c " << index;
 		stringstream name;

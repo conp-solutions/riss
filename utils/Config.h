@@ -152,7 +152,7 @@ else if( optionSet == "RERRW" ) {
 else if( optionSet == "Riss3g" ) {
     parseOptions( std::string("-enabled_cp3 -cp3_stats -up -subsimp -all_strength_res=3 -bva -cp3_bva_limit=120000 -bve -bve_red_lits=1 -no-bve_BCElim -cce -cp3_cce_steps=2000000 -cp3_cce_level=1 -cp3_cce_sizeP=100 -unhide -cp3_uhdUHLE=0 -cp3_uhdIters=5 -dense -hlaevery=1 -hlaLevel=5 -laHack -tabu -hlabound=4096 ") ,false);
 }
-else if( optionSet == "	" ) {
+else if( optionSet == "Riss427i" ) {
     parseOptions( std::string(" -enabled_cp3 -cp3_stats -dense -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -cp3_ptechs=fgvb -cp3_itechs=gsewxp -inprocess -cp3_inp_cons=8000000 -probe -no-pr-vivi -pr-bins -pr-lhbr -no-pr-nce -subsimp -ee -cp3_ee_it -cp3_ee_level=2 -bva -cp3_bva_limit=120000 -cp3_Xbva=2 -xor -dense") ,false);
 }
 else if( optionSet == "Riss427nd" ) {
