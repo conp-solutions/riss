@@ -2936,6 +2936,9 @@ bool Solver::extendedClauseLearning( vec< Lit >& currentLearnedClause, unsigned 
   }
   
   const Var x = newVar(true,true,'e'); // this is the fresh variable!
+  if( big != 0 ) { // increase the information inside the BIG
+    // big->
+  }
   vardata[x].level = level(var(l1));
 
   varFlags[x].assigns = lbool(true);
