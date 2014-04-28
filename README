@@ -15,6 +15,7 @@ Mprocessor    ... a MaxSAT simplifier
 ShiftBMC      ... a BMC solver
 Priss         ... a simple portfolio SAT solver
 Pcasso        ... a parallel search space splitting SAT solver
+Classifier    ... a CNF feature extraction tool
 
 This README file is split into two parts. The first part explains how to build the
 tools that are contained in the package, and the second part explains common use 
@@ -51,6 +52,9 @@ and to disable code optimizations.
 	To build Pcasso:
 	make pcassoRS
 
+	To build Classifier:
+	make cls
+
 To build ShiftBMC, the script "./configure" has to be run successfully in the 
 directory "shiftbmc-src" before the solver can be build.
 
@@ -85,3 +89,8 @@ be exchanged by changing the variable "qbfsolver" in the head of the script. The
 simplification techniques setup of the QBF simplifier is limited at the moment 
 and no further simplifications should be enabled.
 	./qp.sh <input.qcnf> [qbfsolverOptions]
+	
+The CNF feature extraction tool classifier can be used to extract features from
+a CNF file by calling the tool as follows. Features can be disabled separately.
+For more information use the "--help" parameter.
+	./classifier <input.cnf>

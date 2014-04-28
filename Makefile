@@ -186,7 +186,7 @@ bmctar: clean
 clean:
 	@cd core; make clean CPDEPEND="" MROOT=..;
 	@cd simp; make clean MROOT=..;
-	@rm -f riss coprocessor qprocessor libriss.a libcp.so priss
+	@rm -f riss coprocessor qprocessor libriss.a libcp.so priss classifier pcasso
 	@if [ -d "coprocessor-src" ]; then cd coprocessor-src; make clean MROOT=..; fi
 	@if [ -d "qprocessor-src" ]; then cd qprocessor-src; make clean MROOT=..; fi
 	@if [ -d "mprocessor-src" ]; then cd mprocessor-src; make clean MROOT=..; fi
