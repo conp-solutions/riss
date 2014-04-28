@@ -387,9 +387,9 @@ public:
   bool isOneChild( const Lit& parent, const Lit& child1, const Lit& child2 ) const ;
   
   /** get indexes of BIG scan algorithm */
-  uint32_t getStart( const Lit& l ) { return start != 0 ? start[ toInt(l) ] : 0; }
+  uint32_t getStart( const Lit& l ) { return start != 0 && var(l) < duringCreationVariables ? start[ toInt(l) ] : 0; }
   /** get indexes of BIG scan algorithm */
-  uint32_t getStop( const Lit& l ) { return stop != 0 ? stop[ toInt(l) ] : 0; }
+  uint32_t getStop( const Lit& l ) { return stop != 0 && var(l) < duringCreationVariables  ? stop[ toInt(l) ] : 0; }
 };
 
 /** Comperator for Variable Heap of BVE */
