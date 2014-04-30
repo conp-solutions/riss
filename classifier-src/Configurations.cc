@@ -9,7 +9,6 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <boost/lexical_cast.hpp>
 
 //Configurations::Configurations(): startIndex(0), timeout(800000), attrInfoFile("attrInfo.txt"){
 //	readNames("configurations.txt");
@@ -45,8 +44,11 @@ double Configurations::getTimeInfo(istream& input,double penalization) {
 	if (word.compare("-")==0) {
 		return -1;
 	} else {
-		double time = boost::lexical_cast<double>(word);
-		return time + penalization;
+		double time;
+		std::istringstream i(word); // have another stream, to not parse twice from the stream input
+		if( ! (i >> time ) ) // parse time into double
+		    return -1 ; 	// if fails, then return -1
+		return time + penalization;	// otherwise return the time
 	}
 }
 

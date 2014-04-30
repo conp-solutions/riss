@@ -168,19 +168,22 @@ doc: clean
 
 # tar balls
 tar: clean
-	tar czvf riss.tar.gz core   license.txt  Makefile mtl  README  simp utils VERSION
+	tar czvf riss.tar.gz core license.txt  Makefile mtl  README  simp scripts utils VERSION
 	
 cotar: clean
-	tar czvf coprocessor.tar.gz core license.txt  Makefile mtl  README  simp  utils coprocessor-src VERSION
+	tar czvf coprocessor.tar.gz core license.txt  Makefile mtl  README  simp  scripts utils coprocessor-src VERSION
 	
 cltar: clean
-	tar czvf classifier.tar.gz core license.txt  Makefile mtl  README  simp  utils coprocessor-src classifier-src VERSION
+	tar czvf classifier.tar.gz core license.txt  Makefile mtl  README  simp  scripts utils coprocessor-src classifier-src VERSION
 
 qtar: clean
-	tar czvf qprocessor.tar.gz core license.txt Makefile mtl  README  simp  utils coprocessor-src qprocessor-src qp.sh VERSION 
+	tar czvf qprocessor.tar.gz core license.txt Makefile mtl  README  simp  scripts utils coprocessor-src qprocessor-src qp.sh VERSION 
+	
+pctar: clean
+	tar czvf pcasso.tar.gz core license.txt Makefile mtl  README  simp  scripts utils coprocessor-src pcasso-src qprocessor-src qp.sh VERSION 
 	
 bmctar: clean 
-	tar czvf shiftbmc.tar.gz core license.txt  Makefile mtl  README  simp  utils coprocessor-src shiftbmc-src VERSION
+	tar czvf shiftbmc.tar.gz core license.txt  Makefile mtl  README  simp  scripts utils coprocessor-src shiftbmc-src VERSION
 	
 # clean up after solving - be careful here if some directories are missing!
 clean:
