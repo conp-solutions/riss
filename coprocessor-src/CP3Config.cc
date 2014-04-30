@@ -313,7 +313,7 @@ opt_bce_cle_conservative(_cat_bce,"bce-cle-cons", "conservative cle if taut. res
 opt_bceInpStepInc (_cat_bce,"bce-incInp", "number of steps given to BCE for another inprocessign round", 10000, IntRange(0, INT32_MAX) , optionListPtr ),
 #if defined TOOLVERSION
 opt_bce_verbose (0),
-opt_cle_debug(false),
+opt_bce_debug(false),
 #else
 opt_bce_verbose (_cat_bce, "bce-verbose", "be verbose during BCE", 0, IntRange(0, 3), optionListPtr ),
 opt_bce_debug (_cat_bce, "bce-debug", "output debug info during BCE", false, optionListPtr ),

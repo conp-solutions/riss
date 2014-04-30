@@ -19,6 +19,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <iostream>
 
+//#define TOOLVERSION 427
+
 namespace Minisat {
 
 /** class that implements most of the configuration features */

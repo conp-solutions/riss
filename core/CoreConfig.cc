@@ -150,7 +150,7 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  opt_otfssL ("SEARCH - OTFSS", "otfssL", "otfss for learnt clauses", false, optionListPtr ),
  opt_otfssMaxLBD ("SEARCH - OTFSS", "otfssMLDB", "max. LBD of learnt clauses that are candidates for otfss", 30, IntRange(2, INT32_MAX) , optionListPtr ),
 #if defined TOOLVERSION
- debug_otfss ( false , optionListPtr ),
+ debug_otfss ( false ),
 #else
  debug_otfss ("SEARCH - OTFSS", "otfss-d", "print debug output", false, optionListPtr ),
 #endif
@@ -189,7 +189,7 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  opt_rer_newAct("EXTENDED RESOLUTION RER", "rer-new-act", "how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean", 0, IntRange(0, 4) , optionListPtr ),
  opt_rer_ite("EXTENDED RESOLUTION RER", "rer-ite", "check for ITE pattern, if AND is not found?", false , optionListPtr ),
 #if defined TOOLVERSION
- opt_ecl_debug(false),
+ opt_rer_debug(false),
 #else
  opt_rer_debug("EXTENDED RESOLUTION RER", "rer-d", "debug output for RER", false, optionListPtr ),
 #endif

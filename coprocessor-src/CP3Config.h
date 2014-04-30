@@ -296,7 +296,7 @@ BoolOption opt_bce_cle_conservative; // perform CLE conservative and cheap, if t
 IntOption opt_bceInpStepInc; // add to limit for inprocessing
 #if defined TOOLVERSION  
 const int opt_bce_verbose;
-const bool opt_cle_debug; 
+const bool opt_bce_debug; 
 #else
 IntOption opt_bce_verbose; // output operation steps
 BoolOption opt_bce_debug; // debug output
