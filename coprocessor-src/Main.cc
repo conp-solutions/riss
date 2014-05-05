@@ -89,16 +89,12 @@ int main(int argc, char** argv)
 	StringOption modelFile     (_cat, "model",  "read model from SAT solver from this file");
 	IntOption    opt_search    (_cat, "search", "perform search until the given number of conflicts", 1, IntRange(0, INT32_MAX));
 	
-    CoreConfig coreConfig;
-	Coprocessor::CP3Config cp3config;
-
-	bool foundHelp = coreConfig.parseOptions(argc, argv);
+	bool foundHelp = ::parseOptions (argc, argv ); // parse all global options
+	CoreConfig coreConfig(string(opt_config == 0 ? "" : opt_config));
+	Coprocessor::CP3Config cp3config(string(opt_config == 0 ? "" : opt_config));
+	foundHelp = coreConfig.parseOptions(argc, argv) || foundHelp;
 	foundHelp = cp3config.parseOptions(argc, argv) || foundHelp;
-	::parseOptions (argc, argv ); // parse all global options
 	if( foundHelp ) exit(0); // stop after printing the help information
-	coreConfig.setPreset(string(opt_config == 0 ? "" : opt_config));
-	cp3config.setPreset(string(opt_config == 0 ? "" : opt_config));	
-
 	
 	if( opt_cmdLine ) { // print the command line options
 	  std::stringstream s;

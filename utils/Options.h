@@ -38,7 +38,7 @@ namespace Minisat {
 // Top-level option parse/help functions:
 
 
-extern void parseOptions     (int& argc, char** argv, bool strict = false);
+extern bool parseOptions     (int& argc, char** argv, bool strict = false);
 extern void printUsageAndExit(int  argc, char** argv, bool verbose = false);
 extern void setUsageHelp     (const char* str);
 extern void setHelpPrefixStr (const char* str);
@@ -94,7 +94,7 @@ class Option
     virtual bool hasDefaultValue   () = 0; 				// check whether the current value corresponds to the default value of the option
     virtual void printOptionCall   (std::stringstream& strean ) = 0; 	// print the call that is required to obtain that this option is set
 
-    friend  void parseOptions      (int& argc, char** argv, bool strict);
+    friend  bool parseOptions      (int& argc, char** argv, bool strict);
     friend  void printUsageAndExit (int  argc, char** argv, bool verbose);
     friend  void setUsageHelp      (const char* str);
     friend  void setHelpPrefixStr  (const char* str);

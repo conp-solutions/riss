@@ -23,8 +23,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 using namespace Minisat;
 
-void Minisat::parseOptions(int& argc, char** argv, bool strict)
+bool Minisat::parseOptions(int& argc, char** argv, bool strict)
 {
+    bool returnValue = false;
     int i, j;
     for (i = j = 1; i < argc; i++){
         const char* str = argv[i];
@@ -33,6 +34,8 @@ void Minisat::parseOptions(int& argc, char** argv, bool strict)
                 printUsageAndExit(argc, argv);
             else if (match(str, "-verb"))
                 printUsageAndExit(argc, argv, true);
+	    returnValue = true;
+	    argv[j++] = argv[i]; // keep the help parameter
         } else {
             bool parsed_ok = false;
         
@@ -51,6 +54,7 @@ void Minisat::parseOptions(int& argc, char** argv, bool strict)
     }
 
     argc -= (i - j);
+    return returnValue;
 }
 
 
@@ -91,7 +95,7 @@ void Minisat::printUsageAndExit (int argc, char** argv, bool verbose)
     fprintf(stderr, "  --%shelp        Print help message.\n", Option::getHelpPrefixString());
     fprintf(stderr, "  --%shelp-verb   Print verbose help message.\n", Option::getHelpPrefixString());
     fprintf(stderr, "\n");
-    exit(0);
+    // exit(0);
 }
 
 
