@@ -328,7 +328,7 @@ void PSolver::createThreadConfigs()
 {
   const char* Configs[] = { 
     "",			// 0
-    "BIASSERTING",	// 1
+    "PLAINBIASSERTING",	// 1
     "LLA",		// 2
     "AUIP",		// 3
     "SUHD",		// 4
@@ -338,7 +338,7 @@ void PSolver::createThreadConfigs()
     "HACKTWO",		// 8
     "NOTRUST",		// 9
     "DECLEARN",		// 10
-    "BIASSERTING",	// 11
+    "PLAINBIASSERTING",	// 11
     "LBD",		// 12
     "FASTRESTART",	// 13
     "AGILREJECT",	// 14
