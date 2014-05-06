@@ -1417,7 +1417,7 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
 	  if( model[j] == l_Undef ) model[j] = l_True; // set free variables to some value
   }
   
-  const bool local_debug = true;
+  const bool local_debug = false;
   if( true && (global_debug_out || local_debug) ) {
     cerr << "c extend model of size " << model.size() << " with undo information of size " << undo.size() << endl;
     cerr << "c in model: ";

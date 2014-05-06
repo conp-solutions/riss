@@ -163,6 +163,8 @@ bool Symmetry::process() {
 		  data.lits.clear();
 		  data.lits.push_back( ~l1 );
 		  data.lits.push_back( ~l2 );
+		  data.addCommentToProof("found symmetry");
+		  data.addToProof(data.lits);
 		  CRef cr = ca.alloc(data.lits, false); // no learnt clause!!
 		  solver.clauses.push(cr);
 		  solver.attachClause(cr); // no data initialization necessary!!
@@ -189,7 +191,14 @@ bool Symmetry::process() {
 		  solver.useCoprocessorIP = oldUseIP;
 		  totalConflicts = solver.conflicts - totalConflicts;
 		  if( ret == l_False ) { // TODO continue this here!
-		    // entailed! 
+		    data.lits.clear();
+		    data.lits.push_back( ~l1 );
+		    data.lits.push_back( ~l2 );
+		    data.addCommentToProof("found symmetry (might not be entailed by UP only)");
+		    data.addToProof(data.lits);
+		    CRef cr = ca.alloc(data.lits, false); // no learnt clause!!
+		    solver.clauses.push(cr);
+		    solver.attachClause(cr); // no data initialization necessary!!
 		  } else if ( ret == l_True ) {
 		    // found a model for the formula - handle it! 
 		  }
@@ -224,7 +233,9 @@ bool Symmetry::process() {
   
   // clear all the learned clauses inside the solver!
   if( config.sym_opt_cleanLearn ) {
+    data.addCommentToProof("remove symmetry learned clauses again");
     for( int i = 0 ; i < solver.learnts.size(); ++ i ) {
+      data.addToProof( ca[solver.learnts[i]], true );
       solver.removeClause( solver.learnts[i] ); 
     }
   }
