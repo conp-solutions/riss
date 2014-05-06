@@ -150,6 +150,8 @@ void Resolving::ternaryResolve()
 	if( resolvent.size() == 0 ) {
 	  data.setFailed(); return; 
 	} else if( resolvent.size() == 1 ){
+	  data.addCommentToProof("unit during tern resolve");
+	  data.addUnitToProof( resolvent[0] );
 	 if( data.enqueue(resolvent[0]) == l_False ) return;
 	} else if( resolvent.size() < 4 && // use resolvent only, if it has less then 4 literals
 	  !hasDuplicate(data.list(resolvent[0]),resolvent) ) { // and if this clause is not already in the data structures!
@@ -159,6 +161,8 @@ void Resolving::ternaryResolve()
 	  if( config.res3_debug_out ) cerr << "c add clause " << ca[cr] << endl;
 	  data.addClause(cr);
 	  data.addSubStrengthClause(cr);
+	  data.addCommentToProof("during ternary resolution");
+	  data.addToProof( resolvent );
 	  if( becomeLearnt ) {
 	    data.getLEarnts().push(cr);
 	  } else {
@@ -430,6 +434,8 @@ void Resolving::addRedundantBinaries()
 	  if( k < thisLit ) continue;
 	  assert( thisLit < k && "add only ordered clauses!" );
 	  const CRef cr = ca.alloc(ps,false); // not a learnt clause!
+	  data.addCommentToProof("add as redundante binary clause");
+	  data.addToProof(ps);
 	  addedBinaries ++;
 	  data.addClause(cr);
 	  data.getClauses().push(cr);

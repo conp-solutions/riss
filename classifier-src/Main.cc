@@ -350,8 +350,6 @@ int main(int argc, char** argv)
 		  int correct = classifier.train(attrFile);
 		  cout << correct;
 	  } else {
-			cerr << "[@" << cpuTime() << " | " << wallClockTime()
-					<< "] c extract features ... " << endl;
 			if (argc > 1) {
 				printFeatures(argc, argv);
 				if (attr && fileoutput) {
@@ -360,7 +358,6 @@ int main(int argc, char** argv)
 			}
 			time1 = cpuTime();
 			if (!(runtimesInfo) && classify){
-				cerr << "[@" << cpuTime() << " | " <<  wallClockTime() << "] c classification ... " << endl;
 				Classifier classifier(*configuration, prefixClassifier);
 				classifier.setWekaLocation(string(wekaLocation));
 				classifier.setPredictorLocation(string(predictorLocation));
@@ -368,9 +365,7 @@ int main(int argc, char** argv)
 				classifier.setVerbose(verb);
 				classifier.setUseTempFiles(tmpfilecommunication);
 				classifier.setGainThreshold(gainth);
-				cerr << "[@" << cpuTime() << " | " <<  wallClockTime() << "] c classify ... " << endl;
 				vector<int> classes = classifier.classifyJava(attrFile);
-				cerr << "[@" << cpuTime() << " | " <<  wallClockTime() << "] c print class names ... " << endl;
 				time1 = cpuTime()-time1;
 				cout << "c classify time " << time1 << endl;
 				if( classes.size() == 0 ) return 1; // there is no class, so you cannot print anything!
