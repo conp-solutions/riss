@@ -67,6 +67,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
   opt_inc_inp     (_cat, "inc-inp",        "increase technique limits per inprocess step", false, optionListPtr ),
 
 #if defined TOOLVERSION && TOOLVERSION < 400
+#warning NoStatsVerbose
         opt_printStats ( true ), // do not print stats, if restricted binary is produced
         opt_verbose ( 0),        // do not talk during computation!
 #else
@@ -79,11 +80,13 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
   opt_subsimp     (_cat2, "subsimp",       "Use Subsumption during preprocessing", false, optionListPtr ),
   opt_hte         (_cat2, "hte",           "Use Hidden Tautology Elimination during preprocessing", false, optionListPtr ),
 #if defined TOOLVERSION && TOOLVERSION < 355
+#warning NoBCE
   opt_bce ( false ),
 #else
   opt_bce         (_cat2, "bce",           "Use Blocked Clause Elimination during preprocessing", false, optionListPtr ),
 #endif
 #if defined TOOLVERSION && TOOLVERSION < 360
+#warning NoENT
   opt_ent ( false ),
 #else
   opt_ent         (_cat2, "ent",           "Use checking for entailed redundancy during preprocessing", false, optionListPtr ),
@@ -109,6 +112,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
 
 // use 2sat and sls only for high versions!
 #if defined TOOLVERSION && TOOLVERSION < 301
+  #warning NoThreadsSlsXor
   opt_threads ( 0),
   opt_sls ( false),       
   opt_sls_phase ( false),    
@@ -204,6 +208,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
  
 
 #if defined TOOLVERSION // debug only, if no version is given!
+#warning NoDebugCheckLog
   opt_debug ( false),       
   opt_check ( 0),
    opt_log (0),
@@ -220,6 +225,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
 //
 
 #if defined TOOLVERSION && TOOLVERSION < 302
+#warning NoParallel
  opt_par_bve(1),
  opt_bve_verbose(0),
 #else
@@ -249,6 +255,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
   opt_bveInpStepInc      (_cat_bve, "cp3_bve_inpInc","increase for steps per inprocess call", 5000000, IntRange(0, INT32_MAX), optionListPtr ),
 
 #if defined TOOLVERSION && TOOLVERSION < 302
+#warning NoParallelOptions
 par_bve_threshold(0),
 postpone_locked_neighbors (1),
 opt_minimal_updates (false),
@@ -279,6 +286,7 @@ bva_debug (_cat_bva, "bva-debug",       "Debug Output of BVA", 0, IntRange(0, 4)
 #endif
 
 #if defined TOOLVERSION  && TOOLVERSION < 350
+#warning NoXbvaIbva
 opt_bvaAnalysis (false),
 opt_Xbva (false),
 opt_Ibva (false),
@@ -374,6 +382,7 @@ opt_dense_keep_assigned  (_cat_dense, "cp3_keep_set",   "keep already assigned l
 // Entailed
 //
 #if defined TOOLVERSION && TOOLVERSION < 360
+#warning NoENT
 opt_entailed_minClsSize (INT32_MAX),
 #else
 opt_entailed_minClsSize  (_cat_entailed, "ent-min",    "minimum clause size that is tested", 2, IntRange(2, INT32_MAX), optionListPtr ),
@@ -388,6 +397,7 @@ entailed_debug(_cat_entailed, "ent-debug",       "Debug Output for ENT reasoning
 // Equivalence
 //
 #if defined TOOLVERSION  && TOOLVERSION < 350
+#warning NoStructuralHashing
 opt_ee_level            ( 0),
 opt_ee_gate_limit       ( 0),
 opt_ee_circuit_iters    ( 2),
@@ -419,6 +429,7 @@ opt_ee_eager_frozen     (_cat_ee, "ee_freeze_eager", "exclude frozen variables e
 // Structural hashing options
 //
 #if defined TOOLVERSION  && TOOLVERSION < 350
+#warning NoCircuitExtraction
 circ_AND        (false),
 circ_ITE        (false),
 circ_XOR        (false),
@@ -491,6 +502,7 @@ fm_debug_out (_cat_fm, "fm-debug",       "Debug Output of Fourier Motzkin", 0, I
 //
 opt_hte_steps    (_cat_hte, "cp3_hte_steps",  "Number of steps that are allowed per iteration", INT32_MAX, IntRange(-1, INT32_MAX), optionListPtr ),
 #if defined TOOLVERSION && TOOLVERSION < 302
+#warning NoParallelHTE
 opt_par_hte        (false),
 #else
 opt_par_hte         (_cat_hte, "cp3_par_hte",    "Forcing Parallel HTE", false, optionListPtr ),
@@ -626,6 +638,7 @@ opt_sub_strLimit        (_cat_sub, "cp3_str_limit", "limit of strengthening step
 opt_sub_callIncrease    (_cat_sub, "cp3_call_inc",  "max. limit increase per process call (subsimp is frequently called from other techniques)", 200, IntRange(0,INT32_MAX), optionListPtr ), 
 opt_sub_inpStepInc      (_cat_sub, "cp3_sub_inpInc","increase for steps per inprocess call", 40000000, IntRange(0, INT32_MAX), optionListPtr ),
 #if defined TOOLVERSION && TOOLVERSION < 302
+#warning NoParallelSubsimp
 opt_sub_par_strength    (1),
 opt_sub_lock_stats      (false),
 opt_sub_par_subs        (1),
