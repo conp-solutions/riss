@@ -52,6 +52,8 @@ public:
  BoolOption opt_randInp     ;
  BoolOption opt_inc_inp     ;
 
+ StringOption opt_whiteList ;
+ 
 #if defined TOOLVERSION && TOOLVERSION < 400
        const bool opt_printStats; // do not print stats, if restricted binary is produced
        const  int opt_verbose;        // do not talk during computation!

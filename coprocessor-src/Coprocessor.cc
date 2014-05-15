@@ -1231,6 +1231,27 @@ void Preprocessor::initializePreprocessor()
       }
     }
   }
+  
+  if( config.opt_whiteList != 0 && string(config.opt_whiteList).size() != 0 ) {
+    // parse white list file, and set all existing variables to "do not touch"
+    
+    VarFileParser vfp( filename );
+    vector<int> whiteVariables;
+    vfp.extract( whiteVariables );
+    int lockedWhiteVars = 0;
+    for( int i = 0 ; i < whiteVariables.size(); ++ i ) {
+	const Var v = whiteVariables[i] > 0 ? whiteVariables[i] : - whiteVariables[i];
+	if( v - 1 >= data.nVars() ) continue; // other file might contain more variables
+	Lit thisL = mkLit(v-1, whiteVariables[i] < 0 );
+	data.doNotTouch( var(thisL) );
+	lockedWhiteVars ++;
+    }
+    
+    if( config.opt_verbose > 0 ) cerr << "c locked " << lockedWhiteVars << " white variables" << endl;
+    
+    // do not repeat this process in the future -> delete pointer to file name
+    config.opt_whiteList = 0;
+  }
   /*
   uint32_t clausesSize = (*solver).clauses.size();
 
