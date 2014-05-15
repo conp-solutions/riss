@@ -185,6 +185,7 @@ const char * usage =
 "-bmc_ad    use the ABC tool to simplify the circuit before solving, next parameter has to specify a tmp directory location!\n"
 "-bmc_ac    give a special command(-sequence, separated by ':') to ABC. default is AUTO other possible: AUTO, dc2, drwsat, scorr,dc2:scorr,...\n"
 #endif
+"-bmc_outCNF print formula to solve bound k into the given file (formula will not have a valid p-line, works only with preprocessing, should not be used)"
 "-bmc_tune  enable the output for tuning with paramILS/SMAC\n"
 "\n\n the model name should be given first, then, the max. bound should be given\n"
 " other options might be given as well. These options are forwarded to the SAT solver/CNF simplifier\n"

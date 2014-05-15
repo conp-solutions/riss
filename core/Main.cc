@@ -109,12 +109,13 @@ int main(int argc, char** argv)
   StringOption opt_proofFormat  ("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, should be DRUP)","DRUP");
   
   
-  StringOption opt_config     ("MAIN", "config", "Use a preset configuration",0);
-  BoolOption   opt_checkModel ("MAIN", "checkModel", "verify model inside the solver before printing (if input is a file)", false);
-  BoolOption   opt_modelStyle ("MAIN", "oldModel",   "present model on screen in old format", false);
-  BoolOption   opt_quiet      ("MAIN", "quiet",      "Do not print the model", false);
-  BoolOption   opt_parseOnly  ("MAIN", "parseOnly", "abort after parsing", false);
-  BoolOption   opt_cmdLine    ("MAIN", "cmd", "print the relevant options", false);
+  StringOption opt_config       ("MAIN", "config", "Use a preset configuration",0);
+  IntOption    opt_maxConflicts ("MAIN", "maxConflicts","Limit the number of conflicts for the search.\n", -1, IntRange(-1, INT32_MAX));
+  BoolOption   opt_checkModel   ("MAIN", "checkModel", "verify model inside the solver before printing (if input is a file)", false);
+  BoolOption   opt_modelStyle   ("MAIN", "oldModel",   "present model on screen in old format", false);
+  BoolOption   opt_quiet        ("MAIN", "quiet",      "Do not print the model", false);
+  BoolOption   opt_parseOnly    ("MAIN", "parseOnly", "abort after parsing", false);
+  BoolOption   opt_cmdLine      ("MAIN", "cmd", "print the relevant options", false);
   
     try {
       
@@ -352,6 +353,7 @@ int main(int argc, char** argv)
 	  vec<Lit> dummy;
 	  // tell solver about the number of conflicts it is allowed to use (for the current iteration)
 	  if( scheduleConflicts.size() > 0 && scheduleConflicts[solverIteration] >= 0 ) S.setConfBudget( scheduleConflicts[solverIteration] );
+	  if( opt_maxConflicts != -1 ) S.setConfBudget( opt_maxConflicts );
 	  lbool ret = S.solveLimited(dummy);
 	  S.budgetOff(); // remove budget again!
 	  // have we reached UNKNOWN because of the limited number of conflicts? then continue with the next loop!

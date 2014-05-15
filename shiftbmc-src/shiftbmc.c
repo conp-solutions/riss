@@ -55,6 +55,7 @@ static int frameConflictBudget = -1 ; // number of conflicts that are allowed to
 static int doNotAllowToSmallCircuits = 0;	// useful when tool is analyzed with a delta debugger
 static float frameConflictsInc = 4;	// factor how initialFrameConflicts grow when a frame cannot be solved
 static int simplifiedCNF = 0; // count how often the CNF has been simplified already
+static std::string formulaFile; // write the formula into a file instead of solving the formula (only after preprocessing)
 
 /// base structure for performing the shift operation with the (simplified) formula
 static ShiftFormula shiftFormula;
@@ -562,6 +563,11 @@ int parseOptions(int argc, char ** argv)
     }    
     
 #endif
+    else if (!strcmp (argv[i], "-bmc_outCNF")) {
+      ++i;
+      if( i < argc ) formulaFile = std::string(argv[i]);
+      else wrn("not enough parameters to set the output formula");
+    }    
     // the other parameters might be for the SAT solver
     else if (isnum (argv[i]) && maxk == 0) {
       maxk = atoi (argv[i]);
@@ -808,7 +814,7 @@ int simplifyCNF(int &k, void* preprocessorToUse, double& ppCNFtime)
       priss = priss_init(usePriss, "BMC" );
     } else {
       picosat_reset (picosat); // restart the solver!
-      picosat = picosat_init();
+//       picosat = picosat_init();
     }
 
     // get formula back from preprocessor
@@ -1377,14 +1383,80 @@ int main (int argc, char ** argv) {
   cerr << "[shift-bmc] pp time summary: aig: " << ppAigTime << " inner-cnf: " << innerPPtime << " outer-cnf: " << outerPPtime << endl;
   if( stats_only ) exit(0);
 
+  // semi-global variables
+  lit = shiftFormula.currentAssume; // literal might have changed!
+  const int shiftDist = shiftFormula.afterPPmaxVar - 1;  // shift depends on the variables that are actually in the formula that is used for solving
+  
+  
+  // dump the output formula ...
+  std::ofstream outputCNF;
+  if( formulaFile != "" ) {
+    outputCNF.open ( formulaFile.c_str(), std::fstream::out | std::fstream::trunc );
+    if ( ! outputCNF ) {
+      msg(0,"could not open file %s\n", formulaFile.c_str() );
+      exit(3);
+    }
+    
+    if( verbose > 1 ) cerr << "c write simplified first frame to solver" << endl; // as done in the simplify method
+    outputCNF << "c SHIFBMC formula dump for bound " << maxk << endl;
+    cerr << "c SHIFBMC formula dump for bound " << maxk << endl;
+    for( int i = 0 ; i < shiftFormula.formula.size(); ++i ) {
+      if( shiftFormula.formula[i] == 0 ) outputCNF << "0" << endl; // new line
+      else outputCNF << shiftFormula.formula[i] << " "; // have a space after each literal
+    }
+    // convert into printing into file
+    for( int i = 0 ; i < shiftFormula.initEqualities.size(); i+=2 ) {
+      outputCNF << - shiftFormula.initEqualities[i] << " "  << shiftFormula.initEqualities[i+1] << " 0" << endl;
+      outputCNF << shiftFormula.initEqualities[i] << " "  << - shiftFormula.initEqualities[i+1] << " 0" << endl;
+    }
+    outputCNF << constantUnit << " 0" << endl;   // constant unit
+    // take care of bound
+    if( maxk == 0 ) outputCNF << (lit != 0 ? lit : 1) << " 0" << endl;
+    else if( lit != 0 ) outputCNF << -lit << " 0" << endl; 
+    
+    if( maxk != 0 ) {
+      for (k = 1; (k * mergeFrames)  <= maxk; k++) {
+	cerr << "c SHIFBMC process bound " << (k * mergeFrames) << endl;
+	const int thisShift = k * shiftDist;
+	const int lastShift = (k-1) * shiftDist;
+	  // shift the formula!
+	  int thisClauses = 0;
+	  for( int i = 0 ; i < shiftFormula.formula.size(); ++ i ) {
+	    const int& cl = shiftFormula.formula[i];
+	    if( cl >= -1 && cl <= 1 ) {
+	      outputCNF << (cl,false) << " "; // handle constant units, and the end of clause symbol
+	      if( cl == 0 ) outputCNF << endl;
+	    }
+	    else outputCNF << varadd(cl, thisShift) << " "; // do not add to the shiftformula again!
+	  }
+	  // ensure that latches behave correctly in the next iteration
+	  for( int i = 0 ; i < shiftFormula.latch.size(); ++i ) {
+	    const int lhs = ( shiftFormula.latch[i] == 1 || shiftFormula.latch[i] == -1 ) ? shiftFormula.latch[i] : varadd(shiftFormula.latch[i], thisShift);
+	    const int rhs = ( shiftFormula.latchNext[i] == 1 || shiftFormula.latchNext[i] == -1 ) ? shiftFormula.latchNext[i] : varadd(shiftFormula.latchNext[i], lastShift);
+	    outputCNF << -lhs << " " << rhs << " 0" << endl;
+	    outputCNF << lhs << " " << -rhs << " 0" << endl;
+	  }
+	lit = shiftFormula.currentAssume + thisShift;
+	if( (k * mergeFrames) >= maxk ) {
+	  cerr << "c write positive assume unit clause for bound " << (k * mergeFrames) << " : " << lit << endl;
+	  outputCNF << (lit) << " 0" << endl; // set positive only for the last bound! (this is the literal that would be assumed)
+	} else {
+	  cerr << "c write negative assume unit clause for bound " << (k * mergeFrames) << " : " << -lit << endl;
+	  outputCNF << (-lit) << " 0" << endl; // otherwise, for lower bounds its assumed that there cannot be a bug
+	}
+      }
+    }
+    outputCNF.close();
+    msg( 0, "finished dumping CNF file\n" );
+    exit(0);
+  }
+  
 /*
  *
  *  solve the initial state here!
  *
  */
-  
-  lit = shiftFormula.currentAssume; // literal might have changed!
-  const int shiftDist = shiftFormula.afterPPmaxVar - 1;  // shift depends on the variables that are actually in the formula that is used for solving
+
   
   
   // after first PP call, do write equalities between initialized latches and first latch inputs!
