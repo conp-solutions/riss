@@ -11,7 +11,7 @@ namespace Minisat {
   
 BoolOption opt_share(        "PFOLIO", "ps", "enable clause sharing for all clients", true, 0 );
 BoolOption opt_proofCounting("PFOLIO", "pc", "enable avoiding duplicate clauses in the pfolio DRUP proof", true, 0 );
-BoolOption opt_verboseProof ("PFOLIO", "pv", "verbose proof with comments to clause authors", false, 0 );
+IntOption  opt_verboseProof ("PFOLIO", "pv", "verbose proof (2=with comments to clause authors,1=comments by master only, 0=off)", 1, IntRange(0, 2), 0 );
 BoolOption opt_internalProofCheck ("PFOLIO", "pic", "use internal proof checker during run time", false, 0 );
 BoolOption opt_verbosePfolio ("PFOLIO", "ppv", "verbose pfolio execution", false, 0 );
 
@@ -196,7 +196,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
     } else {
       cerr << "c initialization of " << threads << " threads: succeeded" << endl;
     }
-    if( proofMaster != 0 ) proofMaster->addCommentToProof("c initialized parallel solvers", -1);
+    if( proofMaster != 0 && opt_verboseProof > 0) proofMaster->addCommentToProof("c initialized parallel solvers", -1);
    
    /* 
     * copy the formula from the first solver to all the other solvers
@@ -218,15 +218,15 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
     
     // copy the formula of the solver 0 number of thread times
     if( proofMaster != 0 ) { // if a proof is generated, add all clauses that are currently present in solvers[0]
-      proofMaster->addCommentToProof("add irredundant clauses multiple times",-1);
+      if( opt_verboseProof > 0 ) proofMaster->addCommentToProof("add irredundant clauses multiple times",-1);
       for( int j = 0 ; j < solvers[0]->clauses.size(); ++ j ) {
 	proofMaster->addInputToProof( solvers[0]->ca[ solvers[0]->clauses[j] ], -1,threads); // so far, work on global proof
       }
-      proofMaster->addCommentToProof("add redundant clauses multiple times",-1);
+      if( opt_verboseProof > 0 ) proofMaster->addCommentToProof("add redundant clauses multiple times",-1);
       for( int j = 0 ; j < solvers[0]->learnts.size(); ++ j ) {
 	proofMaster->addInputToProof( solvers[0]->ca[ solvers[0]->learnts[j] ], -1, threads); // so far, work on global proof
       }
-      proofMaster->addCommentToProof("add unit clauses of solver 0",-1);
+      if( opt_verboseProof > 0 ) proofMaster->addCommentToProof("add unit clauses of solver 0",-1);
       proofMaster->addUnitsToProof( solvers[0]->trail, 0, false ); // incorporate all the units once more
     }
     
@@ -253,7 +253,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
      assert( (communicators[i]->isFinished() || communicators[i]->isWaiting() ) && "all solvers should not touch anything!" );
    }
    
-   if( proofMaster != 0 ) proofMaster->addCommentToProof("c start all solvers", -1);
+   if( proofMaster != 0 && opt_verboseProof > 0) proofMaster->addCommentToProof("c start all solvers", -1);
    start(); // allow all solvers to start, 
    waitFor( oneFinished ); // and wait until the first solver finishes
    
@@ -376,7 +376,7 @@ void PSolver::createThreadConfigs()
     }
   } else if ( defaultConfig == "DRUP" ) {
     for( int t = 0 ; t < threads; ++ t ) {
-      if( opt_verboseProof ){
+      if( opt_verboseProof > 1 ){
       configs[t].opt_verboseProof = 1;
       //configs[t].opt_verboseProof = true;
       }
@@ -411,7 +411,7 @@ bool PSolver::initializeThreads()
   
   // the portfolio should print proofs
   if( drupProofFile != 0 ) {
-    proofMaster = new ProofMaster(drupProofFile, threads, nVars(), opt_proofCounting, opt_verboseProof ); // use a counting proof master
+    proofMaster = new ProofMaster(drupProofFile, threads, nVars(), opt_proofCounting, opt_verboseProof > 1 ); // use a counting proof master
     proofMaster->setOnlineProofChecker( opc );	// tell proof master about the online proof checker
     data->setProofMaster( proofMaster ); 	// tell shared clauses pool about proof master (so that it adds shared clauses)
   }

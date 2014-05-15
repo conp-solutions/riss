@@ -180,7 +180,10 @@ qtar: clean
 	tar czvf qprocessor.tar.gz core license.txt Makefile mtl  README  simp  scripts utils coprocessor-src qprocessor-src qp.sh VERSION 
 	
 pctar: clean
-	tar czvf pcasso.tar.gz core license.txt Makefile mtl  README  simp  scripts utils coprocessor-src pcasso-src qprocessor-src qp.sh VERSION 
+	tar czvf pcasso.tar.gz core license.txt Makefile mtl  README  simp  scripts utils coprocessor-src pcasso-src VERSION 
+
+ptar: clean
+	tar czvf priss.tar.gz core license.txt Makefile mtl  README  simp  scripts utils coprocessor-src pfolio-src VERSION 
 	
 bmctar: clean 
 	tar czvf shiftbmc.tar.gz core license.txt  Makefile mtl  README  simp  scripts utils coprocessor-src shiftbmc-src VERSION
