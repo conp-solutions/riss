@@ -1235,7 +1235,7 @@ void Preprocessor::initializePreprocessor()
   if( config.opt_whiteList != 0 && string(config.opt_whiteList).size() != 0 ) {
     // parse white list file, and set all existing variables to "do not touch"
     
-    VarFileParser vfp( filename );
+    VarFileParser vfp( string(config.opt_whiteList) );
     vector<int> whiteVariables;
     vfp.extract( whiteVariables );
     int lockedWhiteVars = 0;

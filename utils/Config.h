@@ -135,6 +135,94 @@ else if( optionSet == "CSSC2014" ) {
     , false);
 }
 
+/*
+ * Configurations found for BMC solving
+ */
+else if( optionSet == "BMC1" ) {
+    parseOptions( 
+      std::string(" -enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO ")
+      + std::string(" -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -bva -cp3_bva_limit=120000" )
+      + std::string(" -R=1.2 -szLBDQueue=60 -szTrailQueue=4000 -lbdIgnL0 ")
+      + std::string(" -quickRed -keepWorst=0.001 -var-decay-b=0.85 -var-decay-e=0.99 -var-decay-d=10000 ")
+      + std::string(" -rnd-freq=0.005 -init-act=1 -init-pol=2 -rlevel=1 -alluiphack=2 -clsActB=2 -dontTrust ")
+      + std::string(" -lhbr=3 -lhbr-sub -laHack -dyn -laEEl -hlaLevel=1 -hlaevery=32 -hlabound=-1 -hlaTop=512 -sInterval=1 ")
+      + std::string(" -learnDecP=80 -er-size=16 -er-lbd=12 -sUhdProbe=1 -no-sUhdPrRb -sUHLEsize=30 -sUHLElbd=12 ")
+      + std::string(" -card_maxC=7 -card_max=2 -pr-uips=0 -pr-keepI=0 -no-pr-nce ")
+
+    // but additionally set some better preset default side parameters
+      + std::string(" -pr-bins -cp3_res_bin -no-xorFindSubs -no-xorKeepUsed -xorSelect=1 -xorMaxSize=9")
+      + std::string(" -biAsFreq=4 -no-rer-l -rer-rn -otfssL")    
+      + std::string(" -no-enabled_cp3 -no-rer -R=1.2 -szLBDQueue=70 -szTrailQueue=4000 -incReduceDB=450 -specialIncReduceDB=2000 -minLBDFrozenClause=15 -lbdIgnL0 -keepWorst=0.001 -biAsFreq=8 -minLBDMinimizingClause=9 -var-decay-b=0.85 -var-decay-e=0.99 -var-decay-d=10000 -agil-r -rnd-freq=0.01 -init-act=6 -init-pol=2 -rlevel=1 -rfirst=1000 -rinc=1.5 -alluiphack=2 -varActB=1 -dontTrust -lhbr=3 -lhbr-max=16000 -lhbr-sub -no-hack-cost -actStart=2048 -hlaLevel=1 -hlaevery=0 -hlabound=-1 -hlaTop=1024 -learnDecP=66 -ics_window=80000 -ics_processLast=10000 -ics_keepNew -ics_dyn -ics_relSIZE=0.5 -sUhdProbe=1 -no-sUhdPrRb -sUhdPrSh=2 -sUHLEsize=30")
+    
+    ,false);
+}
+else if( optionSet == "BMC2" ) {
+    parseOptions( 
+      std::string(" -enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO ")
+      + std::string(" -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -bva -cp3_bva_limit=120000" )
+      + std::string(" -R=1.2 -szLBDQueue=60 -szTrailQueue=4000 -lbdIgnL0 ")
+      + std::string(" -quickRed -keepWorst=0.001 -var-decay-b=0.85 -var-decay-e=0.99 -var-decay-d=10000 ")
+      + std::string(" -rnd-freq=0.005 -init-act=1 -init-pol=2 -rlevel=1 -alluiphack=2 -clsActB=2 -dontTrust ")
+      + std::string(" -lhbr=3 -lhbr-sub -laHack -dyn -laEEl -hlaLevel=1 -hlaevery=32 -hlabound=-1 -hlaTop=512 -sInterval=1 ")
+      + std::string(" -learnDecP=80 -er-size=16 -er-lbd=12 -sUhdProbe=1 -no-sUhdPrRb -sUHLEsize=30 -sUHLElbd=12 ")
+      + std::string(" -card_maxC=7 -card_max=2 -pr-uips=0 -pr-keepI=0 -no-pr-nce ")
+
+    // but additionally set some better preset default side parameters
+      + std::string(" -pr-bins -cp3_res_bin -no-xorFindSubs -no-xorKeepUsed -xorSelect=1 -xorMaxSize=9")
+      + std::string(" -biAsFreq=4 -no-rer-l -rer-rn -otfssL")    
+      + std::string(" -no-enabled_cp3 -no-rer -R=1.2 -szLBDQueue=60 -szTrailQueue=3500 -quickRed -biAsserting -biAsFreq=4 -var-decay-b=0.85 -var-decay-e=0.99 -var-decay-d=10000 -cla-decay=0.995 -rnd-freq=0.005 -init-act=1 -rlevel=1 -alluiphack=2 -varActB=1 -clsActB=2 -dontTrust -lhbr-sub -no-hack-cost -laHack -dyn -laEEl -hlaLevel=1 -hlaevery=32 -hlabound=-1 -hlaTop=512 -sInterval=1 -otfssL -learnDecP=80 -ics_window=5050 -sUhdProbe=2 -no-sUhdPrRb -sUHLEsize=30")
+    ,false);
+}
+else if( optionSet == "BMC3" ) {
+  
+    parseOptions( 
+          std::string(" -enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO ")
+      + std::string(" -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -bva -cp3_bva_limit=120000" )
+      + std::string(" -R=1.2 -szLBDQueue=60 -szTrailQueue=4000 -lbdIgnL0 ")
+      + std::string(" -quickRed -keepWorst=0.001 -var-decay-b=0.85 -var-decay-e=0.99 -var-decay-d=10000 ")
+      + std::string(" -rnd-freq=0.005 -init-act=1 -init-pol=2 -rlevel=1 -alluiphack=2 -clsActB=2 -dontTrust ")
+      + std::string(" -lhbr=3 -lhbr-sub -laHack -dyn -laEEl -hlaLevel=1 -hlaevery=32 -hlabound=-1 -hlaTop=512 -sInterval=1 ")
+      + std::string(" -learnDecP=80 -er-size=16 -er-lbd=12 -sUhdProbe=1 -no-sUhdPrRb -sUHLEsize=30 -sUHLElbd=12 ")
+      + std::string(" -card_maxC=7 -card_max=2 -pr-uips=0 -pr-keepI=0 -no-pr-nce ")
+
+    // but additionally set some better preset default side parameters
+      + std::string(" -pr-bins -cp3_res_bin -no-xorFindSubs -no-xorKeepUsed -xorSelect=1 -xorMaxSize=9")
+      + std::string(" -biAsFreq=4 -no-rer-l -rer-rn -otfssL")    
+      + std::string(" -no-enabled_cp3 -no-rer -K=0.85 -szTrailQueue=4000 -firstReduceDB=8000 -incReduceDB=450 -specialIncReduceDB=2000 -keepWorst=0.001 -biAsserting -biAsFreq=16 -minSizeMinimizingClause=50 -minLBDMinimizingClause=9 -var-decay-e=0.99 -var-decay-i=0.001 -agil-r -agil-limit=0.33 -agil-decay=0.99 -agil-add=512 -cla-decay=0.995 -rnd-freq=0.01 -init-act=3 -init-pol=5 -rtype=1 -rfirst=32 -alluiphack=2 -clsActB=2 -lhbr=4 -lhbr-max=1024 -hack=1 -dyn -laEEl -laEEp=66 -hlaMax=25 -hlaLevel=1 -hlaevery=8 -hlabound=-1 -otfss -otfssL -otfssMLDB=16 -ics -ics_window=40000 -ics_processLast=50000 -ics_keepNew -ics_relLBD=0.5 -ics_relSIZE=1.2 -sUhdProbe=1 -sUhdPrSh=8 -sUHLEsize=64"),false);
+}
+else if( optionSet == "BMC4" ) {
+    parseOptions( 
+          std::string(" -enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO ")
+      + std::string(" -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -bva -cp3_bva_limit=120000" )
+      + std::string(" -R=1.2 -szLBDQueue=60 -szTrailQueue=4000 -lbdIgnL0 ")
+      + std::string(" -quickRed -keepWorst=0.001 -var-decay-b=0.85 -var-decay-e=0.99 -var-decay-d=10000 ")
+      + std::string(" -rnd-freq=0.005 -init-act=1 -init-pol=2 -rlevel=1 -alluiphack=2 -clsActB=2 -dontTrust ")
+      + std::string(" -lhbr=3 -lhbr-sub -laHack -dyn -laEEl -hlaLevel=1 -hlaevery=32 -hlabound=-1 -hlaTop=512 -sInterval=1 ")
+      + std::string(" -learnDecP=80 -er-size=16 -er-lbd=12 -sUhdProbe=1 -no-sUhdPrRb -sUHLEsize=30 -sUHLElbd=12 ")
+      + std::string(" -card_maxC=7 -card_max=2 -pr-uips=0 -pr-keepI=0 -no-pr-nce ")
+
+    // but additionally set some better preset default side parameters
+      + std::string(" -pr-bins -cp3_res_bin -no-xorFindSubs -no-xorKeepUsed -xorSelect=1 -xorMaxSize=9")
+      + std::string(" -biAsFreq=4 -no-rer-l -rer-rn -otfssL")    
+      + std::string(" -no-enabled_cp3 -no-rer -R=1.5 -szLBDQueue=60 -firstReduceDB=8000 -keepWorst=0.05 -biAsFreq=16 -minSizeMinimizingClause=50 -minLBDMinimizingClause=9 -var-decay-b=0.85 -var-decay-d=10000 -agil-limit=0.33 -agil-decay=0.99 -agil-init=0.01 -cla-decay=0.995 -init-act=2 -rlevel=1 -rinc=1.5 -alluiphack=2 -varActB=1 -dontTrust -hack=1 -actStart=2048 -rMax=1024 -hlaMax=1000 -hlaLevel=1 -hlaevery=8 -hlabound=16000 -sInterval=3 -otfssL -ics -ics_window=80000 -ics_processLast=20000 -ics_shrinkNew -ics_relLBD=1.2 -ics_relSIZE=0.5 -sUhdPrSh=2"),false);
+}
+else if( optionSet == "BMC5" ) {
+    parseOptions( 
+          std::string(" -enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO ")
+      + std::string(" -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -bva -cp3_bva_limit=120000" )
+      + std::string(" -R=1.2 -szLBDQueue=60 -szTrailQueue=4000 -lbdIgnL0 ")
+      + std::string(" -quickRed -keepWorst=0.001 -var-decay-b=0.85 -var-decay-e=0.99 -var-decay-d=10000 ")
+      + std::string(" -rnd-freq=0.005 -init-act=1 -init-pol=2 -rlevel=1 -alluiphack=2 -clsActB=2 -dontTrust ")
+      + std::string(" -lhbr=3 -lhbr-sub -laHack -dyn -laEEl -hlaLevel=1 -hlaevery=32 -hlabound=-1 -hlaTop=512 -sInterval=1 ")
+      + std::string(" -learnDecP=80 -er-size=16 -er-lbd=12 -sUhdProbe=1 -no-sUhdPrRb -sUHLEsize=30 -sUHLElbd=12 ")
+      + std::string(" -card_maxC=7 -card_max=2 -pr-uips=0 -pr-keepI=0 -no-pr-nce ")
+
+    // but additionally set some better preset default side parameters
+      + std::string(" -pr-bins -cp3_res_bin -no-xorFindSubs -no-xorKeepUsed -xorSelect=1 -xorMaxSize=9")
+      + std::string(" -biAsFreq=4 -no-rer-l -rer-rn -otfssL")    
+      + std::string(" -no-enabled_cp3 -no-rer -R=1.2 -szLBDQueue=60 -szTrailQueue=3500 -lbdIgnL0 -quickRed -keepWorst=0.001 -biAsFreq=4 -var-decay-b=0.85 -var-decay-e=0.99 -var-decay-d=10000 -rnd-freq=0.005 -init-act=1 -init-pol=2 -rlevel=1 -alluiphack=2 -clsActB=2 -dontTrust -lhbr=3 -lhbr-sub -no-hack-cost -laHack -dyn -laEEl -hlaLevel=1 -hlaevery=32 -hlabound=-1 -hlaTop=512 -sInterval=1 -otfss -otfssL -learnDecP=80 -ics_window=5050 -no-sUhdPrRb -sUHLEsize=8"),false);
+}
+
 else if( optionSet == "BIASSERTING" ) {
     parseOptions( std::string(" -enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -biAsserting -biAsFreq=4"),false);
 }

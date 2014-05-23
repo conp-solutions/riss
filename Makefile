@@ -186,7 +186,7 @@ ptar: clean
 	tar czvf priss.tar.gz core license.txt Makefile mtl  README  simp  scripts utils coprocessor-src pfolio-src VERSION 
 	
 bmctar: clean 
-	tar czvf shiftbmc.tar.gz core license.txt  Makefile mtl  README  simp  scripts utils coprocessor-src shiftbmc-src VERSION
+	tar czvf shiftbmc.tar.gz core license.txt  Makefile mtl  README  simp  scripts utils coprocessor-src pfolio-src shiftbmc-src VERSION
 	
 # clean up after solving - be careful here if some directories are missing!
 clean:

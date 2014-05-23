@@ -56,6 +56,7 @@ static int doNotAllowToSmallCircuits = 0;	// useful when tool is analyzed with a
 static float frameConflictsInc = 4;	// factor how initialFrameConflicts grow when a frame cannot be solved
 static int simplifiedCNF = 0; // count how often the CNF has been simplified already
 static std::string formulaFile; // write the formula into a file instead of solving the formula (only after preprocessing)
+static int nonZeroInitialized = 0;	// there are uninitilized latched -> do not use SCORR as preprocessing method
 
 /// base structure for performing the shift operation with the (simplified) formula
 static ShiftFormula shiftFormula;
@@ -274,12 +275,15 @@ static int encode ( bool actuallyEnode = true ) {
     }
   } else {
     prev = 0;
+    int initpos=0,initneg=0,initundef=0;
     for (i = 0; i < model->num_latches; i++) {
       symbol = model->latches + i;
       reset = symbol->reset;
-      if (!reset) lit = -1; // should be false lit -> use equivalence to false lit !
-      else if (reset == 1) lit = 1; // should be true-lit -> use equivalence to !falseLit !
+      msg(2, "reset for latch: %d nr: %d lit: %d \n", reset,i, symbol->lit );
+      if (!reset) { lit = -1;initneg++;} // should be false lit -> use equivalence to false lit !
+      else if (reset == 1) { lit = 1; initpos ++; }  // should be true-lit -> use equivalence to !falseLit !
       else {
+	initundef ++;
 	if (reset != symbol->lit)
 	  die ("can only handle constant or uninitialized reset logic");
 	lit = newvar ();
@@ -307,6 +311,7 @@ static int encode ( bool actuallyEnode = true ) {
       msg(2,"set latch %d to lit %d",i,lit);
       if( actuallyEnode ) shiftFormula.latch[i] = lit;
     }
+    msg(1,"initialized latchs:  %d neg, %d pos, %d undef\n",initneg,initpos,initundef);
   }
 
   /// get a fresh set of input variables
@@ -675,10 +680,11 @@ int ABC_simplify(double& ppAigTime, int& initialLatchNum)
     Abc_Start(); // turn on ABC
     pAbc = Abc_FrameGetGlobalFrame();
     std::string abcmd = std::string("read ") + std::string(name);
+    
     if ( Cmd_CommandExecute( pAbc, abcmd.c_str() ) )
     {
-        wrn( "ABC cannot execute command \"%s\".\n", abcmd.c_str() );
-        exit(30);
+	  wrn( "ABC cannot execute command \"%s\".\n", abcmd.c_str() );
+	  exit(30);
     }
 
     while ( abcCommand.size() > 0 ) {
@@ -691,11 +697,17 @@ int ABC_simplify(double& ppAigTime, int& initialLatchNum)
 	thisCommand = abcCommand;
 	abcCommand = "";
       }
-      msg(1,"execute abc command(s) %s, remaining: %s", thisCommand.c_str(), abcCommand.c_str() );
-      if ( true &&  Cmd_CommandExecute( pAbc, thisCommand.c_str() ) )
-      {
-	  wrn( "ABC cannot execute command %s.\n", thisCommand.c_str() );
-	  exit(30);
+      
+      
+      if( nonZeroInitialized == 0 || thisCommand.find("scorr") == string::npos ) {
+	msg(1,"execute abc command(s) %s, remaining: %s", thisCommand.c_str(), abcCommand.c_str() );
+	if ( true &&  Cmd_CommandExecute( pAbc, thisCommand.c_str() ) )
+	{
+	    wrn( "ABC cannot execute command %s.\n", thisCommand.c_str() );
+	    exit(30);
+	}
+      } else {
+	wrn( "do not execute ABC command \"%s\" with %d nonZeroInitialized latches.\n", abcmd.c_str(), nonZeroInitialized );
       }
     }
     // writing to a directory -> create file name based on PID of the current process!
@@ -1080,6 +1092,36 @@ int main (int argc, char ** argv) {
   int initialLatchNum = 0; // number of latches in initial file. If ABC changes the number of latches, this number is important to print the right witness!
   
 /**
+ *  check AIG circuit for nonZeroInitialized latches
+ */
+ if( true ) {
+  msg (1, "reading from '%s'", name ? name : "<stdin>");
+  if (name) err = aiger_open_and_read_from_file (model, name);
+  else err = aiger_read_from_file (model, stdin), name = "<stdin>";
+  if (err) die ("parse error reading '%s': %s", name, err);
+
+  {
+    unsigned i, j, lit;
+    aiger_symbol * sym;
+    int initpos = 0, initundef = 0;
+    {
+      for (i = 0; i < model->num_latches; i++) {
+	sym = model->latches + i;
+	if (sym->reset == 1 || sym->reset == sym->lit) {
+	  nonZeroInitialized ++;
+	  if( sym->reset == 1 ) initpos ++; 
+	  else initundef ++;
+	}
+      }
+    }
+    msg(1,"found %d nonZeroInitialized latches(non: %d, pos %d)\n", nonZeroInitialized,initundef, initpos );
+  }
+  aiger_reset (model);
+  model = aiger_init ();
+ }
+  
+  
+/**
  *  use ABC for simplification
  */
   ABC_simplify(ppAigTime, initialLatchNum); // measure CPU time, get number of latches in the initial AIG problem
@@ -1088,6 +1130,24 @@ int main (int argc, char ** argv) {
   if (name) err = aiger_open_and_read_from_file (model, name);
   else err = aiger_read_from_file (model, stdin), name = "<stdin>";
   if (err) die ("parse error reading '%s': %s", name, err);
+
+  {
+    unsigned i, j, lit,nonZeroInitialized2=0;
+    aiger_symbol * sym;
+    int initpos = 0, initundef = 0;
+    {
+      for (i = 0; i < model->num_latches; i++) {
+	sym = model->latches + i;
+	if (sym->reset == 1 || sym->reset == sym->lit) {
+	  nonZeroInitialized2 ++;
+	  if( sym->reset == 1 ) initpos ++; 
+	  else initundef ++;
+	}
+      }
+    }
+    msg(1,"found %d nonZeroInitialized latches(non: %d, pos %d)\n", nonZeroInitialized2,initundef, initpos );
+  }
+  
   
   ABC_cleanup();
   
