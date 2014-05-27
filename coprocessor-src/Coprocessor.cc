@@ -1140,7 +1140,7 @@ int Preprocessor::giveNewLit(const int& l) const
   // conversion to inner representation, check move value, return value
   const Lit lit = l > 0 ? mkLit(l-1,false) : mkLit(-l-1,true);
   const Lit nl = dense.giveNewLit(lit);
-  return sign(nl) ? ( -var(nl) -1 ) : (var(nl) +1);
+  return nl == lit_Error ? 0 : (sign(nl) ? ( -var(nl) -1 ) : (var(nl) +1));
 }
 
 Lit Preprocessor::giveNewLit(const Lit& l) const

@@ -109,6 +109,7 @@ public:
   vector<int> inputs;			// the input literals
   vector<int> outputs;			// the input literals
   vector<int> latch;			// current latch literals
+  vector<int> originalLatch;		// current latch literals (original variable indexes of original formula
   vector<int> latchNext;		// next latch literals
   vector<int> currentBads;		// bad state literals of current formula
   vector<int> initEqualities;		// equalities that have to be added to the formula before solving

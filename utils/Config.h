@@ -113,6 +113,10 @@ else if( optionSet == "QUIET" ) {
 else if( optionSet == "VERBOSE" ) {
     parseOptions(" -cp3_stats -solververb=2",false);
 }
+else if( optionSet == "DEBUG" ) {
+    parseOptions(" -cp3_stats -solververb=2 -cp3_bve_verbose=2 -cp3-debug -cp3-check=2 -cp3_verbose=3",false);
+}
+
 
 /*
  *  Options for Riss 427
@@ -462,6 +466,9 @@ else if( optionSet == "BMC_BVECLE" ) {
 }
 else if( optionSet == "BMC_BEBE" ) {
     parseOptions("-enabled_cp3 -dense -cp3_dense_forw -bve -bve_red_lits=1 -bce -cp3_iters=2 -cp3_stats",false);
+}
+else if( optionSet == "BMC_NODENSE" ) {
+    parseOptions("-no-dense",false);
 }
 // CSSC 2013 configurations
 else if( optionSet == "BMC08ext" ) {

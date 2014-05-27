@@ -40,7 +40,7 @@ static char * bad = 0, * justice = 0;
 
 static int maxk=0; // upper bound for search
 static int verbose = 0, move = 0, processNoProperties = 0 ,quiet = 0, nowitness = 0, nowarnings = 0, lazyEncode = 0,useShift=0, // options
-  useRiss = 0, usePriss = 0, useCP3 = 0, denseVariables = 0, dontFreezeInput = 0, dontFreezeBads = 0, printTime=0, checkInitialBad = 0, abcDir = 0, stats_only = 0;
+  useRiss = 0, usePriss = 0, useCP3 = 0, denseVariables = 0, dontFreezeInput = 0, dontFreezeBads = 0, printTime=0, checkInitialBad = 0, abcDir = 0, stats_only = 0, debugWitness = 0;
 static char* rissPresetConf = 0;
 static char* innerPPConf = 0, *outerPPConf = 0;
 static int wildGuesser = 0, wildGuessStart = 10, wildGuessInc = 2, wildGuessIncInc = 1; // guess sequence: 10, 30, 60, ...
@@ -88,7 +88,7 @@ static void die (const char *fmt, ...) {
     << std::endl;
     std::cerr.flush();
   }
-  exit (30);
+  exit (37);
 }
 
 static void msg (int level, const char *fmt, ...) {
@@ -381,14 +381,14 @@ static int encode ( bool actuallyEnode = true ) {
   static bool didJustice = false;
   if (model->num_justice) {
     assert( false && "cannot handle justice constraints yet" );
-    exit (30);
+    exit (38);
   }
 
   /// handle fairness criteria
   static bool didFairness = false;
   if (model->num_justice && model->num_fairness) {
     assert( false && "cannot handle justice constraints yet" );
-    exit (30);    
+    exit (39);    
   }
 
   assert (model->num_bad || model->num_justice);
@@ -473,6 +473,7 @@ int parseOptions(int argc, char ** argv)
 	msg(0,"set debug PP file to %s",dumpPPformula);
       }
     }
+    else if (!strcmp (argv[i], "-bmc_dbgW")) { debugWitness=1; }
 #endif
     else if (!strcmp (argv[i], "-bmc_d")) { useCP3=1,  denseVariables=1;  useShift=1; lazyEncode=1; }
     else if (!strcmp (argv[i], "-bmc_x")) { useCP3=1,  dontFreezeInput=1; useShift=1; lazyEncode=1; }
@@ -612,7 +613,7 @@ int ABC_simplify(double& ppAigTime, int& initialLatchNum)
     MethodTimer aigTimer ( &ppAigTime );
     if(!name) { // reject reading from stdin
       wrn("will not read from stdin, since ABC ");  
-      exit(30);
+      exit(40);
     }
     // if the scorr command is part of the command chain, the initial number of latches has to be set
     bool foundScorr = false;
@@ -621,7 +622,7 @@ int ABC_simplify(double& ppAigTime, int& initialLatchNum)
       // parse the aig file and read the number of latches!
       std::ifstream myfile;
       myfile.open (name);
-      if(!myfile) { wrn("error in opening file %s",name); exit (30); }
+      if(!myfile) { wrn("error in opening file %s",name); exit (41); }
       std::string sstr;
       while( sstr != "aag" && sstr != "aig") {
 				if(!myfile) break; // reached end of file?
@@ -671,7 +672,8 @@ int ABC_simplify(double& ppAigTime, int& initialLatchNum)
       msg(1,"set abc command to default command %s", abcCommand.c_str() );
     }
     
-    if( foundScorr || abcCommand.find("scorr") != std::string::npos ) {
+    // set number of initial latches, but only, if scorr is executed, and if there are no nonZero initialized latches
+    if( (foundScorr || abcCommand.find("scorr") != std::string::npos) && nonZeroInitialized == 0 ) { // scorr is not used when there are nonZeroInitialized latches
       initialLatchNum = fl;
     }
     
@@ -684,7 +686,7 @@ int ABC_simplify(double& ppAigTime, int& initialLatchNum)
     if ( Cmd_CommandExecute( pAbc, abcmd.c_str() ) )
     {
 	  wrn( "ABC cannot execute command \"%s\".\n", abcmd.c_str() );
-	  exit(30);
+	  exit(42);
     }
 
     while ( abcCommand.size() > 0 ) {
@@ -704,10 +706,10 @@ int ABC_simplify(double& ppAigTime, int& initialLatchNum)
 	if ( true &&  Cmd_CommandExecute( pAbc, thisCommand.c_str() ) )
 	{
 	    wrn( "ABC cannot execute command %s.\n", thisCommand.c_str() );
-	    exit(30);
+	    exit(43);
 	}
       } else {
-	wrn( "do not execute ABC command \"%s\" with %d nonZeroInitialized latches.\n", abcmd.c_str(), nonZeroInitialized );
+	wrn( "do not execute ABC command \"%s\" with %d nonZeroInitialized latches.\n", thisCommand.c_str(), nonZeroInitialized );
       }
     }
     // writing to a directory -> create file name based on PID of the current process!
@@ -722,7 +724,7 @@ int ABC_simplify(double& ppAigTime, int& initialLatchNum)
     if ( Cmd_CommandExecute( pAbc, abcmd.c_str() ) )
     {
         wrn( "ABC cannot execute command \"%s\".\n", abcmd.c_str() );
-        exit(30);
+        exit(44);
     }
     Abc_Stop(); // turn off ABC
     msg(1,"change the name of the aiger file to read from %s to %s",name,useABC.c_str());
@@ -783,7 +785,10 @@ int simplifyCNF(int &k, void* preprocessorToUse, double& ppCNFtime)
     if( verbose > 1 ) cerr << "c call freeze variables ... " << endl;
     CPfreezeVariable( preprocessorToUse,  1 ); // do not remove the unit (during dense!)
     if( !dontFreezeInput ) for( int i = 0 ; i < shiftFormula.inputs.size(); ++i ) CPfreezeVariable( preprocessorToUse,  shiftFormula.inputs[i] );
-    for( int i = 0 ; i < shiftFormula.latch.size(); ++i ) CPfreezeVariable( preprocessorToUse,  shiftFormula.latch[i] );
+    for( int i = 0 ; i < shiftFormula.latch.size(); ++i ) {
+      msg(2,"freeze assumption literal %d", shiftFormula.latch[i]);
+      CPfreezeVariable( preprocessorToUse,  shiftFormula.latch[i] );
+    }
     for( int i = 0 ; i < shiftFormula.latchNext.size(); ++i ) CPfreezeVariable( preprocessorToUse,  shiftFormula.latchNext[i] );
     msg(2,"freeze assumption literal %d", shiftFormula.currentAssume);
     CPfreezeVariable( preprocessorToUse,  shiftFormula.currentAssume < 0 ? -shiftFormula.currentAssume : shiftFormula.currentAssume ); // do not alter the assumption variable!
@@ -847,6 +852,11 @@ int simplifyCNF(int &k, void* preprocessorToUse, double& ppCNFtime)
       if( verbose > 1 ) cerr << "c current assume translated from " << shiftFormula.currentAssume << " to " << tmpLit <<endl;
       if( tmpLit != 0 ) shiftFormula.currentAssume = tmpLit; // if the shift literal is 0, then no dense information is present (or the literal is missing, which would be more complicated to track...)
 
+      if( shiftFormula.originalLatch.size() == 0 ) {
+	shiftFormula.originalLatch = shiftFormula.latch; // memorize original latch variables for printing witness with not initialized latches
+      }
+
+
       for( int i = 0 ; i < shiftFormula.latch.size(); ++ i ){
 	tmpLit = CPgetReplaceLiteral( preprocessorToUse,  shiftFormula.latch[i] );
 	if( verbose > 1 ) cerr << "move latch from " << shiftFormula.latch[i] << " to " << tmpLit << endl;
@@ -872,11 +882,11 @@ int simplifyCNF(int &k, void* preprocessorToUse, double& ppCNFtime)
     // check whether single output is already set to false ...
     if( CPlitFalsified(preprocessorToUse, shiftFormula.currentAssume ) ) {
       msg(1, "current bad is already falsified! - circuit has to be safe!" );
-	printf( "0\n" );
+	printf( "u %d\n0\n", maxk );
 	for( int i = 0 ; i < model->num_bad; ++ i ) printf("b%d",i);
 	printf("\n.\n" ); // print witness, and terminate!
 	fflush( stdout );
-	exit(0);
+	exit(20);
     }
     if( verbose > 1 ) printState(k);
     
@@ -888,11 +898,19 @@ int restoreSimplifyModel( void* usedPreprocessor, std::vector<uint8_t>& model)
 {
   // extend model without copying current model twice
   CPresetModel( usedPreprocessor ); // reset current internal model
-  for( int j = 0 ; j < model.size(); ++ j ) CPpushModelBool( usedPreprocessor, model[j] > 0 ? 1 : 0 );
+  for( int j = 0 ; j < model.size(); ++ j ) {
+if(debugWitness)     cerr << "c push model " << j << " : " << (model[j] == l_True ? 1 : 0) << endl;
+    CPpushModelBool( usedPreprocessor, model[j]  == l_True ? 1 : 0 );
+  }
   CPpostprocessModel( usedPreprocessor );
   const int modelVars = CPmodelVariables( usedPreprocessor );
   model.clear(); // reset current model, so that it can be filled with data from the preprocessor
-  for( int j = 0 ; j < modelVars; ++ j ) model.push_back(CPgetFinalModelLit(usedPreprocessor) > 0 ? 1 : 0);
+  for( int j = 0 ; j < modelVars; ++ j ) {
+    uint8_t ret  = CPgetFinalModelLit(usedPreprocessor) > 0 ? l_True : l_False;
+    model.push_back(ret);
+if(debugWitness)     cerr << "c get model " << j << " : " << (int)ret << endl;
+  }
+  return modelVars;
 }
 
 void 
@@ -905,6 +923,8 @@ printWitness(int k, int shiftDist, int initialLatchNum)
     
     // calculated buggy frame
     int actualFaultyFrame = (k * mergeFrames); // this frame has been proven to be good
+    
+    if(debugWitness) cerr << "c extract BAD state variables" << endl;
     
     if( useShift )
     {
@@ -922,16 +942,32 @@ printWitness(int k, int shiftDist, int initialLatchNum)
 		const int v = deref(j==0 ? 1 : j + frameShift + 1); // treat very first value always special, because its not moved!
 		fullFrameModel[j] = v < 0 ? l_False : l_True; // model does not treat field 0!
 	}
-
+	
+	    if( debugWitness && verbose > 1 ) {
+	      cerr << "c pre RESTORE frame model[" << -1 << "] : " << endl;
+	      for( int j = 0 ; j < shiftFormula.afterPPmaxVar; ++ j ) { 
+		cerr << (fullFrameModel[j] == l_True ? j+1 : -j -1) << " ";
+	      }
+	      cerr << endl;
+	    }
+	
 	//
 	// extend model for global frame  (without copying current model twice)
 	//
 	if( outerPreprocessor != 0 ) {
 	  const int modelVars = restoreSimplifyModel( outerPreprocessor, fullFrameModel);
-	  cerr << "c last (multi-) frame has " << modelVars << " variables" << endl;
+	  if( debugWitness ) cerr << "c last (multi-) frame has " << modelVars << " variables" << endl;
 	}
 	const int mergeFrameSize = shiftFormula.mergeShiftDist;  // == ( fullFrameModel.size()  ) / mergeFrames;
 	assert( mergeFrames * mergeFrameSize <= fullFrameModel.size() && "an exact number of frames has been merged, hence the model sizes should also fit!" );
+
+	if( debugWitness && verbose > 1 ) {
+	  cerr << "c initial frame model[" << 0 << "] : " << endl;
+	  for( int j = 0 ; j < shiftFormula.afterPPmaxVar; ++ j ) { 
+	    cerr << (fullFrameModel[j] == l_True ? j+1 : -j -1) << " ";
+	  }
+	  cerr << endl;
+	}
 	
 	//
 	// if frames have been merged, process each single frame now
@@ -939,14 +975,19 @@ printWitness(int k, int shiftDist, int initialLatchNum)
 	
 	for( int localFrame = 0; localFrame < mergeFrames; ++localFrame ) { // find the smallest frame that is actually broken! 
 	    int innerModelVars  = mergeFrameModel.size();
-	    if( mergeFrames == 1 ) mergeFrameModel.swap( fullFrameModel );  // nothing has been merged, simply use the fullFrameModel
-	    else {
+	    if( mergeFrames == 1 ) {
+	      if( debugWitness ) cerr << "c use outer model with PP: " << (int)(innerPreprocessor != 0)  << endl;
+	      mergeFrameModel.swap( fullFrameModel );  // nothing has been merged, simply use the fullFrameModel
+	    } else {
 	      mergeFrameModel.clear();
 	      mergeFrameModel.push_back( fullFrameModel[0] ); // copy the constant unit
 	      for( int j = 1; j <= mergeFrameSize; ++ j )
 		mergeFrameModel.push_back( fullFrameModel[ localFrame*mergeFrameSize + j] ); // copy all the other variables for the current (inner) frame
 	      // has an inner simplifier been used? then undo its simplifications as well!
-	      if( innerPreprocessor != 0 ) restoreSimplifyModel( innerPreprocessor, mergeFrameModel); // restore model from the inner preprocessor, if an inner preprocessor has been used
+	      if( innerPreprocessor != 0 ) {
+		if( debugWitness ) cerr << "c restore inner model with PP: " << (int)(innerPreprocessor != 0) << endl;
+		restoreSimplifyModel( innerPreprocessor, mergeFrameModel); // restore model from the inner preprocessor, if an inner preprocessor has been used
+	      }
 	    }
 	    
 	    // check whether any bad variable is set
@@ -963,7 +1004,7 @@ printWitness(int k, int shiftDist, int initialLatchNum)
 	      break;	// as soon as one bad state has been printed, stop printing bad states!
 	    }
 	}
-	cerr << "c found bad state at " << actualFaultyFrame << endl;
+	if( debugWitness ) cerr << "c found bad state at " << actualFaultyFrame << endl;
 
       } else { // bad variables have been frozen, hance simply use the moved value!
 	assert( false && "this code should never be reached!");
@@ -975,17 +1016,122 @@ printWitness(int k, int shiftDist, int initialLatchNum)
       // print initial Latch configuration
       //
       
+#if 0
       /// nothing special to do with latches, because those are always frozen, and thus never touched
       int latchNumber = 0;
+      vector<int>& witnessLatches = shiftFormula.originalLatch.size() == 0 ? shiftFormula.latch : shiftFormula.originalLatch;
       for (latchNumber = 0; latchNumber < model->num_latches; latchNumber++){
-	if( initialLatchNum > 0 &&  deref(shiftFormula.latch[latchNumber]) != -1 ) wrn("latch[%d],var %d is not initialized to 0, but scorr has been used during simplifying the circuit",latchNumber,shiftFormula.latch[latchNumber]);
-	print ( shiftFormula.latch[latchNumber] ); // this function prints 0 or 1 depending on the current assignment of this variable!
+	if( initialLatchNum > 0 &&  deref(witnessLatches[latchNumber]) != -1 ) wrn("latch[%d],var %d is not initialized to 0, but scorr has been used during simplifying the circuit",latchNumber,witnessLatches[latchNumber]);
+	print ( witnessLatches[latchNumber] ); // this function prints 0 or 1 depending on the current assignment of this variable!
       }
       for( ; latchNumber < initialLatchNum; ++ latchNumber ) { // print the latches that might be removed by ABC
 	printV(-1); // ABC and HWMCC assumes all latches to be initialized to 0!
       }
       nl (); // print new line to give the sequence of inputs
 
+#else
+      
+      /**
+       *  extract value of all the latches
+       */
+      if( debugWitness ) cerr << "c extract BAD latches" << endl;
+      
+      { // for each step give the inputs that lead to the bad state
+	int globalFrame = 0;
+	{ // if inputs have not been frozen, we need to recover them per frame before printing their value!
+	  const int globalFrameShift = globalFrame * shiftDist;
+	  
+	  fullFrameModel.assign ( shiftFormula.afterPPmaxVar, l_False );
+	  for( int j = 1 ; j <= shiftFormula.afterPPmaxVar; ++ j ) { // get the right part of the actual model
+	    const int v = deref(j==1 ? 1 : j + globalFrameShift); // treat very first value always special, because its not moved!
+	    fullFrameModel[j-1] = v < 0 ? l_False : l_True; // model does not treat field 0!
+	  }
+	  
+	  if( debugWitness && verbose > 1 ) {
+	    cerr << "c initial frame model[" << 1 << "] : " << endl;
+	    for( int j = 0 ; j < shiftFormula.afterPPmaxVar; ++ j ) { 
+	      cerr << (fullFrameModel[j] == l_True ? j+1 : -j -1) << " ";
+	    }
+	    cerr << endl;
+	  }
+	  
+	  int mergeFrameSize =0;
+	  if( outerPreprocessor != 0 ) {
+
+	    if( debugWitness && verbose > 1 ) {
+	      cerr << "c pre RESTORE frame model[" << 1 << "] : " << endl;
+	      for( int j = 0 ; j < shiftFormula.afterPPmaxVar; ++ j ) { 
+		cerr << (fullFrameModel[j] == l_True ? j+1 : -j -1) << " ";
+	      }
+	      cerr << endl;
+	    }
+	    
+	    const int modelVars = restoreSimplifyModel( outerPreprocessor, fullFrameModel);
+	    mergeFrameSize = shiftFormula.mergeShiftDist;  // == ( fullFrameModel.size()  ) / mergeFrames;
+	    
+	    if( debugWitness && verbose > 1 ) {
+	      cerr << "c post RESTORE frame model[" << 1 << "] : " << endl;
+	      for( int j = 0 ; j < shiftFormula.afterPPmaxVar; ++ j ) { 
+		cerr << (fullFrameModel[j] == l_True ? j+1 : -j -1) << " ";
+	      }
+	      cerr << endl;
+	    }
+	    
+	    assert( mergeFrames * mergeFrameSize <= fullFrameModel.size() && "an exact number of frames has been merged, hence the model sizes should also fit!" );
+	  } else {
+	    mergeFrameSize = shiftDist;
+	  }
+	  int localFrame = 0;
+	  { // find the smallest frame that is actually broken! 
+	      // setup the model for this local frame
+	      if( mergeFrames == 1 ) {
+		mergeFrameModel.swap( fullFrameModel );  // nothing has been merged, simply use the fullFrameModel
+		if( debugWitness ) cerr << "c simply use outer frame model" << endl;
+	      }
+	      else {
+		mergeFrameModel.clear();
+		mergeFrameModel.push_back( fullFrameModel[0] ); // copy the constant unit
+		for( int j = 1; j <= mergeFrameSize; ++ j )
+		  mergeFrameModel.push_back( fullFrameModel[ localFrame*mergeFrameSize + j] ); // copy all the other variables for the current (inner) frame
+		// has an inner simplifier been used? then undo its simplifications as well!
+		if( innerPreprocessor != 0 ) restoreSimplifyModel( innerPreprocessor, mergeFrameModel); // restore model from the inner preprocessor, if an inner preprocessor has been used
+	      }
+	      
+	      if( debugWitness && verbose > 1 ) {
+		cerr << "c initial inner frame model : " << endl;
+		for( int j = 0 ; j < mergeFrameModel.size(); ++ j ) { 
+		  cerr << (mergeFrameModel[j] == l_True ? j+1 : -j -1) << " ";
+		}
+		cerr << endl;
+	      }
+	      
+	      // print the actual values
+	      if( shiftFormula.originalLatch.size() > 0 ) msg(0,"use original latch variables");
+	      vector<int>& witnessLatches = shiftFormula.originalLatch.size() == 0 ? shiftFormula.latch : shiftFormula.originalLatch;
+	      assert( witnessLatches.size() == model->num_latches && "the number of latches has to match");
+	      int latchNumber = 0;
+	      for (; latchNumber < witnessLatches.size(); latchNumber++) { // print the actual values!
+		int tlit = witnessLatches[latchNumber];
+		if(tlit>0) printV ( mergeFrameModel[ tlit -1 ] == l_False ? -1 : 1  );
+		else  printV ( mergeFrameModel[ -tlit -1 ] == l_True ? -1 : 1  ); 
+	      }
+	      if( debugWitness ) cerr << "c print not initialized latches from " << latchNumber << " to " << initialLatchNum << endl;
+	      for( ; latchNumber < initialLatchNum; ++ latchNumber ) { // print the latches that might have been removed by ABC
+		printV(-1); // ABC and HWMCC assumes all latches to be initialized to 0!
+	      }
+	      nl (); // printed the value of all latches
+	  }
+	}
+      }
+#endif
+      
+      /**
+       *  end of extracting the value of all latches
+       */
+      
+      if( debugWitness ) cerr << "c extract input sequences" << endl;
+      
+      
       //
       // print the inputs for all iterations
       //
@@ -1118,14 +1264,22 @@ int main (int argc, char ** argv) {
   }
   aiger_reset (model);
   model = aiger_init ();
+  
+  if( nonZeroInitialized > 0 ) {
+    mergeFrames = 1;
+    msg(0,"set merge frames to fall back value %d due to non zero initialized latches\n", mergeFrames);
+  }
  }
   
   
 /**
  *  use ABC for simplification
  */
-  ABC_simplify(ppAigTime, initialLatchNum); // measure CPU time, get number of latches in the initial AIG problem
+  if( nonZeroInitialized == 0 )
+    ABC_simplify(ppAigTime, initialLatchNum); // measure CPU time, get number of latches in the initial AIG problem
 
+  if( initialLatchNum != 0 ) cerr << "c set initial latches to " << initialLatchNum << endl;  
+    
   msg (1, "reading from '%s'", name ? name : "<stdin>");
   if (name) err = aiger_open_and_read_from_file (model, name);
   else err = aiger_read_from_file (model, stdin), name = "<stdin>";
@@ -1148,8 +1302,8 @@ int main (int argc, char ** argv) {
     msg(1,"found %d nonZeroInitialized latches(non: %d, pos %d)\n", nonZeroInitialized2,initundef, initpos );
   }
   
-  
-  ABC_cleanup();
+  if( nonZeroInitialized == 0 )
+    ABC_cleanup();
   
   // print stats
   msg (0, "encode MILOA = %u %u %u %u %u",model->maxvar,model->num_inputs,model->num_latches,model->num_outputs,model->num_ands);
@@ -1169,7 +1323,7 @@ int main (int argc, char ** argv) {
          
   if (!model->num_bad && !model->num_justice && ! processNoProperties) {
     wrn ("no properties - abort solving the current instance (can be processed with bmc_np option");
-    exit(30); // do not exit with std exit codes!!
+    exit(31); // do not exit with std exit codes!!
   }
          
   // use output as bad state, if not bad state exists yet!    
@@ -1220,15 +1374,12 @@ int main (int argc, char ** argv) {
   
   if (model->num_justice) {
     assert( false && "cannot handle justice constraints!" );
-    exit(30);
+    exit(32);
   }
 
   /**
    * 
    *  THIS IS THE ACTUAL METHOD TO WORK WITH!
-   *  AT THE MOMENT: the formula is extended by re-encoding it again and again
-   * 
-   *  AIM: encode initial formula once, freeze input/output variables, preprocess, shift this formula again and again!
    * 
    */
 
@@ -1537,7 +1688,7 @@ int main (int argc, char ** argv) {
   const bool foundBadStateFast = (satReturn == 10);
   if( satReturn == 0 && frameConflictBudget == -1 ) {
     wrn("sat call at frame 0 returned UNKNOWN\n");
-    exit(30);
+    exit(33);
   } else if (satReturn == 0 && frameConflictBudget != -1 ) {
     msg(1,"failed to solve bound %d within %d conflicts\n", k, frameConflictBudget );
     frameConflictBudget = frameConflictBudget * frameConflictsInc;
@@ -1576,7 +1727,7 @@ int main (int argc, char ** argv) {
       const bool foundBad = (satReturn  == 10); // // indicate whether solving resulted in 10! otherwise
       if( satReturn == 0 && frameConflictBudget == -1 ) {
 	wrn("sat call at frame %d returned UNKNOWN\n",k);
-	exit(30);
+	exit(34);
       } else if (satReturn == 0 && frameConflictBudget != -1 ) {
 	msg(1,"failed to solve bound %d within %d conflicts\n", k, frameConflictBudget );
 	frameConflictBudget = frameConflictBudget * frameConflictsInc;
@@ -1630,7 +1781,7 @@ int main (int argc, char ** argv) {
       const bool foundBad = (satReturn  == 10); // // indicate whether solving resulted in 10! otherwise
       if( satReturn == 0 && frameConflictBudget == -1 ) {
 	wrn("sat call at frame %d returned UNKNOWN\n",k);
-	exit(30);
+	exit(35);
       } else if (satReturn == 0 && frameConflictBudget != -1 ) {
 	msg(1,"failed to solve bound %d within %d conflicts\n", k, frameConflictBudget );
 	frameConflictBudget = frameConflictBudget * frameConflictsInc;
@@ -1666,6 +1817,7 @@ finishedSolving:;
     printf ("1\n");
     fflush (stdout);
     if (nowitness) goto DONE;
+    cerr << "c print witness with initial latches " << initialLatchNum << endl;
     printWitness(k, shiftDist, initialLatchNum);
   } else {
     printf ("2\n");

@@ -13,7 +13,8 @@ while true
 do
   let "t=$t+1"
   # echo "test $t"
-	./aigfuzz -2 -S -a -b -z -m > $tmpAIG;
+#	./aigfuzz -2 -S -a -b -z -m > $tmpAIG;
+	./aigfuzz -2 -S -b -m > $tmpAIG;
 	ands=`head -n 1 $tmpAIG | awk '{print $2}'`;
 	latches=`head -n 1 $tmpAIG | awk '{print $4}'`;
 	outputs=`head -n 1 $tmpAIG | awk '{print $5}'`;
@@ -52,7 +53,7 @@ do
 			mv $tmpAIG bug-$i.aig
 		fi
 	else
-		if [ "$ecode" -ne "0" ]
+		if [ "$ecode" -ne "0" -a  "$ecode" -ne "20" ]
 		then
 			let "i=$i+1"
 			mv $tmpAIG bug-$i.aig
