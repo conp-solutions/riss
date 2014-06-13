@@ -10,7 +10,7 @@ CC=gcc
 CFLAGS=-O3 -DNDEBUG
 
 PICOSATDIRECTORY=/home/norbert/projects/BMC/hwmcc/picosat
-ABCDIRECTORY=/home/norbert/projects/BMC/hwmcc/abc
+ABCDIRECTORY=/home/norbert/abc
 
 .c.o:
 	$(CC) $(CFLAGS) -c $<

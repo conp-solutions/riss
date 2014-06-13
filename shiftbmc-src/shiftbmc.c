@@ -1265,7 +1265,7 @@ int main (int argc, char ** argv) {
   aiger_reset (model);
   model = aiger_init ();
   
-  if( nonZeroInitialized > 0 ) {
+  if( false && nonZeroInitialized > 0 ) {
     mergeFrames = 1;
     msg(0,"set merge frames to fall back value %d due to non zero initialized latches\n", mergeFrames);
   }
@@ -1275,7 +1275,7 @@ int main (int argc, char ** argv) {
 /**
  *  use ABC for simplification
  */
-  if( nonZeroInitialized == 0 )
+  if( nonZeroInitialized == 0  && model->num_outputs != 0 && model->num_inputs != 0)
     ABC_simplify(ppAigTime, initialLatchNum); // measure CPU time, get number of latches in the initial AIG problem
 
   if( initialLatchNum != 0 ) cerr << "c set initial latches to " << initialLatchNum << endl;  
@@ -1302,7 +1302,7 @@ int main (int argc, char ** argv) {
     msg(1,"found %d nonZeroInitialized latches(non: %d, pos %d)\n", nonZeroInitialized2,initundef, initpos );
   }
   
-  if( nonZeroInitialized == 0 )
+  if( nonZeroInitialized == 0  && model->num_outputs != 0 && model->num_inputs != 0)
     ABC_cleanup();
   
   // print stats
