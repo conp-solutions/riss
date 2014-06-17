@@ -553,6 +553,10 @@ protected:
       rerDontAttachAssertingLit = 2,	// do not enqueue the asserting literal of the current clause
       rerAttemptFailed = 3,	// some extra method failed (e.g. find RER-ITE)
     };
+    
+    /// initialize the data structures for RER with the given clause
+    void restrictedExtendedResolutionInitialize( const vec< Lit >& currentLearnedClause );
+    
     /// @return true, if a clause should be added to rerFuseClauses
     rerReturnType restrictedExtendedResolution( vec<Lit>& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo );
     /// reset current state of restricted Extended Resolution

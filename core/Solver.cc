@@ -3144,6 +3144,18 @@ int Solver::getRestartLevel()
   }
 }
 
+void Solver::restrictedExtendedResolutionInitialize( const vec< Lit >& currentLearnedClause )
+{
+      // init RER
+    rerCommonLits.clear();rerCommonLitsSum=0;
+    for( int i = 1; i < currentLearnedClause.size(); ++ i ) {
+      rerCommonLits.push( currentLearnedClause[i] );
+      rerCommonLitsSum += toInt(currentLearnedClause[i]);
+    }
+    rerLits.push( currentLearnedClause[0] );
+    sort( rerCommonLits ); // TODO: have insertionsort/mergesort here!
+}
+
 Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo )
 {
   if( ! config.opt_restrictedExtendedResolution ) return rerUsualProcedure;
@@ -3154,17 +3166,13 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
   if( (double)rerLearnedClause * config.opt_rer_every > conflicts ) return rerUsualProcedure; // do not consider this clause!
   
   // passed the filters
-  if( rerLits.size() == 0 ) { // init 
-    rerCommonLits.clear();rerCommonLitsSum=0;
-    for( int i = 1; i < currentLearnedClause.size(); ++ i ) {
-      rerCommonLits.push( currentLearnedClause[i] );
-      rerCommonLitsSum += toInt(currentLearnedClause[i]);
-    }
-    rerLits.push( currentLearnedClause[0] );
-    sort( rerCommonLits ); // TODO: have insertionsort/mergesort here!
+  if( rerLits.size() == 0 ) { 
+    // initialize the structures for RER
+    restrictedExtendedResolutionInitialize( currentLearnedClause );
     // rerFuseClauses is updated in search later!
-    //cerr << "c init as [ " << rerLits.size() << " ] candidate [" << rerLearnedSizeCandidates << "] : " << currentLearnedClause << endl;
+    // cerr << "c init as [ " << rerLits.size() << " ] candidate [" << rerLearnedSizeCandidates << "] : " << currentLearnedClause << endl;
     return rerMemorizeClause; // tell search method to include new clause into list
+    
   } else {
     if( currentLearnedClause.size() != 1+rerCommonLits.size() ) {
       //cerr << "c reject size" << endl;
