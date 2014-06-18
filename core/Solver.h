@@ -194,7 +194,7 @@ public:
 
     // Memory managment:
     //
-    PCASSOVIRTUAL void garbageCollect();
+    virtual void garbageCollect();
     void    checkGarbage(double gf);
     void    checkGarbage();
 
