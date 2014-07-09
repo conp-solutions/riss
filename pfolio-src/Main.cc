@@ -119,7 +119,8 @@ int main(int argc, char** argv)
   
     try {
         
-	::parseOptions (argc, argv ); // parse all global options
+	bool foundHelp = ::parseOptions (argc, argv ); // parse all global options
+	if( foundHelp ) exit(0); // stop after printing the help information
 	
         PSolver S(threads, opt_config); // set up a portfolio solver for DRUP proofs
 	

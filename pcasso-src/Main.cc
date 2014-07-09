@@ -119,7 +119,8 @@ int main(int argc, char** argv){
 	IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
 	IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
-	parseOptions(argc, argv, true);	
+	bool foundHelp = ::parseOptions(argc, argv, true);
+	if( foundHelp ) exit(0); // stop after printing the help information
         
 	// Set limit on CPU-time:
         if (cpu_lim != INT32_MAX){
