@@ -71,6 +71,7 @@ static inline double Minisat::wallClockTime(void)
     clock_gettime(CLOCK_MONOTONIC, &timestamp);
     return ((double) timestamp.tv_sec) + ((double) timestamp.tv_nsec / 1000000000);
 }
+
 #else // use the Mac wall clock instead 
 static inline double Minisat::wallClockTime(void)
 {
@@ -81,11 +82,21 @@ static inline double Minisat::wallClockTime(void)
     mach_port_deallocate(mach_task_self(), cclock);
     return ((double) mts.tv_sec) + ((double) mts.tv_nsec / 1000000000);
 }
+
 #endif
 
 #endif
 
 // implement clocks independent on the operating system
+
+static inline void nanosleep(int nanoseconds)
+{
+   // Nanosleep
+   struct timespec req;
+   req.tv_nsec = nanoseconds;
+   req.tv_sec = 0;
+   clock_nanosleep(CLOCK_MONOTONIC, 0, &req, NULL);
+}
 
 /** simple class that combines cpu and wall clock time */
 class Clock {

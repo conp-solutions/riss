@@ -184,6 +184,7 @@ Solver::Solver(CoreConfig& _config) :
   ,extendedLearnedClauses(0)
   ,extendedLearnedClausesCandidates(0)
   ,maxECLclause(0)
+  ,rerExtractedGates(0)
   ,rerITEtries(0)
   ,rerITEsuccesses(0)
   ,rerITErejectS(0)
@@ -322,7 +323,7 @@ Var Solver::newVar(bool sign, bool dvar, char type)
     
     if( config.opt_hack > 0 ) trailPos.push(-1);
     
-    if( config.opt_ecl_rewriteNew || config.opt_rer_rewriteNew ) {
+    if( config.opt_ecl_rewriteNew || config.opt_rer_rewriteNew || config.opt_rer_extractGates ) {
       erRewriteInfo. push ( LitPair() ); erRewriteInfo. push ( LitPair() ); // for the two new literals, add empty infos
     }
     
@@ -682,9 +683,10 @@ bool Solver::searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd ) {
 bool Solver::erRewrite(vec<Lit>& learned_clause, unsigned int& lbd ){
 	// TODO: put into extra method
 	if(lbd<=config.erRewrite_lbd){
-	  if( (config.opt_rer_rewriteNew && config.opt_rer_windowSize == 2) || config.opt_ecl_rewriteNew ) {
+	  if( config.opt_rer_extractGates || (config.opt_rer_rewriteNew && config.opt_rer_windowSize == 2) || config.opt_ecl_rewriteNew ) {
 	    if(  (config.opt_rer_rewriteNew && !config.opt_rer_as_learned) 
 	      || (config.opt_ecl_rewriteNew && !config.opt_ecl_as_learned)
+	      || config.opt_rer_extractGates
 	    ) {
 	      // rewrite the learned clause by replacing a disjunction of two literals with the
 	      // corresponding ER-literal (has to be falsified as well)
@@ -1866,7 +1868,7 @@ lbool Solver::search(int nof_conflicts)
 		    if( !laHack(learnt_clause) ) return l_False;
 		    topLevelsSinceLastLa = 0;
 // 		    cerr << "c drop decision literal " << next << endl;
-		    order_heap.insert( var(next) ); // add the literal back to the heap!
+		    if( !order_heap.inHeap(var(next)) ) order_heap.insert( var(next) ); // add the literal back to the heap!
 		    next = lit_Undef;
 		    continue; // after local look-ahead re-check the assumptions
 		  }
@@ -2561,6 +2563,15 @@ lbool Solver::solve_()
     printSearchHeader();
     
     sdSearchTime.start();
+    
+    rerInitRewriteInfo();
+    
+// 	// is rewrite enabled, then add information
+// 	if( config.opt_rer_rewriteNew && config.opt_rer_full && !config.opt_rer_as_learned && config.opt_rer_windowSize == 2) { // as real clause, and full extension, and two ltis
+// 	  erRewriteInfo[ toInt( ~rerLits[0] ) ].otherMatch = ~rerLits[1];
+// 	  erRewriteInfo[ toInt( ~rerLits[0] ) ].replaceWith = mkLit(x,true);
+// 	}
+    
     do {
       sdLastIterTime.reset(); sdLastIterTime.start();
       //if (verbosity >= 1) printf("c start solving with %d assumptions\n", assumptions.size() );
@@ -2631,8 +2642,9 @@ lbool Solver::solve_()
 		  );
 	    printf("c ext.cl.l.: %d outOf %d ecls, %d maxSize, %.2lf avgSize, %.2lf totalLits\n",
 		   extendedLearnedClauses,extendedLearnedClausesCandidates,maxECLclause, extendedLearnedClauses == 0 ? 0 : ( totalECLlits / (double)extendedLearnedClauses), totalECLlits);
-	    printf("c res.ext.res.: %d rer, %d rerSizeCands, %d sizeReject, %d patternReject, %d bloomReject, %d maxSize, %.2lf avgSize, %.2lf totalLits\n",
-		   rerLearnedClause, rerLearnedSizeCandidates, rerSizeReject, rerPatternReject, rerPatternBloomReject, maxRERclause, rerLearnedClause == 0 ? 0 : (totalRERlits / (double) rerLearnedClause), totalRERlits );
+	    printf("c res.ext.res.: %d rer, %d rerSizeCands, %d sizeReject, %d patternReject, %d bloomReject, %d maxSize, %.2lf avgSize, %.2lf totalLits, %d gates\n",
+		  rerLearnedClause, rerLearnedSizeCandidates, rerSizeReject, rerPatternReject, rerPatternBloomReject, maxRERclause, 
+		  rerLearnedClause == 0 ? 0 : (totalRERlits / (double) rerLearnedClause), totalRERlits, rerExtractedGates );
 	    printf("c ER rewrite: %d cls, %d lits\n", erRewriteClauses, erRewriteRemovedLits );
 	    printf("c ER-ITE: %lf cpu-s %lf wall-s %d tries %d successes, %d rejS, %d rejT, %d rejF\n", rerITEcputime.getCpuTime(), rerITEcputime.getWallClockTime(), rerITEtries, rerITEsuccesses, rerITErejectS, rerITErejectT, rerITErejectF );
 	    printf("c i.cls.strengthening: %.2lf seconds, %d calls, %d candidates, %d droppedBefore, %d shrinked, %d shrinkedLits\n", icsTime.getCpuTime(), icsCalls, icsCandidates, icsDroppedCandidates, icsShrinks, icsShrinkedLits );
@@ -3160,6 +3172,53 @@ void Solver::restrictedExtendedResolutionInitialize( const vec< Lit >& currentLe
     sort( rerCommonLits ); // TODO: have insertionsort/mergesort here!
 }
 
+void Solver::rerInitRewriteInfo()
+{
+  if( !config.opt_rer_extractGates ) return;
+  
+  for( int i = 0; i < clauses.size(); ++ i )
+  {
+    const Clause& c = ca[clauses[i]]; 
+    if ( c.size() != 3 ) continue;
+    
+    // check literal as output
+    char hit[3]; 
+    for( int j = 0 ; j < 3; ++ j ) {
+      const Lit o = c[j]; // clause [o, x, y], clauses to match: [-o,-x] and [-o,-y]
+      hit[0] = 0;  hit[1] = 0;  hit[2] = 0; // init hit array
+      hit[j] = 1;
+      
+      // check binary clauses in watch list
+      const vec<Watcher>&  wbin  = watches[o];
+      for(int k = 0;k<wbin.size();k++) {
+	if( !wbin[k].isBinary() ) continue;
+	const Lit& imp = wbin[k].blocker(); // (o -> imp) => clause [-o, imp]
+	if( ~imp == c[0] ) hit[0] = 1; // could have else here. TODO: what is better for branch prediction?
+	if( ~imp == c[1] ) hit[1] = 1;
+	if( ~imp == c[2] ) hit[2] = 1;
+      }
+      if( hit[0] && hit[1] && hit[2] ) { // all literals have been hit
+	rerExtractedGates ++;
+	Lit l1,l2;
+	int k = 0; 
+	for( ; k < 3; ++ k ) {
+	  if( c[k] == o ) continue;
+	  l1 = c[k++]; break;
+	}
+	for( ; k < 3; ++ k ) {
+	  if( c[k] == o ) continue;
+	  l2 = c[k]; break;
+	}
+	if( l1 > l2 ) { Lit tmp = l1; l1 = l2; l2 = l1; } // l1 is the smaller literal
+	assert( (toInt(l1) + toInt(l2) + toInt(o) == toInt(c[0]) + toInt(c[1]) + toInt(c[2]) ) && "sums have to be the same" );
+	erRewriteInfo[ toInt( l1 ) ].otherMatch = l2;
+	erRewriteInfo[ toInt( l1 ) ].replaceWith = ~o; // resolve with the given clause results in having the original long clause again
+      }
+    }
+  }
+
+}
+
 Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo )
 {
   if( ! config.opt_restrictedExtendedResolution ) return rerUsualProcedure;
@@ -3182,7 +3241,8 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
       //cerr << "c reject size" << endl;
       rerSizeReject ++;
       resetRestrictedExtendedResolution();
-      return rerUsualProcedure; // clauses in a row do not fit the window
+      if( config.opt_rer_each ) { restrictedExtendedResolutionInitialize( currentLearnedClause ); return rerMemorizeClause; } // initialize with the new clause
+      else return rerUsualProcedure; // clauses in a row do not fit the window
     } else { // size fits, check lits!
       // sort, if more than 2 literals
 //       cerr << "current learnt clause before sort: " << currentLearnedClause << endl;
@@ -3203,7 +3263,9 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	resetRestrictedExtendedResolution();
 	//cerr << "c reject patter" << endl;
 	rerPatternReject ++;
-	return thisReturn;
+	
+	if( config.opt_rer_each && thisReturn == rerUsualProcedure ) { restrictedExtendedResolutionInitialize( currentLearnedClause ); return rerMemorizeClause; } // initialize with the new clause
+	else return thisReturn;
       }
 //       cerr << "c found match - check with more details" << endl;
       // Bloom-Filter
@@ -3220,7 +3282,9 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	}
 	resetRestrictedExtendedResolution();
 	rerPatternBloomReject ++;
-	return thisReturn;
+	
+	if( config.opt_rer_each && thisReturn == rerUsualProcedure) { restrictedExtendedResolutionInitialize( currentLearnedClause ); return rerMemorizeClause; } // initialize with the new clause
+	else return thisReturn;
       }
 //       cerr << "c found match - passed bloom filter" << endl;
       
@@ -3245,7 +3309,9 @@ Solver::rerReturnType Solver::restrictedExtendedResolution( vec< Lit >& currentL
 	  resetRestrictedExtendedResolution();
 	  //cerr << "c reject patter" << endl;
 	  rerPatternReject ++;
-	  return thisReturn;
+	  
+	  if( config.opt_rer_each && thisReturn == rerUsualProcedure) { restrictedExtendedResolutionInitialize( currentLearnedClause ); return rerMemorizeClause; } // initialize with the new clause
+	  else return thisReturn;
       }
 
       }
@@ -3752,6 +3818,7 @@ bool Solver::interleavedClauseStrengthening()
       uncheckedEnqueue( ~ca[learnts[i]][j] );
       CRef confl = propagate();
       if( confl != CRef_Undef ) { // found a conflict, handle it (via usual, simple, conflict analysis)
+	if( config.nanosleep != 0 ) nanosleep( config.nanosleep ); // sleep for a few nano seconds
 	learnt_clause.clear(); otfssCls.clear(); // prepare for analysis
 	printConflictTrail( confl );
 	int ret = analyze(confl, learnt_clause, backtrack_level,nblevels,otfssCls,extraInfo);	
@@ -4252,9 +4319,10 @@ lbool Solver::inprocess(lbool status)
 	}
 	
 	// actually, only necessary if the variables got removed or anything like that ...
-	if( config.opt_ecl_rewriteNew || (config.opt_rer_rewriteNew &&  config.opt_rer_windowSize == 2) ){
+	if( config.opt_rer_extractGates || config.opt_ecl_rewriteNew || (config.opt_rer_rewriteNew &&  config.opt_rer_windowSize == 2) ){
 	  erRewriteInfo.clear();
 	  erRewriteInfo.growTo( 2*nVars(), LitPair() );
+	  rerInitRewriteInfo();
 	}
 	
       }
