@@ -2513,15 +2513,19 @@ lbool Solver::solve_()
 
     lbool   status        = l_Undef;
     nbclausesbeforereduce = firstReduceDB;
-    
-    printHeader();
 
+    printHeader();
+    
     // preprocess
     if( status == l_Undef ) { // TODO: freeze variables of assumptions!
 	status = preprocess();
 	if( config.ppOnly ) return l_Undef; 
     }
     
+    if(verbosity>=1) {
+      printf("c | solve clauses: %12d  solve variables: %12d                                            |\n", nClauses(), nVars());
+      printf("c =========================================================================================================\n");
+    }
     
     // probing during search, or UHLE for learnt clauses
     if( config.opt_uhdProbe > 0 || (config.uhle_minimizing_size > 0 && config.uhle_minimizing_lbd > 0) ) {

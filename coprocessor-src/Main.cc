@@ -276,19 +276,21 @@ int main(int argc, char** argv)
 	  bool good = solution != -1;
 	  good = good && preprocessor.parseUndoInfo( string(undoFile) );
 	  if(!good) { cerr << "c will not continue because of above errors" << endl; return 1; }
-	  
+
 	  if( solution == 10 ) {
 	    preprocessor.extendModel(S.model);
+	    int varLimit = preprocessor.getFormulaVariables() == -1 ? S.model.size() : preprocessor.getFormulaVariables();
+	    assert( varLimit <= S.model.size() && "cannot print variables that are not present in the model" );
 	    if( res != NULL ) {
 	      printf("s SATISFIABLE\n");
 	      fprintf(res, "s SATISFIABLE\nv ");
-	      for (int i = 0; i < preprocessor.getFormulaVariables(); i++)
+	      for (int i = 0; i < varLimit; i++)
 		if (S.model[i] != l_Undef)
 		  fprintf(res, "%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
 	      fprintf(res, " 0\n");
 	    } else {
 	      printf("s SATISFIABLE\nv ");
-	      for (int i = 0; i < preprocessor.getFormulaVariables(); i++)
+	      for (int i = 0; i < varLimit; i++)
 		if (S.model[i] != l_Undef)
 		  printf("%s%s%d", (i==0)?"":" ", (S.model[i]==l_True)?"":"-", i+1);
 	      printf(" 0\n");	    
