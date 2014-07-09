@@ -498,7 +498,7 @@ void CNFClassifier::fband(vector<double>& ret) {
 						}
 						if (!missMatch) {
 							// blocked AND gate found
-							double w = pow(2,-c.size() - 1);
+							double w = pow(2,-c.size() + 1);
 							for (int k = 0; k < c.size(); ++k) {
 								// TODO: add this information to the BLOCKED-AND graph!
 								if (c[k] == output)
@@ -537,7 +537,7 @@ void CNFClassifier::fband(vector<double>& ret) {
 					// 					cerr << "c found ExactlyOne( " << c << " )" << endl;
 				} else {
 					for (int j = 0; j < foundAndOutputs.size(); ++j) {
-						double w = pow(2,-c.size() - 1);
+						double w = pow(2,-c.size() + 1);
 						for (int k = 0; k < c.size(); ++k) {
 							// TODO: add this information to the FULL-AND graph!
 							if (c[k] == foundAndOutputs[j])
