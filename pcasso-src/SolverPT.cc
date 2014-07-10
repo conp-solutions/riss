@@ -12,6 +12,7 @@ using namespace Pcasso;
 
 static BoolOption    opt_learnt_unary_res       ("SPLITTER + SHARING", "learnt-unaryres", "If false, the learnt clause is NOT resolved with any \"unsafe\" unary clause, so that it can be shared at a higher level in the tree\n", false);
 static IntOption     opt_addClause_FalseRemoval ("SPLITTER + SHARING", "addcl-falserem", "Controls the removal of the false literals in a clause that is being added to the solver. With 0, the literals are removed only if this does not worsen the PTLevel of the clause. (0=standard, 1=aggressive)", 1, IntRange(0,1));
+static BoolOption    cmdopt_shareClauses        ("SPLITTER + SHARING", "share", "Allow clause sharing at all\n", true);
 static IntOption     opt_sharedClauseMaxSize    ("SPLITTER + SHARING", "shclause-size", "A clause is eligible to be shared if its size is less than or equal to ..", 1, IntRange(1,100));
 static IntOption     opt_LBD_lt                 ("SPLITTER + SHARING", "lbd-lt", "A clause is eligible to be shared if its Literals Blocks Distance is less than or equal to ..", 0, IntRange(0,10));
 static BoolOption    opt_learnt_worsening       ("SPLITTER + SHARING", "learnt-worsening", "During conflict clause minimization, the PTLevel of the learnt clause is increased in order to remove more literals from it\n", false);
@@ -57,6 +58,7 @@ SolverPT::SolverPT(CoreConfig& config) :
 , learnt_unary_res(opt_learnt_unary_res)
 , addClause_FalseRemoval(opt_addClause_FalseRemoval)
 , sharedClauseMaxSize(opt_sharedClauseMaxSize)
+, opt_shareClauses( cmdopt_shareClauses )
 , LBD_lt(opt_LBD_lt)
 , learnt_worsening(opt_learnt_worsening)
 , pools_filling(opt_pools_filling)
@@ -547,6 +549,9 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsign
 	// Davide> Add a UNARY clause to the shared pool, if it is "safe enough"
 	if( out_learnt.size() == 1 ){
 		//if(opt_unit_sharing && PTLevel<=opt_unit_sharing_ptlevel_limit) return;//will be shared by unit_sharing option
+		
+		if( !opt_shareClauses ) return; // no sharing at all -> no unit clauses as well ...
+		
 		if( (rand() % 100) < random_sh_prob ) return;
 
 		unsigned int tempPTLevel = PTLevel;
@@ -641,7 +646,7 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsign
 
 
 	} // Davide> END OF ADDING A UNARY CLAUSE TO THE SHARED POOL
-	else if( (out_learnt.size() <= sharedClauseMaxSize || lbd <= LBD_lt) || shconditions_relaxing || random_sharing || opt_dyn_lbd_shr ){
+	else if( opt_shareClauses && (out_learnt.size() <= sharedClauseMaxSize || lbd <= LBD_lt) || shconditions_relaxing || random_sharing || opt_dyn_lbd_shr ){
 
 		if( (rand() % 100) < random_sh_prob ) return;
 

@@ -113,6 +113,7 @@ namespace Pcasso {
         //
         bool learnt_unary_res; 
         int addClause_FalseRemoval;
+	bool opt_shareClauses; // option to disable sharing completely
         int sharedClauseMaxSize;
         int LBD_lt;
         bool learnt_worsening;
