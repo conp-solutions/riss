@@ -18,6 +18,14 @@ RATElimination::RATElimination( CP3Config& _config, ClauseAllocator& _ca, Thread
 , remAT(0)
 , remHRAT(0)
 , remBCE(0)
+
+, bcaCandidates(0)
+, bcaResolutionChecks(0)
+, bcaSubstitue(0)
+, bcaSubstitueLits(0)
+, bcaFullMatch(0)
+, bcaATs(0)
+, bcaStrenghening(0)
 {
   
 }
@@ -30,13 +38,47 @@ void RATElimination::reset()
 
 bool RATElimination::process()
 {
-  MethodClock mc( rateTime );
+  if( !config.opt_rate_rate && !config.opt_rate_bcs ) return false;
   
   if( ! performSimplification() ) return false; // do not do anything?!
   modifiedFormula = false;
   
   // do not simplify, if the formula is considered to be too large!
   if( !data.unlimited() && ( data.nVars() > config.opt_rate_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_rate_cls && data.nTotLits() <= config.opt_rate_lits) ) return false;
+
+  // make sure that all clauses in the formula do not contain assigned literals
+  if( l_False == propagation.process(data,true) ) {
+    return true;
+  }
+
+  
+  if( config.opt_rate_bcs ) { 
+    modifiedFormula = blockedSubstitution() || modifiedFormula;
+  }
+
+  if( config.opt_rate_rate ) { 
+    modifiedFormula = eliminateRAT() || modifiedFormula;
+  }
+  
+  // re-setup solver!
+  const bool oldLhbrAllow = solver.lhbrAllowed;
+  solver.lhbrAllowed = false;
+  reSetupSolver();
+
+  
+
+  solver.lhbrAllowed = oldLhbrAllow; // restore lhbr state!
+  // clean solver!
+  cleanSolver();
+  
+  return modifiedFormula;
+}
+
+
+bool RATElimination::eliminateRAT()
+{
+  MethodClock mc( rateTime );
+  bool didSomething = false;
   
   LitOrderRATEHeapLt comp(data, config.rate_orderComplements); // use this sort criteria!
   Heap<LitOrderRATEHeapLt> rateHeap(comp);  // heap that stores the variables according to their frequency (dedicated for BCE)
@@ -44,16 +86,12 @@ bool RATElimination::process()
   // setup own structures
   rateHeap.addNewElement(data.nVars() * 2); // set up storage, does not add the element
   rateHeap.clear();
-
+  
   // structures to have inner and outer round
   MarkArray nextRound;
   vector<Lit> nextRoundLits;
   nextRound.create(2*data.nVars());
   
-  // make sure that all clauses in the formula do not contain assigned literals
-  if( l_False == propagation.process(data,true) ) {
-    return true;
-  }
   
   // init
   for( Var v = 0 ; v < data.nVars(); ++ v )
@@ -64,11 +102,6 @@ bool RATElimination::process()
   }
   data.ma.resize(2*data.nVars());
   data.ma.nextStep();
-  
-  // re-setup solver!
-  const bool oldLhbrAllow = solver.lhbrAllowed;
-  solver.lhbrAllowed = false;
-  reSetupSolver();
   
   do {
     
@@ -154,6 +187,7 @@ bool RATElimination::process()
 	  data.removedClause( data.list(right)[i] );
 	  data.addCommentToProof("AT clause during RATE");
 	  data.addToProof(c,true);
+	  didSomething = true;
 	  continue;
 	}
 	
@@ -219,6 +253,7 @@ bool RATElimination::process()
 	  data.addCommentToProof("rat clause during RATE");
 	  data.addToProof(c,true);
 	  data.removedClause( data.list(right)[i] );
+	  didSomething = true;
 	} else {
 	  solver.attachClause( data.list(right)[i] ); // if clause cannot be removed by RAT Elimination, attach it again!
 	}
@@ -226,12 +261,223 @@ bool RATElimination::process()
     }
   
   } while ( nextRoundLits.size() > 0 && (data.unlimited() || config.rate_Limit > rateSteps) && !data.isInterupted() ); // repeat until all literals have been seen until a fixed point is reached!
+  return didSomething;
+}
 
-  solver.lhbrAllowed = oldLhbrAllow; // restore lhbr state!
-  // clean solver!
-  cleanSolver();
+
+
+bool RATElimination::blockedSubstitution()
+{
+  MethodClock mc (bcaTime);
+  bool didSomething = false;
+  LitOrderRATEHeapLt comp(data, config.rate_orderComplements); // use this sort criteria!
+  Heap<LitOrderRATEHeapLt> rateHeap(comp);  // heap that stores the variables according to their frequency (dedicated for BCE)
   
-  return modifiedFormula;
+  // setup own structures
+  rateHeap.addNewElement(data.nVars() * 2); // set up storage, does not add the element
+  rateHeap.clear();
+
+  // structures to have inner and outer round
+  MarkArray nextRound;
+  vector<Lit> nextRoundLits;
+  nextRound.create(2*data.nVars());
+  // init
+  for( Var v = 0 ; v < data.nVars(); ++ v )
+  {
+    if( data[  mkLit(v,false) ] > 0 ) if( !rateHeap.inHeap(toInt(mkLit(v,false))) )  nextRoundLits.push_back( mkLit(v,false) );
+    if( data[  mkLit(v,true)  ] > 0 ) if( !rateHeap.inHeap(toInt(mkLit(v,true))) )   nextRoundLits.push_back( mkLit(v,true) );
+  }
+  data.ma.resize(2*data.nVars());
+  data.ma.nextStep();
+  
+  do {
+    
+    // re-init heap
+    for( int i = 0 ; i < nextRoundLits.size(); ++ i ) {
+      const Lit l = nextRoundLits[i];
+      if( ! nextRound.isCurrentStep( toInt(l) ) ) continue; // has been processed before already
+      assert( !rateHeap.inHeap(toInt(l)) && "literal should not be in the heap already!" );
+      rateHeap.insert( toInt(l) );
+    }
+    nextRoundLits.clear();
+    nextRound.nextStep();
+    
+    
+    // do BCA
+    while (rateHeap.size() > 0 && (data.unlimited() || config.bceLimit > rateSteps) && !data.isInterupted() )
+    {
+      // interupted ?
+      if( data.isInterupted() ) break;
+      
+      const Lit right = toLit(rateHeap[0]);
+      assert( rateHeap.inHeap( toInt(right) ) && "item from the heap has to be on the heap");
+      rateHeap.removeMin();
+
+//       cerr << "c BCE with " << right << endl;
+      
+      // check whether a clause is a tautology wrt. the other clauses
+      const Lit left = ~right; // complement
+
+      data.lits.clear(); // used for covered literal elimination
+      for( int i = 0 ; i < data.list(right).size(); ++ i ) 
+      {
+	if(  ca[ data.list(right)[i] ].can_be_deleted() 
+	  || ca[ data.list(right)[i] ].size() == 2 ) continue; // do not use binary clauses
+	
+	
+	for( int j = 0 ; j < data.list(right).size(); ++ j )
+	{
+	  if( i == j ) continue; // do not replace the clause with itself!
+	  
+	  Clause& c = ca[ data.list(right)[i] ];
+	  Clause& d = ca[ data.list(right)[j] ];
+	  if( d.can_be_deleted() || c.size() > d.size() ) continue; // do not work on uninteresting clauses!
+
+	  int pc = 0, pd = 0;
+	  Lit extraClit = lit_Undef;
+	  
+	  data.ma.nextStep();
+// 	  cerr << "c mark nextstep "  << endl;
+	  for( int k = 0 ; k < d.size(); ++k ) {
+// 	    cerr << "c mark " << d[k] << endl;
+	    data.ma.setCurrentStep( toInt( d[k] ) ); // mark all Lits from D
+	  }
+
+	  // check lits of C whether they match
+	  for( int k = 0; k < c.size(); ++ k ) {
+	    if( ! data.ma.isCurrentStep( toInt( c[k] ) ) ) {
+// 	      cerr << "c diff " << c[k] << endl;
+	      if( extraClit == lit_Undef ) extraClit = c[k];
+	      else { extraClit = lit_Error; break; }
+	    } else {
+// 	      cerr << "c reset " << c[k] << endl;
+	      data.ma.reset( toInt( c[k] ) );
+	    }
+	  }
+	  if ( extraClit == lit_Error ) continue; // use next clause!
+
+	  // collect lits for new clause (the ones only present in D)
+	  data.lits.clear();
+	  for( int k = 0 ; k < d.size(); ++k ) {
+	    if( data.ma.isCurrentStep( toInt(d[k]) ) ) data.lits.push_back( d[k] );
+	  }
+	  
+	  if( extraClit == lit_Undef ) { // found duplicate clauses
+	    didSomething = true;
+	    bcaSubstitue ++; bcaSubstitueLits += c.size();
+	    // delete the old clause
+	    ca[ data.list(right)[j] ] .set_delete(true);		// d can be deleted, because it can be produced by reslution with c and the new clause!
+	    data.removedClause( data.list(right)[j] );
+	    solver.detachClause( data.list(right)[j] );	// remove clause from unit propagation
+	    continue;
+	  }
+	  
+	  // replace common literals with complement of different literal
+// 	  cerr << "c check " << ~extraClit << endl;
+	  if( ! data.ma.isCurrentStep( toInt( ~extraClit ) ) ) {
+	    data.lits.push_back( ~extraClit );
+	    data.ma.setCurrentStep( toInt( ~extraClit ) ); // now all lits of data.lits are marked
+	    bcaFullMatch ++;
+	  }
+	  bcaCandidates ++;
+
+	  if( data.lits.size() <= 1 ) {
+	    bcaStrenghening ++;
+	    // TODO: could implement strengthening here!
+	    continue;
+	  }
+	  
+	  bool isRedundant = false;
+	  Lit redundantLit = lit_Undef;
+	  
+	  if( !isRedundant ) { // is clause AT?
+	    // test whether the resolvent is AT
+	    solver.newDecisionLevel();
+	    if( config.opt_rate_debug > 2 ) cerr << "c enqueue complements in " << data.lits << endl;
+	    for( int k = 0 ; k < data.lits.size(); ++ k ) {
+	      if( solver.value( ~data.lits[k] ) == l_False ) { isRedundant = true; break; }
+	      else if ( solver.value( ~data.lits[k] ) == l_Undef ) solver.uncheckedEnqueue( ~data.lits[k] );	// enqueue all complements
+	    }
+	    if( ! isRedundant ) {
+	      CRef confl = solver.propagate();	// check whether unit propagation finds a conflict for (F \ C) \land \ngt{C}, and hence C would be AT
+	      if( config.opt_rate_debug > 2 ) cerr << "c propagate with conflict " << (confl != CRef_Undef ? "yes" : " no") << endl;
+	      solver.cancelUntil(0);	// backtrack
+	      if( confl != CRef_Undef ) isRedundant = true;	// clause is AT
+	    }
+	    if( isRedundant ) bcaATs ++; // stats
+	  }
+	  
+	  if( !isRedundant ) { // is clause blocked?
+	    bool isblocked = false;
+	    for( int k = 0 ; k < data.lits.size() - 1; ++k )
+	    {
+	      const Lit resL = data.lits[k];
+	      redundantLit = resL;
+	      if( data.doNotTouch( var(resL) ) ) continue; // do not perform blocked clause addition on doNotTouch variables
+	      isblocked = true;
+
+	      for( int m = 0 ; m < data.list(~resL).size(); ++ m ) { // resolve with all candidates
+		const Clause& e = ca[ data.list(~resL)[m] ]; 
+		if( e.can_be_deleted() ) continue;
+		bcaResolutionChecks ++;
+		
+		bool hasComplement = false; // check resolvent for being tautologic
+		for( int n = 0 ; n < e.size(); ++ n ) {
+		  if( e[n] == ~resL ) continue;
+		  if( data.ma.isCurrentStep( toInt(~e[n]) ) ) {hasComplement = true; break; }
+		}
+		
+		if( !hasComplement ) { isblocked = false; break; }
+		
+	      }
+	      
+	      if( isblocked == true ) break; // found a blocking literal
+	    }
+	    isRedundant = isblocked;
+	  }
+	  
+	  if( isRedundant ) {
+	    // stats
+	    didSomething = true;
+	    bcaSubstitue ++; bcaSubstitueLits += c.size() - 1;
+	    
+	    cerr << "c substitute " << d << " with " << data.lits << " via " << c << endl;
+	    
+	    // write according proof
+	    data.addCommentToProof("add a blocked clause for blocked substitution");
+	    data.addToProof(data.lits,false,redundantLit); // add new clause
+	    data.addToProof(d,true);	// delete the clause D
+	    
+	    // add the new clause
+	    // all clauses have to be sorted during simplification
+	    CRef tmpRef = ca.alloc(data.lits, d.learnt() );
+	    data.addClause( tmpRef );		//
+	    if( ca[ data.list(right)[j] ].learnt() ) data.getLEarnts().push( tmpRef );
+	    else data.getClauses().push( tmpRef );
+	    solver.attachClause( tmpRef );	// add clause for unit propagation
+	    
+	    // delete the old clause
+	    ca[ data.list(right)[j] ] .set_delete(true);		// d can be deleted, because it can be produced by reslution with c and the new clause!
+	    data.removedClause( data.list(right)[j] );
+	    solver.detachClause( data.list(right)[j] );	// remove clause from unit propagation
+    
+	    // add literals for the next round!
+	    for ( int k = 0 ; k < data.lits.size(); ++ k ) {
+	      if( ! nextRound.isCurrentStep(toInt( data.lits[k] ) ) ) {
+		nextRoundLits.push_back( data.lits[k] );
+		nextRound.setCurrentStep( toInt( data.lits[k] ) );
+	      }
+	    }
+	  }
+	}
+	
+
+	
+      } // end iterating over all clauses that contain (right)
+    }
+  
+  } while ( nextRoundLits.size() > 0 && (data.unlimited() || config.bceLimit > rateSteps) && !data.isInterupted() ); // repeat until all literals have been seen until a fixed point is reached!
+  return didSomething;
 }
 
 bool RATElimination::resolveUnsortedStamped( const Lit l, const Clause& d, MarkArray& ma, vector<Lit>& resolvent )
@@ -255,6 +501,15 @@ void RATElimination::printStatistics(ostream& stream)
   << remBCE  << " rem-BCE, "
   << remAT   << " rem-AT, "
   << remHRAT << " rem-HRAT," << endl;
+  cerr << "c [STAT] RATE-BCS "  << bcaTime.getCpuTime() << " seconds, " 
+  << bcaCandidates << " cands, "
+  << bcaResolutionChecks << " resChecks, "
+  << bcaSubstitue << " substituted, "
+  << bcaATs << " addedATs, "
+  << bcaSubstitueLits << " subLits, "
+  << bcaFullMatch << " fullMatches, "
+  << bcaStrenghening << " strengthenings, "
+  << endl;
 }
 
 void RATElimination::giveMoreSteps()

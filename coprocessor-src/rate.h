@@ -37,7 +37,11 @@ class RATElimination : public Technique  {
   int64_t rateSteps;
   int rateCandidates; // number of clauses that have been checked for cle
   int remRAT, remAT, remHRAT, remBCE; // how many clauses 
-  Clock rateTime; // clocks for the two methods
+  Clock rateTime, bcaTime; // clocks for the two methods
+  
+  
+  // BCA
+  int bcaCandidates, bcaResolutionChecks, bcaSubstitue, bcaSubstitueLits, bcaFullMatch, bcaATs, bcaStrenghening;
   
 public:
   RATElimination( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data,  Solver& _solver, Coprocessor::Propagation& _propagation  );
@@ -60,6 +64,16 @@ protected:
   /** resolve clause D, ~l \in D, with existing literals in resolvent on literal l */
   bool resolveUnsortedStamped( const Lit l, const Clause& d, MarkArray& ma, vector<Lit>& resolvent );
 
+  /** run RAT elmination 
+   @return true, if modifications have been applied
+   */
+  bool eliminateRAT();
+  
+  /** add new redundant clauses which turn another clause in the formula into an AT 
+   @return true, if modifications have been applied
+   */
+  bool blockedSubstitution();
+  
   /** add all clauses to solver object -- code taken from @see Preprocessor::reSetupSolver, but without deleting clauses */
   void reSetupSolver();
   

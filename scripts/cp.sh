@@ -16,6 +16,17 @@ if [ "x$1" = "x" ]; then
 fi
 
 #
+# check if the file in the first parameter exists
+#
+if [ ! -f $1 ]
+then
+  # if the input file does not exists, then abort nicely with a message
+  echo "c the file does not exist: $1"
+  echo "s UNKNOWN"
+  exit 0
+fi
+
+#
 # variables for the script
 #
 
@@ -26,9 +37,9 @@ shift												# reduce the parameters, removed the very first one. remaining 
 cpParams="-enabled_cp3 -cp3_stats -enabled_cp3 -cp3_stats -up -subsimp -bve -no-bve_gates -no-bve_strength -bve_red_lits=1 -cp3_bve_heap=1 -bve_heap_updates=1 -bve_totalG -bve_cgrow_t=1000 -bve_cgrow=10 "
 
 # some temporary files 
-undo=/tmp/undo_$$				# path to temporary file that stores cp3 undo information
-tmpCNF=/tmp/tmpCNF_$$		# path to temporary file that stores cp3 simplified formula
-model=/tmp/model_$$			# path to temporary file that model of the preprocessor (stdout)
+undo=/tmp/cp_undo_$$				# path to temporary file that stores cp3 undo information
+tmpCNF=/tmp/cp_tmpCNF_$$		# path to temporary file that stores cp3 simplified formula
+model=/tmp/cp_model_$$			# path to temporary file that model of the preprocessor (stdout)
 realModel=/tmp/model_$$			# path to temporary file that model of the SAT solver (stdout)
 echo "c undo: $undo tmpCNF: $tmpCNF model: $model realModel: $realModel"  1>&2
 

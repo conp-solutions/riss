@@ -40,6 +40,7 @@ class BlockedClauseElimination : public Technique  {
   
   int claTestedLits, claSteps, claExtendedClauses, claExtensions;
   int64_t possibleClaExtensions; // cla stats
+
   
 public:
   BlockedClauseElimination( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Coprocessor::Propagation& _propagation  );
@@ -68,6 +69,7 @@ protected:
   
   /** run a covered literal addition to increase the size of clauses */
   void coverdLiteralAddition();
+
 };
 
 }

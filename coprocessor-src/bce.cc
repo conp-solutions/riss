@@ -25,6 +25,7 @@ BlockedClauseElimination::BlockedClauseElimination( CP3Config &_config, ClauseAl
 , claExtensions(0)
 , possibleClaExtensions(0)
 
+
 {
   
 }
@@ -446,6 +447,8 @@ bool BlockedClauseElimination::process()
   if( config.opt_bce_bce || config.opt_bce_cle ) blockedClauseElimination();
   
   if( config.opt_bce_cla ) coverdLiteralAddition();
+  
+
     
   // run BCE here again to remove the new blocked clauses, if there have been any!
   return modifiedFormula;
@@ -472,7 +475,9 @@ bool BlockedClauseElimination::tautologicResolvent(const Clause& c, const Clause
   }
   return false; // a complementarly literal was not found in both clauses
 }
-    
+
+
+
     
 void BlockedClauseElimination::printStatistics(ostream& stream)
 {
@@ -490,3 +495,4 @@ void BlockedClauseElimination::destroy()
 {
   
 }
+

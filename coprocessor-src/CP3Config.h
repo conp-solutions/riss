@@ -345,6 +345,8 @@ BoolOption rate_orderComplements;
 Int64Option rate_Limit;
 IntOption opt_rate_debug;
 IntOption rate_minSize;
+BoolOption opt_rate_rate;
+BoolOption opt_rate_bcs; // perform blocked clause substitution
  
 //
 // Dense
