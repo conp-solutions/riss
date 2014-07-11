@@ -36,8 +36,8 @@ class RATElimination : public Technique  {
   // attributes
   int64_t rateSteps;
   int rateCandidates; // number of clauses that have been checked for cle
-  int remRAT, remAT, remHRAT, remBCE; // how many clauses 
-  Clock rateTime, bcaTime; // clocks for the two methods
+  int remRAT, remAT, remHRAT, remBCE, remBRAT, blockCheckOnSameClause; // how many clauses 
+  Clock rateTime, bcaTime, bratTime; // clocks for the two methods
   
   
   // BCA

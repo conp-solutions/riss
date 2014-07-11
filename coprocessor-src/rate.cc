@@ -18,6 +18,8 @@ RATElimination::RATElimination( CP3Config& _config, ClauseAllocator& _ca, Thread
 , remAT(0)
 , remHRAT(0)
 , remBCE(0)
+, remBRAT(0)
+, blockCheckOnSameClause(0)
 
 , bcaCandidates(0)
 , bcaResolutionChecks(0)
@@ -51,6 +53,10 @@ bool RATElimination::process()
     return true;
   }
 
+  // re-setup solver!
+  const bool oldLhbrAllow = solver.lhbrAllowed;
+  solver.lhbrAllowed = false;
+  reSetupSolver();
   
   if( config.opt_rate_bcs ) { 
     modifiedFormula = blockedSubstitution() || modifiedFormula;
@@ -60,13 +66,6 @@ bool RATElimination::process()
     modifiedFormula = eliminateRAT() || modifiedFormula;
   }
   
-  // re-setup solver!
-  const bool oldLhbrAllow = solver.lhbrAllowed;
-  solver.lhbrAllowed = false;
-  reSetupSolver();
-
-  
-
   solver.lhbrAllowed = oldLhbrAllow; // restore lhbr state!
   // clean solver!
   cleanSolver();
@@ -102,6 +101,12 @@ bool RATElimination::eliminateRAT()
   }
   data.ma.resize(2*data.nVars());
   data.ma.nextStep();
+  
+  MarkArray bratResolve;
+  if( config.opt_rate_brat ) {
+    bratResolve.resize(2*data.nVars());
+    bratResolve.nextStep();
+  }
   
   do {
     
@@ -210,6 +215,7 @@ bool RATElimination::eliminateRAT()
 	if( config.opt_rate_debug > 2 ) cerr << "c RATE resolve with " << data.list(left).size() << " clauses" << endl;
 	bool allResolventsAT = true;
 	bool allTaut = true;
+	bool usedBratClause = false;
 	for( int j = 0 ; allResolventsAT && j < data.list(left).size(); ++ j ) // for all clauses D \in F_{\ngt{l}}
 	{
 	  Clause& d = ca[ data.list(left)[j] ];
@@ -231,7 +237,45 @@ bool RATElimination::eliminateRAT()
 	  rateSteps += solver.trail.size(); // approximate effort for propagation
 	  if( config.opt_rate_debug > 2 ) cerr << "c propagate with conflict " << (confl != CRef_Undef ? "yes" : " no") << endl;
 	  solver.cancelUntil(0);	// backtrack
-	  if( confl == CRef_Undef ) allResolventsAT = false;	// not AT
+	  if( confl == CRef_Undef ) {
+	    if( config.opt_rate_brat ) {
+	      MethodClock bratMC( bratTime ); // measure time
+	      // check whether resolvent is blocked on one of its literals
+	      bool isblocked = false;
+	      bratResolve.nextStep();
+	      for( int k = 0 ; k < data.lits.size(); ++k ) bratResolve.setCurrentStep( toInt(data.lits[k] ) ); // create markArray for redundant clause
+	      for( int k = 0 ; k < data.lits.size(); ++k )
+	      {
+		const Lit resL = data.lits[k];
+		if( data.doNotTouch( var(resL) ) ) continue; // do not perform blocked clause addition on doNotTouch variables
+		isblocked = true;
+
+		for( int m = 0 ; m < data.list(~resL).size(); ++ m ) { // resolve with all candidates
+		  const Clause& e = ca[ data.list(~resL)[m] ]; 
+		  if( e.can_be_deleted() ) continue;
+		  if( data.list(right)[i] == data.list(~resL)[m] ) blockCheckOnSameClause ++;
+		  
+		  bool hasComplement = false; // check resolvent for being tautologic
+		  for( int n = 0 ; n < e.size(); ++ n ) {
+		    if( e[n] == ~resL ) continue;
+		    if( data.ma.isCurrentStep( toInt(~e[n]) ) ) { hasComplement = true; break; }
+		  }
+		  
+		  if( !hasComplement ) { isblocked = false; break; }
+		}
+		
+		if( isblocked == true ) {
+		  usedBratClause = true;
+		  // cerr << "c found brat clause" << endl;
+		  break; // found a blocking literal
+		}
+	      }
+	      allResolventsAT = isblocked;
+	      
+	    } else {
+	      allResolventsAT = false;	// not AT
+	    }
+	  }
 	  data.lits.resize(defaultLits);	// remove the literals from D again
 	  
 	  if( !data.unlimited() && config.rate_Limit <= rateSteps) {	// check step limits
@@ -242,7 +286,8 @@ bool RATElimination::eliminateRAT()
 	  data.addToExtension(data.list(right)[i], right); 
 	  if( config.opt_rate_debug > 1 ) cerr << "c RATE eliminate RAT clause [" << data.list(right)[i] << "] " << c << endl;
 	  c.set_delete(true);
-	  remRAT = (!allTaut) ? remRAT+1 : remRAT;
+	  remBRAT = usedBratClause ? remBRAT + 1 : usedBratClause;
+	  remRAT = (!allTaut && !usedBratClause) ? remRAT+1 : remRAT;
 	  remBCE = ( allTaut) ? remBCE+1 : remBCE;
 	  for( int k = 0 ; k < c.size(); ++ k ) {	// all complementary literals can be tested again
 	    if( ! nextRound.isCurrentStep(toInt(~c[k]) ) ) {
@@ -509,6 +554,8 @@ void RATElimination::printStatistics(ostream& stream)
   << bcaSubstitueLits << " subLits, "
   << bcaFullMatch << " fullMatches, "
   << bcaStrenghening << " strengthenings, "
+  << endl;
+  cerr << "c [STAT] RATE-BRAT "  << bratTime.getCpuTime() << " seconds, " << remBRAT << " remBRAT, " << blockCheckOnSameClause << " sameClauseChecks, "
   << endl;
 }
 

@@ -344,6 +344,7 @@ IntOption  opt_cceInpStepInc;
 BoolOption rate_orderComplements;
 Int64Option rate_Limit;
 IntOption opt_rate_debug;
+BoolOption opt_rate_brat; // test resolvent not only for AT, but also for being blocked
 IntOption rate_minSize;
 BoolOption opt_rate_rate;
 BoolOption opt_rate_bcs; // perform blocked clause substitution
