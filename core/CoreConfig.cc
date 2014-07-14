@@ -30,6 +30,8 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  opt_solve_stats (_cat, "solve_stats", "print stats about solving process", false, optionListPtr ),
  opt_fast_rem (_cat, "rmf", "use fast remove", false, optionListPtr ),
  
+ nanosleep(_cat, "nanosleep", "For each conflict sleep this amount of nano seconds", 0, IntRange(0, INT32_MAX), optionListPtr ),
+ 
  
  ppOnly (_cat, "ppOnly", "interrupts search after preprocessing", false, optionListPtr ),
 #if defined TOOLVERSION
@@ -194,6 +196,9 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  opt_rer_debug("EXTENDED RESOLUTION RER", "rer-d", "debug output for RER", false, optionListPtr ),
 #endif
  opt_rer_every("EXTENDED RESOLUTION RER", "rer-freq", "how often rer compared to usual learning", 1, DoubleRange(0, true, 1, true) , optionListPtr ),
+ opt_rer_each("EXTENDED RESOLUTION RER", "rer-e", "when a pair is rejected, initialize with the new clause", false, optionListPtr ),
+ opt_rer_extractGates("EXTENDED RESOLUTION RER", "rer-g", "extract binary and gates from the formula for RER rewriting", false, optionListPtr ),
+ 
  
  erRewrite_size("EXTENDED RESOLUTION", "er-size", "rewrite new learned clauses with ER, if size is small enough", 30, IntRange(0, INT32_MAX), optionListPtr ),
  erRewrite_lbd( "EXTENDED RESOLUTION", "er-lbd" , "rewrite new learned clauses with ER, if lbd is small enough",  6,  IntRange(0, INT32_MAX), optionListPtr ),

@@ -553,13 +553,18 @@ protected:
       rerDontAttachAssertingLit = 2,	// do not enqueue the asserting literal of the current clause
       rerAttemptFailed = 3,	// some extra method failed (e.g. find RER-ITE)
     };
+    
+    /// initialize the data structures for RER with the given clause
+    void restrictedExtendedResolutionInitialize( const vec< Lit >& currentLearnedClause );
+    
     /// @return true, if a clause should be added to rerFuseClauses
     rerReturnType restrictedExtendedResolution( vec<Lit>& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo );
     /// reset current state of restricted Extended Resolution
     void resetRestrictedExtendedResolution();
     /// check whether the new learned clause produces an ITE pattern with the previously learned clause (assumption, previousClause is sorted, currentClause is sorted starting from the 3rd literal)
     rerReturnType restrictedERITE(const Lit& previousFirst, const vec<Lit>& previousPartialClause, vec<Lit>& currentClause);
-    
+    /// initialize the rewrite info with the gates of the formula
+    void rerInitRewriteInfo();
     /// replace the disjunction p \lor q with x
     void disjunctionReplace( Minisat::Lit p, Minisat::Lit q, const Minisat::Lit x, bool inLearned, bool inBina );
     
@@ -665,6 +670,7 @@ protected:
   // stats for learning clauses
   double totalLearnedClauses, sumLearnedClauseSize, sumLearnedClauseLBD, maxLearnedClauseSize;
   int extendedLearnedClauses, extendedLearnedClausesCandidates,maxECLclause;
+  int rerExtractedGates;
   int rerITEtries, rerITEsuccesses, rerITErejectS, rerITErejectT, rerITErejectF; // how often tried RER-ITE, and how often succeeded
   double totalECLlits; // to calc max and avg
   uint64_t maxResDepth;

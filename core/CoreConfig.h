@@ -35,6 +35,7 @@ public:
  */
  BoolOption opt_solve_stats;
  BoolOption opt_fast_rem; // remove elements on watch list faster, but unsorted
+ IntOption nanosleep; // nanoseconds to sleep for each conflict
  BoolOption ppOnly; // interrupt after preprocessing
 #if defined TOOLVERSION
  const bool opt_learn_debug;
@@ -176,23 +177,25 @@ public:
  DoubleOption opt_ecl_every;  // perform ecl at most every n conflicts
  
  BoolOption opt_restrictedExtendedResolution; // perform restricted extended resolution
- BoolOption opt_rer_as_learned; // add rer clauses as learned clauses?
- IntOption opt_rer_as_replaceAll; // run through formula/learned clauses and replace all the disjunctions (if not reason/watched ... )
- BoolOption opt_rer_rewriteNew; // rewrite upcoming learned clauses (only, if full extension, and not as learned clauses!)
- BoolOption opt_rer_full; // add full rer extension?
- IntOption  opt_rer_minSize; // minimum size of learned clause to perform rer
- IntOption  opt_rer_maxSize; // minimum size of learned clause to perform rer
- IntOption  opt_rer_minLBD;  // minimum LBD to perform rer
- IntOption  opt_rer_maxLBD;  // maximum LBD to perform rer
- IntOption  opt_rer_windowSize;  // number of clauses needed, to perform rer
- IntOption  opt_rer_newAct;  // how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean
- BoolOption opt_rer_ite;	// test for ITE pattern?
+ BoolOption opt_rer_as_learned; 	// add rer clauses as learned clauses?
+ IntOption opt_rer_as_replaceAll; 	// run through formula/learned clauses and replace all the disjunctions (if not reason/watched ... )
+ BoolOption opt_rer_rewriteNew; 	// rewrite upcoming learned clauses (only, if full extension, and not as learned clauses!)
+ BoolOption opt_rer_full; 		// add full rer extension?
+ IntOption  opt_rer_minSize; 		// minimum size of learned clause to perform rer
+ IntOption  opt_rer_maxSize; 		// minimum size of learned clause to perform rer
+ IntOption  opt_rer_minLBD;  		// minimum LBD to perform rer
+ IntOption  opt_rer_maxLBD;  		// maximum LBD to perform rer
+ IntOption  opt_rer_windowSize;  	// number of clauses needed, to perform rer
+ IntOption  opt_rer_newAct;  		// how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean
+ BoolOption opt_rer_ite;		// test for ITE pattern?
 #if defined TOOLVERSION
  const bool opt_rer_debug;
 #else
- BoolOption opt_rer_debug; // enable debug output
+ BoolOption opt_rer_debug; 		// enable debug output
 #endif
- DoubleOption opt_rer_every;  // perform rer at most every n conflicts
+ DoubleOption opt_rer_every;  		// perform rer at most every n conflicts
+ BoolOption opt_rer_each;		// when a pair is rejected, initialize with the latter clause
+ BoolOption opt_rer_extractGates;	// extract binary AND gates from the formula to rewrite the new learned clauses
  
  IntOption erRewrite_size;	// size of clauses, so that it is tested whether they can be rewritten with ER
  IntOption erRewrite_lbd;	// LBD of clauses, so that it is tested whether they can be rewritten with ER
