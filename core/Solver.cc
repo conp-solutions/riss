@@ -3198,18 +3198,21 @@ void Solver::rerInitRewriteInfo()
 	if( ~imp == c[2] ) hit[2] = 1;
       }
       if( hit[0] && hit[1] && hit[2] ) { // all literals have been hit
+	cerr << "c found gate with output " << o << " and clause " << c << endl;
 	rerExtractedGates ++;
 	Lit l1,l2;
 	int k = 0; 
 	for( ; k < 3; ++ k ) {
 	  if( c[k] == o ) continue;
+	  cerr << "c select l1 with k=" << k << " to " << c[k] << endl;
 	  l1 = c[k++]; break;
 	}
 	for( ; k < 3; ++ k ) {
 	  if( c[k] == o ) continue;
+	  cerr << "c select l2 with k=" << k << " to " << c[k] << endl;
 	  l2 = c[k]; break;
 	}
-	if( l1 > l2 ) { Lit tmp = l1; l1 = l2; l2 = l1; } // l1 is the smaller literal
+	if( l1 > l2 ) { Lit tmp = l1; l1 = l2; l2 = tmp; } // l1 is the smaller literal
 	assert( (toInt(l1) + toInt(l2) + toInt(o) == toInt(c[0]) + toInt(c[1]) + toInt(c[2]) ) && "sums have to be the same" );
 	erRewriteInfo[ toInt( l1 ) ].otherMatch = l2;
 	erRewriteInfo[ toInt( l1 ) ].replaceWith = ~o; // resolve with the given clause results in having the original long clause again

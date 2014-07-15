@@ -486,7 +486,7 @@ bool RATElimination::blockedSubstitution()
 	    didSomething = true;
 	    bcaSubstitue ++; bcaSubstitueLits += c.size() - 1;
 	    
-	    cerr << "c substitute " << d << " with " << data.lits << " via " << c << endl;
+	    // cerr << "c substitute " << d << " with " << data.lits << " via " << c << endl;
 	    
 	    // write according proof
 	    data.addCommentToProof("add a blocked clause for blocked substitution");
