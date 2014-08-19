@@ -53,7 +53,7 @@ class CNFClassifier
 	void recursiveWeightHeuristic_code(const int maxClauseSize, std::vector< double >& ret);
 
 	/** tries to extract xor gates, and lists them according as sequence (not sure how to really do this) */
-	void extractXorFeatures(const vector<vector<CRef> >& litToClsMap);
+	void extractXorFeatures(const vector<vector<CRef> >& litToClsMap, vector<double>& ret);
 	
 public:
 	CNFClassifier(ClauseAllocator& _ca, vec<CRef>& _clauses, int _nVars);

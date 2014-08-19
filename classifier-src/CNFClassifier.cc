@@ -599,7 +599,7 @@ void CNFClassifier::fband(vector<double>& ret) {
 		}
 		
 		if( computeXor ) {
-		  extractXorFeatures( litToClsMap );
+		  extractXorFeatures( litToClsMap, ret );
 		}
 	}
 }
@@ -615,7 +615,7 @@ static uint64_t numberByPolarity( const Clause& clause ) {
   return nr;
 }
 
-void CNFClassifier::extractXorFeatures(const vector<vector<CRef> >& litToClsMap)
+void CNFClassifier::extractXorFeatures(const vector<vector<CRef> >& litToClsMap, vector<double>& ret)
 {
   // parameters to set
   const uint32_t maxXorSize = 7;
@@ -878,6 +878,38 @@ void CNFClassifier::extractXorFeatures(const vector<vector<CRef> >& litToClsMap)
   xorTime = cpuTime() - xorTime;
   if (verb>0)
   cerr << "c found " << xorList.size() << " xors (" << subsFound << " sub) in " << findChecks << " steps and " << xorTime << " s" << endl;
+	uint64_t xorSteps = 0; // TODO norbert here you should initiallize the variable with the number
+							// of steps that took you to build the xorList
+
+   // here I add cliques between the literals of the clauses in the xorList
+	int nLiterals = nVars * 2;
+	Graph xorGraph(nLiterals, computingDerivative);
+	for (int i = 0; i < xorList.size(); ++i) {
+		Clause& clause = ca[xorList[i]];
+		int k = clause.size();
+		double w = pow(2, -k);
+		xorSteps+=(k*(k-1)/2);
+
+		for (int j = 0; j < k - 1; ++j) {
+			for (int h = j + 1; h < k; ++h) {
+				xorGraph.addUndirectedEdge(clause[j].x, clause[h].x, w);
+			}
+		}
+	}
+
+	// Print the features
+	xorSteps += xorGraph.computeOnlyStatistics(quantilesCount);
+
+	xorGraph.getDegreeStatistics().infoToVector("XOR gate degree",
+			featuresNames, ret);
+	xorGraph.getWeightStatistics().infoToVector("XOR gate weights",
+			featuresNames, ret);
+	featuresNames.push_back("Blocked AND gate steps");
+	ret.push_back(xorSteps);
+
+	timeIndexes.push_back(ret.size());
+	featuresNames.push_back("xor time");
+	ret.push_back(xorTime);
 }
 
 
