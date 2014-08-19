@@ -904,7 +904,7 @@ void CNFClassifier::extractXorFeatures(const vector<vector<CRef> >& litToClsMap,
 			featuresNames, ret);
 	xorGraph.getWeightStatistics().infoToVector("XOR gate weights",
 			featuresNames, ret);
-	featuresNames.push_back("Blocked AND gate steps");
+	featuresNames.push_back("XOR gate steps");
 	ret.push_back(xorSteps);
 
 	timeIndexes.push_back(ret.size());
