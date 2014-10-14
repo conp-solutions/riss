@@ -399,12 +399,11 @@ void Solver::removeClause(Minisat::CRef cr, bool strict) {
     addCommentToProof("delete via clause removal",true);
     addToProof(c,true);	// clause has not been removed yet
   }
-  if( config.opt_rer_debug || config.opt_learn_debug) cerr << "c remove clause [" << cr << "]: " << c << endl;
+  if(config.opt_learn_debug) cerr << "c remove clause [" << cr << "]: " << c << endl;
 
   detachClause(cr, strict); 
   // Don't leave pointers to free'd memory!
   if (locked(c)) {
-    if( config.opt_rer_debug ) cerr << "c remove reason for variable " << var(c[0]) + 1 << ", namely: " << c << endl;
     vardata[var(c[0])].reason = CRef_Undef;
   }
   c.mark(1); 
@@ -684,7 +683,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     do{
 	if( config.opt_learn_debug ) cerr << "c enter loop with lit " << p << endl;
         Clause& c = ca[confl];
-	if( config.opt_ecl_debug || config.opt_rer_debug ) cerr << "c resolve on " << p << "(" << index << "/" << trail.size() << ") with [" << confl << "]" << c << " -- calculated currentSize: " << currentSize << " pathLimit: " << pathLimit <<  endl;
+
 	int clauseReductSize = c.size();
 	// Special case for binary clauses
 	// The first one has to be SAT
@@ -810,8 +809,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     if( currentSize != out_learnt.size() ) cerr << "c different sizes: clause=" << out_learnt.size() << ", counted=" << currentSize << " and collected vector: " << out_learnt << endl;
     assert( currentSize == out_learnt.size() && "counted literals has to be equal to actual clause!" );
     
-    if( config.opt_ecl_debug || config.opt_rer_debug ) cerr << "c learned clause (before mini): " << out_learnt << endl;
-    
+   
     bool doMinimizeClause = true; // created extra learnt clause? yes -> do not minimize
     lbd = computeLBD(out_learnt);
     bool recomputeLBD = false; // current lbd is valid
@@ -825,18 +823,17 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	  if( (i == 0 || trail_lim[i] != trail_lim[i-1]) && trail_lim[i] < trail.size() ) // no dummy level caused by assumptions ...
 	    out_learnt.push( ~trail[ trail_lim[i] ] ); // get the complements of all decisions into dec array
 	}
-	if( config.opt_printDecisions > 2 || config.opt_learn_debug || config.opt_ecl_debug || config.opt_rer_debug) cerr << endl << "c current decision stack: " << out_learnt << endl ;
+	if( config.opt_printDecisions > 2 || config.opt_learn_debug) cerr << endl << "c current decision stack: " << out_learnt << endl ;
 	const Lit tmpLit = out_learnt[ out_learnt.size() -1 ]; // 
 	out_learnt[ out_learnt.size() -1 ] = out_learnt[0]; // have first decision as last literal
 	out_learnt[0] = tmpLit; // ~p; // new implied literal is the negation of the asserting literal ( could also be the last decision literal, then the learned clause is a decision clause) somehow buggy ...
 	learnedDecisionClauses ++;
-	if( config.opt_printDecisions > 2 || config.opt_learn_debug || config.opt_ecl_debug || config.opt_rer_debug) cerr << endl << "c learn decisionClause " << out_learnt << endl << endl;
+	if( config.opt_printDecisions > 2 || config.opt_learn_debug ) cerr << endl << "c learn decisionClause " << out_learnt << endl << endl;
 	doMinimizeClause = false;
       }
     }
     
-    if( config.opt_ecl_debug || config.opt_rer_debug ) cerr << "c learned clause (after decision clause): " << out_learnt << endl;
-    
+   
     if( doMinimizeClause ) {
     // Simplify conflict clause:
     //
@@ -909,14 +906,13 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
       }
       
       // rewrite clause only, if one of the two systems added information
-      if( out_learnt.size() <= config.erRewrite_size ) {
+      if( out_learnt.size() <= 0 ) { // FIXME not used yet
 	if( recomputeLBD ) lbd = computeLBD(out_learnt); // update current lbd
 	recomputeLBD = erRewrite(out_learnt, lbd);
       }
     } // end working on usual learnt clause (minimize etc.)
     
     
-    if( config.opt_ecl_debug || config.opt_rer_debug ) cerr << "c learned clause (after minimize): " << out_learnt << endl;
     // Find correct backtrack level:
     //
     // yet, the currently learned clause is not bi-asserting (bi-asserting ones could be turned into asserting ones by minimization
@@ -1418,7 +1414,6 @@ lbool Solver::search(int nof_conflicts)
 	      maxResHeight = extraInfo;
 #endif
 	      
-	      if( config.opt_rer_debug ) cerr << "c analyze returns with " << ret << " , jumpLevel " << backtrack_level << " and set of literals " << learnt_clause<< endl;
      
 	      // OTFSS TODO put into extra method!
 	      bool backTrackedBeyondAsserting = false;

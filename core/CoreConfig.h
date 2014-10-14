@@ -58,22 +58,13 @@ public:
  BoolOption opt_quick_reduce; // check clause for being satisfied based on the first two literals only!
  DoubleOption opt_keep_worst_ratio; // keep this (relative to all learnt clauses) number of worst learnt clauses
 
- BoolOption opt_biAsserting;	// learn bi-asserting clauses instead of UIP clauses
- IntOption opt_biAssiMaxEvery;	// number of conflicts until another bi-asserting clause is allowed to be learned
  IntOption opt_lb_size_minimzing_clause;
  IntOption opt_lb_lbd_minimzing_clause;
-
 
  DoubleOption opt_var_decay_start; // start value default: 0.95 glucose 2.3: 0.8
  DoubleOption opt_var_decay_stop;  // stop value  default: 0.95 glucose 2.3: 0.95
  DoubleOption opt_var_decay_inc;   // increase value default: 0 glucose 2.3: 0.01
  IntOption opt_var_decay_dist;     // increase after this number of conflicts: default: never, glucose 2.3: 5000
- 
- BoolOption opt_agility_restart_reject; // reject restarts based on search agility?
- DoubleOption opt_agility_rejectLimit; // agility above this value rejects restarts
- DoubleOption opt_agility_decay;   // decay that controls the agility of the search (stuck: ag = ag * decay; moving: ag = ag*decay + (1-decay) Biere08)
- DoubleOption opt_agility_init;	    // initilize agility with this value
- IntOption opt_agility_limit_increase;	// number of conflicts to be added in case of a restart reject
  
  DoubleOption opt_clause_decay;
  DoubleOption opt_random_var_freq;
@@ -99,12 +90,6 @@ public:
  IntOption opt_var_act_bump_mode; // bump activity of a variable based on the size/LBD of the generated learned clause
  IntOption opt_cls_act_bump_mode; // bump activity of a learned clause based on the size/LBD of the generated learned clause
  
- BoolOption opt_dontTrustPolarity; // negate returned literals polarity once in a while
- 
- IntOption opt_LHBR;
- IntOption opt_LHBR_max;
- BoolOption opt_LHBR_sub;
- BoolOption opt_printLhbr;
 
  BoolOption opt_updateLearnAct;
 
@@ -144,74 +129,10 @@ public:
  BoolOption opt_hpushUnit; 
  IntOption opt_simplifyInterval; 
 
- BoolOption opt_otfss;
- BoolOption opt_otfssL;
- IntOption opt_otfssMaxLBD;
-#if defined TOOLVERSION
- const bool debug_otfss;
-#else
- BoolOption debug_otfss;
-#endif
-
  IntOption opt_learnDecPrecent; // learn decision clauses instead of others
  IntOption opt_learnDecMinSize; // min size of a learned clause so that its turned into an decision clause
  BoolOption opt_learnDecRER;	// use decision learned clauses for restricted extended resolution?
 
-
- BoolOption opt_extendedClauseLearning; // perform extended clause learning
- BoolOption opt_ecl_as_learned; // add ecl clauses as learned clauses?
- IntOption opt_ecl_as_replaceAll; // run through formula/learned clauses and replace all the disjunctions (if not reason/watched ... )
- BoolOption opt_ecl_rewriteNew; // rewrite upcoming learned clauses (only, if not as learned clauses!)
- BoolOption opt_ecl_full; // add full ecl extension?
- IntOption opt_ecl_minSize; // minimum size of learned clause to perform ecl
- IntOption opt_ecl_maxLBD;  // maximum LBD to perform ecl
- IntOption opt_ecl_newAct;  // how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean
-#if defined TOOLVERSION
- const bool opt_ecl_debug;
-#else
- BoolOption opt_ecl_debug; // enable debug output
-#endif
- DoubleOption opt_ecl_smallLevel; // add ecl clauses only, if smallest two literals are from this level or below ( negative -> relativ, positive -> absolute! )
- DoubleOption opt_ecl_every;  // perform ecl at most every n conflicts
- 
- BoolOption opt_restrictedExtendedResolution; // perform restricted extended resolution
- BoolOption opt_rer_as_learned; 	// add rer clauses as learned clauses?
- IntOption opt_rer_as_replaceAll; 	// run through formula/learned clauses and replace all the disjunctions (if not reason/watched ... )
- BoolOption opt_rer_rewriteNew; 	// rewrite upcoming learned clauses (only, if full extension, and not as learned clauses!)
- BoolOption opt_rer_full; 		// add full rer extension?
- IntOption  opt_rer_minSize; 		// minimum size of learned clause to perform rer
- IntOption  opt_rer_maxSize; 		// minimum size of learned clause to perform rer
- IntOption  opt_rer_minLBD;  		// minimum LBD to perform rer
- IntOption  opt_rer_maxLBD;  		// maximum LBD to perform rer
- IntOption  opt_rer_windowSize;  	// number of clauses needed, to perform rer
- IntOption  opt_rer_newAct;  		// how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean
- BoolOption opt_rer_ite;		// test for ITE pattern?
-#if defined TOOLVERSION
- const bool opt_rer_debug;
-#else
- BoolOption opt_rer_debug; 		// enable debug output
-#endif
- DoubleOption opt_rer_every;  		// perform rer at most every n conflicts
- BoolOption opt_rer_each;		// when a pair is rejected, initialize with the latter clause
- BoolOption opt_rer_extractGates;	// extract binary AND gates from the formula to rewrite the new learned clauses
- 
- IntOption erRewrite_size;	// size of clauses, so that it is tested whether they can be rewritten with ER
- IntOption erRewrite_lbd;	// LBD of clauses, so that it is tested whether they can be rewritten with ER
- 
- BoolOption opt_interleavedClauseStrengthening; // enable interleaved clause strengthening
- IntOption opt_ics_interval; // run ICS after another N conflicts
- IntOption opt_ics_processLast; // process this number of learned clauses (analyse, reject if quality too bad!)
- BoolOption opt_ics_keepLearnts; // keep the learned clauses that have been produced during the ICS
- BoolOption opt_ics_dynUpdate; // change activity of variables during ICS?
- BoolOption opt_ics_shrinkNew; // shrink the kept learned clauses in the very same run?! (makes only sense if the other clauses are kept!)
- DoubleOption opt_ics_LBDpercent;  // only look at a clause if its LBD is less than this percent of the average of the clauses that are looked at
- DoubleOption opt_ics_SIZEpercent; // only look at a clause if its size is less than this percent of the average size of the clauses that are looked at
-#if defined TOOLVERSION
- const bool opt_ics_debug;
-#else
- BoolOption opt_ics_debug; // enable interleaved clause strengthening debug output
-#endif
- 
 
 IntOption opt_uhdProbe;  // non, linear, or quadratic analysis
 BoolOption opt_uhdCleanRebuild; // rebuild BIG always before clause database is cleaned next
