@@ -1,0 +1,7 @@
+news for release 276 since competition version 271
+--------------------------------------------------
+added '-i' option to ignore additional clauses
+better logging and verbose messages
+first worker of Plingling = Lingeling
+externalized parameters: lhbr, redlmininc
+cleaned up unused code

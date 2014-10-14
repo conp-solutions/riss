@@ -1,0 +1,306 @@
+# Norbert Manthey, February 2014
+#
+# Parameter specification file for the SAT solver riss (version 4.00)
+#
+#
+#
+
+
+#
+#
+#    SSS  III M   M PPPP  L    III FFFF III  CCC  AA  TTTTTT III  OOO  N   N 
+#   S      I  MM MM P   P L     I  F     I  C    A  A   TT    I  O   O NN  N 
+#    SSS   I  M M M PPPP  L     I  FFF   I  C    AAAA   TT    I  O   O N N N 
+#       S  I  M   M P     L     I  F     I  C    A  A   TT    I  O   O N  NN 
+#   SSSS  III M   M P     LLLL III F    III  CCC A  A   TT   III  OOO  N   N 
+#
+#
+
+
+#
+#
+#   SSS  EEEE  AA  RRRR   CCC H  H 
+#  S     E    A  A R   R C    H  H 
+#   SSS  EEE  AAAA RRRR  C    HHHH 
+#      S E    A  A R R   C    H  H 
+#  SSSS  EEEE A  A R  RR  CCC H  H
+#
+#
+
+#
+#  CORE OPTIONS:
+#
+
+#rmf  {yes,no}[no]       # use fast remove
+#rnd-init  {yes,no}[no]       # Randomize the initial activity
+biAsserting  {yes,no}[no]       # Learn bi-asserting clauses, if possible (do not learn asserting clause!)
+biAsFreq  {0,2,8,16}[0]       # The min nr. of clauses between two learned bi-asserting clauses
+
+
+rinc  {1.5,2,3,4}[2]       # Restart interval increase factor
+rnd-freq  {0,0.005, 0.5}[0]       # The frequency with which the decision heuristic tries to choose a random variable   
+cla-decay  {0.999,0.995,0.5}[0.999]       # The clause activity decay factor
+var-decay-i  {0.001,0.01,0.99}[0.01]       # The variable activity decay factor increase   
+var-decay-e  {0.75,0.85,0.95,0.99}[0.95]       # The variable activity decay factor stop value  
+var-decay-b  {0.75,0.85,0.95,0.99}[0.95]       # The variable activity decay factor start value 
+var-decay-d  {5000,10000}[5000]                      # Nr. of conflicts for activity decay increase
+
+rfirst  {5,10,32,100,1000}[100]       # The base restart interval
+rtype  {0,1,2}[0]       # Choose type of restart (0=dynamic,1=luby,2=geometric)
+
+rlevel  {0,1,2}[0]       # Choose to which level to jump to: 0=0, 1=ReusedTrail, 2=recursive reused trail
+phase-saving  {0,2}[2]       # Controls the level of phase saving (0=none, 1=limited, 2=full)
+ccmin-mode  {2}[2]       # Controls conflict clause minimization (0=none, 1=basic, 2=deep)
+
+#
+#  CORE -- MINIMIZE OPTIONS:
+#
+#minLBDMinimizingClause  {3,6,9}[6]       # The min LBD required to minimize clause
+#minSizeMinimizingClause  {3,15,30,50}[30]       # The min size required to minimize clause
+#
+#  CORE -- REDUCE OPTIONS:
+#
+quickRed  {yes,no}[no]       # check only first two literals for being satisfied
+incLBD  {yes,no}[no]       # allow to increment lbd of clauses dynamically
+lbdIgnL0  {yes,no}[no]       # ignore top level literals for LBD calculation
+
+keepWorst  {0.0,0.001,0.01,0.05}[0.0]       # keep this (relative to all learned) number of worst learned clauses during removal   
+
+firstReduceDB  {2000,4000,8000}[4000]       # The number of conflicts before the first reduce DB
+incReduceDB   {300,450}[300]       # Increment for reduce DB
+specialIncReduceDB  {1000,1100}[1000]       # Special increment for reduce DB
+minLBDFrozenClause  {15,30}[30]       # Protect clauses if their LBD decrease and is lower than (for one turn)
+lbdupd  {0,1}[1]       # update LBD during (0=propagation,1=learning,2=never),
+#
+#  CORE -- RESTART OPTIONS:
+#
+R  {1.2,1.4,1.5}[1.4]       # The constant used to block restart  TODO!
+K  {0.7,0.8}[0.8]       # The constant used to force restart  TODO!
+
+szTrailQueue  {4000,5000}[5000]       # The size of moving average for trail (block restarts)
+szLBDQueue    {45,50,60}[50]       # The size of moving average for LBD (restarts)
+
+#
+#  EXTENDED RESOLUTION RER OPTIONS:
+#
+rer  {yes,no}[no]          # perform restricted extended resolution (along Audemard ea 2010)
+rer-l  {yes,no}[yes]       # store extensions as learned clauses
+rer-f  {yes,no}[yes]       # add full rer extension?
+
+rer-freq  {0.1,0.5,1.0}[1.0]       # how often rer compared to usual learning   
+
+rer-r  {0,1,2}[0]       # replace all disjunctions of the RER extension (only, if not added as learned, and if full - RER adds a conjunction, optionListPtr ), 0=no,1=formula,2=formula+learned
+rer-rn {no,yes}[no]			# rewrite new learned clauses
+rer-window  {2}[2]       # number of clauses to collect before fuse
+rer-maxLBD  {1,6,15,30,2147483647}[2147483647]       # maximum LBD to perform rer
+rer-minLBD  {1,6,15,30}[1]       # minimum LBD to perform rer
+rer-max-size  {2,15,30,2147483647}[2147483647]       # maximum size of learned clause to perform rer
+rer-min-size  {2,6,15,30}[2]       # minimum size of learned clause to perform rer
+rer-new-act  {0,1,2,3,4}[0]       # how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean
+
+er-size     {8,16,30,64}[30] # size of a clause so that it is checked for being rewritten
+er-lbd      {6,12,18}[6]		 # lbd  of a clause so that it is checked for being rewritten
+
+#
+#  INIT OPTIONS:
+#
+#polMode  {yes,no}[no]       # invert provided polarities
+#actDec  {1.052632,1.1,2}[1.052632]       # decrease per element (sub, or divide)  TODO!
+#actStart  {1024.0,2048.0}[1024.0]       # highest value for first variable  TODO!
+
+actIncMode  {0,1,2,3}[0]       # how to inc 0=lin, 1=geo,2=reverse-lin,3=reverse-geo
+init-act  {0,1,2,3,4,5,6}[0]       # initialize activities (0=none,1=inc-lin,2=inc-geo,3=dec-lin,4=dec-geo,5=rnd,6=abs(jw))
+init-pol  {0,1,2,3,4,5}[0]       # initialize polarity (0=none,1=JW-pol,2=JW-neg,3=MOMS,4=MOMS-neg,5=rnd)
+
+#
+#  INTERLEAVED CLAUSE STRENGTHENING OPTIONS (not all bugs seem to be removed from this technique yet)
+#
+ics  {no}[no]       # perform interleaved clause strengthening (along Wieringa ea 2013)
+ics_keepNew  {yes,no}[no]       # keep the learned clauses that have been produced during the ICS
+ics_dyn  {yes,no}[no]       # update variable/clause activities during ICS
+ics_shrinkNew  {yes,no}[no]       # shrink the kept learned clauses in the very same run?! (makes only sense if the other clauses are kept!)
+ics_relLBD  {0.01,0.5,1.0,1.2}[1.0]       # only look at a clause if its LBD is less than this percent of the average of the clauses that are looked at, 1=100%   
+ics_relSIZE  {0.01,0.5,1.0,1.2}[1.0]       # only look at a clause if its size is less than this percent of the average size of the clauses that are looked at, 1=100%   
+ics_processLast  {5050,10000,20000,50000}[5050]       # process this number of learned clauses (analyse, reject if quality too bad!)
+ics_window  {5050,10000,40000,80000,200000}[5050]       # run ICS after another N conflicts
+
+#
+#  MODS OPTIONS:
+#
+otfssL  {yes,no}[no]       # otfss for learnt clauses
+otfss  {yes,no}[no]       # perform otfss during conflict analysis
+
+laHack  {yes,no}[no]       # enable lookahead on level 0
+tabu  {yes}[yes]       # do not perform LA, if all considered LA variables are as before
+dyn  {yes,no}[no]       # dynamically set the frequency based on success
+laEEl  {yes,no}[no]       # add EE clauses as learnt clauses
+agil-r  {yes,no}[no]       # reject restarts based on agility
+lhbr-sub  {yes,no}[no]       # check whether new clause subsumes the old clause
+dontTrust  {yes,no}[no]       # change decision literal polarity once in a while
+
+agil-decay  {0.99,0.9999}[0.9999]       # search agility decay   
+agil-init  {0.01,0.11}[0.11]       # initial agility   
+agil-limit  {0.22,0.33,0.44}[0.22]       # agility above this limit rejects restarts   
+vsids-s  {1.0}[1.0]       # interpolate between VSIDS and VMTF,start value   
+vsids-e  {1.0}[1.0]       # interpolate between VSIDS and VMTF, end value   
+vsids-i  {1.0}[1.0]       # interpolate between VSIDS and VMTF, inc during update   
+vsids-d  {2147483647}[2147483647]       # interpolate between VSIDS and VMTF, numer of conflits until next update
+
+rMaxInc  {1.05,1.1,1.2}[1.1]       # increase of the max. restart interval per restart  TODO!
+
+sInterval  {0,1,2,3}[0]           # how often to perform simplifications on level 0
+otfssMLDB  {2,16,30,64}[30]       # max. LBD of learnt clauses that are candidates for otfss
+learnDecP  {-1,50,66,80,100}[-1]       # if LBD of is > percent of decisionlevel, learn decision Clause (Knuth)
+hlaLevel  {1,5}[5]       # level of look ahead
+hlaMax  {25,50,75,256,1000}[50]       # maximum bound for frequency
+laEEp  {0,50,66,100}[0]       # add EE clauses, if less than p percent tests failed
+rMax  {-1,5,32,128,1024}[-1]       # initial max. interval between two restarts (-1 = off)
+hlaevery  {0,1,8,32}[1]       # initial frequency of LA
+lhbr-max  {0,1024,4096,16000,2147483647}[2147483647]       # max nr of newly created lhbr clauses
+lhbr  {0,3,4}[0]       # use lhbr (0=no,1=str,2=trans,str,3=new,4=trans,new)
+clsActB  {0,1,2}[0]       # bump activity of a clause (0 as usual, 1 relativ to cls size, 2 relative to LBD)
+varActB  {0,1,2}[0]       # bump activity of a variable (0 as usual, 1 relativ to cls size, 2 relative to LBD)
+alluiphack  {0,2}[0]       # learn all unit UIPs at any level
+agil-add  {1,32,128,512}[128]       # number of conflicts until the next restart is allowed (for static schedules)
+hlabound  {-1,4096,16000}[4096]       # max. nr of LAs (-1 == inf)
+hlaTop  {-1,512}[-1]       # allow another LA after learning another nr of top level units (-1 = never)
+
+#
+#  REASON OPTIONS:
+#
+longConflict  {yes,no}[no]       # if a binary conflict is found, check for a longer one!
+hack-cost  {yes,no}[no]       # use size cost
+hack  {0,1}[0]       # use hack modifications
+
+#
+#  SEARCH UNHIDE PROBING OPTIONS:
+#
+sUhdPrRb  {yes,no}[yes]       # rebuild BIG before cleaning the formula
+sUhdProbe  {0,1,2,3}[0]       # perform probing based on learned clauses (off,linear,quadratic,larger)
+sUhdPrSh  {0,2,4,8}[0]        # travers the BIG again during every i-th restart 0=off
+sUHLEsize {0,8,30,64}[0]      # perform UHLE with the learnt clause, if a smaller or equal size is present
+sUHLElbd  {0,2,6,12}[0]       # perform UHLE with the learnt clause, if current LBD is less equal
+
+  
+#
+#   CCCCC   OOOOO  NN   NN DDDDD   IIIII TTTTTTT IIIII  OOOOO  NN   NN   AAA   LL       SSSSS  
+#  CC    C OO   OO NNN  NN DD  DD   III    TTT    III  OO   OO NNN  NN  AAAAA  LL      SS      
+#  CC      OO   OO NN N NN DD   DD  III    TTT    III  OO   OO NN N NN AA   AA LL       SSSSS  
+#  CC    C OO   OO NN  NNN DD   DD  III    TTT    III  OO   OO NN  NNN AAAAAAA LL           SS 
+#   CCCCC   OOOO0  NN   NN DDDDDD  IIIII   TTT   IIIII  OOOO0  NN   NN AA   AA LLLLLLL  SSSSS  
+#
+
+#
+#
+#   SSS  EEEE  AA  RRRR   CCC H  H 
+#  S     E    A  A R   R C    H  H 
+#   SSS  EEE  AAAA RRRR  C    HHHH 
+#      S E    A  A R R   C    H  H 
+#  SSSS  EEEE A  A R  RR  CCC H  H
+#
+#
+
+K            | rtype in   {0}                  # only if dynamic restarts are scheduled
+R            | rtype in   {0}                  # only if dynamic restarts are scheduled
+szLBDQueue   | rtype in   {0}                  # only if dynamic restarts are scheduled
+szTrailQueue | rtype in   {0}                  # only if dynamic restarts are scheduled
+
+rfirst    | rtype in   {1,2}                   # only if static restarts are scheduled
+rinc      | rtype in   {2}                     # only if static restarts are scheduled with the geometric series
+
+dyn       | laHack in   {yes}                  # only if LA is used
+hlaMax    | laHack in   {yes}                  # only if LA and DYN is used
+hlaLevel  | laHack in   {yes}                  # only if LA is used
+hlaevery  | laHack in   {yes}                  # only if LA is used
+hlabound  | laHack in   {yes}                  # only if LA is used
+hlaTop    | laHack in   {yes}                  # only if LA is used
+laEEp     | laHack in   {yes}                  # only if LA is used
+
+rMax      | rtype in   {0}                     # only if dynamic restarts are scheduled
+rMaxInc   | rMax in   {5,32,128,1024}       # only if dynamic restarts are altered
+
+otfssL    | otfss in   {yes}
+otfssMLDB | otfss in   {yes}
+
+lhbr-max | lhbr in   {3,4}
+lhbr-sub | lhbr in   {3,4}
+
+sUhdPrRb  | sUhdProbe in   {1,2,3}
+sUhdPrSh  | sUhdProbe in   {1,2,3}
+sUHLElbd  | sUHLEsize in   {8,30,64}
+
+biAsFreq  | biAsserting  in   {yes}
+
+agil-decay  | agil-r in   {yes}
+agil-init   | agil-r in   {yes}
+agil-limit  | agil-r in   {yes} 
+agil-add  	| agil-r in   {yes}
+
+#ics_keepNew       | ics in   {yes} 
+#ics_dyn           | ics in   {yes} 
+#ics_shrinkNew     | ics in   {yes} 
+#ics_relLBD        | ics in   {yes} 
+#ics_relSIZE       | ics in   {yes} 
+#ics_processLast   | ics in   {yes} 
+#ics_window        | ics in   {yes} 
+
+rer-l         | rer in   {yes}
+rer-f         | rer in   {yes}
+rer-freq      | rer in   {yes}
+rer-r         | rer in   {yes}
+rer-rn        | rer-l in {no}
+rer-rn        | rer-f in {yes}
+rer-rn        | rer-window in {2}
+rer-window    | rer in   {yes}
+rer-maxLBD    | rer in   {yes}
+rer-minLBD    | rer in   {yes}
+rer-max-size  | rer in   {yes}
+rer-min-size  | rer in   {yes}
+rer-new-act   | rer in   {yes}
+
+
+#
+#
+#    SSS  III M   M PPPP  L    III FFFF III  CCC  AA  TTTTTT III  OOO  N   N 
+#   S      I  MM MM P   P L     I  F     I  C    A  A   TT    I  O   O NN  N 
+#    SSS   I  M M M PPPP  L     I  FFF   I  C    AAAA   TT    I  O   O N N N 
+#       S  I  M   M P     L     I  F     I  C    A  A   TT    I  O   O N  NN 
+#   SSSS  III M   M P     LLLL III F    III  CCC A  A   TT   III  OOO  N   N 
+#
+#
+
+#
+#  FFFFFFF  OOOOO  RRRRRR  BBBBB   IIIII DDDDD   DDDDD   EEEEEEE NN   NN 
+#  FF      OO   OO RR   RR BB   B   III  DD  DD  DD  DD  EE      NNN  NN 
+#  FFFF    OO   OO RRRRRR  BBBBBB   III  DD   DD DD   DD EEEEE   NN N NN 
+#  FF      OO   OO RR  RR  BB   BB  III  DD   DD DD   DD EE      NN  NNN 
+#  FF       OOOO0  RR   RR BBBBBB  IIIII DDDDDD  DDDDDD  EEEEEEE NN   NN 
+#
+
+{var-decay-b=0.85 , var-decay-e=0.75     }          # start value should be less equal
+{var-decay-b=0.95     , var-decay-e=0.75 }          # start value should be less equal
+{var-decay-b=0.95     , var-decay-e=0.85 }          # start value should be less equal
+{var-decay-b=0.99 , var-decay-e=0.75 }          # start value should be less equal
+{var-decay-b=0.99 , var-decay-e=0.85 }          # start value should be less equal
+{var-decay-b=0.99 , var-decay-e=0.95 }          # start value should be less equal
+
+{var-decay-b=0.99 , var-decay-e=0.99, var-decay-i=0.001} # do not tune -i if the others are equal!
+{var-decay-b=0.95 , var-decay-e=0.95, var-decay-i=0.001}
+{var-decay-b=0.85 , var-decay-e=0.85, var-decay-i=0.001}
+{var-decay-b=0.75 , var-decay-e=0.75, var-decay-i=0.001}
+{var-decay-b=0.99 , var-decay-e=0.99, var-decay-i=0.99}
+{var-decay-b=0.95 , var-decay-e=0.95, var-decay-i=0.99}
+{var-decay-b=0.85 , var-decay-e=0.85, var-decay-i=0.99}
+{var-decay-b=0.75 , var-decay-e=0.75, var-decay-i=0.99}
+
+{var-decay-b=0.99 , var-decay-e=0.99, var-decay-d=10000} # do not tune -d if the others are equal!
+{var-decay-b=0.95 , var-decay-e=0.95, var-decay-d=10000}
+{var-decay-b=0.85 , var-decay-e=0.85, var-decay-d=10000}
+{var-decay-b=0.75 , var-decay-e=0.75, var-decay-d=10000}
+
+#
+# Execute to test:
+#
+#clear && clear && ./configurators/smac-v2.04.01-master-415/smac --numRun 0 --executionMode ROAR --wallClockLimit 100 --doValidation false --abortOnCrash true --scenarioFile ./scenarios/regressiontests-5s-1h.txt --algo "ruby ../scripts/generic_solver_wrapper.rb riss4" --paramfile solvers/riss4/riss4.pcs
+#
+#

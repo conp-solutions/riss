@@ -1,0 +1,15 @@
+Compile by running "make" (requires g++)
+
+Usage: 
+./certifiedSAT <instance> <solveroutput>
+
+Example of usage:
+Run your solver and redirect stdout of the solver to a file <solveroutput>. e.g.: 
+./solver test.cnf >solution.out
+
+verify the ouput with
+./certifiedSAT test.cnf solution.out
+
+
+
+

@@ -1,0 +1,54 @@
+run ./aigbmc with -bmc_m
+run ./aigbmc with -bmc_m
+run ./aigbmc with -bmc_m
+run ./aigbmc with -bmc_m
+run ./aigbmc with -bmc_m
+finish with state= 0
+finish with state= 0
+finish with state= 0
+finish with state= 124
+exit with 124
+finish with state= 0
+finish with state= 0
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124
+exit with 124

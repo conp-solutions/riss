@@ -1,0 +1,81 @@
+c blocked clause during BVE
+d 21 -22 0
+c perform BVE
+c perform BVE
+c blocked clause during BVE
+d 15 17 0
+c perform BVE
+c perform BVE
+12 -16 0
+d 12 19 0
+d -16 -19 0
+c perform BVE
+5 6 13 0
+d 5 6 11 0
+d -11 13 0
+c perform BVE
+14 16 0
+d 14 17 0
+d 16 -17 0
+c perform BVE
+-7 -18 0
+d 1 -7 0
+d -1 -18 0
+c perform BVE
+-2 -16 0
+d 12 -16 0
+d -2 -12 0
+c perform BVE
+16 -18 0
+d 14 16 0
+d -14 -18 0
+c perform BVE
+5 -10 13 0
+5 13 18 0
+d 5 6 13 0
+d -6 -10 0
+d -6 18 0
+c perform BVE
+3 -10 16 0
+-5 -10 16 0
+d 9 -10 16 0
+d 3 -9 0
+d -5 -9 0
+c perform BVE
+-5 10 0
+-5 -16 0
+d 8 10 0
+d 8 -16 0
+d -5 -8 0
+c perform BVE
+7 -16 0
+-3 7 0
+d 2 7 0
+d -2 -16 0
+d -2 -3 0
+c perform BVE
+7 -10 16 0
+7 10 0
+d 3 -10 16 0
+d 3 10 0
+d -3 7 0
+c BVA one side implication clauses
+-23 -5 0
+-23 7 0
+23 -16 0
+d -5 -16 0
+23 10 0
+d -5 10 0
+23 -10 16 0
+d -5 -10 16 0
+d 7 -16 0
+d 7 10 0
+d 7 -10 16 0
+c learnt clause
+23 0
+23 0
+-5 0
+7 0
+-13 0
+-18 0
+0

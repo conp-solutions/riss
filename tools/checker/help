@@ -1,0 +1,2302 @@
+
+USAGE: ./riss [options] <input-file> <result-output-file>
+
+  where input may be either in plain or gzipped DIMACS.
+
+CEGAR BVA OPTIONS:
+
+  -cbSteps      = <int32>  [   0 .. imax] (default: 2500000)
+
+        number of steps for subsitute disjunctions
+
+  -cbCalls      = <int32>  [   0 .. imax] (default: 0)
+
+        number of calls to cegar bva iterations
+
+
+CORE OPTIONS:
+
+  -useIP, -no-useIP                       (default: on)
+
+        use preprocessor for inprocessing
+
+  -usePP, -no-usePP                       (default: on)
+
+        use preprocessor for preprocessing
+
+  -rnd-init, -no-rnd-init                 (default: off)
+
+        Randomize the initial activity
+
+  -learn-debug, -no-learn-debug           (default: off)
+
+        print debug information during learning
+
+  -ppOnly, -no-ppOnly                     (default: off)
+
+        interrupts search after preprocessing
+
+  -rmf, -no-rmf                           (default: off)
+
+        use fast remove
+
+  -solve_stats, -no-solve_stats           (default: off)
+
+        print stats about solving process
+
+
+  -gc-frac      = <double> (   0 ..  inf) (default: 0.2)
+
+        The fraction of wasted memory allowed before a garbage collection is triggered
+
+  -rinc         = <double> (   1 ..  inf) (default: 2)
+
+        Restart interval increase factor
+
+  -rnd-seed     = <double> (   0 ..  inf) (default: 9.16483e+07)
+
+        Used by the random variable selection
+
+  -rnd-freq     = <double> [   0 ..    1] (default: 0)
+
+        The frequency with which the decision heuristic tries to choose a random variable
+
+  -cla-decay    = <double> (   0 ..    1) (default: 0.999)
+
+        The clause activity decay factor
+
+  -var-decay-i  = <double> (   0 ..    1) (default: 0.01)
+
+        The variable activity decay factor increase 
+
+  -var-decay-e  = <double> (   0 ..    1) (default: 0.95)
+
+        The variable activity decay factor stop value
+
+  -var-decay-b  = <double> (   0 ..    1) (default: 0.95)
+
+        The variable activity decay factor start value
+
+
+  -solververb   = <int32>  [   0 ..    2] (default: 0)
+
+        Verbosity level (0=silent, 1=some, 2=more).
+
+  -rfirst       = <int32>  [   1 .. imax] (default: 100)
+
+        The base restart interval
+
+  -rtype        = <int32>  [   0 ..    2] (default: 0)
+
+        Choose type of restart (0=dynamic,1=luby,2=geometric)
+
+  -rlevel       = <int32>  [   0 ..    2] (default: 0)
+
+        Choose to which level to jump to: 0=0, 1=ReusedTrail, 2=recursive reused trail
+
+  -phase-saving = <int32>  [   0 ..    2] (default: 2)
+
+        Controls the level of phase saving (0=none, 1=limited, 2=full)
+
+  -ccmin-mode   = <int32>  [   0 ..    2] (default: 2)
+
+        Controls conflict clause minimization (0=none, 1=basic, 2=deep)
+
+  -var-decay-d  = <int32>  [   1 .. imax] (default: 5000)
+
+        Nr. of conflicts for activity decay increase
+
+
+CORE -- MINIMIZE OPTIONS:
+
+  -biAsserting, -no-biAsserting           (default: off)
+
+        Learn bi-asserting clauses, if possible (do not learn asserting clause!)
+
+
+  -minLBDMinimizingClause = <int32>  [   3 .. imax] (default: 6)
+
+        The min LBD required to minimize clause
+
+  -minSizeMinimizingClause = <int32>  [   3 .. imax] (default: 30)
+
+        The min size required to minimize clause
+
+  -biAsFreq     = <int32>  [   0 .. imax] (default: 0)
+
+        The min nr. of clauses between two learned bi-asserting clauses
+
+
+CORE -- REDUCE OPTIONS:
+
+  -quickRed, -no-quickRed                 (default: off)
+
+        check only first two literals for being satisfied
+
+  -incLBD, -no-incLBD                     (default: off)
+
+        allow to increment lbd of clauses dynamically
+
+  -lbdIgnL0, -no-lbdIgnL0                 (default: off)
+
+        ignore top level literals for LBD calculation
+
+
+  -keepWorst    = <double> [   0 ..    1] (default: 0)
+
+        keep this (relative to all learned) number of worst learned clauses during removal
+
+
+  -lbdupd       = <int32>  [   0 ..    2] (default: 1)
+
+        update LBD during (0=propagation,1=learning,2=never),
+
+  -minLBDFrozenClause = <int32>  [   0 .. imax] (default: 30)
+
+        Protect clauses if their LBD decrease and is lower than (for one turn)
+
+  -specialIncReduceDB = <int32>  [   0 .. imax] (default: 1000)
+
+        Special increment for reduce DB
+
+  -incReduceDB  = <int32>  [   0 .. imax] (default: 300)
+
+        Increment for reduce DB
+
+  -firstReduceDB = <int32>  [   0 .. imax] (default: 4000)
+
+        The number of conflicts before the first reduce DB
+
+
+CORE -- RESTART OPTIONS:
+
+  -R            = <double> (   1 ..    5) (default: 1.4)
+
+        The constant used to block restart
+
+  -K            = <double> (   0 ..    1) (default: 0.8)
+
+        The constant used to force restart
+
+
+  -szTrailQueue = <int32>  [  10 .. imax] (default: 5000)
+
+        The size of moving average for trail (block restarts)
+
+  -szLBDQueue   = <int32>  [  10 .. imax] (default: 50)
+
+        The size of moving average for LBD (restarts)
+
+
+EXTENDED RESOLUTION OPTIONS:
+
+  -er-lbd       = <int32>  [   0 .. imax] (default: 6)
+
+        rewrite new learned clauses with ER, if lbd is small enough
+
+  -er-size      = <int32>  [   0 .. imax] (default: 30)
+
+        rewrite new learned clauses with ER, if size is small enough
+
+
+EXTENDED RESOLUTION ECL OPTIONS:
+
+  -ecl-d, -no-ecl-d                       (default: off)
+
+        debug output for ECL
+
+  -ecl-f, -no-ecl-f                       (default: on)
+
+        add full ecl extension?
+
+  -ecl-rn, -no-ecl-rn                     (default: off)
+
+        rewrite upcoming learned clauses as well (only, if not added as learned)
+
+  -ecl-l, -no-ecl-l                       (default: on)
+
+        add ecl clauses as learned clauses
+
+  -ecl, -no-ecl                           (default: off)
+
+        perform extended clause learning (along Huang 2010)
+
+
+  -ecl-freq     = <double> [   0 ..    1] (default: 1)
+
+        how often ecl compared to usual learning
+
+  -ecl-smL      = <double> [  -1 ..  inf] (default: -1)
+
+        ecl only, if smallest lit level is below the given (negative=neg.ratio from bj. level,positive=absolute)
+
+
+  -ecl-new-act  = <int32>  [   0 ..    4] (default: 0)
+
+        how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean
+
+  -ecl-maxLBD   = <int32>  [   2 .. imax] (default: 4)
+
+        maximum LBD to perform ecl
+
+  -ecl-min-size = <int32>  [   3 .. imax] (default: 3)
+
+        minimum size of learned clause to perform ecl
+
+  -ecl-r        = <int32>  [   0 ..    2] (default: 0)
+
+        run through formula and replace all disjunctions in the ECL (only if not added as learned) 0=no,1=formula,2=formula+learned
+
+
+EXTENDED RESOLUTION RER OPTIONS:
+
+  -rer-d, -no-rer-d                       (default: off)
+
+        debug output for RER
+
+  -rer-f, -no-rer-f                       (default: on)
+
+        add full rer extension?
+
+  -rer-rn, -no-rer-rn                     (default: off)
+
+        rewrite new learned clauses, only if full and not added as learned
+
+  -rer-l, -no-rer-l                       (default: on)
+
+        store extensions as learned clauses
+
+  -rer, -no-rer                           (default: off)
+
+        perform restricted extended resolution (along Audemard ea 2010)
+
+
+  -rer-freq     = <double> [   0 ..    1] (default: 1)
+
+        how often rer compared to usual learning
+
+
+  -rer-new-act  = <int32>  [   0 ..    4] (default: 0)
+
+        how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean
+
+  -rer-window   = <int32>  [   2 .. imax] (default: 2)
+
+        number of clauses to collect before fuse
+
+  -rer-maxLBD   = <int32>  [   1 .. imax] (default: 2147483647)
+
+        maximum LBD to perform rer
+
+  -rer-minLBD   = <int32>  [   1 .. imax] (default: 1)
+
+        minimum LBD to perform rer
+
+  -rer-max-size = <int32>  [   2 .. imax] (default: 2147483647)
+
+        maximum size of learned clause to perform rer
+
+  -rer-min-size = <int32>  [   2 .. imax] (default: 2)
+
+        minimum size of learned clause to perform rer
+
+  -rer-r        = <int32>  [   0 ..    2] (default: 0)
+
+        replace all disjunctions of the RER extension (only, if not added as learned, and if full - RER adds a conjunction, optionListPtr ), 0=no,1=formula,2=formula+learned
+
+
+INCREMENTAL OPTIONS:
+
+  -incResCnt    = <int32>  [   0 .. imax] (default: 100000)
+
+        reset solving counters every X start (0=off)
+
+  -incClLBD     = <int32>  [   1 .. imax] (default: 10)
+
+        keep lbd for extra cleaning (any higher is dropped)
+
+  -incClSize    = <int32>  [   1 .. imax] (default: 5)
+
+        keep size for extra cleaning (any higher is dropped)
+
+  -incClean     = <int32>  [   0 .. imax] (default: 0)
+
+        when incrementally called, extra clean learnt data base every X calls (0=off)
+
+  -incResPol    = <int32>  [   0 .. imax] (default: 0)
+
+        when incrementally called, reset polarities every X calls (0=off)
+
+  -incResAct    = <int32>  [   0 .. imax] (default: 0)
+
+        when incrementally called, reset activity every X calls (0=off)
+
+
+INIT OPTIONS:
+
+  -polMode, -no-polMode                   (default: off)
+
+        invert provided polarities
+
+
+  -actDec       = <double> (   0 ..  inf] (default: 1.05263)
+
+        decrease per element (sub, or divide)
+
+  -actStart     = <double> (   0 ..  inf) (default: 1024)
+
+        highest value for first variable
+
+
+  -printDec     = <int32>  [   0 ..    3] (default: 0)
+
+        1=print decisions, 2=print all enqueues, 3=show clauses
+
+  -actIncMode   = <int32>  [   0 ..    3] (default: 0)
+
+        how to inc 0=lin, 1=geo,2=reverse-lin,3=reverse-geo
+
+  -init-pol     = <int32>  [   0 ..    5] (default: 0)
+
+        initialize polarity (0=none,1=JW-pol,2=JW-neg,3=MOMS,4=MOMS-neg,5=rnd)
+
+  -init-act     = <int32>  [   0 ..    6] (default: 0)
+
+        initialize activities (0=none,1=inc-lin,2=inc-geo,3=dec-lin,4=dec-geo,5=rnd,6=abs(jw))
+
+
+  -polFile    = <string>
+
+        use these polarities
+
+  -actFile    = <string>
+
+        increase activities of those variables
+
+
+INTERLEAVED CLAUSE STRENGTHENING OPTIONS:
+
+  -ics-debug, -no-ics-debug               (default: off)
+
+        debug output for ICS
+
+  -ics_shrinkNew, -no-ics_shrinkNew       (default: off)
+
+        shrink the kept learned clauses in the very same run?! (makes only sense if the other clauses are kept!)
+
+  -ics_dyn, -no-ics_dyn                   (default: off)
+
+        update variable/clause activities during ICS
+
+  -ics_keepNew, -no-ics_keepNew           (default: off)
+
+        keep the learned clauses that have been produced during the ICS
+
+  -ics, -no-ics                           (default: off)
+
+        perform interleaved clause strengthening (along Wieringa ea 2013)
+
+
+  -ics_relSIZE  = <double> [   0 ..  inf] (default: 1)
+
+        only look at a clause if its size is less than this percent of the average size of the clauses that are looked at, 1=100%
+
+  -ics_relLBD   = <double> [   0 ..  inf] (default: 1)
+
+        only look at a clause if its LBD is less than this percent of the average of the clauses that are looked at, 1=100%
+
+
+  -ics_processLast = <int32>  [   0 .. imax] (default: 5050)
+
+        process this number of learned clauses (analyse, reject if quality too bad!)
+
+  -ics_window   = <int32>  [   0 .. imax] (default: 5000)
+
+        run ICS after another N conflicts
+
+
+MODS OPTIONS:
+
+  -delay-units, -no-delay-units           (default: off)
+
+        does not propagate unit clauses until solving is initialized
+
+  -updLearnAct, -no-updLearnAct           (default: on)
+
+        UPDATEVARACTIVITY trick (see glucose competition'09 companion paper)
+
+  -dontTrust, -no-dontTrust               (default: off)
+
+        change decision literal polarity once in a while
+
+  -agil-r, -no-agil-r                     (default: off)
+
+        reject restarts based on agility
+
+
+  -rMaxInc      = <double> [   1 ..  inf) (default: 1.1)
+
+        increase of the max. restart interval per restart
+
+  -vsids-i      = <double> [   0 ..    1] (default: 1)
+
+        interpolate between VSIDS and VMTF, inc during update
+
+  -vsids-e      = <double> [   0 ..    1] (default: 1)
+
+        interpolate between VSIDS and VMTF, end value
+
+  -vsids-s      = <double> [   0 ..    1] (default: 1)
+
+        interpolate between VSIDS and VMTF,start value
+
+  -agil-init    = <double> [   0 ..    1] (default: 0.11)
+
+        initial agility
+
+  -agil-decay   = <double> [   0 ..    1] (default: 0.9999)
+
+        search agility decay
+
+  -agil-limit   = <double> [   0 ..    1] (default: 0.22)
+
+        agility above this limit rejects restarts
+
+
+  -sInterval    = <int32>  [   0 .. imax] (default: 0)
+
+        how often to perform simplifications on level 0
+
+  -rMax         = <int32>  [  -1 .. imax] (default: -1)
+
+        initial max. interval between two restarts (-1 = off)
+
+  -clsActB      = <int32>  [   0 ..    2] (default: 0)
+
+        bump activity of a clause (0 as usual, 1 relativ to cls size, 2 relative to LBD)
+
+  -varActB      = <int32>  [   0 ..    2] (default: 0)
+
+        bump activity of a variable (0 as usual, 1 relativ to cls size, 2 relative to LBD)
+
+  -vsids-d      = <int32>  [   1 .. imax] (default: 2147483647)
+
+        interpolate between VSIDS and VMTF, numer of conflits until next update
+
+  -alluiphack   = <int32>  [   0 ..    2] (default: 0)
+
+        learn all unit UIPs at any level
+
+  -agil-add     = <int32>  [   1 .. imax] (default: 128)
+
+        number of conflicts until the next restart is allowed (for static schedules)
+
+
+PROOF OPTIONS:
+
+  -rup-only, -no-rup-only                 (default: off)
+
+        do not print delete lines into proof
+
+
+  -verb-proof   = <int32>  [   0 ..    2] (default: 1)
+
+        also print comments into the proof, 2=print proof also to stderr
+
+
+REASON OPTIONS:
+
+  -longConflict, -no-longConflict         (default: off)
+
+        if a binary conflict is found, check for a longer one!
+
+  -dbg, -no-dbg                           (default: off)
+
+        debug hack
+
+
+SEARCH - DECISION CLAUSES OPTIONS:
+
+  -learnDecRER, -no-learnDecRER           (default: off)
+
+        consider decision clauses for RER?
+
+
+  -learnDecMS   = <int32>  [   2 .. imax] (default: 2)
+
+        min size so that decision clauses are learned, -1 = off
+
+  -learnDecP    = <int32>  [  -1 ..  100] (default: -1)
+
+        if LBD of is > percent of decisionlevel, learn decision Clause (Knuth), -1 = off
+
+
+SEARCH - LHBR OPTIONS:
+
+  -lhbr-print, -no-lhbr-print             (default: off)
+
+        print info about lhbr
+
+  -lhbr-sub, -no-lhbr-sub                 (default: off)
+
+        check whether new clause subsumes the old clause
+
+
+  -lhbr-max     = <int32>  [   0 .. imax] (default: 2147483647)
+
+        max nr of newly created lhbr clauses
+
+  -lhbr         = <int32>  [   0 ..    4] (default: 0)
+
+        use lhbr (0=no,1=str,2=trans,str,3=new,4=trans,new)
+
+
+SEARCH - LOCAL LOOK AHEAD OPTIONS:
+
+  -laEEl, -no-laEEl                       (default: on)
+
+        add EE clauses as learnt clauses
+
+  -dyn, -no-dyn                           (default: off)
+
+        dynamically set the frequency based on success
+
+  -tabu, -no-tabu                         (default: on)
+
+        do not perform LA, if all considered LA variables are as before
+
+  -laHack, -no-laHack                     (default: off)
+
+        enable lookahead on level 0
+
+  -laHackOutput, -no-laHackOutput         (default: off)
+
+        output info about LA
+
+
+  -hlaTop       = <int32>  [  -1 .. imax] (default: -1)
+
+        allow another LA after learning another nr of top level units (-1 = never)
+
+  -hlabound     = <int32>  [  -1 .. imax] (default: 4096)
+
+        max. nr of LAs (-1 == inf)
+
+  -hlaevery     = <int32>  [   0 .. imax] (default: 1)
+
+        initial frequency of LA
+
+  -hlaLevel     = <int32>  [   1 ..    5] (default: 5)
+
+        level of look ahead
+
+  -hlaMax       = <int32>  [   0 .. imax] (default: 50)
+
+        maximum bound for frequency
+
+  -laEEp        = <int32>  [   0 ..  100] (default: 0)
+
+        add EE clauses, if less than p percent tests failed
+
+
+SEARCH - OTFSS OPTIONS:
+
+  -otfss-d, -no-otfss-d                   (default: off)
+
+        print debug output
+
+  -otfssL, -no-otfssL                     (default: off)
+
+        otfss for learnt clauses
+
+  -otfss, -no-otfss                       (default: off)
+
+        perform otfss during conflict analysis
+
+
+  -otfssMLDB    = <int32>  [   2 .. imax] (default: 30)
+
+        max. LBD of learnt clauses that are candidates for otfss
+
+
+SEARCH - REASON OPTIONS:
+
+  -hack-cost, -no-hack-cost               (default: on)
+
+        use size cost
+
+
+  -hack         = <int32>  [   0 ..    3] (default: 0)
+
+        use hack modifications
+
+
+SEARCH UNHIDE PROBING OPTIONS:
+
+  -sUhdPrRb, -no-sUhdPrRb                 (default: on)
+
+        rebuild BIG before cleaning the formula
+
+
+  -sUHLElbd     = <int32>  [   0 .. imax] (default: 6)
+
+        maximal LBD for UHLE for learnt clauses (0=off)
+
+  -sUHLEsize    = <int32>  [   0 .. imax] (default: 0)
+
+        maximal clause size for UHLE for learnt clauses (0=off)
+
+  -sUhdPrSh     = <int32>  [   0 .. imax] (default: 0)
+
+        travers the BIG again during every i-th restart 0=off
+
+  -sUhdProbe    = <int32>  [   0 ..    3] (default: 0)
+
+        perform probing based on learned clauses (off,linear,quadratic,larger)
+
+
+SUBSTITUTE DISJUNCTIONS OPTIONS:
+
+  -sdSteps      = <int32>  [   0 .. imax] (default: 250000)
+
+        number of steps for subsitute disjunctions
+
+  -sdCalls      = <int32>  [   0 .. imax] (default: 0)
+
+        number of calls of assumptions, before solving original formula
+
+
+USAGE: ./riss [options] <input-file> <result-output-file>
+
+  where input may be either in plain or gzipped DIMACS.
+
+COPROCESSOR  TECHNIQUES OPTIONS:
+
+  -2sat-phase, -no-2sat-phase             (default: off)
+
+        use 2SAT model as initial phase for SAT solver
+
+  -2sat1, -no-2sat1                       (default: off)
+
+        2SAT before all other algorithms to find units
+
+  -2sat, -no-2sat                         (default: off)
+
+        2SAT algorithm to check satisfiability of binary clauses
+
+  -rew, -no-rew                           (default: off)
+
+        Rewrite AMO constraints
+
+  -xor, -no-xor                           (default: off)
+
+        Reason with XOR constraints
+
+  -sls-phase, -no-sls-phase               (default: off)
+
+        Use current interpretation of SLS as phase
+
+  -sls, -no-sls                           (default: off)
+
+        Use Simple Walksat algorithm to test whether formula is satisfiable quickly
+
+  -fm, -no-fm                             (default: off)
+
+        Use the Fourier Motzkin transformation
+
+  -symm, -no-symm                         (default: off)
+
+        Do local symmetry breaking
+
+  -simplify, -no-simplify                 (default: on)
+
+        Apply easy simplifications to the formula
+
+  -shuffle, -no-shuffle                   (default: off)
+
+        Shuffle the formula, before the preprocessor is initialized
+
+  -dense, -no-dense                       (default: off)
+
+        Remove gaps in variables of the formula
+
+  -addRed2, -no-addRed2                   (default: off)
+
+        Use Adding Redundant Binary Clauses
+
+  -3resolve, -no-3resolve                 (default: off)
+
+        Use Ternary Clause Resolution
+
+  -probe, -no-probe                       (default: off)
+
+        Use Probing/Clause Vivification
+
+  -unhide, -no-unhide                     (default: off)
+
+        Use Unhiding (UHTE, UHLE based on BIG sampling)
+
+  -bva, -no-bva                           (default: off)
+
+        Use Bounded Variable Addition during preprocessing
+
+  -bve, -no-bve                           (default: off)
+
+        Use Bounded Variable Elimination during preprocessing
+
+  -ee, -no-ee                             (default: off)
+
+        Use Equivalence Elimination during preprocessing
+
+  -rate, -no-rate                         (default: off)
+
+        Use resolution asymmetric tautologye limination during preprocessing
+
+  -cce, -no-cce                           (default: off)
+
+        Use (covered) Clause Elimination during preprocessing
+
+  -la, -no-la                             (default: off)
+
+        Use (covered/asymmetric) Literal Addition during preprocessing
+
+  -ent, -no-ent                           (default: off)
+
+        Use checking for entailed redundancy during preprocessing
+
+  -bce, -no-bce                           (default: off)
+
+        Use Blocked Clause Elimination during preprocessing
+
+  -hte, -no-hte                           (default: off)
+
+        Use Hidden Tautology Elimination during preprocessing
+
+  -subsimp, -no-subsimp                   (default: off)
+
+        Use Subsumption during preprocessing
+
+  -up, -no-up                             (default: off)
+
+        Use Unit Propagation during preprocessing
+
+
+  -sls-flips    = <int32>  [  -1 .. imax] (default: 8000000)
+
+        Perform given number of SLS flips
+
+
+  -cp3_itechs = <string>
+
+        techniques for inprocessing
+
+  -cp3_ptechs = <string>
+
+        techniques for preprocessing
+
+
+COPROCESSOR 3 OPTIONS:
+
+  -cp3-debug, -no-cp3-debug               (default: off)
+
+        do more debugging
+
+  -cp3_stats, -no-cp3_stats               (default: off)
+
+        Print Technique Statistics
+
+  -inc-inp, -no-inc-inp                   (default: off)
+
+        increase technique limits per inprocess step
+
+  -randInp, -no-randInp                   (default: on)
+
+        Randomize Inprocessing
+
+  -inprocess, -no-inprocess               (default: off)
+
+        Use CP3 for inprocessing
+
+  -enabled_cp3, -no-enabled_cp3           (default: off)
+
+        Use CP3
+
+  -cp3_randomized, -no-cp3_randomized     (default: off)
+
+        Steps withing preprocessing techniques are executed in random order
+
+  -cp3_limited, -no-cp3_limited           (default: on)
+
+        Limits for preprocessing techniques
+
+
+  -cp3-log      = <int32>  [   0 ..    3] (default: 0)
+
+        Output log messages until given level
+
+  -cp3-check    = <int32>  [   0 ..    3] (default: 0)
+
+        check solver state during simplification and before returning control to solver
+
+  -cp3_rew_lits = <int32>  [   0 .. imax] (default: 2147483647)
+
+        total literal limit to enable REW
+
+  -cp3_rew_cls  = <int32>  [   0 .. imax] (default: 2147483647)
+
+        clause limit to enable REW
+
+  -cp3_rew_vars = <int32>  [   0 .. imax] (default: 2147483647)
+
+        variable limit to enable REW
+
+  -cp3_sls_lits = <int32>  [   0 .. imax] (default: 4000000)
+
+        total literal limit to enable SLS
+
+  -cp3_sls_cls  = <int32>  [   0 .. imax] (default: 500000)
+
+        clause limit to enable SLS
+
+  -cp3_sls_vars = <int32>  [   0 .. imax] (default: 500000)
+
+        variable limit to enable SLS
+
+  -cp3_xor_lits = <int32>  [   0 .. imax] (default: 5000000)
+
+        total literal limit to enable XOR
+
+  -cp3_xor_cls  = <int32>  [   0 .. imax] (default: 3000000)
+
+        clause limit to enable XOR
+
+  -cp3_xor_vars = <int32>  [   0 .. imax] (default: 700000)
+
+        variable limit to enable XOR
+
+  -cp3_fm_lits  = <int32>  [   0 .. imax] (default: 20000000)
+
+        total literal limit to enable FM
+
+  -cp3_fm_cls   = <int32>  [   0 .. imax] (default: 10000000)
+
+        clause limit to enable FM
+
+  -cp3_fm_vars  = <int32>  [   0 .. imax] (default: 2000000)
+
+        variable limit to enable FM
+
+  -cp3_symm_lits = <int32>  [   0 .. imax] (default: 15000000)
+
+        total literal limit to enable SYMM
+
+  -cp3_symm_cls = <int32>  [   0 .. imax] (default: 20000000)
+
+        clause limit to enable SYMM
+
+  -cp3_symm_vars = <int32>  [   0 .. imax] (default: 3000000)
+
+        variable limit to enable SYMM
+
+  -cp3_aBin_lits = <int32>  [   0 .. imax] (default: 2147483647)
+
+        total literal limit to enable ADD2
+
+  -cp3_aBin_cls = <int32>  [   0 .. imax] (default: 2147483647)
+
+        clause limit to enable ADD2
+
+  -cp3_aBin_vars = <int32>  [   0 .. imax] (default: 2147483647)
+
+        variable limit to enable ADD2
+
+  -cp3_tRes_lits = <int32>  [   0 .. imax] (default: 50000000)
+
+        total literal limit to enable 3RES
+
+  -cp3_tRes_cls = <int32>  [   0 .. imax] (default: 20000000)
+
+        clause limit to enable 3RES
+
+  -cp3_tRes_vars = <int32>  [   0 .. imax] (default: 1000000)
+
+        variable limit to enable 3RES
+
+  -cp3_viv_lits = <int32>  [   0 .. imax] (default: 15000000)
+
+        total literal limit to enable VIVIFICATION
+
+  -cp3_viv_cls  = <int32>  [   0 .. imax] (default: 10000000)
+
+        clause limit to enable VIVIFICATION
+
+  -cp3_viv_vars = <int32>  [   0 .. imax] (default: 5000000)
+
+        variable limit to enable VIVIFICATION
+
+  -cp3_probe_lits = <int32>  [   0 .. imax] (default: 30000000)
+
+        total literal limit to enable PROBING
+
+  -cp3_probe_cls = <int32>  [   0 .. imax] (default: 3000000)
+
+        clause limit to enable PROBING
+
+  -cp3_probe_vars = <int32>  [   0 .. imax] (default: 3000000)
+
+        variable limit to enable PROBING
+
+  -cp3_unhide_lits = <int32>  [   0 .. imax] (default: 7000000)
+
+        total literal limit to enable UNHIDE
+
+  -cp3_unhide_cls = <int32>  [   0 .. imax] (default: 10000000)
+
+        clause limit to enable UNHIDE
+
+  -cp3_unhide_vars = <int32>  [   0 .. imax] (default: 3000000)
+
+        variable limit to enable UNHIDE
+
+  -cp3_Xbva_lits = <int32>  [   0 .. imax] (default: 10000000)
+
+        total literal limit to enable XBVA
+
+  -cp3_Xbva_cls = <int32>  [   0 .. imax] (default: 5000000)
+
+        clause limit to enable XBVA
+
+  -cp3_Xbva_vars = <int32>  [   0 .. imax] (default: 1000000)
+
+        variable limit to enable XBVA
+
+  -cp3_Ibva_lits = <int32>  [   0 .. imax] (default: 40000000)
+
+        total literal limit to enable IBVA
+
+  -cp3_Ibva_cls = <int32>  [   0 .. imax] (default: 10000000)
+
+        clause limit to enable IBVA
+
+  -cp3_Ibva_vars = <int32>  [   0 .. imax] (default: 1000000)
+
+        variable limit to enable IBVA
+
+  -cp3_bva_lits = <int32>  [   0 .. imax] (default: 40000000)
+
+        total literal limit to enable BVA
+
+  -cp3_bva_cls  = <int32>  [   0 .. imax] (default: 20000000)
+
+        clause limit to enable BVA
+
+  -cp3_bva_vars = <int32>  [   0 .. imax] (default: 3000000)
+
+        variable limit to enable BVA
+
+  -cp3_bve_lits = <int32>  [   0 .. imax] (default: 50000000)
+
+        total literal limit to enable BVE
+
+  -cp3_bve_cls  = <int32>  [   0 .. imax] (default: 20000000)
+
+        clause limit to enable BVE
+
+  -cp3_bve_vars = <int32>  [   0 .. imax] (default: 5000000)
+
+        variable limit to enable BVE
+
+  -cp3_ee_lits  = <int32>  [   0 .. imax] (default: 40000000)
+
+        total literal limit to enable EE
+
+  -cp3_ee_cls   = <int32>  [   0 .. imax] (default: 20000000)
+
+        clause limit to enable EE
+
+  -cp3_ee_vars  = <int32>  [   0 .. imax] (default: 5000000)
+
+        variable limit to enable EE
+
+  -cp3_rate_lits = <int32>  [   0 .. imax] (default: 10000000)
+
+        total literal limit to enable RATE
+
+  -cp3_rate_cls = <int32>  [   0 .. imax] (default: 2000000)
+
+        clause limit to enable RATE
+
+  -cp3_rate_vars = <int32>  [   0 .. imax] (default: 1000000)
+
+        variable limit to enable RATE
+
+  -cp3_cce_lits = <int32>  [   0 .. imax] (default: 50000000)
+
+        total literal limit to enable CCE
+
+  -cp3_cce_cls  = <int32>  [   0 .. imax] (default: 30000000)
+
+        clause limit to enable CCE
+
+  -cp3_cce_vars = <int32>  [   0 .. imax] (default: 5000000)
+
+        variable limit to enable CCE
+
+  -cp3_la_lits  = <int32>  [   0 .. imax] (default: 2147483647)
+
+        total literal limit to enable CLA
+
+  -cp3_la_cls   = <int32>  [   0 .. imax] (default: 2147483647)
+
+        clause limit to enable CLA
+
+  -cp3_la_vars  = <int32>  [   0 .. imax] (default: 2147483647)
+
+        clause limit to enable CLA
+
+  -cp3_ent_lits = <int32>  [   0 .. imax] (default: 2147483647)
+
+        total literal limit to enable ENT
+
+  -cp3_ent_cls  = <int32>  [   0 .. imax] (default: 2147483647)
+
+        clause limit to enable ENT
+
+  -cp3_ent_vars = <int32>  [   0 .. imax] (default: 2147483647)
+
+        variable limit to enable ENT
+
+  -cp3_bce_lits = <int32>  [   0 .. imax] (default: 30000000)
+
+        total literal limit to enable BCE,CLE,CLA
+
+  -cp3_bce_cls  = <int32>  [   0 .. imax] (default: 10000000)
+
+        clause limit to enable BCE,CLE,CLA
+
+  -cp3_bce_vars = <int32>  [   0 .. imax] (default: 3000000)
+
+        variable limit to enable BCE,CLE,CLA
+
+  -cp3_hte_lits = <int32>  [   0 .. imax] (default: 20000000)
+
+        total literal limit to enable HTE
+
+  -cp3_hte_cls  = <int32>  [   0 .. imax] (default: 2147483647)
+
+        clause limit to enable HTE
+
+  -cp3_hte_vars = <int32>  [   0 .. imax] (default: 1000000)
+
+        variable limit to enable HTE
+
+  -cp3_susi_lits = <int32>  [   0 .. imax] (default: 10000000)
+
+        total literal limit to enable subsimp
+
+  -cp3_susi_cls = <int32>  [   0 .. imax] (default: 5000000)
+
+        clause limit to enable subsimp
+
+  -cp3_susi_vars = <int32>  [   0 .. imax] (default: 5000000)
+
+        variable limit to enable subsimp
+
+  -cp3_threads  = <int32>  [   0 .. imax] (default: 0)
+
+        Number of extra threads that should be used for preprocessing
+
+  -cp3_verbose  = <int32>  [   0 ..    5] (default: 0)
+
+        Verbosity of preprocessor
+
+  -cp3-exit-pp  = <int32>  [   0 ..    3] (default: 0)
+
+        terminate after preprocessing (1=exit,2=print formula cerr+exit 3=cout+exit)
+
+  -cp3_iters    = <int32>  [   0 .. imax] (default: 1)
+
+        simplification rounds in preprocessing
+
+  -cp3_inp_cons = <int32>  [   0 .. imax] (default: 20000)
+
+        Perform Inprocessing after at least X conflicts
+
+  -cp3_iplits   = <int32>  [   0 .. imax] (default: 50000000)
+
+        total literal limit to enable CP3 inprocessing
+
+  -cp3_ipcls    = <int32>  [   0 .. imax] (default: 30000000)
+
+        clause limit to enable CP3 inprocessing
+
+  -cp3_ipvars   = <int32>  [   0 .. imax] (default: 5000000)
+
+        variable limit to enable CP3 inprocessing
+
+  -cp3_lits     = <int32>  [   0 .. imax] (default: 50000000)
+
+        total literal limit to enable CP3
+
+  -cp3_cls      = <int32>  [   0 .. imax] (default: 30000000)
+
+        clause limit to enable CP3
+
+  -cp3_vars     = <int32>  [   0 .. imax] (default: 5000000)
+
+        variable limit to enable CP3
+
+
+  -cp3-print  = <string>
+
+        print intermediate formula after given technique
+
+
+COPROCESSOR 3 - BCE OPTIONS:
+
+  -bce-debug, -no-bce-debug               (default: off)
+
+        output debug info during BCE
+
+  -bce-cle-cons, -no-bce-cle-cons         (default: off)
+
+        conservative cle if taut. resolvents are present
+
+  -bce-cla, -no-bce-cla                   (default: off)
+
+        perform covered literal elimination (CLA)
+
+  -bce-cle, -no-bce-cle                   (default: off)
+
+        perform covered literal elimination (CLE)
+
+  -bce-bce, -no-bce-bce                   (default: on)
+
+        actually perform BCE
+
+  -bce-bin, -no-bce-bin                   (default: off)
+
+        allow to remove binary clauses during BCE
+
+  -bce-compl, -no-bce-compl               (default: on)
+
+        test literals for BCE based on the number of occurrences of the complementary literal
+
+
+  -bce-verbose  = <int32>  [   0 ..    3] (default: 0)
+
+        be verbose during BCE
+
+  -bce-incInp   = <int32>  [   0 .. imax] (default: 10000)
+
+        number of steps given to BCE for another inprocessign round
+
+  -bce-limit    = <int32>  [   0 .. imax] (default: 100000000)
+
+        number of pairwise clause comparisons before interrupting BCE
+
+
+COPROCESSOR 3 - BVA OPTIONS:
+
+  -cp3_bva_subOr, -no-cp3_bva_subOr       (default: off)
+
+        try to also substitus disjunctions
+
+  -cp3_bva_dupli, -no-cp3_bva_dupli       (default: on)
+
+        remove duplicate clauses
+
+  -cp3_bva_compl, -no-cp3_bva_compl       (default: on)
+
+        treat complementary literals special
+
+  -cp3_Abva, -no-cp3_Abva                 (default: on)
+
+        perform AND-bva
+
+
+  -cp3_Ibva     = <int32>  [   0 ..    2] (default: 0)
+
+        perform ITE-bva (1=half gates,2=full gates)
+
+  -cp3_Xbva     = <int32>  [   0 ..    2] (default: 0)
+
+        perform XOR-bva (1=half gates,2=full gates)
+
+  -cp3_Ibva_heap = <int32>  [   0 ..   10] (default: 1)
+
+        0: minimum heap, 1: maximum heap, 2: random, 3: ratio pos/neg smaller+less, 4: ratio pos/neg smaller+greater, 5: ratio pos/neg greater+less, 6: ratio pos/neg greater + greater, 7-10: same as 3-6, but inverse measure order
+
+  -cp3_Xbva_heap = <int32>  [   0 ..   10] (default: 1)
+
+        0: minimum heap, 1: maximum heap, 2: random, 3: ratio pos/neg smaller+less, 4: ratio pos/neg smaller+greater, 5: ratio pos/neg greater+less, 6: ratio pos/neg greater + greater, 7-10: same as 3-6, but inverse measure order
+
+  -cp3_bva_Ilimit = <int32>  [   0 .. imax] (default: 100000000)
+
+        number of steps allowed for ITE-BVA
+
+  -cp3_bva_Xlimit = <int32>  [   0 .. imax] (default: 100000000)
+
+        number of steps allowed for XOR-BVA
+
+  -cp3_bva_ad   = <int32>  [   0 ..    4] (default: 0)
+
+        experimental analysis
+
+  -bva-debug    = <int32>  [   0 ..    4] (default: 0)
+
+        Debug Output of BVA
+
+  -cp3_Abva_heap = <int32>  [   0 ..   10] (default: 1)
+
+        0: minimum heap, 1: maximum heap, 2: random, 3: ratio pos/neg smaller+less, 4: ratio pos/neg smaller+greater, 5: ratio pos/neg greater+less, 6: ratio pos/neg greater + greater, 7-10: same as 3-6, but inverse measure order
+
+  -cp3_bva_incInp = <int32>  [   0 .. imax] (default: 80000)
+
+        increases of number of steps per inprocessing
+
+  -cp3_bva_limit = <int32>  [   0 .. imax] (default: 1200000)
+
+        number of steps allowed for AND-BVA
+
+  -cp3_bva_Vlimit = <int32>  [  -1 .. imax] (default: 3000000)
+
+        use BVA only, if number of variables is below threshold
+
+  -cp3_bva_push = <int32>  [   0 ..    2] (default: 2)
+
+        push variables back to queue (0=none,1=original,2=all)
+
+
+COPROCESSOR 3 - BVE OPTIONS:
+
+  -par_bve_min_upd, -no-par_bve_min_upd   (default: off)
+
+        Omit LitOcc and Heap updates to reduce locking
+
+  -bve_progress, -no-bve_progress         (default: off)
+
+        Print bve progress stats.
+
+  -bce_only, -no-bce_only                 (default: off)
+
+        Only remove blocked clauses but do not resolve variables.
+
+  -bve_BCElim, -no-bve_BCElim             (default: on)
+
+        Eliminate Blocked Clauses
+
+  -bve_totalG, -no-bve_totalG             (default: off)
+
+        Keep track of total size of formula when allowing increasing eliminations
+
+  -bve_force_gates, -no-bve_force_gates   (default: off)
+
+        Force gate search (slower, but probably more eliminations and blockeds are found)
+
+  -bve_gates, -no-bve_gates               (default: on)
+
+        try to find variable AND gate definition before elimination
+
+  -bve_strength, -no-bve_strength         (default: on)
+
+        do strengthening during bve
+
+  -bve_unlimited, -no-bve_unlimited       (default: off)
+
+        perform bve test for Var v, if there are more than 10 + 10 or 15 + 5 Clauses containing v
+
+
+  -postp_lockd_neighb = <int32>  [   0 .. imax] (default: 3)
+
+        Postpone Elimination-Check if more neighbors are locked
+
+  -par_bve_th   = <int32>  [   0 .. imax] (default: 10000)
+
+        Threshold for use of BVE-Worker
+
+  -cp3_bve_inpInc = <int32>  [   0 .. imax] (default: 5000000)
+
+        increase for steps per inprocess call
+
+  -bve_heap_updates = <int32>  [   0 ..    2] (default: 1)
+
+        Always update variable heap if clauses / literals are added or removed, 2 add variables, if not in heap
+
+  -bve_cgrow_t  = <int32>  [   0 .. imax] (default: 2147483647)
+
+        total number of additional clauses
+
+  -bve_cgrow    = <int32>  [-2147483647 .. imax] (default: 0)
+
+        number of additional clauses per elimination
+
+  -cp3_bve_heap = <int32>  [   0 ..   10] (default: 0)
+
+        0: minimum heap, 1: maximum heap, 2: random, 3: ratio pos/neg smaller+less, 4: ratio pos/neg smaller+greater, 5: ratio pos/neg greater+less, 6: ratio pos/neg greater + greater, 7-10: same as 3-6, but inverse measure order
+
+  -bve_red_lits = <int32>  [   0 ..    3] (default: 0)
+
+        0=reduce number of literals, 1=reduce number of clauses,2=reduce any of the two,3 reduce both
+
+  -cp3_bve_resolve_learnts = <int32>  [   0 ..    2] (default: 0)
+
+        Resolve learnt clauses: 0: off, 1: original with learnts, 2: 1 and learnts with learnts
+
+  -cp3_bve_learnt_growth = <int32>  [  -1 .. imax] (default: 0)
+
+        Keep C (x) D, where C or D is learnt, if |C (x) D| <= max(|C|,|D|) + N
+
+  -cp3_bve_limit = <int32>  [  -1 .. imax] (default: 25000000)
+
+        perform at most this many clause derefferences
+
+  -cp3_bve_verbose = <int32>  [   0 ..    3] (default: 0)
+
+        Verbosity of preprocessor
+
+  -cp3_par_bve  = <int32>  [   0 ..    2] (default: 1)
+
+        Parallel BVE: 0 never, 1 heur., 2 always
+
+
+COPROCESSOR 3 - CCE OPTIONS:
+
+  -cp3_cce_inpInc = <int32>  [   0 .. imax] (default: 60000)
+
+        increase for steps per inprocess call
+
+  -cce-debug    = <int32>  [   0 ..    4] (default: 0)
+
+        debug output for clause elimination
+
+  -cp3_cce_sizeP = <int32>  [   0 ..  100] (default: 40)
+
+        percent of max. clause size for clause elimination (excluding)
+
+  -cp3_cce_level = <int32>  [   0 ..    3] (default: 3)
+
+        none, ALA+ATE, CLA+ATE, ALA+CLA+BCE
+
+  -cp3_cce_steps = <int32>  [  -1 .. imax] (default: 2000000)
+
+        Number of steps that are allowed per iteration
+
+
+COPROCESSOR 3 - DENSE OPTIONS:
+
+  -cp3_keep_set, -no-cp3_keep_set         (default: off)
+
+        keep already assigned literals
+
+  -cp3_dense_forw, -no-cp3_dense_forw     (default: off)
+
+        store forward mapping
+
+
+  -cp3_dense_frag = <int32>  [   0 ..  100] (default: 0)
+
+        Perform densing, if fragmentation is higher than (percent)
+
+  -cp3_dense_debug = <int32>  [   0 ..    2] (default: 0)
+
+        print debug output to screen
+
+
+COPROCESSOR 3 - ENTAILED OPTIONS:
+
+  -ent-debug    = <int32>  [   0 ..    5] (default: 0)
+
+        Debug Output for ENT reasoning
+
+  -ent-min      = <int32>  [   2 .. imax] (default: 2)
+
+        minimum clause size that is tested
+
+
+COPROCESSOR 3 - EQUIVALENCE ELIMINATION OPTIONS:
+
+  -ee_freeze_eager, -no-ee_freeze_eager   (default: off)
+
+        exclude frozen variables eagerly from found equivalences
+
+  -cp3_ee_subNew, -no-cp3_ee_subNew       (default: off)
+
+        check for new subsumptions immediately when adding new clauses
+
+  -cp3_ee_it, -no-cp3_ee_it               (default: off)
+
+        use the iterative BIG-EE algorithm
+
+  -ee_reset, -no-ee_reset                 (default: off)
+
+        after Subs or Up, do full reset?
+
+  -ee_sub, -no-ee_sub                     (default: off)
+
+        do subsumption/strengthening during applying equivalent literals?
+
+  -cp3_BigThenGate, -no-cp3_BigThenGate   (default: on)
+
+        detect binary equivalences before going for gates [should not be disabled!]
+
+  -cp3_eagerGates, -no-cp3_eagerGates     (default: on)
+
+        do handle gates eagerly
+
+
+  -cp3_ee_bIter = <int32>  [   0 .. imax] (default: 3)
+
+        max. iteration to perform EE search on BIG
+
+  -cp3_ee_inpInc = <int32>  [   0 .. imax] (default: 200000)
+
+        increase for steps per inprocess call
+
+  -cp3_ee_limit = <int32>  [   0 .. imax] (default: 1000000)
+
+        step limit for detecting equivalent literals
+
+  -ee_debug     = <int32>  [   0 ..    3] (default: 0)
+
+        print debug output to screen
+
+  -cp3_ee_cIter = <int32>  [  -1 .. imax] (default: 2)
+
+        max. EE iterations for circuit (-1 == inf)
+
+  -cp3_ee_glimit = <int32>  [   0 .. imax] (default: 2147483647)
+
+        step limit for structural hashing
+
+  -cp3_ee_level = <int32>  [   0 ..    3] (default: 0)
+
+        EE on BIG, gate probing, structural hashing
+
+
+  -ee_aag     = <string>
+
+        write final circuit to this file
+
+
+COPROCESSOR 3 - EQUIVALENCE ELIMINATION - HASHING OPTIONS:
+
+  -cp3_circ_debug, -no-cp3_circ_debug     (default: off)
+
+        print debug output for circuitextraction
+
+  -cp3_extImplied, -no-cp3_extImplied     (default: on)
+
+        do search binary clause also in BIG with dfs
+
+  -cp3_extNgtInput, -no-cp3_extNgtInput   (default: on)
+
+        extract gates, where inputs come from the same variable
+
+  -cp3_addBlocked, -no-cp3_addBlocked     (default: off)
+
+        clauses that are used to extract blocked gates will be added eagerly (soundness)
+
+  -cp3_extBlocked, -no-cp3_extBlocked     (default: off)
+
+        extract gates, that can be found by blocked clause addition
+
+  -cp3_extHASUM, -no-cp3_extHASUM         (default: off)
+
+        extract full adder sum bit gates
+
+  -cp3_genAND, -no-cp3_genAND             (default: off)
+
+        extract generic AND gates
+
+  -cp3_extExO, -no-cp3_extExO             (default: off)
+
+        extract ExO gates
+
+  -cp3_extXOR, -no-cp3_extXOR             (default: off)
+
+        extract XOR gates
+
+  -cp3_extITE, -no-cp3_extITE             (default: off)
+
+        extract ITE gates
+
+  -cp3_extAND, -no-cp3_extAND             (default: on)
+
+        extract AND gates
+
+
+COPROCESSOR 3 - FOURIERMOTZKIN OPTIONS:
+
+  -card_noUnits, -no-card_noUnits         (default: off)
+
+        assume there are no unit clauses inside the formula (otherwise, more expensive)
+
+  -card_debug, -no-card_debug             (default: off)
+
+        print info during running semantic card find
+
+  -cp3_fm_1st, -no-cp3_fm_1st             (default: off)
+
+        extract first AMO candidate, or last AMO candidate
+
+  -cp3_fm_newSub, -no-cp3_fm_newSub       (default: on)
+
+        check whether new ALO and ALK subsume other clauses (only if newALO or newALK)
+
+  -cp3_fm_keepM, -no-cp3_fm_keepM         (default: on)
+
+        keep all new AMOs (also rejected ones)
+
+  -cp3_fm_cut, -no-cp3_fm_cut             (default: on)
+
+        avoid eliminating too expensive variables (>10,10 or >5,15)
+
+  -cp3_fm_vMulAMT, -no-cp3_fm_vMulAMT     (default: off)
+
+        try to find multiple AMTs per variable
+
+  -cp3_fm_vMulAMO, -no-cp3_fm_vMulAMO     (default: on)
+
+        try to find multiple AMOs per variable
+
+  -cp3_fm_dups, -no-cp3_fm_dups           (default: on)
+
+        avoid finding the same AMO multiple times
+
+  -cp3_fm_merge, -no-cp3_fm_merge         (default: on)
+
+        perform AMO merge
+
+  -cp3_fm_unit, -no-cp3_fm_unit           (default: on)
+
+        check for units first
+
+  -cp3_fm_sem, -no-cp3_fm_sem             (default: on)
+
+        extract Card constraints using UP
+
+  -cp3_fm_twoPr, -no-cp3_fm_twoPr         (default: on)
+
+        extract AMO using two product structures
+
+  -cp3_fm_amt, -no-cp3_fm_amt             (default: on)
+
+        extract at-most-two
+
+
+  -fm-debug     = <int32>  [   0 ..    4] (default: 0)
+
+        Debug Output of Fourier Motzkin
+
+  -card_max     = <int32>  [   2 .. imax] (default: 12)
+
+        max card size that will be looked for
+
+  -card_maxC    = <int32>  [   2 .. imax] (default: 6)
+
+        max clause size to find cards
+
+  -card_minC    = <int32>  [   2 .. imax] (default: 3)
+
+        min clause size to find cards
+
+  -cp3_fm_newAlk = <int32>  [   0 ..    2] (default: 2)
+
+        create clauses from deduced ALK constraints 0=no,1=from kept,2=keep all (possibly redundant!)
+
+  -cp3_fm_newAlo = <int32>  [   0 ..    2] (default: 2)
+
+        create clauses from deduced ALO constraints 0=no,1=from kept,2=keep all 
+
+  -cp3_fm_newAmo = <int32>  [   0 ..    2] (default: 2)
+
+        encode the newly produced AMOs (with pairwise encoding) 0=no,1=yes,2=try to avoid redundant clauses
+
+  -cp3_fm_growT = <int32>  [   0 .. imax] (default: 100000)
+
+        total grow of number of constraints
+
+  -cp3_fm_grow  = <int32>  [   0 .. imax] (default: 40)
+
+        max. grow of number of constraints per step
+
+  -cp3_fm_maxA  = <int32>  [   3 .. imax] (default: 200)
+
+        largest AMO that will be found during search
+
+  -cp3_fm_maxConstraints = <int32>  [   0 .. imax] (default: 200000)
+
+        number of constraints that are allows
+
+
+  -card_Elimit  = <int64>  [   0 .. imax] (default: 1200000)
+
+        number of steps allowed for searching AMOs semantically
+
+  -cp3_fm_Slimit = <int64>  [   0 .. imax] (default: 12000000)
+
+        number of steps allowed for searching AMOs for FM
+
+  -cp3_fm_limit = <int64>  [   0 .. imax] (default: 6000000)
+
+        number of steps allowed for FM
+
+
+COPROCESSOR 3 - HTE OPTIONS:
+
+  -cp3_hteTalk, -no-cp3_hteTalk           (default: off)
+
+        talk about algorithm execution
+
+  -cp3_par_hte, -no-cp3_par_hte           (default: off)
+
+        Forcing Parallel HTE
+
+
+  -cp3_hte_inpInc = <int32>  [   0 .. imax] (default: 60000)
+
+        increase for steps per inprocess call
+
+  -cp3_hte_debug = <int32>  [   0 ..    4] (default: 0)
+
+        print debug output to screen
+
+  -cp3_hte_steps = <int32>  [  -1 .. imax] (default: 2147483647)
+
+        Number of steps that are allowed per iteration
+
+
+COPROCESSOR 3 - LA OPTIONS:
+
+  -la-debug, -no-la-debug                 (default: off)
+
+        output debug info during LA
+
+  -la-alaBin, -no-la-alaBin               (default: off)
+
+        use binary clauses for ALA
+
+  -la-ala, -no-la-ala                     (default: off)
+
+        perform asymmetric literal addition (ALA)
+
+  -la-cla, -no-la-cla                     (default: on)
+
+        perform covered literal addition (CLA)
+
+
+  -la-alaIter   = <int32>  [   1 .. imax] (default: 1)
+
+        number of extension literals per step so that literals are removed randomly
+
+  -ala-limit    = <int32>  [   0 .. imax] (default: 100000000)
+
+        number of pairwise clause comparisons before interrupting LA
+
+  -la-claIter   = <int32>  [   1 .. imax] (default: 1)
+
+        number of extension literals per step so that literals are removed randomly
+
+  -la-claMax    = <int32>  [   1 .. imax] (default: 2)
+
+        number of extension literals per step so that literals are removed randomly
+
+  -la-claStep   = <int32>  [   1 .. imax] (default: 4)
+
+        number of extension literals per step so that literals are removed randomly
+
+  -cla-limit    = <int32>  [   0 .. imax] (default: 100000000)
+
+        number of pairwise clause comparisons before interrupting LA
+
+
+COPROCESSOR 3 - PROBING OPTIONS:
+
+  -pr-vivi, -no-pr-vivi                   (default: on)
+
+        perform clause vivification
+
+  -pr-EE, -no-pr-EE                       (default: on)
+
+        run equivalent literal detection
+
+  -pr-lhbr, -no-pr-lhbr                   (default: off)
+
+        perform lhbr during probing
+
+  -pr-repeat, -no-pr-repeat               (default: off)
+
+        repeat probing if changes have been applied
+
+  -pr-roots, -no-pr-roots                 (default: on)
+
+        probe only on root literals
+
+  -pr-probe, -no-pr-probe                 (default: on)
+
+        perform probing
+
+  -pr-double, -no-pr-double               (default: on)
+
+        perform double look-ahead
+
+  -pr-bins, -no-pr-bins                   (default: off)
+
+        use binary clauses for probing
+
+
+  -pr-debug     = <int32>  [   0 ..    4] (default: 0)
+
+        debug output for probing
+
+  -pr-keepLHBR  = <int32>  [   0 ..    1] (default: 0)
+
+        keep clauses that have been created during LHBR during probing/vivification (0=no,1=learnt)
+
+  -cp3_viv_inpInc = <int32>  [   0 .. imax] (default: 1000000)
+
+        increase for steps per inprocess call
+
+  -cp3_pr_inpInc = <int32>  [   0 .. imax] (default: 1000000)
+
+        increase for steps per inprocess call
+
+  -pr-viviL     = <int32>  [   0 .. imax] (default: 5000000)
+
+        step limit for clause vivification
+
+  -pr-viviP     = <int32>  [   0 ..  100] (default: 80)
+
+        percent of max. clause size for clause vivification
+
+  -pr-keepI     = <int32>  [   0 ..    2] (default: 2)
+
+        keep clauses that imply on level 1 (0=no,1=learnt,2=original)
+
+  -pr-keepL     = <int32>  [   0 ..    2] (default: 2)
+
+        keep conflict clauses in solver (0=no,1=learnt,2=original)
+
+  -pr-probeL    = <int32>  [   0 .. imax] (default: 5000000)
+
+        step limit for probing
+
+  -pr-csize     = <int32>  [   0 .. imax] (default: 2147483647)
+
+        size of clauses that are considered for probing/vivification (propagation)
+
+  -pr-uips      = <int32>  [  -1 .. imax] (default: -1)
+
+        perform learning if a conflict occurs up to x-th UIP (-1 = all )
+
+
+COPROCESSOR 3 - RAT Elimination OPTIONS:
+
+  -rat-compl, -no-rat-compl               (default: on)
+
+        sort according to nr. of complements
+
+
+  -rate-min     = <int32>  [   2 .. imax] (default: 3)
+
+        minimal clause size for RAT elimination
+
+  -rate-debug   = <int32>  [   0 ..    4] (default: 0)
+
+        debug output for RAT elimination
+
+
+  -rate-limit   = <int64>  [   0 .. imax] (default: 9000000000)
+
+        number of pairwise clause comparisons before interrupting RATE
+
+
+COPROCESSOR 3 - RES OPTIONS:
+
+  -cp3_res_debug, -no-cp3_res_debug       (default: off)
+
+        print debug output to screen
+
+  -cp3_res_ars, -no-cp3_res_ars           (default: off)
+
+        also before preprocessing?
+
+  -cp3_res_add_lea, -no-cp3_res_add_lea   (default: off)
+
+        add redundants based on learneds as well?
+
+  -cp3_res_add_lev, -no-cp3_res_add_lev   (default: on)
+
+        calculate added percent based on level
+
+  -cp3_res_add_red, -no-cp3_res_add_red   (default: off)
+
+        add redundant binary clauses
+
+  -cp3_res_eagerSub, -no-cp3_res_eagerSub (default: on)
+
+        perform eager subsumption
+
+  -cp3_res3_reAdd, -no-cp3_res3_reAdd     (default: off)
+
+        Add variables of newly created resolvents back to working queues
+
+  -cp3_res_bin, -no-cp3_res_bin           (default: off)
+
+        resolve with binary clauses
+
+
+  -cp3_res_percent = <double> [   0 ..    1] (default: 0.01)
+
+        produce this percent many new clauses out of the total
+
+
+  -cp3_add_inpInc = <int32>  [   0 .. imax] (default: 60000)
+
+        increase for steps per inprocess call
+
+  -cp3_res_inpInc = <int32>  [   0 .. imax] (default: 200000)
+
+        increase for steps per inprocess call
+
+  -cp3_res3_ncls = <int32>  [   0 .. 2147483646] (default: 100000)
+
+        Max. Number of newly created clauses
+
+  -cp3_res3_steps = <int32>  [   0 .. 2147483646] (default: 1000000)
+
+        Number of resolution-attempts that are allowed per iteration
+
+
+COPROCESSOR 3 - REWRITE OPTIONS:
+
+  -cp3_rewI_small, -no-cp3_rewI_small     (default: on)
+
+        prefer little imply variables
+
+  -cp3_rew_stats, -no-cp3_rew_stats       (default: off)
+
+        analyze formula, but do not apply rewriting
+
+  -cp3_rew_once, -no-cp3_rew_once         (default: on)
+
+        rewrite each variable at most once! (currently: yes only!)
+
+  -cp3_rew_ratio, -no-cp3_rew_ratio       (default: on)
+
+        allow literals in AMO only, if their complement is not more frequent
+
+  -cp3_rew_avg, -no-cp3_rew_avg           (default: on)
+
+        use AMOs above equal average only?
+
+  -cp3_rew_1st, -no-cp3_rew_1st           (default: off)
+
+        how to find AMOs
+
+  -cp3_rew_merge, -no-cp3_rew_merge       (default: off)
+
+        merge AMO constraints to create larger AMOs (fourier motzkin)
+
+  -cp3_rew_exo, -no-cp3_rew_exo           (default: on)
+
+        scan for encoded exactly once constraints first
+
+  -cp3_rew_imp, -no-cp3_rew_imp           (default: off)
+
+        rewrite implication chains
+
+  -cp3_rew_amo, -no-cp3_rew_amo           (default: on)
+
+        rewrite amos
+
+
+  -rew-debug    = <int32>  [   0 ..    4] (default: 0)
+
+        Debug Output of Rewriter
+
+  -cp3_rew_inpInc = <int32>  [   0 .. imax] (default: 60000)
+
+        increase for steps per inprocess call
+
+  -cp3_rewI_min = <int32>  [   0 .. imax] (default: 4)
+
+        min size of an inplication chain to be rewritten
+
+  -cp3_rew_Addlimit = <int32>  [   0 .. imax] (default: 100000)
+
+        number of new variables being allowed
+
+  -cp3_rew_Vlimit = <int32>  [   0 .. imax] (default: 1000000)
+
+        max number of variables to still perform REW
+
+  -cp3_rew_limit = <int32>  [   0 .. imax] (default: 1200000)
+
+        number of steps allowed for REW
+
+  -cp3_rew_minA = <int32>  [   0 .. imax] (default: 3)
+
+        min size of altered AMOs
+
+  -cp3_rew_iter = <int32>  [   0 .. imax] (default: 1)
+
+        number of iterations
+
+  -cp3_rew_min  = <int32>  [   0 .. imax] (default: 3)
+
+        min occurrence to be considered
+
+
+COPROCESSOR 3 - SHUFFLE OPTIONS:
+
+  -shuffle-order, -no-shuffle-order       (default: on)
+
+        shuffle the order of the clauses
+
+
+  -shuffle-debug = <int32>  [   0 ..    4] (default: 0)
+
+        Debug Output of Shuffler
+
+  -shuffle-seed = <int32>  [   0 .. imax] (default: 0)
+
+        seed for shuffling
+
+
+COPROCESSOR 3 - SLS OPTIONS:
+
+  -sls-adopt-cls, -no-sls-adopt-cls       (default: off)
+
+        reduce nr of flips for large instances
+
+  -sls-debug, -no-sls-debug               (default: off)
+
+        Print SLS debug output
+
+
+  -sls-rnd-walk = <int32>  [   0 .. 10000] (default: 2000)
+
+        probability of random walk (0-10000)
+
+  -sls-ksat-flips = <int32>  [  -1 .. imax] (default: 20000000)
+
+        how many flips should be performed, if k-sat is detected (-1 = infinite)
+
+
+COPROCESSOR 3 - SUBSUMPTION OPTIONS:
+
+  -cp3_lock_stats, -no-cp3_lock_stats     (default: off)
+
+        measure time waiting in spin locks
+
+  -cp3_inpPrefL, -no-cp3_inpPrefL         (default: on)
+
+        During inprocessing, check learned clauses first!
+
+  -cp3_strength, -no-cp3_strength         (default: on)
+
+        Perform clause strengthening
+
+  -naive_strength, -no-naive_strength     (default: off)
+
+        use naive strengthening
+
+
+  -susi_debug   = <int32>  [   0 ..    3] (default: 0)
+
+        Debug Output for Subsumption
+
+  -par_str_minCls = <int32>  [   1 .. imax] (default: 250000)
+
+        number of clauses to start parallel strengthening
+
+  -susi_chunk_size = <int32>  [   1 .. imax] (default: 100000)
+
+        Size of Par SuSi Chunks
+
+  -par_subs_counts = <int32>  [   0 ..    1] (default: 1)
+
+        Updates of counts in par-subs 0: compare_xchange, 1: CRef-vector
+
+  -cp3_par_subs = <int32>  [   0 ..    2] (default: 1)
+
+        par subsumption: 0 never, 1 heuristic, 2 always
+
+  -cp3_par_strength = <int32>  [   0 ..    2] (default: 1)
+
+        par strengthening: 0 never, 1 heuristic, 2 always
+
+  -cp3_sub_inpInc = <int32>  [   0 .. imax] (default: 40000000)
+
+        increase for steps per inprocess call
+
+  -cp3_call_inc = <int32>  [   0 .. imax] (default: 200)
+
+        max. limit increase per process call (subsimp is frequently called from other techniques)
+
+  -cp3_str_limit = <int32>  [   0 .. imax] (default: 300000000)
+
+        limit of strengthening steps
+
+  -cp3_sub_limit = <int32>  [   0 .. imax] (default: 300000000)
+
+        limit of subsumption steps
+
+  -all_strength_res = <int32>  [   0 .. imax] (default: 0)
+
+        Create all self-subsuming resolvents of clauses less equal given size (prob. slow & blowup, only seq)
+
+
+COPROCESSOR 3 - SYMMETRY OPTIONS:
+
+  -sym-clLearn, -no-sym-clLearn           (default: off)
+
+        clean the learned clauses that have been created during symmetry search
+
+  -sym-propA, -no-sym-propA               (default: off)
+
+        test all four casese instead of two
+
+  -sym-propF, -no-sym-propF               (default: off)
+
+        generate full clauses
+
+  -sym-prop, -no-sym-prop                 (default: off)
+
+        try to generate symmetry breaking clauses with propagation
+
+  -sym-exit, -no-sym-exit                 (default: off)
+
+        exit after analysis
+
+  -sym-print, -no-sym-print               (default: off)
+
+        show the data for each variable
+
+  -sym-show, -no-sym-show                 (default: off)
+
+        show symmetry pairs
+
+  -sym-unit, -no-sym-unit                 (default: off)
+
+        ignore unit clauses
+
+  -sym-pol, -no-sym-pol                   (default: off)
+
+        consider the polarity of the occurrences
+
+  -sym-size, -no-sym-size                 (default: off)
+
+        scale with the size of the clause
+
+
+  -sym-ratio    = <double> [   0 ..  inf] (default: 0.4)
+
+        only consider a variable if it appears close to the average of variable occurrences
+
+
+  -sym-debug    = <int32>  [   0 ..    4] (default: 0)
+
+        debug output for probing
+
+  -sym-consT    = <int32>  [   0 .. imax] (default: 10000)
+
+        number of total conflicts for looking for being implied
+
+  -sym-cons     = <int32>  [   0 .. imax] (default: 0)
+
+        number of conflicts for looking for being implied
+
+  -sym-iter     = <int32>  [   0 .. imax] (default: 3)
+
+        number of symmetry approximation iterations
+
+  -sym-min      = <int32>  [   1 .. imax] (default: 2)
+
+        minimum symmtry to be exploited
+
+
+COPROCESSOR 3 - TWOSAT OPTIONS:
+
+  -2sat-cq, -no-2sat-cq                   (default: on)
+
+        do a decision after a unit has been found
+
+  -2sat-units, -no-2sat-units             (default: off)
+
+        If 2SAT finds units, use them!
+
+
+  -2sat-debug   = <int32>  [   0 ..    4] (default: 0)
+
+        Debug Output of 2sat
+
+
+COPROCESSOR 3 - UNHIDE OPTIONS:
+
+  -cp3_uhdPrSiBo, -no-cp3_uhdPrSiBo       (default: on)
+
+        Check larger clauses only in first and last iteration
+
+  -cp3_uhdPrEE, -no-cp3_uhdPrEE           (default: off)
+
+        Find Equivalences during uhd probing (requ. uhdProbe > 1)
+
+  -cp3_uhdTstDbl, -no-cp3_uhdTstDbl       (default: off)
+
+        Test for duplicate binary clauses
+
+  -cp3_uhdEE, -no-cp3_uhdEE               (default: off)
+
+        Use equivalent literal elimination (buggy)
+
+  -cp3_uhdNoShuffle, -no-cp3_uhdNoShuffle (default: off)
+
+        Do not perform randomized graph traversation
+
+  -cp3_uhdUHTE, -no-cp3_uhdUHTE           (default: on)
+
+        Use Unhiding+Hidden Tautology Elimination
+
+  -cp3_uhdTrans, -no-cp3_uhdTrans         (default: off)
+
+        Use Transitive Graph Reduction (buggy)
+
+
+  -cp3_uhdDebug = <int32>  [   0 ..    6] (default: 0)
+
+        Debug Level of Unhiding
+
+  -cp3_uhdPrSize = <int32>  [   2 .. imax] (default: 2)
+
+        Enable unhide probing for larger clauses, size <= given parameter
+
+  -cp3_uhdProbe = <int32>  [   0 ..    4] (default: 0)
+
+        Approximate probing (bin cls) with stamp info (off,constant,linear,quadratic,exponential)
+
+  -cp3_uhdUHLE  = <int32>  [   0 ..    3] (default: 3)
+
+        Use Unhiding+Hidden Literal Elimination
+
+  -cp3_uhdIters = <int32>  [   0 .. imax] (default: 3)
+
+        Number of iterations for unhiding
+
+
+COPROCESSOR 3 - UP OPTIONS:
+
+  -up-debug     = <int32>  [   0 ..    4] (default: 0)
+
+        debug output for propagation
+
+
+COPROCESSOR 3 - XOR OPTIONS:
+
+  -xorFindRes, -no-xorFindRes             (default: off)
+
+        try to recover XORs including resolution steps
+
+  -xorFindSubs, -no-xorFindSubs           (default: on)
+
+        try to recover XORs that are partially subsumed
+
+  -xorKeepUsed, -no-xorKeepUsed           (default: on)
+
+        continue to simplify kept xors
+
+
+  -xor-debug    = <int32>  [   0 ..    5] (default: 0)
+
+        Debug Output of XOR reasoning
+
+  -xorSelect    = <int32>  [   0 ..    1] (default: 0)
+
+        how to select next xor 0=first,1=smallest
+
+  -xorLimit     = <int32>  [   0 .. imax] (default: 1200000)
+
+        number of checks for finding xors
+
+  -xorMaxSize   = <int32>  [   3 ..   63] (default: 12)
+
+        Maximum Clause Size for detecting XOrs (high number consume much memory!)
+
+
+CEGAR BVA OPTIONS:
+
+  -cbLeast, -no-cbLeast                   (default: on)
+
+        use least frequent lit for matching (otherwise, most freq.) 
+
+  -cbStrict, -no-cbStrict                 (default: on)
+
+        only use cegar BVA for patterns that always lead to reduction
+
+
+MAIN OPTIONS:
+
+  -checkModel, -no-checkModel             (default: off)
+
+        verify model inside the solver before printing (if input is a file)
+
+  -oldModel, -no-oldModel                 (default: off)
+
+        present model on screen in old format
+
+  -quiet, -no-quiet                       (default: off)
+
+        Do not print the model
+
+  -parseOnly, -no-parseOnly               (default: off)
+
+        abort after parsing
+
+
+  -cpu-lim      = <int32>  [   0 .. imax] (default: 2147483647)
+
+        Limit on CPU time allowed in seconds.
+
+
+  -mem-lim      = <int32>  [   0 .. imax] (default: 2147483647)
+
+        Limit on memory usage in megabytes.
+
+
+  -verb         = <int32>  [   0 ..    2] (default: 1)
+
+        Verbosity level (0=silent, 1=some, 2=more).
+
+  -vv           = <int32>  [   1 .. imax] (default: 10000)
+
+        Verbosity every vv conflicts
+
+
+  -config     = <string>
+
+        Use a preset configuration
+
+
+PROOF OPTIONS:
+
+  -proofFormat = <string>
+
+        Do print the proof format (print o line with the given format, should be DRUP)
+
+  -drup       = <string>
+
+        Write a proof trace into the given file
+
+
+USAGE: ./riss [options] <input-file> <result-output-file>
+
+  where input may be either in plain or gzipped DIMACS.
+
+
+HELP OPTIONS:
+
+  --help        Print help message.
+  --help-verb   Print verbose help message.
+

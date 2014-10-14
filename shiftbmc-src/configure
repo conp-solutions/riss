@@ -1,0 +1,114 @@
+#!/bin/sh
+debug=no
+die () {
+  echo "*** configure: $*" 1>&2
+  exit 1
+}
+usage () {
+  echo "usage: [CC=compile] [CFLAGS=cflags] configure [-h][-hg]"
+  exit 0
+}
+wrn () {
+  echo "###########" 1>& 2
+  echo "########### WARNING : $*" 1>& 2
+  echo "###########" 1>& 2
+}
+msg () {
+  echo "[configure] $*" 1>& 2
+}
+while [ $# -gt 0 ]
+do
+  case $1 in
+    -h|--help) usage;;
+    -g) debug=yes;;
+    *) die "invalid command line option '$1' (try '-h')";;
+  esac
+  shift
+done
+if [ x"$CC" = x ] 
+then 
+  msg "using gcc as default compiler"
+  CC=gcc
+else
+  msg "using $CC as compiler"
+fi
+if [ x"$PDIR" = x ] 
+then 
+  msg "using /home/norbert/projects/BMC/hwmcc/picosat as default picosat directory"
+  PDIR=/home/norbert/projects/BMC/hwmcc/picosat
+else
+  msg "using $PDIR as default picosat directory"
+fi
+
+if [ x"$ABCDIR" = x ] 
+then 
+  msg "using /home/norbert/projects/BMC/hwmcc/abc as default abc directory (required only for shiftbmc-abc)"
+  ABCDIR=/home/norbert/projects/BMC/hwmcc/abc
+else
+  msg "using $ABCDIR as default abc directory (required only for shiftbmc-abc)"
+fi
+
+if [ x"$CFLAGS" = x ]
+then
+  msg "using default compilation flags"
+  case x"$CC" in
+    xgcc*)
+      CFLAGS="-Wall"
+      if [ $debug = yes ]
+      then
+	CFLAGS="-g"
+      else
+	CFLAGS="-O3 -DNDEBUG"
+      fi
+      ;;
+    *)
+      if [ $debug = yes ]
+      then
+	CFLAGS="-g"
+      else
+	CFLAGS="-O -DNDEBUG"
+      fi
+      ;;
+  esac
+else
+  msg "using custom compilation flags"
+fi
+if [ -d $PDIR ]
+then
+  if [ -f $PDIR/picosat.h ]
+  then
+    if [ -f $PDIR/picosat.o ]
+    then
+      if [ -f $PDIR/VERSION ] 
+      then
+	PICOSATVERSION="`cat $PDIR/VERSION`"
+	if [ $PICOSATVERSION -lt 953 ]
+	then
+	  wrn "out-dated version $PICOSATVERSION in '$PDIR/' (need at least 953 for 'aigbmc')"
+	else
+	  msg "found PicoSAT version $PICOSATVERSION in '$PDIR'"
+	  AIGBMCTARGET="aigbmc"
+	  msg "using '$PDIR/picosat.h', '$PDIR/picosat.o' for 'aigbmc'"
+	fi
+      else
+        wrn "can not find '$PDIR/VERSION' (missing for 'aigbmc')"
+      fi
+    else
+    wrn \
+      "can not find '$PDIR/picosat.o' object file (no 'aigbmc' target)"
+    fi
+  else
+    wrn "can not find '$PDIR/picosat.h' header (no 'aigbmc' target)"
+  fi
+else
+  wrn "can not find '$PDIR' directory (no 'aigbmc' target)"
+fi
+msg "compiling with: $CC $CFLAGS"
+rm -f makefile
+sed \
+  -e "s!@CC@!$CC!" \
+  -e "s!@CFLAGS@!$CFLAGS!" \
+  -e "s!@AIGBMCTARGET@!$AIGBMCTARGET!" \
+  -e "s!@PDIR@!$PDIR!" \
+  -e "s!@ABCDIR@!$ABCDIR!" \
+  makefile.in > makefile

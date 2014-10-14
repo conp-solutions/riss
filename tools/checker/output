@@ -1,0 +1,52 @@
+c WARNING: for repeatability, setting FPU to use double precision
+c ============================[       riss3g       ]=======================================================
+c | Norbert Manthey. The use of the tool is limited to research only!                                     |
+c | Based on Minisat 2.2 and Glucose 2.1  -- thanks!                                                      |
+c | Contributors:                                                                                         |
+c |      Kilian Gebhardt (BVE Implementation,parallel preprocessor)                                       |
+c ============================[ Problem Statistics ]=======================================================
+c |                                                                                                       |
+c |  Number of variables:            69                                                                   |
+c |  Number of clauses:             459                                                                   |
+c |  Parse time:                   0.01 s                                                                 |
+c |                                                                                                       |
+c ========================================[ MAGIC CONSTANTS ]==============================================
+c | Constants are supposed to work well together :-)                                                      |
+c | however, if you find better choices, please let us known...                                           |
+c |-------------------------------------------------------------------------------------------------------|
+c |                                |                                |                                     |
+c | - Restarts:                    | - Reduce Clause DB:            | - Minimize Asserting:               |
+c |   * LBD Queue    :     50      |   * First     :   4000         |    * size <  30                     |
+c |   * Trail  Queue :   5000      |   * Inc       :    300         |    * lbd  <   6                     |
+c |   * K            :   0.80      |   * Special   :   1000         |                                     |
+c |   * R            :   1.40      |   * Protected :  (lbd)< 30     |                                     |
+c |                                |                                |                                     |
+c ==================================[ Search Statistics (every  10000 conflicts) ]=========================
+c |                                                                                                       |
+c |          RESTARTS           |          ORIGINAL         |              LEARNT              | Progress |
+c |       NB   Blocked  Avg Cfc |    Vars  Clauses Literals |   Red   Learnts    LBD2  Removed |          |
+c =========================================================================================================
+c =========================================================================================================
+c =========================================================================================================
+c Learnt At Level 1: 5  Multiple: 0 Units: 0
+c LAs: 0 laSeconds 0.000000 LA assigned: 0 tabus: 0, failedLas: 0, maxEvery 0, eeV: 0 eeL: 0 
+c IntervalRestarts: 0
+c lhbr: 0 (l1: 0), new: 0 (l1: 0), tests: 0, subs: 0
+c otfss: 0 (l1: 0), cls: 0, units: 0, binaries: 0, jumpedHigher: 0
+c decisionClauses: 0
+c restarts              : 1 (18 conflicts in avg)
+c blocked restarts      : 0 (multiple: 0) 
+c last block at restart : 0
+c nb ReduceDB           : 0
+c nb removed Clauses    : 0
+c nb learnts DL2        : 7
+c nb learnts size 2     : 5
+c nb learnts size 1     : 5
+c conflicts             : 18             (1125 /sec)
+c decisions             : 32             (0.00 % random) (2000 /sec)
+c propagations          : 236            (14749 /sec)
+c conflict literals     : 49             (12.50 % deleted)
+c nb reduced Clauses    : 0
+c CPU time              : 0.016001 s
+
+s UNSATISFIABLE

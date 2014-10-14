@@ -1,0 +1,11 @@
+DC2 dc2
+DRWSAT drwsat
+SCORR scorr
+DC2L \&get\;\&syn2;\&put\:\&get\;\&syn3\;\&put:\&get\;\&syn4\;\&put
+SCORRL \&get\;\&scorr\;\&put
+DC2SCORR dc2:scorr
+DRWSATSCORR drwsat:scorr
+DC2LSCORR \&get\;\&syn2;\&put\:\&get\;\&syn3\;\&put:\&get\;\&syn4\;\&put:scorr
+DC2SCORRL dc2:\&get\;\&scorr\;\&put
+DRWSATSCORRL drwsat:\&get\;\&scorr\;\&put
+DC2LSCORRL \&get\;\&syn2;\&put\:\&get\;\&syn3\;\&put:\&get\;\&syn4\;\&put:\&get\;\&scorr\;\&put

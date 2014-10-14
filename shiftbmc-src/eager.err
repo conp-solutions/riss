@@ -1,0 +1,139 @@
+[aigbmc] aigbmc bounded model checker
+[aigbmc] maxk = 5
+[aigbmc] init picosat
+[aigbmc] reading from 'test/neclaftp3002.aig'
+[aigbmc] MILOA = 8 0 4 1 4
+[aigbmc] WARNING using 1 outputs as bad state properties
+[aigbmc] BCJF = 1 0 0 0
+[aigbmc] reencoded model
+c before formula[0]:    
+ 1 0
+[aigbmc] re-encode model
+[aigbmc] set latch 0 to lit -1
+[aigbmc] set latch 1 to lit -1
+[aigbmc] set latch 2 to lit -1
+[aigbmc] set latch 3 to lit -1
+[aigbmc] index 10 of latch 0 in time step 0 results in literal 2
+[aigbmc] index 1 of latch 1 in time step 0 results in literal 1
+c found unused latch with index 1
+[aigbmc] index 17 of latch 2 in time step 0 results in literal -5
+[aigbmc] index 0 of latch 3 in time step 0 results in literal -1
+c found unused latch with index 3
+[aigbmc] encoded 0
+c maxVar[0]:     6
+c assume[0]:     6
+c inputs[0]:     0: 
+c latches[0]:    4:  -1 -1 -1 -1
+c latchNext[0]:  4:  2 1 -5 -1
+c formula[0]:    
+ -2 1 0
+ -2 -1 0
+ 2 -1 1 0
+ -3 1 0
+ -3 -1 0
+ 3 -1 1 0
+ -4 3 0
+ -4 1 0
+ 4 -3 -1 0
+ -5 -4 0
+ -5 -2 0
+ 5 4 2 0
+ -6 -1 0
+[aigbmc] solve time with picosat: 1
+[aigbmc] return code of picosat: 20
+[aigbmc] set latch 0 to lit 2
+[aigbmc] set latch 1 to lit 1
+[aigbmc] set latch 2 to lit -5
+[aigbmc] set latch 3 to lit -1
+[aigbmc] index 10 of latch 0 in time step 1 results in literal 7
+[aigbmc] index 1 of latch 1 in time step 1 results in literal 1
+c found unused latch with index 1
+[aigbmc] index 17 of latch 2 in time step 1 results in literal -10
+[aigbmc] index 0 of latch 3 in time step 1 results in literal -1
+c found unused latch with index 3
+[aigbmc] encoded 1
+c maxVar[1]:     11
+c assume[1]:     11
+c inputs[1]:     0: 
+c latches[1]:    4:  2 1 -5 -1
+c latchNext[1]:  4:  7 1 -10 -1
+c formula[1]:    
+ -7 1 0
+ -7 -5 0
+ 7 -1 5 0
+ -8 5 0
+ -8 1 0
+ 8 -5 -1 0
+ -9 8 0
+ -9 1 0
+ 9 -8 -1 0
+ -10 -9 0
+ -10 -7 0
+ 10 9 7 0
+ -11 2 0
+[aigbmc] solve time with picosat: 2
+[aigbmc] return code of picosat: 20
+[aigbmc] set latch 0 to lit 7
+[aigbmc] set latch 1 to lit 1
+[aigbmc] set latch 2 to lit -10
+[aigbmc] set latch 3 to lit -1
+[aigbmc] index 10 of latch 0 in time step 2 results in literal 12
+[aigbmc] index 1 of latch 1 in time step 2 results in literal 1
+c found unused latch with index 1
+[aigbmc] index 17 of latch 2 in time step 2 results in literal -15
+[aigbmc] index 0 of latch 3 in time step 2 results in literal -1
+c found unused latch with index 3
+[aigbmc] encoded 2
+c maxVar[2]:     16
+c assume[2]:     16
+c inputs[2]:     0: 
+c latches[2]:    4:  7 1 -10 -1
+c latchNext[2]:  4:  12 1 -15 -1
+c formula[2]:    
+ -12 1 0
+ -12 -10 0
+ 12 -1 10 0
+ -13 10 0
+ -13 1 0
+ 13 -10 -1 0
+ -14 13 0
+ -14 1 0
+ 14 -13 -1 0
+ -15 -14 0
+ -15 -12 0
+ 15 14 12 0
+ -16 7 0
+[aigbmc] solve time with picosat: 3
+[aigbmc] return code of picosat: 20
+[aigbmc] set latch 0 to lit 12
+[aigbmc] set latch 1 to lit 1
+[aigbmc] set latch 2 to lit -15
+[aigbmc] set latch 3 to lit -1
+[aigbmc] index 10 of latch 0 in time step 3 results in literal 17
+[aigbmc] index 1 of latch 1 in time step 3 results in literal 1
+c found unused latch with index 1
+[aigbmc] index 17 of latch 2 in time step 3 results in literal -20
+[aigbmc] index 0 of latch 3 in time step 3 results in literal -1
+c found unused latch with index 3
+[aigbmc] encoded 3
+c maxVar[3]:     21
+c assume[3]:     21
+c inputs[3]:     0: 
+c latches[3]:    4:  12 1 -15 -1
+c latchNext[3]:  4:  17 1 -20 -1
+c formula[3]:    
+ -17 1 0
+ -17 -15 0
+ 17 -1 15 0
+ -18 15 0
+ -18 1 0
+ 18 -15 -1 0
+ -19 18 0
+ -19 1 0
+ 19 -18 -1 0
+ -20 -19 0
+ -20 -17 0
+ 20 19 17 0
+ -21 12 0
+[aigbmc] solve time with picosat: 4
+[aigbmc] return code of picosat: 10

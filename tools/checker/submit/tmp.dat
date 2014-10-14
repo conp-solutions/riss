@@ -1,0 +1,21 @@
+run riss with /home/norbert/cnf/sudoku2.cnf
+finish with state= 10
+exited with 255
+run riss with /home/norbert/cnf/sudoku2.cnf
+finish with state= 10
+exited with 0
+run riss with /home/norbert/cnf/sudoku2.cnf
+finish with state= 10
+exited with 0
+run riss with bug-279789792.cnf
+finish with state= 10
+exited with 0
+run riss with bug-1017960246.cnf
+finish with state= 10
+exited with 0
+run riss with bug-1017960246.cnf
+finish with state= 10
+exited with 0
+run riss with bug-1017960246.cnf
+finish with state= 10
+exited with 0

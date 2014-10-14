@@ -1,0 +1,139 @@
+[aigbmc] WARNING unknown bmc parameter '-solververb=0'
+[aigbmc] aigbmc bounded model checker
+[aigbmc] maxk = 10
+[aigbmc] init SAT solver
+[aigbmc] reading from 'test/beemprng1b1.aig'
+[aigbmc] MILOA = 19 4 4 1 11
+[aigbmc] WARNING using 1 outputs as bad state properties
+[aigbmc] BCJF = 1 0 0 0
+[aigbmc] reencoded model
+[aigbmc] set latch 0 to lit 2
+[aigbmc] set latch 1 to lit 3
+[aigbmc] set latch 2 to lit 4
+[aigbmc] set latch 3 to lit 5
+[aigbmc] encoded 0
+c call freeze variables ... 
+c freeze variable 1 (int: 0)
+c freeze variable 2 (int: 1)
+c freeze variable 3 (int: 2)
+c freeze variable 4 (int: 3)
+c freeze variable 5 (int: 4)
+c freeze variable 6 (int: 5)
+c freeze variable 7 (int: 6)
+c freeze variable 1 (int: 0)
+c freeze variable 18 (int: 17)
+c freeze variable 21 (int: 20)
+c call preprocess ... 
+c bve ...
+c Garbage collection: 1052 bytes => 132 bytes 
+c compress variables to 9
+c [STAT] CP3 0 s-ppTime, 0 s-ipTime, 0.00049296 s-ppwTime, 0 s-ipwTime, 26 MB 
+c [STAT] CP3(2) 7 cls, 0 learnts, 27 rem-cls, 0 rem-learnts, 
+c [STAT] UP 0 s, 0 units, 0 cls, 0 lits
+c [STAT] SuSi(1) 0 s, 0 cls,  with 0 lits, 0 strengthed 
+c [STAT] SuSi(2) 65 subs-steps, 148 strenght-steps, 0 increases, 0s strengthening 
+c [STAT] EE 0 s, 0 steps 0 ee-lits 0 removedCls, 0 removedSubCls,
+c [STAT] BVE(1) 0 s, 0 s spent on subsimp, 12 vars tested, 12 anticipations, 0 vars skipped, 68 checks, 
+c [STAT] BVE(2) 41 rem cls, with 106 lits, 0 learnts rem, with 0 lits, 23 new cls, with 70 lits, 0 new learnts, with 0 lits, 
+c [STAT] BVE(3) 12 vars eliminated, 0 units enqueued, 9 BC removed, with 24 lits, 0 blocked learnts removed, with 0 lits, 
+c [STAT] BVE(4) 12 gateDefs, 6 usedGates, 0 gateSeconds, 
+c [STAT] BVE(5) 0 incElims, 0 keepElims, 12 decElims, 0 totalAdds,
+c [STAT] DENSE 12 gaps
+c before formula: 
+-9 -10 0
+7 -10 0
+-7 9 10 0
+9 -11 0
+8 -11 0
+-8 -9 11 0
+-11 -12 0
+-10 -12 0
+10 11 12 0
+2 -13 0
+-8 -13 0
+-2 8 13 0
+-13 -14 0
+12 -14 0
+-12 13 14 0
+14 -15 0
+5 -15 0
+-5 -14 15 0
+-15 -16 0
+4 -16 0
+-4 15 16 0
+-4 -17 0
+-6 -17 0
+4 6 17 0
+-17 -18 0
+-16 -18 0
+16 17 18 0
+3 -19 0
+-2 -19 0
+2 -3 19 0
+19 -20 0
+5 -20 0
+-5 -19 20 0
+20 -21 0
+c add formula to riss
+c after variables: 9
+move assume from 21 to 9
+move latch from 2 to 2
+move latch from 3 to 3
+move latch from 4 to 4
+move latch from 5 to 5
+move latchN from 6 to 6
+move latchN from 7 to 7
+move latchN from 1 to 1
+move latchN from 18 to 8
+move eq from -1 to -1
+move eq from 2 to 2
+move eq from -1 to -1
+move eq from 3 to 3
+move eq from -1 to -1
+move eq from 4 to 4
+move eq from -1 to -1
+move eq from 5 to 5
+c maxVar[0]:     21
+c assume[0]:     9
+c inputs[0]:     4:  6 7 8 9
+c latches[0]:    4:  2 3 4 5
+c latchNext[0]:  4:  6 7 1 8
+c thisBad[0]:  1:  20
+c formula[0]:    
+ 5 -9 0
+ 3 -9 0
+ -2 -9 0
+ -4 5 -8 0
+ -2 -4 -7 -8 0
+ 4 6 -8 0
+ 4 -6 8 0
+c after formula (inside riss): 
+5 -9 0
+3 -9 0
+-2 -9 0
+-4 5 -8 0
+-2 -4 -7 -8 0
+4 6 -8 0
+4 -6 8 0
+[aigbmc] solve time with SAT solver: 1
+[aigbmc] return code of SAT solver: 20
+[aigbmc] re-encode model
+[aigbmc] encoded 1
+[aigbmc] solve time with SAT solver: 2
+[aigbmc] return code of SAT solver: 20
+[aigbmc] encoded 2
+[aigbmc] solve time with SAT solver: 3
+[aigbmc] return code of SAT solver: 20
+[aigbmc] encoded 3
+[aigbmc] solve time with SAT solver: 4
+[aigbmc] return code of SAT solver: 10
+c extendModel with 9 variables
+c formula variables: 21 model: 21
+c extendModel with 9 variables
+c formula variables: 21 model: 21
+c extendModel with 9 variables
+c formula variables: 21 model: 21
+c extendModel with 9 variables
+c formula variables: 21 model: 21
+c extendModel with 9 variables
+c formula variables: 21 model: 21
