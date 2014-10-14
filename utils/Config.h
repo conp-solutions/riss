@@ -269,11 +269,29 @@ else if( optionSet == "Riss3g" ) {
 else if( optionSet == "Riss427i" ) {
     parseOptions( std::string(" -enabled_cp3 -cp3_stats -dense -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -cp3_ptechs=fgvb -cp3_itechs=gsewxp -inprocess -cp3_inp_cons=8000000 -probe -no-pr-vivi -pr-bins -pr-lhbr -no-pr-nce -subsimp -ee -cp3_ee_it -cp3_ee_level=2 -bva -cp3_bva_limit=120000 -cp3_Xbva=2 -xor -dense") ,false);
 }
-else if( optionSet == "Riss427nd" ) {
+else if( optionSet == "Riss427nd" || optionSet == "RissND427" ) {
     parseOptions( std::string(" -enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce") ,false);
 }
 else if( optionSet == "Riss427" ) {
     parseOptions( std::string(" -enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense") ,false);
+}
+else if( optionSet == "Riss427-NoCLE") {
+    parseOptions( std::string(" -enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -dense"), false);
+}
+else if( optionSet == "RISSLGL3") {
+    parseOptions( 
+      std::string(  "-R=1.5 -szLBDQueue=45 -incReduceDB=450 -specialIncReduceDB=1100 -minLBDFrozenClause=15 -lbdIgnL0 -lbdupd=0 -incLBD -keepWorst=0.001 -biAsFreq=16 -var-decay-b=0.85 -var-decay-e=0.85 -agil-limit=0.33 -agil-init=0.01 -agil-add=32 -rnd-freq=0.005 -phase-saving=0 -init-act=1 -init-pol=4 -rlevel=1 -rtype=1 -rfirst=32 -rinc=4 -clsActB=1 -lhbr-max=16000 -longConflict -actIncMode=1 -rMax=1024 -rMaxInc=1.2 -laHack -laEEp=50 -hlaLevel=1 -hlaevery=8 -hlabound=16000 -sInterval=1 -otfss -otfssMLDB=64 -learnDecP=80 -no-rer-l -rer-r=1 -rer-min-size=6 -rer-max-size=30 -rer-maxLBD=6 -rer-new-act=2 -rer-freq=0.1" )
+      + std::string("-er-size=64 -sUhdProbe=2 -no-sUhdPrRb -sUHLEsize=64 -cp3_vars=2000000 -cp3_cls=4000000 -no-cp3_limited -cp3_inp_cons=500000 -cp3_iters=2 -enabled_cp3 -inprocess -no-randInp -subsimp -rate -bve -probe -symm -fm -cp3_ptechs= -cp3_itechs= -cp3_bve_limit=2500000 -bve_cgrow=-1 -bve_cgrow_t=10000 -bve_heap_updates=2 -cp3_bva_Vlimit=5000000 -no-cp3_Abva -cp3_bva_Xlimit=0 -cp3_bva_Ilimit=0 -cp3_Ibva=2 -bce-limit=200000000 -no-bce-bce -rate-limit=18000000000 -rate-min=2 -cp3_ee_glimit=1000000 -cp3_ee_limit=2000000 -cp3_ee_bIter=400000000 -no-cp3_extAND -cp3_extITE -cp3_extXOR -cp3_fm_limit=12000000 ")
+      + std::string("-cp3_fm_maxA=50 -cp3_fm_newAmo=0 -no-cp3_fm_keepM -cp3_fm_newAlo=0 -card_maxC=7 -card_max=2 -pr-uips=1 -pr-csize=4 -pr-lhbr -pr-probeL=500000 -pr-viviL=7500000 -pr-keepLHBR=1 -cp3_res3_ncls=10000 -cp3_res_percent=0.005 -sls-adopt-cls -all_strength_res=4 -no-cp3_strength -cp3_sub_limit=3000000 -cp3_str_limit=400000000 -sym-iter=2 -sym-propF -sym-clLearn -sym-cons=100 -cp3_uhdIters=8 -cp3_uhdTrans -cp3_uhdUHLE=0 -cp3_uhdPrSize=8 -xorMaxSize=6 -xorSelect=1 -no-xorKeepUsed -no-xorFindSubs")
+    , false);
+}
+else if( optionSet == "RISSLGL4") {
+    parseOptions( 
+        std::string("-K=0.7 -R=1.2 -firstReduceDB=2000 -specialIncReduceDB=1100 -incLBD -keepWorst=0.001 -biAsserting -biAsFreq=16 -var-decay-b=0.75 -var-decay-i=0.99 -var-decay-d=10000 -agil-limit=0.33 -cla-decay=0.995 -init-act=3 -init-pol=5 -rlevel=2 -rtype=2 -rfirst=32 -rinc=3 -alluiphack=2 -varActB=2 -clsActB=1 -dontTrust -no-hack-cost -actIncMode=2 -rMax=1024 -rMaxInc=1.2 -laHack -laEEl -laEEp=66 -hlaLevel=1 -hlaevery=0 -hlaTop=512 -otfss -otfssMLDB=2 -learnDecP=50 -no-rer-l -rer-r=1 -rer-min-size=15 " )
+      + std::string("-rer-max-size=2 -rer-minLBD=30 -rer-maxLBD=15 -rer-new-act=4 -er-size=16 -er-lbd=18 -sUhdProbe=1 -sUhdPrSh=2 -sUHLEsize=64 -sUHLElbd=12 -cp3_vars=1000000 -cp3_cls=2000000 -no-cp3_limited -cp3_inp_cons=200000 -cp3_iters=2 -enabled_cp3 -inc-inp -up -subsimp -rate -ee -bva -probe -dense -symm " )
+      + std::string("-cp3_ptechs= -cp3_itechs= -sls-flips=-1 -xor -cp3_bve_limit=50000000 -cp3_bve_heap=1 -bve_cgrow_t=10000 -bve_totalG -bve_heap_updates=2 -cp3_bva_Vlimit=1000000 -cp3_bva_limit=12000000 -cp3_bva_Xlimit=0 -cp3_Xbva=2 -cp3_Ibva=2 -bce-limit=200000000 -no-rat-compl -rate-limit=900000000 -rate-min=5 -cp3_ee_glimit=100000 -cp3_ee_limit=2000000 -cp3_ee_bIter=400000000 -cp3_ee_it -cp3_fm_maxConstraints=0 -cp3_fm_maxA=3 -cp3_fm_grow=5 -cp3_fm_growT=1000 -no-cp3_fm_vMulAMO -cp3_fm_newAlk=1 -card_Elimit=600000 ")
+      + std::string("-pr-bins -pr-lhbr -pr-probeL=500000 -pr-keepL=0 -pr-viviP=60 -cp3_res_bin -cp3_res3_steps=2000000 -cp3_res3_ncls=1000000 -cp3_res_percent=0.005 -sls-rnd-walk=2200 -all_strength_res=4 -cp3_str_limit=3000000 -sym-min=4 -sym-ratio=0.1 -sym-iter=0 -sym-propF -sym-clLearn -sym-consT=100000 -cp3_uhdIters=8 -cp3_uhdTrans -cp3_uhdUHLE=0 -cp3_uhdProbe=3 -cp3_uhdPrSize=4 -cp3_uhdPrEE -xorLimit=120000 -xorSelect=1 -no-xorKeepUsed -no-xorFindSubs ")
+    , false);
 }
 else if( optionSet == "SUHLE" ) {
     parseOptions( std::string(" -enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -sUHLEsize=30") ,false);
@@ -319,130 +337,130 @@ else if( optionSet == "riss3g" ) {
     parseOptions( std::string(" -lbdupd=0 -enabled_cp3 -cp3_stats -up -subsimp -all_strength_res=3 -bva -cp3_bva_limit=120000 -bve -bve_red_lits=1 -no-bve_BCElim -cce -cp3_cce_steps=2000000 -cp3_cce_level=1 -cp3_cce_sizeP=100 -unhide -cp3_uhdUHLE=0 -cp3_uhdIters=5 -dense -hlaevery=1 -hlaLevel=5 -laHack -tabu -hlabound=4096 ")
     ,false);
 } 
-else if( optionSet == "SUSI" ) {
+else if( optionSet == "plain_SUSI" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -subsimp",false);
 }
-else if( optionSet == "ASTR" ) {
+else if( optionSet == "plain_ASTR" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -all_strength_res=3 -subsimp",false);
 }
-else if( optionSet == "BVE" ) {
+else if( optionSet == "plain_BVE" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -bve -bve_red_lits=1",false);
 }
-else if( optionSet == "ABVA" ) {
+else if( optionSet == "plain_ABVA" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -bva",false);
 }
-else if( optionSet == "XBVA" ) {
+else if( optionSet == "plain_XBVA" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -bva -cp3_Xbva=2 -no-cp3_Abva",false);
 }
-else if( optionSet == "IBVA" ) {
+else if( optionSet == "plain_IBVA" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -bva -cp3_Ibva=2 -no-cp3_Abva",false);
 }
-else if( optionSet == "BVA" ) {
+else if( optionSet == "plain_BVA" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -bva -cp3_Xbva=2 -cp3_Ibva=2",false);
 }
-else if( optionSet == "BCE" ) {
+else if( optionSet == "plain_BCE" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -bce ",false);
 }
-else if( optionSet == "CLE" ) {
+else if( optionSet == "plain_CLE" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -bce -bce-cle -no-bce-bce",false);
 }
-else if( optionSet == "HTE" ) {
+else if( optionSet == "plain_HTE" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -hte",false);
 }
-else if( optionSet == "CCE" ) {
+else if( optionSet == "plain_CCE" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -cce",false);
 }
-else if( optionSet == "RATE" ) {
+else if( optionSet == "plain_RATE" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -rate -rate-limit=50000000000",false);
 }
-else if( optionSet == "PLAINPRB" ) {
+else if( optionSet == "plain_PRB" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -probe -no-pr-vivi -pr-bins -pr-lhbr ",false);
 }
-else if( optionSet == "VIV" ) {
+else if( optionSet == "plain_VIV" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -probe -no-pr-probe -pr-bins",false);
 }
-else if( optionSet == "3RES" ) {
+else if( optionSet == "plain_3RES" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -3resolve",false);
 }
-else if( optionSet == "UNHIDE" ) {
+else if( optionSet == "plain_UNHIDE" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans ",false);
 }
-else if( optionSet == "UHD-PR" ) {
+else if( optionSet == "plain_UHD-PR" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -cp3_uhdProbe=4 -cp3_uhdPrSize=3",false);
 }
-else if( optionSet == "ELS" ) {
+else if( optionSet == "plain_ELS" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -ee -cp3_ee_it -cp3_ee_level=2 ",false);
 }
-else if( optionSet == "FM" ) {
+else if( optionSet == "plain_FM" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -fm -no-cp3_fm_vMulAMO",false);
 }
-else if( optionSet == "XOR" ) {
+else if( optionSet == "plain_XOR" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -xor",false);
 }
-else if( optionSet == "2SAT" ) {
+else if( optionSet == "plain_2SAT" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -2sat",false);
 }
-else if( optionSet == "SLS" ) {
+else if( optionSet == "plain_SLS" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -sls -sls-flips=16000000",false);
 }
-else if( optionSet == "SYMM" ) {
+else if( optionSet == "plain_SYMM" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -symm -sym-clLearn -sym-prop -sym-propF -sym-cons=128 -sym-consT=128000",false);
 }
-else if( optionSet == "DENSE" ) {
+else if( optionSet == "plain_DENSE" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -dense",false);
 }
-else if( optionSet == "DENSEFORW" ) {
+else if( optionSet == "plain_DENSEFORW" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -cp3_dense_forw -dense",false);
 }
-else if( optionSet == "LHBR" ) {
+else if( optionSet == "plain_LHBR" ) {
     parseOptions(" -lhbr=3 -lhbr-sub",false);
 }
-else if( optionSet == "OTFSS" ) {
+else if( optionSet == "plain_OTFSS" ) {
     parseOptions(" -otfss",false);
 }
-else if( optionSet == "AUIP" ) {
+else if( optionSet == "plain_AUIP" ) {
     parseOptions(" -alluiphack=2",false);
 }
-else if( optionSet == "LLA" ) {
+else if( optionSet == "plain_LLA" ) {
     parseOptions(" -laHack -tabu -hlabound=-1",false);
 }
-else if( optionSet == "SUHD" ) {
+else if( optionSet == "plain_SUHD" ) {
     parseOptions(" -sUhdProbe=3",false);
 }
-else if( optionSet == "SUHLE" ) {
+else if( optionSet == "plain_SUHLE" ) {
     parseOptions(" -sUHLEsize=30",false);
 }
-else if( optionSet == "HACKTWO" ) {
+else if( optionSet == "plain_HACKTWO" ) {
     parseOptions(" -hack=2",false);
 }
-else if( optionSet == "NOTRUST" ) {
+else if( optionSet == "plain_NOTRUST" ) {
     parseOptions(" -dontTrust",false);
 }
-else if( optionSet == "DECLEARN" ) {
+else if( optionSet == "plain_DECLEARN" ) {
     parseOptions(" -learnDecP=100 -learnDecMS=6",false);
 }
-else if( optionSet == "PLAINBIASSERTING" ) {
+else if( optionSet == "plain_PLAINBIASSERTING" ) {
     parseOptions(" -biAsserting -biAsFreq=4",false);
 }
-else if( optionSet == "LBD" ) {
+else if( optionSet == "plain_LBD" ) {
     parseOptions(" -lbdIgnL0 -lbdupd=0",false);
 }
-else if( optionSet == "RER" ) {
+else if( optionSet == "plain_RER" ) {
     parseOptions(" -rer",false);
 }
-else if( optionSet == "RERRW" ) {
+else if( optionSet == "plain_RERRW" ) {
     parseOptions(" -rer -rer-rn -no-rer-l ",false);
 }
-else if( optionSet == "ECL" ) {
+else if( optionSet == "plain_ECL" ) {
     parseOptions(" -ecl -ecl-min-size=12 -ecl-maxLBD=6",false);
 }
-else if( optionSet == "FASTRESTART" ) {
+else if( optionSet == "plain_FASTRESTART" ) {
     parseOptions(" -rlevel=1 ",false);
 }
-else if( optionSet == "AGILREJECT" ) {
+else if( optionSet == "plain_AGILREJECT" ) {
     parseOptions(" -agil-r -agil-limit=0.35",false);
 }
-else if( optionSet == "LIGHT" ) {
+else if( optionSet == "plain_LIGHT" ) {
     parseOptions("  -rlevel=1 -ccmin-mode=1 -lbdupd=0 -minSizeMinimizingClause=3 -minLBDMinimizingClause=3 -no-updLearnAct",false);
 }
 // ShiftBMC configurations
