@@ -54,8 +54,6 @@ bool RATElimination::process()
   }
 
   // re-setup solver!
-  const bool oldLhbrAllow = solver.lhbrAllowed;
-  solver.lhbrAllowed = false;
   reSetupSolver();
   
   if( config.opt_rate_bcs ) { 
@@ -65,8 +63,7 @@ bool RATElimination::process()
   if( config.opt_rate_rate ) { 
     modifiedFormula = eliminateRAT() || modifiedFormula;
   }
-  
-  solver.lhbrAllowed = oldLhbrAllow; // restore lhbr state!
+
   // clean solver!
   cleanSolver();
   

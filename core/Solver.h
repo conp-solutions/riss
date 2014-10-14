@@ -427,7 +427,7 @@ protected:
     CRef     propagate        (bool duringAddingClauses = false );                     // Perform unit propagation. Returns possibly conflicting clause (during adding clauses, to add proof infos, if necessary)
     void     cancelUntil      (int level);                                             // Backtrack until a certain level.
     PCASSOVIRTUAL
-    int      analyze          (CRef confl, vec< Lit >& out_learnt, int& out_btlevel, unsigned int& lbd, vec< CRef >& otfssClauses, uint64_t& extraInfo );    // // (bt = backtrack, return is number of unit clauses in out_learnt. if 0, treat as usual!)
+    int      analyze          (CRef confl, vec< Lit >& out_learnt, int& out_btlevel, unsigned int& lbd, uint64_t& extraInfo );    // // (bt = backtrack, return is number of unit clauses in out_learnt. if 0, treat as usual!)
     void     analyzeFinal     (Lit p, vec<Lit>& out_conflict);                         // COULD THIS BE IMPLEMENTED BY THE ORDINARIY "analyze" BY SOME REASONABLE GENERALIZATION?
     bool     litRedundant     (Lit p, uint32_t abstract_levels,uint64_t& extraInfo);                       // (helper method for 'analyze()')
     PCASSOVIRTUAL
@@ -495,12 +495,7 @@ protected:
     void printConflictTrail(Minisat::CRef confl);
     void printSearchProgress();
     void updateDecayAndVMTF();
-    /** from all the OTFSS clauses that have been collected during the last call to the method analyze
-     *  this method removes the otfss literals, backtracks, and enqueues the new relevant unit clauses
-     *  @return l_False, if the solver state is UNSAT; l_True, if backtracking beyond the learned clause asserting level has been done; l_Undef otherwise
-     */
-    lbool otfssProcessClauses(int backtrack_level);
-    
+
     /** takes care of the vector of entailed unit clauses, DRUP, ... 
      * @return l_False, if adding the learned unit clause(s) results in UNSAT of the formula
      */
@@ -540,41 +535,6 @@ public:
 protected:
 #endif
 
-
-    /** extended clause learning (Huang, 2010)
-     * @return true, if an extension step has been performed
-     */
-    bool extendedClauseLearning( vec<Lit>& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo );
-    
-    /// restricted extended resolution (Audemard ea 2010)
-    enum rerReturnType {	// return type for the rer-implementation
-      rerUsualProcedure = 0,	// do nothing special, since rer failed -- or attach the current clause because its unit on the current level
-      rerMemorizeClause = 1,	// add the current learned clause to the data structure rerFuseClauses
-      rerDontAttachAssertingLit = 2,	// do not enqueue the asserting literal of the current clause
-      rerAttemptFailed = 3,	// some extra method failed (e.g. find RER-ITE)
-    };
-    
-    /// initialize the data structures for RER with the given clause
-    void restrictedExtendedResolutionInitialize( const vec< Lit >& currentLearnedClause );
-    
-    /// @return true, if a clause should be added to rerFuseClauses
-    rerReturnType restrictedExtendedResolution( vec<Lit>& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo );
-    /// reset current state of restricted Extended Resolution
-    void resetRestrictedExtendedResolution();
-    /// check whether the new learned clause produces an ITE pattern with the previously learned clause (assumption, previousClause is sorted, currentClause is sorted starting from the 3rd literal)
-    rerReturnType restrictedERITE(const Lit& previousFirst, const vec<Lit>& previousPartialClause, vec<Lit>& currentClause);
-    /// initialize the rewrite info with the gates of the formula
-    void rerInitRewriteInfo();
-    /// replace the disjunction p \lor q with x
-    void disjunctionReplace( Minisat::Lit p, Minisat::Lit q, const Minisat::Lit x, bool inLearned, bool inBina );
-    
-    /// structure to store for each literal the literal for rewriting new learned clauses after an RER extension
-    struct LitPair {
-      Lit otherMatch, replaceWith;
-      LitPair( const Lit& l1, const Lit& l2 ) : otherMatch(l1), replaceWith(l2) {};
-      LitPair() :otherMatch(lit_Undef), replaceWith(lit_Undef) {}
-    };
-    vec< LitPair > erRewriteInfo; /// vector that stores the information to rewrite new learned clauses
     
     /** fill the current variable assignment into the given vector */
     void fillLAmodel(vec<LONG_INT>& pattern, const int steps, vec<Var>& relevantVariables ,const bool moveOnly = false); // fills current model into variable vector
@@ -583,12 +543,7 @@ protected:
      * @return false, instance is unsatisfable
      */
     bool laHack(Minisat::vec< Minisat::Lit >& toEnqueue);
-    
-    /** concurrent clause strengthening, but interleaved instead of concurrent ...
-    *  @return false, if the formula is proven to be unsatisfiable
-    */
-    bool interleavedClauseStrengthening();
-    
+ 
     // Static helpers:
     //
 
@@ -647,49 +602,13 @@ protected:
   bool startedSolving;	// inidicate whether solving started already
   
   double useVSIDS;	// parameter for interpolating between VSIDS and VMTF
-  
-  bool lhbrAllowed;	// control from the outside whether lhbr is allowed or not
-  int lhbrs,l1lhbrs,lhbr_news,l1lhbr_news,lhbrtests,lhbr_sub,learnedLHBRs; // stats about lhbr
-  
+ 
   int simplifyIterations; // number of visiting level 0 until simplification is to be performed
   int learnedDecisionClauses;
-  
-  vec<CRef> otfssCls; // store the clauses that can be modified by OTFSS (assume: first literal is to be removed!)
-  int otfsss, otfsssL1,otfssClss,otfssUnits,otfssBinaries,otfssHigherJump; // otfss stats!
-  
-  // for rejecting restarts based on agility
-  double agility;
-  double agility_decay;
-  int agility_rejects;
-  
-  // from CSP solver heuristics
-  int dontTrustPolarity; // at which level should the given polarity be negated?
-  
-  bool doAddVariablesViaER; // indicator for allowing ER or not
-  
+
   // stats for learning clauses
   double totalLearnedClauses, sumLearnedClauseSize, sumLearnedClauseLBD, maxLearnedClauseSize;
-  int extendedLearnedClauses, extendedLearnedClausesCandidates,maxECLclause;
-  int rerExtractedGates;
-  int rerITEtries, rerITEsuccesses, rerITErejectS, rerITErejectT, rerITErejectF; // how often tried RER-ITE, and how often succeeded
-  double totalECLlits; // to calc max and avg
-  uint64_t maxResDepth;
-  Clock rerITEcputime; // timer for RER-ITE
-  
-  int erRewriteRemovedLits,erRewriteClauses; // stats for ER rewriting
-  
-  vec<Lit> rerCommonLits, rerIteLits; // literals that are common in the clauses in the window
-  int64_t rerCommonLitsSum; // sum of the current common literals - to Bloom-Filter common lits
-  vec<Lit> rerLits;	// literals that are replaced by the new variable
-  vec<CRef> rerFuseClauses; // clauses that will be replaced by the new clause -
-  int rerLearnedClause, rerLearnedSizeCandidates, rerSizeReject, rerPatternReject,rerPatternBloomReject,maxRERclause; // stat counters
-  double rerOverheadTrailLits,totalRERlits; // stats
-  
-  // interleaved clause strengthening (ics)
-  bool dynamicDataUpdates;	// apply activity updates during search?
-  int lastICSconflicts;		// number of conflicts for last ICS
-  int icsCalls, icsCandidates, icsDroppedCandidates, icsShrinks, icsShrinkedLits; // stats
-  
+
   // modified activity bumping
   vec<Var> varsToBump; // memorize the variables that need to be bumped in that order
   vec<CRef> clssToBump; // memorize the clauses that need to be bumped in that order, also used during propagate
@@ -714,21 +633,10 @@ protected:
   bool analyzeNewLearnedClause( const CRef newLearnedClause );
 
   // helper data structures
-  vector< int > analyzePosition; // fur full probing approximation
+  vector< int > analyzePosition; // for full probing approximation
   vector< int > analyzeLimits; // all combination limits for full probing
   
-  /** replaces disjunctions with fresh variables 
-   * the assumptions will be sorted
-   * NOTE: kind of expensive
-   */
-  void substituteDisjunctions( vec<Lit>& assumptions );
-  
-  /// for generating bi-asserting clauses instead of first UIP clauses
-  bool isBiAsserting;		// indicate whether the current learned clause is bi-asserting or not
-  bool allowBiAsserting;	// conflict analysis is allowed to produce bi-asserting clauses
-  uint32_t lastBiAsserting;	// store number of conflicts when the last bi-asserting clause has been learnd
-  uint64_t biAssertingPostCount, biAssertingPreCount;	// count number of biasserting clauses (after minimization, before minimization)
-  
+ 
   // UHLE during search with learnt clauses:
   uint32_t searchUHLEs, searchUHLElits;
   
@@ -743,82 +651,7 @@ protected:
    * @return true, if the clause has been shrinked, false otherwise (then, the LBD also stays the same)
    */
   bool erRewrite(vec<Lit>& learned_clause, unsigned int& lbd );
-  
-  /*
-   * 
-   *  things that have to do with CEGAR methods
-   * 
-   */
-  
-  /// rewrite formula for CEGAR
-  void initCegar(vec<Lit>& assumptions, int& currentSDassumptions, int solveCalls);
-  
-  /** check whether another CEGAR iteration is required
-   *  @return true, if another search-iteration is necessary
-   */
-  bool cegarNextIteration(vec< Lit >& assumptions, int& currentSDassumptions, lbool& status);
-  
-  /// setup data structures for cegar
-  void initCegarDS();
-  
-  /// free space of cegar data structures
-  void destroyCegarDS();
-  
-  // data structures that might be used by multiple cegar methods
-  struct occHeapLt { // sort according to number of occurrences of complement!
-        vec<int>& occ; // data to use for sorting
-        bool operator () (int& x, int& y) const {
-	  return occ[ x ] > occ[ y ]; 
-        }
-        occHeapLt(vec<int>& _occ) : occ( _occ ) {}
-  };
-  Heap<occHeapLt>* cegarLiteralHeap; // heap for literals
-  vector< vector<CRef> > cegarOccs; // literal to clause map
-  vec<int> cegarOcc; // number of occurrences of literals in formula
-  
-  struct CegarBVAlitMatch{
-    Lit match;
-    CRef refC, refD;
-    CegarBVAlitMatch(Lit _match, CRef _refC, CRef _refD) : match(_match), refC(_refC), refD(_refD) {}
-    CegarBVAlitMatch() : match(lit_Undef), refC( CRef_Undef ), refD( CRef_Undef ) {}
-    // for comparisons
-    bool operator <  (const CegarBVAlitMatch p) const { return match < p.match;  }
-    bool operator <= (const CegarBVAlitMatch p) const { return match <= p.match; }
-  };
-  /*
-   *  method that replaces common shared disjunctions with fresh variables,
-   *  and then tries the formula by first assuming that these disjunctoins 
-   *  are satisfied. If not, another solver call is executed, until a solution
-   *  or unsatisfiablility can be shown.
-   */
-  
-  /** gives the next assumtions, based on the old assumptions and the new conflict clause 
-   * NOTE: assumes that the old assumptions are sorted, will sort the conflict clause
-   */
-  void giveNewSDAssumptions( vec<Lit>& assumptions, vec<Lit>& conflict_clause );
-  Clock sdTime, sdLastIterTime, sdSearchTime; // seconds that are used during substituteDisjunctions, and time to solve wrongly assumed formulas
-  unsigned sdSteps; // steps that are used during substituteDisjunctions
-  unsigned sdAssumptions; // size of the assumptions
-  unsigned sdFailedCalls; // number of calls for SD
-  unsigned sdClauses, sdLits; // number of clauses/literals that have been used for rewriting
-  unsigned sdFailedAssumptions; // number of wrongly assumed literals
-  
-  /** tries to perform incomplete BVA (if no BVA possible, try to add a literal to some clause)
-   *  then, run solver in CEGAR mode, until all clauses are satisfied
-   *  @return vector of literals, which contains lit_Undef separated CEGAR clauses
-   */
-  void cegarBVA( vec<Lit>& cegarClauses );
-  
-  /** based on the current model check whether all the CEGAR clauses are satisfied
-   *  if not, add all the clauses that are not satisfied yet back to the formula.
-   *  Method will update the literal vector
-   *  @return number of clauses that have been added to the solver
-   */
-  int checkCEGARclauses( vec<Lit>& cegarClauses, bool addAll = false );
-  
-  Clock cbTime;  // time for cegar BVA
-  vec<Lit> cegarClauseLits; // literals of the clauses that have been deleted (loosened) due to cegar BVA
-  unsigned cbSteps, cbClauses, cbFailedCalls, cbLits, cbReduction, cbReintroducedClauses; // stats about cegar bva
+
 
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;
@@ -845,12 +678,6 @@ public:
 
   /** return extra variable information (should be called for top level units only!) */
   uint64_t variableExtraInfo( const Var& v ) const ;
-  
-  /** temporarly enable or disable extended resolution, to ensure that the number of variables remains the same */
-  void setExtendedResolution( bool enabled ) { doAddVariablesViaER = enabled; }
-  
-  /** query whether extended resolution is enabled or not */
-  bool getExtendedResolution() const { return doAddVariablesViaER; }
   
 /// for qprocessor
 public:

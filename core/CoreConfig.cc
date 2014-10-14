@@ -105,8 +105,6 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
 
  opt_updateLearnAct ("MODS", "updLearnAct", "UPDATEVARACTIVITY trick (see glucose competition'09 companion paper)", true , optionListPtr ),
 
- opt_hack ("SEARCH - REASON", "hack", "use hack modifications", 0, IntRange(0, 3) , optionListPtr ),
- opt_hack_cost ("SEARCH - REASON", "hack-cost", "use size cost", true , optionListPtr ),
 #if defined TOOLVERSION
  opt_dbg(false) ,
 #else

@@ -995,7 +995,6 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 lbool Preprocessor::preprocess()
 {
   data.preprocessing();
-  const bool wasDoingER = solver->getExtendedResolution();
   
   // do not preprocess, if the formula is considered to be too large!
   if( !data.unlimited() && ( data.nVars() > config.opt_cp3_vars || data.getClauses().size() + data.getLEarnts().size() > config.opt_cp3_cls || data.nTotLits() > config.opt_cp3_lits ) ) return l_Undef;
@@ -1028,7 +1027,6 @@ lbool Preprocessor::preprocess()
     }
     exit(0);
   } else {
-    solver->setExtendedResolution( wasDoingER );
     return ret;
   }
 }
@@ -1061,7 +1059,6 @@ lbool Preprocessor::inprocess()
     
     if( config.opt_verbose > 3 ) cerr << "c start inprocessing after another " << solver->conflicts - lastInpConflicts << endl;
     data.inprocessing();
-    const bool wasDoingER = solver->getExtendedResolution();
     
     
     if(config.opt_randInp) data.randomized();
@@ -1073,8 +1070,6 @@ lbool Preprocessor::inprocess()
     
     lastInpConflicts = solver->conflicts;
     if( config.opt_verbose > 4 ) cerr << "c finished inprocessing " << endl;
-    
-    solver->setExtendedResolution( wasDoingER );
     
     return ret;
   }

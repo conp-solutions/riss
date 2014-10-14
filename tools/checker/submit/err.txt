@@ -1,8 +1,0 @@
-c *****************************************************
-c *  Coprocessor 2.1, Copyright 2012 Norbert Manthey  *
-c *   This program may be redistributed or modified   *
-c * under the terms of the GNU General Public License *
-c *****************************************************
-c process id: 9506
-c [FP] open file fasum.cnf
-c can not open file fasum.cnf

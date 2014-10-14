@@ -1133,8 +1133,6 @@ void FourierMotzkin::findCardsSemantic( vector< FourierMotzkin::CardC >& cards, 
 	intersection.create( 2 * data.nVars() ); // set a flag for each literal
 	intersection.nextStep();
 	const int oldClauses = data.getClauses().size(); // to be able to add the clauses that have been added by LHBR
-	const bool oldLhbrAllow = solver.lhbrAllowed;
-	solver.lhbrAllowed = false;
 	// work on array tmpA with current clauses
 	for( int i = 0 ; i < n && (data.unlimited() || (semSteps < config.opt_semSearchLimit) ); ++ i ) { // for all the clauses (all of them are still watched), and within the limits
 	  Clause& c = ca[ tmpA[i] ];
@@ -1326,7 +1324,6 @@ void FourierMotzkin::findCardsSemantic( vector< FourierMotzkin::CardC >& cards, 
 	
 	cleanSolver();
 	
-	solver.lhbrAllowed = oldLhbrAllow; // set back -- TODO: check where the error comes from!
 	if( data.getClauses().size() > oldClauses ) { // added clauses by LHBR
 	    for( int j = oldClauses; j < data.getClauses().size(); ++ j ) {
 	     // cerr << "c add newly generated clause " << data.getClauses()[j] << " : " << ca[data.getClauses()[j]] << endl;

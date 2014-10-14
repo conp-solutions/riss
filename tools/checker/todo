@@ -1,1 +1,0 @@
-./riss cnfdd_6885/red.cnf  -varActB=1 -var-decay-b=0.6 -no-updLearnAct -szLBDQueue=70 -rnd-init -rnd-freq=0.5 -rmf -rer-max-size=2 -otfssL -otfss -minLBDMinimizingClause=9 -longConflict -keepWorst=0.2 -init-pol=2 -init-act=4 -firstReduceDB=2000 -dontTrust -ccmin-mode=0 -agil-add=128 -K=0.5

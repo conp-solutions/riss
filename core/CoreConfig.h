@@ -108,8 +108,6 @@ public:
 
  BoolOption opt_updateLearnAct;
 
- IntOption opt_hack;
- BoolOption opt_hack_cost;
 #if defined TOOLVERSION
  const bool opt_dbg;
 #else
