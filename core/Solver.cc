@@ -1416,7 +1416,8 @@ lbool Solver::search(int nof_conflicts)
 	      
      
 	      // OTFSS TODO put into extra method!
-	      bool backTrackedBeyondAsserting = false;
+	      bool backTrackedBeyondAsserting = false; // indicate whether learnt clauses can become unit (if no extra backtracking is performed, this stament is true)
+	      cancelUntil( backtrack_level );          // cancel trail so that learned clause becomes a unit clause
 	      
 	      // add the new clause(s) to the solver, perform more analysis on them
 	      if( ret > 0 ) { // multiple learned clauses
