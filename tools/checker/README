@@ -1,15 +1,15 @@
-Compile by running "make" (requires g++)
-
-Usage: 
-./certifiedSAT <instance> <solveroutput>
-
-Example of usage:
-Run your solver and redirect stdout of the solver to a file <solveroutput>. e.g.: 
-./solver test.cnf >solution.out
-
-verify the ouput with
-./certifiedSAT test.cnf solution.out
+tool suite to fuzz check a SAT solver
 
 
+before usage:
+1) make
+2) setup sat solver call in solver.sh
+
+usage:
+
+to check whether the set up solver configuration has bugs
+./fuzzcheck.sh ./solver.sh
 
 
+to minimize a formula (based on exit code)
+./cnfdd original-formula.cnf result-formula.cnf ./tool [-tool-parameter]
