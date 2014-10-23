@@ -720,9 +720,9 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 #endif
        
         for (int j = (p == lit_Undef) ? 0 : 1; j < c.size(); j++){
-            Lit q = c[j];
+            const Lit& q = c[j];
 	    if( config.opt_learn_debug ) cerr << "c level for " << q << " is " << level(var(q)) << endl;
-            if (!varFlags[var(q)].seen && level(var(q)) > 0){
+            if (!varFlags[var(q)].seen && level(var(q)) > 0){ // variable is not in the clause, and not on top level
                 currentSize ++;
                 if( !foundFirstLearnedClause  ) varsToBump.push( var(q) );
 		if( config.opt_learn_debug ) cerr << "c set seen for " << q << endl;
@@ -747,7 +747,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
         if( !isOnlyUnit && units > 0 ) break; // do not consider the next clause, because we cannot continue with units
         
         // Select next clause to look at:
-        while (! varFlags[var(trail[index--])].seen ) {} // cerr << "c check seen for literal " << (sign(trail[index]) ? "-" : " ") << var(trail[index]) + 1 << " at index " << index << " and level " << level( var( trail[index] ) )<< endl;
+        while (! varFlags[ var( trail[index--] ) ].seen ) {} // cerr << "c check seen for literal " << (sign(trail[index]) ? "-" : " ") << var(trail[index]) + 1 << " at index " << index << " and level " << level( var( trail[index] ) )<< endl;
         p     = trail[index+1];
 	lastConfl = confl;
         confl = reason(var(p));
@@ -939,7 +939,6 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     
     // Compute LBD, if the current value is not the right value
     if( recomputeLBD ) lbd = computeLBD(out_learnt);
-    lbd = lbd; // for bi-asserting clauses the LBD has to be one larger (approximation), because it is not known whether the one literal would glue the other one
 
   
 #ifdef UPDATEVARACTIVITY
@@ -1074,7 +1073,7 @@ void Solver::uncheckedEnqueue(Lit p, Minisat::CRef from, bool addToProof, const 
 //       trailPos[ var(p) ] = (int)trail.size(); /// modified learning, important: before trail.push()!
 
     // prefetch watch lists
-    __builtin_prefetch( & watches[p] );
+    __builtin_prefetch( & watches[p], 1, 0 ); // prefetch the watch, prepare for a write (1), the data is highly temoral (0)
     if(config.opt_printDecisions > 1 ) {cerr << "c uncheched enqueue " << p; if( from != CRef_Undef ) cerr << " because of [" << from << "] " <<  ca[from]; cerr << endl;}
       
     trail.push_(p);
@@ -1427,10 +1426,8 @@ lbool Solver::search(int nof_conflicts)
 		if( l_False == handleLearntClause( learnt_clause, backTrackedBeyondAsserting, nblevels, extraInfo ) ) return l_False;
 	      }
 	    
-	    if( true ) {
 	      varDecayActivity();
 	      claDecayActivity();
-	    }
 
 	    conflictsSinceLastRestart ++;
            
@@ -1450,6 +1447,7 @@ lbool Solver::search(int nof_conflicts)
 	  
 	  if( !withinBudget() ) return l_Undef; // check whether we can still do conflicts
 	  
+	  // check for communication to the outside (for example in the portfolio solver)
 	  int result = updateSleep(0);
 	  if( -1 == result ) {
 	    // interrupt via communication
