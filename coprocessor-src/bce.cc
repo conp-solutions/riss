@@ -262,7 +262,7 @@ void BlockedClauseElimination::blockedClauseElimination()
       assert( bceHeap.inHeap( toInt(right) ) && "item from the heap has to be on the heap");
       bceHeap.removeMin();
       
-      if( data.doNotTouch(var(right)) ) continue; // do not consider variables that have to stay fixed!
+      if( data.doNotTouch(var(right)) ) continue; // do not consider variables that have to stay fixed! // TODO: might be put into re-init loop for heap
       
       testedLits++; // count number of literals that have been tested for BCE
       // check whether a clause is a tautology wrt. the other clauses
@@ -345,6 +345,7 @@ void BlockedClauseElimination::blockedClauseElimination()
 	      for( int k = 0 ; k < c.size(); ++ k ) {
 		if( bceHeap.inHeap( toInt(~c[k]) ) ) bceHeap.update( toInt(~c[k]) ); // update entries in heap
 		else {
+		  // if the complementary literal is not yet in the set for the next iteration, add it
 		  if( ! nextRound.isCurrentStep(toInt(~c[k]) ) ) {
 		    nextRoundLits.push_back( ~c[k] );
 		    nextRound.setCurrentStep( toInt(~c[k]) );
@@ -354,7 +355,7 @@ void BlockedClauseElimination::blockedClauseElimination()
 	      didChange();
 	      if ( !c.learnt() ) {
 		  if( config.opt_bce_verbose > 2) cerr << "c remove with blocking literal " << right << " blocked clause " << ca[data.list(right)[i]] << endl;
-		  data.addToExtension(data.list(right)[i], right);
+		  data.addToExtension(data.list(right)[i], right); // to reconstruct the actual model of the formula, add the clause and literal to the repair stack
 	      }
 	  // remove the clause
 	} else {
@@ -417,7 +418,9 @@ void BlockedClauseElimination::blockedClauseElimination()
 	} 
 	
       } // end iterating over all clauses that contain (right)
-    }
+
+      
+    } // end iterating over all literals of the heap
   
     // perform garbage collection
     data.checkGarbage();  

@@ -61,7 +61,11 @@ public:
   
 protected:
 
-  /** resolve clause D, ~l \in D, with existing literals in resolvent on literal l */
+  /** resolve clause D on literal l, ma stores the literals of the other clause
+   *  resolve clause D, ~l \in D, with existing literals in resolvent on literal l 
+   * @param resolvent initially contains the literals of the other clause (except literal l), afterwards, stores the resolvent, if the resolvent is not a  tautology
+   * @return true, if the resolvent is a tautology
+   */
   bool resolveUnsortedStamped( const Lit l, const Clause& d, MarkArray& ma, vector<Lit>& resolvent );
 
   /** run RAT elmination 

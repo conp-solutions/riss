@@ -53,7 +53,7 @@ bool RATElimination::process()
     return true;
   }
 
-  // re-setup solver!
+  // re-setup solver! (now, the clause swill not be sorted any longer, due to two-watched literal propagation and move to front strategy)
   reSetupSolver();
   
   if( config.opt_rate_bcs ) { 
@@ -99,6 +99,7 @@ bool RATElimination::eliminateRAT()
   data.ma.resize(2*data.nVars());
   data.ma.nextStep();
   
+  // additional mark array to perform (unordered) resolution // TODO not necessary if we do not check for blocked?
   MarkArray bratResolve;
   if( config.opt_rate_brat ) {
     bratResolve.resize(2*data.nVars());
@@ -137,8 +138,8 @@ bool RATElimination::eliminateRAT()
       for( int i = 0 ; i < data.list(right).size(); ++ i ) 
       {
 	Clause& c = ca[ data.list(right)[i] ];
-	if( c.can_be_deleted() || c.learnt() ) continue; 
-	if( c.size() < config.rate_minSize ) continue; // ignore "small" clauses
+	if( c.can_be_deleted() || c.learnt() ) continue; // TODO: yet we do not work with learned clauses, because its expensive
+	if( c.size() < config.rate_minSize ) continue; // ignore "small" clauses // TODO have a value for the parameter to disable this limit (e.g. are ther binaray RAT clauses)
 	
 	rateCandidates ++;
 	if( config.opt_rate_debug > 0 ) cerr << endl << "c test clause [" << data.list(right)[i] << "] " << c << endl;
@@ -165,20 +166,24 @@ bool RATElimination::eliminateRAT()
 	for( int j = 0 ; j < c.size(); ++ j) if( c[j] != right ) data.lits.push_back( c[j] );
 	const int defaultLits = data.lits.size(); // number of lits that can be kept for each resolvent
 	
-	data.lits.push_back(right); // to test whether c is AT, and hence can be removed by ATE
-	
+
 	solver.detachClause( data.list(right)[i], true ); // detach the clause eagerly
 	assert( solver.decisionLevel() == 0 && "check can only be done on level 0" );
-	solver.newDecisionLevel();
+	
+	/** check whether the clause C is asymmetric tautology
+	 */
+	data.lits.push_back(right); // to test whether c is AT, and hence can be removed by ATE
+	solver.newDecisionLevel(); // to be able to backtrack
 	if( config.opt_rate_debug > 2 ) cerr << "c enqueue complements in " << data.lits << endl;
 	for( int j = 0 ; j < data.lits.size(); ++ j ) solver.uncheckedEnqueue( ~data.lits[j] ); // enqueue all complements
 	CRef confl = solver.propagate(); // check whether unit propagation finds a conflict for (F \ C) \land \ngt{C}, and hence C would be AT
 	rateSteps += solver.trail.size(); // approximate effort for propagation
 	solver.cancelUntil(0); // backtrack
-	if( confl != CRef_Undef ) {
+	if( confl != CRef_Undef ) { // found a conflict during propagating ~C
 	  remAT++;
+	  // reference c might not be valid any more (because propagate could have created new clauses via LHBR), hence, use ca[ data.list(right)[i]]
 	  for( int j = 0 ; j < ca[ data.list(right)[i]].size(); ++ j ) { // all complementary literals can be tested again
-	    if( ! nextRound.isCurrentStep(toInt(~ca[ data.list(right)[i]][j]) ) ) {
+	    if( ! nextRound.isCurrentStep(toInt(~ca[ data.list(right)[i]][j]) ) ) { // if literal not in set for next round, put it there!
 	      nextRoundLits.push_back( ~ca[ data.list(right)[i]][j] );
 	      nextRound.setCurrentStep( toInt(~ca[ data.list(right)[i]][j]) );
 	    }
@@ -190,11 +195,11 @@ bool RATElimination::eliminateRAT()
 	  data.addCommentToProof("AT clause during RATE");
 	  data.addToProof(c,true);
 	  didSomething = true;
-	  continue;
+	  continue; // consider next clause
 	}
 	
 	
-	data.lits.resize(defaultLits);
+	data.lits.resize(defaultLits); // remove literal right from vector again
 	// data.lits contains the complements of the clause C, except literal right.
 	data.ma.nextStep();
 	for( int j = 0 ; j < data.lits.size(); ++ j ) {
@@ -223,11 +228,14 @@ bool RATElimination::eliminateRAT()
 	  rateSteps += d.size(); // approximate effort for resolution
 	  if( config.opt_rate_debug > 2 ) cerr << "c RATE resolvent (taut=" << isTaut << ") : " << data.lits << endl;
 	  
-	  if( isTaut ) { data.lits.resize( defaultLits ); continue; } // if resolvent is a tautology, then the its also AT (simulates BCE). remove the literals from D from the resolvent again
+	  if( isTaut ) { // if the resolvent is a tautology, then the resolvent is redundant wrt. formula, and we do not need to perform propagation
+	    data.lits.resize( defaultLits ); // TODO: really necessary?
+	    continue;
+	  } // if resolvent is a tautology, then the its also AT (simulates BCE). remove the literals from D from the resolvent again
 	  else allTaut = false;
 
 	  // test whether the resolvent is AT
-	  solver.newDecisionLevel();
+	  solver.newDecisionLevel(); // to be able to backtrack
 	  if( config.opt_rate_debug > 2 ) cerr << "c enqueue complements in " << data.lits << endl;
 	  for( int k = 0 ; k < data.lits.size(); ++ k ) solver.uncheckedEnqueue( ~data.lits[k] );	// enqueue all complements
 	  CRef confl = solver.propagate();	// check whether unit propagation finds a conflict for (F \ C) \land \ngt{C}, and hence C would be AT
@@ -235,6 +243,8 @@ bool RATElimination::eliminateRAT()
 	  if( config.opt_rate_debug > 2 ) cerr << "c propagate with conflict " << (confl != CRef_Undef ? "yes" : " no") << endl;
 	  solver.cancelUntil(0);	// backtrack
 	  if( confl == CRef_Undef ) {
+	    
+	    // the resolvent is not AT, hence, check whether the resolvent is blocked
 	    if( config.opt_rate_brat ) {
 	      MethodClock bratMC( bratTime ); // measure time
 	      // check whether resolvent is blocked on one of its literals
@@ -267,7 +277,7 @@ bool RATElimination::eliminateRAT()
 		  break; // found a blocking literal
 		}
 	      }
-	      allResolventsAT = isblocked;
+	      allResolventsAT = isblocked; // overloading ... not really AT, but the resolvent is redundant
 	      
 	    } else {
 	      allResolventsAT = false;	// not AT
@@ -276,7 +286,7 @@ bool RATElimination::eliminateRAT()
 	  data.lits.resize(defaultLits);	// remove the literals from D again
 	  
 	  if( !data.unlimited() && config.rate_Limit <= rateSteps) {	// check step limits
-	    allResolventsAT = false; break; 
+	    allResolventsAT = false; break; // if limit reached but not all clauses tested, then the clause C is not known to be redundant
 	  }
 	}
 	if( allResolventsAT ) {	// clause C is RAT, remove it!
