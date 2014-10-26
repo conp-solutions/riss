@@ -292,6 +292,7 @@ BoolOption orderComplements; // sort the heap based on the occurrence of complem
 BoolOption bceBinary; // remove binary clauses during BCE
 IntOption bceLimit;
 BoolOption opt_bce_bce; // actually remove blocked clauses
+BoolOption opt_bce_bcm; // minimize blocked clauses instead of eliminating them (keep the literals that are required for being blocked)
 BoolOption opt_bce_cle; // perform covered literal elimination
 BoolOption opt_bce_cla; // perform covered literal addition
 BoolOption opt_bce_cle_conservative; // perform CLE conservative and cheap, if tautological resolvents occur

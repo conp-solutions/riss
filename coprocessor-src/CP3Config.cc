@@ -317,6 +317,7 @@ orderComplements (_cat_bce,"bce-compl", "test literals for BCE based on the numb
 bceBinary (_cat_bce,"bce-bin", "allow to remove binary clauses during BCE", false , optionListPtr ),
 bceLimit (_cat_bce,"bce-limit", "number of pairwise clause comparisons before interrupting BCE", 100000000, IntRange(0, INT32_MAX) , optionListPtr ),
 opt_bce_bce(_cat_bce,"bce-bce", "actually perform BCE", true, optionListPtr ),
+opt_bce_bcm(_cat_bce,"bce-bcm", "actually perform BCM (instead of BCE)", false, optionListPtr ),
 opt_bce_cle(_cat_bce,"bce-cle", "perform covered literal elimination (CLE)", false, optionListPtr ),
 opt_bce_cla(_cat_bce,"bce-cla", "perform covered literal elimination (CLA)", false, optionListPtr ),
 opt_bce_cle_conservative(_cat_bce,"bce-cle-cons", "conservative cle if taut. resolvents are present", false, optionListPtr ),

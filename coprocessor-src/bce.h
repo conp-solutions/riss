@@ -36,6 +36,7 @@ class BlockedClauseElimination : public Technique  {
   int bceSteps, testedLits;
   int cleCandidates; // number of clauses that have been checked for cle
   int remBCE, remCLE, cleUnits; // how many clauses / literals have been removed
+  int bcm_cls, bcm_cls_cands, bcm_lits;        // number of clauses that have been affected by BCM, candidate clauses, literals that have been removed by BCM
   Clock bceTime, claTime; // clocks for the two methods
   
   int claTestedLits, claSteps, claExtendedClauses, claExtensions;
@@ -61,8 +62,9 @@ public:
 protected:
   /** check whether resolving c and d on literal l results in a tautology 
    * Note: method assumes c and d to be sorted
+   * @return Lit_Undef, if the resolvent is no tautology, otherwise the (first) literal of c, which produces the tautologic resolvent
    */
-  bool tautologicResolvent( const Clause& c, const Clause& d, const Lit l );
+  Lit tautologicResolvent( const Clause& c, const Clause& d, const Lit l ) const ;
   
   /** run blocked clause elimination, and covered literal elimination */
   void blockedClauseElimination();
