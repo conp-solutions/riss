@@ -7,7 +7,7 @@
 # print to screen: solution for the cnf
 #
 
-param="-v"
+param="-v -enabled_cp3 -cp3_stats -bce -bce-bcm"
 
 #
 # select between printing a proof and not printing a proof

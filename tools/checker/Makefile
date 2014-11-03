@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: certifiedSAT stc verify cnfdd cnfuzz  lgl 
+all:  verify cnfdd cnfuzz  lgl 
 
 cnfdd: cnfdd.c Makefile
 	gcc -o cnfdd cnfdd.c -Wall -O0
