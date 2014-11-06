@@ -1,0 +1,27 @@
+Before getting started
+
+1) adapt the script download.sh so that the correct data.csv files are copied here
+
+
+
+How to evaluate the data of a benchmark
+(the columnnames in the plots, as well as the limits for the axis might be adopted)
+
+1) copy the data into an extra directory with "./download.sh <experimentName>"
+
+2) enter the (new) directory
+
+3) copy all scripts here "cp ../scripts/*.sh ."
+
+4) normalize the solver files (checks status and exit code, might not work for simplification only)
+   with "./normalize.sh"
+
+5) compare the solutions wrt their exit codes with "./joinAndCheckSAT.sh sat.dat *.csv"
+
+6) show a summary table with "./summarize.sh sat.dat"
+
+7) draw plot with run time "./plotAllCactus.sh time 4 *.csv" that produces a file time.pdf
+
+8) more usueful plots: scatter plot ./plotXYfiles.sh
+
+9) a nicer table: "./joinTimes.sh times.dat *.csv" and "./summarizeTimes.sh times.dat <timeout>"
