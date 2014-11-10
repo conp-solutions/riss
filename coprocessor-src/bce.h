@@ -26,8 +26,8 @@ class BlockedClauseElimination : public Technique  {
         CoprocessorData & data; // data to use for sorting
 	bool useComplements; // sort according to occurrences of complement, or actual literal
         bool operator () (int& x, int& y) const {
-	  if( useComplements ) return data[ ~toLit(x)] > data[ ~toLit(y) ]; 
-	  else return data[ toLit(x)] > data[ toLit(y) ]; 
+	  if( useComplements ) return data[ ~toLit(x)] < data[ ~toLit(y) ]; 
+	  else return data[ toLit(x)] < data[ toLit(y) ]; 
         }
         LitOrderBCEHeapLt(CoprocessorData & _data, bool _useComplements) : data(_data), useComplements(_useComplements) {}
   };
