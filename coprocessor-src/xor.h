@@ -41,7 +41,7 @@ class XorReasoning : public Technique  {
   struct VarLt {
         vector< vector <int> > & data;
         bool operator () (int& x, int& y) const {
-	    return data[ x ].size() > data[ y].size(); 
+	    return data[ x ].size() < data[ y].size(); 
         }
         VarLt(vector<vector< int> > & _data) : data(_data) {}
   };

@@ -57,7 +57,7 @@ class BoundedVariableAddition : public Technique  {
   struct LitOrderBVAHeapLt {
         CoprocessorData & data;
         bool operator () (int& x, int& y) const {
-	    return data[ toLit(x)] > data[toLit(y)]; 
+	    return data[ toLit(x)] > data[toLit(y)]; // more frequent literal should be least element!
         }
         LitOrderBVAHeapLt(CoprocessorData & _data) : data(_data) {}
   };

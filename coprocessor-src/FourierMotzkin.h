@@ -51,7 +51,7 @@ class FourierMotzkin : public Technique  {
   struct LitOrderHeapLt {
         CoprocessorData & data;
         bool operator () (int& x, int& y) const {
-	    return data[ toLit(x)] > data[toLit(y)]; 
+	    return data[ toLit(x)] < data[toLit(y)]; 
         }
         LitOrderHeapLt(CoprocessorData & _data) : data(_data) {}
   };
