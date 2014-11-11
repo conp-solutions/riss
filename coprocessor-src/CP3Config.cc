@@ -240,7 +240,6 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
    opt_resolve_learnts (_cat_bve, "cp3_bve_resolve_learnts", "Resolve learnt clauses: 0: off, 1: original with learnts, 2: 1 and learnts with learnts", 0, IntRange(0,2), optionListPtr ),
   opt_unlimited_bve   (_cat_bve, "bve_unlimited",  "perform bve test for Var v, if there are more than 10 + 10 or 15 + 5 Clauses containing v", false, optionListPtr ),
   opt_bve_strength    (_cat_bve, "bve_strength",  "do strengthening during bve", true, optionListPtr ),
-   opt_bve_reduce_lits(_cat_bve, "bve_red_lits",  "0=reduce number of literals, 1=reduce number of clauses,2=reduce any of the two,3 reduce both", 0, IntRange(0,3), optionListPtr ),
   opt_bve_findGate    (_cat_bve, "bve_gates",  "try to find variable AND gate definition before elimination", true, optionListPtr ),
   opt_force_gates     (_cat_bve, "bve_force_gates", "Force gate search (slower, but probably more eliminations and blockeds are found)", false, optionListPtr ),
  // pick order of eliminations
@@ -250,8 +249,9 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
    opt_bve_growTotal   (_cat_bve, "bve_cgrow_t", "total number of additional clauses", INT32_MAX, IntRange(0,INT32_MAX), optionListPtr ),
   opt_totalGrow       (_cat_bve, "bve_totalG" , "Keep track of total size of formula when allowing increasing eliminations", false, optionListPtr ),
   
-  opt_bve_bc          (_cat_bve, "bve_BCElim",    "Eliminate Blocked Clauses", true, optionListPtr ),
+  opt_bve_bc          (_cat_bve, "bve_BCElim",    "Eliminate Blocked Clauses", false, optionListPtr ),
   heap_updates         (_cat_bve, "bve_heap_updates",    "Always update variable heap if clauses / literals are added or removed, 2 add variables, if not in heap", 1, IntRange(0,2), optionListPtr ),
+  opt_bve_earlyAbort  (_cat_bve, "bve_early",   "Interupt anticipate eagerly", false, optionListPtr ),
   opt_bce_only        (_cat_bve, "bce_only",    "Only remove blocked clauses but do not resolve variables.", false, optionListPtr ),
   opt_print_progress  (_cat_bve, "bve_progress", "Print bve progress stats.", false, optionListPtr ),
   opt_bveInpStepInc      (_cat_bve, "cp3_bve_inpInc","increase for steps per inprocess call", 5000000, IntRange(0, INT32_MAX), optionListPtr ),

@@ -498,10 +498,7 @@ void BoundedVariableElimination::par_bve_worker (CoprocessorData& data, Heap<Var
         bool doResolve = false;
         bool reducedLits = lit_clauses > 0 && lit_clauses <= lit_clauses_old;
 	    bool reducedClss = new_clauses > 0 && pos_count + neg_count >= new_clauses;
-             if( config.opt_bve_reduce_lits == 0 ) doResolve = reducedLits;				    // number of literals decreasesd
-	    else if( config.opt_bve_reduce_lits == 1 ) doResolve = reducedClss;			        // number of clauses decreasesd
-	    else if( config.opt_bve_reduce_lits == 2 ) doResolve = reducedClss || reducedLits;	// number of literals or clauses decreasesd
-	    else if( config.opt_bve_reduce_lits == 3 ) doResolve = reducedClss && reducedLits;	// number of literals and clauses decreasesd
+       doResolve = reducedClss;			        // number of clauses decreasesd
         
         if (!config.opt_bce_only && new_clauses > 0 && (force || doResolve) )
         {

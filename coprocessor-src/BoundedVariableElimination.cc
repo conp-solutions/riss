@@ -437,21 +437,22 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            int lit_clauses = 0;
            int lit_learnts = 0;
 	   int resolvents = 0;
-                  
+
+	   lbool anticipateResult = l_Undef; // usual end
+	   
            if (!force) 
            {
-
                // anticipate only, if there are positiv and negative occurrences of var 
                if (pos_count != 0 &&  neg_count != 0)
                {
                    if (doStatistics) ++anticipations;
-                   if (anticipateElimination(data, pos, neg,  v, p_limit, n_limit, pos_stats, neg_stats, lit_clauses, lit_learnts, resolvents, bveChecks) == l_False) 
-                       return;  // level 0 conflict found while anticipation TODO ABORT
+                   anticipateResult = anticipateElimination(data, pos, neg,  v, p_limit, n_limit, pos_stats, neg_stats, lit_clauses, lit_learnts, resolvents, bveChecks);
+                   if( anticipateResult  == l_False) return;  // level 0 conflict found while anticipation TODO ABORT
                }
                
                
-               
-               if (config.opt_bve_bc)
+               // use BCE only, if no early abort
+               if (anticipateResult == l_Undef && config.opt_bve_bc)
                {
                    //mark Clauses without resolvents for deletion
                    if(config.opt_bve_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
@@ -466,7 +467,6 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
            //    add resolvents
            //    mark old clauses for deletion
            bool doResolve = false; // TODO: do we need the lit_clauses > 0 or resolvents > 0 check? Assumption: no!
-           bool reducedLits = lit_clauses <= lit_clauses_old; // && lit_clauses > 0;
 	   
 	   // we do allow growth
 	   bool reducedClss = resolvents <= pos_count + neg_count + config.opt_bve_grow ; // && resolvents > 0 ;
@@ -478,12 +478,9 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
 	     if ( config.opt_totalGrow ) totallyAddedClauses += resolvents - ( pos_count + neg_count); // substract!
 	   }
 	   
+	   doResolve = reducedClss;	// number of clauses decreasesd
+	   assert( (anticipateResult != l_True || reducedClss) && "in case of an early abort, we have to resolve" );
 	   
-           if( config.opt_bve_reduce_lits == 0 ) doResolve = reducedLits;				// number of literals decreasesd
-	   else if( config.opt_bve_reduce_lits == 1 ) doResolve = reducedClss;			// number of clauses decreasesd
-	   else if( config.opt_bve_reduce_lits == 2 ) doResolve = reducedClss || reducedLits;	// number of literals or clauses decreasesd
-	   else if( config.opt_bve_reduce_lits == 3 ) doResolve = reducedClss && reducedLits;	// number of literals and clauses decreasesd
-           
            if ( (force || doResolve ) // clauses or literals should be reduced and we did
 		&& !config.opt_bce_only // only if bve should be done
 	      )
@@ -597,12 +594,13 @@ inline void BoundedVariableElimination::removeClauses(CoprocessorData & data, He
 
 }
 
-/*
+/** simulate elimination of one variable
  *  anticipates following numbers:
  *  -> number of resolvents derived from specific clause:       pos_stats / neg_stats
  *  -> total number of literals in clauses after resolution:    lit_clauses
  *  -> total number of literals in learnts after resolution:    lit_learnts
  *
+ *  @return l_False, if the empty clause was produced, l_Undef, if the procedure reached its end, l_True, if we had an early abort due to too many resolvents
  */
 inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& data, vector< CRef >& positive, vector< CRef >& negative, const int v, const int p_limit, const int n_limit, vec<int32_t> & pos_stats, vec<int32_t> & neg_stats, int& lit_clauses, int& lit_learnts, int& resolvents, int64_t& bveChecks, const bool doStatistics)
 {
@@ -612,6 +610,18 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& 
     lit_learnts=0;
     // vec <Lit > resolvent;
     const bool hasDefinition = (p_limit < positive.size() || n_limit < negative.size() );
+    
+    
+    assert( resolvents == 0 && "before resolution there are no resolvents" );
+//     config.opt_bve_growTotal
+    int clausesToUse = 0;
+    if( config.opt_bve_earlyAbort ) {
+      for (int cr_p = 0; cr_p < positive.size() ; ++cr_p)
+	  clausesToUse  = (ca[positive[cr_p]].can_be_deleted()) ? clausesToUse : clausesToUse + 1;
+      for (int cr_p = 0; cr_p < negative.size() ; ++cr_p)
+	  clausesToUse  = (ca[negative[cr_p]].can_be_deleted()) ? clausesToUse : clausesToUse + 1;
+      clausesToUse = clausesToUse  + config.opt_bve_grow + config.opt_bve_growTotal - totallyAddedClauses; // have one stable reference value
+    }
     
     for (int cr_p = 0; cr_p < positive.size() ; ++cr_p)
     {
@@ -666,6 +676,11 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& 
                 else 
                     lit_clauses += newLits;
 		resolvents ++; // count number of produced clauses!
+		
+		// check for an early abort -- we already have more resolvents than we are allowed to create
+		if( config.opt_bve_earlyAbort && resolvents > clausesToUse)
+		  return l_True; // indicate that we interrupted the process, hence, the BCE information is not valid
+		
             }
             
             // empty Clause

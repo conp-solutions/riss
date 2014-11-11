@@ -218,7 +218,6 @@ public:
  IntOption  opt_resolve_learnts ;
  BoolOption opt_unlimited_bve   ;
  BoolOption opt_bve_strength    ;
- IntOption  opt_bve_reduce_lits ;
  BoolOption opt_bve_findGate    ;
  BoolOption opt_force_gates     ;
  // pick order of eliminations
@@ -230,6 +229,7 @@ public:
   
  BoolOption opt_bve_bc          ;
  IntOption heap_updates         ;
+ BoolOption opt_bve_earlyAbort  ;
  BoolOption opt_bce_only        ;
  BoolOption opt_print_progress  ;
  IntOption  opt_bveInpStepInc   ;
