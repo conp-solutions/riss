@@ -10,19 +10,21 @@
    should be executed on the cluster.
 8. Copy `cmds.txt` to client directory of your bserver
 9. Run your `binit`
-```bash
-./binit \
-    num_threads=4 \
-    time_limit_h=1 \
-    time_limit_min=20 \
-    memory_limit=4400 \
-    dummy_timeout_s=100 \
-    global_timeout_h=24 \
-    num_nodes=60 \
-    num_cores_reserved=16 \
-    use_every_nth_core=4; \
+   
+   ```bash
+    ./binit \
+        num_threads=4 \
+        time_limit_h=1 \
+        time_limit_min=20 \
+        memory_limit=4400 \
+        dummy_timeout_s=100 \
+        global_timeout_h=24 \
+        num_nodes=60 \
+        num_cores_reserved=16 \
+        use_every_nth_core=4; \
     ./bview
-```
+   ```
+
 10. Collect evaluation data with `./fastEva.sh`
 
 
@@ -30,8 +32,10 @@
 # How to analyze the output for single file
 
 1. Get the hashcode for the run with
-```bash
-./hashFile.sh <file.cnf>"
-```
+   
+   ```bash
+   ./hashFile.sh <file.cnf>"
+   ```
+
 2. Open the output file in the directory `tmp`
    (.err for stderr, .out for stdout, .runlim for environment)
