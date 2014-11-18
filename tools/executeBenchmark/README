@@ -12,9 +12,15 @@ How to execute a benchmark:
 
 6) adapt the name of the binary in "start.sh"
 
-7) start the experiment with "./start.sh"
+7) run "./start.sh" to create "cmds.txt". This files containes all commands
+   that should be executed on the cluster.
 
-8) collect evaluation data with "./fastEva.sh"
+8) copy "cmds.txt" to client directory of your bserver
+
+9) Run your "binit"
+   ./binit num_threads=4 time_limit_h=1 time_limit_min=20 memory_limit=4400 dummy_timeout_s=100 global_timeout_h=24 num_nodes=60 num_cores_reserved=16 use_every_nth_core=4; ./bview
+
+10) collect evaluation data with "./fastEva.sh"
 
 
 
