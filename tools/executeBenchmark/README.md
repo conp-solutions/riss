@@ -3,13 +3,24 @@
 1. Copy the directory `template`
 2. Enter the new directory
 3. Add all necessary files to `files.txt`
+
+  ```bash
+    find path/to/CNF/2014/ -type f ! -iname ".*" -perm -g+r >> path/to/files.txt
+  ```
+
 4. Set the memory and time limit in `overview.dat`
 5. Copy the binary into the directory `bin`
-6. Adapt the name of the binary in `start.sh`
-7. Run `./start.sh` to create `cmds.txt`. This files containes all commands that
+
+  ```bash
+    scp path/to/binary login@taurus.hrsk.tu-dresden.de:path/to/template/bin
+  ```
+
+6. Change parameters in `params.txt` to that one you would like to run with the binary
+7. Adapt the name of the binary in `start.sh`
+8. Run `./start.sh` to create `cmds.txt`. This files containes all commands that
    should be executed on the cluster.
-8. Copy `cmds.txt` to client directory of your bserver
-9. Run your `binit`
+9. Copy `cmds.txt` to client directory of your bserver
+10. Run your `binit`
    
    ```bash
     ./binit \
@@ -25,7 +36,7 @@
     ./bview
    ```
 
-10. Collect evaluation data with `./fastEva.sh`
+11. Collect evaluation data with `./fastEva.sh`
 
 
 
