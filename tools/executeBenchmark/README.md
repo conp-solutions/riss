@@ -15,7 +15,11 @@
     scp path/to/binary login@taurus.hrsk.tu-dresden.de:path/to/template/bin
   ```
 
-6. Change parameters in `params.txt` to that one you would like to run with the binary
+6. Change parameters in `params.txt` to that one you would like to run with
+   the binary.
+
+   If you have no parameter, write `NOPARAM`. (This is required for './fastEva.sh')
+
 7. Adapt the name of the binary in `start.sh`
 8. Run `./start.sh` to create `cmds.txt`. This files containes all commands that
    should be executed on the cluster.
