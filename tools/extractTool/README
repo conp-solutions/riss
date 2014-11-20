@@ -1,0 +1,3 @@
+Tools to extract data from logs of experimental evaluations of several Riss related tools. 
+
+FormatResults can separate results into results for families (sets of formulas), in combination with the evaluation bash scripts

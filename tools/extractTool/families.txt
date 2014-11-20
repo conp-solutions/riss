@@ -1,0 +1,157 @@
+289 289
+ezfact ezfact
+packing 2dimensionalstrippacking
+planning AAAI2010-SATPlanning  blocks Planning
+aes aes_32 aes_64 aes_24 slp-synthesis-AES
+marg marg
+par32 par32
+gridMRPP surynek--gridMRPP
+spence spence/medium/s spence/hard/s
+hardnm hardnm
+cwd heule_szeider--cwd
+sha sha0 sha1 sha2
+fixed-shape-forced fixed-shape-forced
+rbsat rbsat
+anbul anbul-part anbul-dated
+edgematching edgematching
+addm addm_benchs-shuffling addm_bench addm_benchs
+anbulagan anbulagan
+andrew04 andrew04
+anton anton03 anton04
+AProVE aprove AProVE
+automata-synchronization automata-synchronization
+babic babic
+balancedhidden balancedhidden
+battleship battleship
+factoring factoring
+tph tph
+bioinf bioinf bioinfo
+bitverif bitverif
+crypto bivium bivium-exptime12800 bivium-exptime6400 desgen hitag2-exptime1200 hitag2-exptime4800 hitag2-exptime9600 md5gen
+BMC cbmc vis-bmc visbmc-PHNF vis-bmc-shuffling
+bqwh bqwh
+c32sat c32sat 
+chesscolor chesscolor
+fbcolors fbcolors
+cnf-color cnf-color-shuffling cnf-color cnfcolor-PHNF
+graphColoring graphColoring
+composite composite compositeHuge
+connamacher connamacher04
+connm connm
+countbits countbitsarray countbitsrotate countbitssrl countbitswegner 
+counting counting-clq counting-php
+Depots Depots
+diagnosis diagnosis diag-sat
+DriverLog DriverLog
+dspam dspam
+easier easier
+EnsembleComputation EnsembleComputation
+equilarge equilarge
+eulcbip eulcbip
+Ferry Ferry
+Flat Flat125-301 Flat150-360 Flat175-417 Flat200-479 Flat75-180
+fpga-routing aloul-chnl aloul
+een een-tip een-pico
+frb frb
+genurq genurq
+gomes03 gomes03
+GreenTao GreenTao
+gripper gripper gripper-shuffling
+eq-check hard_eq_check-shuffling hard_eq_check GoldbergHardwareEquivalenceChecking goldb-heqc
+MUS randomMUS
+arc4 arc4
+hgen hgen6 hgen7 hgen8 hgen
+okgen okgen
+hidden hidden
+hidoku hidokus manthey--hidoku Hidoku_enu
+hirsch03 hirsch03
+Homer Homer
+hoonsang hoonsang hoonsang04
+hsatv17 hsatv17
+hwb hwb
+timeframe-expansion HWMCC10-combination-timeframe-expansion
+ibm ibm IBM_FV_2002_13_rule_1
+icbrt icbrt
+jarvisalo jarvisalo
+kexu04 kexu04
+pesp kummling_grosmann--pesp manthey/traffic pesp
+lk l2s-shuffling l2s l3k3 l4k3 l4k4 l5k3
+lardeux03 lardeux03
+li-exam li-exam li-exam-shuffling
+linvrinv linvrinv
+li-test4 li-test4-shuffling li-test4
+looksrandom looksrandom
+manolios manolios
+manol-pipe manol-pipe
+marijn04 marijn04
+markstrom03 markstrom03
+matrix matrix
+max maxand maxor maxxor maxxororand
+4col mayer-eichberger--4col
+carseq mayer-eichberger--carseq
+min minand minandmaxor minor minxor minxorminand
+mironov-zhang mironov-zhang
+miter miter
+mizh mizh
+mod2 mod2-3cage-unsat mod2-3g14-sat mod2-rand3bip-sat mod2-rand3bip-unsat mod2c-3cage-unsat mod2c-rand3bip-sat mod2c-rand3bip-unsat modcircuits
+modelCounting modelCounting
+GI mugrauer_balint--GI
+LABS mugrauer_balint--LABS
+mulhs mulhs
+mutcb mutcb
+PigeonHole /ph 
+pret pret
+narain narain
+ndist.b ndist.b
+nec nec
+uts uts
+parity-games parity-games
+pebbling pebbling
+Philips Philips-shuffling Philips
+phnf phnf
+pipe pipe-sat-1-1 pipe-sat-1-1-shuffling pipe_unsat_1.0 pipe_unsat_1.1
+pmg pmg
+post post
+prime2209 prime2209
+purdom03 purdom03
+QG QG QG6 QG7 QG7a QG8
+qwh qwh
+ramseycube ramseycube
+rand-net rand_net
+BIOINFORMATICS1 rbcl_xits ndhf_xits rpoc_xits
+rndcwd rndcwd
+Rovers Rovers
+sabharwal sabharwal
+sat02bis sat02bis sat02bis-shuffling
+sat02-shuffling sat02-shuffling
+fifo fifo
+satex-challenges satex-challenges
+sgen sgen4-sat2012-sat sgen4-sat2012-unsat
+sgi SRHD-SGI sgi
+shift1add shift1add
+simon02 simon02
+smtqfbv smtqfbv-aigs
+smulo smulo
+social-golfer-problem social-golfer-problem
+station03 station03
+SW100 SW100-8-0 SW100-8-1 SW100-8-2 SW100-8-3 SW100-8-4 SW100-8-5 SW100-8-6 SW100-8-7 SW100-8-8 SW100-8-p0
+symmetry symmetry
+treshold treshold
+unforced unforced
+unif unif
+urquhart urq #takeCareOfBeingPrefixFree!(urqAppearsInOtherFamilyNamesAsWell)
+uts uts
+VanderWaerden VanderWaerden3k VanderWaerden_pd_3k
+velev velev-pipe-uns velev-pipe-o-uns velev-pipe-sat SAT-Race_TS_1/velev- SAT-Race_TS_2/velev- SAT-Race-2010-CNF/hardware-verification/velev/
+vliw vliw_sat_4.0 vliw-sat vliw_unsat_2.0-shuffling vliw_unsat_4.0 vliw-uns vliw_unsat_2.0 9vliw
+9dlx 9dlx
+aim- aim-
+vmpc vmpc grieu
+cube cube
+sortnet sortnet
+safe- safe-
+emptyroom emptyroom
+vpn vpn
+xinetd xinetd
+xor-chain xor-chain
+zeus zeus

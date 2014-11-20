@@ -1073,6 +1073,7 @@ void Solver::uncheckedEnqueue(Lit p, Minisat::CRef from, bool addToProof, const 
 //       trailPos[ var(p) ] = (int)trail.size(); /// modified learning, important: before trail.push()!
 
     // prefetch watch lists
+    // __builtin_prefetch( & watchesBin[p], 1, 0 ); // prefetch the watch, prepare for a write (1), the data is highly temoral (0)
     __builtin_prefetch( & watches[p], 1, 0 ); // prefetch the watch, prepare for a write (1), the data is highly temoral (0)
     if(config.opt_printDecisions > 1 ) {cerr << "c uncheched enqueue " << p; if( from != CRef_Undef ) cerr << " because of [" << from << "] " <<  ca[from]; cerr << endl;}
       
