@@ -27,7 +27,7 @@ echo "set key right bottom" >> tmp.plt
 echo "set output \"$outfile.eps\"" >> tmp.plt
 echo "set xlabel \"solved instances\"" >> tmp.plt
 echo "set ylabel \"time in seconds\"" >> tmp.plt
-echo "set xrange [400:]" >> tmp.plt
+#echo "set xrange [400:]" >> tmp.plt
 #echo "set logscale x" >> tmp.plt
 #echo "set logscale y" >> tmp.plt
 #echo "set xtic 2" >> tmp.plt
