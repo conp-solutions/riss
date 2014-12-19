@@ -232,7 +232,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
  opt_bve_verbose(0),
 #else
   opt_par_bve         (_cat_bve, "cp3_par_bve",    "Parallel BVE: 0 never, 1 heur., 2 always", 1,IntRange(0,2), optionListPtr ),
-   opt_bve_verbose     (_cat_bve, "cp3_bve_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 3), optionListPtr ),
+   opt_bve_verbose     (_cat_bve, "cp3_bve_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 4), optionListPtr ),
 #endif
  
    opt_bve_limit       (_cat_bve, "cp3_bve_limit", "perform at most this many clause derefferences", 25000000, IntRange(-1, INT32_MAX), optionListPtr ),
