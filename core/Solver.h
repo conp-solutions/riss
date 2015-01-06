@@ -75,6 +75,7 @@ namespace Coprocessor {
   class Symmetry;
   class RATElimination;
   class FourierMotzkin;
+  class ExperimentalTechniques;
   class BIG;
 }
 
@@ -108,6 +109,7 @@ class Solver {
     friend class Coprocessor::Symmetry;
     friend class Coprocessor::RATElimination;
     friend class Coprocessor::FourierMotzkin;
+    friend class Coprocessor::ExperimentalTechniques;
     friend class Minisat::IncSolver; // for bmc
 
 #ifdef PCASSO 

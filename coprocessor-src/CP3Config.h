@@ -76,6 +76,7 @@ public:
 #else
   BoolOption opt_ent        ;
 #endif
+ BoolOption opt_exp         ;
  BoolOption opt_la          ;
  BoolOption opt_cce         ;
  BoolOption opt_rate        ;

@@ -93,6 +93,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
 #else
   opt_ent         (_cat2, "ent",           "Use checking for entailed redundancy during preprocessing", false, optionListPtr ),
 #endif
+  opt_exp         (_cat2, "exp",           "Use experimental simplification techniques", false, optionListPtr ),
   opt_la          (_cat2, "la",            "Use (covered/asymmetric) Literal Addition during preprocessing", false, optionListPtr ),
   opt_cce         (_cat2, "cce",           "Use (covered) Clause Elimination during preprocessing", false, optionListPtr ),
   opt_rate        (_cat2, "rate",          "Use resolution asymmetric tautologye limination during preprocessing", false, optionListPtr ),

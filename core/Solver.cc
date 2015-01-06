@@ -300,7 +300,10 @@ bool Solver::addClause_(vec<Lit>& ps)
         return ok = false;
     else if (ps.size() == 1){
 	if( config.opt_hpushUnit ) {
-	  if( value( ps[0] ) == l_False ) return ok = false;
+	  if( value( ps[0] ) == l_False ) {
+// 	    cerr << "c UNSAT due to complementary unit: " << ps[0] << endl;
+	    return ok = false;
+	  }
 	  if( value( ps[0] ) == l_True ) return true;
 	}
 	uncheckedEnqueue(ps[0]);

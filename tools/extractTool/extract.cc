@@ -26,6 +26,7 @@ int main(int argc, char* argv[])
 	      << "fmTime fmAmos fmSteps "
 	      << "cceTime cceCls cceSteps "
 	      << "denseVars "
+	      << "rate-time rate-steps "
 	      << endl;
 	  exit(0);
 	}
@@ -33,7 +34,7 @@ int main(int argc, char* argv[])
   if( argc < 3 ) { cerr << "wrong number of parameters" << endl; exit(1); }
   
   
-  const int extractNumber = 33; // number of string-lines below, plus 1 (starts counting with 0...)
+  const int extractNumber = 34; // number of string-lines below, plus 1 (starts counting with 0...)
   bool handled[ extractNumber ];
   for( int i = 0 ; i < extractNumber; ++ i ) handled[i] = false;
   
@@ -77,6 +78,7 @@ int main(int argc, char* argv[])
   string fmTime, fmAMOs, fmSteps; // 23
   string cceTime, cceCls, cceSteps; // 24
   string denseVars; //25
+  string rateTime, rateSteps; //33
   
   // instance
   string variables; // 31
@@ -325,6 +327,11 @@ int main(int argc, char* argv[])
 				handled[32] = true;
 				clauses =  Get(line, 5);
 			}
+			else if( !handled[33] && line.find("c [STAT] RATE ") == 0 ) {
+				handled[33] = true;
+				rateTime  = Get(line, 3);
+				rateSteps = Get(line, 5);
+			}
 	}
   
   
@@ -352,33 +359,29 @@ int main(int argc, char* argv[])
 	cout << " ";
 	if( handled[6] || Conflicts != "" ) cout << Conflicts ; else cout << "-";
 	cout << " ";
-	
-	if( handled[25] || propagations != "" || ppPerSecond != "" ) cout << propagations << " " << ppPerSecond ; else cout << "- -";
+	if( handled[26] || propagations != "" || ppPerSecond != "" ) cout << propagations << " " << ppPerSecond ; else cout << "- -";
 	cout << " ";
-	if( handled[26] || restarts != "" || consPerRestart != "" ) cout << restarts << " " << consPerRestart ; else cout << "- -";
+	if( handled[27] || restarts != "" || consPerRestart != "" ) cout << restarts << " " << consPerRestart ; else cout << "- -";
 	cout << " ";
-	if( handled[27] || learnReduces != "" ) cout << learnReduces  ; else cout << "-";
+	if( handled[28] || learnReduces != "" ) cout << learnReduces  ; else cout << "-";
 	cout << " ";
-	if( handled[28] || removedClauses != "" ) cout << removedClauses  ; else cout << "-";
+	if( handled[29] || removedClauses != "" ) cout << removedClauses  ; else cout << "-";
 	cout << " ";
-	if( handled[29] || conflictLiterals != "" ) cout << conflictLiterals  ; else cout << "-";
+	if( handled[30] || conflictLiterals != "" ) cout << conflictLiterals  ; else cout << "-";
 	cout << " ";
-
 	if( handled[11] || avgLsize != "" || avgLBD != "" || maxCsize != "" ) cout << avgLsize << " " << avgLBD << " " << maxCsize  ; else cout << "- - -";
 	cout << " ";
-
-     if( handled[7] || CP3PPtime != "" || CP3IPtime != "" || CP3remcls != "" ) cout << CP3PPtime << " " << CP3IPtime << " " << CP3remcls  ; else cout << "- - -";
+	if( handled[7] || CP3PPtime != "" || CP3IPtime != "" || CP3remcls != "" ) cout << CP3PPtime << " " << CP3IPtime << " " << CP3remcls  ; else cout << "- - -";
 	cout << " ";
-     
-     if( handled[13] || susTime != "" || subCls != "" ) cout << susTime << " " << subCls ; else cout << "- -";
+	if( handled[13] || susTime != "" || subCls != "" ) cout << susTime << " " << subCls ; else cout << "- -";
 	cout << " ";
-     if( handled[14] || subSteps != "" || strSteps != "" ) cout << subSteps << " " << strSteps ; else cout << "- -";
+	if( handled[14] || subSteps != "" || strSteps != "" ) cout << subSteps << " " << strSteps ; else cout << "- -";
 	cout << " ";
-     if( handled[15] || eeTime != "" || eeCls != ""  || eeLits != "" || eeSteps != "" ) cout << eeTime << " " << eeCls << " " << eeLits << " " << eeSteps; else cout << "- - - -";
+	if( handled[15] || eeTime != "" || eeCls != ""  || eeLits != "" || eeSteps != "" ) cout << eeTime << " " << eeCls << " " << eeLits << " " << eeSteps; else cout << "- - - -";
 	cout << " ";
-     if( handled[16] || hteTime != "" || hteCls != "" || hteSteps != "" ) cout << hteTime << " " << hteCls << " " << hteSteps  ; else cout << "- - -";
+	if( handled[16] || hteTime != "" || hteCls != "" || hteSteps != "" ) cout << hteTime << " " << hteCls << " " << hteSteps  ; else cout << "- - -";
 	cout << " ";
-     if( handled[17] || bveTime != "" || bveSteps != "" ) cout << bveTime << " " << bveSteps ; else cout << "- -";
+	if( handled[17] || bveTime != "" || bveSteps != "" ) cout << bveTime << " " << bveSteps ; else cout << "- -";
 	cout << " ";	
 	if( handled[8] || abvaTime != "" || abvaMatchs != "" || abvaCls != "" ) cout << abvaTime << " " << abvaMatchs << " " << abvaCls  ; else cout << "- - -";
 	cout << " ";
@@ -386,24 +389,24 @@ int main(int argc, char* argv[])
 	cout << " ";
 	if( handled[10] || xbvaTime != "" || xbvaMatchs != "" || xbvaCls != "" ) cout << xbvaTime << " " << xbvaMatchs << " " << xbvaCls  ; else cout << "- - -";
 	cout << " ";	
-      if( handled[18] || probeTime != "" || probeSteps != "" ) cout << probeTime << " " << probeSteps ; else cout << "- -";
+	if( handled[18] || probeTime != "" || probeSteps != "" ) cout << probeTime << " " << probeSteps ; else cout << "- -";
 	cout << " ";	
 	if( handled[19] || vivTime != "" || vivCls != "" || vivSteps != "" ) cout << vivTime << " " << vivCls << " " << vivSteps  ; else cout << "- - -";
 	cout << " ";	
-      if( handled[20] || unhideTime != "" || unhideCls != "" || unhideLits != "" ) cout << unhideTime << " " << unhideCls << " " << unhideLits  ; else cout << "- - -";
+	if( handled[20] || unhideTime != "" || unhideCls != "" || unhideLits != "" ) cout << unhideTime << " " << unhideCls << " " << unhideLits  ; else cout << "- - -";
 	cout << " ";	
-      if( handled[21] || resTime != "" || resCls != "" || resSteps != "" ) cout << resTime << " " << resCls << " " << resSteps  ; else cout << "- - -";
+	if( handled[21] || resTime != "" || resCls != "" || resSteps != "" ) cout << resTime << " " << resCls << " " << resSteps  ; else cout << "- - -";
 	cout << " ";	
-      if( handled[22] || xorTime != "" || xorNewEE != "" || xorSteps != "" ) cout << xorTime << " " << xorNewEE << " " << xorSteps  ; else cout << "- - -";
+	if( handled[22] || xorTime != "" || xorNewEE != "" || xorSteps != "" ) cout << xorTime << " " << xorNewEE << " " << xorSteps  ; else cout << "- - -";
 	cout << " ";
-      if( handled[23] || fmTime != "" || fmAMOs != "" || fmSteps != "" ) cout << fmTime << " " << fmAMOs << " " << fmSteps  ; else cout << "- - -";
+	if( handled[23] || fmTime != "" || fmAMOs != "" || fmSteps != "" ) cout << fmTime << " " << fmAMOs << " " << fmSteps  ; else cout << "- - -";
 	cout << " ";	
-      if( handled[24] || cceTime != "" || cceCls != "" || cceSteps != "" ) cout << cceTime << " " << cceCls << " " << cceSteps  ; else cout << "- - -";
+	if( handled[24] || cceTime != "" || cceCls != "" || cceSteps != "" ) cout << cceTime << " " << cceCls << " " << cceSteps  ; else cout << "- - -";
 	cout << " ";
-      if( handled[25] || denseVars != "" ) cout << denseVars  ; else cout << "-";
+	if( handled[25] || denseVars != "" ) cout << denseVars  ; else cout << "-";
 	cout << " ";
-	
-      
+	if( handled[33] || rateTime != "" || rateSteps != "" ) cout << rateTime << " " << rateSteps  ; else cout << "- -";
+	cout << " ";
       cout << endl;
 	
   return 0;
