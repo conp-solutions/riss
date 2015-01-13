@@ -15,31 +15,31 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 using namespace Coprocessor;
 
-const char* _cat = "COPROCESSOR 3";
+const char* _cat = "COPROCESSOR";
 const char* _cat2 = "COPROCESSOR  TECHNIQUES";
-const char* _cat_bve = "COPROCESSOR 3 - BVE";
-const char* _cat_bva = "COPROCESSOR 3 - BVA";
-const char* _cat_bce = "COPROCESSOR 3 - BCE";
-const char* _cat_la = "COPROCESSOR 3 - LA";
-const char* _cat_cce = "COPROCESSOR 3 - CCE";
-const char* _cat_dense = "COPROCESSOR 3 - DENSE";
-const char* _cat_entailed = "COPROCESSOR 3 - ENTAILED";
-const char* _cat_ee = "COPROCESSOR 3 - EQUIVALENCE ELIMINATION";
-const char* _cat_ee_hash = "COPROCESSOR 3 - EQUIVALENCE ELIMINATION - HASHING";
-const char* _cat_fm = "COPROCESSOR 3 - FOURIERMOTZKIN";
-const char* _cat_hte = "COPROCESSOR 3 - HTE";
-const char* _cat_pr = "COPROCESSOR 3 - PROBING";
-const char* _cat_up = "COPROCESSOR 3 - UP";
-const char* _cat_res = "COPROCESSOR 3 - RES";
-const char* _cat_rew = "COPROCESSOR 3 - REWRITE";
-const char* _cat_shuffle = "COPROCESSOR 3 - SHUFFLE";
-const char* _cat_sls = "COPROCESSOR 3 - SLS";
-const char* _cat_sub = "COPROCESSOR 3 - SUBSUMPTION";
-const char* _cat_sym = "COPROCESSOR 3 - SYMMETRY";
-const char* _cat_twosat = "COPROCESSOR 3 - TWOSAT";
-const char* _cat_uhd = "COPROCESSOR 3 - UNHIDE";
-const char* _cat_xor = "COPROCESSOR 3 - XOR";
-const char* _cat_rat = "COPROCESSOR 3 - RAT Elimination";
+const char* _cat_bve = "COPROCESSOR - BVE";
+const char* _cat_bva = "COPROCESSOR - BVA";
+const char* _cat_bce = "COPROCESSOR - BCE";
+const char* _cat_la = "COPROCESSOR - LA";
+const char* _cat_cce = "COPROCESSOR - CCE";
+const char* _cat_dense = "COPROCESSOR - DENSE";
+const char* _cat_entailed = "COPROCESSOR - ENTAILED";
+const char* _cat_ee = "COPROCESSOR - EQUIVALENCE ELIMINATION";
+const char* _cat_ee_hash = "COPROCESSOR - EQUIVALENCE ELIMINATION - HASHING";
+const char* _cat_fm = "COPROCESSOR - FOURIERMOTZKIN";
+const char* _cat_hte = "COPROCESSOR - HTE";
+const char* _cat_pr = "COPROCESSOR - PROBING";
+const char* _cat_up = "COPROCESSOR - UP";
+const char* _cat_res = "COPROCESSOR - RES";
+const char* _cat_rew = "COPROCESSOR - REWRITE";
+const char* _cat_shuffle = "COPROCESSOR - SHUFFLE";
+const char* _cat_sls = "COPROCESSOR - SLS";
+const char* _cat_sub = "COPROCESSOR - SUBSUMPTION";
+const char* _cat_sym = "COPROCESSOR - SYMMETRY";
+const char* _cat_twosat = "COPROCESSOR - TWOSAT";
+const char* _cat_uhd = "COPROCESSOR - UNHIDE";
+const char* _cat_xor = "COPROCESSOR - XOR";
+const char* _cat_rat = "COPROCESSOR - RAT Elimination";
 
 CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
 :
@@ -371,8 +371,8 @@ rate_Limit(_cat_rat,"rate-limit", "number of pairwise clause comparisons before 
 opt_rate_debug (_cat_rat, "rate-debug", "debug output for RAT elimination",0, IntRange(0,4) , optionListPtr ),
 opt_rate_brat(_cat_rat, "rate-brat", "test resolvents for being blocked if not AT", false, optionListPtr ),
 rate_minSize(_cat_rat,"rate-min", "minimal clause size for RAT elimination", 3, IntRange(2, INT32_MAX) , optionListPtr ),
-opt_rate_rate(_cat_bce,"rate-rate", "perform RAT elimination (rate)", true, optionListPtr ),
-opt_rate_bcs(_cat_bce,"rate-bcs", "perform blocked substitution (bcs)", false, optionListPtr ),
+opt_rate_rate(_cat_rat,"rate-rate", "perform RAT elimination (rate)", true, optionListPtr ),
+opt_rate_bcs(_cat_rat,"rate-bcs", "perform blocked substitution (bcs)", false, optionListPtr ),
 
 //
 // Dense

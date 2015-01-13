@@ -826,12 +826,19 @@ main (int argc, char **argv)
 
 
 	// runlim binary pretends to be a terminal -- then output of child becomes line-buffered
-  int master, slave;
-  openpty(&master, &slave, NULL, NULL, NULL);
+  // int master, slave;
+  // openpty(&master, &slave, NULL, NULL, NULL);
 
   start_time = wall_clock_time();
   if ((child_pid = fork ()) != 0)
     {
+    
+    /*
+     *
+     * PARENT CODE
+     *
+     */
+     
       if (child_pid < 0)
 	{
 	  ok = FORK_FAILED;
@@ -839,13 +846,12 @@ main (int argc, char **argv)
 	}
       else
 	{
+    // stay in the master terminal  
+    // close(slave);
+	
 	  status = 0;
 	  fprintf (log, "[runlim] main pid:\t\t%d\n", (int) child_pid);
 	  fflush (log);
-
-		// attach to the pseudo terminal
-		login_tty(slave);
-    close(master);
 
 	  assert (SAMPLE_RATE < 1000000);
 	  timer.it_interval.tv_sec = 0;
@@ -892,6 +898,14 @@ main (int argc, char **argv)
     }
   else
     {
+    
+    /*
+     *
+     *   CHILD CODE
+     *
+     */
+    
+    
       unsigned hard_time_limit;
       if (time_limit < real_time_limit) {
 	hard_time_limit = time_limit;
@@ -902,8 +916,11 @@ main (int argc, char **argv)
 	setrlimit (RLIMIT_RSS, &l);
       }
     
-    // stay in the master terminal  
-    close(slave);
+
+    
+ 		// attach to the pseudo terminal
+		// login_tty(slave);
+    // close(master);
 
 	  if ( out != NULL ) 
 	  {
@@ -913,7 +930,12 @@ main (int argc, char **argv)
 		  kill (getppid(), SIGIO);
 		  return 1;
 		}
-	  }
+		/*
+		setvbuf(1,NULL,_IOLBF,0);
+	  } else {
+		  setvbuf(stdout,NULL,_IOLBF,0);
+		  */
+		}
 	  
 	  if ( err != NULL ) 
 	  { 
@@ -923,7 +945,12 @@ main (int argc, char **argv)
 		  kill (getppid(), SIGIO);
 		  return 1;
 		}
-	  }
+		/*
+		setvbuf(2,NULL,_IOLBF,0);
+	  } else {
+		  setvbuf(stderr,NULL,_IOLBF,0);
+		  */
+		}
 
 		if (space_limit != 0){
 		  rlim_t new_mem_lim = (rlim_t)space_limit * 1024*1024;
