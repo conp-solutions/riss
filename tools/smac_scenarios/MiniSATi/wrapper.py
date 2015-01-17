@@ -20,7 +20,7 @@ minisati_binary = os.path.dirname(os.path.realpath(__file__))+"/minisati"
 cmd = "%s %s" %(minisati_binary, instance) # --seed %d --model-stdout --dimacs %s --tmout %d" %(minisati_binary, seed, instance, cutoff)       
 for name, value in configMap.items():
     if (value == "false" or value == "true"):
-        cmd += " %s %s" %(name,  value)
+        cmd += " -no%s" %(name)
     else:
         cmd += " %s=%s" %(name,  value)
     
