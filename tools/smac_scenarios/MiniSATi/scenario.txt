@@ -1,0 +1,8 @@
+pcs-file = smac_scenarios/MiniSATi/params.pcs
+runObj = RUNTIME
+cutoffTime = 1
+wallclock-limit = 30
+deterministic = 0
+instance_file = smac_scenarios/MiniSATi/instances-train.txt
+test_instance_file = smac_scenarios/MiniSATi/instances-test.txt
+algo = smac_scenarios/MiniSATi/wrapper.py
