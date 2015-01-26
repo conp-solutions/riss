@@ -1,0 +1,17 @@
+# Object files
+*.od
+*.or
+*.o
+depend.mk
+
+# Final binary
+riss
+coprocessor
+
+# Latex build files
+*.aux
+*.log
+*.bbl
+*.blg
+*.pdf
+*.out
