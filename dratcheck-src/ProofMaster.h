@@ -11,7 +11,7 @@ Copyright (c) 2014, All rights reserved, Norbert Manthey
 #include "core/SolverTypes.h"
 #include "utils/LockCollection.h"
 
-#include "core/OnlineProofChecker.h"
+#include "dratcheck-src/OnlineProofChecker.h"
 
 #include <cstdio>
 #include <iostream>

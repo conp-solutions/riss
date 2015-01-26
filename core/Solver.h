@@ -927,7 +927,7 @@ bool Solver::addUnitClauses(const vec< Lit >& other)
 //
 }  // close namespace for include
 // check generation of DRUP/DRAT proof on the fly
-#include "core/OnlineProofChecker.h"
+#include "dratcheck-src/OnlineProofChecker.h"
 
 namespace Minisat { // open namespace again!
 

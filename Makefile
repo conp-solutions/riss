@@ -200,6 +200,7 @@ clean:
 	@if [ -d "shiftbmc-src" ]; then cd shiftbmc-src; make clean MROOT=..; fi
 	@if [ -d "pfolio-src" ]; then cd pfolio-src; make clean MROOT=..; fi
 	@if [ -d "pcasso-src" ]; then cd pcasso-src; make clean MROOT=..; fi
+	@if [ -d "dratcheck-src" ]; then cd dratcheck-src; make clean MROOT=..; fi
 	@rm -f *~ */*~
 	@rm -rf doc/html
 	@echo Done

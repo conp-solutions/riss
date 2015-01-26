@@ -11,8 +11,10 @@ Copyright (c) 2014, Norbert Manthey, All rights reserved.
 #include "utils/Options.h"
 #include "utils/System.h"
 #include "core/SolverTypes.h"
-#include "core/Solver.h"
 #include "core/Constants.h"
+
+// for generic interface
+#include <vector>
 
 // this file is included right in the middle of the namespace ...
 namespace Minisat {
@@ -77,12 +79,14 @@ public:
    * Note: for DRAT clauses only the very first literal will be used for checking RAT!
    * @return true, if the addition of this clause is valid wrt. the current proof format
    */
+  bool addClause(const std::vector<int>& clause );
   template <class T>
   bool addClause(const  T& clause, const Lit& remLit);
   bool addClause(const  vec<Lit>& cls ) ;
   bool addClause(const  Lit& l ) ;
   
   /** remove a clause during search */
+  void removeClause( const std::vector<int>& clause ) ;
   void removeClause( const Lit& l ) ;
   template <class T>
   void removeClause( const T& cls ) ;
@@ -275,6 +279,16 @@ bool OnlineProofChecker::propagate()
     return (confl != CRef_Undef); // return true, if something was found!
 }
 
+inline 
+void OnlineProofChecker::removeClause( const std::vector<int>& clause ) {
+  tmpLits.clear();
+  for( int i = 0 ; i < clause.size(); ++ i ) {
+    tmpLits.push( clause[i] < 0 ? mkLit(-clause[i]-1, true ) : mkLit(clause[i]-1, false) );
+  }
+  // remove this clause in the usual way
+  return removeClause( tmpLits );
+}
+
 inline
 void OnlineProofChecker::removeClause( const Lit& l ) 
 {
@@ -419,6 +433,17 @@ void OnlineProofChecker::addParsedclause(const vec< Lit >& cls)
   // here, do not check whether the clause is entailed, because its still input!
 }
 
+inline
+bool OnlineProofChecker::addClause(const std::vector<int>& clause )
+{
+  // create a clause where remLit is the first literal
+  tmpLits.clear();
+  for( int i = 0 ; i < clause.size(); ++ i ) {
+    tmpLits.push( clause[i] < 0 ? mkLit(-clause[i]-1, true ) : mkLit(clause[i]-1, false) );
+  }
+  // add this clause in the usual way
+  return addClause( tmpLits );
+}
 
 template <class T>
 inline
@@ -470,9 +495,12 @@ bool OnlineProofChecker::addClause(const vec< Lit >& cls)
     } else if( value(~cls[i]) == l_False ) { conflict = true; break; }
   }
   
+  assert( (conflict || cls.size() > 0 ) && "the empty clause is not entailed by the proof (some clauses are missing ... )" );
+  
   if( ! conflict ) {
     if( propagate() ) conflict = true; // DRUP!
     else if(  proof == drat ) { // are we checking DRAT?
+      assert( cls.size() > 0 && "checking the empty clause cannot reach here (it can only be a RUP clause, not a RAT clause -- empty clause is not entailed" );
       if( initialVars >= var(cls[0]) ) { // DRAT on the first variable, because this variable is not present before!
 	// build all resolents on the first literal!
 	ma.nextStep();
@@ -524,7 +552,7 @@ bool OnlineProofChecker::addClause(const vec< Lit >& cls)
 	    }
 	  }
 	}
-      } else conflict = true;
+      } else conflict = true; // DRAT, because we have a fresh variable!
     } else {
       if( verbose > 1 ) cerr << "c [DRAT-OTFC] the clause " << cls << " is not a DRUP clause" << endl;
       printState();
