@@ -1,18 +1,40 @@
-#CORE OPTIONS:
+# ------------------------------------------- CORE OPTIONS ------------------------------------------------
 
-var-decay{0.99,0.95,0.9, 0.7, 0.5}[0.95]                #The variable activity decay factor
-cla-decay{0.999,0.995,0.99,0.95,0.9, 0.7,0.5}[0.999]    #The clause activity decay factor
-rnd-freq{0,0.005, 0.01, 0.05,0.1,0.2}[0]                #The frequency with which the decision heuristic tries to choose a random variable
-ccmin-mode{0,1,2}[2]                                    #Controls conflict clause minimization (0=none, 1=basic, 2=deep)
-phase-saving{0,1,2}[2]                                  #Controls the level of phase saving (0=none, 1=limited, 2=full)
-rnd-init{false,true}[false]                             #Randomize the initial activity
-luby{false,true}[true]                                  #Use the luby restart sequence
-rfirst{1,10,100,1000}[100]                              #Initial restart size
-rlevel{0,1,2}[0]                                        #Choose to which level to jump to: 0=0, 1=ReusedTrail, 2=recursive reused trail
-rinc{1.5,2,3,4}[2]                                      #Restart increase factor
-gc-frac {0.1,0.2,0.3,1}[0.2]                            #The fraction of wasted memory allowed before a garbage collection is triggered
+var-decay {0.99,0.95,0.9, 0.7, 0.5} [0.95]                # The variable activity decay factor
+cla-decay {0.999,0.995,0.99,0.95,0.9, 0.7,0.5} [0.999]    # The clause activity decay factor
+rnd-freq {0,0.005, 0.01, 0.05,0.1,0.2} [0]                # The frequency with which the decision heuristic tries to choose a random variable
+ccmin-mode {0,1,2} [2]                                    # Controls conflict clause minimization (0=none, 1=basic, 2=deep)
+phase-saving {0,1,2} [2]                                  # Controls the level of phase saving (0=none, 1=limited, 2=full)
+rnd-init {false,true} [false]                             # Randomize the initial activity
+luby {false,true} [true]                                  # Use the luby restart sequence
+rfirst {1,10,100,1000} [100]                              # Initial restart size
+rlevel {0,1,2} [0]                                        # Choose to which level to jump to: 0=0, 1=ReusedTrail, 2=recursive reused trail
+rinc {1.5,2,3,4} [2]                                      # Restart increase factor
+gc-frac {0.1,0.2,0.3,1} [0.2]                             # The fraction of wasted memory allowed before a garbage collection is triggered
 
-#MiniSATi OPTIONS:
-prob-step-width{0, 100, 300, 600, 1200, 2400, 4800}[0] #Perform failed literals and detection of necessary assignments each n times
-prob-limit[1, 3200][100]il                             #Limit how many variables with highest activity should be probed - varies on a long scale
-pol-act-init{false,true}[false]                        #Initializes polarity and activity of variables
+
+# --------------------------------------- MiniSATi OPTIONS ----------------------------------------------
+
+# MiPi-SAT
+prob-step-width {0, 100, 300, 600, 1200, 2400, 4800} [0] # Perform failed literals and detection of necessary assignments each n times
+prob-limit [1, 3200] [100]il                             # Limit how many variables with highest activity should be probed - varies on a long scale
+
+# Minit-SAT
+pol-act-init {false,true} [false]                        # Initializes polarity and activity of variables
+
+
+# 1430ED
+block-rst {false,true} [false]                           # Use blocking restart technique
+R {1.1, 1.4, 2.7, 3.5, 4.9} [1.4]                        # The constant used to block restart
+reduce-confl-limit {10000, 15000, 30000} [15000]         # Number of conflicts after wich the databse will be reduced
+size-lbd-queue {10, 30, 50, 100, 200} [50]               # The size of moving average for LBD (restarts)
+size-trail-queue{10, 1000, 5000, 20000} [5000]           # The size of moving average for trail (block restarts)
+# SimpSolver Options
+cla-prep-lim {-1, 2000000, 4800000} [-1]                 # Turn off pre-processing if number of clause exceeds this limit. Feature is turned off by negative value
+elim_clear_watch {false,true} [false]                    # Always clear watch list if a variable is eliminated
+
+# ContraSAT
+pq-order {false,true} [false]                            # Use priority queue to decide the order in which literals are implied
+
+# CIR
+cir_bump {0, 6000, 9973, 15000} [0]                      # Activates CIR with bump ratio for VSIDS score (choose large: 9973)
