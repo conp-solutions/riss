@@ -15,4 +15,4 @@ gc-frac {0.1,0.2,0.3,1}[0.2]                            #The fraction of wasted 
 #MiniSATi OPTIONS:
 prob-step-width{0, 100, 300, 600, 1200, 2400, 4800}[0] #Perform failed literals and detection of necessary assignments each n times
 prob-limit[1, 3200][100]il                             #Limit how many variables with highest activity should be probed - varies on a long scale
-pol-act-init{false,true}[false]                         #Initializes polarity and activity of variables
+pol-act-init{false,true}[false]                        #Initializes polarity and activity of variables
