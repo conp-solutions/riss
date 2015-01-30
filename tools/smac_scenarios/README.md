@@ -15,9 +15,9 @@
 3. Rename the binary in wrapper.py (line 19)
 4. run this in the smac_scenarios folder
 
-    sbatch ./start-smac.sh <path to smac> <scenario dir>
+    sbatch ./start-smac.sh path/to/smac scenario-dir
 
-    ./start-smac.sh <path to smac> <scenario dir> local - - - - - *will be executed without starting a slurm job*
+    ./start-smac.sh path/to/smac scenario-dir local - - - - - *will be executed without starting a slurm job*
 
 
 ### Create new SMAC-scenario
