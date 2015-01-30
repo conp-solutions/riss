@@ -3,3 +3,6 @@ MiniSATi/minisati
 
 # smac output folder
 */smac_output
+
+# slurm output files
+slurm-*
