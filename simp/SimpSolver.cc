@@ -113,8 +113,28 @@ lbool SimpSolver::solve_(bool do_simp, bool turn_off_simp)
                 extra_frozen.push(v);
             } }
 
+	// NuSMV: PREF MOD
+        // Preferred variables must be temporarily frozen to run variable
+	// elimination:
+        for (int i = 0; i < preferred.size(); i++){
+            Var v = preferred[i];
+
+            // If a preferred variable has been eliminated, remember it.
+            if (isEliminated(v))
+                remember(v);
+
+            if (!frozen[v]){
+                // Freeze and store.
+                setFrozen(v, true);
+                extra_frozen.push(v);
+            }
+        }
+	// NuSMV: PREF MOD END
+
         result = lbool(eliminate(turn_off_simp));
     }
+
+		if (!result) ok = false;
 
     if (result == l_True)
         result = Solver::solve_();
@@ -136,6 +156,8 @@ lbool SimpSolver::solve_(bool do_simp, bool turn_off_simp)
 
 bool SimpSolver::addClause_(vec<Lit>& ps)
 {
+		if (!ok) return false;
+
 #ifndef NDEBUG
     for (int i = 0; i < ps.size(); i++)
         assert(!isEliminated(var(ps[i])));

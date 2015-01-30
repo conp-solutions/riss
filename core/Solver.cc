@@ -300,10 +300,7 @@ bool Solver::addClause_(vec<Lit>& ps)
         return ok = false;
     else if (ps.size() == 1){
 	if( config.opt_hpushUnit ) {
-	  if( value( ps[0] ) == l_False ) {
-// 	    cerr << "c UNSAT due to complementary unit: " << ps[0] << endl;
-	    return ok = false;
-	  }
+	  if( value( ps[0] ) == l_False ) return ok = false;
 	  if( value( ps[0] ) == l_True ) return true;
 	}
 	uncheckedEnqueue(ps[0]);
@@ -346,6 +343,8 @@ void Solver::attachClause(CRef cr) {
     assert(c.size() > 1 && "cannot watch unit clauses!");
     assert( c.mark() == 0 && "satisfied clauses should not be attached!" );
     
+    cerr << "c attach clause " << cr << " which is " << ca[cr] << endl;
+    
     // check for duplicates here!
 //     for (int i = 0; i < c.size(); i++)
 //       for (int j = i+1; j < c.size(); j++)
@@ -367,6 +366,8 @@ void Solver::attachClause(CRef cr) {
 
 void Solver::detachClause(CRef cr, bool strict) {
     const Clause& c = ca[cr];
+    
+    cerr << "c detach clause " << cr << " which is " << ca[cr] << endl;
     
     // assert(c.size() > 1 && "there should not be unit clauses - on the other hand, LHBR and OTFSS could create unit clauses");
 //     if( c.size() == 1 ) {
@@ -626,8 +627,21 @@ Lit Solver::pickBranchLit()
 {
     Var next = var_Undef;
 
+    // NuSMV: PREF MOD
+    // Selection from preferred list
+    for (int i = 0; i < preferred.size(); i++) {
+      if (toLbool(assigns[preferred[i]]) == l_Undef) {
+				next = preferred[i];
+      }
+    }
+    // NuSMV: PREF MOD END
+    
     // Random decision:
-    if (drand(random_seed) < random_var_freq && !order_heap.empty()){
+    if (
+	    // NuSMV: PREF MOD
+   		next == var_Undef && 
+ 		  // NuSMV: PREF MOD END
+      drand(random_seed) < random_var_freq && !order_heap.empty()){
         next = order_heap[irand(random_seed,order_heap.size())];
         if (value(next) == l_Undef && varFlags[next].decision)
             rnd_decisions++; }
@@ -1314,6 +1328,20 @@ void Solver::rebuildOrderHeap()
             vs.push(v);
     order_heap.build(vs);
 }
+
+// NuSMV: PREF MOD
+void Solver::addPreferred(Var v)
+{
+  preferred.push(v);
+}
+
+
+void Solver::clearPreferred()
+{
+  preferred.clear(0);
+}
+// NuSMV: PREF MOD END
+               
 
 
 /*_________________________________________________________________________________________________

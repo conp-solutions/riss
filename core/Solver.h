@@ -75,7 +75,6 @@ namespace Coprocessor {
   class Symmetry;
   class RATElimination;
   class FourierMotzkin;
-  class ExperimentalTechniques;
   class BIG;
 }
 
@@ -109,7 +108,6 @@ class Solver {
     friend class Coprocessor::Symmetry;
     friend class Coprocessor::RATElimination;
     friend class Coprocessor::FourierMotzkin;
-    friend class Coprocessor::ExperimentalTechniques;
     friend class Minisat::IncSolver; // for bmc
 
 #ifdef PCASSO 
@@ -172,6 +170,25 @@ public:
     // 
     void    setPolarity    (Var v, bool b); /// Declare which polarity the decision heuristic should use for a variable. Requires mode 'polarity_user'.
     void    setDecisionVar (Var v, bool b); /// Declare if a variable should be eligible for selection in the decision heuristic.
+
+
+    // NuSMV: SEED 
+    void    setRandomSeed(double seed); // sets random seed (cannot be 0)
+    // NuSMV: SEED END
+    // NuSMV: PREF MOD
+    /*
+     * Add a variable at the end of the list of preferred variables
+     * Does not remove the variable from the standard ordering.
+     */
+    void addPreferred(Var v);
+    
+    /*
+     * Clear vector of preferred variables.
+     */
+    void clearPreferred();
+    // NuSMV: PREF MOD END
+    
+
 
     // Read state:
     //
@@ -354,6 +371,9 @@ protected:
 //     vec<char>           decision;         // Declares if a variable is eligible for selection in the decision heuristic.
 //      vec<char>           seen;
     
+    // NuSMV: PREF MOD
+    vec<Var>            preferred;
+    // NuSMV: PREF MOD END
 
 public:
     /// set whether a variable can be used for simplification techniques that do not preserve equivalence
@@ -896,6 +916,7 @@ inline bool     Solver::solve         (Lit p, Lit q)        { budgetOff(); assum
 inline bool     Solver::solve         (Lit p, Lit q, Lit r) { budgetOff(); assumptions.clear(); assumptions.push(p); assumptions.push(q); assumptions.push(r); return solve_() == l_True; }
 inline bool     Solver::solve         (const vec<Lit>& assumps){ budgetOff(); assumps.copyTo(assumptions); return solve_() == l_True; }
 inline lbool    Solver::solveLimited  (const vec<Lit>& assumps){ assumps.copyTo(assumptions); return solve_(); }
+inline void     Solver::setRandomSeed (double seed) { assert(seed != 0); random_seed = seed; }
 inline bool     Solver::okay          ()      const   { return ok; }
 
 inline void     Solver::toDimacs     (const char* file){ vec<Lit> as; toDimacs(file, as); }
@@ -927,7 +948,7 @@ bool Solver::addUnitClauses(const vec< Lit >& other)
 //
 }  // close namespace for include
 // check generation of DRUP/DRAT proof on the fly
-#include "dratcheck-src/OnlineProofChecker.h"
+#include "core/OnlineProofChecker.h"
 
 namespace Minisat { // open namespace again!
 

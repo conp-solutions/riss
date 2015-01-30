@@ -11,6 +11,5 @@ DEPDIR    += $(CPDEPEND)
 CFLAGS    += $(INCFLAGS)
 LFLAGS    += $(INLDFLAGS)
 
-
 include $(MROOT)/mtl/template.mk
 

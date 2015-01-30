@@ -34,11 +34,12 @@ class RATElimination : public Technique  {
   };
   
   // attributes
-  int64_t rateSteps;
+  int64_t rateSteps,ratmSteps;
   int rateCandidates; // number of clauses that have been checked for cle
   int remRAT, remAT, remHRAT, remBCE, remBRAT, blockCheckOnSameClause; // how many clauses 
-  Clock rateTime, bcaTime, bratTime; // clocks for the two methods
-  
+  int minRATM, minATM , unitRATM, conflRATM, conflATM; // how may literals removed / propagated Units / conflicts
+  Clock ratmTime, rateTime, bcaTime, bratTime; // clocks for the two methods
+
   
   // BCA
   int bcaCandidates, bcaResolutionChecks, bcaSubstitue, bcaSubstitueLits, bcaFullMatch, bcaATs, bcaStrenghening;
@@ -72,6 +73,17 @@ protected:
    @return true, if modifications have been applied
    */
   bool eliminateRAT();
+  
+  /** run RAT minimization
+  @return true, if modifications have been applied
+  */
+  bool minimizeRAT();
+  
+  bool shortATM(const CRef clause, const Lit left, int& trailPosition, vector<Lit>& atlits );
+  
+  bool propagateUnit(const Lit& unit, int& trailPosition);
+  
+  bool minimizeAT();
   
   /** add new redundant clauses which turn another clause in the formula into an AT 
    @return true, if modifications have been applied

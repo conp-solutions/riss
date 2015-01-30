@@ -367,12 +367,16 @@ opt_la_debug (_cat_la, "la-debug", "output debug info during LA", false, optionL
 // RAT Elimination
 //
 rate_orderComplements(_cat_rat, "rat-compl", "sort according to nr. of complements", true, optionListPtr ),
-rate_Limit(_cat_rat,"rate-limit", "number of pairwise clause comparisons before interrupting RATE", 9000000000, Int64Range(0, INT64_MAX) , optionListPtr ),
+rate_Limit(_cat_rat,"rate-limit", "number of pairwise clause comparisons before interrupting RATE and up", 9000000000, Int64Range(0, INT64_MAX) , optionListPtr ),
+ratm_Limit(_cat_rat,"ratm-limit", "number of pairwise clause comparisons before interrupting RATM and up", 9000000000, Int64Range(0, INT64_MAX) , optionListPtr ),
 opt_rate_debug (_cat_rat, "rate-debug", "debug output for RAT elimination",0, IntRange(0,4) , optionListPtr ),
 opt_rate_brat(_cat_rat, "rate-brat", "test resolvents for being blocked if not AT", false, optionListPtr ),
 rate_minSize(_cat_rat,"rate-min", "minimal clause size for RAT elimination", 3, IntRange(2, INT32_MAX) , optionListPtr ),
-opt_rate_rate(_cat_rat,"rate-rate", "perform RAT elimination (rate)", true, optionListPtr ),
+opt_rate_rate(_cat_rat,"rate-rate", "perform RAT elimination (rate)", false, optionListPtr ),
 opt_rate_bcs(_cat_rat,"rate-bcs", "perform blocked substitution (bcs)", false, optionListPtr ),
+opt_rate_ratm(_cat_rat,"rate-ratm", "perform RAT minimization (ratm)", false, optionListPtr ),
+opt_rate_ratm_extended(_cat_rat,"rate-ratm_ext", "perform extended RAT minimization (ratm)", false, optionListPtr ),
+opt_rate_ratm_rounds(_cat_rat,"rate-ratm_rounds", "perform more than one RATM iteration", false, optionListPtr ), 
 
 //
 // Dense

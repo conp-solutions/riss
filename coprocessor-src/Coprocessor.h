@@ -30,7 +30,6 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/LiteralAddition.h"
 #include "coprocessor-src/xor.h"
 #include "coprocessor-src/Entailed.h"
-#include "coprocessor-src/Experimental.h"
 #include "coprocessor-src/Dense.h"
 #include "coprocessor-src/Symmetry.h"
 
@@ -169,7 +168,6 @@ protected:
   BlockedClauseElimination bce;
   LiteralAddition la;
   EntailedRedundant entailedRedundant;
-  ExperimentalTechniques experimental;
   
   Sls sls;
   TwoSatSolver twoSAT;

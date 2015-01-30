@@ -478,10 +478,8 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
 	     if ( config.opt_totalGrow ) totallyAddedClauses += resolvents - ( pos_count + neg_count); // substract!
 	   }
 	   
-	   if(config.opt_bve_verbose > 2) cerr << "c resolvents: " << resolvents << " pos: " << pos_count << " neg: " << neg_count << endl;
-	   
 	   doResolve = reducedClss;	// number of clauses decreasesd
-	   assert( (anticipateResult != l_True || !reducedClss) && "in case of an early abort, we have to resolve" );
+	   assert( (anticipateResult != l_True || reducedClss) && "in case of an early abort, we have to resolve" );
 	   
            if ( (force || doResolve ) // clauses or literals should be reduced and we did
 		&& !config.opt_bce_only // only if bve should be done
@@ -622,8 +620,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& 
 	  clausesToUse  = (ca[positive[cr_p]].can_be_deleted()) ? clausesToUse : clausesToUse + 1;
       for (int cr_p = 0; cr_p < negative.size() ; ++cr_p)
 	  clausesToUse  = (ca[negative[cr_p]].can_be_deleted()) ? clausesToUse : clausesToUse + 1;
-      if( config.opt_bve_verbose > 3 ) cerr << "c estimated resolvents: " << clausesToUse << " grow:" << config.opt_bve_grow << " total: " << config.opt_bve_growTotal << " totallyAdded: " << totallyAddedClauses<< endl;
-      clausesToUse = clausesToUse  + config.opt_bve_grow + ( config.opt_totalGrow ? config.opt_bve_growTotal - totallyAddedClauses : 0); // have one stable reference value
+      clausesToUse = clausesToUse  + config.opt_bve_grow + config.opt_bve_growTotal - totallyAddedClauses; // have one stable reference value
     }
     
     for (int cr_p = 0; cr_p < positive.size() ; ++cr_p)
@@ -681,10 +678,8 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& 
 		resolvents ++; // count number of produced clauses!
 		
 		// check for an early abort -- we already have more resolvents than we are allowed to create
-		if( config.opt_bve_earlyAbort && resolvents > clausesToUse) {
-		  if( config.opt_bve_verbose > 2 ) cerr << "c abort anticipation due to too many resolvents: " << resolvents << " vs " << clausesToUse << endl;
+		if( config.opt_bve_earlyAbort && resolvents > clausesToUse)
 		  return l_True; // indicate that we interrupted the process, hence, the BCE information is not valid
-		}
 		
             }
             

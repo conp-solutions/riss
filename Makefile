@@ -14,6 +14,57 @@ MYLFLAGS  = -lpthread $(LIBRT) $(ARGS)
 
 COPTIMIZE ?= -O3
 
+#
+#
+# NUSVM Makefile
+#
+#
+
+# Copyright (c) 2007 by FBK-irst
+# Author: Roberto Cavada <cavada@fbk.eu>
+# This file has been added in order to make Minisat2 
+# compilable with NuSMV
+
+LIBNAME = libminisat.a
+EXT_LIBNAME = libMiniSat.a
+EXT_LIBIFC = Solver_C.h
+COREDIR = simp
+
+LN ?= ln -s
+RANLIB ?= ranlib
+RM ?= rm -f
+MAKE ?= make
+
+# ----------------------------------------------------------------------
+# this target is invoked by the builder
+lib: $(EXT_LIBNAME) $(EXT_LIBIFC)
+	@echo Done
+
+clean: 
+	cd $(COREDIR) && $(MAKE) clean
+	$(RM) $(EXT_LIBNAME) $(EXT_LIBIFC)
+	$(RM) $(COREDIR)/depend.mk
+# ----------------------------------------------------------------------
+
+$(COREDIR)/$(LIBNAME):
+	cd $(COREDIR) && $(MAKE) lib && $(RANLIB) $(LIBNAME)
+
+$(EXT_LIBNAME): $(COREDIR)/$(LIBNAME)
+	$(LN) $(COREDIR)/$(LIBNAME) $(EXT_LIBNAME)
+
+$(EXT_LIBIFC):
+	$(LN) $(COREDIR)/$(EXT_LIBIFC) $(EXT_LIBIFC)
+
+
+#
+#
+# END NuSVM Makefile
+#
+#
+
+
+
+
 all: rs
 
 # shortcuts
@@ -200,7 +251,6 @@ clean:
 	@if [ -d "shiftbmc-src" ]; then cd shiftbmc-src; make clean MROOT=..; fi
 	@if [ -d "pfolio-src" ]; then cd pfolio-src; make clean MROOT=..; fi
 	@if [ -d "pcasso-src" ]; then cd pcasso-src; make clean MROOT=..; fi
-	@if [ -d "dratcheck-src" ]; then cd dratcheck-src; make clean MROOT=..; fi
 	@rm -f *~ */*~
 	@rm -rf doc/html
 	@echo Done

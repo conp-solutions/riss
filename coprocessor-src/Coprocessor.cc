@@ -49,7 +49,6 @@ config( _config )
 , bce(config, solver->ca, controller, data, propagation )
 , la(config, solver->ca, controller, data, propagation )
 , entailedRedundant( config, solver->ca, controller, data)
-, experimental( config, solver->ca, controller, data, *solver)
 , sls ( config, data, solver->ca, controller )
 , twoSAT( config, solver->ca, controller, data)
 , shuffleVariable (-1)
@@ -380,13 +379,6 @@ lbool Preprocessor::performSimplification()
       if( printRATE || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 't') ) {
       printFormula("after RATE");
       }
-    }
-    
-    if( config.opt_exp ) {
-      if( config.opt_verbose > 0 ) cerr << "c exp ..." << endl;
-      if( config.opt_verbose > 4 )cerr << "c coprocessor(" << data.ok() << ") experimental techniques" << endl;
-      if( status == l_Undef ) experimental.process();  // cannot change status, can generate new unit clauses
-      if( config.opt_verbose > 1 )  { printStatistics(cerr); experimental.printStatistics(cerr); }
     }
 
     //
