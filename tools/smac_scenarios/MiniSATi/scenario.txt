@@ -1,4 +1,2 @@
 runObj = RUNTIME
-cutoffTime = 1
-wallclock-limit = 30
 deterministic = 0

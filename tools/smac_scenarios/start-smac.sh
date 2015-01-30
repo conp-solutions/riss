@@ -33,16 +33,20 @@ optional_options=""
 # execute as slurm job on taurus
 if [ -z "$execute_local" ]
 then
-    #SBATCH --time=00:01:00           # walltime
-    #SBATCH --ntasks=1                # number of processor cores
-    #SBATCH --mem-per-cpu=1024M       # memory per CPU core
-    #SBATCH --partition=sandy         # smp, sandy, west, and gpu available 
-    #SBATCH -A p_sat                  # charge resources to specified project
+#SBATCH --time=08:00:00           # walltime
+#SBATCH --ntasks=1                # number of processor cores
+#SBATCH --mem-per-cpu=2048M       # memory per CPU core
+#SBATCH --partition=sandy,west    # smp, sandy, west, and gpu available 
+#SBATCH -A p_sat                  # charge resources to specified project
 
     # load necessary modules on taurus
     module load java/jdk1.7.0_25; module load python/2.7
     
     optional_options="--rungroup job_$SLURM_JOB_ID"
+else
+    echo "ID of this local run: $(date +%s)"
+    echo "Warning: small Cut-off-time (1) and wallclock-limit (30 sec) ... please change in start-smac.sh if necessary"
+    optional_options="--cutoffTime 1 --wallclock-limit 30 --rungroup local_$(date +%s)"
 fi
 
 # start smac
