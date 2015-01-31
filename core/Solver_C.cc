@@ -32,18 +32,30 @@ C-wrapper for Solver.C
 
 
 #include "Solver.h"
+#include "CoreConfig.h"
+
+struct SolverLibData {
+  CoreConfig* config;
+  Solver* solver;
+};
+
 extern "C" {
 #include "Solver_C.h"
 }
 
 extern "C" MiniSat_ptr MiniSat_Create()
 {
-  return (MiniSat_ptr)new Solver();
+  SolverLibData* data = new SolverLibData();
+  data->config = new CoreConfig();
+  data->solver = new Solver( *data->config );
+  return (MiniSat_ptr)data;
 }
 
 extern "C" void MiniSat_Delete(MiniSat_ptr ms)
 {
-  delete (Solver *)ms;
+  delete (CoreConfig *)ms->config;
+  delete (Solver *)ms->solver;
+  delete (SolverLibData* )ms;
 }
 
 extern "C" int MiniSat_Nof_Variables(MiniSat_ptr ms)
@@ -53,7 +65,7 @@ extern "C" int MiniSat_Nof_Variables(MiniSat_ptr ms)
 
 extern "C" int MiniSat_Nof_Clauses(MiniSat_ptr ms)
 {
-  return ((Solver *)ms)->nClauses();
+  return ((Solver *)ms->solver)->nClauses();
 }
 
 /* variables are in the range 1...N */
@@ -63,7 +75,7 @@ extern "C" int MiniSat_New_Variable(MiniSat_ptr ms)
      so in all function below there is a convertion between
      input variable (1..N) and internal variables (0..N-1)
   */	
-  return ((Solver *)ms)->newVar() + 1;
+  return ((Solver *)ms->solver)->newVar() + 1;
 }
 
 
@@ -78,19 +90,19 @@ extern "C" int MiniSat_Add_Clause(MiniSat_ptr ms,
   for(i = 0; i < num_lits; i++) {
     const int lit = clause_lits[i];
     assert(abs(lit) > 0);
-    assert(abs(lit) <= MiniSat_Nof_Variables((Solver*)ms));
+    assert(abs(lit) <= MiniSat_Nof_Variables((Solver*)ms->solver));
     int var = abs(lit) - 1;
     cl.push((lit > 0) ? Lit(var) : ~Lit(var));
   }
-  ((Solver *)ms)->addClause(cl);
-  if(((Solver *)ms)->okay())
+  ((Solver *)ms->solver)->addClause(cl);
+  if(((Solver *)ms->solver)->okay())
     return 1;
   return 0;
 }
 
 extern "C" int MiniSat_Solve(MiniSat_ptr ms)
 {
-  bool ret = ((Solver *)ms)->solve();
+  bool ret = ((Solver *)ms->solver)->solve();
   if(ret)
     return 1;
   return 0;
@@ -106,8 +118,8 @@ extern "C" int MiniSat_Solve_Assume(MiniSat_ptr ms,
 {
   int i;
   vec<Lit> cl;
-  assert(((Solver*)0) != ((Solver*)ms)); 
-  Solver& solver = *((Solver*)ms);
+  assert(((Solver*)0) != ((Solver*)ms->solver)); 
+  Solver& solver = *((Solver*)ms->solver);
 
   solver.simplify();
   if(solver.okay() == false)
@@ -117,7 +129,7 @@ extern "C" int MiniSat_Solve_Assume(MiniSat_ptr ms,
   for(i = 0; i < nof_assumed_lits; i++) {
     const int lit = assumed_lits[i];
     assert(abs(lit) > 0);
-    assert(abs(lit) <= MiniSat_Nof_Variables((Solver*)ms));
+    assert(abs(lit) <= MiniSat_Nof_Variables((Solver*)ms->solver));
     int var = abs(lit) - 1;
     cl.push((lit > 0) ? Lit(var) : ~Lit(var));
   }
@@ -129,8 +141,8 @@ extern "C" int MiniSat_Solve_Assume(MiniSat_ptr ms,
 
 extern "C" int MiniSat_simplifyDB(MiniSat_ptr ms)
 {
-  ((Solver *)ms)->simplify();
-  if(((Solver *)ms)->okay())
+  ((Solver *)ms->solver)->simplify();
+  if(((Solver *)ms->solver)->okay())
     return 1;
   return 0;
 }
@@ -141,12 +153,12 @@ extern "C" int MiniSat_simplifyDB(MiniSat_ptr ms)
 extern "C" int MiniSat_Get_Value(MiniSat_ptr ms, int var_num)
 {
   assert(var_num > 0);
-  if(var_num > MiniSat_Nof_Variables(ms))
+  if(var_num > MiniSat_Nof_Variables(ms->solver))
     return -1;
   /* minisat assigns all variables. just check */
-  assert(((Solver *)ms)->model[var_num-1] != l_Undef); 
+  assert(((Solver *)ms->solver)->model[var_num-1] != l_Undef); 
   
-  if(((Solver *)ms)->model[var_num-1] == l_True)
+  if(((Solver *)ms->solver)->model[var_num-1] == l_True)
     return 1;
   return 0;
 }
@@ -154,16 +166,16 @@ extern "C" int MiniSat_Get_Value(MiniSat_ptr ms, int var_num)
 
 extern "C" int MiniSat_Get_Nof_Conflict_Lits(MiniSat_ptr ms)
 {
-  assert(((Solver*)0) != ((Solver*)ms)); 
-  Solver& solver = *((Solver*)ms);
+  assert(((Solver*)0) != ((Solver*)ms->solver)); 
+  Solver& solver = *((Solver*)ms->solver);
 
   return solver.conflict.size();
 }
 
 extern "C" void MiniSat_Get_Conflict_Lits(MiniSat_ptr ms, int* conflict_lits)
 {
-  assert(((Solver*)0) != ((Solver*)ms)); 
-  Solver& solver = *((Solver*)ms);
+  assert(((Solver*)0) != ((Solver*)ms->solver)); 
+  Solver& solver = *((Solver*)ms->solver);
 
   vec<Lit>& cf = solver.conflict;
 
@@ -178,22 +190,22 @@ extern "C" void MiniSat_Get_Conflict_Lits(MiniSat_ptr ms, int* conflict_lits)
 /** mode can be  polarity_true, polarity_false, polarity_user, polarity_rnd */
 extern "C" void MiniSat_Set_Polarity_Mode(MiniSat_ptr ms, int mode)
 {
-  assert(((Solver*)0) != ((Solver*)ms)); 
-  Solver& solver = *((Solver*)ms);  
+  assert(((Solver*)0) != ((Solver*)ms->solver)); 
+  Solver& solver = *((Solver*)ms->solver);  
   solver.polarity_mode = mode;
 }
 
 extern "C" int MiniSat_Get_Polarity_Mode(MiniSat_ptr ms)
 {
-  assert(((Solver*)0) != ((Solver*)ms)); 
-  Solver& solver = *((Solver*)ms);  
+  assert(((Solver*)0) != ((Solver*)ms->solver)); 
+  Solver& solver = *((Solver*)ms->solver);  
   return solver.polarity_mode;
 }
 
 extern "C" void MiniSat_Set_Random_Seed(MiniSat_ptr ms, double seed)
 {
-  assert(((Solver*)0) != ((Solver*)ms)); 
-  Solver& solver = *((Solver*)ms);
+  assert(((Solver*)0) != ((Solver*)ms->solver)); 
+  Solver& solver = *((Solver*)ms->solver);
   solver.setRandomSeed(seed);
 }
 

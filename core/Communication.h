@@ -23,7 +23,7 @@ using namespace Minisat;
 #include "core/Solver.h"
 
 
-#include "core/ProofMaster.h"
+#include "dratcheck-src/ProofMaster.h"
 /** collection of some wait states */
 enum WaitState {
   oneIdle = 0,
