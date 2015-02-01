@@ -3,9 +3,10 @@
 #### Get SMAC from
     http://www.cs.ubc.ca/labs/beta/Projects/SMAC/smac-v2.08.00-master-731.tar.gz
 
+Easiest way to use this scenarios: copy the smac_scenarios folder als a symlink into the smac-folder.
+
 #### manual for SMAC
     http://www.cs.ubc.ca/labs/beta/Projects/SMAC/v2.08.00/manual.pdf
-
 
 
 ### start a SMAC-scenario
@@ -18,7 +19,7 @@
 
     sbatch ./start-smac.sh  smac-path  scenario-dir
 
-    ./start-smac.sh  smac-path  scenario-dir  local - - - - - *will be executed without starting a slurm job*
+    ./start-smac.sh  smac-path  scenario-dir  30 - - - - - *nice for local runs: will be executed without starting a slurm job*
 
 
 
