@@ -19,6 +19,8 @@ Easiest way to use this scenarios: copy the smac_scenarios folder als a symlink 
 
     sbatch --exclusive ./start-smac.sh  smac-path  scenario-dir
 
+    sbatch --exclusive ./start-smac-parallel.sh smac-path scenario-dir - - - *start 4 smac runs with shared data*
+
     ./start-smac.sh  smac-path  scenario-dir  30 - - - - - *nice for local runs: will be executed without starting a slurm job*
 
 
