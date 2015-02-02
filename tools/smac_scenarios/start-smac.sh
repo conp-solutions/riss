@@ -33,8 +33,7 @@ then
 fi
 
 # directory in which this script is located
-__DIR__="$(dirname $(readlink -f ${BASH_SOURCE[0]}))"
-path=$__DIR__/$scenario_dir
+path=$PWD/$scenario_dir
 
 train_instance_path=$path/instances-train.txt
 test_instance_path=$path/instances-test.txt
@@ -62,8 +61,8 @@ else
     echo "The output can be found in: [scenarrio-dir]/smac_output/local-$(date +%s)"
 
     # use example CNFs for a local run
-    train_instance_path=$__DIR__/example_instances/instances-train.txt
-    test_instance_path=$__DIR__/example_instances/instances-test.txt
+    train_instance_path=$PWD/example_instances/instances-train.txt
+    test_instance_path=$PWD/example_instances/instances-test.txt
 
     # set small cut-off and wallclock time
     additional_options="--wallclock-limit $wallclock_limit
