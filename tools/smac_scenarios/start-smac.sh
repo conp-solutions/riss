@@ -15,7 +15,7 @@ wallclock_limit=$3
 
 usage="
 Usage as slurm-job:
-    sbatch ./start-smac.sh <smac-folder> <scenario name>
+    sbatch --exclusive ./start-smac.sh <smac-folder> <scenario name>
 Usage as local:
     ./start-smac.sh <smac-folder> <scenario name> <wallclock limit (just local)>"
 

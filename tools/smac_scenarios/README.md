@@ -17,7 +17,7 @@ Easiest way to use this scenarios: copy the smac_scenarios folder als a symlink 
 3. Rename the binary in wrapper.py (line 19)
 4. run this in the smac_scenarios folder
 
-    sbatch ./start-smac.sh  smac-path  scenario-dir
+    sbatch --exclusive ./start-smac.sh  smac-path  scenario-dir
 
     ./start-smac.sh  smac-path  scenario-dir  30 - - - - - *nice for local runs: will be executed without starting a slurm job*
 
