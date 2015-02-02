@@ -44,9 +44,10 @@ additional_options=""
 # execute as slurm job on taurus
 if [ -z "$wallclock_limit" ]
 then
-#SBATCH --time=08:00:00           # walltime
+# if the time for the batch job is changed, change tunertimeout below too
+#SBATCH --time=72:00:00           # walltime
 #SBATCH --ntasks=1                # number of processor cores
-#SBATCH --mem-per-cpu=4400M       # memory per CPU core
+#SBATCH --mem-per-cpu=4500M       # memory per CPU core
 #SBATCH --partition=sandy,west    # smp, sandy, west, and gpu available 
 #SBATCH -A p_sat                  # charge resources to specified project
 
@@ -64,7 +65,7 @@ else
     train_instance_path=$PWD/example_instances/instances-train.txt
     test_instance_path=$PWD/example_instances/instances-test.txt
 
-    # set small cut-off and wallclock time
+    # set small wallclock time (should overwrite tunerTimeout)
     additional_options="--wallclock-limit $wallclock_limit
                         --rungroup local_$(date +%s)"
 fi
@@ -78,6 +79,7 @@ cd $smac_path
         --scenario-file $path/scenario.txt \
         --instance_file $train_instance_path \
         --test_instance_file $test_instance_path \
+        --tunerTimeout 255600 \
         $additional_options
 
 exit 0
