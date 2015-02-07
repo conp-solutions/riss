@@ -83,7 +83,8 @@ do
             --scenario-file $path/scenario.txt \
             --instance_file $train_instance_path \
             --test_instance_file $test_instance_path \
-            --tunerTimeout 255600 \
+            --tunerTimeout 252000 \
+            --validation false \
             --shared-model-mode true \
             $additional_options
 done
