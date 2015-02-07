@@ -17,7 +17,7 @@ configMap = dict((name, value) for name, value in zip(params[::2], params[1::2])
 
 # Construct the call string to sat-solver.
 minisati_binary = os.path.dirname(os.path.realpath(__file__))+"/minisati"
-cmd = "%s %s" %(minisati_binary, instance) # --seed %d --model-stdout --dimacs %s --tmout %d" %(minisati_binary, seed, instance, cutoff)       
+cmd = "%s %s -cpu-lim=%d" %(minisati_binary, instance, cutoff)      
 for name, value in configMap.items():
     if (value == "false" or value == "true"):
         cmd += " -no%s" %(name)
@@ -35,8 +35,10 @@ runtime = time.time() - start_time
 status = "CRASHED"
 if (re.search('s UNKNOWN', stdout_)): 
     status = 'TIMEOUT'
-if (re.search('s SATISFIABLE', stdout_)) or (re.search('s UNSATISFIABLE', stdout_)):
-    status = 'SUCCESS'
+if (re.search('s SATISFIABLE', stdout_)):
+    status = 'SAT'
+if (re.search('s UNSATISFIABLE', stdout_)):
+    status = 'UNSAT'
     
 # Output result for SMAC.
 print("Result for SMAC: %s, %s, 0, 0, %s" % (status, str(runtime), str(seed)))  
