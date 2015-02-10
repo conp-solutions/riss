@@ -1,8 +1,8 @@
 #include "LevelPool.h"
 
-using namespace davide;
+using namespace PcassoDavide;
 using namespace std;
-using namespace Minisat;
+using namespace Riss;
 
 LevelPool::LevelPool(int _max_size){
 	full          = false;

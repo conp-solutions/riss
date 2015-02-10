@@ -38,7 +38,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "VERSION" // include the file that defines the solver version
 
-using namespace Minisat;
+using namespace Riss;
 
 //=================================================================================================
 

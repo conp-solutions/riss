@@ -136,7 +136,7 @@ TreeNode::expand( const vector< vector< vector<Lit>* >* >& childCnfs){
 		//TreeNode(const vector< vector<Lit>* >& localConstraints, TreeNode* parent = 0);
 		childs[i].setup( *(childCnfs[i]), this );
 
-		childs[i].setPosition(position + davide::to_string(i)); // Davide>
+		childs[i].setPosition(position + PcassoDavide::to_string(i)); // Davide>
 		childs[i].pt_level = pt_level + 1; // Davide> CHECK
 
 	}

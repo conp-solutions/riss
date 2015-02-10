@@ -51,7 +51,7 @@ public:
 	enum state {sat = 1, unsat = 2, unknown = 3, retry = 4};
 
 	// Davide> The pool
-	davide::LevelPool* lv_pool;
+	PcassoDavide::LevelPool* lv_pool;
 	TreeNode* childs;
 
 private:
@@ -181,7 +181,7 @@ public:
 	}
 	void activityCopyTo(vec<double>& act);
 	void phaseCopyTo(vec<char>& ph);
-	void updateActivityPolarity(vec<double>& act, vec<Minisat::Solver::VarFlags>& pol, int option);
+	void updateActivityPolarity(vec<double>& act, vec<Riss::Solver::VarFlags>& pol, int option);
                   void incChildrenActPolUpdCount();
 	// Remove the pool associated to the node
 	void removePoolRecursive(bool recursive);

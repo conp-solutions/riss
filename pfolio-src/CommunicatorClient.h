@@ -10,7 +10,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "mtl/Sort.h"
 
 
-namespace Minisat {
+namespace Riss {
 
 class CommunicatorClient {
      Solver* solver; /// pointer to the instance of the solver with which we work
@@ -40,7 +40,7 @@ private:
      * @param bump increases the activity of the current clause to the last seen value
      * note: behaves like the addClause structure
      */
-    bool addLearnedClause(Minisat::vec< Minisat::Lit >& ps, bool bump);
+    bool addLearnedClause(Riss::vec< Riss::Lit >& ps, bool bump);
     
     /** update the send limits based on whether a current clause could have been send or not
      * @param failed sending current clause failed because of limits

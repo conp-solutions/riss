@@ -1647,7 +1647,7 @@ inline void Subsumption::updateOccurrences(vector< OccUpdate > & updates, Heap<V
     updates.clear();
 }
 
-void Subsumption::initClause( const Minisat::CRef cr, bool addToStrengthen )
+void Subsumption::initClause( const Riss::CRef cr, bool addToStrengthen )
 {
   const Clause& c = ca[cr];
   if( !c.can_be_deleted() ) {

@@ -10,7 +10,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #include "core/Solver.h"
 #include "coprocessor-src/CoprocessorTypes.h"
 #include "coprocessor-src/CP3Config.h"
-using namespace Minisat;
+using namespace Riss;
 
 namespace Coprocessor {
   
@@ -46,7 +46,7 @@ namespace Coprocessor {
     VarShuffler(CP3Config &_config);
 
     /** apply full shuffling process to clauses */
-    void process(vec< Minisat::CRef >& clauses, vec< Minisat::CRef >& learnts, vec< Lit >& trail, uint32_t vars, ClauseAllocator& ca);
+    void process(vec< Riss::CRef >& clauses, vec< Riss::CRef >& learnts, vec< Lit >& trail, uint32_t vars, ClauseAllocator& ca);
     
     /** remap model to original variables */
     void unshuffle( vec<lbool>& model, uint32_t vars );

@@ -28,10 +28,10 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <fstream>
 
-using namespace Minisat;
+using namespace Riss;
 //=================================================================================================
 // DIMACS Parser:
-namespace Minisat
+namespace Riss
 {
   
 typedef int64_t Weight;
@@ -160,7 +160,7 @@ static unsigned parse_WCNF_main(B& in, Solver& S, vec<Weight>& literalWeights ) 
  */
 template<class Solver>
 static unsigned parse_WCNF(gzFile input_stream, Solver& S, vec<Weight>& literalWeights ) {
-    Minisat::StreamBuffer in(input_stream);
+    Riss::StreamBuffer in(input_stream);
     return parse_WCNF_main(in, S,literalWeights); 
 }
 

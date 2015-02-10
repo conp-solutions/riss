@@ -17,7 +17,7 @@ Copyright (c) 2014, Norbert Manthey, All rights reserved.
 #include <vector>
 
 // this file is included right in the middle of the namespace ...
-namespace Minisat {
+namespace Riss {
 
 /** class that can check DRUP/DRAT proof on the fly during executing the SAT solver 
  * Note: for DRAT clauses only the very first literal will be used for checking RAT!

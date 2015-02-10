@@ -22,10 +22,10 @@
 #include <iostream>
 #include <fstream>
 
-using namespace Minisat;
+using namespace Riss;
 using namespace std;
 
-namespace davide{
+namespace PcassoDavide{
 
 class LevelPool{
 //	bool remove;

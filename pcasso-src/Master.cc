@@ -741,7 +741,7 @@ Master::solveInstance (void* data)
 
 	// Davide> Create the pool object for this node, and
 	//         push it in the set of pools
-	davide::LevelPool* pool = new davide::LevelPool(opt_pool_size);
+	PcassoDavide::LevelPool* pool = new PcassoDavide::LevelPool(opt_pool_size);
 	// pool->setCode(S.position);
 	tData.nodeToSolve->lv_pool = pool;
 

@@ -19,30 +19,30 @@ all: rs
 # biuld all common targets in a row and check all for errors
 buildtest:
 	# To build Riss (by default without constructing DRAT-proofs):
-	make rissRS
+	make rissd
 	make clean
-	make rissRS ARGS="-DDRATPROOF"
+	make rissd ARGS="-DDRATPROOF"
 	make clean
 #	To build Coprocessor:
-	make coprocessorRS
+	make coprocessord
 	make clean
 #	To build Qprocessor:
-	make qprocessorRS
+	make qprocessord
 	make clean
 #	To build Mprocessor:
-	make mprocessorRS
+	make mprocessord
 	make clean
 #	To build Priss:
-	make prissRS
+	make prissd
 	make clean
 #	To build Pcasso:
-	make pcassoRS
+	make pcassod
 	make clean
 #	To build Classifier:
 	make cls
 	make clean
 	cd shiftbmc-src; ./configure; cd ..
-	make shiftbmcs
+	make shiftbmc
 	make clean
 
 # shortcuts

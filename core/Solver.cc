@@ -45,7 +45,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 
 
-using namespace Minisat;
+using namespace Riss;
 
 //=================================================================================================
 // Options:
@@ -393,7 +393,7 @@ void Solver::detachClause(CRef cr, bool strict) {
     else            clauses_literals -= c.size(); }
 
 
-void Solver::removeClause(Minisat::CRef cr, bool strict) {
+void Solver::removeClause(Riss::CRef cr, bool strict) {
   
   Clause& c = ca[cr];
 
@@ -1057,7 +1057,7 @@ void Solver::analyzeFinal(Lit p, vec<Lit>& out_conflict)
 }
 
 
-void Solver::uncheckedEnqueue(Lit p, Minisat::CRef from, bool addToProof, const uint64_t extraInfo)
+void Solver::uncheckedEnqueue(Lit p, Riss::CRef from, bool addToProof, const uint64_t extraInfo)
 {
   /*
    *  Note: this code is also executed during extended resolution, so take care of modifications performed there!

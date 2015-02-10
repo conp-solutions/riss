@@ -40,7 +40,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include <string>
 #include <cstring>
 
-using namespace Minisat;
+using namespace Riss;
 using namespace std;
 
 namespace Coprocessor {

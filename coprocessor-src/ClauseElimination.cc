@@ -81,7 +81,7 @@ bool ClauseElimination::process(CoprocessorData& data)
   return modifiedFormula;
 }
 
-bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::WorkData& wData, Minisat::CRef cr)
+bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::WorkData& wData, Riss::CRef cr)
 {
   assert(config.opt_ccelevel > 0 && "level needs to be higher than 0 to run elimination" );
   // put all literals of the clause into the mark-array and the other vectors!
@@ -328,7 +328,7 @@ bool ClauseElimination::markedBCE(const Lit& l, const Clause& c, const MarkArray
   return false;
 }
 
-void ClauseElimination::initClause(const Minisat::CRef cr)
+void ClauseElimination::initClause(const Riss::CRef cr)
 {
 
 }

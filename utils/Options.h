@@ -32,7 +32,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "utils/ParseUtils.h"
 #include "mtl/Sort.h"
 
-namespace Minisat {
+namespace Riss {
 
 //==================================================================================================
 // Top-level option parse/help functions:

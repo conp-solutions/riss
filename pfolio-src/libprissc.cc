@@ -3,14 +3,14 @@ Copyright (c) 2014, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
 #include "pfolio-src/PSolver.h"
-using namespace Minisat;
+using namespace Riss;
 
 /** struct that stores the necessary data for a preprocessor */
 struct libpriss {
-  Minisat::vec<Minisat::Lit> currentClause;
-  Minisat::vec<Minisat::Lit> assumptions;
-  Minisat::PSolver* solver;
-  Minisat::lbool lastResult;
+  Riss::vec<Riss::Lit> currentClause;
+  Riss::vec<Riss::Lit> assumptions;
+  Riss::PSolver* solver;
+  Riss::lbool lastResult;
   libpriss () : lastResult(l_Undef) {} // default constructor to ensure everything is set to 0
 };
 
@@ -32,7 +32,7 @@ priss_init(int& threads, const char* presetConfig)
     if( threads < 1 ) threads = 1; // make sure that the number of available threads makes sense ...
     else if ( threads > 64 ) threads = 64;
     libpriss* priss = new libpriss;
-    priss->solver = new Minisat::PSolver (threads, presetConfig);
+    priss->solver = new Riss::PSolver (threads, presetConfig);
     return priss;
 }
   

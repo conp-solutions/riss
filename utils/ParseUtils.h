@@ -27,7 +27,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <zlib.h>
 
-namespace Minisat {
+namespace Riss {
 
 //-------------------------------------------------------------------------------------------------
 // A simple buffered character stream class:

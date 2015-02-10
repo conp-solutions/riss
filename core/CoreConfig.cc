@@ -13,7 +13,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "mtl/Sort.h"
 
-using namespace Minisat;
+using namespace Riss;
 
 static const char* _cat = "CORE";
 static const char* _cr = "CORE -- RESTART";

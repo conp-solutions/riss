@@ -24,7 +24,7 @@ public:
   * @param model vector that can contain a model for the formula afterwards
   * @return true, if a model has been found
   */
-  bool solve(  const vec< Minisat::CRef >& formula, uint64_t stepLimit  );
+  bool solve(  const vec< Riss::CRef >& formula, uint64_t stepLimit  );
 
   /** if search succeeded, return polarity for variable v (1 = positive, -1 = negative) */
   char getModelPolarity( const Var v ) { return varData[v].polarity ? -1 : 1; }

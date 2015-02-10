@@ -12,7 +12,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 
 using namespace std;
-using namespace Minisat;
+using namespace Riss;
 
 /** Main class that performs the feature extraction and classification 
  * TODO: might be split into FeatureExtraction and CNFClassifier class

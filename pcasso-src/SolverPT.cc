@@ -571,7 +571,7 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsign
 				intermediate_nodes[i] = temp_node;
 				temp_node = temp_node->getFather();
 			}
-			davide::LevelPool* pool;
+			PcassoDavide::LevelPool* pool;
 			while( tempPTLevel < getNodePTLevel() ){
 				pool = intermediate_nodes[tempPTLevel]->lv_pool;
 				if( pool->isFull() )
@@ -604,7 +604,7 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsign
 			back_steps_node = back_steps_node->getFather();
 		}
 
-		davide::LevelPool* pool = back_steps_node->lv_pool;
+		PcassoDavide::LevelPool* pool = back_steps_node->lv_pool;
 
 		if(pool == 0) return;
 
@@ -666,7 +666,7 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsign
 				intermediate_nodes[i] = temp_node;
 				temp_node = temp_node->getFather();
 			}
-			davide::LevelPool* pool;
+			PcassoDavide::LevelPool* pool;
 			while( tempPTLevel < getNodePTLevel() ){
 				pool = intermediate_nodes[tempPTLevel]->lv_pool;
 				if( pool->isFull() )
@@ -1260,7 +1260,7 @@ void SolverPT::push_units(){
 				intermediate_nodes[i] = temp_node;
 				temp_node = temp_node->getFather();
 			}
-			davide::LevelPool* pool;
+			PcassoDavide::LevelPool* pool;
 			while( tempPTLevel < getNodePTLevel() ){
 				pool = intermediate_nodes[tempPTLevel]->lv_pool;
 				if( pool->isFull() )
@@ -1291,7 +1291,7 @@ void SolverPT::push_units(){
 			back_steps_node = back_steps_node->getFather();
 		}
 
-		davide::LevelPool* pool = back_steps_node->lv_pool;
+		PcassoDavide::LevelPool* pool = back_steps_node->lv_pool;
 		if(pool == 0) continue;
 
 		// Davide> PREPARING FOR CRITICAL SECTION
@@ -1341,7 +1341,7 @@ void SolverPT::push_learnts(){
 	if( tnode->lv_pool->max_size == 0 ) return; // Davide> Sharing disabled
 	double startSharingTime = cpuTime_t();
 	// Davide> Idea1 : put shared clauses into shared pools
-	vector<davide::LevelPool*> previous_pools;
+	vector<PcassoDavide::LevelPool*> previous_pools;
 
 	for( unsigned int i = 0; i <= getNodePTLevel(); i++ )
 		previous_pools.push_back(0);
@@ -1359,7 +1359,7 @@ void SolverPT::push_learnts(){
 	bool fullPool = false;
 
 	for( unsigned int i = 0; i < learnts_indeces.size(); i++ ){
-		davide::LevelPool* pool = previous_pools[i];
+		PcassoDavide::LevelPool* pool = previous_pools[i];
 
 		if(pool == 0) continue;
 
@@ -1449,7 +1449,7 @@ void SolverPT::pull_learnts(int curr_restarts){
 				}
 
 				chunk.clear();
-				davide::LevelPool* pool = back_steps_node->lv_pool;
+				PcassoDavide::LevelPool* pool = back_steps_node->lv_pool;
 				if(pool==0)
 					continue;
 				bool check = true;

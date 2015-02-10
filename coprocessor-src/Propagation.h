@@ -11,7 +11,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor-src/CoprocessorTypes.h"
 
-using namespace Minisat;
+using namespace Riss;
 
 namespace Coprocessor {
 

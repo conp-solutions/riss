@@ -65,7 +65,7 @@ bool isCorrect(string line){
 
 string runandoutput(string cmd) {
 
-  cerr << "c run and output, current used memory: " << Minisat::memUsed() << " MB, peak: " << Minisat::memUsedPeak() << " MB" << endl;
+  cerr << "c run and output, current used memory: " << Riss::memUsed() << " MB, peak: " << Riss::memUsedPeak() << " MB" << endl;
 	string data;
 	FILE * stream;
 	const int max_buffer = 256;
@@ -77,19 +77,19 @@ string runandoutput(string cmd) {
 	perror("popen");
 	
 	if (stream) {
-		cerr << "c while reading from command call, current used memory: " << Minisat::memUsed() << " MB, peak: " << Minisat::memUsedPeak() << " MB" << endl;
+		cerr << "c while reading from command call, current used memory: " << Riss::memUsed() << " MB, peak: " << Riss::memUsedPeak() << " MB" << endl;
 		while (!feof(stream))
 			if (fgets(buffer, max_buffer, stream) != NULL)
 				data.append(buffer);
 		pclose(stream);
 	}
-	cerr << "c after command call, current used memory: " << Minisat::memUsed() << " MB, peak: " << Minisat::memUsedPeak() << " MB" << endl;
+	cerr << "c after command call, current used memory: " << Riss::memUsed() << " MB, peak: " << Riss::memUsedPeak() << " MB" << endl;
 
 	return data;
 }
 
 vector<int>& Classifier::classifyJava(const char* wekaFile) {
-	cerr << "c call java, current used memory: " << Minisat::memUsed() << " MB, peak: " << Minisat::memUsedPeak() << " MB" << endl;
+	cerr << "c call java, current used memory: " << Riss::memUsed() << " MB, peak: " << Riss::memUsedPeak() << " MB" << endl;
 	stringstream scmd;
 	// -cp "./predictor.jar":"/usr/share/java/weka.jar" predicor.Predictor
 	//scmd << "java -Xmx1600M -cp \""<< predictorLocation.c_str() << "\":\"" << wekaLocation.c_str() << "\" predictor.Predictor ";

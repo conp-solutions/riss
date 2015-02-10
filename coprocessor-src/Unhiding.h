@@ -14,7 +14,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/Subsumption.h"
 #include "coprocessor-src/EquivalenceElimination.h"
 
-using namespace Minisat;
+using namespace Riss;
 using namespace std;
 
 namespace Coprocessor {

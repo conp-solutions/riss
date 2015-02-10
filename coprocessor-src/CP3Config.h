@@ -15,7 +15,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "utils/Config.h"
 #include "utils/Options.h"
 
-using namespace Minisat;
+using namespace Riss;
 
 namespace Coprocessor {
 

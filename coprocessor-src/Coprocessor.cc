@@ -1599,7 +1599,7 @@ void Preprocessor::sortClauses()
   }
 }
 
-void Preprocessor::delete_clause(const Minisat::CRef cr)
+void Preprocessor::delete_clause(const Riss::CRef cr)
 {
   Clause & c = ca[cr];
   c.mark(1);
@@ -1844,7 +1844,7 @@ void Preprocessor::printSolver(ostream& s, int verbose)
   for( Var v = 0 ; v < solver->nVars(); ++ v ) {
     for( int pl = 0 ; pl < 2; ++ pl ) {
       const Lit p = mkLit(v, pl == 1 );
-      vec<Minisat::Solver::Watcher>&  ws  = solver->watches[p];
+      vec<Riss::Solver::Watcher>&  ws  = solver->watches[p];
       
       for (int i = 0 ; i <  ws.size();  i ++){
             CRef     cr        = ws[i].cref();

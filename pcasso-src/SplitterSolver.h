@@ -10,7 +10,7 @@
 
 #include "core/Solver.h"
 
-using namespace Minisat;
+using namespace Riss;
 
 namespace Pcasso {
     class SplitterSolver : public Solver {

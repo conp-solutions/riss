@@ -7,7 +7,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #include "mtl/Sort.h"
 
 using namespace Coprocessor;
-using namespace Minisat;
+using namespace Riss;
 
 
 Symmetry::Symmetry( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Solver& _solver)

@@ -87,26 +87,26 @@ extern "C" { // abc has been compiled with gcc
 #include <pthread.h>
 
 struct SharedData {
-  Minisat::IncSolver* riss;     // handle to solver, to interrupt it if necessary
-  Minisat::IncSolver* guesser;  // handle to solver, to interrupt it if necessary
+  Riss::IncSolver* riss;     // handle to solver, to interrupt it if necessary
+  Riss::IncSolver* guesser;  // handle to solver, to interrupt it if necessary
   int upperBound; // here we had the lowest known SAT result
   int lowerBound; // here we had the highest known UNSAT result
   int rissFrame, guesserFrame; // frames where the two solvers work on at the moment
   int rissSolved, guesserSolved; // indicate who has the solution ready
   pthread_t guesserThread; // thread handle to guesser thread
   
-  Minisat::vec< Minisat::lbool >* upperBoundModel; // if an upper bound has been found by the guesser, store the model here, to be able to recover
+  Riss::vec< Riss::lbool >* upperBoundModel; // if an upper bound has been found by the guesser, store the model here, to be able to recover
   SharedData() : riss(0), guesser(0),upperBound(-1),lowerBound(-1),rissFrame(0),guesserFrame(0),rissSolved(0),guesserSolved(0),upperBoundModel(0) {}
 };
 
 static aiger * model = 0;
 static const char * name = 0;
 static PicoSAT * picosat = 0;
-static Minisat::IncSolver* riss = 0;
+static Riss::IncSolver* riss = 0;
 
 // structures that are necessary for preprocessing, and if x or y parameter are set also for postprocessing
-static Minisat::Solver* ppSolver;
-static Minisat::IncSolver* incsolver;
+static Riss::Solver* ppSolver;
+static Riss::IncSolver* incsolver;
 static Coprocessor::Preprocessor* outerPreprocessor;
 static Coprocessor::CP3Config* cp3config;
 
@@ -285,7 +285,7 @@ static int deref (int lit) {
 /** initialize everything, give solvers the possibility to read the parameters! */
 static void init ( int& argc, char **& argv ) {
   msg (2, "init SAT solver");
-  if( useRiss ) riss = new Minisat::IncSolver(argc,argv);
+  if( useRiss ) riss = new Riss::IncSolver(argc,argv);
   else picosat = picosat_init ();
   model = aiger_init ();
 }
@@ -603,7 +603,7 @@ void* wildGuessMethod (void* threadData) {
   
   assert( lazyEncode && "method does work only with lazy encoding" );
   
-  Minisat::IncSolver* guessSolver = sharedData.guesser;
+  Riss::IncSolver* guessSolver = sharedData.guesser;
   int lit = shiftFormula.currentAssume;
   std::vector<int> thisCheckClause; // collect all assumption literals that are not known yet as clause
   while( true ) {
@@ -702,7 +702,7 @@ void* wildGuessMethod (void* threadData) {
 	      }
 	    }
 	    assert(foundSatLit && "one of the literals in the clause has to be satisfied!" );
-	    if( sharedData.upperBoundModel == 0 ) sharedData.upperBoundModel = new Minisat::vec<Minisat::lbool>();
+	    if( sharedData.upperBoundModel == 0 ) sharedData.upperBoundModel = new Riss::vec<Riss::lbool>();
 	    guessSolver->exportModel( sharedData.upperBoundModel ); // export the model for this level, so that it can be used later
 	    thisRoundLowerBound = thisRoundLowerBound < sharedData.lowerBound ? sharedData.lowerBound : thisRoundLowerBound; // update, if the other thread did something there!
 	    currentFrame = (thisRoundLowerBound + sharedData.upperBound) / 2; // binary search - floor the value (no +1)
@@ -1059,10 +1059,10 @@ int main (int argc, char ** argv) {
     if( denseVariables ) { // enable options for CP3 for densing variables
       cp3config->opt_dense = true; cp3config->opt_dense_store_forward = 1; 
     }
-    Minisat::CoreConfig config = riss->getConfig();
+    Riss::CoreConfig config = riss->getConfig();
     config.hk = false; // do not use laHack during preprocessing! (might already infere that the output lit is false -> unroll forever)
-    ppSolver = new Minisat::Solver (config);
-    incsolver = new Minisat::IncSolver (ppSolver,config);
+    ppSolver = new Riss::Solver (config);
+    incsolver = new Riss::IncSolver (ppSolver,config);
     outerPreprocessor = new Coprocessor::Preprocessor ( ppSolver, *cp3config );
     for( int i = 0 ; i < shiftFormula.formula.size(); ++i ) incsolver->add( shiftFormula.formula[i] );
     
@@ -1222,7 +1222,7 @@ int main (int argc, char ** argv) {
   if( wildGuesser ) {
     // spin off extra thread, which performs guessing!
     sharedData.riss = riss;
-    sharedData.guesser = new Minisat::IncSolver (new Minisat::Solver (riss->getConfig()), riss->getConfig()); // FIXME this causes a memory leak for sure! (cannot delete the solver)
+    sharedData.guesser = new Riss::IncSolver (new Riss::Solver (riss->getConfig()), riss->getConfig()); // FIXME this causes a memory leak for sure! (cannot delete the solver)
     pthread_create( & sharedData.guesserThread, 0, wildGuessMethod , &sharedData );
   }
   
@@ -1387,7 +1387,7 @@ finishedSolving:;
     
     if( !sharedData.rissSolved ) {
       assert( sharedData.guesserSolved && "one of the two solver has have solved the instance" );
-      Minisat::IncSolver* tmp = riss;
+      Riss::IncSolver* tmp = riss;
       riss = sharedData.guesser; // if the other solver solved the instance, swap solvers!
       sharedData.guesser = tmp;
     }
@@ -1420,7 +1420,7 @@ finishedSolving:;
       // print the line that states the bad outputs, that have been reached
       if( dontFreezeBads ) { // if inputs have not been frozen, we need to recover them per frame before printing their value!
 	  const int frameShift = k * shiftDist; // want to access the very last frame
-	  Minisat::vec<lbool> frameModel ( shiftFormula.afterPPmaxVar, l_False ); // TODO put this vector higher!
+	  Riss::vec<lbool> frameModel ( shiftFormula.afterPPmaxVar, l_False ); // TODO put this vector higher!
 	  for( int j = 1 ; j <= shiftFormula.afterPPmaxVar; ++ j ) { // get the right part of the actual model
 	    const int v = deref(j==1 ? 1 : j + frameShift); // treat very first value always special, because its not moved!
 	    if( verbose > 3 ) cerr << "c var " << (j==1 ? 1 : j + frameShift) << " with value " << v << endl;
@@ -1481,7 +1481,7 @@ finishedSolving:;
       for (i = 0; i <= k; i++) { // for each step give the inputs that lead to the bad state
 	if( dontFreezeInput ) { // if inputs have not been frozen, we need to recover them per frame before printing their value!
 	  const int frameShift = i * shiftDist;
-	  Minisat::vec<lbool> frameModel ( shiftFormula.afterPPmaxVar, l_False ); // TODO put this vector higher!
+	  Riss::vec<lbool> frameModel ( shiftFormula.afterPPmaxVar, l_False ); // TODO put this vector higher!
 
 	  for( int j = 1 ; j <= shiftFormula.afterPPmaxVar; ++ j ) { // get the right part of the actual model
 	    const int v = deref(j==1 ? 1 : j + frameShift); // treat very first value always special, because its not moved!

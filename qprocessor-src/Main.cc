@@ -22,7 +22,7 @@ Copyright (c) 2013,      Norbert Manthey, All rights reserved.
 
 #include "VERSION" // include the file that defines the solver version
 
-using namespace Minisat;
+using namespace Riss;
 using namespace Coprocessor;
 
 //=================================================================================================

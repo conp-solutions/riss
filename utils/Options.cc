@@ -21,9 +21,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "utils/Options.h"
 #include "utils/ParseUtils.h"
 
-using namespace Minisat;
+using namespace Riss;
 
-bool Minisat::parseOptions(int& argc, char** argv, bool strict)
+bool Riss::parseOptions(int& argc, char** argv, bool strict)
 {
     bool returnValue = false;
     int i, j;
@@ -58,9 +58,9 @@ bool Minisat::parseOptions(int& argc, char** argv, bool strict)
 }
 
 
-void Minisat::setUsageHelp      (const char* str){ Option::getUsageString() = str; }
-void Minisat::setHelpPrefixStr  (const char* str){ Option::getHelpPrefixString() = str; }
-void Minisat::printUsageAndExit (int argc, char** argv, bool verbose)
+void Riss::setUsageHelp      (const char* str){ Option::getUsageString() = str; }
+void Riss::setHelpPrefixStr  (const char* str){ Option::getHelpPrefixString() = str; }
+void Riss::printUsageAndExit (int argc, char** argv, bool verbose)
 {
     const char* usage = Option::getUsageString();
 
@@ -99,7 +99,7 @@ void Minisat::printUsageAndExit (int argc, char** argv, bool verbose)
 }
 
 
-void Minisat::configCall(int argc, char** argv, std::stringstream& s)
+void Riss::configCall(int argc, char** argv, std::stringstream& s)
 {
   // print all options that are left over
   int i, j;

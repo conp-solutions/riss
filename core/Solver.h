@@ -88,10 +88,10 @@ namespace Pcasso {
 class Communicator;
 
 // since template methods need to be in headers ...
-extern Minisat::IntOption opt_verboseProof;
-extern Minisat::BoolOption opt_rupProofOnly;
+extern Riss::IntOption opt_verboseProof;
+extern Riss::BoolOption opt_rupProofOnly;
 
-namespace Minisat {
+namespace Riss {
 
 class OnlineProofChecker; 
 class IncSolver;
@@ -110,7 +110,7 @@ class Solver {
     friend class Coprocessor::RATElimination;
     friend class Coprocessor::FourierMotzkin;
     friend class Coprocessor::ExperimentalTechniques;
-    friend class Minisat::IncSolver; // for bmc
+    friend class Riss::IncSolver; // for bmc
 
 #ifdef PCASSO 
     friend class Pcasso::PcassoClient; // PcassoClient is allowed to access all the solver data structures
@@ -494,7 +494,7 @@ protected:
     void printSearchHeader();
     
     // for search procedure
-    void printConflictTrail(Minisat::CRef confl);
+    void printConflictTrail(Riss::CRef confl);
     void printSearchProgress();
     void updateDecayAndVMTF();
 
@@ -506,7 +506,7 @@ protected:
     /** handle learned clause, perform RER,ECL, extra analysis, DRUP, ...
      * @return l_False, if adding the learned unit clause(s) results in UNSAT of the formula
      */
-    lbool handleLearntClause(Minisat::vec< Minisat::Lit >& learnt_clause, bool backtrackedBeyond, unsigned int nblevels, uint64_t extraInfo);
+    lbool handleLearntClause(Riss::vec< Riss::Lit >& learnt_clause, bool backtrackedBeyond, unsigned int nblevels, uint64_t extraInfo);
     
     /** check whether a restart should be performed (return true, if restart) 
      * @param nof_conflicts limit can be increased by the method, if an agility reject has been applied
@@ -544,7 +544,7 @@ protected:
     /** perform la hack, return false -> unsat instance!
      * @return false, instance is unsatisfable
      */
-    bool laHack(Minisat::vec< Minisat::Lit >& toEnqueue);
+    bool laHack(Riss::vec< Riss::Lit >& toEnqueue);
  
     // Static helpers:
     //
@@ -714,7 +714,7 @@ private:
      * @param bump increases the activity of the current clause to the last seen value
      * note: behaves like the addClause structure
      */
-    bool addLearnedClause(Minisat::vec< Minisat::Lit >& ps, bool bump);
+    bool addLearnedClause(Riss::vec< Riss::Lit >& ps, bool bump);
     
     /** update the send limits based on whether a current clause could have been send or not
      * @param failed sending current clause failed because of limits
@@ -927,9 +927,9 @@ bool Solver::addUnitClauses(const vec< Lit >& other)
 //
 }  // close namespace for include
 // check generation of DRUP/DRAT proof on the fly
-#include "dratcheck-src/OnlineProofChecker.h"
+#include "proofcheck-src/OnlineProofChecker.h"
 
-namespace Minisat { // open namespace again!
+namespace Riss { // open namespace again!
 
 //=================================================================================================
 // Debug etc:
@@ -960,7 +960,7 @@ inline void Solver::printClause(CRef cr)
 #include "core/SolverCommunication.h"
 
 
-namespace Minisat { // open namespace again!
+namespace Riss { // open namespace again!
   #ifdef DRATPROOF
 
   inline bool Solver::outputsProof () const { 

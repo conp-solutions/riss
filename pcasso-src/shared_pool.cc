@@ -2,7 +2,7 @@
 
 #define NDBG
 
-using namespace davide;
+using namespace PcassoDavide;
 
 // A static vector always need a declaration
 vector<PcassoClause> Shared_pool::shared_clauses;
