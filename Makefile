@@ -16,6 +16,35 @@ COPTIMIZE ?= -O3
 
 all: rs
 
+# biuld all common targets in a row and check all for errors
+buildtest:
+	# To build Riss (by default without constructing DRAT-proofs):
+	make rissRS
+	make clean
+	make rissRS ARGS="-DDRATPROOF"
+	make clean
+#	To build Coprocessor:
+	make coprocessorRS
+	make clean
+#	To build Qprocessor:
+	make qprocessorRS
+	make clean
+#	To build Mprocessor:
+	make mprocessorRS
+	make clean
+#	To build Priss:
+	make prissRS
+	make clean
+#	To build Pcasso:
+	make pcassoRS
+	make clean
+#	To build Classifier:
+	make cls
+	make clean
+	cd shiftbmc-src; ./configure; cd ..
+	make shiftbmcs
+	make clean
+
 # shortcuts
 
 # make a std binary of riss, rissext or the related preprocessor

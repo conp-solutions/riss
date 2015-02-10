@@ -208,7 +208,7 @@ lbool VSIDSSplitting::scatterSeach(int nof_conflicts, void* data)
 
             learnt_clause.clear();otfssClauses.clear(); extraInfo=0;
             unsigned lbd=0;
-            int ret = analyze(confl, learnt_clause, backtrack_level,lbd, otfssClauses, extraInfo); // Davide> scatt !! my invention
+            int ret = analyze(confl, learnt_clause, backtrack_level,lbd, extraInfo); // Davide> scatt !! my invention
 	    
 	    assert( ret == 0 && "can handle only usually learnt clauses" );
 	    if( ret != 0 ) _exit(1); // abort, if learning is set up wrong
