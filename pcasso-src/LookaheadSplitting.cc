@@ -944,7 +944,7 @@ bool LookaheadSplitting::lookahead(Lit p, vec<Lit>& lookaheadTrail, vec<Lit>& un
             unsigned nbscore;
 	    learnt_clause.clear(); otfssClauses.clear(); extraInfo = 0; // reset global structures
 
-            int ret = analyze(confl, learnt_clause, backtrack_level, nbscore, otfssClauses, extraInfo);
+            int ret = analyze(confl, learnt_clause, backtrack_level, nbscore,  extraInfo);
 	    assert( ret == 0 && "can handle only usually learnt clauses" );
 	    if( ret != 0 ) _exit(1); // abort, if learning is set up wrong
 

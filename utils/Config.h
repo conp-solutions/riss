@@ -21,7 +21,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 //#define TOOLVERSION 427
 
-namespace Minisat {
+namespace Riss {
 
 /** class that implements most of the configuration features */
 class Config {

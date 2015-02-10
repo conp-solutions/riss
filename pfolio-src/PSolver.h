@@ -15,7 +15,7 @@ Copyright (c) 2014,      Norbert Manthey, All rights reserved.
 
 #include "pthread.h"
 
-namespace Minisat {
+namespace Riss {
 
   using namespace Coprocessor;
   

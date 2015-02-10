@@ -13,7 +13,7 @@
 #include "core/SolverTypes.h"
 
 using namespace std;
-using namespace Minisat;
+using namespace Riss;
 
 namespace Debug {
 

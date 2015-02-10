@@ -29,7 +29,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 //-------------------------------------------------------------------------------------------------
 
-namespace Minisat {
+namespace Riss {
 
 static inline double cpuTime(void); // CPU-time in seconds.
 static inline double wallClockTime(void); //Wall-Clock-time in seconds
@@ -44,9 +44,9 @@ extern double memUsedPeak();        // Peak-memory in mega bytes (returns 0 for 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 #include <time.h>
 
-static inline double Minisat::cpuTime(void) { return (double)clock() / CLOCKS_PER_SEC; }
+static inline double Riss::cpuTime(void) { return (double)clock() / CLOCKS_PER_SEC; }
 #warning WALLCLOCKTIME NOT SUPPORTED HERE
-static inline double Minisat::wallClockTime(void) { return (double) clock() / CLOCKS_PER_SEC; }
+static inline double Riss::wallClockTime(void) { return (double) clock() / CLOCKS_PER_SEC; }
 #else
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -58,14 +58,14 @@ static inline double Minisat::wallClockTime(void) { return (double) clock() / CL
 #include <mach/mach.h>
 #endif
 
-static inline double Minisat::cpuTime(void) {
+static inline double Riss::cpuTime(void) {
     struct rusage ru;
     getrusage(RUSAGE_SELF, &ru);
     return (double)ru.ru_utime.tv_sec + (double)ru.ru_utime.tv_usec / 1000000; }
 
 
 #ifndef __APPLE__ // Mac OS does not support the linux wall clock
-static inline double Minisat::wallClockTime(void)
+static inline double Riss::wallClockTime(void)
 {
     struct timespec timestamp;
     clock_gettime(CLOCK_MONOTONIC, &timestamp);
@@ -73,7 +73,7 @@ static inline double Minisat::wallClockTime(void)
 }
 
 #else // use the Mac wall clock instead 
-static inline double Minisat::wallClockTime(void)
+static inline double Riss::wallClockTime(void)
 {
     clock_serv_t cclock;
     mach_timespec_t mts;
@@ -103,8 +103,8 @@ class Clock {
   double cTime,wTime;
 public:
   Clock() : cTime(0), wTime(0) {}
-  void start() { cTime = Minisat::cpuTime() - cTime; wTime = Minisat::wallClockTime() - wTime; }
-  void stop() {  cTime = Minisat::cpuTime() - cTime; wTime = Minisat::wallClockTime() - wTime;  }
+  void start() { cTime = Riss::cpuTime() - cTime; wTime = Riss::wallClockTime() - wTime; }
+  void stop() {  cTime = Riss::cpuTime() - cTime; wTime = Riss::wallClockTime() - wTime;  }
   double getCpuTime() const { return cTime; }
   double getWallClockTime() const { return wTime; }
   void reset() { cTime = 0; wTime = 0; }

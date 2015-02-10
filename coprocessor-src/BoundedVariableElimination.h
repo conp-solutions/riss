@@ -12,7 +12,7 @@ Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/Subsumption.h"
 #include "mtl/Heap.h"
 
-using namespace Minisat;
+using namespace Riss;
 using namespace std;
 
 namespace Coprocessor {

@@ -24,7 +24,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "mtl/XAlloc.h"
 #include "mtl/Vec.h"
 #include <iostream>
-namespace Minisat {
+namespace Riss {
 
 //=================================================================================================
 // Simple Region-based memory allocator:

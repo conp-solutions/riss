@@ -1,15 +1,15 @@
-/**************************************************************************************[libcp3c.cc]
+/*******************************************************************************[libcoprocessor.cc]
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
 #include "coprocessor-src/Coprocessor.h"
-using namespace Minisat;
+using namespace Riss;
 
 /** struct that stores the necessary data for a preprocessor */
 struct libcp3 {
-  Minisat::vec<Minisat::Lit> currentClause;
-  Minisat::CoreConfig* solverconfig;
-  Minisat::Solver* solver;
+  Riss::vec<Riss::Lit> currentClause;
+  Riss::CoreConfig* solverconfig;
+  Riss::Solver* solver;
   Coprocessor::CP3Config* cp3config;
   Coprocessor::Preprocessor* cp3;
   // for outputting stuff:
@@ -31,11 +31,11 @@ extern "C" {
     void* 
     CPinit(const char* presetConfig) {
     libcp3* cp3 = new libcp3;
-    cp3->solverconfig = new Minisat::CoreConfig("");
+    cp3->solverconfig = new Riss::CoreConfig("");
     if( presetConfig  != 0 ) cp3->solverconfig->setPreset(presetConfig );
     cp3->cp3config = new Coprocessor::CP3Config("");
     if( presetConfig  != 0 ) cp3->cp3config->setPreset(presetConfig );
-    cp3->solver = new Minisat::Solver (*(cp3->solverconfig));
+    cp3->solver = new Riss::Solver (*(cp3->solverconfig));
     cp3->cp3 = new Coprocessor::Preprocessor ( cp3->solver, *(cp3->cp3config) );
     return cp3;
   }
@@ -112,7 +112,7 @@ extern "C" {
 //     libcp3* cp3 = (libcp3*) preprocessor;
 //     // dangerous line, since the size of the elements inside the vector might be different
 //     
-//     for( int i = 0 ; i < model.size(); ++ i ) cp3model.push( Minisat::toLbool(model[i]) );
+//     for( int i = 0 ; i < model.size(); ++ i ) cp3model.push( Riss::toLbool(model[i]) );
 //     cp3->cp3->extendModel(cp3model);
 //     model.clear();
 //     for( int i = 0 ; i < cp3model.size(); ++ i ) model.push_back( toInt(cp3model[i]) );

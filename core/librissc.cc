@@ -3,16 +3,16 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
 #include "coprocessor-src/Coprocessor.h"
-using namespace Minisat;
+using namespace Riss;
 
 /** struct that stores the necessary data for a preprocessor */
 struct libriss {
-  Minisat::vec<Minisat::Lit> currentClause;
-  Minisat::vec<Minisat::Lit> assumptions;
-  Minisat::CoreConfig* solverconfig;
-  Minisat::Solver* solver;
+  Riss::vec<Riss::Lit> currentClause;
+  Riss::vec<Riss::Lit> assumptions;
+  Riss::CoreConfig* solverconfig;
+  Riss::Solver* solver;
   Coprocessor::CP3Config* cp3config;
-  Minisat::lbool lastResult;
+  Riss::lbool lastResult;
   libriss () : lastResult(l_Undef) {} // default constructor to ensure everything is set to 0
 };
 
@@ -32,9 +32,9 @@ void*
 riss_init(const char* presetConfig)
 {
     libriss* riss = new libriss;
-    riss->solverconfig = new Minisat::CoreConfig(presetConfig == 0 ? "" : presetConfig);
+    riss->solverconfig = new Riss::CoreConfig(presetConfig == 0 ? "" : presetConfig);
     riss->cp3config = new Coprocessor::CP3Config(presetConfig == 0 ? "" : presetConfig);
-    riss->solver = new Minisat::Solver (*(riss->solverconfig));
+    riss->solver = new Riss::Solver (*(riss->solverconfig));
     riss->solver->setPreprocessor( riss->cp3config );
     return riss;
 }

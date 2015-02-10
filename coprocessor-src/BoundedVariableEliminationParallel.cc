@@ -683,7 +683,7 @@ inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData 
  *  -> total number of literals in learnts after resolution:    lit_learnts
  *
  */
-inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(CoprocessorData& data, vector< Minisat::CRef >& positive, vector< Minisat::CRef >& negative, const int v, const int p_limit, const int n_limit, vec< Lit >& resolvent, vec < int32_t > &  pos_stats, vec < int32_t > & neg_stats, int& lit_clauses, int& lit_learnts, int& new_clauses, int& new_learnts, SpinLock& data_lock, BoundedVariableElimination::ParBVEStats& stats, int64_t& bveChecks, const bool doStatistics)
+inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(CoprocessorData& data, vector< Riss::CRef >& positive, vector< Riss::CRef >& negative, const int v, const int p_limit, const int n_limit, vec< Lit >& resolvent, vec < int32_t > &  pos_stats, vec < int32_t > & neg_stats, int& lit_clauses, int& lit_learnts, int& new_clauses, int& new_learnts, SpinLock& data_lock, BoundedVariableElimination::ParBVEStats& stats, int64_t& bveChecks, const bool doStatistics)
 {
     if(config.opt_bve_verbose > 2)  cerr << "c starting anticipate BVE" << endl;
     // Clean the stats

@@ -14,7 +14,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include <vector>
 
-using namespace Minisat;
+using namespace Riss;
 using namespace std;
 
 namespace Coprocessor {
@@ -71,7 +71,7 @@ public:
 protected:
   
   /** try to run CCE on clause cr, return true if clause has been removed */
-  bool eliminate(Coprocessor::CoprocessorData& data, Coprocessor::ClauseElimination::WorkData& wData, Minisat::CRef cr);
+  bool eliminate(Coprocessor::CoprocessorData& data, Coprocessor::ClauseElimination::WorkData& wData, Riss::CRef cr);
 
   /** check whether all clauses with literal ~l result in a tautology when resolved with l based on the mark-array
    * @return true, if l is blocking literal wrt. array

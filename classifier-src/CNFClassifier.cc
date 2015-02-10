@@ -410,7 +410,7 @@ void CNFClassifier::fband(vector<double>& ret) {
 		litToClsMap.resize(2 * nVars); // setup enough vectors
 		for (int i = 0; i < clauses.size(); ++i) {
 			for (int j = 0; j < ca[clauses[i]].size(); ++j)
-				litToClsMap[Minisat::toInt(ca[clauses[i]][j])].push_back(
+				litToClsMap[Riss::toInt(ca[clauses[i]][j])].push_back(
 						clauses[i]);
 		}
 		Coprocessor::BIG big; // graph that works only on the binary clauses with a small memory representation

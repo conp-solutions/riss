@@ -47,7 +47,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 using namespace std;
 using namespace Pcasso;
-using namespace Minisat;
+using namespace Riss;
 
 
 class Master

@@ -1219,9 +1219,9 @@ int main (int argc, char ** argv) {
   msg(0, "shiftbmc, Norbert Manthey, 2014");
   msg(0, "based on the aigbmc bounded model checker");
 
-  msg(0, "include temporal induction: simulate circuit with initial latch setup + simulate, record all states and hash them, check for convergence, turn 0/1 into X if not converging, continue. stable signals/alternating signals: check signals during execution. validate on circuit with initial latches=X, and perform iterations");
-  msg(0,W"debug shift+preprocess with armin");
-  exit(0);
+//   msg(0, "include temporal induction: simulate circuit with initial latch setup + simulate, record all states and hash them, check for convergence, turn 0/1 into X if not converging, continue. stable signals/alternating signals: check signals during execution. validate on circuit with initial latches=X, and perform iterations");
+//   msg(0, "debug shift+preprocess with armin");
+//   exit(0);
 
 
   totalTime = cpuTime() - totalTime;

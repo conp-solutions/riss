@@ -18,7 +18,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "core/Solver.h"
 
-namespace Minisat {
+namespace Riss {
   
 /**
  *  variable representation for interface:  1 - n

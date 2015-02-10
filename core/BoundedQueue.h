@@ -27,7 +27,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 //=================================================================================================
 
-namespace Minisat {
+namespace Riss {
 
 template <class T>
 class bqueue {

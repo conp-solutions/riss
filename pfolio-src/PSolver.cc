@@ -6,7 +6,7 @@ Copyright (c) 2014,      Norbert Manthey, All rights reserved.
 
 #include <assert.h>
 
-namespace Minisat {
+namespace Riss {
 
   
 BoolOption opt_share(        "PFOLIO", "ps", "enable clause sharing for all clients", true, 0 );

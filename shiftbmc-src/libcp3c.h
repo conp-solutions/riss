@@ -61,7 +61,7 @@ extern "C" {
   extern int CPgetReplaceLiteral(void* preprocessor, int oldLit );
   
   /** recreate the variables of the given model from the state of the preprocessor 
-   *  Note: will copy the model twice to be able to change the data type of the model into minisat vector Minisat::Vec
+   *  Note: will copy the model twice to be able to change the data type of the model into minisat vector Riss::Vec
    */
   extern void CPpostprocessModel(void* preprocessor, std::vector<uint8_t>& model );
 

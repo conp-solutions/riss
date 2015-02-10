@@ -10,7 +10,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 #include "coprocessor-src/Technique.h"
 
-using namespace Minisat;
+using namespace Riss;
 using namespace std;
 
 namespace Coprocessor {

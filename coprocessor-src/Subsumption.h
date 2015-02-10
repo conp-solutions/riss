@@ -15,7 +15,7 @@ Copyright (c) 2012, Norbert Manthey, Kilian Gebhardt, All rights reserved.
 
 #include <vector>
 
-using namespace Minisat;
+using namespace Riss;
 using namespace std;
 
 namespace Coprocessor {

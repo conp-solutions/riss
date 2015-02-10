@@ -25,7 +25,7 @@ on the Communicator implementation.
 #define DBG(x)
 // #define DBG(x) x
 
-namespace Minisat {
+namespace Riss {
 
 inline
 void Solver::setCommunication( Communicator* comm )

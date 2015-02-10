@@ -7,7 +7,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 #include "coprocessor-src/Shuffler.h"
 
-using namespace Minisat;
+using namespace Riss;
 using namespace std;
 using namespace Coprocessor;
 
@@ -17,7 +17,7 @@ VarShuffler::VarShuffler(CP3Config &_config)
 , variables(0)
 , seed(0) {}
 
-void VarShuffler::process(vec< Minisat::CRef >& clauses, vec< Minisat::CRef >& learnts, vec< Lit >& trail, uint32_t vars, ClauseAllocator& ca)
+void VarShuffler::process(vec< Riss::CRef >& clauses, vec< Riss::CRef >& learnts, vec< Lit >& trail, uint32_t vars, ClauseAllocator& ca)
 {
   setSeed( config.opt_shuffle_seed );
   setupShuffling(vars);

@@ -13,7 +13,7 @@ Copyright (c) 2012, All rights reserved, Norbert Manthey
 #include <iostream>
 
 using namespace std;
-using namespace Minisat;
+using namespace Riss;
 
 // own files
 #include "utils/LockCollection.h"
@@ -23,7 +23,7 @@ using namespace Minisat;
 #include "core/Solver.h"
 
 
-#include "dratcheck-src/ProofMaster.h"
+#include "proofcheck-src/ProofMaster.h"
 /** collection of some wait states */
 enum WaitState {
   oneIdle = 0,
@@ -39,7 +39,7 @@ class ClauseRingBuffer
   /** item for the pool, remembers the sender so that own clauses are not received again
    */
   struct poolItem {
-    std::vector<Minisat::Lit> data;	/// the actual clause
+    std::vector<Riss::Lit> data;	/// the actual clause
     int author;		/// the author of the clause
     poolItem() : author(-1) {}	/// the initial author is invalid, so that it can be seen whether a clause in the ringbuffer has been added by solver
   };
@@ -64,9 +64,9 @@ class ClauseRingBuffer
    * @param allocator clause allocator of the solver that receives clauses (clauses are copied directly into the allocator
    * note: this method should be locked
    */
-  Minisat::CRef getClause( const unsigned position, Minisat::ClauseAllocator& allocator )
+  Riss::CRef getClause( const unsigned position, Riss::ClauseAllocator& allocator )
   {
-    std::vector<Minisat::Lit>& poolClause = pool[position].data;
+    std::vector<Riss::Lit>& poolClause = pool[position].data;
     return allocator.alloc(poolClause, true); // create as learned clause!!
   }
 
@@ -114,13 +114,13 @@ public:
    * @param authorID id of the author thread, to be stored with the clause
    * @param clause vector that stores the clause to be added
    */
-  void addClause( int authorID, const Minisat::vec<Minisat::Lit>& clause )
+  void addClause( int authorID, const Riss::vec<Riss::Lit>& clause )
   {
     lock();
 
     // cerr << "[COMM] thread " << authorID << " adds clause to " << addHereNext << endl;
     // overwrite current position (starts with 0)
-    std::vector<Minisat::Lit>& poolClause = pool[addHereNext].data;
+    std::vector<Riss::Lit>& poolClause = pool[addHereNext].data;
     // if there has been a clause at this position before, then this clause is removed right now ...
     if( pool[addHereNext].author != -1 && proofMaster != 0 ) proofMaster->delFromProof( poolClause, lit_Undef, -1, false ); // can work only on the global proof
     
@@ -144,14 +144,14 @@ public:
    * @param authorID id of the author thread, to be stored with the clause
    * @param units vector that stores all the literals that are inside the unit clauses to share
    */
-  void addUnitClauses( int authorID, const std::vector<Minisat::Lit>& units )
+  void addUnitClauses( int authorID, const std::vector<Riss::Lit>& units )
   {
     lock(); // coarse lock, do not lock for each unit, but for all!
 
     for( size_t i = 0 ; i < units.size(); ++ i ) {
       // cerr << "[COMM] thread " << authorID << " adds clause to " << addHereNext << endl;
       // overwrite current position (starts with 0)
-      std::vector<Minisat::Lit>& poolClause = pool[addHereNext].data;
+      std::vector<Riss::Lit>& poolClause = pool[addHereNext].data;
       if( pool[addHereNext].author != -1 && proofMaster != 0 ) proofMaster->delFromProof( poolClause, lit_Undef, -1, false ); // can work only on the global proof
       pool[addHereNext].author = authorID;      
       poolClause.resize( 1 );
@@ -170,11 +170,11 @@ public:
    * @param authorID id of the author thread, to be stored with the clause
    * note: only an approximation
    */
-  unsigned receiveClauses ( int authorID, unsigned lastSeenIndex, Minisat::ClauseAllocator& allocator, std::vector< Minisat::CRef>& clauses )
+  unsigned receiveClauses ( int authorID, unsigned lastSeenIndex, Riss::ClauseAllocator& allocator, std::vector< Riss::CRef>& clauses )
   {
     //cerr << "c [COMM] thread " << authorID << " called receive with last seen " << lastSeenIndex << ", addHere: " << addHereNext << endl;
     clauses.clear();
-    std::vector<Minisat::Lit> tmp;
+    std::vector<Riss::Lit> tmp;
     lock();
     // incorporate all clauses that are stored BEFORE addHereNext
     unsigned returnIndex = addHereNext == 0 ? poolSize - 1 : addHereNext - 1;
@@ -232,7 +232,7 @@ public:
     Lock dataLock;		/// lock that protects the access to the task data structures
     SleepLock masterLock;		/// lock that enables the master thread to sleep during waiting for child threads
 
-    Minisat::vec <Minisat::Lit> sendUnits;	/// vector that stores the unit clauses that should be send to all clients as clauses (not learned!)
+    Riss::vec <Riss::Lit> sendUnits;	/// vector that stores the unit clauses that should be send to all clients as clauses (not learned!)
     
   public:
 
@@ -264,14 +264,14 @@ public:
      */
     void addToSendThisUnit( int unitLiteral ) {
       // convert into literal, push to vector
-      sendUnits.push(Minisat::mkLit(abs(unitLiteral),unitLiteral < 0));
+      sendUnits.push(Riss::mkLit(abs(unitLiteral),unitLiteral < 0));
     }
 
     /** receive clauses
      * should be called by worker threads
      * @param fillMe vector of the client that should store the literals that have been send recently
      */
-    void receiveUnits( Minisat::vec<Minisat::Lit>& fillMe ) {
+    void receiveUnits( Riss::vec<Riss::Lit>& fillMe ) {
       fillMe.clear();
       for( int i = 0 ; i < sendUnits.size(); ++i )
         fillMe.push( sendUnits[i] );
@@ -305,15 +305,15 @@ public:
       finishedReceiving,   // thread is finished with receiving!
     };
 
-    Minisat::vec<Minisat::Lit> assumptions;	// vector with assumptions for this thread
+    Riss::vec<Riss::Lit> assumptions;	// vector with assumptions for this thread
     
   private:
 
     bool winner;	// this thread solved the problem
     int originalVars;	// number of variables that is present (without new ER variables)
-    Minisat::lbool returnValue; // value that is returned by the solver after a solving call
+    Riss::lbool returnValue; // value that is returned by the solver after a solving call
     
-    Minisat::Solver * solver;  // pointer to the used solver object
+    Riss::Solver * solver;  // pointer to the used solver object
     int id;                    // id of this thread
 
     State state;
@@ -323,7 +323,7 @@ public:
     bool doSend;               // should this thread send clauses
     bool doReceive;            // should this thread receive clauses
 
-    Minisat::vec<char> protect;         // if char in vector is 0, the variable has to be considered for calculating limits
+    Riss::vec<char> protect;         // if char in vector is 0, the variable has to be considered for calculating limits
     
     char dummy[64]; // to separate this data on extra cache lines (avoids false sharing)
 
@@ -368,7 +368,7 @@ public:
       if( ownLock != 0 ) delete ownLock;
     }
 
-    void setSolver( Minisat::Solver* s ) {
+    void setSolver( Riss::Solver* s ) {
       assert( solver == 0 && "will not overwrite handle to another solver" );
       solver = s;
     }
@@ -407,9 +407,9 @@ public:
     }
     
     /// tell return value of solver
-    Minisat::lbool getReturnValue() const { return returnValue; }
+    Riss::lbool getReturnValue() const { return returnValue; }
     /// set return value of this thread (should be done by the solver, or by the solving thread!)
-    Minisat::lbool setReturnValue( const Minisat::lbool newReturnValue ) {
+    Riss::lbool setReturnValue( const Riss::lbool newReturnValue ) {
       return returnValue = newReturnValue;
     }    
     
@@ -443,7 +443,7 @@ public:
      * @return true, if something has been done (e.g. a clause has been added), false otherwise
      * note: this method should be called by the solver only if it will be doing a decision next
      */
-    bool update( Minisat::Solver* s ){
+    bool update( Riss::Solver* s ){
       // implement update code here!
       return true;
     }
@@ -456,12 +456,12 @@ public:
 
     /** return a handle to the solver of this communicator
      */
-    Minisat::Solver* getSolver() { return solver; }
+    Riss::Solver* getSolver() { return solver; }
 
     /** adds a clause to the next position of the pool
      * @param clause vector that stores the clause to be added
      */
-    void addClause( const Minisat::vec<Minisat::Lit>& clause )
+    void addClause( const Riss::vec<Riss::Lit>& clause )
     {
       data->getBuffer().addClause(id,clause);
     }
@@ -470,23 +470,23 @@ public:
      * note: only an approximation, can happen that ringbuffer overflows!
      * note: should be called by the worker solver only!
      */
-    void receiveClauses ( Minisat::ClauseAllocator& ca, std::vector< Minisat::CRef >& clauses )
+    void receiveClauses ( Riss::ClauseAllocator& ca, std::vector< Riss::CRef >& clauses )
     {
       if( !doReceive ) return;
       //unsigned int oldLastSeen = lastSeenIndex;
       lastSeenIndex = data->getBuffer().receiveClauses( id, lastSeenIndex, ca, clauses );
     }
 
-    void initProtect( const Minisat::vec<Minisat::Lit>& assumptions, const int vars ) {
+    void initProtect( const Riss::vec<Riss::Lit>& assumptions, const int vars ) {
       protect.clear();
       protect.growTo(vars,0);
       for( int i = 0 ; i < assumptions.size(); ++ i )
-	protect[ Minisat::var(assumptions[i]) ] = 1;
+	protect[ Riss::var(assumptions[i]) ] = 1;
     }
     
     // literal is only protected, if this option is enabled
-    bool isProtected ( const Minisat::Lit& l ) const {
-      return protectAssumptions && protect[ Minisat::var( l ) ]; 
+    bool isProtected ( const Riss::Lit& l ) const {
+      return protectAssumptions && protect[ Riss::var( l ) ]; 
     }
 
     bool variableProtection() const { return protectAssumptions; }

@@ -11,12 +11,12 @@ Copyright (c) 2014, All rights reserved, Norbert Manthey
 #include "core/SolverTypes.h"
 #include "utils/LockCollection.h"
 
-#include "dratcheck-src/OnlineProofChecker.h"
+#include "proofcheck-src/OnlineProofChecker.h"
 
 #include <cstdio>
 #include <iostream>
 
-using namespace Minisat;
+using namespace Riss;
 using namespace std;
 
 /** class that takes care of constructing a DRUP proof for a portfolio solver

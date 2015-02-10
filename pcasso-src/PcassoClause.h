@@ -4,9 +4,9 @@
 #include "mtl/Vec.h"
 #include <iostream> // Davide> Debug
 
-using namespace Minisat;
+using namespace Riss;
 
-namespace davide{
+namespace PcassoDavide{
   
   struct PcassoClause{
     unsigned int size;

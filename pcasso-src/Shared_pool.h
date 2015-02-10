@@ -22,10 +22,10 @@
 #include <iostream>
 #include <fstream>
 
-using namespace Minisat;
+using namespace Riss;
 using namespace std;
 
-namespace davide{
+namespace PcassoDavide{
    
   static ComplexLock shared_pool_lock = ComplexLock(); // library can be build with this?
    

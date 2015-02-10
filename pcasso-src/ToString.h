@@ -6,7 +6,7 @@
 
 // Davide> This file simply contains some useful things
 
-namespace davide{
+namespace PcassoDavide{
   
   template <class T>
     inline std::string to_string (const T& t)

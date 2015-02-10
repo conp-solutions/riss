@@ -10,7 +10,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor-src/Technique.h"
 #include "coprocessor-src/Propagation.h"
 
-using namespace Minisat;
+using namespace Riss;
 using namespace std;
 
 namespace Coprocessor {
@@ -43,7 +43,7 @@ protected:
   void addRedundantBinaries();
 
   /** check whether this clause already exists in the occurence list */
-  bool hasDuplicate(vector< Minisat::CRef >& list, const vec< Lit >& c);
+  bool hasDuplicate(vector< Riss::CRef >& list, const vec< Lit >& c);
   
   /**
   * expects c to contain v positive and d to contain v negative
