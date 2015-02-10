@@ -96,6 +96,10 @@ buildtest:
 	make shiftbmc
 	make clean
 
+libcheck: MYLFLAGS += -L . -L .. -lcp 
+libcheck: libso
+	make -C lib-src INLDFLAGS='$(MYLFLAGS)' MROOT=..
+
 # shortcuts
 
 # make a std binary of riss, rissext or the related preprocessor
@@ -170,7 +174,8 @@ libr: always
 	cd core;   make libr INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src pfolio-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; rm lib.a; mv lib_release.a ../libriss.a
 libso: always
 	cd core;   make libso INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src pfolio-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv lib_release.so ../libcp.so
-	strip -g -S -d --strip-debug -X -w --strip-symbol=*Coprocessor* --strip-symbol=*Minisat* libcp.so
+	strip -g -S -d --strip-debug -X -w --strip-symbol=*Coprocessor* --strip-symbol=*Riss* libcp.so
+
 
 # coprocessor
 coprocessor: always

@@ -119,9 +119,10 @@ lbool SimpSolver::solve_(bool do_simp, bool turn_off_simp)
         for (int i = 0; i < preferred.size(); i++){
             Var v = preferred[i];
 
-            // If a preferred variable has been eliminated, remember it.
-            if (isEliminated(v))
-                remember(v);
+// // 	    This functionality is not provided by Minisat's more recent versions
+//             // If a preferred variable has been eliminated, remember it.
+//             if (isEliminated(v))
+//                 remember(v);
 
             if (!frozen[v]){
                 // Freeze and store.
@@ -134,7 +135,7 @@ lbool SimpSolver::solve_(bool do_simp, bool turn_off_simp)
         result = lbool(eliminate(turn_off_simp));
     }
 
-		if (!result) ok = false;
+    if (result == l_False ) ok = false;
 
     if (result == l_True)
         result = Solver::solve_();

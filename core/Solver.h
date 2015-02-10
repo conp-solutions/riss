@@ -176,6 +176,8 @@ public:
     void    setRandomSeed(double seed); // sets random seed (cannot be 0)
     // NuSMV: SEED END
     // NuSMV: PREF MOD
+    vec<char> preferred;
+
     /*
      * Add a variable at the end of the list of preferred variables
      * Does not remove the variable from the standard ordering.

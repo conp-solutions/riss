@@ -84,7 +84,7 @@ Solver::Solver(CoreConfig& _config) :
   , random_seed      (config.opt_random_seed)
   , ccmin_mode       (config.opt_ccmin_mode)
   , phase_saving     (config.opt_phase_saving)
-  , rnd_pol          (false)
+  , rnd_pol          (random_var_freq > 0)     // if there is a random variable frequency, allow random decisions
   , rnd_init_act     (config.opt_rnd_init_act)
   , garbage_frac     (config.opt_garbage_frac)
 
@@ -630,8 +630,8 @@ Lit Solver::pickBranchLit()
     // NuSMV: PREF MOD
     // Selection from preferred list
     for (int i = 0; i < preferred.size(); i++) {
-      if (toLbool(assigns[preferred[i]]) == l_Undef) {
-				next = preferred[i];
+      if ( value(preferred[i]) == l_Undef) {
+	next = preferred[i];
       }
     }
     // NuSMV: PREF MOD END
@@ -654,7 +654,7 @@ Lit Solver::pickBranchLit()
         }else
             next = order_heap.removeMin();
 
-    const Lit returnLit =  next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : varFlags[next].polarity );
+    const Lit returnLit =  next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < random_var_freq : varFlags[next].polarity );
     return returnLit; 
 }
 

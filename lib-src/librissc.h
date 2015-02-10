@@ -1,5 +1,5 @@
 /**************************************************************************************[librissc.h]
-Copyright (c) 2013, Norbert Manthey, All rights reserved.
+Copyright (c) 2013-2015, Norbert Manthey, All rights reserved.
 
  Headerffile to work with Riss as a library
  
@@ -24,7 +24,6 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 // to represent formulas and the data type of truth values
 #include "stdint.h"
 
-
 // use these values to cpecify the model in extend model
 #ifndef l_True
 #define l_True  0 // gcc does not do constant propagation if these are real constants.
@@ -38,42 +37,98 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #define l_Undef 2
 #endif
 
-// #pragma GCC visibility push(hidden)
-// #pragma GCC visibility push(default)
-// #pragma GCC visibility pop // now we should have default!
 
 // only if compiling with g++! -> has to be a way with defines!
 extern "C" {
 
+  /** return the name of the solver and its version
+   *  @return string that contains the verison of the solver
+   */
+  extern const char* riss_signature ();
+  
   /** initialize a solver instance, and return a pointer to the maintain structure 
    * @param presetConfig name of a configuration that should be used
    */
   extern void* riss_init(const char* presetConfig = 0);
   
+  /** set the random seed of the solver
+   * @param seed random seed for double random generator ( must be between 0 and 1 )
+   */
+  extern void riss_set_randomseed( void* riss, double seed );
+  
   /** free the resources of the solver, set the pointer to 0 afterwards */
   extern void riss_destroy(void*& riss);
+
   
-  /** add a literal to the solver, if lit == 0, end the clause and actually add it 
+  
+  /** add a new variables in the solver 
+   * @return number of the newly generated variable
+   */
+  extern int riss_new_variable (const void* riss) ;
+  
+  /** add a literal to the solver, if lit == 0, end the clause and actually add it (lit is in external 1-N variable representation)
    *  @return 0, if addition is ok. 1, if adding this literal (0) leads to a bad state of the solver
    */
   extern int riss_add (void* riss, const int& lit);
 
+  
+  
   /** add the given literal to the assumptions for the next solver call */
   extern void riss_assume (void* riss, const int& lit);
+
+  /** add a variable as prefered search decision (will be decided in this order before deciding other variables) */
+  extern void riss_add_prefered_decision (void* riss, const int& variable);
   
+  /** clear all prefered decisions that have been added so far */
+  extern void riss_clear_prefered_decisions (void* riss);
+
+  
+  /** apply unit propagation (find units, not shrink clauses) and remove satisfied (learned) clauses from solver
+   * @return 1, if simplification did not reveal an empty clause, 0 if an empty clause was found (or inconsistency by unit propagation)
+   */
+  extern int riss_simplify (const void* riss) ; 
+ 
   /** solve the formula that is currently present (riss_add) under the specified assumptions since the last call
    * Note: clears the assumptions after the solver run finished
    * @param nOfConflicts number of conflicts that are allowed for this SAT solver run (-1 = infinite)
    * @return status of the SAT call: 10 = satisfiable, 20 = unsatisfiable, 0 = not finished within number of conflicts
    */
-  extern int riss_sat (void* riss, const int& nOfConflicts);
+  extern int riss_sat (void* riss, const int64_t& nOfConflicts = -1);
 
+  
+  
   /** return the polarity of a variable in the model of the last solver run (if the result was sat) 
    * @return 1 = literal is true, -1 = literal is false, 0 = value is unknown
    */
   extern int riss_deref (const void* riss, const int& lit) ;
-}
+  
+  /** give number of literals that are present in the conflict clause that has been produced by analyze_final
+   *  @return number of literals in the conflict clause
+   */
+  extern int riss_conflict_size (const void* riss) ;
+  
+  /** return the literals of the conflict clause at the specified position
+   *  @return a literal of the conflict clause
+   */
+  extern int riss_conflict_lit (const void* riss, const int& position) ;  
+  
+  
+  /** returns the number of variables that are currently used by the solver 
+   * @return number of currently maximal variables
+   */
+  extern int riss_variables (const void* riss) ;
 
-// #pragma GCC visibility pop // back to what we had before
+  /** returns the current number of assumption literals for the next solver call
+   * @return number of currently added assumptions for the next solver call
+   */
+  extern int riss_assumptions (const void* riss) ;
+  
+  /** returns the number of (added) clauses that are currently used by the solver (does not include learnt clauses)
+   * @return number of clauses (not including learnt clauses)
+   */
+  extern int riss_clauses (const void* riss) ;
+
+  
+}
 
 #endif

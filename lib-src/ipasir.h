@@ -10,6 +10,7 @@
  * 
  * Copyright (c) 2014, Tomas Balyo, Karlsruhe Institute of Technology.
  * Copyright (c) 2014, Armin Biere, Johannes Kepler University.
+ * Copyright (c) 2015, Norbert Manthey, TU Dresden
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -33,11 +34,16 @@
 #ifndef ipasir_h_INCLUDED
 #define ipasir_h_INCLUDED
 
+#include "lib-src/librissc.h" // include actual C-interface of Riss
+
 /**
  * Return the name and the version of the incremental SAT
  * solving library.
  */
-const char * ipasir_signature ();
+inline 
+const char * ipasir_signature () {
+  return riss_signature();
+}
 
 /**
  * Construct a new solver and return a pointer to it.

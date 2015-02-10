@@ -113,8 +113,11 @@ riss_deref (const void* riss, const int& lit)
   return ( lit < 0 ) ? (vValue == l_False ? 1 : (vValue == l_True ? -1 : 0) ) : (vValue == l_False ? -1 : (vValue == l_True ? 1 : 0) );
 }
 
+#warning IMPLEMENT MISSING FUNCTIONALITY INTO LIBRARY
   
 }
+
+
 
 // #pragma GCC visibility pop
 
