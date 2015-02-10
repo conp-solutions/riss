@@ -1,4 +1,4 @@
-/***************************************************************************************[libcp3c.h]
+/*********************************************************************************[libcoprocessor.h]
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
  Headerffile to work with Coprocessor as a library
