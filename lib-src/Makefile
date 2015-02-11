@@ -3,13 +3,14 @@
 
 EXEC      = risslibcheck
 
-DEPDIR    = mtl utils core simp 
+# uses only the library - no dependencies
+#DEPDIR    = mtl utils core simp 
 
 # extern control whether coprocessor should be integrated
 DEPDIR    += $(CPDEPEND)
 
 CFLAGS    += $(INCFLAGS)
-LFLAGS    += $(INLDFLAGS)
+LFLAGS    += $(INLDFLAGS) -lpthread -lrt -lz
 
 
 include $(MROOT)/mtl/template.mk

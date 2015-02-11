@@ -118,6 +118,9 @@ Solver::Solver(CoreConfig& _config) :
   , propagation_budget (-1)
   , asynch_interrupt   (false)
   
+  , terminationCallbackState(0)
+  , terminationCallbackMethod(0)
+  
   // Online proof checking class
   , onlineDratChecker( config.opt_checkProofOnline != 0 ? new OnlineProofChecker(OnlineProofChecker::drat) : 0)
   

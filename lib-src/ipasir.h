@@ -53,7 +53,10 @@ const char * ipasir_signature () {
  * Required state: N/A
  * State after: INPUT
  */
-void * ipasir_init ();
+inline
+void * ipasir_init () {
+  riss_init("INCREMENTAL"); // use riss with the configuration for incremental solving
+}
 
 /**
  * Release the solver, i.e., all its resoruces and
@@ -63,7 +66,10 @@ void * ipasir_init ();
  * Required state: INPUT or SAT or UNSAT
  * State after: undefined
  */
-void ipasir_release (void * solver);
+inline
+void ipasir_release (void * solver) {
+  riss_destroy( solver );
+}
 
 /**
  * Add the given literal into the currently added clause
@@ -80,7 +86,10 @@ void ipasir_release (void * solver);
  * negation overflow).  This applies to all the literal
  * arguments in API functions.
  */
-void ipasir_add (void * solver, int lit_or_zero);
+inline
+void ipasir_add (void * solver, int lit_or_zero) {
+  riss_add ( solver, lit_or_zero );
+}
 
 /**
  * Add an assumption for the next SAT search (the next call
@@ -90,7 +99,10 @@ void ipasir_add (void * solver, int lit_or_zero);
  * Required state: INPUT or SAT or UNSAT
  * State after: INPUT
  */
-void ipasir_assume (void * solver, int lit);
+inline
+void ipasir_assume (void * solver, int lit) {
+  riss_assume( solver, lit );
+}
 
 /**
  * Solve the formula with specified clauses under the specified assumptions.
@@ -102,7 +114,10 @@ void ipasir_assume (void * solver, int lit);
  * Required state: INPUT or SAT or UNSAT
  * State after: INPUT or SAT or UNSAT
  */
-int ipasir_solve (void * solver);
+inline
+int ipasir_solve (void * solver){
+  return riss_sat( solver );
+}
 
 /**
  * Get the truth value of the given literal in the found satisfying
@@ -114,7 +129,9 @@ int ipasir_solve (void * solver);
  * Required state: SAT
  * State after: SAT
  */
-int ipasir_val (void * solver, int lit);
+int ipasir_val (void * solver, int lit) {
+  return riss_deref( solver, lit ) > 0 ? lit : -lit;
+}
 
 /**
  * Check if the given assumption literal was used to prove the
@@ -127,7 +144,10 @@ int ipasir_val (void * solver, int lit);
  * Required state: UNSAT
  * State after: UNSAT
  */
-int ipasir_failed (void * solver, int lit);
+int ipasir_failed (void * solver, int lit) {
+#warning Riss will convert the literal into a variable, hence the check works only for variables, not for literals (if the complement of an assumption is tested)
+  return riss_assumption_failed( solver, lit );
+}
 
 /**
  * Set a callback function used to indicate a termination requirement to the
@@ -142,6 +162,8 @@ int ipasir_failed (void * solver, int lit);
  * Required state: INPUT or SAT or UNSAT
  * State after: INPUT or SAT or UNSAT
  */
-void ipasir_set_terminate (void * solver, void * state, int (*terminate)(void * state));
+void ipasir_set_terminate (void * solver, void * state, int (*terminate)(void * state)){
+  riss_set_termination_callback( solver, state, terminate );
+}
 
 #endif

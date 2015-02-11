@@ -37,6 +37,10 @@ Copyright (c) 2013-2015, Norbert Manthey, All rights reserved.
 #define l_Undef 2
 #endif
 
+/** The internal variable representation of Riss ranges from 0 to n-1. However, this interface assumes that all
+ *  passed variables range between 1 and n. All conversions are made within the Riss-library implementation.
+ */
+
 
 // only if compiling with g++! -> has to be a way with defines!
 extern "C" {
@@ -61,7 +65,7 @@ extern "C" {
 
   
   
-  /** add a new variables in the solver 
+  /** add a new variables in the solver
    * @return number of the newly generated variable
    */
   extern int riss_new_variable (const void* riss) ;
@@ -76,11 +80,21 @@ extern "C" {
   /** add the given literal to the assumptions for the next solver call */
   extern void riss_assume (void* riss, const int& lit);
 
-  /** add a variable as prefered search decision (will be decided in this order before deciding other variables) */
+  /** add a variable as prefered search decision (will be decided in this order before deciding other variables) 
+   * Note: converts variable from external to internal representation automatically
+   */
   extern void riss_add_prefered_decision (void* riss, const int& variable);
   
   /** clear all prefered decisions that have been added so far */
   extern void riss_clear_prefered_decisions (void* riss);
+  
+  /** set a callback to a function that should be frequently tested by the solver to be noticed that the current search should be interrupted
+  * Note: the state has to be used as argument when calling the callback
+  * @param terminationState pointer to an external state object that is used in the termination callback
+  * @param terminationCallbackMethod pointer to an external callback method that indicates termination (return value is != 0 to terminate)
+   */
+  extern void riss_set_termination_callback (void* riss, void* terminationState, int (*terminationCallbackMethod)(void* state) );
+  
 
   
   /** apply unit propagation (find units, not shrink clauses) and remove satisfied (learned) clauses from solver
@@ -112,6 +126,10 @@ extern "C" {
    */
   extern int riss_conflict_lit (const void* riss, const int& position) ;  
   
+  /** check whether a given assumption variable (literal is turned into the corresponding variable) is present in the current conflict clause (result of analyzeFinal)
+  * @return 1 if the assumption variable is part of the conflict, 0 otherwise.
+  */
+  extern int riss_assumption_failed (void* riss, int lit);
   
   /** returns the number of variables that are currently used by the solver 
    * @return number of currently maximal variables

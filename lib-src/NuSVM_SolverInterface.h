@@ -105,7 +105,7 @@ inline int MiniSat_New_Variable(MiniSat_ptr ms)
      so in all function below there is a convertion between
      input variable (1..N) and internal variables (0..N-1)
   */	
-  return riss_new_variable (ms) ; + 1;
+  return riss_new_variable (ms) ; 
 }
 
 

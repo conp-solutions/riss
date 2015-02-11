@@ -498,10 +498,20 @@ protected:
     int      level            (Var x) const;
     double   progressEstimate ()      const; // DELETE THIS ?? IT'S NOT VERY USEFUL ...
     bool     withinBudget     ()      const;
+    
+    /** to handle termination from the outside by a callback function */
+    void* terminationCallbackState;                            // state that should be passed to the calling method
+    int (*terminationCallbackMethod)(void* terminationState);  // pointer to the callback method
 
-    // for a better code style
-    // for solve procedure:
+    
 public:
+    /** set a callback to a function that should be frequently tested by the solver to be noticed that the current search should be interrupted
+     * Note: the state has to be used as argument when calling the callback
+     * @param terminationState pointer to an external state object that is used in the termination callback
+     * @param terminationCallbackMethod pointer to an external callback method that indicates termination (return value is != 0 to terminate)
+     */
+    void setTerminationCallback(void* terminationState, int (*terminationCallback)(void*));
+
     /// use the set preprocessor (if present) to simplify the current formula
     lbool preprocess();
 protected:
@@ -901,7 +911,8 @@ inline void     Solver::interrupt(){ asynch_interrupt = true; }
 inline void     Solver::clearInterrupt(){ asynch_interrupt = false; }
 inline void     Solver::budgetOff(){ conflict_budget = propagation_budget = -1; }
 inline bool     Solver::withinBudget() const {
-    return !asynch_interrupt &&
+    return !asynch_interrupt && 
+	   (terminationCallbackMethod == 0 || 0 == terminationCallbackMethod ( terminationCallbackState ) ) && // check callback to ask outside for termination, if the callback has been set
            (conflict_budget    < 0 || conflicts < (uint64_t)conflict_budget) &&
            (propagation_budget < 0 || propagations < (uint64_t)propagation_budget); }
 
@@ -921,6 +932,11 @@ inline void     Solver::toDimacs     (const char* file){ vec<Lit> as; toDimacs(f
 inline void     Solver::toDimacs     (const char* file, Lit p){ vec<Lit> as; as.push(p); toDimacs(file, as); }
 inline void     Solver::toDimacs     (const char* file, Lit p, Lit q){ vec<Lit> as; as.push(p); as.push(q); toDimacs(file, as); }
 inline void     Solver::toDimacs     (const char* file, Lit p, Lit q, Lit r){ vec<Lit> as; as.push(p); as.push(q); as.push(r); toDimacs(file, as); }
+
+inline void     Solver::setTerminationCallback(void* terminationState, int (*terminationCallback)(void*)) {
+  terminationCallbackState  = terminationState;
+  terminationCallbackMethod = terminationCallback;
+}
 
 inline
 bool Solver::addUnitClauses(const vec< Lit >& other)

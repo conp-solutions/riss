@@ -1,1 +1,2 @@
-const float solverVersion = 4.27;
+const float solverVersion = 5.00;
+const char* signature = "Riss 5.00";
