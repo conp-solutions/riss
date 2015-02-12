@@ -1,0 +1,525 @@
+17:49:43.617 [main] INFO  c.u.c.b.a.l.ComplexLoggingOptions - Logging to: /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi/smac_output/job_12029057/log-run918350512.txt
+17:49:43.632 [main] INFO  c.u.c.b.a.m.version.VersionTracker - Version of Algorithm Execution & Abstraction Toolkit is v2.08.00-master-766 (85fc099c674a) 
+17:49:43.632 [main] INFO  c.u.c.b.a.m.version.VersionTracker - Version of Java Runtime Environment is Java HotSpot(TM) 64-Bit Server VM (1.7.0_25) 
+17:49:43.632 [main] INFO  c.u.c.b.a.m.version.VersionTracker - Version of OS is Linux 2.6.32-279.5.2.bl6.Bull.35_restricted.x86_64 (amd64) 
+17:49:43.632 [main] INFO  c.u.c.b.a.m.version.VersionTracker - Version of Random Forest Library is v1.05.01-master-106 (7fba58fe4271) 
+17:49:43.632 [main] INFO  c.u.c.b.a.m.version.VersionTracker - Version of SMAC is v2.08.00-master-731 (0e43c26c3d1f) 
+17:49:43.632 [main] INFO  c.u.c.b.a.m.j.JCommanderHelper - Call String: smac --experiment-dir /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi/ --outdir /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi//smac_output --pcs-file /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi//params.pcs --algo /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi//wrapper.py --scenario-file /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi//scenario.txt --instance_file /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi//instances-train.txt --test_instance_file /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi//instances-test.txt --tunerTimeout 252000 --validation false --rungroup job_12029057 
+17:49:43.633 [main] INFO  c.u.c.b.smac.executors.SMACExecutor - ********** The next bit of output can be ignored, it is merely useful for debugging **********
+17:49:43.633 [main] INFO  c.u.c.b.smac.executors.SMACExecutor - ==========Enviroment Variables===========
+BASH_FUNC_module()=() {  eval `/sw/modules/global/Modules/$MODULE_VERSION/bin/modulecmd bash $*`
+}
+CUDA_VISIBLE_DEVICES=NoDevFiles
+CVS_RSH=ssh
+DISPLAY_MODULEPATH=/opt/modules/modulefiles:/sw/modules/taurus/compilers:/sw/modules/taurus/libraries:/sw/modules/taurus/tools:/sw/modules/taurus/applications:/sw/modules/taurus/classes
+ENVIRONMENT=BATCH
+GPU_DEVICE_ORDINAL=NoDevFiles
+G_BROKEN_FILENAMES=1
+HISTCONTROL=ignoredups
+HISTSIZE=1000
+HOME=/home/s0324575
+HOSTNAME=taurusi1270
+JAVA_BINDIR=/sw/global/tools/java/jdk1.7.0_25/bin
+JAVA_HOME=/sw/global/tools/java/jdk1.7.0_25
+JAVA_ROOT=/sw/global/tools/java/jdk1.7.0_25
+LANG=de_DE.UTF-8
+LC_ALL=en_US.UTF-8
+LD_LIBPATH=/sw/global/tools/java/jdk1.7.0_25/lib
+LD_LIBRARY_PATH=/sw/taurus/libraries/python/2.7/x86_64/lib:/home/s0324575/smac-v2.08.00-master-731/lib/native/:/home/s0324575/smac-v2.08.00-master-731/lib/:/home/s0324575/smac-v2.08.00-master-731/
+LESSOPEN=|/usr/bin/lesspipe.sh %s
+LOADEDMODULES=java/jdk1.7.0_25:python/2.7
+LOGNAME=s0324575
+LS_COLORS=rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=01;05;37;41:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arj=01;31:*.taz=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.zip=01;31:*.z=01;31:*.Z=01;31:*.dz=01;31:*.gz=01;31:*.lz=01;31:*.xz=01;31:*.bz2=01;31:*.tbz=01;31:*.tbz2=01;31:*.bz=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.rar=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.jpg=01;35:*.jpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.axv=01;35:*.anx=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=01;36:*.au=01;36:*.flac=01;36:*.mid=01;36:*.midi=01;36:*.mka=01;36:*.mp3=01;36:*.mpc=01;36:*.ogg=01;36:*.ra=01;36:*.wav=01;36:*.axa=01;36:*.oga=01;36:*.spx=01;36:*.xspf=01;36:
+MAIL=/var/spool/mail/s0324575
+MANPATH=/sw/global/tools/java/jdk1.7.0_25/man/:/sw/taurus/tools/slurmtools/default/man:/sw/taurus/tools/slurmtools/default/man:
+MODULEPATH=/opt/modules/modulefiles:/sw/modules/taurus/compilers:/sw/modules/taurus/libraries:/sw/modules/taurus/tools:/sw/modules/taurus/applications:/sw/modules/taurus/classes
+MODULESHOME=/sw/modules/global/Modules/3.2.10
+MODULE_VERSION=3.2.10
+MODULE_VERSION_STACK=3.2.10
+NLSPATH=/usr/dt/lib/nls/msg/%L/%N.cat
+PATH=/sw/taurus/libraries/python/2.7/x86_64/bin:/sw/global/tools/java/jdk1.7.0_25/bin:/sw/taurus/tools/slurmtools/default/bin:/usr/lib64/qt-3.3/bin:/home/s0324575/bin:/sw/taurus/tools/slurmtools/default/bin:/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin
+PWD=/home/s0324575/smac-v2.08.00-master-731
+PYTHON_INC=/sw/taurus/libraries/python/2.7/x86_64/include
+PYTHON_LIB=/sw/taurus/libraries/python/2.7/x86_64/lib
+QTDIR=/usr/lib64/qt-3.3
+QTINC=/usr/lib64/qt-3.3/include
+QTLIB=/usr/lib64/qt-3.3/lib
+SCRATCH=/scratch/s0324575
+SHELL=/bin/bash
+SHLVL=2
+SLURMD_NODENAME=taurusi1270
+SLURM_CHECKPOINT_IMAGE_DIR=/home/h2/s0324575/satgroup/tools/smac_scenarios
+SLURM_CLUSTER_NAME=taurus
+SLURM_CPUS_ON_NODE=16
+SLURM_GTIDS=0
+SLURM_JOBID=12029057
+SLURM_JOB_CPUS_PER_NODE=16
+SLURM_JOB_ID=12029057
+SLURM_JOB_NAME=start-smac.sh
+SLURM_JOB_NODELIST=taurusi1270
+SLURM_JOB_NUM_NODES=1
+SLURM_JOB_PARTITION=sandy8,west
+SLURM_JOB_UID=1066642
+SLURM_JOB_USER=s0324575
+SLURM_LOCALID=0
+SLURM_MEM_PER_CPU=4500
+SLURM_NNODES=1
+SLURM_NODEID=0
+SLURM_NODELIST=taurusi1270
+SLURM_NODE_ALIASES=(null)
+SLURM_NPROCS=1
+SLURM_NTASKS=1
+SLURM_PRIO_PROCESS=0
+SLURM_PROCID=0
+SLURM_SUBMIT_DIR=/home/h2/s0324575/satgroup/tools/smac_scenarios
+SLURM_SUBMIT_HOST=tauruslogin1
+SLURM_TASKS_PER_NODE=1
+SLURM_TASK_PID=87314
+SLURM_TOPOLOGY_ADDR=root_virt.isw36.taurusi1270
+SLURM_TOPOLOGY_ADDR_PATTERN=switch.switch.node
+SSH_ASKPASS=/usr/libexec/openssh/gnome-ssh-askpass
+SSH_CLIENT=141.30.61.140 33574 22
+SSH_CONNECTION=141.30.61.140 33574 141.30.63.212 22
+SSH_TTY=/dev/pts/19
+TERM=xterm
+TMPDIR=/tmp
+USER=s0324575
+XFILESEARCHPATH=/usr/dt/app-defaults/%L/Dt
+_LMFILES_=/sw/modules/taurus/tools/java/jdk1.7.0_25:/sw/modules/taurus/libraries/python/2.7
+__ZIH_MACHINE_NAME=taurus
+
+17:49:43.633 [main] INFO  c.u.c.b.smac.executors.SMACExecutor - Hostname:taurusi1270
+17:49:43.633 [main] INFO  c.u.c.b.smac.executors.SMACExecutor - ==========System Properties==============
+ERRLOG=/home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi/smac_output/job_12029057/log-err918350512.txt
+NUMRUN=918350512
+OUTPUTDIR=/home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi/smac_output/job_12029057
+ROOT-LEVEL=INFO
+RUNLOG=/home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi/smac_output/job_12029057/log-run918350512.txt
+STDOUT-LEVEL=INFO
+WARNLOG=/home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi/smac_output/job_12029057/log-warn918350512.txt
+awt.toolkit=sun.awt.X11.XToolkit
+file.encoding=UTF-8
+file.encoding.pkg=sun.io
+file.separator=/
+java.awt.graphicsenv=sun.awt.X11GraphicsEnvironment
+java.awt.printerjob=sun.print.PSPrinterJob
+java.class.path=/home/s0324575/smac-v2.08.00-master-731/conf/:/home/s0324575/smac-v2.08.00-master-731/patches/:/home/s0324575/smac-v2.08.00-master-731/lib/aeatk.jar:/home/s0324575/smac-v2.08.00-master-731/lib/aeatk-src.jar:/home/s0324575/smac-v2.08.00-master-731/lib/commons-collections-3.2.1.jar:/home/s0324575/smac-v2.08.00-master-731/lib/commons-collections-3.2.1-sources.jar:/home/s0324575/smac-v2.08.00-master-731/lib/commons-io-2.1.jar:/home/s0324575/smac-v2.08.00-master-731/lib/commons-math-2.2.jar:/home/s0324575/smac-v2.08.00-master-731/lib/commons-math3-3.2.jar:/home/s0324575/smac-v2.08.00-master-731/lib/DomainInter.jar:/home/s0324575/smac-v2.08.00-master-731/lib/exp4j-0.3.10.jar:/home/s0324575/smac-v2.08.00-master-731/lib/fastrf.jar:/home/s0324575/smac-v2.08.00-master-731/lib/fastrf-src.jar:/home/s0324575/smac-v2.08.00-master-731/lib/guava-14.0.1.jar:/home/s0324575/smac-v2.08.00-master-731/lib/jackson-annotations-2.3.1.jar:/home/s0324575/smac-v2.08.00-master-731/lib/jackson-core-2.3.1.jar:/home/s0324575/smac-v2.08.00-master-731/lib/jackson-databind-2.3.1.jar:/home/s0324575/smac-v2.08.00-master-731/lib/Jama-1.0.2.jar:/home/s0324575/smac-v2.08.00-master-731/lib/jcip-annotations.jar:/home/s0324575/smac-v2.08.00-master-731/lib/jcip-annotations-src.jar:/home/s0324575/smac-v2.08.00-master-731/lib/jcommander.jar:/home/s0324575/smac-v2.08.00-master-731/lib/jmatharray.jar:/home/s0324575/smac-v2.08.00-master-731/lib/logback-access-1.1.2.jar:/home/s0324575/smac-v2.08.00-master-731/lib/logback-classic-1.1.2.jar:/home/s0324575/smac-v2.08.00-master-731/lib/logback-core-1.1.2.jar:/home/s0324575/smac-v2.08.00-master-731/lib/numerics4j-1.3.jar:/home/s0324575/smac-v2.08.00-master-731/lib/opencsv-2.3.jar:/home/s0324575/smac-v2.08.00-master-731/lib/slf4j-api-1.7.5.jar:/home/s0324575/smac-v2.08.00-master-731/lib/smac.jar:/home/s0324575/smac-v2.08.00-master-731/lib/smac-src.jar:/home/s0324575/smac-v2.08.00-master-731/lib/spi-0.2.4.jar:/home/s0324575/smac-v2.08.00-master-731/*.jar:/home/s0324575/smac-v2.08.00-master-731/patches/
+java.class.version=51.0
+java.endorsed.dirs=/sw/global/tools/java/jdk1.7.0_25/jre/lib/endorsed
+java.ext.dirs=/sw/global/tools/java/jdk1.7.0_25/jre/lib/ext:/usr/java/packages/lib/ext
+java.home=/sw/global/tools/java/jdk1.7.0_25/jre
+java.io.tmpdir=/tmp
+java.library.path=/sw/taurus/libraries/python/2.7/x86_64/lib:/home/s0324575/smac-v2.08.00-master-731/lib/native/:/home/s0324575/smac-v2.08.00-master-731/lib/:/home/s0324575/smac-v2.08.00-master-731/:/usr/java/packages/lib/amd64:/usr/lib64:/lib64:/lib:/usr/lib
+java.runtime.name=Java(TM) SE Runtime Environment
+java.runtime.version=1.7.0_25-b15
+java.specification.name=Java Platform API Specification
+java.specification.vendor=Oracle Corporation
+java.specification.version=1.7
+java.vendor=Oracle Corporation
+java.vendor.url=http://java.oracle.com/
+java.vendor.url.bug=http://bugreport.sun.com/bugreport/
+java.version=1.7.0_25
+java.vm.info=mixed mode
+java.vm.name=Java HotSpot(TM) 64-Bit Server VM
+java.vm.specification.name=Java Virtual Machine Specification
+java.vm.specification.vendor=Oracle Corporation
+java.vm.specification.version=1.7
+java.vm.vendor=Oracle Corporation
+java.vm.version=23.25-b01
+line.separator=
+
+logback.configurationFile=ca/ubc/cs/beta/aeatk/logging/complex-logback.xml
+os.arch=amd64
+os.name=Linux
+os.version=2.6.32-279.5.2.bl6.Bull.35_restricted.x86_64
+path.separator=:
+sun.arch.data.model=64
+sun.boot.class.path=/sw/global/tools/java/jdk1.7.0_25/jre/lib/resources.jar:/sw/global/tools/java/jdk1.7.0_25/jre/lib/rt.jar:/sw/global/tools/java/jdk1.7.0_25/jre/lib/sunrsasign.jar:/sw/global/tools/java/jdk1.7.0_25/jre/lib/jsse.jar:/sw/global/tools/java/jdk1.7.0_25/jre/lib/jce.jar:/sw/global/tools/java/jdk1.7.0_25/jre/lib/charsets.jar:/sw/global/tools/java/jdk1.7.0_25/jre/lib/jfr.jar:/sw/global/tools/java/jdk1.7.0_25/jre/classes
+sun.boot.library.path=/sw/global/tools/java/jdk1.7.0_25/jre/lib/amd64
+sun.cpu.endian=little
+sun.cpu.isalist=
+sun.io.unicode.encoding=UnicodeLittle
+sun.java.command=ca.ubc.cs.beta.aeatk.ant.execscript.Launcher ca.ubc.cs.beta.smac.executors.SMACExecutor --experiment-dir /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi/ --outdir /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi//smac_output --pcs-file /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi//params.pcs --algo /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi//wrapper.py --scenario-file /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi//scenario.txt --instance_file /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi//instances-train.txt --test_instance_file /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi//instances-test.txt --tunerTimeout 252000 --validation false --rungroup job_12029057
+sun.java.launcher=SUN_STANDARD
+sun.jnu.encoding=UTF-8
+sun.management.compiler=HotSpot 64-Bit Tiered Compilers
+sun.os.patch.level=unknown
+user.country=US
+user.dir=/home/h2/s0324575/smac-v2.08.00-master-731
+user.home=/home/s0324575
+user.language=en
+user.name=s0324575
+user.timezone=Europe/Berlin
+
+17:49:43.666 [main] INFO  c.u.c.b.a.m.j.JCommanderHelper - ==========Configuration Options==========
+[SMACOptions]
+ adaptiveCapping = true
+ alwaysRunInitialConfiguration = false
+ capAddSlack = 1.0
+ capSlack = 1.3
+classicInitModeOpts = [ClassicInitializationProcedureOptions]
+		 initialIncumbentRuns = 1
+
+dciModeOpts = [DoublingCappingInitializationProcedureOptions]
+		 numberOfChallengers = 2
+		 numberOfRunsPerChallenger = 2
+
+ucip = [UnbiasChallengerInitializationProcedureOptions]
+		 numberOfChallengers = 2
+		 numberOfRunsPerChallenger = 2
+		 cpulimit = 0
+
+ deterministicInstanceOrdering = false
+ doValidation = false
+ execMode = SMAC
+ experimentDir = /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi/
+ expFunc = null
+help = [HelpOptions]
+		 showHiddenParameters = false
+		 showHelp = false
+		 helpLevel = BASIC
+		 showVersion = false
+		 helpDefaults = /home/s0324575/.aeatk/help.opt
+
+ initialChallengeRuns = 1
+ initialIncumbent = DEFAULT
+ initializationMode = CLASSIC
+ intensificationPercentage = 0.5
+ iterativeCappingBreakOnFirstCompletion = false
+ iterativeCappingK = 1
+logOptions = [ComplexLoggingOptions]
+		 consoleLogLevel = INFO
+		 logLevel = INFO
+
+ maxIncumbentRuns = 2000
+mbOptions = [ModelBuildingOptions]
+		 maskCensoredDataAsKappaMax = false
+		 maskInactiveConditionalParametersAsDefaultValue = true
+		 maskCensoredDataAsUncensored = false
+		 imputationIterations = 2
+
+ modelHashCodeFile = null
+ numberOfChallengers = 10
+ numberOfRandomConfigsInEI = 10000
+ numPCA = 7
+ optionFile = null
+ optionFile2 = null
+randomForestOptions = [RandomForestOptions]
+		 brokenVarianceCalculation = false
+		 freeMemoryPercentageToSubsample = 0.25
+		 fullTreeBootstrap = false
+		 ignoreConditionality = false
+		 imputeMean = false
+		 logModel = true
+		 minVariance = 1.0E-14
+		 numTrees = 10
+		 penalizeImputedValues = false
+		 preprocessMarginal = true
+		 ratioFeatures = 0.8333333333333334
+		 shuffleImputedValues = false
+		 splitMin = 10
+		 storeDataInLeaves = false
+		 subsamplePercentage = 0.9
+		 subsampleValuesWhenLowMemory = false
+
+runGroupOptions = [RunGroupOptions]
+		 runGroupName = job_12029057
+		 runGroupExit = false
+		 replacementChar = %
+
+scenarioConfig = [ScenarioOptions]
+		 _runObj = RUNTIME
+		 intraInstanceObj = MEAN10
+		 interInstanceObj = MEAN
+		limitOptions = [TerminationCriteriaOptions]
+				 tunerTimeout = 252000
+				 numIterations = 2147483647
+				 runtimeLimit = 2147483647
+				 totalNumRunsLimit = 9223372036854775807
+				 countSMACTimeAsTunerTime = true
+				 challengeIncumbentAttempts = 1000
+				 fileToWatch = null
+
+		instanceOptions = [ProblemInstanceOptions]
+				 instanceFile = /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi//instances-train.txt
+				 instanceFeatureFile = null
+				 testInstanceFile = /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi//instances-test.txt
+				 checkInstanceFilesExist = false
+				 useInstances = true
+				 instanceSuffix = null
+				 testInstanceSuffix = null
+				 ignoreFeatures = false
+
+		 scenarioFile = /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi/scenario.txt
+		 outputDirectory = /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi//smac_output
+		 invalidScenarioReason = null
+		algoExecOptions = [AlgorithmExecutionOptions]
+				 algoExec = /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi//wrapper.py
+				 algoExecDir = /home/h2/s0324575/smac-v2.08.00-master-731
+				 deterministic = false
+				 cutoffTime = 360.0
+				 cutoffLength = -1.0
+				 additionalContext = {}
+				taeOpts = [TargetAlgorithmEvaluatorOptions]
+						 targetAlgorithmEvaluator = CLI
+						 abortOnCrash = false
+						 abortOnFirstRunCrash = true
+						 retryCount = 0
+						 cacheRuns = false
+						 cacheDebug = false
+						 useDynamicCappingExclusively = false
+						 reportStrictlyIncreasingRuntimes = false
+						 boundRuns = false
+						 maxConcurrentAlgoExecs = 1
+						 exitOnFailure = false
+						 runHashCodeFile = null
+						 leakMemory = false
+						 leakMemoryAmount = 1024
+						 verifySAT = null
+						 checkSATConsistency = true
+						 checkSATConsistencyException = true
+						 callObserverBeforeCompletion = true
+						prePostOptions = [PrePostCommandOptions]
+								 preCommand = null
+								 postCommand = null
+								 exceptionOnError = false
+								 logOutput = true
+								 directory = /home/h2/s0324575/smac-v2.08.00-master-731/.
+
+						 checkResultOrderConsistent = false
+						 skipOutstandingEvaluationsTAE = false
+						 logRequestResponses = false
+						 logRequestResponsesRCOnly = false
+						 trackRunsScheduled = false
+						 trackRunsScheduledResolution = 1.0
+						 uncleanShutdownCheck = true
+						 killCaptimeExceedingRun = true
+						 killCaptimeExceedingRunFactor = 10.0
+						 checkRunConfigsUnique = true
+						 checkRunConfigsUniqueException = true
+						 observeWalltimeIfNoRuntime = true
+						 observeWalltimeScale = 0.95
+						 observeWalltimeDelay = 5.0
+						 synchronousObserver = true
+						 taeDefaults = /home/s0324575/.aeatk/tae.opt
+						ttaedo = [TransformTargetAlgorithmEvaluatorDecoratorOptions]
+								 transform = false
+								 transformValidValuesOnly = true
+								 SAT_runtime_transform = R
+								 SAT_quality_transform = Q
+								 UNSAT_runtime_transform = R
+								 UNSAT_quality_transform = Q
+								 TIMEOUT_runtime_transform = R
+								 TIMEOUT_quality_transform = Q
+								 other_runtime_transform = R
+								 other_quality_transform = Q
+
+						tForkOptions = [ForkingTargetAlgorithmEvaluatorDecoratorOptions]
+								 forkToTAE = null
+								fPolicyOptions = [ForkingTargetAlgorithmEvaluatorDecoratorPolicyOptions]
+										 fPolicy = null
+										 duplicateOnSlaveQuickTimeout = 5
+
+
+						 fileToWatch = null
+						 warnIfNoResponseFromTAE = 120
+						 taeStopProcessingOnShutdown = true
+						 filecache = false
+						 fileCacheSource = null
+						 fileCacheOutput = null
+						 fileCacheCrashOnMiss = false
+
+				paramFileDelegate = [ParamConfigurationSpaceOptions]
+						 paramFile = /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi//params.pcs
+						 searchSubspace = null
+						 searchSubspaceFile = null
+						 continuousNeighbours = 4
+
+
+
+seedOptions = [SeedOptions]
+		 seedOffset = 0
+		 numRun = 918350512
+		 initialSeedMap = {}
+
+ smacDefaults = /home/s0324575/.aeatk/smac.opt
+stateOpts = [StateFactoryOptions]
+		 stateSerializer = LEGACY
+		 statedeSerializer = LEGACY
+		 restoreStateFrom = null
+		 restoreIteration = null
+		 restoreScenario = null
+		 cleanOldStatesOnSuccess = true
+		 saveContextWithState = true
+
+trackingOptions = [ParamConfigurationOriginTrackingOptions]
+		 configTracking = false
+
+validationOptions = [ValidationOptions]
+		 maxTimestamp = -1.0
+		 minTimestamp = 0.0
+		 multFactor = 2.0
+		 numberOfTestInstances = 2147483647
+		 numberOfTestSeedsPerInstance = 1000
+		 numberOfValidationRuns = 1
+		 outputFileSuffix = 
+		 saveStateFile = false
+		 useWallClockTime = true
+		 validateAll = false
+		 validateOnlyIfTunerTimeReached = 0.0
+		 validateOnlyIfWallTimeReached = 0.0
+		 validateOnlyLastIncumbent = true
+		 validationHeaders = true
+		 validationRoundingMode = UP
+
+warmStartOptions = [WarmStartOptions]
+		 warmStartStateFrom = null
+		 restoreIteration = 2147483647
+
+ validationSeed = 0
+ saveRunsEveryIteration = false
+ stateQuickSaves = true
+ shutdownTAEWhenDone = true
+ validationCores = null
+ shareModelMode = false
+ shareRunDataFrequency = 300
+
+[AnalyticTargetAlgorithmEvaluatorOptions]
+ simulateDelay = false
+ cores = 0
+ observerFrequency = 100
+ func = CAMELBACK
+ scaleDelay = 1.0
+
+[BlackHoleTargetAlgorithmEvaluatorOptions]
+ warnings = true
+
+[CommandLineTargetAlgorithmEvaluatorOptions]
+ observerFrequency = 500
+ concurrentExecution = true
+ cores = 1
+ logAllCallStrings = false
+ logAllResultLines = false
+ logAllCallsAndResultLines = false
+ logAllProcessOutput = false
+ listenForUpdates = true
+ paramArgumentsContainQuotes = false
+ pgEnvKillCommand = null
+ pgNiceKillCommand = bash -c "kill -s TERM -%pid"
+ pgForceKillCommand = bash -c "kill -s KILL -%pid"
+ procNiceKillCommand = kill -s TERM %pid
+ procForceKillCommand = kill -s KILL %pid
+ smacDefaults = /home/s0324575/.aeatk/cli-tae.opt
+
+[ConstantTargetAlgorithmEvaluatorOptions]
+ runResult = SAT
+ runtime = 1.0
+ quality = 0.0
+ runlength = 0.0
+ additionalRunData = 
+
+[IPCTargetAlgorithmEvaluatorOptions]
+ persistent = false
+ ipcMechanism = UDP
+ encodingMechanism = CALL_STRING
+ remoteHost = 127.0.0.1
+ remotePort = 5050
+ udpPacketSize = 4096
+ localPort = 0
+ execScript = null
+ execScriptOutput = false
+ poolConnections = false
+ ipcDefaults = /home/s0324575/.aeatk/ipc-tae.opt
+ asyncThreads = 17
+
+[PreloadedResponseTargetAlgorithmEvaluatorOptions]
+ preloadedResponses = 
+ runLength = -1.0
+ quality = 0.0
+ additionalRunData = 
+
+[RandomResponseTargetAlgorithmEvaluatorOptions]
+ simulateDelay = false
+ additionalRunData = 
+ cores = 0
+ maxResponse = 10.0
+ minResponse = 0.0
+ observerFrequency = 500
+ trendCoefficient = 0.0
+ seed = 1423327780962
+ persistent = false
+ scaleDelay = 1.0
+
+
+17:49:44.130 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - SMAC started at: Feb 7, 2015 5:49:44 PM. Minimizing penalized average runtime (PAR10).
+17:50:17.193 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - First incumbent: config 1 (internal ID: 0x000B), with penalized average runtime (PAR10): 29.6867461205; estimate based on 1 runs.
+17:50:17.196 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Sample call for new incumbent config 1 (internal ID: 0x000B): 
+cd /home/h2/s0324575/smac-v2.08.00-master-731; /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi//wrapper.py /projects/p_sat/CNF/2012/industrial/Application_SAT+UNSAT/SATChallenge2012_Application/SAT_Competition_2011_unselected/SAT11/application/rintanen/SATPlanning/grid-strips-grid-y-4.035-NOTKNOWN.cnf.gz 0 360.0 2147483647 9410944 -R '1.4' -block-rst 'false' -ccmin-mode '2' -cir-bump '0' -cla-decay '0.999' -cla-prep-lim '-1' -elim-clear-watch 'false' -gc-frac '0.2' -lbd-core-th '5' -luby 'true' -phase-saving '2' -pol-act-init 'false' -pq-order 'false' -prob-limit '100' -prob-step-width '0' -reduce-confl-limit '15000' -reduce-frac '0.5' -rfirst '100' -rinc '2' -rlevel '0' -rnd-freq '0' -rnd-init 'false' -size-lbd-queue '50' -size-trail-queue '5000' -var-decay '0.95'  
+17:58:04.455 [main] WARN  c.u.c.b.a.t.d.s.TimingCheckerTargetAlgorithmEvaluator - Algorithm Run Result reported a runtime of 361.028403997 (secs) that exceeded it's cutoff time of 360.0 (secs) by 1.028403996999998 (secs). Next warning at 2.028403996999998 (secs)  
+18:54:35.005 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Updated estimated penalized average runtime (PAR10) of the same incumbent: 1117.11891703608; estimate now based on 10 runs.
+19:29:17.750 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Incumbent changed to: config 10 (internal ID: 0x2707C), with penalized average runtime (PAR10): 1028.2611087885819; estimate based on 11 runs.
+19:29:17.754 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Sample call for new incumbent config 10 (internal ID: 0x2707C): 
+cd /home/h2/s0324575/smac-v2.08.00-master-731; /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi//wrapper.py /projects/p_sat/CNF/2012/industrial/Application_SAT+UNSAT/SATChallenge2012_Application/SAT_Race_unselected/manolios/cnf/c8nidw.cnf.gz 0 360.0 2147483647 4494013 -R '3.2' -block-rst 'false' -ccmin-mode '0' -cir-bump '6000' -cla-decay '0.7' -cla-prep-lim '2000000' -elim-clear-watch 'false' -gc-frac '0.1' -lbd-core-th '10' -luby 'false' -phase-saving '2' -pol-act-init 'false' -pq-order 'false' -prob-limit '1110' -prob-step-width '100' -reduce-confl-limit '10000' -reduce-frac '0.3' -rfirst '1' -rinc '1.5' -rlevel '2' -rnd-freq '0' -rnd-init 'false' -size-lbd-queue '76' -size-trail-queue '10000' -var-decay '0.7'  
+19:57:01.005 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Incumbent changed to: config 11 (internal ID: 0x272A0), with penalized average runtime (PAR10): 942.8483341932391; estimate based on 12 runs.
+19:57:01.015 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Sample call for new incumbent config 11 (internal ID: 0x272A0): 
+cd /home/h2/s0324575/smac-v2.08.00-master-731; /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi//wrapper.py /projects/p_sat/CNF/2012/industrial/Application_SAT+UNSAT/SATChallenge2012_Application/SAT_Race_unselected/manolios/cnf/c8nidw.cnf.gz 0 360.0 2147483647 4494013 -R '4.1' -block-rst 'true' -ccmin-mode '1' -cir-bump '15000' -cla-decay '0.999' -cla-prep-lim '2000000' -elim-clear-watch 'true' -gc-frac '0.2' -lbd-core-th '10' -luby 'false' -phase-saving '1' -pol-act-init 'false' -pq-order 'false' -prob-limit '2678' -prob-step-width '0' -reduce-confl-limit '10000' -reduce-frac '0.5' -rfirst '10' -rinc '4' -rlevel '1' -rnd-freq '0' -rnd-init 'false' -size-lbd-queue '136' -size-trail-queue '10000' -var-decay '0.99'  
+20:58:31.040 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Updated estimated penalized average runtime (PAR10) of the same incumbent: 776.449021267887; estimate now based on 20 runs.
+22:21:19.128 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Incumbent changed to: config 23 (internal ID: 0x5BFD8), with penalized average runtime (PAR10): 525.2545930643917; estimate based on 24 runs.
+22:21:19.133 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Sample call for new incumbent config 23 (internal ID: 0x5BFD8): 
+cd /home/h2/s0324575/smac-v2.08.00-master-731; /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi//wrapper.py /projects/p_sat/CNF/2012/industrial/Application_SAT+UNSAT/SAT_Race_2008/post-c32s-col400-16.cnf.gz 0 360.0 2147483647 13387293 -R '3.2' -block-rst 'true' -ccmin-mode '2' -cir-bump '9973' -cla-decay '0.999' -cla-prep-lim '4800000' -elim-clear-watch 'true' -gc-frac '1' -lbd-core-th '4' -luby 'true' -phase-saving '2' -pol-act-init 'false' -pq-order 'true' -prob-limit '1888' -prob-step-width '0' -reduce-confl-limit '10000' -reduce-frac '0.3' -rfirst '1' -rinc '2' -rlevel '1' -rnd-freq '0.05' -rnd-init 'false' -size-lbd-queue '12' -size-trail-queue '5000' -var-decay '0.7'  
+23:10:20.606 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Updated estimated penalized average runtime (PAR10) of the same incumbent: 556.9539138873732; estimate now based on 30 runs.
+01:26:18.967 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Updated estimated penalized average runtime (PAR10) of the same incumbent: 527.8483672619063; estimate now based on 40 runs.
+04:29:14.279 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Updated estimated penalized average runtime (PAR10) of the same incumbent: 715.8126181697953; estimate now based on 50 runs.
+07:08:51.388 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Updated estimated penalized average runtime (PAR10) of the same incumbent: 784.4087308446644; estimate now based on 60 runs.
+10:20:57.765 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Updated estimated penalized average runtime (PAR10) of the same incumbent: 932.0191849776767; estimate now based on 70 runs.
+12:00:04.755 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Updated estimated penalized average runtime (PAR10) of the same incumbent: 866.0178897738571; estimate now based on 80 runs.
+17:31:35.055 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Incumbent changed to: config 83 (internal ID: 0x15F626), with penalized average runtime (PAR10): 799.8493681234582; estimate based on 85 runs.
+17:31:35.060 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Sample call for new incumbent config 83 (internal ID: 0x15F626): 
+cd /home/h2/s0324575/smac-v2.08.00-master-731; /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi//wrapper.py /projects/p_sat/CNF/2012/industrial/Application_SAT+UNSAT/SATCompetition2011/application/SAT04/industrial/velev/pipe-sat-1-1/12pipe_bug6_q0.used-as.sat04-725.cnf.gz 0 360.0 2147483647 7961709 -R '1.1' -block-rst 'true' -ccmin-mode '2' -cir-bump '15000' -cla-decay '0.995' -cla-prep-lim '-1' -elim-clear-watch 'false' -gc-frac '0.2' -lbd-core-th '15' -luby 'false' -phase-saving '0' -pol-act-init 'true' -pq-order 'false' -prob-limit '3182' -prob-step-width '4800' -reduce-confl-limit '10000' -reduce-frac '0.85' -rfirst '1' -rinc '1.5' -rlevel '2' -rnd-freq '0.005' -rnd-init 'false' -size-lbd-queue '199' -size-trail-queue '20000' -var-decay '0.7'  
+19:41:17.184 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Updated estimated penalized average runtime (PAR10) of the same incumbent: 879.8518122169772; estimate now based on 90 runs.
+01:01:15.407 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Updated estimated penalized average runtime (PAR10) of the same incumbent: 872.9340118861295; estimate now based on 100 runs.
+03:20:39.761 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Updated estimated penalized average runtime (PAR10) of the same incumbent: 834.5389504454467; estimate now based on 110 runs.
+04:54:01.963 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Updated estimated penalized average runtime (PAR10) of the same incumbent: 857.6902381817637; estimate now based on 120 runs.
+13:46:14.809 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Updated estimated penalized average runtime (PAR10) of the same incumbent: 962.3810559199488; estimate now based on 130 runs.
+17:10:26.393 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Updated estimated penalized average runtime (PAR10) of the same incumbent: 963.9228633132664; estimate now based on 140 runs.
+23:15:44.456 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Updated estimated penalized average runtime (PAR10) of the same incumbent: 963.9104830432763; estimate now based on 150 runs.
+13:13:29.200 [main] INFO  c.u.c.b.s.c.SequentialModelBasedAlgorithmConfiguration - Updated estimated penalized average runtime (PAR10) of the same incumbent: 963.9067878559122; estimate now based on 160 runs.
+15:39:59.416 [main] INFO  c.u.c.b.a.e.h.LogRuntimeStatistics - *****Developer Statistics*****
+ Count: 82
+ Incumbent ID: 83 (internal ID:0x15F626)
+ Number of PISPs for Incumbent: 162
+ Number of Instances for Incumbent: 138
+ Number of Configurations Run: 160
+ Performance of the Incumbent: 963.906
+ Configuration Time Budget used: 252035.62 s (100%)
+ Configuration Time Budget remaining: -35.62 s
+ Wall-clock Time Budget used: 251415.30 s (0%)
+ Wall-clock Time Budget remaining: 2.15E9 s
+ Algorithm Runs used: 1563.00  (0%)
+ Algorithm Runs remaining: 9.22E18 
+ Model/Iteration used: 81.00  (0%)
+ Model/Iteration remaining: 2.15E9 
+ Sum of Target Algorithm Execution Times (treating minimum value as 0.1): 251190.740 s
+ CPU time of Configurator: 844.877 s
+ User time of Configurator: 844.875 s
+ Outstanding Runs on Target Algorithm Evaluator: 0
+ Outstanding Requests on Target Algorithm Evaluator: 0
+ Total Reported Algorithm Runtime: 251190.740 s
+ Sum of Measured Wallclock Runtime: 251338.248 s
+ Max Memory: 910 MB
+ Total Java Memory: 770 MB
+ Free Java Memory: 430 MB
+ * PISP count is roughly the number of runs, but doesn't included redundant runs on the same problem instance & seed
+15:39:59.426 [main] INFO  c.u.c.b.smac.executors.SMACExecutor - 
+=======================================================================================
+SMAC has finished. Reason: total CPU time limit (252000.0 s) has been reached.   
+Total number of runs performed: 1563, total configurations tried: 160.
+Total CPU time used: 252036 s, total wallclock time used: 251415 s.
+SMAC's final incumbent: config 83 (internal ID: 0x15F626), with estimated penalized average runtime (PAR10): 963.9062437216548, based on 162 run(s) on 138 training instance(s).
+Sample call for this final incumbent:
+cd /home/h2/s0324575/smac-v2.08.00-master-731; /home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi//wrapper.py /projects/p_sat/CNF/2012/industrial/Application_SAT+UNSAT/SATChallenge2012_Application/SAT_Race_unselected/manolios/cnf/c10ni.cnf.gz 0 360.0 2147483647 3540709 -R '1.1' -block-rst 'true' -ccmin-mode '2' -cir-bump '15000' -cla-decay '0.995' -cla-prep-lim '-1' -elim-clear-watch 'false' -gc-frac '0.2' -lbd-core-th '15' -luby 'false' -phase-saving '0' -pol-act-init 'true' -pq-order 'false' -prob-limit '3182' -prob-step-width '4800' -reduce-confl-limit '10000' -reduce-frac '0.85' -rfirst '1' -rinc '1.5' -rlevel '2' -rnd-freq '0.005' -rnd-init 'false' -size-lbd-queue '199' -size-trail-queue '20000' -var-decay '0.7'
+=======================================================================================
+15:39:59.429 [main] INFO  c.u.c.b.smac.executors.SMACExecutor - 
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Additional information about run 918350512 in:/home/s0324575/smac-v2.08.00-master-731/smac_scenarios/MiniSATi/smac_output/job_12029057
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
