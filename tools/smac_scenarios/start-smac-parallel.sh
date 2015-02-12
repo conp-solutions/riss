@@ -1,92 +1,102 @@
 #!/bin/bash
+#
+# this script must be located in the base directory of the CSSC smac environment
+#
 # 
-# start a slurm job for 4 SMAC runs on the same scenario that share their data
+# start a slurm job for a SMAC scenario
 # usage:
-#        sbatch ./start-smac.sh <path/to/smac-folder> <scenario dir> <wallclock limit (just local)>
+#        sbatch --exclusive ./start-smac.sh solver_dir scenario_name train_file test_file
+#        ./start-smac.sh solver_dir scenario_name train_file test_file [additional smac-parameter]
 # 
 # example call if the smac_scenarios folder is placed within the smac folder:
-#        sbatch ./start-smac.sh .. MiniSATi       -- with slurm
-#        ./start-smac.sh .. MiniSATi 30           -- without slurm
+#        sbatch --exclusive ./start-smac.sh MiniSATi minisat-scenario.txt instances-train.txt instances-test.txt       -- with slurm
+#        ./start-smac.sh MiniSATi minisat-scenario.txt instances-train.txt instances-test.txt [--wallclock-limit 30] [--cutoff-time 10] [--executionMoade ROAR] ... -- without slurm
 #
 
-smac_path=$1
-scenario_dir=$2
-wallclock_limit=$3
+solver_dir=$1           # name of the solver that should be executed
+scenario_name=$2        # name of the scenario file (located in "scenarios" directory)
+train_instance_path=$3  # list of training files (relative path from here, or absolute path) 
+test_instance_path=$4   # list of test/validation files (relative path from here, or absolute path)
+
+shift; shift; shift; shift;
 
 usage="
 Usage as slurm-job:
-    sbatch --exclusive ./start-smac-parallel.sh <smac-folder> <scenario name>
+    sbatch --exclusive ./start-smac.sh <solver-dir> <scenario name> <train-instances-file> <test-instances-file>
 Usage as local:
-    ./start-smac-parallel.sh <smac-folder> <scenario name> <wallclock limit (just local)>"
+    ./start-smac.sh <solver-dir> <scenario name> <train-instances-file> <test-instances-file> <--additional smac-parameter>"
 
-if [ -z "$smac_path" ]
+if [ -z "$solver_dir" ]
 then
-        echo "Path where the smac-binary is loacted must be given! (Without binary name)"
+        echo "The name of the solver must be given!"
         echo "$usage"
         exit 1
 fi
-if [ -z "$scenario_dir" ]
+if [ -z "$scenario_name" ]
 then
-        echo "The scenario name must be given!"
+        echo "The name of the scenario must be given!"
         echo "$usage"
         exit 1
 fi
+#    TODO: IMPLEMENT CHECKS FOR REMAINING PARAMETERS"
 
 # directory in which this script is located
-path=$PWD/$scenario_dir
+path=$PWD/solvers/$solver_dir
 
-train_instance_path=$path/instances-train.txt
-test_instance_path=$path/instances-test.txt
-
-# get create additional command line options for smac
-additional_options=""
+# get create additional command line options for smac, use all options that have been passed additionally to the script
+additional_options="$*"
 
 # execute as slurm job on taurus
-if [ -z "$wallclock_limit" ]
-then
+
 # if the time for the batch job is changed, change tunertimeout below too
 #SBATCH --time=72:00:00           # walltime
-#SBATCH --ntasks=4                # number of processor cores
+#SBATCH --ntasks=1                # number of processor cores
 #SBATCH --mem-per-cpu=4500M       # memory per CPU core
 #SBATCH --partition=sandy,west    # smp, sandy, west, and gpu available 
 #SBATCH -A p_sat                  # charge resources to specified project
 
-    # load necessary modules on taurus
-    module load java/jdk1.7.0_25; module load python/2.7
+# load necessary modules on taurus
+module unload java; module unload python
+module load java/jdk1.7.0_25; module load python/2.7
     
-    # this will be the folder name for smac_output of this smac run
+# this will be the folder name for smac_output of this smac run
+if [ -n "$SLURM_JOB_ID" ]; then
     additional_options="--rungroup job_$SLURM_JOB_ID"
-
 else
     echo "------Local run of SMAC with example CNFs---------"
     echo "The output can be found in: [scenarrio-dir]/smac_output/local-$(date +%s)"
 
-    # use example CNFs for a local run
-    train_instance_path=$PWD/example_instances/instances-train.txt
-    test_instance_path=$PWD/example_instances/instances-test.txt
-
-    # set small wallclock time (overwrites tunerTimeout)
-    additional_options="--wallclock-limit $wallclock_limit
-                        --rungroup local_$(date +%s)"
+    # set local output directory
+    additional_options="$additional_options --rungroup local_$(date +%s)"
 fi
 
-# start smac
-cd $smac_path
+# use optimization mode ( executionMode = SMAC) - ROAR is good to find bugs, but does not optimize
+
+# the tunerTimeout has to be less than sbatch-time/i
 export SMAC MEMORY=4096
 for i in `seq 1 4`;
 do
-    echo "start smac run: $i"
-    ./smac  --experiment-dir $path \
-            --outdir $path/smac_output \
-            --pcs-file $path/params.pcs \
-            --algo $path/wrapper.py \
-            --scenario-file $path/scenario.txt \
-            --instance_file $train_instance_path \
-            --test_instance_file $test_instance_path \
-            --tunerTimeout 252000 \
-            --validation false \
-            --shared-model-mode true \
-            $additional_options
+    echo "start SMAC run: $i"
+    ./smac \
+    --execDir . \
+    --executionMode SMAC \
+    --outdir smac_output \
+    --pcs-file $path/params.pcs \
+    --algo $path/wrapper.py \
+    --scenario-file scenarios/$scenario_name \
+    --instance_file $train_instance_path \
+    --test_instance_file $test_instance_path \
+    --tunerTimeout 63000 \
+    --validation false \
+    --shared-model-mode true \
+    $additional_options
 done
+
+#disabled options:
+# we are starting the script in the actual smac directory
+# --experiment-dir $path \  
+#
+# we do not perform the SAT check, as we do not know the result for all files
+#--algo \"python scripts/SATCSSCWrapper.py --script ./solvers/minisati/wrapper.py --sat-checker ./scripts/SAT --sol-file ./instances/true_solubility.txt\"
 
 exit 0
