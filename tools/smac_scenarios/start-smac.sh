@@ -72,6 +72,8 @@ fi
 
 # start smac
 cd $smac_path
+
+echo "call: \
 ./smac  --experiment-dir $path \
         --outdir $path/smac_output \
         --pcs-file $path/params.pcs \
@@ -81,6 +83,6 @@ cd $smac_path
         --test_instance_file $test_instance_path \
         --tunerTimeout 252000 \
         --validation false \
-        $additional_options
+        $additional_options"
 
 exit 0

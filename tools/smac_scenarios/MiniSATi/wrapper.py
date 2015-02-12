@@ -13,14 +13,20 @@ seed = int(sys.argv[5])
 
 # Read in parameter setting and build a param_name->param_value map.
 params = sys.argv[6:]
+print str(params)
 configMap = dict((name, value) for name, value in zip(params[::2], params[1::2]))
 
 # Construct the call string to sat-solver.
 minisati_binary = os.path.dirname(os.path.realpath(__file__))+"/minisati"
 cmd = "%s %s -cpu-lim=%d" %(minisati_binary, instance, cutoff)      
 for name, value in configMap.items():
-    if (value == "false" or value == "true"):
+    # remove ' characters
+    value = value.replace("'","")
+    # handle false and positive separately
+    if (value == "false"):
         cmd += " -no%s" %(name)
+    elif (value == "true"):
+        cmd += " %s" %(name)
     else:
         cmd += " %s=%s" %(name,  value)
     
