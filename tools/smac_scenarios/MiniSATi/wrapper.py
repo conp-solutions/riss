@@ -13,7 +13,6 @@ seed = int(sys.argv[5])
 
 # Read in parameter setting and build a param_name->param_value map.
 params = sys.argv[6:]
-print str(params)
 configMap = dict((name, value) for name, value in zip(params[::2], params[1::2]))
 
 # Construct the call string to sat-solver.
