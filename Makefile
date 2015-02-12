@@ -43,7 +43,7 @@ buildtest:
 	make cls
 	make clean
 	cd shiftbmc-src; ./configure; cd ..
-	make shiftbmc
+	make shiftbmcd
 	make clean
 
 libcheck: MYLFLAGS += -L . -L .. 
@@ -186,6 +186,17 @@ qprocessor: always
 qprocessorRS: always
 	cd qprocessor-src;  make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv qprocessor_static ../qprocessor
 	
+# proof checking tool
+proofcheckd: always
+	cd proofcheck-src;  make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv proofcheck_debug ../proofcheck
+# proof checking tool
+proofcheck: always
+	cd proofcheck-src;  make r INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv proofcheck_release ../proofcheck
+# proof checking tool
+proofcheckRS: always
+	cd proofcheck-src;  make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv proofcheck_static ../proofcheck
+	
+	
 always:
 
 touch:
@@ -227,7 +238,7 @@ bmctar: clean
 clean:
 	@cd core; make clean CPDEPEND="" MROOT=..;
 	@cd simp; make clean MROOT=..;
-	@rm -f riss coprocessor qprocessor libriss.a libriss.so priss classifier pcasso
+	@rm -f riss coprocessor qprocessor mprocessor shiftbmc libriss.a libriss.so priss classifier pcasso
 	@if [ -d "coprocessor-src" ]; then cd coprocessor-src; make clean MROOT=..; fi
 	@if [ -d "qprocessor-src" ]; then cd qprocessor-src; make clean MROOT=..; fi
 	@if [ -d "mprocessor-src" ]; then cd mprocessor-src; make clean MROOT=..; fi

@@ -34,18 +34,20 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "core/Dimacs.h"
 #include "core/Solver.h"
 
-#include "coprocessor-src/Coprocessor.h"
+#include "proofcheck-src/ProofChecker.h"
 
 #include "VERSION" // include the file that defines the solver version
 
 using namespace Riss;
+
+ProofChecker* pc; // pointer to proof checker
 
 //=================================================================================================
 
 static bool receivedInterupt = false;
 // Terminate by notifying the solver and back out gracefully. This is mainly to have a test-case
 // for this feature of the Solver as it may take longer than an immediate call to '_exit()'.
-static void SIGINT_interrupt(int signum) { solver->interrupt(); }
+static void SIGINT_interrupt(int signum) { pc->interupt(); }
 
 // Note that '_exit()' rather than 'exit()' has to be used. The reason is that 'exit()' calls
 // destructors and may cause deadlocks if a malloc/free function happens to be running (these
@@ -55,7 +57,7 @@ static void SIGINT_exit(int signum) {
 //     if (solver->verbosity > 0){
 //         printStats(*solver);
 //         printf("\n"); printf("c *** INTERRUPTED ***\n"); }
-    solver->interrupt();
+//     solver->interrupt();
     if( receivedInterupt ) _exit(1);
     else receivedInterupt = true;
 }
@@ -68,18 +70,17 @@ static void SIGINT_exit(int signum) {
 int main(int argc, char** argv)
 {
   
-  setUsageHelp("USAGE: %s [options] <formula-file> <proof1> [<proof2> ... <proofn>]\n\n  where format may be either in plain or gzipped DIMACS.\n");
+  setUsageHelp("USAGE: %s [options] <formula-file> <proof1> [<proof2> ... <proofn>]\n\n  where format may be either in plain or gzipped DIMACS.\n\n  Returns 0, if the proof can be verified, 1 otherwise");
   // Extra options:
   //
   IntOption    verb   ("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
   IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
   IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
-  BoolOption   opt_drat       ("MAIN", "drat",    "verify DRAT instead of DRUP", true);
-  BoolOption   opt_first      ("MAIN", "first",   "check RAT only for first literal", true);
-  BoolOption   opt_backward   ("MAIN", "quiet",   "Do not print the model", false);
-  
-# error IMPLEMENT DRUP/DRAT checking here
+  BoolOption   opt_drat     ("PROOFCHECK", "drat",     "verify DRAT instead of DRUP", true);
+  BoolOption   opt_first    ("PROOFCHECK", "first",    "check RAT only for first literal", true);
+  BoolOption   opt_backward ("PROOFCHECK", "backward", "use backward checking", false);
+  BoolOption   opt_stdin    ("PROOFCHECK", "useStdin", "scan on stdin for further proof parts (files first)", false);
   
     try {
 
@@ -106,28 +107,92 @@ int main(int argc, char** argv)
 		  if (setrlimit(RLIMIT_AS, &rl) == -1)
 		      printf("c WARNING! Could not set resource limit: Virtual memory.\n");
 	      } }
-  
-	  gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
 
-	      printf("c ==========================[     dratcheck %5.2f     ]====================================================\n", solverVersion);
-	      printf("c | Norbert Manthey. The use of the tool is limited to research only!                                     |\n");
-	      printf("c =========================================================================================================\n");
-	      
-
-	  parse_DIMACS(in, S);
-	  gzclose(in);
-	  FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
-
+	  printf("c ==========================[    proofcheck %5.2f     ]====================================================\n", solverVersion);
+	  printf("c | Norbert Manthey. The use of the tool is limited to research only!                                     |\n");
+	  printf("c =========================================================================================================\n");
 	  
-  #ifdef NDEBUG
-	  exit(ret == l_True ? 10 : ret == l_False ? 20 : 0);     // (faster than "return", which will invoke the destructor for 'Solver')
-  #else
-	  return (ret == l_True ? 10 : ret == l_False ? 20 : 0);
-  #endif
-	
-	
-    } catch (OutOfMemoryException&){
+	  // not enough parameters given, at least a formula and one proof
+	  if( argc < 2 ) {
+	    printUsageAndExit(argc, argv);
+	  }
+	  
+	  // create object
+	  ProofChecker proofChecker( opt_drat, opt_backward, opt_first );
+	  pc = &proofChecker;
+	  
+	  // parse the formula
+	  printf("c parse the formula\n");
+	  gzFile in = gzopen(argv[1], "rb");
+	  if( ! in ) {
+	    printf("c WARNING: could not open formula file %s\n", argv[1] );
+	    printf("s NOT VERIFIED");
+	    exit(1);
+	  } else {
+	    parse_DIMACS(in, proofChecker);
+	    gzclose(in);
+	  }
+	  parse_DIMACS(in, proofChecker);
+	  gzclose(in);
+	  
+	  // tell checker that the end of the formula has been reached
+	  proofChecker.setEndOfFormula();
+	  vec<Lit> dummy;
+	  
+	  // the formula is unsatisfiable by unit propagation, print result and return with correct exit code
+	  if( proofChecker.checkClause( dummy , false ) ) {
+	    printf("s UNSATISFIABLE\n");
+	    printf("s VERIFIED\n");
+	    exit(0);
+	  }
+	  
+	  // parse proofs
+	  int proofParts = 0;
+	  for( int i = 2; i < argc; ++ i ) {
+	    proofParts ++;
+	    printf("c parse proof part [%d] from file %s\n", proofParts, argv[i] );
+	    gzFile in = gzopen(argv[i], "rb");
+	    if( ! in ) {
+	      printf("c WARNING: could not open file %s\n", argv[i] );
+	    } else {
+	      parse_DIMACS(in, proofChecker);
+	      gzclose(in);
+	    }
+	  }
+	  
+	  // scan for the final part of the proof on stdin
+	  if( opt_stdin ) {
+	    proofParts ++;
+	    printf("c parse proof part [%d] from stdin\n", proofParts );
+	    gzFile in =  gzdopen(0, "rb");
+	    parse_DIMACS(in, proofChecker);
+	    gzclose(in);
+	  }
+
+	  bool successfulVerification = proofChecker.emptyPresent();
+	  
+	  if( !successfulVerification ) {
+	    printf ("c WARNING: empty clause not present\n");
+	    printf ("s NOT VERIFIED\n");
+	    return 1;
+	  }
+	  
+	  successfulVerification = proofChecker.verifyProof();
+	    
+	  if( successfulVerification ) {
+	    
+	    // TODO: could do more here, e.g. print unsat core, print statistics, ...
+	    
+	    printf ("s VERIFIED\n");
+	    return 0;
+	  } else {
+	    printf ("s NOT VERIFIED\n");
+	    return 1;
+	  }
+	  
+    } catch (OutOfMemoryException&){  // something went wrong
 	printf("c Warning: caught an exception\n");
-        exit(0);
+	printf ("s NOT VERIFIED\n");
+        exit(1); 
     }
 }
