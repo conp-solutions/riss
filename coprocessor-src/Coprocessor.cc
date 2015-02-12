@@ -1009,7 +1009,7 @@ lbool Preprocessor::preprocess()
   else ret = performSimplification();
   
   if( config.opt_exit_pp > 0) { // exit?
-    if( config.opt_exit_pp > 1) { // print?
+    if( config.opt_exit_pp > 1) { // print? TODO: have a method for this output!
       int cls = 0;
       for( int i = 0 ; i < data.getTrail().size(); ++ i ) cls ++;
       for( int i = 0 ; i < data.getClauses().size(); ++ i ) if( !ca[data.getClauses()[i]].can_be_deleted() ) cls ++;
@@ -1054,6 +1054,8 @@ lbool Preprocessor::inprocess()
   // TODO: do something before preprocessing? e.g. some extra things with learned / original clauses
   if (config.opt_inprocess) {
     
+    freezeSearchVariables(); // take care that special variables of the search are not destroyed during simplification
+    
     /* make sure the solver is at level 0 - not guarantueed with partial restarts!*/
     solver->cancelUntil(0);
     
@@ -1070,6 +1072,8 @@ lbool Preprocessor::inprocess()
     
     lastInpConflicts = solver->conflicts;
     if( config.opt_verbose > 4 ) cerr << "c finished inprocessing " << endl;
+    
+    meltSearchVariables(); // undo restriction for these variables
     
     return ret;
   }
@@ -1844,4 +1848,31 @@ void Preprocessor::printSolver(ostream& s, int verbose)
       }
     }
   }
+}
+
+void Preprocessor::freezeSearchVariables() {
+  // for all special variables in the search
+  for (int i = 0; i < solver->assumptions.size(); i++){ // assumptions
+    Var v = var(solver->assumptions[i]);
+    if( ! data.doNotTouch( v ) ) {  // if the variable is not frozen already
+      data.setNotTouch(v);          // freeze it
+      specialFrozenVariables. push ( v );  // memorize that the variable has been frozen due to this call
+    }
+  }
+  for (int i = 0; i < solver->preferredDecisionVariables.size(); i++){ // preferred decision variables
+    const Var& v = solver->preferredDecisionVariables[i];
+    if( ! data.doNotTouch( v ) ) {  // if the variable is not frozen already
+      data.setNotTouch(v);          // freeze it
+      specialFrozenVariables. push ( v );  // memorize that the variable has been frozen due to this call
+    }
+  }
+}
+
+void Preprocessor::meltSearchVariables(){
+  // release the freezing
+  for( int i = 0 ; i < specialFrozenVariables.size(); ++ i ) {
+    data.unsetNotTouch( specialFrozenVariables[i] );
+  }
+  // clear the list of variables
+  specialFrozenVariables.clear();
 }

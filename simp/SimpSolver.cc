@@ -116,10 +116,10 @@ lbool SimpSolver::solve_(bool do_simp, bool turn_off_simp)
 	// NuSMV: PREF MOD
         // Preferred variables must be temporarily frozen to run variable
 	// elimination:
-        for (int i = 0; i < preferred.size(); i++){
-            Var v = preferred[i];
+        for (int i = 0; i < preferredDecisionVariables.size(); i++){
+            Var v = preferredDecisionVariables[i];
 
-// // 	    This functionality is not provided by Minisat's more recent versions
+// // 	    This functionality is not provided by Minisat's more recent versions than the one originally used in NuSVM
 //             // If a preferred variable has been eliminated, remember it.
 //             if (isEliminated(v))
 //                 remember(v);

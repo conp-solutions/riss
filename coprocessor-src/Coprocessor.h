@@ -173,6 +173,7 @@ protected:
   TwoSatSolver twoSAT;
   
   int shuffleVariable;  // number of variables that have been present when the formula has been shuffled
+  vec<Var> specialFrozenVariables;
   
   // do the real work
   lbool performSimplification();
@@ -188,6 +189,12 @@ protected:
   
   void shuffle();			// shuffle the formula
   void unshuffle( vec< lbool >& model );	// unshuffle the formula
+  
+  /** freeze all variables that appear in special search data structures (assumptions, preferred decisions)
+   *  Note: does not freeze a variable twice, will not add variables to undo information, if the variable is frozen already 
+   */
+  void freezeSearchVariables(); 
+  void meltSearchVariables();   /// undo freezing for the special search variables
   
   // small helpers
   void sortClauses();                // sort the literals within all clauses

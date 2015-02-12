@@ -55,6 +55,8 @@ void testNuSVM() {
   MiniSat_Nof_Variables(riss);
   MiniSat_Nof_Clauses(riss);
   MiniSat_New_Variable(riss);
+  MiniSat_New_Variable(riss);
+  MiniSat_New_Variable(riss);
   MiniSat_Add_Clause(riss, clause, 3);
   MiniSat_Solve(riss);
   MiniSat_Solve_Assume(riss, 3, clause);

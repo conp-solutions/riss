@@ -120,7 +120,7 @@ inline int MiniSat_Add_Clause(MiniSat_ptr ms,
   for(i = 0; i < num_lits; i++) {
     const int lit = clause_lits[i];
     assert(lit != 0);
-    assert(abs(lit) <= MiniSat_Nof_Variables(ms));
+    assert(abs(lit) <= MiniSat_Nof_Variables(ms)); // NuSVM wants to make sure this check itself - riss_add would create variable data structures itself
     ret = riss_add ( ms, lit ) || ret;  // collect all return codes disjunctively
   }
   ret = riss_add ( ms, 0 ) || ret; // add a terminating 0

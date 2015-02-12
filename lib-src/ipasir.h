@@ -55,7 +55,7 @@ const char * ipasir_signature () {
  */
 inline
 void * ipasir_init () {
-  riss_init("INCREMENTAL"); // use riss with the configuration for incremental solving
+  return riss_init("INCREMENTAL"); // use riss with the configuration for incremental solving
 }
 
 /**

@@ -632,9 +632,9 @@ Lit Solver::pickBranchLit()
 
     // NuSMV: PREF MOD
     // Selection from preferred list
-    for (int i = 0; i < preferred.size(); i++) {
-      if ( value(preferred[i]) == l_Undef) {
-	next = preferred[i];
+    for (int i = 0; i < preferredDecisionVariables.size(); i++) {
+      if ( value(preferredDecisionVariables[i]) == l_Undef) {
+	next = preferredDecisionVariables[i];
       }
     }
     // NuSMV: PREF MOD END
@@ -1335,13 +1335,13 @@ void Solver::rebuildOrderHeap()
 // NuSMV: PREF MOD
 void Solver::addPreferred(Var v)
 {
-  preferred.push(v);
+  preferredDecisionVariables.push(v);
 }
 
 
 void Solver::clearPreferred()
 {
-  preferred.clear(0);
+  preferredDecisionVariables.clear(0);
 }
 // NuSMV: PREF MOD END
                

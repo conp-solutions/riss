@@ -14,56 +14,6 @@ MYLFLAGS  = -lpthread $(LIBRT) $(ARGS)
 
 COPTIMIZE ?= -O3
 
-#
-#
-# NUSVM Makefile
-#
-#
-
-# Copyright (c) 2007 by FBK-irst
-# Author: Roberto Cavada <cavada@fbk.eu>
-# This file has been added in order to make Minisat2 
-# compilable with NuSMV
-
-LIBNAME = libminisat.a
-EXT_LIBNAME = libMiniSat.a
-EXT_LIBIFC = Solver_C.h
-COREDIR = simp
-
-LN ?= ln -s
-RANLIB ?= ranlib
-RM ?= rm -f
-MAKE ?= make
-
-# ----------------------------------------------------------------------
-# this target is invoked by the builder
-lib: $(EXT_LIBNAME) $(EXT_LIBIFC)
-	@echo Done
-
-clean: 
-	cd $(COREDIR) && $(MAKE) clean
-	$(RM) $(EXT_LIBNAME) $(EXT_LIBIFC)
-	$(RM) $(COREDIR)/depend.mk
-# ----------------------------------------------------------------------
-
-$(COREDIR)/$(LIBNAME):
-	cd $(COREDIR) && $(MAKE) lib && $(RANLIB) $(LIBNAME)
-
-$(EXT_LIBNAME): $(COREDIR)/$(LIBNAME)
-	$(LN) $(COREDIR)/$(LIBNAME) $(EXT_LIBNAME)
-
-$(EXT_LIBIFC):
-	$(LN) $(COREDIR)/$(EXT_LIBIFC) $(EXT_LIBIFC)
-
-
-#
-#
-# END NuSVM Makefile
-#
-#
-
-
-
 
 all: rs
 
@@ -96,9 +46,9 @@ buildtest:
 	make shiftbmc
 	make clean
 
-libcheck: MYLFLAGS += -L . -L .. -lcp 
+libcheck: MYLFLAGS += -L . -L .. 
 libcheck: libso
-	make -C lib-src INLDFLAGS='$(MYLFLAGS)' MROOT=..
+	cd lib-src ; make INLDFLAGS='$(MYLFLAGS) -lriss' MROOT=..
 
 # shortcuts
 
@@ -173,8 +123,8 @@ libs: always
 libr: always
 	cd core;   make libr INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src pfolio-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; rm lib.a; mv lib_release.a ../libriss.a
 libso: always
-	cd core;   make libso INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src pfolio-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv lib_release.so ../libcp.so
-	strip -g -S -d --strip-debug -X -w --strip-symbol=*Coprocessor* --strip-symbol=*Riss* libcp.so
+	cd core;   make libso INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src pfolio-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv lib_release.so ../libriss.so
+#	strip -g -S -d --strip-debug -X -w --strip-symbol=*Coprocessor* --strip-symbol=*Riss* libriss.so
 
 
 # coprocessor
@@ -277,7 +227,7 @@ bmctar: clean
 clean:
 	@cd core; make clean CPDEPEND="" MROOT=..;
 	@cd simp; make clean MROOT=..;
-	@rm -f riss coprocessor qprocessor libriss.a libcp.so priss classifier pcasso
+	@rm -f riss coprocessor qprocessor libriss.a libriss.so priss classifier pcasso
 	@if [ -d "coprocessor-src" ]; then cd coprocessor-src; make clean MROOT=..; fi
 	@if [ -d "qprocessor-src" ]; then cd qprocessor-src; make clean MROOT=..; fi
 	@if [ -d "mprocessor-src" ]; then cd mprocessor-src; make clean MROOT=..; fi

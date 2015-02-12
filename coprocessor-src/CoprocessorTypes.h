@@ -302,6 +302,7 @@ public:
   
   // checking whether a literal can be altered - TODO: use the frozen information from the solver object!
   void setNotTouch(const Var& v);
+  void unsetNotTouch(const Var& v);
   bool doNotTouch (const Var& v) const ;
   
   // TODO: remove after debug
@@ -1576,6 +1577,11 @@ inline vector<CRef>& CoprocessorData::getStrengthClauses()
 inline void CoprocessorData::setNotTouch(const Var& v)
 {
   solver->freezeVariable(v,true);
+}
+
+inline void CoprocessorData::unsetNotTouch(const Var& v)
+{
+  solver->freezeVariable(v,false);
 }
 
 inline bool CoprocessorData::doNotTouch(const Var& v) const

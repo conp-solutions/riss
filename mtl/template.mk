@@ -99,7 +99,7 @@ lib$(LIB)_standard.a lib$(LIB)_profile.a lib$(LIB)_release.a lib$(LIB)_debug.a:
 ## Library rules (standard/profile/debug/release)
 lib$(LIB)_release.so:
 	@echo Making shared library: "$@ ( $(foreach f,$^,$(subst $(MROOT)/,,$f)) )"
-	g++ -shared -o $@ $(LINKSCOBJS) -lc #-fvisibility=hidden -fvisibility-inlines-hidden  #-Wl,-fvisibility=hidden -Wl,-fvisibility-inlines-hidden -Wl,--version-script=$(MROOT)/exports.version 
+	g++ -shared -o $@ $(LINKSCOBJS) -lc $(LFLAGS) #-fvisibility=hidden -fvisibility-inlines-hidden  #-Wl,-fvisibility=hidden -Wl,-fvisibility-inlines-hidden -Wl,--version-script=$(MROOT)/exports.version 
 
 ## Library Soft Link rule:
 libs libp libd libr:
