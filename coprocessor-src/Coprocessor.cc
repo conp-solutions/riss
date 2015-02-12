@@ -1765,7 +1765,7 @@ void Preprocessor::fullCheck(const string& headline)
       else {
 	for( int j = 0 ; j < 2; ++ j ) {
 	  const Lit l = ~c[j];
-	  vec<Solver::Watcher>&  ws  = solver->watches[l];
+	  vec<Watcher>&  ws  = solver->watches[l];
 	  bool didFind = false;
 	  for ( int j = 0 ; j < ws.size(); ++ j){
 	      CRef     wcr        = ws[j].cref();
@@ -1784,7 +1784,7 @@ void Preprocessor::fullCheck(const string& headline)
     for( int p = 0 ; p < 2; ++ p ) 
     {
       const Lit l = mkLit(v, p==1);
-      vec<Solver::Watcher>&  ws  = solver->watches[l];
+      vec<Watcher>&  ws  = solver->watches[l];
       for ( int j = 0 ; j < ws.size(); ++ j){
 	      CRef     wcr        = ws[j].cref();
 	      const Clause& c = ca[wcr];
@@ -1840,7 +1840,7 @@ void Preprocessor::printSolver(ostream& s, int verbose)
   for( Var v = 0 ; v < solver->nVars(); ++ v ) {
     for( int pl = 0 ; pl < 2; ++ pl ) {
       const Lit p = mkLit(v, pl == 1 );
-      vec<Riss::Solver::Watcher>&  ws  = solver->watches[p];
+      vec<Riss::Watcher>&  ws  = solver->watches[p];
       
       for (int i = 0 ; i <  ws.size();  i ++){
             CRef     cr        = ws[i].cref();

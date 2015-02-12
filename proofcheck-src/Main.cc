@@ -80,10 +80,13 @@ int main(int argc, char** argv)
   BoolOption   opt_drat     ("PROOFCHECK", "drat",     "verify DRAT instead of DRUP", true);
   BoolOption   opt_first    ("PROOFCHECK", "first",    "check RAT only for first literal", true);
   BoolOption   opt_backward ("PROOFCHECK", "backward", "use backward checking", false);
+  IntOption    opt_threads  ("PROOFCHECK", "threads",  "number of threads that are used for verification.\n", 1, IntRange(0, INT32_MAX));
   BoolOption   opt_stdin    ("PROOFCHECK", "useStdin", "scan on stdin for further proof parts (files first)", false);
   
     try {
 
+	  bool foundHelp = ::parseOptions (argc, argv ); // parse all global options
+      
 	  signal(SIGINT, SIGINT_exit);
 	  signal(SIGXCPU,SIGINT_exit);
 
@@ -119,24 +122,23 @@ int main(int argc, char** argv)
 	  
 	  // create object
 	  ProofChecker proofChecker( opt_drat, opt_backward, opt_first );
+	  proofChecker.setVerbosity( verb ); // tell about verbosity
 	  pc = &proofChecker;
 	  
 	  // parse the formula
 	  printf("c parse the formula\n");
-	  gzFile in = gzopen(argv[1], "rb");
+	  gzFile in = gzopen( argv[1], "rb");
 	  if( ! in ) {
 	    printf("c WARNING: could not open formula file %s\n", argv[1] );
-	    printf("s NOT VERIFIED");
+	    printf("s NOT VERIFIED\n");
 	    exit(1);
 	  } else {
 	    parse_DIMACS(in, proofChecker);
 	    gzclose(in);
 	  }
-	  parse_DIMACS(in, proofChecker);
-	  gzclose(in);
 	  
-	  // tell checker that the end of the formula has been reached
-	  proofChecker.setEndOfFormula();
+	  // tell checker that the end of the formula has been reached - from now on there are learned clauses
+	  proofChecker.setReveiceFormula( false );
 	  vec<Lit> dummy;
 	  
 	  // the formula is unsatisfiable by unit propagation, print result and return with correct exit code
@@ -155,7 +157,10 @@ int main(int argc, char** argv)
 	    if( ! in ) {
 	      printf("c WARNING: could not open file %s\n", argv[i] );
 	    } else {
-	      parse_DIMACS(in, proofChecker);
+	      ProofStyle proofStyle = parse_proof(in, proofChecker);
+	      if( proofStyle == drat && !opt_drat ) {
+		printf ("c WARNING given proof format is said to be stronger than the enabled verificatoin\n");
+	      }
 	      gzclose(in);
 	    }
 	  }
@@ -165,7 +170,10 @@ int main(int argc, char** argv)
 	    proofParts ++;
 	    printf("c parse proof part [%d] from stdin\n", proofParts );
 	    gzFile in =  gzdopen(0, "rb");
-	    parse_DIMACS(in, proofChecker);
+	    ProofStyle proofStyle = parse_proof(in, proofChecker);
+	    if( proofStyle == drat && !opt_drat ) {
+	      printf ("c WARNING given proof format is said to be stronger than the enabled verificatoin\n");
+	    }
 	    gzclose(in);
 	  }
 

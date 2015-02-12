@@ -45,6 +45,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <pthread.h>
 #include "utils/LockCollection.h"
 
+#include <vector>
+
 /// TODO remove after debug
 #include <iostream>
 using namespace std;
@@ -62,9 +64,15 @@ namespace Riss {
 typedef int32_t Var; // be explicit here about the number of bits!
 #define var_Undef (-1)
 
+/// distinguish between DRUP and DRAT proofs
+enum ProofStyle {
+  unknown = 0,
+  drup = 1,
+  drat = 2,
+};
 
 struct Lit {
-    int     x;
+    int32_t x; // be explicit about the number of bits!
 
     // Use this as a constructor:
     friend Lit mkLit(Var var, bool sign = false);
@@ -909,6 +917,39 @@ inline void Clause::strengthen(Lit p)
 }
 //=================================================================================================
 
+/** class that represents the data in the two-watched-literal list (one element) */
+    struct Watcher {
+	// payload
+	CRef clauseReference;
+	unsigned blockingLit:30;
+	unsigned watchType:2; // 0 = binary, 1 = long clause, 2= 3=
+	// wrapper
+        const CRef& cref() const { return clauseReference; };
+	CRef& cref() { return clauseReference; };
+        Lit  blocker() const { return toLit(blockingLit); };
+	void cref( const CRef& newRef ) { clauseReference = newRef; }
+	void blocker( const Lit& newBlocker ) { assert( toInt(newBlocker) < (1 << 30) && "can only handle 30 bits here" ); blockingLit = toInt(newBlocker); }
+	
+	bool isBinary() const { return watchType == 0; }
+	bool isLong()   const { return watchType == 1; }
+	bool matchWatchType( const int type ) const { return watchType == type; }
+	
+	// constructor and comparators
+	/// by default, the watch holds a long clause
+        Watcher(CRef cr, Lit p, int type) : clauseReference(cr), blockingLit( toInt(p) ), watchType(type) {}
+        bool operator==(const Watcher& w) const { return clauseReference == w.clauseReference; }
+        bool operator!=(const Watcher& w) const { return clauseReference != w.clauseReference; }
+    };
+
+    /** class that represents the deleted data of the two-watched-literal list (one element) */
+    struct WatcherDeleted
+    {
+        const ClauseAllocator& ca;
+        WatcherDeleted(const ClauseAllocator& _ca) : ca(_ca) {}
+        bool operator()(const Watcher& w) const { return ca[w.clauseReference].mark() == 1; }
+    };
+
+//=================================================================================================
 
 /** class that is used as mark array */
 class MarkArray {
@@ -995,6 +1036,46 @@ public:
 
 };
 
+
+//
+// implementation of frequently used small methods that should be inlined
+//
+
+/// print literals into a stream
+inline ostream& operator<<(ostream& other, const Lit& l ) {
+  if( l == lit_Undef ) other << "lUndef";
+  else if( l == lit_Error ) other << "lError";
+  else other << (sign(l) ? "-" : "") << var(l) + 1;
+  return other;
+}
+
+/// print a clause into a stream
+inline ostream& operator<<(ostream& other, const Clause& c ) {
+  other << "[";
+  for( int i = 0 ; i < c.size(); ++ i )
+    other << " " << c[i];
+  other << "]";
+  return other;
+}
+
+/// print elements of a vector
+template <typename T>
+inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data ) 
+{
+  for( int i = 0 ; i < data.size(); ++ i )
+    other << " " << data[i];
+  return other;
+}
+
+
+/// print elements of a vector
+template <typename T>
+inline std::ostream& operator<<(std::ostream& other, const vec<T>& data ) 
+{
+  for( int i = 0 ; i < data.size(); ++ i )
+    other << " " << data[i];
+  return other;
+}
   
 }
 

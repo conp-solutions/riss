@@ -181,8 +181,8 @@ CRef Probing::prPropagate( bool doDouble )
     solver.clssToBump.clear();
     while (solver.qhead < solver.trail.size()){
         Lit            p   = solver.trail[solver.qhead++];     // 'p' is enqueued fact to propagate.
-        vec<Solver::Watcher>&  ws  = solver.watches[p];
-        Solver::Watcher        *i, *j, *end;
+        vec<Watcher>&  ws  = solver.watches[p];
+        Watcher        *i, *j, *end;
         num_props++;
 	
 	if( config.pr_debug_out > 1 ) cerr << "c for lit " << p << " have watch with " << ws.size() << " elements" << endl;
@@ -195,7 +195,7 @@ CRef Probing::prPropagate( bool doDouble )
 	
 	    // First, Propagate binary clauses 
 	if( config.opt_pr_probeBinary ) { // option to disable propagating binary clauses in probing
-	  const vec<Solver::Watcher>&  wbin  = solver.watches[p]; // this code needs to be added to the usual probing version!
+	  const vec<Watcher>&  wbin  = solver.watches[p]; // this code needs to be added to the usual probing version!
 	  
 	  for(int k = 0;k<wbin.size();k++)
 	  {
@@ -212,7 +212,7 @@ CRef Probing::prPropagate( bool doDouble )
 	  }
 	}
 	
-        for (i = j = (Solver::Watcher*)ws, end = i + ws.size();  i != end;){
+        for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;){
 	    if( i->isBinary() ) { *j++ = *i++; continue; } // skip binary clauses (have been propagated before already!}
             // Try to avoid inspecting the clause:
             const Lit blocker = i->blocker();
@@ -232,7 +232,7 @@ CRef Probing::prPropagate( bool doDouble )
 
             // If 0th watch is true, then clause is already satisfied.
             Lit     first = c[0];
-            const Solver::Watcher w     = Solver::Watcher(cr, first, 1); // always a large clause
+            const Watcher w     = Watcher(cr, first, 1); // always a large clause
             if (first != blocker && solver.value(first) == l_True){
                 *j++ = w; continue; }
 
@@ -1170,7 +1170,7 @@ void Probing::clauseVivification()
       for( int p = 0 ; p < 2; ++ p ) 
       {
 	const Lit l = mkLit(v, p==1);
-	vec<Solver::Watcher>&  ws  = solver.watches[l];
+	vec<Watcher>&  ws  = solver.watches[l];
 	for ( int j = 0 ; j < ws.size(); ++ j){
 		CRef     wcr        = ws[j].cref();
 		const Clause& c = ca[wcr];
@@ -1195,7 +1195,7 @@ void Probing::clauseVivification()
 	else {
 	  for( int j = 0 ; j < 2; ++ j ) {
 	    const Lit l = ~c[j];
-	    vec<Solver::Watcher>&  ws  = solver.watches[l];
+	    vec<Watcher>&  ws  = solver.watches[l];
 	    bool didFind = false;
 	    for ( int j = 0 ; j < ws.size(); ++ j){
 		CRef     wcr        = ws[j].cref();

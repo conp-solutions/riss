@@ -188,13 +188,13 @@ qprocessorRS: always
 	
 # proof checking tool
 proofcheckd: always
-	cd proofcheck-src;  make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv proofcheck_debug ../proofcheck
+	cd proofcheck-src;  make d INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv proofcheck_debug ../proofcheck
 # proof checking tool
 proofcheck: always
-	cd proofcheck-src;  make r INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv proofcheck_release ../proofcheck
+	cd proofcheck-src;  make r INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv proofcheck_release ../proofcheck
 # proof checking tool
 proofcheckRS: always
-	cd proofcheck-src;  make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv proofcheck_static ../proofcheck
+	cd proofcheck-src;  make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv proofcheck_static ../proofcheck
 	
 	
 always:
@@ -243,6 +243,7 @@ clean:
 	@if [ -d "qprocessor-src" ]; then cd qprocessor-src; make clean MROOT=..; fi
 	@if [ -d "mprocessor-src" ]; then cd mprocessor-src; make clean MROOT=..; fi
 	@if [ -d "classifier-src" ]; then cd classifier-src; make clean MROOT=..; fi
+	@if [ -d "proofcheck-src" ]; then cd proofcheck-src; make clean MROOT=..; fi
 	@if [ -d "shiftbmc-src" ]; then cd shiftbmc-src; make clean MROOT=..; fi
 	@if [ -d "pfolio-src" ]; then cd pfolio-src; make clean MROOT=..; fi
 	@if [ -d "pcasso-src" ]; then cd pcasso-src; make clean MROOT=..; fi

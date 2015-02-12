@@ -45,23 +45,37 @@ static void readClause(B& in, Solver& S, vec<Lit>& lits) {
 }
 
 template<class B, class Solver>
-static void parse_DIMACS_main(B& in, Solver& S) {
+static ProofStyle parse_DIMACS_main(B& in, Solver& S, bool isProof = false) {
     vec<Lit> lits;
     int vars    = 0;
     int clauses = 0;
     int cnt     = 0;
+    ProofStyle returnedStyle = unknown;
     for (;;){
         skipWhitespace(in);
         if (*in == EOF) break;
-        else if (*in == 'p'){
+        else if (*in == 'p' && !isProof){ // check header information for CNF formula (variables and clauses)
             if (eagerMatch(in, "p cnf")){
                 vars    = parseInt(in);
                 clauses = parseInt(in);
 		S.reserveVars(vars); // reserve space for the variables, so that there is less fragmentation
-		
-                // SATRACE'06 hack
-                // if (clauses > 4000000)
-                //     S.eliminate(true);
+            }else{
+                printf("PARSE ERROR! Unexpected char: %c\n", *in), exit(3);
+            }
+        } else if (*in == 'o' && isProof){ // check proof format of given proof
+            if (eagerMatch(in, "o proof DR")){
+                if( *in == 'U' ) {
+		  ++ in;
+		  if( *in == 'P' ) { 
+		    returnedStyle = drup;
+		    skipLine(in);
+		  }
+		} else  {
+		  if ( eagerMatch(in, "AT") ) { 
+		    returnedStyle = drat;
+		    skipLine(in);
+		  }
+		}
             }else{
                 printf("PARSE ERROR! Unexpected char: %c\n", *in), exit(3);
             }
@@ -73,10 +87,15 @@ static void parse_DIMACS_main(B& in, Solver& S) {
 	    S.addInputClause_(lits); // tell the solver that this clause is an input clause (used only for proof verification)
             S.addClause_(lits); }
     }
-    if (vars != S.nVars())
-        fprintf(stderr, "WARNING! DIMACS header mismatch: wrong number of variables.\n");
-    if (cnt  != clauses)
-        fprintf(stderr, "WARNING! DIMACS header mismatch: wrong number of clauses.\n");
+    
+    // warn only for the formula, not for the proof
+    if( !isProof ) {
+      if (vars != S.nVars())
+	  fprintf(stderr, "WARNING! DIMACS header mismatch: wrong number of variables.\n");
+      if (cnt  != clauses)
+	  fprintf(stderr, "WARNING! DIMACS header mismatch: wrong number of clauses.\n");
+    }
+    return returnedStyle;
 }
 
 // Inserts problem into solver.
@@ -86,6 +105,13 @@ static void parse_DIMACS(gzFile input_stream, Solver& S) {
     StreamBuffer in(input_stream);
     parse_DIMACS_main(in, S); }
 
+// Inserts problem into solver.
+//
+template<class Solver>
+static ProofStyle parse_proof(gzFile input_stream, Solver& S) {
+    StreamBuffer in(input_stream);
+    return parse_DIMACS_main(in, S, true); }
+
 /** check whether the given model satisfies the given file
  *  @return true, if the model satisfies all clauses in the formula
  */
@@ -93,6 +119,7 @@ bool check_DIMACS( gzFile input_stream, vec<lbool>& model ) {
   StreamBuffer in(input_stream);
   vec<Lit> lits;
   int cnt = 0;
+  bool failed = false;
   for (;;){
         skipWhitespace(in);
         if (*in == EOF) break;
@@ -114,6 +141,7 @@ bool check_DIMACS( gzFile input_stream, vec<lbool>& model ) {
 		  satisfied = satisfied || ( (model[ variable ] == l_True && !sign(l)) || (model[ variable ] == l_False && sign(l)) ) ;
 	    }
 	    if( !satisfied ) {
+	      failed = true;
 	      printf("c no model -- does not satisfy clause [%d] ",cnt);
 	      for( int i =  0 ; i < lits.size(); ++ i ) printf(" %d", sign( lits[i] ) ? - var(lits[i]) - 1 : var(lits[i]) + 1);
 	      printf("\n");
@@ -124,7 +152,7 @@ bool check_DIMACS( gzFile input_stream, vec<lbool>& model ) {
             
     }
   
-  return true;
+  return !failed;
 }
     
 //=================================================================================================

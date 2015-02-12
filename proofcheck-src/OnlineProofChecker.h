@@ -26,12 +26,7 @@ namespace Riss {
 class OnlineProofChecker {
 public:
   
-  /// to determine which proof style is used
-  enum ProofStyle {
-    drup = 0,
-    drat = 1,
-  };
-  
+
 protected:
   
   bool ok;		// indicate whether an empty clause has been in the input!
@@ -41,7 +36,7 @@ protected:
   vec<Lit> unitClauses; // store how many unit clauses have been seen already for a given literal (simply count per literal, use for propagation initialization!)
   vector< vector<CRef> > occ; // use for propagation!
   
-  OccLists<Lit, vec<Solver::Watcher>, Solver::WatcherDeleted> watches; 
+  OccLists<Lit, vec<Watcher>, WatcherDeleted> watches; 
   
   MarkArray ma;	// array to mark literals (to find a clause, or for resolution)
   
@@ -82,7 +77,7 @@ public:
   bool addClause(const std::vector<int>& clause );
   template <class T>
   bool addClause(const  T& clause, const Lit& remLit);
-  bool addClause(const  vec<Lit>& cls ) ;
+  bool addClause(const  vec<Lit>& cls, bool checkOnly = false ) ;
   bool addClause(const  Lit& l ) ;
   
   /** remove a clause during search */
@@ -105,8 +100,8 @@ public:
 };
 
 inline
-OnlineProofChecker::OnlineProofChecker(OnlineProofChecker::ProofStyle proofStyle) 
-: ok(true), proof(proofStyle), watches (Solver::WatcherDeleted(ca)), qhead(0), verbose(0)
+OnlineProofChecker::OnlineProofChecker(ProofStyle proofStyle) 
+: ok(true), proof(proofStyle), watches (WatcherDeleted(ca)), qhead(0), verbose(0)
 {}
 
 inline
@@ -122,11 +117,11 @@ void OnlineProofChecker::attachClause(CRef cr)
     assert( c.mark() == 0 && "satisfied clauses should not be attached!" );
     
     if(c.size()==2) {
-      watches[~c[0]].push(Solver::Watcher(cr, c[1], 0)); // add watch element for binary clause
-      watches[~c[1]].push(Solver::Watcher(cr, c[0], 0)); // add watch element for binary clause
+      watches[~c[0]].push(Watcher(cr, c[1], 0)); // add watch element for binary clause
+      watches[~c[1]].push(Watcher(cr, c[0], 0)); // add watch element for binary clause
     } else {
-      watches[~c[0]].push(Solver::Watcher(cr, c[1], 1));
-      watches[~c[1]].push(Solver::Watcher(cr, c[0], 1));
+      watches[~c[0]].push(Watcher(cr, c[1], 1));
+      watches[~c[1]].push(Watcher(cr, c[0], 1));
     }
 }
 
@@ -135,8 +130,8 @@ void OnlineProofChecker::detachClause(CRef cr)
 {
   const Clause& c = ca[cr];
   const int watchType = c.size()==2 ? 0 : 1; // have the same code only for different watch types!
-  removeUnSort(watches[~c[0]], Solver::Watcher(cr, c[1],watchType)); 
-  removeUnSort(watches[~c[1]], Solver::Watcher(cr, c[0],watchType)); 
+  removeUnSort(watches[~c[0]], Watcher(cr, c[1],watchType)); 
+  removeUnSort(watches[~c[1]], Watcher(cr, c[0],watchType)); 
 }
 
 inline 
@@ -203,11 +198,11 @@ bool OnlineProofChecker::propagate()
     
     while (qhead < trail.size()){
         Lit            p   = trail[qhead++];     // 'p' is enqueued fact to propagate.
-        vec<Solver::Watcher>&  ws  = watches[p];
-        Solver::Watcher        *i, *j, *end;
+        vec<Watcher>&  ws  = watches[p];
+        Watcher        *i, *j, *end;
         num_props++;
 	    // First, Propagate binary clauses 
-	const vec<Solver::Watcher>&  wbin  = watches[p];
+	const vec<Watcher>&  wbin  = watches[p];
 	for(int k = 0;k<wbin.size();k++) {
 	  if( !wbin[k].isBinary() ) continue;
 	  const Lit& imp = wbin[k].blocker();
@@ -223,7 +218,7 @@ bool OnlineProofChecker::propagate()
 	}
 
         // propagate longer clauses here!
-        for (i = j = (Solver::Watcher*)ws, end = i + ws.size();  i != end;)
+        for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;)
 	{
 	    if( i->isBinary() ) { *j++ = *i++; continue; } // skip binary clauses (have been propagated before already!}
 	    assert( ca[ i->cref() ].size() > 2 && "in this list there can only be clauses with more than 2 literals" );
@@ -245,7 +240,7 @@ bool OnlineProofChecker::propagate()
             // If 0th watch is true, then clause is already satisfied.
             Lit     first = c[0];
 	    assert( c.size() > 2 && "at this point, only larger clauses should be handled!" );
-            const Solver::Watcher& w     = Solver::Watcher(cr, first, 1); // updates the blocking literal
+            const Watcher& w     = Watcher(cr, first, 1); // updates the blocking literal
             if (first != blocker && value(first) == l_True) // satisfied clause
 	    {
 	      *j++ = w; continue; } // same as goto NextClause;
@@ -470,7 +465,7 @@ bool OnlineProofChecker::addClause(const  Lit& l )
 }
 
 inline 
-bool OnlineProofChecker::addClause(const vec< Lit >& cls)
+bool OnlineProofChecker::addClause(const vec< Lit >& cls, bool checkOnly )
 {
   if( !ok ) return true; // trivially true, we reached the empty clause already!
   bool conflict = false;
@@ -483,7 +478,7 @@ bool OnlineProofChecker::addClause(const vec< Lit >& cls)
   }
   
   if( verbose > 3 ) {
-    cerr << "c [DRAT-OTFC] add clause " << cls << endl;
+    cerr << "c [DRAT-OTFC] add/check clause " << cls << endl;
     printState();
   }
   
@@ -495,11 +490,10 @@ bool OnlineProofChecker::addClause(const vec< Lit >& cls)
     } else if( value(~cls[i]) == l_False ) { conflict = true; break; }
   }
   
-  assert( (conflict || cls.size() > 0 ) && "the empty clause is not entailed by the proof (some clauses are missing ... )" );
-  
   if( ! conflict ) {
     if( propagate() ) conflict = true; // DRUP!
     else if(  proof == drat ) { // are we checking DRAT?
+      if( cls.size() == 0 && checkOnly ) return false; 
       assert( cls.size() > 0 && "checking the empty clause cannot reach here (it can only be a RUP clause, not a RAT clause -- empty clause is not entailed" );
       if( initialVars >= var(cls[0]) ) { // DRAT on the first variable, because this variable is not present before!
 	// build all resolents on the first literal!
@@ -560,6 +554,9 @@ bool OnlineProofChecker::addClause(const vec< Lit >& cls)
     }
   }
   
+  // do not actually add the clause
+  if( checkOnly ) return true;
+  
   // add the clause ... 
   if( cls.size() == 0 ) { 
     ok = false;
@@ -612,7 +609,7 @@ void OnlineProofChecker::fullCheck()
       else {
 	for( int j = 0 ; j < 2; ++ j ) {
 	  const Lit l = ~c[j];
-	  vec<Solver::Watcher>&  ws  = watches[l];
+	  vec<Watcher>&  ws  = watches[l];
 	  bool didFind = false;
 	  for ( int j = 0 ; j < ws.size(); ++ j){
 	      CRef     wcr        = ws[j].cref();
@@ -630,7 +627,7 @@ void OnlineProofChecker::fullCheck()
     for( int p = 0 ; p < 2; ++ p ) 
     {
       const Lit l = mkLit(v, p==1);
-      vec<Solver::Watcher>&  ws  = watches[l];
+      vec<Watcher>&  ws  = watches[l];
       for ( int j = 0 ; j < ws.size(); ++ j){
 	      CRef     wcr        = ws[j].cref();
 	      const Clause& c = ca[wcr];
