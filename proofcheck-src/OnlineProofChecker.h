@@ -492,7 +492,7 @@ bool OnlineProofChecker::addClause(const vec< Lit >& cls, bool checkOnly )
   
   if( ! conflict ) {
     if( propagate() ) conflict = true; // DRUP!
-    else if(  proof == drat ) { // are we checking DRAT?
+    else if(  proof == dratProof ) { // are we checking DRAT?
       if( cls.size() == 0 && checkOnly ) return false; 
       assert( cls.size() > 0 && "checking the empty clause cannot reach here (it can only be a RUP clause, not a RAT clause -- empty clause is not entailed" );
       if( initialVars >= var(cls[0]) ) { // DRAT on the first variable, because this variable is not present before!

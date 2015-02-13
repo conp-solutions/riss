@@ -158,7 +158,7 @@ int main(int argc, char** argv)
 	      printf("c WARNING: could not open file %s\n", argv[i] );
 	    } else {
 	      ProofStyle proofStyle = parse_proof(in, proofChecker);
-	      if( proofStyle == drat && !opt_drat ) {
+	      if( proofStyle == dratProof && !opt_drat ) {
 		printf ("c WARNING given proof format is said to be stronger than the enabled verificatoin\n");
 	      }
 	      gzclose(in);
@@ -171,7 +171,7 @@ int main(int argc, char** argv)
 	    printf("c parse proof part [%d] from stdin\n", proofParts );
 	    gzFile in =  gzdopen(0, "rb");
 	    ProofStyle proofStyle = parse_proof(in, proofChecker);
-	    if( proofStyle == drat && !opt_drat ) {
+	    if( proofStyle == dratProof && !opt_drat ) {
 	      printf ("c WARNING given proof format is said to be stronger than the enabled verificatoin\n");
 	    }
 	    gzclose(in);

@@ -66,9 +66,9 @@ typedef int32_t Var; // be explicit here about the number of bits!
 
 /// distinguish between DRUP and DRAT proofs
 enum ProofStyle {
-  unknown = 0,
-  drup = 1,
-  drat = 2,
+  unknownProof = 0,
+  drupProof = 1,
+  dratProof = 2,
 };
 
 struct Lit {
@@ -318,6 +318,11 @@ public:
 
     float&       activity    ()              { assert(header.has_extra); return data[header.size].act; }
     uint32_t     abstraction () const        { assert(header.has_extra); return data[header.size].abs; }
+    
+    /// if extra data stores a literal, return this literal
+    Lit          getExtraLiteral() const       { assert(header.has_extra); return data[header.size].lit; }
+    /// set the literal that should be stored in the extradata
+    uint32_t     setExtraLiteral(const Lit& l) { assert(header.has_extra); return data[header.size].lit; }
 
     void         setLBD(int i)  {header.lbd = i;} 
     // unsigned int&       lbd    ()              { return header.lbd; }
