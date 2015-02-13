@@ -9,6 +9,7 @@ using namespace Riss;
 SequentialBackwardWorker::SequentialBackwardWorker(bool opt_drat, ClauseAllocator& outer_ca, vec< BackwardChecker::ClauseData >& outer_fullProof, vec< BackwardChecker::ClauseLabel >& outer_label, int outer_formulaClauses, int outer_variables, bool keepOriginalClauses)
 :
 drat( opt_drat ),
+parallelMode( none ),
 verbose(0), 
 #warning ADD A VERBOSITY OPTION TO THE TOOL
 formulaClauses( outer_formulaClauses ),
@@ -18,12 +19,14 @@ ca(0),                                 // have an empty allocator
 originalClauseData( outer_ca ),        // have a reference to the original clauses
 workOnCopy( !keepOriginalClauses ),
 
-watches ( ClauseDataClauseDeleted(ca) ),
+watches       ( ClauseDataClauseDeleted(ca) ),
+markedWatches ( ClauseDataClauseDeleted(ca) ),
 variables( outer_variables ),
 
+qhead(0),
+unitQhead(0),
 markedHead(0), 
 markedUnitHead(0), 
-qhead(0),
 
 clausesToBeChecked(0),
 num_props(0),
@@ -132,7 +135,7 @@ lbool    SequentialBackwardWorker::value (Lit p) const   { return assigns[var(p)
 void SequentialBackwardWorker::restart()
 {
   for (int c = trail.size()-1; c >= 0; c--) assigns[var(trail[c])] = l_Undef;
-  qhead = 0; markedHead = 0; markedUnitHead = 0;
+  qhead = 0; unitQhead = 0; markedHead = 0; markedUnitHead = 0;
   trail.clear();
 }
 
@@ -141,6 +144,7 @@ void SequentialBackwardWorker::removeBehind( const int& position )
   assert( position >= 0 && position < trail.size() && "can only undo to a position that has been seen already" );
   for (int c = trail.size()-1; c >= position; c--) assigns[var(trail[c])] = l_Undef;
   qhead = qhead < position ? qhead : position; 
+  unitQhead = 0; // to be on the safe side, replay units
   markedHead = 0; // there might have been more marked clauses
   markedUnitHead = 0;
   if( position < trail.size() ) trail.shrink( trail.size() - position );
@@ -150,7 +154,7 @@ bool SequentialBackwardWorker::checkClause(vec< Lit >& clause, int64_t untilProo
 {
   clausesToBeChecked = 0;
   vec<Lit> dummy;
-  if (!checkSingleClause( (int64_t) fullProof.size(), clause, dummy ) ) return false;
+  if (!checkSingleClauseAT( (int64_t) fullProof.size(), clause, dummy ) ) return false;
   
   // check the bound that should be used
   const int64_t maxCheckPosition = formulaClauses > untilProofPosition ? formulaClauses : untilProofPosition;
@@ -164,7 +168,7 @@ bool SequentialBackwardWorker::checkClause(vec< Lit >& clause, int64_t untilProo
       enableProofItem( proofItem ); // activate this item in the data structures (watch lists, or unit list)
     } else if ( label[ proofItem.getID() ].isMarked() ) {
       
-      if( ! checkSingleClause( proofItem.getID(), ca[ proofItem.getRef() ], dummy ) ) {
+      if( ! checkSingleClauseAT( proofItem.getID(), ca[ proofItem.getRef() ], dummy ) ) {
 	cerr << "c WARNING: clause with id " << proofItem.getID() << " cannot be verified with DRUP: " << ca[ proofItem.getRef() ] << endl;
 	return false;
       }
@@ -181,103 +185,68 @@ bool SequentialBackwardWorker::checkClause(vec< Lit >& clause, int64_t untilProo
   return true;
 }
 
-void SequentialBackwardWorker::markToBeVerified(const int64_t& proofItemID)
+bool SequentialBackwardWorker::markToBeVerified(const int64_t& proofItemID)
 {
-  if( label[ proofItemID ].isMarked() ) return;
-  label[ proofItemID ].setMarked();
+  if( label[ proofItemID ].isMarked() ) return false;
+  label[ proofItemID ].setMarked(); // TODO: might be made more thread safe
+  return true;
 }
 
-
-bool SequentialBackwardWorker::checkSingleClause(const int64_t currentID, const Clause& c, vec< Lit >& extraLits, bool reuseClause )
-{
-  assert( (reuseClause || trail.size() == 0) && "there cannot be assigned literals, other than the reused literals" );
-  markedHead = 0; // there might have been more marked clauses in between, so start over
-  
-  if( !reuseClause ) {
-    for( int i = 0 ; i < c.size(); ++ i ) { // enqueue all complements
-      if( value( ~c[i] ) == l_False ) return true;                 // there is a conflict
-      if( value( ~c[i] ) == l_Undef ) uncheckedEnqueue( ~c[i] );   // there is a conflict
-    }
-  }
-  
-  for( int i = 0 ; i < extraLits.size() ; ++ i ) {
-    if( value( ~extraLits[i] ) == l_False ) return true;                 // there is a conflict
-    if( value( ~extraLits[i] ) == l_Undef ) uncheckedEnqueue( ~extraLits[i] );   // there is a conflict
-  }
-  
-  CRef confl = CRef_Undef;
-  do {
-    
-
-
-     // end propagate on marked clauses
-    
-  } while ( markedHead < trail.size() );
-
-}
-
-Riss::CRef SequentialBackwardWorker::propagateMarked(bool addUnits = false)
+Riss::CRef SequentialBackwardWorker::propagateMarked(const int64_t currentID, bool addUnits)
 {
   CRef    confl     = CRef_Undef;
   int     num_props = 0;
-  watches.cleanAll(); 
+  markedWatches.cleanAll(); 
   
-  if( verbose > 3 ) cerr << "c [DRAT-OTFC] propagate ... " << endl;
-#error check validation information, and modify data structures accordingly!
+  if( verbose > 3 ) cerr << "c [S-BW-CHK] propagate marked ... " << endl;
+
   // propagate units first!
-  for( int i = 0 ; i < unitClauses.size() ; ++ i ) { // propagate all known units
-    const Lit l = unitClauses[i];
-    if( value(l) == l_True ) continue;
-    else if (value(l) == l_False ) return true;
-    else uncheckedEnqueue( l );
+  int keptUnits = unitQhead;
+  for( ; unitQhead < unitClauses.size() ; ++ unitQhead ) { // propagate all known units
+    BackwardChecker::ClauseData& unit = unitClauses[ unitQhead ];
+    if( unit.isValidAt( currentID ) ) {
+      const Lit& l = unit.getLit();            // as its a unit clause, we can use the literal
+      if( value(l) == l_True ) continue;       // check whether its SAT already
+      else if (value(l) == l_False ) return 0; // we do not know the exact clause, be we see a conflict
+      else uncheckedEnqueue( l );              // if all is good, enqueue the literal
+    } else { // element not valid any more, remove it
+      assert( currentID < unit.getID() && "a present element can only become invalid if its been removed from the proof (going backwards beyond that element)" );
+    }
   }
   
   while( qhead < trail.size() ) {
         Lit            p   = trail[qhead++];     // 'p' is enqueued fact to propagate.
-        vec<Watcher>&  ws  = watches[p];
-        Watcher        *i, *j, *end;
+        vec<BackwardChecker::ClauseData>&  ws  = markedWatches[p];
+        BackwardChecker::ClauseData        *i, *j, *end;
         num_props++;
-	    // First, Propagate binary clauses 
-	const vec<Watcher>&  wbin  = watches[p];
-	for(int k = 0;k<wbin.size();k++) {
-	  if( !wbin[k].isBinary() ) continue;
-	  const Lit& imp = wbin[k].blocker();
-	  assert( ca[ wbin[k].cref() ].size() == 2 && "in this list there can only be binary clauses" );
-	  if(value(imp) == l_False) {
-	    return true;
-	    break;
-	  }
-	  
-	  if(value(imp) == l_Undef) {
-	    uncheckedEnqueue(imp);
-	  } 
-	}
-
+#warning: IMPROVE DATA STRUCTURES AS IN RISS WITH AN 'ISBINARY' INDICATOR, AND A BLOCKING LITERAL
         // propagate longer clauses here!
-        for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;)
+        for (i = j = (BackwardChecker::ClauseData*)ws, end = i + ws.size();  i != end;)
 	{
-	    if( i->isBinary() ) { *j++ = *i++; continue; } // skip binary clauses (have been propagated before already!}
-	    assert( ca[ i->cref() ].size() > 2 && "in this list there can only be clauses with more than 2 literals" );
-	    
-            // Try to avoid inspecting the clause:
-            const Lit blocker = i->blocker();
-            if (value(blocker) == l_True){ // keep binary clauses, and clauses where the blocking literal is satisfied
-                *j++ = *i++; continue; }
+	    if( ! i->isValidAt( currentID ) ) { ++i; continue; } // simply remove this element from the watch list after the loop ended
+
+// re-enable later again!
+//             // Try to avoid inspecting the clause:
+//             const Lit blocker = i->blocker();
+//             if (value(blocker) == l_True){ // keep binary clauses, and clauses where the blocking literal is satisfied
+//                 *j++ = *i++; continue; }
 
             // Make sure the false literal is data[1]:
-            const CRef cr = i->cref();
+            const CRef cr = i->getRef();
             Clause&  c = ca[cr];
             const Lit false_lit = ~p;
             if (c[0] == false_lit)
                 c[0] = c[1], c[1] = false_lit;
             assert(c[1] == false_lit && "wrong literal order in the clause!");
-            i++;
 
-            // If 0th watch is true, then clause is already satisfied.
+	    // If 0th watch is true, then clause is already satisfied.
             Lit     first = c[0];
 	    assert( c.size() > 2 && "at this point, only larger clauses should be handled!" );
-            const Watcher& w     = Watcher(cr, first, 1); // updates the blocking literal
-            if (first != blocker && value(first) == l_True) // satisfied clause
+            const BackwardChecker::ClauseData& w = *i; // enable later again Watcher(cr, first, 1); // updates the blocking literal
+	    i++;
+            
+            if (  // first != blocker &&  // enable later again
+	      value(first) == l_True) // satisfied clause
 	    {
 	      *j++ = w; continue; } // same as goto NextClause;
 
@@ -286,7 +255,7 @@ Riss::CRef SequentialBackwardWorker::propagateMarked(bool addUnits = false)
                 if (value(c[k]) != l_False)
 		{
                     c[1] = c[k]; c[k] = false_lit;
-                    watches[~c[1]].push(w);
+                    markedWatches[~c[1]].push(w);
                     goto NextClause; 
 		} // no need to indicate failure of lhbr, because remaining code is skipped in this case!
 		
@@ -308,11 +277,13 @@ Riss::CRef SequentialBackwardWorker::propagateMarked(bool addUnits = false)
   }
 }
 
-Riss::CRef SequentialBackwardWorker::propagateUntilFirstUnmarkedEnqueue()
+Riss::CRef SequentialBackwardWorker::propagateUntilFirstUnmarkedEnqueue(const int64_t currentID)
 {
+  // copy method from above, but stop at first enqueue, and mark any used clause (conflict, as well as enqueue)
+#error CONTINUE HERE
   // use the following
-//   markedUnitHead 
-//   markedHead
+  //   markedUnitHead 
+  //   markedHead
 }
 
 

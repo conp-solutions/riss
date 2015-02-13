@@ -10,13 +10,26 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 
 #include "proofcheck-src/BackwardChecker.h"
 
+#include <deque> // to have a queue for LIFO and FIFO
+
 namespace Riss {
 
 /** given an internal representation of a DRAT/DRUP proof, this class performs backward checking */
 class SequentialBackwardWorker
 {
-  bool drat;
-  int verbose;
+public:
+  
+  enum ParallelMode {
+    none = 0,    // sequential execution
+    shared = 1,  // the clause data base (and the full occurrence information) is shared for read only access
+    copy = 2,    // each worker has his (private) copy of the data structures
+  };
+  
+protected:
+  
+  bool drat;                    // check drat
+  ParallelMode  parallelMode;   // how to operate on the data
+  int verbose;                  // verbosity of the tool
   
   // data structures that are re-used from the outside
   int formulaClauses;                          // number of clauses in the formula (these clause do not have to be verified)
@@ -25,6 +38,7 @@ class SequentialBackwardWorker
   ClauseAllocator  ca;                         // storage for the literals of the clauses, gives all clauses an additional field so that the first literal can be stored redundantly once more
   ClauseAllocator& originalClauseData;         // storage for the literals of the clauses, gives all clauses an additional field so that the first literal can be stored redundantly once more
   bool workOnCopy;                             // indicate whether we are really working on the storage, or on a copy
+  std::deque< int64_t > idsToVerify;           // queue of elements that have to be verified by this worker
   
   // data structures for propagation
   
@@ -37,10 +51,13 @@ class SequentialBackwardWorker
     bool operator()(const BackwardChecker::ClauseData& w) const { return ca[ w.getRef() ].mark() == 1; }
   };
   
-  OccLists<Lit, vec<BackwardChecker::ClauseData>, ClauseDataClauseDeleted> watches; // watch list
+  OccLists<Lit, vec<BackwardChecker::ClauseData>, ClauseDataClauseDeleted> watches;       // watch list for all non-marked clauses
+  OccLists<Lit, vec<BackwardChecker::ClauseData>, ClauseDataClauseDeleted> markedWatches; // watch list for all marked clauses
   int variables;                // number of variables in the proof (highest variable)
-  
-  int      markedHead, markedUnitHead, qhead;   // Head of queue,as index into the trail, one for marked propagation, one for non-marked propagation, also for non-marked units
+
+  int      qhead, unitQhead;           // Head of queue,as index into the trail, also for units
+  int      markedHead, markedUnitHead; // one for marked propagation, one for non-marked propagation
+
   vec<Lit> trail; // Assignment stack; stores all assigments made in the order they were made.
   vec<BackwardChecker::ClauseData> unitClauses;  // vector of top level units (not yet marked)
   vec<BackwardChecker::ClauseData> markedUnits;  // vector of top level units (marked)
@@ -74,7 +91,7 @@ public:
   
   /** check whether the given clause is in the proof 
    * @param clause clause to be verified
-   * @param untilProofPosition perform partial check until the specified position
+   * @param untilProofPosition perform partial check until the specified position (when not using chronological, this might leave unverified clauses behind)
    * @return true, if the proof is a valid unsatisfiability proof
    */
   bool checkClause( vec<Lit>& clause, int64_t untilProofPosition = 1);
@@ -117,31 +134,77 @@ protected:
 #warning USE FOR DRAT and checking multiple resolvents
   void removeBehind( const int& position );
 
-  /** modify all data structures so that its known that this clause has to be marked */
-  void markToBeVerified( const int64_t& proofItemID );
+  /** modify all data structures so that its known that this clause has to be marked 
+   * @return true, if this worker marked the clause, false, if already marked before
+   */
+  bool markToBeVerified( const int64_t& proofItemID );
   
   /** propagate only on valid already marked clauses and unit clauses
+   * @param currentID id of the element that is checked. any element higher in the data structures will be deleted. Note: works only for backward checking
    * @param addUnits do add Units only when the this method is called the first time for checking a clause (otherwise, units are scanned again and again)
    * @return CRef_Undef, if no conflict was found, the id of the conflict clause otherwise
    */
-  CRef propagateMarked(bool addUnits = false);
+  CRef propagateMarked(const int64_t currentID, bool addUnits = false);
 
   /** propagate only on non-marked clauses and unit clauses until the next literal can be enqueued
+   * @param currentID id of the element that is checked. any element higher in the data structures will be deleted. Note: works only for backward checking
    * @return CRef_Undef, if no conflict was found, the id of the conflict clause otherwise
    */
-  CRef propagateUntilFirstUnmarkedEnqueue();
+  CRef propagateUntilFirstUnmarkedEnqueue(const int64_t currentID);
   
-  /** check the given clause with the partial proof until currentID
+  /** check AT of the given clause with respect to the partial proof until element currentID
    * @param currentID the position of that clause in the proof
    * @param c the clause to be checked
    * @param extraLits literals that belong to the clause (e.g. after resolution)
    * @param reuseClause do not re-enqueue the literals of c again, as it is ensured that those literals have already been tested
    * @return true, if the verification of this clause is ok
    */
-#error use a template for the clause c, so that also vectors can be used
-  bool checkSingleClause( const int64_t currentID, const Clause& c, vec<Lit>& extraLits, bool reuseClause = false );
+  template<class ClauseType>
+  bool checkSingleClauseAT( const int64_t currentID, const ClauseType& c, vec<Lit>& extraLits, bool reuseClause = false );
   
 };
+
+template<class ClauseType>
+bool SequentialBackwardWorker::checkSingleClauseAT(const int64_t currentID, const ClauseType& c, vec< Lit >& extraLits, bool reuseClause )
+{
+  assert( (reuseClause || trail.size() == 0) && "there cannot be assigned literals, other than the reused literals" );
+  markedHead = 0; // there might have been more marked clauses in between, so start over
+  markedUnitHead = 0;
+  
+  if( !reuseClause ) {
+    for( int i = 0 ; i < c.size(); ++ i ) { // enqueue all complements
+      if( value( ~c[i] ) == l_False ) return true;                 // there is a conflict
+      if( value( ~c[i] ) == l_Undef ) uncheckedEnqueue( ~c[i] );   // there is a conflict
+    }
+  }
+  
+  for( int i = 0 ; i < extraLits.size() ; ++ i ) {
+    if( value( ~extraLits[i] ) == l_False ) return true;                 // there is a conflict
+    if( value( ~extraLits[i] ) == l_Undef ) uncheckedEnqueue( ~extraLits[i] );   // there is a conflict
+  }
+  
+  CRef confl = CRef_Undef;
+  bool firstCall = true;
+  do {
+    // propagate on all marked clauses we already collected
+    confl = propagateMarked( currentID, firstCall );
+    firstCall = false;
+    // if we found a conflict, stop
+    if( confl != CRef_Undef ) break;
+     // end propagate on marked clauses
+    
+    // if there is not yet a conflict, enqueue the first non-marked unit clause
+    // will move clauses from non-marked to marked, but this is ok, as we will backtrack after this call has finished
+    confl = propagateUntilFirstUnmarkedEnqueue( currentID );
+    // if we found a conflict, stop
+    if( confl != CRef_Undef ) break;
+    
+  } while ( markedHead < trail.size() );
+
+  // return true, if there was a conflict (then the clause has AT)
+  return confl != CRef_Undef;
+}
+
 
 }
 
