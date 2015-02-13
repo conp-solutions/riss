@@ -95,7 +95,7 @@ class RegionAllocator
 
     void clear(bool clean = false) { sz = 0; wasted_ = 0; 
       if( clean ) { // free used resources
-	if (to.memory != NULL) ::free(to.memory);
+	if (memory != NULL) ::free(memory);
 	cap = 0;
       }
     }

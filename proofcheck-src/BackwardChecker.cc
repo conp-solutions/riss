@@ -71,8 +71,6 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
   readsFormula = readsFormula && !proofClause;     // memorize that we saw a proof clause
   
   const int64_t id = currentID; // id of the current clause
-  
-
 
   if( ps.size() == 0 ) {
     fullProof.push( ClauseData( CRef_Undef, id ) );
@@ -84,6 +82,7 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
   Lit minLit = ps[0];
   bool hasDuplicateLiterals = false; // stats to be counted in the object
   bool foundDuplicateClause = false; // stats to be counted in the object
+  bool isTautology = false;          // stats to be counted in the object
   
   if( checkDuplicateLits == 0 && checkDuplicateClauses == 0 && !isDelete) { // fast routine if not additional checks are enabled
     for( int i = 0 ; i < ps.size(); ++ i ) {
@@ -94,7 +93,8 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
     // make a list of how many literals are present of which type
     for( int i = 0 ; i < ps.size(); ++ i ) {
       minLit = ps[i] < minLit ? ps[i] : minLit;      // select minimum
-      assert( presentLits[ toInt( ps[i] ) ] >= 0 && "numbr of occurrence cannot be negative, used for below comparison" );
+      assert( presentLits[ toInt( ps[i] ) ] >= 0 && "number of occurrence cannot be negative, used for below comparison" );
+      if( presentLits[ toInt( ~ps[i] ) ] != 0 ) isTautology = true;
       if( presentLits[ toInt( ps[i] ) ] != 0 ) {
 	hasDuplicateLiterals = true;
 	if( checkDuplicateLits != 0 ) {       // optimize most frequent execution path that occurs when duplicates are ignored
@@ -143,16 +143,21 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
     }
   }
   
+  // clean literal occurrence list again
+  if( !checkDuplicateLits > 0 || checkDuplicateClauses > 0 || isDelete) { // TODO: be more precise here, if delete was succesful with duplicate merging, the vector is already cleared
+    for( int i = 0 ; i < ps.size(); ++ i ) presentLits[ toInt( ps[i] ) ] = 0; // set all to 0!
+  }
   
-  // handle the data
+  // tautologies are ignored, if duplicate literals should be handled properly
+  if( isTautology && checkDuplicateLits == 2 ) {
+    return true; // tautology is always fine
+  }
+  
+  // handle the data and add current clause to the proof
   if ( isDelete ) {
     // did we find the corresponding clause?
     if( clausePosition == -1 ) {
       cerr << "c WARNING: clause " << ps << " that should be deleted at position " << id << " did not find a maching partner" << endl;
-      // clean literal occurrence list again
-      if( !checkDuplicateLits > 0 || checkDuplicateClauses > 0 || isDelete) {
-	for( int i = 0 ; i < ps.size(); ++ i ) presentLits[ toInt( ps[i] ) ] = 0; // set all to 0!
-      }
       return false;
     }
     
@@ -210,10 +215,7 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
     mergedElement ++; // count statistics
   }
   
-  // clean literal occurrence list again
-  if( !checkDuplicateLits > 0 || checkDuplicateClauses > 0 || isDelete) { // TODO: be more precise here, if delete was succesful with duplicate merging, the vector is already cleared
-    for( int i = 0 ; i < ps.size(); ++ i ) presentLits[ toInt( ps[i] ) ] = 0; // set all to 0!
-  }
+
   return true;
 }
 

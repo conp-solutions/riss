@@ -579,9 +579,11 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         RegionAllocator<uint32_t>::free(clauseWord32Size(c.size(), c.has_extra()));
     }
 
-    /** remove everything from allocator, but keep its space */
-    void clear() {
-      RegionAllocator<uint32_t>::clear();
+    /** remove everything from allocator, but keep its space 
+     * @param clean will free resources
+     */
+    void clear(bool clean = false) {
+      RegionAllocator<uint32_t>::clear( clean );
     }
     
     void freeLit(int diff = 1)
