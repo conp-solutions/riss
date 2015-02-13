@@ -80,8 +80,25 @@ class RegionAllocator
         memory = NULL;
         sz = cap = wasted_ = 0;
     }
+    
+    void     copyTo(RegionAllocator& to) {
+        if (to.memory != NULL) {
+	  ::free(to.memory); 
+	  to.capacity( cap );
+	}
+        to.memory = memory;
+        to.sz = sz;
+        to.cap = cap;
+        to.wasted_ = wasted_;
 
-    void clear() { sz = 0; wasted_ = 0; }
+    }
+
+    void clear(bool clean = false) { sz = 0; wasted_ = 0; 
+      if( clean ) { // free used resources
+	if (to.memory != NULL) ::free(to.memory);
+	cap = 0;
+      }
+    }
 };
 
 template<class T>

@@ -322,7 +322,7 @@ public:
     /// if extra data stores a literal, return this literal
     Lit          getExtraLiteral() const       { assert(header.has_extra); return data[header.size].lit; }
     /// set the literal that should be stored in the extradata
-    uint32_t     setExtraLiteral(const Lit& l) { assert(header.has_extra); return data[header.size].lit; }
+    void         setExtraLiteral(const Lit& l) { assert(header.has_extra); data[header.size].lit = l; }
 
     void         setLBD(int i)  {header.lbd = i;} 
     // unsigned int&       lbd    ()              { return header.lbd; }
@@ -546,6 +546,10 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         to.extra_clause_field = extra_clause_field;
         RegionAllocator<uint32_t>::moveTo(to); }
 
+    void copyTo(ClauseAllocator& to) {
+      to.extra_clause_field = extra_clause_field;
+      RegionAllocator<uint32_t>::copyTo(to); }
+        
     template<class Lits>
     CRef alloc(const Lits& ps, bool learnt = false)
     {
@@ -949,9 +953,9 @@ inline void Clause::strengthen(Lit p)
     /** class that represents the deleted data of the two-watched-literal list (one element) */
     struct WatcherDeleted
     {
-        const ClauseAllocator& ca;
-        WatcherDeleted(const ClauseAllocator& _ca) : ca(_ca) {}
-        bool operator()(const Watcher& w) const { return ca[w.clauseReference].mark() == 1; }
+      const ClauseAllocator& ca;
+      WatcherDeleted(const ClauseAllocator& _ca) : ca(_ca) {}
+      bool operator()(const Watcher& w) const { return ca[w.clauseReference].mark() == 1; }
     };
 
 //=================================================================================================

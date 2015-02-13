@@ -118,7 +118,7 @@ static ProofStyle parse_proof_main(B& in, Solver& S, bool isProof = false) {
 	} else if (*in == 'd') { // found delete information
 	    if( isDelete ) printf("PARSE ERROR! Unexpected char in delete section: %c\n", *in), exit(3);
 	    isDelete = true; 
-	    in ++; 
+	    ++ in; 
 	    // forward until next symbol to be able to read the clause
 	}
         else{

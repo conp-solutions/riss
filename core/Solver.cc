@@ -91,10 +91,10 @@ Solver::Solver(CoreConfig& _config) :
 
     // Statistics: (formerly in 'SolverStats')
     //
-  ,  nbRemovedClauses(0),nbReducedClauses(0), nbDL2(0),nbBin(0),nbUn(0) , nbReduceDB(0)
-    , solves(0), starts(0), decisions(0), rnd_decisions(0), propagations(0), conflicts(0),nbstopsrestarts(0),nbstopsrestartssame(0),lastblockatrestart(0)
+  , nbRemovedClauses(0),nbReducedClauses(0), nbDL2(0),nbBin(0),nbUn(0) , nbReduceDB(0)
+  , solves(0), starts(0), decisions(0), rnd_decisions(0), propagations(0), conflicts(0),nbstopsrestarts(0),nbstopsrestartssame(0),lastblockatrestart(0)
   , dec_vars(0), clauses_literals(0), learnts_literals(0), max_literals(0), tot_literals(0)
-    , curRestart(1)
+  , curRestart(1)
 
   , ok                 (true)
   , cla_inc            (1)
@@ -122,7 +122,7 @@ Solver::Solver(CoreConfig& _config) :
   , terminationCallbackMethod(0)
   
   // Online proof checking class
-  , onlineDratChecker( config.opt_checkProofOnline != 0 ? new OnlineProofChecker(OnlineProofChecker::drat) : 0)
+  , onlineDratChecker( config.opt_checkProofOnline != 0 ? new OnlineProofChecker(dratProof) : 0)
   
   // UIP hack
   , l1conflicts(0)
