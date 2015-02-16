@@ -113,7 +113,12 @@ static ProofStyle parse_proof_main(B& in, Solver& S, bool isProof = false) {
             }else{
                 printf("PARSE ERROR! Unexpected char: %c\n", *in), exit(3);
             }
-        } else if (*in == 'c') {
+        } else if (*in == 's') {
+	    if( !eagerMatch(in, "s UNSAT") ) {
+	      printf("WARNING: solution not claimed to be unsatisfiable\n");
+	    }
+            skipLine(in);
+	} else if (*in == 'c') {
             skipLine(in);
 	} else if (*in == 'd') { // found delete information
 	    if( isDelete ) printf("PARSE ERROR! Unexpected char in delete section: %c\n", *in), exit(3);

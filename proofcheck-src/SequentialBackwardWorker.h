@@ -51,18 +51,20 @@ protected:
     bool operator()(const BackwardChecker::ClauseData& w) const { return ca[ w.getRef() ].mark() == 1; }
   };
   
-  OccLists<Lit, vec<BackwardChecker::ClauseData>, ClauseDataClauseDeleted> watches;       // watch list for all non-marked clauses
-  OccLists<Lit, vec<BackwardChecker::ClauseData>, ClauseDataClauseDeleted> markedWatches; // watch list for all marked clauses
-  int variables;                // number of variables in the proof (highest variable)
+  OccLists<Lit, vec<BackwardChecker::ClauseData>, ClauseDataClauseDeleted> nonMarkedWatches;  /// watch list for all non-marked clauses
+  OccLists<Lit, vec<BackwardChecker::ClauseData>, ClauseDataClauseDeleted> markedWatches;     /// watch list for all marked clauses
+  int variables;                                                                              /// number of variables in the proof (highest variable)
 
-  int      qhead, unitQhead;           // Head of queue,as index into the trail, also for units
-  int      markedHead, markedUnitHead; // one for marked propagation, one for non-marked propagation
+  int      markedQhead, markedUnitHead;       // Head of queue,as index into the trail, also for units
+  int      nonMarkedQHead, nonMarkedUnithead; // one for marked propagation, one for non-marked propagation
 
   vec<Lit> trail; // Assignment stack; stores all assigments made in the order they were made.
-  vec<BackwardChecker::ClauseData> unitClauses;  // vector of top level units (not yet marked)
-  vec<BackwardChecker::ClauseData> markedUnits;  // vector of top level units (marked)
+  vec<BackwardChecker::ClauseData> nonMarkedUnitClauses;  // vector of top level units (not yet marked)
+  vec<BackwardChecker::ClauseData> markedUnitClauses;     // vector of top level units (marked)
   
   vec<lbool> assigns; // current assignment, one space for each variable
+  
+  vec<char> movedToMarked; // indicate that this thread marked a certain clause during propagation on a watch alredy
   
   // data and statistics
   int clausesToBeChecked;  // number of marked clauses in the proof
@@ -146,11 +148,17 @@ protected:
    */
   CRef propagateMarked(const int64_t currentID, bool addUnits = false);
 
-  /** propagate only on non-marked clauses and unit clauses until the next literal can be enqueued
+  /** propagate only on non-marked clauses and unit clauses until the next literal can be enqueued -- first will be used
    * @param currentID id of the element that is checked. any element higher in the data structures will be deleted. Note: works only for backward checking
    * @return CRef_Undef, if no conflict was found, the id of the conflict clause otherwise
    */
-  CRef propagateUntilFirstUnmarkedEnqueue(const int64_t currentID);
+  CRef propagateUntilFirstUnmarkedEnqueueEager(const int64_t currentID);
+
+  /** propagate only on non-marked clauses and unit clauses until the next literal can be enqueued -- all are collected and a decision is made afterwards
+   * @param currentID id of the element that is checked. any element higher in the data structures will be deleted. Note: works only for backward checking
+   * @return CRef_Undef, if no conflict was found, the id of the conflict clause otherwise
+   */
+  CRef propagateUntilFirstUnmarkedEnqueueManaged(const int64_t currentID);
   
   /** check AT of the given clause with respect to the partial proof until element currentID
    * @param currentID the position of that clause in the proof
@@ -168,19 +176,21 @@ template<class ClauseType>
 bool SequentialBackwardWorker::checkSingleClauseAT(const int64_t currentID, const ClauseType& c, vec< Lit >& extraLits, bool reuseClause )
 {
   assert( (reuseClause || trail.size() == 0) && "there cannot be assigned literals, other than the reused literals" );
-  markedHead = 0; // there might have been more marked clauses in between, so start over
+  nonMarkedQHead = 0; // there might have been more marked clauses in between, so start over
   markedUnitHead = 0;
+  
+  if( verbose > 2 ) cerr << "c [S-BW-CHK] check AT for clause " << c << " " << extraLits << " at proof position " << currentID << " (reuse: " << reuseClause << ")" << endl;
   
   if( !reuseClause ) {
     for( int i = 0 ; i < c.size(); ++ i ) { // enqueue all complements
       if( value( ~c[i] ) == l_False ) return true;                 // there is a conflict
-      if( value( ~c[i] ) == l_Undef ) uncheckedEnqueue( ~c[i] );   // there is a conflict
+      else if( value( ~c[i] ) == l_Undef ) uncheckedEnqueue( ~c[i] );   
     }
   }
   
   for( int i = 0 ; i < extraLits.size() ; ++ i ) {
     if( value( ~extraLits[i] ) == l_False ) return true;                 // there is a conflict
-    if( value( ~extraLits[i] ) == l_Undef ) uncheckedEnqueue( ~extraLits[i] );   // there is a conflict
+    else if( value( ~extraLits[i] ) == l_Undef ) uncheckedEnqueue( ~extraLits[i] );   
   }
   
   CRef confl = CRef_Undef;
@@ -188,19 +198,28 @@ bool SequentialBackwardWorker::checkSingleClauseAT(const int64_t currentID, cons
   do {
     // propagate on all marked clauses we already collected
     confl = propagateMarked( currentID, firstCall );
+    assert( (confl != CRef_Undef || markedQhead == trail.size()) && "visitted all literals during propagation" );
+    assert( (confl != CRef_Undef || markedUnitHead == markedUnitClauses.size()) && "visitted all marked unit clauses" );
     firstCall = false;
     // if we found a conflict, stop
     if( confl != CRef_Undef ) break;
-     // end propagate on marked clauses
+    // end propagate on marked clauses
+    
+    if( verbose > 4 ) {
+      cerr << "c trail: " << trail.size() << " markedUnits: " << markedUnitClauses.size() << " non-markedUnits: " << nonMarkedUnitClauses.size() << endl;
+      cerr << "c HEAD: markedUnit: " << markedUnitHead << " marked: " << markedQhead << " non-markedUnits: " << nonMarkedUnithead << " non-marked: " << nonMarkedQHead << endl;
+    }
     
     // if there is not yet a conflict, enqueue the first non-marked unit clause
     // will move clauses from non-marked to marked, but this is ok, as we will backtrack after this call has finished
-    confl = propagateUntilFirstUnmarkedEnqueue( currentID );
+    confl = propagateUntilFirstUnmarkedEnqueueEager( currentID );
     // if we found a conflict, stop
     if( confl != CRef_Undef ) break;
     
-  } while ( markedHead < trail.size() );
+  } while ( nonMarkedQHead < trail.size() || nonMarkedUnithead < nonMarkedUnitClauses.size() ); // saw all clauses that might be interesting
 
+  if( verbose > 2 ) cerr << "c [S-BW-CHK] returned conflict reference: " << confl << endl;
+  
   // return true, if there was a conflict (then the clause has AT)
   return confl != CRef_Undef;
 }

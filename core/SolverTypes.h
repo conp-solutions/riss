@@ -542,6 +542,11 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
     ClauseAllocator(uint32_t start_cap) : RegionAllocator<uint32_t>(start_cap), extra_clause_field(false){}
     ClauseAllocator() : extra_clause_field(false){}
 
+    /** reduce used space to exactly fit the space that is needed */
+    void fitSize() {
+      RegionAllocator<uint32_t>::fitSize();
+    }
+    
     void moveTo(ClauseAllocator& to){
         to.extra_clause_field = extra_clause_field;
         RegionAllocator<uint32_t>::moveTo(to); }
@@ -751,6 +756,8 @@ class OccLists
         dirty  .clear(free);
         dirties.clear(free);
     }
+    
+    int size() const { return occs.size(); }
 };
 
 

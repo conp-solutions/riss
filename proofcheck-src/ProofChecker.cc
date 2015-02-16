@@ -28,9 +28,8 @@ parsedEmptyClause(false)
 {
   
   if( opt_backward || threads > 1 || !opt_first ) {
-    cerr << "c WARNING: backward checking, parallel checking, or full RAT checking not implemented yet, keep default setup" << endl;
+    cerr << "c WARNING: parallel checking, or full RAT checking not implemented yet, keep default setup" << endl;
 
-    checkBackwards = false;
     testRATall = false;
     threads = 1;
   }
@@ -64,16 +63,14 @@ Var ProofChecker::newVar()
 {
   int oldVariables = variables;
   variables ++;
-  backwardChecker->newVar();
-  // TODO: adapt data structures
+  if( checkBackwards ) backwardChecker->newVar();
   return oldVariables;
 }
 
 void ProofChecker::reserveVars(int newVariables)
 {
   variables = newVariables;
-  // TODO: adapt data structures in a nice way (resize instead of adding one by one)
-  backwardChecker->reserveVars( newVariables );
+  if( checkBackwards ) backwardChecker->reserveVars( newVariables );
 }
 
 void ProofChecker::setReveiceFormula(bool nextIsFormula)

@@ -16,12 +16,14 @@ drat( opt_drat ),
 fullRAT( opt_fullRAT ),
 threads( opt_threads ),
 checkDuplicateLits (1),
+verbose(0), // highest possible for development
 checkDuplicateClauses (1),
 variables(0),
 hasBeenInterupted( false ),
 readsFormula( true ),
 currentID(0),
 sawEmptyClause( false ),
+formulaContainsEmptyClause( false ),
 inputMode( true ),
 duplicateClauses(0), 
 clausesWithDuplicateLiterals(0),
@@ -70,12 +72,15 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
   if( readsFormula && proofClause ) formulaClauses = fullProof.size(); // memorize the number of clauses in the formula
   readsFormula = readsFormula && !proofClause;     // memorize that we saw a proof clause
   
+  if( verbose > 2 ) cerr << "c [BW-CHK] add clause " << ps << " toProof?" << proofClause << " as delete?" << isDelete << endl;
+  
   const int64_t id = currentID; // id of the current clause
 
   if( ps.size() == 0 ) {
     fullProof.push( ClauseData( CRef_Undef, id ) );
     currentID ++;
     sawEmptyClause = true;
+    if( readsFormula ) formulaContainsEmptyClause = true;
     return true;
   }
   
@@ -120,7 +125,9 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
   // scan for duplicate clauses, or the first clause that could be deleted
   int clausePosition = -1;  // position of the clause in the occurrence list of minLit
   if( checkDuplicateClauses != 0 || isDelete ) {
+    if( verbose > 4 ) cerr << "c [BW-CHK] compare with minLit " << minLit << " against " << oneWatch[ minLit ].size() << " clauses" << endl;
     for( int i = 0 ; i < oneWatch[ minLit ].size(); ++ i ) {
+      if( verbose > 4 ) cerr << "c [BW-CHK] compare to clause-ref " << oneWatch[ minLit ][i].getRef() << " with id " << oneWatch[ minLit ][i].getID() << endl;
       const Clause& clause = ca[ oneWatch[ minLit ][i].getRef() ];
       if( clause.size() != ps.size() ) continue; // not the same size means no the same clause, avoid more expensive checks
       bool matches = true;
@@ -136,7 +143,7 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
       }
     }
     if( checkDuplicateClauses != 0 ) { // optimize most relevant execution path
-      if( checkDuplicateClauses == 1 ) {
+      if( foundDuplicateClause && checkDuplicateClauses == 1 ) {
 	cerr << "c WARNING: clause " << ps << " occurs multiple times in the proof, e.g. at position " << oneWatch[ minLit ][ clausePosition ].getID() << " of the full proof" << endl;
 	#warning add a verbosity option to the object, so that this information is only shown in higher verbosities
       }
@@ -193,8 +200,10 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
       const CRef cref = ca.alloc( ps );                         // allocate clause
       if( drat ) ca[ cref ].setExtraLiteral( ps [0] );          // memorize first literal of the clause (if DRAT should be checked on the first literal only)
       oneWatch[minLit].push( ClauseData( cref, id ) );          // add clause to structure so that it can be checked
+
+      if( verbose > 2 ) cerr << "c [BW-CHK] add clause " << ca[cref] << " with id " << id << " ref " << cref << " and minLit " << minLit << endl;
       
-      fullProof.push( ClauseData( CRef_Undef, id ) );           // add clause data to the proof (formula)
+      fullProof.push( ClauseData( cref, id ) );                 // add clause data to the proof (formula)
     } else {
       clauseCount.growTo( oneWatch[ minLit ][ clausePosition ].getID() + 1 ); // make sure the storage for the other ID exists
       clauseCount[ oneWatch[ minLit ][ clausePosition ].getID() + 1 ] ++;     // memorize that this clause has been seen one time more now 
@@ -202,7 +211,7 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
   }
   
   // update ID, if something has been added to the proof
-  assert( (currentID == fullProof.size() || currentID == fullProof.size() + 1) && "the change can be at most one element" );
+  assert( (currentID == fullProof.size() || currentID + 1 == fullProof.size() ) && "the change can be at most one element" );
   if( fullProof.size() > currentID ) {
     currentID ++;
     if( currentID == ((1ull << 32) -1 ) ) {
@@ -229,11 +238,25 @@ bool BackwardChecker::checkClause(vec< Lit >& clause, bool drupOnly, bool clearM
   
   label.growTo( fullProof.size() );
   
+  // if the empty clause is part of the formula we are done already
+  if( formulaContainsEmptyClause ) {
+    if( clearMarks ) label.clear( true ); // free resources
+    return true;
+  }
+
   // setup checker, verify, destroy object
 #warning have an option that allows to keep the original clauses
   sequentialChecker = new SequentialBackwardWorker( drupOnly ? false : drat, ca, fullProof, label, formulaClauses, variables, false );
+  sequentialChecker->initialize( fullProof.size(), false );
   bool ret = sequentialChecker->checkClause( clause );
+  sequentialChecker->release(); // write back the clause storage
   delete sequentialChecker;
+  
+  if( ret ) {
+    for( int i = formulaClauses ; i < fullProof.size(); ++ i ) { // for all clauses in the proof
+      assert( ( !label[i].isMarked() || label[i].isVerified() ) && "each labeled clause has to be verified" );
+    }
+  }
   
   if( clearMarks ) label.clear( true ); // free resources
   

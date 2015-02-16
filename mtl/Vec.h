@@ -89,6 +89,12 @@ public:
     // Duplicatation (preferred instead):
     void copyTo(vec<T>& copy) const { copy.clear(); copy.growTo(sz); for (int i = 0; i < sz; i++) copy[i] = data[i]; }
     void moveTo(vec<T>& dest) { dest.clear(true); dest.data = data; dest.sz = sz; dest.cap = cap; data = NULL; sz = 0; cap = 0; }
+    
+    /** reduce used space to exactly fit the space that is needed */
+    void fitSize() {
+      cap = sz;
+      data = (T*)::realloc(data, (cap) * sizeof(T));
+    }
 };
 
 

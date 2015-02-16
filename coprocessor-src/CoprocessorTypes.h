@@ -662,7 +662,7 @@ inline bool CoprocessorData::randomized()
 
 inline bool CoprocessorData::isInterupted()
 {
-  return solver->asynch_interrupt || 0 != solver->terminationCallbackMethod( solver->terminationCallbackState );
+  return solver->asynch_interrupt || (0 != solver->terminationCallbackMethod && 0 != solver->terminationCallbackMethod( solver->terminationCallbackState ) );
 }
 
 

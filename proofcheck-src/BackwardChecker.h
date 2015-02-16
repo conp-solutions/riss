@@ -95,15 +95,17 @@ protected:
   int  threads;                // number of threads that should be used for the analysis
   int  checkDuplicateLits;     // how to handle duplicate literals in clauses (0 = ignore, 1 = warn, 2 = remove during parsing)
   int  checkDuplicateClauses;  // how to handle duplicate clauses in the proof (0 = ignore, 1 = warn, 2 = merge during parsing)
-
+  int  verbose;                // how verbose the tool should be
+  
   // operation data
-  int variables;           // number of seen variables
-  bool hasBeenInterupted;  // indicate external interupt
-  bool readsFormula;       // indicate that we are still parsing the formula
-  vec<int> presentLits;    // to check input clauses for duplicates and to compare clauses
-  int64_t currentID;       // id of the clause that is added next
-  bool sawEmptyClause;     // memorize that an empty clause has been parsed
-  bool inputMode;          // we expect more clauses to be added
+  int variables;                   // number of seen variables
+  bool hasBeenInterupted;          // indicate external interupt
+  bool readsFormula;               // indicate that we are still parsing the formula
+  vec<int> presentLits;            // to check input clauses for duplicates and to compare clauses
+  int64_t currentID;               // id of the clause that is added next
+  bool sawEmptyClause;             // memorize that an empty clause has been parsed
+  bool formulaContainsEmptyClause; // memorize that we parsed an empty clause in the formula
+  bool inputMode;                  // we expect more clauses to be added
   
   // statistics
   int64_t duplicateClauses, clausesWithDuplicateLiterals, mergedElement;

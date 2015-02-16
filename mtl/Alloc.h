@@ -23,6 +23,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "mtl/XAlloc.h"
 #include "mtl/Vec.h"
+
 #include <iostream>
 namespace Riss {
 
@@ -70,6 +71,12 @@ class RegionAllocator
     Ref      ael       (const T* t)  { assert((void*)t >= (void*)&memory[0] && (void*)t < (void*)&memory[sz-1]);
         return  (Ref)(t - &memory[0]); }
 
+    /** reduce used space to exactly fit the space that is needed */
+    void fitSize() {
+      cap = sz;                                      // reduce capacity to the number of currently used elements
+      memory = (T*)xrealloc(memory, sizeof(T)*cap);  // free resources
+    }
+        
     void     moveTo(RegionAllocator& to) {
         if (to.memory != NULL) ::free(to.memory);
         to.memory = memory;
@@ -82,12 +89,9 @@ class RegionAllocator
     }
     
     void     copyTo(RegionAllocator& to) {
-        if (to.memory != NULL) {
-	  ::free(to.memory); 
-	  to.capacity( cap );
-	}
-        to.memory = memory;
-        to.sz = sz;
+	to.capacity( cap );                         // ensure that there is enough space
+        memcpy(to.memory, memory, sizeof(T) * cap); // copy memory content
+        to.sz = sz;                                 // lazyly delete all elements that might have been there before (does not call destructor)
         to.cap = cap;
         to.wasted_ = wasted_;
 
@@ -95,7 +99,7 @@ class RegionAllocator
 
     void clear(bool clean = false) { sz = 0; wasted_ = 0; 
       if( clean ) { // free used resources
-	if (memory != NULL) ::free(memory);
+	if (memory != NULL) { ::free(memory); memory = NULL; }
 	cap = 0;
       }
     }
