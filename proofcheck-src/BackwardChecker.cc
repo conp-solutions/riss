@@ -6,6 +6,8 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 
 #include "proofcheck-src/SequentialBackwardWorker.h"
 
+#include "mtl/Sort.h"
+
 using namespace Riss;
 
 BackwardChecker::BackwardChecker(bool opt_drat, int opt_threads, bool opt_fullRAT)
@@ -18,7 +20,7 @@ threads( opt_threads ),
 checkDuplicateLits (1),
 verbose(0), // highest possible for development
 checkDuplicateClauses (1),
-variables(0),
+variables(6),
 hasBeenInterupted( false ),
 readsFormula( true ),
 currentID(0),
@@ -44,7 +46,7 @@ int BackwardChecker::newVar()
   if( readsFormula ) {
     oneWatch.init(mkLit(variables, false)); // get space in onewatch structure, if we are still parsing
     oneWatch.init(mkLit(variables, true ));
-    presentLits.growTo( 2 * variables ); // per literal
+    presentLits.growTo( 2 * variables, 0 ); // per literal
   }
   variables ++;
   return v;
@@ -56,12 +58,14 @@ void BackwardChecker::reserveVars(int newVariables)
   if( readsFormula ) {
     oneWatch.init(mkLit(newVariables, false));
     oneWatch.init(mkLit(newVariables, true ));
-    presentLits.growTo( 2 * newVariables ); // per literal
+    presentLits.growTo( 2 * newVariables ,0 ); // per literal
   }
 }
 
 bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDelete)
 {
+  if( sawEmptyClause ) return true;
+  
   // check the state
   if( !inputMode ) {
     cerr << "c WARNING: tried to add clauses after input mode has been deactivated already" << endl;
@@ -80,6 +84,7 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
     fullProof.push( ClauseData( CRef_Undef, id ) );
     currentID ++;
     sawEmptyClause = true;
+    if( verbose > 4 ) cerr << "c [BW-CHK] parsed the empty clause" << endl;
     if( readsFormula ) formulaContainsEmptyClause = true;
     return true;
   }
@@ -88,37 +93,37 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
   bool hasDuplicateLiterals = false; // stats to be counted in the object
   bool foundDuplicateClause = false; // stats to be counted in the object
   bool isTautology = false;          // stats to be counted in the object
-  
-  if( checkDuplicateLits == 0 && checkDuplicateClauses == 0 && !isDelete) { // fast routine if not additional checks are enabled
-    for( int i = 0 ; i < ps.size(); ++ i ) {
-      minLit = ps[i] < minLit ? ps[i] : minLit;
-    }
-  } else {
-    int litsToKeep = 0;
+
+  // memorize the first literal
+  const Lit firstLiteral = ps.size() > 0 ? ps[0] : lit_Error;
+  // sort literals to perform merge sort
+  sort( ps );
+  // find minimal literal
+  for( int i = 0 ; i < ps.size(); ++ i )
+    minLit = ps[i] < minLit ? ps[i] : minLit;
+
+  // duplicate analysis
+  if( checkDuplicateLits > 0  ) {
+    int litsToKeep = 1;
     // make a list of how many literals are present of which type
-    for( int i = 0 ; i < ps.size(); ++ i ) {
-      minLit = ps[i] < minLit ? ps[i] : minLit;      // select minimum
-      assert( presentLits[ toInt( ps[i] ) ] >= 0 && "number of occurrence cannot be negative, used for below comparison" );
-      if( presentLits[ toInt( ~ps[i] ) ] != 0 ) isTautology = true;
-      if( presentLits[ toInt( ps[i] ) ] != 0 ) {
-	hasDuplicateLiterals = true;
-	if( checkDuplicateLits != 0 ) {       // optimize most frequent execution path that occurs when duplicates are ignored
-	  if( checkDuplicateLits == 1 ) {     // keep duplicates, but warn
-	    presentLits[ toInt( ps[i] ) ] ++; // count the duplicate
-	    ps[ litsToKeep++ ] = ps[i];       // keep the duplicate literal
-	  }
-	  // otherwise the literal is implicitely deleted, corresponds to an empty else branch
-	}
+    for( int i = 1 ; i < ps.size(); ++ i ) {
+      if( ps[i] == ~ps[litsToKeep] ) isTautology = true;
+      if( ps[i] != ps[litsToKeep] ) {
+	ps[++litsToKeep] = ps[i];
       } else {
-	presentLits[ toInt( ps[i] ) ] = 1;  // count first occurrence
-	ps[ litsToKeep++ ] = ps[i];         // keep this literal
+	if( checkDuplicateLits == 1 ) {
+	  hasDuplicateLiterals = true;
+	  ps[litsToKeep++] = ps[i];
+	} else {
+	  // implicitely remove this literal 
+	}
       }
     }
+    if( verbose > 5 && litsToKeep != ps.size() ) cerr << "c [BW-CHK] remove " << ps.size() - litsToKeep << " literals from the clause" << endl;
     ps.shrink_( ps.size() - litsToKeep );   // remove the literals that occured multiple times
     
     if( hasDuplicateLiterals ) {
-      cerr << "c WARNING: clause " << ps << " has/had duplicate literals" << endl;
-#warning add a verbosity option to the object, so that this information is only shown in higher verbosities
+      if( verbose > 0 ) cerr << "c WARNING: clause " << ps << " has/had duplicate literals" << endl;
     }
   }
   
@@ -127,17 +132,28 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
   if( checkDuplicateClauses != 0 || isDelete ) {
     if( verbose > 4 ) cerr << "c [BW-CHK] compare with minLit " << minLit << " against " << oneWatch[ minLit ].size() << " clauses" << endl;
     for( int i = 0 ; i < oneWatch[ minLit ].size(); ++ i ) {
-      if( verbose > 4 ) cerr << "c [BW-CHK] compare to clause-ref " << oneWatch[ minLit ][i].getRef() << " with id " << oneWatch[ minLit ][i].getID() << endl;
+      if( verbose > 5 ) cerr << "c [BW-CHK] compare to clause-ref " << oneWatch[ minLit ][i].getRef() << " with id " << oneWatch[ minLit ][i].getID() << " clause: " << ca[ oneWatch[ minLit ][i].getRef() ] << endl;
       const Clause& clause = ca[ oneWatch[ minLit ][i].getRef() ];
-      if( clause.size() != ps.size() ) continue; // not the same size means no the same clause, avoid more expensive checks
-      bool matches = true;
-      for( int j = 0; j < clause.size(); ++ j ) {
-	const Lit& l = clause[j];
-	if( presentLits[ toInt(l) ] == 0 ) { matches = false; break; } // there is a literal, that is not present in the current clause (often enough)
-	assert( presentLits[ toInt(l) ] > 0 && "number of occurence cannot be negative" );
-	presentLits[ toInt(l) ] --;
+      if( clause.size() != ps.size() ) {
+	if( verbose > 6 ) cerr << "c [BW-CHK] size match failed" << endl;
+	continue; // not the same size means no the same clause, avoid more expensive checks
       }
-      if( matches ) {  // found a clause we are looking for
+      bool matches = true;
+      int j = 1 ; // the minimal literal has to be the same
+      // merge compare routine
+      assert( ps[0] == clause[0] && "by construction the smallest literal is always equal" );
+      for( ; j < ps.size(); ++j ) {
+	assert( (ps[j-1] <= ps[j]) && "added clause has to be sorted" );
+	assert( (clause[j-1] <= clause[j]) && "database clause has to be sorted" );
+	if( ps[j] != clause[j] ) { 
+	  assert( j > 0 && "had to be incremented at least once" );
+	  if( verbose > 6 ) cerr << "c [BW-CHK] did not find match for literal " << ps[j-1] << endl;
+	  matches = false; 
+	  break;
+	}
+      }
+      // found a clause we are looking for
+      if( matches ) {
 	clausePosition = i; break;
 	foundDuplicateClause = true;
       }
@@ -150,11 +166,6 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
     }
   }
   
-  // clean literal occurrence list again
-  if( !checkDuplicateLits > 0 || checkDuplicateClauses > 0 || isDelete) { // TODO: be more precise here, if delete was succesful with duplicate merging, the vector is already cleared
-    for( int i = 0 ; i < ps.size(); ++ i ) presentLits[ toInt( ps[i] ) ] = 0; // set all to 0!
-  }
-  
   // tautologies are ignored, if duplicate literals should be handled properly
   if( isTautology && checkDuplicateLits == 2 ) {
     return true; // tautology is always fine
@@ -163,6 +174,7 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
   // handle the data and add current clause to the proof
   if ( isDelete ) {
     // did we find the corresponding clause?
+    assert( clausePosition >= 0 && "the clause that should be deleted has to exist in the proof" );
     if( clausePosition == -1 ) {
       cerr << "c WARNING: clause " << ps << " that should be deleted at position " << id << " did not find a maching partner" << endl;
       return false;
@@ -190,23 +202,32 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
       oneWatch[ minLit ].shrink_(1);  // fast version of shrink (do not call descructor)
       
       // add to proof an element that represents this deletion
-      fullProof.push( ClauseData( cdata.getRef(), id ) );
+      fullProof.push( ClauseData( cdata.getRef(), otherID ) ); // store the ID of the clause that is enabled when running backward over this item
+      fullProof[ fullProof.size() - 1 ].setIsDelete(); // tell the item that its an deletion item
     }
     
   } else {
     if( foundDuplicateClause ) duplicateClauses ++;             // count statistics
     if( hasDuplicateLiterals ) clausesWithDuplicateLiterals ++; // count statistics
-    if( !foundDuplicateClause || checkDuplicateClauses != 2 ) { // only add the clause, if we do not merge duplicate clauses
-      const CRef cref = ca.alloc( ps );                         // allocate clause
-      if( drat ) ca[ cref ].setExtraLiteral( ps [0] );          // memorize first literal of the clause (if DRAT should be checked on the first literal only)
-      oneWatch[minLit].push( ClauseData( cref, id ) );          // add clause to structure so that it can be checked
-
-      if( verbose > 2 ) cerr << "c [BW-CHK] add clause " << ca[cref] << " with id " << id << " ref " << cref << " and minLit " << minLit << endl;
-      
-      fullProof.push( ClauseData( cref, id ) );                 // add clause data to the proof (formula)
+    if( ps.size() == 0 ) {
+      sawEmptyClause = true;
+      if( readsFormula ) formulaContainsEmptyClause = true;
+      fullProof.push( ClauseData() );
+      fullProof[ fullProof.size() -1 ].setIsEmpty();
     } else {
-      clauseCount.growTo( oneWatch[ minLit ][ clausePosition ].getID() + 1 ); // make sure the storage for the other ID exists
-      clauseCount[ oneWatch[ minLit ][ clausePosition ].getID() + 1 ] ++;     // memorize that this clause has been seen one time more now 
+      if( !foundDuplicateClause || checkDuplicateClauses != 2 ) { // only add the clause, if we do not merge duplicate clauses
+	assert( ps.size() > 0 && "should not add the empty clause again to the proof" ); // once seeing the empty clause should actually stop adding further clauses to the proof
+	const CRef cref = ca.alloc( ps );                         // allocate clause
+	if( drat ) ca[ cref ].setExtraLiteral( firstLiteral );    // memorize first literal of the clause (if DRAT should be checked on the first literal only)
+	oneWatch[minLit].push( ClauseData( cref, id ) );          // add clause to structure so that it can be checked
+
+	if( verbose > 2 ) cerr << "c [BW-CHK] add clause " << ca[cref] << " with id " << id << " ref " << cref << " and minLit " << minLit << endl;
+	
+	fullProof.push( ClauseData( cref, id ) );                 // add clause data to the proof (formula)
+      } else {
+	clauseCount.growTo( oneWatch[ minLit ][ clausePosition ].getID() + 1 ); // make sure the storage for the other ID exists
+	clauseCount[ oneWatch[ minLit ][ clausePosition ].getID() + 1 ] ++;     // memorize that this clause has been seen one time more now 
+      }
     }
   }
   
@@ -248,11 +269,11 @@ bool BackwardChecker::checkClause(vec< Lit >& clause, bool drupOnly, bool clearM
 #warning have an option that allows to keep the original clauses
   sequentialChecker = new SequentialBackwardWorker( drupOnly ? false : drat, ca, fullProof, label, formulaClauses, variables, false );
   sequentialChecker->initialize( fullProof.size(), false );
-  bool ret = sequentialChecker->checkClause( clause );
+  bool ret = sequentialChecker->checkClause( clause, 0, readsFormula ); // check only single clause, if we did not see the proof yet
   sequentialChecker->release(); // write back the clause storage
   delete sequentialChecker;
   
-  if( ret ) {
+  if( ret && !readsFormula ) {
     for( int i = formulaClauses ; i < fullProof.size(); ++ i ) { // for all clauses in the proof
       assert( ( !label[i].isMarked() || label[i].isVerified() ) && "each labeled clause has to be verified" );
     }

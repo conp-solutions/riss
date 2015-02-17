@@ -28,17 +28,17 @@ public:
     unsigned long validUntil :48; // indicate id until this clause is valid
   public:
     /** initially, the item is never valid (only at the very last point in the proof )*/
-    ClauseData () : id( ~(1ull << 48) ), validUntil( ~(1ull << 48) ) { data.ref = CRef_Undef; }
+    ClauseData () : id( (~(0ull)) ), validUntil( (~(0ull)) ) { data.ref = CRef_Undef; }
     ClauseData (const CRef& outer_ref, const int64_t& outer_id) 
-    : id(outer_id ), validUntil( ~(1ull << 48) ) {
+    : id(outer_id ), validUntil( (~(0ull)) ) {
       data.ref = outer_ref;
-      assert( outer_id < ( ~(1ull << 48) - 1 ) && "stay in precision" );
+      assert( outer_id <= ( 281474976710655 ) && "stay in precision" );
     }
     ClauseData (const Lit& outer_lit, const int64_t& outer_id, const int64_t outer_validUntil) 
     : id(outer_id ), validUntil( outer_validUntil ) {
       data.lit = outer_lit;
-      assert( outer_id < ( ~(1ull << 48) - 1 ) && "stay in precision" );
-      assert( outer_validUntil < ( ~(1ull << 48) - 1 ) && "stay in precision" );
+      assert( outer_id <= ( 281474976710655 ) && "stay in precision" );
+      assert( outer_validUntil <= ( 281474976710655 ) && "stay in precision" );
     }
     
     /** getters */
@@ -49,14 +49,16 @@ public:
     /** check whether the clause is valid to a given ponit in the proof */
     bool isValidAt( const int64_t& clauseID ) const { return clauseID >= getID() && clauseID < getValidUntil(); }  
     /** get type of the entry in the proof */
-    bool isDelete() const { return validUntil == (~(1ull << 48) - 1); }
+    bool isDelete() const { return validUntil == 281474976710654; } // 2 ^ 48 - 2
+    bool isEmptyClause() const { return data.ref == CRef_Undef; } 
     
     /** setters */
     void setCRef( const CRef& cref )               { data.ref = cref; }
     void setLit ( const Lit& lit )                 { data.lit = lit; }
-    void setID( const int64_t outer_id )           { assert( outer_id < ( ~(1ull << 48) - 1 ) && "stay in precision" ); id = outer_id; }
-    void setInvalidation( const int64_t outer_id ) { assert( outer_id < ( ~(1ull << 48) - 1 ) && "stay in precision" ); validUntil = outer_id; }
-    void setIsDelete()                             { validUntil = (~(1ull << 48) - 1); }
+    void setID( const int64_t outer_id )           { id = outer_id; }
+    void setInvalidation( const int64_t outer_id ) { validUntil = outer_id; }
+    void setIsDelete()                             { validUntil = 281474976710654; }
+    void setIsEmpty()                              { data.ref = CRef_Undef; }
   };
 
   /** indicator of the state of a clause in the proof / formula (marked, verified, ...)*/

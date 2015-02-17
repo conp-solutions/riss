@@ -94,9 +94,10 @@ public:
   /** check whether the given clause is in the proof 
    * @param clause clause to be verified
    * @param untilProofPosition perform partial check until the specified position (when not using chronological, this might leave unverified clauses behind)
-   * @return true, if the proof is a valid unsatisfiability proof
+   * @param returnAfterInitialCheck check only the given clause - if its check succeeds, return true
+   * @return true, if the proof is a valid unsatisfiability proof (or the given claus can be added to the current proof)
    */
-  bool checkClause( vec<Lit>& clause, int64_t untilProofPosition = 1);
+  bool checkClause( vec<Lit>& clause, int64_t untilProofPosition = 0, bool returnAfterInitialCheck = false);
   
   /** check whether the proof is valid for the empty clause 
    * @param untilProofPosition perform partial check until the specified position
@@ -179,7 +180,7 @@ bool SequentialBackwardWorker::checkSingleClauseAT(const int64_t currentID, cons
   nonMarkedQHead = 0; // there might have been more marked clauses in between, so start over
   markedUnitHead = 0;
   
-  if( verbose > 2 ) cerr << "c [S-BW-CHK] check AT for clause " << c << " " << extraLits << " at proof position " << currentID << " (reuse: " << reuseClause << ")" << endl;
+  if( verbose > 2 ) cerr << endl << endl << "c [S-BW-CHK] check AT for clause " << c << " " << extraLits << " at proof position " << currentID << " (reuse: " << reuseClause << ")" << endl;
   
   if( !reuseClause ) {
     for( int i = 0 ; i < c.size(); ++ i ) { // enqueue all complements
@@ -196,10 +197,17 @@ bool SequentialBackwardWorker::checkSingleClauseAT(const int64_t currentID, cons
   CRef confl = CRef_Undef;
   bool firstCall = true;
   do {
+    
+    if( verbose > 4 ) {
+      cerr << "c trail: " << trail.size() << " markedUnits: " << markedUnitClauses.size() << " non-markedUnits: " << nonMarkedUnitClauses.size() << endl;
+      cerr << "c HEAD: markedUnit: " << markedUnitHead << " marked: " << markedQhead << " non-markedUnits: " << nonMarkedUnithead << " non-marked: " << nonMarkedQHead << endl;
+      cerr << "c trail literals: " << trail << endl;
+    }
+    
     // propagate on all marked clauses we already collected
     confl = propagateMarked( currentID, firstCall );
     assert( (confl != CRef_Undef || markedQhead == trail.size()) && "visitted all literals during propagation" );
-    assert( (confl != CRef_Undef || markedUnitHead == markedUnitClauses.size()) && "visitted all marked unit clauses" );
+    assert( (confl != CRef_Undef || markedUnitHead >= markedUnitClauses.size()) && "visitted all marked unit clauses" );
     firstCall = false;
     // if we found a conflict, stop
     if( confl != CRef_Undef ) break;
@@ -208,6 +216,7 @@ bool SequentialBackwardWorker::checkSingleClauseAT(const int64_t currentID, cons
     if( verbose > 4 ) {
       cerr << "c trail: " << trail.size() << " markedUnits: " << markedUnitClauses.size() << " non-markedUnits: " << nonMarkedUnitClauses.size() << endl;
       cerr << "c HEAD: markedUnit: " << markedUnitHead << " marked: " << markedQhead << " non-markedUnits: " << nonMarkedUnithead << " non-marked: " << nonMarkedQHead << endl;
+      cerr << "c trail literals: " << trail << endl;
     }
     
     // if there is not yet a conflict, enqueue the first non-marked unit clause

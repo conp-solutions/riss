@@ -61,12 +61,18 @@ else
      if [ "$lstat" -eq "124" ]
      then
         # we got a timeout here!
-				mkdir -p verificationTimeout # collect instances where lingeling performs badly
+	mkdir -p verificationTimeout # collect instances where lingeling performs badly
         mv $2 verificationTimeout
         exit 124
      fi
 		
-		 if [ "$lstat" -ne "0" ]
+		 # instead of looking for exit code, grep for matching pattern
+		 echo $checkOutput | grep "s VERIFIED" > /dev/null
+		 gstat=$?
+		 
+		 echo "gstat: $gstat output: $checkOutput"
+		
+		 if [ "$gstat" -ne "0" ]
      then
         # verification failed
         exit 26
