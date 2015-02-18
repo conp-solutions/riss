@@ -3,24 +3,35 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 **************************************************************************************************/
 
 #include "proofcheck-src/BackwardChecker.h"
-
 #include "proofcheck-src/BackwardVerificationWorker.h"
-
 #include "mtl/Sort.h"
-
 #include "coprocessor-src/CoprocessorThreads.h"
+
+#include <fstream>
+#include <sstream>
+
+static IntOption  opt_splitLoad   ("BACKWARD-CHECK", "splitLoad",    "number of clauses in queue before splitting", 8, IntRange(2, INT32_MAX));
+static IntOption  opt_verbose     ("BACKWARD-CHECK", "bwc-verbose",  "verbosity level of the checker", 0, IntRange(0, 8));
+static BoolOption opt_statistics  ("BACKWARD-CHECK", "bwc-stats",    "print statistics about backward verification", true);
+static BoolOption opt_minimalCore ("BACKWARD-CHECK", "bwc-min-core", "try to use as few formula clauses as possible", true);
+
+static StringOption opt_coreFile  ("BACKWARD-CHECK", "cores",  "Write unsatisfiable sub formula into this file",0);
+static StringOption opt_proofFile ("BACKWARD-CHECK", "lemmas", "Write relevant part of proof in this file",0);
 
 using namespace Riss;
 
 BackwardChecker::BackwardChecker(bool opt_drat, int opt_threads, bool opt_fullRAT)
 :
+proofWidth(-1), 
+proofLength(-1), 
+unsatisfiableCore(-1),
 formulaClauses( 0 ),
 oneWatch ( ClauseDataDeleted() ), // might fail in compilation depending on which features of the object are used
 drat( opt_drat ),
 fullRAT( opt_fullRAT ),
 threads( opt_threads ),
 checkDuplicateLits (1),
-verbose(5), // highest possible for development
+verbose(opt_verbose), // highest possible for development
 checkDuplicateClauses (1),
 variables(0),
 hasBeenInterupted( false ),
@@ -31,7 +42,8 @@ formulaContainsEmptyClause( false ),
 inputMode( true ),
 duplicateClauses(0), 
 clausesWithDuplicateLiterals(0),
-mergedElement(0)
+mergedElement(0),
+loadUnbalanced(0)
 {
   ca.extra_clause_field = drat; // if we do drat verification, we want to remember the first literal in the extra field
   if( verbose > 0 ) cerr << "c [BW-CHK] create backward checker with " << threads << " threads, and drat: " << drat << endl;
@@ -256,6 +268,49 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
   return true;
 }
 
+
+void BackwardChecker::printStatistics(std::ostream& s) {
+  if( !opt_statistics ) return; // do not print, if disabled
+
+  // make sure we do not divide by 0
+  const double cpuT = verificationClock.getCpuTime() == 0 ? 0.000001 : verificationClock.getCpuTime();
+  const double wallT = verificationClock.getCpuTime() == 0 ? 0.000001 : verificationClock.getCpuTime();
+  
+  s << "c ======== VERIFICATION STATISTICS - OVERVIEW ========" << endl;
+  
+  s << "c verification time: cpu: " << cpuT << " wall: " << wallT << endl;
+  s << "c proof: length: " << proofLength << " width: " << proofWidth << " core: " << unsatisfiableCore << endl;
+  
+  if( threads > 1 ) {
+    s << "c ======== PARALLEL VERIFICATION STATISTICS ========" << endl;
+    s << "c threads: " << threads << " speedup: " << cpuT / wallT << " efficiency: " << cpuT / ( wallT * threads ) << endl;
+    s << "c ID checks RATchecks propagatedLits maxTodo" << endl;
+    for( int i = 0; i < threads; ++ i ) {
+      s << "c " << i << " " 
+        << statistics[i].checks << " "
+	<< statistics[i].RATchecks << " "
+	<< statistics[i].prop_lits << " "
+	<< statistics[i].max_marked << endl;
+      if( i > 0 ) {
+	statistics[0].checks += statistics[i].checks;
+	statistics[0].RATchecks += statistics[i].RATchecks;
+	statistics[0].prop_lits += statistics[i].prop_lits;
+	statistics[0].max_marked += statistics[i].max_marked;
+      }
+    }
+  }
+  s << "c ======== VERIFICATION STATISTICS ========" << endl;
+  s << "c    checks RATchecks propagatedLits maxTodo" << endl;
+  s << "c " << "ALL" << " " 
+        << statistics[0].checks << " "
+	<< statistics[0].RATchecks << " "
+	<< statistics[0].prop_lits << " "
+	<< statistics[0].max_marked << endl;
+  s << "c check/sec: cpu: " << statistics[0].checks / cpuT
+    << " wall: "  << statistics[0].checks / wallT  << endl;
+  s << "c ====================================================" << endl;
+}
+
 void BackwardChecker::clearLabels(bool freeResources) {
   label.clear( freeResources );
   if( ! freeResources ) {
@@ -265,45 +320,71 @@ void BackwardChecker::clearLabels(bool freeResources) {
 
 bool BackwardChecker::checkClause(vec< Lit >& clause, bool drupOnly, bool workOnCopy)
 {
+  // measure the time for this method call with the clock
+  verificationClock.reset();
+  MethodClock mc( verificationClock );
+  
   label.growTo( fullProof.size() );
+  
+  resetStatistics();
+  if( opt_statistics ) statistics.growTo( threads );
   
   // if the empty clause is part of the formula we are done already
   if( formulaContainsEmptyClause ) {
+    if( verbose > 0 ) cerr << "c [BW-CHK] formula contains empty clause" << endl;
     return true;
   }
 
+  // mark all clauses of the formula, if enabled by the routine (clauses are not checked, but help to propagate more eagerly)
+  if( !opt_minimalCore ) {
+    for( int id = 0; id < formulaClauses; ++ id ) 
+      if ( !fullProof[id].isDelete() && !fullProof[id].isEmptyClause() ) label[id].setMarked();
+  }
+  
   // setup checker, verify, destroy object
 #warning have an option that allows to keep the original clauses
 
   if( verbose > 0 ) cerr << "c [BW-CHK] verifiy clause with " << threads << " threads" << endl;
 
+  assert( (!opt_statistics || threads == statistics.size()) && "enough space for all the statistics" );
+  
   bool ret = false;
   if (threads == 1 ) {
     sequentialChecker = new BackwardVerificationWorker( drupOnly ? false : drat, ca, fullProof, label, formulaClauses, variables, workOnCopy );
     sequentialChecker->initialize( fullProof.size(), false );
     ret = ( l_True == sequentialChecker->checkClause( clause, 0, readsFormula ) ); // check only single clause, if we did not see the proof yet
+    
+    if( opt_statistics ) {
+      statistics[0].max_marked = sequentialChecker->maxClausesToBeChecked;
+      statistics[0].prop_lits = sequentialChecker->num_props;
+      statistics[0].checks = sequentialChecker->verifiedClauses;
+      statistics[0].RATchecks = sequentialChecker->ratChecks;
+    }
+    
     sequentialChecker->release(); // write back the clause storage
     delete sequentialChecker;
+    sequentialChecker = 0;
   } else {
     assert ( threads > 1 && "there have to be multiple workers"  );
-    threadContoller = new Coprocessor::ThreadController(threads);
     
     // first worker does not work on a copy
     sequentialChecker = new BackwardVerificationWorker( drupOnly ? false : drat, ca, fullProof, label, formulaClauses, variables, workOnCopy );
-    sequentialChecker->setParallelMode( BackwardVerificationWorker::copy ); // so far, we copy
+    sequentialChecker->setParallelMode( BackwardVerificationWorker::copy ); // so far, we copy the clause data base, so that each worker has full read and write access
     sequentialChecker->initialize( fullProof.size(), false );
     // set sequential limit, so that work can be split afterwards
-    sequentialChecker->setSequentialLimit( 8 ); // TODO should become a parameter
+    sequentialChecker->setSequentialLimit( opt_splitLoad ); 
     
     // let sequential checker make a start and verify clauses until the set sequential limit of clauses has to be verified
     lbool intermediateResult = sequentialChecker->checkClause( clause, 0, readsFormula );
     sequentialChecker->setSequentialLimit( 0 ); // disable limit again
     
     ret = intermediateResult == l_True; // intermediate results
-    
+    if( verbose > 0 ) cerr << "c [BW-CHK] sequential check sufficient: " << ret << endl;
+    bool parallelJobFailed = false;     // indicate that one job failed
     if( intermediateResult == l_Undef )  { // do the parallel work // TODO have separate method
       
       // create workers
+      int assignedWorkers = 1; // initially we have one worker
       BackwardVerificationWorker** workers = new BackwardVerificationWorker*[ threads ];
       lbool* results = new lbool[ threads ];
       for( int i = 0 ; i < threads; ++ i ) {
@@ -319,8 +400,77 @@ bool BackwardChecker::checkClause(vec< Lit >& clause, bool drupOnly, bool workOn
 	  cerr << endl;
 	}
       }
+      
+      // split work for all threads
+      int splitIteration = 0;
+      while( assignedWorkers < threads ) {
+	
+	// split work 
+	int previouslyAssignedWorkers = assignedWorkers;
+	for( int i = 0 ; i < previouslyAssignedWorkers && assignedWorkers < threads; ++ i ) {
+	  cerr << "c split from " << i << " to " << assignedWorkers << endl;
+	  workers[assignedWorkers] = workers[i]->splitWork();
+	  assignedWorkers ++;
+	}
+	splitIteration ++;
+	cerr << "c split iteration: " << splitIteration << " assignedWorkers: " << assignedWorkers << endl;
+	
+	if( assignedWorkers == threads ) break;
+	
+	// create jobs that can be executed in parallel
+	for( int i = 0 ; i < assignedWorkers; ++ i ) {
+	  // execute in parallel!
+	  workers[i]->setSequentialLimit( opt_splitLoad ); // set limit
+	  results[i] = workers[i]->continueCheck();        // create more clauses
+	}
+	
+	// wait for all jobs!
+	
+	// process results
+	for( int i = 0 ; i < assignedWorkers; ++ i ) {
+	  if( results[i] == l_False ) parallelJobFailed = true; // job failed
+	  if( results[i] == l_True ) loadUnbalanced ++;    // indicate that one sequential jobs already finished its part // TODO add load balancing
+	}
+      }
+      
+      // solve all parts only, if jobs did not fail already
+      if( ! parallelJobFailed ) {
+      
+	assert( assignedWorkers == threads && "all workers should be used now" );
+	
+	threadContoller = new Coprocessor::ThreadController(threads);
+	threadContoller->init();
+	vector<Coprocessor::Job> jobs( threads );       // have enough jobs
+	WorkerData workerData [ threads ]; // data for each job
+	
+	// run all jobs in parallel
+	// create jobs that can be executed in parallel
+	for( int i = 0 ; i < assignedWorkers; ++ i ) {
+	  // execute in parallel!
+	  workerData[i].worker = workers[i]; // assign pointer
+	  workerData[i].result = l_Undef; // set to be not finished, but not false either
+	  workers[i]->setSequentialLimit( 0 ); // set limit
+	  
+	  // assign jobs
+	  jobs[i].function  = BackwardChecker::runParallelVerfication; // add pointer to the method
+	  jobs[i].argument  = &(workerData[i]);                        // add pointer to the argument of the method
+	  
+	}
 
-      workers[1] = workers[0]->splitWork();
+	if( verbose > 1 ) cerr << "c [BW-CHK] parallel verification of remaining proof with " << threads << " threads" << endl; 
+	// execute all jobs, and wait for all jobs!
+	threadContoller->runJobs( jobs );
+	
+	// process results
+	for( int i = 0 ; i < assignedWorkers; ++ i ) {
+	  results[i] = workerData[i].result;                    // copy result of jobs that has been executed in parallel
+	  if( results[i] == l_False ) parallelJobFailed = true; // job failed
+	}
+	
+	// free resources
+	delete threadContoller ; threadContoller = 0;
+	
+      }
 
       if( verbose > 3 ) { 
 	cerr << "c [BW-CHK] proof marks after sequential work initialization" << endl;
@@ -330,13 +480,6 @@ bool BackwardChecker::checkClause(vec< Lit >& clause, bool drupOnly, bool workOn
 	  cerr << endl;
 	}
       }
-      
-#warning execute routine in parallel!      
-      for( int i = 0 ; i < threads; ++ i ) {
-	cerr << "c [BW-CHK] continue work for worker " << i << endl;
-	results[i] = workers[i]->continueCheck();
-      }
-      cerr << "c [BW-CHK] finished work" << endl;
       
       // collect all results
       ret = true;
@@ -354,9 +497,31 @@ bool BackwardChecker::checkClause(vec< Lit >& clause, bool drupOnly, bool workOn
 	}
       }
       
+      if( opt_statistics ) { // collect statistics per worker
+	for( int i = 1 ; i < threads; ++ i ) {
+	  statistics[i].max_marked = workers[i]->maxClausesToBeChecked;
+	  statistics[i].prop_lits = workers[i]->num_props;
+	  statistics[i].checks = workers[i]->verifiedClauses;
+	  statistics[i].RATchecks = workers[i]->ratChecks;
+	}
+      }
+      
+      // free resources
+      for( int i = 1 ; i < threads; ++ i ) {
+	delete workers[i]; // delete all workers (do not delete sequentialChecker
+      }
+      delete [] results;
+      delete [] workers;
     }
+    // statistics
+    statistics[0].max_marked = sequentialChecker->maxClausesToBeChecked;
+    statistics[0].prop_lits = sequentialChecker->num_props;
+    statistics[0].checks = sequentialChecker->verifiedClauses;
+    statistics[0].RATchecks = sequentialChecker->ratChecks;
     // clean up all data structures
     sequentialChecker->release(); // write back the clause storage
+    delete sequentialChecker;     // free resources
+    sequentialChecker = 0;        // do not delete sequential worker twice
     // TODO: clean up other workers nicely
 #warning free resources
   }
@@ -367,13 +532,13 @@ bool BackwardChecker::checkClause(vec< Lit >& clause, bool drupOnly, bool workOn
     }
   }
   
+  assert( sequentialChecker == 0 && "freed all resources, hence the pointer has to be cleared as well" );
   return ret;
 }
 
 
+bool BackwardChecker::verifyProof () {
 
-bool BackwardChecker::prepareVerification()
-{
   if( !sawEmptyClause ) {
     cerr << "c WARNING: did not parse an empty clause, proof verification will fail" << endl;
     return false;
@@ -381,4 +546,92 @@ bool BackwardChecker::prepareVerification()
   inputMode = false;     // we do not expect any more clauses
   oneWatch.clear( true );     // free used resources
   clauseCount.clear( true );  // free used resources
+  
+  vec<Lit> dummy; // will not allocate memory, so it's ok to be used as a temporal object
+  bool ret = checkClause( dummy );
+  
+  // collect statistics
+  if( statistics ) {
+    unsatisfiableCore = 0; proofWidth = 0; proofLength = 0;
+    assert( label.size() == fullProof.size() && "data should be present" );
+    for( int i = 0; i < fullProof.size(); ++ i ) { // for all clauses in the proof
+//       assert( (i < formulaClauses || !label[i].isMarked() || label[i].isVerified() ) && "each labeled clause has to be verified" );
+      if( label[i].isMarked() ) {
+	assert( !fullProof[i].isDelete() && !fullProof[i].isEmptyClause() && "has to be a usual clause" );
+	if( i < formulaClauses ) unsatisfiableCore ++;
+	else {
+	  const Clause& c = ca[ fullProof[i].getRef() ];
+	  proofWidth = proofWidth >= c.size() ? proofWidth : c.size();
+	  proofLength ++;
+	}
+      }
+    }
+  }
+  
+  if( opt_coreFile != 0 ) {
+    std::ofstream file;
+    file.open( (const char*) opt_coreFile );
+    if( file ) {
+      std::stringstream formula;
+      int cls = 0, vars = 0;
+      for( int i = 0; i < formulaClauses; ++ i ) { // for all clauses in the proof
+	if( label[i].isMarked() ) { // add all labeled clauses to the formula
+	  assert( !fullProof[i].isDelete() && !fullProof[i].isEmptyClause() && "has to be a usual clause" );
+	  const Clause& c = ca[ fullProof[i].getRef() ];
+	  for( int i = 0 ; i < c.size(); ++ i ) { 
+	    formula << c[i] << " ";
+	    vars = vars >= var(c[i]) ? vars: var(c[i]);
+	  }
+	  formula << "0" << endl;
+	  cls ++;
+	}
+      }
+      // write file, including header information
+      file << "p cnf " << vars + 1 << " " << cls << endl;
+      file << formula.str();
+      file.close();
+    } else {
+      cerr << "c WARNING: could not open file " << (const char*) opt_coreFile << " for writing unsatisfiable core" << endl;
+    }
+  }
+  if( opt_proofFile != 0 ) {
+    std::ofstream file;
+    file.open( (const char*) opt_proofFile );
+    if( file ) {
+      file << "o proof" << (drat ? "DRAT" : "DRUP") << endl; // print proof header
+      for( int i = formulaClauses; i < fullProof.size(); ++ i ) { // for all clauses in the proof
+	if( label[i].isMarked() ) { // add all labeled clauses to the formula
+	  std::stringstream clause;
+	  assert( !fullProof[i].isDelete() && !fullProof[i].isEmptyClause() && "has to be a usual clause" );
+	  const Clause& c = ca[ fullProof[i].getRef() ];
+	  for( int i = 0 ; i < c.size(); ++ i ) clause << c[i] << " ";
+	  clause << "0" << endl;
+	  file << clause.str();
+	} else if ( fullProof[i].isDelete() && label[ fullProof[i].getID() ].isMarked() ) {
+	  std::stringstream clause;
+	  assert( !fullProof[i].isDelete() && !fullProof[i].isEmptyClause() && "has to be a usual clause" );
+	  const Clause& c = ca[ fullProof[i].getRef() ];
+	  clause << "d "; // add this deletion information, as the corresponding clause has also been used
+	  for( int i = 0 ; i < c.size(); ++ i ) clause << c[i] << " ";
+	  clause << "0" << endl;
+	  file << clause.str();
+	}
+      }
+      file.close();
+    } else {
+      cerr << "c WARNING: could not open file " << (const char*) opt_proofFile << " for writing minimized proof" << endl;
+    }
+  }
+  
+  // print statistics
+  printStatistics(cerr);
+  
+  return ret;
+}
+
+void* BackwardChecker::runParallelVerfication(void* verificationData)
+{
+  WorkerData* workerData = (WorkerData*) verificationData;
+  workerData->result = workerData->worker->continueCheck();
+  return 0;
 }

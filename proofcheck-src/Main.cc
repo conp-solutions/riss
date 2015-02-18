@@ -165,7 +165,7 @@ int main(int argc, char** argv)
 		printf ("c WARNING given proof format is said to be stronger than the enabled verification\n");
 	      }
 	      gzclose(in);
-	      drupProof = drupProof && ( proofStyle == Riss::dratProof ); // check whether the given proof is claimed to be in the less expensive format
+	      drupProof = drupProof && ( proofStyle == Riss::drupProof ); // check whether the given proof is claimed to be in the less expensive format
 	    }
 	  }
 	  
@@ -179,7 +179,7 @@ int main(int argc, char** argv)
 	      printf ("c WARNING given proof format is said to be stronger than the enabled verification\n");
 	    }
 	    gzclose(in);
-	    drupProof = drupProof && ( proofStyle == Riss::dratProof ); // check whether the given proof is claimed to be in the less expensive format
+	    drupProof = drupProof && ( proofStyle == Riss::drupProof ); // check whether the given proof is claimed to be in the less expensive format
 	  }
 
 	  bool successfulVerification = proofChecker.emptyPresent();

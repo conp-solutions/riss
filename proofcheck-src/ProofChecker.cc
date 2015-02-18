@@ -129,11 +129,7 @@ bool ProofChecker::verifyProof()
       cerr << "c WARNING: should verify proof without parsing an empty clause" << endl;
       return false;
     }
-    if( backwardChecker->prepareVerification() ) { // tell the checker that there will not be any more clauses coming
-      return false;
-    }
-    vec<Lit> dummy; // will not allocate memory, so it's ok to be used as a temporal object
-    return backwardChecker->checkClause( dummy );
+    return backwardChecker->verifyProof();
   }
 }
 

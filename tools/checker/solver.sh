@@ -13,7 +13,7 @@ param="-enabled_cp3 -cp3_stats -bce -bce-bce -bce-bcm -bve -bva"
 # select between printing a proof and not printing a proof
 #
 # run riss without printing a proof
-./riss $1 -mem-lim=2048 /tmp/riss-out-$$ $param -drup=/tmp/proof-riss-$? #> /dev/null 2> /dev/null
+./riss $1 -mem-lim=2048 /tmp/riss-out-$$ $param -proof=/tmp/proof-riss-$? #> /dev/null 2> /dev/null
 status=$?
 cat /tmp/riss-out-$$
 #

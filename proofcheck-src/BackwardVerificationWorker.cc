@@ -4,7 +4,11 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 
 #include "proofcheck-src/BackwardVerificationWorker.h"
 
+#include "utils/Options.h"
+
 using namespace Riss;
+
+static IntOption opt_verbose ("BACKWARD-CHECK", "bvw-verbose", "verbosity level of the verification worker", 0, IntRange(0, 8));
 
 BackwardVerificationWorker::BackwardVerificationWorker(bool opt_drat, ClauseAllocator& outer_ca, vec< BackwardChecker::ClauseData >& outer_fullProof, vec< BackwardChecker::ClauseLabel >& outer_label, int outer_formulaClauses, int outer_variables, bool keepOriginalClauses)
 :
@@ -12,7 +16,7 @@ drat( opt_drat ),
 fullDrat( false ),
 parallelMode( none ),
 sequentialLimit( 0 ),   // initially, there is no limit and the sequential worker
-verbose(7),   // all details for development
+verbose(opt_verbose),   // all details for development
 #warning ADD A VERBOSITY OPTION TO THE TOOL
 formulaClauses( outer_formulaClauses ),
 label( outer_label ),
@@ -209,10 +213,11 @@ BackwardVerificationWorker* BackwardVerificationWorker::splitWork()
     // initialize worker, duplicates have already been removed
     worker->initialize(lastPosition, true);
     
-    worker->lastPosition = lastPosition; // continue at the same position
-    
+    worker->lastPosition = lastPosition;           // continue at the same position
+    worker->minimalMarkedProofItem = lastPosition; // so far we did not mark any item
     // share work
     int counter = 0;
+    int lastMovedItem = lastPosition;
     assert( minimalMarkedProofItem != -1 && "has to be initialized before" );
     for( int i = lastPosition; i >= minimalMarkedProofItem; -- i ) {
       if( proofItemProperties[i].isMarkedByMe() ) {
@@ -220,6 +225,7 @@ BackwardVerificationWorker* BackwardVerificationWorker::splitWork()
 	if( counter & 1 != 0 ) { // move every second element
 	  worker->proofItemProperties[i].markedByMe(); 
 	  worker->clausesToBeChecked ++;
+	  lastMovedItem = i;
 	  proofItemProperties[i].resetMarked();
 	  clausesToBeChecked --;
 	}
@@ -227,7 +233,7 @@ BackwardVerificationWorker* BackwardVerificationWorker::splitWork()
 	
       }
     }
-    
+    worker->minimalMarkedProofItem = lastMovedItem;
     
   } else {
     assert( false && "shared parallel mode is not yet implemented" );
@@ -339,6 +345,7 @@ lbool BackwardVerificationWorker::checkClause(vec< Lit >& clause, int64_t untilP
   }
   
   clausesToBeChecked = 0;
+  num_props = 0;
   vec<Lit> dummy;
   if (!checkSingleClauseAT( (int64_t) fullProof.size(), (Clause*)0x0, clause ) ) {
     if( verbose > 2 ) cerr << "c [S-BW-CHK] AT check failed" << endl;
@@ -469,7 +476,7 @@ CRef BackwardVerificationWorker::propagateMarked(const int64_t currentID, bool a
   return confl;
 }
 
-Riss::CRef BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEager(const int64_t currentID)
+CRef BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEager(const int64_t currentID)
 {
   CRef    confl     = CRef_Undef;
   nonMarkedWatches.cleanAll(); 
@@ -621,5 +628,3 @@ Riss::CRef BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEager(c
   }
   return confl;  
 }
-
-

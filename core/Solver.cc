@@ -346,7 +346,7 @@ void Solver::attachClause(CRef cr) {
     assert(c.size() > 1 && "cannot watch unit clauses!");
     assert( c.mark() == 0 && "satisfied clauses should not be attached!" );
     
-    cerr << "c attach clause " << cr << " which is " << ca[cr] << endl;
+//     cerr << "c attach clause " << cr << " which is " << ca[cr] << endl;
     
     // check for duplicates here!
 //     for (int i = 0; i < c.size(); i++)
@@ -370,7 +370,7 @@ void Solver::attachClause(CRef cr) {
 void Solver::detachClause(CRef cr, bool strict) {
     const Clause& c = ca[cr];
     
-    cerr << "c detach clause " << cr << " which is " << ca[cr] << endl;
+//     cerr << "c detach clause " << cr << " which is " << ca[cr] << endl;
     
     // assert(c.size() > 1 && "there should not be unit clauses - on the other hand, LHBR and OTFSS could create unit clauses");
 //     if( c.size() == 1 ) {

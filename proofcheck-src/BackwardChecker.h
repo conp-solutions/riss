@@ -7,6 +7,7 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 
 #include "mtl/Vec.h"
 #include "core/SolverTypes.h"
+#include "utils/System.h"
 
 namespace Coprocessor {
   class ThreadController; // TODO move thread controller to other place
@@ -78,6 +79,24 @@ public:
   
 protected:
   
+  struct Statistics {
+    int64_t checks;
+    int64_t prop_lits;
+    int64_t max_marked;
+    int64_t RATchecks;
+  };
+  
+  vec<Statistics> statistics; // statistics per thread
+  int proofWidth, proofLength, unsatisfiableCore; // statistics about verified proof
+  Clock verificationClock;    // clock that measures the verification time
+  
+  /** data that is passed to the parallel job */
+  struct WorkerData {
+    BackwardVerificationWorker* worker; // pointer to the actual worker intantiation
+    lbool result;                       // pointer to the result field of this worker
+    char dummy [ 55 ];                  // makes sure that the element is alone on its cache line
+  };
+  
   /** necessary object for watch list */
   struct ClauseDataDeleted
   {
@@ -116,7 +135,7 @@ protected:
   
   // statistics
   int64_t duplicateClauses, clausesWithDuplicateLiterals, mergedElement;
-  
+  int loadUnbalanced;
   
 public:
   /** create backward checking object */  
@@ -152,6 +171,11 @@ public:
    */
   bool checkClause(vec< Lit >& clause, bool drupOnly = false, bool workOnCopy = false);
   
+  /** verify the given proof. 
+   *  @return true, if the proof can be verified
+   */
+  bool verifyProof ();
+  
   /** tells the checker that there will not be any further clauses to be read
    *  will destroy the onewatch data structure, and set an according flag
    * @return false, if no empty clause was added to the proof
@@ -163,9 +187,16 @@ public:
    */
   void clearLabels(bool freeResources = false);
     
+  /** reset statistics */
+  void resetStatistics() { statistics.clear(); }
+  
+  /** print statistics of verification to given stream */
+  void printStatistics(std::ostream& s);
+  
 protected:
 
-
+  /** method that points to the parallel verification */
+  static void* runParallelVerfication(void* verificationData);
   
 };
 

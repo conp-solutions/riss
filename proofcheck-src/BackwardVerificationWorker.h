@@ -31,7 +31,6 @@ protected:
   ParallelMode  parallelMode;   // how to operate on the data
   int sequentialLimit;          // stop, if there is enough sequential work that could be parallelized (inactive, if == 0)
   int verbose;                  // verbosity of the tool
-
   
   // data structures that are re-used from the outside
   int formulaClauses;                          /// number of clauses in the formula (these clause do not have to be verified)
@@ -103,6 +102,7 @@ protected:
   };
   vec<WatchedLiterals> watchedLiterals; /// vector that stores the current two watched literals for all the clauses in the current watch lists
   
+public:
   
   // data and statistics
   int clausesToBeChecked;    // number of marked clauses in the proof
@@ -111,7 +111,6 @@ protected:
   int verifiedClauses;       // number of verified clauses
   int ratChecks;             // counts how often AT checkes failed
   
-public:
   
   /** setup checker, use data structures that have been set up before from the outside 
    *  @param keepOriginalClauses the internal representation removes duplicate literals, hence the checker would copy the whole clause data base
@@ -253,7 +252,7 @@ protected:
    * @return true, if the verification of this clause is ok
    */
   bool checkSingleClauseRAT( const int64_t currentID, vec< Lit >& lits, const Clause* c = 0);
-  
+
 };
 
 
@@ -347,12 +346,13 @@ bool BackwardVerificationWorker::checkSingleClauseRAT(const int64_t currentID, v
     assert( item.isEmptyClause() && "cannot resolve with the empty clause" );
     assert( item.isDelete() && "delete information should not be in the full watch list" );
     
-    // mark used clause to be verified as well
-    markToBeVerified( item.getID() );
-    
     // work only with valid items
     if( item.isValidAt( currentID ) ) {
       assert( item.getID() <= currentID && "can use only clauses with a smaller index for DRAT checks" );
+      
+      // mark used clause to be verified as well
+      markToBeVerified( item.getID() );
+      
       fullWatch[ firstLiteralComplement ][ keptFullWatchEntries++ ] = fullWatch[ firstLiteralComplement ][currentItem];
       // build resolvent wrt the current assignment
       resolventLits.clear();
