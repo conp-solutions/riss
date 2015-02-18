@@ -27,11 +27,11 @@ ok(true),
 parsedEmptyClause(false)
 {
   
-  if( opt_backward || threads > 1 || !opt_first ) {
-    cerr << "c WARNING: parallel checking, or full RAT checking not implemented yet, keep default setup" << endl;
-
+  cerr << "c create proof checker with " << threads << " threads, drat: " << checkDrat << endl;
+  
+  if( !opt_first ) {
+    cerr << "c WARNING: full RAT checking not implemented yet, keep default setup" << endl;
     testRATall = false;
-    threads = 1;
   }
 
   if( checkBackwards ) {
@@ -52,6 +52,12 @@ void ProofChecker::interupt()
   isInterrupted = true;
   // no need to interupt the forward checker
   if( backwardChecker != 0 ) backwardChecker->interupt();
+}
+
+void ProofChecker::setDRUPproof() {
+  checkDrat = false; 
+  if( checkBackwards ) backwardChecker->setDRUPproof();
+  else {} // nothing to be done for the forward checker after parsing the full proof
 }
 
 int ProofChecker::nVars() const
@@ -95,14 +101,17 @@ bool ProofChecker::addClause_(vec< Lit >& ps, bool isDelete)
   return true;
 }
 
-bool ProofChecker::checkClause(vec< Lit >& clause, bool add)
+bool ProofChecker::checkClauseDRUP(vec< Lit >& clause, bool add)
 {
   assert( !receiveFormula && "clauses of the input formula are not checked" );
   if( receiveFormula ) return true; // clause could obviously be added 
   if( !checkBackwards ) {
     return forwardChecker->addClause( clause, true );
   } else {
-    return backwardChecker->checkClause( clause, true, true ); // only use DRUP, do not build too expensive data structures undo marks afterwards!
+    // work on the formula, but do not touch the clauses
+    bool ret = backwardChecker->checkClause( clause, true, true ); // only use DRUP, do not build too expensive data structures undo marks afterwards!
+    backwardChecker->clearLabels();
+    return ret;
   }
 }
 

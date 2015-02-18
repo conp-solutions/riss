@@ -79,8 +79,8 @@ int main(int argc, char** argv)
 
   BoolOption   opt_drat     ("PROOFCHECK", "drat",     "verify DRAT instead of DRUP", true);
   BoolOption   opt_first    ("PROOFCHECK", "first",    "check RAT only for first literal", true);
-  BoolOption   opt_backward ("PROOFCHECK", "backward", "use backward checking", false);
-  IntOption    opt_threads  ("PROOFCHECK", "threads",  "number of threads that are used for verification.\n", 1, IntRange(0, INT32_MAX));
+  BoolOption   opt_backward ("PROOFCHECK", "backward", "use backward checking", true);
+  IntOption    opt_threads  ("PROOFCHECK", "threads",  "number of threads that are used for verification.\n", 2, IntRange(0, INT32_MAX));
   BoolOption   opt_stdin    ("PROOFCHECK", "useStdin", "scan on stdin for further proof parts (files first)", false);
   
     try {
@@ -118,10 +118,12 @@ int main(int argc, char** argv)
 	  // not enough parameters given, at least a formula and one proof
 	  if( argc < 2 ) {
 	    printUsageAndExit(argc, argv);
+	    exit(1);
 	  }
 	  
-	  // create object
-	  ProofChecker proofChecker( opt_drat, opt_backward, opt_first );
+	  // create checker object
+// 	  cerr << "c opt_drat: " << (bool)opt_drat << " backward: " << (bool)opt_backward << " first: " << (bool)opt_first  << " threads: " << (int) opt_threads << endl;
+	  ProofChecker proofChecker( opt_drat, opt_backward, opt_threads, opt_first );
 	  proofChecker.setVerbosity( verb ); // tell about verbosity
 	  pc = &proofChecker;
 	  
@@ -142,7 +144,7 @@ int main(int argc, char** argv)
 	  vec<Lit> dummy;
 	  
 	  // the formula is unsatisfiable by unit propagation, print result and return with correct exit code
-	  if( proofChecker.checkClause( dummy , false ) ) {
+	  if( proofChecker.checkClauseDRUP( dummy , false ) ) {
 	    printf("s UNSATISFIABLE\n");
 	    printf("s VERIFIED\n");
 	    exit(0);
@@ -150,6 +152,7 @@ int main(int argc, char** argv)
 	  
 	  // parse proofs
 	  int proofParts = 0;
+	  bool drupProof = true;
 	  for( int i = 2; i < argc; ++ i ) {
 	    proofParts ++;
 	    printf("c parse proof part [%d] from file %s\n", proofParts, argv[i] );
@@ -159,9 +162,10 @@ int main(int argc, char** argv)
 	    } else {
 	      ProofStyle proofStyle = parse_proof(in, proofChecker);
 	      if( proofStyle == dratProof && !opt_drat ) {
-		printf ("c WARNING given proof format is said to be stronger than the enabled verificatoin\n");
+		printf ("c WARNING given proof format is said to be stronger than the enabled verification\n");
 	      }
 	      gzclose(in);
+	      drupProof = drupProof && ( proofStyle == Riss::dratProof ); // check whether the given proof is claimed to be in the less expensive format
 	    }
 	  }
 	  
@@ -172,9 +176,10 @@ int main(int argc, char** argv)
 	    gzFile in =  gzdopen(0, "rb");
 	    ProofStyle proofStyle = parse_proof(in, proofChecker);
 	    if( proofStyle == dratProof && !opt_drat ) {
-	      printf ("c WARNING given proof format is said to be stronger than the enabled verificatoin\n");
+	      printf ("c WARNING given proof format is said to be stronger than the enabled verification\n");
 	    }
 	    gzclose(in);
+	    drupProof = drupProof && ( proofStyle == Riss::dratProof ); // check whether the given proof is claimed to be in the less expensive format
 	  }
 
 	  bool successfulVerification = proofChecker.emptyPresent();
@@ -185,6 +190,7 @@ int main(int argc, char** argv)
 	    return 1;
 	  }
 	  
+	  if( drupProof ) proofChecker.setDRUPproof();
 	  successfulVerification = proofChecker.verifyProof();
 	    
 	  if( successfulVerification ) {

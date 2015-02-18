@@ -39,11 +39,14 @@ class ProofChecker
 public:
   
   /** setup the object with the required options */
-  ProofChecker( bool opt_drat = false, bool opt_backward  = false, int opt_threads = 1, bool opt_first  = true);
+  ProofChecker( bool opt_drat, bool opt_backward , int opt_threads , bool opt_first  = true);
   ~ProofChecker();
   
   /** receive interupt from the outside */
   void interupt();
+  
+  /** tell object that we are checking a DRUP proof (independently of the option of the binary) */
+  void setDRUPproof();
   
   /** all further clauses that are added to the checker are considered to be part of the proof (not part of the specification) 
    * @param nextIsFormula indicate whether future clauses have to be checked (not checked, if they belong to the formula)
@@ -56,7 +59,7 @@ public:
    *  @add indicate whether the clause should be added to the proof after the successful check
    *  @return true, if the clause could be added
    */
-  bool checkClause( vec<Lit>& clause, bool add=true );
+  bool checkClauseDRUP( vec<Lit>& clause, bool add=true );
   
   /** indicate whether the empty clause has been added to the proof while creating the proof
    * @return true, if the empty clause was added to the proof (and is still present)

@@ -8,9 +8,13 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 #include "mtl/Vec.h"
 #include "core/SolverTypes.h"
 
+namespace Coprocessor {
+  class ThreadController; // TODO move thread controller to other place
+}
+
 namespace Riss {
   
-class SequentialBackwardWorker;
+class BackwardVerificationWorker;
   
 /** verify a given proof with respect to a given formula in a backward fashion
  */
@@ -86,8 +90,10 @@ protected:
   vec<ClauseData> fullProof; // store the data of the proof (including all clauses of the formula)
   ClauseAllocator ca;        // storage for the literals of the clauses, gives all clauses an additional field so that the first literal can be stored redundantly once more
 
-  SequentialBackwardWorker* sequentialChecker;  // pointer to sequential checking object
-
+  BackwardVerificationWorker* sequentialChecker;   // pointer to sequential checking object
+  Coprocessor::ThreadController* threadContoller;  // handle parallel work load
+  
+  
   vec<int> clauseCount;      // count number of occurrences of a clause that is present in the formula (to be able to merge duplicates)
   OccLists<Lit, vec<ClauseData>, ClauseDataDeleted> oneWatch; // one watch list
    
@@ -103,7 +109,6 @@ protected:
   int variables;                   // number of seen variables
   bool hasBeenInterupted;          // indicate external interupt
   bool readsFormula;               // indicate that we are still parsing the formula
-  vec<int> presentLits;            // to check input clauses for duplicates and to compare clauses
   int64_t currentID;               // id of the clause that is added next
   bool sawEmptyClause;             // memorize that an empty clause has been parsed
   bool formulaContainsEmptyClause; // memorize that we parsed an empty clause in the formula
@@ -128,6 +133,9 @@ public:
   /** set an interupt flag, such that verifying the proof can be interupted from the outside */
   void interupt();
   
+  /** tell object that we are checking a DRUP proof (independently of the option of the binary) */
+  void setDRUPproof();
+  
   /** add the given clause to the data structures for the proof 
    * @param ps clause to be added, Note: will be modified (sorted)
    * @param proofClause indicate that this clause belongs to the proof
@@ -139,16 +147,21 @@ public:
   /** check whether the given clause is entailed in the proof already 
    * @param clause clause to be checked
    * @param drupOnly perform only drup check, even if everything is prepared for DRAT
-   * @param clearMarks resets all marks that have been made durnig the verification
+   * @param workOnCopy do not touch the clauses
    * @return true, if the clause can be added to the proof
    */
-  bool checkClause(vec< Lit >& clause, bool drupOnly = false, bool clearMarks = false);
+  bool checkClause(vec< Lit >& clause, bool drupOnly = false, bool workOnCopy = false);
   
   /** tells the checker that there will not be any further clauses to be read
    *  will destroy the onewatch data structure, and set an according flag
    * @return false, if no empty clause was added to the proof
    */
   bool prepareVerification();
+  
+  /** clear/reset all labels 
+   * @param freeResources release used memory
+   */
+  void clearLabels(bool freeResources = false);
     
 protected:
 

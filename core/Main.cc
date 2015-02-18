@@ -105,8 +105,8 @@ int main(int argc, char** argv)
   IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
   IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
-  StringOption drupFile         ("PROOF", "drup", "Write a proof trace into the given file",0);
-  StringOption opt_proofFormat  ("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, should be DRUP)","DRUP");
+  StringOption drupFile         ("PROOF", "proof", "Write a proof trace into the given file",0);
+  StringOption opt_proofFormat  ("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, DRUP or DRAT)","DRAT");
   
   
   StringOption opt_config       ("MAIN", "config", "Use a preset configuration",0);

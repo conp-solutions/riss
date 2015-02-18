@@ -396,7 +396,7 @@ void BlockedClauseElimination::blockedClauseElimination()
 	      if( !tautologyReasonLiterals.isCurrentStep( toInt (c[k]) ) ) {  // found a literal that can be removed
 		if( !deletedSomeLiteral ) { // tell proof about removed blocked clause (the other clause will be added below, after minimization)
 		  data.addCommentToProof("blocked clause during BCM");
-		  data.addToProof(c,true);
+		  data.addToProof(c,true);  // delete the original clause - the minimized clause can still be added by blocked clause addition
 		}
 		deletedSomeLiteral = true;                          // indicate that the clause has been modified
 		data.removeClauseFrom( data.list(right)[i], c[k] ); // remove the clause from the corresponding list
@@ -423,7 +423,7 @@ void BlockedClauseElimination::blockedClauseElimination()
 	      assert( keptLiterals < c.size() && "some literal was removed" ); // something has to be removed
 	      c.shrink( c.size() - keptLiterals );                             // remove the literals
 	      data.addCommentToProof("found a blocked clause during BCM");     // tell the proof about the clause
-	      data.addToProof(c);                                              // add the clause to the proof (its a RAT clause)
+	      data.addToProof(c, false, right);                                // add the clause to the proof (its a RAT clause)
 	    }
 	  }
 

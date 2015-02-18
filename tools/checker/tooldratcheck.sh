@@ -47,7 +47,7 @@ else
         exit 124
      fi
 		
-		 if [ "$lstat" -ne "0" ]
+     if [ "$lstat" -ne "0" ]
      then
         # verification failed
         rm -f /tmp/verify_$$.cnf

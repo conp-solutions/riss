@@ -4,9 +4,11 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 
 #include "proofcheck-src/BackwardChecker.h"
 
-#include "proofcheck-src/SequentialBackwardWorker.h"
+#include "proofcheck-src/BackwardVerificationWorker.h"
 
 #include "mtl/Sort.h"
+
+#include "coprocessor-src/CoprocessorThreads.h"
 
 using namespace Riss;
 
@@ -18,9 +20,9 @@ drat( opt_drat ),
 fullRAT( opt_fullRAT ),
 threads( opt_threads ),
 checkDuplicateLits (1),
-verbose(0), // highest possible for development
+verbose(5), // highest possible for development
 checkDuplicateClauses (1),
-variables(6),
+variables(0),
 hasBeenInterupted( false ),
 readsFormula( true ),
 currentID(0),
@@ -32,6 +34,7 @@ clausesWithDuplicateLiterals(0),
 mergedElement(0)
 {
   ca.extra_clause_field = drat; // if we do drat verification, we want to remember the first literal in the extra field
+  if( verbose > 0 ) cerr << "c [BW-CHK] create backward checker with " << threads << " threads, and drat: " << drat << endl;
 }
 
 void BackwardChecker::interupt()
@@ -40,14 +43,19 @@ void BackwardChecker::interupt()
 #warning FORWARD INTERUPT TO VERIFICATION WORKER OBJECTS
 }
 
+void BackwardChecker::setDRUPproof()
+{
+  assert( sequentialChecker == 0 && "change format only if we currently have no checker present" );
+  if( drat && verbose > 0 ) cerr << "c [BW-CHK] change format from DRAT to DRUP based on proof" << endl;
+  drat = false;
+}
+
+
 int BackwardChecker::newVar()
 {
   const int v = variables;  
-  if( readsFormula ) {
-    oneWatch.init(mkLit(variables, false)); // get space in onewatch structure, if we are still parsing
-    oneWatch.init(mkLit(variables, true ));
-    presentLits.growTo( 2 * variables, 0 ); // per literal
-  }
+  oneWatch.init(mkLit(variables, false)); // get space in onewatch structure, if we are still parsing
+  oneWatch.init(mkLit(variables, true ));
   variables ++;
   return v;
 }
@@ -55,11 +63,8 @@ int BackwardChecker::newVar()
 void BackwardChecker::reserveVars(int newVariables)
 {
   variables = newVariables;
-  if( readsFormula ) {
-    oneWatch.init(mkLit(newVariables, false));
-    oneWatch.init(mkLit(newVariables, true ));
-    presentLits.growTo( 2 * newVariables ,0 ); // per literal
-  }
+  oneWatch.init(mkLit(newVariables, false));
+  oneWatch.init(mkLit(newVariables, true ));
 }
 
 bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDelete)
@@ -99,8 +104,10 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
   // sort literals to perform merge sort
   sort( ps );
   // find minimal literal
-  for( int i = 0 ; i < ps.size(); ++ i )
+  for( int i = 0 ; i < ps.size(); ++ i ){
+    assert( var( ps[i] ) < variables && "variables must be in the range" );
     minLit = ps[i] < minLit ? ps[i] : minLit;
+  }
 
   // duplicate analysis
   if( checkDuplicateLits > 0  ) {
@@ -112,10 +119,10 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
 	ps[++litsToKeep] = ps[i];
       } else {
 	if( checkDuplicateLits == 1 ) {
-	  hasDuplicateLiterals = true;
 	  ps[litsToKeep++] = ps[i];
 	} else {
 	  // implicitely remove this literal 
+	  hasDuplicateLiterals = true;
 	}
       }
     }
@@ -249,37 +256,116 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
   return true;
 }
 
-
-bool BackwardChecker::checkClause(vec< Lit >& clause, bool drupOnly, bool clearMarks)
-{
-// #error TO BE IMPLEMENTED
-  if( threads > 1 ) {
-    cerr << "c WARNING: currently only the sequential algorithm is supported" << endl;
+void BackwardChecker::clearLabels(bool freeResources) {
+  label.clear( freeResources );
+  if( ! freeResources ) {
+    label.growTo( fullProof.size() );
   }
-  
+}
+
+bool BackwardChecker::checkClause(vec< Lit >& clause, bool drupOnly, bool workOnCopy)
+{
   label.growTo( fullProof.size() );
   
   // if the empty clause is part of the formula we are done already
   if( formulaContainsEmptyClause ) {
-    if( clearMarks ) label.clear( true ); // free resources
     return true;
   }
 
   // setup checker, verify, destroy object
 #warning have an option that allows to keep the original clauses
-  sequentialChecker = new SequentialBackwardWorker( drupOnly ? false : drat, ca, fullProof, label, formulaClauses, variables, false );
-  sequentialChecker->initialize( fullProof.size(), false );
-  bool ret = sequentialChecker->checkClause( clause, 0, readsFormula ); // check only single clause, if we did not see the proof yet
-  sequentialChecker->release(); // write back the clause storage
-  delete sequentialChecker;
+
+  if( verbose > 0 ) cerr << "c [BW-CHK] verifiy clause with " << threads << " threads" << endl;
+
+  bool ret = false;
+  if (threads == 1 ) {
+    sequentialChecker = new BackwardVerificationWorker( drupOnly ? false : drat, ca, fullProof, label, formulaClauses, variables, workOnCopy );
+    sequentialChecker->initialize( fullProof.size(), false );
+    ret = ( l_True == sequentialChecker->checkClause( clause, 0, readsFormula ) ); // check only single clause, if we did not see the proof yet
+    sequentialChecker->release(); // write back the clause storage
+    delete sequentialChecker;
+  } else {
+    assert ( threads > 1 && "there have to be multiple workers"  );
+    threadContoller = new Coprocessor::ThreadController(threads);
+    
+    // first worker does not work on a copy
+    sequentialChecker = new BackwardVerificationWorker( drupOnly ? false : drat, ca, fullProof, label, formulaClauses, variables, workOnCopy );
+    sequentialChecker->setParallelMode( BackwardVerificationWorker::copy ); // so far, we copy
+    sequentialChecker->initialize( fullProof.size(), false );
+    // set sequential limit, so that work can be split afterwards
+    sequentialChecker->setSequentialLimit( 8 ); // TODO should become a parameter
+    
+    // let sequential checker make a start and verify clauses until the set sequential limit of clauses has to be verified
+    lbool intermediateResult = sequentialChecker->checkClause( clause, 0, readsFormula );
+    sequentialChecker->setSequentialLimit( 0 ); // disable limit again
+    
+    ret = intermediateResult == l_True; // intermediate results
+    
+    if( intermediateResult == l_Undef )  { // do the parallel work // TODO have separate method
+      
+      // create workers
+      BackwardVerificationWorker** workers = new BackwardVerificationWorker*[ threads ];
+      lbool* results = new lbool[ threads ];
+      for( int i = 0 ; i < threads; ++ i ) {
+	workers[i] = 0; results[i] = l_Undef;
+      }
+      workers[0] = sequentialChecker;
+      
+      if( verbose > 3 ) { 
+	cerr << "c [BW-CHK] proof marks after sequential work initialization (labels: " << label.size() << ")" << endl;
+	for( int i = formulaClauses ; i < fullProof.size(); ++ i ) { // for all clauses in the proof
+	  cerr << "c item [" << i << "] global: " << label[i].isMarked() << " (v=" << label[i].isVerified() << ")"  << " marks:";
+	  for( int j = 0 ; j < 1; ++ j ) cerr << " " << workers[j]->markedItem( i );
+	  cerr << endl;
+	}
+      }
+
+      workers[1] = workers[0]->splitWork();
+
+      if( verbose > 3 ) { 
+	cerr << "c [BW-CHK] proof marks after sequential work initialization" << endl;
+	for( int i = formulaClauses ; i < fullProof.size(); ++ i ) { // for all clauses in the proof
+	  cerr << "c item [" << i << "] global: " << label[i].isMarked() << " (v=" << label[i].isVerified() << ")"  << " marks:";
+	  for( int j = 0 ; j < threads; ++ j ) cerr << " " << workers[j]->markedItem( i );
+	  cerr << endl;
+	}
+      }
+      
+#warning execute routine in parallel!      
+      for( int i = 0 ; i < threads; ++ i ) {
+	cerr << "c [BW-CHK] continue work for worker " << i << endl;
+	results[i] = workers[i]->continueCheck();
+      }
+      cerr << "c [BW-CHK] finished work" << endl;
+      
+      // collect all results
+      ret = true;
+      for( int i = 0 ; i < threads; ++ i ) {
+	ret = ret && (results[i] == l_True);
+	cerr << "c verification success after worker " << i << " : " << ret << endl;
+      }
+      
+      if( verbose > 3 ) { 
+	cerr << "c [BW-CHK] proof marks after parallel verification" << endl;
+	for( int i = formulaClauses ; i < fullProof.size(); ++ i ) { // for all clauses in the proof
+	  cerr << "c item [" << i << "] global: " << label[i].isMarked() << " (v=" << label[i].isVerified() << ")"  << " marks:";
+	  for( int j = 0 ; j < threads; ++ j ) cerr << " " << workers[j]->markedItem( i );
+	  cerr << endl;
+	}
+      }
+      
+    }
+    // clean up all data structures
+    sequentialChecker->release(); // write back the clause storage
+    // TODO: clean up other workers nicely
+#warning free resources
+  }
   
   if( ret && !readsFormula ) {
     for( int i = formulaClauses ; i < fullProof.size(); ++ i ) { // for all clauses in the proof
       assert( ( !label[i].isMarked() || label[i].isVerified() ) && "each labeled clause has to be verified" );
     }
   }
-  
-  if( clearMarks ) label.clear( true ); // free resources
   
   return ret;
 }

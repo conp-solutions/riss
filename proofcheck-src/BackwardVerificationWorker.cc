@@ -1,41 +1,48 @@
-/**********************************************************************[SequentialBackwardWorker.h]
+/********************************************************************[BackwardVerificationWorker.h]
 Copyright (c) 2015, All rights reserved, Norbert Manthey
 **************************************************************************************************/
 
-#include "proofcheck-src/SequentialBackwardWorker.h"
+#include "proofcheck-src/BackwardVerificationWorker.h"
 
 using namespace Riss;
 
-SequentialBackwardWorker::SequentialBackwardWorker(bool opt_drat, ClauseAllocator& outer_ca, vec< BackwardChecker::ClauseData >& outer_fullProof, vec< BackwardChecker::ClauseLabel >& outer_label, int outer_formulaClauses, int outer_variables, bool keepOriginalClauses)
+BackwardVerificationWorker::BackwardVerificationWorker(bool opt_drat, ClauseAllocator& outer_ca, vec< BackwardChecker::ClauseData >& outer_fullProof, vec< BackwardChecker::ClauseLabel >& outer_label, int outer_formulaClauses, int outer_variables, bool keepOriginalClauses)
 :
 drat( opt_drat ),
+fullDrat( false ),
 parallelMode( none ),
-verbose(0),   // all details for development
+sequentialLimit( 0 ),   // initially, there is no limit and the sequential worker
+verbose(7),   // all details for development
 #warning ADD A VERBOSITY OPTION TO THE TOOL
 formulaClauses( outer_formulaClauses ),
 label( outer_label ),
 fullProof( outer_fullProof ),
 ca(0),                                 // have an empty allocator
 originalClauseData( outer_ca ),        // have a reference to the original clauses
-workOnCopy( !keepOriginalClauses ),
+workOnCopy( keepOriginalClauses ),
 
-nonMarkedWatches       ( ClauseDataClauseDeleted(ca) ),
-markedWatches ( ClauseDataClauseDeleted(ca) ),
+nonMarkedWatches ( ClauseDataClauseDeleted(ca) ),
+markedWatches    ( ClauseDataClauseDeleted(ca) ),
+fullWatch        ( ClauseDataClauseDeleted(ca) ),
 variables( outer_variables ),
 
+lastPosition(0),
+minimalMarkedProofItem( -1 ),
 markedQhead(0),
 markedUnitHead(0), 
 nonMarkedQHead(0), 
 nonMarkedUnithead(0),
 
 clausesToBeChecked(0),
+maxClausesToBeChecked(0),
 num_props(0),
-verifiedClauses(0)
+verifiedClauses(0),
+ratChecks(0)
 {
 }
 
 
-void SequentialBackwardWorker::initialize(int64_t proofPosition, bool duplicateFreeClauses)
+void BackwardVerificationWorker::initialize(int64_t proofPosition, bool duplicateFreeClauses)
 {
   if(workOnCopy) originalClauseData.copyTo(ca);
   else originalClauseData.moveTo( ca );
@@ -47,6 +54,11 @@ void SequentialBackwardWorker::initialize(int64_t proofPosition, bool duplicateF
   
   markedWatches     .init(mkLit(variables, false)); // get storage for watch lists
   markedWatches     .init(mkLit(variables, true));
+  
+  if( drat ) {
+   fullWatch.init(mkLit(variables, false)); // get storage for watch lists
+   fullWatch.init(mkLit(variables, true));  // get storage for watch lists
+  }
   
   assigns.growTo( variables, l_Undef );
   trail.growTo( variables );  // initial storage allows to use push_ instead of push. will be faster, as there is no capacity check
@@ -82,12 +94,13 @@ void SequentialBackwardWorker::initialize(int64_t proofPosition, bool duplicateF
   
   }
   
-  movedToMarked.growTo( fullProof.size(), 0 );
+  proofItemProperties.growTo( fullProof.size() );
+  minimalMarkedProofItem = fullProof.size(); // so far no element has been marked
   
   // add all clauses that are relevant to the watches (all clauses that are valid at the latest point in time, the size of the proof + 1 )
   const int currentID = proofPosition;
   for( int i = 0 ; i < fullProof.size(); ++ i ) {
-    if( fullProof[i].isValidAt( currentID ) ) {
+    if( fullProof[i].isValidAt( currentID ) && !fullProof[i].isDelete() ) {
       if( fullProof[i].isEmptyClause() ) { // jump over the empty clause
 	if( i + 1 < fullProof.size() && i > formulaClauses ) cerr << "c WARNING: found an empty clause in the middle of the proof [" << i << " / " << fullProof.size() << "]" << endl;
 	continue;
@@ -98,25 +111,45 @@ void SequentialBackwardWorker::initialize(int64_t proofPosition, bool duplicateF
   }
 }
 
-void SequentialBackwardWorker::enableProofItem( const BackwardChecker::ClauseData& proofItem ) {
+void BackwardVerificationWorker::enableProofItem( const BackwardChecker::ClauseData& proofItem ) {
   const Clause& c = ca[ proofItem.getRef() ];
   if( c.mark() != 0 ) return;  // this clause has just been removed due to being a isTautology
       
   assert( c.size() > 0 && "there should not be empty clauses in the proof" );
   if( c.size() == 1 ) {
-    nonMarkedUnitClauses.push( BackwardChecker::ClauseData( c[0], proofItem.getID(), proofItem.getValidUntil()  ) );
+    if( label[ proofItem.getID() ].isMarked() ) markedUnitClauses.push( BackwardChecker::ClauseData( c[0], proofItem.getID(), proofItem.getValidUntil()  ) );
+    else nonMarkedUnitClauses.push( BackwardChecker::ClauseData( c[0], proofItem.getID(), proofItem.getValidUntil()  ) );
   } else {
-    attachClause( proofItem );
+    if( label[ proofItem.getID() ].isMarked() ) attachClauseMarked( proofItem );
+    else attachClauseNonMarked( proofItem );
+  }
+  if( drat ) { // add the proof item also to the full occurrence list
+    assert( !proofItem.isDelete() && "cannot add delete clause to full occurence lists" );
+    assert( !proofItem.isEmptyClause() && "cannot add empty clause to full occurence lists" );
+    for( int i = 0 ; i < c.size(); ++ i ) {
+      fullWatch[ c[i] ].push( proofItem );
+    }
   }
 }
 
-void SequentialBackwardWorker::release() {
-  cerr << "c [S-BW-CHK] release (clear?" << workOnCopy << ")" << endl; 
+void BackwardVerificationWorker::release() {
+  if( verbose > 2 ) cerr << "c [S-BW-CHK] release (clear?" << workOnCopy << ") before storage elements:" << ca.size() << " original: " << originalClauseData.size() << endl; 
   if (workOnCopy) ca.clear( true );      // free internal data
-  else originalClauseData.moveTo( ca );  // move copied data back to other object
+  else ca.moveTo( originalClauseData );  // move copied data back to other object
+  if( verbose > 3 ) cerr << "c [S-BW-CHK] after release storage elements:" << ca.size() << " original: " << originalClauseData.size() << endl; 
 }
 
-void SequentialBackwardWorker::attachClause(const BackwardChecker::ClauseData& cData)
+void BackwardVerificationWorker::attachClauseMarked(const BackwardChecker::ClauseData& cData)
+{
+  const Clause& c = ca[ cData.getRef() ];
+  assert(c.size() > 1 && "cannot watch unit clauses!");
+  assert( c.mark() == 0 && "satisfied clauses should not be attached!" );
+    
+  markedWatches[~c[0]].push( cData );
+  markedWatches[~c[1]].push( cData );
+}
+
+void BackwardVerificationWorker::attachClauseNonMarked(const BackwardChecker::ClauseData& cData)
 {
   const Clause& c = ca[ cData.getRef() ];
   assert(c.size() > 1 && "cannot watch unit clauses!");
@@ -126,7 +159,7 @@ void SequentialBackwardWorker::attachClause(const BackwardChecker::ClauseData& c
   nonMarkedWatches[~c[1]].push( cData );
 }
 
-void SequentialBackwardWorker::uncheckedEnqueue(Lit p)
+void BackwardVerificationWorker::uncheckedEnqueue(Lit p)
 {
   if( verbose > 3 ) cerr << "c [S-BW-CHK] enqueue literal " << p << endl;
   assigns[var(p)] = lbool(!sign(p));
@@ -136,11 +169,11 @@ void SequentialBackwardWorker::uncheckedEnqueue(Lit p)
 }
 
 
-lbool    SequentialBackwardWorker::value (Var x) const   { return assigns[x]; }
+lbool    BackwardVerificationWorker::value (Var x) const   { return assigns[x]; }
 
-lbool    SequentialBackwardWorker::value (Lit p) const   { return assigns[var(p)] ^ sign(p); }
+lbool    BackwardVerificationWorker::value (Lit p) const   { return assigns[var(p)] ^ sign(p); }
 
-void SequentialBackwardWorker::restart()
+void BackwardVerificationWorker::restart()
 {
   for (int c = trail.size()-1; c >= 0; c--) assigns[var(trail[c])] = l_Undef;
   markedQhead = 0; nonMarkedUnithead = 0; nonMarkedQHead = 0; markedUnitHead = 0;
@@ -150,7 +183,7 @@ void SequentialBackwardWorker::restart()
   if( verbose > 4 ) cerr << "c HEAD: markedUnit: " << markedUnitHead << " marked: " << markedQhead << " non-markedUnits: " << nonMarkedUnithead << " non-marked: " << nonMarkedQHead << endl;
 }
 
-void SequentialBackwardWorker::removeBehind( const int& position )
+void BackwardVerificationWorker::removeBehind( const int& position )
 {
   assert( position >= 0 && position < trail.size() && "can only undo to a position that has been seen already" );
   for (int c = trail.size()-1; c >= position; c--) assigns[var(trail[c])] = l_Undef;
@@ -163,7 +196,130 @@ void SequentialBackwardWorker::removeBehind( const int& position )
   if( verbose > 3 ) cerr << "c [S-BW-CHK] reduce trail to position " << position << " new trail: " << trail << endl;
 }
 
-bool SequentialBackwardWorker::checkClause(vec< Lit >& clause, int64_t untilProofPosition, bool returnAfterInitialCheck)
+BackwardVerificationWorker* BackwardVerificationWorker::splitWork()
+{
+  assert( parallelMode != none && "beginning with this method we have to use a parallel mode" );
+  assert( trail.size() == 0 && "split work only after verification of a clause finished" );
+  
+  BackwardVerificationWorker* worker = 0;
+  
+  if( parallelMode == copy ) {
+    // create a worker that works on a copy of the clauses - copy data from already modified clause storage
+    worker = new BackwardVerificationWorker( drat, ca, fullProof, label, formulaClauses, variables, true );
+    // initialize worker, duplicates have already been removed
+    worker->initialize(lastPosition, true);
+    
+    worker->lastPosition = lastPosition; // continue at the same position
+    
+    // share work
+    int counter = 0;
+    assert( minimalMarkedProofItem != -1 && "has to be initialized before" );
+    for( int i = lastPosition; i >= minimalMarkedProofItem; -- i ) {
+      if( proofItemProperties[i].isMarkedByMe() ) {
+	assert( label[i].isMarked() && "item has to be marked globally" );
+	if( counter & 1 != 0 ) { // move every second element
+	  worker->proofItemProperties[i].markedByMe(); 
+	  worker->clausesToBeChecked ++;
+	  proofItemProperties[i].resetMarked();
+	  clausesToBeChecked --;
+	}
+	counter ++;
+	
+      }
+    }
+    
+    
+  } else {
+    assert( false && "shared parallel mode is not yet implemented" );
+  }
+  worker->parallelMode = parallelMode; // set the parallel mode
+  
+  return worker;
+}
+
+lbool BackwardVerificationWorker::continueCheck(int64_t untilProofPosition) {
+  
+  if( verbose > 1 ) cerr << "c [S-BW-CHK] check clauses that have been marked (" << clausesToBeChecked << ") start with position " << lastPosition << endl;
+  
+  if( verbose > 7 ) {
+    cerr << "c [S-BW-CHK] full state: " << endl;
+    cerr << "c non-marked-units: "; for( int i = 0 ; i < nonMarkedUnitClauses.size(); ++ i ) { cerr << " " << nonMarkedUnitClauses[i].getLit() ; } cerr << endl;
+    cerr << "c marked-units: "; for( int i = 0 ; i < markedUnitClauses.size(); ++ i ) { cerr << " " << markedUnitClauses[i].getLit() ; } cerr << endl; 
+    cerr << "c HEAD: markedUnit: " << markedUnitHead << " marked: " << markedQhead << " non-markedUnits: " << nonMarkedUnithead << " non-marked: " << nonMarkedQHead << endl;
+    cerr << "c trail: " << trail << endl;
+    cerr << "c BEGIN FULL PROOF" << endl;
+    for( int i = 0 ; i < fullProof.size(); ++ i ) {
+      cerr << "c item [" << i << "] id: " << fullProof[i].getID() << " valid until " << fullProof[i].getValidUntil() << " byMe: " << proofItemProperties[i].isMarkedByMe() << " marked: " << label[i].isMarked() << " delete: " << fullProof[i].isDelete() << "  clause: ";
+      if(fullProof[i].getRef() == CRef_Undef ) cerr << "empty"; else cerr << ca[ fullProof[i].getRef() ] ;
+      cerr << endl;
+    }
+    cerr << "c END FULL PROOF" << endl;
+  }
+  
+  // check the bound that should be used
+  const int64_t maxCheckPosition = formulaClauses > untilProofPosition ? formulaClauses : untilProofPosition;
+
+  vec<Lit> dummy;
+  if( verbose > 2 ) cerr << "c [S-BW-CHK] check from position " << fullProof.size() -1 << " to " << maxCheckPosition << endl;
+  for( ; lastPosition >= maxCheckPosition; -- lastPosition ) {
+    
+    if( verbose > 4 ) cerr << "c [S-BW-CHK] look at proof position " << lastPosition << " / " << fullProof.size() << " limit: " << maxCheckPosition << endl;
+    
+    BackwardChecker::ClauseData& proofItem = fullProof[lastPosition];
+    maxClausesToBeChecked = maxClausesToBeChecked >= clausesToBeChecked ? maxClausesToBeChecked : clausesToBeChecked; // get maximum
+    if( proofItem.isDelete() ) {
+      assert( ! label[ lastPosition ].isMarked() && "deletion information cannot be marked" ); // delete items point to the ID of the clause that should be added instead
+      if( verbose > 3 ) cerr << "c [S-BW-CHK] enable clause from proof item " << proofItem.getID() << " with clause " << ca[ proofItem.getRef() ] << endl;
+      enableProofItem( fullProof[ proofItem.getID() ] );  // activate this item in the data structures (watch lists, or unit list)
+    } else if ( proofItemProperties[proofItem.getID()].isMarkedByMe() && label[ proofItem.getID() ].isMarked() && !label[ proofItem.getID()  ].isVerified() ) { // verify only items that have been marked by me
+      
+      assert( lastPosition == proofItem.getID() && "item to be verified have to have the same ID as their index" );
+      
+      if( verbose > 3 ) cerr << "c [S-BW-CHK] check clause " << ca[ proofItem.getRef() ] << " at position " << lastPosition << " with id " << proofItem.getID() << endl;
+      
+      if( ! checkSingleClauseAT( proofItem.getID(), &(ca[ proofItem.getRef() ]), dummy ) ) {
+	bool ret = false;
+	if( verbose > 2 ) cerr << "c [S-BW-CHK] AT check failed" << endl;
+	ratChecks ++;
+	if( drat ) ret = checkSingleClauseRAT( (int64_t) fullProof.size(), dummy, &(ca[ proofItem.getRef() ]) ); // check RAT, if drat is enabled and AT failed
+	if( ! ret ) {
+	  if( drat && verbose > 2 ) cerr << "c [S-BW-CHK] DRAT check failed" << endl;
+	  restart(); // clean trail again, reset assignments
+	  return l_False;
+	}
+      }
+      restart(); // clean trail again, reset assignments
+      verifiedClauses ++;
+      assert( clausesToBeChecked > 0 && "there had to be work before" );
+      label[ proofItem.getID()  ].setVerified();
+      clausesToBeChecked --; // we checked another clause
+      
+      if( sequentialLimit != 0 && clausesToBeChecked > sequentialLimit ) {
+	return l_Undef;
+      }
+      
+      
+    } else {
+      // nothing to do with unlabeled clauses, they stay in the watch list/full occurrence list until some garbage collection is performed
+      if( verbose > 4 ) cerr << "c [S-BW-CHK] jump over non-marked proof item " << proofItem.getID() << "( marked: " << label[ proofItem.getID()  ].isMarked() << " verified: " << label[ proofItem.getID()  ].isVerified() << endl;
+    }
+    
+  }
+  restart(); // clean trail again, reset assignments
+  
+  assert( clausesToBeChecked == 0 && "has to process all elements of the proof" );
+  if( verbose > 0 ) {
+    cerr << "c still to check: " << clausesToBeChecked 
+         << " (max: " << maxClausesToBeChecked 
+         << ") propagatedLits: " <<  num_props 
+         << " verifiedClauses: " << verifiedClauses 
+         << " rat: " << ratChecks << endl;
+  }
+  
+  return l_True;
+}
+
+lbool BackwardVerificationWorker::checkClause(vec< Lit >& clause, int64_t untilProofPosition, bool returnAfterInitialCheck)
 {
   if( verbose > 1 ) cerr << "c [S-BW-CHK] check clause " << clause << endl;
   
@@ -175,7 +331,7 @@ bool SequentialBackwardWorker::checkClause(vec< Lit >& clause, int64_t untilProo
     cerr << "c trail: " << trail << endl;
     cerr << "c BEGIN FULL PROOF" << endl;
     for( int i = 0 ; i < fullProof.size(); ++ i ) {
-      cerr << "c item [" << i << "] id: " << fullProof[i].getID() << " valid until " << fullProof[i].getValidUntil() << " marked: " << label[i].isMarked() << " delete: " << fullProof[i].isDelete() << "  clause: ";
+      cerr << "c item [" << i << "] id: " << fullProof[i].getID() << " valid until " << fullProof[i].getValidUntil() << " byMe: " << proofItemProperties[i].isMarkedByMe() << " marked: " << label[i].isMarked() << " delete: " << fullProof[i].isDelete() << "  clause: ";
       if(fullProof[i].getRef() == CRef_Undef ) cerr << "empty"; else cerr << ca[ fullProof[i].getRef() ] ;
       cerr << endl;
     }
@@ -184,66 +340,46 @@ bool SequentialBackwardWorker::checkClause(vec< Lit >& clause, int64_t untilProo
   
   clausesToBeChecked = 0;
   vec<Lit> dummy;
-  if (!checkSingleClauseAT( (int64_t) fullProof.size(), clause, dummy ) ) {
+  if (!checkSingleClauseAT( (int64_t) fullProof.size(), (Clause*)0x0, clause ) ) {
     if( verbose > 2 ) cerr << "c [S-BW-CHK] AT check failed" << endl;
-    restart(); // clean trail again, reset assignments
-    return false;
-  }
-  restart(); // clean trail again, reset assignments
-  if( returnAfterInitialCheck ) return true;
-  
-  if( verbose > 1 ) cerr << "c [S-BW-CHK] check clauses that have been marked (" << clausesToBeChecked << ")" << endl;
-  
-  // check the bound that should be used
-  const int64_t maxCheckPosition = formulaClauses > untilProofPosition ? formulaClauses : untilProofPosition;
-
-  if( verbose > 2 ) cerr << "c [S-BW-CHK] check from position " << fullProof.size() -1 << " to " << maxCheckPosition << endl;
-  for( int i = fullProof.size() - 1; i >= maxCheckPosition; -- i ) {
-    
-    if( verbose > 4 ) cerr << "c [S-BW-CHK] look at proof position " << i << " / " << fullProof.size() << " limit: " << maxCheckPosition << endl;
-    
-    BackwardChecker::ClauseData& proofItem = fullProof[i];
-    
-    if( proofItem.isDelete() ) {
-      assert( ! label[ i ].isMarked() && "deletion information cannot be marked" ); // delete items point to the ID of the clause that should be added instead
-      if( verbose > 3 ) cerr << "c [S-BW-CHK] enable clause from proof item " << proofItem.getID() << " with clause " << ca[ proofItem.getRef() ] << endl;
-      enableProofItem( fullProof[ proofItem.getID() ] );  // activate this item in the data structures (watch lists, or unit list)
-    } else if ( label[ proofItem.getID() ].isMarked() ) {
-      
-      if( ! checkSingleClauseAT( proofItem.getID(), ca[ proofItem.getRef() ], dummy ) ) {
-	cerr << "c WARNING: clause with id " << proofItem.getID() << " cannot be verified with DRUP: " << ca[ proofItem.getRef() ] << endl;
-	restart(); // clean trail again, reset assignments
-	return false;
-      }
+    ratChecks ++;
+    bool ret = false;
+    if( drat ) ret = checkSingleClauseRAT( (int64_t) fullProof.size(), clause, (Clause*)0x0); // check RAT, if drat is enabled and AT failed
+    if( ! ret ) {
+      if( drat && verbose > 2 ) cerr << "c [S-BW-CHK] DRAT check failed" << endl;
       restart(); // clean trail again, reset assignments
-      
-      assert( clausesToBeChecked > 0 && "there had to be work before" );
-      label[ proofItem.getID()  ].setVerified();
-      clausesToBeChecked --; // we checked another clause
-      
-    } else {
-      // nothing to do with unlabeled clauses, they stay in the watch list/full occurrence list until some garbage collection is performed
-      if( verbose > 4 ) cerr << "c [S-BW-CHK] jump over non-marked proof item " << proofItem.getID() << endl;
+      return l_False; 
     }
-    
   }
+  verifiedClauses ++;
   restart(); // clean trail again, reset assignments
-  return true;
+  if( returnAfterInitialCheck ) return l_True;
+  
+  lastPosition = fullProof.size() - 1;
+  
+  return continueCheck(untilProofPosition);
+  
 }
 
-bool SequentialBackwardWorker::markToBeVerified(const int64_t& proofItemID)
+bool BackwardVerificationWorker::markToBeVerified(const int64_t& proofItemID)
 {
-  if( label[ proofItemID ].isMarked() ) return false;
+  if( label[ proofItemID ].isMarked() ) return false; // somebody else might have marked that clause already
   if( verbose > 3 ) cerr << "c [S-BW-CHK] mark clause with ID " << proofItemID << endl;
-  label[ proofItemID ].setMarked(); // TODO: might be made more thread safe
-  clausesToBeChecked ++;            // set by ourself
+  label[ proofItemID ].setMarked();                   // TODO: might be made more thread safe
+  clausesToBeChecked = proofItemID >= formulaClauses ? clausesToBeChecked + 1 : clausesToBeChecked; // set by ourself and to be checked in the proof
+  proofItemProperties[ proofItemID ].markedByMe();  // this item has been marked by me
+  minimalMarkedProofItem = ( proofItemID >= formulaClauses && minimalMarkedProofItem > proofItemID ) ? proofItemID : minimalMarkedProofItem; // store minimum (for split work)
   return true;
 }
 
-Riss::CRef SequentialBackwardWorker::propagateMarked(const int64_t currentID, bool addUnits)
+bool BackwardVerificationWorker::markedItem( const int itemID ) {
+  assert( itemID > 0 && itemID < proofItemProperties.size() && "item has to stay in limits" );
+  proofItemProperties[ itemID ].isMarkedByMe();
+}
+
+CRef BackwardVerificationWorker::propagateMarked(const int64_t currentID, bool addUnits)
 {
   CRef    confl     = CRef_Undef;
-  int     num_props = 0;
   markedWatches.cleanAll(); 
   
   if( verbose > 3 ) cerr << "c [S-BW-CHK] propagate marked ... " << endl;
@@ -333,10 +469,9 @@ Riss::CRef SequentialBackwardWorker::propagateMarked(const int64_t currentID, bo
   return confl;
 }
 
-Riss::CRef SequentialBackwardWorker::propagateUntilFirstUnmarkedEnqueueEager(const int64_t currentID)
+Riss::CRef BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEager(const int64_t currentID)
 {
   CRef    confl     = CRef_Undef;
-  int     num_props = 0;
   nonMarkedWatches.cleanAll(); 
   
   if( verbose > 3 ) cerr << "c [S-BW-CHK] propagate non-marked with ID " << currentID << endl;
@@ -418,7 +553,7 @@ Riss::CRef SequentialBackwardWorker::propagateUntilFirstUnmarkedEnqueueEager(con
         for (i = j = (BackwardChecker::ClauseData*)ws, end = i + ws.size();  i != end;)
 	{
 	    if( ! i->isValidAt( currentID ) ) { ++i; continue; }       // simply remove this element from the watch list after the loop ended
-	    if( movedToMarked[ i->getID() ] == 1 ) { ++i; continue; }  // this clause has been moved to the watch lists for marked clauses previously (with the other watched literal)
+	    if( proofItemProperties[ i->getID() ].isMoved() ) { ++i; continue; }  // this clause has been moved to the watch lists for marked clauses previously (with the other watched literal)
 	    
 	    
 // re-enable later again!
@@ -471,8 +606,8 @@ Riss::CRef SequentialBackwardWorker::propagateUntilFirstUnmarkedEnqueueEager(con
 	    markedWatches[~c[0]].push(w);
 	    markedWatches[~c[1]].push(w);
 	    if( verbose > 5 ) cerr << "c [S-BW-CHK] move clause to marked watch lists id: " << w.getID() << " ref: " << w.getRef() << " clause: " << ca[ w.getRef() ] << endl;
-	    markToBeVerified( w.getID() );          // mark the unit clause - TODO: handle for parallel version: returns true, if this worker set the mark
-	    movedToMarked[ w.getID() ] = 1; // indicate that this clause has been moved
+	    markToBeVerified( w.getID() );            // mark the unit clause - TODO: handle for parallel version: returns true, if this worker set the mark
+	    proofItemProperties[ w.getID() ].moved(); // indicate that this clause has been moved
 	    
             // Copy the remaining watches:
             while (i < end)
