@@ -93,14 +93,17 @@ protected:
   class WatchedLiterals {
     Lit data; // xor of two watched literals
   public:
+    WatchedLiterals () : data( toLit(0) ) {}
     /** initialize the data with the XOR of the two literals */
     WatchedLiterals( const Lit& l1, const Lit& l2 ) : data( toLit( toInt(l1) ^ toInt(l2) )  ) {}
     /** get the other literal by using XOR with the given literal */
     Lit getOther( const Lit& l1 ) const { return toLit( toInt(l1) ^ toInt(data) ); }
     /** replace the literal from with the literal to, update by using XOR twice */
     void update( const Lit& from, const Lit& to ) { data = toLit( toInt(data) ^ toInt(from) ^ toInt(to) ); }
+    /** initialize with the two given literals */
+     void init( const Lit& l1, const Lit& l2 ) { data = toLit( toInt(l1) ^ toInt(l2) ); }
   };
-  vec<WatchedLiterals> watchedLiterals; /// vector that stores the current two watched literals for all the clauses in the current watch lists
+  vec<WatchedLiterals> watchedXORLiterals; /// vector that stores the current two watched literals for all the clauses in the current watch lists
   
 public:
   
@@ -126,8 +129,10 @@ public:
   /** try each literal of a clause as DRAT literal (might mark clauses unncessarily) */
   void setFullDrat() { fullDrat = true; }
   
-  /** tell worker how to hande shared data structures */
-  void setParallelMode(ParallelMode mode) { parallelMode = mode; }
+  /** tell worker how to hande shared data structures 
+   *  if object has been initialized already in copy mode and is turned into shared mode, data structures are updated
+   */
+  void setParallelMode(ParallelMode mode);
   
   /** return another worker such that the two workers together would verifiy the whole proof 
    *  sets the state such that both workers can "simply" continue verification

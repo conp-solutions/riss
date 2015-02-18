@@ -10,13 +10,14 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 #include <fstream>
 #include <sstream>
 
-static IntOption  opt_splitLoad   ("BACKWARD-CHECK", "splitLoad",    "number of clauses in queue before splitting", 8, IntRange(2, INT32_MAX));
-static IntOption  opt_verbose     ("BACKWARD-CHECK", "bwc-verbose",  "verbosity level of the checker", 0, IntRange(0, 8));
-static BoolOption opt_statistics  ("BACKWARD-CHECK", "bwc-stats",    "print statistics about backward verification", true);
-static BoolOption opt_minimalCore ("BACKWARD-CHECK", "bwc-min-core", "try to use as few formula clauses as possible", true);
+static IntOption  opt_splitLoad    ("BACKWARD-CHECK", "splitLoad",        "number of clauses in queue before splitting", 8, IntRange(2, INT32_MAX));
+static IntOption  opt_verbose      ("BACKWARD-CHECK", "bwc-verbose",      "verbosity level of the checker", 0, IntRange(0, 8));
+static BoolOption opt_statistics   ("BACKWARD-CHECK", "bwc-stats",        "print statistics about backward verification", true);
+static BoolOption opt_minimalCore  ("BACKWARD-CHECK", "bwc-min-core",     "try to use as few formula clauses as possible", true);
+static BoolOption opt_space_saving ("BACKWARD-CHECK", "bwc-space-saving", "read only access on shared data strucutres (slower)", false);
 
-static StringOption opt_coreFile  ("BACKWARD-CHECK", "cores",  "Write unsatisfiable sub formula into this file",0);
-static StringOption opt_proofFile ("BACKWARD-CHECK", "lemmas", "Write relevant part of proof in this file",0);
+static StringOption opt_coreFile   ("BACKWARD-CHECK", "cores",  "Write unsatisfiable sub formula into this file",0);
+static StringOption opt_proofFile  ("BACKWARD-CHECK", "lemmas", "Write relevant part of proof in this file",0);
 
 using namespace Riss;
 
@@ -375,7 +376,7 @@ bool BackwardChecker::checkClause(vec< Lit >& clause, bool drupOnly, bool workOn
     sequentialChecker->setSequentialLimit( opt_splitLoad ); 
     
     // let sequential checker make a start and verify clauses until the set sequential limit of clauses has to be verified
-    lbool intermediateResult = sequentialChecker->checkClause( clause, 0, readsFormula );
+    lbool intermediateResult = sequentialChecker->checkClause( clause, 0, readsFormula ); // here, still act as we own the shared data (there are no other workers around)
     sequentialChecker->setSequentialLimit( 0 ); // disable limit again
     
     ret = intermediateResult == l_True; // intermediate results
@@ -391,6 +392,8 @@ bool BackwardChecker::checkClause(vec< Lit >& clause, bool drupOnly, bool workOn
 	workers[i] = 0; results[i] = l_Undef;
       }
       workers[0] = sequentialChecker;
+      
+      if( opt_space_saving ) sequentialChecker->setParallelMode( BackwardVerificationWorker::shared );
       
       if( verbose > 3 ) { 
 	cerr << "c [BW-CHK] proof marks after sequential work initialization (labels: " << label.size() << ")" << endl;

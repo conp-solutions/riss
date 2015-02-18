@@ -102,6 +102,7 @@ void BackwardVerificationWorker::initialize(int64_t proofPosition, bool duplicat
   minimalMarkedProofItem = fullProof.size(); // so far no element has been marked
   
   // add all clauses that are relevant to the watches (all clauses that are valid at the latest point in time, the size of the proof + 1 )
+  if( parallelMode == BackwardVerificationWorker::shared ) watchedXORLiterals.growTo( fullProof.size() );
   const int currentID = proofPosition;
   for( int i = 0 ; i < fullProof.size(); ++ i ) {
     if( fullProof[i].isValidAt( currentID ) && !fullProof[i].isDelete() ) {
@@ -111,6 +112,7 @@ void BackwardVerificationWorker::initialize(int64_t proofPosition, bool duplicat
       }
       
       enableProofItem( fullProof[i] ); // add corresponding clause to structures
+      if( parallelMode == BackwardVerificationWorker::shared ) watchedXORLiterals[i].init( ca[ fullProof[i].getRef() ][0], ca[ fullProof[i].getRef() ][1] );
     }
   }
 }
@@ -200,6 +202,25 @@ void BackwardVerificationWorker::removeBehind( const int& position )
   if( verbose > 3 ) cerr << "c [S-BW-CHK] reduce trail to position " << position << " new trail: " << trail << endl;
 }
 
+
+void BackwardVerificationWorker::setParallelMode(ParallelMode mode) { 
+  if( parallelMode == BackwardVerificationWorker::copy && mode == BackwardVerificationWorker::shared ) {
+    // use extra XOR-watchers
+    watchedXORLiterals.growTo( fullProof.size() );
+    for( int i = 0 ; i < fullProof.size(); ++ i ) {
+      if( fullProof[i].isValidAt( lastPosition ) && !fullProof[i].isDelete() ) {
+	if( fullProof[i].isEmptyClause() ) { // jump over the empty clause
+	  if( i + 1 < fullProof.size() && i > formulaClauses ) cerr << "c WARNING: found an empty clause in the middle of the proof [" << i << " / " << fullProof.size() << "]" << endl;
+	  continue;
+	}
+	watchedXORLiterals[i].init( ca[ fullProof[i].getRef() ][0], ca[ fullProof[i].getRef() ][1] );
+      }
+    }
+    
+  }
+  parallelMode = mode;
+}
+
 BackwardVerificationWorker* BackwardVerificationWorker::splitWork()
 {
   assert( parallelMode != none && "beginning with this method we have to use a parallel mode" );
@@ -207,7 +228,7 @@ BackwardVerificationWorker* BackwardVerificationWorker::splitWork()
   
   BackwardVerificationWorker* worker = 0;
   
-  if( parallelMode == copy ) {
+  if( parallelMode != none ) {
     // create a worker that works on a copy of the clauses - copy data from already modified clause storage
     worker = new BackwardVerificationWorker( drat, ca, fullProof, label, formulaClauses, variables, true );
     // initialize worker, duplicates have already been removed
@@ -236,7 +257,7 @@ BackwardVerificationWorker* BackwardVerificationWorker::splitWork()
     worker->minimalMarkedProofItem = lastMovedItem;
     
   } else {
-    assert( false && "shared parallel mode is not yet implemented" );
+    assert( false && "none-parallel mode is not yet implemented" );
   }
   worker->parallelMode = parallelMode; // set the parallel mode
   
@@ -327,6 +348,8 @@ lbool BackwardVerificationWorker::continueCheck(int64_t untilProofPosition) {
 
 lbool BackwardVerificationWorker::checkClause(vec< Lit >& clause, int64_t untilProofPosition, bool returnAfterInitialCheck)
 {
+  assert( parallelMode != shared && "not yet implemented propagating on shared structures without write access (initialization is implemented)" );
+  
   if( verbose > 1 ) cerr << "c [S-BW-CHK] check clause " << clause << endl;
   
   if( verbose > 4 ) {
