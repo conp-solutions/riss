@@ -7,14 +7,18 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 #include "mtl/Sort.h"
 #include "coprocessor-src/CoprocessorThreads.h"
 
+#include "mtl/Map.h"
+
 #include <fstream>
 #include <sstream>
 
-static IntOption  opt_splitLoad    ("BACKWARD-CHECK", "splitLoad",        "number of clauses in queue before splitting", 8, IntRange(2, INT32_MAX));
-static IntOption  opt_verbose      ("BACKWARD-CHECK", "bwc-verbose",      "verbosity level of the checker", 0, IntRange(0, 8));
-static BoolOption opt_statistics   ("BACKWARD-CHECK", "bwc-stats",        "print statistics about backward verification", true);
-static BoolOption opt_minimalCore  ("BACKWARD-CHECK", "bwc-min-core",     "try to use as few formula clauses as possible", true);
-static BoolOption opt_space_saving ("BACKWARD-CHECK", "bwc-space-saving", "read only access on shared data strucutres (slower)", false);
+static IntOption  opt_splitLoad      ("BACKWARD-CHECK", "splitLoad",        "number of clauses in queue before splitting", 8, IntRange(2, INT32_MAX));
+static IntOption  opt_verbose        ("BACKWARD-CHECK", "bwc-verbose",      "verbosity level of the checker", 0, IntRange(0, 8));
+static BoolOption opt_statistics     ("BACKWARD-CHECK", "bwc-stats",        "print statistics about backward verification", true);
+static BoolOption opt_minimalCore    ("BACKWARD-CHECK", "bwc-min-core",     "try to use as few formula clauses as possible", true);
+static BoolOption opt_space_saving   ("BACKWARD-CHECK", "bwc-space-saving", "read only access on shared data strucutres (slower)", false);
+static IntOption  opt_duplicate_cls  ("BACKWARD-CHECK", "bwc-dup-cls",      "handle duplicate clauses  (0=off,1=check,2=merge)",  0, IntRange(0, 2));
+static IntOption  opt_duplicate_lits ("BACKWARD-CHECK", "bwc-dup-lits",     "handle duplicate literals (0=off,1=check,2=delete)", 0, IntRange(0, 2));
 
 static StringOption opt_coreFile   ("BACKWARD-CHECK", "cores",  "Write unsatisfiable sub formula into this file",0);
 static StringOption opt_proofFile  ("BACKWARD-CHECK", "lemmas", "Write relevant part of proof in this file",0);
@@ -27,13 +31,14 @@ proofWidth(-1),
 proofLength(-1), 
 unsatisfiableCore(-1),
 formulaClauses( 0 ),
-oneWatch ( ClauseDataDeleted() ), // might fail in compilation depending on which features of the object are used
+oneWatch ( ClauseHashDeleted() ), // might fail in compilation depending on which features of the object are used
 drat( opt_drat ),
 fullRAT( opt_fullRAT ),
 threads( opt_threads ),
-checkDuplicateLits (1),
+checkDuplicateLits (opt_duplicate_lits),
 verbose(opt_verbose), // highest possible for development
-checkDuplicateClauses (1),
+removedInvalidElements (0),
+checkDuplicateClauses (opt_duplicate_cls),
 variables(0),
 hasBeenInterupted( false ),
 readsFormula( true ),
@@ -116,10 +121,12 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
   const Lit firstLiteral = ps.size() > 0 ? ps[0] : lit_Error;
   // sort literals to perform merge sort
   sort( ps );
+  uint64_t hash = 0;
   // find minimal literal
   for( int i = 0 ; i < ps.size(); ++ i ){
     assert( var( ps[i] ) < variables && "variables must be in the range" );
     minLit = ps[i] < minLit ? ps[i] : minLit;
+    hash |= (1 << (toInt(minLit) & 63)); // update hash
   }
 
   // duplicate analysis
@@ -151,13 +158,27 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
   int clausePosition = -1;  // position of the clause in the occurrence list of minLit
   if( checkDuplicateClauses != 0 || isDelete ) {
     if( verbose > 4 ) cerr << "c [BW-CHK] compare with minLit " << minLit << " against " << oneWatch[ minLit ].size() << " clauses" << endl;
+    int keptElements = 0;
+    
     for( int i = 0 ; i < oneWatch[ minLit ].size(); ++ i ) {
-      if( verbose > 5 ) cerr << "c [BW-CHK] compare to clause-ref " << oneWatch[ minLit ][i].getRef() << " with id " << oneWatch[ minLit ][i].getID() << " clause: " << ca[ oneWatch[ minLit ][i].getRef() ] << endl;
-      const Clause& clause = ca[ oneWatch[ minLit ][i].getRef() ];
-      if( clause.size() != ps.size() ) {
-	if( verbose > 6 ) cerr << "c [BW-CHK] size match failed" << endl;
+      if( verbose > 5 ) cerr << "c [BW-CHK] compare to clause-ref " << oneWatch[ minLit ][i].cd.getRef() << " with id " << oneWatch[ minLit ][i].cd.getID() << " clause: " << ca[ oneWatch[ minLit ][i].cd.getRef() ] << endl;
+      
+      if( oneWatch[ minLit ][i].cd.getValidUntil() <= currentID ) {
+	if( verbose > 6 ) cerr << "c [BW-CHK] element is not valid any more (id=" << oneWatch[ minLit ][i].cd.getID() << ")" << endl; // FIXME could be removed from the list
+	removedInvalidElements++;
 	continue; // not the same size means no the same clause, avoid more expensive checks
       }
+      
+      oneWatch[ minLit ][keptElements++] = oneWatch[ minLit ][i]; // keep the current element
+      
+      // continue, if hash and size do not match (no need to get the clause into the cache again ...
+      if( ps.size() != oneWatch[ minLit ][i].size || hash != oneWatch[ minLit ][i].hash) continue;
+      
+      const Clause& clause = ca[ oneWatch[ minLit ][i].cd.getRef() ];
+//       if( clause.size() != ps.size() ) { // done with the above check already
+// 	if( verbose > 6 ) cerr << "c [BW-CHK] size match failed" << endl;
+// 	continue; // not the same size means no the same clause, avoid more expensive checks
+//       }
       bool matches = true;
       int j = 1 ; // the minimal literal has to be the same
       // merge compare routine
@@ -174,13 +195,32 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
       }
       // found a clause we are looking for
       if( matches ) {
-	clausePosition = i; break;
+	clausePosition = keptElements - 1;
 	foundDuplicateClause = true;
+	if( verbose > 6 ) cerr << "c [BW-CHK] found match, store position " << clausePosition << " position: " << i << " kept: " << keptElements << endl;
+	if( keptElements < i ) {
+	  
+	  // copy remaining elements
+	  for( int j = i; i < oneWatch[ minLit ].size(); ++j ) {
+	    if( oneWatch[ minLit ][i].cd.getValidUntil() <= currentID ) continue; // remove the current element as well
+	    oneWatch[ minLit ][keptElements++] = oneWatch[ minLit ][i];
+	  }
+	} else keptElements = oneWatch[ minLit ].size(); // did not remove an element
+	// do not look for another match
+	break;
       }
     }
+    
+    // shrink only, if elements have been removed before the match
+    if( keptElements < oneWatch[ minLit ].size() ) {
+      if( verbose > 6 ) cerr << "c [BW-CHK] remove " << oneWatch[ minLit ].size() - keptElements << " elements from list of " << minLit << endl;
+      oneWatch[ minLit ].shrink_( oneWatch[ minLit ].size() - keptElements );
+    }
+    
+    
     if( checkDuplicateClauses != 0 ) { // optimize most relevant execution path
       if( foundDuplicateClause && checkDuplicateClauses == 1 ) {
-	cerr << "c WARNING: clause " << ps << " occurs multiple times in the proof, e.g. at position " << oneWatch[ minLit ][ clausePosition ].getID() << " of the full proof" << endl;
+	cerr << "c WARNING: clause " << ps << " occurs multiple times in the proof, e.g. at position " << oneWatch[ minLit ][ clausePosition ].cd.getID() << " of the full proof" << endl;
 	#warning add a verbosity option to the object, so that this information is only shown in higher verbosities
       }
     }
@@ -203,7 +243,7 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
     bool hasToDelete = true;  // indicate that the current clause has to be delete (might not be the case due to merging clauses)
     // find the corresponding clause, add the deletion information, delete this clause from the current occurrence list (as its not valid any more)
     if( checkDuplicateClauses == 2 ) {
-      const int otherID = oneWatch[ minLit ][ clausePosition ].getID();
+      const int otherID = oneWatch[ minLit ][ clausePosition ].cd.getID();
       clauseCount.growTo( otherID + 1 );
       if( clauseCount[ otherID ] > 0 ) {
 	clauseCount[ otherID ] --;
@@ -212,7 +252,7 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
     }
     
     if( hasToDelete ) { // either duplicates are not merged, or the last occuring clause has just been removed
-      const int otherID = oneWatch[ minLit ][ clausePosition ].getID();
+      const int otherID = oneWatch[ minLit ][ clausePosition ].cd.getID();
       ClauseData& cdata = fullProof[ otherID ];
       assert( cdata.getID() == otherID && "make sure we are working with the correct object (clause)" );
       assert( cdata.isValidAt( id )  && "until here this clause should be valid" );
@@ -239,14 +279,14 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
 	assert( ps.size() > 0 && "should not add the empty clause again to the proof" ); // once seeing the empty clause should actually stop adding further clauses to the proof
 	const CRef cref = ca.alloc( ps );                         // allocate clause
 	if( drat ) ca[ cref ].setExtraLiteral( firstLiteral );    // memorize first literal of the clause (if DRAT should be checked on the first literal only)
-	oneWatch[minLit].push( ClauseData( cref, id ) );          // add clause to structure so that it can be checked
+	oneWatch[minLit].push( ClauseHash ( ClauseData( cref, id ), hash, ps.size() ) );          // add clause to structure so that it can be checked
 
 	if( verbose > 2 ) cerr << "c [BW-CHK] add clause " << ca[cref] << " with id " << id << " ref " << cref << " and minLit " << minLit << endl;
 	
 	fullProof.push( ClauseData( cref, id ) );                 // add clause data to the proof (formula)
       } else {
-	clauseCount.growTo( oneWatch[ minLit ][ clausePosition ].getID() + 1 ); // make sure the storage for the other ID exists
-	clauseCount[ oneWatch[ minLit ][ clausePosition ].getID() + 1 ] ++;     // memorize that this clause has been seen one time more now 
+	clauseCount.growTo( oneWatch[ minLit ][ clausePosition ].cd.getID() + 1 ); // make sure the storage for the other ID exists
+	clauseCount[ oneWatch[ minLit ][ clausePosition ].cd.getID() + 1 ] ++;     // memorize that this clause has been seen one time more now 
       }
     }
   }
@@ -532,6 +572,16 @@ bool BackwardChecker::checkClause(vec< Lit >& clause, bool drupOnly, bool workOn
   if( ret && !readsFormula ) {
     for( int i = formulaClauses ; i < fullProof.size(); ++ i ) { // for all clauses in the proof
       assert( ( !label[i].isMarked() || label[i].isVerified() ) && "each labeled clause has to be verified" );
+    }
+  }
+  
+  if( verbose > 5 ) { 
+    cerr << "c [BW-CHK] all proof elements:" << endl;
+    for( int i = 0; i < fullProof.size(); ++ i ) { // for all clauses in the proof
+      cerr << "c item [" << i << "] ";
+      if( fullProof[i].isDelete() ) cerr << "d " << ca[ fullProof[ fullProof[i].getID() ].getRef() ] << endl;
+      else if ( fullProof[i].isEmptyClause() ) cerr << " EMPTY CLAUSE" << endl;
+      else cerr << ca[ fullProof[i].getRef() ] << endl;
     }
   }
   

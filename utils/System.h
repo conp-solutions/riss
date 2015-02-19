@@ -108,6 +108,8 @@ public:
   double getCpuTime() const { return cTime; }
   double getWallClockTime() const { return wTime; }
   void reset() { cTime = 0; wTime = 0; }
+  double getRunningCpuTime()  const { return Riss::cpuTime() - cTime; };
+  double getRunningWallTime() const { return Riss::wallClockTime() - wTime; };
 };
 
 /** Method clock - class that stopes the time from the call until the focus is lost */

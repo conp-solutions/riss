@@ -7,6 +7,7 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 
 #include "mtl/Vec.h"
 #include "core/SolverTypes.h"
+#include "utils/System.h"
 
 namespace Riss {
   
@@ -35,6 +36,9 @@ class ProofChecker
   bool ok;                            // indicate whether the state of the proof is still ok
   
   bool parsedEmptyClause;             // indicate that we saw the empty clause in the input formula / proof
+  
+  Clock checkClock;                   // clock that measures the full time
+  int addedClauses;                   // number of clauses that have been added
   
 public:
   

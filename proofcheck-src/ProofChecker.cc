@@ -12,6 +12,8 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 using namespace Riss;
 using namespace std;
 
+static IntOption  opt_printEvery    ("PROOC-CHECK", "pc-print-every",  "number of clauses until next output is printed during input (0=off)", 0, IntRange(0, INT32_MAX));
+
 ProofChecker::ProofChecker(bool opt_drat, bool opt_backward, int opt_threads, bool opt_first)
 :
 checkDrat( opt_drat ), 
@@ -24,9 +26,10 @@ receiveFormula(true),
 forwardChecker(0),
 backwardChecker(0),
 ok(true),
-parsedEmptyClause(false)
+parsedEmptyClause(false),
+addedClauses(0)
 {
-  
+  checkClock.start();
   cerr << "c create proof checker with " << threads << " threads, drat: " << checkDrat << endl;
   
   if( !opt_first ) {
@@ -90,6 +93,12 @@ bool ProofChecker::addClause_(vec< Lit >& ps, bool isDelete)
   
   assert( (!isDelete || !receiveFormula) && "cannot delete clauses within the formula" );
   
+  addedClauses++;
+  
+  if(opt_printEvery != 0 && addedClauses % opt_printEvery == 0 ) {
+    cerr << "c [PC] " << checkClock.getRunningCpuTime() << " , " << checkClock.getRunningWallTime() << ": clauses: " << addedClauses << " ( " << addedClauses / checkClock.getRunningWallTime() << " )/sec) memory: " << memUsed() << endl;
+  }
+  
   if( !checkBackwards ) {
     if( receiveFormula ) forwardChecker->addParsedclause( ps );
     else return forwardChecker->addClause( ps );
@@ -122,6 +131,8 @@ bool ProofChecker::emptyPresent()
 
 bool ProofChecker::verifyProof()
 {
+  cerr << "c [PC] verify proof with " << addedClauses << " elements" << endl;
+
   if( !checkBackwards ) {
     return parsedEmptyClause;   // in forward checking each clause is checked, hence also the first empty clause
   } else {

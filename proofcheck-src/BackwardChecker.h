@@ -97,10 +97,26 @@ protected:
     char dummy [ 55 ];                  // makes sure that the element is alone on its cache line
   };
   
+  /** struct to speed up clause look up */
+  struct ClauseHash {
+    ClauseData cd;
+    uint64_t hash ;
+    uint32_t size ;
+    uint32_t dummy;
+    ClauseHash ()  : cd( ClauseData() ), hash(0), size(0), dummy(0) {}
+    ClauseHash (const ClauseData _cd, uint64_t _hash, uint32_t _size ) : cd(_cd), hash(_hash), size(_size), dummy(0) {}
+  };
+  
   /** necessary object for watch list */
   struct ClauseDataDeleted
   {
     bool operator()(const ClauseData& w) const { return false; }
+  };
+  
+  
+  struct ClauseHashDeleted
+  {
+    bool operator()(const ClauseHash& w) const { return false; }
   };
   
   // data structures
@@ -114,7 +130,8 @@ protected:
   
   
   vec<int> clauseCount;      // count number of occurrences of a clause that is present in the formula (to be able to merge duplicates)
-  OccLists<Lit, vec<ClauseData>, ClauseDataDeleted> oneWatch; // one watch list
+  OccLists<Lit, vec<ClauseHash>, ClauseHashDeleted> oneWatch; // one watch list
+  Map<uint32_t,CRef> oneWatchMap; // use hash map to find matching clauses
    
   // operation options
   bool drat;                   // verify drat
@@ -123,6 +140,7 @@ protected:
   int  checkDuplicateLits;     // how to handle duplicate literals in clauses (0 = ignore, 1 = warn, 2 = remove during parsing)
   int  checkDuplicateClauses;  // how to handle duplicate clauses in the proof (0 = ignore, 1 = warn, 2 = merge during parsing)
   int  verbose;                // how verbose the tool should be
+  int  removedInvalidElements; // elements that have been removed from the oneWatch structure before finishing the input mode
   
   // operation data
   int variables;                   // number of seen variables
