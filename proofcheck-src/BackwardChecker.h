@@ -9,6 +9,8 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 #include "core/SolverTypes.h"
 #include "utils/System.h"
 
+#include "mtl/HashLookUpTable.h"
+
 namespace Coprocessor {
   class ThreadController; // TODO move thread controller to other place
 }
@@ -131,7 +133,7 @@ protected:
   
   vec<int> clauseCount;      // count number of occurrences of a clause that is present in the formula (to be able to merge duplicates)
   OccLists<Lit, vec<ClauseHash>, ClauseHashDeleted> oneWatch; // one watch list
-  Map<uint32_t,CRef> oneWatchMap; // use hash map to find matching clauses
+  HashLookUpTable<CRef,vec<Lit>*> oneWatchMap; // use hash map to find matching clauses
    
   // operation options
   bool drat;                   // verify drat

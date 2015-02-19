@@ -7,8 +7,6 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 #include "mtl/Sort.h"
 #include "coprocessor-src/CoprocessorThreads.h"
 
-#include "mtl/Map.h"
-
 #include <fstream>
 #include <sstream>
 
