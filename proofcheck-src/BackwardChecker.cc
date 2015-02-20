@@ -586,6 +586,9 @@ bool BackwardChecker::verifyProof () {
   label.fitSize();
   fullProof.fitSize();
   
+  assert( fullProof.last().isEmptyClause() && "last element of the proof should be the empty clause" );
+  label.last().setMarked();
+  
   // do the actual verification of the empty clause  
   vec<Lit> dummy; // will not allocate memory, so it's ok to be used as a temporal object
   bool ret = checkClause( dummy );
