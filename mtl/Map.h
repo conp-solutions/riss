@@ -101,6 +101,8 @@ class Map {
     Map (const H& h, const E& e) : hash(h), equals(e), table(NULL), cap(0), size(0){}
     ~Map () { delete [] table; }
 
+    int32_t index  (const int& k) const { return k % cap; }
+    
     // PRECONDITION: the key must already exist in the map.
     const D& operator [] (const K& k) const
     {
@@ -182,13 +184,16 @@ class Map {
     }
 
     // NOTE: given a bit more time, I could make a more C++-style iterator out of this:
-    const vec<Pair>& bucket(int i) const { return table[i]; }
+    const vec<Pair>& bucket(int i) const { assert( table != NULL && 0 <= i && i < cap && "stay in bounds" ); return table[i]; }
     
     /** allow access from the outside to operate differently on the hash list */
-    vec<Pair>& bucket(int i) { return table[i]; }
+    vec<Pair>& getBucket(int hash) { assert( table != NULL && 0 <= index(hash) && index(hash) < cap && "stay in bounds" );  return table[ index(hash) ]; }
     
     /** tell hash table how many elements have been removed externally */
     void removedElementsExternally( int elements ) { size -= elements; }
+    
+    /** return the number of elements */
+    int elements() const { return size ; }
 };
 
 //=================================================================================================

@@ -29,7 +29,7 @@ proofWidth(-1),
 proofLength(-1), 
 unsatisfiableCore(-1),
 formulaClauses( 0 ),
-oneWatch ( ClauseHashDeleted() ), // might fail in compilation depending on which features of the object are used
+// oneWatch ( ClauseHashDeleted() ), // might fail in compilation depending on which features of the object are used
 drat( opt_drat ),
 fullRAT( opt_fullRAT ),
 threads( opt_threads ),
@@ -70,8 +70,8 @@ void BackwardChecker::setDRUPproof()
 int BackwardChecker::newVar()
 {
   const int v = variables;  
-  oneWatch.init(mkLit(variables, false)); // get space in onewatch structure, if we are still parsing
-  oneWatch.init(mkLit(variables, true ));
+//   oneWatch.init(mkLit(variables, false)); // get space in onewatch structure, if we are still parsing
+//   oneWatch.init(mkLit(variables, true ));
   variables ++;
   return v;
 }
@@ -79,8 +79,8 @@ int BackwardChecker::newVar()
 void BackwardChecker::reserveVars(int newVariables)
 {
   variables = newVariables;
-  oneWatch.init(mkLit(newVariables, false));
-  oneWatch.init(mkLit(newVariables, true ));
+//   oneWatch.init(mkLit(newVariables, false));
+//   oneWatch.init(mkLit(newVariables, true ));
 }
 
 bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDelete)
@@ -154,16 +154,21 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
   
   // scan for duplicate clauses, or the first clause that could be deleted
   int clausePosition = -1;  // position of the clause in the occurrence list of minLit
-  if( checkDuplicateClauses != 0 || isDelete ) {
-    if( verbose > 4 ) cerr << "c [BW-CHK] compare with minLit " << minLit << " against " << oneWatch[ minLit ].size() << " clauses" << endl;
+  int bucketHash = -1;      // bucket of the hash map
+  if( (checkDuplicateClauses != 0 || isDelete) && oneWatchMap.elements() > 0 ) { // enter only, if there are already elements
+    ClauseHashHashFunction hasher; 
+    bucketHash = hasher.operator()( ClauseHash ( ClauseData( CRef_Undef, id ), hash, ps.size(), minLit ) );
     
-    for( int i = 0 ; i < oneWatch[ minLit ].size(); ++ i ) {
-      if( verbose > 5 ) cerr << "c [BW-CHK] compare to clause-ref " << oneWatch[ minLit ][i].cd.getRef() << " with id " << oneWatch[ minLit ][i].cd.getID() << " clause: " << ca[ oneWatch[ minLit ][i].cd.getRef() ] << endl;
+    vec< Map< ClauseHash, EmptyData, ClauseHashHashFunction >::Pair >& hasBucket = oneWatchMap.getBucket( bucketHash ); // in the dummy, the ref is not important
+    if( verbose > 4 ) cerr << "c [BW-CHK] compare with minLit " << minLit << " against " << hasBucket.size() << " clauses" << endl;
+    
+    for( int i = 0 ; i < hasBucket.size(); ++ i ) {
+      if( verbose > 5 ) cerr << "c [BW-CHK] compare to clause-ref " << hasBucket[i].key.cd.getRef() << " with id " << hasBucket[i].key.cd.getID() << " clause: " << ca[ hasBucket[i].key.cd.getRef() ] << endl;
       
       // continue, if hash and size do not match (no need to get the clause into the cache again ...
-      if( ps.size() != oneWatch[ minLit ][i].size || hash != oneWatch[ minLit ][i].hash) continue;
+      if( ps.size() != hasBucket[i].key.size || hash != hasBucket[i].key.hash) continue;
       
-      const Clause& clause = ca[ oneWatch[ minLit ][i].cd.getRef() ];
+      const Clause& clause = ca[ hasBucket[i].key.cd.getRef() ];
 
       bool matches = true;
       int j = 1 ; // the minimal literal has to be the same
@@ -191,7 +196,7 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
     
     if( checkDuplicateClauses != 0 ) { // optimize most relevant execution path
       if( foundDuplicateClause && checkDuplicateClauses == 1 ) {
-	cerr << "c WARNING: clause " << ps << " occurs multiple times in the proof, e.g. at position " << oneWatch[ minLit ][ clausePosition ].cd.getID() << " of the full proof" << endl;
+	cerr << "c WARNING: clause " << ps << " occurs multiple times in the proof, e.g. at position " << hasBucket[ clausePosition ].key.cd.getID() << " of the full proof" << endl;
 	#warning add a verbosity option to the object, so that this information is only shown in higher verbosities
       }
     }
@@ -214,7 +219,7 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
     bool hasToDelete = true;  // indicate that the current clause has to be delete (might not be the case due to merging clauses)
     // find the corresponding clause, add the deletion information, delete this clause from the current occurrence list (as its not valid any more)
     if( checkDuplicateClauses == 2 ) {
-      const int otherID = oneWatch[ minLit ][ clausePosition ].cd.getID();
+      const int otherID = oneWatchMap.getBucket( bucketHash )[ clausePosition ].key.cd.getID();
       clauseCount.growTo( otherID + 1 );
       if( clauseCount[ otherID ] > 0 ) {
 	clauseCount[ otherID ] --;
@@ -223,14 +228,16 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
     }
     
     if( hasToDelete ) { // either duplicates are not merged, or the last occuring clause has just been removed
-      const int otherID = oneWatch[ minLit ][ clausePosition ].cd.getID();
+      const int otherID = oneWatchMap.getBucket( bucketHash )[ clausePosition ].key.cd.getID();
       ClauseData& cdata = fullProof[ otherID ];
       assert( cdata.getID() == otherID && "make sure we are working with the correct object (clause)" );
       assert( cdata.isValidAt( id )  && "until here this clause should be valid" );
       cdata.setInvalidation( id );      // tell the clause that it is no longer valid
       assert( !cdata.isValidAt( id ) && "now the clause should be invalid" );
-      oneWatch[ minLit ][ clausePosition ] = oneWatch[ minLit ][ oneWatch[ minLit ].size() - 1 ]; // remove element from oneWatch
-      oneWatch[ minLit ].shrink_(1);  // fast version of shrink (do not call descructor)
+      
+      oneWatchMap.getBucket( bucketHash )[ clausePosition ] = oneWatchMap.getBucket( bucketHash )[ oneWatchMap.getBucket( bucketHash ).size() - 1 ]; // remove element from oneWatch
+      oneWatchMap.getBucket( bucketHash ).shrink_(1);  // fast version of shrink (do not call descructor)
+      oneWatchMap.removedElementsExternally(1);     // tell map that we removed one object
       
       // add to proof an element that represents this deletion
       fullProof.push( ClauseData( cdata.getRef(), otherID ) ); // store the ID of the clause that is enabled when running backward over this item
@@ -250,16 +257,17 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
 	assert( ps.size() > 0 && "should not add the empty clause again to the proof" ); // once seeing the empty clause should actually stop adding further clauses to the proof
 	const CRef cref = ca.alloc( ps );                         // allocate clause
 	if( drat ) ca[ cref ].setExtraLiteral( firstLiteral );    // memorize first literal of the clause (if DRAT should be checked on the first literal only)
-	oneWatch[minLit].push( ClauseHash ( ClauseData( cref, id ), hash, ps.size() ) );          // add clause to structure so that it can be checked
+// 	oneWatch[minLit].push( ClauseHash ( ClauseData( cref, id ), hash, ps.size() ) );          // add clause to structure so that it can be checked
 
-//	oneWatchMap.insert( ClauseHash ( ClauseData( cref, id ), hash, ps.size(), minLit ) ); // add element to hash map
+	oneWatchMap.insert( ClauseHash ( ClauseData( cref, id ), hash, ps.size(), minLit ), EmptyData() ); // add element to hash map
+	assert( oneWatchMap.elements() > 0 && "there has to be something in the map" );
 	
 	if( verbose > 2 ) cerr << "c [BW-CHK] add clause " << ca[cref] << " with id " << id << " ref " << cref << " and minLit " << minLit << endl;
 	
 	fullProof.push( ClauseData( cref, id ) );                 // add clause data to the proof (formula)
       } else {
-	clauseCount.growTo( oneWatch[ minLit ][ clausePosition ].cd.getID() + 1 ); // make sure the storage for the other ID exists
-	clauseCount[ oneWatch[ minLit ][ clausePosition ].cd.getID() + 1 ] ++;     // memorize that this clause has been seen one time more now 
+	clauseCount.growTo( oneWatchMap.getBucket( bucketHash )[ clausePosition ].key.cd.getID() + 1 );  // make sure the storage for the other ID exists
+	clauseCount[ oneWatchMap.getBucket( bucketHash )[ clausePosition ].key.cd.getID() + 1 ] ++;      // memorize that this clause has been seen one time more now 
       }
     }
   }
@@ -313,13 +321,14 @@ void BackwardChecker::printStatistics(std::ostream& s) {
       }
     }
   }
-  s << "c ======== VERIFICATION STATISTICS ========" << endl;
+  s << "c ========= VERIFICATION STATISTICS =========" << endl;
   s << "c    checks RATchecks propagatedLits maxTodo" << endl;
   s << "c " << "ALL" << " " 
         << statistics[0].checks << " "
 	<< statistics[0].RATchecks << " "
 	<< statistics[0].prop_lits << " "
 	<< statistics[0].max_marked << endl;
+  s << "c ===========================================" << endl;
   s << "c check/sec: cpu: " << statistics[0].checks / cpuT
     << " wall: "  << statistics[0].checks / wallT  << endl;
   s << "c ====================================================" << endl;
@@ -569,8 +578,9 @@ bool BackwardChecker::verifyProof () {
     cerr << "c WARNING: did not parse an empty clause, proof verification will fail" << endl;
     return false;
   }
-  inputMode = false;     // we do not expect any more clauses
-  oneWatch.clear( true );     // free used resources
+  inputMode = false;          // we do not expect any more clauses
+//   oneWatch.clear( true );     // free used resources
+  oneWatchMap.clear();        // free used resources
   clauseCount.clear( true );  // free used resources
   
   vec<Lit> dummy; // will not allocate memory, so it's ok to be used as a temporal object

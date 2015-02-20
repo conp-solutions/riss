@@ -145,7 +145,7 @@ protected:
   
   
   vec<int> clauseCount;      // count number of occurrences of a clause that is present in the formula (to be able to merge duplicates)
-  OccLists<Lit, vec<ClauseHash>, ClauseHashDeleted> oneWatch; // one watch list
+//   OccLists<Lit, vec<ClauseHash>, ClauseHashDeleted> oneWatch; // one watch list
   Map<ClauseHash,EmptyData,ClauseHashHashFunction> oneWatchMap; // use hash map to find matching clauses
    
   // operation options
