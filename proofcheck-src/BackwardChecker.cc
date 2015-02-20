@@ -171,14 +171,12 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
       const Clause& clause = ca[ hasBucket[i].key.cd.getRef() ];
 
       bool matches = true;
-      int j = 1 ; // the minimal literal has to be the same
+
       // merge compare routine
-      assert( ps[0] == clause[0] && "by construction the smallest literal is always equal" );
-      for( ; j < ps.size(); ++j ) {
-	assert( (ps[j-1] <= ps[j]) && "added clause has to be sorted" );
-	assert( (clause[j-1] <= clause[j]) && "database clause has to be sorted" );
+      for( int j = 0 ; j < ps.size(); ++j ) {
+	assert( (j == 0 || ps[j-1] <= ps[j]) && "added clause has to be sorted" );
+	assert( (j == 0 || clause[j-1] <= clause[j]) && "database clause has to be sorted" );
 	if( ps[j] != clause[j] ) { 
-	  assert( j > 0 && "had to be incremented at least once" );
 	  if( verbose > 6 ) cerr << "c [BW-CHK] did not find match for literal " << ps[j-1] << endl;
 	  matches = false; 
 	  break;
