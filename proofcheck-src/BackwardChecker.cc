@@ -156,27 +156,15 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
   int clausePosition = -1;  // position of the clause in the occurrence list of minLit
   if( checkDuplicateClauses != 0 || isDelete ) {
     if( verbose > 4 ) cerr << "c [BW-CHK] compare with minLit " << minLit << " against " << oneWatch[ minLit ].size() << " clauses" << endl;
-    int keptElements = 0;
     
     for( int i = 0 ; i < oneWatch[ minLit ].size(); ++ i ) {
       if( verbose > 5 ) cerr << "c [BW-CHK] compare to clause-ref " << oneWatch[ minLit ][i].cd.getRef() << " with id " << oneWatch[ minLit ][i].cd.getID() << " clause: " << ca[ oneWatch[ minLit ][i].cd.getRef() ] << endl;
-      
-      if( oneWatch[ minLit ][i].cd.getValidUntil() <= currentID ) {
-	if( verbose > 6 ) cerr << "c [BW-CHK] element is not valid any more (id=" << oneWatch[ minLit ][i].cd.getID() << ")" << endl; // FIXME could be removed from the list
-	removedInvalidElements++;
-	continue; // not the same size means no the same clause, avoid more expensive checks
-      }
-      
-      oneWatch[ minLit ][keptElements++] = oneWatch[ minLit ][i]; // keep the current element
       
       // continue, if hash and size do not match (no need to get the clause into the cache again ...
       if( ps.size() != oneWatch[ minLit ][i].size || hash != oneWatch[ minLit ][i].hash) continue;
       
       const Clause& clause = ca[ oneWatch[ minLit ][i].cd.getRef() ];
-//       if( clause.size() != ps.size() ) { // done with the above check already
-// 	if( verbose > 6 ) cerr << "c [BW-CHK] size match failed" << endl;
-// 	continue; // not the same size means no the same clause, avoid more expensive checks
-//       }
+
       bool matches = true;
       int j = 1 ; // the minimal literal has to be the same
       // merge compare routine
@@ -193,28 +181,13 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
       }
       // found a clause we are looking for
       if( matches ) {
-	clausePosition = keptElements - 1;
+	clausePosition = i;
 	foundDuplicateClause = true;
 	if( verbose > 6 ) cerr << "c [BW-CHK] found match, store position " << clausePosition << " position: " << i << " kept: " << keptElements << endl;
-	if( keptElements < i ) {
-	  
-	  // copy remaining elements
-	  for( int j = i; i < oneWatch[ minLit ].size(); ++j ) {
-	    if( oneWatch[ minLit ][i].cd.getValidUntil() <= currentID ) continue; // remove the current element as well
-	    oneWatch[ minLit ][keptElements++] = oneWatch[ minLit ][i];
-	  }
-	} else keptElements = oneWatch[ minLit ].size(); // did not remove an element
 	// do not look for another match
 	break;
       }
     }
-    
-    // shrink only, if elements have been removed before the match
-    if( keptElements < oneWatch[ minLit ].size() ) {
-      if( verbose > 6 ) cerr << "c [BW-CHK] remove " << oneWatch[ minLit ].size() - keptElements << " elements from list of " << minLit << endl;
-      oneWatch[ minLit ].shrink_( oneWatch[ minLit ].size() - keptElements );
-    }
-    
     
     if( checkDuplicateClauses != 0 ) { // optimize most relevant execution path
       if( foundDuplicateClause && checkDuplicateClauses == 1 ) {
@@ -256,7 +229,7 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
       assert( cdata.isValidAt( id )  && "until here this clause should be valid" );
       cdata.setInvalidation( id );      // tell the clause that it is no longer valid
       assert( !cdata.isValidAt( id ) && "now the clause should be invalid" );
-      oneWatch[ minLit ][ clausePosition ] = oneWatch[ minLit ][ oneWatch[ minLit ].size() - 1 ];
+      oneWatch[ minLit ][ clausePosition ] = oneWatch[ minLit ][ oneWatch[ minLit ].size() - 1 ]; // remove element from oneWatch
       oneWatch[ minLit ].shrink_(1);  // fast version of shrink (do not call descructor)
       
       // add to proof an element that represents this deletion
@@ -279,6 +252,8 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
 	if( drat ) ca[ cref ].setExtraLiteral( firstLiteral );    // memorize first literal of the clause (if DRAT should be checked on the first literal only)
 	oneWatch[minLit].push( ClauseHash ( ClauseData( cref, id ), hash, ps.size() ) );          // add clause to structure so that it can be checked
 
+//	oneWatchMap.insert( ClauseHash ( ClauseData( cref, id ), hash, ps.size(), minLit ) ); // add element to hash map
+	
 	if( verbose > 2 ) cerr << "c [BW-CHK] add clause " << ca[cref] << " with id " << id << " ref " << cref << " and minLit " << minLit << endl;
 	
 	fullProof.push( ClauseData( cref, id ) );                 // add clause data to the proof (formula)

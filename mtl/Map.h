@@ -183,6 +183,12 @@ class Map {
 
     // NOTE: given a bit more time, I could make a more C++-style iterator out of this:
     const vec<Pair>& bucket(int i) const { return table[i]; }
+    
+    /** allow access from the outside to operate differently on the hash list */
+    vec<Pair>& bucket(int i) { return table[i]; }
+    
+    /** tell hash table how many elements have been removed externally */
+    void removedElementsExternally( int elements ) { size -= elements; }
 };
 
 //=================================================================================================

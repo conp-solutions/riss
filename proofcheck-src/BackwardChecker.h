@@ -9,7 +9,7 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 #include "core/SolverTypes.h"
 #include "utils/System.h"
 
-#include "mtl/HashLookUpTable.h"
+#include "mtl/Map.h"
 
 namespace Coprocessor {
   class ThreadController; // TODO move thread controller to other place
@@ -106,7 +106,11 @@ protected:
     uint32_t size ;
     uint32_t dummy;
     ClauseHash ()  : cd( ClauseData() ), hash(0), size(0), dummy(0) {}
-    ClauseHash (const ClauseData _cd, uint64_t _hash, uint32_t _size ) : cd(_cd), hash(_hash), size(_size), dummy(0) {}
+    ClauseHash (const ClauseData _cd, uint64_t _hash, uint32_t _size, Lit _dummy = lit_Undef ) : cd(_cd), hash(_hash), size(_size), dummy( toInt(_dummy) ) {}
+  };
+
+  /** dummy struct to be able to use minisat map */  
+  struct EmptyData {
   };
   
   /** necessary object for watch list */
@@ -115,10 +119,19 @@ protected:
     bool operator()(const ClauseData& w) const { return false; }
   };
   
-  
   struct ClauseHashDeleted
   {
     bool operator()(const ClauseHash& w) const { return false; }
+  };
+  
+  /** create a hash function somehow from the data */
+  struct ClauseHashHashFunction { 
+    uint32_t operator()(const ClauseHash& k) const { 
+      uint32_t ret = k.size + k.dummy;
+      ret = ret | k.hash & (~(1 << 31));
+      ret = ret ^ (k.hash >> 32ull);
+      return ret;
+    } 
   };
   
   // data structures
@@ -133,7 +146,7 @@ protected:
   
   vec<int> clauseCount;      // count number of occurrences of a clause that is present in the formula (to be able to merge duplicates)
   OccLists<Lit, vec<ClauseHash>, ClauseHashDeleted> oneWatch; // one watch list
-  HashLookUpTable<CRef,vec<Lit>*> oneWatchMap; // use hash map to find matching clauses
+  Map<ClauseHash,EmptyData,ClauseHashHashFunction> oneWatchMap; // use hash map to find matching clauses
    
   // operation options
   bool drat;                   // verify drat
