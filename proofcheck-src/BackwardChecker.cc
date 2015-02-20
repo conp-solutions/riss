@@ -581,6 +581,12 @@ bool BackwardChecker::verifyProof () {
   oneWatchMap.clear();        // free used resources
   clauseCount.clear( true );  // free used resources
   
+  // minimize memory consumption for shared and copied structures
+  ca.fitSize();
+  label.fitSize();
+  fullProof.fitSize();
+  
+  // do the actual verification of the empty clause  
   vec<Lit> dummy; // will not allocate memory, so it's ok to be used as a temporal object
   bool ret = checkClause( dummy );
   

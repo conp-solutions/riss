@@ -27,7 +27,9 @@ forwardChecker(0),
 backwardChecker(0),
 ok(true),
 parsedEmptyClause(false),
-addedClauses(0)
+addedClauses(0),
+lastAddedClauses(0),
+lastCpuT(0)
 {
   checkClock.start();
   cerr << "c create proof checker with " << threads << " threads, drat: " << checkDrat << endl;
@@ -96,7 +98,12 @@ bool ProofChecker::addClause_(vec< Lit >& ps, bool isDelete)
   addedClauses++;
   
   if(opt_printEvery != 0 && addedClauses % opt_printEvery == 0 ) {
-    cerr << "c [PC] " << checkClock.getRunningCpuTime() << " , " << checkClock.getRunningWallTime() << ": clauses: " << addedClauses << " ( " << addedClauses / checkClock.getRunningWallTime() << " )/sec) memory: " << memUsed() << endl;
+    double relTime = checkClock.getRunningCpuTime() - lastCpuT ;
+    relTime = relTime == 0 ? 0.000001 : relTime;
+    cerr << "c [PC] " << checkClock.getRunningCpuTime() << " , " << checkClock.getRunningWallTime() << ": clauses: " << addedClauses << endl 
+                      <<" (per sec: global:" << addedClauses / checkClock.getRunningWallTime() << " relative: " << (addedClauses - lastAddedClauses) / relTime << " memory: " << memUsed() << endl;
+    lastAddedClauses = addedClauses;
+    lastCpuT = checkClock.getRunningCpuTime();
   }
   
   if( !checkBackwards ) {
@@ -131,17 +138,25 @@ bool ProofChecker::emptyPresent()
 
 bool ProofChecker::verifyProof()
 {
-  cerr << "c [PC] verify proof with " << addedClauses << " elements" << endl;
-
+  double cupT = checkClock.getCpuTime(), wallT = checkClock.getWallClockTime();
+  cerr << "c [PC] verify proof with " << addedClauses << " elements, after " << checkClock.getRunningCpuTime() << " , " << checkClock.getRunningWallTime() << " seconds, memory: " << memUsed() << endl;
+  
+  bool ret = false;
   if( !checkBackwards ) {
-    return parsedEmptyClause;   // in forward checking each clause is checked, hence also the first empty clause
+    ret = parsedEmptyClause;   // in forward checking each clause is checked, hence also the first empty clause
   } else {
     if( !parsedEmptyClause ) {  // a proof without an empty clause cannot be valid
       cerr << "c WARNING: should verify proof without parsing an empty clause" << endl;
-      return false;
+      ret = false;
+    } else {
+      ret =  backwardChecker->verifyProof();
     }
-    return backwardChecker->verifyProof();
   }
+  
+  cupT = checkClock.getCpuTime() - cupT;
+  wallT = checkClock.getWallClockTime() - wallT;
+  cerr << "c [PC] proof verification took " << checkClock.getRunningCpuTime() << " , " << checkClock.getRunningWallTime() << " seconds, memory: " << memUsed() << endl;
+  return ret;
 }
 
 bool ProofChecker::receivedInterupt()

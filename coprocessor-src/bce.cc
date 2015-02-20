@@ -553,7 +553,7 @@ Lit BlockedClauseElimination::tautologicResolvent(const Clause& c, const Clause&
     
 void BlockedClauseElimination::printStatistics(ostream& stream)
 {
-  cerr << "c [STAT] BCE "  << bceTime.getCpuTime() << " seconds, " << bceSteps << " steps, " << testedLits << " testLits, " << remBCE << " remBCE, " << bcm_cls << " BCMs, " << bcm_cls_cands << " BMCcands, " <<  bcm_lits << " BMClits, " << endl;
+  cerr << "c [STAT] BCE "  << bceTime.getCpuTime() << " seconds, " << bceSteps << " steps, " << testedLits << " testLits, " << remBCE << " remBCE, " << bcm_cls << " BCMs, " << bcm_cls_cands << " BCMcands, " <<  bcm_lits << " BCMlits, " << endl;
   cerr << "c [STAT] CLE "  << remCLE << " remCLE, " << cleUnits << " cleUnits, " << endl;
   cerr << "c [STAT] BCE-CLA "  << claTime.getCpuTime() << " seconds, " << claSteps << " steps, " << claTestedLits << " testLits, " << claExtendedClauses << " extClss, " << claExtensions << " extLits, " << possibleClaExtensions << " possibles, " << endl;
 }

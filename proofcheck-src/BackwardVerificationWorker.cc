@@ -205,7 +205,7 @@ void BackwardVerificationWorker::removeBehind( const int& position )
 
 void BackwardVerificationWorker::setParallelMode(ParallelMode mode) { 
   if( parallelMode == BackwardVerificationWorker::copy && mode == BackwardVerificationWorker::shared ) {
-    // use extra XOR-watchers
+    // use extra XOR-watchers in shared mode
     watchedXORLiterals.growTo( fullProof.size() );
     for( int i = 0 ; i < fullProof.size(); ++ i ) {
       if( fullProof[i].isValidAt( lastPosition ) && !fullProof[i].isDelete() ) {
@@ -218,6 +218,7 @@ void BackwardVerificationWorker::setParallelMode(ParallelMode mode) {
     }
     
   }
+  // set mode
   parallelMode = mode;
 }
 
@@ -407,13 +408,9 @@ bool BackwardVerificationWorker::markedItem( const int itemID ) {
   proofItemProperties[ itemID ].isMarkedByMe();
 }
 
-CRef BackwardVerificationWorker::propagateMarked(const int64_t currentID, bool addUnits)
+inline
+CRef BackwardVerificationWorker::propagateMarkedUnits(const int64_t currentID)
 {
-  CRef    confl     = CRef_Undef;
-  markedWatches.cleanAll(); 
-  
-  if( verbose > 3 ) cerr << "c [S-BW-CHK] propagate marked ... " << endl;
-
   // propagate units first!
   int keptUnits = markedUnitHead;
   for( ; markedUnitHead < markedUnitClauses.size() ; ++ markedUnitHead ) { // propagate all known units
@@ -436,6 +433,19 @@ CRef BackwardVerificationWorker::propagateMarked(const int64_t currentID, bool a
   }
   markedUnitClauses.shrink( markedUnitClauses.size() - keptUnits ); // remove all removable elements (less elements in the next call)
   
+  return CRef_Undef; // no conflict
+}
+
+CRef BackwardVerificationWorker::propagateMarked(const int64_t currentID)
+{ 
+  if( verbose > 3 ) cerr << "c [S-BW-CHK] propagate marked ... " << endl;
+
+  // we found some conflicts (the actual ID is not important)
+  if( propagateMarkedUnits( currentID ) != CRef_Undef ) return 0;
+  
+  // otherwise perform usual propagation
+  CRef    confl     = CRef_Undef;
+  markedWatches.cleanAll(); 
   while( markedQhead < trail.size() ) {
         Lit            p   = trail[markedQhead++];     // 'p' is enqueued fact to propagate.
         vec<BackwardChecker::ClauseData>&  ws  = markedWatches[p];
@@ -446,12 +456,6 @@ CRef BackwardVerificationWorker::propagateMarked(const int64_t currentID, bool a
         for (i = j = (BackwardChecker::ClauseData*)ws, end = i + ws.size();  i != end;)
 	{
 	    if( ! i->isValidAt( currentID ) ) { ++i; continue; } // simply remove this element from the watch list after the loop ended
-
-// re-enable later again!
-//             // Try to avoid inspecting the clause:
-//             const Lit blocker = i->blocker();
-//             if (value(blocker) == l_True){ // keep binary clauses, and clauses where the blocking literal is satisfied
-//                 *j++ = *i++; continue; }
 
             // Make sure the false literal is data[1]:
             const CRef cr = i->getRef();
@@ -499,13 +503,77 @@ CRef BackwardVerificationWorker::propagateMarked(const int64_t currentID, bool a
   return confl;
 }
 
-CRef BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEager(const int64_t currentID)
+CRef BackwardVerificationWorker::propagateMarkedShared(const int64_t currentID)
 {
-  CRef    confl     = CRef_Undef;
-  nonMarkedWatches.cleanAll(); 
-  
-  if( verbose > 3 ) cerr << "c [S-BW-CHK] propagate non-marked with ID " << currentID << endl;
+  if( verbose > 3 ) cerr << "c [S-BW-CHK] propagate marked (shared) ... " << endl;
 
+  // we found some conflicts (the actual ID is not important)
+  if( propagateMarkedUnits( currentID ) != CRef_Undef ) return 0;
+  
+  // otherwise perform usual propagation
+  CRef    confl     = CRef_Undef;
+  markedWatches.cleanAll(); 
+  while( markedQhead < trail.size() ) {
+        Lit            p   = trail[markedQhead++];     // 'p' is enqueued fact to propagate.
+        vec<BackwardChecker::ClauseData>&  ws  = markedWatches[p];
+        BackwardChecker::ClauseData        *i, *j, *end;
+        num_props++;
+#warning: IMPROVE DATA STRUCTURES AS IN RISS WITH AN 'ISBINARY' INDICATOR, AND A BLOCKING LITERAL
+        // propagate longer clauses here!
+        for (i = j = (BackwardChecker::ClauseData*)ws, end = i + ws.size();  i != end;)
+	{
+	    if( ! i->isValidAt( currentID ) ) { ++i; continue; } // simply remove this element from the watch list after the loop ended
+
+            WatchedLiterals& watch = watchedXORLiterals[ i->getID() ]; // get watch data structure that belongs to this clause
+            
+            const Lit false_lit = ~p;
+            const Lit otherWatchedLit = watch.getOther( ~p );
+            
+            // Make sure the false literal is data[1]:
+            const CRef cr = i->getRef();
+	    const BackwardChecker::ClauseData& w = *i; // enable later again Watcher(cr, first, 1); // updates the blocking literal
+	    i++;                                       // next iteration consider next literal
+            
+            if (  // first != blocker &&  // enable later again
+	      value(otherWatchedLit) == l_True) // satisfied clause
+	    {
+	      *j++ = w; continue; } // same as goto NextClause;
+	    
+            const Clause&  c = ca[cr];
+
+            // Look for new watch:
+            for (int k = 0; k < c.size(); k++){
+	     if( c[k] == otherWatchedLit || c[k] == false_lit ) continue; // do not look at the watched literals 
+              if (value(c[k]) != l_False)
+	      {
+                    markedWatches[~c[k]].push(w); // watch with literal c[k] instead of literal ~p (put into list ~c[k])
+		    watch.update(~p, c[k] );      // update watch structure to now watch literal c[k], instead of ~p
+                    goto NextClause; 
+	      }
+	    }
+		
+            // Did not find watch -- clause is unit under assignment:
+            *j++ = w; 
+            // if( config.opt_printLhbr ) cerr << "c keep clause (" << cr << ")" << c << " in watch list while propagating " << p << endl;
+            if ( value(otherWatchedLit) == l_False ) {
+                confl = cr;
+                markedQhead = trail.size();
+                // Copy the remaining watches:
+                while (i < end)
+                    *j++ = *i++;
+            } else {
+                uncheckedEnqueue(otherWatchedLit);
+	    }
+        NextClause:;
+        }
+        ws.shrink(i - j); // remove all duplciate clauses!
+  }
+  return confl;
+}
+
+inline
+CRef BackwardVerificationWorker::propagateUnmarkedUnits(const int64_t currentID)
+{
   // propagate units first!
   int keptUnits = nonMarkedUnithead;
   for( ; nonMarkedUnithead < nonMarkedUnitClauses.size() ; ++ nonMarkedUnithead ) { // propagate all known units
@@ -564,6 +632,18 @@ CRef BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEager(const i
   }
   nonMarkedUnitClauses.shrink( nonMarkedUnitClauses.size() - keptUnits ); // remove all removable elements (less elements in the next call)
   
+  return CRef_Undef;
+}
+
+CRef BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEager(const int64_t currentID)
+{
+  if( verbose > 3 ) cerr << "c [S-BW-CHK] propagate non-marked with ID " << currentID << endl;
+
+  if( CRef_Undef != propagateUnmarkedUnits( currentID ) ) return 0; // actual ref of the conflict is not important
+  
+  CRef    confl     = CRef_Undef;
+  nonMarkedWatches.cleanAll(); 
+  
   while( nonMarkedQHead < trail.size() ) {
         const Lit            p   = trail[nonMarkedQHead++];     // 'p' is enqueued fact to propagate.
         if( verbose > 5 ) cerr << "c [S-BW-CHK] propagate literal " << p << endl;
@@ -584,13 +664,6 @@ CRef BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEager(const i
 	{
 	    if( ! i->isValidAt( currentID ) ) { ++i; continue; }       // simply remove this element from the watch list after the loop ended
 	    if( proofItemProperties[ i->getID() ].isMoved() ) { ++i; continue; }  // this clause has been moved to the watch lists for marked clauses previously (with the other watched literal)
-	    
-	    
-// re-enable later again!
-//             // Try to avoid inspecting the clause:
-//             const Lit blocker = i->blocker();
-//             if (value(blocker) == l_True){ // keep binary clauses, and clauses where the blocking literal is satisfied
-//                 *j++ = *i++; continue; }
 
             // Make sure the false literal is data[1]:
             const CRef cr = i->getRef();
@@ -629,15 +702,17 @@ CRef BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEager(const i
                 nonMarkedQHead = trail.size();
             } else {
                 uncheckedEnqueue(first);
+		if( label[ w.getID() ].isMarked() ) goto NextClause;
 		nonMarkedQHead --; // in the next call we have to check this literal again // FIXME might result in checking the same list multiple times without any positive effect as the elements in the front are checked again and again
 	    }
 	    // in either case we found something, so we can abort this method
 	    // add this clause to the watch list of marked clauses
 	    markedWatches[~c[0]].push(w);
 	    markedWatches[~c[1]].push(w);
+	    proofItemProperties[ w.getID() ].moved(); // indicate that this clause has been moved
 	    if( verbose > 5 ) cerr << "c [S-BW-CHK] move clause to marked watch lists id: " << w.getID() << " ref: " << w.getRef() << " clause: " << ca[ w.getRef() ] << endl;
 	    markToBeVerified( w.getID() );            // mark the unit clause - TODO: handle for parallel version: returns true, if this worker set the mark
-	    proofItemProperties[ w.getID() ].moved(); // indicate that this clause has been moved
+
 	    
             // Copy the remaining watches:
             while (i < end)
@@ -651,3 +726,96 @@ CRef BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEager(const i
   }
   return confl;  
 }
+
+CRef BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEagerShared(const int64_t currentID)
+{
+  if( verbose > 3 ) cerr << "c [S-BW-CHK] propagate non-marked with ID " << currentID << endl;
+
+  if( CRef_Undef != propagateUnmarkedUnits( currentID ) ) return 0; // actual ref of the conflict is not important
+  
+  CRef    confl     = CRef_Undef;
+  nonMarkedWatches.cleanAll(); 
+  
+  while( nonMarkedQHead < trail.size() ) {
+        const Lit            p   = trail[nonMarkedQHead++];     // 'p' is enqueued fact to propagate.
+        if( verbose > 5 ) cerr << "c [S-BW-CHK] propagate literal " << p << endl;
+        vec<BackwardChecker::ClauseData>&  ws  = nonMarkedWatches[p];
+	
+	if( verbose > 6 ) {
+	  cerr << "c [S-BW-CHK] watch list for literal " << p << endl;
+	  for( int i = 0 ; i < nonMarkedWatches[p].size(); ++ i ) {
+	    cerr << "c [" << i << "] ref: " << nonMarkedWatches[p][i].getRef() << " clause: " << ca[ nonMarkedWatches[p][i].getRef() ] << endl;
+	  }
+	}
+	
+        BackwardChecker::ClauseData        *i, *j, *end;
+        num_props++;
+#warning: IMPROVE DATA STRUCTURES AS IN RISS WITH AN 'ISBINARY' INDICATOR, AND A BLOCKING LITERAL
+        // propagate longer clauses here!
+        for (i = j = (BackwardChecker::ClauseData*)ws, end = i + ws.size();  i != end;)
+	{
+	    if( ! i->isValidAt( currentID ) ) { ++i; continue; }       // simply remove this element from the watch list after the loop ended
+	    if( proofItemProperties[ i->getID() ].isMoved() ) { ++i; continue; }  // this clause has been moved to the watch lists for marked clauses previously (with the other watched literal)
+
+            WatchedLiterals& watch = watchedXORLiterals[ i->getID() ]; // get watch data structure that belongs to this clause
+            
+            const Lit false_lit = ~p;
+            const Lit otherWatchedLit = watch.getOther( ~p );
+            
+            // Make sure the false literal is data[1]:
+            const CRef cr = i->getRef();
+	    const BackwardChecker::ClauseData& w = *i; // enable later again Watcher(cr, first, 1); // updates the blocking literal
+	    i++;                                       // next iteration consider next literal
+            
+            if (  // first != blocker &&  // enable later again
+	      value(otherWatchedLit) == l_True) // satisfied clause
+	    {
+	      *j++ = w; continue; } // same as goto NextClause;
+
+            const Clause&  c = ca[cr];
+
+            // Look for new watch:
+            for (int k = 0; k < c.size(); k++){
+	     if( c[k] == otherWatchedLit || c[k] == false_lit ) continue; // do not look at the watched literals 
+              if (value(c[k]) != l_False)
+	      {
+                    markedWatches[~c[k]].push(w); // watch with literal c[k] instead of literal ~p (put into list ~c[k])
+		    watch.update(~p, c[k] );      // update watch structure to now watch literal c[k], instead of ~p
+                    goto NextClause; 
+	      }
+	    }
+		
+            // Did not find watch -- clause is unit under assignment:
+            // *j++ = w; 
+            // hence, the clause has to be marked, do not add the clause back to this list!
+	    
+            if ( value(otherWatchedLit) == l_False ) {
+                confl = cr; // independent of opt_long_conflict -> overwrite confl!
+                nonMarkedQHead = trail.size();
+            } else {
+                uncheckedEnqueue(otherWatchedLit);
+		if( label[ w.getID() ].isMarked() ) goto NextClause;
+		nonMarkedQHead --; // in the next call we have to check this literal again // FIXME might result in checking the same list multiple times without any positive effect as the elements in the front are checked again and again
+	    }
+	    // in either case we found something, so we can abort this method
+	    // add this clause to the watch list of marked clauses
+	    markedWatches[p].push(w);
+	    markedWatches[~otherWatchedLit].push(w);
+	    proofItemProperties[ w.getID() ].moved(); // indicate that this clause has been moved
+	    if( verbose > 5 ) cerr << "c [S-BW-CHK] move clause to marked watch lists id: " << w.getID() << " ref: " << w.getRef() << " clause: " << ca[ w.getRef() ] << endl;
+	    markToBeVerified( w.getID() );            // mark the unit clause - TODO: handle for parallel version: returns true, if this worker set the mark
+
+	    
+            // Copy the remaining watches:
+            while (i < end)
+               *j++ = *i++;
+	    ws.shrink(i - j); // remove all duplciate clauses!
+	    return confl;
+	    
+        NextClause:;
+        }
+        ws.shrink(i - j); // remove all duplciate clauses!
+  }
+  return confl;  
+}
+

@@ -39,6 +39,8 @@ class ProofChecker
   
   Clock checkClock;                   // clock that measures the full time
   int addedClauses;                   // number of clauses that have been added
+  int lastAddedClauses;	              // number of added clauses during last report
+  double lastCpuT;                    // cpu time of last report
   
 public:
   

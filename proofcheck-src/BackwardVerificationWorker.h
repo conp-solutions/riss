@@ -219,20 +219,48 @@ protected:
    * @return true, if this worker marked the clause, false, if already marked before
    */
   bool markToBeVerified( const int64_t& proofItemID );
-  
-  /** propagate only on valid already marked clauses and unit clauses
+
+  /** propagate only on valid already marked unit clauses
    * @param currentID id of the element that is checked. any element higher in the data structures will be deleted. Note: works only for backward checking
-   * @param addUnits do add Units only when the this method is called the first time for checking a clause (otherwise, units are scanned again and again)
    * @return CRef_Undef, if no conflict was found, the id of the conflict clause otherwise
    */
-  CRef propagateMarked(const int64_t currentID, bool addUnits = false);
+  CRef propagateMarkedUnits(const int64_t currentID);
+  
+  /** propagate only on valid already marked clauses and unit clauses
+   * Note: uses @see propagateMarkedUnits to propagate top level units
+   * @param currentID id of the element that is checked. any element higher in the data structures will be deleted. Note: works only for backward checking
+   * @return CRef_Undef, if no conflict was found, the id of the conflict clause otherwise
+   */
+  CRef propagateMarked(const int64_t currentID);
 
+  /** propagate only on valid non-marked unit clauses
+   * @param currentID id of the element that is checked. any element higher in the data structures will be deleted. Note: works only for backward checking
+   * @return CRef_Undef, if no conflict was found, the id of the conflict clause otherwise
+   */
+  CRef propagateUnmarkedUnits(const int64_t currentID);
+  
   /** propagate only on non-marked clauses and unit clauses until the next literal can be enqueued -- first will be used
+   * Note: uses @see propagateUnmarkedUnits to propagate top level units
    * @param currentID id of the element that is checked. any element higher in the data structures will be deleted. Note: works only for backward checking
    * @return CRef_Undef, if no conflict was found, the id of the conflict clause otherwise
    */
   CRef propagateUntilFirstUnmarkedEnqueueEager(const int64_t currentID);
 
+  
+  /** propagate only on valid already marked clauses and unit clauses
+   * @param currentID id of the element that is checked. any element higher in the data structures will be deleted. Note: works only for backward checking
+   * @return CRef_Undef, if no conflict was found, the id of the conflict clause otherwise
+   */
+  CRef propagateMarkedShared(const int64_t currentID);
+
+  /** propagate only on non-marked clauses and unit clauses until the next literal can be enqueued -- first will be used
+   * @param currentID id of the element that is checked. any element higher in the data structures will be deleted. Note: works only for backward checking
+   * @return CRef_Undef, if no conflict was found, the id of the conflict clause otherwise
+   */
+  CRef propagateUntilFirstUnmarkedEnqueueEagerShared(const int64_t currentID);
+  
+  
+  
   /** propagate only on non-marked clauses and unit clauses until the next literal can be enqueued -- all are collected and a decision is made afterwards
    * @param currentID id of the element that is checked. any element higher in the data structures will be deleted. Note: works only for backward checking
    * @return CRef_Undef, if no conflict was found, the id of the conflict clause otherwise
@@ -289,7 +317,6 @@ bool BackwardVerificationWorker::checkSingleClauseAT(const int64_t currentID, co
   }
   
   CRef confl = CRef_Undef;
-  bool firstCall = true;
   do {
     
     if( verbose > 4 ) {
@@ -299,10 +326,9 @@ bool BackwardVerificationWorker::checkSingleClauseAT(const int64_t currentID, co
     }
     
     // propagate on all marked clauses we already collected
-    confl = propagateMarked( currentID, firstCall );
+    confl = propagateMarked( currentID );
     assert( (confl != CRef_Undef || markedQhead == trail.size()) && "visitted all literals during propagation" );
     assert( (confl != CRef_Undef || markedUnitHead >= markedUnitClauses.size()) && "visitted all marked unit clauses" );
-    firstCall = false;
     // if we found a conflict, stop
     if( confl != CRef_Undef ) break;
     // end propagate on marked clauses
