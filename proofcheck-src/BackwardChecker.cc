@@ -183,7 +183,7 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
       if( matches ) {
 	clausePosition = i;
 	foundDuplicateClause = true;
-	if( verbose > 6 ) cerr << "c [BW-CHK] found match, store position " << clausePosition << " position: " << i << " kept: " << keptElements << endl;
+	if( verbose > 6 ) cerr << "c [BW-CHK] found match, store position " << clausePosition << " position: " << i << endl;
 	// do not look for another match
 	break;
       }
