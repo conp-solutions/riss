@@ -187,7 +187,7 @@ class Map {
     const vec<Pair>& bucket(int i) const { assert( table != NULL && 0 <= i && i < cap && "stay in bounds" ); return table[i]; }
     
     /** allow access from the outside to operate differently on the hash list */
-    vec<Pair>& getBucket(int hash) { assert( table != NULL && 0 <= index(hash) && index(hash) < cap && "stay in bounds" );  return table[ index(hash) ]; }
+    vec<Pair>& getBucket(uint32_t hash) { assert( hash >= 0 && table != NULL && 0 <= ( hash % (uint32_t)cap) && ( hash % (uint32_t)cap) < cap && "stay in bounds" );  return table[ hash % (uint32_t)cap ]; }
     
     /** tell hash table how many elements have been removed externally */
     void removedElementsExternally( int elements ) { size -= elements; }

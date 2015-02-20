@@ -2,7 +2,10 @@ all: extract select formatResults extractBMC
 
 extract: extract.cc Makefile
 	g++ -O3 -o extract extract.cc -static
-	
+
+extractArgumentation: extractArgumentation.cc Makefile
+	g++ -O3 -o extractArgumentation extractArgumentation.cc -static
+
 extractBMC: extractBMC.cc Makefile
 	g++ -O3 -o extractBMC extractBMC.cc -static
 	
