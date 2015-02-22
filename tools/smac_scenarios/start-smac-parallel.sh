@@ -1,31 +1,30 @@
 #!/bin/bash
 #
-# this script must be located in the base directory of the CSSC smac environment
-#
-# 
-# start a slurm job for a SMAC scenario
-# usage:
-#        sbatch --exclusive ./start-smac.sh solver_dir scenario_name train_file test_file
-#        ./start-smac.sh solver_dir scenario_name train_file test_file [additional smac-parameter]
+# This script starts a parallel smac scenario with the given parameters as a slurm job or without slurm
 # 
 # example call if the smac_scenarios folder is placed within the smac folder:
-#        sbatch --exclusive ./start-smac.sh MiniSATi minisat-scenario.txt instances-train.txt instances-test.txt       -- with slurm
-#        ./start-smac.sh MiniSATi minisat-scenario.txt instances-train.txt instances-test.txt [--wallclock-limit 30] [--cutoff-time 10] [--executionMoade ROAR] ... -- without slurm
+#        with slurm: sbatch --exclusive ./start-smac-parallel.sh .. solvers/MiniSATi minisat-scenario.txt
+#        local:      ./start-smac-parallel.sh .. solvers/MiniSATi scenarios/example-scenario.txt [--wallclock-limit 30] [--cutoff-time 10] [--executionMoade ROAR]
 #
 
-solver_dir=$1           # name of the solver that should be executed
-scenario_name=$2        # name of the scenario file (located in "scenarios" directory)
-train_instance_path=$3  # list of training files (relative path from here, or absolute path) 
-test_instance_path=$4   # list of test/validation files (relative path from here, or absolute path)
+smac_path=$1            # path to smac binary
+solver_dir=$2           # name of the solver that should be executed
+scenario_name=$3        # name of the scenario file (located in "scenarios" directory)
 
-shift; shift; shift; shift;
+shift; shift; shift;
 
 usage="
 Usage as slurm-job:
-    sbatch --exclusive ./start-smac.sh <solver-dir> <scenario name> <train-instances-file> <test-instances-file>
+    sbatch --exclusive ./start-smac-parallel.sh <smac-path> <solver-dir> <scenario name> <--additional smac-parameter>
 Usage as local:
-    ./start-smac.sh <solver-dir> <scenario name> <train-instances-file> <test-instances-file> <--additional smac-parameter>"
+    ./start-smac-parallel.sh <smac-path> <solver-dir> <scenario name> <--additional smac-parameter>"
 
+if [ -z "$smac_path" ]
+then
+        echo "The path where the smac binary is located must be given!"
+        echo "$usage"
+        exit 1
+fi
 if [ -z "$solver_dir" ]
 then
         echo "The name of the solver must be given!"
@@ -38,10 +37,9 @@ then
         echo "$usage"
         exit 1
 fi
-#    TODO: IMPLEMENT CHECKS FOR REMAINING PARAMETERS"
 
 # directory in which this script is located
-path=$PWD/solvers/$solver_dir
+path=$PWD
 
 # get create additional command line options for smac, use all options that have been passed additionally to the script
 additional_options="$*"
@@ -61,7 +59,7 @@ module load java/jdk1.7.0_25; module load python/2.7
     
 # this will be the folder name for smac_output of this smac run
 if [ -n "$SLURM_JOB_ID" ]; then
-    additional_options="--rungroup job_$SLURM_JOB_ID"
+    additional_options="$additional_options --rungroup job_$SLURM_JOB_ID"
 else
     echo "------Local run of SMAC with example CNFs---------"
     echo "The output can be found in: [scenarrio-dir]/smac_output/local-$(date +%s)"
@@ -70,33 +68,23 @@ else
     additional_options="$additional_options --rungroup local_$(date +%s)"
 fi
 
-# use optimization mode ( executionMode = SMAC) - ROAR is good to find bugs, but does not optimize
-
 # the tunerTimeout has to be less than sbatch-time/i
 export SMAC MEMORY=4096
+cd $smac_path
+
 for i in `seq 1 4`;
 do
     echo "start SMAC run: $i"
     ./smac \
-    --execDir . \
     --executionMode SMAC \
-    --outdir smac_output \
-    --pcs-file $path/params.pcs \
-    --algo $path/wrapper.py \
-    --scenario-file scenarios/$scenario_name \
-    --instance_file $train_instance_path \
-    --test_instance_file $test_instance_path \
-    --tunerTimeout 63000 \
+    --outdir $path/smac_output \
+    --pcs-file $path/$solver_dir/params.pcs \
+    --algo $path/$solver_dir/wrapper.py \
+    --scenario-file $path/$scenario_name \
     --validation false \
+    --tunerTimeout 63000 \
     --shared-model-mode true \
     $additional_options
 done
-
-#disabled options:
-# we are starting the script in the actual smac directory
-# --experiment-dir $path \  
-#
-# we do not perform the SAT check, as we do not know the result for all files
-#--algo \"python scripts/SATCSSCWrapper.py --script ./solvers/minisati/wrapper.py --sat-checker ./scripts/SAT --sol-file ./instances/true_solubility.txt\"
 
 exit 0

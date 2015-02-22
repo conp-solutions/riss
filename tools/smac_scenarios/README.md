@@ -3,31 +3,39 @@
 #### Get SMAC from
     http://www.cs.ubc.ca/labs/beta/Projects/SMAC/smac-v2.08.00-master-731.tar.gz
 
-Easiest way to use this scenarios: copy the smac_scenarios folder als a symlink into the smac-folder.
 
 #### manual for SMAC
     http://www.cs.ubc.ca/labs/beta/Projects/SMAC/v2.08.00/manual.pdf
 
 
-### start a SMAC-scenario
 
-1. *new scenario*: Create a scenario folder as described below in the smac_scenarios folder and continue with 4
-   
-2. *existing scenario*: Add the binary for the sat-solver in its scenario folder
-3. Rename the binary in wrapper.py (line 19)
-4. run this in the smac_scenarios folder
+### Easiest way to use
 
-    sbatch --exclusive ./start-smac.sh  smac-path  scenario-dir
+1. Copy the smac_scenarios folder als a symlink into the smac-folder (otherwise see note above)
+2. Copy the solver binary into the existing solvers/<solver-name> or create a new solver-dir in solvers/
+3. start smac as one of the following variants:
+    
+    sbatch --exclusive ./start-smac.sh .. solvers/MiniSATi scenarios/minisati-scenario.txt [--additional-smac-params]
 
-    sbatch --exclusive ./start-smac-parallel.sh smac-path scenario-dir - - - *start 4 smac runs with shared data*
+    sbatch --exclusive ./start-smac-parallel.sh .. solvers/MiniSATi scenarios/minisati-scenario-txt [--additional-smac-params] - - - *start 4 smac runs with shared data*
 
-    ./start-smac.sh  smac-path  scenario-dir  30 - - - - - *nice for local runs: will be executed without starting a slurm job*
+    ./start-smac.sh  .. solvers/MiniSATi scenarios/example-scenario [--additional-smac-params] - - - - - *nice for local runs: will be executed without starting a slurm job*
+
+
+You can extend these smac calls with any other additional smac-parameter (and overwrite the value from the script), for example:
+
+    ./start-smac.sh  .. solvers/MiniSATi scenarios/example-scenario --wallclock-limit 30 --cutoff-time 10
+
+
+**Note**: If you don't copy the smac_scenario folder into the smac folder you have to add the instances-path to the smac call:
+    
+    ... --instance_file <full-path-to-instance-file> --test_instance_file <full-path-to-instance-file>
 
 
 
 ### Ouput
 
-All ouput-files from SMAC will be saved in "[scenario-dir]/smac-output/job-nr/".
+All ouput-files from SMAC will be saved in "smac_scenarios/smac-output/job-nr/".
 
 To get the result of the SMAC run (if it could finish): 
     
@@ -35,7 +43,6 @@ To get the result of the SMAC run (if it could finish):
 
 
 the output looks like this:
-
 
     ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     Estimated mean quality of final incumbent config 3 (internal ID: 0x756E) on test set: 0.013973569870014, based on 5 run(s) on 5 test instance(s).
@@ -48,13 +55,29 @@ the output looks like this:
 
 
 
-### Create new SMAC-scenario
+### folder structur
+This smac_scenarios are structured like the CSSC 2014 Test environment [link](http://aclib.net/cssc2014/cssc14.tar.gz).
 
-a SMAC-scenario looks like this:
+- instances: list of test and training instances
+- solvers: folder with different solvers (binaries, params.pcs, wrapper.py)
+- scenarios: different scenario.txt
 
-- instances-test.txt
-- instances-train.txt
+
+#### Create new SMAC-scenario
+
+new solver in solvers/-folder:
+
 - sat-solver-binary - - - - - - - *Add the binary to the gitignore file!*
 - params.pcs- - - - - - - - - - - *Parameter of the solver that should be tuned [format description](http://aclib.net/cssc2014/pcs-format.pdf)*
-- scenario.txt- - - - - - - - - - - *Parameter for SMAC*
 - wrapper.txt - - - - - - - - - - - *Translate output from solver to SMAC*
+
+
+new scenario in scenarios/-folder:
+
+- scenario.txt- - - - - - - - - - - *Parameter for SMAC*
+
+
+new instances in instances/-folder:
+
+- <name-instances>-test.txt
+- <name-instances>-train.txt

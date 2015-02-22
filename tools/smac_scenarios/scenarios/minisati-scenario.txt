@@ -1,0 +1,8 @@
+execdir = .
+deterministic = 0
+runObj = RUNTIME
+overall_obj = mean10
+cutoff_time = 360
+tunerTimeout = 252000
+instance_file = smac_scenarios/instances/minisati_instances-train.txt 
+test_instance_file = smac_scenarios/instances/minisati_instances-test.txt 

@@ -1,2 +1,0 @@
-02:47:54.669 [main] WARN  c.u.c.b.a.t.d.s.TimingCheckerTargetAlgorithmEvaluator - Algorithm Run Result reported a runtime of 361.030059099 (secs) that exceeded it's cutoff time of 360.0 (secs) by 1.0300590990000273 (secs). Next warning at 2.0300590990000273 (secs)  
-08:40:33.098 [main] WARN  c.u.c.b.a.t.d.s.TimingCheckerTargetAlgorithmEvaluator - Algorithm Run Result reported a runtime of 32.9630289078 (secs) that exceeded it's cutoff time of 30.83787986670733 (secs) by 2.1251490410926728 (secs). Next warning at 3.1251490410926728 (secs)  

@@ -1,8 +1,9 @@
 # binaries
-MiniSATi/minisati
+solvers/MiniSATi/minisati
+solvers/MiniSATi_no_core/minisati
 
 # smac output folder
-*/smac_output
+smac_output
 
 # slurm output files
 slurm-*

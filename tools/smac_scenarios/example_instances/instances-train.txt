@@ -1,5 +1,0 @@
-smac_scenarios/example_instances/train/qcplin2006.10085.cnf
-smac_scenarios/example_instances/train/qcplin2006.10218.cnf
-smac_scenarios/example_instances/train/qcplin2006.10408.cnf
-smac_scenarios/example_instances/train/qcplin2006.10422.cnf
-smac_scenarios/example_instances/train/qcplin2006.10427.cnf
