@@ -367,6 +367,8 @@ bool BackwardVerificationWorker::checkSingleClauseRAT(const int64_t currentID, v
   // get the first literal
   const Lit firstLiteralComplement = ( c == 0 ) ? ~lits[0] : ~c->getExtraLiteral();
   
+  if( verbose > 2 ) cerr << "c [S-BW-CHK] RAT check on firstLiteral: " << ~firstLiteralComplement << " with ID " << currentID << endl;
+  
   assert( !fullDrat && "full DRAT checking is not supported yet" );
   
   bool succeeds = true;
@@ -374,12 +376,12 @@ bool BackwardVerificationWorker::checkSingleClauseRAT(const int64_t currentID, v
   int currentItem = 0;
   for( ; succeeds && currentItem < fullWatch[ firstLiteralComplement ].size(); ++ currentItem ) {
     BackwardChecker::ClauseData& item = fullWatch[ firstLiteralComplement ][currentItem];
-    assert( item.isEmptyClause() && "cannot resolve with the empty clause" );
-    assert( item.isDelete() && "delete information should not be in the full watch list" );
+    assert( !item.isEmptyClause() && "cannot resolve with the empty clause" );
+    assert( !item.isDelete()      && "delete information should not be in the full watch list" );
     
     // work only with valid items
-    if( item.isValidAt( currentID ) ) {
-      assert( item.getID() <= currentID && "can use only clauses with a smaller index for DRAT checks" );
+    if( item.isValidAt( currentID - 1 ) ) {
+      assert( item.getID() < currentID && "can use only clauses with a smaller index for DRAT checks" );
       
       // mark used clause to be verified as well
       markToBeVerified( item.getID() );
@@ -412,15 +414,17 @@ bool BackwardVerificationWorker::checkSingleClauseRAT(const int64_t currentID, v
 	break;
       }
       
+    } else {
+      // implicitely remove the current element
     }
   }
   
   // move the other valid items and remove the invalid items
   for( currentItem = currentItem  + 1; currentItem < fullWatch[ firstLiteralComplement ].size(); ++ currentItem ) { // will enter only if check failed
     BackwardChecker::ClauseData& item = fullWatch[ firstLiteralComplement ][currentItem];
-    if( item.isValidAt( currentID ) ) fullWatch[ firstLiteralComplement ][ keptFullWatchEntries++ ] = fullWatch[ firstLiteralComplement ][currentItem];
+    if( item.isValidAt( currentID - 1) ) fullWatch[ firstLiteralComplement ][ keptFullWatchEntries++ ] = fullWatch[ firstLiteralComplement ][currentItem];
   }
-  fullWatch[ firstLiteralComplement ].shrink( fullWatch[ firstLiteralComplement ].size() - keptFullWatchEntries ); // remove invalid elements
+  fullWatch[ firstLiteralComplement ].shrink_( fullWatch[ firstLiteralComplement ].size() - keptFullWatchEntries ); // remove invalid elements
   
   return succeeds;
 }

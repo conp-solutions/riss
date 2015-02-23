@@ -165,6 +165,7 @@ protected:
   bool sawEmptyClause;             // memorize that an empty clause has been parsed
   bool formulaContainsEmptyClause; // memorize that we parsed an empty clause in the formula
   bool inputMode;                  // we expect more clauses to be added
+  bool invalidProof;               // memorize that something went wrong during parsing the proof (e.g. deleted clause not found)
   
   // statistics
   int64_t duplicateClauses, clausesWithDuplicateLiterals, mergedElement;

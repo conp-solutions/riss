@@ -8,7 +8,7 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 
 using namespace Riss;
 
-static IntOption opt_verbose ("BACKWARD-CHECK", "bvw-verbose", "verbosity level of the verification worker", 0, IntRange(0, 8));
+static IntOption opt_verbose ("BACKWARD-CHECK", "bvw-verbose", "verbosity level of the verification worker", 0, IntRange(0, 9));
 
 BackwardVerificationWorker::BackwardVerificationWorker(bool opt_drat, ClauseAllocator& outer_ca, vec< BackwardChecker::ClauseData >& outer_fullProof, vec< BackwardChecker::ClauseLabel >& outer_label, int outer_formulaClauses, int outer_variables, bool keepOriginalClauses)
 :
@@ -271,8 +271,8 @@ lbool BackwardVerificationWorker::continueCheck(int64_t untilProofPosition) {
   
   if( verbose > 7 ) {
     cerr << "c [S-BW-CHK] full state: " << endl;
-    cerr << "c non-marked-units: "; for( int i = 0 ; i < nonMarkedUnitClauses.size(); ++ i ) { cerr << " " << nonMarkedUnitClauses[i].getLit() ; } cerr << endl;
-    cerr << "c marked-units: "; for( int i = 0 ; i < markedUnitClauses.size(); ++ i ) { cerr << " " << markedUnitClauses[i].getLit() ; } cerr << endl; 
+    cerr << "c non-marked-units ("<< nonMarkedUnitClauses.size() << "): "; for( int i = 0 ; i < nonMarkedUnitClauses.size(); ++ i ) { cerr << " " << nonMarkedUnitClauses[i].getLit() ; } cerr << endl;
+    cerr << "c marked-units (" << markedUnitClauses.size()  << "): "; for( int i = 0 ; i < markedUnitClauses.size(); ++ i ) { cerr << " " << markedUnitClauses[i].getLit() ; } cerr << endl; 
     cerr << "c HEAD: markedUnit: " << markedUnitHead << " marked: " << markedQhead << " non-markedUnits: " << nonMarkedUnithead << " non-marked: " << nonMarkedQHead << endl;
     cerr << "c trail: " << trail << endl;
     cerr << "c BEGIN FULL PROOF" << endl;
@@ -305,11 +305,16 @@ lbool BackwardVerificationWorker::continueCheck(int64_t untilProofPosition) {
       
       if( verbose > 3 ) cerr << "c [S-BW-CHK] check clause " << ca[ proofItem.getRef() ] << " at position " << lastPosition << " with id " << proofItem.getID() << endl;
       
+      // all items that are behind the current item in the proof have to be verified, if they are marked by this thread
+      for( int j = lastPosition + 1; j < fullProof.size(); ++ j ) {
+	assert( ( ! proofItemProperties[j].isMarkedByMe() || label[j].isVerified() ) && "each marked item has to be verified until now in sequential mode" );
+      }
+      
       if( ! checkSingleClauseAT( proofItem.getID(), &(ca[ proofItem.getRef() ]), dummy ) ) {
 	bool ret = false;
 	if( verbose > 2 ) cerr << "c [S-BW-CHK] AT check failed" << endl;
 	ratChecks ++;
-	if( drat ) ret = checkSingleClauseRAT( (int64_t) fullProof.size(), dummy, &(ca[ proofItem.getRef() ]) ); // check RAT, if drat is enabled and AT failed
+	if( drat ) ret = checkSingleClauseRAT( (int64_t) proofItem.getID(), dummy, &(ca[ proofItem.getRef() ]) ); // check RAT, if drat is enabled and AT failed
 	if( ! ret ) {
 	  if( drat && verbose > 2 ) cerr << "c [S-BW-CHK] DRAT check failed" << endl;
 	  restart(); // clean trail again, reset assignments
@@ -334,8 +339,7 @@ lbool BackwardVerificationWorker::continueCheck(int64_t untilProofPosition) {
     
   }
   restart(); // clean trail again, reset assignments
-  
-  assert( clausesToBeChecked == 0 && "has to process all elements of the proof" );
+
   if( verbose > 0 ) {
     cerr << "c still to check: " << clausesToBeChecked 
          << " (max: " << maxClausesToBeChecked 
@@ -343,6 +347,24 @@ lbool BackwardVerificationWorker::continueCheck(int64_t untilProofPosition) {
          << " verifiedClauses: " << verifiedClauses 
          << " rat: " << ratChecks << endl;
   }
+
+  if( verbose > 8 ) {
+    cerr << "c [S-BW-CHK] full state: " << endl;
+    cerr << "c non-marked-units ("<< nonMarkedUnitClauses.size() << "): "; for( int i = 0 ; i < nonMarkedUnitClauses.size(); ++ i ) { cerr << " " << nonMarkedUnitClauses[i].getLit() ; } cerr << endl;
+    cerr << "c marked-units (" << markedUnitClauses.size()  << "): "; for( int i = 0 ; i < markedUnitClauses.size(); ++ i ) { cerr << " " << markedUnitClauses[i].getLit() ; } cerr << endl; 
+    cerr << "c HEAD: markedUnit: " << markedUnitHead << " marked: " << markedQhead << " non-markedUnits: " << nonMarkedUnithead << " non-marked: " << nonMarkedQHead << endl;
+    cerr << "c trail: " << trail << endl;
+    cerr << "c BEGIN FULL PROOF" << endl;
+    for( int i = 0 ; i < fullProof.size(); ++ i ) {
+      cerr << "c item [" << i << "] id: " << fullProof[i].getID() << " valid until " << fullProof[i].getValidUntil() << " byMe: " << proofItemProperties[i].isMarkedByMe() << " marked: " << label[i].isMarked() 
+      << " verified: " << label[i].isVerified() << " deleted: "  << fullProof[i].isDelete() << "  clause: ";
+      if(fullProof[i].getRef() == CRef_Undef ) cerr << "empty"; else cerr << ca[ fullProof[i].getRef() ] ;
+      cerr << endl;
+    }
+    cerr << "c END FULL PROOF" << endl;
+  }
+  
+  assert( clausesToBeChecked == 0 && "has to process all elements of the proof" );
   
   return l_True;
 }
@@ -416,19 +438,24 @@ CRef BackwardVerificationWorker::propagateMarkedUnits(const int64_t currentID)
   for( ; markedUnitHead < markedUnitClauses.size() ; ++ markedUnitHead ) { // propagate all known units
     num_props ++;
     const BackwardChecker::ClauseData& unit = markedUnitClauses[ markedUnitHead ];
-    if( unit.isValidAt( currentID ) ) {
+    if( unit.isValidAt( currentID - 1 ) ) { // we check this position, so the same clause cannot be used for verification here!
       markedUnitClauses[ keptUnits ++ ] = markedUnitClauses[ markedUnitHead ]; // keep current element
       const Lit& l = unit.getLit();            // as its a unit clause, we can use the literal
       if( value(l) == l_True ) continue;       // check whether its SAT already
       else if (value(l) == l_False ) {
+	if( verbose > 8 ) cerr << "c [S-BW-CHK] conflict with unit " << unit.getLit() << " (id: " << unit.getID() << ")" << endl;
 	for( int i = markedUnitHead + 1; i < markedUnitClauses.size(); ++ i )  // kept the current literal already
 	  markedUnitClauses[ keptUnits ++ ] = markedUnitClauses[ i ];          // keep all other elements element
 	markedUnitClauses.shrink( markedUnitClauses.size() - keptUnits );      // remove all removed elements
 	return 0; // we do not know the exact clause, be we see a conflict
       }
-      else uncheckedEnqueue( l );              // if all is good, enqueue the literal
+      else {
+	if( verbose > 8 ) cerr << "c [S-BW-CHK] enqueue literal with unit " << unit.getLit() << " (id: " << unit.getID() << ")" << endl;
+	uncheckedEnqueue( l );              // if all is good, enqueue the literal
+      }
     } else { // element not valid any more, remove it
-      assert( currentID < unit.getID() && "a present element can only become invalid if its been removed from the proof (going backwards beyond that element)" );
+      if( verbose > 8 ) cerr << "c [S-BW-CHK] remove unit " << unit.getLit() << " (id: " << unit.getID() << ") from proof" << endl;
+      assert( currentID - 1 < unit.getID() && "a present element can only become invalid if its been removed from the proof (going backwards beyond that element)" );
     }
   }
   markedUnitClauses.shrink( markedUnitClauses.size() - keptUnits ); // remove all removable elements (less elements in the next call)
@@ -455,7 +482,7 @@ CRef BackwardVerificationWorker::propagateMarked(const int64_t currentID)
         // propagate longer clauses here!
         for (i = j = (BackwardChecker::ClauseData*)ws, end = i + ws.size();  i != end;)
 	{
-	    if( ! i->isValidAt( currentID ) ) { ++i; continue; } // simply remove this element from the watch list after the loop ended
+	    if( ! i->isValidAt( currentID - 1) ) { ++i; continue; } // simply remove this element from the watch list after the loop ended
 
             // Make sure the false literal is data[1]:
             const CRef cr = i->getRef();
@@ -522,7 +549,7 @@ CRef BackwardVerificationWorker::propagateMarkedShared(const int64_t currentID)
         // propagate longer clauses here!
         for (i = j = (BackwardChecker::ClauseData*)ws, end = i + ws.size();  i != end;)
 	{
-	    if( ! i->isValidAt( currentID ) ) { ++i; continue; } // simply remove this element from the watch list after the loop ended
+	    if( ! i->isValidAt( currentID - 1 ) ) { ++i; continue; } // simply remove this element from the watch list after the loop ended
 
             WatchedLiterals& watch = watchedXORLiterals[ i->getID() ]; // get watch data structure that belongs to this clause
             
@@ -579,7 +606,7 @@ CRef BackwardVerificationWorker::propagateUnmarkedUnits(const int64_t currentID)
   for( ; nonMarkedUnithead < nonMarkedUnitClauses.size() ; ++ nonMarkedUnithead ) { // propagate all known units
     num_props ++;
     const BackwardChecker::ClauseData& unit = nonMarkedUnitClauses[ nonMarkedUnithead ];
-    if( unit.isValidAt( currentID ) ) {
+    if( unit.isValidAt( currentID - 1) ) {
       const Lit& l = unit.getLit();            // as its a unit clause, we can use the literal
       if( value(l) == l_True ) {  // check whether its SAT already
 	//TODO: handle for parallel version: check whether its already marked and handle it accordingly
@@ -626,7 +653,7 @@ CRef BackwardVerificationWorker::propagateUnmarkedUnits(const int64_t currentID)
 	return CRef_Undef; // we just enqueued another literal, so everything's fine
       }
     } else { // element not valid any more, remove it
-      assert( currentID < unit.getID() && "a present element can only become invalid if its been removed from the proof (going backwards beyond that element)" );
+      assert( currentID - 1 < unit.getID() && "a present element can only become invalid if its been removed from the proof (going backwards beyond that element)" );
       if( verbose > 4 ) cerr << "c [S-BW-CHK] removed invalid unit: " << unit.getLit() << " with id " << unit.getID() << " valid until " << unit.getValidUntil() << endl;
     }
   }
@@ -662,7 +689,7 @@ CRef BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEager(const i
         // propagate longer clauses here!
         for (i = j = (BackwardChecker::ClauseData*)ws, end = i + ws.size();  i != end;)
 	{
-	    if( ! i->isValidAt( currentID ) ) { ++i; continue; }       // simply remove this element from the watch list after the loop ended
+	    if( ! i->isValidAt( currentID - 1 ) ) { ++i; continue; }       // simply remove this element from the watch list after the loop ended
 	    if( proofItemProperties[ i->getID() ].isMoved() ) { ++i; continue; }  // this clause has been moved to the watch lists for marked clauses previously (with the other watched literal)
 
             // Make sure the false literal is data[1]:
@@ -754,7 +781,7 @@ CRef BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEagerShared(c
         // propagate longer clauses here!
         for (i = j = (BackwardChecker::ClauseData*)ws, end = i + ws.size();  i != end;)
 	{
-	    if( ! i->isValidAt( currentID ) ) { ++i; continue; }       // simply remove this element from the watch list after the loop ended
+	    if( ! i->isValidAt( currentID - 1 ) ) { ++i; continue; }       // simply remove this element from the watch list after the loop ended
 	    if( proofItemProperties[ i->getID() ].isMoved() ) { ++i; continue; }  // this clause has been moved to the watch lists for marked clauses previously (with the other watched literal)
 
             WatchedLiterals& watch = watchedXORLiterals[ i->getID() ]; // get watch data structure that belongs to this clause

@@ -10,13 +10,15 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 #include <fstream>
 #include <sstream>
 
-static IntOption  opt_splitLoad      ("BACKWARD-CHECK", "splitLoad",        "number of clauses in queue before splitting", 8, IntRange(2, INT32_MAX));
-static IntOption  opt_verbose        ("BACKWARD-CHECK", "bwc-verbose",      "verbosity level of the checker", 0, IntRange(0, 8));
-static BoolOption opt_statistics     ("BACKWARD-CHECK", "bwc-stats",        "print statistics about backward verification", true);
-static BoolOption opt_minimalCore    ("BACKWARD-CHECK", "bwc-min-core",     "try to use as few formula clauses as possible", true);
-static BoolOption opt_space_saving   ("BACKWARD-CHECK", "bwc-space-saving", "read only access on shared data strucutres (slower)", false);
-static IntOption  opt_duplicate_cls  ("BACKWARD-CHECK", "bwc-dup-cls",      "handle duplicate clauses  (0=off,1=check,2=merge)",  0, IntRange(0, 2));
-static IntOption  opt_duplicate_lits ("BACKWARD-CHECK", "bwc-dup-lits",     "handle duplicate literals (0=off,1=check,2=delete)", 0, IntRange(0, 2));
+static IntOption  opt_splitLoad      ("BACKWARD-CHECK", "splitLoad",          "number of clauses in queue before splitting", 8, IntRange(2, INT32_MAX));
+static IntOption  opt_verbose        ("BACKWARD-CHECK", "bwc-verbose",        "verbosity level of the checker", 0, IntRange(0, 8));
+static BoolOption opt_statistics     ("BACKWARD-CHECK", "bwc-stats",          "print statistics about backward verification", true);
+static BoolOption opt_minimalCore    ("BACKWARD-CHECK", "bwc-min-core",       "try to use as few formula clauses as possible", true);
+static BoolOption opt_space_saving   ("BACKWARD-CHECK", "bwc-space-saving",   "read only access on shared data strucutres (slower)", false);
+static IntOption  opt_duplicate_cls  ("BACKWARD-CHECK", "bwc-dup-cls",        "handle duplicate clauses  (0=off,1=check,2=merge)",  0, IntRange(0, 2));
+static IntOption  opt_duplicate_lits ("BACKWARD-CHECK", "bwc-dup-lits",       "handle duplicate literals (0=off,1=check,2=delete)", 0, IntRange(0, 2));
+static BoolOption opt_pseudoParallel ("BACKWARD-CHECK", "bwc-pseudoParallel", "reduce the number of actual workers to 1", false);
+static BoolOption opt_strictProof    ("BACKWARD-CHECK", "bwc-strict",         "be strict with the proof (false=ignore wrong deletes)", true);
 
 static StringOption opt_coreFile   ("BACKWARD-CHECK", "cores",  "Write unsatisfiable sub formula into this file",0);
 static StringOption opt_proofFile  ("BACKWARD-CHECK", "lemmas", "Write relevant part of proof in this file",0);
@@ -44,6 +46,7 @@ currentID(0),
 sawEmptyClause( false ),
 formulaContainsEmptyClause( false ),
 inputMode( true ),
+invalidProof( false ),
 duplicateClauses(0), 
 clausesWithDuplicateLiterals(0),
 mergedElement(0),
@@ -90,10 +93,14 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
   // check the state
   if( !inputMode ) {
     cerr << "c WARNING: tried to add clauses after input mode has been deactivated already" << endl;
+    invalidProof = true;
     return false;
   }
   
-  if( !readsFormula && !proofClause ) return false; // if we added proof clauses already, no more formula clauses can be added
+  if( !readsFormula && !proofClause ) {
+    invalidProof = true;
+    return false; // if we added proof clauses already, no more formula clauses can be added
+  }
   if( readsFormula && proofClause ) formulaClauses = fullProof.size(); // memorize the number of clauses in the formula
   readsFormula = readsFormula && !proofClause;     // memorize that we saw a proof clause
   
@@ -177,7 +184,7 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
 	assert( (j == 0 || ps[j-1] <= ps[j]) && "added clause has to be sorted" );
 	assert( (j == 0 || clause[j-1] <= clause[j]) && "database clause has to be sorted" );
 	if( ps[j] != clause[j] ) { 
-	  if( verbose > 6 ) cerr << "c [BW-CHK] did not find match for literal " << ps[j-1] << endl;
+	  if( verbose > 6 ) cerr << "c [BW-CHK] did not find match for literal " << ps[j] << endl;
 	  matches = false; 
 	  break;
 	}
@@ -208,11 +215,13 @@ bool BackwardChecker::addProofClause(vec< Lit >& ps, bool proofClause, bool isDe
   // handle the data and add current clause to the proof
   if ( isDelete ) {
     // did we find the corresponding clause?
-    assert( clausePosition >= 0 && "the clause that should be deleted has to exist in the proof" );
     if( clausePosition == -1 ) {
       cerr << "c WARNING: clause " << ps << " that should be deleted at position " << id << " did not find a maching partner" << endl;
+      invalidProof = true;
       return false;
     }
+    
+    assert( clausePosition >= 0 && "the clause that should be deleted has to exist in the proof" );
     
     bool hasToDelete = true;  // indicate that the current clause has to be delete (might not be the case due to merging clauses)
     // find the corresponding clause, add the deletion information, delete this clause from the current occurrence list (as its not valid any more)
@@ -480,9 +489,16 @@ bool BackwardChecker::checkClause(vec< Lit >& clause, bool drupOnly, bool workOn
 	  
 	}
 
-	if( verbose > 1 ) cerr << "c [BW-CHK] parallel verification of remaining proof with " << threads << " threads" << endl; 
-	// execute all jobs, and wait for all jobs!
-	threadContoller->runJobs( jobs );
+	if( opt_pseudoParallel ) {
+	  if( verbose > 1 ) cerr << "c [BW-CHK] pseudo parallel verification of remaining proof with " << threads << " threads" << endl; 
+	  for( int i = 0 ; i < assignedWorkers; ++ i ) {
+	    jobs[i].function ( jobs[i].argument );
+	  }
+	} else {
+	  if( verbose > 1 ) cerr << "c [BW-CHK] parallel verification of remaining proof with " << threads << " threads" << endl; 
+	  // execute all jobs, and wait for all jobs!
+	  threadContoller->runJobs( jobs );
+	}
 	
 	// process results
 	for( int i = 0 ; i < assignedWorkers; ++ i ) {
@@ -576,6 +592,12 @@ bool BackwardChecker::verifyProof () {
     cerr << "c WARNING: did not parse an empty clause, proof verification will fail" << endl;
     return false;
   }
+  
+  if( invalidProof && opt_strictProof ) {
+    cerr << "c WARNING: proof is not correct based on invalid clause additions during parsing (see warnings)" << endl;
+    return false;    
+  }
+  
   inputMode = false;          // we do not expect any more clauses
 //   oneWatch.clear( true );     // free used resources
   oneWatchMap.clear();        // free used resources
@@ -586,8 +608,16 @@ bool BackwardChecker::verifyProof () {
   label.fitSize();
   fullProof.fitSize();
   
+  // renew labels
+  label.clear(); label.growTo( fullProof.size() );
+  
   assert( fullProof.last().isEmptyClause() && "last element of the proof should be the empty clause" );
-  label.last().setMarked();
+  
+  // if the last clause is the empty clause, set it marked and verified
+  if( fullProof.last().isEmptyClause() ) {
+    label.last().setMarked();
+    label.last().setVerified();
+  }
   
   // do the actual verification of the empty clause  
   vec<Lit> dummy; // will not allocate memory, so it's ok to be used as a temporal object
@@ -599,12 +629,14 @@ bool BackwardChecker::verifyProof () {
     assert( label.size() == fullProof.size() && "data should be present" );
     for( int i = 0; i < fullProof.size(); ++ i ) { // for all clauses in the proof
 //       assert( (i < formulaClauses || !label[i].isMarked() || label[i].isVerified() ) && "each labeled clause has to be verified" );
-      if( label[i].isMarked() ) {
-	assert( !fullProof[i].isDelete() && !fullProof[i].isEmptyClause() && "has to be a usual clause" );
+      if( label[i].isMarked() && ( !fullProof[i].isEmptyClause() || i + 1 < fullProof.size()) ) {
+	assert( !fullProof[i].isDelete() && "has to be a usual clause" );
 	if( i < formulaClauses ) unsatisfiableCore ++;
 	else {
-	  const Clause& c = ca[ fullProof[i].getRef() ];
-	  proofWidth = proofWidth >= c.size() ? proofWidth : c.size();
+	  if( ! fullProof[i].isEmptyClause() ) {
+	    const Clause& c = ca[ fullProof[i].getRef() ];
+	    proofWidth = proofWidth >= c.size() ? proofWidth : c.size();
+	  }
 	  proofLength ++;
 	}
       }
@@ -641,18 +673,20 @@ bool BackwardChecker::verifyProof () {
     std::ofstream file;
     file.open( (const char*) opt_proofFile );
     if( file ) {
-      file << "o proof" << (drat ? "DRAT" : "DRUP") << endl; // print proof header
+      file << "o proof " << (drat ? "DRAT" : "DRUP") << endl; // print proof header
       for( int i = formulaClauses; i < fullProof.size(); ++ i ) { // for all clauses in the proof
 	if( label[i].isMarked() ) { // add all labeled clauses to the formula
 	  std::stringstream clause;
-	  assert( !fullProof[i].isDelete() && !fullProof[i].isEmptyClause() && "has to be a usual clause" );
-	  const Clause& c = ca[ fullProof[i].getRef() ];
-	  for( int i = 0 ; i < c.size(); ++ i ) clause << c[i] << " ";
+	  assert( !fullProof[i].isDelete() && "has to be a usual clause" );
+	  if( !fullProof[i].isEmptyClause() ) { // print the clause, if its not the empty clause
+	    const Clause& c = ca[ fullProof[i].getRef() ];
+	    for( int i = 0 ; i < c.size(); ++ i ) clause << c[i] << " ";
+	  }
 	  clause << "0" << endl;
 	  file << clause.str();
 	} else if ( fullProof[i].isDelete() && label[ fullProof[i].getID() ].isMarked() ) {
 	  std::stringstream clause;
-	  assert( !fullProof[i].isDelete() && !fullProof[i].isEmptyClause() && "has to be a usual clause" );
+	  assert( !fullProof[ fullProof[i].getID() ].isDelete() && !fullProof[ fullProof[i].getID() ].isEmptyClause() && "has to be a usual clause" );
 	  const Clause& c = ca[ fullProof[i].getRef() ];
 	  clause << "d "; // add this deletion information, as the corresponding clause has also been used
 	  for( int i = 0 ; i < c.size(); ++ i ) clause << c[i] << " ";
