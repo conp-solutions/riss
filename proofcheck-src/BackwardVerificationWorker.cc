@@ -41,7 +41,8 @@ clausesToBeChecked(0),
 maxClausesToBeChecked(0),
 num_props(0),
 verifiedClauses(0),
-ratChecks(0)
+ratChecks(0),
+usedOthersMark(0)
 {
 }
 
@@ -250,6 +251,7 @@ BackwardVerificationWorker* BackwardVerificationWorker::splitWork()
 	  lastMovedItem = i;
 	  proofItemProperties[i].resetMarked();
 	  clausesToBeChecked --;
+	  if( verbose > 4 ) cerr << "c [S-BW-CHK] moved proof item " << i << endl;
 	}
 	counter ++;
 	
@@ -323,6 +325,15 @@ lbool BackwardVerificationWorker::continueCheck(int64_t untilProofPosition) {
       }
       restart(); // clean trail again, reset assignments
       verifiedClauses ++;
+      
+	if( verbose > 7 && ca[ proofItem.getRef() ].size() == 1 ) {
+	  cerr << "c begin current formula: " << endl;
+	  for( int i = 0 ; i < proofItem.getID(); ++ i ) {
+	    if( proofItem.isValidAt( proofItem.getID() ) && label[i].isMarked() ) cerr << ca[ fullProof[i].getRef() ] << endl;
+	  }
+	  cerr << "c end current formula: " << endl;
+	}
+      
       assert( clausesToBeChecked > 0 && "there had to be work before" );
       label[ proofItem.getID()  ].setVerified();
       clausesToBeChecked --; // we checked another clause
@@ -330,8 +341,6 @@ lbool BackwardVerificationWorker::continueCheck(int64_t untilProofPosition) {
       if( sequentialLimit != 0 && clausesToBeChecked > sequentialLimit ) {
 	return l_Undef;
       }
-      
-      
     } else {
       // nothing to do with unlabeled clauses, they stay in the watch list/full occurrence list until some garbage collection is performed
       if( verbose > 4 ) cerr << "c [S-BW-CHK] jump over non-marked proof item " << proofItem.getID() << "( marked: " << label[ proofItem.getID()  ].isMarked() << " verified: " << label[ proofItem.getID()  ].isVerified() << endl;
@@ -416,7 +425,10 @@ lbool BackwardVerificationWorker::checkClause(vec< Lit >& clause, int64_t untilP
 
 bool BackwardVerificationWorker::markToBeVerified(const int64_t& proofItemID)
 {
-  if( label[ proofItemID ].isMarked() ) return false; // somebody else might have marked that clause already
+  if( label[ proofItemID ].isMarked() ) {
+    if( ! proofItemProperties[ proofItemID ].isMarkedByMe() ) usedOthersMark ++; // count how often elements are used that have been marked by other threads
+    return false; // somebody else might have marked that clause already
+  }
   if( verbose > 3 ) cerr << "c [S-BW-CHK] mark clause with ID " << proofItemID << endl;
   label[ proofItemID ].setMarked();                   // TODO: might be made more thread safe
   clausesToBeChecked = proofItemID >= formulaClauses ? clausesToBeChecked + 1 : clausesToBeChecked; // set by ourself and to be checked in the proof
@@ -673,12 +685,13 @@ CRef BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEager(const i
   
   while( nonMarkedQHead < trail.size() ) {
         const Lit            p   = trail[nonMarkedQHead++];     // 'p' is enqueued fact to propagate.
-        if( verbose > 5 ) cerr << "c [S-BW-CHK] propagate literal " << p << endl;
+        if( verbose > 5 ) cerr << "c [S-BW-CHK] propagate literal" << p << " on non-marked " << endl;
         vec<BackwardChecker::ClauseData>&  ws  = nonMarkedWatches[p];
 	
 	if( verbose > 6 ) {
-	  cerr << "c [S-BW-CHK] watch list for literal " << p << endl;
+	  cerr << "c [S-BW-CHK] non-marked watch list for literal " << p << endl;
 	  for( int i = 0 ; i < nonMarkedWatches[p].size(); ++ i ) {
+	    if( nonMarkedWatches[p][i].isValidAt( currentID - 1 ) )
 	    cerr << "c [" << i << "] ref: " << nonMarkedWatches[p][i].getRef() << " clause: " << ca[ nonMarkedWatches[p][i].getRef() ] << endl;
 	  }
 	}
@@ -729,7 +742,6 @@ CRef BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEager(const i
                 nonMarkedQHead = trail.size();
             } else {
                 uncheckedEnqueue(first);
-		if( label[ w.getID() ].isMarked() ) goto NextClause;
 		nonMarkedQHead --; // in the next call we have to check this literal again // FIXME might result in checking the same list multiple times without any positive effect as the elements in the front are checked again and again
 	    }
 	    // in either case we found something, so we can abort this method
@@ -821,7 +833,6 @@ CRef BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEagerShared(c
                 nonMarkedQHead = trail.size();
             } else {
                 uncheckedEnqueue(otherWatchedLit);
-		if( label[ w.getID() ].isMarked() ) goto NextClause;
 		nonMarkedQHead --; // in the next call we have to check this literal again // FIXME might result in checking the same list multiple times without any positive effect as the elements in the front are checked again and again
 	    }
 	    // in either case we found something, so we can abort this method

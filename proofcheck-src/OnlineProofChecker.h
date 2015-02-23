@@ -81,12 +81,12 @@ public:
   bool addClause(const  Lit& l ) ;
   
   /** remove a clause during search */
-  void removeClause( const std::vector<int>& clause ) ;
-  void removeClause( const Lit& l ) ;
+  bool removeClause( const std::vector<int>& clause ) ;
+  bool removeClause( const Lit& l ) ;
   template <class T>
-  void removeClause( const T& cls ) ;
+  bool removeClause( const T& cls ) ;
   template <class T>
-  void removeClause( const T& cls, const Lit& rmLit ) ;
+  bool removeClause( const T& cls, const Lit& rmLit ) ;
   
   /// plot the current unit clauses and the current formula
   void printState();
@@ -275,7 +275,7 @@ bool OnlineProofChecker::propagate()
 }
 
 inline 
-void OnlineProofChecker::removeClause( const std::vector<int>& clause ) {
+bool OnlineProofChecker::removeClause( const std::vector<int>& clause ) {
   tmpLits.clear();
   for( int i = 0 ; i < clause.size(); ++ i ) {
     tmpLits.push( clause[i] < 0 ? mkLit(-clause[i]-1, true ) : mkLit(clause[i]-1, false) );
@@ -285,7 +285,7 @@ void OnlineProofChecker::removeClause( const std::vector<int>& clause ) {
 }
 
 inline
-void OnlineProofChecker::removeClause( const Lit& l ) 
+bool OnlineProofChecker::removeClause( const Lit& l ) 
 {
   // create a clause with l
   tmpLits.clear();
@@ -296,7 +296,7 @@ void OnlineProofChecker::removeClause( const Lit& l )
 
 template <class T>
 inline 
-void OnlineProofChecker::removeClause(const T& cls, const Lit& remLit)
+bool OnlineProofChecker::removeClause(const T& cls, const Lit& remLit)
 {
   tmpLits.clear();
   if( remLit != lit_Undef ) tmpLits.push( remLit );
@@ -310,14 +310,14 @@ void OnlineProofChecker::removeClause(const T& cls, const Lit& remLit)
 
 template <class T>
 inline 
-void OnlineProofChecker::removeClause(const T& cls)
+bool OnlineProofChecker::removeClause(const T& cls)
 {
   if( verbose > 3 ) {
     cerr << "c [DRAT-OTFC] remove clause " << cls << endl;
     printState();
   }
   
-  if( cls.size() == 0 || !ok ) return; // do not handle empty clauses here!
+  if( cls.size() == 0 || !ok ) return true; // do not handle empty clauses here!
   if( cls.size() == 1 ) {
     const Lit l = cls[0];
     int i = 0;
@@ -329,7 +329,7 @@ void OnlineProofChecker::removeClause(const T& cls)
     }
     if( i == unitClauses.size() ) assert( false && "the unit clause should be inside the vector of units" );
     if( verbose > 1 ) cerr << "c [DRAT-OTFC] removed clause " << cls << endl;
-    return;
+    return false;
   } 
   // find correct CRef ...
   ma.nextStep();
@@ -365,6 +365,7 @@ void OnlineProofChecker::removeClause(const T& cls)
     if( verbose > 1 ) cerr << "c [DRAT-OTFC] could not remove clause " << cls << " from list of literal " << smallest << endl;
     printState();
     assert(false && "clause should be in the data structures" );
+    return false;
   }
   
   // remove from the other occ-lists!
@@ -400,6 +401,7 @@ void OnlineProofChecker::removeClause(const T& cls)
   if( verbose > 1 ) cerr << "c [DRAT-OTFC] removed clause " << cls << " which is internally " << ca[ref] << endl;
   // check garbage collection once in a while!
   // TODO
+  return true;
 }
 
 inline
@@ -512,10 +514,12 @@ bool OnlineProofChecker::addClause(const vec< Lit >& cls, bool checkOnly )
 	  conflict = true;
 	  const vector<CRef>& list = occ[ toInt(~resolveLit) ];
 	  bool resovleConflict = false;
+	  if( verbose > 4 ) cerr << "c [DRAT-OTFC] resolve against " << list.size() << " clauses" << endl;
 	  for( int i = 0 ; i < list.size(); ++ i ) {
 	    // build resolvent
 	    lits.shrink( lits.size() - initialSize ); // remove literals from previous addClause call
 	    const Clause& d = ca[ list[i] ];
+	    if( verbose > 4 ) cerr << "c [DRAT-OTFC] resolve with clause " << d << endl;
 	    int j = 0;
 	    for(  ; j < d.size(); ++ j ) {
 	      if( d[j] == ~resolveLit ) continue; // this literal is used for resolution
@@ -525,7 +529,10 @@ bool OnlineProofChecker::addClause(const vec< Lit >& cls, bool checkOnly )
 		lits.push(d[j]);
 	      }
 	    }
-	    if( j != d.size() ) continue; // this resolvent would be tautological!
+	    if( j != d.size() ) { 
+	      if( verbose > 4 ) cerr << "c [DRAT-OTFC] resolvent is tautology" << endl;
+	      continue; // this resolvent would be tautological!
+	    }
 	    // lits contains all literals of the resolvent, propagate and check for the conflict!
 	    
 	    if( verbose > 3 ) cerr << "c [DRAT-OTFC] test resolvent " << lits << endl;

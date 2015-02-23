@@ -113,6 +113,7 @@ public:
   int num_props;             // number of propagated literals
   int verifiedClauses;       // number of verified clauses
   int ratChecks;             // counts how often AT checkes failed
+  int usedOthersMark;        // counts how often we used clauses that have been marked by other threads/workers
   
   
   /** setup checker, use data structures that have been set up before from the outside 
@@ -278,6 +279,7 @@ protected:
   bool checkSingleClauseAT( const int64_t currentID, const ClauseType* c, vec<Lit>& extraLits, bool reuseClause = false );
   
   /** check RAT of the given clause with respect to the partial proof until element currentID
+   * Note: call this method only after the AT check failed
    * @param currentID the position of that clause in the proof
    * @param c the clause to be checked
    * @param extraLits literals that belong to the clause (e.g. after resolution)
@@ -345,9 +347,15 @@ bool BackwardVerificationWorker::checkSingleClauseAT(const int64_t currentID, co
     // if we found a conflict, stop
     if( confl != CRef_Undef ) break;
     
-  } while ( nonMarkedQHead < trail.size() || nonMarkedUnithead < nonMarkedUnitClauses.size() ); // saw all clauses that might be interesting
+  } while ( nonMarkedQHead < trail.size() || nonMarkedUnithead < nonMarkedUnitClauses.size() || markedQhead < trail.size() ); // saw all clauses that might be interesting
 
   if( verbose > 2 ) cerr << "c [S-BW-CHK] returned conflict reference: " << confl << endl;
+  
+  if( confl == CRef_Undef && verbose > 5 ) {
+    cerr << "c [S-BW-CHK] no conflict" << endl;
+    cerr << "c trail: " << trail.size() << " markedUnits: " << markedUnitClauses.size() << " non-markedUnits: " << nonMarkedUnitClauses.size() << endl;
+    cerr << "c HEAD: markedUnit: " << markedUnitHead << " marked: " << markedQhead << " non-markedUnits: " << nonMarkedUnithead << " non-marked: " << nonMarkedQHead << endl; 
+  }
   
   // return true, if there was a conflict (then the clause has AT)
   return confl != CRef_Undef;
@@ -366,6 +374,7 @@ bool BackwardVerificationWorker::checkSingleClauseRAT(const int64_t currentID, v
   
   // get the first literal
   const Lit firstLiteralComplement = ( c == 0 ) ? ~lits[0] : ~c->getExtraLiteral();
+  const bool isUnitClause = lits.size() == 1;
   
   if( verbose > 2 ) cerr << "c [S-BW-CHK] RAT check on firstLiteral: " << ~firstLiteralComplement << " with ID " << currentID << endl;
   
@@ -374,6 +383,22 @@ bool BackwardVerificationWorker::checkSingleClauseRAT(const int64_t currentID, v
   bool succeeds = true;
   int keptFullWatchEntries = 0;
   int currentItem = 0;
+  
+  /* built trail for optimized RAT check */
+  restart();
+  assert( c != 0 && "this method sould only be executed on clauses" );
+  assert( lits.size() == 0 && "this method should be called without extra literals" );
+  if( c != 0 ) {
+    const Clause& clause = *c;
+    const Lit& firstLit = c->getExtraLiteral();
+    for( int i = 0 ; i < clause.size(); ++ i ) {                                // enqueue all complements
+      if( clause[i] == firstLit ) continue;                                     // jump over first literal of the clause
+      if( value( ~clause[i] ) == l_False ) return true;                         // there is a conflict
+      else if( value( ~clause[i] ) == l_Undef ) uncheckedEnqueue( ~clause[i] );   
+    }
+  }
+  const int beforeTrailSize = trail.size();
+  
   for( ; succeeds && currentItem < fullWatch[ firstLiteralComplement ].size(); ++ currentItem ) {
     BackwardChecker::ClauseData& item = fullWatch[ firstLiteralComplement ][currentItem];
     assert( !item.isEmptyClause() && "cannot resolve with the empty clause" );
@@ -386,10 +411,15 @@ bool BackwardVerificationWorker::checkSingleClauseRAT(const int64_t currentID, v
       // mark used clause to be verified as well
       markToBeVerified( item.getID() );
       
+      if( verbose > 4 ) cerr << "c [S-BW-CHK] resolve with clause with ID " << item.getID() << endl;
+      
       fullWatch[ firstLiteralComplement ][ keptFullWatchEntries++ ] = fullWatch[ firstLiteralComplement ][currentItem];
       // build resolvent wrt the current assignment
       resolventLits.clear();
       const Clause& d = ca[ item.getRef() ];
+      
+      if( verbose > 6 ) cerr << "c [S-BW-CHK] consider clause with " << item.getID() << " for resolution: " << d << endl;
+      
       // the current assignment is build as follows: J = ~c P, where P are the literals that follow from ~c wrt F
       // the resolvent from c and d is ~c,~d (without the common literal firstLiteralComplement)
       // the AT check is done for J' = ~c, ~d, P, Q, where Q is implied by ~c and ~d together
@@ -398,7 +428,7 @@ bool BackwardVerificationWorker::checkSingleClauseRAT(const int64_t currentID, v
       // literals in d, that are true, are false in ~d, and hence indicate a tautologic clause, or that AT of the resolvent would fail
       bool resolventIsAT = false;     // if the resolvent is a tautology, the check is ok and we continue with the next clause immediately
       for( int j = 0 ; j < d.size(); ++ j ) {
-	if( d[j] == ~firstLiteralComplement ) continue;
+	if( d[j] == firstLiteralComplement ) continue;
 	if( value( d[j] ) == l_True ) { resolventIsAT = true; break; }
 	else if ( value( d[j] ) == l_Undef ) {
 	  resolventLits.push( d[j] );
@@ -406,16 +436,22 @@ bool BackwardVerificationWorker::checkSingleClauseRAT(const int64_t currentID, v
 	  // the literal is not added to the resolvent, and hence silently ignored 
 	}
       }
-      if( resolventIsAT ) continue; // the AT check of the resolvent would succeed
-      
-      // check AT of the resolvent - by reusing the literals that have been used in the AT check for c
-      if( ! checkSingleClauseAT(currentID, c, resolventLits, true ) ) {
-	succeeds = false;
-	break;
+      if( resolventIsAT ) {
+	if( verbose > 5 ) cerr << "c [S-BW-CHK] resolvent is a tautology" << endl;
+	continue; // the AT check of the resolvent would succeed
       }
       
+      // check AT of the resolvent - by reusing the literals that have been used in the AT check for c
+      if( c != 0 ) cerr << "c perform RAT check for clause " << *c << " with resolvent lits " << resolventLits << " and trail: " << trail << endl;
+      if( ! checkSingleClauseAT(currentID, c, resolventLits, true ) ) {  
+	succeeds = false;
+	if( verbose > 5 ) cerr << "c [S-BW-CHK] AT of resolvent failed" << endl;
+	break;
+      }
+      removeBehind( beforeTrailSize );
     } else {
       // implicitely remove the current element
+      if( verbose > 6 ) cerr << "c [S-BW-CHK] remove element with ID " << item.getID() << " from list" << endl;
     }
   }
   
@@ -425,6 +461,8 @@ bool BackwardVerificationWorker::checkSingleClauseRAT(const int64_t currentID, v
     if( item.isValidAt( currentID - 1) ) fullWatch[ firstLiteralComplement ][ keptFullWatchEntries++ ] = fullWatch[ firstLiteralComplement ][currentItem];
   }
   fullWatch[ firstLiteralComplement ].shrink_( fullWatch[ firstLiteralComplement ].size() - keptFullWatchEntries ); // remove invalid elements
+  
+  if( verbose > 6 ) cerr << "c [S-BW-CHK] RAT check succeeds: " << succeeds << endl;
   
   return succeeds;
 }

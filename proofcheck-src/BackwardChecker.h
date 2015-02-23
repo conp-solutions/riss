@@ -86,6 +86,7 @@ protected:
     int64_t prop_lits;
     int64_t max_marked;
     int64_t RATchecks;
+    int64_t reusedOthersMark;
   };
   
   vec<Statistics> statistics; // statistics per thread

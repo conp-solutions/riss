@@ -107,8 +107,13 @@ bool ProofChecker::addClause_(vec< Lit >& ps, bool isDelete)
   }
   
   if( !checkBackwards ) {
-    if( receiveFormula ) forwardChecker->addParsedclause( ps );
-    else return forwardChecker->addClause( ps );
+    if( receiveFormula ) {
+      assert( !isDelete && "there should not be delete information inside the proof" );
+      forwardChecker->addParsedclause( ps );
+    }else {
+      if( isDelete ) return forwardChecker->removeClause( ps );
+      return forwardChecker->addClause( ps );
+    }
   } else {
     if( receiveFormula ) return backwardChecker->addProofClause( ps, false ); // might fail if DRAT is enabled, because than verifying RAT might become unsound (if clauses have been added)
     return backwardChecker->addProofClause( ps, true, isDelete );

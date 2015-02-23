@@ -313,28 +313,31 @@ void BackwardChecker::printStatistics(std::ostream& s) {
   if( threads > 1 ) {
     s << "c ======== PARALLEL VERIFICATION STATISTICS ========" << endl;
     s << "c threads: " << threads << " speedup: " << cpuT / wallT << " efficiency: " << cpuT / ( wallT * threads ) << endl;
-    s << "c ID checks RATchecks propagatedLits maxTodo" << endl;
+    s << "c ID checks RATchecks propagatedLits maxTodo usedOtherMarked" << endl;
     for( int i = 0; i < threads; ++ i ) {
       s << "c " << i << " " 
         << statistics[i].checks << " "
 	<< statistics[i].RATchecks << " "
 	<< statistics[i].prop_lits << " "
-	<< statistics[i].max_marked << endl;
+	<< statistics[i].max_marked << " "
+	<< statistics[i].reusedOthersMark << endl;
       if( i > 0 ) {
 	statistics[0].checks += statistics[i].checks;
 	statistics[0].RATchecks += statistics[i].RATchecks;
 	statistics[0].prop_lits += statistics[i].prop_lits;
 	statistics[0].max_marked += statistics[i].max_marked;
+	statistics[0].reusedOthersMark += statistics[i].reusedOthersMark;
       }
     }
   }
   s << "c ========= VERIFICATION STATISTICS =========" << endl;
-  s << "c    checks RATchecks propagatedLits maxTodo" << endl;
+  s << "c    checks RATchecks propagatedLits maxTodo usedOtherMarked" << endl;
   s << "c " << "ALL" << " " 
         << statistics[0].checks << " "
 	<< statistics[0].RATchecks << " "
 	<< statistics[0].prop_lits << " "
-	<< statistics[0].max_marked << endl;
+	<< statistics[0].max_marked << " "
+	<< statistics[0].reusedOthersMark << endl;
   s << "c ===========================================" << endl;
   s << "c check/sec: cpu: " << statistics[0].checks / cpuT
     << " wall: "  << statistics[0].checks / wallT  << endl;
@@ -389,6 +392,7 @@ bool BackwardChecker::checkClause(vec< Lit >& clause, bool drupOnly, bool workOn
       statistics[0].prop_lits = sequentialChecker->num_props;
       statistics[0].checks = sequentialChecker->verifiedClauses;
       statistics[0].RATchecks = sequentialChecker->ratChecks;
+      statistics[0].reusedOthersMark= sequentialChecker->usedOthersMark;
     }
     
     sequentialChecker->release(); // write back the clause storage
@@ -542,6 +546,7 @@ bool BackwardChecker::checkClause(vec< Lit >& clause, bool drupOnly, bool workOn
 	  statistics[i].prop_lits = workers[i]->num_props;
 	  statistics[i].checks = workers[i]->verifiedClauses;
 	  statistics[i].RATchecks = workers[i]->ratChecks;
+	  statistics[i].reusedOthersMark= workers[i]->usedOthersMark;
 	}
       }
       
@@ -557,6 +562,7 @@ bool BackwardChecker::checkClause(vec< Lit >& clause, bool drupOnly, bool workOn
     statistics[0].prop_lits = sequentialChecker->num_props;
     statistics[0].checks = sequentialChecker->verifiedClauses;
     statistics[0].RATchecks = sequentialChecker->ratChecks;
+    statistics[0].reusedOthersMark= sequentialChecker->usedOthersMark;
     // clean up all data structures
     sequentialChecker->release(); // write back the clause storage
     delete sequentialChecker;     // free resources
@@ -680,7 +686,14 @@ bool BackwardChecker::verifyProof () {
 	  assert( !fullProof[i].isDelete() && "has to be a usual clause" );
 	  if( !fullProof[i].isEmptyClause() ) { // print the clause, if its not the empty clause
 	    const Clause& c = ca[ fullProof[i].getRef() ];
-	    for( int i = 0 ; i < c.size(); ++ i ) clause << c[i] << " ";
+	    if( !drat ) for( int i = 0 ; i < c.size(); ++ i ) clause << c[i] << " ";
+	    else { // f we have drat proofs, print the first literal first, and not twice!
+	      assert( c.size() > 0 && "cannot be the empty clause" );
+	      clause << c.getExtraLiteral() << " "; // print extra literal
+	      for( int i = 0 ; i < c.size(); ++ i ) { // print all other literals
+		if( c[i] != c.getExtraLiteral() ) clause << c[i] << " ";
+	      }
+	    }
 	  }
 	  clause << "0" << endl;
 	  file << clause.str();

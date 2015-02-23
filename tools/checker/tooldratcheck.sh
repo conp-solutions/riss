@@ -9,6 +9,9 @@ status=$?
 proofcheckParams=" -bwc-pseudoParallel -splitLoad=2 -threads=2 -backward "
 
 removecommand="rm -f"
+#
+# enable to not remove files after the run!
+#
 removecommand="ls"
 
 echo "run with PID $?"
@@ -86,68 +89,10 @@ else
         $removecommand /tmp/verify_$$.cnf /tmp/cores-$$.cnf /tmp/lemmas-$$.cnf
         exit 26
      fi 
-     
-     #
-     # shrink proof (and hopefully make it invalid)
-     #
-     cat /tmp/verify_$$.cnf | awk '{ if ($1 == "o" || NR % 5 != 4) print $0;} END {print "0"} ' > /tmp/verify_$$-2.cnf
-     mv /tmp/verify_$$-2.cnf /tmp/verify_$$.cnf
-     
-     echo ""
-     echo "shrink solver output and test again"
-     echo ""
-     
-     checkOutput=$(timeout 120 ./proofcheck $proofcheckParams $2 /tmp/verify_$$.cnf)
-     pstat=$?
-     echo "proofcheck stopped with $pstat"
 
-     if [ "$pstat" -eq "124" ]
-     then
-        # we got a timeout here!
-				mkdir -p verificationTimeout # collect instances where lingeling performs badly
-        mv $2 verificationTimeout
-        $removecommand /tmp/verify_$$.cnf /tmp/cores-$$.cnf /tmp/lemmas-$$.cnf
-        exit 124
-     fi
-		
-		
-		 ./drat-trim /tmp/core.cnf /tmp/lemmas.cnf -S
-		
-     checkOutput=$(timeout 120 ./drat-trim $2 /tmp/verify_$$.cnf -S )
-     lstat=$?
-
-     if [ "$lstat" -eq "124" ]
-     then
-        # we got a timeout here!
-	      mkdir -p verificationTimeout # collect instances where lingeling performs badly
-        mv $2 verificationTimeout
-        $removecommand /tmp/verify_$$.cnf /tmp/cores-$$.cnf /tmp/lemmas-$$.cnf
-        exit 124
-     fi
-		
-		 # instead of looking for exit code, grep for matching pattern
-		 echo $checkOutput | grep "s VERIFIED" > /dev/null
-		 gstat=$?
-		 
-		 echo "gstat: $gstat (1=valid) output: $pstat (0=valid)"
-		
-		 # proofcheck said valid, drat-trim said invalid
-		 if [ "$gstat" -ne "0" -a "$pstat" -eq "0" ]
-     then
-        # verification failed
-        $removecommand /tmp/verify_$$.cnf /tmp/cores-$$.cnf /tmp/lemmas-$$.cnf
-        exit 27
-     fi
-
-		 # proofcheck said invalid, drat-trim said valid
-		 if [ "$gstat" -ne "1" -a "$pstat" -ne "0" ]
-     then
-        # verification failed
-        $removecommand /tmp/verify_$$.cnf /tmp/cores-$$.cnf /tmp/lemmas-$$.cnf
-        exit 28
-     fi
-     
-     
+		 echo ""
+		 echo "check core and lemmas"
+		 echo ""     
      #
      # if a core file has been written (might not have been the case due to trivial unsat)
      #
@@ -161,14 +106,12 @@ else
 		   checkOutput=$(timeout 120 ./drat-trim /tmp/cores-$$.cnf /tmp/lemmas-$$.cnf)
 		   lstat=$?
 
-		   # delete none necessary files
-			 $removecommand /tmp/cores-$$.cnf /tmp/lemmas-$$.cnf
-			 
 		   if [ "$lstat" -eq "124" ]
 		   then
 		      # we got a timeout here!
 					mkdir -p verificationTimeout # collect instances where lingeling performs badly
 		      mv $2 verificationTimeout
+          $removecommand /tmp/verify_$$.cnf /tmp/cores-$$.cnf /tmp/lemmas-$$.cnf
 		      exit 124
 		   fi
 		
@@ -187,7 +130,80 @@ else
      
     fi
 
+     #
+     # shrink proof (and hopefully make it invalid)
+     #
+     cat /tmp/verify_$$.cnf | awk '{ if ($1 == "o" || NR % 5 != 4) print $0;} END {print "0"} ' > /tmp/verify_$$-2.cnf
+     mv /tmp/verify_$$-2.cnf /tmp/verify_$$.cnf
+     
+     echo ""
+     echo "shrink solver output and test again"
+     echo ""
+     
+     # delete intermediate files
+     rm -f /tmp/cores-$$.cnf /tmp/lemmas-$$.cnf
+     # check reduced proof
+     checkOutput=$(timeout 120 ./proofcheck $proofcheckParams $2 /tmp/verify_$$.cnf -cores=/tmp/cores-$$.cnf -lemmas=/tmp/lemmas-$$.cnf)
+     pstat=$?
+     echo "proofcheck stopped with $pstat"
+
+     if [ "$pstat" -eq "124" ]
+     then
+        # we got a timeout here!
+				mkdir -p verificationTimeout # collect instances where lingeling performs badly
+        mv $2 verificationTimeout
+        $removecommand /tmp/verify_$$.cnf /tmp/cores-$$.cnf /tmp/lemmas-$$.cnf
+        exit 124
+     fi
+		 
+		 # verify only on produced core by proofcheck tool, because a valid subproof might be found
+     #checkOutput=$(timeout 120 ./drat-trim /tmp/cores-$$.cnf /tmp/lemmas-$$.cnf -S )
+     
+     coreFile=$2
+     lemmaFile=/tmp/verify_$$.cnf
+     if [ -f /tmp/cores-$$.cnf ]; then 
+     	 coreFile=/tmp/cores-$$.cnf; 
+     	 lemmaFile=/tmp/lemmas-$$.cnf; 
+     fi
+     
+     echo "use core file: $coreFile  lemma file: $lemmaFile"
+     checkOutput=$(timeout 120 ./proofcheck -no-backward $coreFile $lemmaFile )
+     lstat=$?
+
+     if [ "$lstat" -eq "124" ]
+     then
+        # we got a timeout here!
+	      mkdir -p verificationTimeout # collect instances where lingeling performs badly
+        mv $2 verificationTimeout
+        $removecommand /tmp/verify_$$.cnf /tmp/cores-$$.cnf /tmp/lemmas-$$.cnf
+        exit 124
+     fi
+		
+		 # instead of looking for exit code, grep for matching pattern
+		 echo $checkOutput | grep "s VERIFIED" > /dev/null
+		 gstat=$?
+		 
+		 echo "gstat: $gstat (1=valid) output: $pstat (0=valid)"
+		 echo "checkeroutput: $checkOutput"
+		
+		 # proofcheck said valid, drat-trim said invalid
+		 if [ "$gstat" -ne "0" -a "$pstat" -eq "0" ]
+     then
+        # verification failed
+        $removecommand /tmp/verify_$$.cnf /tmp/cores-$$.cnf /tmp/lemmas-$$.cnf
+        exit 27
+     fi
+
+		 # proofcheck said invalid, drat-trim said valid
+		 if [ "$gstat" -ne "1" -a "$pstat" -ne "0" ]
+     then
+        # verification failed
+        $removecommand /tmp/verify_$$.cnf /tmp/cores-$$.cnf /tmp/lemmas-$$.cnf
+        exit 28
+     fi
+
 		# UNSAT has been verified succesfully
+    $removecommand /tmp/verify_$$.cnf /tmp/cores-$$.cnf /tmp/lemmas-$$.cnf
     exit 20
 fi
 
