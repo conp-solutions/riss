@@ -154,7 +154,7 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  
  
  // DRUP
- opt_verboseProof     ("PROOF", "verb-proof", "also print comments into the proof, 2=print proof also to stderr", 1, IntRange(0, 2) , optionListPtr ),
+ opt_verboseProof     ("PROOF", "verb-proof", "also print comments into the proof, 2=print proof also to stderr", 0, IntRange(0, 2) , optionListPtr ),
  opt_rupProofOnly     ("PROOF", "rup-only", "do not print delete lines into proof", false, optionListPtr ), 
  opt_checkProofOnline ("PROOF", "proof-oft-check", "check proof construction during execution (1=on, higher => more verbose checking)", 0, IntRange(0,10), optionListPtr ), 
 
