@@ -17,7 +17,6 @@ fullDrat( false ),
 parallelMode( none ),
 sequentialLimit( 0 ),   // initially, there is no limit and the sequential worker
 verbose(opt_verbose),   // all details for development
-#warning ADD A VERBOSITY OPTION TO THE TOOL
 formulaClauses( outer_formulaClauses ),
 label( outer_label ),
 fullProof( outer_fullProof ),
