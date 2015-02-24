@@ -77,16 +77,18 @@ int main(int argc, char** argv)
   IntOption    cpu_lim("MAIN", "cpu-lim","Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
   IntOption    mem_lim("MAIN", "mem-lim","Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
-  BoolOption   opt_drat     ("PROOFCHECK", "drat",     "verify DRAT instead of DRUP", true);
-  BoolOption   opt_first    ("PROOFCHECK", "first",    "check RAT only for first literal", true);
-  BoolOption   opt_backward ("PROOFCHECK", "backward", "use backward checking", true);
-  IntOption    opt_threads  ("PROOFCHECK", "threads",  "number of threads that are used for verification.\n", 2, IntRange(0, INT32_MAX));
-  BoolOption   opt_stdin    ("PROOFCHECK", "useStdin", "scan on stdin for further proof parts (files first)", false);
+  BoolOption   opt_drat        ("PROOFCHECK", "drat",        "verify DRAT instead of DRUP", true);
+  BoolOption   opt_first       ("PROOFCHECK", "first",       "check RAT only for first literal", true);
+  BoolOption   opt_backward    ("PROOFCHECK", "backward",    "use backward checking", true);
+  BoolOption   opt_verifyUnsat ("PROOFCHECK", "verifyUnsat", "verify the empty clause (otherwise check proof only)", true);
+  IntOption    opt_threads     ("PROOFCHECK", "threads",     "number of threads that are used for verification.\n", 2, IntRange(0, INT32_MAX));
+  BoolOption   opt_stdin       ("PROOFCHECK", "useStdin",    "scan on stdin for further proof parts (files first)", false);
   
     try {
 
 	  bool foundHelp = ::parseOptions (argc, argv ); // parse all global options
-      
+	  if( foundHelp ) exit(0);
+	  
 	  signal(SIGINT, SIGINT_exit);
 	  signal(SIGXCPU,SIGINT_exit);
 
@@ -182,21 +184,24 @@ int main(int argc, char** argv)
 	    drupProof = drupProof && ( proofStyle == Riss::drupProof ); // check whether the given proof is claimed to be in the less expensive format
 	  }
 
-	  bool successfulVerification = proofChecker.emptyPresent();
+	  // check whether parsing worked
+	  bool successfulVerification = proofChecker.parsingOk();
 	  
-	  if( !successfulVerification ) {
-	    printf ("c WARNING: empty clause not present\n");
-	    printf ("s NOT VERIFIED\n");
-	    return 1;
+	  if( opt_verifyUnsat ) {
+	    successfulVerification = successfulVerification && proofChecker.emptyPresent();
+	    
+	    if( !successfulVerification ) {
+	      printf ("c WARNING: empty clause not present\n");
+	      printf ("s NOT VERIFIED\n");
+	      return 1;
+	    }
+	    
+	    // all proof files claimed to be DRUP, so disable expensive DRAT data structures
+	    if( drupProof ) proofChecker.setDRUPproof();
+	    successfulVerification = proofChecker.verifyProof();
 	  }
-	  
-	  if( drupProof ) proofChecker.setDRUPproof();
-	  successfulVerification = proofChecker.verifyProof();
 	    
 	  if( successfulVerification ) {
-	    
-	    // TODO: could do more here, e.g. print unsat core, print statistics, ...
-	    
 	    printf ("s VERIFIED\n");
 	    return 0;
 	  } else {

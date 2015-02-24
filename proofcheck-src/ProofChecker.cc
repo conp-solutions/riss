@@ -89,11 +89,18 @@ void ProofChecker::setReveiceFormula(bool nextIsFormula)
   receiveFormula = nextIsFormula;
 }
 
+bool ProofChecker::parsingOk() const {
+  return ok;
+}
+
 bool ProofChecker::addClause_(vec< Lit >& ps, bool isDelete)
 {
   if( ps.size() == 0 ) parsedEmptyClause = true; // memorize that the empty clause has been added 
   
   assert( (!isDelete || !receiveFormula) && "cannot delete clauses within the formula" );
+
+  // we already know that something went wrong
+  if( !ok ) return false;
   
   addedClauses++;
   
@@ -111,15 +118,14 @@ bool ProofChecker::addClause_(vec< Lit >& ps, bool isDelete)
       assert( !isDelete && "there should not be delete information inside the proof" );
       forwardChecker->addParsedclause( ps );
     }else {
-      if( isDelete ) return forwardChecker->removeClause( ps );
-      return forwardChecker->addClause( ps );
+      if( isDelete ) ok = ok && forwardChecker->removeClause( ps );
+      else ok = ok && forwardChecker->addClause( ps );
     }
   } else {
-    if( receiveFormula ) return backwardChecker->addProofClause( ps, false ); // might fail if DRAT is enabled, because than verifying RAT might become unsound (if clauses have been added)
-    return backwardChecker->addProofClause( ps, true, isDelete );
-    return true;
+    if( receiveFormula ) ok = ok &&  backwardChecker->addProofClause( ps, false ); // might fail if DRAT is enabled, because than verifying RAT might become unsound (if clauses have been added)
+    else ok = ok &&  backwardChecker->addProofClause( ps, true, isDelete );
   }
-  return true;
+  return ok;
 }
 
 bool ProofChecker::checkClauseDRUP(vec< Lit >& clause, bool add)

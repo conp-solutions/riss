@@ -59,6 +59,11 @@ public:
    */
   void setReveiceFormula(bool nextIsFormula);
   
+  /** indicate whether parsing the proof was ok, and that no error occured
+   * @return true, if parsing was ok
+   */
+  bool parsingOk() const;
+  
   /** check whether the current clause can be added to the current proof (do not add the clause) 
    *  Note: uses the set proof format of the checker, does not add the clause to the proof
    *  @clause clause to be checked
