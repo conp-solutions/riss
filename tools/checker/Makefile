@@ -9,7 +9,7 @@ cnfuzz: cnfuzz.c Makefile
 	gcc -o cnfuzz cnfuzz.c -Wall -O0
 
 drat-trim: drat-trim.c
-	gcc -O2 -o drat-trim drat-trim.c
+	gcc -O2 -o drat-trim drat-trim.c -static
 
 lgl:
 	cd lingeling; ./configure && make; cp lingeling ../lgl

@@ -23,6 +23,12 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <assert.h>
 #include <sys/time.h>
 
+// BEGIN Norbert
+#include <sys/resource.h>
+#include <unistd.h>
+#include <time.h>
+// END Norbert
+
 #define TIMEOUT     20000
 #define BIGINIT     1000000
 #define INIT        8
@@ -61,6 +67,24 @@ struct solver { FILE *inputFile, *proofFile, *coreFile, *lemmaFile, *traceFile;
 #define ADD_WATCH(l,m)  { if (S->used[(l)] + 1 == S->max[(l)]) { S->max[(l)] *= 1.5; \
                             S->wlist[(l)] = (long *) realloc(S->wlist[(l)], sizeof(long) * S->max[(l)]); } \
                           S->wlist[(l)][ S->used[(l)]++ ] = (m); S->wlist[(l)][ S->used[(l)] ] = END; }
+
+// BEGIN Norbert
+
+double parseTime = 0, parseWTime = 0, verificationTime = 0, verificationWTime = 0;
+
+static inline double cpuTime(void) {
+    struct rusage ru;
+    getrusage(RUSAGE_SELF, &ru);
+    return (double)ru.ru_utime.tv_sec + (double)ru.ru_utime.tv_usec / 1000000; }
+
+static inline double wallClockTime(void)
+{
+    struct timespec timestamp;
+    clock_gettime(CLOCK_MONOTONIC, &timestamp);
+    return ((double) timestamp.tv_sec) + ((double) timestamp.tv_nsec / 1000000000);
+}
+    
+// END Norbert
 
 static inline void printClause(int* clause) {
   printf("[%i] ", clause[ID]);
@@ -691,8 +715,12 @@ int parse (struct solver* S) {
   free (hashMax);
   free (buffer);
 
-  printf ("c finished parsing\n");
-//  printf ("c finished parsing. average lifetime of lemmas is %.3f\n", 0);
+  // BEGIN Norbert
+  parseTime = cpuTime() - parseTime; parseWTime = wallClockTime() - parseWTime;
+  printf ("c finished parsing -- took %lf seconds (wall: %lf)\n", parseTime, parseWTime);
+  verificationTime = cpuTime();
+  verificationWTime = wallClockTime();
+  // END Norbert
 
   int n = S->maxVar;
   S->falseStack = (int*) malloc((n + 1) * sizeof(int)); // Stack of falsified literals -- this pointer is never changed
@@ -791,6 +819,7 @@ void printHelp ( ) {
   printf("  PROOF       proof file in DRAT format (stdin if no argument)\n\n");
   exit(0); }
 
+
 int main (int argc, char** argv) {
   struct solver S;
 
@@ -835,6 +864,10 @@ int main (int argc, char** argv) {
   if (tmp == 1) printf ("c reading proof from stdin\n");
   if (tmp == 0) printHelp ();
 
+	// BEGIN Norbert
+	parseTime = cpuTime(); parseWTime = wallClockTime();
+	// END Norbert
+
   int parseReturnValue = parse(&S);
 
   fclose (S.inputFile);
@@ -844,6 +877,13 @@ int main (int argc, char** argv) {
   else if  (parseReturnValue == UNSAT)    printf ("c trivial UNSAT\ns VERIFIED\n");
   else if  ((sts = verify (&S)) == UNSAT) printf ("s VERIFIED\n");
   else printf ("s NOT VERIFIED\n")  ;
+  
+  // BEGIN Norbert
+  verificationTime = cpuTime() - verificationTime;
+  verificationWTime = wallClockTime() - verificationWTime;
+  printf ("c verification took %lf seconds (wall: %lf)\n", verificationTime, verificationWTime)  ;
+  // END Norbert
+  
   freeMemory (&S);
   return (sts != UNSAT); // 0 on success, 1 on any failure
 }
