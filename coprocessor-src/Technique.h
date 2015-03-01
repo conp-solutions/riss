@@ -8,7 +8,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "core/Solver.h"
 #include "utils/System.h"
 
-#include "coprocessor-src/CoprocessorThreads.h"
+#include "utils/ThreadController.h"
 #include "coprocessor-src/CP3Config.h"
 using namespace Riss;
 
@@ -105,7 +105,7 @@ inline void Technique::giveMoreSteps()
 }
 
 
-inline Technique::Technique( Coprocessor::CP3Config& _config, ClauseAllocator& _ca, Coprocessor::ThreadController& _controller )
+inline Technique::Technique( Coprocessor::CP3Config& _config, ClauseAllocator& _ca, ThreadController& _controller )
 : config( _config )
 , modifiedFormula(false)
 , isInitialized( false )

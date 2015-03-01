@@ -11,11 +11,9 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 
 #include "mtl/Map.h"
 
-namespace Coprocessor {
-  class ThreadController; // TODO move thread controller to other place
-}
-
 namespace Riss {
+  
+class ThreadController; 
   
 class BackwardVerificationWorker;
   
@@ -142,7 +140,7 @@ protected:
   ClauseAllocator ca;        // storage for the literals of the clauses, gives all clauses an additional field so that the first literal can be stored redundantly once more
 
   BackwardVerificationWorker* sequentialChecker;   // pointer to sequential checking object
-  Coprocessor::ThreadController* threadContoller;  // handle parallel work load
+  ThreadController* threadContoller;  // handle parallel work load
   
   
   vec<int> clauseCount;      // count number of occurrences of a clause that is present in the formula (to be able to merge duplicates)

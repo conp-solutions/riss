@@ -72,7 +72,7 @@ class BoundedVariableAddition : public Technique  {
   vec<Lit> clauseLits;			// vector that is added for clause definitions
  
 public:
-  BoundedVariableAddition( Coprocessor::CP3Config& _config, ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::CoprocessorData& _data, Coprocessor::Propagation& _propagation );
+  BoundedVariableAddition( Coprocessor::CP3Config& _config, ClauseAllocator& _ca, ThreadController& _controller, Coprocessor::CoprocessorData& _data, Coprocessor::Propagation& _propagation );
   
   void reset();
   

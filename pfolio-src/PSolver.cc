@@ -42,7 +42,7 @@ PSolver::PSolver(const int threadsToUse, const char* configName)
     
     // here, DRUP proofs are created!
     if( opt_internalProofCheck ) { 
-      opc = new OnlineProofChecker(OnlineProofChecker::drup);
+      opc = new OnlineProofChecker(drupProof);
     }
     
     // setup the first solver!

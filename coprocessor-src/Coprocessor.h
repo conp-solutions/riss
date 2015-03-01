@@ -9,7 +9,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "core/Solver.h"
 
 #include "coprocessor-src/CoprocessorTypes.h"
-#include "coprocessor-src/CoprocessorThreads.h"
+#include "utils/ThreadController.h"
 #include "coprocessor-src/CP3Config.h"
 
 

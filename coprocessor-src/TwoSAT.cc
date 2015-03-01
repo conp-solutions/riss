@@ -6,7 +6,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 
 
-Coprocessor::TwoSatSolver::TwoSatSolver(CP3Config &_config, ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::CoprocessorData& _data)
+Coprocessor::TwoSatSolver::TwoSatSolver(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, Coprocessor::CoprocessorData& _data)
 : Technique( _config, _ca, _controller)
 , data( _data )
 {

@@ -1,21 +1,20 @@
-/****************************************************************************[CoprocessorThreads.h]
+/******************************************************************************[ThreadController.h]
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef COPROCESSORTHREADS_HH
-#define COPROCESSORTHREADS_HH
+#ifndef THREADCONTROLLER_HH
+#define THREADCONTROLLER_HH
 
-#include "coprocessor-src/CoprocessorTypes.h"
+// #include "coprocessor-src/CoprocessorTypes.h"
 
 #include "utils/LockCollection.h"
 
 #include <vector>
 #include <iostream>
 
-using namespace Riss;
 using namespace std;
 
-namespace Coprocessor {
+namespace Riss {
 
 /** Data Structures that are required to control parallel simplification
  */
@@ -111,7 +110,7 @@ public:
   void runJobs( vector<Job>& jobs );
   
   /** pass a single job to the threads */
-  bool submitJob( Coprocessor::Job& job );
+  bool submitJob( Job& job );
   
   /** waits until at least one thread is waiting again (can be used to submit jobs in any order */
   void waitForOneFinished();

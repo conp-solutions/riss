@@ -1,7 +1,9 @@
 # Object files
 *.od
 *.or
+*.os
 *.o
+*.a
 depend.mk
 
 # Final binary
@@ -13,5 +15,4 @@ coprocessor
 *.log
 *.bbl
 *.blg
-*.pdf
 *.out

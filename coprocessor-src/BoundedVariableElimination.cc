@@ -8,7 +8,7 @@ Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, All rights reserved.
 using namespace Coprocessor;
 using namespace std;
 
-BoundedVariableElimination::BoundedVariableElimination( CP3Config &_config, ClauseAllocator& _ca, Coprocessor::ThreadController& _controller, Coprocessor::Propagation& _propagation, Coprocessor::Subsumption & _subsumption )
+BoundedVariableElimination::BoundedVariableElimination( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, Coprocessor::Propagation& _propagation, Coprocessor::Subsumption & _subsumption )
 : Technique( _config, _ca, _controller )
 , propagation( _propagation)
 , subsumption( _subsumption)

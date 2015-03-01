@@ -94,6 +94,9 @@ typedef enum Status Status;
 "    --time-limit=<number>      set time limit to <number> seconds\n" \
 "    -t <number>\n"\
 "\n" \
+"    --file-limit=<number>      set file size limit to <number> MB\n" \
+"    -f <number>\n"\
+"\n" \
 "    --sigxcpu-delay=<number>   set SIGXCPU waiting time limit to <number>\n"\
 "    -x <number>                microseconds. (default 2000)\n" \
 "\n" \
@@ -294,7 +297,7 @@ static int children = 0;
 
 /*------------------------------------------------------------------------*/
 
-static unsigned start_time, time_limit, real_time_limit, space_limit;
+static unsigned start_time, time_limit, real_time_limit, space_limit, file_size_limit;
 
 /*------------------------------------------------------------------------*/
 
@@ -714,7 +717,8 @@ main (int argc, char **argv)
   time_limit = 60 * 60 * 24 * 3600;	/* one year */
   real_time_limit = time_limit;
   space_limit = get_physical_mb ();	/* physical memory size */
-
+  file_size_limit = -1;                       /* for now, no limit */
+  
   sigxcpu_delay = 5*1000;               /* 5 seconds. */
   for (i = 1; i < argc; i++)
     {
@@ -743,6 +747,14 @@ main (int argc, char **argv)
 	  else if (strstr (argv[i], "--space-limit=") == argv[i])
 	    {
 	      space_limit = parse_number_rhs (argv[i]);
+	    }
+	  else if (argv[i][1] == 'f')
+	    {
+	      file_size_limit = parse_number_argument (&i, argc, argv);
+	    }
+	  else if (strstr (argv[i], "--file-limit=") == argv[i])
+	    {
+	      file_size_limit = parse_number_rhs (argv[i]);
 	    }
 	  else if (argv[i][1] == 'x')
 	    {
@@ -814,6 +826,7 @@ main (int argc, char **argv)
   fprintf (log, "[runlim] time limit:\t\t%u seconds\n", time_limit);
   fprintf (log, "[runlim] real time limit:\t%u seconds\n", real_time_limit);
   fprintf (log, "[runlim] space limit:\t\t%u MB\n", space_limit);
+  if( file_size_limit != -1 ) fprintf (log, "[runlim] file size limit:\t\t%u MB\n", file_size_limit);
   fprintf (log, "[runlim] sample rate:\t\t%u mil1iseconds\n", (SAMPLE_RATE / 1000));
   for (j = i; j < argc; j++)
     fprintf (log, "[runlim] argv[%d]:\t\t%s\n", j - i, argv[j]);
@@ -960,6 +973,17 @@ main (int argc, char **argv)
 				if (setrlimit(RLIMIT_AS, &rl) == -1)
 				  printf("WARNING! Could not set resource limit: Virtual memory.\n");
 			}
+		}
+		
+		if( file_size_limit > -1 ) {
+		  rlim_t new_file_lim = (rlim_t)space_limit * 1024*1024;
+		  getrlimit(RLIMIT_FSIZE, &rl);
+		  if (rl.rlim_max == RLIM_INFINITY || new_file_lim < rl.rlim_max){
+		    rl.rlim_cur = new_file_lim;
+		    if (setrlimit(RLIMIT_FSIZE, &rl) == -1)
+		    printf("WARNING! Could not set resource limit: File size.\n");
+		  }
+		  
 		}
 	  
 	  execvp (argv[i], argv + i);

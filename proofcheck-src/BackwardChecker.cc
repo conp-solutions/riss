@@ -5,10 +5,13 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 #include "proofcheck-src/BackwardChecker.h"
 #include "proofcheck-src/BackwardVerificationWorker.h"
 #include "mtl/Sort.h"
-#include "coprocessor-src/CoprocessorThreads.h"
+#include "utils/ThreadController.h"
+#include "utils/Options.h"
 
 #include <fstream>
 #include <sstream>
+
+using namespace Riss;
 
 static IntOption  opt_splitLoad      ("BACKWARD-CHECK", "splitLoad",          "number of clauses in queue before splitting", 8, IntRange(2, INT32_MAX));
 static IntOption  opt_verbose        ("BACKWARD-CHECK", "bwc-verbose",        "verbosity level of the checker", 0, IntRange(0, 8));
@@ -474,9 +477,9 @@ bool BackwardChecker::checkClause(vec< Lit >& clause, bool drupOnly, bool workOn
       
 	assert( assignedWorkers == threads && "all workers should be used now" );
 	
-	threadContoller = new Coprocessor::ThreadController(threads);
+	threadContoller = new ThreadController(threads);
 	threadContoller->init();
-	vector<Coprocessor::Job> jobs( threads );       // have enough jobs
+	vector<Job> jobs( threads );       // have enough jobs
 	WorkerData workerData [ threads ]; // data for each job
 	
 	// run all jobs in parallel
