@@ -4,18 +4,23 @@
 #
 #
 
+# current status of the project
+VERSION   = 5.00
+
 # variables to setup the build correctly
 CORE      = ../core
 MTL       = ../mtl
-VERSION   = 
-MYCFLAGS  = -I.. -I. -I$(MTL) -I$(CORE) $(ARGS) -Wall -Wextra -ffloat-store -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unused-parameter -Wno-sign-compare -Wno-parentheses $(VERSION)
+MYCFLAGS  = -I.. -I. -I$(MTL) -I$(CORE) $(ARGS) -Wall -Wextra -ffloat-store -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unused-parameter -Wno-sign-compare -Wno-parentheses
 LIBRT     = -lrt
 MYLFLAGS  = -lpthread $(LIBRT) $(ARGS)
 
 COPTIMIZE ?= -O3
 
-
 all: rs
+
+version:
+	@echo "Generate version file"
+	@VERSION=$(VERSION) $(SHELL) utils/version.sh
 
 # biuld all common targets in a row and check all for errors
 buildtest:
@@ -197,7 +202,7 @@ proofcheckRS: always
 	cd proofcheck-src;  make rs INCFLAGS='$(MYCFLAGS)' INLDFLAGS='$(MYLFLAGS)' CPDEPEND="coprocessor-src" MROOT=.. COPTIMIZE="$(COPTIMIZE)" -j 4; mv proofcheck_static ../proofcheck
 	
 	
-always:
+always: version
 
 touch:
 	touch core/Solver.cc coprocessor-src/Coprocessor.cc
@@ -213,26 +218,26 @@ doc: clean
 	touch doc
 
 # tar balls
-tar: clean
-	tar czvf riss.tar.gz core license.txt  Makefile mtl  README  simp scripts utils VERSION
+tar: clean version
+	tar czvf riss.tar.gz core license.txt  Makefile mtl  README  simp scripts utils
 	
-cotar: clean
-	tar czvf coprocessor.tar.gz core license.txt  Makefile mtl  README  simp  scripts utils coprocessor-src VERSION
+cotar: clean version
+	tar czvf coprocessor.tar.gz core license.txt  Makefile mtl  README  simp  scripts utils coprocessor-src
 	
-cltar: clean
-	tar czvf classifier.tar.gz core license.txt  Makefile mtl  README  simp  scripts utils coprocessor-src classifier-src VERSION
+cltar: clean version
+	tar czvf classifier.tar.gz core license.txt  Makefile mtl  README  simp  scripts utils coprocessor-src classifier-src
 
-qtar: clean
-	tar czvf qprocessor.tar.gz core license.txt Makefile mtl  README  simp  scripts utils coprocessor-src qprocessor-src qp.sh VERSION 
+qtar: clean version
+	tar czvf qprocessor.tar.gz core license.txt Makefile mtl  README  simp  scripts utils coprocessor-src qprocessor-src qp.sh 
 	
-pctar: clean
-	tar czvf pcasso.tar.gz core license.txt Makefile mtl  README  simp  scripts utils coprocessor-src pcasso-src VERSION 
+pctar: clean version
+	tar czvf pcasso.tar.gz core license.txt Makefile mtl  README  simp  scripts utils coprocessor-src pcasso-src 
 
-ptar: clean
-	tar czvf priss.tar.gz core license.txt Makefile mtl  README  simp  scripts utils coprocessor-src pfolio-src VERSION 
+ptar: clean version
+	tar czvf priss.tar.gz core license.txt Makefile mtl  README  simp  scripts utils coprocessor-src pfolio-src 
 	
-bmctar: clean 
-	tar czvf shiftbmc.tar.gz core license.txt  Makefile mtl  README  simp  scripts utils coprocessor-src pfolio-src shiftbmc-src VERSION
+bmctar: clean version 
+	tar czvf shiftbmc.tar.gz core license.txt  Makefile mtl  README  simp  scripts utils coprocessor-src pfolio-src shiftbmc-src
 	
 # clean up after solving - be careful here if some directories are missing!
 clean:
@@ -247,6 +252,7 @@ clean:
 	@if [ -d "shiftbmc-src" ]; then cd shiftbmc-src; make clean MROOT=..; fi
 	@if [ -d "pfolio-src" ]; then cd pfolio-src; make clean MROOT=..; fi
 	@if [ -d "pcasso-src" ]; then cd pcasso-src; make clean MROOT=..; fi
+	@rm -f utils/version.cc
 	@rm -f *~ */*~
 	@rm -rf doc/html
 	@echo Done
