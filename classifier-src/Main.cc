@@ -29,7 +29,7 @@ Copyright (c) 2012-2014, Norbert Manthey, All rights reserved.
 
 #include "coprocessor-src/Coprocessor.h"
 
-#include "VERSION" // include the file that defines the solver version
+#include "utils/version.h" // include the file that defines the solver version
 
 using namespace Riss;
 using namespace Coprocessor;

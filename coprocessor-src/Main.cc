@@ -18,7 +18,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor-src/Coprocessor.h"
 
-#include "VERSION" // include the file that defines the solver version
+#include "utils/version.h" // include the file that defines the solver version
 
 using namespace Riss;
 using namespace Coprocessor;
@@ -150,7 +150,7 @@ int main(int argc, char** argv)
 	      printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
 	  
 	  if (S.verbosity > 0) {
-  	      printf("c ================================[ Coprocessor %5.2f ]====================================================\n", solverVersion);
+  	      printf("c =========================[ Coprocessor %5.2f  %13s ]============================================\n", solverVersion, gitCommit);
 	      printf("c|  Norbert Manthey. The use of the tool is limited to research only!                                     |\n");
   	      printf("c | Contributors:                                                                                         |\n");
 	      printf("c |     Kilian Gebhard: Implementation of BVE, Subsumption, Parallelization                               |\n");
