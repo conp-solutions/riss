@@ -88,16 +88,16 @@ qd: qprocessord
 # build the bmc tool
 #
 shiftbmcd: libd
-	cd shiftbmc-src; make shiftbmc CFLAGS="-O0 -g" ARGS=$(ARGS);  mv shiftbmc ..
+	cd shiftbmc-src; make shiftbmc CFLAGS="-O0 -g" ARGS="$(ARGS)";  mv shiftbmc ..
 
 shiftbmcs: libr
-	cd shiftbmc-src; make shiftbmc ARGS=$(ARGS); mv shiftbmc ..
+	cd shiftbmc-src; make shiftbmc ARGS="$(ARGS)"; mv shiftbmc ..
 
 shiftbmc-abcd: libd
-	cd shiftbmc-src; make shiftbmc-abc CFLAGS="-O0 -g" ARGS=$(ARGS);  mv shiftbmc-abc ..
+	cd shiftbmc-src; make shiftbmc-abc CFLAGS="-O0 -g" ARGS="$(ARGS)";  mv shiftbmc-abc ..
 
 shiftbmc-abcs: libr
-	cd shiftbmc-src; make shiftbmc-abc ARGS=$(ARGS) ;  mv shiftbmc-abc ..
+	cd shiftbmc-src; make shiftbmc-abc ARGS="$(ARGS)" ;  mv shiftbmc-abc ..
 	
 # build the solver
 riss: always

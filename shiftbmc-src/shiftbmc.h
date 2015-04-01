@@ -165,20 +165,24 @@ const char * usage =
 "-bmc_l     use lazy coding\n"
 "-bmc_s     use shifting instead of reencoding (implies lazy encoding)\n"
 "-bmc_p X   use CP3 as simplifier (implies using shifting) with the given configuration X\n"
-"bmc_r      use Riss as SAT solver (default is PicoSAT) (disables previous Priss)\n"
-"bmc_pr X   use Priss as SAT solver with X threads (1..64) (default is PicoSAT) (disables previous Riss)\n"
-"bmc_rpc    use given preset configuration for Riss (implies using Riss)\n"
+"-bmc_r      use Riss as SAT solver (default is PicoSAT) (disables previous Priss)\n"
+#ifndef TEST_BINARY
+"-bmc_pr X   use Priss as SAT solver with X threads (1..64) (default is PicoSAT) (disables previous Riss)\n"
+#endif
+"-bmc_rpc    use given preset configuration for Riss (implies using Riss)\n"
 #ifndef TEST_BINARY
 "-bmc_dbgp  dump formula and everything else before preprocessing\n"
 #endif
 "-bmc_d     dense after preprocessing (implies using CP3)\n"
 "-bmc_x     dont freeze input variables (implies using  CP3)\n"
 "-bmc_y     dont freeze bad-state variables (implies using CP3)\n"
+#ifndef TEST_BINARY
 // merge, and budget solving
 "-bmc_mf X  merge X frames into one\n"
 "-bmc_mp X  use CNF simplification before merging with preset configuration X (e.g. AUTO for automatic selection)\n"
 "-bmc_fc X  number of conflicts to be allowed for one frame\n"
 "-bmc_fi X  increase of number of conflicts, if a frame cannot be solved\n"
+#endif
 "-bmc_t     print time needed per bound\n"
 "-bmc_ml X  specify memory limit in MB\n"
 #ifdef USE_ABC
@@ -186,8 +190,10 @@ const char * usage =
 "-bmc_ad    use the ABC tool to simplify the circuit before solving, next parameter has to specify a tmp directory location!\n"
 "-bmc_ac    give a special command(-sequence, separated by ':') to ABC. default is AUTO other possible: AUTO, dc2, drwsat, scorr,dc2:scorr,...\n"
 #endif
+#ifndef TEST_BINARY
 "-bmc_outCNF print formula to solve bound k into the given file (formula will not have a valid p-line, works only with preprocessing, should not be used)"
 "-bmc_tune  enable the output for tuning with paramILS/SMAC\n"
+#endif
 "\n\n the model name should be given first, then, the max. bound should be given\n"
 " other options might be given as well. These options are forwarded to the SAT solver/CNF simplifier\n"
 ;

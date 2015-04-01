@@ -439,10 +439,12 @@ int parseOptions(int argc, char ** argv)
     else if (!strcmp (argv[i], "-bmc_q")) quiet = 1;
     else if (!strcmp (argv[i], "-bmc_nw")) nowarnings = 1;
     else if (!strcmp (argv[i], "-bmc_dd")) doNotAllowToSmallCircuits = 1;
+#ifndef TEST_BINARY
     else if (!strcmp (argv[i], "-bmc_tune")) {
       tuning = 1;
       if( ++i < argc && isnum(argv[i]) ) tuneSeed = atoi( argv[i] );
     }
+#endif
     else if (!strcmp (argv[i], "-bmc_l")) lazyEncode = 1;
     else if (!strcmp (argv[i], "-bmc_s")) { useShift = 1; lazyEncode = 1;} // strong dependency!
     else if (!strcmp (argv[i], "-bmc_r")) { useRiss = 1; usePriss = 0; }
@@ -450,6 +452,7 @@ int parseOptions(int argc, char ** argv)
       useRiss = 1;
       if( ++i < argc ) rissPresetConf = argv[i];
     } 
+#ifndef TEST_BINARY
     else if (!strcmp (argv[i], "-bmc_pr")) { 
       usePriss = 1; 
       if( ++i < argc ) usePriss = atoi( argv[i] );
@@ -457,6 +460,7 @@ int parseOptions(int argc, char ** argv)
       msg(0,"set parallel solver with %d threads",usePriss);
       useRiss = 0; 
     }
+#endif
     else if (!strcmp (argv[i], "-bmc_p")) { 
       useCP3=1,useShift = 1; lazyEncode = 1; 
       ++ i;
@@ -485,6 +489,7 @@ int parseOptions(int argc, char ** argv)
 	msg(1,"set bad state analysis resource limit to %d", checkInitialBad );
       }
     }
+#ifndef TEST_BINARY
     else if (!strcmp (argv[i], "-bmc_mf")) {
       ++ i;
       if( i < argc && isnum(argv[i]) ) { 
@@ -513,6 +518,7 @@ int parseOptions(int argc, char ** argv)
 	msg(1,"conflicts increase in case of failure: %f", frameConflictsInc );
       }
     }
+#endif
     else if (!strcmp (argv[i], "-bmc_t")) printTime = 1;
     else if (!strcmp (argv[i], "-bmc_ml")) { // set a memory limit!!
       ++i;
@@ -569,11 +575,13 @@ int parseOptions(int argc, char ** argv)
     }    
     
 #endif
+#ifndef TEST_BINARY
     else if (!strcmp (argv[i], "-bmc_outCNF")) {
       ++i;
       if( i < argc ) formulaFile = std::string(argv[i]);
       else wrn("not enough parameters to set the output formula");
     }    
+#endif
     // the other parameters might be for the SAT solver
     else if (isnum (argv[i]) && maxk == 0) {
       maxk = atoi (argv[i]);
