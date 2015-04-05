@@ -56,8 +56,8 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  opt_quick_reduce(_cred,"quickRed","check only first two literals for being satisfied",false, optionListPtr ),
  opt_keep_worst_ratio(_cred,"keepWorst","keep this (relative to all learned) number of worst learned clauses during removal", 0, DoubleRange(0, true, 1, true), optionListPtr ), 
  
- opt_lb_size_minimzing_clause (_cm, "minSizeMinimizingClause", "The min size required to minimize clause", 30, IntRange(3, INT32_MAX), optionListPtr ),
- opt_lb_lbd_minimzing_clause (_cm, "minLBDMinimizingClause", "The min LBD required to minimize clause", 6, IntRange(3, INT32_MAX), optionListPtr ),
+ opt_lb_size_minimzing_clause (_cm, "minSizeMinimizingClause", "The min size required to minimize clause", 30, IntRange(0, INT32_MAX), optionListPtr ),
+ opt_lb_lbd_minimzing_clause (_cm, "minLBDMinimizingClause", "The min LBD required to minimize clause", 6, IntRange(0, INT32_MAX), optionListPtr ),
 
  opt_var_decay_start(_cat, "var-decay-b", "The variable activity decay factor start value", 0.95, DoubleRange(0, false, 1, false), optionListPtr ),
  opt_var_decay_stop(_cat, "var-decay-e", "The variable activity decay factor stop value", 0.95, DoubleRange(0, false, 1, false), optionListPtr ),
