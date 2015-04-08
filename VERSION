@@ -1,6 +1,0 @@
-#ifndef signature
-  #define signature "Riss 5.00"
-#endif
-
-const float solverVersion = 5.00;
-

@@ -43,7 +43,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <iostream>
 
-#include "VERSION" // include the file that defines the solver version
+#include "utils/version.h" // include the file that defines the solver version
 
 using namespace Riss;
 
@@ -164,7 +164,7 @@ int main(int argc, char** argv)
 
     
         if (S.verbosity > 0){
-	    printf("c ===========================[   riss (simp) %5.2f   ]=====================================================\n", solverVersion);
+            printf("c ======================[ riss (simp) %5.2f  %.13s ]===============================================\n", solverVersion, gitCommit);
 	    printf("c | Norbert Manthey. The use of the tool is limited to research only!                                     |\n");
 	    printf("c | Based on Minisat 2.2 and Glucose 2.1  -- thanks!                                                      |\n");
 	    printf("c | Contributors:                                                                                         |\n");

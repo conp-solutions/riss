@@ -6,9 +6,17 @@
 *.a
 depend.mk
 
+# Automatically generated version file containing the 
+# version number and the SHA hash of the current commit.
+utils/version.cc
+
 # Final binary
 riss
 coprocessor
+mprocessor
+priss
+qprocessor
+proofcheck
 
 # Latex build files
 *.aux
@@ -16,3 +24,6 @@ coprocessor
 *.bbl
 *.blg
 *.out
+
+# tarballs
+*.tar.gz
