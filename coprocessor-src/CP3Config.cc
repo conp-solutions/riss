@@ -243,6 +243,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
   opt_bve_strength    (_cat_bve, "bve_strength",  "do strengthening during bve", true, optionListPtr ),
   opt_bve_findGate    (_cat_bve, "bve_gates",  "try to find variable AND gate definition before elimination", true, optionListPtr ),
   opt_force_gates     (_cat_bve, "bve_force_gates", "Force gate search (slower, but probably more eliminations and blockeds are found)", false, optionListPtr ),
+  bve_funcDepOnly     (_cat_bve, "bve_fdepOnly",    "eliminate only variables that are func.dep (based on gates)", false, optionListPtr ),
  // pick order of eliminations
    opt_bve_heap        (_cat_bve, "cp3_bve_heap"   ,  "0: minimum heap, 1: maximum heap, 2: random, 3: ratio pos/neg smaller+less, 4: ratio pos/neg smaller+greater, 5: ratio pos/neg greater+less, 6: ratio pos/neg greater + greater, 7-10: same as 3-6, but inverse measure order", 0, IntRange(0,10), optionListPtr ),
  // increasing eliminations

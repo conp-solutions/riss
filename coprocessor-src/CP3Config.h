@@ -221,6 +221,7 @@ public:
  BoolOption opt_bve_strength    ;
  BoolOption opt_bve_findGate    ;
  BoolOption opt_force_gates     ;
+ BoolOption bve_funcDepOnly     ;
  // pick order of eliminations
  IntOption  opt_bve_heap        ;
  // increasing eliminations

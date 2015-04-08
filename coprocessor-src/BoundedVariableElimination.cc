@@ -363,12 +363,15 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
 
            // Search for Gates
            int p_limit = data.list(mkLit(v,false)).size();
-	       int n_limit = data.list(mkLit(v,true)).size();
-	       bool foundGate = false;
-	       if( config.opt_bve_findGate ) {
+	   int n_limit = data.list(mkLit(v,true)).size();
+	   bool foundGate = false;
+	   if( config.opt_bve_findGate ) {
 	           foundGate = findGates(data, v, p_limit, n_limit, gateTime);
-	           if (doStatistics) foundGates ++;
-	       }
+	           if (doStatistics && foundGate ) foundGates ++;
+	   }
+	   
+	   // only eliminate if there is a gate
+	   if( !foundGate && config.bve_funcDepOnly ) continue;
             
            // Heuristic Cutoff Anticipation (if no Gate Found)
            if (!config.opt_unlimited_bve && !foundGate && 
