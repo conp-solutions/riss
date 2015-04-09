@@ -9,7 +9,7 @@
 int main(int argc, char* argv[])
 {
 	if( argc == 1 ) { // no arguments, then print the headline of a data file for the extracted data
-	  cout << "Instance Status ExitCode RealTime CpuTime Memory SolverExit ToolExit" << endl;
+	  cout << "Instance Status ExitCode RealTime CpuTime Memory SolverExit ToolExit Models" << endl;
 	  exit(0);
 	}
 
@@ -32,6 +32,7 @@ int main(int argc, char* argv[])
   string Memory;      // 4
   string SolverCode;  // 5
   string ToolCode;    // 6
+  string Models;      // 7
 
   // parse all files that are given as parameters
   bool verbose = false;
@@ -104,6 +105,12 @@ int main(int argc, char* argv[])
 				}
 			}
 			
+			else if( !handled[6] && (line.find("found answers: ") == 0 || line.find("solution(s) found") ) ) {
+				handled[6] = true;
+				if( line.find("found answers: ") == 0 ) Models =  Get(line,2).c_str();
+				else  Models =  Get(line,0).c_str();
+			}
+			
 	}
   
   
@@ -138,6 +145,9 @@ int main(int argc, char* argv[])
 	  if( ToolCode != "" ) cout << ToolCode; else cout << "-";
 	} else cout << "- -";
 	cout << " ";
+	if( handled[6] || Models != "" ) cout << Models ; else cout << "-";
+	cout << " ";
+	
 	
       cout << endl;
 	
