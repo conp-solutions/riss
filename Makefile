@@ -235,6 +235,9 @@ pctar: clean version
 
 ptar: clean version
 	tar czvf priss.tar.gz core license.txt Makefile mtl  README  simp  scripts utils coprocessor-src pfolio-src 
+
+dtar: clean version
+	tar czvf proofcheck.tar.gz  core license.txt Makefile mtl  README  simp  scripts utils coprocessor-src proofcheck-src
 	
 bmctar: clean version 
 	tar czvf shiftbmc.tar.gz core license.txt  Makefile mtl  README  simp  scripts utils coprocessor-src pfolio-src shiftbmc-src

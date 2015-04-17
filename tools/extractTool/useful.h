@@ -13,6 +13,13 @@
 
 using namespace std;
 
+bool is_number(const std::string& s)
+{
+    std::string::const_iterator it = s.begin();
+    while (it != s.end() && std::isdigit(*it)) ++it;
+    return !s.empty() && it == s.end();
+}
+
 // return n'th field or empty string
 string Get( const std::string & s, unsigned int n ) {
     istringstream is( s );

@@ -109,6 +109,8 @@ int main(int argc, char* argv[])
 				handled[6] = true;
 				if( line.find("found answers: ") == 0 ) Models =  Get(line,2).c_str();
 				else  Models =  Get(line,0).c_str();
+				
+				if( ! is_number( Models ) ) { Models = "" ; handled[6] = false; }
 			}
 			
 	}
