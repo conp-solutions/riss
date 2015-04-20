@@ -45,7 +45,7 @@ bool ClauseElimination::process(CoprocessorData& data)
   if( config.opt_ccelevel == 0 ) return modifiedFormula; // do not run anything!
 
   if( propagation.process(data,true) == l_False){
-    if( config.cce_debug_out > 0 ) cerr << "c propagation failed" << endl;
+    DOUT(if( config.cce_debug_out > 0 ) cerr << "c propagation failed" << endl;);
     data.setFailed();
     return modifiedFormula;
   }
@@ -61,13 +61,13 @@ bool ClauseElimination::process(CoprocessorData& data)
   
   cceSize = (maxSize * config.opt_ccePercent) / 100;
   cceSize = cceSize > 2 ? cceSize : 3;	// do not process binary clauses
-  if( config.cce_debug_out > 0 ) cerr << "c work on clauses larger than " << cceSize << " maxSize= " << maxSize << endl;
+  DOUT( if( config.cce_debug_out > 0 ) cerr << "c work on clauses larger than " << cceSize << " maxSize= " << maxSize << endl; );
   WorkData wData( data.nVars() );
   for( int i = 0 ; i < data.getClauses().size(); ++ i )
   {
     if( ca[ data.getClauses()[i] ].size() <= cceSize ) continue; // work only on very large clauses to eliminate them!
     if( ca[ data.getClauses()[i] ].can_be_deleted() ) continue;
-    if( config.cce_debug_out > 1) cerr << "c work on clause " << ca[ data.getClauses()[i] ] << endl;
+    DOUT( if( config.cce_debug_out > 1) cerr << "c work on clause " << ca[ data.getClauses()[i] ] << endl; );
     candidates ++;
     eliminate(data, wData, data.getClauses()[i] );
     if( !data.unlimited() && steps > config.opt_cceSteps ) break;
@@ -87,9 +87,9 @@ bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::Work
   // put all literals of the clause into the mark-array and the other vectors!
   const Clause& c = ca[cr];
   if( c.can_be_deleted() ) return false;
-  if( config.cce_debug_out > 2 ) cerr << "c process " << c << endl;
+  DOUT( if( config.cce_debug_out > 2 ) cerr << "c process " << c << endl; );
   wData.reset();
-  if( config.cce_debug_out > 1 ) cerr <<  "do cce on " <<  c << endl;
+  DOUT( if( config.cce_debug_out > 1 ) cerr <<  "do cce on " <<  c << endl; );
   for( int i = 0; i < c.size(); ++ i ) {
     const Lit& l = c[i];
     wData.array.setCurrentStep( toInt(l) );
@@ -112,14 +112,14 @@ bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::Work
     for( int i = 0 ; i < wData.toProcess.size(); ++i ) {                          // do ALA for all literals in the array (sometimes also again!)
       const Lit l = wData.toProcess[i];
       assert( l != lit_Undef && l != lit_Error && "only real literals can be in the queue" );
-      if( config.cce_debug_out > 1 ) cerr << "ALA check list of literal " << l << endl;
+      DOUT( if( config.cce_debug_out > 1 ) cerr << "ALA check list of literal " << l << endl; );
       const vector<CRef>& lList = data.list(l);
       for( int j = 0 ; j < lList.size(); ++ j ) { // TODO: add step counter here!
         if( lList[j] == cr ) continue;                                            // to not work on the same clause twice!
 	const Clause& cj = ca[lList[j]];
 	if( cj.can_be_deleted() || cj.learnt() ) continue;                                       // act as the clause is not here
 	wData.steps ++;
-	if( config.cce_debug_out > 1 ) cerr << "c analyze " << cj << endl;
+	DOUT( if( config.cce_debug_out > 1 ) cerr << "c analyze " << cj << endl; );
 	if( cj.size() > wData.toProcess.size() + 1 ) continue;                    // larger clauses cannot add a contribution to the array!
 	Lit alaLit = lit_Undef;
 	for( int k = 0 ; k < cj.size(); ++k ) {                                   // are all literals of that clause except one literal inside the array?
@@ -132,12 +132,12 @@ bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::Work
 	if( alaLit == lit_Error ) continue; // to many additional literals inside the clause
 	else if( alaLit == lit_Undef ) { doRemoveClause=true; break; }
 	alaLit = ~alaLit;
-	if( config.cce_debug_out > 1 ) cerr << "c found ALA literal " << alaLit << endl;
+	DOUT( if( config.cce_debug_out > 1 ) cerr << "c found ALA literal " << alaLit << endl; );
 	if( wData.array.isCurrentStep( toInt(alaLit) ) ) continue;
 	if( wData.array.isCurrentStep( toInt(~alaLit) ) ) {                       // complement of current literal is also in CLA(F,C)
 	  doRemoveClause = true; break;
 	} else {
-	  if( config.cce_debug_out > 1 ) cerr << "c add literal " << alaLit << " to ALA for " << cj << endl;
+	  DOUT( if( config.cce_debug_out > 1 ) cerr << "c add literal " << alaLit << " to ALA for " << cj << endl; );
 	  wData.array.setCurrentStep( toInt(alaLit) );
 	  if( !data.doNotTouch(var(alaLit)) ) wData.toProcess.push_back(alaLit);  // only if semantics is not allowed to be changed!
           // i = -1; break; // need to redo whole calculation, because one more literal has been added!
@@ -145,7 +145,7 @@ bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::Work
 	}
       }
       if( doRemoveClause  ) { 
-	if( config.cce_debug_out > 1 ) cerr <<  "c ALA found tautology for " << c << endl;
+	DOUT( if( config.cce_debug_out > 1 ) cerr <<  "c ALA found tautology for " << c << endl; );
 	break;
       }
     } // tested all literals for ALA
@@ -153,24 +153,24 @@ bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::Work
     
     bool foundMoreThanOneClause = false;
     int outerOldClaSize = wData.cla.size();
-    if( config.cce_debug_out > 1 ) cerr << "c start process iteration with cla size " << wData.cla.size() << endl;
+    DOUT( if( config.cce_debug_out > 1 ) cerr << "c start process iteration with cla size " << wData.cla.size() << endl; );
     for( int i = wData.nextAla ; i < wData.toProcess.size(); ++i ) {              // do CLA for all literals that have not been tested yet!
       bool firstClause = true;
       
       int oldClaSize = wData.cla.size(); // remember old value to check whether something happened!
       const Lit l = ~wData.toProcess[i];
-      if( config.cce_debug_out > 2 )  cerr << "c work on literal " << l << endl;
+      DOUT( if( config.cce_debug_out > 2 )  cerr << "c work on literal " << l << endl; );
       assert( l != lit_Undef && l != lit_Error && "only real literals can be in the queue" );
-      if( config.cce_debug_out > 1 ) cerr << "c CLA check literal " << l << endl;
-      if( config.cce_debug_out > 2 ) cerr << "c start inner iteration with cla size " <<  wData.cla.size()  << endl;
+      DOUT(if( config.cce_debug_out > 1 ) cerr << "c CLA check literal " << l << endl;);
+      DOUT( if( config.cce_debug_out > 2 ) cerr << "c start inner iteration with cla size " <<  wData.cla.size()  << endl;);
       
-      if( config.cce_debug_out > 0 ) {
+      DOUT(if( config.cce_debug_out > 0 ) {
 	cerr << "c current virtual clause: " << endl;
 	for( Var tv = 0 ; tv < data.nVars(); ++ tv ) 
 	  for( int tp = 0 ; tp < 2; tp ++ )
 	    if( wData.array.isCurrentStep( toInt( mkLit(tv,tp==1) ) ) ) cerr << " " << mkLit(tv,tp==1) ;
 	cerr << endl;
-      }
+      });
       
       
       const vector<CRef>& lList = data.list(l);
@@ -180,31 +180,31 @@ bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::Work
 	if( cj.can_be_deleted()  || cj.learnt() ) continue;                                       // act as the clause is not here
 	wData.steps ++;
 	if( firstClause ) {                                                       // first clause fills the array, the other shrink it again
-          if( config.cce_debug_out > 1 ) cerr << "c analyze as first " << cj << endl;
+          DOUT(if( config.cce_debug_out > 1 ) cerr << "c analyze as first " << cj << endl;);
           for( int j = 0 ; j < cj.size(); ++j ) {
 	    if( cj[j] == l ) continue;
 	    if( wData.array.isCurrentStep( toInt(~cj[j] ) ) ) {
 	      wData.cla.resize( oldClaSize );
-	      if( config.cce_debug_out ) cerr << "c reduce CLA back to old size, because literal " << cj[j] << " leads to tautology " << endl;
+	      DOUT(if( config.cce_debug_out ) cerr << "c reduce CLA back to old size, because literal " << cj[j] << " leads to tautology " << endl;);
 	      goto ClaNextClause;
 	    } else if( !wData.array.isCurrentStep( toInt(cj[j]) ) ) { // TODO: check whether this needs to be done! if( !wData.array.isCurrentStep( toInt( cj[j] ) ) ) { // add only, if not already in!
 	      // FIXME: ensure that a literal is not added twice!
 	      wData.cla.push_back(cj[j]);
-	      if( config.cce_debug_out > 0 ) cerr << "c add " << cj[j] << " to CLA" << endl;
-	      if( config.cce_debug_out > 0  && wData.array.isCurrentStep( toInt( cj[j] ) ) ) cerr << "c regard resolvent literal that is already in the virtual clause: " << cj[j] << endl;
+	      DOUT(if( config.cce_debug_out > 0 ) cerr << "c add " << cj[j] << " to CLA" << endl;);
+	      DOUT(if( config.cce_debug_out > 0  && wData.array.isCurrentStep( toInt( cj[j] ) ) ) cerr << "c regard resolvent literal that is already in the virtual clause: " << cj[j] << endl;);
 	    }
 	  }
 	  if( wData.cla.size() == beforeCla ) break; // no new literal -> jnothing to be added with CLA
 	  firstClause = false; // only had first clause, if not tautology!
-	  if( config.cce_debug_out > 1 ) cerr << "c increased(/kept) cla to " << wData.cla.size() << endl;
+	  DOUT(if( config.cce_debug_out > 1 ) cerr << "c increased(/kept) cla to " << wData.cla.size() << endl;);
 	} else { // not the first clause
-          if( config.cce_debug_out > 1 ) cerr << "c analyze as following " << cj << endl;
+          DOUT(if( config.cce_debug_out > 1 ) cerr << "c analyze as following " << cj << endl;);
 // TODO: not necessary?!          //int resetTo = wData.cla.size();  // store size of cla before this clause to be able to reset it
 	  wData.helpArray.nextStep();
           for( int j = 0 ; j < cj.size(); ++j ){   // tag all literals inside the clause
 	     if( cj[j] == l ) continue; // do not tag the literal itself!
             if( wData.array.isCurrentStep( toInt(~cj[j]) ) ){  // this clause produces a tautological resolvent
-	      if( config.cce_debug_out ) cerr << "c reduce CLA back to old size, because literal " << cj[j] << " leads to tautology " << endl;
+	      DOUT(if( config.cce_debug_out ) cerr << "c reduce CLA back to old size, because literal " << cj[j] << " leads to tautology " << endl;);
 	      goto ClaNextClause;
 	    }
 	    wData.helpArray.setCurrentStep( toInt(cj[j]) );
@@ -213,60 +213,60 @@ bool ClauseElimination::eliminate(CoprocessorData& data, ClauseElimination::Work
 	  int current = oldClaSize;                                      // store current size of cla, so that it can be undone
 	  for( int j = oldClaSize; j < wData.cla.size(); ++ j )          // only use literals inside cla that are tagged!
 	    if( wData.helpArray.isCurrentStep( toInt(wData.cla[j]) ) ){   // if the literal has been in the clause
-	      if( config.cce_debug_out > 1 ) cerr << "c keep in cla this time " << wData.cla[j] << endl;
+	      DOUT(if( config.cce_debug_out > 1 ) cerr << "c keep in cla this time " << wData.cla[j] << endl;);
               wData.cla[current++] = wData.cla[j];                       // move the literal inside the cla vector
 	    }
 	  if( current == oldClaSize ) { // stop cla, because the set is empty
-	    if( config.cce_debug_out > 0 ) cerr << "c do not add any literals under current literal" << endl;
+	    DOUT(if( config.cce_debug_out > 0 ) cerr << "c do not add any literals under current literal" << endl;);
 	    wData.cla.resize(oldClaSize); break;
 	  } else {
-	    if( config.cce_debug_out > 0 ) cerr << "c kept " << current - oldClaSize << " literals" << endl;
+	    DOUT(if( config.cce_debug_out > 0 ) cerr << "c kept " << current - oldClaSize << " literals" << endl;);
 	  }
 	  wData.cla.resize( current );        // remove all other literals from the vector!
 	}
 ClaNextClause:;
       } // processed all clauses of current literal inside of CLA
-      if( config.cce_debug_out && !foundMoreThanOneClause ) cerr << "c found only one resolvent clause -- could do variable elimination!" << endl;
+      DOUT(if( config.cce_debug_out && !foundMoreThanOneClause ) cerr << "c found only one resolvent clause -- could do variable elimination!" << endl;);
       // TODO: if something new has been found inside CLA, add it to the toBeProcessed vector, run ALA again!
       if( beforeCla < wData.cla.size() ) {
 	preserveEE = false;
 	// push current cla including the literal that led to it to the undo information
 	wData.toUndo.push_back(lit_Undef);
 	wData.toUndo.push_back( ~l );
-	if( config.cce_debug_out ) cerr << "c CLA add to current extension: " << ~l << endl;
+	DOUT(if( config.cce_debug_out ) cerr << "c CLA add to current extension: " << ~l << endl;);
 	for( int k = 0 ; k < beforeCla; ++ k ) {
 	  if( ~l != wData.cla[k] ) wData.toUndo.push_back( wData.cla[k] );
 	  if( wData.array.isCurrentStep( toInt(~wData.cla[k]) ) ) { 
 	    doRemoveClause = true;
-	    if( config.cce_debug_out )  cerr << "c found remove clause because it became tautology" << endl;
+	    DOUT(if( config.cce_debug_out )  cerr << "c found remove clause because it became tautology" << endl;);
 	  }
 	}
 	// these lines have been added after the whole algorithm!
 	for( int k = beforeCla; k < wData.cla.size(); ++ k ) {
-	  if( config.cce_debug_out > 1 ) cerr << "c consider " << wData.cla[k] << " for being added to cla" << endl;
+	  DOUT(if( config.cce_debug_out > 1 ) cerr << "c consider " << wData.cla[k] << " for being added to cla" << endl;);
 	  if( !wData.array.isCurrentStep( toInt(wData.cla[k]) ) ) { // TODO: add only, if already there
 	    wData.toProcess.push_back( wData.cla[k] );
 	    wData.array.setCurrentStep( toInt(wData.cla[k]) );
 	  } else {
-	    if( config.cce_debug_out > 0 ) cerr << "c already out literal " << wData.cla[k] << " survived all resolvents, still, do not use it!" << endl; 
+	    DOUT(if( config.cce_debug_out > 0 ) cerr << "c already out literal " << wData.cla[k] << " survived all resolvents, still, do not use it!" << endl; );
 	    wData.cla[k] = wData.cla[ wData.cla.size() ];
 	    wData.cla.pop_back();
 	    --k;
 	  }
 	}
-	if( config.cce_debug_out ) {
+	DOUT(if( config.cce_debug_out ) {
 	  cerr << "c current undo: " << endl;
 	  for( int k = 1 ; k < wData.toUndo.size(); ++ k ) {  
 	    if( wData.toUndo[k] == lit_Undef ) cerr << endl;
 	    else cerr << " " << wData.toUndo[k];
 	  }
 	  cerr << endl;
-	}
+	});
       }
       if( doRemoveClause ) break;
       oldProcessSize = wData.toProcess.size();                    // store the size, so that CLA can recognize whether there is more to do
     } // processed all literals inside the processed vector
-    if( config.cce_debug_out > 1 ) cerr << "c end process iteration with cla size " << wData.cla.size()  << endl;
+    DOUT(if( config.cce_debug_out > 1 ) cerr << "c end process iteration with cla size " << wData.cla.size()  << endl;);
     if( outerOldClaSize == wData.cla.size() || doRemoveClause) break;  // nothing found, or ATE with the clause -> stop
   } // end: while(true)
   
@@ -279,7 +279,7 @@ ClaNextClause:;
 	 preserveEE = false;
 	 wData.toUndo.push_back(lit_Undef);
 	 wData.toUndo.push_back(wData.cla[i]);
-	 if( config.cce_debug_out > 1 ) cerr << "c BCE sucess on literal " << wData.cla[i] << endl;
+	 DOUT(if( config.cce_debug_out > 1 ) cerr << "c BCE sucess on literal " << wData.cla[i] << endl;);
 	 for( int j = 0 ; j < wData.cla.size(); ++ j )
 	   if( wData.cla[i] != wData.cla[j] ) wData.toUndo.push_back( wData.cla[j] );
 	 break; // need only removed by BCE once
@@ -287,19 +287,19 @@ ClaNextClause:;
     }
     if( doRemoveClause ) {
       // TODO: take care that BCE clause is also written to undo information! 
-      if( config.cce_debug_out > 1 ) cerr << "c cce with BCE was able to remove clause " << ca[cr] << endl;
+      DOUT(if( config.cce_debug_out > 1 ) cerr << "c cce with BCE was able to remove clause " << ca[cr] << endl;);
       wData.removedBceClauses ++;
     }
   } 
   
   // TODO: put undo to real undo information!
   if( doRemoveClause ) {
-    if( config.cce_debug_out > 1 ) cerr << "clause " << ca[cr] << " is removed by cce" << endl;
+    DOUT(if( config.cce_debug_out > 1 ) cerr << "clause " << ca[cr] << " is removed by cce" << endl;);
     ca[cr].set_delete(true);
     data.removedClause( cr );
     assert( (wData.toUndo.size() > 0 || preserveEE ) && "should not add empty undo information to extension!");
     if( wData.toUndo.size() > 0 ) {
-      if( config.cce_debug_out > 0 ) cerr << "c store CCE backup data: " << wData.toUndo << endl;
+      DOUT(if( config.cce_debug_out > 0 ) cerr << "c store CCE backup data: " << wData.toUndo << endl;);
       data.addExtensionToExtension( wData.toUndo );
     }
     wData.removedClauses ++;
@@ -307,7 +307,7 @@ ClaNextClause:;
     modifiedFormula = true;
     return true;
   } else {
-    if( config.cce_debug_out > 2 )  cerr << "clause " << ca[cr] << " cannot be removed by cce" << endl;
+    DOUT(if( config.cce_debug_out > 2 )  cerr << "clause " << ca[cr] << " cannot be removed by cce" << endl;);
     return false; 
   }
 }

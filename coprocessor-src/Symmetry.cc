@@ -168,7 +168,7 @@ bool Symmetry::process() {
 		  CRef cr = ca.alloc(data.lits, false); // no learnt clause!!
 		  solver.clauses.push(cr);
 		  solver.attachClause(cr); // no data initialization necessary!!
-		  if( config.sym_debug_out > 1 ) cerr << "c add clause [" << ~l1 << ", " << ~l2 << "]" << endl;
+		  DOUT(if( config.sym_debug_out > 1 ) cerr << "c add clause [" << ~l1 << ", " << ~l2 << "]" << endl;);
 		  symmAddClause ++;
 		} else if( config.sym_opt_conflicts > 0 && totalConflicts < config.sym_opt_total_conflicts ) {
 		  assert( solver.assumptions.size() == 0 && "apply symmetry breaking only if no assumptions are used" );
@@ -183,7 +183,7 @@ bool Symmetry::process() {
 		  assumptions.clear();
 		  assert( var(l1) != var(l2) && "assumptions should be different!" );
 		  assumptions.push( l1 );assumptions.push( l2 );
-		  if( config.sym_debug_out > 1 ) cerr << "c search with assumptions [" << l1 << ", " << l2 << "] starting at level " << solver.decisionLevel() << endl;
+		  DOUT(if( config.sym_debug_out > 1 ) cerr << "c search with assumptions [" << l1 << ", " << l2 << "] starting at level " << solver.decisionLevel() << endl;);
 		  lbool ret = solver.solveLimited(assumptions) ;
 		  solver.assumptions.clear();
 		  solver.verbosity = oldVerb;

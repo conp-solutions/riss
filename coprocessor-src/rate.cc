@@ -135,8 +135,8 @@ bool RATElimination::eliminateRAT()
 
       // check whether a clause is a tautology wrt. the other clauses
       const Lit left = ~right; // complement
-      if( config.opt_rate_debug > 0 ) cerr << endl << "c RATE work on literal " << right << " with " << data.list(right).size() << " clauses " << endl;
-      if( config.opt_rate_debug > 3 ) cerr << "current trail: " << data.getTrail() << endl;
+      DOUT( if( config.opt_rate_debug > 0 ) cerr << endl << "c RATE work on literal " << right << " with " << data.list(right).size() << " clauses " << endl;);
+      DOUT( if( config.opt_rate_debug > 3 ) cerr << "current trail: " << data.getTrail() << endl;);
       
       data.lits.clear(); // used for covered literal elimination
       
@@ -148,9 +148,9 @@ bool RATElimination::eliminateRAT()
 	if ( c.size() < config.rate_minSize ) continue; // ignore "small" clauses // TODO have a value for the parameter to disable this limit (e.g. are ther binaray RAT clauses)
 	
 	rateCandidates ++;
-	if( config.opt_rate_debug > 0 ) cerr << endl << "c test clause [" << data.list(right)[i] << "] " << c << endl;
+	DOUT( if( config.opt_rate_debug > 0 ) cerr << endl << "c test clause [" << data.list(right)[i] << "] " << c << endl;);
 	
-	if( config.opt_rate_debug > 3 ) {
+	DOUT( if( config.opt_rate_debug > 3 ) {
 	  cerr << "c current formula: " << endl;
 	  for( int t = 0 ; t < data.getClauses().size(); ++ t ) {
 	    if( ! ca[data.getClauses()[t]].can_be_deleted() ) cerr << "[" << data.getClauses()[t] << "] "<< ca[data.getClauses()[t]] << endl;
@@ -165,7 +165,7 @@ bool RATElimination::eliminateRAT()
 	      }
 	    }
 	  }
-	}
+	});
 	
 	// literals to propagate
 	data.lits.clear();
@@ -181,7 +181,7 @@ bool RATElimination::eliminateRAT()
 	
 	solver.newDecisionLevel(); // to be able to backtrack
 	
-	if( config.opt_rate_debug > 2 ) cerr << "c enqueue complements in " << data.lits << endl;
+	DOUT( if( config.opt_rate_debug > 2 ) cerr << "c enqueue complements in " << data.lits << endl;);
 	
 	for( int j = 0 ; j < data.lits.size(); ++ j ) solver.uncheckedEnqueue( ~data.lits[j] ); // enqueue all complements
 
@@ -203,7 +203,7 @@ bool RATElimination::eliminateRAT()
 	    }
 	  }
 
-	  if( config.opt_rate_debug > 1 ) cerr << "c RATE eliminate AT clause [" << data.list(right)[i] << "] " << ca[data.list(right)[i]] << endl;
+	  DOUT( if( config.opt_rate_debug > 1 ) cerr << "c RATE eliminate AT clause [" << data.list(right)[i] << "] " << ca[data.list(right)[i]] << endl;);
 	  ca[ data.list(right)[i]] .set_delete(true);
 	  data.removedClause( data.list(right)[i] );
 	  data.addCommentToProof("AT clause during RATE");
@@ -219,15 +219,15 @@ bool RATElimination::eliminateRAT()
 	  data.ma.setCurrentStep( toInt( data.lits[j] ) ); // mark all literals of c except right, for fast resolution checks
 	}
 	
-	if( config.opt_rate_debug > 3 ) {
+	DOUT( if( config.opt_rate_debug > 3 ) {
 	  cerr << "c current formula: " << endl;
 	  for( int t = 0 ; t < data.getClauses().size(); ++ t ) {
 	    if( ! ca[data.getClauses()[t]].can_be_deleted() ) cerr << "[" << data.getClauses()[t] << "] "<< ca[data.getClauses()[t]] << endl;
 	  }
-	}
+	});
 
 
-	if( config.opt_rate_debug > 2 ) cerr << "c RATE resolve with " << data.list(left).size() << " clauses" << endl;
+	DOUT( if( config.opt_rate_debug > 2 ) cerr << "c RATE resolve with " << data.list(left).size() << " clauses" << endl;);
 	bool allResolventsRedundant = true;
 	bool allTaut = true;
 	bool usedBratClause = false;
@@ -236,10 +236,10 @@ bool RATElimination::eliminateRAT()
 	  Clause& d = ca[ data.list(left)[j] ];
 	  if( d.can_be_deleted() ) continue; // no resolvent required
 	  rateSteps ++;
-	  if( config.opt_rate_debug > 2 ) cerr << "c RATE resolve with clause [" << data.list(left)[j] << "]" << d << endl;
+	  DOUT( if( config.opt_rate_debug > 2 ) cerr << "c RATE resolve with clause [" << data.list(left)[j] << "]" << d << endl;);
 	  bool isTaut = resolveUnsortedStamped( right, d, data.ma, data.lits ); // data.lits contains the resolvent
 	  rateSteps += d.size(); // approximate effort for resolution
-	  if( config.opt_rate_debug > 2 ) cerr << "c RATE resolvent (taut=" << isTaut << ") : " << data.lits << endl;
+	  DOUT( if( config.opt_rate_debug > 2 ) cerr << "c RATE resolvent (taut=" << isTaut << ") : " << data.lits << endl;);
 	  
 	  if( isTaut ) { // if the resolvent is a tautology, then the resolvent is redundant wrt. formula, and we do not need to perform propagation
 	    data.lits.resize( defaultLits ); 
@@ -248,10 +248,10 @@ bool RATElimination::eliminateRAT()
 	  else allTaut = false;
 
 	  // test whether the resolvent is AT
-	  if( config.opt_rate_debug > 2 ){ 
+	  DOUT( if( config.opt_rate_debug > 2 ){ 
 		  cerr << "c enqueue complements in " << data.lits << endl;
 		  cerr << "the propagated trail is " << solver.trail << endl;
-	  }
+	  });
 	  
 	  confl = false; // confl can be true at this point!
            
@@ -269,7 +269,7 @@ bool RATElimination::eliminateRAT()
       solver.cancelUntil(1);    // backtrack just to level 1 to keep first part of the resolvent propagated
       rateSteps += solver.trail.size()-defaultLits; // approximate effort for propagation with respect to the level! 
       
-      if( config.opt_rate_debug > 2 ) cerr << "c propagate with conflict " << (confl != CRef_Undef ? "yes" : " no") << endl;
+      DOUT( if( config.opt_rate_debug > 2 ) cerr << "c propagate with conflict " << (confl != CRef_Undef ? "yes" : " no") << endl;);
 
 	  if( confl == false ) {
 	    // the resolvent is not AT, hence, check whether the resolvent is blocked
@@ -325,7 +325,7 @@ bool RATElimination::eliminateRAT()
 
 	if( allResolventsRedundant ) {	// clause C is RAT, remove it!
 	  data.addToExtension(data.list(right)[i], right); 
-	  if( config.opt_rate_debug > 1 ) cerr << "c RATE eliminate RAT clause [" << data.list(right)[i] << "] " << c << endl;
+	  DOUT( if( config.opt_rate_debug > 1 ) cerr << "c RATE eliminate RAT clause [" << data.list(right)[i] << "] " << c << endl;);
 	  c.sort();		// necessary to ensure a general result -->  RATE is not confluent! (just for benchmarking)
 	  c.set_delete(true);
 	  remBRAT = usedBratClause ? remBRAT + 1 : usedBratClause;
@@ -625,8 +625,8 @@ bool RATElimination::minimizeRAT()
 
       cerr << "c select literal right=" << right << " trail: " << solver.trail << endl;
       
-      if( config.opt_rate_debug > 0 ) cerr << endl << "c RATE work on literal " << right << " with " << data.list(right).size() << " clauses " << endl;
-      if( config.opt_rate_debug > 3 ) cerr << "current trail: " << data.getTrail() << endl;   
+      DOUT( if( config.opt_rate_debug > 0 ) cerr << endl << "c RATE work on literal " << right << " with " << data.list(right).size() << " clauses " << endl;);
+      DOUT( if( config.opt_rate_debug > 3 ) cerr << "current trail: " << data.getTrail() << endl;   );
       
       for( int i = 0 ; i < data.list(right).size() && data.ok(); ++ i ) 
       {
@@ -845,9 +845,9 @@ do{
 	const CRef cr = clauses[i];
 	Clause& c = ca[ cr ];
 	if ( c.can_be_deleted() || c.learnt() ) continue; // TODO: yet we do not work with learned clauses, because its expensive
-	if( config.opt_rate_debug > 0 ) cerr << endl << "c test clause [" << cr << "] " << c << endl;
+	DOUT( if( config.opt_rate_debug > 0 ) cerr << endl << "c test clause [" << cr << "] " << c << endl;);
 	
-	if( config.opt_rate_debug > 3 ) {
+	DOUT( if( config.opt_rate_debug > 3 ) {
 	  cerr << "c current formula: " << endl;
 	  for( int t = 0 ; t < data.getClauses().size(); ++ t ) {
 	    if( ! ca[data.getClauses()[t]].can_be_deleted() ) cerr << "[" << data.getClauses()[t] << "] "<< ca[data.getClauses()[t]] << endl;
@@ -862,7 +862,7 @@ do{
 	      }
 	    }
 	  }
-	}
+	});
 	
 	// literals to propagate
 	data.lits.clear();
@@ -873,7 +873,7 @@ do{
 	solver.detachClause( cr, true ); // detach the clause eagerly
 	assert( solver.decisionLevel() == 0 && "check can only be done on level 0" );
 	
-	if( config.opt_rate_debug > 2 ) cerr << "c enqueue complements in " << data.lits << endl;
+	DOUT( if( config.opt_rate_debug > 2 ) cerr << "c enqueue complements in " << data.lits << endl;);
 	
 	bool confl = false;
 	int lastKeptLiteral = 0;
@@ -1109,14 +1109,14 @@ bool RATElimination::blockedSubstitution()
 	  if( !isRedundant ) { // is clause AT?
 	    // test whether the resolvent is AT
 	    solver.newDecisionLevel();
-	    if( config.opt_rate_debug > 2 ) cerr << "c enqueue complements in " << data.lits << endl;
+	    DOUT( if( config.opt_rate_debug > 2 ) cerr << "c enqueue complements in " << data.lits << endl;);
 	    for( int k = 0 ; k < data.lits.size(); ++ k ) {
 	      if( solver.value( ~data.lits[k] ) == l_False ) { isRedundant = true; break; }
 	      else if ( solver.value( ~data.lits[k] ) == l_Undef ) solver.uncheckedEnqueue( ~data.lits[k] );	// enqueue all complements
 	    }
 	    if( ! isRedundant ) {
 	      CRef confl = solver.propagate();	// check whether unit propagation finds a conflict for (F \ C) \land \ngt{C}, and hence C would be AT
-	      if( config.opt_rate_debug > 2 ) cerr << "c propagate with conflict " << (confl != CRef_Undef ? "yes" : " no") << endl;
+	      DOUT( if( config.opt_rate_debug > 2 ) cerr << "c propagate with conflict " << (confl != CRef_Undef ? "yes" : " no") << endl;);
 	      solver.cancelUntil(0);	// backtrack
 	      if( confl != CRef_Undef ) isRedundant = true;	// clause is AT
 	    }

@@ -26,7 +26,7 @@ void ExperimentalTechniques::reset()
   
 bool ExperimentalTechniques::process()
 {
-  if( config.entailed_debug > 0 ) cerr << "c run ENT process" << endl;
+  DOUT( if( config.entailed_debug > 0 ) cerr << "c run ENT process" << endl; );
   MethodTimer mt(&processTime);
   
   if( ! performSimplification() ) return false; // do not do anything?!

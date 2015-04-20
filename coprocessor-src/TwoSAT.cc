@@ -54,7 +54,7 @@ bool Coprocessor::TwoSatSolver::tmpUnitPropagate()
     tmpUnitQueue.pop_back();
 
 
-    if( config.twosat_debug_out > 2 && tmpUnitQueue.size() % 100 == 0 ) cerr << "queue.size() = " << tmpUnitQueue.size() << endl;
+    DOUT(if( config.twosat_debug_out > 2 && tmpUnitQueue.size() % 100 == 0 ) cerr << "queue.size() = " << tmpUnitQueue.size() << endl;);
     
     // this literal has been changed by unitPropagate -> ignore!
     if (permVal[toInt(x)] != 0) continue;
@@ -64,7 +64,7 @@ bool Coprocessor::TwoSatSolver::tmpUnitPropagate()
     // if found a conflict, propagate the other polarity for real!
     if (tempVal[toInt(x)] == -1)
     {
-      if( config.twosat_debug_out > 1 ) cerr << "c add to propagation queue(out) : " << x << endl;
+      DOUT(if( config.twosat_debug_out > 1 ) cerr << "c add to propagation queue(out) : " << x << endl;);
       unitQueue.push_back(x);
       
       if( config.twosat_clearQueue ) {
@@ -75,7 +75,7 @@ bool Coprocessor::TwoSatSolver::tmpUnitPropagate()
       }
     }
 
-    if( config.twosat_debug_out > 2 ) cerr  << "TEMP: Assign " << x << " " << endl;
+    DOUT(if( config.twosat_debug_out > 2 ) cerr  << "TEMP: Assign " << x << " " << endl;);
     assert( var(x) < data.nVars() && "do handle variables only that are part of the formula" );
     tempVal[toInt(x)] = 1; tempVal[toInt(~x)] = -1;
     const Lit* impliedLiterals = big.getArray(x);
@@ -87,7 +87,7 @@ bool Coprocessor::TwoSatSolver::tmpUnitPropagate()
       if (permVal[ toInt(l) ] != 0 || tempVal[toInt(l)] == 1)
         continue;
       else {
-	  if( config.twosat_debug_out > 2 ) cerr  << "TEMP: Enqueue " << l << " " << endl;
+	  DOUT(if( config.twosat_debug_out > 2 ) cerr  << "TEMP: Enqueue " << l << " " << endl;);
 	  tmpUnitQueue.push_back(l);
       }
     }
@@ -105,7 +105,7 @@ bool Coprocessor::TwoSatSolver::unitPropagate()
     
     if (permVal[toInt(x)] == -1)
     {
-      if( config.twosat_debug_out > 1 ) cerr << "Prop Unit Conflict " << x  << endl;
+      DOUT(if( config.twosat_debug_out > 1 ) cerr << "Prop Unit Conflict " << x  << endl;);
       return false;
     }
     
@@ -114,9 +114,9 @@ bool Coprocessor::TwoSatSolver::unitPropagate()
       continue;
     }
 
-    if( config.twosat_debug_out > 2 ) cerr  << "PERM: Assign " << x << " " << endl;
+    DOUT(if( config.twosat_debug_out > 2 ) cerr  << "PERM: Assign " << x << " " << endl;);
     if(config.twosat_useUnits) {
-      if( config.twosat_debug_out > 0 ) cerr << "c enqeue unit " << x << endl;
+      DOUT(if( config.twosat_debug_out > 0 ) cerr << "c enqeue unit " << x << endl;);
       data.enqueue(x); // if allowed, use the found unit!
     }
     
@@ -129,14 +129,14 @@ bool Coprocessor::TwoSatSolver::unitPropagate()
     const Lit* impliedLiterals = big.getArray(x);
     const uint32_t impliedLiteralsSize = big.getSize(x);  
     
-    if( config.twosat_debug_out > 2 ) cerr  << "literals to propagate: " << impliedLiteralsSize << " " << endl;
+    DOUT(if( config.twosat_debug_out > 2 ) cerr  << "literals to propagate: " << impliedLiteralsSize << " " << endl;);
     
     for (int i = 0 ; i < impliedLiteralsSize; ++ i)
     {      
       if( permVal[ toInt(impliedLiterals[i]) ] == 0 ) {
 //	permVal[ toInt(impliedLiterals[i]) ] = 1; permVal[ toInt(~impliedLiterals[i]) ] = -1;
 //	tempVal[ toInt(impliedLiterals[i]) ] = 1; tempVal[ toInt(~impliedLiterals[i])] = -1;
-	if( config.twosat_debug_out > 2 )  cerr << "c found by unit propagate [" << i << "/" << impliedLiteralsSize << "] " << impliedLiterals[i] << endl;
+	DOUT(if( config.twosat_debug_out > 2 )  cerr << "c found by unit propagate [" << i << "/" << impliedLiteralsSize << "] " << impliedLiterals[i] << endl;);
         unitQueue.push_back( impliedLiterals[i] );
       } else if ( permVal[ toInt(impliedLiterals[i]) ] == -1 )
 	return false;
@@ -197,15 +197,15 @@ bool Coprocessor::TwoSatSolver::solve()
   {
     Lit DL = getDecisionVariable();
     decs++;
-    if( config.twosat_debug_out > 2 && decs % 100 == 0 ) cerr << "c dec " << decs << "/" << data.nVars() << " mem: " << memUsedPeak() << endl;
+    DOUT(if( config.twosat_debug_out > 2 && decs % 100 == 0 ) cerr << "c dec " << decs << "/" << data.nVars() << " mem: " << memUsedPeak() << endl;);
     //if (Debug_Print2SATAssignments.IsSet()) std::cout << "DECIDE: " << toNumber(DL) << " ";
-    if( config.twosat_debug_out > 2)  cerr << "c decide " << DL << endl;
+    DOUT(if( config.twosat_debug_out > 2)  cerr << "c decide " << DL << endl;);
     tmpUnitQueue.push_back(DL);
     Conflict = !tmpUnitPropagate();
   }
     
   //if (Debug_Print2SATAssignments.IsSet())
-  if( config.twosat_debug_out > 2 ) cerr << "2SAT result: " << (Conflict ? "UNSAT " : "SAT ") << endl ;
+  DOUT(if( config.twosat_debug_out > 2 ) cerr << "2SAT result: " << (Conflict ? "UNSAT " : "SAT ") << endl ;);
   
   solveTime = cpuTime() - solveTime;
   return !Conflict;

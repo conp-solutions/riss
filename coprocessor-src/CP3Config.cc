@@ -68,31 +68,16 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
   
   opt_whiteList   (_cat2, "whiteList", "variables whose set of solution is not touched",0, optionListPtr ),
 
-#if defined TOOLVERSION && TOOLVERSION < 400
-#warning NoStatsVerbose
-        opt_printStats ( true ), // do not print stats, if restricted binary is produced
-        opt_verbose ( 0),        // do not talk during computation!
-#else
         opt_printStats  (_cat, "cp3_stats",      "Print Technique Statistics", false, optionListPtr ),
           opt_verbose     (_cat, "cp3_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 5), optionListPtr ),
-#endif
 
 // techniques
   opt_up          (_cat2, "up",            "Use Unit Propagation during preprocessing", false, optionListPtr ),
   opt_subsimp     (_cat2, "subsimp",       "Use Subsumption during preprocessing", false, optionListPtr ),
   opt_hte         (_cat2, "hte",           "Use Hidden Tautology Elimination during preprocessing", false, optionListPtr ),
-#if defined TOOLVERSION && TOOLVERSION < 355
-#warning NoBCE
-  opt_bce ( false ),
-#else
+
   opt_bce         (_cat2, "bce",           "Use Blocked Clause Elimination during preprocessing", false, optionListPtr ),
-#endif
-#if defined TOOLVERSION && TOOLVERSION < 360
-#warning NoENT
-  opt_ent ( false ),
-#else
   opt_ent         (_cat2, "ent",           "Use checking for entailed redundancy during preprocessing", false, optionListPtr ),
-#endif
   opt_exp         (_cat2, "exp",           "Use experimental simplification techniques", false, optionListPtr ),
   opt_la          (_cat2, "la",            "Use (covered/asymmetric) Literal Addition during preprocessing", false, optionListPtr ),
   opt_cce         (_cat2, "cce",           "Use (covered) Clause Elimination during preprocessing", false, optionListPtr ),
@@ -114,18 +99,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
   opt_itechs (_cat2, "cp3_itechs", "techniques for inprocessing",0, optionListPtr ),
 
 // use 2sat and sls only for high versions!
-#if defined TOOLVERSION && TOOLVERSION < 301
-  #warning NoThreadsSlsXor
-  opt_threads ( 0),
-  opt_sls ( false),       
-  opt_sls_phase ( false),    
-  opt_sls_flips ( 8000000),
-  opt_xor ( false),    
-  opt_rew ( false),    
-  opt_twosat ( false),
-  opt_twosat_init(false),
-   opt_ts_phase (false),    
-#else
+
    opt_threads     (_cat, "cp3_threads",    "Number of extra threads that should be used for preprocessing", 0, IntRange(0, INT32_MAX), optionListPtr ),
   opt_sls         (_cat2, "sls",           "Use Simple Walksat algorithm to test whether formula is satisfiable quickly", false, optionListPtr ),
   opt_sls_phase   (_cat2, "sls-phase",     "Use current interpretation of SLS as phase", false, optionListPtr ),
@@ -135,7 +109,6 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
   opt_twosat      (_cat2, "2sat",          "2SAT algorithm to check satisfiability of binary clauses", false, optionListPtr ),
   opt_twosat_init (_cat2, "2sat1",         "2SAT before all other algorithms to find units", false, optionListPtr ),
   opt_ts_phase    (_cat2, "2sat-phase",    "use 2SAT model as initial phase for SAT solver", false, optionListPtr ),
-#endif
 
 // 
 // Var and Cls LIMTS
@@ -210,13 +183,7 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
  
  
 
-#if defined TOOLVERSION // debug only, if no version is given!
-#warning NoDebugCheckLog
-  opt_debug ( false),       
-  opt_check ( 0),
-   opt_log (0),
-  printAfter ( 0),
-#else
+#ifdef DEBUG
   opt_debug       (_cat, "cp3-debug",   "do more debugging", false, optionListPtr ),
   opt_check       (_cat, "cp3-check",   "check solver state during simplification and before returning control to solver",  0, IntRange(0, 3), optionListPtr ),
    opt_log         (_cat,  "cp3-log",    "Output log messages until given level", 0, IntRange(0, 3), optionListPtr ),
@@ -226,15 +193,8 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
 //
 // parameters BVE
 //
-
-#if defined TOOLVERSION && TOOLVERSION < 302
-#warning NoParallel
- opt_par_bve(1),
- opt_bve_verbose(0),
-#else
   opt_par_bve         (_cat_bve, "cp3_par_bve",    "Parallel BVE: 0 never, 1 heur., 2 always", 1,IntRange(0,2), optionListPtr ),
    opt_bve_verbose     (_cat_bve, "cp3_bve_verbose",    "Verbosity of preprocessor", 0, IntRange(0, 4), optionListPtr ),
-#endif
  
    opt_bve_limit       (_cat_bve, "cp3_bve_limit", "perform at most this many clause derefferences", 25000000, IntRange(-1, INT32_MAX), optionListPtr ),
    opt_learnt_growth   (_cat_bve, "cp3_bve_learnt_growth", "Keep C (x) D, where C or D is learnt, if |C (x) D| <= max(|C|,|D|) + N", 0, IntRange(-1, INT32_MAX), optionListPtr ),
@@ -258,16 +218,10 @@ CP3Config::CP3Config(const std::string& presetOptions) // add new options here!
   opt_print_progress  (_cat_bve, "bve_progress", "Print bve progress stats.", false, optionListPtr ),
   opt_bveInpStepInc      (_cat_bve, "cp3_bve_inpInc","increase for steps per inprocess call", 5000000, IntRange(0, INT32_MAX), optionListPtr ),
 
-#if defined TOOLVERSION && TOOLVERSION < 302
-#warning NoParallelOptions
-par_bve_threshold(0),
-postpone_locked_neighbors (1),
-opt_minimal_updates (false),
-#else
+
 par_bve_threshold (_cat_bve, "par_bve_th", "Threshold for use of BVE-Worker", 10000, IntRange(0,INT32_MAX), optionListPtr ),
 postpone_locked_neighbors (_cat_bve, "postp_lockd_neighb", "Postpone Elimination-Check if more neighbors are locked", 3, IntRange(0,INT32_MAX), optionListPtr ),
 opt_minimal_updates       (_cat_bve, "par_bve_min_upd", "Omit LitOcc and Heap updates to reduce locking", false, optionListPtr ),
-#endif
 
 //
 // BVA
@@ -283,26 +237,11 @@ opt_bvaComplement        (_cat_bva, "cp3_bva_compl",   "treat complementary lite
 opt_bvaRemoveDubplicates (_cat_bva, "cp3_bva_dupli",   "remove duplicate clauses", true, optionListPtr ),
 opt_bvaSubstituteOr      (_cat_bva, "cp3_bva_subOr",   "try to also substitus disjunctions", false, optionListPtr ),
 
-#if defined TOOLVERSION  
-bva_debug (0),
-#else
+#ifdef DEBUG
 bva_debug (_cat_bva, "bva-debug",       "Debug Output of BVA", 0, IntRange(0, 4), optionListPtr ),
 #endif
 
-#if defined TOOLVERSION  && TOOLVERSION < 350
-#warning NoXbvaIbva
-opt_bvaAnalysis (false),
-opt_Xbva (false),
-opt_Ibva (false),
-opt_bvaAnalysisDebug (0),
-opt_bva_Xlimit (100000000),
-opt_bva_Ilimit (100000000),
-opt_Xbva_heap (1),
-opt_Ibva_heap (1),
-#else
- #if defined TOOLVERSION
- opt_bvaAnalysisDebug (0),
-#else
+#ifdef DEBUG
  opt_bvaAnalysisDebug     (_cat_bva, "cp3_bva_ad",      "experimental analysis", 0, IntRange(0, 4), optionListPtr ),
 #endif
 opt_bva_Xlimit           (_cat_bva, "cp3_bva_Xlimit",   "number of steps allowed for XOR-BVA", 100000000, IntRange(0, INT32_MAX), optionListPtr ),
@@ -311,7 +250,6 @@ opt_Xbva_heap            (_cat_bva, "cp3_Xbva_heap",   "0: minimum heap, 1: maxi
 opt_Ibva_heap            (_cat_bva, "cp3_Ibva_heap",   "0: minimum heap, 1: maximum heap, 2: random, 3: ratio pos/neg smaller+less, 4: ratio pos/neg smaller+greater, 5: ratio pos/neg greater+less, 6: ratio pos/neg greater + greater, 7-10: same as 3-6, but inverse measure order", 1, IntRange(0,10), optionListPtr ),
 opt_Xbva                 (_cat_bva, "cp3_Xbva",       "perform XOR-bva (1=half gates,2=full gates)", 0, IntRange(0, 2), optionListPtr ),
 opt_Ibva                 (_cat_bva, "cp3_Ibva",       "perform ITE-bva (1=half gates,2=full gates)", 0, IntRange(0, 2), optionListPtr ),
-#endif  
 //
 // BCE
 //
@@ -324,11 +262,8 @@ opt_bce_cle(_cat_bce,"bce-cle", "perform covered literal elimination (CLE)", fal
 opt_bce_cla(_cat_bce,"bce-cla", "perform covered literal elimination (CLA)", false, optionListPtr ),
 opt_bce_cle_conservative(_cat_bce,"bce-cle-cons", "conservative cle if taut. resolvents are present", false, optionListPtr ),
 opt_bceInpStepInc (_cat_bce,"bce-incInp", "number of steps given to BCE for another inprocessign round", 10000, IntRange(0, INT32_MAX) , optionListPtr ),
-#if defined TOOLVERSION
-opt_bce_verbose (0),
-opt_bce_debug(false),
-#else
 opt_bce_verbose (_cat_bce, "bce-verbose", "be verbose during BCE", 0, IntRange(0, 3), optionListPtr ),
+#ifdef DEBUG
 opt_bce_debug (_cat_bce, "bce-debug", "output debug info during BCE", false, optionListPtr ),
 #endif
 
@@ -345,9 +280,7 @@ claIterations(_cat_la,"la-claIter", "number of extension literals per step so th
 alaLimit(_cat_la,"ala-limit", "number of pairwise clause comparisons before interrupting LA", 100000000, IntRange(0, INT32_MAX) , optionListPtr ),
 alaIterations(_cat_la,"la-alaIter", "number of extension literals per step so that literals are removed randomly", 1, IntRange(1, INT32_MAX) , optionListPtr ), 
 ala_binary(_cat_la, "la-alaBin", "use binary clauses for ALA", false, optionListPtr ),
-#if defined TOOLVERSION
-opt_la_debug(false),
-#else
+#ifdef DEBUG
 opt_la_debug (_cat_la, "la-debug", "output debug info during LA", false, optionListPtr ),
 #endif
 
@@ -357,9 +290,7 @@ opt_la_debug (_cat_la, "la-debug", "output debug info during LA", false, optionL
   opt_cceSteps         (_cat_cce, "cp3_cce_steps", "Number of steps that are allowed per iteration", 2000000, IntRange(-1, INT32_MAX), optionListPtr ),
   opt_ccelevel         (_cat_cce, "cp3_cce_level", "none, ALA+ATE, CLA+ATE, ALA+CLA+BCE", 3, IntRange(0, 3), optionListPtr ),
   opt_ccePercent    (_cat_cce, "cp3_cce_sizeP", "percent of max. clause size for clause elimination (excluding)", 40, IntRange(0,100), optionListPtr ),
-#if defined TOOLVERSION  
- cce_debug_out (0),
-#else
+#ifdef DEBUG
   cce_debug_out (_cat_cce, "cce-debug", "debug output for clause elimination",0, IntRange(0,4) , optionListPtr ),
 #endif
    opt_cceInpStepInc      (_cat_cce, "cp3_cce_inpInc","increase for steps per inprocess call", 60000, IntRange(0, INT32_MAX), optionListPtr ),
@@ -370,7 +301,9 @@ opt_la_debug (_cat_la, "la-debug", "output debug info during LA", false, optionL
 rate_orderComplements(_cat_rat, "rat-compl", "sort according to nr. of complements", true, optionListPtr ),
 rate_Limit(_cat_rat,"rate-limit", "number of pairwise clause comparisons before interrupting RATE and up", 9000000000, Int64Range(0, INT64_MAX) , optionListPtr ),
 ratm_Limit(_cat_rat,"ratm-limit", "number of pairwise clause comparisons before interrupting RATM and up", 9000000000, Int64Range(0, INT64_MAX) , optionListPtr ),
+#ifdef DEBUG
 opt_rate_debug (_cat_rat, "rate-debug", "debug output for RAT elimination",0, IntRange(0,4) , optionListPtr ),
+#endif
 opt_rate_brat(_cat_rat, "rate-brat", "test resolvents for being blocked if not AT", false, optionListPtr ),
 rate_minSize(_cat_rat,"rate-min", "minimal clause size for RAT elimination", 3, IntRange(2, INT32_MAX) , optionListPtr ),
 opt_rate_rate(_cat_rat,"rate-rate", "perform RAT elimination (rate)", false, optionListPtr ),
@@ -382,9 +315,7 @@ opt_rate_ratm_rounds(_cat_rat,"rate-ratm_rounds", "perform more than one RATM it
 //
 // Dense
 //
-#if defined TOOLVERSION  
-dense_debug_out (0),
-#else
+#ifdef DEBUG
 dense_debug_out (_cat_dense, "cp3_dense_debug", "print debug output to screen",0, IntRange(0,2) , optionListPtr ),
 #endif
 opt_dense_fragmentation  (_cat_dense, "cp3_dense_frag", "Perform densing, if fragmentation is higher than (percent)", 0, IntRange(0, 100), optionListPtr ),
@@ -393,40 +324,21 @@ opt_dense_keep_assigned  (_cat_dense, "cp3_keep_set",   "keep already assigned l
 //
 // Entailed
 //
-#if defined TOOLVERSION && TOOLVERSION < 360
-#warning NoENT
-opt_entailed_minClsSize (INT32_MAX),
-#else
 opt_entailed_minClsSize  (_cat_entailed, "ent-min",    "minimum clause size that is tested", 2, IntRange(2, INT32_MAX), optionListPtr ),
-#endif
-#if defined TOOLVERSION 
-entailed_debug(0),
-#else
+#ifdef DEBUG
 entailed_debug(_cat_entailed, "ent-debug",       "Debug Output for ENT reasoning", 0, IntRange(0, 5), optionListPtr ),
 #endif
 
 //
 // Equivalence
 //
-#if defined TOOLVERSION  && TOOLVERSION < 350
-#warning NoStructuralHashing
-opt_ee_level            ( 0),
-opt_ee_gate_limit       ( 0),
-opt_ee_circuit_iters    ( 2),
-opt_ee_eagerEquivalence (false),
-opt_eeGateBigFirst   (false),
-opt_ee_aagFile (0),
-#else
 opt_ee_level            (_cat_ee, "cp3_ee_level",    "EE on BIG, gate probing, structural hashing", 0, IntRange(0, 3), optionListPtr ),
 opt_ee_gate_limit       (_cat_ee, "cp3_ee_glimit",   "step limit for structural hashing", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
 opt_ee_circuit_iters    (_cat_ee, "cp3_ee_cIter",    "max. EE iterations for circuit (-1 == inf)", 2, IntRange(-1, INT32_MAX), optionListPtr ),
 opt_ee_eagerEquivalence (_cat_ee, "cp3_eagerGates",  "do handle gates eagerly", true, optionListPtr ),
 opt_eeGateBigFirst   (_cat_ee, "cp3_BigThenGate", "detect binary equivalences before going for gates [should not be disabled!]", true, optionListPtr ),
 opt_ee_aagFile            (_cat_ee, "ee_aag", "write final circuit to this file",0, optionListPtr ),
-#endif
-#if defined TOOLVERSION  
-ee_debug_out (0),
-#else
+#ifdef DEBUG
 ee_debug_out            (_cat_ee, "ee_debug", "print debug output to screen", 0, IntRange(0, 3), optionListPtr ),
 #endif
 opt_eeSub            (_cat_ee, "ee_sub",          "do subsumption/strengthening during applying equivalent literals?", false, optionListPtr ),
@@ -440,19 +352,6 @@ opt_ee_eager_frozen     (_cat_ee, "ee_freeze_eager", "exclude frozen variables e
 //
 // Structural hashing options
 //
-#if defined TOOLVERSION  && TOOLVERSION < 350
-#warning NoCircuitExtraction
-circ_AND        (false),
-circ_ITE        (false),
-circ_XOR        (false),
-circ_ExO        (false),
-circ_genAND     (false),
-circ_FASUM      (false),
-circ_BLOCKED    (false),
-circ_AddBlocked (false),
-circ_NegatedI   (false),
-circ_Implied    (false),
-#else
 circ_AND        (_cat_ee_hash, "cp3_extAND",      "extract AND gates", true, optionListPtr),
 circ_ITE        (_cat_ee_hash, "cp3_extITE",      "extract ITE gates", false, optionListPtr),
 circ_XOR        (_cat_ee_hash, "cp3_extXOR",      "extract XOR gates", false, optionListPtr),
@@ -463,11 +362,9 @@ circ_BLOCKED    (_cat_ee_hash, "cp3_extBlocked",  "extract gates, that can be fo
 circ_AddBlocked (_cat_ee_hash, "cp3_addBlocked",  "clauses that are used to extract blocked gates will be added eagerly (soundness)", false, optionListPtr),
 circ_NegatedI   (_cat_ee_hash, "cp3_extNgtInput", "extract gates, where inputs come from the same variable", true, optionListPtr),
 circ_Implied    (_cat_ee_hash, "cp3_extImplied",  "do search binary clause also in BIG with dfs", true, optionListPtr),
-#endif
+
 /// temporary Boolean flag to quickly enable debug output for the whole file
-#if defined TOOLVERSION  
-circ_debug_out (false),
-#else
+#ifdef DEBUG
 circ_debug_out      (_cat_ee_hash, "cp3_circ_debug",  "print debug output for circuitextraction", false, optionListPtr),
 #endif
 
@@ -500,12 +397,12 @@ opt_minCardClauseSize (_cat_fm, "card_minC"    ,"min clause size to find cards",
 opt_maxCardClauseSize (_cat_fm, "card_maxC"    ,"max clause size to find cards", 6, IntRange(2, INT32_MAX), optionListPtr),
 opt_maxCardSize       (_cat_fm, "card_max"     ,"max card size that will be looked for", 12, IntRange(2, INT32_MAX), optionListPtr),
 opt_semSearchLimit    (_cat_fm, "card_Elimit"  ,"number of steps allowed for searching AMOs semantically", 1200000, Int64Range(0, INT64_MAX), optionListPtr),
+#ifdef DEBUG
 opt_semDebug          (_cat_fm, "card_debug"   ,"print info during running semantic card find", false, optionListPtr),
+#endif
 opt_noReduct          (_cat_fm, "card_noUnits" ,"assume there are no unit clauses inside the formula (otherwise, more expensive)", false, optionListPtr),
 
-#if defined TOOLVERSION 
-fm_debug_out (0),
-#else
+#ifdef DEBUG
 fm_debug_out (_cat_fm, "fm-debug",       "Debug Output of Fourier Motzkin", 0, IntRange(0, 4), optionListPtr ),
 #endif
 
@@ -513,19 +410,12 @@ fm_debug_out (_cat_fm, "fm-debug",       "Debug Output of Fourier Motzkin", 0, I
 // Hidden Tautology Elimination
 //
 opt_hte_steps    (_cat_hte, "cp3_hte_steps",  "Number of steps that are allowed per iteration", INT32_MAX, IntRange(-1, INT32_MAX), optionListPtr ),
-#if defined TOOLVERSION && TOOLVERSION < 302
-#warning NoParallelHTE
-opt_par_hte        (false),
-#else
+
 opt_par_hte         (_cat_hte, "cp3_par_hte",    "Forcing Parallel HTE", false, optionListPtr ),
-#endif
-#if defined TOOLVERSION  
-hte_debug_out (0),
-opt_hteTalk (false),
-#else
+#ifdef DEBUG
 hte_debug_out    (_cat_hte, "cp3_hte_debug",  "print debug output to screen", 0, IntRange(0, 4), optionListPtr ),
-opt_hteTalk (_cat_hte, "cp3_hteTalk",    "talk about algorithm execution", false, optionListPtr ),
 #endif
+opt_hteTalk (_cat_hte, "cp3_hteTalk",    "talk about algorithm execution", false, optionListPtr ),
 opt_hte_inpStepInc      (_cat_hte, "cp3_hte_inpInc","increase for steps per inprocess call", 60000, IntRange(0, INT32_MAX), optionListPtr ),
 
 //
@@ -550,18 +440,14 @@ pr_opt_inpStepInc1(_cat_pr, "cp3_pr_inpInc","increase for steps per inprocess ca
 pr_opt_inpStepInc2(_cat_pr, "cp3_viv_inpInc","increase for steps per inprocess call", 1000000, IntRange(0, INT32_MAX), optionListPtr ),
 pr_keepLHBRs      (_cat_pr, "pr-keepLHBR",  "keep clauses that have been created during LHBR during probing/vivification (0=no,1=learnt)", 0, IntRange(0,1), optionListPtr ),
 pr_necBinaries      (_cat_pr, "pr-nce",    "generate L2 necessary assignments as binary clauses",true, optionListPtr ),
-#if defined TOOLVERSION  
-pr_debug_out (0),
-#else
+#ifdef DEBUG
 pr_debug_out        (_cat_pr, "pr-debug", "debug output for probing",0, IntRange(0,4) , optionListPtr ),
 #endif
 
 //
 // Unit Propagation
 //
-#if defined TOOLVERSION  
-up_debug_out (0),
-#else
+#ifdef DEBUG
 up_debug_out (_cat_up, "up-debug", "debug output for propagation",0, IntRange(0,4) , optionListPtr ),
 #endif
 
@@ -581,9 +467,7 @@ opt_add2_red_start (_cat_res, "cp3_res_ars",      "also before preprocessing?", 
 opt_res3_inpStepInc      (_cat_res, "cp3_res_inpInc","increase for steps per inprocess call", 200000, IntRange(0, INT32_MAX), optionListPtr ),
 opt_add2_inpStepInc      (_cat_res, "cp3_add_inpInc","increase for steps per inprocess call", 60000, IntRange(0, INT32_MAX), optionListPtr ),
 /// enable this parameter only during debug!
-#if defined TOOLVERSION  
-res3_debug_out (false),
-#else
+#ifdef DEBUG
 res3_debug_out         (_cat_res, "cp3_res_debug",   "print debug output to screen",false, optionListPtr ),
 #endif
 
@@ -609,9 +493,7 @@ opt_rew_stat_only       (_cat_rew, "cp3_rew_stats" ,"analyze formula, but do not
 opt_rew_min_imp_size        (_cat_rew, "cp3_rewI_min"   ,"min size of an inplication chain to be rewritten", 4, IntRange(0, INT32_MAX), optionListPtr ),
 opt_rew_impl_pref_small     (_cat_rew, "cp3_rewI_small" ,"prefer little imply variables", true, optionListPtr ),
 opt_rew_inpStepInc      (_cat_rew, "cp3_rew_inpInc","increase for steps per inprocess call", 60000, IntRange(0, INT32_MAX), optionListPtr ),
-#if defined TOOLVERSION 
-rew_debug_out (0),
-#else
+#ifdef DEBUG
 rew_debug_out                 (_cat_rew, "rew-debug",       "Debug Output of Rewriter", 0, IntRange(0, 4), optionListPtr ),
 #endif
 
@@ -620,18 +502,14 @@ rew_debug_out                 (_cat_rew, "rew-debug",       "Debug Output of Rew
 //
 opt_shuffle_seed          (_cat_shuffle, "shuffle-seed",  "seed for shuffling",  0, IntRange(0, INT32_MAX), optionListPtr ),
 opt_shuffle_order        (_cat_shuffle, "shuffle-order", "shuffle the order of the clauses", true, optionListPtr ),
-#if defined TOOLVERSION  
-shuffle_debug_out (0),
-#else
+#ifdef DEBUG
 shuffle_debug_out                 (_cat_shuffle, "shuffle-debug", "Debug Output of Shuffler", 0, IntRange(0, 4), optionListPtr ),
 #endif
 
 //
 // Sls
 //
-#if defined TOOLVERSION 
-opt_sls_debug (false),
-#else
+#ifdef DEBUG
 opt_sls_debug (_cat_sls, "sls-debug", "Print SLS debug output", false, optionListPtr ),
 #endif
 opt_sls_ksat_flips (_cat_sls, "sls-ksat-flips",   "how many flips should be performed, if k-sat is detected (-1 = infinite)", 20000000, IntRange(-1, INT32_MAX), optionListPtr ),
@@ -649,25 +527,15 @@ opt_sub_subLimit        (_cat_sub, "cp3_sub_limit", "limit of subsumption steps"
 opt_sub_strLimit        (_cat_sub, "cp3_str_limit", "limit of strengthening steps", 300000000, IntRange(0,INT32_MAX), optionListPtr ), 
 opt_sub_callIncrease    (_cat_sub, "cp3_call_inc",  "max. limit increase per process call (subsimp is frequently called from other techniques)", 200, IntRange(0,INT32_MAX), optionListPtr ), 
 opt_sub_inpStepInc      (_cat_sub, "cp3_sub_inpInc","increase for steps per inprocess call", 40000000, IntRange(0, INT32_MAX), optionListPtr ),
-#if defined TOOLVERSION && TOOLVERSION < 302
-#warning NoParallelSubsimp
-opt_sub_par_strength    (1),
-opt_sub_lock_stats      (false),
-opt_sub_par_subs        (1),
-opt_sub_par_subs_counts (false),
-opt_sub_chunk_size      (100000),
-opt_sub_par_str_minCls  (250000),
-#else
+
 opt_sub_par_strength    (_cat_sub, "cp3_par_strength", "par strengthening: 0 never, 1 heuristic, 2 always", 1, IntRange(0,2), optionListPtr ),
 opt_sub_lock_stats      (_cat_sub, "cp3_lock_stats", "measure time waiting in spin locks", false, optionListPtr ),
 opt_sub_par_subs        (_cat_sub, "cp3_par_subs", "par subsumption: 0 never, 1 heuristic, 2 always", 1, IntRange(0,2), optionListPtr ),
 opt_sub_par_subs_counts (_cat_sub, "par_subs_counts" ,  "Updates of counts in par-subs 0: compare_xchange, 1: CRef-vector", 1, IntRange(0,1), optionListPtr ),
 opt_sub_chunk_size      (_cat_sub, "susi_chunk_size" ,  "Size of Par SuSi Chunks", 100000, IntRange(1,INT32_MAX), optionListPtr ),
 opt_sub_par_str_minCls  (_cat_sub, "par_str_minCls"  ,  "number of clauses to start parallel strengthening", 250000, IntRange(1,INT32_MAX), optionListPtr ),
-#endif
-#if defined TOOLVERSION
-opt_sub_debug (0),
-#else
+
+#ifdef DEBUG
 opt_sub_debug   (_cat_sub, "susi_debug" , "Debug Output for Subsumption", 0, IntRange(0,3), optionListPtr ),
 #endif
 
@@ -689,25 +557,18 @@ sym_opt_hpropA            (_cat_sym, "sym-propA",    "test all four casese inste
 sym_opt_cleanLearn        (_cat_sym, "sym-clLearn",  "clean the learned clauses that have been created during symmetry search", false, optionListPtr ),
 sym_opt_conflicts         (_cat_sym, "sym-cons",     "number of conflicts for looking for being implied", 0, IntRange(0, INT32_MAX) , optionListPtr ),
 sym_opt_total_conflicts   (_cat_sym, "sym-consT",    "number of total conflicts for looking for being implied", 10000, IntRange(0, INT32_MAX) , optionListPtr ),
-#if defined TOOLVERSION  
-sym_debug_out (0),
-#else
+#ifdef DEBUG
 sym_debug_out        (_cat_sym, "sym-debug", "debug output for probing",0, IntRange(0,4) , optionListPtr ),
 #endif
 
 //
 // Twosat
 //
-#if defined TOOLVERSION 
-twosat_debug_out (0),
-twosat_useUnits (false),
-twosat_clearQueue( true),
-#else
+#ifdef DEBUG
 twosat_debug_out                 (_cat_twosat, "2sat-debug",  "Debug Output of 2sat", 0, IntRange(0, 4), optionListPtr ),
+#endif
 twosat_useUnits                 (_cat_twosat, "2sat-units",  "If 2SAT finds units, use them!", false, optionListPtr ),
 twosat_clearQueue               (_cat_twosat, "2sat-cq",     "do a decision after a unit has been found", true, optionListPtr ),
-#endif
-
  
 //
 // Unhide
@@ -723,9 +584,7 @@ opt_uhd_probe     (_cat_uhd, "cp3_uhdProbe",     "Approximate probing (bin cls) 
 opt_uhd_fullProbe (_cat_uhd, "cp3_uhdPrSize",    "Enable unhide probing for larger clauses, size <= given parameter", 2, IntRange(2, INT32_MAX), optionListPtr ),
 opt_uhd_probeEE   (_cat_uhd, "cp3_uhdPrEE",      "Find Equivalences during uhd probing (requ. uhdProbe > 1)", false, optionListPtr  ),
 opt_uhd_fullBorder(_cat_uhd, "cp3_uhdPrSiBo",    "Check larger clauses only in first and last iteration", true, optionListPtr  ),
-#if defined TOOLVERSION  
-opt_uhd_Debug(0),
-#else
+#ifdef DEBUG
 opt_uhd_Debug     (_cat_uhd, "cp3_uhdDebug",     "Debug Level of Unhiding", 0, IntRange(0, 6), optionListPtr ),
 #endif
 
@@ -739,9 +598,7 @@ opt_xor_selectX       (_cat_xor, "xorSelect",    "how to select next xor 0=first
 opt_xor_keepUsed      (_cat_xor, "xorKeepUsed",  "continue to simplify kept xors", true, optionListPtr ),
 opt_xor_findSubsumed  (_cat_xor, "xorFindSubs",  "try to recover XORs that are partially subsumed", true, optionListPtr ),
 opt_xor_findResolved  (_cat_xor, "xorFindRes",   "try to recover XORs including resolution steps", false, optionListPtr ),
-#if defined TOOLVERSION 
-opt_xor_debug(0),
-#else
+#ifdef DEBUG
 opt_xor_debug             (_cat_xor, "xor-debug",       "Debug Output of XOR reasoning", 0, IntRange(0, 5), optionListPtr ),
 #endif
  dummy (0)

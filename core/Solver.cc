@@ -287,7 +287,7 @@ bool Solver::addClause_(vec<Lit>& ps)
 	      return true;
 	  else if (value(ps[i]) != l_False && ps[i] != p)
 	      ps[j++] = p = ps[i];
-      ps.shrink(i - j);
+      ps.shrink_(i - j);
     }
 
     // add to Proof that the clause has been changed
@@ -406,7 +406,7 @@ void Solver::removeClause(Riss::CRef cr, bool strict) {
     addCommentToProof("delete via clause removal",true);
     addToProof(c,true);	// clause has not been removed yet
   }
-  if(config.opt_learn_debug) cerr << "c remove clause [" << cr << "]: " << c << endl;
+  DOUT( if(config.opt_learn_debug) cerr << "c remove clause [" << cr << "]: " << c << endl; );
 
   detachClause(cr, strict); 
   // Don't leave pointers to free'd memory!
@@ -497,7 +497,7 @@ bool Solver::minimisationWithBinaryResolution(vec< Lit >& out_learnt, unsigned i
 	    l--;i--;
 	  }
 	}
-	out_learnt.shrink(nb);
+	out_learnt.shrink_(nb);
 	return true; // literals have been removed from the clause
       } else return false; // no literals have been removed
     } else return false; // no literals have been removed
@@ -606,7 +606,7 @@ bool Solver::erRewrite(vec<Lit>& learned_clause, unsigned int& lbd ){
 //
 void Solver::cancelUntil(int level) {
     if (decisionLevel() > level){
-      if( config.opt_learn_debug) cerr << "c call cancel until " << level << " move propagation head from " << qhead << " to " << trail_lim[level] << endl;
+      DOUT( if( config.opt_learn_debug) cerr << "c call cancel until " << level << " move propagation head from " << qhead << " to " << trail_lim[level] << endl; );
         for (int c = trail.size()-1; c >= trail_lim[level]; c--){
             Var      x  = var(trail[c]);
             varFlags [x].assigns = l_Undef;
@@ -617,8 +617,8 @@ void Solver::cancelUntil(int level) {
             insertVarOrder(x); }
         qhead = trail_lim[level];
 	realHead = trail_lim[level];
-        trail.shrink(trail.size() - trail_lim[level]);
-        trail_lim.shrink(trail_lim.size() - level);
+        trail.shrink_(trail.size() - trail_lim[level]);
+        trail_lim.shrink_(trail_lim.size() - level);
     } }
 
 
@@ -701,7 +701,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     int index   = trail.size() - 1;
 
     do{
-	if( config.opt_learn_debug ) cerr << "c enter loop with lit " << p << endl;
+	DOUT( if( config.opt_learn_debug ) cerr << "c enter loop with lit " << p << endl; );
         Clause& c = ca[confl];
 
 	int clauseReductSize = c.size();
@@ -741,11 +741,11 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
        
         for (int j = (p == lit_Undef) ? 0 : 1; j < c.size(); j++){
             const Lit& q = c[j];
-	    if( config.opt_learn_debug ) cerr << "c level for " << q << " is " << level(var(q)) << endl;
+	    DOUT( if( config.opt_learn_debug ) cerr << "c level for " << q << " is " << level(var(q)) << endl; );
             if (!varFlags[var(q)].seen && level(var(q)) > 0){ // variable is not in the clause, and not on top level
                 currentSize ++;
                 if( !foundFirstLearnedClause  ) varsToBump.push( var(q) );
-		if( config.opt_learn_debug ) cerr << "c set seen for " << q << endl;
+		DOUT( if( config.opt_learn_debug ) cerr << "c set seen for " << q << endl; );
                 varFlags[var(q)].seen = 1;
                 if (level(var(q)) >= decisionLevel()) {
                     pathC++;
@@ -771,7 +771,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
         p     = trail[index+1];
 	lastConfl = confl;
         confl = reason(var(p));
-	if( config.opt_learn_debug ) cerr << "c reset seen for " << p << endl;
+	DOUT( if( config.opt_learn_debug ) cerr << "c reset seen for " << p << endl; );
         varFlags[var(p)].seen = 0;
         pathC--;
 	currentSize --;
@@ -781,7 +781,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	  learntUnit ++; 
 	  units ++; // count current units
 	  out_learnt.push( ~p ); // store unit
-	  if( config.opt_learn_debug ) cerr << "c learn unit clause " << ~p << " with pathLimit=" << pathLimit << endl;
+	  DOUT( if( config.opt_learn_debug ) cerr << "c learn unit clause " << ~p << " with pathLimit=" << pathLimit << endl; );
 	  if( config.opt_allUipHack == 1 ) break; // for now, stop at the first unit! // TODO collect all units
 	  pathLimit = 0;	// do not use bi-asserting learning once we found one unit clause
 	  foundFirstLearnedClause = true; // we found a first clause, hence, stop all heuristical updates for the following steps
@@ -810,7 +810,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
       // process learnt units!
       // clear seen
       for( int i = units+1; i < out_learnt.size() ; ++ i ) varFlags[ var(out_learnt[i]) ].seen = 0;
-      out_learnt.shrink( out_learnt.size() - 1 - units );  // keep units+1 elements!
+      out_learnt.shrink_( out_learnt.size() - 1 - units );  // keep units+1 elements!
       
       assert( out_learnt.size() > 1 && "there should have been a unit" );
       out_learnt[0] = out_learnt.last(); out_learnt.pop(); // close gap in vector
@@ -843,12 +843,12 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	  if( (i == 0 || trail_lim[i] != trail_lim[i-1]) && trail_lim[i] < trail.size() ) // no dummy level caused by assumptions ...
 	    out_learnt.push( ~trail[ trail_lim[i] ] ); // get the complements of all decisions into dec array
 	}
-	if( config.opt_printDecisions > 2 || config.opt_learn_debug) cerr << endl << "c current decision stack: " << out_learnt << endl ;
+	DOUT( if( config.opt_printDecisions > 2 || config.opt_learn_debug) cerr << endl << "c current decision stack: " << out_learnt << endl ; );
 	const Lit tmpLit = out_learnt[ out_learnt.size() -1 ]; // 
 	out_learnt[ out_learnt.size() -1 ] = out_learnt[0]; // have first decision as last literal
 	out_learnt[0] = tmpLit; // ~p; // new implied literal is the negation of the asserting literal ( could also be the last decision literal, then the learned clause is a decision clause) somehow buggy ...
 	learnedDecisionClauses ++;
-	if( config.opt_printDecisions > 2 || config.opt_learn_debug ) cerr << endl << "c learn decisionClause " << out_learnt << endl << endl;
+	DOUT( if( config.opt_printDecisions > 2 || config.opt_learn_debug ) cerr << endl << "c learn decisionClause " << out_learnt << endl << endl; );
 	doMinimizeClause = false;
       }
     }
@@ -903,7 +903,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
         i = j = out_learnt.size();
 
     max_literals += out_learnt.size();
-    out_learnt.shrink(i - j);
+    out_learnt.shrink_(i - j);
     tot_literals += out_learnt.size();
     if( i != j ) recomputeLBD = true; // necessary to recompute LBD here!
 
@@ -973,7 +973,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 #endif	    
 
     for (int j = 0; j < analyze_toclear.size(); j++) {
-      if( config.opt_learn_debug ) cerr << "c reset seen for " << analyze_toclear[j] << endl;
+      DOUT( if( config.opt_learn_debug ) cerr << "c reset seen for " << analyze_toclear[j] << endl; );
       varFlags[var(analyze_toclear[j])].seen = 0;    // ('seen[]' is now cleared)
     }
 
@@ -1020,7 +1020,7 @@ bool Solver::litRedundant(Lit p, uint32_t abstract_levels,uint64_t& extraInfo)
                 }else{
                     for (int j = top; j < analyze_toclear.size(); j++)
                         varFlags[var(analyze_toclear[j])].seen = 0;
-                    analyze_toclear.shrink(analyze_toclear.size() - top);
+                    analyze_toclear.shrink_(analyze_toclear.size() - top);
                     return false;
                 }
             }
@@ -1095,7 +1095,7 @@ void Solver::uncheckedEnqueue(Lit p, Riss::CRef from, bool addToProof, const uin
     // prefetch watch lists
     // __builtin_prefetch( & watchesBin[p], 1, 0 ); // prefetch the watch, prepare for a write (1), the data is highly temoral (0)
     __builtin_prefetch( & watches[p], 1, 0 ); // prefetch the watch, prepare for a write (1), the data is highly temoral (0)
-    if(config.opt_printDecisions > 1 ) {cerr << "c uncheched enqueue " << p; if( from != CRef_Undef ) cerr << " because of [" << from << "] " <<  ca[from]; cerr << endl;}
+    DOUT( if(config.opt_printDecisions > 1 ) {cerr << "c uncheched enqueue " << p; if( from != CRef_Undef ) cerr << " because of [" << from << "] " <<  ca[from]; cerr << endl;} );
       
     trail.push_(p);
 }
@@ -1116,14 +1116,14 @@ CRef Solver::propagate(bool duringAddingClauses)
 {
     assert( ( decisionLevel() == 0 || !duringAddingClauses ) && "clauses can only be added at level 0!" );
     // if( config.opt_printLhbr ) cerr << endl << "c called propagate" << endl;
-    if( config.opt_learn_debug ) cerr << "c call propagate with " << qhead << " for " <<  trail.size() << " lits" << endl;
+    DOUT( if( config.opt_learn_debug ) cerr << "c call propagate with " << qhead << " for " <<  trail.size() << " lits" << endl; );
   
     CRef    confl     = CRef_Undef;
     int     num_props = 0;
     watches.cleanAll(); clssToBump.clear();
     while (qhead < trail.size()){
         Lit            p   = trail[qhead++];     // 'p' is enqueued fact to propagate.
-        if( config.opt_learn_debug ) cerr << "c propagate literal " << p << endl;
+        DOUT( if( config.opt_learn_debug ) cerr << "c propagate literal " << p << endl; );
         realHead = qhead;
         vec<Watcher>&  ws  = watches[p];
         Watcher        *i, *j, *end;
@@ -1136,7 +1136,7 @@ CRef Solver::propagate(bool duringAddingClauses)
 	  if( !wbin[k].isBinary() ) continue;
 	  const Lit& imp = wbin[k].blocker();
 	  assert( ca[ wbin[k].cref() ].size() == 2 && "in this list there can only be binary clauses" );
-	  if( config.opt_learn_debug ) cerr << "c checked binary clause " << ca[wbin[k].cref() ] << " with implied literal having value " << toInt(value(imp)) << endl;
+	  DOUT( if( config.opt_learn_debug ) cerr << "c checked binary clause " << ca[wbin[k].cref() ] << " with implied literal having value " << toInt(value(imp)) << endl; );
 	  if(value(imp) == l_False) {
 	    if( !config.opt_long_conflict ) return wbin[k].cref();
 	    confl = wbin[k].cref();
@@ -1149,11 +1149,11 @@ CRef Solver::propagate(bool duringAddingClauses)
 	}
 
         // propagate longer clauses here!
-        for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;)
+        for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;);
 	{
 	    if( i->isBinary() ) { *j++ = *i++; continue; } // skip binary clauses (have been propagated before already!}
 	    
-	    if( config.opt_learn_debug ) cerr << "c check clause [" << i->cref() << "]" << ca[i->cref()] << endl;
+	    DOUT( if( config.opt_learn_debug ) cerr << "c check clause [" << i->cref() << "]" << ca[i->cref()] << endl; );
 #ifndef PCASSO // PCASS reduces clauses during search without updating the watch lists ...
 	    assert( ca[ i->cref() ].size() > 2 && "in this list there can only be clauses with more than 2 literals" );
 #endif
@@ -1188,7 +1188,7 @@ CRef Solver::propagate(bool duringAddingClauses)
                 if (value(c[k]) != l_False)
 		{
                     c[1] = c[k]; c[k] = false_lit;
-		    if( config.opt_learn_debug ) cerr << "c new watched literal for clause " << ca[cr] << " is " << c[1] <<endl;
+		    DOUT( if( config.opt_learn_debug ) cerr << "c new watched literal for clause " << ca[cr] << " is " << c[1] <<endl; );
                     watches[~c[1]].push(w);
                     goto NextClause; 
 		} // no need to indicate failure of lhbr, because remaining code is skipped in this case!
@@ -1204,7 +1204,7 @@ CRef Solver::propagate(bool duringAddingClauses)
                 while (i < end)
                     *j++ = *i++;
             } else {
-		if( config.opt_learn_debug ) cerr << "c current clause is unit clause: " << ca[cr] << endl;
+		DOUT( if( config.opt_learn_debug ) cerr << "c current clause is unit clause: " << ca[cr] << endl; );
                 uncheckedEnqueue(first, cr, duringAddingClauses);
 		
 		// if( config.opt_printLhbr ) cerr << "c final common dominator: " << commonDominator << endl;
@@ -1221,7 +1221,7 @@ CRef Solver::propagate(bool duringAddingClauses)
 	    }
         NextClause:;
         }
-        ws.shrink(i - j); // remove all duplciate clauses!
+        ws.shrink_(i - j); // remove all duplciate clauses!
 
     }
     propagations += num_props;
@@ -1302,7 +1302,7 @@ void Solver::reduceDB()
       learnts[j++] = learnts[i];
     }
   }
-  learnts.shrink(i - j);
+  learnts.shrink_(i - j);
   checkGarbage();
   reduceDBTime.stop();
 }
@@ -1319,7 +1319,7 @@ void Solver::removeSatisfied(vec<CRef>& cs)
         else
             cs[j++] = cs[i];
     }
-    cs.shrink(i - j);
+    cs.shrink_(i - j);
 }
 
 
@@ -1407,7 +1407,7 @@ lbool Solver::search(int nof_conflicts)
     starts++;
     int proofTopLevels = 0;
     if( trail_lim.size() == 0 ) proofTopLevels = trail.size(); else proofTopLevels  = trail_lim[0]; 
-    for (;;){
+    for (;;);{
 	propagationTime.start();
         CRef confl = propagate();
 	propagationTime.stop();
@@ -1473,7 +1473,7 @@ lbool Solver::search(int nof_conflicts)
 	  //
           // Simplify the set of problem clauses - but do not do it each iteration!
 	  if (simplifyIterations > config.opt_simplifyInterval && decisionLevel() == 0 && !simplify()) {
-	    if(config.opt_printDecisions > 0) cerr << "c ran simplify" << endl;
+	    DOUT( if(config.opt_printDecisions > 0) cerr << "c ran simplify" << endl; );
 	    simplifyIterations = 0;
 	    if( verbosity > 1 ) fprintf(stderr,"c last restart ## conflicts  :  %d %d \n",conflictC,decisionLevel());
 	    return l_False;
@@ -1507,13 +1507,13 @@ lbool Solver::search(int nof_conflicts)
 
 		  if (value(p) == l_True){
 		      // Dummy decision level: // do not have a dummy level here!!
-		      if(config.opt_printDecisions > 0) cerr << "c have dummy decision level for assumptions" << endl;
+		      DOUT( if(config.opt_printDecisions > 0) cerr << "c have dummy decision level for assumptions" << endl; );
 		      newDecisionLevel();
 		  }else if (value(p) == l_False){
 		      analyzeFinal(~p, conflict);
 		      return l_False;
 		  }else{
-		      if(config.opt_printDecisions > 0) cerr << "c use assumptoin as next decision : " << p << endl;
+		      DOUT( if(config.opt_printDecisions > 0) cerr << "c use assumptoin as next decision : " << p << endl; );
 		      next = p;
 		      break;
 		  }
@@ -1538,7 +1538,7 @@ lbool Solver::search(int nof_conflicts)
 		if(config.localLookAhead && (maxLaNumber == -1 || (las < maxLaNumber)) ) { // perform LA hack -- only if max. nr is not reached?
 		  // if(config.opt_printDecisions > 0) cerr << "c run LA (lev=" << decisionLevel() << ", untilLA=" << untilLa << endl;
 		  int hl = decisionLevel();
-		  if( hl == 0 ) if( --untilLa == 0 ) { laStart = true; if(config.localLookaheadDebug)cerr << "c startLA" << endl;}
+		  if( hl == 0 ) if( --untilLa == 0 ) { laStart = true; DOUT(if(config.localLookaheadDebug)cerr << "c startLA" << endl;); }
 		  if( laStart && hl == config.opt_laLevel ) {
 		    if( !laHack(learnt_clause) ) return l_False;
 		    topLevelsSinceLastLa = 0;
@@ -1554,7 +1554,7 @@ lbool Solver::search(int nof_conflicts)
             
             // Increase decision level and enqueue 'next'
             newDecisionLevel();
-	    if(config.opt_printDecisions > 0) printf("c decide %s%d at level %d\n", sign(next) ? "-" : "", var(next) + 1, decisionLevel() );
+	    DOUT( if(config.opt_printDecisions > 0) printf("c decide %s%d at level %d\n", sign(next) ? "-" : "", var(next) + 1, decisionLevel() ); );
             uncheckedEnqueue(next);
         }
     }
@@ -1662,11 +1662,11 @@ bool Solver::analyzeNewLearnedClause(const CRef newLearnedClause)
 	  if( decisionLevel() != 0 ) cancelUntil(0); // go to level 0, because a unit is added next
 	  if( value( bLit ) == l_Undef ) { // only if not set already
 	    if ( j == 0 || k == 0) L2units ++; else L3units ++; // stats
-	    if( config.opt_learn_debug ) cerr << "c uhdPR bin(b) enqueue " << bLit << "@" << decisionLevel() << endl;
+	    DOUT( if( config.opt_learn_debug ) cerr << "c uhdPR bin(b) enqueue " << bLit << "@" << decisionLevel() << endl; );
 	    uncheckedEnqueue( bLit );
 	    addCommentToProof("added by uhd probing:"); addUnitToProof(bLit); // not sure whether DRUP can always find this
 	  } else if (value( bLit ) == l_False ) {
-	    if( config.opt_learn_debug ) cerr << "c contradiction on literal bin(b) " << bLit << "@" << decisionLevel() << " when checking clause " << clause << endl;
+	    DOUT( if( config.opt_learn_debug ) cerr << "c contradiction on literal bin(b) " << bLit << "@" << decisionLevel() << " when checking clause " << clause << endl; );
 	    return true; // found a contradiction on level 0! on higher decision levels this is not known!
 	  }
 	} else {
@@ -1675,11 +1675,11 @@ bool Solver::analyzeNewLearnedClause(const CRef newLearnedClause)
 	    if( decisionLevel() != 0 ) cancelUntil(0); // go to level 0, because a unit is added next
 	    if( value( aLit ) == l_Undef ) { // only if not set already
 	      if ( j == 0 || k == 0) L2units ++; else L3units ++; // stats
-	      if( config.opt_learn_debug ) cerr << "c uhdPR bin(a) enqueue " << aLit << "@" << decisionLevel() << endl;
+	      DOUT( if( config.opt_learn_debug ) cerr << "c uhdPR bin(a) enqueue " << aLit << "@" << decisionLevel() << endl; );
 	      uncheckedEnqueue( aLit);
 	      addCommentToProof("added by uhd probing:"); addUnitToProof(aLit);
 	    } else if (value( aLit ) == l_False ) {
-	      if( config.opt_learn_debug ) cerr << "c contradiction on literal bin(a) " << aLit << "@" << decisionLevel() << " when checking clause " << clause << endl;
+	      DOUT( if( config.opt_learn_debug ) cerr << "c contradiction on literal bin(a) " << aLit << "@" << decisionLevel() << " when checking clause " << clause << endl; );
 	      return true; // found a contradiction
 	    }
 	  }
@@ -1725,10 +1725,10 @@ bool Solver::analyzeNewLearnedClause(const CRef newLearnedClause)
 	    if( decisionLevel() != 0 ) cancelUntil(0); // go to level 0, because a unit clause in added next
 	    if( value( minLit ) == l_Undef ) {
 	      L4units ++;
-	      if( config.opt_learn_debug ) cerr << "c uhdPR long enqueue " << minLit << "@" << decisionLevel() << endl;
+	      DOUT( if( config.opt_learn_debug ) cerr << "c uhdPR long enqueue " << minLit << "@" << decisionLevel() << endl; );
 	      uncheckedEnqueue( minLit );
 	    } else if (value(minLit) == l_False ){
-	      if( config.opt_learn_debug ) cerr << "c contradiction on commonly implied liteal " << minLit << "@" << decisionLevel() << " when checking clause " << clause << endl;
+	      DOUT( if( config.opt_learn_debug ) cerr << "c contradiction on commonly implied liteal " << minLit << "@" << decisionLevel() << " when checking clause " << clause << endl; );
 	      return true;
 	    }
 	    for( int j = 0 ; j < clause.size(); ++ j ) {
@@ -1760,7 +1760,7 @@ void Solver::fillLAmodel( vec<LONG_INT>& pattern, const int steps, vec<Var>& rel
 	pattern[v] +=(sign(l)?2:1);	// add the pattern for the kept variable
       }
     }
-    relevantVariables.shrink( relevantVariables.size() - keepVariables ); // remove the variables that are not needed any more
+    relevantVariables.shrink_( relevantVariables.size() - keepVariables ); // remove the variables that are not needed any more
   } else { // only move all the relevant variables
     for( int i = 0 ; i < relevantVariables.size(); ++ i ) {
 	const Var& v = relevantVariables[i];	// the current kept variable
@@ -1790,11 +1790,11 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   }
   const int actualLAlevel = j;
 
-  if( config.localLookaheadDebug ) {
+  DOUT( if( config.localLookaheadDebug ) {
     cerr << "c LA decisions: "; 
     for( int i = 0 ; i< actualLAlevel; ++ i ) cerr << " " << d[i] << " (vs. [" << trail_lim[i] << "] " << trail[ trail_lim[i] ] << " ) ";
     cerr << endl;
-  }
+  });
 
   if(config.tb){ // use tabu
     bool same = true;
@@ -1823,7 +1823,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
   start = 0;
 
 
-  if(config.localLookaheadDebug) cerr << "c do LA until " << bound << " starting at level " << decisionLevel() << endl;
+  DOUT( if(config.localLookaheadDebug) cerr << "c do LA until " << bound << " starting at level " << decisionLevel() << endl; );
   fillLAmodel(variablesPattern,0,relevantLAvariables); // fill current model
   int failedProbesInARow = 0;
   for(LONG_INT i=1;i<bound;++i){ // for each combination
@@ -1832,7 +1832,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
     for(int j=0;j<actualLAlevel;++j) uncheckedEnqueue( (i&(1<<j))!=0 ? ~d[j] : d[j] ); // flip polarity of d[j], if corresponding bit in i is set -> enumerate all combinations!
     bool f = propagate() != CRef_Undef; // for tests!
 //    if(config.localLookaheadDebug) { cerr << "c propagated iteration " << i << " : " ;  for(int j=0;j<actualLAlevel;++j) cerr << " " << ( (i&(1<<j))!=0 ? ~d[j] : d[j] ) ; cerr << endl; }
-    if(config.localLookaheadDebug) { cerr << "c corresponding trail: "; if(f) cerr << " FAILED! "; else  for( int j = trail_lim[0]; j < trail.size(); ++ j ) cerr << " "  << trail[j]; cerr << endl; }
+    DOUT( if(config.localLookaheadDebug) { cerr << "c corresponding trail: "; if(f) cerr << " FAILED! "; else  for( int j = trail_lim[0]; j < trail.size(); ++ j ) cerr << " "  << trail[j]; cerr << endl; });
     
     if(f) {
       LONG_INT m=3;
@@ -1844,7 +1844,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
       failedProbesInARow = 0;
     }
 //    if(config.localLookaheadDebug) cerr << "c this propafation [" << i << "] failed: " << f << " current match pattern: " << pt << "(inv: " << ~pt << ")" << endl;
-    if(config.localLookaheadDebug) { cerr << "c cut: "; for(int j=0;j<2<<actualLAlevel;++j) cerr << ((patternMask&(1<<j))  != (LONG_INT)0 ); cerr << endl; }
+    DOUT(if(config.localLookaheadDebug) { cerr << "c cut: "; for(int j=0;j<2<<actualLAlevel;++j) cerr << ((patternMask&(1<<j))  != (LONG_INT)0 ); cerr << endl; });
   }
   if( failedProbesInARow > 0 ) fillLAmodel(variablesPattern,failedProbesInARow,relevantLAvariables,true); // finally, moving all variables right
   cancelUntil(0);
@@ -1858,7 +1858,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
 //  if(config.localLookaheadDebug) cerr << "c neg hit: " << (pt & (hit[t+1])) << endl;
   toEnqueue.clear();
   bool doEE = ( (failedTries * 100)/ bound ) < config.opt_laEEp; // enough EE candidates?!
-  if( config.localLookaheadDebug) cerr << "c tries: " << bound << " failed: " << failedTries << " percent: " <<  ( (failedTries * 100)/ bound ) << " doEE: " << doEE << " current laEEs: " << laEEvars << endl;
+  DOUT(if( config.localLookaheadDebug) cerr << "c tries: " << bound << " failed: " << failedTries << " percent: " <<  ( (failedTries * 100)/ bound ) << " doEE: " << doEE << " current laEEs: " << laEEvars << endl;);
   for(int variableIndex = 0 ; variableIndex < relevantLAvariables.size(); ++ variableIndex) // loop only over the relevant variables
   { 
     const Var& v = relevantLAvariables[variableIndex];
@@ -1897,24 +1897,26 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
 	  laEEvars++;
 	  laEElits += analyze_stack.size();
 	  for( int i = 0; i < analyze_stack.size(); ++ i ) {
-	    if( config.localLookaheadDebug) {
-	    cerr << "c EE [" << i << "]: " << mkLit(v,false) << " <= " << analyze_stack[i] << ", " << mkLit(v,true) << " <= " << ~analyze_stack[i] << endl;
-/*
-	    cerr << "c match: " << var(mkLit(v,false)  )+1 << " : " << p[var(mkLit(v,false)  )] << " wrt. cut: " << (pt & p[var(mkLit(v,false)  )]) << endl;
-	    cerr << "c match: " << var(analyze_stack[i])+1 << " : " << p[var(analyze_stack[i])] << " wrt. cut: " << (pt & p[var(analyze_stack[i])]) << endl;
-	    
-	    cerr << "c == " <<  d[0] << " ^= HIT0 - pos: " <<   hitEE0[t] << " wrt. cut: " << (pt & (  hitEE0[t])) << endl;
-	    cerr << "c == " << ~d[0] << " ^= HIT0 - neg: " << hitEE0[t+1] << " wrt. cut: " << (pt & (hitEE0[t+1])) << endl;
-	    cerr << "c == " <<  d[1] << " ^= HIT1 - pos: " <<   hitEE1[t] << " wrt. cut: " << (pt & (  hitEE1[t])) << endl;
-	    cerr << "c == " << ~d[1] << " ^= HIT1 - neg: " << hitEE1[t+1] << " wrt. cut: " << (pt & (hitEE1[t+1])) << endl;
-	    cerr << "c == " <<  d[2] << " ^= HIT2 - pos: " <<   hitEE2[t] << " wrt. cut: " << (pt & (  hitEE2[t])) << endl;
-	    cerr << "c == " << ~d[2] << " ^= HIT2 - neg: " << hitEE2[t+1] << " wrt. cut: " << (pt & (hitEE2[t+1])) << endl;
-	    cerr << "c == " <<  d[3] << " ^= HIT3 - pos: " <<   hitEE3[t] << " wrt. cut: " << (pt & (  hitEE3[t])) << endl;
-	    cerr << "c == " << ~d[3] << " ^= HIT3 - neg: " << hitEE3[t+1] << " wrt. cut: " << (pt & (hitEE3[t+1])) << endl;
-	    cerr << "c == " <<  d[4] << " ^= HIT4 - pos: " <<   hitEE4[t] << " wrt. cut: " << (pt & (  hitEE4[t])) << endl;
-	    cerr << "c == " << ~d[4] << " ^= HIT4 - neg: " << hitEE4[t+1] << " wrt. cut: " << (pt & (hitEE4[t+1])) << endl;
-*/
-	    }
+	    DOUT(
+	      if( config.localLookaheadDebug) {
+	      cerr << "c EE [" << i << "]: " << mkLit(v,false) << " <= " << analyze_stack[i] << ", " << mkLit(v,true) << " <= " << ~analyze_stack[i] << endl;
+  /*
+	      cerr << "c match: " << var(mkLit(v,false)  )+1 << " : " << p[var(mkLit(v,false)  )] << " wrt. cut: " << (pt & p[var(mkLit(v,false)  )]) << endl;
+	      cerr << "c match: " << var(analyze_stack[i])+1 << " : " << p[var(analyze_stack[i])] << " wrt. cut: " << (pt & p[var(analyze_stack[i])]) << endl;
+	      
+	      cerr << "c == " <<  d[0] << " ^= HIT0 - pos: " <<   hitEE0[t] << " wrt. cut: " << (pt & (  hitEE0[t])) << endl;
+	      cerr << "c == " << ~d[0] << " ^= HIT0 - neg: " << hitEE0[t+1] << " wrt. cut: " << (pt & (hitEE0[t+1])) << endl;
+	      cerr << "c == " <<  d[1] << " ^= HIT1 - pos: " <<   hitEE1[t] << " wrt. cut: " << (pt & (  hitEE1[t])) << endl;
+	      cerr << "c == " << ~d[1] << " ^= HIT1 - neg: " << hitEE1[t+1] << " wrt. cut: " << (pt & (hitEE1[t+1])) << endl;
+	      cerr << "c == " <<  d[2] << " ^= HIT2 - pos: " <<   hitEE2[t] << " wrt. cut: " << (pt & (  hitEE2[t])) << endl;
+	      cerr << "c == " << ~d[2] << " ^= HIT2 - neg: " << hitEE2[t+1] << " wrt. cut: " << (pt & (hitEE2[t+1])) << endl;
+	      cerr << "c == " <<  d[3] << " ^= HIT3 - pos: " <<   hitEE3[t] << " wrt. cut: " << (pt & (  hitEE3[t])) << endl;
+	      cerr << "c == " << ~d[3] << " ^= HIT3 - neg: " << hitEE3[t+1] << " wrt. cut: " << (pt & (hitEE3[t+1])) << endl;
+	      cerr << "c == " <<  d[4] << " ^= HIT4 - pos: " <<   hitEE4[t] << " wrt. cut: " << (pt & (  hitEE4[t])) << endl;
+	      cerr << "c == " << ~d[4] << " ^= HIT4 - neg: " << hitEE4[t+1] << " wrt. cut: " << (pt & (hitEE4[t+1])) << endl;
+  */
+	      }
+	    );
 	    
 	    for( int pol = 0; pol < 2; ++ pol ) { // encode a->b, and b->a
 	      analyze_toclear[0] = pol == 0 ? ~analyze_stack[i]  : analyze_stack[i];
@@ -1927,7 +1929,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
 	      }
 	      else clauses.push(cr);
 	      attachClause(cr);
-	      if( config.localLookaheadDebug) cerr << "c add as clause: " << ca[cr] << endl;
+	      DOUT( if( config.localLookaheadDebug) cerr << "c add as clause: " << ca[cr] << endl;);
 	    }
 	  }
 	}
@@ -2157,7 +2159,7 @@ lbool Solver::initSolve(int solves)
 	  learnts[j++] = learnts[i]; // move clause forward! 
 	}
       }
-      learnts.shrink(i - j);
+      learnts.shrink_(i - j);
     }
     
     return l_Undef;
@@ -2301,7 +2303,7 @@ lbool Solver::solve_()
         // Extend & copy model:
         model.growTo(nVars());
         for (int i = 0; i < nVars(); i++) model[i] = value(i);
-	if( model.size() > solveVariables ) model.shrink( model.size() - solveVariables ); // if SD has been used, nobody knows about these variables, so remove them before doing anything else next
+	if( model.size() > solveVariables ) model.shrink_( model.size() - solveVariables ); // if SD has been used, nobody knows about these variables, so remove them before doing anything else next
 	
     if( false ) {
       cerr << "c solver state after solving with solution" << endl;
@@ -2445,7 +2447,7 @@ void Solver::relocAll(ClauseAllocator& to)
 	  learnts[keptClauses++] = learnts[i]; // keep the clause only if its not marked!
 	}
     }
-    learnts.shrink ( learnts.size() - keptClauses );
+    learnts.shrink_( learnts.size() - keptClauses );
 
     // All original:
     //
@@ -2457,7 +2459,7 @@ void Solver::relocAll(ClauseAllocator& to)
 	  clauses[keptClauses++] = clauses[i]; // keep the clause only if its not marked!
 	}
     }
-    clauses.shrink ( clauses.size() - keptClauses );
+    clauses.shrink_( clauses.size() - keptClauses );
 }
 
 
@@ -2495,7 +2497,7 @@ void Solver::buildReduct() {
       }
     }
     cerr << "c removed lits during reduct: " << remLits << " removed cls: " << clauses.size() - keptClauses << endl;
-    clauses.shrink( clauses.size() - keptClauses );
+    clauses.shrink_( clauses.size() - keptClauses );
     
 }
 
@@ -2669,14 +2671,14 @@ lbool Solver::inprocess(lbool status)
 
 void Solver::printConflictTrail(CRef confl)
 {
-  if( config.opt_printDecisions > 2 ) {
+  DOUT( if( config.opt_printDecisions > 2 ) {
     printf("c conflict at level %d\n", decisionLevel() );
     cerr << "c conflict clause: " << ca[confl] << endl;
     cerr << "c trail: " ;
     for( int i = 0 ; i < trail.size(); ++ i ) {
       cerr << " " << trail[i] << "@" << level(var(trail[i])) << "?"; if( reason(var(trail[i]) ) == CRef_Undef ) cerr << "U"; else cerr <<reason(var(trail[i]));
     } cerr << endl;
-  }
+  } );
 }
 
 void Solver::updateDecayAndVMTF()
@@ -2709,8 +2711,9 @@ lbool Solver::handleMultipleUnits(vec< Lit >& learnt_clause)
   { 
     if( value(learnt_clause[i]) == l_Undef ) uncheckedEnqueue(learnt_clause[i]);
     else if (value(learnt_clause[i]) == l_False ) return l_False; // otherwise, we have a top level conflict here! 
-    else if( config.opt_learn_debug) cerr << "c tried to enqueue a unit clause that was already a unit clause ... " << endl;
-    if( config.opt_printDecisions > 1 ) cerr << "c enqueue multi-learned literal " << learnt_clause[i] << "(" << i << "/" << learnt_clause.size() << ") at level " <<  decisionLevel() << endl;
+    else 
+      DOUT( if( config.opt_learn_debug) cerr << "c tried to enqueue a unit clause that was already a unit clause ... " << endl; );
+    DOUT( if( config.opt_printDecisions > 1 ) cerr << "c enqueue multi-learned literal " << learnt_clause[i] << "(" << i << "/" << learnt_clause.size() << ") at level " <<  decisionLevel() << endl; );
   }
     
   // write learned unit clauses to DRUP!
@@ -2751,7 +2754,7 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
   #endif
       if( value(learnt_clause[0]) == l_Undef ) {uncheckedEnqueue(learnt_clause[0]);nbUn++;}
       else if (value(learnt_clause[0]) == l_False ) return l_False; // otherwise, we have a top level conflict here!
-      if( config.opt_printDecisions > 1 ) cerr << "c enqueue learned unit literal " << learnt_clause[0]<< " at level " <<  decisionLevel() << " from clause " << learnt_clause << endl;
+      DOUT( if( config.opt_printDecisions > 1 ) cerr << "c enqueue learned unit literal " << learnt_clause[0]<< " at level " <<  decisionLevel() << " from clause " << learnt_clause << endl; );
   }else{
     CRef cr = ca.alloc(learnt_clause, true);
     ca[cr].setLBD(nblevels); 
@@ -2766,7 +2769,7 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
     claBumpActivity(ca[cr], (config.opt_cls_act_bump_mode == 0 ? 1 : (config.opt_cls_act_bump_mode == 1) ? learnt_clause.size() : nblevels )  ); // bump activity based on its size
 
     uncheckedEnqueue(learnt_clause[0], cr); // this clause is only unit, if OTFSS jumped to the same level!
-    if( config.opt_printDecisions > 1  ) cerr << "c enqueue literal " << learnt_clause[0] << " at level " <<  decisionLevel() << " from learned clause " << learnt_clause << endl;
+    DOUT( if( config.opt_printDecisions > 1  ) cerr << "c enqueue literal " << learnt_clause[0] << " at level " <<  decisionLevel() << " from learned clause " << learnt_clause << endl; );
 
     
     if( analyzeNewLearnedClause( cr ) )   // check whether this clause can be used to imply new backbone literals!

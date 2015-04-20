@@ -14,6 +14,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "utils/Config.h"
 #include "utils/Options.h"
+#include "utils/Debug.h"
 
 using namespace Riss;
 
@@ -190,12 +191,7 @@ public:
  IntOption opt_rew_cls;  	// clause limit to enable  
  IntOption opt_rew_lits;	// total literals limit to enable 
  
-#if defined TOOLVERSION // debug only, if no version is given!
- const bool opt_debug;       
- const int opt_check;
- const int  opt_log;
- const char* printAfter;
-#else
+#ifdef DEBUG
  BoolOption opt_debug    ;
  IntOption opt_check    ;
  IntOption  opt_log      ;
@@ -206,14 +202,9 @@ public:
 // BVE
 //
 
-#if defined TOOLVERSION && TOOLVERSION < 302
-  const int opt_par_bve    ;
-  const int  opt_bve_verbose;
-#else
  IntOption opt_par_bve         ;
  IntOption  opt_bve_verbose     ;
-#endif
- 
+
  IntOption  opt_bve_limit       ;
  IntOption  opt_learnt_growth   ;
  IntOption  opt_resolve_learnts ;
@@ -258,34 +249,18 @@ BoolOption opt_minimal_updates;
  BoolOption opt_bvaComplement        ;
  BoolOption opt_bvaRemoveDubplicates ;
  BoolOption opt_bvaSubstituteOr      ;
-#if defined TOOLVERSION  
- const int bva_debug;
-#else
+#ifdef DEBUG
  IntOption  bva_debug                ;
-#endif
-
-#if defined TOOLVERSION  && TOOLVERSION < 350
- const bool opt_bvaAnalysis ;
- const bool opt_Xbva ;
- const bool opt_Ibva ;
- const int opt_bvaAnalysisDebug ;
- const int opt_bva_Xlimit ;
- const int opt_bva_Ilimit ;
- const int opt_Xbva_heap ;
- const int opt_Ibva_heap ;
-#else
- #if defined TOOLVERSION
- const int opt_bvaAnalysisDebug;
-#else
  IntOption  opt_bvaAnalysisDebug     ;
 #endif
+
  IntOption  opt_bva_Xlimit           ;
  IntOption  opt_bva_Ilimit           ;
  IntOption  opt_Xbva_heap            ;
  IntOption  opt_Ibva_heap            ;
  IntOption  opt_Xbva                 ;
  IntOption  opt_Ibva                 ;
-#endif
+
 
 //
 // BCE
@@ -299,11 +274,8 @@ BoolOption opt_bce_cle; // perform covered literal elimination
 BoolOption opt_bce_cla; // perform covered literal addition
 BoolOption opt_bce_cle_conservative; // perform CLE conservative and cheap, if tautological resolvents occur
 IntOption opt_bceInpStepInc; // add to limit for inprocessing
-#if defined TOOLVERSION  
-const int opt_bce_verbose;
-const bool opt_bce_debug; 
-#else
 IntOption opt_bce_verbose; // output operation steps
+#ifdef DEBUG
 BoolOption opt_bce_debug; // debug output
 #endif
 
@@ -321,9 +293,7 @@ IntOption claIterations; // number of iterations to do for CLA
 IntOption alaLimit; // number of steps for limits
 IntOption alaIterations; // number of iterations to do for ALA
 BoolOption ala_binary; // perform ALA with binary clauses
-#if defined TOOLVERSION  
-const bool opt_la_debug; 
-#else
+#ifdef DEBUG
 BoolOption opt_la_debug; // debug output
 #endif
 
@@ -334,9 +304,7 @@ BoolOption opt_la_debug; // debug output
 IntOption opt_cceSteps;
 IntOption opt_ccelevel;
 IntOption opt_ccePercent;
-#if defined TOOLVERSION  
-const int cce_debug_out;
-#else
+#ifdef DEBUG
 IntOption cce_debug_out;
 #endif
 IntOption  opt_cceInpStepInc;
@@ -347,7 +315,9 @@ IntOption  opt_cceInpStepInc;
 BoolOption rate_orderComplements;
 Int64Option rate_Limit;
 Int64Option ratm_Limit;
+#ifdef DEBUG
 IntOption opt_rate_debug;
+#endif
 BoolOption opt_rate_brat; // test resolvent not only for AT, but also for being blocked
 IntOption rate_minSize;
 BoolOption opt_rate_rate;
@@ -359,9 +329,7 @@ BoolOption opt_rate_ratm_rounds;
 //
 // Dense
 //
-#if defined TOOLVERSION  
-const int dense_debug_out;
-#else
+#ifdef DEBUG
 IntOption dense_debug_out;
 #endif
 IntOption  opt_dense_fragmentation;
@@ -377,9 +345,7 @@ const int opt_entailed_minClsSize;
 IntOption opt_entailed_minClsSize;
 #endif
 
-#if defined TOOLVERSION 
-const int entailed_debug;
-#else
+#ifdef DEBUG
 IntOption  entailed_debug;
 #endif
 
@@ -402,9 +368,7 @@ BoolOption opt_ee_eagerEquivalence;
 BoolOption opt_eeGateBigFirst     ;
 StringOption opt_ee_aagFile       ;
 #endif
-#if defined TOOLVERSION  
-const int ee_debug_out;
-#else
+#ifdef DEBUG
 IntOption  ee_debug_out           ;
 #endif
 BoolOption opt_eeSub            ;
@@ -443,9 +407,7 @@ BoolOption circ_NegatedI;
 BoolOption circ_Implied;
 #endif
 /// temporary Boolean flag to quickly enable debug output for the whole file
-#if defined TOOLVERSION  
-  const bool circ_debug_out;
-#else
+#ifdef DEBUG
   BoolOption circ_debug_out;
 #endif
 
@@ -478,12 +440,12 @@ IntOption opt_minCardClauseSize;
 IntOption opt_maxCardClauseSize; 
 IntOption opt_maxCardSize      ;
 Int64Option opt_semSearchLimit ;
+#ifdef DEBUG
 BoolOption opt_semDebug        ;
+#endif
 BoolOption opt_noReduct        ;
 
-#if defined TOOLVERSION 
-const int fm_debug_out;
-#else
+#ifdef DEBUG
 IntOption fm_debug_out       ;
 #endif
 
@@ -496,13 +458,10 @@ const bool opt_par_hte;
 #else
 BoolOption opt_par_hte;
 #endif
-#if defined TOOLVERSION  
-const int hte_debug_out;
-const bool opt_hteTalk;
-#else
+#ifdef DEBUG
 IntOption hte_debug_out;
-BoolOption opt_hteTalk ;
 #endif
+BoolOption opt_hteTalk ;
 IntOption  opt_hte_inpStepInc;
 
 //
@@ -527,18 +486,14 @@ IntOption  pr_opt_inpStepInc1      ;
 IntOption  pr_opt_inpStepInc2      ;
 IntOption  pr_keepLHBRs  ;
 BoolOption pr_necBinaries  ;
-#if defined TOOLVERSION  
-const int pr_debug_out;
-#else
+#ifdef DEBUG
 IntOption pr_debug_out;
 #endif
 
 //
 // Unit Propagation
 //
-#if defined TOOLVERSION  
-const int up_debug_out;
-#else
+#ifdef DEBUG
 IntOption up_debug_out;
 #endif
 
@@ -558,9 +513,7 @@ BoolOption   opt_add2_red_start;
 IntOption  opt_res3_inpStepInc ;
 IntOption  opt_add2_inpStepInc ;
 /// enable this parameter only during debug!
-#if defined TOOLVERSION  
-const bool res3_debug_out;
-#else
+#ifdef DEBUG
 BoolOption res3_debug_out      ;
 #endif
 
@@ -585,9 +538,7 @@ BoolOption res3_debug_out      ;
  IntOption  opt_rew_min_imp_size     ;   
  BoolOption opt_rew_impl_pref_small   ;  
  IntOption  opt_rew_inpStepInc     ;
-#if defined TOOLVERSION 
- const int rew_debug_out;
-#else
+#ifdef DEBUG
  IntOption rew_debug_out;           
 #endif
  
@@ -596,18 +547,14 @@ BoolOption res3_debug_out      ;
 //
 IntOption opt_shuffle_seed;
 BoolOption opt_shuffle_order;
-#if defined TOOLVERSION  
-const int shuffle_debug_out;
-#else
+#ifdef DEBUG
 IntOption shuffle_debug_out;
 #endif
 
 //
 // Sls
 //
-#if defined TOOLVERSION 
-const bool opt_sls_debug;
-#else
+#ifdef DEBUG
 BoolOption opt_sls_debug ;
 #endif
 IntOption  opt_sls_ksat_flips ;
@@ -640,9 +587,7 @@ BoolOption opt_sls_adopt      ;
  IntOption   opt_sub_chunk_size     ;
  IntOption   opt_sub_par_str_minCls ;
 #endif
-#if defined TOOLVERSION
- const int opt_sub_debug;
-#else
+#ifdef DEBUG
  IntOption   opt_sub_debug  ;
 #endif
 
@@ -664,24 +609,18 @@ BoolOption opt_sls_adopt      ;
  BoolOption    sym_opt_cleanLearn     ;
  IntOption     sym_opt_conflicts      ;
  IntOption     sym_opt_total_conflicts;
-#if defined TOOLVERSION  
- const int sym_debug_out;
-#else
+#ifdef DEBUG
  IntOption sym_debug_out;
 #endif
  
 //
 // Twosat
 //
-#if defined TOOLVERSION 
- const int twosat_debug_out;
- const bool twosat_useUnits;
- const bool twosat_clearQueue;
-#else
+#ifdef DEBUG
  IntOption twosat_debug_out  ;
+#endif
  BoolOption twosat_useUnits  ;
  BoolOption twosat_clearQueue;
-#endif
  
 //
 // Unhide
@@ -697,9 +636,7 @@ BoolOption opt_sls_adopt      ;
  IntOption  opt_uhd_fullProbe ;
  BoolOption opt_uhd_probeEE   ;
  BoolOption opt_uhd_fullBorder;
-#if defined TOOLVERSION  
- const int opt_uhd_Debug;
-#else
+#ifdef DEBUG
  IntOption  opt_uhd_Debug;
 #endif
  
@@ -713,9 +650,7 @@ BoolOption opt_sls_adopt      ;
  BoolOption opt_xor_findSubsumed;
  BoolOption opt_xor_findResolved;
  
-#if defined TOOLVERSION
- const int opt_xor_debug;
-#else
+#ifdef DEBUG
  IntOption  opt_xor_debug;
 #endif
 private:

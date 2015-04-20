@@ -67,7 +67,7 @@ bool Solver::addLearnedClause(vec<Lit>& ps, bool bump)
             return true;
         else if (value(ps[i]) != l_False && ps[i] != p)
             ps[j++] = p = ps[i];
-    ps.shrink(i - j);
+    ps.shrink_(i - j);
 
     if (ps.size() == 0)
         return ok = false;

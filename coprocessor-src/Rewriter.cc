@@ -110,7 +110,7 @@ bool Rewriter::rewriteImpl()
     minCand = lit_Undef;
     if( data.ma.isCurrentStep( var(startLit) ) ) continue; // do not reuse literals twice
     Lit current = startLit;
-    if( config.rew_debug_out > 1 ) cerr << "c analyze " << current << " as chain starter with " << big.getSize( current ) << endl;
+    DOUT(if( config.rew_debug_out > 1 ) cerr << "c analyze " << current << " as chain starter with " << big.getSize( current ) << endl;);
     data.lits.clear();
     data.lits.push_back( current );    
     data.ma.setCurrentStep( var(current) ); // disable this lit for being used again
@@ -121,7 +121,7 @@ bool Rewriter::rewriteImpl()
       int usePos = -1;
       for( int j = 0 ; j < size; ++j ) { 
 	const Lit l = list[j];
-	if( config.rew_debug_out > 2 ) cerr << "c test follow candidate " << l << " with " << impliesLits[ toInt(l)] << "/" << big.getSize( l ) << endl;
+	DOUT(if( config.rew_debug_out > 2 ) cerr << "c test follow candidate " << l << " with " << impliesLits[ toInt(l)] << "/" << big.getSize( l ) << endl;);
 	if (data.ma.isCurrentStep( var(l) ) ) continue; // do not use variables twice!
 	if( usePos == -1  ) usePos = j;
 	else if( 
@@ -142,12 +142,12 @@ bool Rewriter::rewriteImpl()
       continue;
     }
     
-    if( config.rew_debug_out > 1 ) cerr << "c found implication with size " << data.lits.size() << endl;
+    DOUT(if( config.rew_debug_out > 1 ) cerr << "c found implication with size " << data.lits.size() << endl;);
     implicationChains.push_back( data.lits );
     minChain = minChain == 0 ? data.lits.size() : (minChain <= data.lits.size() ? minChain : data.lits.size() );
     maxChain = maxChain >= data.lits.size() ? maxChain : data.lits.size();
   }
-  if( config.rew_debug_out > 1 ) cerr << "c found implication chains: " << implicationChains.size() << endl;
+  DOUT(if( config.rew_debug_out > 1 ) cerr << "c found implication chains: " << implicationChains.size() << endl;);
   foundChains += implicationChains.size();
   if( config.opt_rew_stat_only ) return modifiedFormula;
   
@@ -161,7 +161,7 @@ bool Rewriter::rewriteImpl()
     int size = chain.size();
     removedVars +=size;
     int rSize = (size + 1) / 2;
-    if( config.rew_debug_out > 0 ) cerr << "c process chain " << i << "/" << implicationChains.size() << " with size= " << size << " and half= " << rSize << endl;
+    DOUT(if( config.rew_debug_out > 0 ) cerr << "c process chain " << i << "/" << implicationChains.size() << " with size= " << size << " and half= " << rSize << endl;);
 
     
     modifiedFormula = true;
@@ -185,7 +185,7 @@ bool Rewriter::rewriteImpl()
       }
     }
 
-    if( config.rew_debug_out > 1 ) cerr << "c rewrite chain " << chain << " with size " << size << " halfsize " << size/2 << " and rSize " << rSize << endl;
+    DOUT(if( config.rew_debug_out > 1 ) cerr << "c rewrite chain " << chain << " with size " << size << " halfsize " << size/2 << " and rSize " << rSize << endl;);
     // replace smaller half of variables
     for( int half = 0; half < 2; ++ half ) {
     
@@ -193,7 +193,7 @@ bool Rewriter::rewriteImpl()
       // do both halfs based on the same code!!
       //
       for( int j = 0 ; j < rSize; ++ j ) {
-	if( config.rew_debug_out > 3 ) cerr << "c process element j=" << j << ", which is " << chain[j + (half==0 ? 0 : rSize)] << " with index " << j + (half==0 ? 0 : rSize) << endl;
+	DOUT(if( config.rew_debug_out > 3 ) cerr << "c process element j=" << j << ", which is " << chain[j + (half==0 ? 0 : rSize)] << " with index " << j + (half==0 ? 0 : rSize) << endl;);
 	if(half == 1 && (j + rSize >= size)) { // creating the forbidden combination (that does not appear in the input formula this way!
 	  clsLits.clear();
 	  clsLits.push(~newXn);
@@ -205,7 +205,7 @@ bool Rewriter::rewriteImpl()
 	  // clause is sorted already!
 	  data.addClause( tmpRef ); // add to all literal lists in the clause
 	  data.getClauses().push( tmpRef );
-	  if( config.rew_debug_out > 1 ) cerr << "c added clause " << ca[tmpRef] << " to disallow last even combination" << endl;
+	  DOUT(if( config.rew_debug_out > 1 ) cerr << "c added clause " << ca[tmpRef] << " to disallow last even combination" << endl;);
 	  break; // done with this AMO!
 	} else
 	{ // to make sure all variables are valid only for positive!
@@ -222,13 +222,13 @@ bool Rewriter::rewriteImpl()
 	clsLits.push(lit_Undef);clsLits.push(~l);clsLits.push(r2);
 	data.addExtensionToExtension(clsLits);
 	// this code is actually exactly the same as for the rewriting AMOS TODO have a extra method for this?!
-	if( config.rew_debug_out > 1 ) cerr << endl << endl << "c replace " << l << " with (" << r1 << " and " << r2 << ")" << endl;
+	DOUT(if( config.rew_debug_out > 1 ) cerr << endl << endl << "c replace " << l << " with (" << r1 << " and " << r2 << ")" << endl;);
 	vector<CRef>& ll = data.list(l);
 	for( int k = 0 ; k < ll.size(); ++ k ) {
 	  Clause& c= ca[ ll[k] ];
 	  assert(c.size() > 1 && "there should not be unit clauses!" );
 	  if( c.can_be_deleted() ) continue; // to not care about these clauses!
-	  if( config.rew_debug_out > 1 ) cerr << endl << "c rewrite POS [" << ll[k] << "] : " << c << endl;
+	  DOUT(if( config.rew_debug_out > 1 ) cerr << endl << "c rewrite POS [" << ll[k] << "] : " << c << endl;);
 	  clsLits.clear();
 	  int hitPos = -1;
 	  Lit minL = c[0];
@@ -253,9 +253,9 @@ bool Rewriter::rewriteImpl()
 	    foundNR1comp = foundNR1comp || (cl == ~r1); foundNR2comp = foundNR2comp || (cl == ~r2);
 	  }
 	  assert( hitPos + 1 == c.size() );
-	  if( config.rew_debug_out > 4 ) cerr << "c hit at " << hitPos << " intermediate clause: " << c << endl;
+	  DOUT(if( config.rew_debug_out > 4 ) cerr << "c hit at " << hitPos << " intermediate clause: " << c << endl;);
 	  
-	  if( config.rew_debug_out > 3 ) cerr << "c found r1: " << foundNR1 << "  r2: " << foundNR2 << " r1c: " <<  foundNR1comp << " rc2: " << foundNR2comp << " " << endl;
+	  DOUT(if( config.rew_debug_out > 3 ) cerr << "c found r1: " << foundNR1 << "  r2: " << foundNR2 << " r1c: " <<  foundNR1comp << " rc2: " << foundNR2comp << " " << endl;);
 	  
 	  Lit minL1 =  data[r1] < data[minL] ? r1 : minL;
 	  Lit minL2 =  data[r2] < data[minL] ? r2 : minL;
@@ -266,8 +266,11 @@ bool Rewriter::rewriteImpl()
 	  //
 	  // TODO: handle foundNR1 and foundNR2 here
 	  //
-	  if( foundNR1 && foundNR2 ) { c.shrink(1); data.addSubStrengthClause(ll[k]); if( config.rew_debug_out > 2 ) cerr << "c into2 pos new [" << ll[k] << "] : " << c << endl; continue; }
-	  if( config.rew_debug_out > 4 )cerr << "c r1" << endl;
+	  if( foundNR1 && foundNR2 ) { 
+	    c.shrink(1); data.addSubStrengthClause(ll[k]); 
+	    DOUT(if( config.rew_debug_out > 2 ) cerr << "c into2 pos new [" << ll[k] << "] : " << c << endl; );
+	    continue; }
+	  DOUT(if( config.rew_debug_out > 4 )cerr << "c r1" << endl;);
 	  bool reuseClause = false;
 	  // have altered the clause, and its not a tautology now, and its not subsumed
 	  if( !foundNR1comp && !foundNR1 ) {c[hitPos] = r1;c.sort();sortCalls++;} // in this clause, have the new literal, if not present already
@@ -280,17 +283,17 @@ bool Rewriter::rewriteImpl()
 	      data[r1] ++; data.list(r1).push_back( ll[k] ); // add the clause to the right list! update stats!
 	      data.addSubStrengthClause(ll[k]); // afterwards, check for subsumption!
 	    }
-	    if( config.rew_debug_out > 1 ) cerr << "c into1 pos [" << ll[k] << "] : " << c << endl;
+	    DOUT(if( config.rew_debug_out > 1 ) cerr << "c into1 pos [" << ll[k] << "] : " << c << endl;);
 	  } else {
 	    // TODO could reuse clause here!
 	    reuseClause = true;
 	  }
 	  
-	  if( config.rew_debug_out > 4 )cerr << "c r2 (reuse=" << reuseClause << ")" << endl;
+	  DOUT(if( config.rew_debug_out > 4 )cerr << "c r2 (reuse=" << reuseClause << ")" << endl;);
 	  if( reuseClause ) {
 	    reuses ++;
 	    for( hitPos = 0 ; hitPos + 1 < c.size(); ++ hitPos ) if( c[hitPos] == r1 ) break; // replace r1 with r2 (or overwrite last position!)
-	    if( config.rew_debug_out > 3 )cerr << "c found " << r1 << " at " << hitPos << endl;
+	    DOUT(if( config.rew_debug_out > 3 )cerr << "c found " << r1 << " at " << hitPos << endl;);
 	    if( !foundNR2comp && !foundNR2 ) {c[hitPos] = r2;c.sort();sortCalls++;} // in this clause, have the new literal, if not present already
 	    if( !foundNR2comp && !hasDuplicate( data.list(minL1) , c ) ) { // not there or subsumed -> add clause and test other via vector!
 	      if( foundNR2 ) {
@@ -301,7 +304,7 @@ bool Rewriter::rewriteImpl()
 		data[r2] ++; data.list(r2).push_back( ll[k] ); // add the clause to the right list! update stats!
 		data.addSubStrengthClause(ll[k]); // afterwards, check for subsumption!
 	      }
-	      if( config.rew_debug_out > 1 ) cerr << "c into2 reuse [" << ll[k] << "] : " << c << endl;
+	      DOUT(if( config.rew_debug_out > 1 ) cerr << "c into2 reuse [" << ll[k] << "] : " << c << endl;);
 	    } else {
 	      droppedClauses ++;
 	      c.set_delete(true);
@@ -313,7 +316,7 @@ bool Rewriter::rewriteImpl()
 	      // add clause with clsLits
 	      CRef tmpRef = ca.alloc(clsLits, c.learnt() ); // use learnt flag of other !
 	      data.addSubStrengthClause(tmpRef,true); // afterwards, check for subsumption!
-	      if( config.rew_debug_out > 1 ) cerr << "c into2 pos new [" << tmpRef << "] : " << ca[tmpRef] << endl;
+	      DOUT(if( config.rew_debug_out > 1 ) cerr << "c into2 pos new [" << tmpRef << "] : " << ca[tmpRef] << endl;);
 	      createdClauses ++;
 	      // clause is sorted already!
 	      data.addClause( tmpRef ); // add to all literal lists in the clause
@@ -328,13 +331,13 @@ bool Rewriter::rewriteImpl()
 	const Lit nl = ~chain[j + (half==0 ? 0 : rSize) ]; 		// negative occurrence [chain contains negative occurrences!]:  ~l is replaced by (~newL \lor ~newX)
 	const Lit nr1 = half==0 ? newXn : newXp;		// replace with this literal
 	const Lit nr2 = ~data.lits[j];	// replace with this literal, always nr2 > nr1!!
-	if( config.rew_debug_out > 1 ) cerr << endl << endl << "c replace " << nl << " with (" << nr1 << " lor " << nr2 << ")" << endl;
+	DOUT(if( config.rew_debug_out > 1 ) cerr << endl << endl << "c replace " << nl << " with (" << nr1 << " lor " << nr2 << ")" << endl;);
 	vector<CRef>& nll = data.list(nl);
 	for( int k = 0 ; k < nll.size(); ++ k ) {
 	  Clause& c= ca[ nll[k] ];
 	  assert(c.size() > 1 && "there should not be unit clauses!" );
 	  if( c.can_be_deleted() ) continue; // to not care about these clauses - no need to delete from list, will be done later
-	  if( config.rew_debug_out > 1 ) cerr << endl << "c rewrite NEG [" << nll[k] << "] : " << c << endl;
+	  DOUT(if( config.rew_debug_out > 1 ) cerr << endl << "c rewrite NEG [" << nll[k] << "] : " << c << endl;);
 	  clsLits.clear();
 	  int hitPos = -1;
 	  Lit minL = c[0];
@@ -358,7 +361,7 @@ bool Rewriter::rewriteImpl()
 	  }
 	  assert( clsLits.size() + 1 == c.size() && "the literal itself should be missing!" );
 	  
-	  if( config.rew_debug_out > 3 ) cerr << "c found nr1: " << foundNR1 << "  nr2: " << foundNR2 << " nr1c: " <<  foundNR1comp << " nrc2: " << foundNR2comp << " " << endl;
+	  DOUT(if( config.rew_debug_out > 3 ) cerr << "c found nr1: " << foundNR1 << "  nr2: " << foundNR2 << " nr1c: " <<  foundNR1comp << " nrc2: " << foundNR2comp << " " << endl;);
 	  
 	  assert( (!foundNR1 || !foundNR1comp ) && "cannot have both!" );
 	  assert( (!foundNR2 || !foundNR2comp ) && "cannot have both!" );
@@ -366,21 +369,21 @@ bool Rewriter::rewriteImpl()
 	  if( foundNR1comp || foundNR2comp ) { // found complementary literals -> drop clause!
 	    c.set_delete(true);
 	    data.removedClause(nll[k]);
-	    if( config.rew_debug_out > 1 ) cerr << "c into tautology " << endl;
+	    DOUT(if( config.rew_debug_out > 1 ) cerr << "c into tautology " << endl;);
 	    continue; // next clause!
 	  } else if (foundNR1 && foundNR2 ) {
 	    c.shrink(1); // sorted already! remove only the one literal!
 	    data.addSubStrengthClause(nll[k]);
-	    if( config.rew_debug_out > 1 ) cerr << "c into reduced [" << nll[k] << "] : " << c << endl;
+	    DOUT(if( config.rew_debug_out > 1 ) cerr << "c into reduced [" << nll[k] << "] : " << c << endl;);
 	    continue;
 	  } else if( foundNR1 ) {
 	    c[hitPos] = nr2; data.list(nr2).push_back( nll[k] );
 	    data.addSubStrengthClause(nll[k]); c.sort() ;sortCalls++;
-	    if( config.rew_debug_out > 1 ) cerr << "c into equal1 [" << nll[k] << "] : " << c << endl;
+	    DOUT(if( config.rew_debug_out > 1 ) cerr << "c into equal1 [" << nll[k] << "] : " << c << endl;);
 	  } else if ( foundNR2 ) {
 	    c[hitPos] = nr1; data.list(nr1).push_back( nll[k] );
 	    data.addSubStrengthClause(nll[k]); c.sort() ;sortCalls++;
-	    if( config.rew_debug_out > 1 ) cerr << "c into equal2 [" << nll[k] << "] : " << c << endl;
+	    DOUT(if( config.rew_debug_out > 1 ) cerr << "c into equal2 [" << nll[k] << "] : " << c << endl;);
 	  }
 	  
 	  // general case: nothings inside -> enlarge clause!
@@ -399,14 +402,14 @@ bool Rewriter::rewriteImpl()
 	    data.removedClause( nll[k] );
 	    CRef tmpRef = ca.alloc(clsLits, c.learnt() ); // no learnt clause!
 	    data.addSubStrengthClause(tmpRef, true); // afterwards, check for subsumption and strengthening!
-	    if( config.rew_debug_out > 1 ) cerr << "c into4 neg new [" << tmpRef << "] : " << ca[tmpRef] << endl;
+	    DOUT(if( config.rew_debug_out > 1 ) cerr << "c into4 neg new [" << tmpRef << "] : " << ca[tmpRef] << endl;);
 	    // clause is sorted already!
 	    data.addClause( tmpRef ); // add to all literal lists in the clause
 	    data.getClauses().push( tmpRef );
 	  } else {
 	    droppedClauses ++;
 	    data.removedClause( nll[k] );
-	    if( config.rew_debug_out > 1 ) cerr << "c into5 redundant dropped clause" << endl;
+	    DOUT(if( config.rew_debug_out > 1 ) cerr << "c into5 redundant dropped clause" << endl;);
 	  }
 	  
 	}
@@ -423,7 +426,7 @@ bool Rewriter::rewriteImpl()
       else { clsLits[0] =  data.lits[j+1] ;clsLits[1] = ~data.lits[j] ; }
 	CRef tmpRef = ca.alloc(clsLits, false ); // no learnt clause!
 	data.addSubStrengthClause(tmpRef,true); // afterwards, check for subsumption!
-	if( config.rew_debug_out > 2 ) cerr << "c add new chain [" << tmpRef << "] : " << ca[tmpRef] << endl;
+	DOUT(if( config.rew_debug_out > 2 ) cerr << "c add new chain [" << tmpRef << "] : " << ca[tmpRef] << endl;);
 	// clause is sorted already!
 	data.addClause( tmpRef ); // add to all literal lists in the clause
 	data.getClauses().push( tmpRef );
@@ -518,7 +521,7 @@ bool Rewriter::rewriteAMO()
     if( data[  mkLit(v,true)  ] >= config.opt_rew_min ) if( !rewHeap.inHeap(toInt(mkLit(v,true))) )   rewHeap.insert( toInt(mkLit(v,true))  );
   }
   
-  if( config.rew_debug_out > 0) cerr << "c run with " << rewHeap.size() << " elements" << endl;
+  DOUT(if( config.rew_debug_out > 0) cerr << "c run with " << rewHeap.size() << " elements" << endl;);
   
   // for l in F
   while (rewHeap.size() > 0 && (data.unlimited() || rewLimit > steps) && !data.isInterupted() ) 
@@ -529,14 +532,14 @@ bool Rewriter::rewriteAMO()
     const Lit right = toLit(rewHeap[0]);
     assert( rewHeap.inHeap( toInt(right) ) && "item from the heap has to be on the heap");
 
-    if( config.rew_debug_out > 2 && rewHeap.size() > 0 ) cerr << "c [REW] new first item: " << rewHeap[0] << " which is " << right << endl;
+    DOUT(if( config.rew_debug_out > 2 && rewHeap.size() > 0 ) cerr << "c [REW] new first item: " << rewHeap[0] << " which is " << right << endl;);
     rewHeap.removeMin();
     
     if( config.opt_rew_ratio && data[right] < data[~right] ) continue; // if ratio, do not consider literals with the wrong ratio
     if( config.opt_rew_once && data.ma.isCurrentStep( var(right) ) ) continue; // do not touch variable twice!
     if( data[ right ] < config.opt_rew_minAMO ) continue; // no enough occurrences -> skip!
     const uint32_t size = big.getSize( ~right );
-    if( config.rew_debug_out > 2) cerr << "c check " << right << " with " << data[right] << " cls, and " << size << " implieds" << endl;
+    DOUT(if( config.rew_debug_out > 2) cerr << "c check " << right << " with " << data[right] << " cls, and " << size << " implieds" << endl;);
     if( size < config.opt_rew_minAMO ) continue; // cannot result in a AMO of required size -> skip!
     Lit* list = big.getArray( ~right );
 
@@ -554,7 +557,7 @@ bool Rewriter::rewriteAMO()
       inAmo.setCurrentStep( toInt(l ) );
       data.lits.push_back(l); // l is implied by ~right -> canidate for AMO(right,l, ... )
     }
-    if( config.rew_debug_out > 2) cerr << "c implieds: " << data.lits.size() << endl;
+    DOUT(if( config.rew_debug_out > 2) cerr << "c implieds: " << data.lits.size() << endl;);
     
     // TODO: should sort list according to frequency in binary clauses - ascending, so that small literals are removed first, increasing the chance for this more frequent ones to stay!
     
@@ -566,7 +569,7 @@ bool Rewriter::rewriteAMO()
       Lit* list2 = big.getArray( ~l );
       // if not all, disable this literal, remove it from data.lits
       
-      if( config.rew_debug_out > 0 ) cerr << "c check AMO with literal " << l << endl;
+      DOUT(if( config.rew_debug_out > 0 ) cerr << "c check AMO with literal " << l << endl;);
 
       inAmo.nextStep(); // new AMO
       if( config.opt_rew_rem_first ) {
@@ -578,25 +581,26 @@ bool Rewriter::rewriteAMO()
 	    && !inAmo.isCurrentStep( toInt( data.lits[j] ) ) 
 	  ) break;
 	if( j != data.lits.size() ) {
-	  if( config.rew_debug_out > 0) cerr << "c reject [" <<i<< "]" << data.lits[i] << ", because failed with [" << j << "]" << data.lits[j] << endl;
+	  DOUT(if( config.rew_debug_out > 0) cerr << "c reject [" <<i<< "]" << data.lits[i] << ", because failed with [" << j << "]" << data.lits[j] << endl;);
 	  data.lits[i] = lit_Undef; // if not all literals are covered, disable this literal!
-	} else if( config.rew_debug_out > 0) cerr << "c keep [" <<i<< "]" << data.lits[i] << " which hits [" << j << "] literas"  << endl;
+	} else 
+	  DOUT( if( config.rew_debug_out > 0) cerr << "c keep [" <<i<< "]" << data.lits[i] << " which hits [" << j << "] literas"  << endl;);
       } else {
 	for( int j = 0 ; j < size2; ++ j ) {
-	  if( config.rew_debug_out > 2 ) cerr << "c literal " << l << " hits literal " << list2[j] << endl;
+	  DOUT(if( config.rew_debug_out > 2 ) cerr << "c literal " << l << " hits literal " << list2[j] << endl;);
 	  inAmo.setCurrentStep( toInt(list2[j]) );
 	}
 	inAmo.setCurrentStep( toInt(l) ); // set literal itself!
 	int j = i+1; // previous literals have been tested already!
 	for( ; j < data.lits.size(); ++ j ) {
 	  if( data.lits[j] == lit_Undef ) continue; // do not process this literal!
-	  if( config.rew_debug_out > 2 ) cerr << "c check literal " << data.lits[j] << "[" << j << "]" << endl;
+	  DOUT(if( config.rew_debug_out > 2 ) cerr << "c check literal " << data.lits[j] << "[" << j << "]" << endl;);
 	  if( !inAmo.isCurrentStep( toInt( data.lits[j] ) ) // not in AMO with current literal
 	  ) {
-	    if( config.rew_debug_out > 0) cerr << "c reject [" <<j<< "]" << data.lits[j] << ", because failed with [" << i << "]" << data.lits[i] << endl;
+	    DOUT(if( config.rew_debug_out > 0) cerr << "c reject [" <<j<< "]" << data.lits[j] << ", because failed with [" << i << "]" << data.lits[i] << endl;);
 	    data.lits[j] = lit_Undef; // if not all literals are covered, disable this literal!
 	  } else {
-	    if( config.rew_debug_out > 0) cerr << "c keep [" <<j<< "]" << data.lits[j] << " which is hit by literal " << data.lits[i] << "[" << i << "] "  << endl;    
+	    DOUT(if( config.rew_debug_out > 0) cerr << "c keep [" <<j<< "]" << data.lits[j] << " which is hit by literal " << data.lits[i] << "[" << i << "] "  << endl;    );
 	  }
 	}
       }
@@ -619,13 +623,13 @@ bool Rewriter::rewriteAMO()
     for( int i = 0 ; i < data.lits.size(); ++ i )
       data.ma.setCurrentStep( var(data.lits[i]) );
     
-    if( config.rew_debug_out > 0 ) cerr << "c found AMO (negated, == AllExceptOne): " << data.lits << endl;
+    DOUT(if( config.rew_debug_out > 0 ) cerr << "c found AMO (negated, == AllExceptOne): " << data.lits << endl;);
   }
  
   amoTime = cpuTime() - amoTime;
   foundAmos += amos.size();
   
-  if( config.rew_debug_out > 0 ) cerr << "c finished search AMO --- process ... " << endl;
+  DOUT(if( config.rew_debug_out > 0 ) cerr << "c finished search AMO --- process ... " << endl;);
   
   if( config.opt_rew_merge_amo ) {
     cerr << "c WARNING: merging AMO not implemented yet" << endl; 
@@ -649,7 +653,7 @@ bool Rewriter::rewriteAMO()
     int rSize = (size + 1) / 2;
     // assert( rSize * 2 == size && "AMO has to be even!" );
     
-    if( config.rew_debug_out > 0 ) cerr << "c process amo " << i << "/" << amos.size() << " with size= " << size << " and half= " << rSize << endl;
+    DOUT(if( config.rew_debug_out > 0 ) cerr << "c process amo " << i << "/" << amos.size() << " with size= " << size << " and half= " << rSize << endl;);
     
     for( int j = 0 ; j < amo.size(); ++ j ) {
       assert( !data.ma.isCurrentStep( var(amo[j] ) ) && "touch variable only once during one iteration!" ); 
@@ -668,7 +672,7 @@ bool Rewriter::rewriteAMO()
     // find all AMO binary clauses, and replace them with smaller variables!
     inAmo.nextStep();
     for( int j = 0 ; j < amo.size(); ++ j ) {
-      if( config.rew_debug_out > 0 ) cerr << "c set " << ~amo[j] << endl;
+      DOUT(if( config.rew_debug_out > 0 ) cerr << "c set " << ~amo[j] << endl;);
       inAmo.setCurrentStep( toInt( ~amo[j] ) );
     }
     
@@ -676,19 +680,20 @@ bool Rewriter::rewriteAMO()
     for( int j = 0 ; j < amo.size(); ++ j ){
       const Lit l = ~amo[j];
       vector<CRef>& ll = data.list(l);
-      if( config.rew_debug_out > 0 ) cerr << "c check literal " << l << "[" << ll.size() << "]" << endl;
+      DOUT(if( config.rew_debug_out > 0 ) cerr << "c check literal " << l << "[" << ll.size() << "]" << endl;);
       for( int k = 0 ; k < ll.size(); ++ k ) {
 	Clause& c= ca[ ll[k] ];
 	if( c.can_be_deleted() || c.size() != 2 ) continue; // to not care about these clauses!
 	if( inAmo.isCurrentStep( toInt(c[0]) ) && inAmo.isCurrentStep( toInt(c[1]) ) ) { count ++; c.set_delete(true); data.removedClause(ll[k]); }
-	else if( config.rew_debug_out > 2 ) cerr << "c not matching binary clause: " << c << endl;
+	else 
+	  DOUT(if( config.rew_debug_out > 2 ) cerr << "c not matching binary clause: " << c << endl;);
       }
     }
-    if( config.rew_debug_out > 0 )  cerr << "c found " << count << " binary clauses, out of " << (size*(size-1)) / 2 << endl;
+    DOUT(if( config.rew_debug_out > 0 )  cerr << "c found " << count << " binary clauses, out of " << (size*(size-1)) / 2 << endl;);
     assert( count >= ((size*(size-1)) / 2) && "not all clauses have been found" );
     
     
-    if( config.rew_debug_out > 1 ) cerr << "c rewrite AMO " << amo << " with size " << size << " halfsize " << size/2 << " and rSize " << rSize << endl;
+    DOUT(if( config.rew_debug_out > 1 ) cerr << "c rewrite AMO " << amo << " with size " << size << " halfsize " << size/2 << " and rSize " << rSize << endl;);
     // replace smaller half of variables
     for( int half = 0; half < 2; ++ half ) {
     
@@ -696,7 +701,7 @@ bool Rewriter::rewriteAMO()
       // do both halfs based on the same code!!
       //
       for( int j = 0 ; j < rSize; ++ j ) {
-	if( config.rew_debug_out > 3 ) cerr << "c process element j=" << j << ", which is " << amo[j + (half==0 ? 0 : rSize)] << " with index " << j + (half==0 ? 0 : rSize) << endl;
+	DOUT(if( config.rew_debug_out > 3 ) cerr << "c process element j=" << j << ", which is " << amo[j + (half==0 ? 0 : rSize)] << " with index " << j + (half==0 ? 0 : rSize) << endl;);
 	if(half == 1 && (j + rSize >= size)) { // creating the forbidden combination (that does not appear in the input formula this way!
 	  clsLits.clear();
 	  clsLits.push(~newXn);
@@ -708,7 +713,7 @@ bool Rewriter::rewriteAMO()
 	  // clause is sorted already!
 	  data.addClause( tmpRef ); // add to all literal lists in the clause
 	  data.getClauses().push( tmpRef );
-	  if( config.rew_debug_out > 1 ) cerr << "c added clause " << ca[tmpRef] << " to disallow last even combination" << endl;
+	  DOUT(if( config.rew_debug_out > 1 ) cerr << "c added clause " << ca[tmpRef] << " to disallow last even combination" << endl;);
 	  break; // done with this AMO!
 	} else
 	{ // to make sure all variables are valid only for positive!
@@ -725,13 +730,13 @@ bool Rewriter::rewriteAMO()
 	clsLits.push(lit_Undef);clsLits.push(~l);clsLits.push(r2);
 	data.addExtensionToExtension(clsLits);
 	//
-	if( config.rew_debug_out > 1 ) cerr << endl << endl << "c replace " << l << " with (" << r1 << " and " << r2 << ")" << endl;
+	DOUT(if( config.rew_debug_out > 1 ) cerr << endl << endl << "c replace " << l << " with (" << r1 << " and " << r2 << ")" << endl;);
 	vector<CRef>& ll = data.list(l);
 	for( int k = 0 ; k < ll.size(); ++ k ) {
 	  Clause& c= ca[ ll[k] ];
 	  assert(c.size() > 1 && "there should not be unit clauses!" );
 	  if( c.can_be_deleted() ) continue; // to not care about these clauses!
-	  if( config.rew_debug_out > 1 ) cerr << endl << "c rewrite POS [" << ll[k] << "] : " << c << endl;
+	  DOUT(if( config.rew_debug_out > 1 ) cerr << endl << "c rewrite POS [" << ll[k] << "] : " << c << endl;);
 	  clsLits.clear();
 	  int hitPos = -1;
 	  Lit minL = c[0];
@@ -756,9 +761,9 @@ bool Rewriter::rewriteAMO()
 	    foundNR1comp = foundNR1comp || (cl == ~r1); foundNR2comp = foundNR2comp || (cl == ~r2);
 	  }
 	  assert( hitPos + 1 == c.size() );
-	  if( config.rew_debug_out > 4 ) cerr << "c hit at " << hitPos << " intermediate clause: " << c << endl;
+	  DOUT(if( config.rew_debug_out > 4 ) cerr << "c hit at " << hitPos << " intermediate clause: " << c << endl;);
 	  
-	  if( config.rew_debug_out > 3 ) cerr << "c found r1: " << foundNR1 << "  r2: " << foundNR2 << " r1c: " <<  foundNR1comp << " rc2: " << foundNR2comp << " " << endl;
+	  DOUT(if( config.rew_debug_out > 3 ) cerr << "c found r1: " << foundNR1 << "  r2: " << foundNR2 << " r1c: " <<  foundNR1comp << " rc2: " << foundNR2comp << " " << endl;);
 	  
 	  Lit minL1 =  data[r1] < data[minL] ? r1 : minL;
 	  Lit minL2 =  data[r2] < data[minL] ? r2 : minL;
@@ -769,8 +774,10 @@ bool Rewriter::rewriteAMO()
 	  //
 	  // TODO: handle foundNR1 and foundNR2 here
 	  //
-	  if( foundNR1 && foundNR2 ) { c.shrink(1); data.addSubStrengthClause(ll[k]); if( config.rew_debug_out > 2 ) cerr << "c into2 pos new [" << ll[k] << "] : " << c << endl; continue; }
-	  if( config.rew_debug_out > 4 )cerr << "c r1" << endl;
+	  if( foundNR1 && foundNR2 ) { c.shrink(1); data.addSubStrengthClause(ll[k]); 
+	    DOUT(if( config.rew_debug_out > 2 ) cerr << "c into2 pos new [" << ll[k] << "] : " << c << endl; );
+	    continue; }
+	  DOUT(if( config.rew_debug_out > 4 )cerr << "c r1" << endl;);
 	  bool reuseClause = false;
 	  // have altered the clause, and its not a tautology now, and its not subsumed
 	  if( !foundNR1comp && !foundNR1 ) {c[hitPos] = r1;c.sort();sortCalls++;} // in this clause, have the new literal, if not present already
@@ -783,17 +790,17 @@ bool Rewriter::rewriteAMO()
 	      data[r1] ++; data.list(r1).push_back( ll[k] ); // add the clause to the right list! update stats!
 	      data.addSubStrengthClause(ll[k]); // afterwards, check for subsumption!
 	    }
-	    if( config.rew_debug_out > 1 ) cerr << "c into1 pos [" << ll[k] << "] : " << c << endl;
+	    DOUT(if( config.rew_debug_out > 1 ) cerr << "c into1 pos [" << ll[k] << "] : " << c << endl;);
 	  } else {
 	    // TODO could reuse clause here!
 	    reuseClause = true;
 	  }
 	  
-	  if( config.rew_debug_out > 4 )cerr << "c r2 (reuse=" << reuseClause << ")" << endl;
+	  DOUT(if( config.rew_debug_out > 4 )cerr << "c r2 (reuse=" << reuseClause << ")" << endl;);
 	  if( reuseClause ) {
 	    reuses ++;
 	    for( hitPos = 0 ; hitPos + 1 < c.size(); ++ hitPos ) if( c[hitPos] == r1 ) break; // replace r1 with r2 (or overwrite last position!)
-	    if( config.rew_debug_out > 3 )cerr << "c found " << r1 << " at " << hitPos << endl;
+	    DOUT(if( config.rew_debug_out > 3 )cerr << "c found " << r1 << " at " << hitPos << endl;);
 	    if( !foundNR2comp && !foundNR2 ) {c[hitPos] = r2;c.sort();sortCalls++;} // in this clause, have the new literal, if not present already
 	    if( !foundNR2comp && !hasDuplicate( data.list(minL1) , c ) ) { // not there or subsumed -> add clause and test other via vector!
 	      if( foundNR2 ) {
@@ -804,7 +811,7 @@ bool Rewriter::rewriteAMO()
 		data[r2] ++; data.list(r2).push_back( ll[k] ); // add the clause to the right list! update stats!
 		data.addSubStrengthClause(ll[k]); // afterwards, check for subsumption!
 	      }
-	      if( config.rew_debug_out > 1 ) cerr << "c into2 reuse [" << ll[k] << "] : " << c << endl;
+	      DOUT(if( config.rew_debug_out > 1 ) cerr << "c into2 reuse [" << ll[k] << "] : " << c << endl;);
 	    } else {
 	      droppedClauses ++;
 	      c.set_delete(true);
@@ -816,7 +823,7 @@ bool Rewriter::rewriteAMO()
 	      // add clause with clsLits
 	      CRef tmpRef = ca.alloc(clsLits, c.learnt() ); // use learnt flag of other !
 	      data.addSubStrengthClause(tmpRef,true); // afterwards, check for subsumption!
-	      if( config.rew_debug_out > 1 ) cerr << "c into2 pos new [" << tmpRef << "] : " << ca[tmpRef] << endl;
+	      DOUT(if( config.rew_debug_out > 1 ) cerr << "c into2 pos new [" << tmpRef << "] : " << ca[tmpRef] << endl;);
 	      createdClauses ++;
 	      // clause is sorted already!
 	      data.addClause( tmpRef ); // add to all literal lists in the clause
@@ -831,13 +838,13 @@ bool Rewriter::rewriteAMO()
 	const Lit nl = ~amo[j + (half==0 ? 0 : rSize) ]; 		// negative occurrence [amo contains negative occurrences!]:  ~l is replaced by (~newL \lor ~newX)
 	const Lit nr1 = half==0 ? newXn : newXp;		// replace with this literal
 	const Lit nr2 = ~data.lits[j];	// replace with this literal, always nr2 > nr1!!
-	if( config.rew_debug_out > 1 ) cerr << endl << endl << "c replace " << nl << " with (" << nr1 << " lor " << nr2 << ")" << endl;
+	DOUT(if( config.rew_debug_out > 1 ) cerr << endl << endl << "c replace " << nl << " with (" << nr1 << " lor " << nr2 << ")" << endl;);
 	vector<CRef>& nll = data.list(nl);
 	for( int k = 0 ; k < nll.size(); ++ k ) {
 	  Clause& c= ca[ nll[k] ];
 	  assert(c.size() > 1 && "there should not be unit clauses!" );
 	  if( c.can_be_deleted() ) continue; // to not care about these clauses - no need to delete from list, will be done later
-	  if( config.rew_debug_out > 1 ) cerr << endl << "c rewrite NEG [" << nll[k] << "] : " << c << endl;
+	  DOUT(if( config.rew_debug_out > 1 ) cerr << endl << "c rewrite NEG [" << nll[k] << "] : " << c << endl;);
 	  clsLits.clear();
 	  int hitPos = -1;
 	  Lit minL = c[0];
@@ -861,7 +868,7 @@ bool Rewriter::rewriteAMO()
 	  }
 	  assert( clsLits.size() + 1 == c.size() && "the literal itself should be missing!" );
 	  
-	  if( config.rew_debug_out > 3 ) cerr << "c found nr1: " << foundNR1 << "  nr2: " << foundNR2 << " nr1c: " <<  foundNR1comp << " nrc2: " << foundNR2comp << " " << endl;
+	  DOUT(if( config.rew_debug_out > 3 ) cerr << "c found nr1: " << foundNR1 << "  nr2: " << foundNR2 << " nr1c: " <<  foundNR1comp << " nrc2: " << foundNR2comp << " " << endl;);
 	  
 	  assert( (!foundNR1 || !foundNR1comp ) && "cannot have both!" );
 	  assert( (!foundNR2 || !foundNR2comp ) && "cannot have both!" );
@@ -869,21 +876,21 @@ bool Rewriter::rewriteAMO()
 	  if( foundNR1comp || foundNR2comp ) { // found complementary literals -> drop clause!
 	    c.set_delete(true);
 	    data.removedClause(nll[k]);
-	    if( config.rew_debug_out > 1 ) cerr << "c into tautology " << endl;
+	    DOUT(if( config.rew_debug_out > 1 ) cerr << "c into tautology " << endl;);
 	    continue; // next clause!
 	  } else if (foundNR1 && foundNR2 ) {
 	    c.shrink(1); // sorted already! remove only the one literal!
 	    data.addSubStrengthClause(nll[k]);
-	    if( config.rew_debug_out > 1 ) cerr << "c into reduced [" << nll[k] << "] : " << c << endl;
+	    DOUT(if( config.rew_debug_out > 1 ) cerr << "c into reduced [" << nll[k] << "] : " << c << endl;);
 	    continue;
 	  } else if( foundNR1 ) {
 	    c[hitPos] = nr2; data.list(nr2).push_back( nll[k] );
 	    data.addSubStrengthClause(nll[k]); c.sort() ;sortCalls++;
-	    if( config.rew_debug_out > 1 ) cerr << "c into equal1 [" << nll[k] << "] : " << c << endl;
+	    DOUT(if( config.rew_debug_out > 1 ) cerr << "c into equal1 [" << nll[k] << "] : " << c << endl;);
 	  } else if ( foundNR2 ) {
 	    c[hitPos] = nr1; data.list(nr1).push_back( nll[k] );
 	    data.addSubStrengthClause(nll[k]); c.sort() ;sortCalls++;
-	    if( config.rew_debug_out > 1 ) cerr << "c into equal2 [" << nll[k] << "] : " << c << endl;
+	    DOUT(if( config.rew_debug_out > 1 ) cerr << "c into equal2 [" << nll[k] << "] : " << c << endl;);
 	  }
 	  
 	  // general case: nothings inside -> enlarge clause!
@@ -902,14 +909,14 @@ bool Rewriter::rewriteAMO()
 	    data.removedClause( nll[k] );
 	    CRef tmpRef = ca.alloc(clsLits, c.learnt() ); // no learnt clause!
 	    data.addSubStrengthClause(tmpRef, true); // afterwards, check for subsumption and strengthening!
-	    if( config.rew_debug_out > 1 ) cerr << "c into4 neg new [" << tmpRef << "] : " << ca[tmpRef] << endl;
+	    DOUT(if( config.rew_debug_out > 1 ) cerr << "c into4 neg new [" << tmpRef << "] : " << ca[tmpRef] << endl;);
 	    // clause is sorted already!
 	    data.addClause( tmpRef ); // add to all literal lists in the clause
 	    data.getClauses().push( tmpRef );
 	  } else {
 	    droppedClauses ++;
 	    data.removedClause( nll[k] );
-	    if( config.rew_debug_out > 1 ) cerr << "c into5 redundant dropped clause" << endl;
+	    DOUT(if( config.rew_debug_out > 1 ) cerr << "c into5 redundant dropped clause" << endl;);
 	  }
 	  
 	}
@@ -927,7 +934,7 @@ bool Rewriter::rewriteAMO()
 	clsLits[1] = data.lits[j] < data.lits[k] ? ~data.lits[k] : ~data.lits[j];
 	CRef tmpRef = ca.alloc(clsLits, false ); // no learnt clause!
 	data.addSubStrengthClause(tmpRef,true); // afterwards, check for subsumption!
-	if( config.rew_debug_out > 2 ) cerr << "c add new AMO [" << tmpRef << "] : " << ca[tmpRef] << endl;
+	DOUT(if( config.rew_debug_out > 2 ) cerr << "c add new AMO [" << tmpRef << "] : " << ca[tmpRef] << endl;);
 	// clause is sorted already!
 	data.addClause( tmpRef ); // add to all literal lists in the clause
 	data.getClauses().push( tmpRef );
@@ -1091,7 +1098,7 @@ bool Rewriter::hasDuplicate(vector<CRef>& list, const Clause& c)
     if( d.size() == c.size() && (&c != &d) ) { // do not remove itself!
       while( j < c.size() && c[j] == d[j] ) ++j ;
       if( j == c.size() ) { 
-	if( config.rew_debug_out > 1 ) cerr << "c clause is equal to [" << list[i] << "] : " << d << endl;
+	DOUT(if( config.rew_debug_out > 1 ) cerr << "c clause is equal to [" << list[i] << "] : " << d << endl;);
 	detectedDuplicates ++;
 	return true;
       }
@@ -1100,7 +1107,7 @@ bool Rewriter::hasDuplicate(vector<CRef>& list, const Clause& c)
       if( d.size() < c.size() ) {
 	detectedDuplicates ++;
 	if( ordered_subsumes(d,c) ) {
-	  if( config.rew_debug_out > 1 ) cerr << "c clause " << c << " is subsumed by [" << list[i] << "] : " << d << endl;
+	  DOUT(if( config.rew_debug_out > 1 ) cerr << "c clause " << c << " is subsumed by [" << list[i] << "] : " << d << endl;);
 	  return true; // the other clause subsumes the current clause!
 	}
       } else if( d.size() > c.size() ) { // if size is equal, then either removed before, or not removed at all!
@@ -1124,7 +1131,7 @@ bool Rewriter::hasDuplicate(vector<CRef>& list, const vec<Lit>& c)
     if( d.size() == c.size() ) {
       while( j < c.size() && c[j] == d[j] ) ++j ;
       if( j == c.size() ) { 
-	if( config.rew_debug_out > 1 ) cerr << "c clause is equal to [" << list[i] << "] : " << d << endl;
+	DOUT(if( config.rew_debug_out > 1 ) cerr << "c clause is equal to [" << list[i] << "] : " << d << endl;);
 	detectedDuplicates ++;
 	return true;
       }
@@ -1132,7 +1139,7 @@ bool Rewriter::hasDuplicate(vector<CRef>& list, const vec<Lit>& c)
     if( true ) { // check each clause for being subsumed -> kick subsumed clauses!
       if( d.size() < c.size() ) {
 	detectedDuplicates ++;
-	if( config.rew_debug_out > 1 ) cerr << "c clause " << c << " is subsumed by [" << list[i] << "] : " << d << endl;
+	DOUT(if( config.rew_debug_out > 1 ) cerr << "c clause " << c << " is subsumed by [" << list[i] << "] : " << d << endl;);
 	if( ordered_subsumes(d,c) ) return true; // the other clause subsumes the current clause!
       } if( d.size() > c.size() ) { // if size is equal, then either removed before, or not removed at all!
 	if( ordered_subsumes(c,d) ) { 

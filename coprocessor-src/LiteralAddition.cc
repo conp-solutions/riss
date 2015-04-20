@@ -40,7 +40,7 @@ void LiteralAddition::asymemtricLiteralAddition()
   laHeap.addNewElement(data.nVars() * 2); // set up storage, does not add the element
   laHeap.clear();
 
-  if( config.opt_la_debug ) {
+  DOUT(if( config.opt_la_debug ) {
     cerr << "c before ALA formula" << endl;
     for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
 	cerr << "(" << i << ") (" << data.getClauses()[i] << ")" ;
@@ -48,7 +48,7 @@ void LiteralAddition::asymemtricLiteralAddition()
 	if( ca[data.getClauses()[i]].can_be_deleted() != 0 ) cerr << " (del) ";
 	cerr << " " << ca[ data.getClauses()[i] ] << endl;
       }
-  }
+  });
 
   MarkArray nextRound;
   vector<Lit> nextRoundLits;
@@ -91,7 +91,7 @@ void LiteralAddition::asymemtricLiteralAddition()
 
 	alaTestedLits++; // count number of literals that have been tested for BCE
 	// check whether a clause is a tautology wrt. the other clauses
-	if( config.opt_la_debug ) cerr << "c CLA work on literal " << right << " with " << data.list(right).size() << " clauses " << endl;
+	DOUT(if( config.opt_la_debug ) cerr << "c CLA work on literal " << right << " with " << data.list(right).size() << " clauses " << endl;);
 	data.lits.clear(); // used for covered literal elimination
 	const int listSize = data.list(right).size(); // do not process the newly generated clause here as well!
 	for( int i = 0 ; i < listSize; ++ i ) 
@@ -121,7 +121,7 @@ void LiteralAddition::asymemtricLiteralAddition()
 	    if( i == j ) continue; // do not work on the same literal twice!
 	    Clause& c = ca[ data.list(right)[i] ];
 	    Clause& d = ca[ data.list(right)[j] ];
-	    if( config.opt_la_debug ) cerr << "c check " << c << " being contained in " << d << " with lit " << right << endl;
+	    DOUT(if( config.opt_la_debug ) cerr << "c check " << c << " being contained in " << d << " with lit " << right << endl;);
 	    if( d.can_be_deleted() || d.learnt() ) continue; // do not work on uninteresting clauses!
 	    if( d.size() != c.size() ) continue; // in this case, d cannot contain c \setminus e
 	    alaSteps ++;
@@ -147,7 +147,7 @@ void LiteralAddition::asymemtricLiteralAddition()
 		di ++; // literal d[di] is not in c[ci] ... not a problem!
 	      }
 	    }
-	    if( config.opt_la_debug )  cerr << "c intermediate comparison: " << c << "[" << ci << "] and " << d << "[" << di << "], failed: " << failed << " lit e: " << e << endl;
+	    DOUT(if( config.opt_la_debug )  cerr << "c intermediate comparison: " << c << "[" << ci << "] and " << d << "[" << di << "], failed: " << failed << " lit e: " << e << endl;);
 	    
 	    if( ci < c.size() ) // all literals inside di have to be consumed already here to make the above loop abort!
 	    {
@@ -161,7 +161,7 @@ void LiteralAddition::asymemtricLiteralAddition()
 	      data.lits.clear();
 	      for( int k = 0 ; k < d.size(); ++ k) data.lits.push_back(d[k]);
 	      data.lits.push_back( ~e );
-	      if( config.opt_la_debug ) cerr << "c ALA with clause " << c << " turns " << d << " into " << data.lits << endl;
+	      DOUT(if( config.opt_la_debug ) cerr << "c ALA with clause " << c << " turns " << d << " into " << data.lits << endl;);
 	      d.set_delete(true); // "remove" old clause
 	      CRef cr = ca.alloc(data.lits, false ); // do not work on learnt clauses!
 	      ca[cr].sort();
@@ -179,7 +179,7 @@ void LiteralAddition::asymemtricLiteralAddition()
   } while ( nextRoundLits.size() > 0 && (data.unlimited() || config.alaLimit > alaSteps) && !data.isInterupted() ); // repeat until all literals have been seen until a fixed point is reached!
 
   
-  if( config.opt_la_debug ) {
+  DOUT(if( config.opt_la_debug ) {
     cerr << "c after ALA formula" << endl;
     for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
 	cerr << "(" << i << ") (" << data.getClauses()[i] << ")" ;
@@ -187,7 +187,7 @@ void LiteralAddition::asymemtricLiteralAddition()
 	if( ca[data.getClauses()[i]].can_be_deleted() != 0 ) cerr << " (del) ";
 	cerr << " " << ca[ data.getClauses()[i] ] << endl;
       }
-  }
+  });
   
 }
 
@@ -202,7 +202,7 @@ void LiteralAddition::coverdLiteralAddition()
   laHeap.addNewElement(data.nVars() * 2); // set up storage, does not add the element
   laHeap.clear();
 
-  if( config.opt_la_debug ) {
+  DOUT(if( config.opt_la_debug ) {
     cerr << "c before CLA formula" << endl;
     for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
 	cerr << "(" << i << ") (" << data.getClauses()[i] << ")" ;
@@ -210,7 +210,7 @@ void LiteralAddition::coverdLiteralAddition()
 	if( ca[data.getClauses()[i]].can_be_deleted() != 0 ) cerr << " (del) ";
 	cerr << " " << ca[ data.getClauses()[i] ] << endl;
       }
-  }
+  });
 
   MarkArray nextRound;
   vector<Lit> nextRoundLits;
@@ -257,7 +257,7 @@ void LiteralAddition::coverdLiteralAddition()
 	claTestedLits++; // count number of literals that have been tested for BCE
 	// check whether a clause is a tautology wrt. the other clauses
 	const Lit left = ~right; // complement
-	if( config.opt_la_debug ) cerr << "c CLA work on literal " << right << " with " << data.list(right).size() << " clauses " << endl;
+	DOUT(if( config.opt_la_debug ) cerr << "c CLA work on literal " << right << " with " << data.list(right).size() << " clauses " << endl;);
 	data.lits.clear(); // used for covered literal elimination
 	const int listSize = data.list(right).size(); // do not process the newly generated clause here as well!
 	for( int i = 0 ; i < listSize; ++ i ) 
@@ -359,7 +359,7 @@ void LiteralAddition::coverdLiteralAddition()
 	      // add old clause to extension stack
 	      data.addToExtension( data.list(right)[i], right );
 	      // remove old clause, since it should not subsume the other clause!
-	      if( config.opt_la_debug ) cerr << "c CLA turned clause " << ca[ data.list(right)[i] ] << " into the new clause " << ca[newClause] << endl;
+	      DOUT(if( config.opt_la_debug ) cerr << "c CLA turned clause " << ca[ data.list(right)[i] ] << " into the new clause " << ca[newClause] << endl;);
 	      // add new clause
 	      data.addClause( newClause );
 	      data.getClauses().push( newClause );
@@ -389,7 +389,7 @@ void LiteralAddition::coverdLiteralAddition()
   } while ( nextRoundLits.size() > 0 && (data.unlimited() || config.claLimit > claSteps) && !data.isInterupted() ); // repeat until all literals have been seen until a fixed point is reached!
 
   
-  if( config.opt_la_debug ) {
+  DOUT(if( config.opt_la_debug ) {
     cerr << "c after CLA formula" << endl;
     for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
 	cerr << "(" << i << ") (" << data.getClauses()[i] << ")" ;
@@ -397,7 +397,7 @@ void LiteralAddition::coverdLiteralAddition()
 	if( ca[data.getClauses()[i]].can_be_deleted() != 0 ) cerr << " (del) ";
 	cerr << " " << ca[ data.getClauses()[i] ] << endl;
       }
-  }
+  });
   
 }
 
@@ -415,7 +415,7 @@ bool LiteralAddition::process()
   if( !data.unlimited() && ( data.nVars() > config.opt_la_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_la_cls && data.nTotLits() > config.opt_la_lits) ) return false;
 
   // run UP first!
-  if( config.opt_la_debug ) cerr << "c LA run unit propagation" << endl;
+  DOUT(if( config.opt_la_debug ) cerr << "c LA run unit propagation" << endl;);
   propagation.process(data, true); // propagate, if there's something to be propagated
   modifiedFormula = modifiedFormula  || propagation.appliedSomething();
   if( !data.ok() ) return modifiedFormula;

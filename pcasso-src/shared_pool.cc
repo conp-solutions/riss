@@ -31,7 +31,7 @@ void Shared_pool::add_shared(vec<Lit>& lits, unsigned int size){
       return;
     else if ( c.lits[i] != p ) // No duplicated
       c.lits[j++] = p = c.lits[i];
-  c.lits.shrink(i - j);
+  c.lits.shrink_(i - j);
 
 #ifndef NDBG
 

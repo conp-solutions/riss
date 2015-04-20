@@ -34,9 +34,8 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  
  
  ppOnly (_cat, "ppOnly", "interrupts search after preprocessing", false, optionListPtr ),
-#if defined TOOLVERSION
- opt_learn_debug(false) ,
-#else
+ 
+#ifdef DEBUG
  opt_learn_debug (_cat, "learn-debug", "print debug information during learning", false, optionListPtr ),
 #endif
  
@@ -90,13 +89,9 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  
  opt_updateLearnAct ("MODS", "updLearnAct", "UPDATEVARACTIVITY trick (see glucose competition'09 companion paper)", true , optionListPtr ),
 
-#if defined TOOLVERSION
- opt_dbg(false) ,
-#else
+#ifdef DEBUG
  opt_dbg ("REASON", "dbg", "debug hack", false , optionListPtr ),
 #endif
-
- 
 
  opt_long_conflict ("REASON", "longConflict", "if a binary conflict is found, check for a longer one!", false, optionListPtr ),
 
@@ -107,12 +102,16 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  actFile ("INIT", "actFile", "increase activities of those variables",0, optionListPtr ),
  opt_pol ("INIT", "polMode", "invert provided polarities", false , optionListPtr ),
  polFile ("INIT", "polFile", "use these polarities", 0, optionListPtr ),
+#ifdef DEBUG
  opt_printDecisions ("INIT", "printDec", "1=print decisions, 2=print all enqueues, 3=show clauses", 0, IntRange(0, 3)  , optionListPtr ),
+#endif
 
  opt_rMax ("MODS", "rMax", "initial max. interval between two restarts (-1 = off)", -1, IntRange(-1, INT32_MAX) , optionListPtr ),
  opt_rMaxInc ("MODS", "rMaxInc", "increase of the max. restart interval per restart", 1.1, DoubleRange(1, true, HUGE_VAL, false), optionListPtr ),
 
+#ifdef DEBUG
  localLookaheadDebug ("SEARCH - LOCAL LOOK AHEAD", "laHackOutput","output info about LA", false, optionListPtr ),
+#endif
  localLookAhead ("SEARCH - LOCAL LOOK AHEAD", "laHack", "enable lookahead on level 0", false, optionListPtr ),
  tb ("SEARCH - LOCAL LOOK AHEAD", "tabu", "do not perform LA, if all considered LA variables are as before", true, optionListPtr ),
  opt_laDyn ("SEARCH - LOCAL LOOK AHEAD", "dyn", "dynamically set the frequency based on success", false, optionListPtr ),

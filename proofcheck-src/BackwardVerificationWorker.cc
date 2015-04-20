@@ -197,7 +197,7 @@ void BackwardVerificationWorker::removeBehind( const int& position )
   nonMarkedUnithead = 0; // to be on the safe side, replay units
   nonMarkedQHead = 0; // there might have been more marked clauses
   markedUnitHead = 0;
-  if( position < trail.size() ) trail.shrink( trail.size() - position );
+  if( position < trail.size() ) trail.shrink_( trail.size() - position );
   
   if( verbose > 3 ) cerr << "c [S-BW-CHK] reduce trail to position " << position << " new trail: " << trail << endl;
 }
@@ -457,7 +457,7 @@ CRef BackwardVerificationWorker::propagateMarkedUnits(const int64_t currentID)
 	if( verbose > 8 ) cerr << "c [S-BW-CHK] conflict with unit " << unit.getLit() << " (id: " << unit.getID() << ")" << endl;
 	for( int i = markedUnitHead + 1; i < markedUnitClauses.size(); ++ i )  // kept the current literal already
 	  markedUnitClauses[ keptUnits ++ ] = markedUnitClauses[ i ];          // keep all other elements element
-	markedUnitClauses.shrink( markedUnitClauses.size() - keptUnits );      // remove all removed elements
+	markedUnitClauses.shrink_( markedUnitClauses.size() - keptUnits );      // remove all removed elements
 	return 0; // we do not know the exact clause, be we see a conflict
       }
       else {
@@ -469,7 +469,7 @@ CRef BackwardVerificationWorker::propagateMarkedUnits(const int64_t currentID)
       assert( currentID - 1 < unit.getID() && "a present element can only become invalid if its been removed from the proof (going backwards beyond that element)" );
     }
   }
-  markedUnitClauses.shrink( markedUnitClauses.size() - keptUnits ); // remove all removable elements (less elements in the next call)
+  markedUnitClauses.shrink_( markedUnitClauses.size() - keptUnits ); // remove all removable elements (less elements in the next call)
   
   return CRef_Undef; // no conflict
 }
@@ -536,7 +536,7 @@ CRef BackwardVerificationWorker::propagateMarked(const int64_t currentID)
 	    }
         NextClause:;
         }
-        ws.shrink(i - j); // remove all duplciate clauses!
+        ws.shrink_(i - j); // remove all duplciate clauses!
   }
   return confl;
 }
@@ -604,7 +604,7 @@ CRef BackwardVerificationWorker::propagateMarkedShared(const int64_t currentID)
 	    }
         NextClause:;
         }
-        ws.shrink(i - j); // remove all duplciate clauses!
+        ws.shrink_(i - j); // remove all duplciate clauses!
   }
   return confl;
 }
@@ -637,7 +637,7 @@ CRef BackwardVerificationWorker::propagateUnmarkedUnits(const int64_t currentID)
 	// repair data structure before leaving the routine
 	for(; continueToCheck  < nonMarkedUnitClauses.size(); ++ continueToCheck  )          // do not keep this unit that failed
 	  nonMarkedUnitClauses[ keptUnits ++ ] = nonMarkedUnitClauses[ continueToCheck  ];   // keep all other elements element
-	nonMarkedUnitClauses.shrink( nonMarkedUnitClauses.size() - keptUnits );              // remove all removed elements
+	nonMarkedUnitClauses.shrink_( nonMarkedUnitClauses.size() - keptUnits );              // remove all removed elements
 	// use this unit, as it leads to a conflict	
 	if( verbose > 4 ) cerr << "c [S-BW-CHK] unit resulted in conflict: " << unit.getLit() << " with id " << unit.getID() << " valid until " << unit.getValidUntil() << endl;
 	return 0; // we do not know the exact clause, but we saw a conflict
@@ -659,7 +659,7 @@ CRef BackwardVerificationWorker::propagateUnmarkedUnits(const int64_t currentID)
 	// repair data structure before leaving the routine
 	for(; continueToCheck  < nonMarkedUnitClauses.size(); ++ continueToCheck  )          // do not keep this unit that failed
 	  nonMarkedUnitClauses[ keptUnits ++ ] = nonMarkedUnitClauses[ continueToCheck  ];   // keep all other elements element
-	nonMarkedUnitClauses.shrink( nonMarkedUnitClauses.size() - keptUnits );              // remove all removed elements
+	nonMarkedUnitClauses.shrink_( nonMarkedUnitClauses.size() - keptUnits );              // remove all removed elements
 	// use this unit, as it leads to a conflict	
 	return CRef_Undef; // we just enqueued another literal, so everything's fine
       }
@@ -668,7 +668,7 @@ CRef BackwardVerificationWorker::propagateUnmarkedUnits(const int64_t currentID)
       if( verbose > 4 ) cerr << "c [S-BW-CHK] removed invalid unit: " << unit.getLit() << " with id " << unit.getID() << " valid until " << unit.getValidUntil() << endl;
     }
   }
-  nonMarkedUnitClauses.shrink( nonMarkedUnitClauses.size() - keptUnits ); // remove all removable elements (less elements in the next call)
+  nonMarkedUnitClauses.shrink_( nonMarkedUnitClauses.size() - keptUnits ); // remove all removable elements (less elements in the next call)
   
   return CRef_Undef;
 }
@@ -755,12 +755,12 @@ CRef BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEager(const i
             // Copy the remaining watches:
             while (i < end)
                *j++ = *i++;
-	    ws.shrink(i - j); // remove all duplciate clauses!
+	    ws.shrink_(i - j); // remove all duplciate clauses!
 	    return confl;
 	    
         NextClause:;
         }
-        ws.shrink(i - j); // remove all duplciate clauses!
+        ws.shrink_(i - j); // remove all duplciate clauses!
   }
   return confl;  
 }
@@ -846,12 +846,12 @@ CRef BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEagerShared(c
             // Copy the remaining watches:
             while (i < end)
                *j++ = *i++;
-	    ws.shrink(i - j); // remove all duplciate clauses!
+	    ws.shrink_(i - j); // remove all duplciate clauses!
 	    return confl;
 	    
         NextClause:;
         }
-        ws.shrink(i - j); // remove all duplciate clauses!
+        ws.shrink_(i - j); // remove all duplciate clauses!
   }
   return confl;  
 }

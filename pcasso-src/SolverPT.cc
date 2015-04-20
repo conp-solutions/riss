@@ -141,7 +141,7 @@ bool SolverPT::addClause_(vec<Lit>& ps, unsigned int pt_level) // Davide> pt_lev
 				pt_level = pt_level >= tmp ? pt_level : tmp; // Davide> Aggressive removal can prevent clauses to be shared higher in the PartitionTree
 			}
 		}
-	ps.shrink(i - j);
+	ps.shrink_(i - j);
 
 	if (ps.size() == 0){
 		lastLevel = pt_level;
@@ -412,7 +412,7 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsign
 		i = j = out_learnt.size();
 
 	max_literals += out_learnt.size();
-	out_learnt.shrink(i - j);
+	out_learnt.shrink_(i - j);
 	tot_literals += out_learnt.size();
 
 
@@ -490,7 +490,7 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsign
 
 				//    printClause(out_learnt);
 				//printf("\n");
-				out_learnt.shrink(nb);
+				out_learnt.shrink_(nb);
 
 			}
 		}
@@ -735,7 +735,7 @@ bool SolverPT::litRedundant(Lit p, uint32_t abstract_levels)
 				}else{
 					for (int j = top; j < analyze_toclear.size(); j++)
 						varFlags[var(analyze_toclear[j])].seen = 0;
-					analyze_toclear.shrink(analyze_toclear.size() - top);
+					analyze_toclear.shrink_(analyze_toclear.size() - top);
 					return false;
 				}
 			}
@@ -757,7 +757,7 @@ bool SolverPT::litRedundant(Lit p, uint32_t abstract_levels)
 			else{
 				for (int j = top; j < analyze_toclear.size(); j++)
 					varFlags[var(analyze_toclear[j])].seen = 0;
-				analyze_toclear.shrink(analyze_toclear.size() - top);
+				analyze_toclear.shrink_(analyze_toclear.size() - top);
 				return false;
 			}
 	}
@@ -951,7 +951,7 @@ CRef SolverPT::propagate()
 			}
 			NextClause:;
 		}
-		ws.shrink(i - j);
+		ws.shrink_(i - j);
 	}
 	propagations += num_props;
 	simpDB_props -= num_props;
@@ -1513,7 +1513,7 @@ bool SolverPT::addSharedLearnt(vec<Lit>& ps, unsigned int pt_level){
 		}
 	}
 	// there can be satisfied literals inside the clause!
-	ps.shrink(i - j);
+	ps.shrink_(i - j);
 
 	if (ps.size() == 0){
 		if( !disable_stats )
@@ -1700,7 +1700,7 @@ void SolverPT::reduceDB() {
 		}
 	}
 	//push_learnts();
-	learnts.shrink(i - j);
+	learnts.shrink_(i - j);
 	checkGarbage();
 }
 

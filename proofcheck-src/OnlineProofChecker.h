@@ -268,7 +268,7 @@ bool OnlineProofChecker::propagate()
 	    }
         NextClause:;
         }
-        ws.shrink(i - j); // remove all duplciate clauses!
+        ws.shrink_(i - j); // remove all duplciate clauses!
     }
     
     return (confl != CRef_Undef); // return true, if something was found!
@@ -517,7 +517,7 @@ bool OnlineProofChecker::addClause(const vec< Lit >& cls, bool checkOnly )
 	  if( verbose > 4 ) cerr << "c [DRAT-OTFC] resolve against " << list.size() << " clauses" << endl;
 	  for( int i = 0 ; i < list.size(); ++ i ) {
 	    // build resolvent
-	    lits.shrink( lits.size() - initialSize ); // remove literals from previous addClause call
+	    lits.shrink_( lits.size() - initialSize ); // remove literals from previous addClause call
 	    const Clause& d = ca[ list[i] ];
 	    if( verbose > 4 ) cerr << "c [DRAT-OTFC] resolve with clause " << d << endl;
 	    int j = 0;

@@ -20,7 +20,7 @@ void Circuit::extractGates(CoprocessorData& data, vector< Gate >& gates)
   
   if( config.circ_Implied ) big->generateImplied(data);
   
-  if( config.circ_debug_out ) {
+  DOUT(if( config.circ_debug_out ) {
     cerr << "c sampled BIG:" << endl;
     for( Var v =  0 ; v < data.nVars(); ++ v ) {
       for ( int p = 0 ; p < 2; ++ p ) {
@@ -36,7 +36,7 @@ void Circuit::extractGates(CoprocessorData& data, vector< Gate >& gates)
 	cerr << endl;
       }
     }
-  }
+  });
   
   // create the list of all ternary / quadrary clauses
   ternaries.resize( data.nVars() * 2 );
@@ -80,12 +80,12 @@ void Circuit::getGatesWithOutput(const Var v, vector< Circuit::Gate >& gates, Co
 
   if( config.circ_ExO) getExOGates(v,gates, data);
   if( config.circ_FASUM ) getFASUMGates(v,gates, data);
-  if( config.circ_debug_out ) cerr << "c after variable " << v+1 << " found " << gates.size() << " gates" << endl;
+  DOUT(if( config.circ_debug_out ) cerr << "c after variable " << v+1 << " found " << gates.size() << " gates" << endl;;);
 }
 
 void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, CoprocessorData& data)
 {
-  if( config.circ_debug_out ) cerr << "c try to find AND gate for variable " <<  v + 1 <<  " (found so far:" << gates.size() << ")[ok?: " << data.ok() << "]" << endl;
+  DOUT(if( config.circ_debug_out ) cerr << "c try to find AND gate for variable " <<  v + 1 <<  " (found so far:" << gates.size() << ")[ok?: " << data.ok() << "]" << endl;);
   vec<Lit> learnt_clause;
   // check for v <-> A and B
   // cerr << "c check AND gates with variable " << v+1 << endl;
@@ -93,16 +93,16 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
     data.ma.nextStep();
     data.lits.clear();
     Lit pos = mkLit( v, p == 1 ); // pos -> a AND b AND ... => binary clauses [-pos, a],[-pos,b], ...
-    if( config.circ_debug_out ) cerr << "c with lit " << pos << endl;
+    DOUT(if( config.circ_debug_out ) cerr << "c with lit " << pos << endl;);
     Lit* list = big->getArray(pos);
     const int listSize = big->getSize(pos);
     data.ma.setCurrentStep( toInt(~pos) ); 
-    if( config.circ_debug_out ) cerr << "c mark literal " << ~pos << endl;
+    DOUT(if( config.circ_debug_out ) cerr << "c mark literal " << ~pos << endl;);
     // find all binary clauses for gate with positive output "pos"
     for( int i = 0 ; i < listSize; ++i ) {
      data.ma.setCurrentStep( toInt(list[i]) ); 
      data.lits.push_back( list[i] );
-     if( config.circ_debug_out ) cerr << "c mark literal " << list[i] << endl;
+     DOUT(if( config.circ_debug_out ) cerr << "c mark literal " << list[i] << endl;);
     }
     if( data.lits.size() > 1 ) { // work on found binary clauses!
 
@@ -114,16 +114,16 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	for( int i = 0 ; i < cList.size(); ++i ) {   // there can be multiple full encoded gates per variable
 	  const Clause& c = ca[ cList[i] ];
 	  if( c.can_be_deleted() || c.size () < 3 || c.size() > data.lits.size()+1 ) continue; // new clauses that provide not too much literals
-	  if( config.circ_debug_out ) cerr << "c consider clause " << c << endl;
+	  DOUT(if( config.circ_debug_out ) cerr << "c consider clause " << c << endl;);
 	  int marked = 0;
 	  for ( int j = 0 ; j < c.size(); ++j ) 
 	    if( data.ma.isCurrentStep( toInt(~c[j]) )) {
 	      marked ++; // check whether all literals inside the clause are marked
-	      if( config.circ_debug_out ) cerr << "c hit literal " << ~c[j] << endl;
+	      DOUT(if( config.circ_debug_out ) cerr << "c hit literal " << ~c[j] << endl;);
 	    }
 	    else if ( big->implies( pos, ~c[j] ) ) { 
 	      marked ++;  
-	      if( config.circ_debug_out ) cerr << "c imply literal " << pos << " -> "  << ~c[j] << endl;
+	      DOUT(if( config.circ_debug_out ) cerr << "c imply literal " << pos << " -> "  << ~c[j] << endl;);
 	    }
 	    else {
 	  //    cerr << "literal " << ~c[j] << " is not marked, and literal " << c[j] << " is not implied by literal " << pos << endl;
@@ -131,11 +131,11 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	    }
 	  if( marked == c.size() ) {
 	    gates.push_back( Gate( c, c.size() == 3 ? Gate::AND : Gate::GenAND, Gate::FULL, pos ) ); // add the gate
-	    if( config.circ_debug_out ) {
+	    DOUT(if( config.circ_debug_out ) {
 	      cerr << "c found FULL AND gate with output var " << v + 1 << endl; 
 	      cerr << "clause " << c << " leads to gate: ";
 	      gates[ gates.size() -1 ].print(cerr);
-	    }
+	    } );
 	    data.log.log( 1, "clause for gate" ,c );
 	    if( marked == data.lits.size() ) foundBlockedCandidate = true;
 	  } else {
@@ -152,13 +152,13 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	  if( ( data.ma.isCurrentStep(toInt(~c.l1)) || big->implies(pos, ~c.l1 ) ) // since implied does not always work, also check alternative!
 	    &&( data.ma.isCurrentStep(toInt(~c.l2)) || big->implies(pos, ~c.l2 ) ) ){
 	    gates.push_back( Gate( pos, c.l1, c.l2, Gate::AND, Gate::FULL) ); // add the gate
-	    if( config.circ_debug_out ) { 
+	    DOUT(if( config.circ_debug_out ) { 
 	      cerr << "c found FULL ternary only AND gate with output var " << v + 1 << endl;
 	      cerr << " implied: " << pos << " -> " << c.l1 << " : " << big->implies(pos, ~c.l1 ) << endl; 
 	      cerr << " implied: " << pos << " -> " << c.l2 << " : " << big->implies(pos, ~c.l2 ) << endl; 
 	      cerr << "clause [" << pos << "," << c.l1 << "," << c.l2 << "] leads to gate: ";
 	      gates[ gates.size() -1 ].print(cerr);
-	    }
+	    });
 	    if( data.lits.size() == 2 ) foundBlockedCandidate = true;
 	  }
 	}
@@ -191,13 +191,13 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	    }
 	    // if this code is reached, then the gate can be added, and blocked clause addition has been executed properly!
 	    gates.push_back( Gate(data.lits, (data.lits.size() == 2 ? Gate::AND : Gate::GenAND), Gate::POS_BLOCKED, pos) );
-	    if( config.circ_debug_out ) {
+	    DOUT(if( config.circ_debug_out ) {
 	      cerr << "c found posBlocked AND gate with output var " << v + 1 << endl;
 	      cerr << "clause [";
 	      for( int abc = 0; abc < learnt_clause.size(); ++ abc ) cerr << learnt_clause[abc] << " ";
 	      cerr << "] leads to gate: ";
 	      gates[ gates.size() -1 ].print(cerr);
-	    }
+	    });
 	    CRef cr = ca.alloc(learnt_clause, false); // create as learnt clause (theses clauses have to be considered for inprocessing as well, see "inprocessing rules" paper!
 	    data.addClause(cr);
 	    data.getClauses().push(cr);
@@ -218,11 +218,11 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
       for( int i = 0 ; i < data.list(pos).size(); ++i ) 
 	count = ( ca[ data.list(pos)[i] ].can_be_deleted() ? count : count + 1 );
       if( count == 1 ) {
-	if( config.circ_debug_out ) cerr << "c BLOCKED Generic Gates IS NOT PROPERLY IMPLEMENTED YET!!" << endl;
+	DOUT(if( config.circ_debug_out ) cerr << "c BLOCKED Generic Gates IS NOT PROPERLY IMPLEMENTED YET!!" << endl;);
 	continue;
 	// TODO: if blocked clause addition is performed with binary clauses, the BIG has to be updated!
 	gates.push_back( Gate( data.lits, data.lits.size() == 2 ? Gate::AND : Gate::GenAND, Gate::NEG_BLOCKED, pos ) );
-	if( config.circ_debug_out ) cerr << "c found NEG_BLOCKED AND gate with output var " << v + 1 << endl; 
+	DOUT(if( config.circ_debug_out ) cerr << "c found NEG_BLOCKED AND gate with output var " << v + 1 << endl; );
         if( config.circ_AddBlocked ) {
 	  // be careful with the clauses that have to be added! this will change the BIG!    
         }
@@ -364,7 +364,7 @@ void Circuit::getFASUMGates(const Var v, vector< Circuit::Gate >& gates, Coproce
     bool found [8]; found[0] = true; // found first clause!
     for( int i = 0 ; i < cList.size(); ++ i ) 
     {
-      if( config.circ_debug_out ) cerr << "c check quad " << i << "/" << cList.size() << endl;
+      DOUT(if( config.circ_debug_out ) cerr << "c check quad " << i << "/" << cList.size() << endl;);
       const quad& current = cList[i];
       // check size occurrence:
       if( var(current.l1) < var(a) || var(current.l2) < var(a) || var(current.l3) < var(a) ) continue; // do not consider this order of this quad!
@@ -397,7 +397,7 @@ void Circuit::getFASUMGates(const Var v, vector< Circuit::Gate >& gates, Coproce
       if( big->isChild( c,~d) || big->implies( c,~d) ) { found[6] = found[7] = true; }
       if( big->isChild(~c, d) || big->implies(~c, d) ) { found[1] = true; } // part of the initial quadrary!
       if( big->isChild(~c,~d) || big->implies(~c,~d) ) { found[4] = found[5] = true; }      
-      if( config.circ_debug_out ) cerr << "c finished binaries" << endl;
+      DOUT(if( config.circ_debug_out ) cerr << "c finished binaries" << endl;);
       // gates that have not been found are looked for via ternary and if not succesful via quadrary
       Lit lits[4];
       for( int j = 1; j < 8; ++ j ) {
@@ -411,13 +411,13 @@ void Circuit::getFASUMGates(const Var v, vector< Circuit::Gate >& gates, Coproce
 	  case 6: lits[0] =  a; lits[1] =  b; lits[2] = ~c; lits[3] = ~d; break;
 	  case 7: lits[0] = ~a; lits[1] = ~b; lits[2] = ~c; lits[3] = ~d; break;
 	}
-	if( config.circ_debug_out ) cerr << "c try to find quad: [" << lits[0] << ", " << lits[1] << ", " << lits[2] << ", " << lits[3] << "]" << endl;
+	DOUT(if( config.circ_debug_out ) cerr << "c try to find quad: [" << lits[0] << ", " << lits[1] << ", " << lits[2] << ", " << lits[3] << "]" << endl;);
 	for( int ind = 0; ind < 2; ++ ind ) { // index of literal to iterate over
 	  const vector<ternary>& tList = ternaries[ toInt(lits[0]) ]; // all clauses C with pos \in C
 	  for( int ti = 0 ; ti < tList.size(); ++ ti ) 
 	  {
 	    const ternary tern = tList[ti];
-	    if( config.circ_debug_out ) cerr << "c check with ternaries of lit " << lits[0] << " : " << ti << "/" << tList.size() << " [" << lits[0] << "," << tern.l1 << "," << tern.l2 << "]"<< endl;
+	    DOUT(if( config.circ_debug_out ) cerr << "c check with ternaries of lit " << lits[0] << " : " << ti << "/" << tList.size() << " [" << lits[0] << "," << tern.l1 << "," << tern.l2 << "]"<< endl;);
 	    if( tern.l1 == lits[1] && (tern.l2 == lits[2] || tern.l2 == lits[3] ) ) { found[j] = true; goto HASUMnextJ; }
 	    if( tern.l1 == lits[2] && (tern.l2 == lits[1] || tern.l2 == lits[3] ) ) { found[j] = true; goto HASUMnextJ; }
 	    if( tern.l1 == lits[3] && (tern.l2 == lits[2] || tern.l2 == lits[1] ) ) { found[j] = true; goto HASUMnextJ; }
@@ -431,13 +431,13 @@ void Circuit::getFASUMGates(const Var v, vector< Circuit::Gate >& gates, Coproce
 	  for( int qi = 0 ; qi < qList.size(); ++ qi ) 
 	  {
 	    const quad& qQuad = qList[qi];
-	    if( config.circ_debug_out ) cerr << "c check sub quad " << qi << "/" << qList.size() << ": " << qQuad.l1 << "," << qQuad.l2 << "," << qQuad.l3 << endl;
+	    DOUT(if( config.circ_debug_out ) cerr << "c check sub quad " << qi << "/" << qList.size() << ": " << qQuad.l1 << "," << qQuad.l2 << "," << qQuad.l3 << endl;);
 	    if( qQuad.l1 == lits[1] && qQuad.l2 == lits[2] && qQuad.l3 == lits[3] ) // since ordered, there can be only one candidate!
 	      { found[j] = true; break; }
 	  }
 	}
 HASUMnextJ:;
-        if( found[j] && config.circ_debug_out ) cerr << "c found clause " << j << endl;
+        DOUT(if( found[j] && config.circ_debug_out ) cerr << "c found clause " << j << endl;);
       }
 
       // if not all clauses found, check for blocked!
@@ -446,7 +446,7 @@ HASUMnextJ:;
       int count = 0;
       for( int j = 0 ; j < 8; ++ j ) if( found[j] ) count ++;
       
-      if( config.circ_debug_out ) cerr << "c found " << count << " clauses" << endl;
+      DOUT(if( config.circ_debug_out ) cerr << "c found " << count << " clauses" << endl;);
       
       if( count < 4 ) continue; // need at least 4 clauses to have a chance for blocked!
       if( count == 8 ) { // found a full gate!
@@ -457,7 +457,7 @@ HASUMnextJ:;
       }
       
       if( config.circ_BLOCKED ) {
-	if( config.circ_debug_out ) cerr << "c find blocked gate?" << endl;
+	DOUT( if( config.circ_debug_out ) cerr << "c find blocked gate?" << endl;);
 	// depending on the found clauses, four block variants can occur -> select the right literal!
         Lit blockLit = lit_Undef ;
              if( found[0] && found[3] && found[5] && found[6] ) blockLit = a;
@@ -468,7 +468,7 @@ HASUMnextJ:;
 	else if( found[2] && found[3] && found[6] && found[7] ) blockLit = ~c;
 	else if( found[0] && found[1] && found[2] && found[3] ) blockLit = d;
 	else if( found[4] && found[5] && found[6] && found[7] ) blockLit = ~d;
-	if( config.circ_debug_out ) cerr << "c block lit for gate: " << blockLit << endl;
+	DOUT( if( config.circ_debug_out ) cerr << "c block lit for gate: " << blockLit << endl;);
 	if( blockLit == lit_Undef ) continue; // no opportunity for blocking!
 
 	// check whether the literal "blockLit" appears exactly four times in quad clauses, and not else!
@@ -508,7 +508,7 @@ HASUMnextJ:;
 	  gates.pop_back();
 	  --i; break;
 	} else {
-	  if( config.circ_debug_out ) cerr << "c pair of unsatisfiable FASUM gates: " << endl;
+	  DOUT( if( config.circ_debug_out ) cerr << "c pair of unsatisfiable FASUM gates: " << endl;);
 	  gates[i].print(cerr);
 	  gates[j].print(cerr);
 	  data.setFailed();
@@ -544,7 +544,7 @@ void Circuit::getITEGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	   Lit s = posS == 0 ? ~c.l1 : ~c.l2;
 	   Lit t = posS == 0 ? ~c.l2 : ~c.l1;
 	   Lit x = pos;
-	   if( config.circ_debug_out ) cerr << "try to find ["<<i<<"] " << x << " <-> ITE( " << s << "," << t << ", ?)" << endl;
+	   DOUT( if( config.circ_debug_out ) cerr << "try to find ["<<i<<"] " << x << " <-> ITE( " << s << "," << t << ", ?)" << endl;);
 	   // TODO: continue here
 	   // try to find f by first checking binary clauses, afterwards check ternary clauses!
 	   // if allowed, also try to find by blocked!
@@ -555,14 +555,14 @@ void Circuit::getITEGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	   for( int j = 0 ; j < cList.size(); ++ j ) {
 	     if( i == j ) continue;
 	     const ternary& cand = cList[j]; // ternary has the variables X, S and T
-	     if( config.circ_debug_out ) cerr << "candidate ["<<j<<"] : [" << x << "," << cand.l1 << "," << cand.l2 << "]" << endl;
+	     DOUT( if( config.circ_debug_out ) cerr << "candidate ["<<j<<"] : [" << x << "," << cand.l1 << "," << cand.l2 << "]" << endl;);
 	     if( cand.l1 == s || cand.l2 == s ) {
 	       Lit fCandidate = ~toLit(cand.l1.x ^ cand.l2.x ^ s.x);
 	       bool sameVar = (var(fCandidate) == var(s)) || (var(fCandidate) == var(t));
 	       if( (!sameVar || config.circ_NegatedI) && ! data.ma.isCurrentStep( toInt(fCandidate) ) ) {
 	         data.lits.push_back(fCandidate); 
 		 data.ma.setCurrentStep(toInt(fCandidate) );
-		 if( config.circ_debug_out ) cerr << "found f-candidate: " << fCandidate << " sameVar=" << sameVar << endl;
+		 DOUT( if( config.circ_debug_out ) cerr << "found f-candidate: " << fCandidate << " sameVar=" << sameVar << endl;);
 	       }
 	     }
 	   }
@@ -574,7 +574,7 @@ void Circuit::getITEGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	    for( int j = 0 ; j < listSize; ++ j ) {
 	      if( data.ma.isCurrentStep(toInt(list[j])) ) continue; // do not add literals twice!
 	      data.lits.push_back( ~list[j] );
-	      if( config.circ_debug_out ) cerr << "added candidate " << ~list[j] << " by implication " << ~pos << " -> " << list[j] << endl;
+	      DOUT( if( config.circ_debug_out ) cerr << "added candidate " << ~list[j] << " by implication " << ~pos << " -> " << list[j] << endl;);
 	    }
 	   }
 	   int countPos = 0;
@@ -582,7 +582,7 @@ void Circuit::getITEGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	   bool redundantTernary = false;
 	   // try to verify f candidates!
 	   if( config.circ_BLOCKED ) { // try to extract blocked gates!
-             if( config.circ_debug_out ) cerr << "c blocked check with candidates: " << data.lits.size() << " including ternary cands: " << preBinaryFs << endl;
+             DOUT( if( config.circ_debug_out ) cerr << "c blocked check with candidates: " << data.lits.size() << " including ternary cands: " << preBinaryFs << endl;);
 	     if( data.lits.size() == 1 && preBinaryFs == 1) { // ITE gate can be blocked only if there is a single f candidate!
 	      for( int j = 0 ; j < data.list( pos ).size(); ++ j ) {
 		const Clause& bClause = ca[data.list(pos)[j]];
@@ -594,29 +594,29 @@ void Circuit::getITEGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 		    redundantTernary = true;
 	      }
 	      if(  !nonTernary && (countPos == 2 || (countPos == 3 && redundantTernary)) ) {
-		if( config.circ_debug_out ) cerr << "c current ITE gate is implied with blocked clause! ternaries: " << countPos << " found redundant: " << redundantTernary << endl; 
+		DOUT( if( config.circ_debug_out ) cerr << "c current ITE gate is implied with blocked clause! ternaries: " << countPos << " found redundant: " << redundantTernary << endl; );
 		// Lit x, Lit s, Lit t, Lit f, const Coprocessor::Circuit::Gate::Type _type, const Coprocessor::Circuit::Gate::Encoded e
 		gates.push_back( Gate(x,s,t,data.lits[0], Gate::ITE, Gate::NEG_BLOCKED) );
 		continue;
 	      }
-	      if( config.circ_debug_out ) cerr << "counted occurrences: " << countPos << " including " << nonTernary << " nonTernary clauses, found redundant: " << redundantTernary << endl;
+	      DOUT( if( config.circ_debug_out ) cerr << "counted occurrences: " << countPos << " including " << nonTernary << " nonTernary clauses, found redundant: " << redundantTernary << endl;);
 	     }
 	   }
 	   // current gate is not blocked -> scan for remaining clauses
 	   for( int j = 0 ; j < data.lits.size(); ++ j ) {
 	    const Lit& f = data.lits[j];
-	    if( config.circ_debug_out ) cerr << "c verify cand[" << j << "] = " << f << endl;
+	    DOUT( if( config.circ_debug_out ) cerr << "c verify cand[" << j << "] = " << f << endl;);
 	    // look for these clauses (or binary versions!) -s,t,-x     s,f,-x (or f,-x)
 	    vector<ternary>& nList = ternaries[ toInt( ~pos ) ];
 	    bool foundFirst=false, foundSecond=false;
 	    for( int k = 0 ; k < nList.size(); ++ k )  {
 		const ternary& cand = nList[k];
-		if( config.circ_debug_out ) cerr << "c check ternary " << ~pos << "," << cand.l1 << "," << cand.l2 << "  1st: " << foundFirst << " 2nd: " << foundSecond << endl;
+		DOUT( if( config.circ_debug_out ) cerr << "c check ternary " << ~pos << "," << cand.l1 << "," << cand.l2 << "  1st: " << foundFirst << " 2nd: " << foundSecond << endl;);
 		if( (cand.l1 == ~s || cand.l2 == ~s)  && ( cand.l1.x ^ cand.l2.x ^ (~s).x == t.x ) ) foundFirst = true;
 		else if ((cand.l1 == s || cand.l2 == s)  && ( cand.l1.x ^ cand.l2.x ^ s.x == f.x ) ) foundSecond = true;
 	    }
 	    if( ! foundFirst || ! foundSecond ) {
-	      if( config.circ_debug_out ) cerr << "c found not all in ternaries" << endl;
+	      DOUT( if( config.circ_debug_out ) cerr << "c found not all in ternaries" << endl;);
 	      if( ! foundFirst ) { // try to find clause [t,-x], or [-s,-x]
 		if( big->isOneChild(x,t,~s) )
 		  { foundFirst = true; break; }
@@ -629,7 +629,7 @@ void Circuit::getITEGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	      if(!foundSecond) foundSecond = (big->implies(x,f) || big->implies(x,s) ) ? true : foundSecond;
 	    }
 	    if( !foundFirst || !foundSecond ) { // f candidate not verified -> remove gate!!
-              if( config.circ_debug_out ) cerr << "c could not verify " << data.lits[j] << " 1st: " << foundFirst << " 2nd: " << foundSecond << endl;
+              DOUT( if( config.circ_debug_out ) cerr << "c could not verify " << data.lits[j] << " 1st: " << foundFirst << " 2nd: " << foundSecond << endl;);
 	      data.lits[j] = data.lits[ data.lits.size() -1 ];
 	      data.lits.pop_back();
 	      --j;
@@ -683,42 +683,42 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
       found[1] = found[2] = found[3] = false;
       bool binary = false;
       const Lit b = cList[i].l1; const Lit c = cList[i].l2;
-      if( config.circ_debug_out ) { 
+      DOUT( if( config.circ_debug_out ) { 
 	cerr << endl << "c check [" << i << "/" << cList.size() << "] for "
 	<< "[0](" <<  a << "," <<  b << "," <<  c << ")" << endl
 	<< "[1](" <<  a << "," << ~b << "," << ~c << ")" << endl
 	<< "[2](" << ~a << "," << ~b << "," <<  c << ")" << endl
 	<< "[3](" << ~a << "," <<  b << "," << ~c << ")" << endl;
-      }
+      });
       if( var(b) == var(c) || var(b) == var(a) || var(a) == var(c) ) continue; // just to make sure!
       //test whether all the other clauses can be found as well
       for( int j = i+1; j < cList.size(); ++ j ) {
 	const ternary& tern = cList[j];
 	if( (tern.l1 == ~b || tern.l2 == ~b) && ( tern.l1 == ~c || tern.l2 == ~c ) )
 	  { found[1] = true; 
-	    if( config.circ_debug_out ) cerr << "c found 1 with " << a << "," << tern.l1 << "," << tern.l2 << endl;
+	    DOUT( if( config.circ_debug_out ) cerr << "c found 1 with " << a << "," << tern.l1 << "," << tern.l2 << endl;);
 	    break; }
       }
-      if( config.circ_debug_out )  if( found[1] ) cerr << "c found first clause as ternary" << endl;
+      DOUT( if( config.circ_debug_out )  if( found[1] ) cerr << "c found first clause as ternary" << endl;);
       if ( !found[1] ) { // check for 2nd clause in implications
 	if( big->implies(~a,~b) || big->implies(~a,~c)  ) {
 	  found[1] = true;
-	  if( config.circ_debug_out ) cerr << "c found 1 with " << ~a << " ->" << ~b << " or " << ~c << endl;
+	  DOUT( if( config.circ_debug_out ) cerr << "c found 1 with " << ~a << " ->" << ~b << " or " << ~c << endl;);
 	}
 	else { // not found in big
 	  if( big->isOneChild(~a,~b,~c ) )
 	    { found[1] = true; binary=true;
-	      if( config.circ_debug_out ) cerr << "c found 1 with oneChild " << ~a << " ->" << ~b << " or " << ~c << endl;
+	      DOUT( if( config.circ_debug_out ) cerr << "c found 1 with oneChild " << ~a << " ->" << ~b << " or " << ~c << endl;);
 	      break; }
 	  else  { // found[1] is still false!
 	    if( big->implies(b,~c) ) {
-	      if( config.circ_debug_out ) cerr << "c found 1 with " << b << " ->" << ~c << endl;
+	      DOUT( if( config.circ_debug_out ) cerr << "c found 1 with " << b << " ->" << ~c << endl;);
 	      found[1] = true;
 	    }
 	    else {
 		if( big->isChild(b,~c) )
 		  { found[1] = true; 
-		    if( config.circ_debug_out ) cerr << "c found 1 with " << b << " ->" << ~c << endl;
+		    DOUT( if( config.circ_debug_out ) cerr << "c found 1 with " << b << " ->" << ~c << endl;);
 		    binary=true;break; 
 		  }
 	    }
@@ -737,9 +737,9 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	    countPos = countPos + 1; 
 	  }
 	  if(  countPos == 2 ) {
-	    if( config.circ_debug_out ) cerr << "c current XOR gate is implied with blocked clauses! ternaries: " << countPos << endl; 
+	    DOUT( if( config.circ_debug_out ) cerr << "c current XOR gate is implied with blocked clauses! ternaries: " << countPos << endl; );
 	    // Lit x, Lit s, Lit t, Lit f, const Coprocessor::Circuit::Gate::Type _type, const Coprocessor::Circuit::Gate::Encoded e
-	    if( config.circ_debug_out ) cerr << "c blocked XOR gate " << a << "," << b << "," << c << endl;
+	    DOUT( if( config.circ_debug_out ) cerr << "c blocked XOR gate " << a << "," << b << "," << c << endl;);
 	    gates.push_back( Gate(a,b,c, Gate::XOR, Gate::POS_BLOCKED) );
 	    continue;
 	  }
@@ -751,34 +751,34 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 	if( (tern.l1 == ~b || tern.l2 == ~b) && ( tern.l1 == c || tern.l2 == c ) ) // found [-a,-b,c]
 	  { 
 	    found[2] = true; 
-	    if( config.circ_debug_out ) cerr << "c found 2 with " << ~a << "," << tern.l1 << "," << tern.l2 << endl;
+	    DOUT( if( config.circ_debug_out ) cerr << "c found 2 with " << ~a << "," << tern.l1 << "," << tern.l2 << endl;);
 	  }
 	else if( (tern.l1 == b || tern.l2 == b) && ( tern.l1 == ~c || tern.l2 == ~c ) ) // found [-a,b,-c]
 	  { found[3] = true;
-	    if( config.circ_debug_out ) cerr << "c found 3 with " << ~a << "," << tern.l1 << "," << tern.l2 << endl;
+	    DOUT( if( config.circ_debug_out ) cerr << "c found 3 with " << ~a << "," << tern.l1 << "," << tern.l2 << endl;);
 	  }
      }
-     if( config.circ_debug_out )  cerr << "c found in ternaries: 3rd: " << (int)found[2] << " 4th: " << (int)found[3] << endl;
+     DOUT( if( config.circ_debug_out )  cerr << "c found in ternaries: 3rd: " << (int)found[2] << " 4th: " << (int)found[3] << endl;);
      if ( !found[2] ) { // check for 2nd clause in implications
 	if( big->implies(a,~b) || big->implies(a,c) ) { 
 	  binary=true; 
 	  found[2] = true; 
-	  if( config.circ_debug_out ) cerr << "c found 2 with " << a << "->" << ~b << " or " << c << endl;
+	  DOUT( if( config.circ_debug_out ) cerr << "c found 2 with " << a << "->" << ~b << " or " << c << endl;);
 	}
 	else {
 	  if( big->isOneChild(a,~b,c) )
 	    { 
 	      found[2] = true; binary=true;
-	      if( config.circ_debug_out ) cerr << "c found 2 with oneChild" << a << "->" << ~b << " or " << c << endl;
+	      DOUT( if( config.circ_debug_out ) cerr << "c found 2 with oneChild" << a << "->" << ~b << " or " << c << endl;);
 	      break; 
 	    }
 	  else { // found[2] is still false!
 	    if( big->implies(b,c) ) { binary=true; found[2] = true; 
-	      if( config.circ_debug_out ) cerr << "c found 2 with " << b << " -> " << c << endl;
+	      DOUT( if( config.circ_debug_out ) cerr << "c found 2 with " << b << " -> " << c << endl;);
 	    }
 	    else {
 	      if( big->isChild(b,c) ){ found[2] = true; binary=true;
-	      if( config.circ_debug_out ) cerr << "c found 2 with " << b << " ->* " << c << endl;
+	      DOUT( if( config.circ_debug_out ) cerr << "c found 2 with " << b << " ->* " << c << endl;);
 	      break; }
 	    }
 	  }
@@ -787,20 +787,20 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
      if( !found[2] ) continue; // clause [-a,-b,c] not found
      if ( !found[3] ) { // check for 2nd clause in implications for [-a,b,-c]
 	if( big->implies(a,b) || big->implies(a,~c) ) { binary=true; found[3] = true; 
-	  if( config.circ_debug_out ) cerr << "c found 3 with " << a << " -> " << b << " or " << ~c << endl;
+	  DOUT( if( config.circ_debug_out ) cerr << "c found 3 with " << a << " -> " << b << " or " << ~c << endl;);
 	}
 	else {
 	  if( big->isOneChild(a,b,~c)){ found[3] = true; binary=true;
-	  if( config.circ_debug_out ) cerr << "c found 3 with one child" << a << " -> " << b << " or " << ~c << endl;
+	  DOUT( if( config.circ_debug_out ) cerr << "c found 3 with one child" << a << " -> " << b << " or " << ~c << endl;);
 	  break; }
 	  else {
 	    if( big->implies(~b,~c) ) { binary=true; found[3] = true; 
-	      if( config.circ_debug_out ) cerr << "c found 3 with " << ~b << " -> " << ~c << endl;
+	      DOUT( if( config.circ_debug_out ) cerr << "c found 3 with " << ~b << " -> " << ~c << endl;);
 	    }
 	    else {
 	      if( big->isChild(~b,~c) )
 	      { found[3] = true; binary=true;
-	      if( config.circ_debug_out ) cerr << "c found 3 with " << ~b << " ->* " << ~c << endl;
+	      DOUT( if( config.circ_debug_out ) cerr << "c found 3 with " << ~b << " ->* " << ~c << endl;);
 	      break; }
 	    }
 	  }
@@ -809,7 +809,7 @@ void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
       if( !found[3] ) continue; // clause [-a,b,-c] not found
       if( var(a) < var(c) && var(a) < var(b))
       { // for fully encoded gates we do not need to add all, but only one representation
-        if( config.circ_debug_out ) cerr << "c current XOR gate is fully encodeds: " << found[0] << "," << found[1] << "," << found[2] << "," << found[3] << "," << endl; 
+        DOUT( if( config.circ_debug_out ) cerr << "c current XOR gate is fully encodeds: " << found[0] << "," << found[1] << "," << found[2] << "," << found[3] << "," << endl; );
         gates.push_back( Gate(a,b,c, Gate::XOR, Gate::FULL) );
       }
     }

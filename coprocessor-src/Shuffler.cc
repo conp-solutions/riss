@@ -40,12 +40,12 @@ void VarShuffler::setupShuffling(uint32_t vars) {
   replacedBy.resize( vars, lit_Undef );
   for( Var v = 0 ; v < vars; ++v ) replacedBy[v] = mkLit(v,false);
 
-  if( config.shuffle_debug_out > 2 ) {
+  DOUT( if( config.shuffle_debug_out > 2 ) {
     cerr << "c step 1" << endl;
     for( Var v = 0 ; v < vars; ++v ) { 
       cerr << "c " << v+1 << "  => " << replacedBy[v] << endl;
     }  
-  }
+  });
   
   for( Var v = 0 ; v < vars; ++v ) { 
     uint32_t r = randomizer.rand() % vars;
@@ -54,12 +54,12 @@ void VarShuffler::setupShuffling(uint32_t vars) {
     replacedBy[r] = lr;
   }
   
-  if( config.shuffle_debug_out > 2 ) {
+  DOUT(if( config.shuffle_debug_out > 2 ) {
     cerr << "c step 2" << endl;
     for( Var v = 0 ; v < vars; ++v ) { 
       cerr << "c " << v+1 << "  => " << replacedBy[v] << endl;
     }  
-  }
+  });
   
 
   for( Var v = 0 ; v < vars; ++v ) { 
@@ -67,12 +67,12 @@ void VarShuffler::setupShuffling(uint32_t vars) {
     if( r == 1 ) replacedBy[v] = ~replacedBy[v];
   }
   
-  if( config.shuffle_debug_out > 1 ) {
+  DOUT(if( config.shuffle_debug_out > 1 ) {
     cerr << "c step 3" << endl;
     for( Var v = 0 ; v < vars; ++v ) { 
       cerr << "c " << v+1 << "  => " << replacedBy[v] << endl;
     }  
-  }
+  });
   
 }
     
@@ -105,13 +105,13 @@ void VarShuffler::shuffle( vec<CRef>& clauses, ClauseAllocator& ca, bool shuffle
     }
   }
 
-  if( config.shuffle_debug_out > 2 ) {
+  DOUT(if( config.shuffle_debug_out > 2 ) {
     cerr << "c rewritten clauses: " << endl;
     for( uint32_t i = 0 ; i < clauses.size(); ++ i ) {
       Clause& c = ca[ clauses[i] ];
       cerr << c << endl;
     } 
-  }
+  });
   
 }
 
@@ -128,9 +128,9 @@ void VarShuffler::shuffle( vec<Lit>& lits, bool shuffleOrder ) {
 	lits[r] = l;
       }
   }
-  if( config.shuffle_debug_out > 2 ) {
+  DOUT(if( config.shuffle_debug_out > 2 ) {
     cerr << "c rewritten vector: " << lits << endl;
-  }
+  });
 }
 
 void VarShuffler::unshuffle( vec<lbool>& model, uint32_t vars )
@@ -143,21 +143,21 @@ void VarShuffler::unshuffle( vec<lbool>& model, uint32_t vars )
   setSeed( config.opt_shuffle_seed );
   setupShuffling(vars); // be sure tio setup the full range, such that the replacement matches the one used for creating the shuffling
 
-  if( config.shuffle_debug_out > 1 ) {
+  DOUT(if( config.shuffle_debug_out > 1 ) {
     cerr << "c before unshuffle model: "<< endl;
     for( Var v = 0 ; v < max; ++v ) cerr <<  " " << mkLit(v, model[v] == l_False );
     cerr << endl;
-  }
+  });
   
   for( Var v = 0; v < max; ++v ) {
     model [v] = sign( replacedBy[v]) ? (copy[ var(replacedBy[v]) ] == l_False ? l_True : l_False) :  copy[ var(replacedBy[v]) ];
   }
   
-  if( config.shuffle_debug_out > 1 ) {
+  DOUT(if( config.shuffle_debug_out > 1 ) {
     cerr << "c after unshuffle model: " << endl;
     for( Var v = 0 ; v < max; ++v ) cerr <<  " " << mkLit(v, model[v] == l_False );
     cerr << endl;
-  }
+  });
 }
 
 

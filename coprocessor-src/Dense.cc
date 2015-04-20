@@ -22,9 +22,7 @@ void Dense::compress(const char* newWhiteFile)
   if( propagation.process(data) == l_False ) data.setFailed();
   if( !data.ok() ) return;
  
-  if( config.dense_debug_out ) {
-    cerr << "c dense compress" << endl;
-  }
+  DOUT( if( config.dense_debug_out ) {cerr << "c dense compress" << endl;});
   
   Compression compression;
   compression.variables = data.nVars();
@@ -44,7 +42,7 @@ void Dense::compress(const char* newWhiteFile)
       for( ; j < clause.size(); ++j ){
 	const Lit l = clause[j];
 	
-	if( config.dense_debug_out && l_Undef != data.value(l) ) cerr << "c DENSE found assigned literal " << l << " in clause ["<< data.getClauses()[i] << "] : " << clause << " learned?: " << clause.learnt() << endl ;
+	DOUT( if( config.dense_debug_out && l_Undef != data.value(l) ) cerr << "c DENSE found assigned literal " << l << " in clause ["<< data.getClauses()[i] << "] : " << clause << " learned?: " << clause.learnt() << endl ;);
 	assert( l_Undef == data.value(l) && "there cannot be assigned literals");
 	assert(var(l) < data.nVars() );
 	
@@ -62,24 +60,24 @@ void Dense::compress(const char* newWhiteFile)
       ( data.value(mkLit(v,false)) != l_Undef && (config.opt_dense_keep_assigned) ) ) // do not drop assigned variables!
     { // do not rewrite the trail!
       compression.mapping[v] = v - diff;
-      if( config.dense_debug_out && data.doNotTouch(v)) cerr << "c mapping for variable " << v+1 << " is: " << compression.mapping[v]+1 << endl;
+      DOUT( if( config.dense_debug_out && data.doNotTouch(v)) cerr << "c mapping for variable " << v+1 << " is: " << compression.mapping[v]+1 << endl;);
     }
     else { 
       diff++; 
-      if ( config.dense_debug_out  ) {
+      DOUT( if ( config.dense_debug_out  ) {
 	if(data.doNotTouch(v)) cerr << "c do not touch variable will be dropped: " << v+1 << " mapping: " << compression.mapping[v]+1 << endl;
 	else cerr << "c variable " << v+1 << " occurrs " << count[v] << " times, and is undefined: " << (data.value(mkLit(v,false)) == l_Undef) << endl;
-      }
+      });
       assert( compression.mapping[v] == -1 );
     }
   }
   
   // formula is already compact, or not too loose
   if( diff == 0 || ( config.opt_dense_fragmentation > 1.0 + ( (diff * 100)  / data.nVars()  ) ) ) {
-    if( config.dense_debug_out > 0 ) cerr << "c [DENSE] no fragmentation, do not compress!" << endl;
+    DOUT( if( config.dense_debug_out > 0 ) cerr << "c [DENSE] no fragmentation, do not compress!" << endl;);
     
     if( config.opt_dense_store_forward ) {
-      if( config.dense_debug_out ) cerr << "c store forward mapping " << endl;
+      DOUT( if( config.dense_debug_out ) cerr << "c store forward mapping " << endl;);
       forward_mapping.resize( data.nVars(), -1 ); // initially, set to -1 for no mapping (dropped)
       for( Var v = 0; v < data.nVars() ; v++ )
 	forward_mapping[v] = compression.mapping[v]; // store everything into the new mapping file!
@@ -94,18 +92,18 @@ void Dense::compress(const char* newWhiteFile)
   globalDiff += diff;
   
   // replace everything in the clauses
-  if( config.dense_debug_out > 0 ) cerr << "c [DENSE] compress clauses" << endl;
+  DOUT( if( config.dense_debug_out > 0 ) cerr << "c [DENSE] compress clauses" << endl;);
   for( int s = 0 ; s < 2; ++ s ) {
     vec<CRef>& list = s == 0 ? data.getClauses() : data.getLEarnts();
     for( uint32_t i = 0 ; i < list.size(); ++i ){
       Clause& clause = ca[ list[i] ];
       if( clause.can_be_deleted() ) continue;
       assert( clause.size() > 1 && "do not rewrite unit clauses!" );
-      if( config.dense_debug_out > 1 ) cerr << "c [DENSE] rewrite clause [" << list[i] << "] " << clause << endl;
+      DOUT( if( config.dense_debug_out > 1 ) cerr << "c [DENSE] rewrite clause [" << list[i] << "] " << clause << endl;);
       for( uint32_t j = 0 ; j < clause.size(); ++j ){
 	const Lit l = clause[j];
 	if( clause.learnt() && compression.mapping[ var(l) ] == -1 ) { // drop this clause because the current variable is not present in the formula any more!
-	  if( config.dense_debug_out > 1 ) cerr << "c [DENSE] into deleted clause, because variable " << var(l) << " does not occur in non-learned clauses" << endl;
+	  DOUT( if( config.dense_debug_out > 1 ) cerr << "c [DENSE] into deleted clause, because variable " << var(l) << " does not occur in non-learned clauses" << endl;);
 	  clause.set_delete(true); break;
 	}
 	// if( debug > 1 ) cerr << "c compress literal " << l.nr() << endl;
@@ -116,7 +114,7 @@ void Dense::compress(const char* newWhiteFile)
 	// polarity of literal has to be kept
 	assert( sign(clause[j]) == p && "sign of literal should not change" );
       }
-      if( config.dense_debug_out > 1 ) cerr << "c [DENSE] into [" << list[i] << "]           " << clause << endl;
+      DOUT( if( config.dense_debug_out > 1 ) cerr << "c [DENSE] into [" << list[i] << "]           " << clause << endl;);
     }
   }
   
@@ -132,11 +130,11 @@ void Dense::compress(const char* newWhiteFile)
   }
   
   // compress trail, so that it can still be used!
-  if( config.dense_debug_out ) {
+  DOUT( if( config.dense_debug_out ) {
     cerr << "c before trail: "; 
     for( uint32_t i = 0 ; i < data.getTrail().size(); ++ i ) cerr << " " << data.getTrail()[i];
     cerr << endl;
-  }
+  });
   
   // erase all top level units after backup!
   // keep the literals that are not removed!
@@ -146,26 +144,26 @@ void Dense::compress(const char* newWhiteFile)
     if( count[var(l)] != 0 || data.doNotTouch(var(l)) || config.opt_dense_keep_assigned ) {
       const bool p = sign(l);
       const Var v= compression.mapping[ var(l) ];
-      if( config.dense_debug_out ) cerr << "c move literal " << l << " from " << i << " to pos " << j << " as " << mkLit( v, p ) << endl;
+      DOUT( if( config.dense_debug_out ) cerr << "c move literal " << l << " from " << i << " to pos " << j << " as " << mkLit( v, p ) << endl;);
       data.getTrail()[j++] = mkLit( v, p ); // keep the modified literal!
     } else {
       compression.trail.push_back(data.getTrail()[i] );
       data.resetAssignment( var(data.getTrail()[i]) ); 
     }
   }
-  data.getTrail().shrink( data.getTrail().size() - j ); // do not clear, but resize to keep the literals that have been kept!
+  data.getTrail().shrink_( data.getTrail().size() - j ); // do not clear, but resize to keep the literals that have been kept!
   propagation.reset(data); // reset propagated literals in UP
 
   free( count ); // do not need the count array any more
   
-  if( config.dense_debug_out ) {
+  DOUT( if( config.dense_debug_out ) {
     cerr << "c final trail: "; 
     for( uint32_t i = 0 ; i < data.getTrail().size(); ++ i ) cerr << " " << data.getTrail()[i];
     cerr << endl;
-  }
+  });
 
   if( config.opt_dense_store_forward ) {
-    if( config.dense_debug_out) cerr << "c store forward mapping " << endl;
+    DOUT( if( config.dense_debug_out) cerr << "c store forward mapping " << endl;);
     forward_mapping.resize( data.nVars(), -1 ); // initially, set to -1 for no mapping (dropped)
     for( Var v = 0; v < data.nVars() ; v++ )
       forward_mapping[v] = compression.mapping[v]; // store everything into the new mapping file!
@@ -179,7 +177,7 @@ void Dense::compress(const char* newWhiteFile)
     if(! config.opt_dense_keep_assigned ) assert( (data.doNotTouch(v) || data.value( mkLit( v, false) ) == l_Undef) && "there is no assigned variable allowed " );
 //	    if( v+1 == data.nVars() ) cerr << "c final round with variable " << v+1 << endl;
     if ( compression.mapping[v] != -1 ){
-      if( config.dense_debug_out ) cerr << "c map " << v+1 << " to " << compression.mapping[v] + 1 << endl;
+      DOUT( if( config.dense_debug_out ) cerr << "c map " << v+1 << " to " << compression.mapping[v] + 1 << endl;);
 //      if( v+1 == data.nVars() ) cerr << "c final round with move" << endl;
       // cerr << "c move intern var " << v << " to " << compression.mapping[v] << endl;
       data.moveVar( v, compression.mapping[v], v+1 == data.nVars() ); // map variable, and if done, re-organise everything
@@ -189,7 +187,7 @@ void Dense::compress(const char* newWhiteFile)
       // only set to 0, if needed afterwards
       if( compression.mapping[ v ] != v ) compression.mapping[ v ] = -1;
     } else {
-      if( config.dense_debug_out ) cerr << "c remove variable " << v+1  << endl;
+      DOUT( if( config.dense_debug_out ) cerr << "c remove variable " << v+1  << endl;);
 //      if( v+1 == data.nVars() ) cerr << "c final round without move" << endl;
       // any variable that is not replaced should have l_Undef
       if( v+1 == data.nVars() ) data.moveVar( v-diff, v-diff, true ); // compress number of variables!
@@ -217,16 +215,16 @@ void Dense::compress(const char* newWhiteFile)
 
 void Dense::decompress(vec< lbool >& model)
 {
-  if( config.dense_debug_out ) {
+  DOUT( if( config.dense_debug_out ) {
     cerr << "c dense decompress, model to work on: ";
     for( int i = 0 ; i < model.size(); ++ i ) cerr << (model[i] == l_True ? i+1 : -i-1) << " ";
     cerr << endl;
-  }
-  if( map_stack.size() == 0 && config.dense_debug_out ) cerr << "c no decompression" << endl;
+  });
+  DOUT( if( map_stack.size() == 0 && config.dense_debug_out ) cerr << "c no decompression" << endl;);
   // walk backwards on compression stack!
   for( int i = map_stack.size() - 1; i >= 0; --i ) {
     Compression& compression = map_stack[i];
-    if( config.dense_debug_out ) cerr << "c [DENSE] change number of variables from " << model.size() << " to " << compression.variables << endl;
+    DOUT( if( config.dense_debug_out ) cerr << "c [DENSE] change number of variables from " << model.size() << " to " << compression.variables << endl;);
     // extend the assignment, so that it is large enough
     if( model.size() < compression.variables ){
       model.growTo( compression.variables, l_False  );
@@ -237,7 +235,7 @@ void Dense::decompress(vec< lbool >& model)
     for( int v = compression.variables-1; v >= 0 ; v-- ){
       // use inverse mapping to restore the already given polarities (including UNDEF)
 	if( compression.mapping[v] != v && compression.mapping[v] != -1 ) {
-	  if( config.dense_debug_out ) cerr << "c move variable " << v+1 << " to " << compression.mapping[v] + 1  << " -- falsify " << v+1 << endl;
+	  DOUT( if( config.dense_debug_out ) cerr << "c move variable " << v+1 << " to " << compression.mapping[v] + 1  << " -- falsify " << v+1 << endl;);
 	  
 	  model[ compression.mapping[v] ] =  model[ v ];
 	  // set old variable to some value
@@ -245,7 +243,7 @@ void Dense::decompress(vec< lbool >& model)
 	} else {
 	  if( model[v] == l_Undef ) {
 	    model[v] = l_False; 
-	    if( config.dense_debug_out ) cerr << "c falsify " << v+1 << endl;
+	    DOUT( if( config.dense_debug_out ) cerr << "c falsify " << v+1 << endl;);
 	  }
 	}
     }
@@ -254,41 +252,41 @@ void Dense::decompress(vec< lbool >& model)
     for( int j = 0 ; j < compression.trail.size(); ++ j ) {
       if ( sign( compression.trail[j] ) ) model[ var(compression.trail[j]) ] = l_False;
       else model[ var(compression.trail[j]) ] = l_True;
-      if( config.dense_debug_out ) cerr << "c satisfy " << compression.trail[j] << endl;
+      DOUT( if( config.dense_debug_out ) cerr << "c satisfy " << compression.trail[j] << endl;);
     }
   }
-  if( config.dense_debug_out ) {
+  DOUT( if( config.dense_debug_out ) {
     cerr << "c decompressed model: ";
     for( int i = 0 ; i < model.size(); ++ i ) cerr << (model[i] == l_True ? i+1 : -i-1) << " ";
     cerr << endl;
-  }
+  });
 }
 
 void Dense::adoptUndoStack()
 {
-  if( config.dense_debug_out ) {
+  DOUT( if( config.dense_debug_out ) {
     cerr << "c dense adopt undo stack" << endl;
-  }
+  });
   
   vector< Lit >& extend = data.getUndo();
   const int compressed = data.getLastCompressUndoLits();
   if( compressed == -1 ){
-    if( config.dense_debug_out ) cerr << "c no compression yet, so no need to decompress undo info" << endl;
+    DOUT( if( config.dense_debug_out ) cerr << "c no compression yet, so no need to decompress undo info" << endl;);
     return; // nothing to be done, because no compression yet!
   }
 
-  if( config.dense_debug_out > 1 ){
+  DOUT( if( config.dense_debug_out > 1 ){
     cerr << "c adopt undo stack" << endl;
     cerr << "stack: " << extend << endl;
-  }
+  });
   
   int start = data.getLastDecompressUndoLits();
   if( start == -1 ) start = data.getLastCompressUndoLits();
   assert( start >= 0 && "at least one compress or adopt has been done already" );
-  if( config.dense_debug_out ) cerr << "c rewrite undo stack from " << start << " to " << extend.size() << endl;
+  DOUT( if( config.dense_debug_out ) cerr << "c rewrite undo stack from " << start << " to " << extend.size() << endl;);
   for( uint32_t i = start; i < extend.size(); ++ i ) {
     if( extend[i] != lit_Undef ) { // rewrite each literal of the extension step
-	if( config.dense_debug_out ) cerr << "c rewrite " << extend[i] << endl;
+	DOUT( if( config.dense_debug_out ) cerr << "c rewrite " << extend[i] << endl;);
 	Var v = var(extend[i]);
 	for( int j = map_stack.size() - 1; j >= 0; --j ) {
 	  Compression& compression = map_stack[j];
@@ -296,19 +294,19 @@ void Dense::adoptUndoStack()
 	  else v = compression.variables + v - compression.postvariables; // v is a fresh variable since the last compression, hence, handle this variable as such!
 	}
 	extend[i] = mkLit( v, sign(extend [i]) );
-	if( config.dense_debug_out ) cerr << "c             into " << extend[i] << endl;
+	DOUT( if( config.dense_debug_out ) cerr << "c             into " << extend[i] << endl;);
     }
   }
-  if( config.dense_debug_out > 1 ) cerr << "stack: " << extend << endl;
+  DOUT( if( config.dense_debug_out > 1 ) cerr << "stack: " << extend << endl;);
   // store that this decompression has been done
   data.didDecompressUndo();  
 }
 
 bool Dense::writeUndoInfo(const string& filename) {
 
-  if( config.dense_debug_out ) {
+  DOUT( if( config.dense_debug_out ) {
     cerr << "c write undo info" << endl;
-  }
+  });
   
   ofstream file( filename.c_str(), ios_base::out);
   if( ! file ) {

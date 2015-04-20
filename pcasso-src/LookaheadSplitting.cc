@@ -1868,5 +1868,5 @@ void LookaheadSplitting::removeSatisfied(vec<CRef>& cs)
         else
             cs[j++] = cs[i];
     }
-    cs.shrink(i - j);
+    cs.shrink_(i - j);
 }

@@ -60,7 +60,7 @@ Lit Sls::heuristic(){
     
   }
 
-  if( config.opt_sls_debug ) cerr << "smallest break: " << smallestBreak << " candidates: " << data.lits.size() << endl;
+  DOUT(if( config.opt_sls_debug ) cerr << "smallest break: " << smallestBreak << " candidates: " << data.lits.size() << endl;);
 
   Lit tmp = lit_Undef;
   // if literal without break, select smallest such literal!
@@ -132,7 +132,7 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
     // handle unit/unsat case!
     if( satLits == 0 ) {
       addHeap( index ); 
-      if( config.opt_sls_debug) cerr << "c added index " << index << " to unsat clauses" << endl;
+      DOUT(if( config.opt_sls_debug) cerr << "c added index " << index << " to unsat clauses" << endl;);
     } else if( satLits == 1 ) {
       varData[ var(satLit) ].breakCount ++;
     }
@@ -147,7 +147,7 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
   if( minSize == maxSize && minSize > 2 && maxSize < 10 ) stepLimit = config.opt_sls_ksat_flips == -1 ? 0 : config.opt_sls_ksat_flips;
   
   
-      if( config.opt_sls_debug ) {
+      DOUT(if( config.opt_sls_debug ) {
 	for( int i = 0 ; i < formula.size(); ++ i ) {
 	  const Clause& c = ca[ formula[i] ];
 	  if( c.can_be_deleted() || c.size() == 1 ) continue;
@@ -168,27 +168,27 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
 	  cerr << "c UNSAT clause[" << unsatClauses[i] << "] " << c << " has " << clsData[ unsatClauses[i] ].satLiterals << " satisfied literals, watches 1=" << clsData[ unsatClauses[i] ].watch1 + 1<< " 2=" << clsData[ unsatClauses[i] ].watch2 + 1<< endl;
 	}
 	
-      }
+      });
   
   // cerr << "c sls initialized " << endl;
   
   // suche
   for( flips = 0 ; (flips < stepLimit || stepLimit == 0 ) && !data.isInterupted() && unsatClauses.size() > 0 ; ++ flips )
   {
-    if( config.opt_sls_debug ) {
+    DOUT(if( config.opt_sls_debug ) {
      for( int i = 0 ; i < unsatClauses.size(); ++ i ) {
        if( clsData[ unsatClauses[i] ].satLiterals != 0 ) cerr << "c unsat clause has sat lits (according to counter) : [" << unsatClauses[i] << "]: " << ca[ formula[unsatClauses[i]] ] << endl;
      }
-    }
+    });
     
-    if( config.opt_sls_debug ) {
+    DOUT(if( config.opt_sls_debug ) {
       cerr << "c sat lits: ";
       for( Var v = 0; v < data.nVars(); ++v ) if( isSat(mkLit(v,false)) ) cerr << " " << v + 1;
       cerr << endl;
       cerr << "c unsat lits: ";
       for( Var v = 0; v < data.nVars(); ++v ) if( isUnsat(mkLit(v,false)) ) cerr << " " << v + 1;
       cerr << endl;
-    }
+    });
     
     // pick unsat lit per heuristic (walksat)
     const int unsatIndex = unsatClauses[ rand() % unsatClauses.size() ];
@@ -198,7 +198,7 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
     // update flip
     const Var v = var(unsatLit);
     
-    if( config.opt_sls_debug ) cerr << "c flip literal " << ~unsatLit << " to " << unsatLit << " , taken from clause " << c << " [left:" << unsatClauses.size() << "]" << endl;
+    DOUT(if( config.opt_sls_debug ) cerr << "c flip literal " << ~unsatLit << " to " << unsatLit << " , taken from clause " << c << " [left:" << unsatClauses.size() << "]" << endl;);
     assert( isUnsat( unsatLit ) && "this literal has to be false" );
     
     const vector<int>& plusClauses = occ[ toInt( unsatLit) ];
@@ -207,9 +207,9 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
     // handle clauses that get one more satisfied literal
     for( int i = 0; i < plusClauses.size(); ++ i ) {
       const int pIndex = plusClauses[i];
-      if( config.opt_sls_debug ) cerr << "c give this clause one more sat literal: [" << pIndex << "]: " << ca[ formula[pIndex] ] 
+      DOUT(if( config.opt_sls_debug ) cerr << "c give this clause one more sat literal: [" << pIndex << "]: " << ca[ formula[pIndex] ] 
 	                   << ", current satLits: " << clsData[pIndex].satLiterals 
-	                   << ", watches 1=" << clsData[ pIndex ].watch1 + 1<< " 2=" << clsData[ pIndex ].watch2 + 1<< endl;
+	                   << ", watches 1=" << clsData[ pIndex ].watch1 + 1<< " 2=" << clsData[ pIndex ].watch2 + 1<< endl;);
       
       if( clsData[pIndex].satLiterals == 0 ) { // cls became sat
 	delHeap( pIndex );
@@ -225,20 +225,20 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
       }
       clsData[pIndex].satLiterals ++; // after case check!
       
-      if( config.opt_sls_debug ) {
+      DOUT(if( config.opt_sls_debug ) {
 	const Clause& c = ca[ formula[pIndex] ];
 	int satLits = 0;
 	for( int j = 0 ; j < c.size(); ++j ) {
 	  if( isSat(c[j]) ) satLits ++;
 	}
 	assert( satLits + 1== clsData[pIndex].satLiterals && "number of sat lits has to be the same!" ); // although one is not yet flipped
-      }
+      });
     }
     
     // handle clauses that get one more satisfied literal
     for( int i = 0; i < negClauses.size(); ++ i ) {
       const int nIndex = negClauses[i];
-      if( config.opt_sls_debug ) cerr << "c give this clause one less sat literal: [" << nIndex << "]: " << ca[ formula[nIndex] ] << ", current satLits: " << clsData[nIndex].satLiterals << endl;
+      DOUT(if( config.opt_sls_debug ) cerr << "c give this clause one less sat literal: [" << nIndex << "]: " << ca[ formula[nIndex] ] << ", current satLits: " << clsData[nIndex].satLiterals << endl;);
       assert( clsData[nIndex].satLiterals > 0 && "was sat before" );
       
       if( clsData[nIndex].satLiterals == 1 ) { // cls became sat
@@ -265,7 +265,7 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
 	      else { clsData[ nIndex ].watch2 = var(l); satLits++; break; }
 	    }
 	  }
-	  if( config.opt_sls_debug && satLits < 2 ) {
+	  DOUT(if( config.opt_sls_debug && satLits < 2 ) {
 	    cerr << "c not enough sat lits for [" << nIndex << "]: " << c << " with set watches 1=" << clsData[ nIndex ].watch1 + 1<< " 2=" << clsData[ nIndex ].watch2 + 1<< endl;
 	    cerr << "c sat lits: ";
 	    for( int j = 0; j < c.size(); j ++ ) {
@@ -276,21 +276,21 @@ bool Sls::solve( const vec<CRef>& formula, uint64_t stepLimit )
 	      }
 	    }
 	    cerr << endl;
-	  }
+	  });
 	  assert ( satLits > 1 && " there have to be at least to satisfied literals " );
 	  assert( clsData[nIndex].watch1 != clsData[nIndex].watch2 && "the two watched literals have to be different" );
 	}
       }
       clsData[nIndex].satLiterals --;
       
-      if( config.opt_sls_debug ) {
+      DOUT(if( config.opt_sls_debug ) {
 	const Clause& c = ca[ formula[nIndex] ];
 	int satLits = 0;
 	for( int j = 0 ; j < c.size(); ++j ) {
 	  if( isSat(c[j]) ) satLits ++;
 	}
 	assert( satLits == clsData[nIndex].satLiterals + 1 && "number of sat lits has to be the same!" ); // although one is not yet flipped
-      }
+      });
     }
     
     // flip polarity of variable

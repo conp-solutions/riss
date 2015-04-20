@@ -47,8 +47,8 @@ void BlockedClauseElimination::coverdLiteralAddition()
   // setup own structures
   bceHeap.addNewElement(data.nVars() * 2); // set up storage, does not add the element
   bceHeap.clear();
-
-  if( config.opt_bce_debug ) {
+  
+  DOUT( if( config.opt_bce_debug ) {
     cerr << "c before CLA formula" << endl;
     for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
 	cerr << "(" << i << ") (" << data.getClauses()[i] << ")" ;
@@ -56,7 +56,7 @@ void BlockedClauseElimination::coverdLiteralAddition()
 	if( ca[data.getClauses()[i]].can_be_deleted() != 0 ) cerr << " (del) ";
 	cerr << " " << ca[ data.getClauses()[i] ] << endl;
       }
-  }
+  } );
   
   // init
   for( Var v = 0 ; v < data.nVars(); ++ v )
@@ -85,7 +85,7 @@ void BlockedClauseElimination::coverdLiteralAddition()
       claTestedLits++; // count number of literals that have been tested for BCE
       // check whether a clause is a tautology wrt. the other clauses
       const Lit left = ~right; // complement
-      if( config.opt_bce_debug ) cerr << "c CLA work on literal " << right << " with " << data.list(right).size() << " clauses " << endl;
+      DOUT( if( config.opt_bce_debug ) cerr << "c CLA work on literal " << right << " with " << data.list(right).size() << " clauses " << endl; );
       data.lits.clear(); // used for covered literal elimination
       const int listSize = data.list(right).size(); // do not process the newly generated clause here as well!
       for( int i = 0 ; i < listSize; ++ i ) 
@@ -189,7 +189,7 @@ void BlockedClauseElimination::coverdLiteralAddition()
 	    // add old clause to extension stack
 	    data.addToExtension( data.list(right)[i], right );
 	    // remove old clause, since it should not subsume the other clause!
-	    if( config.opt_bce_debug ) cerr << "c CLA turned clause " << ca[ data.list(right)[i] ] << " into the new clause " << ca[newClause] << endl;
+	    DOUT( if( config.opt_bce_debug ) cerr << "c CLA turned clause " << ca[ data.list(right)[i] ] << " into the new clause " << ca[newClause] << endl; );
 	    // add new clause
 	    data.addClause( newClause );
 	    data.getClauses().push( newClause );
@@ -205,7 +205,7 @@ void BlockedClauseElimination::coverdLiteralAddition()
       data.checkGarbage();
   }
   
-  if( config.opt_bce_debug ) {
+  DOUT( if( config.opt_bce_debug ) {
     cerr << "c after CLA formula" << endl;
     for( int i = 0 ; i < data.getClauses().size(); ++ i ) {
 	cerr << "(" << i << ") (" << data.getClauses()[i] << ")" ;
@@ -213,7 +213,7 @@ void BlockedClauseElimination::coverdLiteralAddition()
 	if( ca[data.getClauses()[i]].can_be_deleted() != 0 ) cerr << " (del) ";
 	cerr << " " << ca[ data.getClauses()[i] ] << endl;
       }
-  }
+  });
   
 }
   
@@ -276,7 +276,7 @@ void BlockedClauseElimination::blockedClauseElimination()
       testedLits++; // count number of literals that have been tested for BCE
       // check whether a clause is a tautology wrt. the other clauses
       const Lit left = ~right; // complement
-      if( config.opt_bce_debug ) cerr << "c BCE work on literal " << right << " with " << data.list(right).size() << " clauses " << endl;
+      DOUT(if( config.opt_bce_debug ) cerr << "c BCE work on literal " << right << " with " << data.list(right).size() << " clauses " << endl;);
       data.lits.clear(); // used for covered literal elimination
       for( int i = 0 ; i < data.list(right).size(); ++ i ) 
       {
@@ -319,7 +319,7 @@ void BlockedClauseElimination::blockedClauseElimination()
 		}
 	      }
 	      data.lits.resize( keptCle ); // remove all the other literals
-	      if( config.opt_bce_debug ) cerr << "c resolving " << c << " with " << d << " keeps the literals " << data.lits << endl;
+	      DOUT( if( config.opt_bce_debug ) cerr << "c resolving " << c << " with " << d << " keeps the literals " << data.lits << endl; );
 	      if( keptCle == 0 ) break; // can stop here, because no CLE, and not blocked!
 	    }
 	  } else {
@@ -357,7 +357,7 @@ void BlockedClauseElimination::blockedClauseElimination()
 	    }
 	  }
 	}
-	if( config.opt_bce_debug ) cerr << "c resolved " << c << " with about " << data.list(left).size() << " clauses, blocked: " << isBlocked << endl;
+	DOUT( if( config.opt_bce_debug ) cerr << "c resolved " << c << " with about " << data.list(left).size() << " clauses, blocked: " << isBlocked << endl; );
 	if( config.opt_bce_bce && isBlocked ) {  // the clause c is blocked wrt. the current formula
 	  if( !config.opt_bce_bcm ) {            // perform usual BCE
 	      // add the clause to the stack 
@@ -435,7 +435,7 @@ void BlockedClauseElimination::blockedClauseElimination()
 	    remCLE += data.lits.size(); 
 	    int k = 0, l = 0; // data.lits is a sub set of c, both c and data.lits are ordered!
 	    int keptLiterals = 0;
-	    if( config.opt_bce_debug ) cerr << "c cle turns clause " << c << endl;
+	    DOUT( if( config.opt_bce_debug ) cerr << "c cle turns clause " << c << endl; );
 	    if( data.outputsProof() ) { // store the original clause for deleting it from the proof
 	      data.getSolver()->oc.clear();
 	      for( int m = 0 ; m < c.size(); ++m ) data.getSolver()->oc.push( c[m] ); 
@@ -457,7 +457,7 @@ void BlockedClauseElimination::blockedClauseElimination()
 	    data.addCommentToProof("apply CLE to a clause"); // TODO also delete the original clause!
 	    data.addToProof( c, false, right ); // add the new clause after c[k] has been removed - has been resolved on literal "right", hence, do write that literal to the first position!
 	    data.addToProof( data.getSolver()->oc, true ); // remove the clause of the shape it had before
-	    if( config.opt_bce_debug ) cerr << "c into clause " << c << " by removing " << data.lits.size() << " literals, namely: " << data.lits << endl;
+	    DOUT( if( config.opt_bce_debug ) cerr << "c into clause " << c << " by removing " << data.lits.size() << " literals, namely: " << data.lits << endl; );
 	    if( c.size() == 1 ) {
 	      cleUnits ++;
 	      if( l_False == data.enqueue(c[0] ) ) {
@@ -511,7 +511,7 @@ bool BlockedClauseElimination::process()
   if( !data.unlimited() && ( data.nVars() > config.opt_bce_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_bce_cls && data.nTotLits() > config.opt_bce_lits) ) return false;
   
   // run UP first!
-  if( config.opt_bce_debug ) cerr << "c BCE run unit propagation" << endl;
+  DOUT( if( config.opt_bce_debug ) cerr << "c BCE run unit propagation" << endl; );
   propagation.process(data, true); // propagate, if there's something to be propagated
   modifiedFormula = modifiedFormula  || propagation.appliedSomething();
   if( !data.ok() ) return modifiedFormula;

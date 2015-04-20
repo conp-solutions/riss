@@ -14,6 +14,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "utils/Config.h"
 #include "utils/Options.h"
+#include "utils/Debug.h"
 
 namespace Riss {
 
@@ -37,9 +38,7 @@ public:
  BoolOption opt_fast_rem; // remove elements on watch list faster, but unsorted
  IntOption nanosleep; // nanoseconds to sleep for each conflict
  BoolOption ppOnly; // interrupt after preprocessing
-#if defined TOOLVERSION
- const bool opt_learn_debug;
-#else
+#ifdef DEBUG
  BoolOption opt_learn_debug;
 #endif
  
@@ -93,9 +92,7 @@ public:
 
  BoolOption opt_updateLearnAct;
 
-#if defined TOOLVERSION
- const bool opt_dbg;
-#else
+#ifdef DEBUG
  BoolOption opt_dbg;
 #endif
 
@@ -109,12 +106,16 @@ public:
  StringOption actFile;
  BoolOption opt_pol;
  StringOption polFile;
+#ifdef DEBUG
  IntOption opt_printDecisions;
+#endif
 
  IntOption opt_rMax;
  DoubleOption opt_rMaxInc;
 
- BoolOption localLookaheadDebug; 
+#ifdef DEBUG
+ BoolOption localLookaheadDebug;
+#endif
  BoolOption localLookAhead; 
  BoolOption tb; 
  BoolOption opt_laDyn;

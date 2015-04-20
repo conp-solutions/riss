@@ -21,8 +21,13 @@ config( _config )
 , threads( _threads < 0 ? config.opt_threads : _threads)
 , solver( _solver )
 , ca( solver->ca )
+#ifdef DEBUG
 , log( config.opt_log )
 , data( solver->ca, solver, log, config.opt_unlimited, config.opt_randomized, config.opt_debug )
+#else
+, log( 0 )
+, data( solver->ca, solver, log, config.opt_unlimited, config.opt_randomized, false )
+#endif
 , controller( config.opt_threads )
 // attributes and all that
 , thisClauses( 0 )
@@ -73,7 +78,7 @@ lbool Preprocessor::performSimplification()
   
   MethodClock mc ( data.isInprocessing() ? ipTime : ppTime ); // measure the time for this iteration!
   MethodClock moh( overheadTime ); // measure overhead
-  if( config.printAfter != 0 ) cerr << "c printAfter " << config.printAfter << endl;
+  DOUT(if( config.printAfter != 0 ) cerr << "c printAfter " << config.printAfter << endl;);
     
   // first, remove all satisfied clauses
   if( config.opt_simplify && !solver->simplify() ) { cout.flush(); cerr.flush(); return l_False; }
@@ -81,7 +86,7 @@ lbool Preprocessor::performSimplification()
   lbool status = l_Undef;
   // delete clauses from solver
   
-  if( config.opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << endl;
+  DOUT( if( config.opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << endl; );
   
   cleanSolver ();
   // initialize techniques
@@ -90,9 +95,9 @@ lbool Preprocessor::performSimplification()
   
   if( config.opt_shuffle ) shuffle();
   
-  if( config.opt_check ) checkLists("before initializing");
+  DOUT( if( config.opt_check ) checkLists("before initializing"); );
   initializePreprocessor ();
-  if( config.opt_check ) checkLists("after initializing");
+  DOUT( if( config.opt_check ) checkLists("after initializing"); );
   
   if( config.opt_verbose > 4 ) cerr << "c coprocessor finished initialization" << endl;
   
@@ -107,7 +112,7 @@ lbool Preprocessor::performSimplification()
   for( int ppIteration = 0; ppIteration < ( data.isInprocessing() ? 1 : config.opt_simplifyRounds ); ++ ppIteration )
   {
     double iterTime = cpuTime();
-    if( config.opt_verbose > 0 || config.opt_debug || true) cerr << "c pp iteration " << ppIteration << endl;
+    DOUT( if( config.opt_verbose > 0 || config.opt_debug || true) cerr << "c pp iteration " << ppIteration << endl;);
     // do preprocessing
     if( config.opt_up ) {
       if( config.opt_verbose > 0 ) cerr << "c up ..." << endl;
@@ -152,11 +157,11 @@ lbool Preprocessor::performSimplification()
 	  status = l_False;
     }  
    
-    if( printUP || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'u')  ) {
+    DOUT( if( printUP || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'u')  ) {
     printFormula("after Sorting");
-    }
+    });
     
-    if( config.opt_debug )  { scanCheck("after SORT"); }  
+    DOUT( if( config.opt_debug )  { scanCheck("after SORT"); }  );
     
     if( config.opt_xor ) {
       if( config.opt_verbose > 0 ) cerr << "c xor ..." << endl;
@@ -168,10 +173,10 @@ lbool Preprocessor::performSimplification()
     }
     data.checkGarbage(); // perform garbage collection
     
-    if( config.opt_debug ) { checkLists("after XOR"); scanCheck("after XOR"); }
-    if( printXOR || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'x')) {
+    DOUT( if( config.opt_debug ) { checkLists("after XOR"); scanCheck("after XOR"); });
+    DOUT( if( printXOR || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'x')) {
     printFormula("after XOR");
-    }
+    });
     
     if( config.opt_ent ) {
       if( config.opt_verbose > 0 ) cerr << "c ent ..." << endl;
@@ -181,16 +186,16 @@ lbool Preprocessor::performSimplification()
     }
     data.checkGarbage(); // perform garbage collection
     
-    if( config.opt_debug )  { checkLists("after ENT"); scanCheck("after ENT"); }  
-    if( printENT || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == '1') ) {
+    DOUT( if( config.opt_debug )  { checkLists("after ENT"); scanCheck("after ENT"); }  );
+    DOUT( if( printENT || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == '1') ) {
     printFormula("after ENT");
-    }
+    });
     
     if( config.opt_ternResolve ) {
       if( config.opt_verbose > 0 ) cerr << "c res3 ..." << endl;
       res.process(false); 
       if( config.opt_verbose > 1 )  { printStatistics(cerr); res.printStatistics(cerr); }
-      if( printTernResolve || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == '3') ) printFormula("after TernResolve");
+      DOUT( if( printTernResolve || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == '3') ) printFormula("after TernResolve"););
     }
     
     // clear subsimp stats
@@ -206,12 +211,12 @@ lbool Preprocessor::performSimplification()
 	  status = l_False;
       data.checkGarbage(); // perform garbage collection
       
-      if( printSusi || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 's')) {
+      DOUT( if( printSusi || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 's')) {
       printFormula("after Susi");
-      }
+      });
     }
     
-    if( config.opt_debug ) { checkLists("after SUSI"); scanCheck("after SUSI"); }
+    DOUT( if( config.opt_debug ) { checkLists("after SUSI"); scanCheck("after SUSI"); });
     
     if( config.opt_FM ) {
       if( config.opt_verbose > 0 ) cerr << "c FM ..." << endl;
@@ -222,10 +227,10 @@ lbool Preprocessor::performSimplification()
 	  status = l_False;
       data.checkGarbage(); // perform garbage collection
       
-      if( config.opt_debug ) { checkLists("after FM"); scanCheck("after FM"); }
-      if( printFM || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'f')) {
+      DOUT( if( config.opt_debug ) { checkLists("after FM"); scanCheck("after FM"); });
+      DOUT( if( printFM || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'f')) {
       printFormula("after FM");
-      }
+      });
     }
     
     if( config.opt_rew ) {
@@ -237,10 +242,10 @@ lbool Preprocessor::performSimplification()
 	  status = l_False;
       data.checkGarbage(); // perform garbage collection
       
-      if( config.opt_debug ) { checkLists("after REW"); scanCheck("after REW"); }
-      if( printREW || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'r')) {
+      DOUT( if( config.opt_debug ) { checkLists("after REW"); scanCheck("after REW"); });
+      DOUT( if( printREW || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'r')) {
       printFormula("after REW");
-      }
+      });
     }
     
     if( config.opt_ee ) { // before this technique nothing should be run that alters the structure of the formula (e.g. BVE;BVA)
@@ -252,11 +257,11 @@ lbool Preprocessor::performSimplification()
 	  status = l_False;
       data.checkGarbage(); // perform garbage collection
       
-      if( config.opt_debug ) { checkLists("after EE"); scanCheck("after EE"); }
+      DOUT( if( config.opt_debug ) { checkLists("after EE"); scanCheck("after EE"); });
 
-      if( printEE || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'e') ) {
+      DOUT( if( printEE || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'e') ) {
       printFormula("after EE");
-      }
+      });
     }
     
     if ( config.opt_unhide ) {
@@ -267,10 +272,10 @@ lbool Preprocessor::performSimplification()
       if( !data.ok() ) status = l_False;
       data.checkGarbage(); // perform garbage collection
       
-      if( printUnhide || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'g') ) {
+      DOUT( if( printUnhide || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'g') ) {
       printFormula("after Unhiding");
-      }
-      if( config.opt_debug ) {checkLists("after UNHIDING");  scanCheck("after UNHIDING"); }
+      });
+      DOUT( if( config.opt_debug ) {checkLists("after UNHIDING");  scanCheck("after UNHIDING"); });
     }
     
     if( config.opt_hte ) {
@@ -280,10 +285,10 @@ lbool Preprocessor::performSimplification()
       if( config.opt_verbose > 1 )  { printStatistics(cerr); hte.printStatistics(cerr); }
       data.checkGarbage(); // perform garbage collection
 
-      if( config.opt_debug ) { checkLists("after HTE");  scanCheck("after HTE"); }
-      if( printHTE || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'h')) {
+      DOUT( if( config.opt_debug ) { checkLists("after HTE");  scanCheck("after HTE"); });
+      DOUT( if( printHTE || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'h')) {
       printFormula("after HTE");
-      }
+      });
     }
     
     if ( config.opt_probe ) {
@@ -293,10 +298,10 @@ lbool Preprocessor::performSimplification()
       if( !data.ok() ) status = l_False;
       if( config.opt_verbose > 1 )  { printStatistics(cerr); probing.printStatistics(cerr); }
 
-      if( config.opt_debug ) { checkLists("after PROBE - before GC");  scanCheck("after PROBE - before GC"); }
-      if( printProbe || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'p') ) {
+      DOUT( if( config.opt_debug ) { checkLists("after PROBE - before GC");  scanCheck("after PROBE - before GC"); });
+      DOUT( if( printProbe || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'p') ) {
       printFormula("after Probing");
-      }
+      });
       data.checkGarbage(); // perform garbage collection
     }
 
@@ -308,10 +313,10 @@ lbool Preprocessor::performSimplification()
       if( config.opt_verbose > 1 )  { printStatistics(cerr); bve.printStatistics(cerr); }
       data.checkGarbage(); // perform garbage collection
       
-      if( config.opt_debug ) { checkLists("after BVE");  scanCheck("after BVE"); }
-      if( printBVE || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'v')) {
+      DOUT( if( config.opt_debug ) { checkLists("after BVE");  scanCheck("after BVE"); });
+      DOUT( if( printBVE || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'v')) {
       printFormula("after BVE");
-      }
+      });
     }
     
     if ( config.opt_bva ) {
@@ -322,10 +327,10 @@ lbool Preprocessor::performSimplification()
       if( !data.ok() ) status = l_False;
       data.checkGarbage(); // perform garbage collection
       
-      if( config.opt_debug ) { checkLists("after BVA");  scanCheck("after BVA"); }
-      if( printBVA || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'w') ) {
+      DOUT( if( config.opt_debug ) { checkLists("after BVA");  scanCheck("after BVA"); });
+      DOUT( if( printBVA || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'w') ) {
       printFormula("after BVA");
-      }
+      });
     }
 
     if( config.opt_bce ) {
@@ -335,10 +340,10 @@ lbool Preprocessor::performSimplification()
       if( config.opt_verbose > 1 )  { printStatistics(cerr); bce.printStatistics(cerr); }
       data.checkGarbage(); // perform garbage collection
       
-      if( config.opt_debug )  { checkLists("after BCE");  scanCheck("after BCE"); }  
-      if( printBCE || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'b') ) {
+      DOUT( if( config.opt_debug )  { checkLists("after BCE");  scanCheck("after BCE"); }  );
+      DOUT( if( printBCE || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'b') ) {
 	printFormula("after BCE");
-      }
+      });
     }
     
     if( config.opt_la ) {
@@ -348,10 +353,10 @@ lbool Preprocessor::performSimplification()
       if( config.opt_verbose > 1 )  { printStatistics(cerr); la.printStatistics(cerr); }
       data.checkGarbage(); // perform garbage collection
       
-      if( config.opt_debug )  { checkLists("after LA");  scanCheck("after LA"); }  
-      if( printBCE || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'l') ) {
+      DOUT( if( config.opt_debug )  { checkLists("after LA");  scanCheck("after LA"); }  );
+      DOUT( if( printBCE || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'l') ) {
       printFormula("after BCE");
-      }
+      });
     }
     
     if( config.opt_cce ) {
@@ -361,10 +366,10 @@ lbool Preprocessor::performSimplification()
       if( config.opt_verbose > 1 )  { printStatistics(cerr); cce.printStatistics(cerr); }
       data.checkGarbage(); // perform garbage collection
       
-      if( config.opt_debug )  { checkLists("after CCE");  scanCheck("after CCE"); }  // perform only if BCE finished the whole formula?!
-      if( printCCE || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'c') ) {
+      DOUT( if( config.opt_debug )  { checkLists("after CCE");  scanCheck("after CCE"); });  // perform only if BCE finished the whole formula?!
+      DOUT( if( printCCE || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'c') ) {
       printFormula("after CCE");
-      }
+      });
     }
     
     if( config.opt_rate ) {
@@ -375,24 +380,24 @@ lbool Preprocessor::performSimplification()
     
       data.checkGarbage(); // perform garbage collection
       
-      if( config.opt_debug )  { checkLists("after RATE"), scanCheck("after RATE"); }  // perform only if BCE finished the whole formula?!
-      if( printRATE || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 't') ) {
+      DOUT( if( config.opt_debug )  { checkLists("after RATE"); scanCheck("after RATE"); });  // perform only if BCE finished the whole formula?!
+      DOUT( if( printRATE || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 't') ) {
       printFormula("after RATE");
-      }
+      });
     }
 
     //
     // end of simplification iteration
     //
     iterTime = cpuTime() - iterTime;
-    if( config.opt_verbose > 0 || config.opt_debug || true) cerr << "c used time in interation " << ppIteration << "  : " << iterTime << " s" << endl;    
+    DOUT( if( config.opt_verbose > 0 || config.opt_debug || true) cerr << "c used time in interation " << ppIteration << "  : " << iterTime << " s" << endl;    );
   }
   
   if( config.opt_addRedBins ) {
     if( config.opt_verbose > 0 ) cerr << "c add2 ..." << endl;
     res.process(true); 
     if( config.opt_verbose > 1 )  { printStatistics(cerr); res.printStatistics(cerr); }
-    if( printAddRedBin || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'a') ) printFormula("after Add2");
+    DOUT( if( printAddRedBin || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'a') ) printFormula("after Add2"););
   }
    
 
@@ -476,7 +481,7 @@ lbool Preprocessor::performSimplification()
       //else cerr << "c should apply UP" << endl;
   }
 
-  if( config.opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;
+  DOUT( if( config.opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;);
   
   // if( config.opt_dense && !data.isInprocessing() ) {
   if( config.opt_dense ) {
@@ -486,7 +491,7 @@ lbool Preprocessor::performSimplification()
   
   moh.cont();
   
-  if( config.opt_check ) fullCheck("final check");
+  DOUT( if( config.opt_check ) fullCheck("final check"););
 
   destroyTechniques();
   
@@ -617,7 +622,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
 
   // delete clauses from solver
   
-  if( config.opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << endl;
+  DOUT( if( config.opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << endl;);
   thisClauses = solver->clauses.size();
   thisLearnts = solver->learnts.size();
   
@@ -628,9 +633,9 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
   
   if( config.opt_shuffle ) shuffle();
   
-  if( config.opt_check ) checkLists("before initializing");
+  DOUT( if( config.opt_check ) checkLists("before initializing"););
   initializePreprocessor ();
-  if( config.opt_check ) checkLists("after initializing");
+  DOUT( if( config.opt_check ) checkLists("after initializing"););
   
   if( config.opt_verbose > 4 ) cerr << "c coprocessor finished initialization" << endl;
   
@@ -829,7 +834,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
     }
     
     // perform afte reach call
-    if( config.opt_debug )  { scanCheck("after iteration"); printFormula("after iteration");}   
+    DOUT( if( config.opt_debug )  { scanCheck("after iteration"); printFormula("after iteration");}   );
     data.checkGarbage(); // perform garbage collection
     if( config.opt_verbose > 3 )  printStatistics(cerr);
     if( config.opt_verbose > 4 )  {
@@ -935,7 +940,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
       //else cerr << "c should apply UP" << endl;
   }
 
-  if( config.opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;
+  DOUT( if( config.opt_check ) cerr << "present clauses: orig: " << solver->clauses.size() << " learnts: " << solver->learnts.size() << " solver.ok: " << data.ok() << endl;);
   
   //if( config.opt_dense && !data.isInprocessing() ) {
   if( config.opt_dense ) {
@@ -944,7 +949,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
   }
   
   moh.cont();
-  if( config.opt_check ) fullCheck("final check");
+  DOUT( if( config.opt_check ) fullCheck("final check"););
 
   destroyTechniques();
   
@@ -1188,7 +1193,7 @@ void Preprocessor::extendModel(vec< lbool >& model)
   // get back the old number of variables inside the model, to be able to unshuffle!
   if (formulaVariables != - 1 && formulaVariables < model.size() ) {
     cerr << "c model size before: " << model.size() << " with formula variables: " << formulaVariables << " and shrink: " << model.size() - formulaVariables << endl;
-    model.shrink( model.size() - formulaVariables );
+    model.shrink_( model.size() - formulaVariables );
     cerr << "c model size afterwards: " << model.size() << endl;
   }
   if( config.opt_shuffle ) unshuffle(model);
@@ -1220,7 +1225,11 @@ void Preprocessor::initializePreprocessor()
 	c.set_delete(true);
 	thisClss ++;
       } else {
+#ifdef DEBUG
 	data.addClause( cr, config.opt_check );
+#else
+	data.addClause( cr );
+#endif
 	// TODO: decide for which techniques initClause in not necessary!
 	subsumption.initClause( cr );
 	propagation.initClause( cr );
@@ -1392,9 +1401,9 @@ void Preprocessor::reSetupSolver()
 		    if( data.enqueue(c[0]) == l_False ) {
 		      data.addCommentToProof("learnt unit during resetup solver");
 		      data.addUnitToProof( c[0] ); // tell drup about this unit (whereever it came from)
-		      if( config.opt_debug ) cerr  << "enqueing " << c[0] << " failed." << endl; return;
+		      DOUT(if( config.opt_debug ) cerr  << "enqueing " << c[0] << " failed." << endl; return;);
 		    } else { 
-		      if( config.opt_debug ) cerr << "enqueued " << c[0] << " successfully" << endl; 
+		      DOUT(if( config.opt_debug ) cerr << "enqueued " << c[0] << " successfully" << endl; );
 		      c.set_delete(true);
 		    }
 		    if( solver->propagate() != CRef_Undef ) { data.setFailed(); return; }
@@ -1420,7 +1429,7 @@ void Preprocessor::reSetupSolver()
 	  }
     }
     int c_old = solver->clauses.size();
-    solver->clauses.shrink(solver->clauses.size()-kept_clauses);
+    solver->clauses.shrink_(solver->clauses.size()-kept_clauses);
 
     if( config.opt_verbose > 2 ) fprintf(stderr,"c Subs-STATs: removed clauses: %i of %i,%s" ,c_old - kept_clauses,c_old, (config.opt_verbose == 1 ? "\n" : ""));
 
@@ -1443,7 +1452,7 @@ void Preprocessor::reSetupSolver()
                 solver->learnts[kept_clauses++] = solver->learnts[i];
             }
           } else { // move subsuming clause from learnts to clauses
-	    if( config.opt_check ) cerr << "c clause " << c << " moves from learnt to original " << endl;
+	    DOUT(if( config.opt_check ) cerr << "c clause " << c << " moves from learnt to original " << endl;);
 	    c.set_has_extra(true);
             c.calcAbstraction();
             learntToClause ++;
@@ -1471,8 +1480,10 @@ void Preprocessor::reSetupSolver()
 		  else if( solver->value( c[1] ) == l_False ) {
 		    data.addCommentToProof("learnt unit during resetup solver");
 		    data.addUnitToProof( c[0] ); // tell drup about this unit (whereever it came from)
-		    if( data.enqueue(c[0]) == l_False ) { if( config.opt_debug ) cerr  << "enqueing " << c[0] << " failed." << endl; return; }
-		    else { if( config.opt_debug ) cerr << "enqueued " << c[0] << " successfully" << endl; }
+		    if( data.enqueue(c[0]) == l_False ) { 
+		      DOUT(if( config.opt_debug ) cerr  << "enqueing " << c[0] << " failed." << endl; );
+		      return; }
+		    else { DOUT(if( config.opt_debug ) cerr << "enqueued " << c[0] << " successfully" << endl;); }
 		    if( solver->propagate() != CRef_Undef ) { data.setFailed(); return; }
 		    c.set_delete(true);
 		  } else solver->attachClause(cr);
@@ -1491,7 +1502,7 @@ void Preprocessor::reSetupSolver()
 	  
     }
     int l_old = solver->learnts.size();
-    solver->learnts.shrink(solver->learnts.size()-kept_clauses);
+    solver->learnts.shrink_(solver->learnts.size()-kept_clauses);
     if( config.opt_verbose > 3 ) fprintf(stderr, " moved %i and removed %i from %i learnts\n",learntToClause,(l_old - kept_clauses) -learntToClause, l_old);
 
     
@@ -1696,22 +1707,22 @@ void Preprocessor::scanCheck(const string& headline) {
 	}
 	if( k == data.list( c[j] ).size() ) {
 	  cerr << "c clause [" << cr << "](ign=" << c.can_be_deleted() << ") " << c << " not found in list for literal " << c[j] << endl;
-	  if( config.opt_check > 1 ) assert ( false && "all clauses have to be in the list");
+	  DOUT(if( config.opt_check > 1 ) assert ( false && "all clauses have to be in the list"););
 	}
 	
 	for( int k = j+1; k < c.size(); ++ k ) {
 	  if( c[j] == c[k] ) {
 	    cerr << "c clause ["<<clauses[i]<<"]" << c << " has duplicate literals" << endl;
-	    if( config.opt_check > 1 ) assert ( false && "no duplicate literals are allowed in clauses");
+	    DOUT(if( config.opt_check > 1 ) assert ( false && "no duplicate literals are allowed in clauses"););
 	    j = c.size(); break; 
 	  } else if( c[j] == ~c[k] ) {
 	    cerr << "c clause [" << clauses[i]<< "]" << c << " has complementary literals" << endl;
-	    if( config.opt_check > 1 ) assert ( false && "no complementary literals are allowed in clauses");
+	    DOUT(if( config.opt_check > 1 ) assert ( false && "no complementary literals are allowed in clauses"););
 	  }
 	  else { 
 	    if ( toInt(c[j]) > toInt(c[k]) ) {
 	      cerr << "c clause ["<<clauses[i]<<"]" << c << " is not sorted" << endl;
-	      if( config.opt_check > 1 ) assert ( false && "clauses have to be sorted");
+	      DOUT(if( config.opt_check > 1 ) assert ( false && "clauses have to be sorted"););
 	      j = c.size(); break; 
 	    }
 	  }

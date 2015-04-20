@@ -618,10 +618,10 @@ inline void CoprocessorData::moveVar(Var from, Var to, bool final)
   
     // cerr << "c compress variables to " << to+1 << endl;
 //     solver->assigns.shrink( solver->assigns.size() - to - 1);
-    solver->vardata.shrink( solver->vardata.size() - to - 1);
-    solver->activity.shrink( solver->activity.size() - to - 1);
+    solver->vardata.shrink_( solver->vardata.size() - to - 1);
+    solver->activity.shrink_( solver->activity.size() - to - 1);
 //    solver->seen.shrink( solver->seen.size() - to - 1);
-    solver->varFlags.shrink( solver->varFlags.size() - to - 1);
+    solver->varFlags.shrink_( solver->varFlags.size() - to - 1);
     
     solver->rebuildOrderHeap();
     
@@ -1254,7 +1254,7 @@ inline void CoprocessorData::relocAll(ClauseAllocator& to, vector<CRef> ** updat
                 clauses[j++] = clauses[i];
             }
         }
-        clauses.shrink(i - j);
+        clauses.shrink_(i - j);
     }
     // All learnt:
     //
@@ -1276,7 +1276,7 @@ inline void CoprocessorData::relocAll(ClauseAllocator& to, vector<CRef> ** updat
                 learnts[j++] = learnts[i];
             }
         }
-        learnts.shrink(i - j);
+        learnts.shrink_(i - j);
     }
 }
 

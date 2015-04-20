@@ -130,7 +130,7 @@ void Resolving::ternaryResolve()
     const Var v = (Var)resHeap[0];
     resHeap.removeMin();
         
-    if( config.res3_debug_out ) cerr << "c process variable " << v+1 << " vars[" << data[v] << "]" << endl;
+    DOUT( if( config.res3_debug_out ) cerr << "c process variable " << v+1 << " vars[" << data[v] << "]" << endl;);
     
     const Lit p = mkLit(v,false);
     const Lit n = mkLit(v,true);
@@ -146,7 +146,7 @@ void Resolving::ternaryResolve()
 	res3steps++;
 	if( !data.unlimited() && res3steps > config.opt_res3_steps ) goto endTernResolve;
 	if( resolve( c,d, v, resolvent) ) continue;
-	if( config.res3_debug_out ) cerr << "c resolved " << c << " with " << d << endl;
+	DOUT( if( config.res3_debug_out ) cerr << "c resolved " << c << " with " << d << endl;);
 	if( resolvent.size() == 0 ) {
 	  data.setFailed(); return; 
 	} else if( resolvent.size() == 1 ){
@@ -158,7 +158,7 @@ void Resolving::ternaryResolve()
 	  // add clause here! 
 	  const bool becomeLearnt = c.learnt() || d.learnt();
 	  CRef cr = ca.alloc(resolvent, becomeLearnt); 
-	  if( config.res3_debug_out ) cerr << "c add clause " << ca[cr] << endl;
+	  DOUT( if( config.res3_debug_out ) cerr << "c add clause " << ca[cr] << endl;);
 	  data.addClause(cr);
 	  data.addSubStrengthClause(cr);
 	  data.addCommentToProof("during ternary resolution");
@@ -324,7 +324,7 @@ void Resolving::addRedundantBinaries()
   data.ma.resize( data.nVars() *2 );
   vector < vector<Lit> > big (data.nVars() *2) ;
   
-  if( config.res3_debug_out ) cerr << "add redundant binaries" << endl;
+  DOUT( if( config.res3_debug_out ) cerr << "add redundant binaries" << endl;);
   
   // create big
   for( int p = 0 ; p < 2 ; ++ p ) 
@@ -358,12 +358,12 @@ void Resolving::addRedundantBinaries()
 	// not twice!
 	if( data.ma.isCurrentStep( toInt(l) ) ) continue;
 	data.ma.setCurrentStep( toInt(l) );
-	if( config.res3_debug_out ) cerr << "c found direct " << l << endl;
+	DOUT( if( config.res3_debug_out ) cerr << "c found direct " << l << endl;);
 	data.lits.push_back(l);
       }
       int directLits = data.lits.size();
       
-      if( config.res3_debug_out ) cerr << "c direct lits: " << directLits << endl;
+      DOUT( if( config.res3_debug_out ) cerr << "c direct lits: " << directLits << endl;);
       // no need to work on "empty" trails (no transitive literals)
       if( data.lits.size() == 0 ) continue;
       int level = 1;
@@ -382,7 +382,7 @@ void Resolving::addRedundantBinaries()
 	  if( data.ma.isCurrentStep( toInt(k) ) ) continue;
 	  data.ma.setCurrentStep( toInt(k) );
 	  data.lits.push_back(k);
-	  if( config.res3_debug_out ) cerr << "c found transitive " << startLit << " -> " << k  << "  @ " << level << " via " << l << endl;
+	  DOUT( if( config.res3_debug_out ) cerr << "c found transitive " << startLit << " -> " << k  << "  @ " << level << " via " << l << endl;);
 	}
 	
       }
@@ -393,7 +393,7 @@ void Resolving::addRedundantBinaries()
 	  data.lits[i] = data.lits[ data.lits.size() - 1]; data.lits.pop_back(); --i;
 	}
       
-      if( config.res3_debug_out ) cerr << "c found " << data.lits.size() << " new (" << directLits << " direct) literals for " << startLit << " with " << level << " levels" << endl;
+      DOUT( if( config.res3_debug_out ) cerr << "c found " << data.lits.size() << " new (" << directLits << " direct) literals for " << startLit << " with " << level << " levels" << endl;);
       
       int use = config.opt_add2_red_level ? (level * config.opt_add2_percent) : (config.opt_add2_percent * ( data.lits.size() - directLits ) );
       
@@ -404,7 +404,7 @@ void Resolving::addRedundantBinaries()
       // shuffle some literals to the front!
       for( int i = directLits; i < use+directLits; ++ i ) {
 	int r = i + rand() % (data.lits.size() - i );
-	if( config.res3_debug_out ) cerr << "c swap " << i << " and " << r << " out of " << data.lits.size() << endl;
+	DOUT( if( config.res3_debug_out ) cerr << "c swap " << i << " and " << r << " out of " << data.lits.size() << endl;);
 	const Lit tmp = data.lits[i];
 	data.lits [ i ] = data.lits [ r ];
 	data.lits[r] = tmp;
@@ -414,8 +414,8 @@ void Resolving::addRedundantBinaries()
       for( int i = directLits; i < use+directLits; ++ i ) {
 	  big[ toInt(startLit) ].push_back( data.lits[i] );
 	  big[ toInt( ~data.lits[i]) ].push_back( ~startLit );
-	  if( config.res3_debug_out ) cerr  << "c add " << startLit << " -> " << data.lits[i] << endl;
-	  if( config.res3_debug_out ) cerr  << "c add " << ~data.lits[i] << " -> " << ~startLit << endl;
+	  DOUT( if( config.res3_debug_out ) cerr  << "c add " << startLit << " -> " << data.lits[i] << endl;);
+	  DOUT( if( config.res3_debug_out ) cerr  << "c add " << ~data.lits[i] << " -> " << ~startLit << endl;);
       }
     }
   }
@@ -440,7 +440,7 @@ void Resolving::addRedundantBinaries()
 	  data.addClause(cr);
 	  data.getClauses().push(cr);
 	  modifiedFormula = true;
-	  if( config.res3_debug_out ) cerr << "c added " << ca[cr] << endl;
+	  DOUT( if( config.res3_debug_out ) cerr << "c added " << ca[cr] << endl;);
       }
     }
   }

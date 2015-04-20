@@ -25,7 +25,7 @@ void EntailedRedundant::reset()
   
 bool EntailedRedundant::process()
 {
-  if( config.entailed_debug > 0 ) cerr << "c run ENT process" << endl;
+  DOUT( if( config.entailed_debug > 0 ) cerr << "c run ENT process" << endl;);
   MethodTimer mt(&processTime);
   
   if( ! performSimplification() ) return false; // do not do anything?!
@@ -52,7 +52,7 @@ bool EntailedRedundant::process()
       data.ma.setCurrentStep( toInt(c[i] ) );
     }
     
-    if( config.entailed_debug > 1  ) cerr << "c work on clause " << c << " with min literal " << min << " toRemoveSoFar: " << data.clss.size() << endl;
+    DOUT( if( config.entailed_debug > 1  ) cerr << "c work on clause " << c << " with min literal " << min << " toRemoveSoFar: " << data.clss.size() << endl;);
     
     // all clauses that contain this literal are candidate - all literals except one have to be part of the clause!
     vector<CRef>& clss = data.list(min);
@@ -67,20 +67,20 @@ bool EntailedRedundant::process()
       data.lits.clear();
       while( n < candidate.size() && m < c.size() ) {
 	if( candidate[n] == c[m] ) { // match
-	  if( config.entailed_debug > 4 ) cerr << "c " << candidate[n] << " == " << c[m] << endl;
+	  DOUT( if( config.entailed_debug > 4 ) cerr << "c " << candidate[n] << " == " << c[m] << endl;);
 	  n++; m++;
 	} else if( c[m] < candidate[n] ) { // there is a literal inside original, which is not inside candidate - this literal is part of the data.lits literals
-	  if( config.entailed_debug > 4 ) cerr << "c " << candidate[n] << " > " << c[m] << " -> new missing: " << data.lits << endl;
+	  DOUT( if( config.entailed_debug > 4 ) cerr << "c " << candidate[n] << " > " << c[m] << " -> new missing: " << data.lits << endl;);
 	  data.lits.push_back( c[m] );
 	  m ++;
 	} else if( candidate[n] < c[m] ) { // there is a literal inside candidate, which is not inside original
 	  if( resolveLit == lit_Undef ) resolveLit = candidate[n];
 	  else if( resolveLit != lit_Undef ) { 
 	    resolveLit = lit_Error; 
-	    if( config.entailed_debug > 4 ) cerr << "c " << candidate[n] << " < " << c[m] << " -> resolveLit: " << resolveLit << " => no candidate!" << endl;
+	    DOUT( if( config.entailed_debug > 4 ) cerr << "c " << candidate[n] << " < " << c[m] << " -> resolveLit: " << resolveLit << " => no candidate!" << endl;);
 	    goto checkNextCandidate;
 	  }
-	  if( config.entailed_debug > 4 ) cerr << "c " << candidate[n] << " < " << c[m] << " -> resolveLit: " << resolveLit << endl;
+	  DOUT( if( config.entailed_debug > 4 ) cerr << "c " << candidate[n] << " < " << c[m] << " -> resolveLit: " << resolveLit << endl;);
 	  data.lits.push_back( ~resolveLit );
 	  n ++;
 	}
@@ -95,15 +95,15 @@ bool EntailedRedundant::process()
       if( resolveLit != lit_Error ) for( ;m < c.size(); ++m ) data.lits.push_back(c[m]);
       if( resolveLit == lit_Undef ) { // candidate subsumes other clause - subsume, continue
 	subsumed ++;
-	if( config.entailed_debug > 1 ) cerr << "c " << candidate << " subsumes " << c << "(" << clss[i] << " - " << cr << ")" << endl;
+	DOUT( if( config.entailed_debug > 1 ) cerr << "c " << candidate << " subsumes " << c << "(" << clss[i] << " - " << cr << ")" << endl;);
 	data.clss.push_back(cr);
 	goto checkNextClause;
       } else if ( resolveLit == lit_Error ) {
 	continue; // candidate is no candidate!
       } else {
-	if( config.entailed_debug > 3 ) cerr << "c found candidate " << candidate << " with missing vector " << data.lits << endl;
+	DOUT( if( config.entailed_debug > 3 ) cerr << "c found candidate " << candidate << " with missing vector " << data.lits << endl;);
 	if( data.lits.size() == 1 ) {
-	  if( config.entailed_debug > 1 ) cerr << "c " << c << " extra-subsumes " << candidate << endl;
+	  DOUT( if( config.entailed_debug > 1 ) cerr << "c " << c << " extra-subsumes " << candidate << endl;);
 	  candidate.set_delete(true);
 	  data.removedClause( clss[i] );
 	  extraSubs ++;
@@ -119,7 +119,7 @@ bool EntailedRedundant::process()
 	  if( cr2 == cr || cr2 == clss[i] ) continue; // do not handle same clause twice!
 	  const Clause& c2 = ca[cr2];
 	  if( c2.can_be_deleted() || c2.size() < data.lits.size() || c2.learnt() ) continue; // this clause is too small to contain all literals in data.lits
-	  if( config.entailed_debug > 4 ) cerr << "c consider as match: " << c2 << endl;
+	  DOUT( if( config.entailed_debug > 4 ) cerr << "c consider as match: " << c2 << endl;);
 	  int n = 0; // for literals inside data.lits
 	  int m = 0; // for literals inside the clause
 	  
@@ -128,29 +128,29 @@ bool EntailedRedundant::process()
 	      n++; m++;
 	    } else if( c2[m] < data.lits[n] ) { // there is a literal inside c2, which is not inside data.lits - check whether in c
 	      if( !data.ma.isCurrentStep( toInt(c2[m] ) ) ) {
-		if( config.entailed_debug > 3 ) cerr << "c reject match " << c2 << " , because " << c2[m] << " notin " << c << endl;
+		DOUT( if( config.entailed_debug > 3 ) cerr << "c reject match " << c2 << " , because " << c2[m] << " notin " << c << endl;);
 		goto checkNextMatch; // not inside c -> no match for the current candidate
 	      }
 	      m ++;
 	    } else if( data.lits[n] < c2[m] ) { // there is a literal inside data.lits, which is not inside c2
-	      if( config.entailed_debug > 3 ) cerr << "c reject match " << c2 << " , because " << data.lits[n] << " notin " << c2 << endl;
+	      DOUT( if( config.entailed_debug > 3 ) cerr << "c reject match " << c2 << " , because " << data.lits[n] << " notin " << c2 << endl;);
 	      goto checkNextMatch; // not inside data.lits -> no match for the current candidate
 	    }
 	  }
 	  
 	  if( n < data.lits.size() ) {
-	    if( config.entailed_debug > 3 ) cerr << "c reject match " << c2 << " , because " << data.lits[n] << " notin " << c2 << endl;
+	    DOUT( if( config.entailed_debug > 3 ) cerr << "c reject match " << c2 << " , because " << data.lits[n] << " notin " << c2 << endl;);
 	    goto checkNextMatch; // not all literals found -> not match for current candidate
 	  }
 	  for( ; m<c2.size(); ++m ) { // check whether all remaining literals are also part of c
 	    if( !data.ma.isCurrentStep( toInt(c2[m] ) ) ) {
-		if( config.entailed_debug > 3 ) cerr << "c reject match " << c2 << " , because " << c2[m] << " notin " << c << endl;
+		DOUT( if( config.entailed_debug > 3 ) cerr << "c reject match " << c2 << " , because " << c2[m] << " notin " << c << endl;);
 		goto checkNextMatch; // not inside c -> no match for the current candidate
 	      }
 	  }
 	  
 	  // here, candidate and match are found!
-	  if( config.entailed_debug > 0 ) cerr << "c ENT clause " << c << " is resolvent of " << candidate << " and " << c2 << endl;
+	  DOUT( if( config.entailed_debug > 0 ) cerr << "c ENT clause " << c << " is resolvent of " << candidate << " and " << c2 << endl;);
 	  data.clss.push_back(cr);
 	  goto checkNextClause;
 	  
@@ -166,7 +166,7 @@ bool EntailedRedundant::process()
   // remove all found clauses!
   for( int i = 0 ; i < data.clss.size(); ++ i ) 
   {
-    if( config.entailed_debug > 3 ) cerr << "c ENT remove clause " << ca[data.clss[i]] << endl;
+    DOUT( if( config.entailed_debug > 3 ) cerr << "c ENT remove clause " << ca[data.clss[i]] << endl;);
     ca[data.clss[i]].set_delete(true);
     data.removedClause( data.clss[i] );
   }
