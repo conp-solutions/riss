@@ -112,7 +112,7 @@ inline void* TwinAllocator::initPage(int bin, uint32_t size)
 	  return NULL;
 	}
 	
-	std::cerr << "c init another page for size " << size << " and bin " << bin << std::endl;
+// 	std::cerr << "c init another page for size " << size << " and bin " << bin << std::endl;
 	
 	*(_lastPage[bin]) = ptr;
 	
