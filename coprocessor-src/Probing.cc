@@ -223,7 +223,7 @@ CRef Probing::prPropagate( bool doDouble )
 	  }
 	}
 	
-        for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;);{
+        for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;){
 	    if( i->isBinary() ) { *j++ = *i++; continue; } // skip binary clauses (have been propagated before already!}
             // Try to avoid inspecting the clause:
             const Lit blocker = i->blocker();
