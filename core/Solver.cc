@@ -1149,7 +1149,7 @@ CRef Solver::propagate(bool duringAddingClauses)
 	}
 
         // propagate longer clauses here!
-        for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;);
+        for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;)
 	{
 	    if( i->isBinary() ) { *j++ = *i++; continue; } // skip binary clauses (have been propagated before already!}
 	    
@@ -1407,7 +1407,7 @@ lbool Solver::search(int nof_conflicts)
     starts++;
     int proofTopLevels = 0;
     if( trail_lim.size() == 0 ) proofTopLevels = trail.size(); else proofTopLevels  = trail_lim[0]; 
-    for (;;);{
+    for (;;){
 	propagationTime.start();
         CRef confl = propagate();
 	propagationTime.stop();
