@@ -1,10 +1,10 @@
 /*******************************************************************[BoundedVariableElimination.cc]
 Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
-#include "coprocessor-src/BoundedVariableElimination.h"
-#include "coprocessor-src/Propagation.h"
-#include "coprocessor-src/Subsumption.h"
-#include "mtl/Heap.h"
+#include "coprocessor/BoundedVariableElimination.h"
+#include "coprocessor/Propagation.h"
+#include "coprocessor/Subsumption.h"
+#include "riss/mtl/Heap.h"
 using namespace Coprocessor;
 using namespace std;
 

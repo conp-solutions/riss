@@ -16,7 +16,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef BMCwrapper_h
 #define BMCwrapper_h
 
-#include "core/Solver.h"
+#include "riss/core/Solver.h"
 
 namespace Riss {
   

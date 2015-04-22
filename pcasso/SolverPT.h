@@ -8,16 +8,16 @@
 #ifndef SOLVERPT_H
 #define	SOLVERPT_H
 
-#include "mtl/Vec.h"
-#include "core/SolverTypes.h"
-#include "pcasso-src/SplitterSolver.h"
+#include "riss/mtl/Vec.h"
+#include "riss/core/SolverTypes.h"
+#include "pcasso/SplitterSolver.h"
 
 // Davide> Beginning of my includes
-#include "utils/LockCollection.h"
-#include "pcasso-src/LevelPool.h"
-#include "pcasso-src/PartitionTree.h"
+#include "riss/utils/LockCollection.h"
+#include "pcasso/LevelPool.h"
+#include "pcasso/PartitionTree.h"
 
-#include "utils/Statistics-mt.h"
+#include "riss/utils/Statistics-mt.h"
 
 namespace Pcasso {        
     class SolverPT : public SplitterSolver {

@@ -9,8 +9,8 @@
 #define PCASSODEBUG_H_
 
 #include <iostream>
-#include "mtl/Vec.h"
-#include "core/SolverTypes.h"
+#include "riss/mtl/Vec.h"
+#include "riss/core/SolverTypes.h"
 
 using namespace std;
 using namespace Riss;

@@ -5,12 +5,12 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #ifndef XOR_HH
 #define XOR_HH
 
-#include "core/Solver.h"
-#include "coprocessor-src/Technique.h"
-#include "coprocessor-src/CoprocessorTypes.h"
+#include "riss/core/Solver.h"
+#include "coprocessor/Technique.h"
+#include "coprocessor/CoprocessorTypes.h"
 
-#include "coprocessor-src/Propagation.h"
-#include "coprocessor-src/EquivalenceElimination.h"
+#include "coprocessor/Propagation.h"
+#include "coprocessor/EquivalenceElimination.h"
 
 #include <vector>
 

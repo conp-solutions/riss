@@ -27,16 +27,16 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <signal.h>
 #include <zlib.h>
 
-#include "utils/System.h"
-#include "utils/ParseUtils.h"
-#include "utils/Options.h"
-#include "utils/AutoDelete.h"
-#include "core/Dimacs.h"
-#include "core/Solver.h"
+#include "riss/utils/System.h"
+#include "riss/utils/ParseUtils.h"
+#include "riss/utils/Options.h"
+#include "riss/utils/AutoDelete.h"
+#include "riss/core/Dimacs.h"
+#include "riss/core/Solver.h"
 
-#include "proofcheck-src/ProofChecker.h"
+#include "proofcheck/ProofChecker.h"
 
-#include "utils/version.h" // include the file that defines the solver version
+#include "riss/utils/version.h" // include the file that defines the solver version
 
 using namespace Riss;
 

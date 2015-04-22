@@ -18,9 +18,9 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#include "mtl/Sort.h"
-#include "simp/SimpSolver.h"
-#include "utils/System.h"
+#include "riss/mtl/Sort.h"
+#include "riss/simp/SimpSolver.h"
+#include "riss/utils/System.h"
 
 using namespace Riss;
 

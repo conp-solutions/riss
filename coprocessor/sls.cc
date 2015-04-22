@@ -2,7 +2,7 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "coprocessor-src/sls.h"
+#include "coprocessor/sls.h"
 
 using namespace Coprocessor;
 

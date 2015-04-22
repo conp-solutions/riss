@@ -5,11 +5,11 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #ifndef TECHNIQUE_HH
 #define TECHNIQUE_HH
 
-#include "core/Solver.h"
-#include "utils/System.h"
+#include "riss/core/Solver.h"
+#include "riss/utils/System.h"
 
-#include "utils/ThreadController.h"
-#include "coprocessor-src/CP3Config.h"
+#include "riss/utils/ThreadController.h"
+#include "coprocessor/CP3Config.h"
 using namespace Riss;
 
 namespace Coprocessor {

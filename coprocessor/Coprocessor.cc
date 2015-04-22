@@ -2,12 +2,12 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "coprocessor-src/Coprocessor.h"
+#include "coprocessor/Coprocessor.h"
 
 
-#include "coprocessor-src/VarFileParser.h"
-#include "coprocessor-src/Shuffler.h"
-#include "mtl/Sort.h"
+#include "coprocessor/VarFileParser.h"
+#include "coprocessor/Shuffler.h"
+#include "riss/mtl/Sort.h"
 
 #include <iostream>
 #include <cstring>

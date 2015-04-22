@@ -33,17 +33,17 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <zlib.h>
 #include <sys/resource.h>
 
-#include "utils/System.h"
-#include "utils/ParseUtils.h"
-#include "utils/Options.h"
-#include "core/Dimacs.h"
-#include "simp/SimpSolver.h"
+#include "riss/utils/System.h"
+#include "riss/utils/ParseUtils.h"
+#include "riss/utils/Options.h"
+#include "riss/core/Dimacs.h"
+#include "riss/simp/SimpSolver.h"
 
-#include "coprocessor-src/Coprocessor.h"
+#include "coprocessor/Coprocessor.h"
 
 #include <iostream>
 
-#include "utils/version.h" // include the file that defines the solver version
+#include "riss/utils/version.h" // include the file that defines the solver version
 
 using namespace Riss;
 

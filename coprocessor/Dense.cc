@@ -2,7 +2,7 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "coprocessor-src/Dense.h"
+#include "coprocessor/Dense.h"
 
 #include <fstream>
 #include <sstream>

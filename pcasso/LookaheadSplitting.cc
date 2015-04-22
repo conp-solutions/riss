@@ -9,9 +9,9 @@
 
 #include <math.h>
 
-#include "mtl/Sort.h"
-#include "mtl/Vec.h"
-#include "core/SolverTypes.h"
+#include "riss/mtl/Sort.h"
+#include "riss/mtl/Vec.h"
+#include "riss/core/SolverTypes.h"
 
 using namespace Pcasso;
 

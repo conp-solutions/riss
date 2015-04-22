@@ -5,11 +5,11 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #ifndef REWRITER_HH
 #define REWRITER_HH
 
-#include "core/Solver.h"
-#include "coprocessor-src/Technique.h"
-#include "coprocessor-src/CoprocessorTypes.h"
+#include "riss/core/Solver.h"
+#include "coprocessor/Technique.h"
+#include "coprocessor/CoprocessorTypes.h"
 
-#include "coprocessor-src/Subsumption.h"
+#include "coprocessor/Subsumption.h"
 
 using namespace Riss;
 

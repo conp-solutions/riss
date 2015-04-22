@@ -24,10 +24,10 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_MultiHashLookUpTable_h
 #define Minisat_MultiHashLookUpTable_h
 
-#include "mtl/IntTypes.h"
-#include "mtl/Vec.h"
+#include "riss/mtl/IntTypes.h"
+#include "riss/mtl/Vec.h"
 
-#include "mtl/Map.h"
+#include "riss/mtl/Map.h"
 
 namespace Riss {
 

@@ -2,7 +2,7 @@
 Copyright (c) 2014,      Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "pfolio-src/PSolver.h"
+#include "pfolio/PSolver.h"
 
 #include <assert.h>
 

@@ -2,7 +2,7 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "coprocessor-src/Probing.h"
+#include "coprocessor/Probing.h"
 
 using namespace Coprocessor;
 

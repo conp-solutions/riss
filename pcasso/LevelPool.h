@@ -10,14 +10,14 @@
 #include <string>
 #include <vector>
 #include <map>
-#include "mtl/Vec.h"
-#include "mtl/Sort.h"
-#include "core/SolverTypes.h"
-#include "pcasso-src/PcassoClause.h"
-#include "utils/LockCollection.h"
-#include "pcasso-src/RWLock.h"
-#include "utils/Debug.h"
-// #include "../utils/Statistics-mt.h"
+#include "riss/mtl/Vec.h"
+#include "riss/mtl/Sort.h"
+#include "riss/core/SolverTypes.h"
+#include "pcasso/PcassoClause.h"
+#include "riss/utils/LockCollection.h"
+#include "pcasso/RWLock.h"
+#include "riss/utils/Debug.h"
+// #include "riss/utils/Statistics-mt.h"
 
 #include <iostream>
 #include <fstream>

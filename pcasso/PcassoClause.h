@@ -1,7 +1,7 @@
 #ifndef PCASSOCLAUSE_H
 #define PCASSOCLAUSE_H
 
-#include "mtl/Vec.h"
+#include "riss/mtl/Vec.h"
 #include <iostream> // Davide> Debug
 
 using namespace Riss;

@@ -4,13 +4,13 @@ Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, All rights reserved.
 #ifndef BVE_HH
 #define BVE_HH
 
-#include "core/Solver.h"
+#include "riss/core/Solver.h"
 
-#include "coprocessor-src/Technique.h"
+#include "coprocessor/Technique.h"
 
-#include "coprocessor-src/CoprocessorTypes.h"
-#include "coprocessor-src/Subsumption.h"
-#include "mtl/Heap.h"
+#include "coprocessor/CoprocessorTypes.h"
+#include "coprocessor/Subsumption.h"
+#include "riss/mtl/Heap.h"
 
 using namespace Riss;
 using namespace std;

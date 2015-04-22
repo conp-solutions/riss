@@ -2,8 +2,8 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "coprocessor-src/FourierMotzkin.h"
-#include "mtl/Sort.h"
+#include "coprocessor/FourierMotzkin.h"
+#include "riss/mtl/Sort.h"
 #include <bits/algorithmfwd.h>
 
 

@@ -10,11 +10,11 @@
 
 #include <vector>
 
-#include "core/SolverTypes.h"
-#include "utils/LockCollection.h"
-#include "mtl/Vec.h"
-#include "mtl/Sort.h"
-#include "pcasso-src/PcassoClause.h"
+#include "riss/core/SolverTypes.h"
+#include "riss/utils/LockCollection.h"
+#include "riss/mtl/Vec.h"
+#include "riss/mtl/Sort.h"
+#include "pcasso/PcassoClause.h"
 
 // Debug
 #include <stdio.h>

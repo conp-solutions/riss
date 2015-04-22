@@ -11,12 +11,12 @@ on the Communicator implementation.
 
 #include <math.h>
 
-#include "mtl/Sort.h"
-// #include "core/Solver.h"
-#include "utils/System.h"
+#include "riss/mtl/Sort.h"
+// #include "riss/core/Solver.h"
+#include "riss/utils/System.h"
 
 // to avoid cyclic dependencies
-#include "core/Communication.h"
+#include "riss/core/Communication.h"
 
 // for test_cancel()
 #include <pthread.h>

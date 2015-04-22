@@ -30,15 +30,15 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_Solver_h
 #define Minisat_Solver_h
 
-#include "mtl/Vec.h"
-#include "mtl/Heap.h"
-#include "mtl/Alg.h"
-#include "utils/Options.h"
-#include "utils/System.h"
-#include "core/SolverTypes.h"
-#include "core/BoundedQueue.h"
-#include "core/Constants.h"
-#include "core/CoreConfig.h"
+#include "riss/mtl/Vec.h"
+#include "riss/mtl/Heap.h"
+#include "riss/mtl/Alg.h"
+#include "riss/utils/Options.h"
+#include "riss/utils/System.h"
+#include "riss/core/SolverTypes.h"
+#include "riss/core/BoundedQueue.h"
+#include "riss/core/Constants.h"
+#include "riss/core/CoreConfig.h"
 
 //
 // choose which bit width should be used
@@ -898,7 +898,7 @@ bool Solver::addUnitClauses(const vec< Lit >& other)
 //
 }  // close namespace for include
 // check generation of DRUP/DRAT proof on the fly
-#include "proofcheck-src/OnlineProofChecker.h"
+#include "proofcheck/OnlineProofChecker.h"
 
 namespace Riss { // open namespace again!
 
@@ -927,8 +927,8 @@ inline void Solver::printClause(CRef cr)
 //
 // for parallel portfolio communication, have code in header, so that the code can be inlined!
 //
-#include "core/Communication.h"
-#include "core/SolverCommunication.h"
+#include "riss/core/Communication.h"
+#include "riss/core/SolverCommunication.h"
 
 
 namespace Riss { // open namespace again!

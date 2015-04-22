@@ -5,9 +5,9 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 #ifndef PROOFCHECKER_H
 #define PROOFCHECKER_H
 
-#include "mtl/Vec.h"
-#include "core/SolverTypes.h"
-#include "utils/System.h"
+#include "riss/mtl/Vec.h"
+#include "riss/core/SolverTypes.h"
+#include "riss/utils/System.h"
 
 namespace Riss {
   

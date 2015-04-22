@@ -23,8 +23,8 @@ IN THE SOFTWARE.
 
 extern "C" { // we are compiling with G++, however, picosat is C code, as well as the library interfaces of the other two solvers
   #include "picosat.h" // is found because an include path is set from the outside (makefile)
-  #include "../lib-src/librissc.h" 
-  #include "../lib-src/libprissc.h" 
+  #include "riss/lib/librissc.h" 
+  #include "riss/lib/libprissc.h" 
 }
 
 #include <assert.h>
@@ -48,7 +48,7 @@ using namespace std;
 /**
  *  For using coprocessor 3 as formula simplification
  */
-#include "../lib-src/libcoprocessorc.h"
+#include "riss/lib/libcoprocessorc.h"
 
 /**
  *  For using abc ...

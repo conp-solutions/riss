@@ -5,13 +5,13 @@ Copyright (c) 2014,      Norbert Manthey, All rights reserved.
 #ifndef Minisat_PSolver_h
 #define Minisat_PSolver_h
 
-#include "core/Solver.h"
-#include "core/CoreConfig.h"
-#include "coprocessor-src/CP3Config.h"
+#include "riss/core/Solver.h"
+#include "riss/core/CoreConfig.h"
+#include "coprocessor/CP3Config.h"
 
-#include "pfolio-src/PfolioConfig.h"
+#include "pfolio/PfolioConfig.h"
 
-#include "core/Communication.h"
+#include "riss/core/Communication.h"
 
 #include "pthread.h"
 

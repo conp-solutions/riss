@@ -8,13 +8,13 @@
 #ifndef LOOKAHEADSPLITTING_H
 #define	LOOKAHEADSPLITTING_H
 
-#include "mtl/Vec.h"
-#include "core/SolverTypes.h"
-#include "utils/LockCollection.h"
-#include "core/Solver.h"
-#include "utils/Statistics-mt.h"
-#include "pcasso-src/SplitterSolver.h"
-#include "utils/Debug.h"
+#include "riss/mtl/Vec.h"
+#include "riss/core/SolverTypes.h"
+#include "riss/utils/LockCollection.h"
+#include "riss/core/Solver.h"
+#include "riss/utils/Statistics-mt.h"
+#include "pcasso/SplitterSolver.h"
+#include "riss/utils/Debug.h"
 
 namespace Pcasso {
     class LookaheadSplitting : public SplitterSolver {

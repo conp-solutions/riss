@@ -2,9 +2,9 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "coprocessor-src/Rewriter.h"
+#include "coprocessor/Rewriter.h"
 
-#include "mtl/Sort.h"
+#include "riss/mtl/Sort.h"
 
 #include <algorithm>
 

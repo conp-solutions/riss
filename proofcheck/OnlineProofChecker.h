@@ -5,13 +5,13 @@ Copyright (c) 2014, Norbert Manthey, All rights reserved.
 #ifndef OnlineProofChecker_h
 #define OnlineProofChecker_h
 
-#include "mtl/Vec.h"
-#include "mtl/Heap.h"
-#include "mtl/Alg.h"
-#include "utils/Options.h"
-#include "utils/System.h"
-#include "core/SolverTypes.h"
-#include "core/Constants.h"
+#include "riss/mtl/Vec.h"
+#include "riss/mtl/Heap.h"
+#include "riss/mtl/Alg.h"
+#include "riss/utils/Options.h"
+#include "riss/utils/System.h"
+#include "riss/core/SolverTypes.h"
+#include "riss/core/Constants.h"
 
 // for generic interface
 #include <vector>

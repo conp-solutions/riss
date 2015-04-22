@@ -3,8 +3,8 @@
  **************************************************************************************************/
 
 #include "CNFClassifier.h"
-#include "utils/System.h" // for cpuTime
-#include "coprocessor-src/CoprocessorTypes.h" // for binary implication graph
+#include "riss/utils/System.h" // for cpuTime
+#include "coprocessor/CoprocessorTypes.h" // for binary implication graph
 #include <sstream>
 #include <fstream>
 #include <iostream>
@@ -12,7 +12,7 @@
 #include <limits.h>
 #include <math.h>
 
-#include "mtl/Sort.h"
+#include "riss/mtl/Sort.h"
 
 /*
 

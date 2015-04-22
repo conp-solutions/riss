@@ -8,7 +8,7 @@
 #ifndef SPLITTERSOLVER_H
 #define	SPLITTERSOLVER_H
 
-#include "core/Solver.h"
+#include "riss/core/Solver.h"
 
 using namespace Riss;
 

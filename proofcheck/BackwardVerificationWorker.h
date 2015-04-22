@@ -5,10 +5,10 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 #ifndef SEQUENTIALBACKWARDWORKER_H
 #define SEQUENTIALBACKWARDWORKER_H
 
-#include "mtl/Vec.h"
-#include "core/SolverTypes.h"
+#include "riss/mtl/Vec.h"
+#include "riss/core/SolverTypes.h"
 
-#include "proofcheck-src/BackwardChecker.h"
+#include "proofcheck/BackwardChecker.h"
 
 #include <deque> // to have a queue for LIFO and FIFO
 

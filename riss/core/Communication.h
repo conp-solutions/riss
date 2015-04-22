@@ -16,14 +16,14 @@ using namespace std;
 using namespace Riss;
 
 // own files
-#include "utils/LockCollection.h"
+#include "riss/utils/LockCollection.h"
 //#include "Controller.h"
 // minisat files
-#include "core/SolverTypes.h"
-#include "core/Solver.h"
+#include "riss/core/SolverTypes.h"
+#include "riss/core/Solver.h"
 
 
-#include "proofcheck-src/ProofMaster.h"
+#include "proofcheck/ProofMaster.h"
 /** collection of some wait states */
 enum WaitState {
   oneIdle = 0,

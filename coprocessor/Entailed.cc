@@ -2,7 +2,7 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "coprocessor-src/Entailed.h"
+#include "coprocessor/Entailed.h"
 
 
 using namespace Coprocessor;

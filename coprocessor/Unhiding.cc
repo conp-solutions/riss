@@ -2,8 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "coprocessor-src/Unhiding.h"
-#include "mtl/Sort.h"
+#include "coprocessor/Unhiding.h"
+#include "riss/mtl/Sort.h"
 
 using namespace Coprocessor;
 

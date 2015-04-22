@@ -8,11 +8,11 @@
 #ifndef VSIDSSPLITTING_H
 #define	VSIDSSPLITTING_H
 
-#include "mtl/Vec.h"
-#include "core/SolverTypes.h"
-#include "utils/LockCollection.h"
-#include "core/Solver.h"
-#include "pcasso-src/SplitterSolver.h"
+#include "riss/mtl/Vec.h"
+#include "riss/core/SolverTypes.h"
+#include "riss/utils/LockCollection.h"
+#include "riss/core/Solver.h"
+#include "pcasso/SplitterSolver.h"
 
 namespace Pcasso {
     class VSIDSSplitting : public SplitterSolver {

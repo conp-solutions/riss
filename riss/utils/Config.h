@@ -12,7 +12,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Config_h
 #define Config_h
 
-#include "utils/Options.h"
+#include "riss/utils/Options.h"
 
 #include <string>
 #include <vector>

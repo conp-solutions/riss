@@ -27,10 +27,10 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <string>
 #include <sstream>
 
-#include "mtl/IntTypes.h"
-#include "mtl/Vec.h"
-#include "utils/ParseUtils.h"
-#include "mtl/Sort.h"
+#include "riss/mtl/IntTypes.h"
+#include "riss/mtl/Vec.h"
+#include "riss/utils/ParseUtils.h"
+#include "riss/mtl/Sort.h"
 
 namespace Riss {
 

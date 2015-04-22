@@ -2,9 +2,9 @@
 Copyright (c) 2015, All rights reserved, Norbert Manthey
 **************************************************************************************************/
 
-#include "proofcheck-src/BackwardVerificationWorker.h"
+#include "proofcheck/BackwardVerificationWorker.h"
 
-#include "utils/Options.h"
+#include "riss/utils/Options.h"
 
 using namespace Riss;
 

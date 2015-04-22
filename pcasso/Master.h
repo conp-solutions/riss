@@ -23,17 +23,17 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #define COMPILE_SPLITTER
 
 // splitter
-#include "utils/LockCollection.h"
+#include "riss/utils/LockCollection.h"
 #include "PartitionTree.h"
-#include "pcasso-src/SplitterSolver.h"
+#include "pcasso/SplitterSolver.h"
 
 // Minisat
-#include "mtl/Vec.h"
-#include "core/SolverTypes.h"
-#include "utils/Options.h"
-#include "utils/ParseUtils.h"
-#include "utils/Statistics-mt.h"
-#include "utils/System.h"
+#include "riss/mtl/Vec.h"
+#include "riss/core/SolverTypes.h"
+#include "riss/utils/Options.h"
+#include "riss/utils/ParseUtils.h"
+#include "riss/utils/Statistics-mt.h"
+#include "riss/utils/System.h"
 
 // libs
 #include <pthread.h>

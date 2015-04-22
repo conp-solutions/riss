@@ -5,10 +5,10 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #ifndef RATE_HH
 #define RATE_HH
 
-#include "core/Solver.h"
-#include "coprocessor-src/Technique.h"
-#include "coprocessor-src/CoprocessorTypes.h"
-#include "coprocessor-src/Propagation.h"
+#include "riss/core/Solver.h"
+#include "coprocessor/Technique.h"
+#include "coprocessor/CoprocessorTypes.h"
+#include "coprocessor/Propagation.h"
 
 using namespace Riss;
 

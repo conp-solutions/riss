@@ -2,7 +2,7 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "coprocessor-src/LiteralAddition.h"
+#include "coprocessor/LiteralAddition.h"
 
 using namespace Coprocessor;
 

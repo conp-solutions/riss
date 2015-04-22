@@ -5,14 +5,14 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #ifndef UNHIDING_HH
 #define UNHIDING_HH
 
-#include "core/Solver.h"
+#include "riss/core/Solver.h"
 
-#include "coprocessor-src/CoprocessorTypes.h"
+#include "coprocessor/CoprocessorTypes.h"
 
-#include "coprocessor-src/Technique.h"
-#include "coprocessor-src/Propagation.h"
-#include "coprocessor-src/Subsumption.h"
-#include "coprocessor-src/EquivalenceElimination.h"
+#include "coprocessor/Technique.h"
+#include "coprocessor/Propagation.h"
+#include "coprocessor/Subsumption.h"
+#include "coprocessor/EquivalenceElimination.h"
 
 using namespace Riss;
 using namespace std;

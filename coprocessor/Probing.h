@@ -5,12 +5,12 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #ifndef PROBING_HH
 #define PROBING_HH
 
-#include "core/Solver.h"
-#include "coprocessor-src/CoprocessorTypes.h"
-#include "coprocessor-src/Technique.h"
+#include "riss/core/Solver.h"
+#include "coprocessor/CoprocessorTypes.h"
+#include "coprocessor/Technique.h"
 
-#include "coprocessor-src/Propagation.h"
-#include "coprocessor-src/EquivalenceElimination.h"
+#include "coprocessor/Propagation.h"
+#include "coprocessor/EquivalenceElimination.h"
 
 using namespace Riss;
 using namespace std;

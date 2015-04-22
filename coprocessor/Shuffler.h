@@ -7,9 +7,9 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #include <stdint.h>
 #include <vector>
 
-#include "core/Solver.h"
-#include "coprocessor-src/CoprocessorTypes.h"
-#include "coprocessor-src/CP3Config.h"
+#include "riss/core/Solver.h"
+#include "coprocessor/CoprocessorTypes.h"
+#include "coprocessor/CP3Config.h"
 using namespace Riss;
 
 namespace Coprocessor {

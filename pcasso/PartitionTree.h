@@ -21,12 +21,12 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #define PARTITIONTREE_H
 
 // Minisat
-#include "../mtl/Vec.h"
-#include "../core/SolverTypes.h"
-#include "../core/Solver.h"
+#include "riss/mtl/Vec.h"
+#include "riss/core/SolverTypes.h"
+#include "riss/core/Solver.h"
 
 // read and write constraints
-#include "utils/LockCollection.h"
+#include "riss/utils/LockCollection.h"
 
 // libc
 #include <vector>
@@ -35,8 +35,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 // Davide>
 #include <string>
-#include "pcasso-src/ToString.h"
-#include "pcasso-src/LevelPool.h"
+#include "pcasso/ToString.h"
+#include "pcasso/LevelPool.h"
 
 //using namespace Pcasso;
 using namespace std;

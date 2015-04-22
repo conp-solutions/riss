@@ -2,7 +2,7 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "coprocessor-src/rate.h"
+#include "coprocessor/rate.h"
 
 using namespace Coprocessor;
 

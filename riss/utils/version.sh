@@ -37,7 +37,7 @@ cat - > $OUTPUT <<EOF
  * If you want to distribute the source code without
  * git, make sure you include this file in your bundle.
  */
-#include "utils/version.h"
+#include "riss/utils/version.h"
 
 const char* Riss::signature     = "Riss $VERSION build $GIT_COMMIT";
 const float Riss::solverVersion = $VERSION;

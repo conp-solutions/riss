@@ -5,7 +5,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #ifndef SHUFFLER_HH
 #define SHUFFLER_HH
 
-#include "coprocessor-src/Shuffler.h"
+#include "coprocessor/Shuffler.h"
 
 using namespace Riss;
 using namespace std;

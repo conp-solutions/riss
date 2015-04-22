@@ -69,7 +69,7 @@ void MiniSat_Clear_Preferred_Variables(MiniSat_ptr);
 // 
 // ================================================================================================
 
-#include "lib-src/librissc.h"  // include the actual library interface of riss
+#include "lib/librissc.h"  // include the actual library interface of riss
 #include "assert.h"
 #include "math.h"
 #include <cstdlib>

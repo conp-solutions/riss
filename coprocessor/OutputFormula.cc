@@ -2,7 +2,7 @@
 Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "coprocessor-src/Coprocessor.h"
+#include "coprocessor/Coprocessor.h"
 #include <stdio.h>
 
 #include <sstream>

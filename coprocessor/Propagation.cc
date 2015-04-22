@@ -2,7 +2,7 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "coprocessor-src/Propagation.h"
+#include "coprocessor/Propagation.h"
 
 using namespace Coprocessor;
 

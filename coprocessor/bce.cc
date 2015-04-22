@@ -2,7 +2,7 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "coprocessor-src/bce.h"
+#include "coprocessor/bce.h"
 
 using namespace Coprocessor;
 

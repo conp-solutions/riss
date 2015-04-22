@@ -2,7 +2,7 @@
 Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "coprocessor-src/Subsumption.h"
+#include "coprocessor/Subsumption.h"
 using namespace Coprocessor;
 
 

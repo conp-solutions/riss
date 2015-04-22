@@ -25,9 +25,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <stdio.h>
 #include <vector>
 
-#include "utils/ParseUtils.h"
-#include "core/SolverTypes.h"
-#include "core/Dimacs.h"
+#include "riss/utils/ParseUtils.h"
+#include "riss/core/SolverTypes.h"
+#include "riss/core/Dimacs.h"
 
 namespace Riss {
 

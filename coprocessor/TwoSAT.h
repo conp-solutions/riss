@@ -5,11 +5,11 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #ifndef TWOSAT_HH
 #define TWOSAT_HH
 
-#include "core/Solver.h"
+#include "riss/core/Solver.h"
 
-#include "coprocessor-src/CoprocessorTypes.h"
+#include "coprocessor/CoprocessorTypes.h"
 
-#include "coprocessor-src/Technique.h"
+#include "coprocessor/Technique.h"
 
 #include <vector>
 #include <deque>

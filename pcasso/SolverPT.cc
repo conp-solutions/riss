@@ -1,9 +1,9 @@
-#include "pcasso-src/SolverPT.h"
+#include "pcasso/SolverPT.h"
 // for clock_gettime()
 #include <time.h>
 
 // Davide> My includes
-#include "pcasso-src/LevelPool.h"
+#include "pcasso/LevelPool.h"
 #include <stdexcept>
 
 using namespace Pcasso;

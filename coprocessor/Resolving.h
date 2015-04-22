@@ -5,10 +5,10 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #ifndef RESOLVING_H
 #define RESOLVING_H
 
-#include "coprocessor-src/CoprocessorTypes.h"
+#include "coprocessor/CoprocessorTypes.h"
 
-#include "coprocessor-src/Technique.h"
-#include "coprocessor-src/Propagation.h"
+#include "coprocessor/Technique.h"
+#include "coprocessor/Propagation.h"
 
 using namespace Riss;
 using namespace std;

@@ -6,7 +6,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #define CNFCLASSIFIER_H
 
 
-#include "core/Solver.h"
+#include "riss/core/Solver.h"
 #include "Graph.h"
 #include "BipartiteGraph.h"
 

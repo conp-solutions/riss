@@ -16,20 +16,20 @@ Copyright (c) 2012-2014, Norbert Manthey, All rights reserved.
 #include <sys/resource.h>
 #include <fstream>
 
-#include "classifier-src/CNFClassifier.h"
-#include "classifier-src/WekaDataset.h"
-#include "classifier-src/Configurations.h"
-#include "classifier-src/Classifier.h"
+#include "classifier/CNFClassifier.h"
+#include "classifier/WekaDataset.h"
+#include "classifier/Configurations.h"
+#include "classifier/Classifier.h"
 
-#include "utils/System.h"
-#include "utils/ParseUtils.h"
-#include "utils/Options.h"
-#include "core/Dimacs.h"
-#include "core/Solver.h"
+#include "riss/utils/System.h"
+#include "riss/utils/ParseUtils.h"
+#include "riss/utils/Options.h"
+#include "riss/core/Dimacs.h"
+#include "riss/core/Solver.h"
 
-#include "coprocessor-src/Coprocessor.h"
+#include "coprocessor/Coprocessor.h"
 
-#include "utils/version.h" // include the file that defines the solver version
+#include "riss/utils/version.h" // include the file that defines the solver version
 
 using namespace Riss;
 using namespace Coprocessor;

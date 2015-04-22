@@ -5,11 +5,11 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #ifndef PROPAGATION_HH
 #define PROPAGATION_HH
 
-#include "core/Solver.h"
+#include "riss/core/Solver.h"
 
-#include "coprocessor-src/Technique.h"
+#include "coprocessor/Technique.h"
 
-#include "coprocessor-src/CoprocessorTypes.h"
+#include "coprocessor/CoprocessorTypes.h"
 
 using namespace Riss;
 

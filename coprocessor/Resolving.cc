@@ -2,7 +2,7 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "coprocessor-src/Resolving.h"
+#include "coprocessor/Resolving.h"
 
 using namespace Coprocessor;
 

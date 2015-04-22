@@ -5,9 +5,9 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #ifndef SYMMETRY_HH
 #define SYMMETRY_HH
 
-#include "core/Solver.h"
-#include "coprocessor-src/CoprocessorTypes.h"
-#include "coprocessor-src/Technique.h"
+#include "riss/core/Solver.h"
+#include "coprocessor/CoprocessorTypes.h"
+#include "coprocessor/Technique.h"
 
 using namespace Riss;
 using namespace std;

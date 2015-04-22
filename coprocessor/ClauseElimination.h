@@ -5,12 +5,12 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #ifndef CLAUSEELIMINATION_HH
 #define CLAUSEELIMINATION_HH
 
-#include "core/Solver.h"
+#include "riss/core/Solver.h"
 
-#include "coprocessor-src/CoprocessorTypes.h"
+#include "coprocessor/CoprocessorTypes.h"
 
-#include "coprocessor-src/Technique.h"
-#include "coprocessor-src/Propagation.h"
+#include "coprocessor/Technique.h"
+#include "coprocessor/Propagation.h"
 
 #include <vector>
 

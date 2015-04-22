@@ -30,16 +30,16 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <math.h>
 
-#include "mtl/Sort.h"
-#include "core/Solver.h"
-#include "core/Constants.h"
+#include "riss/mtl/Sort.h"
+#include "riss/core/Solver.h"
+#include "riss/core/Constants.h"
 
 // to be able to use the preprocessor
-#include "coprocessor-src/Coprocessor.h"
-#include "coprocessor-src/CoprocessorTypes.h"
+#include "coprocessor/Coprocessor.h"
+#include "coprocessor/CoprocessorTypes.h"
 
 // to be able to read var files
-#include "coprocessor-src/VarFileParser.h"
+#include "coprocessor/VarFileParser.h"
 
 
 

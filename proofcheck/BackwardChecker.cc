@@ -2,11 +2,11 @@
 Copyright (c) 2015, All rights reserved, Norbert Manthey
 **************************************************************************************************/
 
-#include "proofcheck-src/BackwardChecker.h"
-#include "proofcheck-src/BackwardVerificationWorker.h"
-#include "mtl/Sort.h"
-#include "utils/ThreadController.h"
-#include "utils/Options.h"
+#include "proofcheck/BackwardChecker.h"
+#include "proofcheck/BackwardVerificationWorker.h"
+#include "riss/mtl/Sort.h"
+#include "riss/utils/ThreadController.h"
+#include "riss/utils/Options.h"
 
 #include <fstream>
 #include <sstream>

@@ -5,9 +5,9 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #ifndef THREADCONTROLLER_HH
 #define THREADCONTROLLER_HH
 
-// #include "coprocessor-src/CoprocessorTypes.h"
+// #include "coprocessor/CoprocessorTypes.h"
 
-#include "utils/LockCollection.h"
+#include "riss/utils/LockCollection.h"
 
 #include <vector>
 #include <iostream>

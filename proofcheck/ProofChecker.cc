@@ -2,10 +2,10 @@
 Copyright (c) 2015, All rights reserved, Norbert Manthey
 ***************************************************************************************************/
 
-#include "proofcheck-src/ProofChecker.h"
+#include "proofcheck/ProofChecker.h"
 
-#include "proofcheck-src/OnlineProofChecker.h"
-#include "proofcheck-src/BackwardChecker.h"
+#include "proofcheck/OnlineProofChecker.h"
+#include "proofcheck/BackwardChecker.h"
 
 #include <iostream>
 

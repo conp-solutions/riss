@@ -30,10 +30,10 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <sched.h> // to pin threads to cores
 #include <sys/stat.h>
 
-#include "pcasso-src/SplitterSolver.h"
-#include "pcasso-src/SolverPT.h"
-#include "pcasso-src/LookaheadSplitting.h"
-#include "pcasso-src/vsidsSplitting.h"
+#include "pcasso/SplitterSolver.h"
+#include "pcasso/SolverPT.h"
+#include "pcasso/LookaheadSplitting.h"
+#include "pcasso/vsidsSplitting.h"
 
 // ## begin of automatically handled section
 std::string splitString = std::string("how to split the tree: ") 

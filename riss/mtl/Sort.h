@@ -21,7 +21,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_Sort_h
 #define Minisat_Sort_h
 
-#include "mtl/Vec.h"
+#include "riss/mtl/Vec.h"
 #include <vector>
 #include <cstring> // for memcpy
 

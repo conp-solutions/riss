@@ -7,10 +7,10 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include <cstring>
 
-#include "core/Solver.h"
+#include "riss/core/Solver.h"
 
-#include "coprocessor-src/CoprocessorTypes.h"
-#include "coprocessor-src/CP3Config.h"
+#include "coprocessor/CoprocessorTypes.h"
+#include "coprocessor/CP3Config.h"
 
 #include <vector>
 

@@ -5,13 +5,13 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #ifndef HIDDENTAUTOLOGYELIMINATION_HH
 #define HIDDENTAUTOLOGYELIMINATION_HH
 
-#include "core/Solver.h"
+#include "riss/core/Solver.h"
 
-#include "coprocessor-src/Technique.h"
+#include "coprocessor/Technique.h"
 
-#include "coprocessor-src/CoprocessorTypes.h"
+#include "coprocessor/CoprocessorTypes.h"
 
-#include "coprocessor-src/Propagation.h"
+#include "coprocessor/Propagation.h"
 
 #include <vector>
 

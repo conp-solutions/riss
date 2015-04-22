@@ -7,11 +7,11 @@ Copyright (c) 2014, All rights reserved, Norbert Manthey
 #define PROOFMASTER_H
 
 
-#include "mtl/Vec.h"
-#include "core/SolverTypes.h"
-#include "utils/LockCollection.h"
+#include "riss/mtl/Vec.h"
+#include "riss/core/SolverTypes.h"
+#include "riss/utils/LockCollection.h"
 
-#include "proofcheck-src/OnlineProofChecker.h"
+#include "proofcheck/OnlineProofChecker.h"
 
 #include <cstdio>
 #include <iostream>

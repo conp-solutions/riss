@@ -1,6 +1,6 @@
 #include "vsidsSplitting.h"
-#include "mtl/Vec.h"
-#include "core/SolverTypes.h"
+#include "riss/mtl/Vec.h"
+#include "riss/core/SolverTypes.h"
 #include "pthread.h"
 #include <time.h>
 

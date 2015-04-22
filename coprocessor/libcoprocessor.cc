@@ -2,7 +2,7 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "coprocessor-src/Coprocessor.h"
+#include "coprocessor/Coprocessor.h"
 using namespace Riss;
 
 /** struct that stores the necessary data for a preprocessor */

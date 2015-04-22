@@ -2,7 +2,7 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "coprocessor-src/Experimental.h"
+#include "coprocessor/Experimental.h"
 
 
 using namespace Coprocessor;

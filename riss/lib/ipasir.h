@@ -34,7 +34,7 @@
 #ifndef ipasir_h_INCLUDED
 #define ipasir_h_INCLUDED
 
-#include "lib-src/librissc.h" // include actual C-interface of Riss
+#include "lib/librissc.h" // include actual C-interface of Riss
 
 /**
  * Return the name and the version of the incremental SAT

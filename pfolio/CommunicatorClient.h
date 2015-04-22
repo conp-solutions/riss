@@ -5,9 +5,9 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #ifndef COMMUNICATORCLIENT_H
 #define COMMUNICATORCLIENT_H
 
-#include "core/Communication.h"
-#include "core/Solver.h"
-#include "mtl/Sort.h"
+#include "riss/core/Communication.h"
+#include "riss/core/Solver.h"
+#include "riss/mtl/Sort.h"
 
 
 namespace Riss {

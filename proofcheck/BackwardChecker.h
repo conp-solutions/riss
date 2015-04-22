@@ -5,11 +5,11 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 #ifndef RISS_BACKWARD_H
 #define RISS_BACKWARD_H
 
-#include "mtl/Vec.h"
-#include "core/SolverTypes.h"
-#include "utils/System.h"
+#include "riss/mtl/Vec.h"
+#include "riss/core/SolverTypes.h"
+#include "riss/utils/System.h"
 
-#include "mtl/Map.h"
+#include "riss/mtl/Map.h"
 
 namespace Riss {
   

@@ -2,9 +2,9 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "coprocessor-src/Symmetry.h"
+#include "coprocessor/Symmetry.h"
 
-#include "mtl/Sort.h"
+#include "riss/mtl/Sort.h"
 
 using namespace Coprocessor;
 using namespace Riss;

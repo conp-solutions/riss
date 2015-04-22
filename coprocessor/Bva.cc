@@ -2,7 +2,7 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "coprocessor-src/Bva.h"
+#include "coprocessor/Bva.h"
 
 #include <algorithm>
 

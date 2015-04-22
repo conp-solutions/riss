@@ -2,7 +2,7 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "coprocessor-src/Circuit.h"
+#include "coprocessor/Circuit.h"
 
 
 using namespace Coprocessor;

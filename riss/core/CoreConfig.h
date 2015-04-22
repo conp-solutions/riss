@@ -12,9 +12,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef CoreConfig_h
 #define CoreConfig_h
 
-#include "utils/Config.h"
-#include "utils/Options.h"
-#include "utils/Debug.h"
+#include "riss/utils/Config.h"
+#include "riss/utils/Options.h"
+#include "riss/utils/Debug.h"
 
 namespace Riss {
 

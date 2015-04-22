@@ -25,13 +25,13 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <zlib.h>
 #include <sys/resource.h>
 
-#include "utils/System.h"
-#include "utils/ParseUtils.h"
-#include "utils/Options.h"
-#include "core/Dimacs.h"
-#include "pcasso-src/SplitterSolver.h"
+#include "riss/utils/System.h"
+#include "riss/utils/ParseUtils.h"
+#include "riss/utils/Options.h"
+#include "riss/core/Dimacs.h"
+#include "pcasso/SplitterSolver.h"
 
-#include "pcasso-src/Master.h"
+#include "pcasso/Master.h"
 
 // for parallelization
 #include <pthread.h>

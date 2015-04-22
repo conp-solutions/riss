@@ -5,13 +5,13 @@ Copyright (c) 2012, Norbert Manthey, Kilian Gebhardt, All rights reserved.
 #ifndef SUBSUMPTION_HH
 #define SUBSUMPTION_HH
 
-#include "core/Solver.h"
+#include "riss/core/Solver.h"
 
-#include "coprocessor-src/Propagation.h"
+#include "coprocessor/Propagation.h"
 
-#include "coprocessor-src/Technique.h"
+#include "coprocessor/Technique.h"
 
-#include "coprocessor-src/CoprocessorTypes.h"
+#include "coprocessor/CoprocessorTypes.h"
 
 #include <vector>
 

@@ -35,15 +35,15 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <cstring>
 #include <assert.h>
 
-#include "mtl/IntTypes.h"
-#include "mtl/Alg.h"
-#include "mtl/Vec.h"
-#include "mtl/Map.h"
-#include "mtl/Alloc.h"
+#include "riss/mtl/IntTypes.h"
+#include "riss/mtl/Alg.h"
+#include "riss/mtl/Vec.h"
+#include "riss/mtl/Map.h"
+#include "riss/mtl/Alloc.h"
 
 // for parallel stuff
 #include <pthread.h>
-#include "utils/LockCollection.h"
+#include "riss/utils/LockCollection.h"
 
 #include <vector>
 

@@ -5,7 +5,7 @@
 #ifndef STATISTICS_H
 #define STATISTICS_H
 
-#include "utils/LockCollection.h"
+#include "riss/utils/LockCollection.h"
 
 #include <vector>
 #include <string>

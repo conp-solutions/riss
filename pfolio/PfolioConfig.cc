@@ -9,7 +9,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#include "pfolio-src/PfolioConfig.h"
+#include "pfolio/PfolioConfig.h"
 
 using namespace Riss;
 

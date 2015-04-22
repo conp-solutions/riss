@@ -5,13 +5,13 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #ifndef COPROCESSORTYPES_HH
 #define COPROCESSORTYPES_HH
 
-#include "core/Solver.h"
+#include "riss/core/Solver.h"
 
-#include "utils/System.h"
-#include "mtl/Sort.h"
+#include "riss/utils/System.h"
+#include "riss/mtl/Sort.h"
 
-#include "utils/LockCollection.h"
-#include "utils/AutoDelete.h"
+#include "riss/utils/LockCollection.h"
+#include "riss/utils/AutoDelete.h"
 
 #include <vector>
 #include <iostream>

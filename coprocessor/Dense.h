@@ -5,10 +5,10 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #ifndef DENSE_H
 #define DENSE_H
 
-#include "coprocessor-src/CoprocessorTypes.h"
-#include "coprocessor-src/Propagation.h"
+#include "coprocessor/CoprocessorTypes.h"
+#include "coprocessor/Propagation.h"
 
-#include "coprocessor-src/Technique.h"
+#include "coprocessor/Technique.h"
 
 using namespace Riss;
 using namespace std;

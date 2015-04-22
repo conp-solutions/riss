@@ -7,8 +7,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #ifndef SLS_H
 #define SLS_H
 
-#include "coprocessor-src/CoprocessorTypes.h"
-#include "coprocessor-src/Technique.h"
+#include "coprocessor/CoprocessorTypes.h"
+#include "coprocessor/Technique.h"
 
 namespace Coprocessor {
 

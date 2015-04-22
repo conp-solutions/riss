@@ -5,11 +5,11 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #ifndef FOURIERMOTZKIN_HH
 #define FOURIERMOTZKIN_HH
 
-#include "core/Solver.h"
-#include "coprocessor-src/Technique.h"
-#include "coprocessor-src/CoprocessorTypes.h"
+#include "riss/core/Solver.h"
+#include "coprocessor/Technique.h"
+#include "coprocessor/CoprocessorTypes.h"
 
-#include "coprocessor-src/Propagation.h"
+#include "coprocessor/Propagation.h"
 
 using namespace Riss;
 
