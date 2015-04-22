@@ -150,7 +150,7 @@ int main(int argc, char** argv)
 	      printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
 	  
 	  if (S.verbosity > 0) {
-  	      printf("c =========================[ Coprocessor %5.2f  %13s ]============================================\n", solverVersion, gitCommit);
+  	      printf("c =========================[ Coprocessor %s  %13s ]============================================\n", solverVersion, gitSHA1);
 	      printf("c|  Norbert Manthey. The use of the tool is limited to research only!                                     |\n");
   	      printf("c | Contributors:                                                                                         |\n");
 	      printf("c |     Kilian Gebhard: Implementation of BVE, Subsumption, Parallelization                               |\n");
