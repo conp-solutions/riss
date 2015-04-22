@@ -1,0 +1,113 @@
+# Project definitions:
+# 
+project(riss)
+
+# Project version based on http://stackoverflow.com/a/18658684/2467158
+set(VERSION "5.4.0")
+
+string(REPLACE "." ";" VERSION_LIST ${VERSION})
+list(GET VERSION_LIST 0 VERSION_MAJOR)
+list(GET VERSION_LIST 1 VERSION_MINOR)
+list(GET VERSION_LIST 2 VERSION_PATCH)
+
+set(SOVERSION ${VERSION_MAJOR})
+
+
+# Dependencies:
+# 
+find_package(ZLIB)
+find_package (Threads)
+
+include_directories(${ZLIB_INCLUDE_DIR})
+include_directories(${THREADS_PTHREADS_INCLUDE_DIR})
+
+
+# Libraries:
+# 
+set(LIB_SOURCES
+    core/CoreConfig.cc
+    core/Solver.cc
+    simp/SimpSolver.cc
+    utils/Options.cc
+    utils/Statistics-mt.cc
+    utils/System.cc)
+
+add_library(${PROJECT_NAME}-lib-static STATIC ${LIB_SOURCES})
+add_library(${PROJECT_NAME}-lib-shared SHARED ${LIB_SOURCES})
+
+target_link_libraries(${PROJECT_NAME}-lib-shared ${ZLIB_LIBRARY})
+target_link_libraries(${PROJECT_NAME}-lib-static ${ZLIB_LIBRARY})
+target_link_libraries(${PROJECT_NAME}-lib-shared ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(${PROJECT_NAME}-lib-static ${CMAKE_THREAD_LIBS_INIT})
+
+set_target_properties(${PROJECT_NAME}-lib-static PROPERTIES
+                                                 OUTPUT_NAME "${PROJECT_NAME}")
+set_target_properties(${PROJECT_NAME}-lib-shared PROPERTIES
+                                                 OUTPUT_NAME "${PROJECT_NAME}" 
+                                                 VERSION ${VERSION}
+                                                 SOVERSION ${SOVERSION})
+
+
+# Executables:
+# 
+add_executable(${PROJECT_NAME}-core core/Main.cc)
+add_executable(${PROJECT_NAME}-simp simp/Main.cc)
+
+# Custom version target that is always built, because it DEPENDS on a file (string)
+# that does not exist
+add_custom_target(version ALL
+                  # build_version_file is nothing more than a unique string
+                  DEPENDS build_version_file)
+
+# Tell CMake how to build the "build_version_file" on which the target "version"
+# depends on. On this way we will also create the version.cc file
+add_custom_command(OUTPUT build_version_file ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}/utils/version.cc
+                   COMMENT "Build version file"
+                   COMMAND ${CMAKE_COMMAND} -D VERSION=${VERSION}
+                                            -D PROJECT_NAME=${PROJECT_NAME}
+                                            -P ${CMAKE_CURRENT_SOURCE_DIR}/utils/version.cmake)
+
+# explicitly say that the executable depends on the version
+add_dependencies(${PROJECT_NAME}-lib-shared version)
+add_dependencies(${PROJECT_NAME}-lib-static version)
+
+
+if(STATIC_BINARIES)
+  target_link_libraries(${PROJECT_NAME}-core ${PROJECT_NAME}-lib-static)
+  target_link_libraries(${PROJECT_NAME}-simp ${PROJECT_NAME}-lib-static)
+else()
+  target_link_libraries(${PROJECT_NAME}-core ${PROJECT_NAME}-lib-shared)
+  target_link_libraries(${PROJECT_NAME}-simp ${PROJECT_NAME}-lib-shared)
+endif()
+
+# Custom version target that is always built, because it DEPENDS on a file (string)
+# that does not exist
+add_custom_target(${PROJECT_NAME}-version ALL
+                  # build_version_file is nothing more than a unique string
+                  DEPENDS ${PROJECT_NAME}-build_version_file)
+
+# Tell CMake how to build the "build_version_file" on which the target "version"
+# depends on. On this way we will also create the version.cc file
+add_custom_command(OUTPUT ${PROJECT_NAME}-build_version_file ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}/utils/version.cc
+                   COMMENT "Build version file"
+                   COMMAND ${CMAKE_COMMAND} -D VERSION=${VERSION}
+                                            -D PROJECT_NAME=${PROJECT_NAME}
+                                            -P ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}/utils/version.cmake)
+
+# Create a symlink to the binary as shortcut
+add_custom_command(TARGET  ${PROJECT_NAME}-core POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${PROJECT_NAME}-core ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME})
+add_custom_command(TARGET  ${PROJECT_NAME}-simp POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${PROJECT_NAME}-simp ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME})
+
+
+# Installation:
+# 
+install(TARGETS ${PROJECT_NAME}-lib-static ${PROJECT_NAME}-lib-shared ${PROJECT_NAME}-core ${PROJECT_NAME}-simp 
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib)
+
+install(DIRECTORY ${PROJECT_NAME}/mtl ${PROJECT_NAME}/utils ${PROJECT_NAME}/core ${PROJECT_NAME}/simp
+        DESTINATION include/${PROJECT_NAME}
+        FILES_MATCHING PATTERN "*.h")

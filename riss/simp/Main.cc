@@ -164,7 +164,7 @@ int main(int argc, char** argv)
 
     
         if (S.verbosity > 0){
-            printf("c ======================[ riss (simp) %5.2f  %.13s ]===============================================\n", solverVersion, gitCommit);
+            printf("c ======================[ riss (simp) %s  %.13s ]===============================================\n", solverVersion, gitSHA1);
 	    printf("c | Norbert Manthey. The use of the tool is limited to research only!                                     |\n");
 	    printf("c | Based on Minisat 2.2 and Glucose 2.1  -- thanks!                                                      |\n");
 	    printf("c | Contributors:                                                                                         |\n");

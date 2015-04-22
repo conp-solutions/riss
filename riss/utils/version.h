@@ -3,9 +3,10 @@
 
 namespace Riss {
 
+extern const char* gitSHA1;
+extern const char* gitDate;
+extern const char* solverVersion;
 extern const char* signature;
-extern const float solverVersion;
-extern const char* gitCommit;
 
 }
 
