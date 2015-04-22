@@ -14,14 +14,6 @@ utils/version.cc
 .kdev4/
 .kdev_include_paths
 
-# Final binary
-riss
-coprocessor
-mprocessor
-priss
-qprocessor
-proofcheck
-
 # Latex build files
 *.aux
 *.log
