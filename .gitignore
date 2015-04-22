@@ -10,6 +10,10 @@ depend.mk
 # version number and the SHA hash of the current commit.
 utils/version.cc
 
+# KDevelop files
+.kdev4/
+.kdev_include_paths
+
 # Final binary
 riss
 coprocessor
