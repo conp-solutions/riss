@@ -29,7 +29,7 @@ add_definitions(-D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS)
 # be very harsh to manage. With the subdirs we got a much more modular approach.
 # 
 add_subdirectory(riss/)
-# add_subdirectory(libriss/)
+add_subdirectory(risslibcheck/)
 # add_subdirectory(classifier/)
 add_subdirectory(coprocessor/)
 # add_subdirectory(mprocessor/)

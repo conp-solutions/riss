@@ -11,11 +11,11 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#include "libriss/ipasir.h"
-#include "libriss/libcoprocessorc.h"
-#include "libriss/libprissc.h"
-#include "libriss/librissc.h"
-#include "libriss/NuSVM_SolverInterface.h"
+#include "riss/ipasir.h"
+#include "riss/librissc.h"
+#include "coprocessor/libcoprocessorc.h"
+#include "pfolio/libprissc.h"
+#include "riss/NuSVM_SolverInterface.h"
 
 #include <iostream>
 

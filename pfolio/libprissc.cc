@@ -3,6 +3,8 @@ Copyright (c) 2014, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
 #include "pfolio/PSolver.h"
+#include "pfolio/libprissc.h"
+
 using namespace Riss;
 
 /** struct that stores the necessary data for a preprocessor */

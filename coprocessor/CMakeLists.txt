@@ -49,7 +49,7 @@ set(LIB_SOURCES
     # add the absolute path here
     ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}/version.cc
     bce.cc
-    libcoprocessor.cc
+    libcoprocessorc.cc
     rate.cc
     sls.cc
     xor.cc)
@@ -85,17 +85,14 @@ set_target_properties(${PROJECT_NAME}-lib-shared PROPERTIES
                                                  VERSION ${VERSION}
                                                  SOVERSION ${SOVERSION})
 
-
 # Executables:
 # 
 add_executable(${PROJECT_NAME} Main.cc)
 
 if(STATIC_BINARIES)
-  target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}-lib-static)
-  target_link_libraries(${PROJECT_NAME} riss-lib-static)
+  target_link_libraries(${PROJECT_NAME} riss-lib-static ${PROJECT_NAME}-lib-static)
 else()
-  target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}-lib-shared)
-  target_link_libraries(${PROJECT_NAME} riss-lib-shared)
+  target_link_libraries(${PROJECT_NAME} riss-lib-shared ${PROJECT_NAME}-lib-shared)
 endif()
 
 # Installation:

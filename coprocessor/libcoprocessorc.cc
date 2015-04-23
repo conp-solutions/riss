@@ -1,8 +1,9 @@
-/*******************************************************************************[libcoprocessor.cc]
+/*******************************************************************************[libcoprocessorc.cc]
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
 #include "coprocessor/Coprocessor.h"
+#include "coprocessor/libcoprocessorc.h"
 using namespace Riss;
 
 /** struct that stores the necessary data for a preprocessor */
