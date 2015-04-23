@@ -63,7 +63,7 @@ add_custom_target(${PROJECT_NAME}-version ALL
 # Tell CMake how to build the "build_version_file" on which the target "version"
 # depends on. On this way we will also create the version.cc file
 add_custom_command(OUTPUT ${PROJECT_NAME}-build_version_file ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}/version.cc
-                   COMMENT "Build version file"
+                   COMMENT "Build version file for ${PROJECT_NAME}"
                    COMMAND ${CMAKE_COMMAND} -D VERSION=${VERSION}
                                             -D PROJECT_NAME=${PROJECT_NAME}
                                             -P ${CMAKE_CURRENT_SOURCE_DIR}/version.cmake)

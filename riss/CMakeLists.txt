@@ -62,12 +62,12 @@ add_executable(${PROJECT_NAME}-simp simp/Main.cc)
 # that does not exist
 add_custom_target(version ALL
                   # build_version_file is nothing more than a unique string
-                  DEPENDS build_version_file)
+                  DEPENDS ${PROJECT_NAME}-build_version_file)
 
 # Tell CMake how to build the "build_version_file" on which the target "version"
 # depends on. On this way we will also create the version.cc file
-add_custom_command(OUTPUT build_version_file ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}/utils/version.cc
-                   COMMENT "Build version file"
+add_custom_command(OUTPUT ${PROJECT_NAME}-build_version_file ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}/utils/version.cc
+                   COMMENT "Build version file for ${PROJECT_NAME}"
                    COMMAND ${CMAKE_COMMAND} -D VERSION=${VERSION}
                                             -D PROJECT_NAME=${PROJECT_NAME}
                                             -P ${CMAKE_CURRENT_SOURCE_DIR}/utils/version.cmake)
@@ -94,14 +94,6 @@ endif()
 add_custom_target(${PROJECT_NAME}-version ALL
                   # build_version_file is nothing more than a unique string
                   DEPENDS ${PROJECT_NAME}-build_version_file)
-
-# Tell CMake how to build the "build_version_file" on which the target "version"
-# depends on. On this way we will also create the version.cc file
-add_custom_command(OUTPUT ${PROJECT_NAME}-build_version_file ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}/utils/version.cc
-                   COMMENT "Build version file"
-                   COMMAND ${CMAKE_COMMAND} -D VERSION=${VERSION}
-                                            -D PROJECT_NAME=${PROJECT_NAME}
-                                            -P ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}/utils/version.cmake)
 
 # Create a symlink to the binary as shortcut
 add_custom_command(TARGET  ${PROJECT_NAME}-core POST_BUILD
