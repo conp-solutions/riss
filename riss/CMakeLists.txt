@@ -12,6 +12,8 @@ list(GET VERSION_LIST 2 VERSION_PATCH)
 
 set(SOVERSION ${VERSION_MAJOR})
 
+option(DRATPROOF "Link binaries statically." ON)
+
 
 # Dependencies:
 # 
@@ -60,9 +62,8 @@ add_executable(${PROJECT_NAME}-simp simp/Main.cc)
 
 # Custom version target that is always built, because it DEPENDS on a file (string)
 # that does not exist
-add_custom_target(version ALL
-                  # build_version_file is nothing more than a unique string
-                  DEPENDS ${PROJECT_NAME}-build_version_file)
+# build_version_file is nothing more than a unique string
+add_custom_target(version ALL DEPENDS ${PROJECT_NAME}-build_version_file)
 
 # Tell CMake how to build the "build_version_file" on which the target "version"
 # depends on. On this way we will also create the version.cc file
