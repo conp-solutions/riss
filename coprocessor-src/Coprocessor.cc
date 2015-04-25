@@ -1251,7 +1251,7 @@ void Preprocessor::initializePreprocessor()
 	const Var v = whiteVariables[i] > 0 ? whiteVariables[i] : - whiteVariables[i];
 	if( v - 1 >= data.nVars() ) continue; // other file might contain more variables
 	Lit thisL = mkLit(v-1, whiteVariables[i] < 0 );
-	data.doNotTouch( var(thisL) );
+	data.setNotTouch( var(thisL) );
 	lockedWhiteVars ++;
     }
     
