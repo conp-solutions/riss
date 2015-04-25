@@ -16,15 +16,15 @@ IN THE SOFTWARE.
 #ifndef SHIFTBMC_H
 #define SHIFTBMC_H
 
-#include "aiger.h"
+#include "aiger/aiger.h"
 
 // enable this to disable all the output that might tell about the content of the implementation
 // #define TEST_BINARY
 
 extern "C" { // we are compiling with G++, however, picosat is C code, as well as the library interfaces of the other two solvers
-  #include "picosat.h" // is found because an include path is set from the outside (makefile)
-  #include "riss/lib/librissc.h" 
-  #include "riss/lib/libprissc.h" 
+  #include "picosat/picosat.h"
+  #include "riss/librissc.h" 
+  #include "pfolio/libprissc.h" 
 }
 
 #include <assert.h>
@@ -48,7 +48,7 @@ using namespace std;
 /**
  *  For using coprocessor 3 as formula simplification
  */
-#include "riss/lib/libcoprocessorc.h"
+#include "coprocessor/libcoprocessorc.h"
 
 /**
  *  For using abc ...

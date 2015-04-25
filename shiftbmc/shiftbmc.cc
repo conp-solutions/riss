@@ -16,7 +16,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 IN THE SOFTWARE.
 ***************************************************************************/
 
-#include "shiftbmc.h"
+#include "shiftbmc/shiftbmc.h"
 
 static aiger * model = 0;
 static const char * name = 0;
