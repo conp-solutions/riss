@@ -1,16 +1,7 @@
 # Project definitions:
 # 
+# Use the global version of the whole tool box. 
 project(riss)
-
-# Project version based on http://stackoverflow.com/a/18658684/2467158
-set(VERSION "5.4.0")
-
-string(REPLACE "." ";" VERSION_LIST ${VERSION})
-list(GET VERSION_LIST 0 VERSION_MAJOR)
-list(GET VERSION_LIST 1 VERSION_MINOR)
-list(GET VERSION_LIST 2 VERSION_PATCH)
-
-set(SOVERSION ${VERSION_MAJOR})
 
 option(DRATPROOF "Produce DRAFT-proofs (disabled by default)" ON)
 
@@ -47,6 +38,8 @@ target_link_libraries(${PROJECT_NAME}-lib-shared ${ZLIB_LIBRARY})
 target_link_libraries(${PROJECT_NAME}-lib-static ${ZLIB_LIBRARY})
 target_link_libraries(${PROJECT_NAME}-lib-shared ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(${PROJECT_NAME}-lib-static ${CMAKE_THREAD_LIBS_INIT})
+
+message("Version: ${VERSION}")
 
 set_target_properties(${PROJECT_NAME}-lib-static PROPERTIES
                                                  OUTPUT_NAME "${PROJECT_NAME}")

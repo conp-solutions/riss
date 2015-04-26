@@ -1,7 +1,33 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
-# Configurable options:
+# Auxiliary functions:
 # 
+# Splits a string of format "<major>.<minor>.<path>" into
+# the three subcomponents
+# based on http://stackoverflow.com/a/18658684/2467158
+function(version version_string)
+  set(VERSION ${version_string} PARENT_SCOPE)
+
+  string(REPLACE "." ";" VERSION_LIST ${version_string})
+  list(GET VERSION_LIST 0 VERSION_MAJOR)
+  list(GET VERSION_LIST 1 VERSION_MINOR)
+  list(GET VERSION_LIST 2 VERSION_PATCH)
+
+  # Propagate results
+  set(VERSION_MAJOR ${VERSION_MAJOR} PARENT_SCOPE)
+  set(VERSION_MINOR ${VERSION_MINOR} PARENT_SCOPE)
+  set(VERSION_PATCH ${VERSION_PATCH} PARENT_SCOPE)
+
+  set(SOVERSION ${VERSION_MAJOR} PARENT_SCOPE)
+endfunction()
+
+
+# Defintions:
+# 
+# Version of the whole tool box. Subprojects can define their own versions. If
+# no version is specified, this "global" version will be used,
+version("5.4.0")
+
 option(STATIC_BINARIES "Link binaries statically." ON)
 
 

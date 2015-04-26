@@ -2,16 +2,7 @@
 # 
 # aiger tools by Biere
 project(aiger)
-
-# Project version based on http://stackoverflow.com/a/18658684/2467158
-set(VERSION "1.9.6")
-
-string(REPLACE "." ";" VERSION_LIST ${VERSION})
-list(GET VERSION_LIST 0 VERSION_MAJOR)
-list(GET VERSION_LIST 1 VERSION_MINOR)
-list(GET VERSION_LIST 2 VERSION_PATCH)
-
-set(SOVERSION ${VERSION_MAJOR})
+version("1.9.6")
 
 
 # Dependencies:
