@@ -113,7 +113,7 @@ int main(int argc, char** argv)
 		      printf("c WARNING! Could not set resource limit: Virtual memory.\n");
 	      } }
 
-	  printf("c ======================[ proofcheck %5.2f  %13s ]================================================\n", solverVersion, gitCommit);
+	  printf("c ======================[ proofcheck %s  %13s ]================================================\n", solverVersion, gitSHA1);
 	  printf("c | Norbert Manthey. The use of the tool is limited to research only!                                     |\n");
 	  printf("c =========================================================================================================\n");
 	  
