@@ -5,7 +5,7 @@
  *      Author: gardero
  */
 #include <vector>
-#include "SequenceStatistics.h"
+#include "classifier/SequenceStatistics.h"
 #ifndef GRAPH_H_
 #define GRAPH_H_
 using namespace std;

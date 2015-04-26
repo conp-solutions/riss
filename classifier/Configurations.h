@@ -11,7 +11,7 @@
 #include <string>
 #include <stdio.h>
 #include <stdint.h>
-#include "WekaDataset.h"
+#include "classifier/WekaDataset.h"
 
 using namespace std;
 

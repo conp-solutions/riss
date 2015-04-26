@@ -324,7 +324,7 @@ int main(int argc, char** argv)
 
 	  if (verb > 0) {
 //   	      printf("c =============================[   CNF Classifier 3   ]====================================================\n");
-	      printf("c ===========================[   CNF Classifier %5.2f   ]==================================================\n", solverVersion);
+	      printf("c ===========================[   CNF Classifier %s %s ]==================================================\n", solverVersion, gitSHA1);
 // 	      printf("c ============================[     riss %5.2f     ]=======================================================\n", solverVersion);
 	      printf("c|  Norbert Manthey. The use of the tool is limited to research only!                                     |\n");
   	      printf("c | Contributors:                                                                                         |\n");

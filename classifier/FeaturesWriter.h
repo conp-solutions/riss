@@ -5,10 +5,11 @@
  *      Author: gardero
  */
 
-#include <ostream>
-#include <string>
 #ifndef FEATURESWRITER_H_
 #define FEATURESWRITER_H_
+
+#include <ostream>
+#include <string>
 
 using namespace std;
 

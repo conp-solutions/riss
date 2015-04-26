@@ -5,7 +5,7 @@
  *      Author: gardero
  */
 
-#include "Classifier.h"
+#include "classifier/Classifier.h"
 #include <stdlib.h>
 #include <fstream>
 #include <sstream>

@@ -1,11 +1,11 @@
 /*
- * BipartiteGraph.cpp
+ * BipartiteGraph.cc
  *
  *  Created on: Oct 22, 2013
  *      Author: gardero
  */
 
-#include "BipartiteGraph.h"
+#include "classifier/BipartiteGraph.h"
 
 BipartiteGraph::BipartiteGraph(int sizeB, int sizeW, bool computingDerivative):
 	nodeB(sizeB,0), nodeW(sizeW){

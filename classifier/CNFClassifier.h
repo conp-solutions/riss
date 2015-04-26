@@ -7,9 +7,8 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 
 #include "riss/core/Solver.h"
-#include "Graph.h"
-#include "BipartiteGraph.h"
-
+#include "classifier/Graph.h"
+#include "classifier/BipartiteGraph.h"
 
 using namespace std;
 using namespace Riss;

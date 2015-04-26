@@ -10,7 +10,8 @@
 #include <vector>
 #include <iterator>
 #include <cstdio>
-#include "inttypes.h"
+#include <inttypes.h>
+ 
 using namespace std;
 
 class SequenceStatistics {

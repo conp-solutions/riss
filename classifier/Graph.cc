@@ -5,7 +5,7 @@
  *      Author: gardero
  */
 
-#include "Graph.h"
+#include "classifier/Graph.h"
 #include <math.h>
 #include <assert.h>
 #include <sstream>

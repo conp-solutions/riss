@@ -7,12 +7,15 @@
 
 #ifndef WEKADATASET_H_
 #define WEKADATASET_H_
+
 #include <stdlib.h>
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <vector>
+
 using namespace std;
+
 class WekaDataset {
 private:
 	ifstream fin;

@@ -5,7 +5,7 @@
  *      Author: gardero
  */
 
-#include "FeaturesWriter.h"
+#include "classifier/FeaturesWriter.h"
 #include <assert.h>
 
 FeaturesWriter::FeaturesWriter(int afeaturesNumber, int atimeout,  ostream& aoutput)

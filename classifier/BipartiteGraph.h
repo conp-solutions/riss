@@ -4,11 +4,12 @@
  *  Created on: Oct 22, 2013
  *      Author: gardero
  */
-#include <vector>
-#include "SequenceStatistics.h"
-#include "Graph.h"
 #ifndef BIPARTITEGRAPH_H_
 #define BIPARTITEGRAPH_H_
+
+#include <vector>
+#include "classifier/SequenceStatistics.h"
+#include "classifier/Graph.h"
 
 /**
  * class representing a directed bipartite (Black and White nodes) graph.
@@ -47,4 +48,5 @@ public:
 
 };
 
-#endif /* BIPARTITEGRAPH_H_ */
+/* BIPARTITEGRAPH_H_ */
+#endif

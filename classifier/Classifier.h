@@ -9,7 +9,7 @@
 #define CLASSIFIER_H_
 #include <vector>
 #include <string>
-#include "Configurations.h"
+#include "classifier/Configurations.h"
 
 using namespace std;
 

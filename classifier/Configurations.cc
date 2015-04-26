@@ -5,7 +5,7 @@
  *      Author: gardero
  */
 
-#include "Configurations.h"
+#include "classifier/Configurations.h"
 #include <fstream>
 #include <iostream>
 #include <sstream>

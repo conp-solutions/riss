@@ -5,7 +5,7 @@
  *      Author: gardero
  */
 
-#include "SequenceStatistics.h"
+#include "classifier/SequenceStatistics.h"
 #include <cfloat>
 #include <cstdio>
 #include <string>
