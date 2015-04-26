@@ -47,7 +47,7 @@ set(LIB_SOURCES
 
 # Custom version target that is always built, because it DEPENDS on a file (string)
 # that does not exist
-add_custom_target(${PROJECT_NAME}-version ALL
+add_custom_target(${PROJECT_NAME}-version
                   # build_version_file is nothing more than a unique string
                   DEPENDS ${PROJECT_NAME}-build_version_file)
 
@@ -59,15 +59,12 @@ add_custom_command(OUTPUT ${PROJECT_NAME}-build_version_file ${CMAKE_CURRENT_BIN
                                             -D PROJECT_NAME=${PROJECT_NAME}
                                             -P ${CMAKE_CURRENT_SOURCE_DIR}/version.cmake)
 
-# Create a symlink to the binary as shortcut
-add_custom_command(TARGET  ${PROJECT_NAME}-core POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${PROJECT_NAME}-core ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME})
-add_custom_command(TARGET  ${PROJECT_NAME}-simp POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${PROJECT_NAME}-simp ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME})
-
-
 add_library(${PROJECT_NAME}-lib-static STATIC ${LIB_SOURCES})
 add_library(${PROJECT_NAME}-lib-shared SHARED ${LIB_SOURCES})
+
+# explicitly say that the libraries depends on the version
+add_dependencies(${PROJECT_NAME}-lib-shared version)
+add_dependencies(${PROJECT_NAME}-lib-static version)
 
 set_target_properties(${PROJECT_NAME}-lib-static PROPERTIES
                                                  OUTPUT_NAME "${PROJECT_NAME}")
