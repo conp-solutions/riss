@@ -21,7 +21,7 @@ IN THE SOFTWARE.
 ***************************************************************************/
 
 #include "aiger/aiger.h"
-#include "picosat/picosat.h"
+#include "picosat.h"
 
 #include <assert.h>
 #include <ctype.h>

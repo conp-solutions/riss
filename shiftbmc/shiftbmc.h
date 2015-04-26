@@ -22,7 +22,7 @@ IN THE SOFTWARE.
 // #define TEST_BINARY
 
 extern "C" { // we are compiling with G++, however, picosat is C code, as well as the library interfaces of the other two solvers
-  #include "picosat/picosat.h"
+  #include "picosat.h"
   #include "riss/librissc.h" 
   #include "pfolio/libprissc.h" 
 }

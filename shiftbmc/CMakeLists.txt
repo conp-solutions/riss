@@ -4,6 +4,10 @@ project(shiftbmc)
 
 # Dependencies:
 # 
+set(PICOSAT_LIB "/usr/local/lib" CACHE FILEPATH "Path to the directory containing the PicoSAT library")
+link_directories(${PICOSAT_LIB})
+include_directories(${PICOSAT_LIB})
+
 
 # Libraries:
 # 

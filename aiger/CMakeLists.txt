@@ -4,9 +4,19 @@
 project(aiger)
 version("1.9.6")
 
+set(ABC_LIB     "/usr/local/lib" CACHE FILEPATH "Path to the directory containing the ABC library")
+set(PICOSAT_LIB "/usr/local/lib" CACHE FILEPATH "Path to the directory containing the PicoSAT library")
 
 # Dependencies:
 # 
+link_directories(${ABC_LIB})
+link_directories(${PICOSAT_LIB})
+
+find_package(Threads)
+
+include_directories(${PICOSAT_LIB})
+include_directories(${ABC_LIB})
+include_directories(${THREADS_PTHREADS_INCLUDE_DIR})
 
 # Libraries:
 # 
@@ -30,7 +40,7 @@ set_target_properties(${PROJECT_NAME}-lib-shared PROPERTIES
 # 
 add_executable(aig-plain-bmc    aig-plain-bmc.c)
 add_executable(aigand     aigand.c)
-add_executable(aigbmc     aigbmc.c)
+add_executable(aigbmc     aigbmc.cc)
 add_executable(aigdd      aigdd.c)
 add_executable(aigfuzz    aigfuzz.c)
 add_executable(aiginfo    aigjoin.c)
@@ -55,6 +65,41 @@ add_executable(smvtoaig   smvtoaig.c)
 add_executable(soltostim  soltostim.c)
 add_executable(wrapstim   wrapstim.c)
 add_executable(abc-demo   demo.c)
+
+add_custom_target(aiger-tools
+                  COMMENT "Build all aiger tools"
+                  DEPENDS aig-plain-bmc
+                          aigand
+                          aigbmc
+                          aigdd
+                          aigfuzz
+                          aiginfo
+                          aigflip
+                          aigmiter
+                          aigmove
+                          aignm
+                          aigor
+                          aigreset
+                          aigsim
+                          aigstrip
+                          aigsplit
+                          aigtoaig
+                          aigtoblif
+                          aigtocnf
+                          aigtodot
+                          aigtosmv
+                          andtoaig
+                          aigunroll
+                          bliftoaig
+                          smvtoaig
+                          soltostim
+                          wrapstim
+                          abc-demo)
+
+target_link_libraries(aigbmc         picosat)
+target_link_libraries(aig-plain-bmc  picosat)
+target_link_libraries(abc-demo       abc m dl readline ${CMAKE_THREAD_LIBS_INIT})
+
 
 if(STATIC_BINARIES)
   target_link_libraries(aig-plain-bmc   ${PROJECT_NAME}-lib-static)

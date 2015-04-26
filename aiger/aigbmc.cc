@@ -30,7 +30,7 @@ IN THE SOFTWARE.
 // #define TEST_BINARY
 
 extern "C" { // we are compiling with G++, however, picosat is C code
-  #include "riss/picosat/picosat.h"
+  #include "picosat.h"
 }
 
 #include <assert.h>
@@ -44,6 +44,7 @@ extern "C" { // we are compiling with G++, however, picosat is C code
  *  For g++ extension
  */
 using namespace std;
+
 #include <vector>
 #include <string>
 #include <sstream>
@@ -55,7 +56,7 @@ using namespace std;
  *  For using riss, CP3, ...
  */
 #include "riss/core/BMCwrapper.h"
-#include "riss/coprocessor/Coprocessor.h"
+#include "coprocessor/Coprocessor.h"
 
 /**
  *  For using abc ...
