@@ -69,6 +69,11 @@ add_custom_command(OUTPUT ${PROJECT_NAME}-build_version_file ${CMAKE_CURRENT_BIN
 add_dependencies(${PROJECT_NAME}-lib-shared version)
 add_dependencies(${PROJECT_NAME}-lib-static version)
 
+# Create a symlink to the binary as shortcut
+add_custom_command(TARGET  ${PROJECT_NAME}-core POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${PROJECT_NAME}-core ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME})
+add_custom_command(TARGET  ${PROJECT_NAME}-simp POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${PROJECT_NAME}-simp ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME})
 
 if(STATIC_BINARIES)
   target_link_libraries(${PROJECT_NAME}-core ${PROJECT_NAME}-lib-static)
