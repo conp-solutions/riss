@@ -5,17 +5,16 @@ find_package(Git)
 # the commit's SHA1, and whether the building workspace was dirty or not
 execute_process(COMMAND
                 "${GIT_EXECUTABLE}" describe --always --abbrev --dirty
-                WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+                WORKING_DIRECTORY "${GIT_DIR}"
                 OUTPUT_VARIABLE GIT_SHA1
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 # the date of the commit
 execute_process(COMMAND
                 "${GIT_EXECUTABLE}" log -1 --format=%ad --date=local
-                WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+                WORKING_DIRECTORY "${GIT_DIR}"
                 OUTPUT_VARIABLE GIT_DATE
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
-
 
 # Generate version source file
 # 

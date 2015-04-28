@@ -63,6 +63,7 @@ add_custom_command(OUTPUT ${PROJECT_NAME}-build_version_file ${CMAKE_CURRENT_BIN
                    COMMENT "Build version file for ${PROJECT_NAME}"
                    COMMAND ${CMAKE_COMMAND} -D VERSION=${VERSION}
                                             -D PROJECT_NAME=${PROJECT_NAME}
+                                            -D GIT_DIR=${CMAKE_SOURCE_DIR}
                                             -P ${CMAKE_CURRENT_SOURCE_DIR}/utils/version.cmake)
 
 # explicitly say that the libraries depends on the version
