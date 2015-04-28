@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
+project("riss-toolbox")
+
 # Auxiliary functions:
 # 
 # Splits a string of format "<major>.<minor>.<path>" into
@@ -67,3 +69,4 @@ add_subdirectory(shiftbmc/)
 add_subdirectory(aiger/)
 add_subdirectory(test/)
 add_subdirectory(doc/)
+add_subdirectory(scripts/)
