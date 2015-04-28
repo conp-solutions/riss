@@ -35,6 +35,9 @@ set_target_properties(${PROJECT_NAME}-lib-shared PROPERTIES
 # 
 add_executable(${PROJECT_NAME} Main.cc)
 
+set_target_properties(${PROJECT_NAME} PROPERTIES
+                                      COMPILE_FLAGS "-DPCASSO")
+
 if(STATIC_BINARIES)
   target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}-lib-static riss-lib-static coprocessor-lib-static)
 else()
