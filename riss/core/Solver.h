@@ -1051,7 +1051,7 @@ bool Solver::addUnitClauses(const vec< Lit >& other)
  *************************************************************/
 
 template<typename T>
-inline unsigned int Solver::computeLBD(const T& lits) {
+inline int Solver::computeLBD(const T& lits) {
   
     // Already discovered decision levels are stored in a mark array. We do
     // not want to allocate the mark array for each call of ths function.

@@ -99,8 +99,6 @@ public:
  
  IntOption     opt_cir_bump;
  
- IntOption  opt_probing_step;     // Counter for probing. If zero, inprocessing (probing) will be performed.
- 
  BoolOption opt_updateLearnAct;
 
 #ifdef DEBUG

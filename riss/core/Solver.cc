@@ -1523,7 +1523,8 @@ bool Solver::probing(Var v) {
 
     // no conflicting clause was found
 
-    assigns.copyTo(assigns_before);
+#warning FIXME before running probing during search
+    //assigns.copyTo(assigns_before);
     cancelUntil(0);
     
     // Probe negated literal
