@@ -3,11 +3,11 @@
 # Use the global version of the whole tool box. 
 project(riss)
 
-option(DRATPROOF "Produce DRAFT-proofs (disabled by default)" ON)
+option(DRATPROOF "Produce DRAFT-proofs (disabled by default)" OFF)
 
 
 # Dependencies:
-# 
+#
 find_package(ZLIB)
 find_package(Threads)
 
@@ -46,12 +46,6 @@ set_target_properties(${PROJECT_NAME}-lib-shared PROPERTIES
                                                  VERSION ${VERSION}
                                                  SOVERSION ${SOVERSION})
 
-
-# Executables:
-# 
-add_executable(${PROJECT_NAME}-core core/Main.cc)
-add_executable(${PROJECT_NAME}-simp simp/Main.cc)
-
 # Custom version target that is always built, because it DEPENDS on a file (string)
 # that does not exist
 # build_version_file is nothing more than a unique string
@@ -70,6 +64,18 @@ add_custom_command(OUTPUT ${PROJECT_NAME}-build_version_file ${CMAKE_CURRENT_BIN
 add_dependencies(${PROJECT_NAME}-lib-shared version)
 add_dependencies(${PROJECT_NAME}-lib-static version)
 
+
+# Executables:
+# 
+add_executable(${PROJECT_NAME}-core core/Main.cc)
+add_executable(${PROJECT_NAME}-simp simp/Main.cc)
+
+message("-- DRAT proofs ${DRATPROOF}")
+if(DRATPROOF)
+    set_target_properties(${PROJECT_NAME}-core PROPERTIES COMPILE_FLAGS "-DDRATPROOF")
+    set_target_properties(${PROJECT_NAME}-simp PROPERTIES COMPILE_FLAGS "-DDRATPROOF")
+endif()
+
 # Create a symlink to the binary as shortcut
 add_custom_command(TARGET  ${PROJECT_NAME}-core POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E create_symlink ${PROJECT_NAME}-core ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME})
@@ -77,17 +83,12 @@ add_custom_command(TARGET  ${PROJECT_NAME}-simp POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E create_symlink ${PROJECT_NAME}-simp ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME})
 
 if(STATIC_BINARIES)
-  target_link_libraries(${PROJECT_NAME}-core ${PROJECT_NAME}-lib-static)
-  target_link_libraries(${PROJECT_NAME}-simp ${PROJECT_NAME}-lib-static)
-  target_link_libraries(${PROJECT_NAME}-core coprocessor-lib-static)
-  target_link_libraries(${PROJECT_NAME}-simp coprocessor-lib-static)
+  target_link_libraries(${PROJECT_NAME}-core ${PROJECT_NAME}-lib-static coprocessor-lib-static)
+  target_link_libraries(${PROJECT_NAME}-simp ${PROJECT_NAME}-lib-static coprocessor-lib-static)
 else()
-  target_link_libraries(${PROJECT_NAME}-core ${PROJECT_NAME}-lib-shared)
-  target_link_libraries(${PROJECT_NAME}-simp ${PROJECT_NAME}-lib-shared)
-  target_link_libraries(${PROJECT_NAME}-core coprocessor-lib-shared)
-  target_link_libraries(${PROJECT_NAME}-simp coprocessor-lib-shared)
+  target_link_libraries(${PROJECT_NAME}-core ${PROJECT_NAME}-lib-shared coprocessor-lib-shared)
+  target_link_libraries(${PROJECT_NAME}-simp ${PROJECT_NAME}-lib-shared coprocessor-lib-shared)
 endif()
-
 
 # Installation:
 # 
