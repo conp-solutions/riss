@@ -80,6 +80,7 @@ public:
  DoubleOption opt_restart_inc;
 
  DoubleOption opt_garbage_frac;
+ DoubleOption opt_reduce_frac;        // When clause database is reduced, this fraction of learnt clauses are removed              (default 0.5)
 
  IntOption opt_allUipHack;
  DoubleOption opt_vsids_start; // interpolate between VSIDS and VMTF, start value
@@ -89,7 +90,17 @@ public:
  IntOption opt_var_act_bump_mode; // bump activity of a variable based on the size/LBD of the generated learned clause
  IntOption opt_cls_act_bump_mode; // bump activity of a learned clause based on the size/LBD of the generated learned clause
  
-
+ BoolOption opt_pq_order;           // If true, use a priority queue to decide the order in which literals are implied
+                                  // and what antecedent is used.  The priority attempts to choose an antecedent
+                                  // that permits further backtracking in case of a contradiction on this level.               (default false)
+ 
+ IntOption  opt_probing_step_width; // After how many steps the solver should perform failed literals and detection of necessary assignments. (default 32) If set to '0', no inprocessing is performed.
+ IntOption  opt_probing_limit;       //Limit how many varialbes with highest activity should be probed during the inprocessing step.
+ 
+ IntOption     opt_cir_bump;
+ 
+ IntOption  opt_probing_step;     // Counter for probing. If zero, inprocessing (probing) will be performed.
+ 
  BoolOption opt_updateLearnAct;
 
 #ifdef DEBUG

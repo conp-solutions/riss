@@ -79,6 +79,8 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
 
  opt_garbage_frac (_cat, "gc-frac", "The fraction of wasted memory allowed before a garbage collection is triggered", 0.20, DoubleRange(0, false, HUGE_VAL, false), optionListPtr ),
 
+ opt_reduce_frac (), 
+ 
  opt_allUipHack ("MODS", "alluiphack", "learn all unit UIPs at any level", 0, IntRange(0, 2) , optionListPtr ),
  opt_vsids_start ("MODS", "vsids-s", "interpolate between VSIDS and VMTF,start value", 1, DoubleRange(0, true, 1, true), optionListPtr ),
  opt_vsids_end("MODS", "vsids-e", "interpolate between VSIDS and VMTF, end value", 1, DoubleRange(0, true, 1, true), optionListPtr ),
@@ -86,6 +88,31 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  opt_vsids_distance("MODS", "vsids-d", "interpolate between VSIDS and VMTF, numer of conflits until next update", INT32_MAX, IntRange(1, INT32_MAX), optionListPtr ),
  opt_var_act_bump_mode("MODS", "varActB", "bump activity of a variable (0 as usual, 1 relativ to cls size, 2 relative to LBD)", 0, IntRange(0, 2), optionListPtr ),
  opt_cls_act_bump_mode("MODS", "clsActB", "bump activity of a clause (0 as usual, 1 relativ to cls size, 2 relative to LBD)", 0, IntRange(0, 2), optionListPtr ),
+ 
+// Contrasat flag
+static BoolOption    opt_pq_order          
+
+// MiPiSAT parameters. For detailed description, see "core/Solver.h"
+static IntOption     opt_probing_step_width ("MiPiSAT", "prob-step-width", "Perform failed literals and detection of necessary assignments each n times",   0, IntRange(0, INT32_MAX));
+static IntOption     opt_probing_limit      ("MiPiSAT", "prob-limit",      "Limit how many variables with highest activity should be probed",             100, IntRange(1, INT32_MAX));
+
+// MinitSAT parameters. See details in "core/Solver.h"
+static BoolOption    opt_pol_act_init      ("MinitSAT", "pol-act-init", "Initializes polarity and activity of variables", false);
+
+// cir_minisat
+static IntOption     opt_cir_bump          ("cir-minisat", "cir-bump", "Activates CIR with bump ratio for VSIDS score (choose large: 9973)", 0, IntRange(0, INT32_MAX));
+
+ 
+ 
+ opt_pq_order ("Contrasat", "pq-order",    "Use priority queue to decide the order in which literals are implied", false, optionListPtr),
+ 
+ opt_probing_step_width("MiPiSAT", "prob-step-width", "Perform failed literals and detection of necessary assignments each n times",   0, IntRange(0, INT32_MAX),optionListPtr),
+ opt_probing_limit("MiPiSAT", "prob-limit",      "Limit how many variables with highest activity should be probed",             100, IntRange(1, INT32_MAX), optionListPtr),
+ 
+ opt_cir_bump     ("cir-minisat", "cir-bump", "Activates CIR with bump ratio for VSIDS score (choose large: 9973)", 0, IntRange(0, INT32_MAX), optionListPtr),
+ 
+
+ opt_probing_step(),
  
  opt_updateLearnAct ("MODS", "updLearnAct", "UPDATEVARACTIVITY trick (see glucose competition'09 companion paper)", true , optionListPtr ),
 

@@ -40,6 +40,10 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "riss/core/Constants.h"
 #include "riss/core/CoreConfig.h"
 
+#warning REPLACE WITH MINISAT QUEUE
+#include <deque>
+
+
 //
 // choose which bit width should be used
 // (used in level-X-look-ahead and FM)
@@ -366,7 +370,7 @@ protected:
     Heap<VarOrderLt>    order_heap;       // A priority queue of variables ordered with respect to the variable activity.
     double              progress_estimate;// Set by 'search()'.
     bool                remove_satisfied; // Indicates whether possibly inefficient linear scan for satisfied clauses should be performed in 'simplify'.
-    MarkArray permDiff;
+    MarkArray lbd_marker;
     //vec<unsigned long>  permDiff;         // permDiff[var] contains the current conflict number... Used to count the number of  LBD
     
 #ifdef UPDATEVARACTIVITY
@@ -452,9 +456,11 @@ protected:
 public:
     bool addUnitClauses( const vec< Lit >& other );		// use the given trail as starting point, return true, if fails!
 protected:
-    unsigned int computeLBD(const vec<Lit> & lits);
-    unsigned int computeLBD(const Clause &c);
-    
+  
+    template<typename T>
+    int computeLBD(const T &clause); // Calculates the Literals Block Distance, which is the number of
+                                  // different decision levels in a clause or list of literals.
+     
     /** perform minimization with binary clauses of the formula
      *  @param lbd the current calculated LBD score of the clause
      *  @return true, if the clause has been shrinked
@@ -656,7 +662,158 @@ protected:
    */
   bool erRewrite(vec<Lit>& learned_clause, unsigned int& lbd );
 
+  
+  
+// contrasat hack
+  
+    bool      pq_order;           // If true, use a priority queue to decide the order in which literals are implied
+                                  // and what antecedent is used.  The priority attempts to choose an antecedent
+                                  // that permits further backtracking in case of a contradiction on this level.               (default false)
+  
+    struct ImplData {
+        CRef reason;
+        int level;
+        int dlev_pos;
+        ImplData (CRef cr, int l, int p) : reason (cr), level (l), dlev_pos (p) { }
+        ImplData ()                      : reason (0),  level (0), dlev_pos (0) { }
+    };
 
+    struct HeapImpl {
+        vec<ImplData> heap; // Heap of ImplData
+
+        // Index "traversal" functions
+        static inline int left  (int i) { return i * 2 + 1; }
+        static inline int right (int i) { return (i + 1) * 2; }
+        static inline int parent(int i) { return (i - 1) >> 1; }
+
+        // less than with respect to lexicographical order
+        bool lt (ImplData& x, ImplData& y) const { return (x.level < y.level) ? true :
+                                                          (y.level < x.level) ? false :
+                                                          (x.dlev_pos < y.dlev_pos); }
+
+        void percolateUp(int i)
+        {
+            ImplData x = heap[i];
+            int p  = parent(i);
+            
+            while (i != 0 && lt(x, heap[p])){
+                heap[i] = heap[p];
+                i       = p;
+                p       = parent(p);
+            }
+            heap[i] = x;
+        }
+
+        void percolateDown(int i)
+        {
+            ImplData x = heap[i];
+            while (left(i) < heap.size()){
+                int child =
+                  (right(i) < heap.size() && lt(heap[right(i)], heap[left(i)]))?
+                        right(i) : left(i);
+                if (!lt(heap[child], x)) break;
+                heap[i]          = heap[child];
+                i                = child;
+            }
+            heap   [i] = x;
+        }
+
+      public:
+        HeapImpl()              : heap ()    { heap.clear(); }
+        HeapImpl(const int sz0) : heap (sz0) { heap.clear(); }
+    
+        int  size()  const                   { return heap.size(); }
+        bool empty() const                   { return heap.size() == 0; }
+        ImplData operator[](int index) const { assert(index < heap.size()); return heap[index]; }
+
+        void insert(ImplData elem)
+        {
+            heap.push(elem);
+            percolateUp(heap.size() - 1); 
+        }
+
+        ImplData  removeMin()
+        {
+            ImplData x = heap[0];
+            heap[0]    = heap.last();
+            heap.pop();
+            if (heap.size() > 1) percolateDown(0);
+            return x; 
+        }
+
+        void clear(bool dealloc = false) { heap.clear(dealloc); }
+    };
+  
+    HeapImpl            impl_cl_heap;     // A priority queue of implication clauses wrapped as ImplData, ordered by level.
+  
+  // cir minisat hack
+    void     counterImplicationRestart(); // to jump to as restart.
+ 
+    /**
+     * After how many steps the solver should perform failed literals and detection of necessary assignments. (default 32)
+     * If set to '0', no inprocessing is performed.
+     */
+    int probing_step;     // Counter for probing. If zero, inprocessing (probing) will be performed.
+    int probing_step_width;
+
+    /**
+     * Limit how many varialbes with highest activity should be probed during the inprocessing step.
+     */
+    int probing_limit;
+
+    // MinitSAT parameters
+
+    /**
+     * If true, variable initialization is based on Jeroslow-Wang heuristic and the variable
+     * activity is set to the value of the variable. Therefore, the last variables will be decided
+     * first. This is helpful because the last variables are often auxiliary variables.
+     *
+     * This hack is useful for short timeouts.
+     */
+    bool pol_act_init;
+
+	// cir minisat Parameters
+    int       cir_bump_ratio;     // bump ratio for VSIDS score after restart (if >0 cir is activated)
+    int       cir_count;          // Counts calls of cir-function
+    
+ 
+    // MiPiSAT methods
+
+    /**
+     * Apply inprocessing on the variables with highest activity. The limit of
+     * how many variables are probed is determined by the parameter "probing_limit".
+     * 
+     * @return false if inconsistency was found. That means the formula is unsatisfiable
+     */
+    bool probingHighestActivity();
+
+	/**
+     * Call probingLiteral() for both - positive and negative - literal
+     * of the passed variable.
+     *
+     * If a conflict is found, the formula is unsatisfiable.
+     * Otherwise it collects common implied variables and perform
+     * unit propagation.
+     *
+     * @param v Variable that will be checked as positive and negative literal
+     * @return false if inconsistency was found, meaning the formula is UNSATs
+     */
+    bool probing(Var v);
+
+    /**
+     * Probing a single literal.
+     * 
+     * Collects all literals that are inferred by unit propagation given a
+     * single literal. It is called by the method Solver::probing() two times
+     * for a literal "x" and its negation "not x".
+     * 
+     * @param  v Literal that is used as unit to inferre other literals
+     * @return 0 - no conflict found
+     *         1 - conflict for literal v
+     *         2 - contradiction (conflict for "v" and "not v") => UNSAT
+     */
+    int probingLiteral(Lit v);
+  
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;
 public:     
@@ -889,6 +1046,41 @@ bool Solver::addUnitClauses(const vec< Lit >& other)
   return propagate() != CRef_Undef;
 }
 
+/************************************************************
+ * Compute LBD functions
+ *************************************************************/
+
+template<typename T>
+inline unsigned int Solver::computeLBD(const T& lits) {
+  
+    // Already discovered decision levels are stored in a mark array. We do
+    // not want to allocate the mark array for each call of ths function.
+    // Therefore a "gobal" mark array for the whole Solver instance will be
+    // used.
+
+    int distance = 0;
+
+    // Generate a unique identifier (aka step) for this function call
+    lbd_marker.nextStep();
+
+    for (int i = 0; i < lits.size(); i++) {
+        // decision level of the literal
+        const int& dec_level = level(var(lits[i]));
+
+        // If the current decision level in the mark array is not associated
+        // with the current step, that means that the decision level was
+        // not discovered before. Ignore all literals on level 0, as they are 
+	// implied by the formula
+        if (dec_level != 0 && !lbd_marker.isCurrentStep(dec_level)) {
+            // mark the current level as discovered
+            lbd_marker.setCurrentStep(dec_level);
+            // a new decision level was found
+            distance++;
+        }
+    }
+
+    return distance;
+}
 
 
 //

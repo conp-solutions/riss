@@ -174,6 +174,22 @@ Solver::Solver(CoreConfig& _config) :
   , L3units(0)
   , L4units(0)
   
+  , pq_order( config.opt_pq_order ) // Contrasat
+  
+  , impl_cl_heap       ()
+  
+    // MiPiSAT
+    // 
+  , probing_step_width (config.opt_probing_step_width)
+  , probing_step(0)
+  , probing_limit      (config.opt_probing_limit)
+
+    // cir minisat
+    //
+  , cir_bump_ratio  (config.opt_cir_bump)
+  , cir_count       (0)
+  
+  
   // UHLE for learnt clauses
   , searchUHLEs(0)
   , searchUHLElits(0)
@@ -235,7 +251,7 @@ Var Solver::newVar(bool sign, bool dvar, char type)
     //activity .push(0);
     activity .push(rnd_init_act ? drand(random_seed) * 0.00001 : 0);
 //     seen     .push(0);
-    permDiff  .resize(2*v+2); // add space for the next variable
+    lbd_marker  .resize(2*v+2); // add space for the next variable
 
     trail    .capacity(v+1);
     setDecisionVar(v, dvar);
@@ -255,7 +271,7 @@ void Solver::reserveVars(Var v)
     //activity .push(0);
     activity .capacity(v+1);
 //     seen     .capacity(v+1);
-    permDiff  .capacity(2*v+2);
+    lbd_marker  .capacity(2*v+2);
     varFlags. capacity(v+1);
     trail    .capacity(v+1);
 }
@@ -429,36 +445,6 @@ bool Solver::satisfied(const Clause& c) const {
             return true;
     return false; }
 
-/************************************************************
- * Compute LBD functions
- *************************************************************/
-
-inline unsigned int Solver::computeLBD(const vec<Lit> & lits) {
-  int nblevels = 0;
-  permDiff.nextStep();
-    for(int i=0;i<lits.size();i++) {
-      int l = level(var(lits[i]));
-      if ( ! permDiff.isCurrentStep(l) ) {
-	permDiff.setCurrentStep(l);
-	nblevels++;
-      }
-    }
-  return nblevels;
-}
-
-inline unsigned int Solver::computeLBD(const Clause &c) {
-  int nblevels = 0;
-  permDiff.nextStep();
-
-    for(int i=0;i<c.size();i++) {
-      int l = level(var(c[i]));
-      if ( ! permDiff.isCurrentStep(l) ) {
-	permDiff.setCurrentStep(l);
-	nblevels++;
-      }
-    }
-  return nblevels;
-}
 
 
 /******************************************************************
@@ -471,16 +457,16 @@ bool Solver::minimisationWithBinaryResolution(vec< Lit >& out_learnt, unsigned i
   const Lit p = ~out_learnt[0];
 
       if(lbd<=lbLBDMinimizingClause){
-      permDiff.nextStep();
-      for(int i = 1;i<out_learnt.size();i++) permDiff.setCurrentStep( var(out_learnt[i]) );
+      lbd_marker.nextStep();
+      for(int i = 1;i<out_learnt.size();i++) lbd_marker.setCurrentStep( var(out_learnt[i]) );
       const vec<Watcher>&  wbin  = watches[p]; // const!
       int nb = 0;
       for(int k = 0;k<wbin.size();k++) {
 	if( !wbin[k].isBinary() ) continue; // has been looping on binary clauses only before!
 	const Lit imp = wbin[k].blocker();
-	if(  permDiff.isCurrentStep(var(imp)) && value(imp)==l_True) {
+	if(  lbd_marker.isCurrentStep(var(imp)) && value(imp)==l_True) {
 	  nb++;
-	  permDiff.reset( var(imp) );
+	  lbd_marker.reset( var(imp) );
 #ifdef CLS_EXTRA_INFO
 	  extraInfo = extraInfo >= ca[wbin[k].cref()].extraInformation() ? extraInfo : ca[wbin[k].cref()].extraInformation();
 #endif
@@ -490,7 +476,7 @@ bool Solver::minimisationWithBinaryResolution(vec< Lit >& out_learnt, unsigned i
       if(nb>0) {
 	nbReducedClauses++;
 	for(int i = 1;i<out_learnt.size()-nb;i++) {
-	  if( ! permDiff.isCurrentStep( var(out_learnt[i])) ) {
+	  if( ! lbd_marker.isCurrentStep( var(out_learnt[i])) ) {
 	    const Lit p = out_learnt[l];
 	    out_learnt[l] = out_learnt[i];
 	    out_learnt[i] = p;
@@ -1121,7 +1107,31 @@ CRef Solver::propagate(bool duringAddingClauses)
     CRef    confl     = CRef_Undef;
     int     num_props = 0;
     watches.cleanAll(); clssToBump.clear();
-    while (qhead < trail.size()){
+    while (qhead < trail.size() || (pq_order && !impl_cl_heap.empty())) {
+      
+        if (pq_order && qhead >= trail.size()) {
+            assert(!impl_cl_heap.empty());
+
+            ImplData best   = impl_cl_heap.removeMin();
+            CRef     bestcr = best.reason;
+            Clause&  bestc  = ca[bestcr];
+            Lit      best0  = bestc[0];
+
+            if (value(best0) == l_False) {
+                confl = bestcr;
+                qhead = trail.size();
+                impl_cl_heap.clear();
+                break;
+            }
+
+            if (value(best0) == l_True) {
+                continue;
+            }
+
+            uncheckedEnqueue(best0, bestcr);
+            assert (qhead < trail.size());
+        }
+      
         Lit            p   = trail[qhead++];     // 'p' is enqueued fact to propagate.
         DOUT( if( config.opt_learn_debug ) cerr << "c propagate literal " << p << endl; );
         realHead = qhead;
@@ -1144,7 +1154,18 @@ CRef Solver::propagate(bool duringAddingClauses)
 	  }
 	  
 	  if(value(imp) == l_Undef) {
-	    uncheckedEnqueue(imp,wbin[k].cref(), duringAddingClauses);
+	    
+	    if (pq_order) {
+                // Priority is level of 3rd lit (small is good), then
+                // local trail position of 2nd lit (small is good).
+                // Other lits are at least as early as 3rd lit.
+		// simplified to binary clauses
+#warning check whether this is necessary (how binary clauses are treaded in contrasat
+                ImplData implied(wbin[k].cref(), 0, num_props);
+                impl_cl_heap.insert(implied);
+            } else {
+	      uncheckedEnqueue(imp,wbin[k].cref(), duringAddingClauses);
+	    }
 	  } 
 	}
 
@@ -1187,7 +1208,14 @@ CRef Solver::propagate(bool duringAddingClauses)
             for (int k = 2; k < c.size(); k++)
                 if (value(c[k]) != l_False)
 		{
-                    c[1] = c[k]; c[k] = false_lit;
+                    // AVG: keep c[2] as most recent false_lit.
+                    if (pq_order) {
+                        assert(c[1] == false_lit);
+                        c[1] = c[k]; c[k] = c[2]; c[2] = false_lit;
+                    } else {
+			c[1] = c[k]; c[k] = false_lit;
+                    }
+		    
 		    DOUT( if( config.opt_learn_debug ) cerr << "c new watched literal for clause " << ca[cr] << " is " << c[1] <<endl; );
                     watches[~c[1]].push(w);
                     goto NextClause; 
@@ -1200,24 +1228,34 @@ CRef Solver::propagate(bool duringAddingClauses)
             if ( value(first) == l_False ) {
                 confl = cr; // independent of opt_long_conflict -> overwrite confl!
                 qhead = trail.size();
+		impl_cl_heap.clear(); 
                 // Copy the remaining watches:
                 while (i < end)
                     *j++ = *i++;
+            } else { 
+	      
+	      if( c.mark() == 0  && config.opt_update_lbd == 0) { // if LHBR did not remove this clause
+		int newLbd = computeLBD( c );
+		if( newLbd < c.lbd() || config.opt_lbd_inc ) { // improve the LBD (either LBD decreased,or option is set)
+		  if( c.lbd() <= lbLBDFrozenClause ) {
+		    c.setCanBeDel( false ); // LBD of clause improved, so that its not considered for deletion
+		  }
+		  c.setLBD(newLbd);
+		}
+	      }
+	      
+	      if (pq_order) {
+                // Priority is level of 3rd lit (small is good), then
+                // local trail position of 2nd lit (small is good).
+                // Other lits are at least as early as 3rd lit.
+                Lit  third = (c.size()>2)? c[2] : lit_Undef;
+                int  level3 = (third==lit_Undef)? 0: level(var(third));
+                ImplData implied(cr, level3, num_props);
+                impl_cl_heap.insert(implied);
             } else {
 		DOUT( if( config.opt_learn_debug ) cerr << "c current clause is unit clause: " << ca[cr] << endl; );
                 uncheckedEnqueue(first, cr, duringAddingClauses);
-		
-		// if( config.opt_printLhbr ) cerr << "c final common dominator: " << commonDominator << endl;
-		
-		if( c.mark() == 0  && config.opt_update_lbd == 0) { // if LHBR did not remove this clause
-		  int newLbd = computeLBD( c );
-		  if( newLbd < c.lbd() || config.opt_lbd_inc ) { // improve the LBD (either LBD decreased,or option is set)
-		    if( c.lbd() <= lbLBDFrozenClause ) {
-		      c.setCanBeDel( false ); // LBD of clause improved, so that its not considered for deletion
-		    }
-		    c.setLBD(newLbd);
-		  }
-		}
+	      }
 	    }
         NextClause:;
         }
@@ -1346,6 +1384,61 @@ void Solver::clearPreferred()
 // NuSMV: PREF MOD END
                
 
+               
+void Solver::counterImplicationRestart(){
+    // number of times this function is executed
+    cir_count++;
+
+    // this function runs every three times
+    // small intervalls (like 3) end in better performance
+    if(cir_count % 3 > 0){
+        return;
+    }
+
+    int nv = nVars();
+    vec<int> implied_num(nv + 1, 0);
+    int max_imp = 0;
+
+    // loop backwards over trail to set the indegree
+    // of each variable and find maximal indegree
+    for (int c = trail.size() - 1; c >= 0; c--){
+        int x = var(trail[c]);
+        int lvl = level(x);
+        CRef r = reason(x);
+
+        if(r == CRef_Undef)
+          continue;
+
+        Clause& cl = ca[r];
+
+        // loop over reason clause
+        for(int j = 0; j < cl.size(); j++){
+            int v = var(cl[j]);
+
+            if(level(v) != lvl) {
+                implied_num[x]++;
+            }
+        }
+
+        if(max_imp < implied_num[x])
+            max_imp = implied_num[x];
+    }
+
+    for(int c = trail.size() - 1; c >= 0; c--){
+        int x = var(trail[c]);
+
+
+        // all the VSIDS scores of the variables are bumped in
+        // proportion to their indegrees. To bump the VSIDS score drastically, the constant
+        // number of the \BUMPRATIO" needs to be relatively large.
+        // A variable with a large indegree implies that this variable used to be the unit
+        // variable in a large clause. So it is selected as
+        // decision-variables at early depth of the search tree.
+        if(implied_num[x] != 0)
+            varBumpActivity(x, var_inc * implied_num[x] * cir_bump_ratio / max_imp);
+    }
+}
+
 
 /*_________________________________________________________________________________________________
 |
@@ -1380,7 +1473,128 @@ bool Solver::simplify()
     simpDB_assigns = nAssigns();
     simpDB_props   = clauses_literals + learnts_literals;   // (shouldn't depend on stats really, but it will do for now)
 
+    // Only perform inprocessing if the option is not zero.
+    if (probing_step_width) {
+        // Performed probing every "probing_step_width"-times
+        probing_step = (probing_step + 1) % probing_step_width;
+        
+        if (probing_step == 0) {
+            // If a contraction for any of the variables was found, the
+            // formula is UNSAT
+            if (!probingHighestActivity()) {
+                // Mark the formula as unsatisfiable
+                ok = false;
+
+                return false;
+            }
+        }
+    }
+    
     return true;
+}
+
+bool Solver::probingHighestActivity() {
+    // Probe variables with highest activity
+    for (int i = 0; i < fmin(order_heap.size(), probing_limit); ++i) {
+        // Contradiction was found => UNSAT
+        if (!probing(order_heap[i])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool Solver::probing(Var v) {
+    static vec<Lit> unchecked;
+    static vec<lbool> assigns_before;
+  
+    cancelUntil(0);
+    
+    if (value(v) != l_Undef) {
+        return true;
+    }
+    
+    switch (probingLiteral(mkLit(v, true))) {
+        // Contradiction => UNSAT
+        case 2: return false;
+        case 1: return true;
+    }
+
+    // no conflicting clause was found
+
+    assigns.copyTo(assigns_before);
+    cancelUntil(0);
+    
+    // Probe negated literal
+    switch (probingLiteral(mkLit(v, false))) {
+        // Contradiction => UNSAT
+        case 2: return false;
+        case 1: return true;
+    }
+
+    // No conflict clause for positive and negative literal
+    // found. Collect the commonly implied literals and enqueue them.
+
+    unchecked.clear();
+
+    // Walk though assignment stack for decision level 0
+    for (int i = trail_lim[0]; i < trail.size(); ++i) {
+        Lit l = trail[i];
+
+        // if variable assignment has changed from positive to negative,
+        // save literal as unchecked
+        if (assigns_before[var(l)] == l_True && !sign(l)) {
+           unchecked.push(l);
+        }
+
+        // same as above, but from negative to positive
+        if (assigns_before[var(l)] == l_False && sign(l)) {
+           unchecked.push(l);
+        }
+    }
+    
+    cancelUntil(0);
+
+    // enqueue all implied literals
+    for (int i = 0; i < unchecked.size(); i++) {
+        enqueue(unchecked[i], CRef_Undef);
+    }
+    
+    // Found conflicting clause => UNSAT
+    if (propagate() != CRef_Undef) {
+      return false;
+    }
+ 
+    return true;
+}
+
+
+int Solver::probingLiteral(Lit v) {
+    newDecisionLevel();
+
+    // Unit propagation for literal
+    uncheckedEnqueue(v);
+
+    // Conflict for literal v
+    if (propagate() != CRef_Undef) {
+        // Perform backtrack to top level
+        cancelUntil(0);
+
+        // Unit propagation for negated literal
+        uncheckedEnqueue(~v);
+
+        // Contradiction: conflict literal "v" and "not v"
+        if (propagate() != CRef_Undef) {
+          return 2;
+        }
+
+        // Conflict for literal v
+        return 1;
+    }
+
+    // No conflicting clause found
+    return 0;
 }
 
 /*_________________________________________________________________________________________________
@@ -1602,6 +1816,11 @@ bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
 	      return false; // we found that we should not restart, because we have a (partial) model
 	    }
 	  }
+	  
+	  if (cir_bump_ratio != 0){
+	    counterImplicationRestart();
+	  }
+	  
 	  cancelUntil(partialLevel);
 	  return true;
 	}
@@ -1622,6 +1841,11 @@ bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
 		return false; // we found that we should not restart, because we have a (partial) model
 	      }
 	    }
+	    
+	    if (cir_bump_ratio != 0) {
+	      counterImplicationRestart();
+	    }
+	    
 	    cancelUntil(partialLevel);
 	    return true;
 	  }
