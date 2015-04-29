@@ -326,7 +326,7 @@ bool RATElimination::eliminateRAT()
 	if( allResolventsRedundant ) {	// clause C is RAT, remove it!
 	  data.addToExtension(data.list(right)[i], right); 
 	  DOUT( if( config.opt_rate_debug > 1 ) cerr << "c RATE eliminate RAT clause [" << data.list(right)[i] << "] " << c << endl;);
-	  c.sort();		// necessary to ensure a general result -->  RATE is not confluent! (just for benchmarking)
+	  //c.sort();		// necessary to ensure a general result -->  RATE is not confluent! (just for benchmarking)
 	  c.set_delete(true);
 	  remBRAT = usedBratClause ? remBRAT + 1 : usedBratClause;
 	  remRAT = (!allTaut && !usedBratClause) ? remRAT+1 : remRAT;
@@ -356,7 +356,9 @@ bool RATElimination::eliminateRAT()
 
 bool RATElimination::propagateUnit(const Lit& unit, int& trailPosition)
 {
+  
   assert( solver.value(unit) == l_Undef && "we only propagate units we did not see before" ); // FIXME is the if-statement below necessary?
+  
   if(  solver.value(unit) == l_Undef ) {
     unitRATM ++;
     const int oldTrailsize = solver.trail.size();
@@ -379,13 +381,19 @@ bool RATElimination::propagateUnit(const Lit& unit, int& trailPosition)
 // 	    }
 
     ratmSteps +=  solver.trail.size() - oldTrailsize;
+      for ( int g = trailPosition; g <  solver.trail.size(); ++g ){
+	approxRatm += data.list(solver.trail[g]).size();
+	approxRatm += data.list(~solver.trail[g]).size();
 
-      for (int g=trailPosition; g< solver.trail.size(); ++g){
+      }
+      
+      for (int g = trailPosition; g < solver.trail.size(); ++g ){
 	
 	data.addCommentToProof("implied by previous RATM/ATM unit");
 	data.addUnitToProof( solver.trail[g] );  
     
 	for (int p=0; p < data.list(solver.trail[g]).size(); ++p){
+
 	  Clause& gpclause = ca[data.list(solver.trail[g])[p]];
 	  if (! gpclause.can_be_deleted() ) {
 	    gpclause.set_delete(true);
@@ -402,6 +410,51 @@ bool RATElimination::propagateUnit(const Lit& unit, int& trailPosition)
 	
 }
 
+void RATElimination::checkedAttach(const CRef clause, const int& detachTrailSize)
+{
+  int trailsize = solver.trail.size();
+  assert ( solver.decisionLevel() == 0 && "This method is only for the checked attach at level 0!");
+  
+    if (solver.value(ca[clause][0]) == l_Undef && solver.value(ca[clause][1]) == l_Undef) {
+      solver.attachClause(clause);
+    }
+    else {
+      if (solver.value(ca[clause][0]) != l_Undef){
+	for ( int j = 2; j < ca[clause].size(); ++j ){
+	  if ( solver.value(ca[clause][j]) == l_Undef ){
+	    const Lit tmp = ca[clause][0];
+	    ca[clause][0] = ca[clause][j];
+	    ca[clause][j] = tmp;
+	  }
+	}
+      }
+      if (solver.value(ca[clause][1]) != l_Undef){
+	for ( int j = 2; j < ca[clause].size(); ++j ){
+	  if ( solver.value(ca[clause][j]) == l_Undef ){
+	    const Lit tmp = ca[clause][1];
+	    ca[clause][1] = ca[clause][j];
+	    ca[clause][j] = tmp;
+	  }
+	}
+      }
+      if (solver.value(ca[clause][0]) == l_Undef && solver.value(ca[clause][1]) == l_Undef) {
+	solver.attachClause(clause);
+      }
+      else {
+	assert ( solver.value(ca[clause][0]) != l_True && solver.value(ca[clause][1]) != l_True && "The clause is satified and shouldn't be attached!" );
+	if (solver.value(ca[clause][0]) != l_Undef){
+	  propagateUnit(ca[clause][1], trailsize);
+	  return;
+	}
+	if (solver.value(ca[clause][1]) != l_Undef){
+	  propagateUnit(ca[clause][0], trailsize);
+	  return;
+	}
+	assert ( false && "There should be no case left!" );
+      }
+    }
+}
+
 bool RATElimination::shortATM(const CRef clause, const Lit left, int& trailPosition, vector<Lit>& atlits)
 {	  
   Clause& cl = ca[ clause ];
@@ -413,152 +466,162 @@ bool RATElimination::shortATM(const CRef clause, const Lit left, int& trailPosit
     for( int k = 0 ; k < cl.size(); ++ k){
       if ( cl[k] != left ){ 
 	assert( solver.value(cl[k]) == l_Undef && "all units should be propagated properly before already" );
-	 solver.uncheckedEnqueue( ~cl[k] ); 
+	solver.uncheckedEnqueue( ~cl[k] ); 
       }
     }
 
     ratmSteps += solver.trail.size();
 
     if (CRef_Undef != solver.propagate()) {
+      for ( int g = trailPosition; g < solver.trail.size(); ++g ){
+	approxRatm += data.list(solver.trail[g]).size();
+	approxRatm += data.list(~solver.trail[g]).size();
+      }
       solver.cancelUntil(0);
       return true;
     }
   }
+  
   else
   {
 
-  bool confl = false;
-  int lastKeptLiteral = 0;
-  int delPrefix=0;	 
+    bool confl = false;
+    int lastKeptLiteral = 0;
+    int delPrefix=0;	 
+    
+    solver.newDecisionLevel(); // to be able to backtrack
 
-  solver.newDecisionLevel(); // to be able to backtrack
+    atlits.clear();
 
-  atlits.clear();
+    for( int j = 0 ; j < cl.size(); ++ j ) if (cl[j] != left) atlits.push_back(cl[j]);
 
-  for( int j = 0 ; j < cl.size(); ++ j ) {  if (cl[j] != left) atlits.push_back(cl[j]);}
-  
-  for( int j = 0 ; j < atlits.size(); ++ j ){
-    if ( solver.value(atlits[j]) == l_Undef ) { 
-      const int oldTrailsize = solver.trail.size();
-      solver.uncheckedEnqueue( ~atlits[j] );
-      confl = CRef_Undef != solver.propagate();  
-      ratmSteps += solver.trail.size() - oldTrailsize;
-    } 
-    else confl = (solver.value(atlits[j]) == l_True);
-    if (confl) {
-
-      if (j == 0 ) { // first tested literal is conflicting --> top-level-conflict! --> propagate!
-
-	solver.cancelUntil(0); // backtrack before check the value of the lit!
-	assert ( solver.value(atlits[j])  == l_Undef && " It should be deleted or l_undef at level 0! ");
-	propagateUnit(atlits[j], trailPosition);
-
-	return true;
-      }
-      lastKeptLiteral = j;
-      break;
-    }
-  }
-
-  assert ( (lastKeptLiteral > 0 || !confl) && "Cannot shink to a Unit!"); 
-
-  if (confl){
-
-    confl = false;
-    solver.cancelUntil(0); // backtrack
-    solver.newDecisionLevel(); // to be able to backtrack	
-
-    assert (lastKeptLiteral > 0 && "Cannot shink to a Unit!");
-
-    for( int j = lastKeptLiteral ; j >= 0; -- j ){
-
-      if ( solver.value(atlits[j]) == l_Undef ) {
+    for( int j = 0 ; j < atlits.size(); ++ j ){
+      
+      if ( solver.value(atlits[j]) == l_Undef ) { 
 	const int oldTrailsize = solver.trail.size();
-	solver.uncheckedEnqueue( ~atlits[j] );  
-	confl = CRef_Undef != solver.propagate();
+	solver.uncheckedEnqueue( ~atlits[j] );
+	confl = CRef_Undef != solver.propagate();  
 	ratmSteps += solver.trail.size() - oldTrailsize;
-      }
-      else  confl = solver.value(atlits[j]) == l_True;
-
+      } 
+      
+      else confl = (solver.value(atlits[j]) == l_True);
+      
       if (confl) {
 
-	if (j == lastKeptLiteral) { // first tested literal is conflicting --> top-level-conflict! --> propagate!
-
+	if (j == 0 ) { // first tested literal is conflicting --> top-level-conflict! --> propagate!
+	  for (int g=trailPosition; g< solver.trail.size(); ++g){
+	    approxRatm += data.list(solver.trail[g]).size();
+	    approxRatm += data.list(~solver.trail[g]).size();
+	  }
+	  
 	  solver.cancelUntil(0); // backtrack before check the value of the lit!
 	  assert ( solver.value(atlits[j])  == l_Undef && " It should be deleted or l_undef at level 0! ");
 	  propagateUnit(atlits[j], trailPosition);
 
 	  return true;
 	}
-	delPrefix = j; 
+	lastKeptLiteral = j;
 	break;
       }
     }
-  
-    if (delPrefix > 0 || lastKeptLiteral < atlits.size()-1 ){ // skip clauses, where all negated literals are needed to cause the conflict
 
-      int j = 0, k = 0;
+    assert ( (lastKeptLiteral > 0 || !confl) && "Cannot shink to a Unit!"); 
 
-      cerr << "c detach clause to remove literals" << endl;
-      solver.detachClause(clause, true);
+    if (confl){
 
-      for ( j = 0; j < delPrefix; ++j ) {
-	data.removeClauseFrom( clause, atlits[j] ); // remove the clause from the corresponding list
-	data.removedLiteral(atlits[j]);
+      confl = false;      
+      
+      for (int g = trailPosition; g < solver.trail.size(); ++g ){
+	approxRatm += data.list(solver.trail[g]).size();
+	approxRatm += data.list(~solver.trail[g]).size();
       }
+      
+      solver.cancelUntil(0); // backtrack
+      solver.newDecisionLevel(); // to be able to backtrack	
 
-      for ( ; j <= lastKeptLiteral; ++j ) {
-	cl[k++] = atlits[j];
+      assert (lastKeptLiteral > 0 && "Cannot shink to a Unit!");
+
+      for( int j = lastKeptLiteral ; j >= 0; -- j ){
+
+	if ( solver.value(atlits[j]) == l_Undef ) {
+	  const int oldTrailsize = solver.trail.size();
+	  solver.uncheckedEnqueue( ~atlits[j] );  
+	  confl = CRef_Undef != solver.propagate();
+	  ratmSteps += solver.trail.size() - oldTrailsize;
+	}
+	
+	else  confl = solver.value(atlits[j]) == l_True;
+
+	if (confl) {
+
+	  if (j == lastKeptLiteral) { // first tested literal is conflicting --> top-level-conflict! --> propagate!
+	    
+	    for (int g = trailPosition; g < solver.trail.size(); ++g ){
+	      approxRatm += data.list(solver.trail[g]).size();
+	      approxRatm += data.list(~solver.trail[g]).size();
+	    }
+	    solver.cancelUntil(0); // backtrack before check the value of the lit!
+	    assert ( solver.value(atlits[j])  == l_Undef && " It should be deleted or l_undef at level 0! ");
+	    propagateUnit(atlits[j], trailPosition);
+	    
+	    return true;
+	  }
+	  
+	  delPrefix = j; 
+	  break;
+	}
       }
-      cl[k++] = left;
     
-      for ( ; j < atlits.size(); ++j ) {
-	data.removeClauseFrom( clause, atlits[j] ); // remove the clause from the corresponding list
-	data.removedLiteral(atlits[j]);
+      if (delPrefix > 0 || lastKeptLiteral < atlits.size()-1 ){ // skip clauses, where all negated literals are needed to cause the conflict
+
+	int j = 0, k = 0;
+
+	solver.cancelUntil(0);
+	solver.detachClause(clause, true);
+	
+	assert( solver.value(ca[clause][0]) == l_Undef && solver.value(ca[clause][1]) == l_Undef && "Can't detach a clause where one of the watched literals isn't l_Undef");
+
+	const int detachTrailSize = solver.trail.size();
+	
+	for ( j = 0; j < delPrefix; ++j ) {
+	  data.removeClauseFrom( clause, atlits[j] ); // remove the clause from the corresponding list
+	  data.removedLiteral(atlits[j]);
+	}
+
+	for ( ; j <= lastKeptLiteral; ++j ) {
+	  cl[k++] = atlits[j];
+	}
+	
+	cl[k++] = left;
+      
+	for ( ; j < atlits.size(); ++j ) {
+	  data.removeClauseFrom( clause, atlits[j] ); // remove the clause from the corresponding list
+	  data.removedLiteral(atlits[j]);
+	}
+	minATM +=  (cl.size() - k); 
+
+	const int a = cl.size();
+	cl.shrink(cl.size() - (k));
+	assert (a != cl.size() &&  "Clause is not shrinked! Infinite loop may cause!" ); // FIXME int a needed to check this, delete/comment after fuzzing
+	data.addCommentToProof("remove literals by ATM");
+	data.addToProof(cl);                 // add the shrinked clause to the proof
+	data.addToProof(atlits, true, left); // remove the original clause from the proof (all literals from atlits as well as the literal left)
+
+	checkedAttach(clause, detachTrailSize);
       }
-      minATM +=  (cl.size() - k); 
-
-      const int a = cl.size();
-      cl.shrink(cl.size() - (k));
-      assert (a != cl.size() &&  "Clause is not shrinked! Infinite loop may cause!" ); // FIXME int a needed to check this, delete/comment after fuzzing
-      data.addCommentToProof("remove literals by ATM");
-      data.addToProof(cl);                 // add the shrinked clause to the proof
-      data.addToProof(atlits, true, left); // remove the original clause from the proof (all literals from atlits as well as the literal left)
-
-      cerr << "c attach clause after removing " << k << "literals" << endl;
-      solver.attachClause(clause);
-    }
-
-    solver.cancelUntil(0);
-    return true;
-  }
-
-  if ( solver.value(left) == l_Undef ) {
-   // solver.propagate();
-    
-    cerr << "c trail: " << solver.trail << endl;
-    cerr << "c current clause[" << clause << "]: " << cl << endl;
-    cerr << "c delete: " << cl.can_be_deleted() << endl;
-    cerr << "c left: " << left << endl;
-    
-    
-    assert (false);   // Why left hasn't a value? It should be! FIXME
-    const int oldTrailsize = solver.trail.size();
-    solver.uncheckedEnqueue( left );
-    if ( CRef_Undef != solver.propagate() ) {
-      ratmSteps += solver.trail.size() - oldTrailsize;
+	for ( int g = trailPosition; g < solver.trail.size(); ++g ){
+	  approxRatm += data.list(solver.trail[g]).size();
+	  approxRatm += data.list(~solver.trail[g]).size();
+	}
+	
       solver.cancelUntil(0);
       return true;
     }
+
+    assert ( solver.value(left) == l_True && "Has to be, otherwise the algorithm doesn't recognize some possible conflict's." );
+ 
+    return false; 
   }
-  else
-    if ( solver.value(left) == l_False ) {
-      solver.cancelUntil(0);
-      return true;
-    }
-  }
-  return false; 
-    
 }
 
 bool RATElimination::minimizeRAT()
@@ -583,7 +646,17 @@ bool RATElimination::minimizeRAT()
   reduct.create(2*data.nVars());
   
   int trailPosition = 0;
-  vector<Lit> atlits;
+  vector<Lit> atlits; 
+  
+  if( data.nCls() != 0 && data.nVars() != 0 ){
+    approxFacA = (data.nTotLits() / data.nCls());
+    float b = (data.nTotLits() / data.nVars());
+    approxFacAB = ( approxFacA * b )/1000;
+  }
+  else {
+   approxFacA = 1;
+   approxFacAB = 1;
+  }
   
   // init
   for( Var v = 0 ; v < data.nVars(); ++ v )
@@ -596,6 +669,7 @@ bool RATElimination::minimizeRAT()
   data.ma.nextStep();
   
   do {
+    roundsRATM++;
     
     // re-init heap
     for( int i = 0 ; i < nextRoundLits.size(); ++ i ) {
@@ -604,18 +678,21 @@ bool RATElimination::minimizeRAT()
       assert( !rateHeap.inHeap(toInt(l)) && "literal should not be in the heap already!" );
       rateHeap.insert( toInt(l) );
     }
+    
     nextRoundLits.clear();
     nextRound.nextStep();
               
     // do RAT Minimization on all the literals of the heap
     while (rateHeap.size() > 0 && (data.unlimited() || config.ratm_Limit > ratmSteps) && !data.isInterupted() && data.ok() )
     {
-      
-      // interupted ?
+     
 
-      if( data.isInterupted() ) break;
+//       if( data.isInterupted() ) break;  // ATTENTION is checked in the while-loop... not needed?
+      
       const Lit right = toLit(rateHeap[0]);
+      
       assert( rateHeap.inHeap( toInt(right) ) && "item from the heap has to be on the heap");
+      
       rateHeap.removeMin();   
      
       
@@ -645,24 +722,43 @@ bool RATElimination::minimizeRAT()
 
 	int lastKeptLiteral = 0, toBeKeptLiterals = 0;
 	bool confl = true; // has to be true --> exit condition for the for-loop!
+	
 	for( int j = 0; j < data.list(left).size() && data.ok() && confl; ++j )
 	{
+	  int detachTrailSize = 0;
 	  const CRef clause = data.list(left)[j];
 	  if ( ca[ clause ].can_be_deleted() ) continue;
 	  
-	 if ( shortATM(clause, left, trailPosition, atlits) ) {  // calls the ATM routine, returns true, if clause has AT
+	  if ( shortATM(clause, left, trailPosition, atlits) ) {  // calls the ATM routine, returns true, if clause has AT
 	   conflATM++;
 	   confl = true;
 	   assert( solver.decisionLevel() == 0 && "after conflict the decision level has to be set to 0 again" );
+	   
 	   if (!data.ok()) return true;
+	   
+	   if ( solver.value(right) != l_Undef ) { // if left got a value in a Unit-Propagation it is possible a clause will be shrinked wrongly
+	     confl = false;
+	     break;
+	   }
+	   
 	   continue;
 	 }
+	 
 	 else {
-	   cerr << "c detach clause to check RAT (has not AT)" << endl;
+	   
+// should be possible, if clause is already satified ( at this point we are on level 1 ). In this case, a conflict will follow! 
+// 	   assert( solver.value(ca[cr][0]) == l_Undef && solver.value(ca[cr][1]) == l_Undef && "Can't detach a clause where one of the watched literals isn't l_Undef");
+
 	   solver.detachClause(cr,true);
+	   detachTrailSize = solver.trail.size();
 	 }
 	 
 	 if ( c.can_be_deleted() ) { // the clause might be removed by unit propagation from the ATM method
+	         
+	   for ( int g = trailPosition; g < solver.trail.size(); ++g ){
+	     approxRatm += data.list(solver.trail[g]).size();
+	     approxRatm += data.list(~solver.trail[g]).size();
+	   }
 	   solver.cancelUntil(0);
 	   break;
 	 }
@@ -671,22 +767,23 @@ bool RATElimination::minimizeRAT()
 	  
 	  solver.newDecisionLevel();
 	  
+	  const int tmpTrailPosition = solver.trail.size();
 	  confl = false;
 	  
 	  for( int k = 0 ; k < data.lits.size(); ++ k ){
-	      if ( solver.value(data.lits[k]) == l_Undef ) { 
-		const int oldTrailsize = solver.trail.size();
-		solver.uncheckedEnqueue( ~data.lits[k] );
-		confl = CRef_Undef != solver.propagate();    
-		ratmSteps += solver.trail.size() - oldTrailsize;
-	      }
-	      else  confl = (solver.value( data.lits[k] ) == l_True);
+	    if ( solver.value(data.lits[k]) == l_Undef ) { 
+	      const int oldTrailsize = solver.trail.size();
+	      solver.uncheckedEnqueue( ~data.lits[k] );
+	      confl = CRef_Undef != solver.propagate();    
+	      ratmSteps += solver.trail.size() - oldTrailsize;
+	    }
+	    else  confl = (solver.value( data.lits[k] ) == l_True);
 	    
-	      if ( confl ) {
-		if ( k >= lastKeptLiteral ) lastKeptLiteral = k+1;
-		ratmSteps += k+1;
-		break;
-	      }
+	    if ( confl ) {
+	      if ( k >= lastKeptLiteral ) lastKeptLiteral = k+1;
+	      //ratmSteps += k+1;
+	      break;
+	    }
 	      
 	  }
 	
@@ -695,94 +792,130 @@ bool RATElimination::minimizeRAT()
 	  if ( confl ){
 	    conflRATM++;
 	    confl = false;
+	    
+	    for ( int g = tmpTrailPosition; g < solver.trail.size(); ++g ){
+	      approxRatm += data.list(solver.trail[g]).size();
+	      approxRatm += data.list(~solver.trail[g]).size();
+	    }
+	    
 	    solver.cancelUntil(1); // backtrack
 	    solver.newDecisionLevel(); // to be able to backtrack	
+	    
 	    for( int k = (lastKeptLiteral-1) ; k >= 0; -- k ){
-	        if ( solver.value(data.lits[k]) == l_Undef ) { 
-		  const int oldTrailsize = solver.trail.size();
-		  solver.uncheckedEnqueue( ~data.lits[k]);  
-		  confl = CRef_Undef != solver.propagate();
-		  ratmSteps += solver.trail.size() - oldTrailsize;
-	        }
-	        else  if ( solver.value(data.lits[k]) == l_True ){
+	      if ( solver.value(data.lits[k]) == l_Undef ) { 
+		const int oldTrailsize = solver.trail.size();
+		solver.uncheckedEnqueue( ~data.lits[k]);  
+		confl = CRef_Undef != solver.propagate();
+		ratmSteps += solver.trail.size() - oldTrailsize;
+	      }
+	      
+	      else  
+		if ( solver.value(data.lits[k]) == l_True ){
 		  confl = true;		  
-		  }   
-		if (!reduct.isCurrentStep( toInt(data.lits[k]) )){
-		    reduct.setCurrentStep(toInt(data.lits[k]));
-		    toBeKeptLiterals ++;
-		} 
-	        if (confl) {
-		  
-		  if (toBeKeptLiterals == data.lits.size()){   // then stop with the current clause!
-		    confl = false;
-		  }
-		  break;
-	        }
-	     }
-        }
-        // has to be attached for the ATM routine in the next cycle
-        cerr << "c with right=" << right << " and left=" << left << " attach at RATM 720" << endl;
-	solver.attachClause(cr);
-	solver.cancelUntil(0);	
-     } // END for loop over left-clauses
-     
-     if ( c.can_be_deleted() ) // happens if c is satisfied by a Unit-Propagation in the ATM routine
-       if ( solver.value(right) == l_Undef ) continue;
-       else break;
-    
-     if ( !confl ) continue; // resolvent didn't fulfill the RAT requirement
-     
-     if ( lastKeptLiteral == 0 ) {   // all clauses in data.lits(left) have AT -- kept literals have never been seen
-        cerr << "c with right=" << right << " and left=" << left << " detach at RATM732" << endl;
-	solver.detachClause(cr,true);
-	solver.cancelUntil(0); 
-	
-	if(  solver.value(right) == l_Undef ) { // necassary, because unit's propagated in the ATM prozedure may implied right
-	  propagateUnit(right, trailPosition);
-	}
-	else {
-	  cerr << "c with right=" << right << " and left=" << left << " attach at RATM739" << endl;
-	  solver.attachClause( cr );
-	}
-	continue;
-      }
-      
-  if ( lastKeptLiteral > 0 ) {
-	cerr << "c with right=" << right << " and left=" << left << " detach at RATM747" << endl;
-	solver.detachClause( cr, true ); 
-	int n=0;
-	reduct.setCurrentStep(toInt(right));
-	for ( int k = 0; k < c.size(); ++k ) {
-	  if (reduct.isCurrentStep(toInt(c[k]))) c[n++] = c[k]; 
-	  else {
-	    data.removeClauseFrom( cr, c[k] ); // remove the clause from the corresponding list
-	    data.removedLiteral(c[k]);	 
-	  }
-	}
-	
-	const int a = c.size();
-	minRATM +=  (c.size() - n);
-	c.shrink(c.size() - n);
-	assert ( n == c.size() && "Clause is not shrinked! Infinite loop may cause!" ); // FIXME int a needed to check this, delete/comment after fuzzing
-	data.addCommentToProof("minimize by RAT minimization");
-	data.addToProof( c , false, right); // add minimized version to proof
-	data.addToProof( data.lits, true, right ); // delete all literals from data.lits and additionally right (right will be printed first, because its the RAT literal)
+		}   
+	      
+	      if (!reduct.isCurrentStep( toInt(data.lits[k]) )){
+		  reduct.setCurrentStep(toInt(data.lits[k]));
+		  toBeKeptLiterals ++;
+	      } 
+	      
+	      if (confl) {
+		if (toBeKeptLiterals == data.lits.size()){   // then stop with the current clause!
+		  confl = false;
+		}
+		
+		break;
+	      }
+	    }
+          }
 
-	if( config.opt_rate_ratm_rounds ){
-	  for( int k = 0 ; k < c.size(); ++ k ) {	// all complementary literals can be tested again
-	    if( ! nextRound.isCurrentStep(toInt(~c[k]) ) ) {
-	      nextRoundLits.push_back( ~c[k] );
-	      nextRound.setCurrentStep( toInt(~c[k]) );
+	  for ( int g = trailPosition; g < solver.trail.size(); ++g ){
+	    approxRatm += data.list(solver.trail[g]).size();
+	    approxRatm += data.list(~solver.trail[g]).size();
+	  }
+	  
+	  solver.cancelUntil(0);	
+	  checkedAttach(cr,detachTrailSize);
+	} // END for loop over left-clauses
+     
+	if ( c.can_be_deleted() ){ // happens if c is satisfied by a Unit-Propagation in the ATM routine
+	  if ( solver.value(right) == l_Undef ) continue;
+	  else break;
+	}
+    
+	if ( !confl ) continue; // resolvent didn't fulfill the RAT requirement
+     
+	if ( lastKeptLiteral == 0 ) {   // all clauses in data.lits(left) have AT -- kept literals have never been seen
+
+	  solver.detachClause(cr,true);
+	  assert( solver.value(ca[cr][0]) == l_Undef && solver.value(ca[cr][1]) == l_Undef && "Can't detach a clause where one of the watched literals isn't l_Undef");
+	  const int detachTrailSize = solver.trail.size();
+
+	  for ( int g = trailPosition; g < solver.trail.size(); ++g ){
+	    approxRatm += data.list(solver.trail[g]).size();
+	    approxRatm += data.list(~solver.trail[g]).size();
+	  }
+	  solver.cancelUntil(0); 
+	  
+	  if(  solver.value(right) == l_Undef ) { // necassary, because unit's propagated in the ATM prozedure may implied right
+	    propagateUnit(right, trailPosition);
+	  }
+	  
+	  else {
+	    checkedAttach(cr,detachTrailSize);
+	  }
+	  
+	  continue;
+	}
+      
+	if ( lastKeptLiteral > 0 ) {
+
+	  assert (solver.decisionLevel() == 0 && "Shinking at level > 0 is inpossible!");
+	  
+	  solver.detachClause( cr, true ); 
+	  
+	  assert( solver.value(ca[cr][0]) == l_Undef && solver.value(ca[cr][1]) == l_Undef && "Can't detach a clause where one of the watched literals isn't l_Undef");
+	  
+	  const int detachTrailSize = solver.trail.size();
+	  int n = 0;
+
+	  reduct.setCurrentStep(toInt(right));
+	  
+	  for ( int k = 0; k < c.size(); ++k ) {
+	    if (reduct.isCurrentStep(toInt(c[k]))) c[n++] = c[k]; 
+	    else {
+	      data.removeClauseFrom( cr, c[k] ); // remove the clause from the corresponding list
+	      data.removedLiteral(c[k]);	 
 	    }
 	  }
-	}
-	cerr << "c with right=" << right << " and left=" << left << " attach at RATM774" << endl;
-	solver.attachClause( cr );
-      } 
-    } // end of for c in F_right
-  }
-  } while ( nextRoundLits.size() > 0 && (data.unlimited() || config.ratm_Limit > ratmSteps) && !data.isInterupted() ); // repeat until all literals have been seen until a fixed point is reached!
+	  
+	  const int a = c.size();
+	  minRATM +=  (c.size() - n);
+	  c.shrink(c.size() - n);
+	  
+	  assert ( n == c.size() && "Clause is not shrinked! Infinite loop may cause!" ); // FIXME int a needed to check this, delete/comment after fuzzing
+	  
+	  data.addCommentToProof("minimize by RAT minimization");
+	  data.addToProof( c , false, right); // add minimized version to proof
+	  data.addToProof( data.lits, true, right ); // delete all literals from data.lits and additionally right (right will be printed first, because its the RAT literal)
 
+	  if( config.opt_rate_ratm_rounds ){
+	    for( int k = 0 ; k < c.size(); ++ k ) {	// all complementary literals can be tested again
+	      if( ! nextRound.isCurrentStep(toInt(~c[k]) ) ) {
+		nextRoundLits.push_back( ~c[k] );
+		nextRound.setCurrentStep( toInt(~c[k]) );
+	      }
+	    }
+	  }
+	  
+	  checkedAttach(cr,detachTrailSize);
+	}
+      } // end of for c in F_right
+    }
+  
+    
+  } while ( nextRoundLits.size() > 0 && (data.unlimited() || config.ratm_Limit > ratmSteps) && !data.isInterupted() ); // repeat until all literals have been seen until a fixed point is reached!
+  cout << "c  rounds: " << roundsRATM << endl;
   if ( minRATM !=0 || minATM !=0 || unitRATM !=0 ) didSomething = true;
   return didSomething;
 }
@@ -869,7 +1002,6 @@ do{
 
 	for( int j = 0 ; j < c.size(); ++ j) data.lits.push_back( c[j] );
 	
-	cerr << "c with right=" << right << " and left=" << left << " detach at RATM868" << endl;
 	solver.detachClause( cr, true ); // detach the clause eagerly
 	assert( solver.decisionLevel() == 0 && "check can only be done on level 0" );
 	
@@ -973,7 +1105,6 @@ do{
 	  didSomething = true;
 	}	
 	
-	cerr << "c with right=" << right << " and left=" << left << " attach at RATM970" << endl;
 	solver.attachClause( cr ); 
 	solver.cancelUntil(0); // backtrack	
     }
@@ -1211,7 +1342,7 @@ bool RATElimination::resolveUnsortedStamped( const Lit l, const Clause& d, MarkA
 
 void RATElimination::printStatistics(ostream& stream)
 {
-  cerr << "c [STAT] RATM "  << ratmTime.getCpuTime() << " seconds, " << ratmSteps << " steps, "
+  cerr << "c [STAT] RATM "  << ratmTime.getCpuTime() << " seconds, " << ratmSteps << " steps, " << ratmSteps * approxFacAB << " aproxStepsAB, " << ratmSteps * approxFacA << " aproxStepsA, " << approxRatm << " realApprox, "
   << minRATM  << " min-RATM, "
   << minATM  << " min-ATM, "
   << unitRATM   << " unit-ATM/RATM, "

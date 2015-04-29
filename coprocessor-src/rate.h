@@ -34,10 +34,11 @@ class RATElimination : public Technique  {
   };
   
   // attributes
-  int64_t rateSteps,ratmSteps;
+  int64_t rateSteps,ratmSteps, approxRatm;
+  float approxFacAB, approxFacA;
   int rateCandidates; // number of clauses that have been checked for cle
   int remRAT, remAT, remHRAT, remBCE, remBRAT, blockCheckOnSameClause; // how many clauses 
-  int minRATM, minATM , unitRATM, conflRATM, conflATM; // how may literals removed / propagated Units / conflicts
+  int minRATM, minATM , unitRATM, conflRATM, conflATM, roundsRATM; // how may literals removed / propagated Units / conflicts
   Clock ratmTime, rateTime, bcaTime, bratTime; // clocks for the two methods
 
   
@@ -82,6 +83,8 @@ protected:
   bool shortATM(const CRef clause, const Lit left, int& trailPosition, vector<Lit>& atlits );
   
   bool propagateUnit(const Lit& unit, int& trailPosition);
+  
+  void checkedAttach(const CRef clause, const int& detachTrailSize);
   
   bool minimizeAT();
   
