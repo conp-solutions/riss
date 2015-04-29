@@ -802,7 +802,7 @@ bool Unhiding::process (  )
     });
     
     // expensive cross check that each stamp is unique, and there are no 0 stamps
-#ifdef DEBUG
+#ifndef NDEBUG
     if( config.opt_uhd_Debug > 1 ) {
       cerr << "c checking all stamps ... " << endl;
       int min=-1, max = -1;
