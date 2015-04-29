@@ -191,7 +191,7 @@ public:
  IntOption opt_rew_cls;  	// clause limit to enable  
  IntOption opt_rew_lits;	// total literals limit to enable 
  
-#ifdef DEBUG
+#ifndef NDEBUG
  BoolOption opt_debug    ;
  IntOption opt_check    ;
  IntOption  opt_log      ;
@@ -249,7 +249,7 @@ BoolOption opt_minimal_updates;
  BoolOption opt_bvaComplement        ;
  BoolOption opt_bvaRemoveDubplicates ;
  BoolOption opt_bvaSubstituteOr      ;
-#ifdef DEBUG
+#ifndef NDEBUG
  IntOption  bva_debug                ;
  IntOption  opt_bvaAnalysisDebug     ;
 #endif
@@ -275,7 +275,7 @@ BoolOption opt_bce_cla; // perform covered literal addition
 BoolOption opt_bce_cle_conservative; // perform CLE conservative and cheap, if tautological resolvents occur
 IntOption opt_bceInpStepInc; // add to limit for inprocessing
 IntOption opt_bce_verbose; // output operation steps
-#ifdef DEBUG
+#ifndef NDEBUG
 BoolOption opt_bce_debug; // debug output
 #endif
 
@@ -293,7 +293,7 @@ IntOption claIterations; // number of iterations to do for CLA
 IntOption alaLimit; // number of steps for limits
 IntOption alaIterations; // number of iterations to do for ALA
 BoolOption ala_binary; // perform ALA with binary clauses
-#ifdef DEBUG
+#ifndef NDEBUG
 BoolOption opt_la_debug; // debug output
 #endif
 
@@ -304,7 +304,7 @@ BoolOption opt_la_debug; // debug output
 IntOption opt_cceSteps;
 IntOption opt_ccelevel;
 IntOption opt_ccePercent;
-#ifdef DEBUG
+#ifndef NDEBUG
 IntOption cce_debug_out;
 #endif
 IntOption  opt_cceInpStepInc;
@@ -315,7 +315,7 @@ IntOption  opt_cceInpStepInc;
 BoolOption rate_orderComplements;
 Int64Option rate_Limit;
 Int64Option ratm_Limit;
-#ifdef DEBUG
+#ifndef NDEBUG
 IntOption opt_rate_debug;
 #endif
 BoolOption opt_rate_brat; // test resolvent not only for AT, but also for being blocked
@@ -329,7 +329,7 @@ BoolOption opt_rate_ratm_rounds;
 //
 // Dense
 //
-#ifdef DEBUG
+#ifndef NDEBUG
 IntOption dense_debug_out;
 #endif
 IntOption  opt_dense_fragmentation;
@@ -345,7 +345,7 @@ const int opt_entailed_minClsSize;
 IntOption opt_entailed_minClsSize;
 #endif
 
-#ifdef DEBUG
+#ifndef NDEBUG
 IntOption  entailed_debug;
 #endif
 
@@ -368,7 +368,7 @@ BoolOption opt_ee_eagerEquivalence;
 BoolOption opt_eeGateBigFirst     ;
 StringOption opt_ee_aagFile       ;
 #endif
-#ifdef DEBUG
+#ifndef NDEBUG
 IntOption  ee_debug_out           ;
 #endif
 BoolOption opt_eeSub            ;
@@ -407,7 +407,7 @@ BoolOption circ_NegatedI;
 BoolOption circ_Implied;
 #endif
 /// temporary Boolean flag to quickly enable debug output for the whole file
-#ifdef DEBUG
+#ifndef NDEBUG
   BoolOption circ_debug_out;
 #endif
 
@@ -440,12 +440,12 @@ IntOption opt_minCardClauseSize;
 IntOption opt_maxCardClauseSize; 
 IntOption opt_maxCardSize      ;
 Int64Option opt_semSearchLimit ;
-#ifdef DEBUG
+#ifndef NDEBUG
 BoolOption opt_semDebug        ;
 #endif
 BoolOption opt_noReduct        ;
 
-#ifdef DEBUG
+#ifndef NDEBUG
 IntOption fm_debug_out       ;
 #endif
 
@@ -458,7 +458,7 @@ const bool opt_par_hte;
 #else
 BoolOption opt_par_hte;
 #endif
-#ifdef DEBUG
+#ifndef NDEBUG
 IntOption hte_debug_out;
 #endif
 BoolOption opt_hteTalk ;
@@ -486,14 +486,14 @@ IntOption  pr_opt_inpStepInc1      ;
 IntOption  pr_opt_inpStepInc2      ;
 IntOption  pr_keepLHBRs  ;
 BoolOption pr_necBinaries  ;
-#ifdef DEBUG
+#ifndef NDEBUG
 IntOption pr_debug_out;
 #endif
 
 //
 // Unit Propagation
 //
-#ifdef DEBUG
+#ifndef NDEBUG
 IntOption up_debug_out;
 #endif
 
@@ -513,7 +513,7 @@ BoolOption   opt_add2_red_start;
 IntOption  opt_res3_inpStepInc ;
 IntOption  opt_add2_inpStepInc ;
 /// enable this parameter only during debug!
-#ifdef DEBUG
+#ifndef NDEBUG
 BoolOption res3_debug_out      ;
 #endif
 
@@ -538,7 +538,7 @@ BoolOption res3_debug_out      ;
  IntOption  opt_rew_min_imp_size     ;   
  BoolOption opt_rew_impl_pref_small   ;  
  IntOption  opt_rew_inpStepInc     ;
-#ifdef DEBUG
+#ifndef NDEBUG
  IntOption rew_debug_out;           
 #endif
  
@@ -547,14 +547,14 @@ BoolOption res3_debug_out      ;
 //
 IntOption opt_shuffle_seed;
 BoolOption opt_shuffle_order;
-#ifdef DEBUG
+#ifndef NDEBUG
 IntOption shuffle_debug_out;
 #endif
 
 //
 // Sls
 //
-#ifdef DEBUG
+#ifndef NDEBUG
 BoolOption opt_sls_debug ;
 #endif
 IntOption  opt_sls_ksat_flips ;
@@ -587,7 +587,7 @@ BoolOption opt_sls_adopt      ;
  IntOption   opt_sub_chunk_size     ;
  IntOption   opt_sub_par_str_minCls ;
 #endif
-#ifdef DEBUG
+#ifndef NDEBUG
  IntOption   opt_sub_debug  ;
 #endif
 
@@ -609,14 +609,14 @@ BoolOption opt_sls_adopt      ;
  BoolOption    sym_opt_cleanLearn     ;
  IntOption     sym_opt_conflicts      ;
  IntOption     sym_opt_total_conflicts;
-#ifdef DEBUG
+#ifndef NDEBUG
  IntOption sym_debug_out;
 #endif
  
 //
 // Twosat
 //
-#ifdef DEBUG
+#ifndef NDEBUG
  IntOption twosat_debug_out  ;
 #endif
  BoolOption twosat_useUnits  ;
@@ -636,7 +636,7 @@ BoolOption opt_sls_adopt      ;
  IntOption  opt_uhd_fullProbe ;
  BoolOption opt_uhd_probeEE   ;
  BoolOption opt_uhd_fullBorder;
-#ifdef DEBUG
+#ifndef NDEBUG
  IntOption  opt_uhd_Debug;
 #endif
  
@@ -650,7 +650,7 @@ BoolOption opt_sls_adopt      ;
  BoolOption opt_xor_findSubsumed;
  BoolOption opt_xor_findResolved;
  
-#ifdef DEBUG
+#ifndef NDEBUG
  IntOption  opt_xor_debug;
 #endif
 private:

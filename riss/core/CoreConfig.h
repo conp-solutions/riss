@@ -38,7 +38,7 @@ public:
  BoolOption opt_fast_rem; // remove elements on watch list faster, but unsorted
  IntOption nanosleep; // nanoseconds to sleep for each conflict
  BoolOption ppOnly; // interrupt after preprocessing
-#ifdef DEBUG
+#ifndef NDEBUG
  BoolOption opt_learn_debug;
 #endif
  
@@ -92,7 +92,7 @@ public:
 
  BoolOption opt_updateLearnAct;
 
-#ifdef DEBUG
+#ifndef NDEBUG
  BoolOption opt_dbg;
 #endif
 
@@ -106,14 +106,14 @@ public:
  StringOption actFile;
  BoolOption opt_pol;
  StringOption polFile;
-#ifdef DEBUG
+#ifndef NDEBUG
  IntOption opt_printDecisions;
 #endif
 
  IntOption opt_rMax;
  DoubleOption opt_rMaxInc;
 
-#ifdef DEBUG
+#ifndef NDEBUG
  BoolOption localLookaheadDebug;
 #endif
  BoolOption localLookAhead; 

@@ -21,7 +21,7 @@ config( _config )
 , threads( _threads < 0 ? config.opt_threads : _threads)
 , solver( _solver )
 , ca( solver->ca )
-#ifdef DEBUG
+#ifndef NDEBUG
 , log( config.opt_log )
 , data( solver->ca, solver, log, config.opt_unlimited, config.opt_randomized, config.opt_debug )
 #else
@@ -1225,7 +1225,7 @@ void Preprocessor::initializePreprocessor()
 	c.set_delete(true);
 	thisClss ++;
       } else {
-#ifdef DEBUG
+#ifndef NDEBUG
 	data.addClause( cr, config.opt_check );
 #else
 	data.addClause( cr );
