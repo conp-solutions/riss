@@ -1,4 +1,4 @@
-# Riss tool collection. Norbert Manthey. 2014
+# Riss tool collection. Norbert Manthey. 2015
 
 You can receive the latest copy of the Riss and Coprocessor tool collection from
 http://tools.computational-logic.org
@@ -61,7 +61,7 @@ cmake -DOPTION_NAME=value ..
 
 | Option          | Description                                            |
 | --------------- | ------------------------------------------------------ |
-| STATIC_BINARIES |  Build fully statically linked binaries. Default: ON   |
+| STATIC_BINARIES | Build fully statically linked binaries. Default: ON    |
 | SHIFTBMC        | Include agier and shiftbmc build targets. Default: OFF |
 | WARNINGS        | Set verbose warning flags. Default: OFF                |
 
