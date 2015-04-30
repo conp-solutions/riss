@@ -40,7 +40,7 @@ message(STATUS "ShiftBMC ${SHIFTBMC}")
 message(STATUS "Verbose warnings ${WARNINGS}")
 
 # Output directory definitions
-#
+# 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
@@ -51,8 +51,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
 # Link only to static libs (incl. libc and others)
 if(STATIC_BINARIES)
-  set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-  set(BUILD_SHARED_LIBRARIES OFF)
+  # set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+  # set(BUILD_SHARED_LIBRARIES OFF)
   set(CMAKE_EXE_LINKER_FLAGS "-static")
 
   # Remove dynamic link flags
@@ -65,19 +65,11 @@ if(STATIC_BINARIES)
 endif()
 
 # Dependencies:
-#
+# 
 include_directories(${PROJECT_SOURCE_DIR})
 
-# Build with realtime extensions (librt) on UNIX system
-if(UNIX)
-  find_package(Librt)
-  include_directories(${LIBRT_INCLUDES})
-  add_definitions("-l${LIBRT_LIBRARIES}")
-endif()
-
-
 # Compile flags:
-#
+# 
 add_definitions("-D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS")
 
 if(CMAKE_COMPILER_IS_GNUCXX AND WARNINGS)

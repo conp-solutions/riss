@@ -1,5 +1,5 @@
 # - Check for the presence of RT
-#
+# 
 # The following variables are set when RT is found:
 #  LIBRT_FOUND      = Set to true, if all components of RT
 #                     have been found.
@@ -9,41 +9,41 @@
 ## -----------------------------------------------------------------------------
 ## Check for the header files
 
-find_path (LIBRT_INCLUDES time.h
-           PATHS /usr/local/include /usr/include ${CMAKE_EXTRA_INCLUDES})
+find_path(LIBRT_INCLUDES time.h
+          PATHS /usr/local/include /usr/include ${CMAKE_EXTRA_INCLUDES})
 
 ## -----------------------------------------------------------------------------
 ## Check for the library
 
-find_library (LIBRT_LIBRARIES rt
-              PATHS /usr/local/lib /usr/lib /lib ${CMAKE_EXTRA_LIBRARIES})
+find_library(LIBRT_LIBRARIES rt
+             PATHS /usr/local/lib /usr/lib /lib ${CMAKE_EXTRA_LIBRARIES})
 
 ## -----------------------------------------------------------------------------
 ## Actions taken when all components have been found
 
-if (LIBRT_INCLUDES AND LIBRT_LIBRARIES)
-  set (LIBRT_FOUND TRUE)
-else (LIBRT_INCLUDES AND LIBRT_LIBRARIES)
-  if (NOT LIBRT_FIND_QUIETLY)
-    if (NOT LIBRT_INCLUDES)
+if(LIBRT_INCLUDES AND LIBRT_LIBRARIES)
+  set(LIBRT_FOUND TRUE)
+else()
+  if(NOT LIBRT_FIND_QUIETLY)
+    if(NOT LIBRT_INCLUDES)
       message(STATUS "Unable to find RT header files!")
-    endif (NOT LIBRT_INCLUDES)
-    if (NOT LIBRT_LIBRARIES)
+    endif()
+    if(NOT LIBRT_LIBRARIES)
       message(STATUS "Unable to find RT library files!")
-    endif (NOT LIBRT_LIBRARIES)
-  endif (NOT LIBRT_FIND_QUIETLY)
-endif (LIBRT_INCLUDES AND LIBRT_LIBRARIES)
+    endif()
+  endif()
+endif()
 
-if (LIBRT_FOUND)
-  if (NOT LIBRT_FIND_QUIETLY)
+if(LIBRT_FOUND)
+  if(NOT LIBRT_FIND_QUIETLY)
     message(STATUS "Found components for LIBRT")
     message(STATUS "LIBRT_INCLUDES = ${LIBRT_INCLUDES}")
     message(STATUS "LIBRT_LIBRARIES = ${LIBRT_LIBRARIES}")
-  endif (NOT LIBRT_FIND_QUIETLY)
-else (LIBRT_FOUND)
-  if (LIBRT_FIND_REQUIRED)
+  endif()
+else()
+  if(LIBRT_FIND_REQUIRED)
     message(FATAL_ERROR "Could not find RT!")
-  endif (LIBRT_FIND_REQUIRED)
-endif (LIBRT_FOUND)
+  endif()
+endif()
 
 mark_as_advanced(LIBRT_FOUND LIBRT_LIBRARIES LIBRT_INCLUDES)
