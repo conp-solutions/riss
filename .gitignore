@@ -30,3 +30,6 @@ release/
 
 # tarballs
 *.tar.gz
+
+# example formulas and bugs
+*.cnf
