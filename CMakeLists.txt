@@ -51,8 +51,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
 # Link only to static libs (incl. libc and others)
 if(STATIC_BINARIES)
-  # set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-  # set(BUILD_SHARED_LIBRARIES OFF)
   set(CMAKE_EXE_LINKER_FLAGS "-static")
 
   # Remove dynamic link flags
@@ -63,6 +61,13 @@ if(STATIC_BINARIES)
   set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS)    # remove -rdynamic 
   set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS) 
 endif()
+
+# tuning for release builds
+if(CMAKE_BUILD_TYPE STREQUAL "Release" AND CMAKE_COMPILER_IS_GNUCXX)
+  set(CMAKE_EXE_LINKER_FLAGS    "-s")  # strip binary
+  set(CMAKE_SHARED_LINKER_FLAGS "-s")  # strip shared libs
+endif()
+
 
 # Dependencies:
 # 
