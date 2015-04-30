@@ -51,6 +51,20 @@ make riss-core
 make scripts
 ```
 
+### Options
+
+To configure your build, pass the described options to cmake like this
+
+```bash
+cmake -DOPTION_NAME=value ..
+```
+
+| Option          | Description                                            |
+| --------------- | ------------------------------------------------------ |
+| STATIC_BINARIES |  Build fully statically linked binaries. Default: ON   |
+| SHIFTBMC        | Include agier and shiftbmc build targets. Default: OFF |
+| WARNINGS        | Set verbose warning flags. Default: OFF                |
+
 
 ## Common Usage
 
