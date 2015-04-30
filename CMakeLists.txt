@@ -30,7 +30,7 @@ endfunction()
 # no version is specified, this "global" version will be used,
 version("5.4.0")
 
-option(STATIC_BINARIES "Link binaries statically." ON)
+option(STATIC_BINARIES "Build fully statically linked binaries" ON)
 option(SHIFTBMC        "Include agier and shiftbmc build targets" OFF)
 option(WARNINGS        "Set verbose warning flags" OFF)
 
@@ -54,6 +54,14 @@ if(STATIC_BINARIES)
   set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
   set(BUILD_SHARED_LIBRARIES OFF)
   set(CMAKE_EXE_LINKER_FLAGS "-static")
+
+  # Remove dynamic link flags
+  set(CMAKE_EXE_LINK_DYNAMIC_C_FLAGS)       # remove -Wl,-Bdynamic 
+  set(CMAKE_EXE_LINK_DYNAMIC_CXX_FLAGS) 
+  set(CMAKE_SHARED_LIBRARY_C_FLAGS)         # remove -fPIC 
+  set(CMAKE_SHARED_LIBRARY_CXX_FLAGS) 
+  set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS)    # remove -rdynamic 
+  set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS) 
 endif()
 
 # Dependencies:
