@@ -28,7 +28,7 @@ endfunction()
 # 
 # Version of the whole tool box. Subprojects can define their own versions. If
 # no version is specified, this "global" version will be used,
-version("5.4.0")
+version("5.0.0")
 
 option(STATIC_BINARIES "Build fully statically linked binaries" ON)
 option(SHIFTBMC        "Include agier and shiftbmc build targets" OFF)
