@@ -59,11 +59,18 @@ To configure your build, pass the described options to cmake like this
 cmake -DOPTION_NAME=value ..
 ```
 
-| Option          | Description                                            |
-| --------------- | ------------------------------------------------------ |
-| STATIC_BINARIES | Build fully statically linked binaries. Default: ON    |
-| SHIFTBMC        | Include agier and shiftbmc build targets. Default: OFF |
-| WARNINGS        | Set verbose warning flags. Default: OFF                |
+| Option          | Description                                            | Default |
+| --------------- | ------------------------------------------------------ | ------- |
+| STATIC_BINARIES | Build fully statically linked binaries                 |      ON |
+| SHIFTBMC        | Include agier and shiftbmc build targets               |     OFF |
+| WARNINGS        | Set verbose warning flags                              |     OFF |
+
+The follwing options are only enabled, if `SHIFTBMC=ON`.
+
+| ShiftBMC Option | Description                                            | Default        |
+| --------------- | ------------------------------------------------------ | -------------- |
+| ABC_LIB         | Path to the directory containing the ABC library       | /usr/local/lib |
+| PICOSAT_LIB     | Path to the directory containing the PicoSAT library   | /usr/local/lib |
 
 
 ## Common Usage
