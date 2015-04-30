@@ -30,11 +30,14 @@ endfunction()
 # no version is specified, this "global" version will be used,
 version("5.4.0")
 
-option(STATIC_BINARIES "Link binaries statically." ON)
+option(STATIC_BINARIES "Build fully statically linked binaries" ON)
+option(SHIFTBMC        "Include agier and shiftbmc build targets" OFF)
+option(WARNINGS        "Set verbose warning flags" OFF)
 
 # Print option settings
 message(STATUS "Static binaries ${STATIC_BINARIES}")
-
+message(STATUS "ShiftBMC ${SHIFTBMC}")
+message(STATUS "Verbose warnings ${WARNINGS}")
 
 # Output directory definitions
 #
@@ -51,8 +54,15 @@ if(STATIC_BINARIES)
   set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
   set(BUILD_SHARED_LIBRARIES OFF)
   set(CMAKE_EXE_LINKER_FLAGS "-static")
-endif()
 
+  # Remove dynamic link flags
+  set(CMAKE_EXE_LINK_DYNAMIC_C_FLAGS)       # remove -Wl,-Bdynamic 
+  set(CMAKE_EXE_LINK_DYNAMIC_CXX_FLAGS) 
+  set(CMAKE_SHARED_LIBRARY_C_FLAGS)         # remove -fPIC 
+  set(CMAKE_SHARED_LIBRARY_CXX_FLAGS) 
+  set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS)    # remove -rdynamic 
+  set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS) 
+endif()
 
 # Dependencies:
 #
@@ -70,7 +80,7 @@ endif()
 #
 add_definitions("-D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS")
 
-if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+if(CMAKE_COMPILER_IS_GNUCXX AND WARNINGS)
   message(STATUS "enable verbose compiler warnings")
   add_definitions("-Wall -Wextra -ffloat-store -Wno-unused-but-set-variable"
                   "-Wno-unused-variable -Wno-unused-parameter -Wno-sign-compare"
@@ -92,8 +102,11 @@ add_subdirectory(pcasso/)
 add_subdirectory(pfolio/)
 add_subdirectory(proofcheck/)
 add_subdirectory(qprocessor/)
-add_subdirectory(shiftbmc/)
-add_subdirectory(aiger/)
 add_subdirectory(test/)
 add_subdirectory(doc/)
 add_subdirectory(scripts/)
+
+if(SHIFTBMC)
+  add_subdirectory(shiftbmc/)
+  add_subdirectory(aiger/)
+endif()
