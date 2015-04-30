@@ -56,8 +56,6 @@ if(STATIC_BINARIES)
   # Remove dynamic link flags
   set(CMAKE_EXE_LINK_DYNAMIC_C_FLAGS)       # remove -Wl,-Bdynamic 
   set(CMAKE_EXE_LINK_DYNAMIC_CXX_FLAGS) 
-  set(CMAKE_SHARED_LIBRARY_C_FLAGS)         # remove -fPIC 
-  set(CMAKE_SHARED_LIBRARY_CXX_FLAGS) 
   set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS)    # remove -rdynamic 
   set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS) 
 endif()
