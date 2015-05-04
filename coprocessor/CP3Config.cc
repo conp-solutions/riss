@@ -230,6 +230,7 @@ opt_bva_push             (_cat_bva, "cp3_bva_push",    "push variables back to q
 opt_bva_VarLimit         (_cat_bva, "cp3_bva_Vlimit",  "use BVA only, if number of variables is below threshold", 3000000, IntRange(-1, INT32_MAX), optionListPtr ),
 opt_bva_Alimit           (_cat_bva, "cp3_bva_limit",   "number of steps allowed for AND-BVA", 1200000, IntRange(0, INT32_MAX), optionListPtr ),
 opt_Abva                 (_cat_bva, "cp3_Abva",        "perform AND-bva", true, optionListPtr ),
+opt_Abva_maxRed          (_cat_bva, "cp3_bva_Amax",        "maximum reduction for one additional variable", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
 opt_bvaInpStepInc        (_cat_bva, "cp3_bva_incInp",  "increases of number of steps per inprocessing", 80000, IntRange(0, INT32_MAX), optionListPtr ),
 opt_Abva_heap            (_cat_bva, "cp3_Abva_heap",   "0: minimum heap, 1: maximum heap, 2: random, 3: ratio pos/neg smaller+less, 4: ratio pos/neg smaller+greater, 5: ratio pos/neg greater+less, 6: ratio pos/neg greater + greater, 7-10: same as 3-6, but inverse measure order", 1, IntRange(0,10), optionListPtr ),
 
@@ -246,6 +247,8 @@ bva_debug (_cat_bva, "bva-debug",       "Debug Output of BVA", 0, IntRange(0, 4)
 #endif
 opt_bva_Xlimit           (_cat_bva, "cp3_bva_Xlimit",   "number of steps allowed for XOR-BVA", 100000000, IntRange(0, INT32_MAX), optionListPtr ),
 opt_bva_Ilimit           (_cat_bva, "cp3_bva_Ilimit",   "number of steps allowed for ITE-BVA", 100000000, IntRange(0, INT32_MAX), optionListPtr ),
+opt_Xbva_maxRed          (_cat_bva, "cp3_bva_Xmax",    "maximum reduction for one additional variable", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
+opt_Ibva_maxRed          (_cat_bva, "cp3_bva_Imax",    "maximum reduction for one additional variable", INT32_MAX, IntRange(0, INT32_MAX), optionListPtr ),
 opt_Xbva_heap            (_cat_bva, "cp3_Xbva_heap",   "0: minimum heap, 1: maximum heap, 2: random, 3: ratio pos/neg smaller+less, 4: ratio pos/neg smaller+greater, 5: ratio pos/neg greater+less, 6: ratio pos/neg greater + greater, 7-10: same as 3-6, but inverse measure order", 1, IntRange(0,10), optionListPtr ),
 opt_Ibva_heap            (_cat_bva, "cp3_Ibva_heap",   "0: minimum heap, 1: maximum heap, 2: random, 3: ratio pos/neg smaller+less, 4: ratio pos/neg smaller+greater, 5: ratio pos/neg greater+less, 6: ratio pos/neg greater + greater, 7-10: same as 3-6, but inverse measure order", 1, IntRange(0,10), optionListPtr ),
 opt_Xbva                 (_cat_bva, "cp3_Xbva",       "perform XOR-bva (1=half gates,2=full gates)", 0, IntRange(0, 2), optionListPtr ),
@@ -422,14 +425,14 @@ opt_hte_inpStepInc      (_cat_hte, "cp3_hte_inpInc","increase for steps per inpr
 // Probing
 //
 pr_uip            (_cat_pr, "pr-uips",   "perform learning if a conflict occurs up to x-th UIP (-1 = all )", -1, IntRange(-1, INT32_MAX), optionListPtr ),
-opt_pr_probeBinary(_cat_pr, "pr-bins",   "use binary clauses for probing",false, optionListPtr ),
+opt_pr_probeBinary(_cat_pr, "pr-bins",   "use binary clauses for probing",true, optionListPtr ),
 pr_double         (_cat_pr, "pr-double", "perform double look-ahead",true, optionListPtr ),
 pr_probe          (_cat_pr, "pr-probe",  "perform probing",true, optionListPtr ),
 pr_rootsOnly      (_cat_pr, "pr-roots",  "probe only on root literals",true, optionListPtr ),
 pr_repeat         (_cat_pr, "pr-repeat", "repeat probing if changes have been applied",false, optionListPtr ),
 pr_clsSize        (_cat_pr, "pr-csize",  "size of clauses that are considered for probing/vivification (propagation)", INT32_MAX,  IntRange(0, INT32_MAX), optionListPtr ),
-pr_LHBR           (_cat_pr, "pr-lhbr",   "perform lhbr during probing",false, optionListPtr ),
-pr_prLimit        (_cat_pr, "pr-probeL", "step limit for probing", 5000000,  IntRange(0, INT32_MAX), optionListPtr ),
+pr_LHBR           (_cat_pr, "pr-lhbr",   "perform lhbr during probing",true, optionListPtr ),
+pr_prLimit        (_cat_pr, "pr-probeL", "step limit for probing", 200000,  IntRange(0, INT32_MAX), optionListPtr ),
 pr_EE             (_cat_pr, "pr-EE",     "run equivalent literal detection",true, optionListPtr ),
 pr_vivi           (_cat_pr, "pr-vivi",   "perform clause vivification",true, optionListPtr ),
 pr_keepLearnts    (_cat_pr, "pr-keepL",  "keep conflict clauses in solver (0=no,1=learnt,2=original)", 2, IntRange(0,2), optionListPtr ),
