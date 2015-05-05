@@ -9,6 +9,8 @@ num_params=$(($#-4))
 PARAMS=${@:4:$num_params}
 FILE=`realpath "${@: -1}"`
 
+MD5SUM=`echo "$FILE" "$PARAMS" | md5sum | tr [:blank:] _`
+
 ARAM=`free -k | awk '{ if( NR == 2 ) print $4 }'`
 AMEM=`df -l /tmp | awk '{ if( NR == 2 ) print $4 }'`
 FSIZE=`du -schk $FILE | awk '{ if( NR == 2 ) print $1 }'`
@@ -17,6 +19,12 @@ BSIZE=`du -schk $BIN | awk '{ if( NR == 2 ) print $1 }'`
 NMEM=$(($FSIZE + $BSIZE))
 
 DEST=`mktemp -d`
+
+if [ ! -d "tmp" ]; then
+  mkdir tmp
+fi
+
+exec > >(tee tmp/$MD5SUM.log)
 
 echo "------------------------------------------------------------------------------------------------------"
 echo "  Working directory       | $DEST"
@@ -43,8 +51,8 @@ then
   exit 1
 fi
 
-echo " Used parameters          | $PARAMS"
-echo " Time limit               | $(($TLIM))s"
+echo "  Used parameters         | $PARAMS"
+echo "  Time limit              | $(($TLIM))s"
 
 DIF=$(($AMEM - $NMEM))
 
@@ -68,7 +76,8 @@ cp $BIN $DEST
 cp $FILE $DEST
 
 mkdir $DEST'/tmp'
-TMPFILE=$DEST'/tmp/'`./getHashKey.sh "$FILE" "$PARAMS"`.tmp.dat
+
+TMPFILE=$DEST'/tmp/'$MD5SUM.tmp.dat
 
 # switch to the copied binary
 BIN=$DEST'/'$(basename "$BIN")
@@ -82,10 +91,11 @@ $PERF ./runsolver -C $TLIM -M $MLIM -w $TMPFILE.watch -o $TMPFILE.out  $BIN $FIL
 
 rm $BIN
 rm $FILE
-cp -R $DEST . # maybe remove the tmp folder
+
+cp -R $DEST/* . # maybe remove the tmp folder
 rm -R $DEST
 
 DEST=`pwd`'/'$(basename "$DEST")
 echo "------------------------------------------------------------------------------------------------------"
-echo " Output written to        | $DEST"
+echo "  Output written to       | `pwd`/tmp/$MD5SUM*"
 echo "------------------------------------------------------------------------------------------------------"
