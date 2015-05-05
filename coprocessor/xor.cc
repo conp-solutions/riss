@@ -93,14 +93,18 @@ bool XorReasoning::process()
     assert( heap.inHeap( v ) && "item from the heap has to be on the heap");
     heap.removeMin();
     
+    // there are no XORs
     if( occs[v].size() == 0 ) {
       foundEmptyLists ++;
       continue; // do not work with empty lists!
-    } else if( occs[v].size() == 1 ) { // there is only one xor
+    } 
+    
+     // there is only one xor
+    if( occs[v].size() == 1 ) {
       GaussXor& x = xorList[occs[v][0]];
-      if( x.unit() ) {
+      if( x.unit() ) { // the XOR is a unit, add it as unit clause
 	if( !data.ma.isCurrentStep( toInt(x.getUnitLit()) ) ) {
-	  data.ma.setCurrentStep( toInt(x.getUnitLit()) );
+	  data.ma.setCurrentStep( toInt(x.getUnitLit()) ); // memorize the unit
 	  xorUnits ++;
 	  unitQueue.push_back(x.getUnitLit());
 	}
@@ -109,13 +113,17 @@ bool XorReasoning::process()
       continue;
     }
     
+    // there are multiple XORs with v
+    
     int selectIndex = 0; // simply select first xor
-    while( selectIndex < occs[v].size() && xorList[ occs[v][selectIndex] ].used == true ) selectIndex ++;
+    while( selectIndex < occs[v].size() && xorList[ occs[v][selectIndex] ].used == true ) selectIndex ++; // ignore this XOR
     if( selectIndex == occs[v].size() ) {
       allUsed ++;
       DOUT(if( config.opt_xor_debug > 2 ) cerr << "c all XORs with " << v+1 << " are already used!!" << endl;);
       continue; // do not use an XOR twice!
     }
+    
+    // select an XOR from this list
     if ( config.opt_xor_selectX == 1 ) { // select smallest xor
       for( int i = selectIndex+1 ; i < occs[v].size(); ++ i ) {
 	xorSteps ++;
@@ -132,16 +140,19 @@ bool XorReasoning::process()
     
     DOUT(if( config.opt_xor_debug > 1 ) { cerr << "c eliminate " << v+1 << " with XOR " <<  " + "; for( int j = 0 ; j < selectedX.vars.size(); ++ j ) cerr <<selectedX.vars[j] + 1 << " + "; cerr << " == " << (selectedX.k ? 1 : 0) << endl; });
     
+    // if there are XORs to work with
     while( occs[v].size() > 0 ) {
+      
       if( occs[v][0] == xorIndex ) {
 	occs[v][0] = occs[v][ occs[v].size() - 1]; occs[v].pop_back(); // drop it from this list!
 	continue; // do not simplify xor with itself!
       }
+      
       xorSteps ++;
       GaussXor& simpX = xorList[ occs[v][0] ]; // xor that is simplified
       DOUT(if( config.opt_xor_debug > 1 ) { cerr << "c change XOR " <<  " + "; for( int j = 0 ; j < simpX.vars.size(); ++ j ) cerr <<simpX.vars[j] + 1 << " + "; cerr << " == " << (simpX.k ? 1 : 0) << endl; });
       toRemoveVars.clear();tmpVars.clear();
-      simpX.add(selectedX,toRemoveVars,tmpVars);
+      simpX.add( selectedX, toRemoveVars,tmpVars );
       DOUT(if( config.opt_xor_debug > 1 ) { cerr << "c       into " <<  " + "; for( int j = 0 ; j < simpX.vars.size(); ++ j ) cerr <<simpX.vars[j] + 1 << " + "; cerr << " == " << (simpX.k ? 1 : 0) << endl; 
 	cerr << "c and remove from "; for( int j = 0 ; j < toRemoveVars.size(); ++ j ) cerr << " " << toRemoveVars[j] + 1; cerr << " " << endl;
       });
