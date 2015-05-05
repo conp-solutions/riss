@@ -192,7 +192,7 @@ bool RATElimination::eliminateRAT()
 
 	if( confl == true) { // found a conflict during propagating ~C
 	  remAT++;
-	  ca[ data.list(right)[i]].sort();		// necessary to ensure a general result -->  RATE is not confluent! (only for benchnmarking!)
+	  //ca[ data.list(right)[i]].sort();		// necessary to ensure a general result -->  RATE is not confluent! (only for benchnmarking!)
 	  solver.cancelUntil(0); // backtrack
 	 
 	  // reference c might not be valid any more (because propagate could have created new clauses via LHBR), hence, use ca[ data.list(right)[i]]
@@ -363,11 +363,11 @@ bool RATElimination::propagateUnit(const Lit& unit, int& trailPosition)
     unitRATM ++;
     const int oldTrailsize = solver.trail.size();
 
-    data.addCommentToProof("remove literals by ATM -- created unit clause");
+    data.addCommentToProof("remove literals by RATM/ATM -- created unit clause");
     data.addUnitToProof(unit);  // add the shrinked unit clause to the proof
 
     solver.uncheckedEnqueue(unit);
-    
+
     if (CRef_Undef != solver.propagate()) { 
       data.setFailed(); 
       return true;
@@ -396,6 +396,7 @@ bool RATElimination::propagateUnit(const Lit& unit, int& trailPosition)
 
 	  Clause& gpclause = ca[data.list(solver.trail[g])[p]];
 	  if (! gpclause.can_be_deleted() ) {
+
 	    gpclause.set_delete(true);
 	    data.addToProof( gpclause, true );  // remove the clause from the proof (its subsumed by a unit clause)
 	    data.removedClause( data.list(solver.trail[g])[p] );
@@ -699,8 +700,6 @@ bool RATElimination::minimizeRAT()
       if( data.doNotTouch(var(right)) ) continue;  // do not consider variables that have to stay fixed or which are already propagated!
       if( solver.value(right) != l_Undef ) continue;
       const Lit left = ~right; // complement
-
-      cerr << "c select literal right=" << right << " trail: " << solver.trail << endl;
       
       DOUT( if( config.opt_rate_debug > 0 ) cerr << endl << "c RATE work on literal " << right << " with " << data.list(right).size() << " clauses " << endl;);
       DOUT( if( config.opt_rate_debug > 3 ) cerr << "current trail: " << data.getTrail() << endl;   );
