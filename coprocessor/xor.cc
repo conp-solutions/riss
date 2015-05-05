@@ -140,11 +140,14 @@ bool XorReasoning::process()
     
     DOUT(if( config.opt_xor_debug > 1 ) { cerr << "c eliminate " << v+1 << " with XOR " <<  " + "; for( int j = 0 ; j < selectedX.vars.size(); ++ j ) cerr <<selectedX.vars[j] + 1 << " + "; cerr << " == " << (selectedX.k ? 1 : 0) << endl; });
     
+    // if there are XORs to work with
     while( occs[v].size() > 0 ) {
+      
       if( occs[v][0] == xorIndex ) {
 	occs[v][0] = occs[v][ occs[v].size() - 1]; occs[v].pop_back(); // drop it from this list!
 	continue; // do not simplify xor with itself!
       }
+      
       xorSteps ++;
       GaussXor& simpX = xorList[ occs[v][0] ]; // xor that is simplified
       DOUT(if( config.opt_xor_debug > 1 ) { cerr << "c change XOR " <<  " + "; for( int j = 0 ; j < simpX.vars.size(); ++ j ) cerr <<simpX.vars[j] + 1 << " + "; cerr << " == " << (simpX.k ? 1 : 0) << endl; });
