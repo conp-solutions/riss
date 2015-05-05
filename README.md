@@ -1,4 +1,4 @@
-# Riss tool collection. Norbert Manthey. 2014
+# Riss tool collection. Norbert Manthey. 2015
 
 You can receive the latest copy of the Riss and Coprocessor tool collection from
 http://tools.computational-logic.org
@@ -50,6 +50,27 @@ make riss-core
 # Copy all scripts to the bin/ directory
 make scripts
 ```
+
+### Options
+
+To configure your build, pass the described options to cmake like this
+
+```bash
+cmake -DOPTION_NAME=value ..
+```
+
+| Option          | Description                                            | Default |
+| --------------- | ------------------------------------------------------ | ------- |
+| STATIC_BINARIES | Build fully statically linked binaries                 |      ON |
+| SHIFTBMC        | Include agier and shiftbmc build targets               |     OFF |
+| WARNINGS        | Set verbose warning flags                              |     OFF |
+
+The follwing options are only enabled, if `SHIFTBMC=ON`.
+
+| ShiftBMC Option | Description                                            | Default        |
+| --------------- | ------------------------------------------------------ | -------------- |
+| ABC_LIB         | Path to the directory containing the ABC library       | /usr/local/lib |
+| PICOSAT_LIB     | Path to the directory containing the PicoSAT library   | /usr/local/lib |
 
 
 ## Common Usage

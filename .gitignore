@@ -20,6 +20,7 @@ version.cc
 # Some common build targets
 debug/
 release/
+build/
 
 # Latex build files
 *.aux
@@ -30,3 +31,6 @@ release/
 
 # tarballs
 *.tar.gz
+
+# example formulas and bugs
+*.cnf
