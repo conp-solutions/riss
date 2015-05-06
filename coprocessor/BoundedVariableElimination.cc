@@ -504,11 +504,16 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                     return;
 		}
                 if (doStatistics) ++eliminatedVars;
-		
+
+		// if the clause does not already have a value, 
 		// add only a unit clause to the extension stack for undo simplification, and all clauses for the other polarity before
                 removeClauses(data, heap, pos, lit_Undef, p_limit, doStatistics);      // do not add these clauses to the undo stack!
-		removeClauses(data, heap, neg, mkLit(v,true),  n_limit, doStatistics); // add these clauses to the undo stack
-		data.addToExtension( mkLit(v,false) );                                 // make this variable false by default on the undo stack, the other clauses with take care afterwards
+		if( data.value(mkLit(v,false)) == l_Undef ) {
+		  removeClauses(data, heap, neg, mkLit(v,true),  n_limit, doStatistics); // add these clauses to the undo stack
+		  data.addToExtension( mkLit(v,false) );                                 // make this variable false by default on the undo stack, the other clauses with take care afterwards
+		} else {
+		  removeClauses(data, heap, neg, lit_Undef,  n_limit, doStatistics); // add these clauses to the undo stack
+		}
 		
                 vector<CRef>().swap(pos); //free physical memory of occs
                 vector<CRef>().swap(neg); //free physical memory of occs
