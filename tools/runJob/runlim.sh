@@ -18,6 +18,7 @@ NMEM=$(($FSIZE + $BSIZE))
 
 DEST=`mktemp -d`
 
+e
 echo "------------------------------------------------------------------------------------------------------"
 echo "  Working directory       | $DEST"
 echo "  Used binary             | $BIN"
