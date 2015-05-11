@@ -329,6 +329,7 @@ public:
     // unsigned int&       lbd    ()              { return header.lbd; }
     unsigned int        lbd    () const        { return header.lbd; }
     void setCanBeDel(bool b) {header.canbedel = b;}
+    void resetCanBeDel() {header.canbedel = false;}
     bool canBeDel() {return header.canbedel;}
     
     

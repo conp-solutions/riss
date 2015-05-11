@@ -189,6 +189,10 @@ Solver::Solver(CoreConfig& _config) :
   , cir_bump_ratio  (config.opt_cir_bump)
   , cir_count       (0)
   
+  // 999 MS hack
+  , activityBasedRemoval( config.opt_act_based )
+  , lbd_core_threshold( config.opt_lbd_core_thresh )
+  , learnts_reduce_fraction( config.opt_l_red_frac )
   
   // UHLE for learnt clauses
   , searchUHLEs(0)
@@ -703,21 +707,33 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	
 	if(!foundFirstLearnedClause ) { // dynamic adoption only until first learned clause!
 	  if (c.learnt() ){
-	      if( config.opt_cls_act_bump_mode == 0 ) claBumpActivity(c);
+            if (activityBasedRemoval) {
+              if( config.opt_cls_act_bump_mode == 0 ) claBumpActivity(c);
 	      else clssToBump.push( confl );
-	  }
+            }
 
-	  if( config.opt_update_lbd == 1  ) { // update lbd during analysis, if allowed
-	      if(c.learnt()  && c.lbd()>2 ) { 
-		unsigned int nblevels = computeLBD(c);
-		if(nblevels+1<c.lbd() || config.opt_lbd_inc ) { // improve the LBD (either LBD decreased,or option is set)
-		  if(c.lbd()<=lbLBDFrozenClause) {
-		    c.setCanBeDel(false); 
+	    if( config.opt_update_lbd == 1  ) { // update lbd during analysis, if allowed
+		if(c.learnt()  && c.lbd()>2 ) { 
+		  unsigned int nblevels = computeLBD(c);
+		  if(nblevels+1<c.lbd() || config.opt_lbd_inc ) { // improve the LBD (either LBD decreased,or option is set)
+		    if(c.lbd()<=lbLBDFrozenClause) {
+		      c.setCanBeDel(false); 
+		    }
+		    // seems to be interesting : keep it for the next round
+		    c.setLBD(nblevels); // Update it
+		    
+		    if (c.lbd() < lbd_core_threshold) { // turn learned clause into core clause and keep it for ever
+			// move clause from learnt to original, NOTE: clause is still in the learnt vector, has to be treated correctly during garbage collect/inprocessing
+			clauses.push(confl); 
+			c.learnt(false);
+			// to prevent learnt clauses participated in revert conflict analyses 
+			// from being dropped immediately (by fast-paced periodic clause database reduction)
+			// they are marked as protected
+			c.mark(3); // TODO: should be turned into another bit in the clause header
+		    }
 		  }
-		  // seems to be interesting : keep it for the next round
-		  c.setLBD(nblevels); // Update it
 		}
-	      }
+	    }
 	  }
 	}
 
@@ -736,10 +752,13 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
                 if (level(var(q)) >= decisionLevel()) {
                     pathC++;
 #ifdef UPDATEVARACTIVITY
-		if( !foundFirstLearnedClause && config.opt_updateLearnAct ) {
+		if( !foundFirstLearnedClause && config.opt_updateLearnAct ) { // should be set similar to no_LBD as its used this way in the hack solver
+                    CRef r = reason(var(q));
 		    // UPDATEVARACTIVITY trick (see competition'09 companion paper)
-		    if((reason(var(q))!= CRef_Undef)  && ca[reason(var(q))].learnt()) 
-		      lastDecisionLevel.push(q);
+                    // VSIDS scores of variables at the current decision level is aditionally 
+                    // bumped if they are propagated by core learnt clauses (similar to glucose)
+                    if ( r != CRef_Undef && ca[r].mark() == 3)
+                      lastDecisionLevel.push(q);
 		}
 #endif
 
@@ -1307,13 +1326,14 @@ void Solver::reduceDB()
   int     i, j;
   nbReduceDB++;
   
-  if( big != 0 ) {  // build a new BIG that is valid on the current
+  if( big != 0 ) {  // build a new BIG that is valid on the current formula		
     big->recreate( ca, nVars(), clauses, learnts );
     big->removeDuplicateEdges( nVars() );
     big->generateImplied( nVars(), add_tmp );
     if( config.opt_uhdProbe > 2 ) big->sort( nVars() ); // sort all the lists once
   }
   
+  double  extra_lim = cla_inc / learnts.size();    // Remove any clause below this activity
   sort(learnts, reduceDB_lt(ca) ); // sort size 2 and lbd 2 to the back!
 
   // We have a lot of "good" clauses, it is difficult to compare them. Keep more !
@@ -1325,21 +1345,32 @@ void Solver::reduceDB()
   // Don't delete binary or locked clauses. From the rest, delete clauses from the first half
   // Keep clauses which seem to be usefull (their lbd was reduce during this sequence)
 
-  int limit = learnts.size() / 2;
+  int limit = learnts.size() * learnts_reduce_fraction;
 
   const int delStart = (int) (config.opt_keep_worst_ratio * (double)learnts.size()); // keep some of the bad clauses!
   for (i = j = 0; i < learnts.size(); i++){
     Clause& c = ca[learnts[i]];
-    if (i >= delStart && c.lbd()>2 && c.size() > 2 && c.canBeDel() &&  !locked(c) && (i < limit)) {
-      removeClause(learnts[i]);
-      nbRemovedClauses++;
-    }
-    else {
-      if(!c.canBeDel()) limit++; //we keep c, so we can delete an other clause
-      c.setCanBeDel(true);       // At the next step, c can be delete
-      learnts[j++] = learnts[i];
+    if( c.mark() != 3 ) { // handle usual and interesting learnt clauses
+      if (i >= delStart 
+	  && c.lbd()>2 
+	  && c.size() > 2 
+	  && c.canBeDel() 
+	  &&  !locked(c) 
+	  && (i < limit  || activityBasedRemoval && c.activity() < extra_lim )) {
+	removeClause(learnts[i]);
+	nbRemovedClauses++;
+      }
+      else {
+	if(!c.canBeDel()) limit++; //we keep c, so we can delete an other clause
+	c.setCanBeDel(true);       // At the next step, c can be delete
+	learnts[j++] = learnts[i];
+      }
+    } else {
+      // core-learnt clauses are removed from this vector
+      assert( c.mark() == 3 && !c.learnt() && "for all core-learnt clauses the learnt flag should have been erased" );
     }
   }
+  // FIXME: check whether old variant of removal works with the above code - otherwise include with parameter
   learnts.shrink_(i - j);
   checkGarbage();
   reduceDBTime.stop();
@@ -1463,6 +1494,17 @@ bool Solver::simplify()
     if (nAssigns() == simpDB_assigns || (simpDB_props > 0))
         return true;
 
+    if( !activityBasedRemoval ) { // perform this check only if the option is used
+      int i = 0; // to prevent g++ to throw a "i maybe used unintialized" warning
+      int j = 0;
+      for (; i < learnts.size(); i++) {
+	  if (ca[learnts[i]].mark() != 3) {
+	      learnts[j++] = learnts[i];
+	  }
+      }
+      learnts.shrink(i - j);
+    }
+    
     // Remove satisfied clauses:
     removeSatisfied(learnts);
     if (remove_satisfied)        // Can be turned off.
@@ -2968,7 +3010,7 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
   totalLearnedClauses ++ ; sumLearnedClauseSize+=learnt_clause.size();sumLearnedClauseLBD+=nblevels;
   maxLearnedClauseSize = learnt_clause.size() > maxLearnedClauseSize ? learnt_clause.size() : maxLearnedClauseSize;
 
-  // parallel portfolio: send the learned clause!
+  // parallel portfolio: send the learned clause?
   updateSleep(&learnt_clause);
   
   if (learnt_clause.size() == 1){
@@ -2981,21 +3023,34 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
       else if (value(learnt_clause[0]) == l_False ) return l_False; // otherwise, we have a top level conflict here!
       DOUT( if( config.opt_printDecisions > 1 ) cerr << "c enqueue learned unit literal " << learnt_clause[0]<< " at level " <<  decisionLevel() << " from clause " << learnt_clause << endl; );
   }else{
-    CRef cr = ca.alloc(learnt_clause, true);
+    CRef cr = CRef_Undef;
+    
+    // is a core learnt clause, so we do not create a learned, but a "usual" clause
+    if (!activityBasedRemoval && nblevels < lbd_core_threshold + 1) {
+      // no_LBD = false
+      cr = ca.alloc(learnt_clause);
+      ca[cr].mark(3);   // memorize that this clause is a core-learnt clause
+      clauses.push(cr);
+    } else {
+      // 2 = normal(interesting) learnt clause
+      // 3 = core learnt
+      cr = ca.alloc(learnt_clause, true);
+      // ca[cr].mark(no_LBD ? 0 : nblevels < 6 ? 3 : 2);
+      learnts.push(cr);
+      if (activityBasedRemoval || nblevels > lbd_core_threshold) // FIXME: check whether second condition can be eliminated
+	claBumpActivity(ca[cr], (config.opt_cls_act_bump_mode == 0 ? 1 : (config.opt_cls_act_bump_mode == 1) ? learnt_clause.size() : nblevels )  ); // bump activity based on its size
+    }
+    
     ca[cr].setLBD(nblevels); 
     if(nblevels<=2) nbDL2++; // stats
     if(ca[cr].size()==2) nbBin++; // stats
   #ifdef CLS_EXTRA_INFO
     ca[cr].setExtraInformation(extraInfo);
   #endif
-    learnts.push(cr);
-    attachClause(cr);
     
-    claBumpActivity(ca[cr], (config.opt_cls_act_bump_mode == 0 ? 1 : (config.opt_cls_act_bump_mode == 1) ? learnt_clause.size() : nblevels )  ); // bump activity based on its size
-
+    attachClause(cr);
     uncheckedEnqueue(learnt_clause[0], cr); // this clause is only unit, if OTFSS jumped to the same level!
     DOUT( if( config.opt_printDecisions > 1  ) cerr << "c enqueue literal " << learnt_clause[0] << " at level " <<  decisionLevel() << " from learned clause " << learnt_clause << endl; );
-
     
     if( analyzeNewLearnedClause( cr ) )   // check whether this clause can be used to imply new backbone literals!
     {

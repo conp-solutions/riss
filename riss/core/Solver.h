@@ -814,6 +814,12 @@ protected:
      */
     int probingLiteral(Lit v);
   
+    // 999 MS hack 
+    bool activityBasedRemoval;     // use minisat or glucose style of clause removal and activities
+    int lbd_core_threshold;        // threadhold to move clause from learnt to formula (if LBD is low enough)
+    int learnts_reduce_fraction;   // fraction of how many learned clauses should be removed
+    
+    
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;
 public:     

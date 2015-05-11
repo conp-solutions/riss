@@ -96,6 +96,10 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  
  opt_cir_bump     ("cir-minisat", "cir-bump", "Activates CIR with bump ratio for VSIDS score (choose large: 9973)", 0, IntRange(0, INT32_MAX), optionListPtr),
  
+ opt_act_based       ("999HACK", "act-based",   "Use blocking restart technique", false, optionListPtr),
+ opt_lbd_core_thresh ("999HACK", "lbd-core-th",        "Saving learnt clause forever if LBD deceeds this threshold",      5, IntRange( 1, INT32_MAX), optionListPtr),
+ opt_l_red_frac      ("999HACK", "reduce-frac",   "Remove this quota of learnt clauses when database is reduced", 0.50, DoubleRange(0, false, HUGE_VAL, false), optionListPtr),
+ 
  opt_updateLearnAct ("MODS", "updLearnAct", "UPDATEVARACTIVITY trick (see glucose competition'09 companion paper)", true , optionListPtr ),
 
 #ifdef DEBUG

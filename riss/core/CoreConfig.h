@@ -99,6 +99,10 @@ public:
  
  IntOption     opt_cir_bump;
  
+ BoolOption   opt_act_based;
+ IntOption    opt_lbd_core_thresh;
+ DoubleOption opt_l_red_frac;
+ 
  BoolOption opt_updateLearnAct;
 
 #ifdef DEBUG
