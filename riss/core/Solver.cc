@@ -1128,15 +1128,23 @@ CRef Solver::propagate(bool duringAddingClauses)
     watches.cleanAll(); clssToBump.clear();
     while (qhead < trail.size() || (pq_order && !impl_cl_heap.empty())) {
       
+	DOUT( if( config.opt_learn_debug ) cerr << "c trail.size() " << trail.size() << " qhead: " << qhead << " impl_cl_heap.size(): " << impl_cl_heap.size() << endl; );
+      
         if (pq_order && qhead >= trail.size()) {
             assert(!impl_cl_heap.empty());
 
             ImplData best   = impl_cl_heap.removeMin();
             CRef     bestcr = best.reason;
-            Clause&  bestc  = ca[bestcr];
-            Lit      best0  = bestc[0];
+	    Lit      best0  = best.impliedLit;
+	    if( best.impliedLit == lit_Undef ) { // if not set with a binary clause
+	      Clause&  bestc  = ca[bestcr];
+	      Lit      best0  = bestc[0] ; // statically picks first literal from reason clause
+	    }
+            
+	    DOUT( if( config.opt_learn_debug ) cerr << "c contra selected " << best0 << " with reason " << ca[bestcr] << endl; );
 
             if (value(best0) == l_False) {
+		DOUT( if( config.opt_learn_debug ) cerr << "c resulted in conflict" << endl; );
                 confl = bestcr;
                 qhead = trail.size();
                 impl_cl_heap.clear();
@@ -1144,6 +1152,7 @@ CRef Solver::propagate(bool duringAddingClauses)
             }
 
             if (value(best0) == l_True) {
+		DOUT( if( config.opt_learn_debug ) cerr << "c literal already satisfied" << endl; );
                 continue;
             }
 
@@ -1180,7 +1189,7 @@ CRef Solver::propagate(bool duringAddingClauses)
                 // Other lits are at least as early as 3rd lit.
 		// simplified to binary clauses
 #warning check whether this is necessary (how binary clauses are treaded in contrasat
-                ImplData implied(wbin[k].cref(), 0, num_props);
+                ImplData implied(wbin[k].cref(), imp, 0, num_props);
                 impl_cl_heap.insert(implied);
             } else {
 	      uncheckedEnqueue(imp,wbin[k].cref(), duringAddingClauses);

@@ -40,10 +40,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "riss/core/Constants.h"
 #include "riss/core/CoreConfig.h"
 
-#warning REPLACE WITH MINISAT QUEUE
-#include <deque>
-
-
 //
 // choose which bit width should be used
 // (used in level-X-look-ahead and FM)
@@ -672,10 +668,12 @@ protected:
   
     struct ImplData {
         CRef reason;
+	Lit impliedLit; // if not lit_Undef, use this literal as the implied literal
         int level;
         int dlev_pos;
-        ImplData (CRef cr, int l, int p) : reason (cr), level (l), dlev_pos (p) { }
-        ImplData ()                      : reason (0),  level (0), dlev_pos (0) { }
+	ImplData (CRef cr, Lit implied, int l, int p) : reason (cr), impliedLit(implied), level (l), dlev_pos (p) { }
+        ImplData (CRef cr, int l, int p) : reason (cr), impliedLit(lit_Undef), level (l), dlev_pos (p) { }
+        ImplData ()                      : reason (0),  impliedLit(lit_Undef), level (0), dlev_pos (0) { }
     };
 
     struct HeapImpl {
