@@ -3,10 +3,8 @@ Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
 #include "coprocessor/Subsumption.h"
-using namespace Coprocessor;
 
-
-// options
+namespace Coprocessor {
 
 
 Subsumption::Subsumption( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation )
@@ -1811,3 +1809,5 @@ void Subsumption::destroy() {
   vector< SpinLock >().swap(var_locks); // 1 extra SpinLock for data
   vector< vector < OccUpdate > >().swap(occ_updates);
 }
+
+} // namespace Coprocessor

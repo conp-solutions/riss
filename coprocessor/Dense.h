@@ -10,8 +10,8 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/Technique.h"
 
-using namespace Riss;
-using namespace std;
+// using namespace Riss;
+// using namespace std;
 
 namespace Coprocessor {
 
@@ -25,7 +25,7 @@ class Dense  : public Technique
     int* mapping;
     uint32_t variables;	// number of variables before compression
     uint32_t postvariables;	// number of variables before compression
-    vector<Lit> trail;	// already assigned literals
+    std::vector<Lit> trail;	// already assigned literals
     
     Compression() : mapping(0), variables(0), postvariables(0) {};
     /// free the used resources again
@@ -35,10 +35,10 @@ class Dense  : public Technique
     }
   };
   
-  vector< Compression > map_stack;
+  std::vector< Compression > map_stack;
 
   /// store to which new variable an old variable has been mapped
-  vector< int > forward_mapping;
+  std::vector< int > forward_mapping;
   
 public:
   Dense(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation);
@@ -49,7 +49,7 @@ public:
    */
   void compress(const char *newWhiteFile = 0);
 
-  /** decompress the most recent additions of the extend model vector, 
+  /** decompress the most recent additions of the extend model std::vector, 
    *  does not touch lit_Undefs */
   void adoptUndoStack();
   
@@ -59,15 +59,15 @@ public:
   void decompress(vec< lbool >& model);
   
   /** inherited from @see Technique */
-  void printStatistics( ostream& stream );
+  void printStatistics( std::ostream& stream );
   
   void destroy();
   
   /** write dense information to file, so that it can be loaded afterwards again */
-  bool writeUndoInfo(const string& filename);
+  bool writeUndoInfo(const std::string& filename);
   
   /** read dense information from file */
-  bool readUndoInfo(const string& filename);
+  bool readUndoInfo(const std::string& filename);
   
   /** return the new variable for the old variable */
   Lit giveNewLit ( const Lit& l ) const ;

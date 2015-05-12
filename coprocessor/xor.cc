@@ -4,8 +4,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/xor.h"
 
-using namespace Coprocessor;
-
+namespace Coprocessor {
 
 XorReasoning::XorReasoning( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data,  Propagation& _propagation, EquivalenceElimination& _ee  )
 :Technique(_config, _ca,_controller)
@@ -609,3 +608,5 @@ void XorReasoning::destroy()
 {
   
 }
+
+} // namespace Coprocessor

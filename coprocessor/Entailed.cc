@@ -5,7 +5,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #include "coprocessor/Entailed.h"
 
 
-using namespace Coprocessor;
+namespace Coprocessor {
 
 EntailedRedundant::EntailedRedundant( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data )
 : Technique(_config, _ca,_controller)
@@ -189,3 +189,5 @@ void EntailedRedundant::destroy()
 {
   
 }
+
+} // namespace Coprocessor

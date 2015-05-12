@@ -10,7 +10,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #include "coprocessor/CoprocessorTypes.h"
 #include "coprocessor/Propagation.h"
 
-using namespace Riss;
+// using namespace Riss;
 
 namespace Coprocessor {
 
@@ -55,7 +55,7 @@ public:
   */
   bool process();
     
-  void printStatistics(ostream& stream);
+  void printStatistics(std::ostream& stream);
 
   void giveMoreSteps();
   
@@ -68,7 +68,7 @@ protected:
    * @param resolvent initially contains the literals of the other clause (except literal l), afterwards, stores the resolvent, if the resolvent is not a  tautology
    * @return true, if the resolvent is a tautology
    */
-  bool resolveUnsortedStamped( const Lit l, const Clause& d, MarkArray& ma, vector<Lit>& resolvent );
+  bool resolveUnsortedStamped( const Lit l, const Clause& d, MarkArray& ma, std::vector<Lit>& resolvent );
 
   /** run RAT elmination 
    @return true, if modifications have been applied
@@ -80,7 +80,7 @@ protected:
   */
   bool minimizeRAT();
   
-  bool shortATM(const CRef clause, const Lit left, int& trailPosition, vector<Lit>& atlits );
+  bool shortATM(const CRef clause, const Lit left, int& trailPosition, std::vector<Lit>& atlits );
   
   bool propagateUnit(const Lit& unit, int& trailPosition);
   

@@ -9,8 +9,8 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #include "coprocessor/CoprocessorTypes.h"
 #include "coprocessor/Technique.h"
 
-using namespace Riss;
-using namespace std;
+// using namespace Riss;
+// using namespace std;
 
 namespace Coprocessor {
  
@@ -40,7 +40,7 @@ public:
   
   /** This method should be used to print the statistics of the technique that inherits from this class
    */
-  void printStatistics( ostream& stream );
+  void printStatistics( std::ostream& stream );
   
   void destroy();
   

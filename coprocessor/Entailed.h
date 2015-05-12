@@ -9,7 +9,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #include "coprocessor/Technique.h"
 #include "coprocessor/CoprocessorTypes.h"
 
-using namespace Riss;
+// using namespace Riss;
 
 namespace Coprocessor {
 
@@ -35,7 +35,7 @@ public:
   */
   bool process();
     
-  void printStatistics(ostream& stream);
+  void printStatistics(std::ostream& stream);
 
   void giveMoreSteps();
   

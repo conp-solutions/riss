@@ -10,7 +10,7 @@ Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, All rights reserved.
 
 using namespace std;
 
-using namespace Coprocessor;
+namespace Coprocessor {
 
 void Preprocessor::outputFormula(const char *file, const char *varMap)
 {
@@ -339,3 +339,5 @@ bool Preprocessor::writeUndoInfo(const string& filename, int originalVariables) 
  
  return dense.writeUndoInfo( filename + ".map" );
 }
+
+} // namespace Coprocessor

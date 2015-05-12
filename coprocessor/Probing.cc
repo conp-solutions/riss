@@ -4,9 +4,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/Probing.h"
 
-using namespace Coprocessor;
-
-
+namespace Coprocessor {
 
 Probing::Probing(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, EquivalenceElimination& _ee, Solver& _solver)
 : Technique( _config, _ca, _controller )
@@ -1442,3 +1440,4 @@ void Probing::destroy()
   vector<CRef> ().swap(l2implieds );
 }
 
+} // namespace Coprocessor

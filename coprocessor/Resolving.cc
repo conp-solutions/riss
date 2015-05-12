@@ -4,8 +4,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/Resolving.h"
 
-using namespace Coprocessor;
-
+namespace Coprocessor {
 
 Resolving::Resolving(CP3Config& _config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation)
 : Technique(_config, _ca,_controller)
@@ -451,3 +450,5 @@ void Resolving::destroy()
 {
   vector<int>().swap( seen );
 }
+
+} // namespace Coprocessor

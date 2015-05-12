@@ -14,8 +14,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include <vector>
 #include <deque>
 
-using namespace Riss;
-using namespace std;
+// using namespace Riss;
+// using namespace std;
 
 namespace Coprocessor {
 
@@ -25,7 +25,7 @@ class TwoSatSolver : public Technique
   CoprocessorData& data;
   BIG big;
   
-  vector<char> tempVal, permVal;
+  std::vector<char> tempVal, permVal;
   deque<Lit> unitQueue, tmpUnitQueue;
   int lastSeenIndex;
   
@@ -48,7 +48,7 @@ class TwoSatSolver : public Technique
   
   /** This method should be used to print the statistics of the technique that inherits from this class
   */
-  void printStatistics( ostream& stream );
+  void printStatistics( std::ostream& stream );
   
   void destroy();
   

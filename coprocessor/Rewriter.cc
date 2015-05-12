@@ -3,13 +3,11 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
 #include "coprocessor/Rewriter.h"
-
 #include "riss/mtl/Sort.h"
 
 #include <algorithm>
 
-using namespace Coprocessor;
-
+namespace Coprocessor {
 
 void Rewriter::giveMoreSteps()
 {
@@ -1153,3 +1151,4 @@ bool Rewriter::hasDuplicate(vector<CRef>& list, const vec<Lit>& c)
   return false;
 }
 
+} // namespace Coprocessor

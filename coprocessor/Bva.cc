@@ -6,8 +6,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include <algorithm>
 
-using namespace Coprocessor;
-
+namespace Coprocessor {
 	
 BoundedVariableAddition::BoundedVariableAddition( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data,   Propagation& _propagation)
 : Technique( _config, _ca, _controller )
@@ -2041,3 +2040,5 @@ void BoundedVariableAddition::removeDuplicateClauses( const Lit literal )
     }
   }
 }
+
+} // namespace Coprocessor

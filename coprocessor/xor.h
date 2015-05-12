@@ -14,8 +14,8 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 #include <vector>
 
-using namespace Riss;
-using namespace std;
+// using namespace Riss;
+// using namespace std;
 
 namespace Coprocessor {
 
@@ -39,17 +39,17 @@ class XorReasoning : public Technique  {
   
   /// compare two literals
   struct VarLt {
-        vector< vector <int> > & data;
+        std::vector< std::vector <int> > & data;
         bool operator () (int& x, int& y) const {
 	    return data[ x ].size() < data[ y].size(); 
         }
-        VarLt(vector<vector< int> > & _data) : data(_data) {}
+        VarLt(std::vector<vector< int> > & _data) : data(_data) {}
   };
   
   /** structure to use during simple gauss algorithm */
   class GaussXor {
   public:
-    vector<Var> vars;
+    std::vector<Var> vars;
     bool k; // polarity of XOR has to be true or false
     bool used; // indicate whether this constraint has been used for simplification already
     bool eq() const { return vars.size() == 2 ; }
@@ -69,13 +69,13 @@ class XorReasoning : public Technique  {
     
     /** add the other xor to this xor 
      * @param removed list of variables that have been removed from the xor
-     * @param v1 temporary vector
+     * @param v1 temporary std::vector
      */
-    void add ( const GaussXor& gx, vector<Var>& removed, vector<Var>& v1) {
+    void add ( const GaussXor& gx, std::vector<Var>& removed, std::vector<Var>& v1) {
       k = (k != gx.k); // set new k!
       v1 = vars; // be careful here, its a copy operation!
       vars.clear();
-      const vector<Var>& v2 = gx.vars;
+      const std::vector<Var>& v2 = gx.vars;
       // generate new vars!
       int n1 = 0,n2=0;
       while( n1 < v1.size() && n2 < v2.size() ) {
@@ -105,24 +105,24 @@ public:
   */
   bool process();
     
-  void printStatistics(ostream& stream);
+  void printStatistics(std::ostream& stream);
 
   void giveMoreSteps();
   
   void destroy();
   
   // remove index from all variable lists that are listed in x
-  void dropXor(int index, std::vector< Var >& x, vector< std::vector< int > >& occs);
+  void dropXor(int index, std::vector< Var >& x, std::vector< std::vector< int > >& occs);
   
   /** propagate found units in all related xors 
    * @return true if no conflict was found, false if a conflict was found
    */
-  bool propagate(vector< Lit >& unitQueue, MarkArray& ma, vector< std::vector< int > >& occs, vector< GaussXor >& xorList);
+  bool propagate(std::vector< Lit >& unitQueue, MarkArray& ma, std::vector< std::vector< int > >& occs, std::vector< GaussXor >& xorList);
 
 protected:
   
   /** find xors in the formula, with given max size */
-  bool findXor(vector< Coprocessor::XorReasoning::GaussXor >& xorList);
+  bool findXor(std::vector< Coprocessor::XorReasoning::GaussXor >& xorList);
   
 };
 

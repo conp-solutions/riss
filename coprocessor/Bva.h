@@ -10,7 +10,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor/CoprocessorTypes.h"
 #include "coprocessor/Propagation.h"
 
-using namespace Riss;
+// using namespace Riss;
 
 namespace Coprocessor {
 
@@ -63,13 +63,13 @@ class BoundedVariableAddition : public Technique  {
   };
   
   // structures that would be created on during functions again and again
-  vector< vector< CRef > > bvaMatchingClauses; // found pairs of clauses
-  vector< Lit > bvaMatchingLiterals; // literals that stay in the match
+  std::vector< std::vector< CRef > > bvaMatchingClauses; // found pairs of clauses
+  std::vector< Lit > bvaMatchingLiterals; // literals that stay in the match
   // use general mark array!
-  vector< Lit > bvaCountMark;	// mark literal candidates (a) for the current literal(b)
-  vector< uint32_t > bvaCountCount; // count occurence of a together with b
-  vector< uint64_t > bvaCountSize; // count occurence of a together with b
-  vec<Lit> clauseLits;			// vector that is added for clause definitions
+  std::vector< Lit > bvaCountMark;	// mark literal candidates (a) for the current literal(b)
+  std::vector< uint32_t > bvaCountCount; // count occurence of a together with b
+  std::vector< uint64_t > bvaCountSize; // count occurence of a together with b
+  vec<Lit> clauseLits;			// std::vector that is added for clause definitions
  
 public:
   BoundedVariableAddition( Coprocessor::CP3Config& _config, ClauseAllocator& _ca, ThreadController& _controller, Coprocessor::CoprocessorData& _data, Coprocessor::Propagation& _propagation );
@@ -81,7 +81,7 @@ public:
   */
   bool process();
     
-  void printStatistics(ostream& stream);
+  void printStatistics(std::ostream& stream);
 
   void giveMoreSteps();
   
@@ -114,7 +114,7 @@ protected:
   Var nextVariable(char type, Heap<LitOrderHeapLt>& bvaHeap);
 
   /** check data structures */
-  bool checkLists(const string& headline);
+  bool checkLists(const std::string& headline);
   
   /** pair of literals and clauses, including sort operator */
   struct xorHalfPair {

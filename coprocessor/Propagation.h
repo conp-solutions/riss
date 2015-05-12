@@ -11,7 +11,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/CoprocessorTypes.h"
 
-using namespace Riss;
+// using namespace Riss;
 
 namespace Coprocessor {
 
@@ -41,7 +41,7 @@ public:
   
   void initClause( const CRef cr );
   
-  void printStatistics(ostream& stream);
+  void printStatistics(std::ostream& stream);
   
   /** give more steps for inprocessing - nothing to be done for UP*/
   void giveMoreSteps() {}

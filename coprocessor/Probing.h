@@ -12,8 +12,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor/Propagation.h"
 #include "coprocessor/EquivalenceElimination.h"
 
-using namespace Riss;
-using namespace std;
+// using namespace Riss;
+// using namespace std;
 
 namespace Coprocessor {
  
@@ -28,14 +28,14 @@ class Probing : public Technique {
   EquivalenceElimination& ee;		/// object that takes care of equivalent literal elimination
   
   // necessary local variables
-  vector<Var> variableHeap;
+  std::vector<Var> variableHeap;
   vec<Solver::VarFlags> prPositive;
   vec<Solver::VarFlags> prL2Positive;
   
   vec<Lit> learntUnits;
-  vector<Lit> doubleLiterals;
-  vector<CRef> l2conflicts;
-  vector<CRef> l2implieds;
+  std::vector<Lit> doubleLiterals;
+  std::vector<CRef> l2conflicts;
+  std::vector<CRef> l2implieds;
   
   
 public:
@@ -48,7 +48,7 @@ public:
   
   /** This method should be used to print the statistics of the technique that inherits from this class
    */
-  void printStatistics( ostream& stream );
+  void printStatistics( std::ostream& stream );
   
   void destroy();
   

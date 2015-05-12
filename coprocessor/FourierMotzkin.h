@@ -11,7 +11,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/Propagation.h"
 
-using namespace Riss;
+// using namespace Riss;
 
 namespace Coprocessor {
 
@@ -74,11 +74,11 @@ class FourierMotzkin : public Technique  {
   public:
   class CardC {
   public:
-    vector<Lit> ll;
-    vector<Lit> lr;
+    std::vector<Lit> ll;
+    std::vector<Lit> lr;
     int k;
-    CardC( vector<Lit>& amo ) : ll(amo), k(1) {}; // constructor to add amo constraint
-    CardC( vector<Lit>& amk, int _k ) : ll(amk), k(_k) {}; // constructor to add amk constraint
+    CardC( std::vector<Lit>& amo ) : ll(amo), k(1) {}; // constructor to add amo constraint
+    CardC( std::vector<Lit>& amk, int _k ) : ll(amk), k(_k) {}; // constructor to add amk constraint
     CardC( const Clause& c ) :k(-1) { lr.resize(c.size(),lit_Undef); for(int i = 0 ; i < c.size(); ++i ) lr[i] = c[i]; }// constructor for usual clauses
     bool amo() const { return k == 1 && lr.size() == 0 ; }
     bool amt() const { return k == 2 && lr.size() == 0 ; }
@@ -89,7 +89,7 @@ class FourierMotzkin : public Technique  {
     bool failed() const { return (((int)lr.size() + k) < 0) ; }
     bool taut() const { return k >= (int)ll.size(); } // assume no literal appears both in ll and lr
     bool invalid() const { return k==0 && ll.size() == 0 && lr.size() == 0; } // nothing stored in the constraint any more
-    void invalidate() { k=0;vector<Lit>().swap(ll);vector<Lit>().swap(lr);}
+    void invalidate() { k=0;std::vector<Lit>().swap(ll);std::vector<Lit>().swap(lr);}
     CardC() : k(0) {} // default constructor
     void swap( CardC& other ) { /// swap with other constraint
       const int t = other.k; other.k = k; k = t;
@@ -108,7 +108,7 @@ public:
   */
   bool process();
     
-  void printStatistics(ostream& stream);
+  void printStatistics(std::ostream& stream);
 
   void giveMoreSteps();
   
@@ -117,29 +117,29 @@ public:
   
 protected:
   /** propagate the literals in unitQueue over all constraints*/
-  bool propagateCards( vec<Lit>& unitQueue, vector< vector<int> >& leftHands, vector< vector<int> >& rightHands, vector<CardC>& cards,MarkArray& inAmo);
+  bool propagateCards( vec<Lit>& unitQueue, std::vector< std::vector<int> >& leftHands, std::vector< std::vector<int> >& rightHands, std::vector<CardC>& cards,MarkArray& inAmo);
   
   /** check whether the given clause is already present in the given list */
-  bool hasDuplicate(const vector<Lit>& c);
+  bool hasDuplicate(const std::vector<Lit>& c);
 
   /** given a set of cardinality constraints, and a BIG, try to deduce more AMOs following the two product encoding */
-  void findTwoProduct(vector< CardC >& cards, BIG& big, vector< vector<int> >& leftHands);
+  void findTwoProduct(std::vector< CardC >& cards, BIG& big, std::vector< std::vector<int> >& leftHands);
 
   /** return whether a current set of literals already exists as AMO, or is subsumed by an existing one 
    * Note: assumes the literal lits to be sorted, and all AMOs inside cards as well
    */
-  bool amoExistsAlready(const vector< Lit >& lits, vector< std::vector< int > >& leftHands, vector<CardC>& cards);
+  bool amoExistsAlready(const std::vector< Lit >& lits, std::vector< std::vector< int > >& leftHands, std::vector<CardC>& cards);
 
   /** try to deduce ALO constraints
    *  if something like a board is encoded, then try to add additional ALO constraints (from dangerous reductions paper)
    */
-  void deduceALOfromAmoAloMatrix(vector< CardC >& cards, vector< std::vector< int > >& leftHands);
+  void deduceALOfromAmoAloMatrix(std::vector< CardC >& cards, std::vector< std::vector< int > >& leftHands);
   
   /** remove all the AMOs, whose effect is already covered by some other AMO */
-  void removeSubsumedAMOs(vector< CardC >& cards, vector< std::vector< int > >& leftHands);
+  void removeSubsumedAMOs(std::vector< CardC >& cards, std::vector< std::vector< int > >& leftHands);
   
   /** given a formula, try to extract cardinality constraints semantically */
-  void findCardsSemantic( vector<CardC>& cards,  vector< vector<int> >& leftHands );
+  void findCardsSemantic( std::vector<CardC>& cards,  std::vector< std::vector<int> >& leftHands );
   
   /** given a number x with n bits set, then the procedure returns the next number */
   LONG_INT nextNbitNumber(LONG_INT x) const;
@@ -151,7 +151,7 @@ protected:
   void cleanSolver();
 };
 
-//   inline ostream& operator<<( ostream& stream, const FourierMotzkin::CardC& card ) {
+//   inline std::ostream& operator<<( std::ostream& stream, const FourierMotzkin::CardC& card ) {
 //       stream << "(" << card.ll << " <= " << card.k << " + " << card.lr << ")";
 //       return stream;
 //   }

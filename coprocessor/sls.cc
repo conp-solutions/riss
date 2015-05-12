@@ -4,7 +4,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/sls.h"
 
-using namespace Coprocessor;
+namespace Coprocessor {
 
 Sls::Sls(CP3Config &_config, CoprocessorData& _data, ClauseAllocator& _ca, ThreadController& _controller)
 : 
@@ -376,3 +376,4 @@ void Sls::destroy()
   vector< vector< int > >().swap( occ );
 }
 
+} // namespace Coprocessor

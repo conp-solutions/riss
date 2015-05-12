@@ -4,7 +4,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/LiteralAddition.h"
 
-using namespace Coprocessor;
+namespace Coprocessor {
 
 LiteralAddition::LiteralAddition( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Coprocessor::Propagation& _propagation )
 : Technique(_config, _ca,_controller)
@@ -465,3 +465,5 @@ void LiteralAddition::destroy()
 {
   
 }
+
+} // namespace Coprocessor

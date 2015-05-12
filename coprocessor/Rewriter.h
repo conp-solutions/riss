@@ -11,7 +11,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/Subsumption.h"
 
-using namespace Riss;
+// using namespace Riss;
 
 namespace Coprocessor {
 
@@ -69,7 +69,7 @@ public:
   */
   bool process();
     
-  void printStatistics(ostream& stream);
+  void printStatistics(std::ostream& stream);
 
   void destroy();
   
@@ -85,9 +85,9 @@ protected:
   /** method responsible for rewriting implication chains constraints */
   bool rewriteImpl() ;
   
-  /** check whether the clause represented in the vector c has duplicates, and remove clauses that are subsumed by c */
-  bool hasDuplicate(vector<CRef>& list, const vec<Lit>& c);
-  bool hasDuplicate(vector<CRef>& list, const Clause& c);
+  /** check whether the clause represented in the std::vector c has duplicates, and remove clauses that are subsumed by c */
+  bool hasDuplicate(std::vector<CRef>& list, const vec<Lit>& c);
+  bool hasDuplicate(std::vector<CRef>& list, const Clause& c);
   
   bool checkPush(vec<Lit> & ps, const Lit l);
   bool ordered_subsumes (const Clause& c, const Clause & other) const;

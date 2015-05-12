@@ -14,10 +14,10 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "riss/utils/AutoDelete.h"
 
 #include <vector>
-#include <iostream>
+#include <ostream>
 
-using namespace Riss;
-using namespace std;
+// using namespace Riss;
+// using namespace std;
 
 namespace Coprocessor {
 
@@ -46,11 +46,11 @@ class Logger
 public:
   Logger(int level, bool err = true);
 
-  void log( int level, const string& s );
-  void log( int level, const string& s, const int i);
-  void log( int level, const string& s, const Clause& c);
-  void log( int level, const string& s, const Lit& l);
-  void log( int level, const string& s, const Clause& c, const Lit& l);
+  void log( int level, const std::string& s );
+  void log( int level, const std::string& s, const int i);
+  void log( int level, const std::string& s, const Clause& c);
+  void log( int level, const std::string& s, const Lit& l);
+  void log( int level, const std::string& s, const Clause& c, const Lit& l);
 };
 
 struct VarOrderBVEHeapLt;
@@ -74,7 +74,7 @@ class CoprocessorData
   uint32_t numberOfCls;                 // number of clauses during initialization
   uint32_t numberOfTotalLiterals;       // number of total literals in the formula during initialization
   ComplOcc occs;                        // list of clauses, per literal
-  vector<int32_t> lit_occurrence_count; // number of literal occurrences in the formula
+  std::vector<int32_t> lit_occurrence_count; // number of literal occurrences in the formula
 
   bool hasLimit;                        // indicate whether techniques should be executed limited
   bool randomOrder;                     // perform preprocessing with random execution order within techniques
@@ -85,18 +85,18 @@ class CoprocessorData
 
   MarkArray deleteTimer;                // store for each literal when (by which technique) it has been deleted
 
-  vector<Lit> undo;                     // store clauses that have to be undone for extending the model
+  std::vector<Lit> undo;                     // store clauses that have to be undone for extending the model
   int lastCompressUndoLits;             // number of literals when the last compression took place
   int decompressedUndoLits;             // number of literals on the decompressedUndoLits stack
 
 private:
-  vector<Lit> equivalences;             // stack of literal classes that represent equivalent literals
-  vector<CRef> subsume_queue; // queue of clause references that potentially can subsume other clauses
-  vector<CRef> strengthening_queue;     // vector of clausereferences, which potentially can strengthen
+  std::vector<Lit> equivalences;             // stack of literal classes that represent equivalent literals
+  std::vector<CRef> subsume_queue; // queue of clause references that potentially can subsume other clauses
+  std::vector<CRef> strengthening_queue;     // std::vector of clausereferences, which potentially can strengthen
 
   int countLitOcc(Lit l){
     int count = 0;
-    vector<CRef> & list = occs[toInt(l)];
+    std::vector<CRef> & list = occs[toInt(l)];
     for (int i = 0; i < list.size(); ++i)
     {
         CRef cr = list[i];
@@ -115,15 +115,15 @@ private:
     return count;
   }  
   
-  // TODO decide whether a vector of active variables would be good!
+  // TODO decide whether a std::vector of active variables would be good!
 
 public:
 
   Logger& log;                           // responsible for logs
 
   MarkArray ma;                          // temporary markarray, that should be used only inside of methods
-  vector<Lit> lits;                      // temporary literal vector
-  vector<CRef> clss;                     // temporary literal vector
+  std::vector<Lit> lits;                      // temporary literal std::vector
+  std::vector<CRef> clss;                     // temporary literal std::vector
 
   CoprocessorData(ClauseAllocator& _ca, Solver* _solver, Coprocessor::Logger& _log, bool _limited = true, bool _randomized = false, bool _debug = false);
 
@@ -142,11 +142,11 @@ public:
 
   int32_t& operator[] (const Lit l ); // return the number of occurrences of literal l
   int32_t operator[] (const Var v ) const; // return the number of occurrences of variable v
-  vector<CRef>& list( const Lit l ); // return the list of clauses, which have literal l
-  const vector< CRef >& list( const Lit l ) const; // return the list of clauses, which have literal l
+  std::vector<CRef>& list( const Lit l ); // return the list of clauses, which have literal l
+  const std::vector< CRef >& list( const Lit l ) const; // return the list of clauses, which have literal l
 
-  vec<CRef>& getClauses();           // return the vector of clauses in the solver object
-  vec<CRef>& getLEarnts();           // return the vector of learnt clauses in the solver object
+  vec<CRef>& getClauses();           // return the std::vector of clauses in the solver object
+  vec<CRef>& getLEarnts();           // return the std::vector of learnt clauses in the solver object
   vec<Lit>&  getTrail();             // return trail
   void clearTrail();                 // remove all variables from the trail, and reset qhead in the solver
   void resetPPhead();                // set the pointer to the next element to be propagated to 0
@@ -167,13 +167,13 @@ public:
    * @param final if true, decision heap will be re-build, and the set of variables will be shrinked to the given to variable
    */
   void mergeVar( Lit from, Lit to, bool final = false );
-  void mergeVar( vector<Lit>& from, Lit to, bool final = false );
+  void mergeVar( std::vector<Lit>& from, Lit to, bool final = false );
 
   /// notify about variable renaming
   void didCompress() {
     if( lastCompressUndoLits != -1 &&  // if there has been a  compression,
       decompressedUndoLits != undo.size() ) { // then the complete undo-stack has to be adopted
-      cerr << "c variable renaming went wrong - abort. lastCom: " << lastCompressUndoLits << " decomp: " << decompressedUndoLits << " undo: " << undo.size() << endl;
+      std::cerr << "c variable renaming went wrong - abort. lastCom: " << lastCompressUndoLits << " decomp: " << decompressedUndoLits << " undo: " << undo.size() << std::endl;
       exit(14);
     }
     lastCompressUndoLits = undo.size();
@@ -214,13 +214,13 @@ public:
   void cleanOccurrences();				// remove all clauses and set counters to 0
 
   // Garbage Collection
-  void garbageCollect(vector<CRef> ** updateVectors = 0, int size = 0);
-  void relocAll(ClauseAllocator & to, vector<CRef> ** updateVectors = 0, int size = 0);
-  void checkGarbage(vector<CRef> ** updateVectors = 0, int size = 0) { return checkGarbage(solver->garbage_frac, updateVectors, size); }
-  void checkGarbage(double gf, vector<CRef> ** updateVectors = 0, int size = 0){  if (ca.wasted() > ca.size() * gf) garbageCollect(updateVectors, size); }
+  void garbageCollect(std::vector<CRef> ** updateVectors = 0, int size = 0);
+  void relocAll(ClauseAllocator & to, std::vector<CRef> ** updateVectors = 0, int size = 0);
+  void checkGarbage(std::vector<CRef> ** updateVectors = 0, int size = 0) { return checkGarbage(solver->garbage_frac, updateVectors, size); }
+  void checkGarbage(double gf, std::vector<CRef> ** updateVectors = 0, int size = 0){  if (ca.wasted() > ca.size() * gf) garbageCollect(updateVectors, size); }
 
   void updateClauseAfterDelLit(const Clause& clause)
-  { if( global_debug_out ) cerr << "what to update in clause?! " << clause << endl; }
+  { if( global_debug_out ) std::cerr << "what to update in clause?! " << clause << std::endl; }
   
   // sort
   void sortClauseLists(bool alsoLearnts = false);
@@ -230,8 +230,8 @@ public:
   uint32_t getMyDeleteTimer();
   /** tell timer system that variable has been deleted (thread safe!) */
   void deletedVar( const Var v );
-  /** fill the vector with all the literals that have been deleted after the given timer */
-  void getActiveVariables(const uint32_t myTimer, vector< Var >& activeVariables );
+  /** fill the std::vector with all the literals that have been deleted after the given timer */
+  void getActiveVariables(const uint32_t myTimer, std::vector< Var >& activeVariables );
   /** fill the heap with all the literals that have been deleted afetr the given timer */
   template <class Comp>  
   void getActiveVariables(const uint32_t myTimer, Heap < Comp > & heap );
@@ -262,27 +262,27 @@ public:
   // extending model after clause elimination procedures - l will be put first in list to be undone if necessary!
   void addToExtension( const CRef cr, const Lit l = lit_Error );
   void addToExtension( vec< Lit >& lits, const Lit l = lit_Error );
-  void addToExtension( vector< Lit >& lits, const Lit l = lit_Error );
+  void addToExtension( std::vector< Lit >& lits, const Lit l = lit_Error );
   void addToExtension( const Lit dontTouch, const Lit l = lit_Error );
   
-  /// add already created vector to extension vector
+  /// add already created std::vector to extension std::vector
   void addExtensionToExtension(vec< Lit >& lits);
-  void addExtensionToExtension(vector< Lit >& lits);
+  void addExtensionToExtension(std::vector< Lit >& lits);
 
   void extendModel(vec<lbool>& model);
   /// careful, should not be altered other than be the Dense object
-  vector<Lit>& getUndo() { return undo; }
+  std::vector<Lit>& getUndo() { return undo; }
 
   /// for DRUP / DRAT proofs
 #ifdef DRATPROOF
   template <class T>
-  void addToProof(   T& clause, bool deleteFromProof=false, const Lit remLit = lit_Undef); // write the given clause/vector/vec to the output, if the output is enabled
+  void addToProof(   T& clause, bool deleteFromProof=false, const Lit remLit = lit_Undef); // write the given clause/std::vector/vec to the output, if the output is enabled
   void addUnitToProof(const  Lit& l, bool deleteFromProof=false);    // write a single unit clause to the proof
   void addCommentToProof(const char* text, bool deleteFromProof=false);
   bool outputsProof() const { return solver->outputsProof(); } // return whether the solver outputs the drup proof!
 #else // no DRAT proofs
   template <class T>
-  void addToProof(   T& clause, bool deleteFromProof=false, const Lit remLit = lit_Undef) const {}; // write the given clause/vector/vec to the output, if the output is enabled
+  void addToProof(   T& clause, bool deleteFromProof=false, const Lit remLit = lit_Undef) const {}; // write the given clause/std::vector/vec to the output, if the output is enabled
   void addUnitToProof(const  Lit& l, bool deleteFromProof=false) const {};    // write a single unit clause to the proof
   void addCommentToProof(const char* text, bool deleteFromProof=false) const {};
   bool outputsProof() const { return false; } // return whether the solver outputs the drup proof!
@@ -291,14 +291,14 @@ public:
   // handling equivalent literals
   void addEquivalences( const std::vector<Lit>& list );
   void addEquivalences( const Lit& l1, const Lit& l2 );
-  vector<Lit>& getEquivalences();
+  std::vector<Lit>& getEquivalences();
 
   /** add a clause to the queues, so that this clause will be checked by the next call to subsumeStrength 
    * @return true, if clause has really been added and was not in both queues before
    */
   bool addSubStrengthClause( const CRef cr , bool isNew = false);
-  vector<CRef>& getSubsumeClauses();
-  vector<CRef>& getStrengthClauses();
+  std::vector<CRef>& getSubsumeClauses();
+  std::vector<CRef>& getStrengthClauses();
   
   // checking whether a literal can be altered - TODO: use the frozen information from the solver object!
   void setNotTouch(const Var& v);
@@ -306,8 +306,8 @@ public:
   bool doNotTouch (const Var& v) const ;
   
   // TODO: remove after debug
-  void printTrail(ostream& stream) {
-    for( int i = 0 ; i < solver->trail.size(); ++ i ) cerr << " " << solver->trail[i]; 
+  void printTrail(std::ostream& stream) {
+    for( int i = 0 ; i < solver->trail.size(); ++ i ) std::cerr << " " << solver->trail[i]; 
   }
   
   /** for solver extensions, which rely on extra informations per clause (including unit clauses), e.g. the level of the solver in a partition tree*/
@@ -373,10 +373,10 @@ public:
   
   /** fill the literals in the order they would appear in a BFS in the big, starting with root nodes 
    *  NOTE: will pollute the data.ma MarkArray
-   * @param rootsOnly: fill the vector only with root literals
+   * @param rootsOnly: fill the std::vector only with root literals
    */
-  void fillSorted( vector< Lit >& literals, Coprocessor::CoprocessorData& data, bool rootsOnly = true, bool getAll=false);
-  void fillSorted(vector<Var>& variables, CoprocessorData& data, bool rootsOnly = true, bool getAll=false);
+  void fillSorted( std::vector< Lit >& literals, Coprocessor::CoprocessorData& data, bool rootsOnly = true, bool getAll=false);
+  void fillSorted(std::vector<Var>& variables, CoprocessorData& data, bool rootsOnly = true, bool getAll=false);
 
   /** return true, if the condition "from -> to" holds, based on the stochastic scanned data */
   bool implies(const Lit& from, const Lit& to) const;
@@ -548,8 +548,8 @@ inline void CoprocessorData::init(uint32_t nVars)
 
 inline void CoprocessorData::destroy()
 {
-  ComplOcc().swap(occs); // free physical space of the vector
-  vector<int32_t>().swap(lit_occurrence_count);
+  ComplOcc().swap(occs); // free physical space of the std::vector
+  std::vector<int32_t>().swap(lit_occurrence_count);
   deleteTimer.destroy();
 }
 
@@ -590,10 +590,10 @@ inline Var CoprocessorData::nextFreshVariable(char type)
   deleteTimer.resize( 2*nVars() );
   
   occs.resize( 2*nVars() );
-  // cerr << "c resize occs to " << occs.size() << endl;
+  // std::cerr << "c resize occs to " << occs.size() << std::endl;
   lit_occurrence_count.resize( 2 * nVars() );
   
-  // cerr << "c new fresh variable: " << nextVar+1 << endl;
+  // std::cerr << "c new fresh variable: " << nextVar+1 << std::endl;
   return nextVar;
 }
 
@@ -616,7 +616,7 @@ inline void CoprocessorData::moveVar(Var from, Var to, bool final)
   }
   if( final == true ) {
   
-    // cerr << "c compress variables to " << to+1 << endl;
+    // std::cerr << "c compress variables to " << to+1 << std::endl;
 //     solver->assigns.shrink( solver->assigns.size() - to - 1);
     solver->vardata.shrink_( solver->vardata.size() - to - 1);
     solver->activity.shrink_( solver->activity.size() - to - 1);
@@ -636,7 +636,7 @@ inline void CoprocessorData::mergeVar( Lit from, Lit to, bool final ){
   
 }
 
-inline void CoprocessorData::mergeVar( vector<Lit>& from, Lit to, bool final ){
+inline void CoprocessorData::mergeVar( std::vector<Lit>& from, Lit to, bool final ){
   
 }
 
@@ -668,7 +668,7 @@ inline bool CoprocessorData::isInterupted()
 
 inline lbool CoprocessorData::enqueue(const Lit l, const uint64_t extraInfo)
 {
-  if( false || global_debug_out ) cerr << "c enqueue " << l << " with previous value " << (solver->value( l ) == l_Undef ? "undef" : (solver->value( l ) == l_False ? "unsat" : " sat ") ) << endl;
+  if( false || global_debug_out ) std::cerr << "c enqueue " << l << " with previous value " << (solver->value( l ) == l_Undef ? "undef" : (solver->value( l ) == l_False ? "unsat" : " sat ") ) << std::endl;
   if( solver->value( l ) == l_False) {
     solver->ok = false; // set state to false
     return l_False;
@@ -708,11 +708,11 @@ inline void CoprocessorData::addClause(const CRef cr, bool check)
   if( c.can_be_deleted() ) return;
   for (int l = 0; l < c.size(); ++l)
   {
-    // cerr << "c add clause " << cr << " to list for " << c[l] << endl;
+    // std::cerr << "c add clause " << cr << " to list for " << c[l] << std::endl;
     if( check ) {
       for( int i = 0 ; i < occs[toInt(c[l])].size(); ++ i ) {
 	if( occs[toInt(c[l])][i] == cr ) {
-	  cerr << "c clause " << cr << " is already in list for lit " << c[l] << " clause is: " << ca[cr] << endl; 
+	  std::cerr << "c clause " << cr << " is already in list for lit " << c[l] << " clause is: " << ca[cr] << std::endl; 
 	}
       }
     }
@@ -760,7 +760,7 @@ inline void CoprocessorData::addClause ( const CRef cr , Heap<VarOrderBVEHeapLt>
 
 inline bool CoprocessorData::removeClauseFrom(const CRef cr, const Lit l)
 {
-  vector<CRef>& list = occs[toInt(l)];
+  std::vector<CRef>& list = occs[toInt(l)];
   for( int i = 0 ; i < list.size(); ++ i )
   {
     if( list[i] == cr ) {
@@ -774,7 +774,7 @@ inline bool CoprocessorData::removeClauseFrom(const CRef cr, const Lit l)
 
 inline void CoprocessorData::removeClauseFrom(const CRef cr, const Lit l, const int index)
 {
-  vector<CRef>& list = occs[toInt(l)];
+  std::vector<CRef>& list = occs[toInt(l)];
   assert( list[index] == cr );
   list[index] = list[ list.size() -1 ];
   list.pop_back();
@@ -786,7 +786,7 @@ inline void CoprocessorData::removeClauseFrom(const CRef cr, const Lit l, const 
 inline bool CoprocessorData::removeClauseFromThreadSafe (const CRef cr, const Lit l) 
 {
   assert( cr != CRef_Undef);
-  vector<CRef>& list = occs[toInt(l)];
+  std::vector<CRef>& list = occs[toInt(l)];
   for( int i = 0 ; i < list.size(); ++ i )
   {
     if( list[i] == cr ) {
@@ -807,7 +807,7 @@ inline void CoprocessorData::cleanUpOccurrences(const MarkArray & dirtyOccs, con
     for(int l = 0 ; l < dirtyOccs.size() ; ++ l ) {
         if( dirtyOccs.getIndex(l) >= timer ) 
         {
-            vector<CRef> & list = occs[l];
+            std::vector<CRef> & list = occs[l];
             int i = 0; 
             while (i < list.size())
             {
@@ -839,7 +839,7 @@ inline void CoprocessorData::sortClauseLists(bool alsoLearnts)
 	vec<CRef>& clauseList = (p == 0 ? getClauses() : getLEarnts());
 	int32_t n = clauseList.size();
 	int32_t m, s;
-	// copy elements from vector
+	// copy elements from std::vector
 	CRef* tmpA = new CRef[ n ];
 	CRef* a = tmpA;
 	for( int32_t i = 0 ; i < n; i++ ){
@@ -882,7 +882,7 @@ inline void CoprocessorData::sortClauseLists(bool alsoLearnts)
 		// swap fields!
 		CRef* tmp = a;a = b;b = tmp;
 	}
-	// write data back into vector
+	// write data back into std::vector
 	for( int32_t i = 0 ; i < n; i++ ){clauseList[i] = a[i];}
 	
 	delete [] tmpA;
@@ -901,7 +901,7 @@ inline void CoprocessorData::deletedVar(const Var v)
   deleteTimer.setCurrentStep(v);
 }
 
-inline void CoprocessorData::getActiveVariables(const uint32_t myTimer, vector< Var >& activeVariables)
+inline void CoprocessorData::getActiveVariables(const uint32_t myTimer, std::vector< Var >& activeVariables)
 {
   for( Var v = 0 ; v < solver->nVars(); ++ v ) {
     if( deleteTimer.getIndex(v) >= myTimer ) activeVariables.push_back(v);
@@ -1090,12 +1090,12 @@ inline int32_t CoprocessorData::operator[](const Var v) const
   return lit_occurrence_count[toInt(mkLit(v,0))] + lit_occurrence_count[toInt(mkLit(v,1))];
 }
 
-inline vector< CRef >& CoprocessorData::list(const Lit l)
+inline std::vector< CRef >& CoprocessorData::list(const Lit l)
 {
    return occs[ toInt(l) ];
 }
 
-inline const vector< CRef >& CoprocessorData::list(const Lit l) const
+inline const std::vector< CRef >& CoprocessorData::list(const Lit l) const
 {
    return occs[ toInt(l) ];
 }
@@ -1123,24 +1123,24 @@ inline void CoprocessorData::correctCounters()
   }
 }
 
-inline void CoprocessorData::garbageCollect(vector<CRef> ** updateVectors, int size) 
+inline void CoprocessorData::garbageCollect(std::vector<CRef> ** updateVectors, int size) 
 {
   if( debugging ) {
-    cerr << "c check garbage collection [REJECTED DUE TO DEBUGGING] " << endl;
+    std::cerr << "c check garbage collection [REJECTED DUE TO DEBUGGING] " << std::endl;
     return;
   }
     ClauseAllocator to((ca.size() >= ca.wasted()) ? ca.size() - ca.wasted() : 0);  //FIXME just a workaround
                                                                                    // correct add / remove would be nicer
     
-    cerr << "c garbage collection ... " << endl;
+    std::cerr << "c garbage collection ... " << std::endl;
     relocAll(to, updateVectors);
-    cerr << "c Garbage collection: " << ca.size()*ClauseAllocator::Unit_Size 
-         << " bytes => " << to.size()*ClauseAllocator::Unit_Size <<  " bytes " << endl; 
+    std::cerr << "c Garbage collection: " << ca.size()*ClauseAllocator::Unit_Size 
+         << " bytes => " << to.size()*ClauseAllocator::Unit_Size <<  " bytes " << std::endl; 
     
     to.moveTo(ca);
 }
 
-inline void CoprocessorData::relocAll(ClauseAllocator& to, vector<CRef> ** updateVectors, int size)
+inline void CoprocessorData::relocAll(ClauseAllocator& to, std::vector<CRef> ** updateVectors, int size)
 {
     // Update Vectors
     if (size > 0 && updateVectors != 0)
@@ -1149,7 +1149,7 @@ inline void CoprocessorData::relocAll(ClauseAllocator& to, vector<CRef> ** updat
         {
             if (updateVectors[v_ix] == 0)
                 continue;
-            vector<CRef> & list = *(updateVectors[v_ix]);
+            std::vector<CRef> & list = *(updateVectors[v_ix]);
             int i, j;
             for (i = j = 0; i < list.size(); ++i){
                 Clause & c = ca[list[i]];
@@ -1204,7 +1204,7 @@ inline void CoprocessorData::relocAll(ClauseAllocator& to, vector<CRef> ** updat
     {
         for (int i = 0 ; i < 2; ++i)
         {
-            vector<CRef> & litOccs = list(mkLit(v, ((i == 0) ? false : true)));
+            std::vector<CRef> & litOccs = list(mkLit(v, ((i == 0) ? false : true)));
             int j, k;
             for (j = k = 0; j < litOccs.size(); ++j)
             {
@@ -1373,7 +1373,7 @@ inline void CoprocessorData::addToExtension(vec< Lit >& lits, const Lit l)
   }
 }
 
-inline void CoprocessorData::addToExtension(vector< Lit >& lits, const Lit l)
+inline void CoprocessorData::addToExtension(std::vector< Lit >& lits, const Lit l)
 {
   if( undo.size() > 0 ) assert( undo[ undo.size() - 1] != lit_Undef && "an empty clause should not be put on the undo stack" );
   undo.push_back(lit_Undef);
@@ -1399,7 +1399,7 @@ inline void CoprocessorData::addExtensionToExtension(vec< Lit >& lits)
   }
 }
 
-inline void CoprocessorData::addExtensionToExtension(vector< Lit >& lits)
+inline void CoprocessorData::addExtensionToExtension(std::vector< Lit >& lits)
 {
   for( int i = 0 ; i < lits.size(); ++ i ) {
     undo.push_back(lits[i]);
@@ -1410,7 +1410,7 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
 {
   if( lastCompressUndoLits != -1 &&  // if there has been a  compression,
       decompressedUndoLits != undo.size() ) { // then the complete undo-stack has to be adopted
-    cerr << "c variable renaming went wrong - abort. lastCom: " << lastCompressUndoLits << " decomp: " << decompressedUndoLits << " undo: " << undo.size() << endl;
+    std::cerr << "c variable renaming went wrong - abort. lastCom: " << lastCompressUndoLits << " decomp: " << decompressedUndoLits << " undo: " << undo.size() << std::endl;
     exit(13);
   }
   
@@ -1420,29 +1420,29 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
   
   const bool local_debug = false;
   if( true && (global_debug_out || local_debug) ) {
-    cerr << "c extend model of size " << model.size() << " with undo information of size " << undo.size() << endl;
-    cerr << "c in model: ";
+    std::cerr << "c extend model of size " << model.size() << " with undo information of size " << undo.size() << std::endl;
+    std::cerr << "c in model: ";
 	for( int j = 0 ; j < model.size(); ++ j ) {
-	  if( model[j] == l_Undef ) cerr << "? ";
+	  if( model[j] == l_Undef ) std::cerr << "? ";
 	  else {
 	    const Lit satLit = mkLit( j, model[j] == l_True ? false : true );
-	    cerr << satLit << " ";
+	    std::cerr << satLit << " ";
 	  }
 	}
-	cerr << endl;
+	std::cerr << std::endl;
   }
   
   if( false && local_debug ) {
-    cerr << "extend Stack: " << endl; 
+    std::cerr << "extend Stack: " << std::endl; 
     for( int i = undo.size() - 1; i >= 0 ; --i ) {
-      if( undo[i] == lit_Undef ) cerr << endl;
-      else cerr << " " << undo[i];
+      if( undo[i] == lit_Undef ) std::cerr << std::endl;
+      else std::cerr << " " << undo[i];
     }
     
     
-    cerr << "next clause: ";
-    for( int j = undo.size() - 1; j >= 0 ; --j ) if( undo[j] == lit_Undef ) break; else cerr << " " << undo[j];
-    cerr << endl;
+    std::cerr << "next clause: ";
+    for( int j = undo.size() - 1; j >= 0 ; --j ) if( undo[j] == lit_Undef ) break; else std::cerr << " " << undo[j];
+    std::cerr << std::endl;
 
   }
 
@@ -1452,31 +1452,31 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
     
      isSat = false; // init next clause - redundant!
      const Lit c = undo[i]; // check current literal
-     if( global_debug_out  || local_debug) cerr << "c read literal " << c << endl;
+     if( global_debug_out  || local_debug) std::cerr << "c read literal " << c << std::endl;
      if( c == lit_Undef ) {  // found clause delimiter, without jumping over it in the SAT case (below)
        if( !isSat ) {        // this condition is always satisfied -- the current clause has to be unsatisfied (otherwise, would have been ignored below!)
          // if clause is not satisfied, satisfy last literal!
          const Lit& satLit = undo[i+1];
 	 assert( satLit != lit_Undef && "there should not be an empty clause on the undo stack" );
          log.log(1, "set literal to true",satLit);
-	 if( local_debug ) cerr << "c set literal " << undo[i+1] << " to true " << endl;
+	 if( local_debug ) std::cerr << "c set literal " << undo[i+1] << " to true " << std::endl;
          model[ var(satLit) ] = sign(satLit) ? l_False : l_True;
        }
        
        // finished this clause!
        if( local_debug ) { // print intermediate state!
-       cerr << "c current model: ";
+       std::cerr << "c current model: ";
 	for( int j = 0 ; j < model.size(); ++ j ) {
-	  if( model[j] == l_Undef ) cerr << "? ";
+	  if( model[j] == l_Undef ) std::cerr << "? ";
 	  else {
 	    const Lit satLit = mkLit( j, model[j] == l_True ? false : true );
-	    cerr << satLit << " ";
+	    std::cerr << satLit << " ";
 	  }
 	}
-	cerr << endl;
-        cerr << "next clause: ";
-	for( int j = i - 1; j >= 0 ; --j ) if( undo[j] == lit_Undef ) break; else cerr << " " << undo[j];
-	cerr << endl;
+	std::cerr << std::endl;
+        std::cerr << "next clause: ";
+	for( int j = i - 1; j >= 0 ; --j ) if( undo[j] == lit_Undef ) break; else std::cerr << " " << undo[j];
+	std::cerr << std::endl;
        }
        continue;
      }
@@ -1485,24 +1485,24 @@ inline void CoprocessorData::extendModel(vec< lbool >& model)
      {
        isSat = true; // redundant -- will be reset in the next loop iteration immediately
        while( undo[i] != lit_Undef ){ // skip literal until hitting the delimiter - for loop will decrease i once more
-	 if( global_debug_out  || local_debug) cerr << "c skip because SAT: " << undo[i] << endl; 
+	 if( global_debug_out  || local_debug) std::cerr << "c skip because SAT: " << undo[i] << std::endl; 
 	 --i;
        }
        if( local_debug ) { // print intermediate state!
-        cerr << "next clause: ";
-	for( int j = i - 1; j >= 0 ; --j ) if( undo[j] == lit_Undef ) break; else cerr << " " << undo[j];
-	cerr << endl;
+        std::cerr << "next clause: ";
+	for( int j = i - 1; j >= 0 ; --j ) if( undo[j] == lit_Undef ) break; else std::cerr << " " << undo[j];
+	std::cerr << std::endl;
        }
      }
   }
 
   if( global_debug_out  || local_debug) {
-    cerr << "c out model: ";
+    std::cerr << "c out model: ";
     for( int i = 0 ; i < model.size(); ++ i ) {
       const Lit satLit = mkLit( i, model[i] == l_True ? false : true );
-      cerr << satLit << " ";
+      std::cerr << satLit << " ";
     }
-    cerr << endl;
+    std::cerr << std::endl;
   }
 }
 
@@ -1524,7 +1524,7 @@ inline void CoprocessorData::addCommentToProof(const char* text, bool deleteFrom
 }
 #endif
 
-inline void CoprocessorData::addEquivalences(const vector< Lit >& list)
+inline void CoprocessorData::addEquivalences(const std::vector< Lit >& list)
 {
   assert( (list.size() != 2 || list[0] != list[1]) && "do not allow to add a pair of the same literals" );
   for( int i = 0 ; i < list.size(); ++ i ) equivalences.push_back(list[i]);
@@ -1534,13 +1534,13 @@ inline void CoprocessorData::addEquivalences(const vector< Lit >& list)
 inline void CoprocessorData::addEquivalences(const Lit& l1, const Lit& l2)
 {
   assert( l1 != l2 && "do not state that the same literal is equivalent to itself" );
-  if( global_debug_out ) cerr << "c [DATA] set equi: " << l1 << " == " << l2 << endl;
+  if( global_debug_out ) std::cerr << "c [DATA] set equi: " << l1 << " == " << l2 << std::endl;
   equivalences.push_back(l1);
   equivalences.push_back(l2);
   equivalences.push_back( lit_Undef ); // termination symbol!
 }
 
-inline vector< Lit >& CoprocessorData::getEquivalences()
+inline std::vector< Lit >& CoprocessorData::getEquivalences()
 {
   return equivalences;
 }
@@ -1562,13 +1562,13 @@ inline bool CoprocessorData::addSubStrengthClause(const CRef cr, bool isNew)
   return ret;
 }
 
-inline vector< CRef >& CoprocessorData::getSubsumeClauses()
+inline std::vector< CRef >& CoprocessorData::getSubsumeClauses()
 {
   return subsume_queue;
 }
 
 
-inline vector<CRef>& CoprocessorData::getStrengthClauses()
+inline std::vector<CRef>& CoprocessorData::getStrengthClauses()
 {
   return strengthening_queue; 
 }
@@ -1845,7 +1845,7 @@ inline void BIG::removeEdge(const Lit l0, const Lit l1)
     if( list[i] == l1 ) {
       list[i] = list[ size - 1 ];
       sizes[ toInt(~l0) ] --;
-       //cerr << "c removed edge " << ~l0 << " -> " << l1 << endl;
+       //std::cerr << "c removed edge " << ~l0 << " -> " << l1 << std::endl;
       break;
     }
   }
@@ -1856,7 +1856,7 @@ inline void BIG::removeEdge(const Lit l0, const Lit l1)
     if( list2[i] == l0 ) {
       list2[i] = list2[ size2 - 1 ];
       sizes[ toInt(~l1) ] --;
-//        //cerr << "c removed edge " << ~l1 << " -> " << l0 << endl;
+//        //std::cerr << "c removed edge " << ~l1 << " -> " << l0 << std::endl;
       break;
     }
   }
@@ -1987,7 +1987,7 @@ inline void BIG::generateImplied( uint32_t nVars, vec<Lit>& tmpLits )
     free(index);
 }
 
-inline void BIG::fillSorted(vector<Lit>& literals, CoprocessorData& data, bool rootsOnly, bool getAll)
+inline void BIG::fillSorted(std::vector<Lit>& literals, CoprocessorData& data, bool rootsOnly, bool getAll)
 {
   literals.clear();
   const uint32_t maxVar = duringCreationVariables < data.nVars() ? duringCreationVariables : data.nVars(); // use only known variables
@@ -2055,14 +2055,14 @@ inline void BIG::fillSorted(vector<Lit>& literals, CoprocessorData& data, bool r
   }
 }
 
-inline void BIG::fillSorted(vector< Var >& variables, Coprocessor::CoprocessorData& data, bool rootsOnly, bool getAll)
+inline void BIG::fillSorted(std::vector< Var >& variables, Coprocessor::CoprocessorData& data, bool rootsOnly, bool getAll)
 {
   // get sorted list of lits
   data.lits.clear();
   fillSorted(data.lits, data, rootsOnly, getAll);
   variables.clear();
   
-  // store variables in vector, according to occurrence of first literal in literal vector
+  // store variables in std::vector, according to occurrence of first literal in literal std::vector
   data.ma.nextStep();
   for( int i = 0 ; i < data.lits.size(); ++ i ) {
      const Lit l = data.lits[i];
@@ -2088,14 +2088,14 @@ inline uint32_t BIG::stampLiteral( const Lit literal, uint32_t stamp, int32_t* i
   // do not stamp a literal twice!
   if( start[ toInt(literal) ] != 0 ) return stamp;
 
-  if( global_debug_out ) cerr << "c call STAMP for " << literal << endl;
+  if( global_debug_out ) std::cerr << "c call STAMP for " << literal << std::endl;
   
   stampQueue.clear();
   // linearized algorithm from paper
   stamp++;
   // handle initial literal before putting it on queue
   start[toInt(literal)] = stamp; // parent and root are already set to literal
-  if( global_debug_out ) cerr << "c start[" << literal << "] = " << stamp << endl;
+  if( global_debug_out ) std::cerr << "c start[" << literal << "] = " << stamp << std::endl;
   stampQueue.push_back(literal);
 
   shuffle( getArray(literal), getSize(literal) );
@@ -2110,7 +2110,7 @@ inline uint32_t BIG::stampLiteral( const Lit literal, uint32_t stamp, int32_t* i
 	stampQueue.pop_back();
 	stamp++;
 	stop[toInt(current)] = stamp;
-	if( global_debug_out ) cerr << "c stop[" << current << "] = " << stamp << endl;
+	if( global_debug_out ) std::cerr << "c stop[" << current << "] = " << stamp << std::endl;
       } else {
 	int32_t& ind = index[ toInt(current) ]; // store number of processed elements
 	const Lit impliedLit = getArray( current )[ind]; // get next implied literal
@@ -2118,7 +2118,7 @@ inline uint32_t BIG::stampLiteral( const Lit literal, uint32_t stamp, int32_t* i
 	if( start[ toInt(impliedLit) ] != 0 ) continue;
 	stamp ++;
 	start[ toInt(impliedLit) ] = stamp;
-	if( global_debug_out ) cerr << "c start[" << impliedLit << "] = " << stamp << endl;
+	if( global_debug_out ) std::cerr << "c start[" << impliedLit << "] = " << stamp << std::endl;
 	index[ toInt(impliedLit) ] = 0;
 	stampQueue.push_back( impliedLit );
 	shuffle( getArray(impliedLit), getSize(impliedLit) );
@@ -2161,14 +2161,14 @@ inline Logger::Logger(int level, bool err)
 : outputLevel(level), useStdErr(err)
 {}
 
-inline void Logger::log(int level, const string& s)
+inline void Logger::log(int level, const std::string& s)
 {
   if( level > outputLevel ) return;
   (useStdErr ? std::cerr : std::cout )
-    << "c [" << level << "] " << s << endl;
+    << "c [" << level << "] " << s << std::endl;
 }
 
-inline void Logger::log(int level, const string& s, const Clause& c)
+inline void Logger::log(int level, const std::string& s, const Clause& c)
 {
   if( level > outputLevel ) return;
   (useStdErr ? std::cerr : std::cout )
@@ -2179,27 +2179,27 @@ inline void Logger::log(int level, const string& s, const Clause& c)
       << " " << (sign(l) ? "-" : "") << var(l)+1;
   }
   (useStdErr ? std::cerr : std::cout )
-    << endl;
+    << std::endl;
 }
 
-inline void Logger::log(int level, const string& s, const Lit& l)
+inline void Logger::log(int level, const std::string& s, const Lit& l)
 {
   if( level > outputLevel ) return;
   (useStdErr ? std::cerr : std::cout )
     << "c [" << level << "] " << s << " : "
     << (sign(l) ? "-" : "") << var(l)+1
-    << endl;
+    << std::endl;
 }
 
-inline void Logger::log(int level, const string& s, const int i)
+inline void Logger::log(int level, const std::string& s, const int i)
 {
   if( level > outputLevel ) return;
   (useStdErr ? std::cerr : std::cout )
-    << "c [" << level << "] " << s << " " << i << endl;
+    << "c [" << level << "] " << s << " " << i << std::endl;
 }
 
 
-inline void Logger::log(int level, const string& s, const Clause& c, const Lit& l)
+inline void Logger::log(int level, const std::string& s, const Clause& c, const Lit& l)
 {
   if( level > outputLevel ) return;
   (useStdErr ? std::cerr : std::cout )
@@ -2211,7 +2211,7 @@ inline void Logger::log(int level, const string& s, const Clause& c, const Lit& 
       << " " << (sign(l) ? "-" : "") << var(l)+1;
   }
   (useStdErr ? std::cerr : std::cout )
-    << endl;
+    << std::endl;
 }
 
 }

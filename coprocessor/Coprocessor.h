@@ -39,8 +39,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include <string>
 #include <cstring>
 
-using namespace Riss;
-using namespace std;
+// using namespace Riss;
+// using namespace std;
 
 namespace Coprocessor {
 /** Main class that connects all the functionality of the preprocessor Coprocessor
@@ -89,7 +89,7 @@ public:
    */
   lbool inprocess();
   lbool preprocessScheduled();
-  lbool performSimplificationScheduled(string techniques);
+  lbool performSimplificationScheduled(std::string techniques);
 
   void extendModel( vec<lbool>& model );
   
@@ -109,18 +109,18 @@ public:
   /** parse model, if no file is specified, read from stdin 
    * @return false, if some error happened
    */
-  int parseModel(const string& filename);
+  int parseModel(const std::string& filename);
 
   /** parse model extend information 
    * @return false, if some error happened
    */
-  bool parseUndoInfo(const string& filename);
+  bool parseUndoInfo(const std::string& filename);
 
   /** write model extend information to specified file 
    * @param originalVariables variables that are present in the actual problem (tool might have added variables from the outside)
    * @return false, if some error happened
    */
-  bool writeUndoInfo(const string& filename, int originalVariables = -1);
+  bool writeUndoInfo(const std::string& filename, int originalVariables = -1);
   
   /** return info about formula to be writtern*/
   void getCNFinfo(int& vars, int& cls);
@@ -135,10 +135,10 @@ public:
    */
   void freezeExtern( int lit );
   
-  /** returns current (irredundant) formula in one vector, and external variable representation. all clauses are terminated by a '0'
-   * @param outputFormula vector that contains the formula afterwards
+  /** returns current (irredundant) formula in one std::vector, and external variable representation. all clauses are terminated by a '0'
+   * @param outputFormula std::vector that contains the formula afterwards
    */
-  void dumpFormula( vector<int>& outputFormula );
+  void dumpFormula( std::vector<int>& outputFormula );
   
   /** return the literal, to which the specified literal is mapped to
    * @param l literal in the external world representation
@@ -177,7 +177,7 @@ protected:
   
   // do the real work
   lbool performSimplification();
-  void printStatistics(ostream& stream);
+  void printStatistics(std::ostream& stream);
   
   // own methods:
   void cleanSolver();                // remove all clauses from structures inside the solver
@@ -200,18 +200,18 @@ protected:
   void sortClauses();                // sort the literals within all clauses
   void delete_clause(const CRef cr); // delete a clause from the solver (clause should not be attached within the solver)
 
-  bool checkLists(const string& headline); // check each clause list for duplicate occurrences
-  void fullCheck(const string& headline);  // check solver state before control is passed to solver
-  void scanCheck(const string& headline);	// check clauses for duplicate literals
+  bool checkLists(const std::string& headline); // check each clause list for duplicate occurrences
+  void fullCheck(const std::string& headline);  // check solver state before control is passed to solver
+  void scanCheck(const std::string& headline);	// check clauses for duplicate literals
   
   // print formula
   inline void printClause(FILE * fd, CRef cr);
   inline void printLit(FILE * fd, int l);
-  void printFormula( const string& headline );
+  void printFormula( const std::string& headline );
   
 
   /** print current state of the solver */
-  void printSolver(ostream& s, int verbose);
+  void printSolver(std::ostream& s, int verbose);
 };
 
 };

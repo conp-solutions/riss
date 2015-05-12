@@ -16,7 +16,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "riss/utils/Options.h"
 #include "riss/utils/Debug.h"
 
-using namespace Riss;
+// using namespace Riss;
 
 namespace Coprocessor {
 

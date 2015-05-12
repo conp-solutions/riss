@@ -10,7 +10,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #include "coprocessor/CoprocessorTypes.h"
 #include "coprocessor/Propagation.h"
 
-using namespace Riss;
+// using namespace Riss;
 
 namespace Coprocessor {
 
@@ -50,7 +50,7 @@ public:
   */
   bool process();
     
-  void printStatistics(ostream& stream);
+  void printStatistics(std::ostream& stream);
 
   void giveMoreSteps();
   

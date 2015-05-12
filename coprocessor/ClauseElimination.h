@@ -14,8 +14,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include <vector>
 
-using namespace Riss;
-using namespace std;
+// using namespace Riss;
+// using namespace std;
 
 namespace Coprocessor {
 
@@ -25,7 +25,7 @@ class ClauseElimination : public Technique {
   
   Propagation& propagation;            /// object that takes care of unit propagation
   
-  vector<CRef> clause_processing_queue;
+  std::vector<CRef> clause_processing_queue;
   
   int steps;		// performed clause comparisons (loading a clause)
   double processTime;  // required time
@@ -39,11 +39,11 @@ public:
   
   class WorkData {
   public:
-    vector<Lit> cla;       // literals that have been added by cla
+    std::vector<Lit> cla;       // literals that have been added by cla
     MarkArray array;       // literals that have been marked by ala or cla
     MarkArray helpArray;   // literals that will be inside CLA(F,C) per step
-    vector<Lit> toProcess; // literals that still need to be processed
-    vector<Lit> toUndo;    // literals that have to be out to the undo information, if a cla clause is removed by ATE or ABCE
+    std::vector<Lit> toProcess; // literals that still need to be processed
+    std::vector<Lit> toUndo;    // literals that have to be out to the undo information, if a cla clause is removed by ATE or ABCE
     int nextAla;           // position from which ala needs to be continued
 
     int steps;
@@ -62,7 +62,7 @@ public:
   
   void initClause(const CRef cr); // inherited from Technique
   
-  void printStatistics(ostream& stream);
+  void printStatistics(std::ostream& stream);
   
   void destroy();
   

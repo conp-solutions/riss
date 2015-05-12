@@ -4,7 +4,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/ClauseElimination.h"
 
-using namespace Coprocessor;
+namespace Coprocessor {
 
 static const int cceLevel = 1;
 
@@ -362,3 +362,5 @@ void ClauseElimination::printStatistics(ostream& stream)
 			    << candidates << " candidates "
 			    << endl;
 }
+
+} // namespace Coprocessor

@@ -15,8 +15,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include <vector>
 
-using namespace Riss;
-using namespace std;
+// using namespace Riss;
+// using namespace std;
 
 namespace Coprocessor {
 
@@ -31,8 +31,8 @@ class HiddenTautologyElimination : public Technique {
   int removedClauses;		// how many clauses could be removed
   int removedLits;		// how many literals have been removed
   
-  vector<Var> activeVariables; // which variables should be considered?
-  vector<char> activeFlag;     // array that stores a flag per variable whether it is active
+  std::vector<Var> activeVariables; // which variables should be considered?
+  std::vector<char> activeFlag;     // array that stores a flag per variable whether it is active
   
 
   
@@ -45,7 +45,7 @@ public:
 
   void initClause(const CRef cr); // inherited from Technique
 
-  void printStatistics(ostream& stream);
+  void printStatistics(std::ostream& stream);
   
   /** fills the mark arrays for a certain variable */
   Lit fillHlaArrays(Var v, Coprocessor::BIG& big, MarkArray& hlaPositive, MarkArray& hlaNegative, Lit* litQueue, bool doLock = false);
@@ -54,14 +54,14 @@ public:
    * @return true, if clause can be removed by HTE
    */
   bool hlaMarkClause(const Riss::CRef cr, Coprocessor::BIG& big, MarkArray& markArray, Lit* litQueue );
-  /// same as above, but can add literals to the vector, so that the vector represents the real HLA(C) clause
+  /// same as above, but can add literals to the std::vector, so that the std::vector represents the real HLA(C) clause
   bool hlaMarkClause(vec< Lit >& clause, Coprocessor::BIG& big, MarkArray& markArray, Lit* litQueue, bool addLits = false);
   
   /** mark all literals that would appear in ALA(C) 
    * @return true, if clause can be removed by ATE
    */
   bool alaMarkClause(const Riss::CRef cr, Coprocessor::CoprocessorData& data, MarkArray& markArray, MarkArray& helpArray);
-  /// same as above, but can add literals to the vector, so that the vector represents the real ALA(C) clause
+  /// same as above, but can add literals to the std::vector, so that the std::vector represents the real ALA(C) clause
   bool alaMarkClause(vec< Lit >& clause, Coprocessor::CoprocessorData& data, MarkArray& markArray, MarkArray& helpArray, bool addLits = false);
   
   void destroy();

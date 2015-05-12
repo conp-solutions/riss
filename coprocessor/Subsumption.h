@@ -15,8 +15,8 @@ Copyright (c) 2012, Norbert Manthey, Kilian Gebhardt, All rights reserved.
 
 #include <vector>
 
-using namespace Riss;
-using namespace std;
+// using namespace Riss;
+// using namespace std;
 
 namespace Coprocessor {
 
@@ -41,9 +41,9 @@ class Subsumption : public Technique {
   int limitIncreases;	// number of times the limits have been relaxed
   int chunk_size;
 
-  vec<Lit> ps;  // Resolution vector for keepAllResolvent
-  vector<CRef> toDelete; // Delete vector for keepAllResolvent
-  vector<CRef> newClauses; //Collect new Strengthening Clauses to avoid endless loops
+  vec<Lit> ps;  // Resolution std::vector for keepAllResolvent
+  std::vector<CRef> toDelete; // Delete std::vector for keepAllResolvent
+  std::vector<CRef> newClauses; //Collect new Strengthening Clauses to avoid std::endless loops
   
   // Structure to track updates of occurrence lists
   struct OccUpdate {
@@ -65,18 +65,18 @@ class Subsumption : public Technique {
     };
 
   // Member var seq subsumption
-  vector < CRef > subs_occ_updates;
+  std::vector < CRef > subs_occ_updates;
   // Member var seq strength
-  vector < OccUpdate > strength_occ_updates;
+  std::vector < OccUpdate > strength_occ_updates;
   // Member vars parallel Subsumption
   SpinLock balancerLock;
-  vector< vector < CRef > > toDeletes;
-  vector< vector < CRef > > nonLearnts;
-  vector< struct SubsumeStatsData > localStats;
+  std::vector< std::vector < CRef > > toDeletes;
+  std::vector< std::vector < CRef > > nonLearnts;
+  std::vector< struct SubsumeStatsData > localStats;
   
   // Member vars parallel Strengthening
-  vector< SpinLock > var_locks; // 1 extra SpinLock for data
-  vector< vector < OccUpdate > > occ_updates;
+  std::vector< SpinLock > var_locks; // 1 extra SpinLock for data
+  std::vector< std::vector < OccUpdate > > occ_updates;
             
 public:
   
@@ -93,7 +93,7 @@ public:
   /** indicate whether clauses could be reduced */
   bool hasWork() const ;
   
-  void printStatistics(ostream& stream);
+  void printStatistics(std::ostream& stream);
   
   void resetStatistics();
   /* TODO:
@@ -110,22 +110,22 @@ public:
   
 protected:
 
-  inline void updateOccurrences(vector< Coprocessor::Subsumption::OccUpdate >& updates, Heap< Coprocessor::VarOrderBVEHeapLt >* heap, const Var ignore = (-1));
+  inline void updateOccurrences(std::vector< Coprocessor::Subsumption::OccUpdate >& updates, Heap< Coprocessor::VarOrderBVEHeapLt >* heap, const Var ignore = (-1));
 
   bool hasToSubsume() const ;       // return whether there is something in the subsume queue
   lbool fullSubsumption(Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);   // performs subsumtion until completion
   void subsumption_worker (unsigned int start, unsigned int end, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true); // subsume certain set of elements of the processing queue, does not write to the queue
-  void par_subsumption_worker ( unsigned int & next_start, unsigned int global_end, SpinLock & balancerLock, vector<CRef> & to_delete, vector< CRef > & set_non_learnt, struct SubsumeStatsData & stats, const bool doStatistics = true);
+  void par_subsumption_worker ( unsigned int & next_start, unsigned int global_end, SpinLock & balancerLock, std::vector<CRef> & to_delete, std::vector< CRef > & set_non_learnt, struct SubsumeStatsData & stats, const bool doStatistics = true);
   
   bool hasToStrengthen() const ;    // return whether there is something in the strengthening queue
   
   lbool fullStrengthening( Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true); // performs strengthening until completion, puts clauses into subsumption queue
   lbool strengthening_worker ( unsigned int start, unsigned int end, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, bool doStatistics = true);
 lbool createResolvent( const CRef cr, CRef & resolvent, const int negated_lit_pos, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);
-  void par_strengthening_worker( unsigned int & next_start, unsigned int global_stop, SpinLock & balancerLock, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true); 
-  void par_nn_strengthening_worker( unsigned int & next_start, unsigned int global_end, SpinLock & balancerLock, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);
-  inline lbool par_nn_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true) ; 
-  inline lbool par_nn_negated_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);
+  void par_strengthening_worker( unsigned int & next_start, unsigned int global_stop, SpinLock & balancerLock, std::vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, std::vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true); 
+  void par_nn_strengthening_worker( unsigned int & next_start, unsigned int global_end, SpinLock & balancerLock, std::vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, std::vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);
+  inline lbool par_nn_strength_check(CoprocessorData & data, std::vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, std::vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, std::vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true) ; 
+  inline lbool par_nn_negated_strength_check(CoprocessorData & data, std::vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, std::vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, std::vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);
   
   /** data for parallel execution */
   struct SubsumeWorkData {
@@ -135,10 +135,10 @@ lbool createResolvent( const CRef cr, CRef & resolvent, const int negated_lit_po
     unsigned int *   start;       // partition of the queue
     unsigned int     end;
     SpinLock *       balancerLock;
-    vector<SpinLock> * var_locks;
-    vector<CRef>*    to_delete;
-    vector<CRef>*    set_non_learnt;
-    vector<OccUpdate> * occ_updates;
+    std::vector<SpinLock> * var_locks;
+    std::vector<CRef>*    to_delete;
+    std::vector<CRef>*    set_non_learnt;
+    std::vector<OccUpdate> * occ_updates;
     struct SubsumeStatsData* stats;
     Heap<VarOrderBVEHeapLt> * heap;
     Var              ignore;

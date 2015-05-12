@@ -6,12 +6,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include <fstream>
 
-using namespace Coprocessor;
-
-
-
-
-
+namespace Coprocessor {
 
 static const int eeLevel = 1;
 
@@ -2462,3 +2457,5 @@ void EquivalenceElimination::destroy()
   if( eqLitInStack != 0 ) { free(eqLitInStack); eqLitInStack = 0; }
   
 }
+
+} // namespace Coprocessor

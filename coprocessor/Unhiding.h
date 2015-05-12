@@ -14,8 +14,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor/Subsumption.h"
 #include "coprocessor/EquivalenceElimination.h"
 
-using namespace Riss;
-using namespace std;
+// using namespace Riss;
+// using namespace std;
 
 namespace Coprocessor {
 
@@ -65,18 +65,18 @@ class Unhiding : public Technique {
 	};
  
   /// stamp information (access via literalData[ literal.toIndex() ] ), is maintained by extendStructures-method
-  vector<literalData> stampInfo;
+  std::vector<literalData> stampInfo;
 	  
   /// queue of literals that have to be stamped in the current function call
   deque< Lit > stampQueue;
   /// equivalent literals during stamping
-  vector< Lit > stampEE;
-  vector< Lit > stampClassEE;
-  vector< char > unhideEEflag;
+  std::vector< Lit > stampEE;
+  std::vector< Lit > stampClassEE;
+  std::vector< char > unhideEEflag;
   
-  vector< int > currentPosition; // fur full probing approximation
-  vector< Lit > currentLits; // current literals for full probing approximation
-  vector< int > currentLimits; // all combination limits for full probing
+  std::vector< int > currentPosition; // fur full probing approximation
+  std::vector< Lit > currentLits; // current literals for full probing approximation
+  std::vector< int > currentLimits; // all combination limits for full probing
  
 public:
   
@@ -86,7 +86,7 @@ public:
   bool process();
   
   /** This method should be used to print the statistics of the technique that inherits from this class */
-  void printStatistics( ostream& stream );
+  void printStatistics( std::ostream& stream );
   
   void destroy();
   

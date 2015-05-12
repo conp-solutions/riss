@@ -4,7 +4,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/Propagation.h"
 
-using namespace Coprocessor;
+namespace Coprocessor {
 
 static int upLevel = 1;
 
@@ -133,3 +133,5 @@ void Propagation::printStatistics(ostream& stream)
   stream << "c [STAT] UP " << processTime << " s, " << lastPropagatedLiteral << " units, " << removedClauses << " cls, "
 			    << removedLiterals << " lits" << endl;
 }
+
+} // namespace Coprocessor

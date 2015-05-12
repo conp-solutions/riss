@@ -17,8 +17,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include <vector>
 #include <deque>
 
-using namespace Riss;
-using namespace std;
+// using namespace Riss;
+// using namespace std;
 
 namespace Coprocessor {
 
@@ -39,20 +39,20 @@ class EquivalenceElimination : public Technique {
   char* eqLitInStack;			/// mark whether an element is in the stack
   char* eqInSCC;			/// indicate whether a literal has already been found in another SCC (than it cannot be in the current one)
   uint32_t eqIndex;			/// help variable for finding SCCs
-  vector< Lit > eqStack;		/// stack for the tarjan algorithm
-  vector< int32_t > eqNodeLowLinks;	/// stores the lowest link for a node
-  vector< int32_t > eqNodeIndex;	/// index per node
-  vector< Lit > eqCurrentComponent;	/// literals in the currently searched SCC
+  std::vector< Lit > eqStack;		/// stack for the tarjan algorithm
+  std::vector< int32_t > eqNodeLowLinks;	/// stores the lowest link for a node
+  std::vector< int32_t > eqNodeIndex;	/// index per node
+  std::vector< Lit > eqCurrentComponent;	/// literals in the currently searched SCC
 
-  vector<Lit> replacedBy;              /// stores which variable has been replaced by which literal
+  std::vector<Lit> replacedBy;              /// stores which variable has been replaced by which literal
   
-  vector<char> isToAnalyze;            /// stores that a literal has to be analyzed further
-  vector<Lit> eqDoAnalyze;             /// stores the literals to be analyzed
+  std::vector<char> isToAnalyze;            /// stores that a literal has to be analyzed further
+  std::vector<Lit> eqDoAnalyze;             /// stores the literals to be analyzed
   
   Propagation& propagation;            /// object that takes care of unit propagation
   Subsumption& subsumption;		/// object that takes care of subsumption and strengthening
   
-  vector<Lit> proofClause;		/// set of literals for outputting proofs
+  std::vector<Lit> proofClause;		/// set of literals for outputting proofs
   
 public:
   
@@ -64,7 +64,7 @@ public:
   void initClause(const CRef cr); // inherited from Technique
 
   /** inherited from @see Technique */
-  void printStatistics( ostream& stream );
+  void printStatistics( std::ostream& stream );
 
   /** apply equivalences stored in data object to formula
    * @param force run subsumption and unit propagation, even if no equivalences are found
@@ -81,22 +81,22 @@ protected:
   /** check based on gates that have been extracted, whether more equivalent literals can be found!
    * @return true, if new equivalent literals have been found
    */
-  bool findGateEquivalences( CoprocessorData& data, vector< Circuit::Gate > gates );
-  bool findGateEquivalencesNew(CoprocessorData& data, vector< Circuit::Gate >& gates);
+  bool findGateEquivalences( CoprocessorData& data, std::vector< Circuit::Gate > gates );
+  bool findGateEquivalencesNew(CoprocessorData& data, std::vector< Circuit::Gate >& gates);
   
   /** find all strongly connected components on binary implication graph 
    * @param externBig use extern big as basis for tarjan algorithm
    */
-  void findEquivalencesOnBig(CoprocessorData& data, vector< vector< Lit > >* externBig = 0);
+  void findEquivalencesOnBig(CoprocessorData& data, std::vector< std::vector< Lit > >* externBig = 0);
 
   /** find all strongly connected components on binary implication graph 
    * Note: executes iterative tarjan algorithm
    * @param externBig use extern big as basis 
    */
-  void findEquivalencesOnBigFast(CoprocessorData& data, vector< vector<Lit> >* externBig = 0);
+  void findEquivalencesOnBigFast(CoprocessorData& data, std::vector< std::vector<Lit> >* externBig = 0);
   
   /** use the recursive algorithm */
-  void findEquivalencesOnBigRec(CoprocessorData& data, vector< vector<Lit> >* externBig = 0);
+  void findEquivalencesOnBigRec(CoprocessorData& data, std::vector< std::vector<Lit> >* externBig = 0);
   
   /** return literals that have to be equivalent because of the two gates 
    * @param replacedBy stores for each variable the literal that represents its equivalence class
@@ -104,30 +104,30 @@ protected:
   bool checkEquivalence( const Circuit::Gate& g1, const Circuit::Gate& g2, Lit& e1, Lit& e2);
   
   /** perform tarjan algorithm to find SCC on binary implication graph */
-  void eqTarjan(int depth, Lit l, Lit list, CoprocessorData& data, BIG& big, vector< vector< Lit > >* externBig = 0);
+  void eqTarjan(int depth, Lit l, Lit list, CoprocessorData& data, BIG& big, std::vector< std::vector< Lit > >* externBig = 0);
 
   /** check whether the clause c has duplicates in the list of literal l (irredundant clause is no duplicate for learned clause! -> deletes learned clause!)
    *  Note: assumes that all clauses are sorted!
    *  @return true, if there are duplicates, so that c can be deleted
    */
-  bool hasDuplicate( CoprocessorData& data, vector< CRef >& list, const Clause& c );
+  bool hasDuplicate( CoprocessorData& data, std::vector< CRef >& list, const Clause& c );
   
   /** check whether this gate can be processed for equivalence checks */
-  bool allInputsStamped(Circuit::Gate& g, vector< unsigned int >& bitType);
+  bool allInputsStamped(Circuit::Gate& g, std::vector< unsigned int >& bitType);
   
   /** check the current gate for equivalent literals, enqueue them to the "replacedBy" structure, invalidate the gate */
-  void processGate       (CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, deque< int >& queue, vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable);
+  void processGate       (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable);
   
   
-  void processANDgate    (CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, deque< int >& queue, vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable, MarkArray* active = 0, deque< Var >* activeVariables=0);
-  void processGenANDgate (CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, deque< int >& queue, vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable, MarkArray* active = 0, deque< Var >*  activeVariables=0);
-  void processExOgate    (CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, deque< int >& queue, vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable, MarkArray* active = 0, deque<Var>* activeVariables=0);
-  void processITEgate    (CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, deque< int >& queue, vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable, MarkArray* active = 0, deque< Var >*  activeVariables=0);
-  void processXORgate    (CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, deque< int >& queue, vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable, MarkArray* active = 0, deque< Var >*  activeVariables=0);
-  void processFASUMgate  (CoprocessorData& data, Circuit::Gate& g, vector< Circuit::Gate >& gates, deque< int >& queue, vector< unsigned int >& bitType, vector< vector< int32_t > >& varTable, MarkArray* active = 0, deque< Var >*  activeVariables=0);
+  void processANDgate    (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, MarkArray* active = 0, deque< Var >* activeVariables=0);
+  void processGenANDgate (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, MarkArray* active = 0, deque< Var >*  activeVariables=0);
+  void processExOgate    (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, MarkArray* active = 0, deque<Var>* activeVariables=0);
+  void processITEgate    (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, MarkArray* active = 0, deque< Var >*  activeVariables=0);
+  void processXORgate    (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, MarkArray* active = 0, deque< Var >*  activeVariables=0);
+  void processFASUMgate  (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, MarkArray* active = 0, deque< Var >*  activeVariables=0);
   
   /** enqueue all successor gates of the given gate g into the queue, stamp output variables, have a limit when to stop?! */
-  void enqueueSucessorGates(Circuit::Gate& g, deque< int > queue, vector<Circuit::Gate>& gates, vector< unsigned int >& bitType, vector< vector<int32_t> >& varTable);
+  void enqueueSucessorGates(Circuit::Gate& g, deque< int > queue, std::vector<Circuit::Gate>& gates, std::vector< unsigned int >& bitType, std::vector< std::vector<int32_t> >& varTable);
   
   /** write the AIGER circuit that can be found based on the clauses in the formula to a file in aag format */
   void writeAAGfile( CoprocessorData& data );

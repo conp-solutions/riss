@@ -7,7 +7,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #include <bits/algorithmfwd.h>
 
 
-using namespace Coprocessor;
+namespace Coprocessor {
 
 FourierMotzkin::FourierMotzkin( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, Solver& _solver )
 : Technique(_config, _ca,_controller)
@@ -1951,3 +1951,4 @@ void FourierMotzkin::reSetupSolver()
     }
 }
 
+} // namespace Coprocessor

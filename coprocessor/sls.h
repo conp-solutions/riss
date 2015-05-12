@@ -21,7 +21,7 @@ public:
   ~Sls();
 
   /** run sls algorithm on formula 
-  * @param model vector that can contain a model for the formula afterwards
+  * @param model std::vector that can contain a model for the formula afterwards
   * @return true, if a model has been found
   */
   bool solve(  const vec< Riss::CRef >& formula, uint64_t stepLimit  );
@@ -31,7 +31,7 @@ public:
 
   /** This method should be used to print the statistics of the technique that inherits from this class
   */
-  void printStatistics( ostream& stream );
+  void printStatistics( std::ostream& stream );
 
   void destroy();
   
@@ -44,8 +44,8 @@ private:
   double solveTime;		// number of seconds for solving
   
   // keep track of unsat clauses
-  vector<CRef> unsatClauses; // data
-  vector<int> indexes; // indexes
+  std::vector<CRef> unsatClauses; // data
+  std::vector<int> indexes; // indexes
   
   uint64_t flips;
   
@@ -55,7 +55,7 @@ private:
     VarData() : breakCount(0),polarity(false) {}
   };
   
-  vector<VarData> varData;
+  std::vector<VarData> varData;
   
   // data per variable
   struct ClsData {
@@ -66,9 +66,9 @@ private:
     ClsData() : watch1(1 << 30), watch2(1 << 30), satLiterals(0){}
   };
   
-  vector< ClsData > clsData;
+  std::vector< ClsData > clsData;
   
-  vector< vector< int > > occ;
+  std::vector< std::vector< int > > occ;
 	
   void addHeap(int index) {
     assert( indexes[ index ] == -1 && "cannot be in already" );

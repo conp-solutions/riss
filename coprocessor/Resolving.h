@@ -10,8 +10,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor/Technique.h"
 #include "coprocessor/Propagation.h"
 
-using namespace Riss;
-using namespace std;
+// using namespace Riss;
+// using namespace std;
 
 namespace Coprocessor {
 
@@ -20,7 +20,7 @@ class Resolving  : public Technique
   CoprocessorData& data;
   Propagation& propagation;            /// object that takes care of unit propagation
   
-  vector<int> seen; // remembers how many clauses per variable have been processed already
+  std::vector<int> seen; // remembers how many clauses per variable have been processed already
   
 public:
   Resolving(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation);
@@ -28,7 +28,7 @@ public:
   bool process( bool post = false);
 
   /** inherited from @see Technique */
-  void printStatistics( ostream& stream );
+  void printStatistics( std::ostream& stream );
   
   void destroy();
   
@@ -43,7 +43,7 @@ protected:
   void addRedundantBinaries();
 
   /** check whether this clause already exists in the occurence list */
-  bool hasDuplicate(vector< Riss::CRef >& list, const vec< Lit >& c);
+  bool hasDuplicate(std::vector< Riss::CRef >& list, const vec< Lit >& c);
   
   /**
   * expects c to contain v positive and d to contain v negative
@@ -52,7 +52,7 @@ protected:
   */
   bool resolve(const Clause & c, const Clause & d, const int v, vec<Lit> & resolvent);
   
-  // check whether a vector of lits subsumes a given clause
+  // check whether a std::vector of lits subsumes a given clause
   bool ordered_subsumes (const vec<Lit>& c, const Clause & other) const;
   bool ordered_subsumes (const Clause & c, const vec<Lit>& other) const;
   
