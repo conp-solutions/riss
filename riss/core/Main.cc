@@ -35,6 +35,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "riss/core/Solver.h"
 
 #include "coprocessor/Coprocessor.h"
+#include "classifier/CNFClassifier.h"
 
 #include "riss/utils/version.h" // include the file that defines the solver version
 
@@ -116,8 +117,10 @@ int main(int argc, char** argv)
   BoolOption   opt_quiet        ("MAIN", "quiet",      "Do not print the model", false);
   BoolOption   opt_parseOnly    ("MAIN", "parseOnly", "abort after parsing", false);
   BoolOption   opt_cmdLine      ("MAIN", "cmd", "print the relevant options", false);
+  BoolOption   opt_auto         ("MAIN", "auto", "enables the automatic configuration", false);
   
     try {
+      
 
 	  //
 	  // here the solver starts with its actual work ...
@@ -137,6 +140,32 @@ int main(int argc, char** argv)
 	    cerr << "c tool-parameters: " << s.str() << endl;
 	    exit(0);
 	  }
+	  
+	  
+      if ( opt_auto ) {
+	Solver T(coreConfig);
+        T.verbosity = verb;
+	T.verbEveryConflicts = vv;
+	gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
+	
+	if (in == NULL)
+	    printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
+	  
+	parse_DIMACS(in, T);
+	gzclose(in);
+	
+
+	if (!T.simplify()){
+	  printf("UNSAT\n");
+	  exit(20);
+	}
+
+	T.buildReduct();
+	T.setClassifier();
+	
+	printf("SAT\n");
+	exit(10);
+      }
 	  
 	  Solver S(coreConfig);
 	  S.setPreprocessor(&cp3config); // tell solver about preprocessor

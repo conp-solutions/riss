@@ -7,6 +7,7 @@
 
 #ifndef CONFIGURATIONS_H_
 #define CONFIGURATIONS_H_
+#include "riss/core/Solver.h"
 #include <vector>
 #include <string>
 #include <stdio.h>
@@ -14,6 +15,7 @@
 #include "classifier/WekaDataset.h"
 
 using namespace std;
+using namespace Riss;
 
 class Configurations {
 private:

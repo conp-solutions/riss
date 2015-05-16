@@ -65,6 +65,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 //
 // forward declaration
 //
+
 namespace Coprocessor {
   class Preprocessor;
   class CP3Config;
@@ -656,6 +657,11 @@ protected:
    */
   bool erRewrite(vec<Lit>& learned_clause, unsigned int& lbd );
 
+// for classifier ( auto config ) 
+protected:  Classifier::CNFClassifier* classifier;
+public:
+  
+  void setClassifier();
 
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;

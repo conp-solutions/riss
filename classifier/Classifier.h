@@ -7,11 +7,14 @@
 
 #ifndef CLASSIFIER_H_
 #define CLASSIFIER_H_
+
+#include "riss/core/Solver.h"
 #include <vector>
 #include <string>
 #include "classifier/Configurations.h"
 
 using namespace std;
+using namespace Riss;
 
 typedef int ClassifierMode;
 

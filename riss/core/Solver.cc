@@ -2599,6 +2599,11 @@ void Solver::setPreprocessor(Coprocessor::CP3Config* _config)
   coprocessor = new Coprocessor::Preprocessor( this, *_config ); 
 }
 
+void Solver::setClassifier()
+{
+  classifier = new Classifier::CNFClassifier(this);
+}
+
 void Solver::printHeader()
 {
     if(verbosity>=1) {
