@@ -8,7 +8,7 @@
 #
 
 #param="-enabled_cp3 -cp3_stats -bce -bce-bce -bce-bcm -bve -bva -act-based -cir-bump=100 -prob-step-width=100 -pq-order -rlevel=2"
-param="-act-based -cir-bump=100 -prob-step-width=100 -pq-order -rlevel=2"
+param="-act-based -cir-bump=100 -rlevel=2"
 
 #
 # select between printing a proof and not printing a proof

@@ -729,7 +729,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 			// to prevent learnt clauses participated in revert conflict analyses 
 			// from being dropped immediately (by fast-paced periodic clause database reduction)
 			// they are marked as protected
-			c.mark(3); // TODO: should be turned into another bit in the clause header
+			c.setCoreClause( true );
 		    }
 		  }
 		}
@@ -757,7 +757,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 		    // UPDATEVARACTIVITY trick (see competition'09 companion paper)
                     // VSIDS scores of variables at the current decision level is aditionally 
                     // bumped if they are propagated by core learnt clauses (similar to glucose)
-                    if ( r != CRef_Undef && ca[r].mark() == 3)
+                    if ( r != CRef_Undef && ca[r].isCoreClause())
                       lastDecisionLevel.push(q);
 		}
 #endif
@@ -1137,8 +1137,7 @@ CRef Solver::propagate(bool duringAddingClauses)
             CRef     bestcr = best.reason;
 	    Lit      best0  = best.impliedLit;
 	    if( best.impliedLit == lit_Undef ) { // if not set with a binary clause
-	      Clause&  bestc  = ca[bestcr];
-	      Lit      best0  = bestc[0] ; // statically picks first literal from reason clause
+	      best0  = ca[bestcr][0] ; // statically picks first literal from reason clause
 	    }
             
 	    DOUT( if( config.opt_learn_debug ) cerr << "c contra selected " << best0 << " with reason " << ca[bestcr] << endl; );
@@ -1178,6 +1177,7 @@ CRef Solver::propagate(bool duringAddingClauses)
 	  if(value(imp) == l_False) {
 	    if( !config.opt_long_conflict ) return wbin[k].cref();
 	    confl = wbin[k].cref();
+	    impl_cl_heap.clear();
 	    break;
 	  }
 	  
@@ -1359,7 +1359,7 @@ void Solver::reduceDB()
   const int delStart = (int) (config.opt_keep_worst_ratio * (double)learnts.size()); // keep some of the bad clauses!
   for (i = j = 0; i < learnts.size(); i++){
     Clause& c = ca[learnts[i]];
-    if( c.mark() != 3 ) { // handle usual and interesting learnt clauses
+    if( c.mark() != 0 && ! c.isCoreClause() ) { // handle usual and interesting learnt clauses
       if (i >= delStart 
 	  && c.lbd()>2 
 	  && c.size() > 2 
@@ -1376,7 +1376,7 @@ void Solver::reduceDB()
       }
     } else {
       // core-learnt clauses are removed from this vector
-      assert( c.mark() == 3 && !c.learnt() && "for all core-learnt clauses the learnt flag should have been erased" );
+      assert( c.isCoreClause() && !c.learnt() && "for all core-learnt clauses the learnt flag should have been erased" );
     }
   }
   // FIXME: check whether old variant of removal works with the above code - otherwise include with parameter
@@ -3038,7 +3038,7 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
     if (!activityBasedRemoval && nblevels < lbd_core_threshold + 1) {
       // no_LBD = false
       cr = ca.alloc(learnt_clause);
-      ca[cr].mark(3);   // memorize that this clause is a core-learnt clause
+      ca[cr].setCoreClause(true);   // memorize that this clause is a core-learnt clause
       clauses.push(cr);
     } else {
       // 2 = normal(interesting) learnt clause
