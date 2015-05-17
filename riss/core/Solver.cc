@@ -708,8 +708,8 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	if(!foundFirstLearnedClause ) { // dynamic adoption only until first learned clause!
 	  if (c.learnt() ){
             if (activityBasedRemoval) {
-              if( config.opt_cls_act_bump_mode == 0 ) claBumpActivity(c);
-	      else clssToBump.push( confl );
+              if( config.opt_cls_act_bump_mode == 0 ) claBumpActivity(c); // use constant activity increase
+	      else clssToBump.push( confl );                              // or make activity depending on generated clause
             }
 
 	    if( config.opt_update_lbd == 1  ) { // update lbd during analysis, if allowed
@@ -825,6 +825,17 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
       
       // clean seen, if more literals have been added
       if( !isOnlyUnit ) while (index >= trail_lim[ decisionLevel() - 1 ] ) varFlags[ var(trail[index--]) ].seen = 0;
+      
+#warning have an extra-routine for the below code (is repeated below)
+      // bump the used clauses!
+      if( config.opt_cls_act_bump_mode != 2 ) { // if the static measure is not use, use a dynamic one based on the LBD
+	for( int i = 0 ; i < clssToBump.size(); ++ i ) {
+	  claBumpActivity( ca[ clssToBump[i] ], config.opt_cls_act_bump_mode == 1 ? out_learnt.size() : lbd );
+	}
+      }
+      for( int i = 0 ; i < varsToBump.size(); ++ i ) {
+	varBumpActivity( varsToBump[i], config.opt_var_act_bump_mode == 0 ? 1 : (config.opt_var_act_bump_mode == 1 ? out_learnt.size() : lbd) );
+      }
       
       lbd = 1; // for glucoses LBD score
       return units; // for unit clauses no minimization is necessary
@@ -983,8 +994,10 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     }
 
   // bump the used clauses!
-  for( int i = 0 ; i < clssToBump.size(); ++ i ) {
-    claBumpActivity( ca[ clssToBump[i] ], config.opt_cls_act_bump_mode == 1 ? out_learnt.size() : lbd );
+  if( config.opt_cls_act_bump_mode != 2 ) { // if the static measure is not use, use a dynamic one based on the LBD
+    for( int i = 0 ; i < clssToBump.size(); ++ i ) {
+      claBumpActivity( ca[ clssToBump[i] ], config.opt_cls_act_bump_mode == 1 ? out_learnt.size() : lbd );
+    }
   }
   for( int i = 0 ; i < varsToBump.size(); ++ i ) {
     varBumpActivity( varsToBump[i], config.opt_var_act_bump_mode == 0 ? 1 : (config.opt_var_act_bump_mode == 1 ? out_learnt.size() : lbd) );
@@ -1305,9 +1318,11 @@ CRef Solver::propagate(bool duringAddingClauses)
 |    Remove half of the learnt clauses, minus the clauses locked by the current assignment. Locked
 |    clauses are clauses that are reason to some assignment. Binary clauses are never removed.
 |________________________________________________________________________________________________@*/
-struct reduceDB_lt { 
+
+// lbd based sort
+struct reduceDB_lbd_lt { 
     ClauseAllocator& ca;
-    reduceDB_lt(ClauseAllocator& ca_) : ca(ca_) {}
+    reduceDB_lbd_lt(ClauseAllocator& ca_) : ca(ca_) {}
     bool operator () (CRef x, CRef y) { 
  
     // Main criteria... Like in MiniSat we keep all binary clauses
@@ -1329,6 +1344,18 @@ struct reduceDB_lt {
     }    
 };
 
+// struct that has been used inside Minisat for removal
+struct reduceDB_act_lt { 
+    ClauseAllocator& ca;
+    reduceDB_act_lt(ClauseAllocator& ca_) : ca(ca_) {}
+    bool operator () (CRef x, CRef y) {
+      
+        return (!ca[x].learnt() || !ca[y].learnt()) || // do not continue, if one of the clauses is not learnt
+          ( ca[x].size() > 2 && (ca[y].size() == 2 || ca[x].activity() < ca[y].activity()) ); 
+      
+    } 
+};
+
 void Solver::reduceDB()
 {
   reduceDBTime.start();
@@ -1343,7 +1370,8 @@ void Solver::reduceDB()
   }
   
   double  extra_lim = cla_inc / learnts.size();    // Remove any clause below this activity
-  sort(learnts, reduceDB_lt(ca) ); // sort size 2 and lbd 2 to the back!
+  if( ! activityBasedRemoval ) sort(learnts, reduceDB_lbd_lt(ca) ); // sort size 2 and lbd 2 to the back!
+  else sort(learnts, reduceDB_act_lt(ca) ); // sort size 2 and lbd 2 to the back!
 
   // We have a lot of "good" clauses, it is difficult to compare them. Keep more !
   if(ca[learnts[learnts.size() / RATIOREMOVECLAUSES]].lbd()<=3) nbclausesbeforereduce +=specialIncReduceDB; 
@@ -1376,7 +1404,7 @@ void Solver::reduceDB()
       }
     } else {
       // core-learnt clauses are removed from this vector
-      assert( c.isCoreClause() && !c.learnt() && "for all core-learnt clauses the learnt flag should have been erased" );
+      assert( (!c.isCoreClause() || !c.learnt()) && "for all core-learnt clauses the learnt flag should have been erased" );
     }
   }
   // FIXME: check whether old variant of removal works with the above code - otherwise include with parameter
@@ -1854,6 +1882,12 @@ bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
 	  if( (config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound ) ) { 
 	    intervalRestart++;conflictsSinceLastRestart = (double)conflictsSinceLastRestart * (double)config.opt_rMaxInc; 
 	  }
+	  
+	  // do counter implication before partial restart
+	  if (cir_bump_ratio != 0){
+	    counterImplicationRestart();
+	  }
+	  
 	  conflictsSinceLastRestart = 0;
 	  lbdQueue.fastclear();
 	  progress_estimate = progressEstimate();
@@ -1869,18 +1903,18 @@ bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
 	    }
 	  }
 	  
-	  if (cir_bump_ratio != 0){
-	    counterImplicationRestart();
-	  }
-	  
 	  cancelUntil(partialLevel);
 	  return true;
 	}
       }
     } else { // usual static luby or geometric restarts
       if (nof_conflicts >= 0 && conflictC >= nof_conflicts || !withinBudget()) {
+
+	    // do counter implication restart before partial restart
+	    if (cir_bump_ratio != 0) {
+	      counterImplicationRestart();
+	    }
 	
-	  {
 	    progress_estimate = progressEstimate();
 	    int partialLevel = 0;
 	    if( config.opt_restart_level != 0 ) {
@@ -1893,14 +1927,9 @@ bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
 		return false; // we found that we should not restart, because we have a (partial) model
 	      }
 	    }
-	    
-	    if (cir_bump_ratio != 0) {
-	      counterImplicationRestart();
-	    }
-	    
+    
 	    cancelUntil(partialLevel);
 	    return true;
-	  }
       }
     }
   }
@@ -2202,6 +2231,19 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
 		ca[cr].setLBD(2);
 		learnts.push(cr);
 		claBumpActivity(ca[cr], (config.opt_cls_act_bump_mode == 0 ? 1 : (config.opt_cls_act_bump_mode == 1) ? analyze_toclear.size() : 2 )  ); // bump activity based on its size); }
+		
+		if( config.opt_cls_act_bump_mode != 2 ) {
+		claBumpActivity(ca[cr],                                                         // bump activity based on its
+				(config.opt_cls_act_bump_mode == 0 ? 1                          // constant
+				  : (config.opt_cls_act_bump_mode == 1) ? 2  // size
+				  : 1              // LBD
+				  )  );                  
+		} else {
+		  ca[cr].activity() = 2 < config.opt_size_bounded_randomized ?       // if clause size is less than SBR
+				      2                                              // use size as activity
+				    : config.opt_size_bounded_randomized + drand( random_seed ); // otherwise, use SBR
+		}
+		
 	      }
 	      else clauses.push(cr);
 	      attachClause(cr);
@@ -3046,8 +3088,19 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
       cr = ca.alloc(learnt_clause, true);
       // ca[cr].mark(no_LBD ? 0 : nblevels < 6 ? 3 : 2);
       learnts.push(cr);
-      if (activityBasedRemoval || nblevels > lbd_core_threshold) // FIXME: check whether second condition can be eliminated
-	claBumpActivity(ca[cr], (config.opt_cls_act_bump_mode == 0 ? 1 : (config.opt_cls_act_bump_mode == 1) ? learnt_clause.size() : nblevels )  ); // bump activity based on its size
+      if (activityBasedRemoval || nblevels > lbd_core_threshold) { // FIXME: check whether second condition can be eliminated
+	if( config.opt_cls_act_bump_mode != 2 ) {
+	claBumpActivity(ca[cr],                                                         // bump activity based on its
+			(config.opt_cls_act_bump_mode == 0 ? 1                          // constant
+			  : (config.opt_cls_act_bump_mode == 1) ? learnt_clause.size()  // size
+			  : nblevels              // LBD
+			  )  );                  
+	} else {
+	  ca[cr].activity() = ca[cr].size() < config.opt_size_bounded_randomized ?       // if clause size is less than SBR
+	                      ca[cr].size()                                              // use size as activity
+			    : config.opt_size_bounded_randomized + drand( random_seed ); // otherwise, use SBR
+	}
+      }
     }
     
     ca[cr].setLBD(nblevels); 

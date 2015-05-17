@@ -46,6 +46,8 @@ public:
  DoubleOption opt_R; 
  IntOption opt_size_lbd_queue;
  IntOption opt_size_trail_queue;
+ IntOption opt_size_bounded_randomized; // Revisiting the Learned Clauses Database Reduction Strategies paper by Jabbour et al
+
 
  IntOption opt_first_reduce_db;
  IntOption opt_inc_reduce_db;

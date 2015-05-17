@@ -44,6 +44,7 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  opt_R (_cr, "R", "The constant used to block restart", 1.4, DoubleRange(1, false, 5, false), optionListPtr ), 
  opt_size_lbd_queue (_cr, "szLBDQueue", "The size of moving average for LBD (restarts)", 50, IntRange(10, INT32_MAX), optionListPtr ),
  opt_size_trail_queue (_cr, "szTrailQueue", "The size of moving average for trail (block restarts)", 5000, IntRange(10, INT32_MAX), optionListPtr ),
+ opt_size_bounded_randomized (_cr, "sbr", "use removal with clause activity based on sbr (randomized)", 12, IntRange(0, INT32_MAX), optionListPtr ),
 
  opt_first_reduce_db (_cred, "firstReduceDB", "The number of conflicts before the first reduce DB", 4000, IntRange(0, INT32_MAX), optionListPtr ),
  opt_inc_reduce_db (_cred, "incReduceDB", "Increment for reduce DB", 300, IntRange(0, INT32_MAX), optionListPtr ),
@@ -87,7 +88,7 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  opt_vsids_inc("MODS", "vsids-i", "interpolate between VSIDS and VMTF, inc during update", 1, DoubleRange(0, true, 1, true), optionListPtr ),
  opt_vsids_distance("MODS", "vsids-d", "interpolate between VSIDS and VMTF, numer of conflits until next update", INT32_MAX, IntRange(1, INT32_MAX), optionListPtr ),
  opt_var_act_bump_mode("MODS", "varActB", "bump activity of a variable (0 as usual, 1 relativ to cls size, 2 relative to LBD)", 0, IntRange(0, 2), optionListPtr ),
- opt_cls_act_bump_mode("MODS", "clsActB", "bump activity of a clause (0 as usual, 1 relativ to cls size, 2 relative to LBD)", 0, IntRange(0, 2), optionListPtr ),
+ opt_cls_act_bump_mode("MODS", "clsActB", "bump activity of a clause (0 as usual, 1 relativ to cls size, 2 relative to LBD, 3 SBR)", 0, IntRange(0, 3), optionListPtr ),
   
  opt_pq_order ("Contrasat", "pq-order",    "Use priority queue to decide the order in which literals are implied", false, optionListPtr),
  
