@@ -207,8 +207,10 @@ public:
 // adding, removing clauses and literals =======
   void addClause (      const CRef cr, bool check = false );                 // add clause to data structures, update counters
   void addClause (      const CRef cr , Heap<VarOrderBVEHeapLt> * heap, const bool update = false, const Var ignore = var_Undef, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL);     // add clause to data structures, update counters
+  
   bool removeClauseFrom (const CRef cr, const Lit l); // remove clause reference from list of clauses for literal l, returns true, if successful
   void removeClauseFrom (const CRef cr, const Lit l, const int index); // remove clause reference from list of clauses for literal l, returns true, if successful
+
   inline bool removeClauseFromThreadSafe (const CRef cr, const Lit l); // replaces clause reference from clause list by CRef_Undef, returns true, if successful
   inline void cleanUpOccurrences(const MarkArray & dirtyOccs, const uint32_t timer); // removes CRef_Undef from all dirty occurrences
   void cleanOccurrences();				// remove all clauses and set counters to 0
