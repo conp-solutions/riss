@@ -83,7 +83,6 @@ static bool receivedInterupt = false;
 	StringOption wekaLocation("WEKA", "weka","location to weka tool", "/usr/share/java/weka.jar");
 	StringOption predictorLocation("WEKA", "predictor","location to the predictor", "./predictor.jar");
 
-	BoolOption optClassify("CLASSIFY", "newknn", "turn the new classify version on", false);
 
 void setTimeLimit(int timeout) {
 	// Set limit on CPU-time:
@@ -334,7 +333,6 @@ int main(int argc, char** argv)
 	      printf("c |                                                                                                       |\n"); }
 	  
 	  configuration = new Configurations(configInfo,attrInfo);
-	  
 	  
 	  if (test){
 		  Classifier classifier(*configuration, prefixClassifier);
