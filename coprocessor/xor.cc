@@ -30,6 +30,8 @@ XorReasoning::XorReasoning( CP3Config &_config, ClauseAllocator& _ca, ThreadCont
 , allUsed(0)
 , xorDeducedUnits(0)
 , eqs(0)
+, addedTernaryXors(0)
+, addedQuadraryXors(0)
 {
   
 }
@@ -51,6 +53,7 @@ bool XorReasoning::process()
   if( data.outputsProof() ) printDRUPwarning( cerr, "XOR cannot produce DRUP/DRAT proofs yet" );
   
   data.ma.resize( 2* data.nVars() ); // TODO: check whether only for variables!
+  reAddedClauses.clear();
   
   // find xors
   parseTime = cpuTime() - parseTime;
@@ -93,14 +96,18 @@ bool XorReasoning::process()
     assert( heap.inHeap( v ) && "item from the heap has to be on the heap");
     heap.removeMin();
     
+    DOUT(if( config.opt_xor_debug > 4 ) cerr << "c check XORs for " << v+1 << endl;);
+    
     // there are no XORs
     if( occs[v].size() == 0 ) {
       foundEmptyLists ++;
+      DOUT(if( config.opt_xor_debug > 4 ) cerr << "c no occurences for " << v+1 << endl;);
       continue; // do not work with empty lists!
     } 
     
      // there is only one xor
     if( occs[v].size() == 1 ) {
+      DOUT(if( config.opt_xor_debug > 4 ) cerr << "c there is a pure XOR on " << v+1 << " of size " << xorList[occs[v][0]].size() << endl;);
       GaussXor& x = xorList[occs[v][0]];
       if( x.unit() ) { // the XOR is a unit, add it as unit clause
 	if( !data.ma.isCurrentStep( toInt(x.getUnitLit()) ) ) {
@@ -109,7 +116,8 @@ bool XorReasoning::process()
 	  unitQueue.push_back(x.getUnitLit());
 	}
       }
-      dropXor(occs[v][0], x.vars, occs );
+      DOUT(if( config.opt_xor_debug > 4 ) cerr << "c drop the XOR " << endl;);
+      if( config.opt_xor_dropPure ) dropXor(occs[v][0], x.vars, occs );
       continue;
     }
     
@@ -171,6 +179,9 @@ bool XorReasoning::process()
 	eqs ++;
 	data.addEquivalences( mkLit(simpX.vars[0],false), mkLit(simpX.vars[1],simpX.k) ); // add found equivalence!
 	DOUT(if( config.opt_xor_debug > 2 ) cerr << "c eq lits: " << mkLit(simpX.vars[0],false) << " == " << mkLit(simpX.vars[1],simpX.k) << endl;);
+      } else if (simpX.size() <= config.opt_xor_encodeSize ) { // if clauses for this XOR should be kept
+	// for now, encode full XOR
+	addXor( simpX );
       }
     }
     
@@ -180,6 +191,10 @@ bool XorReasoning::process()
       dropXor(selectIndex,selectedX.vars,occs);
     }
     
+  }
+  
+  if( config.opt_xor_checkNewSubsume ) { // check whether newly added clauses subsume other clauses
+    checkReaddedSubsumption();
   }
   
   // after final round, propagate once more!
@@ -575,7 +590,82 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 	DOUT(if( config.opt_xor_debug > 0 ) cerr << "c [XOR] found " << xors << " non-binary xors encoded with " << xorClauses << " clauses" << endl;);
 	return didSomething;
 }
+
+void XorReasoning::checkReaddedSubsumption()
+{
+
+}
+
+void XorReasoning::addXor(XorReasoning::GaussXor& simpX)
+{
+  if( simpX.size() == 3 ) {
+    Lit lits[3]; // k == 0: a + b + c == 0 -> clause: a \land b \to \neg c ^=  ( \neg a \lor \neg b \lor \neg c )
+    lits[0] = mkLit( simpX.vars[0], true );
+    lits[1] = mkLit( simpX.vars[1], true );
+    lits[2] = mkLit( simpX.vars[2], simpX.k == 0); // if k == 1, c has to be positive
     
+    addClause( lits, 3, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 1 1 1
+    
+    lits[0] = ~lits[0]; lits[1] = ~lits[1];
+    addClause( lits, 3, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 0 0 1
+    
+    lits[1] = ~lits[1]; lits[2] = ~lits[2];
+    addClause( lits, 3, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 0 1 0
+    
+    lits[0] = ~lits[0]; lits[1] = ~lits[1]; 
+    addClause( lits, 3, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 1 0 0
+    
+    addedTernaryXors ++;
+    
+  } else if ( simpX.size() == 4 ) {
+    
+    Lit lits[4]; // k == 0: a + b + c + d == 0 -> clause: a \land b \land c \to d ^=  ( \neg a \lor \neg b \lor \neg c \lor d )
+    lits[0] = mkLit( simpX.vars[0], true );
+    lits[1] = mkLit( simpX.vars[1], true );
+    lits[2] = mkLit( simpX.vars[2], true );
+    lits[3] = mkLit( simpX.vars[3], simpX.k == 1); // if k == 0, d has to be positive
+    
+    addClause( lits, 4, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 1 1 1 0
+    lits[2] = ~lits[2]; lits[3] = ~lits[3];
+    addClause( lits, 4, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 1 1 0 1
+    lits[1] = ~lits[1]; lits[2] = ~lits[2];
+    addClause( lits, 4, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 1 0 1 1
+    lits[2] = ~lits[2]; lits[3] = ~lits[3];
+    addClause( lits, 4, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 1 0 0 0
+    lits[0] = ~lits[0]; lits[3] = ~lits[3];
+    addClause( lits, 4, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 0 0 0 1
+    lits[2] = ~lits[2]; lits[3] = ~lits[3];
+    addClause( lits, 4, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 0 0 1 0
+    lits[1] = ~lits[1]; lits[3] = ~lits[3];
+    addClause( lits, 4, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 0 1 0 1
+    lits[2] = ~lits[2]; lits[3] = ~lits[3];
+    addClause( lits, 4, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 0 1 1 0
+    
+    addedQuadraryXors ++;
+    
+  } else {
+#warning implement generic XOR encode routine, might allow to use fresh variables! 
+  }
+  
+  
+}
+
+CRef XorReasoning::addClause(const Lit* lits, int size, bool learnt)
+{
+  CRef cr = ca.alloc(lits, size, learnt); // allocate clause
+  DOUT( if( config.opt_xor_debug > 4 ) cerr << "c added clause by reencoding: [" << cr << "]: " << ca[cr] << endl;); // print created clause
+  data.addClause(cr);               // add to coprocessor data structures
+  if (learnt)                       // add to corresponding clause list
+    data.getLEarnts().push(cr);
+  else
+    data.getClauses().push(cr);
+  
+  if( config.opt_xor_checkNewSubsume ) reAddedClauses.push( cr );
+  return cr;
+}
+
+
+
 void XorReasoning::printStatistics(ostream& stream)
 {
   stream << "c [STAT] XOR " << processTime << "s, "

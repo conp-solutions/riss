@@ -36,6 +36,7 @@ class XorReasoning : public Technique  {
   
   int xorLimit,xorSteps;
   int foundEmptyLists,xorUnits,allUsed,xorDeducedUnits,eqs;
+  int addedTernaryXors, addedQuadraryXors;
   
   /// compare two literals
   struct VarLt {
@@ -94,6 +95,8 @@ class XorReasoning : public Technique  {
     
   };
   
+  vec<CRef> reAddedClauses; /// clauses that have been added by reencoding intermediate XORs
+  
 public:
 
   XorReasoning( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data,  Propagation& _propagation, EquivalenceElimination& _ee  );
@@ -124,6 +127,14 @@ protected:
   /** find xors in the formula, with given max size */
   bool findXor(vector< Coprocessor::XorReasoning::GaussXor >& xorList);
   
+  /** encodes the given xor, and stores the newly added clauses to the clause list, if the according optoin is specified */
+  void addXor( GaussXor& simpX );
+  
+  /** add the given literals as a clause to Coprocessor */
+  CRef addClause( const Lit* lits, int size, bool learnt = false );
+  
+  /** checks whether the newly added clauses subsume other clauses from the formula */
+  void checkReaddedSubsumption();
 };
 
 }
