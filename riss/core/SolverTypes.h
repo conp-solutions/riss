@@ -283,6 +283,44 @@ class Clause {
             else
                 calcAbstraction(); }
     }
+    
+    template<class V>
+    Clause(const V* ps, int psSize, bool use_extra, bool learnt) {
+        header.mark      = 0;
+    	header.locked    = 0;
+        header.learnt    = learnt;
+        header.has_extra = use_extra;
+        header.reloced   = 0;
+        header.size      = psSize;
+#ifdef CLS_EXTRA_INFO
+	header.extra_info = 0
+#endif
+	header.lbd = 0;
+	header.canbedel = 1;
+        header.can_subsume = 1;
+        header.can_strengthen = 1;
+#ifdef PCASSO
+        header.pt_level = 0;
+        header.shared = 0; // Non-shared
+        header.shCleanDelay = 0;
+#endif
+
+	for (int i = 0; i < psSize; i++)
+	  for (int j = i+1; j < psSize; j++) {
+	    assert( ps[i] != ps[j] && "have no duplicate literals in clauses!" );
+	    assert( ps[i] != ~ps[j] && "have no complementary literals in clauses!" );
+	  }
+	
+	
+        for (int i = 0; i < psSize; i++)
+            data[i].lit = ps[i];
+	
+        if (header.has_extra){
+            if (header.learnt)
+                data[header.size].act = 0;
+            else
+                calcAbstraction(); }
+    }
 
 public:
     void calcAbstraction() {
@@ -574,8 +612,18 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         CRef cid = RegionAllocator<uint32_t>::alloc(clauseWord32Size(ps.size(), use_extra));
         new (lea(cid)) Clause(ps, use_extra, learnt);
 
-// 	if( ((Clause&)RegionAllocator<uint32_t>::operator[](cid)).learnt() && ! ((Clause&)RegionAllocator<uint32_t>::operator[](cid)).header.has_extra )
-// 	  cerr << "c created learnt clause without has_extra field" << endl;
+        return cid;
+    }
+    
+    template<class Lits>
+    CRef alloc(const Lits* ps, int psSize , bool learnt = false)
+    {
+        assert(sizeof(Lit)      == sizeof(uint32_t));
+        assert(sizeof(float)    == sizeof(uint32_t));
+        bool use_extra = learnt | extra_clause_field;
+
+        CRef cid = RegionAllocator<uint32_t>::alloc(clauseWord32Size(psSize, use_extra));
+        new (lea(cid)) Clause(ps, psSize, use_extra, learnt);
 	
         return cid;
     }

@@ -244,6 +244,7 @@ BoolOption opt_minimal_updates;
  IntOption  opt_bva_VarLimit         ;
  IntOption  opt_bva_Alimit           ;
  BoolOption opt_Abva                 ;
+ IntOption  opt_Abva_maxRed          ;
  IntOption  opt_bvaInpStepInc        ;
  IntOption  opt_Abva_heap            ;
  BoolOption opt_bvaComplement        ;
@@ -256,6 +257,8 @@ BoolOption opt_minimal_updates;
 
  IntOption  opt_bva_Xlimit           ;
  IntOption  opt_bva_Ilimit           ;
+ IntOption  opt_Xbva_maxRed          ;
+ IntOption  opt_Ibva_maxRed          ;
  IntOption  opt_Xbva_heap            ;
  IntOption  opt_Ibva_heap            ;
  IntOption  opt_Xbva                 ;
@@ -649,6 +652,11 @@ BoolOption opt_sls_adopt      ;
  BoolOption opt_xor_keepUsed    ;
  BoolOption opt_xor_findSubsumed;
  BoolOption opt_xor_findResolved;
+ 
+ BoolOption opt_xor_dropPure;
+ IntOption  opt_xor_encodeSize;
+ BoolOption opt_xor_checkNewSubsume;
+ BoolOption opt_xor_addAsLearnt;
  
 #ifndef NDEBUG
  IntOption  opt_xor_debug;

@@ -102,6 +102,10 @@ protected:
   // sequential functions:
   void sequentiellBVE(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const bool force = false, const bool doStatistics = true);
   void bve_worker (Coprocessor::CoprocessorData& data, Heap< Coprocessor::VarOrderBVEHeapLt >& heap, int64_t& bveChecks, const bool force = false, const bool doStatistics = true);   
+  
+  /** remove clauses from data structures and add to extension lists
+   *  @param l literal that has been used to remove the clauses during elimination (if l == lit_Undef, clauses are not added to extension stack)
+   */
   inline void removeClauses(CoprocessorData & data, Heap<VarOrderBVEHeapLt> & heap, const vector<CRef> & list, const Lit l, const int limit, const bool doStatistics = true);
   
   

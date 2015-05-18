@@ -30,6 +30,8 @@ XorReasoning::XorReasoning( CP3Config &_config, ClauseAllocator& _ca, ThreadCont
 , allUsed(0)
 , xorDeducedUnits(0)
 , eqs(0)
+, addedTernaryXors(0)
+, addedQuadraryXors(0)
 {
   
 }
@@ -51,6 +53,7 @@ bool XorReasoning::process()
   if( data.outputsProof() ) printDRUPwarning( cerr, "XOR cannot produce DRUP/DRAT proofs yet" );
   
   data.ma.resize( 2* data.nVars() ); // TODO: check whether only for variables!
+  reAddedClauses.clear();
   
   // find xors
   parseTime = cpuTime() - parseTime;
@@ -93,29 +96,42 @@ bool XorReasoning::process()
     assert( heap.inHeap( v ) && "item from the heap has to be on the heap");
     heap.removeMin();
     
+    DOUT(if( config.opt_xor_debug > 4 ) cerr << "c check XORs for " << v+1 << endl;);
+    
+    // there are no XORs
     if( occs[v].size() == 0 ) {
       foundEmptyLists ++;
+      DOUT(if( config.opt_xor_debug > 4 ) cerr << "c no occurences for " << v+1 << endl;);
       continue; // do not work with empty lists!
-    } else if( occs[v].size() == 1 ) { // there is only one xor
+    } 
+    
+     // there is only one xor
+    if( occs[v].size() == 1 ) {
+      DOUT(if( config.opt_xor_debug > 4 ) cerr << "c there is a pure XOR on " << v+1 << " of size " << xorList[occs[v][0]].size() << endl;);
       GaussXor& x = xorList[occs[v][0]];
-      if( x.unit() ) {
+      if( x.unit() ) { // the XOR is a unit, add it as unit clause
 	if( !data.ma.isCurrentStep( toInt(x.getUnitLit()) ) ) {
-	  data.ma.setCurrentStep( toInt(x.getUnitLit()) );
+	  data.ma.setCurrentStep( toInt(x.getUnitLit()) ); // memorize the unit
 	  xorUnits ++;
 	  unitQueue.push_back(x.getUnitLit());
 	}
       }
-      dropXor(occs[v][0], x.vars, occs );
+      DOUT(if( config.opt_xor_debug > 4 ) cerr << "c drop the XOR " << endl;);
+      if( config.opt_xor_dropPure ) dropXor(occs[v][0], x.vars, occs );
       continue;
     }
     
+    // there are multiple XORs with v
+    
     int selectIndex = 0; // simply select first xor
-    while( selectIndex < occs[v].size() && xorList[ occs[v][selectIndex] ].used == true ) selectIndex ++;
+    while( selectIndex < occs[v].size() && xorList[ occs[v][selectIndex] ].used == true ) selectIndex ++; // ignore this XOR
     if( selectIndex == occs[v].size() ) {
       allUsed ++;
       DOUT(if( config.opt_xor_debug > 2 ) cerr << "c all XORs with " << v+1 << " are already used!!" << endl;);
       continue; // do not use an XOR twice!
     }
+    
+    // select an XOR from this list
     if ( config.opt_xor_selectX == 1 ) { // select smallest xor
       for( int i = selectIndex+1 ; i < occs[v].size(); ++ i ) {
 	xorSteps ++;
@@ -132,16 +148,19 @@ bool XorReasoning::process()
     
     DOUT(if( config.opt_xor_debug > 1 ) { cerr << "c eliminate " << v+1 << " with XOR " <<  " + "; for( int j = 0 ; j < selectedX.vars.size(); ++ j ) cerr <<selectedX.vars[j] + 1 << " + "; cerr << " == " << (selectedX.k ? 1 : 0) << endl; });
     
+    // if there are XORs to work with
     while( occs[v].size() > 0 ) {
+      
       if( occs[v][0] == xorIndex ) {
 	occs[v][0] = occs[v][ occs[v].size() - 1]; occs[v].pop_back(); // drop it from this list!
 	continue; // do not simplify xor with itself!
       }
+      
       xorSteps ++;
       GaussXor& simpX = xorList[ occs[v][0] ]; // xor that is simplified
       DOUT(if( config.opt_xor_debug > 1 ) { cerr << "c change XOR " <<  " + "; for( int j = 0 ; j < simpX.vars.size(); ++ j ) cerr <<simpX.vars[j] + 1 << " + "; cerr << " == " << (simpX.k ? 1 : 0) << endl; });
       toRemoveVars.clear();tmpVars.clear();
-      simpX.add(selectedX,toRemoveVars,tmpVars);
+      simpX.add( selectedX, toRemoveVars,tmpVars );
       DOUT(if( config.opt_xor_debug > 1 ) { cerr << "c       into " <<  " + "; for( int j = 0 ; j < simpX.vars.size(); ++ j ) cerr <<simpX.vars[j] + 1 << " + "; cerr << " == " << (simpX.k ? 1 : 0) << endl; 
 	cerr << "c and remove from "; for( int j = 0 ; j < toRemoveVars.size(); ++ j ) cerr << " " << toRemoveVars[j] + 1; cerr << " " << endl;
       });
@@ -160,6 +179,9 @@ bool XorReasoning::process()
 	eqs ++;
 	data.addEquivalences( mkLit(simpX.vars[0],false), mkLit(simpX.vars[1],simpX.k) ); // add found equivalence!
 	DOUT(if( config.opt_xor_debug > 2 ) cerr << "c eq lits: " << mkLit(simpX.vars[0],false) << " == " << mkLit(simpX.vars[1],simpX.k) << endl;);
+      } else if (simpX.size() <= config.opt_xor_encodeSize ) { // if clauses for this XOR should be kept
+	// for now, encode full XOR
+	addXor( simpX );
       }
     }
     
@@ -169,6 +191,10 @@ bool XorReasoning::process()
       dropXor(selectIndex,selectedX.vars,occs);
     }
     
+  }
+  
+  if( config.opt_xor_checkNewSubsume ) { // check whether newly added clauses subsume other clauses
+    checkReaddedSubsumption();
   }
   
   // after final round, propagate once more!
@@ -564,7 +590,82 @@ bool XorReasoning::findXor(vector<GaussXor>& xorList)
 	DOUT(if( config.opt_xor_debug > 0 ) cerr << "c [XOR] found " << xors << " non-binary xors encoded with " << xorClauses << " clauses" << endl;);
 	return didSomething;
 }
+
+void XorReasoning::checkReaddedSubsumption()
+{
+
+}
+
+void XorReasoning::addXor(XorReasoning::GaussXor& simpX)
+{
+  if( simpX.size() == 3 ) {
+    Lit lits[3]; // k == 0: a + b + c == 0 -> clause: a \land b \to \neg c ^=  ( \neg a \lor \neg b \lor \neg c )
+    lits[0] = mkLit( simpX.vars[0], true );
+    lits[1] = mkLit( simpX.vars[1], true );
+    lits[2] = mkLit( simpX.vars[2], simpX.k == 0); // if k == 1, c has to be positive
     
+    addClause( lits, 3, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 1 1 1
+    
+    lits[0] = ~lits[0]; lits[1] = ~lits[1];
+    addClause( lits, 3, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 0 0 1
+    
+    lits[1] = ~lits[1]; lits[2] = ~lits[2];
+    addClause( lits, 3, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 0 1 0
+    
+    lits[0] = ~lits[0]; lits[1] = ~lits[1]; 
+    addClause( lits, 3, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 1 0 0
+    
+    addedTernaryXors ++;
+    
+  } else if ( simpX.size() == 4 ) {
+    
+    Lit lits[4]; // k == 0: a + b + c + d == 0 -> clause: a \land b \land c \to d ^=  ( \neg a \lor \neg b \lor \neg c \lor d )
+    lits[0] = mkLit( simpX.vars[0], true );
+    lits[1] = mkLit( simpX.vars[1], true );
+    lits[2] = mkLit( simpX.vars[2], true );
+    lits[3] = mkLit( simpX.vars[3], simpX.k == 1); // if k == 0, d has to be positive
+    
+    addClause( lits, 4, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 1 1 1 0
+    lits[2] = ~lits[2]; lits[3] = ~lits[3];
+    addClause( lits, 4, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 1 1 0 1
+    lits[1] = ~lits[1]; lits[2] = ~lits[2];
+    addClause( lits, 4, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 1 0 1 1
+    lits[2] = ~lits[2]; lits[3] = ~lits[3];
+    addClause( lits, 4, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 1 0 0 0
+    lits[0] = ~lits[0]; lits[3] = ~lits[3];
+    addClause( lits, 4, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 0 0 0 1
+    lits[2] = ~lits[2]; lits[3] = ~lits[3];
+    addClause( lits, 4, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 0 0 1 0
+    lits[1] = ~lits[1]; lits[3] = ~lits[3];
+    addClause( lits, 4, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 0 1 0 1
+    lits[2] = ~lits[2]; lits[3] = ~lits[3];
+    addClause( lits, 4, config.opt_xor_addAsLearnt ); // adds negative (for k==0): 0 1 1 0
+    
+    addedQuadraryXors ++;
+    
+  } else {
+#warning implement generic XOR encode routine, might allow to use fresh variables! 
+  }
+  
+  
+}
+
+CRef XorReasoning::addClause(const Lit* lits, int size, bool learnt)
+{
+  CRef cr = ca.alloc(lits, size, learnt); // allocate clause
+  DOUT( if( config.opt_xor_debug > 4 ) cerr << "c added clause by reencoding: [" << cr << "]: " << ca[cr] << endl;); // print created clause
+  data.addClause(cr);               // add to coprocessor data structures
+  if (learnt)                       // add to corresponding clause list
+    data.getLEarnts().push(cr);
+  else
+    data.getClauses().push(cr);
+  
+  if( config.opt_xor_checkNewSubsume ) reAddedClauses.push( cr );
+  return cr;
+}
+
+
+
 void XorReasoning::printStatistics(ostream& stream)
 {
   stream << "c [STAT] XOR " << processTime << "s, "

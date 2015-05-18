@@ -504,8 +504,17 @@ void BoundedVariableElimination::bve_worker (CoprocessorData& data, Heap<VarOrde
                     return;
 		}
                 if (doStatistics) ++eliminatedVars;
-                removeClauses(data, heap, pos, mkLit(v,false), p_limit, doStatistics);
-                removeClauses(data, heap, neg, mkLit(v,true),  n_limit, doStatistics);
+
+		// if the clause does not already have a value, 
+		// add only a unit clause to the extension stack for undo simplification, and all clauses for the other polarity before
+                removeClauses(data, heap, pos, lit_Undef, p_limit, doStatistics);      // do not add these clauses to the undo stack!
+		if( data.value(mkLit(v,false)) == l_Undef ) {
+		  removeClauses(data, heap, neg, mkLit(v,true),  n_limit, doStatistics); // add these clauses to the undo stack
+		  data.addToExtension( mkLit(v,false) );                                 // make this variable false by default on the undo stack, the other clauses with take care afterwards
+		} else {
+		  removeClauses(data, heap, neg, lit_Undef,  n_limit, doStatistics); // add these clauses to the undo stack
+		}
+		
                 vector<CRef>().swap(pos); //free physical memory of occs
                 vector<CRef>().swap(neg); //free physical memory of occs
                 if (config.opt_bve_verbose > 0) cerr << "c Resolved " << v+1 <<endl;
@@ -567,7 +576,7 @@ inline void BoundedVariableElimination::removeClauses(CoprocessorData & data, He
                 data.removedClause(cr);
             didChange();
             c.set_delete(true);
-            if (!c.learnt() /*&& cr < limit*/) data.addToExtension(cr, l);
+            if (l != lit_Undef && !c.learnt() /*&& cr < limit*/) data.addToExtension(cr, l);
             if (doStatistics)
             {
                 if (c.learnt())
