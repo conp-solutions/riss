@@ -7,7 +7,7 @@
 #
 
 #param="-enabled_cp3 -cp3_stats -bce -bce-bce -bce-bcm -bve -bva -xor -xorEncSize=4"
-param="-act-based -cir-bump=100 -rlevel=2 -pq-order"
+param="-act-based -cir-bump=100 -rlevel=2 -pq-order -prob-step-width=1024"
 
 
 #

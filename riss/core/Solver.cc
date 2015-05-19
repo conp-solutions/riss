@@ -1593,9 +1593,7 @@ bool Solver::probingHighestActivity() {
 }
 
 bool Solver::probing(Var v) {
-    static vec<Lit> unchecked;
-    static vec<lbool> assigns_before;
-  
+ 
     cancelUntil(0);
     
     if (value(v) != l_Undef) {
@@ -1609,9 +1607,7 @@ bool Solver::probing(Var v) {
     }
 
     // no conflicting clause was found
-
-#warning FIXME before running probing during search
-    //assigns.copyTo(assigns_before);
+    varFlags.copyTo(probing_oldAssigns);
     cancelUntil(0);
     
     // Probe negated literal
@@ -1624,7 +1620,7 @@ bool Solver::probing(Var v) {
     // No conflict clause for positive and negative literal
     // found. Collect the commonly implied literals and enqueue them.
 
-    unchecked.clear();
+    probing_uncheckedLits.clear();
 
     // Walk though assignment stack for decision level 0
     for (int i = trail_lim[0]; i < trail.size(); ++i) {
@@ -1632,21 +1628,21 @@ bool Solver::probing(Var v) {
 
         // if variable assignment has changed from positive to negative,
         // save literal as unchecked
-        if (assigns_before[var(l)] == l_True && !sign(l)) {
-           unchecked.push(l);
+        if (probing_oldAssigns[var(l)].assigns == l_True && !sign(l)) {
+           probing_uncheckedLits.push(l);
         }
 
         // same as above, but from negative to positive
-        if (assigns_before[var(l)] == l_False && sign(l)) {
-           unchecked.push(l);
+        if (probing_oldAssigns[var(l)].assigns == l_False && sign(l)) {
+           probing_uncheckedLits.push(l);
         }
     }
     
     cancelUntil(0);
 
     // enqueue all implied literals
-    for (int i = 0; i < unchecked.size(); i++) {
-        enqueue(unchecked[i], CRef_Undef);
+    for (int i = 0; i < probing_uncheckedLits.size(); i++) {
+        enqueue(probing_uncheckedLits[i], CRef_Undef);
     }
     
     // Found conflicting clause => UNSAT

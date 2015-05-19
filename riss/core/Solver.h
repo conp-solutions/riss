@@ -777,6 +777,8 @@ protected:
  
     // MiPiSAT methods
 
+    vec<Lit>      probing_uncheckedLits;            /// literals to be used in probing routine
+    vec<VarFlags> probing_oldAssigns;  /// literals to be used in probing routine
     /**
      * Apply inprocessing on the variables with highest activity. The limit of
      * how many variables are probed is determined by the parameter "probing_limit".

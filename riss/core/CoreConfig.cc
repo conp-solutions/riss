@@ -93,7 +93,7 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  opt_pq_order ("Contrasat", "pq-order",    "Use priority queue to decide the order in which literals are implied", false, optionListPtr),
  
  opt_probing_step_width("MiPiSAT", "prob-step-width", "Perform failed literals and detection of necessary assignments each n times",   0, IntRange(0, INT32_MAX),optionListPtr),
- opt_probing_limit("MiPiSAT", "prob-limit",      "Limit how many variables with highest activity should be probed",             100, IntRange(1, INT32_MAX), optionListPtr),
+ opt_probing_limit("MiPiSAT", "prob-limit",      "Limit how many variables with highest activity should be probed", 32, IntRange(1, INT32_MAX), optionListPtr),
  
  opt_cir_bump     ("cir-minisat", "cir-bump", "Activates CIR with bump ratio for VSIDS score (choose large: 9973)", 0, IntRange(0, INT32_MAX), optionListPtr),
  
