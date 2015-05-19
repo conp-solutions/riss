@@ -12,23 +12,18 @@ NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPO
 NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
 DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-**************************************************************************************************/
-/*************************************************************************************************
-
- *************************************************************************************************/
-
+*************************************************************************************************/
 #ifndef WDimacs_h
 #define WDimacs_h
 
 #include <stdio.h>
+#include <fstream>
 
 #include "riss/utils/ParseUtils.h"
 #include "riss/core/SolverTypes.h"
 #include "riss/core/Solver.h"
 
-#include <fstream>
 
-using namespace Riss;
 //=================================================================================================
 // DIMACS Parser:
 namespace Riss
@@ -53,9 +48,11 @@ static void readWCNFClause(B& in, Solver& S, vec<Lit>& lits, int32_t original_va
 }
 
 
-/** parse the input and add the (relaxed) clauses to the solver
- *  @param variableWeights for each (relaxation or unit clause) variable, store the weight in the given vector!
- *  @return number of variables in the WCNF file (higher variables are relax variables)
+/** 
+ * parse the input and add the (relaxed) clauses to the solver
+ * 
+ * @param variableWeights for each (relaxation or unit clause) variable, store the weight in the given vector!
+ * @return number of variables in the WCNF file (higher variables are relax variables)
  */
 template<class B, class Solver>
 static unsigned parse_WCNF_main(B& in, Solver& S, vec<Weight>& literalWeights ) {
@@ -86,7 +83,7 @@ static unsigned parse_WCNF_main(B& in, Solver& S, vec<Weight>& literalWeights ) 
 		original_vars = vars;
 		while( S.nVars() < original_vars ) S.newVar(false,true,'o'); // add "enough" variables for the original problem
 		literalWeights.growTo( 2*S.nVars(), 0 ); // all variables in the orignial-variable range do not have a weight (yet)
-		cerr << "c p cnf " << vars << " " << clauses << endl;
+		std::cerr << "c p cnf " << vars << " " << clauses << std::endl;
             }else if (eagerMatch(in, "wcnf")){
 		    isWcnf = true;
 		    original_vars = vars = parseInt(in);
@@ -94,7 +91,7 @@ static unsigned parse_WCNF_main(B& in, Solver& S, vec<Weight>& literalWeights ) 
 		    while (*in == 9 || *in == 32) ++in; // skip whitespace except new line / return
 		    if (*in < '0' || *in > '9') top = 0;
 		    else top = parseInt(in);
-		    cerr << "c wcnf " << vars << " " << clauses << " " << top << endl;
+		    std::cerr << "c wcnf " << vars << " " << clauses << " " << top << std::endl;
 		    while( S.nVars() < original_vars) S.newVar(false,true,'o'); // add "enough" variables for the original problem
 		    literalWeights.growTo( 2*S.nVars(), 0 ); // all variables in the orignial-variable range do not have a weight (yet)
 		  }
@@ -114,7 +111,7 @@ static unsigned parse_WCNF_main(B& in, Solver& S, vec<Weight>& literalWeights ) 
             readWCNFClause(in, S, lits, original_vars);
 	    
 	    if( weight > 0 ) { // if the weight is 0, then noghting has to be done!
-	      // cerr << "c found clause " << lits << " with weight " << weight << "(max=" << top << ") vars=" << vars <<endl;
+	      // std::cerr << "c found clause " << lits << " with weight " << weight << "(max=" << top << ") vars=" << vars <<std::endl;
 	      if (weight != top || !isWcnf ) // this clause is weighted, or the instance is not a WCNF
 	      {
 		if( lits.size() != 1 ) { // what happens to empty clauses?
@@ -145,8 +142,8 @@ static unsigned parse_WCNF_main(B& in, Solver& S, vec<Weight>& literalWeights ) 
 	    }
 	}
     }
-    cerr << "c clss: " << cnt << "(" << clauses << "), vars=" << S.nVars() << "(" << original_vars << "+" << weighted_cnt << ") weighted units: " << weighted_units << " hard cls: " << hard_cnt << " emptyWeighted: " << empty_weighted << endl;
-    cerr.flush();
+    std::cerr << "c clss: " << cnt << "(" << clauses << "), vars=" << S.nVars() << "(" << original_vars << "+" << weighted_cnt << ") weighted units: " << weighted_units << " hard cls: " << hard_cnt << " emptyWeighted: " << empty_weighted << std::endl;
+    std::cerr.flush();
     if( S.okay() ) {
       if (original_vars + weighted_cnt != S.nVars()) fprintf(stderr, "WARNING! DIMACS header mismatch: wrong number of variables.\n");
       if (cnt  != clauses) fprintf(stderr, "WARNING! DIMACS header mismatch: wrong number of clauses.\n");
@@ -155,8 +152,10 @@ static unsigned parse_WCNF_main(B& in, Solver& S, vec<Weight>& literalWeights ) 
     return original_vars;
 }
 
-/** Inserts problem into solver.
- *  @return number of variables in the WCNF file (higher variables are relax variables)
+/** 
+ * Inserts problem into solver.
+ * 
+ * @return number of variables in the WCNF file (higher variables are relax variables)
  */
 template<class Solver>
 static unsigned parse_WCNF(gzFile input_stream, Solver& S, vec<Weight>& literalWeights ) {
@@ -165,6 +164,5 @@ static unsigned parse_WCNF(gzFile input_stream, Solver& S, vec<Weight>& literalW
 }
 
 //=================================================================================================
-
-}
+} // namespace Riss
 #endif
