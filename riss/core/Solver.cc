@@ -1133,6 +1133,7 @@ void Solver::uncheckedEnqueue(Lit p, Riss::CRef from, bool addToProof, const uin
 CRef Solver::propagate(bool duringAddingClauses)
 {
     assert( ( decisionLevel() == 0 || !duringAddingClauses ) && "clauses can only be added at level 0!" );
+    assert( impl_cl_heap.empty() && "for now there cannot be any literals in the heap" );
     // if( config.opt_printLhbr ) cerr << endl << "c called propagate" << endl;
     DOUT( if( config.opt_learn_debug ) cerr << "c call propagate with " << qhead << " for " <<  trail.size() << " lits" << endl; );
   
@@ -1150,13 +1151,14 @@ CRef Solver::propagate(bool duringAddingClauses)
             CRef     bestcr = best.reason;
 	    Lit      best0  = best.impliedLit;
 	    if( best.impliedLit == lit_Undef ) { // if not set with a binary clause
+	      assert( ca[bestcr].size() > 2 && "binary clauses should set this value themselves" );
 	      best0  = ca[bestcr][0] ; // statically picks first literal from reason clause
 	    }
             
 	    DOUT( if( config.opt_learn_debug ) cerr << "c contra selected " << best0 << " with reason " << ca[bestcr] << endl; );
 
             if (value(best0) == l_False) {
-		DOUT( if( config.opt_learn_debug ) cerr << "c resulted in conflict" << endl; );
+		DOUT( if( config.opt_learn_debug ) cerr << "c literal " << best0 << " is in conflict" << endl; );
                 confl = bestcr;
                 qhead = trail.size();
                 impl_cl_heap.clear();
@@ -1164,7 +1166,7 @@ CRef Solver::propagate(bool duringAddingClauses)
             }
 
             if (value(best0) == l_True) {
-		DOUT( if( config.opt_learn_debug ) cerr << "c literal already satisfied" << endl; );
+		DOUT( if( config.opt_learn_debug ) cerr << "c literal " << best0 << " already satisfied" << endl; );
                 continue;
             }
 
@@ -1188,9 +1190,12 @@ CRef Solver::propagate(bool duringAddingClauses)
 	  assert( ca[ wbin[k].cref() ].size() == 2 && "in this list there can only be binary clauses" );
 	  DOUT( if( config.opt_learn_debug ) cerr << "c checked binary clause " << ca[wbin[k].cref() ] << " with implied literal having value " << toInt(value(imp)) << endl; );
 	  if(value(imp) == l_False) {
-	    if( !config.opt_long_conflict ) return wbin[k].cref();
-	    confl = wbin[k].cref();
 	    impl_cl_heap.clear();
+	    if( !config.opt_long_conflict ) {
+	      assert( impl_cl_heap.empty() && "in case of a conflict the heap has to be empty" );
+	      return wbin[k].cref();
+	    }
+	    confl = wbin[k].cref();
 	    break;
 	  }
 	  
@@ -1249,7 +1254,7 @@ CRef Solver::propagate(bool duringAddingClauses)
             for (int k = 2; k < c.size(); k++)
                 if (value(c[k]) != l_False)
 		{
-                    // AVG: keep c[2] as most recent false_lit.
+                    // keep c[2] as most recent false_lit.
                     if (pq_order) {
                         assert(c[1] == false_lit);
                         c[1] = c[k]; c[k] = c[2]; c[2] = false_lit;
@@ -1305,6 +1310,9 @@ CRef Solver::propagate(bool duringAddingClauses)
     }
     propagations += num_props;
     simpDB_props -= num_props;
+    
+    impl_cl_heap.clear(); // after a binary conflict with long conflicts enabled there might be newly implied literals
+    assert( impl_cl_heap.empty() && "in case of a conflict the heap has to be empty" );
     
     return confl;
 }
