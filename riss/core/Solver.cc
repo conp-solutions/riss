@@ -707,10 +707,9 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	
 	if(!foundFirstLearnedClause ) { // dynamic adoption only until first learned clause!
 	  if (c.learnt() ){
-//             if (activityBasedRemoval) {
-              if( config.opt_cls_act_bump_mode == 0 ) claBumpActivity(c); // use constant activity increase
+          if( config.opt_cls_act_bump_mode == 0 ) claBumpActivity(c); // use constant activity increase
 	      else clssToBump.push( confl );                              // or make activity depending on generated clause
-//             }
+      }
 
 	    if( config.opt_update_lbd == 1  ) { // update lbd during analysis, if allowed
 		if(c.learnt()  && c.lbd()>2 ) { 
@@ -723,13 +722,13 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 		    c.setLBD(nblevels); // Update it
 		    
 		    if (c.lbd() < lbd_core_threshold) { // turn learned clause into core clause and keep it for ever
-			// move clause from learnt to original, NOTE: clause is still in the learnt vector, has to be treated correctly during garbage collect/inprocessing
-			clauses.push(confl); 
-			c.learnt(false);
-			// to prevent learnt clauses participated in revert conflict analyses 
-			// from being dropped immediately (by fast-paced periodic clause database reduction)
-			// they are marked as protected
-			c.setCoreClause( true );
+			    // move clause from learnt to original, NOTE: clause is still in the learnt vector, has to be treated correctly during garbage collect/inprocessing
+			    clauses.push(confl); 
+			    c.learnt(false);
+			    // to prevent learnt clauses participated in revert conflict analyses 
+			    // from being dropped immediately (by fast-paced periodic clause database reduction)
+			    // they are marked as protected
+			    c.setCoreClause( true );
 		    }
 		  }
 		}
@@ -757,7 +756,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 		    // UPDATEVARACTIVITY trick (see competition'09 companion paper)
                     // VSIDS scores of variables at the current decision level is aditionally 
                     // bumped if they are propagated by core learnt clauses (similar to glucose)
-                    if ( r != CRef_Undef && ca[r].isCoreClause())
+                    if ( r != CRef_Undef && ca[r].learnt())
                       lastDecisionLevel.push(q);
 		}
 #endif
@@ -1280,16 +1279,6 @@ CRef Solver::propagate(bool duringAddingClauses)
                     *j++ = *i++;
             } else { 
 	      
-	      if( c.mark() == 0  && config.opt_update_lbd == 0) { // if LHBR did not remove this clause
-		int newLbd = computeLBD( c );
-		if( newLbd < c.lbd() || config.opt_lbd_inc ) { // improve the LBD (either LBD decreased,or option is set)
-		  if( c.lbd() <= lbLBDFrozenClause ) {
-		    c.setCanBeDel( false ); // LBD of clause improved, so that its not considered for deletion
-		  }
-		  c.setLBD(newLbd);
-		}
-	      }
-	      
 	      if (pq_order) {
                 // Priority is level of 3rd lit (small is good), then
                 // local trail position of 2nd lit (small is good).
@@ -1302,6 +1291,17 @@ CRef Solver::propagate(bool duringAddingClauses)
 		DOUT( if( config.opt_learn_debug ) cerr << "c current clause is unit clause: " << ca[cr] << endl; );
                 uncheckedEnqueue(first, cr, duringAddingClauses);
 	      }
+
+	      if( c.mark() == 0  && config.opt_update_lbd == 0) { // if LHBR did not remove this clause
+		int newLbd = computeLBD( c );
+		if( newLbd < c.lbd() || config.opt_lbd_inc ) { // improve the LBD (either LBD decreased,or option is set)
+		  if( c.lbd() <= lbLBDFrozenClause ) {
+		    c.setCanBeDel( false ); // LBD of clause improved, so that its not considered for deletion
+		  }
+		  c.setLBD(newLbd);
+		}
+	      }
+
 	    }
         NextClause:;
         }
@@ -1543,7 +1543,7 @@ bool Solver::simplify()
       int i = 0; // to prevent g++ to throw a "i maybe used unintialized" warning
       int j = 0;
       for (; i < learnts.size(); i++) {
-	  if (ca[learnts[i]].mark() != 3) {
+	  if ( !ca[learnts[i]].isCoreClause() ) {
 	      learnts[j++] = learnts[i];
 	  }
       }
