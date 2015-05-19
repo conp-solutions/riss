@@ -11,9 +11,15 @@
 #include <sstream>
 #include <iostream>
 #include <algorithm>
+ 
 using namespace std;
 
-Graph::Graph(int size, bool computingDerivative): nodeDeg(size,0), node(size), degreeStatistics(computingDerivative), weightStatistics(computingDerivative, false){
+Graph::Graph(int size, bool computingDerivative) :
+    node(size),
+    nodeDeg(size,0),
+    degreeStatistics(computingDerivative),
+    weightStatistics(computingDerivative, false)
+{
 	// TODO Auto-generated constructor stub
 	this->size = size;
 	this->mergeAtTheEnd = true;
@@ -21,7 +27,12 @@ Graph::Graph(int size, bool computingDerivative): nodeDeg(size,0), node(size), d
 	for( int i = 0 ; i < size; ++ i ) node[i].reserve(8); // get space for the first 8 elements
 }
 
-Graph::Graph(int size, bool mergeAtTheEnd, bool computingDerivative): nodeDeg(size,0), node(size),  degreeStatistics(computingDerivative), weightStatistics(computingDerivative, false) {
+Graph::Graph(int size, bool mergeAtTheEnd, bool computingDerivative) :
+    node(size),
+    nodeDeg(size,0),
+    degreeStatistics(computingDerivative),
+    weightStatistics(computingDerivative, false)
+{
 	// TODO Auto-generated constructor stub
 	this->size = size;
 	this->mergeAtTheEnd=mergeAtTheEnd;
@@ -212,4 +223,6 @@ uint64_t Graph::sortAdjacencyList( adjacencyList& aList ) {
   }
   operations+=aList.size();
   aList.resize(kept);	// save space!
+
+  return operations;
 }

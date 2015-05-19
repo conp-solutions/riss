@@ -26,10 +26,9 @@ Copyright (c) 2012-2014, Norbert Manthey, All rights reserved.
 #include "riss/utils/Options.h"
 #include "riss/core/Dimacs.h"
 #include "riss/core/Solver.h"
-
-#include "coprocessor/Coprocessor.h"
-
 #include "riss/utils/version.h" // include the file that defines the solver version
+#
+#include "coprocessor/Coprocessor.h"
 
 using namespace Riss;
 using namespace Coprocessor;

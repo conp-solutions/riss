@@ -6,15 +6,17 @@
  */
 
 #include "WekaDataset.h"
-//
-//WekaDataset::WekaDataset(char* filename) {
-//	bool data =false;
-//	do {
-//		getline(fin,line);
-//		data = (line[0]!='@');
-//	} while (data);
-//	haveLine = true;
-//}
+
+using namespace std;
+
+// WekaDataset::WekaDataset(char* filename) {
+// 	bool data =false;
+// 	do {
+// 		getline(fin,line);
+// 		data = (line[0]!='@');
+// 	} while (data);
+// 	haveLine = true;
+// }
 
 bool WekaDataset::getDataRow(vector<string>& row) {
 	if (haveLine) {

@@ -8,6 +8,8 @@
 #include "classifier/FeaturesWriter.h"
 #include <assert.h>
 
+using namespace std;
+
 FeaturesWriter::FeaturesWriter(int afeaturesNumber, int atimeout,  ostream& aoutput)
 :featuresNumber(afeaturesNumber),
  output(aoutput),
