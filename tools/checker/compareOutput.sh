@@ -35,7 +35,7 @@ ec1=$?
 if [ "$ec2" == "1" ]
 then
   # analyze manually
-	meld /tmp/err_$$ /tmp/err2_$$
+  #	meld /tmp/err_$$ /tmp/err2_$$
 	exit 2
 fi
 
