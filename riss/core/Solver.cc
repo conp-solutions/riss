@@ -2097,6 +2097,7 @@ lbool Solver::initSolve(int solves)
 	    else if( config.opt_init_pol == 3 ) varFlags[v].polarity = moms[v] > 0 ? 1 : 0;
 	    else if( config.opt_init_pol == 4 ) varFlags[v].polarity = moms[v] > 0 ? 0 : 1;
 	    else if( config.opt_init_pol == 5 ) varFlags[v].polarity = irand(random_seed,100) > 50 ? 1 : 0;
+	    else if( config.opt_init_pol == 6 ) varFlags[v].polarity = ~ varFlags[v].polarity;
 	  }
 	}
 	delete [] moms;
