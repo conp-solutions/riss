@@ -6,7 +6,7 @@
 # return code: 10 or 20 (SAT/UNSAT)
 # print to screen: solution for the cnf
 #
-
+#param="-threads=4"
 param="-enabled_cp3 -cp3_stats -bce -bce-bce -bce-bcm -bve -bva -xor -xorEncSize=4  "
 
 #
