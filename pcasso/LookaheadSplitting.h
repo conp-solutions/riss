@@ -19,11 +19,11 @@
 namespace Pcasso {
     class LookaheadSplitting : public SplitterSolver {
       
-    CoreConfig& coreConfig;
+    Riss::CoreConfig& coreConfig;
       
     // more global data structures
-    vec<Lit> learnt_clause;
-    vec<CRef> otfssClauses;
+    Riss::vec<Riss::Lit> learnt_clause;
+    Riss::vec<Riss::CRef> otfssClauses;
     uint64_t extraInfo;
       
     public:
@@ -31,7 +31,7 @@ namespace Pcasso {
         ~LookaheadSplitting();
         void dummy(){
         }
-        lbool produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<vec<Lit>* > **valid);
+        lbool produceSplitting(Riss::vec<Riss::vec<Riss::vec<Riss::Lit>* >* > **splits, Riss::vec<Riss::vec<Riss::Lit>* > **valid);
         double cpuTime_t() const ; // CPU time used by this thread
         void setTimeOut(double to);
         struct VarScore{
@@ -46,8 +46,8 @@ namespace Pcasso {
                 return (score < vs.score);
             }
         };
-//        CRef     propagate        (); 
-        void     removeSatisfied  (vec<CRef>& cs);                                         // Shrink 'cs' to contain only non-satisfied clauses.
+        // Riss::CRef     propagate        (); 
+        void     removeSatisfied  (Riss::vec<Riss::CRef>& cs);                                         // Shrink 'cs' to contain only non-satisfied clauses.
         /// local version of the statistics object
         Statistics localStat; // Norbert> Local Statistics
 
@@ -80,27 +80,34 @@ namespace Pcasso {
         static unsigned countFailedLiterals; 
         static unsigned countLookaheadDecisions;
         //pure literals
-        vec<Lit> pureLiterals;
+        Riss::vec<Riss::Lit> pureLiterals;
         
-        //vec<int>& sortedVar,vec<double>& negHScore, vec<double>& posHScore, int watcherPosLitSize[], int watcherNegLitSize[], int numPosLitTerClause[], int numNegLitTerClause[],int& maxClauseSize
+        // Riss::vec<int>& sortedVar;
+        // Riss::vec<double>& negHScore;
+        // Riss::vec<double>& posHScore;
+        // int watcherPosLitSize[];
+        // int watcherNegLitSize[];
+        // int numPosLitTerClause[];
+        // int numNegLitTerClause[];
+        // int& maxClauseSize;
 
         //data
-        vec<vec<Lit>* > *splitting; //splittings produced
-        vec<vec<vec<Lit>* >* > *validAtLevel; //valid for each splittings
+        Riss::vec<Riss::vec<Riss::Lit>* > *splitting; //splittings produced
+        Riss::vec<Riss::vec<Riss::vec<Riss::Lit>* >* > *validAtLevel; //valid for each splittings
         double timeOut;
-        vec<bool> tabuList;
-        vec<int> bestKList;//subset of variables for lookahead
-        vec<int> sortedVar;
-        vec<unsigned> numNegLitTerClause;
-        vec<unsigned> numPosLitTerClause;
-        vec<double> negHScore;
-        vec<double> posHScore;
-        vec<unsigned> watcherNegLitSize;
-        vec<unsigned> watcherPosLitSize;
-	vec<VarFlags> phaseSaving; // to not change the solver
+        Riss::vec<bool> tabuList;
+        Riss::vec<int> bestKList;//subset of variables for lookahead
+        Riss::vec<int> sortedVar;
+        Riss::vec<unsigned> numNegLitTerClause;
+        Riss::vec<unsigned> numPosLitTerClause;
+        Riss::vec<double> negHScore;
+        Riss::vec<double> posHScore;
+        Riss::vec<unsigned> watcherNegLitSize;
+        Riss::vec<unsigned> watcherPosLitSize;
+        Riss::vec<VarFlags> phaseSaving; // to not change the solver
         int maxClauseSize;
-        MarkArray markArray;
-        vec<unsigned> learntsLimit;
+        Riss::MarkArray markArray;
+        Riss::vec<unsigned> learntsLimit;
         
         ComplexLock communicationLock;
         //helper methods
@@ -108,11 +115,11 @@ namespace Pcasso {
         bool checkSolution();
         void clearLearnts();
         void preselectionHeuristic();
-        void preselectVar(vec<int>& sv, vec<int>& bkl);
-        bool lookahead(Lit p, vec<Lit>& lookaheadTrail, vec<Lit>& units);
-        bool doubleLookahead(bool& sol, vec<Lit>& binClauses, vec<Lit>& unitLearnts, Lit lastDecision);
-        Lit pickBranchLiteral(vec<vec<Lit>* > **valid);
-        void constraintResolvent(const vec<Lit>& t);
+        void preselectVar(Riss::vec<int>& sv, Riss::vec<int>& bkl);
+        bool lookahead(Riss::Lit p, Riss::vec<Riss::Lit>& lookaheadTrail, Riss::vec<Riss::Lit>& units);
+        bool doubleLookahead(bool& sol, Riss::vec<Riss::Lit>& binClauses, Riss::vec<Riss::Lit>& unitLearnts, Riss::Lit lastDecision);
+        Riss::Lit pickBranchLiteral(Riss::vec<Riss::vec<Riss::Lit>* > **valid);
+        void constraintResolvent(const Riss::vec<Riss::Lit>& t);
         void learntsLimitPush();
         void learntsLimitPop();
     };

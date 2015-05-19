@@ -22,6 +22,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <iostream> // Davide> Debug
 
+
 unsigned int TreeNode::runningID = 0;
 
 ComplexLock TreeNode::unitLock = ComplexLock();

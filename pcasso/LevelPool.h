@@ -22,14 +22,14 @@
 #include <iostream>
 #include <fstream>
 
-using namespace Riss;
-using namespace std;
+// using namespace Riss;
+// using namespace std;
 
 namespace PcassoDavide{
 
 class LevelPool{
 //	bool remove;
-	string code;
+	std::string code;
 	bool full;
 	int endP;
 
@@ -43,10 +43,9 @@ public:
 	int max_size;
 
 	void dumpClauses( const char* filename){
-
-		//    	fstream s;
-		//    	s.open(filename, fstream::out);
-		//    	s << "c [POOL] all collected shared clauses begin: " << endl;
+		//    	std::fstream s;
+		//    	s.open(filename, std::fstream::out);
+		//    	s << "c [POOL] all collected shared clauses begin: " << std::endl;
 		//    	for( unsigned int i = 0 ; i < shared_clauses.size(); ++i )
 		//    	{
 		//    		clause& c = shared_clauses[i];
@@ -54,29 +53,29 @@ public:
 		//    			s << (sign(c.lits[j]) ? "-" : "") << var(c.lits[j])+1 << " ";
 		//    		s << "0\n";
 		//    	}
-		//    	s << "c [POOL] all collected shared clauses end: " << endl;
+		//    	s << "c [POOL] all collected shared clauses end: " << std::endl;
 		//    	s.close();
 	}
 
-	bool duplicate( const vec<Lit>& c );
-	bool add_shared(vec<Lit>& lits, unsigned int nodeID, bool disable_dupl_removal=false, bool disable_dupl_check=false);
+	bool duplicate( const Riss::vec<Riss::Lit>& c );
+	bool add_shared(Riss::vec<Riss::Lit>& lits, unsigned int nodeID, bool disable_dupl_removal=false, bool disable_dupl_check=false);
 
 
 	/** Reads positions until the writeP position **/
-	void getChunk(int readP, vec<Lit>& chunk);
+	void getChunk(int readP, Riss::vec<Riss::Lit>& chunk);
 
 public:
-	inline string getCode(void) const{
+	inline std::string getCode(void) const{
 		return code;
 	}
 
-	inline void setCode(const string& _code){
+	inline void setCode(const std::string& _code){
 		code = _code;
 	}
 	inline bool isFull() {
 		return full;
 	}
-	vec<Lit> shared_clauses;
+	Riss::vec<Riss::Lit> shared_clauses;
 };
 }
 

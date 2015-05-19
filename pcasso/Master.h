@@ -45,28 +45,28 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <cstdio>
 #include <algorithm>    // std::sort
 
-using namespace std;
-using namespace Pcasso;
-using namespace Riss;
+// using namespace std;
+// using namespace Pcasso;
+// using namespace Riss;
 
+namespace Pcasso {
 
 class Master
 {
 public: // Davide
-	//void removeUnreachableNodes(TreeNode* node);
+	// void removeUnreachableNodes(TreeNode* node);
 	/** Stops all the nodes that are known to be unsat */
 	void killUnsatChildren(unsigned int i);
-	//void removeUnsatNodesFromQueues();
-	//void killUnsatChildren(int tDataIndex);
+	// void removeUnsatNodesFromQueues();
+	// void killUnsatChildren(int tDataIndex);
 
 	/// configuration with which each solver is initialized
-static	CoreConfig defaultSolverConfig;
+	static Riss::CoreConfig defaultSolverConfig;
 	
-public:
 	struct Parameter {
 		int    verb;
 		bool   pre;
-		string dimacs;
+		std::string dimacs;
 	};
 
 private:
@@ -85,13 +85,13 @@ private:
 		Lit* lits;
 	};
 
-                    struct clause_size {
-                        vector<clause>& vectorClause;
-                        clause_size(vector<clause>& vc) : vectorClause(vc){}
-                        bool operator() (clause x, clause y) {
-                            return x.size < y.size;
-                        }
-                    };
+    struct clause_size {
+        std::vector<clause>& vectorClause;
+        clause_size(std::vector<clause>& vc) : vectorClause(vc){}
+        bool operator() (clause x, clause y) {
+            return x.size < y.size;
+        }
+    };
 
 	// data that is passed to the thread that is responsible for solving the instance
 	struct ThreadData {
@@ -109,10 +109,10 @@ private:
 
 	// to maintain the original formula
 	int maxVar;
-	vector< clause > originalFormula;
+	std::vector< clause > originalFormula;
 	vec<lbool>* model;       // model that will be produced by one of the child nodes
-	//vector<char> polarity;   // preferred polarity from the last solver, for the next solvers
-	// vector<double> activity; // activity of each variable
+	//std::vector<char> polarity;   // preferred polarity from the last solver, for the next solvers
+	// std::vector<double> activity; // activity of each variable
 
 	// to maintain the parameters that have been specified on the commandline
 	Parameter param;
@@ -140,8 +140,8 @@ private:
 
 	// partition tree and work queue
 	TreeNode root;
-	deque<TreeNode*> solveQueue;
-	deque<TreeNode*> splitQueue;
+	std::deque<TreeNode*> solveQueue;
+	std::deque<TreeNode*> splitQueue;
 
 
 	// wakes up the master thread such that it can check for the reason
@@ -179,10 +179,10 @@ private:
 	/* parses formula into originalFormulaVector
 	 * @param filename if empty, parse from stdin
 	 */
-	int parseFormula(string filename);
+	int parseFormula(std::string filename);
 
 	// return the formula for reading (for the threads)
-	const vector< clause >& formula() const ;
+	const std::vector< clause >& formula() const ;
 	// return number of variables for reading
 	const unsigned int varCnt() const;
 
@@ -246,5 +246,7 @@ public:
 	unsigned solverMaxTimeID;
 	unsigned nConflictKilledID;
 };
+
+} // namespace Pcasso
 
 #endif
