@@ -436,28 +436,33 @@ bool Solver::satisfied(const Clause& c) const {
 inline unsigned int Solver::computeLBD(const vec<Lit> & lits) {
   int nblevels = 0;
   permDiff.nextStep();
+  bool withLevelZero = false;
     for(int i=0;i<lits.size();i++) {
       int l = level(var(lits[i]));
+      withLevelZero = (l==0);
       if ( ! permDiff.isCurrentStep(l) ) {
 	permDiff.setCurrentStep(l);
 	nblevels++;
       }
     }
-  return nblevels;
+  if( config.opt_lbd_ignore_l0 && withLevelZero ) return nblevels - 1;
+  else return nblevels;
 }
 
 inline unsigned int Solver::computeLBD(const Clause &c) {
   int nblevels = 0;
   permDiff.nextStep();
-
+  bool withLevelZero = false;
     for(int i=0;i<c.size();i++) {
       int l = level(var(c[i]));
+      withLevelZero = (l==0);
       if ( ! permDiff.isCurrentStep(l) ) {
 	permDiff.setCurrentStep(l);
 	nblevels++;
       }
     }
-  return nblevels;
+  if( config.opt_lbd_ignore_l0 && withLevelZero ) return nblevels - 1;
+  else return nblevels;
 }
 
 
@@ -1265,6 +1270,7 @@ struct reduceDB_lt {
 
 void Solver::reduceDB()
 {
+  DOUT( if( config.opt_removal_debug > 0)  cerr << "c reduceDB ..." << endl; );
   reduceDBTime.start();
   int     i, j;
   nbReduceDB++;
@@ -1288,6 +1294,7 @@ void Solver::reduceDB()
   // Keep clauses which seem to be usefull (their lbd was reduce during this sequence)
 
   int limit = learnts.size() / 2;
+  DOUT( if( config.opt_removal_debug > 1) cerr << "c reduce limit: " << limit << endl; ) ;
 
   const int delStart = (int) (config.opt_keep_worst_ratio * (double)learnts.size()); // keep some of the bad clauses!
   for (i = j = 0; i < learnts.size(); i++){
@@ -1295,14 +1302,17 @@ void Solver::reduceDB()
     if (i >= delStart && c.lbd()>2 && c.size() > 2 && c.canBeDel() &&  !locked(c) && (i < limit)) {
       removeClause(learnts[i]);
       nbRemovedClauses++;
+      DOUT( if( config.opt_removal_debug > 2) cerr << "c remove clause " << c << endl; );
     }
     else {
       if(!c.canBeDel()) limit++; //we keep c, so we can delete an other clause
       c.setCanBeDel(true);       // At the next step, c can be delete
+      DOUT( if( config.opt_removal_debug > 2) cerr << "c keep clause " << c << " due to set 'canBeDel' flag" << endl; ); 
       learnts[j++] = learnts[i];
     }
   }
   learnts.shrink_(i - j);
+  DOUT( if( config.opt_removal_debug > 0) cerr << "c resulting learnt clauses: " << learnts.size() << endl; );
   checkGarbage();
   reduceDBTime.stop();
 }

@@ -792,12 +792,16 @@ inline void Solver::varBumpActivityD(Var v, double inc) {
 
 inline void Solver::claDecayActivity() { cla_inc *= (1 / clause_decay); }
 inline void Solver::claBumpActivity (Clause& c, double inverseRatio) {
+  DOUT( if( config.opt_removal_debug > 1) cerr << "c bump clause activity for " << c << " with " << c.activity() << " by " << inverseRatio << endl; ) ;
         if ( (c.activity() += cla_inc / inverseRatio) > 1e20 ) {
             // Rescale:
             for (int i = 0; i < learnts.size(); i++)
                 ca[learnts[i]].activity() *= 1e-20;
-            cla_inc *= 1e-20; } }
-
+            cla_inc *= 1e-20; 
+  DOUT( if( config.opt_removal_debug > 1) cerr << "c rescale clause activities" << endl; ) ;
+	}
+}
+            
 inline void Solver::checkGarbage(void){ return checkGarbage(garbage_frac); }
 inline void Solver::checkGarbage(double gf){
     if (ca.wasted() > ca.size() * gf)

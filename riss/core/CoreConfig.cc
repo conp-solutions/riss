@@ -36,7 +36,8 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  ppOnly (_cat, "ppOnly", "interrupts search after preprocessing", false, optionListPtr ),
  
 #ifndef NDEBUG
- opt_learn_debug (_cat, "learn-debug", "print debug information during learning", false, optionListPtr ),
+ opt_learn_debug   (_cat, "learn-debug", "print debug information during learning", false, optionListPtr ),
+ opt_removal_debug (_cat, "rem-debug",   "print debug information about removal", 0, IntRange(0, 5), optionListPtr ),
 #endif
  
 
