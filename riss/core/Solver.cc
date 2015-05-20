@@ -733,7 +733,6 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 		  }
 		}
 	    }
-	  }
 	}
 
 #ifdef CLS_EXTRA_INFO // if resolution is done, then take also care of the participating clause!

@@ -7,7 +7,7 @@ params="-quiet -printDec=3 -no-learn-debug -verb=0"
 #
 ./riss-master $params $1 2> /tmp/err_$$  | grep -v "time" | grep -v "riss" | grep -v "Ratios" | grep -v "cpu" | grep -v "sec" > /tmp/out_$$
 
-./riss-hacks  $params $1 2> /tmp/err2_$$ | grep -v "time" | grep -v "riss" | grep -v "Ratios" | grep -v "cpu" | grep -v "sec" > /tmp/out2_$$
+./riss  $params $1 2> /tmp/err2_$$ | grep -v "time" | grep -v "riss" | grep -v "Ratios" | grep -v "cpu" | grep -v "sec" > /tmp/out2_$$
 
 # stderr
 diff /tmp/err_$$ /tmp/err2_$$ #> /dev/null
