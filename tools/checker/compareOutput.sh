@@ -1,6 +1,10 @@
 #!/bin/bash 
 
-params="-quiet -printDec=3 -rem-debug=3 -learn-debug -verb=0"
+#
+# for f in red*.cnf bug*.cnf; do ./compareOutput.sh $f > /dev/null 2> /dev/null; ec=$?; if [ "$ec" -ne "0" ]; then echo "$ec for $f with `grep \"p cnf\" $f`"; fi; done
+#
+
+params="-quiet -printDec=2 -rem-debug=1 -no-learn-debug -verb=0"
 
 #
 # run the  solvers
@@ -35,7 +39,7 @@ ec1=$?
 if [ "$ec2" == "1" ]
 then
   # analyze manually
-  	meld /tmp/err_$$ /tmp/err2_$$
+  #	meld /tmp/err_$$ /tmp/err2_$$
 	exit 2
 fi
 

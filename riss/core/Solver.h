@@ -1082,9 +1082,8 @@ inline int Solver::computeLBD(const T& lits) {
 
         // If the current decision level in the mark array is not associated
         // with the current step, that means that the decision level was
-        // not discovered before. Ignore all literals on level 0, as they are 
-	// implied by the formula
-        if (dec_level != 0 && !lbd_marker.isCurrentStep(dec_level)) {
+        // not discovered before. 
+        if ( !lbd_marker.isCurrentStep(dec_level) ) {
             // mark the current level as discovered
             lbd_marker.setCurrentStep(dec_level);
             // a new decision level was found
@@ -1093,6 +1092,7 @@ inline int Solver::computeLBD(const T& lits) {
     }
 
     // if the parameter says that level 0 should be ignored, ignore it (if it have been present)
+    // Ignore all literals on level 0, as they are implied by the formula
     if( config.opt_lbd_ignore_l0 && withLevelZero ) return distance - 1;
     return distance;
 }
