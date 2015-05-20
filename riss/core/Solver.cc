@@ -756,8 +756,10 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 		    // UPDATEVARACTIVITY trick (see competition'09 companion paper)
                     // VSIDS scores of variables at the current decision level is aditionally 
                     // bumped if they are propagated by core learnt clauses (similar to glucose)
-                    if ( r != CRef_Undef && ca[r].learnt())
+                    if ( r != CRef_Undef && ca[r].learnt()){
+		      DOUT( if (config.opt_learn_debug) cerr << "c add " << q << " to last decision level" << endl; );
                       lastDecisionLevel.push(q);
+		    }
 		}
 #endif
 
@@ -968,9 +970,12 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 #ifdef UPDATEVARACTIVITY
   // UPDATEVARACTIVITY trick (see competition'09 companion paper)
   if(lastDecisionLevel.size()>0 ) {
+    
     for(int i = 0;i<lastDecisionLevel.size();i++) {
-      if(ca[reason(var(lastDecisionLevel[i]))].lbd()<lbd)
+      if(ca[reason(var(lastDecisionLevel[i]))].lbd()<lbd) {
+	DOUT( if ( config.opt_learn_debug ) cerr << "c add " << lastDecisionLevel[i] << " to bump, with " << ca[reason(var(lastDecisionLevel[i]))].lbd() << " vs " << lbd << endl;
 	varsToBump.push( var(lastDecisionLevel[i]) ) ;
+      }
     }
     lastDecisionLevel.clear();
   } 
