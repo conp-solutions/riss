@@ -815,9 +815,9 @@ protected:
     int probingLiteral(Lit v);
   
     // 999 MS hack 
-    bool activityBasedRemoval;     // use minisat or glucose style of clause removal and activities
-    int lbd_core_threshold;        // threadhold to move clause from learnt to formula (if LBD is low enough)
-    int learnts_reduce_fraction;   // fraction of how many learned clauses should be removed
+    bool  activityBasedRemoval;     // use minisat or glucose style of clause removal and activities
+    int   lbd_core_threshold;        // threadhold to move clause from learnt to formula (if LBD is low enough)
+    float learnts_reduce_fraction;   // fraction of how many learned clauses should be removed
     
     
 /// for coprocessor
@@ -955,12 +955,16 @@ inline void Solver::varBumpActivityD(Var v, double inc) {
 
 inline void Solver::claDecayActivity() { cla_inc *= (1 / clause_decay); }
 inline void Solver::claBumpActivity (Clause& c, double inverseRatio) {
+  DOUT( if( config.opt_removal_debug > 1) cerr << "c bump clause activity for " << c << " with " << c.activity() << " by " << inverseRatio << endl; ) ;
         if ( (c.activity() += cla_inc / inverseRatio) > 1e20 ) {
             // Rescale:
             for (int i = 0; i < learnts.size(); i++)
                 ca[learnts[i]].activity() *= 1e-20;
-            cla_inc *= 1e-20; } }
-
+            cla_inc *= 1e-20; 
+  DOUT( if( config.opt_removal_debug > 1) cerr << "c rescale clause activities" << endl; ) ;
+	}
+}
+            
 inline void Solver::checkGarbage(void){ return checkGarbage(garbage_frac); }
 inline void Solver::checkGarbage(double gf){
     if (ca.wasted() > ca.size() * gf)
@@ -1068,10 +1072,11 @@ inline int Solver::computeLBD(const T& lits) {
 
     // Generate a unique identifier (aka step) for this function call
     lbd_marker.nextStep();
-
+    bool withLevelZero = false;  
     for (int i = 0; i < lits.size(); i++) {
         // decision level of the literal
         const int& dec_level = level(var(lits[i]));
+	withLevelZero = (dec_level==0);
 
         // If the current decision level in the mark array is not associated
         // with the current step, that means that the decision level was
@@ -1085,6 +1090,8 @@ inline int Solver::computeLBD(const T& lits) {
         }
     }
 
+    // if the parameter says that level 0 should be ignored, ignore it (if it have been present)
+    if( config.opt_lbd_ignore_l0 && withLevelZero ) return distance - 1;
     return distance;
 }
 

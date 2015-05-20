@@ -623,6 +623,8 @@ bool RATElimination::shortATM(const CRef clause, const Lit left, int& trailPosit
  
     return false; 
   }
+  
+  return false;
 }
 
 bool RATElimination::minimizeRAT()

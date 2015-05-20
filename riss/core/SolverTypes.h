@@ -175,15 +175,15 @@ class Clause {
         unsigned can_strengthen : 1;
         unsigned size      : 32;	
 #else
-        unsigned lbd       : 19;
-	unsigned isCore    : 1;
+        unsigned shared     : 1;
+        unsigned shCleanDelay : 1;
+        unsigned size      : 25;
         unsigned canbedel  : 1;
         unsigned can_subsume : 1;
         unsigned can_strengthen : 1;
         unsigned pt_level   : 9;     // level of the clause in the decision tree
-        unsigned shared     : 1;
-        unsigned shCleanDelay : 1;
-        unsigned size      : 27;
+        unsigned isCore    : 1;
+        unsigned lbd       : 19;
 #endif
 	
 #ifdef CLS_EXTRA_INFO

@@ -451,6 +451,7 @@ bool Solver::satisfied(const Clause& c) const {
 
 
 
+
 /******************************************************************
  * Minimisation with binary reolution
  ******************************************************************/
@@ -824,17 +825,6 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
       // clean seen, if more literals have been added
       if( !isOnlyUnit ) while (index >= trail_lim[ decisionLevel() - 1 ] ) varFlags[ var(trail[index--]) ].seen = 0;
       
-#warning have an extra-routine for the below code (is repeated below)
-      // bump the used clauses!
-      if( config.opt_cls_act_bump_mode != 2 ) { // if the static measure is not use, use a dynamic one based on the LBD
-	for( int i = 0 ; i < clssToBump.size(); ++ i ) {
-	  claBumpActivity( ca[ clssToBump[i] ], config.opt_cls_act_bump_mode == 1 ? out_learnt.size() : lbd );
-	}
-      }
-      for( int i = 0 ; i < varsToBump.size(); ++ i ) {
-	varBumpActivity( varsToBump[i], config.opt_var_act_bump_mode == 0 ? 1 : (config.opt_var_act_bump_mode == 1 ? out_learnt.size() : lbd) );
-      }
-      
       lbd = 1; // for glucoses LBD score
       return units; // for unit clauses no minimization is necessary
     }
@@ -992,10 +982,8 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     }
 
   // bump the used clauses!
-  if( config.opt_cls_act_bump_mode != 2 ) { // if the static measure is not use, use a dynamic one based on the LBD
-    for( int i = 0 ; i < clssToBump.size(); ++ i ) {
-      claBumpActivity( ca[ clssToBump[i] ], config.opt_cls_act_bump_mode == 1 ? out_learnt.size() : lbd );
-    }
+  for( int i = 0 ; i < clssToBump.size(); ++ i ) {
+    claBumpActivity( ca[ clssToBump[i] ], config.opt_cls_act_bump_mode == 1 ? out_learnt.size() : lbd );
   }
   for( int i = 0 ; i < varsToBump.size(); ++ i ) {
     varBumpActivity( varsToBump[i], config.opt_var_act_bump_mode == 0 ? 1 : (config.opt_var_act_bump_mode == 1 ? out_learnt.size() : lbd) );
@@ -1131,47 +1119,13 @@ void Solver::uncheckedEnqueue(Lit p, Riss::CRef from, bool addToProof, const uin
 CRef Solver::propagate(bool duringAddingClauses)
 {
     assert( ( decisionLevel() == 0 || !duringAddingClauses ) && "clauses can only be added at level 0!" );
-    assert( impl_cl_heap.empty() && "for now there cannot be any literals in the heap" );
     // if( config.opt_printLhbr ) cerr << endl << "c called propagate" << endl;
     DOUT( if( config.opt_learn_debug ) cerr << "c call propagate with " << qhead << " for " <<  trail.size() << " lits" << endl; );
   
     CRef    confl     = CRef_Undef;
     int     num_props = 0;
     watches.cleanAll(); clssToBump.clear();
-    while (qhead < trail.size() || (pq_order && !impl_cl_heap.empty())) {
-      
-	DOUT( if( config.opt_learn_debug ) cerr << "c trail.size() " << trail.size() << " qhead: " << qhead << " impl_cl_heap.size(): " << impl_cl_heap.size() << endl; );
-      
-        if (pq_order && qhead >= trail.size()) {
-            assert(!impl_cl_heap.empty());
-
-            ImplData best   = impl_cl_heap.removeMin();
-            CRef     bestcr = best.reason;
-	    Lit      best0  = best.impliedLit;
-	    if( best.impliedLit == lit_Undef ) { // if not set with a binary clause
-	      assert( ca[bestcr].size() > 2 && "binary clauses should set this value themselves" );
-	      best0  = ca[bestcr][0] ; // statically picks first literal from reason clause
-	    }
-            
-	    DOUT( if( config.opt_learn_debug ) cerr << "c contra selected " << best0 << " with reason " << ca[bestcr] << endl; );
-
-            if (value(best0) == l_False) {
-		DOUT( if( config.opt_learn_debug ) cerr << "c literal " << best0 << " is in conflict" << endl; );
-                confl = bestcr;
-                qhead = trail.size();
-                impl_cl_heap.clear();
-                break;
-            }
-
-            if (value(best0) == l_True) {
-		DOUT( if( config.opt_learn_debug ) cerr << "c literal " << best0 << " already satisfied" << endl; );
-                continue;
-            }
-
-            uncheckedEnqueue(best0, bestcr);
-            assert (qhead < trail.size());
-        }
-      
+    while (qhead < trail.size()){
         Lit            p   = trail[qhead++];     // 'p' is enqueued fact to propagate.
         DOUT( if( config.opt_learn_debug ) cerr << "c propagate literal " << p << endl; );
         realHead = qhead;
@@ -1188,28 +1142,13 @@ CRef Solver::propagate(bool duringAddingClauses)
 	  assert( ca[ wbin[k].cref() ].size() == 2 && "in this list there can only be binary clauses" );
 	  DOUT( if( config.opt_learn_debug ) cerr << "c checked binary clause " << ca[wbin[k].cref() ] << " with implied literal having value " << toInt(value(imp)) << endl; );
 	  if(value(imp) == l_False) {
-	    impl_cl_heap.clear();
-	    if( !config.opt_long_conflict ) {
-	      assert( impl_cl_heap.empty() && "in case of a conflict the heap has to be empty" );
-	      return wbin[k].cref();
-	    }
+	    if( !config.opt_long_conflict ) return wbin[k].cref();
 	    confl = wbin[k].cref();
 	    break;
 	  }
 	  
 	  if(value(imp) == l_Undef) {
-	    
-	    if (pq_order) {
-                // Priority is level of 3rd lit (small is good), then
-                // local trail position of 2nd lit (small is good).
-                // Other lits are at least as early as 3rd lit.
-		// simplified to binary clauses
-#warning check whether this is necessary (how binary clauses are treaded in contrasat
-                ImplData implied(wbin[k].cref(), imp, 0, num_props);
-                impl_cl_heap.insert(implied);
-            } else {
-	      uncheckedEnqueue(imp,wbin[k].cref(), duringAddingClauses);
-	    }
+	    uncheckedEnqueue(imp,wbin[k].cref(), duringAddingClauses);
 	  } 
 	}
 
@@ -1252,14 +1191,7 @@ CRef Solver::propagate(bool duringAddingClauses)
             for (int k = 2; k < c.size(); k++)
                 if (value(c[k]) != l_False)
 		{
-                    // keep c[2] as most recent false_lit.
-                    if (pq_order) {
-                        assert(c[1] == false_lit);
-                        c[1] = c[k]; c[k] = c[2]; c[2] = false_lit;
-                    } else {
-			c[1] = c[k]; c[k] = false_lit;
-                    }
-		    
+                    c[1] = c[k]; c[k] = false_lit;
 		    DOUT( if( config.opt_learn_debug ) cerr << "c new watched literal for clause " << ca[cr] << " is " << c[1] <<endl; );
                     watches[~c[1]].push(w);
                     goto NextClause; 
@@ -1272,35 +1204,24 @@ CRef Solver::propagate(bool duringAddingClauses)
             if ( value(first) == l_False ) {
                 confl = cr; // independent of opt_long_conflict -> overwrite confl!
                 qhead = trail.size();
-		impl_cl_heap.clear(); 
                 // Copy the remaining watches:
                 while (i < end)
                     *j++ = *i++;
-            } else { 
-	      
-	      if (pq_order) {
-                // Priority is level of 3rd lit (small is good), then
-                // local trail position of 2nd lit (small is good).
-                // Other lits are at least as early as 3rd lit.
-                Lit  third = (c.size()>2)? c[2] : lit_Undef;
-                int  level3 = (third==lit_Undef)? 0: level(var(third));
-                ImplData implied(cr, level3, num_props);
-                impl_cl_heap.insert(implied);
             } else {
 		DOUT( if( config.opt_learn_debug ) cerr << "c current clause is unit clause: " << ca[cr] << endl; );
                 uncheckedEnqueue(first, cr, duringAddingClauses);
-	      }
-
-	      if( c.mark() == 0  && config.opt_update_lbd == 0) { // if LHBR did not remove this clause
-		int newLbd = computeLBD( c );
-		if( newLbd < c.lbd() || config.opt_lbd_inc ) { // improve the LBD (either LBD decreased,or option is set)
-		  if( c.lbd() <= lbLBDFrozenClause ) {
-		    c.setCanBeDel( false ); // LBD of clause improved, so that its not considered for deletion
+		
+		// if( config.opt_printLhbr ) cerr << "c final common dominator: " << commonDominator << endl;
+		
+		if( c.mark() == 0  && config.opt_update_lbd == 0) { // if LHBR did not remove this clause
+		  int newLbd = computeLBD( c );
+		  if( newLbd < c.lbd() || config.opt_lbd_inc ) { // improve the LBD (either LBD decreased,or option is set)
+		    if( c.lbd() <= lbLBDFrozenClause ) {
+		      c.setCanBeDel( false ); // LBD of clause improved, so that its not considered for deletion
+		    }
+		    c.setLBD(newLbd);
 		  }
-		  c.setLBD(newLbd);
 		}
-	      }
-
 	    }
         NextClause:;
         }
@@ -1309,9 +1230,6 @@ CRef Solver::propagate(bool duringAddingClauses)
     }
     propagations += num_props;
     simpDB_props -= num_props;
-    
-    impl_cl_heap.clear(); // after a binary conflict with long conflicts enabled there might be newly implied literals
-    assert( impl_cl_heap.empty() && "in case of a conflict the heap has to be empty" );
     
     return confl;
 }
@@ -1325,8 +1243,6 @@ CRef Solver::propagate(bool duringAddingClauses)
 |    Remove half of the learnt clauses, minus the clauses locked by the current assignment. Locked
 |    clauses are clauses that are reason to some assignment. Binary clauses are never removed.
 |________________________________________________________________________________________________@*/
-
-// lbd based sort
 struct reduceDB_lbd_lt { 
     ClauseAllocator& ca;
     reduceDB_lbd_lt(ClauseAllocator& ca_) : ca(ca_) {}
@@ -1365,6 +1281,7 @@ struct reduceDB_act_lt {
 
 void Solver::reduceDB()
 {
+  DOUT( if( config.opt_removal_debug > 0) cerr << "c reduceDB ..." << endl; ) ;
   reduceDBTime.start();
   int     i, j;
   nbReduceDB++;
@@ -1390,25 +1307,28 @@ void Solver::reduceDB()
   // Keep clauses which seem to be usefull (their lbd was reduce during this sequence)
 
   int limit = learnts.size() * learnts_reduce_fraction;
+  DOUT( if( config.opt_removal_debug > 1) cerr << "c reduce limit: " << limit << endl; ) ;
 
   const int delStart = (int) (config.opt_keep_worst_ratio * (double)learnts.size()); // keep some of the bad clauses!
   for (i = j = 0; i < learnts.size(); i++){
     Clause& c = ca[learnts[i]];
-    if( c.mark() != 0 && ! c.isCoreClause() ) { // handle usual and interesting learnt clauses
-      if (i >= delStart 
-	  && c.lbd()>2 
-	  && c.size() > 2 
-	  && c.canBeDel() 
-	  &&  !locked(c) 
-	  && (i < limit  || activityBasedRemoval && c.activity() < extra_lim )) {
-	removeClause(learnts[i]);
-	nbRemovedClauses++;
-      }
-      else {
-	if(!c.canBeDel()) limit++; //we keep c, so we can delete an other clause
-	c.setCanBeDel(true);       // At the next step, c can be delete
-	learnts[j++] = learnts[i];
-      }
+    if( ! c.isCoreClause() ) {
+        if (i >= delStart 
+          && ( c.lbd()>2 || activityBasedRemoval )
+          && c.size() > 2 
+          && c.canBeDel() 
+          &&  !locked(c) 
+          && (i < limit)) {
+          removeClause(learnts[i]);
+          nbRemovedClauses++;
+          DOUT( if( config.opt_removal_debug > 2) cerr << "c remove clause " << c << endl; );
+        }
+        else {
+          if(!c.canBeDel()) limit++; //we keep c, so we can delete an other clause
+          c.setCanBeDel(true);       // At the next step, c can be delete
+          DOUT( if( config.opt_removal_debug > 2) cerr << "c keep clause " << c << " due to set 'canBeDel' flag" << endl; ); 
+          learnts[j++] = learnts[i];
+        }
     } else {
       // core-learnt clauses are removed from this vector
       assert( (!c.isCoreClause() || !c.learnt()) && "for all core-learnt clauses the learnt flag should have been erased" );
@@ -1416,6 +1336,7 @@ void Solver::reduceDB()
   }
   // FIXME: check whether old variant of removal works with the above code - otherwise include with parameter
   learnts.shrink_(i - j);
+  DOUT( if( config.opt_removal_debug > 0) cerr << "c resulting learnt clauses: " << learnts.size() << endl; );
   checkGarbage();
   reduceDBTime.stop();
 }
@@ -1458,7 +1379,6 @@ void Solver::clearPreferred()
 }
 // NuSMV: PREF MOD END
                
-
                
 void Solver::counterImplicationRestart(){
     // number of times this function is executed
@@ -1679,7 +1599,6 @@ int Solver::probingLiteral(Lit v) {
     // No conflicting clause found
     return 0;
 }
-
 /*_________________________________________________________________________________________________
 |
 |  search : (nof_conflicts : int) (params : const SearchParams&)  ->  [lbool]
@@ -1912,12 +1831,12 @@ bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
       }
     } else { // usual static luby or geometric restarts
       if (nof_conflicts >= 0 && conflictC >= nof_conflicts || !withinBudget()) {
-
 	    // do counter implication restart before partial restart
 	    if (cir_bump_ratio != 0) {
 	      counterImplicationRestart();
 	    }
 	
+
 	    progress_estimate = progressEstimate();
 	    int partialLevel = 0;
 	    if( config.opt_restart_level != 0 ) {
@@ -1930,9 +1849,9 @@ bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
 		return false; // we found that we should not restart, because we have a (partial) model
 	      }
 	    }
-    
 	    cancelUntil(partialLevel);
 	    return true;
+
       }
     }
   }
@@ -3116,6 +3035,7 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
     attachClause(cr);
     uncheckedEnqueue(learnt_clause[0], cr); // this clause is only unit, if OTFSS jumped to the same level!
     DOUT( if( config.opt_printDecisions > 1  ) cerr << "c enqueue literal " << learnt_clause[0] << " at level " <<  decisionLevel() << " from learned clause " << learnt_clause << endl; );
+
     
     if( analyzeNewLearnedClause( cr ) )   // check whether this clause can be used to imply new backbone literals!
     {

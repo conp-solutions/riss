@@ -40,6 +40,7 @@ public:
  BoolOption ppOnly; // interrupt after preprocessing
 #ifndef NDEBUG
  BoolOption opt_learn_debug;
+ IntOption opt_removal_debug;
 #endif
  
  DoubleOption opt_K; 
