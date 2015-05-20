@@ -778,9 +778,11 @@ inline void Solver::insertVarOrder(Var x) {
 inline void Solver::varDecayActivity() { var_inc *= (1 / var_decay); }
 inline void Solver::varBumpActivity(Var v, double inverseRatio) { varBumpActivityD(v, var_inc / (double) inverseRatio); }
 inline void Solver::varBumpActivityD(Var v, double inc) {
+  DOUT( if( config.opt_printDecisions > 1) cerr << "c bump var activity for " << v+1 << " with " << activity[v] << " by " << inc << endl; ) ;
     activity[v] = ( useVSIDS * activity[v] ) + inc; // interpolate between VSIDS and VMTF here!
     // NOTE this code is also used in extended clause learning, and restricted extended resolution
     if ( activity[v] > 1e100 ) {
+	DOUT( if( config.opt_printDecisions > 0) cerr << "c rescale decision heap" << endl; ) ;
         // Rescale:
         for (int i = 0; i < nVars(); i++)
             activity[i] *= 1e-100;
