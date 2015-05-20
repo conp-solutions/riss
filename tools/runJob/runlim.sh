@@ -48,12 +48,12 @@ echo "--------------------------------------------------------------------------
 
 file $BIN | grep 'statically linked'
 
-if [ "$?" = "1" ]
-then
-  file $BIN
-  echo "ERROR: $BIN is not a statically linked binary (check with 'file <binary>')."
-  exit 1
-fi
+#if [ "$?" = "1" ]
+#then
+#  file $BIN
+#  echo "ERROR: $BIN is not a statically linked binary (check with 'file <binary>')."
+#  exit 1
+#fi
 
 echo "  Used parameters         | $PARAMS"
 echo "  Time limit              | $(($TLIM))s"
@@ -95,12 +95,7 @@ function clean_up {
   rm -R $DEST
   echo "Received SIGINT, SIGTERM or SIGHUP. Abort."
 		
-  DEST=`pwd`'/'$(basename "$DEST")
-  echo "------------------------------------------------------------------------------------------------------"
-  echo "  Output written to       | `pwd`/tmp/$MD5SUM*"
-  echo "------------------------------------------------------------------------------------------------------"
-  
-  exit
+  exit 1
 }
 
 trap clean_up SIGHUP SIGINT SIGTERM
@@ -116,7 +111,6 @@ rm $FILE
 cp -R $DEST/* . # maybe remove the tmp folder
 rm -R $DEST
 
-DEST=`pwd`'/'$(basename "$DEST")
 echo "------------------------------------------------------------------------------------------------------"
 echo "  Output written to       | `pwd`/tmp/$MD5SUM*"
 echo "------------------------------------------------------------------------------------------------------"
