@@ -757,8 +757,10 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 #ifdef UPDATEVARACTIVITY
 		if( !foundFirstLearnedClause && config.opt_updateLearnAct ) {
 		    // UPDATEVARACTIVITY trick (see competition'09 companion paper)
-		    if((reason(var(q))!= CRef_Undef)  && ca[reason(var(q))].learnt()) 
+		    if((reason(var(q))!= CRef_Undef)  && ca[reason(var(q))].learnt())  {
+		      DOUT( if (config.opt_learn_debug) cerr << "c add " << q << " to last decision level" << endl; );
 		      lastDecisionLevel.push(q);
+		    }
 		}
 #endif
 
@@ -970,8 +972,10 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
   // UPDATEVARACTIVITY trick (see competition'09 companion paper)
   if(lastDecisionLevel.size()>0 ) {
     for(int i = 0;i<lastDecisionLevel.size();i++) {
-      if(ca[reason(var(lastDecisionLevel[i]))].lbd()<lbd)
+      if(ca[reason(var(lastDecisionLevel[i]))].lbd()<lbd) {
+	DOUT( if ( config.opt_learn_debug ) cerr << "c add " << lastDecisionLevel[i] << " to bump, with " << ca[reason(var(lastDecisionLevel[i]))].lbd() << " vs " << lbd << endl; );
 	varsToBump.push( var(lastDecisionLevel[i]) ) ;
+      }
     }
     lastDecisionLevel.clear();
   } 
