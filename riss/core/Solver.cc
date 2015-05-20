@@ -708,9 +708,9 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	
 	if(!foundFirstLearnedClause ) { // dynamic adoption only until first learned clause!
 	  if (c.learnt() ){
-          if( config.opt_cls_act_bump_mode == 0 ) claBumpActivity(c); // use constant activity increase
+	      if( config.opt_cls_act_bump_mode == 0 ) claBumpActivity(c); // use constant activity increase
 	      else clssToBump.push( confl );                              // or make activity depending on generated clause
-      }
+	  }
 
 	    if( config.opt_update_lbd == 1  ) { // update lbd during analysis, if allowed
 		if(c.learnt()  && c.lbd()>2 ) { 

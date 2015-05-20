@@ -1,6 +1,6 @@
 #!/bin/bash 
 
-params="-quiet -printDec=3 -rem-debug=3 -no-learn-debug -verb=0"
+params="-quiet -printDec=3 -rem-debug=3 -learn-debug -verb=0"
 
 #
 # run the  solvers
