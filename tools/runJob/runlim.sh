@@ -1,5 +1,11 @@
 #!/bin/bash  
 
+# error if dimacs are not found../B
+
+#set -e  # exits if failure arises
+
+
+
 TLIM=$1
 MLIM=$2  # in M !!!! All others are in K 
 
@@ -42,12 +48,12 @@ echo "--------------------------------------------------------------------------
 
 file $BIN | grep 'statically linked'
 
-if [ "$?" = "1" ]
-then
-  file $BIN
-  echo "ERROR: $BIN is not a statically linked binary (check with 'file <binary>')."
-  exit 1
-fi
+#if [ "$?" = "1" ]
+#then
+#  file $BIN
+#  echo "ERROR: $BIN is not a statically linked binary (check with 'file <binary>')."
+#  exit 1
+#fi
 
 echo "  Used parameters         | $PARAMS"
 echo "  Time limit              | $(($TLIM))s"
@@ -80,18 +86,31 @@ TMPFILE=$DEST'/tmp/'$MD5SUM.tmp.dat
 BIN=$DEST'/'$(basename "$BIN")
 FILE=$DEST'/'$(basename "$FILE")
 
+
+function clean_up {
+
+  rm $BIN
+  rm $FILE
+  cp -R $DEST/* . # maybe remove the tmp folder
+  rm -R $DEST
+  echo "Received SIGINT, SIGTERM or SIGHUP. Abort."
+		
+  exit 1
+}
+
+trap clean_up SIGHUP SIGINT SIGTERM
+
 PERF="perf stat -o $TMPFILE.perf -B -e cache-references,cache-misses,cycles,stalled-cycles-frontend,stalled-cycles-backend,instructions,branches,branch-misses"
 
 #perf stat -B ./runsolver -M $MLIM -w $TMPFILE.watch -o $TMPFILE.out  $BIN $FILE $PARAMS 
-$PERF ./runsolver -C $TLIM -M $MLIM -w $TMPFILE.watch -o $TMPFILE.out  $BIN $FILE $PARAMS;
-#$PERF ./runlim -k -r $TLIM -s $MLIM -1 $TMPFILE.out -2 $TMPFILE.err $BIN $FILE /dev/null $PARAMS 2> $TMPFILE.runlim2;
+#$PERF ./runsolver -C $TLIM -M $MLIM -w $TMPFILE.watch -o $TMPFILE.out  $BIN $FILE $PARAMS;
+$PERF ./runlim -k -r $TLIM -s $MLIM -1 $TMPFILE.out -2 $TMPFILE.err $BIN $FILE /dev/null $PARAMS 2> $TMPFILE.runlim2;
 
 rm $BIN
 rm $FILE
 cp -R $DEST/* . # maybe remove the tmp folder
 rm -R $DEST
 
-DEST=`pwd`'/'$(basename "$DEST")
 echo "------------------------------------------------------------------------------------------------------"
 echo "  Output written to       | `pwd`/tmp/$MD5SUM*"
 echo "------------------------------------------------------------------------------------------------------"
