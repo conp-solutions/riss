@@ -13,17 +13,17 @@
 #include <assert.h>
 #include <iostream>
 
-using namespace std;
+// using namespace std;
 
 /** class that can take care of statistic tracking in a multi-thread environment
  */
 class Statistics {
 
-  vector < int > integerData;
-  vector <string> intNames;
+  std::vector < int > integerData;
+  std::vector <std::string> intNames;
   
-  vector < double > doubleData;
-  vector <string> doubleNames;
+  std::vector < double > doubleData;
+  std::vector <std::string> doubleNames;
   
   //Lock lockI; // lock for integer operations
   //Lock lockD; // lock for double operations
@@ -42,7 +42,7 @@ public:
   
   /** return the key of a given index
    */
-  string& getName( unsigned index ){ return  (index < intNames.size()) ? intNames[index] : doubleNames[index - intNames.size() ]; }
+  std::string& getName( unsigned index ){ return  (index < intNames.size()) ? intNames[index] : doubleNames[index - intNames.size() ]; }
   
   /** return whether a given index is an int value
    */
@@ -61,7 +61,7 @@ public:
   /** register statistic value for integer values
    *  @return id of the register for this statistic value
    */
-  unsigned registerI( const string& name, const int firstValue = 0 ) {
+  unsigned registerI( const std::string& name, const int firstValue = 0 ) {
     unsigned ret = 0;
 //    lockI.wait();
     ret = integerData.size();
@@ -74,7 +74,7 @@ public:
   /** return the id of an already registered event, if it exists, otherwise, create it with 0
    * 
    */
-  unsigned reregisterI( const string& name ) {
+  unsigned reregisterI( const std::string& name ) {
 
     for( unsigned i = 0 ; i < intNames.size(); ++i )
     {
@@ -94,7 +94,7 @@ public:
   /** register statistic value for integer values
    *  @return id of the register for this statistic value
    */
-  unsigned registerD( const string& name, const double firstValue = 0 ) {
+  unsigned registerD( const std::string& name, const double firstValue = 0 ) {
     unsigned ret = 0;
 //    lockD.wait();
     ret = doubleData.size();
@@ -107,7 +107,7 @@ public:
   /** return the id of an already registered event, if it exists, otherwise, create it with 0
    * 
    */
-  unsigned reregisterD( const string& name ) {
+  unsigned reregisterD( const std::string& name ) {
 //    lockD.wait();
     for( unsigned i = 0 ; i < doubleNames.size(); ++i )
     {
@@ -176,22 +176,22 @@ public:
     return ret;
   }
   
-  /** prints all data of objects to a string
+  /** prints all data of objects to a std::string
    */
-  void print( string& output )
+  void print( std::string& output )
   {
 //    lockI.wait();
-    stringstream s;
+    std::stringstream s;
     assert( integerData.size() == intNames.size() && "number of data elements and names has to be the same" );
     for( int i = 0 ; i < integerData.size(); ++i ) {
-      s << "c [STAT] " << intNames[i] << " : " << integerData[i] << endl;
+      s << "c [STAT] " << intNames[i] << " : " << integerData[i] << std::endl;
     }
 //    lockI.unlock();
     
 //    lockD.wait();
     assert( doubleData.size() == doubleNames.size() && "number of data elements and names has to be the same" );
     for( int i = 0 ; i < doubleData.size(); ++i ) {
-      s << "c [STAT] " << doubleNames[i] << " : " << doubleData[i] << endl;
+      s << "c [STAT] " << doubleNames[i] << " : " << doubleData[i] << std::endl;
     }
 //    lockD.unlock();
     output = s.str();

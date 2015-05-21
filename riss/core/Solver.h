@@ -63,7 +63,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #endif
 
 //
-// forward declaration
+// forward declarations
 //
 namespace Coprocessor {
   class Preprocessor;
@@ -85,14 +85,14 @@ namespace Pcasso {
 }
 #endif
 
-class Communicator;
 
 // since template methods need to be in headers ...
-extern Riss::IntOption opt_verboseProof;
+extern Riss::IntOption  opt_verboseProof;
 extern Riss::BoolOption opt_rupProofOnly;
 
 namespace Riss {
 
+class Communicator;
 class OnlineProofChecker; 
 class IncSolver;
  
@@ -591,8 +591,8 @@ protected:
   int maxLaNumber;	     // maximum number of LAs allowed
   int topLevelsSinceLastLa; // number of learned top level units since last LA
   int laEEvars,laEElits;    // number of equivalent literals
-  vector< vector< Lit > > localLookAheadProofClauses;
-  vector<Lit> localLookAheadTmpClause;
+  std::vector< std::vector< Lit > > localLookAheadProofClauses;
+  std::vector<Lit> localLookAheadTmpClause;
   
   // real data
   Lit hstry[6];
@@ -637,8 +637,8 @@ protected:
   bool analyzeNewLearnedClause( const CRef newLearnedClause );
 
   // helper data structures
-  vector< int > analyzePosition; // for full probing approximation
-  vector< int > analyzeLimits; // all combination limits for full probing
+  std::vector< int > analyzePosition; // for full probing approximation
+  std::vector< int > analyzeLimits; // all combination limits for full probing
   
  
   // UHLE during search with learnt clauses:

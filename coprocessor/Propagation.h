@@ -28,7 +28,7 @@ class Propagation : public Technique  {
   
 public:
   
-  Propagation( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller );
+  Propagation( CP3Config &_config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller );
   
   /// will also set back the qhead variable inside the Solver object
   void reset(CoprocessorData& data);
@@ -37,9 +37,9 @@ public:
    *  will run over all clauses with satisfied/unsatisfied literals (that have not been done already)
    *  @return l_Undef, if no conflict has been found, l_False if there has been a conflict
    */
-  lbool process(CoprocessorData& data, bool sort = false, Heap<VarOrderBVEHeapLt> * heap = NULL, const Var ignore = var_Undef);
+  Riss::lbool process(CoprocessorData& data, bool sort = false, Riss::Heap<VarOrderBVEHeapLt> * heap = NULL, const Riss::Var ignore = var_Undef);
   
-  void initClause( const CRef cr );
+  void initClause( const Riss::CRef cr );
   
   void printStatistics(std::ostream& stream);
   

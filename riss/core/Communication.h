@@ -9,11 +9,7 @@ Copyright (c) 2012, All rights reserved, Norbert Manthey
 #include <cmath>
 #include <deque>
 #include <vector>
-
 #include <iostream>
-
-using namespace std;
-using namespace Riss;
 
 // own files
 #include "riss/utils/LockCollection.h"
@@ -22,8 +18,10 @@ using namespace Riss;
 #include "riss/core/SolverTypes.h"
 #include "riss/core/Solver.h"
 
-
 #include "proofcheck/ProofMaster.h"
+
+namespace Riss {
+
 /** collection of some wait states */
 enum WaitState {
   oneIdle = 0,
@@ -39,7 +37,7 @@ class ClauseRingBuffer
   /** item for the pool, remembers the sender so that own clauses are not received again
    */
   struct poolItem {
-    std::vector<Riss::Lit> data;	/// the actual clause
+    std::vector<Lit> data;	/// the actual clause
     int author;		/// the author of the clause
     poolItem() : author(-1) {}	/// the initial author is invalid, so that it can be seen whether a clause in the ringbuffer has been added by solver
   };
@@ -66,7 +64,7 @@ class ClauseRingBuffer
    */
   Riss::CRef getClause( const unsigned position, Riss::ClauseAllocator& allocator )
   {
-    std::vector<Riss::Lit>& poolClause = pool[position].data;
+    std::vector<Lit>& poolClause = pool[position].data;
     return allocator.alloc(poolClause, true); // create as learned clause!!
   }
 
@@ -114,13 +112,13 @@ public:
    * @param authorID id of the author thread, to be stored with the clause
    * @param clause vector that stores the clause to be added
    */
-  void addClause( int authorID, const Riss::vec<Riss::Lit>& clause )
+  void addClause( int authorID, const vec<Lit>& clause )
   {
     lock();
 
-    // cerr << "[COMM] thread " << authorID << " adds clause to " << addHereNext << endl;
+    // std::cerr << "[COMM] thread " << authorID << " adds clause to " << addHereNext << std::endl;
     // overwrite current position (starts with 0)
-    std::vector<Riss::Lit>& poolClause = pool[addHereNext].data;
+    std::vector<Lit>& poolClause = pool[addHereNext].data;
     // if there has been a clause at this position before, then this clause is removed right now ...
     if( pool[addHereNext].author != -1 && proofMaster != 0 ) proofMaster->delFromProof( poolClause, lit_Undef, -1, false ); // can work only on the global proof
     
@@ -144,14 +142,14 @@ public:
    * @param authorID id of the author thread, to be stored with the clause
    * @param units vector that stores all the literals that are inside the unit clauses to share
    */
-  void addUnitClauses( int authorID, const std::vector<Riss::Lit>& units )
+  void addUnitClauses( int authorID, const std::vector<Lit>& units )
   {
     lock(); // coarse lock, do not lock for each unit, but for all!
 
     for( size_t i = 0 ; i < units.size(); ++ i ) {
-      // cerr << "[COMM] thread " << authorID << " adds clause to " << addHereNext << endl;
+      // std::cerr << "[COMM] thread " << authorID << " adds clause to " << addHereNext << std::endl;
       // overwrite current position (starts with 0)
-      std::vector<Riss::Lit>& poolClause = pool[addHereNext].data;
+      std::vector<Lit>& poolClause = pool[addHereNext].data;
       if( pool[addHereNext].author != -1 && proofMaster != 0 ) proofMaster->delFromProof( poolClause, lit_Undef, -1, false ); // can work only on the global proof
       pool[addHereNext].author = authorID;      
       poolClause.resize( 1 );
@@ -172,9 +170,9 @@ public:
    */
   unsigned receiveClauses ( int authorID, unsigned lastSeenIndex, Riss::ClauseAllocator& allocator, std::vector< Riss::CRef>& clauses )
   {
-    //cerr << "c [COMM] thread " << authorID << " called receive with last seen " << lastSeenIndex << ", addHere: " << addHereNext << endl;
+    //std::cerr << "c [COMM] thread " << authorID << " called receive with last seen " << lastSeenIndex << ", addHere: " << addHereNext << std::endl;
     clauses.clear();
-    std::vector<Riss::Lit> tmp;
+    std::vector<Lit> tmp;
     lock();
     // incorporate all clauses that are stored BEFORE addHereNext
     unsigned returnIndex = addHereNext == 0 ? poolSize - 1 : addHereNext - 1;
@@ -182,7 +180,7 @@ public:
     const unsigned startIndex = lastSeenIndex == poolSize - 1 ? 0 : lastSeenIndex + 1; // first clause that needs to be copied
     const unsigned stopIndex = addHereNext;     // last clause that needs to be copied
 
-    //cerr << "c [COMM] thread " << authorID << " start:" << startIndex << " stop:" << stopIndex << " return: " << returnIndex << endl;
+    //std::cerr << "c [COMM] thread " << authorID << " start:" << startIndex << " stop:" << stopIndex << " return: " << returnIndex << std::endl;
 
     // do not copy anything, if the next position is the one where the next clause would be added
     if( startIndex != addHereNext )
@@ -191,7 +189,7 @@ public:
         for( unsigned i = startIndex; i < stopIndex; ++ i ) { // do copy the last clause!
           // receive only, if calling thread was not the author
           if( getAuthor(i) != authorID ) {
-            //cerr << "[COMM] c try to get clause from " << i << endl;
+            //std::cerr << "[COMM] c try to get clause from " << i << std::endl;
             clauses.push_back( getClause(i, allocator) ); // create clause directly in clause allocator
             tmp.clear();
           }
@@ -200,7 +198,7 @@ public:
         for( unsigned i = startIndex; i < poolSize; ++i ) {
           // receive only, if calling thread was not the author
           if( getAuthor(i) != authorID ) {
-            //cerr << "[COMM] c try to get clause from " << i << endl;
+            //std::cerr << "[COMM] c try to get clause from " << i << std::endl;
             clauses.push_back( getClause(i, allocator) ); // create clause directly in clause allocator
             tmp.clear();
           }
@@ -208,14 +206,14 @@ public:
         for( unsigned i = 0 ; i < stopIndex; ++ i ) {
           // receive only, if calling thread was not the author
           if( getAuthor(i) != authorID ) {
-            //cerr << "[COMM] c try to get clause from " << i << endl;
+            //std::cerr << "[COMM] c try to get clause from " << i << std::endl;
             clauses.push_back( getClause(i, allocator) ); // create clause directly in clause allocator
             tmp.clear();
           }
         }
       }
     } else { // end if (something to share)
-      //cerr << "[COMM] c thread " << authorID << " nothing new to import" << endl;
+      //std::cerr << "[COMM] c thread " << authorID << " nothing new to import" << std::endl;
     }
     unlock();
     return returnIndex;
@@ -232,7 +230,7 @@ public:
     Lock dataLock;		/// lock that protects the access to the task data structures
     SleepLock masterLock;		/// lock that enables the master thread to sleep during waiting for child threads
 
-    Riss::vec <Riss::Lit> sendUnits;	/// vector that stores the unit clauses that should be send to all clients as clauses (not learned!)
+    vec <Lit> sendUnits;	/// vector that stores the unit clauses that should be send to all clients as clauses (not learned!)
     
   public:
 
@@ -271,7 +269,7 @@ public:
      * should be called by worker threads
      * @param fillMe vector of the client that should store the literals that have been send recently
      */
-    void receiveUnits( Riss::vec<Riss::Lit>& fillMe ) {
+    void receiveUnits( vec<Lit>& fillMe ) {
       fillMe.clear();
       for( int i = 0 ; i < sendUnits.size(); ++i )
         fillMe.push( sendUnits[i] );
@@ -305,7 +303,7 @@ public:
       finishedReceiving,   // thread is finished with receiving!
     };
 
-    Riss::vec<Riss::Lit> assumptions;	// vector with assumptions for this thread
+    vec<Lit> assumptions;	// vector with assumptions for this thread
     
   private:
 
@@ -323,7 +321,7 @@ public:
     bool doSend;               // should this thread send clauses
     bool doReceive;            // should this thread receive clauses
 
-    Riss::vec<char> protect;         // if char in vector is 0, the variable has to be considered for calculating limits
+    vec<char> protect;         // if char in vector is 0, the variable has to be considered for calculating limits
     
     char dummy[64]; // to separate this data on extra cache lines (avoids false sharing)
 
@@ -461,7 +459,7 @@ public:
     /** adds a clause to the next position of the pool
      * @param clause vector that stores the clause to be added
      */
-    void addClause( const Riss::vec<Riss::Lit>& clause )
+    void addClause( const vec<Lit>& clause )
     {
       data->getBuffer().addClause(id,clause);
     }
@@ -477,7 +475,7 @@ public:
       lastSeenIndex = data->getBuffer().receiveClauses( id, lastSeenIndex, ca, clauses );
     }
 
-    void initProtect( const Riss::vec<Riss::Lit>& assumptions, const int vars ) {
+    void initProtect( const vec<Lit>& assumptions, const int vars ) {
       protect.clear();
       protect.growTo(vars,0);
       for( int i = 0 ; i < assumptions.size(); ++ i )
@@ -485,7 +483,7 @@ public:
     }
     
     // literal is only protected, if this option is enabled
-    bool isProtected ( const Riss::Lit& l ) const {
+    bool isProtected ( const Lit& l ) const {
       return protectAssumptions && protect[ Riss::var( l ) ]; 
     }
 
@@ -509,5 +507,7 @@ public:
     unsigned nrReceivedCls;       // how many clauses have been received (there is no filter yet!!)
     
   };
+
+} // namespace Riss
   
 #endif

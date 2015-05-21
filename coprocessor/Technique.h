@@ -29,15 +29,15 @@ protected:
   int thisPelalty;              // how many attepts will be blocked, before the technique is allowed to perform preprocessing again
   int lastMaxPenalty;           // if the next simplification is unsuccessful, block the simplification for more than the given number
   
-  ClauseAllocator& ca;          // clause allocator for direct access to clauses
-  ThreadController& controller; // controller for parallel execution
+  Riss::ClauseAllocator& ca;          // clause allocator for direct access to clauses
+  Riss::ThreadController& controller; // controller for parallel execution
     
   bool didPrintCannotDrup;      // store whether the drup warning has been reported already
   bool didPrintCannotExtraInfo; // store whether the extraInfo warning has been reported already
     
 public:
   
-  Technique( CP3Config& _config, ClauseAllocator& _ca, ThreadController& _controller );
+  Technique( CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller );
   
   /** return whether some changes have been applied since last time
    *  resets the counter after call
@@ -47,7 +47,7 @@ public:
   /** call this method for each clause when the technique is initialized with the formula 
    *  This method should be overwritten by all techniques that inherit this class
    */
-  void initClause( const CRef cr );
+  void initClause( const Riss::CRef cr );
   
   /** free resources of the technique, which are not needed until the technique is used next time
    *  This method should be overwritten by all techniques that inherit this class
@@ -105,7 +105,7 @@ inline void Technique::giveMoreSteps()
 }
 
 
-inline Technique::Technique( Coprocessor::CP3Config& _config, ClauseAllocator& _ca, ThreadController& _controller )
+inline Technique::Technique( Coprocessor::CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller )
 : config( _config )
 , modifiedFormula(false)
 , isInitialized( false )
@@ -130,7 +130,7 @@ inline void Technique::didChange()
   modifiedFormula = true;
 }
 
-inline void Technique::initClause(const CRef cr)
+inline void Technique::initClause(const Riss::CRef cr)
 {
   assert( false && "This method has not been implemented." );   
 }

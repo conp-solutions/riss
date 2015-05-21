@@ -41,15 +41,15 @@ class Subsumption : public Technique {
   int limitIncreases;	// number of times the limits have been relaxed
   int chunk_size;
 
-  vec<Lit> ps;  // Resolution std::vector for keepAllResolvent
-  std::vector<CRef> toDelete; // Delete std::vector for keepAllResolvent
-  std::vector<CRef> newClauses; //Collect new Strengthening Clauses to avoid std::endless loops
+  Riss::vec<Riss::Lit> ps;  // Resolution std::vector for keepAllResolvent
+  std::vector<Riss::CRef> toDelete; // Delete std::vector for keepAllResolvent
+  std::vector<Riss::CRef> newClauses; //Collect new Strengthening Clauses to avoid std::endless loops
   
   // Structure to track updates of occurrence lists
   struct OccUpdate {
-      CRef cr;
-      Lit  l;
-      OccUpdate(const CRef _cr, const Lit _l) : cr(_cr), l(_l) {} 
+      Riss::CRef cr;
+      Riss::Lit  l;
+      OccUpdate(const Riss::CRef _cr, const Riss::Lit _l) : cr(_cr), l(_l) {} 
   };
 
   // local stats for parallel execution
@@ -65,13 +65,13 @@ class Subsumption : public Technique {
     };
 
   // Member var seq subsumption
-  std::vector < CRef > subs_occ_updates;
+  std::vector < Riss::CRef > subs_occ_updates;
   // Member var seq strength
   std::vector < OccUpdate > strength_occ_updates;
   // Member vars parallel Subsumption
   SpinLock balancerLock;
-  std::vector< std::vector < CRef > > toDeletes;
-  std::vector< std::vector < CRef > > nonLearnts;
+  std::vector< std::vector < Riss::CRef > > toDeletes;
+  std::vector< std::vector < Riss::CRef > > nonLearnts;
   std::vector< struct SubsumeStatsData > localStats;
   
   // Member vars parallel Strengthening
@@ -80,15 +80,15 @@ class Subsumption : public Technique {
             
 public:
   
-  Subsumption( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Coprocessor::Propagation& _propagation );
+  Subsumption( CP3Config &_config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data, Coprocessor::Propagation& _propagation );
   
   
   /** run subsumption and strengthening until completion 
    * @param doStrengthen use strengthening in this call?
    */
-  bool process(bool doStrengthen = true, Heap<VarOrderBVEHeapLt> * heap = NULL, const Var ignore = var_Undef, const bool doStatistics = true);
+  bool process(bool doStrengthen = true, Riss::Heap<VarOrderBVEHeapLt> * heap = NULL, const Riss::Var ignore = var_Undef, const bool doStatistics = true);
 
-  void initClause(const CRef cr, bool addToStrengthen=true); // inherited from Technique
+  void initClause(const Riss::CRef cr, bool addToStrengthen=true); // inherited from Technique
   
   /** indicate whether clauses could be reduced */
   bool hasWork() const ;
@@ -110,22 +110,22 @@ public:
   
 protected:
 
-  inline void updateOccurrences(std::vector< Coprocessor::Subsumption::OccUpdate >& updates, Heap< Coprocessor::VarOrderBVEHeapLt >* heap, const Var ignore = (-1));
+  inline void updateOccurrences(std::vector< Coprocessor::Subsumption::OccUpdate >& updates, Riss::Heap< Coprocessor::VarOrderBVEHeapLt >* heap, const Riss::Var ignore = (-1));
 
   bool hasToSubsume() const ;       // return whether there is something in the subsume queue
-  lbool fullSubsumption(Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);   // performs subsumtion until completion
-  void subsumption_worker (unsigned int start, unsigned int end, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true); // subsume certain set of elements of the processing queue, does not write to the queue
-  void par_subsumption_worker ( unsigned int & next_start, unsigned int global_end, SpinLock & balancerLock, std::vector<CRef> & to_delete, std::vector< CRef > & set_non_learnt, struct SubsumeStatsData & stats, const bool doStatistics = true);
+  Riss::lbool fullSubsumption(Riss::Heap<VarOrderBVEHeapLt> * heap, const Riss::Var ignore = var_Undef, const bool doStatistics = true);   // performs subsumtion until completion
+  void subsumption_worker (unsigned int start, unsigned int end, Riss::Heap<VarOrderBVEHeapLt> * heap, const Riss::Var ignore = var_Undef, const bool doStatistics = true); // subsume certain set of elements of the processing queue, does not write to the queue
+  void par_subsumption_worker ( unsigned int & next_start, unsigned int global_end, SpinLock & balancerLock, std::vector<Riss::CRef> & to_delete, std::vector< Riss::CRef > & set_non_learnt, struct SubsumeStatsData & stats, const bool doStatistics = true);
   
   bool hasToStrengthen() const ;    // return whether there is something in the strengthening queue
   
-  lbool fullStrengthening( Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true); // performs strengthening until completion, puts clauses into subsumption queue
-  lbool strengthening_worker ( unsigned int start, unsigned int end, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, bool doStatistics = true);
-lbool createResolvent( const CRef cr, CRef & resolvent, const int negated_lit_pos, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);
-  void par_strengthening_worker( unsigned int & next_start, unsigned int global_stop, SpinLock & balancerLock, std::vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, std::vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true); 
-  void par_nn_strengthening_worker( unsigned int & next_start, unsigned int global_end, SpinLock & balancerLock, std::vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, std::vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);
-  inline lbool par_nn_strength_check(CoprocessorData & data, std::vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, std::vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, std::vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true) ; 
-  inline lbool par_nn_negated_strength_check(CoprocessorData & data, std::vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, std::vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, std::vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);
+  Riss::lbool fullStrengthening( Riss::Heap<VarOrderBVEHeapLt> * heap, const Riss::Var ignore = var_Undef, const bool doStatistics = true); // performs strengthening until completion, puts clauses into subsumption queue
+  Riss::lbool strengthening_worker ( unsigned int start, unsigned int end, Riss::Heap<VarOrderBVEHeapLt> * heap, const Riss::Var ignore = var_Undef, bool doStatistics = true);
+  Riss::lbool createResolvent( const Riss::CRef cr, Riss::CRef & resolvent, const int negated_lit_pos, Riss::Heap<VarOrderBVEHeapLt> * heap, const Riss::Var ignore = var_Undef, const bool doStatistics = true);
+  void par_strengthening_worker( unsigned int & next_start, unsigned int global_stop, SpinLock & balancerLock, std::vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, std::vector<OccUpdate> & occ_updates, Riss::Heap<VarOrderBVEHeapLt> * heap, const Riss::Var ignore = var_Undef, const bool doStatistics = true); 
+  void par_nn_strengthening_worker( unsigned int & next_start, unsigned int global_end, SpinLock & balancerLock, std::vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, std::vector<OccUpdate> & occ_updates, Riss::Heap<VarOrderBVEHeapLt> * heap, const Riss::Var ignore = var_Undef, const bool doStatistics = true);
+  inline Riss::lbool par_nn_strength_check(CoprocessorData & data, std::vector < Riss::CRef > & list, std::deque<Riss::CRef> & localQueue, Riss::Clause & strengthener, Riss::CRef cr, Riss::Var fst, std::vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, std::vector<OccUpdate> & occ_updates, Riss::Heap<VarOrderBVEHeapLt> * heap, const Riss::Var ignore = var_Undef, const bool doStatistics = true) ; 
+  inline Riss::lbool par_nn_negated_strength_check(CoprocessorData & data, std::vector < Riss::CRef > & list, std::deque<Riss::CRef> & localQueue, Riss::Clause & strengthener, Riss::CRef cr, Riss::Lit min, Riss::Var fst, std::vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, std::vector<OccUpdate> & occ_updates, Riss::Heap<VarOrderBVEHeapLt> * heap, const Riss::Var ignore = var_Undef, const bool doStatistics = true);
   
   /** data for parallel execution */
   struct SubsumeWorkData {
@@ -136,17 +136,17 @@ lbool createResolvent( const CRef cr, CRef & resolvent, const int negated_lit_po
     unsigned int     end;
     SpinLock *       balancerLock;
     std::vector<SpinLock> * var_locks;
-    std::vector<CRef>*    to_delete;
-    std::vector<CRef>*    set_non_learnt;
+    std::vector<Riss::CRef>*    to_delete;
+    std::vector<Riss::CRef>*    set_non_learnt;
     std::vector<OccUpdate> * occ_updates;
     struct SubsumeStatsData* stats;
-    Heap<VarOrderBVEHeapLt> * heap;
-    Var              ignore;
+    Riss::Heap<VarOrderBVEHeapLt> * heap;
+    Riss::Var              ignore;
     };
   
   /** run parallel subsumption with all available threads */
   void parallelSubsumption( const bool doStatistics = true);
-  void parallelStrengthening(Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);  
+  void parallelStrengthening(Riss::Heap<VarOrderBVEHeapLt> * heap, const Riss::Var ignore = var_Undef, const bool doStatistics = true);  
 public:
 
   /** converts arg into SubsumeWorkData*, runs subsumption of its part of the queue */

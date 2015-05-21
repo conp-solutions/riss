@@ -7,11 +7,12 @@ Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, All rights reserved.
 #include "riss/mtl/Heap.h"
 
 using namespace std;
+using namespace Riss;
 
 namespace Coprocessor {
 
-BoundedVariableElimination::BoundedVariableElimination(CP3Config &_config, ClauseAllocator &_ca,
-                                                       ThreadController &_controller,
+BoundedVariableElimination::BoundedVariableElimination(CP3Config &_config, Riss::ClauseAllocator &_ca,
+                                                       Riss::ThreadController &_controller,
                                                        Coprocessor::Propagation &_propagation,
                                                        Coprocessor::Subsumption &_subsumption)
     : Technique(_config, _ca, _controller), propagation(_propagation), subsumption(_subsumption),
@@ -115,7 +116,7 @@ void BoundedVariableElimination::progressStats(CoprocessorData &data, const bool
                                                   << ", clauses: " << clauseCount << " (" << ((double) clauseCount / (double) initialClauses * 100) << " %), "
                                                   << "units: " << unitCount << " (" << ((double) unitCount / (double) data.nVars() * 100) << " %), "
                                                   << "elim:  " << elimCount << " (" << ((double) elimCount / (double) data.nVars() * 100) << " %), "
-                                                  << "bve-time: " << (cputime ? cpuTime() : wallClockTime()) - processTime << endl;
+                                                  << "bve-time: " << (cputime ? Riss::cpuTime() : Riss::wallClockTime()) - processTime << endl;
     restarts++;
 }
 
