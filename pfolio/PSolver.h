@@ -7,29 +7,27 @@ Copyright (c) 2014,      Norbert Manthey, All rights reserved.
 
 #include "riss/core/Solver.h"
 #include "riss/core/CoreConfig.h"
+#include "riss/core/Communication.h"
 #include "coprocessor/CP3Config.h"
 
 #include "pfolio/PfolioConfig.h"
 
-#include "riss/core/Communication.h"
-
 #include "pthread.h"
+
 
 namespace Riss {
 
-  using namespace Coprocessor;
-  
 class PSolver {
   
   bool initialized;
   int threads;
   
-  vec<Solver*> solvers;
-  CoreConfig* configs; // the configuration for each solver
-  CP3Config*  ppconfigs; // the configuration for each preprocessor
+  vec<Solver*>             solvers;
+  CoreConfig*              configs;   // the configuration for each solver
+  Coprocessor::CP3Config*  ppconfigs; // the configuration for each preprocessor
   
   CommunicationData* data;		// major data object that takes care of the sharing
-  Communicator** communicators;		// interface between controller and SAT solvers
+  Communicator** communicators;	// interface between controller and SAT solvers
   pthread_t* threadIDs;			// pthread handles for the threads
   
   ProofMaster* proofMaster;		// in a portfolio setup, use the proof master for generating DRUP proofs
@@ -62,7 +60,7 @@ public:
   //
   CoreConfig& getConfig( const int solverID );
   
-  CP3Config& getPPConfig( const int solverID );
+  Coprocessor::CP3Config& getPPConfig( const int solverID );
   
   //
   // solve the formula in parallel, including communication and all that
@@ -104,7 +102,7 @@ public:
   bool addClause_(vec<Lit>& ps);
   
   /// Add a clause to the online proof checker.. Not implemented for parallel solver
-  void    addInputClause_( vec<Lit>& ps);                     
+  void addInputClause_( vec<Lit>& ps);                     
   
   void interrupt(); // Trigger a (potentially asynchronous) interruption of the solver.
   
@@ -152,10 +150,10 @@ protected:
 
 inline FILE* PSolver::getDrupFile()
 {
- return drupProofFile;
+    return drupProofFile;
 }
 
 
-};
+} // namespace Riss
 
 #endif

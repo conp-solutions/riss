@@ -22,7 +22,7 @@ public:
     /** sets up the communication client */
     CommunicatorClient( Solver* _solver, Communicator* _communicator=0);
   
-      /** setup the communication object
+    /** setup the communication object
      * @param comm pointer to the communication object that should be used by this thread
      */
     void setCommunication( Communicator* comm );
