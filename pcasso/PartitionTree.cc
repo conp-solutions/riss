@@ -22,6 +22,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <iostream> // Davide> Debug
 
+namespace Pcasso {
 
 unsigned int TreeNode::runningID = 0;
 
@@ -524,3 +525,5 @@ bool TreeNode::isOnlyChildScenario(){
 TreeNode* TreeNode::getOnlyChildScenarioChildNode(){
     return onlyChildScenarioChildNode;
 }
+
+} // namespace Pcasso

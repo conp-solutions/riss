@@ -24,7 +24,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 // splitter
 #include "riss/utils/LockCollection.h"
-#include "PartitionTree.h"
+#include "pcasso/PartitionTree.h"
 #include "pcasso/SplitterSolver.h"
 
 // Minisat

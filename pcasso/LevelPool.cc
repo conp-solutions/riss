@@ -1,8 +1,10 @@
 #include "LevelPool.h"
 
-using namespace PcassoDavide;
+using namespace Pcasso;
 using namespace std;
 using namespace Riss;
+
+namespace PcassoDavide {
 
 LevelPool::LevelPool(int _max_size){
 	full          = false;
@@ -106,3 +108,5 @@ LevelPool::getChunk(int readP, vec<Lit>& chunk){
 	// The else case is not strictly necessary. The clauses will be read at next
 	// iteration, even thoug some will be missed.
 }
+
+} // namespace PcassoDavide

@@ -17,14 +17,15 @@
 #include "riss/utils/Debug.h"
 
 namespace Pcasso {
+
     class LookaheadSplitting : public SplitterSolver {
       
-    Riss::CoreConfig& coreConfig;
+        Riss::CoreConfig& coreConfig;
       
-    // more global data structures
-    Riss::vec<Riss::Lit> learnt_clause;
-    Riss::vec<Riss::CRef> otfssClauses;
-    uint64_t extraInfo;
+        // more global data structures
+        Riss::vec<Riss::Lit> learnt_clause;
+        Riss::vec<Riss::CRef> otfssClauses;
+        uint64_t extraInfo;
       
     public:
         LookaheadSplitting(CoreConfig& config);
@@ -124,6 +125,7 @@ namespace Pcasso {
         void learntsLimitPop();
     };
     
-}
+} // namespace Pcasso
+
 #endif	/* LOOKAHEADSPLITTING_H */
 

@@ -22,8 +22,8 @@
 #include <iostream>
 #include <fstream>
 
-using namespace Riss;
-using namespace std;
+// using namespace Riss;
+// using namespace std;
 
 namespace PcassoDavide{
    
@@ -33,17 +33,17 @@ namespace PcassoDavide{
    public:
       
      static bool duplicate( const PcassoClause& c );
-     static void add_shared(vec<Lit>& lits, unsigned int size);
+     static void add_shared(Riss::vec<Riss::Lit>& lits, unsigned int size);
      // static void delete_shared_clauses(void);
       
      const static unsigned int max_size = 10000;
      
-     static vector<PcassoClause> shared_clauses;
+     static std::vector<PcassoClause> shared_clauses;
 
      static void dumpClauses( const char* filename){
 	
-       fstream s;
-       s.open(filename, fstream::out);
+       std::fstream s;
+       s.open(filename, std::fstream::out);
        s << "c [POOL] all collected shared clauses begin: " << endl;
        for( unsigned int i = 0 ; i < shared_clauses.size(); ++i )
        {

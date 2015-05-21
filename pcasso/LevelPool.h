@@ -37,7 +37,7 @@ public:
 
 	LevelPool(int _max_size);
 
-	RWLock levelPoolLock;
+	Pcasso::RWLock levelPoolLock;
 
 	int writeP;     // index for whatever clause
 	int max_size;

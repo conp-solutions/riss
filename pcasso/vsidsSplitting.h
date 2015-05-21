@@ -15,27 +15,28 @@
 #include "pcasso/SplitterSolver.h"
 
 namespace Pcasso {
+
     class VSIDSSplitting : public SplitterSolver {
       
-    CoreConfig& coreConfig;
+      Riss::CoreConfig& coreConfig;
       
       // more global data structure
-      vec<Lit>    learnt_clause; 
-      vec<CRef> otfssClauses; 
+      Riss::vec<Riss::Lit>  learnt_clause; 
+      Riss::vec<Riss::CRef> otfssClauses; 
       uint64_t extraInfo;
       
     public:
-        VSIDSSplitting(CoreConfig& config);
+        VSIDSSplitting(Riss::CoreConfig& config);
         ~VSIDSSplitting();
         void dummy(){
         }
-        lbool vsidsScatteringSplit(vec<vec<vec<Lit>* >* > **splits, vec<vec<Lit>* > **valid, double to);
+        lbool vsidsScatteringSplit(Riss::vec<Riss::vec<Riss::vec<Riss::Lit>* >* > **splits, Riss::vec<Riss::vec<Riss::Lit>* > **valid, double to);
         lbool scatterSolve(void* data);
         lbool scatterSeach(int nof_conflicts, void* data);
         double cpuTime_t() const ; // CPU time used by this thread
         struct vsidsScatterData {
-            vec<vec<Lit> *>     scatters;
-            vec<vec<vec<Lit> *> *> *out_scatters;
+            Riss::vec<Riss::vec<Riss::Lit> *>     scatters;
+            Riss::vec<Riss::vec<Riss::vec<Riss::Lit> *> *> *out_scatters;
             bool     startscatter;
             bool     isscattering;
             int      scatterfactor;
@@ -52,9 +53,9 @@ namespace Pcasso {
             uint64_t cnfl_bw;		// conflicts to be reached before next scatter output
             uint64_t time_bw;		// number conflicts between two scatters
         };
-        double              max_learnts;
-        double              learntsize_adjust_confl;
-        int                 learntsize_adjust_cnt;
+        double    max_learnts;
+        double    learntsize_adjust_confl;
+        int       learntsize_adjust_cnt;
         
         int       restart_first;      // The initial restart limit.                                                                (default 100)
         double    restart_inc;        // The factor with which the restart limit is multiplied in each restart.                    (default 1.5)
@@ -65,7 +66,8 @@ namespace Pcasso {
         double    learntsize_adjust_inc;
 
     };
-}
+
+} // namespace Pcasso
 
 #endif	/* VSIDSSPLITTING_H */
 

@@ -20,6 +20,10 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef PARTITIONTREE_H
 #define PARTITIONTREE_H
 
+// libc
+#include <vector>
+#include <cstdio>
+
 // Minisat
 #include "riss/mtl/Vec.h"
 #include "riss/core/SolverTypes.h"
@@ -28,19 +32,17 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 // read and write constraints
 #include "riss/utils/LockCollection.h"
 
-// libc
-#include <vector>
-#include <cstdio>
-
-
 // Davide>
 #include <string>
 #include "pcasso/ToString.h"
 #include "pcasso/LevelPool.h"
 
-//using namespace Pcasso;
-using namespace std;
+// using namespace Pcasso;
+// using namespace std;
 
+namespace Pcasso {
+
+// to avoid circular dependencies with an extra #include, use a forward declaration
 class Master;
 
 class TreeNode
@@ -190,5 +192,7 @@ public:
                   TreeNode* getOnlyChildScenarioChildNode();
                   
 };
+
+} // namespace Pcasso
 
 #endif // PARTITIONTREE_H
