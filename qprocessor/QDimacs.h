@@ -22,7 +22,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_QDimacs_h
 #define Minisat_QDimacs_h
 
-#include <stdio.h>
+#include <cstdio>
 #include <vector>
 
 #include "riss/utils/ParseUtils.h"
@@ -31,12 +31,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 namespace Riss {
 
-//=================================================================================================
-// DIMACS Parser:
-
 struct quantification {
   char kind; // 'e' for existential, 'a' for all
-  vector<Lit> lits; // literals inside the quantifier
+  std::vector<Lit> lits; // literals inside the quantifier
 };
 
 template<class B, class Solver>
@@ -51,14 +48,14 @@ static void readQuantifier(B& in, Solver& S, quantification& quantifier) {
         quantifier.lits.push_back( (parsed_lit > 0) ? mkLit(var) : ~mkLit(var) );
     }
     /*
-    cerr << "c parsed quantifier: " << quantifier.kind << endl;
+    std::cerr << "c parsed quantifier: " << quantifier.kind << std::endl;
     
     for( int i=0; i < quantifier.lits.size(); ++ i ) {
       const int l = toInt(quantifier.lits[i]);
-	if (l % 2 == 0) cerr << " " << (l / 2) + 1 ;
-	else cerr << " " << - (l/2) - 1;
+	if (l % 2 == 0) std::cerr << " " << (l / 2) + 1 ;
+	else std::cerr << " " << - (l/2) - 1;
     }
-    cerr << endl;
+    std::cerr << std::endl;
     */
 }
 
@@ -78,7 +75,7 @@ static void parse_QDIMACS_main(B& in, Solver& S, std::vector<quantification>& qu
                 // SATRACE'06 hack
                 // if (clauses > 4000000)
                 //     S.eliminate(true);
-		cerr << "c parsed " << vars << " variables and " << clauses << " clauses " << endl;
+		std::cerr << "c parsed " << vars << " variables and " << clauses << " clauses " << std::endl;
             }else{
                 printf("PARSE ERROR! Unexpected char: %c\n", *in), exit(3);
             }
@@ -97,7 +94,7 @@ static void parse_QDIMACS_main(B& in, Solver& S, std::vector<quantification>& qu
 	    readQuantifier(in, S, quantifiers[quantifiers.size() - 1]);
 	}
         else{
-	  // cerr << "next symbol: (" << *in << ")" << endl;
+	  // std::cerr << "next symbol: (" << *in << ")" << std::endl;
             cnt++;
             readClause(in, S, lits);
             S.addClause_(lits); }
@@ -113,9 +110,9 @@ static void parse_QDIMACS_main(B& in, Solver& S, std::vector<quantification>& qu
 template<class Solver>
 static void parse_QDIMACS(gzFile input_stream, Solver& S, std::vector<quantification>& quantifiers) {
     StreamBuffer in(input_stream);
-    parse_QDIMACS_main(in, S,quantifiers); }
-
-//=================================================================================================
+    parse_QDIMACS_main(in, S,quantifiers);
 }
+
+} // namespace Riss
 
 #endif

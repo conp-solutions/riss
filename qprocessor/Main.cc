@@ -13,6 +13,7 @@ Copyright (c) 2013,      Norbert Manthey, All rights reserved.
 #include "riss/utils/System.h"
 #include "riss/utils/ParseUtils.h"
 #include "riss/utils/Options.h"
+#include "riss/utils/version.h" // include the file that defines the solver version
 #include "riss/core/Dimacs.h"
 #include "riss/simp/SimpSolver.h"
 
@@ -20,7 +21,6 @@ Copyright (c) 2013,      Norbert Manthey, All rights reserved.
 
 #include "qprocessor/QDimacs.h"
 
-#include "riss/utils/version.h" // include the file that defines the solver version
 
 using namespace Riss;
 using namespace Coprocessor;
