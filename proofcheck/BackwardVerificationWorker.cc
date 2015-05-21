@@ -6,7 +6,7 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 
 #include "riss/utils/Options.h"
 
-using namespace Riss;
+namespace Riss {
 
 static IntOption opt_verbose ("BACKWARD-CHECK", "bvw-verbose", "verbosity level of the verification worker", 0, IntRange(0, 9));
 
@@ -856,3 +856,4 @@ CRef BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEagerShared(c
   return confl;  
 }
 
+} // namespace Riss
