@@ -257,7 +257,6 @@ int main(int argc, char** argv)
 	      S.drupProofFile = fopen((const char*) drupFile, "w");	// remove the content of that file
 	      fclose( S.drupProofFile );	// close the file again
 	    }
-	    if (S.verbosity > 0 ) printf("c\nc ===========================[ Next Schedule Element ]=====================================================\nc\n");
 	  }
 	  
 	  // print stats
@@ -276,8 +275,8 @@ int main(int argc, char** argv)
 	  }
 	      
 	  // print solution to screen
-	      if( opt_modelStyle ) printf(ret == l_True ? "SAT\n" : ret == l_False ? "UNSAT\n" : "UNKNOWN\n");
-	      else printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n");
+	  if( opt_modelStyle ) printf(ret == l_True ? "SAT\n" : ret == l_False ? "UNSAT\n" : "UNKNOWN\n");
+	  else printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n");
 
 	  // put empty clause on proof
 	  if(ret == l_False && S.drupProofFile != NULL ) {

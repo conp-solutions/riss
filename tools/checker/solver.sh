@@ -8,8 +8,8 @@
 #
 
 #param="-threads=4"
-#param="-enabled_cp3 -cp3_stats -bce -bce-bce -bce-bcm -bve -bva -xor -xorEncSize=4  "
-param="-act-based -cir-bump=100 -rlevel=2 -pq-order -prob-step-width=1024"
+param="-enabled_cp3 -cp3_stats -bce -bce-bce -bce-bcm -bve -bva -xor -xorEncSize=4 -config=RERRW "
+#param="-act-based -cir-bump=100 -rlevel=2 -pq-order -prob-step-width=1024"
 
 #
 # select between printing a proof and not printing a proof

@@ -541,7 +541,41 @@ public:
 protected:
 #endif
 
+    /*
+     * restricted extended resolution (Audemard ea 2010)
+     */
+
+    enum rerReturnType {	// return type for the rer-implementation
+      rerUsualProcedure = 0,	// do nothing special, since rer failed -- or attach the current clause because its unit on the current level
+      rerMemorizeClause = 1,	// add the current learned clause to the data structure rerFuseClauses
+      rerDontAttachAssertingLit = 2,	// do not enqueue the asserting literal of the current clause
+      rerAttemptFailed = 3,	// some extra method failed (e.g. find RER-ITE)
+    };
     
+    /// initialize the data structures for RER with the given clause
+    void restrictedExtendedResolutionInitialize( const vec< Lit >& currentLearnedClause );
+    
+    /// @return true, if a clause should be added to rerFuseClauses
+    rerReturnType restrictedExtendedResolution( vec<Lit>& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo );
+    /// reset current state of restricted Extended Resolution
+    void resetRestrictedExtendedResolution();
+    /// check whether the new learned clause produces an ITE pattern with the previously learned clause (assumption, previousClause is sorted, currentClause is sorted starting from the 3rd literal)
+    rerReturnType restrictedERITE(const Lit& previousFirst, const vec<Lit>& previousPartialClause, vec<Lit>& currentClause);
+    /// initialize the rewrite info with the gates of the formula
+    void rerInitRewriteInfo();
+    /// replace the disjunction p \lor q with x
+    void disjunctionReplace( Lit p, Lit q, const Lit x, bool inLearned, bool inBina );
+    
+    /// structure to store for each literal the literal for rewriting new learned clauses after an RER extension
+    struct LitPair {
+      Lit otherMatch, replaceWith;
+      LitPair( const Lit& l1, const Lit& l2 ) : otherMatch(l1), replaceWith(l2) {};
+      LitPair() :otherMatch(lit_Undef), replaceWith(lit_Undef) {}
+    };
+    vec< LitPair > erRewriteInfo; /// vector that stores the information to rewrite new learned clauses
+        
+
+
     /** fill the current variable assignment into the given vector */
     void fillLAmodel(vec<LONG_INT>& pattern, const int steps, vec<Var>& relevantVariables ,const bool moveOnly = false); // fills current model into variable vector
     
@@ -550,6 +584,12 @@ protected:
      */
     bool laHack(Riss::vec< Riss::Lit >& toEnqueue);
  
+
+    /** concurrent clause strengthening, but interleaved instead of concurrent ...
+    *  @return false, if the formula is proven to be unsatisfiable
+    */
+    bool interleavedClauseStrengthening();
+
     // Static helpers:
     //
 
@@ -612,8 +652,28 @@ protected:
   int simplifyIterations; // number of visiting level 0 until simplification is to be performed
   int learnedDecisionClauses;
 
+  bool doAddVariablesViaER; // indicator for allowing ER or not
+
   // stats for learning clauses
   double totalLearnedClauses, sumLearnedClauseSize, sumLearnedClauseLBD, maxLearnedClauseSize;
+  int extendedLearnedClauses, extendedLearnedClausesCandidates,maxECLclause;
+  int rerExtractedGates;
+  int rerITEtries, rerITEsuccesses, rerITErejectS, rerITErejectT, rerITErejectF; // how often tried RER-ITE, and how often succeeded
+  uint64_t maxResDepth;
+  Clock rerITEcputime; // timer for RER-ITE
+  
+  int erRewriteRemovedLits,erRewriteClauses; // stats for ER rewriting
+  
+  vec<Lit> rerCommonLits, rerIteLits; // literals that are common in the clauses in the window
+  int64_t rerCommonLitsSum; // sum of the current common literals - to Bloom-Filter common lits
+  vec<Lit> rerLits;	// literals that are replaced by the new variable
+  vec<CRef> rerFuseClauses; // clauses that will be replaced by the new clause -
+  int rerLearnedClause, rerLearnedSizeCandidates, rerSizeReject, rerPatternReject,rerPatternBloomReject,maxRERclause; // stat counters
+  double rerOverheadTrailLits,totalRERlits; // stats
+  
+  // interleaved clause strengthening (ics)
+  int lastICSconflicts;		// number of conflicts for last ICS
+  int icsCalls, icsCandidates, icsDroppedCandidates, icsShrinks, icsShrinkedLits; // stats
 
   // modified activity bumping
   vec<Var> varsToBump; // memorize the variables that need to be bumped in that order
@@ -846,6 +906,12 @@ public:
   /** return extra variable information (should be called for top level units only!) */
   uint64_t variableExtraInfo( const Var& v ) const ;
   
+  /** temporarly enable or disable extended resolution, to ensure that the number of variables remains the same */
+  void setExtendedResolution( bool enabled ) { doAddVariablesViaER = enabled; }
+  
+  /** query whether extended resolution is enabled or not */
+  bool getExtendedResolution() const { return doAddVariablesViaER; }
+
 /// for qprocessor
 public:
 // 	    void writeClauses( std::ostream& stream ) {

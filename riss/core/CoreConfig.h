@@ -150,6 +150,39 @@ public:
  IntOption opt_learnDecMinSize; // min size of a learned clause so that its turned into an decision clause
  BoolOption opt_learnDecRER;	// use decision learned clauses for restricted extended resolution?
 
+ BoolOption opt_restrictedExtendedResolution; // perform restricted extended resolution
+ BoolOption opt_rer_as_learned; 	// add rer clauses as learned clauses?
+ IntOption opt_rer_as_replaceAll; 	// run through formula/learned clauses and replace all the disjunctions (if not reason/watched ... )
+ BoolOption opt_rer_rewriteNew; 	// rewrite upcoming learned clauses (only, if full extension, and not as learned clauses!)
+ BoolOption opt_rer_full; 		// add full rer extension?
+ IntOption  opt_rer_minSize; 		// minimum size of learned clause to perform rer
+ IntOption  opt_rer_maxSize; 		// minimum size of learned clause to perform rer
+ IntOption  opt_rer_minLBD;  		// minimum LBD to perform rer
+ IntOption  opt_rer_maxLBD;  		// maximum LBD to perform rer
+ IntOption  opt_rer_windowSize;  	// number of clauses needed, to perform rer
+ IntOption  opt_rer_newAct;  		// how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean
+ BoolOption opt_rer_ite;		// test for ITE pattern?
+#ifndef NDEBUG
+ BoolOption opt_rer_debug; 		// enable debug output
+#endif
+ DoubleOption opt_rer_every;  		// perform rer at most every n conflicts
+ BoolOption opt_rer_each;		// when a pair is rejected, initialize with the latter clause
+ BoolOption opt_rer_extractGates;	// extract binary AND gates from the formula to rewrite the new learned clauses
+ 
+ IntOption erRewrite_size;	// size of clauses, so that it is tested whether they can be rewritten with ER
+ IntOption erRewrite_lbd;	// LBD of clauses, so that it is tested whether they can be rewritten with ER
+ 
+ BoolOption opt_interleavedClauseStrengthening; // enable interleaved clause strengthening
+ IntOption opt_ics_interval; // run ICS after another N conflicts
+ IntOption opt_ics_processLast; // process this number of learned clauses (analyse, reject if quality too bad!)
+ BoolOption opt_ics_keepLearnts; // keep the learned clauses that have been produced during the ICS
+ BoolOption opt_ics_dynUpdate; // change activity of variables during ICS?
+ BoolOption opt_ics_shrinkNew; // shrink the kept learned clauses in the very same run?! (makes only sense if the other clauses are kept!)
+ DoubleOption opt_ics_LBDpercent;  // only look at a clause if its LBD is less than this percent of the average of the clauses that are looked at
+ DoubleOption opt_ics_SIZEpercent; // only look at a clause if its size is less than this percent of the average size of the clauses that are looked at
+#ifndef NDEBUG
+ BoolOption opt_ics_debug; // enable interleaved clause strengthening debug output
+#endif
 
 IntOption opt_uhdProbe;  // non, linear, or quadratic analysis
 BoolOption opt_uhdCleanRebuild; // rebuild BIG always before clause database is cleaned next

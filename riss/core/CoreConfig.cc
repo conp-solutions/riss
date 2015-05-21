@@ -149,7 +149,41 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  opt_learnDecMinSize ("SEARCH - DECISION CLAUSES", "learnDecMS",  "min size so that decision clauses are learned, -1 = off", 2, IntRange(2, INT32_MAX) , optionListPtr ),
  opt_learnDecRER     ("SEARCH - DECISION CLAUSES", "learnDecRER", "consider decision clauses for RER?",false , optionListPtr ),
 
+ opt_restrictedExtendedResolution("EXTENDED RESOLUTION RER", "rer", "perform restricted extended resolution (along Audemard ea 2010)", false, optionListPtr ), 
+ opt_rer_as_learned("EXTENDED RESOLUTION RER", "rer-l", "store extensions as learned clauses", true, optionListPtr ), 
+ opt_rer_as_replaceAll("EXTENDED RESOLUTION RER", "rer-r", "replace all disjunctions of the RER extension (only, if not added as learned, and if full - RER adds a conjunction, optionListPtr ), 0=no,1=formula,2=formula+learned", 0, IntRange(0, 2), optionListPtr ), 
+ opt_rer_rewriteNew("EXTENDED RESOLUTION RER", "rer-rn", "rewrite new learned clauses, only if full and not added as learned", false, optionListPtr ), 
+ opt_rer_full("EXTENDED RESOLUTION RER", "rer-f", "add full rer extension?", true, optionListPtr ), 
+ opt_rer_minSize ("EXTENDED RESOLUTION RER", "rer-min-size", "minimum size of learned clause to perform rer", 2, IntRange(2, INT32_MAX) , optionListPtr ),
+ opt_rer_maxSize("EXTENDED RESOLUTION RER", "rer-max-size", "maximum size of learned clause to perform rer", INT32_MAX, IntRange(2, INT32_MAX) , optionListPtr ),
+ opt_rer_minLBD("EXTENDED RESOLUTION RER", "rer-minLBD", "minimum LBD to perform rer", 1, IntRange(1, INT32_MAX) , optionListPtr ), 
+ opt_rer_maxLBD("EXTENDED RESOLUTION RER", "rer-maxLBD", "maximum LBD to perform rer", INT32_MAX, IntRange(1, INT32_MAX) , optionListPtr ), 
+ opt_rer_windowSize("EXTENDED RESOLUTION RER", "rer-window", "number of clauses to collect before fuse", 2, IntRange(2, INT32_MAX) , optionListPtr ), 
+ opt_rer_newAct("EXTENDED RESOLUTION RER", "rer-new-act", "how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean", 0, IntRange(0, 4) , optionListPtr ),
+ opt_rer_ite("EXTENDED RESOLUTION RER", "rer-ite", "check for ITE pattern, if AND is not found?", false , optionListPtr ),
+#ifndef NDEBUG
+ opt_rer_debug("EXTENDED RESOLUTION RER", "rer-d", "debug output for RER", false, optionListPtr ),
+#endif
+ opt_rer_every("EXTENDED RESOLUTION RER", "rer-freq", "how often rer compared to usual learning", 1, DoubleRange(0, true, 1, true) , optionListPtr ),
+ opt_rer_each("EXTENDED RESOLUTION RER", "rer-e", "when a pair is rejected, initialize with the new clause", false, optionListPtr ),
+ opt_rer_extractGates("EXTENDED RESOLUTION RER", "rer-g", "extract binary and gates from the formula for RER rewriting", false, optionListPtr ),
  
+ 
+ erRewrite_size("EXTENDED RESOLUTION", "er-size", "rewrite new learned clauses with ER, if size is small enough", 30, IntRange(0, INT32_MAX), optionListPtr ),
+ erRewrite_lbd( "EXTENDED RESOLUTION", "er-lbd" , "rewrite new learned clauses with ER, if lbd is small enough",  6,  IntRange(0, INT32_MAX), optionListPtr ),
+ 
+ opt_interleavedClauseStrengthening("INTERLEAVED CLAUSE STRENGTHENING", "ics", "perform interleaved clause strengthening (along Wieringa ea 2013)", false, optionListPtr ), 
+ opt_ics_interval("INTERLEAVED CLAUSE STRENGTHENING", "ics_window" ,"run ICS after another N conflicts", 5000, IntRange(0, INT32_MAX) , optionListPtr ),
+ opt_ics_processLast("INTERLEAVED CLAUSE STRENGTHENING", "ics_processLast" ,"process this number of learned clauses (analyse, reject if quality too bad!)", 5050, IntRange(0, INT32_MAX) , optionListPtr ),
+ opt_ics_keepLearnts("INTERLEAVED CLAUSE STRENGTHENING", "ics_keepNew" ,"keep the learned clauses that have been produced during the ICS", false , optionListPtr ),
+ opt_ics_dynUpdate("INTERLEAVED CLAUSE STRENGTHENING", "ics_dyn" ,"update variable/clause activities during ICS", false , optionListPtr ),
+ opt_ics_shrinkNew("INTERLEAVED CLAUSE STRENGTHENING", "ics_shrinkNew" ,"shrink the kept learned clauses in the very same run?! (makes only sense if the other clauses are kept!)", false , optionListPtr ),
+ opt_ics_LBDpercent("INTERLEAVED CLAUSE STRENGTHENING", "ics_relLBD" ,"only look at a clause if its LBD is less than this percent of the average of the clauses that are looked at, 1=100%",1, DoubleRange(0, true, HUGE_VAL, true) , optionListPtr ), 
+ opt_ics_SIZEpercent("INTERLEAVED CLAUSE STRENGTHENING", "ics_relSIZE" ,"only look at a clause if its size is less than this percent of the average size of the clauses that are looked at, 1=100%",1, DoubleRange(0, true, HUGE_VAL, true) , optionListPtr ),
+#ifndef NDEBUG
+ opt_ics_debug("INTERLEAVED CLAUSE STRENGTHENING", "ics-debug","debug output for ICS",false, optionListPtr ),
+#endif 
+
  // USING BIG information during search
  opt_uhdProbe     (       "SEARCH UNHIDE PROBING", "sUhdProbe", "perform probing based on learned clauses (off,linear,quadratic,larger)", 0, IntRange(0,3), optionListPtr ),
  opt_uhdCleanRebuild     ("SEARCH UNHIDE PROBING", "sUhdPrRb",  "rebuild BIG before cleaning the formula" ,true, optionListPtr ),
