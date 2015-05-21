@@ -79,6 +79,7 @@ public:
  IntOption opt_restarts_type;
  IntOption opt_restart_first;
  DoubleOption opt_restart_inc;
+ IntOption opt_inc_restart_level;
 
  DoubleOption opt_garbage_frac;
 
@@ -155,6 +156,7 @@ BoolOption opt_rupProofOnly;
 IntOption opt_checkProofOnline;
  
  IntOption opt_verb;
+ IntOption opt_inc_verb;
  
  BoolOption opt_usePPpp;
  BoolOption opt_usePPip;

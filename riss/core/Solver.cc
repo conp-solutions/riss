@@ -59,9 +59,10 @@ using namespace Riss;
 //=================================================================================================
 // Constructor/Destructor:
 
-
-Solver::Solver(CoreConfig& _config) :
-    config(_config)
+Solver::Solver(CoreConfig* externalConfig , const char* configName ) :  // CoreConfig& _config
+    privateConfig ( externalConfig == 0 ? new CoreConfig( configName ) : externalConfig )
+    , deleteConfig ( externalConfig == 0 )
+    , config(* privateConfig )
     // DRUP output file
     , drupProofFile (0)
     // Parameters (user settable):
@@ -123,6 +124,9 @@ Solver::Solver(CoreConfig& _config) :
   
   // Online proof checking class
   , onlineDratChecker( config.opt_checkProofOnline != 0 ? new OnlineProofChecker(dratProof) : 0)
+  
+  // number of restarts
+  , curr_restarts(0)
   
   // UIP hack
   , l1conflicts(0)
@@ -204,6 +208,7 @@ Solver::Solver(CoreConfig& _config) :
   
   if( onlineDratChecker != 0 ) onlineDratChecker->setVerbosity( config.opt_checkProofOnline );
   
+  DOUT( if ( config.opt_inc_verb > 0 ) cerr << "c set up solver" << endl; );
 }
 
 
@@ -212,6 +217,9 @@ Solver::~Solver()
 {
   if( big != 0 )         { big->BIG::~BIG(); delete big; big = 0; } // clean up! 
   if( coprocessor != 0 ) { delete coprocessor; coprocessor = 0; }
+  if( deleteConfig  ) delete privateConfig;  // delete the configuration that has been created for this solver object
+  
+  DOUT( if ( config.opt_inc_verb > 0 ) cerr << "c destruct solver" << endl; );
 }
 
 
@@ -2201,6 +2209,8 @@ lbool Solver::solve_()
 
     printHeader();
     
+    DOUT( if ( config.opt_inc_verb > 0 ) cerr << "c solve with v: " << nVars() << " c: " << clauses.size() << " a: " << assumptions.size() << endl; );
+    
     // preprocess
     if( status == l_Undef ) { // TODO: freeze variables of assumptions!
 	status = preprocess();
@@ -2233,7 +2243,7 @@ lbool Solver::solve_()
     //
     // Search:
     //
-    int curr_restarts = 0; 
+    curr_restarts = 0; 
     lastReshuffleRestart = 0;
     
     // substitueDisjunctions
@@ -2518,7 +2528,9 @@ void Solver::buildReduct() {
 
 int Solver::getRestartLevel()
 {
-  if( config.opt_restart_level == 0 ) return 0;
+  // check whether we should jump beyond assumptions (if there are any)
+  const int minRestartLevel = (assumptions.size() == 0 || curr_restarts % config.opt_inc_restart_level == 0) ? 0 : assumptions.size();
+  if( config.opt_restart_level == 0 ) return minRestartLevel;
   else {
     // get decision literal that would be decided next:
     
@@ -2581,9 +2593,9 @@ int Solver::getRestartLevel()
 	rs_partialRestarts ++;
       } 
       // return restart level
-      return restartLevel;
+      return restartLevel < minRestartLevel ? minRestartLevel : restartLevel;
     } 
-    return 0;
+    return minRestartLevel;
   }
 }
 

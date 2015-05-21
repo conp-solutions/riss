@@ -73,10 +73,11 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  opt_init_act ("INIT", "init-act", "initialize activities (0=none,1=inc-lin,2=inc-geo,3=dec-lin,4=dec-geo,5=rnd,6=abs(jw))", 0, IntRange(0, 6), optionListPtr ),
  opt_init_pol ("INIT", "init-pol", "initialize polarity (0=none,1=JW-pol,2=JW-neg,3=MOMS,4=MOMS-neg,5=rnd,6=pos)", 0, IntRange(0, 5), optionListPtr ),
 
- opt_restart_level (_cat, "rlevel", "Choose to which level to jump to: 0=0, 1=ReusedTrail, 2=recursive reused trail", 0, IntRange(0, 2), optionListPtr ),
- opt_restarts_type (_cat, "rtype", "Choose type of restart (0=dynamic,1=luby,2=geometric)", 0, IntRange(0, 2), optionListPtr ),
- opt_restart_first (_cat, "rfirst", "The base restart interval", 100, IntRange(1, INT32_MAX), optionListPtr ),
- opt_restart_inc (_cat, "rinc", "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false), optionListPtr ),
+ opt_restart_level     (_cat, "rlevel",  "Choose to which level to jump to: 0=0, 1=ReusedTrail, 2=recursive reused trail", 0, IntRange(0, 2), optionListPtr ),
+ opt_restarts_type     (_cat, "rtype",   "Choose type of restart (0=dynamic,1=luby,2=geometric)", 0, IntRange(0, 2), optionListPtr ),
+ opt_restart_first     (_cat, "rfirst",  "The base restart interval", 100, IntRange(1, INT32_MAX), optionListPtr ),
+ opt_restart_inc       (_cat, "rinc",    "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false), optionListPtr ),
+ opt_inc_restart_level (_cat, "irlevel", "Choose how often restarts beyond assumptions shoud be performed (every X)", 1, IntRange(1, INT32_MAX), optionListPtr ),
 
  opt_garbage_frac (_cat, "gc-frac", "The fraction of wasted memory allowed before a garbage collection is triggered", 0.20, DoubleRange(0, false, HUGE_VAL, false), optionListPtr ),
 
@@ -158,7 +159,8 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  opt_rupProofOnly     ("PROOF", "rup-only", "do not print delete lines into proof", false, optionListPtr ), 
  opt_checkProofOnline ("PROOF", "proof-oft-check", "check proof construction during execution (1=on, higher => more verbose checking)", 0, IntRange(0,10), optionListPtr ), 
 
- opt_verb ("CORE", "solververb",   "Verbosity level (0=silent, 1=some, 2=more).", 0, IntRange(0, 2), optionListPtr ),
+ opt_verb     ("CORE", "solververb",   "Verbosity level (0=silent, 1=some, 2=more).", 0, IntRange(0, 2), optionListPtr ),
+ opt_inc_verb ("CORE", "incsverb",     "Verbosity level for MaxSAT (0=silent, 1=some, 2=more).", 0, IntRange(0, 2), optionListPtr ),
  
  opt_usePPpp ("CORE", "usePP", "use preprocessor for preprocessing", true, optionListPtr ),
  opt_usePPip ("CORE", "useIP", "use preprocessor for inprocessing", true, optionListPtr ),

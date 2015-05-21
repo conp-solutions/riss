@@ -116,16 +116,22 @@ class Solver {
     friend class Pcasso::PcassoClient; // PcassoClient is allowed to access all the solver data structures
 #endif
     
+    CoreConfig* privateConfig; // do be able to construct object without modifying configuration
+    bool deleteConfig;
+    
     CoreConfig& config;
 public:
 
     // Constructor/Destructor:
     //
-    Solver(CoreConfig& _config);
+    Solver(CoreConfig* externalConfig = 0, const char* configName = 0);
 
     PCASSOVIRTUAL
     ~Solver();
 
+    /// tell the solver to delete the configuration it just received
+    void setDeleteConfig() { deleteConfig = true; }
+    
     // Problem specification:
     //
     PCASSOVIRTUAL
@@ -569,6 +575,7 @@ protected:
   
   OnlineProofChecker* onlineDratChecker;
   
+  int curr_restarts; // number of restarts for current call to solve_ method
   
   // UIP hack
   int l1conflicts; // number of conflicts at level 1

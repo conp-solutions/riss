@@ -36,7 +36,7 @@ extern "C" {
     if( presetConfig  != 0 ) cp3->solverconfig->setPreset(presetConfig );
     cp3->cp3config = new Coprocessor::CP3Config("");
     if( presetConfig  != 0 ) cp3->cp3config->setPreset(presetConfig );
-    cp3->solver = new Riss::Solver (*(cp3->solverconfig));
+    cp3->solver = new Riss::Solver ( cp3->solverconfig ); // pointer to config object, will be deleted by solver during its destruction
     cp3->cp3 = new Coprocessor::Preprocessor ( cp3->solver, *(cp3->cp3config) );
     return cp3;
   }
@@ -48,7 +48,7 @@ extern "C" {
     delete (*cp3)->cp3config;
     delete (*cp3)->solver;
     // delete (*cp3)->cp3; // not necessary, because solver is already killing it
-    delete (*cp3)->solverconfig;
+    // delete (*cp3)->solverconfig; // deleted by solver
     delete (*cp3);
     (*cp3) = 0;
   }
