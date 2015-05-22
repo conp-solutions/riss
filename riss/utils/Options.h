@@ -192,12 +192,12 @@ class DoubleOption : public Option
                 range.end,
                 range.end_inclusive ? ']' : ')',
                 value);
-#ifndef NOVERBHELP
+        #ifndef NOVERBHELP
         if (verbose) {
             fprintf(stderr, "\n        %s\n", description);
             fprintf(stderr, "\n");
         }
-#endif
+        #endif
     }
 
     void giveRndValue (std::string& optionText )
@@ -280,12 +280,12 @@ class IntOption : public Option
         }
 
         fprintf(stderr, "] (default: %d)\n", value);
-#ifndef NOVERBHELP
+        #ifndef NOVERBHELP
         if (verbose) {
             fprintf(stderr, "\n        %s\n", description);
             fprintf(stderr, "\n");
         }
-#endif
+        #endif
     }
 
 
@@ -368,12 +368,12 @@ class Int64Option : public Option
         }
 
         fprintf(stderr, "] (default: %ld)\n", value);
-#ifndef NOVERBHELP
+        #ifndef NOVERBHELP
         if (verbose) {
             fprintf(stderr, "\n        %s\n", description);
             fprintf(stderr, "\n");
         }
-#endif
+        #endif
     }
 
 
@@ -427,12 +427,12 @@ class StringOption : public Option
     virtual void help (bool verbose = false)
     {
         fprintf(stderr, "  -%-10s = %8s\n", name, type_name);
-#ifndef NOVERBHELP
+        #ifndef NOVERBHELP
         if (verbose) {
             fprintf(stderr, "\n        %s\n", description);
             fprintf(stderr, "\n");
         }
-#endif
+        #endif
     }
 
 
@@ -494,12 +494,12 @@ class BoolOption : public Option
 
         fprintf(stderr, " ");
         fprintf(stderr, "(default: %s)\n", value ? "on" : "off");
-#ifndef NOVERBHELP
+        #ifndef NOVERBHELP
         if (verbose) {
             fprintf(stderr, "\n        %s\n", description);
             fprintf(stderr, "\n");
         }
-#endif
+        #endif
     }
 
 

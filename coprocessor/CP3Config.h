@@ -57,28 +57,28 @@ class CP3Config : public Riss::Config
 
     Riss::StringOption opt_whiteList ;
 
-#if defined TOOLVERSION && TOOLVERSION < 400
+    #if defined TOOLVERSION && TOOLVERSION < 400
     const bool opt_printStats; // do not print stats, if restricted binary is produced
     const  int opt_verbose;        // do not talk during computation!
-#else
+    #else
     Riss::BoolOption opt_printStats;
     Riss::IntOption  opt_verbose;
-#endif
+    #endif
 
 // techniques
     Riss::BoolOption opt_up          ;
     Riss::BoolOption opt_subsimp     ;
     Riss::BoolOption opt_hte         ;
-#if defined TOOLVERSION && TOOLVERSION < 355
+    #if defined TOOLVERSION && TOOLVERSION < 355
     const bool opt_bce;
-#else
+    #else
     Riss::BoolOption opt_bce         ;
-#endif
-#if defined TOOLVERSION && TOOLVERSION < 360
+    #endif
+    #if defined TOOLVERSION && TOOLVERSION < 360
     const bool opt_ent;
-#else
+    #else
     Riss::BoolOption opt_ent        ;
-#endif
+    #endif
     Riss::BoolOption opt_exp         ;
     Riss::BoolOption opt_la          ;
     Riss::BoolOption opt_cce         ;
@@ -101,7 +101,7 @@ class CP3Config : public Riss::Config
     Riss::StringOption opt_itechs ;
 
 // use 2sat and sls only for high versions!
-#if defined TOOLVERSION && TOOLVERSION < 301
+    #if defined TOOLVERSION && TOOLVERSION < 301
     const int opt_threads;
     const bool opt_sls;
     const bool opt_sls_phase;
@@ -111,7 +111,7 @@ class CP3Config : public Riss::Config
     const bool opt_twosat;
     const bool opt_twosat_init;
     const bool  opt_ts_phase;
-#else
+    #else
     Riss::IntOption  opt_threads     ;
     Riss::BoolOption opt_sls         ;
     Riss::BoolOption opt_sls_phase   ;
@@ -121,7 +121,7 @@ class CP3Config : public Riss::Config
     Riss::BoolOption opt_twosat      ;
     Riss::BoolOption opt_twosat_init ;
     Riss::BoolOption opt_ts_phase    ;
-#endif
+    #endif
 
 
 
@@ -193,12 +193,12 @@ class CP3Config : public Riss::Config
     Riss::IntOption opt_rew_cls;   // clause limit to enable
     Riss::IntOption opt_rew_lits;  // total literals limit to enable
 
-#ifndef NDEBUG
+    #ifndef NDEBUG
     Riss::BoolOption opt_debug    ;
     Riss::IntOption opt_check    ;
     Riss::IntOption  opt_log      ;
     Riss::StringOption printAfter ;
-#endif
+    #endif
 
 //
 // BVE
@@ -229,15 +229,15 @@ class CP3Config : public Riss::Config
     Riss::BoolOption opt_print_progress  ;
     Riss::IntOption  opt_bveInpStepInc   ;
 
-#if defined TOOLVERSION && TOOLVERSION < 302
+    #if defined TOOLVERSION && TOOLVERSION < 302
     const int par_bve_threshold ;
     const int postpone_locked_neighbors ;
     const bool opt_minimal_updates ;
-#else
+    #else
     Riss::IntOption  par_bve_threshold;
     Riss::IntOption  postpone_locked_neighbors;
     Riss::BoolOption opt_minimal_updates;
-#endif
+    #endif
 
 //
 // BVA
@@ -252,10 +252,10 @@ class CP3Config : public Riss::Config
     Riss::BoolOption opt_bvaComplement        ;
     Riss::BoolOption opt_bvaRemoveDubplicates ;
     Riss::BoolOption opt_bvaSubstituteOr      ;
-#ifndef NDEBUG
+    #ifndef NDEBUG
     Riss::IntOption  bva_debug                ;
     Riss::IntOption  opt_bvaAnalysisDebug     ;
-#endif
+    #endif
 
     Riss::IntOption  opt_bva_Xlimit           ;
     Riss::IntOption  opt_bva_Ilimit           ;
@@ -280,9 +280,9 @@ class CP3Config : public Riss::Config
     Riss::BoolOption opt_bce_cle_conservative; // perform CLE conservative and cheap, if tautological resolvents occur
     Riss::IntOption opt_bceInpStepInc; // add to limit for inprocessing
     Riss::IntOption opt_bce_verbose; // output operation steps
-#ifndef NDEBUG
+    #ifndef NDEBUG
     Riss::BoolOption opt_bce_debug; // debug output
-#endif
+    #endif
 
 //
 // LiteralAddition
@@ -298,9 +298,9 @@ class CP3Config : public Riss::Config
     Riss::IntOption alaLimit; // number of steps for limits
     Riss::IntOption alaIterations; // number of iterations to do for ALA
     Riss::BoolOption ala_binary; // perform ALA with binary clauses
-#ifndef NDEBUG
+    #ifndef NDEBUG
     Riss::BoolOption opt_la_debug; // debug output
-#endif
+    #endif
 
 
 //
@@ -309,9 +309,9 @@ class CP3Config : public Riss::Config
     Riss::IntOption opt_cceSteps;
     Riss::IntOption opt_ccelevel;
     Riss::IntOption opt_ccePercent;
-#ifndef NDEBUG
+    #ifndef NDEBUG
     Riss::IntOption cce_debug_out;
-#endif
+    #endif
     Riss::IntOption  opt_cceInpStepInc;
 
 //
@@ -320,9 +320,9 @@ class CP3Config : public Riss::Config
     Riss::BoolOption rate_orderComplements;
     Riss::Int64Option rate_Limit;
     Riss::Int64Option ratm_Limit;
-#ifndef NDEBUG
+    #ifndef NDEBUG
     Riss::IntOption opt_rate_debug;
-#endif
+    #endif
     Riss::BoolOption opt_rate_brat; // test resolvent not only for AT, but also for being blocked
     Riss::IntOption rate_minSize;
     Riss::BoolOption opt_rate_rate;
@@ -334,9 +334,9 @@ class CP3Config : public Riss::Config
 //
 // Dense
 //
-#ifndef NDEBUG
+    #ifndef NDEBUG
     Riss::IntOption dense_debug_out;
-#endif
+    #endif
     Riss::IntOption  opt_dense_fragmentation;
     Riss::BoolOption opt_dense_store_forward;
     Riss::BoolOption opt_dense_keep_assigned;
@@ -344,38 +344,38 @@ class CP3Config : public Riss::Config
 //
 // Entailed
 //
-#if defined TOOLVERSION && TOOLVERSION < 360
+    #if defined TOOLVERSION && TOOLVERSION < 360
     const int opt_entailed_minClsSize;
-#else
+    #else
     Riss::IntOption opt_entailed_minClsSize;
-#endif
+    #endif
 
-#ifndef NDEBUG
+    #ifndef NDEBUG
     Riss::IntOption  entailed_debug;
-#endif
+    #endif
 
 
 //
 // Equivalence
 //
-#if defined TOOLVERSION  && TOOLVERSION < 350
+    #if defined TOOLVERSION  && TOOLVERSION < 350
     const int opt_ee_level            ;
     const int opt_ee_gate_limit       ;
     const int opt_ee_circuit_iters    ;
     const bool opt_ee_eagerEquivalence;
     const bool opt_eeGateBigFirst     ;
     const char* opt_ee_aagFile        ;
-#else
+    #else
     Riss::IntOption  opt_ee_level           ;
     Riss::IntOption  opt_ee_gate_limit      ;
     Riss::IntOption  opt_ee_circuit_iters   ;
     Riss::BoolOption opt_ee_eagerEquivalence;
     Riss::BoolOption opt_eeGateBigFirst     ;
     Riss::StringOption opt_ee_aagFile       ;
-#endif
-#ifndef NDEBUG
+    #endif
+    #ifndef NDEBUG
     Riss::IntOption  ee_debug_out           ;
-#endif
+    #endif
     Riss::BoolOption opt_eeSub            ;
     Riss::BoolOption opt_eeFullReset      ;
     Riss::IntOption  opt_ee_limit         ;
@@ -387,7 +387,7 @@ class CP3Config : public Riss::Config
 //
 // Structural hashing options
 //
-#if defined TOOLVERSION  && TOOLVERSION < 350
+    #if defined TOOLVERSION  && TOOLVERSION < 350
     const bool circ_AND       ;
     const bool circ_ITE       ;
     const bool circ_XOR       ;
@@ -398,7 +398,7 @@ class CP3Config : public Riss::Config
     const bool circ_AddBlocked;
     const bool circ_NegatedI  ;
     const bool circ_Implied   ;
-#else
+    #else
     Riss::BoolOption circ_AND;
     Riss::BoolOption circ_ITE;
     Riss::BoolOption circ_XOR;
@@ -410,11 +410,11 @@ class CP3Config : public Riss::Config
     Riss::BoolOption circ_AddBlocked;
     Riss::BoolOption circ_NegatedI;
     Riss::BoolOption circ_Implied;
-#endif
+    #endif
 /// temporary Boolean flag to quickly enable debug output for the whole file
-#ifndef NDEBUG
+    #ifndef NDEBUG
     Riss::BoolOption circ_debug_out;
-#endif
+    #endif
 
 
 //
@@ -445,27 +445,27 @@ class CP3Config : public Riss::Config
     Riss::IntOption opt_maxCardClauseSize;
     Riss::IntOption opt_maxCardSize      ;
     Riss::Int64Option opt_semSearchLimit ;
-#ifndef NDEBUG
+    #ifndef NDEBUG
     Riss::BoolOption opt_semDebug        ;
-#endif
+    #endif
     Riss::BoolOption opt_noReduct        ;
 
-#ifndef NDEBUG
+    #ifndef NDEBUG
     Riss::IntOption fm_debug_out       ;
-#endif
+    #endif
 
 //
 // Hidden Tautology Elimination
 //
     Riss::IntOption opt_hte_steps;
-#if defined TOOLVERSION && TOOLVERSION < 302
+    #if defined TOOLVERSION && TOOLVERSION < 302
     const bool opt_par_hte;
-#else
+    #else
     Riss::BoolOption opt_par_hte;
-#endif
-#ifndef NDEBUG
+    #endif
+    #ifndef NDEBUG
     Riss::IntOption hte_debug_out;
-#endif
+    #endif
     Riss::BoolOption opt_hteTalk ;
     Riss::IntOption  opt_hte_inpStepInc;
 
@@ -491,16 +491,16 @@ class CP3Config : public Riss::Config
     Riss::IntOption  pr_opt_inpStepInc2      ;
     Riss::IntOption  pr_keepLHBRs  ;
     Riss::BoolOption pr_necBinaries  ;
-#ifndef NDEBUG
+    #ifndef NDEBUG
     Riss::IntOption pr_debug_out;
-#endif
+    #endif
 
 //
 // Unit Propagation
 //
-#ifndef NDEBUG
+    #ifndef NDEBUG
     Riss::IntOption up_debug_out;
-#endif
+    #endif
 
 //
 // Resolution and Redundancy Addition
@@ -518,9 +518,9 @@ class CP3Config : public Riss::Config
     Riss::IntOption  opt_res3_inpStepInc ;
     Riss::IntOption  opt_add2_inpStepInc ;
 /// enable this parameter only during debug!
-#ifndef NDEBUG
+    #ifndef NDEBUG
     Riss::BoolOption res3_debug_out      ;
-#endif
+    #endif
 
 //
 // Rewriter
@@ -543,25 +543,25 @@ class CP3Config : public Riss::Config
     Riss::IntOption  opt_rew_min_imp_size     ;
     Riss::BoolOption opt_rew_impl_pref_small   ;
     Riss::IntOption  opt_rew_inpStepInc     ;
-#ifndef NDEBUG
+    #ifndef NDEBUG
     Riss::IntOption rew_debug_out;
-#endif
+    #endif
 
 //
 // Shuffle
 //
     Riss::IntOption opt_shuffle_seed;
     Riss::BoolOption opt_shuffle_order;
-#ifndef NDEBUG
+    #ifndef NDEBUG
     Riss::IntOption shuffle_debug_out;
-#endif
+    #endif
 
 //
 // Sls
 //
-#ifndef NDEBUG
+    #ifndef NDEBUG
     Riss::BoolOption opt_sls_debug ;
-#endif
+    #endif
     Riss::IntOption  opt_sls_ksat_flips ;
     Riss::IntOption  opt_sls_rand_walk  ;
     Riss::BoolOption opt_sls_adopt      ;
@@ -577,24 +577,24 @@ class CP3Config : public Riss::Config
     Riss::IntOption   opt_sub_strLimit     ;
     Riss::IntOption   opt_sub_callIncrease ;
     Riss::IntOption  opt_sub_inpStepInc    ;
-#if defined TOOLVERSION && TOOLVERSION < 302
+    #if defined TOOLVERSION && TOOLVERSION < 302
     const int   opt_sub_par_strength ;
     const bool  opt_sub_lock_stats   ;
     const int   opt_sub_par_subs     ;
     const int   opt_sub_par_subs_counts;
     const int   opt_sub_chunk_size     ;
     const int   opt_sub_par_str_minCls ;
-#else
+    #else
     Riss::IntOption   opt_sub_par_strength   ;
     Riss::BoolOption  opt_sub_lock_stats     ;
     Riss::IntOption   opt_sub_par_subs       ;
     Riss::IntOption   opt_sub_par_subs_counts;
     Riss::IntOption   opt_sub_chunk_size     ;
     Riss::IntOption   opt_sub_par_str_minCls ;
-#endif
-#ifndef NDEBUG
+    #endif
+    #ifndef NDEBUG
     Riss::IntOption   opt_sub_debug  ;
-#endif
+    #endif
 
 //
 // Symmetry Breaker
@@ -614,16 +614,16 @@ class CP3Config : public Riss::Config
     Riss::BoolOption    sym_opt_cleanLearn     ;
     Riss::IntOption     sym_opt_conflicts      ;
     Riss::IntOption     sym_opt_total_conflicts;
-#ifndef NDEBUG
+    #ifndef NDEBUG
     Riss::IntOption sym_debug_out;
-#endif
+    #endif
 
 //
 // Twosat
 //
-#ifndef NDEBUG
+    #ifndef NDEBUG
     Riss::IntOption twosat_debug_out  ;
-#endif
+    #endif
     Riss::BoolOption twosat_useUnits  ;
     Riss::BoolOption twosat_clearQueue;
 
@@ -641,9 +641,9 @@ class CP3Config : public Riss::Config
     Riss::IntOption  opt_uhd_fullProbe ;
     Riss::BoolOption opt_uhd_probeEE   ;
     Riss::BoolOption opt_uhd_fullBorder;
-#ifndef NDEBUG
+    #ifndef NDEBUG
     Riss::IntOption  opt_uhd_Debug;
-#endif
+    #endif
 
 //
 // Xor
@@ -660,9 +660,9 @@ class CP3Config : public Riss::Config
     Riss::BoolOption opt_xor_checkNewSubsume;
     Riss::BoolOption opt_xor_addAsLearnt;
 
-#ifndef NDEBUG
+    #ifndef NDEBUG
     Riss::IntOption  opt_xor_debug;
-#endif
+    #endif
   private:
     int dummy;
 };

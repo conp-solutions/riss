@@ -178,13 +178,13 @@ class Clause
         // + write get_method()
         unsigned has_extra : 1;
         unsigned reloced   : 1;
-#ifndef PCASSO
+        #ifndef PCASSO
         unsigned lbd       : 24;
         unsigned canbedel  : 1;
         unsigned can_subsume : 1;
         unsigned can_strengthen : 1;
         unsigned size      : 32;
-#else
+        #else
         unsigned shared     : 1;
         unsigned shCleanDelay : 1;
         unsigned size      : 25;
@@ -193,11 +193,11 @@ class Clause
         unsigned can_strengthen : 1;
         unsigned pt_level   : 9;     // level of the clause in the decision tree
         unsigned lbd       : 20;
-#endif
+        #endif
 
-#ifdef CLS_EXTRA_INFO
+        #ifdef CLS_EXTRA_INFO
         unsigned extra_info : 64;
-#endif
+        #endif
 
         ClauseHeader(void) {}
         ClauseHeader(volatile ClauseHeader& rhs)
@@ -212,14 +212,14 @@ class Clause
             can_subsume = rhs.can_subsume;
             can_strengthen = rhs.can_strengthen;
             size = rhs.size;
-#ifdef PCASSO
+            #ifdef PCASSO
             pt_level = rhs.pt_level;
             shared = rhs.shared;
             shCleanDelay = rhs.shCleanDelay;
-#endif
-#ifdef CLS_EXTRA_INFO
+            #endif
+            #ifdef CLS_EXTRA_INFO
             extra_info = rhs.extra_info;
-#endif
+            #endif
         }
 
         ClauseHeader& operator = (volatile ClauseHeader& rhs)
@@ -234,14 +234,14 @@ class Clause
             can_subsume = rhs.can_subsume;
             can_strengthen = rhs.can_strengthen;
             size = rhs.size;
-#ifdef PCASSO
+            #ifdef PCASSO
             pt_level = rhs.pt_level;
             shared = rhs.shared;
             shCleanDelay = rhs.shCleanDelay;
-#endif
-#ifdef CLS_EXTRA_INFO
+            #endif
+            #ifdef CLS_EXTRA_INFO
             extra_info = rhs.extra_info;
-#endif
+            #endif
             return *this;
         }
 
@@ -261,18 +261,18 @@ class Clause
         header.has_extra = use_extra;
         header.reloced   = 0;
         header.size      = ps.size();
-#ifdef CLS_EXTRA_INFO
+        #ifdef CLS_EXTRA_INFO
         header.extra_info = 0
-#endif
+        #endif
                             header.lbd = 0;
         header.canbedel = 1;
         header.can_subsume = 1;
         header.can_strengthen = 1;
-#ifdef PCASSO
+        #ifdef PCASSO
         header.pt_level = 0;
         header.shared = 0; // Non-shared
         header.shCleanDelay = 0;
-#endif
+        #endif
 
         for (int i = 0; i < ps.size(); i++)
             for (int j = i+1; j < ps.size(); j++) {
@@ -303,18 +303,18 @@ class Clause
         header.has_extra = use_extra;
         header.reloced   = 0;
         header.size      = psSize;
-#ifdef CLS_EXTRA_INFO
+        #ifdef CLS_EXTRA_INFO
         header.extra_info = 0
-#endif
+        #endif
                             header.lbd = 0;
         header.canbedel = 1;
         header.can_subsume = 1;
         header.can_strengthen = 1;
-#ifdef PCASSO
+        #ifdef PCASSO
         header.pt_level = 0;
         header.shared = 0; // Non-shared
         header.shCleanDelay = 0;
-#endif
+        #endif
 
         for (int i = 0; i < psSize; i++)
             for (int j = i+1; j < psSize; j++) {
@@ -495,10 +495,10 @@ class Clause
     }
 
     //DebugOutput
-#ifdef SUBDEBUG
+    #ifdef SUBDEBUG
     inline void print_clause() const ;
     inline void print_lit(int i) const ;
-#endif
+    #endif
 
     bool operator<( const Clause& other ) const
     {
@@ -518,7 +518,7 @@ class Clause
         return false;
     }
 
-#ifdef PCASSO
+    #ifdef PCASSO
 // For PCASSO:
     /** Davide> Sets the clause pt_level */
     void setPTLevel(unsigned int _pt_level)
@@ -536,46 +536,46 @@ class Clause
     void initShCleanDelay(unsigned i) {        i>1 ? header.shCleanDelay=1: header.shCleanDelay=i;    }
     void decShCleanDelay() {        if(header.shCleanDelay>0) { header.shCleanDelay--; }    }
     unsigned getShCleanDelay() {       return header.shCleanDelay;    }
-#endif
+    #endif
 
     /// set the extra info of the clause to the given value
     void setExtraInformation( const uint64_t& info)
-#ifdef CLS_EXTRA_INFO
+    #ifdef CLS_EXTRA_INFO
     { header.extra_info = info }
-#else
+    #else
     {}
-#endif
+    #endif
 
     /// adopt this to external needs
     uint64_t extraInformation() const
-#ifdef CLS_EXTRA_INFO
+    #ifdef CLS_EXTRA_INFO
     { return header.extra_info; }
-#else
+    #else
     { return 0; }
-#endif
+    #endif
 
 
     /// update the current extra information with the extra information of another clause used to modify/create this clause
     void updateExtraInformation(const uint64_t& othersExtra) const
-#ifdef CLS_EXTRA_INFO
+    #ifdef CLS_EXTRA_INFO
     {
         uint64_t max = header.extra_info >= info ? header.extra_info : info;
         header.extra_info = max + 1;
     }
-#else
+    #else
     {}
-#endif
+    #endif
 
     /// this method will be used if extra information for unit clauses is calculated!
     static uint64_t updateExtraInformation(const uint64_t& a, const uint64_t& b)
-#ifdef CLS_EXTRA_INFO
+    #ifdef CLS_EXTRA_INFO
     {
         uint64_t max = a >= b ? a : b;
         return max+1;;
     }
-#else
+    #else
     { return 0; }
-#endif
+    #endif
 };
 
 //=================================================================================================
@@ -709,14 +709,14 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
             to[cr].activity() = c.activity();
             to[cr].setLBD(c.lbd());
             to[cr].setCanBeDel(c.canBeDel());
-#ifdef PCASSO
+            #ifdef PCASSO
             to[cr].header.shCleanDelay = c.getShCleanDelay();
             to[cr].header.shared = c.isShared() ? 1: 0;
-#endif
+            #endif
         } else if (to[cr].has_extra()) { to[cr].calcAbstraction(); }
-#ifdef PCASSO
+        #ifdef PCASSO
         to[cr].header.pt_level = c.getPTLevel();
-#endif
+        #endif
 
     }
 

@@ -277,19 +277,19 @@ class CoprocessorData
     std::vector<Riss::Lit>& getUndo() { return undo; }
 
     /// for DRUP / DRAT proofs
-#ifdef DRATPROOF
+    #ifdef DRATPROOF
     template <class T>
     void addToProof(   T& clause, bool deleteFromProof=false, const Riss::Lit remLit = Riss::lit_Undef); // write the given clause/std::vector/Riss::vec to the output, if the output is enabled
     void addUnitToProof(const  Riss::Lit& l, bool deleteFromProof=false);    // write a single unit clause to the proof
     void addCommentToProof(const char* text, bool deleteFromProof=false);
     bool outputsProof() const { return solver->outputsProof(); } // return whether the solver outputs the drup proof!
-#else // no DRAT proofs
+    #else // no DRAT proofs
     template <class T>
     void addToProof(   T& clause, bool deleteFromProof=false, const Riss::Lit remLit = Riss::lit_Undef) const {}; // write the given clause/std::vector/Riss::vec to the output, if the output is enabled
     void addUnitToProof(const  Riss::Lit& l, bool deleteFromProof=false) const {};    // write a single unit clause to the proof
     void addCommentToProof(const char* text, bool deleteFromProof=false) const {};
     bool outputsProof() const { return false; } // return whether the solver outputs the drup proof!
-#endif
+    #endif
 
     // handling equivalent literals
     void addEquivalences( const std::vector<Riss::Lit>& list );

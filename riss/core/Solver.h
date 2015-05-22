@@ -116,9 +116,9 @@ class Solver
     friend class Coprocessor::ExperimentalTechniques;
     friend class Riss::IncSolver; // for bmc
 
-#ifdef PCASSO
+    #ifdef PCASSO
     friend class Pcasso::PcassoClient; // PcassoClient is allowed to access all the solver data structures
-#endif
+    #endif
 
     CoreConfig& config;
   public:
@@ -279,24 +279,24 @@ class Solver
         CRef reason; int level;
         Lit dom;      /// for lhbr
         int32_t cost; /// for hack
-#ifdef CLS_EXTRA_INFO
+        #ifdef CLS_EXTRA_INFO
         uint64_t extraInfo;
-#endif
+        #endif
     };
     static inline VarData mkVarData(CRef cr, int l)
     {
         VarData d = {cr, l, lit_Undef, -1
-#ifdef CLS_EXTRA_INFO
+                     #ifdef CLS_EXTRA_INFO
                      , 0
-#endif
+                     #endif
                     }; return d;
     }
     static inline VarData mkVarData(CRef cr, int l, int _cost)
     {
         VarData d = {cr, l,lit_Undef,_cost
-#ifdef CLS_EXTRA_INFO
+                     #ifdef CLS_EXTRA_INFO
                      , 0
-#endif
+                     #endif
                     }; return d;
     }
 
@@ -334,18 +334,18 @@ class Solver
         unsigned seen:1;
         unsigned extra:4; // TODO: use for special variable (not in LBD) and do not touch!
         unsigned frozen:1; // indicate that this variable cannot be used for simplification techniques that do not preserve equivalence
-#ifdef PCASSO
+        #ifdef PCASSO
         unsigned varPT:16; // partition tree level for this variable
-#endif
+        #endif
         VarFlags( char _polarity ) : assigns(l_Undef), polarity(_polarity), decision(0), seen(0), extra(0), frozen(0)
-#ifdef PCASSO
+            #ifdef PCASSO
             , varPT(0)
-#endif
+            #endif
         {}
         VarFlags () : assigns(l_Undef), polarity(1), decision(0), seen(0), extra(0), frozen(0)
-#ifdef PCASSO
+            #ifdef PCASSO
             , varPT(0)
-#endif
+            #endif
         {}
     };
 
@@ -380,10 +380,10 @@ class Solver
     MarkArray permDiff;
     //vec<unsigned long>  permDiff;         // permDiff[var] contains the current conflict number... Used to count the number of  LBD
 
-#ifdef UPDATEVARACTIVITY
+    #ifdef UPDATEVARACTIVITY
     // UPDATEVARACTIVITY trick (see competition'09 companion paper)
     vec<Lit> lastDecisionLevel;
-#endif
+    #endif
 
   public: // TODO: set more nicely!
     ClauseAllocator     ca;
@@ -529,7 +529,7 @@ class Solver
     /** remove learned clauses during search */
     void clauseRemoval();
 
-#ifdef DRATPROOF
+    #ifdef DRATPROOF
     // DRUP proof
     bool outputsProof() const ;
     template <class T>
@@ -539,7 +539,7 @@ class Solver
   public:
     bool checkProof(); // if online checker is used, return whether the current proof is valid
   protected:
-#else // have empty dummy functions
+    #else // have empty dummy functions
     bool outputsProof() const { return false; }
     template <class T>
     void addToProof(   const T& clause, bool deleteFromProof = false, const Lit remLit = lit_Undef) const {};
@@ -548,7 +548,7 @@ class Solver
   public:
     bool checkProof() const { return true; } // if online checker is used, return whether the current proof is valid
   protected:
-#endif
+    #endif
 
 
     /** fill the current variable assignment into the given std::vector */
@@ -686,11 +686,11 @@ class Solver
     /** if extra info should be used, this method needs to return true! */
     bool usesExtraInfo() const
     {
-#ifdef CLS_EXTRA_INFO
+        #ifdef CLS_EXTRA_INFO
         return true;
-#else
+        #else
         return false;
-#endif
+        #endif
     }
 
     /** for solver extensions, which rely on extra informations per clause (including unit clauses), e.g. the level of the solver in a partition tree*/
@@ -772,10 +772,10 @@ class Solver
 // [END] modifications for parallel assumption based solver
 
 // Modifications for Pcasso
-#ifdef PCASSO
+    #ifdef PCASSO
     Pcasso::PcassoClient* pcassoClient;
 
-#endif
+    #endif
 // END modifications for Pcasso
 
 
@@ -1076,12 +1076,12 @@ bool Solver::checkProof ()
 inline
 void Solver::addInputClause_(vec< Lit >& ps)
 {
-#ifdef DRATPROOF
+    #ifdef DRATPROOF
     if( onlineDratChecker != 0 ) {
         // std::cerr << "c add parsed clause to DRAT-OTFC: " << ps << std::endl;
         onlineDratChecker->addParsedclause( ps );
     }
-#endif
+    #endif
 }
 
 };

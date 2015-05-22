@@ -23,6 +23,8 @@
 --indent-modifiers
 --indent-labels
 --indent-preproc-block
+--indent-preproc-cond
+--indent-preproc-define
 --convert-tabs
 # riss and co. have a lot of one line statements.
 # We keep them alive

@@ -74,13 +74,13 @@ class SimpSolver : public Solver
 
     // Generate a (possibly simplified) DIMACS file:
     //
-#if 0
+    #if 0
     void    toDimacs  (const char* file, const vec<Lit>& assumps);
     void    toDimacs  (const char* file);
     void    toDimacs  (const char* file, Lit p);
     void    toDimacs  (const char* file, Lit p, Lit q);
     void    toDimacs  (const char* file, Lit p, Lit q, Lit r);
-#endif
+    #endif
 
     // Mode of operation:
     //

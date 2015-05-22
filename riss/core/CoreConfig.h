@@ -40,10 +40,10 @@ class CoreConfig : public Config
     BoolOption opt_fast_rem; // remove elements on watch list faster, but unsorted
     IntOption nanosleep; // nanoseconds to sleep for each conflict
     BoolOption ppOnly; // interrupt after preprocessing
-#ifndef NDEBUG
+    #ifndef NDEBUG
     BoolOption opt_learn_debug;
     IntOption opt_removal_debug;
-#endif
+    #endif
 
     DoubleOption opt_K;
     DoubleOption opt_R;
@@ -95,9 +95,9 @@ class CoreConfig : public Config
 
     BoolOption opt_updateLearnAct;
 
-#ifndef NDEBUG
+    #ifndef NDEBUG
     BoolOption opt_dbg;
-#endif
+    #endif
 
     BoolOption opt_long_conflict;
 
@@ -109,16 +109,16 @@ class CoreConfig : public Config
     StringOption actFile;
     BoolOption opt_pol;
     StringOption polFile;
-#ifndef NDEBUG
+    #ifndef NDEBUG
     IntOption opt_printDecisions;
-#endif
+    #endif
 
     IntOption opt_rMax;
     DoubleOption opt_rMaxInc;
 
-#ifndef NDEBUG
+    #ifndef NDEBUG
     BoolOption localLookaheadDebug;
-#endif
+    #endif
     BoolOption localLookAhead;
     BoolOption tb;
     BoolOption opt_laDyn;

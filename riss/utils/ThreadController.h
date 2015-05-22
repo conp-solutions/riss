@@ -59,11 +59,11 @@ class ThreadData
     SleepLock ownLock;     // lock to synchronize with the mast in a sleep state
     SleepLock* masterLock; // pointer to masters lock for synchronization
 
-#ifndef __APPLE__ // Does not work on OS-X
+    #ifndef __APPLE__ // Does not work on OS-X
     char dummy [128 - sizeof(Job) - sizeof(ThreadState) - sizeof(SleepLock) - sizeof(SleepLock*) ]; // at least on cacheline as dummy!
-#else
+    #else
     char dummy [256 - sizeof(Job) - sizeof(ThreadState) - sizeof(SleepLock) - sizeof(SleepLock*) ]; // at least on cacheline as dummy!
-#endif
+    #endif
 
   public:
     ThreadData(SleepLock* _masterLock) : state(initializing), masterLock(_masterLock) {}

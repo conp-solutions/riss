@@ -75,7 +75,7 @@ static inline double Riss::wallClockTime(void)
     return ((double) timestamp.tv_sec) + ((double) timestamp.tv_nsec / 1000000000);
 }
 
-#else // use the Mac wall clock instead 
+#else // use the Mac wall clock instead
 static inline double Riss::wallClockTime(void)
 {
     clock_serv_t cclock;

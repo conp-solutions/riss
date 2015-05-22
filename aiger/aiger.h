@@ -53,13 +53,13 @@ typedef struct aiger_symbol aiger_symbol;
 #define aiger_true 1
 
 #define aiger_sign(l) \
-  (((unsigned)(l))&1)
+    (((unsigned)(l))&1)
 
 #define aiger_strip(l) \
-  (((unsigned)(l))&~1)
+    (((unsigned)(l))&~1)
 
 #define aiger_not(l) \
-  (((unsigned)(l))^1)
+    (((unsigned)(l))^1)
 
 /*------------------------------------------------------------------------*/
 /* Each literal is associated to a variable having an unsigned index.  The
@@ -67,10 +67,10 @@ typedef struct aiger_symbol aiger_symbol;
  * the same as removing the sign bit.
  */
 #define aiger_var2lit(i) \
-  (((unsigned)(i)) << 1)
+    (((unsigned)(i)) << 1)
 
 #define aiger_lit2var(l) \
-  (((unsigned)(l)) >> 1)
+    (((unsigned)(l)) >> 1)
 
 /*------------------------------------------------------------------------*/
 /* Callback functions for client memory management.  The 'free' wrapper will

@@ -167,7 +167,7 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
 
         if( s > 0 ) {
             // calculate LBD value
-#if 0   // if variables should be protected
+            #if 0   // if variables should be protected
             if( communication->variableProtection() ) {
                 int j = 0;
                 for( int i = 0 ; i < toSend->size(); ++ i )
@@ -193,7 +193,7 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
             for( int i = 1; i < s; ++ i ) {
                 lbd = ( levels[i-1] == levels[i] ) ? lbd : lbd + 1;
             }
-#endif
+            #endif
             int lbd = computeLBD( *toSend );
 
             if( lbd > currentSendLbdLimit ) {
