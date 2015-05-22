@@ -27,11 +27,15 @@ public:  // TODO get this right by having getters and setters
   int specVars, specCls; // clauses specified in the header
   int fullVariables;     // variables after parsing the formula
   
+  int debugLevel; // how much 
+  
 public:
   
   Mprocessor( const char* configname );
   
   ~Mprocessor();
+  
+  void setDebugLevel( int level ) { debugLevel = level; }
   
   // from open-wbo maxsat solver
   void setProblemType(int type);       // Set problem type.

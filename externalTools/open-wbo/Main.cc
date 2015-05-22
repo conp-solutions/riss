@@ -62,6 +62,8 @@ static void SIGINT_exit(int signum)
   exit(_UNKNOWN_);
 }
 
+IntOption debug("Encodings", "dbg", "debug output verbosity.\n", 0, IntRange(0, 5));
+
 #if NSPACE == Riss
 void loadFromMprocessorToMaxsat( MaxSAT* S ) {
   
@@ -80,8 +82,11 @@ void loadFromMprocessorToMaxsat( MaxSAT* S ) {
 
   // if the option dense is used, these literals are already rewritten by "dense"
   // write header
+  S->setProblemType( mprocessor->getProblemType() );
   while( S->nVars() < vars ) S->newVar(); // set variables in MS solver
   S->setHardWeight( top );                // tell MS solver about top weight
+  
+  if( debug > 0 ) cerr << "c p wcnf " << S->nVars() << " " << clss << " " << top << endl;
   
   // write the hard clauses into the formula!
   // print assignments
@@ -90,6 +95,7 @@ void loadFromMprocessorToMaxsat( MaxSAT* S ) {
   for (int i = 0; i < mprocessor->S->trail.size(); ++i)
   {
     cls[0] = mprocessor->S->trail[i];
+    if( debug > 1 ) cerr << "c add hard: " << cls << " 0" << endl;
     S->addHardClause( cls );
   }
   // print clauses
@@ -101,6 +107,7 @@ void loadFromMprocessorToMaxsat( MaxSAT* S ) {
     cls.clear();
     for (int i = 0; i < c.size(); ++i)
       cls.push_( c[i] );
+    if( debug > 1 ) cerr << "c add hard: " << cls << " 0" << endl;
     S->addHardClause( cls );
   }  
 
@@ -119,10 +126,16 @@ void loadFromMprocessorToMaxsat( MaxSAT* S ) {
     }
     if( mprocessor->literalWeights[toInt(mkLit(v))] != 0 ) { // setting literal l to true ha a cost, hence have unit!
       cls[0] = l;
+      if( debug > 1 ) cerr << "c add soft: " << mprocessor->literalWeights[toInt(mkLit(v))] << " ; " << cls << " 0" << endl;
+      S->setCurrentWeight( mprocessor->literalWeights[toInt(mkLit(v))] );
+      S->updateSumWeights( mprocessor->literalWeights[toInt(mkLit(v))] );
       S->addSoftClause(mprocessor->literalWeights[toInt(mkLit(v))], cls);
     }
     if( mprocessor->literalWeights[toInt(~mkLit(v))] != 0 ) { // setting literal ~l to true ha a cost, hence have unit!
       cls[0] = ~l;
+      if( debug > 1 ) cerr << "c add soft: " << mprocessor->literalWeights[toInt(~mkLit(v))] << " ; " << cls << " 0" << endl;
+      S->setCurrentWeight( mprocessor->literalWeights[toInt(~mkLit(v))] );
+      S->updateSumWeights( mprocessor->literalWeights[toInt(~mkLit(v))] );
       S->addSoftClause(mprocessor->literalWeights[toInt(~mkLit(v))], cls);
     }
   }
@@ -197,6 +210,7 @@ int main(int argc, char **argv)
         "Limit on the number of symmetry breaking clauses.\n", 500000,
         IntRange(0, INT32_MAX));
 
+ 
 #if NSPACE == Riss      
     StringOption    opt_pre_config ("CONFIG", "preConfig",    "configuration for simplification",0);
     StringOption opt_solver_config ("CONFIG", "solverConfig", "configuration for sat solver",    0);
@@ -300,6 +314,7 @@ int main(int argc, char **argv)
     } else {
       // setup maxsat preprocessor
       S->createMprocessor( (const char*)opt_pre_config  );
+      S->getMprocessor()->setDebugLevel( debug ); // tell about level
       // parse with preprocessor      
       parse_DIMACS(in, S->getMprocessor() );
       // simplify

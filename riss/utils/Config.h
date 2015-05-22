@@ -121,7 +121,7 @@ else if( optionSet == "DEBUG" ) {
  *  Options for Open-WBO 
  */
 else if( optionSet == "MAXSAT" ) {
-  parseOptions ( "-incsverb=1", true );
+  parseOptions ( "-incsverb=1 -solververb=1 -cp3_stats -cp3-debug -cp3-check=2 -cp3_verbose=3 -enabled_cp3", false );
 }
 /*
  *  Options for Riss 427
