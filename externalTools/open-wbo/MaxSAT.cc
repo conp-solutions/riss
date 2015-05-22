@@ -161,7 +161,7 @@ Solver *MaxSAT::newSATSolver()
 #else
 
   #ifdef SOLVERNAME == Riss
-    Solver *S = new Solver(0, "MAXSAT");  // create Riss and tell Riss to use the MaxSAT configuration
+    Solver *S = new Solver(0, SATsolverConfig.c_str() );  // create Riss and tell Riss to use the MaxSAT configuration
   #else
     Solver *S = new Solver();  
   #endif
@@ -238,7 +238,11 @@ void MaxSAT::saveModel(vec<lbool> &currentModel)
   model.clear();
   // Only store the value of the variables that belong to the
   // original MaxSAT formula.
-  for (int i = 0; i < nbInitialVariables; i++)
+  
+  assert ( printModelVariables <= nbInitialVariables );
+  int toPrint = printModelVariables != 0 ? printModelVariables : nbInitialVariables;
+   
+  for (int i = 0; i < toPrint; i++)
     model.push(currentModel[i]);
 }
 

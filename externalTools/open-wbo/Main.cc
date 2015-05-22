@@ -83,8 +83,9 @@ void loadFromMprocessorToMaxsat( MaxSAT* S ) {
   // if the option dense is used, these literals are already rewritten by "dense"
   // write header
   S->setProblemType( mprocessor->getProblemType() );
-  while( S->nVars() < vars ) S->newVar(); // set variables in MS solver
-  S->setHardWeight( top );                // tell MS solver about top weight
+  while( S->nVars() < vars ) S->newVar();        // set variables in MS solver
+  S->setHardWeight( top );                       // tell MS solver about top weight
+  S->setPrintModelVars( mprocessor->specVars );  // tell MS solver about variables that originally occured in the formula only
   
   if( debug > 0 ) cerr << "c p wcnf " << S->nVars() << " " << clss << " " << top << endl;
   
@@ -188,6 +189,8 @@ int main(int argc, char **argv)
                           3, IntRange(0, 3));
 
     BoolOption bmo("Open-WBO", "bmo", "BMO search.\n", true);
+    
+    BoolOption incomplete("Open-WBO", "incomplete", "BMO search.\n", true);
 
     IntOption cardinality("Encodings", "cardinality",
                           "Cardinality encoding (0=cardinality networks, "
@@ -266,6 +269,8 @@ int main(int argc, char **argv)
     mxsolver = S;
     mxsolver->setInitialTime(initial_time);
 
+    mxsolver->setIncomplete( incomplete ); // tell solver to print each model
+    
     signal(SIGXCPU, SIGINT_exit);
     signal(SIGTERM, SIGINT_exit);
 
@@ -309,6 +314,10 @@ int main(int argc, char **argv)
 	  
 
 #if NSPACE == Riss      
+    if( (const char*)opt_solver_config == 0 ) {	  // set SAT solver configuration
+      S->setSolverConfig( std::string(opt_solver_config) );
+    }  
+    
     if( (const char*)opt_pre_config == 0 ) {
       parse_DIMACS(in, S);
     } else {

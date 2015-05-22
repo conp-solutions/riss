@@ -41,6 +41,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <set>
 #include <vector>
 #include <algorithm>
+#include <string>
 
 namespace NSPACE
 {
@@ -55,6 +56,9 @@ class MaxSAT
 public:
   MaxSAT()
   {
+    printModelVariables = -1;         // for simplicity set to -1, so that the variable is not used
+    printEachModel = false; // for incomplete solving
+    
     hardWeight = INT32_MAX;
     problemType = _UNWEIGHTED_;
     nbVars = 0;
@@ -114,7 +118,17 @@ public:
     mprocessor->preprocessor->extendModel(model);
   #endif  
   }
+  
+  void setSolverConfig( string& configName ) { SATsolverConfig = configName; }
 
+  std::string SATsolverConfig;
+  
+  int printModelVariables;    // number of variables that have to be printed in the model
+  bool printEachModel;        // print all models
+  
+  void setPrintModelVars( int printModelVars ) { printModelVariables = printModelVars; }
+  void setIncomplete( bool incomplete ) { printEachModel = incomplete; }
+  
 
   int nVars();   // Number of variables.
   int nSoft();   // Number of soft clauses.
