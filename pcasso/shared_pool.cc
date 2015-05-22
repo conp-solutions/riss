@@ -1,6 +1,7 @@
 #include "Shared_pool.h"
 
 using namespace Riss;
+using namespace std;
 
 namespace PcassoDavide {
 

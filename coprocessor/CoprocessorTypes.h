@@ -1526,7 +1526,7 @@ inline void CoprocessorData::addCommentToProof(const char* text, bool deleteFrom
 
 inline void CoprocessorData::addEquivalences(const std::vector< Riss::Lit >& list)
 {
-  assert( (list.size() != 2 || list[0] != list[1]) && "do not allow to add a pair of the same literals" );
+  assert( (list.size() != 2 || list[0] != list[1]) && "do not allow to add a std::pair of the same literals" );
   for( int i = 0 ; i < list.size(); ++ i ) equivalences.push_back(list[i]);
   equivalences.push_back( Riss::lit_Undef ); // termination symbol!
 }

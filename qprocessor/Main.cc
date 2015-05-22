@@ -24,6 +24,7 @@ Copyright (c) 2013,      Norbert Manthey, All rights reserved.
 
 using namespace Riss;
 using namespace Coprocessor;
+using namespace std;
 
 //=================================================================================================
 

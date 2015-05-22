@@ -30,9 +30,9 @@ namespace Pcasso {
         ~VSIDSSplitting();
         void dummy(){
         }
-        lbool vsidsScatteringSplit(Riss::vec<Riss::vec<Riss::vec<Riss::Lit>* >* > **splits, Riss::vec<Riss::vec<Riss::Lit>* > **valid, double to);
-        lbool scatterSolve(void* data);
-        lbool scatterSeach(int nof_conflicts, void* data);
+        Riss::lbool vsidsScatteringSplit(Riss::vec<Riss::vec<Riss::vec<Riss::Lit>* >* > **splits, Riss::vec<Riss::vec<Riss::Lit>* > **valid, double to);
+        Riss::lbool scatterSolve(void* data);
+        Riss::lbool scatterSeach(int nof_conflicts, void* data);
         double cpuTime_t() const ; // CPU time used by this thread
         struct vsidsScatterData {
             Riss::vec<Riss::vec<Riss::Lit> *>     scatters;

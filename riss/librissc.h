@@ -46,7 +46,7 @@ Copyright (c) 2013-2015, Norbert Manthey, All rights reserved.
 extern "C" {
 
   /** return the name of the solver and its version
-   *  @return string that contains the verison of the solver
+   *  @return std::string that contains the verison of the solver
    */
   extern const char* riss_signature ();
   

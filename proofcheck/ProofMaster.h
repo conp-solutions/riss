@@ -65,7 +65,7 @@ public:
   
   /** add clauses to the proof (if not local, a lock is used before the global proof is updated)
    * Note: that added clause should not be an original clause from the CNF formula! this has to be ensured by the calling thread!
-   * @param clause clause that should be added (can be vector or clause)
+   * @param clause clause that should be added (can be std::vector or clause)
    * @param extraClauseLit additional literal of the clause that is written to the proof at the first position (and might be presend in the clause again)
    * @param ownerID id of the calling thread, for the clause sharing pool the ID has to match the thread number
    * @param local add the clauses only to the local storage, and do not submit them to the global proof (can be done later, when the next clauses are sent)
@@ -87,7 +87,7 @@ public:
   void addInputToProof(const T& clause, int ownerID, int numberOfOccurrence, bool isNewClause = true); 
   
   /** delete a clause from the proof (if not local, a lock is used before the global proof is updated)
-   * @param clause clause that should be added (can be vector or clause)
+   * @param clause clause that should be added (can be std::vector or clause)
    * @param ownerID id of the calling thread, for the clause sharing pool the ID has to match the thread number
    * @param local delete the clauses only from the local storage, and do not ubdate the global proof (can be done later, when the next clauses are sent)
    */

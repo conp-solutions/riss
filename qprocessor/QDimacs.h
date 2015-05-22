@@ -33,7 +33,7 @@ namespace Riss {
 
 struct quantification {
   char kind; // 'e' for existential, 'a' for all
-  std::vector<Lit> lits; // literals inside the quantifier
+  std::vector<Riss::Lit> lits; // literals inside the quantifier
 };
 
 template<class B, class Solver>
@@ -45,7 +45,7 @@ static void readQuantifier(B& in, Solver& S, quantification& quantifier) {
         if (parsed_lit == 0) break;
         var = abs(parsed_lit)-1;
         while (var >= S.nVars()) S.newVar();
-        quantifier.lits.push_back( (parsed_lit > 0) ? mkLit(var) : ~mkLit(var) );
+        quantifier.lits.push_back( (parsed_lit > 0) ? Riss::mkLit(var) : ~Riss::mkLit(var) );
     }
     /*
     std::cerr << "c parsed quantifier: " << quantifier.kind << std::endl;
@@ -61,7 +61,7 @@ static void readQuantifier(B& in, Solver& S, quantification& quantifier) {
 
 template<class B, class Solver>
 static void parse_QDIMACS_main(B& in, Solver& S, std::vector<quantification>& quantifiers) {
-    vec<Lit> lits;
+    Riss::vec<Riss::Lit> lits;
     int vars    = 0;
     int clauses = 0;
     int cnt     = 0;

@@ -44,7 +44,7 @@ namespace PcassoDavide{
 	
        std::fstream s;
        s.open(filename, std::fstream::out);
-       s << "c [POOL] all collected shared clauses begin: " << endl;
+       s << "c [POOL] all collected shared clauses begin: " << std::endl;
        for( unsigned int i = 0 ; i < shared_clauses.size(); ++i )
        {
 	  PcassoClause& c = shared_clauses[i];
@@ -52,7 +52,7 @@ namespace PcassoDavide{
 	    s << (sign(c.lits[j]) ? "-" : "") << var(c.lits[j])+1 << " ";
 	  s << "0\n"; 
        }
-       s << "c [POOL] all collected shared clauses end: " << endl;
+       s << "c [POOL] all collected shared clauses end: " << std::endl;
        s.close();
      }
      

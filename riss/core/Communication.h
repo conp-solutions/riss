@@ -110,7 +110,7 @@ public:
 
   /** adds a clause to the next position of the pool
    * @param authorID id of the author thread, to be stored with the clause
-   * @param clause vector that stores the clause to be added
+   * @param clause std::vector that stores the clause to be added
    */
   void addClause( int authorID, const vec<Lit>& clause )
   {
@@ -140,7 +140,7 @@ public:
   
   /** adds a set of unit clauses to the pool
    * @param authorID id of the author thread, to be stored with the clause
-   * @param units vector that stores all the literals that are inside the unit clauses to share
+   * @param units std::vector that stores all the literals that are inside the unit clauses to share
    */
   void addUnitClauses( int authorID, const std::vector<Lit>& units )
   {
@@ -164,7 +164,7 @@ public:
     unlock();
   }
   
-  /** copy all clauses into the clauses vector that have been received since the last call to this method
+  /** copy all clauses into the clauses std::vector that have been received since the last call to this method
    * @param authorID id of the author thread, to be stored with the clause
    * note: only an approximation
    */
@@ -230,7 +230,7 @@ public:
     Lock dataLock;		/// lock that protects the access to the task data structures
     SleepLock masterLock;		/// lock that enables the master thread to sleep during waiting for child threads
 
-    vec <Lit> sendUnits;	/// vector that stores the unit clauses that should be send to all clients as clauses (not learned!)
+    vec <Lit> sendUnits;	/// std::vector that stores the unit clauses that should be send to all clients as clauses (not learned!)
     
   public:
 
@@ -250,24 +250,24 @@ public:
      */
     ClauseRingBuffer& getBuffer() { return ringbuffer; }
 
-    /** clears the vector of units to send
+    /** clears the std::vector of units to send
      * should be called by the master thread only!
      */
     void clearToSend() {
       sendUnits.clear();
     }
 
-    /** adds the given literal to the vector of literals that should be sent
+    /** adds the given literal to the std::vector of literals that should be sent
      * should be called by the master thread only
      */
     void addToSendThisUnit( int unitLiteral ) {
-      // convert into literal, push to vector
+      // convert into literal, push to std::vector
       sendUnits.push(Riss::mkLit(abs(unitLiteral),unitLiteral < 0));
     }
 
     /** receive clauses
      * should be called by worker threads
-     * @param fillMe vector of the client that should store the literals that have been send recently
+     * @param fillMe std::vector of the client that should store the literals that have been send recently
      */
     void receiveUnits( vec<Lit>& fillMe ) {
       fillMe.clear();
@@ -303,7 +303,7 @@ public:
       finishedReceiving,   // thread is finished with receiving!
     };
 
-    vec<Lit> assumptions;	// vector with assumptions for this thread
+    vec<Lit> assumptions;	// std::vector with assumptions for this thread
     
   private:
 
@@ -321,7 +321,7 @@ public:
     bool doSend;               // should this thread send clauses
     bool doReceive;            // should this thread receive clauses
 
-    vec<char> protect;         // if char in vector is 0, the variable has to be considered for calculating limits
+    vec<char> protect;         // if char in std::vector is 0, the variable has to be considered for calculating limits
     
     char dummy[64]; // to separate this data on extra cache lines (avoids false sharing)
 
@@ -457,14 +457,14 @@ public:
     Riss::Solver* getSolver() { return solver; }
 
     /** adds a clause to the next position of the pool
-     * @param clause vector that stores the clause to be added
+     * @param clause std::vector that stores the clause to be added
      */
     void addClause( const vec<Lit>& clause )
     {
       data->getBuffer().addClause(id,clause);
     }
 
-    /** copy all clauses into the clauses vector that have been received since the last call to this method
+    /** copy all clauses into the clauses std::vector that have been received since the last call to this method
      * note: only an approximation, can happen that ringbuffer overflows!
      * note: should be called by the worker solver only!
      */

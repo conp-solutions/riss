@@ -6,6 +6,9 @@
 #include "pcasso/LevelPool.h"
 #include <stdexcept>
 
+using namespace Riss;
+using namespace std;
+
 namespace Pcasso {
 
 // Davide> Options

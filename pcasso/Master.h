@@ -82,7 +82,7 @@ private:
 	// to be stored in original formula
 	struct clause{
 		int size;
-		Lit* lits;
+		Riss::Lit* lits;
 	};
 
     struct clause_size {
@@ -110,7 +110,7 @@ private:
 	// to maintain the original formula
 	int maxVar;
 	std::vector< clause > originalFormula;
-	vec<lbool>* model;       // model that will be produced by one of the child nodes
+	Riss::vec<Riss::lbool>* model;       // model that will be produced by one of the child nodes
 	//std::vector<char> polarity;   // preferred polarity from the last solver, for the next solvers
 	// std::vector<double> activity; // activity of each variable
 
@@ -118,7 +118,7 @@ private:
 	Parameter param;
 
 	unsigned int threads;	// number of threads
-	int64_t      space_lim;       // Total number of bytes reserved for ClauseAllocator and vec in each solver
+	int64_t      space_lim;       // Total number of bytes reserved for Riss::ClauseAllocator and Riss::vec in each solver
 	ThreadData* threadData;	// data for each thread
 
 	// to lock whenever some critical section has to be executed
@@ -152,7 +152,7 @@ private:
 	void goSleeping();
 
 
-	/** dequeues the next instance from the queue to the next free core
+	/** std::dequeues the next instance from the queue to the next free core
 	 * @param return false, if no core was available. Thus, thread and solver instance will not be created.
 	 */
 	bool solveNextQueueEle();
@@ -189,7 +189,7 @@ private:
 	/** submits the model to the master
 	 *   NOTE: the model has to be complete and not only be the model of one of the nodes in the tree, not thread safe
 	 */
-	void submitModel( const vec<lbool>& fullModel );
+	void submitModel( const Riss::vec<Riss::lbool>& fullModel );
 
 	// lock access to shared data for any thread
 	void lock();

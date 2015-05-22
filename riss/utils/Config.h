@@ -39,7 +39,7 @@ public:
       */
     bool parseOptions (int& argc, char** argv, bool strict = false);
     
-    /** parse options that are present in one string
+    /** parse options that are present in one std::string
      * @return true, if "help" has been found in the parameters
      */
     bool parseOptions (const std::string& options, bool strict = false);
@@ -58,10 +58,10 @@ public:
     /** checks all specified constraints */
     bool checkConfiguration();
     
-    /** return preset string */
+    /** return preset std::string */
     std::string presetConfig() const { return defaultPreset; }
     
-    /** fill the string stream with the command that is necessary to obtain the current configuration */
+    /** fill the std::string stream with the command that is necessary to obtain the current configuration */
     void configCall( std::stringstream& s );
 };
 
@@ -76,11 +76,11 @@ Config::Config(vec<Option*>* ptr, const std::string & presetOptions)
 inline 
 void Config::setPreset(const std::string& optionSet)
 {
-  // split string into sub strings, separated by ':'
+  // split std::string into sub std::strings, separated by ':'
   std::vector<std::string> optionList;
   int lastStart = 0;
   int findP = 0;
-  while ( findP < optionSet.size() ) { // tokenize string
+  while ( findP < optionSet.size() ) { // tokenize std::string
       findP = optionSet.find(":", lastStart);
       if( findP == std::string::npos ) { findP = optionSet.size(); }
       
@@ -569,11 +569,11 @@ inline
 bool Config::parseOptions(const std::string& options, bool strict)
 {
   if( options.size() == 0 ) return false;
-  // split string into sub strings, separated by ':'
+  // split std::string into sub std::strings, separated by ':'
   std::vector<std::string> optionList;
   int lastStart = 0;
   int findP = 0;
-  while ( findP < options.size() ) { // tokenize string
+  while ( findP < options.size() ) { // tokenize std::string
       findP = options.find(" ", lastStart);
       if( findP == std::string::npos ) { findP = options.size(); }
       
@@ -582,7 +582,7 @@ bool Config::parseOptions(const std::string& options, bool strict)
       }
       lastStart = findP + 1;
   }
-//  std::cerr << "c work on option string " << options << std::endl;
+//  std::cerr << "c work on option std::string " << options << std::endl;
   // create argc - argv combination
   char* argv[ optionList.size() + 1]; // one dummy in front!
   for( int i = 0; i < optionList.size(); ++ i ) {

@@ -87,7 +87,7 @@ public:
    */
   void reserveVars(int newVariables);
   
-  /** Add a clause to the solver without making superflous internal copy. Will change the passed vector 'ps'
+  /** Add a clause to the solver without making superflous internal copy. Will change the passed std::vector 'ps'
    * @param ps clause to be added to the checker
    * @param isDelete indicate whether the clause should be removed instead of being added
    * @return true, if no error with the current clause could be found yet (e.g. due to backward checking)

@@ -22,7 +22,7 @@ class PSolver {
   bool initialized;
   int threads;
   
-  vec<Solver*>             solvers;
+  Riss::vec<Riss::Solver*>             solvers;
   CoreConfig*              configs;   // the configuration for each solver
   Coprocessor::CP3Config*  ppconfigs; // the configuration for each preprocessor
   
@@ -33,7 +33,7 @@ class PSolver {
   ProofMaster* proofMaster;		// in a portfolio setup, use the proof master for generating DRUP proofs
   OnlineProofChecker* opc;		// check the proof on the fly during its creation
   
-  string defaultConfig;			// name of the configuration that should be used
+  std::string defaultConfig;			// name of the configuration that should be used
 
   // Output for DRUP unsat proof
   FILE* drupProofFile;
@@ -52,8 +52,8 @@ public:
   
   int verbosity, verbEveryConflicts; // how much information to be printed
   
-  vec<lbool> model;             // If problem is satisfiable, this vector contains the model (if any).
-  vec<Lit>   conflict;          // If problem is unsatisfiable (possibly under assumptions),  this vector represent the final conflict clause expressed in the assumptions.
+  Riss::vec<Riss::lbool> model;             // If problem is satisfiable, this std::vector contains the model (if any).
+  Riss::vec<Riss::Lit>   conflict;          // If problem is unsatisfiable (possibly under assumptions),  this std::vector represent the final conflict clause expressed in the assumptions.
   
   //
   // Control of parallel behavior
@@ -68,7 +68,7 @@ public:
   /** Search for a model that respects a given set of assumptions
    *  Note: when this method is called the first time, the solver incarnations are created
    */
-  lbool solveLimited (const vec<Lit>& assumps); 
+  Riss::lbool solveLimited (const Riss::vec<Riss::Lit>& assumps); 
   
   //
   // executed only for the first solver (e.g. for parsing and simplification)
@@ -84,7 +84,7 @@ public:
   int nTotLits () const;
   
   /// reserve space for enough variables in the first solver
-  void reserveVars( Var v );
+  void reserveVars( Riss::Var v );
 
   /// Removes already satisfied clauses in the first solver
   bool simplify(); 
@@ -94,15 +94,15 @@ public:
   //
   //
   /// Add a new variable with parameters specifying variable mode to all solvers
-  Var  newVar (bool polarity = true, bool dvar = true, char type = 'o'); 
+  Riss::Var  newVar (bool polarity = true, bool dvar = true, char type = 'o'); 
   
-  /** Add a clause to the solver without making superflous internal copy. Will change the passed vector 'ps'.
+  /** Add a clause to the solver without making superflous internal copy. Will change the passed std::vector 'ps'.
    *  @return false, if the addition of the clause results in an unsatisfiable formula
    */
-  bool addClause_(vec<Lit>& ps);
+  bool addClause_(Riss::vec<Riss::Lit>& ps);
   
   /// Add a clause to the online proof checker.. Not implemented for parallel solver
-  void addInputClause_( vec<Lit>& ps);                     
+  void addInputClause_( Riss::vec<Riss::Lit>& ps);                     
   
   void interrupt(); // Trigger a (potentially asynchronous) interruption of the solver.
   

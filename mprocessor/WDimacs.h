@@ -32,7 +32,7 @@ namespace Riss
 typedef int64_t Weight;
   
 template<class B, class Solver>
-static void readWCNFClause(B& in, Solver& S, vec<Lit>& lits, int32_t original_vars) {
+static void readWCNFClause(B& in, Solver& S, Riss::vec<Riss::Lit>& lits, int32_t original_vars) {
     int     parsed_lit, var;
     lits.clear();
     for (;;){
@@ -43,7 +43,7 @@ static void readWCNFClause(B& in, Solver& S, vec<Lit>& lits, int32_t original_va
 	  fprintf(stderr, "PARSE ERROR! DIMACS header mismatch: wrong number of variables. Variable: %d \n", var); 
 	  exit(3);
 	}
-        lits.push( (parsed_lit > 0) ? mkLit(var) : ~mkLit(var) );
+        lits.push( (parsed_lit > 0) ? Riss::mkLit(var) : ~Riss::mkLit(var) );
     }
 }
 
@@ -51,12 +51,12 @@ static void readWCNFClause(B& in, Solver& S, vec<Lit>& lits, int32_t original_va
 /** 
  * parse the input and add the (relaxed) clauses to the solver
  * 
- * @param variableWeights for each (relaxation or unit clause) variable, store the weight in the given vector!
+ * @param variableWeights for each (relaxation or unit clause) variable, store the weight in the given std::vector!
  * @return number of variables in the WCNF file (higher variables are relax variables)
  */
 template<class B, class Solver>
-static unsigned parse_WCNF_main(B& in, Solver& S, vec<Weight>& literalWeights ) {
-    vec<Lit> lits;
+static unsigned parse_WCNF_main(B& in, Solver& S, Riss::vec<Weight>& literalWeights ) {
+    Riss::vec<Riss::Lit> lits;
     literalWeights.clear();
     int32_t vars    = 0;
     int32_t original_vars    = 0;
@@ -117,16 +117,16 @@ static unsigned parse_WCNF_main(B& in, Solver& S, vec<Weight>& literalWeights ) 
 		if( lits.size() != 1 ) { // what happens to empty clauses?
 		  weighted_cnt++;
 		  vars++;
-		  Var relaxVariables = S.newVar(false,false,'r'); // add a relax variable
+		  Riss::Var relaxVariables = S.newVar(false,false,'r'); // add a relax variable
 		  literalWeights.push(0);literalWeights.push(0); // weights for the two new literals!
-		  literalWeights[ toInt( mkLit(relaxVariables) ) ] += weight;	// assign the weight of the current clause to the relaxation variable!
+		  literalWeights[ toInt( Riss::mkLit(relaxVariables) ) ] += weight;	// assign the weight of the current clause to the relaxation variable!
 		  
 		  if( lits.size() == 0 ) { // found empty weighted clause
 		    // to ensure that this clause is falsified, add the compementary unit clause!
-		    S.addClause( mkLit( relaxVariables ) );
+		    S.addClause( Riss::mkLit( relaxVariables ) );
 		    empty_weighted ++;
 		  }
-		  lits.push( ~ mkLit( relaxVariables ) ); // add a negative relax variable to the clause
+		  lits.push( ~ Riss::mkLit( relaxVariables ) ); // add a negative relax variable to the clause
 		  S.freezeVariable( relaxVariables, true ); // set this variable as frozen!
 		  S.addClause(lits);
 		} else {
@@ -158,7 +158,7 @@ static unsigned parse_WCNF_main(B& in, Solver& S, vec<Weight>& literalWeights ) 
  * @return number of variables in the WCNF file (higher variables are relax variables)
  */
 template<class Solver>
-static unsigned parse_WCNF(gzFile input_stream, Solver& S, vec<Weight>& literalWeights ) {
+static unsigned parse_WCNF(gzFile input_stream, Solver& S, Riss::vec<Weight>& literalWeights ) {
     Riss::StreamBuffer in(input_stream);
     return parse_WCNF_main(in, S,literalWeights); 
 }

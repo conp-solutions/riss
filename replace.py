@@ -4,32 +4,16 @@ from pathlib import Path
 # replace_std  = re.compile(r'(?<!std::)(cerr|cout|endl|(?<!\<)vector|string|ostream)')
 using_namespace = re.compile(r'^using namespace')
 
-# replace_riss = re.compile(r'(?<!Riss::)((?<!\w)Lit|vec(?!tor)|Var(?!\w)|Clause(?!\w)|CRef)')
-# replace_riss = re.compile(r'''(?<!Riss::)(
-#                                 ClauseAllocator|
-#                                 (?<=[\s<])Lit(?=[\s\*])|
-#                                 (?<=[\s<])Var(?=[\s\*&?>])|
-#                                 MarkArray|
-#                                 vec(?=[<\s])|
-#                                 CRef|
-#                                 ThreadController|
-#                                 Var(?= )|
-#                                 IntOption|
-#                                 DoubleOption|
-#                                 StringOption
-#                               )''', re.X)
-
 std_types = [
     # iostream
     r'(?<!std::)(?<!\w)(cerr)',
     r'(?<!std::)(?<!\w)(cout)',
+    r'(?<!std::)(?<!\w)(endl)',
     r'(?<!std::)(?<!\w)(ostream)',
     r'(?<!std::)(?<!\w)(string)',
-
     r'(?<!std::)(?<!\w)(vector)(?!\w)',
-
     r'(?<!std::)(?<!\w)(deque)',
-
+    r'(?<!std::)(?<!\w)(pair)',
 ]
 
 riss_types = [
@@ -62,6 +46,10 @@ riss_types = [
     r'(?<!Riss::)(?<!\w)(mkLit)(?!\w)',
 ]
 
+pcasso_types = [
+    r'(?<!Pcasso::)(?<!\w)(SplitterSolver)(?!\w)',
+]
+
 # compile all expressions
 riss_types = [re.compile(t) for t in riss_types]
 std_types  = [re.compile(t) for t in std_types]
@@ -69,22 +57,24 @@ std_types  = [re.compile(t) for t in std_types]
 replace_double_riss = re.compile(r'Riss::Riss::')
 
 folders = [
-    # # Path('aiger'),
-    # Path('classifier'),
-    # # Path('cmake'),
+    Path('classifier'),
     Path('coprocessor'),
-    # # Path('doc'),
-    # Path('mprocessor'),
-    # Path('pcasso'),
-    # Path('pfolio'),
-    # Path('proofcheck'),
-    # Path('qprocessor'),
-    # # Path('riss'),
+    Path('mprocessor'),
+    Path('pcasso'),
+    Path('pfolio'),
+    Path('proofcheck'),
+    Path('qprocessor'),
+    Path('riss'),
+    
     # Path('risslibcheck'),
-    # # Path('scripts'),
-    # # Path('shiftbmc'),
-    # # Path('test'),
-    # # Path('tools'),
+    # Path('aiger'),
+    # Path('shiftbmc'),
+
+    # Path('scripts'),
+    # Path('test'),
+    # Path('tools'),
+    # Path('doc'),
+    # Path('cmake'),
 ]
 
 # riss_path = Path('riss')
@@ -103,8 +93,11 @@ for folder in folders:
                     for p in std_types:
                         line = re.sub(p, r'std::\1', line)
 
-                    for p in riss_types:
-                        line = re.sub(p, r'Riss::\1', line)
+                    # for p in riss_types:
+                    #     line = re.sub(p, r'Riss::\1', line)
+
+                    # for p in pcasso_types:
+                    #     line = re.sub(p, r'Pcasso::\1', line)
 
                     line = re.sub(r'Riss::(l_Undef|l_True|l_False)', r'\1', line)
 

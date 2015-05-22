@@ -58,16 +58,16 @@ public:
 
 private:
 	static unsigned int runningID;
-	vector< vector<Lit>* > additionalConstraints;
-	vector< pair< vector<Lit>*, unsigned int> > additionalUnaryConstraints; // Davide>
+	std::vector< std::vector<Riss::Lit>* > additionalConstraints;
+	std::vector< std::pair< std::vector<Riss::Lit>*, unsigned int> > additionalUnaryConstraints; // Davide>
 
 	TreeNode* parent;
 	unsigned int _size;
 	int solvesMe;
 	unsigned int myID;
 
-	vec<double> activity; //Ahmed> for storing the activity of the node after certain number of conflicts
-	vec<char> phase;      //Ahmed> for storing the phase of the node after certain number of conflicts
+	Riss::vec<double> activity; //Ahmed> for storing the activity of the node after certain number of conflicts
+	Riss::vec<char> phase;      //Ahmed> for storing the phase of the node after certain number of conflicts
 	bool inheritedActPol;
                   unsigned childrenActPolUpdCount;
                   
@@ -84,7 +84,7 @@ private:
 	state s;
 
 	// Davide> Position in the tree
-	string position; // TODO CURRENTLY, IT ONLY WORKS WITH A BRANCHING OF CARDINALITY UP TO 9 !! ( base 10 encoding )
+	std::string position; // TODO CURRENTLY, IT ONLY WORKS WITH A BRANCHING OF CARDINALITY UP TO 9 !! ( base 10 encoding )
 	                 // TODO IF YOU WANT TO BRANCH MORE, FIXME OTHERWISE BUG IN KILLUNSATCHILDREN (Master)
 	// Davide> Level in the tree
 	unsigned int pt_level;
@@ -92,7 +92,7 @@ private:
 	/// lock to prevent threads to read on data that is update at the moment
 	static ComplexLock unitLock;
 
-	void setup(const vector< vector<Lit>* >& localConstraints, TreeNode* parent = 0);
+	void setup(const std::vector< std::vector<Riss::Lit>* >& localConstraints, TreeNode* parent = 0);
 
 
 	void printSubTree(int nodeNr, int debth);
@@ -103,11 +103,11 @@ public:
 
 	// setup the node
 	TreeNode();
-	TreeNode(const vector< vector<Lit>* >& localConstraints, TreeNode* parent = 0);
+	TreeNode(const std::vector< std::vector<Riss::Lit>* >& localConstraints, TreeNode* parent = 0);
 	~TreeNode();
 
 	// add children to the node
-	void expand( const vector< vector< vector<Lit>* >* >& childCnfs);
+	void expand( const std::vector< std::vector< std::vector<Riss::Lit>* >* >& childCnfs);
 
 	unsigned int size() const;
 
@@ -124,15 +124,15 @@ public:
 	// can set a state recusively, such that all sub nodes will be set immediately as well
 	void setState(const state _s, bool recursive = false);
 
-	void fillConstraintPath( vector< vector<Lit>* >* toFill );
+	void fillConstraintPath( std::vector< std::vector<Riss::Lit>* >* toFill );
 
-	void fillConstraintPathWithLevels( vector< pair< vector<Lit>*, unsigned int > >* toFill ); // Davide> A slightly different version able to store levels for every clause
+	void fillConstraintPathWithLevels( std::vector< std::pair< std::vector<Riss::Lit>*, unsigned int > >* toFill ); // Davide> A slightly different version able to store levels for every clause
 
 	/// add more constraints to the node, for example found unit clauses
-	void addNodeConstraint( vector<Lit>* clause );
+	void addNodeConstraint( std::vector<Riss::Lit>* clause );
 
 	// Davide> Add unary constraints & specify their pt_level
-	void addNodeUnaryConstraint( vector<Lit>* clause, unsigned int pt_level );
+	void addNodeUnaryConstraint( std::vector<Riss::Lit>* clause, unsigned int pt_level );
 
 	/** tries to set the state of the node by using the sub tree below the node
 	 * NOTE: writes only to the state value, if the state is not unknown any more
@@ -149,10 +149,10 @@ public:
 	bool isUnsat();
 
 	// Davide> Get the position of the node in the tree
-	string getPosition(void);
+	std::string getPosition(void);
 
 	// Davide> Set the position of the node in the tree
-	void setPosition(string _position);
+	void setPosition(std::string _position);
 
 	// Davide> useful
 	void setSize(unsigned int size);
@@ -181,9 +181,9 @@ public:
 	unsigned int childsCount(){
 		return _size;
 	}
-	void activityCopyTo(vec<double>& act);
-	void phaseCopyTo(vec<char>& ph);
-	void updateActivityPolarity(vec<double>& act, vec<Riss::Solver::VarFlags>& pol, int option);
+	void activityCopyTo(Riss::vec<double>& act);
+	void phaseCopyTo(Riss::vec<char>& ph);
+	void updateActivityPolarity(Riss::vec<double>& act, Riss::vec<Riss::Solver::VarFlags>& pol, int option);
                   void incChildrenActPolUpdCount();
 	// Remove the pool associated to the node
 	void removePoolRecursive(bool recursive);

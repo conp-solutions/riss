@@ -6,6 +6,7 @@ Copyright (c) 2014,      Norbert Manthey, All rights reserved.
 #include <assert.h>
 
 using namespace Coprocessor;
+using namespace std;
 
 namespace Riss {
   

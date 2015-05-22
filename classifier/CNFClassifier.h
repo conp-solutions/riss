@@ -20,7 +20,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 class CNFClassifier
 {
     Riss::ClauseAllocator& ca;      // clause storage
-    Riss::vec<Riss::CRef>& clauses; // vector to indexes of clauses into storage
+    Riss::vec<Riss::CRef>& clauses; // std::vector to indexes of clauses into storage
     int nVars;                      // number of variables
     std::vector<std::string> featuresNames;
     // parameters for features
@@ -101,7 +101,7 @@ public:
         this->dumpingPlots = dumpingPlots;
     }
 
-    const string& getPlotsFileName() const {
+    const std::string& getPlotsFileName() const {
         return plotsFileName;
     }
 
@@ -178,7 +178,7 @@ public:
         computingRWH = computingRwh;
     }
 
-    const std::vector<string>& getFeaturesNames() const {
+    const std::vector<std::string>& getFeaturesNames() const {
         return featuresNames;
     }
 

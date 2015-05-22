@@ -63,7 +63,7 @@ class BoundedVariableAddition : public Technique  {
   };
   
   // structures that would be created on during functions again and again
-  std::vector< std::vector< Riss::CRef > > bvaMatchingClauses; // found pairs of clauses
+  std::vector< std::vector< Riss::CRef > > bvaMatchingClauses; // found std::pairs of clauses
   std::vector< Riss::Lit > bvaMatchingLiterals; // literals that stay in the match
   // use general mark array!
   std::vector< Riss::Lit > bvaCountMark;	// mark literal candidates (a) for the current literal(b)
@@ -116,14 +116,14 @@ protected:
   /** check data structures */
   bool checkLists(const std::string& headline);
   
-  /** pair of literals and clauses, including sort operator */
+  /** std::pair of literals and clauses, including sort operator */
   struct xorHalfPair {
     Riss::Lit l1,l2;
     Riss::CRef c1,c2;
     xorHalfPair( Riss::Lit _l1, Riss::Lit _l2, Riss::CRef _c1, Riss::CRef _c2) : l1(_l1),l2(_l2),c1(_c1),c2(_c2){}
     xorHalfPair() : l1(Riss::lit_Undef),l2(Riss::lit_Undef),c1(Riss::CRef_Undef),c2(Riss::CRef_Undef){}
     
-    /** generate an order, so that pairs that belong to the same XOR gate are placed behind each other */
+    /** generate an order, so that std::pairs that belong to the same XOR gate are placed behind each other */
     bool operator>(const xorHalfPair& other ) const {
       return ( toInt(l2) > toInt( other.l2 ));
     }
@@ -141,7 +141,7 @@ protected:
       
     iteHalfPair() : l1(Riss::lit_Undef),l2(Riss::lit_Undef),l3(Riss::lit_Undef),c1(Riss::CRef_Undef),c2(Riss::CRef_Undef){}
 
-      /** generate an order, so that pairs that belong to the same ITE gate are placed behind each other */
+      /** generate an order, so that std::pairs that belong to the same ITE gate are placed behind each other */
     bool operator>(const iteHalfPair& other) const {
 	const Riss::Var iv2 = var(l2); const Riss::Var jv2 = var(other.l2);
 	const Riss::Var iv3 = var(l3); const Riss::Var jv3 = var(other.l3);

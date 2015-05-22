@@ -30,7 +30,7 @@ namespace Pcasso {
 
         void dummy(){
         }
-        vector<unsigned> shared_indeces;
+        std::vector<unsigned> shared_indeces;
   
         std::string position; /** Davide> Position of the solver in the Partition tree */
         unsigned curPTLevel; // Davide> Contains the pt_level of curNode
@@ -44,7 +44,7 @@ namespace Pcasso {
         
         bool rndDecLevel0;//Ahmed> choose random variable at decision level zero
         
-        vector< vector<unsigned> > learnts_indeces; // Davide> attempt
+        std::vector< std::vector<unsigned> > learnts_indeces; // Davide> attempt
         unsigned int level0UnitsIndex; // ahmed> saving the last index of shared level0 units
         enum ScoreType{NONE, SIZE, LBD_LT, PSM, PSM_FALSE}; // Davide>
         ScoreType receiver_filter_enum;
@@ -72,21 +72,21 @@ namespace Pcasso {
         unsigned n_tot_reduceDB_calls_ID;
         //unsigned sharing_time_ID;
         
-         Var newVar(bool polarity = true, bool dvar = true, char type = 'o');
+         Riss::Var newVar(bool polarity = true, bool dvar = true, char type = 'o');
          /** Davide> adds a clause, toghether with its pt_level, to the clauses
 	of the current formula. False literals of level zero will be 
 	removed from the clause only if their pt_level is equal to zero, 
             i.e. the clause is "safe"
         **/
-        bool    addClause (const vec<Lit>& ps, unsigned int pt_level = 0, bool from_shpool=false); 
-        bool    addClause_( vec<Lit>& ps, unsigned int level = 0);
-        void     analyze          (CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned int &nblevels);    // (bt = backtrack)
-        bool     litRedundant     (Lit p, uint32_t abstract_levels);                       // (helper method for 'analyze()')
-        void     uncheckedEnqueue (Lit p, CRef from = CRef_Undef, unsigned int pt_level = 0);                         // Enqueue a literal. Assumes value of literal is undefined.
-        Lit      pickBranchLit    ();                                                      // Return the next decision variable.
-        CRef    propagate();
-        lbool    search           (int nof_conflicts);                                     // Search for a given number of conflicts.
-        lbool    solve_           ();                                                      // Main solve method (assumptions given in 'assumptions').
+        bool    addClause (const Riss::vec<Riss::Lit>& ps, unsigned int pt_level = 0, bool from_shpool=false); 
+        bool    addClause_( Riss::vec<Riss::Lit>& ps, unsigned int level = 0);
+        void     analyze          (Riss::CRef confl, Riss::vec<Riss::Lit>& out_learnt, int& out_btlevel,unsigned int &nblevels);    // (bt = backtrack)
+        bool     litRedundant     (Riss::Lit p, uint32_t abstract_levels);                       // (helper method for 'analyze()')
+        void     uncheckedEnqueue (Riss::Lit p, Riss::CRef from = Riss::CRef_Undef, unsigned int pt_level = 0);                         // Enqueue a literal. Assumes value of literal is undefined.
+        Riss::Lit      pickBranchLit    ();                                                      // Return the next decision variable.
+        Riss::CRef    propagate();
+        Riss::lbool    search           (int nof_conflicts);                                     // Search for a given number of conflicts.
+        Riss::lbool    solve_           ();                                                      // Main solve method (assumptions given in 'assumptions').
         void reduceDB();
         /** 
             Davide> Returns the level of the current node in the Partition Tree
@@ -96,18 +96,18 @@ namespace Pcasso {
         }
 
         // Davide> Returns the pt_level associated to the literal l
-        unsigned getLiteralPTLevel(const Lit& l) const;//get PT level of literal
-        void setLiteralPTLevel(const Lit& l, unsigned pt);
+        unsigned getLiteralPTLevel(const Riss::Lit& l) const;//get PT level of literal
+        void setLiteralPTLevel(const Riss::Lit& l, unsigned pt);
                 
         // Davide> Shares all the learnts that have to be shared
         void push_units();     
         void push_learnts(void);    
         void pull_learnts(int curr_restarts); 
-        bool addSharedLearnt(vec<Lit>& ps, unsigned int pt_level);
+        bool addSharedLearnt(Riss::vec<Riss::Lit>& ps, unsigned int pt_level);
 
         /** Transforms a chunk of shared pool into clauses that
          *  will be added to the learnts database **/
-        void addChunkToLearnts(vec<Lit>& chunk, unsigned int pt_level, int, int);
+        void addChunkToLearnts(Riss::vec<Riss::Lit>& chunk, unsigned int pt_level, int, int);
 
         // Davide> Options related to clause sharing
         //
@@ -149,17 +149,17 @@ namespace Pcasso {
         unsigned int getTopLevelUnits() const;
 
         /// return a specifit literal from the trail
-        Lit trailGet( const unsigned int index );
+        Riss::Lit trailGet( const unsigned int index );
     private:
-        vec<unsigned> varPT; //storing the PT level of each variable
+        Riss::vec<unsigned> varPT; //storing the PT level of each variable
         //CMap<unsigned> clausePT; //storing the PT level of each clause
-        //int lbd_lt(vec<Lit>&);
+        //int lbd_lt(Riss::vec<Riss::Lit>&);
      //different restart strategy settings for sat and unsat
         void satRestartStrategy();  
      void unsatRestartStrategy();  
     };
     
-    inline bool     SolverPT::addClause       (const vec<Lit>& ps, unsigned int pt_level, bool from_shpool)    { ps.copyTo(add_tmp); return from_shpool ? addSharedLearnt(add_tmp, pt_level) : addClause_(add_tmp, pt_level); } // Davide> Added pt_level info;
+    inline bool     SolverPT::addClause       (const Riss::vec<Riss::Lit>& ps, unsigned int pt_level, bool from_shpool)    { ps.copyTo(add_tmp); return from_shpool ? addSharedLearnt(add_tmp, pt_level) : addClause_(add_tmp, pt_level); } // Davide> Added pt_level info;
 }
 #endif	/* SOLVERPT_H */
 

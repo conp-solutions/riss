@@ -1079,7 +1079,7 @@ inline std::ostream& operator<<(std::ostream& other, const Clause& c ) {
   return other;
 }
 
-/// print elements of a vector
+/// print elements of a std::vector
 template <typename T>
 inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data ) 
 {
@@ -1089,7 +1089,7 @@ inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data 
 }
 
 
-/// print elements of a vector
+/// print elements of a std::vector
 template <typename T>
 inline std::ostream& operator<<(std::ostream& other, const vec<T>& data ) 
 {

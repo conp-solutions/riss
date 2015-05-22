@@ -50,7 +50,7 @@ protected:
   // unit propagation
   int      qhead; // Head of queue (as index into the trail -- no more explicit propagation queue in MiniSat).
   vec<Lit> trail; // Assignment stack; stores all assigments made in the order they were made.
-  vec<Lit> lits;  // vector of literals for resolution
+  vec<Lit> lits;  // std::vector of literals for resolution
   vec<lbool> assigns; // current assignment
   
   lbool value (Var x) const;     // The current value of a variable.
@@ -327,7 +327,7 @@ bool OnlineProofChecker::removeClause(const T& cls)
 	unitClauses.pop();
       }
     }
-    if( i == unitClauses.size() ) assert( false && "the unit clause should be inside the vector of units" );
+    if( i == unitClauses.size() ) assert( false && "the unit clause should be inside the std::vector of units" );
     if( verbose > 1 ) std::cerr << "c [DRAT-OTFC] removed clause " << cls << std::endl;
     return false;
   } 

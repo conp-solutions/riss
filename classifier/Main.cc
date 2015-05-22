@@ -32,6 +32,7 @@ Copyright (c) 2012-2014, Norbert Manthey, All rights reserved.
 
 using namespace Riss;
 using namespace Coprocessor;
+using namespace std;
 
 //=================================================================================================
 static bool receivedInterupt = false;

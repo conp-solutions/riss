@@ -106,7 +106,7 @@ public:
   /** initializes the controller object */
   void init();
   
-  /** pass jobs to threads, size of vector has to be number of threads! */
+  /** pass jobs to threads, size of std::vector has to be number of threads! */
   void runJobs( std::vector<Job>& jobs );
   
   /** pass a single job to the threads */

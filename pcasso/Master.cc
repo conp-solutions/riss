@@ -35,6 +35,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "pcasso/vsidsSplitting.h"
 
 using namespace Riss;
+using namespace std;
 
 namespace Pcasso {
  
