@@ -22,7 +22,7 @@ IN THE SOFTWARE.
 
 /*------------------------------------------------------------------------*/
 /* This file contains the API of the 'AIGER' library, which is a reader and
- * writer for the AIGER AIG format.  The code of the library 
+ * writer for the AIGER AIG format.  The code of the library
  * consists of 'aiger.c' and 'aiger.h'.  It is independent of 'simpaig.c'
  * and 'simpaig.h'.
  * library.
@@ -96,32 +96,29 @@ typedef int (*aiger_put) (char ch, void *client_state);
 
 /*------------------------------------------------------------------------*/
 
-enum aiger_mode
-{
-  aiger_binary_mode = 0,
-  aiger_ascii_mode = 1,
-  aiger_stripped_mode = 2,	/* can be ORed with one of the previous */
+enum aiger_mode {
+    aiger_binary_mode = 0,
+    aiger_ascii_mode = 1,
+    aiger_stripped_mode = 2,  /* can be ORed with one of the previous */
 };
 
 typedef enum aiger_mode aiger_mode;
 
 /*------------------------------------------------------------------------*/
 
-struct aiger_and
-{
-  unsigned lhs;			/* as literal [2..2*maxvar], even */
-  unsigned rhs0;		/* as literal [0..2*maxvar+1] */
-  unsigned rhs1;		/* as literal [0..2*maxvar+1] */
+struct aiger_and {
+    unsigned lhs;         /* as literal [2..2*maxvar], even */
+    unsigned rhs0;        /* as literal [0..2*maxvar+1] */
+    unsigned rhs1;        /* as literal [0..2*maxvar+1] */
 };
 
 /*------------------------------------------------------------------------*/
 
-struct aiger_symbol
-{
-  unsigned lit;			/* as literal [0..2*maxvar+1] */
-  unsigned next, reset;		/* used only for latches */
-  unsigned size, * lits;	/* used only for justice */
-  char *name;
+struct aiger_symbol {
+    unsigned lit;         /* as literal [0..2*maxvar+1] */
+    unsigned next, reset;     /* used only for latches */
+    unsigned size, * lits;    /* used only for justice */
+    char *name;
 };
 
 /*------------------------------------------------------------------------*/
@@ -130,32 +127,31 @@ struct aiger_symbol
  * in the header 'M I L O A' and optional 'B C J F' after the format identifier
  * string.
  */
-struct aiger
-{
-  /* variable not literal index, e.g. maxlit = 2*maxvar + 1 
-   */
-  unsigned maxvar;
+struct aiger {
+    /* variable not literal index, e.g. maxlit = 2*maxvar + 1
+     */
+    unsigned maxvar;
 
-  unsigned num_inputs;
-  unsigned num_latches;
-  unsigned num_outputs;
-  unsigned num_ands;
-  unsigned num_bad;
-  unsigned num_constraints;
-  unsigned num_justice;
-  unsigned num_fairness;
+    unsigned num_inputs;
+    unsigned num_latches;
+    unsigned num_outputs;
+    unsigned num_ands;
+    unsigned num_bad;
+    unsigned num_constraints;
+    unsigned num_justice;
+    unsigned num_fairness;
 
-  aiger_symbol *inputs;		/* [0..num_inputs[ */
-  aiger_symbol *latches;	/* [0..num_latches[ */
-  aiger_symbol *outputs;	/* [0..num_outputs[ */
-  aiger_symbol *bad;		/* [0..num_bad[ */
-  aiger_symbol *constraints;	/* [0..num_constraints[ */
-  aiger_symbol *justice;	/* [0..num_justice[ */
-  aiger_symbol *fairness;	/* [0..num_fairness[ */
+    aiger_symbol *inputs;     /* [0..num_inputs[ */
+    aiger_symbol *latches;    /* [0..num_latches[ */
+    aiger_symbol *outputs;    /* [0..num_outputs[ */
+    aiger_symbol *bad;        /* [0..num_bad[ */
+    aiger_symbol *constraints;    /* [0..num_constraints[ */
+    aiger_symbol *justice;    /* [0..num_justice[ */
+    aiger_symbol *fairness;   /* [0..num_fairness[ */
 
-  aiger_and *ands;		/* [0..num_ands[ */
+    aiger_and *ands;      /* [0..num_ands[ */
 
-  char **comments;		/* zero terminated */
+    char **comments;      /* zero terminated */
 };
 
 /*------------------------------------------------------------------------*/
@@ -278,7 +274,7 @@ void aiger_reencode (aiger *);
  *
  * TODO: this is just a stub and actually not really implemented yet.
  */
-const unsigned char * aiger_coi (aiger *);		/* [1..maxvar] */
+const unsigned char * aiger_coi (aiger *);      /* [1..maxvar] */
 
 /*------------------------------------------------------------------------*/
 /* Read an AIG from a FILE, a string, or through a generic interface.  These

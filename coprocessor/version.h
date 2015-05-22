@@ -1,7 +1,8 @@
 #ifndef Coprocessor_version_h
 #define Coprocessor_version_h
 
-namespace Coprocessor {
+namespace Coprocessor
+{
 
 extern const char* gitSHA1;
 extern const char* gitDate;

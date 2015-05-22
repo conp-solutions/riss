@@ -29,7 +29,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "riss/mtl/Map.h"
 
-namespace Riss {
+namespace Riss
+{
 
 //=================================================================================================
 // Default hash/equals functions for multiple types
@@ -40,99 +41,113 @@ template<class K, class L> struct DeepEqualKL { bool     operator()(const K* k1,
 //=================================================================================================
 /** HashLookUpTable, where two different types of keys are supported
  *  one key for being stored in the hash table, and another for comparisons
- * 
+ *
  *  Note: If the two clases are the same, use the usual map!
  */
 template<class K, class L, class H = Hash<K>, class I = Hash<L>, class E = Equal<K>, class F = EqualKL<K,L> >
-class HashLookUpTable {
- public:
+class HashLookUpTable
+{
+  public:
 
- private:
+  private:
     H          hash;      // usual hash function
     E          equals;    // usual equals method for K
 
     I          hashL;     // hash function for L
     F          equalsKL;  // equals function for K and L
-    
+
     vec<K>* table;
     int        cap;
     int        size;
 
     // Don't allow copying (error prone):
     HashLookUpTable<K,L,H,I,E,F>&  operator = (HashLookUpTable<K,L,H,I,E,F>& other) { assert(0); }
-                   HashLookUpTable            (HashLookUpTable<K,L,H,I,E,F>& other) { assert(0); }
+    HashLookUpTable            (HashLookUpTable<K,L,H,I,E,F>& other) { assert(0); }
 
     bool    checkCap(int new_size) const { return new_size > cap; }
 
     int32_t index  (const K& k) const { return hash(k) % cap; }
-    
-    int32_t index  (const L& k) const { return hash(k) % cap; }
-    
-    void   _insert (const K& k) { 
-        vec<K>& ps = table[index(k)];
-        ps.push(); ps.last() = k; }
 
-    void    rehash () {
+    int32_t index  (const L& k) const { return hash(k) % cap; }
+
+    void   _insert (const K& k)
+    {
+        vec<K>& ps = table[index(k)];
+        ps.push(); ps.last() = k;
+    }
+
+    void    rehash ()
+    {
         const vec<K>* old = table;
 
         int old_cap = cap;
         int newsize = primes[0];
-        for (int i = 1; newsize <= cap && i < nprimes; i++)
-           newsize = primes[i];
+        for (int i = 1; newsize <= cap && i < nprimes; i++) {
+            newsize = primes[i];
+        }
 
         table = new vec<K>[newsize];
         cap   = newsize;
 
-        for (int i = 0; i < old_cap; i++){
-            for (int j = 0; j < old[i].size(); j++){
-                _insert(old[i][j].key); }}
+        for (int i = 0; i < old_cap; i++) {
+            for (int j = 0; j < old[i].size(); j++) {
+                _insert(old[i][j].key);
+            }
+        }
 
         delete [] old;
 
         // printf(" --- rehashing, old-cap=%d, new-cap=%d\n", cap, newsize);
     }
 
-    
- public:
+
+  public:
 
     HashLookUpTable () : table(NULL), cap(0), size(0) {}
-    HashLookUpTable (const H& h, const E& e) : hash(h), equals(e), table(NULL), cap(0), size(0){}
+    HashLookUpTable (const H& h, const E& e) : hash(h), equals(e), table(NULL), cap(0), size(0) {}
     ~HashLookUpTable () { delete [] table; }
 
     // PRECONDITION: the key must *NOT* exist in the map.
-    void insert (const K& k) { if (checkCap(size+1)) rehash(); _insert(k); size++; }
+    void insert (const K& k) { if (checkCap(size+1)) { rehash(); } _insert(k); size++; }
 
-    bool has   (const K& k) const {
-        if (size == 0) return false;
+    bool has   (const K& k) const
+    {
+        if (size == 0) { return false; }
         const vec<K>& ps = table[index(k)];
         for (int i = 0; i < ps.size(); i++)
-            if (equals(ps[i].key, k))
+            if (equals(ps[i].key, k)) {
                 return true;
+            }
         return false;
     }
-    
-    bool hasL  (const L& k) const {
-        if (size == 0) return false;
+
+    bool hasL  (const L& k) const
+    {
+        if (size == 0) { return false; }
         const vec<K>& ps = table[index(k)];
         for (int i = 0; i < ps.size(); i++)
-            if (equals(ps[i].key, k))
+            if (equals(ps[i].key, k)) {
                 return true;
+            }
         return false;
     }
 
     /** if there is only one element, return immediately */
-    bool hasLone (const L& k) const {
-        if (size == 0) return false;
+    bool hasLone (const L& k) const
+    {
+        if (size == 0) { return false; }
         const vec<K>& ps = table[index(k)];
-	if( ps.size() == 1 ) return; // has to be the same element based on the above assumption
+        if( ps.size() == 1 ) { return; } // has to be the same element based on the above assumption
         for (int i = 0; i < ps.size(); i++)
-            if (equals(ps[i].key, k))
+            if (equals(ps[i].key, k)) {
                 return true;
+            }
         return false;
     }
-    
+
     // PRECONDITION: the key must exist in the map.
-    void remove(const K& k) {
+    void remove(const K& k)
+    {
         assert(table != NULL);
         vec<K>& ps = table[index(k)];
         int j = 0;
@@ -142,9 +157,10 @@ class HashLookUpTable {
         ps.pop();
         size--;
     }
-    
+
     /** remove based on other key type */
-    void removeL(const L& k) {
+    void removeL(const L& k)
+    {
         assert(table != NULL);
         vec<K>& ps = table[index(k)];
         int j = 0;
@@ -155,7 +171,8 @@ class HashLookUpTable {
         size--;
     }
 
-    void clear  () {
+    void clear  ()
+    {
         cap = size = 0;
         delete [] table;
         table = NULL;
@@ -165,7 +182,8 @@ class HashLookUpTable {
     int  bucket_count() const { return cap; }
 
     // NOTE: the hash and equality objects are not moved by this method:
-    void moveTo(HashLookUpTable& other){
+    void moveTo(HashLookUpTable& other)
+    {
         delete [] other.table;
 
         other.table = table;

@@ -24,28 +24,28 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
     // Not sure if there are newer versions that support C99 headers. The
     // needed features are implemented in the headers below though:
 
-#   include <sys/int_types.h>
-#   include <sys/int_fmtio.h>
-#   include <sys/int_limits.h>
+    #include <sys/int_types.h>
+    #include <sys/int_fmtio.h>
+    #include <sys/int_limits.h>
 
 #else
 
-#ifdef __GXX_EXPERIMENTAL_CXX0X__
-#	include <cstdint>
-#else
-#   include <stdint.h>
-#endif
+    #ifdef __GXX_EXPERIMENTAL_CXX0X__
+        #include <cstdint>
+    #else
+        #include <stdint.h>
+    #endif
 
 
-#   include <inttypes.h>
+    #include <inttypes.h>
 
 #endif
 
 #include <limits.h>
 
 #ifndef PRIu64
-#define PRIu64 "lu"
-#define PRIi64 "ld"
+    #define PRIu64 "lu"
+    #define PRIi64 "ld"
 #endif
 //=================================================================================================
 

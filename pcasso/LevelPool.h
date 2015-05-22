@@ -1,7 +1,7 @@
 /**
-   Davide> 
+   Davide>
    A LevelPool is a pool of clauses. It is identified by its position in the
-   PartitionTree. 
+   PartitionTree.
  **/
 
 #ifndef LEVEL_POOL_H
@@ -25,57 +25,63 @@
 // using namespace Riss;
 // using namespace std;
 
-namespace PcassoDavide{
+namespace PcassoDavide
+{
 
-class LevelPool{
-//	bool remove;
-	std::string code;
-	bool full;
-	int endP;
+class LevelPool
+{
+//  bool remove;
+    std::string code;
+    bool full;
+    int endP;
 
-public:
+  public:
 
-	LevelPool(int _max_size);
+    LevelPool(int _max_size);
 
-	Pcasso::RWLock levelPoolLock;
+    Pcasso::RWLock levelPoolLock;
 
-	int writeP;     // index for whatever clause
-	int max_size;
+    int writeP;     // index for whatever clause
+    int max_size;
 
-	void dumpClauses( const char* filename){
-		//    	std::fstream s;
-		//    	s.open(filename, std::fstream::out);
-		//    	s << "c [POOL] all collected shared clauses begin: " << std::endl;
-		//    	for( unsigned int i = 0 ; i < shared_clauses.size(); ++i )
-		//    	{
-		//    		clause& c = shared_clauses[i];
-		//    		for (unsigned int j = 0; j < c.size; j++)
-		//    			s << (sign(c.lits[j]) ? "-" : "") << var(c.lits[j])+1 << " ";
-		//    		s << "0\n";
-		//    	}
-		//    	s << "c [POOL] all collected shared clauses end: " << std::endl;
-		//    	s.close();
-	}
+    void dumpClauses( const char* filename)
+    {
+        //      std::fstream s;
+        //      s.open(filename, std::fstream::out);
+        //      s << "c [POOL] all collected shared clauses begin: " << std::endl;
+        //      for( unsigned int i = 0 ; i < shared_clauses.size(); ++i )
+        //      {
+        //          clause& c = shared_clauses[i];
+        //          for (unsigned int j = 0; j < c.size; j++)
+        //              s << (sign(c.lits[j]) ? "-" : "") << var(c.lits[j])+1 << " ";
+        //          s << "0\n";
+        //      }
+        //      s << "c [POOL] all collected shared clauses end: " << std::endl;
+        //      s.close();
+    }
 
-	bool duplicate( const Riss::vec<Riss::Lit>& c );
-	bool add_shared(Riss::vec<Riss::Lit>& lits, unsigned int nodeID, bool disable_dupl_removal=false, bool disable_dupl_check=false);
+    bool duplicate( const Riss::vec<Riss::Lit>& c );
+    bool add_shared(Riss::vec<Riss::Lit>& lits, unsigned int nodeID, bool disable_dupl_removal=false, bool disable_dupl_check=false);
 
 
-	/** Reads positions until the writeP position **/
-	void getChunk(int readP, Riss::vec<Riss::Lit>& chunk);
+    /** Reads positions until the writeP position **/
+    void getChunk(int readP, Riss::vec<Riss::Lit>& chunk);
 
-public:
-	inline std::string getCode(void) const{
-		return code;
-	}
+  public:
+    inline std::string getCode(void) const
+    {
+        return code;
+    }
 
-	inline void setCode(const std::string& _code){
-		code = _code;
-	}
-	inline bool isFull() {
-		return full;
-	}
-	Riss::vec<Riss::Lit> shared_clauses;
+    inline void setCode(const std::string& _code)
+    {
+        code = _code;
+    }
+    inline bool isFull()
+    {
+        return full;
+    }
+    Riss::vec<Riss::Lit> shared_clauses;
 };
 }
 
