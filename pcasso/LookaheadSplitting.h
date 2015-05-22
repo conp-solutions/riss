@@ -28,11 +28,11 @@ namespace Pcasso {
         uint64_t extraInfo;
       
     public:
-        LookaheadSplitting(CoreConfig& config);
+        LookaheadSplitting(Riss::CoreConfig& config);
         ~LookaheadSplitting();
         void dummy(){
         }
-        lbool produceSplitting(Riss::vec<Riss::vec<Riss::vec<Riss::Lit>* >* > **splits, Riss::vec<Riss::vec<Riss::Lit>* > **valid);
+        Riss::lbool produceSplitting(Riss::vec<Riss::vec<Riss::vec<Riss::Lit>* >* > **splits, Riss::vec<Riss::vec<Riss::Lit>* > **valid);
         double cpuTime_t() const ; // CPU time used by this thread
         void setTimeOut(double to);
         struct VarScore{

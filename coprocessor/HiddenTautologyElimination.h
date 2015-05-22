@@ -31,38 +31,38 @@ class HiddenTautologyElimination : public Technique {
   int removedClauses;		// how many clauses could be removed
   int removedLits;		// how many literals have been removed
   
-  std::vector<Var> activeVariables; // which variables should be considered?
+  std::vector<Riss::Var> activeVariables; // which variables should be considered?
   std::vector<char> activeFlag;     // array that stores a flag per variable whether it is active
   
 
   
 public:
   
-  HiddenTautologyElimination( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation );
+  HiddenTautologyElimination( CP3Config &_config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, Propagation& _propagation );
   
   /** run subsumption and strengthening until completion */
   void process(Coprocessor::CoprocessorData& data);
 
-  void initClause(const CRef cr); // inherited from Technique
+  void initClause(const Riss::CRef cr); // inherited from Technique
 
   void printStatistics(std::ostream& stream);
   
   /** fills the mark arrays for a certain variable */
-  Lit fillHlaArrays(Var v, Coprocessor::BIG& big, MarkArray& hlaPositive, MarkArray& hlaNegative, Lit* litQueue, bool doLock = false);
+  Riss::Lit fillHlaArrays(Riss::Var v, Coprocessor::BIG& big, Riss::MarkArray& hlaPositive, Riss::MarkArray& hlaNegative, Riss::Lit* litQueue, bool doLock = false);
   
   /** mark all literals that would appear in HLA(C) 
    * @return true, if clause can be removed by HTE
    */
-  bool hlaMarkClause(const Riss::CRef cr, Coprocessor::BIG& big, MarkArray& markArray, Lit* litQueue );
+  bool hlaMarkClause(const Riss::CRef cr, Coprocessor::BIG& big, Riss::MarkArray& markArray, Riss::Lit* litQueue );
   /// same as above, but can add literals to the std::vector, so that the std::vector represents the real HLA(C) clause
-  bool hlaMarkClause(vec< Lit >& clause, Coprocessor::BIG& big, MarkArray& markArray, Lit* litQueue, bool addLits = false);
+  bool hlaMarkClause(Riss::vec< Riss::Lit >& clause, Coprocessor::BIG& big, Riss::MarkArray& markArray, Riss::Lit* litQueue, bool addLits = false);
   
   /** mark all literals that would appear in ALA(C) 
    * @return true, if clause can be removed by ATE
    */
-  bool alaMarkClause(const Riss::CRef cr, Coprocessor::CoprocessorData& data, MarkArray& markArray, MarkArray& helpArray);
+  bool alaMarkClause(const Riss::CRef cr, Coprocessor::CoprocessorData& data, Riss::MarkArray& markArray, Riss::MarkArray& helpArray);
   /// same as above, but can add literals to the std::vector, so that the std::vector represents the real ALA(C) clause
-  bool alaMarkClause(vec< Lit >& clause, Coprocessor::CoprocessorData& data, MarkArray& markArray, MarkArray& helpArray, bool addLits = false);
+  bool alaMarkClause(Riss::vec< Riss::Lit >& clause, Coprocessor::CoprocessorData& data, Riss::MarkArray& markArray, Riss::MarkArray& helpArray, bool addLits = false);
   
   void destroy();
   
@@ -77,15 +77,15 @@ protected:
   void elimination_worker (CoprocessorData& data, uint32_t start, uint32_t end, BIG& big, bool doStatistics = true, bool doLock = false); // subsume certain set of elements of the processing queue, does not write to the queue
   
   /** run hte for the specified variable */
-  bool hiddenTautologyElimination(Var v, Coprocessor::CoprocessorData& data, Coprocessor::BIG& big, MarkArray& hlaPositive, MarkArray& hlaNegative, bool statistic = true, bool doLock = false);
+  bool hiddenTautologyElimination(Riss::Var v, Coprocessor::CoprocessorData& data, Coprocessor::BIG& big, Riss::MarkArray& hlaPositive, Riss::MarkArray& hlaNegative, bool statistic = true, bool doLock = false);
   
   /** data for parallel execution of HTE */
   struct EliminationData {
     HiddenTautologyElimination* hte; // class with code
     CoprocessorData* data;           // formula and maintain lists
     BIG* big;                        // handle to binary implication graph
-    Var start;                       // partition of the queue
-    Var end;
+    Riss::Var start;                       // partition of the queue
+    Riss::Var end;
   };
 
   /** run parallel subsumption with all available threads */

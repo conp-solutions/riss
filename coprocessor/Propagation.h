@@ -30,7 +30,7 @@ public:
   
   Propagation( CP3Config &_config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller );
   
-  /// will also set back the qhead variable inside the Solver object
+  /// will also set back the qhead variable inside the Riss::Solver object
   void reset(CoprocessorData& data);
   
   /** perform usual unit propagation, but shrinks clause sizes also physically

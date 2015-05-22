@@ -54,12 +54,12 @@ class Preprocessor {
 
   // attributes
   int32_t threads;             // number of threads that can be used by the preprocessor
-  Solver* solver;              // handle to the solver object that stores the formula
-  ClauseAllocator& ca;         // reference to clause allocator
+  Riss::Solver* solver;              // handle to the solver object that stores the formula
+  Riss::ClauseAllocator& ca;         // reference to clause allocator
 
   Logger log;                  // log output
   CoprocessorData  data;       // all the data that needs to be accessed by other classes (preprocessing methods)
-  ThreadController controller; // controller for all threads
+  Riss::ThreadController controller; // controller for all threads
 
   Clock ppTime;		// time to do preprocessing
   Clock ipTime;		// time to do inpreprocessing
@@ -72,14 +72,14 @@ class Preprocessor {
   
 public:
 
-  Preprocessor(Solver* solver, CP3Config & _config, int32_t _threads=-1 );
+  Preprocessor(Riss::Solver* solver, CP3Config & _config, int32_t _threads=-1 );
   ~Preprocessor();
 
   // major methods to start preprocessing
   /** perform preprocessing
    * @return status of the formula l_False for UNSAT, l_Undef for unknown, l_True so satisfiable.
    */
-  lbool preprocess();
+  Riss::lbool preprocess();
   
   /** method to determine whether inprocessing should be done, according to the preprocessors heurisics*/
   bool wantsToInprocess();
@@ -87,11 +87,11 @@ public:
   /** perform inprocessing 
    * @return status of the formula l_False for UNSAT, l_Undef for unknown, l_True so satisfiable.
    */
-  lbool inprocess();
-  lbool preprocessScheduled();
-  lbool performSimplificationScheduled(std::string techniques);
+  Riss::lbool inprocess();
+  Riss::lbool preprocessScheduled();
+  Riss::lbool performSimplificationScheduled(std::string techniques);
 
-  void extendModel( vec<lbool>& model );
+  void extendModel( Riss::vec<Riss::lbool>& model );
   
   /* TODO:
    - extra classes for each extra techniques, which are friend of coprocessor class
@@ -142,10 +142,10 @@ public:
   
   /** return the literal, to which the specified literal is mapped to
    * @param l literal in the external world representation
-   * @return the new literal, or lit_Undef if the literal is not present any more, or lit_Error, if the information is not present
+   * @return the new literal, or Riss::lit_Undef if the literal is not present any more, or lit_Error, if the information is not present
    */
   int giveNewLit(const int& l) const;
-  Lit giveNewLit(const Lit& l) const;
+  Riss::Lit giveNewLit(const Riss::Lit& l) const;
   
 protected:
   // techniques
@@ -173,10 +173,10 @@ protected:
   TwoSatSolver twoSAT;
   
   int shuffleVariable;  // number of variables that have been present when the formula has been shuffled
-  vec<Var> specialFrozenVariables;
+  Riss::vec<Riss::Var> specialFrozenVariables;
   
   // do the real work
-  lbool performSimplification();
+  Riss::lbool performSimplification();
   void printStatistics(std::ostream& stream);
   
   // own methods:
@@ -188,7 +188,7 @@ protected:
   void giveMoreSteps();
   
   void shuffle();			// shuffle the formula
-  void unshuffle( vec< lbool >& model );	// unshuffle the formula
+  void unshuffle( Riss::vec< Riss::lbool >& model );	// unshuffle the formula
   
   /** freeze all variables that appear in special search data structures (assumptions, preferred decisions)
    *  Note: does not freeze a variable twice, will not add variables to undo information, if the variable is frozen already 
@@ -198,14 +198,14 @@ protected:
   
   // small helpers
   void sortClauses();                // sort the literals within all clauses
-  void delete_clause(const CRef cr); // delete a clause from the solver (clause should not be attached within the solver)
+  void delete_clause(const Riss::CRef cr); // delete a clause from the solver (clause should not be attached within the solver)
 
   bool checkLists(const std::string& headline); // check each clause list for duplicate occurrences
   void fullCheck(const std::string& headline);  // check solver state before control is passed to solver
   void scanCheck(const std::string& headline);	// check clauses for duplicate literals
   
   // print formula
-  inline void printClause(FILE * fd, CRef cr);
+  inline void printClause(FILE * fd, Riss::CRef cr);
   inline void printLit(FILE * fd, int l);
   void printFormula( const std::string& headline );
   

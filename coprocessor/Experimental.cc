@@ -4,6 +4,8 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/Experimental.h"
 
+using namespace Riss;
+using namespace std;
 
 namespace Coprocessor {
 

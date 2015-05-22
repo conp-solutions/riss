@@ -4,6 +4,9 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/rate.h"
 
+using namespace Riss;
+using namespace std;
+
 namespace Coprocessor {
 
 RATElimination::RATElimination( CP3Config& _config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Solver& _solver, Propagation& _propagation )

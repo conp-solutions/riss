@@ -26,8 +26,8 @@ class BlockedClauseElimination : public Technique  {
         CoprocessorData & data; // data to use for sorting
 	bool useComplements; // sort according to occurrences of complement, or actual literal
         bool operator () (int& x, int& y) const {
-	  if( useComplements ) return data[ ~toLit(x)] < data[ ~toLit(y) ]; 
-	  else return data[ toLit(x)] < data[ toLit(y) ]; 
+	  if( useComplements ) return data[ ~Riss::toLit(x)] < data[ ~Riss::toLit(y) ]; 
+	  else return data[ Riss::toLit(x)] < data[ Riss::toLit(y) ]; 
         }
         LitOrderBCEHeapLt(CoprocessorData & _data, bool _useComplements) : data(_data), useComplements(_useComplements) {}
   };
@@ -44,7 +44,7 @@ class BlockedClauseElimination : public Technique  {
 
   
 public:
-  BlockedClauseElimination( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Coprocessor::Propagation& _propagation  );
+  BlockedClauseElimination( CP3Config &_config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data, Coprocessor::Propagation& _propagation  );
 
   void reset();
   
@@ -64,7 +64,7 @@ protected:
    * Note: method assumes c and d to be sorted
    * @return Lit_Undef, if the resolvent is no tautology, otherwise the (first) literal of c, which produces the tautologic resolvent
    */
-  Lit tautologicResolvent( const Clause& c, const Clause& d, const Lit l ) const ;
+  Riss::Lit tautologicResolvent( const Riss::Clause& c, const Riss::Clause& d, const Riss::Lit l ) const ;
   
   /** run blocked clause elimination, and covered literal elimination */
   void blockedClauseElimination();

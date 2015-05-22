@@ -9,6 +9,7 @@ Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, All rights reserved.
 #include <fstream>
 
 using namespace std;
+using namespace Riss;
 
 namespace Coprocessor {
 

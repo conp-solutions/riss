@@ -195,7 +195,7 @@ public:
   void setFailed();                                      // found UNSAT, set ok state to false
   Riss::lbool enqueue( const Riss::Lit l, const uint64_t extraInfo = 0); // enqueue literal l to current solver structures, adopt to extraInfo of solver, if needed
   Riss::lbool value( const Riss::Lit l ) const ;         // return the assignment of a literal
-  void resetAssignment( const Riss::Var v );             // set the polarity of a variable to Riss::l_Undef -- Note: be careful with this!
+  void resetAssignment( const Riss::Var v );             // set the polarity of a variable to l_Undef -- Note: be careful with this!
   
   Riss::Solver* getSolver();                             // return the pointer to the solver object
   bool hasToPropagate();                                 // signal whether there are new unprocessed units
@@ -209,8 +209,8 @@ public:
   void addClause (       const Riss::CRef cr, Riss::Heap<VarOrderBVEHeapLt> * heap, const bool update = false, const Riss::Var ignore = var_Undef, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL);     // add clause to data structures, update counters
   bool removeClauseFrom (const Riss::CRef cr, const Riss::Lit l); 		             // remove clause reference from list of clauses for literal l, returns true, if successful
   void removeClauseFrom (const Riss::CRef cr, const Riss::Lit l, const int index);   // remove clause reference from list of clauses for literal l, returns true, if successful
-  inline bool removeClauseFromThreadSafe (const Riss::CRef cr, const Riss::Lit l);   // replaces clause reference from clause list by CRef_Undef, returns true, if successful
-  inline void cleanUpOccurrences(const Riss::MarkArray & dirtyOccs, const uint32_t timer); // removes CRef_Undef from all dirty occurrences
+  inline bool removeClauseFromThreadSafe (const Riss::CRef cr, const Riss::Lit l);   // replaces clause reference from clause list by Riss::CRef_Undef, returns true, if successful
+  inline void cleanUpOccurrences(const Riss::MarkArray & dirtyOccs, const uint32_t timer); // removes Riss::CRef_Undef from all dirty occurrences
   void cleanOccurrences();                                                           // remove all clauses and set counters to 0
 
   // Garbage Collection
@@ -276,13 +276,13 @@ public:
   /// for DRUP / DRAT proofs
 #ifdef DRATPROOF
   template <class T>
-  void addToProof(   T& clause, bool deleteFromProof=false, const Riss::Lit remLit = Riss::lit_Undef); // write the given clause/std::vector/vec to the output, if the output is enabled
+  void addToProof(   T& clause, bool deleteFromProof=false, const Riss::Lit remLit = Riss::lit_Undef); // write the given clause/std::vector/Riss::vec to the output, if the output is enabled
   void addUnitToProof(const  Riss::Lit& l, bool deleteFromProof=false);    // write a single unit clause to the proof
   void addCommentToProof(const char* text, bool deleteFromProof=false);
   bool outputsProof() const { return solver->outputsProof(); } // return whether the solver outputs the drup proof!
 #else // no DRAT proofs
   template <class T>
-  void addToProof(   T& clause, bool deleteFromProof=false, const Riss::Lit remLit = Riss::lit_Undef) const {}; // write the given clause/std::vector/vec to the output, if the output is enabled
+  void addToProof(   T& clause, bool deleteFromProof=false, const Riss::Lit remLit = Riss::lit_Undef) const {}; // write the given clause/std::vector/Riss::vec to the output, if the output is enabled
   void addUnitToProof(const  Riss::Lit& l, bool deleteFromProof=false) const {};    // write a single unit clause to the proof
   void addCommentToProof(const char* text, bool deleteFromProof=false) const {};
   bool outputsProof() const { return false; } // return whether the solver outputs the drup proof!
@@ -600,7 +600,7 @@ inline Riss::Var CoprocessorData::nextFreshVariable(char type)
 inline void CoprocessorData::moveVar(Riss::Var from, Riss::Var to, bool final)
 {
   if( from != to ) { // move data only if necessary
-    solver->varFlags[to].assigns = solver->varFlags[from].assigns; solver->varFlags[from].assigns = Riss::l_Undef;
+    solver->varFlags[to].assigns = solver->varFlags[from].assigns; solver->varFlags[from].assigns = l_Undef;
     solver->vardata[to] = solver->vardata[from]; solver->vardata[from] = Riss::Solver::VarData();
     solver->activity[to] = solver->activity[from]; solver->activity[from] = 0;
     solver->varFlags[to].seen = solver->varFlags[to].seen; solver->varFlags[to].seen = 0;
@@ -668,15 +668,15 @@ inline bool CoprocessorData::isInterupted()
 
 inline Riss::lbool CoprocessorData::enqueue(const Riss::Lit l, const uint64_t extraInfo)
 {
-  if( false || global_debug_out ) std::cerr << "c enqueue " << l << " with previous value " << (solver->value( l ) == Riss::l_Undef ? "undef" : (solver->value( l ) == Riss::l_False ? "unsat" : " sat ") ) << std::endl;
-  if( solver->value( l ) == Riss::l_False) {
+  if( false || global_debug_out ) std::cerr << "c enqueue " << l << " with previous value " << (solver->value( l ) == l_Undef ? "undef" : (solver->value( l ) == l_False ? "unsat" : " sat ") ) << std::endl;
+  if( solver->value( l ) == l_False) {
     solver->ok = false; // set state to false
-    return Riss::l_False;
-  } else if( solver->value( l ) == Riss::l_Undef ) {solver->uncheckedEnqueue(l);
+    return l_False;
+  } else if( solver->value( l ) == l_Undef ) {solver->uncheckedEnqueue(l);
     // if( extraInfo != 0 ) solver.vardata[ var(l) ] ... // make use of extra information!
-    return Riss::l_True;
+    return l_True;
   }
-  return Riss::l_Undef;
+  return l_Undef;
 }
 
 inline Riss::lbool CoprocessorData::value(const Riss::Lit l) const
@@ -686,7 +686,7 @@ inline Riss::lbool CoprocessorData::value(const Riss::Lit l) const
 
 inline void CoprocessorData::resetAssignment(const Riss::Var v)
 {
-  solver->varFlags[ v ].assigns = Riss::l_Undef;
+  solver->varFlags[ v ].assigns = l_Undef;
 }
 
 
@@ -780,7 +780,7 @@ inline void CoprocessorData::removeClauseFrom(const Riss::CRef cr, const Riss::L
   list.pop_back();
 }
 
-/** replaces clause reference from clause list by CRef_Undef, returns true, if successful
+/** replaces clause reference from clause list by Riss::CRef_Undef, returns true, if successful
  *  asynchronous list modification
  */
 inline bool CoprocessorData::removeClauseFromThreadSafe (const Riss::CRef cr, const Riss::Lit l) 
@@ -797,7 +797,7 @@ inline bool CoprocessorData::removeClauseFromThreadSafe (const Riss::CRef cr, co
   return false;
 }
 
-/** removes CRef_Undef from all dirty occurrences
+/** removes Riss::CRef_Undef from all dirty occurrences
  *  should be used sequentiell or with exclusive occ-access
  *
  *  @param dirtyOccs (on Lits !)
@@ -1415,7 +1415,7 @@ inline void CoprocessorData::extendModel(Riss::vec< Riss::lbool >& model)
   }
   
   for( int j = 0 ; j < model.size(); ++ j ) {
-	  if( model[j] == Riss::l_Undef ) model[j] = Riss::l_True; // set free variables to some value
+	  if( model[j] == l_Undef ) model[j] = l_True; // set free variables to some value
   }
   
   const bool local_debug = false;
@@ -1423,9 +1423,9 @@ inline void CoprocessorData::extendModel(Riss::vec< Riss::lbool >& model)
     std::cerr << "c extend model of size " << model.size() << " with undo information of size " << undo.size() << std::endl;
     std::cerr << "c in model: ";
 	for( int j = 0 ; j < model.size(); ++ j ) {
-	  if( model[j] == Riss::l_Undef ) std::cerr << "? ";
+	  if( model[j] == l_Undef ) std::cerr << "? ";
 	  else {
-	    const Riss::Lit satLit = Riss::mkLit( j, model[j] == Riss::l_True ? false : true );
+	    const Riss::Lit satLit = Riss::mkLit( j, model[j] == l_True ? false : true );
 	    std::cerr << satLit << " ";
 	  }
 	}
@@ -1460,16 +1460,16 @@ inline void CoprocessorData::extendModel(Riss::vec< Riss::lbool >& model)
 	 assert( satLit != Riss::lit_Undef && "there should not be an empty clause on the undo stack" );
          log.log(1, "set literal to true",satLit);
 	 if( local_debug ) std::cerr << "c set literal " << undo[i+1] << " to true " << std::endl;
-         model[ var(satLit) ] = sign(satLit) ? Riss::l_False : Riss::l_True;
+         model[ var(satLit) ] = sign(satLit) ? l_False : l_True;
        }
        
        // finished this clause!
        if( local_debug ) { // print intermediate state!
        std::cerr << "c current model: ";
 	for( int j = 0 ; j < model.size(); ++ j ) {
-	  if( model[j] == Riss::l_Undef ) std::cerr << "? ";
+	  if( model[j] == l_Undef ) std::cerr << "? ";
 	  else {
-	    const Riss::Lit satLit = Riss::mkLit( j, model[j] == Riss::l_True ? false : true );
+	    const Riss::Lit satLit = Riss::mkLit( j, model[j] == l_True ? false : true );
 	    std::cerr << satLit << " ";
 	  }
 	}
@@ -1480,8 +1480,8 @@ inline void CoprocessorData::extendModel(Riss::vec< Riss::lbool >& model)
        }
        continue;
      }
-     if( var(c) >= model.size() ) model.growTo( var(c) + 1, Riss::l_True ); // model is too small? this will also take care of extended resolution variables!
-     if (model[var(c)] == (sign(c) ? Riss::l_False : Riss::l_True) ) // satisfied
+     if( var(c) >= model.size() ) model.growTo( var(c) + 1, l_True ); // model is too small? this will also take care of extended resolution variables!
+     if (model[var(c)] == (sign(c) ? l_False : l_True) ) // satisfied
      {
        isSat = true; // redundant -- will be reset in the next loop iteration immediately
        while( undo[i] != Riss::lit_Undef ){ // skip literal until hitting the delimiter - for loop will decrease i once more
@@ -1499,7 +1499,7 @@ inline void CoprocessorData::extendModel(Riss::vec< Riss::lbool >& model)
   if( global_debug_out  || local_debug) {
     std::cerr << "c out model: ";
     for( int i = 0 ; i < model.size(); ++ i ) {
-      const Riss::Lit satLit = Riss::mkLit( i, model[i] == Riss::l_True ? false : true );
+      const Riss::Lit satLit = Riss::mkLit( i, model[i] == l_True ? false : true );
       std::cerr << satLit << " ";
     }
     std::cerr << std::endl;

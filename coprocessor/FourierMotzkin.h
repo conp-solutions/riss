@@ -21,7 +21,7 @@ class FourierMotzkin : public Technique  {
     
   CoprocessorData& data;
   Propagation& propagation;
-  Solver& solver;
+  Riss::Solver& solver;
   
   double processTime,amoTime,amtTime,fmTime,twoPrTime,deduceAloTime,semTime;
   int64_t steps, searchSteps;
@@ -45,27 +45,27 @@ class FourierMotzkin : public Technique  {
   uint64_t semSteps;
   
   
-  vec<Lit> unitQueue; // store literals that should be propagated on the card constraints
+  Riss::vec<Riss::Lit> unitQueue; // store literals that should be propagated on the card constraints
   
   /// compare two literals
   struct LitOrderHeapLt {
         CoprocessorData & data;
         bool operator () (int& x, int& y) const {
-	    return data[ toLit(x)] < data[toLit(y)]; 
+	    return data[ Riss::toLit(x)] < data[Riss::toLit(y)]; 
         }
         LitOrderHeapLt(CoprocessorData & _data) : data(_data) {}
   };
   
   /// struct to handle ternary clauses efficiently
   struct Ternary {
-    Lit lit [3];
-    Ternary ( const Lit a, const Lit b, const Lit c )
+    Riss::Lit lit [3];
+    Ternary ( const Riss::Lit a, const Riss::Lit b, const Riss::Lit c )
     {
       lit[0] = ( a > b ? ( b > c ? c : b ) : ( a > c ? c : a ) ); // min
       lit[2] = ( a > b ? ( a > c ? a : c ) : ( b > c ? b : c)  ); // max
-      lit[1] = toLit( toInt(a) ^ toInt(b) ^ toInt(c) ^ toInt( lit[0] ) ^ toInt( lit[2] ) ); // xor all three lits and min and max (the middle remains)
+      lit[1] = Riss::toLit( toInt(a) ^ toInt(b) ^ toInt(c) ^ toInt( lit[0] ) ^ toInt( lit[2] ) ); // xor all three lits and min and max (the middle remains)
     }
-    Lit operator[](const int position) const {
+    Riss::Lit operator[](const int position) const {
       return lit[position];
     }
   };
@@ -74,12 +74,12 @@ class FourierMotzkin : public Technique  {
   public:
   class CardC {
   public:
-    std::vector<Lit> ll;
-    std::vector<Lit> lr;
+    std::vector<Riss::Lit> ll;
+    std::vector<Riss::Lit> lr;
     int k;
-    CardC( std::vector<Lit>& amo ) : ll(amo), k(1) {}; // constructor to add amo constraint
-    CardC( std::vector<Lit>& amk, int _k ) : ll(amk), k(_k) {}; // constructor to add amk constraint
-    CardC( const Clause& c ) :k(-1) { lr.resize(c.size(),lit_Undef); for(int i = 0 ; i < c.size(); ++i ) lr[i] = c[i]; }// constructor for usual clauses
+    CardC( std::vector<Riss::Lit>& amo ) : ll(amo), k(1) {}; // constructor to add amo constraint
+    CardC( std::vector<Riss::Lit>& amk, int _k ) : ll(amk), k(_k) {}; // constructor to add amk constraint
+    CardC( const Riss::Clause& c ) :k(-1) { lr.resize(c.size(),Riss::lit_Undef); for(int i = 0 ; i < c.size(); ++i ) lr[i] = c[i]; }// constructor for usual clauses
     bool amo() const { return k == 1 && lr.size() == 0 ; }
     bool amt() const { return k == 2 && lr.size() == 0 ; }
     bool amk() const { return k >= 0 && lr.size() == 0 ; }
@@ -89,7 +89,7 @@ class FourierMotzkin : public Technique  {
     bool failed() const { return (((int)lr.size() + k) < 0) ; }
     bool taut() const { return k >= (int)ll.size(); } // assume no literal appears both in ll and lr
     bool invalid() const { return k==0 && ll.size() == 0 && lr.size() == 0; } // nothing stored in the constraint any more
-    void invalidate() { k=0;std::vector<Lit>().swap(ll);std::vector<Lit>().swap(lr);}
+    void invalidate() { k=0;std::vector<Riss::Lit>().swap(ll);std::vector<Riss::Lit>().swap(lr);}
     CardC() : k(0) {} // default constructor
     void swap( CardC& other ) { /// swap with other constraint
       const int t = other.k; other.k = k; k = t;
@@ -99,7 +99,7 @@ class FourierMotzkin : public Technique  {
   };
   
 public:
-  FourierMotzkin( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, Solver& _solver );
+  FourierMotzkin( CP3Config &_config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, Riss::Solver& _solver );
 
   void reset();
   
@@ -117,10 +117,10 @@ public:
   
 protected:
   /** propagate the literals in unitQueue over all constraints*/
-  bool propagateCards( vec<Lit>& unitQueue, std::vector< std::vector<int> >& leftHands, std::vector< std::vector<int> >& rightHands, std::vector<CardC>& cards,MarkArray& inAmo);
+  bool propagateCards( Riss::vec<Riss::Lit>& unitQueue, std::vector< std::vector<int> >& leftHands, std::vector< std::vector<int> >& rightHands, std::vector<CardC>& cards,Riss::MarkArray& inAmo);
   
   /** check whether the given clause is already present in the given list */
-  bool hasDuplicate(const std::vector<Lit>& c);
+  bool hasDuplicate(const std::vector<Riss::Lit>& c);
 
   /** given a set of cardinality constraints, and a BIG, try to deduce more AMOs following the two product encoding */
   void findTwoProduct(std::vector< CardC >& cards, BIG& big, std::vector< std::vector<int> >& leftHands);
@@ -128,7 +128,7 @@ protected:
   /** return whether a current set of literals already exists as AMO, or is subsumed by an existing one 
    * Note: assumes the literal lits to be sorted, and all AMOs inside cards as well
    */
-  bool amoExistsAlready(const std::vector< Lit >& lits, std::vector< std::vector< int > >& leftHands, std::vector<CardC>& cards);
+  bool amoExistsAlready(const std::vector< Riss::Lit >& lits, std::vector< std::vector< int > >& leftHands, std::vector<CardC>& cards);
 
   /** try to deduce ALO constraints
    *  if something like a board is encoded, then try to add additional ALO constraints (from dangerous reductions paper)

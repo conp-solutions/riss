@@ -57,22 +57,22 @@ class BoundedVariableAddition : public Technique  {
   struct LitOrderBVAHeapLt {
         CoprocessorData & data;
         bool operator () (int& x, int& y) const {
-	    return data[ toLit(x)] > data[toLit(y)]; // more frequent literal should be least element!
+	    return data[ Riss::toLit(x)] > data[Riss::toLit(y)]; // more frequent literal should be least element!
         }
         LitOrderBVAHeapLt(CoprocessorData & _data) : data(_data) {}
   };
   
   // structures that would be created on during functions again and again
-  std::vector< std::vector< CRef > > bvaMatchingClauses; // found pairs of clauses
-  std::vector< Lit > bvaMatchingLiterals; // literals that stay in the match
+  std::vector< std::vector< Riss::CRef > > bvaMatchingClauses; // found pairs of clauses
+  std::vector< Riss::Lit > bvaMatchingLiterals; // literals that stay in the match
   // use general mark array!
-  std::vector< Lit > bvaCountMark;	// mark literal candidates (a) for the current literal(b)
+  std::vector< Riss::Lit > bvaCountMark;	// mark literal candidates (a) for the current literal(b)
   std::vector< uint32_t > bvaCountCount; // count occurence of a together with b
   std::vector< uint64_t > bvaCountSize; // count occurence of a together with b
-  vec<Lit> clauseLits;			// std::vector that is added for clause definitions
+  Riss::vec<Riss::Lit> clauseLits;			// std::vector that is added for clause definitions
  
 public:
-  BoundedVariableAddition( Coprocessor::CP3Config& _config, ClauseAllocator& _ca, ThreadController& _controller, Coprocessor::CoprocessorData& _data, Coprocessor::Propagation& _propagation );
+  BoundedVariableAddition( Coprocessor::CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, Coprocessor::CoprocessorData& _data, Coprocessor::Propagation& _propagation );
   
   void reset();
   
@@ -108,20 +108,20 @@ protected:
   * @param right literal that represents the right side
   * @return false, if shrinking a clause to unit led to a failed enqueue (UNSAT)
   */
-  bool bvaHandleComplement( const Lit right, Heap< Coprocessor::LitOrderHeapLt >& bvaHeap );
+  bool bvaHandleComplement( const Riss::Lit right, Riss::Heap< Coprocessor::LitOrderHeapLt >& bvaHeap );
 
   /** introduce a fresh variable, update the size of all required structures*/
-  Var nextVariable(char type, Heap<LitOrderHeapLt>& bvaHeap);
+  Riss::Var nextVariable(char type, Riss::Heap<LitOrderHeapLt>& bvaHeap);
 
   /** check data structures */
   bool checkLists(const std::string& headline);
   
   /** pair of literals and clauses, including sort operator */
   struct xorHalfPair {
-    Lit l1,l2;
-    CRef c1,c2;
-    xorHalfPair( Lit _l1, Lit _l2, CRef _c1, CRef _c2) : l1(_l1),l2(_l2),c1(_c1),c2(_c2){}
-    xorHalfPair() : l1(lit_Undef),l2(lit_Undef),c1(CRef_Undef),c2(CRef_Undef){}
+    Riss::Lit l1,l2;
+    Riss::CRef c1,c2;
+    xorHalfPair( Riss::Lit _l1, Riss::Lit _l2, Riss::CRef _c1, Riss::CRef _c2) : l1(_l1),l2(_l2),c1(_c1),c2(_c2){}
+    xorHalfPair() : l1(Riss::lit_Undef),l2(Riss::lit_Undef),c1(Riss::CRef_Undef),c2(Riss::CRef_Undef){}
     
     /** generate an order, so that pairs that belong to the same XOR gate are placed behind each other */
     bool operator>(const xorHalfPair& other ) const {
@@ -134,17 +134,17 @@ protected:
   };
 
   struct iteHalfPair {
-    Lit l1,l2,l3;
-    CRef c1,c2;
-    iteHalfPair( Lit _l1, Lit _l2, Lit _l3, CRef _c1, CRef _c2)
+    Riss::Lit l1,l2,l3;
+    Riss::CRef c1,c2;
+    iteHalfPair( Riss::Lit _l1, Riss::Lit _l2, Riss::Lit _l3, Riss::CRef _c1, Riss::CRef _c2)
       : l1(_l1),l2(_l2),l3(_l3),c1(_c1),c2(_c2){}
       
-    iteHalfPair() : l1(lit_Undef),l2(lit_Undef),l3(lit_Undef),c1(CRef_Undef),c2(CRef_Undef){}
+    iteHalfPair() : l1(Riss::lit_Undef),l2(Riss::lit_Undef),l3(Riss::lit_Undef),c1(Riss::CRef_Undef),c2(Riss::CRef_Undef){}
 
       /** generate an order, so that pairs that belong to the same ITE gate are placed behind each other */
     bool operator>(const iteHalfPair& other) const {
-	const Var iv2 = var(l2); const Var jv2 = var(other.l2);
-	const Var iv3 = var(l3); const Var jv3 = var(other.l3);
+	const Riss::Var iv2 = var(l2); const Riss::Var jv2 = var(other.l2);
+	const Riss::Var iv3 = var(l3); const Riss::Var jv3 = var(other.l3);
 	const bool signDiff = (sign(l2));
 	return (   iv2 > jv2
 	   || (iv2 == jv2 &&  iv3 > jv3)
@@ -157,7 +157,7 @@ protected:
   };
   
   /** remove duplicate clauses from the clause list of the given literal*/
-  void removeDuplicateClauses( const Lit literal );
+  void removeDuplicateClauses( const Riss::Lit literal );
   
 public:
   // parameters

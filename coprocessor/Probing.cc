@@ -4,6 +4,9 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/Probing.h"
 
+using namespace Riss;
+using namespace std;
+
 namespace Coprocessor {
 
 Probing::Probing(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, EquivalenceElimination& _ee, Solver& _solver)

@@ -43,20 +43,20 @@ class XorReasoning : public Technique  {
         bool operator () (int& x, int& y) const {
 	    return data[ x ].size() < data[ y].size(); 
         }
-        VarLt(std::vector<vector< int> > & _data) : data(_data) {}
+        VarLt(std::vector<std::vector< int> > & _data) : data(_data) {}
   };
   
   /** structure to use during simple gauss algorithm */
   class GaussXor {
   public:
-    std::vector<Var> vars;
+    std::vector<Riss::Var> vars;
     bool k; // polarity of XOR has to be true or false
     bool used; // indicate whether this constraint has been used for simplification already
     bool eq() const { return vars.size() == 2 ; }
     bool unit() const { return vars.size() == 1; }
-    Lit getUnitLit() const { return unit() ? mkLit(vars[0],!k) : lit_Undef; }
+    Riss::Lit getUnitLit() const { return unit() ? Riss::mkLit(vars[0],!k) : Riss::lit_Undef; }
     bool failed() const { return vars.size() == 0 && k; }
-    GaussXor( const Clause& c ) : k(true),used(false) { // build xor from clause
+    GaussXor( const Riss::Clause& c ) : k(true),used(false) { // build xor from clause
       vars.resize(c.size());
       for( int i = 0 ; i < c.size(); ++ i ){
 	vars[i] = var( c[i] );
@@ -71,11 +71,11 @@ class XorReasoning : public Technique  {
      * @param removed list of variables that have been removed from the xor
      * @param v1 temporary std::vector
      */
-    void add ( const GaussXor& gx, std::vector<Var>& removed, std::vector<Var>& v1) {
+    void add ( const GaussXor& gx, std::vector<Riss::Var>& removed, std::vector<Riss::Var>& v1) {
       k = (k != gx.k); // set new k!
       v1 = vars; // be careful here, its a copy operation!
       vars.clear();
-      const std::vector<Var>& v2 = gx.vars;
+      const std::vector<Riss::Var>& v2 = gx.vars;
       // generate new vars!
       int n1 = 0,n2=0;
       while( n1 < v1.size() && n2 < v2.size() ) {
@@ -96,7 +96,7 @@ class XorReasoning : public Technique  {
   
 public:
 
-  XorReasoning( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data,  Propagation& _propagation, EquivalenceElimination& _ee  );
+  XorReasoning( CP3Config &_config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data,  Propagation& _propagation, EquivalenceElimination& _ee  );
 
   void reset();
   
@@ -112,12 +112,12 @@ public:
   void destroy();
   
   // remove index from all variable lists that are listed in x
-  void dropXor(int index, std::vector< Var >& x, std::vector< std::vector< int > >& occs);
+  void dropXor(int index, std::vector< Riss::Var >& x, std::vector< std::vector< int > >& occs);
   
   /** propagate found units in all related xors 
    * @return true if no conflict was found, false if a conflict was found
    */
-  bool propagate(std::vector< Lit >& unitQueue, MarkArray& ma, std::vector< std::vector< int > >& occs, std::vector< GaussXor >& xorList);
+  bool propagate(std::vector< Riss::Lit >& unitQueue, Riss::MarkArray& ma, std::vector< std::vector< int > >& occs, std::vector< GaussXor >& xorList);
 
 protected:
   

@@ -4,6 +4,9 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/sls.h"
 
+using namespace Riss;
+using namespace std;
+
 namespace Coprocessor {
 
 Sls::Sls(CP3Config &_config, CoprocessorData& _data, ClauseAllocator& _ca, ThreadController& _controller)

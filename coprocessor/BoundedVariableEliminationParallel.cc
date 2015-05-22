@@ -8,6 +8,7 @@ Copyright (c) 2013, Kilian Gebhardt, Norbert Manthey, All rights reserved.
 #include "riss/mtl/Heap.h"
 
 using namespace std;
+using namespace Riss;
 
 namespace Coprocessor {
 

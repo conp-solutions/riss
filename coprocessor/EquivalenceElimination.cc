@@ -6,6 +6,9 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include <fstream>
 
+using namespace std;
+using namespace Riss;
+
 namespace Coprocessor {
 
 static const int eeLevel = 1;

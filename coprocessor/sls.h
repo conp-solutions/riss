@@ -17,17 +17,17 @@ class Sls : public Technique
 {
 
 public:
-  Sls(CP3Config &_config, CoprocessorData& _data, ClauseAllocator& _ca, ThreadController& _controller);
+  Sls(CP3Config &_config, CoprocessorData& _data, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller);
   ~Sls();
 
   /** run sls algorithm on formula 
   * @param model std::vector that can contain a model for the formula afterwards
   * @return true, if a model has been found
   */
-  bool solve(  const vec< Riss::CRef >& formula, uint64_t stepLimit  );
+  bool solve(  const Riss::vec< Riss::CRef >& formula, uint64_t stepLimit  );
 
   /** if search succeeded, return polarity for variable v (1 = positive, -1 = negative) */
-  char getModelPolarity( const Var v ) { return varData[v].polarity ? -1 : 1; }
+  char getModelPolarity( const Riss::Var v ) { return varData[v].polarity ? -1 : 1; }
 
   /** This method should be used to print the statistics of the technique that inherits from this class
   */
@@ -40,11 +40,11 @@ public:
 private:
   
   CoprocessorData& data;	// reference to coprocessor data object
-  ClauseAllocator& ca;	// reference to clause allocator
+  Riss::ClauseAllocator& ca;	// reference to clause allocator
   double solveTime;		// number of seconds for solving
   
   // keep track of unsat clauses
-  std::vector<CRef> unsatClauses; // data
+  std::vector<Riss::CRef> unsatClauses; // data
   std::vector<int> indexes; // indexes
   
   uint64_t flips;
@@ -59,8 +59,8 @@ private:
   
   // data per variable
   struct ClsData {
-    Var watch1;
-    Var watch2;
+    Riss::Var watch1;
+    Riss::Var watch2;
     int satLiterals;
     
     ClsData() : watch1(1 << 30), watch2(1 << 30), satLiterals(0){}
@@ -87,18 +87,18 @@ private:
     return indexes[index] != -1; 
   }
     
-  bool isSat( const Lit& l ) const {
+  bool isSat( const Riss::Lit& l ) const {
     return (sign(l) && varData[var(l)].polarity == false) 
        || (!sign(l) && varData[var(l)].polarity == true);
   }
   
-  bool isUnsat( const Lit& l ) const {
+  bool isUnsat( const Riss::Lit& l ) const {
     return !isSat(l);
   }
   
   /** heuristic implementations
   */
-  Lit heuristic();
+  Riss::Lit heuristic();
 
   /** fill the assignment with random values
   */

@@ -4,6 +4,9 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/TwoSAT.h"
 
+using namespace Riss;
+using namespace std;
+
 namespace Coprocessor {
 
 TwoSatSolver::TwoSatSolver(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data)

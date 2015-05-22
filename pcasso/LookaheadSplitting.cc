@@ -12,6 +12,8 @@
 #include "riss/mtl/Vec.h"
 #include "riss/core/SolverTypes.h"
 
+using namespace Riss;
+
 namespace Pcasso {
 
 static const char* _cat = "LOOKAHEADSPLITTING";

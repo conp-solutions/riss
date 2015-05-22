@@ -39,7 +39,7 @@ class VarShuffler
 {
   CP3Config& config;
   uint32_t variables;
-  std::vector< Lit > replacedBy;
+  std::vector< Riss::Lit > replacedBy;
   uint32_t seed;
   
   Randomizer randomizer;
@@ -48,10 +48,10 @@ public:
   VarShuffler(CP3Config &_config);
 
   /** apply full shuffling process to clauses */
-  void process(vec< Riss::CRef >& clauses, vec< Riss::CRef >& learnts, vec< Lit >& trail, uint32_t vars, ClauseAllocator& ca);
+  void process(Riss::vec< Riss::CRef >& clauses, Riss::vec< Riss::CRef >& learnts, Riss::vec< Riss::Lit >& trail, uint32_t vars, Riss::ClauseAllocator& ca);
   
   /** remap model to original variables */
-  void unshuffle( vec<lbool>& model, uint32_t vars );
+  void unshuffle( Riss::vec<Riss::lbool>& model, uint32_t vars );
   
 protected:
   /** set seed fo shuffling (it is a pivate seed, independent from rand() */
@@ -61,10 +61,10 @@ protected:
     void setupShuffling(uint32_t vars);
   
   /** apply the mapping to the formula */
-    void shuffle( vec<CRef>& clauses, ClauseAllocator& ca, bool shuffleOrder = false );
+    void shuffle( Riss::vec<Riss::CRef>& clauses, Riss::ClauseAllocator& ca, bool shuffleOrder = false );
     
     /** apply mapping */
-    void shuffle( vec<Lit>& lits, bool shuffleOrder = false );
+    void shuffle( Riss::vec<Riss::Lit>& lits, bool shuffleOrder = false );
     
 
 

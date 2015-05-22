@@ -26,7 +26,7 @@ class TwoSatSolver : public Technique
   BIG big;
   
   std::vector<char> tempVal, permVal;
-  deque<Lit> unitQueue, tmpUnitQueue;
+  std::deque<Riss::Lit> unitQueue, tmpUnitQueue;
   int lastSeenIndex;
   
   double solveTime;		// number of seconds for solving
@@ -35,16 +35,16 @@ class TwoSatSolver : public Technique
   int calls;			// number of calls to twosat solver
   
   public:
-    TwoSatSolver(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data);
+    TwoSatSolver(CP3Config &_config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data);
     ~TwoSatSolver();
     
   bool solve();
   
-  char getPolarity( const Var v ) const;
+  char getPolarity( const Riss::Var v ) const;
   
-  bool isSat( const Lit& l ) const;
+  bool isSat( const Riss::Lit& l ) const;
   
-  bool isPermanent( const Var v ) const;
+  bool isPermanent( const Riss::Var v ) const;
   
   /** This method should be used to print the statistics of the technique that inherits from this class
   */
@@ -62,7 +62,7 @@ protected:
   
   bool hasDecisionVariable();
 
-  Lit getDecisionVariable();
+  Riss::Lit getDecisionVariable();
 };
 
 };

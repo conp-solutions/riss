@@ -17,12 +17,13 @@ class SplitterSolver : public Riss::Solver {
     Riss::CoreConfig& coreConfig;
       
 public:
-	SplitterSolver (CoreConfig& config) : Solver(config) , coreConfig( config ) {}
+	SplitterSolver (Riss::CoreConfig& config) : Riss::Solver(config), coreConfig( config ) {}
       
     virtual ~SplitterSolver() {}
     virtual void dummy() = 0;
 
-    void inline kill(){ // Davide>
+    // Davide>
+    void inline kill(){
     	printf("\n"); printf("*** INTERRUPTED ***\n");
     	_exit(1);
     }

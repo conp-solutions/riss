@@ -6,6 +6,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #include "coprocessor/libcoprocessorc.h"
 
 using namespace Riss;
+using namespace std;
 
 /** struct that stores the necessary data for a preprocessor */
 struct libcp3 {

@@ -8,6 +8,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #include <sstream>
 
 using namespace std;
+using namespace Riss;
 
 namespace Coprocessor {
 

@@ -6,6 +6,8 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #include "riss/mtl/Sort.h"
 #include <bits/algorithmfwd.h>
 
+using namespace Riss;
+using namespace std;
 
 namespace Coprocessor {
 

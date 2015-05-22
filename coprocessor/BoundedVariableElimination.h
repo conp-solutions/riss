@@ -42,7 +42,7 @@ class BoundedVariableElimination : public Technique {
   Riss::vec< int32_t > neg_stats; 
   // parallel member variables
   Riss::MarkArray lastTouched;                    //Riss::MarkArray to track modifications of parallel BVE-Threads
-  Riss::MarkArray dirtyOccs;                      // tracks occs that contain CRef_Undef
+  Riss::MarkArray dirtyOccs;                      // tracks occs that contain Riss::CRef_Undef
   std::vector< Riss::Job > jobs;                     
   std::vector< SpinLock > variableLocks;         // 3 extra SpinLock for data, heap, ca
   std::vector< std::deque < Riss::CRef > > subsumeQueues;

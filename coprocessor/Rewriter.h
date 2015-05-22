@@ -52,15 +52,15 @@ class Rewriter : public Technique  {
   struct LitOrderHeapLt {
         CoprocessorData & data;
         bool operator () (int& x, int& y) const {
-	    return data[ toLit(x)] < data[toLit(y)]; 
+	    return data[ Riss::toLit(x)] < data[Riss::toLit(y)]; 
         }
         LitOrderHeapLt(CoprocessorData & _data) : data(_data) {}
   };
-  Heap<LitOrderHeapLt> rewHeap; // heap that stores the variables according to their frequency
+  Riss::Heap<LitOrderHeapLt> rewHeap; // heap that stores the variables according to their frequency
   
 public:
   
-  Rewriter( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, Coprocessor::CoprocessorData& _data, Coprocessor::Subsumption& _subsumption );
+  Rewriter( CP3Config &_config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, Coprocessor::CoprocessorData& _data, Coprocessor::Subsumption& _subsumption );
   
   void reset();
   
@@ -78,7 +78,7 @@ public:
 protected:
   
   /** take care of creating a new variable */
-  Var nextVariable(char type);
+  Riss::Var nextVariable(char type);
   
   /** method responsible for rewriting AMO constraints */
   bool rewriteAMO() ;
@@ -86,13 +86,13 @@ protected:
   bool rewriteImpl() ;
   
   /** check whether the clause represented in the std::vector c has duplicates, and remove clauses that are subsumed by c */
-  bool hasDuplicate(std::vector<CRef>& list, const vec<Lit>& c);
-  bool hasDuplicate(std::vector<CRef>& list, const Clause& c);
+  bool hasDuplicate(std::vector<Riss::CRef>& list, const Riss::vec<Riss::Lit>& c);
+  bool hasDuplicate(std::vector<Riss::CRef>& list, const Riss::Clause& c);
   
-  bool checkPush(vec<Lit> & ps, const Lit l);
-  bool ordered_subsumes (const Clause& c, const Clause & other) const;
-  bool ordered_subsumes (const vec<Lit>& c, const Clause & other) const;
-  bool ordered_subsumes (const Clause & c, const vec<Lit>& other) const;
+  bool checkPush(Riss::vec<Riss::Lit> & ps, const Riss::Lit l);
+  bool ordered_subsumes (const Riss::Clause& c, const Riss::Clause & other) const;
+  bool ordered_subsumes (const Riss::vec<Riss::Lit>& c, const Riss::Clause & other) const;
+  bool ordered_subsumes (const Riss::Clause & c, const Riss::vec<Riss::Lit>& other) const;
   
 public:
   

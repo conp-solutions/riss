@@ -20,7 +20,7 @@ namespace Coprocessor {
 class Symmetry : public Technique {
   
   CoprocessorData& data;
-  Solver& solver;
+  Riss::Solver& solver;
   
   double processTime;
   int addPairs;
@@ -31,7 +31,7 @@ class Symmetry : public Technique {
   int totalConflicts;
   
 public:
-  Symmetry( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Solver& _solver);
+  Symmetry( CP3Config &_config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data, Riss::Solver& _solver);
   
   /** perform local symmetry detection
    * @return false, if formula is UNSAT
@@ -49,9 +49,9 @@ public:
 protected:
   
   struct ScorePair {
-     Var v1,v2;
+     Riss::Var v1,v2;
      float score;
-     ScorePair( Var _v1, Var _v2, float _score ) : v1(_v1), v2(_v2),score(_score) {}
+     ScorePair( Riss::Var _v1, Riss::Var _v2, float _score ) : v1(_v1), v2(_v2),score(_score) {}
      
     ScorePair() : v1(0),v2(0),score(0) {} 
      

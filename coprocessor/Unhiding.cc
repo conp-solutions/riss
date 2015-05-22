@@ -5,6 +5,9 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor/Unhiding.h"
 #include "riss/mtl/Sort.h"
 
+using namespace Riss;
+using namespace std;
+
 namespace Coprocessor {
 
 void Unhiding::giveMoreSteps()

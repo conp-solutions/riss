@@ -326,7 +326,7 @@ public: // TODO: set more nicely, or write method!
 #ifdef PCASSO
       unsigned varPT:16; // partition tree level for this variable
 #endif
-      VarFlags( char _polarity ) : assigns(l_Undef), polarity(_polarity), decision(0), seen(0), extra(0), frozen(0) 
+      VarFlags( char _polarity ) : assigns(l_Undef), polarity(_polarity), decision(0), seen(0), extra(0), frozen(0)
 #ifdef PCASSO
       , varPT(0)
 #endif

@@ -23,7 +23,7 @@ class Resolving  : public Technique
   std::vector<int> seen; // remembers how many clauses per variable have been processed already
   
 public:
-  Resolving(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation);
+  Resolving(CP3Config &_config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation);
 
   bool process( bool post = false);
 
@@ -43,20 +43,20 @@ protected:
   void addRedundantBinaries();
 
   /** check whether this clause already exists in the occurence list */
-  bool hasDuplicate(std::vector< Riss::CRef >& list, const vec< Lit >& c);
+  bool hasDuplicate(std::vector< Riss::CRef >& list, const Riss::vec< Riss::Lit >& c);
   
   /**
   * expects c to contain v positive and d to contain v negative
   * @return true, if resolvent is satisfied
   *         else, otherwise
   */
-  bool resolve(const Clause & c, const Clause & d, const int v, vec<Lit> & resolvent);
+  bool resolve(const Riss::Clause & c, const Riss::Clause & d, const int v, Riss::vec<Riss::Lit> & resolvent);
   
   // check whether a std::vector of lits subsumes a given clause
-  bool ordered_subsumes (const vec<Lit>& c, const Clause & other) const;
-  bool ordered_subsumes (const Clause & c, const vec<Lit>& other) const;
+  bool ordered_subsumes (const Riss::vec<Riss::Lit>& c, const Riss::Clause & other) const;
+  bool ordered_subsumes (const Riss::Clause & c, const Riss::vec<Riss::Lit>& other) const;
   
-  bool checkPush(vec<Lit> & ps, const Lit l);
+  bool checkPush(Riss::vec<Riss::Lit> & ps, const Riss::Lit l);
   
   double processTime;
   unsigned addedTern2;
@@ -70,12 +70,12 @@ protected:
   /// compare two literals
   struct VarOrderHeapLt {
         CoprocessorData & data;
-        bool operator () (const Var& x, const Var& y) const {
+        bool operator () (const Riss::Var& x, const Riss::Var& y) const {
 	    return data[ x] < data[y]; 
         }
         VarOrderHeapLt(CoprocessorData & _data) : data(_data) {}
   };
-  Heap<VarOrderHeapLt> resHeap; // heap that stores the variables according to their frequency (dedicated for BVA)
+  Riss::Heap<VarOrderHeapLt> resHeap; // heap that stores the variables according to their frequency (dedicated for BVA)
   
 };
 

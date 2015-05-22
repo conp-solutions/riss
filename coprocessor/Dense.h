@@ -25,7 +25,7 @@ class Dense  : public Technique
     int* mapping;
     uint32_t variables;	// number of variables before compression
     uint32_t postvariables;	// number of variables before compression
-    std::vector<Lit> trail;	// already assigned literals
+    std::vector<Riss::Lit> trail;	// already assigned literals
     
     Compression() : mapping(0), variables(0), postvariables(0) {};
     /// free the used resources again
@@ -41,7 +41,7 @@ class Dense  : public Technique
   std::vector< int > forward_mapping;
   
 public:
-  Dense(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation);
+  Dense(CP3Config &_config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation);
 
   
   /** compress the formula - if necessary, output a new whiteFile 
@@ -56,7 +56,7 @@ public:
   /** undo variable mapping, so that model is a model for the original formula
    * adoptUndoStack should be called before this method!
    */
-  void decompress(vec< lbool >& model);
+  void decompress(Riss::vec< Riss::lbool >& model);
   
   /** inherited from @see Technique */
   void printStatistics( std::ostream& stream );
@@ -70,7 +70,7 @@ public:
   bool readUndoInfo(const std::string& filename);
   
   /** return the new variable for the old variable */
-  Lit giveNewLit ( const Lit& l ) const ;
+  Riss::Lit giveNewLit ( const Riss::Lit& l ) const ;
   
 protected:
 

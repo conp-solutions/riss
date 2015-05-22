@@ -4,6 +4,9 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/bce.h"
 
+using namespace Riss;
+using namespace std;
+
 namespace Coprocessor {
 
 BlockedClauseElimination::BlockedClauseElimination(CP3Config &_config, ClauseAllocator &_ca,

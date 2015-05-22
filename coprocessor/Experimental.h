@@ -18,7 +18,7 @@ namespace Coprocessor {
 class ExperimentalTechniques : public Technique  {
     
   CoprocessorData& data;
-  Solver& solver;
+  Riss::Solver& solver;
   
   double processTime;
   int subsumed;
@@ -26,7 +26,7 @@ class ExperimentalTechniques : public Technique  {
   int extraSubs;
   
 public:
-  ExperimentalTechniques( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Solver& _solver );
+  ExperimentalTechniques( CP3Config &_config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data, Riss::Solver& _solver );
 
   void reset();
   

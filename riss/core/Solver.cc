@@ -41,6 +41,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "coprocessor/VarFileParser.h"
 
 using namespace Coprocessor;
+using namespace std;
 
 namespace Riss {
 

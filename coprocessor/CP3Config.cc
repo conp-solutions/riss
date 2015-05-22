@@ -13,6 +13,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "riss/mtl/Sort.h"
 
+using namespace Riss;
+
 namespace Coprocessor {
 
 const char* _cat = "COPROCESSOR";

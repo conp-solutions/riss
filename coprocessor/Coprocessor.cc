@@ -13,6 +13,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include <cstring>
 
 using namespace std;
+using namespace Riss;
 
 namespace Coprocessor {
 
