@@ -73,6 +73,8 @@ template <class B, class MaxSAT> static void parse_DIMACS_main(B &in, MaxSAT *S)
 {
   vec<Lit> lits;
   int hardWeight = INT32_MAX;
+  int specifiedVars = -1;
+  int specifiedCls = -1;
   for (;;)
   {
     skipWhitespace(in);
@@ -82,14 +84,16 @@ template <class B, class MaxSAT> static void parse_DIMACS_main(B &in, MaxSAT *S)
     {
       if (eagerMatch(in, "p cnf"))
       {
-        parseInt(in); // Variables
-        parseInt(in); // Clauses
+        specifiedVars = parseInt(in); // Variables
+        specifiedCls  = parseInt(in); // Clauses
+	S->setSpecs( specifiedVars, specifiedCls ); // added so that Mprocessor works
       }
       else if (eagerMatch(in, "wcnf"))
       {
         S->setProblemType(_WEIGHTED_);
-        parseInt(in); // Variables
-        parseInt(in); // Clauses
+        specifiedVars = parseInt(in); // Variables
+        specifiedCls  = parseInt(in); // Clauses
+	S->setSpecs( specifiedVars, specifiedCls ); // added so that Mprocessor works
         if (*in != '\r' && *in != '\n')
         {
           hardWeight = parseWeight(in);

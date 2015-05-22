@@ -28,14 +28,14 @@ DEPDIR     = mtl utils core
 # For the original Minisat based systems
 DEPDIR     +=  ../../encodings ../../algorithms
 MROOT      = $(PWD)/solvers/$(SOLVERDIR)
-CFLAGS     = -Wall -Wno-parentheses -DNSPACE=$(NSPACE) -DSOLVERNAME=$(SOLVERNAME) -DVERSION=$(VERSION)
+CFLAGS     = -Wall -Wno-parentheses -g3 -DNSPACE=$(NSPACE) -DSOLVERNAME=$(SOLVERNAME) -DVERSION=$(VERSION)
 
 # Riss is based on cmake, and located somewhere else, and relies on coprocessor, and requires more libraries
 ifeq ($(SOLVERDIR),riss)
 DEPDIR     = mtl utils core 
 DEPDIR     += ../externalTools/open-wbo/encodings ../externalTools/open-wbo/algorithms ../coprocessor
 MROOT      = ../../$(SOLVERDIR)
-CFLAGS     = -I .. -I ../.. -I ../externalTools/open-wbo -I ../coprocessor  -Wall -Wno-parentheses -DNSPACE=$(NSPACE) -DSOLVERNAME=$(SOLVERNAME) -DVERSION=$(VERSION)
+CFLAGS     = -I .. -I ../.. -I ../externalTools/open-wbo -I ../coprocessor  -Wall -Wno-parentheses -g3 -DNSPACE=$(NSPACE) -DSOLVERNAME=$(SOLVERNAME) -DVERSION=$(VERSION)
 LFLAGS     = -lpthread -lz -lrt
 endif
 

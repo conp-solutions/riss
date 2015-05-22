@@ -62,6 +62,74 @@ static void SIGINT_exit(int signum)
   exit(_UNKNOWN_);
 }
 
+#if NSPACE == Riss
+void loadFromMprocessorToMaxsat( MaxSAT* S ) {
+  
+  Coprocessor::Mprocessor* mprocessor = S->getMprocessor();
+  
+  // calculate the header
+  const int vars = mprocessor->S->nVars(); // might be smaller already due to dense
+  int clss = mprocessor->S->trail.size() + mprocessor->S->clauses.size();
+  int top = 0;
+  for( Var v = 0 ; v < mprocessor->fullVariables; ++ v ) { // for each weighted literal, have an extra clause! use variables before preprocessing (densing)
+    clss = (mprocessor->literalWeights[toInt(mkLit(v))] != 0 ? clss + 1 : clss);
+    clss = (mprocessor->literalWeights[toInt(~mkLit(v))] != 0 ? clss + 1 : clss);
+    top += mprocessor->literalWeights[toInt(mkLit(v))] + mprocessor->literalWeights[toInt(~mkLit(v))];
+  }
+  top ++;
+
+  // if the option dense is used, these literals are already rewritten by "dense"
+  // write header
+  while( S->nVars() < vars ) S->newVar(); // set variables in MS solver
+  S->setHardWeight( top );                // tell MS solver about top weight
+  
+  // write the hard clauses into the formula!
+  // print assignments
+  vec<Lit> cls;
+  cls.push( lit_Undef );
+  for (int i = 0; i < mprocessor->S->trail.size(); ++i)
+  {
+    cls[0] = mprocessor->S->trail[i];
+    S->addHardClause( cls );
+  }
+  // print clauses
+  for (int i = 0; i < mprocessor->S->clauses.size(); ++i)
+  {
+    const Clause & c = mprocessor->S->ca[mprocessor->S->clauses[i]];
+    if (c.mark()) continue;
+    cls.growTo( c.size() );
+    cls.clear();
+    for (int i = 0; i < c.size(); ++i)
+      cls.push_( c[i] );
+    S->addHardClause( cls );
+  }  
+
+  // if the option dense is used, these literals need to be adapted!
+  // write all the soft clauses (write after hard clauses, because there might be units that can have positive effects on the next tool in the chain!)
+  cls.clear();
+  cls.push( lit_Undef );
+  for( Var v = 0 ; v < mprocessor->fullVariables; ++ v ) { // for each weighted literal, have an extra clause!
+    Lit l = mkLit(v);
+    Lit nl = mprocessor->preprocessor->giveNewLit(l);
+    // cerr << "c lit " << l << " is compress lit " << nl << endl;
+    if( nl != lit_Undef && nl != lit_Error ) l = nl;
+    else if (nl == lit_Undef && mprocessor->cpconfig.opt_dense ) {
+      cerr << "c WARNING: soft literal " << l << " has been removed from the formula" << endl;
+      continue;
+    }
+    if( mprocessor->literalWeights[toInt(mkLit(v))] != 0 ) { // setting literal l to true ha a cost, hence have unit!
+      cls[0] = l;
+      S->addSoftClause(mprocessor->literalWeights[toInt(mkLit(v))], cls);
+    }
+    if( mprocessor->literalWeights[toInt(~mkLit(v))] != 0 ) { // setting literal ~l to true ha a cost, hence have unit!
+      cls[0] = ~l;
+      S->addSoftClause(mprocessor->literalWeights[toInt(~mkLit(v))], cls);
+    }
+  }
+}
+#endif
+
+
 //=================================================================================================
 // Main:
 
@@ -129,6 +197,11 @@ int main(int argc, char **argv)
         "Limit on the number of symmetry breaking clauses.\n", 500000,
         IntRange(0, INT32_MAX));
 
+#if NSPACE == Riss      
+    StringOption    opt_pre_config ("CONFIG", "preConfig",    "configuration for simplification",0);
+    StringOption opt_solver_config ("CONFIG", "solverConfig", "configuration for sat solver",    0);
+#endif
+    
     parseOptions(argc, argv, true);
 
     double initial_time = cpuTime();
@@ -218,7 +291,31 @@ int main(int argc, char **argv)
              argc == 1 ? "<stdin>" : argv[1]),
           printf("c UNKNOWN\n"), exit(_ERROR_);
 
+    // if we want to use a maxsat preprocessor, the preprocessor should be parsing
+	  
+
+#if NSPACE == Riss      
+    if( (const char*)opt_pre_config == 0 ) {
+      parse_DIMACS(in, S);
+    } else {
+      // setup maxsat preprocessor
+      S->createMprocessor( (const char*)opt_pre_config  );
+      // parse with preprocessor      
+      parse_DIMACS(in, S->getMprocessor() );
+      // simplify
+      S->getMprocessor()->simplify();
+      // load into actual solver
+      loadFromMprocessorToMaxsat(S);
+    }
+#else 
     parse_DIMACS(in, S);
+#endif
+      
+    
+//     opt_pre_config ("CONFIG", "preConfig",    "configuration for simplification",0);
+//     opt_solver_config
+    
+    
     gzclose(in);
 
     printf("c |                                                                "

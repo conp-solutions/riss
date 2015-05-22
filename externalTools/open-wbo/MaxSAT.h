@@ -28,6 +28,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "core/Solver.h"
 #endif
 
+#if NSPACE == Riss
+  #include "coprocessor/MaxsatWrapper.h"
+#endif
+
 #include "Soft.h"
 #include "Hard.h"
 #include "MaxTypes.h"
@@ -44,6 +48,10 @@ namespace NSPACE
 class MaxSAT
 {
 
+#if NSPACE == Riss
+  Coprocessor::Mprocessor* mprocessor;
+#endif
+  
 public:
   MaxSAT()
   {
@@ -78,13 +86,44 @@ public:
 
     for (int i = 0; i < hardClauses.size(); i++)
       hardClauses[i].clause.clear();
+    
+#if NSPACE == Riss
+    if(  mprocessor != 0 ) delete mprocessor;
+    mprocessor = 0;
+#endif
+    
   }
+
+#if NSPACE == Riss
+  /// create a mprocessor object (if not already created)
+  void createMprocessor( const char* mprocessorConfig ) {
+    if(  mprocessor == 0 ) mprocessor = new Coprocessor::Mprocessor( mprocessorConfig );
+  }
+#endif    
+  
+#if NSPACE == Riss
+  /// get reference to mprocessor object
+  Coprocessor::Mprocessor* getMprocessor() {
+    return mprocessor;
+  }
+#endif
+
+  // create the actual model based on the model that is given from the solver
+  void reconstructRealModel ( vec<lbool>& model ) {
+  #if NSPACE == Riss
+    mprocessor->preprocessor->extendModel(model);
+  #endif  
+  }
+
 
   int nVars();   // Number of variables.
   int nSoft();   // Number of soft clauses.
   int nHard();   // Number of hard clauses.
   void newVar(); // New variable.
 
+  // dummy for Mprocessor
+  void setSpecs( int specifiedVars, int specifiedCls ) {};
+  
   void addHardClause(vec<Lit> &lits);             // Add a new hard clause.
   void addSoftClause(int weight, vec<Lit> &lits); // Add a new soft clause.
   // Add a new soft clause with predefined relaxation variables.
