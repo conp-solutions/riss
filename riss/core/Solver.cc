@@ -37,24 +37,13 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 // to be able to use the preprocessor
 #include "coprocessor/Coprocessor.h"
 #include "coprocessor/CoprocessorTypes.h"
-
 // to be able to read var files
 #include "coprocessor/VarFileParser.h"
 
+using namespace Coprocessor;
+using namespace std;
 
-
-
-
-using namespace Riss;
-
-//=================================================================================================
-// Options:
-
-
-
-
-// useful methods
-
+namespace Riss {
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -214,9 +203,6 @@ Solver::~Solver()
   if( coprocessor != 0 ) { delete coprocessor; coprocessor = 0; }
 }
 
-
-//=================================================================================================
-// Minor methods:
 
 
 // Creates a new SAT variable in the solver. If 'decision' is cleared, variable will not be
@@ -2806,3 +2792,5 @@ void Solver::printSearchProgress()
 		   (int)nbReduceDB, nLearnts(), (int)nbDL2,(int)nbRemovedClauses, progressEstimate()*100);
 	  }
 }
+
+} // namespace Riss

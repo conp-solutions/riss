@@ -14,17 +14,15 @@
 #include <string>
 #include <vector>
 
-using namespace std;
-
 class WekaDataset {
 private:
-	ifstream fin;
-	string line;
+	std::ifstream fin;
+	std::string line;
 	bool haveLine;
 	int attributesNumber;
 public:
 	WekaDataset(const char* filename);
-	bool getDataRow(vector<string>& row);
+	bool getDataRow(std::vector<std::string>& row);
 	virtual ~WekaDataset();
 
 	int getAttributesNumber() const {

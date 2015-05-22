@@ -32,7 +32,7 @@ namespace Riss {
 //=================================================================================================
 // Automatically resizable arrays
 //
-// NOTE! Don't use this vector on datatypes that cannot be re-located in memory (with realloc)
+// NOTE! Don't use this std::vector on datatypes that cannot be re-located in memory (with realloc)
 
 template<class T>
 class vec {

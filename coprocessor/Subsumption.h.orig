@@ -119,6 +119,15 @@ protected:
   
   bool hasToStrengthen() const ;    // return whether there is something in the strengthening queue
   
+<<<<<<< HEAD
+  lbool fullStrengthening( Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true); // performs strengthening until completion, puts clauses into subsumption queue
+  lbool strengthening_worker ( unsigned int start, unsigned int end, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, bool doStatistics = true);
+  lbool createResolvent( const CRef cr, CRef & resolvent, const int negated_lit_pos, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);
+  void par_strengthening_worker( unsigned int & next_start, unsigned int global_stop, SpinLock & balancerLock, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true); 
+  void par_nn_strengthening_worker( unsigned int & next_start, unsigned int global_end, SpinLock & balancerLock, vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);
+  inline lbool par_nn_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true) ; 
+  inline lbool par_nn_negated_strength_check(CoprocessorData & data, vector < CRef > & list, deque<CRef> & localQueue, Clause & strengthener, CRef cr, Lit min, Var fst, vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, vector<OccUpdate> & occ_updates, Heap<VarOrderBVEHeapLt> * heap, const Var ignore = var_Undef, const bool doStatistics = true);
+=======
   Riss::lbool fullStrengthening( Riss::Heap<VarOrderBVEHeapLt> * heap, const Riss::Var ignore = var_Undef, const bool doStatistics = true); // performs strengthening until completion, puts clauses into subsumption queue
   Riss::lbool strengthening_worker ( unsigned int start, unsigned int end, Riss::Heap<VarOrderBVEHeapLt> * heap, const Riss::Var ignore = var_Undef, bool doStatistics = true);
   Riss::lbool createResolvent( const Riss::CRef cr, Riss::CRef & resolvent, const int negated_lit_pos, Riss::Heap<VarOrderBVEHeapLt> * heap, const Riss::Var ignore = var_Undef, const bool doStatistics = true);
@@ -126,6 +135,7 @@ protected:
   void par_nn_strengthening_worker( unsigned int & next_start, unsigned int global_end, SpinLock & balancerLock, std::vector< SpinLock > & var_lock, struct SubsumeStatsData & stats, std::vector<OccUpdate> & occ_updates, Riss::Heap<VarOrderBVEHeapLt> * heap, const Riss::Var ignore = var_Undef, const bool doStatistics = true);
   inline Riss::lbool par_nn_strength_check(CoprocessorData & data, std::vector < Riss::CRef > & list, std::deque<Riss::CRef> & localQueue, Riss::Clause & strengthener, Riss::CRef cr, Riss::Var fst, std::vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, std::vector<OccUpdate> & occ_updates, Riss::Heap<VarOrderBVEHeapLt> * heap, const Riss::Var ignore = var_Undef, const bool doStatistics = true) ; 
   inline Riss::lbool par_nn_negated_strength_check(CoprocessorData & data, std::vector < Riss::CRef > & list, std::deque<Riss::CRef> & localQueue, Riss::Clause & strengthener, Riss::CRef cr, Riss::Lit min, Riss::Var fst, std::vector < SpinLock > & var_lock, struct SubsumeStatsData & stats, std::vector<OccUpdate> & occ_updates, Riss::Heap<VarOrderBVEHeapLt> * heap, const Riss::Var ignore = var_Undef, const bool doStatistics = true);
+>>>>>>> no-using-namespace
   
   /** data for parallel execution */
   struct SubsumeWorkData {

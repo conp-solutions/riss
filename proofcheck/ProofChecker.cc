@@ -9,8 +9,9 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 
 #include <iostream>
 
-using namespace Riss;
 using namespace std;
+
+namespace Riss {
 
 static IntOption  opt_printEvery    ("PROOC-CHECK", "pc-print-every",  "number of clauses until next output is printed during input (0=off)", 0, IntRange(0, INT32_MAX));
 
@@ -181,3 +182,4 @@ void ProofChecker::setVerbosity(int verbosity)
 }
 
 
+} // namespace Riss

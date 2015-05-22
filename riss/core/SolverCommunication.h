@@ -9,7 +9,7 @@ on the Communicator implementation.
 #ifndef Minisat_SolverCommunication_h
 #define Minisat_SolverCommunication_h
 
-#include <math.h>
+#include <cmath>
 
 #include "riss/mtl/Sort.h"
 // #include "riss/core/Solver.h"
@@ -98,8 +98,8 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
     if( communication->isAborted() ) {
       interrupt();
       if (verbosity > 0)
-        cerr << "c [THREAD] " << communication->getID()
-             << " aborted current search due to flag by master" << endl;
+        std::cerr << "c [THREAD] " << communication->getID()
+             << " aborted current search due to flag by master" << std::endl;
       return -1;
     }
 
@@ -114,7 +114,7 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
 
     communication->awakeMaster();
 
-    cerr << "c [THREAD] " << communication->getID() << " wait for master to do something (sleep)" << endl;
+    std::cerr << "c [THREAD] " << communication->getID() << " wait for master to do something (sleep)" << std::endl;
     // wait until master changes the state again to working!
 
     while( ! communication->isWorking() ){
@@ -213,14 +213,14 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
 
     receiveClauses.clear();
     communication->receiveClauses( ca, receiveClauses );
-    // if( receiveClauses.size()  > 5 ) cerr << "c [THREAD] " << communication->getID() << " received " << receiveClauses.size() << " clauses." << endl;
+    // if( receiveClauses.size()  > 5 ) std::cerr << "c [THREAD] " << communication->getID() << " received " << receiveClauses.size() << " clauses." << std::endl;
     succesfullySend += receiveClauses.size();
     for( unsigned i = 0 ; i < receiveClauses.size(); ++ i ) {
       Clause& c = ca[ receiveClauses[i] ]; // take the clause and propagate / enqueue it
       
       if (c.size() < 2) {
 	if( c.size() == 0 ) {
-	  cerr << "c empty clause has been shared!" << endl;
+	  std::cerr << "c empty clause has been shared!" << std::endl;
 	  ok = false; return 1; 
 	}
 	// has to be unit clause!
@@ -232,13 +232,13 @@ int Solver::updateSleep(vec< Lit >* toSend, bool multiUnits)
 	c.mark();
         ok = (propagate() == CRef_Undef);
 	if( !ok ) { // adding this clause failed?
-          cerr << "c adding received clause failed" << endl;
+          std::cerr << "c adding received clause failed" << std::endl;
           return 1; 
 	}
       } else {
 	for( int j = 0 ; j < c.size(); ++ j ) { // propagate inside the clause!
           if( var(c[j]) > nVars() ) {
-	    cerr << "c shared variable " << var( c[j] ) << "[" << j << "] is greater than " << nVars() << endl;
+	    std::cerr << "c shared variable " << var( c[j] ) << "[" << j << "] is greater than " << nVars() << std::endl;
 	   assert( false && "received variables have to be smaller than maximum!" );
 	  }
 	  if( value( c[j] ) == l_True ) { c.mark(1); break; } // this clause is already satisfied -> remove it! (we are on level 0!)

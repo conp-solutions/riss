@@ -12,7 +12,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include <vector>
 #include <iostream>
 
-using namespace std;
+// using namespace std;
 
 namespace Riss {
 
@@ -106,8 +106,8 @@ public:
   /** initializes the controller object */
   void init();
   
-  /** pass jobs to threads, size of vector has to be number of threads! */
-  void runJobs( vector<Job>& jobs );
+  /** pass jobs to threads, size of std::vector has to be number of threads! */
+  void runJobs( std::vector<Job>& jobs );
   
   /** pass a single job to the threads */
   bool submitJob( Job& job );
@@ -218,22 +218,22 @@ inline ThreadController::~ThreadController()
 inline void ThreadController::init()
 {
   if( threads == 0 ) return;
-  cerr << "c init thread controller with " << threads << " threads" << endl;
+  std::cerr << "c init thread controller with " << threads << " threads" << std::endl;
   threadHandles = new pthread_t [ threads ];
   
   data = new ThreadData* [ threads ];
   
-  cerr << "c created pointer to data " << endl;
+  std::cerr << "c created pointer to data " << std::endl;
   
   // create threads for all except the first data object
   for( int i = 0 ; i < threads; ++i ){
-    cerr << "c create object " << i << endl;
+    std::cerr << "c create object " << i << std::endl;
     data[i] = new ThreadData( &masterLock );
-    cerr << "c create object thread " << i << endl;
+    std::cerr << "c create object thread " << i << std::endl;
     pthread_create( & (threadHandles[i]), 0, ThreadData::executeThread , data[i] ); // create thread
   }
     
-  cerr << "c wait for initialize " << endl;
+  std::cerr << "c wait for initialize " << std::endl;
   
   int done = 0; // calling thread is thread nr0!
   masterLock.lock();
@@ -247,10 +247,10 @@ inline void ThreadController::init()
     if( done != threads ) masterLock.sleep();
   }
   masterLock.unlock();
-  cerr << "c init done" << endl;
+  std::cerr << "c init done" << std::endl;
 }
 
-inline void ThreadController::runJobs(vector< Job >& jobs)
+inline void ThreadController::runJobs(std::vector< Job >& jobs)
 {
   assert( jobs.size() <= threads && "More jobs than threads cannot be handled at the moment" );
   // submit all jobs

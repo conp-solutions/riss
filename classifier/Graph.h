@@ -4,21 +4,25 @@
  *  Created on: Oct 21, 2013
  *      Author: gardero
  */
-#include <vector>
-#include "classifier/SequenceStatistics.h"
 #ifndef GRAPH_H_
 #define GRAPH_H_
-using namespace std;
-typedef pair<int,double> edge;
-typedef vector<edge> adjacencyList;
+
+#include <vector>
+#include "classifier/SequenceStatistics.h"
+
+// using namespace std;
+
+typedef std::pair<int,double> edge;
+typedef std::vector<edge> adjacencyList;
+
 /**
  * undirected weighted graph.
  */
 class Graph {
 private:
 	int size;
-	vector<adjacencyList> node;
-	vector<int> nodeDeg;
+	std::vector<adjacencyList> node;
+	std::vector<int> nodeDeg;
 	// statistics variables
 	SequenceStatistics degreeStatistics;
 	SequenceStatistics weightStatistics;
@@ -38,7 +42,7 @@ public:
 	uint64_t addAndCountUndirectedEdge(int nodeA, int nodeB, double weight);
 	int getDegree(int node);
 
-    vector<int> sortSize;	// for each adjacencyList store the size when its re-sorted
+    std::vector<int> sortSize;	// for each adjacencyList store the size when its re-sorted
     void setIntermediateSort( bool newValue );
     
     uint64_t computeStatistics(int quantilesCount);

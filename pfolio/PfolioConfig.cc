@@ -11,7 +11,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "pfolio/PfolioConfig.h"
 
-using namespace Riss;
+namespace Riss {
 
 static const char* _cat = "PFOLIO";
 
@@ -25,3 +25,4 @@ PfolioConfig::PfolioConfig(const std::string & presetOptions) // add new options
  
 {}
 
+} // namespace Riss

@@ -1,19 +1,21 @@
 #include "Shared_pool.h"
 
-#define NDBG
+using namespace Riss;
+using namespace std;
 
-using namespace PcassoDavide;
+namespace PcassoDavide {
 
 // A static vector always need a declaration
 vector<PcassoClause> Shared_pool::shared_clauses;
 
 void Shared_pool::add_shared(vec<Lit>& lits, unsigned int size){
   
-#ifndef NDBG
+#ifndef NDEBUG
   
   if( shared_clauses.size() % 128 == 0 ) std::cerr << "c [POOL] added a shared clause nr. " << shared_clauses.size() << " of size " << size << std::endl;
   
 #endif
+  
   PcassoClause c;
   
   c.size = size;
@@ -33,7 +35,7 @@ void Shared_pool::add_shared(vec<Lit>& lits, unsigned int size){
       c.lits[j++] = p = c.lits[i];
   c.lits.shrink_(i - j);
 
-#ifndef NDBG
+#ifndef NDEBUG
 
   if( c.lits.size() == 0 ) printf("CLAUSE OF SIZE ZERO ADDED TO SHARED POOL\n");
   
@@ -61,3 +63,5 @@ bool Shared_pool::duplicate(const PcassoClause& c){
 //      }
 //      shared_clauses.clear();
 //   }
+
+} // namespace PcassoDavide

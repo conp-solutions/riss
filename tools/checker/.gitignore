@@ -1,0 +1,12 @@
+# Binaries
+cnfdd
+cnfuzz
+drat-trim
+lgl
+lingeling/ilingeling
+lingeling/lglcfg.h
+lingeling/lglcflags.h
+lingeling/lingeling
+lingeling/makefile
+lingeling/plingeling
+verify

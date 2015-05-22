@@ -13,29 +13,29 @@
 #include <stdint.h>
 #include "classifier/WekaDataset.h"
 
-using namespace std;
+// using namespace std;
 
 class Configurations {
 private:
 	double timeout;
 	const char* attrInfoFile;
 	const char* definitionsFilename;
-	vector<string> names;
-	vector<string> classifierInfo;
+	std::vector<std::string> names;
+	std::vector<std::string> classifierInfo;
 	int startIndex;
 	void readNames(const char* definitionsFilename);
 
-	stringstream attrToRemove;
+	std::stringstream attrToRemove;
 	int removeCount;
-	vector<int> classIndexes;
+	std::vector<int> classIndexes;
 	bool loaded;
 public:
 	Configurations(const char* definitionsFilename, const char* attrInfoFile);
 
 	void removeIndex(int index);
 	void addClassIndex(int index);
-	void removeIndexes(const vector<int>& index);
-	void removeIndexes(int offset, const vector<int>& index);
+	void removeIndexes(const std::vector<int>& index);
+	void removeIndexes(int offset, const std::vector<int>& index);
 	void printRunningInfo();
 
 	void loadConfigurationInfo();
@@ -45,17 +45,17 @@ public:
 		return names.size();
 	}
 
-	const vector<string>& getNames() const {
+	const std::vector<std::string>& getNames() const {
 		return names;
 	}
 
-	double getTimeInfo(istream& input);
-	double getTimeInfo(istream& input, double penalization);
+	double getTimeInfo(std::istream& input);
+	double getTimeInfo(std::istream& input, double penalization);
 	bool isSolved(const char* cnfFile);
 	bool isGood(double time);
-	string nullInfo();
-	string configInfo(istream& input, double penalization);
-	string attrInfo(int startIndex);
+	std::string nullInfo();
+	std::string configInfo(std::istream& input, double penalization);
+	std::string attrInfo(int startIndex);
 	int getAttrIndex(int config) const{
 		return startIndex+config;
 	}
@@ -68,20 +68,20 @@ public:
 		this->attrInfoFile = attrInfoFile;
 	}
 
-	const vector<int>& getClassIndexes() const {
+	const std::vector<int>& getClassIndexes() const {
 		return classIndexes;
 	}
 
-	void setClassIndexes(const vector<int>& classIndexes) {
+	void setClassIndexes(const std::vector<int>& classIndexes) {
 		this->classIndexes = classIndexes;
 	}
 
 
-	const vector<string>& getClassifierInfo() const {
+	const std::vector<std::string>& getClassifierInfo() const {
 		return classifierInfo;
 	}
 
-	void setClassifierInfo(const vector<string>& classifierInfo) {
+	void setClassifierInfo(const std::vector<std::string>& classifierInfo) {
 		this->classifierInfo = classifierInfo;
 	}
 

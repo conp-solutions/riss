@@ -4,9 +4,10 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/HiddenTautologyElimination.h"
 
+using namespace Riss;
+using namespace std;
 
-
-using namespace Coprocessor;
+namespace Coprocessor {
 
 HiddenTautologyElimination::HiddenTautologyElimination( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation )
 : Technique( _config, _ca, _controller )
@@ -603,3 +604,4 @@ void HiddenTautologyElimination::destroy()
   vector<char>().swap( activeFlag);
 }
 
+} // namespace Coprocessor

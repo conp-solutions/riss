@@ -11,7 +11,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/CoprocessorTypes.h"
 
-using namespace Riss;
+// using namespace Riss;
 
 namespace Coprocessor {
 
@@ -28,20 +28,20 @@ class Propagation : public Technique  {
   
 public:
   
-  Propagation( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller );
+  Propagation( CP3Config &_config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller );
   
-  /// will also set back the qhead variable inside the Solver object
+  /// will also set back the qhead variable inside the Riss::Solver object
   void reset(CoprocessorData& data);
   
   /** perform usual unit propagation, but shrinks clause sizes also physically
    *  will run over all clauses with satisfied/unsatisfied literals (that have not been done already)
    *  @return l_Undef, if no conflict has been found, l_False if there has been a conflict
    */
-  lbool process(CoprocessorData& data, bool sort = false, Heap<VarOrderBVEHeapLt> * heap = NULL, const Var ignore = var_Undef);
+  Riss::lbool process(CoprocessorData& data, bool sort = false, Riss::Heap<VarOrderBVEHeapLt> * heap = NULL, const Riss::Var ignore = var_Undef);
   
-  void initClause( const CRef cr );
+  void initClause( const Riss::CRef cr );
   
-  void printStatistics(ostream& stream);
+  void printStatistics(std::ostream& stream);
   
   /** give more steps for inprocessing - nothing to be done for UP*/
   void giveMoreSteps() {}

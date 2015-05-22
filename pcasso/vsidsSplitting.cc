@@ -1,18 +1,22 @@
-#include "vsidsSplitting.h"
-#include "riss/mtl/Vec.h"
-#include "riss/core/SolverTypes.h"
 #include "pthread.h"
 #include <time.h>
 
-using namespace Pcasso;
+#include "pcasso/vsidsSplitting.h"
+#include "riss/mtl/Vec.h"
+#include "riss/core/SolverTypes.h"
+
+using namespace std;
+using namespace Riss;
+
+namespace Pcasso {
 
 static const char* _cat = "VSIDSSCATTERING";
 static IntOption     opt_scatter_fact  (_cat, "sc-fact",             "The number of derived instances produced in a split", 8, IntRange(0, INT_MAX));
 static BoolOption    opt_scatter_time  (_cat, "sc-timeLimit",        "Limit the time during two scatters", false);
 static BoolOption    opt_scatter_con   (_cat, "sc-conLimit",         "Limit the number of conflicts during two scatters", true);
 static IntOption     opt_scatter_conBw (_cat, "sc-betweenConflicts", "The number of derived instances produced in a split", 8096, IntRange(0, INT_MAX));
-static IntOption     opt_restart_first     (_cat, "rfirst",      "The base restart interval", 100, IntRange(1, INT32_MAX));
-static DoubleOption  opt_restart_inc       (_cat, "rinc",        "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false));
+static IntOption     opt_restart_first (_cat, "rfirst",              "The base restart interval", 100, IntRange(1, INT32_MAX));
+static DoubleOption  opt_restart_inc   (_cat, "rinc",                "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false));
 
 VSIDSSplitting::VSIDSSplitting(CoreConfig& config):
 SplitterSolver(config)
@@ -327,7 +331,7 @@ lbool VSIDSSplitting::scatterSeach(int nof_conflicts, void* data)
             
             if (!d.startscatter && d.isscattering && scatterLevel)
 	    {
-                fprintf(stderr, "Scatter %d, conflicts %d, this limit %d: interval %d :", d.scatters.size(), (int)conflicts, d.sc_bw_cnfl, d.cnfl_bw);
+                fprintf(stderr, "Scatter %d, conflicts %d, this limit %lu: interval %lu :", d.scatters.size(), (int)conflicts, d.sc_bw_cnfl, d.cnfl_bw);
                 vec<Lit>* declits = new vec<Lit>;
                 for(int i = assumptions.size(); i < trail_lim.size(); i++) {
                     Lit decL = trail[trail_lim[i]];
@@ -477,3 +481,5 @@ double VSIDSSplitting::cpuTime_t() const  {
     }
     return (double) ts.tv_sec + ts.tv_nsec/1000000000.0;
 }
+
+} // namespace Pcasso
