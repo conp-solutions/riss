@@ -37,24 +37,13 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 // to be able to use the preprocessor
 #include "coprocessor/Coprocessor.h"
 #include "coprocessor/CoprocessorTypes.h"
-
 // to be able to read var files
 #include "coprocessor/VarFileParser.h"
 
+using namespace Coprocessor;
+using namespace std;
 
-
-
-
-using namespace Riss;
-
-//=================================================================================================
-// Options:
-
-
-
-
-// useful methods
-
+namespace Riss {
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -214,9 +203,6 @@ Solver::~Solver()
   if( coprocessor != 0 ) { delete coprocessor; coprocessor = 0; }
 }
 
-
-//=================================================================================================
-// Minor methods:
 
 
 // Creates a new SAT variable in the solver. If 'decision' is cleared, variable will not be
@@ -436,28 +422,33 @@ bool Solver::satisfied(const Clause& c) const {
 inline unsigned int Solver::computeLBD(const vec<Lit> & lits) {
   int nblevels = 0;
   permDiff.nextStep();
+  bool withLevelZero = false;
     for(int i=0;i<lits.size();i++) {
       int l = level(var(lits[i]));
+      withLevelZero = (l==0);
       if ( ! permDiff.isCurrentStep(l) ) {
 	permDiff.setCurrentStep(l);
 	nblevels++;
       }
     }
-  return nblevels;
+  if( config.opt_lbd_ignore_l0 && withLevelZero ) return nblevels - 1;
+  else return nblevels;
 }
 
 inline unsigned int Solver::computeLBD(const Clause &c) {
   int nblevels = 0;
   permDiff.nextStep();
-
+  bool withLevelZero = false;
     for(int i=0;i<c.size();i++) {
       int l = level(var(c[i]));
+      withLevelZero = (l==0);
       if ( ! permDiff.isCurrentStep(l) ) {
 	permDiff.setCurrentStep(l);
 	nblevels++;
       }
     }
-  return nblevels;
+  if( config.opt_lbd_ignore_l0 && withLevelZero ) return nblevels - 1;
+  else return nblevels;
 }
 
 
@@ -752,8 +743,10 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 #ifdef UPDATEVARACTIVITY
 		if( !foundFirstLearnedClause && config.opt_updateLearnAct ) {
 		    // UPDATEVARACTIVITY trick (see competition'09 companion paper)
-		    if((reason(var(q))!= CRef_Undef)  && ca[reason(var(q))].learnt()) 
+		    if((reason(var(q))!= CRef_Undef)  && ca[reason(var(q))].learnt())  {
+		      DOUT( if (config.opt_learn_debug) cerr << "c add " << q << " to last decision level" << endl; );
 		      lastDecisionLevel.push(q);
+		    }
 		}
 #endif
 
@@ -965,8 +958,10 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
   // UPDATEVARACTIVITY trick (see competition'09 companion paper)
   if(lastDecisionLevel.size()>0 ) {
     for(int i = 0;i<lastDecisionLevel.size();i++) {
-      if(ca[reason(var(lastDecisionLevel[i]))].lbd()<lbd)
+      if(ca[reason(var(lastDecisionLevel[i]))].lbd()<lbd) {
+	DOUT( if ( config.opt_learn_debug ) cerr << "c add " << lastDecisionLevel[i] << " to bump, with " << ca[reason(var(lastDecisionLevel[i]))].lbd() << " vs " << lbd << endl; );
 	varsToBump.push( var(lastDecisionLevel[i]) ) ;
+      }
     }
     lastDecisionLevel.clear();
   } 
@@ -1265,6 +1260,7 @@ struct reduceDB_lt {
 
 void Solver::reduceDB()
 {
+  DOUT( if( config.opt_removal_debug > 0)  cerr << "c reduceDB ..." << endl; );
   reduceDBTime.start();
   int     i, j;
   nbReduceDB++;
@@ -1288,6 +1284,7 @@ void Solver::reduceDB()
   // Keep clauses which seem to be usefull (their lbd was reduce during this sequence)
 
   int limit = learnts.size() / 2;
+  DOUT( if( config.opt_removal_debug > 1) cerr << "c reduce limit: " << limit << endl; ) ;
 
   const int delStart = (int) (config.opt_keep_worst_ratio * (double)learnts.size()); // keep some of the bad clauses!
   for (i = j = 0; i < learnts.size(); i++){
@@ -1295,14 +1292,17 @@ void Solver::reduceDB()
     if (i >= delStart && c.lbd()>2 && c.size() > 2 && c.canBeDel() &&  !locked(c) && (i < limit)) {
       removeClause(learnts[i]);
       nbRemovedClauses++;
+      DOUT( if( config.opt_removal_debug > 2) cerr << "c remove clause " << c << endl; );
     }
     else {
       if(!c.canBeDel()) limit++; //we keep c, so we can delete an other clause
       c.setCanBeDel(true);       // At the next step, c can be delete
+      DOUT( if( config.opt_removal_debug > 2) cerr << "c keep clause " << c << " due to set 'canBeDel' flag" << endl; ); 
       learnts[j++] = learnts[i];
     }
   }
   learnts.shrink_(i - j);
+  DOUT( if( config.opt_removal_debug > 0) cerr << "c resulting learnt clauses: " << learnts.size() << endl; );
   checkGarbage();
   reduceDBTime.stop();
 }
@@ -2097,6 +2097,7 @@ lbool Solver::initSolve(int solves)
 	    else if( config.opt_init_pol == 3 ) varFlags[v].polarity = moms[v] > 0 ? 1 : 0;
 	    else if( config.opt_init_pol == 4 ) varFlags[v].polarity = moms[v] > 0 ? 0 : 1;
 	    else if( config.opt_init_pol == 5 ) varFlags[v].polarity = irand(random_seed,100) > 50 ? 1 : 0;
+	    else if( config.opt_init_pol == 6 ) varFlags[v].polarity = ~ varFlags[v].polarity;
 	  }
 	}
 	delete [] moms;
@@ -2791,3 +2792,5 @@ void Solver::printSearchProgress()
 		   (int)nbReduceDB, nLearnts(), (int)nbDL2,(int)nbRemovedClauses, progressEstimate()*100);
 	  }
 }
+
+} // namespace Riss

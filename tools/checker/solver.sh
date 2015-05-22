@@ -6,8 +6,8 @@
 # return code: 10 or 20 (SAT/UNSAT)
 # print to screen: solution for the cnf
 #
-
-param="-enabled_cp3 -cp3_stats -bce -bce-bce -bce-bcm -bve -bva"
+#param="-threads=4"
+param="-enabled_cp3 -cp3_stats -bce -bce-bce -bce-bcm -bve -bva -xor -xorEncSize=4  "
 
 #
 # select between printing a proof and not printing a proof

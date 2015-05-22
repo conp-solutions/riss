@@ -11,23 +11,23 @@
 #include <string>
 #include "classifier/Configurations.h"
 
-using namespace std;
+// using namespace std;
 
 typedef int ClassifierMode;
 
 class Classifier {
 private:
 	Configurations& configurations;
-	vector< string > classifiersNames;
-	vector<int> classification;
-	vector<double> probabilities;
-	vector<bool> correct;
+	std::vector< std::string > classifiersNames;
+	std::vector<int> classification;
+	std::vector<double> probabilities;
+	std::vector<bool> correct;
 	int correctCount;
 	ClassifierMode mode;
 	double gainThreshold;
 	int verbose;
-	string wekaLocation;	// location of the weka tool
-	string predictorLocation;
+	std::string wekaLocation;	// location of the weka tool
+	std::string predictorLocation;
 	bool nonZero;		// consider classes as best class, even when they have a prediction of 0?
 	bool useTempFiles;
 	const char* prefix;
@@ -37,8 +37,8 @@ public:
 	Classifier(Configurations& config,const char* prefix);
 	virtual ~Classifier();
 	void writeTestDetails(const char* wekaFile);
-	vector<int>& classify(const char* wekaFile);
-	vector<int>& classifyJava(const char* wekaFile);
+	std::vector<int>& classify(const char* wekaFile);
+	std::vector<int>& classifyJava(const char* wekaFile);
 	double trainModel(const char* wekaFile, int config, const char* tempclassifier,
 			int localmode, int ltrees,
 			int lfeatures);
@@ -46,7 +46,7 @@ public:
 	int train(const char* wekaFile);
 	int test(const char* wekaFile);
 
-	void setWekaLocation(const string& location) {
+	void setWekaLocation(const std::string& location) {
 	  wekaLocation = location;
 	}
 	
@@ -54,19 +54,19 @@ public:
 	  nonZero = useNonZero;
 	}
 	
-	const vector<int>& getClassification() const {
+	const std::vector<int>& getClassification() const {
 		return classification;
 	}
 
-	void setClassification(const vector<int>& classification) {
+	void setClassification(const std::vector<int>& classification) {
 		this->classification = classification;
 	}
 
-	const vector<bool>& getCorrect() const {
+	const std::vector<bool>& getCorrect() const {
 		return correct;
 	}
 
-	void setCorrect(const vector<bool>& correct) {
+	void setCorrect(const std::vector<bool>& correct) {
 		this->correct = correct;
 	}
 
@@ -78,11 +78,11 @@ public:
 		this->correctCount = correctCount;
 	}
 
-	const vector<double>& getProbabilities() const {
+	const std::vector<double>& getProbabilities() const {
 		return probabilities;
 	}
 
-	void setProbabilities(const vector<double>& probabilities) {
+	void setProbabilities(const std::vector<double>& probabilities) {
 		this->probabilities = probabilities;
 	}
 
@@ -119,11 +119,11 @@ public:
 		this->verbose = verbose;
 	}
 
-	const string& getPredictorLocation() const {
+	const std::string& getPredictorLocation() const {
 		return predictorLocation;
 	}
 
-	void setPredictorLocation(const string& predictorLocation) {
+	void setPredictorLocation(const std::string& predictorLocation) {
 		this->predictorLocation = predictorLocation;
 	}
 

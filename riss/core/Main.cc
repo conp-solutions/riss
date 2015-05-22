@@ -31,14 +31,15 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "riss/utils/ParseUtils.h"
 #include "riss/utils/Options.h"
 #include "riss/utils/AutoDelete.h"
+#include "riss/utils/version.h" // include the file that defines the solver version
 #include "riss/core/Dimacs.h"
+
 #include "riss/core/Solver.h"
 
 #include "coprocessor/Coprocessor.h"
 
-#include "riss/utils/version.h" // include the file that defines the solver version
-
 using namespace Riss;
+using namespace std;
 
 //=================================================================================================
 
@@ -118,114 +119,7 @@ int main(int argc, char** argv)
   BoolOption   opt_cmdLine      ("MAIN", "cmd", "print the relevant options", false);
   
     try {
-      
-	// for having a schedule
-	vector<int> scheduleConflicts;
-	vector<string> scheduleArguments;
-	
-	// check the very first option for being a schedule that starts with "//\\"
-	if( argc > 2 ) {
-	  cerr << "c argv[1]: " << argv[1] << endl;
-	  string firstParam = string(argv[1]);
-	  string nextConfig, nextConflicts, nextOptions;
-	  //
-	  // FORMAT FOR THE SCHEDULE, as one parameter:
-	  // "SCHED: <x|configureation1 parameters> <y|configuretion2 parameters> <z|configuration3 parameters> <*|final parameters>
-	  // x,y and z are the number of conflicts to run the given configuration, * executes a configuration until a solution is found (or interrupt).
-	  // 
-	  // Or
-	  // "SCHED:DEFAULT"
-	  // Use a default configuration that has been valuable before
-	  //
-	  if( firstParam.find("SCHED:") == 0 ) { // consider the first parameter as the schedule, handle the schedule!"
-	    firstParam=firstParam.substr(6);
-	    cerr << "c schedule: " << firstParam << endl;
-	    
-	    if( firstParam == "DEFAULT" ) { // handle the default schedule here!
-	      cerr << "c setup default schedule" << endl;
-	    } else {	// parse the schedule
-	      while( firstParam.find("<") != string::npos ) // there is another parameter
-	      {
-		firstParam = firstParam.substr( firstParam.find("<") + 1 );
-		cerr << "c next remainder: " << firstParam << endl;
-		nextConfig = firstParam.substr( 0, firstParam.find(">") );
-		cerr << "c add the conflicts|params pair: " << nextConfig << endl;
-		nextConflicts = nextConfig.substr( 0, nextConfig.find("|") );
-		nextOptions = nextConfig.substr(  nextConfig.find("|") + 1);
-		cerr << "c pair: " << nextConflicts << " for " << nextOptions << endl;
-		int nr = -1; // in case no number is given, or a star is given, run the configuration for ever!
-		if( nextConflicts.size() != 0 &&  nextConflicts != "*" ) { // found final configuration that should run until a solution is found
-		  nr = atoi( nextConflicts.c_str() ); // convert to number
-		  assert( nr >= 0 && "do not run this configuration for ever" );
-		}
-		scheduleConflicts.push_back(nr);
-		scheduleArguments.push_back(nextOptions);
-	      }
-	    }
 
-	    cerr << "c schedule:" << endl;
-	    for( int i = 0 ; i < scheduleArguments.size(); ++ i )
-	    {
-	      cerr << "c [" << i << "] " << scheduleConflicts[i] << " for " << scheduleArguments[i] << endl;
-	    }
-
-	    cerr << "c initial argc: " << argc << " and argv: " << endl;
-	    for( int i = 0 ; i < argc; ++i ) cerr << "c [" << i << "] " << argv[i] << endl;
-	    
-	    // set argc and argv right ...
-	    for( int i = 1 ; i + 1 < argc; ++i ) argv[i] = argv[i+1];
-	    argc --;
-	    
-	    cerr << "c modified argc: " << argc << " and argv: " << endl;
-	    for( int i = 0 ; i  < argc; ++i ) cerr << "c [" << i << "] " << argv[i] << endl;
-
-
-	  }
-	}
-        
-        // memorize pointer to argv of
-        char** originalArgv = argv;
-	int originalArgc = argc;
-        char** scheduleArgv = 0; // array to which argv could point to
-        std::vector<std::string> optionList; // global option list, so that memory fields are accessible
-        MethodFree mf( (void*&)scheduleArgv ); // delete the field if its not used any more
-	// run all the iterations, and one iteration if scheduleArguments.size() == 0
-        for( int solverIteration = 0 ; solverIteration < scheduleArguments.size() || (solverIteration == 0 && scheduleArguments.size() == 0); ++ solverIteration ) 
-	{
-	  // setup the actual argv by adding the specified configuration to the current argv ...
-	  if( scheduleArguments.size() > 0 ) { // modify argv and argc only if necessary!
-	    // split string into sub strings, separated by ':'
-	    cerr << "c handle schedule arguments: " << scheduleArguments[solverIteration] << endl;
-	    
-	    int lastStart = 0;
-	    int findP = 0;
-	    optionList.clear();
-	    while ( findP < scheduleArguments[solverIteration].size() ) { // tokenize string
-		findP = scheduleArguments[solverIteration].find(" ", lastStart);
-		if( findP == std::string::npos ) { findP = scheduleArguments[solverIteration].size(); }
-		
-		if( findP - lastStart - 1 >= 0 ) {
-		  optionList.push_back( scheduleArguments[solverIteration].substr(lastStart ,findP - lastStart) );
-		}
-		lastStart = findP + 1;
-	    }
-	  //  std::cerr << "c work on option string " << options << std::endl;
-	    // create argc - argv combination
-	    if( scheduleArgv != 0 ) free( scheduleArgv ); // free the resources again
-	    scheduleArgv = (char**) malloc( sizeof(char*) * (optionList.size() +  originalArgc) ); // and all the other
-	    
-	    for( int i = 0; i < originalArgc; ++ i ) scheduleArgv[i] = originalArgv[i]; // copy the global parameters
-	    for( int i = 0; i < optionList.size(); ++ i ) scheduleArgv[i+originalArgc] = (char*)optionList[i].c_str(); // copy the global parameters
-	    
-	    argc = optionList.size() + originalArgc;
-	    argv = scheduleArgv;
-  
-	    cerr << "c SCHEDULE[" << solverIteration << "] argc: " << argc << " and argv: " << endl;
-	    for( int i = 0 ; i  < argc; ++i ) cerr << "c [" << i << "] " << argv[i] << endl;
-	    
-// 	    exit(40);
-	  }
-	  
 	  //
 	  // here the solver starts with its actual work ...
 	  //	  
@@ -293,7 +187,7 @@ int main(int argc, char** argv)
 	  if (in == NULL)
 	      printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
 	  
-	  if (S.verbosity > 0 && (scheduleArguments.size() == 0 || solverIteration == 0 ) ){ // print only once!
+	  if (S.verbosity > 0 ){ // print only once!
 	      printf("c ======================[ riss (core) %s  %.13s ]===============================================\n", solverVersion, gitSHA1);
 	      printf("c | Norbert Manthey. The use of the tool is limited to research only!                                     |\n");
 	      printf("c | Based on Minisat 2.2 and Glucose 2.1  -- thanks!                                                      |\n");
@@ -312,7 +206,7 @@ int main(int argc, char** argv)
 	  FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
 	  
 	  double parsed_time = cpuTime();
-	  if (S.verbosity > 0 && (scheduleArguments.size() == 0 || solverIteration == 0 ) ){
+	  if (S.verbosity > 0 ){
 	      printf("c |  Number of variables:       %12d                                                              |\n", S.nVars());
 	      printf("c |  Number of clauses:         %12d                                                              |\n", S.nClauses());
 	      printf("c |  Number of total literals:  %12d                                                              |\n", S.nTotLits());
@@ -352,14 +246,12 @@ int main(int argc, char** argv)
 	  
 	  vec<Lit> dummy;
 	  // tell solver about the number of conflicts it is allowed to use (for the current iteration)
-	  if( scheduleConflicts.size() > 0 && scheduleConflicts[solverIteration] >= 0 ) S.setConfBudget( scheduleConflicts[solverIteration] );
 	  if( opt_maxConflicts != -1 ) S.setConfBudget( opt_maxConflicts );
 	  lbool ret = S.solveLimited(dummy);
 	  S.budgetOff(); // remove budget again!
 	  // have we reached UNKNOWN because of the limited number of conflicts? then continue with the next loop!
-	  if( ret == l_Undef && scheduleConflicts.size() > 0 && scheduleConflicts[solverIteration] >= 0 ) 
+	  if( ret == l_Undef) 
 	  {
-	    if( S.verbosity > 0 ) cerr << "c schedule element [" << solverIteration << "] failed" << endl;
 	    if( res != NULL) fclose(res);
 	    if( S.drupProofFile != NULL ) {
 	      fclose( S.drupProofFile );	// close the current file
@@ -367,9 +259,6 @@ int main(int argc, char** argv)
 	      fclose( S.drupProofFile );	// close the file again
 	    }
 	    if (S.verbosity > 0 ) printf("c\nc ===========================[ Next Schedule Element ]=====================================================\nc\n");
-	    continue; // next iteration
-	  } else {
-	    if( scheduleConflicts.size() > 0 && S.verbosity > 0) cerr << "c schedule element [" << solverIteration << "] succeed" << endl;
 	  }
 	  
 	  // print stats
@@ -432,7 +321,7 @@ int main(int argc, char** argv)
   #else
 	  return (ret == l_True ? 10 : ret == l_False ? 20 : 0);
   #endif
-	}
+
 	
 	
     } catch (OutOfMemoryException&){

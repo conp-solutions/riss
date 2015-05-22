@@ -22,6 +22,11 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <iostream> // Davide> Debug
 
+using namespace Riss;
+using namespace std;
+
+namespace Pcasso {
+
 unsigned int TreeNode::runningID = 0;
 
 ComplexLock TreeNode::unitLock = ComplexLock();
@@ -523,3 +528,5 @@ bool TreeNode::isOnlyChildScenario(){
 TreeNode* TreeNode::getOnlyChildScenarioChildNode(){
     return onlyChildScenarioChildNode;
 }
+
+} // namespace Pcasso

@@ -12,11 +12,11 @@
 #include "riss/mtl/Vec.h"
 #include "riss/core/SolverTypes.h"
 
-using namespace std;
-using namespace Riss;
+// using namespace std;
+// using namespace Riss;
 
 /// support debug output only if it is compiled in
-#ifdef DEBUG
+#ifndef NDEBUG
   #define DOUT(x) ( {x} )
 #else
   #define DOUT(x)
@@ -27,103 +27,103 @@ namespace Debug {
 static const int pcasso_debug_verbosity = 0;
 
 inline void
-PRINTLN(vec<Lit>& v){
+PRINTLN(Riss::vec<Riss::Lit>& v){
 	if(pcasso_debug_verbosity > 0){
 			for( int i = 0; i < v.size(); i++ )
-				cerr << (sign(v[i]) ? "-" : "") << var(v[i])+1 << " ";
-			cerr << endl;
+				std::cerr << (sign(v[i]) ? "-" : "") << var(v[i])+1 << " ";
+			std::cerr << std::endl;
 	}
 }
 inline void
-PRINTLN(vec<Lit>& v, unsigned int limit){
+PRINTLN(Riss::vec<Riss::Lit>& v, unsigned int limit){
 	if(pcasso_debug_verbosity > 0){
 		for( int i = 0; i < limit; i++ )
-			cerr << (sign(v[i]) ? "-" : "") << var(v[i])+1 << " ";
-		cerr << endl;
+			std::cerr << (sign(v[i]) ? "-" : "") << var(v[i])+1 << " ";
+		std::cerr << std::endl;
 	}
 }
 inline void
-PRINTLN(Lit& l){
+PRINTLN(Riss::Lit& l){
 	if(pcasso_debug_verbosity > 0){
-		cerr << (sign(l) ? "-" : "") << var(l)+1 << " ";
-		cerr << endl;
+		std::cerr << (sign(l) ? "-" : "") << var(l)+1 << " ";
+		std::cerr << std::endl;
 	}
 }
-inline void PRINTLN(string s){
-	if(pcasso_debug_verbosity > 0) cerr << s << endl;
+inline void PRINTLN(std::string s){
+	if(pcasso_debug_verbosity > 0) std::cerr << s << std::endl;
 }
 inline void PRINTLN(const char* s){
-	if(pcasso_debug_verbosity > 0) cerr << s << endl;
+	if(pcasso_debug_verbosity > 0) std::cerr << s << std::endl;
 }
 inline void PRINTLN(int i){
-	if(pcasso_debug_verbosity > 0) cerr << i << endl;
+	if(pcasso_debug_verbosity > 0) std::cerr << i << std::endl;
 }
-inline void PRINT(string s){
-	if(pcasso_debug_verbosity > 0) cerr << s;
+inline void PRINT(std::string s){
+	if(pcasso_debug_verbosity > 0) std::cerr << s;
 }
 inline void PRINT(const char* s){
-	if(pcasso_debug_verbosity > 0) cerr << s;
+	if(pcasso_debug_verbosity > 0) std::cerr << s;
 }
 inline void PRINT(int i){
-	if(pcasso_debug_verbosity > 0) cerr << i;
+	if(pcasso_debug_verbosity > 0) std::cerr << i;
 }
 inline void STOP(void){
 	assert(false);
 }
-inline void PRINTLN_DEBUG(vec<Lit>& v){
+inline void PRINTLN_DEBUG(Riss::vec<Riss::Lit>& v){
 	if( pcasso_debug_verbosity > 2 )
 		PRINTLN(v);
 }
 inline void
-PRINTLN_DEBUG(Lit& l){
+PRINTLN_DEBUG(Riss::Lit& l){
 	if(pcasso_debug_verbosity > 2){
-		cerr << (sign(l) ? "-" : "") << var(l)+1 << " ";
-		cerr << endl;
+		std::cerr << (sign(l) ? "-" : "") << var(l)+1 << " ";
+		std::cerr << std::endl;
 	}
 }
-inline void PRINTLN_DEBUG(string s){
-	if(pcasso_debug_verbosity > 2) cerr << s << endl;
+inline void PRINTLN_DEBUG(std::string s){
+	if(pcasso_debug_verbosity > 2) std::cerr << s << std::endl;
 }
 inline void PRINTLN_DEBUG(const char* s){
-	if(pcasso_debug_verbosity > 2) cout << s << endl;
+	if(pcasso_debug_verbosity > 2) std::cout << s << std::endl;
 }
-inline void PRINT_DEBUG(string s){
-	if(pcasso_debug_verbosity > 2) cerr << s;
+inline void PRINT_DEBUG(std::string s){
+	if(pcasso_debug_verbosity > 2) std::cerr << s;
 }
 inline void PRINT_DEBUG(const char* s){
-	if(pcasso_debug_verbosity > 2) cout << s;
+	if(pcasso_debug_verbosity > 2) std::cout << s;
 }
 inline void PRINTLN_DEBUG(int i){
-	if(pcasso_debug_verbosity > 2) cout << i << endl;
+	if(pcasso_debug_verbosity > 2) std::cout << i << std::endl;
 }
-inline void PRINTLN_NOTE(vec<Lit>& v){
+inline void PRINTLN_NOTE(Riss::vec<Riss::Lit>& v){
 	if( pcasso_debug_verbosity > 1 )
 		PRINTLN(v);
 }
 inline void
-PRINTLN_NOTE(Lit& l){
+PRINTLN_NOTE(Riss::Lit& l){
 	if(pcasso_debug_verbosity > 1){
-		cerr << (sign(l) ? "-" : "") << var(l)+1 << " ";
-		cerr << endl;
+		std::cerr << (sign(l) ? "-" : "") << var(l)+1 << " ";
+		std::cerr << std::endl;
 	}
 }
-inline void PRINTLN_NOTE(string s){
-	if(pcasso_debug_verbosity > 1) cerr << s << endl;
+inline void PRINTLN_NOTE(std::string s){
+	if(pcasso_debug_verbosity > 1) std::cerr << s << std::endl;
 }
 inline void PRINTLN_NOTE(const char* s){
-	if(pcasso_debug_verbosity > 1) cout << s << endl;
+	if(pcasso_debug_verbosity > 1) std::cout << s << std::endl;
 }
-inline void PRINT_NOTE(string s){
-	if(pcasso_debug_verbosity > 1) cerr << s;
+inline void PRINT_NOTE(std::string s){
+	if(pcasso_debug_verbosity > 1) std::cerr << s;
 }
 inline void PRINT_NOTE(const char* s){
-	if(pcasso_debug_verbosity > 1) cout << s;
+	if(pcasso_debug_verbosity > 1) std::cout << s;
 }
 inline void PRINTLN_NOTE(int i){
-	if(pcasso_debug_verbosity > 1) cout << i << endl;
+	if(pcasso_debug_verbosity > 1) std::cout << i << std::endl;
 }
 inline void PRINT_NOTE(int i){
-	if(pcasso_debug_verbosity > 1) cout << i;
+	if(pcasso_debug_verbosity > 1) std::cout << i;
 }
 
 } /* namespace davide */

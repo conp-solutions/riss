@@ -11,19 +11,19 @@
 #include <ostream>
 #include <string>
 
-using namespace std;
+// using namespace std;
 
 class FeaturesWriter {
 private:
-	ostream& output;
+	std::ostream& output;
 	int featuresNumber;
 	int featuresCount;
 	int timeout;
 public:
-	FeaturesWriter(int afeaturesNumber, int atimeout, ostream& aoutput);
+	FeaturesWriter(int afeaturesNumber, int atimeout, std::ostream& aoutput);
 	virtual ~FeaturesWriter();
 
-	const ostream& getOutput() const {
+	const std::ostream& getOutput() const {
 		return output;
 	}
 
@@ -37,7 +37,8 @@ public:
 	void setFeaturesNumber(int featuresNumber) {
 		this->featuresNumber = featuresNumber;
 	}
-	string getTimeoutDefinition();
+    
+	std::string getTimeoutDefinition();
 };
 
 

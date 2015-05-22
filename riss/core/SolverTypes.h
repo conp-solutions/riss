@@ -108,19 +108,14 @@ inline void printLit(Lit l)
 }
 
 
-
-//=================================================================================================
-// Lifted booleans:
-//
-// NOTE: this implementation is optimized for the case when comparisons between values are mostly
-//       between one variable and one constant. Some care had to be taken to make sure that gcc
-//       does enough constant propagation to produce sensible code, and this appears to be somewhat
-//       fragile unfortunately.
-
-#define l_True  (lbool((uint8_t)0)) // gcc does not do constant propagation if these are real constants.
-#define l_False (lbool((uint8_t)1))
-#define l_Undef (lbool((uint8_t)2))
-
+/**
+ * Lifted booleans:
+ * 
+ * NOTE: this implementation is optimized for the case when comparisons between values are mostly
+ *       between one variable and one constant. Some care had to be taken to make sure that gcc
+ *       does enough constant propagation to produce sensible code, and this appears to be somewhat
+ *       fragile unfortunately.
+ */
 class  lbool {
     uint8_t value;
 
@@ -147,6 +142,15 @@ public:
     friend int   toInt  (lbool l);
     friend lbool toLbool(int   v);
 };
+
+// gcc does not do constant propagation if these are real constants.
+// const lbool l_True  (lbool((uint8_t)0))
+// const lbool l_False (lbool((uint8_t)1))
+// const lbool l_Undef (lbool((uint8_t)2))
+#define l_True  (Riss::lbool((uint8_t)0))
+#define l_False (Riss::lbool((uint8_t)1))
+#define l_Undef (Riss::lbool((uint8_t)2))
+
 inline int   toInt  (lbool l) { return l.value; }
 inline lbool toLbool(int   v) { return lbool((uint8_t)v);  }
 
@@ -174,14 +178,14 @@ class Clause {
         unsigned can_strengthen : 1;
         unsigned size      : 32;	
 #else
-        unsigned lbd       : 20;
+        unsigned shared     : 1;
+        unsigned shCleanDelay : 1;
+        unsigned size      : 25;
         unsigned canbedel  : 1;
         unsigned can_subsume : 1;
         unsigned can_strengthen : 1;
         unsigned pt_level   : 9;     // level of the clause in the decision tree
-        unsigned shared     : 1;
-        unsigned shCleanDelay : 1;
-        unsigned size      : 27;
+        unsigned lbd       : 20;
 #endif
 	
 #ifdef CLS_EXTRA_INFO
@@ -270,6 +274,44 @@ class Clause {
 	
 	
         for (int i = 0; i < ps.size(); i++)
+            data[i].lit = ps[i];
+	
+        if (header.has_extra){
+            if (header.learnt)
+                data[header.size].act = 0;
+            else
+                calcAbstraction(); }
+    }
+    
+    template<class V>
+    Clause(const V* ps, int psSize, bool use_extra, bool learnt) {
+        header.mark      = 0;
+    	header.locked    = 0;
+        header.learnt    = learnt;
+        header.has_extra = use_extra;
+        header.reloced   = 0;
+        header.size      = psSize;
+#ifdef CLS_EXTRA_INFO
+	header.extra_info = 0
+#endif
+	header.lbd = 0;
+	header.canbedel = 1;
+        header.can_subsume = 1;
+        header.can_strengthen = 1;
+#ifdef PCASSO
+        header.pt_level = 0;
+        header.shared = 0; // Non-shared
+        header.shCleanDelay = 0;
+#endif
+
+	for (int i = 0; i < psSize; i++)
+	  for (int j = i+1; j < psSize; j++) {
+	    assert( ps[i] != ps[j] && "have no duplicate literals in clauses!" );
+	    assert( ps[i] != ~ps[j] && "have no complementary literals in clauses!" );
+	  }
+	
+	
+        for (int i = 0; i < psSize; i++)
             data[i].lit = ps[i];
 	
         if (header.has_extra){
@@ -565,8 +607,18 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         CRef cid = RegionAllocator<uint32_t>::alloc(clauseWord32Size(ps.size(), use_extra));
         new (lea(cid)) Clause(ps, use_extra, learnt);
 
-// 	if( ((Clause&)RegionAllocator<uint32_t>::operator[](cid)).learnt() && ! ((Clause&)RegionAllocator<uint32_t>::operator[](cid)).header.has_extra )
-// 	  cerr << "c created learnt clause without has_extra field" << endl;
+        return cid;
+    }
+    
+    template<class Lits>
+    CRef alloc(const Lits* ps, int psSize , bool learnt = false)
+    {
+        assert(sizeof(Lit)      == sizeof(uint32_t));
+        assert(sizeof(float)    == sizeof(uint32_t));
+        bool use_extra = learnt | extra_clause_field;
+
+        CRef cid = RegionAllocator<uint32_t>::alloc(clauseWord32Size(psSize, use_extra));
+        new (lea(cid)) Clause(ps, psSize, use_extra, learnt);
 	
         return cid;
     }
@@ -660,7 +712,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         assert(clauses >= learnts);
         if (literals < 2 * clauses)
         {
-            std::cerr << "c lits: " << literals << " clauses: " << clauses << endl; 
+            std::cerr << "c lits: " << literals << " clauses: " << clauses << std::endl; 
         }
         assert(literals >= 2 * clauses);
         if ( currentCap() >= size() + requiredMemory(clauses, literals, learnts) )
@@ -696,14 +748,14 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         assert(reservation.current < reservation.upper_limit && "no reserved space left");
         if (false && reservation.current >= reservation.upper_limit)
         {
-           cerr <<  "no reserved space left" << endl;
+           std::cerr <<  "no reserved space left" << std::endl;
            abort();
         }
         bool use_extra = learnt | extra_clause_field;
         
         assert(reservation.current + clauseWord32Size(ps.size(), use_extra) <= reservation.upper_limit && "requested clause size does not fit in reservation");
         if(false && reservation.current + clauseWord32Size(ps.size(), use_extra) > reservation.upper_limit)
-            cerr << "requested clause size does not fit in reservation" <<endl;
+            std::cerr << "requested clause size does not fit in reservation" <<std::endl;
         CRef cid = reservation.current;
         new (lea(cid)) Clause(ps, use_extra, learnt);
         
@@ -972,7 +1024,7 @@ inline void Clause::strengthen(Lit p)
 /** class that is used as mark array */
 class MarkArray {
 private:
-	vector<uint32_t> array;
+	std::vector<uint32_t> array;
 	uint32_t step;
 
 public:
@@ -986,7 +1038,7 @@ public:
 	}
 
 	void destroy() {
-	  vector<uint32_t>().swap(array);
+	  std::vector<uint32_t>().swap(array);
 	  step = 0;
 	}
 
@@ -1060,7 +1112,7 @@ public:
 //
 
 /// print literals into a stream
-inline ostream& operator<<(ostream& other, const Lit& l ) {
+inline std::ostream& operator<<(std::ostream& other, const Lit& l ) {
   if( l == lit_Undef ) other << "lUndef";
   else if( l == lit_Error ) other << "lError";
   else other << (sign(l) ? "-" : "") << var(l) + 1;
@@ -1068,7 +1120,7 @@ inline ostream& operator<<(ostream& other, const Lit& l ) {
 }
 
 /// print a clause into a stream
-inline ostream& operator<<(ostream& other, const Clause& c ) {
+inline std::ostream& operator<<(std::ostream& other, const Clause& c ) {
   other << "[";
   for( int i = 0 ; i < c.size(); ++ i )
     other << " " << c[i];
@@ -1076,7 +1128,7 @@ inline ostream& operator<<(ostream& other, const Clause& c ) {
   return other;
 }
 
-/// print elements of a vector
+/// print elements of a std::vector
 template <typename T>
 inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data ) 
 {
@@ -1086,7 +1138,7 @@ inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data 
 }
 
 
-/// print elements of a vector
+/// print elements of a std::vector
 template <typename T>
 inline std::ostream& operator<<(std::ostream& other, const vec<T>& data ) 
 {

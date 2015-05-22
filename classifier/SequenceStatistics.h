@@ -4,23 +4,23 @@
  *  Created on: Oct 22, 2013
  *      Author: gardero
  */
-
 #ifndef SECUENCESTATISTICS_H_
 #define SECUENCESTATISTICS_H_
+
 #include <vector>
 #include <iterator>
 #include <cstdio>
 #include <inttypes.h>
  
-using namespace std;
+// using namespace std;
 
 class SequenceStatistics {
 private:
 	double min, max, mode, median, stDeviation, entropy;
 	int modeCount, valuesCount;
 	double mean, valuesRate;
-	vector<double> values;
-	vector<double> quantiles;
+	std::vector<double> values;
+	std::vector<double> quantiles;
 	int quantilesCount;
 	double sum, sumXsq;
 	int count;
@@ -39,12 +39,12 @@ public:
 	void addValue(double value);
 	uint64_t compute(int quantiles);
 	void tostdio() const;
-	void valuesToVector(vector<double>& v) const;
-	void namesToVector(string prefix, vector<string>& v) const;
-	void infoToVector(string prefix, vector<string>& names,
-			vector<double>& values) const;
-	void toStream(ostream& other) const;
-	void valuesToStream(ostream& other) const;
+	void valuesToVector(std::vector<double>& v) const;
+	void namesToVector(std::string prefix, std::vector<std::string>& v) const;
+	void infoToVector(std::string prefix, std::vector<std::string>& names,
+			std::vector<double>& values) const;
+	void toStream(std::ostream& other) const;
+	void valuesToStream(std::ostream& other) const;
 	void toStream(const char* filename, const char* ext) const;
 
 	int getCount() const {
@@ -75,13 +75,13 @@ public:
 		return median;
 	}
 
-	const vector<double>& getQuantiles() const;
+	const std::vector<double>& getQuantiles() const;
 
 	double getStDeviation() const {
 		return stDeviation;
 	}
 
-	const vector<double>& getValues() const {
+	const std::vector<double>& getValues() const {
 		return values;
 	}
 

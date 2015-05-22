@@ -4,16 +4,17 @@
  * 
  * Created on December 23, 2012, 6:07 PM
  */
-
-#include "LookaheadSplitting.h"
-
 #include <math.h>
+
+#include "pcasso/LookaheadSplitting.h"
 
 #include "riss/mtl/Sort.h"
 #include "riss/mtl/Vec.h"
 #include "riss/core/SolverTypes.h"
 
-using namespace Pcasso;
+using namespace Riss;
+
+namespace Pcasso {
 
 static const char* _cat = "LOOKAHEADSPLITTING";
 static DoubleOption     opt_preselection_factor  (_cat, "presel-fac",             "Factor for Preselection variables", 0.15, DoubleRange(0, false, 1, true));
@@ -1870,3 +1871,5 @@ void LookaheadSplitting::removeSatisfied(vec<CRef>& cs)
     }
     cs.shrink_(i - j);
 }
+
+} // namespace Pcasso

@@ -5,8 +5,10 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor/Unhiding.h"
 #include "riss/mtl/Sort.h"
 
-using namespace Coprocessor;
+using namespace Riss;
+using namespace std;
 
+namespace Coprocessor {
 
 void Unhiding::giveMoreSteps()
 {
@@ -802,7 +804,7 @@ bool Unhiding::process (  )
     });
     
     // expensive cross check that each stamp is unique, and there are no 0 stamps
-#ifdef DEBUG
+#ifndef NDEBUG
     if( config.opt_uhd_Debug > 1 ) {
       cerr << "c checking all stamps ... " << endl;
       int min=-1, max = -1;
@@ -931,3 +933,5 @@ void Unhiding::destroy()
   vector< Lit >().swap(  stampClassEE );
   vector< char >().swap(  unhideEEflag );
 }
+
+} // namespace Coprocessor

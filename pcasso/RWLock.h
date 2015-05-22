@@ -5,6 +5,8 @@
 #include <pthread.h>
 #include <semaphore.h>
 
+namespace Pcasso {
+
 class RWLock{
 
 private:
@@ -60,5 +62,7 @@ private:
     return err == 0;
   }
 };
+
+} // namespace Pcasso
 
 #endif

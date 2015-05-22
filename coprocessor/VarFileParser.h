@@ -12,13 +12,13 @@ Copyright (c) 2012 Norbert Manthey
 #include <string>
 // for int types
 #include <inttypes.h>
-#include <cstdlib>
 #include <cstring>
+#include <string>
 
 #include <vector>
 #include <assert.h>
 
-using namespace std;
+// using namespace std;
 
 namespace Coprocessor {
 
@@ -31,9 +31,9 @@ class VarFileParser{
 public:
 	/** open the specified file
 	*/
-	VarFileParser( const string& filename);
+	VarFileParser( const std::string& filename);
 
-	/** extract the variables from the file and store them in the vector vars
+	/** extract the variables from the file and store them in the std::vector vars
 	 * @return maximum variable in file
 	*/
 	int extract ( std::vector<int>& vars );
@@ -54,7 +54,7 @@ inline int VarFileParser::extract ( std::vector<int>& vars ){
 		if( line.size() == 0 ) continue;
 		// ignore comment lines
 		if( line.at(0) == 'c' ) continue;
-		if( line.find('.') != string::npos ){
+		if( line.find('.') != std::string::npos ){
 			// range of numbers
 			uint32_t dotPos = line.find('.');
 			std::string first = line.substr(0, line.find('.'));
@@ -67,7 +67,7 @@ inline int VarFileParser::extract ( std::vector<int>& vars ){
 		} else {
 		        int nr = atoi( line.c_str() ); // can handle negative values
 			// single number
-			if( nr == 0 ) cerr << "c WARNING: found 0 in variable file" << endl;
+			if( nr == 0 ) std::cerr << "c WARNING: found 0 in variable file" << std::endl;
 			else vars.push_back( nr );
 			max = max >= nr ? max : nr;
 		}
@@ -76,11 +76,11 @@ inline int VarFileParser::extract ( std::vector<int>& vars ){
 }
 
 
-inline VarFileParser::VarFileParser( const string& filename)
+inline VarFileParser::VarFileParser( const std::string& filename)
 {
 	file.open(filename.c_str(), std::ios_base::in );
 	if( !file.is_open() ){
-	   cerr << "c variable parser was not able to open file " << filename << endl;
+	   std::cerr << "c variable parser was not able to open file " << filename << std::endl;
 	}
 }
 

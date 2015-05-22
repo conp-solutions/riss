@@ -13,7 +13,9 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include <cstring>
 
 using namespace std;
-using namespace Coprocessor;
+using namespace Riss;
+
+namespace Coprocessor {
 
 Preprocessor::Preprocessor( Solver* _solver, CP3Config& _config, int32_t _threads)
 : 
@@ -21,7 +23,7 @@ config( _config )
 , threads( _threads < 0 ? config.opt_threads : _threads)
 , solver( _solver )
 , ca( solver->ca )
-#ifdef DEBUG
+#ifndef NDEBUG
 , log( config.opt_log )
 , data( solver->ca, solver, log, config.opt_unlimited, config.opt_randomized, config.opt_debug )
 #else
@@ -1225,7 +1227,7 @@ void Preprocessor::initializePreprocessor()
 	c.set_delete(true);
 	thisClss ++;
       } else {
-#ifdef DEBUG
+#ifndef NDEBUG
 	data.addClause( cr, config.opt_check );
 #else
 	data.addClause( cr );
@@ -1887,3 +1889,5 @@ void Preprocessor::meltSearchVariables(){
   // clear the list of variables
   specialFrozenVariables.clear();
 }
+
+} // namespace Coprocessor

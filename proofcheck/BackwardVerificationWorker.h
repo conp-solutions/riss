@@ -54,7 +54,7 @@ protected:
   
   OccLists<Lit, vec<BackwardChecker::ClauseData>, ClauseDataClauseDeleted> nonMarkedWatches;  /// watch list for all non-marked clauses
   OccLists<Lit, vec<BackwardChecker::ClauseData>, ClauseDataClauseDeleted> markedWatches;     /// watch list for all marked clauses
-  OccLists<Lit, vec<BackwardChecker::ClauseData>, ClauseDataClauseDeleted> fullWatch;         /// full occurrence list fullWatch[l] gives the vector with all (currently active) proofitems that contain literal l
+  OccLists<Lit, vec<BackwardChecker::ClauseData>, ClauseDataClauseDeleted> fullWatch;         /// full occurrence list fullWatch[l] gives the std::vector with all (currently active) proofitems that contain literal l
   int variables;                                                                              /// number of variables in the proof (highest variable)
 
   int      lastPosition;                      // next position in the proof that has to be verified
@@ -63,8 +63,8 @@ protected:
   int      nonMarkedQHead, nonMarkedUnithead; // one for marked propagation, one for non-marked propagation
 
   vec<Lit> trail; // Assignment stack; stores all assigments made in the order they were made.
-  vec<BackwardChecker::ClauseData> nonMarkedUnitClauses;  // vector of top level units (not yet marked)
-  vec<BackwardChecker::ClauseData> markedUnitClauses;     // vector of top level units (marked)
+  vec<BackwardChecker::ClauseData> nonMarkedUnitClauses;  // std::vector of top level units (not yet marked)
+  vec<BackwardChecker::ClauseData> markedUnitClauses;     // std::vector of top level units (marked)
   
   vec<lbool> assigns;     // current assignment, one space for each variable
   vec<Lit> resolventLits; // literals that are added to the resolvent wrt. the old clause
@@ -83,7 +83,7 @@ protected:
     void resetMarked() { markedSelf = 0; }
   };
   
-  vec<ProofItemProperty> proofItemProperties;  // TODO: could be merged with the vector below
+  vec<ProofItemProperty> proofItemProperties;  // TODO: could be merged with the std::vector below
   
   /** external watched literals for propagating clauses 
    *  stores the XOR of the two literals, as one literal is always known 
@@ -103,7 +103,7 @@ protected:
     /** initialize with the two given literals */
      void init( const Lit& l1, const Lit& l2 ) { data = toLit( toInt(l1) ^ toInt(l2) ); }
   };
-  vec<WatchedLiterals> watchedXORLiterals; /// vector that stores the current two watched literals for all the clauses in the current watch lists
+  vec<WatchedLiterals> watchedXORLiterals; /// std::vector that stores the current two watched literals for all the clauses in the current watch lists
   
 public:
   
@@ -303,7 +303,7 @@ bool BackwardVerificationWorker::checkSingleClauseAT(const int64_t currentID, co
   nonMarkedQHead = 0; // there might have been more marked clauses in between, so start over
   markedUnitHead = 0;
   
-  if( verbose > 2 && c != 0 ) cerr << endl << endl << "c [S-BW-CHK] check AT for clause " << *c << " " << extraLits << " at proof position " << currentID << " (reuse: " << reuseClause << ")" << endl;
+  if( verbose > 2 && c != 0 ) std::cerr << std::endl << std::endl << "c [S-BW-CHK] check AT for clause " << *c << " " << extraLits << " at proof position " << currentID << " (reuse: " << reuseClause << ")" << std::endl;
   
   if( !reuseClause && c != 0 ) {
     for( int i = 0 ; i < c->size(); ++ i ) { // enqueue all complements
@@ -322,9 +322,9 @@ bool BackwardVerificationWorker::checkSingleClauseAT(const int64_t currentID, co
   do {
     
     if( verbose > 4 ) {
-      cerr << "c trail: " << trail.size() << " markedUnits: " << markedUnitClauses.size() << " non-markedUnits: " << nonMarkedUnitClauses.size() << endl;
-      cerr << "c HEAD: markedUnit: " << markedUnitHead << " marked: " << markedQhead << " non-markedUnits: " << nonMarkedUnithead << " non-marked: " << nonMarkedQHead << endl;
-      cerr << "c trail literals: " << trail << endl;
+      std::cerr << "c trail: " << trail.size() << " markedUnits: " << markedUnitClauses.size() << " non-markedUnits: " << nonMarkedUnitClauses.size() << std::endl;
+      std::cerr << "c HEAD: markedUnit: " << markedUnitHead << " marked: " << markedQhead << " non-markedUnits: " << nonMarkedUnithead << " non-marked: " << nonMarkedQHead << std::endl;
+      std::cerr << "c trail literals: " << trail << std::endl;
     }
     
     // propagate on all marked clauses we already collected
@@ -336,9 +336,9 @@ bool BackwardVerificationWorker::checkSingleClauseAT(const int64_t currentID, co
     // end propagate on marked clauses
     
     if( verbose > 4 ) {
-      cerr << "c trail: " << trail.size() << " markedUnits: " << markedUnitClauses.size() << " non-markedUnits: " << nonMarkedUnitClauses.size() << endl;
-      cerr << "c HEAD: markedUnit: " << markedUnitHead << " marked: " << markedQhead << " non-markedUnits: " << nonMarkedUnithead << " non-marked: " << nonMarkedQHead << endl;
-      cerr << "c trail literals: " << trail << endl;
+      std::cerr << "c trail: " << trail.size() << " markedUnits: " << markedUnitClauses.size() << " non-markedUnits: " << nonMarkedUnitClauses.size() << std::endl;
+      std::cerr << "c HEAD: markedUnit: " << markedUnitHead << " marked: " << markedQhead << " non-markedUnits: " << nonMarkedUnithead << " non-marked: " << nonMarkedQHead << std::endl;
+      std::cerr << "c trail literals: " << trail << std::endl;
     }
     
     // if there is not yet a conflict, enqueue the first non-marked unit clause
@@ -349,12 +349,12 @@ bool BackwardVerificationWorker::checkSingleClauseAT(const int64_t currentID, co
     
   } while ( nonMarkedQHead < trail.size() || nonMarkedUnithead < nonMarkedUnitClauses.size() || markedQhead < trail.size() ); // saw all clauses that might be interesting
 
-  if( verbose > 2 ) cerr << "c [S-BW-CHK] returned conflict reference: " << confl << endl;
+  if( verbose > 2 ) std::cerr << "c [S-BW-CHK] returned conflict reference: " << confl << std::endl;
   
   if( confl == CRef_Undef && verbose > 5 ) {
-    cerr << "c [S-BW-CHK] no conflict" << endl;
-    cerr << "c trail: " << trail.size() << " markedUnits: " << markedUnitClauses.size() << " non-markedUnits: " << nonMarkedUnitClauses.size() << endl;
-    cerr << "c HEAD: markedUnit: " << markedUnitHead << " marked: " << markedQhead << " non-markedUnits: " << nonMarkedUnithead << " non-marked: " << nonMarkedQHead << endl; 
+    std::cerr << "c [S-BW-CHK] no conflict" << std::endl;
+    std::cerr << "c trail: " << trail.size() << " markedUnits: " << markedUnitClauses.size() << " non-markedUnits: " << nonMarkedUnitClauses.size() << std::endl;
+    std::cerr << "c HEAD: markedUnit: " << markedUnitHead << " marked: " << markedQhead << " non-markedUnits: " << nonMarkedUnithead << " non-marked: " << nonMarkedQHead << std::endl; 
   }
   
   // return true, if there was a conflict (then the clause has AT)
@@ -376,7 +376,7 @@ bool BackwardVerificationWorker::checkSingleClauseRAT(const int64_t currentID, v
   const Lit firstLiteralComplement = ( c == 0 ) ? ~lits[0] : ~c->getExtraLiteral();
   const bool isUnitClause = lits.size() == 1;
   
-  if( verbose > 2 ) cerr << "c [S-BW-CHK] RAT check on firstLiteral: " << ~firstLiteralComplement << " with ID " << currentID << endl;
+  if( verbose > 2 ) std::cerr << "c [S-BW-CHK] RAT check on firstLiteral: " << ~firstLiteralComplement << " with ID " << currentID << std::endl;
   
   assert( !fullDrat && "full DRAT checking is not supported yet" );
   
@@ -411,14 +411,14 @@ bool BackwardVerificationWorker::checkSingleClauseRAT(const int64_t currentID, v
       // mark used clause to be verified as well
       markToBeVerified( item.getID() );
       
-      if( verbose > 4 ) cerr << "c [S-BW-CHK] resolve with clause with ID " << item.getID() << endl;
+      if( verbose > 4 ) std::cerr << "c [S-BW-CHK] resolve with clause with ID " << item.getID() << std::endl;
       
       fullWatch[ firstLiteralComplement ][ keptFullWatchEntries++ ] = fullWatch[ firstLiteralComplement ][currentItem];
       // build resolvent wrt the current assignment
       resolventLits.clear();
       const Clause& d = ca[ item.getRef() ];
       
-      if( verbose > 6 ) cerr << "c [S-BW-CHK] consider clause with " << item.getID() << " for resolution: " << d << endl;
+      if( verbose > 6 ) std::cerr << "c [S-BW-CHK] consider clause with " << item.getID() << " for resolution: " << d << std::endl;
       
       // the current assignment is build as follows: J = ~c P, where P are the literals that follow from ~c wrt F
       // the resolvent from c and d is ~c,~d (without the common literal firstLiteralComplement)
@@ -437,21 +437,21 @@ bool BackwardVerificationWorker::checkSingleClauseRAT(const int64_t currentID, v
 	}
       }
       if( resolventIsAT ) {
-	if( verbose > 5 ) cerr << "c [S-BW-CHK] resolvent is a tautology" << endl;
+	if( verbose > 5 ) std::cerr << "c [S-BW-CHK] resolvent is a tautology" << std::endl;
 	continue; // the AT check of the resolvent would succeed
       }
       
       // check AT of the resolvent - by reusing the literals that have been used in the AT check for c
-      if( c != 0 ) cerr << "c perform RAT check for clause " << *c << " with resolvent lits " << resolventLits << " and trail: " << trail << endl;
+      if( c != 0 ) std::cerr << "c perform RAT check for clause " << *c << " with resolvent lits " << resolventLits << " and trail: " << trail << std::endl;
       if( ! checkSingleClauseAT(currentID, c, resolventLits, true ) ) {  
 	succeeds = false;
-	if( verbose > 5 ) cerr << "c [S-BW-CHK] AT of resolvent failed" << endl;
+	if( verbose > 5 ) std::cerr << "c [S-BW-CHK] AT of resolvent failed" << std::endl;
 	break;
       }
       removeBehind( beforeTrailSize );
     } else {
       // implicitely remove the current element
-      if( verbose > 6 ) cerr << "c [S-BW-CHK] remove element with ID " << item.getID() << " from list" << endl;
+      if( verbose > 6 ) std::cerr << "c [S-BW-CHK] remove element with ID " << item.getID() << " from list" << std::endl;
     }
   }
   
@@ -462,7 +462,7 @@ bool BackwardVerificationWorker::checkSingleClauseRAT(const int64_t currentID, v
   }
   fullWatch[ firstLiteralComplement ].shrink_( fullWatch[ firstLiteralComplement ].size() - keptFullWatchEntries ); // remove invalid elements
   
-  if( verbose > 6 ) cerr << "c [S-BW-CHK] RAT check succeeds: " << succeeds << endl;
+  if( verbose > 6 ) std::cerr << "c [S-BW-CHK] RAT check succeeds: " << succeeds << std::endl;
   
   return succeeds;
 }

@@ -21,7 +21,7 @@ namespace Riss {
  */
 class PfolioConfig : public Config {
   /** pointer to all options in this object - used for parsing and printing the help! */
-  vec<Option*> configOptions;
+  Riss::vec<Option*> configOptions;
 
   
 public:

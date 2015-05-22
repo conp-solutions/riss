@@ -20,7 +20,7 @@ class BipartiteGraph {
 private:
 	int sizeB, sizeW;
 	std::vector<int> nodeB;
-	std::vector< vector<int> > nodeW;
+	std::vector< std::vector<int> > nodeW;
 
 
 public:
@@ -41,7 +41,7 @@ public:
 		return nodeB[indexB];
 	}
 
-	const vector<int>& getAjacencyW(int indexW) const {
+	const std::vector<int>& getAjacencyW(int indexW) const {
 		return nodeW[indexW];
 	}
 

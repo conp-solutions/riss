@@ -24,25 +24,29 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
  **/
 
 #include <time.h>
-#include "Master.h"
-
-#include <string>
 #include <sched.h> // to pin threads to cores
 #include <sys/stat.h>
+#include <string>
 
+#include "pcasso/Master.h"
 #include "pcasso/SplitterSolver.h"
 #include "pcasso/SolverPT.h"
 #include "pcasso/LookaheadSplitting.h"
 #include "pcasso/vsidsSplitting.h"
 
+using namespace Riss;
+using namespace std;
+
+namespace Pcasso {
+ 
 // ## begin of automatically handled section
 std::string splitString = std::string("how to split the tree: ") 
-+ std::string("simple,")
-+ std::string("vsidsScattering,")
-+ std::string("lookaheadSplitting,")
-+ std::string("score,")
-// ## add your new splitting here (above)
-;
+                        + std::string("simple,")
+                        + std::string("vsidsScattering,")
+                        + std::string("lookaheadSplitting,")
+                        + std::string("score,")
+                        // ## add your new splitting here (above)
+                        ;
 // ## number of splittings, will be increased automatically when a new splitting is added via the script
 static const int splitMethodNumbers = 3 ;
 // ## end of automatically handled section
@@ -76,25 +80,23 @@ static BoolOption    Portfolio         ("SPLITTER", "portfolio",  "Portfolio mod
 static Int64Option   PortfolioLevel    ("SPLITTER", "portfolioL", "Perform Portfolio until specified level\n", 0, Int64Range(0, INT64_MAX)); // depends on option above!
 static BoolOption    UseHardwareCores  ("SPLITTER", "usehw",  "Use Hardware, pin threads to cores\n", false);
 
-
 static vector<unsigned short int> hardwareCores; // set of available hardware cores
-
+  
 CoreConfig Master::defaultSolverConfig;
 
-Master::Master(Parameter p)
-:
-maxVar(0),
-model(0),
-param(p),
-threads( work_threads ),
-space_lim(data_space/threads),
-communicationLock(1),
-sleepLock(1),
-masterState( working ),
-done(false),
-timeout(work_timeout),
-res(0),
-plainpart(opt_scheme_pp)
+Master::Master(Parameter p) :
+    maxVar(0),
+    model(0),
+    param(p),
+    threads( work_threads ),
+    space_lim(data_space/threads),
+    communicationLock(1),
+    sleepLock(1),
+    masterState( working ),
+    done(false),
+    timeout(work_timeout),
+    res(0),
+    plainpart(opt_scheme_pp)
 {
 	// decrease available elements in semaphore down to 0 -> next call will be blocking
 	sleepLock.wait();
@@ -1329,3 +1331,5 @@ Master::killUnsatChildren(unsigned int i){
 //		}
 //	}
 //}
+
+} // namespace Pcasso

@@ -4,8 +4,10 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/Experimental.h"
 
+using namespace Riss;
+using namespace std;
 
-using namespace Coprocessor;
+namespace Coprocessor {
 
 ExperimentalTechniques::ExperimentalTechniques( CP3Config& _config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Solver& _solver )
 : Technique(_config, _ca,_controller)
@@ -242,3 +244,5 @@ void ExperimentalTechniques::reSetupSolver()
       }
     }
 }
+
+} // namespace Coprocessor

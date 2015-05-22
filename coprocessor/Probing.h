@@ -12,8 +12,8 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor/Propagation.h"
 #include "coprocessor/EquivalenceElimination.h"
 
-using namespace Riss;
-using namespace std;
+// using namespace Riss;
+// using namespace std;
 
 namespace Coprocessor {
  
@@ -23,23 +23,23 @@ namespace Coprocessor {
 class Probing : public Technique {
   
   CoprocessorData& data;
-  Solver& solver;
+  Riss::Solver& solver;
   Propagation& propagation;            /// object that takes care of unit propagation
   EquivalenceElimination& ee;		/// object that takes care of equivalent literal elimination
   
   // necessary local variables
-  vector<Var> variableHeap;
-  vec<Solver::VarFlags> prPositive;
-  vec<Solver::VarFlags> prL2Positive;
+  std::vector<Riss::Var> variableHeap;
+  Riss::vec<Riss::Solver::VarFlags> prPositive;
+  Riss::vec<Riss::Solver::VarFlags> prL2Positive;
   
-  vec<Lit> learntUnits;
-  vector<Lit> doubleLiterals;
-  vector<CRef> l2conflicts;
-  vector<CRef> l2implieds;
+  Riss::vec<Riss::Lit> learntUnits;
+  std::vector<Riss::Lit> doubleLiterals;
+  std::vector<Riss::CRef> l2conflicts;
+  std::vector<Riss::CRef> l2implieds;
   
   
 public:
-  Probing( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, EquivalenceElimination& _ee, Solver& _solver);
+  Probing( CP3Config &_config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, EquivalenceElimination& _ee, Riss::Solver& _solver);
   
   /** perform probing and clause vivification
    * @return false, if formula is UNSAT
@@ -48,7 +48,7 @@ public:
   
   /** This method should be used to print the statistics of the technique that inherits from this class
    */
-  void printStatistics( ostream& stream );
+  void printStatistics( std::ostream& stream );
   
   void destroy();
   
@@ -57,18 +57,18 @@ public:
 protected:
   
   /** perform special propagation for probing (track ternary clauses, LHBR if enabled) */
-  CRef prPropagate(bool doDouble = true); 
+  Riss::CRef prPropagate(bool doDouble = true); 
   
   /** perform conflict analysis and enqueue each unit clause that could be learned 
    * note: prLits contains the learned clause (not necessarily 1st UIP!)
    * @return false, nothing has been learned
    */
-  bool prAnalyze(CRef confl);
+  bool prAnalyze(Riss::CRef confl);
   
   /** perform double look ahead on literals that have been traced during level1 probing
    * @return true, if procedure jumped back at level 0
    */
-  bool prDoubleLook(Lit l1decision);
+  bool prDoubleLook(Riss::Lit l1decision);
   
   /** perform probing */
   void probing();

@@ -2,13 +2,15 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "coprocessor/Bva.h"
-
 #include <algorithm>
 
-using namespace Coprocessor;
+#include "coprocessor/Bva.h"
 
-	
+using namespace Riss;
+using namespace std;
+
+namespace Coprocessor {
+
 BoundedVariableAddition::BoundedVariableAddition( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data,   Propagation& _propagation)
 : Technique( _config, _ca, _controller )
 , data( _data )
@@ -379,7 +381,9 @@ bool BoundedVariableAddition::andBVA() {
 	  DOUT(if( config.bva_debug > 1 ) cerr << "c BVA new reduction: " << newReduction << " old: " << currentReduction << endl;);
 	  
 	  // check whether new reduction is better, if so, update structures and proceed with adding matching clauses to structure
-	  if( newReduction > currentReduction )
+	  if( newReduction > currentReduction || 
+	    ( currentReduction > config.opt_Abva_maxRed && ! data.unlimited() )  // do not allow too many reductions
+	  )
 	  {
 	    DOUT(if( config.bva_debug > 2 ) cerr << "c [BVA] keep literal " << left << endl;);
 	    currentReduction = newReduction;
@@ -1041,6 +1045,7 @@ bool BoundedVariableAddition::xorBVAfull()
 	if( doesMatch ) break; // do not collect all pairs of this clause!
       }
       
+      if( xorPairs.size() > config.opt_Xbva_maxRed && ! data.unlimited() ) break; // do not collect too many matching pairs
     }
     // evaluate matches here!
     // sort based on second literal -- TODO: use improved sort!
@@ -1595,7 +1600,7 @@ bool BoundedVariableAddition::iteBVAfull()
     // look for pairs, where right = s:
     // C :=  s,f,C'
     // D := -s,t,C'
-    
+    itePairs.clear();
     DOUT( if( config.opt_bvaAnalysisDebug > 2 ) cerr << "c analysis on " << right << endl;);
     for( uint32_t j = 0 ; j < data.list( right ).size() && !data.isInterupted(); ++j ) { // iterate over all candidates for C
       const Clause & c = ca[ data.list(right)[j] ] ;
@@ -1653,7 +1658,7 @@ bool BoundedVariableAddition::iteBVAfull()
 	
 	//if( doesMatch ) break; // do not collect all pairs of this clause!
       }
-      
+      if( itePairs.size() > config.opt_Ibva_maxRed && ! data.unlimited() ) break; // do not collect too many matching pairs
     }
     // evaluate matches here!
     // sort based on second literal -- TODO: use improved sort!
@@ -2038,3 +2043,5 @@ void BoundedVariableAddition::removeDuplicateClauses( const Lit literal )
     }
   }
 }
+
+} // namespace Coprocessor

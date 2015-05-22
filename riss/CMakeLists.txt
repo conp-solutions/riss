@@ -7,12 +7,14 @@ option(DRATPROOF "Produce DRAFT-proofs (disabled by default)" OFF)
 
 
 # Dependencies:
-#
-find_package(ZLIB)
-find_package(Threads)
+# 
+find_package(ZLIB REQUIRED)
+find_package(Threads REQUIRED)
+find_package(Librt REQUIRED)
 
 include_directories(${ZLIB_INCLUDE_DIR})
 include_directories(${THREADS_PTHREADS_INCLUDE_DIR})
+include_directories(${LIBRT_INCLUDES})
 
 
 # Libraries:
@@ -34,10 +36,10 @@ set(LIB_SOURCES
 add_library(${PROJECT_NAME}-lib-static STATIC ${LIB_SOURCES})
 add_library(${PROJECT_NAME}-lib-shared SHARED ${LIB_SOURCES})
 
-target_link_libraries(${PROJECT_NAME}-lib-shared ${ZLIB_LIBRARY})
-target_link_libraries(${PROJECT_NAME}-lib-static ${ZLIB_LIBRARY})
-target_link_libraries(${PROJECT_NAME}-lib-shared ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(${PROJECT_NAME}-lib-static ${CMAKE_THREAD_LIBS_INIT})
+message(STATUS "Libs: ${ZLIB_LIBRARY} ${LIBRT_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT}")
+
+target_link_libraries(${PROJECT_NAME}-lib-shared z pthread rt)
+target_link_libraries(${PROJECT_NAME}-lib-static z pthread rt)
 
 set_target_properties(${PROJECT_NAME}-lib-static PROPERTIES
                                                  OUTPUT_NAME "${PROJECT_NAME}")

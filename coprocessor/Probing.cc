@@ -4,9 +4,10 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/Probing.h"
 
-using namespace Coprocessor;
+using namespace Riss;
+using namespace std;
 
-
+namespace Coprocessor {
 
 Probing::Probing(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, EquivalenceElimination& _ee, Solver& _solver)
 : Technique( _config, _ca, _controller )
@@ -116,7 +117,7 @@ bool Probing::process()
     // clean solver again!
     cleanSolver();
     
-#ifdef DEBUG
+#ifndef NDEBUG
     for( int i = beforeClauses; i < data.getClauses().size(); ++ i ) data.addClause( data.getClauses()[i], config.pr_debug_out > 0 ); // incorporate new clauses into the solver
 #else
     for( int i = beforeClauses; i < data.getClauses().size(); ++ i ) data.addClause( data.getClauses()[i] ); // incorporate new clauses into the solver
@@ -125,7 +126,7 @@ bool Probing::process()
     
     if( beforeLClauses < data.getLEarnts().size() ) {
       if( config.pr_keepLHBRs > 0 ) {
-#ifdef DEBUG
+#ifndef NDEBUG
 	for( int i = beforeClauses; i < data.getClauses().size(); ++ i ) data.addClause( data.getClauses()[i], config.pr_debug_out > 0 ); // incorporate new clauses into the solverif( config.pr_debug_out ) cerr << "c add another " << data.getLEarnts().size() - beforeLClauses << " new learnt clauses to the formula" << endl;
 	for( int i = beforeLClauses; i < data.getLEarnts().size(); ++ i ) {
 	  data.addClause( data.getLEarnts()[i], config.pr_debug_out > 0 );
@@ -1442,3 +1443,4 @@ void Probing::destroy()
   vector<CRef> ().swap(l2implieds );
 }
 
+} // namespace Coprocessor
