@@ -168,6 +168,7 @@ public:
  DoubleOption opt_rer_every;  		// perform rer at most every n conflicts
  BoolOption opt_rer_each;		// when a pair is rejected, initialize with the latter clause
  BoolOption opt_rer_extractGates;	// extract binary AND gates from the formula to rewrite the new learned clauses
+ DoubleOption opt_rer_addInputAct;      // increase activity of input variables of found gates
  
  IntOption erRewrite_size;	// size of clauses, so that it is tested whether they can be rewritten with ER
  IntOption erRewrite_lbd;	// LBD of clauses, so that it is tested whether they can be rewritten with ER

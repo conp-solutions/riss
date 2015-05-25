@@ -167,6 +167,7 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  opt_rer_every("EXTENDED RESOLUTION RER", "rer-freq", "how often rer compared to usual learning", 1, DoubleRange(0, true, 1, true) , optionListPtr ),
  opt_rer_each("EXTENDED RESOLUTION RER", "rer-e", "when a pair is rejected, initialize with the new clause", false, optionListPtr ),
  opt_rer_extractGates("EXTENDED RESOLUTION RER", "rer-g", "extract binary and gates from the formula for RER rewriting", false, optionListPtr ),
+ opt_rer_addInputAct("EXTENDED RESOLUTION RER", "rer-ga", "increase activity for input variables",  0, DoubleRange(0, true, HUGE_VAL, true) , optionListPtr ),
  
  
  erRewrite_size("EXTENDED RESOLUTION", "er-size", "rewrite new learned clauses with ER, if size is small enough", 30, IntRange(0, INT32_MAX), optionListPtr ),
