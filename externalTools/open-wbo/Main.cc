@@ -190,7 +190,7 @@ int main(int argc, char **argv)
 
     BoolOption bmo("Open-WBO", "bmo", "BMO search.\n", true);
     
-    BoolOption incomplete("Open-WBO", "incomplete", "BMO search.\n", true);
+    BoolOption incomplete("Open-WBO", "incomplete", "BMO search.\n", false);
 
     IntOption cardinality("Encodings", "cardinality",
                           "Cardinality encoding (0=cardinality networks, "
@@ -269,7 +269,8 @@ int main(int argc, char **argv)
     mxsolver = S;
     mxsolver->setInitialTime(initial_time);
 
-    mxsolver->setIncomplete( incomplete ); // tell solver to print each model
+    printf("c set incomplete: %d\n", incomplete == true );
+    mxsolver->setIncomplete( incomplete == true ); // tell solver to print each model
     
     signal(SIGXCPU, SIGINT_exit);
     signal(SIGTERM, SIGINT_exit);
@@ -314,7 +315,7 @@ int main(int argc, char **argv)
 	  
 
 #if NSPACE == Riss      
-    if( (const char*)opt_solver_config == 0 ) {	  // set SAT solver configuration
+    if( (const char*)opt_solver_config != 0 ) {	  // set SAT solver configuration
       S->setSolverConfig( std::string(opt_solver_config) );
     }  
     

@@ -57,7 +57,7 @@ public:
   MaxSAT()
   {
     printModelVariables = -1;         // for simplicity set to -1, so that the variable is not used
-    printEachModel = false; // for incomplete solving
+    printEachModel = false;           // for incomplete solving
     
     hardWeight = INT32_MAX;
     problemType = _UNWEIGHTED_;
@@ -119,10 +119,9 @@ public:
   #endif  
   }
   
-  void setSolverConfig( string& configName ) { SATsolverConfig = configName; }
+  void setSolverConfig( const std::string& configName ) { SATsolverConfig = configName; }
 
   std::string SATsolverConfig;
-  
   int printModelVariables;    // number of variables that have to be printed in the model
   bool printEachModel;        // print all models
   

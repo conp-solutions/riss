@@ -142,6 +142,11 @@ void MaxSAT::copySolver(MaxSAT *solver)
   solver->nbCores = nbCores;
 
   solver->nbInitialVariables = nbInitialVariables;
+  
+  solver->SATsolverConfig = SATsolverConfig;
+  solver->printModelVariables = printModelVariables;
+  solver->printEachModel = printEachModel;
+  
   if (nbInitialVariables != 0) solver->saveModel(model);
 }
 
@@ -240,10 +245,13 @@ void MaxSAT::saveModel(vec<lbool> &currentModel)
   // original MaxSAT formula.
   
   assert ( printModelVariables <= nbInitialVariables );
-  int toPrint = printModelVariables != 0 ? printModelVariables : nbInitialVariables;
+  int toPrint = (printModelVariables != -1) ? printModelVariables : nbInitialVariables; // use only variables of the original formula (not the simplified one)
    
   for (int i = 0; i < toPrint; i++)
     model.push(currentModel[i]);
+  
+  if( printEachModel ) 
+    printModel( ); // print the model now (last model is printed twice)
 }
 
 /*_________________________________________________________________________________________________

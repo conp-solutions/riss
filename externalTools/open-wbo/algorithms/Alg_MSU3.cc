@@ -66,9 +66,9 @@ void MSU3::MSU3_none()
     {
       nbSatisfiable++;
       uint64_t newCost = computeCostModel(solver->model);
-      saveModel(solver->model);
       printf("o %" PRIu64 "\n", newCost);
-
+      saveModel(solver->model);
+      
       ubCost = newCost;
 
       if (nbSatisfiable == 1)
@@ -196,9 +196,9 @@ void MSU3::MSU3_blocking()
     {
       nbSatisfiable++;
       uint64_t newCost = computeCostModel(solver->model);
-      saveModel(solver->model);
       printf("o %" PRIu64 "\n", newCost);
-
+      saveModel(solver->model);
+      
       ubCost = newCost;
 
       if (nbSatisfiable == 1)
@@ -328,8 +328,8 @@ void MSU3::MSU3_weakening()
     {
       nbSatisfiable++;
       uint64_t newCost = computeCostModel(solver->model);
-      saveModel(solver->model);
       printf("o %" PRIu64 "\n", newCost);
+      saveModel(solver->model);
 
       ubCost = newCost;
 
@@ -466,8 +466,8 @@ void MSU3::MSU3_iterative()
     {
       nbSatisfiable++;
       uint64_t newCost = computeCostModel(solver->model);
-      saveModel(solver->model);
       printf("o %" PRIu64 "\n", newCost);
+      saveModel(solver->model);
 
       ubCost = newCost;
 

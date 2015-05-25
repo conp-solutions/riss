@@ -116,12 +116,15 @@ else if( optionSet == "VERBOSE" ) {
 else if( optionSet == "DEBUG" ) {
     parseOptions(" -cp3_stats -solververb=2 -cp3_bve_verbose=2 -cp3-debug -cp3-check=2 -cp3_verbose=3",false);
 }
+else if( optionSet == "NOCP" ) {
+    parseOptions(" -no-enabled_cp3",false);
+}
 
 /*
  *  Options for Open-WBO 
  */
 else if( optionSet == "MAXSAT" ) {
-  parseOptions ( "-incsverb=1 -solververb=1 -cp3_stats -cp3-debug -cp3-check=2 -cp3_verbose=3 -enabled_cp3", false );
+  parseOptions ( "-incsverb=1", false );
 }
 /*
  *  Options for Riss 427
