@@ -69,7 +69,7 @@ riss_init(const char* presetConfig)
     libriss* riss = new libriss;
     riss->solverconfig = new Riss::CoreConfig(presetConfig == 0 ? "" : presetConfig);
     riss->cp3config = new Coprocessor::CP3Config(presetConfig == 0 ? "" : presetConfig);
-    riss->solver = new Riss::Solver (*(riss->solverconfig));
+    riss->solver = new Riss::Solver ( riss->solverconfig) ;
     riss->solver->setPreprocessor( riss->cp3config );
     return riss;
 }

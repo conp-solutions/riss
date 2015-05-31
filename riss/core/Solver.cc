@@ -208,7 +208,7 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName ) :  // CoreC
   
   if( onlineDratChecker != 0 ) onlineDratChecker->setVerbosity( config.opt_checkProofOnline );
   
-  DOUT( if ( config.opt_inc_verb > 0 ) cerr << "c set up solver" << endl; );
+  DOUT( if ( config.opt_inc_verb > 1 ) cerr << "c set up solver" << endl; );
 }
 
 
@@ -219,7 +219,7 @@ Solver::~Solver()
   if( coprocessor != 0 ) { delete coprocessor; coprocessor = 0; }
   if( deleteConfig  ) delete privateConfig;  // delete the configuration that has been created for this solver object
   
-  DOUT( if ( config.opt_inc_verb > 0 ) cerr << "c destruct solver" << endl; );
+  DOUT( if ( config.opt_inc_verb > 1 ) cerr << "c destruct solver" << endl; );
 }
 
 
@@ -445,8 +445,10 @@ inline unsigned int Solver::computeLBD(const vec<Lit> & lits) {
   int nblevels = 0;
   permDiff.nextStep();
   bool withLevelZero = false;
+  const int minLevel = ( config.opt_lbd_ignore_assumptions ? assumptions.size() : 0 );
     for(int i=0;i<lits.size();i++) {
-      int l = level(var(lits[i]));
+      const int l = level(var(lits[i]));
+      if( l < minLevel ) continue; // ignore literals for assumptions
       withLevelZero = (l==0);
       if ( ! permDiff.isCurrentStep(l) ) {
 	permDiff.setCurrentStep(l);
@@ -461,8 +463,10 @@ inline unsigned int Solver::computeLBD(const Clause &c) {
   int nblevels = 0;
   permDiff.nextStep();
   bool withLevelZero = false;
+  const int minLevel = ( config.opt_lbd_ignore_assumptions ? assumptions.size() : 0 );
     for(int i=0;i<c.size();i++) {
-      int l = level(var(c[i]));
+      const int l = level(var(c[i]));
+      if( l < minLevel ) continue; // ignore literals for assumptions
       withLevelZero = (l==0);
       if ( ! permDiff.isCurrentStep(l) ) {
 	permDiff.setCurrentStep(l);
@@ -2073,6 +2077,9 @@ lbool Solver::initSolve(int solves)
     bool changedActivities = false; // indicate whether the decision heap has to be rebuild
     // reset the counters that guide the search (and stats)
     if( config.opt_reset_counters != 0 && solves % config.opt_reset_counters == 0 ) {
+      
+      if ( config.opt_inc_verb > 0 ) cerr << "c reset search counters ..." << endl; 
+      
       nbRemovedClauses =0; nbReducedClauses = 0; 
       nbDL2 = 0; nbBin = 0; nbUn = 0; nbReduceDB = 0;
       starts = 0; decisions = 0; rnd_decisions = 0;
@@ -2209,7 +2216,7 @@ lbool Solver::solve_()
 
     printHeader();
     
-    DOUT( if ( config.opt_inc_verb > 0 ) cerr << "c solve with v: " << nVars() << " c: " << clauses.size() << " a: " << assumptions.size() << endl; );
+    if ( config.opt_inc_verb > 0 ) cerr << "c solve with v: " << nVars() << " c: " << clauses.size() << " a: " << assumptions.size() << endl;
     
     // preprocess
     if( status == l_Undef ) { // TODO: freeze variables of assumptions!
@@ -2293,6 +2300,24 @@ lbool Solver::solve_()
     //
     if (verbosity >= 1)
       printf("c =========================================================================================================\n");
+    
+    if ( config.opt_inc_verb > 0 ) cerr << "c solved with :" 
+       << " sol: " << solves
+       << " dec: " << decisions
+       << " con: " << conflicts 
+       << " prop: " << propagations 
+       << " res: " << curr_restarts 
+       << " rems: " << nbReduceDB 
+       << " remCs: " << nbRemovedClauses
+       << " timing: ( " 
+       << " all: "      << totalTime.getCpuTime()
+       << " prop: "     << propagationTime.getCpuTime()
+       << " analysis: " << analysisTime.getCpuTime()
+       << " reduce: "   << reduceDBTime.getCpuTime()
+       << " overhead: " << totalTime.getCpuTime() - ( propagationTime.getCpuTime() + analysisTime.getCpuTime() + extResTime.getCpuTime() + preprocessTime.getCpuTime() + inprocessTime.getCpuTime() )
+       << " )"
+       << endl; 
+    
     
     if (verbosity >= 1 || config.opt_solve_stats)
     {

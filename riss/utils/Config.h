@@ -126,6 +126,9 @@ else if( optionSet == "NOCP" ) {
 else if( optionSet == "MAXSAT" ) {
   parseOptions ( "-incsverb=1", false );
 }
+else if( optionSet == "INCSOLVE" ) {
+  parseOptions ( "-rmf -sInterval=16 -lbdIgnLA -var-decay-b=0.85 -var-decay-e=0.85 -irlevel=1024 -rlevel=2 -incResCnt=3", false );
+}
 /*
  *  Options for Riss 427
  */
@@ -467,6 +470,9 @@ else if( optionSet == "plain_ECL" ) {
 }
 else if( optionSet == "plain_FASTRESTART" ) {
     parseOptions(" -rlevel=1 ",false);
+}
+else if( optionSet == "plain_SEMIFASTRESTART" ) {
+    parseOptions(" -rlevel=2 ",false);
 }
 else if( optionSet == "plain_AGILREJECT" ) {
     parseOptions(" -agil-r -agil-limit=0.35",false);

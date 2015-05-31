@@ -138,7 +138,7 @@ int main(int argc, char** argv)
 	    exit(0);
 	  }
 	  
-	  Solver S(coreConfig);
+	  Solver S(&coreConfig);
 	  S.setPreprocessor(&cp3config); // tell solver about preprocessor
 	  
 	  double initial_time = cpuTime();

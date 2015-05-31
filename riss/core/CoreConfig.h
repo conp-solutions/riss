@@ -53,6 +53,7 @@ public:
  IntOption opt_spec_inc_reduce_db;
  IntOption opt_lb_lbd_frozen_clause;
  BoolOption opt_lbd_ignore_l0; // do not consider literals that have toplevel assignments for LBD calculation
+ BoolOption opt_lbd_ignore_assumptions; // do not consider assumption levels for LBD
  IntOption opt_update_lbd; // update LBD during 0=propagation,1=learning,2=never (if during propagation, then during learning is not necessary!)
  BoolOption opt_lbd_inc;	// allow to increase LBD of clauses dynamically?
  BoolOption opt_quick_reduce; // check clause for being satisfied based on the first two literals only!
