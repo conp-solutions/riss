@@ -14,6 +14,7 @@ Mprocessor::Mprocessor(const char* configname)
 , hardWeight(0) 
 , currentWeight(1)
 , sumWeights(0)
+, hasNonUnitSoftClauses (false)
 
 , specVars(-1)
 , specCls (-1)
@@ -94,9 +95,19 @@ void Mprocessor::addHardClause(vec< Lit >& lits)
   S->addClause_( lits );
 }
 
-void Mprocessor::addSoftClause(int weight, vec< Lit >& lits)
+bool Mprocessor::addSoftClause(int weight, vec< Lit >& lits)
 {
   if( debugLevel > 1 ) cerr << "c added soft clause to MSW: " << weight << " ; "  << lits << endl;
+  
+  if (weight == 0 ) return false;
+  
+  if (lits.size() == 1 ) {
+    S->freezeVariable( var ( lits[0] ), true ); // set this variable as frozen!
+    literalWeights[ toInt( lits[0] ) ] += weight;	// assign the weight of the current clause to the relaxation variable!
+    return true;
+  }
+  
+  hasNonUnitSoftClauses = true;
   Var relaxVariables = S->newVar(false,false,'r'); // add a relax variable
   fullVariables = fullVariables > relaxVariables + 1 ? fullVariables : relaxVariables + 1; // keep track of highest variable
   
@@ -116,6 +127,7 @@ void Mprocessor::addSoftClause(int weight, vec< Lit >& lits)
   S->freezeVariable( relaxVariables, true ); // set this variable as frozen!
   if( debugLevel > 2 ) cerr << "c add as HARD clause to PREPROCESSOR: " << lits << endl;
   S->addClause(lits);
+  return false;
 }
 
 bool Mprocessor::okay()

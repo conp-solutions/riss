@@ -215,8 +215,9 @@ int main(int argc, char **argv)
 
  
 #if NSPACE == Riss      
-    StringOption    opt_pre_config ("CONFIG", "preConfig",    "configuration for simplification",0);
-    StringOption opt_solver_config ("CONFIG", "solverConfig", "configuration for sat solver",    0);
+    StringOption    opt_pre_config  ("CONFIG", "preConfig",    "configuration for simplification",0);
+    StringOption opt_solver_config  ("CONFIG", "solverConfig", "configuration for sat solver",    0);
+    BoolOption   opt_simpOnlySimple ("SIMPLIFICATION", "sos",  "simplify only maxsat formulas with soft unit clauses", false);
 #endif
     
     parseOptions(argc, argv, true);
@@ -327,10 +328,33 @@ int main(int argc, char **argv)
       S->getMprocessor()->setDebugLevel( debug ); // tell about level
       // parse with preprocessor      
       parse_DIMACS(in, S->getMprocessor() );
-      // simplify
-      S->getMprocessor()->simplify();
-      // load into actual solver
-      loadFromMprocessorToMaxsat(S);
+      
+      if( opt_simpOnlySimple && S->getMprocessor()->hasNonUnitSoftClauses ) {
+	printf("c Re-reading input due to non-unit soft clauses\n");
+	if( argc == 1 ) {
+	  printf("c Warning, cannot re-read from STDIN - abort\n");
+	  exit(_ERROR_);
+	}
+	// destruct preprocessor
+	S->deleteMprocessor();
+	
+	// re-open file and parse with usual solver again, as simplification will not be performed
+	gzclose(in);
+	in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
+	if (in == NULL)
+	  printf("c ERROR! Could not open file: %s\n",
+		argc == 1 ? "<stdin>" : argv[1]),
+	      printf("c UNKNOWN\n"), exit(_ERROR_);
+	      
+	// re-read formula into maxsat solver
+	parse_DIMACS(in, S);
+	
+      } else {
+	// simplify
+	S->getMprocessor()->simplify();
+	// load into actual solver
+	loadFromMprocessorToMaxsat(S);
+      }
     }
 #else 
     parse_DIMACS(in, S);

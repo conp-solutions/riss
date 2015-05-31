@@ -103,6 +103,12 @@ public:
   void createMprocessor( const char* mprocessorConfig ) {
     if(  mprocessor == 0 ) mprocessor = new Coprocessor::Mprocessor( mprocessorConfig );
   }
+  
+  // destruct preprocessor
+  void deleteMprocessor() {
+    if(  mprocessor != 0 ) delete mprocessor;
+    mprocessor = 0;
+  }
 #endif    
   
 #if NSPACE == Riss
