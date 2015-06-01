@@ -73,10 +73,12 @@ void loadFromMprocessorToMaxsat( MaxSAT* S ) {
   const int vars = mprocessor->S->nVars(); // might be smaller already due to dense
   int clss = mprocessor->S->trail.size() + mprocessor->S->clauses.size();
   int top = 0;
+  if( debug > 2 ) cerr << "c work with fullVars: " << mprocessor->fullVariables << endl;
   for( Var v = 0 ; v < mprocessor->fullVariables; ++ v ) { // for each weighted literal, have an extra clause! use variables before preprocessing (densing)
-    clss = (mprocessor->literalWeights[toInt(mkLit(v))] != 0 ? clss + 1 : clss);
+    clss = (mprocessor->literalWeights[toInt( mkLit(v))] != 0 ? clss + 1 : clss);
     clss = (mprocessor->literalWeights[toInt(~mkLit(v))] != 0 ? clss + 1 : clss);
-    top += mprocessor->literalWeights[toInt(mkLit(v))] + mprocessor->literalWeights[toInt(~mkLit(v))];
+    if( debug > 2 ) cerr << "c look at variable " << v << " with weights: + " << mprocessor->literalWeights[toInt( mkLit(v))] << " - " << mprocessor->literalWeights[toInt( ~mkLit(v))] << endl;
+    top +=  mprocessor->literalWeights[toInt( mkLit(v))]  +  mprocessor->literalWeights[toInt(~mkLit(v))];
   }
   top ++;
 

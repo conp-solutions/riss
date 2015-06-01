@@ -39,8 +39,9 @@ void Mprocessor::setSpecs(int specifiedVars, int specifiedCls)
   specVars = specifiedVars;
   specCls  = specifiedCls;
   literalWeights.growTo( specVars * 2 );
-  S->reserveVars( specVars ); 			// use reserve function of Riss
-  while( S->nVars() < specVars ) S->newVar();	// are there variables missing, add them
+  S->reserveVars( specVars ); 							// use reserve function of Riss
+  fullVariables =  specVars > fullVariables ? specVars : fullVariables;  	// keep track of highest variable
+  while( S->nVars() < specVars ) newVar();					// are there variables missing, add them
 }
 
 void Mprocessor::setProblemType(int type)
@@ -101,9 +102,10 @@ bool Mprocessor::addSoftClause(int weight, vec< Lit >& lits)
   
   if (weight == 0 ) return false;
   
-  if (lits.size() == 1 ) {
+  if (lits.size() == 1 ) {	
     S->freezeVariable( var ( lits[0] ), true ); // set this variable as frozen!
     literalWeights[ toInt( lits[0] ) ] += weight;	// assign the weight of the current clause to the relaxation variable!
+    if( debugLevel > 1 ) cerr << "c added soft unit clause: " << lits << " with current total weight: " << literalWeights[ toInt( lits[0] ) ] << endl;
     return true;
   }
   
