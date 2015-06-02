@@ -1213,29 +1213,27 @@ CRef Solver::propagate(bool duringAddingClauses)
         Watcher        *i, *j, *end;
         num_props++;
 	
-	    // First, Propagate binary clauses 
-	const vec<Watcher>&  wbin  = watches[p];
-	
-	for(int k = 0;k<wbin.size();k++) {
-	  if( !wbin[k].isBinary() ) continue;
-	  const Lit& imp = wbin[k].blocker();
-	  assert( ca[ wbin[k].cref() ].size() == 2 && "in this list there can only be binary clauses" );
-	  DOUT( if( config.opt_learn_debug ) cerr << "c checked binary clause " << ca[wbin[k].cref() ] << " with implied literal having value " << toInt(value(imp)) << endl; );
-	  if(value(imp) == l_False) {
-	    if( !config.opt_long_conflict ) return wbin[k].cref();
-	    confl = wbin[k].cref();
-	    break;
-	  }
-	  
-	  if(value(imp) == l_Undef) {
-	    uncheckedEnqueue(imp,wbin[k].cref(), duringAddingClauses);
-	  } 
-	}
-
         // propagate longer clauses here!
         for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;)
 	{
-	    if( i->isBinary() ) { *j++ = *i++; continue; } // skip binary clauses (have been propagated before already!}
+	    if( i->isBinary() ) {  // handle binary clauses
+		const Lit& imp = i->blocker();
+		assert( ca[ i->cref() ].size() == 2 && "in this list there can only be binary clauses" );
+		DOUT( if( config.opt_learn_debug ) cerr << "c checked binary clause " << ca[i->cref() ] << " with implied literal having value " << toInt(value(imp)) << endl; );
+		if(value(imp) == l_False) {
+		  if( !config.opt_long_conflict ) { // stop on the first conflict we see?
+		    confl = i->cref();              // store the conflict
+		    while (i < end) *j++ = *i++;    // move the remaining elements forward
+		    ws.shrink_(i - j);              // remove all duplciate clauses
+		    goto FinishedPropagation;       // jump to end of method, so that the statistics can be updated correctly
+		  }
+		  confl = i->cref(); // store intermediate conflict to be evaluated later
+		} else if(value(imp) == l_Undef) { // enqueue the implied literal
+		  uncheckedEnqueue(imp,i->cref(), duringAddingClauses);
+		}
+		*j++ = *i++; // keep the element in the list
+		continue;
+	    }
 	    
 	    DOUT( if( config.opt_learn_debug ) cerr << "c check clause [" << i->cref() << "]" << ca[i->cref()] << endl; );
 #ifndef PCASSO // PCASS reduces clauses during search without updating the watch lists ...
@@ -1308,6 +1306,7 @@ CRef Solver::propagate(bool duringAddingClauses)
         ws.shrink_(i - j); // remove all duplciate clauses!
 
     }
+    FinishedPropagation:
     propagations += num_props;
     simpDB_props -= num_props;
     
