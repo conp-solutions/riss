@@ -76,26 +76,28 @@ class PSolver
     // executed only for the first solver (e.g. for parsing and simplification)
     //
     //
-    /// The current number of original clauses of the 1st solver.
+
+    /** The current number of original clauses of the 1st solver. */
     int nClauses () const;
 
-    /// The current number of variables of the 1st solver.
+    /** The current number of variables of the 1st solver. */
     int nVars    () const;
 
-    /// The current number of total literals in the formula of the 1st solver.
+    /** The current number of total literals in the formula of the 1st solver. */
     int nTotLits () const;
 
-    /// reserve space for enough variables in the first solver
+    /** reserve space for enough variables in the first solver */
     void reserveVars( Riss::Var v );
 
-    /// Removes already satisfied clauses in the first solver
+    /** Removes already satisfied clauses in the first solver */
     bool simplify();
 
     //
     // executed for all present solvers:
     //
     //
-    /// Add a new variable with parameters specifying variable mode to all solvers
+    
+    /** Add a new variable with parameters specifying variable mode to all solvers */
     Riss::Var  newVar (bool polarity = true, bool dvar = true, char type = 'o');
 
     /** Add a clause to the solver without making superflous internal copy. Will change the passed std::vector 'ps'.
@@ -103,7 +105,7 @@ class PSolver
      */
     bool addClause_(Riss::vec<Riss::Lit>& ps);
 
-    /// Add a clause to the online proof checker.. Not implemented for parallel solver
+    /** Add a clause to the online proof checker.. Not implemented for parallel solver */
     void addInputClause_( Riss::vec<Riss::Lit>& ps);
 
     void interrupt(); // Trigger a (potentially asynchronous) interruption of the solver.

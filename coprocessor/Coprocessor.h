@@ -196,7 +196,8 @@ class Preprocessor
      *  Note: does not freeze a variable twice, will not add variables to undo information, if the variable is frozen already
      */
     void freezeSearchVariables();
-    void meltSearchVariables();   /// undo freezing for the special search variables
+    /** undo freezing for the special search variables */
+    void meltSearchVariables();
 
     // small helpers
     void sortClauses();                // sort the literals within all clauses

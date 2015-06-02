@@ -1085,7 +1085,7 @@ void Solver::uncheckedEnqueue(Lit p, Riss::CRef from, bool addToProof, const uin
     /** include variableExtraInfo here, if required! */
     vardata[var(p)] = mkVarData(from, decisionLevel());
     
-//       trailPos[ var(p) ] = (int)trail.size(); /// modified learning, important: before trail.push()!
+    // trailPos[ var(p) ] = (int)trail.size(); // modified learning, important: before trail.push()!
 
     // prefetch watch lists
     // __builtin_prefetch( & watchesBin[p], 1, 0 ); // prefetch the watch, prepare for a write (1), the data is highly temoral (0)
@@ -2029,7 +2029,7 @@ double Solver::progressEstimate() const
     return progress / nVars();
 }
 
-/// to create the luby series
+/** to create the luby series */
 static double luby(double y, int x){
 
     // Find the finite subsequence that contains index 'x', and the

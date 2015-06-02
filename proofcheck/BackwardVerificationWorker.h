@@ -34,13 +34,13 @@ class BackwardVerificationWorker
     int verbose;                  // verbosity of the tool
 
     // data structures that are re-used from the outside
-    int formulaClauses;                          /// number of clauses in the formula (these clause do not have to be verified)
-    vec<BackwardChecker::ClauseLabel>& label;    /// stores the label per clause in the formula and proof
-    vec<BackwardChecker::ClauseData>& fullProof; /// store the data of the proof (including all clauses of the formula)
-    ClauseAllocator  ca;                         /// storage for the literals of the clauses, gives all clauses an additional field so that the first literal can be stored redundantly once more
-    ClauseAllocator& originalClauseData;         /// storage for the literals of the clauses, gives all clauses an additional field so that the first literal can be stored redundantly once more
-    bool workOnCopy;                             /// indicate whether we are really working on the storage, or on a copy
-    std::deque< int64_t > idsToVerify;           /// queue of elements that have to be verified by this worker
+    int formulaClauses;                          /** number of clauses in the formula (these clause do not have to be verified) */
+    vec<BackwardChecker::ClauseLabel>& label;    /** stores the label per clause in the formula and proof */
+    vec<BackwardChecker::ClauseData>& fullProof; /** store the data of the proof (including all clauses of the formula) */
+    ClauseAllocator  ca;                         /** storage for the literals of the clauses, gives all clauses an additional field so that the first literal can be stored redundantly once more */
+    ClauseAllocator& originalClauseData;         /** storage for the literals of the clauses, gives all clauses an additional field so that the first literal can be stored redundantly once more */
+    bool workOnCopy;                             /** indicate whether we are really working on the storage, or on a copy */
+    std::deque< int64_t > idsToVerify;           /** queue of elements that have to be verified by this worker */
 
     // data structures for propagation
 
@@ -52,10 +52,10 @@ class BackwardVerificationWorker
         bool operator()(const BackwardChecker::ClauseData& w) const { return ca[ w.getRef() ].mark() == 1; }
     };
 
-    OccLists<Lit, vec<BackwardChecker::ClauseData>, ClauseDataClauseDeleted> nonMarkedWatches;  /// watch list for all non-marked clauses
-    OccLists<Lit, vec<BackwardChecker::ClauseData>, ClauseDataClauseDeleted> markedWatches;     /// watch list for all marked clauses
-    OccLists<Lit, vec<BackwardChecker::ClauseData>, ClauseDataClauseDeleted> fullWatch;         /// full occurrence list fullWatch[l] gives the std::vector with all (currently active) proofitems that contain literal l
-    int variables;                                                                              /// number of variables in the proof (highest variable)
+    OccLists<Lit, vec<BackwardChecker::ClauseData>, ClauseDataClauseDeleted> nonMarkedWatches;  /** watch list for all non-marked clauses */
+    OccLists<Lit, vec<BackwardChecker::ClauseData>, ClauseDataClauseDeleted> markedWatches;     /** watch list for all marked clauses */
+    OccLists<Lit, vec<BackwardChecker::ClauseData>, ClauseDataClauseDeleted> fullWatch;         /** full occurrence list fullWatch[l] gives the std::vector with all (currently active) proofitems that contain literal l */
+    int variables;                                                                              /** number of variables in the proof (highest variable) */
 
     int      lastPosition;                      // next position in the proof that has to be verified
     int      minimalMarkedProofItem;            // minimal element in the proof that has been marked by this worker
@@ -105,7 +105,7 @@ class BackwardVerificationWorker
         /** initialize with the two given literals */
         void init( const Lit& l1, const Lit& l2 ) { data = toLit( toInt(l1) ^ toInt(l2) ); }
     };
-    vec<WatchedLiterals> watchedXORLiterals; /// std::vector that stores the current two watched literals for all the clauses in the current watch lists
+    vec<WatchedLiterals> watchedXORLiterals; /** std::vector that stores the current two watched literals for all the clauses in the current watch lists */
 
   public:
 

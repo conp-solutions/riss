@@ -25,27 +25,17 @@ class Lock
 {
     pthread_mutex_t m;
   public:
-    /// initially, the lock can be grabbed
-    Lock()
-    {
-        pthread_mutex_init(&m, 0);
-    }
+    /** initially, the lock can be grabbed */
+    Lock() { pthread_mutex_init(&m, 0); }
 
-    /// get the lock
-    void lock()
-    {
-        pthread_mutex_lock (&m);
-    }
+    /** get the lock */
+    void lock() { pthread_mutex_lock (&m); }
 
-    /// release the lock
-    void unlock()
-    {
-        pthread_mutex_unlock (&m);
-    }
+    /** release the lock */
+    void unlock() { pthread_mutex_unlock (&m); }
 
     // give the method lock access to the mutex that is inside of a lock class
     friend class MethodLock;
-
 };
 
 /** Lock that offers more tricks, basd on a semaphore */
@@ -58,9 +48,8 @@ class ComplexLock
   public:
 
     /** create an unlocked lock
-    *
-    * @param max specify number of maximal threads that have entered the semaphore
-    */
+     * @param max specify number of maximal threads that have entered the semaphore
+     */
     ComplexLock(int max = 1)
         : _max( max )
     {
@@ -75,36 +64,34 @@ class ComplexLock
     }
 
     /** tries to lock
-    * @return true, if locking was successful
-    */
+     * @param transitive allow multiple locking of the same thread ?
+     * @return true, if locking was successful
+     */
     bool trylock()
     {
         int err = sem_trywait( &_lock );
         return err == 0;
     }
-    //@param transitive allow multiple locking of the same thread ?
 
     /** releases one lock again
-    *
-    * should only be called by the thread that is currently owns the lock
-    */
+     *
+     * should only be called by the thread that is currently owns the lock
+     */
     void unlock()
     {
         sem_post( &_lock );
-        //fprintf( stderr, "\n\nreleased lock %d\n\n" , (int)*(int*)(void*)&_lock );
+        // fprintf( stderr, "\n\nreleased lock %d\n\n" , (int)*(int*)(void*)&_lock );
     }
 
-    /** waits until the lock is given to the calling thread
-    */
+    /** waits until the lock is given to the calling thread */
     void wait()
     {
-        //fprintf( stderr, "\n\nwait for lock %d\n\n" , (int)*(int*)(void*)&_lock );
+        // fprintf( stderr, "\n\nwait for lock %d\n\n" , (int)*(int*)(void*)&_lock );
         sem_wait( &_lock );
-        //fprintf( stderr, "\n\nblog lock %d\n\n" , (int)*(int*)(void*)&_lock );
+        // fprintf( stderr, "\n\nblog lock %d\n\n" , (int)*(int*)(void*)&_lock );
     }
 
-    /** return numbers of waiters in the semaphore
-    */
+    /** return numbers of waiters in the semaphore */
     int getWaiters()
     {
         int ret = 0;
@@ -113,8 +100,7 @@ class ComplexLock
     }
 };
 
-/** This class can be created the begin of each method and will be automatically destroyed before the method is left
- */
+/** This class can be created the begin of each method and will be automatically destroyed before the method is left */
 class MethodLock
 {
     pthread_mutex_t& m;
@@ -141,9 +127,9 @@ class MethodLock
  */
 class SleepLock
 {
-    // bool sleeps;               /// is set to true, iff last time somebody called sleep() before awake was called
-    pthread_mutex_t mutex;     /// mutex for the lock
-    pthread_cond_t master_cv;  /// conditional variable for the lock
+    // bool sleeps;               /** is set to true, iff last time somebody called sleep() before awake was called */
+    pthread_mutex_t mutex;     /** mutex for the lock */
+    pthread_cond_t master_cv;  /** conditional variable for the lock */
 
     // do not allow the outside to copy this lock
     explicit SleepLock(const SleepLock& l )
@@ -168,13 +154,13 @@ class SleepLock
         pthread_cond_destroy (&master_cv);
     }
 
-    /// get the lock
+    /** get the lock */
     void lock()
     {
         pthread_mutex_lock (&mutex);
     }
 
-    /// release the lock
+    /** release the lock */
     void unlock()
     {
         pthread_mutex_unlock (&mutex);
@@ -208,7 +194,7 @@ class SpinLock
 {
 
   private:
-    /// the integer that is used for locking
+    /** the integer that is used for locking */
     volatile unsigned short _lock;
   public:
     SpinLock()
@@ -253,28 +239,13 @@ class ReadersWriterLock
         assert (val == 0);
         pthread_rwlockattr_destroy(&attr);
     }
-    void readLock()
-    {
-        pthread_rwlock_rdlock(&mutex);
-    }
-    void readUnlock()
-    {
-        pthread_rwlock_unlock(&mutex);
-    }
+    void readLock()    { pthread_rwlock_rdlock(&mutex); }
+    void readUnlock()  { pthread_rwlock_unlock(&mutex); }
 
-    void writeLock()
-    {
-        pthread_rwlock_wrlock(&mutex);
-    }
-    void writeUnlock()
-    {
-        pthread_rwlock_unlock(&mutex);
-    }
-    pthread_rwlock_t getValue()
-    {
-        return mutex;
-    }
+    void writeLock()   { pthread_rwlock_wrlock(&mutex); }
+    void writeUnlock() { pthread_rwlock_unlock(&mutex); }
 
+    pthread_rwlock_t getValue() const { return mutex; }
 };
 
 #endif

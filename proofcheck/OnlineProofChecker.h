@@ -90,13 +90,13 @@ class OnlineProofChecker
     template <class T>
     bool removeClause( const T& cls, const Lit& rmLit ) ;
 
-    /// plot the current unit clauses and the current formula
+    /** plot the current unit clauses and the current formula */
     void printState();
 
-    /// check whether all clauses in the online checker are correctly in the data structures!
+    /** check whether all clauses in the online checker are correctly in the data structures! */
     void fullCheck();
 
-    /// set verbosity of the checker
+    /** set verbosity of the checker */
     void setVerbosity( int newVerbosity );
 
 };

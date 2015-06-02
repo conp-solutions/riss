@@ -26,8 +26,8 @@ class XorReasoning : public Technique
 {
 
     CoprocessorData& data;
-    Propagation& propagation; /// object that takes care of unit propagation
-    EquivalenceElimination& ee;   /// object that takes care of equivalent literal elimination
+    Propagation& propagation;     // object that takes care of unit propagation
+    EquivalenceElimination& ee;   // object that takes care of equivalent literal elimination
 
     double processTime,parseTime,reasonTime;
     int findChecks;
@@ -40,7 +40,7 @@ class XorReasoning : public Technique
     int foundEmptyLists,xorUnits,allUsed,xorDeducedUnits,eqs;
     int addedTernaryXors, addedQuadraryXors;
 
-    /// compare two literals
+    /** compare two literals */
     struct VarLt {
         std::vector< std::vector <int> >& data;
         bool operator () (int& x, int& y) const
@@ -101,7 +101,7 @@ class XorReasoning : public Technique
 
     };
 
-    Riss::vec<Riss::CRef> reAddedClauses; /// clauses that have been added by reencoding intermediate XORs
+    Riss::vec<Riss::CRef> reAddedClauses; // clauses that have been added by reencoding intermediate XORs
 
   public:
 

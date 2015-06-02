@@ -25,17 +25,17 @@ namespace Coprocessor
 class ClauseElimination : public Technique
 {
 
-    Propagation& propagation;            /// object that takes care of unit propagation
+    Propagation& propagation;     // object that takes care of unit propagation
 
     std::vector<Riss::CRef> clause_processing_queue;
 
-    int steps;        // performed clause comparisons (loading a clause)
-    double processTime;  // required time
-    int removedClauses;  // number of removed clauses
-    int removedBceClauses; // number of clauses that have been removed without changing equivalence
+    int steps;                    // performed clause comparisons (loading a clause)
+    double processTime;           // required time
+    int removedClauses;           // number of removed clauses
+    int removedBceClauses;        // number of clauses that have been removed without changing equivalence
     unsigned removedNonEEClauses; // number of clauses that have been removed without preserving equivalence
-    unsigned cceSize;      // clause size for which cce is applied
-    unsigned candidates;       // number of candidates for which cce was tested
+    unsigned cceSize;             // clause size for which cce is applied
+    unsigned candidates;          // number of candidates for which cce was tested
 
   public:
 
@@ -43,11 +43,11 @@ class ClauseElimination : public Technique
     {
       public:
         std::vector<Riss::Lit> cla;       // literals that have been added by cla
-        Riss::MarkArray array;       // literals that have been marked by ala or cla
-        Riss::MarkArray helpArray;   // literals that will be inside CLA(F,C) per step
+        Riss::MarkArray array;            // literals that have been marked by ala or cla
+        Riss::MarkArray helpArray;        // literals that will be inside CLA(F,C) per step
         std::vector<Riss::Lit> toProcess; // literals that still need to be processed
         std::vector<Riss::Lit> toUndo;    // literals that have to be out to the undo information, if a cla clause is removed by ATE or ABCE
-        int nextAla;           // position from which ala needs to be continued
+        int nextAla;                      // position from which ala needs to be continued
 
         int steps;
         int removedClauses;

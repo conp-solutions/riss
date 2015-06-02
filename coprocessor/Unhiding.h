@@ -25,19 +25,19 @@ namespace Coprocessor
 class Unhiding : public Technique
 {
 
-    CoprocessorData& data;    /// object to store all coprocessor data
-    Propagation& propagation; /// object that takes care of unit propagation
-    Subsumption& subsumption; /// object that takes care of subsumption and strengthening
-    EquivalenceElimination& ee;   /// object that takes care of equivalent literal elimination
+    CoprocessorData& data;        // object to store all coprocessor data
+    Propagation& propagation;     // object that takes care of unit propagation
+    Subsumption& subsumption;     // object that takes care of subsumption and strengthening
+    EquivalenceElimination& ee;   // object that takes care of equivalent literal elimination
 
     BIG big;
 
-    bool uhdTransitive;   // transitive graph reduction?
-    int unhideIter;   // mulitple iterations?
-    int  doUHLE;      // run hidden literal elimination?
-    bool doUHTE;      // run hidden tautology elimination?
-    bool uhdNoShuffle;    // do not perform randomized depth first search in BIG
-    bool uhdEE;       // use equivalent literal elimination
+    bool uhdTransitive;       // transitive graph reduction?
+    int unhideIter;           // mulitple iterations?
+    int  doUHLE;              // run hidden literal elimination?
+    bool doUHTE;              // run hidden tautology elimination?
+    bool uhdNoShuffle;        // do not perform randomized depth first search in BIG
+    bool uhdEE;               // use equivalent literal elimination
 
     unsigned removedClauses;  // number of removed clauses
     unsigned removedLiterals; // number of removed literals
@@ -54,24 +54,24 @@ class Unhiding : public Technique
 
     unsigned uhdProbeEEChecks, uhdProbeEECandss, uhdProbeEE; // stats about probe EE
 
-    /// structure that store all necessary stamp information of the paper for each literal
+    /** structure that store all necessary stamp information of the paper for each literal */
     struct literalData {
-        uint32_t fin; // finished
-        uint32_t dsc; // discovered
-        uint32_t obs; // observed last
-        Riss::Lit parent; // parent literal (directly implied by)
-        Riss::Lit root;   // root literal of the subtree that also implied this literal
+        uint32_t fin;       // finished
+        uint32_t dsc;       // discovered
+        uint32_t obs;       // observed last
+        Riss::Lit parent;   // parent literal (directly implied by)
+        Riss::Lit root;     // root literal of the subtree that also implied this literal
         Riss::Lit lastSeen; //
-        uint32_t index;   // index of the literal that has already been processed in the adjacence list of the literal
+        uint32_t index;     // index of the literal that has already been processed in the adjacence list of the literal
         literalData () : fin(0),dsc(0),obs(0),parent(Riss::lit_Undef),root(Riss::lit_Undef),index(0) {};
     };
 
-    /// stamp information (access via literalData[ literal.toIndex() ] ), is maintained by extendStructures-method
+    // stamp information (access via literalData[ literal.toIndex() ] ), is maintained by extendStructures-method
     std::vector<literalData> stampInfo;
 
-    /// queue of literals that have to be stamped in the current function call
+    // queue of literals that have to be stamped in the current function call
     std::deque< Riss::Lit > stampQueue;
-    /// equivalent literals during stamping
+    // equivalent literals during stamping
     std::vector< Riss::Lit > stampEE;
     std::vector< Riss::Lit > stampClassEE;
     std::vector< char > unhideEEflag;
@@ -110,12 +110,10 @@ class Unhiding : public Technique
      */
     uint32_t stampLiteral( const Riss::Lit literal, uint32_t stamp, bool& detectedEE );
 
-    /// linear version of the advanced stamping
+    /** linear version of the advanced stamping */
     uint32_t linStamp( const Riss::Lit literal, uint32_t stamp, bool& detectedEE );
 
-    /** simplify the formula based on the literal stamps
-     *
-     */
+    /** simplify the formula based on the literal stamps */
     bool unhideSimplify(bool borderIteration, bool& foundEE);
 };
 

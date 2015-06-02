@@ -38,17 +38,17 @@ class ClauseRingBuffer
     /** item for the pool, remembers the sender so that own clauses are not received again
      */
     struct poolItem {
-        std::vector<Lit> data;  /// the actual clause
-        int author;     /// the author of the clause
-        poolItem() : author(-1) {}  /// the initial author is invalid, so that it can be seen whether a clause in the ringbuffer has been added by solver
+        std::vector<Lit> data;      /** the actual clause */
+        int author;                 /** the author of the clause */
+        poolItem() : author(-1) {}  /** the initial author is invalid, so that it can be seen whether a clause in the ringbuffer has been added by solver */
     };
 
-    Lock dataLock;        /// lock that protects the access to the task data structures
-    poolItem* pool;       /// ringbuffer for the clauses
-    unsigned poolSize;        /// size of the pool
-    unsigned addHereNext;     /// index of the position where the next clause will be added in the buffer
+    Lock dataLock;                  /** lock that protects the access to the task data structures */
+    poolItem* pool;                 /** ringbuffer for the clauses */
+    unsigned poolSize;              /** size of the pool */
+    unsigned addHereNext;           /** index of the position where the next clause will be added in the buffer */
 
-    ProofMaster* proofMaster; /// handle to the proof master, to handle shared clauses of the shared clauses pool
+    ProofMaster* proofMaster;       /** handle to the proof master, to handle shared clauses of the shared clauses pool */
 
     /** get the author of the clause of the given position in the pool
      * @param position index of the clause that should be received
@@ -103,7 +103,7 @@ class ClauseRingBuffer
         if( pool != 0 ) { delete [] pool; pool = 0; }
     }
 
-    /// set the handle for the proof master
+    /** set the handle for the proof master */
     void setProofMaster( ProofMaster *pm ) { proofMaster = pm; }
 
     unsigned size() const { return poolSize; }
@@ -228,12 +228,12 @@ class ClauseRingBuffer
  */
 class CommunicationData
 {
-    ClauseRingBuffer ringbuffer; /// buffer that stores the shared clauses
+    ClauseRingBuffer ringbuffer; /** buffer that stores the shared clauses */
 
-    Lock dataLock;      /// lock that protects the access to the task data structures
-    SleepLock masterLock;       /// lock that enables the master thread to sleep during waiting for child threads
+    Lock dataLock;               /** lock that protects the access to the task data structures */
+    SleepLock masterLock;        /** lock that enables the master thread to sleep during waiting for child threads */
 
-    vec <Lit> sendUnits;    /// std::vector that stores the unit clauses that should be send to all clients as clauses (not learned!)
+    vec <Lit> sendUnits;         /** std::vector that stores the unit clauses that should be send to all clients as clauses (not learned!) */
 
   public:
 
@@ -245,7 +245,7 @@ class CommunicationData
 
     SleepLock& getMasterLock() { return masterLock; };
 
-    /// set the handle for the proof master in the ringbuffer
+    /** set the handle for the proof master in the ringbuffer */
     void setProofMaster( ProofMaster *pm ) { ringbuffer.setProofMaster(pm); }
 
 
@@ -403,23 +403,23 @@ class Communicator
     bool getDoReceive() const  { return doReceive; }
     void setDoReceive(bool dr) { doReceive = dr; }
 
-    /// tell the number of shared variables
+    /** tell the number of shared variables */
     void setFormulaVariables( const int formulaVariables ) { originalVars = formulaVariables; }
 
-    /// set whether this thread is the winner
+    /** set whether this thread is the winner */
     bool setWinner( const bool newWinner )
     {
         return winner = newWinner;
     }
-    /// check whether this thread solved the problem
+    /** check whether this thread solved the problem */
     bool isWinner() const
     {
         return winner;
     }
 
-    /// tell return value of solver
+    /** tell return value of solver */
     Riss::lbool getReturnValue() const { return returnValue; }
-    /// set return value of this thread (should be done by the solver, or by the solving thread!)
+    /** set return value of this thread (should be done by the solver, or by the solving thread!) */
     Riss::lbool setReturnValue( const Riss::lbool newReturnValue )
     {
         return returnValue = newReturnValue;

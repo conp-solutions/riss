@@ -100,7 +100,7 @@ lbool VSIDSSplitting::vsidsScatteringSplit(vec<vec<vec<Lit>* >* > **splits, vec<
     return l_False;
 }
 
-/// implementation of the luby series
+/** implementation of the luby series */
 static double luby(double y, int x){
 
     // Find the finite subsequence that contains index 'x', and the
@@ -471,7 +471,7 @@ lbool VSIDSSplitting::scatterSeach(int nof_conflicts, void* data)
     }
 }
 
-/// Get CPU time used by this thread
+/** Get CPU time used by this thread */
 double VSIDSSplitting::cpuTime_t() const  {
     struct timespec ts;
     if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts) != 0) {

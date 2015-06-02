@@ -24,12 +24,12 @@ class Rewriter : public Technique
     CoprocessorData& data;
 
     // statistics
-    double processTime;       // seconds of process time
+    double processTime;             // seconds of process time
     double rewAmoTime, rewImplTime; // time per procedure
-    double amoTime;   // seconds of process time
-    double rewTime;   // seconds of process time
-    unsigned rewLimit; // upper limit of steps
-    unsigned steps;  //current number of steps
+    double amoTime;                 // seconds of process time
+    double rewTime;                 // seconds of process time
+    unsigned rewLimit;              // upper limit of steps
+    unsigned steps;                 // current number of steps
 
     // TODO: initialize these ones!
     unsigned detectedDuplicates;     // how many clauses after rewriting detected as duplicate
@@ -47,10 +47,10 @@ class Rewriter : public Technique
     unsigned removedViaSubsubption;
     unsigned maxChain, minChain, foundChains;
 
-    Subsumption& subsumption;     /// object that takes care of subsumption and strengthening
+    Subsumption& subsumption;    // object that takes care of subsumption and strengthening
 
     // work data
-    /// compare two literals
+    /** compare two literals */
     struct LitOrderHeapLt {
         CoprocessorData& data;
         bool operator () (int& x, int& y) const

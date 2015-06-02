@@ -90,7 +90,7 @@ class TreeNode
     // Davide> Level in the tree
     unsigned int pt_level;
 
-    /// lock to prevent threads to read on data that is update at the moment
+    /** lock to prevent threads to read on data that is update at the moment */
     static ComplexLock unitLock;
 
     void setup(const std::vector< std::vector<Riss::Lit>* >& localConstraints, TreeNode* parent = 0);
@@ -127,9 +127,10 @@ class TreeNode
 
     void fillConstraintPath( std::vector< std::vector<Riss::Lit>* >* toFill );
 
-    void fillConstraintPathWithLevels( std::vector< std::pair< std::vector<Riss::Lit>*, unsigned int > >* toFill ); // Davide> A slightly different version able to store levels for every clause
+    /** Davide> A slightly different version able to store levels for every clause */
+    void fillConstraintPathWithLevels( std::vector< std::pair< std::vector<Riss::Lit>*, unsigned int > >* toFill );
 
-    /// add more constraints to the node, for example found unit clauses
+    /** add more constraints to the node, for example found unit clauses */
     void addNodeConstraint( std::vector<Riss::Lit>* clause );
 
     // Davide> Add unary constraints & specify their pt_level
@@ -145,8 +146,7 @@ class TreeNode
 
     unsigned int id() const;
 
-    /** check whether this node is unsatisfiable (take knowledge about parent into account)
-     */
+    /** check whether this node is unsatisfiable (take knowledge about parent into account) */
     bool isUnsat();
 
     // Davide> Get the position of the node in the tree

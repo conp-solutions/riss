@@ -49,7 +49,7 @@ class FourierMotzkin : public Technique
 
     Riss::vec<Riss::Lit> unitQueue; // store literals that should be propagated on the card constraints
 
-    /// compare two literals
+    /** compare two literals */
     struct LitOrderHeapLt {
         CoprocessorData& data;
         bool operator () (int& x, int& y) const
@@ -59,7 +59,7 @@ class FourierMotzkin : public Technique
         LitOrderHeapLt(CoprocessorData& _data) : data(_data) {}
     };
 
-    /// struct to handle ternary clauses efficiently
+    /** struct to handle ternary clauses efficiently */
     struct Ternary {
         Riss::Lit lit [3];
         Ternary ( const Riss::Lit a, const Riss::Lit b, const Riss::Lit c )
@@ -96,7 +96,7 @@ class FourierMotzkin : public Technique
         bool invalid() const { return k==0 && ll.size() == 0 && lr.size() == 0; } // nothing stored in the constraint any more
         void invalidate() { k=0; std::vector<Riss::Lit>().swap(ll); std::vector<Riss::Lit>().swap(lr);}
         CardC() : k(0) {} // default constructor
-        void swap( CardC& other )   /// swap with other constraint
+        void swap( CardC& other )   /** swap with other constraint */
         {
             const int t = other.k; other.k = k; k = t;
             ll.swap( other.ll );

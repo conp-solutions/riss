@@ -56,8 +56,7 @@ class Technique
      */
     void destroy();
 
-    /** This method should be used to print the statistics of the technique that inherits from this class
-     */
+    /** This method should be used to print the statistics of the technique that inherits from this class */
     void printStatistics( std::ostream& stream );
 
     /** per call to the inprocess method of the preprocessor, allow a technique to have this number more steps */
@@ -72,10 +71,10 @@ class Technique
      */
     void reset();
 
-    /// indicate that this technique has been initialized (reset if destroy is called)
+    /** indicate that this technique has been initialized (reset if destroy is called) */
     void initializedTechnique();
 
-    /// return true, if technique can be used without further initialization
+    /** return true, if technique can be used without further initialization */
     bool isInitializedTechnique();
 
     /** give delete timer */

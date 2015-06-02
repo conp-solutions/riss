@@ -23,7 +23,7 @@ class LiteralAddition : public Technique
     CoprocessorData& data;
     Coprocessor::Propagation& propagation;
 
-    /// compare two literals
+    /** compare two literals */
     struct LitOrderLAHeapLt { // sort according to number of occurrences of complement!
         CoprocessorData& data;  // data to use for sorting
         bool useComplements; // sort according to occurrences of complement, or actual literal

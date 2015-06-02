@@ -22,7 +22,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 namespace Coprocessor
 {
 
-/// temporary Boolean flag to quickly enable debug output for the whole file
+/** temporary Boolean flag to quickly enable debug output for the whole file */
 const bool global_debug_out = false;
 
 //forward declaration
@@ -170,7 +170,7 @@ class CoprocessorData
     void mergeVar( Riss::Lit from, Riss::Lit to, bool final = false );
     void mergeVar( std::vector<Riss::Lit>& from, Riss::Lit to, bool final = false );
 
-    /// notify about variable renaming
+    /** notify about variable renaming */
     void didCompress()
     {
         if( lastCompressUndoLits != -1 &&  // if there has been a  compression,
@@ -181,7 +181,7 @@ class CoprocessorData
         lastCompressUndoLits = undo.size();
     }
 
-    /// memorize that the undo info has been adopted until this size already
+    /** memorize that the undo info has been adopted until this size already */
     void didDecompressUndo()
     {
         decompressedUndoLits = undo.size();
@@ -268,27 +268,34 @@ class CoprocessorData
     void addToExtension( std::vector< Riss::Lit >& lits, const Riss::Lit l = Riss::lit_Error );
     void addToExtension( const Riss::Lit dontTouch, const Riss::Lit l = Riss::lit_Error );
 
-    /// add already created std::vector to extension std::vector
+    /** add already created std::vector to extension std::vector */
     void addExtensionToExtension(Riss::vec< Riss::Lit >& lits);
     void addExtensionToExtension(std::vector< Riss::Lit >& lits);
 
     void extendModel(Riss::vec<Riss::lbool>& model);
-    /// careful, should not be altered other than be the Dense object
+    /** careful, should not be altered other than be the Dense object */
     std::vector<Riss::Lit>& getUndo() { return undo; }
 
-    /// for DRUP / DRAT proofs
+    // for DRUP / DRAT proofs
     #ifdef DRATPROOF
+
+    /** write the given clause/std::vector/Riss::vec to the output, if the output is enabled */
     template <class T>
-    void addToProof(   T& clause, bool deleteFromProof=false, const Riss::Lit remLit = Riss::lit_Undef); // write the given clause/std::vector/Riss::vec to the output, if the output is enabled
-    void addUnitToProof(const  Riss::Lit& l, bool deleteFromProof=false);    // write a single unit clause to the proof
+    void addToProof(T& clause, bool deleteFromProof=false, const Riss::Lit remLit = Riss::lit_Undef);
+
+    /** write a single unit clause to the proof */
+    void addUnitToProof(const  Riss::Lit& l, bool deleteFromProof=false);
     void addCommentToProof(const char* text, bool deleteFromProof=false);
-    bool outputsProof() const { return solver->outputsProof(); } // return whether the solver outputs the drup proof!
+
+    /** return whether the solver outputs the drup proof! */
+    bool outputsProof() const { return solver->outputsProof(); }
+
     #else // no DRAT proofs
     template <class T>
-    void addToProof(   T& clause, bool deleteFromProof=false, const Riss::Lit remLit = Riss::lit_Undef) const {}; // write the given clause/std::vector/Riss::vec to the output, if the output is enabled
-    void addUnitToProof(const  Riss::Lit& l, bool deleteFromProof=false) const {};    // write a single unit clause to the proof
+    void addToProof(T& clause, bool deleteFromProof=false, const Riss::Lit remLit = Riss::lit_Undef) const {};
+    void addUnitToProof(const  Riss::Lit& l, bool deleteFromProof=false) const {};
     void addCommentToProof(const char* text, bool deleteFromProof=false) const {};
-    bool outputsProof() const { return false; } // return whether the solver outputs the drup proof!
+    bool outputsProof() const { return false; }
     #endif
 
     // handling equivalent literals

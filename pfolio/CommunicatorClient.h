@@ -15,9 +15,9 @@ namespace Riss
 
 class CommunicatorClient
 {
-    Riss::Solver* solver; /// pointer to the instance of the solver with which we work
+    Riss::Solver* solver;        /** pointer to the instance of the solver with which we work   */
 
-    Communicator* communication; /// communication with the outside, and control of this solver
+    Communicator* communication; /** communication with the outside, and control of this solver */
 
   public:
 
@@ -62,31 +62,31 @@ class CommunicatorClient
     /*
      * temporary structures
      */
-    Riss::vec<Riss::Lit> receiveClause;         /// temporary placeholder for receiving clause
-    std::vector< Riss::CRef > receiveClauses;   /// temporary placeholder indexes of the clauses that have been received by communication
-    int currentTries;                          /// current number of waits
-    int receiveEvery;                          /// do receive every n tries
+    Riss::vec<Riss::Lit> receiveClause;        /** temporary placeholder for receiving clause                                            */
+    std::vector< Riss::CRef > receiveClauses;  /** temporary placeholder indexes of the clauses that have been received by communication */
+    int currentTries;                          /** current number of waits                                                               */
+    int receiveEvery;                          /** do receive every n tries                                                              */
 
-    float currentSendSizeLimit;                /// dynamic limit to control send size
-    float currentSendLbdLimit;                 /// dynamic limit to control send lbd
-    int succesfullySend;                       /// number of clauses that have been sucessfully transmitted
-    float sendSize;                            /// Minimum Lbd of clauses to send  (also start value)
-    float sendLbd;                             /// Minimum size of clauses to send (also start value)
-    float sendMaxSize;                         /// Maximum size of clauses to send
-    float sendMaxLbd;                          /// Maximum Lbd of clauses to send
-    float sizeChange;                          /// How fast should size send limit be adopted?
-    float lbdChange;                           /// How fast should lbd send limit be adopted?
-    float sendRatio;                           /// How big should the ratio of send clauses be?
+    float currentSendSizeLimit;                /** dynamic limit to control send size                                                    */
+    float currentSendLbdLimit;                 /** dynamic limit to control send lbd                                                     */
+    int succesfullySend;                       /** number of clauses that have been sucessfully transmitted                              */
+    float sendSize;                            /** Minimum Lbd of clauses to send  (also start value)                                    */
+    float sendLbd;                             /** Minimum size of clauses to send (also start value)                                    */
+    float sendMaxSize;                         /** Maximum size of clauses to send                                                       */
+    float sendMaxLbd;                          /** Maximum Lbd of clauses to send                                                        */
+    float sizeChange;                          /** How fast should size send limit be adopted?                                           */
+    float lbdChange;                           /** How fast should lbd send limit be adopted?                                            */
+    float sendRatio;                           /** How big should the ratio of send clauses be?                                          */
 
 // [END] modifications for parallel assumption based solver
 };
 
 CommunicatorClient::CommunicatorClient(Riss::Solver* _solver, Communicator* _communicator)
-    :   solver(_solver)
+    : solver(_solver)
     , communication(_communicator)
     , currentTries (0)
     , receiveEvery (128)
-    , currentSendSizeLimit(0)                /// dynamic limit to control send size
+    , currentSendSizeLimit(0) // dynamic limit to control send size
     , currentSendLbdLimit(0)
     , succesfullySend(0)
     , sendSize(10)

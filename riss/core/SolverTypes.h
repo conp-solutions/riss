@@ -47,10 +47,10 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <vector>
 
-/// TODO remove after debug
+// TODO remove after debug
 #include <iostream>
-using namespace std;
 
+using namespace std;
 
 namespace Riss
 {
@@ -65,7 +65,7 @@ namespace Riss
 typedef int32_t Var; // be explicit here about the number of bits!
 #define var_Undef (-1)
 
-/// distinguish between DRUP and DRAT proofs
+/** distinguish between DRUP and DRAT proofs */
 enum ProofStyle {
     unknownProof = 0,
     drupProof = 1,
@@ -381,9 +381,9 @@ class Clause
     float&       activity    ()              { assert(header.has_extra); return data[header.size].act; }
     uint32_t     abstraction () const        { assert(header.has_extra); return data[header.size].abs; }
 
-    /// if extra data stores a literal, return this literal
+    /** if extra data stores a literal, return this literal */
     Lit          getExtraLiteral() const       { assert(header.has_extra); return data[header.size].lit; }
-    /// set the literal that should be stored in the extradata
+    /** set the literal that should be stored in the extradata */
     void         setExtraLiteral(const Lit& l) { assert(header.has_extra); data[header.size].lit = l; }
 
     void         setLBD(int i)  {header.lbd = i;}
@@ -405,7 +405,7 @@ class Clause
     Lit          subsumes         (const Clause& other) const;
     bool         ordered_subsumes (const Clause& other) const;
     bool         ordered_equals   (const Clause& other) const;
-    void         remove_lit       (const Lit p); /// keeps the order of the remaining literals
+    void         remove_lit       (const Lit p); /** keeps the order of the remaining literals */
     void         strengthen       (Lit p);
 
     void    set_delete (bool b)         { if (b) { header.mark = 1; } else { header.mark = 0; }}
@@ -538,7 +538,7 @@ class Clause
     unsigned getShCleanDelay() {       return header.shCleanDelay;    }
     #endif
 
-    /// set the extra info of the clause to the given value
+    /** set the extra info of the clause to the given value */
     void setExtraInformation( const uint64_t& info)
     #ifdef CLS_EXTRA_INFO
     { header.extra_info = info }
@@ -546,7 +546,7 @@ class Clause
     {}
     #endif
 
-    /// adopt this to external needs
+    /** adopt this to external needs */
     uint64_t extraInformation() const
     #ifdef CLS_EXTRA_INFO
     { return header.extra_info; }
@@ -555,7 +555,7 @@ class Clause
     #endif
 
 
-    /// update the current extra information with the extra information of another clause used to modify/create this clause
+    /** update the current extra information with the extra information of another clause used to modify/create this clause */
     void updateExtraInformation(const uint64_t& othersExtra) const
     #ifdef CLS_EXTRA_INFO
     {
@@ -566,7 +566,7 @@ class Clause
     {}
     #endif
 
-    /// this method will be used if extra information for unit clauses is calculated!
+    /** this method will be used if extra information for unit clauses is calculated! */
     static uint64_t updateExtraInformation(const uint64_t& a, const uint64_t& b)
     #ifdef CLS_EXTRA_INFO
     {
@@ -1047,7 +1047,7 @@ struct Watcher {
     bool matchWatchType( const int type ) const { return watchType == type; }
 
     // constructor and comparators
-    /// by default, the watch holds a long clause
+    /** by default, the watch holds a long clause */
     Watcher(CRef cr, Lit p, int type) : clauseReference(cr), blockingLit( toInt(p) ), watchType(type) {}
     bool operator==(const Watcher& w) const { return clauseReference == w.clauseReference; }
     bool operator!=(const Watcher& w) const { return clauseReference != w.clauseReference; }
@@ -1164,7 +1164,7 @@ class MarkArray
 // implementation of frequently used small methods that should be inlined
 //
 
-/// print literals into a stream
+/** print literals into a stream */
 inline std::ostream& operator<<(std::ostream& other, const Lit& l )
 {
     if( l == lit_Undef ) { other << "lUndef"; }
@@ -1173,7 +1173,7 @@ inline std::ostream& operator<<(std::ostream& other, const Lit& l )
     return other;
 }
 
-/// print a clause into a stream
+/** print a clause into a stream */
 inline std::ostream& operator<<(std::ostream& other, const Clause& c )
 {
     other << "[";
@@ -1184,7 +1184,7 @@ inline std::ostream& operator<<(std::ostream& other, const Clause& c )
     return other;
 }
 
-/// print elements of a std::vector
+/** print elements of a std::vector */
 template <typename T>
 inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data )
 {
@@ -1195,7 +1195,7 @@ inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data 
 }
 
 
-/// print elements of a std::vector
+/** print elements of a std::vector */
 template <typename T>
 inline std::ostream& operator<<(std::ostream& other, const vec<T>& data )
 {
@@ -1205,7 +1205,6 @@ inline std::ostream& operator<<(std::ostream& other, const vec<T>& data )
     return other;
 }
 
-}
-
+} // end namespace
 
 #endif

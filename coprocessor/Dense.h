@@ -29,7 +29,7 @@ class Dense  : public Technique
         std::vector<Riss::Lit> trail;   // already assigned literals
 
         Compression() : mapping(0), variables(0), postvariables(0) {};
-        /// free the used resources again
+        /** free the used resources again */
         void destroy()
         {
             if(mapping!=0) { delete[] mapping; }
@@ -39,7 +39,7 @@ class Dense  : public Technique
 
     std::vector< Compression > map_stack;
 
-    /// store to which new variable an old variable has been mapped
+    /** store to which new variable an old variable has been mapped */
     std::vector< int > forward_mapping;
 
   public:

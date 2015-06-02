@@ -17,43 +17,42 @@
 using namespace Riss;
 using namespace std;
 
-/*
 
-/// print literals into a stream
-static inline ostream& operator<<(ostream& other, const Lit& l) {
-    if (l == lit_Undef)
-        other << "lUndef";
-    else if (l == lit_Error)
-        other << "lError";
-    else
-        other << (sign(l) ? "-" : "") << var(l) + 1;
-    return other;
-}
+// /** print literals into a stream */
+// static inline ostream& operator<<(ostream& other, const Lit& l) {
+//     if (l == lit_Undef)
+//         other << "lUndef";
+//     else if (l == lit_Error)
+//         other << "lError";
+//     else
+//         other << (sign(l) ? "-" : "") << var(l) + 1;
+//     return other;
+// }
 
-/// print a clause into a stream
-static inline ostream& operator<<(ostream& other, const Clause& c) {
-    other << "[";
-    for (int i = 0; i < c.size(); ++i)
-        other << " " << c[i];
-    other << "]";
-    return other;
-}*/
-/*
-/// print elements of a vector
-template<typename T>
-static inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data) {
-    for (int i = 0; i < data.size(); ++i)
-        other << " " << data[i];
-    return other;
-}
+// /** print a clause into a stream */
+// static inline ostream& operator<<(ostream& other, const Clause& c) {
+//     other << "[";
+//     for (int i = 0; i < c.size(); ++i)
+//         other << " " << c[i];
+//     other << "]";
+//     return other;
+// }*/
+// /*
+// /** print elements of a vector */
+// template<typename T>
+// static inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data) {
+//     for (int i = 0; i < data.size(); ++i)
+//         other << " " << data[i];
+//     return other;
+// }
 
-/// print elements of a vector
-template<typename T>
-static inline std::ostream& operator<<(std::ostream& other, const vec<T>& data) {
-    for (int i = 0; i < data.size(); ++i)
-        other << " " << data[i];
-    return other;
-}*/
+// /** print elements of a vector */
+// template<typename T>
+// static inline std::ostream& operator<<(std::ostream& other, const vec<T>& data) {
+//     for (int i = 0; i < data.size(); ++i)
+//         other << " " << data[i];
+//     return other;
+// }
 
 CNFClassifier::CNFClassifier(ClauseAllocator& _ca, vec<CRef>& _clauses, int _nVars) :
         ca(_ca), clauses(_clauses), nVars(_nVars) {
@@ -1116,14 +1115,14 @@ void CNFClassifier::symmetrycode(vector<double>& ret) {
 }
 
 std::vector<double> CNFClassifier::extractFeatures(vector<double>& ret) {
-    uint64_t operations=0; /// number of operations to compute features;
+    uint64_t operations=0; // number of operations to compute features;
     
 
     // TODO should return the vector of features. If possible, the features should range between 0 and 1 - all the graph features could be scaled down by number of variables, number of clauses or some other measure
 
     // some useful code snippets:
 
-    /// measure time in seconds
+    // measure time in seconds
     double time1 = cpuTime(); // start timer
     // do some work here to measure the time for
     // TODO improve weights computation....

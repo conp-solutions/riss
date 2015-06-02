@@ -19,9 +19,9 @@ namespace Coprocessor
 class Resolving  : public Technique
 {
     CoprocessorData& data;
-    Propagation& propagation;            /// object that takes care of unit propagation
+    Propagation& propagation; // object that takes care of unit propagation
 
-    std::vector<int> seen; // remembers how many clauses per variable have been processed already
+    std::vector<int> seen;    // remembers how many clauses per variable have been processed already
 
   public:
     Resolving(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation);
@@ -68,7 +68,7 @@ class Resolving  : public Technique
     unsigned removedViaSubsubption;
     unsigned detectedDuplicates;
 
-    /// compare two literals
+    /** compare two literals */
     struct VarOrderHeapLt {
         CoprocessorData& data;
         bool operator () (const Riss::Var& x, const Riss::Var& y) const

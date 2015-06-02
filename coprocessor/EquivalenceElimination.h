@@ -32,29 +32,29 @@ class EquivalenceElimination : public Technique
     double gateTime;
     double gateExtractTime;
     double eeTime;
-    unsigned equivalentLits;  // number of equivalent literals
-    unsigned removedCls;      // number of removed clauses due to rewriting
-    unsigned removedViaSubsubption;       // number of immediate removed clauses due to subsumption
+    unsigned equivalentLits;                     // number of equivalent literals
+    unsigned removedCls;                         // number of removed clauses due to rewriting
+    unsigned removedViaSubsubption;              // number of immediate removed clauses due to subsumption
 
-    uint64_t steps;                   // how many steps is the worker allowed to do
+    uint64_t steps;                              // how many steps is the worker allowed to do
 
-    char* eqLitInStack;           /// mark whether an element is in the stack
-    char* eqInSCC;            /// indicate whether a literal has already been found in another SCC (than it cannot be in the current one)
-    uint32_t eqIndex;         /// help variable for finding SCCs
-    std::vector< Riss::Lit > eqStack;     /// stack for the tarjan algorithm
-    std::vector< int32_t > eqNodeLowLinks;    /// stores the lowest link for a node
-    std::vector< int32_t > eqNodeIndex;   /// index per node
-    std::vector< Riss::Lit > eqCurrentComponent;  /// literals in the currently searched SCC
+    char* eqLitInStack;                          // mark whether an element is in the stack
+    char* eqInSCC;                               // indicate whether a literal has already been found in another SCC (than it cannot be in the current one)
+    uint32_t eqIndex;                            // help variable for finding SCCs
+    std::vector< Riss::Lit > eqStack;            // stack for the tarjan algorithm
+    std::vector< int32_t > eqNodeLowLinks;       // stores the lowest link for a node
+    std::vector< int32_t > eqNodeIndex;          // index per node
+    std::vector< Riss::Lit > eqCurrentComponent; // literals in the currently searched SCC
 
-    std::vector<Riss::Lit> replacedBy;              /// stores which variable has been replaced by which literal
+    std::vector<Riss::Lit> replacedBy;           // stores which variable has been replaced by which literal
 
-    std::vector<char> isToAnalyze;            /// stores that a literal has to be analyzed further
-    std::vector<Riss::Lit> eqDoAnalyze;             /// stores the literals to be analyzed
+    std::vector<char> isToAnalyze;               // stores that a literal has to be analyzed further
+    std::vector<Riss::Lit> eqDoAnalyze;          // stores the literals to be analyzed
 
-    Propagation& propagation;            /// object that takes care of unit propagation
-    Subsumption& subsumption;     /// object that takes care of subsumption and strengthening
+    Propagation& propagation;                    // object that takes care of unit propagation
+    Subsumption& subsumption;                    // object that takes care of subsumption and strengthening
 
-    std::vector<Riss::Lit> proofClause;       /// set of literals for outputting proofs
+    std::vector<Riss::Lit> proofClause;          // set of literals for outputting proofs
 
   public:
 

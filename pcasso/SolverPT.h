@@ -140,19 +140,19 @@ class SolverPT : public SplitterSolver
     // Timeout in seconds, initialize to 0 (no timeout)
     double tOut;
     double cpuTime_t() const ; // CPU time used by this thread
-    /// return true, if the run time of the solver exceeds the specified limit
+    /** return true, if the run time of the solver exceeds the specified limit */
     bool timedOut() const;
 
-    /// specify a number of seconds that is allowed to be executed
+    /** specify a number of seconds that is allowed to be executed */
     void setTimeOut(double timeout);
 
-    /// local version of the statistics object
+    /** local version of the statistics object */
     Statistics localStat; // Norbert> Local Statistics
 
-    /// return the number of top level units from that are on the trail
+    /** return the number of top level units from that are on the trail */
     unsigned int getTopLevelUnits() const;
 
-    /// return a specifit literal from the trail
+    /** return a specifit literal from the trail */
     Riss::Lit trailGet( const unsigned int index );
   private:
     Riss::vec<unsigned> varPT; //storing the PT level of each variable

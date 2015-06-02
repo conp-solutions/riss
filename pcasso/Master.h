@@ -61,7 +61,7 @@ class Master
     // void removeUnsatNodesFromQueues();
     // void killUnsatChildren(int tDataIndex);
 
-    /// configuration with which each solver is initialized
+    /** configuration with which each solver is initialized */
     static Riss::CoreConfig defaultSolverConfig;
 
     struct Parameter {

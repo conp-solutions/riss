@@ -76,8 +76,8 @@ class BackwardChecker
         uint8_t x;
       public:
         ClauseLabel() : x(0) {};
-        void setMarked()        { x = x | 1; } /// set mark, not thread safe
-        void setVerified()      { x = x | 2; } /// set mark, not thread safe
+        void setMarked()        { x = x | 1; } // set mark, not thread safe
+        void setVerified()      { x = x | 2; } // set mark, not thread safe
         bool isMarked()   const { return ( x & 1 ) != 0; }
         bool isVerified() const { return ( x & 2 ) != 0; }
     };

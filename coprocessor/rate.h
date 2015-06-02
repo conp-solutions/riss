@@ -24,7 +24,7 @@ class RATElimination : public Technique
     Riss::Solver& solver;
     Coprocessor::Propagation& propagation;
 
-    /// compare two literals
+    /** compare two literals */
     struct LitOrderRATEHeapLt { // sort according to number of occurrences of complement!
         CoprocessorData& data;  // data to use for sorting
         bool useComplements; // sort according to occurrences of complement, or actual literal

@@ -26,8 +26,8 @@ class Probing : public Technique
 
     CoprocessorData& data;
     Riss::Solver& solver;
-    Propagation& propagation;            /// object that takes care of unit propagation
-    EquivalenceElimination& ee;       /// object that takes care of equivalent literal elimination
+    Propagation& propagation;         // object that takes care of unit propagation
+    EquivalenceElimination& ee;       // object that takes care of equivalent literal elimination
 
     // necessary local variables
     std::vector<Riss::Var> variableHeap;

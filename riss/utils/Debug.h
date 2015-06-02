@@ -15,7 +15,7 @@
 // using namespace std;
 // using namespace Riss;
 
-/// support debug output only if it is compiled in
+// support debug output only if it is compiled in
 #ifndef NDEBUG
     #define DOUT(x) ( {x} )
 #else
