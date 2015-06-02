@@ -17,7 +17,7 @@
 
 // support debug output only if it is compiled in
 #ifndef NDEBUG
-    #define DOUT(x) ( {x} )
+    #define DOUT(x) {x}
 #else
     #define DOUT(x)
 #endif
