@@ -173,7 +173,7 @@ class SleepLock
      */
     void sleep()
     {
-        pthread_cond_wait (&master_cv,&mutex); // otherwise sleep now!
+        pthread_cond_wait (&master_cv, &mutex); // otherwise sleep now!
     }
 
     /** wakeup all sleeping threads!

@@ -295,12 +295,12 @@ double lglprocesstime (void);
 void lglseterm (LGL *, int (*term)(void*), void*);
 
 void lglsetproduceunit (LGL *, void (*produce)(void*, int), void*);
-void lglsetconsumeunits (LGL *, void (*consume)(void*,int**,int**), void*);
+void lglsetconsumeunits (LGL *, void (*consume)(void*, int**, int**), void*);
 
 void lglsetlockeq (LGL *, int * (*lock)(void*), void *);
-void lglsetunlockeq (LGL *, void (*unlock)(void*,int cons,int prod), void *);
+void lglsetunlockeq (LGL *, void (*unlock)(void*, int cons, int prod), void *);
 
-void lglsetconsumedunits (LGL *, void (*consumed)(void*,int), void*);
+void lglsetconsumedunits (LGL *, void (*consumed)(void*, int), void*);
 
 void lglsetmsglock (LGL *, void (*lock)(void*), void (*unlock)(void*), void*);
 void lglsetime (LGL *, double (*time)(void));

@@ -30,14 +30,14 @@ class RATElimination : public Technique
         bool useComplements; // sort according to occurrences of complement, or actual literal
         bool operator () (int& x, int& y) const
         {
-            if( useComplements ) { return data[ ~Riss::toLit(x)] < data[ ~Riss::toLit(y) ]; }
+            if ( useComplements ) { return data[ ~Riss::toLit(x)] < data[ ~Riss::toLit(y) ]; }
             else { return data[ Riss::toLit(x)] < data[ Riss::toLit(y) ]; }
         }
         LitOrderRATEHeapLt(CoprocessorData& _data, bool _useComplements) : data(_data), useComplements(_useComplements) {}
     };
 
     // attributes
-    int64_t rateSteps,ratmSteps, approxRatm;
+    int64_t rateSteps, ratmSteps, approxRatm;
     float approxFacAB, approxFacA;
     int rateCandidates; // number of clauses that have been checked for cle
     int remRAT, remAT, remHRAT, remBCE, remBRAT, blockCheckOnSameClause; // how many clauses

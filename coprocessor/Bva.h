@@ -28,7 +28,7 @@ class BoundedVariableAddition : public Technique
 
     // statistics
     double processTime;       // seconds of process time
-    double andTime,iteTime,xorTime;   // seconds per technique
+    double andTime, iteTime, xorTime; // seconds per technique
 
     uint32_t andDuplicates;       // how many duplicate clauses have been found
     uint32_t andComplementCount;  // how many complementary literals have been found (strengthening)
@@ -122,10 +122,10 @@ class BoundedVariableAddition : public Technique
 
     /** std::pair of literals and clauses, including sort operator */
     struct xorHalfPair {
-        Riss::Lit l1,l2;
-        Riss::CRef c1,c2;
-        xorHalfPair( Riss::Lit _l1, Riss::Lit _l2, Riss::CRef _c1, Riss::CRef _c2) : l1(_l1),l2(_l2),c1(_c1),c2(_c2) {}
-        xorHalfPair() : l1(Riss::lit_Undef),l2(Riss::lit_Undef),c1(Riss::CRef_Undef),c2(Riss::CRef_Undef) {}
+        Riss::Lit l1, l2;
+        Riss::CRef c1, c2;
+        xorHalfPair( Riss::Lit _l1, Riss::Lit _l2, Riss::CRef _c1, Riss::CRef _c2) : l1(_l1), l2(_l2), c1(_c1), c2(_c2) {}
+        xorHalfPair() : l1(Riss::lit_Undef), l2(Riss::lit_Undef), c1(Riss::CRef_Undef), c2(Riss::CRef_Undef) {}
 
         /** generate an order, so that std::pairs that belong to the same XOR gate are placed behind each other */
         bool operator>(const xorHalfPair& other ) const
@@ -140,12 +140,12 @@ class BoundedVariableAddition : public Technique
     };
 
     struct iteHalfPair {
-        Riss::Lit l1,l2,l3;
-        Riss::CRef c1,c2;
+        Riss::Lit l1, l2, l3;
+        Riss::CRef c1, c2;
         iteHalfPair( Riss::Lit _l1, Riss::Lit _l2, Riss::Lit _l3, Riss::CRef _c1, Riss::CRef _c2)
-            : l1(_l1),l2(_l2),l3(_l3),c1(_c1),c2(_c2) {}
+            : l1(_l1), l2(_l2), l3(_l3), c1(_c1), c2(_c2) {}
 
-        iteHalfPair() : l1(Riss::lit_Undef),l2(Riss::lit_Undef),l3(Riss::lit_Undef),c1(Riss::CRef_Undef),c2(Riss::CRef_Undef) {}
+        iteHalfPair() : l1(Riss::lit_Undef), l2(Riss::lit_Undef), l3(Riss::lit_Undef), c1(Riss::CRef_Undef), c2(Riss::CRef_Undef) {}
 
         /** generate an order, so that std::pairs that belong to the same ITE gate are placed behind each other */
         bool operator>(const iteHalfPair& other) const

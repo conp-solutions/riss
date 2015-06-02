@@ -19,66 +19,68 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <iostream>
 
-void testIPASIR () {
+void testIPASIR ()
+{
 
-  std::cerr << "c solver: " << ipasir_signature ()  << std::endl;
+    std::cerr << "c solver: " << ipasir_signature ()  << std::endl;
 
-  void * riss = ipasir_init ();
+    void * riss = ipasir_init ();
 
-  ipasir_add (riss, 1);
-  ipasir_add (riss, 2);
-  ipasir_add (riss, 0);
+    ipasir_add (riss, 1);
+    ipasir_add (riss, 2);
+    ipasir_add (riss, 0);
 
-  ipasir_solve (riss);
+    ipasir_solve (riss);
 
-  ipasir_val (riss, 1);
+    ipasir_val (riss, 1);
 
-  ipasir_assume (riss, 1);
-  ipasir_failed (riss, 1);
+    ipasir_assume (riss, 1);
+    ipasir_failed (riss, 1);
 
 //   ipasir_set_terminate (riss, void * state, int (*terminate)(void * state));
 
-  ipasir_release (riss);
+    ipasir_release (riss);
 }
 
-void testNuSVM() {
-   int clause [3];
-  clause[0] = 1; clause[1] = 2; clause[2] = 3;
-  
-  // NuSVM Interface
-  MiniSat_ptr riss = MiniSat_Create();
-  MiniSat_Set_Random_Seed(riss, 0);
-  MiniSat_Set_Preferred_Variable(riss, 1);
-  
-  MiniSat_Nof_Variables(riss);
-  MiniSat_Nof_Clauses(riss);
-  MiniSat_New_Variable(riss);
-  MiniSat_New_Variable(riss);
-  MiniSat_New_Variable(riss);
-  MiniSat_Add_Clause(riss, clause, 3);
-  MiniSat_Solve(riss);
-  MiniSat_Solve_Assume(riss, 3, clause);
-  MiniSat_simplifyDB(riss);
-  MiniSat_Get_Value(riss, 1);
-  
-  int conflict [ MiniSat_Get_Nof_Conflict_Lits(riss) ];
-  MiniSat_Get_Conflict_Lits(riss, conflict);
+void testNuSVM()
+{
+    int clause [3];
+    clause[0] = 1; clause[1] = 2; clause[2] = 3;
 
-  MiniSat_Set_Polarity_Mode(riss, polarity_false);
-  MiniSat_Get_Polarity_Mode(riss);
-    
-  MiniSat_Clear_Preferred_Variables(riss);
+    // NuSVM Interface
+    MiniSat_ptr riss = MiniSat_Create();
+    MiniSat_Set_Random_Seed(riss, 0);
+    MiniSat_Set_Preferred_Variable(riss, 1);
 
-  MiniSat_Delete(riss); 
+    MiniSat_Nof_Variables(riss);
+    MiniSat_Nof_Clauses(riss);
+    MiniSat_New_Variable(riss);
+    MiniSat_New_Variable(riss);
+    MiniSat_New_Variable(riss);
+    MiniSat_Add_Clause(riss, clause, 3);
+    MiniSat_Solve(riss);
+    MiniSat_Solve_Assume(riss, 3, clause);
+    MiniSat_simplifyDB(riss);
+    MiniSat_Get_Value(riss, 1);
+
+    int conflict [ MiniSat_Get_Nof_Conflict_Lits(riss) ];
+    MiniSat_Get_Conflict_Lits(riss, conflict);
+
+    MiniSat_Set_Polarity_Mode(riss, polarity_false);
+    MiniSat_Get_Polarity_Mode(riss);
+
+    MiniSat_Clear_Preferred_Variables(riss);
+
+    MiniSat_Delete(riss);
 }
 
 int main(int argc, char** argv)
 {
-  std::cerr << "c check implemented solver interfaces ... " << std::endl;
-  
-  testNuSVM ();
-  
-  testIPASIR ();
-  
-  return 0;  
+    std::cerr << "c check implemented solver interfaces ... " << std::endl;
+
+    testNuSVM ();
+
+    testIPASIR ();
+
+    return 0;
 }

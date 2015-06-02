@@ -11,18 +11,19 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "pfolio/PfolioConfig.h"
 
-namespace Riss {
+namespace Riss
+{
 
 static const char* _cat = "PFOLIO";
 
-PfolioConfig::PfolioConfig(const std::string & presetOptions) // add new options here!
-:
- Config( &configOptions, presetOptions )
+PfolioConfig::PfolioConfig(const std::string& presetOptions)  // add new options here!
+    :
+    Config( &configOptions, presetOptions )
 
- ,send(         _cat, "ps", "enable clause sharing for all clients", true, optionListPtr )
- ,receive(      _cat, "pr", "enable receiving clauses for all clients", true, optionListPtr )
- ,proofCounting(_cat, "pc", "enable avoiding duplicate clauses in the pfolio DRUP proof", true, optionListPtr )
- 
+    , send(         _cat, "ps", "enable clause sharing for all clients", true, optionListPtr )
+    , receive(      _cat, "pr", "enable receiving clauses for all clients", true, optionListPtr )
+    , proofCounting(_cat, "pc", "enable avoiding duplicate clauses in the pfolio DRUP proof", true, optionListPtr )
+
 {}
 
 } // namespace Riss

@@ -38,7 +38,7 @@ class Rewriter : public Technique
     unsigned enlargedClauses;
     unsigned sortCalls;
     unsigned reuses;
-    unsigned processedAmos,processedChains;
+    unsigned processedAmos, processedChains;
     unsigned foundAmos;
     unsigned exoAMOs;
     unsigned maxAmo;

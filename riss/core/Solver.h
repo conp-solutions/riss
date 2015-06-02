@@ -266,7 +266,7 @@ class Solver
 
     // Statistics: (read-only member variable)
     //
-    uint64_t nbRemovedClauses,nbReducedClauses,nbDL2,nbBin,nbUn,nbReduceDB,solves, starts, decisions, rnd_decisions, propagations, conflicts,nbstopsrestarts,nbstopsrestartssame,lastblockatrestart;
+    uint64_t nbRemovedClauses, nbReducedClauses, nbDL2, nbBin, nbUn, nbReduceDB, solves, starts, decisions, rnd_decisions, propagations, conflicts, nbstopsrestarts, nbstopsrestartssame, lastblockatrestart;
     uint64_t dec_vars, clauses_literals, learnts_literals, max_literals, tot_literals;
 
   protected:
@@ -293,7 +293,7 @@ class Solver
     }
     static inline VarData mkVarData(CRef cr, int l, int _cost)
     {
-        VarData d = {cr, l,lit_Undef,_cost
+        VarData d = {cr, l, lit_Undef, _cost
                      #ifdef CLS_EXTRA_INFO
                      , 0
                      #endif
@@ -329,13 +329,13 @@ class Solver
 
     struct VarFlags {
         lbool assigns;
-        unsigned polarity:1;
-        unsigned decision:1;
-        unsigned seen:1;
-        unsigned extra:4; // TODO: use for special variable (not in LBD) and do not touch!
-        unsigned frozen:1; // indicate that this variable cannot be used for simplification techniques that do not preserve equivalence
+        unsigned polarity: 1;
+        unsigned decision: 1;
+        unsigned seen: 1;
+        unsigned extra: 4; // TODO: use for special variable (not in LBD) and do not touch!
+        unsigned frozen: 1; // indicate that this variable cannot be used for simplification techniques that do not preserve equivalence
         #ifdef PCASSO
-        unsigned varPT:16; // partition tree level for this variable
+        unsigned varPT: 16; // partition tree level for this variable
         #endif
         VarFlags( char _polarity ) : assigns(l_Undef), polarity(_polarity), decision(0), seen(0), extra(0), frozen(0)
             #ifdef PCASSO
@@ -391,7 +391,7 @@ class Solver
 
     int nbclausesbeforereduce;            // To know when it is time to reduce clause database
 
-    bqueue<unsigned int> trailQueue,lbdQueue; // Bounded queues for restarts.
+    bqueue<unsigned int> trailQueue, lbdQueue; // Bounded queues for restarts.
     float sumLBD; // used to compute the global average of LBD. Restarts...
 
 
@@ -434,7 +434,7 @@ class Solver
     PCASSOVIRTUAL
     int      analyze          (CRef confl, vec< Lit >& out_learnt, int& out_btlevel, unsigned int& lbd, uint64_t& extraInfo );    // // (bt = backtrack, return is number of unit clauses in out_learnt. if 0, treat as usual!)
     void     analyzeFinal     (Lit p, vec<Lit>& out_conflict);                         // COULD THIS BE IMPLEMENTED BY THE ORDINARIY "analyze" BY SOME REASONABLE GENERALIZATION?
-    bool     litRedundant     (Lit p, uint32_t abstract_levels,uint64_t& extraInfo);                       // (helper method for 'analyze()')
+    bool     litRedundant     (Lit p, uint32_t abstract_levels, uint64_t& extraInfo);                      // (helper method for 'analyze()')
     PCASSOVIRTUAL
     lbool    search           (int nof_conflicts);                                     // Search for a given number of conflicts.
     PCASSOVIRTUAL
@@ -534,8 +534,8 @@ class Solver
     bool outputsProof() const ;
     template <class T>
     void addToProof(   const T& clause, bool deleteFromProof = false, const Lit remLit = lit_Undef); // write the given clause to the output, if the output is enabled
-    void addUnitToProof( const Lit& l, bool deleteFromProof=false);    // write a single unit clause to the proof
-    void addCommentToProof( const char* text, bool deleteFromProof=false); // write the text as comment into the proof!
+    void addUnitToProof( const Lit& l, bool deleteFromProof = false);  // write a single unit clause to the proof
+    void addCommentToProof( const char* text, bool deleteFromProof = false); // write the text as comment into the proof!
   public:
     bool checkProof(); // if online checker is used, return whether the current proof is valid
   protected:
@@ -543,8 +543,8 @@ class Solver
     bool outputsProof() const { return false; }
     template <class T>
     void addToProof(   const T& clause, bool deleteFromProof = false, const Lit remLit = lit_Undef) const {};
-    void addUnitToProof( const Lit& l, bool deleteFromProof=false) const {};
-    void addCommentToProof( const char* text, bool deleteFromProof=false) const {};
+    void addUnitToProof( const Lit& l, bool deleteFromProof = false) const {};
+    void addCommentToProof( const char* text, bool deleteFromProof = false) const {};
   public:
     bool checkProof() const { return true; } // if online checker is used, return whether the current proof is valid
   protected:
@@ -552,7 +552,7 @@ class Solver
 
 
     /** fill the current variable assignment into the given std::vector */
-    void fillLAmodel(vec<LONG_INT>& pattern, const int steps, vec<Var>& relevantVariables ,const bool moveOnly = false); // fills current model into variable std::vector
+    void fillLAmodel(vec<LONG_INT>& pattern, const int steps, vec<Var>& relevantVariables , const bool moveOnly = false); // fills current model into variable std::vector
 
     /** perform la hack, return false -> unsat instance!
      * @return false, instance is unsatisfable
@@ -605,7 +605,7 @@ class Solver
     double laTime;
     int maxLaNumber;       // maximum number of LAs allowed
     int topLevelsSinceLastLa; // number of learned top level units since last LA
-    int laEEvars,laEElits;    // number of equivalent literals
+    int laEEvars, laEElits;   // number of equivalent literals
     std::vector< std::vector< Lit > > localLookAheadProofClauses;
     std::vector<Lit> localLookAheadTmpClause;
 
@@ -643,7 +643,7 @@ class Solver
     Coprocessor::BIG* big;
     Clock bigBackboneTime;
     unsigned lastReshuffleRestart;
-    unsigned L2units,L3units,L4units;
+    unsigned L2units, L3units, L4units;
     /** if the new learned clause is binary, C = (a \lor b),
      *  then it is checked whether a literal l is implied by both a and b in the formula.
      *  Should be called after eventually enqueuing the asserting literal of the current learned clause
@@ -791,11 +791,11 @@ inline void Solver::varDecayActivity() { var_inc *= (1 / var_decay); }
 inline void Solver::varBumpActivity(Var v, double inverseRatio) { varBumpActivityD(v, var_inc / (double) inverseRatio); }
 inline void Solver::varBumpActivityD(Var v, double inc)
 {
-    DOUT( if( config.opt_printDecisions > 1) std::cerr << "c bump var activity for " << v+1 << " with " << activity[v] << " by " << inc << std::endl; ) ;
+    DOUT( if ( config.opt_printDecisions > 1) std::cerr << "c bump var activity for " << v + 1 << " with " << activity[v] << " by " << inc << std::endl; ) ;
     activity[v] = ( useVSIDS * activity[v] ) + inc; // interpolate between VSIDS and VMTF here!
     // NOTE this code is also used in extended clause learning, and restricted extended resolution
     if ( activity[v] > 1e100 ) {
-        DOUT( if( config.opt_printDecisions > 0) std::cerr << "c rescale decision heap" << std::endl; ) ;
+        DOUT( if ( config.opt_printDecisions > 0) std::cerr << "c rescale decision heap" << std::endl; ) ;
         // Rescale:
         for (int i = 0; i < nVars(); i++) {
             activity[i] *= 1e-100;
@@ -812,14 +812,14 @@ inline void Solver::varBumpActivityD(Var v, double inc)
 inline void Solver::claDecayActivity() { cla_inc *= (1 / clause_decay); }
 inline void Solver::claBumpActivity (Clause& c, double inverseRatio)
 {
-    DOUT( if( config.opt_removal_debug > 1) std::cerr << "c bump clause activity for " << c << " with " << c.activity() << " by " << inverseRatio << std::endl; ) ;
+    DOUT( if ( config.opt_removal_debug > 1) std::cerr << "c bump clause activity for " << c << " with " << c.activity() << " by " << inverseRatio << std::endl; ) ;
     if ( (c.activity() += cla_inc / inverseRatio) > 1e20 ) {
         // Rescale:
         for (int i = 0; i < learnts.size(); i++) {
             ca[learnts[i]].activity() *= 1e-20;
         }
         cla_inc *= 1e-20;
-        DOUT( if( config.opt_removal_debug > 1) std::cerr << "c rescale clause activities" << std::endl; ) ;
+        DOUT( if ( config.opt_removal_debug > 1) std::cerr << "c rescale clause activities" << std::endl; ) ;
     }
 }
 
@@ -840,7 +840,7 @@ inline bool     Solver::addClause       (Lit p, Lit q)          { add_tmp.clear(
 inline bool     Solver::addClause       (Lit p, Lit q, Lit r)   { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); add_tmp.push(r); return addClause_(add_tmp); }
 inline bool     Solver::locked          (const Clause& c) const
 {
-    if(c.size()>2) {
+    if (c.size() > 2) {
         return value(c[0]) == l_True && reason(var(c[0])) != CRef_Undef && ca.lea(reason(var(c[0]))) == &c;
     }
     return
@@ -911,9 +911,9 @@ inline
 bool Solver::addUnitClauses(const vec< Lit >& other)
 {
     assert( decisionLevel() == 0 && "init trail can only be done at level 0" );
-    for( int i = 0 ; i < other.size(); ++ i ) {
+    for ( int i = 0 ; i < other.size(); ++ i ) {
         addUnitToProof( other[i] ); // add the unit clause to the proof
-        if( value( other[i] ) == l_Undef ) {
+        if ( value( other[i] ) == l_Undef ) {
             uncheckedEnqueue( other[i] );
         } else if ( value( other[i] ) == l_False ) {
             ok = false; return true;
@@ -942,7 +942,7 @@ namespace Riss   // open namespace again!
 
 inline void Solver::printLit(Lit l)
 {
-    printf("%s%d:%c", sign(l) ? "-" : "", var(l)+1, value(l) == l_True ? '1' : (value(l) == l_False ? '0' : 'X'));
+    printf("%s%d:%c", sign(l) ? "-" : "", var(l) + 1, value(l) == l_True ? '1' : (value(l) == l_False ? '0' : 'X'));
 }
 
 
@@ -980,38 +980,38 @@ inline void Solver::addToProof( const T& clause, bool deleteFromProof, const Lit
 {
     if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) ) { return; } // no proof, or delete and noDrup
 
-    if( communication != 0 ) { // if the solver is part of a portfolio, then produce a global proof!
+    if ( communication != 0 ) { // if the solver is part of a portfolio, then produce a global proof!
 //       if( deleteFromProof ) std::cerr << "c [" << communication->getID() << "] remove clause " << clause << " to proof" << std::endl;
 //       else std::cerr << "c [" << communication->getID() << "] add clause " << clause << " to proof" << std::endl;
-        if( deleteFromProof ) { communication->getPM()->delFromProof(clause, remLit, communication->getID(), false ); } // first version: work on global proof only! TODO: change to local!
+        if ( deleteFromProof ) { communication->getPM()->delFromProof(clause, remLit, communication->getID(), false ); } // first version: work on global proof only! TODO: change to local!
         else { communication->getPM()->addToProof(clause, remLit, communication->getID(), false ); } // first version: work on global proof only!
         return;
     }
 
     // check before actually using the clause
-    if( onlineDratChecker != 0 ) {
-        if( deleteFromProof ) { onlineDratChecker->removeClause( clause, remLit ); }
+    if ( onlineDratChecker != 0 ) {
+        if ( deleteFromProof ) { onlineDratChecker->removeClause( clause, remLit ); }
         else {
             onlineDratChecker->addClause( clause, remLit );
         }
     }
     // actually print the clause into the file
-    if( deleteFromProof ) { fprintf(drupProofFile, "d "); }
-    if( remLit != lit_Undef ) { fprintf(drupProofFile, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1)); } // print this literal first (e.g. for DRAT clauses)
+    if ( deleteFromProof ) { fprintf(drupProofFile, "d "); }
+    if ( remLit != lit_Undef ) { fprintf(drupProofFile, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1)); } // print this literal first (e.g. for DRAT clauses)
     for (int i = 0; i < clause.size(); i++) {
-        if( clause[i] == lit_Undef || clause[i] == remLit ) { continue; } // print the remaining literal, if they have not been printed yet
+        if ( clause[i] == lit_Undef || clause[i] == remLit ) { continue; } // print the remaining literal, if they have not been printed yet
         fprintf(drupProofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
     }
     fprintf(drupProofFile, "0\n");
 
-    if( config.opt_verboseProof == 2 ) {
+    if ( config.opt_verboseProof == 2 ) {
         std::cerr << "c [PROOF] ";
-        if( deleteFromProof ) { std::cerr << " d "; }
+        if ( deleteFromProof ) { std::cerr << " d "; }
         for (int i = 0; i < clause.size(); i++) {
-            if( clause[i] == lit_Undef ) { continue; }
+            if ( clause[i] == lit_Undef ) { continue; }
             std::cerr << clause[i] << " ";
         }
-        if( deleteFromProof && remLit != lit_Undef ) { std::cerr << remLit; }
+        if ( deleteFromProof && remLit != lit_Undef ) { std::cerr << remLit; }
         std::cerr << " 0" << std::endl;
     }
 }
@@ -1020,25 +1020,25 @@ inline void Solver::addUnitToProof(const Lit& l, bool deleteFromProof)
 {
     if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) ) { return; } // no proof, or delete and noDrup
 
-    if( communication != 0 ) { // if the solver is part of a portfolio, then produce a global proof!
-        if( deleteFromProof ) { communication->getPM()->delFromProof(l, communication->getID(), false ); } // first version: work on global proof only! TODO: change to local!
+    if ( communication != 0 ) { // if the solver is part of a portfolio, then produce a global proof!
+        if ( deleteFromProof ) { communication->getPM()->delFromProof(l, communication->getID(), false ); } // first version: work on global proof only! TODO: change to local!
         else { communication->getPM()->addUnitToProof(l, communication->getID(), false ); } // first version: work on global proof only!
         return;
     }
 
     // check before actually using the clause
-    if( onlineDratChecker != 0 ) {
-        if( deleteFromProof ) { onlineDratChecker->removeClause(l); }
+    if ( onlineDratChecker != 0 ) {
+        if ( deleteFromProof ) { onlineDratChecker->removeClause(l); }
         else {
             onlineDratChecker->addClause(l);
         }
     }
-    if( l == lit_Undef ) { return; } // no need to check this literal, however, routine can be used to check whether the empty clause is in the proof
+    if ( l == lit_Undef ) { return; } // no need to check this literal, however, routine can be used to check whether the empty clause is in the proof
     // actually print the clause into the file
-    if( deleteFromProof ) { fprintf(drupProofFile, "d "); }
+    if ( deleteFromProof ) { fprintf(drupProofFile, "d "); }
     fprintf(drupProofFile, "%i 0\n", (var(l) + 1) * (-2 * sign(l) + 1));
-    if( config.opt_verboseProof == 2 ) {
-        if( deleteFromProof ) { std::cerr << "c [PROOF] d " << l << std::endl; }
+    if ( config.opt_verboseProof == 2 ) {
+        if ( deleteFromProof ) { std::cerr << "c [PROOF] d " << l << std::endl; }
         else { std::cerr << "c [PROOF] " << l << std::endl; }
     }
 }
@@ -1047,18 +1047,18 @@ inline void Solver::addCommentToProof(const char* text, bool deleteFromProof)
 {
     if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) || config.opt_verboseProof == 0) { return; } // no proof, no Drup, or no comments
 
-    if( communication != 0 && communication->getPM() != 0) {
+    if ( communication != 0 && communication->getPM() != 0) {
         communication->getPM()->addCommentToProof(text, communication->getID() );
         return;
     }
     fprintf(drupProofFile, "c %s\n", text);
-    if( config.opt_verboseProof == 2 ) { std::cerr << "c [PROOF] c " << text << std::endl; }
+    if ( config.opt_verboseProof == 2 ) { std::cerr << "c [PROOF] c " << text << std::endl; }
 }
 
 inline
 bool Solver::checkProof ()
 {
-    if( onlineDratChecker != 0 ) {
+    if ( onlineDratChecker != 0 ) {
         return onlineDratChecker->addClause(lit_Undef);
     } else {
         return true; // here, we simply do not know
@@ -1071,7 +1071,7 @@ inline
 void Solver::addInputClause_(vec< Lit >& ps)
 {
     #ifdef DRATPROOF
-    if( onlineDratChecker != 0 ) {
+    if ( onlineDratChecker != 0 ) {
         // std::cerr << "c add parsed clause to DRAT-OTFC: " << ps << std::endl;
         onlineDratChecker->addParsedclause( ps );
     }

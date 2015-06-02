@@ -35,7 +35,7 @@ class IncSolver
   public:
     IncSolver (int& argc, char **& argv)
     {
-        config.parseOptions(argc,argv);
+        config.parseOptions(argc, argv);
         solver = new Solver(config);
     }
 
@@ -45,7 +45,7 @@ class IncSolver
 
     void destroy()
     {
-        if( solver != 0 ) { delete solver; solver = 0 ; }
+        if ( solver != 0 ) { delete solver; solver = 0 ; }
     }
 
     /** interrupt the solver from its current work */
@@ -58,7 +58,7 @@ class IncSolver
     void exportModel( vec<lbool>* externModel )
     {
         externModel->clear();
-        for( int i = 0 ; i < solver->model.size(); ++ i ) {
+        for ( int i = 0 ; i < solver->model.size(); ++ i ) {
             externModel->push( solver->model[i] );
         }
     }
@@ -67,7 +67,7 @@ class IncSolver
     void importModel( vec<lbool>* externModel )
     {
         solver->model.clear();
-        for( int i = 0 ; i < externModel->size(); ++ i ) {
+        for ( int i = 0 ; i < externModel->size(); ++ i ) {
             solver->model.push( (*externModel)[i] );
         }
     }
@@ -75,10 +75,10 @@ class IncSolver
     /** add a literal to the solver, if lit == 0, end the clause and actually add it */
     void add (int lit)
     {
-        if( lit != 0 ) { currentClause.push( lit > 0 ? mkLit( lit-1, false ) : mkLit( -lit-1, true ) ); }
+        if ( lit != 0 ) { currentClause.push( lit > 0 ? mkLit( lit - 1, false ) : mkLit( -lit - 1, true ) ); }
         else { // add the current clause, and clear the std::vector
             // reserve variables in the solver
-            for( int i = 0 ; i < currentClause.size(); ++i ) {
+            for ( int i = 0 ; i < currentClause.size(); ++i ) {
                 const Lit l2 = currentClause[i];
                 const Var v = var(l2);
                 while ( solver->nVars() <= v ) { solver->newVar(); }
@@ -93,7 +93,7 @@ class IncSolver
      */
     void assume (int lit)
     {
-        if( lit != 0 ) { currentAssumptions.push( lit > 0 ? mkLit( lit-1, false ) : mkLit( -lit-1, true ) ); }
+        if ( lit != 0 ) { currentAssumptions.push( lit > 0 ? mkLit( lit - 1, false ) : mkLit( -lit - 1, true ) ); }
     }
 
     /** reset the set assumptions again */
@@ -111,7 +111,7 @@ class IncSolver
         solver->clearInterrupt();
         if (limit != -1 ) { solver->setConfBudget( limit ); } // enable budget
         lbool ret = solver->solveLimited( currentAssumptions );
-        if( limit != -1 ) { solver->budgetOff(); } // disable budget again
+        if ( limit != -1 ) { solver->budgetOff(); } // disable budget again
         currentAssumptions.clear();
         return ret == l_True ? 10 : ( ret == l_False ? 20 : 0 ); // be able to return unknown
     }
@@ -122,14 +122,14 @@ class IncSolver
     int deref (int lit)
     {
         assert (lit != 0 && "the method cannot hande lit == 0" );
-        const lbool ret = lit > 0 ? solver->model[ lit-1 ] : (solver->model[ -lit-1 ] ^ true); // second statement should invert the value
+        const lbool ret = lit > 0 ? solver->model[ lit - 1 ] : (solver->model[ -lit - 1 ] ^ true); // second statement should invert the value
         const int iret = ret == l_False ? -1 : (ret == l_True ? 1 : 0); // if the value is undefined, map it to true! (important for the output state!)
         return iret;
     }
 
     void setMaxVar( int maxVar )
     {
-        while( solver->nVars() < maxVar ) { solver->newVar(); }
+        while ( solver->nVars() < maxVar ) { solver->newVar(); }
     }
 
     CoreConfig& getConfig() { return config; }
@@ -137,26 +137,26 @@ class IncSolver
     /** give current model on stderr */
     void printModel ()
     {
-        fprintf(stderr,"s SATISFIABLE\nv ");
+        fprintf(stderr, "s SATISFIABLE\nv ");
         for (int i = 0; i < solver->nVars(); i++)
             if (solver->model[i] != l_Undef) {
-                fprintf(stderr,"%s%s%d", (i==0)?"":" ", (solver->model[i]==l_True)?"":"-", i+1);
+                fprintf(stderr, "%s%s%d", (i == 0) ? "" : " ", (solver->model[i] == l_True) ? "" : "-", i + 1);
             }
-        fprintf(stderr," 0\n");
+        fprintf(stderr, " 0\n");
     }
 
     /** dump formula to stderr */
     void printFormula()
     {
         // top level unit clauses
-        for( int i = 0 ; i < solver->trail.size(); ++ i ) {
+        for ( int i = 0 ; i < solver->trail.size(); ++ i ) {
             const Lit& l =  solver->trail[i];
             std::cerr << l << " " << 0 << std::endl;
         }
-        for( int i = 0 ; i < solver->clauses.size(); ++ i ) {
+        for ( int i = 0 ; i < solver->clauses.size(); ++ i ) {
             const Clause& c = solver->ca[solver->clauses[i]];
-            if( c.can_be_deleted() ) { continue; } // do only process valid clauses!
-            for( int j = 0; j < c.size(); ++ j ) {
+            if ( c.can_be_deleted() ) { continue; } // do only process valid clauses!
+            for ( int j = 0; j < c.size(); ++ j ) {
                 const Lit& l =  c[j];
                 std::cerr << l << " ";
             }

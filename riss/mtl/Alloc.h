@@ -47,7 +47,7 @@ class RegionAllocator
     enum { Ref_Undef = UINT32_MAX };
     enum { Unit_Size = sizeof(uint32_t) };
 
-    explicit RegionAllocator(uint32_t start_cap = 1024*1024) : memory(NULL), sz(0), cap(0), wasted_(0) { capacity(start_cap); }
+    explicit RegionAllocator(uint32_t start_cap = 1024 * 1024) : memory(NULL), sz(0), cap(0), wasted_(0) { capacity(start_cap); }
     ~RegionAllocator()
     {
         if (memory != NULL) {
@@ -76,7 +76,7 @@ class RegionAllocator
     const T* lea       (Ref r) const { assert(r < sz); return &memory[r]; }
     Ref      ael       (const T* t)
     {
-        assert((void*)t >= (void*)&memory[0] && (void*)t < (void*)&memory[sz-1]);
+        assert((void*)t >= (void*)&memory[0] && (void*)t < (void*)&memory[sz - 1]);
         return  (Ref)(t - &memory[0]);
     }
 
@@ -84,7 +84,7 @@ class RegionAllocator
     void fitSize()
     {
         cap = sz;                                      // reduce capacity to the number of currently used elements
-        memory = (T*)xrealloc(memory, sizeof(T)*cap);  // free resources
+        memory = (T*)xrealloc(memory, sizeof(T) * cap); // free resources
     }
 
     void     moveTo(RegionAllocator& to)
@@ -112,7 +112,7 @@ class RegionAllocator
     void clear(bool clean = false)
     {
         sz = 0; wasted_ = 0;
-        if( clean ) { // free used resources
+        if ( clean ) { // free used resources
             if (memory != NULL) { ::free(memory); memory = NULL; }
             cap = 0;
         }
@@ -140,7 +140,7 @@ void RegionAllocator<T>::capacity(uint32_t min_cap)
     // printf(" .. (%p) cap = %u\n", this, cap);
 
     assert(cap > 0);
-    memory = (T*)xrealloc(memory, sizeof(T)*cap);
+    memory = (T*)xrealloc(memory, sizeof(T) * cap);
 }
 
 

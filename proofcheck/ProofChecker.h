@@ -71,7 +71,7 @@ class ProofChecker
      *  @add indicate whether the clause should be added to the proof after the successful check
      *  @return true, if the clause could be added
      */
-    bool checkClauseDRUP( vec<Lit>& clause, bool add=true );
+    bool checkClauseDRUP( vec<Lit>& clause, bool add = true );
 
     /** indicate whether the empty clause has been added to the proof while creating the proof
      * @return true, if the empty clause was added to the proof (and is still present)

@@ -79,9 +79,9 @@ class Statistics
     unsigned reregisterI( const std::string& name )
     {
 
-        for( unsigned i = 0 ; i < intNames.size(); ++i ) {
+        for ( unsigned i = 0 ; i < intNames.size(); ++i ) {
             // check each name whether it matches the name to register
-            if( intNames[i] == name ) {
+            if ( intNames[i] == name ) {
                 return i;
             }
         }
@@ -113,9 +113,9 @@ class Statistics
     unsigned reregisterD( const std::string& name )
     {
 //    lockD.wait();
-        for( unsigned i = 0 ; i < doubleNames.size(); ++i ) {
+        for ( unsigned i = 0 ; i < doubleNames.size(); ++i ) {
             // check each name whether it matches the name to register
-            if( doubleNames[i] == name ) {
+            if ( doubleNames[i] == name ) {
 //  lockD.unlock();
                 return i;
             }
@@ -186,14 +186,14 @@ class Statistics
 //    lockI.wait();
         std::stringstream s;
         assert( integerData.size() == intNames.size() && "number of data elements and names has to be the same" );
-        for( int i = 0 ; i < integerData.size(); ++i ) {
+        for ( int i = 0 ; i < integerData.size(); ++i ) {
             s << "c [STAT] " << intNames[i] << " : " << integerData[i] << std::endl;
         }
 //    lockI.unlock();
 
 //    lockD.wait();
         assert( doubleData.size() == doubleNames.size() && "number of data elements and names has to be the same" );
-        for( int i = 0 ; i < doubleData.size(); ++i ) {
+        for ( int i = 0 ; i < doubleData.size(); ++i ) {
             s << "c [STAT] " << doubleNames[i] << " : " << doubleData[i] << std::endl;
         }
 //    lockD.unlock();

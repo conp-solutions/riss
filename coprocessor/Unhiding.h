@@ -63,7 +63,7 @@ class Unhiding : public Technique
         Riss::Lit root;     // root literal of the subtree that also implied this literal
         Riss::Lit lastSeen; //
         uint32_t index;     // index of the literal that has already been processed in the adjacence list of the literal
-        literalData () : fin(0),dsc(0),obs(0),parent(Riss::lit_Undef),root(Riss::lit_Undef),index(0) {};
+        literalData () : fin(0), dsc(0), obs(0), parent(Riss::lit_Undef), root(Riss::lit_Undef), index(0) {};
     };
 
     // stamp information (access via literalData[ literal.toIndex() ] ), is maintained by extendStructures-method

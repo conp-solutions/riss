@@ -32,7 +32,7 @@ class Dense  : public Technique
         /** free the used resources again */
         void destroy()
         {
-            if(mapping!=0) { delete[] mapping; }
+            if (mapping != 0) { delete[] mapping; }
             mapping = 0;
         }
     };

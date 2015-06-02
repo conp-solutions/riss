@@ -74,7 +74,7 @@ class Preprocessor
 
   public:
 
-    Preprocessor(Riss::Solver* solver, CP3Config& _config, int32_t _threads=-1 );
+    Preprocessor(Riss::Solver* solver, CP3Config& _config, int32_t _threads = -1 );
     ~Preprocessor();
 
     // major methods to start preprocessing

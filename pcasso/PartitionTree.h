@@ -173,8 +173,8 @@ class TreeNode
 //      if(i == this->position.size()) return true;
 //      return false;
         TreeNode* curNode = &t;
-        while(curNode != 0) {
-            if(curNode->id() == this->id()) {
+        while (curNode != 0) {
+            if (curNode->id() == this->id()) {
                 return true;
             }
             curNode = curNode->getFather();

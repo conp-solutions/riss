@@ -10,17 +10,20 @@ Copyright (c) 2013, Kilian Gebhardt, Norbert Manthey, All rights reserved.
 using namespace std;
 using namespace Riss;
 
-namespace Coprocessor {
+namespace Coprocessor
+{
 
 static int upLevel = 1;
 
-static inline void printLitErr(const Lit l) {
+static inline void printLitErr(const Lit l)
+{
     if (toInt(l) % 2)
-        cerr << "-";
+    { cerr << "-"; }
     cerr << (toInt(l) / 2) + 1 << " ";
 }
 
-static void printLitVec(const vec<Lit> &litvec) {
+static void printLitVec(const vec<Lit>& litvec)
+{
     cerr << "c ";
     for (int i = 0; i < litvec.size(); ++i) {
         printLitErr(litvec[i]);
@@ -29,10 +32,11 @@ static void printLitVec(const vec<Lit> &litvec) {
 
 }
 
-static void printClauses(ClauseAllocator &ca, vector<CRef> &list, bool skipDeleted) {
+static void printClauses(ClauseAllocator& ca, vector<CRef>& list, bool skipDeleted)
+{
     for (unsigned i = 0; i < list.size(); ++i) {
         if (list[i] == CRef_Undef || skipDeleted && ca[list[i]].can_be_deleted())
-            continue;
+        { continue; }
         cerr << ca[list[i]] << (ca[list[i]].can_be_deleted() ? " delete" : " valid") << endl;
     }
 
@@ -45,7 +49,7 @@ static void printClauses(ClauseAllocator &ca, vector<CRef> &list, bool skipDelet
  *  all unit clauses were propagated
  *
  *  Assumptions:
- *  -> occurrence lists are valid, 
+ *  -> occurrence lists are valid,
  *          i.e. CR in list(l) iff l \in ca[CR]
  *     they may contain deleted clauses (blocked clauses or clauses that were resolved)
  *     resolvents are immediately added to the list
@@ -61,46 +65,46 @@ static void printClauses(ClauseAllocator &ca, vector<CRef> &list, bool skipDelet
  *
  *  -> i.e. you must not acquire a write and a read lock at the same time
  *          you must not acquire a write lock on the data object, if alread 2.b was acquired
- *          you either hold a heap lock or any of the other locks 
+ *          you either hold a heap lock or any of the other locks
  */
-void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarOrderBVEHeapLt> &heap,
-                                                deque<CRef> &strengthQueue, deque<CRef> &sharedStrengthQueue,
-                                                deque<PostponeReason> &postponed, vector<SpinLock> &var_lock,
-                                                ReadersWriterLock &rwlock, ParBVEStats &stats, MarkArray *gateMarkArray,
-                                                int &rwlock_count, int &garbageCounter, int64_t &parBVEchecks,
-                                                const bool force, const bool doStatistics) {
-    if (doStatistics) stats.processTime = wallClockTime() - stats.processTime;
+void BoundedVariableElimination::par_bve_worker(CoprocessorData& data, Heap<VarOrderBVEHeapLt>& heap,
+        deque<CRef>& strengthQueue, deque<CRef>& sharedStrengthQueue,
+        deque<PostponeReason>& postponed, vector<SpinLock>& var_lock,
+        ReadersWriterLock& rwlock, ParBVEStats& stats, MarkArray *gateMarkArray,
+        int& rwlock_count, int& garbageCounter, int64_t& parBVEchecks,
+        const bool force, const bool doStatistics)
+{
+    if (doStatistics) { stats.processTime = wallClockTime() - stats.processTime; }
 
-    SpinLock &data_lock = var_lock[data.nVars()];
-    SpinLock &heap_lock = var_lock[data.nVars() + 1]; // used for variable-heap or queue
-    SpinLock &ca_lock = var_lock[data.nVars() + 2];
-    SpinLock &susi_lock = var_lock[data.nVars() + 4];
+    SpinLock& data_lock = var_lock[data.nVars()];
+    SpinLock& heap_lock = var_lock[data.nVars() + 1]; // used for variable-heap or queue
+    SpinLock& ca_lock = var_lock[data.nVars() + 2];
+    SpinLock& susi_lock = var_lock[data.nVars() + 4];
 
     vector<Var> neighbors;
     vec<int32_t> pos_stats;
     vec<int32_t> neg_stats;
     vec<Lit> ps;
-    MarkArray &neighborMA = *gateMarkArray; //reuse gate MA
+    MarkArray& neighborMA = *gateMarkArray; //reuse gate MA
     int32_t timeStamp;
     while (data.ok()
-           && (!data.isInterupted())
-           && (seqBveSteps + parBVEchecks < bveLimit || data.unlimited())
-        ) // if solver state = false => abort
-    {
+            && (!data.isInterupted())
+            && (seqBveSteps + parBVEchecks < bveLimit || data.unlimited())
+          ) { // if solver state = false => abort
         // Propagate (rw-locks)
         if (data.hasToPropagate()) {
-            if (doStatistics) stats.upTime = wallClockTime() - stats.upTime;
+            if (doStatistics) { stats.upTime = wallClockTime() - stats.upTime; }
             par_bve_propagate(data, heap, var_Undef, var_lock, rwlock, dirtyOccs, sharedStrengthQueue, stats,
                               rwlock_count, garbageCounter, doStatistics);
-            if (doStatistics) stats.upTime = wallClockTime() - stats.upTime;
+            if (doStatistics) { stats.upTime = wallClockTime() - stats.upTime; }
             continue;
         }
         // Subsimp
         if (sharedStrengthQueue.size() > 0) {
-            if (doStatistics) stats.subsimpTime = wallClockTime() - stats.subsimpTime;
+            if (doStatistics) { stats.subsimpTime = wallClockTime() - stats.subsimpTime; }
             par_bve_strengthening_worker(data, heap, var_Undef, var_lock, rwlock, sharedStrengthQueue, strengthQueue,
                                          dirtyOccs, stats, rwlock_count, garbageCounter, false, doStatistics);
-            if (doStatistics) stats.subsimpTime = wallClockTime() - stats.subsimpTime;
+            if (doStatistics) { stats.subsimpTime = wallClockTime() - stats.subsimpTime; }
             continue;
         }
 
@@ -128,8 +132,7 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
                 postponed.pop_front();
             }
 
-        }
-        else if (variable_queue.size() > 0) {
+        } else if (variable_queue.size() > 0) {
             int rand = data.getSolver()->irand(data.getSolver()->random_seed, variable_queue.size());
             v = variable_queue[rand];
             if (variable_queue.size() > 1) {
@@ -142,39 +145,39 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
 
         // if Heap or Queue was empty, break
         if (v == var_Undef)
-            break;
+        { break; }
 
-        calculate_neighbors:
+    calculate_neighbors:
         // do not work on this variable, if it will be unit-propagated! if all units are eagerly propagated, this is not necessary
         if (data.value(mkLit(v, true)) != l_Undef || data.value(mkLit(v, false)) != l_Undef)
-            continue;
+        { continue; }
         // if no occurrences of v, continue
         if (data[v] <= 0)
-            continue;
-        if (data.doNotTouch(v)) continue; // do not use this variable!
+        { continue; }
+        if (data.doNotTouch(v)) { continue; } // do not use this variable!
 
         // Heuristic Cutoff
         if (!config.opt_force_gates && !config.opt_unlimited_bve
-                                       && (data[mkLit(v, true)] > 10 && data[mkLit(v, false)] > 10 ||
-                                           data[v] > 15 && (data[mkLit(v, true)] > 5 || data[mkLit(v, false)] > 5))) {
-            if (doStatistics) ++stats.skippedVars;
+                && (data[mkLit(v, true)] > 10 && data[mkLit(v, false)] > 10 ||
+                    data[v] > 15 && (data[mkLit(v, true)] > 5 || data[mkLit(v, false)] > 5))) {
+            if (doStatistics) { ++stats.skippedVars; }
             continue;
         }
 
-        // Lock v 
+        // Lock v
         if (config.opt_bve_heap != 2 && var_lock[v].getValue()) {
             postponed.push_back(PostponeReason(v, v));
             continue;
         }
 
-        if (doStatistics) stats.lockNeighborTime = wallClockTime() - stats.lockNeighborTime;
+        if (doStatistics) { stats.lockNeighborTime = wallClockTime() - stats.lockNeighborTime; }
 
         assert(rwlock_count == 0);
         var_lock[v].lock();
 
         ///////////////////////////////////////////////////////////////////////////////////////////
         //
-        //  Begin: read locked part 
+        //  Begin: read locked part
         //
         ///////////////////////////////////////////////////////////////////////////////////////////
 
@@ -182,8 +185,8 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
         rwlock_count++;
         rwlock.readLock();
         // Get the clauses with v
-        vector<CRef> &pos = data.list(mkLit(v, false));
-        vector<CRef> &neg = data.list(mkLit(v, true));
+        vector<CRef>& pos = data.list(mkLit(v, false));
+        vector<CRef>& neg = data.list(mkLit(v, true));
 
         int locked_neigbors = 0;
         Var reason = var_Undef;
@@ -193,12 +196,12 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
         neighborMA.setCurrentStep(v);
         neighbors.push_back(v);
         // Build neighbor-vector
-        // expecting valid occurrence-lists, i.e. v really occurs in lists 
+        // expecting valid occurrence-lists, i.e. v really occurs in lists
         for (int r = 0; r < pos.size() && locked_neigbors <= config.postpone_locked_neighbors; ++r) {
             const CRef cr = pos[r];
             if (CRef_Undef == cr)
-                continue;
-            Clause &c = ca[cr];
+            { continue; }
+            Clause& c = ca[cr];
             c.spinlock();
             if (c.can_be_deleted()) {
                 c.unlock();
@@ -208,10 +211,10 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
                 Var v = var(c[l]);
                 if (!neighborMA.isCurrentStep(v)) {
                     if (config.opt_bve_heap != 2 && var_lock[v].getValue()) if (++locked_neigbors >
-                                                                                config.postpone_locked_neighbors) {
-                        reason = v;
-                        break;
-                    }
+                                config.postpone_locked_neighbors) {
+                            reason = v;
+                            break;
+                        }
                     neighborMA.setCurrentStep(v);
                     neighbors.push_back(v);
                 }
@@ -221,8 +224,8 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
         for (int r = 0; r < neg.size() && locked_neigbors <= config.postpone_locked_neighbors; ++r) {
             const CRef cr = neg[r];
             if (CRef_Undef == cr)
-                continue;
-            Clause &c = ca[cr];
+            { continue; }
+            Clause& c = ca[cr];
             c.spinlock();
             if (c.can_be_deleted()) {
                 c.unlock();
@@ -233,10 +236,10 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
                 //if (! neighbor_heap.inHeap(v))
                 if (!neighborMA.isCurrentStep(v)) {
                     if (config.opt_bve_heap != 2 && var_lock[v].getValue()) if (++locked_neigbors >
-                                                                                config.postpone_locked_neighbors) {
-                        reason = v;
-                        break;
-                    }
+                                config.postpone_locked_neighbors) {
+                            reason = v;
+                            break;
+                        }
                     //neighbor_heap.insert(v);
                     neighborMA.setCurrentStep(v);
                     neighbors.push_back(v);
@@ -252,7 +255,7 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
 
         ///////////////////////////////////////////////////////////////////////////////////////////
         //
-        //  End: read locked part 
+        //  End: read locked part
         //
         ///////////////////////////////////////////////////////////////////////////////////////////
 
@@ -264,7 +267,7 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
             neighbors.clear();
             //neighbor_heap.clear();
             postponed.push_back(PostponeReason(v, reason));
-            if (doStatistics) stats.lockNeighborTime = wallClockTime() - stats.lockNeighborTime;
+            if (doStatistics) { stats.lockNeighborTime = wallClockTime() - stats.lockNeighborTime; }
             continue;
         }
 
@@ -273,18 +276,18 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
         std::sort(neighbors.begin(), neighbors.end());
         // neighbor contains all neighbors in ascending order
 
-        // lock all Vars in ascending order 
-        if (doStatistics) stats.mereLockingTime = wallClockTime() - stats.mereLockingTime;
+        // lock all Vars in ascending order
+        if (doStatistics) { stats.mereLockingTime = wallClockTime() - stats.mereLockingTime; }
         for (int i = 0; i < neighbors.size(); ++i) {
             var_lock[neighbors[i]].lock();
         }
-        if (doStatistics) stats.mereLockingTime = wallClockTime() - stats.mereLockingTime;
+        if (doStatistics) { stats.mereLockingTime = wallClockTime() - stats.mereLockingTime; }
 
-        if (doStatistics) stats.lockNeighborTime = wallClockTime() - stats.lockNeighborTime;
+        if (doStatistics) { stats.lockNeighborTime = wallClockTime() - stats.lockNeighborTime; }
 
         ///////////////////////////////////////////////////////////////////////////////////////////
         //
-        //  Begin: read locked part 
+        //  Begin: read locked part
         //
         ///////////////////////////////////////////////////////////////////////////////////////////
         assert(rwlock_count == 0);
@@ -295,35 +298,35 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
         // or UNSAT
         //  or var enqueued
         if (lastTouched.getIndex(v) != timeStamp
-            || !data.ok()
-            || data.value(mkLit(v, true)) != l_Undef
-            || data.value(mkLit(v, false)) != l_Undef) {
+                || !data.ok()
+                || data.value(mkLit(v, true)) != l_Undef
+                || data.value(mkLit(v, false)) != l_Undef) {
             assert(rwlock_count == 1);
             --rwlock_count;
             rwlock.readUnlock(); // Early Exit Read Lock
-            // free all locks on Vars in descending order 
+            // free all locks on Vars in descending order
             for (int i = neighbors.size() - 1; i >= 0; --i) {
                 var_lock[neighbors[i]].unlock();
             }
 
             // if UNSAT -> return
             if (!data.ok())
-                break;
+            { break; }
 
             // Cleanup
             neighbors.clear();
 
             if (data.value(mkLit(v, true)) != l_Undef
-                || data.value(mkLit(v, false)) != l_Undef)
-                continue;
+                    || data.value(mkLit(v, false)) != l_Undef)
+            { continue; }
             goto calculate_neighbors;
         }
 
         ///////////////////////////////////////////////////////////////////////////////////////////
         //
-        //  The process now holds all exclusive locks for the current neighbors of v, 
-        //  and perhaps some additional, since some Clauses could have 
-        //  been removed from pos and neg, but for sure none were added. 
+        //  The process now holds all exclusive locks for the current neighbors of v,
+        //  and perhaps some additional, since some Clauses could have
+        //  been removed from pos and neg, but for sure none were added.
         //
         ///////////////////////////////////////////////////////////////////////////////////////////
 
@@ -344,7 +347,7 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
         bool foundGate = false;
         if (config.opt_bve_findGate) {
             foundGate = findGates(data, v, p_limit, n_limit, stats.gateTime, gateMarkArray);
-            if (doStatistics) stats.foundGates++;
+            if (doStatistics) { stats.foundGates++; }
         }
 
         // ---Printing all Clauses with v --------------------------//
@@ -359,28 +362,28 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
         // ---------------------------------------------------------//
         // Heuristic Cutoff if Gate-Search is forced
         if (config.opt_force_gates && !foundGate && !config.opt_unlimited_bve
-                                                    && (data[mkLit(v, true)] > 10 && data[mkLit(v, false)] > 10 ||
-                                                        data[v] > 15 && (data[mkLit(v, true)] > 5 || data[mkLit(v, false)] > 5))) {
-            if (doStatistics) ++stats.skippedVars;
+                && (data[mkLit(v, true)] > 10 && data[mkLit(v, false)] > 10 ||
+                    data[v] > 15 && (data[mkLit(v, true)] > 5 || data[mkLit(v, false)] > 5))) {
+            if (doStatistics) { ++stats.skippedVars; }
 
             assert(rwlock_count == 1);
             --rwlock_count;
             rwlock.readUnlock(); // Early Exit Read Lock
-            // free all locks on Vars in descending order 
+            // free all locks on Vars in descending order
             for (int i = neighbors.size() - 1; i >= 0; --i) {
                 var_lock[neighbors[i]].unlock();
             }
 
             // if UNSAT -> return
             if (!data.ok())
-                break;
+            { break; }
 
             // Cleanup
             neighbors.clear();
             continue;
         }
 
-        if (doStatistics) ++stats.testedVars;
+        if (doStatistics) { ++stats.testedVars; }
 
         int pos_count = 0;
         int neg_count = 0;
@@ -395,32 +398,32 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
         for (int i = 0; i < pos.size(); ++i) {
             const CRef cr = pos[i];
             if (CRef_Undef == cr)
-                continue;
-            Clause &c = ca[cr];
+            { continue; }
+            Clause& c = ca[cr];
             if (c.can_be_deleted())
-                continue;
+            { continue; }
             if (c.learnt())
-                lit_learnts_old += c.size();
+            { lit_learnts_old += c.size(); }
             else
-                lit_clauses_old += c.size();
+            { lit_clauses_old += c.size(); }
             ++pos_count;
         }
         for (int i = 0; i < neg.size(); ++i) {
             const CRef cr = neg[i];
             if (CRef_Undef == cr)
-                continue;
-            Clause &c = ca[cr];
+            { continue; }
+            Clause& c = ca[cr];
             if (c.can_be_deleted())
-                continue;
+            { continue; }
             if (c.learnt())
-                lit_learnts_old += c.size();
+            { lit_learnts_old += c.size(); }
             else
-                lit_clauses_old += c.size();
+            { lit_clauses_old += c.size(); }
             ++neg_count;
         }
-        if (config.opt_bve_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+        if (config.opt_bve_verbose > 2) { cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl; }
 
-        // Declare stats variables;        
+        // Declare stats variables;
         pos_stats.growTo(pos.size(), 0);
         neg_stats.growTo(neg.size(), 0);
         int lit_clauses = 0;
@@ -428,9 +431,9 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
         int new_clauses = 0;
         int new_learnts = 0;
 
-        // anticipate only, if there are positiv and negative occurrences of var 
+        // anticipate only, if there are positiv and negative occurrences of var
         if (pos_count != 0 && neg_count != 0) {
-            if (doStatistics) ++stats.anticipations;
+            if (doStatistics) { ++stats.anticipations; }
             if (anticipateEliminationThreadsafe(data, pos, neg, v, p_limit, n_limit, ps, pos_stats, neg_stats,
                                                 lit_clauses, lit_learnts, new_clauses, new_learnts, data_lock, stats,
                                                 parBVEchecks, doStatistics) == l_False) {
@@ -438,7 +441,7 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
                 assert(rwlock_count == 1);
                 --rwlock_count;
                 rwlock.readUnlock(); // Early Exit Read Lock
-                // free all locks on Vars in descending order 
+                // free all locks on Vars in descending order
                 for (int i = neighbors.size() - 1; i >= 0; --i) {
                     var_lock[neighbors[i]].unlock();
                 }
@@ -448,11 +451,11 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
         }
         if (config.opt_bve_bc) {
             //mark Clauses without resolvents for deletion
-            if (config.opt_bve_verbose > 2) cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-            if (config.opt_bve_verbose > 1) cerr << "c removing blocked clauses from F_" << v + 1 << endl;
+            if (config.opt_bve_verbose > 2) { cerr << "c ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl; }
+            if (config.opt_bve_verbose > 1) { cerr << "c removing blocked clauses from F_" << v + 1 << endl; }
             removeBlockedClausesThreadSafe(data, heap, pos, pos_stats, mkLit(v, false), p_limit, data_lock, heap_lock,
                                            stats, garbageCounter, doStatistics);
-            if (config.opt_bve_verbose > 1) cerr << "c removing blocked clauses from F_¬" << v + 1 << endl;
+            if (config.opt_bve_verbose > 1) { cerr << "c removing blocked clauses from F_¬" << v + 1 << endl; }
             removeBlockedClausesThreadSafe(data, heap, neg, neg_stats, mkLit(v, true), n_limit, data_lock, heap_lock,
                                            stats, garbageCounter, doStatistics);
         }
@@ -462,12 +465,12 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
 
         ///////////////////////////////////////////////////////////////////////////////////////////
         //
-        //  End: Read locked part 
+        //  End: Read locked part
         //
         ///////////////////////////////////////////////////////////////////////////////////////////
 
 
-        // if resolving reduces number of literals in clauses: 
+        // if resolving reduces number of literals in clauses:
         //    add resolvents
         //    mark old clauses for deletion
         bool doResolve = false;
@@ -485,14 +488,14 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
             ca_lock.lock();
             if (false) {
                 cerr << "c want resolve " << new_clauses + new_learnts << " clauses on variable " << v + 1 <<
-                                                                                                     " with pos size: " << pos.size() << " negs: " << neg.size() <<
-                                                                                                     endl;
+                     " with pos size: " << pos.size() << " negs: " << neg.size() <<
+                     endl;
                 cerr << "c v " << v + 1 << " neighbors: ";
                 for (int i = 0; i < neighbors.size(); ++i) { cerr << neighbors[i] + 1 << ", "; }
                 cerr << endl;
             }
             AllocatorReservation memoryReservation = ca.reserveMemory(new_clauses + new_learnts,
-                                                                      lit_clauses + lit_learnts, new_learnts, rwlock);
+                    lit_clauses + lit_learnts, new_learnts, rwlock);
             ca_lock.unlock();
 
             ///////////////////////////////////////////////////////////////////////////////////////////
@@ -516,8 +519,8 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
                 break; // break the main-loop, i.e. end of function
             }
 
-            if (doStatistics) stats.usedGates = (foundGate ? stats.usedGates + 1 : stats.usedGates); // statistics
-            if (config.opt_bve_verbose > 1) cerr << "c resolveSet" << endl;
+            if (doStatistics) { stats.usedGates = (foundGate ? stats.usedGates + 1 : stats.usedGates); } // statistics
+            if (config.opt_bve_verbose > 1) { cerr << "c resolveSet" << endl; }
 
             if (resolveSetThreadSafe(data, heap, pos, neg, v, p_limit, n_limit, ps, memoryReservation, strengthQueue,
                                      stats, data_lock, heap_lock, new_clauses + new_learnts, parBVEchecks,
@@ -542,8 +545,8 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
                                     garbageCounter, doStatistics);
             vector<CRef>().swap(pos); // free physical memory of pos-occ
             vector<CRef>().swap(neg); // free physical memory of neg-occ
-            if (config.opt_bve_verbose > 0) cerr << "c Resolved " << v + 1 << endl;
-            if (doStatistics) ++stats.eliminatedVars;
+            if (config.opt_bve_verbose > 0) { cerr << "c Resolved " << v + 1 << endl; }
+            if (doStatistics) { ++stats.eliminatedVars; }
 
             // touch variables:
             data_lock.lock();
@@ -554,10 +557,10 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
             data_lock.unlock();
 
             //subsimp with new clauses!!
-            if (doStatistics) stats.subsimpTime = wallClockTime() - stats.subsimpTime;
+            if (doStatistics) { stats.subsimpTime = wallClockTime() - stats.subsimpTime; }
             par_bve_strengthening_worker(data, heap, v, var_lock, rwlock, sharedStrengthQueue, strengthQueue, dirtyOccs,
                                          stats, rwlock_count, garbageCounter, true, doStatistics);
-            if (doStatistics) stats.subsimpTime = wallClockTime() - stats.subsimpTime;
+            if (doStatistics) { stats.subsimpTime = wallClockTime() - stats.subsimpTime; }
             assert(rwlock_count == 1);
             --rwlock_count;
             rwlock.readUnlock();
@@ -571,9 +574,9 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
         }
 
         if (config.opt_bve_verbose > 1)
-            cerr << "c =============================================================================" << endl;
+        { cerr << "c =============================================================================" << endl; }
 
-        // free all locks on Vars in descending order 
+        // free all locks on Vars in descending order
         for (int i = neighbors.size() - 1; i >= 0; --i) {
             var_lock[neighbors[i]].unlock();
         }
@@ -583,7 +586,7 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
         neg_stats.clear();
     }
 
-    if (doStatistics) stats.processTime = wallClockTime() - stats.processTime;
+    if (doStatistics) { stats.processTime = wallClockTime() - stats.processTime; }
 }
 
 /**
@@ -593,30 +596,30 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData &data, Heap<VarO
  *
  *      TODO don't use the data_lock, since we already have the global writeLock
  */
-inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData &data, Heap<VarOrderBVEHeapLt> &heap,
-                                                                const vector<CRef> &list, const Lit l, const int limit,
-                                                                SpinLock &data_lock, SpinLock &heap_lock,
-                                                                ParBVEStats &stats, int &garbageCounter,
-                                                                const bool doStatistics) {
+inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData& data, Heap<VarOrderBVEHeapLt>& heap,
+        const vector<CRef>& list, const Lit l, const int limit,
+        SpinLock& data_lock, SpinLock& heap_lock,
+        ParBVEStats& stats, int& garbageCounter,
+        const bool doStatistics)
+{
     const Var ignore = var(l);
     for (int cr_i = 0; cr_i < list.size(); ++cr_i) {
         const CRef cr = list[cr_i];
         if (CRef_Undef == cr)
-            continue;
-        Clause &c = ca[cr];
+        { continue; }
+        Clause& c = ca[cr];
         if (!c.can_be_deleted()) {
             c.set_delete(true);
             didChange();
             if (config.opt_minimal_updates) {
                 for (int i = 0; i < c.size(); ++i)
-                    data.deletedVar(var(c[i]));
+                { data.deletedVar(var(c[i])); }
                 garbageCounter += ca.clauseWord32Size(c.size(), c.has_extra());
-            }
-            else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
+            } else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
                 data.removedClause(cr, &heap, config.heap_updates == 2, ignore, &data_lock,
                                    &heap_lock); // updates stats and deleteTimer
             else
-                data.removedClause(cr, NULL, false, ignore, &data_lock, NULL);
+            { data.removedClause(cr, NULL, false, ignore, &data_lock, NULL); }
 
             if (!c.learnt() /*&& cr < limit*/) {
                 data_lock.lock();
@@ -627,8 +630,7 @@ inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData 
                 if (c.learnt()) {
                     ++stats.removedLearnts;
                     stats.learntLits += c.size();
-                }
-                else {
+                } else {
 
                     ++stats.removedClauses;
                     stats.removedLiterals += c.size();
@@ -657,17 +659,18 @@ inline void BoundedVariableElimination::removeClausesThreadSafe(CoprocessorData 
  *  -> total number of literals in learnts after resolution:    lit_learnts
  *
  */
-inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(CoprocessorData &data,
-                                                                         vector<Riss::CRef> &positive,
-                                                                         vector<Riss::CRef> &negative, const int v,
-                                                                         const int p_limit, const int n_limit,
-                                                                         vec<Lit> &resolvent, vec<int32_t> &pos_stats,
-                                                                         vec<int32_t> &neg_stats, int &lit_clauses,
-                                                                         int &lit_learnts, int &new_clauses,
-                                                                         int &new_learnts, SpinLock &data_lock,
-                                                                         BoundedVariableElimination::ParBVEStats &stats,
-                                                                         int64_t &bveChecks, const bool doStatistics) {
-    if (config.opt_bve_verbose > 2) cerr << "c starting anticipate BVE" << endl;
+inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(CoprocessorData& data,
+        vector<Riss::CRef>& positive,
+        vector<Riss::CRef>& negative, const int v,
+        const int p_limit, const int n_limit,
+        vec<Lit>& resolvent, vec<int32_t>& pos_stats,
+        vec<int32_t>& neg_stats, int& lit_clauses,
+        int& lit_learnts, int& new_clauses,
+        int& new_learnts, SpinLock& data_lock,
+        BoundedVariableElimination::ParBVEStats& stats,
+        int64_t& bveChecks, const bool doStatistics)
+{
+    if (config.opt_bve_verbose > 2) { cerr << "c starting anticipate BVE" << endl; }
     // Clean the stats
     lit_clauses = 0;
     lit_learnts = 0;
@@ -677,22 +680,22 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p) {
         const CRef crPos = positive[cr_p];
         if (CRef_Undef == crPos)
-            continue;
-        Clause &p = ca[crPos];
+        { continue; }
+        Clause& p = ca[crPos];
         if (p.can_be_deleted()) {
-            if (config.opt_bve_verbose > 2) cerr << "c    skipped p " << p << endl;
+            if (config.opt_bve_verbose > 2) { cerr << "c    skipped p " << p << endl; }
             continue;
         }
         for (int cr_n = 0; cr_n < negative.size(); ++cr_n) {
             // do not check resolvents, which would touch two clauses out of the variable definition
-            if (cr_p >= p_limit && cr_n >= n_limit) continue;
+            if (cr_p >= p_limit && cr_n >= n_limit) { continue; }
             if (hasDefinition && cr_p < p_limit && cr_n < n_limit)
-                continue; // no need to resolve the definition clauses with each other NOTE: assumes that these clauses result in tautologies
+            { continue; } // no need to resolve the definition clauses with each other NOTE: assumes that these clauses result in tautologies
             const CRef crNeg = negative[cr_n];
             if (CRef_Undef == crNeg)
-                continue;
+            { continue; }
             bveChecks++;
-            Clause &n = ca[crNeg];
+            Clause& n = ca[crNeg];
             if (n.can_be_deleted()) {
                 if (config.opt_bve_verbose > 2) {
                     cerr << "c    skipped n " << n << endl;
@@ -701,7 +704,7 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
             }
             int newLits = tryResolve(p, n, v);
 
-            if (config.opt_bve_verbose > 2) cerr << "c    resolvent size " << newLits << endl;
+            if (config.opt_bve_verbose > 2) { cerr << "c    resolvent size " << newLits << endl; }
 
             // Clause Size > 1
             if (newLits > 1) {
@@ -714,25 +717,24 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
                     printLitVec(resolvent);
                 }
                 if (p.learnt() || !n.learnt()) // don't increment blocking-stats for p,
-                    ++pos_stats[cr_p];         // if p is original and n learnt
+                { ++pos_stats[cr_p]; }         // if p is original and n learnt
                 // goal: detect that p is blocked by all orig. n-clauses
-                if (n.learnt() || !p.learnt()) // vice versa 
-                    ++neg_stats[cr_n];
+                if (n.learnt() || !p.learnt()) // vice versa
+                { ++neg_stats[cr_n]; }
                 if (p.learnt() || n.learnt()) {
                     if ((config.opt_resolve_learnts > 1
-                         || config.opt_resolve_learnts > 0 && !(p.learnt() && n.learnt())
+                            || config.opt_resolve_learnts > 0 && !(p.learnt() && n.learnt())
                         ) && newLits <= max(p.size(), n.size()) + config.opt_learnt_growth) {
                         lit_learnts += newLits;
                         ++new_learnts;
                     }
-                }
-                else {
+                } else {
                     lit_clauses += newLits;
                     ++new_clauses;
                 }
             }
 
-                // empty Clause
+            // empty Clause
             else if (newLits == 0) {
                 if (config.opt_bve_verbose > 2) {
                     cerr << "c    empty resolvent" << endl;
@@ -744,7 +746,7 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
                 return l_False;
             }
 
-                // unit Clause
+            // unit Clause
             else if (newLits == 1) {
                 resolvent.clear();
                 resolve(p, n, v, resolvent);
@@ -761,26 +763,24 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
                 lbool status = data.enqueue(resolvent[0]); //check for level 0 conflict
                 data_lock.unlock();
                 if (status == l_False) {
-                    if (config.opt_bve_verbose > 2) cerr << "c finished anticipate_bve with conflict" << endl;
+                    if (config.opt_bve_verbose > 2) { cerr << "c finished anticipate_bve with conflict" << endl; }
                     return l_False;
-                }
-                else if (status == l_Undef); // variable already assigned
+                } else if (status == l_Undef); // variable already assigned
                 else if (status == l_True) {
                     if (doStatistics)
-                        ++stats.unitsEnqueued;
-                }
-                else
-                    assert (0); //something went wrong
+                    { ++stats.unitsEnqueued; }
+                } else
+                { assert (0); } //something went wrong
             }
 
-            if (config.opt_bve_verbose > 2) cerr << "c ------------------------------------------" << endl;
+            if (config.opt_bve_verbose > 2) { cerr << "c ------------------------------------------" << endl; }
         }
     }
     if (config.opt_bve_verbose > 2) {
         for (int i = 0; i < positive.size(); ++i)
-            cerr << "c pos stat(" << i << "): " << (unsigned) pos_stats[i] << endl;;
+        { cerr << "c pos stat(" << i << "): " << (unsigned) pos_stats[i] << endl; };
         for (int i = 0; i < negative.size(); ++i)
-            cerr << "c neg stat(" << i << "): " << (unsigned) neg_stats[i] << endl;;
+        { cerr << "c neg stat(" << i << "): " << (unsigned) neg_stats[i] << endl; };
 
         cerr << "c finished anticipate_bve normally" << endl;
     }
@@ -788,54 +788,55 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
 }
 
 /**
- *   threadsafe variant of resolve set, 
+ *   threadsafe variant of resolve set,
  *   assumption: Write Lock is holded, i.e. exclusive read and write access to data object and clause allocator
  *
- *   performes resolution and 
- *   allocates resolvents c, with |c| > 1, in ClauseAllocator 
+ *   performes resolution and
+ *   allocates resolvents c, with |c| > 1, in ClauseAllocator
  *   as learnts or clauses respectively
  *   and adds them in data object
  *
- *   - resolvents that are tautologies are skipped 
+ *   - resolvents that are tautologies are skipped
  *   - unit clauses and empty clauses are not handeled here
- *          -> this is already done in anticipateElimination 
+ *          -> this is already done in anticipateElimination
  */
-lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData &data, Heap<VarOrderBVEHeapLt> &heap,
-                                                       vector<CRef> &positive, vector<CRef> &negative, const int v,
-                                                       const int p_limit, const int n_limit, vec<Lit> &ps,
-                                                       AllocatorReservation &memoryReservation,
-                                                       deque<CRef> &strengthQueue, ParBVEStats &stats,
-                                                       SpinLock &data_lock, SpinLock &heap_lock, int expectedResolvents,
-                                                       int64_t &bveChecks, const bool doStatistics,
-                                                       const bool keepLearntResolvents) {
+lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData& data, Heap<VarOrderBVEHeapLt>& heap,
+        vector<CRef>& positive, vector<CRef>& negative, const int v,
+        const int p_limit, const int n_limit, vec<Lit>& ps,
+        AllocatorReservation& memoryReservation,
+        deque<CRef>& strengthQueue, ParBVEStats& stats,
+        SpinLock& data_lock, SpinLock& heap_lock, int expectedResolvents,
+        int64_t& bveChecks, const bool doStatistics,
+        const bool keepLearntResolvents)
+{
     int resolvents = 0;
     const bool hasDefinition = (p_limit < positive.size() || n_limit < negative.size());
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p) {
         const CRef crPos = positive[cr_p];
         if (CRef_Undef == crPos)
-            continue;
-        Clause &p = ca[crPos];
+        { continue; }
+        Clause& p = ca[crPos];
         if (p.can_be_deleted())
-            continue;
+        { continue; }
         for (int cr_n = 0; cr_n < negative.size(); ++cr_n) {
             // no need to resolve two clauses that are both not within the variable definition
-            if (cr_p >= p_limit && cr_n >= n_limit) continue;
+            if (cr_p >= p_limit && cr_n >= n_limit) { continue; }
             if (hasDefinition && cr_p < p_limit && cr_n < n_limit)
-                continue; // no need to resolve the definition clauses with each other NOTE: assumes that these clauses result in tautologies
+            { continue; } // no need to resolve the definition clauses with each other NOTE: assumes that these clauses result in tautologies
             const CRef crNeg = negative[cr_n];
             if (CRef_Undef == crNeg)
-                continue;
+            { continue; }
 
             bveChecks++;
-            Clause &n = ca[crNeg];
+            Clause& n = ca[crNeg];
             if (n.can_be_deleted())
-                continue;
+            { continue; }
 
             // Dont compute resolvents for learnt clauses
             if (config.opt_resolve_learnts == 0 && (p.learnt() || n.learnt()))
-                continue;
+            { continue; }
             if (config.opt_resolve_learnts == 1 && (p.learnt() && n.learnt()))
-                continue;
+            { continue; }
 
             ps.clear();
             if (!resolve(p, n, v, ps)) {
@@ -846,33 +847,32 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData &data, He
                     data_lock.unlock();
                 } else if (ps.size() > 1) {
                     if ((p.learnt() || n.learnt()) && ps.size() > max(p.size(), n.size()) + config.opt_learnt_growth)
-                        continue;
+                    { continue; }
                     resolvents++;
                     if (false) {
                         cerr << "c on variable " << v + 1 << " with pos size: " << positive.size() << " negs: " <<
-                        negative.size() << endl;
+                             negative.size() << endl;
                         cerr << "c resolving " << resolvents << " of " << expectedResolvents << " at adress " <<
-                                                                                                memoryReservation.getCurrent() << " with limit " << memoryReservation.getUpperLimit() << endl;
+                             memoryReservation.getCurrent() << " with limit " << memoryReservation.getUpperLimit() << endl;
                     }
                     const CRef cr = ca.allocThreadsafe(memoryReservation, ps, p.learnt() || n.learnt());
-                    Clause &resolvent = ca[cr];
+                    Clause& resolvent = ca[cr];
                     if (config.opt_minimal_updates) {
                         // just add to occs
                         data_lock.lock();
                         for (int l = 0; l < resolvent.size(); ++l)
-                            data.list(resolvent[l]).push_back(cr);
+                        { data.list(resolvent[l]).push_back(cr); }
                         data_lock.unlock();
-                    }
-                    else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
-                        data.addClause(cr, &heap, config.heap_updates == 2, v, &data_lock, &heap_lock);
+                    } else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
+                    { data.addClause(cr, &heap, config.heap_updates == 2, v, &data_lock, &heap_lock); }
                     else
-                        data.addClause(cr, NULL, false, var_Undef, &data_lock, NULL);
+                    { data.addClause(cr, NULL, false, var_Undef, &data_lock, NULL); }
 
                     data_lock.lock();
                     if (resolvent.learnt())
-                        data.getLEarnts().push(cr);
+                    { data.getLEarnts().push(cr); }
                     else
-                        data.getClauses().push(cr);
+                    { data.getClauses().push(cr); }
                     data_lock.unlock();
                     // add clause to local subsimp queues
                     strengthQueue.push_back(cr);
@@ -899,34 +899,34 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData &data, He
  * i.e. all resolvents are tautologies
  *
  */
-inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(CoprocessorData &data,
-                                                                       Heap<VarOrderBVEHeapLt> &heap,
-                                                                       const vector<CRef> &list, const int32_t _stats[],
-                                                                       const Lit l, const int limit,
-                                                                       SpinLock &data_lock, SpinLock &heap_lock,
-                                                                       ParBVEStats &stats, int &garbageCounter,
-                                                                       const bool doStatistics) {
+inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(CoprocessorData& data,
+        Heap<VarOrderBVEHeapLt>& heap,
+        const vector<CRef>& list, const int32_t _stats[],
+        const Lit l, const int limit,
+        SpinLock& data_lock, SpinLock& heap_lock,
+        ParBVEStats& stats, int& garbageCounter,
+        const bool doStatistics)
+{
     const Var ignore = var(l);
     for (unsigned ci = 0; ci < list.size(); ++ci) {
         const CRef cr = list[ci];
         if (CRef_Undef == cr)
-            continue;
-        Clause &c = ca[cr];
+        { continue; }
+        Clause& c = ca[cr];
         if (c.can_be_deleted())
-            continue;
+        { continue; }
         if (_stats[ci] == 0) {
             didChange();
             c.set_delete(true);
             if (config.opt_minimal_updates) {
                 for (int i = 0; i < c.size(); ++i)
-                    data.deletedVar(var(c[i]));
+                { data.deletedVar(var(c[i])); }
                 garbageCounter += ca.clauseWord32Size(c.size(), c.has_extra());
-            }
-            else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
+            } else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
                 data.removedClause(cr, &heap, config.heap_updates == 2, ignore, &data_lock,
                                    &heap_lock); // updates stats and deleteTimer
             else
-                data.removedClause(cr, NULL, false, var_Undef, &data_lock, NULL);
+            { data.removedClause(cr, NULL, false, var_Undef, &data_lock, NULL); }
             if (!c.learnt() /* && cr < limit*/) {
                 data_lock.lock();
                 data.addToExtension(cr, l);
@@ -936,8 +936,7 @@ inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(Coprocess
                 if (c.learnt()) {
                     ++stats.removedBlockedLearnt;
                     stats.learntBlockedLit += c.size();
-                }
-                else {
+                } else {
                     ++stats.removedBC;
                     stats.blockedLits += c.size();
                 }
@@ -950,7 +949,8 @@ inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(Coprocess
     }
 }
 
-void *BoundedVariableElimination::runParallelBVE(void *arg) {
+void *BoundedVariableElimination::runParallelBVE(void *arg)
+{
     BVEWorkData *workData = (BVEWorkData *) arg;
     workData->bve->par_bve_worker(*(workData->data), *(workData->heap), *(workData->strengthQueue),
                                   *(workData->sharedStrengthQueue), *(workData->postponed), *(workData->var_locks),
@@ -959,28 +959,29 @@ void *BoundedVariableElimination::runParallelBVE(void *arg) {
     return 0;
 }
 
-void BoundedVariableElimination::parallelBVE(CoprocessorData &data) {
+void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
+{
     printDRUPwarning(cerr, "parallel BVE"); // warnings that certain things are not supported (yet)
     printExtraInfowarning(cerr, "parallel BVE");
 
     if (data.hasToPropagate()) {
         if (propagation.process(data, true) == l_False)
-            return;
+        { return; }
         else
-            modifiedFormula = modifiedFormula || propagation.appliedSomething();
+        { modifiedFormula = modifiedFormula || propagation.appliedSomething(); }
     }
     const bool doStatistics = true;
-    if (doStatistics) processTime = wallClockTime() - processTime;
+    if (doStatistics) { processTime = wallClockTime() - processTime; }
 
     lastTouched.resize(data.nVars());
     VarOrderBVEHeapLt comp(data, config.opt_bve_heap);
     Heap<VarOrderBVEHeapLt> newheap(comp);
-#ifdef __APPLE__
-  BVEWorkData *workData=new BVEWorkData[ controller.size() ];
-  MethodFree mf(workData);
-#else
+    #ifdef __APPLE__
+    BVEWorkData *workData = new BVEWorkData[ controller.size() ];
+    MethodFree mf(workData);
+    #else
     BVEWorkData workData[controller.size()];
-#endif
+    #endif
     jobs.resize(controller.size());
     variableLocks.resize(
         data.nVars() + 5); // 5 extra SpinLock for data, heap, ca, shared subsume-queue, shared strength-queue
@@ -992,7 +993,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData &data) {
     if (true || config.opt_bve_findGate) {
         gateMarkArrays.resize(controller.size());
         for (int i = 0; i < controller.size(); ++i)
-            gateMarkArrays[i].resize(config.opt_bve_findGate ? data.nVars() * 2 : data.nVars());
+        { gateMarkArrays[i].resize(config.opt_bve_findGate ? data.nVars() * 2 : data.nVars()); }
     }
 
     for (int i = 0; i < controller.size(); ++i) {
@@ -1005,21 +1006,20 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData &data) {
         workData[i].sharedStrengthQueue = &sharedStrengthQueue;
         workData[i].postponed = &postpones[i];
         workData[i].bveStats = &parStats[i];
-        if (true || config.opt_bve_findGate) workData[i].gateMarkArray = &gateMarkArrays[i];
+        if (true || config.opt_bve_findGate) { workData[i].gateMarkArray = &gateMarkArrays[i]; }
     }
 
     if (config.opt_bve_heap != 2) {
         data.getActiveVariables(lastDeleteTime(), newheap);
-    }
-    else {
+    } else {
         data.getActiveVariables(lastDeleteTime(), variable_queue);
     }
 
     bool reachedLimit = false; // indicate if enough steps have been performed
     while (((config.opt_bve_heap != 2 && newheap.size() > 0) || (config.opt_bve_heap == 2 && variable_queue.size() > 0))
-           && !data.isInterupted()
-           && !reachedLimit
-        ) {
+            && !data.isInterupted()
+            && !reachedLimit
+          ) {
 
         updateDeleteTime(data.getMyDeleteTimer());
 
@@ -1037,36 +1037,35 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData &data) {
                 jobs[i].argument = &(workData[i]);
             }
             if (config.opt_bve_verbose > 0)
-                cerr << "c parallel bve with " << controller.size() << " threads on " << QSize << " variables" << endl;
+            { cerr << "c parallel bve with " << controller.size() << " threads on " << QSize << " variables" << endl; }
             pthread_rwlock_t mutex = allocatorRWLock.getValue(); // FIXME reicht hier auch eine reference?
-#ifndef __APPLE__ // Does not work on OS-X
+            #ifndef __APPLE__ // Does not work on OS-X
             assert (mutex.__data.__nr_readers == 0);
             assert (mutex.__data.__readers_wakeup == 0);
             assert (mutex.__data.__writer_wakeup == 0);
             assert (mutex.__data.__nr_readers_queued == 0);
             assert (mutex.__data.__writer == 0);
             assert (mutex.__data.__lock == 0);
-#endif
+            #endif
             controller.runJobs(jobs);
 
             if (!data.ok()) {
-                if (doStatistics) processTime = wallClockTime() - processTime;
+                if (doStatistics) { processTime = wallClockTime() - processTime; }
                 return;
             }
             // clean dirty occs
             data.cleanUpOccurrences(dirtyOccs, timer);
             if (config.opt_minimal_updates) {
                 for (int i = 0; i < controller.size(); ++i) {
-                    if (workData[i].garbageCounter > 0) ca.freeLit(workData[i].garbageCounter);
+                    if (workData[i].garbageCounter > 0) { ca.freeLit(workData[i].garbageCounter); }
                 }
             }
-        }
-        else {
-            if (config.opt_bve_findGate) data.ma.resize(data.nVars() * 2);
-            if (config.opt_bve_verbose > 0) cerr << "c sequentiel bve on " << QSize << " variables" << endl;
+        } else {
+            if (config.opt_bve_findGate) { data.ma.resize(data.nVars() * 2); }
+            if (config.opt_bve_verbose > 0) { cerr << "c sequentiel bve on " << QSize << " variables" << endl; }
             int parBveStepSum = 0;
             for (int i = 0; i < controller.size(); ++i)
-                parBveStepSum += parStats[i].parBveChecks;
+            { parBveStepSum += parStats[i].parBveChecks; }
             seqBveSteps += parBveStepSum / controller.size();
             bve_worker(data, newheap, seqBveSteps);
             seqBveSteps -= parBveStepSum / controller.size();
@@ -1074,7 +1073,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData &data) {
         //propagate units
         if (data.hasToPropagate()) {
             if (l_False == propagation.process(data, true)) {
-                if (doStatistics) processTime = wallClockTime() - processTime;
+                if (doStatistics) { processTime = wallClockTime() - processTime; }
                 return;
             }
             modifiedFormula = modifiedFormula || propagation.appliedSomething();
@@ -1089,29 +1088,29 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData &data) {
         data.getActiveVariables(lastDeleteTime(), touched_variables);
         touchedVarsForSubsumption(data, touched_variables);
 
-        if (doStatistics) subsimpTime = wallClockTime() - subsimpTime;
+        if (doStatistics) { subsimpTime = wallClockTime() - subsimpTime; }
         subsumption.process();
         if (subsumption.appliedSomething())
-            didChange();
-        if (doStatistics) subsimpTime = wallClockTime() - subsimpTime;
+        { didChange(); }
+        if (doStatistics) { subsimpTime = wallClockTime() - subsimpTime; }
         modifiedFormula = modifiedFormula || subsumption.appliedSomething();
 
         if (config.opt_bve_heap != 2)
-            newheap.clear();
+        { newheap.clear(); }
         else
-            variable_queue.clear();
+        { variable_queue.clear(); }
 
         for (int i = 0; i < touched_variables.size(); ++i) {
             if (config.opt_bve_heap != 2)
-                newheap.insert(touched_variables[i]);
+            { newheap.insert(touched_variables[i]); }
             else
-                variable_queue.push_back(touched_variables[i]);
+            { variable_queue.push_back(touched_variables[i]); }
         }
         touched_variables.clear();
     }
 
     progressStats(data, false);
-    if (doStatistics) processTime = wallClockTime() - processTime;
+    if (doStatistics) { processTime = wallClockTime() - processTime; }
 }
 
 /** lock-based parallel non-naive strengthening-methode
@@ -1123,26 +1122,27 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData &data) {
  * @param strength_resolvents : if activated, strengthener wont be locked
  *                              to use directly after VE when all locks are
  *                              already hold by the thread
- * 
+ *
  * Idea of strengthening Lock:
  * -> lock fst variable of strengthener
  * -> lock strengthener
  * -> if fstvar(other) <= fstvar(strengthener)
  *      -> lock other
  */
-void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData &data, Heap<VarOrderBVEHeapLt> &heap,
-                                                              const Var ignore, vector<SpinLock> &var_lock,
-                                                              ReadersWriterLock &rwlock,
-                                                              deque<CRef> &sharedStrengthQueue, deque<CRef> &localQueue,
-                                                              MarkArray &dirtyOccs, ParBVEStats &stats,
-                                                              int &rwlock_count, int &garbageCounter,
-                                                              const bool strength_resolvents, const bool doStatistics) {
+void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& data, Heap<VarOrderBVEHeapLt>& heap,
+        const Var ignore, vector<SpinLock>& var_lock,
+        ReadersWriterLock& rwlock,
+        deque<CRef>& sharedStrengthQueue, deque<CRef>& localQueue,
+        MarkArray& dirtyOccs, ParBVEStats& stats,
+        int& rwlock_count, int& garbageCounter,
+        const bool strength_resolvents, const bool doStatistics)
+{
     assert(data.nVars() <= var_lock.size() && "var_lock vector to small");
 //  if (doStatistics)
 //    stats.strengthTime = cpuTime() - stats.strengthTime;
 
-    SpinLock &data_lock = var_lock[data.nVars()];
-    SpinLock &strength_lock = var_lock[data.nVars() + 4];
+    SpinLock& data_lock = var_lock[data.nVars()];
+    SpinLock& strength_lock = var_lock[data.nVars() + 4];
 
     while (data.ok() && ((!strength_resolvents && sharedStrengthQueue.size() > 0) || localQueue.size() > 0)) {
         CRef cr = CRef_Undef;
@@ -1175,7 +1175,7 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData &d
 
         // No locking if strength_resolvents
         if (!strength_resolvents) {
-            lock_strengthener_nn: // readlock @ this point
+        lock_strengthener_nn: // readlock @ this point
             if (ca[cr].can_be_deleted() || ca[cr].size() == 0) {
                 assert(rwlock_count == 1);
                 --rwlock_count;
@@ -1221,7 +1221,7 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData &d
         }
 
         // readlock @ this point
-        Clause &strengthener = ca[cr];
+        Clause& strengthener = ca[cr];
 
         // handle unit of empty strengthener
         if (strengthener.size() < 2) {
@@ -1238,10 +1238,9 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData &d
                     var_lock[fst].unlock(); // unlock fst var
                 } // no readlock @ this point
 
-                if (l_False == status) break;
-                else continue;
-            }
-            else {
+                if (l_False == status) { break; }
+                else { continue; }
+            } else {
                 data.setFailed();  // can be done asynchronously
                 if (!strength_resolvents) {
                     strengthener.unlock();
@@ -1262,14 +1261,14 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData &d
         Lit minT = strengthener[0];
         for (int j = 1; j < strengthener.size(); ++j) {
             if (data[var(minT)] > data[var(strengthener[j])])
-                minT = strengthener[j];
+            { minT = strengthener[j]; }
         }
         min = minT;
         nmin = ~minT;
 
         assert(min != nmin && "min and nmin should be different");
-        vector<CRef> &list = data.list(min);        // occurrences of minlit from strengthener
-        vector<CRef> &list_neg = data.list(nmin);   // occurrences of negated minlit from strengthener
+        vector<CRef>& list = data.list(min);        // occurrences of minlit from strengthener
+        vector<CRef>& list_neg = data.list(nmin);   // occurrences of negated minlit from strengthener
 
         lbool state = strength_check_pos(data, heap, ignore, list, sharedStrengthQueue, localQueue, strengthener, cr,
                                          fst, var_lock, dirtyOccs, stats, garbageCounter, strength_resolvents,
@@ -1298,7 +1297,7 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData &d
 /**
  * strengthening check for parallel non-naive strengthening
  *
- * Preconditions: 
+ * Preconditions:
  * fst is locked by this thread
  *
  * Thread-Saftey-Requirements
@@ -1309,37 +1308,38 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData &d
  * Postconditions:
  * all locks, that were aquired, are freed
  *
- * @param strengthener 
+ * @param strengthener
  * @param list          a list with CRef to check for strengthening
  * @param var_lock      lock for each variable
  *
  */
-inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData &data, Heap<VarOrderBVEHeapLt> &heap,
-                                                            const Var ignore, vector<CRef> &list,
-                                                            deque<CRef> &sharedStrengthQueue, deque<CRef> &localQueue,
-                                                            Clause &strengthener, CRef cr, Var fst,
-                                                            vector<SpinLock> &var_lock, MarkArray &dirtyOccs,
-                                                            ParBVEStats &stats, int &garbageCounter,
-                                                            const bool strength_resolvents, const bool doStatistics) {
+inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData& data, Heap<VarOrderBVEHeapLt>& heap,
+        const Var ignore, vector<CRef>& list,
+        deque<CRef>& sharedStrengthQueue, deque<CRef>& localQueue,
+        Clause& strengthener, CRef cr, Var fst,
+        vector<SpinLock>& var_lock, MarkArray& dirtyOccs,
+        ParBVEStats& stats, int& garbageCounter,
+        const bool strength_resolvents, const bool doStatistics)
+{
     int si, so;           // indices used for "can be strengthened"-testing
     int negated_lit_pos;  // index of negative lit, if we find one
 
-    SpinLock &data_lock = var_lock[data.nVars()];
-    SpinLock &heap_lock = var_lock[data.nVars() + 1];
-    SpinLock &strength_lock = var_lock[data.nVars() + 4];
+    SpinLock& data_lock = var_lock[data.nVars()];
+    SpinLock& heap_lock = var_lock[data.nVars() + 1];
+    SpinLock& strength_lock = var_lock[data.nVars() + 4];
 
     // test every clause, where the minimum is, if it can be strenghtened
     for (unsigned int j = 0; j < list.size(); ++j) {
-        lock_to_strengthen_nn_pos:
+    lock_to_strengthen_nn_pos:
         const CRef crO = list[j];
         if (CRef_Undef == crO)
-            continue;
+        { continue; }
 
-        Clause &other = ca[crO];
+        Clause& other = ca[crO];
 
         // a clause can not strengthen itself, and a clause can not strengther smaller clauses
         if (other.can_be_deleted() || crO == cr || other.size() < strengthener.size())
-            continue;
+        { continue; }
         Lit other_fst_lit = other[0];
         Var other_fst = var(other[0]);
 
@@ -1347,13 +1347,13 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData &dat
         // if the other_fst > fst, other cannot contain fst, and therefore strengthener cannot strengthen other
         // if other_fst < fst, then other has to be longer
         if (other_fst > fst || other_fst < fst && other.size() <= strengthener.size())
-            continue;
+        { continue; }
 
         // lock the other clause (we already tested it for beeing different from cr)
         // if false is returned: the first variable changed, and no lock was performed
         bool locked = other.spinlock(other_fst_lit);
         if (false == locked)
-            goto lock_to_strengthen_nn_pos;
+        { goto lock_to_strengthen_nn_pos; }
 
         // check if other has been deleted, while waiting for lock
         if (other.can_be_deleted() || other.size() <= strengthener.size()) {
@@ -1368,7 +1368,7 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData &dat
         }
 
         // now other is locked
-        if (doStatistics) ++stats.subsimpSteps;
+        if (doStatistics) { ++stats.subsimpSteps; }
         // test if we can strengthen other clause
         si = 0;
         so = 0;
@@ -1378,45 +1378,41 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData &dat
                 // the lits are the same in both clauses
                 ++si;
                 ++so;
-            }
-            else if (strengthener[si] == ~other[so]) {
+            } else if (strengthener[si] == ~other[so]) {
                 // found neglit...
                 if (negated_lit_pos == -1) {
                     // if it's the first neglit found, save its position
                     negated_lit_pos = so;
                     ++si;
                     ++so;
-                }
-                else
-                    break;  // found more than 1 negated lit, can't strengthen
-            }
-            else if (strengthener[si] < other[so])
-                break;    // the other clause did not contain this variable => can't strengthen
+                } else
+                { break; }  // found more than 1 negated lit, can't strengthen
+            } else if (strengthener[si] < other[so])
+            { break; }    // the other clause did not contain this variable => can't strengthen
             else
-                ++so;
+            { ++so; }
         }
 
         // subsumption
         if (negated_lit_pos == -1 && si == strengthener.size()) {
             other.set_delete(true);
-            if (config.opt_bve_verbose > 2) cerr << "c " << strengthener << " subsumed " << other << endl;
+            if (config.opt_bve_verbose > 2) { cerr << "c " << strengthener << " subsumed " << other << endl; }
             if (doStatistics) {
                 if (!other.learnt()) {
                     ++stats.subsumedClauses;
                     stats.subsumedLiterals += other.size();
-                }
-                else {
+                } else {
                     ++stats.subsumedLearnts;
                     stats.subsumedLearntLiterals += other.size();
                 }
             }
             if (strengthener.learnt() && !other.learnt())
-                strengthener.set_learnt(false);
+            { strengthener.set_learnt(false); }
         }
-            // if subsumption successful, strengthen
+        // if subsumption successful, strengthen
         else if (negated_lit_pos >= 0 && si == strengthener.size()) {
-            if (doStatistics && other.learnt()) ++stats.strengthtLearntLits;
-            else if (doStatistics) ++stats.strengthtLits;
+            if (doStatistics && other.learnt()) { ++stats.strengthtLearntLits; }
+            else if (doStatistics) { ++stats.strengthtLits; }
 
             // unit found
             if (other.size() == 2) {
@@ -1427,14 +1423,13 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData &dat
                 data_lock.unlock();
                 if (config.opt_minimal_updates) {
                     for (int i = 0; i < other.size(); ++i)
-                        data.deletedVar(var(other[i]));
+                    { data.deletedVar(var(other[i])); }
                     garbageCounter += ca.clauseWord32Size(other.size(), other.has_extra());
-                }
-                else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
+                } else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
                     data.removedClause(crO, &heap, config.heap_updates == 2, ignore, &data_lock,
                                        &heap_lock); // updates stats and deleteTimer
                 else
-                    data.removedClause(crO, NULL, false, var_Undef, &data_lock, NULL);
+                { data.removedClause(crO, NULL, false, var_Undef, &data_lock, NULL); }
                 if (l_False == state) {
                     other.unlock();
                     return l_False;
@@ -1443,16 +1438,15 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData &dat
                     ++stats.unitsEnqueued;
                 }
             }
-                //TODO optimize out
+            //TODO optimize out
             else if (other.size() == 1) {
                 assert(false && "no unit clauses should be strengthened");
                 // empty -> fail
-            }
-            else {
+            } else {
                 didChange();
                 Lit neg = other[negated_lit_pos];
                 if (config.opt_bve_verbose > 2 || global_debug_out)
-                    cerr << "c remove " << neg << " from clause " << other << endl;
+                { cerr << "c remove " << neg << " from clause " << other << endl; }
 
                 //remove from occ-list (by overwriting cr with CRef_Undef
                 data.removeClauseFromThreadSafe(crO, neg);
@@ -1461,23 +1455,22 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData &dat
                 if (config.opt_minimal_updates) {
                     data.deletedVar(var(neg));
                     ++garbageCounter; // do not update data structure
-                }
-                else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
-                    data.removedLiteral(neg, 1, &heap, config.heap_updates == 2, ignore, &data_lock, &heap_lock);
+                } else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
+                { data.removedLiteral(neg, 1, &heap, config.heap_updates == 2, ignore, &data_lock, &heap_lock); }
                 else
-                    data.removedLiteral(neg, 1, NULL, false, var_Undef, &data_lock, NULL);
-/*              if ( ! other.can_subsume()) 
-              {
-                  other.set_subsume(true);
-                  subsumeQueue.push_back(crO);
-              } 
-*/
+                { data.removedLiteral(neg, 1, NULL, false, var_Undef, &data_lock, NULL); }
+                /*              if ( ! other.can_subsume())
+                              {
+                                  other.set_subsume(true);
+                                  subsumeQueue.push_back(crO);
+                              }
+                */
                 // keep track of this clause for further strengthening!
                 if (!other.can_strengthen()) {
                     other.set_strengthen(true);
                     other.set_subsume(true);
                     if (!strength_resolvents)
-                        localQueue.push_back(crO);
+                    { localQueue.push_back(crO); }
                     else {
                         strength_lock.lock();
                         sharedStrengthQueue.push_back(crO);
@@ -1496,7 +1489,7 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData &dat
  * strengthening check for the negated literal for parallel non-naive strengthening
  * i.e. the Literal that has to occur negated is already known
  *
- * Preconditions: 
+ * Preconditions:
  * fst is locked by this thread
  *
  * Thread-Saftey-Requirements
@@ -1507,48 +1500,49 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData &dat
  * Postconditions:
  * all locks, that were aquired, are freed
  *
- * @param strengthener 
+ * @param strengthener
  * @param list          a list with CRef to check for strengthening
  * @param var_lock      lock for each variable
  *
  */
-inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData &data, Heap<VarOrderBVEHeapLt> &heap,
-                                                            const Var ignore, vector<CRef> &list,
-                                                            deque<CRef> &sharedStrengthQueue, deque<CRef> &localQueue,
-                                                            Clause &strengthener, CRef cr, Lit min, Var fst,
-                                                            vector<SpinLock> &var_lock, MarkArray &dirtyOccs,
-                                                            ParBVEStats &stats, int &garbageCounter,
-                                                            const bool strength_resolvents, const bool doStatistics) {
+inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData& data, Heap<VarOrderBVEHeapLt>& heap,
+        const Var ignore, vector<CRef>& list,
+        deque<CRef>& sharedStrengthQueue, deque<CRef>& localQueue,
+        Clause& strengthener, CRef cr, Lit min, Var fst,
+        vector<SpinLock>& var_lock, MarkArray& dirtyOccs,
+        ParBVEStats& stats, int& garbageCounter,
+        const bool strength_resolvents, const bool doStatistics)
+{
     int si, so;           // indices used for "can be strengthened"-testing
     int negated_lit_pos;  // index of negative lit, if we find one
 
-    SpinLock &data_lock = var_lock[data.nVars()];
-    SpinLock &heap_lock = var_lock[data.nVars() + 1];
-    SpinLock &strength_lock = var_lock[data.nVars() + 4];
+    SpinLock& data_lock = var_lock[data.nVars()];
+    SpinLock& heap_lock = var_lock[data.nVars() + 1];
+    SpinLock& strength_lock = var_lock[data.nVars() + 4];
     // test every clause, where the minimum is, if it can be strenghtened
     for (unsigned int j = 0; j < list.size(); ++j) {
-        lock_to_strengthen_nn_neg:
+    lock_to_strengthen_nn_neg:
         const CRef crO = list[j];
         if (CRef_Undef == crO)
-            continue;
-        Clause &other = ca[crO];
+        { continue; }
+        Clause& other = ca[crO];
 
         // a clause can not strengthen itself, and a clause can not strengther smaller clauses
         if (other.can_be_deleted() || crO == cr || other.size() < strengthener.size())
-            continue;
+        { continue; }
         Lit other_fst_lit = other[0];
         Var other_fst = var(other[0]);
 
         // if the other_fst > fst, other cannot contain fst, and therefore strengthener cannot strengthen other
         // if other_fst < fst, then other has to be longer
         if (other_fst > fst || other_fst < fst && other.size() <= strengthener.size())
-            continue;
+        { continue; }
 
         // lock the other clause (we already tested it for beeing different from cr)
         // if false is returned: the first literal changed, and no lock was performed
         bool locked = other.spinlock(other_fst_lit);
         if (false == locked)
-            goto lock_to_strengthen_nn_neg;
+        { goto lock_to_strengthen_nn_neg; }
 
         // check if other has been deleted, while waiting for lock
         if (other.can_be_deleted() || other.size() < strengthener.size()) {
@@ -1564,7 +1558,7 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData &dat
 
         // now other is locked
 
-        if (doStatistics) ++stats.subsimpSteps;
+        if (doStatistics) { ++stats.subsimpSteps; }
         // test if we can strengthen other clause
         si = 0;
         so = 0;
@@ -1574,42 +1568,39 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData &dat
                 // the lits are the same in both clauses
                 ++si;
                 ++so;
-            }
-            else if (other[so] == ~min) {
+            } else if (other[so] == ~min) {
                 negated_lit_pos = so;
                 ++si;
                 ++so;
-            }
-            else if (strengthener[si] < other[so])
-                break;    // the other clause did not contain this variable => can't strengthen
+            } else if (strengthener[si] < other[so])
+            { break; }    // the other clause did not contain this variable => can't strengthen
             else
-                ++so;
+            { ++so; }
         }
         // subsumption TODO -> maybe just in pos strength check!
         // but it doesn't harm at this point (just takes longer?)
         if (negated_lit_pos == -1 && si == strengthener.size()) {
             other.set_delete(true);
             didChange();
-            if (config.opt_bve_verbose > 2) cerr << "c " << strengthener << " subsumed " << other << endl;
+            if (config.opt_bve_verbose > 2) { cerr << "c " << strengthener << " subsumed " << other << endl; }
             if (doStatistics) {
                 if (!other.learnt()) {
                     ++stats.subsumedClauses;
                     stats.subsumedLiterals += other.size();
-                }
-                else {
+                } else {
                     ++stats.subsumedLearnts;
                     stats.subsumedLearntLiterals += other.size();
                 }
             }
             if (strengthener.learnt() && !other.learnt())
-                strengthener.set_learnt(false);
+            { strengthener.set_learnt(false); }
         }
 
-            // if subsumption successful, strengthen
+        // if subsumption successful, strengthen
         else if (negated_lit_pos >= 0 && si == strengthener.size()) {
 
-            if (doStatistics && other.learnt()) ++stats.strengthtLearntLits;
-            else if (doStatistics) ++stats.strengthtLits;
+            if (doStatistics && other.learnt()) { ++stats.strengthtLearntLits; }
+            else if (doStatistics) { ++stats.strengthtLits; }
 
             // unit found
             if (other.size() == 2) {
@@ -1620,14 +1611,13 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData &dat
                 data_lock.unlock();
                 if (config.opt_minimal_updates) {
                     for (int i = 0; i < other.size(); ++i)
-                        data.deletedVar(var(other[i]));
+                    { data.deletedVar(var(other[i])); }
                     garbageCounter += ca.clauseWord32Size(other.size(), other.has_extra());
-                }
-                else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
+                } else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
                     data.removedClause(crO, &heap, config.heap_updates == 2, ignore, &data_lock,
                                        &heap_lock); // updates stats and deleteTimer
                 else
-                    data.removedClause(crO, NULL, false, var_Undef, &data_lock, NULL);
+                { data.removedClause(crO, NULL, false, var_Undef, &data_lock, NULL); }
                 if (l_False == state) {
                     other.unlock();
                     return l_False;
@@ -1636,15 +1626,14 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData &dat
                     ++stats.unitsEnqueued;
                 }
             }
-                //TODO optimize out
+            //TODO optimize out
             else if (other.size() == 1) {
                 assert(false && "no unit clauses should be strengthened");
                 // empty -> fail
-            }
-            else {
+            } else {
                 Lit neg = other[negated_lit_pos];
                 if (config.opt_bve_verbose > 2 || global_debug_out)
-                    cerr << "c remove " << neg << " from clause " << other << endl;
+                { cerr << "c remove " << neg << " from clause " << other << endl; }
 
                 //remove from occ-list (by overwriting cr with CRef_Undef
                 data.removeClauseFromThreadSafe(crO, neg);
@@ -1655,21 +1644,20 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData &dat
                 if (config.opt_minimal_updates) {
                     data.deletedVar(var(neg));
                     ++garbageCounter; // do not update data structure
-                }
-                else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
-                    data.removedLiteral(neg, 1, &heap, config.heap_updates == 2, ignore, &data_lock, &heap_lock);
+                } else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
+                { data.removedLiteral(neg, 1, &heap, config.heap_updates == 2, ignore, &data_lock, &heap_lock); }
                 else
-                    data.removedLiteral(neg, 1, NULL, false, var_Undef, &data_lock, NULL);
-/*              if ( ! other.can_subsume()) 
-              {
-                  other.set_subsume(true);
-                  subsumeQueue.push_back( crO );
-              } */
+                { data.removedLiteral(neg, 1, NULL, false, var_Undef, &data_lock, NULL); }
+                /*              if ( ! other.can_subsume())
+                              {
+                                  other.set_subsume(true);
+                                  subsumeQueue.push_back( crO );
+                              } */
                 // keep track of this clause for further strengthening!
                 if (!other.can_strengthen()) {
                     other.set_strengthen(true);
                     if (!strength_resolvents)
-                        localQueue.push_back(crO);
+                    { localQueue.push_back(crO); }
                     else {
                         strength_lock.lock();
                         sharedStrengthQueue.push_back(crO);
@@ -1684,15 +1672,16 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData &dat
     return l_Undef;
 }
 
-lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData &data, Heap<VarOrderBVEHeapLt> &heap,
-                                                    const Var ignore, vector<SpinLock> &var_lock,
-                                                    ReadersWriterLock &rwlock, MarkArray &dirtyOccs,
-                                                    deque<CRef> &sharedSubsimpQueue, ParBVEStats &stats,
-                                                    int &rwlock_count, int &garbageCounter, const bool doStatistics) {
+lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<VarOrderBVEHeapLt>& heap,
+        const Var ignore, vector<SpinLock>& var_lock,
+        ReadersWriterLock& rwlock, MarkArray& dirtyOccs,
+        deque<CRef>& sharedSubsimpQueue, ParBVEStats& stats,
+        int& rwlock_count, int& garbageCounter, const bool doStatistics)
+{
     //processTime = cpuTime() - processTime;
-    SpinLock &data_lock = var_lock[data.nVars()];
-    SpinLock &heap_lock = var_lock[data.nVars() + 1];
-    SpinLock &strength_lock = var_lock[data.nVars() + 4];
+    SpinLock& data_lock = var_lock[data.nVars()];
+    SpinLock& heap_lock = var_lock[data.nVars() + 1];
+    SpinLock& strength_lock = var_lock[data.nVars() + 4];
     Solver *solver = data.getSolver();
     // propagate all literals that are on the trail but have not been propagated
     while (data.ok() && data.hasToPropagate()) {
@@ -1702,8 +1691,7 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData &data, Heap<
         if (lit_Undef == l) {
             data.unlock();
             break;
-        }
-        else {
+        } else {
             ++(solver->qhead);
             data.unlock();
         }
@@ -1713,7 +1701,7 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData &data, Heap<
         // Lock variable
         var_lock[v].lock();
 
-        if (config.opt_bve_verbose > 2 || global_debug_out) cerr << "c UP propagating " << l << endl;
+        if (config.opt_bve_verbose > 2 || global_debug_out) { cerr << "c UP propagating " << l << endl; }
 
         data_lock.lock();
         data.log.log(upLevel, "propagate literal", l);
@@ -1725,26 +1713,25 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData &data, Heap<
         rwlock.readLock();
 
         // remove positives
-        vector<CRef> &positive = data.list(l);
+        vector<CRef>& positive = data.list(l);
         for (int i = 0; i < positive.size(); ++i) {
             const CRef cr = positive[i];
             if (CRef_Undef == cr)
-                continue;
+            { continue; }
 //      cerr << "cr: " << cr << " Undef " << CRef_Undef << endl;
-            Clause &satisfied = ca[cr];
+            Clause& satisfied = ca[cr];
             if (satisfied.can_be_deleted()) // only track yet-non-deleted clauses
-                continue;
+            { continue; }
 
             // lock satisfied
             satisfied.spinlock();
 
-            if (config.opt_bve_verbose > 2 || global_debug_out) cerr << "c UP remove " << satisfied << endl;
+            if (config.opt_bve_verbose > 2 || global_debug_out) { cerr << "c UP remove " << satisfied << endl; }
             if (doStatistics) {
                 if (satisfied.learnt()) {
                     ++stats.removedLearnts;
                     stats.learntLits += satisfied.size();
-                }
-                else {
+                } else {
                     ++stats.removedClauses;
                     stats.removedLiterals += satisfied.size();
                 }
@@ -1760,30 +1747,29 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData &data, Heap<
 
             if (config.opt_minimal_updates) {
                 for (int i = 0; i < satisfied.size(); ++i)
-                    data.deletedVar(var(satisfied[i]));
+                { data.deletedVar(var(satisfied[i])); }
                 garbageCounter += ca.clauseWord32Size(satisfied.size(), satisfied.has_extra());
-            }
-            else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
+            } else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
                 data.removedClause(cr, &heap, config.heap_updates == 2, ignore, &data_lock,
                                    &heap_lock); // updates stats and deleteTimer
             else
-                data.removedClause(cr, NULL, false, var_Undef, &data_lock, NULL);
+            { data.removedClause(cr, NULL, false, var_Undef, &data_lock, NULL); }
 
         }
 
         const Lit nl = ~l;
         int countO = 0;
         int countL = 0;
-        vector<CRef> &negative = data.list(nl);
+        vector<CRef>& negative = data.list(nl);
 
         for (int i = 0; i < negative.size(); ++i) {
             const CRef cr = negative[i];
             if (CRef_Undef == cr)
-                continue;
+            { continue; }
 
-            Clause &c = ca[cr];
+            Clause& c = ca[cr];
             if (c.can_be_deleted())
-                continue;
+            { continue; }
 
             c.spinlock();
 
@@ -1792,12 +1778,12 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData &data, Heap<
                 for (int j = 0; j < c.size(); ++j)
                     if (c[j] == nl) {
                         if (config.opt_bve_verbose > 2 || global_debug_out)
-                            cerr << "c UP remove " << nl << " from " << c << endl;
+                        { cerr << "c UP remove " << nl << " from " << c << endl; }
                         c.removePositionSorted(j);
                         break;
                     }
-                if (c.learnt()) ++countL;
-                else ++countO;
+                if (c.learnt()) { ++countL; }
+                else { ++countO; }
             }
             // unit propagation
             data_lock.lock();
@@ -1805,7 +1791,7 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData &data, Heap<
                 data.setFailed();   // set state to false
                 data_lock.unlock();
 
-                if (config.opt_bve_verbose > 2 || global_debug_out) cerr << "c UNSAT by UP" << endl;
+                if (config.opt_bve_verbose > 2 || global_debug_out) { cerr << "c UNSAT by UP" << endl; }
                 c.set_delete(true); // TODO it seems safer to do this, is it necessary
                 c.unlock();
 
@@ -1816,13 +1802,12 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData &data, Heap<
                 var_lock[v].unlock();
 
                 return l_False;
-            }
-            else if (c.size() == 1) {
+            } else if (c.size() == 1) {
                 if (solver->value(c[0]) == l_Undef && (global_debug_out || config.opt_bve_verbose > 2))
                     cerr << "c UP enqueue " << c[0] << " with previous value "
-                    <<
-                    (solver->value(c[0]) == l_Undef ? "undef" : (solver->value(c[0]) == l_False ? "unsat" : " sat ")) <<
-                    endl;
+                         <<
+                         (solver->value(c[0]) == l_Undef ? "undef" : (solver->value(c[0]) == l_False ? "unsat" : " sat ")) <<
+                         endl;
                 if (solver->value(c[0]) == l_Undef) {
                     solver->uncheckedEnqueue(c[0]);
                 }
@@ -1831,21 +1816,19 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData &data, Heap<
                 data_lock.unlock();
                 if (config.opt_minimal_updates) {
                     for (int i = 0; i < c.size(); ++i)
-                        data.deletedVar(var(c[i]));
+                    { data.deletedVar(var(c[i])); }
                     garbageCounter += ca.clauseWord32Size(c.size(), c.has_extra());
-                }
-                else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
+                } else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
                     data.removedClause(cr, &heap, config.heap_updates == 2, ignore, &data_lock,
                                        &heap_lock); // updates stats and deleteTimer
                 else
-                    data.removedClause(cr, NULL, false, var_Undef, &data_lock, NULL);
+                { data.removedClause(cr, NULL, false, var_Undef, &data_lock, NULL); }
                 if (doStatistics) {
-                    if (c.learnt()) ++countL;
-                    else ++countO;
+                    if (c.learnt()) { ++countL; }
+                    else { ++countO; }
                     ++stats.unitsEnqueued;
                 }
-            }
-            else {
+            } else {
                 data_lock.unlock();
                 didChange();
                 if (true && !c.can_strengthen()) {
@@ -1870,11 +1853,10 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData &data, Heap<
         if (config.opt_minimal_updates) {
             data.deletedVar(var(nl));
             garbageCounter += countL + countO; // do not update data structure
-        }
-        else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
-            data.removedLiteral(nl, countL + countO, &heap, config.heap_updates == 2, ignore, &data_lock, &heap_lock);
+        } else if (config.heap_updates > 0 && config.opt_bve_heap != 2)
+        { data.removedLiteral(nl, countL + countO, &heap, config.heap_updates == 2, ignore, &data_lock, &heap_lock); }
         else
-            data.removedLiteral(nl, countL + countO, NULL, false, var_Undef, &data_lock, NULL);
+        { data.removedLiteral(nl, countL + countO, NULL, false, var_Undef, &data_lock, NULL); }
 
         if (doStatistics) {
             stats.removedLiterals += countO;

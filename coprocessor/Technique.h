@@ -196,13 +196,13 @@ inline void Technique::unsuccessfulSimplification()
 
 inline void Technique::printDRUPwarning(std::ostream& stream, const std::string s)
 {
-    if( ! didPrintCannotDrup ) { stream << "c [" << s << "] cannot produce DRUP proofs" << std::endl; }
+    if ( ! didPrintCannotDrup ) { stream << "c [" << s << "] cannot produce DRUP proofs" << std::endl; }
     didPrintCannotDrup = true;
 }
 
 inline void Technique::printExtraInfowarning(std::ostream& stream, const std::string s)
 {
-    if( ! didPrintCannotExtraInfo ) { stream << "c [" << s << "] cannot handle clause/variable extra information" << std::endl; }
+    if ( ! didPrintCannotExtraInfo ) { stream << "c [" << s << "] cannot handle clause/variable extra information" << std::endl; }
     didPrintCannotExtraInfo = true;
 }
 

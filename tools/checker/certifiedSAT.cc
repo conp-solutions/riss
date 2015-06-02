@@ -15,12 +15,14 @@ using namespace std;
 
 int iabs(int a) { return a < 0 ? -a : a; }
 
-void exit_verifier(int result_code, int exit_code) {
+void exit_verifier(int result_code, int exit_code)
+{
     cout << endl << result_code << endl;
     exit(exit_code);
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[])
+{
     if (argc < 3) {
         cout << "Usage: ./certifiedSAT <instance> <solveroutput>" << endl;
         exit_verifier(0, 1);
@@ -42,18 +44,15 @@ int main(int argc, char* argv[]) {
             if (answer == "UNKNOWN") {
                 cout << "Solver reported unknown." << endl;
                 exit_verifier(0, 1);
-            }
-            else if (answer == "SATISFIABLE") {
+            } else if (answer == "SATISFIABLE") {
                 cout << "Solver reported satisfiable. Checking." << endl;
                 SAT_answer = true;
-            }
-            else if (answer == "UNSATISFIABLE") {
+            } else if (answer == "UNSATISFIABLE") {
                 cout << "Solver reported unsatisfiable. Checking." << endl;
                 UNSAT_answer = true;
                 break; // Proof should follow.
             }
-        }
-        else if (prefix == "v") {
+        } else if (prefix == "v") {
             // read solution
             int v;
             while (lss >> v && v != 0) {
@@ -63,7 +62,7 @@ int main(int argc, char* argv[]) {
     }
     if (SAT_answer) {
         while (getline(instance, line)) {
-            if (line.substr(0, 1) == "c" || line.substr(0, 1) == "p") continue;
+            if (line.substr(0, 1) == "c" || line.substr(0, 1) == "p") { continue; }
             istringstream lss(line);
             int v;
             bool sat_clause = false;
@@ -101,7 +100,7 @@ int main(int argc, char* argv[]) {
                 break;
             }
         }
-        
+
         if (format == "") {
             cout << "Could not find 'o proof <format>' line with proof format identifier." << endl;
             exit_verifier(0, 1);
@@ -121,10 +120,10 @@ int main(int argc, char* argv[]) {
         } else if (format == "tc") {
             strcpy(checker_cmd, "./stc");
         }
-        
+
         cout << "Calling " << checker_cmd << " " << argv[1] << endl;
         char* argvc[] = {checker_cmd, argv[1], 0 };
-        
+
         int pid = fork();
         if (!pid) {
             // This is the child, connect pipes and launch checker program
@@ -139,8 +138,8 @@ int main(int argc, char* argv[]) {
             close(outfd[1]);
             close(infd[0]);
             close(infd[1]);
-                     
-            cout << "c drup proofer starts" << endl;   
+
+            cout << "c drup proofer starts" << endl;
             execv(argvc[0], argvc);
         } else {
             // This is the parent (verifier), write the proof to the checker's stdin and read result from stdout.
@@ -153,7 +152,7 @@ int main(int argc, char* argv[]) {
             int linecount = 0;
             while (getline(solver_output, line)) {
                 linecount ++;
-                if (line[0] == 'c' || line[0] == 'o' || line[0] == 's') continue;
+                if (line[0] == 'c' || line[0] == 'o' || line[0] == 's') { continue; }
 //                cout << "write line " << linecount << " stream good: " << solver_output.good() << ": " << line << endl;
                 line = line + "\n"; // skip timestamp, add newline
                 write(outfd[1], line.c_str(), line.length());
@@ -165,30 +164,30 @@ int main(int argc, char* argv[]) {
             istream checker_output(&filebuf);
             string line;
             cout << "Reading output from checker." << endl;
-            
+
             int t2 = time(NULL);
-		        cout << "Send file to verifier took " << (t2 - t0) << " seconds. " << endl;
-		        
+            cout << "Send file to verifier took " << (t2 - t0) << " seconds. " << endl;
+
             // wait for cihld here!
             cout << "Wait for verifier" << endl;
-            
+
             int countLine = 0;
             while ( getline(checker_output, line) ) {
-		          cout << "Checker [" << countLine++ << "]: " << line << endl;
-		          if (line.find("s VERIFIED") != string::npos || line.find("s TRIVIAL UNSAT") != string::npos) {
-		              close(outfd[1]);
-		              close(infd[0]);
-		              
-            int t1 = time(NULL);
-		        cout << "Verification took " << (t1 - t0) << " seconds. " << endl;
-		              
-		              exit_verifier(10, 0);
-		          }
+                cout << "Checker [" << countLine++ << "]: " << line << endl;
+                if (line.find("s VERIFIED") != string::npos || line.find("s TRIVIAL UNSAT") != string::npos) {
+                    close(outfd[1]);
+                    close(infd[0]);
+
+                    int t1 = time(NULL);
+                    cout << "Verification took " << (t1 - t0) << " seconds. " << endl;
+
+                    exit_verifier(10, 0);
+                }
             }
-            
+
             int t1 = time(NULL);
-		        cout << "Verification took " << (t1 - t0) << " seconds. " << endl;
-        
+            cout << "Verification took " << (t1 - t0) << " seconds. " << endl;
+
         }
     }
     cout << "Could not find a valid solution" << endl;

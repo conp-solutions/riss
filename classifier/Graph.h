@@ -12,7 +12,7 @@
 
 // using namespace std;
 
-typedef std::pair<int,double> edge;
+typedef std::pair<int, double> edge;
 typedef std::vector<edge> adjacencyList;
 
 /**

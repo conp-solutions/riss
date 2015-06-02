@@ -93,30 +93,30 @@ static void skipLine(B& in)
 template<class B>
 static double parseDouble(B& in)   // only in the form X.XXXXXe-XX
 {
-    bool    neg= false;
+    bool    neg = false;
     double accu = 0.0;
     double currentExponent = 1;
     int exponent;
 
     skipWhitespace(in);
-    if(*in == EOF) { return 0; }
+    if (*in == EOF) { return 0; }
     if      (*in == '-') { neg = true, ++in; }
     else if (*in == '+') { ++in; }
     if (*in < '1' || *in > '9') { printf("PARSE ERROR! Unexpected char: %c\n", *in), exit(3); }
     accu = (double)(*in - '0');
     ++in;
-    if (*in != '.') { printf("PARSE ERROR! Unexpected char: %c\n", *in),exit(3); }
+    if (*in != '.') { printf("PARSE ERROR! Unexpected char: %c\n", *in), exit(3); }
     ++in; // skip dot
     currentExponent = 0.1;
     while (*in >= '0' && *in <= '9')
         accu = accu + currentExponent * ((double)(*in - '0')),
         currentExponent /= 10,
                            ++in;
-    if (*in != 'e') { printf("PARSE ERROR! Unexpected char: %c\n", *in),exit(3); }
+    if (*in != 'e') { printf("PARSE ERROR! Unexpected char: %c\n", *in), exit(3); }
     ++in; // skip dot
     exponent = parseInt(in); // read exponent
-    accu *= pow(10,exponent);
-    return neg ? -accu:accu;
+    accu *= pow(10, exponent);
+    return neg ? -accu : accu;
 }
 
 
@@ -130,7 +130,7 @@ static int64_t parseInt(B& in)
     else if (*in == '+') { ++in; }
     if (*in < '0' || *in > '9') { fprintf(stderr, "PARSE ERROR! Unexpected char: %c\n", *in), exit(3); }
     while (*in >= '0' && *in <= '9')
-        val = val*10 + (*in - '0'),
+        val = val * 10 + (*in - '0'),
         ++in;
     return neg ? -val : val;
 }

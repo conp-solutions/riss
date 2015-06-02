@@ -44,7 +44,7 @@ template<class K, class L> struct DeepEqualKL { bool     operator()(const K* k1,
  *
  *  Note: If the two clases are the same, use the usual map!
  */
-template<class K, class L, class H = Hash<K>, class I = Hash<L>, class E = Equal<K>, class F = EqualKL<K,L> >
+template<class K, class L, class H = Hash<K>, class I = Hash<L>, class E = Equal<K>, class F = EqualKL<K, L> >
 class HashLookUpTable
 {
   public:
@@ -61,8 +61,8 @@ class HashLookUpTable
     int        size;
 
     // Don't allow copying (error prone):
-    HashLookUpTable<K,L,H,I,E,F>&  operator = (HashLookUpTable<K,L,H,I,E,F>& other) { assert(0); }
-    HashLookUpTable            (HashLookUpTable<K,L,H,I,E,F>& other) { assert(0); }
+    HashLookUpTable<K, L, H, I, E, F>&  operator = (HashLookUpTable<K, L, H, I, E, F>& other) { assert(0); }
+    HashLookUpTable            (HashLookUpTable<K, L, H, I, E, F>& other) { assert(0); }
 
     bool    checkCap(int new_size) const { return new_size > cap; }
 
@@ -108,7 +108,7 @@ class HashLookUpTable
     ~HashLookUpTable () { delete [] table; }
 
     // PRECONDITION: the key must *NOT* exist in the map.
-    void insert (const K& k) { if (checkCap(size+1)) { rehash(); } _insert(k); size++; }
+    void insert (const K& k) { if (checkCap(size + 1)) { rehash(); } _insert(k); size++; }
 
     bool has   (const K& k) const
     {
@@ -137,7 +137,7 @@ class HashLookUpTable
     {
         if (size == 0) { return false; }
         const vec<K>& ps = table[index(k)];
-        if( ps.size() == 1 ) { return; } // has to be the same element based on the above assumption
+        if ( ps.size() == 1 ) { return; } // has to be the same element based on the above assumption
         for (int i = 0; i < ps.size(); i++)
             if (equals(ps[i].key, k)) {
                 return true;

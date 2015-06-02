@@ -29,15 +29,15 @@ class XorReasoning : public Technique
     Propagation& propagation;     // object that takes care of unit propagation
     EquivalenceElimination& ee;   // object that takes care of equivalent literal elimination
 
-    double processTime,parseTime,reasonTime;
+    double processTime, parseTime, reasonTime;
     int findChecks;
     int xors;         // number of found xors
     int xorClauses;       // count how many clauses have been used to encode the xors
-    int resolvedInCls,subsFound,resFound;
-    int resTauts,resStrength;
+    int resolvedInCls, subsFound, resFound;
+    int resTauts, resStrength;
 
-    int xorLimit,xorSteps;
-    int foundEmptyLists,xorUnits,allUsed,xorDeducedUnits,eqs;
+    int xorLimit, xorSteps;
+    int foundEmptyLists, xorUnits, allUsed, xorDeducedUnits, eqs;
     int addedTernaryXors, addedQuadraryXors;
 
     /** compare two literals */
@@ -59,17 +59,17 @@ class XorReasoning : public Technique
         bool used; // indicate whether this constraint has been used for simplification already
         bool eq() const { return vars.size() == 2 ; }
         bool unit() const { return vars.size() == 1; }
-        Riss::Lit getUnitLit() const { return unit() ? Riss::mkLit(vars[0],!k) : Riss::lit_Undef; }
+        Riss::Lit getUnitLit() const { return unit() ? Riss::mkLit(vars[0], !k) : Riss::lit_Undef; }
         bool failed() const { return vars.size() == 0 && k; }
-        GaussXor( const Riss::Clause& c ) : k(true),used(false)   // build xor from clause
+        GaussXor( const Riss::Clause& c ) : k(true), used(false)  // build xor from clause
         {
             vars.resize(c.size());
-            for( int i = 0 ; i < c.size(); ++ i ) {
+            for ( int i = 0 ; i < c.size(); ++ i ) {
                 vars[i] = var( c[i] );
                 k = sign(c[i]) ? !k : k ; // change polarity of k, if literal is negative!
             }
         }
-        GaussXor() : k(false),used(false) {} // create an empty xor
+        GaussXor() : k(false), used(false) {} // create an empty xor
 
         int size() const { return vars.size(); }
 
@@ -84,19 +84,19 @@ class XorReasoning : public Technique
             vars.clear();
             const std::vector<Riss::Var>& v2 = gx.vars;
             // generate new vars!
-            int n1 = 0,n2=0;
-            while( n1 < v1.size() && n2 < v2.size() ) {
-                if( v1[n1] == v2[n2] ) {
+            int n1 = 0, n2 = 0;
+            while ( n1 < v1.size() && n2 < v2.size() ) {
+                if ( v1[n1] == v2[n2] ) {
                     removed.push_back(v2[n2]); // variables that appear in both XORs will be removed!
                     n1++; n2++;
-                } else if( v1[n1] < v2[n2] ) {
+                } else if ( v1[n1] < v2[n2] ) {
                     vars.push_back(v1[n1++]);
                 } else {
                     vars.push_back(v2[n2++]);
                 }
             }
-            for(; n1<v1.size(); ++n1) { vars.push_back(v1[n1]); }
-            for(; n2<v2.size(); ++n2) { vars.push_back(v2[n2]); }
+            for (; n1 < v1.size(); ++n1) { vars.push_back(v1[n1]); }
+            for (; n2 < v2.size(); ++n2) { vars.push_back(v2[n2]); }
         }
 
     };

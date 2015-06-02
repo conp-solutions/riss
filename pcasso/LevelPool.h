@@ -61,7 +61,7 @@ class LevelPool
     }
 
     bool duplicate( const Riss::vec<Riss::Lit>& c );
-    bool add_shared(Riss::vec<Riss::Lit>& lits, unsigned int nodeID, bool disable_dupl_removal=false, bool disable_dupl_check=false);
+    bool add_shared(Riss::vec<Riss::Lit>& lits, unsigned int nodeID, bool disable_dupl_removal = false, bool disable_dupl_check = false);
 
 
     /** Reads positions until the writeP position **/

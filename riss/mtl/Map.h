@@ -66,8 +66,8 @@ class Map
     int        size;
 
     // Don't allow copying (error prone):
-    Map<K,D,H,E>&  operator = (Map<K,D,H,E>& other) { assert(0); }
-    Map        (Map<K,D,H,E>& other) { assert(0); }
+    Map<K, D, H, E>&  operator = (Map<K, D, H, E>& other) { assert(0); }
+    Map        (Map<K, D, H, E>& other) { assert(0); }
 
     bool    checkCap(int new_size) const { return new_size > cap; }
 
@@ -140,7 +140,7 @@ class Map
     }
 
     // PRECONDITION: the key must *NOT* exist in the map.
-    void insert (const K& k, const D& d) { if (checkCap(size+1)) { rehash(); } _insert(k, d); size++; }
+    void insert (const K& k, const D& d) { if (checkCap(size + 1)) { rehash(); } _insert(k, d); size++; }
     bool peek   (const K& k, D& d) const
     {
         if (size == 0) { return false; }

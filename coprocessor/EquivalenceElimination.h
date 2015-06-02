@@ -121,12 +121,12 @@ class EquivalenceElimination : public Technique
     void processGate       (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable);
 
 
-    void processANDgate    (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque< Riss::Var >* activeVariables=0);
-    void processGenANDgate (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque< Riss::Var >*  activeVariables=0);
-    void processExOgate    (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque<Riss::Var>* activeVariables=0);
-    void processITEgate    (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque< Riss::Var >*  activeVariables=0);
-    void processXORgate    (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque< Riss::Var >*  activeVariables=0);
-    void processFASUMgate  (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque< Riss::Var >*  activeVariables=0);
+    void processANDgate    (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque< Riss::Var >* activeVariables = 0);
+    void processGenANDgate (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque< Riss::Var >*  activeVariables = 0);
+    void processExOgate    (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque<Riss::Var>* activeVariables = 0);
+    void processITEgate    (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque< Riss::Var >*  activeVariables = 0);
+    void processXORgate    (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque< Riss::Var >*  activeVariables = 0);
+    void processFASUMgate  (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque< Riss::Var >*  activeVariables = 0);
 
     /** enqueue all successor gates of the given gate g into the queue, stamp output variables, have a limit when to stop?! */
     void enqueueSucessorGates(Circuit::Gate& g, std::deque< int > queue, std::vector<Circuit::Gate>& gates, std::vector< unsigned int >& bitType, std::vector< std::vector<int32_t> >& varTable);
@@ -147,7 +147,7 @@ class EquivalenceElimination : public Technique
         int start;
         int min;
         int seen;
-        Vertex() : start(-1),min(-1),seen(-1) {}
+        Vertex() : start(-1), min(-1), seen(-1) {}
     };
 };
 

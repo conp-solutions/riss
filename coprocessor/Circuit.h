@@ -28,19 +28,19 @@ class Circuit
     Riss::ClauseAllocator& ca;
 
     struct ternary {
-        Riss::Lit l1,l2;
+        Riss::Lit l1, l2;
         ternary(Riss::Lit _l1, Riss::Lit _l2 ) : l1(_l1), l2(_l2) {}
     };
     struct quad {
-        Riss::Lit l1,l2,l3;
+        Riss::Lit l1, l2, l3;
         quad(Riss::Lit _l1, Riss::Lit _l2, Riss::Lit _l3 ) :
             l1(_l1)
             , l2(_l2)
             , l3(_l3)
         {
-            if( l1.x > l2.x ) { const Riss::Lit tmp = l1; l1 = l2; l2 = tmp; } // first two are okay!
-            if( l2.x > l3.x ) { const Riss::Lit tmp = l2; l2 = l3; l3 = tmp; } // also check last candidate!
-            if( l1.x > l2.x ) { const Riss::Lit tmp = l1; l1 = l2; l2 = tmp; } // now, first two have to be compared again!
+            if ( l1.x > l2.x ) { const Riss::Lit tmp = l1; l1 = l2; l2 = tmp; } // first two are okay!
+            if ( l2.x > l3.x ) { const Riss::Lit tmp = l2; l2 = l3; l3 = tmp; } // also check last candidate!
+            if ( l1.x > l2.x ) { const Riss::Lit tmp = l1; l1 = l2; l2 = tmp; } // now, first two have to be compared again!
         }
     };
 

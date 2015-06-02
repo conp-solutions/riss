@@ -100,7 +100,7 @@ class ClauseRingBuffer
 
     ~ClauseRingBuffer()
     {
-        if( pool != 0 ) { delete [] pool; pool = 0; }
+        if ( pool != 0 ) { delete [] pool; pool = 0; }
     }
 
     /** set the handle for the proof master */
@@ -124,15 +124,15 @@ class ClauseRingBuffer
         // overwrite current position (starts with 0)
         std::vector<Lit>& poolClause = pool[addHereNext].data;
         // if there has been a clause at this position before, then this clause is removed right now ...
-        if( pool[addHereNext].author != -1 && proofMaster != 0 ) { proofMaster->delFromProof( poolClause, lit_Undef, -1, false ); } // can work only on the global proof
+        if ( pool[addHereNext].author != -1 && proofMaster != 0 ) { proofMaster->delFromProof( poolClause, lit_Undef, -1, false ); } // can work only on the global proof
 
         pool[addHereNext].author = authorID;
 
 
         poolClause.resize( clause.size() );
-        for( int i = 0 ; i < clause.size(); ++i ) { poolClause[i] = clause[i]; }
+        for ( int i = 0 ; i < clause.size(); ++i ) { poolClause[i] = clause[i]; }
 
-        if( proofMaster != 0 ) { proofMaster->addToProof( poolClause, lit_Undef, -1, false ); } // can work only on the global proof
+        if ( proofMaster != 0 ) { proofMaster->addToProof( poolClause, lit_Undef, -1, false ); } // can work only on the global proof
 
         // push pointer to the next position
         // stay in the pool!
@@ -150,15 +150,15 @@ class ClauseRingBuffer
     {
         lock(); // coarse lock, do not lock for each unit, but for all!
 
-        for( size_t i = 0 ; i < units.size(); ++ i ) {
+        for ( size_t i = 0 ; i < units.size(); ++ i ) {
             // std::cerr << "[COMM] thread " << authorID << " adds clause to " << addHereNext << std::endl;
             // overwrite current position (starts with 0)
             std::vector<Lit>& poolClause = pool[addHereNext].data;
-            if( pool[addHereNext].author != -1 && proofMaster != 0 ) { proofMaster->delFromProof( poolClause, lit_Undef, -1, false ); } // can work only on the global proof
+            if ( pool[addHereNext].author != -1 && proofMaster != 0 ) { proofMaster->delFromProof( poolClause, lit_Undef, -1, false ); } // can work only on the global proof
             pool[addHereNext].author = authorID;
             poolClause.resize( 1 );
             poolClause[0] = units[i];
-            if( proofMaster != 0 ) { proofMaster->addToProof( poolClause, lit_Undef, -1, false ); } // can work only on the global proof
+            if ( proofMaster != 0 ) { proofMaster->addToProof( poolClause, lit_Undef, -1, false ); } // can work only on the global proof
 
             // push pointer to the next position
             // stay in the pool!
@@ -187,28 +187,28 @@ class ClauseRingBuffer
         //std::cerr << "c [COMM] thread " << authorID << " start:" << startIndex << " stop:" << stopIndex << " return: " << returnIndex << std::endl;
 
         // do not copy anything, if the next position is the one where the next clause would be added
-        if( startIndex != addHereNext ) {
-            if( startIndex < stopIndex ) {
-                for( unsigned i = startIndex; i < stopIndex; ++ i ) { // do copy the last clause!
+        if ( startIndex != addHereNext ) {
+            if ( startIndex < stopIndex ) {
+                for ( unsigned i = startIndex; i < stopIndex; ++ i ) { // do copy the last clause!
                     // receive only, if calling thread was not the author
-                    if( getAuthor(i) != authorID ) {
+                    if ( getAuthor(i) != authorID ) {
                         //std::cerr << "[COMM] c try to get clause from " << i << std::endl;
                         clauses.push_back( getClause(i, allocator) ); // create clause directly in clause allocator
                         tmp.clear();
                     }
                 }
             } else { // startIndex > stopIndex
-                for( unsigned i = startIndex; i < poolSize; ++i ) {
+                for ( unsigned i = startIndex; i < poolSize; ++i ) {
                     // receive only, if calling thread was not the author
-                    if( getAuthor(i) != authorID ) {
+                    if ( getAuthor(i) != authorID ) {
                         //std::cerr << "[COMM] c try to get clause from " << i << std::endl;
                         clauses.push_back( getClause(i, allocator) ); // create clause directly in clause allocator
                         tmp.clear();
                     }
                 }
-                for( unsigned i = 0 ; i < stopIndex; ++ i ) {
+                for ( unsigned i = 0 ; i < stopIndex; ++ i ) {
                     // receive only, if calling thread was not the author
-                    if( getAuthor(i) != authorID ) {
+                    if ( getAuthor(i) != authorID ) {
                         //std::cerr << "[COMM] c try to get clause from " << i << std::endl;
                         clauses.push_back( getClause(i, allocator) ); // create clause directly in clause allocator
                         tmp.clear();
@@ -267,7 +267,7 @@ class CommunicationData
     void addToSendThisUnit( int unitLiteral )
     {
         // convert into literal, push to std::vector
-        sendUnits.push(Riss::mkLit(abs(unitLiteral),unitLiteral < 0));
+        sendUnits.push(Riss::mkLit(abs(unitLiteral), unitLiteral < 0));
     }
 
     /** receive clauses
@@ -277,7 +277,7 @@ class CommunicationData
     void receiveUnits( vec<Lit>& fillMe )
     {
         fillMe.clear();
-        for( int i = 0 ; i < sendUnits.size(); ++i ) {
+        for ( int i = 0 ; i < sendUnits.size(); ++i ) {
             fillMe.push( sendUnits[i] );
         }
     }
@@ -338,31 +338,31 @@ class Communicator
     // seet default values, ownLock is set to initial sleep
     Communicator(const int id, CommunicationData* communicationData) :
         ownLock( new SleepLock() )
-        ,data( communicationData)
-        ,proofMaster(0)
-        ,winner(false)
-        ,originalVars(-1)
-        ,returnValue(l_Undef)
-        ,solver(0)
-        ,id(id)
-        ,state(waiting)
-        ,myLastTaskID(-1)
-        ,lastSeenIndex(0)
-        ,doSend(true)               // should this thread send clauses
-        ,doReceive(true)
-        ,protectAssumptions(false)  // should the size limit check also consider assumed variables?
-        ,sendSize   (10)  // initial value, also minimum limit (smaller clauses can be shared if LBD is also accepted)
-        ,sendLbd    ( 5)  // initial value, also minimum limit (smaller clauses can be shared if size is also accepted)
-        ,sendMaxSize(128) // upper bound for clause size (larger clause is never shared)
-        ,sendMaxLbd (32)  // upper bound for clause lbd (larger lbd is never shared)
-        ,sizeChange (0.0) // TODO: set to value greater than 0 to see dynamic limit changes! (e.g. 0.05)
-        ,lbdChange  (0.0) // TODO: set to value greater than 0 to see dynamic limit changes! (e.g. 0.02)
-        ,sendRatio  (0.1) // how many of the learned clauses should be shared? 10%?
-        ,doBumpClauseActivity(false)
-        ,nrSendCls (0)
-        ,nrRejectSendSizeCls(0)
-        ,nrRejectSendLbdCls(0)
-        ,nrReceivedCls(0)
+        , data( communicationData)
+        , proofMaster(0)
+        , winner(false)
+        , originalVars(-1)
+        , returnValue(l_Undef)
+        , solver(0)
+        , id(id)
+        , state(waiting)
+        , myLastTaskID(-1)
+        , lastSeenIndex(0)
+        , doSend(true)              // should this thread send clauses
+        , doReceive(true)
+        , protectAssumptions(false) // should the size limit check also consider assumed variables?
+        , sendSize   (10) // initial value, also minimum limit (smaller clauses can be shared if LBD is also accepted)
+        , sendLbd    ( 5) // initial value, also minimum limit (smaller clauses can be shared if size is also accepted)
+        , sendMaxSize(128) // upper bound for clause size (larger clause is never shared)
+        , sendMaxLbd (32) // upper bound for clause lbd (larger lbd is never shared)
+        , sizeChange (0.0) // TODO: set to value greater than 0 to see dynamic limit changes! (e.g. 0.05)
+        , lbdChange  (0.0) // TODO: set to value greater than 0 to see dynamic limit changes! (e.g. 0.02)
+        , sendRatio  (0.1) // how many of the learned clauses should be shared? 10%?
+        , doBumpClauseActivity(false)
+        , nrSendCls (0)
+        , nrRejectSendSizeCls(0)
+        , nrRejectSendLbdCls(0)
+        , nrReceivedCls(0)
     {
         // do create the solver here, or from the outside?
         // solver = new Solver();
@@ -371,7 +371,7 @@ class Communicator
     // destructor
     ~Communicator()
     {
-        if( ownLock != 0 ) { delete ownLock; }
+        if ( ownLock != 0 ) { delete ownLock; }
     }
 
     void setSolver( Riss::Solver* s )
@@ -478,7 +478,7 @@ class Communicator
      */
     void addClause( const vec<Lit>& clause )
     {
-        data->getBuffer().addClause(id,clause);
+        data->getBuffer().addClause(id, clause);
     }
 
     /** copy all clauses into the clauses std::vector that have been received since the last call to this method
@@ -487,7 +487,7 @@ class Communicator
      */
     void receiveClauses ( Riss::ClauseAllocator& ca, std::vector< Riss::CRef >& clauses )
     {
-        if( !doReceive ) { return; }
+        if ( !doReceive ) { return; }
         //unsigned int oldLastSeen = lastSeenIndex;
         lastSeenIndex = data->getBuffer().receiveClauses( id, lastSeenIndex, ca, clauses );
     }
@@ -495,8 +495,8 @@ class Communicator
     void initProtect( const vec<Lit>& assumptions, const int vars )
     {
         protect.clear();
-        protect.growTo(vars,0);
-        for( int i = 0 ; i < assumptions.size(); ++ i ) {
+        protect.growTo(vars, 0);
+        for ( int i = 0 ; i < assumptions.size(); ++ i ) {
             protect[ Riss::var(assumptions[i]) ] = 1;
         }
     }

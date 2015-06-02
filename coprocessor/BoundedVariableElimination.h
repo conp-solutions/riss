@@ -79,7 +79,7 @@ class BoundedVariableElimination : public Technique
         skippedVars, unitsEnqueued, foundGates, usedGates,
         initialClauses, initialLits, clauseCount, litCount, unitCount, elimCount, restarts;
     int64_t seqBveSteps, bveLimit;
-    int64_t nClsIncreases,nClsDecreases,nClsKeep,totallyAddedClauses; // number of clauses that have been added by bve
+    int64_t nClsIncreases, nClsDecreases, nClsKeep, totallyAddedClauses; // number of clauses that have been added by bve
     double processTime, subsimpTime, gateTime;
 
   public:
@@ -194,8 +194,8 @@ inline bool BoundedVariableElimination::resolve(const Riss::Clause& c, const Ris
 {
     unsigned i = 0, j = 0;
     while (i < c.size() && j < d.size()) {
-        if (c[i] == Riss::mkLit(v,false)) { ++i; }
-        else if (d[j] == Riss::mkLit(v,true)) { ++j; }
+        if (c[i] == Riss::mkLit(v, false)) { ++i; }
+        else if (d[j] == Riss::mkLit(v, true)) { ++j; }
         else if (c[i] < d[j]) {
             if (checkPush(resolvent, c[i])) {
                 return true;
@@ -209,7 +209,7 @@ inline bool BoundedVariableElimination::resolve(const Riss::Clause& c, const Ris
         }
     }
     while (i < c.size()) {
-        if (c[i] == Riss::mkLit(v,false)) { ++i; }
+        if (c[i] == Riss::mkLit(v, false)) { ++i; }
         else if (checkPush(resolvent, c[i])) {
             return true;
         } else {
@@ -217,7 +217,7 @@ inline bool BoundedVariableElimination::resolve(const Riss::Clause& c, const Ris
         }
     }
     while (j < d.size()) {
-        if (d[j] == Riss::mkLit(v,true)) { ++j; }
+        if (d[j] == Riss::mkLit(v, true)) { ++j; }
         else if (checkPush(resolvent, d[j])) {
             return true;
         } else { ++j; }
@@ -235,15 +235,15 @@ inline int BoundedVariableElimination::tryResolve(const Riss::Clause& c, const R
     unsigned i = 0, j = 0, r = 0;
     Riss::Lit prev = Riss::lit_Undef;
     while (i < c.size() && j < d.size()) {
-        if (c[i] == Riss::mkLit(v,false)) { ++i; }
-        else if (d[j] == Riss::mkLit(v,true)) { ++j; }
+        if (c[i] == Riss::mkLit(v, false)) { ++i; }
+        else if (d[j] == Riss::mkLit(v, true)) { ++j; }
         else if (c[i] < d[j]) {
             char status = checkUpdatePrev(prev, c[i]);
             if (status == -1) {
                 return -1;
             } else {
                 ++i;
-                r+=status;;
+                r += status;;
             }
         } else {
             char status = checkUpdatePrev(prev, d[j]);
@@ -251,12 +251,12 @@ inline int BoundedVariableElimination::tryResolve(const Riss::Clause& c, const R
                 return -1;
             } else {
                 ++j;
-                r+=status;
+                r += status;
             }
         }
     }
     while (i < c.size()) {
-        if (c[i] == Riss::mkLit(v,false)) {
+        if (c[i] == Riss::mkLit(v, false)) {
             ++i;
         } else {
             char status = checkUpdatePrev(prev, c[i]);
@@ -264,19 +264,19 @@ inline int BoundedVariableElimination::tryResolve(const Riss::Clause& c, const R
                 return -1;
             } else {
                 ++i;
-                r+=status;
+                r += status;
             }
         }
     }
     while (j < d.size()) {
-        if (d[j] == Riss::mkLit(v,true)) { ++j; }
+        if (d[j] == Riss::mkLit(v, true)) { ++j; }
         else {
             char status = checkUpdatePrev(prev, d[j]);
             if (status == -1) {
                 return -1;
             } else {
                 ++j;
-                r+=status;
+                r += status;
             }
         }
     }

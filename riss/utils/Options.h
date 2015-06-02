@@ -82,7 +82,7 @@ class Option
         , category   (cate_)
         , type_name  (type_)
     {
-        if( externOptionList == 0 ) { getOptionList().push(this); }
+        if ( externOptionList == 0 ) { getOptionList().push(this); }
         else { externOptionList->push( this ); }
     }
 
@@ -204,7 +204,7 @@ class DoubleOption : public Option
     {
         double rndV = range.begin_inclusive ? range.begin : range.begin + 0.000001;
         rndV += rand();
-        while( rndV > range.end ) { rndV -= range.end - range.begin; }
+        while ( rndV > range.end ) { rndV -= range.end - range.begin; }
         std::ostringstream strs;
         strs << rndV;
         optionText = "-" + optionText + "=" + strs.str();
@@ -293,7 +293,7 @@ class IntOption : public Option
     {
         int rndV = range.begin;
         rndV += rand();
-        while( rndV > range.end ) { rndV -= range.end - range.begin; }
+        while ( rndV > range.end ) { rndV -= range.end - range.begin; }
         std::ostringstream strs;
         strs << rndV;
         optionText = "-" + optionText + "=" + strs.str();
@@ -381,7 +381,7 @@ class Int64Option : public Option
     {
         int64_t rndV = range.begin;
         rndV += rand();
-        while( rndV > range.end ) { rndV -= range.end - range.begin; }
+        while ( rndV > range.end ) { rndV -= range.end - range.begin; }
         std::ostringstream strs;
         strs << rndV;
         optionText = "-" + optionText + "=" + strs.str();
@@ -408,7 +408,7 @@ class StringOption : public Option
     virtual bool hasDefaultValue ( ) { return value == defaultValue; }
     virtual void printOptionCall (std::stringstream& s )
     {
-        if( value != 0 ) { s << "-" << name << "=" << value; }
+        if ( value != 0 ) { s << "-" << name << "=" << value; }
         else { s << "-" << name << "=\"\""; }
     }
 
@@ -463,7 +463,7 @@ class BoolOption : public Option
     virtual bool hasDefaultValue ( ) { return value == defaultValue; }
     virtual void printOptionCall (std::stringstream& s )
     {
-        if( value ) { s << "-" << name ; }
+        if ( value ) { s << "-" << name ; }
         else { s << "-no-" << name ; }
     }
 
@@ -488,7 +488,7 @@ class BoolOption : public Option
 
         fprintf(stderr, "  -%s, -no-%s", name, name);
 
-        for (uint32_t i = 0; i < 48 - strlen(name)*2; i++) {
+        for (uint32_t i = 0; i < 48 - strlen(name) * 2; i++) {
             fprintf(stderr, " ");
         }
 
@@ -506,7 +506,7 @@ class BoolOption : public Option
     void giveRndValue (std::string& optionText )
     {
         int r = rand();
-        if( r % 5 > 1 ) { // more likely to be enabled
+        if ( r % 5 > 1 ) { // more likely to be enabled
             optionText = "-" + std::string(name);
         } else {
             optionText = "-no-" + std::string(name);

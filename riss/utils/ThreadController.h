@@ -174,7 +174,7 @@ inline void ThreadData::run()
     ownLock.sleep();
 
     // perform parallel work until abort
-    while( state != aborting ) {
+    while ( state != aborting ) {
         assert(state == working && "state of the worker should be working" );
         // do current work of piece
         job.function( job.argument );
@@ -196,12 +196,12 @@ inline ThreadController::ThreadController(int _threads)
 inline ThreadController::~ThreadController()
 {
     // tell everybody that work is over!
-    for( int i = 0 ; i < threads; ++i ) {
+    for ( int i = 0 ; i < threads; ++i ) {
         data[i]->sendShutdown();
         data[i]->awake();
     }
     // join all threads
-    for( int i = 0 ; i < threads; ++i ) {
+    for ( int i = 0 ; i < threads; ++i ) {
         void* status;
         pthread_join( threadHandles[i], &status);
     }
@@ -211,7 +211,7 @@ inline ThreadController::~ThreadController()
     }
 
     // delete thread-data
-    for( int i = 0; i < threads; ++i) {
+    for ( int i = 0; i < threads; ++i) {
         delete data[i];
         data[i] = 0;
     }
@@ -220,7 +220,7 @@ inline ThreadController::~ThreadController()
 
 inline void ThreadController::init()
 {
-    if( threads == 0 ) { return; }
+    if ( threads == 0 ) { return; }
     std::cerr << "c init thread controller with " << threads << " threads" << std::endl;
     threadHandles = new pthread_t [ threads ];
 
@@ -229,7 +229,7 @@ inline void ThreadController::init()
     std::cerr << "c created pointer to data " << std::endl;
 
     // create threads for all except the first data object
-    for( int i = 0 ; i < threads; ++i ) {
+    for ( int i = 0 ; i < threads; ++i ) {
         std::cerr << "c create object " << i << std::endl;
         data[i] = new ThreadData( &masterLock );
         std::cerr << "c create object thread " << i << std::endl;
@@ -241,11 +241,11 @@ inline void ThreadController::init()
     int done = 0; // calling thread is thread nr0!
     masterLock.lock();
     while ( done < threads ) {
-        for( ; done < threads; done ++ ) {
+        for ( ; done < threads; done ++ ) {
             // thread still does something
-            if( data[done]->isInitializing() ) { break; }
+            if ( data[done]->isInitializing() ) { break; }
         }
-        if( done != threads ) { masterLock.sleep(); }
+        if ( done != threads ) { masterLock.sleep(); }
     }
     masterLock.unlock();
     std::cerr << "c init done" << std::endl;
@@ -255,7 +255,7 @@ inline void ThreadController::runJobs(std::vector< Job >& jobs)
 {
     assert( jobs.size() <= threads && "More jobs than threads cannot be handled at the moment" );
     // submit all jobs
-    for( int i = 0 ; i < threads; i++ ) {
+    for ( int i = 0 ; i < threads; i++ ) {
         assert( data[i]->isWaiting() && "Thread has to be waiting when a new job should be assigned" );
         data[i]->performTask(jobs[i]);
     }
@@ -265,10 +265,10 @@ inline void ThreadController::runJobs(std::vector< Job >& jobs)
 
 inline bool ThreadController::submitJob(Job& job)
 {
-    if( threads == 0 ) { return false; }
-    for( int done = 0; done < threads; done ++ ) {
+    if ( threads == 0 ) { return false; }
+    for ( int done = 0; done < threads; done ++ ) {
         // found a finished thread -> return to user!
-        if( data[done]->isWaiting() ) {
+        if ( data[done]->isWaiting() ) {
             data[done]->performTask(job);
             return true;
         }
@@ -278,31 +278,31 @@ inline bool ThreadController::submitJob(Job& job)
 
 inline void ThreadController::waitForAllFinished()
 {
-    if( threads == 0 ) { return; }
+    if ( threads == 0 ) { return; }
     int done = 0;
     masterLock.lock();
     while ( done < threads ) {
-        for( ; done < threads; done ++ ) {
+        for ( ; done < threads; done ++ ) {
             // thread still does something
-            if( data[done]->isWorking() ) { break; }
+            if ( data[done]->isWorking() ) { break; }
             // set all done thread to "ready"
-            if( data[done]->isFinished() ) {
+            if ( data[done]->isFinished() ) {
                 data[done]->setWaiting();
             }
         }
-        if( done != threads ) { masterLock.sleep(); }
+        if ( done != threads ) { masterLock.sleep(); }
     }
     masterLock.unlock();
 }
 
 inline void ThreadController::waitForOneFinished()
 {
-    if( threads == 0 ) { return; }
+    if ( threads == 0 ) { return; }
     masterLock.lock();
     while ( true ) {
-        for( int done = 0; done < threads; done ++ ) {
+        for ( int done = 0; done < threads; done ++ ) {
             // found a finished thread -> return to user!
-            if( data[done]->isFinished() || data[done]->isWaiting() ) {
+            if ( data[done]->isFinished() || data[done]->isWaiting() ) {
                 data[done]->setWaiting();
                 return;
             }

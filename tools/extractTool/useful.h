@@ -29,7 +29,7 @@ string Get( const std::string& s, unsigned int n )
         if ( ! ( is >> field ) ) {
             return "";
         }
-    } while( n-- != 0 );
+    } while ( n-- != 0 );
     return field;
 }
 
@@ -44,11 +44,11 @@ string Get( const std::string& s, unsigned int n )
 //     return item;
 // }
 
-string split(const std::string& s, unsigned int n,char delim = ' ')
+string split(const std::string& s, unsigned int n, char delim = ' ')
 {
     std::stringstream ss(s);
     std::string item;
-    while(std::getline(ss, item, delim) || n-- > 0) {
+    while (std::getline(ss, item, delim) || n-- > 0) {
 
     }
     return item;

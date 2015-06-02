@@ -35,7 +35,7 @@ class Classifier
     double classifyTime;
     double timeout;
   public:
-    Classifier(Configurations& config,const char* prefix);
+    Classifier(Configurations& config, const char* prefix);
     virtual ~Classifier();
     void writeTestDetails(const char* wekaFile);
     std::vector<int>& classify(const char* wekaFile);

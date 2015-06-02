@@ -105,7 +105,7 @@ const Lit lit_Error = { -1 };  // }
 
 inline void printLit(Lit l)
 {
-    fprintf(stderr,"%s%d", sign(l) ? "-" : "", var(l)+1);
+    fprintf(stderr, "%s%d", sign(l) ? "-" : "", var(l) + 1);
 }
 
 
@@ -127,9 +127,9 @@ class  lbool
     lbool()       : value(0) { }
     explicit lbool(bool x) : value(!x) { }
 
-    bool  operator == (lbool b) const { return ((b.value&2) & (value&2)) | (!(b.value&2)&(value == b.value)); }
+    bool  operator == (lbool b) const { return ((b.value & 2) & (value & 2)) | (!(b.value & 2) & (value == b.value)); }
     bool  operator != (lbool b) const { return !(*this == b); }
-    lbool operator ^  (bool  b) const { return lbool((uint8_t)(value^(uint8_t)b)); }
+    lbool operator ^  (bool  b) const { return lbool((uint8_t)(value ^ (uint8_t)b)); }
 
     lbool operator && (lbool b) const
     {
@@ -275,7 +275,7 @@ class Clause
         #endif
 
         for (int i = 0; i < ps.size(); i++)
-            for (int j = i+1; j < ps.size(); j++) {
+            for (int j = i + 1; j < ps.size(); j++) {
                 assert( ps[i] != ps[j] && "have no duplicate literals in clauses!" );
                 assert( ps[i] != ~ps[j] && "have no complementary literals in clauses!" );
             }
@@ -317,7 +317,7 @@ class Clause
         #endif
 
         for (int i = 0; i < psSize; i++)
-            for (int j = i+1; j < psSize; j++) {
+            for (int j = i + 1; j < psSize; j++) {
                 assert( ps[i] != ps[j] && "have no duplicate literals in clauses!" );
                 assert( ps[i] != ~ps[j] && "have no complementary literals in clauses!" );
             }
@@ -360,13 +360,13 @@ class Clause
     }
 
     int          size        ()      const   { return header.size; }
-    void         shrink      (int i)         { assert(i <= size()); if (header.has_extra) { data[header.size-i] = data[header.size]; } header.size -= i; }
+    void         shrink      (int i)         { assert(i <= size()); if (header.has_extra) { data[header.size - i] = data[header.size]; } header.size -= i; }
     void         pop         ()              { shrink(1); }
     bool         learnt      ()      const   { return header.learnt; }
     bool         has_extra   ()      const   { return header.has_extra; }
     uint32_t     mark        ()      const   { return header.mark; }
     void         mark        (uint32_t m)    { header.mark = m; }
-    const Lit&   last        ()      const   { return data[header.size-1].lit; }
+    const Lit&   last        ()      const   { return data[header.size - 1].lit; }
 
     bool         reloced     ()      const   { return header.reloced; }
     CRef         relocation  ()      const   { return data[0].rel; }
@@ -393,13 +393,13 @@ class Clause
     bool canBeDel() {return header.canbedel;}
 
 
-    void         print       (bool nl=false) const
+    void         print       (bool nl = false) const
     {
         for (int i = 0; i < size(); i++) {
             printLit(data[i].lit);
-            fprintf(stderr," ");
+            fprintf(stderr, " ");
         }
-        if(nl) { fprintf(stderr,"\n"); }
+        if (nl) { fprintf(stderr, "\n"); }
     }
 
     Lit          subsumes         (const Clause& other) const;
@@ -422,10 +422,10 @@ class Clause
             const Lit key = operator[](j);
             int32_t i = j - 1;
             while ( i >= 0 && toInt(operator[](i)) > toInt(key) ) {
-                operator[](i+1) = operator[](i);
+                operator[](i + 1) = operator[](i);
                 i--;
             }
-            operator[](i+1) = key;
+            operator[](i + 1) = key;
         }
     }
 
@@ -482,13 +482,13 @@ class Clause
     };
 
     void    removePositionUnsorted(int i)    { data[i].lit = data[ size() - 1].lit; shrink(1); if (has_extra() && !header.learnt) { calcAbstraction(); } }
-    inline void removePositionSorted(int i)      { for (int j = i; j < size() - 1; ++j) { data[j] = data[j+1]; } shrink(1); if (has_extra() && !header.learnt) { calcAbstraction(); } }
+    inline void removePositionSorted(int i)      { for (int j = i; j < size() - 1; ++j) { data[j] = data[j + 1]; } shrink(1); if (has_extra() && !header.learnt) { calcAbstraction(); } }
     // thread safe version, that changes the first literal last
     inline void removePositionSortedThreadSafe(int i)
     {
         if (i == 0) {
             Lit second = data[1].lit;
-            for (int j = 1; j < size() - 1; ++j) { data[j] = data[j+1]; } shrink(1);
+            for (int j = 1; j < size() - 1; ++j) { data[j] = data[j + 1]; } shrink(1);
             if (has_extra() && !header.learnt) { calcAbstraction(second); }
             data[0].lit = second;
         } else { removePositionSorted(i); }
@@ -503,17 +503,17 @@ class Clause
     bool operator<( const Clause& other ) const
     {
         const uint32_t clauseSize = size();
-        if( other.can_be_deleted() && !can_be_deleted() ) { return true; }
-        if( !other.can_be_deleted() && can_be_deleted() ) { return false; }
-        if( clauseSize > other.size() ) { return false; }
-        if( clauseSize < other.size() ) { return true; }
-        for( uint32_t i = 0 ; i < clauseSize; i++ ) { // first criterion: vars
-            if( var(other[i]) < var(data[i].lit) ) { return false; }
-            if( var(data[i].lit) < var(other[i]) ) { return true; }
+        if ( other.can_be_deleted() && !can_be_deleted() ) { return true; }
+        if ( !other.can_be_deleted() && can_be_deleted() ) { return false; }
+        if ( clauseSize > other.size() ) { return false; }
+        if ( clauseSize < other.size() ) { return true; }
+        for ( uint32_t i = 0 ; i < clauseSize; i++ ) { // first criterion: vars
+            if ( var(other[i]) < var(data[i].lit) ) { return false; }
+            if ( var(data[i].lit) < var(other[i]) ) { return true; }
         }
-        for( uint32_t i = 0 ; i < clauseSize; i++ ) { // second criterion: polarity
-            if( other[i] < data[i].lit ) { return false; }
-            if( data[i].lit < other[i] ) { return true; }
+        for ( uint32_t i = 0 ; i < clauseSize; i++ ) { // second criterion: polarity
+            if ( other[i] < data[i].lit ) { return false; }
+            if ( data[i].lit < other[i] ) { return true; }
         }
         return false;
     }
@@ -532,9 +532,9 @@ class Clause
     /** Davihmed Is it shared ? */
     bool isShared() {      return header.shared == 0 ? false : true;    }
     //setting the shared to true... means the clause is shared or coming from a shared pool
-    void setShared() {        header.shared=1;    }
-    void initShCleanDelay(unsigned i) {        i>1 ? header.shCleanDelay=1: header.shCleanDelay=i;    }
-    void decShCleanDelay() {        if(header.shCleanDelay>0) { header.shCleanDelay--; }    }
+    void setShared() {        header.shared = 1;    }
+    void initShCleanDelay(unsigned i) {        i > 1 ? header.shCleanDelay = 1 : header.shCleanDelay = i;    }
+    void decShCleanDelay() {        if (header.shCleanDelay > 0) { header.shCleanDelay--; }    }
     unsigned getShCleanDelay() {       return header.shCleanDelay;    }
     #endif
 
@@ -571,7 +571,7 @@ class Clause
     #ifdef CLS_EXTRA_INFO
     {
         uint64_t max = a >= b ? a : b;
-        return max+1;;
+        return max + 1;;
     }
     #else
     { return 0; }
@@ -711,7 +711,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
             to[cr].setCanBeDel(c.canBeDel());
             #ifdef PCASSO
             to[cr].header.shCleanDelay = c.getShCleanDelay();
-            to[cr].header.shared = c.isShared() ? 1: 0;
+            to[cr].header.shared = c.isShared() ? 1 : 0;
             #endif
         } else if (to[cr].has_extra()) { to[cr].calcAbstraction(); }
         #ifdef PCASSO
@@ -788,8 +788,8 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         bool use_extra = learnt | extra_clause_field;
 
         assert(reservation.current + clauseWord32Size(ps.size(), use_extra) <= reservation.upper_limit && "requested clause size does not fit in reservation");
-        if(false && reservation.current + clauseWord32Size(ps.size(), use_extra) > reservation.upper_limit) {
-            std::cerr << "requested clause size does not fit in reservation" <<std::endl;
+        if (false && reservation.current + clauseWord32Size(ps.size(), use_extra) > reservation.upper_limit) {
+            std::cerr << "requested clause size does not fit in reservation" << std::endl;
         }
         CRef cid = reservation.current;
         new (lea(cid)) Clause(ps, use_extra, learnt);
@@ -824,7 +824,7 @@ class OccLists
   public:
     OccLists(const Deleted& d) : deleted(d) {}
 
-    void  init      (const Idx& idx) { occs.growTo(toInt(idx)+1); dirty.growTo(toInt(idx)+1, 0); }
+    void  init      (const Idx& idx) { occs.growTo(toInt(idx) + 1); dirty.growTo(toInt(idx) + 1, 0); }
     // Vec&  operator[](const Idx& idx){ return occs[toInt(idx)]; }
     Vec&  operator[](const Idx& idx) { return occs[toInt(idx)]; }
     Vec&  lookup    (const Idx& idx) { if (dirty[toInt(idx)]) { clean(idx); } return occs[toInt(idx)]; }
@@ -851,7 +851,7 @@ class OccLists
 
 
 template<class Idx, class Vec, class Deleted>
-void OccLists<Idx,Vec,Deleted>::cleanAll()
+void OccLists<Idx, Vec, Deleted>::cleanAll()
 {
     for (int i = 0; i < dirties.size(); i++)
         // Dirties may contain duplicates so check here if a variable is already cleaned:
@@ -863,7 +863,7 @@ void OccLists<Idx,Vec,Deleted>::cleanAll()
 
 
 template<class Idx, class Vec, class Deleted>
-void OccLists<Idx,Vec,Deleted>::clean(const Idx& idx)
+void OccLists<Idx, Vec, Deleted>::clean(const Idx& idx)
 {
     Vec& vec = occs[toInt(idx)];
     int  i, j;
@@ -1008,8 +1008,8 @@ inline bool Clause::ordered_equals (const Clause& other) const
 inline void Clause::remove_lit(const Lit p)
 {
     for (int i = 0; i < size(); ++i) {
-        if(data[i].lit == p) {
-            while(i < size()-1) {
+        if (data[i].lit == p) {
+            while (i < size() - 1) {
                 data[i] = data[i + 1];
                 ++i;
             }
@@ -1033,8 +1033,8 @@ inline void Clause::strengthen(Lit p)
 struct Watcher {
     // payload
     CRef clauseReference;
-    unsigned blockingLit:30;
-    unsigned watchType:2; // 0 = binary, 1 = long clause, 2= 3=
+    unsigned blockingLit: 30;
+    unsigned watchType: 2; // 0 = binary, 1 = long clause, 2= 3=
     // wrapper
     const CRef& cref() const { return clauseReference; };
     CRef& cref() { return clauseReference; };
@@ -1093,7 +1093,7 @@ class MarkArray
 
     void capacity(const uint32_t newSize)
     {
-        if( newSize > array.size() ) {
+        if ( newSize > array.size() ) {
             array.resize(newSize, 0); // add 0 as element
             // memset( &(array[0]), 0 , sizeof( uint32_t) * (newSize) );
         }
@@ -1101,7 +1101,7 @@ class MarkArray
 
     void resize(const uint32_t newSize)
     {
-        if( newSize > array.size() ) {
+        if ( newSize > array.size() ) {
             array.resize(newSize, 0); // add 0 as element
             // memset( &(array[0]), 0 , sizeof( uint32_t) * (newSize) );
         }
@@ -1126,7 +1126,7 @@ class MarkArray
      */
     uint32_t nextStep()
     {
-        if( step >= 1 << 30 ) { reset(); }
+        if ( step >= 1 << 30 ) { reset(); }
         return ++step;
     }
 
@@ -1167,8 +1167,8 @@ class MarkArray
 /** print literals into a stream */
 inline std::ostream& operator<<(std::ostream& other, const Lit& l )
 {
-    if( l == lit_Undef ) { other << "lUndef"; }
-    else if( l == lit_Error ) { other << "lError"; }
+    if ( l == lit_Undef ) { other << "lUndef"; }
+    else if ( l == lit_Error ) { other << "lError"; }
     else { other << (sign(l) ? "-" : "") << var(l) + 1; }
     return other;
 }
@@ -1177,7 +1177,7 @@ inline std::ostream& operator<<(std::ostream& other, const Lit& l )
 inline std::ostream& operator<<(std::ostream& other, const Clause& c )
 {
     other << "[";
-    for( int i = 0 ; i < c.size(); ++ i ) {
+    for ( int i = 0 ; i < c.size(); ++ i ) {
         other << " " << c[i];
     }
     other << "]";
@@ -1188,7 +1188,7 @@ inline std::ostream& operator<<(std::ostream& other, const Clause& c )
 template <typename T>
 inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data )
 {
-    for( int i = 0 ; i < data.size(); ++ i ) {
+    for ( int i = 0 ; i < data.size(); ++ i ) {
         other << " " << data[i];
     }
     return other;
@@ -1199,7 +1199,7 @@ inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data 
 template <typename T>
 inline std::ostream& operator<<(std::ostream& other, const vec<T>& data )
 {
-    for( int i = 0 ; i < data.size(); ++ i ) {
+    for ( int i = 0 ; i < data.size(); ++ i ) {
         other << " " << data[i];
     }
     return other;

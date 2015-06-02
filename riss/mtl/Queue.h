@@ -53,7 +53,7 @@ class Queue
         buf[end++] = elem;
         if (end == buf.size()) { end = 0; }
         if (first == end) { // Resize:
-            vec<T>  tmp((buf.size()*3 + 1) >> 1);
+            vec<T>  tmp((buf.size() * 3 + 1) >> 1);
             //**/printf("queue alloc: %d elems (%.1f MB)\n", tmp.size(), tmp.size() * sizeof(T) / 1000000.0);
             int     i = 0;
             for (int j = first; j < buf.size(); j++) { tmp[i++] = buf[j]; }

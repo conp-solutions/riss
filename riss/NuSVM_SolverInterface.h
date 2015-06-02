@@ -118,7 +118,7 @@ inline int MiniSat_Add_Clause(MiniSat_ptr ms,
 {
     int i, ret = 0;
 
-    for(i = 0; i < num_lits; i++) {
+    for (i = 0; i < num_lits; i++) {
         const int lit = clause_lits[i];
         assert(lit != 0);
         assert(abs(lit) <= MiniSat_Nof_Variables(ms)); // NuSVM wants to make sure this check itself - riss_add would create variable data structures itself
@@ -146,12 +146,12 @@ inline int MiniSat_Solve_Assume(MiniSat_ptr ms,
     int i;
     assert(ms != 0);
 
-    if( 0 == riss_simplify( ms ) ) { return 0; } // unit propagation failed
+    if ( 0 == riss_simplify( ms ) ) { return 0; } // unit propagation failed
 
     assert(nof_assumed_lits >= 0);
     assert( riss_assumptions(ms) == 0 && "there should not be old assumption variables left" );
 
-    for(i = 0; i < nof_assumed_lits; i++) {
+    for (i = 0; i < nof_assumed_lits; i++) {
         const int lit = assumed_lits[i];
         assert(abs(lit) > 0);
         assert(abs(lit) <= MiniSat_Nof_Variables(ms));
@@ -172,7 +172,7 @@ inline int MiniSat_simplifyDB(MiniSat_ptr ms)
 inline int MiniSat_Get_Value(MiniSat_ptr ms, int var_num)
 {
     assert(var_num > 0);
-    if(var_num > MiniSat_Nof_Variables(ms) ) {
+    if (var_num > MiniSat_Nof_Variables(ms) ) {
         return -1;
     }
     /* minisat assigns all variables. just check */

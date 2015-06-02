@@ -90,7 +90,7 @@ class Subsumption : public Technique
      */
     bool process(bool doStrengthen = true, Riss::Heap<VarOrderBVEHeapLt> * heap = NULL, const Riss::Var ignore = var_Undef, const bool doStatistics = true);
 
-    void initClause(const Riss::CRef cr, bool addToStrengthen=true); // inherited from Technique
+    void initClause(const Riss::CRef cr, bool addToStrengthen = true); // inherited from Technique
 
     /** indicate whether clauses could be reduced */
     bool hasWork() const ;

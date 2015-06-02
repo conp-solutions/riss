@@ -25,17 +25,17 @@ class FourierMotzkin : public Technique
     Propagation& propagation;
     Riss::Solver& solver;
 
-    double processTime,amoTime,amtTime,fmTime,twoPrTime,deduceAloTime,semTime;
+    double processTime, amoTime, amtTime, fmTime, twoPrTime, deduceAloTime, semTime;
     int64_t steps, searchSteps;
     int fmLimit;
-    int foundAmos,foundAmts,newAmos,newAlos,newAlks;
-    int sameUnits,deducedUnits,propUnits;
+    int foundAmos, foundAmts, newAmos, newAlos, newAlks;
+    int sameUnits, deducedUnits, propUnits;
     int addDuplicates;
     int irregular, pureAmoLits;
     int usedClauses;
     int cardDiff, discardedCards, discardedNewAmos;
     int removedCards, newCards;
-    int addedBinaryClauses,addedClauses;
+    int addedBinaryClauses, addedClauses;
     int detectedDuplicates;
     int garbageCollects;
 
@@ -84,7 +84,7 @@ class FourierMotzkin : public Technique
         int k;
         CardC( std::vector<Riss::Lit>& amo ) : ll(amo), k(1) {}; // constructor to add amo constraint
         CardC( std::vector<Riss::Lit>& amk, int _k ) : ll(amk), k(_k) {}; // constructor to add amk constraint
-        CardC( const Riss::Clause& c ) :k(-1) { lr.resize(c.size(),Riss::lit_Undef); for(int i = 0 ; i < c.size(); ++i ) { lr[i] = c[i]; } }// constructor for usual clauses
+        CardC( const Riss::Clause& c ) : k(-1) { lr.resize(c.size(), Riss::lit_Undef); for (int i = 0 ; i < c.size(); ++i ) { lr[i] = c[i]; } } // constructor for usual clauses
         bool amo() const { return k == 1 && lr.size() == 0 ; }
         bool amt() const { return k == 2 && lr.size() == 0 ; }
         bool amk() const { return k >= 0 && lr.size() == 0 ; }
@@ -93,8 +93,8 @@ class FourierMotzkin : public Technique
         bool isUnit() const { return (k + (int)lr.size()) == 0; } // all literals in ll have to be false, and all literals in lr have to be true
         bool failed() const { return (((int)lr.size() + k) < 0) ; }
         bool taut() const { return k >= (int)ll.size(); } // assume no literal appears both in ll and lr
-        bool invalid() const { return k==0 && ll.size() == 0 && lr.size() == 0; } // nothing stored in the constraint any more
-        void invalidate() { k=0; std::vector<Riss::Lit>().swap(ll); std::vector<Riss::Lit>().swap(lr);}
+        bool invalid() const { return k == 0 && ll.size() == 0 && lr.size() == 0; } // nothing stored in the constraint any more
+        void invalidate() { k = 0; std::vector<Riss::Lit>().swap(ll); std::vector<Riss::Lit>().swap(lr);}
         CardC() : k(0) {} // default constructor
         void swap( CardC& other )   /** swap with other constraint */
         {
@@ -123,7 +123,7 @@ class FourierMotzkin : public Technique
 
   protected:
     /** propagate the literals in unitQueue over all constraints*/
-    bool propagateCards( Riss::vec<Riss::Lit>& unitQueue, std::vector< std::vector<int> >& leftHands, std::vector< std::vector<int> >& rightHands, std::vector<CardC>& cards,Riss::MarkArray& inAmo);
+    bool propagateCards( Riss::vec<Riss::Lit>& unitQueue, std::vector< std::vector<int> >& leftHands, std::vector< std::vector<int> >& rightHands, std::vector<CardC>& cards, Riss::MarkArray& inAmo);
 
     /** check whether the given clause is already present in the given list */
     bool hasDuplicate(const std::vector<Riss::Lit>& c);

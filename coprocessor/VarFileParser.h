@@ -52,11 +52,11 @@ inline int VarFileParser::extract ( std::vector<int>& vars )
     file.seekg( 0 );
     std::string line;
     int max = 0;
-    while(getline (file, line)) {
-        if( line.size() == 0 ) { continue; }
+    while (getline (file, line)) {
+        if ( line.size() == 0 ) { continue; }
         // ignore comment lines
-        if( line.at(0) == 'c' ) { continue; }
-        if( line.find('.') != std::string::npos ) {
+        if ( line.at(0) == 'c' ) { continue; }
+        if ( line.find('.') != std::string::npos ) {
             // range of numbers
             uint32_t dotPos = line.find('.');
             std::string first = line.substr(0, line.find('.'));
@@ -64,12 +64,12 @@ inline int VarFileParser::extract ( std::vector<int>& vars )
 
             line = line.substr(dotPos + 2);
             int secondVar = atoi(line.c_str());
-            for( int v = firstVar; v <= secondVar; v++) { vars.push_back( v ); }
+            for ( int v = firstVar; v <= secondVar; v++) { vars.push_back( v ); }
             max = max >= secondVar ? max : secondVar;
         } else {
             int nr = atoi( line.c_str() ); // can handle negative values
             // single number
-            if( nr == 0 ) { std::cerr << "c WARNING: found 0 in variable file" << std::endl; }
+            if ( nr == 0 ) { std::cerr << "c WARNING: found 0 in variable file" << std::endl; }
             else { vars.push_back( nr ); }
             max = max >= nr ? max : nr;
         }
@@ -81,7 +81,7 @@ inline int VarFileParser::extract ( std::vector<int>& vars )
 inline VarFileParser::VarFileParser( const std::string& filename)
 {
     file.open(filename.c_str(), std::ios_base::in );
-    if( !file.is_open() ) {
+    if ( !file.is_open() ) {
         std::cerr << "c variable parser was not able to open file " << filename << std::endl;
     }
 }

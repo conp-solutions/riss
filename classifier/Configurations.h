@@ -61,7 +61,7 @@ class Configurations
     std::string attrInfo(int startIndex);
     int getAttrIndex(int config) const
     {
-        return startIndex+config;
+        return startIndex + config;
     }
 
     const char* getAttrInfoFile() const

@@ -27,19 +27,19 @@ bool Riss::parseOptions(int& argc, char** argv, bool strict)
 {
     bool returnValue = false;
     int i, j;
-    for (i = j = 1; i < argc; i++){
+    for (i = j = 1; i < argc; i++) {
         const char* str = argv[i];
-        if (match(str, "--") && match(str, Option::getHelpPrefixString()) && match(str, "help")){
+        if (match(str, "--") && match(str, Option::getHelpPrefixString()) && match(str, "help")) {
             if (*str == '\0')
-                printUsageAndExit(argc, argv);
+            { printUsageAndExit(argc, argv); }
             else if (match(str, "-verb"))
-                printUsageAndExit(argc, argv, true);
-	    returnValue = true;
-	    argv[j++] = argv[i]; // keep the help parameter
+            { printUsageAndExit(argc, argv, true); }
+            returnValue = true;
+            argv[j++] = argv[i]; // keep the help parameter
         } else {
             bool parsed_ok = false;
-        
-            for (int k = 0; !parsed_ok && k < Option::getOptionList().size(); k++){
+
+            for (int k = 0; !parsed_ok && k < Option::getOptionList().size(); k++) {
                 parsed_ok = Option::getOptionList()[k]->parse(argv[i]);
 
                 // fprintf(stderr, "checking %d: %s against flag <%s> (%s)\n", i, argv[i], Option::getOptionList()[k]->name, parsed_ok ? "ok" : "skip");
@@ -47,9 +47,9 @@ bool Riss::parseOptions(int& argc, char** argv, bool strict)
 
             if (!parsed_ok)
                 if (strict && match(argv[i], "-"))
-                    fprintf(stderr, "ERROR! Unknown flag \"%s\". Use '--%shelp' for help.\n", argv[i], Option::getHelpPrefixString()), exit(1);
+                { fprintf(stderr, "ERROR! Unknown flag \"%s\". Use '--%shelp' for help.\n", argv[i], Option::getHelpPrefixString()), exit(1); }
                 else
-                    argv[j++] = argv[i];
+                { argv[j++] = argv[i]; }
         }
     }
 
@@ -58,8 +58,8 @@ bool Riss::parseOptions(int& argc, char** argv, bool strict)
 }
 
 
-void Riss::setUsageHelp      (const char* str){ Option::getUsageString() = str; }
-void Riss::setHelpPrefixStr  (const char* str){ Option::getHelpPrefixString() = str; }
+void Riss::setUsageHelp      (const char* str) { Option::getUsageString() = str; }
+void Riss::setHelpPrefixStr  (const char* str) { Option::getHelpPrefixString() = str; }
 void Riss::printUsageAndExit (int argc, char** argv, bool verbose)
 {
     const char* usage = Option::getUsageString();
@@ -69,14 +69,14 @@ void Riss::printUsageAndExit (int argc, char** argv, bool verbose)
     const char* prev_cat  = NULL;
     const char* prev_type = NULL;
 
-    for (int i = 0; i < Option::getOptionList().size(); i++){
+    for (int i = 0; i < Option::getOptionList().size(); i++) {
         const char* cat  = Option::getOptionList()[i]->category;
         const char* type = Option::getOptionList()[i]->type_name;
 
         if (cat != prev_cat)
-            fprintf(stderr, "\n%s OPTIONS:\n\n", cat);
+        { fprintf(stderr, "\n%s OPTIONS:\n\n", cat); }
         else if (type != prev_type)
-            fprintf(stderr, "\n");
+        { fprintf(stderr, "\n"); }
 
         Option::getOptionList()[i]->help(verbose);
 
@@ -85,11 +85,11 @@ void Riss::printUsageAndExit (int argc, char** argv, bool verbose)
     }
 
     if (usage != NULL) {
-      fprintf(stderr, "\n");
-      fprintf(stderr, usage, argv[0]);
+        fprintf(stderr, "\n");
+        fprintf(stderr, usage, argv[0]);
     }
-	
-    
+
+
     fprintf(stderr, "\n");
     fprintf(stderr, "\nHELP OPTIONS:\n\n");
     fprintf(stderr, "  --%shelp        Print help message.\n", Option::getHelpPrefixString());
@@ -101,21 +101,21 @@ void Riss::printUsageAndExit (int argc, char** argv, bool verbose)
 
 void Riss::configCall(int argc, char** argv, std::stringstream& s)
 {
-  // print all options that are left over
-  int i, j;
-  for (i = j = 1; i < argc; i++){
-    const char* str = argv[i];
-    s << argv[i] << " ";
-  }
-  
-  // fill the stream for all the options
-  for (int i = 0; i < Option::getOptionList().size(); i++) {
-    // skip the option "-cmd", because this option is responsible to print the command line
-    if( Option::getOptionList()[i]->name != 0 && strcmp( Option::getOptionList()[i]->name, "cmd" ) == 0 ) continue;
-    // if there is an option that has not its default value, print its call
-    if( ! Option::getOptionList()[i]->hasDefaultValue() ) {
-      Option::getOptionList()[i]->printOptionCall(s);
-      s << " ";
+    // print all options that are left over
+    int i, j;
+    for (i = j = 1; i < argc; i++) {
+        const char* str = argv[i];
+        s << argv[i] << " ";
     }
-  }
+
+    // fill the stream for all the options
+    for (int i = 0; i < Option::getOptionList().size(); i++) {
+        // skip the option "-cmd", because this option is responsible to print the command line
+        if ( Option::getOptionList()[i]->name != 0 && strcmp( Option::getOptionList()[i]->name, "cmd" ) == 0 ) { continue; }
+        // if there is an option that has not its default value, print its call
+        if ( ! Option::getOptionList()[i]->hasDefaultValue() ) {
+            Option::getOptionList()[i]->printOptionCall(s);
+            s << " ";
+        }
+    }
 }

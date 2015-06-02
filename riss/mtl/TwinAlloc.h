@@ -37,7 +37,7 @@ class TwinAllocator
     void** _nextCell[SLAB_BINS];    // memory cell which is returned next
     void** _lastCell[SLAB_BINS];    // last free memory cell
 
-    int counts [SLAB_BINS+1];       // count distribution
+    int counts [SLAB_BINS + 1];     // count distribution
 
     void* initPage(int bin, uint32_t size);
 
@@ -49,8 +49,8 @@ class TwinAllocator
     {
         // find correct bin, set size to bin-maximum (extra function?)
         uint32_t bin = 0 ;
-        for( ; bin < SLAB_BINS; bin ++ ) {
-            if( size <= binMaxSize(bin) ) { break; }
+        for ( ; bin < SLAB_BINS; bin ++ ) {
+            if ( size <= binMaxSize(bin) ) { break; }
         }
 //    std::cerr << "c used bin: " << bin << " for size " << size << " results in block: " << bin - SLAB_BINS << " with blocksize " << ( 1 << bin) << std::endl;
         size = binMaxSize(bin );
@@ -72,21 +72,21 @@ class TwinAllocator
 
         // std::cerr << std::endl << "c initialize twin alloc (already done: " << initialized << ")" << std::endl;
 
-        if( initialized ) { return; }
+        if ( initialized ) { return; }
 
         // setup all initial pages for all sizes
-        for( uint32_t i = 0 ; i < SLAB_BINS; ++i ) {
+        for ( uint32_t i = 0 ; i < SLAB_BINS; ++i ) {
             _head[i] = 0;
             _lastPage[i] = (void**)valloc( SLAB_PAGE_SIZE );
 
-            if( _lastPage[i] == NULL ) {
+            if ( _lastPage[i] == NULL ) {
                 assert( false && "ran out of memory" );
                 exit(3);
             }
 
             memset( _lastPage[i], 0, SLAB_PAGE_SIZE );
 
-            const uint32_t pageElements = ( (SLAB_PAGE_SIZE-8)/binMaxSize(i) ); // think of the one pointer that needs to store the next page!
+            const uint32_t pageElements = ( (SLAB_PAGE_SIZE - 8) / binMaxSize(i) ); // think of the one pointer that needs to store the next page!
             _nextCell[i] = &( _lastPage[i][1] );
             // std::cerr << "c setup for bin " << i << " with size " << binMaxSize(i) ) << std::endl;
             _lastCell[i] = reinterpret_cast<void **>( reinterpret_cast<unsigned long>( &(_lastPage[i][1]) ) + (pageElements - 1) *  binMaxSize(i) ) ;
@@ -94,7 +94,7 @@ class TwinAllocator
             _head[i] = _lastPage[i];
         }
 
-        for( uint32_t i = 0; i <=SLAB_BINS; ++ i ) {
+        for ( uint32_t i = 0; i <= SLAB_BINS; ++ i ) {
             counts [i] = 0;
         }
 
@@ -110,10 +110,10 @@ class TwinAllocator
     ~TwinAllocator()
     {
 
-        if( !initialized ) { return; }
+        if ( !initialized ) { return; }
 
-        for( uint32_t i = sizeof( void* ) ; i < SLAB_BINS; ++i ) {
-            while( _head[i] != _lastPage[i] ) {
+        for ( uint32_t i = sizeof( void* ) ; i < SLAB_BINS; ++i ) {
+            while ( _head[i] != _lastPage[i] ) {
                 void** tmp = (void**)(*(_head[i]));
                 free( (void*)_head[i] );
                 _head[i] = tmp;
@@ -139,7 +139,7 @@ inline void* TwinAllocator::initPage(int bin, uint32_t size)
     // std::cerr << "init page for" << size << " bytes" <<std::endl;
     void** ptr  = (void**)valloc( SLAB_PAGE_SIZE );
 
-    if( ptr == NULL ) {
+    if ( ptr == NULL ) {
         return NULL;
     }
 
@@ -147,12 +147,12 @@ inline void* TwinAllocator::initPage(int bin, uint32_t size)
 
     *(_lastPage[bin]) = ptr;
 
-    _lastPage[bin] = (void**) *(_lastPage[bin]);
+    _lastPage[bin] = (void**) * (_lastPage[bin]);
     memset( _lastPage[bin], 0, SLAB_PAGE_SIZE );
 
     assert( size == binMaxSize(bin) && "work with intern data" );
 
-    const uint32_t pageElements = ( (SLAB_PAGE_SIZE-8)/size); // think of the one pointer that needs to store the next page!
+    const uint32_t pageElements = ( (SLAB_PAGE_SIZE - 8) / size); // think of the one pointer that needs to store the next page!
     _nextCell[bin] = &( _lastPage[bin][1] );
     _lastCell[bin] = reinterpret_cast<void **>( reinterpret_cast<unsigned long>( &(_lastPage[bin][1]) ) + (pageElements - 1) * size );
     // std::cerr << "set lastCell[" << bin << "] to "  << std::hex << _lastCell[bin] << std::dec <<  ", page(" << pageElements << " eles) base: " << std::hex << _lastPage[bin] << std::dec << std::endl;
@@ -166,28 +166,28 @@ inline void* TwinAllocator::get(uint32_t size)
     // std::cerr << "c twinalloc get " << size << std::endl;
 
     // check size and set real one!
-    if( size > SLAB_MALLOC_MAXSIZE ) {
+    if ( size > SLAB_MALLOC_MAXSIZE ) {
         counts [SLAB_BINS] ++;
         return malloc(size);
     }
-    if( size < sizeof( void* ) ) { size = sizeof( void* ); }
+    if ( size < sizeof( void* ) ) { size = sizeof( void* ); }
 
-    if( ! initialized ) { initFirstPages(); } // make sure the object is initialized
+    if ( ! initialized ) { initFirstPages(); } // make sure the object is initialized
 
     int bin = findBin( size );
 
     counts [bin] ++;
 
     void** t = _nextCell[bin];
-    if( _nextCell[bin] != _lastCell[bin] ) {
-        _nextCell[bin] = ( (*(_nextCell[bin]))==0 )
+    if ( _nextCell[bin] != _lastCell[bin] ) {
+        _nextCell[bin] = ( (*(_nextCell[bin])) == 0 )
                          ? /* TODO: fix this expression according to bin!*/ /*_nextCell[bin] + sizeof( void* )*/
 
                          reinterpret_cast<void **>( reinterpret_cast<unsigned long>(_nextCell[bin]) + size)
 
                          : (void**)(*(_nextCell[bin]));
     } else {
-        if( NULL == initPage(bin,size) ) { return NULL; } // tell outside that there was no more memory
+        if ( NULL == initPage(bin, size) ) { return NULL; } // tell outside that there was no more memory
     }
 
     // std::cerr << "get " << size << " bytes at " << std::hex << t << " set new_ele to " << _nextCell[bin] << std::dec << std::endl;
@@ -201,8 +201,8 @@ inline void TwinAllocator::release( void* adress, uint32_t size )
 {
     // std::cerr << "release" << size << " bytes at " << std::hex << adress << std::dec << std::endl;
     // check size and set real one!
-    if( size > SLAB_MALLOC_MAXSIZE ) { return free(   adress ); }
-    if( size < sizeof( void* ) ) { size = sizeof(  void* ); }
+    if ( size > SLAB_MALLOC_MAXSIZE ) { return free(   adress ); }
+    if ( size < sizeof( void* ) ) { size = sizeof(  void* ); }
 
     assert( adress != NULL && adress != 0 && "cannot free memory to 0" );
 
@@ -221,15 +221,15 @@ inline void TwinAllocator::release( void* adress, uint32_t size )
 inline void* TwinAllocator::resize( void* adress, uint32_t new_size, uint32_t size )
 {
     // if the same bin can still be used, use it again
-    if( adress != 0 && new_size <= SLAB_MALLOC_MAXSIZE && findBin(size) == findBin(new_size) ) { return adress; }
+    if ( adress != 0 && new_size <= SLAB_MALLOC_MAXSIZE && findBin(size) == findBin(new_size) ) { return adress; }
 
     // std::cerr << "resize " << std::hex << adress << " from " << std::dec << size << " to " << new_size << std::endl;
     // get new memory
     void* mem = get(new_size);
 
-    if( mem == NULL ) { return NULL; } // if there is no more space, tell the outside
+    if ( mem == NULL ) { return NULL; } // if there is no more space, tell the outside
 
-    if( adress != 0 ) { // otherwise nothing to be copied
+    if ( adress != 0 ) { // otherwise nothing to be copied
         uint32_t smaller = ( new_size < size ) ? new_size : size;
 
         // copy memory!

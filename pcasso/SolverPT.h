@@ -81,9 +81,9 @@ class SolverPT : public SplitterSolver
     removed from the clause only if their pt_level is equal to zero,
                i.e. the clause is "safe"
            **/
-    bool    addClause (const Riss::vec<Riss::Lit>& ps, unsigned int pt_level = 0, bool from_shpool=false);
+    bool    addClause (const Riss::vec<Riss::Lit>& ps, unsigned int pt_level = 0, bool from_shpool = false);
     bool    addClause_( Riss::vec<Riss::Lit>& ps, unsigned int level = 0);
-    void     analyze          (Riss::CRef confl, Riss::vec<Riss::Lit>& out_learnt, int& out_btlevel,unsigned int& nblevels);    // (bt = backtrack)
+    void     analyze          (Riss::CRef confl, Riss::vec<Riss::Lit>& out_learnt, int& out_btlevel, unsigned int& nblevels);   // (bt = backtrack)
     bool     litRedundant     (Riss::Lit p, uint32_t abstract_levels);                       // (helper method for 'analyze()')
     void     uncheckedEnqueue (Riss::Lit p, Riss::CRef from = Riss::CRef_Undef, unsigned int pt_level = 0);                         // Enqueue a literal. Assumes value of literal is undefined.
     Riss::Lit      pickBranchLit    ();                                                      // Return the next decision variable.

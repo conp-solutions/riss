@@ -31,8 +31,8 @@ class BackwardChecker
             CRef ref;              // reference to the clause in the allocator. abstraction in the clause stores the firstLiteral of the clause
             Lit lit;               // literal of a unit clause (used during propagation)
         } data;
-        unsigned long id :48;         // id of the clause (the clause has been added to the formula/proof at this step)
-        unsigned long validUntil :48; // indicate id until this clause is valid
+        unsigned long id : 48;        // id of the clause (the clause has been added to the formula/proof at this step)
+        unsigned long validUntil : 48; // indicate id until this clause is valid
       public:
         /** initially, the item is never valid (only at the very last point in the proof )*/
         ClauseData () : id( (~(0ull)) ), validUntil( (~(0ull)) ) { data.ref = CRef_Undef; }
@@ -149,7 +149,7 @@ class BackwardChecker
 
     vec<int> clauseCount;      // count number of occurrences of a clause that is present in the formula (to be able to merge duplicates)
 //   OccLists<Lit, vec<ClauseHash>, ClauseHashDeleted> oneWatch; // one watch list
-    Map<ClauseHash,EmptyData,ClauseHashHashFunction> oneWatchMap; // use hash map to find matching clauses
+    Map<ClauseHash, EmptyData, ClauseHashHashFunction> oneWatchMap; // use hash map to find matching clauses
 
     // operation options
     bool drat;                   // verify drat

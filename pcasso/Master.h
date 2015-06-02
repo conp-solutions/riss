@@ -106,7 +106,7 @@ class Master
         Master* master;     // handle to the master class, for backward communication (e.g. wakeup)
         Master::state s;        // state of the thread
         SplitterSolver* solver;         // The most recent solver
-        ThreadData  () : id(-1),result(0), timeout(-1), conflicts(-1), handle((pthread_t)0), s( idle ), solver(NULL) {}
+        ThreadData  () : id(-1), result(0), timeout(-1), conflicts(-1), handle((pthread_t)0), s( idle ), solver(NULL) {}
     };
 
     // to maintain the original formula
@@ -229,7 +229,7 @@ class Master
             ts.tv_sec = -1;
             ts.tv_nsec = -1;
         }
-        return (long long int) ts.tv_sec * 1000 + ts.tv_nsec/1000000.0;
+        return (long long int) ts.tv_sec * 1000 + ts.tv_nsec / 1000000.0;
     }
 
     // statistics section

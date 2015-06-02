@@ -53,7 +53,7 @@ class Sls : public Technique
     struct VarData {
         int breakCount;
         bool polarity; // true = false!
-        VarData() : breakCount(0),polarity(false) {}
+        VarData() : breakCount(0), polarity(false) {}
     };
 
     std::vector<VarData> varData;
@@ -80,7 +80,7 @@ class Sls : public Technique
 
     void delHeap( int index )
     {
-        unsatClauses[ indexes[index] ] = unsatClauses[ unsatClauses.size() -1 ];
+        unsatClauses[ indexes[index] ] = unsatClauses[ unsatClauses.size() - 1 ];
         indexes[ unsatClauses[ indexes[index] ] ] = indexes[index];
         unsatClauses.pop_back();
         indexes[index] = -1;

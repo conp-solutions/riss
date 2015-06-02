@@ -38,9 +38,9 @@ class Heap
     vec<int> indices;  // Each integers position (index) in the Heap
 
     // Index "traversal" functions
-    static inline int left  (int i) { return i*2+1; }
-    static inline int right (int i) { return (i+1)*2; }
-    static inline int parent(int i) { return (i-1) >> 1; }
+    static inline int left  (int i) { return i * 2 + 1; }
+    static inline int right (int i) { return (i + 1) * 2; }
+    static inline int parent(int i) { return (i - 1) >> 1; }
 
 
     void percolateUp(int i)
@@ -101,7 +101,7 @@ class Heap
 
     void insert(int n)
     {
-        indices.growTo(n+1, -1);
+        indices.growTo(n + 1, -1);
         assert(!inHeap(n));
 
         indices[n] = heap.size();
@@ -145,9 +145,9 @@ class Heap
      */
     void addNewElement ( int number = -1)
     {
-        if( number == - 1 ) {
+        if ( number == - 1 ) {
             indices.push( -1 );    // element is not in heap
-        } else while( indices.size() <= number ) {
+        } else while ( indices.size() <= number ) {
                 indices.push( -1 );    // elements are not in heap
             }
     }

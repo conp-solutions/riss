@@ -173,7 +173,7 @@ class CoprocessorData
     /** notify about variable renaming */
     void didCompress()
     {
-        if( lastCompressUndoLits != -1 &&  // if there has been a  compression,
+        if ( lastCompressUndoLits != -1 && // if there has been a  compression,
                 decompressedUndoLits != undo.size() ) { // then the complete undo-stack has to be adopted
             std::cerr << "c variable renaming went wrong - abort. lastCom: " << lastCompressUndoLits << " decomp: " << decompressedUndoLits << " undo: " << undo.size() << std::endl;
             exit(14);
@@ -223,7 +223,7 @@ class CoprocessorData
     void checkGarbage(double gf, std::vector<Riss::CRef> ** updateVectors = 0, int size = 0) {  if (ca.wasted() > ca.size() * gf) { garbageCollect(updateVectors, size); } }
 
     void updateClauseAfterDelLit(const Riss::Clause& clause)
-    { if( global_debug_out ) { std::cerr << "what to update in clause?! " << clause << std::endl; } }
+    { if ( global_debug_out ) { std::cerr << "what to update in clause?! " << clause << std::endl; } }
 
     // sort
     void sortClauseLists(bool alsoLearnts = false);
@@ -281,20 +281,20 @@ class CoprocessorData
 
     /** write the given clause/std::vector/Riss::vec to the output, if the output is enabled */
     template <class T>
-    void addToProof(T& clause, bool deleteFromProof=false, const Riss::Lit remLit = Riss::lit_Undef);
+    void addToProof(T& clause, bool deleteFromProof = false, const Riss::Lit remLit = Riss::lit_Undef);
 
     /** write a single unit clause to the proof */
-    void addUnitToProof(const  Riss::Lit& l, bool deleteFromProof=false);
-    void addCommentToProof(const char* text, bool deleteFromProof=false);
+    void addUnitToProof(const  Riss::Lit& l, bool deleteFromProof = false);
+    void addCommentToProof(const char* text, bool deleteFromProof = false);
 
     /** return whether the solver outputs the drup proof! */
     bool outputsProof() const { return solver->outputsProof(); }
 
     #else // no DRAT proofs
     template <class T>
-    void addToProof(T& clause, bool deleteFromProof=false, const Riss::Lit remLit = Riss::lit_Undef) const {};
-    void addUnitToProof(const  Riss::Lit& l, bool deleteFromProof=false) const {};
-    void addCommentToProof(const char* text, bool deleteFromProof=false) const {};
+    void addToProof(T& clause, bool deleteFromProof = false, const Riss::Lit remLit = Riss::lit_Undef) const {};
+    void addUnitToProof(const  Riss::Lit& l, bool deleteFromProof = false) const {};
+    void addCommentToProof(const char* text, bool deleteFromProof = false) const {};
     bool outputsProof() const { return false; }
     #endif
 
@@ -318,7 +318,7 @@ class CoprocessorData
     // TODO: remove after debug
     void printTrail(std::ostream& stream)
     {
-        for( int i = 0 ; i < solver->trail.size(); ++ i ) { std::cerr << " " << solver->trail[i]; }
+        for ( int i = 0 ; i < solver->trail.size(); ++ i ) { std::cerr << " " << solver->trail[i]; }
     }
 
     /** for solver extensions, which rely on extra informations per clause (including unit clauses), e.g. the level of the solver in a partition tree*/
@@ -386,8 +386,8 @@ class BIG
      *  NOTE: will pollute the data.ma Riss::MarkArray
      * @param rootsOnly: fill the std::vector only with root literals
      */
-    void fillSorted( std::vector< Riss::Lit >& literals, Coprocessor::CoprocessorData& data, bool rootsOnly = true, bool getAll=false);
-    void fillSorted(std::vector<Riss::Var>& variables, CoprocessorData& data, bool rootsOnly = true, bool getAll=false);
+    void fillSorted( std::vector< Riss::Lit >& literals, Coprocessor::CoprocessorData& data, bool rootsOnly = true, bool getAll = false);
+    void fillSorted(std::vector<Riss::Var>& variables, CoprocessorData& data, bool rootsOnly = true, bool getAll = false);
 
     /** return true, if the condition "from -> to" holds, based on the stochastic scanned data */
     bool implies(const Riss::Lit& from, const Riss::Lit& to) const;
@@ -411,42 +411,42 @@ struct VarOrderBVEHeapLt {
     bool operator () (Riss::Var x, Riss::Var y) const
     {
         /* assert (data != NULL && "Please assign a valid data object before heap usage" );*/
-        if( heapOption == 0 ) {
+        if ( heapOption == 0 ) {
             return data[x] < data[y];
-        } else if( heapOption == 1 ) {
+        } else if ( heapOption == 1 ) {
             return data[x] > data[y];
-        } else if( heapOption > 2 && heapOption < 11 ) {
-            const double xp =data[ Riss::mkLit(x,false) ];
-            const double xn =data[ Riss::mkLit(x,true)  ];
-            const double yp =data[ Riss::mkLit(y,false) ];
-            const double yn =data[ Riss::mkLit(y,true)  ];
+        } else if ( heapOption > 2 && heapOption < 11 ) {
+            const double xp = data[ Riss::mkLit(x, false) ];
+            const double xn = data[ Riss::mkLit(x, true)  ];
+            const double yp = data[ Riss::mkLit(y, false) ];
+            const double yn = data[ Riss::mkLit(y, true)  ];
             double rx = 0;
-            if( xp != 0 || xn != 0 ) { rx = xp > xn ?  ( xn != 0 ? xp / xn : xp * 1000 ) : ( xp != 0 ? xn  / xp : xn * 1000 ); }
+            if ( xp != 0 || xn != 0 ) { rx = xp > xn ?  ( xn != 0 ? xp / xn : xp * 1000 ) : ( xp != 0 ? xn  / xp : xn * 1000 ); }
             double ry = 0;
-            if( yp != 0 || yn != 0 ) { ry = yp > yn ?  ( yn != 0 ? yp / yn : yp * 1000 ) : ( yp != 0 ? yn  / yp : yn * 1000 ); }
+            if ( yp != 0 || yn != 0 ) { ry = yp > yn ?  ( yn != 0 ? yp / yn : yp * 1000 ) : ( yp != 0 ? yn  / yp : yn * 1000 ); }
 
-            if( heapOption == 3 ) {
+            if ( heapOption == 3 ) {
                 return ( rx < ry )
                        || ( rx == ry && data[x] < data[y] );
-            } else if( heapOption == 4 )  {
+            } else if ( heapOption == 4 )  {
                 return ( rx < ry )
                        || (rx == ry &&  data[x] > data[y] );
-            } else if( heapOption == 5 )  {
+            } else if ( heapOption == 5 )  {
                 return ( rx > ry )
                        || (rx == ry &&  data[x] < data[y] );
-            } else if( heapOption == 6 )  {
+            } else if ( heapOption == 6 )  {
                 return ( rx > ry )
                        || (rx == ry &&  data[x] > data[y] );
-            } else if( heapOption == 7 ) {
+            } else if ( heapOption == 7 ) {
                 return ( data[x] < data[y] )
                        || ( rx < ry && data[x] == data[y] );
-            } else if( heapOption == 8 )  {
+            } else if ( heapOption == 8 )  {
                 return ( data[x] > data[y] )
                        || (rx < ry &&  data[x] == data[y] );
-            } else if( heapOption == 9 )  {
+            } else if ( heapOption == 9 )  {
                 return ( data[x] < data[y] )
                        || (rx > ry &&  data[x] == data[y] );
-            } else if( heapOption == 10 )  {
+            } else if ( heapOption == 10 )  {
                 return ( data[x] > data[y] )
                        || (rx > ry &&  data[x] == data[y] );
             } else {
@@ -468,42 +468,42 @@ struct LitOrderHeapLt {
     {
         /* assert (data != NULL && "Please assign a valid data object before heap usage" );*/
         const Riss::Lit x = Riss::toLit(ix); const Riss::Lit y = Riss::toLit(iy);
-        if( heapOption == 0 ) {
+        if ( heapOption == 0 ) {
             return data[x] < data[y];
-        } else if( heapOption == 1 ) {
+        } else if ( heapOption == 1 ) {
             return data[x] > data[y];
-        } else if( heapOption > 2 && heapOption < 11 ) {
-            const double xp =data[x];
-            const double xn =data[~x];
-            const double yp =data[y];
-            const double yn =data[~y];
+        } else if ( heapOption > 2 && heapOption < 11 ) {
+            const double xp = data[x];
+            const double xn = data[~x];
+            const double yp = data[y];
+            const double yn = data[~y];
             double rx = 0;
-            if( xp != 0 || xn != 0 ) { rx = xp > xn ?  ( xn != 0 ? xp / xn : xp * 1000 ) : ( xp != 0 ? xn  / xp : xn * 1000 ); }
+            if ( xp != 0 || xn != 0 ) { rx = xp > xn ?  ( xn != 0 ? xp / xn : xp * 1000 ) : ( xp != 0 ? xn  / xp : xn * 1000 ); }
             double ry = 0;
-            if( yp != 0 || yn != 0 ) { ry = yp > yn ?  ( yn != 0 ? yp / yn : yp * 1000 ) : ( yp != 0 ? yn  / yp : yn * 1000 ); }
+            if ( yp != 0 || yn != 0 ) { ry = yp > yn ?  ( yn != 0 ? yp / yn : yp * 1000 ) : ( yp != 0 ? yn  / yp : yn * 1000 ); }
 
-            if( heapOption == 3 ) {
+            if ( heapOption == 3 ) {
                 return ( rx < ry )
                        || ( rx == ry && data[x] < data[y] );
-            } else if( heapOption == 4 )  {
+            } else if ( heapOption == 4 )  {
                 return ( rx < ry )
                        || (rx == ry &&  data[x] > data[y] );
-            } else if( heapOption == 5 )  {
+            } else if ( heapOption == 5 )  {
                 return ( rx > ry )
                        || (rx == ry &&  data[x] < data[y] );
-            } else if( heapOption == 6 )  {
+            } else if ( heapOption == 6 )  {
                 return ( rx > ry )
                        || (rx == ry &&  data[x] > data[y] );
-            } else if( heapOption == 7 ) {
+            } else if ( heapOption == 7 ) {
                 return ( data[x] < data[y] )
                        || ( rx < ry && data[x] == data[y] );
-            } else if( heapOption == 8 )  {
+            } else if ( heapOption == 8 )  {
                 return ( data[x] > data[y] )
                        || (rx < ry &&  data[x] == data[y] );
-            } else if( heapOption == 9 )  {
+            } else if ( heapOption == 9 )  {
                 return ( data[x] < data[y] )
                        || (rx > ry &&  data[x] == data[y] );
-            } else if( heapOption == 10 )  {
+            } else if ( heapOption == 10 )  {
                 return ( data[x] > data[y] )
                        || (rx > ry &&  data[x] == data[y] );
             } else {
@@ -582,13 +582,13 @@ inline void CoprocessorData::resetPPhead()
 inline Riss::Var CoprocessorData::nextFreshVariable(char type)
 {
     // be careful here
-    Riss::Var nextVar = solver->newVar(true,true,type);
+    Riss::Var nextVar = solver->newVar(true, true, type);
     numberOfVars = solver->nVars();
-    ma.resize( 2*nVars() );
+    ma.resize( 2 * nVars() );
 
-    deleteTimer.resize( 2*nVars() );
+    deleteTimer.resize( 2 * nVars() );
 
-    occs.resize( 2*nVars() );
+    occs.resize( 2 * nVars() );
     // std::cerr << "c resize occs to " << occs.size() << std::endl;
     lit_occurrence_count.resize( 2 * nVars() );
 
@@ -598,7 +598,7 @@ inline Riss::Var CoprocessorData::nextFreshVariable(char type)
 
 inline void CoprocessorData::moveVar(Riss::Var from, Riss::Var to, bool final)
 {
-    if( from != to ) { // move data only if necessary
+    if ( from != to ) { // move data only if necessary
         solver->varFlags[to].assigns = solver->varFlags[from].assigns; solver->varFlags[from].assigns = l_Undef;
         solver->vardata[to] = solver->vardata[from]; solver->vardata[from] = Riss::Solver::VarData();
         solver->activity[to] = solver->activity[from]; solver->activity[from] = 0;
@@ -613,7 +613,7 @@ inline void CoprocessorData::moveVar(Riss::Var from, Riss::Var to, bool final)
         occs[Riss::toInt( Riss::mkLit(to, false ))].swap( occs[Riss::toInt( Riss::mkLit(from, false ))] );
         occs[Riss::toInt( Riss::mkLit(to, true  ))].swap( occs[Riss::toInt( Riss::mkLit(from, true  ))] );
     }
-    if( final == true ) {
+    if ( final == true ) {
 
         // std::cerr << "c compress variables to " << to+1 << std::endl;
 //     solver->assigns.shrink( solver->assigns.size() - to - 1);
@@ -669,11 +669,11 @@ inline bool CoprocessorData::isInterupted()
 
 inline Riss::lbool CoprocessorData::enqueue(const Riss::Lit l, const uint64_t extraInfo)
 {
-    if( false || global_debug_out ) { std::cerr << "c enqueue " << l << " with previous value " << (solver->value( l ) == l_Undef ? "undef" : (solver->value( l ) == l_False ? "unsat" : " sat ") ) << std::endl; }
-    if( solver->value( l ) == l_False) {
+    if ( false || global_debug_out ) { std::cerr << "c enqueue " << l << " with previous value " << (solver->value( l ) == l_Undef ? "undef" : (solver->value( l ) == l_False ? "unsat" : " sat ") ) << std::endl; }
+    if ( solver->value( l ) == l_False) {
         solver->ok = false; // set state to false
         return l_False;
-    } else if( solver->value( l ) == l_Undef ) {
+    } else if ( solver->value( l ) == l_Undef ) {
         solver->uncheckedEnqueue(l);
         // if( extraInfo != 0 ) solver.vardata[ var(l) ] ... // make use of extra information!
         return l_True;
@@ -707,12 +707,12 @@ inline bool CoprocessorData::hasToPropagate()
 inline void CoprocessorData::addClause(const Riss::CRef cr, bool check)
 {
     const Riss::Clause& c = ca[cr];
-    if( c.can_be_deleted() ) { return; }
+    if ( c.can_be_deleted() ) { return; }
     for (int l = 0; l < c.size(); ++l) {
         // std::cerr << "c add clause " << cr << " to list for " << c[l] << std::endl;
-        if( check ) {
-            for( int i = 0 ; i < occs[Riss::toInt(c[l])].size(); ++ i ) {
-                if( occs[Riss::toInt(c[l])][i] == cr ) {
+        if ( check ) {
+            for ( int i = 0 ; i < occs[Riss::toInt(c[l])].size(); ++ i ) {
+                if ( occs[Riss::toInt(c[l])][i] == cr ) {
                     std::cerr << "c clause " << cr << " is already in list for lit " << c[l] << " clause is: " << ca[cr] << std::endl;
                 }
             }
@@ -726,7 +726,7 @@ inline void CoprocessorData::addClause(const Riss::CRef cr, bool check)
 inline void CoprocessorData::addClause ( const Riss::CRef cr , Riss::Heap<VarOrderBVEHeapLt> * heap, const bool update, const Riss::Var ignore, SpinLock * data_lock, SpinLock * heap_lock)
 {
     const Riss::Clause& c = ca[cr];
-    if( c.can_be_deleted() ) { return; }
+    if ( c.can_be_deleted() ) { return; }
     if (heap == NULL && data_lock == NULL && heap_lock == NULL) {
         for (int l = 0; l < c.size(); ++l) {
             occs[Riss::toInt(c[l])].push_back(cr);
@@ -758,8 +758,8 @@ inline void CoprocessorData::addClause ( const Riss::CRef cr , Riss::Heap<VarOrd
 inline bool CoprocessorData::removeClauseFrom(const Riss::CRef cr, const Riss::Lit l)
 {
     std::vector<Riss::CRef>& list = occs[Riss::toInt(l)];
-    for( int i = 0 ; i < list.size(); ++ i ) {
-        if( list[i] == cr ) {
+    for ( int i = 0 ; i < list.size(); ++ i ) {
+        if ( list[i] == cr ) {
             list[i] = list[ list.size() - 1 ];
             list.pop_back();
             return true;
@@ -772,7 +772,7 @@ inline void CoprocessorData::removeClauseFrom(const Riss::CRef cr, const Riss::L
 {
     std::vector<Riss::CRef>& list = occs[Riss::toInt(l)];
     assert( list[index] == cr );
-    list[index] = list[ list.size() -1 ];
+    list[index] = list[ list.size() - 1 ];
     list.pop_back();
 }
 
@@ -783,8 +783,8 @@ inline bool CoprocessorData::removeClauseFromThreadSafe (const Riss::CRef cr, co
 {
     assert( cr != Riss::CRef_Undef);
     std::vector<Riss::CRef>& list = occs[Riss::toInt(l)];
-    for( int i = 0 ; i < list.size(); ++ i ) {
-        if( list[i] == cr ) {
+    for ( int i = 0 ; i < list.size(); ++ i ) {
+        if ( list[i] == cr ) {
             list[i] = Riss::CRef_Undef;
             return true;
         }
@@ -799,8 +799,8 @@ inline bool CoprocessorData::removeClauseFromThreadSafe (const Riss::CRef cr, co
  */
 inline void CoprocessorData::cleanUpOccurrences(const Riss::MarkArray& dirtyOccs, const uint32_t timer)
 {
-    for(int l = 0 ; l < dirtyOccs.size() ; ++ l ) {
-        if( dirtyOccs.getIndex(l) >= timer ) {
+    for (int l = 0 ; l < dirtyOccs.size() ; ++ l ) {
+        if ( dirtyOccs.getIndex(l) >= timer ) {
             std::vector<Riss::CRef>& list = occs[l];
             int i = 0;
             while (i < list.size()) {
@@ -817,66 +817,66 @@ inline void CoprocessorData::cleanUpOccurrences(const Riss::MarkArray& dirtyOccs
 
 inline void CoprocessorData::cleanOccurrences()
 {
-    for( Riss::Var v = 0; v < nVars(); ++v ) {
-        list( Riss::mkLit(v,false) ).clear();
-        list( Riss::mkLit(v,true) ).clear();
+    for ( Riss::Var v = 0; v < nVars(); ++v ) {
+        list( Riss::mkLit(v, false) ).clear();
+        list( Riss::mkLit(v, true) ).clear();
     }
-    lit_occurrence_count.assign(0,nVars()*2);
+    lit_occurrence_count.assign(0, nVars() * 2);
 }
 
 
 inline void CoprocessorData::sortClauseLists(bool alsoLearnts)
 {
-    for( int p = 0 ; p < (alsoLearnts ? 2 : 1); ++ p ) {
+    for ( int p = 0 ; p < (alsoLearnts ? 2 : 1); ++ p ) {
         Riss::vec<Riss::CRef>& clauseList = (p == 0 ? getClauses() : getLEarnts());
         int32_t n = clauseList.size();
         int32_t m, s;
         // copy elements from std::vector
         Riss::CRef* tmpA = new Riss::CRef[ n ];
         Riss::CRef* a = tmpA;
-        for( int32_t i = 0 ; i < n; i++ ) {
+        for ( int32_t i = 0 ; i < n; i++ ) {
             a[i] = clauseList[i];
         }
         Riss::CRef *tmpB = new Riss::CRef[n];
         Riss::CRef *b = tmpB;
 
         // size of work fields, power of 2
-        for (s=1; s<n; s+=s) {
+        for (s = 1; s < n; s += s) {
             m = n;
             do {
-                m = m - 2*s;    // set begin of working field
-                int32_t hi = (m+s > 0) ? m + s : 0; // set middle of working field
+                m = m - 2 * s;  // set begin of working field
+                int32_t hi = (m + s > 0) ? m + s : 0; // set middle of working field
 
                 int32_t i = (m > 0) ? m : 0;    // lowest position in field
                 int32_t j = hi;
 
-                int32_t stopb = m + 2*s;    // upper bound of current work area
+                int32_t stopb = m + 2 * s;  // upper bound of current work area
                 int32_t currentb = i;           // current position in field for copy
 
                 // merge two sorted fields into one
-                while( i < hi && j < stopb) {
-                    if( ( ca[a[i]] ) < ( ca[a[j]])  ) {
+                while ( i < hi && j < stopb) {
+                    if ( ( ca[a[i]] ) < ( ca[a[j]])  ) {
                         b[currentb++] = a[i++];
                     } else {
                         b[currentb++] = a[j++];
                     }
                 }
                 // copy rest of the elements
-                for( ; i < hi; ) {
+                for ( ; i < hi; ) {
                     b[currentb++] = a[i++];
                 }
 
-                for( ; j< stopb;    ) {
+                for ( ; j < stopb;    ) {
                     b[currentb++] = a[j++];
                 }
 
-            } while( m > 0 );
+            } while ( m > 0 );
 
             // swap fields!
             Riss::CRef* tmp = a; a = b; b = tmp;
         }
         // write data back into std::vector
-        for( int32_t i = 0 ; i < n; i++ ) {clauseList[i] = a[i];}
+        for ( int32_t i = 0 ; i < n; i++ ) {clauseList[i] = a[i];}
 
         delete [] tmpA;
         delete [] tmpB;
@@ -896,8 +896,8 @@ inline void CoprocessorData::deletedVar(const Riss::Var v)
 
 inline void CoprocessorData::getActiveVariables(const uint32_t myTimer, std::vector< Riss::Var >& activeVariables)
 {
-    for( Riss::Var v = 0 ; v < solver->nVars(); ++ v ) {
-        if( deleteTimer.getIndex(v) >= myTimer ) { activeVariables.push_back(v); }
+    for ( Riss::Var v = 0 ; v < solver->nVars(); ++ v ) {
+        if ( deleteTimer.getIndex(v) >= myTimer ) { activeVariables.push_back(v); }
     }
 }
 
@@ -905,8 +905,8 @@ inline void CoprocessorData::getActiveVariables(const uint32_t myTimer, std::vec
 template<class Comp>
 inline void CoprocessorData::getActiveVariables(const uint32_t myTimer, Riss::Heap< Comp >& heap)
 {
-    for( Riss::Var v = 0 ; v < solver->nVars(); ++ v ) {
-        if( deleteTimer.getIndex(v) >= myTimer ) { heap.insert(v); }
+    for ( Riss::Var v = 0 ; v < solver->nVars(); ++ v ) {
+        if ( deleteTimer.getIndex(v) >= myTimer ) { heap.insert(v); }
     }
 }
 
@@ -925,10 +925,10 @@ inline void CoprocessorData::removedClause(const Riss::Lit l1, const Riss::Lit l
     const Riss::Lit secondLit = Riss::toLit(  Riss::toInt(l1) ^ Riss::toInt(l2) ^ Riss::toInt(searchLit) );
 
     // find the right binary clause and remove it!
-    for( int i = 0 ; i < list(searchLit).size(); ++ i ) {
+    for ( int i = 0 ; i < list(searchLit).size(); ++ i ) {
         Riss::Clause& cl = ca[list(searchLit)[i]];
-        if( cl.can_be_deleted() || cl.size() != 2 ) { continue; }
-        if( cl[0] == secondLit || cl[1] == secondLit ) {
+        if ( cl.can_be_deleted() || cl.size() != 2 ) { continue; }
+        if ( cl[0] == secondLit || cl[1] == secondLit ) {
             cl.set_delete(true);
             addCommentToProof("remove binary clause");
             addToProof( cl, true );
@@ -1080,7 +1080,7 @@ inline int32_t& CoprocessorData::operator[](const Riss::Lit l)
 
 inline int32_t CoprocessorData::operator[](const Riss::Var v) const
 {
-    return lit_occurrence_count[Riss::toInt(Riss::mkLit(v,0))] + lit_occurrence_count[Riss::toInt(Riss::mkLit(v,1))];
+    return lit_occurrence_count[Riss::toInt(Riss::mkLit(v, 0))] + lit_occurrence_count[Riss::toInt(Riss::mkLit(v, 1))];
 }
 
 inline std::vector< Riss::CRef >& CoprocessorData::list(const Riss::Lit l)
@@ -1100,26 +1100,26 @@ inline void CoprocessorData::correctCounters()
     // reset to 0
     for (int v = 0; v < solver->nVars(); v++)
         for (int s = 0; s < 2; s++) {
-            lit_occurrence_count[ Riss::toInt(Riss::mkLit(v,s)) ] = 0;
+            lit_occurrence_count[ Riss::toInt(Riss::mkLit(v, s)) ] = 0;
         }
     // re-calculate counters!
-    for( int i = 0 ; i < solver->clauses.size(); ++ i ) {
+    for ( int i = 0 ; i < solver->clauses.size(); ++ i ) {
         const Riss::Clause& c = ca[ solver->clauses[i] ];
-        if( c.can_be_deleted() ) { continue; }
+        if ( c.can_be_deleted() ) { continue; }
         numberOfCls ++;
-        for( int j = 0 ; j < c.size(); j++) { lit_occurrence_count[ Riss::toInt(c[j]) ] ++; } // increment all literal counters accordingly
+        for ( int j = 0 ; j < c.size(); j++) { lit_occurrence_count[ Riss::toInt(c[j]) ] ++; } // increment all literal counters accordingly
     }
-    for( int i = 0 ; i < solver->learnts.size(); ++ i ) {
+    for ( int i = 0 ; i < solver->learnts.size(); ++ i ) {
         const Riss::Clause& c = ca[ solver->learnts[i] ];
-        if( c.can_be_deleted() ) { continue; }
+        if ( c.can_be_deleted() ) { continue; }
         numberOfCls ++;
-        for( int j = 0 ; j < c.size(); j++) { lit_occurrence_count[ Riss::toInt(c[j]) ] ++; } // increment all literal counters accordingly
+        for ( int j = 0 ; j < c.size(); j++) { lit_occurrence_count[ Riss::toInt(c[j]) ] ++; } // increment all literal counters accordingly
     }
 }
 
 inline void CoprocessorData::garbageCollect(std::vector<Riss::CRef> ** updateVectors, int size)
 {
-    if( debugging ) {
+    if ( debugging ) {
         std::cerr << "c check garbage collection [REJECTED DUE TO DEBUGGING] " << std::endl;
         return;
     }
@@ -1264,16 +1264,16 @@ inline void CoprocessorData::relocAll(Riss::ClauseAllocator& to, std::vector<Ris
  */
 inline void CoprocessorData::mark1(Riss::Var x, Riss::MarkArray& array)
 {
-    std::vector<Riss::CRef>& clauses = occs[Riss::toInt( Riss::mkLit(x,true))];
-    for( int i = 0; i < clauses.size(); ++i) {
+    std::vector<Riss::CRef>& clauses = occs[Riss::toInt( Riss::mkLit(x, true))];
+    for ( int i = 0; i < clauses.size(); ++i) {
         Riss::CRef cr = clauses[i];
         Riss::Clause& c = ca[cr];
         for (int j = 0; j < c.size(); ++j) {
             array.setCurrentStep(var(c[j]));
         }
     }
-    clauses = occs[Riss::toInt( Riss::mkLit(x,false) )];
-    for( int i = 0; i < clauses.size(); ++i) {
+    clauses = occs[Riss::toInt( Riss::mkLit(x, false) )];
+    for ( int i = 0; i < clauses.size(); ++i) {
         Riss::CRef cr = clauses[i];
         Riss::Clause& c = ca[cr];
         for (int j = 0; j < c.size(); ++j) {
@@ -1295,23 +1295,23 @@ inline void CoprocessorData::mark2(Riss::Var x, Riss::MarkArray& array, Riss::Ma
 {
     tmp.nextStep();
     // for negative literal
-    std::vector<Riss::CRef>& clauses = occs[Riss::toInt( Riss::mkLit(x,true))];
-    for( int i = 0; i < clauses.size(); ++i) {
+    std::vector<Riss::CRef>& clauses = occs[Riss::toInt( Riss::mkLit(x, true))];
+    for ( int i = 0; i < clauses.size(); ++i) {
         Riss::Clause& c = ca[clauses[i]];
         // for l in C
         for (int l = 0; l < c.size(); ++l) {
-            if( !tmp.isCurrentStep(var(c[l])) ) {
+            if ( !tmp.isCurrentStep(var(c[l])) ) {
                 mark1(var(c[l]), array);
             }
             tmp.setCurrentStep(var(c[l]));
         }
     }
     // for positive literal
-    clauses = occs[Riss::toInt( Riss::mkLit(x,false))];
-    for( int i = 0; i < clauses.size(); ++i) {
+    clauses = occs[Riss::toInt( Riss::mkLit(x, false))];
+    for ( int i = 0; i < clauses.size(); ++i) {
         Riss::Clause& c = ca[clauses[i]];
         for (int l = 0; l < c.size(); ++l) {
-            if( !tmp.isCurrentStep(var(c[l])) ) {
+            if ( !tmp.isCurrentStep(var(c[l])) ) {
                 mark1(var(c[l]), array);
             }
             tmp.setCurrentStep(var(c[l]));
@@ -1322,75 +1322,75 @@ inline void CoprocessorData::mark2(Riss::Var x, Riss::MarkArray& array, Riss::Ma
 inline void CoprocessorData::addToExtension(const Riss::CRef cr, const Riss::Lit l)
 {
     const Riss::Clause& c = ca[cr];
-    if( undo.size() > 0 ) { assert( undo[ undo.size() - 1] != Riss::lit_Undef && "an empty clause should not be put on the undo stack" ); }
+    if ( undo.size() > 0 ) { assert( undo[ undo.size() - 1] != Riss::lit_Undef && "an empty clause should not be put on the undo stack" ); }
     undo.push_back(Riss::lit_Undef);
-    if( l != Riss::lit_Error ) { undo.push_back(l); }
-    for( int i = 0 ; i < c.size(); ++ i ) {
-        if( c[i] != l ) { undo.push_back(c[i]); }
+    if ( l != Riss::lit_Error ) { undo.push_back(l); }
+    for ( int i = 0 ; i < c.size(); ++ i ) {
+        if ( c[i] != l ) { undo.push_back(c[i]); }
     }
 }
 
 inline void CoprocessorData::addToExtension(Riss::vec< Riss::Lit >& lits, const Riss::Lit l)
 {
-    if( undo.size() > 0 ) { assert( undo[ undo.size() - 1] != Riss::lit_Undef && "an empty clause should not be put on the undo stack" ); }
+    if ( undo.size() > 0 ) { assert( undo[ undo.size() - 1] != Riss::lit_Undef && "an empty clause should not be put on the undo stack" ); }
     undo.push_back(Riss::lit_Undef);
-    if( l != Riss::lit_Error ) { undo.push_back(l); }
-    for( int i = 0 ; i < lits.size(); ++ i ) {
-        if( lits[i] != l ) { undo.push_back(lits[i]); }
+    if ( l != Riss::lit_Error ) { undo.push_back(l); }
+    for ( int i = 0 ; i < lits.size(); ++ i ) {
+        if ( lits[i] != l ) { undo.push_back(lits[i]); }
     }
 }
 
 inline void CoprocessorData::addToExtension(std::vector< Riss::Lit >& lits, const Riss::Lit l)
 {
-    if( undo.size() > 0 ) { assert( undo[ undo.size() - 1] != Riss::lit_Undef && "an empty clause should not be put on the undo stack" ); }
+    if ( undo.size() > 0 ) { assert( undo[ undo.size() - 1] != Riss::lit_Undef && "an empty clause should not be put on the undo stack" ); }
     undo.push_back(Riss::lit_Undef);
-    if( l != Riss::lit_Error ) { undo.push_back(l); }
-    for( int i = 0 ; i < lits.size(); ++ i ) {
-        if( lits[i] != l ) { undo.push_back(lits[i]); }
+    if ( l != Riss::lit_Error ) { undo.push_back(l); }
+    for ( int i = 0 ; i < lits.size(); ++ i ) {
+        if ( lits[i] != l ) { undo.push_back(lits[i]); }
     }
 }
 
 inline void CoprocessorData::addToExtension(const Riss::Lit dontTouch, const Riss::Lit l)
 {
-    if( undo.size() > 0 ) { assert( undo[ undo.size() - 1] != Riss::lit_Undef && "an empty clause should not be put on the undo stack" ); }
+    if ( undo.size() > 0 ) { assert( undo[ undo.size() - 1] != Riss::lit_Undef && "an empty clause should not be put on the undo stack" ); }
     undo.push_back(Riss::lit_Undef);
-    if( l != Riss::lit_Error) { undo.push_back(l); }
+    if ( l != Riss::lit_Error) { undo.push_back(l); }
     undo.push_back(dontTouch);
 }
 
 // TODO: use template!
 inline void CoprocessorData::addExtensionToExtension(Riss::vec< Riss::Lit >& lits)
 {
-    for( int i = 0 ; i < lits.size(); ++ i ) {
+    for ( int i = 0 ; i < lits.size(); ++ i ) {
         undo.push_back(lits[i]);
     }
 }
 
 inline void CoprocessorData::addExtensionToExtension(std::vector< Riss::Lit >& lits)
 {
-    for( int i = 0 ; i < lits.size(); ++ i ) {
+    for ( int i = 0 ; i < lits.size(); ++ i ) {
         undo.push_back(lits[i]);
     }
 }
 
 inline void CoprocessorData::extendModel(Riss::vec< Riss::lbool >& model)
 {
-    if( lastCompressUndoLits != -1 &&  // if there has been a  compression,
+    if ( lastCompressUndoLits != -1 && // if there has been a  compression,
             decompressedUndoLits != undo.size() ) { // then the complete undo-stack has to be adopted
         std::cerr << "c variable renaming went wrong - abort. lastCom: " << lastCompressUndoLits << " decomp: " << decompressedUndoLits << " undo: " << undo.size() << std::endl;
         exit(13);
     }
 
-    for( int j = 0 ; j < model.size(); ++ j ) {
-        if( model[j] == l_Undef ) { model[j] = l_True; } // set free variables to some value
+    for ( int j = 0 ; j < model.size(); ++ j ) {
+        if ( model[j] == l_Undef ) { model[j] = l_True; } // set free variables to some value
     }
 
     const bool local_debug = false;
-    if( true && (global_debug_out || local_debug) ) {
+    if ( true && (global_debug_out || local_debug) ) {
         std::cerr << "c extend model of size " << model.size() << " with undo information of size " << undo.size() << std::endl;
         std::cerr << "c in model: ";
-        for( int j = 0 ; j < model.size(); ++ j ) {
-            if( model[j] == l_Undef ) { std::cerr << "? "; }
+        for ( int j = 0 ; j < model.size(); ++ j ) {
+            if ( model[j] == l_Undef ) { std::cerr << "? "; }
             else {
                 const Riss::Lit satLit = Riss::mkLit( j, model[j] == l_True ? false : true );
                 std::cerr << satLit << " ";
@@ -1399,42 +1399,42 @@ inline void CoprocessorData::extendModel(Riss::vec< Riss::lbool >& model)
         std::cerr << std::endl;
     }
 
-    if( false && local_debug ) {
+    if ( false && local_debug ) {
         std::cerr << "extend Stack: " << std::endl;
-        for( int i = undo.size() - 1; i >= 0 ; --i ) {
-            if( undo[i] == Riss::lit_Undef ) { std::cerr << std::endl; }
+        for ( int i = undo.size() - 1; i >= 0 ; --i ) {
+            if ( undo[i] == Riss::lit_Undef ) { std::cerr << std::endl; }
             else { std::cerr << " " << undo[i]; }
         }
 
 
         std::cerr << "next clause: ";
-        for( int j = undo.size() - 1; j >= 0 ; --j ) if( undo[j] == Riss::lit_Undef ) { break; } else { std::cerr << " " << undo[j]; }
+        for ( int j = undo.size() - 1; j >= 0 ; --j ) if ( undo[j] == Riss::lit_Undef ) { break; } else { std::cerr << " " << undo[j]; }
         std::cerr << std::endl;
 
     }
 
     // check current clause for being satisfied
     bool isSat = false; // FIXME: this bool is redundant!
-    for( int i = undo.size() - 1; i >= 0 ; --i ) {
+    for ( int i = undo.size() - 1; i >= 0 ; --i ) {
 
         isSat = false; // init next clause - redundant!
         const Riss::Lit c = undo[i]; // check current literal
-        if( global_debug_out  || local_debug) { std::cerr << "c read literal " << c << std::endl; }
-        if( c == Riss::lit_Undef ) {  // found clause delimiter, without jumping over it in the SAT case (below)
-            if( !isSat ) {        // this condition is always satisfied -- the current clause has to be unsatisfied (otherwise, would have been ignored below!)
+        if ( global_debug_out  || local_debug) { std::cerr << "c read literal " << c << std::endl; }
+        if ( c == Riss::lit_Undef ) { // found clause delimiter, without jumping over it in the SAT case (below)
+            if ( !isSat ) {       // this condition is always satisfied -- the current clause has to be unsatisfied (otherwise, would have been ignored below!)
                 // if clause is not satisfied, satisfy last literal!
-                const Riss::Lit& satLit = undo[i+1];
+                const Riss::Lit& satLit = undo[i + 1];
                 assert( satLit != Riss::lit_Undef && "there should not be an empty clause on the undo stack" );
-                log.log(1, "set literal to true",satLit);
-                if( local_debug ) { std::cerr << "c set literal " << undo[i+1] << " to true " << std::endl; }
+                log.log(1, "set literal to true", satLit);
+                if ( local_debug ) { std::cerr << "c set literal " << undo[i + 1] << " to true " << std::endl; }
                 model[ var(satLit) ] = sign(satLit) ? l_False : l_True;
             }
 
             // finished this clause!
-            if( local_debug ) { // print intermediate state!
+            if ( local_debug ) { // print intermediate state!
                 std::cerr << "c current model: ";
-                for( int j = 0 ; j < model.size(); ++ j ) {
-                    if( model[j] == l_Undef ) { std::cerr << "? "; }
+                for ( int j = 0 ; j < model.size(); ++ j ) {
+                    if ( model[j] == l_Undef ) { std::cerr << "? "; }
                     else {
                         const Riss::Lit satLit = Riss::mkLit( j, model[j] == l_True ? false : true );
                         std::cerr << satLit << " ";
@@ -1442,29 +1442,29 @@ inline void CoprocessorData::extendModel(Riss::vec< Riss::lbool >& model)
                 }
                 std::cerr << std::endl;
                 std::cerr << "next clause: ";
-                for( int j = i - 1; j >= 0 ; --j ) if( undo[j] == Riss::lit_Undef ) { break; } else { std::cerr << " " << undo[j]; }
+                for ( int j = i - 1; j >= 0 ; --j ) if ( undo[j] == Riss::lit_Undef ) { break; } else { std::cerr << " " << undo[j]; }
                 std::cerr << std::endl;
             }
             continue;
         }
-        if( var(c) >= model.size() ) { model.growTo( var(c) + 1, l_True ); } // model is too small? this will also take care of extended resolution variables!
+        if ( var(c) >= model.size() ) { model.growTo( var(c) + 1, l_True ); } // model is too small? this will also take care of extended resolution variables!
         if (model[var(c)] == (sign(c) ? l_False : l_True) ) { // satisfied
             isSat = true; // redundant -- will be reset in the next loop iteration immediately
-            while( undo[i] != Riss::lit_Undef ) { // skip literal until hitting the delimiter - for loop will decrease i once more
-                if( global_debug_out  || local_debug) { std::cerr << "c skip because SAT: " << undo[i] << std::endl; }
+            while ( undo[i] != Riss::lit_Undef ) { // skip literal until hitting the delimiter - for loop will decrease i once more
+                if ( global_debug_out  || local_debug) { std::cerr << "c skip because SAT: " << undo[i] << std::endl; }
                 --i;
             }
-            if( local_debug ) { // print intermediate state!
+            if ( local_debug ) { // print intermediate state!
                 std::cerr << "next clause: ";
-                for( int j = i - 1; j >= 0 ; --j ) if( undo[j] == Riss::lit_Undef ) { break; } else { std::cerr << " " << undo[j]; }
+                for ( int j = i - 1; j >= 0 ; --j ) if ( undo[j] == Riss::lit_Undef ) { break; } else { std::cerr << " " << undo[j]; }
                 std::cerr << std::endl;
             }
         }
     }
 
-    if( global_debug_out  || local_debug) {
+    if ( global_debug_out  || local_debug) {
         std::cerr << "c out model: ";
-        for( int i = 0 ; i < model.size(); ++ i ) {
+        for ( int i = 0 ; i < model.size(); ++ i ) {
             const Riss::Lit satLit = Riss::mkLit( i, model[i] == l_True ? false : true );
             std::cerr << satLit << " ";
         }
@@ -1476,31 +1476,31 @@ inline void CoprocessorData::extendModel(Riss::vec< Riss::lbool >& model)
 template <class T>
 inline void CoprocessorData::addToProof(T& clause, bool deleteFromProof, const Riss::Lit remLit)
 {
-    solver->addToProof(clause,deleteFromProof,remLit);
+    solver->addToProof(clause, deleteFromProof, remLit);
 }
 
 inline void CoprocessorData::addUnitToProof(const Riss::Lit& l, bool deleteFromProof)
 {
-    solver->addUnitToProof(l,deleteFromProof);
+    solver->addUnitToProof(l, deleteFromProof);
 }
 
 inline void CoprocessorData::addCommentToProof(const char* text, bool deleteFromProof)
 {
-    solver->addCommentToProof(text,deleteFromProof);
+    solver->addCommentToProof(text, deleteFromProof);
 }
 #endif
 
 inline void CoprocessorData::addEquivalences(const std::vector< Riss::Lit >& list)
 {
     assert( (list.size() != 2 || list[0] != list[1]) && "do not allow to add a std::pair of the same literals" );
-    for( int i = 0 ; i < list.size(); ++ i ) { equivalences.push_back(list[i]); }
+    for ( int i = 0 ; i < list.size(); ++ i ) { equivalences.push_back(list[i]); }
     equivalences.push_back( Riss::lit_Undef ); // termination symbol!
 }
 
 inline void CoprocessorData::addEquivalences(const Riss::Lit& l1, const Riss::Lit& l2)
 {
     assert( l1 != l2 && "do not state that the same literal is equivalent to itself" );
-    if( global_debug_out ) { std::cerr << "c [DATA] set equi: " << l1 << " == " << l2 << std::endl; }
+    if ( global_debug_out ) { std::cerr << "c [DATA] set equi: " << l1 << " == " << l2 << std::endl; }
     equivalences.push_back(l1);
     equivalences.push_back(l2);
     equivalences.push_back( Riss::lit_Undef ); // termination symbol!
@@ -1515,12 +1515,12 @@ inline bool CoprocessorData::addSubStrengthClause(const Riss::CRef cr, bool isNe
 {
     bool ret = false;
     Riss::Clause& c = ca[cr];
-    if( !c.can_strengthen() || isNew ) {
+    if ( !c.can_strengthen() || isNew ) {
         c.set_strengthen(true);
         strengthening_queue.push_back(cr);
         ret = true;
     }
-    if( !c.can_subsume() || isNew) {
+    if ( !c.can_subsume() || isNew) {
         c.set_subsume(true);
         subsume_queue.push_back(cr);
         ret = true;
@@ -1542,12 +1542,12 @@ inline std::vector<Riss::CRef>& CoprocessorData::getStrengthClauses()
 
 inline void CoprocessorData::setNotTouch(const Riss::Var& v)
 {
-    solver->freezeVariable(v,true);
+    solver->freezeVariable(v, true);
 }
 
 inline void CoprocessorData::unsetNotTouch(const Riss::Var& v)
 {
-    solver->freezeVariable(v,false);
+    solver->freezeVariable(v, false);
 }
 
 inline bool CoprocessorData::doNotTouch(const Riss::Var& v) const
@@ -1561,7 +1561,7 @@ bool inline CoprocessorData::removeClauseThreadSafe (const Riss::CRef cr)
     c.spinlock();
     if (!c.can_be_deleted()) {
         c.set_delete(true);
-        while ( __sync_bool_compare_and_swap(&numberOfCls, numberOfCls, numberOfCls-1) == false) {};
+        while ( __sync_bool_compare_and_swap(&numberOfCls, numberOfCls, numberOfCls - 1) == false) {};
         for (int l = 0; l < c.size(); ++l) {
             int32_t old_count, new_count;
             Riss::Lit lit = c[l];
@@ -1584,11 +1584,11 @@ inline BIG::BIG()
 
 inline BIG::~BIG()
 {
-    if( big != 0 )    { free( big ); big = 0; }
-    if( storage != 0 ) { free( storage ); storage = 0; }
-    if( sizes != 0 )  { free( sizes ); sizes = 0 ; }
-    if( start != 0 ) { free( start ); start = 0; }
-    if( stop != 0 ) { free( stop ); stop = 0; }
+    if ( big != 0 )    { free( big ); big = 0; }
+    if ( storage != 0 ) { free( storage ); storage = 0; }
+    if ( sizes != 0 )  { free( sizes ); sizes = 0 ; }
+    if ( start != 0 ) { free( start ); start = 0; }
+    if ( stop != 0 ) { free( stop ); stop = 0; }
 
 }
 
@@ -1596,13 +1596,13 @@ inline void BIG::create(Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec< Ri
 {
     duringCreationVariables = nVars; // memorize the number of present variables
     sizes = (int*) malloc( sizeof(int) * nVars * 2 );
-    memset(sizes,0, sizeof(int) * nVars * 2 );
+    memset(sizes, 0, sizeof(int) * nVars * 2 );
 
     int sum = 0;
     // count occurrences of literals in binary clauses of the given list
-    for( int i = 0 ; i < list.size(); ++i ) {
+    for ( int i = 0 ; i < list.size(); ++i ) {
         const Riss::Clause& c = ca[list[i]];
-        if(c.size() != 2 || c.can_be_deleted() ) { continue; }
+        if (c.size() != 2 || c.can_be_deleted() ) { continue; }
         sizes[ Riss::toInt( ~c[0] )  ] ++;
         sizes[ Riss::toInt( ~c[1] )  ] ++;
         sum += 2;
@@ -1619,9 +1619,9 @@ inline void BIG::create(Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec< Ri
     }
 
     // add all binary clauses to graph
-    for( int i = 0 ; i < list.size(); ++i ) {
+    for ( int i = 0 ; i < list.size(); ++i ) {
         const Riss::Clause& c = ca[list[i]];
-        if(c.size() != 2 || c.can_be_deleted() ) { continue; }
+        if (c.size() != 2 || c.can_be_deleted() ) { continue; }
         const Riss::Lit l0 = c[0]; const Riss::Lit l1 = c[1];
 
         ( big[ Riss::toInt(~l0) ] )[ sizes[Riss::toInt(~l0)] ] = l1;
@@ -1635,15 +1635,15 @@ inline void BIG::create(Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec< Ri
 {
     duringCreationVariables = nVars; // memorize the number of present variables
     sizes = (int*) malloc( sizeof(int) * nVars * 2 );
-    memset(sizes,0, sizeof(int) * nVars * 2 );
+    memset(sizes, 0, sizeof(int) * nVars * 2 );
 
     int sum = 0;
     // count occurrences of literals in binary clauses of the given list
-    for( int p = 0 ; p < 2; ++ p ) {
-        const Riss::vec<Riss::CRef>& list = (p==0 ? list1 : list2 );
-        for( int i = 0 ; i < list.size(); ++i ) {
+    for ( int p = 0 ; p < 2; ++ p ) {
+        const Riss::vec<Riss::CRef>& list = (p == 0 ? list1 : list2 );
+        for ( int i = 0 ; i < list.size(); ++i ) {
             const Riss::Clause& c = ca[list[i]];
-            if(c.size() != 2 || c.can_be_deleted() ) { continue; }
+            if (c.size() != 2 || c.can_be_deleted() ) { continue; }
             sizes[ Riss::toInt( ~c[0] )  ] ++;
             sizes[ Riss::toInt( ~c[1] )  ] ++;
             sum += 2;
@@ -1661,11 +1661,11 @@ inline void BIG::create(Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec< Ri
     }
 
     // add all binary clauses to graph
-    for( int p = 0 ; p < 2; ++ p ) {
-        const Riss::vec<Riss::CRef>& list = (p==0 ? list1 : list2 );
-        for( int i = 0 ; i < list.size(); ++i ) {
+    for ( int p = 0 ; p < 2; ++ p ) {
+        const Riss::vec<Riss::CRef>& list = (p == 0 ? list1 : list2 );
+        for ( int i = 0 ; i < list.size(); ++i ) {
             const Riss::Clause& c = ca[list[i]];
-            if(c.size() != 2 || c.can_be_deleted() ) { continue; }
+            if (c.size() != 2 || c.can_be_deleted() ) { continue; }
             const Riss::Lit l0 = c[0]; const Riss::Lit l1 = c[1];
             ( big[ Riss::toInt(~l0) ] )[ sizes[Riss::toInt(~l0)] ] = l1;
             ( big[ Riss::toInt(~l1) ] )[ sizes[Riss::toInt(~l1)] ] = l0;
@@ -1680,13 +1680,13 @@ inline void BIG::recreate( Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec<
 {
     duringCreationVariables = nVars; // memorize the number of present variables
     sizes = sizes == 0 ? (int*) malloc( sizeof(int) * nVars * 2 ) : (int*) realloc( sizes, sizeof(int) * nVars * 2 );
-    memset(sizes,0, sizeof(int) * nVars * 2 );
+    memset(sizes, 0, sizeof(int) * nVars * 2 );
 
     int sum = 0;
     // count occurrences of literals in binary clauses of the given list
-    for( int i = 0 ; i < list.size(); ++i ) {
+    for ( int i = 0 ; i < list.size(); ++i ) {
         const Riss::Clause& c = ca[list[i]];
-        if(c.size() != 2 || c.can_be_deleted() ) { continue; }
+        if (c.size() != 2 || c.can_be_deleted() ) { continue; }
         sizes[ Riss::toInt( ~c[0] )  ] ++;
         sizes[ Riss::toInt( ~c[1] )  ] ++;
         sum += 2;
@@ -1694,7 +1694,7 @@ inline void BIG::recreate( Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec<
     storage = storage == 0 ? (Riss::Lit*) malloc( sizeof(Riss::Lit) * sum ) : (Riss::Lit*) realloc( storage, sizeof(Riss::Lit) * sum )  ;
     big = big == 0 ? (Riss::Lit**)malloc ( sizeof(Riss::Lit*) * nVars * 2 ) : (Riss::Lit**)realloc ( big, sizeof(Riss::Lit*) * nVars * 2 );
     // should not be necessary!
-    memset(storage,0, sizeof(Riss::Lit) * sum );
+    memset(storage, 0, sizeof(Riss::Lit) * sum );
     memset(big, 0, sizeof(Riss::Lit*) * nVars * 2 );
 
     // set the pointers to the right location and clear the size
@@ -1706,9 +1706,9 @@ inline void BIG::recreate( Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec<
     }
 
     // add all binary clauses to graph
-    for( int i = 0 ; i < list.size(); ++i ) {
+    for ( int i = 0 ; i < list.size(); ++i ) {
         const Riss::Clause& c = ca[list[i]];
-        if(c.size() != 2 || c.can_be_deleted() ) { continue; }
+        if (c.size() != 2 || c.can_be_deleted() ) { continue; }
         const Riss::Lit l0 = c[0]; const Riss::Lit l1 = c[1];
         ( big[ Riss::toInt(~l0) ] )[ sizes[Riss::toInt(~l0)] ] = l1;
         ( big[ Riss::toInt(~l1) ] )[ sizes[Riss::toInt(~l1)] ] = l0;
@@ -1721,15 +1721,15 @@ inline void BIG::recreate( Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec<
 {
     duringCreationVariables = nVars; // memorize the number of present variables
     sizes = sizes == 0 ? (int*) malloc( sizeof(int) * nVars * 2 ) : (int*) realloc( sizes, sizeof(int) * nVars * 2 );
-    memset(sizes,0, sizeof(int) * nVars * 2 );
+    memset(sizes, 0, sizeof(int) * nVars * 2 );
 
     int sum = 0;
     // count occurrences of literals in binary clauses of the given list
-    for( int p = 0 ; p < 2; ++ p ) {
-        const Riss::vec<Riss::CRef>& list = (p==0 ? list1 : list2 );
-        for( int i = 0 ; i < list.size(); ++i ) {
+    for ( int p = 0 ; p < 2; ++ p ) {
+        const Riss::vec<Riss::CRef>& list = (p == 0 ? list1 : list2 );
+        for ( int i = 0 ; i < list.size(); ++i ) {
             const Riss::Clause& c = ca[list[i]];
-            if(c.size() != 2 || c.can_be_deleted() ) { continue; }
+            if (c.size() != 2 || c.can_be_deleted() ) { continue; }
             sizes[ Riss::toInt( ~c[0] )  ] ++;
             sizes[ Riss::toInt( ~c[1] )  ] ++;
             sum += 2;
@@ -1738,7 +1738,7 @@ inline void BIG::recreate( Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec<
     storage = storage == 0 ? (Riss::Lit*) malloc( sizeof(Riss::Lit) * sum ) : (Riss::Lit*) realloc( storage, sizeof(Riss::Lit) * sum )  ;
     big = big == 0 ? (Riss::Lit**)malloc ( sizeof(Riss::Lit*) * nVars * 2 ) : (Riss::Lit**)realloc ( big, sizeof(Riss::Lit*) * nVars * 2 );
     // should not be necessary!
-    memset(storage,0, sizeof(Riss::Lit) * sum );
+    memset(storage, 0, sizeof(Riss::Lit) * sum );
     memset(big, 0, sizeof(Riss::Lit*) * nVars * 2 );
 
     // set the pointers to the right location and clear the size
@@ -1750,11 +1750,11 @@ inline void BIG::recreate( Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec<
     }
 
     // add all binary clauses to graph
-    for( int p = 0 ; p < 2; ++ p ) {
-        const Riss::vec<Riss::CRef>& list = (p==0 ? list1 : list2 );
-        for( int i = 0 ; i < list.size(); ++i ) {
+    for ( int p = 0 ; p < 2; ++ p ) {
+        const Riss::vec<Riss::CRef>& list = (p == 0 ? list1 : list2 );
+        for ( int i = 0 ; i < list.size(); ++i ) {
             const Riss::Clause& c = ca[list[i]];
-            if(c.size() != 2 || c.can_be_deleted() ) { continue; }
+            if (c.size() != 2 || c.can_be_deleted() ) { continue; }
             const Riss::Lit l0 = c[0]; const Riss::Lit l1 = c[1];
             ( big[ Riss::toInt(~l0) ] )[ sizes[Riss::toInt(~l0)] ] = l1;
             ( big[ Riss::toInt(~l1) ] )[ sizes[Riss::toInt(~l1)] ] = l0;
@@ -1767,17 +1767,17 @@ inline void BIG::recreate( Riss::ClauseAllocator& ca, uint32_t nVars, Riss::vec<
 inline void BIG::removeDuplicateEdges(const uint32_t nVars)
 {
     const uint32_t maxVar = duringCreationVariables < nVars ? duringCreationVariables : nVars; // use only known variables
-    for( Riss::Var v = 0 ; v < maxVar; ++v ) {
-        for( int p = 0 ; p < 2 ; ++ p ) {
-            const Riss::Lit l = Riss::mkLit(v,p==1);
-            if( getSize(l) == 0 ) { continue; } // not for empty lists!
+    for ( Riss::Var v = 0 ; v < maxVar; ++v ) {
+        for ( int p = 0 ; p < 2 ; ++ p ) {
+            const Riss::Lit l = Riss::mkLit(v, p == 1);
+            if ( getSize(l) == 0 ) { continue; } // not for empty lists!
             Riss::sort( getArray(l), getSize(l) );
             int j = 0;
-            for( int i = 1; i < getSize(l); ++i ) {
-                assert( getArray(l)[i-1] <= getArray(l)[i] && "implication list should be ordered" );
-                if( getArray(l)[i] != getArray(l)[j] ) { getArray(l)[++j] = getArray(l)[i]; } // keep elements, if they are not equal to the last element!
+            for ( int i = 1; i < getSize(l); ++i ) {
+                assert( getArray(l)[i - 1] <= getArray(l)[i] && "implication list should be ordered" );
+                if ( getArray(l)[i] != getArray(l)[j] ) { getArray(l)[++j] = getArray(l)[i]; } // keep elements, if they are not equal to the last element!
             }
-            sizes[ Riss::toInt(l) ] = j+1; // update size information
+            sizes[ Riss::toInt(l) ] = j + 1; // update size information
         }
     }
 }
@@ -1785,10 +1785,10 @@ inline void BIG::removeDuplicateEdges(const uint32_t nVars)
 inline void BIG::sort(const uint32_t nVars)
 {
     const uint32_t maxVar = duringCreationVariables < nVars ? duringCreationVariables : nVars; // use only known variables
-    for( Riss::Var v = 0 ; v < maxVar; ++v ) {
-        for( int p = 0 ; p < 2 ; ++ p ) {
-            const Riss::Lit l = Riss::mkLit(v,p==1);
-            if( getSize(l) == 0 ) { continue; } // not for empty lists!
+    for ( Riss::Var v = 0 ; v < maxVar; ++v ) {
+        for ( int p = 0 ; p < 2 ; ++ p ) {
+            const Riss::Lit l = Riss::mkLit(v, p == 1);
+            if ( getSize(l) == 0 ) { continue; } // not for empty lists!
             Riss::sort( getArray(l), getSize(l) );
         }
     }
@@ -1799,8 +1799,8 @@ inline void BIG::removeEdge(const Riss::Lit l0, const Riss::Lit l1)
     // remove literal from the two lists
     Riss::Lit* list = getArray( ~l0 );
     const uint32_t size = getSize( ~l0 );
-    for( int i = 0 ; i < size; ++i ) {
-        if( list[i] == l1 ) {
+    for ( int i = 0 ; i < size; ++i ) {
+        if ( list[i] == l1 ) {
             list[i] = list[ size - 1 ];
             sizes[ Riss::toInt(~l0) ] --;
             //std::cerr << "c removed edge " << ~l0 << " -> " << l1 << std::endl;
@@ -1809,8 +1809,8 @@ inline void BIG::removeEdge(const Riss::Lit l0, const Riss::Lit l1)
     }
     Riss::Lit* list2 = getArray( ~l1 );
     const uint32_t size2 = getSize( ~l1 );
-    for( int i = 0 ; i < size2; ++i ) {
-        if( list2[i] == l0 ) {
+    for ( int i = 0 ; i < size2; ++i ) {
+        if ( list2[i] == l0 ) {
             list2[i] = list2[ size2 - 1 ];
             sizes[ Riss::toInt(~l1) ] --;
 //        //std::cerr << "c removed edge " << ~l1 << " -> " << l0 << std::endl;
@@ -1839,10 +1839,10 @@ inline void BIG::generateImplied( CoprocessorData& data )
     uint32_t stamp = 1 ;
     const uint32_t maxVar = duringCreationVariables < data.nVars() ? duringCreationVariables : data.nVars(); // use only known variables
 
-    if( start == 0 ) { start = (uint32_t*) malloc( maxVar * sizeof(uint32_t) * 2 ); }
+    if ( start == 0 ) { start = (uint32_t*) malloc( maxVar * sizeof(uint32_t) * 2 ); }
     else { start = (uint32_t*)realloc( start, maxVar * sizeof(uint32_t) * 2 ); }
 
-    if( stop == 0 ) { stop = (uint32_t*) malloc( maxVar * sizeof(uint32_t) * 2 ); }
+    if ( stop == 0 ) { stop = (uint32_t*) malloc( maxVar * sizeof(uint32_t) * 2 ); }
     else { stop = (uint32_t*)realloc( stop, maxVar * sizeof(int32_t) * 2 ); }
 
     int32_t* index = (int32_t*)malloc( maxVar * sizeof(int32_t) * 2 );
@@ -1858,32 +1858,32 @@ inline void BIG::generateImplied( CoprocessorData& data )
     data.lits.clear();
     // reset all present variables, collect all roots in binary implication graph
     for ( Riss::Var v = 0 ; v < maxVar; ++ v ) {
-        const Riss::Lit pos =  Riss::mkLit(v,false);
+        const Riss::Lit pos =  Riss::mkLit(v, false);
         // a literal is a root, if its complement does not imply a literal
-        if( getSize(pos) == 0 ) { data.lits.push_back(~pos); }
-        if( getSize(~pos) == 0 ) { data.lits.push_back(pos); }
+        if ( getSize(pos) == 0 ) { data.lits.push_back(~pos); }
+        if ( getSize(~pos) == 0 ) { data.lits.push_back(pos); }
     }
 
     // do stamping for all roots, shuffle first
     const uint32_t ts = data.lits.size();
-    for( uint32_t i = 0 ; i < ts; i++ ) { const uint32_t rnd=rand()%ts; const Riss::Lit tmp = data.lits[i]; data.lits[i] = data.lits[rnd]; data.lits[rnd]=tmp; }
+    for ( uint32_t i = 0 ; i < ts; i++ ) { const uint32_t rnd = rand() % ts; const Riss::Lit tmp = data.lits[i]; data.lits[i] = data.lits[rnd]; data.lits[rnd] = tmp; }
     // stamp shuffled data.lits
     for ( uint32_t i = 0 ; i < ts; ++ i ) {
-        stamp = stampLiteral(data.lits[i],stamp,index,stampQueue);
+        stamp = stampLiteral(data.lits[i], stamp, index, stampQueue);
     }
 
     // stamp all remaining literals, after shuffling
     data.lits.clear();
     for ( Riss::Var v = 0 ; v < maxVar; ++ v ) {
-        const Riss::Lit pos =  Riss::mkLit(v,false);
-        if( start[ Riss::toInt(pos) ] == 0 ) { data.lits.push_back(pos); }
-        if( start[ Riss::toInt(~pos) ] == 0 ) { data.lits.push_back(~pos); }
+        const Riss::Lit pos =  Riss::mkLit(v, false);
+        if ( start[ Riss::toInt(pos) ] == 0 ) { data.lits.push_back(pos); }
+        if ( start[ Riss::toInt(~pos) ] == 0 ) { data.lits.push_back(~pos); }
     }
     // stamp shuffled data.lits
     const uint32_t ts2 = data.lits.size();
-    for( uint32_t i = 0 ; i < ts2; i++ ) { const uint32_t rnd=rand()%ts2; const Riss::Lit tmp = data.lits[i]; data.lits[i] = data.lits[rnd]; data.lits[rnd]=tmp; }
+    for ( uint32_t i = 0 ; i < ts2; i++ ) { const uint32_t rnd = rand() % ts2; const Riss::Lit tmp = data.lits[i]; data.lits[i] = data.lits[rnd]; data.lits[rnd] = tmp; }
     for ( uint32_t i = 0 ; i < ts2; ++ i ) {
-        stamp = stampLiteral(data.lits[i],stamp,index,stampQueue);
+        stamp = stampLiteral(data.lits[i], stamp, index, stampQueue);
     }
     free(index);
 }
@@ -1893,10 +1893,10 @@ inline void BIG::generateImplied( uint32_t nVars, Riss::vec<Riss::Lit>& tmpLits 
     uint32_t stamp = 1 ;
     const uint32_t maxVar = duringCreationVariables < nVars ? duringCreationVariables : nVars; // use only known variables
 
-    if( start == 0 ) { start = (uint32_t*) malloc( maxVar * sizeof(uint32_t) * 2 ); }
+    if ( start == 0 ) { start = (uint32_t*) malloc( maxVar * sizeof(uint32_t) * 2 ); }
     else { start = (uint32_t*)realloc( start, maxVar * sizeof(uint32_t) * 2 ); }
 
-    if( stop == 0 ) { stop = (uint32_t*) malloc( maxVar * sizeof(uint32_t) * 2 ); }
+    if ( stop == 0 ) { stop = (uint32_t*) malloc( maxVar * sizeof(uint32_t) * 2 ); }
     else { stop = (uint32_t*)realloc( stop, maxVar * sizeof(int32_t) * 2 ); }
 
     int32_t* index = (int32_t*)malloc( maxVar * sizeof(int32_t) * 2 );
@@ -1912,32 +1912,32 @@ inline void BIG::generateImplied( uint32_t nVars, Riss::vec<Riss::Lit>& tmpLits 
     tmpLits.clear();
     // reset all present variables, collect all roots in binary implication graph
     for ( Riss::Var v = 0 ; v < maxVar; ++ v ) {
-        const Riss::Lit pos =  Riss::mkLit(v,false);
+        const Riss::Lit pos =  Riss::mkLit(v, false);
         // a literal is a root, if its complement does not imply a literal
-        if( getSize(pos) == 0 ) { tmpLits.push(~pos); }
-        if( getSize(~pos) == 0 ) { tmpLits.push(pos); }
+        if ( getSize(pos) == 0 ) { tmpLits.push(~pos); }
+        if ( getSize(~pos) == 0 ) { tmpLits.push(pos); }
     }
 
     // do stamping for all roots, shuffle first
     const uint32_t ts = tmpLits.size();
-    for( uint32_t i = 0 ; i < ts; i++ ) { const uint32_t rnd=rand()%ts; const Riss::Lit tmp = tmpLits[i]; tmpLits[i] = tmpLits[rnd]; tmpLits[rnd]=tmp; }
+    for ( uint32_t i = 0 ; i < ts; i++ ) { const uint32_t rnd = rand() % ts; const Riss::Lit tmp = tmpLits[i]; tmpLits[i] = tmpLits[rnd]; tmpLits[rnd] = tmp; }
     // stamp shuffled tmpLits
     for ( uint32_t i = 0 ; i < ts; ++ i ) {
-        stamp = stampLiteral(tmpLits[i],stamp,index,stampQueue);
+        stamp = stampLiteral(tmpLits[i], stamp, index, stampQueue);
     }
 
     // stamp all remaining literals, after shuffling
     tmpLits.clear();
     for ( Riss::Var v = 0 ; v < maxVar; ++ v ) {
-        const Riss::Lit pos =  Riss::mkLit(v,false);
-        if( start[ Riss::toInt(pos) ] == 0 ) { tmpLits.push(pos); }
-        if( start[ Riss::toInt(~pos) ] == 0 ) { tmpLits.push(~pos); }
+        const Riss::Lit pos =  Riss::mkLit(v, false);
+        if ( start[ Riss::toInt(pos) ] == 0 ) { tmpLits.push(pos); }
+        if ( start[ Riss::toInt(~pos) ] == 0 ) { tmpLits.push(~pos); }
     }
     // stamp shuffled tmpLits
     const uint32_t ts2 = tmpLits.size();
-    for( uint32_t i = 0 ; i < ts2; i++ ) { const uint32_t rnd=rand()%ts2; const Riss::Lit tmp = tmpLits[i]; tmpLits[i] = tmpLits[rnd]; tmpLits[rnd]=tmp; }
+    for ( uint32_t i = 0 ; i < ts2; i++ ) { const uint32_t rnd = rand() % ts2; const Riss::Lit tmp = tmpLits[i]; tmpLits[i] = tmpLits[rnd]; tmpLits[rnd] = tmp; }
     for ( uint32_t i = 0 ; i < ts2; ++ i ) {
-        stamp = stampLiteral(tmpLits[i],stamp,index,stampQueue);
+        stamp = stampLiteral(tmpLits[i], stamp, index, stampQueue);
     }
 
     tmpLits.clear(); // clean up
@@ -1948,61 +1948,61 @@ inline void BIG::fillSorted(std::vector<Riss::Lit>& literals, CoprocessorData& d
 {
     literals.clear();
     const uint32_t maxVar = duringCreationVariables < data.nVars() ? duringCreationVariables : data.nVars(); // use only known variables
-    data.ma.resize( maxVar *2 );
+    data.ma.resize( maxVar * 2 );
     data.ma.nextStep();
 
     // put root nodes in queue
-    for( Riss::Var v = 0 ; v < maxVar; ++ v ) {
-        if( getSize( Riss::mkLit(v,false) ) == 0 )
-            if( getSize( Riss::mkLit(v,true) ) == 0 ) { continue; }
+    for ( Riss::Var v = 0 ; v < maxVar; ++ v ) {
+        if ( getSize( Riss::mkLit(v, false) ) == 0 )
+            if ( getSize( Riss::mkLit(v, true) ) == 0 ) { continue; }
             else {
-                data.ma.setCurrentStep( Riss::toInt(Riss::mkLit(v,true)) );
-                literals.push_back( Riss::mkLit(v,true) ); // tthis is a root node
+                data.ma.setCurrentStep( Riss::toInt(Riss::mkLit(v, true)) );
+                literals.push_back( Riss::mkLit(v, true) ); // tthis is a root node
             }
-        else if( getSize( Riss::mkLit(v,true) ) == 0 ) {
-            data.ma.setCurrentStep( Riss::toInt(Riss::mkLit(v,false)) );
-            literals.push_back( Riss::mkLit(v,false) ); // tthis is a root node
+        else if ( getSize( Riss::mkLit(v, true) ) == 0 ) {
+            data.ma.setCurrentStep( Riss::toInt(Riss::mkLit(v, false)) );
+            literals.push_back( Riss::mkLit(v, false) ); // tthis is a root node
         }
     }
 
     // shuffle root nodes
-    for( int i = 0 ; i + 1 < literals.size(); ++ i ) {
+    for ( int i = 0 ; i + 1 < literals.size(); ++ i ) {
         const Riss::Lit tmp = literals[i];
         const int rndInd = rand() % literals.size();
         literals[i] = literals[ rndInd ];
         literals[ rndInd ] = tmp;
     }
 
-    if( rootsOnly ) { return; }
+    if ( rootsOnly ) { return; }
 
     // perform BFS
     data.ma.nextStep();
-    for( int i = 0 ; i < literals.size(); ++ i ) {
+    for ( int i = 0 ; i < literals.size(); ++ i ) {
         const Riss::Lit l = literals[i];
         Riss::Lit* lits = getArray(l);
         int s = getSize(l);
-        for( int j = 0 ; j < s; ++ j ) {
+        for ( int j = 0 ; j < s; ++ j ) {
             const Riss::Lit l2 = lits[j];
             // each literal only once!
-            if( data.ma.isCurrentStep( Riss::toInt(l2) ) ) { continue; }
+            if ( data.ma.isCurrentStep( Riss::toInt(l2) ) ) { continue; }
             data.ma.setCurrentStep( Riss::toInt(l2) );
             literals.push_back(l2);
         }
     }
 
-    if( !getAll ) { return; }
+    if ( !getAll ) { return; }
 
     unsigned seenSoFar = literals.size();
-    for( Riss::Var v = 0 ; v < maxVar; ++ v ) {
-        for( int p = 0 ; p < 2; ++ p ) {
-            const Riss::Lit l = Riss::mkLit(v,p==1);
-            if( data.ma.isCurrentStep(Riss::toInt(l)) ) { continue; } // literal already in heap
+    for ( Riss::Var v = 0 ; v < maxVar; ++ v ) {
+        for ( int p = 0 ; p < 2; ++ p ) {
+            const Riss::Lit l = Riss::mkLit(v, p == 1);
+            if ( data.ma.isCurrentStep(Riss::toInt(l)) ) { continue; } // literal already in heap
             else { literals.push_back(l); }
         }
     }
     // shuffle these variables!
     const unsigned diff = literals.size() - seenSoFar;
-    for( int i =  seenSoFar; i < literals.size(); ++ i ) {
+    for ( int i =  seenSoFar; i < literals.size(); ++ i ) {
         const Riss::Lit tmp = literals[i];
         const int rndInd = (rand() % diff) + seenSoFar;
         literals[i] = literals[ rndInd ];
@@ -2019,9 +2019,9 @@ inline void BIG::fillSorted(std::vector< Riss::Var >& variables, Coprocessor::Co
 
     // store variables in std::vector, according to occurrence of first literal in literal std::vector
     data.ma.nextStep();
-    for( int i = 0 ; i < data.lits.size(); ++ i ) {
+    for ( int i = 0 ; i < data.lits.size(); ++ i ) {
         const Riss::Lit l = data.lits[i];
-        if( !data.ma.isCurrentStep( var(l) ) ) {
+        if ( !data.ma.isCurrentStep( var(l) ) ) {
             variables.push_back(var(l));
             data.ma.setCurrentStep( var(l) );
         }
@@ -2030,7 +2030,7 @@ inline void BIG::fillSorted(std::vector< Riss::Var >& variables, Coprocessor::Co
 
 inline void BIG::shuffle( Riss::Lit* adj, int size ) const
 {
-    for( uint32_t i = 0 ;  i+1<size; ++i ) {
+    for ( uint32_t i = 0 ;  i + 1 < size; ++i ) {
         const uint32_t rnd = rand() % size;
         const Riss::Lit tmp = adj[i];
         adj[i] = adj[rnd];
@@ -2041,38 +2041,38 @@ inline void BIG::shuffle( Riss::Lit* adj, int size ) const
 inline uint32_t BIG::stampLiteral( const Riss::Lit literal, uint32_t stamp, int32_t* index, std::deque<Riss::Lit>& stampQueue)
 {
     // do not stamp a literal twice!
-    if( start[ Riss::toInt(literal) ] != 0 ) { return stamp; }
+    if ( start[ Riss::toInt(literal) ] != 0 ) { return stamp; }
 
-    if( global_debug_out ) { std::cerr << "c call STAMP for " << literal << std::endl; }
+    if ( global_debug_out ) { std::cerr << "c call STAMP for " << literal << std::endl; }
 
     stampQueue.clear();
     // linearized algorithm from paper
     stamp++;
     // handle initial literal before putting it on queue
     start[Riss::toInt(literal)] = stamp; // parent and root are already set to literal
-    if( global_debug_out ) { std::cerr << "c start[" << literal << "] = " << stamp << std::endl; }
+    if ( global_debug_out ) { std::cerr << "c start[" << literal << "] = " << stamp << std::endl; }
     stampQueue.push_back(literal);
 
     shuffle( getArray(literal), getSize(literal) );
     index[Riss::toInt(literal)] = 0;
 
-    while( ! stampQueue.empty() ) {
+    while ( ! stampQueue.empty() ) {
         const Riss::Lit current = stampQueue.back();
         const int adjSize = getSize(current);
 
-        if( index[Riss::toInt(current)] == adjSize ) {
+        if ( index[Riss::toInt(current)] == adjSize ) {
             stampQueue.pop_back();
             stamp++;
             stop[Riss::toInt(current)] = stamp;
-            if( global_debug_out ) { std::cerr << "c stop[" << current << "] = " << stamp << std::endl; }
+            if ( global_debug_out ) { std::cerr << "c stop[" << current << "] = " << stamp << std::endl; }
         } else {
             int32_t& ind = index[ Riss::toInt(current) ]; // store number of processed elements
             const Riss::Lit impliedLit = getArray( current )[ind]; // get next implied literal
             ind ++;
-            if( start[ Riss::toInt(impliedLit) ] != 0 ) { continue; }
+            if ( start[ Riss::toInt(impliedLit) ] != 0 ) { continue; }
             stamp ++;
             start[ Riss::toInt(impliedLit) ] = stamp;
-            if( global_debug_out ) { std::cerr << "c start[" << impliedLit << "] = " << stamp << std::endl; }
+            if ( global_debug_out ) { std::cerr << "c start[" << impliedLit << "] = " << stamp << std::endl; }
             index[ Riss::toInt(impliedLit) ] = 0;
             stampQueue.push_back( impliedLit );
             shuffle( getArray(impliedLit), getSize(impliedLit) );
@@ -2084,7 +2084,7 @@ inline uint32_t BIG::stampLiteral( const Riss::Lit literal, uint32_t stamp, int3
 
 inline bool BIG::implies(const Riss::Lit& from, const Riss::Lit& to) const
 {
-    if( start == 0 || stop == 0 || var(from) >= duringCreationVariables || var(to) >= duringCreationVariables ) { return false; }
+    if ( start == 0 || stop == 0 || var(from) >= duringCreationVariables || var(to) >= duringCreationVariables ) { return false; }
     return ( start[ Riss::toInt(from) ] < start[ Riss::toInt(to) ] && stop[ Riss::toInt(from) ] > stop[ Riss::toInt(to) ] )
            || ( start[ Riss::toInt(~to) ] < start[ Riss::toInt(~from) ] && stop[ Riss::toInt(~to) ] > stop[ Riss::toInt(~from) ] );
 }
@@ -2093,8 +2093,8 @@ inline bool BIG::isChild(const Riss::Lit& parent, const Riss::Lit& child) const
 {
     const Riss::Lit * list = getArray(parent);
     const int listSize = getSize(parent);
-    for( int j = 0 ; j < listSize; ++ j ) {
-        if( list[j] == child ) {
+    for ( int j = 0 ; j < listSize; ++ j ) {
+        if ( list[j] == child ) {
             return true;
         }
     }
@@ -2105,8 +2105,8 @@ inline bool BIG::isOneChild(const Riss::Lit& parent, const Riss::Lit& child1, co
 {
     const Riss::Lit * list = getArray(parent);
     const int listSize = getSize(parent);
-    for( int j = 0 ; j < listSize; ++ j ) {
-        if( list[j] == child1 || list[j] == child2 ) { return true; }
+    for ( int j = 0 ; j < listSize; ++ j ) {
+        if ( list[j] == child1 || list[j] == child2 ) { return true; }
     }
     return false;
 }
@@ -2118,20 +2118,20 @@ inline Logger::Logger(int level, bool err)
 
 inline void Logger::log(int level, const std::string& s)
 {
-    if( level > outputLevel ) { return; }
+    if ( level > outputLevel ) { return; }
     (useStdErr ? std::cerr : std::cout )
             << "c [" << level << "] " << s << std::endl;
 }
 
 inline void Logger::log(int level, const std::string& s, const Riss::Clause& c)
 {
-    if( level > outputLevel ) { return; }
+    if ( level > outputLevel ) { return; }
     (useStdErr ? std::cerr : std::cout )
             << "c [" << level << "] " << s << " : " ;
-    for( int i = 0 ; i< c.size(); ++i ) {
+    for ( int i = 0 ; i < c.size(); ++i ) {
         const Riss::Lit& l = c[i];
         (useStdErr ? std::cerr : std::cout )
-                << " " << (sign(l) ? "-" : "") << var(l)+1;
+                << " " << (sign(l) ? "-" : "") << var(l) + 1;
     }
     (useStdErr ? std::cerr : std::cout )
             << std::endl;
@@ -2139,16 +2139,16 @@ inline void Logger::log(int level, const std::string& s, const Riss::Clause& c)
 
 inline void Logger::log(int level, const std::string& s, const Riss::Lit& l)
 {
-    if( level > outputLevel ) { return; }
+    if ( level > outputLevel ) { return; }
     (useStdErr ? std::cerr : std::cout )
             << "c [" << level << "] " << s << " : "
-            << (sign(l) ? "-" : "") << var(l)+1
+            << (sign(l) ? "-" : "") << var(l) + 1
             << std::endl;
 }
 
 inline void Logger::log(int level, const std::string& s, const int i)
 {
-    if( level > outputLevel ) { return; }
+    if ( level > outputLevel ) { return; }
     (useStdErr ? std::cerr : std::cout )
             << "c [" << level << "] " << s << " " << i << std::endl;
 }
@@ -2156,14 +2156,14 @@ inline void Logger::log(int level, const std::string& s, const int i)
 
 inline void Logger::log(int level, const std::string& s, const Riss::Clause& c, const Riss::Lit& l)
 {
-    if( level > outputLevel ) { return; }
+    if ( level > outputLevel ) { return; }
     (useStdErr ? std::cerr : std::cout )
             << "c [" << level << "] " << s << " : "
-            << (sign(l) ? "-" : "") << var(l)+1 << " with clause ";
-    for( int i = 0 ; i< c.size(); ++i ) {
+            << (sign(l) ? "-" : "") << var(l) + 1 << " with clause ";
+    for ( int i = 0 ; i < c.size(); ++i ) {
         const Riss::Lit& l = c[i];
         (useStdErr ? std::cerr : std::cout )
-                << " " << (sign(l) ? "-" : "") << var(l)+1;
+                << " " << (sign(l) ? "-" : "") << var(l) + 1;
     }
     (useStdErr ? std::cerr : std::cout )
             << std::endl;
