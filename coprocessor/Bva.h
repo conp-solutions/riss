@@ -55,7 +55,7 @@ class BoundedVariableAddition : public Technique
 
 
     // work data
-    // 
+    //
     /** compare two literals */
     struct LitOrderBVAHeapLt {
         CoprocessorData& data;

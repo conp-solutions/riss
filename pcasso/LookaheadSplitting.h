@@ -52,7 +52,7 @@ class LookaheadSplitting : public SplitterSolver
     };
     // Riss::CRef     propagate        ();
     /** Shrink 'cs' to contain only non-satisfied clauses. */
-    void     removeSatisfied  (Riss::vec<Riss::CRef>& cs); 
+    void     removeSatisfied  (Riss::vec<Riss::CRef>& cs);
     /** local version of the statistics object */
     Statistics localStat; // Norbert> Local Statistics
 

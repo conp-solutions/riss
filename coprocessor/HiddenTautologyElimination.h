@@ -56,7 +56,7 @@ class HiddenTautologyElimination : public Technique
      * @return true, if clause can be removed by HTE
      */
     bool hlaMarkClause(const Riss::CRef cr, Coprocessor::BIG& big, Riss::MarkArray& markArray, Riss::Lit* litQueue );
-    
+
     /** same as above, but can add literals to the std::vector, so that the std::vector represents the real HLA(C) clause */
     bool hlaMarkClause(Riss::vec< Riss::Lit >& clause, Coprocessor::BIG& big, Riss::MarkArray& markArray, Riss::Lit* litQueue, bool addLits = false);
 
@@ -64,7 +64,7 @@ class HiddenTautologyElimination : public Technique
      * @return true, if clause can be removed by ATE
      */
     bool alaMarkClause(const Riss::CRef cr, Coprocessor::CoprocessorData& data, Riss::MarkArray& markArray, Riss::MarkArray& helpArray);
-    
+
     /** same as above, but can add literals to the std::vector, so that the std::vector represents the real ALA(C) clause */
     bool alaMarkClause(Riss::vec< Riss::Lit >& clause, Coprocessor::CoprocessorData& data, Riss::MarkArray& markArray, Riss::MarkArray& helpArray, bool addLits = false);
 

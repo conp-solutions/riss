@@ -96,7 +96,7 @@ class PSolver
     // executed for all present solvers:
     //
     //
-    
+
     /** Add a new variable with parameters specifying variable mode to all solvers */
     Riss::Var  newVar (bool polarity = true, bool dvar = true, char type = 'o');
 

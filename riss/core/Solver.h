@@ -672,7 +672,7 @@ class Solver
     bool erRewrite(vec<Lit>& learned_clause, unsigned int& lbd );
 
 
-  // for coprocessor
+    // for coprocessor
   protected:  Coprocessor::Preprocessor* coprocessor;
   public:
 
@@ -699,12 +699,12 @@ class Solver
     /** return extra variable information (should be called for top level units only!) */
     uint64_t variableExtraInfo( const Var& v ) const ;
 
-  // for qprocessor
+    // for qprocessor
   public:
-     // void writeClauses( std::ostream& stream ) { }
+    // void writeClauses( std::ostream& stream ) { }
 
 
-  // [BEGIN] modifications for parallel assumption based solver
+    // [BEGIN] modifications for parallel assumption based solver
   public:
     /** setup the communication object
      * @param comm pointer to the communication object that should be used by this thread
@@ -767,7 +767,7 @@ class Solver
     float lbdChange;                           /** How fast should lbd send limit be adopted?                                            */
     float sendRatio;                           /** How big should the ratio of send clauses be?                                          */
 
-  // [END] modifications for parallel assumption based solver
+    // [END] modifications for parallel assumption based solver
 
     // Modifications for Pcasso
     #ifdef PCASSO
