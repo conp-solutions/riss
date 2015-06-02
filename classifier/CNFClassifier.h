@@ -116,7 +116,7 @@ class CNFClassifier
 
     void setPlotsFileName(const char* plotsFileName)
     {
-        dumpingPlots = (plotsFileName!=NULL);
+        dumpingPlots = (plotsFileName != NULL);
         this->plotsFileName = plotsFileName;
     }
 

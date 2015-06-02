@@ -25,7 +25,7 @@ class Randomizer
 
     /** sets the current random value
     */
-    void set( uint64_t newValue ) { hold = newValue; }
+    void set(uint64_t newValue) { hold = newValue; }
 
     /** return the next random value
     */
@@ -53,20 +53,20 @@ class VarShuffler
     void process(Riss::vec< Riss::CRef >& clauses, Riss::vec< Riss::CRef >& learnts, Riss::vec< Riss::Lit >& trail, uint32_t vars, Riss::ClauseAllocator& ca);
 
     /** remap model to original variables */
-    void unshuffle( Riss::vec<Riss::lbool>& model, uint32_t vars );
+    void unshuffle(Riss::vec<Riss::lbool>& model, uint32_t vars);
 
   protected:
     /** set seed fo shuffling (it is a pivate seed, independent from rand() */
-    void setSeed( uint32_t s );
+    void setSeed(uint32_t s);
 
     /** create a shuffle - mapping */
     void setupShuffling(uint32_t vars);
 
     /** apply the mapping to the formula */
-    void shuffle( Riss::vec<Riss::CRef>& clauses, Riss::ClauseAllocator& ca, bool shuffleOrder = false );
+    void shuffle(Riss::vec<Riss::CRef>& clauses, Riss::ClauseAllocator& ca, bool shuffleOrder = false);
 
     /** apply mapping */
-    void shuffle( Riss::vec<Riss::Lit>& lits, bool shuffleOrder = false );
+    void shuffle(Riss::vec<Riss::Lit>& lits, bool shuffleOrder = false);
 
 
 

@@ -46,7 +46,7 @@ class ProofChecker
   public:
 
     /** setup the object with the required options */
-    ProofChecker( bool opt_drat, bool opt_backward , int opt_threads , bool opt_first  = true);
+    ProofChecker(bool opt_drat, bool opt_backward , int opt_threads , bool opt_first  = true);
     ~ProofChecker();
 
     /** receive interupt from the outside */
@@ -71,7 +71,7 @@ class ProofChecker
      *  @add indicate whether the clause should be added to the proof after the successful check
      *  @return true, if the clause could be added
      */
-    bool checkClauseDRUP( vec<Lit>& clause, bool add=true );
+    bool checkClauseDRUP(vec<Lit>& clause, bool add = true);
 
     /** indicate whether the empty clause has been added to the proof while creating the proof
      * @return true, if the empty clause was added to the proof (and is still present)
@@ -81,7 +81,7 @@ class ProofChecker
     /** verify the given proof.
      *  @return true, if the proof can be verified
      */
-    bool verifyProof ();
+    bool verifyProof();
 
     /** reserve storage for the given number of variables
      * @param newVariables number of variables for which the data strucutures are set up
@@ -93,19 +93,19 @@ class ProofChecker
      * @param isDelete indicate whether the clause should be removed instead of being added
      * @return true, if no error with the current clause could be found yet (e.g. due to backward checking)
      */
-    bool    addClause_( vec< Lit >& ps, bool isDelete = false);
+    bool    addClause_(vec< Lit >& ps, bool isDelete = false);
 
     /** dummy method, not needed here (but required to re-use code), will not do anything */
     void addInputClause_(vec< Lit >& ps) {}
 
     /** Add a new variable, increase all necessary data structures */
-    Var     newVar    ();
+    Var     newVar();
 
     /** return the number of variables that are currently present in the object */
-    int     nVars      ()      const;
+    int     nVars()      const;
 
     /** set verbosity level */
-    void setVerbosity( int verbosity );
+    void setVerbosity(int verbosity);
 
   protected:
 

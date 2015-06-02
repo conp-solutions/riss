@@ -61,7 +61,7 @@ extern "C" { // abc has been compiled with gcc
     extern void   Abc_Stop();
     // procedures to get the ABC framework and execute commands in it
     extern void * Abc_FrameGetGlobalFrame();
-    extern int    Cmd_CommandExecute( void * pAbc, char * sCommand );
+    extern int    Cmd_CommandExecute(void * pAbc, char * sCommand);
 }
 #endif
 
@@ -129,12 +129,12 @@ class ShiftFormula
 
     void clearFormula() { formula.clear(); clauses = 0; }
 
-    ShiftFormula () : clauses(0) {}
+    ShiftFormula() : clauses(0) {}
 
     /// clear current state
     void clear() { formula.clear(); inputs.clear(); latch.clear(); currentBads.clear(); initEqualities.clear(); loopEqualities.clear(); }
 
-    void produceFormula( int k )
+    void produceFormula(int k)
     {
 
     }
@@ -145,7 +145,7 @@ class MethodTimer
 {
     double* pointer;
   public:
-    MethodTimer( double* timer ) : pointer( timer ) { *pointer = cpuTime() - *pointer;}
+    MethodTimer(double* timer) : pointer(timer) { *pointer = cpuTime() - *pointer;}
     ~MethodTimer() { *pointer = cpuTime() - *pointer; }
 };
 
@@ -203,26 +203,26 @@ const char * usage =
     ;
 
 
-static int isnum (const char * str)
+static int isnum(const char * str)
 {
     const char * p = str;
-    if (!isdigit (*p++)) { return 0; }
-    while (isdigit (*p)) { p++; }
+    if (!isdigit(*p++)) { return 0; }
+    while (isdigit(*p)) { p++; }
     return !*p;
 }
 
 
 /** print the given value, without deref */
-static void printV (int val)
+static void printV(int val)
 {
     int ch;
     if (val < 0) { ch = '0'; }
     else if (val > 0) { ch = '1'; }
     else { ch = 'x'; }
-    putc (ch, stdout);
+    putc(ch, stdout);
 }
 
-static void nl () { putc ('\n', stdout); }
+static void nl() { putc('\n', stdout); }
 
 
 #endif

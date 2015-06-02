@@ -34,51 +34,51 @@ IN THE SOFTWARE.
 typedef struct simpaigmgr simpaigmgr;
 typedef struct simpaig simpaig;
 
-typedef void *(*simpaig_malloc) (void *mem_mgr, size_t);
-typedef void (*simpaig_free) (void *mem_mgr, void *ptr, size_t);
+typedef void *(*simpaig_malloc)(void *mem_mgr, size_t);
+typedef void (*simpaig_free)(void *mem_mgr, void *ptr, size_t);
 
-simpaigmgr *simpaig_init (void);
-simpaigmgr *simpaig_init_mem (void *mem_mgr, simpaig_malloc, simpaig_free);
-void simpaig_reset (simpaigmgr *);
+simpaigmgr *simpaig_init(void);
+simpaigmgr *simpaig_init_mem(void *mem_mgr, simpaig_malloc, simpaig_free);
+void simpaig_reset(simpaigmgr *);
 
-int simpaig_isfalse (const simpaig *);
-int simpaig_istrue (const simpaig *);
-int simpaig_signed (const simpaig *);
-void *simpaig_isvar (const simpaig *);
-int simpaig_slice (const simpaig *);
-int simpaig_isand (const simpaig *);
+int simpaig_isfalse(const simpaig *);
+int simpaig_istrue(const simpaig *);
+int simpaig_signed(const simpaig *);
+void *simpaig_isvar(const simpaig *);
+int simpaig_slice(const simpaig *);
+int simpaig_isand(const simpaig *);
 
 /* The following functions do not give  back a new reference.  The reference
  * is shared with the argument.
  */
-simpaig *simpaig_strip (simpaig *);
-simpaig *simpaig_not (simpaig *);
-simpaig *simpaig_child (simpaig *, int child);
+simpaig *simpaig_strip(simpaig *);
+simpaig *simpaig_not(simpaig *);
+simpaig *simpaig_child(simpaig *, int child);
 
 /* The functions below this point will all return a new reference, if they
  * return a 'simpaig *'.  The user should delete the returned aig with
  * 'simpaig_dec', if memory is scarce.
  */
-simpaig *simpaig_false (simpaigmgr *);
-simpaig *simpaig_true (simpaigmgr *);
+simpaig *simpaig_false(simpaigmgr *);
+simpaig *simpaig_true(simpaigmgr *);
 
 /* A variable in 'SimpAIG' consists of an arbitrary external pointer and a
  * time offset the time 'slice'.  This is useful for time frame expansion.
  * If only combinational problems are modelled, then slice should be set 0.
  */
-simpaig *simpaig_var (simpaigmgr *, void *var, int slice);
+simpaig *simpaig_var(simpaigmgr *, void *var, int slice);
 
-simpaig *simpaig_and (simpaigmgr *, simpaig * a, simpaig * b);
-simpaig *simpaig_or (simpaigmgr *, simpaig * a, simpaig * b);
-simpaig *simpaig_implies (simpaigmgr *, simpaig * a, simpaig * b);
-simpaig *simpaig_xor (simpaigmgr *, simpaig * a, simpaig * b);
-simpaig *simpaig_xnor (simpaigmgr *, simpaig * a, simpaig * b);
-simpaig *simpaig_ite (simpaigmgr *, simpaig * c, simpaig * t, simpaig * e);
+simpaig *simpaig_and(simpaigmgr *, simpaig * a, simpaig * b);
+simpaig *simpaig_or(simpaigmgr *, simpaig * a, simpaig * b);
+simpaig *simpaig_implies(simpaigmgr *, simpaig * a, simpaig * b);
+simpaig *simpaig_xor(simpaigmgr *, simpaig * a, simpaig * b);
+simpaig *simpaig_xnor(simpaigmgr *, simpaig * a, simpaig * b);
+simpaig *simpaig_ite(simpaigmgr *, simpaig * c, simpaig * t, simpaig * e);
 
 /* Increment and decrement reference counts.
  */
-simpaig *simpaig_inc (simpaigmgr *, simpaig *);
-void simpaig_dec (simpaigmgr *, simpaig *);
+simpaig *simpaig_inc(simpaigmgr *, simpaig *);
+void simpaig_dec(simpaigmgr *, simpaig *);
 
 /* With 'simpaig_substitute' a set of variables ('lhs') is replaced
  * recursively by AIGs ('rhs').  The mapping of left hand sides to right
@@ -88,13 +88,13 @@ void simpaig_dec (simpaigmgr *, simpaig *);
  * assignments have to be acyclic.  When  'simpaig_substitute' returns the
  * assignment is reset.
  */
-void simpaig_assign (simpaigmgr *, simpaig * lhs, simpaig * rhs);
-simpaig *simpaig_substitute (simpaigmgr *, simpaig *);
+void simpaig_assign(simpaigmgr *, simpaig * lhs, simpaig * rhs);
+simpaig *simpaig_substitute(simpaigmgr *, simpaig *);
 
 /* Shift the time by 'delta' which in essence replaces every variable by a
  * time shifted copy.
  */
-simpaig *simpaig_shift (simpaigmgr *, simpaig *, int delta);
+simpaig *simpaig_shift(simpaigmgr *, simpaig *, int delta);
 
 /* This function will recursively assign tseitin indices to all nodes and
  * variables of the AIG.  The return value is the maximum tseitin index
@@ -104,14 +104,14 @@ simpaig *simpaig_shift (simpaigmgr *, simpaig *, int delta);
  * to this nodes which are indexed have to be maintained.  So it is always
  * a good idea to reset the indices after they are not used anymore.
  */
-void simpaig_assign_indices (simpaigmgr *, simpaig *);
-void simpaig_reset_indices (simpaigmgr *);
+void simpaig_assign_indices(simpaigmgr *, simpaig *);
+void simpaig_reset_indices(simpaigmgr *);
 
 /* Return the 'unsigned' tseitin index of an unsigned AIG and the maximal
  * valid tseitin index respectively.
  */
-unsigned simpaig_index (simpaig *);
-unsigned simpaig_max_index (simpaigmgr *);
+unsigned simpaig_index(simpaig *);
+unsigned simpaig_max_index(simpaigmgr *);
 
 /* There are two ways to obtain signed tseitin indices.  In the first
  * version we use signed numbers.  A negative number denotes a negated node.
@@ -121,16 +121,16 @@ unsigned simpaig_max_index (simpaigmgr *);
  * Otherwise it would be problematic to distinguish FALSE from TRUE.  FALSE
  * has '1' as int index and TRUE '-1'.
  */
-int simpaig_int_index (simpaig *);
+int simpaig_int_index(simpaig *);
 
 /* The second type of signed tseitin indices uses the least significant to
  * store the sign as in the AIGER format.  FALSE has '0' as unsigned index
  * and TRUE '1'.
  */
-unsigned simpaig_unsigned_index (simpaig *);
+unsigned simpaig_unsigned_index(simpaig *);
 
 /* The number of nodes still alive.
  */
-unsigned simpaig_current_nodes (simpaigmgr *);
+unsigned simpaig_current_nodes(simpaigmgr *);
 
 #endif

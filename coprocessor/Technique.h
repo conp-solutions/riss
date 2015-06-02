@@ -39,7 +39,7 @@ class Technique
 
   public:
 
-    Technique( CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller );
+    Technique(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller);
 
     /** return whether some changes have been applied since last time
      *  resets the counter after call
@@ -49,7 +49,7 @@ class Technique
     /** call this method for each clause when the technique is initialized with the formula
      *  This method should be overwritten by all techniques that inherit this class
      */
-    void initClause( const Riss::CRef cr );
+    void initClause(const Riss::CRef cr);
 
     /** free resources of the technique, which are not needed until the technique is used next time
      *  This method should be overwritten by all techniques that inherit this class
@@ -57,7 +57,7 @@ class Technique
     void destroy();
 
     /** This method should be used to print the statistics of the technique that inherits from this class */
-    void printStatistics( std::ostream& stream );
+    void printStatistics(std::ostream& stream);
 
     /** per call to the inprocess method of the preprocessor, allow a technique to have this number more steps */
     void giveMoreSteps();
@@ -81,7 +81,7 @@ class Technique
     uint32_t lastDeleteTime();
 
     /** update current delete timer */
-    void updateDeleteTime( const uint32_t deleteTime );
+    void updateDeleteTime(const uint32_t deleteTime);
 
     /** ask whether a simplification should be performed yet */
     bool performSimplification();
@@ -102,19 +102,19 @@ class Technique
 
 inline void Technique::giveMoreSteps()
 {
-    assert( false && "needs to be overwritten" );
+    assert(false && "needs to be overwritten");
 }
 
 
-inline Technique::Technique( Coprocessor::CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller )
-    : config( _config )
+inline Technique::Technique(Coprocessor::CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller)
+    : config(_config)
     , modifiedFormula(false)
-    , isInitialized( false )
-    , myDeleteTimer( 0 )
+    , isInitialized(false)
+    , myDeleteTimer(0)
     , thisPelalty(0)
     , lastMaxPenalty(0)
-    , ca( _ca )
-    , controller( _controller )
+    , ca(_ca)
+    , controller(_controller)
     , didPrintCannotDrup(false)
     , didPrintCannotExtraInfo(false)
 {}
@@ -133,12 +133,12 @@ inline void Technique::didChange()
 
 inline void Technique::initClause(const Riss::CRef cr)
 {
-    assert( false && "This method has not been implemented." );
+    assert(false && "This method has not been implemented.");
 }
 
 inline void Technique::reset()
 {
-    assert( false && "This method has not been implemented." );
+    assert(false && "This method has not been implemented.");
 }
 
 inline void Technique::initializedTechnique()
@@ -154,7 +154,7 @@ inline bool Technique::isInitializedTechnique()
 
 inline void Technique::destroy()
 {
-    assert( false && "This method has not been implemented." );
+    assert(false && "This method has not been implemented.");
 }
 
 inline void Technique::printStatistics(std::ostream& stream)
@@ -163,7 +163,7 @@ inline void Technique::printStatistics(std::ostream& stream)
     stream << "c [STAT] EE " << eeTime << " s, " << steps << " steps" << std::endl;
     stream << "c [STAT] EE-gate " << gateTime << " s, " << gateSteps << " steps" << std::endl;
     */
-    assert( false && "This method has not been implemented" );
+    assert(false && "This method has not been implemented");
 }
 
 inline uint32_t Technique::lastDeleteTime()
@@ -179,7 +179,7 @@ inline void Technique::updateDeleteTime(const uint32_t deleteTime)
 inline bool Technique::performSimplification()
 {
     bool ret = (thisPelalty == 0);
-    thisPelalty = (thisPelalty == 0 ) ? thisPelalty : thisPelalty - 1; // reduce current wait cycle if necessary!
+    thisPelalty = (thisPelalty == 0) ? thisPelalty : thisPelalty - 1;  // reduce current wait cycle if necessary!
     return ret; // if there is no penalty, apply the simplification!
 }
 
@@ -196,13 +196,13 @@ inline void Technique::unsuccessfulSimplification()
 
 inline void Technique::printDRUPwarning(std::ostream& stream, const std::string s)
 {
-    if( ! didPrintCannotDrup ) { stream << "c [" << s << "] cannot produce DRUP proofs" << std::endl; }
+    if (! didPrintCannotDrup) { stream << "c [" << s << "] cannot produce DRUP proofs" << std::endl; }
     didPrintCannotDrup = true;
 }
 
 inline void Technique::printExtraInfowarning(std::ostream& stream, const std::string s)
 {
-    if( ! didPrintCannotExtraInfo ) { stream << "c [" << s << "] cannot handle clause/variable extra information" << std::endl; }
+    if (! didPrintCannotExtraInfo) { stream << "c [" << s << "] cannot handle clause/variable extra information" << std::endl; }
     didPrintCannotExtraInfo = true;
 }
 

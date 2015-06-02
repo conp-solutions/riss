@@ -28,7 +28,7 @@ class PfolioConfig : public Config
 
   public:
     /** default constructor, which sets up all options in their standard format */
-    PfolioConfig (const std::string& presetOptions = "");
+    PfolioConfig(const std::string& presetOptions = "");
 
 
     BoolOption send;

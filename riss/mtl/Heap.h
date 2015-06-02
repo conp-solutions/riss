@@ -38,9 +38,9 @@ class Heap
     vec<int> indices;  // Each integers position (index) in the Heap
 
     // Index "traversal" functions
-    static inline int left  (int i) { return i*2+1; }
-    static inline int right (int i) { return (i+1)*2; }
-    static inline int parent(int i) { return (i-1) >> 1; }
+    static inline int left(int i) { return i * 2 + 1; }
+    static inline int right(int i) { return (i + 1) * 2; }
+    static inline int parent(int i) { return (i - 1) >> 1; }
 
 
     void percolateUp(int i)
@@ -77,14 +77,14 @@ class Heap
   public:
     Heap(const Comp& c) : lt(c) { }
 
-    int  size      ()          const { return heap.size(); }
-    bool empty     ()          const { return heap.size() == 0; }
-    bool inHeap    (int n)     const { return n < indices.size() && indices[n] >= 0; }
+    int  size()          const { return heap.size(); }
+    bool empty()          const { return heap.size() == 0; }
+    bool inHeap(int n)     const { return n < indices.size() && indices[n] >= 0; }
     int  operator[](int index) const { assert(index < heap.size()); return heap[index]; }
 
 
-    void decrease  (int n) { assert(inHeap(n)); percolateUp  (indices[n]); }
-    void increase  (int n) { assert(inHeap(n)); percolateDown(indices[n]); }
+    void decrease(int n) { assert(inHeap(n)); percolateUp(indices[n]); }
+    void increase(int n) { assert(inHeap(n)); percolateDown(indices[n]); }
 
 
     // Safe variant of insert/decrease/increase:
@@ -101,7 +101,7 @@ class Heap
 
     void insert(int n)
     {
-        indices.growTo(n+1, -1);
+        indices.growTo(n + 1, -1);
         assert(!inHeap(n));
 
         indices[n] = heap.size();
@@ -143,12 +143,12 @@ class Heap
     /** enlarge the heap
      * Note: assumes, that compare object can handle new elements
      */
-    void addNewElement ( int number = -1)
+    void addNewElement(int number = -1)
     {
-        if( number == - 1 ) {
-            indices.push( -1 );    // element is not in heap
-        } else while( indices.size() <= number ) {
-                indices.push( -1 );    // elements are not in heap
+        if (number == - 1) {
+            indices.push(-1);      // element is not in heap
+        } else while (indices.size() <= number) {
+                indices.push(-1);      // elements are not in heap
             }
     }
 

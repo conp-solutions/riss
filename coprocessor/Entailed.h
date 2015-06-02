@@ -28,7 +28,7 @@ class EntailedRedundant : public Technique
     int extraSubs;
 
   public:
-    EntailedRedundant( CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data );
+    EntailedRedundant(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data);
 
     void reset();
 

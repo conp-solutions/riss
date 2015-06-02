@@ -36,7 +36,7 @@ namespace Riss
 
 template<class T>
 struct LessThan_default {
-    bool operator () (T x, T y) { return x < y; }
+    bool operator()(T x, T y) { return x < y; }
 };
 
 
@@ -47,20 +47,20 @@ template <typename T, class LessThan>
 static inline void mergesort(T* field, const int32_t arraySize, LessThan lt)
 {
     // if copying is enabled, only half of the elements are needed
-    T* helpArray=new T[ arraySize ];
+    T* helpArray = new T[ arraySize ];
     int swaps = 0;
 
     int rightHead, rightEnd;
-    int leftRead,rightRead,writeHead=0;
+    int leftRead, rightRead, writeHead = 0;
 
-    for (int windowSize=1; windowSize < arraySize; windowSize *= 2 ) {
-        for (int left=0; left+windowSize < arraySize; left += windowSize*2 ) {
+    for (int windowSize = 1; windowSize < arraySize; windowSize *= 2) {
+        for (int left = 0; left + windowSize < arraySize; left += windowSize * 2) {
             rightHead = left + windowSize;
             rightEnd = rightHead + windowSize;
             if (rightEnd > arraySize) { rightEnd = arraySize; } // stay within the array!
             writeHead = left; leftRead = left; rightRead = rightHead;
             while (leftRead < rightHead && rightRead < rightEnd) { // merge the two fields by using the smaller number
-                if ( lt( field[leftRead], field[rightRead]) ) { // use the smaller element
+                if (lt(field[leftRead], field[rightRead])) {    // use the smaller element
                     helpArray[writeHead++] = field[leftRead++];
                 } else {
                     helpArray[writeHead++] = field[rightRead++];
@@ -68,13 +68,13 @@ static inline void mergesort(T* field, const int32_t arraySize, LessThan lt)
             }
             // write the remaining positions from the one field that is left
             while (leftRead < rightHead) {
-                helpArray[writeHead++]=field[leftRead++];
+                helpArray[writeHead++] = field[leftRead++];
             }
             while (rightRead < rightEnd) {
-                helpArray[writeHead++]=field[rightRead++];
+                helpArray[writeHead++] = field[rightRead++];
             }
         }
-        while( writeHead < arraySize ) { helpArray[writeHead] = field[writeHead]; writeHead++; }
+        while (writeHead < arraySize) { helpArray[writeHead] = field[writeHead]; writeHead++; }
         // swap fields after the iteration (do not copy!)
         T* tmp = field;
         field = helpArray;
@@ -82,9 +82,9 @@ static inline void mergesort(T* field, const int32_t arraySize, LessThan lt)
         swaps ++;
     }
     // copy back original data into original std::vector!
-    if( (swaps & 1) != 0 ) {
+    if ((swaps & 1) != 0) {
         //std::cerr << "c swaps: " << swaps << std::endl;
-        memcpy(helpArray, field, sizeof(T) * arraySize ); // copy currently sorted data into the other std::vector as well, if necessary!
+        memcpy(helpArray, field, sizeof(T) * arraySize);  // copy currently sorted data into the other std::vector as well, if necessary!
         T* tmp = field;
         field = helpArray;
         helpArray = tmp;
@@ -105,9 +105,9 @@ void selectionSort(T* array, int size, LessThan lt)
     int     i, j, best_i;
     T       tmp;
 
-    for (i = 0; i < size-1; i++) {
+    for (i = 0; i < size - 1; i++) {
         best_i = i;
-        for (j = i+1; j < size; j++) {
+        for (j = i + 1; j < size; j++) {
             if (lt(array[j], array[best_i])) {
                 best_i = j;
             }
@@ -125,17 +125,17 @@ void sort(T* array, int size, LessThan lt)
 {
     if (size <= 15) {
         selectionSort(array, size, lt);
-    } else if( size > 32 ) {
-        mergesort( array,size,lt);
+    } else if (size > 32) {
+        mergesort(array, size, lt);
     } else {
         T           pivot = array[size / 2];
         T           tmp;
         int         i = -1;
         int         j = size;
 
-        for(;;) {
-            do { i++; } while(lt(array[i], pivot));
-            do { j--; } while(lt(pivot, array[j]));
+        for (;;) {
+            do { i++; } while (lt(array[i], pivot));
+            do { j--; } while (lt(pivot, array[j]));
 
             if (i >= j) { break; }
 
@@ -143,7 +143,7 @@ void sort(T* array, int size, LessThan lt)
         }
 
         sort(array    , i     , lt);
-        sort(&array[i], size-i, lt);
+        sort(&array[i], size - i, lt);
     }
 }
 template <class T> static inline void sort(T* array, int size)
@@ -168,7 +168,7 @@ template <class T> void sort(vec<T>& v)
 // Minisat sort for usual std::vector
 template <class T, class LessThan> void sort(std::vector<T>& v, LessThan lt)
 {
-    sort((T*)&(v[0]), v.size(), lt);
+    sort((T*) & (v[0]), v.size(), lt);
 }
 template <class T> void sort(std::vector<T>& v)
 {

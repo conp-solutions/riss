@@ -43,29 +43,29 @@ class SimpSolver : public Solver
 
     // Problem specification:
     //
-    Var     newVar    (bool polarity = true, bool dvar = true);
-    bool    addClause (const vec<Lit>& ps);
+    Var     newVar(bool polarity = true, bool dvar = true);
+    bool    addClause(const vec<Lit>& ps);
     bool    addEmptyClause();                // Add the empty clause to the solver.
-    bool    addClause (Lit p);               // Add a unit clause to the solver.
-    bool    addClause (Lit p, Lit q);        // Add a binary clause to the solver.
-    bool    addClause (Lit p, Lit q, Lit r); // Add a ternary clause to the solver.
-    bool    addClause_(      vec<Lit>& ps);
+    bool    addClause(Lit p);                // Add a unit clause to the solver.
+    bool    addClause(Lit p, Lit q);         // Add a binary clause to the solver.
+    bool    addClause(Lit p, Lit q, Lit r);  // Add a ternary clause to the solver.
+    bool    addClause_(vec<Lit>& ps);
     bool    substitute(Var v, Lit x);  // Replace all occurences of v with x (may cause a contradiction).
 
     // Variable mode:
     //
-    void    setFrozen (Var v, bool b); // If a variable is frozen it will not be eliminated.
+    void    setFrozen(Var v, bool b);  // If a variable is frozen it will not be eliminated.
     bool    isEliminated(Var v) const;
 
     // Solving:
     //
-    bool    solve       (const vec<Lit>& assumps, bool do_simp = true, bool turn_off_simp = false);
+    bool    solve(const vec<Lit>& assumps, bool do_simp = true, bool turn_off_simp = false);
     lbool   solveLimited(const vec<Lit>& assumps, bool do_simp = true, bool turn_off_simp = false);
-    bool    solve       (                     bool do_simp = true, bool turn_off_simp = false);
-    bool    solve       (Lit p       ,        bool do_simp = true, bool turn_off_simp = false);
-    bool    solve       (Lit p, Lit q,        bool do_simp = true, bool turn_off_simp = false);
-    bool    solve       (Lit p, Lit q, Lit r, bool do_simp = true, bool turn_off_simp = false);
-    bool    eliminate   (bool turn_off_elim = false);  // Perform variable elimination based simplification.
+    bool    solve(bool do_simp = true, bool turn_off_simp = false);
+    bool    solve(Lit p       ,        bool do_simp = true, bool turn_off_simp = false);
+    bool    solve(Lit p, Lit q,        bool do_simp = true, bool turn_off_simp = false);
+    bool    solve(Lit p, Lit q, Lit r, bool do_simp = true, bool turn_off_simp = false);
+    bool    eliminate(bool turn_off_elim = false);     // Perform variable elimination based simplification.
 
     // Memory managment:
     //
@@ -75,11 +75,11 @@ class SimpSolver : public Solver
     // Generate a (possibly simplified) DIMACS file:
     //
     #if 0
-    void    toDimacs  (const char* file, const vec<Lit>& assumps);
-    void    toDimacs  (const char* file);
-    void    toDimacs  (const char* file, Lit p);
-    void    toDimacs  (const char* file, Lit p, Lit q);
-    void    toDimacs  (const char* file, Lit p, Lit q, Lit r);
+    void    toDimacs(const char* file, const vec<Lit>& assumps);
+    void    toDimacs(const char* file);
+    void    toDimacs(const char* file, Lit p);
+    void    toDimacs(const char* file, Lit p, Lit q);
+    void    toDimacs(const char* file, Lit p, Lit q, Lit r);
     #endif
 
     // Mode of operation:
@@ -111,7 +111,7 @@ class SimpSolver : public Solver
 
         // TODO: are 64-bit operations here noticably bad on 32-bit platforms? Could use a saturating
         // 32-bit implementation instead then, but this will have to do for now.
-        uint64_t cost  (Var x)        const { return (uint64_t)n_occ[toInt(mkLit(x))] * (uint64_t)n_occ[toInt(~mkLit(x))]; }
+        uint64_t cost(Var x)        const { return (uint64_t)n_occ[toInt(mkLit(x))] * (uint64_t)n_occ[toInt(~mkLit(x))]; }
         bool operator()(Var x, Var y) const { return cost(x) < cost(y); }
 
         // TODO: investigate this order alternative more.
@@ -149,22 +149,22 @@ class SimpSolver : public Solver
 
     // Main internal methods:
     //
-    lbool         solve_                   (bool do_simp = true, bool turn_off_simp = false);
-    bool          asymm                    (Var v, CRef cr);
-    bool          asymmVar                 (Var v);
-    void          updateElimHeap           (Var v);
-    void          gatherTouchedClauses     ();
-    bool          merge                    (const Clause& _ps, const Clause& _qs, Var v, vec<Lit>& out_clause);
-    bool          merge                    (const Clause& _ps, const Clause& _qs, Var v, int& size);
-    bool          backwardSubsumptionCheck (bool verbose = false);
-    bool          eliminateVar             (Var v);
-    void          extendModel              ();
+    lbool         solve_(bool do_simp = true, bool turn_off_simp = false);
+    bool          asymm(Var v, CRef cr);
+    bool          asymmVar(Var v);
+    void          updateElimHeap(Var v);
+    void          gatherTouchedClauses();
+    bool          merge(const Clause& _ps, const Clause& _qs, Var v, vec<Lit>& out_clause);
+    bool          merge(const Clause& _ps, const Clause& _qs, Var v, int& size);
+    bool          backwardSubsumptionCheck(bool verbose = false);
+    bool          eliminateVar(Var v);
+    void          extendModel();
 
-    void          removeClause             (CRef cr);
-    bool          strengthenClause         (CRef cr, Lit l);
-    void          cleanUpClauses           ();
-    bool          implied                  (const vec<Lit>& c);
-    void          relocAll                 (ClauseAllocator& to);
+    void          removeClause(CRef cr);
+    bool          strengthenClause(CRef cr, Lit l);
+    void          cleanUpClauses();
+    bool          implied(const vec<Lit>& c);
+    void          relocAll(ClauseAllocator& to);
 };
 
 
@@ -172,7 +172,7 @@ class SimpSolver : public Solver
 // Implementation of inline methods:
 
 
-inline bool SimpSolver::isEliminated (Var v) const { return eliminated[v]; }
+inline bool SimpSolver::isEliminated(Var v) const { return eliminated[v]; }
 inline void SimpSolver::updateElimHeap(Var v)
 {
     assert(use_simplification);
@@ -183,23 +183,23 @@ inline void SimpSolver::updateElimHeap(Var v)
 }
 
 
-inline bool SimpSolver::addClause    (const vec<Lit>& ps)    { ps.copyTo(add_tmp); return addClause_(add_tmp); }
+inline bool SimpSolver::addClause(const vec<Lit>& ps)    { ps.copyTo(add_tmp); return addClause_(add_tmp); }
 inline bool SimpSolver::addEmptyClause()                     { add_tmp.clear(); return addClause_(add_tmp); }
-inline bool SimpSolver::addClause    (Lit p)                 { add_tmp.clear(); add_tmp.push(p); return addClause_(add_tmp); }
-inline bool SimpSolver::addClause    (Lit p, Lit q)          { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); return addClause_(add_tmp); }
-inline bool SimpSolver::addClause    (Lit p, Lit q, Lit r)   { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); add_tmp.push(r); return addClause_(add_tmp); }
-inline void SimpSolver::setFrozen    (Var v, bool b) { frozen[v] = (char)b; if (use_simplification && !b) { updateElimHeap(v); } }
+inline bool SimpSolver::addClause(Lit p)                 { add_tmp.clear(); add_tmp.push(p); return addClause_(add_tmp); }
+inline bool SimpSolver::addClause(Lit p, Lit q)          { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); return addClause_(add_tmp); }
+inline bool SimpSolver::addClause(Lit p, Lit q, Lit r)   { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); add_tmp.push(r); return addClause_(add_tmp); }
+inline void SimpSolver::setFrozen(Var v, bool b) { frozen[v] = (char)b; if (use_simplification && !b) { updateElimHeap(v); } }
 
-inline bool SimpSolver::solve        (                     bool do_simp, bool turn_off_simp)  { budgetOff(); assumptions.clear(); return solve_(do_simp, turn_off_simp) == l_True; }
-inline bool SimpSolver::solve        (Lit p       ,        bool do_simp, bool turn_off_simp)  { budgetOff(); assumptions.clear(); assumptions.push(p); return solve_(do_simp, turn_off_simp) == l_True; }
-inline bool SimpSolver::solve        (Lit p, Lit q,        bool do_simp, bool turn_off_simp)  { budgetOff(); assumptions.clear(); assumptions.push(p); assumptions.push(q); return solve_(do_simp, turn_off_simp) == l_True; }
-inline bool SimpSolver::solve        (Lit p, Lit q, Lit r, bool do_simp, bool turn_off_simp)  { budgetOff(); assumptions.clear(); assumptions.push(p); assumptions.push(q); assumptions.push(r); return solve_(do_simp, turn_off_simp) == l_True; }
-inline bool SimpSolver::solve        (const vec<Lit>& assumps, bool do_simp, bool turn_off_simp)
+inline bool SimpSolver::solve(bool do_simp, bool turn_off_simp)  { budgetOff(); assumptions.clear(); return solve_(do_simp, turn_off_simp) == l_True; }
+inline bool SimpSolver::solve(Lit p       ,        bool do_simp, bool turn_off_simp)  { budgetOff(); assumptions.clear(); assumptions.push(p); return solve_(do_simp, turn_off_simp) == l_True; }
+inline bool SimpSolver::solve(Lit p, Lit q,        bool do_simp, bool turn_off_simp)  { budgetOff(); assumptions.clear(); assumptions.push(p); assumptions.push(q); return solve_(do_simp, turn_off_simp) == l_True; }
+inline bool SimpSolver::solve(Lit p, Lit q, Lit r, bool do_simp, bool turn_off_simp)  { budgetOff(); assumptions.clear(); assumptions.push(p); assumptions.push(q); assumptions.push(r); return solve_(do_simp, turn_off_simp) == l_True; }
+inline bool SimpSolver::solve(const vec<Lit>& assumps, bool do_simp, bool turn_off_simp)
 {
     budgetOff(); assumps.copyTo(assumptions); return solve_(do_simp, turn_off_simp) == l_True;
 }
 
-inline lbool SimpSolver::solveLimited (const vec<Lit>& assumps, bool do_simp, bool turn_off_simp)
+inline lbool SimpSolver::solveLimited(const vec<Lit>& assumps, bool do_simp, bool turn_off_simp)
 {
     assumps.copyTo(assumptions); return solve_(do_simp, turn_off_simp);
 }

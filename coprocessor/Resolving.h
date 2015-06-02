@@ -26,10 +26,10 @@ class Resolving  : public Technique
   public:
     Resolving(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation);
 
-    bool process( bool post = false);
+    bool process(bool post = false);
 
     /** inherited from @see Technique */
-    void printStatistics( std::ostream& stream );
+    void printStatistics(std::ostream& stream);
 
     void destroy();
 
@@ -54,8 +54,8 @@ class Resolving  : public Technique
     bool resolve(const Riss::Clause& c, const Riss::Clause& d, const int v, Riss::vec<Riss::Lit>& resolvent);
 
     // check whether a std::vector of lits subsumes a given clause
-    bool ordered_subsumes (const Riss::vec<Riss::Lit>& c, const Riss::Clause& other) const;
-    bool ordered_subsumes (const Riss::Clause& c, const Riss::vec<Riss::Lit>& other) const;
+    bool ordered_subsumes(const Riss::vec<Riss::Lit>& c, const Riss::Clause& other) const;
+    bool ordered_subsumes(const Riss::Clause& c, const Riss::vec<Riss::Lit>& other) const;
 
     bool checkPush(Riss::vec<Riss::Lit>& ps, const Riss::Lit l);
 
@@ -71,7 +71,7 @@ class Resolving  : public Technique
     /** compare two literals */
     struct VarOrderHeapLt {
         CoprocessorData& data;
-        bool operator () (const Riss::Var& x, const Riss::Var& y) const
+        bool operator()(const Riss::Var& x, const Riss::Var& y) const
         {
             return data[ x] < data[y];
         }

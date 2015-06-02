@@ -33,7 +33,7 @@ class Symmetry : public Technique
     int totalConflicts;
 
   public:
-    Symmetry( CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data, Riss::Solver& _solver);
+    Symmetry(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data, Riss::Solver& _solver);
 
     /** perform local symmetry detection
      * @return false, if formula is UNSAT
@@ -42,7 +42,7 @@ class Symmetry : public Technique
 
     /** This method should be used to print the statistics of the technique that inherits from this class
      */
-    void printStatistics( std::ostream& stream );
+    void printStatistics(std::ostream& stream);
 
     void destroy();
 
@@ -51,13 +51,13 @@ class Symmetry : public Technique
   protected:
 
     struct ScorePair {
-        Riss::Var v1,v2;
+        Riss::Var v1, v2;
         float score;
-        ScorePair( Riss::Var _v1, Riss::Var _v2, float _score ) : v1(_v1), v2(_v2),score(_score) {}
+        ScorePair(Riss::Var _v1, Riss::Var _v2, float _score) : v1(_v1), v2(_v2), score(_score) {}
 
-        ScorePair() : v1(0),v2(0),score(0) {}
+        ScorePair() : v1(0), v2(0), score(0) {}
 
-        bool operator<( const ScorePair& other ) const
+        bool operator<(const ScorePair& other) const
         {
             return score < other.score;
         }
@@ -68,18 +68,18 @@ class Symmetry : public Technique
 
       public:
         int v;
-        uint64_t c2,c3,c4,c5,c6,c7,cl;
-        Symm() : v(0),c2(0),c3(0),c4(0),c5(0),c6(0),c7(0),cl(0) {}
+        uint64_t c2, c3, c4, c5, c6, c7, cl;
+        Symm() : v(0), c2(0), c3(0), c4(0), c5(0), c6(0), c7(0), cl(0) {}
 
-        bool operator<( const Symm& other ) const
+        bool operator<(const Symm& other) const
         {
             return c2 < other.c2 ||
-                   ( c2 == other.c2 && c3 < other.c3 ) ||
-                   ( c2 == other.c2 && c3 == other.c3 && c4 < other.c4) ||
-                   ( c2 == other.c2 && c3 == other.c3 && c4 == other.c4 && c5 < other.c5) ||
-                   ( c2 == other.c2 && c3 == other.c3 && c4 == other.c4 && c5 == other.c5 && c6 < other.c6) ||
-                   ( c2 == other.c2 && c3 == other.c3 && c4 == other.c4 && c5 == other.c5 && c6 == other.c6 && c7 < other.c7) ||
-                   ( c2 == other.c2 && c3 == other.c3 && c4 == other.c4 && c5 == other.c5 && c6 == other.c6 && c7 == other.c7 && cl < other.cl);
+                   (c2 == other.c2 && c3 < other.c3) ||
+                   (c2 == other.c2 && c3 == other.c3 && c4 < other.c4) ||
+                   (c2 == other.c2 && c3 == other.c3 && c4 == other.c4 && c5 < other.c5) ||
+                   (c2 == other.c2 && c3 == other.c3 && c4 == other.c4 && c5 == other.c5 && c6 < other.c6) ||
+                   (c2 == other.c2 && c3 == other.c3 && c4 == other.c4 && c5 == other.c5 && c6 == other.c6 && c7 < other.c7) ||
+                   (c2 == other.c2 && c3 == other.c3 && c4 == other.c4 && c5 == other.c5 && c6 == other.c6 && c7 == other.c7 && cl < other.cl);
         }
 
 //     Symm( Symm& other ) {
@@ -95,12 +95,12 @@ class Symmetry : public Technique
 //        return *this;
 //      }
 
-        bool operator==( const Symm& other ) const
+        bool operator==(const Symm& other) const
         {
             return c2 == other.c2 && c3 == other.c3 && c4 == other.c4 &&  c5 == other.c5 && c6 == other.c6 && c7 == other.c7 && cl == other.cl;
         }
 
-        Symm& operator+( const Symm& other )
+        Symm& operator+(const Symm& other)
         {
             c2 += other.c2;
             c3 += other.c3;
@@ -113,7 +113,7 @@ class Symmetry : public Technique
         }
 
 
-        Symm& operator*( const int64_t factor )
+        Symm& operator*(const int64_t factor)
         {
             c2 *= factor;
             c3 *= factor;
@@ -133,9 +133,9 @@ class Symmetry : public Technique
             return s;
         }
 
-        void add( int i )
+        void add(int i)
         {
-            switch( i ) {
+            switch (i) {
             case 2:  c2 ++; break;
             case 3:  c3 ++; break;
             case 4:  c4 ++; break;
@@ -146,9 +146,9 @@ class Symmetry : public Technique
             }
         }
 
-        void sub( int i )
+        void sub(int i)
         {
-            switch( i ) {
+            switch (i) {
             case 2:  c2 --; break;
             case 3:  c3 --; break;
             case 4:  c4 --; break;

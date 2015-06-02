@@ -45,9 +45,9 @@ static void readQuantifier(B& in, Solver& S, quantification& quantifier)
     for (;;) {
         parsed_lit = parseInt(in);
         if (parsed_lit == 0) { break; }
-        var = abs(parsed_lit)-1;
+        var = abs(parsed_lit) - 1;
         while (var >= S.nVars()) { S.newVar(); }
-        quantifier.lits.push_back( (parsed_lit > 0) ? Riss::mkLit(var) : ~Riss::mkLit(var) );
+        quantifier.lits.push_back((parsed_lit > 0) ? Riss::mkLit(var) : ~Riss::mkLit(var));
     }
     /*
     std::cerr << "c parsed quantifier: " << quantifier.kind << std::endl;
@@ -84,14 +84,14 @@ static void parse_QDIMACS_main(B& in, Solver& S, std::vector<quantification>& qu
             }
         } else if (*in == 'c' || *in == 'p') {
             skipLine(in);
-        } else if (*in == 'e' ) {
+        } else if (*in == 'e') {
 
-            quantifiers.push_back( quantification() );
+            quantifiers.push_back(quantification());
             quantifiers[quantifiers.size() - 1].kind = 'e';
             ++ in;
             readQuantifier(in, S, quantifiers[quantifiers.size() - 1]);
-        } else if (*in == 'a' ) {
-            quantifiers.push_back( quantification() );
+        } else if (*in == 'a') {
+            quantifiers.push_back(quantification());
             quantifiers[quantifiers.size() - 1].kind = 'a';
             ++ in;
             readQuantifier(in, S, quantifiers[quantifiers.size() - 1]);
@@ -116,7 +116,7 @@ template<class Solver>
 static void parse_QDIMACS(gzFile input_stream, Solver& S, std::vector<quantification>& quantifiers)
 {
     StreamBuffer in(input_stream);
-    parse_QDIMACS_main(in, S,quantifiers);
+    parse_QDIMACS_main(in, S, quantifiers);
 }
 
 } // namespace Riss

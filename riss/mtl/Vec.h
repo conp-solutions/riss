@@ -44,10 +44,10 @@ class vec
 
     // Don't allow copying (error prone):
     vec<T>&  operator = (vec<T>& other) { assert(0); return *this; }
-    vec        (vec<T>& other) { assert(0); }
+    vec(vec<T>& other) { assert(0); }
 
     // Helpers for calculating next capacity:
-    static inline int  imax   (int x, int y) { int mask = (y-x) >> (sizeof(int)*8-1); return (x&mask) + (y&(~mask)); }
+    static inline int  imax(int x, int y) { int mask = (y - x) >> (sizeof(int) * 8 - 1); return (x & mask) + (y & (~mask)); }
     //static inline void nextCap(int& cap){ cap += ((cap >> 1) + 2) & ~1; }
     static inline void nextCap(int& cap) { cap += ((cap >> 1) + 2) & ~1; }
 
@@ -62,31 +62,31 @@ class vec
     operator T*       (void)           { return data; }
 
     // Size operations:
-    int      size     (void) const     { return sz; }
-    void     shrink   (int nelems)     { assert(nelems <= sz); for (int i = 0; i < nelems; i++) { sz--, data[sz].~T(); } }
-    void     shrink_  (int nelems)     { assert(nelems <= sz); sz -= nelems; }
-    int      capacity (void) const     { return cap; }
-    void     capacity (int min_cap);
-    void     growTo   (int size);
-    void     growTo   (int size, const T& pad);
-    void     clear    (bool dealloc = false);
+    int      size(void) const     { return sz; }
+    void     shrink(int nelems)     { assert(nelems <= sz); for (int i = 0; i < nelems; i++) { sz--, data[sz].~T(); } }
+    void     shrink_(int nelems)     { assert(nelems <= sz); sz -= nelems; }
+    int      capacity(void) const     { return cap; }
+    void     capacity(int min_cap);
+    void     growTo(int size);
+    void     growTo(int size, const T& pad);
+    void     clear(bool dealloc = false);
 
     // Stack interface:
-    void     push  (void)              { if (sz == cap) { capacity(sz+1); } new (&data[sz]) T(); sz++; }
-    void     push  (const T& elem)     { if (sz == cap) { capacity(sz+1); } data[sz++] = elem; }
-    void     push_ (const T& elem)     { assert(sz < cap); data[sz++] = elem; }
-    void     pop   (void)              { assert(sz > 0); sz--, data[sz].~T(); }
+    void     push(void)              { if (sz == cap) { capacity(sz + 1); } new(&data[sz]) T(); sz++; }
+    void     push(const T& elem)     { if (sz == cap) { capacity(sz + 1); } data[sz++] = elem; }
+    void     push_(const T& elem)     { assert(sz < cap); data[sz++] = elem; }
+    void     pop(void)              { assert(sz > 0); sz--, data[sz].~T(); }
     // NOTE: it seems possible that overflow can happen in the 'sz+1' expression of 'push()', but
     // in fact it can not since it requires that 'cap' is equal to INT_MAX. This in turn can not
     // happen given the way capacities are calculated (below). Essentially, all capacities are
     // even, but INT_MAX is odd.
 
-    const T& last  (void) const        { return data[sz-1]; }
-    T&       last  (void)              { return data[sz-1]; }
+    const T& last(void) const        { return data[sz - 1]; }
+    T&       last(void)              { return data[sz - 1]; }
 
     // Vector interface:
-    const T& operator [] (int index) const { assert (0 <= index && index < sz); return data[index]; }
-    T&       operator [] (int index)       { assert (0 <= index && index < sz); return data[index]; }
+    const T& operator [](int index) const { assert(0 <= index && index < sz); return data[index]; }
+    T&       operator [](int index)       { assert(0 <= index && index < sz); return data[index]; }
 
     // Duplicatation (preferred instead):
     void copyTo(vec<T>& copy) const { copy.clear(); copy.growTo(sz); for (int i = 0; i < sz; i++) { copy[i] = data[i]; } }
@@ -127,7 +127,7 @@ void vec<T>::growTo(int size)
 {
     if (sz >= size) { return; }
     capacity(size);
-    for (int i = sz; i < size; i++) { new (&data[i]) T(); }
+    for (int i = sz; i < size; i++) { new(&data[i]) T(); }
     sz = size;
 }
 

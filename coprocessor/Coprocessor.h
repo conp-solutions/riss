@@ -74,7 +74,7 @@ class Preprocessor
 
   public:
 
-    Preprocessor(Riss::Solver* solver, CP3Config& _config, int32_t _threads=-1 );
+    Preprocessor(Riss::Solver* solver, CP3Config& _config, int32_t _threads = -1);
     ~Preprocessor();
 
     // major methods to start preprocessing
@@ -93,7 +93,7 @@ class Preprocessor
     Riss::lbool preprocessScheduled();
     Riss::lbool performSimplificationScheduled(std::string techniques);
 
-    void extendModel( Riss::vec<Riss::lbool>& model );
+    void extendModel(Riss::vec<Riss::lbool>& model);
 
     /* TODO:
      - extra classes for each extra techniques, which are friend of coprocessor class
@@ -135,12 +135,12 @@ class Preprocessor
     /** disable the specified variable (external representation) for modelset-changing preprocessing (bve,ee,bce,cce,la,...)
      * @param lit literal in external representation (the whole variable will be frozen!)
      */
-    void freezeExtern( int lit );
+    void freezeExtern(int lit);
 
     /** returns current (irredundant) formula in one std::vector, and external variable representation. all clauses are terminated by a '0'
      * @param outputFormula std::vector that contains the formula afterwards
      */
-    void dumpFormula( std::vector<int>& outputFormula );
+    void dumpFormula(std::vector<int>& outputFormula);
 
     /** return the literal, to which the specified literal is mapped to
      * @param l literal in the external world representation
@@ -190,7 +190,7 @@ class Preprocessor
     void giveMoreSteps();
 
     void shuffle();           // shuffle the formula
-    void unshuffle( Riss::vec< Riss::lbool >& model );    // unshuffle the formula
+    void unshuffle(Riss::vec< Riss::lbool >& model);      // unshuffle the formula
 
     /** freeze all variables that appear in special search data structures (assumptions, preferred decisions)
      *  Note: does not freeze a variable twice, will not add variables to undo information, if the variable is frozen already
@@ -210,7 +210,7 @@ class Preprocessor
     // print formula
     inline void printClause(FILE * fd, Riss::CRef cr);
     inline void printLit(FILE * fd, int l);
-    void printFormula( const std::string& headline );
+    void printFormula(const std::string& headline);
 
 
     /** print current state of the solver */

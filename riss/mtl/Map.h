@@ -66,19 +66,19 @@ class Map
     int        size;
 
     // Don't allow copying (error prone):
-    Map<K,D,H,E>&  operator = (Map<K,D,H,E>& other) { assert(0); }
-    Map        (Map<K,D,H,E>& other) { assert(0); }
+    Map<K, D, H, E>&  operator = (Map<K, D, H, E>& other) { assert(0); }
+    Map(Map<K, D, H, E>& other) { assert(0); }
 
     bool    checkCap(int new_size) const { return new_size > cap; }
 
-    int32_t index  (const K& k) const { return hash(k) % cap; }
-    void   _insert (const K& k, const D& d)
+    int32_t index(const K& k) const { return hash(k) % cap; }
+    void   _insert(const K& k, const D& d)
     {
         vec<Pair>& ps = table[index(k)];
         ps.push(); ps.last().key = k; ps.last().data = d;
     }
 
-    void    rehash ()
+    void    rehash()
     {
         const vec<Pair>* old = table;
 
@@ -105,14 +105,14 @@ class Map
 
   public:
 
-    Map () : table(NULL), cap(0), size(0) {}
-    Map (const H& h, const E& e) : hash(h), equals(e), table(NULL), cap(0), size(0) {}
-    ~Map () { delete [] table; }
+    Map() : table(NULL), cap(0), size(0) {}
+    Map(const H& h, const E& e) : hash(h), equals(e), table(NULL), cap(0), size(0) {}
+    ~Map() { delete [] table; }
 
-    int32_t index  (const int& k) const { return k % cap; }
+    int32_t index(const int& k) const { return k % cap; }
 
     // PRECONDITION: the key must already exist in the map.
-    const D& operator [] (const K& k) const
+    const D& operator [](const K& k) const
     {
         assert(size != 0);
         const D*         res = NULL;
@@ -126,7 +126,7 @@ class Map
     }
 
     // PRECONDITION: the key must already exist in the map.
-    D& operator [] (const K& k)
+    D& operator [](const K& k)
     {
         assert(size != 0);
         D*         res = NULL;
@@ -140,8 +140,8 @@ class Map
     }
 
     // PRECONDITION: the key must *NOT* exist in the map.
-    void insert (const K& k, const D& d) { if (checkCap(size+1)) { rehash(); } _insert(k, d); size++; }
-    bool peek   (const K& k, D& d) const
+    void insert(const K& k, const D& d) { if (checkCap(size + 1)) { rehash(); } _insert(k, d); size++; }
+    bool peek(const K& k, D& d) const
     {
         if (size == 0) { return false; }
         const vec<Pair>& ps = table[index(k)];
@@ -153,7 +153,7 @@ class Map
         return false;
     }
 
-    bool has   (const K& k) const
+    bool has(const K& k) const
     {
         if (size == 0) { return false; }
         const vec<Pair>& ps = table[index(k)];
@@ -177,7 +177,7 @@ class Map
         size--;
     }
 
-    void clear  ()
+    void clear()
     {
         cap = size = 0;
         delete [] table;
@@ -201,13 +201,13 @@ class Map
     }
 
     // NOTE: given a bit more time, I could make a more C++-style iterator out of this:
-    const vec<Pair>& bucket(int i) const { assert( table != NULL && 0 <= i && i < cap && "stay in bounds" ); return table[i]; }
+    const vec<Pair>& bucket(int i) const { assert(table != NULL && 0 <= i && i < cap && "stay in bounds"); return table[i]; }
 
     /** allow access from the outside to operate differently on the hash list */
-    vec<Pair>& getBucket(uint32_t hash) { assert( hash >= 0 && table != NULL && 0 <= ( hash % (uint32_t)cap) && ( hash % (uint32_t)cap) < cap && "stay in bounds" );  return table[ hash % (uint32_t)cap ]; }
+    vec<Pair>& getBucket(uint32_t hash) { assert(hash >= 0 && table != NULL && 0 <= (hash % (uint32_t)cap) && (hash % (uint32_t)cap) < cap && "stay in bounds");  return table[ hash % (uint32_t)cap ]; }
 
     /** tell hash table how many elements have been removed externally */
-    void removedElementsExternally( int elements ) { size -= elements; }
+    void removedElementsExternally(int elements) { size -= elements; }
 
     /** return the number of elements */
     int elements() const { return size ; }

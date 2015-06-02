@@ -81,15 +81,15 @@ class SolverPT : public SplitterSolver
     removed from the clause only if their pt_level is equal to zero,
                i.e. the clause is "safe"
            **/
-    bool    addClause (const Riss::vec<Riss::Lit>& ps, unsigned int pt_level = 0, bool from_shpool=false);
-    bool    addClause_( Riss::vec<Riss::Lit>& ps, unsigned int level = 0);
-    void     analyze          (Riss::CRef confl, Riss::vec<Riss::Lit>& out_learnt, int& out_btlevel,unsigned int& nblevels);    // (bt = backtrack)
-    bool     litRedundant     (Riss::Lit p, uint32_t abstract_levels);                       // (helper method for 'analyze()')
-    void     uncheckedEnqueue (Riss::Lit p, Riss::CRef from = Riss::CRef_Undef, unsigned int pt_level = 0);                         // Enqueue a literal. Assumes value of literal is undefined.
-    Riss::Lit      pickBranchLit    ();                                                      // Return the next decision variable.
+    bool    addClause(const Riss::vec<Riss::Lit>& ps, unsigned int pt_level = 0, bool from_shpool = false);
+    bool    addClause_(Riss::vec<Riss::Lit>& ps, unsigned int level = 0);
+    void     analyze(Riss::CRef confl, Riss::vec<Riss::Lit>& out_learnt, int& out_btlevel, unsigned int& nblevels);             // (bt = backtrack)
+    bool     litRedundant(Riss::Lit p, uint32_t abstract_levels);                            // (helper method for 'analyze()')
+    void     uncheckedEnqueue(Riss::Lit p, Riss::CRef from = Riss::CRef_Undef, unsigned int pt_level = 0);                          // Enqueue a literal. Assumes value of literal is undefined.
+    Riss::Lit      pickBranchLit();                                                          // Return the next decision variable.
     Riss::CRef    propagate();
-    Riss::lbool    search           (int nof_conflicts);                                     // Search for a given number of conflicts.
-    Riss::lbool    solve_           ();                                                      // Main solve method (assumptions given in 'assumptions').
+    Riss::lbool    search(int nof_conflicts);                                                // Search for a given number of conflicts.
+    Riss::lbool    solve_();                                                                 // Main solve method (assumptions given in 'assumptions').
     void reduceDB();
     /**
         Davide> Returns the level of the current node in the Partition Tree
@@ -153,7 +153,7 @@ class SolverPT : public SplitterSolver
     unsigned int getTopLevelUnits() const;
 
     /** return a specifit literal from the trail */
-    Riss::Lit trailGet( const unsigned int index );
+    Riss::Lit trailGet(const unsigned int index);
   private:
     Riss::vec<unsigned> varPT; //storing the PT level of each variable
     //CMap<unsigned> clausePT; //storing the PT level of each clause
@@ -163,7 +163,7 @@ class SolverPT : public SplitterSolver
     void unsatRestartStrategy();
 };
 
-inline bool     SolverPT::addClause       (const Riss::vec<Riss::Lit>& ps, unsigned int pt_level, bool from_shpool)    { ps.copyTo(add_tmp); return from_shpool ? addSharedLearnt(add_tmp, pt_level) : addClause_(add_tmp, pt_level); } // Davide> Added pt_level info;
+inline bool     SolverPT::addClause(const Riss::vec<Riss::Lit>& ps, unsigned int pt_level, bool from_shpool)    { ps.copyTo(add_tmp); return from_shpool ? addSharedLearnt(add_tmp, pt_level) : addClause_(add_tmp, pt_level); }        // Davide> Added pt_level info;
 }
 #endif  /* SOLVERPT_H */
 

@@ -30,7 +30,7 @@ class CoreConfig : public Config
 
   public:
     /** default constructor, which sets up all options in their standard format */
-    CoreConfig (const std::string& presetOptions = "");
+    CoreConfig(const std::string& presetOptions = "");
 
 
     /**

@@ -133,49 +133,49 @@ class Solver
     // Problem specification:
     //
     PCASSOVIRTUAL
-    Var     newVar    (bool polarity = true, bool dvar = true, char type = 'o'); // Add a new variable with parameters specifying variable mode.
-    void    reserveVars( Var v );
+    Var     newVar(bool polarity = true, bool dvar = true, char type = 'o');     // Add a new variable with parameters specifying variable mode.
+    void    reserveVars(Var v);
 
     PCASSOVIRTUAL
-    bool    addClause (const vec<Lit>& ps);                     /** Add a clause to the solver.                                                  */
+    bool    addClause(const vec<Lit>& ps);                      /** Add a clause to the solver.                                                  */
 
-    bool    addClause (const Clause& ps);                       /** Add a clause to the solver (all clause invariants do not need to be checked) */
+    bool    addClause(const Clause& ps);                        /** Add a clause to the solver (all clause invariants do not need to be checked) */
     bool    addEmptyClause();                                   /** Add the empty clause, making the solver contradictory.                       */
-    bool    addClause (Lit p);                                  /** Add a unit clause to the solver.                                             */
-    bool    addClause (Lit p, Lit q);                           /** Add a binary clause to the solver.                                           */
-    bool    addClause (Lit p, Lit q, Lit r);                    /** Add a ternary clause to the solver.                                          */
+    bool    addClause(Lit p);                                   /** Add a unit clause to the solver.                                             */
+    bool    addClause(Lit p, Lit q);                            /** Add a binary clause to the solver.                                           */
+    bool    addClause(Lit p, Lit q, Lit r);                     /** Add a ternary clause to the solver.                                          */
 
     PCASSOVIRTUAL
-    bool    addClause_(      vec<Lit>& ps);                     /** Add a clause to the solver without making superflous internal copy. Will
+    bool    addClause_(vec<Lit>& ps);                     /** Add a clause to the solver without making superflous internal copy. Will
                                                                  *  change the passed std::vector 'ps'.                                          */
-    void    addInputClause_( vec<Lit>& ps);                     /** Add a clause to the online proof checker                                     */
+    void    addInputClause_(vec<Lit>& ps);                      /** Add a clause to the online proof checker                                     */
 
     // Solving:
     //
-    bool    simplify     ();                        /** Removes already satisfied clauses.                                                       */
-    bool    solve        (const vec<Lit>& assumps); /** Search for a model that respects a given set of assumptions.                             */
-    lbool   solveLimited (const vec<Lit>& assumps); /** Search for a model that respects a given set of assumptions (With resource constraints). */
-    bool    solve        ();                        /** Search without assumptions.                                                              */
-    bool    solve        (Lit p);                   /** Search for a model that respects a single assumption.                                    */
-    bool    solve        (Lit p, Lit q);            /** Search for a model that respects two assumptions.                                        */
-    bool    solve        (Lit p, Lit q, Lit r);     /** Search for a model that respects three assumptions.                                      */
-    bool    okay         () const;                  /** FALSE means solver is in a conflicting state                                             */
+    bool    simplify();                             /** Removes already satisfied clauses.                                                       */
+    bool    solve(const vec<Lit>& assumps);         /** Search for a model that respects a given set of assumptions.                             */
+    lbool   solveLimited(const vec<Lit>& assumps);  /** Search for a model that respects a given set of assumptions (With resource constraints). */
+    bool    solve();                                /** Search without assumptions.                                                              */
+    bool    solve(Lit p);                           /** Search for a model that respects a single assumption.                                    */
+    bool    solve(Lit p, Lit q);                    /** Search for a model that respects two assumptions.                                        */
+    bool    solve(Lit p, Lit q, Lit r);             /** Search for a model that respects three assumptions.                                      */
+    bool    okay() const;                           /** FALSE means solver is in a conflicting state                                             */
 
-    void    toDimacs     (FILE* f, const vec<Lit>& assumps);            // Write CNF to file in DIMACS-format.
-    void    toDimacs     (const char *file, const vec<Lit>& assumps);
-    void    toDimacs     (FILE* f, Clause& c, vec<Var>& map, Var& max);
+    void    toDimacs(FILE* f, const vec<Lit>& assumps);                 // Write CNF to file in DIMACS-format.
+    void    toDimacs(const char *file, const vec<Lit>& assumps);
+    void    toDimacs(FILE* f, Clause& c, vec<Var>& map, Var& max);
     void printLit(Lit l);
     void printClause(CRef c);
     // Convenience versions of 'toDimacs()':
-    void    toDimacs     (const char* file);
-    void    toDimacs     (const char* file, Lit p);
-    void    toDimacs     (const char* file, Lit p, Lit q);
-    void    toDimacs     (const char* file, Lit p, Lit q, Lit r);
+    void    toDimacs(const char* file);
+    void    toDimacs(const char* file, Lit p);
+    void    toDimacs(const char* file, Lit p, Lit q);
+    void    toDimacs(const char* file, Lit p, Lit q, Lit r);
 
     // Variable mode:
     //
-    void    setPolarity    (Var v, bool b); /** Declare which polarity the decision heuristic should use for a variable. Requires mode 'polarity_user'. */
-    void    setDecisionVar (Var v, bool b); /** Declare if a variable should be eligible for selection in the decision heuristic.                       */
+    void    setPolarity(Var v, bool b);     /** Declare which polarity the decision heuristic should use for a variable. Requires mode 'polarity_user'. */
+    void    setDecisionVar(Var v, bool b);  /** Declare if a variable should be eligible for selection in the decision heuristic.                       */
     // NuSMV: SEED
     void    setRandomSeed(double seed); // sets random seed (cannot be 0)
     // NuSMV: SEED END
@@ -197,16 +197,16 @@ class Solver
 
     // Read state:
     //
-    lbool   value      (Var x) const;       /** The current value of a variable.                                                              */
-    lbool   value      (Lit p) const;       /** The current value of a literal.                                                               */
-    lbool   modelValue (Var x) const;       /** The value of a variable in the last model. The last call to solve must have been satisfiable. */
-    lbool   modelValue (Lit p) const;       /** The value of a literal in the last model. The last call to solve must have been satisfiable.  */
-    int     nAssigns   ()      const;       /** The current number of assigned literals.                                                      */
-    int     nClauses   ()      const;       /** The current number of original clauses.                                                       */
-    int     nLearnts   ()      const;       /** The current number of learnt clauses.                                                         */
-    int     nVars      ()      const;       /** The current number of variables.                                                              */
-    int     nTotLits   ()      const;       /** The current number of total literals in the formula.                                          */
-    int     nFreeVars  ()      const;
+    lbool   value(Var x) const;             /** The current value of a variable.                                                              */
+    lbool   value(Lit p) const;             /** The current value of a literal.                                                               */
+    lbool   modelValue(Var x) const;        /** The value of a variable in the last model. The last call to solve must have been satisfiable. */
+    lbool   modelValue(Lit p) const;        /** The value of a literal in the last model. The last call to solve must have been satisfiable.  */
+    int     nAssigns()      const;          /** The current number of assigned literals.                                                      */
+    int     nClauses()      const;          /** The current number of original clauses.                                                       */
+    int     nLearnts()      const;          /** The current number of learnt clauses.                                                         */
+    int     nVars()      const;             /** The current number of variables.                                                              */
+    int     nTotLits()      const;          /** The current number of total literals in the formula.                                          */
+    int     nFreeVars()      const;
 
     // Resource contraints:
     //
@@ -266,7 +266,7 @@ class Solver
 
     // Statistics: (read-only member variable)
     //
-    uint64_t nbRemovedClauses,nbReducedClauses,nbDL2,nbBin,nbUn,nbReduceDB,solves, starts, decisions, rnd_decisions, propagations, conflicts,nbstopsrestarts,nbstopsrestartssame,lastblockatrestart;
+    uint64_t nbRemovedClauses, nbReducedClauses, nbDL2, nbBin, nbUn, nbReduceDB, solves, starts, decisions, rnd_decisions, propagations, conflicts, nbstopsrestarts, nbstopsrestartssame, lastblockatrestart;
     uint64_t dec_vars, clauses_literals, learnts_literals, max_literals, tot_literals;
 
   protected:
@@ -293,7 +293,7 @@ class Solver
     }
     static inline VarData mkVarData(CRef cr, int l, int _cost)
     {
-        VarData d = {cr, l,lit_Undef,_cost
+        VarData d = {cr, l, lit_Undef, _cost
                      #ifdef CLS_EXTRA_INFO
                      , 0
                      #endif
@@ -307,7 +307,7 @@ class Solver
 
     struct VarOrderLt {
         const vec<double>&  activity;
-        bool operator () (Var x, Var y) const { return activity[x] > activity[y]; }
+        bool operator()(Var x, Var y) const { return activity[x] > activity[y]; }
         VarOrderLt(const vec<double>&  act) : activity(act) { }
     };
 
@@ -329,20 +329,20 @@ class Solver
 
     struct VarFlags {
         lbool assigns;
-        unsigned polarity:1;
-        unsigned decision:1;
-        unsigned seen:1;
-        unsigned extra:4; // TODO: use for special variable (not in LBD) and do not touch!
-        unsigned frozen:1; // indicate that this variable cannot be used for simplification techniques that do not preserve equivalence
+        unsigned polarity: 1;
+        unsigned decision: 1;
+        unsigned seen: 1;
+        unsigned extra: 4; // TODO: use for special variable (not in LBD) and do not touch!
+        unsigned frozen: 1; // indicate that this variable cannot be used for simplification techniques that do not preserve equivalence
         #ifdef PCASSO
-        unsigned varPT:16; // partition tree level for this variable
+        unsigned varPT: 16; // partition tree level for this variable
         #endif
-        VarFlags( char _polarity ) : assigns(l_Undef), polarity(_polarity), decision(0), seen(0), extra(0), frozen(0)
+        VarFlags(char _polarity) : assigns(l_Undef), polarity(_polarity), decision(0), seen(0), extra(0), frozen(0)
             #ifdef PCASSO
             , varPT(0)
             #endif
         {}
-        VarFlags () : assigns(l_Undef), polarity(1), decision(0), seen(0), extra(0), frozen(0)
+        VarFlags() : assigns(l_Undef), polarity(1), decision(0), seen(0), extra(0), frozen(0)
             #ifdef PCASSO
             , varPT(0)
             #endif
@@ -360,9 +360,9 @@ class Solver
 
   public:
     /** set whether a variable can be used for simplification techniques that do not preserve equivalence */
-    void freezeVariable( const Var& v, const bool& frozen ) { varFlags[v].frozen = frozen; }
+    void freezeVariable(const Var& v, const bool& frozen) { varFlags[v].frozen = frozen; }
     /** indicates that this variable cannot be used for simplification techniques that do not preserve equivalence */
-    bool isFrozen( const Var& v ) const { return varFlags[v].frozen; }
+    bool isFrozen(const Var& v) const { return varFlags[v].frozen; }
 
     vec<Lit>            trail;             // Assignment stack; stores all assigments made in the order they were made.
   protected:
@@ -391,7 +391,7 @@ class Solver
 
     int nbclausesbeforereduce;            // To know when it is time to reduce clause database
 
-    bqueue<unsigned int> trailQueue,lbdQueue; // Bounded queues for restarts.
+    bqueue<unsigned int> trailQueue, lbdQueue; // Bounded queues for restarts.
     float sumLBD; // used to compute the global average of LBD. Restarts...
 
 
@@ -420,48 +420,48 @@ class Solver
 
     // Main internal methods:
     //
-    void     insertVarOrder   (Var x);                                                 // Insert a variable in the decision order priority queue.
+    void     insertVarOrder(Var x);                                                    // Insert a variable in the decision order priority queue.
     PCASSOVIRTUAL
-    Lit      pickBranchLit    ();                                                      // Return the next decision variable.
-    void     newDecisionLevel ();                                                      // Begins a new decision level.
+    Lit      pickBranchLit();                                                          // Return the next decision variable.
+    void     newDecisionLevel();                                                       // Begins a new decision level.
     PCASSOVIRTUAL
-    void     uncheckedEnqueue (Lit p, CRef from = CRef_Undef,                          // Enqueue a literal. Assumes value of literal is undefined.
-                               bool addToProof = false, const uint64_t extraInfo = 0);     // decide whether the method should furthermore add the literal to the proof, and whether the literal has an extra information (interegsting for decision level 0)
-    bool     enqueue          (Lit p, CRef from = CRef_Undef);                         // Test if fact 'p' contradicts current state, enqueue otherwise.
+    void     uncheckedEnqueue(Lit p, CRef from = CRef_Undef,                           // Enqueue a literal. Assumes value of literal is undefined.
+                              bool addToProof = false, const uint64_t extraInfo = 0);     // decide whether the method should furthermore add the literal to the proof, and whether the literal has an extra information (interegsting for decision level 0)
+    bool     enqueue(Lit p, CRef from = CRef_Undef);                                   // Test if fact 'p' contradicts current state, enqueue otherwise.
     PCASSOVIRTUAL
-    CRef     propagate        (bool duringAddingClauses = false );                     // Perform unit propagation. Returns possibly conflicting clause (during adding clauses, to add proof infos, if necessary)
-    void     cancelUntil      (int level);                                             // Backtrack until a certain level.
+    CRef     propagate(bool duringAddingClauses = false);                              // Perform unit propagation. Returns possibly conflicting clause (during adding clauses, to add proof infos, if necessary)
+    void     cancelUntil(int level);                                                   // Backtrack until a certain level.
     PCASSOVIRTUAL
-    int      analyze          (CRef confl, vec< Lit >& out_learnt, int& out_btlevel, unsigned int& lbd, uint64_t& extraInfo );    // // (bt = backtrack, return is number of unit clauses in out_learnt. if 0, treat as usual!)
-    void     analyzeFinal     (Lit p, vec<Lit>& out_conflict);                         // COULD THIS BE IMPLEMENTED BY THE ORDINARIY "analyze" BY SOME REASONABLE GENERALIZATION?
-    bool     litRedundant     (Lit p, uint32_t abstract_levels,uint64_t& extraInfo);                       // (helper method for 'analyze()')
+    int      analyze(CRef confl, vec< Lit >& out_learnt, int& out_btlevel, unsigned int& lbd, uint64_t& extraInfo);               // // (bt = backtrack, return is number of unit clauses in out_learnt. if 0, treat as usual!)
+    void     analyzeFinal(Lit p, vec<Lit>& out_conflict);                              // COULD THIS BE IMPLEMENTED BY THE ORDINARIY "analyze" BY SOME REASONABLE GENERALIZATION?
+    bool     litRedundant(Lit p, uint32_t abstract_levels, uint64_t& extraInfo);                           // (helper method for 'analyze()')
     PCASSOVIRTUAL
-    lbool    search           (int nof_conflicts);                                     // Search for a given number of conflicts.
+    lbool    search(int nof_conflicts);                                                // Search for a given number of conflicts.
     PCASSOVIRTUAL
-    lbool    solve_           ();                                                      // Main solve method (assumptions given in 'assumptions').
+    lbool    solve_();                                                                 // Main solve method (assumptions given in 'assumptions').
     PCASSOVIRTUAL
-    void     reduceDB         ();                                                      // Reduce the set of learnt clauses.
-    void     removeSatisfied  (vec<CRef>& cs);                                         // Shrink 'cs' to contain only non-satisfied clauses.
-    void     rebuildOrderHeap ();
+    void     reduceDB();                                                               // Reduce the set of learnt clauses.
+    void     removeSatisfied(vec<CRef>& cs);                                           // Shrink 'cs' to contain only non-satisfied clauses.
+    void     rebuildOrderHeap();
 
     // Maintaining Variable/Clause activity:
     //
-    void     varDecayActivity ();                      // Decay all variables with the specified factor. Implemented by increasing the 'bump' value instead.
-    void     varBumpActivityD (Var v, double inc);     // Increase a variable with the current 'bump' value.
-    void     varBumpActivity  (Var v, double inverseRatio = 1) ;      // Increase a variable with the current 'bump' value, multiplied by 1 / (inverseRatio).
-    void     claDecayActivity ();                      // Decay all clauses with the specified factor. Implemented by increasing the 'bump' value instead.
-    void     claBumpActivity  (Clause& c, double inverseRatio = 1);   // Increase a clause with the current 'bump' value, multiplied by 1 / (inverseRatio).
+    void     varDecayActivity();                       // Decay all variables with the specified factor. Implemented by increasing the 'bump' value instead.
+    void     varBumpActivityD(Var v, double inc);      // Increase a variable with the current 'bump' value.
+    void     varBumpActivity(Var v, double inverseRatio = 1) ;        // Increase a variable with the current 'bump' value, multiplied by 1 / (inverseRatio).
+    void     claDecayActivity();                       // Decay all clauses with the specified factor. Implemented by increasing the 'bump' value instead.
+    void     claBumpActivity(Clause& c, double inverseRatio = 1);     // Increase a clause with the current 'bump' value, multiplied by 1 / (inverseRatio).
 
     // Operations on clauses:
     //
-    void     attachClause     (CRef cr);               // Attach a clause to watcher lists.
-    void     detachClause     (CRef cr, bool strict = false); // Detach a clause to watcher lists.
+    void     attachClause(CRef cr);                    // Attach a clause to watcher lists.
+    void     detachClause(CRef cr, bool strict = false);      // Detach a clause to watcher lists.
     PCASSOVIRTUAL
-    void     removeClause     (CRef cr, bool strict = false); // Detach and free a clause.
-    bool     locked           (const Clause& c) const; // Returns TRUE if a clause is a reason for some implication in the current state.
-    bool     satisfied        (const Clause& c) const; // Returns TRUE if a clause is satisfied in the current state.
+    void     removeClause(CRef cr, bool strict = false);      // Detach and free a clause.
+    bool     locked(const Clause& c) const;            // Returns TRUE if a clause is a reason for some implication in the current state.
+    bool     satisfied(const Clause& c) const;         // Returns TRUE if a clause is satisfied in the current state.
   public:
-    bool addUnitClauses( const vec< Lit >& other );     // use the given trail as starting point, return true, if fails!
+    bool addUnitClauses(const vec< Lit >& other);       // use the given trail as starting point, return true, if fails!
   protected:
     unsigned int computeLBD(const vec<Lit>& lits);
     unsigned int computeLBD(const Clause& c);
@@ -473,16 +473,16 @@ class Solver
     bool minimisationWithBinaryResolution(vec<Lit>& out_learnt, unsigned int& lbd);
 
     PCASSOVIRTUAL
-    void     relocAll         (ClauseAllocator& to);
+    void     relocAll(ClauseAllocator& to);
 
     // Misc:
     //
-    int      decisionLevel    ()      const; // Gives the current decisionlevel.
-    uint32_t abstractLevel    (Var x) const; // Used to represent an abstraction of sets of decision levels.
-    CRef     reason           (Var x) const;
-    int      level            (Var x) const;
-    double   progressEstimate ()      const; // DELETE THIS ?? IT'S NOT VERY USEFUL ...
-    bool     withinBudget     ()      const;
+    int      decisionLevel()      const;     // Gives the current decisionlevel.
+    uint32_t abstractLevel(Var x) const;     // Used to represent an abstraction of sets of decision levels.
+    CRef     reason(Var x) const;
+    int      level(Var x) const;
+    double   progressEstimate()      const;  // DELETE THIS ?? IT'S NOT VERY USEFUL ...
+    bool     withinBudget()      const;
 
     /** to handle termination from the outside by a callback function */
     void* terminationCallbackState;                            // state that should be passed to the calling method
@@ -501,7 +501,7 @@ class Solver
     lbool preprocess();
   protected:
     lbool inprocess(lbool status); // inprocessing code
-    lbool initSolve( int solves ); // set up the next call to solve
+    lbool initSolve(int solves);   // set up the next call to solve
 
     void printHeader();
     void printSearchHeader();
@@ -533,18 +533,18 @@ class Solver
     // DRUP proof
     bool outputsProof() const ;
     template <class T>
-    void addToProof(   const T& clause, bool deleteFromProof = false, const Lit remLit = lit_Undef); // write the given clause to the output, if the output is enabled
-    void addUnitToProof( const Lit& l, bool deleteFromProof=false);    // write a single unit clause to the proof
-    void addCommentToProof( const char* text, bool deleteFromProof=false); // write the text as comment into the proof!
+    void addToProof(const T& clause, bool deleteFromProof = false, const Lit remLit = lit_Undef);    // write the given clause to the output, if the output is enabled
+    void addUnitToProof(const Lit& l, bool deleteFromProof = false);   // write a single unit clause to the proof
+    void addCommentToProof(const char* text, bool deleteFromProof = false);  // write the text as comment into the proof!
   public:
     bool checkProof(); // if online checker is used, return whether the current proof is valid
   protected:
     #else // have empty dummy functions
     bool outputsProof() const { return false; }
     template <class T>
-    void addToProof(   const T& clause, bool deleteFromProof = false, const Lit remLit = lit_Undef) const {};
-    void addUnitToProof( const Lit& l, bool deleteFromProof=false) const {};
-    void addCommentToProof( const char* text, bool deleteFromProof=false) const {};
+    void addToProof(const T& clause, bool deleteFromProof = false, const Lit remLit = lit_Undef) const {};
+    void addUnitToProof(const Lit& l, bool deleteFromProof = false) const {};
+    void addCommentToProof(const char* text, bool deleteFromProof = false) const {};
   public:
     bool checkProof() const { return true; } // if online checker is used, return whether the current proof is valid
   protected:
@@ -552,7 +552,7 @@ class Solver
 
 
     /** fill the current variable assignment into the given std::vector */
-    void fillLAmodel(vec<LONG_INT>& pattern, const int steps, vec<Var>& relevantVariables ,const bool moveOnly = false); // fills current model into variable std::vector
+    void fillLAmodel(vec<LONG_INT>& pattern, const int steps, vec<Var>& relevantVariables , const bool moveOnly = false); // fills current model into variable std::vector
 
     /** perform la hack, return false -> unsat instance!
      * @return false, instance is unsatisfable
@@ -605,7 +605,7 @@ class Solver
     double laTime;
     int maxLaNumber;       // maximum number of LAs allowed
     int topLevelsSinceLastLa; // number of learned top level units since last LA
-    int laEEvars,laEElits;    // number of equivalent literals
+    int laEEvars, laEElits;   // number of equivalent literals
     std::vector< std::vector< Lit > > localLookAheadProofClauses;
     std::vector<Lit> localLookAheadTmpClause;
 
@@ -643,13 +643,13 @@ class Solver
     Coprocessor::BIG* big;
     Clock bigBackboneTime;
     unsigned lastReshuffleRestart;
-    unsigned L2units,L3units,L4units;
+    unsigned L2units, L3units, L4units;
     /** if the new learned clause is binary, C = (a \lor b),
      *  then it is checked whether a literal l is implied by both a and b in the formula.
      *  Should be called after eventually enqueuing the asserting literal of the current learned clause
      *  @return true, if a contrdiction has been found, so that the result is UNSAT
      */
-    bool analyzeNewLearnedClause( const CRef newLearnedClause );
+    bool analyzeNewLearnedClause(const CRef newLearnedClause);
 
     // helper data structures
     std::vector< int > analyzePosition; // for full probing approximation
@@ -663,22 +663,22 @@ class Solver
      * @param lbd current lbd value of the given clause
      * @return true, if the clause has been shrinked, false otherwise (then, the LBD also stays the same)
      */
-    bool searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd );
+    bool searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd);
 
     /** reduce the learned clause by replacing std::pairs of literals with their previously created extended resolution literal
      * @param lbd current lbd value of the given clause
      * @return true, if the clause has been shrinked, false otherwise (then, the LBD also stays the same)
      */
-    bool erRewrite(vec<Lit>& learned_clause, unsigned int& lbd );
+    bool erRewrite(vec<Lit>& learned_clause, unsigned int& lbd);
 
 
     // for coprocessor
   protected:  Coprocessor::Preprocessor* coprocessor;
   public:
 
-    void setPreprocessor( Coprocessor::Preprocessor* cp );
+    void setPreprocessor(Coprocessor::Preprocessor* cp);
 
-    void setPreprocessor( Coprocessor::CP3Config* _config );
+    void setPreprocessor(Coprocessor::CP3Config* _config);
 
     bool useCoprocessorPP;
     bool useCoprocessorIP;
@@ -697,7 +697,7 @@ class Solver
     uint64_t defaultExtraInfo() const ;
 
     /** return extra variable information (should be called for top level units only!) */
-    uint64_t variableExtraInfo( const Var& v ) const ;
+    uint64_t variableExtraInfo(const Var& v) const ;
 
     // for qprocessor
   public:
@@ -709,7 +709,7 @@ class Solver
     /** setup the communication object
      * @param comm pointer to the communication object that should be used by this thread
      */
-    void setCommunication( Communicator* comm );
+    void setCommunication(Communicator* comm);
 
     /** reset the state of an possibly interrupted solver
      * clear interrupt, jump to level 0
@@ -736,7 +736,7 @@ class Solver
      * @param failed sending current clause failed because of limits
      * @param sizeOnly update only size information
      */
-    void updateDynamicLimits( bool failed, bool sizeOnly = false );
+    void updateDynamicLimits(bool failed, bool sizeOnly = false);
 
     /** inits the protection environment for variables
      */
@@ -780,7 +780,7 @@ class Solver
 
 
 inline CRef Solver::reason(Var x) const { return vardata[x].reason; }
-inline int  Solver::level (Var x) const { return vardata[x].level; }
+inline int  Solver::level(Var x) const { return vardata[x].level; }
 
 inline void Solver::insertVarOrder(Var x)
 {
@@ -791,11 +791,11 @@ inline void Solver::varDecayActivity() { var_inc *= (1 / var_decay); }
 inline void Solver::varBumpActivity(Var v, double inverseRatio) { varBumpActivityD(v, var_inc / (double) inverseRatio); }
 inline void Solver::varBumpActivityD(Var v, double inc)
 {
-    DOUT( if( config.opt_printDecisions > 1) std::cerr << "c bump var activity for " << v+1 << " with " << activity[v] << " by " << inc << std::endl; ) ;
-    activity[v] = ( useVSIDS * activity[v] ) + inc; // interpolate between VSIDS and VMTF here!
+    DOUT(if (config.opt_printDecisions > 1) std::cerr << "c bump var activity for " << v + 1 << " with " << activity[v] << " by " << inc << std::endl;) ;
+    activity[v] = (useVSIDS * activity[v]) + inc;   // interpolate between VSIDS and VMTF here!
     // NOTE this code is also used in extended clause learning, and restricted extended resolution
-    if ( activity[v] > 1e100 ) {
-        DOUT( if( config.opt_printDecisions > 0) std::cerr << "c rescale decision heap" << std::endl; ) ;
+    if (activity[v] > 1e100) {
+        DOUT(if (config.opt_printDecisions > 0) std::cerr << "c rescale decision heap" << std::endl;) ;
         // Rescale:
         for (int i = 0; i < nVars(); i++) {
             activity[i] *= 1e-100;
@@ -810,16 +810,16 @@ inline void Solver::varBumpActivityD(Var v, double inc)
 }
 
 inline void Solver::claDecayActivity() { cla_inc *= (1 / clause_decay); }
-inline void Solver::claBumpActivity (Clause& c, double inverseRatio)
+inline void Solver::claBumpActivity(Clause& c, double inverseRatio)
 {
-    DOUT( if( config.opt_removal_debug > 1) std::cerr << "c bump clause activity for " << c << " with " << c.activity() << " by " << inverseRatio << std::endl; ) ;
-    if ( (c.activity() += cla_inc / inverseRatio) > 1e20 ) {
+    DOUT(if (config.opt_removal_debug > 1) std::cerr << "c bump clause activity for " << c << " with " << c.activity() << " by " << inverseRatio << std::endl;) ;
+    if ((c.activity() += cla_inc / inverseRatio) > 1e20) {
         // Rescale:
         for (int i = 0; i < learnts.size(); i++) {
             ca[learnts[i]].activity() *= 1e-20;
         }
         cla_inc *= 1e-20;
-        DOUT( if( config.opt_removal_debug > 1) std::cerr << "c rescale clause activities" << std::endl; ) ;
+        DOUT(if (config.opt_removal_debug > 1) std::cerr << "c rescale clause activities" << std::endl;) ;
     }
 }
 
@@ -832,15 +832,15 @@ inline void Solver::checkGarbage(double gf)
 }
 
 // NOTE: enqueue does not set the ok flag! (only public methods do)
-inline bool     Solver::enqueue         (Lit p, CRef from)      { return value(p) != l_Undef ? value(p) != l_False : (uncheckedEnqueue(p, from), true); }
-inline bool     Solver::addClause       (const vec<Lit>& ps)    { ps.copyTo(add_tmp); return addClause_(add_tmp); }
-inline bool     Solver::addEmptyClause  ()                      { add_tmp.clear(); return addClause_(add_tmp); }
-inline bool     Solver::addClause       (Lit p)                 { add_tmp.clear(); add_tmp.push(p); return addClause_(add_tmp); }
-inline bool     Solver::addClause       (Lit p, Lit q)          { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); return addClause_(add_tmp); }
-inline bool     Solver::addClause       (Lit p, Lit q, Lit r)   { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); add_tmp.push(r); return addClause_(add_tmp); }
-inline bool     Solver::locked          (const Clause& c) const
+inline bool     Solver::enqueue(Lit p, CRef from)      { return value(p) != l_Undef ? value(p) != l_False : (uncheckedEnqueue(p, from), true); }
+inline bool     Solver::addClause(const vec<Lit>& ps)    { ps.copyTo(add_tmp); return addClause_(add_tmp); }
+inline bool     Solver::addEmptyClause()                      { add_tmp.clear(); return addClause_(add_tmp); }
+inline bool     Solver::addClause(Lit p)                 { add_tmp.clear(); add_tmp.push(p); return addClause_(add_tmp); }
+inline bool     Solver::addClause(Lit p, Lit q)          { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); return addClause_(add_tmp); }
+inline bool     Solver::addClause(Lit p, Lit q, Lit r)   { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); add_tmp.push(r); return addClause_(add_tmp); }
+inline bool     Solver::locked(const Clause& c) const
 {
-    if(c.size()>2) {
+    if (c.size() > 2) {
         return value(c[0]) == l_True && reason(var(c[0])) != CRef_Undef && ca.lea(reason(var(c[0]))) == &c;
     }
     return
@@ -850,22 +850,22 @@ inline bool     Solver::locked          (const Clause& c) const
 }
 inline void     Solver::newDecisionLevel()                      { trail_lim.push(trail.size());}
 
-inline int      Solver::decisionLevel ()      const   { return trail_lim.size(); }
-inline uint32_t Solver::abstractLevel (Var x) const   { return 1 << (level(x) & 31); }
-inline lbool    Solver::value         (Var x) const   { return varFlags[x].assigns; }
-inline lbool    Solver::value         (Lit p) const   { return varFlags[var(p)].assigns ^ sign(p); }
-inline lbool    Solver::modelValue    (Var x) const   { return model[x]; }
-inline lbool    Solver::modelValue    (Lit p) const   { return model[var(p)] ^ sign(p); }
-inline int      Solver::nAssigns      ()      const   { return trail.size(); }
-inline int      Solver::nClauses      ()      const   { return clauses.size(); }
-inline int      Solver::nLearnts      ()      const   { return learnts.size(); }
-inline int      Solver::nVars         ()      const   { return vardata.size(); }
-inline int      Solver::nTotLits      ()      const   { return clauses_literals + learnts_literals; }
-inline int      Solver::nFreeVars     ()      const   { return (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]); }
-inline void     Solver::setPolarity   (Var v, bool b) { varFlags[v].polarity = b; }
+inline int      Solver::decisionLevel()      const   { return trail_lim.size(); }
+inline uint32_t Solver::abstractLevel(Var x) const   { return 1 << (level(x) & 31); }
+inline lbool    Solver::value(Var x) const   { return varFlags[x].assigns; }
+inline lbool    Solver::value(Lit p) const   { return varFlags[var(p)].assigns ^ sign(p); }
+inline lbool    Solver::modelValue(Var x) const   { return model[x]; }
+inline lbool    Solver::modelValue(Lit p) const   { return model[var(p)] ^ sign(p); }
+inline int      Solver::nAssigns()      const   { return trail.size(); }
+inline int      Solver::nClauses()      const   { return clauses.size(); }
+inline int      Solver::nLearnts()      const   { return learnts.size(); }
+inline int      Solver::nVars()      const   { return vardata.size(); }
+inline int      Solver::nTotLits()      const   { return clauses_literals + learnts_literals; }
+inline int      Solver::nFreeVars()      const   { return (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]); }
+inline void     Solver::setPolarity(Var v, bool b) { varFlags[v].polarity = b; }
 inline void     Solver::setDecisionVar(Var v, bool b)
 {
-    if      ( b && !varFlags[v].decision) { dec_vars++; }
+    if (b && !varFlags[v].decision) { dec_vars++; }
     else if (!b &&  varFlags[v].decision) { dec_vars--; }
 
     varFlags[v].decision = b;
@@ -879,7 +879,7 @@ inline void     Solver::budgetOff() { conflict_budget = propagation_budget = -1;
 inline bool     Solver::withinBudget() const
 {
     return !asynch_interrupt &&
-           (terminationCallbackMethod == 0 || 0 == terminationCallbackMethod ( terminationCallbackState ) ) && // check callback to ask outside for termination, if the callback has been set
+           (terminationCallbackMethod == 0 || 0 == terminationCallbackMethod(terminationCallbackState)) &&     // check callback to ask outside for termination, if the callback has been set
            (conflict_budget    < 0 || conflicts < (uint64_t)conflict_budget) &&
            (propagation_budget < 0 || propagations < (uint64_t)propagation_budget);
 }
@@ -887,19 +887,19 @@ inline bool     Solver::withinBudget() const
 // FIXME: after the introduction of asynchronous interrruptions the solve-versions that return a
 // pure bool do not give a safe interface. Either interrupts must be possible to turn off here, or
 // all calls to solve must return an 'lbool'. I'm not yet sure which I prefer.
-inline bool     Solver::solve         ()                    { budgetOff(); assumptions.clear(); return solve_() == l_True; }
-inline bool     Solver::solve         (Lit p)               { budgetOff(); assumptions.clear(); assumptions.push(p); return solve_() == l_True; }
-inline bool     Solver::solve         (Lit p, Lit q)        { budgetOff(); assumptions.clear(); assumptions.push(p); assumptions.push(q); return solve_() == l_True; }
-inline bool     Solver::solve         (Lit p, Lit q, Lit r) { budgetOff(); assumptions.clear(); assumptions.push(p); assumptions.push(q); assumptions.push(r); return solve_() == l_True; }
-inline bool     Solver::solve         (const vec<Lit>& assumps) { budgetOff(); assumps.copyTo(assumptions); return solve_() == l_True; }
-inline lbool    Solver::solveLimited  (const vec<Lit>& assumps) { assumps.copyTo(assumptions); return solve_(); }
-inline void     Solver::setRandomSeed (double seed) { assert(seed != 0); random_seed = seed; }
-inline bool     Solver::okay          ()      const   { return ok; }
+inline bool     Solver::solve()                    { budgetOff(); assumptions.clear(); return solve_() == l_True; }
+inline bool     Solver::solve(Lit p)               { budgetOff(); assumptions.clear(); assumptions.push(p); return solve_() == l_True; }
+inline bool     Solver::solve(Lit p, Lit q)        { budgetOff(); assumptions.clear(); assumptions.push(p); assumptions.push(q); return solve_() == l_True; }
+inline bool     Solver::solve(Lit p, Lit q, Lit r) { budgetOff(); assumptions.clear(); assumptions.push(p); assumptions.push(q); assumptions.push(r); return solve_() == l_True; }
+inline bool     Solver::solve(const vec<Lit>& assumps) { budgetOff(); assumps.copyTo(assumptions); return solve_() == l_True; }
+inline lbool    Solver::solveLimited(const vec<Lit>& assumps) { assumps.copyTo(assumptions); return solve_(); }
+inline void     Solver::setRandomSeed(double seed) { assert(seed != 0); random_seed = seed; }
+inline bool     Solver::okay()      const   { return ok; }
 
-inline void     Solver::toDimacs     (const char* file) { vec<Lit> as; toDimacs(file, as); }
-inline void     Solver::toDimacs     (const char* file, Lit p) { vec<Lit> as; as.push(p); toDimacs(file, as); }
-inline void     Solver::toDimacs     (const char* file, Lit p, Lit q) { vec<Lit> as; as.push(p); as.push(q); toDimacs(file, as); }
-inline void     Solver::toDimacs     (const char* file, Lit p, Lit q, Lit r) { vec<Lit> as; as.push(p); as.push(q); as.push(r); toDimacs(file, as); }
+inline void     Solver::toDimacs(const char* file) { vec<Lit> as; toDimacs(file, as); }
+inline void     Solver::toDimacs(const char* file, Lit p) { vec<Lit> as; as.push(p); toDimacs(file, as); }
+inline void     Solver::toDimacs(const char* file, Lit p, Lit q) { vec<Lit> as; as.push(p); as.push(q); toDimacs(file, as); }
+inline void     Solver::toDimacs(const char* file, Lit p, Lit q, Lit r) { vec<Lit> as; as.push(p); as.push(q); as.push(r); toDimacs(file, as); }
 
 inline void     Solver::setTerminationCallback(void* terminationState, int (*terminationCallback)(void*))
 {
@@ -910,12 +910,12 @@ inline void     Solver::setTerminationCallback(void* terminationState, int (*ter
 inline
 bool Solver::addUnitClauses(const vec< Lit >& other)
 {
-    assert( decisionLevel() == 0 && "init trail can only be done at level 0" );
-    for( int i = 0 ; i < other.size(); ++ i ) {
-        addUnitToProof( other[i] ); // add the unit clause to the proof
-        if( value( other[i] ) == l_Undef ) {
-            uncheckedEnqueue( other[i] );
-        } else if ( value( other[i] ) == l_False ) {
+    assert(decisionLevel() == 0 && "init trail can only be done at level 0");
+    for (int i = 0 ; i < other.size(); ++ i) {
+        addUnitToProof(other[i]);   // add the unit clause to the proof
+        if (value(other[i]) == l_Undef) {
+            uncheckedEnqueue(other[i]);
+        } else if (value(other[i]) == l_False) {
             ok = false; return true;
         }
     }
@@ -942,7 +942,7 @@ namespace Riss   // open namespace again!
 
 inline void Solver::printLit(Lit l)
 {
-    printf("%s%d:%c", sign(l) ? "-" : "", var(l)+1, value(l) == l_True ? '1' : (value(l) == l_False ? '0' : 'X'));
+    printf("%s%d:%c", sign(l) ? "-" : "", var(l) + 1, value(l) == l_True ? '1' : (value(l) == l_False ? '0' : 'X'));
 }
 
 
@@ -969,76 +969,76 @@ namespace Riss   // open namespace again!
 {
 #ifdef DRATPROOF
 
-inline bool Solver::outputsProof () const
+inline bool Solver::outputsProof() const
 {
     // either there is a local file, or there is a parallel build proof
-    return drupProofFile != NULL || (communication != 0 && communication->getPM() != 0 );
+    return drupProofFile != NULL || (communication != 0 && communication->getPM() != 0);
 }
 
 template <class T>
-inline void Solver::addToProof( const T& clause, bool deleteFromProof, const Lit remLit)
+inline void Solver::addToProof(const T& clause, bool deleteFromProof, const Lit remLit)
 {
-    if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) ) { return; } // no proof, or delete and noDrup
+    if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly)) { return; }  // no proof, or delete and noDrup
 
-    if( communication != 0 ) { // if the solver is part of a portfolio, then produce a global proof!
+    if (communication != 0) {   // if the solver is part of a portfolio, then produce a global proof!
 //       if( deleteFromProof ) std::cerr << "c [" << communication->getID() << "] remove clause " << clause << " to proof" << std::endl;
 //       else std::cerr << "c [" << communication->getID() << "] add clause " << clause << " to proof" << std::endl;
-        if( deleteFromProof ) { communication->getPM()->delFromProof(clause, remLit, communication->getID(), false ); } // first version: work on global proof only! TODO: change to local!
-        else { communication->getPM()->addToProof(clause, remLit, communication->getID(), false ); } // first version: work on global proof only!
+        if (deleteFromProof) { communication->getPM()->delFromProof(clause, remLit, communication->getID(), false); }    // first version: work on global proof only! TODO: change to local!
+        else { communication->getPM()->addToProof(clause, remLit, communication->getID(), false); }  // first version: work on global proof only!
         return;
     }
 
     // check before actually using the clause
-    if( onlineDratChecker != 0 ) {
-        if( deleteFromProof ) { onlineDratChecker->removeClause( clause, remLit ); }
+    if (onlineDratChecker != 0) {
+        if (deleteFromProof) { onlineDratChecker->removeClause(clause, remLit); }
         else {
-            onlineDratChecker->addClause( clause, remLit );
+            onlineDratChecker->addClause(clause, remLit);
         }
     }
     // actually print the clause into the file
-    if( deleteFromProof ) { fprintf(drupProofFile, "d "); }
-    if( remLit != lit_Undef ) { fprintf(drupProofFile, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1)); } // print this literal first (e.g. for DRAT clauses)
+    if (deleteFromProof) { fprintf(drupProofFile, "d "); }
+    if (remLit != lit_Undef) { fprintf(drupProofFile, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1)); }   // print this literal first (e.g. for DRAT clauses)
     for (int i = 0; i < clause.size(); i++) {
-        if( clause[i] == lit_Undef || clause[i] == remLit ) { continue; } // print the remaining literal, if they have not been printed yet
+        if (clause[i] == lit_Undef || clause[i] == remLit) { continue; }   // print the remaining literal, if they have not been printed yet
         fprintf(drupProofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
     }
     fprintf(drupProofFile, "0\n");
 
-    if( config.opt_verboseProof == 2 ) {
+    if (config.opt_verboseProof == 2) {
         std::cerr << "c [PROOF] ";
-        if( deleteFromProof ) { std::cerr << " d "; }
+        if (deleteFromProof) { std::cerr << " d "; }
         for (int i = 0; i < clause.size(); i++) {
-            if( clause[i] == lit_Undef ) { continue; }
+            if (clause[i] == lit_Undef) { continue; }
             std::cerr << clause[i] << " ";
         }
-        if( deleteFromProof && remLit != lit_Undef ) { std::cerr << remLit; }
+        if (deleteFromProof && remLit != lit_Undef) { std::cerr << remLit; }
         std::cerr << " 0" << std::endl;
     }
 }
 
 inline void Solver::addUnitToProof(const Lit& l, bool deleteFromProof)
 {
-    if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) ) { return; } // no proof, or delete and noDrup
+    if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly)) { return; }  // no proof, or delete and noDrup
 
-    if( communication != 0 ) { // if the solver is part of a portfolio, then produce a global proof!
-        if( deleteFromProof ) { communication->getPM()->delFromProof(l, communication->getID(), false ); } // first version: work on global proof only! TODO: change to local!
-        else { communication->getPM()->addUnitToProof(l, communication->getID(), false ); } // first version: work on global proof only!
+    if (communication != 0) {   // if the solver is part of a portfolio, then produce a global proof!
+        if (deleteFromProof) { communication->getPM()->delFromProof(l, communication->getID(), false); }    // first version: work on global proof only! TODO: change to local!
+        else { communication->getPM()->addUnitToProof(l, communication->getID(), false); }  // first version: work on global proof only!
         return;
     }
 
     // check before actually using the clause
-    if( onlineDratChecker != 0 ) {
-        if( deleteFromProof ) { onlineDratChecker->removeClause(l); }
+    if (onlineDratChecker != 0) {
+        if (deleteFromProof) { onlineDratChecker->removeClause(l); }
         else {
             onlineDratChecker->addClause(l);
         }
     }
-    if( l == lit_Undef ) { return; } // no need to check this literal, however, routine can be used to check whether the empty clause is in the proof
+    if (l == lit_Undef) { return; }   // no need to check this literal, however, routine can be used to check whether the empty clause is in the proof
     // actually print the clause into the file
-    if( deleteFromProof ) { fprintf(drupProofFile, "d "); }
+    if (deleteFromProof) { fprintf(drupProofFile, "d "); }
     fprintf(drupProofFile, "%i 0\n", (var(l) + 1) * (-2 * sign(l) + 1));
-    if( config.opt_verboseProof == 2 ) {
-        if( deleteFromProof ) { std::cerr << "c [PROOF] d " << l << std::endl; }
+    if (config.opt_verboseProof == 2) {
+        if (deleteFromProof) { std::cerr << "c [PROOF] d " << l << std::endl; }
         else { std::cerr << "c [PROOF] " << l << std::endl; }
     }
 }
@@ -1047,18 +1047,18 @@ inline void Solver::addCommentToProof(const char* text, bool deleteFromProof)
 {
     if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) || config.opt_verboseProof == 0) { return; } // no proof, no Drup, or no comments
 
-    if( communication != 0 && communication->getPM() != 0) {
-        communication->getPM()->addCommentToProof(text, communication->getID() );
+    if (communication != 0 && communication->getPM() != 0) {
+        communication->getPM()->addCommentToProof(text, communication->getID());
         return;
     }
     fprintf(drupProofFile, "c %s\n", text);
-    if( config.opt_verboseProof == 2 ) { std::cerr << "c [PROOF] c " << text << std::endl; }
+    if (config.opt_verboseProof == 2) { std::cerr << "c [PROOF] c " << text << std::endl; }
 }
 
 inline
-bool Solver::checkProof ()
+bool Solver::checkProof()
 {
-    if( onlineDratChecker != 0 ) {
+    if (onlineDratChecker != 0) {
         return onlineDratChecker->addClause(lit_Undef);
     } else {
         return true; // here, we simply do not know
@@ -1071,9 +1071,9 @@ inline
 void Solver::addInputClause_(vec< Lit >& ps)
 {
     #ifdef DRATPROOF
-    if( onlineDratChecker != 0 ) {
+    if (onlineDratChecker != 0) {
         // std::cerr << "c add parsed clause to DRAT-OTFC: " << ps << std::endl;
-        onlineDratChecker->addParsedclause( ps );
+        onlineDratChecker->addParsedclause(ps);
     }
     #endif
 }

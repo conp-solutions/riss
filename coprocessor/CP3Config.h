@@ -32,7 +32,7 @@ class CP3Config : public Riss::Config
 
   public:
     /** default constructor, which sets up all options in their standard format */
-    CP3Config (const std::string& presetOptions = "");
+    CP3Config(const std::string& presetOptions = "");
 
     /**
     * List of all used options, public members, can be changed and read directly

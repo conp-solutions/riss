@@ -91,12 +91,12 @@ inline void MiniSat_Delete(MiniSat_ptr ms)
 inline int MiniSat_Nof_Variables(MiniSat_ptr ms)
 {
     // return the number of variables of the solver
-    return riss_variables( ms );
+    return riss_variables(ms);
 }
 
 inline int MiniSat_Nof_Clauses(MiniSat_ptr ms)
 {
-    return riss_clauses( ms );
+    return riss_clauses(ms);
 }
 
 /* variables are in the range 1...N */
@@ -106,7 +106,7 @@ inline int MiniSat_New_Variable(MiniSat_ptr ms)
        so in all function below there is a convertion between
        input variable (1..N) and internal variables (0..N-1)
     */
-    return riss_new_variable (ms) ;
+    return riss_new_variable(ms) ;
 }
 
 
@@ -118,21 +118,21 @@ inline int MiniSat_Add_Clause(MiniSat_ptr ms,
 {
     int i, ret = 0;
 
-    for(i = 0; i < num_lits; i++) {
+    for (i = 0; i < num_lits; i++) {
         const int lit = clause_lits[i];
         assert(lit != 0);
         assert(abs(lit) <= MiniSat_Nof_Variables(ms)); // NuSVM wants to make sure this check itself - riss_add would create variable data structures itself
-        ret = riss_add ( ms, lit ) || ret;  // collect all return codes disjunctively
+        ret = riss_add(ms, lit) || ret;     // collect all return codes disjunctively
     }
-    ret = riss_add ( ms, 0 ) || ret; // add a terminating 0
+    ret = riss_add(ms, 0) || ret;    // add a terminating 0
     return ret;
 }
 
 inline int MiniSat_Solve(MiniSat_ptr ms)
 {
     // return 1, if the current formula is satisfiable
-    assert( riss_assumptions(ms) == 0 );
-    return (10 == riss_sat ( ms )) ? 1 : 0;
+    assert(riss_assumptions(ms) == 0);
+    return (10 == riss_sat(ms)) ? 1 : 0;
 }
 
 
@@ -146,24 +146,24 @@ inline int MiniSat_Solve_Assume(MiniSat_ptr ms,
     int i;
     assert(ms != 0);
 
-    if( 0 == riss_simplify( ms ) ) { return 0; } // unit propagation failed
+    if (0 == riss_simplify(ms)) { return 0; }     // unit propagation failed
 
     assert(nof_assumed_lits >= 0);
-    assert( riss_assumptions(ms) == 0 && "there should not be old assumption variables left" );
+    assert(riss_assumptions(ms) == 0 && "there should not be old assumption variables left");
 
-    for(i = 0; i < nof_assumed_lits; i++) {
+    for (i = 0; i < nof_assumed_lits; i++) {
         const int lit = assumed_lits[i];
         assert(abs(lit) > 0);
         assert(abs(lit) <= MiniSat_Nof_Variables(ms));
-        riss_assume (ms, lit);
+        riss_assume(ms, lit);
     }
 
-    return (10 == riss_sat ( ms )) ? 1 : 0; // return 1, if the SAT call was successful
+    return (10 == riss_sat(ms)) ? 1 : 0;    // return 1, if the SAT call was successful
 }
 
 inline int MiniSat_simplifyDB(MiniSat_ptr ms)
 {
-    return 0 == riss_simplify( ms ) ? 0 : 1; // return 0, if simplification failes
+    return 0 == riss_simplify(ms) ? 0 : 1;   // return 0, if simplification failes
 }
 
 /*
@@ -172,29 +172,29 @@ inline int MiniSat_simplifyDB(MiniSat_ptr ms)
 inline int MiniSat_Get_Value(MiniSat_ptr ms, int var_num)
 {
     assert(var_num > 0);
-    if(var_num > MiniSat_Nof_Variables(ms) ) {
+    if (var_num > MiniSat_Nof_Variables(ms)) {
         return -1;
     }
     /* minisat assigns all variables. just check */
-    assert( riss_deref (ms, var_num) != 0 );
+    assert(riss_deref(ms, var_num) != 0);
 
-    return riss_deref (ms, var_num) == 1 ? 1 : 0;
+    return riss_deref(ms, var_num) == 1 ? 1 : 0;
 }
 
 
 inline int MiniSat_Get_Nof_Conflict_Lits(MiniSat_ptr ms)
 {
-    assert( 0 != ms );
-    return riss_conflict_size (ms);
+    assert(0 != ms);
+    return riss_conflict_size(ms);
 }
 
 inline void MiniSat_Get_Conflict_Lits(MiniSat_ptr ms, int* conflict_lits)
 {
-    assert( 0 != ms );
+    assert(0 != ms);
 
-    const int conflictSize = riss_conflict_size( ms );
+    const int conflictSize = riss_conflict_size(ms);
     for (int i = 0; i < conflictSize; i++) {
-        conflict_lits[i] = riss_conflict_lit (ms, i);
+        conflict_lits[i] = riss_conflict_lit(ms, i);
     }
 }
 
@@ -211,9 +211,9 @@ inline int MiniSat_Get_Polarity_Mode(MiniSat_ptr ms)
 
 inline void MiniSat_Set_Random_Seed(MiniSat_ptr ms, double seed)
 {
-    assert( 0 != ms );
-    assert( seed >= 0 && seed <= 1 );
-    riss_set_randomseed( ms, seed );
+    assert(0 != ms);
+    assert(seed >= 0 && seed <= 1);
+    riss_set_randomseed(ms, seed);
 }
 
 
@@ -225,12 +225,12 @@ inline void MiniSat_Set_Preferred_Variable(MiniSat_ptr ms, int x)
        so in all function below there is a convertion between
        input variable (1..N) and internal variables (0..N-1)
     */
-    riss_add_prefered_decision( ms, x );
+    riss_add_prefered_decision(ms, x);
 }
 
 inline void MiniSat_Clear_Preferred_Variables(MiniSat_ptr ms)
 {
-    riss_clear_prefered_decisions( ms );
+    riss_clear_prefered_decisions(ms);
 }
 // NuSMV: PREF MOD END
 

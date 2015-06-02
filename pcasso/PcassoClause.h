@@ -23,7 +23,7 @@ struct PcassoClause {
     PcassoClause& operator = (const PcassoClause& c)
     {
 
-        if( this != &c ) { // Davide> Self-copy protection
+        if (this != &c) {   // Davide> Self-copy protection
             lits.clear(true);
             c.lits.copyTo(lits);
             size = c.size;

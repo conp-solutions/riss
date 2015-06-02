@@ -39,11 +39,11 @@ struct aigfuzz_opts {
     int zero;
 };
 
-void aigfuzz_msg (int level, const char *fmt, ...);
-void aigfuzz_opt (const char *fmt, ...);
-unsigned aigfuzz_pick (unsigned from, unsigned to);
-int aigfuzz_oneoutof (unsigned to);
+void aigfuzz_msg(int level, const char *fmt, ...);
+void aigfuzz_opt(const char *fmt, ...);
+unsigned aigfuzz_pick(unsigned from, unsigned to);
+int aigfuzz_oneoutof(unsigned to);
 
-unsigned * aigfuzz_layers (aiger *, aigfuzz_opts *);
+unsigned * aigfuzz_layers(aiger *, aigfuzz_opts *);
 
 #endif

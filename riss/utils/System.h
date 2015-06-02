@@ -104,7 +104,7 @@ static inline void nanosleep(int nanoseconds)
 /** simple class that combines cpu and wall clock time */
 class Clock
 {
-    double cTime,wTime;
+    double cTime, wTime;
   public:
     Clock() : cTime(0), wTime(0) {}
     void start() { cTime = Riss::cpuTime() - cTime; wTime = Riss::wallClockTime() - wTime; }
@@ -123,10 +123,10 @@ class MethodClock
     Clock& clock;
     bool stopped;
   public:
-    MethodClock( Clock& c ) : clock(c), stopped(false) { clock.start(); };
-    ~MethodClock() { if(!stopped) { clock.stop(); } }
+    MethodClock(Clock& c) : clock(c), stopped(false) { clock.start(); };
+    ~MethodClock() { if (!stopped) { clock.stop(); } }
     void stop() { clock.stop(); stopped = true;}
-    void cont() { if( stopped ) {clock.start(); stopped = false;} }
+    void cont() { if (stopped) {clock.start(); stopped = false;} }
 };
 
 #endif

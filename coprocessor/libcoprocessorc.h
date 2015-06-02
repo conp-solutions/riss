@@ -46,7 +46,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 extern "C" {
 
     /** initialize a preprocessor instance, and return a pointer to the maintain structure */
-    extern void* CPinit( const char* presetConfig = 0);
+    extern void* CPinit(const char* presetConfig = 0);
 
     /** call the preprocess method of the preprocessor */
     extern void CPpreprocess(void* preprocessor);
@@ -55,18 +55,18 @@ extern "C" {
     extern void CPdestroy(void** preprocessor);
 
     /** parse the options of the command line and pass them to the preprocessor */
-    extern void CPparseOptions (void* preprocessor, int* argc, char** argv, int strict);
-    extern void CPparseOptionString (void* preprocessor, char* argv);
+    extern void CPparseOptions(void* preprocessor, int* argc, char** argv, int strict);
+    extern void CPparseOptionString(void* preprocessor, char* argv);
 
     /** set CP3 to simulate predefined behavior
      */
-    extern void CPsetPresetConfig (void* preprocessor, const char* presetConfig);
+    extern void CPsetPresetConfig(void* preprocessor, const char* presetConfig);
 
     /** add a literal to the solver, if lit == 0, end the clause and actually add it */
-    extern void CPaddLit (void* preprocessor, int lit);
+    extern void CPaddLit(void* preprocessor, int lit);
 
     /** return the version of the library verison */
-    extern float CPversion (void* preprocessor);
+    extern float CPversion(void* preprocessor);
 
     /** there is another literal inside the sat solver */
     extern int CPhasNextOutputLit(void* preprocessor);
@@ -80,13 +80,13 @@ extern "C" {
     /** freeze the given variable, so that it is not altered semantically
      * Note: the variable might still be pushed, so that it is necessary to call giveNewLit()
      */
-    extern void CPfreezeVariable(void* preprocessor, int variable );
+    extern void CPfreezeVariable(void* preprocessor, int variable);
 
     /** returns the new literal of a literal
      * @param oldLit literal before calling preprocess()
      * @return representation of the literal after preprocessing
      */
-    extern int CPgetReplaceLiteral(void* preprocessor, int oldLit );
+    extern int CPgetReplaceLiteral(void* preprocessor, int oldLit);
 
     /** recreate the variables of the given model from the state of the preprocessor
      *  Note: will copy the model twice to be able to change the data type of the model into minisat std::vector Riss::Vec

@@ -32,7 +32,7 @@ class Dense  : public Technique
         /** free the used resources again */
         void destroy()
         {
-            if(mapping!=0) { delete[] mapping; }
+            if (mapping != 0) { delete[] mapping; }
             mapping = 0;
         }
     };
@@ -61,7 +61,7 @@ class Dense  : public Technique
     void decompress(Riss::vec< Riss::lbool >& model);
 
     /** inherited from @see Technique */
-    void printStatistics( std::ostream& stream );
+    void printStatistics(std::ostream& stream);
 
     void destroy();
 
@@ -72,7 +72,7 @@ class Dense  : public Technique
     bool readUndoInfo(const std::string& filename);
 
     /** return the new variable for the old variable */
-    Riss::Lit giveNewLit ( const Riss::Lit& l ) const ;
+    Riss::Lit giveNewLit(const Riss::Lit& l) const ;
 
   protected:
 

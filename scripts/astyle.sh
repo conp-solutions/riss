@@ -27,6 +27,6 @@ $root/test/
 $root/tools/
 "
 
-find $root$folders -name '*.cc' -or -name '*.c' -or -name '*.h' -exec astyle --options=.astylerc {} \;
+find $root$folders \( -name '*.cc' -or -name '*.c' -or -name '*.h' \) -exec astyle --options=.astylerc {} \;
 # clean up backup files
-find $root$folders -name '*.cc.orig' -or -name '*.c.orig' -or -name '*.h.orig' -exec rm -v {} \;
+find $root$folders \( -name '*.cc.orig' -or -name '*.c.orig' -or -name '*.h.orig' \) -exec rm -v {} \;

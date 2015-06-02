@@ -21,45 +21,46 @@
 
 #include "SignalNames.hh"
 
-const char *signalNames[]={
-  "???",
-  "SIGHUP",         
-  "SIGINT",        
-  "SIGQUIT",        
-  "SIGILL",         
-  "SIGTRAP",
-  "SIGABRT",         
-  "SIGBUS",          
-  "SIGFPE",          
-  "SIGKILL",         
-  "SIGUSR1",         
-  "SIGSEGV",         
-  "SIGUSR2",         
-  "SIGPIPE",         
-  "SIGALRM",         
-  "SIGTERM",         
-  "SIGSTKFLT",       
-  "SIGCHLD",         
-  "SIGCONT",         
-  "SIGSTOP",         
-  "SIGTSTP",         
-  "SIGTTIN",         
-  "SIGTTOU",         
-  "SIGURG",          
-  "SIGXCPU",         
-  "SIGXFSZ",         
-  "SIGVTALRM",       
-  "SIGPROF",         
-  "SIGWINCH",        
-  "SIGIO",           
-  "SIGPWR",          
-  "SIGSYS"};
+const char *signalNames[] = {
+    "???",
+    "SIGHUP",
+    "SIGINT",
+    "SIGQUIT",
+    "SIGILL",
+    "SIGTRAP",
+    "SIGABRT",
+    "SIGBUS",
+    "SIGFPE",
+    "SIGKILL",
+    "SIGUSR1",
+    "SIGSEGV",
+    "SIGUSR2",
+    "SIGPIPE",
+    "SIGALRM",
+    "SIGTERM",
+    "SIGSTKFLT",
+    "SIGCHLD",
+    "SIGCONT",
+    "SIGSTOP",
+    "SIGTSTP",
+    "SIGTTIN",
+    "SIGTTOU",
+    "SIGURG",
+    "SIGXCPU",
+    "SIGXFSZ",
+    "SIGVTALRM",
+    "SIGPROF",
+    "SIGWINCH",
+    "SIGIO",
+    "SIGPWR",
+    "SIGSYS"
+};
 
 
 const char *getSignalName(int sig)
 {
-  if (sig>0 && sig<=sizeof(signalNames)/sizeof(char *))
-    return signalNames[sig];
-  else
-    return "???";
+    if (sig > 0 && sig <= sizeof(signalNames) / sizeof(char *))
+    { return signalNames[sig]; }
+    else
+    { return "???"; }
 }

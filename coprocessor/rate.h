@@ -28,16 +28,16 @@ class RATElimination : public Technique
     struct LitOrderRATEHeapLt { // sort according to number of occurrences of complement!
         CoprocessorData& data;  // data to use for sorting
         bool useComplements; // sort according to occurrences of complement, or actual literal
-        bool operator () (int& x, int& y) const
+        bool operator()(int& x, int& y) const
         {
-            if( useComplements ) { return data[ ~Riss::toLit(x)] < data[ ~Riss::toLit(y) ]; }
+            if (useComplements) { return data[ ~Riss::toLit(x)] < data[ ~Riss::toLit(y) ]; }
             else { return data[ Riss::toLit(x)] < data[ Riss::toLit(y) ]; }
         }
         LitOrderRATEHeapLt(CoprocessorData& _data, bool _useComplements) : data(_data), useComplements(_useComplements) {}
     };
 
     // attributes
-    int64_t rateSteps,ratmSteps, approxRatm;
+    int64_t rateSteps, ratmSteps, approxRatm;
     float approxFacAB, approxFacA;
     int rateCandidates; // number of clauses that have been checked for cle
     int remRAT, remAT, remHRAT, remBCE, remBRAT, blockCheckOnSameClause; // how many clauses
@@ -49,7 +49,7 @@ class RATElimination : public Technique
     int bcaCandidates, bcaResolutionChecks, bcaSubstitue, bcaSubstitueLits, bcaFullMatch, bcaATs, bcaStrenghening;
 
   public:
-    RATElimination( CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data,  Riss::Solver& _solver, Coprocessor::Propagation& _propagation  );
+    RATElimination(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data,  Riss::Solver& _solver, Coprocessor::Propagation& _propagation);
 
     void reset();
 
@@ -71,7 +71,7 @@ class RATElimination : public Technique
      * @param resolvent initially contains the literals of the other clause (except literal l), afterwards, stores the resolvent, if the resolvent is not a  tautology
      * @return true, if the resolvent is a tautology
      */
-    bool resolveUnsortedStamped( const Riss::Lit l, const Riss::Clause& d, Riss::MarkArray& ma, std::vector<Riss::Lit>& resolvent );
+    bool resolveUnsortedStamped(const Riss::Lit l, const Riss::Clause& d, Riss::MarkArray& ma, std::vector<Riss::Lit>& resolvent);
 
     /** run RAT elmination
      @return true, if modifications have been applied
@@ -83,7 +83,7 @@ class RATElimination : public Technique
     */
     bool minimizeRAT();
 
-    bool shortATM(const Riss::CRef clause, const Riss::Lit left, int& trailPosition, std::vector<Riss::Lit>& atlits );
+    bool shortATM(const Riss::CRef clause, const Riss::Lit left, int& trailPosition, std::vector<Riss::Lit>& atlits);
 
     bool propagateUnit(const Riss::Lit& unit, int& trailPosition);
 

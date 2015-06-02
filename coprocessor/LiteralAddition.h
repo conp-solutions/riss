@@ -27,9 +27,9 @@ class LiteralAddition : public Technique
     struct LitOrderLAHeapLt { // sort according to number of occurrences of complement!
         CoprocessorData& data;  // data to use for sorting
         bool useComplements; // sort according to occurrences of complement, or actual literal
-        bool operator () (int& x, int& y) const
+        bool operator()(int& x, int& y) const
         {
-            if( useComplements ) { return data[ ~Riss::toLit(x)] < data[ ~Riss::toLit(y) ]; }
+            if (useComplements) { return data[ ~Riss::toLit(x)] < data[ ~Riss::toLit(y) ]; }
             else { return data[ Riss::toLit(x)] < data[ Riss::toLit(y) ]; }
         }
         LitOrderLAHeapLt(CoprocessorData& _data, bool _useComplements) : data(_data), useComplements(_useComplements) {}
@@ -41,10 +41,10 @@ class LiteralAddition : public Technique
     int claTestedLits, claSteps, claExtendedClauses, claExtensions;
     int64_t possibleClaExtensions; // cla stats
 
-    int alaSteps,alaTestedLits, alaExtensions;
+    int alaSteps, alaTestedLits, alaExtensions;
 
   public:
-    LiteralAddition( CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data, Coprocessor::Propagation& _propagation  );
+    LiteralAddition(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data, Coprocessor::Propagation& _propagation);
 
     void reset();
 
@@ -63,7 +63,7 @@ class LiteralAddition : public Technique
     /** check whether resolving c and d on literal l results in a tautology
      * Note: method assumes c and d to be sorted
      */
-    bool tautologicResolvent( const Riss::Clause& c, const Riss::Clause& d, const Riss::Lit l );
+    bool tautologicResolvent(const Riss::Clause& c, const Riss::Clause& d, const Riss::Lit l);
 
     /** run a covered literal addition to increase the size of clauses */
     void coverdLiteralAddition();

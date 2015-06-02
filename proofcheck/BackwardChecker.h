@@ -31,23 +31,23 @@ class BackwardChecker
             CRef ref;              // reference to the clause in the allocator. abstraction in the clause stores the firstLiteral of the clause
             Lit lit;               // literal of a unit clause (used during propagation)
         } data;
-        unsigned long id :48;         // id of the clause (the clause has been added to the formula/proof at this step)
-        unsigned long validUntil :48; // indicate id until this clause is valid
+        unsigned long id : 48;        // id of the clause (the clause has been added to the formula/proof at this step)
+        unsigned long validUntil : 48; // indicate id until this clause is valid
       public:
         /** initially, the item is never valid (only at the very last point in the proof )*/
-        ClauseData () : id( (~(0ull)) ), validUntil( (~(0ull)) ) { data.ref = CRef_Undef; }
-        ClauseData (const CRef& outer_ref, const int64_t& outer_id)
-            : id(outer_id ), validUntil( (~(0ull)) )
+        ClauseData() : id((~(0ull))), validUntil((~(0ull))) { data.ref = CRef_Undef; }
+        ClauseData(const CRef& outer_ref, const int64_t& outer_id)
+            : id(outer_id), validUntil((~(0ull)))
         {
             data.ref = outer_ref;
-            assert( outer_id <= ( 281474976710655 ) && "stay in precision" );
+            assert(outer_id <= (281474976710655) && "stay in precision");
         }
-        ClauseData (const Lit& outer_lit, const int64_t& outer_id, const int64_t outer_validUntil)
-            : id(outer_id ), validUntil( outer_validUntil )
+        ClauseData(const Lit& outer_lit, const int64_t& outer_id, const int64_t outer_validUntil)
+            : id(outer_id), validUntil(outer_validUntil)
         {
             data.lit = outer_lit;
-            assert( outer_id <= ( 281474976710655 ) && "stay in precision" );
-            assert( outer_validUntil <= ( 281474976710655 ) && "stay in precision" );
+            assert(outer_id <= (281474976710655) && "stay in precision");
+            assert(outer_validUntil <= (281474976710655) && "stay in precision");
         }
 
         /** getters */
@@ -56,16 +56,16 @@ class BackwardChecker
         int64_t getID() const { return id; }
         int64_t getValidUntil() const { return validUntil; }
         /** check whether the clause is valid to a given ponit in the proof */
-        bool isValidAt( const int64_t& clauseID ) const { return clauseID >= getID() && clauseID < getValidUntil(); }
+        bool isValidAt(const int64_t& clauseID) const { return clauseID >= getID() && clauseID < getValidUntil(); }
         /** get type of the entry in the proof */
         bool isDelete() const { return validUntil == 281474976710654; } // 2 ^ 48 - 2
         bool isEmptyClause() const { return data.ref == CRef_Undef; }
 
         /** setters */
-        void setCRef( const CRef& cref )               { data.ref = cref; }
-        void setLit ( const Lit& lit )                 { data.lit = lit; }
-        void setID( const int64_t outer_id )           { id = outer_id; }
-        void setInvalidation( const int64_t outer_id ) { validUntil = outer_id; }
+        void setCRef(const CRef& cref)               { data.ref = cref; }
+        void setLit(const Lit& lit)                 { data.lit = lit; }
+        void setID(const int64_t outer_id)           { id = outer_id; }
+        void setInvalidation(const int64_t outer_id) { validUntil = outer_id; }
         void setIsDelete()                             { validUntil = 281474976710654; }
         void setIsEmpty()                              { data.ref = CRef_Undef; }
     };
@@ -78,8 +78,8 @@ class BackwardChecker
         ClauseLabel() : x(0) {};
         void setMarked()        { x = x | 1; } // set mark, not thread safe
         void setVerified()      { x = x | 2; } // set mark, not thread safe
-        bool isMarked()   const { return ( x & 1 ) != 0; }
-        bool isVerified() const { return ( x & 2 ) != 0; }
+        bool isMarked()   const { return (x & 1) != 0; }
+        bool isVerified() const { return (x & 2) != 0; }
     };
 
   protected:
@@ -109,8 +109,8 @@ class BackwardChecker
         uint64_t hash ;
         uint32_t size ;
         uint32_t dummy;
-        ClauseHash ()  : cd( ClauseData() ), hash(0), size(0), dummy(0) {}
-        ClauseHash (const ClauseData _cd, uint64_t _hash, uint32_t _size, Lit _dummy = lit_Undef ) : cd(_cd), hash(_hash), size(_size), dummy( toInt(_dummy) ) {}
+        ClauseHash()  : cd(ClauseData()), hash(0), size(0), dummy(0) {}
+        ClauseHash(const ClauseData _cd, uint64_t _hash, uint32_t _size, Lit _dummy = lit_Undef) : cd(_cd), hash(_hash), size(_size), dummy(toInt(_dummy)) {}
     };
 
     /** dummy struct to be able to use minisat map */
@@ -149,7 +149,7 @@ class BackwardChecker
 
     vec<int> clauseCount;      // count number of occurrences of a clause that is present in the formula (to be able to merge duplicates)
 //   OccLists<Lit, vec<ClauseHash>, ClauseHashDeleted> oneWatch; // one watch list
-    Map<ClauseHash,EmptyData,ClauseHashHashFunction> oneWatchMap; // use hash map to find matching clauses
+    Map<ClauseHash, EmptyData, ClauseHashHashFunction> oneWatchMap; // use hash map to find matching clauses
 
     // operation options
     bool drat;                   // verify drat
@@ -176,7 +176,7 @@ class BackwardChecker
 
   public:
     /** create backward checking object */
-    BackwardChecker ( bool opt_drat, int opt_threads, bool opt_fullRAT );
+    BackwardChecker(bool opt_drat, int opt_threads, bool opt_fullRAT);
 
     /** allocate space for the given number of variables in the data structures (only during parsing)*/
     void reserveVars(int newVariables);
@@ -211,7 +211,7 @@ class BackwardChecker
     /** verify the given proof.
      *  @return true, if the proof can be verified
      */
-    bool verifyProof ();
+    bool verifyProof();
 
     /** tells the checker that there will not be any further clauses to be read
      *  will destroy the onewatch data structure, and set an according flag
