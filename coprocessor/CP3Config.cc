@@ -262,7 +262,7 @@ bceLimit (_cat_bce,"bce-limit", "number of pairwise clause comparisons before in
 opt_bce_bce(_cat_bce,"bce-bce", "actually perform BCE", true, optionListPtr ),
 opt_bce_bcm(_cat_bce,"bce-bcm", "actually perform BCM (instead of BCE)", false, optionListPtr ),
 opt_bce_cle(_cat_bce,"bce-cle", "perform covered literal elimination (CLE)", false, optionListPtr ),
-opt_bce_cla(_cat_bce,"bce-cla", "perform covered literal elimination (CLA)", false, optionListPtr ),
+opt_bce_cla(_cat_bce,"bce-cla", "perform covered literal addition (CLA)", false, optionListPtr ),
 opt_bce_cle_conservative(_cat_bce,"bce-cle-cons", "conservative cle if taut. resolvents are present", false, optionListPtr ),
 opt_bceInpStepInc (_cat_bce,"bce-incInp", "number of steps given to BCE for another inprocessign round", 10000, IntRange(0, INT32_MAX) , optionListPtr ),
 opt_bce_verbose (_cat_bce, "bce-verbose", "be verbose during BCE", 0, IntRange(0, 3), optionListPtr ),
