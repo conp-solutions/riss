@@ -129,8 +129,8 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
     // propagate top level
     CRef confl = propagate();
     if (confl != CRef_Undef){// if there is a conflict on the top level, there cannot be a split
-            ////fprintf( stderr, "splitting the instance failed with a conflict during propagation\n" );
-       //fprintf(stderr, "splitter: Unsat node 2\n");
+        // fprintf( stderr, "splitting the instance failed with a conflict during propagation\n" );
+        // fprintf(stderr, "splitter: Unsat node 2\n");
         return l_False;
     }
     
@@ -977,7 +977,7 @@ bool LookaheadSplitting::lookahead(Lit p, vec<Lit>& lookaheadTrail, vec<Lit>& un
     return false;                       //lookahead unsuccessful
 }
 
-/// Get CPU time used by this thread
+/** Get CPU time used by this thread */
 double LookaheadSplitting::cpuTime_t() const  {
     struct timespec ts;
     if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts) != 0) {
@@ -1515,19 +1515,16 @@ Lit LookaheadSplitting::pickBranchLiteral(vec<vec<Lit>* > **valid){
         }
     }
 
-    /*if(opt_failed_literals>0)
-       //fprintf(stderr, "splitter: Failed Literal \t\t\t = %d\n", failedLiterals.size());
-    if(opt_nec_assign>0)
-       //fprintf(stderr, "splitter: Necessay Assignments \t\t\t = %d\n", necAssign.size());
-    if(opt_double_lookahead)
-       //fprintf(stderr, "splitter: DoubleLookahead Binary Clauses \t = %d \\ %d\n", temp, binaryForcedClauses.size()/2);
-    //if(opt_clause_learning>0)
-       //fprintf(stderr, "splitter: Local Clauses Learnt \t\t\t = %d \n", learnts.size());
-    *///if(opt_var_eq>0)
-       //fprintf(stderr, "splitter: Var Equivalence \t\t\t = %d \n", varEq.size()/2);
-    //fprintf(stderr, "splitter: Best Var Index = %d\n",bestVarIndex);
-    if(opt_tabu)
+    // if(opt_failed_literals>0) { fprintf(stderr, "splitter: Failed Literal \t\t\t = %d\n", failedLiterals.size());                                }
+    // if(opt_nec_assign>0) {      fprintf(stderr, "splitter: Necessay Assignments \t\t\t = %d\n", necAssign.size());                               }
+    // if(opt_double_lookahead) {  fprintf(stderr, "splitter: DoubleLookahead Binary Clauses \t = %d \\ %d\n", temp, binaryForcedClauses.size()/2); }
+    // if(opt_clause_learning>0) { fprintf(stderr, "splitter: Local Clauses Learnt \t\t\t = %d \n", learnts.size());                                }
+    // if(opt_var_eq>0) {          fprintf(stderr, "splitter: Var Equivalence \t\t\t = %d \n", varEq.size()/2);                                     }
+    // fprintf(stderr, "splitter: Best Var Index = %d\n",bestVarIndex);
+
+    if(opt_tabu){
         tabuList[var(next)]=true;
+    }
     
     lock();
     countFailedLiterals+=failedLiterals.size();

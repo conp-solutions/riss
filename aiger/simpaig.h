@@ -22,14 +22,14 @@ IN THE SOFTWARE.
 
 /*------------------------------------------------------------------------*/
 /* This file contains the API of the 'SimpAIG' library, which is a simple
- * implementation of an AIG data structure.  The code of the library 
+ * implementation of an AIG data structure.  The code of the library
  * consists of 'simpaig.c' and 'simpaig.h' and is independent of the 'AIGER'
  * library.
  */
 #ifndef simpaig_h_INCLUDED
 #define simpaig_h_INCLUDED
 
-#include <stdlib.h>		/* for 'size_t' */
+#include <stdlib.h>     /* for 'size_t' */
 
 typedef struct simpaigmgr simpaigmgr;
 typedef struct simpaig simpaig;

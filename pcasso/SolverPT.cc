@@ -1213,8 +1213,11 @@ lbool SolverPT::solve_() {
 	return status;
 }
 
-// ## begin splitter minisat modifications:
-/// Get CPU time used by this thread
+// 
+// begin splitter minisat modifications:
+// -------------------------------------
+
+/** Get CPU time used by this thread */
 double SolverPT::cpuTime_t() const  {
 	struct timespec ts;
 	if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts) != 0) {
@@ -1225,12 +1228,12 @@ double SolverPT::cpuTime_t() const  {
 	return (double) ts.tv_sec + ts.tv_nsec/1000000000.0;
 }
 
-/// return true, if the run time of the solver exceeds the specified limit
+/** return true, if the run time of the solver exceeds the specified limit */
 bool SolverPT::timedOut() const {
 	return (tOut > 0) && cpuTime_t() > tOut;
 }
 
-/// specify a number of seconds that is allowed to be executed
+/** specify a number of seconds that is allowed to be executed */
 void SolverPT::setTimeOut(double timeout) {
 	tOut = cpuTime_t() + timeout;
 	//  fprintf(stderr, "set exit time to %f, current: %f\n", tOut, cpuTime_t() );
@@ -1240,7 +1243,7 @@ unsigned int SolverPT::getTopLevelUnits() const {
 	return ( trail_lim.size() > 1 ) ? trail_lim[1] : trail.size();
 };
 
-/// return a specifit literal from the trail
+/** return a specifit literal from the trail */
 Lit SolverPT::trailGet( const unsigned int index ){
 	return trail[index];
 }

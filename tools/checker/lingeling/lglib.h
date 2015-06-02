@@ -5,8 +5,8 @@
 #ifndef lglib_h_INCLUDED
 #define lglib_h_INCLUDED
 
-#include <stdio.h>				// for 'FILE'
-#include <stdlib.h>				// for 'int64_t'
+#include <stdio.h>              // for 'FILE'
+#include <stdlib.h>             // for 'int64_t'
 
 //--------------------------------------------------------------------------
 
@@ -20,8 +20,8 @@ typedef struct LGL LGL;
 
 //--------------------------------------------------------------------------
 
-LGL * lglinit (void);				// constructor
-void lglrelease (LGL *);			// destructor
+LGL * lglinit (void);               // constructor
+void lglrelease (LGL *);            // destructor
 
 // externally provided memory manager ...
 
@@ -31,7 +31,7 @@ typedef void * (*lglrealloc) (void*mem, void *ptr, size_t old, size_t);
 
 LGL * lglminit (void *mem, lglalloc, lglrealloc, lgldealloc);
 
-LGL * lglclone (LGL *);				// identical copy
+LGL * lglclone (LGL *);             // identical copy
 
 int lglunclone (LGL * dst, LGL * src);
 
@@ -52,7 +52,7 @@ int lglunclone (LGL * dst, LGL * src);
 
    lglsat (forked);
 
-   res = lgljoin (base, forked);	// merge and release
+   res = lgljoin (base, forked);    // merge and release
 
    // this copies back units and equivalences and
    // also failed assumptions from 'forked' to 'base'
@@ -69,19 +69,19 @@ int lglunclone (LGL * dst, LGL * src);
 // has a copy of the clauses and assumptions.  Units and equivalent literals
 // are not copied in 'lglfork', unless 'complete' is non zero.
 //
-LGL * lglfork (LGL *, int complete);		// copy constructor
+LGL * lglfork (LGL *, int complete);        // copy constructor
 
 // Almost same semantics as 'lglfork', but this time assumptions are added
 // as unit clauses.  So the only thing that can be merged back in a
 // following 'lgljoin', is a clause that consists of the negated assumptions
 // respectively the empty clause if there were no assumptions.
 //
-LGL * lglbrutefork (LGL *, int complete);	// copy constructor
+LGL * lglbrutefork (LGL *, int complete);   // copy constructor
 
 // During 'lgljoin' units are copied back as well as detected equivalences.
 //
-int lgljoin (LGL * to, LGL * from);		// join 'from' into 'to'
-						// AND release 'from'
+int lgljoin (LGL * to, LGL * from);     // join 'from' into 'to'
+// AND release 'from'
 
 // The forked copy remembers the old assumptions and whether 'lglfork' or
 // 'lglbrutefork' was used.  So 'lgljoin' is from the user perspective
@@ -99,35 +99,35 @@ const char * lglversion ();
 
 void lglbnr (const char * name,
              const char * prefix,
-	     FILE * file);			// ... banner
+             FILE * file);          // ... banner
 
-void lglusage (LGL *);				// print usage "-h"
-void lglopts (LGL *, const char * prefix, int);	// ... defaults "-d" | "-e"
-void lglrgopts (LGL *);				// ... option ranges "-r"
-void lglsizes (LGL *);				// ... data structure sizes
+void lglusage (LGL *);              // print usage "-h"
+void lglopts (LGL *, const char * prefix, int); // ... defaults "-d" | "-e"
+void lglrgopts (LGL *);             // ... option ranges "-r"
+void lglsizes (LGL *);              // ... data structure sizes
 
 //--------------------------------------------------------------------------
 // setters and getters for options
 
-void lglsetout (LGL *, FILE*);			// output file for report
-void lglsetprefix (LGL *, const char*);		// prefix for messages
+void lglsetout (LGL *, FILE*);          // output file for report
+void lglsetprefix (LGL *, const char*);     // prefix for messages
 
 FILE * lglgetout (LGL *);
 const char * lglgetprefix (LGL *);
 
-void lglsetopt (LGL *, const char *, int);	// set option value
-int lglreadopts (LGL *, FILE *);		// read and set options
-int lglgetopt (LGL *, const char *);		// get option value
-int lglhasopt (LGL *, const char *);		// exists option?
+void lglsetopt (LGL *, const char *, int);  // set option value
+int lglreadopts (LGL *, FILE *);        // read and set options
+int lglgetopt (LGL *, const char *);        // get option value
+int lglhasopt (LGL *, const char *);        // exists option?
 
 int lglgetoptminmax (LGL *, const char *, int * minptr, int * maxptr);
 
-void * lglfirstopt (LGL *);			// option iterator: first
+void * lglfirstopt (LGL *);         // option iterator: first
 
-void * lglnextopt (LGL *, 			// option iterator: next
-                   void * iterator, 
+void * lglnextopt (LGL *,           // option iterator: next
+                   void * iterator,
                    const char ** nameptr,
-		   int *valptr, int *minptr, int *maxptr);
+                   int *valptr, int *minptr, int *maxptr);
 
 // individual ids for logging and statistics:
 
@@ -135,12 +135,12 @@ void lglsetid (LGL *, int tid, int tids);
 
 // Set default phase of a literal.  Any decision on this literal will always
 // try this phase.  Note, that this function does not have any effect on
-// eliminated variables.  Further equivalent variables share the same forced 
+// eliminated variables.  Further equivalent variables share the same forced
 // phase and thus if they are set to different default phases, only the last
 // set operation will be kept.
 
 void lglsetphase (LGL *, int lit);
-void lglresetphase (LGL *, int lit);	// Stop forcing phase in decisions.
+void lglresetphase (LGL *, int lit);    // Stop forcing phase in decisions.
 
 // Assume the solver is in the SATISFIABLE state (after 'lglsat' or
 // 'lglsimp'), then calling 'lglsetphases' will copy the current assignment
@@ -169,7 +169,7 @@ void lgltravall (LGL *, void * state, void (*trav)(void *state, int lit));
 
 //--------------------------------------------------------------------------
 
-void lglprint (LGL *, FILE *);			// in DIMACS format
+void lglprint (LGL *, FILE *);          // in DIMACS format
 
 //--------------------------------------------------------------------------
 // main interface as in PicoSAT (see 'picosat.h' for more information)
@@ -178,24 +178,24 @@ int lglmaxvar (LGL *);
 int lglincvar (LGL *);
 
 void lgladd (LGL *, int lit);
-void lglassume (LGL *, int lit);		// assume single units
+void lglassume (LGL *, int lit);        // assume single units
 
-void lglcassume (LGL *, int lit);		// assume clause
-						// (at most one)
+void lglcassume (LGL *, int lit);       // assume clause
+// (at most one)
 
-void lglfixate (LGL *);				// add assumptions as units
-void lglmeltall (LGL *);			// melt everything
+void lglfixate (LGL *);             // add assumptions as units
+void lglmeltall (LGL *);            // melt everything
 
 int lglsat (LGL *);
 int lglsimp (LGL *, int iterations);
 
-int lglderef (LGL *, int lit);			// neg=false, pos=true
-int lglfixed (LGL *, int lit);			// dito but toplevel
+int lglderef (LGL *, int lit);          // neg=false, pos=true
+int lglfixed (LGL *, int lit);          // dito but toplevel
 
-int lglfailed (LGL *, int lit);			// dito for assumptions
-int lglinconsistent (LGL *);			// contains empty clause?
-int lglchanged (LGL *);				// model changed
-void lglflushcache (LGL *);			// reset cache size
+int lglfailed (LGL *, int lit);         // dito for assumptions
+int lglinconsistent (LGL *);            // contains empty clause?
+int lglchanged (LGL *);             // model changed
+void lglflushcache (LGL *);         // reset cache size
 
 /* Return representative from equivalence class if literal is not top-level
  * assigned nor eliminated.
@@ -223,7 +223,7 @@ int lglmosat (LGL *, void * state, lglnotify, int * targets);
 // unfrozen indices become invalid after next 'lglsat' or 'lglsimp'.
 // This is actually a reference counter for variable indices still in use
 // after the next 'lglsat' or 'lglsimp' call.  It is actually variable based
-// and only applies to literals in new clauses or used as assumptions. 
+// and only applies to literals in new clauses or used as assumptions.
 /*
   LGL * lgl = lglinit ();
   int res;
@@ -275,7 +275,7 @@ int lglookahead (LGL *);
 //--------------------------------------------------------------------------
 // stats:
 
-void lglflushtimers (LGL *lgl);			// after interrupt etc.
+void lglflushtimers (LGL *lgl);         // after interrupt etc.
 
 void lglstats (LGL *);
 void lglprintfeatures (LGL *);

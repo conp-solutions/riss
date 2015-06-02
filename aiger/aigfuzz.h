@@ -26,18 +26,17 @@ IN THE SOFTWARE.
 
 typedef struct aigfuzz_opts aigfuzz_opts;
 
-struct aigfuzz_opts
-{
-  int merge;
-  int small;
-  int large;
-  int combinational;
-  int version;
-  int safety;
-  int liveness;
-  int bad;
-  int justice;
-  int zero;
+struct aigfuzz_opts {
+    int merge;
+    int small;
+    int large;
+    int combinational;
+    int version;
+    int safety;
+    int liveness;
+    int bad;
+    int justice;
+    int zero;
 };
 
 void aigfuzz_msg (int level, const char *fmt, ...);

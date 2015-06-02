@@ -37,7 +37,7 @@ Classifier::~Classifier() {
 	// TODO Auto-generated destructor stub
 }
 
-/// print elements of a vector
+/** print elements of a vector */
 template <typename T>
 inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data ) 
 {

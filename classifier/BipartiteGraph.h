@@ -16,34 +16,37 @@
  * Black nodes keep a counter to how many white nodes they are related.
  * White nodes keep the list of black nodes to which they are related.
  */
-class BipartiteGraph {
-private:
-	int sizeB, sizeW;
-	std::vector<int> nodeB;
-	std::vector< std::vector<int> > nodeW;
+class BipartiteGraph
+{
+  private:
+    int sizeB, sizeW;
+    std::vector<int> nodeB;
+    std::vector< std::vector<int> > nodeW;
 
 
-public:
-	BipartiteGraph(int sizeB, int sizeW, bool computingDerivative);
-	virtual ~BipartiteGraph();
-	void addEdgeFromB(int nodeB, int nodeW);
-	void addEdgeFromW(int nodeW, int nodeB);
-	void addEdge(int nodeW, int nodeB);
+  public:
+    BipartiteGraph(int sizeB, int sizeW, bool computingDerivative);
+    virtual ~BipartiteGraph();
+    void addEdgeFromB(int nodeB, int nodeW);
+    void addEdgeFromW(int nodeW, int nodeB);
+    void addEdge(int nodeW, int nodeB);
 
-	/**
-	 * 100*positiveCount/degreeOfNode
-	 */
-	int getPositiveDegreeFromB(int nodeB);
-	int getPositiveDegreeFromW(int nodeB);
-	uint64_t computeStatistics(int quantilesCount);
+    /**
+     * 100*positiveCount/degreeOfNode
+     */
+    int getPositiveDegreeFromB(int nodeB);
+    int getPositiveDegreeFromW(int nodeB);
+    uint64_t computeStatistics(int quantilesCount);
 
-	int getBCount(int indexB) const{
-		return nodeB[indexB];
-	}
+    int getBCount(int indexB) const
+    {
+        return nodeB[indexB];
+    }
 
-	const std::vector<int>& getAjacencyW(int indexW) const {
-		return nodeW[indexW];
-	}
+    const std::vector<int>& getAjacencyW(int indexW) const
+    {
+        return nodeW[indexW];
+    }
 
 
 };

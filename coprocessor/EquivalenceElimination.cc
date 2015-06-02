@@ -441,7 +441,7 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
 	  // do some statistics
 	  gateSteps ++;
 	  
-	  /// do simplify gate!
+	  // do simplify gate!
 	  if( oa == ob ) {
 	    DOUT(if( config.ee_debug_out > 2 ) cerr << "c found equivalence based on equivalent inputs" << endl;);
 	    DOUT(if( config.ee_debug_out > 2 ) cerr << "[   5]" << endl;);

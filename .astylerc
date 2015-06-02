@@ -1,0 +1,36 @@
+# Astyle options for the riss toolbox
+# -----------------------------------
+# 
+# Inline comments over multiple lines, like:
+# 
+# 	vec<Lit>   conflict;          // If problem is unsatisfiable (possibly under assumptions),
+#                                 // this vector represent the final conflict clause expressed in the assumptions.
+# 
+# will be adjusted to:
+# 
+#	 vec<Lit>   conflict;          // If problem is unsatisfiable (possibly under assumptions),
+#    // this vector represent the final conflict clause expressed in the assumptions. 
+# 
+# You have to fix it manually. If we would use multline comments (/* ... */ ) astylic would
+# do it right. But for this we have to adjust all other comments for sake of consistency.
+
+--style=k&r
+# Pythons indention syntax is cool -- but not in C++ code. We use brackets for each
+# statement.
+--add-brackets
+# indent class visibility modifiers (public, protected)
+# one half indent
+--indent-modifiers
+--indent-labels
+--indent-preproc-block
+--indent-preproc-cond
+--indent-preproc-define
+--convert-tabs
+# riss and co. have a lot of one line statements.
+# We keep them alive
+--keep-one-line-statements
+--keep-one-line-blocks
+# The reference "&" will be written directly after the
+# type
+--align-reference=type
+    

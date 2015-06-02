@@ -5,6 +5,7 @@ project(scripts)
 set(SCRIPTS
     Riss427.sh
     Riss427DRAT.sh
+    astyle.sh
     cp.sh
     dratChecked.sh
     findMinimumBound.sh

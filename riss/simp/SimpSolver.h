@@ -25,15 +25,17 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "riss/core/Solver.h"
 
 
-namespace Riss {
+namespace Riss
+{
 
 //=================================================================================================
 
 
-class SimpSolver : public Solver {
-    
+class SimpSolver : public Solver
+{
+
     CoreConfig& config;
- public:
+  public:
     // Constructor/Destructor:
     //
     SimpSolver(CoreConfig& _config);
@@ -51,7 +53,7 @@ class SimpSolver : public Solver {
     bool    substitute(Var v, Lit x);  // Replace all occurences of v with x (may cause a contradiction).
 
     // Variable mode:
-    // 
+    //
     void    setFrozen (Var v, bool b); // If a variable is frozen it will not be eliminated.
     bool    isEliminated(Var v) const;
 
@@ -60,10 +62,10 @@ class SimpSolver : public Solver {
     bool    solve       (const vec<Lit>& assumps, bool do_simp = true, bool turn_off_simp = false);
     lbool   solveLimited(const vec<Lit>& assumps, bool do_simp = true, bool turn_off_simp = false);
     bool    solve       (                     bool do_simp = true, bool turn_off_simp = false);
-    bool    solve       (Lit p       ,        bool do_simp = true, bool turn_off_simp = false);       
+    bool    solve       (Lit p       ,        bool do_simp = true, bool turn_off_simp = false);
     bool    solve       (Lit p, Lit q,        bool do_simp = true, bool turn_off_simp = false);
     bool    solve       (Lit p, Lit q, Lit r, bool do_simp = true, bool turn_off_simp = false);
-    bool    eliminate   (bool turn_off_elim = false);  // Perform variable elimination based simplification. 
+    bool    eliminate   (bool turn_off_elim = false);  // Perform variable elimination based simplification.
 
     // Memory managment:
     //
@@ -72,20 +74,20 @@ class SimpSolver : public Solver {
 
     // Generate a (possibly simplified) DIMACS file:
     //
-#if 0
+    #if 0
     void    toDimacs  (const char* file, const vec<Lit>& assumps);
     void    toDimacs  (const char* file);
     void    toDimacs  (const char* file, Lit p);
     void    toDimacs  (const char* file, Lit p, Lit q);
     void    toDimacs  (const char* file, Lit p, Lit q, Lit r);
-#endif
+    #endif
 
     // Mode of operation:
     //
     int     parsing;
     int     grow;              // Allow a variable elimination step to grow by a number of clauses (default to zero).
     int     clause_lim;        // Variables are not eliminated if it produces a resolvent with a length above this limit.
-                               // -1 means no limit.
+    // -1 means no limit.
     int     subsumption_lim;   // Do not check if subsumption against a clause larger than this. -1 means no limit.
     double  simp_garbage_frac; // A different limit for when to issue a GC during simplification (Also see 'garbage_frac').
 
@@ -99,7 +101,7 @@ class SimpSolver : public Solver {
     int     asymm_lits;
     int     eliminated_vars;
 
- protected:
+  protected:
 
     // Helper structures:
     //
@@ -111,9 +113,9 @@ class SimpSolver : public Solver {
         // 32-bit implementation instead then, but this will have to do for now.
         uint64_t cost  (Var x)        const { return (uint64_t)n_occ[toInt(mkLit(x))] * (uint64_t)n_occ[toInt(~mkLit(x))]; }
         bool operator()(Var x, Var y) const { return cost(x) < cost(y); }
-        
+
         // TODO: investigate this order alternative more.
-        // bool operator()(Var x, Var y) const { 
+        // bool operator()(Var x, Var y) const {
         //     int c_x = cost(x);
         //     int c_y = cost(y);
         //     return c_x < c_y || c_x == c_y && x < y; }
@@ -122,7 +124,8 @@ class SimpSolver : public Solver {
     struct ClauseDeleted {
         const ClauseAllocator& ca;
         explicit ClauseDeleted(const ClauseAllocator& _ca) : ca(_ca) {}
-        bool operator()(const CRef& cr) const { return ca[cr].mark() == 1; } };
+        bool operator()(const CRef& cr) const { return ca[cr].mark() == 1; }
+    };
 
     // Solver state:
     //
@@ -131,7 +134,7 @@ class SimpSolver : public Solver {
     vec<uint32_t>       elimclauses;
     vec<char>           touched;
     OccLists<Var, vec<CRef>, ClauseDeleted>
-                        occurs;
+    occurs;
     vec<int>            n_occ;
     Heap<ElimLt>        elim_heap;
     Queue<CRef>         subsumption_queue;
@@ -170,11 +173,14 @@ class SimpSolver : public Solver {
 
 
 inline bool SimpSolver::isEliminated (Var v) const { return eliminated[v]; }
-inline void SimpSolver::updateElimHeap(Var v) {
+inline void SimpSolver::updateElimHeap(Var v)
+{
     assert(use_simplification);
     // if (!frozen[v] && !isEliminated(v) && value(v) == l_Undef)
-    if (elim_heap.inHeap(v) || (!frozen[v] && !isEliminated(v) && value(v) == l_Undef))
-        elim_heap.update(v); }
+    if (elim_heap.inHeap(v) || (!frozen[v] && !isEliminated(v) && value(v) == l_Undef)) {
+        elim_heap.update(v);
+    }
+}
 
 
 inline bool SimpSolver::addClause    (const vec<Lit>& ps)    { ps.copyTo(add_tmp); return addClause_(add_tmp); }
@@ -188,11 +194,15 @@ inline bool SimpSolver::solve        (                     bool do_simp, bool tu
 inline bool SimpSolver::solve        (Lit p       ,        bool do_simp, bool turn_off_simp)  { budgetOff(); assumptions.clear(); assumptions.push(p); return solve_(do_simp, turn_off_simp) == l_True; }
 inline bool SimpSolver::solve        (Lit p, Lit q,        bool do_simp, bool turn_off_simp)  { budgetOff(); assumptions.clear(); assumptions.push(p); assumptions.push(q); return solve_(do_simp, turn_off_simp) == l_True; }
 inline bool SimpSolver::solve        (Lit p, Lit q, Lit r, bool do_simp, bool turn_off_simp)  { budgetOff(); assumptions.clear(); assumptions.push(p); assumptions.push(q); assumptions.push(r); return solve_(do_simp, turn_off_simp) == l_True; }
-inline bool SimpSolver::solve        (const vec<Lit>& assumps, bool do_simp, bool turn_off_simp){ 
-    budgetOff(); assumps.copyTo(assumptions); return solve_(do_simp, turn_off_simp) == l_True; }
+inline bool SimpSolver::solve        (const vec<Lit>& assumps, bool do_simp, bool turn_off_simp)
+{
+    budgetOff(); assumps.copyTo(assumptions); return solve_(do_simp, turn_off_simp) == l_True;
+}
 
-inline lbool SimpSolver::solveLimited (const vec<Lit>& assumps, bool do_simp, bool turn_off_simp){ 
-    assumps.copyTo(assumptions); return solve_(do_simp, turn_off_simp); }
+inline lbool SimpSolver::solveLimited (const vec<Lit>& assumps, bool do_simp, bool turn_off_simp)
+{
+    assumps.copyTo(assumptions); return solve_(do_simp, turn_off_simp);
+}
 
 //=================================================================================================
 }

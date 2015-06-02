@@ -23,14 +23,16 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "riss/mtl/Vec.h"
 
-namespace Riss {
+namespace Riss
+{
 
 //=================================================================================================
 // A heap implementation with support for decrease/increase key.
 
 
 template<class Comp>
-class Heap {
+class Heap
+{
     Comp     lt;       // The heap is a minimum-heap with respect to this comparator
     vec<int> heap;     // Heap of integers
     vec<int> indices;  // Each integers position (index) in the Heap
@@ -45,8 +47,8 @@ class Heap {
     {
         int x  = heap[i];
         int p  = parent(i);
-        
-        while (i != 0 && lt(x, heap[p])){
+
+        while (i != 0 && lt(x, heap[p])) {
             heap[i]          = heap[p];
             indices[heap[p]] = i;
             i                = p;
@@ -60,9 +62,9 @@ class Heap {
     void percolateDown(int i)
     {
         int x = heap[i];
-        while (left(i) < heap.size()){
+        while (left(i) < heap.size()) {
             int child = right(i) < heap.size() && lt(heap[right(i)], heap[left(i)]) ? right(i) : left(i);
-            if (!lt(heap[child], x)) break;
+            if (!lt(heap[child], x)) { break; }
             heap[i]          = heap[child];
             indices[heap[i]] = i;
             i                = child;
@@ -88,11 +90,12 @@ class Heap {
     // Safe variant of insert/decrease/increase:
     void update(int n)
     {
-        if (!inHeap(n))
+        if (!inHeap(n)) {
             insert(n);
-        else {
+        } else {
             percolateUp(indices[n]);
-            percolateDown(indices[n]); }
+            percolateDown(indices[n]);
+        }
     }
 
 
@@ -103,7 +106,7 @@ class Heap {
 
         indices[n] = heap.size();
         heap.push(n);
-        percolateUp(indices[n]); 
+        percolateUp(indices[n]);
     }
 
 
@@ -114,41 +117,47 @@ class Heap {
         indices[heap[0]] = 0;
         indices[x]       = -1;
         heap.pop();
-        if (heap.size() > 1) percolateDown(0);
-        return x; 
+        if (heap.size() > 1) { percolateDown(0); }
+        return x;
     }
 
 
     // Rebuild the heap from scratch, using the elements in 'ns':
-    void build(vec<int>& ns) {
-        for (int i = 0; i < heap.size(); i++)
+    void build(vec<int>& ns)
+    {
+        for (int i = 0; i < heap.size(); i++) {
             indices[heap[i]] = -1;
+        }
         heap.clear();
 
-        for (int i = 0; i < ns.size(); i++){
+        for (int i = 0; i < ns.size(); i++) {
             indices[ns[i]] = i;
-            heap.push(ns[i]); }
+            heap.push(ns[i]);
+        }
 
-        for (int i = heap.size() / 2 - 1; i >= 0; i--)
+        for (int i = heap.size() / 2 - 1; i >= 0; i--) {
             percolateDown(i);
+        }
     }
-    
-    /** enlarge the heap 
+
+    /** enlarge the heap
      * Note: assumes, that compare object can handle new elements
      */
-    void addNewElement ( int number = -1) 
+    void addNewElement ( int number = -1)
     {
-      if( number == - 1 ) 
-	indices.push( -1 ); 	// element is not in heap
-      else while( indices.size() <= number )
-	indices.push( -1 ); 	// elements are not in heap
-    }    
+        if( number == - 1 ) {
+            indices.push( -1 );    // element is not in heap
+        } else while( indices.size() <= number ) {
+                indices.push( -1 );    // elements are not in heap
+            }
+    }
 
-    void clear(bool dealloc = false) 
-    { 
-        for (int i = 0; i < heap.size(); i++)
+    void clear(bool dealloc = false)
+    {
+        for (int i = 0; i < heap.size(); i++) {
             indices[heap[i]] = -1;
-        heap.clear(dealloc); 
+        }
+        heap.clear(dealloc);
     }
 };
 
