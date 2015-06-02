@@ -31,7 +31,7 @@ class Graph
     bool intermediateSort;  // remove duplicates in adjacency lists already during the algorithm execution
 
     /** sort the adjacencyList and remove duplicate entries */
-    uint64_t sortAdjacencyList( adjacencyList& aList );
+    uint64_t sortAdjacencyList(adjacencyList& aList);
 
   public:
     Graph(int nodes, bool computingDerivative);
@@ -44,7 +44,7 @@ class Graph
     int getDegree(int node);
 
     std::vector<int> sortSize;  // for each adjacencyList store the size when its re-sorted
-    void setIntermediateSort( bool newValue );
+    void setIntermediateSort(bool newValue);
 
     uint64_t computeStatistics(int quantilesCount);
     uint64_t computeNmergeStatistics(int quantilesCount);

@@ -329,7 +329,7 @@ class RunSolver
       public:
         MemOverQuotaCallback() {alreadyActivated = false;}
 
-        virtual void operator() ()
+        virtual void operator()()
         {
             if (!alreadyActivated) {
                 alreadyActivated = true;
@@ -1567,7 +1567,7 @@ int main(int argc, char **argv)
     try {
         ios_base::sync_with_stdio();
 
-        while ((optc = getopt_long (argc, argv, "+o:w:C:W:M:S:O:d:h", longopts, NULL))
+        while ((optc = getopt_long(argc, argv, "+o:w:C:W:M:S:O:d:h", longopts, NULL))
                 != EOF) {
             switch (optc) {
             case 'o':
@@ -1620,7 +1620,7 @@ int main(int argc, char **argv)
                 solver.setCleanupAllIPCQueues(true);;
                 break;
             default:
-                usage (argv[0]);
+                usage(argv[0]);
             }
         }
 
@@ -1638,7 +1638,7 @@ int main(int argc, char **argv)
              << endl;
 
         if (optind == argc)
-        { usage (argv[0]); }
+        { usage(argv[0]); }
 
         cout << "command line: " << cmdline << endl
              << endl;

@@ -31,6 +31,8 @@
 --pad-oper
 # Insert space padding between a header (e.g. 'if', 'for', 'while'...) and the following paren
 --pad-header
+# Remove extra space padding around parenthesis on the inside and outside
+--unpad-paren
 # riss and co. have a lot of one line statements.
 # We keep them alive
 --keep-one-line-statements

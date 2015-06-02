@@ -44,7 +44,7 @@ class LevelPool
     int writeP;     // index for whatever clause
     int max_size;
 
-    void dumpClauses( const char* filename)
+    void dumpClauses(const char* filename)
     {
         //      std::fstream s;
         //      s.open(filename, std::fstream::out);
@@ -60,7 +60,7 @@ class LevelPool
         //      s.close();
     }
 
-    bool duplicate( const Riss::vec<Riss::Lit>& c );
+    bool duplicate(const Riss::vec<Riss::Lit>& c);
     bool add_shared(Riss::vec<Riss::Lit>& lits, unsigned int nodeID, bool disable_dupl_removal = false, bool disable_dupl_check = false);
 
 

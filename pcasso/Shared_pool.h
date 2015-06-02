@@ -34,7 +34,7 @@ class Shared_pool
 {
   public:
 
-    static bool duplicate( const PcassoClause& c );
+    static bool duplicate(const PcassoClause& c);
     static void add_shared(Riss::vec<Riss::Lit>& lits, unsigned int size);
     // static void delete_shared_clauses(void);
 
@@ -42,13 +42,13 @@ class Shared_pool
 
     static std::vector<PcassoClause> shared_clauses;
 
-    static void dumpClauses( const char* filename)
+    static void dumpClauses(const char* filename)
     {
 
         std::fstream s;
         s.open(filename, std::fstream::out);
         s << "c [POOL] all collected shared clauses begin: " << std::endl;
-        for ( unsigned int i = 0 ; i < shared_clauses.size(); ++i ) {
+        for (unsigned int i = 0 ; i < shared_clauses.size(); ++i) {
             PcassoClause& c = shared_clauses[i];
             for (unsigned int j = 0; j < c.size; j++) {
                 s << (sign(c.lits[j]) ? "-" : "") << var(c.lits[j]) + 1 << " ";

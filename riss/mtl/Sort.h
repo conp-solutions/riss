@@ -36,7 +36,7 @@ namespace Riss
 
 template<class T>
 struct LessThan_default {
-    bool operator () (T x, T y) { return x < y; }
+    bool operator()(T x, T y) { return x < y; }
 };
 
 
@@ -53,14 +53,14 @@ static inline void mergesort(T* field, const int32_t arraySize, LessThan lt)
     int rightHead, rightEnd;
     int leftRead, rightRead, writeHead = 0;
 
-    for (int windowSize = 1; windowSize < arraySize; windowSize *= 2 ) {
-        for (int left = 0; left + windowSize < arraySize; left += windowSize * 2 ) {
+    for (int windowSize = 1; windowSize < arraySize; windowSize *= 2) {
+        for (int left = 0; left + windowSize < arraySize; left += windowSize * 2) {
             rightHead = left + windowSize;
             rightEnd = rightHead + windowSize;
             if (rightEnd > arraySize) { rightEnd = arraySize; } // stay within the array!
             writeHead = left; leftRead = left; rightRead = rightHead;
             while (leftRead < rightHead && rightRead < rightEnd) { // merge the two fields by using the smaller number
-                if ( lt( field[leftRead], field[rightRead]) ) { // use the smaller element
+                if (lt(field[leftRead], field[rightRead])) {    // use the smaller element
                     helpArray[writeHead++] = field[leftRead++];
                 } else {
                     helpArray[writeHead++] = field[rightRead++];
@@ -74,7 +74,7 @@ static inline void mergesort(T* field, const int32_t arraySize, LessThan lt)
                 helpArray[writeHead++] = field[rightRead++];
             }
         }
-        while ( writeHead < arraySize ) { helpArray[writeHead] = field[writeHead]; writeHead++; }
+        while (writeHead < arraySize) { helpArray[writeHead] = field[writeHead]; writeHead++; }
         // swap fields after the iteration (do not copy!)
         T* tmp = field;
         field = helpArray;
@@ -82,9 +82,9 @@ static inline void mergesort(T* field, const int32_t arraySize, LessThan lt)
         swaps ++;
     }
     // copy back original data into original std::vector!
-    if ( (swaps & 1) != 0 ) {
+    if ((swaps & 1) != 0) {
         //std::cerr << "c swaps: " << swaps << std::endl;
-        memcpy(helpArray, field, sizeof(T) * arraySize ); // copy currently sorted data into the other std::vector as well, if necessary!
+        memcpy(helpArray, field, sizeof(T) * arraySize);  // copy currently sorted data into the other std::vector as well, if necessary!
         T* tmp = field;
         field = helpArray;
         helpArray = tmp;
@@ -125,8 +125,8 @@ void sort(T* array, int size, LessThan lt)
 {
     if (size <= 15) {
         selectionSort(array, size, lt);
-    } else if ( size > 32 ) {
-        mergesort( array, size, lt);
+    } else if (size > 32) {
+        mergesort(array, size, lt);
     } else {
         T           pivot = array[size / 2];
         T           tmp;

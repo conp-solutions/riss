@@ -770,7 +770,7 @@ inline lbool BoundedVariableElimination::anticipateEliminationThreadsafe(Coproce
                     if (doStatistics)
                     { ++stats.unitsEnqueued; }
                 } else
-                { assert (0); } //something went wrong
+                { assert(0); }  //something went wrong
             }
 
             if (config.opt_bve_verbose > 2) { cerr << "c ------------------------------------------" << endl; }
@@ -1040,12 +1040,12 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
             { cerr << "c parallel bve with " << controller.size() << " threads on " << QSize << " variables" << endl; }
             pthread_rwlock_t mutex = allocatorRWLock.getValue(); // FIXME reicht hier auch eine reference?
             #ifndef __APPLE__ // Does not work on OS-X
-            assert (mutex.__data.__nr_readers == 0);
-            assert (mutex.__data.__readers_wakeup == 0);
-            assert (mutex.__data.__writer_wakeup == 0);
-            assert (mutex.__data.__nr_readers_queued == 0);
-            assert (mutex.__data.__writer == 0);
-            assert (mutex.__data.__lock == 0);
+            assert(mutex.__data.__nr_readers == 0);
+            assert(mutex.__data.__readers_wakeup == 0);
+            assert(mutex.__data.__writer_wakeup == 0);
+            assert(mutex.__data.__nr_readers_queued == 0);
+            assert(mutex.__data.__writer == 0);
+            assert(mutex.__data.__lock == 0);
             #endif
             controller.runJobs(jobs);
 
@@ -1253,7 +1253,7 @@ void BoundedVariableElimination::par_bve_strengthening_worker(CoprocessorData& d
             }
         }
 
-        assert (strengthener.size() > 1 && "expect strengthener to be > 1");
+        assert(strengthener.size() > 1 && "expect strengthener to be > 1");
 
         //find Lit with least occurrences and its occurrences
         // search lit with minimal occurrences

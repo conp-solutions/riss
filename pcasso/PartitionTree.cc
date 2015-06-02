@@ -40,7 +40,7 @@ TreeNode::TreeNode()
       childs(0),
       lv_pool(0),
       solveTime(0),
-      level(0 ),
+      level(0),
       eval_level(-1),
       expanded(false),
       s(unknown),
@@ -55,11 +55,11 @@ TreeNode::TreeNode(const vector< vector<Lit>* >& localConstraints, TreeNode* par
     : parent(parent),
       _size(0),
       solvesMe(-1),
-      myID( runningID++),
+      myID(runningID++),
       childs(0),
       lv_pool(0),
       solveTime(0),
-      level(0 ),
+      level(0),
       eval_level(-1),
       expanded(false),
 
@@ -84,7 +84,7 @@ TreeNode::setup(const vector< vector<Lit>* >& localConstraints, TreeNode* parent
     _size = 0;
     solvesMe = -1;
     expanded = false;
-    level = (parent != 0 ) ? parent->level + 1 : 0;
+    level = (parent != 0) ? parent->level + 1 : 0;
     s = unknown;
     // unitLock.lock();
     additionalConstraints = localConstraints;
@@ -93,22 +93,22 @@ TreeNode::setup(const vector< vector<Lit>* >& localConstraints, TreeNode* parent
 
 TreeNode::~TreeNode()
 {
-    if ( childs != 0 ) {
+    if (childs != 0) {
         delete [] childs;
         childs = 0;
     }
 
     // free clauses as well
 
-    for ( unsigned   int i = 0 ; i < additionalConstraints.size(); i++ ) {
+    for (unsigned   int i = 0 ; i < additionalConstraints.size(); i++) {
         delete additionalConstraints[i];
     }
 
-    for ( unsigned int i = 0; i < additionalUnaryConstraints.size(); i++ ) {
+    for (unsigned int i = 0; i < additionalUnaryConstraints.size(); i++) {
         delete additionalUnaryConstraints[i].first;
     }
 
-    if ( this->lv_pool != 0 ) {
+    if (this->lv_pool != 0) {
         delete this->lv_pool; // The destructor should be called
         this->lv_pool = 0;
     }
@@ -127,21 +127,21 @@ TreeNode::~TreeNode()
 
 // add children to the node
 void
-TreeNode::expand( const vector< vector< vector<Lit>* >* >& childCnfs)
+TreeNode::expand(const vector< vector< vector<Lit>* >* >& childCnfs)
 {
-    assert( expanded == false );
-    assert( childs == 0 );
+    assert(expanded == false);
+    assert(childs == 0);
 
-    if ( this->s == unsat ) { return; } // Davide>
+    if (this->s == unsat) { return; }   // Davide>
 
     childs = new TreeNode[ childCnfs.size() ];
 
     _size = childCnfs.size();
-    for ( unsigned int i = 0 ; i < _size; ++i ) {
+    for (unsigned int i = 0 ; i < _size; ++i) {
         // tell all the nodes about their extra clauses and their parent
 
         //TreeNode(const vector< vector<Lit>* >& localConstraints, TreeNode* parent = 0);
-        childs[i].setup( *(childCnfs[i]), this );
+        childs[i].setup(*(childCnfs[i]), this);
 
         childs[i].setPosition(position + PcassoDavide::to_string(i)); // Davide>
         childs[i].pt_level = pt_level + 1; // Davide> CHECK
@@ -160,22 +160,22 @@ TreeNode::size() const
 
 
 int
-TreeNode::getLevel () const
+TreeNode::getLevel() const
 {
     return level;
 }
 
 int
-TreeNode::getEvaLevel () const
+TreeNode::getEvaLevel() const
 {
     return eval_level;
 }
 
-int TreeNode::getSubTreeHeight () const
+int TreeNode::getSubTreeHeight() const
 {
-    if ( ! expanded ) { return 0; }
+    if (! expanded) { return 0; }
     int l = 0;
-    for ( unsigned int i = 0; i < _size; ++i ) {
+    for (unsigned int i = 0; i < _size; ++i) {
         int c = childs[i].getSubTreeHeight();
         l = l > c ? l : c;
     }
@@ -186,8 +186,8 @@ int TreeNode::getSubTreeHeight () const
 TreeNode*
 TreeNode::getChild(const unsigned int index)
 {
-    assert( childs != 0 );
-    assert( index < _size );
+    assert(childs != 0);
+    assert(index < _size);
     return &(childs[index]);
 }
 
@@ -203,18 +203,18 @@ TreeNode::setState(const state _s, bool recursive)
 {
     s = _s;
     eval_level = level;
-    if ( recursive ) {
-        if ( !expanded ) { return; }
-        for ( unsigned int i = 0; i < _size; ++i ) {
+    if (recursive) {
+        if (!expanded) { return; }
+        for (unsigned int i = 0; i < _size; ++i) {
             childs[i].setState(_s, true);
         }
     }
 }
 
 void
-TreeNode::fillConstraintPath( vector< vector<Lit>* >* toFill )
+TreeNode::fillConstraintPath(vector< vector<Lit>* >* toFill)
 {
-    assert(toFill != 0 );
+    assert(toFill != 0);
 
     // printf("lock filling here\n");
 
@@ -224,15 +224,15 @@ TreeNode::fillConstraintPath( vector< vector<Lit>* >* toFill )
     // printf("unlock filling here\n");
     unitLock.unlock();
 
-    if ( parent != 0 ) {
-        parent->fillConstraintPath( toFill );
+    if (parent != 0) {
+        parent->fillConstraintPath(toFill);
     }
 }
 
 void
-TreeNode::fillConstraintPathWithLevels( vector< pair< vector<Lit>*, unsigned int > >* toFill )
+TreeNode::fillConstraintPathWithLevels(vector< pair< vector<Lit>*, unsigned int > >* toFill)
 {
-    assert(toFill != 0 );
+    assert(toFill != 0);
 
     unitLock.wait();
 
@@ -241,13 +241,13 @@ TreeNode::fillConstraintPathWithLevels( vector< pair< vector<Lit>*, unsigned int
 
     // fill the vector up to the top by simply calling the parent node to do the same
     // Davide> Edited in order to include pt_level information
-    for ( unsigned int i = 0; i < additionalConstraints.size(); i++ )
-    { toFill->push_back(make_pair( additionalConstraints[i], pt_level )); }
+    for (unsigned int i = 0; i < additionalConstraints.size(); i++)
+    { toFill->push_back(make_pair(additionalConstraints[i], pt_level)); }
 
     unitLock.unlock();
 
-    if ( parent != 0 ) {
-        parent->fillConstraintPathWithLevels( toFill );
+    if (parent != 0) {
+        parent->fillConstraintPathWithLevels(toFill);
     }
 }
 
@@ -261,7 +261,7 @@ TreeNode::addNodeConstraint(vector< Lit >* clause)
 }
 
 void
-TreeNode::addNodeUnaryConstraint( vector<Lit>* clause, unsigned int pt_level )
+TreeNode::addNodeUnaryConstraint(vector<Lit>* clause, unsigned int pt_level)
 {
     unitLock.wait();
     additionalUnaryConstraints.push_back(make_pair(clause, pt_level));
@@ -269,47 +269,47 @@ TreeNode::addNodeUnaryConstraint( vector<Lit>* clause, unsigned int pt_level )
 }
 
 void
-TreeNode::evaluate (Master& m)
+TreeNode::evaluate(Master& m)
 {
-    assert( (getState() == unknown || eval_level != -1) && "if the node has been evaluated with some value, its evaluation level has to be different than -1" );
+    assert((getState() == unknown || eval_level != -1) && "if the node has been evaluated with some value, its evaluation level has to be different than -1");
 
     checkOnlyChildScenarioChild();
     // nothing to do, if the state of the node is already known
-    if ( getState() == sat || getState() == unsat ) { return; }
+    if (getState() == sat || getState() == unsat) { return; }
 
     // if there are no children yet, there is nothing more to evaluate
-    if ( !expanded ) { return; }
+    if (!expanded) { return; }
 
     // evaluate children
-    for ( unsigned int i = 0; i < _size; ++i ) {
+    for (unsigned int i = 0; i < _size; ++i) {
         childs[i].evaluate(m);
     }
 
     // check whether this node can be evaluated by the children
     unsigned int countUnsat = 0;
     int max_eval_level = -1;
-    for ( unsigned int i = 0; i < _size; ++i ) {
-        if ( childs[i].getState() == sat ) { setState(sat); eval_level = childs[i].eval_level; break; }
-        if ( childs[i].getState() == unsat ) {
+    for (unsigned int i = 0; i < _size; ++i) {
+        if (childs[i].getState() == sat) { setState(sat); eval_level = childs[i].eval_level; break; }
+        if (childs[i].getState() == unsat) {
             countUnsat ++;
             max_eval_level = max_eval_level >= childs[i].eval_level ? max_eval_level : childs[i].eval_level;
         }
         if (childs[i].getState() == retry) {
             // add nodes again to the queue?!
             childs[i].setState(unknown);
-            statistics.changeI( m.retryNodesID, 1 );
+            statistics.changeI(m.retryNodesID, 1);
             m.lock();
             m.solveQueue.push_back(&childs[i]);
             m.unlock();
         }
     }
     // subtree is unsat? -> this node and all subnodes are unsat as well
-    if ( countUnsat == _size ) {
+    if (countUnsat == _size) {
         eval_level = max_eval_level;
-        setState( unsat, true );
+        setState(unsat, true);
     }
 
-    assert( (getState() == unknown || eval_level != -1) && "if the node has been evaluated with some value, its evaluation level has to be different than -1" );
+    assert((getState() == unknown || eval_level != -1) && "if the node has been evaluated with some value, its evaluation level has to be different than -1");
 }
 
 void
@@ -319,12 +319,12 @@ TreeNode::print()
     fprintf(stderr, "root(%d)  s: %d c: %d l: %d t: %lld\n", myID, s, _size, level, solveTime);
     printClauses();
     fprintf(stderr, "\n");
-    if ( !expanded ) {
+    if (!expanded) {
         fprintf(stderr, "===  END TREE  ===\n");
         return;
     }
 
-    for ( unsigned int i = 0; i < _size; ++i ) {
+    for (unsigned int i = 0; i < _size; ++i) {
         childs[i].printSubTree(i, 1);
     }
     fprintf(stderr, "===  END TREE  ===\n");
@@ -334,16 +334,16 @@ void
 TreeNode::printSubTree(int nodeNr, int debth)
 {
     char push [2 * debth + 1];
-    for ( int i = 0 ; i < debth; ++i ) { push[2 * i] = ' '; push[2 * i + 1] = '|'; }
+    for (int i = 0 ; i < debth; ++i) { push[2 * i] = ' '; push[2 * i + 1] = '|'; }
     push[2 * debth] = 0;
 
     fprintf(stderr, "%s--= %d(%d):  s: %d c: %d l: %d t: %lld \n", push, nodeNr, myID, s, _size, level, solveTime);
     fprintf(stderr, "%s    ", push);
     printClauses();
     fprintf(stderr, "\n");
-    if ( !expanded ) { return; }
+    if (!expanded) { return; }
 
-    for ( unsigned int i = 0; i < _size; ++i ) {
+    for (unsigned int i = 0; i < _size; ++i) {
         childs[i].printSubTree(i, debth + 1);
     }
 }
@@ -351,12 +351,12 @@ TreeNode::printSubTree(int nodeNr, int debth)
 void
 TreeNode::printClauses()
 {
-    for ( unsigned int i = 0 ; i < additionalConstraints.size(); ++i ) {
+    for (unsigned int i = 0 ; i < additionalConstraints.size(); ++i) {
         vector<Lit>& clause = *(additionalConstraints[i]);
         fprintf(stderr, " ;");
-        for ( unsigned int j = 0; j < clause.size(); j++ ) {
+        for (unsigned int j = 0; j < clause.size(); j++) {
             int lit = sign(clause[j]) ? var(clause[j]) + 1 : 0 - var(clause[j]) - 1;
-            fprintf(stderr, " %d", lit );
+            fprintf(stderr, " %d", lit);
         }
     }
     fprintf(stderr, " ;");
@@ -372,19 +372,19 @@ bool
 TreeNode::isUnsat()
 {
     bool u = false;
-    if ( getState() == unsat ) { u = true; }
-    if ( !u ) {
+    if (getState() == unsat) { u = true; }
+    if (!u) {
         // check the path to the root, whether some node is unsat
         TreeNode* p = parent;
-        while ( p != 0 ) {
-            if ( p->getState() == unsat ) { u = true; break; }
-            else if ( p->getState() == sat ) { break; }
+        while (p != 0) {
+            if (p->getState() == unsat) { u = true; break; }
+            else if (p->getState() == sat) { break; }
             // no need to stop at unknown, because a parent of unknown could be unsat as well
             p = p->parent;
         }
     }
     // if unsat, set all child nodes to unsat as well
-    if ( u ) {
+    if (u) {
         setState(unsat, true);
     }
     return u;
@@ -476,8 +476,8 @@ void TreeNode::updateActivityPolarity(vec<double>& act, vec<Solver::VarFlags>& p
         if (childrenActPolUpdCount < size()) {
             if (option > 0) { act.copyTo(activity); }
             if (option > 1) {
-                phase.growTo( ph.size() );
-                for ( int i = 0 ; i < ph.size(); ++ i ) { phase[i] = ph[i].polarity; }
+                phase.growTo(ph.size());
+                for (int i = 0 ; i < ph.size(); ++ i) { phase[i] = ph[i].polarity; }
             }
         }
         unitLock.unlock();

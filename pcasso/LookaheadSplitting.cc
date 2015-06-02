@@ -18,41 +18,41 @@ namespace Pcasso
 {
 
 static const char* _cat = "LOOKAHEADSPLITTING";
-static DoubleOption     opt_preselection_factor  (_cat, "presel-fac",             "Factor for Preselection variables", 0.15, DoubleRange(0, false, 1, true));
-static IntOption    opt_preselection_minimum  (_cat, "presel-min",        "minimum number of preselection variables", 64, IntRange(1, 128));
-static IntOption    opt_preselection_maximum  (_cat, "presel-max",        "maximum number of preselection variables", 512, IntRange(128, 4096));
-static IntOption    opt_failed_literals  (_cat, "fail-lit",        "Use failed literals in splitting", 2, IntRange(0, 2));
-static IntOption    opt_nec_assign  (_cat, "nec-assign",        "Use necessary assignment (local learning) in splitting", 2, IntRange(0, 2));
-static IntOption     opt_num_iterat        (_cat, "num-iterat",         "Number of iterations to find more necessary assignments and failed literals", 3, IntRange(1, INT32_MAX));
-static BoolOption    opt_double_lookahead  (_cat, "double-la",        "Use double lookahead", true);
-static DoubleOption     opt_double_lookahead_trigger_decay  (_cat, "double-decay",             "The factor of total variables to trigger double lookahead", 0.95, DoubleRange(0, false, 1, true));
-static IntOption    opt_constraint_resolvent  (_cat, "con-resolv",        "Use of constraint resolvent in lookahead", 1, IntRange(0, 1));
-static BoolOption    opt_tabu  (_cat, "tabu",        "Tabu List for decision variables for scattering option", false);
-static BoolOption    opt_bin_constraints  (_cat, "bin-const",        "Sharing of binary constraints ", false);
-static IntOption     opt_lookahead_heuristic        (_cat, "la-heur",         "Lookahead heuristic to use", 4, IntRange(0, 7));
-static IntOption     opt_preselection_heuristic        (_cat, "presel-heur",         "Variable Preselection heuristic to use", 2, IntRange(0, 2));
-static BoolOption    opt_adp_preselection_ranking  (_cat, "adp-presel",        "Adaptive number of preselection variables", true);
-static IntOption     opt_adp_preselection_L        (_cat, "adp-preselL",         "Adaptive Preselection Constant L, minimum number of variables", 50, IntRange(1, INT32_MAX));
-static IntOption     opt_adp_preselection_S        (_cat, "adp-preselS",         "Adaptive Preselection Constant S, importance of failed literals", 7, IntRange(1, INT32_MAX));
-static IntOption    opt_clause_learning  (_cat, "clause-learn",        "Learn clause from failed Literal", 2, IntRange(0, 2));
-static IntOption     opt_child_direction_priority        (_cat, "dir-prior",         "0=Positive,1=Negative,2=higher reduction,3=lower reduction,4=random,5=phasefromsolver,6=adaptive", 3, IntRange(0, 6));
-static DoubleOption     opt_child_direction_adaptive_factor  (_cat, "dir-adp-fac",             "Adaptive Direction heuristic factor", 0.1, DoubleRange(0, false, 1, false));
-static IntOption     opt_children_count        (_cat, "child-count",         "Number of children", 8, IntRange(2, 16));
-static BoolOption    opt_shrink_clauses  (_cat, "shrk-clause",        "Shrink clauses in the starting of splitting ", true);
-static IntOption    opt_pure_lit  (_cat, "pure-lit",        "check for pure literals during clause shrinking; 0=no, 1=local,2=pass to splitting", 0, IntRange(0, 2));
-static IntOption    opt_var_eq  (_cat, "var-eq",        "check for variable equivalence 0=no, 1=check,2=local, 3=pass to splitting", 2, IntRange(0, 3));
-static IntOption    opt_splitting_method (_cat, "split-method",        "Splitting method to use 0=simple, 1=scattering", 1, IntRange(0, 1));
-static IntOption    opt_branch_depth (_cat, "split-depth",        "Number of decision per splitting", 0, IntRange(0, INT32_MAX));
-static BoolOption    opt_dSeq  (_cat, "dseq",        "Use d sequence proposed by Anntti; to use this feature fix -split-depth=0", true);
-static DoubleOption    opt_branch_threshold (_cat, "split-thres",        "Split Depth threshold", 1, DoubleRange(0, true, INT32_MAX, true));
-static DoubleOption     opt_branch_threshold_penalty  (_cat, "split-penal",             "The penality factor if selected literal turns out to be failed literal", 0.7, DoubleRange(0, false, 1, true));
-static DoubleOption     opt_branch_threshold_increment  (_cat, "thres-inc",             "Increment threshold by factor", 0.05, DoubleRange(0, true, 1, true));
-static IntOption    opt_hscore_accuracy (_cat, "h-acc",        "hScore accuracy; number of iterations", 3, IntRange(1, 32));
-static IntOption    opt_hscore_maxclause (_cat, "h-maxcl",        "hScore max clause size", 7, IntRange(1, 32));
-static IntOption    opt_hscore_clause_weight (_cat, "h-cl-wg",        "hScore clause weight", 5, IntRange(1, 32));
-static DoubleOption     opt_hscore_clause_upperbound  (_cat, "h-upper",             "Upper bound for hscore of a literal", 10900, DoubleRange(0, false, INT32_MAX, true));
-static DoubleOption     opt_hscore_clause_lowerbound  (_cat, "h-lower",             "lower bound for hscore of a literal", 0.1, DoubleRange(0, false, INT32_MAX, true));
-static BoolOption    opt_sort_split  (_cat, "sort-split",        "Sort the splits according to their trail score", false);
+static DoubleOption     opt_preselection_factor(_cat, "presel-fac",             "Factor for Preselection variables", 0.15, DoubleRange(0, false, 1, true));
+static IntOption    opt_preselection_minimum(_cat, "presel-min",        "minimum number of preselection variables", 64, IntRange(1, 128));
+static IntOption    opt_preselection_maximum(_cat, "presel-max",        "maximum number of preselection variables", 512, IntRange(128, 4096));
+static IntOption    opt_failed_literals(_cat, "fail-lit",        "Use failed literals in splitting", 2, IntRange(0, 2));
+static IntOption    opt_nec_assign(_cat, "nec-assign",        "Use necessary assignment (local learning) in splitting", 2, IntRange(0, 2));
+static IntOption     opt_num_iterat(_cat, "num-iterat",         "Number of iterations to find more necessary assignments and failed literals", 3, IntRange(1, INT32_MAX));
+static BoolOption    opt_double_lookahead(_cat, "double-la",        "Use double lookahead", true);
+static DoubleOption     opt_double_lookahead_trigger_decay(_cat, "double-decay",             "The factor of total variables to trigger double lookahead", 0.95, DoubleRange(0, false, 1, true));
+static IntOption    opt_constraint_resolvent(_cat, "con-resolv",        "Use of constraint resolvent in lookahead", 1, IntRange(0, 1));
+static BoolOption    opt_tabu(_cat, "tabu",        "Tabu List for decision variables for scattering option", false);
+static BoolOption    opt_bin_constraints(_cat, "bin-const",        "Sharing of binary constraints ", false);
+static IntOption     opt_lookahead_heuristic(_cat, "la-heur",         "Lookahead heuristic to use", 4, IntRange(0, 7));
+static IntOption     opt_preselection_heuristic(_cat, "presel-heur",         "Variable Preselection heuristic to use", 2, IntRange(0, 2));
+static BoolOption    opt_adp_preselection_ranking(_cat, "adp-presel",        "Adaptive number of preselection variables", true);
+static IntOption     opt_adp_preselection_L(_cat, "adp-preselL",         "Adaptive Preselection Constant L, minimum number of variables", 50, IntRange(1, INT32_MAX));
+static IntOption     opt_adp_preselection_S(_cat, "adp-preselS",         "Adaptive Preselection Constant S, importance of failed literals", 7, IntRange(1, INT32_MAX));
+static IntOption    opt_clause_learning(_cat, "clause-learn",        "Learn clause from failed Literal", 2, IntRange(0, 2));
+static IntOption     opt_child_direction_priority(_cat, "dir-prior",         "0=Positive,1=Negative,2=higher reduction,3=lower reduction,4=random,5=phasefromsolver,6=adaptive", 3, IntRange(0, 6));
+static DoubleOption     opt_child_direction_adaptive_factor(_cat, "dir-adp-fac",             "Adaptive Direction heuristic factor", 0.1, DoubleRange(0, false, 1, false));
+static IntOption     opt_children_count(_cat, "child-count",         "Number of children", 8, IntRange(2, 16));
+static BoolOption    opt_shrink_clauses(_cat, "shrk-clause",        "Shrink clauses in the starting of splitting ", true);
+static IntOption    opt_pure_lit(_cat, "pure-lit",        "check for pure literals during clause shrinking; 0=no, 1=local,2=pass to splitting", 0, IntRange(0, 2));
+static IntOption    opt_var_eq(_cat, "var-eq",        "check for variable equivalence 0=no, 1=check,2=local, 3=pass to splitting", 2, IntRange(0, 3));
+static IntOption    opt_splitting_method(_cat, "split-method",        "Splitting method to use 0=simple, 1=scattering", 1, IntRange(0, 1));
+static IntOption    opt_branch_depth(_cat, "split-depth",        "Number of decision per splitting", 0, IntRange(0, INT32_MAX));
+static BoolOption    opt_dSeq(_cat, "dseq",        "Use d sequence proposed by Anntti; to use this feature fix -split-depth=0", true);
+static DoubleOption    opt_branch_threshold(_cat, "split-thres",        "Split Depth threshold", 1, DoubleRange(0, true, INT32_MAX, true));
+static DoubleOption     opt_branch_threshold_penalty(_cat, "split-penal",             "The penality factor if selected literal turns out to be failed literal", 0.7, DoubleRange(0, false, 1, true));
+static DoubleOption     opt_branch_threshold_increment(_cat, "thres-inc",             "Increment threshold by factor", 0.05, DoubleRange(0, true, 1, true));
+static IntOption    opt_hscore_accuracy(_cat, "h-acc",        "hScore accuracy; number of iterations", 3, IntRange(1, 32));
+static IntOption    opt_hscore_maxclause(_cat, "h-maxcl",        "hScore max clause size", 7, IntRange(1, 32));
+static IntOption    opt_hscore_clause_weight(_cat, "h-cl-wg",        "hScore clause weight", 5, IntRange(1, 32));
+static DoubleOption     opt_hscore_clause_upperbound(_cat, "h-upper",             "Upper bound for hscore of a literal", 10900, DoubleRange(0, false, INT32_MAX, true));
+static DoubleOption     opt_hscore_clause_lowerbound(_cat, "h-lower",             "lower bound for hscore of a literal", 0.1, DoubleRange(0, false, INT32_MAX, true));
+static BoolOption    opt_sort_split(_cat, "sort-split",        "Sort the splits according to their trail score", false);
 
 double LookaheadSplitting::triggerDoubleLookahead = 0;
 double LookaheadSplitting::branchThreshold = 0;
@@ -833,7 +833,7 @@ void LookaheadSplitting::preselectionHeuristic()
             vec<double> constant;
             constant.growTo(opt_hscore_maxclause + 1, 0.0f);
             for (int j = 2; j <= opt_hscore_maxclause; j++) {
-                constant[j] = pow( (int)opt_hscore_clause_weight, (int)opt_hscore_maxclause - j) / (pow(avg, (double)j - 1));
+                constant[j] = pow((int)opt_hscore_clause_weight, (int)opt_hscore_maxclause - j) / (pow(avg, (double)j - 1));
             }
             for (int k = 0; k < clauses.size(); k++) {
                 Clause& c = ca[clauses[k]];
@@ -882,7 +882,7 @@ void LookaheadSplitting::preselectionHeuristic()
         }
     }
 
-    if (opt_preselection_heuristic == 3 ) {
+    if (opt_preselection_heuristic == 3) {
         while (!order_heap.empty()) {
             int v = order_heap.removeMin();
             if (value(v) == l_Undef)
@@ -949,8 +949,8 @@ bool LookaheadSplitting::lookahead(Lit p, vec<Lit>& lookaheadTrail, vec<Lit>& un
             learnt_clause.clear(); otfssClauses.clear(); extraInfo = 0; // reset global structures
 
             int ret = analyze(confl, learnt_clause, backtrack_level, nbscore,  extraInfo);
-            assert( ret == 0 && "can handle only usually learnt clauses" );
-            if ( ret != 0 ) { _exit(1); } // abort, if learning is set up wrong
+            assert(ret == 0 && "can handle only usually learnt clauses");
+            if (ret != 0) { _exit(1); }   // abort, if learning is set up wrong
 
             cancelUntil(decisionLevel() - 1);
             if (learnt_clause[0] != ~p && value(learnt_clause[0]) == l_Undef) {
@@ -1000,7 +1000,7 @@ void LookaheadSplitting::constraintResolvent(const vec<Lit>& t)
     vec<Lit> clause;
     for (int i = 1; i < t.size(); i++) {
         //if(binVarScore[var(t[i])]==0){
-        if ( value( var(t[i]) ) != l_Undef // only check for the reason clause if it exists
+        if (value(var(t[i])) != l_Undef    // only check for the reason clause if it exists
                 && ca[reason(var(t[i]))].size() >= clauseLimit) { // check if value is not already in trail //reason clause for propagated literal..... if its size is greater than 2 ... then we add a binary learnt clause
             clause.clear();
             clause.push(~t[0]);
@@ -1205,7 +1205,7 @@ decLitNotFound:
             if (value(~p) == l_Undef) { //checking if the literal has already been assigned
                 negativeLookahead = lookahead(~p, negativeTrail, unitLearnts);
 
-                if (negativeLookahead ) {
+                if (negativeLookahead) {
                     cancelUntil(decLev);
                     score[i] = 0;
                     if (opt_failed_literals > 0) {
@@ -1286,15 +1286,15 @@ decLitNotFound:
 
                 markArray.nextStep();
                 for (int j = 1; j < positiveTrail.size(); j++) {
-                    markArray.setCurrentStep( toInt(positiveTrail[j]) );
+                    markArray.setCurrentStep(toInt(positiveTrail[j]));
                 }
                 vec<Lit> clause1;
 //                for(int j=1; j<positiveTrail.size(); j++){
                 for (int k = 1; k < negativeTrail.size(); k++) {
                     if (value(negativeTrail[k]) != l_Undef)
                     { continue; }
-                    const bool posHit = markArray.isCurrentStep( toInt(negativeTrail[k]) );
-                    const bool negHit = markArray.isCurrentStep( toInt(~(negativeTrail[k])) );
+                    const bool posHit = markArray.isCurrentStep(toInt(negativeTrail[k]));
+                    const bool negHit = markArray.isCurrentStep(toInt(~(negativeTrail[k])));
                     if (posHit && opt_nec_assign > 0) {
                         necAssign.push(negativeTrail[k]);
                         uncheckedEnqueue(negativeTrail[k]);
@@ -1449,7 +1449,7 @@ jump:
     vec<Lit>* clause;
     if (opt_failed_literals == 2) {
         for (int i = 0; i < failedLiterals.size(); i++) {
-            permDiff.setCurrentStep( var(failedLiterals[i]) );
+            permDiff.setCurrentStep(var(failedLiterals[i]));
             clause = new vec<Lit>();
             clause->push(~failedLiterals[i]);
             (*valid)->push(clause);
@@ -1458,7 +1458,7 @@ jump:
     }
     if (opt_nec_assign == 2) {
         for (int i = 0; i < necAssign.size(); i++) {
-            permDiff.setCurrentStep( var(necAssign[i]) );
+            permDiff.setCurrentStep(var(necAssign[i]));
             clause = new vec<Lit>();
             clause->push(necAssign[i]);
             (*valid)->push(clause);
@@ -1467,7 +1467,7 @@ jump:
     }
     if (opt_clause_learning == 2) {
         for (int i = 0; i < unitLearnts.size(); i++) {
-            permDiff.setCurrentStep( var(unitLearnts[i]) );
+            permDiff.setCurrentStep(var(unitLearnts[i]));
             clause = new vec<Lit>();
             clause->push(unitLearnts[i]);
             (*valid)->push(clause);
@@ -1478,17 +1478,17 @@ jump:
         Lit eqLit;
         for (int i = 0; i < varEq.size() - 1; i = i + 2) {
             eqLit = lit_Undef;
-            if (value(varEq[i]) == l_True && permDiff.isCurrentStep(var(varEq[i])) )
+            if (value(varEq[i]) == l_True && permDiff.isCurrentStep(var(varEq[i])))
             { eqLit = varEq[i + 1]; }
-            else if (value(~varEq[i]) == l_True && permDiff.isCurrentStep(var(varEq[i])) )
+            else if (value(~varEq[i]) == l_True && permDiff.isCurrentStep(var(varEq[i])))
             { eqLit = ~varEq[i + 1]; }
-            if (value(varEq[i + 1]) == l_True && permDiff.isCurrentStep( var(varEq[i + 1])) )
+            if (value(varEq[i + 1]) == l_True && permDiff.isCurrentStep(var(varEq[i + 1])))
             { eqLit = varEq[i]; }
-            else if (value(~varEq[i + 1]) == l_True && permDiff.isCurrentStep( var(varEq[i + 1])) )
+            else if (value(~varEq[i + 1]) == l_True && permDiff.isCurrentStep(var(varEq[i + 1])))
             { eqLit = ~varEq[i]; }
 
-            if (eqLit != lit_Undef &&  ! permDiff.isCurrentStep(var(eqLit)) ) {
-                permDiff.setCurrentStep( var(eqLit) );
+            if (eqLit != lit_Undef &&  ! permDiff.isCurrentStep(var(eqLit))) {
+                permDiff.setCurrentStep(var(eqLit));
                 clause = new vec<Lit>();
                 clause->push(eqLit);
                 (*valid)->push(clause);
@@ -1499,14 +1499,14 @@ jump:
         for (int i = 0, j = 0; i < binaryForcedClauses.size() - 1; i = i + 2) {
             if ((value(binaryForcedClauses[i]) == l_True) || value(binaryForcedClauses[i + 1]) == l_True)
             { continue; }
-            if (permDiff.isCurrentStep( var(binaryForcedClauses[i]) ) && value(binaryForcedClauses[i]) == l_False && value(binaryForcedClauses[i + 1]) == l_Undef)
+            if (permDiff.isCurrentStep(var(binaryForcedClauses[i])) && value(binaryForcedClauses[i]) == l_False && value(binaryForcedClauses[i + 1]) == l_Undef)
             { j = i + 1; }
-            else if (permDiff.isCurrentStep( var(binaryForcedClauses[i + 1]) ) && value(binaryForcedClauses[i + 1]) == l_False && value(binaryForcedClauses[i]) == l_Undef)
+            else if (permDiff.isCurrentStep(var(binaryForcedClauses[i + 1])) && value(binaryForcedClauses[i + 1]) == l_False && value(binaryForcedClauses[i]) == l_Undef)
             { j = i; }
             else
             { continue; }
-            if ( ! permDiff.isCurrentStep( var(binaryForcedClauses[j])) ) {
-                permDiff.setCurrentStep(var(binaryForcedClauses[j]) );
+            if (! permDiff.isCurrentStep(var(binaryForcedClauses[j]))) {
+                permDiff.setCurrentStep(var(binaryForcedClauses[j]));
                 clause = new vec<Lit>();
                 clause->push(binaryForcedClauses[j]);
                 (*valid)->push(clause);
@@ -1677,11 +1677,11 @@ bool LookaheadSplitting::doubleLookahead(bool& sol, vec<Lit>& binClauses, vec<Li
             if (opt_nec_assign > 0) {
                 markArray.nextStep();
                 for (int j = 0; j < positiveTrail.size(); j++) {
-                    markArray.setCurrentStep( toInt(positiveTrail[j]) );
+                    markArray.setCurrentStep(toInt(positiveTrail[j]));
                 }
                 for (int k = 0; k < negativeTrail.size(); k++) {
-                    const bool posHit = markArray.isCurrentStep( toInt(negativeTrail[k]) );
-                    const bool negHit = markArray.isCurrentStep( toInt(~(negativeTrail[k])) );
+                    const bool posHit = markArray.isCurrentStep(toInt(negativeTrail[k]));
+                    const bool negHit = markArray.isCurrentStep(toInt(~(negativeTrail[k])));
                     if (posHit) {
                         binClauses.push(~lastDecision);
                         binClauses.push(negativeTrail[k]);
@@ -1837,7 +1837,7 @@ CRef LookaheadSplitting::propagate()
 
 
                     }
-                    if (nblevels + 1 < c.lbd() ) { // improve the LBD
+                    if (nblevels + 1 < c.lbd()) {  // improve the LBD
                         if (c.lbd() <= lbLBDFrozenClause) {
                             c.setCanBeDel(false);
                         }

@@ -39,10 +39,10 @@ namespace Riss
 // Top-level option parse/help functions:
 
 
-extern bool parseOptions     (int& argc, char** argv, bool strict = false);
+extern bool parseOptions(int& argc, char** argv, bool strict = false);
 extern void printUsageAndExit(int  argc, char** argv, bool verbose = false);
-extern void setUsageHelp     (const char* str);
-extern void setHelpPrefixStr (const char* str);
+extern void setUsageHelp(const char* str);
+extern void setHelpPrefixStr(const char* str);
 
 extern void configCall(int argc, char** argv, std::stringstream& s);
 
@@ -59,7 +59,7 @@ class Option
     const char* type_name;
 
 
-    static vec<Option*>& getOptionList () { static vec<Option*> options; return options; }
+    static vec<Option*>& getOptionList() { static vec<Option*> options; return options; }
     static const char*&  getUsageString() { static const char* usage_str; return usage_str; }
     static const char*&  getHelpPrefixString() { static const char* help_prefix_str = ""; return help_prefix_str; }
 
@@ -76,30 +76,30 @@ class Option
            const char* desc_,
            const char* cate_,
            const char* type_,
-           vec<Option*>* externOptionList ) : // push to this list, if present!
-        name       (name_)
+           vec<Option*>* externOptionList) :  // push to this list, if present!
+        name(name_)
         , description(desc_)
-        , category   (cate_)
-        , type_name  (type_)
+        , category(cate_)
+        , type_name(type_)
     {
-        if ( externOptionList == 0 ) { getOptionList().push(this); }
-        else { externOptionList->push( this ); }
+        if (externOptionList == 0) { getOptionList().push(this); }
+        else { externOptionList->push(this); }
     }
 
   public:
     virtual ~Option() {}
 
-    virtual bool parse             (const char* str)      = 0;
-    virtual void help              (bool verbose = false) = 0;
-    virtual void giveRndValue      (std::string& optionText ) = 0; // return a valid option-specification as it could appear on the command line
+    virtual bool parse(const char* str)      = 0;
+    virtual void help(bool verbose = false) = 0;
+    virtual void giveRndValue(std::string& optionText) = 0;        // return a valid option-specification as it could appear on the command line
 
-    virtual bool hasDefaultValue   () = 0;              // check whether the current value corresponds to the default value of the option
-    virtual void printOptionCall   (std::stringstream& strean ) = 0;    // print the call that is required to obtain that this option is set
+    virtual bool hasDefaultValue() = 0;                 // check whether the current value corresponds to the default value of the option
+    virtual void printOptionCall(std::stringstream& strean) = 0;        // print the call that is required to obtain that this option is set
 
-    friend  bool parseOptions      (int& argc, char** argv, bool strict);
-    friend  void printUsageAndExit (int  argc, char** argv, bool verbose);
-    friend  void setUsageHelp      (const char* str);
-    friend  void setHelpPrefixStr  (const char* str);
+    friend  bool parseOptions(int& argc, char** argv, bool strict);
+    friend  void printUsageAndExit(int  argc, char** argv, bool verbose);
+    friend  void setUsageHelp(const char* str);
+    friend  void setHelpPrefixStr(const char* str);
 };
 
 
@@ -146,12 +146,12 @@ class DoubleOption : public Option
         // FIXME: set LC_NUMERIC to "C" to make sure that strtof/strtod parses decimal point correctly.
     }
 
-    operator      double   (void) const { return value; }
+    operator      double (void) const { return value; }
     operator      double&  (void)       { return value; }
     DoubleOption& operator=(double x)   { value = x; return *this; }
 
-    virtual bool hasDefaultValue ( ) { return value == defaultValue; }
-    virtual void printOptionCall (std::stringstream& s )
+    virtual bool hasDefaultValue() { return value == defaultValue; }
+    virtual void printOptionCall(std::stringstream& s)
     {
         s << "-" << name << "=" << value;
     }
@@ -183,7 +183,7 @@ class DoubleOption : public Option
         return true;
     }
 
-    virtual void help (bool verbose = false)
+    virtual void help(bool verbose = false)
     {
         fprintf(stderr, "  -%-12s = %-8s %c%4.2g .. %4.2g%c (default: %g)\n",
                 name, type_name,
@@ -200,11 +200,11 @@ class DoubleOption : public Option
         #endif
     }
 
-    void giveRndValue (std::string& optionText )
+    void giveRndValue(std::string& optionText)
     {
         double rndV = range.begin_inclusive ? range.begin : range.begin + 0.000001;
         rndV += rand();
-        while ( rndV > range.end ) { rndV -= range.end - range.begin; }
+        while (rndV > range.end) { rndV -= range.end - range.begin; }
         std::ostringstream strs;
         strs << rndV;
         optionText = "-" + optionText + "=" + strs.str();
@@ -227,12 +227,12 @@ class IntOption : public Option
     IntOption(const char* c, const char* n, const char* d, int32_t def = int32_t(), IntRange r = IntRange(INT32_MIN, INT32_MAX), vec<Option*>* externOptionList = 0)
         : Option(n, d, c, "<int32>", externOptionList), range(r), value(def), defaultValue(def) {}
 
-    operator   int32_t   (void) const { return value; }
+    operator   int32_t (void) const { return value; }
     operator   int32_t&  (void)       { return value; }
     IntOption& operator= (int32_t x)  { value = x; return *this; }
 
-    virtual bool hasDefaultValue ( ) { return value == defaultValue; }
-    virtual void printOptionCall (std::stringstream& s )
+    virtual bool hasDefaultValue() { return value == defaultValue; }
+    virtual void printOptionCall(std::stringstream& s)
     {
         s << "-" << name << "=" << value;
     }
@@ -263,7 +263,7 @@ class IntOption : public Option
         return true;
     }
 
-    virtual void help (bool verbose = false)
+    virtual void help(bool verbose = false)
     {
         fprintf(stderr, "  -%-12s = %-8s [", name, type_name);
         if (range.begin == INT32_MIN) {
@@ -289,11 +289,11 @@ class IntOption : public Option
     }
 
 
-    void giveRndValue (std::string& optionText )
+    void giveRndValue(std::string& optionText)
     {
         int rndV = range.begin;
         rndV += rand();
-        while ( rndV > range.end ) { rndV -= range.end - range.begin; }
+        while (rndV > range.end) { rndV -= range.end - range.begin; }
         std::ostringstream strs;
         strs << rndV;
         optionText = "-" + optionText + "=" + strs.str();
@@ -315,12 +315,12 @@ class Int64Option : public Option
     Int64Option(const char* c, const char* n, const char* d, int64_t def = int64_t(), Int64Range r = Int64Range(INT64_MIN, INT64_MAX), vec<Option*>* externOptionList = 0)
         : Option(n, d, c, "<int64>", externOptionList), range(r), value(def), defaultValue(def) {}
 
-    operator     int64_t   (void) const { return value; }
+    operator     int64_t (void) const { return value; }
     operator     int64_t&  (void)       { return value; }
     Int64Option& operator= (int64_t x)  { value = x; return *this; }
 
-    virtual bool hasDefaultValue ( ) { return value == defaultValue; }
-    virtual void printOptionCall (std::stringstream& s )
+    virtual bool hasDefaultValue() { return value == defaultValue; }
+    virtual void printOptionCall(std::stringstream& s)
     {
         s << "-" << name << "=" << value;
     }
@@ -351,7 +351,7 @@ class Int64Option : public Option
         return true;
     }
 
-    virtual void help (bool verbose = false)
+    virtual void help(bool verbose = false)
     {
         fprintf(stderr, "  -%-12s = %-8s [", name, type_name);
         if (range.begin == INT64_MIN) {
@@ -377,11 +377,11 @@ class Int64Option : public Option
     }
 
 
-    void giveRndValue (std::string& optionText )
+    void giveRndValue(std::string& optionText)
     {
         int64_t rndV = range.begin;
         rndV += rand();
-        while ( rndV > range.end ) { rndV -= range.end - range.begin; }
+        while (rndV > range.end) { rndV -= range.end - range.begin; }
         std::ostringstream strs;
         strs << rndV;
         optionText = "-" + optionText + "=" + strs.str();
@@ -403,12 +403,12 @@ class StringOption : public Option
 
     operator      const char*  (void) const     { return value; }
     operator      const char*& (void)           { return value; }
-    StringOption& operator=    (const char* x)  { value = x; return *this; }
+    StringOption& operator= (const char* x)  { value = x; return *this; }
 
-    virtual bool hasDefaultValue ( ) { return value == defaultValue; }
-    virtual void printOptionCall (std::stringstream& s )
+    virtual bool hasDefaultValue() { return value == defaultValue; }
+    virtual void printOptionCall(std::stringstream& s)
     {
-        if ( value != 0 ) { s << "-" << name << "=" << value; }
+        if (value != 0) { s << "-" << name << "=" << value; }
         else { s << "-" << name << "=\"\""; }
     }
 
@@ -424,7 +424,7 @@ class StringOption : public Option
         return true;
     }
 
-    virtual void help (bool verbose = false)
+    virtual void help(bool verbose = false)
     {
         fprintf(stderr, "  -%-10s = %8s\n", name, type_name);
         #ifndef NOVERBHELP
@@ -436,7 +436,7 @@ class StringOption : public Option
     }
 
 
-    void giveRndValue (std::string& optionText )
+    void giveRndValue(std::string& optionText)
     {
         optionText = ""; // NOTE: this could be files or any other thing, so do not consider this (for now - for special std::strings, another way might be found...)
     }
@@ -456,14 +456,14 @@ class BoolOption : public Option
     BoolOption(const char* c, const char* n, const char* d, bool v, vec<Option*>* externOptionList = 0)
         : Option(n, d, c, "<bool>", externOptionList), value(v), defaultValue(v) {}
 
-    operator    bool     (void) const { return value; }
+    operator    bool (void) const { return value; }
     operator    bool&    (void)       { return value; }
     BoolOption& operator=(bool b)     { value = b; return *this; }
 
-    virtual bool hasDefaultValue ( ) { return value == defaultValue; }
-    virtual void printOptionCall (std::stringstream& s )
+    virtual bool hasDefaultValue() { return value == defaultValue; }
+    virtual void printOptionCall(std::stringstream& s)
     {
-        if ( value ) { s << "-" << name ; }
+        if (value) { s << "-" << name ; }
         else { s << "-no-" << name ; }
     }
 
@@ -483,7 +483,7 @@ class BoolOption : public Option
         return false;
     }
 
-    virtual void help (bool verbose = false)
+    virtual void help(bool verbose = false)
     {
 
         fprintf(stderr, "  -%s, -no-%s", name, name);
@@ -503,10 +503,10 @@ class BoolOption : public Option
     }
 
 
-    void giveRndValue (std::string& optionText )
+    void giveRndValue(std::string& optionText)
     {
         int r = rand();
-        if ( r % 5 > 1 ) { // more likely to be enabled
+        if (r % 5 > 1) {   // more likely to be enabled
             optionText = "-" + std::string(name);
         } else {
             optionText = "-no-" + std::string(name);

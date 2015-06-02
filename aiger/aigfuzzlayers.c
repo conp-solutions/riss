@@ -51,59 +51,59 @@ static unsigned M, I, L, O, A;
 static Layer * layer;
 
 static unsigned
-fraction (unsigned f, unsigned of)
+fraction(unsigned f, unsigned of)
 {
     unsigned res;
-    assert (0 <= f && f <= 100);
+    assert(0 <= f && f <= 100);
     res = (f * of) / 100;
-    assert (res <= of);
+    assert(res <= of);
     return res;
 }
 
 unsigned *
-aigfuzz_layers (aiger * model, aigfuzz_opts * opts)
+aigfuzz_layers(aiger * model, aigfuzz_opts * opts)
 {
     unsigned j, k, lit, start, end, pos, * res;
     Layer * l, * m;
     AIG * a;
 
-    aigfuzz_opt ("fuzzer layers");
+    aigfuzz_opt("fuzzer layers");
 
-    depth = aigfuzz_pick (opts->large ? 50 : 2, opts->small ? 10 : 200);
-    aigfuzz_opt ("depth %u", depth);
+    depth = aigfuzz_pick(opts->large ? 50 : 2, opts->small ? 10 : 200);
+    aigfuzz_opt("depth %u", depth);
 
-    layer = calloc (depth, sizeof * layer);
+    layer = calloc(depth, sizeof * layer);
 
-    width = aigfuzz_pick (opts->large ? 50 : 10, opts->small ? 20 : 200);
-    aigfuzz_opt ("width %u", width);
+    width = aigfuzz_pick(opts->large ? 50 : 10, opts->small ? 20 : 200);
+    aigfuzz_opt("width %u", width);
 
-    input_fraction = aigfuzz_pick (0, 20);
-    aigfuzz_opt ("input fraction %u%%", input_fraction);
+    input_fraction = aigfuzz_pick(0, 20);
+    aigfuzz_opt("input fraction %u%%", input_fraction);
 
-    latch_fraction = opts->combinational ? 0 : aigfuzz_pick (0, 100);
-    aigfuzz_opt ("latch fraction %u%%", latch_fraction);
+    latch_fraction = opts->combinational ? 0 : aigfuzz_pick(0, 100);
+    aigfuzz_opt("latch fraction %u%%", latch_fraction);
 
-    lower_fraction = 10 * aigfuzz_pick (0, 5);
-    aigfuzz_opt ("lower fraction %u%%", lower_fraction);
+    lower_fraction = 10 * aigfuzz_pick(0, 5);
+    aigfuzz_opt("lower fraction %u%%", lower_fraction);
 
-    monotonicity = aigfuzz_pick (0, 2) - 1;
-    aigfuzz_opt ("monotonicity %d", monotonicity);
+    monotonicity = aigfuzz_pick(0, 2) - 1;
+    aigfuzz_opt("monotonicity %d", monotonicity);
 
     for (l = layer; l < layer + depth; l++) {
-        assert (10 <= width);
+        assert(10 <= width);
         if (monotonicity < 0 && l == layer + 1)
-        { l->M = aigfuzz_pick (layer[0].M, 2 * layer[0].M); }
+        { l->M = aigfuzz_pick(layer[0].M, 2 * layer[0].M); }
         else {
-            l->M = aigfuzz_pick (10, 10 + width - 1);
+            l->M = aigfuzz_pick(10, 10 + width - 1);
             if (monotonicity > 0 && l > layer && l->M < l[-1].M) { l->M = l[-1].M; }
             else if (monotonicity < 0 && l > layer + 1 &&
                      l->M > l[-1].M) { l->M = l[-1].M; }
         }
         if (!I) { l->I = l->M; }
         else if (input_fraction)
-        { l->I = aigfuzz_pick (0, fraction (input_fraction, l->M)); }
+        { l->I = aigfuzz_pick(0, fraction(input_fraction, l->M)); }
         if (latch_fraction) {
-            l->L = aigfuzz_pick (0, fraction (latch_fraction, l->I));
+            l->L = aigfuzz_pick(0, fraction(latch_fraction, l->I));
             l->I -= l->L;
         }
         l->A = l->M;
@@ -113,19 +113,19 @@ aigfuzz_layers (aiger * model, aigfuzz_opts * opts)
         I += l->I;
         L += l->L;
         A += l->A;
-        l->aigs = calloc (l->M, sizeof * l->aigs);
-        l->unused = calloc (l->M, sizeof * l->unused);
+        l->aigs = calloc(l->M, sizeof * l->aigs);
+        l->unused = calloc(l->M, sizeof * l->unused);
         l->O = l->M;
     }
 
-    assert (M = I + L + A);
+    assert(M = I + L + A);
 
     lit = 0;
     for (l = layer; l < layer + depth; l++)
         for (j = 0; j < l->I; j++)
         { l->aigs[j].lit = (lit += 2); }
 
-    assert (lit / 2 == I);
+    assert(lit / 2 == I);
 
     for (l = layer; l < layer + depth; l++) {
         start = l->I;
@@ -134,12 +134,12 @@ aigfuzz_layers (aiger * model, aigfuzz_opts * opts)
         { l->aigs[j].lit = (lit += 2); }
     }
 
-    assert (lit / 2 == I + L);
+    assert(lit / 2 == I + L);
 
     for (l = layer; l < layer + depth; l++) {
         start = l->I + l->L;
         end = start + l->A;
-        assert (end == l->M);
+        assert(end == l->M);
         for (j = start; j < end; j++)
         { l->aigs[j].lit = (lit += 2); }
     }
@@ -148,31 +148,31 @@ aigfuzz_layers (aiger * model, aigfuzz_opts * opts)
         for (j = 0; j < l->M; j++)
         { l->unused[j] = l->aigs[j].lit; }
 
-    assert (lit / 2 == M);
+    assert(lit / 2 == M);
 
     for (l = layer; l < layer + depth; l++) {
         start = l->I + l->L;
         end = start + l->A;
-        assert (end == l->M);
+        assert(end == l->M);
         for (j = start; j < end; j++) {
             a = l->aigs + j;
             for (k = 0; k <= 1; k++) {
                 m = l - 1;
                 if (k) {
-                    while (m > layer && aigfuzz_pick (1, 100) <= lower_fraction)
+                    while (m > layer && aigfuzz_pick(1, 100) <= lower_fraction)
                     { m--; }
                 }
 
                 if (m->O > 0) {
-                    pos = aigfuzz_pick (0, m->O - 1);
+                    pos = aigfuzz_pick(0, m->O - 1);
                     lit = m->unused[pos];
                     m->unused[pos] = m->unused[--m->O];
                 } else {
-                    pos = aigfuzz_pick (0, m->M - 1);
+                    pos = aigfuzz_pick(0, m->M - 1);
                     lit = m->aigs[pos].lit;
                 }
 
-                if (aigfuzz_oneoutof (2))
+                if (aigfuzz_oneoutof(2))
                 { lit++; }
 
                 if (k && a->child[0] / 2 == lit / 2)
@@ -187,8 +187,8 @@ aigfuzz_layers (aiger * model, aigfuzz_opts * opts)
                 a->child[0] = lit;
             }
 
-            assert (a->lit > a->child[0]);
-            assert (a->child[0] > a->child[1]);
+            assert(a->lit > a->child[0]);
+            assert(a->child[0] > a->child[1]);
         }
     }
 
@@ -200,22 +200,22 @@ aigfuzz_layers (aiger * model, aigfuzz_opts * opts)
             m = l + 1;
             if (m >= layer + depth)
             { m -= depth; }
-            while (aigfuzz_oneoutof (2)) {
+            while (aigfuzz_oneoutof(2)) {
                 m++;
                 if (m >= layer + depth)
                 { m -= depth; }
             }
 
             if (m->O > 0) {
-                pos = aigfuzz_pick (0, m->O - 1);
+                pos = aigfuzz_pick(0, m->O - 1);
                 lit = m->unused[pos];
                 m->unused[pos] = m->unused[--m->O];
             } else {
-                pos = aigfuzz_pick (0, m->M - 1);
+                pos = aigfuzz_pick(0, m->M - 1);
                 lit = m->aigs[pos].lit;
             }
 
-            if (aigfuzz_oneoutof (2))
+            if (aigfuzz_oneoutof(2))
             { lit++; }
 
             a->next = lit;
@@ -223,45 +223,45 @@ aigfuzz_layers (aiger * model, aigfuzz_opts * opts)
     }
 
     for (l = layer + depth - 1; l >= layer; l--)
-        aigfuzz_msg (2,
-                     "layer[%u] MILOA %u %u %u %u %u",
-                     l - layer, l->M, l->I, l->L, l->O, l->A);
+        aigfuzz_msg(2,
+                    "layer[%u] MILOA %u %u %u %u %u",
+                    l - layer, l->M, l->I, l->L, l->O, l->A);
 
     for (l = layer; l < layer + depth; l++)
         for (j = 0; j < l->I; j++)
-        { aiger_add_input (model, l->aigs[j].lit, 0); }
+        { aiger_add_input(model, l->aigs[j].lit, 0); }
 
     for (l = layer; l < layer + depth; l++) {
         start = l->I;
         end = start + l->L;
         for (j = start; j < end; j++) {
-            aiger_add_latch (model, l->aigs[j].lit, l->aigs[j].next, 0);
+            aiger_add_latch(model, l->aigs[j].lit, l->aigs[j].next, 0);
             if (opts->version < 2 || opts->zero) { continue; }
-            if (aigfuzz_pick (0, 3)) { continue; }
-            aiger_add_reset (model, l->aigs[j].lit,
-                             aigfuzz_pick (0, 1) ? l->aigs[j].lit : 1);
+            if (aigfuzz_pick(0, 3)) { continue; }
+            aiger_add_reset(model, l->aigs[j].lit,
+                            aigfuzz_pick(0, 1) ? l->aigs[j].lit : 1);
         }
     }
 
     for (l = layer; l < layer + depth; l++) {
         start = l->I + l->L;
         end = start + l->A;
-        assert (end == l->M);
+        assert(end == l->M);
         for (j = start; j < end; j++) {
             a = l->aigs + j;
-            aiger_add_and (model, a->lit, a->child[0], a->child[1]);
+            aiger_add_and(model, a->lit, a->child[0], a->child[1]);
         }
     }
 
     for (l = layer; l < layer + depth; l++)
     { O += l->O; }
 
-    res = calloc (O + 1, sizeof * res);
+    res = calloc(O + 1, sizeof * res);
     O = 0;
     for (l = layer; l < layer + depth; l++)
         for (j = 0; j < l->O; j++) {
             lit = l->unused[j];
-            if (aigfuzz_oneoutof (2))
+            if (aigfuzz_oneoutof(2))
             { lit ^= 1; }
             res[O++] = lit;
         }
@@ -269,51 +269,51 @@ aigfuzz_layers (aiger * model, aigfuzz_opts * opts)
 
     if (opts->merge) {
         int * unused, lhs, rhs0, rhs1, out;
-        aigfuzz_msg (1, "merging %u unused outputs", O);
+        aigfuzz_msg(1, "merging %u unused outputs", O);
 
-        unused = calloc (O, sizeof * unused);
+        unused = calloc(O, sizeof * unused);
         O = 0;
         for (l = layer; l < layer + depth; l++)
             for (j = 0; j < l->O; j++)
             { unused[O++] = l->unused[j]; }
 
         while (O > 1) {
-            pos = aigfuzz_pick (0, O - 1);
+            pos = aigfuzz_pick(0, O - 1);
             rhs0 = unused[pos];
             unused[pos] = unused[--O];
-            if (aigfuzz_pick (7, 8) == 7)
+            if (aigfuzz_pick(7, 8) == 7)
             { rhs0++; }
-            assert (O > 0);
-            pos = aigfuzz_pick (0, O - 1);
+            assert(O > 0);
+            pos = aigfuzz_pick(0, O - 1);
             rhs1 = unused[pos];
-            if (aigfuzz_pick (11, 12) == 11)
+            if (aigfuzz_pick(11, 12) == 11)
             { rhs1++; }
             lhs = 2 * ++M;
-            aiger_add_and (model, lhs, rhs0, rhs1);
+            aiger_add_and(model, lhs, rhs0, rhs1);
             unused[pos] = lhs;
         }
 
         if (O == 1) {
             out = unused[0];
-            if (aigfuzz_pick (3, 4) == 3)
+            if (aigfuzz_pick(3, 4) == 3)
             { out++; }
-            aiger_add_output (model, out, 0);
+            aiger_add_output(model, out, 0);
         }
     } else {
         for (l = layer; l < layer + depth; l++)
             for (j = 0; j < l->O; j++) {
                 lit = l->unused[j];
-                if (aigfuzz_pick (17, 18) == 17)
+                if (aigfuzz_pick(17, 18) == 17)
                 { lit++; }
 
-                aiger_add_output (model, lit, 0);
+                aiger_add_output(model, lit, 0);
             }
     }
 
     for (l = layer; l < layer + depth; l++) {
-        free (l->aigs);
-        free (l->unused);
+        free(l->aigs);
+        free(l->unused);
     }
-    free (layer);
+    free(layer);
     return res;
 }

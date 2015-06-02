@@ -87,7 +87,7 @@ static void SIGINT_exit(int signum)
 //         printStats(*solver);
 //         printf("\n"); printf("c *** INTERRUPTED ***\n"); }
     solver->interrupt();
-    if ( receivedInterupt ) { _exit(1); }
+    if (receivedInterupt) { _exit(1); }
     else { receivedInterupt = true; }
 }
 
@@ -102,27 +102,27 @@ int main(int argc, char** argv)
     setUsageHelp("USAGE: %s [options] <input-file> <result-output-file>\n\n  where input may be either in plain or gzipped DIMACS.\n");
     // Extra options:
     //
-    IntOption    verb   ("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
-    IntOption    vv  ("MAIN", "vv",   "Verbosity every vv conflicts", 10000, IntRange(1, INT32_MAX));
+    IntOption    verb("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
+    IntOption    vv("MAIN", "vv",   "Verbosity every vv conflicts", 10000, IntRange(1, INT32_MAX));
     IntOption    cpu_lim("MAIN", "cpu-lim", "Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
     IntOption    mem_lim("MAIN", "mem-lim", "Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
     IntOption    threads("MAIN", "threads", "Number of threads to be used by the parallel solver.\n", 2, IntRange(1, 64));
 
-    StringOption drupFile         ("PROOF", "drup", "Write a proof trace into the given file", 0);
-    StringOption opt_proofFormat  ("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, should be DRUP)", "DRUP");
+    StringOption drupFile("PROOF", "drup", "Write a proof trace into the given file", 0);
+    StringOption opt_proofFormat("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, should be DRUP)", "DRUP");
 
 
-    BoolOption   opt_checkModel ("MAIN", "checkModel", "verify model inside the solver before printing (if input is a file)", false);
-    BoolOption   opt_modelStyle ("MAIN", "oldModel",   "present model on screen in old format", false);
-    BoolOption   opt_quiet      ("MAIN", "quiet",      "Do not print the model", false);
-    BoolOption   opt_parseOnly  ("MAIN", "parseOnly", "abort after parsing", false);
-    StringOption opt_config     ("MAIN", "config", "the configuration to be used for the portfolio solver", "DRUP");
+    BoolOption   opt_checkModel("MAIN", "checkModel", "verify model inside the solver before printing (if input is a file)", false);
+    BoolOption   opt_modelStyle("MAIN", "oldModel",   "present model on screen in old format", false);
+    BoolOption   opt_quiet("MAIN", "quiet",      "Do not print the model", false);
+    BoolOption   opt_parseOnly("MAIN", "parseOnly", "abort after parsing", false);
+    StringOption opt_config("MAIN", "config", "the configuration to be used for the portfolio solver", "DRUP");
 
     try {
 
-        bool foundHelp = ::parseOptions (argc, argv ); // parse all global options
-        if ( foundHelp ) { exit(0); } // stop after printing the help information
+        bool foundHelp = ::parseOptions(argc, argv);   // parse all global options
+        if (foundHelp) { exit(0); }   // stop after printing the help information
 
         PSolver S(threads, opt_config); // set up a portfolio solver for DRUP proofs
 
@@ -134,7 +134,7 @@ int main(int argc, char** argv)
         #if defined(__linux__)
         fpu_control_t oldcw, newcw;
         _FPU_GETCW(oldcw); newcw = (oldcw & ~_FPU_EXTENDED) | _FPU_DOUBLE; _FPU_SETCW(newcw);
-        if ( verb > 0 ) { printf("c WARNING: for repeatability, setting FPU to use double precision\n"); }
+        if (verb > 0) { printf("c WARNING: for repeatability, setting FPU to use double precision\n"); }
         #endif
 
         solver = &S;
@@ -185,8 +185,8 @@ int main(int argc, char** argv)
 
 
         // open file for proof
-        S.setDrupFile( (drupFile) ? fopen( (const char*) drupFile , "wb") : 0 );
-        if ( opt_proofFormat && strlen(opt_proofFormat) > 0 && S.getDrupFile() != NULL ) { fprintf( S.getDrupFile(), "o proof %s\n", (const char*)opt_proofFormat ); } // we are writing proofs of the given format!
+        S.setDrupFile((drupFile) ? fopen((const char*) drupFile , "wb") : 0);
+        if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S.getDrupFile() != NULL) { fprintf(S.getDrupFile(), "o proof %s\n", (const char*)opt_proofFormat); }     // we are writing proofs of the given format!
 
         parse_DIMACS(in, S);
         gzclose(in);
@@ -201,7 +201,7 @@ int main(int argc, char** argv)
             printf("c |                                                                                                       |\n");
         }
 
-        if ( opt_parseOnly ) { exit(0); } // simply stop here!
+        if (opt_parseOnly) { exit(0); }   // simply stop here!
 
         // Change to signal-handlers that will only notify the solver and allow it to terminate
         // voluntarily:
@@ -210,7 +210,7 @@ int main(int argc, char** argv)
 
         if (!S.simplify()) {
             if (res != NULL) {
-                if ( opt_modelStyle ) { fprintf(res, "UNSAT\n"), fclose(res); }
+                if (opt_modelStyle) { fprintf(res, "UNSAT\n"), fclose(res); }
                 else { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
             }
             // add the empty clause to the proof, close proof file
@@ -222,7 +222,7 @@ int main(int argc, char** argv)
             }
 
             // choose among output formats!
-            if ( opt_modelStyle ) { printf("UNSAT"); }
+            if (opt_modelStyle) { printf("UNSAT"); }
             else { printf("s UNSATISFIABLE\n"); }
             cout.flush(); cerr.flush();
             exit(20);
@@ -235,8 +235,8 @@ int main(int argc, char** argv)
         }
 
         // check model of the formula
-        if ( ret == l_True && opt_checkModel && argc != 1 ) { // check the model if the formla was given via a file!
-            if ( check_DIMACS(in, S.model) ) {
+        if (ret == l_True && opt_checkModel && argc != 1) {   // check the model if the formla was given via a file!
+            if (check_DIMACS(in, S.model)) {
                 printf("c verified model\n");
             } else {
                 printf("c model invalid -- turn answer into UNKNOWN\n");
@@ -245,35 +245,35 @@ int main(int argc, char** argv)
         }
 
         // print solution to screen
-        if ( opt_modelStyle ) { printf(ret == l_True ? "SAT\n" : ret == l_False ? "UNSAT\n" : "UNKNOWN\n"); }
+        if (opt_modelStyle) { printf(ret == l_True ? "SAT\n" : ret == l_False ? "UNSAT\n" : "UNKNOWN\n"); }
         else { printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n"); }
 
         // put empty clause on proof
-        if (ret == l_False && S.getDrupFile() != NULL ) { fprintf(S.getDrupFile(), "0\n"); }
+        if (ret == l_False && S.getDrupFile() != NULL) { fprintf(S.getDrupFile(), "0\n"); }
 
         // print solution into file
         if (res != NULL) {
             if (ret == l_True) {
-                if ( opt_modelStyle ) { fprintf(res, "SAT\n"); }
+                if (opt_modelStyle) { fprintf(res, "SAT\n"); }
                 else { fprintf(res, "s SATISFIABLE\nv "); }
                 for (int i = 0; i < S.model.size(); i++)
                     //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
                 { fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1); }
                 fprintf(res, " 0\n");
             } else if (ret == l_False) {
-                if ( opt_modelStyle ) { fprintf(res, "UNSAT\n"); }
+                if (opt_modelStyle) { fprintf(res, "UNSAT\n"); }
                 else { fprintf(res, "s UNSATISFIABLE\n"); }
-            } else if ( opt_modelStyle ) { fprintf(res, "UNKNOWN\n"); }
+            } else if (opt_modelStyle) { fprintf(res, "UNKNOWN\n"); }
             else { fprintf(res, "s UNKNOWN\n"); }
             fclose(res);
         }
 
         // print model to screen
-        if (! opt_quiet && ret == l_True && res == NULL ) {
-            if ( !opt_modelStyle ) { printf ("v "); }
+        if (! opt_quiet && ret == l_True && res == NULL) {
+            if (!opt_modelStyle) { printf("v "); }
             for (int i = 0; i < S.model.size(); i++)
                 //  if (S.model[i] != l_Undef) // treat undef simply as falsified (does not matter anyways)
-            { printf( "%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1); }
+            { printf("%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1); }
             printf(" 0\n");
         }
 
@@ -287,7 +287,7 @@ int main(int argc, char** argv)
     } catch (OutOfMemoryException&) {
         // printf("c ===============================================================================\n");
         printf("c Warning: caught an exception\n");
-        if ( opt_modelStyle ) { printf("UNKNOWN\n"); }
+        if (opt_modelStyle) { printf("UNKNOWN\n"); }
         else { printf("s UNKNOWN\n"); }
         exit(0);
     }

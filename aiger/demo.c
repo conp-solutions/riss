@@ -32,7 +32,7 @@ extern void   Abc_Stop();
 
 // procedures to get the ABC framework and execute commands in it
 extern void * Abc_FrameGetGlobalFrame();
-extern int    Cmd_CommandExecute( void * pAbc, char * sCommand );
+extern int    Cmd_CommandExecute(void * pAbc, char * sCommand);
 
 ////////////////////////////////////////////////////////////////////////
 ///                     FUNCTION DEFINITIONS                         ///
@@ -53,7 +53,7 @@ extern int    Cmd_CommandExecute( void * pAbc, char * sCommand );
   SeeAlso     []
 
 ***********************************************************************/
-int main( int argc, char * argv[] )
+int main(int argc, char * argv[])
 {
     // parameters
     int fUseResyn2  = 0;
@@ -67,8 +67,8 @@ int main( int argc, char * argv[] )
 
     //////////////////////////////////////////////////////////////////////////
     // get the input file name
-    if ( argc != 2 ) {
-        printf( "Wrong number of command-line arguments.\n" );
+    if (argc != 2) {
+        printf("Wrong number of command-line arguments.\n");
         return 1;
     }
     pFileName = argv[1];
@@ -81,27 +81,27 @@ int main( int argc, char * argv[] )
     clk = clock();
     //////////////////////////////////////////////////////////////////////////
     // read the file
-    sprintf( Command, "read %s", pFileName );
-    if ( Cmd_CommandExecute( pAbc, Command ) ) {
-        fprintf( stdout, "Cannot execute command \"%s\".\n", Command );
+    sprintf(Command, "read %s", pFileName);
+    if (Cmd_CommandExecute(pAbc, Command)) {
+        fprintf(stdout, "Cannot execute command \"%s\".\n", Command);
         return 1;
     }
 
     //////////////////////////////////////////////////////////////////////////
     // balance
-    sprintf( Command, "balance" );
-    if ( Cmd_CommandExecute( pAbc, Command ) ) {
-        fprintf( stdout, "Cannot execute command \"%s\".\n", Command );
+    sprintf(Command, "balance");
+    if (Cmd_CommandExecute(pAbc, Command)) {
+        fprintf(stdout, "Cannot execute command \"%s\".\n", Command);
         return 1;
     }
     clkRead = clock() - clk;
 
     //////////////////////////////////////////////////////////////////////////
     // print stats
-    if ( fPrintStats ) {
-        sprintf( Command, "print_stats" );
-        if ( Cmd_CommandExecute( pAbc, Command ) ) {
-            fprintf( stdout, "Cannot execute command \"%s\".\n", Command );
+    if (fPrintStats) {
+        sprintf(Command, "print_stats");
+        if (Cmd_CommandExecute(pAbc, Command)) {
+            fprintf(stdout, "Cannot execute command \"%s\".\n", Command);
             return 1;
         }
     }
@@ -109,16 +109,16 @@ int main( int argc, char * argv[] )
     clk = clock();
     //////////////////////////////////////////////////////////////////////////
     // synthesize
-    if ( fUseResyn2 ) {
-        sprintf( Command, "balance; rewrite -l; refactor -l; balance; rewrite -l; rewrite -lz; balance; refactor -lz; rewrite -lz; balance" );
-        if ( Cmd_CommandExecute( pAbc, Command ) ) {
-            fprintf( stdout, "Cannot execute command \"%s\".\n", Command );
+    if (fUseResyn2) {
+        sprintf(Command, "balance; rewrite -l; refactor -l; balance; rewrite -l; rewrite -lz; balance; refactor -lz; rewrite -lz; balance");
+        if (Cmd_CommandExecute(pAbc, Command)) {
+            fprintf(stdout, "Cannot execute command \"%s\".\n", Command);
             return 1;
         }
     } else {
-        sprintf( Command, "balance; rewrite -l; rewrite -lz; balance; rewrite -lz; balance" );
-        if ( Cmd_CommandExecute( pAbc, Command ) ) {
-            fprintf( stdout, "Cannot execute command \"%s\".\n", Command );
+        sprintf(Command, "balance; rewrite -l; rewrite -lz; balance; rewrite -lz; balance");
+        if (Cmd_CommandExecute(pAbc, Command)) {
+            fprintf(stdout, "Cannot execute command \"%s\".\n", Command);
             return 1;
         }
     }
@@ -126,37 +126,37 @@ int main( int argc, char * argv[] )
 
     //////////////////////////////////////////////////////////////////////////
     // print stats
-    if ( fPrintStats ) {
-        sprintf( Command, "print_stats" );
-        if ( Cmd_CommandExecute( pAbc, Command ) ) {
-            fprintf( stdout, "Cannot execute command \"%s\".\n", Command );
+    if (fPrintStats) {
+        sprintf(Command, "print_stats");
+        if (Cmd_CommandExecute(pAbc, Command)) {
+            fprintf(stdout, "Cannot execute command \"%s\".\n", Command);
             return 1;
         }
     }
 
     //////////////////////////////////////////////////////////////////////////
     // write the result in blif
-    sprintf( Command, "write_blif result.blif" );
-    if ( Cmd_CommandExecute( pAbc, Command ) ) {
-        fprintf( stdout, "Cannot execute command \"%s\".\n", Command );
+    sprintf(Command, "write_blif result.blif");
+    if (Cmd_CommandExecute(pAbc, Command)) {
+        fprintf(stdout, "Cannot execute command \"%s\".\n", Command);
         return 1;
     }
 
     //////////////////////////////////////////////////////////////////////////
     // perform verification
     clk = clock();
-    if ( fVerify ) {
-        sprintf( Command, "cec %s result.blif", pFileName );
-        if ( Cmd_CommandExecute( pAbc, Command ) ) {
-            fprintf( stdout, "Cannot execute command \"%s\".\n", Command );
+    if (fVerify) {
+        sprintf(Command, "cec %s result.blif", pFileName);
+        if (Cmd_CommandExecute(pAbc, Command)) {
+            fprintf(stdout, "Cannot execute command \"%s\".\n", Command);
             return 1;
         }
     }
     clkVer = clock() - clk;
 
-    printf( "Reading = %6.2f sec   ",     (float)(clkRead) / (float)(CLOCKS_PER_SEC) );
-    printf( "Rewriting = %6.2f sec   ",   (float)(clkResyn) / (float)(CLOCKS_PER_SEC) );
-    printf( "Verification = %6.2f sec\n", (float)(clkVer) / (float)(CLOCKS_PER_SEC) );
+    printf("Reading = %6.2f sec   ", (float)(clkRead) / (float)(CLOCKS_PER_SEC));
+    printf("Rewriting = %6.2f sec   ", (float)(clkResyn) / (float)(CLOCKS_PER_SEC));
+    printf("Verification = %6.2f sec\n", (float)(clkVer) / (float)(CLOCKS_PER_SEC));
 
     //////////////////////////////////////////////////////////////////////////
     // stop the ABC framework

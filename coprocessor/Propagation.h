@@ -30,7 +30,7 @@ class Propagation : public Technique
 
   public:
 
-    Propagation( CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller );
+    Propagation(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller);
 
     /** will also set back the qhead variable inside the Riss::Solver object */
     void reset(CoprocessorData& data);
@@ -41,7 +41,7 @@ class Propagation : public Technique
      */
     Riss::lbool process(CoprocessorData& data, bool sort = false, Riss::Heap<VarOrderBVEHeapLt> * heap = NULL, const Riss::Var ignore = var_Undef);
 
-    void initClause( const Riss::CRef cr );
+    void initClause(const Riss::CRef cr);
 
     void printStatistics(std::ostream& stream);
 

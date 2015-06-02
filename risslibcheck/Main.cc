@@ -19,27 +19,27 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <iostream>
 
-void testIPASIR ()
+void testIPASIR()
 {
 
-    std::cerr << "c solver: " << ipasir_signature ()  << std::endl;
+    std::cerr << "c solver: " << ipasir_signature()  << std::endl;
 
-    void * riss = ipasir_init ();
+    void * riss = ipasir_init();
 
-    ipasir_add (riss, 1);
-    ipasir_add (riss, 2);
-    ipasir_add (riss, 0);
+    ipasir_add(riss, 1);
+    ipasir_add(riss, 2);
+    ipasir_add(riss, 0);
 
-    ipasir_solve (riss);
+    ipasir_solve(riss);
 
-    ipasir_val (riss, 1);
+    ipasir_val(riss, 1);
 
-    ipasir_assume (riss, 1);
-    ipasir_failed (riss, 1);
+    ipasir_assume(riss, 1);
+    ipasir_failed(riss, 1);
 
 //   ipasir_set_terminate (riss, void * state, int (*terminate)(void * state));
 
-    ipasir_release (riss);
+    ipasir_release(riss);
 }
 
 void testNuSVM()
@@ -78,9 +78,9 @@ int main(int argc, char** argv)
 {
     std::cerr << "c check implemented solver interfaces ... " << std::endl;
 
-    testNuSVM ();
+    testNuSVM();
 
-    testIPASIR ();
+    testIPASIR();
 
     return 0;
 }

@@ -22,7 +22,7 @@
 inline uint64_t get_microseconds()
 {
     timeval t;
-    gettimeofday (&t, NULL);
+    gettimeofday(&t, NULL);
     return t.tv_sec * 1000000 + t.tv_usec;
 }
 
@@ -75,19 +75,19 @@ typedef int (*munmap_type)(void *start, size_t length);
 typedef void (*exit_type)(int returnCode);
 
 
-std::ofstream alloc_file( "allocs.dat" );
-std::ofstream free_file( "free.dat" );
+std::ofstream alloc_file("allocs.dat");
+std::ofstream free_file("free.dat");
 
 void* malloc(size_t size)
 {
     // printf("1\n");
     static malloc_type orig = 0;
     if (0 == orig) {
-        orig = (malloc_type)dlsym (RTLD_NEXT, "malloc");
+        orig = (malloc_type)dlsym(RTLD_NEXT, "malloc");
         // printf("set malloc to %lu\n",orig);
-        assert (orig && "original malloc function not found");
+        assert(orig && "original malloc function not found");
     }
-    void * ret = orig (size);
+    void * ret = orig(size);
 //  PRINTF( "own MALLOC" );
     alloc_file << std::hex << ret << std::dec << " " << size << " " << get_microseconds() - program_starttime << " M" << std::endl;
     allocatedBytes += size;
@@ -117,13 +117,13 @@ void free(void *ptr)
     // printf("3\n");
     static free_type orig = 0;
     if (0 == orig) {
-        orig = (free_type)dlsym (RTLD_NEXT, "free");
-        if ( orig == 0 ) { printf("3.1\n"); }
-        assert (orig && "original free function not found");
+        orig = (free_type)dlsym(RTLD_NEXT, "free");
+        if (orig == 0) { printf("3.1\n"); }
+        assert(orig && "original free function not found");
     }
-    PRINTF( "own FREE" );
+    PRINTF("own FREE");
     free_file << std::hex << ptr << std::dec << " " << get_microseconds() - program_starttime << " F" << std::endl;
-    orig (ptr);
+    orig(ptr);
 }
 
 void* realloc(void *ptr, size_t size)
@@ -131,13 +131,13 @@ void* realloc(void *ptr, size_t size)
     // printf("4\n");
     static realloc_type orig = 0;
     if (0 == orig) {
-        orig = (realloc_type)dlsym (RTLD_NEXT, "realloc");
-        if ( orig == 0 ) { printf("4.1\n"); }
-        assert (orig && "original realloc function not found");
+        orig = (realloc_type)dlsym(RTLD_NEXT, "realloc");
+        if (orig == 0) { printf("4.1\n"); }
+        assert(orig && "original realloc function not found");
     }
-    PRINTF( "own REALLOC" );
+    PRINTF("own REALLOC");
     free_file << std::hex << ptr << std::dec << " " << get_microseconds() - program_starttime << " R" << std::endl;
-    void * ret = orig ( ptr, size);
+    void * ret = orig(ptr, size);
     alloc_file << std::hex << ret << std::dec << " " << size << " " << get_microseconds() - program_starttime <<  " R" << std::endl;
     allocatedBytes += size;
     maxAllocatedBytes = maxAllocatedBytes >= allocatedBytes ? maxAllocatedBytes : allocatedBytes;
@@ -149,13 +149,13 @@ void* reallocf(void *ptr, size_t size)
     // printf("5\n");
     static reallocf_type orig = 0;
     if (0 == orig) {
-        orig = (reallocf_type)dlsym (RTLD_NEXT, "reallocf");
-        if ( orig == 0 ) { printf("5.1\n"); }
-        assert (orig && "original reallocf function not found");
+        orig = (reallocf_type)dlsym(RTLD_NEXT, "reallocf");
+        if (orig == 0) { printf("5.1\n"); }
+        assert(orig && "original reallocf function not found");
     }
-    PRINTF( "own REALLOCF" );
+    PRINTF("own REALLOCF");
     free_file << std::hex << ptr << std::dec << " " << get_microseconds() - program_starttime <<  " RF" << std::endl;
-    void * ret = orig ( ptr, size);
+    void * ret = orig(ptr, size);
     alloc_file << std::hex << ret << std::dec << " " << size << " " << get_microseconds() - program_starttime <<  " RF" << std::endl;
     allocatedBytes += size;
     maxAllocatedBytes = maxAllocatedBytes >= allocatedBytes ? maxAllocatedBytes : allocatedBytes;
@@ -167,11 +167,11 @@ void* valloc(size_t size)
     // printf("6\n");
     static valloc_type orig = 0;
     if (0 == orig) {
-        orig = (valloc_type)dlsym (RTLD_NEXT, "valloc");
-        assert (orig && "original valloc function not found");
+        orig = (valloc_type)dlsym(RTLD_NEXT, "valloc");
+        assert(orig && "original valloc function not found");
     }
-    PRINTF( "own VALLOC" );
-    void * ret = orig (size);
+    PRINTF("own VALLOC");
+    void * ret = orig(size);
     alloc_file << std::hex << ret << std::dec << " " << size << " " << get_microseconds() - program_starttime <<  " V" << std::endl;
     allocatedBytes += size;
     maxAllocatedBytes = maxAllocatedBytes >= allocatedBytes ? maxAllocatedBytes : allocatedBytes;
@@ -189,11 +189,11 @@ void* sbrk(intptr_t increment)
     static sbrk_type orig = 0;
     // printf("use own sbrk\n");
     if (0 == orig) {
-        orig = (sbrk_type)dlsym (RTLD_NEXT, "sbrk");
-        assert (orig && "original sbrk function not found");
+        orig = (sbrk_type)dlsym(RTLD_NEXT, "sbrk");
+        assert(orig && "original sbrk function not found");
     }
     alloc_file << "sbrk" << std::endl;
-    return orig (increment);
+    return orig(increment);
 }
 
 void* mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t off)
@@ -201,11 +201,11 @@ void* mmap(void *addr, size_t len, int prot, int flags, int fildes, off_t off)
     static mmap_type orig = 0;
     // printf("use own mmap\n");
     if (0 == orig) {
-        orig = (mmap_type)dlsym (RTLD_NEXT, "mmap");
-        assert (orig && "original mmap function not found");
+        orig = (mmap_type)dlsym(RTLD_NEXT, "mmap");
+        assert(orig && "original mmap function not found");
     }
     alloc_file << "mmap\n" << std::endl;
-    return orig ( addr, len, prot, flags, fildes, off);
+    return orig(addr, len, prot, flags, fildes, off);
 }
 
 void* mmap2(void *start, size_t length, int prot, int flags, int fd, off_t pgoffset)
@@ -213,11 +213,11 @@ void* mmap2(void *start, size_t length, int prot, int flags, int fd, off_t pgoff
     static mmap2_type orig = 0;
     // printf("use own mmap2\n");
     if (0 == orig) {
-        orig = (mmap2_type)dlsym (RTLD_NEXT, "mmap2");
-        assert (orig && "original mmap2 function not found");
+        orig = (mmap2_type)dlsym(RTLD_NEXT, "mmap2");
+        assert(orig && "original mmap2 function not found");
     }
     alloc_file << "mmap2\n" << std::endl;
-    return orig ( start, length, prot, flags, fd, pgoffset);
+    return orig(start, length, prot, flags, fd, pgoffset);
 }
 
 int munmap(void *start, size_t length)
@@ -225,11 +225,11 @@ int munmap(void *start, size_t length)
     static munmap_type orig = 0;
     // printf("use own munmap\n");
     if (0 == orig) {
-        orig = (munmap_type)dlsym (RTLD_NEXT, "munmap");
-        assert (orig && "original munmap function not found");
+        orig = (munmap_type)dlsym(RTLD_NEXT, "munmap");
+        assert(orig && "original munmap function not found");
     }
     alloc_file << "munmap\n" << std::endl;
-    return orig ( start, length);
+    return orig(start, length);
 }
 
 

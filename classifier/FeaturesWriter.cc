@@ -29,7 +29,7 @@ void FeaturesWriter::writeFeature(double value)
     { output << ","; }
     output << value;
     featuresCount++;
-    assert (featuresCount <= featuresNumber && "Increase the number of features");
+    assert(featuresCount <= featuresNumber && "Increase the number of features");
 }
 
 void FeaturesWriter::fillWithUnknown()

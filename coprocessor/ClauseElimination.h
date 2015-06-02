@@ -56,10 +56,10 @@ class ClauseElimination : public Technique
 
         WorkData(int vars) : nextAla(0), steps(0), removedClauses(0), removedBceClauses(0), removedNonEEClauses(0) { array.create(2 * vars); helpArray.create(2 * vars);}
         ~WorkData() {array.destroy(); helpArray.destroy();}
-        void reset () { cla.clear(); array.nextStep(); toProcess.clear(); toUndo.clear(); nextAla = 0; }
+        void reset() { cla.clear(); array.nextStep(); toProcess.clear(); toUndo.clear(); nextAla = 0; }
     };
 
-    ClauseElimination( CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, Propagation& _propagation );
+    ClauseElimination(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, Propagation& _propagation);
 
     bool process(Coprocessor::CoprocessorData& data);
 

@@ -63,7 +63,7 @@ class Unhiding : public Technique
         Riss::Lit root;     // root literal of the subtree that also implied this literal
         Riss::Lit lastSeen; //
         uint32_t index;     // index of the literal that has already been processed in the adjacence list of the literal
-        literalData () : fin(0), dsc(0), obs(0), parent(Riss::lit_Undef), root(Riss::lit_Undef), index(0) {};
+        literalData() : fin(0), dsc(0), obs(0), parent(Riss::lit_Undef), root(Riss::lit_Undef), index(0) {};
     };
 
     // stamp information (access via literalData[ literal.toIndex() ] ), is maintained by extendStructures-method
@@ -82,13 +82,13 @@ class Unhiding : public Technique
 
   public:
 
-    Unhiding( CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data,  Propagation& _propagation, Subsumption& _subsumption, EquivalenceElimination& _ee  );
+    Unhiding(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data,  Propagation& _propagation, Subsumption& _subsumption, EquivalenceElimination& _ee);
 
     /** perform unhiding algorithm */
     bool process();
 
     /** This method should be used to print the statistics of the technique that inherits from this class */
-    void printStatistics( std::ostream& stream );
+    void printStatistics(std::ostream& stream);
 
     void destroy();
 
@@ -99,7 +99,7 @@ class Unhiding : public Technique
     /** sorts the given array with increasing discovery stamp
      * NOTE: uses insertion sort
      */
-    void sortStampTime( Riss::Lit* literalArray, const uint32_t size );
+    void sortStampTime(Riss::Lit* literalArray, const uint32_t size);
 
     /** execute the advanced stamping algorithm
      * NOTE: there is a parameter that controls whether the advanced stamping is used
@@ -108,10 +108,10 @@ class Unhiding : public Technique
      *  @param stamp current stamp index
      *  @param detectedEE mark whether equivalent literals have been found
      */
-    uint32_t stampLiteral( const Riss::Lit literal, uint32_t stamp, bool& detectedEE );
+    uint32_t stampLiteral(const Riss::Lit literal, uint32_t stamp, bool& detectedEE);
 
     /** linear version of the advanced stamping */
-    uint32_t linStamp( const Riss::Lit literal, uint32_t stamp, bool& detectedEE );
+    uint32_t linStamp(const Riss::Lit literal, uint32_t stamp, bool& detectedEE);
 
     /** simplify the formula based on the literal stamps */
     bool unhideSimplify(bool borderIteration, bool& foundEE);

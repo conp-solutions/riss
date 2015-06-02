@@ -38,10 +38,10 @@ using namespace std;
 static bool receivedInterupt = false;
 
 
-IntOption    verb   ("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
+IntOption    verb("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
 // Extra options:
 //
-StringOption dimacs ("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
+StringOption dimacs("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
 IntOption    cpu_lim("MAIN", "cpu-lim", "Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
 IntOption    mem_lim("MAIN", "mem-lim", "Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
@@ -62,14 +62,14 @@ DoubleOption    gainth("CLASSIFY", "gainth", "The Information Gain TH of the att
 DoubleOption    timeout("CLASSIFY", "timeout", "The the timeout for SAT solving.\n", 900, DoubleRange(0.0, false, DOUBLE_MAX, false));
 DoubleOption    classifytime("CLASSIFY", "classifytime", "The estimated time to classify an instance by the complete model.\n", 5, DoubleRange(0.0, true, DOUBLE_MAX, false));
 
-StringOption plotFile ("CLASSIFY", "plotfile", "If given, the values used to compute distributions are written to this file.");
-StringOption attrFile ("CLASSIFY", "dataset", "the (input/output) file with computed values in weka format", "weka.arff");
+StringOption plotFile("CLASSIFY", "plotfile", "If given, the values used to compute distributions are written to this file.");
+StringOption attrFile("CLASSIFY", "dataset", "the (input/output) file with computed values in weka format", "weka.arff");
 BoolOption attr("CLASSIFY", "attr", "if off the feature is appended to dataset.", false);
-StringOption configInfo ("CLASSIFY", "configInfo", "information about configurations of parameters of the solver.", "configurations.txt");
-StringOption attrInfo ("CLASSIFY", "attrInfo", " (input/output) information about class attributes indexes and indexes to remove", "attrInfo.txt");
+StringOption configInfo("CLASSIFY", "configInfo", "information about configurations of parameters of the solver.", "configurations.txt");
+StringOption attrInfo("CLASSIFY", "attrInfo", " (input/output) information about class attributes indexes and indexes to remove", "attrInfo.txt");
 //      BoolOption opt_big("CLASSIFY", "big","turn on/off computation of binary implication graph features.", true);
 
-StringOption prefixClassifier ("CLASSIFY", "classifier", "the prefix of path of the classifier", "bestClassifier");
+StringOption prefixClassifier("CLASSIFY", "classifier", "the prefix of path of the classifier", "bestClassifier");
 BoolOption train("CLASSIFY", "train", "turn on/off training (needs dataset, attrInfo, classifier)", false);
 BoolOption test("CLASSIFY", "test", "turn on/off testing (needs dataset, attrInfo, classifier)", false);
 BoolOption classify("CLASSIFY", "classify", "turn on/off classify (needs attrInfo, classifier)", false);
@@ -136,7 +136,7 @@ string splitString(const std::string& s, unsigned int n, char delim = ' ')
 
 static bool isInfinite(const double pV)
 {
-    return isinf( fabs(pV) );
+    return isinf(fabs(pV));
 }
 
 void dumpData()
@@ -166,9 +166,9 @@ void dumpData()
         stringstream s;
         s.setf(ios::fixed);
         s.precision(4);
-        if ( isInfinite( features[k] ) ) { s << ",?"; } // weka cannot handle "inf" -- FIXME should be replaced with a high cut-off value
+        if (isInfinite(features[k])) { s << ",?"; }     // weka cannot handle "inf" -- FIXME should be replaced with a high cut-off value
         else { s << "," << features[k]; }
-        if ( s.str().find("inf") != string::npos ) { cerr << "c there are infinite features (index " << k << " -- " << features[k] << " isInf: " << isInfinite( features[k] ) <<  ")" << endl; }
+        if (s.str().find("inf") != string::npos) { cerr << "c there are infinite features (index " << k << " -- " << features[k] << " isInf: " << isInfinite(features[k]) <<  ")" << endl; }
         fout << s.str();
     }
     if (classify || preclassify) {
@@ -282,7 +282,7 @@ void static SIGINT_exit(int signum)
 {
     printf("\n"); printf("c *** INTERRUPTED ***\n");
     _exit(1); // immediately exit!
-    if ( !receivedInterupt ) { _exit(1); }
+    if (!receivedInterupt) { _exit(1); }
     else { receivedInterupt = true; }
 }
 
@@ -342,13 +342,13 @@ int main(int argc, char** argv)
         if (test) {
             Classifier classifier(*configuration, prefixClassifier);
             classifier.setWekaLocation(string(wekaLocation));
-            classifier.setNonZero( nonZero );
+            classifier.setNonZero(nonZero);
             classifier.setVerbose(verb);
             classifier.test(attrFile);
         } else if (train) {
             Classifier classifier(*configuration, prefixClassifier);
             classifier.setWekaLocation(string(wekaLocation));
-            classifier.setNonZero( nonZero );
+            classifier.setNonZero(nonZero);
             classifier.setVerbose(verb);
             classifier.setGainThreshold(gainth);
             int correct = classifier.train(attrFile);
@@ -365,15 +365,15 @@ int main(int argc, char** argv)
                 Classifier classifier(*configuration, prefixClassifier);
                 classifier.setWekaLocation(string(wekaLocation));
                 classifier.setPredictorLocation(string(predictorLocation));
-                classifier.setNonZero( nonZero );
+                classifier.setNonZero(nonZero);
                 classifier.setVerbose(verb);
                 classifier.setUseTempFiles(tmpfilecommunication);
                 classifier.setGainThreshold(gainth);
                 vector<int> classes = classifier.classifyJava(attrFile);
                 time1 = cpuTime() - time1;
                 cout << "c classify time " << time1 << endl;
-                if ( classes.size() == 0 ) { return 1; } // there is no class, so you cannot print anything!
-                if ( classes.size() != 1) {
+                if (classes.size() == 0) { return 1; }   // there is no class, so you cannot print anything!
+                if (classes.size() != 1) {
                     cout << "@class " << splitString(configuration->getNames()[classes[0]], 1, '.') << endl;
                     return 0;
 

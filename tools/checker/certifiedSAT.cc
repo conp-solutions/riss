@@ -172,7 +172,7 @@ int main(int argc, char* argv[])
             cout << "Wait for verifier" << endl;
 
             int countLine = 0;
-            while ( getline(checker_output, line) ) {
+            while (getline(checker_output, line)) {
                 cout << "Checker [" << countLine++ << "]: " << line << endl;
                 if (line.find("s VERIFIED") != string::npos || line.find("s TRIVIAL UNSAT") != string::npos) {
                     close(outfd[1]);

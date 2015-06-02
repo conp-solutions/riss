@@ -167,7 +167,7 @@ static int libpdex_satisfies_problem(polarity_t *model, size_t model_ctr, litera
             literal_t *clause = problem[clause_id];
             printf("unsat clause: ");
             while (*clause != 0) {
-                printf( "%d " , *clause );
+                printf("%d " , *clause);
                 clause++;
             }
             printf("\n");
@@ -275,7 +275,7 @@ literal_t** libpdex_read_problem(FILE *file, size_t *clause_ctr)
         while (!feof(file)) {
             lit = libpdex_read_literal(file);
 
-            if (    (feof(file) && (lits_count == 0))
+            if ((feof(file) && (lits_count == 0))
                     || ((lit == 0) && (lits_count == 0))
                )
             { break; }

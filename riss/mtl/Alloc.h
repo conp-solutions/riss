@@ -56,28 +56,28 @@ class RegionAllocator
     }
 
     uint32_t currentCap() const      { return cap;}
-    uint32_t size      () const      { return sz; }
-    uint32_t wasted    () const      { return wasted_; }
+    uint32_t size() const      { return sz; }
+    uint32_t wasted() const      { return wasted_; }
 
-    Ref      alloc     (int size);
-    void     free      (int size)    { wasted_ += size; }
+    Ref      alloc(int size);
+    void     free(int size)    { wasted_ += size; }
 
     // Deref, Load Effective Address (LEA), Inverse of LEA (AEL):
     T&       operator[](Ref r)         // if (r < 0 || r >= sz) std::cerr << "r " << r << " sz " << sz << std::endl;
     {
-        assert( r < sz); return memory[r];
+        assert(r < sz); return memory[r];
     }
     const T& operator[](Ref r) const   // if (r < 0 || r >= sz) std::cerr << "r " << r << " sz " << sz << std::endl;
     {
-        assert( r < sz); return memory[r];
+        assert(r < sz); return memory[r];
     }
 
-    T*       lea       (Ref r)       { assert(r < sz); return &memory[r]; }
-    const T* lea       (Ref r) const { assert(r < sz); return &memory[r]; }
-    Ref      ael       (const T* t)
+    T*       lea(Ref r)       { assert(r < sz); return &memory[r]; }
+    const T* lea(Ref r) const { assert(r < sz); return &memory[r]; }
+    Ref      ael(const T* t)
     {
         assert((void*)t >= (void*)&memory[0] && (void*)t < (void*)&memory[sz - 1]);
-        return  (Ref)(t - &memory[0]);
+        return (Ref)(t - &memory[0]);
     }
 
     /** reduce used space to exactly fit the space that is needed */
@@ -101,7 +101,7 @@ class RegionAllocator
 
     void     copyTo(RegionAllocator& to)
     {
-        to.capacity( cap );                         // ensure that there is enough space
+        to.capacity(cap);                           // ensure that there is enough space
         memcpy(to.memory, memory, sizeof(T) * cap); // copy memory content
         to.sz = sz;                                 // lazyly delete all elements that might have been there before (does not call destructor)
         to.cap = cap;
@@ -112,7 +112,7 @@ class RegionAllocator
     void clear(bool clean = false)
     {
         sz = 0; wasted_ = 0;
-        if ( clean ) { // free used resources
+        if (clean) {   // free used resources
             if (memory != NULL) { ::free(memory); memory = NULL; }
             cap = 0;
         }

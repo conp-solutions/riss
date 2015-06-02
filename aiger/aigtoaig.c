@@ -46,29 +46,29 @@ struct memory {
 };
 
 static void *
-aigtoaig_malloc (memory * m, size_t bytes)
+aigtoaig_malloc(memory * m, size_t bytes)
 {
     m->bytes += bytes;
-    assert (m->bytes);
+    assert(m->bytes);
     if (m->bytes > m->max)
     { m->max = m->bytes; }
-    return malloc (bytes);
+    return malloc(bytes);
 }
 
 static void
-aigtoaig_free (memory * m, void *ptr, size_t bytes)
+aigtoaig_free(memory * m, void *ptr, size_t bytes)
 {
-    assert (m->bytes >= bytes);
+    assert(m->bytes >= bytes);
     m->bytes -= bytes;
-    free (ptr);
+    free(ptr);
 }
 
 static int
-aigtoaig_put (char ch, stream * stream)
+aigtoaig_put(char ch, stream * stream)
 {
     int res;
 
-    res = putc ((unsigned char) ch, stream->file);
+    res = putc((unsigned char) ch, stream->file);
     if (res != EOF)
     { stream->bytes++; }
 
@@ -76,11 +76,11 @@ aigtoaig_put (char ch, stream * stream)
 }
 
 static int
-aigtoaig_get (stream * stream)
+aigtoaig_get(stream * stream)
 {
     int res;
 
-    res = getc (stream->file);
+    res = getc(stream->file);
     if (res != EOF)
     { stream->bytes++; }
 
@@ -88,24 +88,24 @@ aigtoaig_get (stream * stream)
 }
 
 static double
-size_of_file (const char *file_name)
+size_of_file(const char *file_name)
 {
     struct stat buf;
     buf.st_size = 0;
-    stat (file_name, &buf);
+    stat(file_name, &buf);
     return buf.st_size;
 }
 
 static void
-die (const char *fmt, ...)
+die(const char *fmt, ...)
 {
     va_list ap;
-    fputs ("*** [aigtoaig] ", stderr);
-    va_start (ap, fmt);
-    vfprintf (stderr, fmt, ap);
-    va_end (ap);
-    fputc ('\n', stderr);
-    exit (1);
+    fputs("*** [aigtoaig] ", stderr);
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fputc('\n', stderr);
+    exit(1);
 }
 
 #define USAGE \
@@ -129,7 +129,7 @@ die (const char *fmt, ...)
     "a compressed file needs to have a '.gz' suffix.\n"
 
 int
-main (int argc, char **argv)
+main(int argc, char **argv)
 {
     const char *src, *dst, *src_name, *dst_name, *error;
     int verbose, ascii, strip, res;
@@ -143,103 +143,103 @@ main (int argc, char **argv)
     src_name = dst_name = src = dst = 0;
 
     for (i = 1; i < argc; i++) {
-        if (!strcmp (argv[i], "-h")) {
-            fprintf (stderr, USAGE);
-            exit (0);
-        } else if (!strcmp (argv[i], "-v"))
+        if (!strcmp(argv[i], "-h")) {
+            fprintf(stderr, USAGE);
+            exit(0);
+        } else if (!strcmp(argv[i], "-v"))
         { verbose = 1; }
-        else if (!strcmp (argv[i], "-s"))
+        else if (!strcmp(argv[i], "-s"))
         { strip = 1; }
-        else if (!strcmp (argv[i], "-a"))
+        else if (!strcmp(argv[i], "-a"))
         { ascii = 1; }
         else if (argv[i][0] == '-' && argv[i][1])
-        { die ("invalid command line option '%s'", argv[i]); }
+        { die("invalid command line option '%s'", argv[i]); }
         else if (!src_name) {
-            if (!strcmp (argv[i], "-")) {
+            if (!strcmp(argv[i], "-")) {
                 src = 0;
                 src_name = "<stdin>";
             } else
             { src = src_name = argv[i]; }
         } else if (!dst_name) {
-            if (!strcmp (argv[i], "-")) {
+            if (!strcmp(argv[i], "-")) {
                 dst = 0;
                 dst_name = "<stdout>";
             } else
             { dst = dst_name = argv[i]; }
         } else
-        { die ("more than two files specified"); }
+        { die("more than two files specified"); }
     }
 
     if (dst && ascii)
-    { die ("'dst' file and '-a' specified"); }
+    { die("'dst' file and '-a' specified"); }
 
-    if (!dst && !ascii && isatty (1))
+    if (!dst && !ascii && isatty(1))
     { ascii = 1; }
 
-    if (src && dst && !strcmp (src, dst))
-    { die ("identical 'src' and 'dst' file"); }
+    if (src && dst && !strcmp(src, dst))
+    { die("identical 'src' and 'dst' file"); }
 
     memory.max = memory.bytes = 0;
-    aiger = aiger_init_mem (&memory,
-                            (aiger_malloc) aigtoaig_malloc,
-                            (aiger_free) aigtoaig_free);
+    aiger = aiger_init_mem(&memory,
+                           (aiger_malloc) aigtoaig_malloc,
+                           (aiger_free) aigtoaig_free);
     if (src) {
-        error = aiger_open_and_read_from_file (aiger, src);
+        error = aiger_open_and_read_from_file(aiger, src);
         if (error) {
         READ_ERROR:
-            fprintf (stderr, "*** [aigtoaig] %s\n", error);
+            fprintf(stderr, "*** [aigtoaig] %s\n", error);
             res = 1;
         } else {
-            reader.bytes = size_of_file (src);
+            reader.bytes = size_of_file(src);
 
             if (verbose) {
-                fprintf (stderr,
-                         "[aigtoaig] read from '%s' (%.0f bytes)\n",
-                         src, (double) reader.bytes);
-                fflush (stderr);
+                fprintf(stderr,
+                        "[aigtoaig] read from '%s' (%.0f bytes)\n",
+                        src, (double) reader.bytes);
+                fflush(stderr);
             }
         }
     } else {
         reader.file = stdin;
         reader.bytes = 0;
 
-        error = aiger_read_generic (aiger, &reader, (aiger_get) aigtoaig_get);
+        error = aiger_read_generic(aiger, &reader, (aiger_get) aigtoaig_get);
 
         if (error)
         { goto READ_ERROR; }
 
         if (verbose) {
-            fprintf (stderr,
-                     "[aigtoaig] read from '<stdin>' (%.0f bytes)\n",
-                     (double) reader.bytes);
-            fflush (stderr);
+            fprintf(stderr,
+                    "[aigtoaig] read from '<stdin>' (%.0f bytes)\n",
+                    (double) reader.bytes);
+            fflush(stderr);
         }
     }
 
     if (!res) {
         if (strip) {
-            i = aiger_strip_symbols_and_comments (aiger);
+            i = aiger_strip_symbols_and_comments(aiger);
 
             if (verbose) {
-                fprintf (stderr, "[aigtoaig] stripped %u symbols\n", i);
-                fflush (stderr);
+                fprintf(stderr, "[aigtoaig] stripped %u symbols\n", i);
+                fflush(stderr);
             }
         }
 
         if (dst) {
-            if (aiger_open_and_write_to_file (aiger, dst)) {
-                writer.bytes = size_of_file (dst);
+            if (aiger_open_and_write_to_file(aiger, dst)) {
+                writer.bytes = size_of_file(dst);
 
                 if (verbose) {
-                    fprintf (stderr,
-                             "[aigtoaig] wrote to '%s' (%.0f bytes)\n",
-                             dst, (double) writer.bytes);
-                    fflush (stderr);
+                    fprintf(stderr,
+                            "[aigtoaig] wrote to '%s' (%.0f bytes)\n",
+                            dst, (double) writer.bytes);
+                    fflush(stderr);
                 }
             } else {
-                unlink (dst);
+                unlink(dst);
             WRITE_ERROR:
-                fprintf (stderr, "*** [aigtoai]: write error\n");
+                fprintf(stderr, "*** [aigtoai]: write error\n");
                 res = 1;
             }
         } else {
@@ -251,33 +251,33 @@ main (int argc, char **argv)
             else
             { mode = aiger_binary_mode; }
 
-            if (!aiger_write_generic (aiger, mode,
-                                      &writer, (aiger_put) aigtoaig_put))
+            if (!aiger_write_generic(aiger, mode,
+                                     &writer, (aiger_put) aigtoaig_put))
             { goto WRITE_ERROR; }
 
             if (verbose) {
-                fprintf (stderr,
-                         "[aigtoaig] wrote to '<stdout>' (%.0f bytes)\n",
-                         (double) writer.bytes);
-                fflush (stderr);
+                fprintf(stderr,
+                        "[aigtoaig] wrote to '<stdout>' (%.0f bytes)\n",
+                        (double) writer.bytes);
+                fflush(stderr);
             }
         }
     }
 
-    aiger_reset (aiger);
+    aiger_reset(aiger);
 
     if (!res && verbose) {
         if (reader.bytes > writer.bytes)
-            fprintf (stderr, "[aigtoaig] deflated to %.1f%%\n",
-                     PERCENT (writer.bytes, reader.bytes));
+            fprintf(stderr, "[aigtoaig] deflated to %.1f%%\n",
+                    PERCENT(writer.bytes, reader.bytes));
         else
-            fprintf (stderr, "[aigtoaig] inflated to %.1f%%\n",
-                     PERCENT (writer.bytes, reader.bytes));
+            fprintf(stderr, "[aigtoaig] inflated to %.1f%%\n",
+                    PERCENT(writer.bytes, reader.bytes));
 
-        fprintf (stderr,
-                 "[aigtoaig] allocated %.0f bytes maximum\n", memory.max);
+        fprintf(stderr,
+                "[aigtoaig] allocated %.0f bytes maximum\n", memory.max);
 
-        fflush (stderr);
+        fflush(stderr);
     }
 
     return res;

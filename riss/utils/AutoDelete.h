@@ -19,8 +19,8 @@ class MethodFree
 {
     void*& pointer;
   public:
-    MethodFree( void*& ptr ) : pointer( ptr ) {}
-    ~MethodFree() { free( pointer ); pointer = 0; } // also set pointer to 0!
+    MethodFree(void*& ptr) : pointer(ptr) {}
+    ~MethodFree() { free(pointer); pointer = 0; }   // also set pointer to 0!
 };
 
 #endif

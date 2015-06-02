@@ -59,7 +59,7 @@ static void SIGINT_exit(int signum)
 //         printStats(*solver);
 //         printf("\n"); printf("c *** INTERRUPTED ***\n"); }
 //     solver->interrupt();
-    if ( receivedInterupt ) { _exit(1); }
+    if (receivedInterupt) { _exit(1); }
     else { receivedInterupt = true; }
 }
 
@@ -74,21 +74,21 @@ int main(int argc, char** argv)
     setUsageHelp("USAGE: %s [options] <formula-file> <proof1> [<proof2> ... <proofn>]\n\n  where format may be either in plain or gzipped DIMACS.\n\n  Returns 0, if the proof can be verified, 1 otherwise");
     // Extra options:
     //
-    IntOption    verb   ("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more, ...).", 1, IntRange(0, 5));
+    IntOption    verb("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more, ...).", 1, IntRange(0, 5));
     IntOption    cpu_lim("MAIN", "cpu-lim", "Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
     IntOption    mem_lim("MAIN", "mem-lim", "Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
-    BoolOption   opt_drat        ("PROOFCHECK", "drat",        "verify DRAT instead of DRUP", true);
-    BoolOption   opt_first       ("PROOFCHECK", "first",       "check RAT only for first literal", true);
-    BoolOption   opt_backward    ("PROOFCHECK", "backward",    "use backward checking", true);
-    BoolOption   opt_verifyUnsat ("PROOFCHECK", "verifyUnsat", "verify the empty clause (otherwise check proof only)", true);
-    IntOption    opt_threads     ("PROOFCHECK", "threads",     "number of threads that are used for verification.\n", 2, IntRange(0, INT32_MAX));
-    BoolOption   opt_stdin       ("PROOFCHECK", "useStdin",    "scan on stdin for further proof parts (files first)", false);
+    BoolOption   opt_drat("PROOFCHECK", "drat",        "verify DRAT instead of DRUP", true);
+    BoolOption   opt_first("PROOFCHECK", "first",       "check RAT only for first literal", true);
+    BoolOption   opt_backward("PROOFCHECK", "backward",    "use backward checking", true);
+    BoolOption   opt_verifyUnsat("PROOFCHECK", "verifyUnsat", "verify the empty clause (otherwise check proof only)", true);
+    IntOption    opt_threads("PROOFCHECK", "threads",     "number of threads that are used for verification.\n", 2, IntRange(0, INT32_MAX));
+    BoolOption   opt_stdin("PROOFCHECK", "useStdin",    "scan on stdin for further proof parts (files first)", false);
 
     try {
 
-        bool foundHelp = ::parseOptions (argc, argv ); // parse all global options
-        if ( foundHelp ) { exit(0); }
+        bool foundHelp = ::parseOptions(argc, argv);   // parse all global options
+        if (foundHelp) { exit(0); }
 
         signal(SIGINT, SIGINT_exit);
         signal(SIGXCPU, SIGINT_exit);
@@ -121,22 +121,22 @@ int main(int argc, char** argv)
         printf("c =========================================================================================================\n");
 
         // not enough parameters given, at least a formula and one proof
-        if ( argc < 2 ) {
+        if (argc < 2) {
             printUsageAndExit(argc, argv);
             exit(1);
         }
 
         // create checker object
 //    cerr << "c opt_drat: " << (bool)opt_drat << " backward: " << (bool)opt_backward << " first: " << (bool)opt_first  << " threads: " << (int) opt_threads << endl;
-        ProofChecker proofChecker( opt_drat, opt_backward, opt_threads, opt_first );
-        proofChecker.setVerbosity( verb ); // tell about verbosity
+        ProofChecker proofChecker(opt_drat, opt_backward, opt_threads, opt_first);
+        proofChecker.setVerbosity(verb);   // tell about verbosity
         pc = &proofChecker;
 
         // parse the formula
         printf("c parse the formula\n");
-        gzFile in = gzopen( argv[1], "rb");
-        if ( ! in ) {
-            printf("c WARNING: could not open formula file %s\n", argv[1] );
+        gzFile in = gzopen(argv[1], "rb");
+        if (! in) {
+            printf("c WARNING: could not open formula file %s\n", argv[1]);
             printf("s NOT VERIFIED\n");
             exit(1);
         } else {
@@ -145,11 +145,11 @@ int main(int argc, char** argv)
         }
 
         // tell checker that the end of the formula has been reached - from now on there are learned clauses
-        proofChecker.setReveiceFormula( false );
+        proofChecker.setReveiceFormula(false);
         vec<Lit> dummy;
 
         // the formula is unsatisfiable by unit propagation, print result and return with correct exit code
-        if ( proofChecker.checkClauseDRUP( dummy , false ) ) {
+        if (proofChecker.checkClauseDRUP(dummy , false)) {
             printf("s UNSATISFIABLE\n");
             printf("s VERIFIED\n");
             exit(0);
@@ -158,63 +158,63 @@ int main(int argc, char** argv)
         // parse proofs
         int proofParts = 0;
         bool drupProof = true;
-        for ( int i = 2; i < argc; ++ i ) {
+        for (int i = 2; i < argc; ++ i) {
             proofParts ++;
-            printf("c parse proof part [%d] from file %s\n", proofParts, argv[i] );
+            printf("c parse proof part [%d] from file %s\n", proofParts, argv[i]);
             gzFile in = gzopen(argv[i], "rb");
-            if ( ! in ) {
-                printf("c WARNING: could not open file %s\n", argv[i] );
+            if (! in) {
+                printf("c WARNING: could not open file %s\n", argv[i]);
             } else {
                 ProofStyle proofStyle = parse_proof(in, proofChecker);
-                if ( proofStyle == dratProof && !opt_drat ) {
-                    printf ("c WARNING given proof format is said to be stronger than the enabled verification\n");
+                if (proofStyle == dratProof && !opt_drat) {
+                    printf("c WARNING given proof format is said to be stronger than the enabled verification\n");
                 }
                 gzclose(in);
-                drupProof = drupProof && ( proofStyle == Riss::drupProof ); // check whether the given proof is claimed to be in the less expensive format
+                drupProof = drupProof && (proofStyle == Riss::drupProof);   // check whether the given proof is claimed to be in the less expensive format
             }
         }
 
         // scan for the final part of the proof on stdin
-        if ( opt_stdin ) {
+        if (opt_stdin) {
             proofParts ++;
-            printf("c parse proof part [%d] from stdin\n", proofParts );
+            printf("c parse proof part [%d] from stdin\n", proofParts);
             gzFile in =  gzdopen(0, "rb");
             ProofStyle proofStyle = parse_proof(in, proofChecker);
-            if ( proofStyle == dratProof && !opt_drat ) {
-                printf ("c WARNING given proof format is said to be stronger than the enabled verification\n");
+            if (proofStyle == dratProof && !opt_drat) {
+                printf("c WARNING given proof format is said to be stronger than the enabled verification\n");
             }
             gzclose(in);
-            drupProof = drupProof && ( proofStyle == Riss::drupProof ); // check whether the given proof is claimed to be in the less expensive format
+            drupProof = drupProof && (proofStyle == Riss::drupProof);   // check whether the given proof is claimed to be in the less expensive format
         }
 
         // check whether parsing worked
         bool successfulVerification = proofChecker.parsingOk();
 
-        if ( opt_verifyUnsat ) {
+        if (opt_verifyUnsat) {
             successfulVerification = successfulVerification && proofChecker.emptyPresent();
 
-            if ( !successfulVerification ) {
-                printf ("c WARNING: empty clause not present\n");
-                printf ("s NOT VERIFIED\n");
+            if (!successfulVerification) {
+                printf("c WARNING: empty clause not present\n");
+                printf("s NOT VERIFIED\n");
                 return 1;
             }
 
             // all proof files claimed to be DRUP, so disable expensive DRAT data structures
-            if ( drupProof ) { proofChecker.setDRUPproof(); }
+            if (drupProof) { proofChecker.setDRUPproof(); }
             successfulVerification = proofChecker.verifyProof();
         }
 
-        if ( successfulVerification ) {
-            printf ("s VERIFIED\n");
+        if (successfulVerification) {
+            printf("s VERIFIED\n");
             return 0;
         } else {
-            printf ("s NOT VERIFIED\n");
+            printf("s NOT VERIFIED\n");
             return 1;
         }
 
     } catch (OutOfMemoryException&) { // something went wrong
         printf("c Warning: caught an exception\n");
-        printf ("s NOT VERIFIED\n");
+        printf("s NOT VERIFIED\n");
         exit(1);
     }
 }

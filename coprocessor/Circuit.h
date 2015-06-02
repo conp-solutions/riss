@@ -29,18 +29,18 @@ class Circuit
 
     struct ternary {
         Riss::Lit l1, l2;
-        ternary(Riss::Lit _l1, Riss::Lit _l2 ) : l1(_l1), l2(_l2) {}
+        ternary(Riss::Lit _l1, Riss::Lit _l2) : l1(_l1), l2(_l2) {}
     };
     struct quad {
         Riss::Lit l1, l2, l3;
-        quad(Riss::Lit _l1, Riss::Lit _l2, Riss::Lit _l3 ) :
+        quad(Riss::Lit _l1, Riss::Lit _l2, Riss::Lit _l3) :
             l1(_l1)
             , l2(_l2)
             , l3(_l3)
         {
-            if ( l1.x > l2.x ) { const Riss::Lit tmp = l1; l1 = l2; l2 = tmp; } // first two are okay!
-            if ( l2.x > l3.x ) { const Riss::Lit tmp = l2; l2 = l3; l3 = tmp; } // also check last candidate!
-            if ( l1.x > l2.x ) { const Riss::Lit tmp = l1; l1 = l2; l2 = tmp; } // now, first two have to be compared again!
+            if (l1.x > l2.x) { const Riss::Lit tmp = l1; l1 = l2; l2 = tmp; }   // first two are okay!
+            if (l2.x > l3.x) { const Riss::Lit tmp = l2; l2 = l3; l3 = tmp; }   // also check last candidate!
+            if (l1.x > l2.x) { const Riss::Lit tmp = l1; l1 = l2; l2 = tmp; }   // now, first two have to be compared again!
         }
     };
 
@@ -50,7 +50,7 @@ class Circuit
 
   public:
 
-    Circuit (CP3Config& _config, Riss::ClauseAllocator& _ca );
+    Circuit(CP3Config& _config, Riss::ClauseAllocator& _ca);
 
     class Gate
     {
@@ -88,7 +88,7 @@ class Circuit
         Gate(Riss::Lit x, Riss::Lit s, Riss::Lit t, Riss::Lit f, const Coprocessor::Circuit::Gate::Type _type, const Coprocessor::Circuit::Gate::Encoded e); // ITE, FA_SUM
         Gate(Riss::Lit x, Riss::Lit a, Riss::Lit b, const Coprocessor::Circuit::Gate::Type _type, const Coprocessor::Circuit::Gate::Encoded e); // AND, XOR
         ~Gate();
-        Gate( const Gate& other );
+        Gate(const Gate& other);
         /** Note: this operator does not copy the memory for the external literals, but simply copies the pointer! */
         Gate& operator=(const Gate& other);
 
@@ -98,9 +98,9 @@ class Circuit
 
         bool isFull() const { return encoded == FULL; }
 
-        Riss::Lit getOutput() const { return (type != GenAND && type != ExO ) ? (const Riss::Lit) x() : data.e.x; }
+        Riss::Lit getOutput() const { return (type != GenAND && type != ExO) ? (const Riss::Lit) x() : data.e.x; }
 
-        void print( std::ostream& stream ) const ; // write gate to a stream
+        void print(std::ostream& stream) const ;   // write gate to a stream
 
         /** free resources, if necessary */
         void destroy();
@@ -111,33 +111,33 @@ class Circuit
         Encoded encoded;
 
       public:
-        Riss::Lit& x () {assert (type != XOR && type != GenAND && type != ExO && "gate cannot be XOR"); return data.lits[0]; } // output
-        Riss::Lit& a () {assert (type != ITE && "gate cannot be ITE"); return data.lits[1]; } // AND, FA_SUM
-        Riss::Lit& b () {assert (type != ITE && "gate cannot be ITE"); return data.lits[2]; } // AND, FA_SUM
-        Riss::Lit& c () {assert ((type == FA_SUM || type == XOR) && "gate has to be FA_SUM"); return data.lits[3]; } // FA_SUM
-        Riss::Lit& s () {assert (type == ITE && "gate has to be ITE"); return data.lits[1]; } // ITE selector
-        Riss::Lit& t () {assert (type == ITE && "gate has to be ITE"); return data.lits[2]; } // ITE true branch
-        Riss::Lit& f () {assert (type == ITE && "gate has to be ITE"); return data.lits[3]; } // ITE false branch
-        Riss::Lit& get( const int index) { assert( type == ExO || type == GenAND ); return data.e.externLits[index]; }
+        Riss::Lit& x() {assert(type != XOR && type != GenAND && type != ExO && "gate cannot be XOR"); return data.lits[0]; }   // output
+        Riss::Lit& a() {assert(type != ITE && "gate cannot be ITE"); return data.lits[1]; }   // AND, FA_SUM
+        Riss::Lit& b() {assert(type != ITE && "gate cannot be ITE"); return data.lits[2]; }   // AND, FA_SUM
+        Riss::Lit& c() {assert((type == FA_SUM || type == XOR) && "gate has to be FA_SUM"); return data.lits[3]; }   // FA_SUM
+        Riss::Lit& s() {assert(type == ITE && "gate has to be ITE"); return data.lits[1]; }   // ITE selector
+        Riss::Lit& t() {assert(type == ITE && "gate has to be ITE"); return data.lits[2]; }   // ITE true branch
+        Riss::Lit& f() {assert(type == ITE && "gate has to be ITE"); return data.lits[3]; }   // ITE false branch
+        Riss::Lit& get(const int index) { assert(type == ExO || type == GenAND); return data.e.externLits[index]; }
 
-        const Riss::Lit& x () const {return data.lits[0]; } // output
-        const Riss::Lit& a () const {return data.lits[1]; } // AND, FA_SUM
-        const Riss::Lit& b () const {return data.lits[2]; } // AND, FA_SUM
-        const Riss::Lit& c () const {return data.lits[3]; } // FA_SUM
-        const Riss::Lit& s () const {return data.lits[1]; } // ITE selector
-        const Riss::Lit& t () const {return data.lits[2]; } // ITE true branch
-        const Riss::Lit& f () const {return data.lits[3]; } // ITE false branch
-        const Riss::Lit& get( const int index) const { return data.e.externLits[index]; }
-        int size() const { assert( type == ExO || type == GenAND ); return data.e.size; }
+        const Riss::Lit& x() const {return data.lits[0]; }  // output
+        const Riss::Lit& a() const {return data.lits[1]; }  // AND, FA_SUM
+        const Riss::Lit& b() const {return data.lits[2]; }  // AND, FA_SUM
+        const Riss::Lit& c() const {return data.lits[3]; }  // FA_SUM
+        const Riss::Lit& s() const {return data.lits[1]; }  // ITE selector
+        const Riss::Lit& t() const {return data.lits[2]; }  // ITE true branch
+        const Riss::Lit& f() const {return data.lits[3]; }  // ITE false branch
+        const Riss::Lit& get(const int index) const { return data.e.externLits[index]; }
+        int size() const { assert(type == ExO || type == GenAND); return data.e.size; }
 
         bool isInQueue() const { return inQueue; }
-        void putInQueue() { assert( inQueue == false && "cannot put twice in a queue" ); inQueue = true; }
+        void putInQueue() { assert(inQueue == false && "cannot put twice in a queue"); inQueue = true; }
         void takeFromQueue() { inQueue = false; }
         int touch() { return ++touched; }
     };
 
 
-    void extractGates( Coprocessor::CoprocessorData& data, std::vector< Coprocessor::Circuit::Gate >& gates );
+    void extractGates(Coprocessor::CoprocessorData& data, std::vector< Coprocessor::Circuit::Gate >& gates);
 
   private:
 

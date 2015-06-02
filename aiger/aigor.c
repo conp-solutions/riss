@@ -37,34 +37,34 @@ static aiger * src, * dst;
 static int verbose = 0;
 
 static void
-die (const char *fmt, ...)
+die(const char *fmt, ...)
 {
     va_list ap;
-    fputs ("*** [aigor] ", stderr);
-    va_start (ap, fmt);
-    vfprintf (stderr, fmt, ap);
-    va_end (ap);
-    fputc ('\n', stderr);
-    fflush (stderr);
-    exit (1);
+    fputs("*** [aigor] ", stderr);
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fputc('\n', stderr);
+    fflush(stderr);
+    exit(1);
 }
 
 static void
-msg (const char *fmt, ...)
+msg(const char *fmt, ...)
 {
     va_list ap;
     if (!verbose)
     { return; }
-    fputs ("[aigor] ", stderr);
-    va_start (ap, fmt);
-    vfprintf (stderr, fmt, ap);
-    va_end (ap);
-    fputc ('\n', stderr);
-    fflush (stderr);
+    fputs("[aigor] ", stderr);
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fputc('\n', stderr);
+    fflush(stderr);
 }
 
 int
-main (int argc, char ** argv)
+main(int argc, char ** argv)
 {
     const char * input, * output, * err;
     unsigned j, out, tmp;
@@ -76,94 +76,94 @@ main (int argc, char ** argv)
     input = output = 0;
 
     for (i = 1; i < argc; i++) {
-        if (!strcmp (argv[i], "-h")) {
-            printf ("%s", USAGE);
-            exit (0);
+        if (!strcmp(argv[i], "-h")) {
+            printf("%s", USAGE);
+            exit(0);
         }
 
-        if (!strcmp (argv[i], "-v"))
+        if (!strcmp(argv[i], "-v"))
         { verbose = 1; }
         else if (argv[i][0] == '-')
-        { die ("invalid command line option '%s'", argv[i]); }
+        { die("invalid command line option '%s'", argv[i]); }
         else if (output)
-        { die ("too many arguments"); }
+        { die("too many arguments"); }
         else if (input)
         { output = argv[i]; }
         else
         { input = argv[i]; }
     }
 
-    msg ("reading %s", input ? input : "<stdin>");
-    src = aiger_init ();
+    msg("reading %s", input ? input : "<stdin>");
+    src = aiger_init();
     if (input)
-    { err = aiger_open_and_read_from_file (src, input); }
+    { err = aiger_open_and_read_from_file(src, input); }
     else
-    { err = aiger_read_from_file (src, stdin); }
+    { err = aiger_read_from_file(src, stdin); }
 
     if (err)
-    { die ("read error: %s", err); }
+    { die("read error: %s", err); }
 
-    msg ("read MILOA %u %u %u %u %u",
-         src->maxvar,
-         src->num_inputs,
-         src->num_latches,
-         src->num_outputs,
-         src->num_ands);
+    msg("read MILOA %u %u %u %u %u",
+        src->maxvar,
+        src->num_inputs,
+        src->num_latches,
+        src->num_outputs,
+        src->num_ands);
 
-    dst = aiger_init ();
+    dst = aiger_init();
     for (j = 0; j < src->num_inputs; j++)
-    { aiger_add_input (dst, src->inputs[j].lit, src->inputs[j].name); }
+    { aiger_add_input(dst, src->inputs[j].lit, src->inputs[j].name); }
 
     for (j = 0; j < src->num_latches; j++) {
-        aiger_add_latch (dst, src->latches[j].lit,
-                         src->latches[j].next,
-                         src->latches[j].name);
-        aiger_add_reset (dst, src->latches[j].lit,
-                         src->latches[j].reset);
+        aiger_add_latch(dst, src->latches[j].lit,
+                        src->latches[j].next,
+                        src->latches[j].name);
+        aiger_add_reset(dst, src->latches[j].lit,
+                        src->latches[j].reset);
     }
 
     for (j = 0; j < src->num_ands; j++) {
         a = src->ands + j;
-        aiger_add_and (dst, a->lhs, a->rhs0, a->rhs1);
+        aiger_add_and(dst, a->lhs, a->rhs0, a->rhs1);
     }
 
     if (src->num_outputs) {
         out = src->outputs[0].lit;
         for (j = 1; j < src->num_outputs; j++) {
             tmp = 2 * (dst->maxvar + 1);
-            aiger_add_and (dst, tmp, out, aiger_not (src->outputs[j].lit));
+            aiger_add_and(dst, tmp, out, aiger_not(src->outputs[j].lit));
             out = tmp;
         }
-        aiger_add_output (dst, aiger_not (out), "AIGER_OR");
+        aiger_add_output(dst, aiger_not(out), "AIGER_OR");
     }
 
-    sprintf (comment, "aigor");
-    aiger_add_comment (dst, comment);
-    sprintf (comment, "disjunction of %u original outputs", src->num_outputs);
-    aiger_add_comment (dst, comment);
+    sprintf(comment, "aigor");
+    aiger_add_comment(dst, comment);
+    sprintf(comment, "disjunction of %u original outputs", src->num_outputs);
+    aiger_add_comment(dst, comment);
 
-    aiger_reset (src);
+    aiger_reset(src);
 
-    msg ("writing %s", output ? output : "<stdout>");
+    msg("writing %s", output ? output : "<stdout>");
 
     if (output)
-    { ok = aiger_open_and_write_to_file (dst, output); }
+    { ok = aiger_open_and_write_to_file(dst, output); }
     else {
-        mode = isatty (1) ? aiger_ascii_mode : aiger_binary_mode;
-        ok = aiger_write_to_file (dst, mode, stdout);
+        mode = isatty(1) ? aiger_ascii_mode : aiger_binary_mode;
+        ok = aiger_write_to_file(dst, mode, stdout);
     }
 
     if (!ok)
-    { die ("writing failed"); }
+    { die("writing failed"); }
 
-    msg ("wrote MILOA %u %u %u %u %u",
-         dst->maxvar,
-         dst->num_inputs,
-         dst->num_latches,
-         dst->num_outputs,
-         dst->num_ands);
+    msg("wrote MILOA %u %u %u %u %u",
+        dst->maxvar,
+        dst->num_inputs,
+        dst->num_latches,
+        dst->num_outputs,
+        dst->num_ands);
 
-    aiger_reset (dst);
+    aiger_reset(dst);
 
     return 0;
 }

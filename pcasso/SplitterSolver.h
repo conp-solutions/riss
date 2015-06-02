@@ -19,7 +19,7 @@ class SplitterSolver : public Riss::Solver
     Riss::CoreConfig& coreConfig;
 
   public:
-    SplitterSolver (Riss::CoreConfig& config) : Riss::Solver(config), coreConfig( config ) {}
+    SplitterSolver(Riss::CoreConfig& config) : Riss::Solver(config), coreConfig(config) {}
 
     virtual ~SplitterSolver() {}
     virtual void dummy() = 0;

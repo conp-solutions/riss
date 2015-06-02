@@ -85,34 +85,34 @@ IN THE SOFTWARE.
     static int runs;
 
     static void
-    msg (int level, const char *fmt, ...)
+    msg(int level, const char *fmt, ...)
     {
         va_list ap;
         if (verbose < level)
         { return; }
-        fputs ("[aigdd] ", stderr);
-        va_start (ap, fmt);
-        vfprintf (stderr, fmt, ap);
-        va_end (ap);
-        fputc ('\n', stderr);
-        fflush (stderr);
+        fputs("[aigdd] ", stderr);
+        va_start(ap, fmt);
+        vfprintf(stderr, fmt, ap);
+        va_end(ap);
+        fputc('\n', stderr);
+        fflush(stderr);
     }
 
     static void
-    die (const char *fmt, ...)
+    die(const char *fmt, ...)
     {
         va_list ap;
-        fputs ("*** [aigdd] ", stderr);
-        va_start (ap, fmt);
-        vfprintf (stderr, fmt, ap);
-        va_end (ap);
-        fputc ('\n', stderr);
-        fflush (stderr);
-        exit (1);
+        fputs("*** [aigdd] ", stderr);
+        va_start(ap, fmt);
+        vfprintf(stderr, fmt, ap);
+        va_end(ap);
+        fputc('\n', stderr);
+        fflush(stderr);
+        exit(1);
     }
 
     static unsigned
-    deref (unsigned lit)
+    deref(unsigned lit)
     {
         unsigned idx = lit / 2, sign = lit & 1, tmp, res, tmp0, tmp1;
         aiger_and * and;
@@ -121,11 +121,11 @@ IN THE SOFTWARE.
 
         if (tmp == 2 * idx) {
             if (!fixed [idx]) {
-                and = aiger_is_and (src, 2 * idx);
+                and = aiger_is_and(src, 2 * idx);
 
-                if ( and ) {
-                    tmp0 = deref ( and ->rhs0);
-                    tmp1 = deref ( and ->rhs1);
+                if ( and) {
+                    tmp0 = deref( and ->rhs0);
+                    tmp1 = deref( and ->rhs1);
 
                     if (!tmp0 || !tmp1)
                     { tmp = 0; }
@@ -136,7 +136,7 @@ IN THE SOFTWARE.
                 }
             }
         } else
-        { tmp = deref (tmp); }
+        { tmp = deref(tmp); }
 
         unstable[idx] = tmp;
         fixed[idx] = 1;
@@ -146,7 +146,7 @@ IN THE SOFTWARE.
     }
 
     static void
-    write_unstable (const char * name)
+    write_unstable(const char * name)
     {
         int print_progress = (name == dst_name);
         aiger_symbol *symbol;
@@ -154,151 +154,151 @@ IN THE SOFTWARE.
         aiger_and * and;
         aiger *dst;
 
-        memset (fixed, 0, src->maxvar + 1);
+        memset(fixed, 0, src->maxvar + 1);
 
-        dst = aiger_init ();
+        dst = aiger_init();
 
         for (i = 0; i < src->num_inputs; i++) {
             symbol = src->inputs + i;
             lit = symbol->lit;
-            if (deref (lit) != lit) { continue; }
-            aiger_add_input (dst, lit, symbol->name);
+            if (deref(lit) != lit) { continue; }
+            aiger_add_input(dst, lit, symbol->name);
             if (symbol->reset)                // TODO delta debug
-            { aiger_add_reset (dst, lit, symbol->reset); }
+            { aiger_add_reset(dst, lit, symbol->reset); }
         }
 
         for (i = 0; i < src->num_latches; i++) {
             symbol = src->latches + i;
             lit = symbol->lit;
-            if (deref (lit) != lit) { continue; }
-            aiger_add_latch (dst, lit, deref (symbol->next), symbol->name);
+            if (deref(lit) != lit) { continue; }
+            aiger_add_latch(dst, lit, deref(symbol->next), symbol->name);
             if (symbol->reset <= 1)
-            { aiger_add_reset (dst, lit, symbol->reset); }
+            { aiger_add_reset(dst, lit, symbol->reset); }
             else {
-                assert (symbol->reset == lit);
-                aiger_add_reset (dst, lit, lit);
+                assert(symbol->reset == lit);
+                aiger_add_reset(dst, lit, lit);
             }
         }
 
         for (i = 0; i < src->num_ands; i++) {
             and = src->ands + i;
-            if (deref ( and ->lhs) == and ->lhs)
-            { aiger_add_and (dst, and ->lhs, deref ( and ->rhs0), deref ( and ->rhs1)); }
+            if (deref( and ->lhs) == and ->lhs)
+            { aiger_add_and(dst, and ->lhs, deref( and ->rhs0), deref( and ->rhs1)); }
         }
 
         for (i = 0; i < src->num_outputs; i++) {
             if (!outputs[i]) { continue; }
             symbol = src->outputs + i;
-            aiger_add_output (dst, deref (symbol->lit), symbol->name);
+            aiger_add_output(dst, deref(symbol->lit), symbol->name);
         }
 
         for (i = 0; i < src->num_bad; i++) {
             if (!bad[i]) { continue; }
             symbol = src->bad + i;
-            aiger_add_bad (dst, deref (symbol->lit), symbol->name);
+            aiger_add_bad(dst, deref(symbol->lit), symbol->name);
         }
 
         for (i = 0; i < src->num_constraints; i++) {
             if (!constraints[i]) { continue; }
             symbol = src->constraints + i;
-            aiger_add_constraint (dst, deref (symbol->lit), symbol->name);
+            aiger_add_constraint(dst, deref(symbol->lit), symbol->name);
         }
 
         for (i = 0; i < src->num_justice; i++) {
             unsigned * lits;
             if (!justice[i]) { continue; }
             symbol = src->justice + i;
-            lits = malloc (symbol->size * sizeof * lits);
+            lits = malloc(symbol->size * sizeof * lits);
             for (j = 0; j < symbol->size; j++)
-            { lits[j] = deref (symbol->lit); }
-            aiger_add_justice (dst, symbol->size, lits, symbol->name);
-            free (lits);
+            { lits[j] = deref(symbol->lit); }
+            aiger_add_justice(dst, symbol->size, lits, symbol->name);
+            free(lits);
         }
 
         for (i = 0; i < src->num_fairness; i++) {
             if (!fairness[i]) { continue; }
             symbol = src->fairness + i;
-            aiger_add_fairness (dst, deref (symbol->lit), symbol->name);
+            aiger_add_fairness(dst, deref(symbol->lit), symbol->name);
         }
 
 
-        assert (!aiger_check (dst));
+        assert(!aiger_check(dst));
 
         if (reencode)
-        { aiger_reencode (dst); }
+        { aiger_reencode(dst); }
 
-        unlink (name);
-        if (!aiger_open_and_write_to_file (dst, name))
-        { die ("failed to write '%s'", name); }
+        unlink(name);
+        if (!aiger_open_and_write_to_file(dst, name))
+        { die("failed to write '%s'", name); }
 
         if (print_progress) {
-            assert (name == dst_name);
-            msg (2, "wrote '%s' MILOABCJF %u %u %u %u %u %u %u %u %u",
-                 name,
-                 dst->maxvar,
-                 dst->num_inputs,
-                 dst->num_latches,
-                 dst->num_outputs,
-                 dst->num_ands,
-                 dst->num_bad,
-                 dst->num_constraints,
-                 dst->num_justice,
-                 dst->num_fairness);
+            assert(name == dst_name);
+            msg(2, "wrote '%s' MILOABCJF %u %u %u %u %u %u %u %u %u",
+                name,
+                dst->maxvar,
+                dst->num_inputs,
+                dst->num_latches,
+                dst->num_outputs,
+                dst->num_ands,
+                dst->num_bad,
+                dst->num_constraints,
+                dst->num_justice,
+                dst->num_fairness);
         } else
-        { assert (name == tmp_name); }
+        { assert(name == tmp_name); }
 
-        aiger_reset (dst);
+        aiger_reset(dst);
     }
 
     static void
-    copy_stable_to_unstable_and_write_dst_name (void)
+    copy_stable_to_unstable_and_write_dst_name(void)
     {
         unsigned i;
 
         for (i = 0; i <= src->maxvar; i++)
         { unstable[i] = stable[i]; }
-        msg (2, "writing '%s'", dst_name);
-        write_unstable (dst_name);
+        msg(2, "writing '%s'", dst_name);
+        write_unstable(dst_name);
     }
 
 #define CMDSUFFIX " 1>/dev/null 2>/dev/null"
 
     static char *
-    strapp (char * str, const char * suffix)
+    strapp(char * str, const char * suffix)
     {
-        return strcat (realloc (str, strlen (str) + strlen (suffix) + 1), suffix);
+        return strcat(realloc(str, strlen(str) + strlen(suffix) + 1), suffix);
     }
 
     static int
-    run (const char * cmd, const char * name)
+    run(const char * cmd, const char * name)
     {
         int res;
-        char * fullcmd = strdup (cmd);
-        fullcmd = strapp (fullcmd, " ");
-        fullcmd = strapp (fullcmd, name);
-        fullcmd = strapp (fullcmd, CMDSUFFIX);
+        char * fullcmd = strdup(cmd);
+        fullcmd = strapp(fullcmd, " ");
+        fullcmd = strapp(fullcmd, name);
+        fullcmd = strapp(fullcmd, CMDSUFFIX);
         runs++;
-        msg (3, "full command '%s'", fullcmd);
-        res = system (fullcmd);
-        free (fullcmd);
-        return WEXITSTATUS (res);
+        msg(3, "full command '%s'", fullcmd);
+        res = system(fullcmd);
+        free(fullcmd);
+        return WEXITSTATUS(res);
     }
 
     static int
-    write_and_run_unstable (const char * cmd)
+    write_and_run_unstable(const char * cmd)
     {
-        write_unstable (tmp_name);
-        return run (cmd, tmp_name);
+        write_unstable(tmp_name);
+        return run(cmd, tmp_name);
     }
 
     static int
-    min (int a, int b)
+    min(int a, int b)
     {
         return a < b ? a : b;
     }
 
     int
-    main (int argc, char **argv)
+    main(int argc, char **argv)
     {
         int i, changed, delta, j, expected, res, last, outof;
         const char *src_name, *err;
@@ -307,17 +307,17 @@ IN THE SOFTWARE.
         src_name = dst_name = cmd = 0;
 
         for (i = 1; i < argc; i++) {
-            if (!src_name && !strcmp (argv[i], "-h")) {
-                fprintf (stderr, USAGE);
-                exit (0);
-            } else if (!src_name && !strcmp (argv[i], "-v"))
+            if (!src_name && !strcmp(argv[i], "-h")) {
+                fprintf(stderr, USAGE);
+                exit(0);
+            } else if (!src_name && !strcmp(argv[i], "-v"))
             { verbose++; }
-            else if (!src_name && !strcmp (argv[i], "-r"))
+            else if (!src_name && !strcmp(argv[i], "-r"))
             { reencode = 1; }
             else if (src_name && dst_name && cmd)
-            { cmd = strapp (strapp (cmd, " "), argv[i]); }
+            { cmd = strapp(strapp(cmd, " "), argv[i]); }
             else if (dst_name)
-            { cmd = strdup (argv[i]); }
+            { cmd = strdup(argv[i]); }
             else if (src_name)
             { dst_name = argv[i]; }
             else
@@ -325,27 +325,27 @@ IN THE SOFTWARE.
         }
 
         if (!src_name || !dst_name)
-        { die ("expected exactly two files"); }
+        { die("expected exactly two files"); }
 
         if (!cmd)
-        { die ("name of executable missing"); }
+        { die("name of executable missing"); }
 
-        expected = run (cmd, src_name);
-        msg (1, "'%s %s' returns %d", cmd, src_name, expected);
+        expected = run(cmd, src_name);
+        msg(1, "'%s %s' returns %d", cmd, src_name, expected);
 
-        src = aiger_init ();
-        if ((err = aiger_open_and_read_from_file (src, src_name)))
-        { die ("%s: %s", src_name, err); }
+        src = aiger_init();
+        if ((err = aiger_open_and_read_from_file(src, src_name)))
+        { die("%s: %s", src_name, err); }
 
-        stable = malloc (sizeof (stable[0]) * (src->maxvar + 1));
-        unstable = malloc (sizeof (unstable[0]) * (src->maxvar + 1));
-        fixed = malloc (src->maxvar + 1);
+        stable = malloc(sizeof(stable[0]) * (src->maxvar + 1));
+        unstable = malloc(sizeof(unstable[0]) * (src->maxvar + 1));
+        fixed = malloc(src->maxvar + 1);
 
-        outputs = malloc (src->num_outputs + sizeof * outputs);
-        bad = malloc (src->num_bad + sizeof * bad);
-        constraints = malloc (src->num_constraints + sizeof * constraints);
-        justice = malloc (src->num_justice + sizeof * justice);
-        fairness = malloc (src->num_fairness + sizeof * fairness);
+        outputs = malloc(src->num_outputs + sizeof * outputs);
+        bad = malloc(src->num_bad + sizeof * bad);
+        constraints = malloc(src->num_constraints + sizeof * constraints);
+        justice = malloc(src->num_justice + sizeof * justice);
+        fairness = malloc(src->num_fairness + sizeof * fairness);
 
         for (i = 0; i <= src->maxvar; i++)
         { stable[i] = 2 * i; }
@@ -360,18 +360,18 @@ IN THE SOFTWARE.
         for (i = 0; i < src->num_fairness; i++)
         { fairness[i] = 1; }
 
-        copy_stable_to_unstable_and_write_dst_name ();
+        copy_stable_to_unstable_and_write_dst_name();
 
-        res = run (cmd, dst_name);
-        msg (1, "'%s %s' returns %d", cmd, dst_name, expected);
+        res = run(cmd, dst_name);
+        msg(1, "'%s %s' returns %d", cmd, dst_name, expected);
 
         if (res != expected)
-            die ("exec code on copy '%s' of '%s' differs (%d instead of %d)",
-                 dst_name, src_name, res, expected);
+            die("exec code on copy '%s' of '%s' differs (%d instead of %d)",
+                dst_name, src_name, res, expected);
 
-        sprintf (tmp_name, "/tmp/aigdd%d.aig", getpid ());
+        sprintf(tmp_name, "/tmp/aigdd%d.aig", getpid());
 
-        msg (1, "using temporary file '%s'", tmp_name);
+        msg(1, "using temporary file '%s'", tmp_name);
 
         for (delta = src->maxvar; delta; delta = (delta == 1) ? 0 : (delta + 1) / 2) {
             i = 1;
@@ -381,7 +381,7 @@ IN THE SOFTWARE.
                 { unstable[j] = stable[j]; }
 
                 changed = 0;
-                last = min (i + delta - 1, src->maxvar);
+                last = min(i + delta - 1, src->maxvar);
                 outof = last - i + 1;
                 for (j = i; j <= last; j++) {
                     if (stable[j]) {  /* replace '1' by '0' as well */
@@ -395,18 +395,18 @@ IN THE SOFTWARE.
                     for (j = i + delta; j <= src->maxvar; j++)
                     { unstable[j] = stable[j]; }
 
-                    res = write_and_run_unstable (cmd);
+                    res = write_and_run_unstable(cmd);
                     if (res == expected) {
-                        msg (1, "[%d,%d] set to 0 (%d out of %d)",
-                             i, last, changed, outof);
+                        msg(1, "[%d,%d] set to 0 (%d out of %d)",
+                            i, last, changed, outof);
 
                         for (j = i; j <= last; j++)
                         { stable[j] = unstable[j]; }
 
-                        copy_stable_to_unstable_and_write_dst_name ();
+                        copy_stable_to_unstable_and_write_dst_name();
                     } else {  /* try setting to 'one' */
-                        msg (3, "[%d,%d] can not be set to 0 (%d out of %d)",
-                             i, last, changed, outof);
+                        msg(3, "[%d,%d] can not be set to 0 (%d out of %d)",
+                            i, last, changed, outof);
 
                         for (j = 1; j < i; j++)
                         { unstable[j] = stable[j]; }
@@ -427,128 +427,128 @@ IN THE SOFTWARE.
                             for (j = i + delta; j <= src->maxvar; j++)
                             { unstable[j] = stable[j]; }
 
-                            res = write_and_run_unstable (cmd);
+                            res = write_and_run_unstable(cmd);
                             if (res == expected) {
-                                msg (1, "[%d,%d] set to 1 (%d out of %d)",
-                                     i, last, changed, outof);
+                                msg(1, "[%d,%d] set to 1 (%d out of %d)",
+                                    i, last, changed, outof);
 
                                 for (j = i; j < i + delta && j <= src->maxvar; j++)
                                 { stable[j] = unstable[j]; }
 
-                                copy_stable_to_unstable_and_write_dst_name ();
+                                copy_stable_to_unstable_and_write_dst_name();
                             } else
-                                msg (3,
-                                     "[%d,%d] can neither be set to 1 (%d out of %d)",
-                                     i, last, changed, outof);
+                                msg(3,
+                                    "[%d,%d] can neither be set to 1 (%d out of %d)",
+                                    i, last, changed, outof);
                         }
                     }
                 } else
-                { msg (3, "[%d,%d] stabilized to 0", i, last); }
+                { msg(3, "[%d,%d] stabilized to 0", i, last); }
 
                 i += delta;
             } while (i <= src->maxvar);
         }
 
-        copy_stable_to_unstable_and_write_dst_name ();
+        copy_stable_to_unstable_and_write_dst_name();
 
         if (src->num_outputs) {
             changed = 0;
             for (i = 0; i < src->num_outputs; i++) {
-                assert (outputs[i]);
+                assert(outputs[i]);
                 outputs[i] = 0;
-                res = write_and_run_unstable (cmd);
+                res = write_and_run_unstable(cmd);
                 if (res == expected) {
-                    msg (2, "removed output %d", i);
+                    msg(2, "removed output %d", i);
                     changed++;
                 } else {
-                    msg (3, "can not remove output %d", i);
+                    msg(3, "can not remove output %d", i);
                     outputs[i] = 1;
                 }
             }
             if (changed)
-            { msg (1, "removed %d outputs", changed); }
+            { msg(1, "removed %d outputs", changed); }
 
-            copy_stable_to_unstable_and_write_dst_name ();
+            copy_stable_to_unstable_and_write_dst_name();
         }
 
         if (src->num_bad) {
             changed = 0;
             for (i = 0; i < src->num_bad; i++) {
-                assert (bad[i]);
+                assert(bad[i]);
                 bad[i] = 0;
-                res = write_and_run_unstable (cmd);
+                res = write_and_run_unstable(cmd);
                 if (res == expected) {
-                    msg (2, "removed bad state property %d", i);
+                    msg(2, "removed bad state property %d", i);
                     changed++;
                 } else {
-                    msg (3, "can not remove bad state property %d", i);
+                    msg(3, "can not remove bad state property %d", i);
                     bad[i] = 1;
                 }
             }
             if (changed)
-            { msg (1, "removed %d bad state properties", changed); }
+            { msg(1, "removed %d bad state properties", changed); }
 
-            copy_stable_to_unstable_and_write_dst_name ();
+            copy_stable_to_unstable_and_write_dst_name();
         }
 
         if (src->num_constraints) {
             changed = 0;
             for (i = 0; i < src->num_constraints; i++) {
-                assert (constraints[i]);
+                assert(constraints[i]);
                 constraints[i] = 0;
-                res = write_and_run_unstable (cmd);
+                res = write_and_run_unstable(cmd);
                 if (res == expected) {
-                    msg (2, "removed environment constraint %d", i);
+                    msg(2, "removed environment constraint %d", i);
                     changed++;
                 } else {
-                    msg (3, "can not remove environment constraint %d", i);
+                    msg(3, "can not remove environment constraint %d", i);
                     constraints[i] = 1;
                 }
             }
             if (changed)
-            { msg (1, "removed %d environment constraints", changed); }
+            { msg(1, "removed %d environment constraints", changed); }
 
-            copy_stable_to_unstable_and_write_dst_name ();
+            copy_stable_to_unstable_and_write_dst_name();
         }
 
         if (src->num_justice) {
             changed = 0;
             for (i = 0; i < src->num_justice; i++) {
-                assert (justice[i]);
+                assert(justice[i]);
                 justice[i] = 0;
-                res = write_and_run_unstable (cmd);
+                res = write_and_run_unstable(cmd);
                 if (res == expected) {
-                    msg (2, "removed justice property %d", i);
+                    msg(2, "removed justice property %d", i);
                     changed++;
                 } else {
-                    msg (3, "can not remove justice property %d", i);
+                    msg(3, "can not remove justice property %d", i);
                     justice[i] = 1;
                 }
             }
             if (changed)
-            { msg (1, "removed %d justice property", changed); }
+            { msg(1, "removed %d justice property", changed); }
 
-            copy_stable_to_unstable_and_write_dst_name ();
+            copy_stable_to_unstable_and_write_dst_name();
         }
 
         if (src->num_fairness) {
             changed = 0;
             for (i = 0; i < src->num_fairness; i++) {
-                assert (fairness[i]);
+                assert(fairness[i]);
                 fairness[i] = 0;
-                res = write_and_run_unstable (cmd);
+                res = write_and_run_unstable(cmd);
                 if (res == expected) {
-                    msg (2, "removed fairness constraint %d", i);
+                    msg(2, "removed fairness constraint %d", i);
                     changed++;
                 } else {
-                    msg (3, "can not remove fairness constraint %d", i);
+                    msg(3, "can not remove fairness constraint %d", i);
                     fairness[i] = 1;
                 }
             }
             if (changed)
-            { msg (1, "removed %d fairness constraint", changed); }
+            { msg(1, "removed %d fairness constraint", changed); }
 
-            copy_stable_to_unstable_and_write_dst_name ();
+            copy_stable_to_unstable_and_write_dst_name();
         }
 
         changed = 0;
@@ -556,19 +556,19 @@ IN THE SOFTWARE.
             if (stable[i] <= 1)
             { changed++; }
 
-        msg (1, "%.1f%% literals removed (%d out of %d)",
-             src->maxvar ? changed * 100.0 / src->maxvar : 0, changed, src->maxvar);
+        msg(1, "%.1f%% literals removed (%d out of %d)",
+            src->maxvar ? changed * 100.0 / src->maxvar : 0, changed, src->maxvar);
 
-        free (fairness);
-        free (justice);
-        free (constraints);
-        free (bad);
-        free (stable);
-        free (unstable);
-        free (fixed);
-        free (cmd);
-        aiger_reset (src);
-        unlink (tmp_name);
+        free(fairness);
+        free(justice);
+        free(constraints);
+        free(bad);
+        free(stable);
+        free(unstable);
+        free(fixed);
+        free(cmd);
+        aiger_reset(src);
+        unlink(tmp_name);
 
         return 0;
     }

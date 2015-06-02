@@ -51,46 +51,46 @@ static char *buffer;
 static unsigned size_buffer;
 
 static void
-die (const char *fmt, ...)
+die(const char *fmt, ...)
 {
     va_list ap;
-    fflush (stdout);
-    fputs ("*** [aigunroll] ", stderr);
-    va_start (ap, fmt);
-    vfprintf (stderr, fmt, ap);
-    va_end (ap);
-    fputc ('\n', stderr);
-    exit (1);
+    fflush(stdout);
+    fputs("*** [aigunroll] ", stderr);
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fputc('\n', stderr);
+    exit(1);
 }
 
 static void
-wrn (const char *fmt, ...)
+wrn(const char *fmt, ...)
 {
     va_list ap;
-    fflush (stdout);
-    fputs ("[aigunroll] WARNING ", stderr);
-    va_start (ap, fmt);
-    vfprintf (stderr, fmt, ap);
-    va_end (ap);
-    fputc ('\n', stderr);
-    fflush (stderr);
+    fflush(stdout);
+    fputs("[aigunroll] WARNING ", stderr);
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fputc('\n', stderr);
+    fflush(stderr);
 }
 
 static void
-msg (const char *fmt, ...)
+msg(const char *fmt, ...)
 {
     va_list ap;
     if (!verbose) { return; }
-    fputs ("[aigunroll] ", stderr);
-    va_start (ap, fmt);
-    vfprintf (stderr, fmt, ap);
-    va_end (ap);
-    fputc ('\n', stderr);
-    fflush (stderr);
+    fputs("[aigunroll] ", stderr);
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fputc('\n', stderr);
+    fflush(stderr);
 }
 
 static simpaig *
-build_rec (unsigned lit)
+build_rec(unsigned lit)
 {
     unsigned sign = lit & 1;
     unsigned idx = lit / 2;
@@ -99,72 +99,72 @@ build_rec (unsigned lit)
 
     if (!(res = lois[idx].aig)) {
         if (idx) {
-            if (( and = aiger_is_and (model, 2 * idx))) {
-                assert ( and ->lhs == 2 * idx);
-                l = build_rec ( and ->rhs0);
-                r = build_rec ( and ->rhs1);
-                res = simpaig_and (mgr, l, r);
+            if (( and = aiger_is_and(model, 2 * idx))) {
+                assert( and ->lhs == 2 * idx);
+                l = build_rec( and ->rhs0);
+                r = build_rec( and ->rhs1);
+                res = simpaig_and(mgr, l, r);
             } else
-            { res = simpaig_var (mgr, lois + idx, 0); }
+            { res = simpaig_var(mgr, lois + idx, 0); }
         } else
-        { res = simpaig_false (mgr); }
+        { res = simpaig_false(mgr); }
 
         lois[idx].aig = res;
     }
 
     if (sign)
-    { res = simpaig_not (res); }
+    { res = simpaig_not(res); }
 
     return res;
 }
 
 static simpaig *
-build (void)
+build(void)
 {
     simpaig *aig, *res, *shifted, *tmp, *lhs, *rhs, *out;
     simpaig *pos, *neg, **loop;
     unsigned i, j;
 
-    lois = malloc ((model->maxvar + 1) * sizeof lois[0]);
+    lois = malloc((model->maxvar + 1) * sizeof lois[0]);
     for (i = 0; i <= model->maxvar; i++) {
         lois[i].idx = i;
         lois[i].aig = 0;
     }
 
     for (i = 0; i <= model->maxvar; i++) {
-        aig = build_rec (i * 2);
-        assert (aig == lois[i].aig);
+        aig = build_rec(i * 2);
+        assert(aig == lois[i].aig);
     }
 
     for (i = 0; i < model->num_latches; i++) {
-        lhs = build_rec (model->latches[i].lit);
+        lhs = build_rec(model->latches[i].lit);
         if (model->latches[i].reset > 1) { continue; }
-        if (model->latches[i].reset) { rhs = simpaig_true (mgr); }
-        else { rhs = simpaig_false (mgr); }
-        simpaig_assign (mgr, lhs, rhs);
-        simpaig_dec (mgr, rhs);
+        if (model->latches[i].reset) { rhs = simpaig_true(mgr); }
+        else { rhs = simpaig_false(mgr); }
+        simpaig_assign(mgr, lhs, rhs);
+        simpaig_dec(mgr, rhs);
     }
 
     for (i = 1; i <= k; i++) {
         for (j = 0; j < model->num_latches; j++) {
-            tmp = build_rec (model->latches[j].lit);
-            lhs = simpaig_shift (mgr, tmp, i);
-            tmp = build_rec (model->latches[j].next);
-            rhs = simpaig_shift (mgr, tmp, i - 1);
-            simpaig_assign (mgr, lhs, rhs);
-            simpaig_dec (mgr, rhs);
-            simpaig_dec (mgr, lhs);
+            tmp = build_rec(model->latches[j].lit);
+            lhs = simpaig_shift(mgr, tmp, i);
+            tmp = build_rec(model->latches[j].next);
+            rhs = simpaig_shift(mgr, tmp, i - 1);
+            simpaig_assign(mgr, lhs, rhs);
+            simpaig_dec(mgr, rhs);
+            simpaig_dec(mgr, lhs);
         }
     }
 
     #if 1
-    out = build_rec (model->outputs[0].lit);
-    res = simpaig_false (mgr);
+    out = build_rec(model->outputs[0].lit);
+    res = simpaig_false(mgr);
     for (i = 0; i <= k; i++) {
-        shifted = simpaig_shift (mgr, out, i);
-        tmp = simpaig_or (mgr, res, shifted);
-        simpaig_dec (mgr, shifted);
-        simpaig_dec (mgr, res);
+        shifted = simpaig_shift(mgr, out, i);
+        tmp = simpaig_or(mgr, res, shifted);
+        simpaig_dec(mgr, shifted);
+        simpaig_dec(mgr, res);
         res = tmp;
     }
     #else
@@ -173,79 +173,79 @@ build (void)
 
     /* SW110303 For all "bad" outputs
      */
-    if ( model->num_badoutputs ) {
-        res = simpaig_false (mgr);
+    if (model->num_badoutputs) {
+        res = simpaig_false(mgr);
 
-        for ( i = 0; i < model->num_badoutputs; i++ ) {
-            out = build_rec (model->outputs[i].lit);
+        for (i = 0; i < model->num_badoutputs; i++) {
+            out = build_rec(model->outputs[i].lit);
 
             for (j = 0; j <= k; j++) {
-                shifted = simpaig_shift (mgr, out, j);
-                tmp = simpaig_or (mgr, res, shifted);
-                simpaig_dec (mgr, shifted);
-                simpaig_dec (mgr, res);
+                shifted = simpaig_shift(mgr, out, j);
+                tmp = simpaig_or(mgr, res, shifted);
+                simpaig_dec(mgr, shifted);
+                simpaig_dec(mgr, res);
                 res = tmp;
             }
         }
-    } else { res = simpaig_not( simpaig_false (mgr) ); }
+    } else { res = simpaig_not(simpaig_false(mgr)); }
 
     /* SW110303 Constraints for "fair" outputs
      */
-    if (model->num_outputs > model->num_badoutputs ) {
+    if (model->num_outputs > model->num_badoutputs) {
         /* loop_0 = ( latches @0 == latches.next @k )
 
            For i=1..k
              loop_i = loop_(i-1) or ( latches @i == latches.next @k )
          */
-        loop = malloc ((k + 1) * sizeof loop[0]);
+        loop = malloc((k + 1) * sizeof loop[0]);
 
         /* For all i=0..k construct loop_i
          */
         for (i = 0; i <= k; i++) {
             /* loop_i = true
              */
-            loop[i] = simpaig_not ( simpaig_false (mgr) );
+            loop[i] = simpaig_not(simpaig_false(mgr));
 
             /* For all latches
                loop_i&= latch_j @i == latch_j.next @k
              */
             for (j = 0; j < model->num_latches; j++) {
-                tmp = build_rec (model->latches[j].next);
-                lhs = simpaig_shift (mgr, tmp, k);
+                tmp = build_rec(model->latches[j].next);
+                lhs = simpaig_shift(mgr, tmp, k);
 
-                tmp = build_rec (model->latches[j].lit);
-                rhs = simpaig_shift (mgr, tmp, i);
+                tmp = build_rec(model->latches[j].lit);
+                rhs = simpaig_shift(mgr, tmp, i);
 
-                pos = simpaig_implies (mgr, lhs, rhs);
-                neg = simpaig_implies (mgr, simpaig_not(lhs), simpaig_not(rhs));
+                pos = simpaig_implies(mgr, lhs, rhs);
+                neg = simpaig_implies(mgr, simpaig_not(lhs), simpaig_not(rhs));
 
-                simpaig_dec (mgr, lhs);
-                simpaig_dec (mgr, rhs);
+                simpaig_dec(mgr, lhs);
+                simpaig_dec(mgr, rhs);
 
-                lhs = simpaig_and (mgr, pos, neg);
+                lhs = simpaig_and(mgr, pos, neg);
                 rhs = loop[i];
-                loop[i] = simpaig_and (mgr, lhs, rhs);
+                loop[i] = simpaig_and(mgr, lhs, rhs);
 
-                simpaig_dec (mgr, pos);
-                simpaig_dec (mgr, neg);
-                simpaig_dec (mgr, lhs);
-                simpaig_dec (mgr, rhs);
+                simpaig_dec(mgr, pos);
+                simpaig_dec(mgr, neg);
+                simpaig_dec(mgr, lhs);
+                simpaig_dec(mgr, rhs);
             }
 
             /* if ( i>0 ) loop_i |= loop_(i-1)
              */
-            if ( i > 0 ) {
+            if (i > 0) {
                 tmp = loop[i];
-                loop[i] = simpaig_or (mgr, loop[i - 1], tmp);
-                simpaig_dec (mgr, tmp);
+                loop[i] = simpaig_or(mgr, loop[i - 1], tmp);
+                simpaig_dec(mgr, tmp);
             }
         }
 
         /* For all fair outputs
          */
-        for ( i = model->num_badoutputs; i < model->num_outputs; i++ ) {
-            out = build_rec (model->outputs[i].lit);
-            tmp = simpaig_false (mgr);
+        for (i = model->num_badoutputs; i < model->num_outputs; i++) {
+            out = build_rec(model->outputs[i].lit);
+            tmp = simpaig_false(mgr);
 
             /* tmp = ( fair_i @0 && loop_0 ) ||
                          ( fair_i @1 && loop_1 ) ||
@@ -253,67 +253,67 @@ build (void)
                          ( fair_i @k && loop_k )
              */
             for (j = 0; j <= k; j++) {
-                shifted = simpaig_shift (mgr, out, j);
-                lhs = simpaig_and (mgr, shifted, loop[j]);
+                shifted = simpaig_shift(mgr, out, j);
+                lhs = simpaig_and(mgr, shifted, loop[j]);
                 rhs = tmp;
-                tmp = simpaig_or (mgr, lhs, rhs);
-                simpaig_dec (mgr, shifted);
-                simpaig_dec (mgr, rhs);
-                simpaig_dec (mgr, lhs);
+                tmp = simpaig_or(mgr, lhs, rhs);
+                simpaig_dec(mgr, shifted);
+                simpaig_dec(mgr, rhs);
+                simpaig_dec(mgr, lhs);
             }
 
             /* res&= tmp
              */
             lhs = res;
-            res = simpaig_and (mgr, lhs, tmp);
-            simpaig_dec (mgr, lhs);
-            simpaig_dec (mgr, tmp);
+            res = simpaig_and(mgr, lhs, tmp);
+            simpaig_dec(mgr, lhs);
+            simpaig_dec(mgr, tmp);
         }
 
         /* Decrease loop_i reference counters and free memory
          */
         for (i = 0; i <= k; i++) {
-            simpaig_dec (mgr, loop[i]);
+            simpaig_dec(mgr, loop[i]);
         }
         free(loop);
     }
     #endif
 
-    tmp = simpaig_substitute (mgr, res);
-    simpaig_dec (mgr, res);
+    tmp = simpaig_substitute(mgr, res);
+    simpaig_dec(mgr, res);
     res = tmp;
 
     return res;
 }
 
 static const char *
-next_symbol (unsigned idx, int slice)
+next_symbol(unsigned idx, int slice)
 {
     aiger_symbol *symbol;
     const char *unsliced_name;
     unsigned len, pos;
 
-    assert (!strip);
-    assert (1 <= idx);
-    assert (idx <= model->maxvar);
-    assert (slice >= 0);
+    assert(!strip);
+    assert(1 <= idx);
+    assert(idx <= model->maxvar);
+    assert(slice >= 0);
 
-    symbol = aiger_is_input (model, 2 * idx);
+    symbol = aiger_is_input(model, 2 * idx);
     if (symbol) {
         pos = symbol - model->inputs;
-        assert (pos < model->num_inputs);
+        assert(pos < model->num_inputs);
     } else {
-        assert (!slice);
-        symbol = aiger_is_latch (model, 2 * idx);
-        assert (symbol);
-        assert (symbol->reset == 2 * idx);
+        assert(!slice);
+        symbol = aiger_is_latch(model, 2 * idx);
+        assert(symbol);
+        assert(symbol->reset == 2 * idx);
         pos = symbol - model->latches;
-        assert (pos < model->num_latches);
+        assert(pos < model->num_latches);
     }
 
     unsliced_name = symbol->name;
 
-    len = unsliced_name ? strlen (unsliced_name) : 20;
+    len = unsliced_name ? strlen(unsliced_name) : 20;
     len += 30;
 
     if (size_buffer < len) {
@@ -321,21 +321,21 @@ next_symbol (unsigned idx, int slice)
             while (size_buffer < len)
             { size_buffer *= 2; }
 
-            buffer = realloc (buffer, size_buffer);
+            buffer = realloc(buffer, size_buffer);
         } else
-        { buffer = malloc (size_buffer = len); }
+        { buffer = malloc(size_buffer = len); }
     }
 
     if (unsliced_name)
-    { sprintf (buffer, "%d %s %u", slice, unsliced_name, pos); }
+    { sprintf(buffer, "%d %s %u", slice, unsliced_name, pos); }
     else
-    { sprintf (buffer, "%d %u %u", slice, 2 * idx, pos); }
+    { sprintf(buffer, "%d %u %u", slice, 2 * idx, pos); }
 
     return buffer;
 }
 
 static void
-copyaig (simpaig * aig)
+copyaig(simpaig * aig)
 {
     LatchOrInput *input;
     simpaig *c0, *c1;
@@ -343,49 +343,49 @@ copyaig (simpaig * aig)
     unsigned idx;
     int slice;
 
-    assert (aig);
+    assert(aig);
 
-    aig = simpaig_strip (aig);
-    idx = simpaig_index (aig);
+    aig = simpaig_strip(aig);
+    idx = simpaig_index(aig);
     if (!idx || aigs[idx])
     { return; }
 
     aigs[idx] = aig;
-    if (simpaig_isand (aig)) {
-        c0 = simpaig_child (aig, 0);
-        c1 = simpaig_child (aig, 1);
-        copyaig (c0);
-        copyaig (c1);
-        aiger_add_and (expansion,
-                       2 * idx,
-                       simpaig_unsigned_index (c0),
-                       simpaig_unsigned_index (c1));
+    if (simpaig_isand(aig)) {
+        c0 = simpaig_child(aig, 0);
+        c1 = simpaig_child(aig, 1);
+        copyaig(c0);
+        copyaig(c1);
+        aiger_add_and(expansion,
+                      2 * idx,
+                      simpaig_unsigned_index(c0),
+                      simpaig_unsigned_index(c1));
     } else {
         name = 0;
         if (!strip) {
-            input = simpaig_isvar (aig);
-            assert (input);
-            slice = simpaig_slice (aig);
+            input = simpaig_isvar(aig);
+            assert(input);
+            slice = simpaig_slice(aig);
 
-            name = next_symbol (input->idx, slice);
+            name = next_symbol(input->idx, slice);
         }
 
-        aiger_add_input (expansion, 2 * idx, name);
+        aiger_add_input(expansion, 2 * idx, name);
     }
 }
 
 static void
-expand (simpaig * aig)
+expand(simpaig * aig)
 {
     unsigned maxvar;
-    simpaig_assign_indices (mgr, aig);
-    maxvar = simpaig_max_index (mgr);
-    aigs = calloc (maxvar + 1, sizeof aigs[0]);
-    copyaig (aig);
-    aiger_add_output (expansion, simpaig_unsigned_index (aig), 0);
-    free (aigs);
-    simpaig_reset_indices (mgr);
-    free (buffer);
+    simpaig_assign_indices(mgr, aig);
+    maxvar = simpaig_max_index(mgr);
+    aigs = calloc(maxvar + 1, sizeof aigs[0]);
+    copyaig(aig);
+    aiger_add_output(expansion, simpaig_unsigned_index(aig), 0);
+    free(aigs);
+    simpaig_reset_indices(mgr);
+    free(buffer);
 }
 
 #define USAGE \
@@ -402,7 +402,7 @@ expand (simpaig * aig)
     "  <dst>  combinational target model in AIGER format\n"
 
 int
-main (int argc, char **argv)
+main(int argc, char **argv)
 {
     const char *src, *dst, *p, *err;
     aiger_mode mode;
@@ -413,96 +413,96 @@ main (int argc, char **argv)
     ascii = 0;
 
     for (i = 1; i < argc; i++) {
-        for (p = argv[i]; isdigit (*p); p++)
+        for (p = argv[i]; isdigit(*p); p++)
             ;
 
         if (!*p)
-        { k = atoi (argv[i]); }
-        else if (!strcmp (argv[i], "-h")) {
-            fprintf (stderr, USAGE);
-            exit (0);
-        } else if (!strcmp (argv[i], "-a"))
+        { k = atoi(argv[i]); }
+        else if (!strcmp(argv[i], "-h")) {
+            fprintf(stderr, USAGE);
+            exit(0);
+        } else if (!strcmp(argv[i], "-a"))
         { ascii = 1; }
-        else if (!strcmp (argv[i], "-s"))
+        else if (!strcmp(argv[i], "-s"))
         { strip = 1; }
-        else if (!strcmp (argv[i], "-v"))
+        else if (!strcmp(argv[i], "-v"))
         { verbose++; }
         else if (argv[i][0] == '-')
-        { die ("invalid command line option '%s'", argv[i]); }
+        { die("invalid command line option '%s'", argv[i]); }
         else if (!src)
         { src = argv[i]; }
         else if (!dst)
         { dst = argv[i]; }
         else
-        { die ("too many files"); }
+        { die("too many files"); }
     }
 
     if (ascii && dst)
-    { die ("'dst' file and '-a' specified"); }
+    { die("'dst' file and '-a' specified"); }
 
-    if (!ascii && !dst && isatty (1))
+    if (!ascii && !dst && isatty(1))
     { ascii = 1; }
 
-    if (src && dst && !strcmp (src, dst))
-    { die ("identical 'src' and 'dst' file"); }
+    if (src && dst && !strcmp(src, dst))
+    { die("identical 'src' and 'dst' file"); }
 
-    model = aiger_init ();
+    model = aiger_init();
     if (src)
-    { err = aiger_open_and_read_from_file (model, src); }
+    { err = aiger_open_and_read_from_file(model, src); }
     else
-    { err = aiger_read_from_file (model, stdin); }
+    { err = aiger_read_from_file(model, stdin); }
 
     if (!src)
     { src = "<stdin>"; }
 
     if (err)
-    { die ("%s: %s", src, err); }
+    { die("%s: %s", src, err); }
 
-    msg ("read MILOA %u %u %u %u %u",
-         model->maxvar,
-         model->num_inputs,
-         model->num_latches,
-         model->num_outputs,
-         model->num_ands);
+    msg("read MILOA %u %u %u %u %u",
+        model->maxvar,
+        model->num_inputs,
+        model->num_latches,
+        model->num_outputs,
+        model->num_ands);
 
     if (model->num_bad)
-    { die ("can not handle bad state properties (use 'aigmove')"); }
+    { die("can not handle bad state properties (use 'aigmove')"); }
     if (model->num_constraints)
-    { die ("can not handle environment constraints (use 'aigmove')"); }
-    if (!model->num_outputs) { die ("no output"); }
-    if (model->num_outputs > 1) { die ("more than one output"); }
-    if (model->num_justice) { wrn ("ignoring justice properties"); }
-    if (model->num_fairness) { wrn ("ignoring fairness constraints"); }
+    { die("can not handle environment constraints (use 'aigmove')"); }
+    if (!model->num_outputs) { die("no output"); }
+    if (model->num_outputs > 1) { die("more than one output"); }
+    if (model->num_justice) { wrn("ignoring justice properties"); }
+    if (model->num_fairness) { wrn("ignoring fairness constraints"); }
 
-    aiger_reencode (model);
+    aiger_reencode(model);
 
-    mgr = simpaig_init ();
-    res = build ();
-    expansion = aiger_init ();
-    expand (res);
-    simpaig_dec (mgr, res);
+    mgr = simpaig_init();
+    res = build();
+    expansion = aiger_init();
+    expand(res);
+    simpaig_dec(mgr, res);
 
     for (i = 0; i <= model->maxvar; i++)
-    { simpaig_dec (mgr, lois[i].aig); }
-    assert (!simpaig_current_nodes (mgr));
-    simpaig_reset (mgr);
-    aiger_reset (model);
+    { simpaig_dec(mgr, lois[i].aig); }
+    assert(!simpaig_current_nodes(mgr));
+    simpaig_reset(mgr);
+    aiger_reset(model);
 
-    free (lois);
+    free(lois);
 
     if (dst) {
-        if (!aiger_open_and_write_to_file (expansion, dst)) {
-            unlink (dst);
+        if (!aiger_open_and_write_to_file(expansion, dst)) {
+            unlink(dst);
         WRITE_ERROR:
-            die ("%s: write error", dst);
+            die("%s: write error", dst);
         }
     } else {
         mode = ascii ? aiger_ascii_mode : aiger_binary_mode;
-        if (!aiger_write_to_file (expansion, mode, stdout))
+        if (!aiger_write_to_file(expansion, mode, stdout))
         { goto WRITE_ERROR; }
     }
 
-    aiger_reset (expansion);
+    aiger_reset(expansion);
 
     return 0;
 }

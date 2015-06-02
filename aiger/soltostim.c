@@ -45,32 +45,32 @@ static int size_assignment;
 static int *assignment;
 
 static void
-die (const char *fmt, ...)
+die(const char *fmt, ...)
 {
     va_list ap;
-    fputs ("*** soltostim: ", stderr);
-    va_start (ap, fmt);
-    vfprintf (stderr, fmt, ap);
-    va_end (ap);
-    fputc ('\n', stdout);
-    exit (1);
+    fputs("*** soltostim: ", stderr);
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fputc('\n', stdout);
+    exit(1);
 }
 
 static void
-push (int lit)
+push(int lit)
 {
     if (count_solution == size_solution) {
         size_solution = size_solution ? 2 * size_solution : 1;
-        solution = realloc (solution, sizeof (solution[0]) * size_solution);
+        solution = realloc(solution, sizeof(solution[0]) * size_solution);
     }
 
     solution[count_solution++] = lit;
 }
 
 static int
-next (void)
+next(void)
 {
-    int ch = getc (solution_file);
+    int ch = getc(solution_file);
     if (prev == '\n')
     { lineno++; }
     prev = ch;
@@ -78,25 +78,25 @@ next (void)
 }
 
 static int
-match (const char *str)
+match(const char *str)
 {
     const char *p;
 
     for (p = str; *p; p++)
-        if (*p != next ())
+        if (*p != next())
         { return 0; }
 
     return 1;
 }
 
 static void
-perr (const char *msg)
+perr(const char *msg)
 {
-    die ("%s: line %d: %s", solution_file_name, lineno, msg);
+    die("%s: line %d: %s", solution_file_name, lineno, msg);
 }
 
 static void
-parse (void)
+parse(void)
 {
     int ch, lit, sign;
 
@@ -105,46 +105,46 @@ parse (void)
 
 SKIP_COMMENTS_UNTIL_SOLUTION_START:
 
-    ch = next ();
+    ch = next();
     if (ch == 's')
     { goto SOLUTION_START; }
 
     if (ch == 'c') {
-        while ((ch = next ()) != '\n' && ch != EOF)
+        while ((ch = next()) != '\n' && ch != EOF)
             ;
 
         if (ch == EOF)
-        { die ("%s: no solution line found", solution_file_name); }
+        { die("%s: no solution line found", solution_file_name); }
 
         goto SKIP_COMMENTS_UNTIL_SOLUTION_START;
     }
 
-    perr ("expected 's' or 'c' at line start");
+    perr("expected 's' or 'c' at line start");
 
 SOLUTION_START:
 
-    ch = next ();
+    ch = next();
     if (ch != ' ')
     INVALID_SOLUTION_LINE:
-        perr ("invalid solution line");
+        perr("invalid solution line");
 
-    ch = next ();
+    ch = next();
 
     if (ch != 'S') {
         if (ch == 'U') {
-            ch = next ();
+            ch = next();
             if (ch != 'N')
             { goto INVALID_SOLUTION_LINE; }
 
-            ch = next ();
+            ch = next();
             if (ch == 'K') {
-                if (!match ("NOWN\n"))
+                if (!match("NOWN\n"))
                 { goto INVALID_SOLUTION_LINE; }
 
             EXPECTED_SATISFIABLE_SOLUTION:
-                perr ("expected 's SATISFIABLE'");
+                perr("expected 's SATISFIABLE'");
             } else if (ch == 'S') {
-                if (!match ("ATISFIABLE\n"))
+                if (!match("ATISFIABLE\n"))
                 { goto INVALID_SOLUTION_LINE; }
 
                 goto EXPECTED_SATISFIABLE_SOLUTION;
@@ -154,17 +154,17 @@ SOLUTION_START:
         { goto INVALID_SOLUTION_LINE; }
     }
 
-    if (!match ("ATISFIABLE\n"))
+    if (!match("ATISFIABLE\n"))
     { goto INVALID_SOLUTION_LINE; }
 
 SCAN_SOLUTION:
-    ch = next ();
+    ch = next();
     if (ch != 'v')
     UNTERMINATED_SOLUTION:
-        perr ("terminating '0' missing");
+        perr("terminating '0' missing");
 
 SCAN_LITERAL:
-    ch = next ();
+    ch = next();
 
 SCAN_LITERAL_AFTER_READING_CH:
     if (ch == ' ' || ch == '\t')
@@ -178,58 +178,58 @@ SCAN_LITERAL_AFTER_READING_CH:
 
     if (ch == '-') {
         sign = -1;
-        ch = next ();
+        ch = next();
     } else
     { sign = 1; }
 
-    if (!isdigit (ch))
-    { perr ("expected literal"); }
+    if (!isdigit(ch))
+    { perr("expected literal"); }
 
     lit = ch - '0';
-    while (isdigit (ch = next ()))
+    while (isdigit(ch = next()))
     { lit = 10 * lit + (ch - '0'); }
 
     if (!lit)
     { return; }
 
     lit *= sign;
-    push (lit);
+    push(lit);
 
     goto SCAN_LITERAL_AFTER_READING_CH;
 }
 
 static void
-assign (void)
+assign(void)
 {
     int i, tmp;
 
     size_assignment = 0;
     for (i = 0; i < count_solution; i++) {
-        tmp = abs (solution[i]);
+        tmp = abs(solution[i]);
         if (size_assignment < tmp)
         { size_assignment = tmp; }
     }
 
     size_assignment++;
-    assignment = calloc (size_assignment, sizeof (assignment[0]));
+    assignment = calloc(size_assignment, sizeof(assignment[0]));
 
     for (i = 0; i < count_solution; i++) {
         tmp = solution[i];
-        assignment[abs (tmp)] = tmp;
+        assignment[abs(tmp)] = tmp;
     }
 }
 
 static int
-deref (unsigned idx)
+deref(unsigned idx)
 {
-    assert (idx);
-    assert (idx <= model->maxvar);
+    assert(idx);
+    assert(idx <= model->maxvar);
 
     return idx >= size_assignment ? 0 : assignment[idx];
 }
 
 static void
-print (void)
+print(void)
 {
     unsigned i, idx;
     char ch;
@@ -237,7 +237,7 @@ print (void)
 
     for (i = 0; i < model->num_inputs; i++) {
         idx = model->inputs[i].lit / 2;
-        tmp = deref (idx);
+        tmp = deref(idx);
         if (tmp < 0)
         { ch = '0'; }
         else if (tmp > 0)
@@ -245,17 +245,17 @@ print (void)
         else
         { ch = 'x'; }
 
-        fputc (ch, stdout);
+        fputc(ch, stdout);
     }
 
-    fputc ('\n', stdout);
+    fputc('\n', stdout);
 }
 
 static const char *USAGE =
     "usage: soltostim [-h] <aiger-model> [ <dimacs-solution> ]\n";
 
 int
-main (int argc, char **argv)
+main(int argc, char **argv)
 {
     const char *model_file_name, *err;
     int i;
@@ -263,13 +263,13 @@ main (int argc, char **argv)
     solution_file_name = model_file_name = 0;
 
     for (i = 1; i < argc; i++) {
-        if (!strcmp (argv[i], "-h")) {
-            fputs (USAGE, stdout);
-            exit (1);
+        if (!strcmp(argv[i], "-h")) {
+            fputs(USAGE, stdout);
+            exit(1);
         } else if (argv[i][0] == '-')
-        { die ("invalid command line option '%s'", argv[i]); }
+        { die("invalid command line option '%s'", argv[i]); }
         else if (solution_file_name)
-        { die ("more than two files on command line"); }
+        { die("more than two files on command line"); }
         else if (model_file_name)
         { solution_file_name = argv[i]; }
         else
@@ -277,15 +277,15 @@ main (int argc, char **argv)
     }
 
     if (!model_file_name)
-    { die ("no model specified"); }
+    { die("no model specified"); }
 
-    model = aiger_init ();
-    if ((err = aiger_open_and_read_from_file (model, model_file_name)))
-    { die ("%s: %s", model_file_name, err); }
+    model = aiger_init();
+    if ((err = aiger_open_and_read_from_file(model, model_file_name)))
+    { die("%s: %s", model_file_name, err); }
 
     if (solution_file_name) {
-        if (!(solution_file = fopen (solution_file_name, "r")))
-        { die ("failed to read '%s'", solution_file_name); }
+        if (!(solution_file = fopen(solution_file_name, "r")))
+        { die("failed to read '%s'", solution_file_name); }
 
         close_solution_file = 1;
     } else {
@@ -293,16 +293,16 @@ main (int argc, char **argv)
         solution_file_name = "<stdin>";
     }
 
-    parse ();
-    assign ();
-    print ();
+    parse();
+    assign();
+    print();
 
     if (close_solution_file)
-    { fclose (solution_file); }
+    { fclose(solution_file); }
 
-    aiger_reset (model);
-    free (solution);
-    free (assignment);
+    aiger_reset(model);
+    free(solution);
+    free(assignment);
 
     return 0;
 }

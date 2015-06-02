@@ -17,17 +17,17 @@ void allocfreetest()
 
     TwinAllocator alloc;
 
-    for ( int i = 0; i < 1000; i++ ) {
+    for (int i = 0; i < 1000; i++) {
         int size = (rand() % 510) + 1;
-        sizes.push_back( size);
+        sizes.push_back(size);
         cerr << "c size[" << i << "]: " << size << endl;
-        ptrs.push_back ( alloc.get( size ) );
+        ptrs.push_back(alloc.get(size));
     }
 
     // free memory
-    for ( int i = 0 ; i < 1000; i++ ) {
+    for (int i = 0 ; i < 1000; i++) {
         cerr << "c free[" << i << "] " << sizes[i] << endl;
-        alloc.release( ptrs[i], sizes[i] );
+        alloc.release(ptrs[i], sizes[i]);
     }
 
 }
@@ -39,18 +39,18 @@ void* samesize()
 
     cout << "c run samesize test" << endl;
 
-    for ( int i = 0 ; i < 3000; i ++ ) {
-        ptrs.push_back( alloc.get( 32 ) );
+    for (int i = 0 ; i < 3000; i ++) {
+        ptrs.push_back(alloc.get(32));
         *((int*)(ptrs[ ptrs.size() - 1 ])) = 5;
     }
 
-    for ( int i =  0 ; i < 3000; ++i ) {
-        alloc.release( ptrs[i], 32 );
+    for (int i =  0 ; i < 3000; ++i) {
+        alloc.release(ptrs[i], 32);
     }
     return 0;
 }
 
-int main ()
+int main()
 {
 
     samesize();

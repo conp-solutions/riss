@@ -25,7 +25,7 @@ Classifier::Classifier(Configurations& config, const char* prefix): configuratio
     useTempFiles = false;
     wekaLocation = "/usr/share/java/weka.jar";
     this->prefix = prefix;
-    for  (int config = 0; config < configurations.getSize(); config++ ) {
+    for (int config = 0; config < configurations.getSize(); config++) {
         stringstream scmd;
         scmd << prefix << configurations.getNames()[config];
         scmd << ".model";
@@ -40,9 +40,9 @@ Classifier::~Classifier()
 
 /** print elements of a vector */
 template <typename T>
-inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data )
+inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data)
 {
-    for ( int i = 0 ; i < data.size(); ++ i )
+    for (int i = 0 ; i < data.size(); ++ i)
     { other << " " << data[i]; }
     return other;
 }
@@ -140,7 +140,7 @@ vector<int>& Classifier::classify(const char* wekaFile)
     vector<double> tprobs;
     vector<bool> tcorrect;
     configurations.loadConfigurationInfo();
-    for  (int config = 0; config < configurations.getSize(); config++ ) {
+    for (int config = 0; config < configurations.getSize(); config++) {
         stringstream scmd;
         int index = configurations.getClassIndexes()[config];
         //scmd << "java -Xmx1600M -cp \"" << wekaLocation << "\" weka.classifiers.meta.FilteredClassifier -l " << classifiersNames[config];
@@ -210,7 +210,7 @@ vector<int>& Classifier::classify(const char* wekaFile)
         }
 
         if (verbose > 0) {
-            if ( tprobs.size() == 0 ) { cerr << "c probability for " << configurations.getNames()[config] << " is " << 0 << endl; }
+            if (tprobs.size() == 0) { cerr << "c probability for " << configurations.getNames()[config] << " is " << 0 << endl; }
             else { cerr << "c probability for " << configurations.getNames()[config] << " is " << tprobs[0] << " all probs: " << probabilities << endl; }
         }
 
@@ -221,10 +221,10 @@ vector<int>& Classifier::classify(const char* wekaFile)
         }
     }
     // check whether there is a class that has a higher propability than 0!
-    if ( nonZero ) {
+    if (nonZero) {
         bool foundNonZero = false;
-        for ( int i = 0 ; i < probabilities.size(); ++i ) if ( probabilities[i] != 0 ) { foundNonZero = true; break; }
-        if ( !foundNonZero ) { classification.clear(); } // if the propability for all classes is '0', then do not select a single class!
+        for (int i = 0 ; i < probabilities.size(); ++i) if (probabilities[i] != 0) { foundNonZero = true; break; }
+        if (!foundNonZero) { classification.clear(); }   // if the propability for all classes is '0', then do not select a single class!
     }
     return classification;
 }

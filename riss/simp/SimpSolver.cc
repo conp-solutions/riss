@@ -30,12 +30,12 @@ using namespace Riss;
 
 static const char* _cat = "SIMP";
 
-static BoolOption   opt_use_asymm        (_cat, "asymm",        "Shrink clauses by asymmetric branching.", false);
-static BoolOption   opt_use_rcheck       (_cat, "rcheck",       "Check if a clause is already implied. (costly)", false);
-static BoolOption   opt_use_elim         (_cat, "elim",         "Perform variable elimination.", true);
-static IntOption    opt_grow             (_cat, "grow",         "Allow a variable elimination step to grow by a number of clauses.", 0);
-static IntOption    opt_clause_lim       (_cat, "cl-lim",       "Variables are not eliminated if it produces a resolvent with a length above this limit. -1 means no limit", 20,   IntRange(-1, INT32_MAX));
-static IntOption    opt_subsumption_lim  (_cat, "sub-lim",      "Do not check if subsumption against a clause larger than this. -1 means no limit.", 1000, IntRange(-1, INT32_MAX));
+static BoolOption   opt_use_asymm(_cat, "asymm",        "Shrink clauses by asymmetric branching.", false);
+static BoolOption   opt_use_rcheck(_cat, "rcheck",       "Check if a clause is already implied. (costly)", false);
+static BoolOption   opt_use_elim(_cat, "elim",         "Perform variable elimination.", true);
+static IntOption    opt_grow(_cat, "grow",         "Allow a variable elimination step to grow by a number of clauses.", 0);
+static IntOption    opt_clause_lim(_cat, "cl-lim",       "Variables are not eliminated if it produces a resolvent with a length above this limit. -1 means no limit", 20,   IntRange(-1, INT32_MAX));
+static IntOption    opt_subsumption_lim(_cat, "sub-lim",      "Do not check if subsumption against a clause larger than this. -1 means no limit.", 1000, IntRange(-1, INT32_MAX));
 static DoubleOption opt_simp_garbage_frac(_cat, "simp-gc-frac", "The fraction of wasted memory allowed before a garbage collection is triggered during simplification.",  0.5, DoubleRange(0, false, HUGE_VAL, false));
 
 
@@ -44,24 +44,24 @@ static DoubleOption opt_simp_garbage_frac(_cat, "simp-gc-frac", "The fraction of
 
 
 SimpSolver::SimpSolver(CoreConfig& _config) :
-    Solver( _config )
-    , config( _config )
-    , grow               (opt_grow)
-    , clause_lim         (opt_clause_lim)
-    , subsumption_lim    (opt_subsumption_lim)
-    , simp_garbage_frac  (opt_simp_garbage_frac)
-    , use_asymm          (opt_use_asymm)
-    , use_rcheck         (opt_use_rcheck)
-    , use_elim           (opt_use_elim)
-    , merges             (0)
-    , asymm_lits         (0)
-    , eliminated_vars    (0)
-    , elimorder          (1)
-    , use_simplification (true)
-    , occurs             (ClauseDeleted(ca))
-    , elim_heap          (ElimLt(n_occ))
-    , bwdsub_assigns     (0)
-    , n_touched          (0)
+    Solver(_config)
+    , config(_config)
+    , grow(opt_grow)
+    , clause_lim(opt_clause_lim)
+    , subsumption_lim(opt_subsumption_lim)
+    , simp_garbage_frac(opt_simp_garbage_frac)
+    , use_asymm(opt_use_asymm)
+    , use_rcheck(opt_use_rcheck)
+    , use_elim(opt_use_elim)
+    , merges(0)
+    , asymm_lits(0)
+    , eliminated_vars(0)
+    , elimorder(1)
+    , use_simplification(true)
+    , occurs(ClauseDeleted(ca))
+    , elim_heap(ElimLt(n_occ))
+    , bwdsub_assigns(0)
+    , n_touched(0)
 {
     vec<Lit> dummy(1, lit_Undef);
     ca.extra_clause_field = true; // NOTE: must happen before allocating the dummy clause below.
@@ -138,7 +138,7 @@ lbool SimpSolver::solve_(bool do_simp, bool turn_off_simp)
         result = lbool(eliminate(turn_off_simp));
     }
 
-    if (result == l_False ) { ok = false; }
+    if (result == l_False) { ok = false; }
 
     if (result == l_True)
     { result = Solver::solve_(); }
@@ -176,7 +176,7 @@ bool SimpSolver::addClause_(vec<Lit>& ps)
     { return false; }
 
     // add clause to DRUP
-    if ( !parsing &&  outputsProof() ) {
+    if (!parsing &&  outputsProof()) {
         addCommentToProof("add new clause to drup");
         addToProof(ps);
     }
@@ -232,14 +232,14 @@ bool SimpSolver::strengthenClause(CRef cr, Lit l)
     subsumption_queue.insert(cr);
 
     // the new clause is added to the proof
-    addToProof( c, false, l ); // add the clause c to the proof, but do not write the literal l (literal l is deleted from the clause)
+    addToProof(c, false, l);   // add the clause c to the proof, but do not write the literal l (literal l is deleted from the clause)
 
     if (c.size() == 2) {
         removeClause(cr);
         c.strengthen(l);
     } else {
         // this clause can be deleted from the proof
-        addToProof( c, true ); // delete the full clause from the proof
+        addToProof(c, true);   // delete the full clause from the proof
 
         detachClause(cr, true);
         c.strengthen(l);

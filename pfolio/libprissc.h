@@ -56,22 +56,22 @@ extern "C" {
     /** add a literal to the solver, if lit == 0, end the clause and actually add it
      *  @return 0, if addition is ok. 1, if adding this literal (0) leads to a bad state of the solver
      */
-    extern int priss_add (void* priss, const int& lit);
+    extern int priss_add(void* priss, const int& lit);
 
     /** add the given literal to the assumptions for the next solver call */
-    extern void priss_assume (void* priss, const int& lit);
+    extern void priss_assume(void* priss, const int& lit);
 
     /** solve the formula that is currently present (priss_add) under the specified assumptions since the last call
      * Note: clears the assumptions after the solver run finished
      * @param nOfConflicts number of conflicts that are allowed for this SAT solver run (-1 = infinite)
      * @return status of the SAT call: 10 = satisfiable, 20 = unsatisfiable, 0 = not finished within number of conflicts
      */
-    extern int priss_sat (void* priss, const int& nOfConflicts);
+    extern int priss_sat(void* priss, const int& nOfConflicts);
 
     /** return the polarity of a variable in the model of the last solver run (if the result was sat)
      * @return 1 = literal is true, -1 = literal is false, 0 = value is unknown
      */
-    extern int priss_deref (const void* priss, const int& lit) ;
+    extern int priss_deref(const void* priss, const int& lit) ;
 }
 
 // #pragma GCC visibility pop // back to what we had before

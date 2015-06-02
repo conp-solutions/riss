@@ -123,10 +123,10 @@ class MethodClock
     Clock& clock;
     bool stopped;
   public:
-    MethodClock( Clock& c ) : clock(c), stopped(false) { clock.start(); };
+    MethodClock(Clock& c) : clock(c), stopped(false) { clock.start(); };
     ~MethodClock() { if (!stopped) { clock.stop(); } }
     void stop() { clock.stop(); stopped = true;}
-    void cont() { if ( stopped ) {clock.start(); stopped = false;} }
+    void cont() { if (stopped) {clock.start(); stopped = false;} }
 };
 
 #endif

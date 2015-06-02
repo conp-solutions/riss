@@ -14,7 +14,7 @@ void Shared_pool::add_shared(vec<Lit>& lits, unsigned int size)
 
     #ifndef NDEBUG
 
-    if ( shared_clauses.size() % 128 == 0 ) { std::cerr << "c [POOL] added a shared clause nr. " << shared_clauses.size() << " of size " << size << std::endl; }
+    if (shared_clauses.size() % 128 == 0) { std::cerr << "c [POOL] added a shared clause nr. " << shared_clauses.size() << " of size " << size << std::endl; }
 
     #endif
 
@@ -31,15 +31,15 @@ void Shared_pool::add_shared(vec<Lit>& lits, unsigned int size)
     // Remove duplicates
     Lit p; int i, j;
     for (i = j = 0, p = lit_Undef; i < c.lits.size(); i++)
-        if ( c.lits[i] == ~p ) // contains a tautology
+        if (c.lits[i] == ~p)   // contains a tautology
         { return; }
-        else if ( c.lits[i] != p ) // No duplicated
+        else if (c.lits[i] != p)   // No duplicated
         { c.lits[j++] = p = c.lits[i]; }
     c.lits.shrink_(i - j);
 
     #ifndef NDEBUG
 
-    if ( c.lits.size() == 0 ) { printf("CLAUSE OF SIZE ZERO ADDED TO SHARED POOL\n"); }
+    if (c.lits.size() == 0) { printf("CLAUSE OF SIZE ZERO ADDED TO SHARED POOL\n"); }
 
     #endif
 
@@ -51,11 +51,11 @@ void Shared_pool::add_shared(vec<Lit>& lits, unsigned int size)
 bool Shared_pool::duplicate(const PcassoClause& c)
 {
 
-    for ( unsigned int i = 0; i < shared_clauses.size(); i++ )
-        if ( shared_clauses[i].size == c.size ) {
+    for (unsigned int i = 0; i < shared_clauses.size(); i++)
+        if (shared_clauses[i].size == c.size) {
             unsigned int j = 0;
-            while ( j < c.size && ( toInt(shared_clauses[i].lits[j]) == toInt(c.lits[j]) ) ) { j++; }
-            if ( j == c.size ) { return true; }
+            while (j < c.size && (toInt(shared_clauses[i].lits[j]) == toInt(c.lits[j]))) { j++; }
+            if (j == c.size) { return true; }
         }
     return false;
 }

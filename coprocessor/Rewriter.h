@@ -53,7 +53,7 @@ class Rewriter : public Technique
     /** compare two literals */
     struct LitOrderHeapLt {
         CoprocessorData& data;
-        bool operator () (int& x, int& y) const
+        bool operator()(int& x, int& y) const
         {
             return data[ Riss::toLit(x)] < data[Riss::toLit(y)];
         }
@@ -63,7 +63,7 @@ class Rewriter : public Technique
 
   public:
 
-    Rewriter( CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, Coprocessor::CoprocessorData& _data, Coprocessor::Subsumption& _subsumption );
+    Rewriter(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, Coprocessor::CoprocessorData& _data, Coprocessor::Subsumption& _subsumption);
 
     void reset();
 
@@ -93,9 +93,9 @@ class Rewriter : public Technique
     bool hasDuplicate(std::vector<Riss::CRef>& list, const Riss::Clause& c);
 
     bool checkPush(Riss::vec<Riss::Lit>& ps, const Riss::Lit l);
-    bool ordered_subsumes (const Riss::Clause& c, const Riss::Clause& other) const;
-    bool ordered_subsumes (const Riss::vec<Riss::Lit>& c, const Riss::Clause& other) const;
-    bool ordered_subsumes (const Riss::Clause& c, const Riss::vec<Riss::Lit>& other) const;
+    bool ordered_subsumes(const Riss::Clause& c, const Riss::Clause& other) const;
+    bool ordered_subsumes(const Riss::vec<Riss::Lit>& c, const Riss::Clause& other) const;
+    bool ordered_subsumes(const Riss::Clause& c, const Riss::vec<Riss::Lit>& other) const;
 
   public:
 

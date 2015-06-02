@@ -41,15 +41,15 @@ class TwoSatSolver : public Technique
 
     bool solve();
 
-    char getPolarity( const Riss::Var v ) const;
+    char getPolarity(const Riss::Var v) const;
 
-    bool isSat( const Riss::Lit& l ) const;
+    bool isSat(const Riss::Lit& l) const;
 
-    bool isPermanent( const Riss::Var v ) const;
+    bool isPermanent(const Riss::Var v) const;
 
     /** This method should be used to print the statistics of the technique that inherits from this class
     */
-    void printStatistics( std::ostream& stream );
+    void printStatistics(std::ostream& stream);
 
     void destroy();
 
@@ -59,7 +59,7 @@ class TwoSatSolver : public Technique
 
     bool unitPropagate();
 
-    bool tmpUnitPropagate(  );
+    bool tmpUnitPropagate();
 
     bool hasDecisionVariable();
 

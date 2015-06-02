@@ -107,22 +107,22 @@ typedef enum Status Status;
 /*------------------------------------------------------------------------*/
 
 static void
-usage (void)
+usage(void)
 {
-    printf (USAGE);
+    printf(USAGE);
 }
 
 /*------------------------------------------------------------------------*/
 
 static int
-isposnumber (const char *str)
+isposnumber(const char *str)
 {
     const char *p;
     int res;
 
     if (*str) {
         for (res = 1, p = str; res && *p; p++)
-        { res = isdigit ((int) * p); }
+        { res = isdigit((int) * p); }
     } else
     { res = 0; }
 
@@ -132,25 +132,25 @@ isposnumber (const char *str)
 /*------------------------------------------------------------------------*/
 
 static unsigned
-parse_number_argument (int *i, int argc, char **argv)
+parse_number_argument(int *i, int argc, char **argv)
 {
     unsigned res;
 
     if (argv[*i][2]) {
-        if (isposnumber (argv[*i] + 2))
-        { res = (unsigned) atoi (argv[*i] + 2); }
+        if (isposnumber(argv[*i] + 2))
+        { res = (unsigned) atoi(argv[*i] + 2); }
         else
         { goto ARGUMENT_IS_MISSING; }
-    } else if (*i + 1 < argc && isposnumber (argv[*i + 1])) {
-        res = (unsigned) atoi (argv[*i + 1]);
+    } else if (*i + 1 < argc && isposnumber(argv[*i + 1])) {
+        res = (unsigned) atoi(argv[*i + 1]);
         *i += 1;
     } else {
     ARGUMENT_IS_MISSING:
 
-        fprintf (stderr,
-                 "*** runlim: number argument for '-%c' is missing\n",
-                 argv[*i][1]);
-        exit (1);
+        fprintf(stderr,
+                "*** runlim: number argument for '-%c' is missing\n",
+                argv[*i][1]);
+        exit(1);
 
         res = 0;
     }
@@ -161,44 +161,44 @@ parse_number_argument (int *i, int argc, char **argv)
 /*------------------------------------------------------------------------*/
 
 static void
-print_long_command_line_option (FILE * file, char *str)
+print_long_command_line_option(FILE * file, char *str)
 {
     const char *p;
 
     for (p = str; *p && *p != ' '; p++)
-    { fputc (*p, file); }
+    { fputc(*p, file); }
 }
 
 /*------------------------------------------------------------------------*/
 
 static unsigned
-parse_number_rhs (char *str)
+parse_number_rhs(char *str)
 {
     unsigned res;
     char *p;
 
-    p = strchr (str, '=');
-    assert (p);
+    p = strchr(str, '=');
+    assert(p);
 
     if (!p[1]) {
-        fputs ("*** runlim: argument to ", stderr);
-        print_long_command_line_option (stderr, str);
-        fputs (" is missing\n", stderr);
-        exit (1);
+        fputs("*** runlim: argument to ", stderr);
+        print_long_command_line_option(stderr, str);
+        fputs(" is missing\n", stderr);
+        exit(1);
 
         res = 0;
     }
 
-    if (!isposnumber (p + 1)) {
-        fputs ("*** runlim: argument to ", stderr);
-        print_long_command_line_option (stderr, str);
-        fputs (" is not a positive number\n", stderr);
-        exit (1);
+    if (!isposnumber(p + 1)) {
+        fputs("*** runlim: argument to ", stderr);
+        print_long_command_line_option(stderr, str);
+        fputs(" is not a positive number\n", stderr);
+        exit(1);
 
         res = 0;
     }
 
-    res = (unsigned) atoi (p + 1);
+    res = (unsigned) atoi(p + 1);
 
     return res;
 }
@@ -206,19 +206,19 @@ parse_number_rhs (char *str)
 /*------------------------------------------------------------------------*/
 
 static FILE *
-open_log (const char *name, const char *option)
+open_log(const char *name, const char *option)
 {
     FILE *res;
 
     if (!name || !name[0]) {
-        fprintf (stderr, "*** runlim: argument to '%s' is missing\n", option);
-        exit (1);
+        fprintf(stderr, "*** runlim: argument to '%s' is missing\n", option);
+        exit(1);
     }
 
-    res = fopen (name, "w");
+    res = fopen(name, "w");
     if (!res) {
-        fprintf (stderr, "*** runlim: could not write to '%s'\n", name);
-        exit (1);
+        fprintf(stderr, "*** runlim: could not write to '%s'\n", name);
+        exit(1);
     }
 
     return res;
@@ -227,17 +227,17 @@ open_log (const char *name, const char *option)
 /*------------------------------------------------------------------------*/
 
 static int
-open_iofile (const char *name, const char *option)
+open_iofile(const char *name, const char *option)
 {
     if (!name || !name[0]) {
-        fprintf (stderr, "*** runlim: argument to '%s' is missing\n", option);
-        exit (1);
+        fprintf(stderr, "*** runlim: argument to '%s' is missing\n", option);
+        exit(1);
     }
 
     int iofile = open(name , O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
     if (iofile < 0) {
-        fprintf (stderr, "*** runlim: could not write to '%s'\n", name);
-        exit (1);
+        fprintf(stderr, "*** runlim: could not write to '%s'\n", name);
+        exit(1);
     }
 
     return iofile;
@@ -246,12 +246,12 @@ open_iofile (const char *name, const char *option)
 /*------------------------------------------------------------------------*/
 
 static unsigned
-get_physical_mb ()
+get_physical_mb()
 {
     unsigned res;
     long tmp;
 
-    tmp = sysconf (_SC_PAGE_SIZE) * sysconf (_SC_PHYS_PAGES);
+    tmp = sysconf(_SC_PAGE_SIZE) * sysconf(_SC_PHYS_PAGES);
     tmp >>= 20;
     res = (unsigned) tmp;
 
@@ -286,14 +286,14 @@ static unsigned start_time, time_limit, real_time_limit, space_limit, file_size_
 /*------------------------------------------------------------------------*/
 
 static Proc *
-new_proc (pid_t pid, pid_t ppid, long unsigned sjiffies,
-          long unsigned ujiffies, unsigned long vsize, long rsize)
+new_proc(pid_t pid, pid_t ppid, long unsigned sjiffies,
+         long unsigned ujiffies, unsigned long vsize, long rsize)
 {
     Proc *new;
 
-    if (!(new = malloc (sizeof (Proc)))) {
-        perror ("malloc");
-        exit (1);
+    if (!(new = malloc(sizeof(Proc)))) {
+        perror("malloc");
+        exit(1);
     }
     new->pid = pid;
     new->ppid = ppid;
@@ -311,13 +311,13 @@ new_proc (pid_t pid, pid_t ppid, long unsigned sjiffies,
 /*------------------------------------------------------------------------*/
 
 static void
-add_child (Proc * parent, Proc * child)
+add_child(Proc * parent, Proc * child)
 {
     Child *new, **walk;
 
-    if (!(new = malloc (sizeof (Child)))) {
-        perror ("malloc");
-        exit (1);
+    if (!(new = malloc(sizeof(Child)))) {
+        perror("malloc");
+        exit(1);
     }
     new->child = child;
     for (walk = &parent->children; *walk; walk = &(*walk)->next)
@@ -331,7 +331,7 @@ add_child (Proc * parent, Proc * child)
 /*------------------------------------------------------------------------*/
 
 static Proc *
-find_proc (pid_t pid)
+find_proc(pid_t pid)
 {
     Proc *p;
 
@@ -345,7 +345,7 @@ find_proc (pid_t pid)
 /*------------------------------------------------------------------------*/
 
 static void
-delete_proc (void)
+delete_proc(void)
 {
     Child * c, * nextc;
     Proc * p, * nextp;
@@ -354,9 +354,9 @@ delete_proc (void)
         nextp = p->next;
         for (c = p->children; c; c = nextc) {
             nextc = c->next;
-            free (c);
+            free(c);
         }
-        free (p);
+        free(p);
     }
     proc_list = 0;
 }
@@ -364,13 +364,13 @@ delete_proc (void)
 /*------------------------------------------------------------------------*/
 
 static void
-add_proc (pid_t pid, pid_t ppid, long unsigned sjiffies,
-          long unsigned ujiffies, unsigned long vsize, long rsize)
+add_proc(pid_t pid, pid_t ppid, long unsigned sjiffies,
+         long unsigned ujiffies, unsigned long vsize, long rsize)
 {
     Proc *this, *parent;
 
-    if (!(this = find_proc (pid)))
-    { this = new_proc (pid, ppid, sjiffies, ujiffies, vsize, rsize); }
+    if (!(this = find_proc(pid)))
+    { this = new_proc(pid, ppid, sjiffies, ujiffies, vsize, rsize); }
     else {
         /* was already there, update sjiffies, ujiffies, vsize, rsize */
         this->sjiffies = sjiffies;
@@ -387,10 +387,10 @@ add_proc (pid_t pid, pid_t ppid, long unsigned sjiffies,
     if (pid == ppid)
     { ppid = 0; }
 
-    if (!(parent = find_proc (ppid)))
-    { parent = new_proc (ppid, 0, 0, 0, 0, 0); }
+    if (!(parent = find_proc(ppid)))
+    { parent = new_proc(ppid, 0, 0, 0, 0, 0); }
 
-    add_child (parent, this);
+    add_child(parent, this);
     this->parent = parent;
 }
 
@@ -399,7 +399,7 @@ add_proc (pid_t pid, pid_t ppid, long unsigned sjiffies,
  * name in the /proc filesystem. My thanks to Albert and procps authors.
  */
 static void
-read_proc ()
+read_proc()
 {
     DIR *dir;
     struct dirent *de;
@@ -411,90 +411,90 @@ read_proc ()
     unsigned long vsize;
     long rsize;
 
-    buffer = malloc (size = 100);
+    buffer = malloc(size = 100);
 
-    if (!(dir = opendir (Proc_BASE))) {
-        perror (Proc_BASE);
-        exit (1);
+    if (!(dir = opendir(Proc_BASE))) {
+        perror(Proc_BASE);
+        exit(1);
     }
 
     empty = 1;
 SKIP:
-    while ((de = readdir (dir)) != NULL) {
+    while ((de = readdir(dir)) != NULL) {
         empty = 0;
-        if ((pid = (pid_t) atoi (de->d_name)) == 0) { continue; }
-        if (!(path = malloc (strlen (Proc_BASE) + strlen (de->d_name) + 10)))
+        if ((pid = (pid_t) atoi(de->d_name)) == 0) { continue; }
+        if (!(path = malloc(strlen(Proc_BASE) + strlen(de->d_name) + 10)))
         { continue; }
-        sprintf (path, "%s/%d/stat", Proc_BASE, pid);
-        file = fopen (path, "r");
-        free (path);
+        sprintf(path, "%s/%d/stat", Proc_BASE, pid);
+        file = fopen(path, "r");
+        free(path);
         if (!file) { continue; }
         num_valid_results = 0;
         pos = 0;
 
-        while ((ch = getc (file)) != EOF) {
+        while ((ch = getc(file)) != EOF) {
             if (pos >= size - 1)
-            { buffer = realloc (buffer, size *= 2); }
+            { buffer = realloc(buffer, size *= 2); }
 
             buffer[pos++] = ch;
         }
 
-        fclose (file);
+        fclose(file);
 
         ujiffies = sjiffies = -1;
         num_valid_results = 0;
         vsize = 0;
         rsize = 0;
 
-        token = strtok (buffer, " ");
+        token = strtok(buffer, " ");
         i = 0;
 
         while (token) {
             switch (i++) {
             case VSIZE_POS:
-                if (sscanf (token, "%lu", &vsize) != 1) { goto SKIP; }
+                if (sscanf(token, "%lu", &vsize) != 1) { goto SKIP; }
                 break;
             case RSIZE_POS:
-                if (sscanf (token, "%ld", &rsize) != 1) { goto SKIP; }
+                if (sscanf(token, "%ld", &rsize) != 1) { goto SKIP; }
                 break;
             case PID_POS:
-                if (atoi (token) != pid) { goto SKIP; }
+                if (atoi(token) != pid) { goto SKIP; }
                 break;
             case PPID_POS:
-                if (sscanf (token, "%d", &ppid) != 1) { goto SKIP; }
+                if (sscanf(token, "%d", &ppid) != 1) { goto SKIP; }
                 break;
             case STIME_POS:
-                if (sscanf (token, "%d", &tmp) != 1) { goto SKIP; }
+                if (sscanf(token, "%d", &tmp) != 1) { goto SKIP; }
                 sjiffies = tmp;
-                assert (sjiffies >= 0);
+                assert(sjiffies >= 0);
                 break;
             case UTIME_POS:
-                if (sscanf (token, "%d", &tmp) != 1) { goto SKIP; }
+                if (sscanf(token, "%d", &tmp) != 1) { goto SKIP; }
                 ujiffies = tmp;
-                assert (usage >= 0);
+                assert(usage >= 0);
                 break;
             default:
                 break;
             }
 
-            token = strtok (0, " ");
+            token = strtok(0, " ");
         }
         if (ujiffies < 0 || sjiffies < 0) { goto SKIP; }
-        add_proc (pid, ppid, ujiffies, sjiffies, vsize, rsize);
+        add_proc(pid, ppid, ujiffies, sjiffies, vsize, rsize);
     }
 
-    (void) closedir (dir);
-    free (buffer);
+    (void) closedir(dir);
+    free(buffer);
     if (empty) {
-        fprintf (stderr, "%s is empty (not mounted ?)\n", Proc_BASE) ;
-        exit (1);
+        fprintf(stderr, "%s is empty (not mounted ?)\n", Proc_BASE) ;
+        exit(1);
     }
 }
 
 /*------------------------------------------------------------------------*/
 
 static void
-sample_children (Child *cptr, double *time_ptr, double *mb_ptr)
+sample_children(Child *cptr, double *time_ptr, double *mb_ptr)
 {
     while (cptr) {
         children++;
@@ -511,12 +511,12 @@ sample_children (Child *cptr, double *time_ptr, double *mb_ptr)
         *time_ptr +=
             (cptr->child->ujiffies + cptr->child->sjiffies) / (double) HZ;
 
-        *mb_ptr += cptr->child->rsize / (double) (1 << 8);
+        *mb_ptr += cptr->child->rsize / (double)(1 << 8);
         #ifdef DEBUGSAMPLE
         fprintf(log, "timeptr(new) %f\n", *time_ptr);
         #endif
         if (cptr->child->children)
-        { sample_children (cptr->child->children, time_ptr, mb_ptr); }
+        { sample_children(cptr->child->children, time_ptr, mb_ptr); }
 
         cptr = cptr->next;
     }
@@ -530,23 +530,23 @@ sample_children (Child *cptr, double *time_ptr, double *mb_ptr)
  * 3. goes through all the children
  */
 static int
-sample_recursive (double *time_ptr, double *mb_ptr)
+sample_recursive(double *time_ptr, double *mb_ptr)
 {
     Proc *pr;
 
-    read_proc ();
-    pr = find_proc (child_pid);
+    read_proc();
+    pr = find_proc(child_pid);
 
     if (!pr)
     { return 0; }
 
     *time_ptr = (pr->ujiffies + pr->sjiffies) / (double) HZ;
-    *mb_ptr = pr->rsize / (double) (1 << 8);
+    *mb_ptr = pr->rsize / (double)(1 << 8);
 
     if (pr->children)
-    { sample_children (pr->children, time_ptr, mb_ptr); }
+    { sample_children(pr->children, time_ptr, mb_ptr); }
 
-    delete_proc ();
+    delete_proc();
 
     return 1;
 }
@@ -554,10 +554,10 @@ sample_recursive (double *time_ptr, double *mb_ptr)
 /*------------------------------------------------------------------------*/
 
 static void
-report (double time, double mb)
+report(double time, double mb)
 {
-    fprintf (log, "[runlim] sample:\t\t%.1f seconds, %.1f MB\n", time, mb);
-    fflush (log);
+    fprintf(log, "[runlim] sample:\t\t%.1f seconds, %.1f MB\n", time, mb);
+    fflush(log);
 }
 
 /*------------------------------------------------------------------------*/
@@ -570,32 +570,32 @@ static int caught_out_of_time;
 static unsigned sigxcpu_delay;
 
 static void
-really_kill_child (void)
+really_kill_child(void)
 {
     // be nice to CVC4's stats
-    kill (child_pid, SIGXCPU);
-    usleep (sigxcpu_delay);
-    kill (child_pid, SIGTERM);
-    usleep (10);
-    kill (child_pid, SIGTERM);
-    usleep (10);
-    kill (child_pid, SIGTERM);
-    usleep (100);
-    kill (child_pid, SIGKILL);
-    usleep (10);
-    kill (child_pid, SIGKILL);
-    usleep (10);
-    kill (child_pid, SIGKILL);
+    kill(child_pid, SIGXCPU);
+    usleep(sigxcpu_delay);
+    kill(child_pid, SIGTERM);
+    usleep(10);
+    kill(child_pid, SIGTERM);
+    usleep(10);
+    kill(child_pid, SIGTERM);
+    usleep(100);
+    kill(child_pid, SIGKILL);
+    usleep(10);
+    kill(child_pid, SIGKILL);
+    usleep(10);
+    kill(child_pid, SIGKILL);
 }
 
 /*------------------------------------------------------------------------*/
 
 static double
-wall_clock_time (void)
+wall_clock_time(void)
 {
     double res = -1;
     struct timeval tv;
-    if (!gettimeofday (&tv, 0)) {
+    if (!gettimeofday(&tv, 0)) {
         res = 1e-6 * tv.tv_usec;
         res += tv.tv_sec;
     }
@@ -605,7 +605,7 @@ wall_clock_time (void)
 /*------------------------------------------------------------------------*/
 
 static double
-real_time (void)
+real_time(void)
 {
     double res;
     if (start_time < 0) { return -1; }
@@ -616,15 +616,15 @@ real_time (void)
 /*------------------------------------------------------------------------*/
 
 static void
-sampler (int s)
+sampler(int s)
 {
     double mb, time;
     int res;
 
-    assert (s == SIGALRM);
+    assert(s == SIGALRM);
     num_samples++;
 
-    res = sample_recursive (&time, &mb);
+    res = sample_recursive(&time, &mb);
 
     if (res) {
         if (mb > max_mb)
@@ -637,16 +637,16 @@ sampler (int s)
     if (++num_samples_since_last_report >= REPORT_RATE) {
         num_samples_since_last_report = 0;
         if (res)
-        { report (time, mb); }
+        { report(time, mb); }
     }
 
     if (res) {
-        if (time > time_limit || real_time () > real_time_limit) {
+        if (time > time_limit || real_time() > real_time_limit) {
             caught_out_of_time = 1;
-            really_kill_child ();
+            really_kill_child();
         } else if (mb > space_limit) {
             caught_out_of_memory = 1;
-            really_kill_child ();
+            really_kill_child();
         }
     }
 }
@@ -658,16 +658,16 @@ static int caught_usr1_signal = 0;
 /*------------------------------------------------------------------------*/
 
 static void
-sig_usr1_handler (int s)
+sig_usr1_handler(int s)
 {
-    assert (s == SIGUSR1);
+    assert(s == SIGUSR1);
     caught_usr1_signal = 1;
 }
 
 /*------------------------------------------------------------------------*/
 
 int
-main (int argc, char **argv)
+main(int argc, char **argv)
 {
     int i, j, res, status, s, ok;
     struct rlimit l;
@@ -680,87 +680,87 @@ main (int argc, char **argv)
     s = 0;                /* signal caught */
     time_limit = 60 * 60 * 24 * 3600; /* one year */
     real_time_limit = time_limit;
-    space_limit = get_physical_mb (); /* physical memory size */
+    space_limit = get_physical_mb();  /* physical memory size */
     file_size_limit = -1;                       /* for now, no limit */
 
     sigxcpu_delay = 5 * 1000;             /* 5 seconds. */
     for (i = 1; i < argc; i++) {
         if (argv[i][0] == '-') {
             if (argv[i][1] == 't') {
-                time_limit = parse_number_argument (&i, argc, argv);
-            } else if (strstr (argv[i], "--time-limit=") == argv[i]) {
-                time_limit = parse_number_rhs (argv[i]);
+                time_limit = parse_number_argument(&i, argc, argv);
+            } else if (strstr(argv[i], "--time-limit=") == argv[i]) {
+                time_limit = parse_number_rhs(argv[i]);
             } else if (argv[i][1] == 'r') {
-                real_time_limit = parse_number_argument (&i, argc, argv);
-            } else if (strstr (argv[i], "--real-time-limit=") == argv[i]) {
-                real_time_limit = parse_number_rhs (argv[i]);
+                real_time_limit = parse_number_argument(&i, argc, argv);
+            } else if (strstr(argv[i], "--real-time-limit=") == argv[i]) {
+                real_time_limit = parse_number_rhs(argv[i]);
             } else if (argv[i][1] == 's') {
-                space_limit = parse_number_argument (&i, argc, argv);
-            } else if (strstr (argv[i], "--space-limit=") == argv[i]) {
-                space_limit = parse_number_rhs (argv[i]);
+                space_limit = parse_number_argument(&i, argc, argv);
+            } else if (strstr(argv[i], "--space-limit=") == argv[i]) {
+                space_limit = parse_number_rhs(argv[i]);
             } else if (argv[i][1] == 'f') {
-                file_size_limit = parse_number_argument (&i, argc, argv);
-            } else if (strstr (argv[i], "--file-limit=") == argv[i]) {
-                file_size_limit = parse_number_rhs (argv[i]);
+                file_size_limit = parse_number_argument(&i, argc, argv);
+            } else if (strstr(argv[i], "--file-limit=") == argv[i]) {
+                file_size_limit = parse_number_rhs(argv[i]);
             } else if (argv[i][1] == 'x') {
-                sigxcpu_delay = parse_number_argument (&i, argc, argv);
-            } else if (strstr (argv[i], "--sigxcpu-delay=") == argv[i]) {
-                sigxcpu_delay = parse_number_rhs (argv[i]);
-            } else if (strcmp (argv[i], "-v") == 0 ||
-                       strcmp (argv[i], "--version") == 0) {
-                printf ("%s\n", VERSION);
-                exit (0);
-            } else if (strcmp (argv[i], "-k") == 0 ||
-                       strcmp (argv[i], "--kill") == 0) {
+                sigxcpu_delay = parse_number_argument(&i, argc, argv);
+            } else if (strstr(argv[i], "--sigxcpu-delay=") == argv[i]) {
+                sigxcpu_delay = parse_number_rhs(argv[i]);
+            } else if (strcmp(argv[i], "-v") == 0 ||
+                       strcmp(argv[i], "--version") == 0) {
+                printf("%s\n", VERSION);
+                exit(0);
+            } else if (strcmp(argv[i], "-k") == 0 ||
+                       strcmp(argv[i], "--kill") == 0) {
                 propagate_signals = 1;
-            } else if (strcmp (argv[i], "-h") == 0 ||
-                       strcmp (argv[i], "--help") == 0) {
-                usage ();
-                exit (0);
+            } else if (strcmp(argv[i], "-h") == 0 ||
+                       strcmp(argv[i], "--help") == 0) {
+                usage();
+                exit(0);
             } else if (argv[i][1] == '1') {
                 out = argv[++i];
             } else if (argv[i][1] == '2') {
                 err = argv[++i];
             } else if (argv[i][1] == 'o') {
                 if (argv[i][2])
-                { log = open_log (argv[i] + 2, "-o"); }
+                { log = open_log(argv[i] + 2, "-o"); }
                 else
-                { log = open_log (i + 1 >= argc ? 0 : argv[++i], "-o"); }
-            } else if (strstr (argv[i], "--output-file=") == argv[i]) {
-                p = strchr (argv[i], '=');
-                assert (p);
-                log = open_log (p + 1, "--output-file");
+                { log = open_log(i + 1 >= argc ? 0 : argv[++i], "-o"); }
+            } else if (strstr(argv[i], "--output-file=") == argv[i]) {
+                p = strchr(argv[i], '=');
+                assert(p);
+                log = open_log(p + 1, "--output-file");
             } else {
-                fprintf (stderr, "*** runlim: invalid option '%s' (try '-h')\n",
-                         argv[i]);
-                exit (1);
+                fprintf(stderr, "*** runlim: invalid option '%s' (try '-h')\n",
+                        argv[i]);
+                exit(1);
             }
         } else
         { break; }
     }
 
     if (i >= argc) {
-        fprintf (stderr, "*** runlim: no program specified (try '-h')\n");
-        exit (1);
+        fprintf(stderr, "*** runlim: no program specified (try '-h')\n");
+        exit(1);
     }
 
     if (!log)
     { log = stderr; }
 
-    fprintf (log, "[runlim] version:\t\t%s\n", VERSION);
-    fprintf (log, "[runlim] time limit:\t\t%u seconds\n", time_limit);
-    fprintf (log, "[runlim] real time limit:\t%u seconds\n", real_time_limit);
-    fprintf (log, "[runlim] space limit:\t\t%u MB\n", space_limit);
-    if ( file_size_limit != -1 ) { fprintf (log, "[runlim] file size limit:\t\t%u MB\n", file_size_limit); }
-    fprintf (log, "[runlim] sample rate:\t\t%u mil1iseconds\n", (SAMPLE_RATE / 1000));
+    fprintf(log, "[runlim] version:\t\t%s\n", VERSION);
+    fprintf(log, "[runlim] time limit:\t\t%u seconds\n", time_limit);
+    fprintf(log, "[runlim] real time limit:\t%u seconds\n", real_time_limit);
+    fprintf(log, "[runlim] space limit:\t\t%u MB\n", space_limit);
+    if (file_size_limit != -1) { fprintf(log, "[runlim] file size limit:\t\t%u MB\n", file_size_limit); }
+    fprintf(log, "[runlim] sample rate:\t\t%u mil1iseconds\n", (SAMPLE_RATE / 1000));
     for (j = i; j < argc; j++)
-    { fprintf (log, "[runlim] argv[%d]:\t\t%s\n", j - i, argv[j]); }
-    t = time (0);
-    fprintf (log, "[runlim] start:\t\t\t%s", ctime (&t));
-    fflush (log);
+    { fprintf(log, "[runlim] argv[%d]:\t\t%s\n", j - i, argv[j]); }
+    t = time(0);
+    fprintf(log, "[runlim] start:\t\t\t%s", ctime(&t));
+    fflush(log);
 
-    signal (SIGUSR1, sig_usr1_handler);
-    parent_pid = getpid ();
+    signal(SIGUSR1, sig_usr1_handler);
+    parent_pid = getpid();
 
 
     // runlim binary pretends to be a terminal -- then output of child becomes line-buffered
@@ -768,7 +768,7 @@ main (int argc, char **argv)
     // openpty(&master, &slave, NULL, NULL, NULL);
 
     start_time = wall_clock_time();
-    if ((child_pid = fork ()) != 0) {
+    if ((child_pid = fork()) != 0) {
 
         /*
          *
@@ -784,24 +784,24 @@ main (int argc, char **argv)
             // close(slave);
 
             status = 0;
-            fprintf (log, "[runlim] main pid:\t\t%d\n", (int) child_pid);
-            fflush (log);
+            fprintf(log, "[runlim] main pid:\t\t%d\n", (int) child_pid);
+            fflush(log);
 
-            assert (SAMPLE_RATE < 1000000);
+            assert(SAMPLE_RATE < 1000000);
             timer.it_interval.tv_sec = 0;
             timer.it_interval.tv_usec = SAMPLE_RATE;
             timer.it_value = timer.it_interval;
-            signal (SIGALRM, sampler);
-            setitimer (ITIMER_REAL, &timer, &old_timer);
+            signal(SIGALRM, sampler);
+            setitimer(ITIMER_REAL, &timer, &old_timer);
 
-            (void) wait (&status);
+            (void) wait(&status);
 
-            setitimer (ITIMER_REAL, &old_timer, &timer);
+            setitimer(ITIMER_REAL, &old_timer, &timer);
 
-            if (WIFEXITED (status))
-            { res = WEXITSTATUS (status); }
-            else if (WIFSIGNALED (status)) {
-                s = WTERMSIG (status);
+            if (WIFEXITED(status))
+            { res = WEXITSTATUS(status); }
+            else if (WIFSIGNALED(status)) {
+                s = WTERMSIG(status);
                 res = 128 + s;
                 switch (s) {
                 case SIGXFSZ:
@@ -839,9 +839,9 @@ main (int argc, char **argv)
             hard_time_limit = time_limit;
             hard_time_limit = (hard_time_limit * 101 + 99) / 100;   // + 1%
             l.rlim_cur = l.rlim_max = hard_time_limit;
-            setrlimit (RLIMIT_CPU, &l);
+            setrlimit(RLIMIT_CPU, &l);
             l.rlim_cur = l.rlim_max = hard_time_limit << 20;
-            setrlimit (RLIMIT_RSS, &l);
+            setrlimit(RLIMIT_RSS, &l);
         }
 
 
@@ -850,10 +850,10 @@ main (int argc, char **argv)
         // login_tty(slave);
         // close(master);
 
-        if ( out != NULL ) {
-            int outfile = open_iofile( out, "-1" );
+        if (out != NULL) {
+            int outfile = open_iofile(out, "-1");
             if (dup2(outfile, 1) < 0) {
-                kill (getppid(), SIGIO);
+                kill(getppid(), SIGIO);
                 return 1;
             }
             /*
@@ -863,10 +863,10 @@ main (int argc, char **argv)
               */
         }
 
-        if ( err != NULL ) {
-            int errfile = open_iofile( err, "-2" );
+        if (err != NULL) {
+            int errfile = open_iofile(err, "-2");
             if (dup2(errfile, 2) < 0) {
-                kill (getppid(), SIGIO);
+                kill(getppid(), SIGIO);
                 return 1;
             }
             /*
@@ -886,7 +886,7 @@ main (int argc, char **argv)
             }
         }
 
-        if ( file_size_limit > -1 ) {
+        if (file_size_limit > -1) {
             rlim_t new_file_lim = (rlim_t)space_limit * 1024 * 1024;
             getrlimit(RLIMIT_FSIZE, &rl);
             if (rl.rlim_max == RLIM_INFINITY || new_file_lim < rl.rlim_max) {
@@ -897,12 +897,12 @@ main (int argc, char **argv)
 
         }
 
-        execvp (argv[i], argv + i);
-        kill (getppid (), SIGUSR1);
-        exit (1);
+        execvp(argv[i], argv + i);
+        kill(getppid(), SIGUSR1);
+        exit(1);
     }
 
-    real = real_time ();
+    real = real_time();
 
     if (caught_usr1_signal)
     { ok = EXEC_FAILED; }
@@ -911,56 +911,56 @@ main (int argc, char **argv)
     else if (caught_out_of_time)
     { ok = OUT_OF_TIME; }
 
-    t = time (0);
-    fprintf (log, "[runlim] end:\t\t\t%s", ctime (&t));
-    fprintf (log, "[runlim] status:\t\t");
+    t = time(0);
+    fprintf(log, "[runlim] end:\t\t\t%s", ctime(&t));
+    fprintf(log, "[runlim] status:\t\t");
 
-    if (max_seconds >= time_limit || real_time () >= real_time_limit)
+    if (max_seconds >= time_limit || real_time() >= real_time_limit)
     { goto FORCE_OUT_OF_TIME_ENTRY; }
 
     switch (ok) {
     case OK:
-        fputs ("ok", log);
+        fputs("ok", log);
         break;
     case OUT_OF_TIME:
     FORCE_OUT_OF_TIME_ENTRY:
-        fputs ("out of time", log);
+        fputs("out of time", log);
         res = 1;
         break;
     case OUT_OF_MEMORY:
-        fputs ("out of memory", log);
+        fputs("out of memory", log);
         res = 1;
         break;
     case SEGMENTATION_FAULT:
-        fputs ("segmentation fault", log);
+        fputs("segmentation fault", log);
         break;
     case BUS_ERROR:
-        fputs ("bus error", log);
+        fputs("bus error", log);
         break;
     case FORK_FAILED:
-        fputs ("fork failed", log);
+        fputs("fork failed", log);
         break;
     case INTERNAL_ERROR:
-        fputs ("internal error", log);
+        fputs("internal error", log);
         break;
     case EXEC_FAILED:
-        fputs ("execvp failed", log);
+        fputs("execvp failed", log);
         break;
     default:
-        fprintf (log, "signal(%d)", s);
+        fprintf(log, "signal(%d)", s);
         break;
     }
-    fputc ('\n', log);
-    fprintf (log, "[runlim] result:\t\t%d\n", res);
-    fflush (log);
+    fputc('\n', log);
+    fprintf(log, "[runlim] result:\t\t%d\n", res);
+    fflush(log);
 
-    fprintf (log, "[runlim] children:\t\t%d\n", children);
-    fprintf (log, "[runlim] real:\t\t\t%.2f seconds\n", real);
-    fprintf (log, "[runlim] time:\t\t\t%.2f seconds\n", max_seconds);
-    fprintf (log, "[runlim] space:\t\t\t%.1f MB\n", max_mb);
-    fprintf (log, "[runlim] samples:\t\t%u\n", num_samples);
+    fprintf(log, "[runlim] children:\t\t%d\n", children);
+    fprintf(log, "[runlim] real:\t\t\t%.2f seconds\n", real);
+    fprintf(log, "[runlim] time:\t\t\t%.2f seconds\n", max_seconds);
+    fprintf(log, "[runlim] space:\t\t\t%.1f MB\n", max_mb);
+    fprintf(log, "[runlim] samples:\t\t%u\n", num_samples);
 
-    fflush (log);
+    fflush(log);
 
     if (propagate_signals) {
         switch (ok) {
@@ -972,7 +972,7 @@ main (int argc, char **argv)
         case EXEC_FAILED:
             break;
         default:
-            kill (parent_pid, s);
+            kill(parent_pid, s);
             break;
         }
     }

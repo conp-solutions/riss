@@ -59,7 +59,7 @@ class BoundedVariableAddition : public Technique
     /** compare two literals */
     struct LitOrderBVAHeapLt {
         CoprocessorData& data;
-        bool operator () (int& x, int& y) const
+        bool operator()(int& x, int& y) const
         {
             return data[ Riss::toLit(x)] > data[Riss::toLit(y)]; // more frequent literal should be least element!
         }
@@ -76,7 +76,7 @@ class BoundedVariableAddition : public Technique
     Riss::vec<Riss::Lit> clauseLits;          // std::vector that is added for clause definitions
 
   public:
-    BoundedVariableAddition( Coprocessor::CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, Coprocessor::CoprocessorData& _data, Coprocessor::Propagation& _propagation );
+    BoundedVariableAddition(Coprocessor::CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, Coprocessor::CoprocessorData& _data, Coprocessor::Propagation& _propagation);
 
     void reset();
 
@@ -112,7 +112,7 @@ class BoundedVariableAddition : public Technique
     * @param right literal that represents the right side
     * @return false, if shrinking a clause to unit led to a failed enqueue (UNSAT)
     */
-    bool bvaHandleComplement( const Riss::Lit right, Riss::Heap< Coprocessor::LitOrderHeapLt >& bvaHeap );
+    bool bvaHandleComplement(const Riss::Lit right, Riss::Heap< Coprocessor::LitOrderHeapLt >& bvaHeap);
 
     /** introduce a fresh variable, update the size of all required structures*/
     Riss::Var nextVariable(char type, Riss::Heap<LitOrderHeapLt>& bvaHeap);
@@ -124,17 +124,17 @@ class BoundedVariableAddition : public Technique
     struct xorHalfPair {
         Riss::Lit l1, l2;
         Riss::CRef c1, c2;
-        xorHalfPair( Riss::Lit _l1, Riss::Lit _l2, Riss::CRef _c1, Riss::CRef _c2) : l1(_l1), l2(_l2), c1(_c1), c2(_c2) {}
+        xorHalfPair(Riss::Lit _l1, Riss::Lit _l2, Riss::CRef _c1, Riss::CRef _c2) : l1(_l1), l2(_l2), c1(_c1), c2(_c2) {}
         xorHalfPair() : l1(Riss::lit_Undef), l2(Riss::lit_Undef), c1(Riss::CRef_Undef), c2(Riss::CRef_Undef) {}
 
         /** generate an order, so that std::pairs that belong to the same XOR gate are placed behind each other */
-        bool operator>(const xorHalfPair& other ) const
+        bool operator>(const xorHalfPair& other) const
         {
-            return ( toInt(l2) > toInt( other.l2 ));
+            return (toInt(l2) > toInt(other.l2));
         }
-        bool operator<(const xorHalfPair& other ) const
+        bool operator<(const xorHalfPair& other) const
         {
-            return ( toInt(l2) < toInt( other.l2 ));
+            return (toInt(l2) < toInt(other.l2));
         }
 
     };
@@ -142,7 +142,7 @@ class BoundedVariableAddition : public Technique
     struct iteHalfPair {
         Riss::Lit l1, l2, l3;
         Riss::CRef c1, c2;
-        iteHalfPair( Riss::Lit _l1, Riss::Lit _l2, Riss::Lit _l3, Riss::CRef _c1, Riss::CRef _c2)
+        iteHalfPair(Riss::Lit _l1, Riss::Lit _l2, Riss::Lit _l3, Riss::CRef _c1, Riss::CRef _c2)
             : l1(_l1), l2(_l2), l3(_l3), c1(_c1), c2(_c2) {}
 
         iteHalfPair() : l1(Riss::lit_Undef), l2(Riss::lit_Undef), l3(Riss::lit_Undef), c1(Riss::CRef_Undef), c2(Riss::CRef_Undef) {}
@@ -153,9 +153,9 @@ class BoundedVariableAddition : public Technique
             const Riss::Var iv2 = var(l2); const Riss::Var jv2 = var(other.l2);
             const Riss::Var iv3 = var(l3); const Riss::Var jv3 = var(other.l3);
             const bool signDiff = (sign(l2));
-            return (   iv2 > jv2
-                       || (iv2 == jv2 &&  iv3 > jv3)
-                       || (iv2 == jv2 &&  iv3 == jv3 && signDiff )
+            return (iv2 > jv2
+                    || (iv2 == jv2 &&  iv3 > jv3)
+                    || (iv2 == jv2 &&  iv3 == jv3 && signDiff)
                    );
         }
         bool operator<(const iteHalfPair& other) const
@@ -165,7 +165,7 @@ class BoundedVariableAddition : public Technique
     };
 
     /** remove duplicate clauses from the clause list of the given literal*/
-    void removeDuplicateClauses( const Riss::Lit literal );
+    void removeDuplicateClauses(const Riss::Lit literal);
 
   public:
     // parameters

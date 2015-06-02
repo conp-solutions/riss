@@ -317,7 +317,7 @@ void BoundedVariableElimination::bve_worker(CoprocessorData& data, Heap<VarOrder
             }
             variable_queue.pop_back();
         }
-        assert (v != var_Undef && "variable heap or queue failed");
+        assert(v != var_Undef && "variable heap or queue failed");
 
         // do not work on this variable, if it will be unit-propagated! if all units are eagerly propagated, this is not necessary
         if (data.value(mkLit(v, true)) != l_Undef || data.value(mkLit(v, false)) != l_Undef) { continue; }
@@ -724,7 +724,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& 
                         break;
                     }
                 } else
-                { assert (0); } //something went wrong
+                { assert(0); }  //something went wrong
             }
 
             if (config.opt_bve_verbose > 2) { cerr << "c ------------------------------------------" << endl; }
@@ -883,7 +883,7 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData& data, Heap<VarOrde
                             if (p.can_be_deleted()) // now, the next clause might be redundant!
                             { break; }
                         } else
-                        { assert (false && "a case that should not be happen occurred!"); } //something went wrong
+                        { assert(false && "a case that should not be happen occurred!"); }  //something went wrong
                     }
                 }
 

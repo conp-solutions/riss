@@ -54,9 +54,9 @@ class StreamBuffer
   public:
     explicit StreamBuffer(gzFile i) : in(i), pos(0), size(0) { assureLookahead(); }
 
-    int  operator *  () const { return (pos >= size) ? EOF : buf[pos]; }
+    int  operator * () const { return (pos >= size) ? EOF : buf[pos]; }
     void operator ++ ()       { pos++; assureLookahead(); }
-    int  position    () const { return pos; }
+    int  position() const { return pos; }
 };
 
 
@@ -100,7 +100,7 @@ static double parseDouble(B& in)   // only in the form X.XXXXXe-XX
 
     skipWhitespace(in);
     if (*in == EOF) { return 0; }
-    if      (*in == '-') { neg = true, ++in; }
+    if (*in == '-') { neg = true, ++in; }
     else if (*in == '+') { ++in; }
     if (*in < '1' || *in > '9') { printf("PARSE ERROR! Unexpected char: %c\n", *in), exit(3); }
     accu = (double)(*in - '0');
@@ -126,7 +126,7 @@ static int64_t parseInt(B& in)
     int64_t     val = 0;
     bool    neg = false;
     skipWhitespace(in);
-    if      (*in == '-') { neg = true, ++in; }
+    if (*in == '-') { neg = true, ++in; }
     else if (*in == '+') { ++in; }
     if (*in < '0' || *in > '9') { fprintf(stderr, "PARSE ERROR! Unexpected char: %c\n", *in), exit(3); }
     while (*in >= '0' && *in <= '9')

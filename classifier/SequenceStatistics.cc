@@ -65,7 +65,7 @@ SequenceStatistics::SequenceStatistics(bool computingDerivative, bool countingZe
 
 SequenceStatistics::~SequenceStatistics()
 {
-    vector<double>().swap( values );
+    vector<double>().swap(values);
     if (computingDerivative)
     { delete derivative; }
 }
@@ -154,7 +154,7 @@ uint64_t SequenceStatistics::compute(int quantilesCount)
         for (int i = 1; i < quantilesCount; ++i) {
             quantiles.push_back(0);
         }
-        if ( computingDerivative ) {
+        if (computingDerivative) {
             operations += quantilesCount;
             operations += derivative->compute(quantilesCount);
         }

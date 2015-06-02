@@ -23,53 +23,53 @@ static int close_stimulus_file;
 static FILE *stimulus_file;
 
 static void
-die (const char *fmt, ...)
+die(const char *fmt, ...)
 {
     va_list ap;
-    fputs ("*** [wrapstim] ", stderr);
-    va_start (ap, fmt);
-    vfprintf (stderr, fmt, ap);
-    va_end (ap);
-    fputc ('\n', stderr);
-    exit (1);
+    fputs("*** [wrapstim] ", stderr);
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fputc('\n', stderr);
+    exit(1);
 }
 
 static void
-link (void)
+link(void)
 {
     const char *p, *start_of_name, *end_of_name, *q;
     aiger_symbol *esym, *msym;
     unsigned i, mpos, epos;
     char ch;
 
-    m2e = malloc (sizeof (m2e[0]) * model->num_inputs);
+    m2e = malloc(sizeof(m2e[0]) * model->num_inputs);
     for (mpos = 0; mpos < model->num_inputs; mpos++)
-    { m2e[mpos] = calloc (k + 1, sizeof (m2e[mpos][0])); }
+    { m2e[mpos] = calloc(k + 1, sizeof(m2e[mpos][0])); }
 
     for (epos = 0; epos < expansion->num_inputs; epos++) {
         esym = expansion->inputs + epos;
         p = esym->name;
         if (!p)
-            die ("input %u does not have an expanded symbol in '%s'",
-                 epos, expansion_file_name);
+            die("input %u does not have an expanded symbol in '%s'",
+                epos, expansion_file_name);
 
         ch = *p++;
-        if (!isdigit (ch))
-            die ("symbol for input %u of '%s' does not have a time prefix",
-                 epos, expansion_file_name);
+        if (!isdigit(ch))
+            die("symbol for input %u of '%s' does not have a time prefix",
+                epos, expansion_file_name);
 
         i = ch - '0';
-        while (isdigit (ch = *p++))
+        while (isdigit(ch = *p++))
         { i = 10 * i + (ch - '0'); }
 
         if (i > k)
-            die ("time prefix %u of input %u in '%s' exceeds bound %u",
-                 i, epos, expansion_file_name, k);
+            die("time prefix %u of input %u in '%s' exceeds bound %u",
+                i, epos, expansion_file_name, k);
 
         if (ch != ' ')
         SPACE_MISSING:
-            die ("symbol of input %u of '%s' is missing a space seperator",
-                 epos, expansion_file_name);
+            die("symbol of input %u of '%s' is missing a space seperator",
+                epos, expansion_file_name);
 
         start_of_name = p;
         while (*p++)
@@ -84,21 +84,21 @@ link (void)
 
         mpos = 0;
         while ((ch = *++p)) {
-            if (!isdigit (ch))
-                die ("invalid position suffix in symbol for input %u of '%s'",
-                     epos, expansion_file_name);
+            if (!isdigit(ch))
+                die("invalid position suffix in symbol for input %u of '%s'",
+                    epos, expansion_file_name);
 
             mpos = 10 * mpos + (ch - '0');
         }
 
-        assert (i <= k);
+        assert(i <= k);
         if (mpos >= model->num_inputs)
-            die ("invalid model position %u in symbol of input %u of '%s'",
-                 mpos, epos, expansion_file_name);
+            die("invalid model position %u in symbol of input %u of '%s'",
+                mpos, epos, expansion_file_name);
 
         if (m2e[mpos][i])
-            die ("input %u of '%s' at time %u expanded twice in '%s'",
-                 mpos, model_file_name, i, expansion_file_name);
+            die("input %u of '%s' at time %u expanded twice in '%s'",
+                mpos, model_file_name, i, expansion_file_name);
 
         msym = model->inputs + mpos;
         if (msym->name) {
@@ -107,9 +107,9 @@ link (void)
                 ;
 
             if ((p == end_of_name) != !*q)
-                die ("symbol of input %u in '%s' "
-                     "does not match its expansion at time %u in '%s'",
-                     mpos, model_file_name, i, expansion_file_name);
+                die("symbol of input %u in '%s' "
+                    "does not match its expansion at time %u in '%s'",
+                    mpos, model_file_name, i, expansion_file_name);
         }
 
         m2e[mpos][i] = epos + 1;  /* 0 reserved for 'x' */
@@ -117,48 +117,48 @@ link (void)
 }
 
 static void
-parse (void)
+parse(void)
 {
     unsigned epos;
     int ch;
 
-    assignment = calloc (expansion->num_inputs + 1, sizeof (assignment[0]));
+    assignment = calloc(expansion->num_inputs + 1, sizeof(assignment[0]));
     assignment[0] = 'x';
 
     for (epos = 0; epos < expansion->num_inputs; epos++) {
-        ch = getc (stimulus_file);
+        ch = getc(stimulus_file);
 
         if (ch == EOF || ch == '\n')
-            die ("only got %u values out of %u in line 1 of '%s'",
-                 epos, expansion->num_inputs, stimulus_file_name);
+            die("only got %u values out of %u in line 1 of '%s'",
+                epos, expansion->num_inputs, stimulus_file_name);
 
         if (ch != '0' && ch != '1' && ch != 'x')
-            die ("expected '0', '1', or 'x' at character %u in line 1 of '%s'",
-                 epos + 1, stimulus_file_name);
+            die("expected '0', '1', or 'x' at character %u in line 1 of '%s'",
+                epos + 1, stimulus_file_name);
 
         assignment[epos + 1] = ch;
     }
 
-    ch = getc (stimulus_file);
+    ch = getc(stimulus_file);
     if (ch != '\n')
-        die ("expected new line after %u values in line 1 of '%s'",
-             expansion->num_inputs, stimulus_file_name);
+        die("expected new line after %u values in line 1 of '%s'",
+            expansion->num_inputs, stimulus_file_name);
 
-    ch = getc (stimulus_file);
+    ch = getc(stimulus_file);
     if (ch != EOF)
-    { die ("trailing characters after line 1 of '%s'", stimulus_file_name); }
+    { die("trailing characters after line 1 of '%s'", stimulus_file_name); }
 }
 
 static void
-print (void)
+print(void)
 {
     unsigned i, mpos;
 
     for (i = 0; i <= k; i++) {
         for (mpos = 0; mpos < model->num_inputs; mpos++)
-        { fputc (assignment[m2e[mpos][i]], stdout); }
+        { fputc(assignment[m2e[mpos][i]], stdout); }
 
-        fputc ('\n', stdout);
+        fputc('\n', stdout);
     }
 }
 
@@ -187,17 +187,17 @@ print (void)
     "which would due to the usage of the '-v' option even produce a VCD file.\n"
 
 int
-main (int argc, char **argv)
+main(int argc, char **argv)
 {
     const char *err;
     int i;
 
     for (i = 1; i < argc; i++) {
-        if (!strcmp (argv[i], "-h")) {
-            fprintf (stderr, USAGE);
-            exit (0);
+        if (!strcmp(argv[i], "-h")) {
+            fprintf(stderr, USAGE);
+            exit(0);
         } else if (argv[i][0] == '-')
-        { die ("invalid command line option '%s'", argv[i]); }
+        { die("invalid command line option '%s'", argv[i]); }
         else if (!model_file_name)
         { model_file_name = argv[i]; }
         else if (!expansion_file_name)
@@ -205,58 +205,58 @@ main (int argc, char **argv)
         else if (!foundk) {
             const char *p = argv[i];
             while (*p)
-                if (!isdigit (*p++))
-                { die ("expected bound as third argument"); }
+                if (!isdigit(*p++))
+                { die("expected bound as third argument"); }
 
-            k = atoi (argv[i]);
+            k = atoi(argv[i]);
             foundk = 1;
         } else if (!stimulus_file)
         { stimulus_file_name = argv[i]; }
         else
-        { die ("too many paramaters"); }
+        { die("too many paramaters"); }
     }
 
     if (!model_file_name)
-    { die ("no model specified"); }
+    { die("no model specified"); }
 
     if (!expansion_file_name)
-    { die ("no expansion specified"); }
+    { die("no expansion specified"); }
 
     if (!foundk)
-    { die ("unspecified bound"); }
+    { die("unspecified bound"); }
 
-    model = aiger_init ();
-    if ((err = aiger_open_and_read_from_file (model, model_file_name)))
-    { die ("%s", err); }
+    model = aiger_init();
+    if ((err = aiger_open_and_read_from_file(model, model_file_name)))
+    { die("%s", err); }
 
-    expansion = aiger_init ();
-    if ((err = aiger_open_and_read_from_file (expansion, expansion_file_name)))
-    { die ("%s", err); }
+    expansion = aiger_init();
+    if ((err = aiger_open_and_read_from_file(expansion, expansion_file_name)))
+    { die("%s", err); }
 
-    link ();
+    link();
 
     if (stimulus_file_name) {
-        if (!(stimulus_file = fopen (stimulus_file_name, "r")))
-        { die ("failed to read '%s'", stimulus_file_name); }
+        if (!(stimulus_file = fopen(stimulus_file_name, "r")))
+        { die("failed to read '%s'", stimulus_file_name); }
 
         close_stimulus_file = 1;
     } else
     { stimulus_file = stdin; }
 
-    parse ();
+    parse();
 
     if (close_stimulus_file)
-    { fclose (stimulus_file); }
+    { fclose(stimulus_file); }
 
-    aiger_reset (expansion);
+    aiger_reset(expansion);
 
-    print ();
+    print();
 
     for (i = 0; i < model->num_inputs; i++)
-    { free (m2e[i]); }
-    free (m2e);
+    { free(m2e[i]); }
+    free(m2e);
 
-    aiger_reset (model);
+    aiger_reset(model);
 
     return 0;
 }

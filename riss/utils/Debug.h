@@ -31,7 +31,7 @@ inline void
 PRINTLN(Riss::vec<Riss::Lit>& v)
 {
     if (pcasso_debug_verbosity > 0) {
-        for ( int i = 0; i < v.size(); i++ ) {
+        for (int i = 0; i < v.size(); i++) {
             std::cerr << (sign(v[i]) ? "-" : "") << var(v[i]) + 1 << " ";
         }
         std::cerr << std::endl;
@@ -41,7 +41,7 @@ inline void
 PRINTLN(Riss::vec<Riss::Lit>& v, unsigned int limit)
 {
     if (pcasso_debug_verbosity > 0) {
-        for ( int i = 0; i < limit; i++ ) {
+        for (int i = 0; i < limit; i++) {
             std::cerr << (sign(v[i]) ? "-" : "") << var(v[i]) + 1 << " ";
         }
         std::cerr << std::endl;
@@ -85,7 +85,7 @@ inline void STOP(void)
 }
 inline void PRINTLN_DEBUG(Riss::vec<Riss::Lit>& v)
 {
-    if ( pcasso_debug_verbosity > 2 ) {
+    if (pcasso_debug_verbosity > 2) {
         PRINTLN(v);
     }
 }
@@ -119,7 +119,7 @@ inline void PRINTLN_DEBUG(int i)
 }
 inline void PRINTLN_NOTE(Riss::vec<Riss::Lit>& v)
 {
-    if ( pcasso_debug_verbosity > 1 ) {
+    if (pcasso_debug_verbosity > 1) {
         PRINTLN(v);
     }
 }

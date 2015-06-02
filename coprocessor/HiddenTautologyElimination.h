@@ -40,7 +40,7 @@ class HiddenTautologyElimination : public Technique
 
   public:
 
-    HiddenTautologyElimination( CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, Propagation& _propagation );
+    HiddenTautologyElimination(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, Propagation& _propagation);
 
     /** run subsumption and strengthening until completion */
     void process(Coprocessor::CoprocessorData& data);
@@ -55,7 +55,7 @@ class HiddenTautologyElimination : public Technique
     /** mark all literals that would appear in HLA(C)
      * @return true, if clause can be removed by HTE
      */
-    bool hlaMarkClause(const Riss::CRef cr, Coprocessor::BIG& big, Riss::MarkArray& markArray, Riss::Lit* litQueue );
+    bool hlaMarkClause(const Riss::CRef cr, Coprocessor::BIG& big, Riss::MarkArray& markArray, Riss::Lit* litQueue);
 
     /** same as above, but can add literals to the std::vector, so that the std::vector represents the real HLA(C) clause */
     bool hlaMarkClause(Riss::vec< Riss::Lit >& clause, Coprocessor::BIG& big, Riss::MarkArray& markArray, Riss::Lit* litQueue, bool addLits = false);
@@ -78,7 +78,7 @@ class HiddenTautologyElimination : public Technique
     bool hasToEliminate();
 
     /** apply hte for the elements in the queue in the intervall [stard,end[ (position end is not touched!) */
-    void elimination_worker (CoprocessorData& data, uint32_t start, uint32_t end, BIG& big, bool doStatistics = true, bool doLock = false); // subsume certain set of elements of the processing queue, does not write to the queue
+    void elimination_worker(CoprocessorData& data, uint32_t start, uint32_t end, BIG& big, bool doStatistics = true, bool doLock = false);  // subsume certain set of elements of the processing queue, does not write to the queue
 
     /** run hte for the specified variable */
     bool hiddenTautologyElimination(Riss::Var v, Coprocessor::CoprocessorData& data, Coprocessor::BIG& big, Riss::MarkArray& hlaPositive, Riss::MarkArray& hlaNegative, bool statistic = true, bool doLock = false);

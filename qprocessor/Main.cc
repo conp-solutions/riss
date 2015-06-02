@@ -72,24 +72,24 @@ int main(int argc, char** argv)
 
         // Extra options:
         //
-        IntOption    verb   ("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
-        BoolOption   pre    ("MAIN", "pre",    "Completely turn on/off any preprocessing.", true);
-        StringOption dimacs ("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
+        IntOption    verb("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
+        BoolOption   pre("MAIN", "pre",    "Completely turn on/off any preprocessing.", true);
+        StringOption dimacs("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
         IntOption    cpu_lim("MAIN", "cpu-lim", "Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim", "Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
-        StringOption opt_config     ("MAIN", "config", "Use a preset configuration", 0);
-        BoolOption   opt_cmdLine    ("MAIN", "cmd", "print the relevant options", false);
+        StringOption opt_config("MAIN", "config", "Use a preset configuration", 0);
+        BoolOption   opt_cmdLine("MAIN", "cmd", "print the relevant options", false);
 
         CoreConfig coreConfig;
         Coprocessor::CP3Config cp3config;
         bool foundHelp = coreConfig.parseOptions(argc, argv);
         foundHelp = cp3config.parseOptions(argc, argv) || foundHelp;
-        ::parseOptions (argc, argv ); // parse all global options
-        if ( foundHelp ) { exit(0); } // stop after printing the help information
+        ::parseOptions(argc, argv);   // parse all global options
+        if (foundHelp) { exit(0); }   // stop after printing the help information
         coreConfig.setPreset(string(opt_config == 0 ? "" : opt_config));
         cp3config.setPreset(string(opt_config == 0 ? "" : opt_config));
 
-        if ( opt_cmdLine ) { // print the command line options
+        if (opt_cmdLine) {   // print the command line options
             std::stringstream s;
             coreConfig.configCall(s);
             cp3config.configCall(s);
@@ -171,10 +171,10 @@ int main(int argc, char** argv)
         signal(SIGXCPU, SIGINT_interrupt);
 
         unsigned beforeVariables = S.nVars();
-        Preprocessor preprocessor( &S, cp3config ); // build preprocessor with 1 thread
+        Preprocessor preprocessor(&S, cp3config);   // build preprocessor with 1 thread
         preprocessor.preprocess();
 
-        if ( S.nVars() < beforeVariables ) { printf("c Warning: Number of variables has been reduced from %d to %d\n", beforeVariables, S.nVars() ); }
+        if (S.nVars() < beforeVariables) { printf("c Warning: Number of variables has been reduced from %d to %d\n", beforeVariables, S.nVars()); }
 
         double simplified_time = cpuTime();
         if (S.verbosity > 0) {
@@ -188,7 +188,7 @@ int main(int argc, char** argv)
             if (S.verbosity > 0)
             { printf("c ==============================[ Writing QDIMACS ]===============================\n"); }
 
-            if ( beforeVariables < S.nVars() ) { printf("c add %d extra variables to the prefix\n", S.nVars() - beforeVariables); }
+            if (beforeVariables < S.nVars()) { printf("c add %d extra variables to the prefix\n", S.nVars() - beforeVariables); }
 
             FILE* res = fopen(dimacs, "wb") ;
 
@@ -197,26 +197,26 @@ int main(int argc, char** argv)
             fprintf(res, "p cnf %u %i\n", vars, cls);
             // print all the quantifiers again!
             bool lastQisE = quantifiers.size() == 0 ? false : quantifiers[ quantifiers.size() - 1 ].kind == 'e';
-            for ( int i = 0; i < quantifiers.size(); ++ i ) { // check whether the last quantifier is 'e'. if yes, add BVA variables, if not, add another quantifier sequence
+            for (int i = 0; i < quantifiers.size(); ++ i) {   // check whether the last quantifier is 'e'. if yes, add BVA variables, if not, add another quantifier sequence
                 fprintf(res, "%c ", quantifiers[i].kind);
-                for ( int j = 0 ; j < quantifiers[i].lits.size(); ++ j ) {
+                for (int j = 0 ; j < quantifiers[i].lits.size(); ++ j) {
                     const int l = toInt(quantifiers[i].lits[j]);
                     if (l % 2 == 0) { fprintf(res, "%i ", (l / 2) + 1); }
                     else { fprintf(res, "-%i ", (l / 2) + 1); }
                 }
 
-                if ( lastQisE && i + 1 == quantifiers.size() ) {
+                if (lastQisE && i + 1 == quantifiers.size()) {
                     // print bva variables!
-                    assert( quantifiers[i].kind == 'e' && "this quantifier set needs to be existential" );
-                    for ( Var v = beforeVariables; v < S.nVars(); ++v ) {
+                    assert(quantifiers[i].kind == 'e' && "this quantifier set needs to be existential");
+                    for (Var v = beforeVariables; v < S.nVars(); ++v) {
                         fprintf(res, "%i ", v + 1);
                     }
                 }
                 fprintf(res, "0\n");
             }
-            if ( ! lastQisE && beforeVariables < S.nVars() ) { // additional variables have been added, add them to the prefix as existential
+            if (! lastQisE && beforeVariables < S.nVars()) {   // additional variables have been added, add them to the prefix as existential
                 fprintf(res, "e ");
-                for ( Var v = beforeVariables; v < S.nVars(); ++v ) { fprintf(res, "%i ", v + 1); }
+                for (Var v = beforeVariables; v < S.nVars(); ++v) { fprintf(res, "%i ", v + 1); }
                 fprintf(res, "0\n");
             }
             // print the remaining formula!

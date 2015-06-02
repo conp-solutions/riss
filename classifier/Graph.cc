@@ -24,7 +24,7 @@ Graph::Graph(int size, bool computingDerivative) :
     this->size = size;
     this->mergeAtTheEnd = true;
     intermediateSort = false;
-    for ( int i = 0 ; i < size; ++ i ) { node[i].reserve(8); } // get space for the first 8 elements
+    for (int i = 0 ; i < size; ++ i) { node[i].reserve(8); }   // get space for the first 8 elements
 }
 
 Graph::Graph(int size, bool mergeAtTheEnd, bool computingDerivative) :
@@ -37,7 +37,7 @@ Graph::Graph(int size, bool mergeAtTheEnd, bool computingDerivative) :
     this->size = size;
     this->mergeAtTheEnd = mergeAtTheEnd;
     intermediateSort = false;
-    for ( int i = 0 ; i < size; ++ i ) { node[i].reserve(8); } // get space for the first 8 elements
+    for (int i = 0 ; i < size; ++ i) { node[i].reserve(8); }   // get space for the first 8 elements
 }
 
 Graph::~Graph()
@@ -45,11 +45,11 @@ Graph::~Graph()
     // TODO Auto-generated destructor stub
 }
 
-void Graph::setIntermediateSort( bool newValue )
+void Graph::setIntermediateSort(bool newValue)
 {
     intermediateSort = newValue;
-    if ( intermediateSort == true ) {
-        sortSize.resize( size, 16 );    // re-sort after 16 elements
+    if (intermediateSort == true) {
+        sortSize.resize(size, 16);      // re-sort after 16 elements
     }
 }
 
@@ -79,7 +79,7 @@ void Graph::addUndirectedEdge(int nodeA, int nodeB, double aweight)
         sstm << "tying to put node " << nodeA << " in a " << node.size() << " nodes Graph" << endl;
         string s = sstm.str();
         cerr << s;
-        assert (false);
+        assert(false);
     }
     if (nodeA > nodeB) { // always save the reference to the greater node.
         int t = nodeB;
@@ -90,8 +90,8 @@ void Graph::addUndirectedEdge(int nodeA, int nodeB, double aweight)
     node[nodeA].push_back(p);
     nodeDeg[nodeA]++;
     nodeDeg[nodeB]++;
-    if ( intermediateSort && node[nodeA].size() > sortSize[ nodeA ] ) {
-        sortAdjacencyList( node[nodeA] );
+    if (intermediateSort && node[nodeA].size() > sortSize[ nodeA ]) {
+        sortAdjacencyList(node[nodeA]);
         sortSize[ nodeA ] *= 2;
     }
 }
@@ -103,7 +103,7 @@ void Graph::addDirectedEdge(int nodeA, int nodeB, double aweight)
         sstm << "tying to put node " << nodeA << " in a " << node.size() << " nodes Graph" << endl;
         string s = sstm.str();
         cerr << s;
-        assert (false);
+        assert(false);
     }
     edge p(nodeB, aweight);
     node[nodeA].push_back(p);
@@ -222,14 +222,14 @@ uint64_t Graph::computeNmergeStatistics(int quantilesCount)
     return operations;
 }
 
-uint64_t Graph::sortAdjacencyList( adjacencyList& aList )
+uint64_t Graph::sortAdjacencyList(adjacencyList& aList)
 {
     uint64_t operations = 0;
     sort(aList.begin(), aList.end(), nodesComparator);
     operations += aList.size() * log(aList.size());
     int kept = 0;
     for (int j = 0; j < aList.size(); ++j) {
-        if ( aList[j].first != aList[kept].first ) { aList[kept++] = aList[j]; } // keep the next element
+        if (aList[j].first != aList[kept].first) { aList[kept++] = aList[j]; }   // keep the next element
         else { aList[kept].second += aList[j].second; } // otherwise add the weights!
     }
     operations += aList.size();

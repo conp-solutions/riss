@@ -53,7 +53,7 @@ double Configurations::getTimeInfo(istream& input, double penalization)
     } else {
         double time;
         std::istringstream i(word); // have another stream, to not parse twice from the stream input
-        if ( ! (i >> time ) ) // parse time into double
+        if (!(i >> time))     // parse time into double
         { return -1 ; }     // if fails, then return -1
         return time + penalization; // otherwise return the time
     }
@@ -91,7 +91,7 @@ void Configurations::readNames(const char* definitionsFilename)
     this->definitionsFilename = definitionsFilename;
     ifstream fin;
     fin.open(definitionsFilename, ofstream::in);
-    if ( !fin ) { cerr << "failed to open configurations file " << definitionsFilename << endl; }
+    if (!fin) { cerr << "failed to open configurations file " << definitionsFilename << endl; }
     string word;
     while (fin >> word) {
         names.push_back(word);

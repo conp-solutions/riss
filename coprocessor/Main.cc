@@ -58,7 +58,7 @@ static void SIGINT_exit(int signum)
 //         printStats(*solver);
 //         printf("\n"); printf("c *** INTERRUPTED ***\n"); }
     solver->interrupt();
-    if ( receivedInterupt ) { _exit(1); }
+    if (receivedInterupt) { _exit(1); }
     else { receivedInterupt = true; }
 }
 
@@ -73,31 +73,31 @@ int main(int argc, char** argv)
 
         // Extra options:
         //
-        IntOption    verb   ("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
-        BoolOption   pre    ("MAIN", "pre",    "Completely turn on/off any preprocessing.", true);
-        StringOption dimacs ("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
+        IntOption    verb("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
+        BoolOption   pre("MAIN", "pre",    "Completely turn on/off any preprocessing.", true);
+        StringOption dimacs("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
         IntOption    cpu_lim("MAIN", "cpu-lim", "Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
         IntOption    mem_lim("MAIN", "mem-lim", "Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
-        StringOption opt_config     ("MAIN", "config", "Use a preset configuration", 0);
-        BoolOption   opt_cmdLine    ("MAIN", "cmd", "print the relevant options", false);
+        StringOption opt_config("MAIN", "config", "Use a preset configuration", 0);
+        BoolOption   opt_cmdLine("MAIN", "cmd", "print the relevant options", false);
 
-        StringOption drupFile         ("PROOF", "drup", "Write a proof trace into the given file", 0);
-        StringOption opt_proofFormat  ("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, should be DRUP)", "DRUP");
+        StringOption drupFile("PROOF", "drup", "Write a proof trace into the given file", 0);
+        StringOption opt_proofFormat("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, should be DRUP)", "DRUP");
 
         const char* _cat = "COPROCESSOR 3";
-        StringOption undoFile      (_cat, "undo",   "write information about undoing simplifications into given file (and var map into X.map file)");
-        BoolOption   post          (_cat, "post",   "perform post processing", false);
-        StringOption modelFile     (_cat, "model",  "read model from SAT solver from this file");
-        IntOption    opt_search    (_cat, "search", "perform search until the given number of conflicts", 1, IntRange(0, INT32_MAX));
+        StringOption undoFile(_cat, "undo",   "write information about undoing simplifications into given file (and var map into X.map file)");
+        BoolOption   post(_cat, "post",   "perform post processing", false);
+        StringOption modelFile(_cat, "model",  "read model from SAT solver from this file");
+        IntOption    opt_search(_cat, "search", "perform search until the given number of conflicts", 1, IntRange(0, INT32_MAX));
 
-        bool foundHelp = ::parseOptions (argc, argv ); // parse all global options
+        bool foundHelp = ::parseOptions(argc, argv);   // parse all global options
         CoreConfig coreConfig(string(opt_config == 0 ? "" : opt_config));
         Coprocessor::CP3Config cp3config(string(opt_config == 0 ? "" : opt_config));
         foundHelp = coreConfig.parseOptions(argc, argv) || foundHelp;
         foundHelp = cp3config.parseOptions(argc, argv) || foundHelp;
-        if ( foundHelp ) { exit(0); } // stop after printing the help information
+        if (foundHelp) { exit(0); }   // stop after printing the help information
 
-        if ( opt_cmdLine ) { // print the command line options
+        if (opt_cmdLine) {   // print the command line options
             std::stringstream s;
             coreConfig.configCall(s);
             cp3config.configCall(s);
@@ -143,7 +143,7 @@ int main(int argc, char** argv)
         }
 
         FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
-        if ( !post ) {
+        if (!post) {
 
             if (argc == 1)
             { printf("c Reading from standard input... Use '--help' for help.\n"); }
@@ -162,8 +162,8 @@ int main(int argc, char** argv)
             }
 
             // open file for proof
-            S.drupProofFile = (drupFile) ? fopen( (const char*) drupFile , "wb") : NULL;
-            if ( opt_proofFormat && strlen(opt_proofFormat) > 0 &&  S.drupProofFile != NULL ) { fprintf( S.drupProofFile, "o proof %s\n", (const char*)opt_proofFormat ); } // we are writing proofs of the given format!
+            S.drupProofFile = (drupFile) ? fopen((const char*) drupFile , "wb") : NULL;
+            if (opt_proofFormat && strlen(opt_proofFormat) > 0 &&  S.drupProofFile != NULL) { fprintf(S.drupProofFile, "o proof %s\n", (const char*)opt_proofFormat); }     // we are writing proofs of the given format!
 
             parse_DIMACS(in, S);
             gzclose(in);
@@ -182,7 +182,7 @@ int main(int argc, char** argv)
             signal(SIGINT, SIGINT_interrupt);
             signal(SIGXCPU, SIGINT_interrupt);
 
-            Preprocessor preprocessor( &S , cp3config);
+            Preprocessor preprocessor(&S , cp3config);
             preprocessor.preprocess();
 
             double simplified_time = cpuTime();
@@ -201,10 +201,10 @@ int main(int argc, char** argv)
                 preprocessor.outputFormula((const char*) dimacs);
             }
 
-            if (  (const char*)undoFile != 0  ) {
+            if ((const char*)undoFile != 0) {
                 if (S.verbosity > 0)
                 { printf("c =============================[ Writing Undo Info ]=======================================================\n"); }
-                preprocessor.writeUndoInfo( string(undoFile) );
+                preprocessor.writeUndoInfo(string(undoFile));
             }
 
             if (!S.okay()) {
@@ -226,7 +226,7 @@ int main(int argc, char** argv)
                 #endif
             } else {
                 lbool ret = l_Undef;
-                if ( opt_search > 0 ) {
+                if (opt_search > 0) {
                     S.setConfBudget(1); // solve until first conflict!
                     S.verbosity = 0;
                     vec<Lit> dummy;
@@ -234,10 +234,10 @@ int main(int argc, char** argv)
                     S.useCoprocessorIP = false;
                     ret = S.solveLimited(dummy);
                 }
-                if ( ret == l_True ) {
-                    if ( S.drupProofFile != 0 ) { fclose(S.drupProofFile); } // close proof file!
+                if (ret == l_True) {
+                    if (S.drupProofFile != 0) { fclose(S.drupProofFile); }   // close proof file!
                     preprocessor.extendModel(S.model);
-                    if ( res != NULL ) {
+                    if (res != NULL) {
                         cerr << "s SATISFIABLE" << endl;
                         fprintf(res, "s SATISFIABLE\nv ");
                         for (int i = 0; i < preprocessor.getFormulaVariables(); i++)
@@ -257,7 +257,7 @@ int main(int argc, char** argv)
                     #else
                     return (10);
                     #endif
-                } else if ( ret == l_False ) {
+                } else if (ret == l_False) {
                     if (S.drupProofFile != NULL) { fprintf(S.drupProofFile, "0\n"), fclose(S.drupProofFile); } // tell proof about result!
                     if (res != NULL) { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
                     printf("s UNSATISFIABLE\n");
@@ -273,22 +273,22 @@ int main(int argc, char** argv)
 //
 // process undo here!
 //
-            Preprocessor preprocessor( &S , cp3config );
-            if ( undoFile == 0) {
+            Preprocessor preprocessor(&S , cp3config);
+            if (undoFile == 0) {
                 cerr << "c ERROR: no undo file specified" << endl;
                 exit(1);
             }
 
-            int solution = preprocessor.parseModel( modelFile == 0 ? string("") : string(modelFile) );
+            int solution = preprocessor.parseModel(modelFile == 0 ? string("") : string(modelFile));
             bool good = solution != -1;
-            good = good && preprocessor.parseUndoInfo( string(undoFile) );
+            good = good && preprocessor.parseUndoInfo(string(undoFile));
             if (!good) { cerr << "c will not continue because of above errors" << endl; return 1; }
 
-            if ( solution == 10 ) {
+            if (solution == 10) {
                 preprocessor.extendModel(S.model);
                 int varLimit = preprocessor.getFormulaVariables() == -1 ? S.model.size() : preprocessor.getFormulaVariables();
-                assert( varLimit <= S.model.size() && "cannot print variables that are not present in the model" );
-                if ( res != NULL ) {
+                assert(varLimit <= S.model.size() && "cannot print variables that are not present in the model");
+                if (res != NULL) {
                     printf("s SATISFIABLE\n");
                     fprintf(res, "s SATISFIABLE\nv ");
                     for (int i = 0; i < varLimit; i++)
@@ -308,7 +308,7 @@ int main(int argc, char** argv)
                 #else
                 return (10);
                 #endif
-            } else if (solution == 20 ) {
+            } else if (solution == 20) {
                 if (res != NULL) { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
                 printf("s UNSATISFIABLE\n");
                 cerr.flush(); cout.flush();

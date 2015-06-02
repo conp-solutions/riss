@@ -108,13 +108,13 @@ class TreeNode
     ~TreeNode();
 
     // add children to the node
-    void expand( const std::vector< std::vector< std::vector<Riss::Lit>* >* >& childCnfs);
+    void expand(const std::vector< std::vector< std::vector<Riss::Lit>* >* >& childCnfs);
 
     unsigned int size() const;
 
-    int getLevel () const ;
-    int getSubTreeHeight () const ;
-    int getEvaLevel () const ;
+    int getLevel() const ;
+    int getSubTreeHeight() const ;
+    int getEvaLevel() const ;
 
     TreeNode* getChild(const unsigned int index);
 
@@ -125,16 +125,16 @@ class TreeNode
     // can set a state recusively, such that all sub nodes will be set immediately as well
     void setState(const state _s, bool recursive = false);
 
-    void fillConstraintPath( std::vector< std::vector<Riss::Lit>* >* toFill );
+    void fillConstraintPath(std::vector< std::vector<Riss::Lit>* >* toFill);
 
     /** Davide> A slightly different version able to store levels for every clause */
-    void fillConstraintPathWithLevels( std::vector< std::pair< std::vector<Riss::Lit>*, unsigned int > >* toFill );
+    void fillConstraintPathWithLevels(std::vector< std::pair< std::vector<Riss::Lit>*, unsigned int > >* toFill);
 
     /** add more constraints to the node, for example found unit clauses */
-    void addNodeConstraint( std::vector<Riss::Lit>* clause );
+    void addNodeConstraint(std::vector<Riss::Lit>* clause);
 
     // Davide> Add unary constraints & specify their pt_level
-    void addNodeUnaryConstraint( std::vector<Riss::Lit>* clause, unsigned int pt_level );
+    void addNodeUnaryConstraint(std::vector<Riss::Lit>* clause, unsigned int pt_level);
 
     /** tries to set the state of the node by using the sub tree below the node
      * NOTE: writes only to the state value, if the state is not unknown any more

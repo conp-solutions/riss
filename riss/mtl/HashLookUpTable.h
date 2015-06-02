@@ -62,21 +62,21 @@ class HashLookUpTable
 
     // Don't allow copying (error prone):
     HashLookUpTable<K, L, H, I, E, F>&  operator = (HashLookUpTable<K, L, H, I, E, F>& other) { assert(0); }
-    HashLookUpTable            (HashLookUpTable<K, L, H, I, E, F>& other) { assert(0); }
+    HashLookUpTable(HashLookUpTable<K, L, H, I, E, F>& other) { assert(0); }
 
     bool    checkCap(int new_size) const { return new_size > cap; }
 
-    int32_t index  (const K& k) const { return hash(k) % cap; }
+    int32_t index(const K& k) const { return hash(k) % cap; }
 
-    int32_t index  (const L& k) const { return hash(k) % cap; }
+    int32_t index(const L& k) const { return hash(k) % cap; }
 
-    void   _insert (const K& k)
+    void   _insert(const K& k)
     {
         vec<K>& ps = table[index(k)];
         ps.push(); ps.last() = k;
     }
 
-    void    rehash ()
+    void    rehash()
     {
         const vec<K>* old = table;
 
@@ -103,14 +103,14 @@ class HashLookUpTable
 
   public:
 
-    HashLookUpTable () : table(NULL), cap(0), size(0) {}
-    HashLookUpTable (const H& h, const E& e) : hash(h), equals(e), table(NULL), cap(0), size(0) {}
-    ~HashLookUpTable () { delete [] table; }
+    HashLookUpTable() : table(NULL), cap(0), size(0) {}
+    HashLookUpTable(const H& h, const E& e) : hash(h), equals(e), table(NULL), cap(0), size(0) {}
+    ~HashLookUpTable() { delete [] table; }
 
     // PRECONDITION: the key must *NOT* exist in the map.
-    void insert (const K& k) { if (checkCap(size + 1)) { rehash(); } _insert(k); size++; }
+    void insert(const K& k) { if (checkCap(size + 1)) { rehash(); } _insert(k); size++; }
 
-    bool has   (const K& k) const
+    bool has(const K& k) const
     {
         if (size == 0) { return false; }
         const vec<K>& ps = table[index(k)];
@@ -121,7 +121,7 @@ class HashLookUpTable
         return false;
     }
 
-    bool hasL  (const L& k) const
+    bool hasL(const L& k) const
     {
         if (size == 0) { return false; }
         const vec<K>& ps = table[index(k)];
@@ -133,11 +133,11 @@ class HashLookUpTable
     }
 
     /** if there is only one element, return immediately */
-    bool hasLone (const L& k) const
+    bool hasLone(const L& k) const
     {
         if (size == 0) { return false; }
         const vec<K>& ps = table[index(k)];
-        if ( ps.size() == 1 ) { return; } // has to be the same element based on the above assumption
+        if (ps.size() == 1) { return; }   // has to be the same element based on the above assumption
         for (int i = 0; i < ps.size(); i++)
             if (equals(ps[i].key, k)) {
                 return true;
@@ -171,7 +171,7 @@ class HashLookUpTable
         size--;
     }
 
-    void clear  ()
+    void clear()
     {
         cap = size = 0;
         delete [] table;

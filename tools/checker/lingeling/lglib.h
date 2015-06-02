@@ -20,20 +20,20 @@ typedef struct LGL LGL;
 
 //--------------------------------------------------------------------------
 
-LGL * lglinit (void);               // constructor
-void lglrelease (LGL *);            // destructor
+LGL * lglinit(void);                // constructor
+void lglrelease(LGL *);             // destructor
 
 // externally provided memory manager ...
 
-typedef void * (*lglalloc) (void*mem, size_t);
-typedef void (*lgldealloc) (void*mem, void*, size_t);
-typedef void * (*lglrealloc) (void*mem, void *ptr, size_t old, size_t);
+typedef void * (*lglalloc)(void*mem, size_t);
+typedef void (*lgldealloc)(void*mem, void*, size_t);
+typedef void * (*lglrealloc)(void*mem, void *ptr, size_t old, size_t);
 
-LGL * lglminit (void *mem, lglalloc, lglrealloc, lgldealloc);
+LGL * lglminit(void *mem, lglalloc, lglrealloc, lgldealloc);
 
-LGL * lglclone (LGL *);             // identical copy
+LGL * lglclone(LGL *);              // identical copy
 
-int lglunclone (LGL * dst, LGL * src);
+int lglunclone(LGL * dst, LGL * src);
 
 //--------------------------------------------------------------------------
 /* functions used for forking (cloning) and joining (merging):
@@ -69,18 +69,18 @@ int lglunclone (LGL * dst, LGL * src);
 // has a copy of the clauses and assumptions.  Units and equivalent literals
 // are not copied in 'lglfork', unless 'complete' is non zero.
 //
-LGL * lglfork (LGL *, int complete);        // copy constructor
+LGL * lglfork(LGL *, int complete);         // copy constructor
 
 // Almost same semantics as 'lglfork', but this time assumptions are added
 // as unit clauses.  So the only thing that can be merged back in a
 // following 'lgljoin', is a clause that consists of the negated assumptions
 // respectively the empty clause if there were no assumptions.
 //
-LGL * lglbrutefork (LGL *, int complete);   // copy constructor
+LGL * lglbrutefork(LGL *, int complete);    // copy constructor
 
 // During 'lgljoin' units are copied back as well as detected equivalences.
 //
-int lgljoin (LGL * to, LGL * from);     // join 'from' into 'to'
+int lgljoin(LGL * to, LGL * from);      // join 'from' into 'to'
 // AND release 'from'
 
 // The forked copy remembers the old assumptions and whether 'lglfork' or
@@ -91,47 +91,47 @@ int lgljoin (LGL * to, LGL * from);     // join 'from' into 'to'
 // with the following function.  In this case of course the originally
 // 'forked' solver can not be 'joined' again latter.
 //
-void lglresetforked (LGL *);
+void lglresetforked(LGL *);
 
 //--------------------------------------------------------------------------
 
-const char * lglversion ();
+const char * lglversion();
 
-void lglbnr (const char * name,
-             const char * prefix,
-             FILE * file);          // ... banner
+void lglbnr(const char * name,
+            const char * prefix,
+            FILE * file);          // ... banner
 
-void lglusage (LGL *);              // print usage "-h"
-void lglopts (LGL *, const char * prefix, int); // ... defaults "-d" | "-e"
-void lglrgopts (LGL *);             // ... option ranges "-r"
-void lglsizes (LGL *);              // ... data structure sizes
+void lglusage(LGL *);               // print usage "-h"
+void lglopts(LGL *, const char * prefix, int);  // ... defaults "-d" | "-e"
+void lglrgopts(LGL *);              // ... option ranges "-r"
+void lglsizes(LGL *);               // ... data structure sizes
 
 //--------------------------------------------------------------------------
 // setters and getters for options
 
-void lglsetout (LGL *, FILE*);          // output file for report
-void lglsetprefix (LGL *, const char*);     // prefix for messages
+void lglsetout(LGL *, FILE*);           // output file for report
+void lglsetprefix(LGL *, const char*);      // prefix for messages
 
-FILE * lglgetout (LGL *);
-const char * lglgetprefix (LGL *);
+FILE * lglgetout(LGL *);
+const char * lglgetprefix(LGL *);
 
-void lglsetopt (LGL *, const char *, int);  // set option value
-int lglreadopts (LGL *, FILE *);        // read and set options
-int lglgetopt (LGL *, const char *);        // get option value
-int lglhasopt (LGL *, const char *);        // exists option?
+void lglsetopt(LGL *, const char *, int);   // set option value
+int lglreadopts(LGL *, FILE *);         // read and set options
+int lglgetopt(LGL *, const char *);         // get option value
+int lglhasopt(LGL *, const char *);         // exists option?
 
-int lglgetoptminmax (LGL *, const char *, int * minptr, int * maxptr);
+int lglgetoptminmax(LGL *, const char *, int * minptr, int * maxptr);
 
-void * lglfirstopt (LGL *);         // option iterator: first
+void * lglfirstopt(LGL *);          // option iterator: first
 
-void * lglnextopt (LGL *,           // option iterator: next
-                   void * iterator,
-                   const char ** nameptr,
-                   int *valptr, int *minptr, int *maxptr);
+void * lglnextopt(LGL *,            // option iterator: next
+                  void * iterator,
+                  const char ** nameptr,
+                  int *valptr, int *minptr, int *maxptr);
 
 // individual ids for logging and statistics:
 
-void lglsetid (LGL *, int tid, int tids);
+void lglsetid(LGL *, int tid, int tids);
 
 // Set default phase of a literal.  Any decision on this literal will always
 // try this phase.  Note, that this function does not have any effect on
@@ -139,68 +139,68 @@ void lglsetid (LGL *, int tid, int tids);
 // phase and thus if they are set to different default phases, only the last
 // set operation will be kept.
 
-void lglsetphase (LGL *, int lit);
-void lglresetphase (LGL *, int lit);    // Stop forcing phase in decisions.
+void lglsetphase(LGL *, int lit);
+void lglresetphase(LGL *, int lit);     // Stop forcing phase in decisions.
 
 // Assume the solver is in the SATISFIABLE state (after 'lglsat' or
 // 'lglsimp'), then calling 'lglsetphases' will copy the current assignment
 // as default phases.
 
-void lglsetphases (LGL *);
+void lglsetphases(LGL *);
 
 //--------------------------------------------------------------------------
 // call back for abort
 
-void lglonabort (LGL *, void * state, void (*callback)(void* state));
+void lglonabort(LGL *, void * state, void (*callback)(void* state));
 
 //--------------------------------------------------------------------------
 // write and read API trace
 
-void lglwtrapi (LGL *, FILE *);
-void lglrtrapi (LGL *, FILE *);
+void lglwtrapi(LGL *, FILE *);
+void lglrtrapi(LGL *, FILE *);
 
 //--------------------------------------------------------------------------
 // traverse units, equivalences, remaining clauses, or all clauses:
 
-void lglutrav (LGL *, void * state, void (*trav)(void *, int unit));
-void lgletrav (LGL *, void * state, void (*trav)(void *, int lit, int repr));
-void lglctrav (LGL *, void * state, void (*trav)(void *, int lit));
-void lgltravall (LGL *, void * state, void (*trav)(void *state, int lit));
+void lglutrav(LGL *, void * state, void (*trav)(void *, int unit));
+void lgletrav(LGL *, void * state, void (*trav)(void *, int lit, int repr));
+void lglctrav(LGL *, void * state, void (*trav)(void *, int lit));
+void lgltravall(LGL *, void * state, void (*trav)(void *state, int lit));
 
 //--------------------------------------------------------------------------
 
-void lglprint (LGL *, FILE *);          // in DIMACS format
+void lglprint(LGL *, FILE *);           // in DIMACS format
 
 //--------------------------------------------------------------------------
 // main interface as in PicoSAT (see 'picosat.h' for more information)
 
-int lglmaxvar (LGL *);
-int lglincvar (LGL *);
+int lglmaxvar(LGL *);
+int lglincvar(LGL *);
 
-void lgladd (LGL *, int lit);
-void lglassume (LGL *, int lit);        // assume single units
+void lgladd(LGL *, int lit);
+void lglassume(LGL *, int lit);         // assume single units
 
-void lglcassume (LGL *, int lit);       // assume clause
+void lglcassume(LGL *, int lit);        // assume clause
 // (at most one)
 
-void lglfixate (LGL *);             // add assumptions as units
-void lglmeltall (LGL *);            // melt everything
+void lglfixate(LGL *);              // add assumptions as units
+void lglmeltall(LGL *);             // melt everything
 
-int lglsat (LGL *);
-int lglsimp (LGL *, int iterations);
+int lglsat(LGL *);
+int lglsimp(LGL *, int iterations);
 
-int lglderef (LGL *, int lit);          // neg=false, pos=true
-int lglfixed (LGL *, int lit);          // dito but toplevel
+int lglderef(LGL *, int lit);           // neg=false, pos=true
+int lglfixed(LGL *, int lit);           // dito but toplevel
 
-int lglfailed (LGL *, int lit);         // dito for assumptions
-int lglinconsistent (LGL *);            // contains empty clause?
-int lglchanged (LGL *);             // model changed
-void lglflushcache (LGL *);         // reset cache size
+int lglfailed(LGL *, int lit);          // dito for assumptions
+int lglinconsistent(LGL *);             // contains empty clause?
+int lglchanged(LGL *);              // model changed
+void lglflushcache(LGL *);          // reset cache size
 
 /* Return representative from equivalence class if literal is not top-level
  * assigned nor eliminated.
  */
-int lglrepr (LGL *, int lit);
+int lglrepr(LGL *, int lit);
 
 //--------------------------------------------------------------------------
 // Multiple-Objective SAT tries to solve multiple objectives at the same
@@ -216,7 +216,7 @@ int lglrepr (LGL *, int lit);
 //
 typedef int (*lglnotify)(void *state, int target, int val);
 
-int lglmosat (LGL *, void * state, lglnotify, int * targets);
+int lglmosat(LGL *, void * state, lglnotify, int * targets);
 
 //--------------------------------------------------------------------------
 // Incremental interface provides reference counting for indices, i.e.
@@ -259,8 +259,8 @@ int lglmosat (LGL *, void * state, lglnotify, int * targets);
   // lgladd(lgl, 1);                                    // ILLEGAL
 */
 
-void lglfreeze (LGL *, int lit);
-void lglmelt (LGL *, int lit);
+void lglfreeze(LGL *, int lit);
+void lglmelt(LGL *, int lit);
 
 //--------------------------------------------------------------------------
 // Returns a good look ahead literal or zero if all potential literals have
@@ -270,40 +270,40 @@ void lglmelt (LGL *, int lit);
 // if it was not frozen during a previous SAT call and thus implicitly
 // became melted.  Therefore it can be added in a unit clause.
 
-int lglookahead (LGL *);
+int lglookahead(LGL *);
 
 //--------------------------------------------------------------------------
 // stats:
 
-void lglflushtimers (LGL *lgl);         // after interrupt etc.
+void lglflushtimers(LGL *lgl);          // after interrupt etc.
 
-void lglstats (LGL *);
-void lglprintfeatures (LGL *);
-int64_t lglgetconfs (LGL *);
-int64_t lglgetdecs (LGL *);
-int64_t lglgetprops (LGL *);
-size_t lglbytes (LGL *);
-int lglnvars (LGL *);
-double lglmb (LGL *);
-double lglmaxmb (LGL *);
-double lglsec (LGL *);
-double lglprocesstime (void);
+void lglstats(LGL *);
+void lglprintfeatures(LGL *);
+int64_t lglgetconfs(LGL *);
+int64_t lglgetdecs(LGL *);
+int64_t lglgetprops(LGL *);
+size_t lglbytes(LGL *);
+int lglnvars(LGL *);
+double lglmb(LGL *);
+double lglmaxmb(LGL *);
+double lglsec(LGL *);
+double lglprocesstime(void);
 
 //--------------------------------------------------------------------------
 // low-level parallel support through call backs
 
-void lglseterm (LGL *, int (*term)(void*), void*);
+void lglseterm(LGL *, int (*term)(void*), void*);
 
-void lglsetproduceunit (LGL *, void (*produce)(void*, int), void*);
-void lglsetconsumeunits (LGL *, void (*consume)(void*, int**, int**), void*);
+void lglsetproduceunit(LGL *, void (*produce)(void*, int), void*);
+void lglsetconsumeunits(LGL *, void (*consume)(void*, int**, int**), void*);
 
-void lglsetlockeq (LGL *, int * (*lock)(void*), void *);
-void lglsetunlockeq (LGL *, void (*unlock)(void*, int cons, int prod), void *);
+void lglsetlockeq(LGL *, int * (*lock)(void*), void *);
+void lglsetunlockeq(LGL *, void (*unlock)(void*, int cons, int prod), void *);
 
-void lglsetconsumedunits (LGL *, void (*consumed)(void*, int), void*);
+void lglsetconsumedunits(LGL *, void (*consumed)(void*, int), void*);
 
-void lglsetmsglock (LGL *, void (*lock)(void*), void (*unlock)(void*), void*);
-void lglsetime (LGL *, double (*time)(void));
+void lglsetmsglock(LGL *, void (*lock)(void*), void (*unlock)(void*), void*);
+void lglsetime(LGL *, double (*time)(void));
 
 // term: called regularly if set: terminate if non zero return value
 // produce: called for each derived unit if set

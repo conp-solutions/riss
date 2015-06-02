@@ -44,7 +44,7 @@ static void readWCNFClause(B& in, Solver& S, Riss::vec<Riss::Lit>& lits, int32_t
             fprintf(stderr, "PARSE ERROR! DIMACS header mismatch: wrong number of variables. Variable: %d \n", var);
             exit(3);
         }
-        lits.push( (parsed_lit > 0) ? Riss::mkLit(var) : ~Riss::mkLit(var) );
+        lits.push((parsed_lit > 0) ? Riss::mkLit(var) : ~Riss::mkLit(var));
     }
 }
 
@@ -56,7 +56,7 @@ static void readWCNFClause(B& in, Solver& S, Riss::vec<Riss::Lit>& lits, int32_t
  * @return number of variables in the WCNF file (higher variables are relax variables)
  */
 template<class B, class Solver>
-static unsigned parse_WCNF_main(B& in, Solver& S, Riss::vec<Weight>& literalWeights )
+static unsigned parse_WCNF_main(B& in, Solver& S, Riss::vec<Weight>& literalWeights)
 {
     Riss::vec<Riss::Lit> lits;
     literalWeights.clear();
@@ -83,8 +83,8 @@ static unsigned parse_WCNF_main(B& in, Solver& S, Riss::vec<Weight>& literalWeig
                 vars    = parseInt(in);
                 clauses = parseInt(in);
                 original_vars = vars;
-                while ( S.nVars() < original_vars ) { S.newVar(false, true, 'o'); } // add "enough" variables for the original problem
-                literalWeights.growTo( 2 * S.nVars(), 0 ); // all variables in the orignial-variable range do not have a weight (yet)
+                while (S.nVars() < original_vars) { S.newVar(false, true, 'o'); }   // add "enough" variables for the original problem
+                literalWeights.growTo(2 * S.nVars(), 0);   // all variables in the orignial-variable range do not have a weight (yet)
                 std::cerr << "c p cnf " << vars << " " << clauses << std::endl;
             } else if (eagerMatch(in, "wcnf")) {
                 isWcnf = true;
@@ -94,43 +94,43 @@ static unsigned parse_WCNF_main(B& in, Solver& S, Riss::vec<Weight>& literalWeig
                 if (*in < '0' || *in > '9') { top = 0; }
                 else { top = parseInt(in); }
                 std::cerr << "c wcnf " << vars << " " << clauses << " " << top << std::endl;
-                while ( S.nVars() < original_vars) { S.newVar(false, true, 'o'); } // add "enough" variables for the original problem
-                literalWeights.growTo( 2 * S.nVars(), 0 ); // all variables in the orignial-variable range do not have a weight (yet)
+                while (S.nVars() < original_vars) { S.newVar(false, true, 'o'); }  // add "enough" variables for the original problem
+                literalWeights.growTo(2 * S.nVars(), 0);   // all variables in the orignial-variable range do not have a weight (yet)
             } else {
                 printf("PARSE ERROR! Expected wcnf. Unexpected char: %c\n", *in), exit(3);
             }
-            S.reserveVars( original_vars );
+            S.reserveVars(original_vars);
         } else if (*in == 'c') {
             skipLine(in);
         } else {
-            if ( !foundPline ) { printf("PARSE ERROR! Expected p-line before the first clause. Unexpected char: %c\n", *in); exit(3); }
+            if (!foundPline) { printf("PARSE ERROR! Expected p-line before the first clause. Unexpected char: %c\n", *in); exit(3); }
             cnt++;
             if (isWcnf) { weight = parseInt(in); } // a weight should be here, hence parse an extra number
             else { weight = 1; }
 
             readWCNFClause(in, S, lits, original_vars);
 
-            if ( weight > 0 ) { // if the weight is 0, then noghting has to be done!
+            if (weight > 0) {   // if the weight is 0, then noghting has to be done!
                 // std::cerr << "c found clause " << lits << " with weight " << weight << "(max=" << top << ") vars=" << vars <<std::endl;
-                if (weight != top || !isWcnf ) { // this clause is weighted, or the instance is not a WCNF
-                    if ( lits.size() != 1 ) { // what happens to empty clauses?
+                if (weight != top || !isWcnf) {  // this clause is weighted, or the instance is not a WCNF
+                    if (lits.size() != 1) {   // what happens to empty clauses?
                         weighted_cnt++;
                         vars++;
                         Riss::Var relaxVariables = S.newVar(false, false, 'r'); // add a relax variable
                         literalWeights.push(0); literalWeights.push(0); // weights for the two new literals!
-                        literalWeights[ toInt( Riss::mkLit(relaxVariables) ) ] += weight; // assign the weight of the current clause to the relaxation variable!
+                        literalWeights[ toInt(Riss::mkLit(relaxVariables)) ] += weight;   // assign the weight of the current clause to the relaxation variable!
 
-                        if ( lits.size() == 0 ) { // found empty weighted clause
+                        if (lits.size() == 0) {   // found empty weighted clause
                             // to ensure that this clause is falsified, add the compementary unit clause!
-                            S.addClause( Riss::mkLit( relaxVariables ) );
+                            S.addClause(Riss::mkLit(relaxVariables));
                             empty_weighted ++;
                         }
-                        lits.push( ~ Riss::mkLit( relaxVariables ) ); // add a negative relax variable to the clause
-                        S.freezeVariable( relaxVariables, true ); // set this variable as frozen!
+                        lits.push(~ Riss::mkLit(relaxVariables));     // add a negative relax variable to the clause
+                        S.freezeVariable(relaxVariables, true);   // set this variable as frozen!
                         S.addClause(lits);
                     } else {
-                        literalWeights[ toInt( lits[0] ) ] += weight; // if variable is true, then the clause is false, henec pay the cost!
-                        S.freezeVariable( var(lits[0]), true ); // set this variable as frozen!
+                        literalWeights[ toInt(lits[0]) ] += weight;   // if variable is true, then the clause is false, henec pay the cost!
+                        S.freezeVariable(var(lits[0]), true);   // set this variable as frozen!
                     }
                 } else { // this is a hard clause!
                     hard_cnt++;
@@ -141,7 +141,7 @@ static unsigned parse_WCNF_main(B& in, Solver& S, Riss::vec<Weight>& literalWeig
     }
     std::cerr << "c clss: " << cnt << "(" << clauses << "), vars=" << S.nVars() << "(" << original_vars << "+" << weighted_cnt << ") weighted units: " << weighted_units << " hard cls: " << hard_cnt << " emptyWeighted: " << empty_weighted << std::endl;
     std::cerr.flush();
-    if ( S.okay() ) {
+    if (S.okay()) {
         if (original_vars + weighted_cnt != S.nVars()) { fprintf(stderr, "WARNING! DIMACS header mismatch: wrong number of variables.\n"); }
         if (cnt  != clauses) { fprintf(stderr, "WARNING! DIMACS header mismatch: wrong number of clauses.\n"); }
     }
@@ -155,7 +155,7 @@ static unsigned parse_WCNF_main(B& in, Solver& S, Riss::vec<Weight>& literalWeig
  * @return number of variables in the WCNF file (higher variables are relax variables)
  */
 template<class Solver>
-static unsigned parse_WCNF(gzFile input_stream, Solver& S, Riss::vec<Weight>& literalWeights )
+static unsigned parse_WCNF(gzFile input_stream, Solver& S, Riss::vec<Weight>& literalWeights)
 {
     Riss::StreamBuffer in(input_stream);
     return parse_WCNF_main(in, S, literalWeights);

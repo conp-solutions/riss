@@ -21,15 +21,15 @@ bool is_number(const std::string& s)
 }
 
 // return n'th field or empty string
-string Get( const std::string& s, unsigned int n )
+string Get(const std::string& s, unsigned int n)
 {
-    istringstream is( s );
+    istringstream is(s);
     string field;
     do {
-        if ( ! ( is >> field ) ) {
+        if (!(is >> field)) {
             return "";
         }
-    } while ( n-- != 0 );
+    } while (n-- != 0);
     return field;
 }
 

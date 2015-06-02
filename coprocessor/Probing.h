@@ -41,7 +41,7 @@ class Probing : public Technique
 
 
   public:
-    Probing( CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, EquivalenceElimination& _ee, Riss::Solver& _solver);
+    Probing(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data, Propagation& _propagation, EquivalenceElimination& _ee, Riss::Solver& _solver);
 
     /** perform probing and clause vivification
      * @return false, if formula is UNSAT
@@ -50,7 +50,7 @@ class Probing : public Technique
 
     /** This method should be used to print the statistics of the technique that inherits from this class
      */
-    void printStatistics( std::ostream& stream );
+    void printStatistics(std::ostream& stream);
 
     void destroy();
 

@@ -18,11 +18,11 @@ static const char* _cat = "PFOLIO";
 
 PfolioConfig::PfolioConfig(const std::string& presetOptions)  // add new options here!
     :
-    Config( &configOptions, presetOptions )
+    Config(&configOptions, presetOptions)
 
-    , send(         _cat, "ps", "enable clause sharing for all clients", true, optionListPtr )
-    , receive(      _cat, "pr", "enable receiving clauses for all clients", true, optionListPtr )
-    , proofCounting(_cat, "pc", "enable avoiding duplicate clauses in the pfolio DRUP proof", true, optionListPtr )
+    , send(_cat, "ps", "enable clause sharing for all clients", true, optionListPtr)
+    , receive(_cat, "pr", "enable receiving clauses for all clients", true, optionListPtr)
+    , proofCounting(_cat, "pc", "enable avoiding duplicate clauses in the pfolio DRUP proof", true, optionListPtr)
 
 {}
 

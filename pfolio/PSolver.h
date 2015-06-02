@@ -50,7 +50,7 @@ class PSolver
     FILE* getDrupFile();
 
     /** set the handle for the global DRUP file */
-    void setDrupFile( FILE* drupFile );
+    void setDrupFile(FILE* drupFile);
 
     int verbosity, verbEveryConflicts; // how much information to be printed
 
@@ -60,9 +60,9 @@ class PSolver
     //
     // Control of parallel behavior
     //
-    CoreConfig& getConfig( const int solverID );
+    CoreConfig& getConfig(const int solverID);
 
-    Coprocessor::CP3Config& getPPConfig( const int solverID );
+    Coprocessor::CP3Config& getPPConfig(const int solverID);
 
     //
     // solve the formula in parallel, including communication and all that
@@ -70,7 +70,7 @@ class PSolver
     /** Search for a model that respects a given set of assumptions
      *  Note: when this method is called the first time, the solver incarnations are created
      */
-    Riss::lbool solveLimited (const Riss::vec<Riss::Lit>& assumps);
+    Riss::lbool solveLimited(const Riss::vec<Riss::Lit>& assumps);
 
     //
     // executed only for the first solver (e.g. for parsing and simplification)
@@ -78,16 +78,16 @@ class PSolver
     //
 
     /** The current number of original clauses of the 1st solver. */
-    int nClauses () const;
+    int nClauses() const;
 
     /** The current number of variables of the 1st solver. */
-    int nVars    () const;
+    int nVars() const;
 
     /** The current number of total literals in the formula of the 1st solver. */
-    int nTotLits () const;
+    int nTotLits() const;
 
     /** reserve space for enough variables in the first solver */
-    void reserveVars( Riss::Var v );
+    void reserveVars(Riss::Var v);
 
     /** Removes already satisfied clauses in the first solver */
     bool simplify();
@@ -98,7 +98,7 @@ class PSolver
     //
 
     /** Add a new variable with parameters specifying variable mode to all solvers */
-    Riss::Var  newVar (bool polarity = true, bool dvar = true, char type = 'o');
+    Riss::Var  newVar(bool polarity = true, bool dvar = true, char type = 'o');
 
     /** Add a clause to the solver without making superflous internal copy. Will change the passed std::vector 'ps'.
      *  @return false, if the addition of the clause results in an unsatisfiable formula
@@ -106,7 +106,7 @@ class PSolver
     bool addClause_(Riss::vec<Riss::Lit>& ps);
 
     /** Add a clause to the online proof checker.. Not implemented for parallel solver */
-    void addInputClause_( Riss::vec<Riss::Lit>& ps);
+    void addInputClause_(Riss::vec<Riss::Lit>& ps);
 
     void interrupt(); // Trigger a (potentially asynchronous) interruption of the solver.
 
@@ -139,7 +139,7 @@ class PSolver
      * @param forceRestart forces all solvers to perform a restart
      * note: calling thread will sleep until all threads are interrupted and waiting
      */
-    void interrupt( const bool forceRestart );
+    void interrupt(const bool forceRestart);
 
     /** continue with the current work
      *  note: simply releases all waiting workers once

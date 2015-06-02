@@ -29,10 +29,10 @@ class Lock
     Lock() { pthread_mutex_init(&m, 0); }
 
     /** get the lock */
-    void lock() { pthread_mutex_lock (&m); }
+    void lock() { pthread_mutex_lock(&m); }
 
     /** release the lock */
-    void unlock() { pthread_mutex_unlock (&m); }
+    void unlock() { pthread_mutex_unlock(&m); }
 
     // give the method lock access to the mutex that is inside of a lock class
     friend class MethodLock;
@@ -51,7 +51,7 @@ class ComplexLock
      * @param max specify number of maximal threads that have entered the semaphore
      */
     ComplexLock(int max = 1)
-        : _max( max )
+        : _max(max)
     {
         // create semaphore with no space in it
         sem_init(&(_lock), 0, max);
@@ -69,7 +69,7 @@ class ComplexLock
      */
     bool trylock()
     {
-        int err = sem_trywait( &_lock );
+        int err = sem_trywait(&_lock);
         return err == 0;
     }
 
@@ -79,7 +79,7 @@ class ComplexLock
      */
     void unlock()
     {
-        sem_post( &_lock );
+        sem_post(&_lock);
         // fprintf( stderr, "\n\nreleased lock %d\n\n" , (int)*(int*)(void*)&_lock );
     }
 
@@ -87,7 +87,7 @@ class ComplexLock
     void wait()
     {
         // fprintf( stderr, "\n\nwait for lock %d\n\n" , (int)*(int*)(void*)&_lock );
-        sem_wait( &_lock );
+        sem_wait(&_lock);
         // fprintf( stderr, "\n\nblog lock %d\n\n" , (int)*(int*)(void*)&_lock );
     }
 
@@ -106,19 +106,19 @@ class MethodLock
     pthread_mutex_t& m;
   public:
     // when the object is created, the lock is grabbed
-    MethodLock( pthread_mutex_t& mutex ) : m(mutex)
+    MethodLock(pthread_mutex_t& mutex) : m(mutex)
     {
-        pthread_mutex_lock (&m);
+        pthread_mutex_lock(&m);
     }
-    MethodLock( Lock& lock ) : m(lock.m)
+    MethodLock(Lock& lock) : m(lock.m)
     {
-        pthread_mutex_lock (&m);
+        pthread_mutex_lock(&m);
     }
 
     // when the object is destroyed, the lock is released
     ~MethodLock()
     {
-        pthread_mutex_unlock (&m);
+        pthread_mutex_unlock(&m);
     }
 };
 
@@ -132,7 +132,7 @@ class SleepLock
     pthread_cond_t master_cv;  /** conditional variable for the lock */
 
     // do not allow the outside to copy this lock
-    explicit SleepLock(const SleepLock& l )
+    explicit SleepLock(const SleepLock& l)
     {};
     SleepLock& operator=(const SleepLock& l)
     {return *this;}
@@ -144,26 +144,26 @@ class SleepLock
     SleepLock() // : sleeps( initialSleep )
     {
         pthread_mutex_init(&mutex,     0);
-        pthread_cond_init (&master_cv, 0);
+        pthread_cond_init(&master_cv, 0);
     }
 
     ~SleepLock()
     {
         // sleeps = false;
         pthread_mutex_destroy(&mutex);
-        pthread_cond_destroy (&master_cv);
+        pthread_cond_destroy(&master_cv);
     }
 
     /** get the lock */
     void lock()
     {
-        pthread_mutex_lock (&mutex);
+        pthread_mutex_lock(&mutex);
     }
 
     /** release the lock */
     void unlock()
     {
-        pthread_mutex_unlock (&mutex);
+        pthread_mutex_unlock(&mutex);
     }
 
 
@@ -173,7 +173,7 @@ class SleepLock
      */
     void sleep()
     {
-        pthread_cond_wait (&master_cv, &mutex); // otherwise sleep now!
+        pthread_cond_wait(&master_cv, &mutex);  // otherwise sleep now!
     }
 
     /** wakeup all sleeping threads!
@@ -183,9 +183,9 @@ class SleepLock
      */
     void awake()
     {
-        pthread_mutex_lock (&mutex);
-        pthread_cond_broadcast (&master_cv); // initial attempt will fail!
-        pthread_mutex_unlock (&mutex);
+        pthread_mutex_lock(&mutex);
+        pthread_cond_broadcast(&master_cv);  // initial attempt will fail!
+        pthread_mutex_unlock(&mutex);
     }
 };
 
@@ -204,7 +204,7 @@ class SpinLock
     void lock()
     {
         // Aquire once locked==false (atomic)
-        while ( _lock != 0 || __sync_bool_compare_and_swap(&_lock, 0, 0xffff) == false) {}
+        while (_lock != 0 || __sync_bool_compare_and_swap(&_lock, 0, 0xffff) == false) {}
     }
 
     void unlock()
@@ -236,7 +236,7 @@ class ReadersWriterLock
     ~ReadersWriterLock()
     {
         int val = pthread_rwlock_destroy(&mutex);
-        assert (val == 0);
+        assert(val == 0);
         pthread_rwlockattr_destroy(&attr);
     }
     void readLock()    { pthread_rwlock_rdlock(&mutex); }

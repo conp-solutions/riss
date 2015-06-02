@@ -58,7 +58,7 @@ class EquivalenceElimination : public Technique
 
   public:
 
-    EquivalenceElimination( CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, Propagation& _propagation, Subsumption& _subsumption  );
+    EquivalenceElimination(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, Propagation& _propagation, Subsumption& _subsumption);
 
     /** run equivalent literal elimination */
     bool process(CoprocessorData& data);
@@ -66,13 +66,13 @@ class EquivalenceElimination : public Technique
     void initClause(const Riss::CRef cr); // inherited from Technique
 
     /** inherited from @see Technique */
-    void printStatistics( std::ostream& stream );
+    void printStatistics(std::ostream& stream);
 
     /** apply equivalences stored in data object to formula
      * @param force run subsumption and unit propagation, even if no equivalences are found
      * @return true, if new binary clauses have been created (for completion)
      */
-    bool applyEquivalencesToFormula( Coprocessor::CoprocessorData& data, bool force = false);
+    bool applyEquivalencesToFormula(Coprocessor::CoprocessorData& data, bool force = false);
 
     void destroy();
 
@@ -83,7 +83,7 @@ class EquivalenceElimination : public Technique
     /** check based on gates that have been extracted, whether more equivalent literals can be found!
      * @return true, if new equivalent literals have been found
      */
-    bool findGateEquivalences( CoprocessorData& data, std::vector< Circuit::Gate > gates );
+    bool findGateEquivalences(CoprocessorData& data, std::vector< Circuit::Gate > gates);
     bool findGateEquivalencesNew(CoprocessorData& data, std::vector< Circuit::Gate >& gates);
 
     /** find all strongly connected components on binary implication graph
@@ -103,7 +103,7 @@ class EquivalenceElimination : public Technique
     /** return literals that have to be equivalent because of the two gates
      * @param replacedBy stores for each variable the literal that represents its equivalence class
      */
-    bool checkEquivalence( const Circuit::Gate& g1, const Circuit::Gate& g2, Riss::Lit& e1, Riss::Lit& e2);
+    bool checkEquivalence(const Circuit::Gate& g1, const Circuit::Gate& g2, Riss::Lit& e1, Riss::Lit& e2);
 
     /** perform tarjan algorithm to find SCC on binary implication graph */
     void eqTarjan(int depth, Riss::Lit l, Riss::Lit list, CoprocessorData& data, BIG& big, std::vector< std::vector< Riss::Lit > >* externBig = 0);
@@ -112,30 +112,30 @@ class EquivalenceElimination : public Technique
      *  Note: assumes that all clauses are sorted!
      *  @return true, if there are duplicates, so that c can be deleted
      */
-    bool hasDuplicate( CoprocessorData& data, std::vector< Riss::CRef >& list, const Riss::Clause& c );
+    bool hasDuplicate(CoprocessorData& data, std::vector< Riss::CRef >& list, const Riss::Clause& c);
 
     /** check whether this gate can be processed for equivalence checks */
     bool allInputsStamped(Circuit::Gate& g, std::vector< unsigned int >& bitType);
 
     /** check the current gate for equivalent literals, enqueue them to the "replacedBy" structure, invalidate the gate */
-    void processGate       (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable);
+    void processGate(CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable);
 
 
-    void processANDgate    (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque< Riss::Var >* activeVariables = 0);
-    void processGenANDgate (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque< Riss::Var >*  activeVariables = 0);
-    void processExOgate    (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque<Riss::Var>* activeVariables = 0);
-    void processITEgate    (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque< Riss::Var >*  activeVariables = 0);
-    void processXORgate    (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque< Riss::Var >*  activeVariables = 0);
-    void processFASUMgate  (CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque< Riss::Var >*  activeVariables = 0);
+    void processANDgate(CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque< Riss::Var >* activeVariables = 0);
+    void processGenANDgate(CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque< Riss::Var >*  activeVariables = 0);
+    void processExOgate(CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque<Riss::Var>* activeVariables = 0);
+    void processITEgate(CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque< Riss::Var >*  activeVariables = 0);
+    void processXORgate(CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque< Riss::Var >*  activeVariables = 0);
+    void processFASUMgate(CoprocessorData& data, Circuit::Gate& g, std::vector< Circuit::Gate >& gates, std::deque< int >& queue, std::vector< unsigned int >& bitType, std::vector< std::vector< int32_t > >& varTable, Riss::MarkArray* active = 0, std::deque< Riss::Var >*  activeVariables = 0);
 
     /** enqueue all successor gates of the given gate g into the queue, stamp output variables, have a limit when to stop?! */
     void enqueueSucessorGates(Circuit::Gate& g, std::deque< int > queue, std::vector<Circuit::Gate>& gates, std::vector< unsigned int >& bitType, std::vector< std::vector<int32_t> >& varTable);
 
     /** write the AIGER circuit that can be found based on the clauses in the formula to a file in aag format */
-    void writeAAGfile( CoprocessorData& data );
+    void writeAAGfile(CoprocessorData& data);
 
     /** returns the literal, that represents the Equivalence-class of l */
-    Riss::Lit getReplacement(Riss::Lit l ) ;
+    Riss::Lit getReplacement(Riss::Lit l) ;
 
     /** sets literal replacement, fails if not possible
      * @return false, if this equivalence results in a conflict

@@ -47,13 +47,13 @@ void printStats(SplitterSolver& solver)
 {
     double cpu_time = cpuTime();
     double mem_used = memUsedPeak();
-    fprintf( stderr, "restarts              : %"PRIu64"\n", solver.starts);
-    fprintf( stderr, "conflicts             : %-12"PRIu64"   (%.0f /sec)\n", solver.conflicts   , solver.conflicts   / cpu_time);
-    fprintf( stderr, "decisions             : %-12"PRIu64"   (%4.2f %% random) (%.0f /sec)\n", solver.decisions, (float)solver.rnd_decisions * 100 / (float)solver.decisions, solver.decisions   / cpu_time);
-    fprintf( stderr, "propagations          : %-12"PRIu64"   (%.0f /sec)\n", solver.propagations, solver.propagations / cpu_time);
-    fprintf( stderr, "conflict literals     : %-12"PRIu64"   (%4.2f %% deleted)\n", solver.tot_literals, (solver.max_literals - solver.tot_literals) * 100 / (double)solver.max_literals);
-    if (mem_used != 0) { fprintf( stderr, "Memory used           : %.2f MB\n", mem_used); }
-    fprintf( stderr, "CPU time              : %g s\n", cpu_time);
+    fprintf(stderr, "restarts              : %"PRIu64"\n", solver.starts);
+    fprintf(stderr, "conflicts             : %-12"PRIu64"   (%.0f /sec)\n", solver.conflicts   , solver.conflicts   / cpu_time);
+    fprintf(stderr, "decisions             : %-12"PRIu64"   (%4.2f %% random) (%.0f /sec)\n", solver.decisions, (float)solver.rnd_decisions * 100 / (float)solver.decisions, solver.decisions   / cpu_time);
+    fprintf(stderr, "propagations          : %-12"PRIu64"   (%.0f /sec)\n", solver.propagations, solver.propagations / cpu_time);
+    fprintf(stderr, "conflict literals     : %-12"PRIu64"   (%4.2f %% deleted)\n", solver.tot_literals, (solver.max_literals - solver.tot_literals) * 100 / (double)solver.max_literals);
+    if (mem_used != 0) { fprintf(stderr, "Memory used           : %.2f MB\n", mem_used); }
+    fprintf(stderr, "CPU time              : %g s\n", cpu_time);
 }
 
 
@@ -68,7 +68,7 @@ static Master* master;
 
 static void SIGINT_exit(int signum)
 {
-    fprintf( stderr, "\n"); fprintf( stderr, "*** INTERRUPTED ***\n");
+    fprintf(stderr, "\n"); fprintf(stderr, "*** INTERRUPTED ***\n");
     master->shutdown();
 }
 //    if (solver->verbosity > 0){
@@ -110,19 +110,19 @@ int main(int argc, char** argv)
     #if defined(__linux__)
     fpu_control_t oldcw, newcw;
     _FPU_GETCW(oldcw); newcw = (oldcw & ~_FPU_EXTENDED) | _FPU_DOUBLE; _FPU_SETCW(newcw);
-    fprintf( stderr, "WARNING: for repeatability, setting FPU to use double precision\n");
+    fprintf(stderr, "WARNING: for repeatability, setting FPU to use double precision\n");
     #endif
     // Extra options:
     //
 
-    IntOption    verb   ("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
-    BoolOption   pre    ("MAIN", "pre",    "Completely turn on/off any preprocessing.", true);
-    StringOption dimacs ("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
+    IntOption    verb("MAIN", "verb",   "Verbosity level (0=silent, 1=some, 2=more).", 1, IntRange(0, 2));
+    BoolOption   pre("MAIN", "pre",    "Completely turn on/off any preprocessing.", true);
+    StringOption dimacs("MAIN", "dimacs", "If given, stop after preprocessing and write the result to this file.");
     IntOption    cpu_lim("MAIN", "cpu-lim", "Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
     IntOption    mem_lim("MAIN", "mem-lim", "Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
     bool foundHelp = ::parseOptions(argc, argv, true);
-    if ( foundHelp ) { exit(0); } // stop after printing the help information
+    if (foundHelp) { exit(0); }   // stop after printing the help information
 
     // Set limit on CPU-time:
     if (cpu_lim != INT32_MAX) {
@@ -131,7 +131,7 @@ int main(int argc, char** argv)
         if (rl.rlim_max == RLIM_INFINITY || (rlim_t)cpu_lim < rl.rlim_max) {
             rl.rlim_cur = cpu_lim;
             if (setrlimit(RLIMIT_CPU, &rl) == -1)
-            { fprintf( stderr, "WARNING! Could not set resource limit: CPU-time.\n"); }
+            { fprintf(stderr, "WARNING! Could not set resource limit: CPU-time.\n"); }
         }
     }
 
@@ -143,7 +143,7 @@ int main(int argc, char** argv)
         if (rl.rlim_max == RLIM_INFINITY || new_mem_lim < rl.rlim_max) {
             rl.rlim_cur = new_mem_lim;
             if (setrlimit(RLIMIT_AS, &rl) == -1)
-            { fprintf( stderr, "WARNING! Could not set resource limit: Virtual memory.\n"); }
+            { fprintf(stderr, "WARNING! Could not set resource limit: Virtual memory.\n"); }
         }
     }
 
@@ -161,7 +161,7 @@ int main(int argc, char** argv)
     signal(SIGINT, SIGINT_exit);
     signal(SIGXCPU, SIGINT_exit);
 
-    return m.main( argc, argv );
+    return m.main(argc, argv);
     /*
 
         parameter p;
@@ -256,15 +256,15 @@ void* solverMain(void* pointer)
 
 
         if (p.argc == 1)
-        { fprintf( stderr, "Reading from standard input... Use '--help' for help.\n"); }
+        { fprintf(stderr, "Reading from standard input... Use '--help' for help.\n"); }
 
         gzFile in = (p.argc == 1) ? gzdopen(0, "rb") : gzopen(p.argv[1], "rb");
         if (in == NULL)
-        { fprintf( stderr, "ERROR! Could not open file: %s\n", p.argc == 1 ? "<stdin>" : p.argv[1]), exit(1); }
+        { fprintf(stderr, "ERROR! Could not open file: %s\n", p.argc == 1 ? "<stdin>" : p.argv[1]), exit(1); }
 
         if (S.verbosity > 0) {
-            fprintf( stderr, "============================[ Problem Statistics ]=============================\n");
-            fprintf( stderr, "|                                                                             |\n");
+            fprintf(stderr, "============================[ Problem Statistics ]=============================\n");
+            fprintf(stderr, "|                                                                             |\n");
         }
 
         parse_DIMACS(in, S);
@@ -272,13 +272,13 @@ void* solverMain(void* pointer)
 
 
         if (S.verbosity > 0) {
-            fprintf( stderr, "|  Number of variables:  %12d                                         |\n", S.nVars());
-            fprintf( stderr, "|  Number of clauses:    %12d                                         |\n", S.nClauses());
+            fprintf(stderr, "|  Number of variables:  %12d                                         |\n", S.nVars());
+            fprintf(stderr, "|  Number of clauses:    %12d                                         |\n", S.nClauses());
         }
 
         double parsed_time = cpuTime();
         if (S.verbosity > 0)
-        { fprintf( stderr, "|  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time); }
+        { fprintf(stderr, "|  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time); }
 
         // Change to signal-handlers that will only notify the solver and allow it to terminate
         // voluntarily:
@@ -288,36 +288,36 @@ void* solverMain(void* pointer)
         S.eliminate(true);
         double simplified_time = cpuTime();
         if (S.verbosity > 0) {
-            fprintf( stderr, "|  Simplification time:  %12.2f s                                       |\n", simplified_time - parsed_time);
-            fprintf( stderr, "|                                                                             |\n");
+            fprintf(stderr, "|  Simplification time:  %12.2f s                                       |\n", simplified_time - parsed_time);
+            fprintf(stderr, "|                                                                             |\n");
         }
 
         if (!S.okay()) {
             // print? -> mutex!
-            pthread_mutex_lock( share->mutex );
-            if ( *(share->printedAlready) == 0 ) {
+            pthread_mutex_lock(share->mutex);
+            if (*(share->printedAlready) == 0) {
                 *(share->printedAlready) = 1;
                 FILE* res = (p.argc >= 3) ? fopen(p.argv[2], "wb") : NULL;
-                if (res != NULL) { ffprintf( stderr, res, "UNSAT\n"), fclose(res); }
+                if (res != NULL) { ffprintf(stderr, res, "UNSAT\n"), fclose(res); }
 
                 if (S.verbosity > 0) {
-                    fprintf( stderr, "===============================================================================\n");
-                    fprintf( stderr, "Solved by simplification\n");
+                    fprintf(stderr, "===============================================================================\n");
+                    fprintf(stderr, "Solved by simplification\n");
                     printStats(S);
-                    fprintf( stderr, "\n");
+                    fprintf(stderr, "\n");
                 }
-                fprintf( stderr, "UNSATISFIABLE\n");
+                fprintf(stderr, "UNSATISFIABLE\n");
 
             }
-            pthread_mutex_unlock( share->mutex );
+            pthread_mutex_unlock(share->mutex);
             share->result = 20;
-            sem_post( share->wakeSem );
+            sem_post(share->wakeSem);
             return 0;
         }
 
         if (p.dimacs) {
             if (S.verbosity > 0)
-            { fprintf( stderr, "==============================[ Writing DIMACS ]===============================\n"); }
+            { fprintf(stderr, "==============================[ Writing DIMACS ]===============================\n"); }
             S.toDimacs((const char*)p.dimacs);
             if (S.verbosity > 0)
             { printStats(S); }
@@ -328,14 +328,14 @@ void* solverMain(void* pointer)
         lbool ret = S.solveLimited(dummy);
 
         // do print only, if no other thread has already printed
-        pthread_mutex_lock( share->mutex );
-        if ( *(share->printedAlready) == 0 ) {
+        pthread_mutex_lock(share->mutex);
+        if (*(share->printedAlready) == 0) {
             *(share->printedAlready) = 1;
             if (S.verbosity > 0) {
                 printStats(S);
-                fprintf( stderr, "\n");
+                fprintf(stderr, "\n");
             }
-            fprintf( stderr, ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
+            fprintf(stderr, ret == l_True ? "SATISFIABLE\n" : ret == l_False ? "UNSATISFIABLE\n" : "INDETERMINATE\n");
 
             FILE* res = (p.argc >= 3) ? fopen(p.argv[2], "wb") : NULL;
             if (res != NULL) {
@@ -352,17 +352,17 @@ void* solverMain(void* pointer)
                 fclose(res);
             }
         }
-        pthread_mutex_unlock( share->mutex );
+        pthread_mutex_unlock(share->mutex);
 
         // let thread starter know about return value
         share->result = (int)(ret == l_True ? 10 : ret == l_False ? 20 : 0);
-        sem_post( share->wakeSem );
+        sem_post(share->wakeSem);
         return 0;
 
     } catch (OutOfMemoryException&) {
-        fprintf( stderr, "===============================================================================\n");
-        fprintf( stderr, "INDETERMINATE\n");
-        sem_post( share->wakeSem );
+        fprintf(stderr, "===============================================================================\n");
+        fprintf(stderr, "INDETERMINATE\n");
+        sem_post(share->wakeSem);
         exit(0);
     }
     #endif

@@ -12,18 +12,18 @@ namespace Pcasso
 {
 
 static const char* _cat = "VSIDSSCATTERING";
-static IntOption     opt_scatter_fact  (_cat, "sc-fact",             "The number of derived instances produced in a split", 8, IntRange(0, INT_MAX));
-static BoolOption    opt_scatter_time  (_cat, "sc-timeLimit",        "Limit the time during two scatters", false);
-static BoolOption    opt_scatter_con   (_cat, "sc-conLimit",         "Limit the number of conflicts during two scatters", true);
-static IntOption     opt_scatter_conBw (_cat, "sc-betweenConflicts", "The number of derived instances produced in a split", 8096, IntRange(0, INT_MAX));
-static IntOption     opt_restart_first (_cat, "rfirst",              "The base restart interval", 100, IntRange(1, INT32_MAX));
-static DoubleOption  opt_restart_inc   (_cat, "rinc",                "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false));
+static IntOption     opt_scatter_fact(_cat, "sc-fact",             "The number of derived instances produced in a split", 8, IntRange(0, INT_MAX));
+static BoolOption    opt_scatter_time(_cat, "sc-timeLimit",        "Limit the time during two scatters", false);
+static BoolOption    opt_scatter_con(_cat, "sc-conLimit",         "Limit the number of conflicts during two scatters", true);
+static IntOption     opt_scatter_conBw(_cat, "sc-betweenConflicts", "The number of derived instances produced in a split", 8096, IntRange(0, INT_MAX));
+static IntOption     opt_restart_first(_cat, "rfirst",              "The base restart interval", 100, IntRange(1, INT32_MAX));
+static DoubleOption  opt_restart_inc(_cat, "rinc",                "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false));
 
 VSIDSSplitting::VSIDSSplitting(CoreConfig& config):
     SplitterSolver(config)
     , coreConfig(config)
-    , restart_first    (opt_restart_first)
-    , restart_inc      (opt_restart_inc)
+    , restart_first(opt_restart_first)
+    , restart_inc(opt_restart_inc)
 
 
 // Parameters (the rest):
@@ -32,8 +32,8 @@ VSIDSSplitting::VSIDSSplitting(CoreConfig& config):
 
 // Parameters (experimental):
 //
-    , learntsize_adjust_start_confl (100)
-    , learntsize_adjust_inc         (1.5)
+    , learntsize_adjust_start_confl(100)
+    , learntsize_adjust_inc(1.5)
 {
 
 }
@@ -75,7 +75,7 @@ lbool VSIDSSplitting::vsidsScatteringSplit(vec<vec<vec<Lit>* >* > **splits, vec<
     // run the search to get VSIDS scores and print the scatters
     lbool res = scatterSolve(&data); //solve_();
 
-    fprintf( stderr, "return in splitting from solve with %s\n", res == l_False ? "false" : ( res == l_Undef ? "undef" : "true") );
+    fprintf(stderr, "return in splitting from solve with %s\n", res == l_False ? "false" : (res == l_Undef ? "undef" : "true"));
 
     //fprintf ( stderr, "stop splitting with %d sub formulas\n", (*splits)->size());
     // if res is true, than there is a solution
@@ -88,18 +88,18 @@ lbool VSIDSSplitting::vsidsScatteringSplit(vec<vec<vec<Lit>* >* > **splits, vec<
         // and there cannot be any children
         assert((*splits)->size() == 0 && "if the problem is unsatisfiable there should not be any child nodes");
         return l_False;
-    } else if ( res == l_Undef) {
+    } else if (res == l_Undef) {
         // fprintf( stderr, "the result is undef and we return that\n");
         // there should be at least one split, in case no solution has been found (no way to timeout before the first split)
 
         // fprintf( stderr, "\n\n\nEither there has been a problem during splitting, or an external interrupt\n\n\n");
 
-        assert( ((*splits)->size() > 0 || asynch_interrupt) && "splitting has to return with a result" );
+        assert(((*splits)->size() > 0 || asynch_interrupt) && "splitting has to return with a result");
 
         return l_Undef;
     }
 
-    assert(false && "this code should never be reached" );
+    assert(false && "this code should never be reached");
     return l_False;
 }
 
@@ -184,7 +184,7 @@ lbool VSIDSSplitting::scatterSolve(void* data)
 */
 lbool VSIDSSplitting::scatterSeach(int nof_conflicts, void* data)
 {
-    vsidsScatterData& d = *( (vsidsScatterData*)data );
+    vsidsScatterData& d = *((vsidsScatterData*)data);
 
 
     assert(ok);
@@ -217,8 +217,8 @@ lbool VSIDSSplitting::scatterSeach(int nof_conflicts, void* data)
             unsigned lbd = 0;
             int ret = analyze(confl, learnt_clause, backtrack_level, lbd, extraInfo); // Davide> scatt !! my invention
 
-            assert( ret == 0 && "can handle only usually learnt clauses" );
-            if ( ret != 0 ) { _exit(1); } // abort, if learning is set up wrong
+            assert(ret == 0 && "can handle only usually learnt clauses");
+            if (ret != 0) { _exit(1); }   // abort, if learning is set up wrong
 
             cancelUntil(backtrack_level);
 
@@ -252,7 +252,7 @@ lbool VSIDSSplitting::scatterSeach(int nof_conflicts, void* data)
             }
 
             // minimum time / confl before starting the scatter
-            bool scatterCond = ((d.time_cond) && (cpuTime_t() - d.starttime >= d.sc_min_time)) ||  ((d.cnfl_cond) && (conflicts >= d.sc_min_cnfl));
+            bool scatterCond = ((d.time_cond) && (cpuTime_t() - d.starttime >= d.sc_min_time)) || ((d.cnfl_cond) && (conflicts >= d.sc_min_cnfl));
             // minimum time / confl between each scatter
             bool scatterCond_bw = ((d.time_cond) && (cpuTime_t() - d.prevscatter >= d.sc_bw_time)) || ((d.cnfl_cond) && (conflicts >= d.sc_bw_cnfl));
 
@@ -313,7 +313,7 @@ lbool VSIDSSplitting::scatterSeach(int nof_conflicts, void* data)
 
             // Are we yet in the scatter level?
             bool scatterLevel = false;
-            if ( !d.startscatter && d.isscattering ) { // only necessary to calculate in this case, because otherwise the below if won't trigger anyways
+            if (!d.startscatter && d.isscattering) {   // only necessary to calculate in this case, because otherwise the below if won't trigger anyways
                 int dl;
                 if (!d.isscattering) { scatterLevel = false; }
                 else {
@@ -391,7 +391,7 @@ lbool VSIDSSplitting::scatterSeach(int nof_conflicts, void* data)
                 {
                     vec<Lit>* cl = new vec<Lit>;
                     for (int i = 0; i < declits->size(); i++)
-                    { cl->push(~ (*(declits))[i]); }
+                    { cl->push(~(*(declits))[i]); }
                     addClause_(*cl);
                     delete cl;
                     reduceDB();

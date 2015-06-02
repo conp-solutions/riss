@@ -42,7 +42,7 @@ static void readClause(B& in, Solver& S, vec<Lit>& lits)
         if (parsed_lit == 0) { break; }
         var = abs(parsed_lit) - 1;
         while (var >= S.nVars()) { S.newVar(); }
-        lits.push( (parsed_lit > 0) ? mkLit(var) : ~mkLit(var) );
+        lits.push((parsed_lit > 0) ? mkLit(var) : ~mkLit(var));
     }
 }
 
@@ -107,14 +107,14 @@ static ProofStyle parse_proof_main(B& in, Solver& S, bool isProof = false)
         if (*in == EOF) { break; }
         if (*in == 'o') { // check proof format of given proof
             if (eagerMatch(in, "o proof DR")) {
-                if ( *in == 'U' ) {
+                if (*in == 'U') {
                     ++ in;
-                    if ( *in == 'P' ) {
+                    if (*in == 'P') {
                         returnedStyle = drupProof;
                         skipLine(in);
                     }
                 } else  {
-                    if ( eagerMatch(in, "AT") ) {
+                    if (eagerMatch(in, "AT")) {
                         returnedStyle = dratProof;
                         skipLine(in);
                     }
@@ -123,14 +123,14 @@ static ProofStyle parse_proof_main(B& in, Solver& S, bool isProof = false)
                 printf("PARSE ERROR! Unexpected char: %c\n", *in), exit(3);
             }
         } else if (*in == 's') {
-            if ( !eagerMatch(in, "s UNSAT") ) {
+            if (!eagerMatch(in, "s UNSAT")) {
                 printf("WARNING: solution not claimed to be unsatisfiable\n");
             }
             skipLine(in);
         } else if (*in == 'c') {
             skipLine(in);
         } else if (*in == 'd') { // found delete information
-            if ( isDelete ) { printf("PARSE ERROR! Unexpected char in delete section: %c\n", *in), exit(3); }
+            if (isDelete) { printf("PARSE ERROR! Unexpected char in delete section: %c\n", *in), exit(3); }
             isDelete = true;
             ++ in;
             // forward until next symbol to be able to read the clause
@@ -143,7 +143,7 @@ static ProofStyle parse_proof_main(B& in, Solver& S, bool isProof = false)
     }
 
     // warn only for the formula, not for the proof
-    if ( !isProof ) {
+    if (!isProof) {
         if (vars != S.nVars()) {
             fprintf(stderr, "WARNING! DIMACS header mismatch: wrong number of variables.\n");
         }
@@ -168,7 +168,7 @@ static ProofStyle parse_proof(gzFile input_stream, Solver& S)
 /** check whether the given model satisfies the given file
  *  @return true, if the model satisfies all clauses in the formula
  */
-bool check_DIMACS( gzFile input_stream, vec<lbool>& model )
+bool check_DIMACS(gzFile input_stream, vec<lbool>& model)
 {
     StreamBuffer in(input_stream);
     vec<Lit> lits;
@@ -190,15 +190,15 @@ bool check_DIMACS( gzFile input_stream, vec<lbool>& model )
                 if (parsed_lit == 0) { break; }
                 variable = abs(parsed_lit) - 1;
                 const Lit l = (parsed_lit > 0) ? mkLit(variable) : ~mkLit(variable);
-                lits.push( l );
-                if ( variable < model.size() ) {
-                    satisfied = satisfied || ( (model[ variable ] == l_True && !sign(l)) || (model[ variable ] == l_False && sign(l)) ) ;
+                lits.push(l);
+                if (variable < model.size()) {
+                    satisfied = satisfied || ((model[ variable ] == l_True && !sign(l)) || (model[ variable ] == l_False && sign(l))) ;
                 }
             }
-            if ( !satisfied ) {
+            if (!satisfied) {
                 failed = true;
                 printf("c no model -- does not satisfy clause [%d] ", cnt);
-                for ( int i =  0 ; i < lits.size(); ++ i ) { printf(" %d", sign( lits[i] ) ? - var(lits[i]) - 1 : var(lits[i]) + 1); }
+                for (int i =  0 ; i < lits.size(); ++ i) { printf(" %d", sign(lits[i]) ? - var(lits[i]) - 1 : var(lits[i]) + 1); }
                 printf("\n");
                 break;
             }

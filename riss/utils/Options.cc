@@ -58,9 +58,9 @@ bool Riss::parseOptions(int& argc, char** argv, bool strict)
 }
 
 
-void Riss::setUsageHelp      (const char* str) { Option::getUsageString() = str; }
-void Riss::setHelpPrefixStr  (const char* str) { Option::getHelpPrefixString() = str; }
-void Riss::printUsageAndExit (int argc, char** argv, bool verbose)
+void Riss::setUsageHelp(const char* str) { Option::getUsageString() = str; }
+void Riss::setHelpPrefixStr(const char* str) { Option::getHelpPrefixString() = str; }
+void Riss::printUsageAndExit(int argc, char** argv, bool verbose)
 {
     const char* usage = Option::getUsageString();
 
@@ -111,9 +111,9 @@ void Riss::configCall(int argc, char** argv, std::stringstream& s)
     // fill the stream for all the options
     for (int i = 0; i < Option::getOptionList().size(); i++) {
         // skip the option "-cmd", because this option is responsible to print the command line
-        if ( Option::getOptionList()[i]->name != 0 && strcmp( Option::getOptionList()[i]->name, "cmd" ) == 0 ) { continue; }
+        if (Option::getOptionList()[i]->name != 0 && strcmp(Option::getOptionList()[i]->name, "cmd") == 0) { continue; }
         // if there is an option that has not its default value, print its call
-        if ( ! Option::getOptionList()[i]->hasDefaultValue() ) {
+        if (! Option::getOptionList()[i]->hasDefaultValue()) {
             Option::getOptionList()[i]->printOptionCall(s);
             s << " ";
         }

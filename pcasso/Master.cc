@@ -54,32 +54,32 @@ static const int splitMethodNumbers = 3 ;
 
 
 // Davide> Options for clauses sharing
-static IntOption opt_pool_size             ("SPLITTER + SHARING", "shpool-size", "Specifies the size of the shared clauses pools, in kb\n", 5000, IntRange(0, INT32_MAX));
+static IntOption opt_pool_size("SPLITTER + SHARING", "shpool-size", "Specifies the size of the shared clauses pools, in kb\n", 5000, IntRange(0, INT32_MAX));
 
 
-static BoolOption opt_conflict_killing     ("SPLITTER + SHARING", "c-killing", "Conflict killing", false);
+static BoolOption opt_conflict_killing("SPLITTER + SHARING", "c-killing", "Conflict killing", false);
 
-static IntOption     split_mode        ("SPLITTER", "split-mode",  splitString.c_str(), 2, IntRange(0, splitMethodNumbers));
-static DoubleOption  work_timeout      ("SPLITTER", "work-timeout", "timeout for worker theards (seconds).\n", -1, DoubleRange(-1, true, 2000000000, true));
-static IntOption     work_conflicts    ("SPLITTER", "work-conflicts", "limit for conflicts in a working thread.\n", -1, IntRange(-1, INT32_MAX));
-static DoubleOption  split_timeout     ("SPLITTER", "split-timeout", "timeout for splitter theards (seconds).\n", 1024, DoubleRange(-1, true, 2000000000, true));
-static IntOption     work_threads      ("SPLITTER", "threads", "number of threads that should be used.\n", 1, IntRange(1, 64));
+static IntOption     split_mode("SPLITTER", "split-mode",  splitString.c_str(), 2, IntRange(0, splitMethodNumbers));
+static DoubleOption  work_timeout("SPLITTER", "work-timeout", "timeout for worker theards (seconds).\n", -1, DoubleRange(-1, true, 2000000000, true));
+static IntOption     work_conflicts("SPLITTER", "work-conflicts", "limit for conflicts in a working thread.\n", -1, IntRange(-1, INT32_MAX));
+static DoubleOption  split_timeout("SPLITTER", "split-timeout", "timeout for splitter theards (seconds).\n", 1024, DoubleRange(-1, true, 2000000000, true));
+static IntOption     work_threads("SPLITTER", "threads", "number of threads that should be used.\n", 1, IntRange(1, 64));
 //static IntOption     solve_mode        ("SPLITTER", "solve-mode","how to solve child nodes (0=usual, 1=simplification)\n", 0, IntRange(0, 1));
-static IntOption     maxSplitters      ("SPLITTER", "max-splitters", "how many splitters can be used simultaneously\n", 1, IntRange(1, 1024));
-static BoolOption    loadSplit         ("SPLITTER", "load-split", "If there is nothing to solve,but to split, split!.\n", false);
-static BoolOption    stopUnsatChilds   ("SPLITTER", "stop-children", "If a child formula is known to be unsat, stop that solver.\n", false);
-static IntOption     phase_saving_mode ("SPLITTER", "phase-saving-mode", "how to handle the phase saving information (0=not,1=use last)\n", 0, IntRange(0, 1));
-static IntOption     activity_mode     ("SPLITTER", "activity-mode", "how to handle the activity information (0=not,1=use last)\n", 0, IntRange(0, 1));
-static IntOption     keepToplevelUnits ("SPLITTER", "forward-units", "propagate found toplevel units downwards (0=no, 1=yes)\n", 1, IntRange(0, 1));
-static IntOption     seed              ("SPLITTER", "seed", "Seed to initialize randomization\n", 0, IntRange(0, INT32_MAX));
-static Int64Option   data_space        ("SPLITTER", "data-lim", "total bytes reserved for internal data of the solvers.\n", INT64_MAX, Int64Range(0, INT64_MAX));
-static BoolOption    opt_scheme_pp     ("SPLITTER", "plain-scheme", "Use the plain partitioning paralellization scheme.\n", false);
-static BoolOption    printModel        ("SPLITTER", "model", "Display the model for the formula\n", false);
-static BoolOption    printTree         ("SPLITTER", "print-tree", "Print the solve-tree.\n", false);
-static Int64Option   MSverbosity       ("SPLITTER", "verbosity", "verbosity of the master\n", 0, Int64Range(0, INT64_MAX));
-static BoolOption    Portfolio         ("SPLITTER", "portfolio",  "Portfolio mode.\n", false);
-static Int64Option   PortfolioLevel    ("SPLITTER", "portfolioL", "Perform Portfolio until specified level\n", 0, Int64Range(0, INT64_MAX)); // depends on option above!
-static BoolOption    UseHardwareCores  ("SPLITTER", "usehw",  "Use Hardware, pin threads to cores\n", false);
+static IntOption     maxSplitters("SPLITTER", "max-splitters", "how many splitters can be used simultaneously\n", 1, IntRange(1, 1024));
+static BoolOption    loadSplit("SPLITTER", "load-split", "If there is nothing to solve,but to split, split!.\n", false);
+static BoolOption    stopUnsatChilds("SPLITTER", "stop-children", "If a child formula is known to be unsat, stop that solver.\n", false);
+static IntOption     phase_saving_mode("SPLITTER", "phase-saving-mode", "how to handle the phase saving information (0=not,1=use last)\n", 0, IntRange(0, 1));
+static IntOption     activity_mode("SPLITTER", "activity-mode", "how to handle the activity information (0=not,1=use last)\n", 0, IntRange(0, 1));
+static IntOption     keepToplevelUnits("SPLITTER", "forward-units", "propagate found toplevel units downwards (0=no, 1=yes)\n", 1, IntRange(0, 1));
+static IntOption     seed("SPLITTER", "seed", "Seed to initialize randomization\n", 0, IntRange(0, INT32_MAX));
+static Int64Option   data_space("SPLITTER", "data-lim", "total bytes reserved for internal data of the solvers.\n", INT64_MAX, Int64Range(0, INT64_MAX));
+static BoolOption    opt_scheme_pp("SPLITTER", "plain-scheme", "Use the plain partitioning paralellization scheme.\n", false);
+static BoolOption    printModel("SPLITTER", "model", "Display the model for the formula\n", false);
+static BoolOption    printTree("SPLITTER", "print-tree", "Print the solve-tree.\n", false);
+static Int64Option   MSverbosity("SPLITTER", "verbosity", "verbosity of the master\n", 0, Int64Range(0, INT64_MAX));
+static BoolOption    Portfolio("SPLITTER", "portfolio",  "Portfolio mode.\n", false);
+static Int64Option   PortfolioLevel("SPLITTER", "portfolioL", "Perform Portfolio until specified level\n", 0, Int64Range(0, INT64_MAX));     // depends on option above!
+static BoolOption    UseHardwareCores("SPLITTER", "usehw",  "Use Hardware, pin threads to cores\n", false);
 
 static vector<unsigned short int> hardwareCores; // set of available hardware cores
 
@@ -89,11 +89,11 @@ Master::Master(Parameter p) :
     maxVar(0),
     model(0),
     param(p),
-    threads( work_threads ),
+    threads(work_threads),
     space_lim(data_space / threads),
     communicationLock(1),
     sleepLock(1),
-    masterState( working ),
+    masterState(working),
     done(false),
     timeout(work_timeout),
     res(0),
@@ -120,14 +120,14 @@ Master::Master(Parameter p) :
     //solverMaxTimeID = statistics.registerD("solverMaxTime");
     nConflictKilledID = statistics.registerI("nConflictKilled");
 
-    if ( UseHardwareCores ) {
+    if (UseHardwareCores) {
         hardwareCores.clear();
         cpu_set_t mask;
         sched_getaffinity(0, sizeof(cpu_set_t), &mask);
         for (int i = 0; i < sizeof(cpu_set_t) << 3; ++i) // add all available cores to the system
             if (CPU_ISSET(i, &mask)) { hardwareCores.push_back(i); }
         cerr << "c detected available cores: " << hardwareCores.size() << endl;
-        if ( hardwareCores.size() < threads ) {
+        if (hardwareCores.size() < threads) {
             cerr << "c WARNING: less physical cores that available threads, core-pinning will be disabled" << endl;
             hardwareCores.clear();
         }
@@ -138,7 +138,7 @@ Master::Master(Parameter p) :
 Master::~Master()  // TODO Dav> See if this can be re-enabled, when you join
 {
     // free allocated literals
-    for ( unsigned int i = 0 ; i < originalFormula.size(); ++i ) {
+    for (unsigned int i = 0 ; i < originalFormula.size(); ++i) {
         delete [] originalFormula[i].lits;
     }
     // clear vector
@@ -148,17 +148,17 @@ Master::~Master()  // TODO Dav> See if this can be re-enabled, when you join
 
 
 int
-Master::main (int argc, char **argv)
+Master::main(int argc, char **argv)
 {
 
-    fprintf( stderr, "c ***********************************************************************************************\n" );
-    fprintf( stderr, "c * PCASSO - a Parallel, CooperAtive Sat SOlver                                                 *\n" );
-    fprintf( stderr, "c * Author: Nobert Manthey                                                                      *\n" );
-    fprintf( stderr, "c * Contributors:                                                                               *\n" );
-    fprintf( stderr, "c * Davide Lanti (clause sharing, extended conflict analysis)                                   *\n" );
-    fprintf( stderr, "c * Ahmed Irfan  (LA partitioning, information sharing      )                                   *\n" );
-    fprintf( stderr, "c * This solver is based on Riss3g, Glucose 2.2 and Minisat 2.2                                 *\n" );
-    fprintf( stderr, "c ***********************************************************************************************\n" );
+    fprintf(stderr, "c ***********************************************************************************************\n");
+    fprintf(stderr, "c * PCASSO - a Parallel, CooperAtive Sat SOlver                                                 *\n");
+    fprintf(stderr, "c * Author: Nobert Manthey                                                                      *\n");
+    fprintf(stderr, "c * Contributors:                                                                               *\n");
+    fprintf(stderr, "c * Davide Lanti (clause sharing, extended conflict analysis)                                   *\n");
+    fprintf(stderr, "c * Ahmed Irfan  (LA partitioning, information sharing      )                                   *\n");
+    fprintf(stderr, "c * This solver is based on Riss3g, Glucose 2.2 and Minisat 2.2                                 *\n");
+    fprintf(stderr, "c ***********************************************************************************************\n");
 
     string filename = (argc == 1) ? "" : argv[1];
 
@@ -168,13 +168,13 @@ Master::main (int argc, char **argv)
     // fclose( out_state_file ); // Davide> for statistics
 
     // setup everything
-    parseFormula( filename );
-    if (MSverbosity > 1) { fprintf( stderr, "parsed %d clauses with %d variables\n", (int)originalFormula.size(), maxVar); }
+    parseFormula(filename);
+    if (MSverbosity > 1) { fprintf(stderr, "parsed %d clauses with %d variables\n", (int)originalFormula.size(), maxVar); }
 
     // open output file, in case of a non-valid filename, res will be 0 as well
     res = (argc >= 3) ? fopen(argv[2], "wb") : 0;
     if (argc >= 3) {
-        fprintf( stderr, "The output file name should be %s\n", argv[2]);
+        fprintf(stderr, "The output file name should be %s\n", argv[2]);
     }
     // push the root node to the solve and split queues
     if (!plainpart)
@@ -198,19 +198,19 @@ int Master::run()
     // check the state of the tree
     // solve the next node in the tree
     if (MSverbosity > 0) { fprintf(stderr, "M: start main loop\n"); }
-    while ( !done ) {
+    while (!done) {
 
         int idles = 0;  // important, because this indicates that there can be done more in the next round!
         int workers = 0, splitters = 0, uncleans = 0;
 
-        for (unsigned int i = 0 ; i < threads; ++i ) {
-            if ( threadData[i].s == splitting) { splitters++; }
-            if ( threadData[i].s == idle) { idles++; }
-            if ( threadData[i].s == working) { workers++; }
-            if ( threadData[i].s == unclean) {
+        for (unsigned int i = 0 ; i < threads; ++i) {
+            if (threadData[i].s == splitting) { splitters++; }
+            if (threadData[i].s == idle) { idles++; }
+            if (threadData[i].s == working) { workers++; }
+            if (threadData[i].s == unclean) {
 
                 // Davide> Free memory
-                if ( threadData[i].result == 20 && stopUnsatChilds ) {
+                if (threadData[i].result == 20 && stopUnsatChilds) {
                     // The children are NOT running, so I can delete every pool
                     lock();
                     threadData[i].nodeToSolve->setState(TreeNode::unsat, true);
@@ -234,22 +234,22 @@ int Master::run()
         //      unlock(); // End of critical
 
         // print some information
-        if (MSverbosity > 1 ) {
-            fprintf( stderr, "==== STATE ====\n");
-            fprintf( stderr, "solveQ: %d nodes = {", (int)solveQueue.size() );
-            for ( uint32_t i = 0 ; i < solveQueue.size(); ++i ) {
-                fprintf( stderr, " %d", solveQueue[i]->id() );
+        if (MSverbosity > 1) {
+            fprintf(stderr, "==== STATE ====\n");
+            fprintf(stderr, "solveQ: %d nodes = {", (int)solveQueue.size());
+            for (uint32_t i = 0 ; i < solveQueue.size(); ++i) {
+                fprintf(stderr, " %d", solveQueue[i]->id());
             }
-            fprintf( stderr, " }\n");
-            fprintf( stderr, "splitQ: %d nodes = {", (int)splitQueue.size() );
-            for ( uint32_t i = 0 ; i < splitQueue.size(); ++i ) {
-                fprintf( stderr, " %d", splitQueue[i]->id() );
+            fprintf(stderr, " }\n");
+            fprintf(stderr, "splitQ: %d nodes = {", (int)splitQueue.size());
+            for (uint32_t i = 0 ; i < splitQueue.size(); ++i) {
+                fprintf(stderr, " %d", splitQueue[i]->id());
             }
-            fprintf( stderr, " }\n");
-            fprintf( stderr, "THREADS: i: %d, s: %d w: %d u: %d \n", idles, splitters, workers, uncleans );
-            fprintf( stderr, "====\n");
-        } else if (MSverbosity > 0 ) {
-            fprintf( stderr, "STATE: solveQ: %d, splitQ: %d  -- Threads: i: %d, s: %d w: %d u: %d \n", (int)solveQueue.size(), (int)splitQueue.size(), idles, splitters, workers, uncleans);
+            fprintf(stderr, " }\n");
+            fprintf(stderr, "THREADS: i: %d, s: %d w: %d u: %d \n", idles, splitters, workers, uncleans);
+            fprintf(stderr, "====\n");
+        } else if (MSverbosity > 0) {
+            fprintf(stderr, "STATE: solveQ: %d, splitQ: %d  -- Threads: i: %d, s: %d w: %d u: %d \n", (int)solveQueue.size(), (int)splitQueue.size(), idles, splitters, workers, uncleans);
         }
         if (MSverbosity > 3)  { root.print(); } // might become quite huge
 
@@ -257,27 +257,27 @@ int Master::run()
         idles = idles + uncleans;
 
         // check the state of the search tree
-        if ( true ) {
+        if (true) {
             // model might be increased right now
 
             lock();
-            if ( model != 0 ) {
+            if (model != 0) {
                 solution = 10;
                 unlock();
-                fprintf( stderr, "c A model has been submitted!\n" );
+                fprintf(stderr, "c A model has been submitted!\n");
             }
             unlock();
 
             // check the tree for UNSAT/SAT
             if (MSverbosity > 1) { fprintf(stderr, "M: CHECK TREE\n"); }
             root.evaluate(*this);
-            if ( root.getState() == TreeNode::unsat ) {
+            if (root.getState() == TreeNode::unsat) {
                 // assign the according solution
                 solution = 20;
                 // jump out of the workloop
                 break;
             }
-            if ( solution == 10 || root.getState() == TreeNode::sat ) {
+            if (solution == 10 || root.getState() == TreeNode::sat) {
                 // assign the according solution
                 solution = 10;
                 break;
@@ -287,16 +287,16 @@ int Master::run()
         }
 
         // can only start more threads, if there are some available
-        if ( idles > 0 ) {
+        if (idles > 0) {
 
             // more splitting?
-            if ( solveQueue.size() < threads ) {
+            if (solveQueue.size() < threads) {
                 unsigned int splitter = 0;
-                for (unsigned int i = 0 ; i < threads; ++i ) {
-                    if ( threadData[i].s == splitting) { splitter++; }
+                for (unsigned int i = 0 ; i < threads; ++i) {
+                    if (threadData[i].s == splitting) { splitter++; }
                 }
                 if (MSverbosity > 1) { fprintf(stderr, "M: current splitters: %d queue size: %d threads %d\n", splitter, (int)splitQueue.size(), threads); }
-                if ( splitter < maxSplitters && splitQueue.size() > 0) {
+                if (splitter < maxSplitters && splitQueue.size() > 0) {
                     // check the size of the queue and whether the splitter is already running TODO: think about introducing several splitter
                     // in case it is too short, create more childs
                     // do splitting
@@ -306,17 +306,17 @@ int Master::run()
                     TreeNode* node = 0;
                     bool fail = false;
                     do {
-                        if ( splitQueue.size() == 0 ) { fail = true; break; }
+                        if (splitQueue.size() == 0) { fail = true; break; }
                         else {
                             node = splitQueue.front();
                             splitQueue.pop_front();
                         }
-                    } while ( node->getState() == TreeNode::unsat );
+                    } while (node->getState() == TreeNode::unsat);
                     Debug::PRINT_NOTE("M: SPLITTING NODE ");
                     Debug::PRINTLN_NOTE(node->getPosition());
-                    if ( !fail ) {
-                        assert(node != 0 );
-                        if ( !splittFormula(node) ) { continue; }   // if it fails, retry!
+                    if (!fail) {
+                        assert(node != 0);
+                        if (!splittFormula(node)) { continue; }     // if it fails, retry!
                     }
                 }
             }
@@ -324,68 +324,68 @@ int Master::run()
             // if there is something to solve, solve it!
             unsigned int i = 0 ;
             bool fail = false;
-            for (; i < threads; ++i ) {
-                if ( threadData[i].s == idle && solveQueue.size() > 0) {
+            for (; i < threads; ++i) {
+                if (threadData[i].s == idle && solveQueue.size() > 0) {
                     if (MSverbosity > 1) { fprintf(stderr, "M: solve the next node\n"); }
                     if (!solveNextQueueEle()) {
                         fail = true; break;
                     }
                 };
             }
-            if ( fail ) { continue; } // if one of the instance creations failed, start loop again
+            if (fail) { continue; }   // if one of the instance creations failed, start loop again
 
             // if there is nothing to solve, but more nodes to be split, split them!
-            if ( loadSplit && solveQueue.size() == 0 && splitQueue.size() > 0 ) {
+            if (loadSplit && solveQueue.size() == 0 && splitQueue.size() > 0) {
                 unsigned int i = 0 ;
                 bool fail = false;
-                for (; i < threads; ++i ) {
-                    if ( threadData[i].s == idle && splitQueue.size() > 0) {
+                for (; i < threads; ++i) {
+                    if (threadData[i].s == idle && splitQueue.size() > 0) {
                         // only split nodes that are not already unsatisfied
                         TreeNode* node = 0;
                         bool localFail = false;
                         do {
-                            if ( splitQueue.size() == 0 ) { localFail = true; break; }
+                            if (splitQueue.size() == 0) { localFail = true; break; }
                             else {
                                 node = splitQueue.front();
                                 splitQueue.pop_front();
                             }
-                        } while ( node->getState() == TreeNode::unsat );
+                        } while (node->getState() == TreeNode::unsat);
 
-                        if ( !localFail ) {
-                            assert(node != 0 );
+                        if (!localFail) {
+                            assert(node != 0);
                             // TODO Davide> IS this the best we can do ?
-                            if ( !splittFormula(node) ) { continue; } // if it fails, retry!
+                            if (!splittFormula(node)) { continue; }   // if it fails, retry!
                             else {
-                                statistics.changeI( loadSplitID, 1 ); // count how many load splits have been performed
+                                statistics.changeI(loadSplitID, 1);   // count how many load splits have been performed
                                 if (MSverbosity > 1) { fprintf(stderr, "M: scheduled load split\n"); }
                             }
                         }
                         fail = fail || localFail;
                     };
                 }
-                if ( fail ) { continue; } // if one of the instance creations failed, start loop again
+                if (fail) { continue; }   // if one of the instance creations failed, start loop again
             }
 
             // TODO: what should happen, if all queues are empty and not all threads do have work?
-            if ( solveQueue.size() == 0 && splitQueue.size() == 0 ) {
+            if (solveQueue.size() == 0 && splitQueue.size() == 0) {
                 unsigned int i = 0;
-                for (; i < threads; ++i ) {
-                    if ( threadData[i].s == splitting ) { break; } // TODO SHOULDN'T BE IDLE ?? DAVIDE>
-                    if ( threadData[i].s == working ) { break; } // do not stop if some worker is doing something
+                for (; i < threads; ++i) {
+                    if (threadData[i].s == splitting) { break; }   // TODO SHOULDN'T BE IDLE ?? DAVIDE>
+                    if (threadData[i].s == working) { break; }   // do not stop if some worker is doing something
                 }
                 // if there is a thread that is still doing something, we did not run out of work!
-                if ( i == threads ) {
-                    fprintf( stderr, "\n***\n*** RUN OUT OF WORK - return unknown?\n***\n\n" );
+                if (i == threads) {
+                    fprintf(stderr, "\n***\n*** RUN OUT OF WORK - return unknown?\n***\n\n");
 
                     int idles = 0, workers = 0, splitters = 0, uncleans = 0;
-                    for (unsigned int i = 0 ; i < threads; ++i ) {
-                        if ( threadData[i].s == splitting) { splitters++; }
-                        else if ( threadData[i].s == idle) { idles++; }
-                        else if ( threadData[i].s == working) { workers++; }
-                        else if ( threadData[i].s == unclean) { uncleans++; }
+                    for (unsigned int i = 0 ; i < threads; ++i) {
+                        if (threadData[i].s == splitting) { splitters++; }
+                        else if (threadData[i].s == idle) { idles++; }
+                        else if (threadData[i].s == working) { workers++; }
+                        else if (threadData[i].s == unclean) { uncleans++; }
                     }
 
-                    fprintf( stderr, "c idle: %d working: %d splitting: %d unclean: %d\n", idles, workers, splitters, uncleans );
+                    fprintf(stderr, "c idle: %d working: %d splitting: %d unclean: %d\n", idles, workers, splitters, uncleans);
 
                     exit(0);
                 }
@@ -393,7 +393,7 @@ int Master::run()
 
 
         } else {
-            if (MSverbosity > 1) { fprintf( stderr, "M: all threads are in work\n" ); }
+            if (MSverbosity > 1) { fprintf(stderr, "M: all threads are in work\n"); }
         }
 
         // if there is nothing more to do (splitter runs, all tasks are assigned, no free cores)
@@ -409,7 +409,7 @@ int Master::run()
 
     // handle the solution
     // check whether sat has been found
-    if (MSverbosity > 0) { fprintf( stderr, "M: solved formula with result %d\n", solution); }
+    if (MSverbosity > 0) { fprintf(stderr, "M: solved formula with result %d\n", solution); }
     // // Davide> handle statistics
     // for( unsigned int i = 0; i < root.size(); i++ ){
     //   cout << i << endl;
@@ -425,14 +425,14 @@ int Master::run()
 
     // fclose(out_state_file);
 
-    assert( model != 0 || solution != 10 );
+    assert(model != 0 || solution != 10);
 
-    if ( printModel ) {
+    if (printModel) {
 
         if (res != NULL) { fprintf(stderr, "c write model to file\n"); }
 
-        if ( model != 0 ) {
-            assert( solution == 10 && "the solution has to be 20" );
+        if (model != 0) {
+            assert(solution == 10 && "the solution has to be 20");
             fprintf(stderr, "c SATISFIABLE\n");
 
             // fprintf(out_state_file, "SAT %g\n", cpuTime()); // Davide> for statistics
@@ -446,14 +446,14 @@ int Master::run()
                 }
                  */
                 for (int i = 0; i < maxVar; i++) {
-                    if ( (*model)[i] != l_Undef)
+                    if ((*model)[i] != l_Undef)
                     { fprintf(res, "%s%s%d", (i == 0) ? "" : " ", ((*model)[i] == l_True) ? "" : "-", i + 1); }
                     /*
                     else
                     fprintf(res, "%s%s%d", (i==0)?"":" ", (true)?"":"-", i+1);
                      */
                 }
-                fprintf(res, " 0\n" );
+                fprintf(res, " 0\n");
             } else {
                 fprintf(stdout, "s SATISFIABLE\nv ");
                 /*
@@ -462,16 +462,16 @@ int Master::run()
                 }
                  */
                 for (int i = 0; i < maxVar; i++) {
-                    if ( (*model)[i] != l_Undef)
-                    { fprintf(stdout, "%s%s%d", (i == 0) ? "" : " ", ( (*model)[i] == l_True) ? "" : "-", i + 1); }
+                    if ((*model)[i] != l_Undef)
+                    { fprintf(stdout, "%s%s%d", (i == 0) ? "" : " ", ((*model)[i] == l_True) ? "" : "-", i + 1); }
                     /*
                     else
                     fprintf(res, "%s%s%d", (i==0)?"":" ", (true)?"":"-", i+1);
                      */
                 }
-                fprintf(stdout, " 0\n" );
+                fprintf(stdout, " 0\n");
             }
-        } else if ( solution == 20 ) {
+        } else if (solution == 20) {
             fprintf(stdout, "UNSATISFIABLE\n");
 
             // fprintf(out_state_file, "UNSAT %g\n", cpuTime()); // Davide> for statistics
@@ -489,7 +489,7 @@ int Master::run()
 
     }
 
-    if ( res != 0 ) { fclose(res); }
+    if (res != 0) { fclose(res); }
 
     struct timespec ts;
     if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts) != 0) {
@@ -501,32 +501,32 @@ int Master::run()
     double canc_t = ts.tv_sec + ts.tv_nsec / 1000000000.0;
 
     // cancel all threads
-    for ( unsigned int i = 0 ; i < threads ; ++i ) {
+    for (unsigned int i = 0 ; i < threads ; ++i) {
         //    int err = 0;
-        fprintf( stderr, "c try to cancel thread %d\n", i);
+        fprintf(stderr, "c try to cancel thread %d\n", i);
         // if( threadData[i].s == idle || threadData[i].handle == 0 || threadData[i].solver == NULL) continue;
         if (threadData[i].solver == 0) { continue; }
         threadData[i].solver->interrupt(); // Yeah, it takes time.
         // threadData[i].solver->kill();
         Debug::PRINTLN_NOTE("thread KILLED");
-        if ( threadData[i].s == idle || threadData[i].handle == 0) { continue; }
+        if (threadData[i].s == idle || threadData[i].handle == 0) { continue; }
         // pthread_cancel(threadData[i].handle);
         //if( err == ESRCH ) fprintf( stderr, "c specified thread does not exist\n");
     }
 
     // TODO Davide> REDO THIS, if POSSIBLE
     // join all threads (avoid segmentation fault due to calls to destructor of master object)
-    for ( unsigned int i = 0 ; i < threads ; ++i ) {
+    for (unsigned int i = 0 ; i < threads ; ++i) {
         int* status = 0;
         int err = 0;
-        if (MSverbosity > 1) { fprintf( stderr, "c try to join thread %d\n", i); }
+        if (MSverbosity > 1) { fprintf(stderr, "c try to join thread %d\n", i); }
         //    if( threadData[i].s == idle || threadData[i].handle == 0 ) continue;
         if (threadData[i].solver != NULL) {
             if (threadData[i].handle != 0) {
                 err = pthread_join(threadData[i].handle, (void**)&status);
-                if ( err == EINVAL ) { fprintf( stderr, "c tried to cancel wrong thread\n"); }
-                if ( err == ESRCH ) { fprintf( stderr, "c specified thread does not exist\n"); }
-                if (MSverbosity > 1) { fprintf( stderr, "c joined thread %d\n", i); }
+                if (err == EINVAL) { fprintf(stderr, "c tried to cancel wrong thread\n"); }
+                if (err == ESRCH) { fprintf(stderr, "c specified thread does not exist\n"); }
+                if (MSverbosity > 1) { fprintf(stderr, "c joined thread %d\n", i); }
             }
             delete threadData[i].solver;
         }
@@ -541,37 +541,37 @@ int Master::run()
     if (MSverbosity > 0)
     { fprintf(stderr, "c Waited for threads for %f secs\n", (ts.tv_sec + ts.tv_nsec / 1000000000.0) - canc_t); }
 
-    if (MSverbosity > 2 || printTree ) {
+    if (MSverbosity > 2 || printTree) {
         fprintf(stderr, "\n\nfinal tree:\n");
         root.print();
     }
 
     int treeHeight = root.getSubTreeHeight();
-    statistics.changeI( treeHeightID, treeHeight );
+    statistics.changeI(treeHeightID, treeHeight);
     int evaLevel = root.getEvaLevel();
     //statistics.changeI( evaLevelID, evaLevel );
 
     string statOutput;
     statistics.print(statOutput);
 
-    fprintf( stderr, "c statistics:\n%s\n", statOutput.c_str() );
+    fprintf(stderr, "c statistics:\n%s\n", statOutput.c_str());
 
-    fprintf( stderr, "c solved instance with result %d\n", solution );
+    fprintf(stderr, "c solved instance with result %d\n", solution);
 
-    printf( "CPU time              : %g s\n", cpuTime());
+    printf("CPU time              : %g s\n", cpuTime());
 
     // report found value to calling method
     return solution;
 }
 
 void
-Master::stopThread( uint32_t threadId )
+Master::stopThread(uint32_t threadId)
 {
 
     // Solver will terminate gracefully next time it restarts.
     // It can require a lot of time.
     //lock();
-    if ( threadData[threadId].solver != 0 ) { threadData[threadId].solver->interrupt(); }
+    if (threadData[threadId].solver != 0) { threadData[threadId].solver->interrupt(); }
     //unlock();
     //
     //        if(pthread_cancel(threadData[threadId].handle) == 0){
@@ -584,14 +584,14 @@ Master::solveNextQueueEle()
 {
     // make all threads joinable
     pthread_attr_t attr;
-    pthread_attr_init (&attr);
-    pthread_attr_setdetachstate (&attr, PTHREAD_CREATE_JOINABLE);
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
     // find an idle thread
     unsigned int i = 0 ;
-    for (; i < threads; ++i ) {
-        if ( threadData[i].s == idle ) { break; }
+    for (; i < threads; ++i) {
+        if (threadData[i].s == idle) { break; }
     }
-    if ( i == threads ) {
+    if (i == threads) {
         fprintf(stderr, "was not able to allocate a thread for the next task\n");
         return false;
     }
@@ -606,22 +606,22 @@ Master::solveNextQueueEle()
     lock();
     // look for the next node, that can be solved (is not already unsatisfiable)
     do {
-        if ( solveQueue.size() == 0 ) { fail = true; break; }
+        if (solveQueue.size() == 0) { fail = true; break; }
         else {
             threadData[i].nodeToSolve = solveQueue.front();
             solveQueue.pop_front();
         }
-    } while ( threadData[i].nodeToSolve->getState() == TreeNode::unsat );
+    } while (threadData[i].nodeToSolve->getState() == TreeNode::unsat);
     unlock();
-    if ( fail ) {
+    if (fail) {
         threadData[i].s = idle;
         return false;
     }
 
     // create one thread
     if (MSverbosity > 1) { fprintf(stderr, "create thread [%d] for solving\n", i); }
-    assert( threadData[i].nodeToSolve != 0 );
-    int rc = pthread_create( &(threadData[i].handle), &attr, Master::solveInstance, (void *)  & (threadData[i]));
+    assert(threadData[i].nodeToSolve != 0);
+    int rc = pthread_create(&(threadData[i].handle), &attr, Master::solveInstance, (void *)  & (threadData[i]));
     if (rc) {
         printf("ERROR; return code from pthread_create() is %d for thread %d\n", rc, i);
         // add the tree element back to the queue
@@ -643,14 +643,14 @@ Master::splittFormula(TreeNode* data)
     // this thread has to reset the splitter state
     // make all threads joinable
     pthread_attr_t attr;
-    pthread_attr_init (&attr);
-    pthread_attr_setdetachstate (&attr, PTHREAD_CREATE_JOINABLE);
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
     // find an idle thread
     unsigned int i = 0 ;
-    for (; i < threads; ++i ) {
-        if ( threadData[i].s == idle ) { break; }
+    for (; i < threads; ++i) {
+        if (threadData[i].s == idle) { break; }
     }
-    if ( i == threads ) {
+    if (i == threads) {
         fprintf(stderr, "was not able to allocate a thread for the next task\n");
         return false;
     }
@@ -660,11 +660,11 @@ Master::splittFormula(TreeNode* data)
     threadData[i].s = splitting;
     threadData[i].nodeToSolve = data;   // this is the node to split
 
-    assert( threadData[i].nodeToSolve != 0 );
-    assert( threadData[i].handle == 0);
+    assert(threadData[i].nodeToSolve != 0);
+    assert(threadData[i].handle == 0);
     // create one thread
     if (MSverbosity > 1) { fprintf(stderr, "create another thread[%d]  for splitting\n", i); }
-    int rc = pthread_create( &(threadData[i].handle), &attr, Master::splitInstance, (void *)  & (threadData[i]));
+    int rc = pthread_create(&(threadData[i].handle), &attr, Master::splitInstance, (void *)  & (threadData[i]));
     if (rc) {
         fprintf(stderr, "ERROR; return code from pthread_create() is %d for thread %d\n", rc, i);
         // set the state of the current core back to idle
@@ -676,7 +676,7 @@ Master::splittFormula(TreeNode* data)
 }
 
 void*
-Master::solveInstance (void* data)
+Master::solveInstance(void* data)
 {
     // set thread cancelable
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, 0);
@@ -684,16 +684,16 @@ Master::solveInstance (void* data)
     ThreadData& tData = *((ThreadData*)data);
     Master& master = *(tData.master);
 
-    if ( MSverbosity > 0 ) {
+    if (MSverbosity > 0) {
         fprintf(stderr, "solve instance with id %d that solves node %d\n", tData.id, tData.nodeToSolve->id());
-        fprintf(stderr, "thread %d starts solving a node at %lld with the node solve time %lld\n", tData.id, Master::getCpuTimeMS(), tData.nodeToSolve->solveTime );
+        fprintf(stderr, "thread %d starts solving a node at %lld with the node solve time %lld\n", tData.id, Master::getCpuTimeMS(), tData.nodeToSolve->solveTime);
     }
     Debug::PRINT_NOTE("STARTED TO SOLVE NODE ");
     Debug::PRINT_NOTE(tData.nodeToSolve->getPosition());
     Debug::PRINT_NOTE(" with PT_Level ");
     Debug::PRINTLN_NOTE(tData.nodeToSolve->getPTLevel());
 
-    if ( UseHardwareCores && hardwareCores.size() > 0) { // pin this thread to the specified core
+    if (UseHardwareCores && hardwareCores.size() > 0) {  // pin this thread to the specified core
         cpu_set_t mask;
         CPU_ZERO(&mask); CPU_SET(tData.id, &mask);
         if (sched_setaffinity(0, sizeof(cpu_set_t), &mask) != 0) {
@@ -718,20 +718,20 @@ Master::solveInstance (void* data)
     S.curPTLevel = tData.nodeToSolve->getPTLevel();
     S.lastLevel = tData.nodeToSolve->getPTLevel();
 
-    if ( Portfolio && tData.nodeToSolve->getLevel() <= PortfolioLevel ) { // a portfolio node should be solved
+    if (Portfolio && tData.nodeToSolve->getLevel() <= PortfolioLevel) {   // a portfolio node should be solved
         const int nodeLevel = tData.nodeToSolve->getLevel();
-        if ( nodeLevel > 0 ) { // root node is solved as usually
+        if (nodeLevel > 0) {   // root node is solved as usually
             cerr << "c solve portfolio node at level " << nodeLevel << endl;
-            if ( nodeLevel == 1 ) {
+            if (nodeLevel == 1) {
                 S.K = 0.8; S.R = 1.5;
-            } else if ( nodeLevel == 2 ) {
+            } else if (nodeLevel == 2) {
                 S.firstReduceDB  = 10000;
-            } else if ( nodeLevel == 3 ) {
+            } else if (nodeLevel == 3) {
                 S.rnd_init_act = true;
-            } else if ( nodeLevel == 4 ) {
+            } else if (nodeLevel == 4) {
                 S.sizeLBDQueue  = 150;
             } else { // default diversification
-                srand( rand() );
+                srand(rand());
                 S.rnd_init_act = true;
                 S.rnd_pol = true;
             }
@@ -739,7 +739,7 @@ Master::solveInstance (void* data)
     }
 
     // Davide> Initialize the shared indeces to zero
-    for ( unsigned int i = 0; i <= S.getNodePTLevel(); i++ ) // Davide> I put my level, also
+    for (unsigned int i = 0; i <= S.getNodePTLevel(); i++)   // Davide> I put my level, also
     { S.shared_indeces.push_back(0); }
 
     // Davide> Create the pool object for this node, and
@@ -761,16 +761,16 @@ Master::solveInstance (void* data)
 
     // feed the instance into the solver
     vector< pair<vector<Lit>*, unsigned int> > clauses;
-    assert( tData.nodeToSolve != 0 );
+    assert(tData.nodeToSolve != 0);
     tData.nodeToSolve->fillConstraintPathWithLevels(&clauses);
     vec<Lit> lits;
 
     // Davide> conversion vector -> vec. Here the "new" constraints are added to the threa
     // Davide> Many changes here, because clauses "now" is a vector of pairs
-    for (unsigned int i = 0 ; i < clauses.size(); ++i ) {
+    for (unsigned int i = 0 ; i < clauses.size(); ++i) {
         lits.clear();
-        for ( unsigned int j = 0 ; j < clauses[i].first->size(); ++ j ) {
-            lits.push( (*clauses[i].first)[j] );
+        for (unsigned int j = 0 ; j < clauses[i].first->size(); ++ j) {
+            lits.push((*clauses[i].first)[j]);
         }
         //simp ? ((SimpSolver&)S).addClause(lits, clauses[i].second) : S.addClause(lits, clauses[i].second);
         // if( clauses[i].second > 1 ) cout << "OK solveInstance" << endl;
@@ -778,10 +778,10 @@ Master::solveInstance (void* data)
     }
 
     // add the formula to the solver
-    for (unsigned int i = 0 ; i < master.formula().size(); ++i ) {
+    for (unsigned int i = 0 ; i < master.formula().size(); ++i) {
         lits.clear();
-        for ( int j = 0 ; j < master.formula()[i].size; ++j ) {
-            lits.push( master.formula()[i].lits[j] );
+        for (int j = 0 ; j < master.formula()[i].size; ++j) {
+            lits.push(master.formula()[i].lits[j]);
         }
         S.addClause_(lits, 0);
 
@@ -797,8 +797,8 @@ Master::solveInstance (void* data)
     if (MSverbosity > 1) { fprintf(stderr, "c start search with %d units\n", initialUnits); }
 
     // solve the instance with a timeout?
-    if ( tData.timeout != -1 )   { S.setTimeOut( tData.timeout); }
-    if ( tData.conflicts != -1 ) { S.setConfBudget(tData.conflicts); }
+    if (tData.timeout != -1)   { S.setTimeOut(tData.timeout); }
+    if (tData.conflicts != -1) { S.setConfBudget(tData.conflicts); }
 
     // TODO introduce conflict limit for becoming deterministic!
     // solve the formula
@@ -818,8 +818,8 @@ Master::solveInstance (void* data)
             tData.nodeToSolve->lv_pool = 0;
     }*/
     // tell statistics
-    if ( ret != 10 && ret != 20 ) {
-        statistics.changeI( master.unsolvedNodesID, 1 );
+    if (ret != 10 && ret != 20) {
+        statistics.changeI(master.unsolvedNodesID, 1);
     } else {
         tData.nodeToSolve->solveTime = Master::getCpuTimeMS() - cputime;
     }
@@ -837,13 +837,13 @@ Master::solveInstance (void* data)
     statistics.changeI(master.TotalDecisionsID, S.decisions);
     statistics.changeI(master.TotalRestartsID, S.starts);
     Statistics& localStat = S.localStat;
-    for ( unsigned si = 0; si < localStat.size(); ++ si ) {
-        if ( localStat.isInt(si) ) {
-            unsigned thisID = statistics.reregisterI( localStat.getName(si) );
-            statistics.changeI( thisID, localStat.giveInt(si) );
+    for (unsigned si = 0; si < localStat.size(); ++ si) {
+        if (localStat.isInt(si)) {
+            unsigned thisID = statistics.reregisterI(localStat.getName(si));
+            statistics.changeI(thisID, localStat.giveInt(si));
         } else {
-            unsigned thisID = statistics.reregisterD( localStat.getName(si) );
-            statistics.changeD( thisID, localStat.giveDouble(si) );
+            unsigned thisID = statistics.reregisterD(localStat.getName(si));
+            statistics.changeD(thisID, localStat.giveDouble(si));
         }
     }
 
@@ -852,8 +852,8 @@ Master::solveInstance (void* data)
                 tData.nodeToSolve->id(), tData.nodeToSolve->getLevel());
         tData.nodeToSolve->setState(TreeNode::sat);
         master.submitModel(S.model);
-    } else if (ret == 20 ) {
-        if ( opt_conflict_killing && ((SolverPT *)tData.solver)->lastLevel < tData.nodeToSolve->getPTLevel() ) {
+    } else if (ret == 20) {
+        if (opt_conflict_killing && ((SolverPT *)tData.solver)->lastLevel < tData.nodeToSolve->getPTLevel()) {
             statistics.changeI(master.nConflictKilledID, 1);
 
             int i = tData.nodeToSolve->getPTLevel() - ((SolverPT *)tData.solver)->lastLevel;
@@ -869,13 +869,13 @@ Master::solveInstance (void* data)
         if (master.plainpart) { tData.nodeToSolve->setState(TreeNode::retry); }
         else { tData.nodeToSolve->setState(TreeNode::unknown); }
 
-        if ( keepToplevelUnits > 0 ) {
+        if (keepToplevelUnits > 0) {
             int toplevelVariables = 0;
 
             toplevelVariables = S.getTopLevelUnits();
 
-            if ( toplevelVariables > 0 && MSverbosity > 1) { fprintf( stderr, "found %d topLevel units\n", toplevelVariables - initialUnits ); }
-            for ( int i = initialUnits ; i < toplevelVariables; ++i ) {
+            if (toplevelVariables > 0 && MSverbosity > 1) { fprintf(stderr, "found %d topLevel units\n", toplevelVariables - initialUnits); }
+            for (int i = initialUnits ; i < toplevelVariables; ++i) {
                 Lit currentLit = S.trailGet(i);  //(*trail)[i];
                 vector<Lit>* clause = new vector<Lit>(1);
                 (*clause)[0] = currentLit;
@@ -896,16 +896,16 @@ Master::solveInstance (void* data)
     master.unlock();
 
     // set the own state to unclean
-    if (MSverbosity > 1) { fprintf( stderr, "run instance with id %d, state=%d, result=%d\n", tData.id, tData.s, tData.result); }
+    if (MSverbosity > 1) { fprintf(stderr, "run instance with id %d, state=%d, result=%d\n", tData.id, tData.s, tData.result); }
     if (MSverbosity > 2) { fprintf(stderr, "done with the work (%d), wakeup master again\n", ret); }
     // wake up the master so that it can check the result
-    if (MSverbosity > 0) { fprintf( stderr, "thread %d calls notify from solving after spending time on the node: %lld\n" , tData.id, tData.nodeToSolve->solveTime ); }
+    if (MSverbosity > 0) { fprintf(stderr, "thread %d calls notify from solving after spending time on the node: %lld\n" , tData.id, tData.nodeToSolve->solveTime); }
     master.notify();
     return (void*)ret;
 }
 
 void*
-Master::splitInstance (void* data)
+Master::splitInstance(void* data)
 {
     // set thread cancelable
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, 0);
@@ -913,8 +913,8 @@ Master::splitInstance (void* data)
     ThreadData& tData = *((ThreadData*)data);
     Master& master = *(tData.master);
 
-    if (MSverbosity > 1) { fprintf(stderr, "create a split thread[%d] that splits node %d\n", tData.id, tData.nodeToSolve->id() ); }
-    if ( UseHardwareCores && hardwareCores.size() > 0) { // pin this thread to the specified core
+    if (MSverbosity > 1) { fprintf(stderr, "create a split thread[%d] that splits node %d\n", tData.id, tData.nodeToSolve->id()); }
+    if (UseHardwareCores && hardwareCores.size() > 0) {  // pin this thread to the specified core
         cpu_set_t mask;
         CPU_ZERO(&mask); CPU_SET(tData.id, &mask);
         if (sched_setaffinity(0, sizeof(cpu_set_t), &mask) != 0) {
@@ -926,12 +926,12 @@ Master::splitInstance (void* data)
     int ret = 0;
     vector< vector< vector<Lit>* >* > childConstraints;
 
-    if (Portfolio && tData.nodeToSolve->getLevel() < PortfolioLevel ) { // perform portfolio only until this level!
+    if (Portfolio && tData.nodeToSolve->getLevel() < PortfolioLevel) {  // perform portfolio only until this level!
         master.lock(); // ********************* START CRITICAL ***********************
         childConstraints.push_back(new vector<vector<Lit>*>);
         tData.nodeToSolve->setState(TreeNode::unknown);
-        tData.nodeToSolve->expand( childConstraints );
-        master.addNode( tData.nodeToSolve->getChild(0) );
+        tData.nodeToSolve->expand(childConstraints);
+        master.addNode(tData.nodeToSolve->getChild(0));
         tData.result = ret;
         tData.s = unclean;
         master.unlock(); // --------------------- END CRITICAL --------------------- //
@@ -959,20 +959,20 @@ Master::splitInstance (void* data)
     while (master.varCnt() >= (unsigned int)S->nVars()) { S->newVar(); }
 
     vector< vector<Lit>* > clauses;
-    assert( tData.nodeToSolve != 0 );
+    assert(tData.nodeToSolve != 0);
     tData.nodeToSolve->fillConstraintPath(&clauses);
     vec<Lit> lits;
-    for (unsigned int i = 0 ; i < clauses.size(); ++i ) {
+    for (unsigned int i = 0 ; i < clauses.size(); ++i) {
         lits.clear();
-        for ( unsigned int j = 0 ; j < clauses[i]->size(); ++ j ) {
-            lits.push( (*clauses[i])[j] );
+        for (unsigned int j = 0 ; j < clauses[i]->size(); ++ j) {
+            lits.push((*clauses[i])[j]);
         }
-        S->addClause_( lits );
+        S->addClause_(lits);
     }
-    for (unsigned int i = 0 ; i < master.formula().size(); ++i ) {
+    for (unsigned int i = 0 ; i < master.formula().size(); ++i) {
         lits.clear();
-        for ( int j = 0 ; j < master.formula()[i].size; ++j ) {
-            lits.push( master.formula()[i].lits[j] );
+        for (int j = 0 ; j < master.formula()[i].size; ++j) {
+            lits.push(master.formula()[i].lits[j]);
         }
         S->addClause_(lits);
     }
@@ -1009,10 +1009,10 @@ Master::splitInstance (void* data)
     }*/
 
     if (!S->okay()) {
-        fprintf(stderr, "reading split instance resulted in error (node %d)\n", tData.nodeToSolve->id() );
+        fprintf(stderr, "reading split instance resulted in error (node %d)\n", tData.nodeToSolve->id());
         ret = 20;
         // tell statistics
-        statistics.changeI( master.splitSolvedNodesID, 1 );
+        statistics.changeI(master.splitSolvedNodesID, 1);
         tData.nodeToSolve->solveTime = Master::getCpuTimeMS() - cputime;
     } else {
         vec<vec<vec<Lit>* >* > *splits = 0;
@@ -1024,12 +1024,12 @@ Master::splitInstance (void* data)
         //try {
         // ## begin automatically handled code
         // ## selecting split mode
-        if ( split_mode == 0 ) { //solution = S->simpleSplit(&splits, NULL, split_timeout);
-        } else if ( split_mode == 1 ) {
+        if (split_mode == 0) {   //solution = S->simpleSplit(&splits, NULL, split_timeout);
+        } else if (split_mode == 1) {
             solution = ((VSIDSSplitting *)S)->vsidsScatteringSplit(&splits, NULL, split_timeout);
-        } else if ( split_mode == 2 ) {
+        } else if (split_mode == 2) {
             solution = ((LookaheadSplitting *)S)->produceSplitting(&splits, &valid);
-        } else if ( split_mode == 3 ) { //solution = S->score(&splits, &valid, split_timeout);
+        } else if (split_mode == 3) {   //solution = S->score(&splits, &valid, split_timeout);
             // ## add your new split-method here (above)
 
             // ## end automatically handled code
@@ -1045,11 +1045,11 @@ Master::splitInstance (void* data)
         // tell statistics
         Debug::PRINT_NOTE("c add to created nodes: ");
         Debug::PRINTLN_NOTE((*splits).size());
-        statistics.changeI( master.createdNodeID, (*splits).size() );
+        statistics.changeI(master.createdNodeID, (*splits).size());
         statistics.changeI(master.splitterCallsID, 1);
 
         // only if there is a valid vector, use it!
-        if ( valid != 0 ) {
+        if (valid != 0) {
             for (int i = 0; i < (*valid).size(); i++) {
                 vec<Lit> *tmp_cls = (*valid)[i];
                 validConstraints.push_back(new vector<Lit>);
@@ -1069,7 +1069,7 @@ Master::splitInstance (void* data)
         //          fprintf( stderr,"\n");
 
         for (int i = 0; i < (*splits).size(); i++) {
-            if (MSverbosity > 1) { fprintf( stderr, "Split %d\n", i); }
+            if (MSverbosity > 1) { fprintf(stderr, "Split %d\n", i); }
             vec<vec<Lit>*> *tmp_cnf = (*splits)[i];
             childConstraints.push_back(new vector<vector<Lit>*>);
             for (int j = 0; j < (*tmp_cnf).size(); j++) {
@@ -1088,22 +1088,22 @@ Master::splitInstance (void* data)
             delete tmp_cnf;
         }
         // if sat has been found, return SAT
-        if ( solution == l_True ) {
+        if (solution == l_True) {
             // tell statistics
-            statistics.changeI( master.splitSolvedNodesID, 1 );
+            statistics.changeI(master.splitSolvedNodesID, 1);
             ret = 10;
             tData.nodeToSolve->solveTime = Master::getCpuTimeMS() - cputime;
         }
         // if no split has been found, return unsat
-        else if ( childConstraints.size() == 0 ) {
+        else if (childConstraints.size() == 0) {
             // tell statistics
-            statistics.changeI( master.splitSolvedNodesID, 1 );
+            statistics.changeI(master.splitSolvedNodesID, 1);
             ret = 20;
             tData.nodeToSolve->solveTime = Master::getCpuTimeMS() - cputime;
         }
     }
     // take care about the output
-    if (MSverbosity > 1) { fprintf(stderr, "finished splitting an instance, resulting in %d childs (node %d)\n", (int)childConstraints.size(), tData.nodeToSolve->id() ); }
+    if (MSverbosity > 1) { fprintf(stderr, "finished splitting an instance, resulting in %d childs (node %d)\n", (int)childConstraints.size(), tData.nodeToSolve->id()); }
 
     master.lock(); // ********************* START CRITICAL ***********************
     // expand the node
@@ -1114,13 +1114,13 @@ Master::splitInstance (void* data)
      */
     if (split_mode == 2) {
         Statistics& localStat = ((LookaheadSplitting *)S)->localStat;//currently only using statistics for lookahead splitting
-        for ( unsigned si = 0; si < localStat.size(); ++ si ) {
-            if ( localStat.isInt(si) ) {
-                unsigned thisID = statistics.reregisterI( localStat.getName(si) );
-                statistics.changeI( thisID, localStat.giveInt(si) );
+        for (unsigned si = 0; si < localStat.size(); ++ si) {
+            if (localStat.isInt(si)) {
+                unsigned thisID = statistics.reregisterI(localStat.getName(si));
+                statistics.changeI(thisID, localStat.giveInt(si));
             } else {
-                unsigned thisID = statistics.reregisterD( localStat.getName(si) );
-                statistics.changeD( thisID, localStat.giveDouble(si) );
+                unsigned thisID = statistics.reregisterD(localStat.getName(si));
+                statistics.changeD(thisID, localStat.giveDouble(si));
             }
         }
     }
@@ -1132,21 +1132,21 @@ Master::splitInstance (void* data)
         master.submitModel(S->model);
         tData.nodeToSolve->setState(TreeNode::sat);
         // nothing more to do, master will take care of the submitted model
-    } else if ( ret == 20 ) {
+    } else if (ret == 20) {
         tData.nodeToSolve->setState(TreeNode::unsat, true);
         // shut down all threads that are running below that node (necessary?)
     } else {
         // simply set the node to the unknown state
         tData.nodeToSolve->setState(TreeNode::unknown);
         for (unsigned int i = 0; i < validConstraints.size(); i++)
-        { tData.nodeToSolve->addNodeConstraint( validConstraints[i] ); }
+        { tData.nodeToSolve->addNodeConstraint(validConstraints[i]); }
         // expand the node
-        tData.nodeToSolve->expand( childConstraints );
+        tData.nodeToSolve->expand(childConstraints);
         for (unsigned int i = 0; i < childConstraints.size(); i++)
         { delete childConstraints[i]; }
         // add childs to both queues
-        for ( unsigned int i = 0 ; i < tData.nodeToSolve->size(); ++ i ) {
-            master.addNode( tData.nodeToSolve->getChild(i) );
+        for (unsigned int i = 0 ; i < tData.nodeToSolve->size(); ++ i) {
+            master.addNode(tData.nodeToSolve->getChild(i));
         }
     }
     tData.result = ret;
@@ -1159,7 +1159,7 @@ Master::splitInstance (void* data)
     if (MSverbosity > 1) {
         fprintf(stderr, "finished splitting with %d\n", ret);
         // wake up the master so that it can check the result
-        fprintf( stderr, "thread %d calls notify from splitting\n" , tData.id );
+        fprintf(stderr, "thread %d calls notify from splitting\n" , tData.id);
     }
     master.notify();
 
@@ -1167,7 +1167,7 @@ Master::splitInstance (void* data)
 }
 
 void
-Master::addNode( TreeNode* t )
+Master::addNode(TreeNode* t)
 {
     solveQueue.push_back(t);
     if (!plainpart)
@@ -1175,14 +1175,14 @@ Master::addNode( TreeNode* t )
 }
 
 void
-Master::submitModel( const vec<lbool>& fullModel )
+Master::submitModel(const vec<lbool>& fullModel)
 {
     // only store one model
-    if ( model == 0 )  {
+    if (model == 0)  {
         // if( MSverbosity > 0 )
-        fprintf( stderr, "c model submitted\n");
+        fprintf(stderr, "c model submitted\n");
         model = new vec< lbool >;
-        fullModel.copyTo( *model );
+        fullModel.copyTo(*model);
     }
 }
 
@@ -1201,7 +1201,7 @@ Master::varCnt() const
 void Master::notify()
 {
     if (MSverbosity > 0)
-    { fprintf( stderr, "wake up master with %d waiters\n", sleepLock.getWaiters() ); }
+    { fprintf(stderr, "wake up master with %d waiters\n", sleepLock.getWaiters()); }
     // do nothing, if master is already working
     //while( masterState == sleeping ){
     // otherwise wake it up
@@ -1234,11 +1234,11 @@ Master::unlock()
 }
 
 int
-Master::parseFormula (string filename)
+Master::parseFormula(string filename)
 {
     gzFile in = (filename.size() == 0) ? gzdopen(0, "rb") : gzopen(filename.c_str(), "rb");
     if (in == NULL)
-    { fprintf( stderr, "ERROR! Could not open file: %s\n", filename.size() == 0 ? "<stdin>" : filename.c_str() ), exit(1); }
+    { fprintf(stderr, "ERROR! Could not open file: %s\n", filename.size() == 0 ? "<stdin>" : filename.c_str()), exit(1); }
     else {
         // open file
         StreamBuffer stream(in);
@@ -1259,7 +1259,7 @@ Master::parseFormula (string filename)
                     // if (clauses > 4000000)
                     //     S.eliminate(true);
                 } else {
-                    fprintf( stderr, "PARSE ERROR! Unexpected char: %c\n", *stream), exit(3);
+                    fprintf(stderr, "PARSE ERROR! Unexpected char: %c\n", *stream), exit(3);
                 }
             } else if (*stream == 'c' || *stream == 'p')
             { skipLine(stream); }
@@ -1274,14 +1274,14 @@ Master::parseFormula (string filename)
                     if (parsed_lit == 0) { break; }
                     var = abs(parsed_lit) - 1;
                     while (var >= maxVar) { maxVar++; }
-                    lits.push( (parsed_lit > 0) ? mkLit(var) : ~mkLit(var) );
+                    lits.push((parsed_lit > 0) ? mkLit(var) : ~mkLit(var));
                 }
                 // add clause to original formula
                 clause c;
                 c.size = lits.size();
                 c.lits = new Lit [ c.size ];
-                for ( int i =  0; i < c.size; i++) { c.lits[i] = lits[i]; }
-                originalFormula.push_back( c );
+                for (int i =  0; i < c.size; i++) { c.lits[i] = lits[i]; }
+                originalFormula.push_back(c);
             }
         }
         /*
@@ -1301,7 +1301,7 @@ Master::killUnsatChildren(unsigned int i)
     // MASTER HAS TO BE IN LOCK HERE!
     uint32_t solvedUnsat = 0;
     TreeNode* solvedNode = threadData[i].nodeToSolve;
-    for (unsigned int j = 0 ; j < threads; j++ ) {
+    for (unsigned int j = 0 ; j < threads; j++) {
         if (j == i) { continue; }
         if (threadData[j].nodeToSolve == 0) { continue; }
 
@@ -1310,15 +1310,15 @@ Master::killUnsatChildren(unsigned int i)
         if (solvedNode->isAncestorOf((*curNode))) {
             Debug::PRINTLN_DEBUG("PREPARING TO KILL A NODE");
             solvedUnsat ++;
-            stopThread( j );
+            stopThread(j);
             // threadData[j].s = unclean;
             Debug::PRINTLN_DEBUG("KILLED");
             //              notify();
         }
     }
-    if ( solvedUnsat > 0 ) {
-        if ( MSverbosity > 0 && solvedUnsat > 0) { fprintf(stderr, "M: killed %d nodes that solved unsatisfiable nodes\n", solvedUnsat ); }
-        statistics.changeI( stoppedUnsatID, solvedUnsat );
+    if (solvedUnsat > 0) {
+        if (MSverbosity > 0 && solvedUnsat > 0) { fprintf(stderr, "M: killed %d nodes that solved unsatisfiable nodes\n", solvedUnsat); }
+        statistics.changeI(stoppedUnsatID, solvedUnsat);
     } else {
         Debug::PRINTLN_NOTE("M: DELETING POOLS ");
         assert(threadData[i].nodeToSolve != 0);
