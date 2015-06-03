@@ -351,7 +351,7 @@ opt_ee_inpStepInc       (_cat_ee, "cp3_ee_inpInc",   "increase for steps per inp
 opt_ee_bigIters         (_cat_ee, "cp3_ee_bIter",    "max. iteration to perform EE search on BIG", 3, IntRange(0, INT32_MAX), optionListPtr ),
 opt_ee_iterative        (_cat_ee, "cp3_ee_it",       "use the iterative BIG-EE algorithm", false, optionListPtr ),
 opt_EE_checkNewSub   (_cat_ee, "cp3_ee_subNew",   "check for new subsumptions immediately when adding new clauses", false, optionListPtr ),
-opt_ee_eager_frozen     (_cat_ee, "ee_freeze_eager", "exclude frozen variables eagerly from found equivalences", false, optionListPtr ),
+opt_ee_eager_frozen     (_cat_ee, "ee_freeze_eager", "exclude frozen variables eagerly from found equivalences", true, optionListPtr ),
 //
 // Structural hashing options
 //

@@ -129,6 +129,9 @@ else if( optionSet == "MAXSAT" ) {
 else if( optionSet == "INCSOLVE" ) {
   parseOptions ( "-rmf -sInterval=16 -lbdIgnLA -var-decay-b=0.85 -var-decay-e=0.85 -irlevel=1024 -rlevel=2 -incResCnt=3", false );
 }
+else if (optionSet == "PPMAXSAT2015" ) {
+ parseOptions ( "-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -bce-bcm -cp3_iters=2 -rlevel=2", false );
+}
 /*
  *  Options for Riss 427
  */
@@ -378,6 +381,9 @@ else if( optionSet == "plain_BCE" ) {
 else if( optionSet == "plain_CLE" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -bce -bce-cle -no-bce-bce",false);
 }
+else if( optionSet == "plain_BCM" ) {
+    parseOptions(" -enabled_cp3 -cp3_stats -bce -bce-bcm -no-bce-bce",false);
+}
 else if( optionSet == "plain_HTE" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -hte",false);
 }
@@ -409,7 +415,7 @@ else if( optionSet == "plain_FM" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -fm -no-cp3_fm_vMulAMO",false);
 }
 else if( optionSet == "plain_XOR" ) {
-    parseOptions(" -enabled_cp3 -cp3_stats -xor",false);
+    parseOptions(" -enabled_cp3 -cp3_stats -xor -no-xorFindSubs -xorEncSize=3 -xorLimit=100000 -no-xorKeepUsed",false);
 }
 else if( optionSet == "plain_2SAT" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -2sat",false);
