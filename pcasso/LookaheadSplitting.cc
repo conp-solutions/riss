@@ -729,6 +729,8 @@ void LookaheadSplitting::preselectionHeuristic()
     int *numNegLitClause = new int[nVars()];
     int *numPosLitClause = new int[nVars()];
     vec<VarScore> varScore;
+    sortedVar.clear(); // clear the vector with sorted variables
+    assert( sortedVar.size() == 0 && "yet there should not be any variables in the preselection" );
     for (int i = 0; i < nVars(); i++) {
         posLitScore[i] = 0;
         negLitScore[i] = 0;
@@ -767,6 +769,7 @@ void LookaheadSplitting::preselectionHeuristic()
             }
         }
         sort(varScore);
+	assert( varScore.size() <= nVars() && "cannot add variables" );
         for (int i = varScore.size() - 1; i >= 0; i--) {
             sortedVar.push(varScore[i].var);
         }
@@ -901,6 +904,7 @@ void LookaheadSplitting::preselectionHeuristic()
 
 void LookaheadSplitting::preselectVar(vec<int>& sv, vec<int>& bkl)
 {
+    assert( sv.size() < nVars() && "cannot work on more variables than occuring in the formula" );
     int bestK;
     if (opt_adp_preselection_ranking) {
         bestK = opt_adp_preselection_L + opt_adp_preselection_S * (countFailedLiterals / countLookaheadDecisions);
@@ -929,7 +933,10 @@ void LookaheadSplitting::preselectVar(vec<int>& sv, vec<int>& bkl)
             }
         }
     }
-    //fprintf( stderr, "Number of preselected variables \t\t\t = %d / %d\n", bkl.size(), nVars());
+    
+    fprintf( stderr, "Number of preselected variables( objectID: %ld ) \t\t\t = %d / %d\n", (uint64_t)this, bkl.size(), nVars());
+    assert( bkl.size() < nVars() && "cannot select more variables than present in the formula" );
+    
     if (bkl.size() > statistics.getI(splitterMaxPreselectedVariablesID))
     { statistics.changeI(splitterMaxPreselectedVariablesID, bkl.size() - statistics.getI(splitterMaxPreselectedVariablesID)); }
 }
@@ -1080,6 +1087,8 @@ decLitNotFound:
         //removeSatisfied(learnts);//removing satisfied learnt clauses
         //checkGarbage();
 
+        assert( bestKList.size() <= nVars() * 2 && "has to have information ready to be selected" );
+        
         for (int i = 0; i < bestKList.size(); i++) {
             bool positiveLookahead = false;
             bool negativeLookahead = false;
@@ -1146,6 +1155,7 @@ decLitNotFound:
                 continue;
             }
             sizePositiveLookahead = trail.size() - initTrailSize;
+	    assert( trail.size() < nVars() && initTrailSize <= trail.size() && "there cannot be more elements in the trail than there are variables in the solver" );
             for (int j = initTrailSize; j < trail.size(); j++) {
                 //fprintf(stderr, "Watcher size = %d\n", watches[trail[j]].size());
                 sizeWatcherPositiveLookahead += sign(trail[j]) ? watcherNegLitSize[i] : watcherPosLitSize[i];
@@ -1428,7 +1438,7 @@ jump:
         }
         next = mkLit(bestKList[bestVarIndex], pol);
     } else {
-        fprintf(stderr, "splitter: no variable picked by lookahead; redo with new preselection\n");
+        // fprintf(stderr, "splitter: no variable picked by lookahead; redo with new preselection\n");
         if (bestKList.size() == 0) {
             next = pickBranchLit();
         } else {
