@@ -144,6 +144,7 @@ void MaxSAT::copySolver(MaxSAT *solver)
   solver->nbInitialVariables = nbInitialVariables;
   
   solver->SATsolverConfig = SATsolverConfig;
+  solver->SATsolverInitConfig = SATsolverInitConfig
   solver->printModelVariables = printModelVariables;
   solver->printEachModel = printEachModel;
   
@@ -158,7 +159,7 @@ void MaxSAT::copySolver(MaxSAT *solver)
  ************************************************************************************************/
 
 // Creates an empty SAT Solver.
-Solver *MaxSAT::newSATSolver()
+Solver *MaxSAT::newSATSolver(bool forHardFormula)
 {
 
 #ifdef SIMP
@@ -166,7 +167,7 @@ Solver *MaxSAT::newSATSolver()
 #else
 
   #ifdef SOLVERNAME == Riss
-    Solver *S = new Solver(0, SATsolverConfig.c_str() );  // create Riss and tell Riss to use the MaxSAT configuration
+    Solver *S = new Solver(0, forHardFormula ? SATsolverInitConfig.c_str() : SATsolverConfig.c_str() );  // create Riss and tell Riss to use the MaxSAT configuration
   #else
     Solver *S = new Solver();  
   #endif

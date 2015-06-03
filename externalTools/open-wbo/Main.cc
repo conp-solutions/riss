@@ -217,9 +217,10 @@ int main(int argc, char **argv)
 
  
 #if NSPACE == Riss      
-    StringOption    opt_pre_config  ("CONFIG", "preConfig",    "configuration for simplification",0);
-    StringOption opt_solver_config  ("CONFIG", "solverConfig", "configuration for sat solver",    0);
-    BoolOption   opt_simpOnlySimple ("SIMPLIFICATION", "sos",  "simplify only maxsat formulas with soft unit clauses", false);
+    StringOption    opt_pre_config       ("CONFIG", "preConfig",     "configuration for simplification",0);
+    StringOption opt_solver_config       ("CONFIG", "solverConfig",  "configuration for sat solver",    0);
+    StringOption opt_solver_init_config  ("CONFIG", "solverIConfig", "configuration for sat solver for initial call on hard clauses", 0);
+    BoolOption   opt_simpOnlySimple      ("SIMPLIFICATION", "sos",   "simplify only maxsat formulas with soft unit clauses", false);
 #endif
     
     parseOptions(argc, argv, true);
@@ -321,6 +322,10 @@ int main(int argc, char **argv)
     if( (const char*)opt_solver_config != 0 ) {	  // set SAT solver configuration
       S->setSolverConfig( std::string(opt_solver_config) );
     }  
+    
+    if( (const char*) opt_solver_init_config != 0 ) {
+      S->setInitSolverConfig( std::string(opt_solver_init_config) );
+    }
     
     if( (const char*)opt_pre_config == 0 ) {
       parse_DIMACS(in, S);

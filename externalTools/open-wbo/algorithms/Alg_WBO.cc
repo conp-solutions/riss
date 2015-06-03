@@ -147,7 +147,7 @@ Solver *WBO::rebuildSolver()
 Solver *WBO::rebuildHardSolver()
 {
 
-  Solver *S = newSATSolver();
+  Solver *S = newSATSolver( true );
 
   for (int i = 0; i < nVars(); i++)
     newSATVariable(S);

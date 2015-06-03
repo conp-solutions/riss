@@ -126,7 +126,9 @@ public:
   }
   
   void setSolverConfig( const std::string& configName ) { SATsolverConfig = configName; }
-
+  void setInitSolverConfig( const std::string& configName ) { SATsolverInitConfig = configName; }
+  
+  std::string SATsolverInitConfig; // configuration that solves the first time the hard formula (might be faster and find a lower bound than the other solver)
   std::string SATsolverConfig;
   int printModelVariables;    // number of variables that have to be printed in the model
   bool printEachModel;        // print all models
@@ -188,7 +190,7 @@ protected:
 
   // Interface with the SAT solver
   //
-  Solver *newSATSolver(); // Creates a SAT solver.
+  Solver *newSATSolver(bool forHardFormula = false); // Creates a SAT solver.
   // Solves the formula that is currently loaded in the SAT solver.
   lbool searchSATSolver(Solver *S, vec<Lit> &assumptions, bool pre = false);
   lbool searchSATSolver(Solver *S, bool pre = false);
