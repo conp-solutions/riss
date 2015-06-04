@@ -60,6 +60,9 @@ class CNFClassifier
 
     ~CNFClassifier();
 
+    /** return config for given file */
+  std::string getConfig( Riss::Solver& S, string dbName );
+    
     /** return the names of the features */
     std::vector<std::string> featureNames();
 

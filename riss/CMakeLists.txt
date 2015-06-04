@@ -87,9 +87,13 @@ add_custom_command(TARGET  ${PROJECT_NAME}-simp POST_BUILD
 if(STATIC_BINARIES)
   target_link_libraries(${PROJECT_NAME}-core ${PROJECT_NAME}-lib-static coprocessor-lib-static)
   target_link_libraries(${PROJECT_NAME}-simp ${PROJECT_NAME}-lib-static coprocessor-lib-static)
+  target_link_libraries(${PROJECT_NAME}-core ${PROJECT_NAME}-lib-static classifier-lib-static)
+  target_link_libraries(${PROJECT_NAME}-simp ${PROJECT_NAME}-lib-static classifier-lib-static)
 else()
   target_link_libraries(${PROJECT_NAME}-core ${PROJECT_NAME}-lib-shared coprocessor-lib-shared)
   target_link_libraries(${PROJECT_NAME}-simp ${PROJECT_NAME}-lib-shared coprocessor-lib-shared)
+  target_link_libraries(${PROJECT_NAME}-core ${PROJECT_NAME}-lib-shared classifier-lib-shared)
+  target_link_libraries(${PROJECT_NAME}-simp ${PROJECT_NAME}-lib-shared classifier-lib-shared)
 endif()
 
 # Installation:

@@ -80,6 +80,31 @@ CNFClassifier::~CNFClassifier()
 
 }
 
+string CNFClassifier::getConfig(Solver& S, std::string dbName)
+{
+#warning MIGHT BE DONE OUTSIDE OF THIS METHOD
+    S.verbosity = 0;
+
+    // here convert the found unit clauses of the solver back as real clauses!
+    if (S.trail.size() > 0) {
+        S.buildReduct();
+        vec<Lit> ps;ps.push(lit_Undef);
+        for (int j = 0; j < S.trail.size(); ++j) {
+            const Lit l = S.trail[j];
+            ps[0] = l;
+            CRef cr = S.ca.alloc(ps, false);
+            S.clauses.push(cr);
+        }
+    }
+    
+    vector<double> features; // temporary storage
+    extractFeatures(features); // also print the formula name!!
+
+#warning TODO implement classification with data base
+#error to be implemented by Aaron
+}
+
+
 std::vector<std::string> CNFClassifier::featureNames()
 {
     // TODO: should return the names of the features in the order returned by the extractFeatures method
