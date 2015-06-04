@@ -1210,11 +1210,11 @@ CRef Solver::propagate(bool duringAddingClauses)
         DOUT( if( config.opt_learn_debug ) cerr << "c propagate literal " << p << endl; );
         realHead = qhead;
         vec<Watcher>&  ws  = watches[p];
-        Watcher        *i, *end;
+        Watcher        *i, *j, *end;
         num_props++;
 	
         // propagate longer clauses here!
-        for (i = (Watcher*)ws, end = i + ws.size();  i != end;)
+        for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;)
 	{
 	    if( i->isBinary() ) {  // handle binary clauses
 		const Lit& imp = i->blocker();
@@ -1223,14 +1223,15 @@ CRef Solver::propagate(bool duringAddingClauses)
 		if(value(imp) == l_False) {
 		  if( !config.opt_long_conflict ) { // stop on the first conflict we see?
 		    confl = i->cref();              // store the conflict
-		    // do not alter list, as all elements have been removed already
+		    while (i < end) *j++ = *i++;    // move the remaining elements forward
+		    ws.shrink_(i - j);              // remove all duplciate clauses
 		    goto FinishedPropagation;       // jump to end of method, so that the statistics can be updated correctly
 		  }
 		  confl = i->cref(); // store intermediate conflict to be evaluated later
 		} else if(value(imp) == l_Undef) { // enqueue the implied literal
 		  uncheckedEnqueue(imp,i->cref(), duringAddingClauses);
 		}
-		i++; // keep the element in the list
+		*j++ = *i++; // keep the element in the list
 		continue;
 	    }
 	    
@@ -1241,10 +1242,8 @@ CRef Solver::propagate(bool duringAddingClauses)
 	    
             // Try to avoid inspecting the clause:
             const Lit blocker = i->blocker();
-            if (value(blocker) == l_True){ // clauses where the blocking literal is satisfied
-               i++; // keep the elment in the list
-	       continue; 
-	    }
+            if (value(blocker) == l_True){ // keep binary clauses, and clauses where the blocking literal is satisfied
+                *j++ = *i++; continue; }
 
             // Make sure the false literal is data[1]:
             const CRef cr = i->cref();
@@ -1253,46 +1252,44 @@ CRef Solver::propagate(bool duringAddingClauses)
             if (c[0] == false_lit)
                 c[0] = c[1], c[1] = false_lit;
             assert(c[1] == false_lit && "wrong literal order in the clause!");
+            i++;
 
             // If 0th watch is true, then clause is already satisfied.
-            const Lit first = c[0];
+            Lit     first = c[0];
 #ifndef PCASSO // Pcasso reduces clauses without updating the watch lists
 	    assert( c.size() > 2 && "at this point, only larger clauses should be handled!" );
 #endif
-            const Watcher& w     = Watcher(cr, first, 1);   // updates the blocking literal
+            const Watcher& w     = Watcher(cr, first, 1); // updates the blocking literal
             if (first != blocker && value(first) == l_True) // satisfied clause
 	    {
-	      *i++ = w; //  store watch with new blocking literal, process next element
-	      continue; // continue with next element in watch list
-	    } 
+	      
+	      *j++ = w; continue; } // same as goto NextClause;
 	    
             // Look for new watch:
-            for (int k = 2; k < c.size(); k++) {
+            for (int k = 2; k < c.size(); k++)
                 if (value(c[k]) != l_False)
 		{
                     c[1] = c[k]; c[k] = false_lit;
 		    DOUT( if( config.opt_learn_debug ) cerr << "c new watched literal for clause " << ca[cr] << " is " << c[1] <<endl; );
                     watches[~c[1]].push(w);
-		    
-		    // remove element from this watch list
-		    end --;          // pointer end points to last element of ws now
-		    *i = *end;       // this last element is copied to the current position
-		    ws.shrink_(1);   // and removed from the vector
-                    goto NextClause; // then, we process exactly this element in the next iteration (i++ is not executed) 
-		} 
-	    }
+                    goto NextClause; 
+		} // no need to indicate failure of lhbr, because remaining code is skipped in this case!
 
 		
             // Did not find watch -- clause is unit under assignment:
-            *i++ = w; 
+            *j++ = w; 
             // if( config.opt_printLhbr ) cerr << "c keep clause (" << cr << ")" << c << " in watch list while propagating " << p << endl;
             if ( value(first) == l_False ) {
                 confl = cr; // independent of opt_long_conflict -> overwrite confl!
                 qhead = trail.size();
-                // no need to shrink the watch list
+                // Copy the remaining watches:
+                while (i < end)
+                    *j++ = *i++;
             } else {
 		DOUT( if( config.opt_learn_debug ) cerr << "c current clause is unit clause: " << ca[cr] << endl; );
                 uncheckedEnqueue(first, cr, duringAddingClauses);
+		
+		// if( config.opt_printLhbr ) cerr << "c final common dominator: " << commonDominator << endl;
 		
 		if( c.mark() == 0  && config.opt_update_lbd == 0) { // if LHBR did not remove this clause
 		  int newLbd = computeLBD( c );
@@ -1306,7 +1303,7 @@ CRef Solver::propagate(bool duringAddingClauses)
 	    }
         NextClause:;
         }
-        // there is no need to shrink the watch list here
+        ws.shrink_(i - j); // remove all duplciate clauses!
 
     }
     FinishedPropagation:
