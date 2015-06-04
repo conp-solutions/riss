@@ -66,6 +66,12 @@ public:
     nbHard = 0;
     nbInitialVariables = 0;
 
+    // set polarity mode
+    useMinimizingPol = 0;
+    setPolWithAssumptions = false;
+    setPolMaxSize = 1;
+    useCache = false;
+    
     currentWeight = 1;
 
     // 'ubCost' will be set to the sum of the weights of soft clauses
@@ -182,6 +188,16 @@ public:
   // Tests if a MaxSAT formula has a lexicographical optimization criterion.
   bool isBMO(bool cache = true);
 
+  void setPolarityMode( int setPol, bool useAssumpts, int maxCsize ) {
+    useMinimizingPol = setPol;
+    setPolWithAssumptions = useAssumpts; 
+    setPolMaxSize = maxCsize;
+  }
+  
+  void setUsePolarityCaching( bool use ) {
+    useCache = use;
+  }
+  
 protected:
   // MaxSAT database
   //
@@ -227,6 +243,13 @@ protected:
   // Different weights that corresponds to each function in the BMO algorithm.
   std::vector<uint64_t> orderWeights;
 
+  // to set the polarity for decision variables
+  int useMinimizingPol;        // enable setting polairty
+  bool setPolWithAssumptions;  // use setting polarity together with assumptions
+  int setPolMaxSize;           // max. clause size of soft clauses that are used for setting the polarity
+  bool useCache;               // use polarity values of last SAT call
+  vec<bool> polarityCache;     // cache poliarites of previous run
+  
   // Utils for model management
   //
   void saveModel(vec<lbool> &currentModel); // Saves a Model.

@@ -144,9 +144,14 @@ void MaxSAT::copySolver(MaxSAT *solver)
   solver->nbInitialVariables = nbInitialVariables;
   
   solver->SATsolverConfig = SATsolverConfig;
-  solver->SATsolverInitConfig = SATsolverInitConfig
+  solver->SATsolverInitConfig = SATsolverInitConfig;
   solver->printModelVariables = printModelVariables;
   solver->printEachModel = printEachModel;
+  
+  solver->useMinimizingPol = useMinimizingPol;
+  solver->setPolWithAssumptions = setPolWithAssumptions;
+  solver->setPolMaxSize = setPolMaxSize;
+  solver->useCache = useCache;
   
   if (nbInitialVariables != 0) solver->saveModel(model);
 }
@@ -193,16 +198,47 @@ void MaxSAT::newSATVariable(Solver *S)
 lbool MaxSAT::searchSATSolver(Solver *S, vec<Lit> &assumptions, bool pre)
 {
 
+// set the polarity for decisions inside the SAT solver in favor of soft clauses (or not in favor of soft clauses)
+// use only certain soft clauses, take care of calls with assumptions and without assumptions
+  if(assumptions.size() == 0 || setPolWithAssumptions ) {
+    if( polarityCache.size() != 0 && useCache ) {
+      const Var maxVar = S->nVars() > polarityCache.size() ? polarityCache.size() : S->nVars(); // use only for present variables and for variables where we have information
+      for( Var v = 0 ; v < maxVar; ++v ) {
+	S->setPolarity(v, polarityCache[v] );
+      }
+      
+    } else if( useMinimizingPol != 0 ) {
+      for (int i = 0; i < nSoft(); i++)
+      {
+	if( softClauses[i].clause.size() <= setPolMaxSize ) {
+	  for( int j = 0 ; j < softClauses[i].clause.size(); ++j ) {
+	    const Lit l = softClauses[i].clause[j];
+	    const Var v = var(l);
+	    bool satisfy = sign(l);
+	    S->setPolarity(v, useMinimizingPol == 1 ? satisfy : !satisfy ); // satify or falsify soft clauses
+	  }
+	}
+      }
+    }
+  }
+  
 // Currently preprocessing is disabled by default.
 // Variable elimination cannot be done on relaxation variables nor on variables
 // that belong to soft clauses. To preprocessing to be used those variables
 // should be frozen.
-
+ 
 #ifdef SIMP
   lbool res = ((SimpSolver *)S)->solveLimited(assumptions, pre);
 #else
   lbool res = S->solveLimited(assumptions);
 #endif
+  
+  if( useCache ) { // if the cache should be used, copy the polarities
+    polarityCache.growTo( S->nVars() );
+    for( Var v = 0 ; v < S->nVars(); ++v ) {
+      polarityCache[v] = S->getPolarity(v);
+    }
+  }
 
   return res;
 }

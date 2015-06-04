@@ -215,7 +215,18 @@ int main(int argc, char **argv)
         "Limit on the number of symmetry breaking clauses.\n", 500000,
         IntRange(0, INT32_MAX));
 
- 
+    IntOption opt_set_polarity("Polarity", "setPol", "set polarity for decision variables (1=sat soft,-1=false soft)\n", 0,
+                 IntRange(-1, 1));
+    
+    IntOption opt_pol_max_size("Polarity", "polMaxCSize", "max. size of soft clauses that are considered for seting polarity\n", 1,
+                 IntRange(1, INT32_MAX));
+    
+    BoolOption opt_pol_with_assumptions("Polarity", "polWithA", "set polarity if assumptions are present\n", false);
+    
+    BoolOption opt_pol_cache("Polarity", "polCache", "use polarity caching\n", false);
+
+    
+    
 #if NSPACE == Riss      
     StringOption    opt_pre_config       ("CONFIG", "preConfig",     "configuration for simplification",0);
     StringOption opt_solver_config       ("CONFIG", "solverConfig",  "configuration for sat solver",    0);
@@ -275,6 +286,10 @@ int main(int argc, char **argv)
 
     printf("c set incomplete: %d\n", incomplete == true );
     mxsolver->setIncomplete( incomplete == true ); // tell solver to print each model
+    
+    // set polarity mode
+    S->setPolarityMode( opt_set_polarity, opt_pol_with_assumptions, opt_pol_max_size );
+    S->setUsePolarityCaching( opt_pol_cache );
     
     signal(SIGXCPU, SIGINT_exit);
     signal(SIGTERM, SIGINT_exit);

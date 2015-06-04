@@ -176,7 +176,8 @@ public:
     
     // Variable mode:
     // 
-    void    setPolarity    (Var v, bool b); /// Declare which polarity the decision heuristic should use for a variable. Requires mode 'polarity_user'.
+    void    setPolarity    (Var v, bool b); /// Declare which polarity the decision heuristic should use for a variable. Requires mode 'polarity_user', or phase saving.
+    bool    getPolarity   (Var v);          /// Return the polarity that a variable would be assigned to next (valid if phase saving is active)
     void    setDecisionVar (Var v, bool b); /// Declare if a variable should be eligible for selection in the decision heuristic.
     // NuSMV: SEED 
     void    setRandomSeed(double seed); // sets random seed (cannot be 0)
@@ -846,6 +847,7 @@ inline int      Solver::nVars         ()      const   { return vardata.size(); }
 inline int      Solver::nTotLits      ()      const   { return clauses_literals + learnts_literals; }
 inline int      Solver::nFreeVars     ()      const   { return (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]); }
 inline void     Solver::setPolarity   (Var v, bool b) { varFlags[v].polarity = b; }
+inline bool     Solver::getPolarity   (Var v)         { return varFlags[v].polarity; }
 inline void     Solver::setDecisionVar(Var v, bool b) 
 { 
     if      ( b && !varFlags[v].decision) dec_vars++;
