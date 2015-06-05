@@ -215,15 +215,19 @@ int main(int argc, char **argv)
         "Limit on the number of symmetry breaking clauses.\n", 500000,
         IntRange(0, INT32_MAX));
 
-    IntOption opt_set_polarity("Polarity", "setPol", "set polarity for decision variables (1=sat soft,-1=false soft)\n", 0,
+    IntOption opt_set_polarity("Initialization", "setPol", "set polarity for decision variables (1=sat soft,-1=false soft)\n", 0,
                  IntRange(-1, 1));
     
-    IntOption opt_pol_max_size("Polarity", "polMaxCSize", "max. size of soft clauses that are considered for seting polarity\n", 1,
+    IntOption opt_pol_max_size("Initialization", "polMaxCSize", "max. size of soft clauses that are considered for seting polarity\n", 1,
                  IntRange(1, INT32_MAX));
     
-    BoolOption opt_pol_with_assumptions("Polarity", "polWithA", "set polarity if assumptions are present\n", false);
+    BoolOption opt_pol_with_assumptions("Initialization", "polWithA", "set polarity if assumptions are present\n", false);
     
-    BoolOption opt_pol_cache("Polarity", "polCache", "use polarity caching\n", false);
+    BoolOption opt_act_with_assumptions("Initialization", "actWithA", "set polarity if assumptions are present\n", true);
+    
+    BoolOption opt_pol_cache("Initialization", "polCache", "use polarity caching\n", false);
+    
+    BoolOption opt_act_cache("Initialization", "actCache", "use activity caching\n", false);
 
     
     
@@ -290,6 +294,7 @@ int main(int argc, char **argv)
     // set polarity mode
     S->setPolarityMode( opt_set_polarity, opt_pol_with_assumptions, opt_pol_max_size );
     S->setUsePolarityCaching( opt_pol_cache );
+    S->setUseActivityCaching( opt_act_cache, opt_act_with_assumptions );
     
     signal(SIGXCPU, SIGINT_exit);
     signal(SIGTERM, SIGINT_exit);

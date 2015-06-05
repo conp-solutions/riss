@@ -71,6 +71,8 @@ public:
     setPolWithAssumptions = false;
     setPolMaxSize = 1;
     useCache = false;
+    setActWithAssumptions = false;
+    useActivityCache = false;
     
     currentWeight = 1;
 
@@ -198,6 +200,11 @@ public:
     useCache = use;
   }
   
+  void setUseActivityCaching( bool use, bool useAssumpts ) {
+    useActivityCache = use;
+    setActWithAssumptions = useAssumpts;
+  }
+  
 protected:
   // MaxSAT database
   //
@@ -249,6 +256,9 @@ protected:
   int setPolMaxSize;           // max. clause size of soft clauses that are used for setting the polarity
   bool useCache;               // use polarity values of last SAT call
   vec<bool> polarityCache;     // cache poliarites of previous run
+  bool setActWithAssumptions;  // use activity caching
+  bool useActivityCache;       // use activity values of last SAT call
+  vec<double> activityCache;   // cache activities of previous run
   
   // Utils for model management
   //

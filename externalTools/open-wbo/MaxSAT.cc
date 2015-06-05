@@ -152,6 +152,10 @@ void MaxSAT::copySolver(MaxSAT *solver)
   solver->setPolWithAssumptions = setPolWithAssumptions;
   solver->setPolMaxSize = setPolMaxSize;
   solver->useCache = useCache;
+  solver->useActivityCache = useActivityCache;
+  solver->setActWithAssumptions = setActWithAssumptions;
+  polarityCache.copyTo(solver->polarityCache);
+  activityCache.copyTo(solver->activityCache);
   
   if (nbInitialVariables != 0) solver->saveModel(model);
 }
@@ -222,6 +226,16 @@ lbool MaxSAT::searchSATSolver(Solver *S, vec<Lit> &assumptions, bool pre)
     }
   }
   
+  if(  useActivityCache 
+    && ( assumptions.size() == 0 || setActWithAssumptions) 
+    && activityCache.size() > 0  ) {
+      const Var maxVar = S->nVars() > activityCache.size() ? activityCache.size() : S->nVars(); // use only for present variables and for variables where we have information
+      for( Var v = 0 ; v < maxVar; ++v ) {
+	S->varSetActivity(v, activityCache[v] );
+      }
+      S->rebuildOrderHeap(); // has to made public in other SAT solvers
+  }
+  
 // Currently preprocessing is disabled by default.
 // Variable elimination cannot be done on relaxation variables nor on variables
 // that belong to soft clauses. To preprocessing to be used those variables
@@ -237,6 +251,13 @@ lbool MaxSAT::searchSATSolver(Solver *S, vec<Lit> &assumptions, bool pre)
     polarityCache.growTo( S->nVars() );
     for( Var v = 0 ; v < S->nVars(); ++v ) {
       polarityCache[v] = S->getPolarity(v);
+    }
+  }
+  
+  if(  useActivityCache  ) {
+    activityCache.growTo( S->nVars() );
+    for( Var v = 0 ; v < S->nVars(); ++v ) {
+      activityCache[v] = S->varGetActivity(v);
     }
   }
 

@@ -1440,6 +1440,7 @@ void Solver::removeSatisfied(vec<CRef>& cs)
 
 void Solver::rebuildOrderHeap()
 {
+    assert( decisionLevel() == 0 && "rebuilt heap only (from outside the solver) if we are on decision level 0" );
     vec<Var> vs;
     for (Var v = 0; v < nVars(); v++)
         if ( varFlags[v].decision && value(v) == l_Undef)

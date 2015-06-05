@@ -436,8 +436,13 @@ protected:
     PCASSOVIRTUAL
     void     reduceDB         ();                                                      // Reduce the set of learnt clauses.
     void     removeSatisfied  (vec<CRef>& cs);                                         // Shrink 'cs' to contain only non-satisfied clauses.
+public:
     void     rebuildOrderHeap ();
+    void     varSetActivity  (Var v, double value);    // set activity for a given variable
+    double   varGetActivity  (Var v) const;            // get activity for a given variable
 
+
+protected:
     // Maintaining Variable/Clause activity:
     //
     void     varDecayActivity ();                      // Decay all variables with the specified factor. Implemented by increasing the 'bump' value instead.
@@ -1003,6 +1008,8 @@ inline int  Solver::level (Var x) const { return vardata[x].level; }
 inline void Solver::insertVarOrder(Var x) {
     if (!order_heap.inHeap(x) && varFlags[x].decision) order_heap.insert(x); }
 
+inline void Solver::varSetActivity(Var v, double value){activity[v] = value;}
+inline double Solver::varGetActivity  (Var v) const { return activity[v]; }
 inline void Solver::varDecayActivity() { var_inc *= (1 / var_decay); }
 inline void Solver::varBumpActivity(Var v, double inverseRatio) { varBumpActivityD(v, var_inc / (double) inverseRatio); }
 inline void Solver::varBumpActivityD(Var v, double inc) {
