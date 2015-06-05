@@ -168,7 +168,8 @@ class Clause {
         unsigned has_extra : 1;
         unsigned reloced   : 1;
 #ifndef PCASSO
-        unsigned lbd       : 24;
+        unsigned lbd       : 23;
+	unsigned isCore    : 1;
         unsigned canbedel  : 1;
         unsigned can_subsume : 1;
         unsigned can_strengthen : 1;
@@ -181,7 +182,8 @@ class Clause {
         unsigned can_subsume : 1;
         unsigned can_strengthen : 1;
         unsigned pt_level   : 9;     // level of the clause in the decision tree
-        unsigned lbd       : 20;
+        unsigned isCore    : 1;
+        unsigned lbd       : 19;
 #endif
 	
 #ifdef CLS_EXTRA_INFO
@@ -197,6 +199,7 @@ class Clause {
             has_extra = rhs.has_extra;
             reloced = rhs.reloced;
 	    lbd = rhs.lbd;
+	    isCore = rhs.isCore;
 	    canbedel = rhs.canbedel;
             can_subsume = rhs.can_subsume;
             can_strengthen = rhs.can_strengthen;
@@ -219,6 +222,7 @@ class Clause {
             has_extra = rhs.has_extra;
             reloced = rhs.reloced;
 	    lbd = rhs.lbd;
+	    isCore = rhs.isCore;
 	    canbedel = rhs.canbedel;
             can_subsume = rhs.can_subsume;
             can_strengthen = rhs.can_strengthen;
@@ -253,6 +257,7 @@ class Clause {
 	header.extra_info = 0
 #endif
 	header.lbd = 0;
+	header.isCore = 0;
 	header.canbedel = 1;
         header.can_subsume = 1;
         header.can_strengthen = 1;
@@ -339,6 +344,7 @@ public:
     void         shrink      (int i)         { assert(i <= size()); if (header.has_extra) data[header.size-i] = data[header.size]; header.size -= i; }
     void         pop         ()              { shrink(1); }
     bool         learnt      ()      const   { return header.learnt; }
+    void         learnt      (bool learnt)   { header.learnt = learnt; }
     bool         has_extra   ()      const   { return header.has_extra; }
     uint32_t     mark        ()      const   { return header.mark; }
     void         mark        (uint32_t m)    { header.mark = m; }
@@ -366,8 +372,11 @@ public:
     // unsigned int&       lbd    ()              { return header.lbd; }
     unsigned int        lbd    () const        { return header.lbd; }
     void setCanBeDel(bool b) {header.canbedel = b;}
+    void resetCanBeDel() {header.canbedel = false;}
     bool canBeDel() {return header.canbedel;}
     
+    bool isCoreClause() const { return header.isCore; }
+    void setCoreClause( bool c ) { header.isCore = c; }
     
     void         print       (bool nl=false) const { for (int i = 0; i < size(); i++){
                                                  printLit(data[i].lit);

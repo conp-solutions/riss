@@ -118,7 +118,6 @@ class Solver {
     
     CoreConfig* privateConfig; // do be able to construct object without modifying configuration
     bool deleteConfig;
-    
     CoreConfig& config;
 public:
 
@@ -128,10 +127,9 @@ public:
 
     PCASSOVIRTUAL
     ~Solver();
-
     /// tell the solver to delete the configuration it just received
     void setDeleteConfig() { deleteConfig = true; }
-    
+
     // Problem specification:
     //
     PCASSOVIRTUAL
@@ -176,8 +174,8 @@ public:
     
     // Variable mode:
     // 
-    void    setPolarity    (Var v, bool b); /// Declare which polarity the decision heuristic should use for a variable. Requires mode 'polarity_user', or phase saving.
-    bool    getPolarity   (Var v);          /// Return the polarity that a variable would be assigned to next (valid if phase saving is active)
+    void    setPolarity    (Var v, bool b); /// Declare which polarity the decision heuristic should use for a variable. Requires mode 'polarity_user'.
+    bool    getPolarity    (Var v);
     void    setDecisionVar (Var v, bool b); /// Declare if a variable should be eligible for selection in the decision heuristic.
     // NuSMV: SEED 
     void    setRandomSeed(double seed); // sets random seed (cannot be 0)
@@ -373,7 +371,7 @@ protected:
     Heap<VarOrderLt>    order_heap;       // A priority queue of variables ordered with respect to the variable activity.
     double              progress_estimate;// Set by 'search()'.
     bool                remove_satisfied; // Indicates whether possibly inefficient linear scan for satisfied clauses should be performed in 'simplify'.
-    MarkArray permDiff;
+    MarkArray lbd_marker;
     //vec<unsigned long>  permDiff;         // permDiff[var] contains the current conflict number... Used to count the number of  LBD
     
 #ifdef UPDATEVARACTIVITY
@@ -459,8 +457,9 @@ protected:
 public:
     bool addUnitClauses( const vec< Lit >& other );		// use the given trail as starting point, return true, if fails!
 protected:
-    unsigned int computeLBD(const vec<Lit> & lits);
-    unsigned int computeLBD(const Clause &c);
+    template<typename T>
+    int computeLBD(const T &clause); // Calculates the Literals Block Distance, which is the number of
+                                  // different decision levels in a clause or list of literals.
     
     /** perform minimization with binary clauses of the formula
      *  @param lbd the current calculated LBD score of the clause
@@ -545,6 +544,38 @@ public:
     bool checkProof() const { return true; } // if online checker is used, return whether the current proof is valid
 protected:
 #endif
+    /*
+     * restricted extended resolution (Audemard ea 2010)
+     */
+
+    enum rerReturnType {	// return type for the rer-implementation
+      rerUsualProcedure = 0,	// do nothing special, since rer failed -- or attach the current clause because its unit on the current level
+      rerMemorizeClause = 1,	// add the current learned clause to the data structure rerFuseClauses
+      rerDontAttachAssertingLit = 2,	// do not enqueue the asserting literal of the current clause
+      rerAttemptFailed = 3,	// some extra method failed (e.g. find RER-ITE)
+    };
+    
+    /// initialize the data structures for RER with the given clause
+    void restrictedExtendedResolutionInitialize( const vec< Lit >& currentLearnedClause );
+    
+    /// @return true, if a clause should be added to rerFuseClauses
+    rerReturnType restrictedExtendedResolution( vec<Lit>& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo );
+    /// reset current state of restricted Extended Resolution
+    void resetRestrictedExtendedResolution();
+    /// check whether the new learned clause produces an ITE pattern with the previously learned clause (assumption, previousClause is sorted, currentClause is sorted starting from the 3rd literal)
+    rerReturnType restrictedERITE(const Lit& previousFirst, const vec<Lit>& previousPartialClause, vec<Lit>& currentClause);
+    /// initialize the rewrite info with the gates of the formula
+    void rerInitRewriteInfo();
+    /// replace the disjunction p \lor q with x
+    void disjunctionReplace( Lit p, Lit q, const Lit x, bool inLearned, bool inBina );
+    
+    /// structure to store for each literal the literal for rewriting new learned clauses after an RER extension
+    struct LitPair {
+      Lit otherMatch, replaceWith;
+      LitPair( const Lit& l1, const Lit& l2 ) : otherMatch(l1), replaceWith(l2) {};
+      LitPair() :otherMatch(lit_Undef), replaceWith(lit_Undef) {}
+    };
+    vec< LitPair > erRewriteInfo; /// vector that stores the information to rewrite new learned clauses
 
     
     /** fill the current variable assignment into the given vector */
@@ -554,6 +585,11 @@ protected:
      * @return false, instance is unsatisfable
      */
     bool laHack(Riss::vec< Riss::Lit >& toEnqueue);
+
+    /** concurrent clause strengthening, but interleaved instead of concurrent ...
+    *  @return false, if the formula is proven to be unsatisfiable
+    */
+    bool interleavedClauseStrengthening();
  
     // Static helpers:
     //
@@ -617,9 +653,29 @@ protected:
  
   int simplifyIterations; // number of visiting level 0 until simplification is to be performed
   int learnedDecisionClauses;
+  
+  bool doAddVariablesViaER; // indicator for allowing ER or not
 
   // stats for learning clauses
   double totalLearnedClauses, sumLearnedClauseSize, sumLearnedClauseLBD, maxLearnedClauseSize;
+  int extendedLearnedClauses, extendedLearnedClausesCandidates,maxECLclause;
+  int rerExtractedGates;
+  int rerITEtries, rerITEsuccesses, rerITErejectS, rerITErejectT, rerITErejectF; // how often tried RER-ITE, and how often succeeded
+  uint64_t maxResDepth;
+  Clock rerITEcputime; // timer for RER-ITE
+  
+  int erRewriteRemovedLits,erRewriteClauses; // stats for ER rewriting
+  
+  vec<Lit> rerCommonLits, rerIteLits; // literals that are common in the clauses in the window
+  int64_t rerCommonLitsSum; // sum of the current common literals - to Bloom-Filter common lits
+  vec<Lit> rerLits;	// literals that are replaced by the new variable
+  vec<CRef> rerFuseClauses; // clauses that will be replaced by the new clause -
+  int rerLearnedClause, rerLearnedSizeCandidates, rerSizeReject, rerPatternReject,rerPatternBloomReject,maxRERclause; // stat counters
+  double rerOverheadTrailLits,totalRERlits; // stats
+  
+  // interleaved clause strengthening (ics)
+  int lastICSconflicts;		// number of conflicts for last ICS
+  int icsCalls, icsCandidates, icsDroppedCandidates, icsShrinks, icsShrinkedLits; // stats
 
   // modified activity bumping
   vec<Var> varsToBump; // memorize the variables that need to be bumped in that order
@@ -665,6 +721,164 @@ protected:
   bool erRewrite(vec<Lit>& learned_clause, unsigned int& lbd );
 
 
+// contrasat hack
+  
+    bool      pq_order;           // If true, use a priority queue to decide the order in which literals are implied
+                                  // and what antecedent is used.  The priority attempts to choose an antecedent
+                                  // that permits further backtracking in case of a contradiction on this level.               (default false)
+  
+    struct ImplData {
+        CRef reason;
+	Lit impliedLit; // if not lit_Undef, use this literal as the implied literal
+        int level;
+        int dlev_pos;
+	ImplData (CRef cr, Lit implied, int l, int p) : reason (cr), impliedLit(implied), level (l), dlev_pos (p) { }
+        ImplData (CRef cr, int l, int p) : reason (cr), impliedLit(lit_Undef), level (l), dlev_pos (p) { }
+        ImplData ()                      : reason (0),  impliedLit(lit_Undef), level (0), dlev_pos (0) { }
+    };
+
+    struct HeapImpl {
+        vec<ImplData> heap; // Heap of ImplData
+
+        // Index "traversal" functions
+        static inline int left  (int i) { return i * 2 + 1; }
+        static inline int right (int i) { return (i + 1) * 2; }
+        static inline int parent(int i) { return (i - 1) >> 1; }
+
+        // less than with respect to lexicographical order
+        bool lt (ImplData& x, ImplData& y) const { return (x.level < y.level) ? true :
+                                                          (y.level < x.level) ? false :
+                                                          (x.dlev_pos < y.dlev_pos); }
+
+        void percolateUp(int i)
+        {
+            ImplData x = heap[i];
+            int p  = parent(i);
+            
+            while (i != 0 && lt(x, heap[p])){
+                heap[i] = heap[p];
+                i       = p;
+                p       = parent(p);
+            }
+            heap[i] = x;
+        }
+
+        void percolateDown(int i)
+        {
+            ImplData x = heap[i];
+            while (left(i) < heap.size()){
+                int child =
+                  (right(i) < heap.size() && lt(heap[right(i)], heap[left(i)]))?
+                        right(i) : left(i);
+                if (!lt(heap[child], x)) break;
+                heap[i]          = heap[child];
+                i                = child;
+            }
+            heap   [i] = x;
+        }
+
+      public:
+        HeapImpl()              : heap ()    { heap.clear(); }
+        HeapImpl(const int sz0) : heap (sz0) { heap.clear(); }
+    
+        int  size()  const                   { return heap.size(); }
+        bool empty() const                   { return heap.size() == 0; }
+        ImplData operator[](int index) const { assert(index < heap.size()); return heap[index]; }
+
+        void insert(ImplData elem)
+        {
+            heap.push(elem);
+            percolateUp(heap.size() - 1); 
+        }
+
+        ImplData  removeMin()
+        {
+            ImplData x = heap[0];
+            heap[0]    = heap.last();
+            heap.pop();
+            if (heap.size() > 1) percolateDown(0);
+            return x; 
+        }
+
+        void clear(bool dealloc = false) { heap.clear(dealloc); }
+    };
+  
+    HeapImpl            impl_cl_heap;     // A priority queue of implication clauses wrapped as ImplData, ordered by level.
+  
+  // cir minisat hack
+    void     counterImplicationRestart(); // to jump to as restart.
+ 
+    /**
+     * After how many steps the solver should perform failed literals and detection of necessary assignments. (default 32)
+     * If set to '0', no inprocessing is performed.
+     */
+    int probing_step;     // Counter for probing. If zero, inprocessing (probing) will be performed.
+    int probing_step_width;
+
+    /**
+     * Limit how many varialbes with highest activity should be probed during the inprocessing step.
+     */
+    int probing_limit;
+
+    // MinitSAT parameters
+
+    /**
+     * If true, variable initialization is based on Jeroslow-Wang heuristic and the variable
+     * activity is set to the value of the variable. Therefore, the last variables will be decided
+     * first. This is helpful because the last variables are often auxiliary variables.
+     *
+     * This hack is useful for short timeouts.
+     */
+    bool pol_act_init;
+
+	// cir minisat Parameters
+    int       cir_bump_ratio;     // bump ratio for VSIDS score after restart (if >0 cir is activated)
+    int       cir_count;          // Counts calls of cir-function
+    
+ 
+    // MiPiSAT methods
+
+    vec<Lit>      probing_uncheckedLits;            /// literals to be used in probing routine
+    vec<VarFlags> probing_oldAssigns;  /// literals to be used in probing routine
+    /**
+     * Apply inprocessing on the variables with highest activity. The limit of
+     * how many variables are probed is determined by the parameter "probing_limit".
+     * 
+     * @return false if inconsistency was found. That means the formula is unsatisfiable
+     */
+    bool probingHighestActivity();
+
+	/**
+     * Call probingLiteral() for both - positive and negative - literal
+     * of the passed variable.
+     *
+     * If a conflict is found, the formula is unsatisfiable.
+     * Otherwise it collects common implied variables and perform
+     * unit propagation.
+     *
+     * @param v Variable that will be checked as positive and negative literal
+     * @return false if inconsistency was found, meaning the formula is UNSATs
+     */
+    bool probing(Var v);
+
+    /**
+     * Probing a single literal.
+     * 
+     * Collects all literals that are inferred by unit propagation given a
+     * single literal. It is called by the method Solver::probing() two times
+     * for a literal "x" and its negation "not x".
+     * 
+     * @param  v Literal that is used as unit to inferre other literals
+     * @return 0 - no conflict found
+     *         1 - conflict for literal v
+     *         2 - contradiction (conflict for "v" and "not v") => UNSAT
+     */
+    int probingLiteral(Lit v);
+  
+    // 999 MS hack 
+    bool   activityBasedRemoval;     // use minisat or glucose style of clause removal and activities
+    int    lbd_core_threshold;        // threadhold to move clause from learnt to formula (if LBD is low enough)
+    double learnts_reduce_fraction;   // fraction of how many learned clauses should be removed
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;
 public:     
@@ -690,6 +904,12 @@ public:
 
   /** return extra variable information (should be called for top level units only!) */
   uint64_t variableExtraInfo( const Var& v ) const ;
+
+  /** temporarly enable or disable extended resolution, to ensure that the number of variables remains the same */
+  void setExtendedResolution( bool enabled ) { doAddVariablesViaER = enabled; }
+  
+  /** query whether extended resolution is enabled or not */
+  bool getExtendedResolution() const { return doAddVariablesViaER; }
   
 /// for qprocessor
 public:
@@ -786,7 +1006,7 @@ inline void Solver::insertVarOrder(Var x) {
 inline void Solver::varDecayActivity() { var_inc *= (1 / var_decay); }
 inline void Solver::varBumpActivity(Var v, double inverseRatio) { varBumpActivityD(v, var_inc / (double) inverseRatio); }
 inline void Solver::varBumpActivityD(Var v, double inc) {
-  DOUT( if( config.opt_printDecisions > 1) cerr << "c bump var activity for " << v+1 << " with " << activity[v] << " by " << inc << endl; ) ;
+    DOUT( if( config.opt_printDecisions > 1) cerr << "c bump var activity for " << v+1 << " with " << activity[v] << " by " << inc << endl; ) ;
     activity[v] = ( useVSIDS * activity[v] ) + inc; // interpolate between VSIDS and VMTF here!
     // NOTE this code is also used in extended clause learning, and restricted extended resolution
     if ( activity[v] > 1e100 ) {
@@ -904,6 +1124,46 @@ bool Solver::addUnitClauses(const vec< Lit >& other)
   return propagate() != CRef_Undef;
 }
 
+/************************************************************
+ * Compute LBD functions
+ *************************************************************/
+
+template<typename T>
+inline int Solver::computeLBD(const T& lits) {
+  
+    // Already discovered decision levels are stored in a mark array. We do
+    // not want to allocate the mark array for each call of ths function.
+    // Therefore a "gobal" mark array for the whole Solver instance will be
+    // used.
+
+    int distance = 0;
+
+    // Generate a unique identifier (aka step) for this function call
+    lbd_marker.nextStep();
+    bool withLevelZero = false;  
+    const int minLevel = ( config.opt_lbd_ignore_assumptions ? assumptions.size() : 0 );
+    for (int i = 0; i < lits.size(); i++) {
+        // decision level of the literal
+        const int& dec_level = level(var(lits[i]));
+        if( dec_level < minLevel ) continue; // ignore literals for assumptions
+        withLevelZero = (dec_level==0);
+
+        // If the current decision level in the mark array is not associated
+        // with the current step, that means that the decision level was
+        // not discovered before. 
+        if ( !lbd_marker.isCurrentStep(dec_level) ) {
+            // mark the current level as discovered
+            lbd_marker.setCurrentStep(dec_level);
+            // a new decision level was found
+            distance++;
+        }
+    }
+
+    // if the parameter says that level 0 should be ignored, ignore it (if it have been present)
+    // Ignore all literals on level 0, as they are implied by the formula
+    if( config.opt_lbd_ignore_l0 && withLevelZero ) return distance - 1;
+    return distance;
+}
 
 
 //

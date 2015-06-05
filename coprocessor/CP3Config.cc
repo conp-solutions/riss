@@ -601,7 +601,6 @@ opt_xor_selectX       (_cat_xor, "xorSelect",    "how to select next xor 0=first
 opt_xor_keepUsed      (_cat_xor, "xorKeepUsed",  "continue to simplify kept xors", true, optionListPtr ),
 opt_xor_findSubsumed  (_cat_xor, "xorFindSubs",  "try to recover XORs that are partially subsumed", true, optionListPtr ),
 opt_xor_findResolved  (_cat_xor, "xorFindRes",   "try to recover XORs including resolution steps", false, optionListPtr ),
-
 opt_xor_dropPure        (_cat_xor, "xorDropPure",  "drop XORs with a literal that occurs only once", false, optionListPtr ),
 opt_xor_encodeSize      (_cat_xor, "xorEncSize",   "size of xors that are encoded back (<=2 ^= none)", 2, IntRange(2, INT32_MAX), optionListPtr ),
 opt_xor_checkNewSubsume (_cat_xor, "xorEncSubs",   "perform subsumptoin checks with newly added XOR clauses", false, optionListPtr ),
