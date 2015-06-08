@@ -228,6 +228,8 @@ int main(int argc, char **argv)
     BoolOption opt_pol_cache("Initialization", "polCache", "use polarity caching\n", false);
     
     BoolOption opt_act_cache("Initialization", "actCache", "use activity caching\n", false);
+    
+    BoolOption opt_refine_cores("Initialization", "refCores", "try to reduce cores (reverse and call SAT solver again)\n", false);
 
     
     
@@ -295,6 +297,9 @@ int main(int argc, char **argv)
     S->setPolarityMode( opt_set_polarity, opt_pol_with_assumptions, opt_pol_max_size );
     S->setUsePolarityCaching( opt_pol_cache );
     S->setUseActivityCaching( opt_act_cache, opt_act_with_assumptions );
+    
+    // set refine cores
+    S->setRefineCores( opt_refine_cores );
     
     signal(SIGXCPU, SIGINT_exit);
     signal(SIGTERM, SIGINT_exit);
