@@ -121,6 +121,16 @@ else if( optionSet == "NOCP" ) {
 }
 
 /*
+ *  Options for CVC4 (intermediate version Riss 5.0.1) 
+ */
+else if( optionSet == "CVC4" ) {
+  parseOptions ( "-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -dense -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -rer-g -rer-ga=3", false );
+}
+else if( optionSet == "CVC4inc" ) {
+  parseOptions ( "-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -cp3_iters=2 -rlevel=2 -rer-g -rer-ga=3", false );
+}
+
+/*
  *  Options for Open-WBO 
  */
 else if( optionSet == "MAXSAT" ) {
