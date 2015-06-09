@@ -392,7 +392,7 @@ lbool Preprocessor::performSimplification()
     // end of simplification iteration
     //
     iterTime = cpuTime() - iterTime;
-    DOUT( if( config.opt_verbose > 0 || config.opt_debug || true) cerr << "c used time in interation " << ppIteration << "  : " << iterTime << " s" << endl;    );
+    DOUT( if( config.opt_verbose > 0 || config.opt_debug) cerr << "c used time in interation " << ppIteration << "  : " << iterTime << " s" << endl;    );
   }
   
   if( config.opt_addRedBins ) {
