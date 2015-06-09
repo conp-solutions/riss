@@ -34,3 +34,6 @@ build/
 
 # example formulas and bugs
 *.cnf
+
+# backup files
+*~
