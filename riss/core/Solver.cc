@@ -829,7 +829,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 		    // UPDATEVARACTIVITY trick (see competition'09 companion paper)
                     // VSIDS scores of variables at the current decision level is aditionally 
                     // bumped if they are propagated by core learnt clauses (similar to glucose)
-                    if ( r != CRef_Undef && ca[r].learnt()){
+                    if ( r != CRef_Undef && (ca[r].learnt() || ca[r].isCoreClause() ) ){ // either core clause, as some learnt clauses are moved
 		      DOUT( if (config.opt_learn_debug) cerr << "c add " << q << " to last decision level" << endl; );
                       lastDecisionLevel.push(q);
 		    }
@@ -3915,11 +3915,11 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
     CRef cr = CRef_Undef;
     
     // is a core learnt clause, so we do not create a learned, but a "usual" clause
-    if (!activityBasedRemoval && nblevels < lbd_core_threshold + 1) {
+    if (learnt_clause.size() <= config.opt_keep_permanent_size || nblevels <= lbd_core_threshold) {
       // no_LBD = false
-      cr = ca.alloc(learnt_clause);
+      cr = ca.alloc(learnt_clause ); // memorize that this is a learnt clause (in analyze method vsids activity is increased sometimes)
       if( rerClause == rerMemorizeClause )  resetRestrictedExtendedResolution(); // do not memorize clause that is added to the formula
-      ca[cr].setCoreClause(true);   // memorize that this clause is a core-learnt clause
+      ca[cr].setCoreClause( true );   // memorize that this clause is a core-learnt clause (not for size based!)
       clauses.push(cr);
     } else {
       // 2 = normal(interesting) learnt clause
@@ -3928,7 +3928,7 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
       // ca[cr].mark(no_LBD ? 0 : nblevels < 6 ? 3 : 2);
       learnts.push(cr);
       if( rerClause == rerMemorizeClause ) rerFuseClauses.push( cr ); // memorize this clause reference for RER
-      if (activityBasedRemoval || nblevels > lbd_core_threshold) { // FIXME: check whether second condition can be eliminated
+      
 	if( config.opt_cls_act_bump_mode != 2 ) {
 	claBumpActivity(ca[cr],                                                         // bump activity based on its
 			(config.opt_cls_act_bump_mode == 0 ? 1                          // constant
@@ -3940,7 +3940,7 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
 	                      ca[cr].size()                                              // use size as activity
 			    : config.opt_size_bounded_randomized + drand( random_seed ); // otherwise, use SBR
 	}
-      }
+
     }
     
     ca[cr].setLBD(nblevels); 

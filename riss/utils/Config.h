@@ -559,7 +559,8 @@ else if( optionSet == "SWV" ) {
   
   else {
     ret = false; // indicate that no configuration has been found here!
-}
+    if ( optionSet != "" ) parseOptions( optionSet ); // parse the string that has been parsed as commandline
+  }
   parsePreset = false;
   return ret; // return whether a preset configuration has been found
 }
