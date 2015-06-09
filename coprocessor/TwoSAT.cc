@@ -4,11 +4,14 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/TwoSAT.h"
 
+using namespace Riss;
+using namespace std;
 
+namespace Coprocessor {
 
-Coprocessor::TwoSatSolver::TwoSatSolver(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, Coprocessor::CoprocessorData& _data)
-: Technique( _config, _ca, _controller)
-, data( _data )
+TwoSatSolver::TwoSatSolver(CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data)
+  : Technique( _config, _ca, _controller)
+  , data( _data )
 {
   solveTime = 0;
   touchedLiterals = 0;
@@ -16,37 +19,37 @@ Coprocessor::TwoSatSolver::TwoSatSolver(CP3Config &_config, ClauseAllocator& _ca
   calls = 0;
 }
 
-Coprocessor::TwoSatSolver::~TwoSatSolver()
+TwoSatSolver::~TwoSatSolver()
 {
 }
 
-bool Coprocessor::TwoSatSolver::isSat(const Lit& l) const
+bool TwoSatSolver::isSat(const Lit& l) const
 {
   assert( toInt(l) < permVal.size() && "literal has to be in bounds" );
   return ( permVal[ toInt( l ) ]  == 1 
     || ( permVal[ toInt( l ) ]  == 0 && tempVal[ toInt( l ) ]  == 1  ) );
 }
 
-bool Coprocessor::TwoSatSolver::isPermanent(const Var v) const
+bool TwoSatSolver::isPermanent(const Var v) const
 {
 assert( v < permVal.size() && "literal has to be in bounds" );
   return ( permVal[ toInt( mkLit(v,false) ) ]  != 0 );
 }
 
-void Coprocessor::TwoSatSolver::printStatistics(ostream& stream)
+void TwoSatSolver::printStatistics(ostream& stream)
 {
   stream << "c [STAT] 2SAT " << solveTime << " s, " << touchedLiterals << " lits, " << permLiterals << " permanents, " << calls << " calls " << endl;
 }
 
 
-char Coprocessor::TwoSatSolver::getPolarity(const Var v) const
+char TwoSatSolver::getPolarity(const Var v) const
 {
   assert( toInt(mkLit(v,false)) < permVal.size() && "variable has to have an assignment" );
   if( permVal[toInt(mkLit(v,false))] != 0 ) return permVal[toInt(mkLit(v,false))];
   else return tempVal[toInt(mkLit(v,false))];
 }
 
-bool Coprocessor::TwoSatSolver::tmpUnitPropagate()
+bool TwoSatSolver::tmpUnitPropagate()
 {
   while (! tmpUnitQueue.empty())
   {
@@ -96,7 +99,7 @@ bool Coprocessor::TwoSatSolver::tmpUnitPropagate()
   return true;
 }
 
-bool Coprocessor::TwoSatSolver::unitPropagate()
+bool TwoSatSolver::unitPropagate()
 {
   while (! unitQueue.empty())
   {
@@ -146,7 +149,7 @@ bool Coprocessor::TwoSatSolver::unitPropagate()
 }
 
 
-bool Coprocessor::TwoSatSolver::hasDecisionVariable()
+bool TwoSatSolver::hasDecisionVariable()
 {
   
   for (unsigned int i = lastSeenIndex+1, end = tempVal.size(); i < end; ++i)
@@ -161,7 +164,7 @@ bool Coprocessor::TwoSatSolver::hasDecisionVariable()
   return false;
 }
 
-Lit Coprocessor::TwoSatSolver::getDecisionVariable()
+Lit TwoSatSolver::getDecisionVariable()
 {
   
   for (unsigned int i = lastSeenIndex+1, end = tempVal.size(); i < end; ++i)
@@ -177,7 +180,7 @@ Lit Coprocessor::TwoSatSolver::getDecisionVariable()
   return lit_Error;
 }
 
-bool Coprocessor::TwoSatSolver::solve()
+bool TwoSatSolver::solve()
 {
   solveTime = cpuTime() - solveTime;
   big.create(ca, data.nVars(), data.getClauses() );
@@ -212,10 +215,12 @@ bool Coprocessor::TwoSatSolver::solve()
   
 }
 
-void Coprocessor::TwoSatSolver::destroy()
+void TwoSatSolver::destroy()
 {
   vector<char>().swap( tempVal );
   vector<char>().swap( permVal );
   deque<Lit>().swap(  unitQueue);
   deque<Lit>().swap( tmpUnitQueue);
 }
+
+} // namespace Coprocessor

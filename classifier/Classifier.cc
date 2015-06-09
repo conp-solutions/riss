@@ -13,6 +13,8 @@
 #include <iostream>
 #include <ctime>
 
+using namespace std;
+
 Classifier::Classifier(Configurations& config, const char* prefix): configurations(config), correctCount(0) , nonZero(false)
 {
 	mode = RNDFOREST;

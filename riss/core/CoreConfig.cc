@@ -10,15 +10,14 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 **************************************************************************************************/
 
 #include "riss/core/CoreConfig.h"
-
 #include "riss/mtl/Sort.h"
 
-using namespace Riss;
+namespace Riss {
 
-static const char* _cat = "CORE";
-static const char* _cr = "CORE -- RESTART";
+static const char* _cat  = "CORE";
+static const char* _cr   = "CORE -- RESTART";
 static const char* _cred = "CORE -- REDUCE";
-static const char* _cm = "CORE -- MINIMIZE";
+static const char* _cm   = "CORE -- MINIMIZE";
 
 CoreConfig::CoreConfig(const std::string & presetOptions) // add new options here!
 :
@@ -100,9 +99,10 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  
  opt_cir_bump     ("cir-minisat", "cir-bump", "Activates CIR with bump ratio for VSIDS score (choose large: 9973)", 0, IntRange(0, INT32_MAX), optionListPtr),
  
- opt_act_based       ("999HACK", "act-based",   "use activity for learned clauses", false, optionListPtr),
- opt_lbd_core_thresh ("999HACK", "lbd-core-th", "Saving learnt clause forever if LBD deceeds this threshold", 0, IntRange( 0, INT32_MAX), optionListPtr),
- opt_l_red_frac      ("999HACK", "reduce-frac", "Remove this quota of learnt clauses when database is reduced", 0.50, DoubleRange(0, false, HUGE_VAL, false), optionListPtr),
+ opt_act_based       ("999HACK", "act-based",    "use activity for learned clauses", false, optionListPtr),
+ opt_lbd_core_thresh ("999HACK", "lbd-core-th",  "Saving learnt clause forever if LBD deceeds this threshold", 0, IntRange( 0, INT32_MAX), optionListPtr),
+ opt_l_red_frac      ("999HACK", "reduce-frac",  "Remove this quota of learnt clauses when database is reduced", 0.50, DoubleRange(0, false, HUGE_VAL, false), optionListPtr),
+ opt_keep_permanent_size("999HACK", "size_core", "Saving learnt clause forever if size deceeds this threshold", 0, IntRange( 0, INT32_MAX), optionListPtr),
  
  opt_updateLearnAct ("MODS", "updLearnAct", "UPDATEVARACTIVITY trick (see glucose competition'09 companion paper)", true , optionListPtr ),
 
@@ -227,3 +227,4 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
   if( defaultPreset.size() != 0 ) setPreset( defaultPreset ); // set configuration options immediately
 }
 
+} // namespace Riss

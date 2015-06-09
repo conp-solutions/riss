@@ -107,6 +107,7 @@ public:
  BoolOption   opt_act_based;
  IntOption    opt_lbd_core_thresh;
  DoubleOption opt_l_red_frac;
+ IntOption    opt_keep_permanent_size;
  
  BoolOption opt_updateLearnAct;
 

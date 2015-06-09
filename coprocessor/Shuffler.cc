@@ -2,15 +2,12 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef SHUFFLER_HH
-#define SHUFFLER_HH
-
 #include "coprocessor/Shuffler.h"
 
-using namespace Riss;
 using namespace std;
-using namespace Coprocessor;
+using namespace Riss;
 
+namespace Coprocessor {
 
 VarShuffler::VarShuffler(CP3Config &_config) 
 : config(_config) 
@@ -160,5 +157,4 @@ void VarShuffler::unshuffle( vec<lbool>& model, uint32_t vars )
   });
 }
 
-
-#endif
+} // namespace Coprocessor

@@ -374,7 +374,7 @@ class StringOption : public Option
     const char* defaultValue;
  public:
     StringOption(const char* c, const char* n, const char* d, const char* def = NULL, vec<Option*>* externOptionList = 0) 
-        : Option(n, d, c, "<string>", externOptionList), value(def), defaultValue(def) {}
+        : Option(n, d, c, "<std::string>", externOptionList), value(def), defaultValue(def) {}
 
     operator      const char*  (void) const     { return value; }
     operator      const char*& (void)           { return value; }
@@ -408,7 +408,7 @@ class StringOption : public Option
     
     
     void giveRndValue (std::string& optionText ) {
-      optionText = ""; // NOTE: this could be files or any other thing, so do not consider this (for now - for special strings, another way might be found...)
+      optionText = ""; // NOTE: this could be files or any other thing, so do not consider this (for now - for special std::strings, another way might be found...)
     }
 };
 

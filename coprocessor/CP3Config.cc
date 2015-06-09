@@ -13,7 +13,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "riss/mtl/Sort.h"
 
-using namespace Coprocessor;
+using namespace Riss;
+
+namespace Coprocessor {
 
 const char* _cat = "COPROCESSOR";
 const char* _cat2 = "COPROCESSOR  TECHNIQUES";
@@ -613,3 +615,5 @@ opt_xor_debug             (_cat_xor, "xor-debug",       "Debug Output of XOR rea
 {
   if( defaultPreset.size() != 0 ) setPreset( defaultPreset ); // set configuration options immediately
 }
+
+} // namespace Coprocessor

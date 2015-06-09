@@ -67,7 +67,7 @@ public:
   /** add a literal to the solver, if lit == 0, end the clause and actually add it */
   void add (int lit) {
     if( lit != 0 ) currentClause.push( lit > 0 ? mkLit( lit-1, false ) : mkLit( -lit-1, true ) );
-    else { // add the current clause, and clear the vector
+    else { // add the current clause, and clear the std::vector
       // reserve variables in the solver
       for( int i = 0 ; i < currentClause.size(); ++i ) {
 	const Lit l2 = currentClause[i];
@@ -79,7 +79,7 @@ public:
     }
   }
 
-  /** add another literal to the assumptions vector for the next sat() call 
+  /** add another literal to the assumptions std::vector for the next sat() call 
    *  Note: rejects lit==0
    */
   void assume (int lit) { 
@@ -92,7 +92,7 @@ public:
   }
   
   /** solve the current formula under the current set of assignments 
-   * Note: will clear the assumption vector after the call
+   * Note: will clear the assumption std::vector after the call
    * @param limit gives the number of conflicts before the call returns (-1 = infinite conflicts )
    */
   int sat (int limit = -1) {
@@ -134,16 +134,16 @@ public:
     // top level unit clauses
     for( int i = 0 ; i < solver->trail.size(); ++ i ) {
       const Lit& l =  solver->trail[i];
-      cerr << l << " " << 0 << endl;
+      std::cerr << l << " " << 0 << std::endl;
     }
     for( int i = 0 ; i < solver->clauses.size(); ++ i ) {
       const Clause& c = solver->ca[solver->clauses[i]];
       if( c.can_be_deleted() ) continue; // do only process valid clauses!
       for( int j = 0; j < c.size(); ++ j ) {
 	const Lit& l =  c[j];
-	cerr << l << " ";
+	std::cerr << l << " ";
       }
-      cerr << 0 << endl;
+      std::cerr << 0 << std::endl;
     }
   }
   

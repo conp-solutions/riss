@@ -12,9 +12,9 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 #include "riss/mtl/Map.h"
 
 namespace Riss {
-  
+
+// to avoid circular #includes, use a forward declaration
 class ThreadController; 
-  
 class BackwardVerificationWorker;
   
 /** verify a given proof with respect to a given formula in a backward fashion

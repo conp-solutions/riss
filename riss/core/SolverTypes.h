@@ -108,19 +108,14 @@ inline void printLit(Lit l)
 }
 
 
-
-//=================================================================================================
-// Lifted booleans:
-//
-// NOTE: this implementation is optimized for the case when comparisons between values are mostly
-//       between one variable and one constant. Some care had to be taken to make sure that gcc
-//       does enough constant propagation to produce sensible code, and this appears to be somewhat
-//       fragile unfortunately.
-
-#define l_True  (lbool((uint8_t)0)) // gcc does not do constant propagation if these are real constants.
-#define l_False (lbool((uint8_t)1))
-#define l_Undef (lbool((uint8_t)2))
-
+/**
+ * Lifted booleans:
+ * 
+ * NOTE: this implementation is optimized for the case when comparisons between values are mostly
+ *       between one variable and one constant. Some care had to be taken to make sure that gcc
+ *       does enough constant propagation to produce sensible code, and this appears to be somewhat
+ *       fragile unfortunately.
+ */
 class  lbool {
     uint8_t value;
 
@@ -147,6 +142,15 @@ public:
     friend int   toInt  (lbool l);
     friend lbool toLbool(int   v);
 };
+
+// gcc does not do constant propagation if these are real constants.
+// const lbool l_True  (lbool((uint8_t)0))
+// const lbool l_False (lbool((uint8_t)1))
+// const lbool l_Undef (lbool((uint8_t)2))
+#define l_True  (Riss::lbool((uint8_t)0))
+#define l_False (Riss::lbool((uint8_t)1))
+#define l_Undef (Riss::lbool((uint8_t)2))
+
 inline int   toInt  (lbool l) { return l.value; }
 inline lbool toLbool(int   v) { return lbool((uint8_t)v);  }
 
@@ -717,7 +721,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         assert(clauses >= learnts);
         if (literals < 2 * clauses)
         {
-            std::cerr << "c lits: " << literals << " clauses: " << clauses << endl; 
+            std::cerr << "c lits: " << literals << " clauses: " << clauses << std::endl; 
         }
         assert(literals >= 2 * clauses);
         if ( currentCap() >= size() + requiredMemory(clauses, literals, learnts) )
@@ -753,14 +757,14 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         assert(reservation.current < reservation.upper_limit && "no reserved space left");
         if (false && reservation.current >= reservation.upper_limit)
         {
-           cerr <<  "no reserved space left" << endl;
+           std::cerr <<  "no reserved space left" << std::endl;
            abort();
         }
         bool use_extra = learnt | extra_clause_field;
         
         assert(reservation.current + clauseWord32Size(ps.size(), use_extra) <= reservation.upper_limit && "requested clause size does not fit in reservation");
         if(false && reservation.current + clauseWord32Size(ps.size(), use_extra) > reservation.upper_limit)
-            cerr << "requested clause size does not fit in reservation" <<endl;
+            std::cerr << "requested clause size does not fit in reservation" <<std::endl;
         CRef cid = reservation.current;
         new (lea(cid)) Clause(ps, use_extra, learnt);
         
@@ -1029,7 +1033,7 @@ inline void Clause::strengthen(Lit p)
 /** class that is used as mark array */
 class MarkArray {
 private:
-	vector<uint32_t> array;
+	std::vector<uint32_t> array;
 	uint32_t step;
 
 public:
@@ -1043,7 +1047,7 @@ public:
 	}
 
 	void destroy() {
-	  vector<uint32_t>().swap(array);
+	  std::vector<uint32_t>().swap(array);
 	  step = 0;
 	}
 
@@ -1117,7 +1121,7 @@ public:
 //
 
 /// print literals into a stream
-inline ostream& operator<<(ostream& other, const Lit& l ) {
+inline std::ostream& operator<<(std::ostream& other, const Lit& l ) {
   if( l == lit_Undef ) other << "lUndef";
   else if( l == lit_Error ) other << "lError";
   else other << (sign(l) ? "-" : "") << var(l) + 1;
@@ -1125,7 +1129,7 @@ inline ostream& operator<<(ostream& other, const Lit& l ) {
 }
 
 /// print a clause into a stream
-inline ostream& operator<<(ostream& other, const Clause& c ) {
+inline std::ostream& operator<<(std::ostream& other, const Clause& c ) {
   other << "[";
   for( int i = 0 ; i < c.size(); ++ i )
     other << " " << c[i];
@@ -1133,7 +1137,7 @@ inline ostream& operator<<(ostream& other, const Clause& c ) {
   return other;
 }
 
-/// print elements of a vector
+/// print elements of a std::vector
 template <typename T>
 inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data ) 
 {
@@ -1143,7 +1147,7 @@ inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data 
 }
 
 
-/// print elements of a vector
+/// print elements of a std::vector
 template <typename T>
 inline std::ostream& operator<<(std::ostream& other, const vec<T>& data ) 
 {

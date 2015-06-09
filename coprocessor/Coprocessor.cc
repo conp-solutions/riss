@@ -13,7 +13,9 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include <cstring>
 
 using namespace std;
-using namespace Coprocessor;
+using namespace Riss;
+
+namespace Coprocessor {
 
 Preprocessor::Preprocessor( Solver* _solver, CP3Config& _config, int32_t _threads)
 : 
@@ -1894,3 +1896,5 @@ void Preprocessor::meltSearchVariables(){
   // clear the list of variables
   specialFrozenVariables.clear();
 }
+
+} // namespace Coprocessor

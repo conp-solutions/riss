@@ -20,10 +20,7 @@ struct libpriss {
 // #pragma GCC visibility push(default)
 // #pragma GCC visibility pop // now we should have default!
 
-//#pragma GCC visibility push(default)
-
 extern "C" {
-  
 
 /** initialize a solver instance, and return a pointer to the maintain structure 
 * @param threads number of threads that should be used (1 <= threads <= 64), will be adjusted if not in these bounds!

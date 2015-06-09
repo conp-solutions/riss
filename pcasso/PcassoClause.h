@@ -10,7 +10,7 @@ namespace PcassoDavide{
   
   struct PcassoClause{
     unsigned int size;
-    vec<Lit> lits;
+    Riss::vec<Riss::Lit> lits;
     
     PcassoClause(){};
     // copy constructor required by push_back

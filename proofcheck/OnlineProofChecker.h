@@ -34,7 +34,7 @@ protected:
   ClauseAllocator ca;
   vec<CRef> clauses;
   vec<Lit> unitClauses; // store how many unit clauses have been seen already for a given literal (simply count per literal, use for propagation initialization!)
-  vector< vector<CRef> > occ; // use for propagation!
+  std::vector< std::vector<CRef> > occ; // use for propagation!
   
   OccLists<Lit, vec<Watcher>, WatcherDeleted> watches; 
   
@@ -50,7 +50,7 @@ protected:
   // unit propagation
   int      qhead; // Head of queue (as index into the trail -- no more explicit propagation queue in MiniSat).
   vec<Lit> trail; // Assignment stack; stores all assigments made in the order they were made.
-  vec<Lit> lits;  // vector of literals for resolution
+  vec<Lit> lits;  // std::vector of literals for resolution
   vec<lbool> assigns; // current assignment
   
   lbool value (Var x) const;     // The current value of a variable.
@@ -148,8 +148,8 @@ Var OnlineProofChecker::newVar()
   watches  .init(mkLit(v, true ));
   
   assigns.push( l_Undef );
-  occ.push_back( vector<CRef> () ); // there are no new clauses here yet
-  occ.push_back( vector<CRef> () );
+  occ.push_back( std::vector<CRef> () ); // there are no new clauses here yet
+  occ.push_back( std::vector<CRef> () );
   ma.resize( ma.size() + 2 ); // for each literal have a cell
   trail    .capacity(v+1);
   return v;
@@ -158,7 +158,7 @@ Var OnlineProofChecker::newVar()
 inline
 void OnlineProofChecker::uncheckedEnqueue(Lit p)
 {
-  if( verbose > 3 ) cerr << "c [DRAT-OTFC] enqueue literal " << p << endl;
+  if( verbose > 3 ) std::cerr << "c [DRAT-OTFC] enqueue literal " << p << std::endl;
   assigns[var(p)] = lbool(!sign(p));
   // prefetch watch lists
   __builtin_prefetch( & watches[p] );
@@ -185,7 +185,7 @@ bool OnlineProofChecker::propagate()
     int     num_props = 0;
     watches.cleanAll(); 
     
-    if( verbose > 3 ) cerr << "c [DRAT-OTFC] propagate ... " << endl;
+    if( verbose > 3 ) std::cerr << "c [DRAT-OTFC] propagate ... " << std::endl;
     
     // propagate units first!
     for( int i = 0 ; i < unitClauses.size() ; ++ i ) { // propagate all known units
@@ -256,7 +256,7 @@ bool OnlineProofChecker::propagate()
 		
             // Did not find watch -- clause is unit under assignment:
             *j++ = w; 
-            // if( config.opt_printLhbr ) cerr << "c keep clause (" << cr << ")" << c << " in watch list while propagating " << p << endl;
+            // if( config.opt_printLhbr ) std::cerr << "c keep clause (" << cr << ")" << c << " in watch list while propagating " << p << std::endl;
             if ( value(first) == l_False ) {
                 confl = cr; // independent of opt_long_conflict -> overwrite confl!
                 qhead = trail.size();
@@ -313,7 +313,7 @@ inline
 bool OnlineProofChecker::removeClause(const T& cls)
 {
   if( verbose > 3 ) {
-    cerr << "c [DRAT-OTFC] remove clause " << cls << endl;
+    std::cerr << "c [DRAT-OTFC] remove clause " << cls << std::endl;
     printState();
   }
   
@@ -327,8 +327,8 @@ bool OnlineProofChecker::removeClause(const T& cls)
 	unitClauses.pop();
       }
     }
-    if( i == unitClauses.size() ) assert( false && "the unit clause should be inside the vector of units" );
-    if( verbose > 1 ) cerr << "c [DRAT-OTFC] removed clause " << cls << endl;
+    if( i == unitClauses.size() ) assert( false && "the unit clause should be inside the std::vector of units" );
+    if( verbose > 1 ) std::cerr << "c [DRAT-OTFC] removed clause " << cls << std::endl;
     return false;
   } 
   // find correct CRef ...
@@ -362,7 +362,7 @@ bool OnlineProofChecker::removeClause(const T& cls)
     break;
   }
   if( i == occ[ toInt(smallest) ].size() || ref == CRef_Undef ) {
-    if( verbose > 1 ) cerr << "c [DRAT-OTFC] could not remove clause " << cls << " from list of literal " << smallest << endl;
+    if( verbose > 1 ) std::cerr << "c [DRAT-OTFC] could not remove clause " << cls << " from list of literal " << smallest << std::endl;
     printState();
     assert(false && "clause should be in the data structures" );
     return false;
@@ -371,7 +371,7 @@ bool OnlineProofChecker::removeClause(const T& cls)
   // remove from the other occ-lists!
   for( int i = 0 ; i < cls.size(); ++ i ) {
     if( i == smallestIndex ) continue;
-    vector<CRef>& list = occ[ toInt(cls[i]) ];
+    std::vector<CRef>& list = occ[ toInt(cls[i]) ];
     int j = 0;
     for(  ; j < list.size(); ++ j ) {
       if( list[j] == ref ) { 
@@ -381,11 +381,11 @@ bool OnlineProofChecker::removeClause(const T& cls)
       }
     }
     if( j == list.size() ) { 
-      if( verbose > 1 )  cerr << "c could not remove clause " << cls << " from list of literal " << cls[i] << endl;
+      if( verbose > 1 )  std::cerr << "c could not remove clause " << cls << " from list of literal " << cls[i] << std::endl;
       printState();
       if( verbose > 2 ) { 
-	cerr << "c list for " << cls[i] << " : ";
-	for( int k = 0 ; k < list.size(); ++k ) cerr << "c " << ca[ list[k] ] << endl;
+	std::cerr << "c list for " << cls[i] << " : ";
+	for( int k = 0 ; k < list.size(); ++k ) std::cerr << "c " << ca[ list[k] ] << std::endl;
       }
       assert( false && "should be able to remove the clause from all lists" );
     }
@@ -398,7 +398,7 @@ bool OnlineProofChecker::removeClause(const T& cls)
   ca[ref].mark(1); 
   ca.free(ref);
   
-  if( verbose > 1 ) cerr << "c [DRAT-OTFC] removed clause " << cls << " which is internally " << ca[ref] << endl;
+  if( verbose > 1 ) std::cerr << "c [DRAT-OTFC] removed clause " << cls << " which is internally " << ca[ref] << std::endl;
   // check garbage collection once in a while!
   // TODO
   return true;
@@ -426,7 +426,7 @@ void OnlineProofChecker::addParsedclause(const vec< Lit >& cls)
     clauses.push( ref );
   } else unitClauses.push( cls[0] );
 
-  if( verbose > 1 ) cerr << "c added clause " << cls << endl;
+  if( verbose > 1 ) std::cerr << "c added clause " << cls << std::endl;
   // here, do not check whether the clause is entailed, because its still input!
 }
 
@@ -480,7 +480,7 @@ bool OnlineProofChecker::addClause(const vec< Lit >& cls, bool checkOnly )
   }
   
   if( verbose > 3 ) {
-    cerr << "c [DRAT-OTFC] add/check clause " << cls << endl;
+    std::cerr << "c [DRAT-OTFC] add/check clause " << cls << std::endl;
     printState();
   }
   
@@ -510,16 +510,16 @@ bool OnlineProofChecker::addClause(const vec< Lit >& cls, bool checkOnly )
 	  const int initialSize = lits.size(); // these literals are added by resolving with  the current clause on its first literal
 	  assert( initialSize + 1 == cls.size() && "initial resolvent size has all literals except the literal to resolve on" );
 	  const Lit resolveLit = cls[0];
-	  if( verbose > 3 ) cerr << "c [DRAT-OTFC] use literal " << resolveLit << " for DRAT check" << endl;
+	  if( verbose > 3 ) std::cerr << "c [DRAT-OTFC] use literal " << resolveLit << " for DRAT check" << std::endl;
 	  conflict = true;
-	  const vector<CRef>& list = occ[ toInt(~resolveLit) ];
+	  const std::vector<CRef>& list = occ[ toInt(~resolveLit) ];
 	  bool resovleConflict = false;
-	  if( verbose > 4 ) cerr << "c [DRAT-OTFC] resolve against " << list.size() << " clauses" << endl;
+	  if( verbose > 4 ) std::cerr << "c [DRAT-OTFC] resolve against " << list.size() << " clauses" << std::endl;
 	  for( int i = 0 ; i < list.size(); ++ i ) {
 	    // build resolvent
 	    lits.shrink_( lits.size() - initialSize ); // remove literals from previous addClause call
 	    const Clause& d = ca[ list[i] ];
-	    if( verbose > 4 ) cerr << "c [DRAT-OTFC] resolve with clause " << d << endl;
+	    if( verbose > 4 ) std::cerr << "c [DRAT-OTFC] resolve with clause " << d << std::endl;
 	    int j = 0;
 	    for(  ; j < d.size(); ++ j ) {
 	      if( d[j] == ~resolveLit ) continue; // this literal is used for resolution
@@ -530,12 +530,12 @@ bool OnlineProofChecker::addClause(const vec< Lit >& cls, bool checkOnly )
 	      }
 	    }
 	    if( j != d.size() ) { 
-	      if( verbose > 4 ) cerr << "c [DRAT-OTFC] resolvent is tautology" << endl;
+	      if( verbose > 4 ) std::cerr << "c [DRAT-OTFC] resolvent is tautology" << std::endl;
 	      continue; // this resolvent would be tautological!
 	    }
 	    // lits contains all literals of the resolvent, propagate and check for the conflict!
 	    
-	    if( verbose > 3 ) cerr << "c [DRAT-OTFC] test resolvent " << lits << endl;
+	    if( verbose > 3 ) std::cerr << "c [DRAT-OTFC] test resolvent " << lits << std::endl;
 	    // enqueue all complementary literals!
 	    resovleConflict = false;
 	    cancelUntil();
@@ -546,7 +546,7 @@ bool OnlineProofChecker::addClause(const vec< Lit >& cls, bool checkOnly )
 	    }
 	    if( !propagate() ) {
 	      conflict = false; // not DRAT, the current resolvent does not lead to a conflict!
-	      if( verbose > 1 ) cerr << "c [DRAT-OTFC] the clause " << cls << " is not a DRAT clause -- resolution on " << resolveLit << " with " << d << " failed! (does not result in a conflict with UP)" << endl;
+	      if( verbose > 1 ) std::cerr << "c [DRAT-OTFC] the clause " << cls << " is not a DRAT clause -- resolution on " << resolveLit << " with " << d << " failed! (does not result in a conflict with UP)" << std::endl;
 	      printState();
 	      assert( false && "added clause has to be a DRAT clause" );
 	      break;
@@ -555,7 +555,7 @@ bool OnlineProofChecker::addClause(const vec< Lit >& cls, bool checkOnly )
 	}
       } else conflict = true; // DRAT, because we have a fresh variable!
     } else {
-      if( verbose > 1 ) cerr << "c [DRAT-OTFC] the clause " << cls << " is not a DRUP clause" << endl;
+      if( verbose > 1 ) std::cerr << "c [DRAT-OTFC] the clause " << cls << " is not a DRUP clause" << std::endl;
       printState();
       assert( false && "added clause has to be a DRUP clause" );
     }
@@ -578,7 +578,7 @@ bool OnlineProofChecker::addClause(const vec< Lit >& cls, bool checkOnly )
     attachClause( ref );
     clauses.push( ref );
   } else unitClauses.push( cls[0] );
-  if( verbose > 1 ) cerr << "c [DRAT-OTFC] added the clause " << cls << endl;
+  if( verbose > 1 ) std::cerr << "c [DRAT-OTFC] added the clause " << cls << std::endl;
   return true;
 }
 
@@ -589,17 +589,17 @@ void OnlineProofChecker::printState()
   
   fullCheck();
   
-  cerr << "c [DRAT-OTFC] STATE:" << endl;
+  std::cerr << "c [DRAT-OTFC] STATE:" << std::endl;
   for( int i = 0 ; i < unitClauses.size(); ++ i ) {
-    cerr << unitClauses[i] << " 0" << endl;
+    std::cerr << unitClauses[i] << " 0" << std::endl;
   }
   for( int i = 0 ; i < clauses.size(); ++ i ) {
     const Clause& clause = ca[clauses[i]];
     if( clause.mark() != 0 || clause.can_be_deleted() ) continue; // jump over this clause
     for( int j = 0 ; j < clause.size(); ++ j ) {
-      cerr << clause[j] << " ";
+      std::cerr << clause[j] << " ";
     }
-    cerr << "0" << endl;
+    std::cerr << "0" << std::endl;
   }
 }
 
@@ -612,7 +612,7 @@ void OnlineProofChecker::fullCheck()
       if( c.can_be_deleted() ) continue;
       
       void  *end = 0;
-      if( c.size() == 1 ) cerr << "there should not be unit clauses! [" << cr << "]" << c << endl;
+      if( c.size() == 1 ) std::cerr << "there should not be unit clauses! [" << cr << "]" << c << std::endl;
       else {
 	for( int j = 0 ; j < 2; ++ j ) {
 	  const Lit l = ~c[j];
@@ -622,7 +622,7 @@ void OnlineProofChecker::fullCheck()
 	      CRef     wcr        = ws[j].cref();
 	      if( wcr  == cr ) { didFind = true; break; }
 	  }
-	  if( ! didFind ) cerr << "could not find clause[" << cr << "] " << c << " in watcher for lit " << l << endl;
+	  if( ! didFind ) std::cerr << "could not find clause[" << cr << "] " << c << " in watcher for lit " << l << std::endl;
 	}
 	
       }
@@ -638,7 +638,7 @@ void OnlineProofChecker::fullCheck()
       for ( int j = 0 ; j < ws.size(); ++ j){
 	      CRef     wcr        = ws[j].cref();
 	      const Clause& c = ca[wcr];
-	      if( c[0] != ~l && c[1] != ~l ) cerr << "wrong literals for clause [" << wcr << "] " << c << " are watched. Found in list for " << l << endl;
+	      if( c[0] != ~l && c[1] != ~l ) std::cerr << "wrong literals for clause [" << wcr << "] " << c << " are watched. Found in list for " << l << std::endl;
 	  }
     }
   }

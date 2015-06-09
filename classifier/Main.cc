@@ -26,13 +26,13 @@ Copyright (c) 2012-2014, Norbert Manthey, All rights reserved.
 #include "riss/utils/Options.h"
 #include "riss/core/Dimacs.h"
 #include "riss/core/Solver.h"
-
-#include "coprocessor/Coprocessor.h"
-
 #include "riss/utils/version.h" // include the file that defines the solver version
+#
+#include "coprocessor/Coprocessor.h"
 
 using namespace Riss;
 using namespace Coprocessor;
+using namespace std;
 
 //=================================================================================================
 static bool receivedInterupt = false;
@@ -185,7 +185,7 @@ void printFeatures(int argc, char** argv)
 	cnffile = argv[1];
 
 	CoreConfig coreConfig;
-	Solver S(coreConfig);
+	Solver S(&coreConfig);
 
 	double initial_time = cpuTime();
 	S.verbosity = 0;

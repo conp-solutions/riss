@@ -1,19 +1,20 @@
 /***************************************************************************************[PSolver.h]
 Copyright (c) 2014,      Norbert Manthey, All rights reserved.
 **************************************************************************************************/
-
 #include "pfolio/PSolver.h"
 
 #include <assert.h>
 
-namespace Riss {
+using namespace Coprocessor;
+using namespace std;
 
+namespace Riss {
   
-BoolOption opt_share(        "PFOLIO", "ps", "enable clause sharing for all clients", true, 0 );
-BoolOption opt_proofCounting("PFOLIO", "pc", "enable avoiding duplicate clauses in the pfolio DRUP proof", true, 0 );
-IntOption  opt_verboseProof ("PFOLIO", "pv", "verbose proof (2=with comments to clause authors,1=comments by master only, 0=off)", 1, IntRange(0, 2), 0 );
+BoolOption opt_share              ("PFOLIO", "ps",  "enable clause sharing for all clients", true, 0 );
+BoolOption opt_proofCounting      ("PFOLIO", "pc",  "enable avoiding duplicate clauses in the pfolio DRUP proof", true, 0 );
+IntOption  opt_verboseProof       ("PFOLIO", "pv",  "verbose proof (2=with comments to clause authors,1=comments by master only, 0=off)", 1, IntRange(0, 2), 0 );
 BoolOption opt_internalProofCheck ("PFOLIO", "pic", "use internal proof checker during run time", false, 0 );
-BoolOption opt_verbosePfolio ("PFOLIO", "ppv", "verbose pfolio execution", false, 0 );
+BoolOption opt_verbosePfolio      ("PFOLIO", "ppv", "verbose pfolio execution", false, 0 );
 
 /** main method that is executed by all worker threads */
 static void* runWorkerSolver (void* data);
@@ -46,7 +47,7 @@ PSolver::PSolver(const int threadsToUse, const char* configName)
     }
     
     // setup the first solver!
-    solvers.push( new Solver( configs[0] ) ); // from this point on the address of this configuration is not allowed to be changed any more!
+    solvers.push( new Solver( &configs[0] ) ); // from this point on the address of this configuration is not allowed to be changed any more!
     solvers[0]->setPreprocessor( &ppconfigs[0] );
 }
 
@@ -424,7 +425,7 @@ bool PSolver::initializeThreads()
     // create the solver
     if( i > 0 ) { 
       assert( solvers.size() == i && "next solver is not already created!" );
-      solvers.push(  new Solver( configs[i] ) ); // solver 0 should exist already!
+      solvers.push(  new Solver( &configs[i] ) ); // solver 0 should exist already!
     }
 
     // tell the communication system about the solver
@@ -650,4 +651,4 @@ void PSolver::setDrupFile(FILE* drupFile)
 }
 
 
-};
+} // namespace Riss

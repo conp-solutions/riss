@@ -4,8 +4,10 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "coprocessor/Circuit.h"
 
+using namespace Riss;
+using namespace std;
 
-using namespace Coprocessor;
+namespace Coprocessor {
 
 Circuit::Circuit(CP3Config& _config, ClauseAllocator& _ca)
 : config( _config), ca (_ca), big(0)
@@ -1006,3 +1008,5 @@ void Circuit::Gate::print(ostream& stream) const
     cerr << ")" << endl;
   }
 }
+
+} // namespace Coprocessor

@@ -10,31 +10,26 @@
 
 #include "riss/core/Solver.h"
 
-using namespace Riss;
-
 namespace Pcasso {
-    class SplitterSolver : public Solver {
-      
-      CoreConfig& coreConfig;
-      
-    public:
-	SplitterSolver (CoreConfig& config)
-	 : Solver(config) 
-	 , coreConfig( config )
-	 {}
-      
-      
-        virtual ~SplitterSolver() {
-        }
-        virtual void dummy() = 0;
-        void inline kill(){ // Davide>
-        	printf("\n"); printf("*** INTERRUPTED ***\n");
-        	_exit(1);
-        }
-    };
 
-}
+class SplitterSolver : public Riss::Solver {
+      
+    Riss::CoreConfig& coreConfig;
+      
+public:
+	SplitterSolver (Riss::CoreConfig& config) : Riss::Solver(&config), coreConfig( config ) {}
+      
+    virtual ~SplitterSolver() {}
+    virtual void dummy() = 0;
 
+    // Davide>
+    void inline kill(){
+    	printf("\n"); printf("*** INTERRUPTED ***\n");
+    	_exit(1);
+    }
+};
+
+} // namespace Pcasso
 
 #endif	/* SPLITTERSOLVER_H */
 
