@@ -28,8 +28,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 **************************************************************************************************/
 
 
-#ifndef Minisat_SolverTypes_h
-#define Minisat_SolverTypes_h
+#ifndef RISS_Minisat_SolverTypes_h
+#define RISS_Minisat_SolverTypes_h
 
 #include <cstdio>
 #include <cstring>

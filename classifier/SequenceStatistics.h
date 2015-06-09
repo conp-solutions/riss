@@ -4,8 +4,8 @@
  *  Created on: Oct 22, 2013
  *      Author: gardero
  */
-#ifndef SECUENCESTATISTICS_H_
-#define SECUENCESTATISTICS_H_
+#ifndef RISS_SECUENCESTATISTICS_H_
+#define RISS_SECUENCESTATISTICS_H_
 
 #include <vector>
 #include <iterator>

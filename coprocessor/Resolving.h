@@ -2,8 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef RESOLVING_H
-#define RESOLVING_H
+#ifndef RISS_RESOLVING_H
+#define RISS_RESOLVING_H
 
 #include "coprocessor/CoprocessorTypes.h"
 

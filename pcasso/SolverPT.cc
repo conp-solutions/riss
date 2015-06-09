@@ -155,7 +155,7 @@ bool SolverPT::addClause_(vec<Lit>& ps, unsigned int pt_level) // Davide> pt_lev
 	else if (ps.size() == 1){
 		if( value(ps[0]) == l_False ){
 			assert(false && "addClause_ Unuseful");
-			Debug::PRINTLN_NOTE("NOTE: tried to add unary false clause");
+			PcassoDebug::PRINTLN_NOTE("NOTE: tried to add unary false clause");
 			if( !disable_stats ){
 				localStat.changeI(n_import_shcl_unsatID, 1);
 			}
@@ -428,8 +428,8 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsign
       Otherwise, this can be useless
 	 */
 	if(opt_lbd_minimization && out_learnt.size()<=lbSizeMinimizingClause) {
-		Debug::PRINTLN_DEBUG("START MINIMIZING LEARNT CLAUSE");
-		Debug::PRINTLN_DEBUG(out_learnt);
+		PcassoDebug::PRINTLN_DEBUG("START MINIMIZING LEARNT CLAUSE");
+		PcassoDebug::PRINTLN_DEBUG(out_learnt);
 		// Find the LBD measure
 		lbd = 0;
 		lbd_marker.nextStep();
@@ -453,7 +453,7 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsign
 			// Davide>
 			// The binary clauses watched by ~out_learnt[0]
 			vec<Watcher>&  wbin  = watches[p];//p is ~outlearnt[0]
-			Debug::PRINTLN_DEBUG("WBIN IS: ");
+			PcassoDebug::PRINTLN_DEBUG("WBIN IS: ");
 			int nb = 0;
 			for(int k = 0;k<wbin.size();k++) {
 				if( !wbin[k].isBinary() ) continue;
@@ -1179,7 +1179,7 @@ lbool SolverPT::solve_() {
 			if(!protect_root_node || tnode->id()!=0) {
 				if(tnode->isOnlyChildScenario() && conflict_budget<0 ){
 					localStat.changeI(diversification_stop_nodes_ID,1);
-					Debug::PRINTLN_DEBUG("NOTE: Diversification limited solver\n" );
+					PcassoDebug::PRINTLN_DEBUG("NOTE: Diversification limited solver\n" );
 					conflict_budget=conflicts+opt_diversification_conflict_limit*(curPTLevel+1);
 				}
 			}
@@ -1535,7 +1535,7 @@ bool SolverPT::addSharedLearnt(vec<Lit>& ps, unsigned int pt_level){
 			cancelUntil(0); // its a unit, you have to go to level 0 in any case!
 			//starts++;
 			if( value(ps[0]) == l_False ){
-				Debug::PRINTLN_NOTE("NOTE: tried to add unary false clause");
+				PcassoDebug::PRINTLN_NOTE("NOTE: tried to add unary false clause");
 				if( !disable_stats ){
 					localStat.changeI(n_import_shcl_unsatID, 1);
 				}

@@ -2,8 +2,8 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef LITERALADDITION_HH
-#define LITERALADDITION_HH
+#ifndef RISS_LITERALADDITION_HH
+#define RISS_LITERALADDITION_HH
 
 #include "riss/core/Solver.h"
 #include "coprocessor/Technique.h"

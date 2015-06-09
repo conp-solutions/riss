@@ -5,8 +5,8 @@
  * Created on December 26, 2012, 1:45 AM
  */
 
-#ifndef SPLITTERSOLVER_H
-#define	SPLITTERSOLVER_H
+#ifndef PCASSO_SPLITTERSOLVER_H
+#define	PCASSO_SPLITTERSOLVER_H
 
 #include "riss/core/Solver.h"
 

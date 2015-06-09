@@ -5,8 +5,8 @@
  * Created on April 22, 2013, 1:53 PM
  */
 
-#ifndef VSIDSSPLITTING_H
-#define	VSIDSSPLITTING_H
+#ifndef PCASSO_VSIDSSPLITTING_H
+#define	PCASSO_VSIDSSPLITTING_H
 
 #include "riss/mtl/Vec.h"
 #include "riss/core/SolverTypes.h"

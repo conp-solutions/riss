@@ -6,8 +6,8 @@ on the Communicator implementation.
 
 **************************************************************************************************/
 
-#ifndef Minisat_SolverCommunication_h
-#define Minisat_SolverCommunication_h
+#ifndef RISS_Minisat_SolverCommunication_h
+#define RISS_Minisat_SolverCommunication_h
 
 #include <cmath>
 

@@ -2,8 +2,8 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef BCE_HH
-#define BCE_HH
+#ifndef RISS_BCE_HH
+#define RISS_BCE_HH
 
 #include "riss/core/Solver.h"
 #include "coprocessor/Technique.h"

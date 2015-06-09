@@ -13,8 +13,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
  *  This file provides the interface between the Minisat based SAT solver für BMC
  */
 
-#ifndef BMCwrapper_h
-#define BMCwrapper_h
+#ifndef RISS_BMCwrapper_h
+#define RISS_BMCwrapper_h
 
 #include "riss/core/Solver.h"
 

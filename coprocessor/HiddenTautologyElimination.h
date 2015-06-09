@@ -2,8 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef HIDDENTAUTOLOGYELIMINATION_HH
-#define HIDDENTAUTOLOGYELIMINATION_HH
+#ifndef RISS_HIDDENTAUTOLOGYELIMINATION_HH
+#define RISS_HIDDENTAUTOLOGYELIMINATION_HH
 
 #include "riss/core/Solver.h"
 

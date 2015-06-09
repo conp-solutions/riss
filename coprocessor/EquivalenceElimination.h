@@ -2,8 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef EQUIVALENCEELIMINATION_HH
-#define EQUIVALENCEELIMINATION_HH
+#ifndef RISS_EQUIVALENCEELIMINATION_HH
+#define RISS_EQUIVALENCEELIMINATION_HH
 
 #include "riss/core/Solver.h"
 

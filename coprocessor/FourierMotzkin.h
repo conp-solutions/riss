@@ -2,8 +2,8 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef FOURIERMOTZKIN_HH
-#define FOURIERMOTZKIN_HH
+#ifndef RISS_FOURIERMOTZKIN_HH
+#define RISS_FOURIERMOTZKIN_HH
 
 #include "riss/core/Solver.h"
 #include "coprocessor/Technique.h"

@@ -2,8 +2,8 @@
  *  Useful functions for parsing
  */
 
-#ifndef USEFUL_H
-#define USEFUL_H
+#ifndef RISS_USEFUL_H
+#define RISS_USEFUL_H
 
 #include <vector>
 #include <string>

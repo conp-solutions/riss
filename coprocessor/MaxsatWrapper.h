@@ -2,8 +2,8 @@
 Copyright (c) 2015, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef MAXSATWRAPPER_HH
-#define MAXSATWRAPPER_HH
+#ifndef RISS_MAXSATWRAPPER_HH
+#define RISS_MAXSATWRAPPER_HH
 
 #include "coprocessor/Coprocessor.h"
 

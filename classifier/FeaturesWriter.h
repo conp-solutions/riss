@@ -5,8 +5,8 @@
  *      Author: gardero
  */
 
-#ifndef FEATURESWRITER_H_
-#define FEATURESWRITER_H_
+#ifndef RISS_FEATURESWRITER_H_
+#define RISS_FEATURESWRITER_H_
 
 #include <ostream>
 #include <string>

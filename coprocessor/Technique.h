@@ -2,8 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef TECHNIQUE_HH
-#define TECHNIQUE_HH
+#ifndef RISS_TECHNIQUE_HH
+#define RISS_TECHNIQUE_HH
 
 #include "riss/core/Solver.h"
 #include "riss/utils/System.h"

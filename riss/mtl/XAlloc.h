@@ -18,8 +18,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 **************************************************************************************************/
 
 
-#ifndef Minisat_XAlloc_h
-#define Minisat_XAlloc_h
+#ifndef RISS_Minisat_XAlloc_h
+#define RISS_Minisat_XAlloc_h
 
 #include <errno.h>
 #include <stdlib.h>

@@ -5,8 +5,8 @@
  * Created on December 23, 2012, 6:07 PM
  */
 
-#ifndef LOOKAHEADSPLITTING_H
-#define	LOOKAHEADSPLITTING_H
+#ifndef PCASSO_LOOKAHEADSPLITTING_H
+#define	PCASSO_LOOKAHEADSPLITTING_H
 
 #include "riss/mtl/Vec.h"
 #include "riss/core/SolverTypes.h"

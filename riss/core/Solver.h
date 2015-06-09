@@ -27,8 +27,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef Minisat_Solver_h
-#define Minisat_Solver_h
+#ifndef RISS_Minisat_Solver_h
+#define RISS_Minisat_Solver_h
 
 #include "riss/mtl/Vec.h"
 #include "riss/mtl/Heap.h"

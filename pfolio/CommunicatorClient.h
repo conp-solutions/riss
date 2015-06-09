@@ -2,8 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef COMMUNICATORCLIENT_H
-#define COMMUNICATORCLIENT_H
+#ifndef RISS_COMMUNICATORCLIENT_H
+#define RISS_COMMUNICATORCLIENT_H
 
 #include "riss/core/Communication.h"
 #include "riss/core/Solver.h"

@@ -9,8 +9,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef Config_h
-#define Config_h
+#ifndef RISS_Config_h
+#define RISS_Config_h
 
 #include "riss/utils/Options.h"
 
@@ -141,6 +141,9 @@ else if( optionSet == "INCSOLVE" ) {
 }
 else if (optionSet == "PPMAXSAT2015" ) {
  parseOptions ( "-enabled_cp3 -cp3_stats -bve -bve_red_lits=1 -fm -no-cp3_fm_vMulAMO -unhide -cp3_uhdIters=5 -cp3_uhdEE -cp3_uhdTrans -bce -bce-cle -no-bce-bce -bce-bcm -cp3_iters=2 -rlevel=2", false );
+}
+else if (optionSet == "CORESIZE2" ) {
+ parseOptions ( "-size_core=2", false );
 }
 /*
  *  Options for Riss 427
@@ -372,6 +375,9 @@ else if( optionSet == "plain_ASTR" ) {
 }
 else if( optionSet == "plain_BVE" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -bve -bve_red_lits=1",false);
+}
+else if( optionSet == "BVEEARLY" ) {
+    parseOptions(" -bve_early",false);
 }
 else if( optionSet == "plain_ABVA" ) {
     parseOptions(" -enabled_cp3 -cp3_stats -bva",false);

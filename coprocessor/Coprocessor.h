@@ -2,8 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef COPROCESSOR_HH
-#define COPRECESSOR_HH
+#ifndef RISS_COPROCESSOR_HH
+#define RISS_COPRECESSOR_HH
 
 
 #include "riss/core/Solver.h"

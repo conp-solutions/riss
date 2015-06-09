@@ -4,8 +4,8 @@ Copyright (c) 2012, All rights reserved, Norbert Manthey
 **************************************************************************************************/
 
 
-#ifndef PARALLEL_HH
-#define PARALLEL_HH
+#ifndef RISS_LOCKCOLLECTION_HH
+#define RISS_LOCKCOLLECTION_HH
 
 #include <cstdio>
 #include <iostream>

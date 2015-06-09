@@ -2,8 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, Kilian Gebhardt, All rights reserved.
 **************************************************************************************************/
 
-#ifndef SUBSUMPTION_HH
-#define SUBSUMPTION_HH
+#ifndef RISS_SUBSUMPTION_HH
+#define RISS_SUBSUMPTION_HH
 
 #include "riss/core/Solver.h"
 

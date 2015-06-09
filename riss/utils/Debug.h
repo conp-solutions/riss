@@ -5,8 +5,8 @@
  *      Author: tirrolo
  */
 
-#ifndef PCASSODEBUG_H_
-#define PCASSODEBUG_H_
+#ifndef PCASSO_DEBUG_H_
+#define PCASSO_DEBUG_H_
 
 #include <iostream>
 #include "riss/mtl/Vec.h"
@@ -22,7 +22,7 @@
   #define DOUT(x)
 #endif
 
-namespace Debug {
+namespace PcassoDebug {
 
 static const int pcasso_debug_verbosity = 0;
 

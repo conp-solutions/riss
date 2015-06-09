@@ -2,10 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-
-
-#ifndef SLS_H
-#define SLS_H
+#ifndef RISS_SLS_H
+#define RISS_SLS_H
 
 #include "coprocessor/CoprocessorTypes.h"
 #include "coprocessor/Technique.h"

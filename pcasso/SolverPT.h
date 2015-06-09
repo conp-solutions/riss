@@ -5,8 +5,8 @@
  * Created on December 24, 2012, 4:04 PM
  */
 
-#ifndef SOLVERPT_H
-#define	SOLVERPT_H
+#ifndef PCASSO_SOLVERPT_H
+#define	PCASSO_SOLVERPT_H
 
 #include "riss/mtl/Vec.h"
 #include "riss/core/SolverTypes.h"

@@ -2,8 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef CIRCUIT_HH
-#define CIRCUIT_HH
+#ifndef RISS_CIRCUIT_HH
+#define RISS_CIRCUIT_HH
 
 #include <cstring>
 

@@ -4,8 +4,8 @@
    PartitionTree. 
  **/
 
-#ifndef LEVEL_POOL_H
-#define LEVEL_POOL_H
+#ifndef PCASSO_LEVEL_POOL_H
+#define PCASSO_LEVEL_POOL_H
 
 #include <string>
 #include <vector>

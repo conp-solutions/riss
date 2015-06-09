@@ -2,8 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef BVA_HH
-#define BVA_HH
+#ifndef RISS_BVA_HH
+#define RISS_BVA_HH
 
 #include "riss/core/Solver.h"
 #include "coprocessor/Technique.h"

@@ -2,8 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef UNHIDING_HH
-#define UNHIDING_HH
+#ifndef RISS_UNHIDING_HH
+#define RISS_UNHIDING_HH
 
 #include "riss/core/Solver.h"
 

@@ -5,8 +5,8 @@
  *      Author: gardero
  */
 
-#ifndef CONFIGURATIONS_H_
-#define CONFIGURATIONS_H_
+#ifndef RISS_CONFIGURATIONS_H_
+#define RISS_CONFIGURATIONS_H_
 #include <vector>
 #include <string>
 #include <stdio.h>

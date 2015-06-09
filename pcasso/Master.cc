@@ -311,8 +311,8 @@ int Master::run(){
 							splitQueue.pop_front();
 						}
 					} while ( node->getState() == TreeNode::unsat );
-					Debug::PRINT_NOTE("M: SPLITTING NODE ");
-					Debug::PRINTLN_NOTE(node->getPosition());
+					PcassoDebug::PRINT_NOTE("M: SPLITTING NODE ");
+					PcassoDebug::PRINTLN_NOTE(node->getPosition());
 					if( !fail ){
 						assert(node != 0 );
 						if( !splittFormula(node) ) continue;	// if it fails, retry!
@@ -508,7 +508,7 @@ int Master::run(){
 		if(threadData[i].solver == 0){ continue; }
 		threadData[i].solver->interrupt(); // Yeah, it takes time.
 		// threadData[i].solver->kill();
-		Debug::PRINTLN_NOTE("thread KILLED");
+		PcassoDebug::PRINTLN_NOTE("thread KILLED");
 		if( threadData[i].s == idle || threadData[i].handle == 0) continue;
 		// pthread_cancel(threadData[i].handle);
 		//if( err == ESRCH ) fprintf( stderr, "c specified thread does not exist\n");
@@ -687,16 +687,16 @@ Master::solveInstance (void* data)
 		fprintf(stderr, "solve instance with id %d that solves node %d\n", tData.id, tData.nodeToSolve->id());
 	fprintf(stderr, "thread %d starts solving a node at %lld with the node solve time %lld\n", tData.id, Master::getCpuTimeMS(), tData.nodeToSolve->solveTime );
 	}
-	Debug::PRINT_NOTE("STARTED TO SOLVE NODE ");
-	Debug::PRINT_NOTE(tData.nodeToSolve->getPosition());
-	Debug::PRINT_NOTE(" with PT_Level ");
-	Debug::PRINTLN_NOTE(tData.nodeToSolve->getPTLevel());
+	PcassoDebug::PRINT_NOTE("STARTED TO SOLVE NODE ");
+	PcassoDebug::PRINT_NOTE(tData.nodeToSolve->getPosition());
+	PcassoDebug::PRINT_NOTE(" with PT_Level ");
+	PcassoDebug::PRINTLN_NOTE(tData.nodeToSolve->getPTLevel());
 
 	if( UseHardwareCores && hardwareCores.size() > 0) { // pin this thread to the specified core
 	  cpu_set_t mask;
 	  CPU_ZERO(&mask);CPU_SET(tData.id,&mask);
 	  if(sched_setaffinity(0,sizeof(cpu_set_t),&mask)!=0){
-	    Debug::PRINTLN_NOTE("Failed to pin thread to core");    
+	    PcassoDebug::PRINTLN_NOTE("Failed to pin thread to core");    
 	  }
 	}
 	
@@ -917,7 +917,7 @@ Master::splitInstance (void* data)
 	  cpu_set_t mask;
 	  CPU_ZERO(&mask);CPU_SET(tData.id,&mask);
 	  if(sched_setaffinity(0,sizeof(cpu_set_t),&mask)!=0){
-	    Debug::PRINTLN_NOTE("Failed to pin thread to core");    
+	    PcassoDebug::PRINTLN_NOTE("Failed to pin thread to core");    
 	  }
 	}
 
@@ -1040,8 +1040,8 @@ Master::splitInstance (void* data)
       } */     
 
 		// tell statistics
-		Debug::PRINT_NOTE("c add to created nodes: ");
-		Debug::PRINTLN_NOTE((*splits).size());
+		PcassoDebug::PRINT_NOTE("c add to created nodes: ");
+		PcassoDebug::PRINTLN_NOTE((*splits).size());
 		statistics.changeI( master.createdNodeID, (*splits).size() );
 		statistics.changeI(master.splitterCallsID, 1);
 
@@ -1296,11 +1296,11 @@ Master::killUnsatChildren(unsigned int i){
 		TreeNode* curNode = threadData[j].nodeToSolve;
 
 		if(solvedNode->isAncestorOf((*curNode))){
-			Debug::PRINTLN_DEBUG("PREPARING TO KILL A NODE");
+			PcassoDebug::PRINTLN_DEBUG("PREPARING TO KILL A NODE");
 			solvedUnsat ++;
 			stopThread( j );
 			// threadData[j].s = unclean;
-			Debug::PRINTLN_DEBUG("KILLED");
+			PcassoDebug::PRINTLN_DEBUG("KILLED");
 			//				notify();
 		}
 	}
@@ -1309,7 +1309,7 @@ Master::killUnsatChildren(unsigned int i){
 		statistics.changeI( stoppedUnsatID, solvedUnsat );
 	}
 	else{
-		Debug::PRINTLN_NOTE("M: DELETING POOLS ");
+		PcassoDebug::PRINTLN_NOTE("M: DELETING POOLS ");
 		assert(threadData[i].nodeToSolve != 0);
 		threadData[i].nodeToSolve->removePoolRecursive(true);
 	}

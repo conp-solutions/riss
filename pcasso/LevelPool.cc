@@ -44,7 +44,7 @@ bool LevelPool::add_shared(vec<Lit>& lits, unsigned int nodeID, bool disable_dup
 		if(writeP > endP) endP = writeP;
 	}
 	else{ // write from the beginning
-		Debug::PRINTLN_NOTE("write from beginning!");
+		PcassoDebug::PRINTLN_NOTE("write from beginning!");
 		full = true;
 
 		endP = writeP;

@@ -1,8 +1,8 @@
 /********************************************************************[BoundedVariableElimination.h]
 Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
-#ifndef BVE_HH
-#define BVE_HH
+#ifndef RISS_BVE_HH
+#define RISS_BVE_HH
 
 #include "riss/core/Solver.h"
 

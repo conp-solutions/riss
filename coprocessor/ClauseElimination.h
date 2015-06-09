@@ -2,8 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef CLAUSEELIMINATION_HH
-#define CLAUSEELIMINATION_HH
+#ifndef RISS_CLAUSEELIMINATION_HH
+#define RISS_CLAUSEELIMINATION_HH
 
 #include "riss/core/Solver.h"
 

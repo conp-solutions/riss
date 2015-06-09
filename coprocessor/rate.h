@@ -2,8 +2,8 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef RATE_HH
-#define RATE_HH
+#ifndef RISS_RATE_HH
+#define RISS_RATE_HH
 
 #include "riss/core/Solver.h"
 #include "coprocessor/Technique.h"

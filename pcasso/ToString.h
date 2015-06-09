@@ -1,5 +1,5 @@
-#ifndef TOSTRING_H
-#define TOSTRING_H
+#ifndef RISS_TOSTRING_H
+#define RISS_TOSTRING_H
 
 #include <sstream>
 #include <string>

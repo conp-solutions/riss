@@ -561,17 +561,17 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
         }
         if(opt_splitting_method==1 && i == splitting->size()){
             (*splits)->push(childClauses);
-            Debug::PRINT_NOTE("Child-");
-            Debug::PRINT_NOTE(i+1);
-            Debug::PRINTLN_NOTE(":");
+            PcassoDebug::PRINT_NOTE("Child-");
+            PcassoDebug::PRINT_NOTE(i+1);
+            PcassoDebug::PRINTLN_NOTE(":");
             continue;
         }
         decList = new vec<Lit>();
         (*splitting)[i]->copyTo(*decList);
-        Debug::PRINT_NOTE("Child-");
-        Debug::PRINT_NOTE(i+1);
-        Debug::PRINTLN_NOTE(":");
-        Debug::PRINTLN_NOTE(*decList);
+        PcassoDebug::PRINT_NOTE("Child-");
+        PcassoDebug::PRINT_NOTE(i+1);
+        PcassoDebug::PRINTLN_NOTE(":");
+        PcassoDebug::PRINTLN_NOTE(*decList);
         for(int j=0; j<decList->size();j++){
             clause = new vec<Lit>();
             clause->push((*decList)[j]);
@@ -581,8 +581,8 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
                 
         localValid=new vec<vec<Lit>* >();
         (*validAtLevel)[i]->copyTo(*localValid);
-        Debug::PRINT_NOTE(" Valids count: ");
-        Debug::PRINTLN_NOTE(localValid->size());
+        PcassoDebug::PRINT_NOTE(" Valids count: ");
+        PcassoDebug::PRINTLN_NOTE(localValid->size());
         for(int k=0; k<localValid->size();k++){
             clause = new vec<Lit>();
             (*localValid)[k]->copyTo(*clause);
@@ -608,8 +608,8 @@ lbool LookaheadSplitting::produceSplitting(vec<vec<vec<Lit>* >* > **splits, vec<
 
         (*splits)->push(childClauses);
     }*/
-    Debug::PRINT_NOTE("Max Clause Size = ");
-    Debug::PRINTLN_NOTE(maxClauseSize);
+    PcassoDebug::PRINT_NOTE("Max Clause Size = ");
+    PcassoDebug::PRINTLN_NOTE(maxClauseSize);
    /* if(opt_failed_literals)
        //fprintf(stderr, "splitter: Failed Literal \t\t\t = %d\n", failedLiterals.size());
     if(opt_nec_assign)
@@ -1592,10 +1592,10 @@ bool LookaheadSplitting::doubleLookahead(bool& sol, vec<Lit>& binClauses, vec<Li
      }
       preselectVar(sortedVarDLA, bestKListDLA);
      
-      Debug::PRINT_NOTE("splitter: Double Lookahead Preselection size = ");
-      Debug::PRINT_NOTE(bestKListDLA.size());
-      Debug::PRINT_NOTE(" out of ");
-      Debug::PRINTLN_NOTE(nVars());
+      PcassoDebug::PRINT_NOTE("splitter: Double Lookahead Preselection size = ");
+      PcassoDebug::PRINT_NOTE(bestKListDLA.size());
+      PcassoDebug::PRINT_NOTE(" out of ");
+      PcassoDebug::PRINTLN_NOTE(nVars());
     
     vec<Lit> positiveTrail;
     vec<Lit> negativeTrail;
@@ -1706,8 +1706,8 @@ bool LookaheadSplitting::doubleLookahead(bool& sol, vec<Lit>& binClauses, vec<Li
     varScore.clear(true);
     sortedVarDLA.clear(true);
     bestKListDLA.clear(true);
-    Debug::PRINT_NOTE("splitter: Lookahead Learning Size = ");
-    Debug::PRINTLN_NOTE(binClauses.size());
+    PcassoDebug::PRINT_NOTE("splitter: Lookahead Learning Size = ");
+    PcassoDebug::PRINTLN_NOTE(binClauses.size());
     return false;
 }
 

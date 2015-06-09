@@ -2558,6 +2558,11 @@ lbool Solver::solve_()
     int solveVariables = nVars();
     int currentSDassumptions = 0;
     
+    if ( config.opt_inc_verb > 0 ) cerr << "c solve with :" 
+       << " vars: " << nVars()
+       << " cls: " << clauses.size()
+       << " assumptions: " << assumptions.size()
+       << endl; 
     
     printSearchHeader();
     

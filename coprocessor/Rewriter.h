@@ -2,8 +2,8 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef REWRITER_HH
-#define REWRITER_HH
+#ifndef RISS_REWRITER_HH
+#define RISS_REWRITER_HH
 
 #include "riss/core/Solver.h"
 #include "coprocessor/Technique.h"

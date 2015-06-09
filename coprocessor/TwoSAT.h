@@ -2,8 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef TWOSAT_HH
-#define TWOSAT_HH
+#ifndef RISS_TWOSAT_HH
+#define RISS_TWOSAT_HH
 
 #include "riss/core/Solver.h"
 

@@ -4,8 +4,8 @@
  *  Created on: Oct 21, 2013
  *      Author: gardero
  */
-#ifndef GRAPH_H_
-#define GRAPH_H_
+#ifndef RISS_GRAPH_H_
+#define RISS_GRAPH_H_
 
 #include <vector>
 #include "classifier/SequenceStatistics.h"

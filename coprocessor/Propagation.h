@@ -2,8 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef PROPAGATION_HH
-#define PROPAGATION_HH
+#ifndef RISS_PROPAGATION_HH
+#define RISS_PROPAGATION_HH
 
 #include "riss/core/Solver.h"
 
