@@ -63,7 +63,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #endif
 
 //
-// forward declaration
+// forward declarations
 //
 namespace Coprocessor {
   class Preprocessor;
@@ -85,7 +85,6 @@ namespace Pcasso {
 }
 #endif
 
-class Communicator;
 
 // since template methods need to be in headers ...
 extern Riss::IntOption opt_verboseProof;
@@ -93,6 +92,7 @@ extern Riss::BoolOption opt_rupProofOnly;
 
 namespace Riss {
 
+class Communicator;
 class OnlineProofChecker; 
 class IncSolver;
  
@@ -366,8 +366,7 @@ protected:
     Heap<VarOrderLt>    order_heap;       // A priority queue of variables ordered with respect to the variable activity.
     double              progress_estimate;// Set by 'search()'.
     bool                remove_satisfied; // Indicates whether possibly inefficient linear scan for satisfied clauses should be performed in 'simplify'.
-    MarkArray lbd_marker;
-    //vec<unsigned long>  permDiff;         // permDiff[var] contains the current conflict number... Used to count the number of  LBD
+    MarkArray           lbd_marker;
     
 #ifdef UPDATEVARACTIVITY
     // UPDATEVARACTIVITY trick (see competition'09 companion paper)
@@ -452,11 +451,10 @@ protected:
 public:
     bool addUnitClauses( const vec< Lit >& other );		// use the given trail as starting point, return true, if fails!
 protected:
-  
     template<typename T>
-    int computeLBD(const T &clause); // Calculates the Literals Block Distance, which is the number of
-                                  // different decision levels in a clause or list of literals.
-     
+    int computeLBD(const T &lits); // Calculates the Literals Block Distance, which is the number of
+                                     // different decision levels in a clause or list of literals.
+    
     /** perform minimization with binary clauses of the formula
      *  @param lbd the current calculated LBD score of the clause
      *  @return true, if the clause has been shrinked
@@ -573,9 +571,7 @@ protected:
       LitPair() :otherMatch(lit_Undef), replaceWith(lit_Undef) {}
     };
     vec< LitPair > erRewriteInfo; /// vector that stores the information to rewrite new learned clauses
-        
-
-
+    
     /** fill the current variable assignment into the given vector */
     void fillLAmodel(vec<LONG_INT>& pattern, const int steps, vec<Var>& relevantVariables ,const bool moveOnly = false); // fills current model into variable vector
     
@@ -583,13 +579,11 @@ protected:
      * @return false, instance is unsatisfable
      */
     bool laHack(Riss::vec< Riss::Lit >& toEnqueue);
- 
-
     /** concurrent clause strengthening, but interleaved instead of concurrent ...
     *  @return false, if the formula is proven to be unsatisfiable
     */
     bool interleavedClauseStrengthening();
-
+ 
     // Static helpers:
     //
 
@@ -633,8 +627,8 @@ protected:
   int maxLaNumber;	     // maximum number of LAs allowed
   int topLevelsSinceLastLa; // number of learned top level units since last LA
   int laEEvars,laEElits;    // number of equivalent literals
-  vector< vector< Lit > > localLookAheadProofClauses;
-  vector<Lit> localLookAheadTmpClause;
+  std::vector< std::vector< Lit > > localLookAheadProofClauses;
+  std::vector<Lit> localLookAheadTmpClause;
   
   // real data
   Lit hstry[6];
@@ -651,7 +645,6 @@ protected:
  
   int simplifyIterations; // number of visiting level 0 until simplification is to be performed
   int learnedDecisionClauses;
-
   bool doAddVariablesViaER; // indicator for allowing ER or not
 
   // stats for learning clauses
@@ -699,8 +692,8 @@ protected:
   bool analyzeNewLearnedClause( const CRef newLearnedClause );
 
   // helper data structures
-  vector< int > analyzePosition; // for full probing approximation
-  vector< int > analyzeLimits; // all combination limits for full probing
+  std::vector< int > analyzePosition; // for full probing approximation
+  std::vector< int > analyzeLimits; // all combination limits for full probing
   
  
   // UHLE during search with learnt clauses:
@@ -717,9 +710,6 @@ protected:
    * @return true, if the clause has been shrinked, false otherwise (then, the LBD also stays the same)
    */
   bool erRewrite(vec<Lit>& learned_clause, unsigned int& lbd );
-
-  
-  
 // contrasat hack
   
     bool      pq_order;           // If true, use a priority queue to decide the order in which literals are implied
@@ -878,8 +868,8 @@ protected:
     bool   activityBasedRemoval;     // use minisat or glucose style of clause removal and activities
     int    lbd_core_threshold;        // threadhold to move clause from learnt to formula (if LBD is low enough)
     double learnts_reduce_fraction;   // fraction of how many learned clauses should be removed
-    
-    
+
+
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;
 public:     
@@ -905,13 +895,13 @@ public:
 
   /** return extra variable information (should be called for top level units only!) */
   uint64_t variableExtraInfo( const Var& v ) const ;
-  
+
   /** temporarly enable or disable extended resolution, to ensure that the number of variables remains the same */
   void setExtendedResolution( bool enabled ) { doAddVariablesViaER = enabled; }
   
   /** query whether extended resolution is enabled or not */
   bool getExtendedResolution() const { return doAddVariablesViaER; }
-
+  
 /// for qprocessor
 public:
 // 	    void writeClauses( std::ostream& stream ) {
@@ -1007,11 +997,11 @@ inline void Solver::insertVarOrder(Var x) {
 inline void Solver::varDecayActivity() { var_inc *= (1 / var_decay); }
 inline void Solver::varBumpActivity(Var v, double inverseRatio) { varBumpActivityD(v, var_inc / (double) inverseRatio); }
 inline void Solver::varBumpActivityD(Var v, double inc) {
-    DOUT( if( config.opt_printDecisions > 1) cerr << "c bump var activity for " << v+1 << " with " << activity[v] << " by " << inc << endl; ) ;
+  DOUT( if( config.opt_printDecisions > 1) std::cerr << "c bump var activity for " << v+1 << " with " << activity[v] << " by " << inc << std::endl; ) ;
     activity[v] = ( useVSIDS * activity[v] ) + inc; // interpolate between VSIDS and VMTF here!
     // NOTE this code is also used in extended clause learning, and restricted extended resolution
     if ( activity[v] > 1e100 ) {
-	DOUT( if( config.opt_printDecisions > 0) cerr << "c rescale decision heap" << endl; ) ;
+	DOUT( if( config.opt_printDecisions > 0) std::cerr << "c rescale decision heap" << std::endl; ) ;
         // Rescale:
         for (int i = 0; i < nVars(); i++)
             activity[i] *= 1e-100;
@@ -1023,13 +1013,13 @@ inline void Solver::varBumpActivityD(Var v, double inc) {
 
 inline void Solver::claDecayActivity() { cla_inc *= (1 / clause_decay); }
 inline void Solver::claBumpActivity (Clause& c, double inverseRatio) {
-  DOUT( if( config.opt_removal_debug > 1) cerr << "c bump clause activity for " << c << " with " << c.activity() << " by " << inverseRatio << endl; ) ;
+  DOUT( if( config.opt_removal_debug > 1) std::cerr << "c bump clause activity for " << c << " with " << c.activity() << " by " << inverseRatio << std::endl; ) ;
         if ( (c.activity() += cla_inc / inverseRatio) > 1e20 ) {
             // Rescale:
             for (int i = 0; i < learnts.size(); i++)
                 ca[learnts[i]].activity() *= 1e-20;
             cla_inc *= 1e-20; 
-  DOUT( if( config.opt_removal_debug > 1) cerr << "c rescale clause activities" << endl; ) ;
+  DOUT( if( config.opt_removal_debug > 1) std::cerr << "c rescale clause activities" << std::endl; ) ;
 	}
 }
             
@@ -1098,7 +1088,7 @@ inline bool     Solver::solve         (const vec<Lit>& assumps){ budgetOff(); as
 inline lbool    Solver::solveLimited  (const vec<Lit>& assumps){ assumps.copyTo(assumptions); return solve_(); }
 inline void     Solver::setRandomSeed (double seed) { assert(seed != 0); random_seed = seed; }
 inline bool     Solver::okay          ()      const   { return ok; }
-
+    
 inline void     Solver::toDimacs     (const char* file){ vec<Lit> as; toDimacs(file, as); }
 inline void     Solver::toDimacs     (const char* file, Lit p){ vec<Lit> as; as.push(p); toDimacs(file, as); }
 inline void     Solver::toDimacs     (const char* file, Lit p, Lit q){ vec<Lit> as; as.push(p); as.push(q); toDimacs(file, as); }
@@ -1218,8 +1208,8 @@ namespace Riss { // open namespace again!
     if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) ) return; // no proof, or delete and noDrup
 
     if( communication != 0 ) { // if the solver is part of a portfolio, then produce a global proof!
-//       if( deleteFromProof ) cerr << "c [" << communication->getID() << "] remove clause " << clause << " to proof" << endl;
-//       else cerr << "c [" << communication->getID() << "] add clause " << clause << " to proof" << endl;
+//       if( deleteFromProof ) std::cerr << "c [" << communication->getID() << "] remove clause " << clause << " to proof" << std::endl;
+//       else std::cerr << "c [" << communication->getID() << "] add clause " << clause << " to proof" << std::endl;
       if( deleteFromProof ) communication->getPM()->delFromProof(clause, remLit, communication->getID(), false ); // first version: work on global proof only! TODO: change to local!
       else communication->getPM()->addToProof(clause, remLit, communication->getID(), false ); // first version: work on global proof only!
       return;
@@ -1242,14 +1232,14 @@ namespace Riss { // open namespace again!
     fprintf(drupProofFile, "0\n");
     
     if( config.opt_verboseProof == 2 ) {
-      cerr << "c [PROOF] ";
-      if( deleteFromProof ) cerr << " d ";
+      std::cerr << "c [PROOF] ";
+      if( deleteFromProof ) std::cerr << " d ";
       for (int i = 0; i < clause.size(); i++) {
 	if( clause[i] == lit_Undef ) continue;
-	cerr << clause[i] << " ";
+	std::cerr << clause[i] << " ";
       }    
-      if( deleteFromProof && remLit != lit_Undef ) cerr << remLit;
-      cerr << " 0" << endl;
+      if( deleteFromProof && remLit != lit_Undef ) std::cerr << remLit;
+      std::cerr << " 0" << std::endl;
     }
   }
 
@@ -1275,8 +1265,8 @@ namespace Riss { // open namespace again!
     if( deleteFromProof ) fprintf(drupProofFile, "d ");
     fprintf(drupProofFile, "%i 0\n", (var(l) + 1) * (-2 * sign(l) + 1));  
     if( config.opt_verboseProof == 2 ) {
-      if( deleteFromProof ) cerr << "c [PROOF] d " << l << endl;
-      else cerr << "c [PROOF] " << l << endl;
+      if( deleteFromProof ) std::cerr << "c [PROOF] d " << l << std::endl;
+      else std::cerr << "c [PROOF] " << l << std::endl;
     }
   }
 
@@ -1289,7 +1279,7 @@ namespace Riss { // open namespace again!
       return;
     }
     fprintf(drupProofFile, "c %s\n", text);  
-    if( config.opt_verboseProof == 2 ) cerr << "c [PROOF] c " << text << endl;
+    if( config.opt_verboseProof == 2 ) std::cerr << "c [PROOF] c " << text << std::endl;
   }
 
   inline
@@ -1309,7 +1299,7 @@ namespace Riss { // open namespace again!
   {
   #ifdef DRATPROOF
     if( onlineDratChecker != 0 ) {
-      // cerr << "c add parsed clause to DRAT-OTFC: " << ps << endl;
+      // std::cerr << "c add parsed clause to DRAT-OTFC: " << ps << std::endl;
       onlineDratChecker->addParsedclause( ps );
     }
   #endif

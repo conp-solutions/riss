@@ -10,7 +10,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #include "coprocessor/CoprocessorTypes.h"
 #include "coprocessor/Propagation.h"
 
-using namespace Riss;
+// using namespace Riss;
 
 namespace Coprocessor {
 
@@ -19,7 +19,7 @@ namespace Coprocessor {
 class RATElimination : public Technique  {
     
   CoprocessorData& data;
-  Solver& solver;
+  Riss::Solver& solver;
   Coprocessor::Propagation& propagation;
   
   /// compare two literals
@@ -27,8 +27,8 @@ class RATElimination : public Technique  {
         CoprocessorData & data; // data to use for sorting
 	bool useComplements; // sort according to occurrences of complement, or actual literal
         bool operator () (int& x, int& y) const {
-	  if( useComplements ) return data[ ~toLit(x)] < data[ ~toLit(y) ]; 
-	  else return data[ toLit(x)] < data[ toLit(y) ]; 
+	  if( useComplements ) return data[ ~Riss::toLit(x)] < data[ ~Riss::toLit(y) ]; 
+	  else return data[ Riss::toLit(x)] < data[ Riss::toLit(y) ]; 
         }
         LitOrderRATEHeapLt(CoprocessorData & _data, bool _useComplements) : data(_data), useComplements(_useComplements) {}
   };
@@ -46,7 +46,7 @@ class RATElimination : public Technique  {
   int bcaCandidates, bcaResolutionChecks, bcaSubstitue, bcaSubstitueLits, bcaFullMatch, bcaATs, bcaStrenghening;
   
 public:
-  RATElimination( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data,  Solver& _solver, Coprocessor::Propagation& _propagation  );
+  RATElimination( CP3Config &_config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data,  Riss::Solver& _solver, Coprocessor::Propagation& _propagation  );
 
   void reset();
   
@@ -55,7 +55,7 @@ public:
   */
   bool process();
     
-  void printStatistics(ostream& stream);
+  void printStatistics(std::ostream& stream);
 
   void giveMoreSteps();
   
@@ -68,7 +68,7 @@ protected:
    * @param resolvent initially contains the literals of the other clause (except literal l), afterwards, stores the resolvent, if the resolvent is not a  tautology
    * @return true, if the resolvent is a tautology
    */
-  bool resolveUnsortedStamped( const Lit l, const Clause& d, MarkArray& ma, vector<Lit>& resolvent );
+  bool resolveUnsortedStamped( const Riss::Lit l, const Riss::Clause& d, Riss::MarkArray& ma, std::vector<Riss::Lit>& resolvent );
 
   /** run RAT elmination 
    @return true, if modifications have been applied
@@ -80,11 +80,11 @@ protected:
   */
   bool minimizeRAT();
   
-  bool shortATM(const CRef clause, const Lit left, int& trailPosition, vector<Lit>& atlits );
+  bool shortATM(const Riss::CRef clause, const Riss::Lit left, int& trailPosition, std::vector<Riss::Lit>& atlits );
   
-  bool propagateUnit(const Lit& unit, int& trailPosition);
+  bool propagateUnit(const Riss::Lit& unit, int& trailPosition);
   
-  void checkedAttach(const CRef clause, const int& detachTrailSize);
+  void checkedAttach(const Riss::CRef clause, const int& detachTrailSize);
   
   bool minimizeAT();
   

@@ -80,10 +80,10 @@ static inline void mergesort(T* field, const int32_t arraySize, LessThan lt)
 		helpArray = tmp;
     		swaps ++;
     }
-	// copy back original data into original vector!
+	// copy back original data into original std::vector!
 	if( (swaps & 1) != 0 ) { 
-			//cerr << "c swaps: " << swaps << endl;
-	  memcpy(helpArray, field, sizeof(T) * arraySize ); // copy currently sorted data into the other vector as well, if necessary!
+			//std::cerr << "c swaps: " << swaps << std::endl;
+	  memcpy(helpArray, field, sizeof(T) * arraySize ); // copy currently sorted data into the other std::vector as well, if necessary!
 	  T* tmp = field;
 	  field = helpArray;
 	  helpArray = tmp;
@@ -155,7 +155,7 @@ template <class T, class LessThan> void sort(vec<T>& v, LessThan lt) {
 template <class T> void sort(vec<T>& v) {
     sort(v, LessThan_default<T>()); }
 
-// Minisat sort for usual vector
+// Minisat sort for usual std::vector
 template <class T, class LessThan> void sort(std::vector<T>& v, LessThan lt) {
     sort((T*)&(v[0]), v.size(), lt); }
 template <class T> void sort(std::vector<T>& v) {

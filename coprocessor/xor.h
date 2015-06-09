@@ -14,8 +14,8 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 
 #include <vector>
 
-using namespace Riss;
-using namespace std;
+// using namespace Riss;
+// using namespace std;
 
 namespace Coprocessor {
 
@@ -40,24 +40,24 @@ class XorReasoning : public Technique  {
   
   /// compare two literals
   struct VarLt {
-        vector< vector <int> > & data;
+        std::vector< std::vector <int> > & data;
         bool operator () (int& x, int& y) const {
 	    return data[ x ].size() < data[ y].size(); 
         }
-        VarLt(vector<vector< int> > & _data) : data(_data) {}
+        VarLt(std::vector<std::vector< int> > & _data) : data(_data) {}
   };
   
   /** structure to use during simple gauss algorithm */
   class GaussXor {
   public:
-    vector<Var> vars;
+    std::vector<Riss::Var> vars;
     bool k; // polarity of XOR has to be true or false
     bool used; // indicate whether this constraint has been used for simplification already
     bool eq() const { return vars.size() == 2 ; }
     bool unit() const { return vars.size() == 1; }
-    Lit getUnitLit() const { return unit() ? mkLit(vars[0],!k) : lit_Undef; }
+    Riss::Lit getUnitLit() const { return unit() ? Riss::mkLit(vars[0],!k) : Riss::lit_Undef; }
     bool failed() const { return vars.size() == 0 && k; }
-    GaussXor( const Clause& c ) : k(true),used(false) { // build xor from clause
+    GaussXor( const Riss::Clause& c ) : k(true),used(false) { // build xor from clause
       vars.resize(c.size());
       for( int i = 0 ; i < c.size(); ++ i ){
 	vars[i] = var( c[i] );
@@ -70,13 +70,13 @@ class XorReasoning : public Technique  {
     
     /** add the other xor to this xor 
      * @param removed list of variables that have been removed from the xor
-     * @param v1 temporary vector
+     * @param v1 temporary std::vector
      */
-    void add ( const GaussXor& gx, vector<Var>& removed, vector<Var>& v1) {
+    void add ( const GaussXor& gx, std::vector<Riss::Var>& removed, std::vector<Riss::Var>& v1) {
       k = (k != gx.k); // set new k!
       v1 = vars; // be careful here, its a copy operation!
       vars.clear();
-      const vector<Var>& v2 = gx.vars;
+      const std::vector<Riss::Var>& v2 = gx.vars;
       // generate new vars!
       int n1 = 0,n2=0;
       while( n1 < v1.size() && n2 < v2.size() ) {
@@ -95,11 +95,11 @@ class XorReasoning : public Technique  {
     
   };
   
-  vec<CRef> reAddedClauses; /// clauses that have been added by reencoding intermediate XORs
+  Riss::vec<Riss::CRef> reAddedClauses; /// clauses that have been added by reencoding intermediate XORs
   
 public:
 
-  XorReasoning( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data,  Propagation& _propagation, EquivalenceElimination& _ee  );
+  XorReasoning( CP3Config &_config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data,  Propagation& _propagation, EquivalenceElimination& _ee  );
 
   void reset();
   
@@ -108,30 +108,30 @@ public:
   */
   bool process();
     
-  void printStatistics(ostream& stream);
+  void printStatistics(std::ostream& stream);
 
   void giveMoreSteps();
   
   void destroy();
   
   // remove index from all variable lists that are listed in x
-  void dropXor(int index, std::vector< Var >& x, vector< std::vector< int > >& occs);
+  void dropXor(int index, std::vector< Riss::Var >& x, std::vector< std::vector< int > >& occs);
   
   /** propagate found units in all related xors 
    * @return true if no conflict was found, false if a conflict was found
    */
-  bool propagate(vector< Lit >& unitQueue, MarkArray& ma, vector< std::vector< int > >& occs, vector< GaussXor >& xorList);
+  bool propagate(std::vector< Riss::Lit >& unitQueue, Riss::MarkArray& ma, std::vector< std::vector< int > >& occs, std::vector< GaussXor >& xorList);
 
 protected:
   
   /** find xors in the formula, with given max size */
-  bool findXor(vector< Coprocessor::XorReasoning::GaussXor >& xorList);
+  bool findXor(std::vector< Coprocessor::XorReasoning::GaussXor >& xorList);
   
   /** encodes the given xor, and stores the newly added clauses to the clause list, if the according optoin is specified */
   void addXor( GaussXor& simpX );
   
   /** add the given literals as a clause to Coprocessor */
-  CRef addClause( const Lit* lits, int size, bool learnt = false );
+  Riss::CRef addClause( const Riss::Lit* lits, int size, bool learnt = false );
   
   /** checks whether the newly added clauses subsume other clauses from the formula */
   void checkReaddedSubsumption();

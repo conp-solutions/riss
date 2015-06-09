@@ -39,6 +39,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "riss/utils/version.h" // include the file that defines the solver version
 
 using namespace Riss;
+using namespace std;
 
 //=================================================================================================
 

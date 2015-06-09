@@ -10,7 +10,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "riss/utils/ThreadController.h"
 #include "coprocessor/CP3Config.h"
-using namespace Riss;
+// using namespace Riss;
 
 namespace Coprocessor {
 
@@ -29,15 +29,15 @@ protected:
   int thisPelalty;              // how many attepts will be blocked, before the technique is allowed to perform preprocessing again
   int lastMaxPenalty;           // if the next simplification is unsuccessful, block the simplification for more than the given number
   
-  ClauseAllocator& ca;          // clause allocator for direct access to clauses
-  ThreadController& controller; // controller for parallel execution
+  Riss::ClauseAllocator& ca;          // clause allocator for direct access to clauses
+  Riss::ThreadController& controller; // controller for parallel execution
     
   bool didPrintCannotDrup;      // store whether the drup warning has been reported already
   bool didPrintCannotExtraInfo; // store whether the extraInfo warning has been reported already
     
 public:
   
-  Technique( CP3Config& _config, ClauseAllocator& _ca, ThreadController& _controller );
+  Technique( CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller );
   
   /** return whether some changes have been applied since last time
    *  resets the counter after call
@@ -47,7 +47,7 @@ public:
   /** call this method for each clause when the technique is initialized with the formula 
    *  This method should be overwritten by all techniques that inherit this class
    */
-  void initClause( const CRef cr );
+  void initClause( const Riss::CRef cr );
   
   /** free resources of the technique, which are not needed until the technique is used next time
    *  This method should be overwritten by all techniques that inherit this class
@@ -56,7 +56,7 @@ public:
   
   /** This method should be used to print the statistics of the technique that inherits from this class
    */
-  void printStatistics( ostream& stream );
+  void printStatistics( std::ostream& stream );
 
   /** per call to the inprocess method of the preprocessor, allow a technique to have this number more steps */
   void giveMoreSteps();
@@ -92,10 +92,10 @@ protected:
   void unsuccessfulSimplification();
   
   /** tell via stream that the technique does not support DRUP proofs */
-  void printDRUPwarning(ostream& stream, const string s);
+  void printDRUPwarning(std::ostream& stream, const std::string s);
 
   /** tell via stream that the technique does not support extra clause info proofs */
-  void printExtraInfowarning(ostream& stream, const string s);
+  void printExtraInfowarning(std::ostream& stream, const std::string s);
   
 };
 
@@ -105,7 +105,7 @@ inline void Technique::giveMoreSteps()
 }
 
 
-inline Technique::Technique( Coprocessor::CP3Config& _config, ClauseAllocator& _ca, ThreadController& _controller )
+inline Technique::Technique( Coprocessor::CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller )
 : config( _config )
 , modifiedFormula(false)
 , isInitialized( false )
@@ -130,7 +130,7 @@ inline void Technique::didChange()
   modifiedFormula = true;
 }
 
-inline void Technique::initClause(const CRef cr)
+inline void Technique::initClause(const Riss::CRef cr)
 {
   assert( false && "This method has not been implemented." );   
 }
@@ -156,11 +156,11 @@ inline void Technique::destroy()
   assert( false && "This method has not been implemented." ); 
 }
 
-inline void Technique::printStatistics(ostream& stream)
+inline void Technique::printStatistics(std::ostream& stream)
 {
   /* // example output
-  stream << "c [STAT] EE " << eeTime << " s, " << steps << " steps" << endl;
-  stream << "c [STAT] EE-gate " << gateTime << " s, " << gateSteps << " steps" << endl;
+  stream << "c [STAT] EE " << eeTime << " s, " << steps << " steps" << std::endl;
+  stream << "c [STAT] EE-gate " << gateTime << " s, " << gateSteps << " steps" << std::endl;
   */
   assert( false && "This method has not been implemented" );
 }
@@ -193,15 +193,15 @@ inline void Technique::unsuccessfulSimplification()
   thisPelalty = ++lastMaxPenalty;
 }
 
-inline void Technique::printDRUPwarning(ostream& stream, const string s)
+inline void Technique::printDRUPwarning(std::ostream& stream, const std::string s)
 {
-  if( ! didPrintCannotDrup ) stream << "c [" << s << "] cannot produce DRUP proofs" << endl;
+  if( ! didPrintCannotDrup ) stream << "c [" << s << "] cannot produce DRUP proofs" << std::endl;
   didPrintCannotDrup = true;
 }
 
-inline void Technique::printExtraInfowarning(ostream& stream, const string s)
+inline void Technique::printExtraInfowarning(std::ostream& stream, const std::string s)
 {
-  if( ! didPrintCannotExtraInfo ) stream << "c [" << s << "] cannot handle clause/variable extra information" << endl;
+  if( ! didPrintCannotExtraInfo ) stream << "c [" << s << "] cannot handle clause/variable extra information" << std::endl;
   didPrintCannotExtraInfo = true;
 }
 

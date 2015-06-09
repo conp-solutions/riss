@@ -10,15 +10,14 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 **************************************************************************************************/
 
 #include "riss/core/CoreConfig.h"
-
 #include "riss/mtl/Sort.h"
 
-using namespace Riss;
+namespace Riss {
 
-static const char* _cat = "CORE";
-static const char* _cr = "CORE -- RESTART";
+static const char* _cat  = "CORE";
+static const char* _cr   = "CORE -- RESTART";
 static const char* _cred = "CORE -- REDUCE";
-static const char* _cm = "CORE -- MINIMIZE";
+static const char* _cm   = "CORE -- MINIMIZE";
 
 CoreConfig::CoreConfig(const std::string & presetOptions) // add new options here!
 :
@@ -225,3 +224,4 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
   if( defaultPreset.size() != 0 ) setPreset( defaultPreset ); // set configuration options immediately
 }
 
+} // namespace Riss

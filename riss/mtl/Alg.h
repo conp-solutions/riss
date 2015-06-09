@@ -26,7 +26,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 namespace Riss {
 
 //=================================================================================================
-// Useful functions on vector-like types:
+// Useful functions on std::vector-like types:
 
 //=================================================================================================
 // Removing and searching for elements:
@@ -37,7 +37,7 @@ static inline void remove(V& ts, const T& t)
 {
     int j = 0;
     for (; j < ts.size() && ts[j] != t; j++) {};
-    assert(j < ts.size() && "item must appear in vector");
+    assert(j < ts.size() && "item must appear in std::vector");
     //if( j >= ts.size() ) exit (47 ); // todo remove after debug!
     for (; j < ts.size()-1; j++) ts[j] = ts[j+1];
     ts.pop();
@@ -49,7 +49,7 @@ static inline void removeUnSort(V& ts, const T& t)
 {
     int j = 0;
     for (; j < ts.size() && ts[j] != t; j++) {};
-    assert(j < ts.size() && "item must appear in vector");
+    assert(j < ts.size() && "item must appear in std::vector");
     ts[j] = ts[ts.size() - 1];
     ts.pop();
 }
@@ -66,7 +66,7 @@ static inline bool find(V& ts, const T& t)
 
 
 //=================================================================================================
-// Copying vectors with support for nested vector types:
+// Copying vectors with support for nested std::vector types:
 //
 
 // Base case:

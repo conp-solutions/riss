@@ -9,8 +9,9 @@ Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, All rights reserved.
 #include <fstream>
 
 using namespace std;
+using namespace Riss;
 
-using namespace Coprocessor;
+namespace Coprocessor {
 
 void Preprocessor::outputFormula(const char *file, const char *varMap)
 {
@@ -339,3 +340,5 @@ bool Preprocessor::writeUndoInfo(const string& filename, int originalVariables) 
  
  return dense.writeUndoInfo( filename + ".map" );
 }
+
+} // namespace Coprocessor

@@ -6,7 +6,10 @@
 #include "pcasso/LevelPool.h"
 #include <stdexcept>
 
-using namespace Pcasso;
+using namespace Riss;
+using namespace std;
+
+namespace Pcasso {
 
 // Davide> Options
 
@@ -29,26 +32,28 @@ static IntOption     opt_sharing_delay          ("SPLITTER + SHARING", "sh-delay
 static BoolOption    opt_flag_based             ("SPLITTER + SHARING", "flag-based", "Enable flag-based sharing\n", false);
 static IntOption     opt_receiver_filter        ("SPLITTER + SHARING", "receiver-filter", "Filter on received clauses: 0 - NONE, 1 - SIZE, 2 - LDB_LT, 3 - PSM, 4 PSM_ACTIVITY\n", 0, IntRange(0,4));
 static IntOption     opt_receiver_score         ("SPLITTER + SHARING", "receiver-score", "Score value of the receiver filter\n", 1, IntRange(0,100));
-//>>>>>>>>>ahmed>>>>>>>>>
-static BoolOption    opt_dyn_lbd_shr             ("SPLITTER + SHARING", "dyn-lbdsh", "Enable dynamic lbd sharing\n", false);
-static DoubleOption    opt_dyn_lbd_shr_fac             ("SPLITTER + SHARING", "dyn-lbdshfac", "Enable dynamic lbd sharing\n",  1, DoubleRange(0, false, 1, true));
-static BoolOption opt_sharing_var_bump("SPLITTER + SHARING", "shvar-bump", "Enable bumping activity of variables in shared clauses\n", false);
-static BoolOption opt_unit_sharing("SPLITTER + SHARING", "unit-sharing", "Enable sharing decision level0 units\n", false);
-//static IntOption opt_unit_sharing_ptlevel_limit("SPLITTER + SHARING", "unitptlvl-lim", "sharing greater or equal than pt level \n", 1, IntRange(0,64));
-static IntOption opt_update_act_pol("SPLITTER + SHARING", "upd-actpol", "Update Activity and polarity in treenode: 0 - disable, 1 activity only, 2 polarity only, 3 activity and polarity \n", 3, IntRange(0,3));
-static BoolOption opt_init_random_act_pol("SPLITTER + SHARING", "rnd-actpol", "Initialize random polarity and activity, except for the root\n", false);
-static IntOption opt_pull_learnts_interval("SPLITTER + SHARING", "pull-int", "learnt pull interval - zero to check on restart only \n", 0, IntRange(0,INT32_MAX));
-static BoolOption    diversification   ("SPLITTER + SHARING", "split-diver", "If only one child formula is unsolved, then stop the solver of that node.\n", false);
-static IntOption opt_max_tree_height("SPLITTER + SHARING", "max-tree", "Max tree height for diversification option, such that it does not go beyond that\n", 512, IntRange(8,512));
-static BoolOption    randomization  ("SPLITTER + SHARING", "node-rnd", "Randomization in the nodes increases with 1% per level, if split-diver is off.\n", false);
-static IntOption opt_diversification_conflict_limit("SPLITTER + SHARING", "spdiver-lim", "conflict limit for the solver with diversification option \n", 0, IntRange(0,INT32_MAX));
-static BoolOption    protect_root_node  ("SPLITTER + SHARING", "prot-root", "Do not interrupt root node.\n", true);
-static BoolOption    opt_restart_strategy_satunsat   ("SPLITTER + SHARING", "satunsat-restart", "SAT restart strategy for parent and UNSAT restart strategy for child.\n", false);
-static IntOption  cleaning_delay     ("SPLITTER", "clean-delay","Cleaning delay for leaf and parent nodes; O is off, 1 is decreasing order, 2 is increasing order\n", 0, IntRange(0,2));
-static IntOption opt_shared_clean_delay("SPLITTER + SHARING", "shclean-delay", "Keep the shared clause for a certain number of cleanings\n", 1, IntRange(0,1));
-static BoolOption    opt_lbd_minimization  ("SPLITTER + SHARING", "lbd-min", "Enable lbd minimization.\n", true);
-static BoolOption opt_simulate_portfolio ("SPLITTER + SHARING", "sim-port", "Enable Simulation of Portfolio.\n", false);
-//=================================================================================================
+
+// ahmed> Options
+
+static BoolOption    opt_dyn_lbd_shr                    ("SPLITTER + SHARING", "dyn-lbdsh", "Enable dynamic lbd sharing\n", false);
+static DoubleOption  opt_dyn_lbd_shr_fac                ("SPLITTER + SHARING", "dyn-lbdshfac", "Enable dynamic lbd sharing\n",  1, DoubleRange(0, false, 1, true));
+static BoolOption    opt_sharing_var_bump               ("SPLITTER + SHARING", "shvar-bump", "Enable bumping activity of variables in shared clauses\n", false);
+static BoolOption    opt_unit_sharing                   ("SPLITTER + SHARING", "unit-sharing", "Enable sharing decision level0 units\n", false);
+// static IntOption     opt_unit_sharing_ptlevel_limit     ("SPLITTER + SHARING", "unitptlvl-lim", "sharing greater or equal than pt level \n", 1, IntRange(0,64));
+static IntOption     opt_update_act_pol                 ("SPLITTER + SHARING", "upd-actpol", "Update Activity and polarity in treenode: 0 - disable, 1 activity only, 2 polarity only, 3 activity and polarity \n", 3, IntRange(0,3));
+static BoolOption    opt_init_random_act_pol            ("SPLITTER + SHARING", "rnd-actpol", "Initialize random polarity and activity, except for the root\n", false);
+static IntOption     opt_pull_learnts_interval          ("SPLITTER + SHARING", "pull-int", "learnt pull interval - zero to check on restart only \n", 0, IntRange(0,INT32_MAX));
+static BoolOption    diversification                    ("SPLITTER + SHARING", "split-diver", "If only one child formula is unsolved, then stop the solver of that node.\n", false);
+static IntOption     opt_max_tree_height                ("SPLITTER + SHARING", "max-tree", "Max tree height for diversification option, such that it does not go beyond that\n", 512, IntRange(8,512));
+static BoolOption    randomization                      ("SPLITTER + SHARING", "node-rnd", "Randomization in the nodes increases with 1% per level, if split-diver is off.\n", false);
+static IntOption     opt_diversification_conflict_limit ("SPLITTER + SHARING", "spdiver-lim", "conflict limit for the solver with diversification option \n", 0, IntRange(0,INT32_MAX));
+static BoolOption    protect_root_node                  ("SPLITTER + SHARING", "prot-root", "Do not interrupt root node.\n", true);
+static BoolOption    opt_restart_strategy_satunsat      ("SPLITTER + SHARING", "satunsat-restart", "SAT restart strategy for parent and UNSAT restart strategy for child.\n", false);
+static IntOption     cleaning_delay                     ("SPLITTER", "clean-delay","Cleaning delay for leaf and parent nodes; O is off, 1 is decreasing order, 2 is increasing order\n", 0, IntRange(0,2));
+static IntOption     opt_shared_clean_delay             ("SPLITTER + SHARING", "shclean-delay", "Keep the shared clause for a certain number of cleanings\n", 1, IntRange(0,1));
+static BoolOption    opt_lbd_minimization               ("SPLITTER + SHARING", "lbd-min", "Enable lbd minimization.\n", true);
+static BoolOption    opt_simulate_portfolio             ("SPLITTER + SHARING", "sim-port", "Enable Simulation of Portfolio.\n", false);
+
 
 SolverPT::SolverPT(CoreConfig& config) :
   SplitterSolver(config)
@@ -1737,3 +1742,5 @@ SolverPT::addChunkToLearnts(vec<Lit>& chunk, unsigned int pt_level, int readP, i
 
 	}
 }
+
+} // namespace Pcasso

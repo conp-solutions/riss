@@ -41,19 +41,13 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 // to be able to read var files
 #include "coprocessor/VarFileParser.h"
 
+using namespace Coprocessor;
+using namespace std;
 
 
 
 
-using namespace Riss;
-
-//=================================================================================================
-// Options:
-
-
-
-
-// useful methods
+namespace Riss {
 
 
 //=================================================================================================
@@ -161,7 +155,7 @@ Solver::Solver(CoreConfig& _config) :
   ,sumLearnedClauseSize(0)
   ,sumLearnedClauseLBD(0)
   ,maxLearnedClauseSize(0)
-
+  
   ,rerExtractedGates(0)
   ,rerITEtries(0)
   ,rerITEsuccesses(0)
@@ -192,7 +186,6 @@ Solver::Solver(CoreConfig& _config) :
   ,icsDroppedCandidates(0)
   ,icsShrinks(0)
   ,icsShrinkedLits(0)  
-
   // for partial restarts
   , rs_partialRestarts(0)
   , rs_savedDecisions(0)
@@ -205,7 +198,6 @@ Solver::Solver(CoreConfig& _config) :
   , L2units(0)
   , L3units(0)
   , L4units(0)
-  
   , pq_order( config.opt_pq_order ) // Contrasat
   
   , impl_cl_heap       ()
@@ -267,10 +259,6 @@ Solver::~Solver()
 }
 
 
-//=================================================================================================
-// Minor methods:
-
-
 // Creates a new SAT variable in the solver. If 'decision' is cleared, variable will not be
 // used as a decision variable (NOTE! This has effects on the meaning of a SATISFIABLE result).
 //
@@ -291,11 +279,10 @@ Var Solver::newVar(bool sign, bool dvar, char type)
 
     trail    .capacity(v+1);
     setDecisionVar(v, dvar);
-    
     if( config.opt_rer_rewriteNew || config.opt_rer_extractGates ) {
       erRewriteInfo. push ( LitPair() ); erRewriteInfo. push ( LitPair() ); // for the two new literals, add empty infos
     }
-
+    
     return v;
 }
 
@@ -487,8 +474,6 @@ bool Solver::satisfied(const Clause& c) const {
     return false; }
 
 
-
-
 /******************************************************************
  * Minimisation with binary reolution
  ******************************************************************/
@@ -626,7 +611,6 @@ bool Solver::searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd ) {
 /** check whether there is an AND-gate that can be used to simplify the given clause
  */
 bool Solver::erRewrite(vec<Lit>& learned_clause, unsigned int& lbd ){
-  // TODO: put into extra method
 	if(lbd<=config.erRewrite_lbd){
 	  if( config.opt_rer_extractGates || (config.opt_rer_rewriteNew && config.opt_rer_windowSize == 2) ) {
 	    if(  (config.opt_rer_rewriteNew && !config.opt_rer_as_learned) 
@@ -780,21 +764,20 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 	
 	if(!foundFirstLearnedClause ) { // dynamic adoption only until first learned clause!
 	  if (c.learnt() ){
-	      if( config.opt_cls_act_bump_mode == 0 ) claBumpActivity(c); // use constant activity increase
-	      else clssToBump.push( confl );                              // or make activity depending on generated clause
+	      if( config.opt_cls_act_bump_mode == 0 ) claBumpActivity(c);
+	      else clssToBump.push( confl );
 	  }
 
-	    if( config.opt_update_lbd == 1  ) { // update lbd during analysis, if allowed
-		if(c.learnt()  && c.lbd()>2 ) { 
-		  unsigned int nblevels = computeLBD(c);
+	  if( config.opt_update_lbd == 1  ) { // update lbd during analysis, if allowed
+	      if(c.learnt()  && c.lbd()>2 ) { 
+		unsigned int nblevels = computeLBD(c);
 // 		  DOUT( if (config.opt_learn_debug) cerr << "c compute LBD " << nblevels << " for clause " << c << endl; );
-		  if(nblevels+1<c.lbd() || config.opt_lbd_inc ) { // improve the LBD (either LBD decreased,or option is set)
-		    if(c.lbd()<=lbLBDFrozenClause) {
-		      c.setCanBeDel(false); 
-		    }
-		    // seems to be interesting : keep it for the next round
-		    c.setLBD(nblevels); // Update it
-		    
+		if(nblevels+1<c.lbd() || config.opt_lbd_inc ) { // improve the LBD (either LBD decreased,or option is set)
+		  if(c.lbd()<=lbLBDFrozenClause) {
+		    c.setCanBeDel(false); 
+		  }
+		  // seems to be interesting : keep it for the next round
+		  c.setLBD(nblevels); // Update it
 		    if (c.lbd() < lbd_core_threshold) { // turn learned clause into core clause and keep it for ever
 			    // move clause from learnt to original, NOTE: clause is still in the learnt vector, has to be treated correctly during garbage collect/inprocessing
 			    clauses.push(confl); 
@@ -804,9 +787,9 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 			    // they are marked as protected
 			    c.setCoreClause( true );
 		    }
-		  }
 		}
-	    }
+	      }
+	  }
 	}
 
 #ifdef CLS_EXTRA_INFO // if resolution is done, then take also care of the participating clause!
@@ -831,7 +814,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
                     // bumped if they are propagated by core learnt clauses (similar to glucose)
                     if ( r != CRef_Undef && (ca[r].learnt() || ca[r].isCoreClause() ) ){ // either core clause, as some learnt clauses are moved
 		      DOUT( if (config.opt_learn_debug) cerr << "c add " << q << " to last decision level" << endl; );
-                      lastDecisionLevel.push(q);
+		      lastDecisionLevel.push(q);
 		    }
 		}
 #endif
@@ -909,7 +892,7 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
     assert( currentSize == out_learnt.size() && "counted literals has to be equal to actual clause!" );
     
     DOUT( if( config.opt_rer_debug ) cerr << "c learned clause (before mini): " << out_learnt << endl; );
-
+   
     bool doMinimizeClause = true; // created extra learnt clause? yes -> do not minimize
     lbd = computeLBD(out_learnt);
     bool recomputeLBD = false; // current lbd is valid
@@ -1045,7 +1028,6 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel,unsigned 
 #ifdef UPDATEVARACTIVITY
   // UPDATEVARACTIVITY trick (see competition'09 companion paper)
   if(lastDecisionLevel.size()>0 ) {
-    
     for(int i = 0;i<lastDecisionLevel.size();i++) {
       if(ca[reason(var(lastDecisionLevel[i]))].lbd()<lbd) {
 	DOUT( if ( config.opt_learn_debug ) cerr << "c add " << lastDecisionLevel[i] << " to bump, with " << ca[reason(var(lastDecisionLevel[i]))].lbd() << " vs " << lbd << endl; );
@@ -1220,21 +1202,22 @@ CRef Solver::propagate(bool duringAddingClauses)
 		const Lit& imp = i->blocker();
 		assert( ca[ i->cref() ].size() == 2 && "in this list there can only be binary clauses" );
 		DOUT( if( config.opt_learn_debug ) cerr << "c checked binary clause " << ca[i->cref() ] << " with implied literal having value " << toInt(value(imp)) << endl; );
-		if(value(imp) == l_False) {
+	  if(value(imp) == l_False) {
 		  if( !config.opt_long_conflict ) { // stop on the first conflict we see?
 		    confl = i->cref();              // store the conflict
 		    while (i < end) *j++ = *i++;    // move the remaining elements forward
 		    ws.shrink_(i - j);              // remove all duplciate clauses
 		    goto FinishedPropagation;       // jump to end of method, so that the statistics can be updated correctly
-		  }
+	  }
+	  
 		  confl = i->cref(); // store intermediate conflict to be evaluated later
 		} else if(value(imp) == l_Undef) { // enqueue the implied literal
 		  uncheckedEnqueue(imp,i->cref(), duringAddingClauses);
-		}
+	  } 
 		*j++ = *i++; // keep the element in the list
 		continue;
-	    }
-	    
+	}
+ 
 	    DOUT( if( config.opt_learn_debug ) cerr << "c check clause [" << i->cref() << "]" << ca[i->cref()] << endl; );
 #ifndef PCASSO // PCASS reduces clauses during search without updating the watch lists ...
 	    assert( ca[ i->cref() ].size() > 2 && "in this list there can only be clauses with more than 2 literals" );
@@ -1354,13 +1337,12 @@ struct reduceDB_act_lt {
       
         return (!ca[x].learnt() || !ca[y].learnt()) || // do not continue, if one of the clauses is not learnt
           ( ca[x].size() > 2 && (ca[y].size() == 2 || ca[x].activity() < ca[y].activity()) ); 
-      
-    } 
+    }    
 };
 
 void Solver::reduceDB()
 {
-  DOUT( if( config.opt_removal_debug > 0) cerr << "c reduceDB ..." << endl; ) ;
+  DOUT( if( config.opt_removal_debug > 0)  cerr << "c reduceDB ..." << endl; );
   reduceDBTime.start();
   resetRestrictedExtendedResolution(); // whenever the clause database is touched, forget about current RER step
   int     i, j;
@@ -1399,20 +1381,20 @@ void Solver::reduceDB()
           && c.canBeDel() 
           &&  !locked(c) 
           && (i < limit)) {
-          removeClause(learnts[i]);
-          nbRemovedClauses++;
-          DOUT( if( config.opt_removal_debug > 2) cerr << "c remove clause " << c << endl; );
-        }
-        else {
-          if(!c.canBeDel()) limit++; //we keep c, so we can delete an other clause
-          c.setCanBeDel(true);       // At the next step, c can be delete
-          DOUT( if( config.opt_removal_debug > 2) cerr << "c keep clause " << c << " due to set 'canBeDel' flag" << endl; ); 
-          learnts[j++] = learnts[i];
-        }
+      removeClause(learnts[i]);
+      nbRemovedClauses++;
+      DOUT( if( config.opt_removal_debug > 2) cerr << "c remove clause " << c << endl; );
+    }
+    else {
+      if(!c.canBeDel()) limit++; //we keep c, so we can delete an other clause
+      c.setCanBeDel(true);       // At the next step, c can be delete
+      DOUT( if( config.opt_removal_debug > 2) cerr << "c keep clause " << c << " due to set 'canBeDel' flag" << endl; ); 
+      learnts[j++] = learnts[i];
+    }
     } else {
       // core-learnt clauses are removed from this vector
       assert( (!c.isCoreClause() || !c.learnt()) && "for all core-learnt clauses the learnt flag should have been erased" );
-    }
+  }
   }
   // FIXME: check whether old variant of removal works with the above code - otherwise include with parameter
   learnts.shrink_(i - j);
@@ -1459,7 +1441,7 @@ void Solver::clearPreferred()
 }
 // NuSMV: PREF MOD END
                
-               
+
 void Solver::counterImplicationRestart(){
     // number of times this function is executed
     cir_count++;
@@ -1514,7 +1496,6 @@ void Solver::counterImplicationRestart(){
     }
 }
 
-
 /*_________________________________________________________________________________________________
 |
 |  simplify : [void]  ->  [bool]
@@ -1537,7 +1518,6 @@ bool Solver::simplify()
 
     if (nAssigns() == simpDB_assigns || (simpDB_props > 0))
         return true;
-
     if( !activityBasedRemoval ) { // perform this check only if the option is used
       int i = 0; // to prevent g++ to throw a "i maybe used unintialized" warning
       int j = 0;
@@ -1548,7 +1528,7 @@ bool Solver::simplify()
       }
       learnts.shrink(i - j);
     }
-    
+
     // Remove satisfied clauses:
     removeSatisfied(learnts);
     if (remove_satisfied)        // Can be turned off.
@@ -1558,7 +1538,6 @@ bool Solver::simplify()
 
     simpDB_assigns = nAssigns();
     simpDB_props   = clauses_literals + learnts_literals;   // (shouldn't depend on stats really, but it will do for now)
-
     // Only perform inprocessing if the option is not zero.
     if (probing_step_width) {
         // Performed probing every "probing_step_width"-times
@@ -1575,7 +1554,7 @@ bool Solver::simplify()
             }
         }
     }
-    
+
     return true;
 }
 
@@ -1804,8 +1783,7 @@ lbool Solver::search(int nof_conflicts)
         	return l_False;
 	      }
 	    }
-
-        Lit next = lit_Undef;
+            Lit next = lit_Undef;
 	    bool checkedLookaheadAlready = false;
 	    while( next == lit_Undef )
 	    {
@@ -1896,12 +1874,10 @@ bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
 	  if( (config.opt_rMax != -1 && conflictsSinceLastRestart >= currentRestartIntervalBound ) ) { 
 	    intervalRestart++;conflictsSinceLastRestart = (double)conflictsSinceLastRestart * (double)config.opt_rMaxInc; 
 	  }
-	  
 	  // do counter implication before partial restart
 	  if (cir_bump_ratio != 0){
 	    counterImplicationRestart();
 	  }
-	  
 	  conflictsSinceLastRestart = 0;
 	  lbdQueue.fastclear();
 	  progress_estimate = progressEstimate();
@@ -1916,7 +1892,6 @@ bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
 	      return false; // we found that we should not restart, because we have a (partial) model
 	    }
 	  }
-	  
 	  cancelUntil(partialLevel);
 	  return true;
 	}
@@ -1928,7 +1903,7 @@ bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
 	      counterImplicationRestart();
 	    }
 	
-
+	  {
 	    progress_estimate = progressEstimate();
 	    int partialLevel = 0;
 	    if( config.opt_restart_level != 0 ) {
@@ -1943,7 +1918,7 @@ bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
 	    }
 	    cancelUntil(partialLevel);
 	    return true;
-
+	  }
       }
     }
   }
@@ -2245,7 +2220,6 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
 		ca[cr].setLBD(2);
 		learnts.push(cr);
 		claBumpActivity(ca[cr], (config.opt_cls_act_bump_mode == 0 ? 1 : (config.opt_cls_act_bump_mode == 1) ? analyze_toclear.size() : 2 )  ); // bump activity based on its size); }
-		
 		if( config.opt_cls_act_bump_mode != 2 ) {
 		claBumpActivity(ca[cr],                                                         // bump activity based on its
 				(config.opt_cls_act_bump_mode == 0 ? 1                          // constant
@@ -2257,7 +2231,6 @@ bool Solver::laHack(vec<Lit>& toEnqueue ) {
 				      2                                              // use size as activity
 				    : config.opt_size_bounded_randomized + drand( random_seed ); // otherwise, use SBR
 		}
-		
 	      }
 	      else clauses.push(cr);
 	      attachClause(cr);
@@ -2429,6 +2402,7 @@ lbool Solver::initSolve(int solves)
 	    else if( config.opt_init_pol == 3 ) varFlags[v].polarity = moms[v] > 0 ? 1 : 0;
 	    else if( config.opt_init_pol == 4 ) varFlags[v].polarity = moms[v] > 0 ? 0 : 1;
 	    else if( config.opt_init_pol == 5 ) varFlags[v].polarity = irand(random_seed,100) > 50 ? 1 : 0;
+	    else if( config.opt_init_pol == 6 ) varFlags[v].polarity = ~ varFlags[v].polarity;
 	  }
 	}
 	delete [] moms;
@@ -2624,13 +2598,11 @@ lbool Solver::solve_()
 		   sumLearnedClauseLBD/totalLearnedClauses,
 		   (int64_t)maxLearnedClauseSize
 		  );
-
         printf("c res.ext.res.: %d rer, %d rerSizeCands, %d sizeReject, %d patternReject, %d bloomReject, %d maxSize, %.2lf avgSize, %.2lf totalLits, %d gates\n",
 		  rerLearnedClause, rerLearnedSizeCandidates, rerSizeReject, rerPatternReject, rerPatternBloomReject, maxRERclause, 
 		  rerLearnedClause == 0 ? 0 : (totalRERlits / (double) rerLearnedClause), totalRERlits, rerExtractedGates );
 	    printf("c ER rewrite: %d cls, %d lits\n", erRewriteClauses, erRewriteRemovedLits );
 	    printf("c i.cls.strengthening: %.2lf seconds, %d calls, %d candidates, %d droppedBefore, %d shrinked, %d shrinkedLits\n", icsTime.getCpuTime(), icsCalls, icsCandidates, icsDroppedCandidates, icsShrinks, icsShrinkedLits );
-
 	    printf("c search-UHLE: %d attempts, %d rem-lits\n", searchUHLEs, searchUHLElits );
 	    printf("c decisionClauses: %d\n", learnedDecisionClauses );
 	    printf("c IntervalRestarts: %d\n", intervalRestart);
@@ -3942,19 +3914,18 @@ lbool Solver::handleLearntClause(vec< Lit >& learnt_clause, bool backtrackedBeyo
 	}
 
     }
-    
     ca[cr].setLBD(nblevels); 
     if(nblevels<=2) nbDL2++; // stats
     if(ca[cr].size()==2) nbBin++; // stats
   #ifdef CLS_EXTRA_INFO
     ca[cr].setExtraInformation(extraInfo);
   #endif
-    
     attachClause(cr);
-
+    
     // attach unit only, if  rer does allow it
     if( rerClause != rerDontAttachAssertingLit ) {
-        uncheckedEnqueue(learnt_clause[0], cr); // this clause is only unit, if OTFSS jumped to the same level!
+
+    uncheckedEnqueue(learnt_clause[0], cr); // this clause is only unit, if OTFSS jumped to the same level!
     }
     DOUT( if( config.opt_printDecisions > 1  ) cerr << "c enqueue literal " << learnt_clause[0] << " at level " <<  decisionLevel() << " from learned clause " << learnt_clause << endl; );
 
@@ -3978,3 +3949,5 @@ void Solver::printSearchProgress()
 		   (int)nbReduceDB, nLearnts(), (int)nbDL2,(int)nbRemovedClauses, progressEstimate()*100);
 	  }
 }
+
+} // namespace Riss

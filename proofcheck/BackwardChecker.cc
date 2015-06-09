@@ -11,7 +11,9 @@ Copyright (c) 2015, All rights reserved, Norbert Manthey
 #include <fstream>
 #include <sstream>
 
-using namespace Riss;
+using namespace std;
+
+namespace Riss {
 
 static IntOption  opt_splitLoad      ("BACKWARD-CHECK", "splitLoad",          "number of clauses in queue before splitting", 8, IntRange(2, INT32_MAX));
 static IntOption  opt_verbose        ("BACKWARD-CHECK", "bwc-verbose",        "verbosity level of the checker", 0, IntRange(0, 8));
@@ -728,3 +730,5 @@ void* BackwardChecker::runParallelVerfication(void* verificationData)
   workerData->result = workerData->worker->continueCheck();
   return 0;
 }
+
+} // namespace Riss

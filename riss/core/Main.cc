@@ -31,14 +31,15 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "riss/utils/ParseUtils.h"
 #include "riss/utils/Options.h"
 #include "riss/utils/AutoDelete.h"
+#include "riss/utils/version.h" // include the file that defines the solver version
 #include "riss/core/Dimacs.h"
+
 #include "riss/core/Solver.h"
 
 #include "coprocessor/Coprocessor.h"
 
-#include "riss/utils/version.h" // include the file that defines the solver version
-
 using namespace Riss;
+using namespace std;
 
 //=================================================================================================
 

@@ -14,6 +14,9 @@
 
 #include "riss/mtl/Sort.h"
 
+using namespace Riss;
+using namespace std;
+
 /*
 
 /// print literals into a stream

@@ -5,8 +5,10 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor/Unhiding.h"
 #include "riss/mtl/Sort.h"
 
-using namespace Coprocessor;
+using namespace Riss;
+using namespace std;
 
+namespace Coprocessor {
 
 void Unhiding::giveMoreSteps()
 {
@@ -931,3 +933,5 @@ void Unhiding::destroy()
   vector< Lit >().swap(  stampClassEE );
   vector< char >().swap(  unhideEEflag );
 }
+
+} // namespace Coprocessor

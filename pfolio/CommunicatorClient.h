@@ -13,16 +13,16 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 namespace Riss {
 
 class CommunicatorClient {
-     Solver* solver; /// pointer to the instance of the solver with which we work
+     Riss::Solver* solver; /// pointer to the instance of the solver with which we work
 
      Communicator* communication; /// communication with the outside, and control of this solver
      
 public:
   
     /** sets up the communication client */
-    CommunicatorClient( Solver* _solver, Communicator* _communicator=0);
+    CommunicatorClient( Riss::Solver* _solver, Communicator* _communicator=0);
   
-      /** setup the communication object
+    /** setup the communication object
      * @param comm pointer to the communication object that should be used by this thread
      */
     void setCommunication( Communicator* comm );
@@ -32,7 +32,7 @@ public:
      * note: can also interrupt search and incorporate new assumptions etc.
      * @return -1 = abort, 0=everythings nice, 1=conflict/false result
      */
-    int updateSleep(vec<Lit>* toSend);
+    int updateSleep(Riss::vec<Riss::Lit>* toSend);
     
 private: 
     
@@ -60,8 +60,8 @@ private:
     /*
      * temporary structures
      */
-    vec<Lit> receiveClause;			/// temporary placeholder for receiving clause
-    std::vector< CRef > receiveClauses;	/// temporary placeholder indexes of the clauses that have been received by communication
+    Riss::vec<Riss::Lit> receiveClause;			/// temporary placeholder for receiving clause
+    std::vector< Riss::CRef > receiveClauses;	/// temporary placeholder indexes of the clauses that have been received by communication
     int currentTries;                          /// current number of waits
     int receiveEvery;                          /// do receive every n tries
     
@@ -79,7 +79,7 @@ private:
 // [END] modifications for parallel assumption based solver
 };
 
-CommunicatorClient::CommunicatorClient(Solver* _solver, Communicator* _communicator)
+CommunicatorClient::CommunicatorClient(Riss::Solver* _solver, Communicator* _communicator)
 :   solver(_solver)
   , communication(_communicator)
   , currentTries (0)
@@ -111,13 +111,13 @@ inline void CommunicatorClient::setCommunication(Communicator* comm)
 
 /** add a learned clause to the solver
  */
-bool CommunicatorClient::addLearnedClause(vec<Lit>& ps, bool bump)
+bool CommunicatorClient::addLearnedClause(Riss::vec<Riss::Lit>& ps, bool bump)
 {
     assert(decisionLevel() == 0);
     if (!solver->ok) return false;
 
     sort(ps);
-    Lit p; int i, j;
+    Riss::Lit p; int i, j;
     for (i = j = 0, p = lit_Undef; i < ps.size(); i++)
         if (solver->value(ps[i]) == l_True || ps[i] == ~p)
             return true;
@@ -129,9 +129,9 @@ bool CommunicatorClient::addLearnedClause(vec<Lit>& ps, bool bump)
         return ok = false;
     else if (ps.size() == 1){
         solver->uncheckedEnqueue(ps[0]);
-        return ok = (solver->propagate() == CRef_Undef);
+        return ok = (solver->propagate() == Riss::CRef_Undef);
     }else{
-        CRef cr = solver->ca.alloc(ps, true);
+        Riss::CRef cr = solver->ca.alloc(ps, true);
 	if( bump ) solver->ca[cr].activity() += cla_inc; // same as in claBumpActivity
         solver->learnts.push(cr);
         solver->attachClause(cr);
@@ -140,7 +140,7 @@ bool CommunicatorClient::addLearnedClause(vec<Lit>& ps, bool bump)
 }
 
 
-int CommunicatorClient::updateSleep(vec<Lit>* toSend)
+int CommunicatorClient::updateSleep(Riss::vec<Riss::Lit>* toSend)
 {
   if( communication == 0 ) return 0;
   
@@ -154,8 +154,8 @@ int CommunicatorClient::updateSleep(vec<Lit>* toSend)
     if( communication->isAborted() ) {
       solver->interrupt();
       if (verbosity > 0)
-        cerr << "c [THREAD] " << communication->getID()
-             << " aborted current search due to flag by master" << endl;
+        std::cerr << "c [THREAD] " << communication->getID()
+             << " aborted current search due to flag by master" << std::endl;
       return -1;
     }
 
@@ -170,7 +170,7 @@ int CommunicatorClient::updateSleep(vec<Lit>* toSend)
 
     communication->awakeMaster();
 
-    cerr << "c [THREAD] " << communication->getID() << " wait for master to do something (sleep)" << endl;
+    std::cerr << "c [THREAD] " << communication->getID() << " wait for master to do something (sleep)" << std::endl;
     // wait until master changes the state again to working!
 
     while( ! communication->isWorking() ){
@@ -269,27 +269,27 @@ int CommunicatorClient::updateSleep(vec<Lit>* toSend)
     receiveClauses.clear();
     communication->receiveClauses( ca, receiveClauses );
     
-    // if( receiveClauses.size()  > 5 ) cerr << "c [THREAD] " << communication->getID() << " received " << receiveClauses.size() << " clauses." << endl;
+    // if( receiveClauses.size()  > 5 ) std::cerr << "c [THREAD] " << communication->getID() << " received " << receiveClauses.size() << " clauses." << std::endl;
 
     for( unsigned i = 0 ; i < receiveClauses.size(); ++ i ) {
-      Clause& c = ca[ receiveClauses[i] ]; // take the clause and propagate / enqueue it
+      Riss::Clause& c = ca[ receiveClauses[i] ]; // take the clause and propagate / enqueue it
       
       if (c.size() < 2) {
 	if( c.size() == 0 ) {
-	  cerr << "c empty clause has been shared!" << endl;
+	  std::cerr << "c empty clause has been shared!" << std::endl;
 	  ok = false; return 1; 
 	}
         solver->uncheckedEnqueue(c[0]);
 	c.mark();
-        ok = (solver->propagate() == CRef_Undef);
+        ok = (solver->propagate() == Riss::CRef_Undef);
 	if( !ok ) { // adding this clause failed?
-          cerr << "c adding received clause failed" << endl;
+          std::cerr << "c adding received clause failed" << std::endl;
           return 1; 
 	}
       } else {
 	for( int j = 0 ; j < c.size(); ++ j ) { // propagate inside the clause!
           if( var(c[j]) > solver->nVars() ) {
-	    cerr << "c shared variable " << var( c[j] ) << "[" << j << "] is greater than " << nVars() << endl;
+	    std::cerr << "c shared variable " << var( c[j] ) << "[" << j << "] is greater than " << nVars() << std::endl;
 	   assert( false && "received variables have to be smaller than maximum!" );
 	  }
 	  if( solver->value( c[j] ) == l_True ) { c.mark(1); break; } // this clause is already satisfied -> remove it! (we are on level 0!)
@@ -301,7 +301,7 @@ int CommunicatorClient::updateSleep(vec<Lit>* toSend)
         else if ( c.size() == 1 ) {
           solver->uncheckedEnqueue(c[0]);
 	  c.mark();
-          ok = (solver->propagate() == CRef_Undef);
+          ok = (solver->propagate() == Riss::CRef_Undef);
 	  if( !ok ) return 1; 
 	} else { // attach the clause, if its not a unit clause!
           solver->learnts.push(receiveClauses[i]);

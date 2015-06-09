@@ -10,6 +10,8 @@
 #include <iostream>
 #include <sstream>
 
+using namespace std;
+
 //Configurations::Configurations(): startIndex(0), timeout(800000), attrInfoFile("attrInfo.txt"){
 //	readNames("configurations.txt");
 //}

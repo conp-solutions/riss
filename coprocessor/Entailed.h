@@ -9,7 +9,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 #include "coprocessor/Technique.h"
 #include "coprocessor/CoprocessorTypes.h"
 
-using namespace Riss;
+// using namespace Riss;
 
 namespace Coprocessor {
 
@@ -26,7 +26,7 @@ class EntailedRedundant : public Technique  {
   int extraSubs;
   
 public:
-  EntailedRedundant( CP3Config &_config, ClauseAllocator& _ca, ThreadController& _controller, CoprocessorData& _data );
+  EntailedRedundant( CP3Config &_config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, CoprocessorData& _data );
 
   void reset();
   
@@ -35,7 +35,7 @@ public:
   */
   bool process();
     
-  void printStatistics(ostream& stream);
+  void printStatistics(std::ostream& stream);
 
   void giveMoreSteps();
   

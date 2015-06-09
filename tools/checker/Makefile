@@ -6,10 +6,10 @@ cnfdd: cnfdd.c Makefile
 	gcc -o cnfdd cnfdd.c -Wall -O0
 	
 cnfuzz: cnfuzz.c Makefile
-	gcc -o cnfuzz cnfuzz.c -Wall -O0
+	gcc -o cnfuzz cnfuzz.c -Wall -O0 -lrt
 
 drat-trim: drat-trim.c
-	gcc -O2 -o drat-trim drat-trim.c -static
+	gcc -O2 -o drat-trim drat-trim.c -static -lrt
 
 lgl:
 	cd lingeling; ./configure && make; cp lingeling ../lgl
