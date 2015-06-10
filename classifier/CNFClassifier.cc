@@ -13,6 +13,7 @@
 #include <math.h>
 
 #include "riss/mtl/Sort.h"
+#include "knn.cc"
 
 using namespace Riss;
 using namespace std;
@@ -79,10 +80,10 @@ CNFClassifier::~CNFClassifier()
 {
 
 }
-
-string CNFClassifier::getConfig(Solver& S, std::string dbName)
+string CNFClassifier::getConfig( Solver& S )
+//string CNFClassifier::getConfig ( Riss::Solver& S, std::string dbName)
 {
-#warning MIGHT BE DONE OUTSIDE OF THIS METHOD
+    #warning MIGHT BE DONE OUTSIDE OF THIS METHOD
     S.verbosity = 0;
 
     // here convert the found unit clauses of the solver back as real clauses!
@@ -101,7 +102,9 @@ string CNFClassifier::getConfig(Solver& S, std::string dbName)
     extractFeatures(features); // also print the formula name!!
 
 #warning TODO implement classification with data base
-#error to be implemented by Aaron
+  string configuration = computeKNN ( "dataset", 5, features );
+  cout << configuration << "BKJANDS" << endl; 
+  return configuration;
 }
 
 

@@ -38,7 +38,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "coprocessor/Coprocessor.h"
 
-// #include "classifier/Classifier.h"
+#include "classifier/CNFClassifier.h"
 
 using namespace Riss;
 using namespace std;
@@ -127,23 +127,24 @@ int main(int argc, char** argv)
         // here the solver starts with its actual work ...
         //
         bool foundHelp = ::parseOptions(argc, argv);   // parse all global options
-        CoreConfig coreConfig(string(opt_config == 0 ? "" : opt_config));
-        Coprocessor::CP3Config cp3config(string(opt_config == 0 ? "" : opt_config));
-        foundHelp = coreConfig.parseOptions(argc, argv) || foundHelp;
-        foundHelp = cp3config.parseOptions(argc, argv) || foundHelp;
+	cout << opt_config << endl;
+        CoreConfig* coreConfig = new CoreConfig(string(opt_config == 0 ? "" : opt_config));
+        Coprocessor::CP3Config* cp3config = new Coprocessor::CP3Config(string(opt_config == 0 ? "" : opt_config));
+        foundHelp = coreConfig->parseOptions(argc, argv) || foundHelp;
+        foundHelp = cp3config->parseOptions(argc, argv) || foundHelp;
         if (foundHelp) { exit(0); }   // stop after printing the help information
 
         if (opt_cmdLine) {   // print the command line options
             std::stringstream s;
-            coreConfig.configCall(s);
-            cp3config.configCall(s);
+            coreConfig->configCall(s);
+            cp3config->configCall(s);
             configCall(argc, argv, s);
             cerr << "c tool-parameters: " << s.str() << endl;
             exit(0);
         }
 
-        Solver* S = new Solver(coreConfig);
-        S->setPreprocessor(&cp3config); // tell solver about preprocessor
+        Solver* S = new Solver(*coreConfig);
+        S->setPreprocessor(cp3config); // tell solver about preprocessor
 
         double initial_time = cpuTime();
 
@@ -188,6 +189,7 @@ int main(int argc, char** argv)
         if (argc == 1)
         { printf("c Reading from standard input... Use '--help' for help.\n"); }
 
+
         gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
         if (in == NULL)
         { printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1); }
@@ -201,16 +203,17 @@ int main(int argc, char** argv)
             printf("c ============================[ Problem Statistics ]=======================================================\n");
             printf("c |                                                                                                       |\n");
         }
-
-        if( opt_autoconfig ) { // do configuration
+	
+	if ( true ) {
+//        if( opt_autoconfig ) { // do configuration
 	  
 	  if( (argc == 1) ) {
 	    printf("c cannot autoconfig with formula on stdin\n");
 	    exit(0);
 	  }
 	  
-	  parse_DIMACS(in, S);
-	  gzclose(in);
+	  parse_DIMACS(in, *S);
+	  //gzclose(in);
 	  
 	  CNFClassifier* cnfclassifier = new CNFClassifier(S->ca, S->clauses, S->nVars());
 	  cnfclassifier->setVerb(0);
@@ -225,33 +228,35 @@ int main(int argc, char** argv)
 	  cnfclassifier->setComputingVarGraph(false);
 	  cnfclassifier->setAttrFileName(NULL);
 	  cnfclassifier->setComputingDerivative(true);
-	  string config = cnfclassifier->getConfig( S, string( opt_db_name ) );
-	  delete cnfclassifier;
 	  
-	  delete S;
-	  S->setPreprocessor(&cp3config); // tell solver about preprocessor
+	  string config = cnfclassifier->getConfig( *S );//TODO
+	  //string config = cnfclassifier->getConfig( S, string( opt_db_name ) );//TODO add functionality for the use of an external database
+	  printf("%s", config.c_str());
+	  // get new autoconfigured config
+	  
+	  //delete cnfclassifier;
+	  //delete S;
+	  //delete coreConfig;
+	  //delete cp3config; TODO
+// 	  
+	  coreConfig = new CoreConfig( config );
+	  cp3config = new Coprocessor::CP3Config ( config ); // use new and pointer!
+	  //coreConfig = CoreConfig( config.c_str() );
+	  //cp3config = Coprocessor::CP3Config( config.c_str() ); // use new and pointer!
+// 	  // resetup solver
+	  S = new Solver(*coreConfig);
+	  S->setPreprocessor(cp3config); // tell solver about preprocessor       
 	  S->verbosity = verb;
 	  S->verbEveryConflicts = vv;
-	  
-	  gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
-	  if (in == NULL)
-	  { printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1); }
-	  
-	  // get new autoconfigured config
-	  coreConfig = CoreConfig( config.c_str() );
-	  cp3config = Coprocessor::CP3Config( config.c_str() ); // use new and pointer!
-	  
-	  // resetup solver
-	  S = new Solver(coreConfig);
-	  S->setPreprocessor(&cp3config); // tell solver about preprocessor
+	  printf("\n%d\n", S->nClauses());
 	}
         
-
+	parse_DIMACS(in, *S);
         // open file for proof
         S->drupProofFile = (drupFile) ? fopen((const char*) drupFile , "wb") : NULL;
         if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S->drupProofFile != NULL) { fprintf(S->drupProofFile, "o proof %s\n", (const char*)opt_proofFormat); }     // we are writing proofs of the given format!
-
-        parse_DIMACS(in, S);
+        
+        
         gzclose(in);
         FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
 
@@ -285,7 +290,7 @@ int main(int argc, char** argv)
             if (S->verbosity > 0) {
                 printf("c =========================================================================================================\n");
                 printf("c Solved by unit propagation\n");
-                printStats(S);
+                printStats(*S);
             }
 
             // choose among output formats!
@@ -313,7 +318,7 @@ int main(int argc, char** argv)
 
         // print stats
         if (S->verbosity > 0) {
-            printStats(S);
+            printStats(*S);
         }
 
         // check model of the formula
