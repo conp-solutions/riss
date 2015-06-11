@@ -22,12 +22,26 @@ echo "Make fuzzer"
 cd $repo/tools/checker
 make
 
-n=10
-echo "Run fuzzer on Riss"
-./fuzzcheck.sh $repo/build/bin/riss $n  >/dev/null 2>/dev/null
+echo "Start fuzzchecking"
+# solvers for fuzzchecking
+solver=('riss' 'pcasso' 'pfolio')
+n_runs=10
 
-echo "Run fuzzer on Pcasso"
-./fuzzcheck.sh $repo/build/bin/pcasso $n  >/dev/null 2>/dev/null
+# check each solver
+for s in "${solver[@]}"
+do
+    echo "Run fuzzer with $n_runs cnfs on $s"
+    
+    # run fuzzcheck as background process and wait for it
+    ./fuzzcheck.sh $repo/build/bin/$s $n_runs > /dev/null 2> /dev/null &
+    wait $!
 
-echo "Run fuzzer on Pfolio"
-./fuzzcheck.sh $repo/build/bin/pfolio $n  >/dev/null 2>/dev/null
+    # count lines of log for this run (in this file the seed of the bugs can be found)
+    bugs=`cat runcnfuzz-$!.log | wc -l`
+
+    if ! [ $bugs -eq 1 ]
+        then
+            echo "fuzzer found bugs for $s"
+            exit 1
+    fi
+done
