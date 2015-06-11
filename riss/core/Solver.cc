@@ -2597,6 +2597,10 @@ lbool Solver::solve_()
       // another cegr iteration
       break; // if non of the cegar methods found something, stop here!
     } while ( true ); // if nothing special happens, a single search call is sufficient
+    
+    
+    if( status == l_False && config.opt_refineConflict ) refineFinalConflict(); // minimize final conflict clause
+    
     totalTime.stop();
     
     // cerr << "c finish solving with " << nVars() << " vars, " << nClauses() << " clauses and " << nLearnts() << " learnts and status " << (status == l_Undef ? "UNKNOWN" : ( status == l_True ? "SAT" : "UNSAT" ) ) << endl;
@@ -2690,6 +2694,32 @@ lbool Solver::solve_()
     
     return status;
 }
+
+void Solver::refineFinalConflict()
+{
+  if( assumptions.size() == 0 || conflict.size() < 2 ) return;  // nothing to be done
+  assumptions.moveTo( refineAssumptions );                      // memorize original assumptions
+
+  assert( decisionLevel() == 0 && "run this routine only after the trail has been cleared already" );
+  
+  // Solver::analyzeFinal adds assumptions in reverse order to the conflict clause, hence, add them in this order again
+  assumptions.clear(); 
+  for( int i = 0 ; i < conflict.size(); ++ i ) assumptions.push( ~conflict[i] ); // assumptions are reversed now
+  // call the search routine once more, now with the modified assertions
+  lbool res = search(1);
+  
+  // move assumptions back
+  refineAssumptions.moveTo( assumptions );
+  
+  // literals in conflict clause are reversed now. turn around the vector once more
+  int i = 0, j = conflict.size() - 1;
+  while( i<j ) { 
+    Lit tmp = conflict[i]; 
+    conflict[i++] = conflict[j]; // last time i is used in loop, hence increase afterwards
+    conflict[j--] = tmp;         // last time j is used in loop, hence increase afterwards
+  }
+}
+
 
 //=================================================================================================
 // Writing CNF to DIMACS:

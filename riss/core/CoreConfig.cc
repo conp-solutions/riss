@@ -31,15 +31,14 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  
  nanosleep(_cat, "nanosleep", "For each conflict sleep this amount of nano seconds", 0, IntRange(0, INT32_MAX), optionListPtr ),
  
- 
  ppOnly (_cat, "ppOnly", "interrupts search after preprocessing", false, optionListPtr ),
  
 #ifndef NDEBUG
- opt_learn_debug   (_cat, "learn-debug", "print debug information during learning", false, optionListPtr ),
- opt_removal_debug (_cat, "rem-debug",   "print debug information about removal", 0, IntRange(0, 5), optionListPtr ),
+ opt_learn_debug    (_cat, "learn-debug", "print debug information during learning", false, optionListPtr ),
+ opt_removal_debug  (_cat, "rem-debug",   "print debug information about removal", 0, IntRange(0, 5), optionListPtr ),
 #endif
+ opt_refineConflict (_cat, "refConflict", "refine conflict clause after solving with assumptions", true, optionListPtr ),
  
-
  opt_K (_cr, "K", "The constant used to force restart", 0.8, DoubleRange(0, false, 1, false), optionListPtr ), 
  opt_R (_cr, "R", "The constant used to block restart", 1.4, DoubleRange(1, false, 5, false), optionListPtr ), 
  opt_size_lbd_queue (_cr, "szLBDQueue", "The size of moving average for LBD (restarts)", 50, IntRange(10, INT32_MAX), optionListPtr ),

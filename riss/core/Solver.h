@@ -483,6 +483,9 @@ protected:
     double   progressEstimate ()      const; // DELETE THIS ?? IT'S NOT VERY USEFUL ...
     bool     withinBudget     ()      const;
     
+    vec<Lit> refineAssumptions;     // assumption vector used for refinement
+    void     refineFinalConflict(); // minimize final conflict clause
+    
     /** to handle termination from the outside by a callback function */
     void* terminationCallbackState;                            // state that should be passed to the calling method
     int (*terminationCallbackMethod)(void* terminationState);  // pointer to the callback method

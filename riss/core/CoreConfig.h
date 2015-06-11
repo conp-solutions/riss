@@ -42,6 +42,7 @@ public:
  BoolOption opt_learn_debug;
  IntOption opt_removal_debug;
 #endif
+ BoolOption opt_refineConflict;
  
  DoubleOption opt_K; 
  DoubleOption opt_R; 
