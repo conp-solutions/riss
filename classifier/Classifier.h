@@ -15,137 +15,162 @@
 
 typedef int ClassifierMode;
 
-class Classifier {
-private:
-	Configurations& configurations;
-	std::vector< std::string > classifiersNames;
-	std::vector<int> classification;
-	std::vector<double> probabilities;
-	std::vector<bool> correct;
-	int correctCount;
-	ClassifierMode mode;
-	double gainThreshold;
-	int verbose;
-	std::string wekaLocation;	// location of the weka tool
-	std::string predictorLocation;
-	bool nonZero;		// consider classes as best class, even when they have a prediction of 0?
-	bool useTempFiles;
-	const char* prefix;
-	double classifyTime;
-	double timeout;
-public:
-	Classifier(Configurations& config,const char* prefix);
-	virtual ~Classifier();
-	void writeTestDetails(const char* wekaFile);
-	std::vector<int>& classify(const char* wekaFile);
-	std::vector<int>& classifyJava(const char* wekaFile);
-	double trainModel(const char* wekaFile, int config, const char* tempclassifier,
-			int localmode, int ltrees,
-			int lfeatures);
-	int trainBest(const char* wekaFile, int config);
-	int train(const char* wekaFile);
-	int test(const char* wekaFile);
+class Classifier
+{
+  private:
+    Configurations& configurations;
+    std::vector< std::string > classifiersNames;
+    std::vector<int> classification;
+    std::vector<double> probabilities;
+    std::vector<bool> correct;
+    int correctCount;
+    ClassifierMode mode;
+    double gainThreshold;
+    int verbose;
+    std::string wekaLocation;   // location of the weka tool
+    std::string predictorLocation;
+    bool nonZero;       // consider classes as best class, even when they have a prediction of 0?
+    bool useTempFiles;
+    const char* prefix;
+    double classifyTime;
+    double timeout;
+  public:
+    Classifier(Configurations& config, const char* prefix);
+    virtual ~Classifier();
+    void writeTestDetails(const char* wekaFile);
+    std::vector<int>& classify(const char* wekaFile);
+    std::vector<int>& classifyJava(const char* wekaFile);
+    double trainModel(const char* wekaFile, int config, const char* tempclassifier,
+                      int localmode, int ltrees,
+                      int lfeatures);
+    int trainBest(const char* wekaFile, int config);
+    int train(const char* wekaFile);
+    int test(const char* wekaFile);
 
-	void setWekaLocation(const std::string& location) {
-	  wekaLocation = location;
-	}
-	
-	void setNonZero(const bool& useNonZero) {
-	  nonZero = useNonZero;
-	}
-	
-	const std::vector<int>& getClassification() const {
-		return classification;
-	}
+    void setWekaLocation(const std::string& location)
+    {
+        wekaLocation = location;
+    }
 
-	void setClassification(const std::vector<int>& classification) {
-		this->classification = classification;
-	}
+    void setNonZero(const bool& useNonZero)
+    {
+        nonZero = useNonZero;
+    }
 
-	const std::vector<bool>& getCorrect() const {
-		return correct;
-	}
+    const std::vector<int>& getClassification() const
+    {
+        return classification;
+    }
 
-	void setCorrect(const std::vector<bool>& correct) {
-		this->correct = correct;
-	}
+    void setClassification(const std::vector<int>& classification)
+    {
+        this->classification = classification;
+    }
 
-	int getCorrectCount() const {
-		return correctCount;
-	}
+    const std::vector<bool>& getCorrect() const
+    {
+        return correct;
+    }
 
-	void setCorrectCount(int correctCount) {
-		this->correctCount = correctCount;
-	}
+    void setCorrect(const std::vector<bool>& correct)
+    {
+        this->correct = correct;
+    }
 
-	const std::vector<double>& getProbabilities() const {
-		return probabilities;
-	}
+    int getCorrectCount() const
+    {
+        return correctCount;
+    }
 
-	void setProbabilities(const std::vector<double>& probabilities) {
-		this->probabilities = probabilities;
-	}
+    void setCorrectCount(int correctCount)
+    {
+        this->correctCount = correctCount;
+    }
 
-	ClassifierMode getMode() const {
-		return mode;
-	}
+    const std::vector<double>& getProbabilities() const
+    {
+        return probabilities;
+    }
 
-	void setMode(ClassifierMode mode) {
-		this->mode = mode;
-	}
+    void setProbabilities(const std::vector<double>& probabilities)
+    {
+        this->probabilities = probabilities;
+    }
 
-	double getGainThreshold() const {
-		return gainThreshold;
-	}
+    ClassifierMode getMode() const
+    {
+        return mode;
+    }
 
-	void setGainThreshold(double gainThreshold) {
-		this->gainThreshold = gainThreshold;
-	}
+    void setMode(ClassifierMode mode)
+    {
+        this->mode = mode;
+    }
 
-	bool isUseTempFiles() const {
-		return useTempFiles;
-	}
+    double getGainThreshold() const
+    {
+        return gainThreshold;
+    }
 
-	void setUseTempFiles(bool useTempFiles) {
-		this->useTempFiles = useTempFiles;
-	}
+    void setGainThreshold(double gainThreshold)
+    {
+        this->gainThreshold = gainThreshold;
+    }
+
+    bool isUseTempFiles() const
+    {
+        return useTempFiles;
+    }
+
+    void setUseTempFiles(bool useTempFiles)
+    {
+        this->useTempFiles = useTempFiles;
+    }
 
 
-	int getVerbose() const {
-		return verbose;
-	}
+    int getVerbose() const
+    {
+        return verbose;
+    }
 
-	void setVerbose(int verbose) {
-		this->verbose = verbose;
-	}
+    void setVerbose(int verbose)
+    {
+        this->verbose = verbose;
+    }
 
-	const std::string& getPredictorLocation() const {
-		return predictorLocation;
-	}
+    const std::string& getPredictorLocation() const
+    {
+        return predictorLocation;
+    }
 
-	void setPredictorLocation(const std::string& predictorLocation) {
-		this->predictorLocation = predictorLocation;
-	}
+    void setPredictorLocation(const std::string& predictorLocation)
+    {
+        this->predictorLocation = predictorLocation;
+    }
 
-	double getClassifyTime() const {
-		return classifyTime;
-	}
+    double getClassifyTime() const
+    {
+        return classifyTime;
+    }
 
-	void setClassifyTime(double classifyTime) {
-		this->classifyTime = classifyTime;
-	}
+    void setClassifyTime(double classifyTime)
+    {
+        this->classifyTime = classifyTime;
+    }
 
-	double getTimeout() const {
-		return timeout;
-	}
+    double getTimeout() const
+    {
+        return timeout;
+    }
 
-	void setTimeout(double timeout) {
-		this->timeout = timeout;
-	}
+    void setTimeout(double timeout)
+    {
+        this->timeout = timeout;
+    }
 
-	static const ClassifierMode RNDFOREST = 1;
-	static const ClassifierMode AdaBoostM1 = 2;
-	static const ClassifierMode MIXED = RNDFOREST | AdaBoostM1;
+    static const ClassifierMode RNDFOREST = 1;
+    static const ClassifierMode AdaBoostM1 = 2;
+    static const ClassifierMode MIXED = RNDFOREST | AdaBoostM1;
 };
 
 

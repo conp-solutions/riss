@@ -160,7 +160,8 @@ inline lbool toLbool(int   v) { return lbool((uint8_t)v);  }
 class Clause;
 typedef RegionAllocator<uint32_t>::Ref CRef;
 
-class Clause {
+class Clause
+{
 
     struct ClauseHeader {
 
@@ -173,7 +174,7 @@ class Clause {
         unsigned reloced   : 1;
 #ifndef PCASSO
         unsigned lbd       : 23;
-	unsigned isCore    : 1;
+        unsigned isCore    : 1;
         unsigned canbedel  : 1;
         unsigned can_subsume : 1;
         unsigned can_strengthen : 1;
@@ -202,9 +203,9 @@ class Clause {
             learnt = rhs.learnt;
             has_extra = rhs.has_extra;
             reloced = rhs.reloced;
-	    lbd = rhs.lbd;
-	    isCore = rhs.isCore;
-	    canbedel = rhs.canbedel;
+            lbd = rhs.lbd;
+            isCore = rhs.isCore;
+            canbedel = rhs.canbedel;
             can_subsume = rhs.can_subsume;
             can_strengthen = rhs.can_strengthen;
             size = rhs.size;
@@ -225,9 +226,9 @@ class Clause {
             learnt = rhs.learnt;
             has_extra = rhs.has_extra;
             reloced = rhs.reloced;
-	    lbd = rhs.lbd;
-	    isCore = rhs.isCore;
-	    canbedel = rhs.canbedel;
+            lbd = rhs.lbd;
+            isCore = rhs.isCore;
+            canbedel = rhs.canbedel;
             can_subsume = rhs.can_subsume;
             can_strengthen = rhs.can_strengthen;
             size = rhs.size;
@@ -250,7 +251,8 @@ class Clause {
 
     // NOTE: This constructor cannot be used directly (doesn't allocate enough memory).
     template<class V>
-    Clause(const V& ps, bool use_extra, bool learnt) {
+    Clause(const V& ps, bool use_extra, bool learnt)
+    {
         header.mark      = 0;
     	header.locked    = 0;
         header.learnt    = learnt;
@@ -260,9 +262,9 @@ class Clause {
 #ifdef CLS_EXTRA_INFO
 	header.extra_info = 0
 #endif
-	header.lbd = 0;
-	header.isCore = 0;
-	header.canbedel = 1;
+        header.lbd = 0;
+        header.isCore = 0;
+        header.canbedel = 1;
         header.can_subsume = 1;
         header.can_strengthen = 1;
 #ifdef PCASSO
@@ -278,18 +280,22 @@ class Clause {
 	  }
 	
 	
-        for (int i = 0; i < ps.size(); i++)
+        for (int i = 0; i < ps.size(); i++) {
             data[i].lit = ps[i];
+        }
 	
         if (header.has_extra){
-            if (header.learnt)
+            if (header.learnt) {
                 data[header.size].act = 0;
-            else
-                calcAbstraction(); }
+            } else {
+                calcAbstraction();
+            }
+        }
     }
     
     template<class V>
-    Clause(const V* ps, int psSize, bool use_extra, bool learnt) {
+    Clause(const V* ps, int psSize, bool use_extra, bool learnt)
+    {
         header.mark      = 0;
     	header.locked    = 0;
         header.learnt    = learnt;
@@ -316,36 +322,44 @@ class Clause {
 	  }
 	
 	
-        for (int i = 0; i < psSize; i++)
+        for (int i = 0; i < psSize; i++) {
             data[i].lit = ps[i];
+        }
 	
         if (header.has_extra){
-            if (header.learnt)
+            if (header.learnt) {
                 data[header.size].act = 0;
-            else
-                calcAbstraction(); }
+            } else {
+                calcAbstraction();
+            }
+        }
     }
 
 public:
-    void calcAbstraction() {
+    void calcAbstraction()
+    {
         assert(header.has_extra);
         uint32_t abstraction = 0;
-        for (int i = 0; i < size(); i++)
+        for (int i = 0; i < size(); i++) {
             abstraction |= 1 << (var(data[i].lit) & 31);
-        data[header.size].abs = abstraction;  }
+        }
+        data[header.size].abs = abstraction;
+    }
     
     // thread safe copy for strengthening  
-    void calcAbstraction(Lit first) {
+    void calcAbstraction(Lit first)
+    {
         assert(header.has_extra);
         uint32_t abstraction = 0;
         abstraction |= 1 << (var(first) & 31);
-        for (int i = 1; i < size(); i++)
+        for (int i = 1; i < size(); i++) {
             abstraction |= 1 << (var(data[i].lit) & 31);
+        }
         data[header.size].abs = abstraction; 
     }
 
     int          size        ()      const   { return header.size; }
-    void         shrink      (int i)         { assert(i <= size()); if (header.has_extra) data[header.size-i] = data[header.size]; header.size -= i; }
+    void         shrink      (int i)         { assert(i <= size()); if (header.has_extra) { data[header.size - i] = data[header.size]; } header.size -= i; }
     void         pop         ()              { shrink(1); }
     bool         learnt      ()      const   { return header.learnt; }
     void         learnt      (bool learnt)   { header.learnt = learnt; }
@@ -367,9 +381,9 @@ public:
     float&       activity    ()              { assert(header.has_extra); return data[header.size].act; }
     uint32_t     abstraction () const        { assert(header.has_extra); return data[header.size].abs; }
     
-    /// if extra data stores a literal, return this literal
+    /** if extra data stores a literal, return this literal */
     Lit          getExtraLiteral() const       { assert(header.has_extra); return data[header.size].lit; }
-    /// set the literal that should be stored in the extradata
+    /** set the literal that should be stored in the extradata */
     void         setExtraLiteral(const Lit& l) { assert(header.has_extra); data[header.size].lit = l; }
 
     void         setLBD(int i)  {header.lbd = i;} 
@@ -382,33 +396,35 @@ public:
     bool isCoreClause() const { return header.isCore; }
     void setCoreClause( bool c ) { header.isCore = c; }
     
-    void         print       (bool nl=false) const { for (int i = 0; i < size(); i++){
+    void         print(bool nl = false) const
+    {
+        for (int i = 0; i < size(); i++) {
                                                  printLit(data[i].lit);
                                                  fprintf(stderr," ");
                                                }
-                                               if(nl) fprintf(stderr,"\n"); }
+        if (nl) { fprintf(stderr, "\n"); }
+    }
 
     Lit          subsumes         (const Clause& other) const;
     bool         ordered_subsumes (const Clause& other) const;
     bool         ordered_equals   (const Clause& other) const;
-    void         remove_lit       (const Lit p); /// keeps the order of the remaining literals
+    void         remove_lit(const Lit p);        /** keeps the order of the remaining literals */
     void         strengthen       (Lit p);
 
-    void    set_delete (bool b) 	    { if (b) header.mark = 1; else header.mark = 0;}
+    void    set_delete(bool b)          { if (b) { header.mark = 1; } else { header.mark = 0; }}
     void    set_learnt (bool b)         { header.learnt = b; }
     bool    can_be_deleted()     const  { return mark() == 1; }
     
     /** sort the literals in the clause 
      *  Note: do not use if clause is watched or reason!
      */
-    void sort() {
+    void sort()
+    {
       const uint32_t s = size();
-      for (uint32_t j = 1; j < s; ++j)
-      {
+        for (uint32_t j = 1; j < s; ++j) {
 	  const Lit key = operator[](j);
 	  int32_t i = j - 1;
-	  while ( i >= 0 && toInt(operator[](i)) > toInt(key) )
-	  {
+            while (i >= 0 && toInt(operator[](i)) > toInt(key)) {
 	      operator[](i+1) = operator[](i);
 	      i--;
 	  }
@@ -430,7 +446,8 @@ public:
      *         false gave up locking, because first literal of clause has changed
      *               (only if first lit was specified)
      */
-    bool    spinlock(const Lit first = lit_Undef) {
+    bool    spinlock(const Lit first = lit_Undef)
+    {
       ClauseHeader compare = header;
       compare.locked = 0;
       ClauseHeader setHeader = header;
@@ -441,8 +458,9 @@ public:
       uint32_t* iHeader = (uint32_t*)(&header);
       while ( *iHeader != *cHeader || __sync_bool_compare_and_swap( iHeader, uint32_t(*cHeader), uint32_t(*sHeader) ) == false) {
         // integrity check on first literal to prevent deadlocks
-        if (header.size == 0 || lit_Undef != first && data[0].lit.x != first.x)
+            if (header.size == 0 || lit_Undef != first && data[0].lit.x != first.x) {
           return false;
+            }
 	    // renew header
 	    compare = header;
 	    setHeader = header;
@@ -461,23 +479,22 @@ public:
     bool isLocked() const { return header.locked; }
     
     /** reset the header bit unlocked to indicate that the clause is unlocked */
-    void unlock() {
+    void unlock()
+    {
       header.locked = 0;
     };
 
-    void    removePositionUnsorted(int i)    { data[i].lit = data[ size() - 1].lit; shrink(1); if (has_extra() && !header.learnt) calcAbstraction(); }
-    inline void removePositionSorted(int i)      { for (int j = i; j < size() - 1; ++j) data[j] = data[j+1]; shrink(1); if (has_extra() && !header.learnt) calcAbstraction(); }
+    void    removePositionUnsorted(int i)    { data[i].lit = data[ size() - 1].lit; shrink(1); if (has_extra() && !header.learnt) { calcAbstraction(); } }
+    inline void removePositionSorted(int i)      { for (int j = i; j < size() - 1; ++j) { data[j] = data[j + 1]; } shrink(1); if (has_extra() && !header.learnt) { calcAbstraction(); } }
     // thread safe version, that changes the first literal last
     inline void removePositionSortedThreadSafe(int i)
     {
-      if (i == 0)
-      {
+        if (i == 0) {
          Lit second = data[1].lit;
-         for (int j = 1; j < size() - 1; ++j) data[j] = data[j+1]; shrink(1);  
-         if (has_extra() && !header.learnt) calcAbstraction(second);
+            for (int j = 1; j < size() - 1; ++j) { data[j] = data[j + 1]; } shrink(1);
+            if (has_extra() && !header.learnt) { calcAbstraction(second); }
          data[0].lit = second;
-      }
-      else removePositionSorted(i);      
+        } else { removePositionSorted(i); }
     }
  
     //DebugOutput
@@ -486,19 +503,20 @@ public:
     inline void print_lit(int i) const ;
 #endif
 
-    bool operator<( const Clause& other ) const {
+    bool operator<(const Clause& other) const
+    {
 	const uint32_t clauseSize = size();
-	if( other.can_be_deleted() && !can_be_deleted() ) return true;
-	if( !other.can_be_deleted() && can_be_deleted() ) return false;
-	if( clauseSize > other.size() ) return false;
-	if( clauseSize < other.size() ) return true;
+        if (other.can_be_deleted() && !can_be_deleted()) { return true; }
+        if (!other.can_be_deleted() && can_be_deleted()) { return false; }
+        if (clauseSize > other.size()) { return false; }
+        if (clauseSize < other.size()) { return true; }
 	for( uint32_t i = 0 ; i < clauseSize; i++ ){ // first criterion: vars
-		if( var(other[i]) < var(data[i].lit) ) return false;
-		if( var(data[i].lit) < var(other[i]) ) return true;
+            if (var(other[i]) < var(data[i].lit)) { return false; }
+            if (var(data[i].lit) < var(other[i])) { return true; }
 	}
 	for( uint32_t i = 0 ; i < clauseSize; i++ ){// second criterion: polarity
-		if( other[i] < data[i].lit ) return false;
-		if( data[i].lit < other[i] ) return true;
+            if (other[i] < data[i].lit) { return false; }
+            if (data[i].lit < other[i]) { return true; }
 	}
 	return false;
     }
@@ -506,7 +524,8 @@ public:
 #ifdef PCASSO
 // For PCASSO:
     /** Davide> Sets the clause pt_level */
-    void setPTLevel(unsigned int _pt_level){
+    void setPTLevel(unsigned int _pt_level)
+    {
       header.pt_level = _pt_level;
     }
 
@@ -518,11 +537,11 @@ public:
     //setting the shared to true... means the clause is shared or coming from a shared pool
     void setShared(){        header.shared=1;    }
     void initShCleanDelay(unsigned i){        i>1 ? header.shCleanDelay=1: header.shCleanDelay=i;    }
-    void decShCleanDelay(){        if(header.shCleanDelay>0)     header.shCleanDelay--;    }
+    void decShCleanDelay() {        if (header.shCleanDelay > 0) { header.shCleanDelay--; }    }
     unsigned getShCleanDelay(){       return header.shCleanDelay;    }
 #endif
 
-    /// set the extra info of the clause to the given value
+    /** set the extra info of the clause to the given value */
     void setExtraInformation( const uint64_t& info)
 #ifdef CLS_EXTRA_INFO
     { header.extra_info = info }
@@ -530,7 +549,7 @@ public:
     {}
 #endif
     
-    /// adopt this to external needs
+    /** adopt this to external needs */
     uint64_t extraInformation() const
 #ifdef CLS_EXTRA_INFO
     { return header.extra_info; }
@@ -539,7 +558,7 @@ public:
 #endif
 
 
-    /// update the current extra information with the extra information of another clause used to modify/create this clause
+    /** update the current extra information with the extra information of another clause used to modify/create this clause */
     void updateExtraInformation(const uint64_t& othersExtra) const 
 #ifdef CLS_EXTRA_INFO
     { 
@@ -550,7 +569,7 @@ public:
     {}
 #endif
 
-    /// this method will be used if extra information for unit clauses is calculated!
+    /** this method will be used if extra information for unit clauses is calculated! */
     static uint64_t updateExtraInformation(const uint64_t& a, const uint64_t& b)
 #ifdef CLS_EXTRA_INFO
     { 
@@ -586,25 +605,32 @@ const CRef CRef_Undef = RegionAllocator<uint32_t>::Ref_Undef;
 class ClauseAllocator : public RegionAllocator<uint32_t>
 {
  public:
-    static int clauseWord32Size(int size, bool has_extra){
-        return (sizeof(Clause) + (sizeof(Lit) * (size + (int)has_extra))) / sizeof(uint32_t); }
+    static int clauseWord32Size(int size, bool has_extra)
+    {
+        return (sizeof(Clause) + (sizeof(Lit) * (size + (int)has_extra))) / sizeof(uint32_t);
+    }
     bool extra_clause_field;
 
     ClauseAllocator(uint32_t start_cap) : RegionAllocator<uint32_t>(start_cap), extra_clause_field(false){}
     ClauseAllocator() : extra_clause_field(false){}
 
     /** reduce used space to exactly fit the space that is needed */
-    void fitSize() {
+    void fitSize()
+    {
       RegionAllocator<uint32_t>::fitSize();
     }
     
-    void moveTo(ClauseAllocator& to){
+    void moveTo(ClauseAllocator& to)
+    {
         to.extra_clause_field = extra_clause_field;
-        RegionAllocator<uint32_t>::moveTo(to); }
+        RegionAllocator<uint32_t>::moveTo(to);
+    }
 
-    void copyTo(ClauseAllocator& to) {
+    void copyTo(ClauseAllocator& to)
+    {
       to.extra_clause_field = extra_clause_field;
-      RegionAllocator<uint32_t>::copyTo(to); }
+        RegionAllocator<uint32_t>::copyTo(to);
+    }
         
     template<class Lits>
     CRef alloc(const Lits& ps, bool learnt = false)
@@ -648,7 +674,8 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
     /** remove everything from allocator, but keep its space 
      * @param clean will free resources
      */
-    void clear(bool clean = false) {
+    void clear(bool clean = false)
+    {
       RegionAllocator<uint32_t>::clear( clean );
     }
     
@@ -671,8 +698,9 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         c.relocate(cr);
 
         // Check this, otherwise segfault
-        if (!c.learnt())
+        if (!c.learnt()) {
             to[cr].header.has_extra = to.extra_clause_field;
+        }
 
         // Copy extra data-fields:
         // (This could be cleaned-up. Generalize Clause-constructor to be applicable here instead?)
@@ -688,8 +716,7 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
       to[cr].header.shCleanDelay = c.getShCleanDelay();
       to[cr].header.shared = c.isShared() ? 1: 0;
 #endif
-	}
-        else if (to[cr].has_extra()) to[cr].calcAbstraction();
+        } else if (to[cr].has_extra()) { to[cr].calcAbstraction(); }
 #ifdef PCASSO
     to[cr].header.pt_level = c.getPTLevel();
 #endif
@@ -719,15 +746,15 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
     bool hasFreeMemory(int clauses, int literals, int learnts) const
     {
         assert(clauses >= learnts);
-        if (literals < 2 * clauses)
-        {
+        if (literals < 2 * clauses) {
             std::cerr << "c lits: " << literals << " clauses: " << clauses << std::endl; 
         }
         assert(literals >= 2 * clauses);
-        if ( currentCap() >= size() + requiredMemory(clauses, literals, learnts) )
+        if (currentCap() >= size() + requiredMemory(clauses, literals, learnts)) {
             return true;
-        else
+        } else {
             return false;
+        }
     };
 
  public:
@@ -740,12 +767,14 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
     AllocatorReservation reserveMemory(int clauses, int literals, int learnts, ReadersWriterLock & CA_Lock)
     {
         bool need_lock = ! hasFreeMemory(clauses, literals, learnts);
-        if (need_lock)
+        if (need_lock) {
             CA_Lock.writeLock();
+        }
         uint32_t start = RegionAllocator<uint32_t>::alloc(requiredMemory(clauses, literals, learnts));
         uint32_t limit = RegionAllocator<uint32_t>::size();
-        if (need_lock)
+        if (need_lock) {
             CA_Lock.writeUnlock();
+        }
         return AllocatorReservation(start, limit);
     }
 
@@ -755,16 +784,16 @@ class ClauseAllocator : public RegionAllocator<uint32_t>
         assert(sizeof(Lit)      == sizeof(uint32_t));
         assert(sizeof(float)    == sizeof(uint32_t));
         assert(reservation.current < reservation.upper_limit && "no reserved space left");
-        if (false && reservation.current >= reservation.upper_limit)
-        {
+        if (false && reservation.current >= reservation.upper_limit) {
            std::cerr <<  "no reserved space left" << std::endl;
            abort();
         }
         bool use_extra = learnt | extra_clause_field;
         
         assert(reservation.current + clauseWord32Size(ps.size(), use_extra) <= reservation.upper_limit && "requested clause size does not fit in reservation");
-        if(false && reservation.current + clauseWord32Size(ps.size(), use_extra) > reservation.upper_limit)
+        if (false && reservation.current + clauseWord32Size(ps.size(), use_extra) > reservation.upper_limit) {
             std::cerr << "requested clause size does not fit in reservation" <<std::endl;
+        }
         CRef cid = reservation.current;
         new (lea(cid)) Clause(ps, use_extra, learnt);
         
@@ -801,18 +830,20 @@ class OccLists
     void  init      (const Idx& idx){ occs.growTo(toInt(idx)+1); dirty.growTo(toInt(idx)+1, 0); }
     // Vec&  operator[](const Idx& idx){ return occs[toInt(idx)]; }
     Vec&  operator[](const Idx& idx){ return occs[toInt(idx)]; }
-    Vec&  lookup    (const Idx& idx){ if (dirty[toInt(idx)]) clean(idx); return occs[toInt(idx)]; }
+    Vec&  lookup(const Idx& idx) { if (dirty[toInt(idx)]) { clean(idx); } return occs[toInt(idx)]; }
 
     void  cleanAll  ();
     void  clean     (const Idx& idx);
-    void  smudge    (const Idx& idx){
+    void  smudge(const Idx& idx)
+    {
         if (dirty[toInt(idx)] == 0){
             dirty[toInt(idx)] = 1;
             dirties.push(idx);
         }
     }
 
-    void  clear(bool free = true){
+    void  clear(bool free = true)
+    {
         occs   .clear(free);
         dirty  .clear(free);
         dirties.clear(free);
@@ -827,8 +858,9 @@ void OccLists<Idx,Vec,Deleted>::cleanAll()
 {
     for (int i = 0; i < dirties.size(); i++)
         // Dirties may contain duplicates so check here if a variable is already cleaned:
-        if (dirty[toInt(dirties[i])])
+        if (dirty[toInt(dirties[i])]) {
             clean(dirties[i]);
+        }
     dirties.clear();
 }
 
@@ -839,8 +871,9 @@ void OccLists<Idx,Vec,Deleted>::clean(const Idx& idx)
     Vec& vec = occs[toInt(idx)];
     int  i, j;
     for (i = j = 0; i < vec.size(); i++)
-        if (!deleted(vec[i]))
+        if (!deleted(vec[i])) {
             vec[j++] = vec[i];
+        }
     vec.shrink(i - j);
     dirty[toInt(idx)] = 0;
 }
@@ -854,7 +887,8 @@ template<class T>
 class CMap
 {
     struct CRefHash {
-        uint32_t operator()(CRef cr) const { return (uint32_t)cr; } };
+        uint32_t operator()(CRef cr) const { return (uint32_t)cr; }
+    };
 
     typedef Map<CRef, T, CRefHash> HashTable;
     HashTable map;
@@ -883,8 +917,10 @@ class CMap
     void moveTo(CMap& other){ map.moveTo(other.map); }
 
     // TMP debug:
-    void debug(){
-        printf(" --- size = %d, bucket_count = %d\n", size(), map.bucket_count()); }
+    void debug()
+    {
+        printf(" --- size = %d, bucket_count = %d\n", size(), map.bucket_count());
+    }
 };
 
 
@@ -907,8 +943,9 @@ inline Lit Clause::subsumes(const Clause& other) const
     //if (other.size() < size() || (!learnt() && !other.learnt() && (extra.abst & ~other.extra.abst) != 0))
     assert(!header.learnt);   assert(!other.header.learnt);
     assert(header.has_extra); assert(other.header.has_extra);
-    if (other.header.size < header.size || (data[header.size].abs & ~other.data[other.header.size].abs) != 0)
+    if (other.header.size < header.size || (data[header.size].abs & ~other.data[other.header.size].abs) != 0) {
         return lit_Error;
+    }
 
     Lit        ret = lit_Undef;
     const Lit* c   = (const Lit*)(*this);
@@ -917,9 +954,9 @@ inline Lit Clause::subsumes(const Clause& other) const
     for (unsigned i = 0; i < header.size; i++) {
         // search for c[i] or ~c[i]
         for (unsigned j = 0; j < other.header.size; j++)
-            if (c[i] == d[j])
+            if (c[i] == d[j]) {
                 goto ok;
-            else if (ret == lit_Undef && c[i] == ~d[j]){
+            } else if (ret == lit_Undef && c[i] == ~d[j]) {
                 ret = c[i];
                 goto ok;
             }
@@ -936,23 +973,23 @@ inline Lit Clause::subsumes(const Clause& other) const
 inline bool Clause :: ordered_subsumes (const Clause & other) const
 {
     int i = 0, j = 0;
-    while (i < size() && j < other.size())
-    {
-        if (data[i].lit == other[j])
-        {
+    while (i < size() && j < other.size()) {
+        if (data[i].lit == other[j]) {
             ++i;
             ++j;
         }
         // D does not contain c[i]
-        else if (data[i].lit < other[j])
+        else if (data[i].lit < other[j]) {
             return false;
-        else
+        } else {
             ++j;
     }
-    if (i == size())
+    }
+    if (i == size()) {
         return true;
-    else
+    } else {
         return false;
+    }
 }
 
 /**
@@ -961,23 +998,21 @@ inline bool Clause :: ordered_subsumes (const Clause & other) const
  */
 inline bool Clause::ordered_equals (const Clause & other) const 
 {
-    if (size() != other.size())
+    if (size() != other.size()) {
         return false;
-    else 
+    } else
         for (int i = 0; i < size(); ++i)
-            if (data[i].lit != other[i])
+            if (data[i].lit != other[i]) {
                 return false;
+            }
     return true;
 }
 
 inline void Clause::remove_lit(const Lit p)
 {   
-    for (int i = 0; i < size(); ++i)
-    {
-        if(data[i].lit == p)
-        {
-            while(i < size()-1)
-            {
+    for (int i = 0; i < size(); ++i) {
+        if (data[i].lit == p) {
+            while (i < size() - 1) {
                 data[i] = data[i + 1];
                 ++i;
             }
@@ -985,8 +1020,9 @@ inline void Clause::remove_lit(const Lit p)
         }
     }
     shrink(1);
-    if (has_extra() && size() > 1 && !header.learnt)
+    if (has_extra() && size() > 1 && !header.learnt) {
         calcAbstraction();
+    }
 }
 
 inline void Clause::strengthen(Lit p)
@@ -1014,15 +1050,14 @@ inline void Clause::strengthen(Lit p)
 	bool matchWatchType( const int type ) const { return watchType == type; }
 	
 	// constructor and comparators
-	/// by default, the watch holds a long clause
+    /** by default, the watch holds a long clause */
         Watcher(CRef cr, Lit p, int type) : clauseReference(cr), blockingLit( toInt(p) ), watchType(type) {}
         bool operator==(const Watcher& w) const { return clauseReference == w.clauseReference; }
         bool operator!=(const Watcher& w) const { return clauseReference != w.clauseReference; }
     };
 
     /** class that represents the deleted data of the two-watched-literal list (one element) */
-    struct WatcherDeleted
-    {
+struct WatcherDeleted {
       const ClauseAllocator& ca;
       WatcherDeleted(const ClauseAllocator& _ca) : ca(_ca) {}
       bool operator()(const Watcher& w) const { return ca[w.clauseReference].mark() == 1; }
@@ -1031,7 +1066,8 @@ inline void Clause::strengthen(Lit p)
 //=================================================================================================
 
 /** class that is used as mark array */
-class MarkArray {
+class MarkArray
+{
 private:
 	std::vector<uint32_t> array;
 	uint32_t step;
@@ -1046,24 +1082,28 @@ public:
 	  destroy();
 	}
 
-	void destroy() {
+    void destroy()
+    {
 	  std::vector<uint32_t>().swap(array);
 	  step = 0;
 	}
 
-	void create(const uint32_t newSize){
+    void create(const uint32_t newSize)
+    {
 	  array.resize(newSize);
 	  memset( &(array[0]), 0 , sizeof( uint32_t) * newSize );
 	}
 
-	void capacity(const uint32_t newSize) {
+    void capacity(const uint32_t newSize)
+    {
 	  if( newSize > array.size() ) {
 	    array.resize(newSize, 0); // add 0 as element
 	    // memset( &(array[0]), 0 , sizeof( uint32_t) * (newSize) );
 	  }
 	}
 	
-	void resize(const uint32_t newSize) {
+    void resize(const uint32_t newSize)
+    {
 	  if( newSize > array.size() ) {
 	    array.resize(newSize, 0); // add 0 as element
 	    // memset( &(array[0]), 0 , sizeof( uint32_t) * (newSize) );
@@ -1072,42 +1112,49 @@ public:
 
 	/** reset the mark of a single item
 	 */
-	void reset( const uint32_t index ) {
+    void reset(const uint32_t index)
+    {
 	  array[index] = 0;
 	}
 
 	/** reset the marks of the whole array
 	 */
-	void reset() {
+    void reset()
+    {
 	  memset( &(array[0]), 0 , sizeof( uint32_t) * array.size() );
 	  step = 0;
 	}
 
 	/** give number of next step. if value becomes critical, array will be reset
 	 */
-	uint32_t nextStep() {
-	  if( step >= 1 << 30 ) reset();
+    uint32_t nextStep()
+    {
+        if (step >= 1 << 30) { reset(); }
 	  return ++step;
 	}
 
 	/** returns whether an item has been marked at the current step
 	 */
-	bool isCurrentStep( const uint32_t index ) const {
+    bool isCurrentStep(const uint32_t index) const
+    {
 	  return array[index] == step;
 	}
 
 	/** set an item to the current step value
 	 */
-	void setCurrentStep( const uint32_t index ) {
+    void setCurrentStep(const uint32_t index)
+    {
 	  array[index] = step;
 	}
 
 	/** check whether a given index has the wanted index */ 
-	bool hasSameIndex( const uint32_t index, const uint32_t comparestep ) const { //TODO name is confusing hasSameStep ??
+    bool hasSameIndex(const uint32_t index, const uint32_t comparestep) const     //TODO name is confusing hasSameStep ??
+    {
 	  return array[index] == comparestep;
 	}
 
-	uint32_t size() const {
+    uint32_t size() const
+    {
 	  return array.size();
 	}
 
@@ -1120,43 +1167,48 @@ public:
 // implementation of frequently used small methods that should be inlined
 //
 
-/// print literals into a stream
-inline std::ostream& operator<<(std::ostream& other, const Lit& l ) {
-  if( l == lit_Undef ) other << "lUndef";
-  else if( l == lit_Error ) other << "lError";
-  else other << (sign(l) ? "-" : "") << var(l) + 1;
+/** print literals into a stream */
+inline std::ostream& operator<<(std::ostream& other, const Lit& l)
+{
+    if (l == lit_Undef) { other << "lUndef"; }
+    else if (l == lit_Error) { other << "lError"; }
+    else { other << (sign(l) ? "-" : "") << var(l) + 1; }
   return other;
 }
 
-/// print a clause into a stream
-inline std::ostream& operator<<(std::ostream& other, const Clause& c ) {
+/** print a clause into a stream */
+inline std::ostream& operator<<(std::ostream& other, const Clause& c)
+{
   other << "[";
-  for( int i = 0 ; i < c.size(); ++ i )
+    for (int i = 0 ; i < c.size(); ++ i) {
     other << " " << c[i];
+    }
   other << "]";
   return other;
 }
 
-/// print elements of a std::vector
+/** print elements of a std::vector */
 template <typename T>
 inline std::ostream& operator<<(std::ostream& other, const std::vector<T>& data ) 
 {
-  for( int i = 0 ; i < data.size(); ++ i )
+    for (int i = 0 ; i < data.size(); ++ i) {
     other << " " << data[i];
+    }
   return other;
 }
 
 
-/// print elements of a std::vector
+/** print elements of a std::vector */
 template <typename T>
 inline std::ostream& operator<<(std::ostream& other, const vec<T>& data ) 
 {
-  for( int i = 0 ; i < data.size(); ++ i )
+    for (int i = 0 ; i < data.size(); ++ i) {
     other << " " << data[i];
+    }
   return other;
 }
   
-}
+} // end namespace
 
  
 #endif

@@ -27,68 +27,67 @@
 
 using namespace std;
 
-map<int,string> list;
+map<int, string> list;
 
 int main()
 {
 #include "tmpSyscallList.cc"
 
-  int max=0;
-  map<int,string>::iterator it;
+    int max = 0;
+    map<int, string>::iterator it;
 
-  for(it=list.begin();it!=list.end();++it)
-    if ((*it).first>max)
-      max=(*it).first;
+    for (it = list.begin(); it != list.end(); ++it)
+        if ((*it).first > max)
+        { max = (*it).first; }
 
-  ofstream Hfile("SyscallNames.hh");
+    ofstream Hfile("SyscallNames.hh");
 
-  Hfile << "#ifndef _SyscallNames_hh_" << endl
-	<< "#define _SyscallNames_hh_" << endl
-	<< endl;
+    Hfile << "#ifndef _SyscallNames_hh_" << endl
+          << "#define _SyscallNames_hh_" << endl
+          << endl;
 
-  Hfile << "const int nbSyscallNames=" << max+1 << ";" << endl;
+    Hfile << "const int nbSyscallNames=" << max + 1 << ";" << endl;
 
-  Hfile << endl;
+    Hfile << endl;
 
-  Hfile << "const char *getSyscallName(int n);" << endl;
+    Hfile << "const char *getSyscallName(int n);" << endl;
 
-  Hfile << endl;
+    Hfile << endl;
 
-  Hfile << "#endif" << endl;
+    Hfile << "#endif" << endl;
 
-  Hfile.close();
+    Hfile.close();
 
-  ofstream CCfile("SyscallNames.cc");
+    ofstream CCfile("SyscallNames.cc");
 
-  CCfile << "#include \"SyscallNames.hh\"\n\n";
+    CCfile << "#include \"SyscallNames.hh\"\n\n";
 
-  CCfile << "const char *syscallNames[nbSyscallNames]={\n";
+    CCfile << "const char *syscallNames[nbSyscallNames]={\n";
 
-  for(int i=0;i<=max;++i)
-  {
-    string name;
-    it=list.find(i);
-    if (it==list.end())
-      name="???";
-    else
-      name=(*it).second;
+    for (int i = 0; i <= max; ++i) {
+        string name;
+        it = list.find(i);
+        if (it == list.end())
+        { name = "???"; }
+        else
+        { name = (*it).second; }
 
-    CCfile << "\t\"" << name << "\"";
-    if (i!=max)
-      CCfile << ",";
+        CCfile << "\t\"" << name << "\"";
+        if (i != max)
+        { CCfile << ","; }
 
-    CCfile << "\n";
-  }
+        CCfile << "\n";
+    }
 
-  CCfile << "};\n\n";
+    CCfile << "};\n\n";
 
-  CCfile << "const char *getSyscallName(int n)\n"
-	 << "{\n"
-	 << "  if (n>0 && n<=nbSyscallNames)\n"
-	 << "    return syscallNames[n];\n"
-	 << "  else\n"
-	 << "    return \"???\";\n"
-	 << "}\n";
+    CCfile << "const char *getSyscallName(int n)\n"
+           << "{\n"
+           << "  if (n>0 && n<=nbSyscallNames)\n"
+           << "    return syscallNames[n];\n"
+           << "  else\n"
+           << "    return \"???\";\n"
+           << "}\n";
 
-  CCfile.close();
+    CCfile.close();
 }
