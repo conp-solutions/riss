@@ -46,10 +46,9 @@ void LinearUS::lbSearch_none()
     {
       nbSatisfiable++;
       uint64_t newCost = computeCostModel(solver->model);
-      printf("o %" PRIu64 "\n", newCost);
       saveModel(solver->model);
+      printf("o %" PRIu64 "\n", newCost);
       
-
       ubCost = newCost;
 
       if (nbSatisfiable == 1)
@@ -123,10 +122,9 @@ void LinearUS::lbSearch_blocking()
     {
       nbSatisfiable++;
       uint64_t newCost = computeCostModel(solver->model);
-      printf("o %" PRIu64 "\n", newCost);
       saveModel(solver->model);
+      printf("o %" PRIu64 "\n", newCost);
       
-
       ubCost = newCost;
 
       if (nbSatisfiable == 1)
@@ -197,7 +195,7 @@ void LinearUS::lbSearch_weakening()
       nbSatisfiable++;
       uint64_t newCost = computeCostModel(solver->model);
       printf("o %" PRIu64 "\n", newCost);
-      saveModel(solver->model);
+      
       
 
       ubCost = newCost;
@@ -278,10 +276,9 @@ void LinearUS::lbSearch_iterative()
     {
       nbSatisfiable++;
       uint64_t newCost = computeCostModel(solver->model);
-      printf("o %" PRIu64 "\n", newCost);
       saveModel(solver->model);
+      printf("o %" PRIu64 "\n", newCost);
       
-
       ubCost = newCost;
 
       if (nbSatisfiable == 1)

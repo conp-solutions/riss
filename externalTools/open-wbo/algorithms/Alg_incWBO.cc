@@ -498,8 +498,8 @@ void incWBO::weightSearch()
         if (lbCost < ubCost)
         {
           ubCost = lbCost;
-          printf("o %" PRIu64 "\n", lbCost);
 	  saveModel(solver->model);
+          printf("o %" PRIu64 "\n", lbCost);
         }
         printAnswer(_OPTIMUM_);
         exit(_OPTIMUM_);
@@ -511,8 +511,8 @@ void incWBO::weightSearch()
         if (cost < ubCost)
         {
           ubCost = cost;
-          printf("o %" PRIu64 "\n", ubCost);
 	  saveModel(solver->model);
+          printf("o %" PRIu64 "\n", ubCost);
         }
 
         if (lbCost == ubCost)
@@ -643,8 +643,8 @@ void incWBO::normalSearch()
       nbSatisfiable++;
       ubCost = incComputeCostModel(solver->model);
       assert(lbCost == ubCost);
-      printf("o %" PRIu64 "\n", lbCost);
       saveModel(solver->model);
+      printf("o %" PRIu64 "\n", lbCost);
       printAnswer(_OPTIMUM_);
       exit(_OPTIMUM_);
     }
