@@ -105,3 +105,32 @@ if(SHIFTBMC)
   add_subdirectory(shiftbmc/)
   add_subdirectory(aiger/)
 endif()
+
+include(ExternalProject)
+
+# Adds PicoSAT as external project. You can build this directly inside your build directory
+# with "make picosat"
+ExternalProject_Add(picosat
+  PREFIX       "picosat"
+  TMP_DIR      "picosat/tmp"
+  STAMP_DIR    "picosat/stamp"
+  DOWNLOAD_DIR "picosat/tmp"
+  SOURCE_DIR   "picosat/src/picosat"
+  BINARY_DIR   "picosat/src/picosat"
+
+  # Download step
+  URL "http://fmv.jku.at/picosat/picosat-960.tar.gz"
+  DOWNLOAD_NAME picosat.tar.gz # to be independent of version
+
+  # Configure step
+  CONFIGURE_COMMAND <SOURCE_DIR>/configure
+
+  # Install step
+  INSTALL_COMMAND ${CMAKE_COMMAND} -E copy "libpicosat.a" ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} &&
+                  ${CMAKE_COMMAND} -E copy "picosat"      ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} &&
+                  ${CMAKE_COMMAND} -E copy "picomcs"      ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} &&
+                  ${CMAKE_COMMAND} -E copy "picomus"      ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} &&
+                  ${CMAKE_COMMAND} -E copy "picogcnf"     ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+  # Logging
+  LOG_BUILD 1
+)
