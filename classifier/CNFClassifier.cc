@@ -101,10 +101,7 @@ string CNFClassifier::getConfig( Solver& S )
     vector<double> features; // temporary storage
     extractFeatures(features); // also print the formula name!!
 
-#warning TODO implement classification with data base
-  string configuration = computeKNN ( "dataset", 5, features );
-  cout << configuration << "BKJANDS" << endl; 
-  return configuration;
+  return computeKNN ( "dataset", 5, features );
 }
 
 

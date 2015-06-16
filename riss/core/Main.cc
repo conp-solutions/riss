@@ -122,12 +122,12 @@ int main(int argc, char** argv)
     BoolOption   opt_cmdLine("MAIN", "cmd", "print the relevant options", false);
 
     try {
-
         //
         // here the solver starts with its actual work ...
         //
         bool foundHelp = ::parseOptions(argc, argv);   // parse all global options
-	cout << opt_config << endl;
+	string co = string(opt_config == 0 ? "" : opt_config);
+	printf("%s\n", co.c_str());
         CoreConfig* coreConfig = new CoreConfig(string(opt_config == 0 ? "" : opt_config));
         Coprocessor::CP3Config* cp3config = new Coprocessor::CP3Config(string(opt_config == 0 ? "" : opt_config));
         foundHelp = coreConfig->parseOptions(argc, argv) || foundHelp;
@@ -191,8 +191,9 @@ int main(int argc, char** argv)
 
 
         gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
-        if (in == NULL)
-        { printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1); }
+        if (in == NULL) {
+	  printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1); 
+	}
 
         if (S->verbosity > 0) {  // print only once!
             printf("c ======================[ riss (core) %s  %.13s ]===============================================\n", solverVersion, gitSHA1);
@@ -234,24 +235,28 @@ int main(int argc, char** argv)
 	  printf("%s", config.c_str());
 	  // get new autoconfigured config
 	  
-	  //delete cnfclassifier;
-	  //delete S;
-	  //delete coreConfig;
-	  //delete cp3config; TODO
-// 	  
-	  coreConfig = new CoreConfig( config );
-	  cp3config = new Coprocessor::CP3Config ( config ); // use new and pointer!
-	  //coreConfig = CoreConfig( config.c_str() );
-	  //cp3config = Coprocessor::CP3Config( config.c_str() ); // use new and pointer!
-// 	  // resetup solver
+	  delete cnfclassifier;
+	  delete S;
+	  delete coreConfig;
+	  delete cp3config; 
+
+	  // set up the new configuration
+	  coreConfig = new CoreConfig( config.c_str() );
+	  cp3config = new Coprocessor::CP3Config( config.c_str() ); // use new and pointer!
+	  
+	  // reset the solver with the new configuration
 	  S = new Solver(*coreConfig);
 	  S->setPreprocessor(cp3config); // tell solver about preprocessor       
 	  S->verbosity = verb;
 	  S->verbEveryConflicts = vv;
-	  printf("\n%d\n", S->nClauses());
+	
+	  gzclose(in); // reopening the formula file. (old one refers to EOF)
+	  in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
+	
 	}
-        
 	parse_DIMACS(in, *S);
+	printf("\n%d\n", S->nClauses());
+
         // open file for proof
         S->drupProofFile = (drupFile) ? fopen((const char*) drupFile , "wb") : NULL;
         if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S->drupProofFile != NULL) { fprintf(S->drupProofFile, "o proof %s\n", (const char*)opt_proofFormat); }     // we are writing proofs of the given format!

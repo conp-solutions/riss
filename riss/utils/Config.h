@@ -465,10 +465,35 @@ bool Config::addPreset(const std::string& optionSet)
         parseOptions(std::string(" -rnd-seed=9207562  -no-unhide -szTrailQueue=6000 -no-sls -no-probe -gc-frac=0.3 -dense -bve -no-bva -minSizeMinimizingClause=30 -no-laHack -up -rMax=40000  -cla-decay=0.999 -no-bve_totalG -bve_cgrow=10 -subsimp -cp3_str_limit=300000000 -cp3_bve_limit=2500000 -no-cce -R=2.0 -K=0.95 -rtype=0 -cp3_strength -cp3_call_inc=200 -no-bve_BCElim -phase-saving=2 -minLBDMinimizingClause=6 -no-inprocess -no-bve_gates")
                      + std::string(" -alluiphack=2 -all_strength_res=5 -var-decay-e=0.7 -var-decay-b=0.7 -rMaxInc=1.5 -longConflict -cp3_sub_limit=300000 -specialIncReduceDB=1000 -rnd-freq=0 -minLBDFrozenClause=15 -enabled_cp3 -ccmin-mode=2 -no-bve_unlimited -incReduceDB=450 -hack=0 -firstReduceDB=16000 -no-ee -no-cp3_randomized -szLBDQueue=30 -no-rew -no-hte -cp3_bve_heap=0 -bve_strength -bve_red_lits=0 -bve_heap_updates=2 -no-3resolve ")
                      , false);
+    
+      
+    // options for the competition 2015
+    } else if (optionSet == "COMP1") {
+        parseOptions(std::string("-config=Riss427 -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early"), false);
+    } else if (optionSet == "COMP2") {
+        parseOptions(std::string("-config=Riss427:plain_XOR -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early"), false);
+    } else if (optionSet == "COMP3") {
+        parseOptions(std::string("-config=Riss427:plain_XOR:plain_BVA -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early"), false);
+    } else if (optionSet == "COMP4") {
+	parseOptions(std::string("-config=Riss427 -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -no-cp3_limited"), false);
+    } else if (optionSet == "COMP5") {
+	parseOptions(std::string("-config=Riss427 -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -lbd-core-th=5"), false);
+    } else if (optionSet == "COMP6") {
+	parseOptions(std::string("-config=Riss427:plain_XOR -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -cp3_bve_limit=50000000 -bce-bcm -rate -rate-ratm_ext -rate-ratm_rounds -probe -pr-probeL=200000 -pr-lhbr -pr-bins -pr-keepL=0 -pr-keepI=0"), false);
+    } else if (optionSet == "COMP7") {
+	parseOptions(std::string("-config=Riss427:INCSOLVE -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early"), false);
+    } else if (optionSet == "COMP8") {
+	parseOptions(std::string("-config=Riss427 -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -rtype=1 -rlevel=2 -firstReduceDB=20000 -lbdIgnL0 -quickRed -act-based -clsActB=3"), false);
+    } else if (optionSet == "COMP9") {
+	parseOptions(std::string("-config=Riss427 -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early -lbdIgnL0 -rer-g -rer-ga=3 -init-pol=6"), false);
+    } else if (optionSet == "COMP10") {
+	parseOptions(std::string("-config=Riss3g -cp3_iters=2 -ee -cp3_ee_level=3 -cp3_ee_it -rlevel=2 -bve_early"), false);
     }
+     
 
 
     else {
+        printf("%s\n", "c FAILED LOADING PRESET CONFIG");
         ret = false; // indicate that no configuration has been found here!
     }
     parsePreset = false;
