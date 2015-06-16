@@ -161,11 +161,11 @@ add_subdirectory(scripts/)
 
 if(SHIFTBMC)
   add_subdirectory(shiftbmc/)
-  # we need the aiger lib, therefore we have to include the subdirectory
-  # also here
-  add_subdirectory(aiger/)
 endif()
 
-if(AIGER-TOOLS)
+# Subdirectories are not allowed to be included twice,
+# therefore we have two cases for the aiger-tools to
+# be imported.
+if(AIGER-TOOLS OR SHIFTBMC)
   add_subdirectory(aiger/)
 endif()
