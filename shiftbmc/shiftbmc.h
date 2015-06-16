@@ -16,15 +16,17 @@ IN THE SOFTWARE.
 #ifndef SHIFTBMC_H
 #define SHIFTBMC_H
 
-#include "aiger/aiger.h"
-
 // enable this to disable all the output that might tell about the content of the implementation
 // #define TEST_BINARY
 
-extern "C" { // we are compiling with G++, however, picosat is C code, as well as the library interfaces of the other two solvers
+// we are compiling with G++, however, picosat and aiger is C code, as well as the library interfaces of the other two solvers
+extern "C" {
+
+#include "aiger/aiger.h"
 #include "picosat.h"
 #include "riss/librissc.h"
 #include "pfolio/libprissc.h"
+
 }
 
 #include <assert.h>

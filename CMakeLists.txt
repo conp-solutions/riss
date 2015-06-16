@@ -31,12 +31,14 @@ endfunction()
 version("5.0.0")
 
 option(STATIC_BINARIES "Build fully statically linked binaries" ON)
-option(SHIFTBMC        "Include agier and shiftbmc build targets" OFF)
+option(SHIFTBMC        "Include build targets for shiftbmc and aiger library" OFF)
+option(AIGER-TOOLS     "Include build targets for all agier executables" OFF)
 option(WARNINGS        "Set verbose warning flags" OFF)
 
 # Print option settings
 message(STATUS "Static binaries ${STATIC_BINARIES}")
 message(STATUS "ShiftBMC ${SHIFTBMC}")
+message(STATUS "aiger-tools ${AIGER-TOOLS}")
 message(STATUS "Verbose warnings ${WARNINGS}")
 
 # Output directory definitions
@@ -84,6 +86,62 @@ endif()
 
 # Sub-Projects:
 # 
+
+include(ExternalProject)
+
+
+# 
+# PicoSAT
+# 
+# Adds PicoSAT as external project. You can build this directly inside your build directory
+# with "make picosat"
+
+# define flags for PicoSATs configure script
+if (STATIC_BINARIES)
+  set(PICOSAT_CONFIGURE_FLAGS "--shared")
+else()
+  set(PICOSAT_CONFIGURE_FLAGS "--static")
+endif()
+
+ExternalProject_Add(picosat
+  PREFIX       "picosat"
+  TMP_DIR      "picosat/tmp"
+  STAMP_DIR    "picosat/stamp"
+  DOWNLOAD_DIR "picosat/tmp"
+  SOURCE_DIR   "picosat/src/picosat"
+  BINARY_DIR   "picosat/src/picosat"
+
+  # Download step
+  URL "http://fmv.jku.at/picosat/picosat-960.tar.gz"
+  DOWNLOAD_NAME picosat.tar.gz # to be independent of version
+
+  # Configure step
+  CONFIGURE_COMMAND ./configure ${PICOSAT_CONFIGURE_FLAGS}
+
+  # Install step
+  INSTALL_COMMAND ${CMAKE_COMMAND} -E copy "libpicosat.a" ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} &&
+                  ${CMAKE_COMMAND} -E copy "picosat"      ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} &&
+                  ${CMAKE_COMMAND} -E copy "picomcs"      ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} &&
+                  ${CMAKE_COMMAND} -E copy "picomus"      ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} &&
+                  ${CMAKE_COMMAND} -E copy "picogcnf"     ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+  # Logging
+  LOG_BUILD 1
+)
+
+# Add PicoSAT libraries
+if (STATIC_BINARIES)
+  add_library(picosat-lib-static STATIC IMPORTED)
+  set_property(TARGET picosat-lib-static PROPERTY IMPORTED_LOCATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libpicosat${CMAKE_STATIC_LIBRARY_SUFFIX})
+  add_dependencies(picosat-lib-static picosat)
+else()
+  add_library(picosat-lib-shared SHARED IMPORTED)
+  set_property(TARGET picosat-lib-shared PROPERTY IMPORTED_LOCATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libpicosat${CMAKE_SHARED_LIBRARY_SUFFIX})
+  add_dependencies(picosat-lib-shared picosat)
+endif()
+
+# PicoSAT headers for #include directives
+include_directories("${CMAKE_CURRENT_BINARY_DIR}/picosat/src/picosat")
+
 # We use the CMakeLists.txt files in subdirectories, because you maybe want
 # to include other components and a huge single top-level CMakeLists.txt would
 # be very harsh to manage. With the subdirs we got a much more modular approach.
@@ -103,34 +161,11 @@ add_subdirectory(scripts/)
 
 if(SHIFTBMC)
   add_subdirectory(shiftbmc/)
+  # we need the aiger lib, therefore we have to include the subdirectory
+  # also here
   add_subdirectory(aiger/)
 endif()
 
-include(ExternalProject)
-
-# Adds PicoSAT as external project. You can build this directly inside your build directory
-# with "make picosat"
-ExternalProject_Add(picosat
-  PREFIX       "picosat"
-  TMP_DIR      "picosat/tmp"
-  STAMP_DIR    "picosat/stamp"
-  DOWNLOAD_DIR "picosat/tmp"
-  SOURCE_DIR   "picosat/src/picosat"
-  BINARY_DIR   "picosat/src/picosat"
-
-  # Download step
-  URL "http://fmv.jku.at/picosat/picosat-960.tar.gz"
-  DOWNLOAD_NAME picosat.tar.gz # to be independent of version
-
-  # Configure step
-  CONFIGURE_COMMAND <SOURCE_DIR>/configure
-
-  # Install step
-  INSTALL_COMMAND ${CMAKE_COMMAND} -E copy "libpicosat.a" ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} &&
-                  ${CMAKE_COMMAND} -E copy "picosat"      ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} &&
-                  ${CMAKE_COMMAND} -E copy "picomcs"      ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} &&
-                  ${CMAKE_COMMAND} -E copy "picomus"      ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} &&
-                  ${CMAKE_COMMAND} -E copy "picogcnf"     ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  # Logging
-  LOG_BUILD 1
-)
+if(AIGER-TOOLS)
+  add_subdirectory(aiger/)
+endif()
