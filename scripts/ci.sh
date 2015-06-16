@@ -9,7 +9,8 @@
 set -e
 
 # solvers for fuzzchecking
-solver=('riss' 'pcasso' 'pfolio')
+solver=('riss-simp' 'riss-core -config=Riss427:BMC_FULL' 'riss-core -config=CSSC2014' 'pfolio' 'pcasso')
+params="-mem-lim=2048"
 
 # directory of this script (in repo/scripts)
 script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
@@ -23,7 +24,7 @@ cd build
 cmake -DCMAKE_BUILD_TYPE=Debug ..
 make all
 
-echo "Make fuzzer"
+# echo "Make fuzzer"
 cd $repo_dir/tools/checker
 make
 
@@ -34,12 +35,19 @@ n_runs=100
 for s in "${solver[@]}"
 do
     echo "Run fuzzer with $n_runs cnfs on $s"
+    params=""
+
+    # write wrapper script to call solver with parameters
+    echo "$repo_dir/build/bin/$s $params \$1" > solver-wrapper.sh
+    echo "exit \$?" >> solver-wrapper.sh
+    chmod +x solver-wrapper.sh
     
     # run fuzzcheck as background process and wait for it
-    ./fuzzcheck.sh $repo_dir/build/bin/$s $n_runs > /dev/null 2> /dev/null &
+    ./fuzzcheck.sh $repo_dir/tools/checker/solver-wrapper.sh $n_runs > /dev/null 2> /dev/null &
     wait $!
 
-    # count lines of log for this run (in this file the seed of the bugs can be found)
+    # count lines of log for this run (in this file the name of the bugs-files can be found)
+    # the log file has the pid of the fuzzcheck-process
     bugs=`cat runcnfuzz-$!.log | wc -l`
 
     if ! [ $bugs -eq 1 ]
