@@ -19,11 +19,11 @@ add_executable(shiftbmc-abc     shiftbmc.cc)
 
 
 if(STATIC_BINARIES)
-  target_link_libraries(shiftbmc        riss-lib-static aiger-lib-static)
-  target_link_libraries(shiftbmc-abc    riss-lib-static aiger-lib-static)
+  target_link_libraries(shiftbmc        riss-lib-static coprocessor-lib-static aiger-lib-static)
+  target_link_libraries(shiftbmc-abc    riss-lib-static coprocessor-lib-static aiger-lib-static)
 else()
-  target_link_libraries(shiftbmc        riss-lib-shared aiger-lib-shared)
-  target_link_libraries(shiftbmc-abc    riss-lib-shared aiger-lib-shared)
+  target_link_libraries(shiftbmc        riss-lib-shared coprocessor-lib-shared aiger-lib-shared)
+  target_link_libraries(shiftbmc-abc    riss-lib-shared coprocessor-lib-shared aiger-lib-shared)
 endif()
 
 
