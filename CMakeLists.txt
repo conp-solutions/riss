@@ -25,7 +25,7 @@ endfunction()
 
 
 # Options:
-# 
+#  
 # Version of the whole tool box. Subprojects can define their own versions. If
 # no version is specified, this "global" version will be used,
 version("5.0.1")
@@ -92,6 +92,7 @@ add_subdirectory(riss/)
 add_subdirectory(risslibcheck/)
 add_subdirectory(classifier/)
 add_subdirectory(coprocessor/)
+add_subdirectory(externalTools/)
 add_subdirectory(mprocessor/)
 add_subdirectory(pcasso/)
 add_subdirectory(pfolio/)
@@ -105,3 +106,4 @@ if(SHIFTBMC)
   add_subdirectory(shiftbmc/)
   add_subdirectory(aiger/)
 endif()
+
