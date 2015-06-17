@@ -261,13 +261,13 @@ static int encode(bool actuallyEnode = true)
     unsigned reset;
     int i, j;
     if (nstates == szstates)
-    { states = realloc(states, ++szstates * sizeof * states); }
+    { states = (State*)realloc(states, ++szstates * sizeof * states); }
     nstates++; /// work on next state
     res = states + time;
     memset(res, 0, sizeof * res);
     res->time = time;
 
-    res->latches = malloc(model->num_latches * sizeof * res->latches);
+    res->latches = (Latch*)malloc(model->num_latches * sizeof * res->latches);
     shiftFormula.latch.resize(model->num_latches, 0); /// create vector of latch literals
     shiftFormula.latchNext.resize(model->num_latches, 0); /// create vector of latch literals
     shiftFormula.currentBads.resize(model->num_bad, 0);  /// create vector of bad literals
@@ -330,14 +330,14 @@ static int encode(bool actuallyEnode = true)
     }
 
     /// get a fresh set of input variables
-    res->inputs = malloc(model->num_inputs * sizeof * res->inputs);
+    res->inputs = (int*) malloc(model->num_inputs * sizeof * res->inputs);
     for (i = 0; i < model->num_inputs; i++) {
         res->inputs[i] = newvar();
         if (actuallyEnode) { shiftFormula.inputs.push_back(res->inputs[i]); }
     }
 
     /// encode the whole formula one more time!
-    res->_ands = malloc(model->num_ands * sizeof * res->_ands);
+    res->_ands = (int*) malloc(model->num_ands * sizeof * res->_ands);
     for (i = 0; i < model->num_ands; i++) {
         lit = newvar();
         res->_ands[i] = lit;
@@ -360,7 +360,7 @@ static int encode(bool actuallyEnode = true)
 
     /// take care of bad states ( seem to be set for each iteration )
     if (model->num_bad) {
-        res->bad = malloc(model->num_bad * sizeof * res->bad);
+        res->bad = (int*) malloc(model->num_bad * sizeof * res->bad);
         for (i = 0; i < model->num_bad; i++) {
             res->bad[i] = import(res, model->bad[i].lit);  /// check how this variable is created
             if (actuallyEnode) { shiftFormula.currentBads[i] = res->bad[i]; }   // store bad literals for output! have to be the of the current last state!
@@ -380,7 +380,7 @@ static int encode(bool actuallyEnode = true)
     if (model->num_constraints) {
         if (!didNumConstraints) { cerr << "WARNING: CANNOT HANDLE NUM_CONSTRAINTS YET!" << endl; didNumConstraints = true; }
         res->constraints =
-            malloc(model->num_constraints * sizeof * res->constraints);
+            (int*) malloc(model->num_constraints * sizeof * res->constraints);
         for (i = 0; i < model->num_constraints; i++)
         { res->constraints[i] = import(res, model->constraints[i].lit); }
         res->sane = newvar();
@@ -1385,8 +1385,8 @@ int main(int argc, char ** argv)
     firstlatchidx = 1 + model->num_inputs;
     first_andidx = firstlatchidx + model->num_latches;
     msg(2, "reencoded model");
-    bad = calloc(model->num_bad, 1);
-    justice = calloc(model->num_justice, 1);
+    bad = (char*)calloc(model->num_bad, 1);
+    justice = (char*)calloc(model->num_justice, 1);
 
     if (model->num_justice) {
         assert(false && "cannot handle justice constraints!");
