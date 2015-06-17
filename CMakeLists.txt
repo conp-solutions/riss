@@ -169,3 +169,33 @@ endif()
 if(AIGER-TOOLS OR SHIFTBMC)
   add_subdirectory(aiger/)
 endif()
+
+if(AIGER-TOOLS)
+  ExternalProject_Add(abc
+    PREFIX       "abc"
+    TMP_DIR      "abc/tmp"
+    STAMP_DIR    "abc/stamp"
+    DOWNLOAD_DIR "abc/tmp"
+    SOURCE_DIR   "abc/src/abc"
+    BINARY_DIR   "abc/src/abc"
+
+    # Download step
+    URL "https://bitbucket.org/alanmi/abc/get/default.tar.bz2"
+    DOWNLOAD_NAME abc.tar.bz2
+
+    # There is no configure script
+    CONFIGURE_COMMAND ""
+
+    BUILD_COMMAND make libabc.a
+
+    # Install step
+    INSTALL_COMMAND ${CMAKE_COMMAND} -E copy "libabc.a" ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
+
+    # Logging
+    LOG_BUILD 1
+  )
+  add_library(abc-lib-static STATIC IMPORTED)
+  set_property(TARGET abc-lib-static PROPERTY IMPORTED_LOCATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libabc${CMAKE_STATIC_LIBRARY_SUFFIX})
+  add_dependencies(abc-lib-static abc)
+
+endif()
