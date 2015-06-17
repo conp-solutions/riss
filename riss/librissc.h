@@ -55,7 +55,7 @@ extern "C" {
   /** initialize a solver instance, and return a pointer to the maintain structure 
    * @param presetConfig name of a configuration that should be used
    */
-  extern void* riss_init(const char* presetConfig);
+  extern void* riss_init(const char* presetConfig = 0);
   
   /** set the random seed of the solver
    * @param seed random seed for double random generator ( must be between 0 and 1 )
@@ -63,7 +63,7 @@ extern "C" {
   extern void riss_set_randomseed( void* riss, double seed );
   
   /** free the resources of the solver, set the pointer to 0 afterwards */
-  extern void riss_destroy(void* riss);
+  extern void riss_destroy(void*& riss);
 
   
   
@@ -75,17 +75,17 @@ extern "C" {
   /** add a literal to the solver, if lit == 0, end the clause and actually add it (lit is in external 1-N variable representation)
    *  @return 0, if addition is ok. 1, if adding this literal (0) leads to a bad state of the solver
    */
-  extern int riss_add (void* riss, const int lit);
+  extern int riss_add (void* riss, const int& lit);
 
   
   
   /** add the given literal to the assumptions for the next solver call */
-  extern void riss_assume (void* riss, const int lit);
+  extern void riss_assume (void* riss, const int& lit);
 
   /** add a variable as prefered search decision (will be decided in this order before deciding other variables) 
    * Note: converts variable from external to internal representation automatically
    */
-  extern void riss_add_prefered_decision (void* riss, const int variable);
+  extern void riss_add_prefered_decision (void* riss, const int& variable);
   
   /** clear all prefered decisions that have been added so far */
   extern void riss_clear_prefered_decisions (void* riss);
@@ -109,14 +109,14 @@ extern "C" {
    * @param nOfConflicts number of conflicts that are allowed for this SAT solver run (-1 = infinite)
    * @return status of the SAT call: 10 = satisfiable, 20 = unsatisfiable, 0 = not finished within number of conflicts
    */
-  extern int riss_sat (void* riss, const int64_t nOfConflicts);
+  extern int riss_sat (void* riss, const int64_t& nOfConflicts = -1);
 
   
   
   /** return the polarity of a variable in the model of the last solver run (if the result was sat) 
    * @return 1 = literal is true, -1 = literal is false, 0 = value is unknown
    */
-  extern int riss_deref (const void* riss, const int lit) ;
+  extern int riss_deref (const void* riss, const int& lit) ;
   
   /** give number of literals that are present in the conflict clause that has been produced by analyze_final
    *  @return number of literals in the conflict clause
@@ -126,7 +126,7 @@ extern "C" {
   /** return the literals of the conflict clause at the specified position
    *  @return a literal of the conflict clause
    */
-  extern int riss_conflict_lit (const void* riss, const int position) ;  
+  extern int riss_conflict_lit (const void* riss, const int& position) ;  
   
   /** check whether a given assumption variable (literal is turned into the corresponding variable) is present in the current conflict clause (result of analyzeFinal)
   * @return 1 if the assumption variable is part of the conflict, 0 otherwise.
@@ -148,6 +148,7 @@ extern "C" {
    */
   extern int riss_clauses (const void* riss) ;
 
+  
 #ifdef __cplusplus
 }
 #endif

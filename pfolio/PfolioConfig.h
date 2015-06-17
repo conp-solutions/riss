@@ -15,25 +15,27 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "riss/utils/Config.h"
 #include "riss/utils/Options.h"
 
-namespace Riss {
+namespace Riss
+{
 
 /** This class should contain all options that can be specified for the pfolio solver
  */
-class PfolioConfig : public Config {
-  /** pointer to all options in this object - used for parsing and printing the help! */
-  Riss::vec<Option*> configOptions;
+class PfolioConfig : public Config
+{
+    /** pointer to all options in this object - used for parsing and printing the help! */
+    Riss::vec<Option*> configOptions;
 
-  
-public:
- /** default constructor, which sets up all options in their standard format */
- PfolioConfig (const std::string & presetOptions = "");
- 
- 
- BoolOption send;
- BoolOption receive; // remove elements on watch list faster, but unsorted
- BoolOption proofCounting; // interrupt after preprocessing
+
+  public:
+    /** default constructor, which sets up all options in their standard format */
+    PfolioConfig(const std::string& presetOptions = "");
+
+
+    BoolOption send;
+    BoolOption receive; // remove elements on watch list faster, but unsorted
+    BoolOption proofCounting; // interrupt after preprocessing
 };
- 
+
 }
 
 #endif

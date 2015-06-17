@@ -425,7 +425,7 @@ bool PSolver::initializeThreads()
     // create the solver
     if( i > 0 ) { 
       assert( solvers.size() == i && "next solver is not already created!" );
-      solvers.push(  new Solver( &configs[i] ) ); // solver 0 should exist already!
+      solvers.push(  new Solver( & configs[i] ) ); // solver 0 should exist already!
     }
 
     // tell the communication system about the solver

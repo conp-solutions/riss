@@ -31,14 +31,16 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  
  nanosleep(_cat, "nanosleep", "For each conflict sleep this amount of nano seconds", 0, IntRange(0, INT32_MAX), optionListPtr ),
  
+ 
  ppOnly (_cat, "ppOnly", "interrupts search after preprocessing", false, optionListPtr ),
  
 #ifndef NDEBUG
- opt_learn_debug    (_cat, "learn-debug", "print debug information during learning", false, optionListPtr ),
- opt_removal_debug  (_cat, "rem-debug",   "print debug information about removal", 0, IntRange(0, 5), optionListPtr ),
+ opt_learn_debug   (_cat, "learn-debug", "print debug information during learning", false, optionListPtr ),
+ opt_removal_debug (_cat, "rem-debug",   "print debug information about removal", 0, IntRange(0, 5), optionListPtr ),
 #endif
- opt_refineConflict (_cat, "refConflict", "refine conflict clause after solving with assumptions", true, optionListPtr ),
  
+ opt_refineConflict (_cat, "refConflict", "refine conflict clause after solving with assumptions", true, optionListPtr ),
+
  opt_K (_cr, "K", "The constant used to force restart", 0.8, DoubleRange(0, false, 1, false), optionListPtr ), 
  opt_R (_cr, "R", "The constant used to block restart", 1.4, DoubleRange(1, false, 5, false), optionListPtr ), 
  opt_size_lbd_queue (_cr, "szLBDQueue", "The size of moving average for LBD (restarts)", 50, IntRange(10, INT32_MAX), optionListPtr ),
@@ -50,7 +52,7 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  opt_spec_inc_reduce_db (_cred, "specialIncReduceDB", "Special increment for reduce DB", 1000, IntRange(0, INT32_MAX), optionListPtr ),
  opt_lb_lbd_frozen_clause (_cred, "minLBDFrozenClause", "Protect clauses if their LBD decrease and is lower than (for one turn)", 30, IntRange(0, INT32_MAX), optionListPtr ),
  opt_lbd_ignore_l0 (_cred, "lbdIgnL0", "ignore top level literals for LBD calculation", false, optionListPtr ),
- opt_lbd_ignore_assumptions(_cred, "lbdIgnLA", "ignore literals of assumption literals", false, optionListPtr ),
+ opt_lbd_ignore_assumptions (_cred, "lbdIgnLA", "ignore top level literals for LBD calculation", false, optionListPtr ),
  opt_update_lbd (_cred, "lbdupd", "update LBD during (0=propagation,1=learning,2=never),",1, IntRange(0, 2), optionListPtr ),
  opt_lbd_inc(_cred,"incLBD","allow to increment lbd of clauses dynamically",false, optionListPtr ),
  opt_quick_reduce(_cred,"quickRed","check only first two literals for being satisfied",false, optionListPtr ),
@@ -73,10 +75,10 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  opt_init_act ("INIT", "init-act", "initialize activities (0=none,1=inc-lin,2=inc-geo,3=dec-lin,4=dec-geo,5=rnd,6=abs(jw))", 0, IntRange(0, 6), optionListPtr ),
  opt_init_pol ("INIT", "init-pol", "initialize polarity (0=none,1=JW-pol,2=JW-neg,3=MOMS,4=MOMS-neg,5=rnd,6=pos)", 0, IntRange(0, 6), optionListPtr ),
 
- opt_restart_level     (_cat, "rlevel",  "Choose to which level to jump to: 0=0, 1=ReusedTrail, 2=recursive reused trail", 0, IntRange(0, 2), optionListPtr ),
- opt_restarts_type     (_cat, "rtype",   "Choose type of restart (0=dynamic,1=luby,2=geometric)", 0, IntRange(0, 2), optionListPtr ),
- opt_restart_first     (_cat, "rfirst",  "The base restart interval", 100, IntRange(1, INT32_MAX), optionListPtr ),
- opt_restart_inc       (_cat, "rinc",    "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false), optionListPtr ),
+ opt_restart_level (_cat, "rlevel", "Choose to which level to jump to: 0=0, 1=ReusedTrail, 2=recursive reused trail", 0, IntRange(0, 2), optionListPtr ),
+ opt_restarts_type (_cat, "rtype", "Choose type of restart (0=dynamic,1=luby,2=geometric)", 0, IntRange(0, 2), optionListPtr ),
+ opt_restart_first (_cat, "rfirst", "The base restart interval", 100, IntRange(1, INT32_MAX), optionListPtr ),
+ opt_restart_inc (_cat, "rinc", "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false), optionListPtr ),
  opt_inc_restart_level (_cat, "irlevel", "Choose how often restarts beyond assumptions shoud be performed (every X)", 1, IntRange(1, INT32_MAX), optionListPtr ),
 
  opt_garbage_frac (_cat, "gc-frac", "The fraction of wasted memory allowed before a garbage collection is triggered", 0.20, DoubleRange(0, false, HUGE_VAL, false), optionListPtr ),
@@ -208,7 +210,7 @@ CoreConfig::CoreConfig(const std::string & presetOptions) // add new options her
  opt_rupProofOnly     ("PROOF", "rup-only", "do not print delete lines into proof", false, optionListPtr ), 
  opt_checkProofOnline ("PROOF", "proof-oft-check", "check proof construction during execution (1=on, higher => more verbose checking)", 0, IntRange(0,10), optionListPtr ), 
 
- opt_verb     ("CORE", "solververb",   "Verbosity level (0=silent, 1=some, 2=more).", 0, IntRange(0, 2), optionListPtr ),
+ opt_verb ("CORE", "solververb",   "Verbosity level (0=silent, 1=some, 2=more).", 0, IntRange(0, 2), optionListPtr ),
  opt_inc_verb ("CORE", "incsverb",     "Verbosity level for MaxSAT (0=silent, 1=some, 2=more).", 0, IntRange(0, 2), optionListPtr ),
  
  opt_usePPpp ("CORE", "usePP", "use preprocessor for preprocessing", true, optionListPtr ),

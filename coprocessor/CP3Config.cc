@@ -15,8 +15,10 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 using namespace Riss;
 
-namespace Coprocessor {
+namespace Coprocessor
+{
 
+// parameter categories
 const char* _cat = "COPROCESSOR";
 const char* _cat2 = "COPROCESSOR  TECHNIQUES";
 const char* _cat_bve = "COPROCESSOR - BVE";
@@ -368,7 +370,7 @@ circ_AddBlocked (_cat_ee_hash, "cp3_addBlocked",  "clauses that are used to extr
 circ_NegatedI   (_cat_ee_hash, "cp3_extNgtInput", "extract gates, where inputs come from the same variable", true, optionListPtr),
 circ_Implied    (_cat_ee_hash, "cp3_extImplied",  "do search binary clause also in BIG with dfs", true, optionListPtr),
 
-/// temporary Boolean flag to quickly enable debug output for the whole file
+// temporary Boolean flag to quickly enable debug output for the whole file
 #ifndef NDEBUG
 circ_debug_out      (_cat_ee_hash, "cp3_circ_debug",  "print debug output for circuitextraction", false, optionListPtr),
 #endif
@@ -471,7 +473,7 @@ opt_add2_red_lea   (_cat_res, "cp3_res_add_lea",  "add redundants based on learn
 opt_add2_red_start (_cat_res, "cp3_res_ars",      "also before preprocessing?", false, optionListPtr ),
 opt_res3_inpStepInc      (_cat_res, "cp3_res_inpInc","increase for steps per inprocess call", 200000, IntRange(0, INT32_MAX), optionListPtr ),
 opt_add2_inpStepInc      (_cat_res, "cp3_add_inpInc","increase for steps per inprocess call", 60000, IntRange(0, INT32_MAX), optionListPtr ),
-/// enable this parameter only during debug!
+// enable this parameter only during debug!
 #ifndef NDEBUG
 res3_debug_out         (_cat_res, "cp3_res_debug",   "print debug output to screen",false, optionListPtr ),
 #endif

@@ -32,83 +32,72 @@ using namespace std;
 
 int main(int argc, char **argv)
 {
-  string s,timestamp;
-  bool withTimestamp;
+    string s, timestamp;
+    bool withTimestamp;
 
-  withTimestamp=argc==2 && strcmp(argv[1],"--timestamp")==0;
+    withTimestamp = argc == 2 && strcmp(argv[1], "--timestamp") == 0;
 
-  try
-  {
-    while(cin.good())
-    {
-      if (withTimestamp)
-      {
-	cin >> timestamp;
-	cin.get(); // skip tabulation
+    try {
+        while (cin.good()) {
+            if (withTimestamp) {
+                cin >> timestamp;
+                cin.get(); // skip tabulation
 
-	if (!cin.good())
-	  break;
-      }
+                if (!cin.good())
+                { break; }
+            }
 
-      getline(cin,s);
+            getline(cin, s);
 
-      if (!cin.good() && s.length()==0)
-	break;
+            if (!cin.good() && s.length() == 0)
+            { break; }
 
-      // we're only concerned by a "v " line
-      if (s.length()>=2 && s[0]=='v' && s[1]==' ')
-      {
-	istringstream f(s);
-	string word;
-	int len=0;
+            // we're only concerned by a "v " line
+            if (s.length() >= 2 && s[0] == 'v' && s[1] == ' ') {
+                istringstream f(s);
+                string word;
+                int len = 0;
 
-	f >> word; // skip "v "
+                f >> word; // skip "v "
 
-	while (f.good())
-	{
-	  // read a literal
-	  word="";
-	  f >> word;
-	  if (word=="")
-	    break;
+                while (f.good()) {
+                    // read a literal
+                    word = "";
+                    f >> word;
+                    if (word == "")
+                    { break; }
 
-	  if (len==0)
-	  {
-	    if (withTimestamp)
-	      cout << timestamp << "\t";
-	    cout << "v";
-	  }
+                    if (len == 0) {
+                        if (withTimestamp)
+                        { cout << timestamp << "\t"; }
+                        cout << "v";
+                    }
 
-	  cout << " " << word;
-	  len+=word.length();
+                    cout << " " << word;
+                    len += word.length();
 
-	  if (len>100)
-	  {
-	    cout << endl;
-	    len=0;
-	  }
-	}
+                    if (len > 100) {
+                        cout << endl;
+                        len = 0;
+                    }
+                }
 
-	if (len!=0)
-	  cout << endl;
+                if (len != 0)
+                { cout << endl; }
 
-	s.clear();
-      }
-      else
-      {
-	// copy
-	if (withTimestamp)
-	  cout << timestamp << "\t";
-	cout << s << endl;
-      } 
+                s.clear();
+            } else {
+                // copy
+                if (withTimestamp)
+                { cout << timestamp << "\t"; }
+                cout << s << endl;
+            }
+        }
+    } catch (exception& e) {
+        cout.flush();
+        cerr << "\n\tUnexpected exception :\n";
+        cerr << "\t" << e.what() << endl;
+        exit(1);
     }
-  }
-  catch (exception &e)
-  {
-    cout.flush();
-    cerr << "\n\tUnexpected exception :\n";
-    cerr << "\t" << e.what() << endl;
-    exit(1);
-  }
 }
 

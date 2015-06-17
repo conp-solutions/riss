@@ -1168,7 +1168,7 @@ stream << "c [STAT] CP3 "
 << ipTime.getCpuTime() << " s-ipTime, "
 << ppTime.getWallClockTime() << " s-ppwTime, " 
 << ipTime.getWallClockTime() << " s-ipwTime, "
-// << memUsedPeak() << " MB, "
+<< memUsedPeak() << " MB, "
 << (data.ok() ? "ok ":"notok ")
 << overheadTime.getCpuTime() << " s-ohTime, "
 << endl;

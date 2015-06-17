@@ -84,7 +84,8 @@ static bool receivedInterupt = false;
 	StringOption predictorLocation("WEKA", "predictor","location to the predictor", "./predictor.jar");
 
 
-void setTimeLimit(int timeout) {
+void setTimeLimit(int timeout)
+{
 	// Set limit on CPU-time:
 	if (timeout != INT32_MAX) {
 		rlimit rl;
@@ -92,12 +93,13 @@ void setTimeLimit(int timeout) {
 		if (rl.rlim_max == RLIM_INFINITY || (rlim_t)timeout < rl.rlim_max) {
 			rl.rlim_cur = timeout;
 			if (setrlimit(RLIMIT_CPU, &rl) == -1)
-			printf("c WARNING! Could not set resource limit: CPU-time.\n");
+            { printf("c WARNING! Could not set resource limit: CPU-time.\n"); }
 		}
 	}
 }
 
-void setMEMLimit(int memout) {
+void setMEMLimit(int memout)
+{
 	// Set limit on virtual memory:
 	if (memout != INT32_MAX) {
 		rlim_t new_mem_lim = (rlim_t)memout * 1024*1024;
@@ -106,7 +108,7 @@ void setMEMLimit(int memout) {
 		if (rl.rlim_max == RLIM_INFINITY || new_mem_lim < rl.rlim_max) {
 			rl.rlim_cur = new_mem_lim;
 			if (setrlimit(RLIMIT_AS, &rl) == -1)
-			printf("c WARNING! Could not set resource limit: Virtual memory.\n");
+            { printf("c WARNING! Could not set resource limit: Virtual memory.\n"); }
 		}
 	}
 }
@@ -122,7 +124,8 @@ const char* cnffile;
 double time1 = 0;
 
 
-string splitString(const std::string &s, unsigned int n,char delim = ' ') {
+string splitString(const std::string& s, unsigned int n, char delim = ' ')
+{
     std::stringstream ss(s);
     std::string item;
     while(std::getline(ss, item, delim) || n-- > 0) {
@@ -145,7 +148,7 @@ void dumpData()
 	ostream& fout = *output;
 
 	if (fileoutput)
-		(*fileout).open(attrFile, fstream::out | fstream::app);
+    { (*fileout).open(attrFile, fstream::out | fstream::app); }
 	fout.setf(ios::fixed);
 	fout.precision(4);
 	if (attr && fileoutput) {
@@ -163,9 +166,9 @@ void dumpData()
 	  stringstream s;
 	  s.setf(ios::fixed);
 	  s.precision(4);
-	  if( isInfinite( features[k] ) ) s << ",?"; // weka cannot handle "inf" -- FIXME should be replaced with a high cut-off value
-	  else s << "," << features[k];
-	  if ( s.str().find("inf") != string::npos ) cerr << "c there are infinite features (index " << k << " -- " << features[k] << " isInf: " << isInfinite( features[k] ) <<  ")" << endl;
+        if (isInfinite(features[k])) { s << ",?"; }     // weka cannot handle "inf" -- FIXME should be replaced with a high cut-off value
+        else { s << "," << features[k]; }
+        if (s.str().find("inf") != string::npos) { cerr << "c there are infinite features (index " << k << " -- " << features[k] << " isInf: " << isInfinite(features[k]) <<  ")" << endl; }
 	  fout << s.str();
 	}
 	if (classify || preclassify) {
@@ -191,7 +194,7 @@ void printFeatures(int argc, char** argv)
 	S.verbosity = 0;
 
 	if (verb > 0)
-		printf("c trying %s\n", cnffile);
+    { printf("c trying %s\n", cnffile); }
 
 	gzFile in = gzopen(cnffile, "rb");
 	if (in == NULL) {
@@ -248,9 +251,9 @@ void printFeatures(int argc, char** argv)
 	cnfclassifier->setPlotsFileName(plotFile);
 	cnfclassifier->setComputingVarGraph(varf);
 	if (attr)
-		cnfclassifier->setAttrFileName(attrFile);
+    { cnfclassifier->setAttrFileName(attrFile); }
 	else
-		cnfclassifier->setAttrFileName(NULL);
+    { cnfclassifier->setAttrFileName(NULL); }
 	cnfclassifier->setComputingDerivative(derivative);
 	
 	// in output features the actual calculation is done
@@ -268,18 +271,19 @@ void printFeatures(int argc, char** argv)
 	dumpData();
 //	}
 	if (fileoutput)
-		(*fileout).close();
+    { (*fileout).close(); }
 }
 
 
 // Note that '_exit()' rather than 'exit()' has to be used. The reason is that 'exit()' calls
 // destructors and may cause deadlocks if a malloc/free function happens to be running (these
 // functions are guarded by locks for multithreaded use).
-void static SIGINT_exit(int signum) {
+void static SIGINT_exit(int signum)
+{
     printf("\n"); printf("c *** INTERRUPTED ***\n");
     _exit(1); // immediately exit!
-    if( !receivedInterupt ) _exit(1);
-    else receivedInterupt = true;
+    if (!receivedInterupt) { _exit(1); }
+    else { receivedInterupt = true; }
 }
 
 
@@ -319,7 +323,7 @@ int main(int argc, char** argv)
         setMEMLimit(mem_lim);
 
 	  if (argc == 1)
-	      printf("c Reading from standard input... Use '--help' for help.\n");
+        { printf("c Reading from standard input... Use '--help' for help.\n"); }
 
 
 	  if (verb > 0) {
@@ -330,7 +334,8 @@ int main(int argc, char** argv)
   	      printf("c | Contributors:                                                                                         |\n");
 	      printf("c |     Enrique Matos Alfonso: Implementation of the classification and base features                     |\n");
 	      printf("c ============================[ Problem Statistics ]=======================================================\n");
-	      printf("c |                                                                                                       |\n"); }
+            printf("c |                                                                                                       |\n");
+        }
 	  
 	  configuration = new Configurations(configInfo,attrInfo);
 	  
@@ -340,8 +345,7 @@ int main(int argc, char** argv)
 		  classifier.setNonZero( nonZero );
 		  classifier.setVerbose(verb);
 		  classifier.test(attrFile);
-	  } else
-	  if (train){
+        } else if (train) {
 		  Classifier classifier(*configuration, prefixClassifier);
 		  classifier.setWekaLocation(string(wekaLocation));
 		  classifier.setNonZero( nonZero );
@@ -368,7 +372,7 @@ int main(int argc, char** argv)
 				vector<int> classes = classifier.classifyJava(attrFile);
 				time1 = cpuTime()-time1;
 				cout << "c classify time " << time1 << endl;
-				if( classes.size() == 0 ) return 1; // there is no class, so you cannot print anything!
+                if (classes.size() == 0) { return 1; }   // there is no class, so you cannot print anything!
 				if( classes.size() != 1) {
 				  cout << "@class " << splitString(configuration->getNames()[classes[0]], 1, '.') << endl;
 				  return 0;

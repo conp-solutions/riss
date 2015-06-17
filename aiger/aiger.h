@@ -22,7 +22,7 @@ IN THE SOFTWARE.
 
 /*------------------------------------------------------------------------*/
 /* This file contains the API of the 'AIGER' library, which is a reader and
- * writer for the AIGER AIG format.  The code of the library 
+ * writer for the AIGER AIG format.  The code of the library
  * consists of 'aiger.c' and 'aiger.h'.  It is independent of 'simpaig.c'
  * and 'simpaig.h'.
  * library.
@@ -53,13 +53,13 @@ typedef struct aiger_symbol aiger_symbol;
 #define aiger_true 1
 
 #define aiger_sign(l) \
-  (((unsigned)(l))&1)
+    (((unsigned)(l))&1)
 
 #define aiger_strip(l) \
-  (((unsigned)(l))&~1)
+    (((unsigned)(l))&~1)
 
 #define aiger_not(l) \
-  (((unsigned)(l))^1)
+    (((unsigned)(l))^1)
 
 /*------------------------------------------------------------------------*/
 /* Each literal is associated to a variable having an unsigned index.  The
@@ -67,24 +67,24 @@ typedef struct aiger_symbol aiger_symbol;
  * the same as removing the sign bit.
  */
 #define aiger_var2lit(i) \
-  (((unsigned)(i)) << 1)
+    (((unsigned)(i)) << 1)
 
 #define aiger_lit2var(l) \
-  (((unsigned)(l)) >> 1)
+    (((unsigned)(l)) >> 1)
 
 /*------------------------------------------------------------------------*/
 /* Callback functions for client memory management.  The 'free' wrapper will
  * get as last argument the size of the memory as it was allocated.
  */
-typedef void *(*aiger_malloc) (void *mem_mgr, size_t);
-typedef void (*aiger_free) (void *mem_mgr, void *ptr, size_t);
+typedef void *(*aiger_malloc)(void *mem_mgr, size_t);
+typedef void (*aiger_free)(void *mem_mgr, void *ptr, size_t);
 
 /*------------------------------------------------------------------------*/
 /* Callback function for client character stream reading.  It returns an
  * ASCII character or EOF.  Thus is has the same semantics as the standard
  * library 'getc'.   See 'aiger_read_generic' for more details.
  */
-typedef int (*aiger_get) (void *client_state);
+typedef int (*aiger_get)(void *client_state);
 
 /*------------------------------------------------------------------------*/
 /* Callback function for client character stream writing.  The return value
@@ -92,36 +92,33 @@ typedef int (*aiger_get) (void *client_state);
  * unsigned char.  It has therefore the same semantics as 'fputc' and 'putc'
  * from the standard library.
  */
-typedef int (*aiger_put) (char ch, void *client_state);
+typedef int (*aiger_put)(char ch, void *client_state);
 
 /*------------------------------------------------------------------------*/
 
-enum aiger_mode
-{
-  aiger_binary_mode = 0,
-  aiger_ascii_mode = 1,
-  aiger_stripped_mode = 2,	/* can be ORed with one of the previous */
+enum aiger_mode {
+    aiger_binary_mode = 0,
+    aiger_ascii_mode = 1,
+    aiger_stripped_mode = 2,  /* can be ORed with one of the previous */
 };
 
 typedef enum aiger_mode aiger_mode;
 
 /*------------------------------------------------------------------------*/
 
-struct aiger_and
-{
-  unsigned lhs;			/* as literal [2..2*maxvar], even */
-  unsigned rhs0;		/* as literal [0..2*maxvar+1] */
-  unsigned rhs1;		/* as literal [0..2*maxvar+1] */
+struct aiger_and {
+    unsigned lhs;         /* as literal [2..2*maxvar], even */
+    unsigned rhs0;        /* as literal [0..2*maxvar+1] */
+    unsigned rhs1;        /* as literal [0..2*maxvar+1] */
 };
 
 /*------------------------------------------------------------------------*/
 
-struct aiger_symbol
-{
-  unsigned lit;			/* as literal [0..2*maxvar+1] */
-  unsigned next, reset;		/* used only for latches */
-  unsigned size, * lits;	/* used only for justice */
-  char *name;
+struct aiger_symbol {
+    unsigned lit;         /* as literal [0..2*maxvar+1] */
+    unsigned next, reset;     /* used only for latches */
+    unsigned size, * lits;    /* used only for justice */
+    char *name;
 };
 
 /*------------------------------------------------------------------------*/
@@ -130,58 +127,57 @@ struct aiger_symbol
  * in the header 'M I L O A' and optional 'B C J F' after the format identifier
  * string.
  */
-struct aiger
-{
-  /* variable not literal index, e.g. maxlit = 2*maxvar + 1 
-   */
-  unsigned maxvar;
+struct aiger {
+    /* variable not literal index, e.g. maxlit = 2*maxvar + 1
+     */
+    unsigned maxvar;
 
-  unsigned num_inputs;
-  unsigned num_latches;
-  unsigned num_outputs;
-  unsigned num_ands;
-  unsigned num_bad;
-  unsigned num_constraints;
-  unsigned num_justice;
-  unsigned num_fairness;
+    unsigned num_inputs;
+    unsigned num_latches;
+    unsigned num_outputs;
+    unsigned num_ands;
+    unsigned num_bad;
+    unsigned num_constraints;
+    unsigned num_justice;
+    unsigned num_fairness;
 
-  aiger_symbol *inputs;		/* [0..num_inputs[ */
-  aiger_symbol *latches;	/* [0..num_latches[ */
-  aiger_symbol *outputs;	/* [0..num_outputs[ */
-  aiger_symbol *bad;		/* [0..num_bad[ */
-  aiger_symbol *constraints;	/* [0..num_constraints[ */
-  aiger_symbol *justice;	/* [0..num_justice[ */
-  aiger_symbol *fairness;	/* [0..num_fairness[ */
+    aiger_symbol *inputs;     /* [0..num_inputs[ */
+    aiger_symbol *latches;    /* [0..num_latches[ */
+    aiger_symbol *outputs;    /* [0..num_outputs[ */
+    aiger_symbol *bad;        /* [0..num_bad[ */
+    aiger_symbol *constraints;    /* [0..num_constraints[ */
+    aiger_symbol *justice;    /* [0..num_justice[ */
+    aiger_symbol *fairness;   /* [0..num_fairness[ */
 
-  aiger_and *ands;		/* [0..num_ands[ */
+    aiger_and *ands;      /* [0..num_ands[ */
 
-  char **comments;		/* zero terminated */
+    char **comments;      /* zero terminated */
 };
 
 /*------------------------------------------------------------------------*/
 /* Version and CVS identifier.
  */
-const char *aiger_id (void);
-const char *aiger_version (void);
+const char *aiger_id(void);
+const char *aiger_version(void);
 
 /*------------------------------------------------------------------------*/
 /* You need to initialize the library first.  This generic initialization
  * function uses standard 'malloc' and 'free' from the standard library for
  * memory management.
  */
-aiger *aiger_init (void);
+aiger *aiger_init(void);
 
 /*------------------------------------------------------------------------*/
 /* Same as previous initialization function except that a memory manager
  * from the client is used for memory allocation.  See the 'aiger_malloc'
  * and 'aiger_free' definitions above.
  */
-aiger *aiger_init_mem (void *mem_mgr, aiger_malloc, aiger_free);
+aiger *aiger_init_mem(void *mem_mgr, aiger_malloc, aiger_free);
 
 /*------------------------------------------------------------------------*/
 /* Reset and delete the library.
  */
-void aiger_reset (aiger *);
+void aiger_reset(aiger *);
 
 /*------------------------------------------------------------------------*/
 /* Treat the literal 'lit' as input, output, latch, bad, constraint,
@@ -191,20 +187,20 @@ void aiger_reset (aiger *);
  * be a latch.  The last argument is the symbolic name if non zero.
  * The same literal can of course be used for multiple outputs.
  */
-void aiger_add_input (aiger *, unsigned lit, const char *);
-void aiger_add_latch (aiger *, unsigned lit, unsigned next, const char *);
-void aiger_add_output (aiger *, unsigned lit, const char *);
-void aiger_add_bad (aiger *, unsigned lit, const char *);
-void aiger_add_constraint (aiger *, unsigned lit, const char *);
-void aiger_add_justice (aiger *, unsigned size, unsigned *, const char *);
-void aiger_add_fairness (aiger *, unsigned lit, const char *);
+void aiger_add_input(aiger *, unsigned lit, const char *);
+void aiger_add_latch(aiger *, unsigned lit, unsigned next, const char *);
+void aiger_add_output(aiger *, unsigned lit, const char *);
+void aiger_add_bad(aiger *, unsigned lit, const char *);
+void aiger_add_constraint(aiger *, unsigned lit, const char *);
+void aiger_add_justice(aiger *, unsigned size, unsigned *, const char *);
+void aiger_add_fairness(aiger *, unsigned lit, const char *);
 
 /*------------------------------------------------------------------------*/
 /* Add a reset value to the latch 'lit'.  The 'lit' has to be a previously
  * added latch and 'reset' is either '0', '1' or equal to 'lit', the latter
  * means undefined.
  */
-void aiger_add_reset (aiger *, unsigned lit, unsigned reset);
+void aiger_add_reset(aiger *, unsigned lit, unsigned reset);
 
 /*------------------------------------------------------------------------*/
 /* Register an unsigned AND with AIGER.  The arguments are signed literals
@@ -213,12 +209,12 @@ void aiger_add_reset (aiger *, unsigned lit, unsigned reset);
  * (even).  It identifies the AND and can only be registered once.  After
  * registration an AND can be accessed through 'ands[aiger_lit2idx (lhs)]'.
  */
-void aiger_add_and (aiger *, unsigned lhs, unsigned rhs0, unsigned rhs1);
+void aiger_add_and(aiger *, unsigned lhs, unsigned rhs0, unsigned rhs1);
 
 /*------------------------------------------------------------------------*/
 /* Add a line of comments.  The comment may not contain a new line character.
  */
-void aiger_add_comment (aiger *, const char *comment_line);
+void aiger_add_comment(aiger *, const char *comment_line);
 
 /*------------------------------------------------------------------------*/
 /* This checks the consistency for debugging and testing purposes.  In
@@ -229,7 +225,7 @@ void aiger_add_comment (aiger *, const char *comment_line);
  * checked to be non cyclic.  If a check fails a corresponding error message
  * is returned.
  */
-const char *aiger_check (aiger *);
+const char *aiger_check(aiger *);
 
 /*------------------------------------------------------------------------*/
 /* These are the writer functions for AIGER.  They return zero on failure.
@@ -239,9 +235,9 @@ const char *aiger_check (aiger *);
  * original literal association and may even delete AND nodes.  See
  * 'aiger_reencode' for more details.
  */
-int aiger_write_to_file (aiger *, aiger_mode, FILE *);
-int aiger_write_to_string (aiger *, aiger_mode, char *str, size_t len);
-int aiger_write_generic (aiger *, aiger_mode, void *state, aiger_put);
+int aiger_write_to_file(aiger *, aiger_mode, FILE *);
+int aiger_write_to_string(aiger *, aiger_mode, char *str, size_t len);
+int aiger_write_generic(aiger *, aiger_mode, void *state, aiger_put);
 
 /*------------------------------------------------------------------------*/
 /* The following function allows to write to a file.  The write mode is
@@ -251,7 +247,7 @@ int aiger_write_generic (aiger *, aiger_mode, void *state, aiger_put);
  * This feature assumes that the 'gzip' program is in your path and can be
  * executed through 'popen'.  The return value is non zero on success.
  */
-int aiger_open_and_write_to_file (aiger *, const char *file_name);
+int aiger_open_and_write_to_file(aiger *, const char *file_name);
 
 /*------------------------------------------------------------------------*/
 /* The binary format reencodes all indices.  After normalization the input
@@ -265,8 +261,8 @@ int aiger_open_and_write_to_file (aiger *, const char *file_name);
  * data structures are updated accordingly including 'maxvar'.  The client
  * data within ANDs is reset to zero.
  */
-int aiger_is_reencoded (aiger *);
-void aiger_reencode (aiger *);
+int aiger_is_reencoded(aiger *);
+void aiger_reencode(aiger *);
 
 /*------------------------------------------------------------------------*/
 /* This function computes the cone of influence (coi). The coi contains
@@ -278,7 +274,7 @@ void aiger_reencode (aiger *);
  *
  * TODO: this is just a stub and actually not really implemented yet.
  */
-const unsigned char * aiger_coi (aiger *);		/* [1..maxvar] */
+const unsigned char * aiger_coi(aiger *);       /* [1..maxvar] */
 
 /*------------------------------------------------------------------------*/
 /* Read an AIG from a FILE, a string, or through a generic interface.  These
@@ -288,9 +284,9 @@ const unsigned char * aiger_coi (aiger *);		/* [1..maxvar] */
  * library becomes invalid.  Only 'aiger_reset' or 'aiger_error' can be
  * used.  The latter returns the previously returned error message.
  */
-const char *aiger_read_from_file (aiger *, FILE *);
-const char *aiger_read_from_string (aiger *, const char *str);
-const char *aiger_read_generic (aiger *, void *state, aiger_get);
+const char *aiger_read_from_file(aiger *, FILE *);
+const char *aiger_read_from_string(aiger *, const char *str);
+const char *aiger_read_generic(aiger *, void *state, aiger_get);
 
 /*------------------------------------------------------------------------*/
 /* Returns a previously generated error message if the library is in an
@@ -299,24 +295,24 @@ const char *aiger_read_generic (aiger *, void *state, aiger_get);
  * reach an invalid through a failed read attempt, or if 'aiger_check'
  * failed.
  */
-const char *aiger_error (aiger *);
+const char *aiger_error(aiger *);
 
 /*------------------------------------------------------------------------*/
 /* Same semantics as with 'aiger_open_and_write_to_file' for reading.
  */
-const char *aiger_open_and_read_from_file (aiger *, const char *);
+const char *aiger_open_and_read_from_file(aiger *, const char *);
 
 /*------------------------------------------------------------------------*/
 /* Write symbol table or the comments to a file.  Result is zero on failure.
  */
-int aiger_write_symbols_to_file (aiger *, FILE * file);
-int aiger_write_comments_to_file (aiger *, FILE * file);
+int aiger_write_symbols_to_file(aiger *, FILE * file);
+int aiger_write_comments_to_file(aiger *, FILE * file);
 
 /*------------------------------------------------------------------------*/
 /* Remove symbols and comments.  The result is the number of symbols
  * and comments removed.
  */
-unsigned aiger_strip_symbols_and_comments (aiger *);
+unsigned aiger_strip_symbols_and_comments(aiger *);
 
 /*------------------------------------------------------------------------*/
 /* If 'lit' is an input or a latch with a name, the symbolic name is
@@ -325,7 +321,7 @@ unsigned aiger_strip_symbols_and_comments (aiger *);
  * Names for outputs are stored in the 'outputs' symbols and can only be
  * accesed through a linear traversal of the output symbols.
  */
-const char *aiger_get_symbol (aiger *, unsigned lit);
+const char *aiger_get_symbol(aiger *, unsigned lit);
 
 /*------------------------------------------------------------------------*/
 /* Return tag of the literal:
@@ -336,7 +332,7 @@ const char *aiger_get_symbol (aiger *, unsigned lit);
  * 3 = and
  */
 
-int aiger_lit2tag (aiger *, unsigned lit);
+int aiger_lit2tag(aiger *, unsigned lit);
 
 /*------------------------------------------------------------------------*/
 /* Check whether the given unsigned, e.g. even, literal was defined as
@@ -349,8 +345,8 @@ int aiger_lit2tag (aiger *, unsigned lit);
  * For outputs this is not possible, since the same literal may be used for
  * several outputs.
  */
-aiger_symbol *aiger_is_input (aiger *, unsigned lit);
-aiger_symbol *aiger_is_latch (aiger *, unsigned lit);
-aiger_and *aiger_is_and (aiger *, unsigned lit);
+aiger_symbol *aiger_is_input(aiger *, unsigned lit);
+aiger_symbol *aiger_is_latch(aiger *, unsigned lit);
+aiger_and *aiger_is_and(aiger *, unsigned lit);
 
 #endif

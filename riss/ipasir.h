@@ -7,21 +7,21 @@
  * corresponding LICENSE or COPYING files, either in the sub-directory or in
  * the included software distribution package (the tar or zip file).  Please
  * refer to those licenses for rights to use that software.
- * 
+ *
  * Copyright (c) 2014, Tomas Balyo, Karlsruhe Institute of Technology.
  * Copyright (c) 2014, Armin Biere, Johannes Kepler University.
  * Copyright (c) 2015, Norbert Manthey, TU Dresden
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
  * deal in the Software without restriction, including without limitation the
  * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
  * sell copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -40,9 +40,10 @@
  * Return the name and the version of the incremental SAT
  * solving library.
  */
-inline 
-const char * ipasir_signature () {
-  return riss_signature();
+inline
+const char * ipasir_signature()
+{
+    return riss_signature();
 }
 
 /**
@@ -54,8 +55,9 @@ const char * ipasir_signature () {
  * State after: INPUT
  */
 inline
-void * ipasir_init () {
-  return riss_init("INCREMENTAL"); // use riss with the configuration for incremental solving
+void * ipasir_init()
+{
+    return riss_init("INCREMENTAL"); // use riss with the configuration for incremental solving
 }
 
 /**
@@ -67,8 +69,9 @@ void * ipasir_init () {
  * State after: undefined
  */
 inline
-void ipasir_release (void * solver) {
-  riss_destroy( solver );
+void ipasir_release(void * solver)
+{
+    riss_destroy(solver);
 }
 
 /**
@@ -87,8 +90,9 @@ void ipasir_release (void * solver) {
  * arguments in API functions.
  */
 inline
-void ipasir_add (void * solver, int lit_or_zero) {
-  riss_add ( solver, lit_or_zero );
+void ipasir_add(void * solver, int lit_or_zero)
+{
+    riss_add(solver, lit_or_zero);
 }
 
 /**
@@ -100,8 +104,9 @@ void ipasir_add (void * solver, int lit_or_zero) {
  * State after: INPUT
  */
 inline
-void ipasir_assume (void * solver, int lit) {
-  riss_assume( solver, lit );
+void ipasir_assume(void * solver, int lit)
+{
+    riss_assume(solver, lit);
 }
 
 /**
@@ -115,8 +120,9 @@ void ipasir_assume (void * solver, int lit) {
  * State after: INPUT or SAT or UNSAT
  */
 inline
-int ipasir_solve (void * solver){
-  return riss_sat( solver );
+int ipasir_solve(void * solver)
+{
+    return riss_sat(solver);
 }
 
 /**
@@ -129,8 +135,9 @@ int ipasir_solve (void * solver){
  * Required state: SAT
  * State after: SAT
  */
-int ipasir_val (void * solver, int lit) {
-  return riss_deref( solver, lit ) > 0 ? lit : -lit;
+int ipasir_val(void * solver, int lit)
+{
+    return riss_deref(solver, lit) > 0 ? lit : -lit;
 }
 
 /**
@@ -144,9 +151,10 @@ int ipasir_val (void * solver, int lit) {
  * Required state: UNSAT
  * State after: UNSAT
  */
-int ipasir_failed (void * solver, int lit) {
+int ipasir_failed(void * solver, int lit)
+{
 #warning Riss will convert the literal into a variable, hence the check works only for variables, not for literals (if the complement of an assumption is tested)
-  return riss_assumption_failed( solver, lit );
+    return riss_assumption_failed(solver, lit);
 }
 
 /**
@@ -162,8 +170,9 @@ int ipasir_failed (void * solver, int lit) {
  * Required state: INPUT or SAT or UNSAT
  * State after: INPUT or SAT or UNSAT
  */
-void ipasir_set_terminate (void * solver, void * state, int (*terminate)(void * state)){
-  riss_set_termination_callback( solver, state, terminate );
+void ipasir_set_terminate(void * solver, void * state, int (*terminate)(void * state))
+{
+    riss_set_termination_callback(solver, state, terminate);
 }
 
 #endif

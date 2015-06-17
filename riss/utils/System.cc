@@ -38,11 +38,11 @@ static inline int memReadStat(int field)
 
     sprintf(name, "/proc/%d/statm", pid);
     FILE* in = fopen(name, "rb");
-    if (in == NULL) return 0;
+    if (in == NULL) { return 0; }
 
     for (; field >= 0; field--)
         if (fscanf(in, "%d", &value) != 1)
-            printf("ERROR! Failed to parse memory statistics from \"/proc\".\n"), exit(1);
+        { printf("ERROR! Failed to parse memory statistics from \"/proc\".\n"), exit(1); }
     fclose(in);
     return value;
 }
@@ -55,7 +55,7 @@ static inline int memReadPeak(void)
 
     sprintf(name, "/proc/%d/status", pid);
     FILE* in = fopen(name, "rb");
-    if (in == NULL) return 0;
+    if (in == NULL) { return 0; }
 
     // Find the correct line, beginning with "VmPeak:":
     int peak_kb = 0;
@@ -67,33 +67,41 @@ static inline int memReadPeak(void)
     return peak_kb;
 }
 
-double Riss::memUsed() { return (double)memReadStat(0) * (double)getpagesize() / (1024*1024); }
-double Riss::memUsedPeak() { 
+double Riss::memUsed() { return (double)memReadStat(0) * (double)getpagesize() / (1024 * 1024); }
+double Riss::memUsedPeak()
+{
     double peak = memReadPeak() / 1024;
-    return peak == 0 ? memUsed() : peak; }
+    return peak == 0 ? memUsed() : peak;
+}
 
 #elif defined(__FreeBSD__)
 
-double Riss::memUsed(void) {
+double Riss::memUsed(void)
+{
     struct rusage ru;
     getrusage(RUSAGE_SELF, &ru);
-    return (double)ru.ru_maxrss / 1024; }
+    return (double)ru.ru_maxrss / 1024;
+}
 double Riss::memUsedPeak(void) { return memUsed(); }
 
 
 #elif defined(__APPLE__)
 #include <malloc/malloc.h>
 
-double Riss::memUsed(void) {
+double Riss::memUsed(void)
+{
     malloc_statistics_t t;
     malloc_zone_statistics(NULL, &t);
-    return (double)t.max_size_in_use / (1024*1024); }
-    
+    return (double)t.max_size_in_use / (1024 * 1024);
+}
+
 double Riss::memUsedPeak(void) { return memUsed(); }
 
 #else
-double Riss::memUsed() { 
-    return 0; }
-    
+double Riss::memUsed()
+{
+    return 0;
+}
+
 double Riss::memUsedPeak(void) { return memUsed(); }
 #endif

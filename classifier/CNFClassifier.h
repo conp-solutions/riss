@@ -12,9 +12,9 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 // using namespace Riss;
 // using namespace std;
 
-/** 
- * Main class that performs the feature extraction and classification 
- * 
+/**
+ * Main class that performs the feature extraction and classification
+ *
  * TODO: might be split into FeatureExtraction and CNFClassifier class
  */
 class CNFClassifier
@@ -41,21 +41,21 @@ class CNFClassifier
     int verb;
 
     uint64_t buildClausesAndVariablesGrapths(BipartiteGraph& clausesVariablesP,
-                                             BipartiteGraph& clausesVariablesN,
-                                             std::vector<double>& ret);
+            BipartiteGraph& clausesVariablesN,
+            std::vector<double>& ret);
     uint64_t buildResolutionAndClausesGrapths(const BipartiteGraph& clausesVariablesP,
-                                              const BipartiteGraph& clausesVariablesN,
-                                              std::vector<double>& ret);
+            const BipartiteGraph& clausesVariablesN,
+            std::vector<double>& ret);
     void fband(std::vector<double>& ret);
     void symmetrycode(std::vector<double>& ret);
-    
+
     /** calculate the recursive weight heuristic value for each literal for multiple iterations */
     void recursiveWeightHeuristic_code(const int maxClauseSize, std::vector< double >& ret);
 
     /** tries to extract xor gates, and lists them according as sequence (not sure how to really do this) */
     void extractXorFeatures(const std::vector<std::vector<Riss::CRef> >& litToClsMap, std::vector<double>& ret);
-    
-public:
+
+  public:
     CNFClassifier(Riss::ClauseAllocator& _ca, Riss::vec<Riss::CRef>& _clauses, int _nVars);
 
     ~CNFClassifier();
@@ -69,140 +69,174 @@ public:
 
     std::vector<double> outputFeatures(const char* formulaName);
 
-    bool isComputingClausesGraph() const {
+    bool isComputingClausesGraph() const
+    {
         return computingClausesGraph;
     }
 
-    void setComputingClausesGraph(bool computingClausesGraph) {
+    void setComputingClausesGraph(bool computingClausesGraph)
+    {
         this->computingClausesGraph = computingClausesGraph;
     }
 
-    bool isComputingResolutionGraph() const {
+    bool isComputingResolutionGraph() const
+    {
         return computingResolutionGraph;
     }
 
-    void setComputingResolutionGraph(bool computingResolutionGraph) {
+    void setComputingResolutionGraph(bool computingResolutionGraph)
+    {
         this->computingResolutionGraph = computingResolutionGraph;
     }
 
-    int getQuantilesCount() const {
+    int getQuantilesCount() const
+    {
         return quantilesCount;
     }
 
-    void setQuantilesCount(int quantilesCount) {
+    void setQuantilesCount(int quantilesCount)
+    {
         this->quantilesCount = quantilesCount;
     }
 
-    bool isDumpingPlots() const {
+    bool isDumpingPlots() const
+    {
         return dumpingPlots;
     }
 
-    void setDumpingPlots(bool dumpingPlots) {
+    void setDumpingPlots(bool dumpingPlots)
+    {
         this->dumpingPlots = dumpingPlots;
     }
 
-    const std::string& getPlotsFileName() const {
+    const std::string& getPlotsFileName() const
+    {
         return plotsFileName;
     }
 
-    void setPlotsFileName(const char* plotsFileName) {
-        dumpingPlots = (plotsFileName!=NULL);
+    void setPlotsFileName(const char* plotsFileName)
+    {
+        dumpingPlots = (plotsFileName != NULL);
         this->plotsFileName = plotsFileName;
     }
-    
-    bool isComputeBinaryImplicationGraph() const {
+
+    bool isComputeBinaryImplicationGraph() const
+    {
         return computeBinaryImplicationGraph;
     }
 
-    void setComputeBinaryImplicationGraph(bool computeBinaryImplicationGraph) {
+    void setComputeBinaryImplicationGraph(bool computeBinaryImplicationGraph)
+    {
         this->computeBinaryImplicationGraph = computeBinaryImplicationGraph;
     }
-    
-    bool isComputeConstraints() const {
+
+    bool isComputeConstraints() const
+    {
         return computeConstraints;
     }
 
-    void setComputeConstraints(bool computeConstraints) {
+    void setComputeConstraints(bool computeConstraints)
+    {
         this->computeConstraints = computeConstraints;
     }
-    
-    bool isComputeXor() const {
+
+    bool isComputeXor() const
+    {
         return computeXor;
     }
 
-    void setComputeXor(bool computeXor) {
+    void setComputeXor(bool computeXor)
+    {
         this->computeXor = computeXor;
     }
 
-    const char* getOutputFileName() const {
+    const char* getOutputFileName() const
+    {
         return outputFileName;
     }
 
-    void setOutputFileName(const char* outputFileName) {
+    void setOutputFileName(const char* outputFileName)
+    {
         this->outputFileName = outputFileName;
     }
 
-    const char* getAttrFileName() const {
+    const char* getAttrFileName() const
+    {
         return attrFileName;
     }
 
-    void setAttrFileName(const char* attrFileName) {
+    void setAttrFileName(const char* attrFileName)
+    {
         this->attrFileName = attrFileName;
     }
 
-    int getPrecision() const {
+    int getPrecision() const
+    {
         return precision;
     }
 
-    void setPrecision(int precision = 4) {
+    void setPrecision(int precision = 4)
+    {
         this->precision = precision;
     }
 
-    bool isComputingDerivative() const {
+    bool isComputingDerivative() const
+    {
         return computingDerivative;
     }
 
-    void setComputingDerivative(bool computingDerivative) {
+    void setComputingDerivative(bool computingDerivative)
+    {
         this->computingDerivative = computingDerivative;
     }
 
-    const std::vector<int>& getTimeIndexes() const {
+    const std::vector<int>& getTimeIndexes() const
+    {
         return timeIndexes;
     }
 
-    bool isComputingRwh() const {
+    bool isComputingRwh() const
+    {
         return computingRWH;
     }
 
-    void setComputingRwh(bool computingRwh) {
+    void setComputingRwh(bool computingRwh)
+    {
         computingRWH = computingRwh;
     }
 
-    const std::vector<std::string>& getFeaturesNames() const {
+    const std::vector<std::string>& getFeaturesNames() const
+    {
         return featuresNames;
     }
 
-    double getCpuTime() const {
+    double getCpuTime() const
+    {
         return mycpuTime;
     }
 
-    void setCpuTime(double cpuTime) {
+    void setCpuTime(double cpuTime)
+    {
         this->mycpuTime = cpuTime;
     }
 
-    int getVerb() const {
+    int getVerb() const
+    {
         return verb;
     }
 
-    void setVerb(int verb) {
+    void setVerb(int verb)
+    {
         this->verb = verb;
     }
 
-    bool isComputingVarGraph() const {
+    bool isComputingVarGraph() const
+    {
         return computingVarGraph;
     }
 
-    void setComputingVarGraph(bool computingVarGraph) {
+    void setComputingVarGraph(bool computingVarGraph)
+    {
         this->computingVarGraph = computingVarGraph;
     }
 };

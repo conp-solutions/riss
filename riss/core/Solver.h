@@ -63,7 +63,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #endif
 
 //
-// forward declaration
+// forward declarations
 //
 namespace Coprocessor {
   class Preprocessor;
@@ -84,6 +84,7 @@ namespace Pcasso {
   class PcassoClient;
 }
 #endif
+
 
 // since template methods need to be in headers ...
 extern Riss::IntOption opt_verboseProof;
@@ -370,8 +371,7 @@ protected:
     Heap<VarOrderLt>    order_heap;       // A priority queue of variables ordered with respect to the variable activity.
     double              progress_estimate;// Set by 'search()'.
     bool                remove_satisfied; // Indicates whether possibly inefficient linear scan for satisfied clauses should be performed in 'simplify'.
-    MarkArray lbd_marker;
-
+    MarkArray           lbd_marker;
     
 #ifdef UPDATEVARACTIVITY
     // UPDATEVARACTIVITY trick (see competition'09 companion paper)
@@ -460,11 +460,12 @@ protected:
 public:
     bool addUnitClauses( const vec< Lit >& other );		// use the given trail as starting point, return true, if fails!
 protected:
-  
+    /** Calculates the Literals Block Distance, which is the number of
+     *  different decision levels in a clause or list of literals.
+     */
     template<typename T>
-    int computeLBD(const T &clause); // Calculates the Literals Block Distance, which is the number of
-                                  // different decision levels in a clause or list of literals.
-     
+    int computeLBD(const T& lits);
+    
     /** perform minimization with binary clauses of the formula
      *  @param lbd the current calculated LBD score of the clause
      *  @return true, if the clause has been shrinked
@@ -482,8 +483,8 @@ protected:
     int      level            (Var x) const;
     double   progressEstimate ()      const; // DELETE THIS ?? IT'S NOT VERY USEFUL ...
     bool     withinBudget     ()      const;
-    
-    vec<Lit> refineAssumptions;     // assumption vector used for refinement
+  
+  vec<Lit> refineAssumptions;     // assumption vector used for refinement
     void     refineFinalConflict(); // minimize final conflict clause
     
     /** to handle termination from the outside by a callback function */
@@ -584,9 +585,7 @@ protected:
       LitPair() :otherMatch(lit_Undef), replaceWith(lit_Undef) {}
     };
     vec< LitPair > erRewriteInfo; /// vector that stores the information to rewrite new learned clauses
-        
-
-
+    
     /** fill the current variable assignment into the given vector */
     void fillLAmodel(vec<LONG_INT>& pattern, const int steps, vec<Var>& relevantVariables ,const bool moveOnly = false); // fills current model into variable vector
     
@@ -594,13 +593,11 @@ protected:
      * @return false, instance is unsatisfable
      */
     bool laHack(Riss::vec< Riss::Lit >& toEnqueue);
- 
-
     /** concurrent clause strengthening, but interleaved instead of concurrent ...
     *  @return false, if the formula is proven to be unsatisfiable
     */
     bool interleavedClauseStrengthening();
-
+ 
     // Static helpers:
     //
 
@@ -663,7 +660,6 @@ protected:
  
   int simplifyIterations; // number of visiting level 0 until simplification is to be performed
   int learnedDecisionClauses;
-
   bool doAddVariablesViaER; // indicator for allowing ER or not
 
   // stats for learning clauses
@@ -729,9 +725,6 @@ protected:
    * @return true, if the clause has been shrinked, false otherwise (then, the LBD also stays the same)
    */
   bool erRewrite(vec<Lit>& learned_clause, unsigned int& lbd );
-
-  
-  
 // contrasat hack
   
     bool      pq_order;           // If true, use a priority queue to decide the order in which literals are implied
@@ -890,8 +883,8 @@ protected:
     bool   activityBasedRemoval;     // use minisat or glucose style of clause removal and activities
     int    lbd_core_threshold;        // threadhold to move clause from learnt to formula (if LBD is low enough)
     double learnts_reduce_fraction;   // fraction of how many learned clauses should be removed
-    
-    
+
+
 /// for coprocessor
 protected:  Coprocessor::Preprocessor* coprocessor;
 public:     
@@ -917,13 +910,13 @@ public:
 
   /** return extra variable information (should be called for top level units only!) */
   uint64_t variableExtraInfo( const Var& v ) const ;
-  
+
   /** temporarly enable or disable extended resolution, to ensure that the number of variables remains the same */
   void setExtendedResolution( bool enabled ) { doAddVariablesViaER = enabled; }
   
   /** query whether extended resolution is enabled or not */
   bool getExtendedResolution() const { return doAddVariablesViaER; }
-
+  
 /// for qprocessor
 public:
 // 	    void writeClauses( std::ostream& stream ) {
@@ -1113,7 +1106,7 @@ inline bool     Solver::solve         (const vec<Lit>& assumps){ budgetOff(); as
 inline lbool    Solver::solveLimited  (const vec<Lit>& assumps){ assumps.copyTo(assumptions); return solve_(); }
 inline void     Solver::setRandomSeed (double seed) { assert(seed != 0); random_seed = seed; }
 inline bool     Solver::okay          ()      const   { return ok; }
-
+    
 inline void     Solver::toDimacs     (const char* file){ vec<Lit> as; toDimacs(file, as); }
 inline void     Solver::toDimacs     (const char* file, Lit p){ vec<Lit> as; as.push(p); toDimacs(file, as); }
 inline void     Solver::toDimacs     (const char* file, Lit p, Lit q){ vec<Lit> as; as.push(p); as.push(q); toDimacs(file, as); }

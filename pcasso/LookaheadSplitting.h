@@ -48,8 +48,9 @@ namespace Pcasso {
             }
         };
         // Riss::CRef     propagate        (); 
-        void     removeSatisfied  (Riss::vec<Riss::CRef>& cs);                                         // Shrink 'cs' to contain only non-satisfied clauses.
-        /// local version of the statistics object
+    /** Shrink 'cs' to contain only non-satisfied clauses. */
+    void     removeSatisfied(Riss::vec<Riss::CRef>& cs);
+    /** local version of the statistics object */
         Statistics localStat; // Norbert> Local Statistics
 
         unsigned splitterMaxPreselectedVariablesID;
