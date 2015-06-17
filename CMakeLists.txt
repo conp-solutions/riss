@@ -105,3 +105,8 @@ if(SHIFTBMC)
   add_subdirectory(shiftbmc/)
   add_subdirectory(aiger/)
 endif()
+
+# Combined riss and coprocessor library. This makes linking against riss with
+# the usage of coprocessor simpler (you only have to link against one lib).
+include(MergeStaticLibs)
+merge_static_libs(riss-coprocessor riss-lib-static coprocessor-lib-static)
