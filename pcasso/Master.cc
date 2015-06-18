@@ -387,6 +387,20 @@ int Master::run()
 
                     fprintf(stderr, "c idle: %d working: %d splitting: %d unclean: %d\n", idles, workers, splitters, uncleans);
 
+	    root.evaluate(*this);
+            if (root.getState() == TreeNode::unsat) {
+                // assign the according solution
+                solution = 20;
+		fprintf(stderr, "found UNSAT of tree\n");
+                // jump out of the workloop
+            } else if (solution == 10 || root.getState() == TreeNode::sat) {
+                // assign the according solution
+                solution = 10;
+		fprintf(stderr, "found SAT of tree\n");
+            }
+            
+            fprintf(stderr, "solution unknown!\n");
+		    
                     exit(0);
                 }
             }
@@ -558,7 +572,7 @@ int Master::run()
 
     fprintf(stderr, "c solved instance with result %d\n", solution);
 
-    printf("CPU time              : %g s\n", cpuTime());
+    printf("c CPU time              : %g s\n", cpuTime());
 
     // report found value to calling method
     return solution;
@@ -866,8 +880,10 @@ Master::solveInstance(void* data)
         tData.nodeToSolve->setState(TreeNode::unsat);
     } else {
         // result of solver is "unknown"
-        if (master.plainpart) { tData.nodeToSolve->setState(TreeNode::retry); }
-        else { tData.nodeToSolve->setState(TreeNode::unknown); }
+        if (master.plainpart && tData.nodeToSolve->getState() == TreeNode::unknown ) { 
+	  tData.nodeToSolve->setState(TreeNode::retry);
+	}
+	  
 
         if (keepToplevelUnits > 0) {
             int toplevelVariables = 0;
@@ -1010,7 +1026,8 @@ Master::splitInstance(void* data)
 
     if (!S->okay()) {
         fprintf(stderr, "reading split instance resulted in error (node %d)\n", tData.nodeToSolve->id());
-        ret = 20;
+#warning: check whether this is really unsat!
+//         ret = 20;
         // tell statistics
         statistics.changeI(master.splitSolvedNodesID, 1);
         tData.nodeToSolve->solveTime = Master::getCpuTimeMS() - cputime;
@@ -1137,7 +1154,7 @@ Master::splitInstance(void* data)
         // shut down all threads that are running below that node (necessary?)
     } else {
         // simply set the node to the unknown state
-        tData.nodeToSolve->setState(TreeNode::unknown);
+
         for (unsigned int i = 0; i < validConstraints.size(); i++)
         { tData.nodeToSolve->addNodeConstraint(validConstraints[i]); }
         // expand the node

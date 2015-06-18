@@ -1155,7 +1155,7 @@ decLitNotFound:
                 continue;
             }
             sizePositiveLookahead = trail.size() - initTrailSize;
-	    assert( trail.size() < nVars() && initTrailSize <= trail.size() && "there cannot be more elements in the trail than there are variables in the solver" );
+	    assert( trail.size() <= nVars() && initTrailSize <= trail.size() && "there cannot be more elements in the trail than there are variables in the solver" );
             for (int j = initTrailSize; j < trail.size(); j++) {
                 //fprintf(stderr, "Watcher size = %d\n", watches[trail[j]].size());
                 sizeWatcherPositiveLookahead += sign(trail[j]) ? watcherNegLitSize[i] : watcherPosLitSize[i];

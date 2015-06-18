@@ -53,7 +53,7 @@ void printStats(SplitterSolver& solver)
     fprintf(stderr, "propagations          : %-12"PRIu64"   (%.0f /sec)\n", solver.propagations, solver.propagations / cpu_time);
     fprintf(stderr, "conflict literals     : %-12"PRIu64"   (%4.2f %% deleted)\n", solver.tot_literals, (solver.max_literals - solver.tot_literals) * 100 / (double)solver.max_literals);
     if (mem_used != 0) { fprintf(stderr, "Memory used           : %.2f MB\n", mem_used); }
-    fprintf(stderr, "CPU time              : %g s\n", cpu_time);
+    fprintf(stderr, "cCPU time              : %g s\n", cpu_time);
 }
 
 

@@ -31,6 +31,7 @@ endfunction()
 version("5.0.0")
 
 option(STATIC_BINARIES "Build fully statically linked binaries" ON)
+option(PCASSO          "adapt assertions to algorithm used in pcasso" OFF)
 option(SHIFTBMC        "Include agier and shiftbmc build targets" OFF)
 option(WARNINGS        "Set verbose warning flags" OFF)
 
@@ -38,6 +39,7 @@ option(WARNINGS        "Set verbose warning flags" OFF)
 message(STATUS "Static binaries ${STATIC_BINARIES}")
 message(STATUS "ShiftBMC ${SHIFTBMC}")
 message(STATUS "Verbose warnings ${WARNINGS}")
+message(STATUS "PCASSO ${PCASSO}")
 
 # Output directory definitions
 # 
@@ -58,6 +60,11 @@ if(STATIC_BINARIES)
   set(CMAKE_EXE_LINK_DYNAMIC_CXX_FLAGS) 
   set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS)    # remove -rdynamic 
   set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS) 
+endif()
+
+# Link only to static libs (incl. libc and others)
+if(PCASSO)
+  add_definitions("-DPCASSO")
 endif()
 
 # tuning for release builds
