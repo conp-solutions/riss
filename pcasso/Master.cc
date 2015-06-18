@@ -818,29 +818,20 @@ Master::solveInstance(void* data)
     // solve the formula
     lbool solution = S.solveLimited(dummy);
     ret = (int)(solution == l_True ? 10 : solution == l_False ? 20 : 0);
+    
     master.lock();
     if (tData.result == 20) { ret = 20; }
-    master.unlock();
-    /*} catch (ControlledOutOfMemoryException &e) {
-    if(MSverbosity > 1) fprintf(stderr, "Controlled memory out on node %d\n", tData.nodeToSolve->id());
-    ret = 0;
-    }*/
 
-    // if( ret != 10 && ret != 20 ) fprintf(stderr, "c [SOLVER] stopped after %d conflicts\n", S.conflicts );
-    /*if( tData.nodeToSolve != 0){
-            delete tData.nodeToSolve->lv_pool;
-            tData.nodeToSolve->lv_pool = 0;
-    }*/
     // tell statistics
     if (ret != 10 && ret != 20) {
         statistics.changeI(master.unsolvedNodesID, 1);
     } else {
+      if( tData.nodeToSolve != 0 ) // prevent using 0 pointers
         tData.nodeToSolve->solveTime = Master::getCpuTimeMS() - cputime;
     }
 
     // take care about the output
     if (MSverbosity > 1) { fprintf(stderr, "finished working on an instance (node %d, level %d)\n", tData.nodeToSolve->id(), tData.nodeToSolve->getLevel()); }
-    master.lock();
 
 
     /** take care about statistics
@@ -862,26 +853,32 @@ Master::solveInstance(void* data)
     }
 
     if (ret == 10) {
+      if( tData.nodeToSolve != 0 ) {
         fprintf(stderr, "============SOLUTION FOUND BY NODE %d AT PARTITION LEVEL %d============\n",
                 tData.nodeToSolve->id(), tData.nodeToSolve->getLevel());
-        tData.nodeToSolve->setState(TreeNode::sat);
+      }
+      if( tData.nodeToSolve != 0 ) { tData.nodeToSolve->setState(TreeNode::sat); }
         master.submitModel(S.model);
     } else if (ret == 20) {
         if (opt_conflict_killing && ((SolverPT *)tData.solver)->lastLevel < tData.nodeToSolve->getPTLevel()) {
             statistics.changeI(master.nConflictKilledID, 1);
 
-            int i = tData.nodeToSolve->getPTLevel() - ((SolverPT *)tData.solver)->lastLevel;
-            while (i > 0) {
-                TreeNode* node = tData.nodeToSolve->getFather();
-                node->setState(TreeNode::unsat);
-                --i;
-            }
+	    if( tData.nodeToSolve != 0 ) {
+	      int i = tData.nodeToSolve->getPTLevel() - ((SolverPT *)tData.solver)->lastLevel;
+	      while (i > 0) {
+		  TreeNode* node = tData.nodeToSolve->getFather();
+		  node->setState(TreeNode::unsat);
+		  --i;
+	      }
+	    }
         }
-        tData.nodeToSolve->setState(TreeNode::unsat);
+        if( tData.nodeToSolve != 0 ) tData.nodeToSolve->setState(TreeNode::unsat);
     } else {
         // result of solver is "unknown"
-        if (master.plainpart && tData.nodeToSolve->getState() == TreeNode::unknown ) { 
-	  tData.nodeToSolve->setState(TreeNode::retry);
+        if( tData.nodeToSolve != 0 ) {
+	  if (master.plainpart && tData.nodeToSolve->getState() == TreeNode::unknown ) { 
+	    tData.nodeToSolve->setState(TreeNode::retry);
+	  }
 	}
 	  
 
@@ -891,15 +888,17 @@ Master::solveInstance(void* data)
             toplevelVariables = S.getTopLevelUnits();
 
             if (toplevelVariables > 0 && MSverbosity > 1) { fprintf(stderr, "found %d topLevel units\n", toplevelVariables - initialUnits); }
-            for (int i = initialUnits ; i < toplevelVariables; ++i) {
-                Lit currentLit = S.trailGet(i);  //(*trail)[i];
-                vector<Lit>* clause = new vector<Lit>(1);
-                (*clause)[0] = currentLit;
+            if( tData.nodeToSolve != 0 ) {
+	      for (int i = initialUnits ; i < toplevelVariables; ++i) {
+		  Lit currentLit = S.trailGet(i);  //(*trail)[i];
+		  vector<Lit>* clause = new vector<Lit>(1);
+		  (*clause)[0] = currentLit;
 
-                // Davide> I modified this in order to include information about
-                // literal pt_levels
-                tData.nodeToSolve->addNodeUnaryConstraint(clause, S.getLiteralPTLevel(currentLit));
-            }
+		  // Davide> I modified this in order to include information about
+		  // literal pt_levels
+		  tData.nodeToSolve->addNodeUnaryConstraint(clause, S.getLiteralPTLevel(currentLit));
+	      }
+	    }
         }
     }
 
@@ -909,13 +908,14 @@ Master::solveInstance(void* data)
     // Delete pools
 
 
-    master.unlock();
-
     // set the own state to unclean
     if (MSverbosity > 1) { fprintf(stderr, "run instance with id %d, state=%d, result=%d\n", tData.id, tData.s, tData.result); }
     if (MSverbosity > 2) { fprintf(stderr, "done with the work (%d), wakeup master again\n", ret); }
     // wake up the master so that it can check the result
-    if (MSverbosity > 0) { fprintf(stderr, "thread %d calls notify from solving after spending time on the node: %lld\n" , tData.id, tData.nodeToSolve->solveTime); }
+    if (MSverbosity > 0 && tData.nodeToSolve != 0) { fprintf(stderr, "thread %d calls notify from solving after spending time on the node: %lld\n" , tData.id, tData.nodeToSolve->solveTime); }
+
+    master.unlock();
+    
     master.notify();
     return (void*)ret;
 }
