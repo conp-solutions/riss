@@ -21,6 +21,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "Alg_WMSU3.h"
 
+#ifdef PBLIB
+#include "../minisat_to_pblib.h"
+
+using namespace PBLib;
+#include <iostream> // TODO remove this
+using namespace std; // TODO remove this
+#endif
 using namespace NSPACE;
 
 /*_________________________________________________________________________________________________
@@ -51,12 +58,19 @@ using namespace NSPACE;
   |________________________________________________________________________________________________@*/
 void WMSU3::WMSU3_iterative()
 {
+#ifdef PBLIB
+  printf("c WMSU3_iterative is not supported by pblib, switching to WMSU3_none\n");
+  WMSU3_none();
+  return;
+#endif
   nbInitialVariables = nVars();
   lbool res = l_True;
 
   initRelaxation();
   solver = rebuildSolver();
+#ifndef PBLIB
   encoder.setIncremental(_INCREMENTAL_ITERATIVE_);
+#endif
 
   activeSoft.growTo(nSoft(), false);
   for (int i = 0; i < nSoft(); i++)
@@ -159,6 +173,9 @@ void WMSU3::WMSU3_iterative()
       }
 
       if (verbosity > 0) printf("c LB : %-12" PRIu64 "\n", lbCost);
+#ifdef PBLIB
+      #warning add code here
+#else
       if (!encoder.hasPBEncoding())
       {
         encoder.incEncodePB(solver, objFunction, coeffs, lbCost, assumptions,
@@ -169,6 +186,7 @@ void WMSU3::WMSU3_iterative()
         encoder.incUpdatePB(solver, objFunction, coeffs, lbCost, assumptions);
         encoder.incUpdatePBAssumptions(solver, assumptions);
       }
+#endif
     }
   }
 }
@@ -201,7 +219,9 @@ void WMSU3::WMSU3_none()
 
   initRelaxation();
   solver = rebuildSolver();
+#ifndef PBLIB
   encoder.setIncremental(_INCREMENTAL_NONE_);
+#endif
 
   activeSoft.growTo(nSoft(), false);
   for (int i = 0; i < nSoft(); i++)
@@ -294,7 +314,11 @@ void WMSU3::WMSU3_none()
       }
 
       if (verbosity > 0) printf("c LB : %-12" PRIu64 "\n", lbCost);
+#ifdef PBLIB
+      pb2cnf->encode(PBConstraint(MinisatToPBLib::createWeightedLiterals(objFunction,coeffs), LEQ, lbCost), *pbEncodingFormula, *auxvars);
+#else
       encoder.encodePB(solver, objFunction, coeffs, lbCost);
+#endif
     }
   }
 }
@@ -329,6 +353,11 @@ void WMSU3::WMSU3_none()
   |________________________________________________________________________________________________@*/
 void WMSU3::WMSU3_iterative_bmo()
 {
+#ifdef PBLIB
+  printf("c WMSU3_iterative is not supported by pblib, switching to WMSU3_none_bmo\n");
+  WMSU3_none_bmo();
+  return;
+#endif
   // Assumes that is_bmo was set by method 'isBMO()'.
   assert(is_bmo);
 
@@ -337,7 +366,9 @@ void WMSU3::WMSU3_iterative_bmo()
 
   initRelaxation();
   solver = rebuildSolver();
+#ifndef PBLIB
   encoder.setIncremental(_INCREMENTAL_ITERATIVE_);
+#endif
   vec<Lit> joinObjFunction;
   vec<Lit> encodingAssumptions;
   vec<int> joinCoeffs;
@@ -355,7 +386,9 @@ void WMSU3::WMSU3_iterative_bmo()
   vec<vec<Lit> > functions;
   vec<int> weights;
 
+#ifndef PBLIB
   vec<Encoder *> bmo_encodings;
+#endif
   vec<bool> first_encoding;
 
   functions.push();
@@ -363,10 +396,12 @@ void WMSU3::WMSU3_iterative_bmo()
   weights.push(0);
   assert(objFunction.size() == 0);
 
+#ifndef PBLIB
   Encoder *e = new Encoder();
   e->setIncremental(_INCREMENTAL_ITERATIVE_);
   bmo_encodings.push(e);
   first_encoding.push(true);
+#endif
 
   for (;;)
   {
@@ -424,10 +459,12 @@ void WMSU3::WMSU3_iterative_bmo()
           weights.push(0);
           localCost = 0;
 
+#ifndef PBLIB
           Encoder *e = new Encoder();
           e->setIncremental(_INCREMENTAL_ITERATIVE_);
           bmo_encodings.push(e);
           first_encoding.push(true);
+#endif
 
           for (int i = 0; i < encodingAssumptions.size(); i++)
             solver->addClause(encodingAssumptions[i]);
@@ -522,6 +559,9 @@ void WMSU3::WMSU3_iterative_bmo()
       {
         if (weights[posWeight] != objFunction.size())
         {
+#ifdef PBLIB
+	  #warning add code here
+#else
           bmo_encodings[posWeight]->buildCardinality(solver, objFunction,
                                                      weights[posWeight]);
           joinObjFunction.clear();
@@ -529,17 +569,24 @@ void WMSU3::WMSU3_iterative_bmo()
               solver, joinObjFunction, objFunction, weights[posWeight],
               encodingAssumptions);
           first_encoding[posWeight] = false;
+#endif
         }
       }
       else
       {
+#ifdef PBLIB
+#warning add code here
+#else
         bmo_encodings[posWeight]->incUpdateCardinality(
             solver, joinObjFunction, objFunction, weights[posWeight],
             encodingAssumptions);
+#endif
       }
 
+#ifndef PBLIB
       for (int i = 0; i < encodingAssumptions.size(); i++)
         assumptions.push(encodingAssumptions[i]);
+#endif
     }
   }
 }
@@ -579,7 +626,9 @@ void WMSU3::WMSU3_none_bmo()
 
   initRelaxation();
   solver = rebuildSolver();
+#ifndef PBLIB
   encoder.setIncremental(_INCREMENTAL_NONE_);
+#endif
 
   activeSoft.growTo(nSoft(), false);
   for (int i = 0; i < nSoft(); i++)
@@ -740,8 +789,13 @@ void WMSU3::WMSU3_none_bmo()
       // Encode functions.
       for (int i = 0; i < functions.size(); i++)
       {
+#ifdef PBLIB
+	if (functions[i].size() > 0)
+          pb2cnf->encode(PBConstraint(MinisatToPBLib::createCardinalityWeightedLiterals(functions[i]), LEQ, weights[i]), *pbEncodingFormula, *auxvars);
+#else
         if (functions[i].size() > 0)
           encoder.encodeCardinality(solver, functions[i], weights[i]);
+#endif
       }
     }
   }
@@ -773,6 +827,7 @@ void WMSU3::search()
   case _INCREMENTAL_ITERATIVE_:
     if (is_bmo)
     {
+#ifndef PBLIB
       if (encoder.getCardEncoding() != _CARD_TOTALIZER_)
       {
         printf("Error: Currently iterative encoding in WMSU3 only supports "
@@ -780,6 +835,7 @@ void WMSU3::search()
         printf("s UNKNOWN\n");
         exit(_ERROR_);
       }
+#endif
       WMSU3_iterative_bmo();
     }
     else
@@ -829,6 +885,13 @@ Solver *WMSU3::rebuildSolver()
     S->addClause(clause);
   }
 
+#ifdef PBLIB
+  if (pbEncodingFormula != nullptr) delete pbEncodingFormula;
+  if (auxvars != nullptr) delete auxvars;
+  
+  auxvars = new AuxVarManager(S->nVars() + 1);
+  pbEncodingFormula = new SATSolverClauseDatabase(pbconfig, S);
+#endif
   return S;
 }
 
@@ -923,7 +986,9 @@ void WMSU3::print_WMSU3_configuration()
     printf("c |  BMO search: %22s                      "
            "                                             |\n",
            "Yes");
+#ifndef PBLIB
     print_Card_configuration(encoder.getCardEncoding());
+#endif
   }
   else
   {
@@ -939,6 +1004,8 @@ void WMSU3::print_WMSU3_configuration()
     printf("c |  BMO search: %22s                      "
            "                                             |\n",
            "No");
+#ifndef PBLIB
     print_PB_configuration(encoder.getPBEncoding());
+#endif
   }
 }

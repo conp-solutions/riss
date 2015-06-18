@@ -35,6 +35,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <map>
 #include <set>
 
+#ifdef PBLIB
+  #include "../pblib/lib/pb2cnf.h"
+  #include "../pblib/SATSolverClauseDatabase.h"
+#endif
 namespace NSPACE
 {
 
@@ -54,11 +58,22 @@ public:
 
     symmetryStrategy = symmetry;
     symmetryBreakingLimit = limit;
+#ifdef PBLIB
+    pbconfig = std::make_shared<PBLib::PBConfigClass>();
+    
+    pb2cnf = new PBLib::PB2CNF(pbconfig);
+    #warning init pbconfig here
+#endif
   }
 
   ~WBO()
   {
     if (solver != NULL) delete solver;
+#ifdef PBLIB    
+    if (pbEncodingFormula != nullptr) delete pbEncodingFormula;
+    if (auxvars != nullptr) delete auxvars;
+    if (pb2cnf != nullptr) delete pb2cnf;    
+#endif
   }
 
   void search(); // WBO search.
@@ -73,7 +88,11 @@ public:
     print_WBO_configuration(weightStrategy, symmetryStrategy,
                             symmetryBreakingLimit);
     print_Incremental_configuration(_INCREMENTAL_NONE_);
+#ifdef PBLIB
+    #warning print pb config here
+#else
     print_AMO_configuration(_AMO_LADDER_);
+#endif
     printf("c |                                                                "
            "                                       |\n");
   }
@@ -148,6 +167,12 @@ protected:
                                                       // clauses (prevents
                                                       // duplication).
   int symmetryBreakingLimit; // Limit on the number of symmetry clauses.
+#ifdef PBLIB
+  PBLib::SATSolverClauseDatabase * pbEncodingFormula = nullptr;
+  PBLib::AuxVarManager * auxvars = nullptr;
+  PBLib::PB2CNF * pb2cnf = nullptr;
+  PBLib::PBConfig pbconfig;
+#endif
 };
 }
 

@@ -29,7 +29,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 #include "../MaxSAT.h"
+#ifdef PBLIB
+  #include "../pblib/lib/pb2cnf.h"
+  #include "../pblib/SATSolverClauseDatabase.h"
+#else
 #include "../Encoder.h"
+#endif
 #include <map>
 #include <set>
 #include <vector>
@@ -49,15 +54,28 @@ public:
 
     verbosity = verb;
     bmoMode = bmo;
+#ifdef PBLIB
+    pbconfig = std::make_shared<PBLib::PBConfigClass>();
+    
+    pb2cnf = new PBLib::PB2CNF(pbconfig);
+    //TODO init pbconfig here
+#else
     encoding = enc;
     encoder.setCardEncoding(encoding);
     encoder.setPBEncoding(pb);
+#endif
 
     is_bmo = false;
   }
   ~LinearSU()
   {
     if (solver != NULL) delete solver;
+#ifdef PBLIB    
+  if (pbEncodingFormula != nullptr) delete pbEncodingFormula;
+  if (auxvars != nullptr) delete auxvars;
+  if (pb2cnf != nullptr) delete pb2cnf;
+    
+#endif
   }
 
   void search(); // Linear search.
@@ -70,12 +88,16 @@ public:
     printf("c |                                                                "
            "                                       |\n");
     print_LinearSU_configuration();
+#ifdef PBLIB
+    //TODO print pb config here
+#else
     if (bmo || ptype == _UNWEIGHTED_)
       print_Card_configuration(encoder.getCardEncoding());
     else
       print_PB_configuration(encoder.getPBEncoding());
     printf("c |                                                                "
            "                                       |\n");
+#endif
   }
 
 protected:
@@ -101,9 +123,16 @@ protected:
   void print_LinearSU_configuration();
 
   Solver *solver;  // SAT Solver used as a black box.
+#ifdef PBLIB
+  PBLib::SATSolverClauseDatabase * pbEncodingFormula = nullptr;
+  PBLib::AuxVarManager * auxvars = nullptr;
+  PBLib::PB2CNF * pb2cnf = nullptr;
+  PBLib::PBConfig pbconfig;
+#else
   Encoder encoder; // Interface for the encoder of constraints to CNF.
   int encoding;    // Encoding for cardinality constraints.
   int pb_encoding;
+#endif
 
   bool bmoMode;  // Enables BMO mode.
   bool allFalse; // Forces relaxation variables to be false.

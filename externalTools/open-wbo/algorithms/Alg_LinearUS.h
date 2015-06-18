@@ -29,7 +29,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 #include "../MaxSAT.h"
+#ifdef PBLIB
+  #include "../pblib/lib/pb2cnf.h"
+  #include "../pblib/SATSolverClauseDatabase.h"
+#else
 #include "../Encoder.h"
+#endif
 #include <map>
 #include <set>
 #include <algorithm>
@@ -48,12 +53,25 @@ public:
     solver = NULL;
     verbosity = verb;
     incremental_strategy = incremental;
+#ifdef PBLIB
+    pbconfig = std::make_shared<PBLib::PBConfigClass>();
+    
+    pb2cnf = new PBLib::PB2CNF(pbconfig);
+    #warning TODO init pbconfig here
+#else
     encoding = enc;
     encoder.setCardEncoding(enc);
+#endif
   }
   ~LinearUS()
   {
     if (solver != NULL) delete solver;
+#ifdef PBLIB    
+  if (pbEncodingFormula != nullptr) delete pbEncodingFormula;
+  if (auxvars != nullptr) delete auxvars;
+  if (pb2cnf != nullptr) delete pb2cnf;
+    
+#endif
   }
 
   void search(); // LinearUS search.
@@ -68,7 +86,11 @@ public:
     printf("c |  Algorithm: %23s                                             "
            "                      |\n",
            "LinearUS");
+#ifdef PBLIB
+    #warning TODO print pb config here
+#else
     print_Card_configuration(encoder.getCardEncoding());
+#endif
     print_Incremental_configuration(incremental_strategy);
     printf("c |                                                                "
            "                                       |\n");
@@ -90,10 +112,17 @@ protected:
   void initRelaxation(); // Relaxes soft clauses.
 
   Solver *solver;  // SAT Solver used as a black box.
-  Encoder encoder; // Interface for the encoder of constraints to CNF.
 
   int incremental_strategy;
+#ifdef PBLIB
+  PBLib::SATSolverClauseDatabase * pbEncodingFormula = nullptr;
+  PBLib::AuxVarManager * auxvars = nullptr;
+  PBLib::PB2CNF * pb2cnf = nullptr;
+  PBLib::PBConfig pbconfig;
+#else  
+  Encoder encoder; // Interface for the encoder of constraints to CNF.
   int encoding;
+#endif
 
   // Literals to be used in the constraint that excludes models.
   vec<Lit> objFunction;

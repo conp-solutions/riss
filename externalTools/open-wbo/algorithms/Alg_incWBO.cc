@@ -21,6 +21,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "Alg_incWBO.h"
 
+#ifdef PBLIB
+#include "../minisat_to_pblib.h"
+
+using namespace PBLib;
+#endif
 using namespace NSPACE;
 
 /************************************************************************************************
@@ -80,6 +85,13 @@ void incWBO::incrementalBuildWeightSolver(int strategy)
     if (symmetryStrategy) symmetryBreaking();
 
     firstBuild = false;
+#ifdef PBLIB
+    if (pbEncodingFormula != nullptr) delete pbEncodingFormula;
+    if (auxvars != nullptr) delete auxvars;
+    
+    auxvars = new AuxVarManager(solver->nVars() + 1);
+    pbEncodingFormula = new SATSolverClauseDatabase(pbconfig, solver);
+#endif
   }
 
   // For the remaining iterations clauses are added to the solver incrementally.
@@ -290,7 +302,12 @@ void incWBO::relaxCore(vec<Lit> &conflict, int weightCore, vec<Lit> &assumps)
       }
     }
   }
+#ifdef PBLIB
+  auxvars->resetAuxVarsTo(nVars() + 1);
+  pb2cnf->encode(PBConstraint(MinisatToPBLib::createCardinalityWeightedLiterals(lits), BOTH, 1, 1), *pbEncodingFormula, *auxvars);
+#else
   encoder.encodeAMO(solver, lits);
+#endif
   nbVars = solver->nVars();
   if (symmetryStrategy) symmetryBreaking();
 

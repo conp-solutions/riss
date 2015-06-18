@@ -29,7 +29,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 #include "Alg_WBO.h"
+#ifdef PBLIB
+  #include "../pblib/lib/pb2cnf.h"
+  #include "../pblib/SATSolverClauseDatabase.h"
+#else
 #include "../Encoder.h"
+#endif
 #include "../MaxTypes.h"
 #include "utils/System.h"
 #include <utility>
@@ -58,6 +63,9 @@ public:
     symmetryBreakingLimit = limit;
 
     firstBuild = true;
+#ifdef PBLIB
+    #warning init pbconfig here ... or in Alg_WBO.h ?
+#endif
   }
 
   ~incWBO()
@@ -77,7 +85,11 @@ public:
     print_WBO_configuration(weightStrategy, symmetryStrategy,
                             symmetryBreakingLimit);
     print_Incremental_configuration(_INCREMENTAL_BLOCKING_);
+#ifdef PBLIB
+    #warning print pb config here
+#else
     print_AMO_configuration(_AMO_LADDER_);
+#endif
     printf("c |                                                                "
            "                                       |\n");
   }
@@ -106,8 +118,10 @@ protected:
   uint64_t incComputeCostModel(vec<lbool> &currentModel,
                                int weight = INT32_MAX);
 
+#ifndef PBLIB
   // // SAT solver
   Encoder encoder; // Interface for the encoder of constraints to CNF.
+#endif
 
   // Incremental
   //

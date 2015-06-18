@@ -21,6 +21,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "Alg_MSU3.h"
 
+#ifdef PBLIB
+#include "../minisat_to_pblib.h"
+
+using namespace PBLib;
+#endif
 using namespace NSPACE;
 
 /*_________________________________________________________________________________________________
@@ -52,7 +57,9 @@ void MSU3::MSU3_none()
   solver = rebuildSolver();
   vec<Lit> assumptions;
   vec<Lit> currentObjFunction;
+#ifndef PBLIB  
   encoder.setIncremental(_INCREMENTAL_NONE_);
+#endif
 
   activeSoft.growTo(nSoft(), false);
   for (int i = 0; i < nSoft(); i++)
@@ -134,7 +141,11 @@ void MSU3::MSU3_none()
 
       delete solver;
       solver = rebuildSolver();
+#ifdef PBLIB
+      pb2cnf->encode(PBConstraint(MinisatToPBLib::createCardinalityWeightedLiterals(currentObjFunction), LEQ, lbCost), *pbEncodingFormula, *auxvars);
+#else
       encoder.encodeCardinality(solver, currentObjFunction, lbCost);
+#endif
     }
   }
 }
@@ -170,7 +181,9 @@ void MSU3::MSU3_none()
   |________________________________________________________________________________________________@*/
 void MSU3::MSU3_blocking()
 {
+#ifndef PBLIB
   assert(encoding == _CARD_TOTALIZER_);
+#endif
 
   nbInitialVariables = nVars();
   lbool res = l_True;
@@ -180,7 +193,11 @@ void MSU3::MSU3_blocking()
   vec<Lit> assumptions;
   vec<Lit> encodingAssumptions;
   vec<Lit> currentObjFunction;
+#ifdef PBLIB
+  Lit currentCardEncodingConditionalLit = lit_Undef;
+#else
   encoder.setIncremental(_INCREMENTAL_BLOCKING_);
+#endif
 
   vec<Lit> join; // dummy empty vector.
 
@@ -258,6 +275,18 @@ void MSU3::MSU3_blocking()
         printf("c Relaxed soft clauses %d / %d\n", currentObjFunction.size(),
                objFunction.size());
 
+#ifdef PBLIB
+      if (currentCardEncodingConditionalLit != lit_Undef)
+	pbEncodingFormula->addClause(MinisatToPBLib::litToInteger(~currentCardEncodingConditionalLit)); // deactiave old encoding
+	
+      currentCardEncodingConditionalLit = MinisatToPBLib::integerToLit(auxvars->getVariable());
+      assumptions.push(currentCardEncodingConditionalLit);
+      
+      
+      pbEncodingFormula->addConditional(MinisatToPBLib::litToInteger(currentCardEncodingConditionalLit));
+      pb2cnf->encode(PBConstraint(MinisatToPBLib::createCardinalityWeightedLiterals(objFunction), PBLib::LEQ, lbCost), *pbEncodingFormula, *auxvars);
+      pbEncodingFormula->getConditionals().clear();
+#else
       // A new encoding is built at each iteration of the algorithm.
       encoder.buildCardinality(solver, currentObjFunction, lbCost);
       // Previous encodings are disabled by setting the
@@ -268,6 +297,7 @@ void MSU3::MSU3_blocking()
       // Disable the blocking literal for the current encoding.
       for (int i = 0; i < encodingAssumptions.size(); i++)
         assumptions.push(encodingAssumptions[i]);
+#endif
     }
   }
 }
@@ -312,7 +342,12 @@ void MSU3::MSU3_weakening()
   vec<Lit> assumptions;
   vec<Lit> encodingAssumptions;
   vec<Lit> currentObjFunction;
+#ifdef PBLIB
+  IncPBConstraint * objPBConstraint = nullptr;
+  Lit currentCardEncodingConditionalLit = lit_Undef;
+#else
   encoder.setIncremental(_INCREMENTAL_WEAKENING_);
+#endif
 
   vec<Lit> join; // dummy empty vector.
 
@@ -389,7 +424,23 @@ void MSU3::MSU3_weakening()
       if (verbosity > 0)
         printf("c Relaxed soft clauses %d / %d\n", currentObjFunction.size(),
                objFunction.size());
+#ifdef PBLIB
+      if (objPBConstraint == nullptr)
+      {
+	objPBConstraint = new IncPBConstraint(MinisatToPBLib::createCardinalityWeightedLiterals(objFunction), PBLib::LEQ, ubCost - 1);
+	pb2cnf->encodeIncInital(*objPBConstraint, *pbEncodingFormula, *auxvars);
+      }
 
+      if (currentCardEncodingConditionalLit != lit_Undef)
+	pbEncodingFormula->addClause(MinisatToPBLib::litToInteger(~currentCardEncodingConditionalLit)); // deactiave old encoding
+	
+      currentCardEncodingConditionalLit = MinisatToPBLib::integerToLit(auxvars->getVariable());
+      assumptions.push(currentCardEncodingConditionalLit);
+      
+      pbEncodingFormula->addConditional(MinisatToPBLib::litToInteger(currentCardEncodingConditionalLit));
+      objPBConstraint->encodeNewLeq(lbCost, *pbEncodingFormula, *auxvars);
+      pbEncodingFormula->getConditionals().clear();
+#else
       // The cardinality encoding is only build once.
       if (!encoder.hasCardEncoding())
         encoder.buildCardinality(solver, objFunction, ubCost);
@@ -401,6 +452,7 @@ void MSU3::MSU3_weakening()
 
       for (int i = 0; i < encodingAssumptions.size(); i++)
         assumptions.push(encodingAssumptions[i]);
+#endif
     }
   }
 }
@@ -436,6 +488,11 @@ void MSU3::MSU3_weakening()
 void MSU3::MSU3_iterative()
 {
 
+#ifdef PBLIB
+  printf("c MSU3_iterative is not supported by pblib switching to MSU3_weakening\n");
+  MSU3_weakening();
+  return;
+#else
   if (encoding != _CARD_TOTALIZER_)
   {
     printf("Error: Currently algorithm MSU3 with iterative encoding only "
@@ -443,6 +500,7 @@ void MSU3::MSU3_iterative()
     printf("s UNKNOWN\n");
     exit(_ERROR_);
   }
+#endif
 
   nbInitialVariables = nVars();
   lbool res = l_True;
@@ -452,7 +510,9 @@ void MSU3::MSU3_iterative()
   vec<Lit> joinObjFunction;
   vec<Lit> currentObjFunction;
   vec<Lit> encodingAssumptions;
+#ifndef PBLIB
   encoder.setIncremental(_INCREMENTAL_ITERATIVE_);
+#endif
 
   activeSoft.growTo(nSoft(), false);
   for (int i = 0; i < nSoft(); i++)
@@ -538,6 +598,9 @@ void MSU3::MSU3_iterative()
         printf("c Relaxed soft clauses %d / %d\n", currentObjFunction.size(),
                objFunction.size());
 
+#ifdef PBLIB
+	#warning TODO add code here
+#else
       if (!encoder.hasCardEncoding())
       {
         if (lbCost != (unsigned)currentObjFunction.size())
@@ -555,6 +618,7 @@ void MSU3::MSU3_iterative()
                                      currentObjFunction, lbCost,
                                      encodingAssumptions);
       }
+#endif
 
       for (int i = 0; i < encodingAssumptions.size(); i++)
         assumptions.push(encodingAssumptions[i]);
@@ -581,6 +645,7 @@ void MSU3::search()
     MSU3_none();
     break;
   case _INCREMENTAL_BLOCKING_:
+#ifndef PBLIB
     if (encoder.getCardEncoding() != _CARD_TOTALIZER_)
     {
       printf("Error: Currently incremental blocking in MSU3 only supports "
@@ -588,9 +653,11 @@ void MSU3::search()
       printf("s UNKNOWN\n");
       exit(_ERROR_);
     }
+#endif
     MSU3_blocking();
     break;
   case _INCREMENTAL_WEAKENING_:
+#ifndef PBLIB
     if (encoder.getCardEncoding() != _CARD_TOTALIZER_)
     {
       printf("Error: Currently incremental weakening in MSU3 only supports "
@@ -598,9 +665,11 @@ void MSU3::search()
       printf("s UNKNOWN\n");
       exit(_ERROR_);
     }
+#endif
     MSU3_weakening();
     break;
   case _INCREMENTAL_ITERATIVE_:
+#ifndef PBLIB
     if (encoder.getCardEncoding() != _CARD_TOTALIZER_)
     {
       printf("Error: Currently iterative encoding in MSU3 only supports "
@@ -608,6 +677,7 @@ void MSU3::search()
       printf("s UNKNOWN\n");
       exit(_ERROR_);
     }
+#endif
     MSU3_iterative();
     break;
   default:
@@ -653,6 +723,13 @@ Solver *MSU3::rebuildSolver()
 
     S->addClause(clause);
   }
+#ifdef PBLIB
+  if (pbEncodingFormula != nullptr) delete pbEncodingFormula;
+  if (auxvars != nullptr) delete auxvars;
+  
+  auxvars = new AuxVarManager(S->nVars() + 1);
+  pbEncodingFormula = new SATSolverClauseDatabase(pbconfig, S);
+#endif
 
   return S;
 }

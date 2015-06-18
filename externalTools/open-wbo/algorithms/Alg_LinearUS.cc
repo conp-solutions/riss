@@ -21,6 +21,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "Alg_LinearUS.h"
 
+#ifdef PBLIB
+#include "../minisat_to_pblib.h"
+using namespace PBLib;
+#endif
 using namespace NSPACE;
 
 /************************************************************************************************
@@ -38,7 +42,9 @@ void LinearUS::lbSearch_none()
   solver = rebuildSolver();
   vec<Lit> assumptions;
 
+#ifndef PBLIB
   encoder.setIncremental(_INCREMENTAL_NONE_);
+#endif
   for (;;)
   {
     res = searchSATSolver(solver, assumptions);
@@ -53,12 +59,16 @@ void LinearUS::lbSearch_none()
 
       if (nbSatisfiable == 1)
       {
+#ifdef PBLIB
+	pb2cnf->encode(PBConstraint(MinisatToPBLib::createCardinalityWeightedLiterals(objFunction), PBLib::LEQ, 0), *pbEncodingFormula, *auxvars);
+#else
         // Stability fix.
         // Fix the same modulo operation for all encodings.
         if (encoding == _CARD_MTOTALIZER_)
           encoder.setModulo(ceil(sqrt(ubCost + 1)));
 
         encoder.encodeCardinality(solver, objFunction, 0);
+#endif
       }
       else
       {
@@ -96,14 +106,20 @@ void LinearUS::lbSearch_none()
 
       delete solver;
       solver = rebuildSolver();
+#ifdef PBLIB
+      pb2cnf->encode(PBConstraint(MinisatToPBLib::createCardinalityWeightedLiterals(objFunction), PBLib::LEQ, lbCost), *pbEncodingFormula, *auxvars);
+#else 
       encoder.encodeCardinality(solver, objFunction, lbCost);
+#endif
     }
   }
 }
 
 void LinearUS::lbSearch_blocking()
 {
+#ifndef PBLIB
   assert(encoding == _CARD_TOTALIZER_);
+#endif 
 
   nbInitialVariables = nVars();
   lbool res = l_True;
@@ -113,7 +129,11 @@ void LinearUS::lbSearch_blocking()
   vec<Lit> assumptions;
   vec<Lit> join; // dummy empty vector.
 
+#ifdef PBLIB
+  bool firstUnsatResult = true;
+#else
   encoder.setIncremental(_INCREMENTAL_BLOCKING_);
+#endif
   for (;;)
   {
 
@@ -160,6 +180,22 @@ void LinearUS::lbSearch_blocking()
         }
       }
 
+#ifdef PBLIB
+      if (firstUnsatResult)
+	assumptions.clear();
+      
+      Lit conditionalLit = MinisatToPBLib::integerToLit(auxvars->getVariable());
+      if (assumptions.size() > 0)
+	assumptions[assumptions.size()-1] = ~assumptions[assumptions.size()-1];
+      
+      assumptions.push(conditionalLit);
+      
+      
+      pbEncodingFormula->addConditional(MinisatToPBLib::litToInteger(conditionalLit));
+      pb2cnf->encode(PBConstraint(MinisatToPBLib::createCardinalityWeightedLiterals(objFunction), PBLib::LEQ, lbCost), *pbEncodingFormula, *auxvars);
+      pbEncodingFormula->getConditionals().clear();
+
+#else
       // When using the blocking strategy the update cardinality builds a new
       // encoding for the current 'lbCost' and disables previous encodings.
       encoder.buildCardinality(solver, objFunction, lbCost);
@@ -168,6 +204,7 @@ void LinearUS::lbSearch_blocking()
       // NOTE: 'assumptions' are modified in 'incrementalUpdate'.
       encoder.incUpdateCardinality(solver, join, objFunction, lbCost,
                                    assumptions);
+#endif
     }
   }
 }
@@ -175,7 +212,9 @@ void LinearUS::lbSearch_blocking()
 void LinearUS::lbSearch_weakening()
 {
 
+#ifndef PBLIB
   assert(encoding == _CARD_TOTALIZER_);
+#endif
 
   nbInitialVariables = nVars();
   lbool res = l_True;
@@ -185,7 +224,11 @@ void LinearUS::lbSearch_weakening()
   vec<Lit> assumptions;
   vec<Lit> join; // dummy empty vector.
 
+#ifdef PBLIB
+  IncPBConstraint * objPBConstraint = nullptr;
+#else
   encoder.setIncremental(_INCREMENTAL_WEAKENING_);
+#endif
   for (;;)
   {
 
@@ -194,6 +237,7 @@ void LinearUS::lbSearch_weakening()
     {
       nbSatisfiable++;
       uint64_t newCost = computeCostModel(solver->model);
+      saveModel(solver->model);
       printf("o %" PRIu64 "\n", newCost);
       
       
@@ -242,6 +286,25 @@ void LinearUS::lbSearch_weakening()
         }
       }
 
+#ifdef PBLIB
+      if (objPBConstraint == nullptr)
+      {
+	objPBConstraint = new IncPBConstraint(MinisatToPBLib::createCardinalityWeightedLiterals(objFunction), PBLib::LEQ, ubCost - 1);
+	pb2cnf->encodeIncInital(*objPBConstraint, *pbEncodingFormula, *auxvars);
+	assumptions.clear();
+      }
+      
+      Lit conditionalLit = MinisatToPBLib::integerToLit(auxvars->getVariable());
+      if (assumptions.size() > 0)
+	assumptions[assumptions.size()-1] = ~assumptions[assumptions.size()-1];
+      
+      assumptions.push(conditionalLit);
+      
+      
+      pbEncodingFormula->addConditional(MinisatToPBLib::litToInteger(conditionalLit));
+      objPBConstraint->encodeNewLeq(lbCost, *pbEncodingFormula, *auxvars);
+      pbEncodingFormula->getConditionals().clear();
+#else
       // The cardinality encoding is only build once.
       if (!encoder.hasCardEncoding())
         encoder.buildCardinality(solver, objFunction, ubCost);
@@ -250,6 +313,7 @@ void LinearUS::lbSearch_weakening()
       // NOTE: 'assumptions' are modified in 'incrementalUpdate'.
       encoder.incUpdateCardinality(solver, join, objFunction, lbCost,
                                    assumptions);
+#endif
     }
   }
 }
@@ -257,7 +321,13 @@ void LinearUS::lbSearch_weakening()
 void LinearUS::lbSearch_iterative()
 {
 
+#ifdef PBLIB
+  printf("c lbSearch_iterative is not supported by pblib switching to lbSearch_weakening\n");
+  lbSearch_weakening();
+  return;
+#else
   assert(encoding == _CARD_TOTALIZER_);
+#endif
 
   nbInitialVariables = nVars();
   lbool res = l_True;
@@ -267,7 +337,9 @@ void LinearUS::lbSearch_iterative()
   vec<Lit> assumptions;
   vec<Lit> join; // dummy empty vector.
 
+#ifndef PBLIB
   encoder.setIncremental(_INCREMENTAL_ITERATIVE_);
+#endif
   for (;;)
   {
 
@@ -320,6 +392,10 @@ void LinearUS::lbSearch_iterative()
           exit(_UNSATISFIABLE_);
         }
       }
+#ifdef PBLIB
+	//TODO add code here
+  #warning does not compile yet
+#else
 
       if (!encoder.hasCardEncoding())
         encoder.buildCardinality(solver, objFunction, lbCost);
@@ -330,6 +406,7 @@ void LinearUS::lbSearch_iterative()
       // count up to 'k' are incrementally added.
       encoder.incUpdateCardinality(solver, join, objFunction, lbCost,
                                    assumptions);
+#endif
     }
   }
 }
@@ -340,6 +417,7 @@ void LinearUS::search()
 
   if (problemType == _WEIGHTED_)
   {
+    //TODO add weighted MaxSAT support with PBLib
     printf("Error: Currently LinearUS does not support weighted MaxSAT "
            "instances.\n");
     printf("s UNKNOWN\n");
@@ -354,6 +432,7 @@ void LinearUS::search()
     lbSearch_none();
     break;
   case _INCREMENTAL_BLOCKING_:
+#ifndef PBLIB
     if (encoder.getCardEncoding() != _CARD_TOTALIZER_)
     {
       printf("Error: Currently incremental blocking in LinearUS only supports "
@@ -361,10 +440,12 @@ void LinearUS::search()
       printf("s UNKNOWN\n");
       exit(_ERROR_);
     }
+#endif
     lbSearch_blocking();
     break;
 
   case _INCREMENTAL_WEAKENING_:
+#ifndef PBLIB
     if (encoder.getCardEncoding() != _CARD_TOTALIZER_)
     {
       printf("Error: Currently incremental weakening in LinearUS only supports "
@@ -372,10 +453,12 @@ void LinearUS::search()
       printf("s UNKNOWN\n");
       exit(_ERROR_);
     }
+#endif
     lbSearch_weakening();
     break;
 
   case _INCREMENTAL_ITERATIVE_:
+#ifndef PBLIB
     if (encoder.getCardEncoding() != _CARD_TOTALIZER_)
     {
       printf("Error: Currently iterative encoding in LinearUS only supports "
@@ -383,6 +466,7 @@ void LinearUS::search()
       printf("s UNKNOWN\n");
       exit(_ERROR_);
     }
+#endif
     lbSearch_iterative();
     break;
 
@@ -429,6 +513,13 @@ Solver *LinearUS::rebuildSolver()
 
     S->addClause(clause);
   }
+#ifdef PBLIB
+  if (pbEncodingFormula != nullptr) delete pbEncodingFormula;
+  if (auxvars != nullptr) delete auxvars;
+  
+  auxvars = new AuxVarManager(S->nVars() + 1);
+  pbEncodingFormula = new SATSolverClauseDatabase(pbconfig, S);
+#endif
 
   return S;
 }

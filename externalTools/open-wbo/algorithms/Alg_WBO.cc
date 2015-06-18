@@ -21,6 +21,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "Alg_WBO.h"
 
+#ifdef PBLIB
+#include "../minisat_to_pblib.h"
+
+using namespace PBLib;
+#endif
 using namespace NSPACE;
 
 /************************************************************************************************
@@ -87,6 +92,13 @@ Solver *WBO::rebuildWeightSolver(int strategy)
       S->addClause(clause);
     }
   }
+#ifdef PBLIB
+  if (pbEncodingFormula != nullptr) delete pbEncodingFormula;
+  if (auxvars != nullptr) delete auxvars;
+  
+  auxvars = new AuxVarManager(S->nVars() + 1);
+  pbEncodingFormula = new SATSolverClauseDatabase(pbconfig, S);
+#endif
 
   return S;
 }
@@ -131,6 +143,13 @@ Solver *WBO::rebuildSolver()
 
     S->addClause(clause);
   }
+#ifdef PBLIB
+  if (pbEncodingFormula != nullptr) delete pbEncodingFormula;
+  if (auxvars != nullptr) delete auxvars;
+  
+  auxvars = new AuxVarManager(S->nVars() + 1);
+  pbEncodingFormula = new SATSolverClauseDatabase(pbconfig, S);
+#endif
   return S;
 }
 
@@ -155,6 +174,13 @@ Solver *WBO::rebuildHardSolver()
   for (int i = 0; i < nHard(); i++)
     S->addClause(hardClauses[i].clause);
 
+#ifdef PBLIB
+  if (pbEncodingFormula != nullptr) delete pbEncodingFormula;
+  if (auxvars != nullptr) delete auxvars;
+  
+  auxvars = new AuxVarManager(S->nVars() + 1);
+  pbEncodingFormula = new SATSolverClauseDatabase(pbconfig, S);
+#endif
   return S;
 }
 
@@ -304,6 +330,20 @@ int WBO::findNextWeightDiversity(int weight)
   |________________________________________________________________________________________________@*/
 void WBO::encodeEO(vec<Lit> &lits)
 {
+#ifdef PBLIB
+  auxvars->resetAuxVarsTo(nVars() + 1);
+  VectorClauseDatabase pbEncodingFormula(pbconfig);
+  pb2cnf->encode(PBConstraint(MinisatToPBLib::createCardinalityWeightedLiterals(lits), BOTH, 1, 1), pbEncodingFormula, *auxvars);
+  while (nVars() < auxvars->getBiggestReturnedAuxVar())
+    newVar();
+  
+  for (auto clause : pbEncodingFormula.getClauses())
+  {
+    MinisatToPBLib::integerClauseToLitClause(clause, lits);
+    addHardClause(lits);
+  }
+  return;
+#endif
 
   assert(lits.size() != 0);
 

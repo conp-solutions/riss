@@ -172,6 +172,9 @@ int main(int argc, char **argv)
         "c WARNING: for repeatability, setting FPU to use double precision\n");
 #endif
 
+//     IntOption resultOffset("Open-WBO", "offset",
+// 			   "offset set is added to each result.\n", 0,
+// 			   IntRange(INT32_MIN, INT32_MAX));
     IntOption cpu_lim("Open-WBO", "cpu-lim",
                       "Limit on CPU time allowed in seconds.\n", INT32_MAX,
                       IntRange(0, INT32_MAX));

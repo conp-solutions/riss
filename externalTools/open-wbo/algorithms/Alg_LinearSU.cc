@@ -21,6 +21,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "Alg_LinearSU.h"
 
+#ifdef PBLIB
+#include "../minisat_to_pblib.h"
+
+using namespace PBLib;
+#endif
 using namespace NSPACE;
 
 /************************************************************************************************
@@ -68,6 +73,11 @@ void LinearSU::bmoSearch()
   uint64_t localCost = 0;
   ubCost = 0;
 
+#ifdef PBLIB
+  
+  IncPBConstraint * objPBConstraint = nullptr; 
+  
+#endif
   for (;;)
   {
 
@@ -122,18 +132,37 @@ void LinearSU::bmoSearch()
 
           delete solver;
           solver = rebuildBMO(functions, weights, currentWeight);
+#ifdef PBLIB
+	if (objPBConstraint != nullptr)
+	  delete objPBConstraint;
+	objPBConstraint = nullptr;
+#endif
 
           if (verbosity > 0) printf("c LB : %-12" PRIu64 "\n", lbCost);
         }
         else
         {
 
+#ifdef PBLIB
+	  if (localCost == 0)
+	  {
+	    assert(objPBConstraint == nullptr);
+	    objPBConstraint = new IncPBConstraint(MinisatToPBLib::createCardinalityWeightedLiterals(objFunction), PBLib::LEQ, newCost / currentWeight - 1);
+	    pb2cnf->encodeIncInital(*objPBConstraint, *pbEncodingFormula, *auxvars);	    
+	  }
+	  else
+	  {
+	    assert(objPBConstraint != nullptr);
+	    objPBConstraint->encodeNewLeq(newCost / currentWeight - 1, *pbEncodingFormula, *auxvars);
+	  }
+#else
           // Optimization of the current lexicographical function.
           if (localCost == 0)
             encoder.encodeCardinality(solver, objFunction,
                                       newCost / currentWeight - 1);
           else
             encoder.updateCardinality(solver, newCost / currentWeight - 1);
+#endif
 
           localCost = newCost;
         }
@@ -178,6 +207,11 @@ void LinearSU::bmoSearch()
 
         delete solver;
         solver = rebuildBMO(functions, weights, currentWeight);
+#ifdef PBLIB
+	if (objPBConstraint != nullptr)
+	  delete objPBConstraint;
+	objPBConstraint = nullptr;
+#endif
 
         if (verbosity > 0) printf("c LB : %-12" PRIu64 "\n", lbCost);
       }
@@ -213,6 +247,9 @@ void LinearSU::normalSearch()
   initRelaxation();
   solver = rebuildSolver();
 
+#ifdef PBLIB
+  IncPBConstraint * objPBConstraint = nullptr; 
+#endif
   while (res == l_True)
   {
 
@@ -239,6 +276,32 @@ void LinearSU::normalSearch()
       }
       else
       {
+#ifdef PBLIB
+	if (problemType == _WEIGHTED_)
+        {
+	  if (objPBConstraint == nullptr)
+	  {
+	    objPBConstraint = new IncPBConstraint(MinisatToPBLib::createWeightedLiterals(objFunction, coeffs), PBLib::LEQ, newCost - 1);
+	    pb2cnf->encodeIncInital(*objPBConstraint, *pbEncodingFormula, *auxvars);
+	  }
+	  else
+	  {
+	    objPBConstraint->encodeNewLeq(newCost - 1, *pbEncodingFormula, *auxvars); 
+	  }
+	}
+	else
+	{
+	  if (objPBConstraint == nullptr)
+	  {
+	    objPBConstraint = new IncPBConstraint(MinisatToPBLib::createCardinalityWeightedLiterals(objFunction), PBLib::LEQ, newCost - 1);
+	    pb2cnf->encodeIncInital(*objPBConstraint, *pbEncodingFormula, *auxvars);
+	  }
+	  else
+	  {
+	    objPBConstraint->encodeNewLeq(newCost - 1, *pbEncodingFormula, *auxvars); 
+	  }
+	}
+#else
         if (problemType == _WEIGHTED_)
         {
           if (!encoder.hasPBEncoding())
@@ -253,8 +316,9 @@ void LinearSU::normalSearch()
             encoder.encodeCardinality(solver, objFunction, newCost - 1);
           else
             encoder.updateCardinality(solver, newCost - 1);
-        }
 
+        }
+#endif
         ubCost = newCost;
       }
     }
@@ -350,6 +414,13 @@ Solver *LinearSU::rebuildSolver(int minWeight)
     S->addClause(clause);
   }
 
+#ifdef PBLIB
+  if (pbEncodingFormula != nullptr) delete pbEncodingFormula;
+  if (auxvars != nullptr) delete auxvars;
+  
+  auxvars = new AuxVarManager(S->nVars() + 1);
+  pbEncodingFormula = new SATSolverClauseDatabase(pbconfig, S);
+#endif
   return S;
 }
 
@@ -385,8 +456,17 @@ Solver *LinearSU::rebuildBMO(vec<vec<Lit> > &functions, vec<int> &rhs,
     }
   }
 
+#ifdef PBLIB
+  
+  for (int i = 0; i < functions.size(); i++)
+  {    
+      PBConstraint c(MinisatToPBLib::createCardinalityWeightedLiterals(functions[i]), PBLib::LEQ, rhs[i]);
+      pb2cnf->encode(c, *pbEncodingFormula, *auxvars);
+  }
+#else    
   for (int i = 0; i < functions.size(); i++)
     encoder.encodeCardinality(S, functions[i], rhs[i]);
+#endif
 
   return S;
 }
