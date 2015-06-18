@@ -536,7 +536,7 @@ protected:
     // DRUP proof
     bool outputsProof() const ;
     template <class T>
-    void addToProof(   const T& clause, bool deleteFromProof = false, const Lit remLit = lit_Undef); // write the given clause to the output, if the output is enabled
+    void addToProof(   const T& clause, bool deleteFromProof = false, const Lit & remLit = lit_Undef); // write the given clause to the output, if the output is enabled
     void addUnitToProof( const Lit& l, bool deleteFromProof=false);    // write a single unit clause to the proof
     void addCommentToProof( const char* text, bool deleteFromProof=false); // write the text as comment into the proof!
 public:
@@ -545,7 +545,7 @@ protected:
 #else // have empty dummy functions
     bool outputsProof() const { return false; }
     template <class T>
-    void addToProof(   const T& clause, bool deleteFromProof = false, const Lit remLit = lit_Undef) const {};
+    void addToProof(   const T& clause, bool deleteFromProof = false, const Lit& remLit = lit_Undef) const {};
     void addUnitToProof( const Lit& l, bool deleteFromProof=false) const {};    
     void addCommentToProof( const char* text, bool deleteFromProof=false) const {}; 
 public:
@@ -576,7 +576,7 @@ protected:
     /// initialize the rewrite info with the gates of the formula
     void rerInitRewriteInfo();
     /// replace the disjunction p \lor q with x
-    void disjunctionReplace( Lit p, Lit q, const Lit x, bool inLearned, bool inBina );
+    void disjunctionReplace( Lit p, Lit q, const Lit& x, const bool& inLearned, const bool& inBinary );
     
     /// structure to store for each literal the literal for rewriting new learned clauses after an RER extension
     struct LitPair {
@@ -704,7 +704,7 @@ protected:
    *  Should be called after eventually enqueuing the asserting literal of the current learned clause
    *  @return true, if a contrdiction has been found, so that the result is UNSAT
    */
-  bool analyzeNewLearnedClause( const CRef newLearnedClause );
+  bool analyzeNewLearnedClause( const CRef & newLearnedClause );
 
   // helper data structures
   std::vector< int > analyzePosition; // for full probing approximation
@@ -1223,7 +1223,7 @@ namespace Riss { // open namespace again!
   }
 
   template <class T>
-  inline void Solver::addToProof( const T& clause, bool deleteFromProof, const Lit remLit)
+  inline void Solver::addToProof( const T& clause, const bool deleteFromProof, const Lit & remLit)
   {
     if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly) ) return; // no proof, or delete and noDrup
 

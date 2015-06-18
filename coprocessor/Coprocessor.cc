@@ -1613,7 +1613,7 @@ void Preprocessor::sortClauses()
   }
 }
 
-void Preprocessor::delete_clause(const Riss::CRef cr)
+void Preprocessor::delete_clause(const Riss::CRef& cr)
 {
   Clause & c = ca[cr];
   c.mark(1);

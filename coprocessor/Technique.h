@@ -49,7 +49,7 @@ class Technique
     /** call this method for each clause when the technique is initialized with the formula
      *  This method should be overwritten by all techniques that inherit this class
      */
-    void initClause(const Riss::CRef cr);
+    void initClause(const Riss::CRef& cr);
 
     /** free resources of the technique, which are not needed until the technique is used next time
      *  This method should be overwritten by all techniques that inherit this class
@@ -93,10 +93,10 @@ class Technique
     void unsuccessfulSimplification();
 
     /** tell via stream that the technique does not support DRUP proofs */
-    void printDRUPwarning(std::ostream& stream, const std::string s);
+    void printDRUPwarning(ostream& stream, const string& s);
 
     /** tell via stream that the technique does not support extra clause info proofs */
-    void printExtraInfowarning(std::ostream& stream, const std::string s);
+    void printExtraInfowarning(ostream& stream, const string& s);
 
 };
 
@@ -131,7 +131,7 @@ inline void Technique::didChange()
     modifiedFormula = true;
 }
 
-inline void Technique::initClause(const Riss::CRef cr)
+inline void Technique::initClause(const Riss::CRef & cr)
 {
     assert(false && "This method has not been implemented.");
 }
@@ -194,13 +194,13 @@ inline void Technique::unsuccessfulSimplification()
     thisPelalty = ++lastMaxPenalty;
 }
 
-inline void Technique::printDRUPwarning(std::ostream& stream, const std::string s)
+inline void Technique::printDRUPwarning(std::ostream& stream, const std::string & s)
 {
     if (! didPrintCannotDrup) { stream << "c [" << s << "] cannot produce DRUP proofs" << std::endl; }
     didPrintCannotDrup = true;
 }
 
-inline void Technique::printExtraInfowarning(std::ostream& stream, const std::string s)
+inline void Technique::printExtraInfowarning(std::ostream& stream, const std::string & s)
 {
     if (! didPrintCannotExtraInfo) { stream << "c [" << s << "] cannot handle clause/variable extra information" << std::endl; }
     didPrintCannotExtraInfo = true;

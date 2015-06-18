@@ -86,7 +86,7 @@ static inline void mergesort(T* field, const int32_t arraySize, LessThan lt)
         //std::cerr << "c swaps: " << swaps << std::endl;
         memcpy(helpArray, field, sizeof(T) * arraySize);  // copy currently sorted data into the other std::vector as well, if necessary!
         T* tmp = field;
-        field = helpArray;
+//         field = helpArray;  // no need to set the pointer again (as we do use a copy of the outside pointer!)
         helpArray = tmp;
     }
     // free space

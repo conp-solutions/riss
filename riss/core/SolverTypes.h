@@ -86,16 +86,16 @@ struct Lit {
 };
 
 
-inline  Lit  mkLit(Var var, bool sign) { Lit p; p.x = var + var + (int)sign; return p; }
-inline  Lit  operator ~(Lit p)              { Lit q; q.x = p.x ^ 1; return q; }
-inline  Lit  operator ^(Lit p, bool b)      { Lit q; q.x = p.x ^ (unsigned int)b; return q; }
-inline  bool sign(Lit p)              { return p.x & 1; }
-inline  int  var(Lit p)              { return p.x >> 1; }
+inline  Lit  mkLit(const Var& var, const bool & sign = false) { Lit p; p.x = var + var + (int)sign; return p; }
+inline  Lit  operator ~(const Lit & p)              { Lit q; q.x = p.x ^ 1; return q; }
+inline  Lit  operator ^(const Lit & p, bool b)      { Lit q; q.x = p.x ^ (unsigned int)b; return q; }
+inline  bool sign(const Lit & p)              { return p.x & 1; }
+inline  int  var(const Lit & p)              { return p.x >> 1; }
 
 // Mapping Literals to and from compact integers suitable for array indexing:
-inline  int  toInt(Var v)              { return v; }
-inline  int  toInt(Lit p)              { return p.x; }
-inline  Lit  toLit(int i)              { Lit p; p.x = i; return p; }
+inline  int  toInt(const Var& v)              { return v; }
+inline  int  toInt(const Lit& p)              { return p.x; }
+inline  Lit  toLit(const int& i)              { Lit p; p.x = i; return p; }
 
 //const Lit lit_Undef = mkLit(var_Undef, false);  // }- Useful special constants.
 //const Lit lit_Error = mkLit(var_Undef, true );  // }
@@ -414,8 +414,8 @@ class Clause
     Lit          subsumes(const Clause& other) const;
     bool         ordered_subsumes(const Clause& other) const;
     bool         ordered_equals(const Clause& other) const;
-    void         remove_lit(const Lit p);        /** keeps the order of the remaining literals */
-    void         strengthen(Lit p);
+    void         remove_lit(const Lit & p);        /** keeps the order of the remaining literals */
+    void         strengthen(const Riss::Lit& p);
 
     void    set_delete(bool b)          { if (b) { header.mark = 1; } else { header.mark = 0; }}
     void    set_learnt(bool b)         { header.learnt = b; }
@@ -452,7 +452,7 @@ class Clause
      *         false gave up locking, because first literal of clause has changed
      *               (only if first lit was specified)
      */
-    bool    spinlock(const Lit first = lit_Undef)
+    bool    spinlock(const Lit& first = lit_Undef)
     {
         ClauseHeader compare = header;
         compare.locked = 0;
@@ -1014,7 +1014,7 @@ inline bool Clause::ordered_equals(const Clause& other) const
     return true;
 }
 
-inline void Clause::remove_lit(const Lit p)
+inline void Clause::remove_lit(const Lit & p)
 {
     for (int i = 0; i < size(); ++i) {
         if (data[i].lit == p) {
@@ -1031,10 +1031,9 @@ inline void Clause::remove_lit(const Lit p)
     }
 }
 
-inline void Clause::strengthen(Lit p)
+inline void Clause::strengthen(const Lit& p)
 {
-    remove(*this, p);
-    calcAbstraction();
+    remove_lit(p);
 }
 //=================================================================================================
 

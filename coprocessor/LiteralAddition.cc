@@ -420,7 +420,7 @@ bool LiteralAddition::process()
     return modifiedFormula;
 }
 
-bool LiteralAddition::tautologicResolvent(const Clause& c, const Clause& d, const Lit l)
+bool LiteralAddition::tautologicResolvent(const Clause& c, const Clause& d, const Lit& l)
 {
     int i = 0, j = 0;
     while (i < c.size() && j < d.size()) {

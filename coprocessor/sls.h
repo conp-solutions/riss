@@ -39,7 +39,6 @@ class Sls : public Technique
   private:
 
     CoprocessorData& data;    // reference to coprocessor data object
-    Riss::ClauseAllocator& ca;    // reference to clause allocator
     double solveTime;     // number of seconds for solving
 
     // keep track of unsat clauses

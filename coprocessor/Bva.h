@@ -108,7 +108,7 @@ protected:
   * @param right literal that represents the right side
   * @return false, if shrinking a clause to unit led to a failed enqueue (UNSAT)
   */
-  bool bvaHandleComplement( const Riss::Lit right, Riss::Heap< Coprocessor::LitOrderHeapLt >& bvaHeap );
+  bool bvaHandleComplement( const Riss::Lit & right, Riss::Heap< Coprocessor::LitOrderHeapLt >& bvaHeap );
 
   /** introduce a fresh variable, update the size of all required structures*/
   Riss::Var nextVariable(char type, Riss::Heap<LitOrderHeapLt>& bvaHeap);
@@ -157,7 +157,7 @@ protected:
   };
   
   /** remove duplicate clauses from the clause list of the given literal*/
-  void removeDuplicateClauses( const Riss::Lit literal );
+  void removeDuplicateClauses( const Riss::Lit  & literal );
   
 public:
   // parameters

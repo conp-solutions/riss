@@ -1008,7 +1008,7 @@ void Rewriter::destroy()
     rewHeap.clear(true);
 }
 
-bool Rewriter::checkPush(vec<Lit>& ps, const Lit l)
+bool Rewriter::checkPush(vec< Lit >& ps, const Lit& l)
 {
     if (ps.size() > 0) {
         if (ps.last() == l)

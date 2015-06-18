@@ -529,9 +529,7 @@ void BoundedVariableElimination::bve_worker(CoprocessorData &data, Heap<VarOrder
  *      remove it from data-Objects statistics
  *      mark it for deletion
  */
-inline void BoundedVariableElimination::removeClauses(CoprocessorData &data, Heap<VarOrderBVEHeapLt> &heap,
-                                                      const vector<CRef> &list, const Lit l, const int limit,
-                                                      const bool doStatistics) {
+inline void BoundedVariableElimination::removeClauses(Coprocessor::CoprocessorData& data, Heap< Coprocessor::VarOrderBVEHeapLt >& heap, const vector< Riss::CRef >& list, const Lit& l, const int limit, const bool doStatistics) {
     for (int cr_i = 0; cr_i < list.size(); ++cr_i) {
         Clause &c = ca[list[cr_i]];
         CRef cr = list[cr_i];
@@ -900,9 +898,7 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData &data, Heap<VarOrde
  * i.e. all resolvents are tautologies
  *
  */
-inline void BoundedVariableElimination::removeBlockedClauses(CoprocessorData &data, Heap<VarOrderBVEHeapLt> &heap,
-                                                             const vector<CRef> &list, const int32_t stats[],
-                                                             const Lit l, const int limit, const bool doStatistics) {
+inline void BoundedVariableElimination::removeBlockedClauses(Coprocessor::CoprocessorData& data, Heap< Coprocessor::VarOrderBVEHeapLt >& heap, const vector< Riss::CRef >& list, const int32_t stats[], const Lit& l, const int limit, const bool doStatistics) {
     for (unsigned ci = 0; ci < list.size(); ++ci) {
         Clause &c = ca[list[ci]];
         if (c.can_be_deleted()) continue;

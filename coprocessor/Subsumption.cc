@@ -1165,7 +1165,7 @@ lbool Subsumption::fullStrengthening(Heap<VarOrderBVEHeapLt> * heap, const Var i
  *creating resolvents in the createAllResolvents Version of Strengthening
  *
  */
-lbool Subsumption::createResolvent(const CRef cr, CRef& resolvent, const int negated_lit_pos, Heap<VarOrderBVEHeapLt> * heap, const Var ignore, const bool doStatistics)
+lbool Subsumption::createResolvent(const Riss::CRef& cr, Riss::CRef& resolvent, const int negated_lit_pos, Heap< Coprocessor::VarOrderBVEHeapLt >* heap, const Var ignore, const bool doStatistics)
 {
     Clause& origin = ca[cr];
     assert(origin.size() >= 2);
@@ -1494,7 +1494,7 @@ inline void Subsumption::updateOccurrences(vector< OccUpdate >& updates, Heap<Va
 updates.clear();
 }
 
-void Subsumption::initClause(const Riss::CRef cr, bool addToStrengthen)
+void Subsumption::initClause(const Riss::CRef& cr, const bool& addToStrengthen)
 {
     const Clause& c = ca[cr];
     if (!c.can_be_deleted()) {

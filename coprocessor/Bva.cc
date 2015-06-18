@@ -1833,7 +1833,7 @@ bool BoundedVariableAddition::iteBVAfull()
 }
 
 
-bool BoundedVariableAddition::bvaHandleComplement(const Lit right, Heap<LitOrderHeapLt>& bvaHeap)
+bool BoundedVariableAddition::bvaHandleComplement(const Lit& right, Heap< Coprocessor::LitOrderHeapLt >& bvaHeap)
 {
     data.clss.clear();
     const Lit left = ~right;
@@ -2001,7 +2001,7 @@ void BoundedVariableAddition::destroy()
 }
 
 
-void BoundedVariableAddition::removeDuplicateClauses(const Lit literal)
+void BoundedVariableAddition::removeDuplicateClauses(const Lit& literal)
 {
 
     for (uint32_t i = 0 ; i < data.list(literal).size() ; ++ i) {

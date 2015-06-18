@@ -92,7 +92,7 @@ class Rewriter : public Technique
     bool hasDuplicate(std::vector<Riss::CRef>& list, const Riss::vec<Riss::Lit>& c);
     bool hasDuplicate(std::vector<Riss::CRef>& list, const Riss::Clause& c);
 
-    bool checkPush(Riss::vec<Riss::Lit>& ps, const Riss::Lit l);
+    bool checkPush(Riss::vec<Riss::Lit>& ps, const Riss::Lit & l);
     bool ordered_subsumes(const Riss::Clause& c, const Riss::Clause& other) const;
     bool ordered_subsumes(const Riss::vec<Riss::Lit>& c, const Riss::Clause& other) const;
     bool ordered_subsumes(const Riss::Clause& c, const Riss::vec<Riss::Lit>& other) const;

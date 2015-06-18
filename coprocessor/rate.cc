@@ -409,7 +409,7 @@ bool RATElimination::propagateUnit(const Lit& unit, int& trailPosition)
 
 }
 
-void RATElimination::checkedAttach(const CRef clause, const int& detachTrailSize)
+void RATElimination::checkedAttach(const Riss::CRef& clause, const int& detachTrailSize)
 {
     int trailsize = solver.trail.size();
     assert(solver.decisionLevel() == 0 && "This method is only for the checked attach at level 0!");
@@ -452,7 +452,7 @@ void RATElimination::checkedAttach(const CRef clause, const int& detachTrailSize
     }
 }
 
-bool RATElimination::shortATM(const CRef clause, const Lit left, int& trailPosition, vector<Lit>& atlits)
+bool RATElimination::shortATM(const Riss::CRef& clause, const Lit& left, int& trailPosition, vector< Lit >& atlits)
 {
     Clause& cl = ca[ clause ];
 
@@ -1306,7 +1306,7 @@ bool RATElimination::blockedSubstitution()
     return didSomething;
 }
 
-bool RATElimination::resolveUnsortedStamped(const Lit l, const Clause& d, MarkArray& ma, vector<Lit>& resolvent)
+bool RATElimination::resolveUnsortedStamped(const Lit& l, const Clause& d, MarkArray& ma, vector< Lit >& resolvent)
 {
     for (int i = 0 ; i < d.size(); ++ i) {
         const Lit& dl = d[i];

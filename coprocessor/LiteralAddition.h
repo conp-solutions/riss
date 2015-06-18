@@ -63,7 +63,7 @@ class LiteralAddition : public Technique
     /** check whether resolving c and d on literal l results in a tautology
      * Note: method assumes c and d to be sorted
      */
-    bool tautologicResolvent(const Riss::Clause& c, const Riss::Clause& d, const Riss::Lit l);
+    bool tautologicResolvent(const Riss::Clause& c, const Riss::Clause& d, const Riss::Lit & l);
 
     /** run a covered literal addition to increase the size of clauses */
     void coverdLiteralAddition();

@@ -83,10 +83,10 @@ class Circuit
             NEG_BLOCKED  // clauses with the negative output literal occurences are blocked TODO: can these gates have even more inputs than encoded?
         };
 
-        Gate(const Riss::Clause& c, const Type _type, const Encoded e, const Riss::Lit output = Riss::lit_Undef);      // generic gate
-        Gate(const std::vector<Riss::Lit>& c, const Type _type, const Encoded e, const Riss::Lit output = Riss::lit_Undef); // generic gate
-        Gate(Riss::Lit x, Riss::Lit s, Riss::Lit t, Riss::Lit f, const Coprocessor::Circuit::Gate::Type _type, const Coprocessor::Circuit::Gate::Encoded e); // ITE, FA_SUM
-        Gate(Riss::Lit x, Riss::Lit a, Riss::Lit b, const Coprocessor::Circuit::Gate::Type _type, const Coprocessor::Circuit::Gate::Encoded e); // AND, XOR
+        Gate(const Riss::Clause& c, const Type _type, const Encoded e, const Riss::Lit & output = Riss::lit_Undef);      // generic gate
+        Gate(const std::vector<Riss::Lit>& c, const Type _type, const Encoded e, const Riss::Lit & output = Riss::lit_Undef); // generic gate
+        Gate(const Riss::Lit & x, const Riss::Lit & s, const Riss::Lit & t, const Riss::Lit & f, const Coprocessor::Circuit::Gate::Type & _type, const Coprocessor::Circuit::Gate::Encoded e); // ITE, FA_SUM
+        Gate(const Riss::Lit & x, const Riss::Lit & a, const Riss::Lit & b, const Coprocessor::Circuit::Gate::Type & _type, const Coprocessor::Circuit::Gate::Encoded & e); // AND, XOR
         ~Gate();
         Gate(const Gate& other);
         /** Note: this operator does not copy the memory for the external literals, but simply copies the pointer! */
@@ -147,15 +147,15 @@ class Circuit
     void getGatesWithOutput(const Riss::Var v, std::vector<Gate>& gates, CoprocessorData& data);
 
     /** method that looks for AND gates (multiple AND might form an ExO gate!)*/
-    void getANDGates(const Riss::Var v, std::vector<Gate>& gates, CoprocessorData& data);
+    void getANDGates(const Riss::Var & v, std::vector<Gate>& gates, CoprocessorData& data);
     /** one ExO can be understood as many AND gates! */
-    void getExOGates(const Riss::Var v, std::vector<Gate>& gates, CoprocessorData& data);
+    void getExOGates(const Riss::Var & v, std::vector<Gate>& gates, CoprocessorData& data);
     /** method that looks for XOR gate( stores it only in list, if v is the smallest variable of the gate)*/
-    void getXORGates(const Riss::Var v, std::vector<Gate>& gates, CoprocessorData& data);
+    void getXORGates(const Riss::Var & v, std::vector<Gate>& gates, CoprocessorData& data);
     /** method that looks for ITE gates */
-    void getITEGates(const Riss::Var v, std::vector<Gate>& gates, CoprocessorData& data);
+    void getITEGates(const Riss::Var & v, std::vector<Gate>& gates, CoprocessorData& data);
     /** method that looks for half adder sum gates (have gate only if v is smallest variale) */
-    void getFASUMGates(const Riss::Var v, std::vector<Gate>& gates, CoprocessorData& data);
+    void getFASUMGates(const Riss::Var & v, std::vector<Gate>& gates, CoprocessorData& data);
 };
 
 

@@ -62,7 +62,7 @@ class FourierMotzkin : public Technique
     /** struct to handle ternary clauses efficiently */
     struct Ternary {
         Riss::Lit lit [3];
-        Ternary(const Riss::Lit a, const Riss::Lit b, const Riss::Lit c)
+        Ternary(const Riss::Lit & a, const Riss::Lit & b, const Riss::Lit & c)
         {
             lit[0] = (a > b ? (b > c ? c : b) : (a > c ? c : a));       // min
             lit[2] = (a > b ? (a > c ? a : c) : (b > c ? b : c));       // max

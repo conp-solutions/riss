@@ -41,7 +41,7 @@ class Propagation : public Technique
      */
     Riss::lbool process(CoprocessorData& data, bool sort = false, Riss::Heap<VarOrderBVEHeapLt> * heap = NULL, const Riss::Var ignore = var_Undef);
 
-    void initClause(const Riss::CRef cr);
+    void initClause(const Riss::CRef & cr);
 
     void printStatistics(std::ostream& stream);
 

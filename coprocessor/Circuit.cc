@@ -85,7 +85,7 @@ void Circuit::getGatesWithOutput(const Var v, vector< Circuit::Gate >& gates, Co
     DOUT(if (config.circ_debug_out) cerr << "c after variable " << v + 1 << " found " << gates.size() << " gates" << endl;;);
 }
 
-void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, CoprocessorData& data)
+void Circuit::getANDGates(const Var& v, vector< Coprocessor::Circuit::Gate >& gates, Coprocessor::CoprocessorData& data)
 {
     DOUT(if (config.circ_debug_out) cerr << "c try to find AND gate for variable " <<  v + 1 <<  " (found so far:" << gates.size() << ")[ok?: " << data.ok() << "]" << endl;);
     vec<Lit> learnt_clause;
@@ -231,7 +231,7 @@ void Circuit::getANDGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
     } // end pos/neg for loop
 }
 
-void Circuit::getExOGates(const Var v, vector< Circuit::Gate >& gates, CoprocessorData& data)
+void Circuit::getExOGates(const Var& v, vector< Coprocessor::Circuit::Gate >& gates, Coprocessor::CoprocessorData& data)
 {
     for (int p = 0; p < 2 ; ++ p) {
         Lit pos = mkLit(v, p == 1);
@@ -342,7 +342,7 @@ void Circuit::getExOGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
 }
 
 
-void Circuit::getFASUMGates(const Var v, vector< Circuit::Gate >& gates, CoprocessorData& data)
+void Circuit::getFASUMGates(const Var& v, vector< Coprocessor::Circuit::Gate >& gates, Coprocessor::CoprocessorData& data)
 {
 // clauses to look for:
 //    a  b  c  d == 0
@@ -513,7 +513,7 @@ void Circuit::getFASUMGates(const Var v, vector< Circuit::Gate >& gates, Coproce
     }
 }
 
-void Circuit::getITEGates(const Var v, vector< Circuit::Gate >& gates, CoprocessorData& data)
+void Circuit::getITEGates(const Var& v, vector< Coprocessor::Circuit::Gate >& gates, Coprocessor::CoprocessorData& data)
 {
     // ITE(s,t,f) == ITE(-s,f,t) => scanning for these gates is simple
 
@@ -663,7 +663,7 @@ void Circuit::getITEGates(const Var v, vector< Circuit::Gate >& gates, Coprocess
     }
 }
 
-void Circuit::getXORGates(const Var v, vector< Circuit::Gate >& gates, CoprocessorData& data)
+void Circuit::getXORGates(const Var& v, vector< Coprocessor::Circuit::Gate >& gates, Coprocessor::CoprocessorData& data)
 {
     // cerr << "c find XOR for variable " << v+1 << endl;
     int oldGates = gates.size();
@@ -841,7 +841,7 @@ Circuit::Gate::~Gate()
 }
 
 
-Circuit::Gate::Gate(const Clause& c, const Circuit::Gate::Type _type, const Circuit::Gate::Encoded e, const Lit output)
+Circuit::Gate::Gate(const Clause& c, const Coprocessor::Circuit::Gate::Type _type, const Coprocessor::Circuit::Gate::Encoded e, const Lit& output)
     : inQueue(false), touched(0), type(_type), encoded(e)
 {
     if (_type == Gate::GenAND || _type == Gate::ExO) {
@@ -874,7 +874,7 @@ Circuit::Gate::Gate(const Clause& c, const Circuit::Gate::Type _type, const Circ
     }
 }
 
-Circuit::Gate::Gate(const vector< Lit >& c, const Circuit::Gate::Type _type, const Circuit::Gate::Encoded e, const Lit output)
+Circuit::Gate::Gate(const vector< Lit >& c, const Coprocessor::Circuit::Gate::Type _type, const Coprocessor::Circuit::Gate::Encoded e, const Lit& output)
     : inQueue(false), touched(0), type(_type), encoded(e)
 {
     if (_type == Gate::GenAND || _type == Gate::ExO) {
@@ -904,14 +904,14 @@ Circuit::Gate::Gate(const vector< Lit >& c, const Circuit::Gate::Type _type, con
     }
 }
 
-Circuit::Gate::Gate(Lit _x, Lit _s, Lit _t, Lit _f, const Circuit::Gate::Type _type, const Circuit::Gate::Encoded e)
+Circuit::Gate::Gate(const Lit & _x, const Lit & _s, const Lit & _t, const Lit & _f, const Circuit::Gate::Type & _type, const Circuit::Gate::Encoded e)
     : inQueue(false), touched(0), type(_type), encoded(e)
 {
     assert((_type == ITE || _type == FA_SUM) && "This constructur can be used for ITE gates only");
     x() = _x; s() = _s; t() = _t; f() = _f;
 }
 
-Circuit::Gate::Gate(Lit _x, Lit _a, Lit _b, const Circuit::Gate::Type _type, const Circuit::Gate::Encoded e)
+Circuit::Gate::Gate(const Lit& _x, const Lit& _a, const Lit& _b, const Coprocessor::Circuit::Gate::Type& _type, const Coprocessor::Circuit::Gate::Encoded& e)
     : inQueue(false), touched(0), type(_type), encoded(e)
 {
 //  assert( false && "This constructor is not yet implemented (should be for faster construction!)" );

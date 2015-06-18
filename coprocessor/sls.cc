@@ -14,7 +14,6 @@ Sls::Sls(CP3Config& _config, CoprocessorData& _data, ClauseAllocator& _ca, Threa
     :
     Technique(_config, _ca, _controller)
     , data(_data)
-    , ca(_ca)
     , solveTime(0)
     , flips(0)
     , unsats(0)

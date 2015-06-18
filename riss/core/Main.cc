@@ -224,6 +224,7 @@ int main(int argc, char** argv)
 	      if (res != NULL) {
 		if( opt_modelStyle ) fprintf(res, "UNSAT\n"), fclose(res);
 		else fprintf(res, "s UNSATISFIABLE\n"), fclose(res);
+		res = NULL;
 	      }
 	  // add the empty clause to the proof, close proof file
 	  if (S.drupProofFile != NULL) { 
@@ -252,7 +253,7 @@ int main(int argc, char** argv)
 	  // have we reached UNKNOWN because of the limited number of conflicts? then continue with the next loop!
 	  if( ret == l_Undef) 
 	  {
-	    if( res != NULL) fclose(res);
+	    if( res != NULL) { fclose(res); res == NULL; }
 	    if( S.drupProofFile != NULL ) {
 	      fclose( S.drupProofFile );	// close the current file
 	      S.drupProofFile = fopen((const char*) drupFile, "w");	// remove the content of that file
@@ -301,7 +302,7 @@ int main(int argc, char** argv)
 	      }else
 		  if( opt_modelStyle ) fprintf(res, "UNKNOWN\n");
 		  else fprintf(res, "s UNKNOWN\n");
-	      fclose(res);
+	      fclose(res); res = NULL;
 	  }
 
 	  // print model to screen

@@ -563,7 +563,7 @@ bool BlockedClauseElimination::process()
     return modifiedFormula;
 }
 
-Lit BlockedClauseElimination::tautologicResolvent(const Clause& c, const Clause& d, const Lit l) const
+Lit BlockedClauseElimination::tautologicResolvent(const Clause& c, const Clause& d, const Lit& l) const
 {
     int i = 0, j = 0;
     while (i < c.size() && j < d.size()) {

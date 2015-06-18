@@ -191,7 +191,7 @@ void HiddenTautologyElimination::elimination_worker(CoprocessorData& data, uint3
     }
 }
 
-void HiddenTautologyElimination::initClause(const CRef cr)
+void HiddenTautologyElimination::initClause(const Riss::CRef& cr)
 {
     return;
     /*
@@ -444,7 +444,7 @@ Lit HiddenTautologyElimination::fillHlaArrays(Var v, BIG& big, MarkArray& hlaPos
     return lit_Undef;
 }
 
-bool HiddenTautologyElimination::hlaMarkClause(const Riss::CRef cr, BIG& big, MarkArray& markArray, Lit* litQueue)
+bool HiddenTautologyElimination::hlaMarkClause(const Riss::CRef& cr, Coprocessor::BIG& big, MarkArray& markArray, Lit* litQueue)
 {
     const Clause& clause = ca[cr];
     if (clause.size() < 3) { return false; }   // do not work on binary and smaller clauses!
@@ -529,7 +529,7 @@ bool HiddenTautologyElimination::hlaMarkClause(vec< Lit >& clause, BIG& big, Mar
 }
 
 
-bool HiddenTautologyElimination::alaMarkClause(const CRef cr, CoprocessorData& data, MarkArray& markArray, MarkArray& helpArray)
+bool HiddenTautologyElimination::alaMarkClause(const Riss::CRef& cr, Coprocessor::CoprocessorData& data, MarkArray& markArray, MarkArray& helpArray)
 {
     vec<Lit> lits;
     const Clause& c = ca[cr];

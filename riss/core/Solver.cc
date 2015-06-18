@@ -1933,7 +1933,7 @@ bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
 }
 
 
-bool Solver::analyzeNewLearnedClause(const CRef newLearnedClause)
+bool Solver::analyzeNewLearnedClause(const Riss::CRef& newLearnedClause)
 {
   if( config.opt_uhdProbe == 0 ) return false;
   
@@ -2724,9 +2724,11 @@ void Solver::toDimacs(FILE* f, Clause& c, vec<Var>& map, Var& max)
 void Solver::toDimacs(const char *file, const vec<Lit>& assumps)
 {
     FILE* f = fopen(file, "wr");
-    if (f == NULL)
-        fprintf(stderr, "could not open file %s\n", file), exit(1);
-    toDimacs(f, assumps);
+    if (f == NULL) {
+      fprintf(stderr, "could not open file %s\n", file), exit(1);
+    } else {
+      toDimacs(f, assumps);
+    }
     fclose(f);
 }
 
@@ -3465,7 +3467,7 @@ Solver::rerReturnType Solver::restrictedERITE( const Lit& previousFirst, const v
 }
 
 
-void Solver::disjunctionReplace( Lit p, Lit q, const Lit x, bool inLearned, bool inBinary)
+void Solver::disjunctionReplace( Lit p, Lit q, const Lit& x, const bool & inLearned, const bool & inBinary)
 {
   
   for( int m = 0 ; m < (inLearned?2:1); ++ m ) {
