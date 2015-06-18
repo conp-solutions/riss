@@ -5,6 +5,7 @@ Copyright (c) 2015, Norbert Manthey, All rights reserved.
 #include "coprocessor/MaxsatWrapper.h"
 
 using namespace Coprocessor;
+using namespace Riss;
 
 Mprocessor::Mprocessor(const char* configname)
 : cpconfig(configname)
@@ -55,7 +56,7 @@ int Mprocessor::getProblemType()
   return problemType;
 }
 
-Var Mprocessor::newVar(bool polarity, bool dvar, char type)
+Riss::Var Mprocessor::newVar(bool polarity, bool dvar, char type)
 {
   Var v = S->newVar( polarity, dvar, type );
   fullVariables =  v > fullVariables ? v : fullVariables;  // keep track of highest variable
@@ -90,13 +91,13 @@ void Mprocessor::updateSumWeights(int weight)
   sumWeights = weight;
 }
 
-void Mprocessor::addHardClause(vec< Lit >& lits)
+void Mprocessor::addHardClause(Riss::vec< Riss::Lit >& lits)
 {
   if( debugLevel > 1 ) cerr << "c added hard clause to MSW: " << lits << endl;
   S->addClause_( lits );
 }
 
-bool Mprocessor::addSoftClause(int weight, vec< Lit >& lits)
+bool Mprocessor::addSoftClause(int weight, Riss::vec< Riss::Lit >& lits)
 {
   if( debugLevel > 1 ) cerr << "c added soft clause to MSW: " << weight << " ; "  << lits << endl;
   

@@ -15,8 +15,8 @@ public:  // TODO get this right by having getters and setters
   // from coprocessor
   Coprocessor::CP3Config cpconfig;
   Preprocessor* preprocessor;
-  Solver* S;
-  vec<int> literalWeights; /// weights seem to be ints
+  Riss::Solver* S;
+  Riss::vec<int> literalWeights; /// weights seem to be ints
   
   // from open-wbo
   int problemType;
@@ -48,14 +48,14 @@ public:
   void setHardWeight(int weight);      // Set initial 'hardWeight'.
 
   int     nVars      ()      const;       /// The current number of variables.
-  Var     newVar    (bool polarity = true, bool dvar = true, char type = 'o'); // Add a new variable with parameters specifying variable mode.
+  Riss::Var     newVar    (bool polarity = true, bool dvar = true, char type = 'o'); // Add a new variable with parameters specifying variable mode.
   
-  void addHardClause(vec<Lit> &lits);             // Add a new hard clause.
+  void addHardClause(Riss::vec<Riss::Lit> &lits);             // Add a new hard clause.
   
   /** Add a new soft clause.
    *  @return true, if soft clause has been a unit clause
    */
-  bool addSoftClause(int weight, vec< Lit >& lits);
+  bool addSoftClause(int weight, Riss::vec< Riss::Lit >& lits);
   
   void setSpecs( int specifiedVars, int specifiedCls ) ;
   
