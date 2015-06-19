@@ -1145,7 +1145,6 @@ CRef Solver::propagate(bool duringAddingClauses)
             if (!wbin[k].isBinary()) { continue; }
             const Lit& imp = wbin[k].blocker();
             assert(ca[ wbin[k].cref() ].size() == 2 && "in this list there can only be binary clauses");
-            DOUT(if (config.opt_learn_debug) cerr << "c checked binary clause " << ca[wbin[k].cref() ] << " with implied literal having value " << toInt(value(imp)) << endl;);
             if (value(imp) == l_False) {
                 if (!config.opt_long_conflict) { return wbin[k].cref(); }
                 confl = wbin[k].cref();

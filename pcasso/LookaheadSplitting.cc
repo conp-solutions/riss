@@ -664,6 +664,13 @@ void LookaheadSplitting::shrinkClauses()
         Var v;
         Lit l;
 
+	// cleared all watch lists
+	watches.cleanAll();
+	for( Var v = 0; v < nVars(); ++v ) {
+	  watches[ mkLit(v,true) ].clear();
+	  watches[ mkLit(v,false) ].clear();
+	}
+	
         for (int i = 0, j = 0, k = 0; i < clauses.size(); i++) {
             Clause& c = ca[clauses[i]];
             for (j = 0, k = 0; j < c.size(); j++) {
@@ -684,6 +691,8 @@ void LookaheadSplitting::shrinkClauses()
                 }
             }
             c.shrink(j - k);
+	    if( c.size() == 1 ) uncheckedEnqueue( c[0] ); // handle unit clauses properly!
+	    else attachClause( clauses[i] );
         }
 
         if (opt_pure_lit > 0) {
@@ -703,6 +712,9 @@ void LookaheadSplitting::shrinkClauses()
             //fprintf(stderr,"splitter: Found pure literals : %d\n",pureLiterals.size());
         }
 
+        CRef ref = propagate();
+	assert( ref == CRef_Undef && "otherwise the current formula is unsatisfiable" );
+        
         checkGarbage();
         rebuildOrderHeap();
     }
