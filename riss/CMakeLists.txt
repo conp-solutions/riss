@@ -35,11 +35,17 @@ set(LIB_SOURCES
 
 add_library(${PROJECT_NAME}-lib-static STATIC ${LIB_SOURCES})
 add_library(${PROJECT_NAME}-lib-shared SHARED ${LIB_SOURCES})
+# This extra libraries are build for pcasso, because pcasso needs some
+# extensions to the riss source code
+add_library(${PROJECT_NAME}-pcasso-lib-static STATIC ${LIB_SOURCES})
+add_library(${PROJECT_NAME}-pcasso-lib-shared SHARED ${LIB_SOURCES})
 
 message(STATUS "Libs: ${ZLIB_LIBRARY} ${LIBRT_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT}")
 
 target_link_libraries(${PROJECT_NAME}-lib-shared z pthread rt)
 target_link_libraries(${PROJECT_NAME}-lib-static z pthread rt)
+target_link_libraries(${PROJECT_NAME}-pcasso-lib-shared z pthread rt)
+target_link_libraries(${PROJECT_NAME}-pcasso-lib-static z pthread rt)
 
 set_target_properties(${PROJECT_NAME}-lib-static PROPERTIES
                                                  OUTPUT_NAME "${PROJECT_NAME}")
@@ -47,6 +53,15 @@ set_target_properties(${PROJECT_NAME}-lib-shared PROPERTIES
                                                  OUTPUT_NAME "${PROJECT_NAME}" 
                                                  VERSION ${VERSION}
                                                  SOVERSION ${SOVERSION})
+set_target_properties(${PROJECT_NAME}-pcasso-lib-static PROPERTIES
+                                                        OUTPUT_NAME "${PROJECT_NAME}-pcasso"
+                                                        COMPILE_FLAGS "-DPCASSO")
+set_target_properties(${PROJECT_NAME}-pcasso-lib-shared PROPERTIES
+                                                        OUTPUT_NAME "${PROJECT_NAME}-pcasso"
+                                                        COMPILE_FLAGS "-DPCASSO"
+                                                        VERSION ${VERSION}
+                                                        SOVERSION ${SOVERSION})
+
 
 # Custom version target that is always built, because it DEPENDS on a file (string)
 # that does not exist
@@ -65,6 +80,8 @@ add_custom_command(OUTPUT ${PROJECT_NAME}-build_version_file ${CMAKE_CURRENT_BIN
 # explicitly say that the libraries depends on the version
 add_dependencies(${PROJECT_NAME}-lib-shared version)
 add_dependencies(${PROJECT_NAME}-lib-static version)
+add_dependencies(${PROJECT_NAME}-pcasso-lib-shared version)
+add_dependencies(${PROJECT_NAME}-pcasso-lib-static version)
 
 
 # Executables:
@@ -94,7 +111,8 @@ endif()
 
 # Installation:
 # 
-install(TARGETS ${PROJECT_NAME}-lib-static ${PROJECT_NAME}-lib-shared ${PROJECT_NAME}-core ${PROJECT_NAME}-simp 
+install(TARGETS ${PROJECT_NAME}-lib-static ${PROJECT_NAME}-lib-shared ${PROJECT_NAME}-pcasso-lib-static ${PROJECT_NAME}-pcasso-lib-shared
+                ${PROJECT_NAME}-core ${PROJECT_NAME}-simp 
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
