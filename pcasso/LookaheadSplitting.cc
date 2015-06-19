@@ -1053,7 +1053,9 @@ Lit LookaheadSplitting::pickBranchLiteral(vec<vec<Lit>* > **valid)
 
 decLitNotFound:
     preselectVar(sortedVar, bestKList);
+    score.clear();
     score.growTo(bestKList.size(), 0);
+    assert( score.size() == bestKList.size() && "has been initialized to the same size" );
     numIterations = opt_num_iterat;
     progress = true;
     bestVarIndex = var_Undef;
@@ -1337,6 +1339,7 @@ decLitNotFound:
                 //              }
             }
 
+            assert( score.size() == bestKList.size() && "has been initialized to the same size" );
             if (!positiveLookahead && !negativeLookahead) {
                 switch (heuristic) {
                 case 0:
@@ -1385,11 +1388,14 @@ decLitNotFound:
                 }
             }
         }
+        assert( score.size() == bestKList.size() && "has been initialized to the same size" );
     }
 
+    assert( score.size() == bestKList.size() && "has been initialized to the same size" );
+    
 jump:
     cancelUntil(decLev);
-
+    
     for (int i = 0; i < score.size(); i++) {
         if (score[i] > 0 && score[i] > bestVarScore && value(bestKList[i]) == l_Undef) {
             bestVarScore = score[i];
