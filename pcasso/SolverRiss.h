@@ -15,7 +15,7 @@
 namespace Pcasso {
     class SolverRiss : public InstanceSolver {
     public:
-        SolverRiss(Riss::CoreConfig& config);
+        SolverRiss(Riss::CoreConfig* config);
 
         ~SolverRiss();
 
@@ -54,7 +54,7 @@ namespace Pcasso {
         inline unsigned int getLiteralPTLevel(const Riss::Lit& l) const{ return 0; } // TODO: return correct PT level
 
     private:
-        Riss::CoreConfig&   coreConfig;
+        Riss::CoreConfig*   coreConfig;
         // TODO: varPT not working yet
         Riss::vec<unsigned> varPT;             // storing the PT level of each variable
     };

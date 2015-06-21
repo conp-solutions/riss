@@ -22,7 +22,7 @@ namespace Pcasso
 class LookaheadSplitting : public SplitterSolver
 {
 
-    Riss::CoreConfig& coreConfig;
+    Riss::CoreConfig* coreConfig;
 
     // more global data structures
     Riss::vec<Riss::Lit> learnt_clause;
@@ -30,7 +30,7 @@ class LookaheadSplitting : public SplitterSolver
     uint64_t extraInfo;
 
   public:
-    LookaheadSplitting(Riss::CoreConfig& config);
+    LookaheadSplitting(Riss::CoreConfig* config);
     ~LookaheadSplitting();
     void dummy()
     {

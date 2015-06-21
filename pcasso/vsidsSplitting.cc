@@ -19,7 +19,7 @@ static IntOption     opt_scatter_conBw(_cat, "sc-betweenConflicts", "The number 
 static IntOption     opt_restart_first(_cat, "rfirst",              "The base restart interval", 100, IntRange(1, INT32_MAX));
 static DoubleOption  opt_restart_inc(_cat, "rinc",                "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false));
 
-VSIDSSplitting::VSIDSSplitting(CoreConfig& config):
+VSIDSSplitting::VSIDSSplitting(CoreConfig* config):
     SplitterSolver(config)
     , coreConfig(config)
     , restart_first(opt_restart_first)

@@ -20,7 +20,7 @@ namespace Pcasso
 class VSIDSSplitting : public SplitterSolver
 {
 
-    Riss::CoreConfig& coreConfig;
+    Riss::CoreConfig* coreConfig;
 
     // more global data structure
     Riss::vec<Riss::Lit>  learnt_clause;
@@ -28,7 +28,7 @@ class VSIDSSplitting : public SplitterSolver
     uint64_t extraInfo;
 
   public:
-    VSIDSSplitting(Riss::CoreConfig& config);
+    VSIDSSplitting(Riss::CoreConfig* config);
     ~VSIDSSplitting();
     void dummy()
     {

@@ -55,7 +55,7 @@ static BoolOption    opt_lbd_minimization               ("SPLITTER + SHARING", "
 static BoolOption    opt_simulate_portfolio             ("SPLITTER + SHARING", "sim-port", "Enable Simulation of Portfolio.\n", false);
 
 
-SolverPT::SolverPT(CoreConfig& config) :
+SolverPT::SolverPT(CoreConfig* config) :
   SplitterSolver(config)
 , coreConfig(config)
 , tOut( 0 )

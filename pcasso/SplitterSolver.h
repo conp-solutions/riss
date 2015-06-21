@@ -17,10 +17,10 @@ namespace Pcasso
 class SplitterSolver : public Riss::Solver, public ISolver
 {
 
-    Riss::CoreConfig& coreConfig;
+    Riss::CoreConfig* coreConfig;
 
   public:
-    SplitterSolver(Riss::CoreConfig& config) : Riss::Solver(config), coreConfig(config) {}
+    SplitterSolver(Riss::CoreConfig* config) : Riss::Solver(config), coreConfig(config) {}
 
     virtual ~SplitterSolver() {}
     virtual void dummy() = 0;

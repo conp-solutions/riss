@@ -22,10 +22,10 @@
 namespace Pcasso {        
     class SolverPT : public SplitterSolver {
       
-      CoreConfig& coreConfig;
+      CoreConfig* coreConfig;
       
     public:
-        SolverPT(CoreConfig& config);
+        SolverPT(CoreConfig* config);
         ~SolverPT();
 
         void dummy(){

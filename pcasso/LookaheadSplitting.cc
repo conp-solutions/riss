@@ -61,7 +61,7 @@ unsigned LookaheadSplitting::dSeq[] = {4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 3, 2, 2, 2,
 unsigned LookaheadSplitting::countFailedLiterals = 0;
 unsigned LookaheadSplitting::countLookaheadDecisions = 0;
 
-LookaheadSplitting::LookaheadSplitting(CoreConfig& config):
+LookaheadSplitting::LookaheadSplitting(CoreConfig* config):
 
     SplitterSolver(config) ,
     coreConfig(config),

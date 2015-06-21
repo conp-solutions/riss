@@ -50,8 +50,10 @@ namespace Riss
 // Constructor/Destructor:
 
 
-Solver::Solver(CoreConfig& _config) :
-    config(_config)
+Solver::Solver(CoreConfig* externalConfig , const char* configName ) :  // CoreConfig& _config
+    privateConfig ( externalConfig == 0 ? new CoreConfig( configName ) : externalConfig )
+    , deleteConfig ( externalConfig == 0 )
+    , config(* privateConfig )
     // DRUP output file
     , drupProofFile(0)
     // Parameters (user settable):
@@ -222,7 +224,7 @@ Var Solver::newVar(bool sign, bool dvar, char type)
     //activity .push(0);
     activity .push(rnd_init_act ? drand(random_seed) * 0.00001 : 0);
 //     seen     .push(0);
-    permDiff  .resize(2 * v + 2); // add space for the next variable
+    lbd_marker  .resize(2 * v + 2); // add space for the next variable
 
     trail    .capacity(v + 1);
     setDecisionVar(v, dvar);
@@ -242,7 +244,7 @@ void Solver::reserveVars(Var v)
     //activity .push(0);
     activity .capacity(v + 1);
 //     seen     .capacity(v+1);
-    permDiff  .capacity(2 * v + 2);
+    lbd_marker  .capacity(2 * v + 2);
     varFlags. capacity(v + 1);
     trail    .capacity(v + 1);
 }
@@ -423,43 +425,6 @@ bool Solver::satisfied(const Clause& c) const
     return false;
 }
 
-/************************************************************
- * Compute LBD functions
- *************************************************************/
-
-inline unsigned int Solver::computeLBD(const vec<Lit>& lits)
-{
-    int nblevels = 0;
-    permDiff.nextStep();
-    bool withLevelZero = false;
-    for (int i = 0; i < lits.size(); i++) {
-        int l = level(var(lits[i]));
-        withLevelZero = (l == 0);
-        if (! permDiff.isCurrentStep(l)) {
-            permDiff.setCurrentStep(l);
-            nblevels++;
-        }
-    }
-    if (config.opt_lbd_ignore_l0 && withLevelZero) { return nblevels - 1; }
-    else { return nblevels; }
-}
-
-inline unsigned int Solver::computeLBD(const Clause& c)
-{
-    int nblevels = 0;
-    permDiff.nextStep();
-    bool withLevelZero = false;
-    for (int i = 0; i < c.size(); i++) {
-        int l = level(var(c[i]));
-        withLevelZero = (l == 0);
-        if (! permDiff.isCurrentStep(l)) {
-            permDiff.setCurrentStep(l);
-            nblevels++;
-        }
-    }
-    if (config.opt_lbd_ignore_l0 && withLevelZero) { return nblevels - 1; }
-    else { return nblevels; }
-}
 
 
 /******************************************************************
@@ -473,16 +438,16 @@ bool Solver::minimisationWithBinaryResolution(vec< Lit >& out_learnt, unsigned i
     const Lit p = ~out_learnt[0];
 
     if (lbd <= lbLBDMinimizingClause) {
-        permDiff.nextStep();
-        for (int i = 1; i < out_learnt.size(); i++) { permDiff.setCurrentStep(var(out_learnt[i])); }
+        lbd_marker.nextStep();
+        for (int i = 1; i < out_learnt.size(); i++) { lbd_marker.setCurrentStep(var(out_learnt[i])); }
         const vec<Watcher>&  wbin  = watches[p]; // const!
         int nb = 0;
         for (int k = 0; k < wbin.size(); k++) {
             if (!wbin[k].isBinary()) { continue; }   // has been looping on binary clauses only before!
             const Lit imp = wbin[k].blocker();
-            if (permDiff.isCurrentStep(var(imp)) && value(imp) == l_True) {
+            if (lbd_marker.isCurrentStep(var(imp)) && value(imp) == l_True) {
                 nb++;
-                permDiff.reset(var(imp));
+                lbd_marker.reset(var(imp));
                 #ifdef CLS_EXTRA_INFO
                 extraInfo = extraInfo >= ca[wbin[k].cref()].extraInformation() ? extraInfo : ca[wbin[k].cref()].extraInformation();
                 #endif
@@ -492,7 +457,7 @@ bool Solver::minimisationWithBinaryResolution(vec< Lit >& out_learnt, unsigned i
         if (nb > 0) {
             nbReducedClauses++;
             for (int i = 1; i < out_learnt.size() - nb; i++) {
-                if (! permDiff.isCurrentStep(var(out_learnt[i]))) {
+                if (! lbd_marker.isCurrentStep(var(out_learnt[i]))) {
                     const Lit p = out_learnt[l];
                     out_learnt[l] = out_learnt[i];
                     out_learnt[i] = p;
@@ -1644,7 +1609,7 @@ bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
 }
 
 
-bool Solver::analyzeNewLearnedClause(const CRef newLearnedClause)
+bool Solver::analyzeNewLearnedClause(const CRef& newLearnedClause)
 {
     if (config.opt_uhdProbe == 0) { return false; }
 

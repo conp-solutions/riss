@@ -4,7 +4,7 @@ using namespace Riss;
 using namespace std;
 
 namespace Pcasso {
-SolverRiss::SolverRiss(CoreConfig &config) :
+SolverRiss::SolverRiss(CoreConfig *config) :
     solver(config),
     coreConfig(config),
     lastLevel(0)
