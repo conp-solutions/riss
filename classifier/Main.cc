@@ -27,7 +27,7 @@ Copyright (c) 2012-2014, Norbert Manthey, All rights reserved.
 #include "riss/core/Dimacs.h"
 #include "riss/core/Solver.h"
 #include "riss/utils/version.h" // include the file that defines the solver version
-#
+
 #include "coprocessor/Coprocessor.h"
 
 using namespace Riss;
@@ -346,7 +346,7 @@ void printFeatures(int argc, char** argv)
    }
 */
     if (fileoutput)
-    { (*fileout).close(); }
+    { (*fileout).close(); } 
 }
 
 std::string getConfig( gzFile& in )
@@ -479,7 +479,7 @@ int main(int argc, char** argv)
                     configuration->printRunningInfo();
                 }
             }
-			else 	printFeatures(argc, argv);
+        else 	printFeatures(argc, argv);
             time1 = cpuTime();
             if (!(runtimesInfo) && classify) {
                 Classifier classifier(*configuration, prefixClassifier);

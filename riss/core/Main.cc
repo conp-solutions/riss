@@ -251,7 +251,7 @@ int main(int argc, char** argv)
 	  S->verbEveryConflicts = vv;
 	
 	  gzclose(in); // reopening the formula file. (old one refers to EOF)
-	  in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
+	  in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb"); 
 	
 	}
 	parse_DIMACS(in, *S);
