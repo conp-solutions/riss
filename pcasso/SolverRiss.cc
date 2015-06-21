@@ -61,11 +61,11 @@ void SolverRiss::setupForPortfolio(const int nodeLevel)
 }
 
     int       SolverRiss::nVars              () const    { return solver.nVars(); }
-    bool      SolverRiss::okay               () const    { return true; } // solver.ok; }
+    bool      SolverRiss::okay               () const    { return solver.okay(); }
     void      SolverRiss::interrupt          ()          { solver.interrupt(); }
     inline lbool     SolverRiss::solveLimited       (const Riss::vec<Riss::Lit>& assumps){ return solver.solveLimited(assumps); }
     inline void      SolverRiss::setVerbosity       (int verbosity)    { solver.verbosity = verbosity; }
-    inline void      SolverRiss::setConfBudget      (int64_t x) { } // solver.conflict_budget = solver.conflicts + x; }
+    inline void      SolverRiss::setConfBudget      (int64_t x) { solver.setConfBudget(x); }
     // return a specifit literal from the trail
     inline Riss::Lit SolverRiss::trailGet           (const unsigned int index){ return solver.trail[index]; }
     // return the number of top level units from that are on the trail
