@@ -25,12 +25,13 @@ endfunction()
 
 
 # Options:
-#  
+# 
 # Version of the whole tool box. Subprojects can define their own versions. If
 # no version is specified, this "global" version will be used,
 version("5.0.1")
 
 option(STATIC_BINARIES "Build fully statically linked binaries" ON)
+option(PCASSO          "adapt assertions to algorithm used in pcasso" OFF)
 option(SHIFTBMC        "Include agier and shiftbmc build targets" OFF)
 option(WARNINGS        "Set verbose warning flags" OFF)
 
@@ -107,3 +108,7 @@ if(SHIFTBMC)
   add_subdirectory(aiger/)
 endif()
 
+# Combined riss and coprocessor library. This makes linking against riss with
+# the usage of coprocessor simpler (you only have to link against one lib).
+include(MergeStaticLibs)
+merge_static_libs(riss-coprocessor riss-lib-static coprocessor-lib-static)

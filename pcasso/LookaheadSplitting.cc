@@ -664,6 +664,13 @@ void LookaheadSplitting::shrinkClauses()
         Var v;
         Lit l;
 
+	// cleared all watch lists
+	watches.cleanAll();
+	for( Var v = 0; v < nVars(); ++v ) {
+	  watches[ mkLit(v,true) ].clear();
+	  watches[ mkLit(v,false) ].clear();
+	}
+	
         for (int i = 0, j = 0, k = 0; i < clauses.size(); i++) {
             Clause& c = ca[clauses[i]];
             for (j = 0, k = 0; j < c.size(); j++) {
@@ -684,6 +691,8 @@ void LookaheadSplitting::shrinkClauses()
                 }
             }
             c.shrink(j - k);
+	    if( c.size() == 1 ) uncheckedEnqueue( c[0] ); // handle unit clauses properly!
+	    else attachClause( clauses[i] );
         }
 
         if (opt_pure_lit > 0) {
@@ -703,6 +712,9 @@ void LookaheadSplitting::shrinkClauses()
             //fprintf(stderr,"splitter: Found pure literals : %d\n",pureLiterals.size());
         }
 
+        CRef ref = propagate();
+	assert( ref == CRef_Undef && "otherwise the current formula is unsatisfiable" );
+        
         checkGarbage();
         rebuildOrderHeap();
     }
@@ -1051,7 +1063,9 @@ Lit LookaheadSplitting::pickBranchLiteral(vec<vec<Lit>* > **valid)
 
 decLitNotFound:
     preselectVar(sortedVar, bestKList);
+    score.clear();
     score.growTo(bestKList.size(), 0);
+    assert( score.size() == bestKList.size() && "has been initialized to the same size" );
     numIterations = opt_num_iterat;
     progress = true;
     bestVarIndex = var_Undef;
@@ -1152,7 +1166,7 @@ decLitNotFound:
                 continue;
             }
             sizePositiveLookahead = trail.size() - initTrailSize;
-	    assert( trail.size() < nVars() && initTrailSize <= trail.size() && "there cannot be more elements in the trail than there are variables in the solver" );
+	    assert( trail.size() <= nVars() && initTrailSize <= trail.size() && "there cannot be more elements in the trail than there are variables in the solver" );
             for (int j = initTrailSize; j < trail.size(); j++) {
                 //fprintf(stderr, "Watcher size = %d\n", watches[trail[j]].size());
                 sizeWatcherPositiveLookahead += sign(trail[j]) ? watcherNegLitSize[i] : watcherPosLitSize[i];
@@ -1334,6 +1348,7 @@ decLitNotFound:
                 //              }
             }
 
+            assert( score.size() == bestKList.size() && "has been initialized to the same size" );
             if (!positiveLookahead && !negativeLookahead) {
                 switch (heuristic) {
                 case 0:
@@ -1382,11 +1397,14 @@ decLitNotFound:
                 }
             }
         }
+        assert( score.size() == bestKList.size() && "has been initialized to the same size" );
     }
 
+    assert( score.size() == bestKList.size() && "has been initialized to the same size" );
+    
 jump:
     cancelUntil(decLev);
-
+    
     for (int i = 0; i < score.size(); i++) {
         if (score[i] > 0 && score[i] > bestVarScore && value(bestKList[i]) == l_Undef) {
             bestVarScore = score[i];
