@@ -22,6 +22,14 @@ using namespace std;
 //    }
 // };
 
+void printVector(vector<double>& printable){
+  for (int i = 0; i < printable.size(); ++i){
+    cout << printable[i] << " ";
+  }
+  
+  cout << endl;
+}
+
 int getStandardClass (vector<vector<double> >& times, int& amountClasses){
   
   pair <int, double> appearance[amountClasses]{{0,0}};
@@ -426,40 +434,6 @@ int main( int argc, const char* argv[] )
 //       }
 //     }
 
-  stats::pca pca(size);	
-  //pca.set_do_bootstrap(true, 100);
-
-  for (int k = 0; k < features[1].size(); ++k ){
-    vector<double> record(size);
-    for ( int i = 0; i < size; ++i ){ 
-      record[i]=features[i][k];     
-      //record.push_back(i);
-     //cout << record[i] << " "; 
-    }
-    pca.add_record(record);
-    cout << endl;
- }
-   pca.solve(); 
-    	cout<<"Energy = "<<pca.get_energy()<<" ("<<
-       		stats::utils::get_sigma(pca.get_energy_boot())<<")"<<endl;
- 
- 	vector<double> eigenvalues = pca.get_eigenvalues();
- 	cout<<"First three eigenvalues = "<<eigenvalues[0]<<", "
- 									  <<eigenvalues[1]<<", "
- 									  <<eigenvalues[2]<<endl;
-	cout << endl;
-	vector<double> eigenvector = pca.get_eigenvector(eigenvalues[0]);
-	for (int i=0; i < eigenvalues.size(); ++i) 
-	  cout << eigenvalues[i] << " ";
-	cout << endl;
-	for (int i=0; i < eigenvector.size(); ++i) 
-	  cout << eigenvector[i] << " ";
-	cout << endl;
- 	cout<<"Orthogonal Check = "<<pca.check_eigenvectors_orthogonal()<<endl;
- 	cout<<"Projection Check = "<<pca.check_projection_accurate()<<endl;
-	pca.save("pca_results");
-    exit (1);
-  
   // write header
   
   if (ofs.is_open()){
