@@ -31,6 +31,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "pcasso/Master.h"
 #include "pcasso/SplitterSolver.h"
 #include "pcasso/SolverPT.h"
+#include "pcasso/SolverRiss.h"
+#include "pcasso/InstanceSolver.h"
 #include "pcasso/LookaheadSplitting.h"
 #include "pcasso/vsidsSplitting.h"
 
@@ -720,41 +722,28 @@ Master::solveInstance(void* data)
 
     // create a solver object
     //bool simp = solve_mode;
-    SolverPT* slvr = new SolverPT(defaultSolverConfig);
+    InstanceSolver* slvr = new SolverRiss(defaultSolverConfig);
     assert(tData.solver == NULL);
     tData.solver = slvr;
-    SolverPT& S = *slvr;
 
     // Davide> Give the position to the solver
     //S.position = tData.nodeToSolve->getPosition();
 
     // Davide> Give the pt_level to the solver
-    S.curPTLevel = tData.nodeToSolve->getPTLevel();
-    S.lastLevel = tData.nodeToSolve->getPTLevel();
+    slvr->curPTLevel = tData.nodeToSolve->getPTLevel();
+    slvr->lastLevel = tData.nodeToSolve->getPTLevel();
 
     if (Portfolio && tData.nodeToSolve->getLevel() <= PortfolioLevel) {   // a portfolio node should be solved
         const int nodeLevel = tData.nodeToSolve->getLevel();
         if (nodeLevel > 0) {   // root node is solved as usually
             cerr << "c solve portfolio node at level " << nodeLevel << endl;
-            if (nodeLevel == 1) {
-                S.K = 0.8; S.R = 1.5;
-            } else if (nodeLevel == 2) {
-                S.firstReduceDB  = 10000;
-            } else if (nodeLevel == 3) {
-                S.rnd_init_act = true;
-            } else if (nodeLevel == 4) {
-                S.sizeLBDQueue  = 150;
-            } else { // default diversification
-                srand(rand());
-                S.rnd_init_act = true;
-                S.rnd_pol = true;
-            }
+            slvr->setupForPortfolio(nodeLevel);
         }
     }
 
     // Davide> Initialize the shared indeces to zero
-    for (unsigned int i = 0; i <= S.getNodePTLevel(); i++)   // Davide> I put my level, also
-    { S.shared_indeces.push_back(0); }
+    for (unsigned int i = 0; i <= slvr->getNodePTLevel(); i++)   // Davide> I put my level, also
+    { slvr->shared_indeces.push_back(0); }
 
     // Davide> Create the pool object for this node, and
     //         push it in the set of pools
@@ -763,15 +752,16 @@ Master::solveInstance(void* data)
     tData.nodeToSolve->lv_pool = pool;
 
     // Davide> Associate the pt_node to the Solver
-    S.tnode = tData.nodeToSolve;
+    slvr->tnode = tData.nodeToSolve;
     //ahmed> initialize the activity with random if partition level of the node is greater than zero and update activity & polarity is turned on
     /*if(S.getNodePTLevel()>0 && S.update_act_pol) {
         S.rnd_init_act =true;
     }*/
     // setup the parameters, setup varCnt
-    S.verbosity = tData.master->param.verb;
-    while (master.varCnt() >= (unsigned int)S.nVars())
-    { S.newVar(); }
+    slvr->setVerbosity(tData.master->param.verb);
+    while (master.varCnt() >= (unsigned int)slvr->nVars()) {
+        slvr->newVar();
+    }
 
     // feed the instance into the solver
     vector< pair<vector<Lit>*, unsigned int> > clauses;
@@ -788,7 +778,7 @@ Master::solveInstance(void* data)
         }
         //simp ? ((SimpSolver&)S).addClause(lits, clauses[i].second) : S.addClause(lits, clauses[i].second);
         // if( clauses[i].second > 1 ) cout << "OK solveInstance" << endl;
-        S.addClause_(lits, clauses[i].second);
+        slvr->addClause_(lits, clauses[i].second);
     }
 
     // add the formula to the solver
@@ -797,7 +787,7 @@ Master::solveInstance(void* data)
         for (int j = 0 ; j < master.formula()[i].size; ++j) {
             lits.push(master.formula()[i].lits[j]);
         }
-        S.addClause_(lits, 0);
+        slvr->addClause_(lits, 0);
 
     }
 
@@ -805,18 +795,18 @@ Master::solveInstance(void* data)
     int ret = 0;
     int initialUnits = 0;
     //try {
-    if (!S.okay()) { ret = 20; }
+    if (!slvr->okay()) { ret = 20; }
     vec<Lit> dummy;
-    initialUnits = S.getTopLevelUnits();
+    initialUnits = slvr->getTopLevelUnits();
     if (MSverbosity > 1) { fprintf(stderr, "c start search with %d units\n", initialUnits); }
 
     // solve the instance with a timeout?
-    if (tData.timeout != -1)   { S.setTimeOut(tData.timeout); }
-    if (tData.conflicts != -1) { S.setConfBudget(tData.conflicts); }
+    if (tData.timeout != -1)   { slvr->setTimeOut(tData.timeout); }
+    if (tData.conflicts != -1) { slvr->setConfBudget(tData.conflicts); }
 
     // TODO introduce conflict limit for becoming deterministic!
     // solve the formula
-    lbool solution = S.solveLimited(dummy);
+    lbool solution = slvr->solveLimited(dummy);
     ret = (int)(solution == l_True ? 10 : solution == l_False ? 20 : 0);
     
     master.lock();
@@ -838,10 +828,10 @@ Master::solveInstance(void* data)
      * since solver is dead, there is no need to have a lock for reading statistics!
      * since we are in the master, there is also no need to lock changing statistics here, however, its there ...
      */
-    statistics.changeI(master.TotalConflictsID, S.conflicts);
-    statistics.changeI(master.TotalDecisionsID, S.decisions);
-    statistics.changeI(master.TotalRestartsID, S.starts);
-    Statistics& localStat = S.localStat;
+    statistics.changeI(master.TotalConflictsID, slvr->getConflicts());
+    statistics.changeI(master.TotalDecisionsID, slvr->getDecisions());
+    statistics.changeI(master.TotalRestartsID, slvr->getStarts());
+    Statistics& localStat = slvr->localStat;
     for (unsigned si = 0; si < localStat.size(); ++ si) {
         if (localStat.isInt(si)) {
             unsigned thisID = statistics.reregisterI(localStat.getName(si));
@@ -858,7 +848,9 @@ Master::solveInstance(void* data)
                 tData.nodeToSolve->id(), tData.nodeToSolve->getLevel());
       }
       if( tData.nodeToSolve != 0 ) { tData.nodeToSolve->setState(TreeNode::sat); }
-        master.submitModel(S.model);
+        vec< lbool > solverModel;
+        slvr->getModel(solverModel);
+        master.submitModel(solverModel);
     } else if (ret == 20) {
         if (opt_conflict_killing && ((SolverPT *)tData.solver)->lastLevel < tData.nodeToSolve->getPTLevel()) {
             statistics.changeI(master.nConflictKilledID, 1);
@@ -885,18 +877,18 @@ Master::solveInstance(void* data)
         if (keepToplevelUnits > 0) {
             int toplevelVariables = 0;
 
-            toplevelVariables = S.getTopLevelUnits();
+            toplevelVariables = slvr->getTopLevelUnits();
 
             if (toplevelVariables > 0 && MSverbosity > 1) { fprintf(stderr, "found %d topLevel units\n", toplevelVariables - initialUnits); }
             if( tData.nodeToSolve != 0 ) {
 	      for (int i = initialUnits ; i < toplevelVariables; ++i) {
-		  Lit currentLit = S.trailGet(i);  //(*trail)[i];
+		  Lit currentLit = slvr->trailGet(i);  //(*trail)[i];
 		  vector<Lit>* clause = new vector<Lit>(1);
 		  (*clause)[0] = currentLit;
 
 		  // Davide> I modified this in order to include information about
 		  // literal pt_levels
-		  tData.nodeToSolve->addNodeUnaryConstraint(clause, S.getLiteralPTLevel(currentLit));
+		  tData.nodeToSolve->addNodeUnaryConstraint(clause, slvr->getLiteralPTLevel(currentLit));
 	      }
 	    }
         }

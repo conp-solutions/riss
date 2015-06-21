@@ -25,7 +25,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 // splitter
 #include "riss/utils/LockCollection.h"
 #include "pcasso/PartitionTree.h"
-#include "pcasso/SplitterSolver.h"
+#include "pcasso/ISolver.h"
 
 // Minisat
 #include "riss/mtl/Vec.h"
@@ -105,7 +105,7 @@ class Master
         pthread_t handle;       // handle to the thread
         Master* master;     // handle to the master class, for backward communication (e.g. wakeup)
         Master::state s;        // state of the thread
-        SplitterSolver* solver;         // The most recent solver
+        ISolver* solver;         // The most recent solver
         ThreadData() : nodeToSolve(0), id(-1), result(0), timeout(-1), conflicts(-1), handle((pthread_t)0), s(idle), master(0), solver(NULL) {}
     };
 

@@ -127,6 +127,8 @@ class LookaheadSplitting : public SplitterSolver
     void constraintResolvent(const Riss::vec<Riss::Lit>& t);
     void learntsLimitPush();
     void learntsLimitPop();
+
+    virtual inline void interrupt() { Riss::Solver::interrupt(); }
 };
 
 } // namespace Pcasso

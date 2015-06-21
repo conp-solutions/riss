@@ -68,6 +68,8 @@ class VSIDSSplitting : public SplitterSolver
     int       learntsize_adjust_start_confl;
     double    learntsize_adjust_inc;
 
+    virtual inline void interrupt() { Riss::Solver::interrupt(); }
+
 };
 
 } // namespace Pcasso

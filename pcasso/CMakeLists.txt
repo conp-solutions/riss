@@ -15,6 +15,7 @@ set(LIB_SOURCES
     Master.cc
     PartitionTree.cc
     SolverPT.cc
+    SolverRiss.cc
     shared_pool.cc
     vsidsSplitting.cc)
 
