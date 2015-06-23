@@ -283,7 +283,7 @@ class Solver
     struct VarData {
         CRef reason; int level;
         Lit dom;      /// for lhbr
-        int32_t cost; /// for hack
+        int32_t position; /// for hack
         #ifdef CLS_EXTRA_INFO
         uint64_t extraInfo;
         #endif
@@ -325,9 +325,20 @@ class Solver
     vec<double>         activity;         // A heuristic measurement of the activity of a variable.
     double              var_inc;          // Amount to bump next variable with.
   public: // TODO FIXME undo after debugging!
-    OccLists<Lit, vec<Watcher>, WatcherDeleted>
-    watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
+    OccLists<Lit, vec<Watcher>, WatcherDeleted> watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
     // no watchesBin, incorporated into watches
+    
+    struct ReverseMinimization {
+      OccLists<Lit, vec<Watcher>, WatcherDeleted> watches;   // watch list for learned clause minimization (via vivification)
+      vec<lbool> assigns;                                    // assignment for learned clause minimization
+      vec<Lit>   trail;                                      // trail for learned clause minimization
+      bool enabled;                                                 // indicate whether the technique is enabled
+      ReverseMinimization(bool doUse, ClauseAllocator& ca) : enabled(doUse), watches( WatcherDeleted(ca) ) { }
+      lbool value(const Var& x) const { return assigns[x]; }                         /// The current value of a variable.
+      lbool value(const Lit& p) const { return varFlags[var(p)].assigns ^ sign(p); } /// The current value of a literal.
+      void uncheckedEnqueue(const Lit& l){ assigns[ var(l) ] = sign(l); trail.push( l ); } /// add variable assignment
+    } reverseMinimization;
+    
   public: // TODO: set more nicely, or write method!
     vec<CRef>           clauses;          // List of problem clauses.
     vec<CRef>           learnts;          // List of learnt clauses.
@@ -734,6 +745,22 @@ class Solver
      * @return true, if the clause has been shrinked, false otherwise (then, the LBD also stays the same)
      */
     bool searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd);
+    
+    /// sort according to position of literal in trail
+    struct TrailPosition_Gt { 
+      vec<VarData>& varData;  // data to use for sorting
+      bool operator()(const Lit & x, const Lit & y) const
+      {
+	return varData[ var(x) ].position > varData[ var(y) ].position; // compare data of x and y instead of elements themselves
+      }
+      TrailPosition_Gt(vec<VarData>& _varData) : varData(_varData) {}
+    };
+    
+    /** reduce the literals inside the clause by performing vivification in the opposite order the literals have been added to the trail
+     * @param lbd current lbd value of the given clause
+     * @return true, if the clause has been shrinked, false otherwise (then, the LBD also stays the same)
+     */
+    bool reverseLearntClause(vec<Lit>& learned_clause, unsigned int& lbd);
 
     /** reduce the learned clause by replacing pairs of literals with their previously created extended resolution literal
      * @param lbd current lbd value of the given clause

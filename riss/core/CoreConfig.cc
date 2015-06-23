@@ -189,6 +189,12 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_ics_debug("INTERLEAVED CLAUSE STRENGTHENING", "ics-debug", "debug output for ICS", false, optionListPtr),
     #endif
 
+// MINIMIZATION BY REVERSING AND VIVIFICATION
+    opt_use_reverse_minimization("REVERSE MINIMIZATION", "revMin",  "minimize learned clause by reversing it and using vivification", false, optionListPtr),
+    reverse_minimizing_size("REVERSE MINIMIZATION", "revMinSize", "maximal clause size for revMin for learnt clauses" , 2, IntRange(2, INT32_MAX), optionListPtr),
+    lbLBDreverseClause("REVERSE MINIMIZATION", "revMinSize", "maximal clause size for revMin for learnt clauses", 1, IntRange(1, INT32_MAX), optionListPtr),
+    
+
 // USING BIG information during search
     opt_uhdProbe("SEARCH UNHIDE PROBING", "sUhdProbe", "perform probing based on learned clauses (off,linear,quadratic,larger)", 0, IntRange(0, 3), optionListPtr),
     opt_uhdCleanRebuild("SEARCH UNHIDE PROBING", "sUhdPrRb",  "rebuild BIG before cleaning the formula" , true, optionListPtr),

@@ -39,7 +39,6 @@ struct LessThan_default {
     bool operator()(T x, T y) { return x < y; }
 };
 
-
 /** for very large arrays, use merge sort (because recursions for quicksort might be too high!)
  *  Note: elements should be able to be copied cheaply!
  */

@@ -191,6 +191,10 @@ class CoreConfig : public Config
     BoolOption opt_ics_debug; // enable interleaved clause strengthening debug output
     #endif
 
+    BoolOption opt_use_reverse_minimization; // indicate that reverse minimization is used
+    IntOption reverse_minimizing_size;       // size to perform reverse minimization
+    IntOption lbLBDreverseClause;            // lbd to perform reverse minimization
+    
     IntOption opt_uhdProbe;  // non, linear, or quadratic analysis
     BoolOption opt_uhdCleanRebuild; // rebuild BIG always before clause database is cleaned next
     IntOption opt_uhdRestartReshuffle; // travers the BIG again during every i-th restart 0=off
