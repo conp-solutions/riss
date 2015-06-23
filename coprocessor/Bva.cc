@@ -454,7 +454,7 @@ bool BoundedVariableAddition::andBVA()
         // continue with next literal, if there has not been any reduction
         if (bvaMatchingLiterals.size() < 2) {
             if (bvaHeap.size() > 0)
-            { DOUT(if (config.bva_debug > 2) cerr << "c [BVA] continue because not two matching literals (" << right << "), bvaHeap[" << bvaHeap.size() << "],0=" << toLit(bvaHeap[0]) << endl; });
+            { DOUT(if (config.bva_debug > 2) cerr << "c [BVA] continue because not two matching literals (" << right << "), bvaHeap[" << bvaHeap.size() << "],0=" << toLit(bvaHeap[0]) << endl;); }
         continue;
     }
 

@@ -2817,8 +2817,10 @@ lbool Solver::handleMultipleUnits(vec< Lit >& learnt_clause)
         if (value(learnt_clause[i]) == l_Undef) { uncheckedEnqueue(learnt_clause[i]); }
         else if (value(learnt_clause[i]) == l_False) { return l_False; }  // otherwise, we have a top level conflict here!
         else
-        { DOUT(if (config.opt_learn_debug) cerr << "c tried to enqueue a unit clause that was already a unit clause ... " << endl; });
-    DOUT(if (config.opt_printDecisions > 1) cerr << "c enqueue multi-learned literal " << learnt_clause[i] << "(" << i << "/" << learnt_clause.size() << ") at level " <<  decisionLevel() << endl;);
+        { 
+	  DOUT(if (config.opt_learn_debug) { cerr << "c tried to enqueue a unit clause that was already a unit clause ... " << endl; } );
+	  DOUT(if (config.opt_printDecisions > 1){ cerr << "c enqueue multi-learned literal " << learnt_clause[i] << "(" << i << "/" << learnt_clause.size() << ") at level " <<  decisionLevel() << endl;} );
+        }
     }
 
     // write learned unit clauses to DRUP!

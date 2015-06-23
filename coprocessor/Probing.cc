@@ -999,7 +999,7 @@ void Probing::probing()
                     continue;
                 } // something has been found, so that second polarity has not to be propagated
                 else
-                { DOUT(if (config.pr_debug_out > 1) cerr << "c double lookahead did not fail" << endl; });
+                { DOUT(if (config.pr_debug_out > 1) cerr << "c double lookahead did not fail" << endl; ); }
         }
         solver.varFlags.copyTo(prPositive);
 
@@ -1041,7 +1041,7 @@ void Probing::probing()
                     continue;
                 } // something has been found, so that second polarity has not to be propagated
                 else
-                { DOUT(if (config.pr_debug_out > 1) cerr << "c double lookahead did not fail" << endl; });
+                { DOUT(if (config.pr_debug_out > 1) cerr << "c double lookahead did not fail" << endl; ); }
         }
         // could copy to prNegatie here, but we do not do this, but refer to the vector inside the solver instead
         if (!data.ok()) { break; }

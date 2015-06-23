@@ -1489,7 +1489,7 @@ inline void Subsumption::updateOccurrences(vector< OccUpdate >& updates, Heap<Va
             DOUT(if (config.opt_sub_debug > 1) cerr << "c successfully removed clause [" << i << "/" << updates.size() <<  "] from list for literal " << updates[i].l << " from clause " << ca[updates[i].cr] << " [" << updates[i].cr << "]" << endl;);
             data.removedLiteral(updates[i].l, 1, heap, ignore);
         } else
-        { DOUT(if (config.opt_sub_debug > 1) cerr << "c DID NOT remove clause [" << i << "/" << updates.size() <<  "] from list for literal " << updates[i].l << " from clause " << ca[updates[i].cr] << " [" << updates[i].cr << "]" << endl; });
+        { DOUT(if (config.opt_sub_debug > 1) cerr << "c DID NOT remove clause [" << i << "/" << updates.size() <<  "] from list for literal " << updates[i].l << " from clause " << ca[updates[i].cr] << " [" << updates[i].cr << "]" << endl; ); }
 }
 updates.clear();
 }
