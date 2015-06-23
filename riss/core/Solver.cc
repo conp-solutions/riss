@@ -1291,119 +1291,118 @@ void Solver::uncheckedEnqueue(Lit p, Riss::CRef from, bool addToProof, const uin
 |________________________________________________________________________________________________@*/
 CRef Solver::propagate(bool duringAddingClauses)
 {
-    assert((decisionLevel() == 0 || !duringAddingClauses) && "clauses can only be added at level 0!");
+    assert( ( decisionLevel() == 0 || !duringAddingClauses ) && "clauses can only be added at level 0!" );
     // if( config.opt_printLhbr ) cerr << endl << "c called propagate" << endl;
-    DOUT(if (config.opt_learn_debug) cerr << "c call propagate with " << qhead << " for " <<  trail.size() << " lits" << endl;);
-
+    DOUT( if( config.opt_learn_debug ) cerr << "c call propagate with " << qhead << " for " <<  trail.size() << " lits" << endl; );
+  
     CRef    confl     = CRef_Undef;
     int     num_props = 0;
     watches.cleanAll(); clssToBump.clear();
-    while (qhead < trail.size()) {
+    while (qhead < trail.size()){
         Lit            p   = trail[qhead++];     // 'p' is enqueued fact to propagate.
-        DOUT(if (config.opt_learn_debug) cerr << "c propagate literal " << p << endl;);
+        DOUT( if( config.opt_learn_debug ) cerr << "c propagate literal " << p << endl; );
         realHead = qhead;
         vec<Watcher>&  ws  = watches[p];
         Watcher        *i, *j, *end;
         num_props++;
-
-        // First, Propagate binary clauses
-        const vec<Watcher>&  wbin  = watches[p];
-
-        for (int k = 0; k < wbin.size(); k++) {
-            if (!wbin[k].isBinary()) { continue; }
-            const Lit& imp = wbin[k].blocker();
-            assert(ca[ wbin[k].cref() ].size() == 2 && "in this list there can only be binary clauses");
-
-            DOUT(if (config.opt_learn_debug) cerr << "c checked binary clause " << ca[wbin[k].cref() ] << " with implied literal having value " << toInt(value(imp)) << endl;);
-            if (value(imp) == l_False) {
-                if (!config.opt_long_conflict) { return wbin[k].cref(); }
-                confl = wbin[k].cref();
-                break;
-            }
-
-            if (value(imp) == l_Undef) {
-                uncheckedEnqueue(imp, wbin[k].cref(), duringAddingClauses);
-            }
-        }
-
+	
         // propagate longer clauses here!
-        for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;) {
-            if (i->isBinary()) { *j++ = *i++; continue; }   // skip binary clauses (have been propagated before already!}
-
-            DOUT(if (config.opt_learn_debug) cerr << "c check clause [" << i->cref() << "]" << ca[i->cref()] << endl;);
-            #ifndef PCASSO // PCASS reduces clauses during search without updating the watch lists ...
-            assert(ca[ i->cref() ].size() > 2 && "in this list there can only be clauses with more than 2 literals, except for PCASSO");
-            #endif
-
+        for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;)
+	{
+	    if( i->isBinary() ) {  // handle binary clauses
+		const Lit& imp = i->blocker();
+		assert( ca[ i->cref() ].size() == 2 && "in this list there can only be binary clauses" );
+		DOUT( if( config.opt_learn_debug ) cerr << "c checked binary clause " << ca[i->cref() ] << " with implied literal having value " << toInt(value(imp)) << endl; );
+		if(value(imp) == l_False) {
+		  if( !config.opt_long_conflict ) { // stop on the first conflict we see?
+		    confl = i->cref();              // store the conflict
+		    while (i < end) *j++ = *i++;    // move the remaining elements forward
+		    ws.shrink_(i - j);              // remove all duplciate clauses
+		    goto FinishedPropagation;       // jump to end of method, so that the statistics can be updated correctly
+		  }
+		  confl = i->cref(); // store intermediate conflict to be evaluated later
+		} else if(value(imp) == l_Undef) { // enqueue the implied literal
+		  uncheckedEnqueue(imp,i->cref(), duringAddingClauses);
+		}
+		*j++ = *i++; // keep the element in the list
+		continue;
+	    }
+	    
+	    DOUT( if( config.opt_learn_debug ) cerr << "c check clause [" << i->cref() << "]" << ca[i->cref()] << endl; );
+#ifndef PCASSO // PCASS reduces clauses during search without updating the watch lists ...
+	    assert( ca[ i->cref() ].size() > 2 && "in this list there can only be clauses with more than 2 literals" );
+#endif
+	    
             // Try to avoid inspecting the clause:
             const Lit blocker = i->blocker();
-            if (value(blocker) == l_True) { // keep binary clauses, and clauses where the blocking literal is satisfied
-                *j++ = *i++; continue;
-            }
+            if (value(blocker) == l_True){ // keep binary clauses, and clauses where the blocking literal is satisfied
+                *j++ = *i++; continue; }
 
             // Make sure the false literal is data[1]:
             const CRef cr = i->cref();
             Clause&  c = ca[cr];
             const Lit false_lit = ~p;
             if (c[0] == false_lit)
-            { c[0] = c[1], c[1] = false_lit; }
+                c[0] = c[1], c[1] = false_lit;
             assert(c[1] == false_lit && "wrong literal order in the clause!");
             i++;
 
             // If 0th watch is true, then clause is already satisfied.
             Lit     first = c[0];
-            #ifndef PCASSO // Pcasso reduces clauses without updating the watch lists
-            assert(c.size() > 2 && "at this point, only larger clauses should be handled!");
-            #endif
+#ifndef PCASSO // Pcasso reduces clauses without updating the watch lists
+	    assert( c.size() > 2 && "at this point, only larger clauses should be handled!" );
+#endif
             const Watcher& w     = Watcher(cr, first, 1); // updates the blocking literal
-            if (first != blocker && value(first) == l_True) { // satisfied clause
-
-                *j++ = w; continue;
-            } // same as goto NextClause;
-
+            if (first != blocker && value(first) == l_True) // satisfied clause
+	    {
+	      
+	      *j++ = w; continue; } // same as goto NextClause;
+	    
             // Look for new watch:
             for (int k = 2; k < c.size(); k++)
-                if (value(c[k]) != l_False) {
+                if (value(c[k]) != l_False)
+		{
                     c[1] = c[k]; c[k] = false_lit;
-                    DOUT(if (config.opt_learn_debug) cerr << "c new watched literal for clause " << ca[cr] << " is " << c[1] << endl;);
+		    DOUT( if( config.opt_learn_debug ) cerr << "c new watched literal for clause " << ca[cr] << " is " << c[1] <<endl; );
                     watches[~c[1]].push(w);
-                    goto NextClause;
-                } // no need to indicate failure of lhbr, because remaining code is skipped in this case!
+                    goto NextClause; 
+		} // no need to indicate failure of lhbr, because remaining code is skipped in this case!
 
-
+		
             // Did not find watch -- clause is unit under assignment:
-            *j++ = w;
+            *j++ = w; 
             // if( config.opt_printLhbr ) cerr << "c keep clause (" << cr << ")" << c << " in watch list while propagating " << p << endl;
-            if (value(first) == l_False) {
+            if ( value(first) == l_False ) {
                 confl = cr; // independent of opt_long_conflict -> overwrite confl!
                 qhead = trail.size();
                 // Copy the remaining watches:
                 while (i < end)
-                { *j++ = *i++; }
+                    *j++ = *i++;
             } else {
-                DOUT(if (config.opt_learn_debug) cerr << "c current clause is unit clause: " << ca[cr] << endl;);
+		DOUT( if( config.opt_learn_debug ) cerr << "c current clause is unit clause: " << ca[cr] << endl; );
                 uncheckedEnqueue(first, cr, duringAddingClauses);
-
-                // if( config.opt_printLhbr ) cerr << "c final common dominator: " << commonDominator << endl;
-
-                if (c.mark() == 0  && config.opt_update_lbd == 0) {  // if LHBR did not remove this clause
-                    int newLbd = computeLBD(c);
-                    if (newLbd < c.lbd() || config.opt_lbd_inc) {   // improve the LBD (either LBD decreased,or option is set)
-                        if (c.lbd() <= lbLBDFrozenClause) {
-                            c.setCanBeDel(false);   // LBD of clause improved, so that its not considered for deletion
-                        }
-                        c.setLBD(newLbd);
-                    }
-                }
-            }
+		
+		// if( config.opt_printLhbr ) cerr << "c final common dominator: " << commonDominator << endl;
+		
+		if( c.mark() == 0  && config.opt_update_lbd == 0) { // if LHBR did not remove this clause
+		  int newLbd = computeLBD( c );
+		  if( newLbd < c.lbd() || config.opt_lbd_inc ) { // improve the LBD (either LBD decreased,or option is set)
+		    if( c.lbd() <= lbLBDFrozenClause ) {
+		      c.setCanBeDel( false ); // LBD of clause improved, so that its not considered for deletion
+		    }
+		    c.setLBD(newLbd);
+		  }
+		}
+	    }
         NextClause:;
         }
         ws.shrink_(i - j); // remove all duplciate clauses!
 
     }
+    FinishedPropagation:
     propagations += num_props;
     simpDB_props -= num_props;
-
+    
     return confl;
 }
 
