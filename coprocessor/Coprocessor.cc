@@ -311,7 +311,7 @@ lbool Preprocessor::performSimplification()
         if (config.opt_bve) {
             if (config.opt_verbose > 0) { cerr << "c bve ..." << endl; }
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") bounded variable elimination" << endl; }
-            if (status == l_Undef) { status = bve.runBVE(data); }   // can change status, can generate new unit clauses
+            if (status == l_Undef) { status = bve.process(data); }   // can change status, can generate new unit clauses
             if (config.opt_verbose > 1)  { printStatistics(cerr); bve.printStatistics(cerr); }
             data.checkGarbage(); // perform garbage collection
 

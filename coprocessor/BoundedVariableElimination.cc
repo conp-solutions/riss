@@ -130,7 +130,7 @@ bool BoundedVariableElimination::hasToEliminate()   // TODO if heap is used, thi
     return (variable_queue.size() > 0);
 }
 
-lbool BoundedVariableElimination::runBVE(CoprocessorData& data, const bool doStatistics)
+lbool BoundedVariableElimination::process(CoprocessorData &data, const bool doStatistics)
 {
     if (!performSimplification()) { return l_Undef; } // do not do anything?!
     modifiedFormula = false;

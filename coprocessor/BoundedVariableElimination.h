@@ -86,12 +86,9 @@ class BoundedVariableElimination : public Technique
 
     BoundedVariableElimination(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller , Coprocessor::Propagation& _propagation, Coprocessor::Subsumption& _subsumption);
 
-    Riss::lbool process(CoprocessorData& data, const bool doStatistics = true) { modifiedFormula = false; return runBVE(data, doStatistics); }
-
     /** run BVE until completion */
-    Riss::lbool runBVE(CoprocessorData& data, const bool doStatistics = true);
+    Riss::lbool process(CoprocessorData& data, const bool doStatistics = true);
 
-    void initClause(const Riss::CRef& cr);  // inherited from Technique
     void destroy();
     void giveMoreSteps();
     void printStatistics(std::ostream& stream);
