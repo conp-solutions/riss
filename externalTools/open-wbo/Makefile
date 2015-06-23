@@ -38,8 +38,14 @@ DEPDIR     = mtl utils core ../../pblib
 DEPDIR     += ../externalTools/open-wbo/encodings ../externalTools/open-wbo/algorithms ../coprocessor
 MROOT      = ../../$(SOLVERDIR)
 CFLAGS     = -I .. -I ../.. -I ../externalTools/open-wbo -I ../coprocessor -Wall -Wno-parentheses -g3 -DNSPACE=$(NSPACE) -DSOLVERNAME=$(SOLVERNAME) -DVERSION=$(VERSION)
-# CFLAGS     = -I .. -I ../.. -I ../externalTools/open-wbo -I ../coprocessor -DPBLIB -std=c++11 -Wall -Wno-parentheses -g3 -DNSPACE=$(NSPACE) -DSOLVERNAME=$(SOLVERNAME) -DVERSION=$(VERSION)
 LFLAGS     = -lpthread -lz -lrt -Lpblib -lpblib
+endif
+
+# compile with PBLib and use it
+ifeq ($(PBLIB),PBLIB)
+DEPDIR     += ../../pblib
+CFLAGS     += -DPBLIB -std=c++11
+LFLAGS     += -Lpblib -lpblib
 endif
 
 ifeq ($(VERSION),simp)

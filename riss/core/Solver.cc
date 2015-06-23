@@ -2400,6 +2400,7 @@ lbool Solver::solve_()
                (int64_t)maxLearnedClauseSize
               );
         printf("c search-UHLE: %d attempts, %d rem-lits\n", searchUHLEs, searchUHLElits);
+	printf("c revMin: %d tries %d succesful %d dropped %d cut %d conflicts\n", reverseMinimization.attempts, reverseMinimization.succesfulReverseMinimizations, reverseMinimization.revMindroppedLiterals, reverseMinimization.revMinConflicts, reverseMinimization.revMincutOffLiterals);
         printf("c decisionClauses: %d\n", learnedDecisionClauses);
         printf("c IntervalRestarts: %d\n", intervalRestart);
         printf("c partial restarts: %d saved decisions: %d saved propagations: %d recursives: %d\n", rs_partialRestarts, rs_savedDecisions, rs_savedPropagations, rs_recursiveRefinements);
