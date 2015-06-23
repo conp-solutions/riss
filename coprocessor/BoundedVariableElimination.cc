@@ -125,11 +125,6 @@ void BoundedVariableElimination::progressStats(CoprocessorData& data, const bool
     restarts++;
 }
 
-bool BoundedVariableElimination::hasToEliminate()   // TODO if heap is used, this will not work, since the heap depends on the changing data-object
-{
-    return (variable_queue.size() > 0);
-}
-
 lbool BoundedVariableElimination::process(CoprocessorData &data, const bool doStatistics)
 {
     if (!performSimplification()) { return l_Undef; } // do not do anything?!

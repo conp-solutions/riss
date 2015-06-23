@@ -96,7 +96,6 @@ class BoundedVariableElimination : public Technique
   protected:
 
     void progressStats(CoprocessorData& data, const bool cputime = false);      // prints statistics before/after each BVE-Run
-    bool hasToEliminate();                               // return whether there is something in the BVE queue
 
     // sequential functions:
     void sequentiellBVE(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, const bool force = false, const bool doStatistics = true);
