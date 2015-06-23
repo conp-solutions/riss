@@ -25,7 +25,7 @@ namespace Coprocessor
 
 /** This class implement hidden tautology elimination
  */
-class EquivalenceElimination : public Technique
+class EquivalenceElimination : public Technique<EquivalenceElimination>
 {
 
     uint64_t gateSteps;

@@ -22,7 +22,7 @@ namespace Coprocessor
 
 /** this class is used forthe gauss elimination algorithm
  */
-class XorReasoning : public Technique
+class XorReasoning : public Technique<XorReasoning>
 {
 
     CoprocessorData& data;

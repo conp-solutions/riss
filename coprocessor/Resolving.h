@@ -16,7 +16,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 namespace Coprocessor
 {
 
-class Resolving  : public Technique
+class Resolving : public Technique<Resolving>
 {
     CoprocessorData& data;
     Propagation& propagation; // object that takes care of unit propagation

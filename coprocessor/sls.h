@@ -12,7 +12,7 @@ namespace Coprocessor
 {
 
 /** implements a simple walksat solver that can be executed on the formula */
-class Sls : public Technique
+class Sls : public Technique<Sls>
 {
 
   public:

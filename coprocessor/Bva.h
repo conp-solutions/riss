@@ -17,7 +17,7 @@ namespace Coprocessor
 
 /** this class is used for bounded variable addition (replace patterns by introducion a fresh variable)
  */
-class BoundedVariableAddition : public Technique
+class BoundedVariableAddition : public Technique<BoundedVariableAddition>
 {
 
     CoprocessorData& data;

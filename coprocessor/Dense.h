@@ -16,7 +16,7 @@ Copyright (c) 2013, Norbert Manthey, All rights reserved.
 namespace Coprocessor
 {
 
-class Dense  : public Technique
+class Dense : public Technique<Dense>
 {
     CoprocessorData& data;
     Propagation& propagation;

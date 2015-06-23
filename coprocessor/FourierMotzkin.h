@@ -18,7 +18,7 @@ namespace Coprocessor
 
 /** this class is used for the fourier motzkin procedure on extracted cardinality constraints
  */
-class FourierMotzkin : public Technique
+class FourierMotzkin : public Technique<FourierMotzkin>
 {
 
     CoprocessorData& data;

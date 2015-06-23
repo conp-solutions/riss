@@ -21,7 +21,7 @@ namespace Coprocessor
 // forward declaration
 
 /** class that implements probing techniques */
-class Probing : public Technique
+class Probing : public Technique<Probing>
 {
 
     CoprocessorData& data;
