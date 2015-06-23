@@ -6,7 +6,7 @@
  */
 
 #ifndef PCASSO_SPLITTERSOLVER_H
-#define	PCASSO_SPLITTERSOLVER_H
+#define PCASSO_SPLITTERSOLVER_H
 
 #include "riss/core/Solver.h"
 #include "pcasso/ISolver.h"

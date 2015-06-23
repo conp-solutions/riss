@@ -86,11 +86,11 @@ struct Lit {
 };
 
 
-inline  Lit  mkLit(const Var& var, const bool & sign = false) { Lit p; p.x = var + var + (int)sign; return p; }
-inline  Lit  operator ~(const Lit & p)              { Lit q; q.x = p.x ^ 1; return q; }
-inline  Lit  operator ^(const Lit & p, bool b)      { Lit q; q.x = p.x ^ (unsigned int)b; return q; }
-inline  bool sign(const Lit & p)              { return p.x & 1; }
-inline  int  var(const Lit & p)              { return p.x >> 1; }
+inline  Lit  mkLit(const Var& var, const bool& sign = false) { Lit p; p.x = var + var + (int)sign; return p; }
+inline  Lit  operator ~(const Lit& p)              { Lit q; q.x = p.x ^ 1; return q; }
+inline  Lit  operator ^(const Lit& p, bool b)      { Lit q; q.x = p.x ^ (unsigned int)b; return q; }
+inline  bool sign(const Lit& p)              { return p.x & 1; }
+inline  int  var(const Lit& p)              { return p.x >> 1; }
 
 // Mapping Literals to and from compact integers suitable for array indexing:
 inline  int  toInt(const Var& v)              { return v; }
@@ -414,7 +414,7 @@ class Clause
     Lit          subsumes(const Clause& other) const;
     bool         ordered_subsumes(const Clause& other) const;
     bool         ordered_equals(const Clause& other) const;
-    void         remove_lit(const Lit & p);        /** keeps the order of the remaining literals */
+    void         remove_lit(const Lit& p);         /** keeps the order of the remaining literals */
     void         strengthen(const Riss::Lit& p);
 
     void    set_delete(bool b)          { if (b) { header.mark = 1; } else { header.mark = 0; }}
@@ -1014,7 +1014,7 @@ inline bool Clause::ordered_equals(const Clause& other) const
     return true;
 }
 
-inline void Clause::remove_lit(const Lit & p)
+inline void Clause::remove_lit(const Lit& p)
 {
     for (int i = 0; i < size(); ++i) {
         if (data[i].lit == p) {

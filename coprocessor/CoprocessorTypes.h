@@ -141,10 +141,10 @@ class CoprocessorData
     // free all the resources that are used by this data object,
     void destroy();
 
-    int32_t& operator[](const Riss::Lit & l);                           // return the number of occurrences of literal l
-    int32_t operator[](const Riss::Var & v) const;                      // return the number of occurrences of variable v
-    std::vector<Riss::CRef>& list(const Riss::Lit & l);                 // return the list of clauses, which have literal l
-    const std::vector< Riss::CRef >& list(const Riss::Lit & l) const;   // return the list of clauses, which have literal l
+    int32_t& operator[](const Riss::Lit& l);                            // return the number of occurrences of literal l
+    int32_t operator[](const Riss::Var& v) const;                       // return the number of occurrences of variable v
+    std::vector<Riss::CRef>& list(const Riss::Lit& l);                  // return the list of clauses, which have literal l
+    const std::vector< Riss::CRef >& list(const Riss::Lit& l) const;    // return the list of clauses, which have literal l
 
     Riss::vec<Riss::CRef>& getClauses();   // return the std::vector of clauses in the solver object
     Riss::vec<Riss::CRef>& getLEarnts();   // return the std::vector of learnt clauses in the solver object
@@ -252,21 +252,21 @@ class CoprocessorData
 
 // formula statistics with HeapUpdate and LockHandling
 
-    void addedLiteral(const Riss::Lit & l, const int32_t diff = 1, Riss::Heap<VarOrderBVEHeapLt> * heap = NULL, const bool update = false, const Riss::Var ignore = var_Undef, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL);  // update counter for literal
-    void removedLiteral(const Riss::Lit & l, const int32_t diff = 1, Riss::Heap<VarOrderBVEHeapLt> * heap = NULL, const bool update = false, const Riss::Var ignore = var_Undef, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL);  // update counter for literal
+    void addedLiteral(const Riss::Lit& l, const int32_t diff = 1, Riss::Heap<VarOrderBVEHeapLt> * heap = NULL, const bool update = false, const Riss::Var ignore = var_Undef, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL);   // update counter for literal
+    void removedLiteral(const Riss::Lit& l, const int32_t diff = 1, Riss::Heap<VarOrderBVEHeapLt> * heap = NULL, const bool update = false, const Riss::Var ignore = var_Undef, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL);   // update counter for literal
     void addedClause(const Riss::CRef& cr, Riss::Heap< Coprocessor::VarOrderBVEHeapLt >* heap = 0, const bool update = false, const Riss::Var ignore = (-1), SpinLock* data_lock = 0, SpinLock* heap_lock = 0);              // update counters for literals in the clause
 
-    void removedClause(const Riss::CRef & cr, Riss::Heap<VarOrderBVEHeapLt> * heap = NULL, const bool update = false, const Riss::Var ignore = var_Undef, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL);            // update counters for literals in the clause
-    void removedClause(const Riss::Lit & l1, const Riss::Lit & l2);           // update counters for literals in the clause
+    void removedClause(const Riss::CRef& cr, Riss::Heap<VarOrderBVEHeapLt> * heap = NULL, const bool update = false, const Riss::Var ignore = var_Undef, SpinLock * data_lock = NULL, SpinLock * heap_lock = NULL);             // update counters for literals in the clause
+    void removedClause(const Riss::Lit& l1, const Riss::Lit& l2);             // update counters for literals in the clause
 
     bool removeClauseThreadSafe(const Riss::CRef& cr);
     void correctCounters();
 
     // extending model after clause elimination procedures - l will be put first in list to be undone if necessary!
-    void addToExtension(const Riss::CRef &cr, const Riss::Lit &l = Riss::lit_Error);
+    void addToExtension(const Riss::CRef& cr, const Riss::Lit& l = Riss::lit_Error);
     void addToExtension(const Riss::vec< Riss::Lit >& lits, const Riss::Lit& l);
     void addToExtension(const vector< Riss::Lit >& lits, const Riss::Lit& l);
-    void addToExtension(const Riss::Lit & dontTouch, const Riss::Lit & l = Riss::lit_Error);
+    void addToExtension(const Riss::Lit& dontTouch, const Riss::Lit& l = Riss::lit_Error);
 
     /** add already created std::vector to extension std::vector */
     void addExtensionToExtension(const Riss::vec< Riss::Lit >& lits);
@@ -281,7 +281,7 @@ class CoprocessorData
 
     /** write the given clause/std::vector/Riss::vec to the output, if the output is enabled */
     template <class T>
-    void addToProof(const T& clause, bool deleteFromProof = false, const Riss::Lit & remLit = Riss::lit_Undef);
+    void addToProof(const T& clause, bool deleteFromProof = false, const Riss::Lit& remLit = Riss::lit_Undef);
 
     /** write a single unit clause to the proof */
     void addUnitToProof(const  Riss::Lit& l, bool deleteFromProof = false);
@@ -292,7 +292,7 @@ class CoprocessorData
 
     #else // no DRAT proofs
     template <class T>
-    void addToProof(const T& clause, bool deleteFromProof = false, const Riss::Lit & remLit = Riss::lit_Undef) const {};
+    void addToProof(const T& clause, bool deleteFromProof = false, const Riss::Lit& remLit = Riss::lit_Undef) const {};
     void addUnitToProof(const  Riss::Lit& l, bool deleteFromProof = false) const {};
     void addCommentToProof(const char* text, bool deleteFromProof = false) const {};
     bool outputsProof() const { return false; }
@@ -667,7 +667,7 @@ inline bool CoprocessorData::isInterupted()
 }
 
 
-inline Riss::lbool CoprocessorData::enqueue(const Riss::Lit & l, const uint64_t extraInfo)
+inline Riss::lbool CoprocessorData::enqueue(const Riss::Lit& l, const uint64_t extraInfo)
 {
     if (false || global_debug_out) { std::cerr << "c enqueue " << l << " with previous value " << (solver->value(l) == l_Undef ? "undef" : (solver->value(l) == l_False ? "unsat" : " sat ")) << std::endl; }
     if (solver->value(l) == l_False) {
@@ -681,7 +681,7 @@ inline Riss::lbool CoprocessorData::enqueue(const Riss::Lit & l, const uint64_t 
     return l_Undef;
 }
 
-inline Riss::lbool CoprocessorData::value(const Riss::Lit & l) const
+inline Riss::lbool CoprocessorData::value(const Riss::Lit& l) const
 {
     return solver->value(l);
 }
@@ -704,7 +704,7 @@ inline bool CoprocessorData::hasToPropagate()
 }
 
 
-inline void CoprocessorData::addClause(const Riss::CRef & cr, bool check)
+inline void CoprocessorData::addClause(const Riss::CRef& cr, bool check)
 {
     const Riss::Clause& c = ca[cr];
     if (c.can_be_deleted()) { return; }
@@ -723,7 +723,7 @@ inline void CoprocessorData::addClause(const Riss::CRef & cr, bool check)
     numberOfCls ++;
 }
 
-inline void CoprocessorData::addClause(const Riss::CRef & cr , Riss::Heap<VarOrderBVEHeapLt> * heap, const bool update, const Riss::Var ignore, SpinLock * data_lock, SpinLock * heap_lock)
+inline void CoprocessorData::addClause(const Riss::CRef& cr , Riss::Heap<VarOrderBVEHeapLt> * heap, const bool update, const Riss::Var ignore, SpinLock * data_lock, SpinLock * heap_lock)
 {
     const Riss::Clause& c = ca[cr];
     if (c.can_be_deleted()) { return; }
@@ -755,7 +755,7 @@ inline void CoprocessorData::addClause(const Riss::CRef & cr , Riss::Heap<VarOrd
     }
 }
 
-inline bool CoprocessorData::removeClauseFrom(const Riss::CRef & cr, const Riss::Lit & l)
+inline bool CoprocessorData::removeClauseFrom(const Riss::CRef& cr, const Riss::Lit& l)
 {
     std::vector<Riss::CRef>& list = occs[Riss::toInt(l)];
     for (int i = 0 ; i < list.size(); ++ i) {
@@ -768,7 +768,7 @@ inline bool CoprocessorData::removeClauseFrom(const Riss::CRef & cr, const Riss:
     return false;
 }
 
-inline void CoprocessorData::removeClauseFrom(const Riss::CRef & cr, const Riss::Lit & l, const int index)
+inline void CoprocessorData::removeClauseFrom(const Riss::CRef& cr, const Riss::Lit& l, const int index)
 {
     std::vector<Riss::CRef>& list = occs[Riss::toInt(l)];
     assert(list[index] == cr);
@@ -779,7 +779,7 @@ inline void CoprocessorData::removeClauseFrom(const Riss::CRef & cr, const Riss:
 /** replaces clause reference from clause list by Riss::CRef_Undef, returns true, if successful
  *  asynchronous list modification
  */
-inline bool CoprocessorData::removeClauseFromThreadSafe(const Riss::CRef & cr, const Riss::Lit & l)
+inline bool CoprocessorData::removeClauseFromThreadSafe(const Riss::CRef& cr, const Riss::Lit& l)
 {
     assert(cr != Riss::CRef_Undef);
     std::vector<Riss::CRef>& list = occs[Riss::toInt(l)];
@@ -916,7 +916,7 @@ inline void CoprocessorData::resetDeleteTimer()
 }
 
 
-inline void CoprocessorData::removedClause(const Riss::Lit & l1, const Riss::Lit & l2)
+inline void CoprocessorData::removedClause(const Riss::Lit& l1, const Riss::Lit& l2)
 {
     removedLiteral(l1);
     removedLiteral(l2);
@@ -937,7 +937,7 @@ inline void CoprocessorData::removedClause(const Riss::Lit & l1, const Riss::Lit
     }
 }
 
-inline void CoprocessorData::addedLiteral(const Riss::Lit & l, const int32_t diff, Riss::Heap<VarOrderBVEHeapLt> * heap, const bool update, const Riss::Var ignore, SpinLock * data_lock, SpinLock * heap_lock)
+inline void CoprocessorData::addedLiteral(const Riss::Lit& l, const int32_t diff, Riss::Heap<VarOrderBVEHeapLt> * heap, const bool update, const Riss::Var ignore, SpinLock * data_lock, SpinLock * heap_lock)
 {
     if (heap == NULL && data_lock == NULL && heap_lock == NULL) {
         lit_occurrence_count[Riss::toInt(l)] += diff;
@@ -964,7 +964,7 @@ inline void CoprocessorData::addedLiteral(const Riss::Lit & l, const int32_t dif
         }
     }
 }
-inline void CoprocessorData::removedLiteral(const Riss::Lit & l, const int32_t diff, Riss::Heap<VarOrderBVEHeapLt> * heap, const bool update, const Riss::Var ignore, SpinLock * data_lock, SpinLock * heap_lock)  // update counter for literal
+inline void CoprocessorData::removedLiteral(const Riss::Lit& l, const int32_t diff, Riss::Heap<VarOrderBVEHeapLt> * heap, const bool update, const Riss::Var ignore, SpinLock * data_lock, SpinLock * heap_lock)   // update counter for literal
 {
     if (heap == NULL && data_lock == NULL && heap_lock == NULL) {
         deletedVar(var(l));
@@ -997,7 +997,7 @@ inline void CoprocessorData::removedLiteral(const Riss::Lit & l, const int32_t d
         }
     }
 }
-inline void CoprocessorData::addedClause(const Riss::CRef & cr, Riss::Heap<VarOrderBVEHeapLt> * heap, const bool update , const Riss::Var ignore, SpinLock * data_lock, SpinLock * heap_lock)             // update counters for literals in the clause
+inline void CoprocessorData::addedClause(const Riss::CRef& cr, Riss::Heap<VarOrderBVEHeapLt> * heap, const bool update , const Riss::Var ignore, SpinLock * data_lock, SpinLock * heap_lock)              // update counters for literals in the clause
 {
     const Riss::Clause& c = ca[cr];
     if (heap == NULL && data_lock == NULL && heap_lock == NULL) {
@@ -1031,7 +1031,7 @@ inline void CoprocessorData::addedClause(const Riss::CRef & cr, Riss::Heap<VarOr
         }
     }
 }
-inline void CoprocessorData::removedClause(const Riss::CRef & cr, Riss::Heap< Coprocessor::VarOrderBVEHeapLt >* heap, const bool update, const Riss::Var ignore, SpinLock* data_lock, SpinLock* heap_lock)            // update counters for literals in the clause
+inline void CoprocessorData::removedClause(const Riss::CRef& cr, Riss::Heap< Coprocessor::VarOrderBVEHeapLt >* heap, const bool update, const Riss::Var ignore, SpinLock* data_lock, SpinLock* heap_lock)             // update counters for literals in the clause
 {
     const Riss::Clause& c = ca[cr];
     if (heap == NULL && data_lock == NULL && heap_lock == NULL) {
@@ -1073,22 +1073,22 @@ inline void CoprocessorData::removedClause(const Riss::CRef & cr, Riss::Heap< Co
     }
 }
 
-inline int32_t& CoprocessorData::operator[](const Riss::Lit & l)
+inline int32_t& CoprocessorData::operator[](const Riss::Lit& l)
 {
     return lit_occurrence_count[Riss::toInt(l)];
 }
 
-inline int32_t CoprocessorData::operator[](const Riss::Var & v) const
+inline int32_t CoprocessorData::operator[](const Riss::Var& v) const
 {
     return lit_occurrence_count[Riss::toInt(Riss::mkLit(v, 0))] + lit_occurrence_count[Riss::toInt(Riss::mkLit(v, 1))];
 }
 
-inline std::vector< Riss::CRef >& CoprocessorData::list(const Riss::Lit & l)
+inline std::vector< Riss::CRef >& CoprocessorData::list(const Riss::Lit& l)
 {
     return occs[ Riss::toInt(l) ];
 }
 
-inline const std::vector< Riss::CRef >& CoprocessorData::list(const Riss::Lit & l) const
+inline const std::vector< Riss::CRef >& CoprocessorData::list(const Riss::Lit& l) const
 {
     return occs[ Riss::toInt(l) ];
 }
@@ -1319,7 +1319,7 @@ inline void CoprocessorData::mark2(Riss::Var x, Riss::MarkArray& array, Riss::Ma
     }
 }
 
-inline void CoprocessorData::addToExtension(const Riss::CRef & cr, const Riss::Lit & l)
+inline void CoprocessorData::addToExtension(const Riss::CRef& cr, const Riss::Lit& l)
 {
     const Riss::Clause& c = ca[cr];
     if (undo.size() > 0) { assert(undo[ undo.size() - 1] != Riss::lit_Undef && "an empty clause should not be put on the undo stack"); }
@@ -1330,7 +1330,7 @@ inline void CoprocessorData::addToExtension(const Riss::CRef & cr, const Riss::L
     }
 }
 
-inline void CoprocessorData::addToExtension(const Riss::vec< Riss::Lit >& lits, const Riss::Lit & l)
+inline void CoprocessorData::addToExtension(const Riss::vec< Riss::Lit >& lits, const Riss::Lit& l)
 {
     if (undo.size() > 0) { assert(undo[ undo.size() - 1] != Riss::lit_Undef && "an empty clause should not be put on the undo stack"); }
     undo.push_back(Riss::lit_Undef);
@@ -1340,7 +1340,7 @@ inline void CoprocessorData::addToExtension(const Riss::vec< Riss::Lit >& lits, 
     }
 }
 
-inline void CoprocessorData::addToExtension(const std::vector< Riss::Lit >& lits, const Riss::Lit & l)
+inline void CoprocessorData::addToExtension(const std::vector< Riss::Lit >& lits, const Riss::Lit& l)
 {
     if (undo.size() > 0) { assert(undo[ undo.size() - 1] != Riss::lit_Undef && "an empty clause should not be put on the undo stack"); }
     undo.push_back(Riss::lit_Undef);
@@ -1350,7 +1350,7 @@ inline void CoprocessorData::addToExtension(const std::vector< Riss::Lit >& lits
     }
 }
 
-inline void CoprocessorData::addToExtension(const Riss::Lit & dontTouch, const Riss::Lit & l)
+inline void CoprocessorData::addToExtension(const Riss::Lit& dontTouch, const Riss::Lit& l)
 {
     if (undo.size() > 0) { assert(undo[ undo.size() - 1] != Riss::lit_Undef && "an empty clause should not be put on the undo stack"); }
     undo.push_back(Riss::lit_Undef);
@@ -1474,7 +1474,7 @@ inline void CoprocessorData::extendModel(Riss::vec< Riss::lbool >& model)
 
 #ifdef DRATPROOF
 template <class T>
-inline void CoprocessorData::addToProof(const T& clause, bool deleteFromProof, const Riss::Lit & remLit)
+inline void CoprocessorData::addToProof(const T& clause, bool deleteFromProof, const Riss::Lit& remLit)
 {
     solver->addToProof(clause, deleteFromProof, remLit);
 }
@@ -1511,7 +1511,7 @@ inline std::vector< Riss::Lit >& CoprocessorData::getEquivalences()
     return equivalences;
 }
 
-inline bool CoprocessorData::addSubStrengthClause(const Riss::CRef & cr, const bool & isNew)
+inline bool CoprocessorData::addSubStrengthClause(const Riss::CRef& cr, const bool& isNew)
 {
     bool ret = false;
     Riss::Clause& c = ca[cr];
@@ -1555,7 +1555,7 @@ inline bool CoprocessorData::doNotTouch(const Riss::Var& v) const
     return solver->isFrozen(v);
 }
 
-bool inline CoprocessorData::removeClauseThreadSafe(const Riss::CRef & cr)
+bool inline CoprocessorData::removeClauseThreadSafe(const Riss::CRef& cr)
 {
     Riss::Clause& c = ca[cr];
     c.spinlock();
@@ -1794,7 +1794,7 @@ inline void BIG::sort(const uint32_t nVars)
     }
 }
 
-inline void BIG::removeEdge(const Riss::Lit & l0, const Riss::Lit & l1)
+inline void BIG::removeEdge(const Riss::Lit& l0, const Riss::Lit& l1)
 {
     // remove literal from the two lists
     Riss::Lit* list = getArray(~l0);
@@ -1824,12 +1824,12 @@ inline Riss::Lit* BIG::getArray(const Riss::Lit l)
     return var(l) < duringCreationVariables ? big[ Riss::toInt(l) ] : 0;
 }
 
-inline const Riss::Lit* BIG::getArray(const Riss::Lit & l) const
+inline const Riss::Lit* BIG::getArray(const Riss::Lit& l) const
 {
     return var(l) < duringCreationVariables ? big[ Riss::toInt(l) ] : 0;
 }
 
-inline int BIG::getSize(const Riss::Lit & l) const
+inline int BIG::getSize(const Riss::Lit& l) const
 {
     return var(l) < duringCreationVariables ? sizes[ Riss::toInt(l) ] : 0;
 }
@@ -1840,10 +1840,10 @@ inline void BIG::generateImplied(CoprocessorData& data)
     const uint32_t maxVar = duringCreationVariables < data.nVars() ? duringCreationVariables : data.nVars(); // use only known variables
 
     if (start == 0) { start = (uint32_t*) malloc(maxVar * sizeof(uint32_t) * 2); }
-    else { uint32_t* oldPtr = start; start = (uint32_t*)realloc(start, maxVar * sizeof(uint32_t) * 2); if( start == 0 ) { free(oldPtr); exit(-1); } }
+    else { uint32_t* oldPtr = start; start = (uint32_t*)realloc(start, maxVar * sizeof(uint32_t) * 2); if (start == 0) { free(oldPtr); exit(-1); } }
 
     if (stop == 0) { stop = (uint32_t*) malloc(maxVar * sizeof(uint32_t) * 2); }
-    else { uint32_t* oldPtr = stop; stop = (uint32_t*)realloc(stop, maxVar * sizeof(int32_t) * 2); if( stop == 0 ) { free(oldPtr); exit(-1); } }
+    else { uint32_t* oldPtr = stop; stop = (uint32_t*)realloc(stop, maxVar * sizeof(int32_t) * 2); if (stop == 0) { free(oldPtr); exit(-1); } }
 
     int32_t* index = (int32_t*)malloc(maxVar * sizeof(int32_t) * 2);
 
@@ -1894,10 +1894,10 @@ inline void BIG::generateImplied(uint32_t nVars, Riss::vec<Riss::Lit>& tmpLits)
     const uint32_t maxVar = duringCreationVariables < nVars ? duringCreationVariables : nVars; // use only known variables
 
     if (start == 0) { start = (uint32_t*) malloc(maxVar * sizeof(uint32_t) * 2); }
-    else { uint32_t* oldPtr = start; start = (uint32_t*)realloc(start, maxVar * sizeof(uint32_t) * 2); if( start == 0 ) { free(oldPtr); exit(-1); } }
+    else { uint32_t* oldPtr = start; start = (uint32_t*)realloc(start, maxVar * sizeof(uint32_t) * 2); if (start == 0) { free(oldPtr); exit(-1); } }
 
     if (stop == 0) { stop = (uint32_t*) malloc(maxVar * sizeof(uint32_t) * 2); }
-    else { uint32_t* oldPtr = stop; stop = (uint32_t*)realloc(stop, maxVar * sizeof(int32_t) * 2); if( stop == 0 ) { free(oldPtr); exit(-1); } }
+    else { uint32_t* oldPtr = stop; stop = (uint32_t*)realloc(stop, maxVar * sizeof(int32_t) * 2); if (stop == 0) { free(oldPtr); exit(-1); } }
 
     int32_t* index = (int32_t*)malloc(maxVar * sizeof(int32_t) * 2);
 
@@ -2038,7 +2038,7 @@ inline void BIG::shuffle(Riss::Lit* adj, int size) const
     }
 }
 
-inline uint32_t BIG::stampLiteral(const Riss::Lit & literal, uint32_t stamp, int32_t* index, std::deque<Riss::Lit>& stampQueue)
+inline uint32_t BIG::stampLiteral(const Riss::Lit& literal, uint32_t stamp, int32_t* index, std::deque<Riss::Lit>& stampQueue)
 {
     // do not stamp a literal twice!
     if (start[ Riss::toInt(literal) ] != 0) { return stamp; }

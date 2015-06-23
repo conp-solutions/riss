@@ -50,10 +50,10 @@ namespace Riss
 // Constructor/Destructor:
 
 
-Solver::Solver(CoreConfig* externalConfig , const char* configName ) :  // CoreConfig& _config
-    privateConfig ( externalConfig == 0 ? new CoreConfig( configName ) : externalConfig )
-    , deleteConfig ( externalConfig == 0 )
-    , config(* privateConfig )
+Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreConfig& _config
+    privateConfig(externalConfig == 0 ? new CoreConfig(configName) : externalConfig)
+    , deleteConfig(externalConfig == 0)
+    , config(* privateConfig)
     // DRUP output file
     , drupProofFile(0)
     // Parameters (user settable):

@@ -284,8 +284,8 @@ int CommunicatorClient::updateSleep(Riss::vec<Riss::Lit>* toSend)
                     ok = false; return 1;
                 }
                 if (var(c[0]) > solver->nVars()) {
-                        std::cerr << "c shared variable " << var(c[0]) << "[" << 0 << "] is greater than " << nVars() << std::endl;
-                        assert(false && "received variables have to be smaller than maximum!");
+                    std::cerr << "c shared variable " << var(c[0]) << "[" << 0 << "] is greater than " << nVars() << std::endl;
+                    assert(false && "received variables have to be smaller than maximum!");
                 }
                 solver->uncheckedEnqueue(c[0]);
                 c.mark();

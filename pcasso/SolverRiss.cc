@@ -3,7 +3,8 @@
 using namespace Riss;
 using namespace std;
 
-namespace Pcasso {
+namespace Pcasso
+{
 SolverRiss::SolverRiss(CoreConfig *config) :
     solver(config),
     coreConfig(config),
@@ -28,7 +29,7 @@ Var SolverRiss::newVar(bool polarity, bool dvar, char type)
 /**
 * Lets Riss add the clause and saves the pt level for the new clause.
 */
-bool SolverRiss::addClause_(vec<Lit> &ps, unsigned int pt_level)
+bool SolverRiss::addClause_(vec<Lit>& ps, unsigned int pt_level)
 {
     return solver.addClause_(ps);
 }
@@ -60,19 +61,19 @@ void SolverRiss::setupForPortfolio(const int nodeLevel)
     }
 }
 
-    int       SolverRiss::nVars              () const    { return solver.nVars(); }
-    bool      SolverRiss::okay               () const    { return solver.okay(); }
-    void      SolverRiss::interrupt          ()          { solver.interrupt(); }
-    inline lbool     SolverRiss::solveLimited       (const Riss::vec<Riss::Lit>& assumps){ return solver.solveLimited(assumps); }
-    inline void      SolverRiss::setVerbosity       (int verbosity)    { solver.verbosity = verbosity; }
-    inline void      SolverRiss::setConfBudget      (int64_t x) { solver.setConfBudget(x); }
-    // return a specifit literal from the trail
-    inline Riss::Lit SolverRiss::trailGet           (const unsigned int index){ return solver.trail[index]; }
-    // return the number of top level units from that are on the trail
-    inline unsigned int SolverRiss::getTopLevelUnits() const    { return solver.trail.size(); } //( solver.trail_lim.size() > 1 ) ? solver.trail_lim[1] : solver.trail.size(); }
-    inline unsigned int SolverRiss::getNodePTLevel  ()          { return curPTLevel; }
-    inline uint64_t     SolverRiss::getStarts       ()          { return solver.starts; }
-    inline uint64_t     SolverRiss::getDecisions    ()          { return solver.decisions; }
-    inline uint64_t     SolverRiss::getConflicts    ()          { return solver.conflicts; }
-    inline void         SolverRiss::getModel        (Riss::vec<Riss::lbool>& model){ solver.model.copyTo( model ); }
+int       SolverRiss::nVars() const    { return solver.nVars(); }
+bool      SolverRiss::okay() const    { return solver.okay(); }
+void      SolverRiss::interrupt()          { solver.interrupt(); }
+inline lbool     SolverRiss::solveLimited(const Riss::vec<Riss::Lit>& assumps) { return solver.solveLimited(assumps); }
+inline void      SolverRiss::setVerbosity(int verbosity)    { solver.verbosity = verbosity; }
+inline void      SolverRiss::setConfBudget(int64_t x) { solver.setConfBudget(x); }
+// return a specifit literal from the trail
+inline Riss::Lit SolverRiss::trailGet(const unsigned int index) { return solver.trail[index]; }
+// return the number of top level units from that are on the trail
+inline unsigned int SolverRiss::getTopLevelUnits() const    { return solver.trail.size(); } //( solver.trail_lim.size() > 1 ) ? solver.trail_lim[1] : solver.trail.size(); }
+inline unsigned int SolverRiss::getNodePTLevel()          { return curPTLevel; }
+inline uint64_t     SolverRiss::getStarts()          { return solver.starts; }
+inline uint64_t     SolverRiss::getDecisions()          { return solver.decisions; }
+inline uint64_t     SolverRiss::getConflicts()          { return solver.conflicts; }
+inline void         SolverRiss::getModel(Riss::vec<Riss::lbool>& model) { solver.model.copyTo(model); }
 } // namespace Pcasso

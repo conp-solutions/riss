@@ -201,7 +201,7 @@ class Preprocessor
 
     // small helpers
     void sortClauses();                // sort the literals within all clauses
-    void delete_clause(const Riss::CRef & cr); // delete a clause from the solver (clause should not be attached within the solver)
+    void delete_clause(const Riss::CRef& cr);  // delete a clause from the solver (clause should not be attached within the solver)
 
     bool checkLists(const std::string& headline); // check each clause list for duplicate occurrences
     void fullCheck(const std::string& headline);  // check solver state before control is passed to solver

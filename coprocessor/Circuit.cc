@@ -904,7 +904,7 @@ Circuit::Gate::Gate(const vector< Lit >& c, const Coprocessor::Circuit::Gate::Ty
     }
 }
 
-Circuit::Gate::Gate(const Lit & _x, const Lit & _s, const Lit & _t, const Lit & _f, const Circuit::Gate::Type & _type, const Circuit::Gate::Encoded e)
+Circuit::Gate::Gate(const Lit& _x, const Lit& _s, const Lit& _t, const Lit& _f, const Circuit::Gate::Type& _type, const Circuit::Gate::Encoded e)
     : inQueue(false), touched(0), type(_type), encoded(e)
 {
     assert((_type == ITE || _type == FA_SUM) && "This constructur can be used for ITE gates only");

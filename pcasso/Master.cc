@@ -389,19 +389,19 @@ int Master::run()
 
                     fprintf(stderr, "c idle: %d working: %d splitting: %d unclean: %d\n", idles, workers, splitters, uncleans);
 
-	    root.evaluate(*this);
-            if (root.getState() == TreeNode::unsat) {
-                // assign the according solution
-                solution = 20;
-		fprintf(stderr, "found UNSAT of tree\n");
-                // jump out of the workloop
-            } else if (solution == 10 || root.getState() == TreeNode::sat) {
-                // assign the according solution
-                solution = 10;
-		fprintf(stderr, "found SAT of tree\n");
-            }
-            
-            fprintf(stderr, "solution unknown!\n");
+                    root.evaluate(*this);
+                    if (root.getState() == TreeNode::unsat) {
+                        // assign the according solution
+                        solution = 20;
+                        fprintf(stderr, "found UNSAT of tree\n");
+                        // jump out of the workloop
+                    } else if (solution == 10 || root.getState() == TreeNode::sat) {
+                        // assign the according solution
+                        solution = 10;
+                        fprintf(stderr, "found SAT of tree\n");
+                    }
+
+                    fprintf(stderr, "solution unknown!\n");
                     exit(0);
                 }
             }
@@ -574,7 +574,7 @@ int Master::run()
     fprintf(stderr, "c solved instance with result %d\n", solution);
 
     printf("c CPU time              : %g s\n", cpuTime());
-    printf("c memory                : %g MB\n", memUsedPeak() );
+    printf("c memory                : %g MB\n", memUsedPeak());
 
     // report found value to calling method
     return solution;
@@ -816,8 +816,8 @@ Master::solveInstance(void* data)
     if (ret != 10 && ret != 20) {
         statistics.changeI(master.unsolvedNodesID, 1);
     } else {
-      if( tData.nodeToSolve != 0 ) // prevent using 0 pointers
-        tData.nodeToSolve->solveTime = Master::getCpuTimeMS() - cputime;
+        if (tData.nodeToSolve != 0)  // prevent using 0 pointers
+        { tData.nodeToSolve->solveTime = Master::getCpuTimeMS() - cputime; }
     }
 
     // take care about the output
@@ -843,11 +843,11 @@ Master::solveInstance(void* data)
     }
 
     if (ret == 10) {
-      if( tData.nodeToSolve != 0 ) {
-        fprintf(stderr, "============SOLUTION FOUND BY NODE %d AT PARTITION LEVEL %d============\n",
-                tData.nodeToSolve->id(), tData.nodeToSolve->getLevel());
-      }
-      if( tData.nodeToSolve != 0 ) { tData.nodeToSolve->setState(TreeNode::sat); }
+        if (tData.nodeToSolve != 0) {
+            fprintf(stderr, "============SOLUTION FOUND BY NODE %d AT PARTITION LEVEL %d============\n",
+                    tData.nodeToSolve->id(), tData.nodeToSolve->getLevel());
+        }
+        if (tData.nodeToSolve != 0) { tData.nodeToSolve->setState(TreeNode::sat); }
         vec< lbool > solverModel;
         slvr->getModel(solverModel);
         master.submitModel(solverModel);
@@ -855,23 +855,23 @@ Master::solveInstance(void* data)
         if (opt_conflict_killing && ((SolverPT *)tData.solver)->lastLevel < tData.nodeToSolve->getPTLevel()) {
             statistics.changeI(master.nConflictKilledID, 1);
 
-	    if( tData.nodeToSolve != 0 ) {
-            int i = tData.nodeToSolve->getPTLevel() - ((SolverPT *)tData.solver)->lastLevel;
-            while (i > 0) {
-                TreeNode* node = tData.nodeToSolve->getFather();
-                node->setState(TreeNode::unsat);
-                --i;
+            if (tData.nodeToSolve != 0) {
+                int i = tData.nodeToSolve->getPTLevel() - ((SolverPT *)tData.solver)->lastLevel;
+                while (i > 0) {
+                    TreeNode* node = tData.nodeToSolve->getFather();
+                    node->setState(TreeNode::unsat);
+                    --i;
+                }
             }
         }
-        }
-        if( tData.nodeToSolve != 0 ) tData.nodeToSolve->setState(TreeNode::unsat);
+        if (tData.nodeToSolve != 0) { tData.nodeToSolve->setState(TreeNode::unsat); }
     } else {
         // result of solver is "unknown"
-        if( tData.nodeToSolve != 0 ) {
-	  if (master.plainpart && tData.nodeToSolve->getState() == TreeNode::unknown ) { 
-	    tData.nodeToSolve->setState(TreeNode::retry);
-	  }
-	}
+        if (tData.nodeToSolve != 0) {
+            if (master.plainpart && tData.nodeToSolve->getState() == TreeNode::unknown) {
+                tData.nodeToSolve->setState(TreeNode::retry);
+            }
+        }
 
         if (keepToplevelUnits > 0) {
             int toplevelVariables = 0;
@@ -879,16 +879,16 @@ Master::solveInstance(void* data)
             toplevelVariables = slvr->getTopLevelUnits();
 
             if (toplevelVariables > 0 && MSverbosity > 1) { fprintf(stderr, "found %d topLevel units\n", toplevelVariables - initialUnits); }
-            if( tData.nodeToSolve != 0 ) {
-            for (int i = initialUnits ; i < toplevelVariables; ++i) {
-		  Lit currentLit = slvr->trailGet(i);  //(*trail)[i];
-                vector<Lit>* clause = new vector<Lit>(1);
-                (*clause)[0] = currentLit;
+            if (tData.nodeToSolve != 0) {
+                for (int i = initialUnits ; i < toplevelVariables; ++i) {
+                    Lit currentLit = slvr->trailGet(i);  //(*trail)[i];
+                    vector<Lit>* clause = new vector<Lit>(1);
+                    (*clause)[0] = currentLit;
 
-                // Davide> I modified this in order to include information about
-                // literal pt_levels
-		  tData.nodeToSolve->addNodeUnaryConstraint(clause, slvr->getLiteralPTLevel(currentLit));
-	      }
+                    // Davide> I modified this in order to include information about
+                    // literal pt_levels
+                    tData.nodeToSolve->addNodeUnaryConstraint(clause, slvr->getLiteralPTLevel(currentLit));
+                }
             }
         }
     }
@@ -1016,7 +1016,7 @@ Master::splitInstance(void* data)
     if (!S->okay()) {
         fprintf(stderr, "reading split instance resulted in error (node %d)\n", tData.nodeToSolve->id());
 #warning: this is ok! (according to LA-splitting author Ahmed)
-         ret = 20;
+        ret = 20;
         // tell statistics
         statistics.changeI(master.splitSolvedNodesID, 1);
         tData.nodeToSolve->solveTime = Master::getCpuTimeMS() - cputime;

@@ -6,7 +6,7 @@
  */
 
 #ifndef PCASSO_LOOKAHEADSPLITTING_H
-#define	PCASSO_LOOKAHEADSPLITTING_H
+#define PCASSO_LOOKAHEADSPLITTING_H
 
 #include "riss/mtl/Vec.h"
 #include "riss/core/SolverTypes.h"

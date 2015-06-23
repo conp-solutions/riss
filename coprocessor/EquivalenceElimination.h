@@ -63,7 +63,7 @@ class EquivalenceElimination : public Technique
     /** run equivalent literal elimination */
     bool process(CoprocessorData& data);
 
-    void initClause(const Riss::CRef & cr); // inherited from Technique
+    void initClause(const Riss::CRef& cr);  // inherited from Technique
 
     /** inherited from @see Technique */
     void printStatistics(std::ostream& stream);

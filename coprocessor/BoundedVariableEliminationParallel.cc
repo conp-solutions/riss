@@ -596,7 +596,7 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData& data, Heap<VarO
  *
  *      TODO don't use the data_lock, since we already have the global writeLock
  */
-inline void BoundedVariableElimination::removeClausesThreadSafe(Coprocessor::CoprocessorData& data, Heap< Coprocessor::VarOrderBVEHeapLt >& heap, const vector< Riss::CRef >& list, const Lit& l, const int limit, SpinLock& data_lock, SpinLock& heap_lock, Coprocessor::BoundedVariableElimination::ParBVEStats& stats, int& garbageCounter, const bool doStatistics )
+inline void BoundedVariableElimination::removeClausesThreadSafe(Coprocessor::CoprocessorData& data, Heap< Coprocessor::VarOrderBVEHeapLt >& heap, const vector< Riss::CRef >& list, const Lit& l, const int limit, SpinLock& data_lock, SpinLock& heap_lock, Coprocessor::BoundedVariableElimination::ParBVEStats& stats, int& garbageCounter, const bool doStatistics)
 {
     const Var ignore = var(l);
     for (int cr_i = 0; cr_i < list.size(); ++cr_i) {
@@ -898,7 +898,7 @@ lbool BoundedVariableElimination::resolveSetThreadSafe(CoprocessorData& data, He
 inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(CoprocessorData& data,
         Heap<VarOrderBVEHeapLt>& heap,
         const vector<CRef>& list, const int32_t _stats[],
-        const Lit & l, const int limit,
+        const Lit& l, const int limit,
         SpinLock& data_lock, SpinLock& heap_lock,
         ParBVEStats& stats, int& garbageCounter,
         const bool doStatistics)

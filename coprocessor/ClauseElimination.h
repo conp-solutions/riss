@@ -63,7 +63,7 @@ class ClauseElimination : public Technique
 
     bool process(Coprocessor::CoprocessorData& data);
 
-    void initClause(const Riss::CRef & cr); // inherited from Technique
+    void initClause(const Riss::CRef& cr);  // inherited from Technique
 
     void printStatistics(std::ostream& stream);
 

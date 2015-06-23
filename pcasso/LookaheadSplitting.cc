@@ -664,13 +664,13 @@ void LookaheadSplitting::shrinkClauses()
         Var v;
         Lit l;
 
-	// cleared all watch lists
-	watches.cleanAll();
-	for( Var v = 0; v < nVars(); ++v ) {
-	  watches[ mkLit(v,true) ].clear();
-	  watches[ mkLit(v,false) ].clear();
-	}
-	
+        // cleared all watch lists
+        watches.cleanAll();
+        for (Var v = 0; v < nVars(); ++v) {
+            watches[ mkLit(v, true) ].clear();
+            watches[ mkLit(v, false) ].clear();
+        }
+
         for (int i = 0, j = 0, k = 0; i < clauses.size(); i++) {
             Clause& c = ca[clauses[i]];
             for (j = 0, k = 0; j < c.size(); j++) {
@@ -691,8 +691,8 @@ void LookaheadSplitting::shrinkClauses()
                 }
             }
             c.shrink(j - k);
-	    if( c.size() == 1 ) uncheckedEnqueue( c[0] ); // handle unit clauses properly!
-	    else attachClause( clauses[i] );
+            if (c.size() == 1) { uncheckedEnqueue(c[0]); }    // handle unit clauses properly!
+            else { attachClause(clauses[i]); }
         }
 
         if (opt_pure_lit > 0) {
@@ -713,8 +713,8 @@ void LookaheadSplitting::shrinkClauses()
         }
 
         CRef ref = propagate();
-	assert( ref == CRef_Undef && "otherwise the current formula is unsatisfiable" );
-        
+        assert(ref == CRef_Undef && "otherwise the current formula is unsatisfiable");
+
         checkGarbage();
         rebuildOrderHeap();
     }
@@ -742,7 +742,7 @@ void LookaheadSplitting::preselectionHeuristic()
     int *numPosLitClause = new int[nVars()];
     vec<VarScore> varScore;
     sortedVar.clear(); // clear the vector with sorted variables
-    assert( sortedVar.size() == 0 && "yet there should not be any variables in the preselection" );
+    assert(sortedVar.size() == 0 && "yet there should not be any variables in the preselection");
     for (int i = 0; i < nVars(); i++) {
         posLitScore[i] = 0;
         negLitScore[i] = 0;
@@ -781,7 +781,7 @@ void LookaheadSplitting::preselectionHeuristic()
             }
         }
         sort(varScore);
-	assert( varScore.size() <= nVars() && "cannot add variables" );
+        assert(varScore.size() <= nVars() && "cannot add variables");
         for (int i = varScore.size() - 1; i >= 0; i--) {
             sortedVar.push(varScore[i].var);
         }
@@ -916,7 +916,7 @@ void LookaheadSplitting::preselectionHeuristic()
 
 void LookaheadSplitting::preselectVar(vec<int>& sv, vec<int>& bkl)
 {
-    assert( sv.size() < nVars() && "cannot work on more variables than occuring in the formula" );
+    assert(sv.size() < nVars() && "cannot work on more variables than occuring in the formula");
     int bestK;
     if (opt_adp_preselection_ranking) {
         bestK = opt_adp_preselection_L + opt_adp_preselection_S * (countFailedLiterals / countLookaheadDecisions);
@@ -945,8 +945,8 @@ void LookaheadSplitting::preselectVar(vec<int>& sv, vec<int>& bkl)
             }
         }
     }
-    fprintf( stderr, "Number of preselected variables( objectID: %ld ) \t\t\t = %d / %d\n", (uint64_t)this, bkl.size(), nVars());
-    assert( bkl.size() < nVars() && "cannot select more variables than present in the formula" );
+    fprintf(stderr, "Number of preselected variables( objectID: %ld ) \t\t\t = %d / %d\n", (uint64_t)this, bkl.size(), nVars());
+    assert(bkl.size() < nVars() && "cannot select more variables than present in the formula");
     if (bkl.size() > statistics.getI(splitterMaxPreselectedVariablesID))
     { statistics.changeI(splitterMaxPreselectedVariablesID, bkl.size() - statistics.getI(splitterMaxPreselectedVariablesID)); }
 }
@@ -1065,7 +1065,7 @@ decLitNotFound:
     preselectVar(sortedVar, bestKList);
     score.clear();
     score.growTo(bestKList.size(), 0);
-    assert( score.size() == bestKList.size() && "has been initialized to the same size" );
+    assert(score.size() == bestKList.size() && "has been initialized to the same size");
     numIterations = opt_num_iterat;
     progress = true;
     bestVarIndex = var_Undef;
@@ -1098,7 +1098,7 @@ decLitNotFound:
 
         //removeSatisfied(learnts);//removing satisfied learnt clauses
         //checkGarbage();
-        assert( bestKList.size() <= nVars() * 2 && "has to have information ready to be selected" );
+        assert(bestKList.size() <= nVars() * 2 && "has to have information ready to be selected");
 
         for (int i = 0; i < bestKList.size(); i++) {
             bool positiveLookahead = false;
@@ -1166,7 +1166,7 @@ decLitNotFound:
                 continue;
             }
             sizePositiveLookahead = trail.size() - initTrailSize;
-	    assert( trail.size() <= nVars() && initTrailSize <= trail.size() && "there cannot be more elements in the trail than there are variables in the solver" );
+            assert(trail.size() <= nVars() && initTrailSize <= trail.size() && "there cannot be more elements in the trail than there are variables in the solver");
             for (int j = initTrailSize; j < trail.size(); j++) {
                 //fprintf(stderr, "Watcher size = %d\n", watches[trail[j]].size());
                 sizeWatcherPositiveLookahead += sign(trail[j]) ? watcherNegLitSize[i] : watcherPosLitSize[i];
@@ -1348,7 +1348,7 @@ decLitNotFound:
                 //              }
             }
 
-            assert( score.size() == bestKList.size() && "has been initialized to the same size" );
+            assert(score.size() == bestKList.size() && "has been initialized to the same size");
             if (!positiveLookahead && !negativeLookahead) {
                 switch (heuristic) {
                 case 0:
@@ -1397,14 +1397,14 @@ decLitNotFound:
                 }
             }
         }
-        assert( score.size() == bestKList.size() && "has been initialized to the same size" );
+        assert(score.size() == bestKList.size() && "has been initialized to the same size");
     }
 
-    assert( score.size() == bestKList.size() && "has been initialized to the same size" );
-    
+    assert(score.size() == bestKList.size() && "has been initialized to the same size");
+
 jump:
     cancelUntil(decLev);
-    
+
     for (int i = 0; i < score.size(); i++) {
         if (score[i] > 0 && score[i] > bestVarScore && value(bestKList[i]) == l_Undef) {
             bestVarScore = score[i];
@@ -1474,7 +1474,7 @@ jump:
     vec<Lit>* clause;
     if (opt_failed_literals == 2) {
         for (int i = 0; i < failedLiterals.size(); i++) {
-            lbd_marker.setCurrentStep( var(failedLiterals[i]) );
+            lbd_marker.setCurrentStep(var(failedLiterals[i]));
             clause = new vec<Lit>();
             clause->push(~failedLiterals[i]);
             (*valid)->push(clause);
@@ -1483,7 +1483,7 @@ jump:
     }
     if (opt_nec_assign == 2) {
         for (int i = 0; i < necAssign.size(); i++) {
-            lbd_marker.setCurrentStep( var(necAssign[i]) );
+            lbd_marker.setCurrentStep(var(necAssign[i]));
             clause = new vec<Lit>();
             clause->push(necAssign[i]);
             (*valid)->push(clause);
@@ -1492,7 +1492,7 @@ jump:
     }
     if (opt_clause_learning == 2) {
         for (int i = 0; i < unitLearnts.size(); i++) {
-            lbd_marker.setCurrentStep( var(unitLearnts[i]) );
+            lbd_marker.setCurrentStep(var(unitLearnts[i]));
             clause = new vec<Lit>();
             clause->push(unitLearnts[i]);
             (*valid)->push(clause);
@@ -1503,17 +1503,17 @@ jump:
         Lit eqLit;
         for (int i = 0; i < varEq.size() - 1; i = i + 2) {
             eqLit = lit_Undef;
-            if(value(varEq[i])==l_True && lbd_marker.isCurrentStep(var(varEq[i])) )
-                eqLit = varEq[i+1];
-            else if(value(~varEq[i])==l_True && lbd_marker.isCurrentStep(var(varEq[i])) )
-                eqLit = ~varEq[i+1];
-            if(value(varEq[i+1])==l_True && lbd_marker.isCurrentStep( var(varEq[i+1])) )
-                eqLit = varEq[i];
-            else if(value(~varEq[i+1])==l_True && lbd_marker.isCurrentStep( var(varEq[i+1])) )
-                eqLit = ~varEq[i];
+            if (value(varEq[i]) == l_True && lbd_marker.isCurrentStep(var(varEq[i])))
+            { eqLit = varEq[i + 1]; }
+            else if (value(~varEq[i]) == l_True && lbd_marker.isCurrentStep(var(varEq[i])))
+            { eqLit = ~varEq[i + 1]; }
+            if (value(varEq[i + 1]) == l_True && lbd_marker.isCurrentStep(var(varEq[i + 1])))
+            { eqLit = varEq[i]; }
+            else if (value(~varEq[i + 1]) == l_True && lbd_marker.isCurrentStep(var(varEq[i + 1])))
+            { eqLit = ~varEq[i]; }
 
-            if(eqLit!=lit_Undef &&  ! lbd_marker.isCurrentStep(var(eqLit)) ){
-                lbd_marker.setCurrentStep( var(eqLit) );
+            if (eqLit != lit_Undef &&  ! lbd_marker.isCurrentStep(var(eqLit))) {
+                lbd_marker.setCurrentStep(var(eqLit));
                 clause = new vec<Lit>();
                 clause->push(eqLit);
                 (*valid)->push(clause);
@@ -1523,15 +1523,15 @@ jump:
     if (opt_double_lookahead && opt_bin_constraints) {
         for (int i = 0, j = 0; i < binaryForcedClauses.size() - 1; i = i + 2) {
             if ((value(binaryForcedClauses[i]) == l_True) || value(binaryForcedClauses[i + 1]) == l_True)
-                continue;
-            if(lbd_marker.isCurrentStep( var(binaryForcedClauses[i]) ) && value(binaryForcedClauses[i])==l_False && value(binaryForcedClauses[i+1])==l_Undef)
-                j=i+1;
-            else if(lbd_marker.isCurrentStep( var(binaryForcedClauses[i+1]) ) && value(binaryForcedClauses[i+1])==l_False && value(binaryForcedClauses[i])==l_Undef)
-                j=i;
+            { continue; }
+            if (lbd_marker.isCurrentStep(var(binaryForcedClauses[i])) && value(binaryForcedClauses[i]) == l_False && value(binaryForcedClauses[i + 1]) == l_Undef)
+            { j = i + 1; }
+            else if (lbd_marker.isCurrentStep(var(binaryForcedClauses[i + 1])) && value(binaryForcedClauses[i + 1]) == l_False && value(binaryForcedClauses[i]) == l_Undef)
+            { j = i; }
             else
-                continue;
-            if( ! lbd_marker.isCurrentStep( var(binaryForcedClauses[j])) ){
-                lbd_marker.setCurrentStep(var(binaryForcedClauses[j]) );
+            { continue; }
+            if (! lbd_marker.isCurrentStep(var(binaryForcedClauses[j]))) {
+                lbd_marker.setCurrentStep(var(binaryForcedClauses[j]));
                 clause = new vec<Lit>();
                 clause->push(binaryForcedClauses[j]);
                 (*valid)->push(clause);

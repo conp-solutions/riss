@@ -6,7 +6,7 @@
  */
 
 #ifndef PCASSO_VSIDSSPLITTING_H
-#define	PCASSO_VSIDSSPLITTING_H
+#define PCASSO_VSIDSSPLITTING_H
 
 #include "riss/mtl/Vec.h"
 #include "riss/core/SolverTypes.h"
