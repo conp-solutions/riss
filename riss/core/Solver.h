@@ -328,15 +328,26 @@ class Solver
     OccLists<Lit, vec<Watcher>, WatcherDeleted> watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
     // no watchesBin, incorporated into watches
     
+    /** structure to hande reverse minimization nicely
+     *  uses data structures of solver for incomplete propagation
+     */
     struct ReverseMinimization {
-      OccLists<Lit, vec<Watcher>, WatcherDeleted> watches;   // watch list for learned clause minimization (via vivification)
       vec<lbool> assigns;                                    // assignment for learned clause minimization
       vec<Lit>   trail;                                      // trail for learned clause minimization
       bool enabled;                                                 // indicate whether the technique is enabled
-      ReverseMinimization(bool doUse, ClauseAllocator& ca) : enabled(doUse), watches( WatcherDeleted(ca) ) { }
+      
+      int attempts;
+      int revMindroppedLiterals;
+      int revMinConflicts;
+      int revMincutOffLiterals;
+      int succesfulReverseMinimizations;
+      
+      ReverseMinimization(bool doUse) : enabled(doUse), attempts(0), revMindroppedLiterals(0), revMinConflicts(0), revMincutOffLiterals(0), succesfulReverseMinimizations(0) { }
+      
       lbool value(const Var& x) const { return assigns[x]; }                         /// The current value of a variable.
-      lbool value(const Lit& p) const { return varFlags[var(p)].assigns ^ sign(p); } /// The current value of a literal.
-      void uncheckedEnqueue(const Lit& l){ assigns[ var(l) ] = sign(l); trail.push( l ); } /// add variable assignment
+      lbool value(const Lit& p) const { return assigns[var(p)] ^ sign(p); } /// The current value of a literal.
+      void uncheckedEnqueue(const Lit& l){ assigns[ var(l) ] = sign(l) ? l_False : l_True; trail.push( l ); } /// add variable assignment
+      
     } reverseMinimization;
     
   public: // TODO: set more nicely, or write method!
