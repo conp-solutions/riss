@@ -9,7 +9,7 @@
 set -e
 
 # solvers for fuzzchecking
-solver=('riss-simp' 'riss-core -config=Riss427:BMC_FULL' 'riss-core -config=CSSC2014' 'pfolio' 'pcasso')
+solver=('riss-simp' 'riss-core -config=Riss427:BMC_FULL' 'riss-core -config=CSSC2014' 'pfolio' 'pcasso -model -thread=2')
 params="-mem-lim=2048"
 
 # directory of this script (in repo/scripts)
@@ -19,7 +19,10 @@ repo_dir="$(dirname "$script_dir")"
 
 echo "Build all targets"
 cd $repo_dir
-mkdir build
+
+if [ ! -d "build" ]; then
+    mkdir build
+fi
 cd build
 cmake -DCMAKE_BUILD_TYPE=Debug ..
 make all
@@ -29,13 +32,12 @@ cd $repo_dir/tools/checker
 make
 
 echo "Start fuzzchecking"
-n_runs=100
+n_runs=150
 
 # check each solver
 for s in "${solver[@]}"
 do
     echo "Run fuzzer with $n_runs cnfs on $s"
-    params=""
 
     # write wrapper script to call solver with parameters
     echo "$repo_dir/build/bin/$s $params \$1" > solver-wrapper.sh
@@ -52,7 +54,7 @@ do
 
     if ! [ $bugs -eq 1 ]
         then
-            echo "fuzzer found bugs for $s"
+            echo "fuzzer found bug for $s"
             exit 1
     fi
 done
