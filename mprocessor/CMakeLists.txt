@@ -12,7 +12,7 @@ add_executable(${PROJECT_NAME} Main.cc)
 if(STATIC_BINARIES)
   target_link_libraries(${PROJECT_NAME} coprocessor-lib-static riss-lib-static)
 else()
-  target_link_libraries(${PROJECT_NAME} coprocessor-lib-shared lib-riss-shared)
+  target_link_libraries(${PROJECT_NAME} coprocessor-lib-shared riss-lib-shared)
 endif()
 
 # Installation:
