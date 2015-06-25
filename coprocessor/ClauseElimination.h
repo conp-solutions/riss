@@ -22,7 +22,7 @@ namespace Coprocessor
 
 /** This class implement subsumption and strengthening, and related techniques
  */
-class ClauseElimination : public Technique
+class ClauseElimination : public Technique<ClauseElimination>
 {
 
     Propagation& propagation;     // object that takes care of unit propagation

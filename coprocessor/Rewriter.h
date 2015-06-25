@@ -18,7 +18,7 @@ namespace Coprocessor
 
 /** this class is used for bounded variable addition (replace patterns by introducion a fresh variable)
  */
-class Rewriter : public Technique
+class Rewriter : public Technique<Rewriter>
 {
 
     CoprocessorData& data;

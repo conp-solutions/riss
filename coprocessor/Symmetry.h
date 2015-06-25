@@ -18,7 +18,7 @@ namespace Coprocessor
 // forward declaration
 
 /** class that implements local symmetry detection */
-class Symmetry : public Technique
+class Symmetry : public Technique<Symmetry>
 {
 
     CoprocessorData& data;

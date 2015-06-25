@@ -17,7 +17,7 @@ namespace Coprocessor
 
 /** this class is used for blocked clause elimination procedure
  */
-class RATElimination : public Technique
+class RATElimination : public Technique<RATElimination>
 {
 
     CoprocessorData& data;

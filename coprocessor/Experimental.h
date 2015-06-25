@@ -16,7 +16,7 @@ namespace Coprocessor
 
 /** experimental techniques, test bed
  */
-class ExperimentalTechniques : public Technique
+class ExperimentalTechniques : public Technique<ExperimentalTechniques>
 {
 
     CoprocessorData& data;

@@ -21,7 +21,7 @@ namespace Coprocessor
 {
 
 /** perform 2-SAT checking */
-class TwoSatSolver : public Technique
+class TwoSatSolver : public Technique<TwoSatSolver>
 {
     CoprocessorData& data;
     BIG big;

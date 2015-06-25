@@ -22,7 +22,7 @@ namespace Coprocessor
 
 /** This class implement hidden tautology elimination
  */
-class Unhiding : public Technique
+class Unhiding : public Technique<Unhiding>
 {
 
     CoprocessorData& data;        // object to store all coprocessor data

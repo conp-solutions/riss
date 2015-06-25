@@ -10,17 +10,21 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include "riss/utils/ThreadController.h"
 #include "coprocessor/CP3Config.h"
-// using namespace Riss;
+
 
 namespace Coprocessor
 {
 
-/** template class for all techniques that should be implemented into Coprocessor
- *  should be inherited by all implementations of classes
+/**
+ * Template class for all techniques that should be implemented into Coprocessor
+ * should be inherited by all implementations of classes.
+ *
+ * It uses the CRTP (Curiously recurring template pattern) technique for static
+ * polymorphism. This prevents vtables.
  */
+template<class T>
 class Technique
 {
-
   protected:
     CP3Config& config;             // store the configuration for the whole preprocessor
 
@@ -39,12 +43,28 @@ class Technique
 
   public:
 
-    Technique(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller);
+    Technique(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller)
+        : config(_config)
+        , modifiedFormula(false)
+        , isInitialized(false)
+        , myDeleteTimer(0)
+        , thisPelalty(0)
+        , lastMaxPenalty(0)
+        , ca(_ca)
+        , controller(_controller)
+        , didPrintCannotDrup(false)
+        , didPrintCannotExtraInfo(false)
+    {}
 
     /** return whether some changes have been applied since last time
      *  resets the counter after call
      */
-    bool appliedSomething();
+    inline bool appliedSomething()
+    {
+        bool modified = modifiedFormula;
+        modifiedFormula = false;
+        return modified;
+    }
 
     /** call this method for each clause when the technique is initialized with the formula
      *  This method should be overwritten by all techniques that inherit this class
@@ -64,7 +84,11 @@ class Technique
 
   protected:
     /** call this method to indicate that the technique has applied changes to the formula */
-    void didChange();
+    inline void didChange()
+    {
+        modifiedFormula = true;
+    }
+
 
     /** reset counter, so that complete propagation is executed next time
      *  This method should be overwritten by all techniques that inherit this class
@@ -72,142 +96,70 @@ class Technique
     void reset();
 
     /** indicate that this technique has been initialized (reset if destroy is called) */
-    void initializedTechnique();
+    inline void initializedTechnique()
+    {
+        isInitialized = true;
+    }
 
     /** return true, if technique can be used without further initialization */
-    bool isInitializedTechnique();
+    inline bool isInitializedTechnique()
+    {
+        return isInitialized;
+    }
 
     /** give delete timer */
-    uint32_t lastDeleteTime();
+    inline uint32_t lastDeleteTime()
+    {
+        return myDeleteTimer;
+    }
 
     /** update current delete timer */
-    void updateDeleteTime(const uint32_t deleteTime);
+    inline void updateDeleteTime(const uint32_t deleteTime)
+    {
+        myDeleteTimer = deleteTime;
+    }
 
     /** ask whether a simplification should be performed yet */
-    bool performSimplification();
+    inline bool performSimplification()
+    {
+        bool ret = (thisPelalty == 0);
+        thisPelalty = (thisPelalty == 0) ? thisPelalty : thisPelalty - 1;  // reduce current wait cycle if necessary!
+        return ret; // if there is no penalty, apply the simplification!
+    }
 
     /** return whether next time the simplification will be performed */
-    bool willSimplify() const;
+    inline bool willSimplify() const
+    {
+        return thisPelalty == 0;
+    }
 
     /** report that the current simplification was unsuccessful */
-    void unsuccessfulSimplification();
+    inline void unsuccessfulSimplification()
+    {
+        thisPelalty = ++lastMaxPenalty;
+    }
+
 
     /** tell via stream that the technique does not support DRUP proofs */
-    void printDRUPwarning(ostream& stream, const string& s);
+    inline void printDRUPwarning(ostream& stream, const string& s)
+    {
+        if (!didPrintCannotDrup) {
+            stream << "c [" << s << "] cannot produce DRUP proofs" << std::endl;
+        }
+        didPrintCannotDrup = true;
+    }
 
     /** tell via stream that the technique does not support extra clause info proofs */
-    void printExtraInfowarning(ostream& stream, const string& s);
+    inline void printExtraInfowarning(ostream& stream, const string& s)
+    {
+        if (!didPrintCannotExtraInfo) {
+            stream << "c [" << s << "] cannot handle clause/variable extra information" << std::endl;
+        }
+        didPrintCannotExtraInfo = true;
+    }
 
 };
 
-inline void Technique::giveMoreSteps()
-{
-    assert(false && "needs to be overwritten");
-}
-
-
-inline Technique::Technique(Coprocessor::CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller)
-    : config(_config)
-    , modifiedFormula(false)
-    , isInitialized(false)
-    , myDeleteTimer(0)
-    , thisPelalty(0)
-    , lastMaxPenalty(0)
-    , ca(_ca)
-    , controller(_controller)
-    , didPrintCannotDrup(false)
-    , didPrintCannotExtraInfo(false)
-{}
-
-inline bool Technique::appliedSomething()
-{
-    bool modified = modifiedFormula;
-    modifiedFormula = false;
-    return modified;
-}
-
-inline void Technique::didChange()
-{
-    modifiedFormula = true;
-}
-
-inline void Technique::initClause(const Riss::CRef& cr)
-{
-    assert(false && "This method has not been implemented.");
-}
-
-inline void Technique::reset()
-{
-    assert(false && "This method has not been implemented.");
-}
-
-inline void Technique::initializedTechnique()
-{
-    isInitialized = true;
-}
-
-inline bool Technique::isInitializedTechnique()
-{
-    return isInitialized;
-}
-
-
-inline void Technique::destroy()
-{
-    assert(false && "This method has not been implemented.");
-}
-
-inline void Technique::printStatistics(std::ostream& stream)
-{
-    /* // example output
-    stream << "c [STAT] EE " << eeTime << " s, " << steps << " steps" << std::endl;
-    stream << "c [STAT] EE-gate " << gateTime << " s, " << gateSteps << " steps" << std::endl;
-    */
-    assert(false && "This method has not been implemented");
-}
-
-inline uint32_t Technique::lastDeleteTime()
-{
-    return myDeleteTimer;
-}
-
-inline void Technique::updateDeleteTime(const uint32_t deleteTime)
-{
-    myDeleteTimer = deleteTime;
-}
-
-inline bool Technique::performSimplification()
-{
-    bool ret = (thisPelalty == 0);
-    thisPelalty = (thisPelalty == 0) ? thisPelalty : thisPelalty - 1;  // reduce current wait cycle if necessary!
-    return ret; // if there is no penalty, apply the simplification!
-}
-
-inline bool Technique::willSimplify() const
-{
-    return thisPelalty == 0;
-}
-
-
-inline void Technique::unsuccessfulSimplification()
-{
-    thisPelalty = ++lastMaxPenalty;
-}
-
-inline void Technique::printDRUPwarning(std::ostream& stream, const std::string& s)
-{
-    if (! didPrintCannotDrup) { stream << "c [" << s << "] cannot produce DRUP proofs" << std::endl; }
-    didPrintCannotDrup = true;
-}
-
-inline void Technique::printExtraInfowarning(std::ostream& stream, const std::string& s)
-{
-    if (! didPrintCannotExtraInfo) { stream << "c [" << s << "] cannot handle clause/variable extra information" << std::endl; }
-    didPrintCannotExtraInfo = true;
-}
-
-
-
-}
+} // end namespace coprocessor
 
 #endif

@@ -17,7 +17,7 @@ namespace Coprocessor
 /** this class is used for checking whether clauses are entailed by the remaining formula cheaply
  *  (so far, check whether resolving two other clauses produces this clause)
  */
-class EntailedRedundant : public Technique
+class EntailedRedundant : public Technique<EntailedRedundant>
 {
 
     CoprocessorData& data;

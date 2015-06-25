@@ -20,7 +20,7 @@ namespace Coprocessor
 
 /** This class implement blocked variable elimination
  */
-class BoundedVariableElimination : public Technique
+class BoundedVariableElimination : public Technique<BoundedVariableElimination>
 {
 
     Coprocessor::Propagation& propagation;

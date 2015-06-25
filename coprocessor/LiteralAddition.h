@@ -17,7 +17,7 @@ namespace Coprocessor
 
 /** this class is used for blocked clause elimination procedure
  */
-class LiteralAddition : public Technique
+class LiteralAddition : public Technique<LiteralAddition>
 {
 
     CoprocessorData& data;

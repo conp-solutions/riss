@@ -23,7 +23,7 @@ namespace Coprocessor
 
 /** This class implement subsumption and strengthening, and related techniques
  */
-class Subsumption : public Technique
+class Subsumption : public Technique<Subsumption>
 {
 
     Coprocessor::CoprocessorData& data;

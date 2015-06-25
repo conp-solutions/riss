@@ -18,7 +18,7 @@ namespace Coprocessor
 
 /** this class is used for usual unit propagation, probing and distillation/asyymetric branching
  */
-class Propagation : public Technique
+class Propagation : public Technique<Propagation>
 {
     /*  TODO: add queues and other attributes here!
      */

@@ -23,7 +23,7 @@ namespace Coprocessor
 
 /** This class implement hidden tautology elimination
  */
-class HiddenTautologyElimination : public Technique
+class HiddenTautologyElimination : public Technique<HiddenTautologyElimination>
 {
 
     Propagation& propagation;    // object that takes care of unit propagation
