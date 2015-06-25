@@ -56,7 +56,7 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
             ++removedClauses; // = ca[ positive[i] ].can_be_deleted() ? removedClauses : removedClauses + 1;
             ca[ positive[i] ].set_delete(true);
             modifiedFormula = true;
-            data.removedClause(positive[i], heap, ignore);
+            data.removedClause(positive[i], heap, false, ignore);
             // remove clauses from structures?
         }
         vector<CRef>().swap(positive); // free physical space of positive
