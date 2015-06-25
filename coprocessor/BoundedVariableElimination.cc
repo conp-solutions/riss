@@ -32,7 +32,7 @@ BoundedVariableElimination::BoundedVariableElimination(CP3Config& _config, Riss:
 
 void BoundedVariableElimination::giveMoreSteps()
 {
-    seqBveSteps = seqBveSteps < config.opt_bveInpStepInc ? 0 : seqBveSteps - config.opt_bveInpStepInc;
+    seqBveSteps = (seqBveSteps < config.opt_bveInpStepInc) ? 0 : seqBveSteps - config.opt_bveInpStepInc;
 }
 
 
@@ -150,14 +150,18 @@ lbool BoundedVariableElimination::process(CoprocessorData &data, const bool doSt
     }
     VarOrderBVEHeapLt comp(data, config.opt_bve_heap);
     Heap<VarOrderBVEHeapLt> newheap(comp);
+
+    // We is a heap, if the option is not set to "random"
+    // otherwise use a plain vector
     if (config.opt_bve_heap != 2) {
         data.getActiveVariables(lastDeleteTime(), newheap);
     } else {
         data.getActiveVariables(lastDeleteTime(), variable_queue);
     }
 
-    if (propagation.process(data, true) == l_False)
-    { return l_False; }
+    if (propagation.process(data, true) == l_False) {
+        return l_False;
+    }
     bool upAppliedSomething = propagation.appliedSomething();
 
 
@@ -172,16 +176,26 @@ lbool BoundedVariableElimination::process(CoprocessorData &data, const bool doSt
     data.ma.resize(data.nVars() * 2);
 
     sequentiellBVE(data, newheap, false);
-    if (config.opt_bve_heap != 2) { newheap.clear(); }
-    else { variable_queue.clear(); }
 
-    if (doStatistics) { processTime = cpuTime() - processTime; }
-    if (!modifiedFormula) { unsuccessfulSimplification(); }
+    // clear the variable keeping data structure
+    if (config.opt_bve_heap != 2) {
+        newheap.clear();
+    } else {
+        variable_queue.clear();
+    }
+
+    if (doStatistics) {
+        processTime = cpuTime() - processTime;
+    }
+    if (!modifiedFormula) {
+        unsuccessfulSimplification();
+    }
     modifiedFormula = modifiedFormula || upAppliedSomething;
-    if (data.getSolver()->okay())
-    { return l_Undef; }
-    else
-    { return l_False; }
+    if (data.getSolver()->okay()) {
+        return l_Undef;
+    } else {
+        return l_False;
+    }
 }
 
 
@@ -222,8 +236,9 @@ static void printClauses(ClauseAllocator& ca, vector<CRef>& list, bool skipDelet
 
 }
 
-void BoundedVariableElimination::sequentiellBVE(CoprocessorData& data, Heap<VarOrderBVEHeapLt>& heap, const bool force,
-        const bool doStatistics)
+void BoundedVariableElimination::sequentiellBVE(CoprocessorData& data,
+                                                Heap<VarOrderBVEHeapLt>& heap,
+                                                const bool force, const bool doStatistics)
 {
     //Subsumption / Strengthening
     if (doStatistics) { subsimpTime = cpuTime() - subsimpTime; }
@@ -997,10 +1012,10 @@ bool BoundedVariableElimination::findGates(CoprocessorData& data, const Var v, i
     MarkArray& markArray = (helper == 0 ? data.ma : *helper);
 
     for (uint32_t pn = 0; pn < 2; ++pn) {
-        vector<CRef>& pList = data.list(mkLit(v, pn == 0 ? false : true));
-        vector<CRef>& nList = data.list(mkLit(v, pn == 0 ? true : false));
-        const Lit pLit = mkLit(v, pn == 0 ? false : true);
-        const Lit nLit = mkLit(v, pn == 0 ? true : false);
+        vector<CRef>& pList = data.list(mkLit(v, pn != 0));
+        vector<CRef>& nList = data.list(mkLit(v, pn == 0));
+        const Lit pLit = mkLit(v, pn != 0);
+        const Lit nLit = mkLit(v, pn == 0);
         int& pClauses = pn == 0 ? p_limit : n_limit;
         int& nClauses = pn == 0 ? n_limit : p_limit;
 
