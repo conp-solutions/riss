@@ -2,8 +2,8 @@
 Copyright (c) 2012 Norbert Manthey
 *************************************************************************************************/
 
-#ifndef _VARFILEPARSER_H
-#define _VARFILEPARSER_H
+#ifndef RISS_VARFILEPARSER_H
+#define RISS_VARFILEPARSER_H
 
 #include <iostream>
 

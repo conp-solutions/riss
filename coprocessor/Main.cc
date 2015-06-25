@@ -95,9 +95,9 @@ int main(int argc, char** argv)
         Coprocessor::CP3Config cp3config(string(opt_config == 0 ? "" : opt_config));
         foundHelp = coreConfig.parseOptions(argc, argv) || foundHelp;
         foundHelp = cp3config.parseOptions(argc, argv) || foundHelp;
-        if (foundHelp) { exit(0); }   // stop after printing the help information
+        if (foundHelp) { exit(0); }  // stop after printing the help information
 
-        if (opt_cmdLine) {   // print the command line options
+        if (opt_cmdLine) {  // print the command line options
             std::stringstream s;
             coreConfig.configCall(s);
             cp3config.configCall(s);
@@ -106,7 +106,7 @@ int main(int argc, char** argv)
             exit(0);
         }
 
-        Solver S(coreConfig);
+        Solver S(&coreConfig);
         S.setPreprocessor(&cp3config); // tell solver about preprocessor
 
         double      initial_time = cpuTime();
@@ -163,7 +163,7 @@ int main(int argc, char** argv)
 
             // open file for proof
             S.drupProofFile = (drupFile) ? fopen((const char*) drupFile , "wb") : NULL;
-            if (opt_proofFormat && strlen(opt_proofFormat) > 0 &&  S.drupProofFile != NULL) { fprintf(S.drupProofFile, "o proof %s\n", (const char*)opt_proofFormat); }     // we are writing proofs of the given format!
+            if (opt_proofFormat && strlen(opt_proofFormat) > 0 &&  S.drupProofFile != NULL) { fprintf(S.drupProofFile, "o proof %s\n", (const char*)opt_proofFormat); }    // we are writing proofs of the given format!
 
             parse_DIMACS(in, S);
             gzclose(in);
@@ -235,7 +235,7 @@ int main(int argc, char** argv)
                     ret = S.solveLimited(dummy);
                 }
                 if (ret == l_True) {
-                    if (S.drupProofFile != 0) { fclose(S.drupProofFile); }   // close proof file!
+                    if (S.drupProofFile != 0) { fclose(S.drupProofFile); }  // close proof file!
                     preprocessor.extendModel(S.model);
                     if (res != NULL) {
                         cerr << "s SATISFIABLE" << endl;

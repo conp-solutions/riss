@@ -314,8 +314,8 @@ int Master::run()
                             splitQueue.pop_front();
                         }
                     } while (node->getState() == TreeNode::unsat);
-                    Debug::PRINT_NOTE("M: SPLITTING NODE ");
-                    Debug::PRINTLN_NOTE(node->getPosition());
+                    PcassoDebug::PRINT_NOTE("M: SPLITTING NODE ");
+                    PcassoDebug::PRINTLN_NOTE(node->getPosition());
                     if (!fail) {
                         assert(node != 0);
                         if (!splittFormula(node)) { continue; }     // if it fails, retry!
@@ -389,20 +389,19 @@ int Master::run()
 
                     fprintf(stderr, "c idle: %d working: %d splitting: %d unclean: %d\n", idles, workers, splitters, uncleans);
 
-	    root.evaluate(*this);
-            if (root.getState() == TreeNode::unsat) {
-                // assign the according solution
-                solution = 20;
-		fprintf(stderr, "found UNSAT of tree\n");
-                // jump out of the workloop
-            } else if (solution == 10 || root.getState() == TreeNode::sat) {
-                // assign the according solution
-                solution = 10;
-		fprintf(stderr, "found SAT of tree\n");
-            }
-            
-            fprintf(stderr, "solution unknown!\n");
-		    
+                    root.evaluate(*this);
+                    if (root.getState() == TreeNode::unsat) {
+                        // assign the according solution
+                        solution = 20;
+                        fprintf(stderr, "found UNSAT of tree\n");
+                        // jump out of the workloop
+                    } else if (solution == 10 || root.getState() == TreeNode::sat) {
+                        // assign the according solution
+                        solution = 10;
+                        fprintf(stderr, "found SAT of tree\n");
+                    }
+
+                    fprintf(stderr, "solution unknown!\n");
                     exit(0);
                 }
             }
@@ -524,7 +523,7 @@ int Master::run()
         if (threadData[i].solver == 0) { continue; }
         threadData[i].solver->interrupt(); // Yeah, it takes time.
         // threadData[i].solver->kill();
-        Debug::PRINTLN_NOTE("thread KILLED");
+        PcassoDebug::PRINTLN_NOTE("thread KILLED");
         if (threadData[i].s == idle || threadData[i].handle == 0) { continue; }
         // pthread_cancel(threadData[i].handle);
         //if( err == ESRCH ) fprintf( stderr, "c specified thread does not exist\n");
@@ -575,6 +574,7 @@ int Master::run()
     fprintf(stderr, "c solved instance with result %d\n", solution);
 
     printf("c CPU time              : %g s\n", cpuTime());
+    printf("c memory                : %g MB\n", memUsedPeak());
 
     // report found value to calling method
     return solution;
@@ -704,16 +704,16 @@ Master::solveInstance(void* data)
         fprintf(stderr, "solve instance with id %d that solves node %d\n", tData.id, tData.nodeToSolve->id());
         fprintf(stderr, "thread %d starts solving a node at %lld with the node solve time %lld\n", tData.id, Master::getCpuTimeMS(), tData.nodeToSolve->solveTime);
     }
-    Debug::PRINT_NOTE("STARTED TO SOLVE NODE ");
-    Debug::PRINT_NOTE(tData.nodeToSolve->getPosition());
-    Debug::PRINT_NOTE(" with PT_Level ");
-    Debug::PRINTLN_NOTE(tData.nodeToSolve->getPTLevel());
+    PcassoDebug::PRINT_NOTE("STARTED TO SOLVE NODE ");
+    PcassoDebug::PRINT_NOTE(tData.nodeToSolve->getPosition());
+    PcassoDebug::PRINT_NOTE(" with PT_Level ");
+    PcassoDebug::PRINTLN_NOTE(tData.nodeToSolve->getPTLevel());
 
     if (UseHardwareCores && hardwareCores.size() > 0) {  // pin this thread to the specified core
         cpu_set_t mask;
         CPU_ZERO(&mask); CPU_SET(tData.id, &mask);
         if (sched_setaffinity(0, sizeof(cpu_set_t), &mask) != 0) {
-            Debug::PRINTLN_NOTE("Failed to pin thread to core");
+            PcassoDebug::PRINTLN_NOTE("Failed to pin thread to core");
         }
     }
 
@@ -722,9 +722,10 @@ Master::solveInstance(void* data)
 
     // create a solver object
     //bool simp = solve_mode;
-    InstanceSolver* slvr = new SolverRiss(defaultSolverConfig);
+    InstanceSolver* slvr = new SolverRiss(&defaultSolverConfig);
     assert(tData.solver == NULL);
     tData.solver = slvr;
+//     SolverPT& S = *slvr;
 
     // Davide> Give the position to the solver
     //S.position = tData.nodeToSolve->getPosition();
@@ -808,7 +809,6 @@ Master::solveInstance(void* data)
     // solve the formula
     lbool solution = slvr->solveLimited(dummy);
     ret = (int)(solution == l_True ? 10 : solution == l_False ? 20 : 0);
-    
     master.lock();
     if (tData.result == 20) { ret = 20; }
 
@@ -816,8 +816,8 @@ Master::solveInstance(void* data)
     if (ret != 10 && ret != 20) {
         statistics.changeI(master.unsolvedNodesID, 1);
     } else {
-      if( tData.nodeToSolve != 0 ) // prevent using 0 pointers
-        tData.nodeToSolve->solveTime = Master::getCpuTimeMS() - cputime;
+        if (tData.nodeToSolve != 0)  // prevent using 0 pointers
+        { tData.nodeToSolve->solveTime = Master::getCpuTimeMS() - cputime; }
     }
 
     // take care about the output
@@ -843,11 +843,11 @@ Master::solveInstance(void* data)
     }
 
     if (ret == 10) {
-      if( tData.nodeToSolve != 0 ) {
-        fprintf(stderr, "============SOLUTION FOUND BY NODE %d AT PARTITION LEVEL %d============\n",
-                tData.nodeToSolve->id(), tData.nodeToSolve->getLevel());
-      }
-      if( tData.nodeToSolve != 0 ) { tData.nodeToSolve->setState(TreeNode::sat); }
+        if (tData.nodeToSolve != 0) {
+            fprintf(stderr, "============SOLUTION FOUND BY NODE %d AT PARTITION LEVEL %d============\n",
+                    tData.nodeToSolve->id(), tData.nodeToSolve->getLevel());
+        }
+        if (tData.nodeToSolve != 0) { tData.nodeToSolve->setState(TreeNode::sat); }
         vec< lbool > solverModel;
         slvr->getModel(solverModel);
         master.submitModel(solverModel);
@@ -855,24 +855,23 @@ Master::solveInstance(void* data)
         if (opt_conflict_killing && ((SolverPT *)tData.solver)->lastLevel < tData.nodeToSolve->getPTLevel()) {
             statistics.changeI(master.nConflictKilledID, 1);
 
-	    if( tData.nodeToSolve != 0 ) {
-	      int i = tData.nodeToSolve->getPTLevel() - ((SolverPT *)tData.solver)->lastLevel;
-	      while (i > 0) {
-		  TreeNode* node = tData.nodeToSolve->getFather();
-		  node->setState(TreeNode::unsat);
-		  --i;
-	      }
-	    }
+            if (tData.nodeToSolve != 0) {
+                int i = tData.nodeToSolve->getPTLevel() - ((SolverPT *)tData.solver)->lastLevel;
+                while (i > 0) {
+                    TreeNode* node = tData.nodeToSolve->getFather();
+                    node->setState(TreeNode::unsat);
+                    --i;
+                }
+            }
         }
-        if( tData.nodeToSolve != 0 ) tData.nodeToSolve->setState(TreeNode::unsat);
+        if (tData.nodeToSolve != 0) { tData.nodeToSolve->setState(TreeNode::unsat); }
     } else {
         // result of solver is "unknown"
-        if( tData.nodeToSolve != 0 ) {
-	  if (master.plainpart && tData.nodeToSolve->getState() == TreeNode::unknown ) { 
-	    tData.nodeToSolve->setState(TreeNode::retry);
-	  }
-	}
-	  
+        if (tData.nodeToSolve != 0) {
+            if (master.plainpart && tData.nodeToSolve->getState() == TreeNode::unknown) {
+                tData.nodeToSolve->setState(TreeNode::retry);
+            }
+        }
 
         if (keepToplevelUnits > 0) {
             int toplevelVariables = 0;
@@ -880,17 +879,17 @@ Master::solveInstance(void* data)
             toplevelVariables = slvr->getTopLevelUnits();
 
             if (toplevelVariables > 0 && MSverbosity > 1) { fprintf(stderr, "found %d topLevel units\n", toplevelVariables - initialUnits); }
-            if( tData.nodeToSolve != 0 ) {
-	      for (int i = initialUnits ; i < toplevelVariables; ++i) {
-		  Lit currentLit = slvr->trailGet(i);  //(*trail)[i];
-		  vector<Lit>* clause = new vector<Lit>(1);
-		  (*clause)[0] = currentLit;
+            if (tData.nodeToSolve != 0) {
+                for (int i = initialUnits ; i < toplevelVariables; ++i) {
+                    Lit currentLit = slvr->trailGet(i);  //(*trail)[i];
+                    vector<Lit>* clause = new vector<Lit>(1);
+                    (*clause)[0] = currentLit;
 
-		  // Davide> I modified this in order to include information about
-		  // literal pt_levels
-		  tData.nodeToSolve->addNodeUnaryConstraint(clause, slvr->getLiteralPTLevel(currentLit));
-	      }
-	    }
+                    // Davide> I modified this in order to include information about
+                    // literal pt_levels
+                    tData.nodeToSolve->addNodeUnaryConstraint(clause, slvr->getLiteralPTLevel(currentLit));
+                }
+            }
         }
     }
 
@@ -899,7 +898,6 @@ Master::solveInstance(void* data)
 
     // Delete pools
 
-
     // set the own state to unclean
     if (MSverbosity > 1) { fprintf(stderr, "run instance with id %d, state=%d, result=%d\n", tData.id, tData.s, tData.result); }
     if (MSverbosity > 2) { fprintf(stderr, "done with the work (%d), wakeup master again\n", ret); }
@@ -907,7 +905,6 @@ Master::solveInstance(void* data)
     if (MSverbosity > 0 && tData.nodeToSolve != 0) { fprintf(stderr, "thread %d calls notify from solving after spending time on the node: %lld\n" , tData.id, tData.nodeToSolve->solveTime); }
 
     master.unlock();
-    
     master.notify();
     return (void*)ret;
 }
@@ -926,7 +923,7 @@ Master::splitInstance(void* data)
         cpu_set_t mask;
         CPU_ZERO(&mask); CPU_SET(tData.id, &mask);
         if (sched_setaffinity(0, sizeof(cpu_set_t), &mask) != 0) {
-            Debug::PRINTLN_NOTE("Failed to pin thread to core");
+            PcassoDebug::PRINTLN_NOTE("Failed to pin thread to core");
         }
     }
 
@@ -951,11 +948,11 @@ Master::splitInstance(void* data)
     // create a solver object
     SplitterSolver* S;
     if (split_mode == 1) {
-        S = new VSIDSSplitting(defaultSolverConfig);
+        S = new VSIDSSplitting(&defaultSolverConfig);
         //((VSIDSSplitting *)S)->setTimeOut(split_timeout);
     }
     if (split_mode == 2) {
-        S = new LookaheadSplitting(defaultSolverConfig);
+        S = new LookaheadSplitting(&defaultSolverConfig);
         ((LookaheadSplitting *)S)->setTimeOut(split_timeout);
     }
     tData.solver = S;
@@ -1018,8 +1015,8 @@ Master::splitInstance(void* data)
 
     if (!S->okay()) {
         fprintf(stderr, "reading split instance resulted in error (node %d)\n", tData.nodeToSolve->id());
-#warning: check whether this is really unsat!
-//         ret = 20;
+#warning: this is ok! (according to LA-splitting author Ahmed)
+        ret = 20;
         // tell statistics
         statistics.changeI(master.splitSolvedNodesID, 1);
         tData.nodeToSolve->solveTime = Master::getCpuTimeMS() - cputime;
@@ -1052,8 +1049,8 @@ Master::splitInstance(void* data)
         } */
 
         // tell statistics
-        Debug::PRINT_NOTE("c add to created nodes: ");
-        Debug::PRINTLN_NOTE((*splits).size());
+        PcassoDebug::PRINT_NOTE("c add to created nodes: ");
+        PcassoDebug::PRINTLN_NOTE((*splits).size());
         statistics.changeI(master.createdNodeID, (*splits).size());
         statistics.changeI(master.splitterCallsID, 1);
 
@@ -1146,7 +1143,7 @@ Master::splitInstance(void* data)
         // shut down all threads that are running below that node (necessary?)
     } else {
         // simply set the node to the unknown state
-
+        tData.nodeToSolve->setState(TreeNode::unknown);
         for (unsigned int i = 0; i < validConstraints.size(); i++)
         { tData.nodeToSolve->addNodeConstraint(validConstraints[i]); }
         // expand the node
@@ -1317,11 +1314,11 @@ Master::killUnsatChildren(unsigned int i)
         TreeNode* curNode = threadData[j].nodeToSolve;
 
         if (solvedNode->isAncestorOf((*curNode))) {
-            Debug::PRINTLN_DEBUG("PREPARING TO KILL A NODE");
+            PcassoDebug::PRINTLN_DEBUG("PREPARING TO KILL A NODE");
             solvedUnsat ++;
             stopThread(j);
             // threadData[j].s = unclean;
-            Debug::PRINTLN_DEBUG("KILLED");
+            PcassoDebug::PRINTLN_DEBUG("KILLED");
             //              notify();
         }
     }
@@ -1329,7 +1326,7 @@ Master::killUnsatChildren(unsigned int i)
         if (MSverbosity > 0 && solvedUnsat > 0) { fprintf(stderr, "M: killed %d nodes that solved unsatisfiable nodes\n", solvedUnsat); }
         statistics.changeI(stoppedUnsatID, solvedUnsat);
     } else {
-        Debug::PRINTLN_NOTE("M: DELETING POOLS ");
+        PcassoDebug::PRINTLN_NOTE("M: DELETING POOLS ");
         assert(threadData[i].nodeToSolve != 0);
         threadData[i].nodeToSolve->removePoolRecursive(true);
     }

@@ -188,7 +188,7 @@ void printFeatures(int argc, char** argv)
     cnffile = argv[1];
 
     CoreConfig coreConfig;
-    Solver S(coreConfig);
+    Solver S(&coreConfig);
 
     double initial_time = cpuTime();
     S.verbosity = 0;

@@ -214,7 +214,7 @@ bool EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
     return modifiedFormula;
 }
 
-void EquivalenceElimination::initClause(const CRef cr)
+void EquivalenceElimination::initClause(const Riss::CRef& cr)
 {
 
 }

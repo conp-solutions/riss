@@ -44,7 +44,7 @@ static DoubleOption opt_simp_garbage_frac(_cat, "simp-gc-frac", "The fraction of
 
 
 SimpSolver::SimpSolver(CoreConfig& _config) :
-    Solver(_config)
+    Solver(&_config)
     , config(_config)
     , grow(opt_grow)
     , clause_lim(opt_clause_lim)

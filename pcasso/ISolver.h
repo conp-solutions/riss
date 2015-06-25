@@ -9,15 +9,18 @@
 #ifndef ISOLVER_H
 #define ISOLVER_H
 
-namespace Pcasso {
-    class ISolver {
+namespace Pcasso
+{
+class ISolver
+{
 
-    public:
-        virtual ~ISolver() {
-        }
+  public:
+    virtual ~ISolver()
+    {
+    }
 
-        virtual void interrupt() = 0;
-    };
+    virtual void interrupt() = 0;
+};
 }
 
 #endif //ISOLVER_H

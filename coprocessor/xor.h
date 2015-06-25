@@ -2,8 +2,8 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef XOR_HH
-#define XOR_HH
+#ifndef RISS_XOR_HH
+#define RISS_XOR_HH
 
 #include "riss/core/Solver.h"
 #include "coprocessor/Technique.h"

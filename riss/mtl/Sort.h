@@ -18,8 +18,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef Minisat_Sort_h
-#define Minisat_Sort_h
+#ifndef RISS_Minisat_Sort_h
+#define RISS_Minisat_Sort_h
 
 #include "riss/mtl/Vec.h"
 #include <vector>
@@ -38,7 +38,6 @@ template<class T>
 struct LessThan_default {
     bool operator()(T x, T y) { return x < y; }
 };
-
 
 /** for very large arrays, use merge sort (because recursions for quicksort might be too high!)
  *  Note: elements should be able to be copied cheaply!
@@ -86,7 +85,7 @@ static inline void mergesort(T* field, const int32_t arraySize, LessThan lt)
         //std::cerr << "c swaps: " << swaps << std::endl;
         memcpy(helpArray, field, sizeof(T) * arraySize);  // copy currently sorted data into the other std::vector as well, if necessary!
         T* tmp = field;
-        field = helpArray;
+//         field = helpArray;  // no need to set the pointer again (as we do use a copy of the outside pointer!)
         helpArray = tmp;
     }
     // free space

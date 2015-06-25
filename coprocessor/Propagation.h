@@ -2,8 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef PROPAGATION_HH
-#define PROPAGATION_HH
+#ifndef RISS_PROPAGATION_HH
+#define RISS_PROPAGATION_HH
 
 #include "riss/core/Solver.h"
 
@@ -41,7 +41,7 @@ class Propagation : public Technique
      */
     Riss::lbool process(CoprocessorData& data, bool sort = false, Riss::Heap<VarOrderBVEHeapLt> * heap = NULL, const Riss::Var ignore = var_Undef);
 
-    void initClause(const Riss::CRef cr);
+    void initClause(const Riss::CRef& cr);
 
     void printStatistics(std::ostream& stream);
 

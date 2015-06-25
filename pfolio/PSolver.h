@@ -2,8 +2,8 @@
 Copyright (c) 2014,      Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef Minisat_PSolver_h
-#define Minisat_PSolver_h
+#ifndef RISS_Minisat_PSolver_h
+#define RISS_Minisat_PSolver_h
 
 #include "riss/core/Solver.h"
 #include "riss/core/CoreConfig.h"

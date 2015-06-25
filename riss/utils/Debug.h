@@ -5,8 +5,8 @@
  *      Author: tirrolo
  */
 
-#ifndef PCASSODEBUG_H_
-#define PCASSODEBUG_H_
+#ifndef PCASSO_DEBUG_H_
+#define PCASSO_DEBUG_H_
 
 #include <iostream>
 #include "riss/mtl/Vec.h"
@@ -15,14 +15,14 @@
 // using namespace std;
 // using namespace Riss;
 
-// support debug output only if it is compiled in
+/// support debug output only if it is compiled in
 #ifndef NDEBUG
-    #define DOUT(x) {x}
+    #define DOUT(x) x
 #else
     #define DOUT(x)
 #endif
 
-namespace Debug
+namespace PcassoDebug
 {
 
 static const int pcasso_debug_verbosity = 0;
@@ -31,9 +31,8 @@ inline void
 PRINTLN(Riss::vec<Riss::Lit>& v)
 {
     if (pcasso_debug_verbosity > 0) {
-        for (int i = 0; i < v.size(); i++) {
-            std::cerr << (sign(v[i]) ? "-" : "") << var(v[i]) + 1 << " ";
-        }
+        for (int i = 0; i < v.size(); i++)
+        { std::cerr << (sign(v[i]) ? "-" : "") << var(v[i]) + 1 << " "; }
         std::cerr << std::endl;
     }
 }
@@ -41,9 +40,8 @@ inline void
 PRINTLN(Riss::vec<Riss::Lit>& v, unsigned int limit)
 {
     if (pcasso_debug_verbosity > 0) {
-        for (int i = 0; i < limit; i++) {
-            std::cerr << (sign(v[i]) ? "-" : "") << var(v[i]) + 1 << " ";
-        }
+        for (int i = 0; i < limit; i++)
+        { std::cerr << (sign(v[i]) ? "-" : "") << var(v[i]) + 1 << " "; }
         std::cerr << std::endl;
     }
 }
@@ -85,9 +83,8 @@ inline void STOP(void)
 }
 inline void PRINTLN_DEBUG(Riss::vec<Riss::Lit>& v)
 {
-    if (pcasso_debug_verbosity > 2) {
-        PRINTLN(v);
-    }
+    if (pcasso_debug_verbosity > 2)
+    { PRINTLN(v); }
 }
 inline void
 PRINTLN_DEBUG(Riss::Lit& l)
@@ -119,9 +116,8 @@ inline void PRINTLN_DEBUG(int i)
 }
 inline void PRINTLN_NOTE(Riss::vec<Riss::Lit>& v)
 {
-    if (pcasso_debug_verbosity > 1) {
-        PRINTLN(v);
-    }
+    if (pcasso_debug_verbosity > 1)
+    { PRINTLN(v); }
 }
 inline void
 PRINTLN_NOTE(Riss::Lit& l)

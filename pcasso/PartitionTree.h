@@ -17,8 +17,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  **************************************************************************************************/
 
-#ifndef PARTITIONTREE_H
-#define PARTITIONTREE_H
+#ifndef PCASSO_PARTITIONTREE_H
+#define PCASSO_PARTITIONTREE_H
 
 // libc
 #include <vector>

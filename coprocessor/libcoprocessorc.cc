@@ -39,7 +39,7 @@ extern "C" {
         if (presetConfig  != 0) { cp3->solverconfig->setPreset(presetConfig); }
         cp3->cp3config = new Coprocessor::CP3Config("");
         if (presetConfig  != 0) { cp3->cp3config->setPreset(presetConfig); }
-        cp3->solver = new Riss::Solver(*(cp3->solverconfig));
+        cp3->solver = new Riss::Solver(cp3->solverconfig);    // pointer to config object, will be deleted by solver during its destruction
         cp3->cp3 = new Coprocessor::Preprocessor(cp3->solver, *(cp3->cp3config));
         return cp3;
     }
@@ -51,7 +51,7 @@ extern "C" {
         delete(*cp3)->cp3config;
         delete(*cp3)->solver;
         // delete (*cp3)->cp3; // not necessary, because solver is already killing it
-        delete(*cp3)->solverconfig;
+        // delete (*cp3)->solverconfig; // deleted by solver
         delete(*cp3);
         (*cp3) = 0;
     }
@@ -67,11 +67,11 @@ extern "C" {
     CPhasNextOutputLit(void* preprocessor)
     {
         libcp3* cp3 = (libcp3*) preprocessor;
-        if (cp3->outputCls < cp3->solver->clauses.size() + cp3->solver->trail.size()) { return 1; }   // there are more clauses to go
-        if (cp3->outputCls >= cp3->solver->clauses.size() + cp3->solver->trail.size()) { return 0; }   // all clauses have been skipped
+        if (cp3->outputCls < cp3->solver->clauses.size() + cp3->solver->trail.size()) { return 1; }  // there are more clauses to go
+        if (cp3->outputCls >= cp3->solver->clauses.size() + cp3->solver->trail.size()) { return 0; }  // all clauses have been skipped
         // here, only the very last clause needs to be considered!
-        if (cp3->outputCls == cp3->solver->trail.size() + cp3->solver->clauses.size() && cp3->outputLit <= 1) { return 1; }   // have seen at most one literal of the very last clause yet (there is at least the termination literal)
-        if (cp3->outputCls > cp3->solver->trail.size() &&  // there is a longer clause
+        if (cp3->outputCls == cp3->solver->trail.size() + cp3->solver->clauses.size() && cp3->outputLit <= 1) { return 1; }  // have seen at most one literal of the very last clause yet (there is at least the termination literal)
+        if (cp3->outputCls > cp3->solver->trail.size() && // there is a longer clause
                 cp3->outputLit <= cp3->solver->ca[ cp3->solver->clauses[ cp3->solver->clauses.size() - 1 ] ].size() // have seen all its literals, but not the termination symbol
            ) { return 1; }
         return 0;
@@ -83,8 +83,8 @@ extern "C" {
         if (!CPhasNextOutputLit(preprocessor)) { return 0; }
         libcp3* cp3 = (libcp3*) preprocessor;
         //cerr << "c ask for literal " << cp3->outputLit << " if cls " << cp3->outputCls << " (trail: " << cp3->solver->trail.size() << ", clss: " << cp3->solver->clauses.size() << ")" << endl;
-        if (cp3->outputCls < cp3->solver->trail.size()) {   // currently reading the trail
-            if (cp3->outputLit >= 1) {   // reached end of unit clause?
+        if (cp3->outputCls < cp3->solver->trail.size()) {  // currently reading the trail
+            if (cp3->outputLit >= 1) {  // reached end of unit clause?
                 cp3->outputLit = 0;
                 cp3->outputCls ++;
                 return 0; // terminate current clause
@@ -94,7 +94,7 @@ extern "C" {
             return sign(l) ? (-var(l) - 1) : (var(l) + 1);
         }
 
-        if (cp3->outputCls >= cp3->solver->trail.size() + cp3->solver->clauses.size()) { return 2 << 31; }   // undefined behavior!
+        if (cp3->outputCls >= cp3->solver->trail.size() + cp3->solver->clauses.size()) { return 2 << 31; }  // undefined behavior!
 
         // reading the clauses - jumping over the trail
         const Clause& c = cp3->solver->ca[  cp3->solver->clauses[cp3->outputCls - cp3->solver->trail.size()] ];

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.12 FATAL_ERROR)
+cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 project("riss-toolbox")
 
@@ -28,7 +28,7 @@ endfunction()
 # 
 # Version of the whole tool box. Subprojects can define their own versions. If
 # no version is specified, this "global" version will be used,
-version("5.0.0")
+version("5.0.1")
 
 option(STATIC_BINARIES "Build fully statically linked binaries" ON)
 option(PCASSO          "adapt assertions to algorithm used in pcasso" OFF)
@@ -93,6 +93,7 @@ add_subdirectory(riss/)
 add_subdirectory(risslibcheck/)
 add_subdirectory(classifier/)
 add_subdirectory(coprocessor/)
+add_subdirectory(externalTools/)
 add_subdirectory(mprocessor/)
 add_subdirectory(pcasso/)
 add_subdirectory(pfolio/)

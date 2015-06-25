@@ -2,8 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef EQUIVALENCEELIMINATION_HH
-#define EQUIVALENCEELIMINATION_HH
+#ifndef RISS_EQUIVALENCEELIMINATION_HH
+#define RISS_EQUIVALENCEELIMINATION_HH
 
 #include "riss/core/Solver.h"
 
@@ -63,7 +63,7 @@ class EquivalenceElimination : public Technique
     /** run equivalent literal elimination */
     bool process(CoprocessorData& data);
 
-    void initClause(const Riss::CRef cr); // inherited from Technique
+    void initClause(const Riss::CRef& cr);  // inherited from Technique
 
     /** inherited from @see Technique */
     void printStatistics(std::ostream& stream);

@@ -19,7 +19,7 @@ static IntOption     opt_scatter_conBw(_cat, "sc-betweenConflicts", "The number 
 static IntOption     opt_restart_first(_cat, "rfirst",              "The base restart interval", 100, IntRange(1, INT32_MAX));
 static DoubleOption  opt_restart_inc(_cat, "rinc",                "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false));
 
-VSIDSSplitting::VSIDSSplitting(CoreConfig& config):
+VSIDSSplitting::VSIDSSplitting(CoreConfig* config):
     SplitterSolver(config)
     , coreConfig(config)
     , restart_first(opt_restart_first)
@@ -321,10 +321,10 @@ lbool VSIDSSplitting::scatterSeach(int nof_conflicts, void* data)
                     float r = 1 / (float)(d.scatterfactor - d.scatters.size());
                     for (int i = 0;; i++) {
                         // 2 << i == 2^(i+1)
-                        if ((2 << (i - 1) <= d.scatterfactor - d.scatters.size()) &&
+                        if ((1 << i <= d.scatterfactor - d.scatters.size()) &&
                                 (2 << i >= d.scatterfactor - d.scatters.size())) {
                             // r-1/(2^i) < 0 and we want absolute
-                            dl = -(r - 1 / (float)(2 << (i - 1))) > r - 1 / (float)(2 << i) ? i + 1 : i;
+                            dl = -(r - 1 / (float)(1 << i)) > r - 1 / (float)(2 << i) ? i + 1 : i;
                             break;
                         }
                     }

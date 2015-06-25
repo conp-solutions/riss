@@ -13,8 +13,8 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 IN THE SOFTWARE.
 ***************************************************************************/
 
-#ifndef SHIFTBMC_H
-#define SHIFTBMC_H
+#ifndef RISS_SHIFTBMC_H
+#define RISS_SHIFTBMC_H
 
 #include "aiger/aiger.h"
 

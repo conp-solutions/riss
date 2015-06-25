@@ -9,8 +9,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef CoreConfig_h
-#define CoreConfig_h
+#ifndef RISS_CoreConfig_h
+#define RISS_CoreConfig_h
 
 #include "riss/utils/Config.h"
 #include "riss/utils/Options.h"

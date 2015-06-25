@@ -2,8 +2,8 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef ENTAILED_HH
-#define ENTAILED_HH
+#ifndef RISS_ENTAILED_HH
+#define RISS_ENTAILED_HH
 
 #include "riss/core/Solver.h"
 #include "coprocessor/Technique.h"

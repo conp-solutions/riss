@@ -331,7 +331,7 @@ bool ClauseElimination::markedBCE(const Lit& l, const Clause& c, const MarkArray
     return false;
 }
 
-void ClauseElimination::initClause(const Riss::CRef cr)
+void ClauseElimination::initClause(const Riss::CRef& cr)
 {
 
 }

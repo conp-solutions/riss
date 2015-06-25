@@ -1165,7 +1165,7 @@ lbool Subsumption::fullStrengthening(Heap<VarOrderBVEHeapLt> * heap, const Var i
  *creating resolvents in the createAllResolvents Version of Strengthening
  *
  */
-lbool Subsumption::createResolvent(const CRef cr, CRef& resolvent, const int negated_lit_pos, Heap<VarOrderBVEHeapLt> * heap, const Var ignore, const bool doStatistics)
+lbool Subsumption::createResolvent(const Riss::CRef& cr, Riss::CRef& resolvent, const int negated_lit_pos, Heap< Coprocessor::VarOrderBVEHeapLt >* heap, const Var ignore, const bool doStatistics)
 {
     Clause& origin = ca[cr];
     assert(origin.size() >= 2);
@@ -1489,12 +1489,12 @@ inline void Subsumption::updateOccurrences(vector< OccUpdate >& updates, Heap<Va
             DOUT(if (config.opt_sub_debug > 1) cerr << "c successfully removed clause [" << i << "/" << updates.size() <<  "] from list for literal " << updates[i].l << " from clause " << ca[updates[i].cr] << " [" << updates[i].cr << "]" << endl;);
             data.removedLiteral(updates[i].l, 1, heap, ignore);
         } else
-        { DOUT(if (config.opt_sub_debug > 1) cerr << "c DID NOT remove clause [" << i << "/" << updates.size() <<  "] from list for literal " << updates[i].l << " from clause " << ca[updates[i].cr] << " [" << updates[i].cr << "]" << endl; });
+        { DOUT(if (config.opt_sub_debug > 1) cerr << "c DID NOT remove clause [" << i << "/" << updates.size() <<  "] from list for literal " << updates[i].l << " from clause " << ca[updates[i].cr] << " [" << updates[i].cr << "]" << endl; ); }
 }
 updates.clear();
 }
 
-void Subsumption::initClause(const Riss::CRef cr, bool addToStrengthen)
+void Subsumption::initClause(const Riss::CRef& cr, const bool& addToStrengthen)
 {
     const Clause& c = ca[cr];
     if (!c.can_be_deleted()) {

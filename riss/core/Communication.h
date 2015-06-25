@@ -3,8 +3,8 @@ Copyright (c) 2012, All rights reserved, Norbert Manthey
 
  **************************************************************************************************/
 
-#ifndef COMMUNICATION_H
-#define COMMUNICATION_H
+#ifndef RISS_COMMUNICATION_H
+#define RISS_COMMUNICATION_H
 
 #include <cmath>
 #include <deque>

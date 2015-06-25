@@ -2,8 +2,8 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef LITERALADDITION_HH
-#define LITERALADDITION_HH
+#ifndef RISS_LITERALADDITION_HH
+#define RISS_LITERALADDITION_HH
 
 #include "riss/core/Solver.h"
 #include "coprocessor/Technique.h"
@@ -63,7 +63,7 @@ class LiteralAddition : public Technique
     /** check whether resolving c and d on literal l results in a tautology
      * Note: method assumes c and d to be sorted
      */
-    bool tautologicResolvent(const Riss::Clause& c, const Riss::Clause& d, const Riss::Lit l);
+    bool tautologicResolvent(const Riss::Clause& c, const Riss::Clause& d, const Riss::Lit& l);
 
     /** run a covered literal addition to increase the size of clauses */
     void coverdLiteralAddition();

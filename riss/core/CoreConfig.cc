@@ -40,17 +40,20 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_removal_debug(_cat, "rem-debug",   "print debug information about removal", 0, IntRange(0, 5), optionListPtr),
     #endif
 
+    opt_refineConflict(_cat, "refConflict", "refine conflict clause after solving with assumptions", true, optionListPtr),
 
     opt_K(_cr, "K", "The constant used to force restart", 0.8, DoubleRange(0, false, 1, false), optionListPtr),
     opt_R(_cr, "R", "The constant used to block restart", 1.4, DoubleRange(1, false, 5, false), optionListPtr),
     opt_size_lbd_queue(_cr, "szLBDQueue", "The size of moving average for LBD (restarts)", 50, IntRange(10, INT32_MAX), optionListPtr),
     opt_size_trail_queue(_cr, "szTrailQueue", "The size of moving average for trail (block restarts)", 5000, IntRange(10, INT32_MAX), optionListPtr),
+    opt_size_bounded_randomized(_cr, "sbr", "use removal with clause activity based on sbr (randomized)", 12, IntRange(0, INT32_MAX), optionListPtr),
 
     opt_first_reduce_db(_cred, "firstReduceDB", "The number of conflicts before the first reduce DB", 4000, IntRange(0, INT32_MAX), optionListPtr),
     opt_inc_reduce_db(_cred, "incReduceDB", "Increment for reduce DB", 300, IntRange(0, INT32_MAX), optionListPtr),
     opt_spec_inc_reduce_db(_cred, "specialIncReduceDB", "Special increment for reduce DB", 1000, IntRange(0, INT32_MAX), optionListPtr),
     opt_lb_lbd_frozen_clause(_cred, "minLBDFrozenClause", "Protect clauses if their LBD decrease and is lower than (for one turn)", 30, IntRange(0, INT32_MAX), optionListPtr),
     opt_lbd_ignore_l0(_cred, "lbdIgnL0", "ignore top level literals for LBD calculation", false, optionListPtr),
+    opt_lbd_ignore_assumptions(_cred, "lbdIgnLA", "ignore top level literals for LBD calculation", false, optionListPtr),
     opt_update_lbd(_cred, "lbdupd", "update LBD during (0=propagation,1=learning,2=never),", 1, IntRange(0, 2), optionListPtr),
     opt_lbd_inc(_cred, "incLBD", "allow to increment lbd of clauses dynamically", false, optionListPtr),
     opt_quick_reduce(_cred, "quickRed", "check only first two literals for being satisfied", false, optionListPtr),
@@ -71,14 +74,17 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_phase_saving(_cat, "phase-saving", "Controls the level of phase saving (0=none, 1=limited, 2=full)", 2, IntRange(0, 2), optionListPtr),
     opt_rnd_init_act(_cat, "rnd-init", "Randomize the initial activity", false, optionListPtr),
     opt_init_act("INIT", "init-act", "initialize activities (0=none,1=inc-lin,2=inc-geo,3=dec-lin,4=dec-geo,5=rnd,6=abs(jw))", 0, IntRange(0, 6), optionListPtr),
-    opt_init_pol("INIT", "init-pol", "initialize polarity (0=none,1=JW-pol,2=JW-neg,3=MOMS,4=MOMS-neg,5=rnd,6=pos)", 0, IntRange(0, 5), optionListPtr),
+    opt_init_pol("INIT", "init-pol", "initialize polarity (0=none,1=JW-pol,2=JW-neg,3=MOMS,4=MOMS-neg,5=rnd,6=pos)", 0, IntRange(0, 6), optionListPtr),
 
     opt_restart_level(_cat, "rlevel", "Choose to which level to jump to: 0=0, 1=ReusedTrail, 2=recursive reused trail", 0, IntRange(0, 2), optionListPtr),
     opt_restarts_type(_cat, "rtype", "Choose type of restart (0=dynamic,1=luby,2=geometric)", 0, IntRange(0, 2), optionListPtr),
     opt_restart_first(_cat, "rfirst", "The base restart interval", 100, IntRange(1, INT32_MAX), optionListPtr),
     opt_restart_inc(_cat, "rinc", "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false), optionListPtr),
+    opt_inc_restart_level(_cat, "irlevel", "Choose how often restarts beyond assumptions shoud be performed (every X)", 1, IntRange(1, INT32_MAX), optionListPtr),
 
     opt_garbage_frac(_cat, "gc-frac", "The fraction of wasted memory allowed before a garbage collection is triggered", 0.20, DoubleRange(0, false, HUGE_VAL, false), optionListPtr),
+
+    opt_reduce_frac(_cat, "reduce-frac", "Remove this quota of learnt clauses when database is reduced",                    0.50, DoubleRange(0, false, 1, true)),
 
     opt_allUipHack("MODS", "alluiphack", "learn all unit UIPs at any level", 0, IntRange(0, 2) , optionListPtr),
     opt_vsids_start("MODS", "vsids-s", "interpolate between VSIDS and VMTF,start value", 1, DoubleRange(0, true, 1, true), optionListPtr),
@@ -86,7 +92,20 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_vsids_inc("MODS", "vsids-i", "interpolate between VSIDS and VMTF, inc during update", 1, DoubleRange(0, true, 1, true), optionListPtr),
     opt_vsids_distance("MODS", "vsids-d", "interpolate between VSIDS and VMTF, numer of conflits until next update", INT32_MAX, IntRange(1, INT32_MAX), optionListPtr),
     opt_var_act_bump_mode("MODS", "varActB", "bump activity of a variable (0 as usual, 1 relativ to cls size, 2 relative to LBD)", 0, IntRange(0, 2), optionListPtr),
-    opt_cls_act_bump_mode("MODS", "clsActB", "bump activity of a clause (0 as usual, 1 relativ to cls size, 2 relative to LBD)", 0, IntRange(0, 2), optionListPtr),
+    opt_cls_act_bump_mode("MODS", "clsActB", "bump activity of a clause (0 as usual, 1 relativ to cls size, 2 relative to LBD, 3 SBR)", 0, IntRange(0, 3), optionListPtr),
+
+    opt_pq_order("Contrasat", "pq-order",    "Use priority queue to decide the order in which literals are implied", false, optionListPtr),
+
+    opt_probing_step_width("MiPiSAT", "prob-step-width", "Perform failed literals and detection of necessary assignments each n times",   0, IntRange(0, INT32_MAX), optionListPtr),
+    opt_probing_limit("MiPiSAT", "prob-limit",      "Limit how many variables with highest activity should be probed", 32, IntRange(1, INT32_MAX), optionListPtr),
+
+    opt_cir_bump("cir-minisat", "cir-bump", "Activates CIR with bump ratio for VSIDS score (choose large: 9973)", 0, IntRange(0, INT32_MAX), optionListPtr),
+
+    opt_act_based("999HACK", "act-based",    "use activity for learned clauses", false, optionListPtr),
+    opt_lbd_core_thresh("999HACK", "lbd-core-th",  "Saving learnt clause forever if LBD deceeds this threshold", 0, IntRange(0, INT32_MAX), optionListPtr),
+    opt_l_red_frac("999HACK", "reduce-frac",  "Remove this quota of learnt clauses when database is reduced", 0.50, DoubleRange(0, false, HUGE_VAL, false), optionListPtr),
+    opt_keep_permanent_size("999HACK", "size_core", "Saving learnt clause forever if size deceeds this threshold", 0, IntRange(0, INT32_MAX), optionListPtr),
+
     opt_updateLearnAct("MODS", "updLearnAct", "UPDATEVARACTIVITY trick (see glucose competition'09 companion paper)", true , optionListPtr),
 
     #ifndef NDEBUG
@@ -134,6 +153,47 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_learnDecMinSize("SEARCH - DECISION CLAUSES", "learnDecMS",  "min size so that decision clauses are learned, -1 = off", 2, IntRange(2, INT32_MAX) , optionListPtr),
     opt_learnDecRER("SEARCH - DECISION CLAUSES", "learnDecRER", "consider decision clauses for RER?", false , optionListPtr),
 
+    opt_restrictedExtendedResolution("EXTENDED RESOLUTION RER", "rer", "perform restricted extended resolution (along Audemard ea 2010)", false, optionListPtr),
+    opt_rer_as_learned("EXTENDED RESOLUTION RER", "rer-l", "store extensions as learned clauses", true, optionListPtr),
+    opt_rer_as_replaceAll("EXTENDED RESOLUTION RER", "rer-r", "replace all disjunctions of the RER extension (only, if not added as learned, and if full - RER adds a conjunction, optionListPtr ), 0=no,1=formula,2=formula+learned", 0, IntRange(0, 2), optionListPtr),
+    opt_rer_rewriteNew("EXTENDED RESOLUTION RER", "rer-rn", "rewrite new learned clauses, only if full and not added as learned", false, optionListPtr),
+    opt_rer_full("EXTENDED RESOLUTION RER", "rer-f", "add full rer extension?", true, optionListPtr),
+    opt_rer_minSize("EXTENDED RESOLUTION RER", "rer-min-size", "minimum size of learned clause to perform rer", 2, IntRange(2, INT32_MAX) , optionListPtr),
+    opt_rer_maxSize("EXTENDED RESOLUTION RER", "rer-max-size", "maximum size of learned clause to perform rer", INT32_MAX, IntRange(2, INT32_MAX) , optionListPtr),
+    opt_rer_minLBD("EXTENDED RESOLUTION RER", "rer-minLBD", "minimum LBD to perform rer", 1, IntRange(1, INT32_MAX) , optionListPtr),
+    opt_rer_maxLBD("EXTENDED RESOLUTION RER", "rer-maxLBD", "maximum LBD to perform rer", INT32_MAX, IntRange(1, INT32_MAX) , optionListPtr),
+    opt_rer_windowSize("EXTENDED RESOLUTION RER", "rer-window", "number of clauses to collect before fuse", 2, IntRange(2, INT32_MAX) , optionListPtr),
+    opt_rer_newAct("EXTENDED RESOLUTION RER", "rer-new-act", "how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean", 0, IntRange(0, 4) , optionListPtr),
+    opt_rer_ite("EXTENDED RESOLUTION RER", "rer-ite", "check for ITE pattern, if AND is not found?", false , optionListPtr),
+    #ifndef NDEBUG
+    opt_rer_debug("EXTENDED RESOLUTION RER", "rer-d", "debug output for RER", false, optionListPtr),
+    #endif
+    opt_rer_every("EXTENDED RESOLUTION RER", "rer-freq", "how often rer compared to usual learning", 1, DoubleRange(0, true, 1, true) , optionListPtr),
+    opt_rer_each("EXTENDED RESOLUTION RER", "rer-e", "when a pair is rejected, initialize with the new clause", false, optionListPtr),
+    opt_rer_extractGates("EXTENDED RESOLUTION RER", "rer-g", "extract binary and gates from the formula for RER rewriting", false, optionListPtr),
+    opt_rer_addInputAct("EXTENDED RESOLUTION RER", "rer-ga", "increase activity for input variables",  0, DoubleRange(0, true, HUGE_VAL, true) , optionListPtr),
+
+
+    erRewrite_size("EXTENDED RESOLUTION", "er-size", "rewrite new learned clauses with ER, if size is small enough", 30, IntRange(0, INT32_MAX), optionListPtr),
+    erRewrite_lbd("EXTENDED RESOLUTION", "er-lbd" , "rewrite new learned clauses with ER, if lbd is small enough",  6,  IntRange(0, INT32_MAX), optionListPtr),
+
+    opt_interleavedClauseStrengthening("INTERLEAVED CLAUSE STRENGTHENING", "ics", "perform interleaved clause strengthening (along Wieringa ea 2013)", false, optionListPtr),
+    opt_ics_interval("INTERLEAVED CLAUSE STRENGTHENING", "ics_window" , "run ICS after another N conflicts", 5000, IntRange(0, INT32_MAX) , optionListPtr),
+    opt_ics_processLast("INTERLEAVED CLAUSE STRENGTHENING", "ics_processLast" , "process this number of learned clauses (analyse, reject if quality too bad!)", 5050, IntRange(0, INT32_MAX) , optionListPtr),
+    opt_ics_keepLearnts("INTERLEAVED CLAUSE STRENGTHENING", "ics_keepNew" , "keep the learned clauses that have been produced during the ICS", false , optionListPtr),
+    opt_ics_dynUpdate("INTERLEAVED CLAUSE STRENGTHENING", "ics_dyn" , "update variable/clause activities during ICS", false , optionListPtr),
+    opt_ics_shrinkNew("INTERLEAVED CLAUSE STRENGTHENING", "ics_shrinkNew" , "shrink the kept learned clauses in the very same run?! (makes only sense if the other clauses are kept!)", false , optionListPtr),
+    opt_ics_LBDpercent("INTERLEAVED CLAUSE STRENGTHENING", "ics_relLBD" , "only look at a clause if its LBD is less than this percent of the average of the clauses that are looked at, 1=100%", 1, DoubleRange(0, true, HUGE_VAL, true) , optionListPtr),
+    opt_ics_SIZEpercent("INTERLEAVED CLAUSE STRENGTHENING", "ics_relSIZE" , "only look at a clause if its size is less than this percent of the average size of the clauses that are looked at, 1=100%", 1, DoubleRange(0, true, HUGE_VAL, true) , optionListPtr),
+    #ifndef NDEBUG
+    opt_ics_debug("INTERLEAVED CLAUSE STRENGTHENING", "ics-debug", "debug output for ICS", false, optionListPtr),
+    #endif
+
+// MINIMIZATION BY REVERSING AND VIVIFICATION
+    opt_use_reverse_minimization("REVERSE MINIMIZATION", "revMin",  "minimize learned clause by reversing it and using vivification", false, optionListPtr),
+    reverse_minimizing_size("REVERSE MINIMIZATION", "revMinSize", "maximal clause size for revMin for learnt clauses" , 12, IntRange(2, INT32_MAX), optionListPtr),
+    lbLBDreverseClause("REVERSE MINIMIZATION", "revMinLBD", "maximal clause LBD for revMin for learnt clauses", 6, IntRange(1, INT32_MAX), optionListPtr),
+    
 
 // USING BIG information during search
     opt_uhdProbe("SEARCH UNHIDE PROBING", "sUhdProbe", "perform probing based on learned clauses (off,linear,quadratic,larger)", 0, IntRange(0, 3), optionListPtr),
@@ -158,6 +218,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_checkProofOnline("PROOF", "proof-oft-check", "check proof construction during execution (1=on, higher => more verbose checking)", 0, IntRange(0, 10), optionListPtr),
 
     opt_verb("CORE", "solververb",   "Verbosity level (0=silent, 1=some, 2=more).", 0, IntRange(0, 2), optionListPtr),
+    opt_inc_verb("CORE", "incsverb",     "Verbosity level for MaxSAT (0=silent, 1=some, 2=more).", 0, IntRange(0, 2), optionListPtr),
 
     opt_usePPpp("CORE", "usePP", "use preprocessor for preprocessing", true, optionListPtr),
     opt_usePPip("CORE", "useIP", "use preprocessor for inprocessing", true, optionListPtr),
@@ -171,7 +232,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     incKeepLBD("INCREMENTAL", "incClLBD",  "keep lbd for extra cleaning (any higher is dropped)", 10, IntRange(1, INT32_MAX) , optionListPtr),
     opt_reset_counters("INCREMENTAL", "incResCnt", "reset solving counters every X start (0=off)", 100000, IntRange(0, INT32_MAX) , optionListPtr)
 {
-    if (defaultPreset.size() != 0) { setPreset(defaultPreset); }     // set configuration options immediately
+    if (defaultPreset.size() != 0) { setPreset(defaultPreset); }    // set configuration options immediately
 }
 
 } // namespace Riss

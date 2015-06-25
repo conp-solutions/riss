@@ -3,8 +3,8 @@ Copyright (c) 2014, All rights reserved, Norbert Manthey
 
  **************************************************************************************************/
 
-#ifndef PROOFMASTER_H
-#define PROOFMASTER_H
+#ifndef RISS_PROOFMASTER_H
+#define RISS_PROOFMASTER_H
 
 
 #include "riss/mtl/Vec.h"

@@ -31,8 +31,8 @@
  * IN THE SOFTWARE.
  *
  */
-#ifndef ipasir_h_INCLUDED
-#define ipasir_h_INCLUDED
+#ifndef RISS_ipasir_h_INCLUDED
+#define RISS_ipasir_h_INCLUDED
 
 #include "riss/librissc.h" // include actual C-interface of Riss
 

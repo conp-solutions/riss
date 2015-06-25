@@ -3,8 +3,8 @@ Copyright (c) 2015, Norbert Manthey
 **************************************************************************************************/
 // idea introduced in: SunOS by Jeff Bonwick
 
-#ifndef _TWINALLOC_H_
-#define _TWINALLOC_H_
+#ifndef RISS_RISS_TWINALLOC_H_
+#define RISS_TWINALLOC_H_
 
 #include <cstdlib>
 #include <cstring>

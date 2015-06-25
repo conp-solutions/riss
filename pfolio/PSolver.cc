@@ -48,7 +48,7 @@ PSolver::PSolver(const int threadsToUse, const char* configName)
     }
 
     // setup the first solver!
-    solvers.push(new Solver(configs[0]));     // from this point on the address of this configuration is not allowed to be changed any more!
+    solvers.push(new Solver(&configs[0]));     // from this point on the address of this configuration is not allowed to be changed any more!
     solvers[0]->setPreprocessor(&ppconfigs[0]);
 }
 
@@ -142,7 +142,7 @@ bool PSolver::addClause_(vec< Lit >& ps)
             while (solvers[i]->nVars() <= var(ps[j])) { solvers[i]->newVar(); }
         }
         bool ret2 = solvers[i]->addClause_(ps); // if a solver failed adding the clause, then the state for all solvers is bad as well
-        if (opt_verbosePfolio) if (i == 0) { cerr << "c parsed clause " << ps << endl; }    // TODO remove after debug
+        if (opt_verbosePfolio) if (i == 0) { cerr << "c parsed clause " << ps << endl; } // TODO remove after debug
         ret = ret2 && ret;
     }
     return ret;
@@ -187,7 +187,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
         }
     }
 
-    if (! initialized) {   // distribute the formula, if this is the first call to this method!
+    if (! initialized) {  // distribute the formula, if this is the first call to this method!
 
         /* setup all solvers
         * setup the communication system for the solvers, including the number of commonly known variables
@@ -219,10 +219,10 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
         }
 
         // copy the formula of the solver 0 number of thread times
-        if (proofMaster != 0) {   // if a proof is generated, add all clauses that are currently present in solvers[0]
+        if (proofMaster != 0) {  // if a proof is generated, add all clauses that are currently present in solvers[0]
             if (opt_verboseProof > 0) { proofMaster->addCommentToProof("add irredundant clauses multiple times", -1); }
             for (int j = 0 ; j < solvers[0]->clauses.size(); ++ j) {
-                proofMaster->addInputToProof(solvers[0]->ca[ solvers[0]->clauses[j] ], -1, threads);  // so far, work on global proof
+                proofMaster->addInputToProof(solvers[0]->ca[ solvers[0]->clauses[j] ], -1, threads); // so far, work on global proof
             }
             if (opt_verboseProof > 0) { proofMaster->addCommentToProof("add redundant clauses multiple times", -1); }
             for (int j = 0 ; j < solvers[0]->learnts.size(); ++ j) {
@@ -246,7 +246,7 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
      */
     // add assumptions to all solvers
     for (int i = 0 ; i < threads; ++i) {
-        for (int j = 0; j < assumps.size(); ++ j) {   // make sure, everybody knows all the variables
+        for (int j = 0; j < assumps.size(); ++ j) {  // make sure, everybody knows all the variables
             while (solvers[i]->nVars() <= var(assumps[j])) { solvers[i]->newVar(); }
         }
         assumps.copyTo(communicators[i]->assumptions);
@@ -414,8 +414,8 @@ bool PSolver::initializeThreads()
     // the portfolio should print proofs
     if (drupProofFile != 0) {
         proofMaster = new ProofMaster(drupProofFile, threads, nVars(), opt_proofCounting, opt_verboseProof > 1);  // use a counting proof master
-        proofMaster->setOnlineProofChecker(opc);    // tell proof master about the online proof checker
-        data->setProofMaster(proofMaster);      // tell shared clauses pool about proof master (so that it adds shared clauses)
+        proofMaster->setOnlineProofChecker(opc);     // tell proof master about the online proof checker
+        data->setProofMaster(proofMaster);       // tell shared clauses pool about proof master (so that it adds shared clauses)
     }
 
     // create all solvers and threads
@@ -425,7 +425,7 @@ bool PSolver::initializeThreads()
         // create the solver
         if (i > 0) {
             assert(solvers.size() == i && "next solver is not already created!");
-            solvers.push(new Solver(configs[i]));      // solver 0 should exist already!
+            solvers.push(new Solver(& configs[i]));      // solver 0 should exist already!
         }
 
         // tell the communication system about the solver
@@ -499,7 +499,7 @@ void PSolver::waitFor(const WaitState waitState)
                     break;
                 }
             } else if (waitState == allFinished) {
-                if (! communicators[i]->isFinished() && ! communicators[i]->isIdle()) {   // be careful with (! communicators[i]->isWaiting() &&)
+                if (! communicators[i]->isFinished() && ! communicators[i]->isIdle()) {  // be careful with (! communicators[i]->isWaiting() &&)
                     if (verbosity > 2) { cerr << "c [WFI" << waitForIterations << "] Thread " << i << " is not finished and not idle" << endl; }
                     threadOfInterest = i; // notify that there is a thread that is not finished with this index
                     break;
@@ -529,7 +529,7 @@ void PSolver::waitFor(const WaitState waitState)
 
 void PSolver::kill()
 {
-    if (!initialized) { return; }   // child threads have never been created - no need to kill them
+    if (!initialized) { return; }  // child threads have never been created - no need to kill them
 
     if (verbosity > 0)  { cerr << "c MASTER kills all child threads ..." << endl; }
     // set all threads to working (they'll have a look for new work on their own)
@@ -601,7 +601,7 @@ void* runWorkerSolver(void* data)
                               (result == l_Undef ? "UNKNOWN" : (result == l_True ? "SAT" : "UNSAT"))
                               << endl;
 
-        if (result != l_Undef) {   // solved the formula
+        if (result != l_Undef) { // solved the formula
             info.setWinner(true); // indicate that this solver has a solution
         }
 
@@ -620,7 +620,7 @@ void* runWorkerSolver(void* data)
         if (verbose) { cerr << "c [THREAD] " << info.getID() << " wait for next round (sleep)" << endl; }
         // wait until master changes the state again to working!
         info.ownLock->lock();
-        while (! info.isWorking() && ! info.isAborted()) {  // wait for work or being aborted
+        while (! info.isWorking() && ! info.isAborted()) { // wait for work or being aborted
             if (verbose) { cerr << "c [THREAD] " << info.getID() << " sleeps until next work ... " << endl; }
             info.ownLock->sleep();
             if (verbose) { cerr << "c [THREAD] " << info.getID() << " awakes after work-sleep ... " << endl; }

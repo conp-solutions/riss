@@ -1,5 +1,5 @@
-#ifndef Coprocessor_version_h
-#define Coprocessor_version_h
+#ifndef RISS_Coprocessor_version_h
+#define RISS_Coprocessor_version_h
 
 namespace Coprocessor
 {

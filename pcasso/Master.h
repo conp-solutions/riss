@@ -17,8 +17,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  **************************************************************************************************/
 
-#ifndef MASTER_H
-#define MASTER_H
+#ifndef RISS_PCASSO_MASTER_H
+#define RISS_PCASSO_MASTER_H
 
 #define COMPILE_SPLITTER
 

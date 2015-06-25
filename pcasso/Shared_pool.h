@@ -5,8 +5,8 @@
  * Created on June 17, 2012, 12:08 PM
  */
 
-#ifndef SHARED_POOL_H
-#define SHARED_POOL_H
+#ifndef PCASSO_SHARED_POOL_H
+#define PCASSO_SHARED_POOL_H
 
 #include <vector>
 
@@ -50,9 +50,8 @@ class Shared_pool
         s << "c [POOL] all collected shared clauses begin: " << std::endl;
         for (unsigned int i = 0 ; i < shared_clauses.size(); ++i) {
             PcassoClause& c = shared_clauses[i];
-            for (unsigned int j = 0; j < c.size; j++) {
-                s << (sign(c.lits[j]) ? "-" : "") << var(c.lits[j]) + 1 << " ";
-            }
+            for (unsigned int j = 0; j < c.size; j++)
+            { s << (sign(c.lits[j]) ? "-" : "") << var(c.lits[j]) + 1 << " "; }
             s << "0\n";
         }
         s << "c [POOL] all collected shared clauses end: " << std::endl;

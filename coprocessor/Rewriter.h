@@ -2,8 +2,8 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef REWRITER_HH
-#define REWRITER_HH
+#ifndef RISS_REWRITER_HH
+#define RISS_REWRITER_HH
 
 #include "riss/core/Solver.h"
 #include "coprocessor/Technique.h"
@@ -92,7 +92,7 @@ class Rewriter : public Technique
     bool hasDuplicate(std::vector<Riss::CRef>& list, const Riss::vec<Riss::Lit>& c);
     bool hasDuplicate(std::vector<Riss::CRef>& list, const Riss::Clause& c);
 
-    bool checkPush(Riss::vec<Riss::Lit>& ps, const Riss::Lit l);
+    bool checkPush(Riss::vec<Riss::Lit>& ps, const Riss::Lit& l);
     bool ordered_subsumes(const Riss::Clause& c, const Riss::Clause& other) const;
     bool ordered_subsumes(const Riss::vec<Riss::Lit>& c, const Riss::Clause& other) const;
     bool ordered_subsumes(const Riss::Clause& c, const Riss::vec<Riss::Lit>& other) const;

@@ -2,8 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef PROBING_HH
-#define PROBING_HH
+#ifndef RISS_PROBING_HH
+#define RISS_PROBING_HH
 
 #include "riss/core/Solver.h"
 #include "coprocessor/CoprocessorTypes.h"

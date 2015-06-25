@@ -2,8 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef RESOLVING_H
-#define RESOLVING_H
+#ifndef RISS_RESOLVING_H
+#define RISS_RESOLVING_H
 
 #include "coprocessor/CoprocessorTypes.h"
 
@@ -57,7 +57,7 @@ class Resolving  : public Technique
     bool ordered_subsumes(const Riss::vec<Riss::Lit>& c, const Riss::Clause& other) const;
     bool ordered_subsumes(const Riss::Clause& c, const Riss::vec<Riss::Lit>& other) const;
 
-    bool checkPush(Riss::vec<Riss::Lit>& ps, const Riss::Lit l);
+    bool checkPush(Riss::vec<Riss::Lit>& ps, const Riss::Lit& l);
 
     double processTime;
     unsigned addedTern2;

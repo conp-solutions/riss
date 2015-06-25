@@ -2,8 +2,8 @@
 Copyright (c) 2012, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef COMMUNICATORCLIENT_H
-#define COMMUNICATORCLIENT_H
+#ifndef RISS_COMMUNICATORCLIENT_H
+#define RISS_COMMUNICATORCLIENT_H
 
 #include "riss/core/Communication.h"
 #include "riss/core/Solver.h"
@@ -282,6 +282,10 @@ int CommunicatorClient::updateSleep(Riss::vec<Riss::Lit>* toSend)
                 if (c.size() == 0) {
                     std::cerr << "c empty clause has been shared!" << std::endl;
                     ok = false; return 1;
+                }
+                if (var(c[0]) > solver->nVars()) {
+                    std::cerr << "c shared variable " << var(c[0]) << "[" << 0 << "] is greater than " << nVars() << std::endl;
+                    assert(false && "received variables have to be smaller than maximum!");
                 }
                 solver->uncheckedEnqueue(c[0]);
                 c.mark();

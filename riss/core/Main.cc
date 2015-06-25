@@ -129,9 +129,9 @@ int main(int argc, char** argv)
         Coprocessor::CP3Config cp3config(string(opt_config == 0 ? "" : opt_config));
         foundHelp = coreConfig.parseOptions(argc, argv) || foundHelp;
         foundHelp = cp3config.parseOptions(argc, argv) || foundHelp;
-        if (foundHelp) { exit(0); }   // stop after printing the help information
+        if (foundHelp) { exit(0); }  // stop after printing the help information
 
-        if (opt_cmdLine) {   // print the command line options
+        if (opt_cmdLine) {  // print the command line options
             std::stringstream s;
             coreConfig.configCall(s);
             cp3config.configCall(s);
@@ -140,7 +140,7 @@ int main(int argc, char** argv)
             exit(0);
         }
 
-        Solver S(coreConfig);
+        Solver S(&coreConfig);
         S.setPreprocessor(&cp3config); // tell solver about preprocessor
 
         double initial_time = cpuTime();
@@ -190,7 +190,7 @@ int main(int argc, char** argv)
         if (in == NULL)
         { printf("c ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1); }
 
-        if (S.verbosity > 0) {  // print only once!
+        if (S.verbosity > 0) { // print only once!
             printf("c ======================[ riss (core) %s  %.13s ]===============================================\n", solverVersion, gitSHA1);
             printf("c | Norbert Manthey. The use of the tool is limited to research only!                                     |\n");
             printf("c | Based on Minisat 2.2 and Glucose 2.1  -- thanks!                                                      |\n");
@@ -203,7 +203,7 @@ int main(int argc, char** argv)
 
         // open file for proof
         S.drupProofFile = (drupFile) ? fopen((const char*) drupFile , "wb") : NULL;
-        if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S.drupProofFile != NULL) { fprintf(S.drupProofFile, "o proof %s\n", (const char*)opt_proofFormat); }     // we are writing proofs of the given format!
+        if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S.drupProofFile != NULL) { fprintf(S.drupProofFile, "o proof %s\n", (const char*)opt_proofFormat); }    // we are writing proofs of the given format!
 
         parse_DIMACS(in, S);
         gzclose(in);
@@ -218,7 +218,7 @@ int main(int argc, char** argv)
             printf("c |                                                                                                       |\n");
         }
 
-        if (opt_parseOnly) { exit(0); }   // simply stop here!
+        if (opt_parseOnly) { exit(0); }  // simply stop here!
 
         // Change to signal-handlers that will only notify the solver and allow it to terminate
         // voluntarily:
@@ -229,6 +229,7 @@ int main(int argc, char** argv)
             if (res != NULL) {
                 if (opt_modelStyle) { fprintf(res, "UNSAT\n"), fclose(res); }
                 else { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
+                res = NULL;
             }
             // add the empty clause to the proof, close proof file
             if (S.drupProofFile != NULL) {
@@ -256,13 +257,12 @@ int main(int argc, char** argv)
         S.budgetOff(); // remove budget again!
         // have we reached UNKNOWN because of the limited number of conflicts? then continue with the next loop!
         if (ret == l_Undef) {
-            if (res != NULL) { fclose(res); }
+            if (res != NULL) { fclose(res); res == NULL; }
             if (S.drupProofFile != NULL) {
-                fclose(S.drupProofFile);      // close the current file
+                fclose(S.drupProofFile);   // close the current file
                 S.drupProofFile = fopen((const char*) drupFile, "w"); // remove the content of that file
-                fclose(S.drupProofFile);      // close the file again
+                fclose(S.drupProofFile);   // close the file again
             }
-            if (S.verbosity > 0) { printf("c\nc ===========================[ Next Schedule Element ]=====================================================\nc\n"); }
         }
 
         // print stats
@@ -271,7 +271,7 @@ int main(int argc, char** argv)
         }
 
         // check model of the formula
-        if (ret == l_True && opt_checkModel && argc != 1) {   // check the model if the formla was given via a file!
+        if (ret == l_True && opt_checkModel && argc != 1) {  // check the model if the formla was given via a file!
             if (check_DIMACS(in, S.model)) {
                 printf("c verified model\n");
             } else {
@@ -305,7 +305,7 @@ int main(int argc, char** argv)
                 else { fprintf(res, "s UNSATISFIABLE\n"); }
             } else if (opt_modelStyle) { fprintf(res, "UNKNOWN\n"); }
             else { fprintf(res, "s UNKNOWN\n"); }
-            fclose(res);
+            fclose(res); res = NULL;
         }
 
         // print model to screen

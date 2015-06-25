@@ -90,11 +90,11 @@ int main(int argc, char** argv)
         bool foundHelp = coreConfig.parseOptions(argc, argv);
         foundHelp = cp3config.parseOptions(argc, argv) || foundHelp;
         ::parseOptions(argc, argv);   // parse all global options
-        if (foundHelp) { exit(0); }   // stop after printing the help information
+        if (foundHelp) { exit(0); }  // stop after printing the help information
         coreConfig.setPreset(string(opt_config == 0 ? "" : opt_config));
         cp3config.setPreset(string(opt_config == 0 ? "" : opt_config));
 
-        if (opt_cmdLine) {   // print the command line options
+        if (opt_cmdLine) {  // print the command line options
             std::stringstream s;
             coreConfig.configCall(s);
             cp3config.configCall(s);
@@ -103,7 +103,7 @@ int main(int argc, char** argv)
             exit(0);
         }
 
-        Solver S(coreConfig);
+        Solver S(&coreConfig);
         S.setPreprocessor(&cp3config); // tell solver about preprocessor
 
         double      initial_time = cpuTime();
@@ -209,7 +209,7 @@ int main(int argc, char** argv)
                 const int vars = S.nVars(); // might be smaller already due to dense
                 int cls = S.trail.size() + S.clauses.size();
                 Weight top = 0;
-                for (Var v = 0 ; v < fullVariables; ++ v) {   // for each weighted literal, have an extra clause! use variables before preprocessing (densing)
+                for (Var v = 0 ; v < fullVariables; ++ v) {  // for each weighted literal, have an extra clause! use variables before preprocessing (densing)
                     cls = (literalWeights[toInt(mkLit(v))] != 0 ? cls + 1 : cls);
                     cls = (literalWeights[toInt(~mkLit(v))] != 0 ? cls + 1 : cls);
                     top += literalWeights[toInt(mkLit(v))] + literalWeights[toInt(~mkLit(v))];
@@ -241,7 +241,7 @@ int main(int argc, char** argv)
 
                 // if the option dense is used, these literals need to be adopted!
                 // write all the soft clauses (write after hard clauses, because there might be units that can have positive effects on the next tool in the chain!)
-                for (Var v = 0 ; v < fullVariables; ++ v) {   // for each weighted literal, have an extra clause!
+                for (Var v = 0 ; v < fullVariables; ++ v) {  // for each weighted literal, have an extra clause!
                     Lit l = mkLit(v);
                     Lit nl = preprocessor.giveNewLit(l);
                     cerr << "c lit " << l << " is compress lit " << nl << endl;
@@ -250,11 +250,11 @@ int main(int argc, char** argv)
                         cerr << "c WARNING: soft literal " << l << " has been removed from the formula" << endl;
                         continue;
                     }
-                    if (literalWeights[toInt(mkLit(v))] != 0) {   // setting literal l to true ha a cost, hence have unit!
-                        fprintf(wcnfFile, "%ld %d 0\n", literalWeights[toInt(mkLit(v))], var(l) + 1);  // use the weight of the not rewritten literal!
+                    if (literalWeights[toInt(mkLit(v))] != 0) {  // setting literal l to true ha a cost, hence have unit!
+                        fprintf(wcnfFile, "%ld %d 0\n", literalWeights[toInt(mkLit(v))], var(l) + 1); // use the weight of the not rewritten literal!
                     }
-                    if (literalWeights[toInt(~mkLit(v))] != 0) {   // setting literal ~l to true ha a cost, hence have unit!
-                        fprintf(wcnfFile, "%ld %d 0\n", literalWeights[toInt(~mkLit(v))], -var(l) - 1);  // use the weight of the not rewritten literal!
+                    if (literalWeights[toInt(~mkLit(v))] != 0) {  // setting literal ~l to true ha a cost, hence have unit!
+                        fprintf(wcnfFile, "%ld %d 0\n", literalWeights[toInt(~mkLit(v))], -var(l) - 1); // use the weight of the not rewritten literal!
                     }
                 }
                 // close the file

@@ -1,5 +1,5 @@
-#ifndef RWLOCK_H
-#define RWLOCK_H
+#ifndef PCASSO_RWLOCK_H
+#define PCASSO_RWLOCK_H
 
 #include <cstdio>
 #include <pthread.h>

@@ -125,7 +125,7 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
     return data.ok() ? l_Undef : l_False;
 }
 
-void Propagation::initClause(const CRef cr) {}
+void Propagation::initClause(const Riss::CRef& cr) {}
 
 void Propagation::printStatistics(ostream& stream)
 {

@@ -34,7 +34,7 @@ bool LevelPool::add_shared(vec<Lit>& lits, unsigned int nodeID, bool disable_dup
 
     assert(temp.size() < shared_clauses.size());
 
-    if (writeP + temp.size() < shared_clauses.size() - 2) {   // Space for the ending lit_Undef
+    if (writeP + temp.size() < shared_clauses.size() - 2) { // Space for the ending lit_Undef
         for (i = 0; i < temp.size(); ++i) {
             shared_clauses[writeP + i] = temp[i];
         }
@@ -46,7 +46,7 @@ bool LevelPool::add_shared(vec<Lit>& lits, unsigned int nodeID, bool disable_dup
         }
         if (writeP > endP) { endP = writeP; }
     } else { // write from the beginning
-        Debug::PRINTLN_NOTE("write from beginning!");
+        PcassoDebug::PRINTLN_NOTE("write from beginning!");
         full = true;
 
         endP = writeP;

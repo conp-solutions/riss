@@ -5,8 +5,8 @@
  * Created on April 22, 2013, 1:53 PM
  */
 
-#ifndef VSIDSSPLITTING_H
-#define VSIDSSPLITTING_H
+#ifndef PCASSO_VSIDSSPLITTING_H
+#define PCASSO_VSIDSSPLITTING_H
 
 #include "riss/mtl/Vec.h"
 #include "riss/core/SolverTypes.h"
@@ -20,7 +20,7 @@ namespace Pcasso
 class VSIDSSplitting : public SplitterSolver
 {
 
-    Riss::CoreConfig& coreConfig;
+    Riss::CoreConfig* coreConfig;
 
     // more global data structure
     Riss::vec<Riss::Lit>  learnt_clause;
@@ -28,7 +28,7 @@ class VSIDSSplitting : public SplitterSolver
     uint64_t extraInfo;
 
   public:
-    VSIDSSplitting(Riss::CoreConfig& config);
+    VSIDSSplitting(Riss::CoreConfig* config);
     ~VSIDSSplitting();
     void dummy()
     {

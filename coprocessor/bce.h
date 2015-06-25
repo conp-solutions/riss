@@ -2,8 +2,8 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef BCE_HH
-#define BCE_HH
+#ifndef RISS_BCE_HH
+#define RISS_BCE_HH
 
 #include "riss/core/Solver.h"
 #include "coprocessor/Technique.h"
@@ -67,7 +67,7 @@ class BlockedClauseElimination : public Technique
      * Note: method assumes c and d to be sorted
      * @return Lit_Undef, if the resolvent is no tautology, otherwise the (first) literal of c, which produces the tautologic resolvent
      */
-    Riss::Lit tautologicResolvent(const Riss::Clause& c, const Riss::Clause& d, const Riss::Lit l) const ;
+    Riss::Lit tautologicResolvent(const Riss::Clause& c, const Riss::Clause& d, const Riss::Lit& l) const ;
 
     /** run blocked clause elimination, and covered literal elimination */
     void blockedClauseElimination();

@@ -28,8 +28,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 **************************************************************************************************/
 
 
-#ifndef Minisat_SolverTypes_h
-#define Minisat_SolverTypes_h
+#ifndef RISS_Minisat_SolverTypes_h
+#define RISS_Minisat_SolverTypes_h
 
 #include <cstdio>
 #include <cstring>
@@ -47,10 +47,10 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include <vector>
 
-// TODO remove after debug
+/// TODO remove after debug
 #include <iostream>
-
 using namespace std;
+
 
 namespace Riss
 {
@@ -65,7 +65,7 @@ namespace Riss
 typedef int32_t Var; // be explicit here about the number of bits!
 #define var_Undef (-1)
 
-/** distinguish between DRUP and DRAT proofs */
+/// distinguish between DRUP and DRAT proofs
 enum ProofStyle {
     unknownProof = 0,
     drupProof = 1,
@@ -86,16 +86,16 @@ struct Lit {
 };
 
 
-inline  Lit  mkLit(Var var, bool sign) { Lit p; p.x = var + var + (int)sign; return p; }
-inline  Lit  operator ~(Lit p)              { Lit q; q.x = p.x ^ 1; return q; }
-inline  Lit  operator ^(Lit p, bool b)      { Lit q; q.x = p.x ^ (unsigned int)b; return q; }
-inline  bool sign(Lit p)              { return p.x & 1; }
-inline  int  var(Lit p)              { return p.x >> 1; }
+inline  Lit  mkLit(const Var& var, const bool& sign = false) { Lit p; p.x = var + var + (int)sign; return p; }
+inline  Lit  operator ~(const Lit& p)              { Lit q; q.x = p.x ^ 1; return q; }
+inline  Lit  operator ^(const Lit& p, bool b)      { Lit q; q.x = p.x ^ (unsigned int)b; return q; }
+inline  bool sign(const Lit& p)              { return p.x & 1; }
+inline  int  var(const Lit& p)              { return p.x >> 1; }
 
 // Mapping Literals to and from compact integers suitable for array indexing:
-inline  int  toInt(Var v)              { return v; }
-inline  int  toInt(Lit p)              { return p.x; }
-inline  Lit  toLit(int i)              { Lit p; p.x = i; return p; }
+inline  int  toInt(const Var& v)              { return v; }
+inline  int  toInt(const Lit& p)              { return p.x; }
+inline  Lit  toLit(const int& i)              { Lit p; p.x = i; return p; }
 
 //const Lit lit_Undef = mkLit(var_Undef, false);  // }- Useful special constants.
 //const Lit lit_Error = mkLit(var_Undef, true );  // }
@@ -179,7 +179,8 @@ class Clause
         unsigned has_extra : 1;
         unsigned reloced   : 1;
         #ifndef PCASSO
-        unsigned lbd       : 24;
+        unsigned lbd       : 23;
+        unsigned isCore    : 1;
         unsigned canbedel  : 1;
         unsigned can_subsume : 1;
         unsigned can_strengthen : 1;
@@ -192,7 +193,8 @@ class Clause
         unsigned can_subsume : 1;
         unsigned can_strengthen : 1;
         unsigned pt_level   : 9;     // level of the clause in the decision tree
-        unsigned lbd       : 20;
+        unsigned isCore    : 1;
+        unsigned lbd       : 19;
         #endif
 
         #ifdef CLS_EXTRA_INFO
@@ -208,6 +210,7 @@ class Clause
             has_extra = rhs.has_extra;
             reloced = rhs.reloced;
             lbd = rhs.lbd;
+            isCore = rhs.isCore;
             canbedel = rhs.canbedel;
             can_subsume = rhs.can_subsume;
             can_strengthen = rhs.can_strengthen;
@@ -230,6 +233,7 @@ class Clause
             has_extra = rhs.has_extra;
             reloced = rhs.reloced;
             lbd = rhs.lbd;
+            isCore = rhs.isCore;
             canbedel = rhs.canbedel;
             can_subsume = rhs.can_subsume;
             can_strengthen = rhs.can_strengthen;
@@ -265,6 +269,7 @@ class Clause
         header.extra_info = 0
         #endif
                             header.lbd = 0;
+        header.isCore = 0;
         header.canbedel = 1;
         header.can_subsume = 1;
         header.can_strengthen = 1;
@@ -363,6 +368,7 @@ class Clause
     void         shrink(int i)         { assert(i <= size()); if (header.has_extra) { data[header.size - i] = data[header.size]; } header.size -= i; }
     void         pop()              { shrink(1); }
     bool         learnt()      const   { return header.learnt; }
+    void         learnt(bool learnt)   { header.learnt = learnt; }
     bool         has_extra()      const   { return header.has_extra; }
     uint32_t     mark()      const   { return header.mark; }
     void         mark(uint32_t m)    { header.mark = m; }
@@ -390,8 +396,11 @@ class Clause
     // unsigned int&       lbd    ()              { return header.lbd; }
     unsigned int        lbd() const        { return header.lbd; }
     void setCanBeDel(bool b) {header.canbedel = b;}
+    void resetCanBeDel() {header.canbedel = false;}
     bool canBeDel() {return header.canbedel;}
 
+    bool isCoreClause() const { return header.isCore; }
+    void setCoreClause(bool c) { header.isCore = c; }
 
     void         print(bool nl = false) const
     {
@@ -405,10 +414,10 @@ class Clause
     Lit          subsumes(const Clause& other) const;
     bool         ordered_subsumes(const Clause& other) const;
     bool         ordered_equals(const Clause& other) const;
-    void         remove_lit(const Lit p);        /** keeps the order of the remaining literals */
-    void         strengthen(Lit p);
+    void         remove_lit(const Lit& p);         /** keeps the order of the remaining literals */
+    void         strengthen(const Riss::Lit& p);
 
-    void    set_delete(bool b)         { if (b) { header.mark = 1; } else { header.mark = 0; }}
+    void    set_delete(bool b)          { if (b) { header.mark = 1; } else { header.mark = 0; }}
     void    set_learnt(bool b)         { header.learnt = b; }
     bool    can_be_deleted()     const  { return mark() == 1; }
 
@@ -443,7 +452,7 @@ class Clause
      *         false gave up locking, because first literal of clause has changed
      *               (only if first lit was specified)
      */
-    bool    spinlock(const Lit first = lit_Undef)
+    bool    spinlock(const Lit& first = lit_Undef)
     {
         ClauseHeader compare = header;
         compare.locked = 0;
@@ -507,11 +516,11 @@ class Clause
         if (!other.can_be_deleted() && can_be_deleted()) { return false; }
         if (clauseSize > other.size()) { return false; }
         if (clauseSize < other.size()) { return true; }
-        for (uint32_t i = 0 ; i < clauseSize; i++) {   // first criterion: vars
+        for (uint32_t i = 0 ; i < clauseSize; i++) { // first criterion: vars
             if (var(other[i]) < var(data[i].lit)) { return false; }
             if (var(data[i].lit) < var(other[i])) { return true; }
         }
-        for (uint32_t i = 0 ; i < clauseSize; i++) {   // second criterion: polarity
+        for (uint32_t i = 0 ; i < clauseSize; i++) {// second criterion: polarity
             if (other[i] < data[i].lit) { return false; }
             if (data[i].lit < other[i]) { return true; }
         }
@@ -898,7 +907,7 @@ class CMap
 
     // Insert/Remove/Test mapping:
     void     insert(CRef cr, const T& t) { map.insert(cr, t); }
-    void     growTo(CRef cr, const T& t) { map.insert(cr, t); }       // NOTE: for compatibility
+    void     growTo(CRef cr, const T& t) { map.insert(cr, t); }      // NOTE: for compatibility
     void     remove(CRef cr)            { map.remove(cr); }
     bool     has(CRef cr, T& t)      { return map.peek(cr, t); }
 
@@ -1005,7 +1014,7 @@ inline bool Clause::ordered_equals(const Clause& other) const
     return true;
 }
 
-inline void Clause::remove_lit(const Lit p)
+inline void Clause::remove_lit(const Lit& p)
 {
     for (int i = 0; i < size(); ++i) {
         if (data[i].lit == p) {
@@ -1022,10 +1031,9 @@ inline void Clause::remove_lit(const Lit p)
     }
 }
 
-inline void Clause::strengthen(Lit p)
+inline void Clause::strengthen(const Lit& p)
 {
-    remove(*this, p);
-    calcAbstraction();
+    remove_lit(p);
 }
 //=================================================================================================
 
@@ -1206,5 +1214,6 @@ inline std::ostream& operator<<(std::ostream& other, const vec<T>& data)
 }
 
 } // end namespace
+
 
 #endif

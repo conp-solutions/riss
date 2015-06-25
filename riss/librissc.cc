@@ -16,7 +16,7 @@ struct libriss {
     Riss::vec<Riss::Lit> assumptions;   // current set of assumptions that are used for the next SAT call
     Riss::vec<char> conflictMap;        // map that stores for the last conflict whether a variable is present in the conflict (result of analyzeFinal)
     Riss::lbool lastResult;
-    libriss() : lastResult(l_Undef) {}  // default constructor to ensure everything is set to 0
+    libriss() : solver(0), cp3config(0), solverconfig(0), lastResult(l_Undef) {}  // default constructor to ensure everything is set to 0
 };
 
 
@@ -72,7 +72,7 @@ extern "C" {
         libriss* riss = new libriss;
         riss->solverconfig = new Riss::CoreConfig(presetConfig == 0 ? "" : presetConfig);
         riss->cp3config = new Coprocessor::CP3Config(presetConfig == 0 ? "" : presetConfig);
-        riss->solver = new Riss::Solver(*(riss->solverconfig));
+        riss->solver = new Riss::Solver(riss->solverconfig) ;
         riss->solver->setPreprocessor(riss->cp3config);
         return riss;
     }

@@ -58,7 +58,7 @@ static void shuffleVector(Lit* adj, const int adjSize)
 }
 // uhdNoShuffle
 
-uint32_t Unhiding::linStamp(const Lit literal, uint32_t stamp, bool& detectedEE)
+uint32_t Unhiding::linStamp(const Lit& literal, uint32_t stamp, bool& detectedEE)
 {
     int32_t level = 0; // corresponds to position of current literal in stampQueue
 
@@ -223,7 +223,7 @@ uint32_t Unhiding::linStamp(const Lit literal, uint32_t stamp, bool& detectedEE)
 }
 
 
-uint32_t Unhiding::stampLiteral(const Lit literal, uint32_t stamp, bool& detectedEE)
+uint32_t Unhiding::stampLiteral(const Lit& literal, uint32_t stamp, bool& detectedEE)
 {
     stampQueue.clear();
     stampEE.clear();

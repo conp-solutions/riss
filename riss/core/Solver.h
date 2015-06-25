@@ -27,8 +27,8 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#ifndef Minisat_Solver_h
-#define Minisat_Solver_h
+#ifndef RISS_Minisat_Solver_h
+#define RISS_Minisat_Solver_h
 
 #include "riss/mtl/Vec.h"
 #include "riss/mtl/Heap.h"
@@ -89,7 +89,7 @@ class PcassoClient;
 
 
 // since template methods need to be in headers ...
-extern Riss::IntOption  opt_verboseProof;
+extern Riss::IntOption opt_verboseProof;
 extern Riss::BoolOption opt_rupProofOnly;
 
 namespace Riss
@@ -120,15 +120,19 @@ class Solver
     friend class Pcasso::PcassoClient; // PcassoClient is allowed to access all the solver data structures
     #endif
 
+    CoreConfig* privateConfig; // do be able to construct object without modifying configuration
+    bool deleteConfig;
     CoreConfig& config;
   public:
 
     // Constructor/Destructor:
     //
-    Solver(CoreConfig& _config);
+    Solver(CoreConfig* externalConfig = 0, const char* configName = 0);
 
     PCASSOVIRTUAL
     ~Solver();
+    /// tell the solver to delete the configuration it just received
+    void setDeleteConfig() { deleteConfig = true; }
 
     // Problem specification:
     //
@@ -137,29 +141,29 @@ class Solver
     void    reserveVars(Var v);
 
     PCASSOVIRTUAL
-    bool    addClause(const vec<Lit>& ps);                      /** Add a clause to the solver.                                                  */
+    bool    addClause(const vec<Lit>& ps);                      /// Add a clause to the solver.
 
-    bool    addClause(const Clause& ps);                        /** Add a clause to the solver (all clause invariants do not need to be checked) */
-    bool    addEmptyClause();                                   /** Add the empty clause, making the solver contradictory.                       */
-    bool    addClause(Lit p);                                   /** Add a unit clause to the solver.                                             */
-    bool    addClause(Lit p, Lit q);                            /** Add a binary clause to the solver.                                           */
-    bool    addClause(Lit p, Lit q, Lit r);                     /** Add a ternary clause to the solver.                                          */
+    bool    addClause(const Clause& ps);                        /// Add a clause to the solver (all clause invariants do not need to be checked)
+    bool    addEmptyClause();                                   /// Add the empty clause, making the solver contradictory.
+    bool    addClause(Lit p);                                   /// Add a unit clause to the solver.
+    bool    addClause(Lit p, Lit q);                            /// Add a binary clause to the solver.
+    bool    addClause(Lit p, Lit q, Lit r);                     /// Add a ternary clause to the solver.
 
     PCASSOVIRTUAL
-    bool    addClause_(vec<Lit>& ps);                     /** Add a clause to the solver without making superflous internal copy. Will
-                                                                 *  change the passed std::vector 'ps'.                                          */
-    void    addInputClause_(vec<Lit>& ps);                      /** Add a clause to the online proof checker                                     */
+    bool    addClause_(vec<Lit>& ps);                           /// Add a clause to the solver without making superflous internal copy. Will
+    /// change the passed vector 'ps'.
+    void    addInputClause_(vec<Lit>& ps);                      /// Add a clause to the online proof checker
 
     // Solving:
     //
-    bool    simplify();                             /** Removes already satisfied clauses.                                                       */
-    bool    solve(const vec<Lit>& assumps);         /** Search for a model that respects a given set of assumptions.                             */
-    lbool   solveLimited(const vec<Lit>& assumps);  /** Search for a model that respects a given set of assumptions (With resource constraints). */
-    bool    solve();                                /** Search without assumptions.                                                              */
-    bool    solve(Lit p);                           /** Search for a model that respects a single assumption.                                    */
-    bool    solve(Lit p, Lit q);                    /** Search for a model that respects two assumptions.                                        */
-    bool    solve(Lit p, Lit q, Lit r);             /** Search for a model that respects three assumptions.                                      */
-    bool    okay() const;                           /** FALSE means solver is in a conflicting state                                             */
+    bool    simplify();                             /// Removes already satisfied clauses.
+    bool    solve(const vec<Lit>& assumps);         /// Search for a model that respects a given set of assumptions.
+    lbool   solveLimited(const vec<Lit>& assumps);  /// Search for a model that respects a given set of assumptions (With resource constraints).
+    bool    solve();                                /// Search without assumptions.
+    bool    solve(Lit p);                           /// Search for a model that respects a single assumption.
+    bool    solve(Lit p, Lit q);                    /// Search for a model that respects two assumptions.
+    bool    solve(Lit p, Lit q, Lit r);             /// Search for a model that respects three assumptions.
+    bool    okay() const;                           /// FALSE means solver is in a conflicting state
 
     void    toDimacs(FILE* f, const vec<Lit>& assumps);                 // Write CNF to file in DIMACS-format.
     void    toDimacs(const char *file, const vec<Lit>& assumps);
@@ -174,22 +178,23 @@ class Solver
 
     // Variable mode:
     //
-    void    setPolarity(Var v, bool b);     /** Declare which polarity the decision heuristic should use for a variable. Requires mode 'polarity_user'. */
-    void    setDecisionVar(Var v, bool b);  /** Declare if a variable should be eligible for selection in the decision heuristic.                       */
+    void    setPolarity(Var v, bool b);     /// Declare which polarity the decision heuristic should use for a variable. Requires mode 'polarity_user'.
+    bool    getPolarity(Var v);
+    void    setDecisionVar(Var v, bool b);  /// Declare if a variable should be eligible for selection in the decision heuristic.
     // NuSMV: SEED
     void    setRandomSeed(double seed); // sets random seed (cannot be 0)
     // NuSMV: SEED END
     // NuSMV: PREF MOD
     vec<Var> preferredDecisionVariables;
 
-    /**
+    /*
      * Add a variable at the end of the list of preferred variables
      * Does not remove the variable from the standard ordering.
      */
     void addPreferred(Var v);
 
-    /**
-     * Clear std::vector of preferred variables.
+    /*
+     * Clear vector of preferred variables.
      */
     void clearPreferred();
     // NuSMV: PREF MOD END
@@ -197,15 +202,15 @@ class Solver
 
     // Read state:
     //
-    lbool   value(Var x) const;             /** The current value of a variable.                                                              */
-    lbool   value(Lit p) const;             /** The current value of a literal.                                                               */
-    lbool   modelValue(Var x) const;        /** The value of a variable in the last model. The last call to solve must have been satisfiable. */
-    lbool   modelValue(Lit p) const;        /** The value of a literal in the last model. The last call to solve must have been satisfiable.  */
-    int     nAssigns()      const;          /** The current number of assigned literals.                                                      */
-    int     nClauses()      const;          /** The current number of original clauses.                                                       */
-    int     nLearnts()      const;          /** The current number of learnt clauses.                                                         */
-    int     nVars()      const;             /** The current number of variables.                                                              */
-    int     nTotLits()      const;          /** The current number of total literals in the formula.                                          */
+    lbool   value(Var x) const;             /// The current value of a variable.
+    lbool   value(Lit p) const;             /// The current value of a literal.
+    lbool   modelValue(Var x) const;        /// The value of a variable in the last model. The last call to solve must have been satisfiable.
+    lbool   modelValue(Lit p) const;        /// The value of a literal in the last model. The last call to solve must have been satisfiable.
+    int     nAssigns()      const;          /// The current number of assigned literals.
+    int     nClauses()      const;          /// The current number of original clauses.
+    int     nLearnts()      const;          /// The current number of learnt clauses.
+    int     nVars()      const;             /// The current number of variables.
+    int     nTotLits()      const;          /// The current number of total literals in the formula.
     int     nFreeVars()      const;
 
     // Resource contraints:
@@ -213,8 +218,8 @@ class Solver
     void    setConfBudget(int64_t x);
     void    setPropBudget(int64_t x);
     void    budgetOff();
-    void    interrupt();          /** Trigger a (potentially asynchronous) interruption of the solver. */
-    void    clearInterrupt();     /** Clear interrupt indicator flag.                                  */
+    void    interrupt();          /// Trigger a (potentially asynchronous) interruption of the solver.
+    void    clearInterrupt();     /// Clear interrupt indicator flag.
 
     // Memory managment:
     //
@@ -227,10 +232,10 @@ class Solver
 
     // Extra results: (read-only member variable)
     //
-    vec<lbool> model;             /** If problem is satisfiable, this std::vector contains the model (if any).           */
-    vec<Lit>   conflict;          /** If problem is unsatisfiable (possibly under assumptions),
-                                   *  this std::vector represent the final conflict clause expressed in the assumptions. */
-    vec<Lit>    oc;               /** std::vector to store clauses for before being added -- for DRUP output             */
+    vec<lbool> model;             /// If problem is satisfiable, this vector contains the model (if any).
+    vec<Lit>   conflict;          /// If problem is unsatisfiable (possibly under assumptions),
+    /// this vector represent the final conflict clause expressed in the assumptions.
+    vec<Lit>    oc;               /// vector to store clauses for before being added -- for DRUP output
 
     // Mode of operation:
     //
@@ -277,8 +282,8 @@ class Solver
 
     struct VarData {
         CRef reason; int level;
-        Lit dom;      // for lhbr
-        int32_t cost; // for hack
+        Lit dom;      /// for lhbr
+        int32_t position; /// for hack
         #ifdef CLS_EXTRA_INFO
         uint64_t extraInfo;
         #endif
@@ -320,9 +325,31 @@ class Solver
     vec<double>         activity;         // A heuristic measurement of the activity of a variable.
     double              var_inc;          // Amount to bump next variable with.
   public: // TODO FIXME undo after debugging!
-    OccLists<Lit, vec<Watcher>, WatcherDeleted>
-    watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
+    OccLists<Lit, vec<Watcher>, WatcherDeleted> watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
     // no watchesBin, incorporated into watches
+    
+    /** structure to hande reverse minimization nicely
+     *  uses data structures of solver for incomplete propagation
+     */
+    struct ReverseMinimization {
+      vec<lbool> assigns;                                    // assignment for learned clause minimization
+      vec<Lit>   trail;                                      // trail for learned clause minimization
+      bool enabled;                                                 // indicate whether the technique is enabled
+      
+      int attempts;
+      int revMindroppedLiterals;
+      int revMinConflicts;
+      int revMincutOffLiterals;
+      int succesfulReverseMinimizations;
+      
+      ReverseMinimization(bool doUse) : enabled(doUse), attempts(0), revMindroppedLiterals(0), revMinConflicts(0), revMincutOffLiterals(0), succesfulReverseMinimizations(0) { }
+      
+      lbool value(const Var& x) const { return assigns[x]; }                         /// The current value of a variable.
+      lbool value(const Lit& p) const { return assigns[var(p)] ^ sign(p); } /// The current value of a literal.
+      void uncheckedEnqueue(const Lit& l){ assigns[ var(l) ] = sign(l) ? l_False : l_True; trail.push( l ); } /// add variable assignment
+      
+    } reverseMinimization;
+    
   public: // TODO: set more nicely, or write method!
     vec<CRef>           clauses;          // List of problem clauses.
     vec<CRef>           learnts;          // List of learnt clauses.
@@ -359,26 +386,25 @@ class Solver
 
 
   public:
-    /** set whether a variable can be used for simplification techniques that do not preserve equivalence */
+    /// set whether a variable can be used for simplification techniques that do not preserve equivalence
     void freezeVariable(const Var& v, const bool& frozen) { varFlags[v].frozen = frozen; }
-    /** indicates that this variable cannot be used for simplification techniques that do not preserve equivalence */
+    /// indicates that this variable cannot be used for simplification techniques that do not preserve equivalence
     bool isFrozen(const Var& v) const { return varFlags[v].frozen; }
 
-    vec<Lit>            trail;             // Assignment stack; stores all assigments made in the order they were made.
+    vec<Lit>            trail;            // Assignment stack; stores all assigments made in the order they were made.
   protected:
     vec<int>            nbpos;
-    vec<int>            trail_lim;         // Separator indices for different decision levels in 'trail'.
-    vec<VarData>        vardata;           // Stores reason and level for each variable.
-    int                 qhead;             // Head of queue (as index into the trail -- no more explicit propagation queue in MiniSat).
-    int                 realHead;          // indicate last literal that has been analyzed for unit propagation
-    int                 simpDB_assigns;    // Number of top-level assignments since last execution of 'simplify()'.
-    int64_t             simpDB_props;      // Remaining number of propagations that must be made before next execution of 'simplify()'.
-    vec<Lit>            assumptions;       // Current set of assumptions provided to solve by the user.
-    Heap<VarOrderLt>    order_heap;        // A priority queue of variables ordered with respect to the variable activity.
-    double              progress_estimate; // Set by 'search()'.
-    bool                remove_satisfied;  // Indicates whether possibly inefficient linear scan for satisfied clauses should be performed in 'simplify'.
-    MarkArray permDiff;
-    // vec<unsigned long>  permDiff;          // permDiff[var] contains the current conflict number... Used to count the number of  LBD
+    vec<int>            trail_lim;        // Separator indices for different decision levels in 'trail'.
+    vec<VarData>        vardata;          // Stores reason and level for each variable.
+    int                 qhead;            // Head of queue (as index into the trail -- no more explicit propagation queue in MiniSat).
+    int                 realHead;         // indicate last literal that has been analyzed for unit propagation
+    int                 simpDB_assigns;   // Number of top-level assignments since last execution of 'simplify()'.
+    int64_t             simpDB_props;     // Remaining number of propagations that must be made before next execution of 'simplify()'.
+    vec<Lit>            assumptions;      // Current set of assumptions provided to solve by the user.
+    Heap<VarOrderLt>    order_heap;       // A priority queue of variables ordered with respect to the variable activity.
+    double              progress_estimate;// Set by 'search()'.
+    bool                remove_satisfied; // Indicates whether possibly inefficient linear scan for satisfied clauses should be performed in 'simplify'.
+    MarkArray           lbd_marker;
 
     #ifdef UPDATEVARACTIVITY
     // UPDATEVARACTIVITY trick (see competition'09 companion paper)
@@ -403,7 +429,7 @@ class Solver
     vec<Lit>            add_tmp;
     unsigned long  MYFLAG;
 
-    vec<int> trailPos; /** store the position where the variable is located in the trail exactly (for hack) */
+    vec<int> trailPos;          /// store the position where the variable is located in the trail exactly (for hack)
 
     double              max_learnts;
     double              learntsize_adjust_confl;
@@ -442,8 +468,12 @@ class Solver
     PCASSOVIRTUAL
     void     reduceDB();                                                               // Reduce the set of learnt clauses.
     void     removeSatisfied(vec<CRef>& cs);                                           // Shrink 'cs' to contain only non-satisfied clauses.
+  public:
     void     rebuildOrderHeap();
+    void     varSetActivity(Var v, double value);      // set activity for a given variable
+    double   varGetActivity(Var v) const;              // get activity for a given variable
 
+  protected:
     // Maintaining Variable/Clause activity:
     //
     void     varDecayActivity();                       // Decay all variables with the specified factor. Implemented by increasing the 'bump' value instead.
@@ -461,10 +491,13 @@ class Solver
     bool     locked(const Clause& c) const;            // Returns TRUE if a clause is a reason for some implication in the current state.
     bool     satisfied(const Clause& c) const;         // Returns TRUE if a clause is satisfied in the current state.
   public:
-    bool addUnitClauses(const vec< Lit >& other);       // use the given trail as starting point, return true, if fails!
+    bool addUnitClauses(const vec< Lit >& other);        // use the given trail as starting point, return true, if fails!
   protected:
-    unsigned int computeLBD(const vec<Lit>& lits);
-    unsigned int computeLBD(const Clause& c);
+    /** Calculates the Literals Block Distance, which is the number of
+     *  different decision levels in a clause or list of literals.
+     */
+    template<typename T>
+    int computeLBD(const T& lits);
 
     /** perform minimization with binary clauses of the formula
      *  @param lbd the current calculated LBD score of the clause
@@ -484,6 +517,9 @@ class Solver
     double   progressEstimate()      const;  // DELETE THIS ?? IT'S NOT VERY USEFUL ...
     bool     withinBudget()      const;
 
+    vec<Lit> refineAssumptions;     // assumption vector used for refinement
+    void     refineFinalConflict(); // minimize final conflict clause
+
     /** to handle termination from the outside by a callback function */
     void* terminationCallbackState;                            // state that should be passed to the calling method
     int (*terminationCallbackMethod)(void* terminationState);  // pointer to the callback method
@@ -497,7 +533,7 @@ class Solver
      */
     void setTerminationCallback(void* terminationState, int (*terminationCallback)(void*));
 
-    /** use the set preprocessor (if present) to simplify the current formula */
+    /// use the set preprocessor (if present) to simplify the current formula
     lbool preprocess();
   protected:
     lbool inprocess(lbool status); // inprocessing code
@@ -511,7 +547,7 @@ class Solver
     void printSearchProgress();
     void updateDecayAndVMTF();
 
-    /** takes care of the std::vector of entailed unit clauses, DRUP, ...
+    /** takes care of the vector of entailed unit clauses, DRUP, ...
      * @return l_False, if adding the learned unit clause(s) results in UNSAT of the formula
      */
     lbool handleMultipleUnits(vec< Lit >& learnt_clause);
@@ -533,16 +569,16 @@ class Solver
     // DRUP proof
     bool outputsProof() const ;
     template <class T>
-    void addToProof(const T& clause, bool deleteFromProof = false, const Lit remLit = lit_Undef);    // write the given clause to the output, if the output is enabled
+    void addToProof(const T& clause, bool deleteFromProof = false, const Lit& remLit = lit_Undef);     // write the given clause to the output, if the output is enabled
     void addUnitToProof(const Lit& l, bool deleteFromProof = false);   // write a single unit clause to the proof
-    void addCommentToProof(const char* text, bool deleteFromProof = false);  // write the text as comment into the proof!
+    void addCommentToProof(const char* text, bool deleteFromProof = false); // write the text as comment into the proof!
   public:
     bool checkProof(); // if online checker is used, return whether the current proof is valid
   protected:
     #else // have empty dummy functions
     bool outputsProof() const { return false; }
     template <class T>
-    void addToProof(const T& clause, bool deleteFromProof = false, const Lit remLit = lit_Undef) const {};
+    void addToProof(const T& clause, bool deleteFromProof = false, const Lit& remLit = lit_Undef) const {};
     void addUnitToProof(const Lit& l, bool deleteFromProof = false) const {};
     void addCommentToProof(const char* text, bool deleteFromProof = false) const {};
   public:
@@ -550,14 +586,50 @@ class Solver
   protected:
     #endif
 
+    /*
+     * restricted extended resolution (Audemard ea 2010)
+     */
 
-    /** fill the current variable assignment into the given std::vector */
-    void fillLAmodel(vec<LONG_INT>& pattern, const int steps, vec<Var>& relevantVariables , const bool moveOnly = false); // fills current model into variable std::vector
+    enum rerReturnType {    // return type for the rer-implementation
+        rerUsualProcedure = 0,    // do nothing special, since rer failed -- or attach the current clause because its unit on the current level
+        rerMemorizeClause = 1,    // add the current learned clause to the data structure rerFuseClauses
+        rerDontAttachAssertingLit = 2,    // do not enqueue the asserting literal of the current clause
+        rerAttemptFailed = 3, // some extra method failed (e.g. find RER-ITE)
+    };
+
+    /// initialize the data structures for RER with the given clause
+    void restrictedExtendedResolutionInitialize(const vec< Lit >& currentLearnedClause);
+
+    /// @return true, if a clause should be added to rerFuseClauses
+    rerReturnType restrictedExtendedResolution(vec<Lit>& currentLearnedClause, unsigned int& lbd, uint64_t& extraInfo);
+    /// reset current state of restricted Extended Resolution
+    void resetRestrictedExtendedResolution();
+    /// check whether the new learned clause produces an ITE pattern with the previously learned clause (assumption, previousClause is sorted, currentClause is sorted starting from the 3rd literal)
+    rerReturnType restrictedERITE(const Lit& previousFirst, const vec<Lit>& previousPartialClause, vec<Lit>& currentClause);
+    /// initialize the rewrite info with the gates of the formula
+    void rerInitRewriteInfo();
+    /// replace the disjunction p \lor q with x
+    void disjunctionReplace(Lit p, Lit q, const Lit& x, const bool& inLearned, const bool& inBinary);
+
+    /// structure to store for each literal the literal for rewriting new learned clauses after an RER extension
+    struct LitPair {
+        Lit otherMatch, replaceWith;
+        LitPair(const Lit& l1, const Lit& l2) : otherMatch(l1), replaceWith(l2) {};
+        LitPair() : otherMatch(lit_Undef), replaceWith(lit_Undef) {}
+    };
+    vec< LitPair > erRewriteInfo; /// vector that stores the information to rewrite new learned clauses
+
+    /** fill the current variable assignment into the given vector */
+    void fillLAmodel(vec<LONG_INT>& pattern, const int steps, vec<Var>& relevantVariables , const bool moveOnly = false); // fills current model into variable vector
 
     /** perform la hack, return false -> unsat instance!
      * @return false, instance is unsatisfable
      */
     bool laHack(Riss::vec< Riss::Lit >& toEnqueue);
+    /** concurrent clause strengthening, but interleaved instead of concurrent ...
+    *  @return false, if the formula is proven to be unsatisfiable
+    */
+    bool interleavedClauseStrengthening();
 
     // Static helpers:
     //
@@ -577,13 +649,14 @@ class Solver
         return (int)(drand(seed) * size);
     }
 
-    /** build reduct wrt current unit clauses */
+    /// build reduct wrt current unit clauses
     void buildReduct();
 
   protected:
 
     OnlineProofChecker* onlineDratChecker;
 
+    int curr_restarts; // number of restarts for current call to solve_ method
 
     // UIP hack
     int l1conflicts; // number of conflicts at level 1
@@ -611,9 +684,9 @@ class Solver
 
     // real data
     Lit hstry[6];
-    vec<VarFlags> backupSolverState;  // std::vector to hold the solver state
-    vec<LONG_INT> variablesPattern;   // std::vector for variable patterns
-    vec<Var> relevantLAvariables;     // std::vector that stores the variables that are relevant for local LA
+    vec<VarFlags> backupSolverState;  // vector to hold the solver state
+    vec<LONG_INT> variablesPattern;   // vector for variable patterns
+    vec<Var> relevantLAvariables;     // vector that stores the variables that are relevant for local LA
     int untilLa;      // count until  next LA is performed
     int laBound;      // current bound for l5-LA
     bool laStart;     // when reached the la level, perform la
@@ -624,9 +697,28 @@ class Solver
 
     int simplifyIterations; // number of visiting level 0 until simplification is to be performed
     int learnedDecisionClauses;
+    bool doAddVariablesViaER; // indicator for allowing ER or not
 
     // stats for learning clauses
     double totalLearnedClauses, sumLearnedClauseSize, sumLearnedClauseLBD, maxLearnedClauseSize;
+    int extendedLearnedClauses, extendedLearnedClausesCandidates, maxECLclause;
+    int rerExtractedGates;
+    int rerITEtries, rerITEsuccesses, rerITErejectS, rerITErejectT, rerITErejectF; // how often tried RER-ITE, and how often succeeded
+    uint64_t maxResDepth;
+    Clock rerITEcputime; // timer for RER-ITE
+
+    int erRewriteRemovedLits, erRewriteClauses; // stats for ER rewriting
+
+    vec<Lit> rerCommonLits, rerIteLits; // literals that are common in the clauses in the window
+    int64_t rerCommonLitsSum; // sum of the current common literals - to Bloom-Filter common lits
+    vec<Lit> rerLits; // literals that are replaced by the new variable
+    vec<CRef> rerFuseClauses; // clauses that will be replaced by the new clause -
+    int rerLearnedClause, rerLearnedSizeCandidates, rerSizeReject, rerPatternReject, rerPatternBloomReject, maxRERclause; // stat counters
+    double rerOverheadTrailLits, totalRERlits; // stats
+
+    // interleaved clause strengthening (ics)
+    int lastICSconflicts;     // number of conflicts for last ICS
+    int icsCalls, icsCandidates, icsDroppedCandidates, icsShrinks, icsShrinkedLits; // stats
 
     // modified activity bumping
     vec<Var> varsToBump; // memorize the variables that need to be bumped in that order
@@ -649,7 +741,7 @@ class Solver
      *  Should be called after eventually enqueuing the asserting literal of the current learned clause
      *  @return true, if a contrdiction has been found, so that the result is UNSAT
      */
-    bool analyzeNewLearnedClause(const CRef newLearnedClause);
+    bool analyzeNewLearnedClause(const CRef& newLearnedClause);
 
     // helper data structures
     std::vector< int > analyzePosition; // for full probing approximation
@@ -664,15 +756,192 @@ class Solver
      * @return true, if the clause has been shrinked, false otherwise (then, the LBD also stays the same)
      */
     bool searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd);
+    
+    /// sort according to position of literal in trail
+    struct TrailPosition_Gt { 
+      vec<VarData>& varData;  // data to use for sorting
+      bool operator()(const Lit & x, const Lit & y) const
+      {
+	return varData[ var(x) ].position > varData[ var(y) ].position; // compare data of x and y instead of elements themselves
+      }
+      TrailPosition_Gt(vec<VarData>& _varData) : varData(_varData) {}
+    };
+    
+    /** reduce the literals inside the clause by performing vivification in the opposite order the literals have been added to the trail
+     * @param lbd current lbd value of the given clause
+     * @return true, if the clause has been shrinked, false otherwise (then, the LBD also stays the same)
+     */
+    bool reverseLearntClause(vec<Lit>& learned_clause, unsigned int& lbd);
 
-    /** reduce the learned clause by replacing std::pairs of literals with their previously created extended resolution literal
+    /** reduce the learned clause by replacing pairs of literals with their previously created extended resolution literal
      * @param lbd current lbd value of the given clause
      * @return true, if the clause has been shrinked, false otherwise (then, the LBD also stays the same)
      */
     bool erRewrite(vec<Lit>& learned_clause, unsigned int& lbd);
+// contrasat hack
+
+    bool      pq_order;           // If true, use a priority queue to decide the order in which literals are implied
+    // and what antecedent is used.  The priority attempts to choose an antecedent
+    // that permits further backtracking in case of a contradiction on this level.               (default false)
+
+    struct ImplData {
+        CRef reason;
+        Lit impliedLit; // if not lit_Undef, use this literal as the implied literal
+        int level;
+        int dlev_pos;
+        ImplData(CRef cr, Lit implied, int l, int p) : reason(cr), impliedLit(implied), level(l), dlev_pos(p) { }
+        ImplData(CRef cr, int l, int p) : reason(cr), impliedLit(lit_Undef), level(l), dlev_pos(p) { }
+        ImplData()                      : reason(0),  impliedLit(lit_Undef), level(0), dlev_pos(0) { }
+    };
+
+    struct HeapImpl {
+        vec<ImplData> heap; // Heap of ImplData
+
+        // Index "traversal" functions
+        static inline int left(int i) { return i * 2 + 1; }
+        static inline int right(int i) { return (i + 1) * 2; }
+        static inline int parent(int i) { return (i - 1) >> 1; }
+
+        // less than with respect to lexicographical order
+        bool lt(ImplData& x, ImplData& y) const
+        {
+            return (x.level < y.level) ? true :
+                   (y.level < x.level) ? false :
+                   (x.dlev_pos < y.dlev_pos);
+        }
+
+        void percolateUp(int i)
+        {
+            ImplData x = heap[i];
+            int p  = parent(i);
+
+            while (i != 0 && lt(x, heap[p])) {
+                heap[i] = heap[p];
+                i       = p;
+                p       = parent(p);
+            }
+            heap[i] = x;
+        }
+
+        void percolateDown(int i)
+        {
+            ImplData x = heap[i];
+            while (left(i) < heap.size()) {
+                int child =
+                    (right(i) < heap.size() && lt(heap[right(i)], heap[left(i)])) ?
+                    right(i) : left(i);
+                if (!lt(heap[child], x)) { break; }
+                heap[i]          = heap[child];
+                i                = child;
+            }
+            heap   [i] = x;
+        }
+
+      public:
+        HeapImpl()              : heap()    { heap.clear(); }
+        HeapImpl(const int sz0) : heap(sz0) { heap.clear(); }
+
+        int  size()  const                   { return heap.size(); }
+        bool empty() const                   { return heap.size() == 0; }
+        ImplData operator[](int index) const { assert(index < heap.size()); return heap[index]; }
+
+        void insert(ImplData elem)
+        {
+            heap.push(elem);
+            percolateUp(heap.size() - 1);
+        }
+
+        ImplData  removeMin()
+        {
+            ImplData x = heap[0];
+            heap[0]    = heap.last();
+            heap.pop();
+            if (heap.size() > 1) { percolateDown(0); }
+            return x;
+        }
+
+        void clear(bool dealloc = false) { heap.clear(dealloc); }
+    };
+
+    HeapImpl            impl_cl_heap;     // A priority queue of implication clauses wrapped as ImplData, ordered by level.
+
+    // cir minisat hack
+    void     counterImplicationRestart(); // to jump to as restart.
+
+    /**
+     * After how many steps the solver should perform failed literals and detection of necessary assignments. (default 32)
+     * If set to '0', no inprocessing is performed.
+     */
+    int probing_step;     // Counter for probing. If zero, inprocessing (probing) will be performed.
+    int probing_step_width;
+
+    /**
+     * Limit how many varialbes with highest activity should be probed during the inprocessing step.
+     */
+    int probing_limit;
+
+    // MinitSAT parameters
+
+    /**
+     * If true, variable initialization is based on Jeroslow-Wang heuristic and the variable
+     * activity is set to the value of the variable. Therefore, the last variables will be decided
+     * first. This is helpful because the last variables are often auxiliary variables.
+     *
+     * This hack is useful for short timeouts.
+     */
+    bool pol_act_init;
+
+    // cir minisat Parameters
+    int       cir_bump_ratio;     // bump ratio for VSIDS score after restart (if >0 cir is activated)
+    int       cir_count;          // Counts calls of cir-function
 
 
-    // for coprocessor
+    // MiPiSAT methods
+
+    vec<Lit>      probing_uncheckedLits;            /// literals to be used in probing routine
+    vec<VarFlags> probing_oldAssigns;  /// literals to be used in probing routine
+    /**
+     * Apply inprocessing on the variables with highest activity. The limit of
+     * how many variables are probed is determined by the parameter "probing_limit".
+     *
+     * @return false if inconsistency was found. That means the formula is unsatisfiable
+     */
+    bool probingHighestActivity();
+
+    /**
+     * Call probingLiteral() for both - positive and negative - literal
+     * of the passed variable.
+     *
+     * If a conflict is found, the formula is unsatisfiable.
+     * Otherwise it collects common implied variables and perform
+     * unit propagation.
+     *
+     * @param v Variable that will be checked as positive and negative literal
+     * @return false if inconsistency was found, meaning the formula is UNSATs
+     */
+    bool probing(Var v);
+
+    /**
+     * Probing a single literal.
+     *
+     * Collects all literals that are inferred by unit propagation given a
+     * single literal. It is called by the method Solver::probing() two times
+     * for a literal "x" and its negation "not x".
+     *
+     * @param  v Literal that is used as unit to inferre other literals
+     * @return 0 - no conflict found
+     *         1 - conflict for literal v
+     *         2 - contradiction (conflict for "v" and "not v") => UNSAT
+     */
+    int probingLiteral(Lit v);
+
+    // 999 MS hack
+    bool   activityBasedRemoval;     // use minisat or glucose style of clause removal and activities
+    int    lbd_core_threshold;        // threadhold to move clause from learnt to formula (if LBD is low enough)
+    double learnts_reduce_fraction;   // fraction of how many learned clauses should be removed
+
+
+/// for coprocessor
   protected:  Coprocessor::Preprocessor* coprocessor;
   public:
 
@@ -699,12 +968,20 @@ class Solver
     /** return extra variable information (should be called for top level units only!) */
     uint64_t variableExtraInfo(const Var& v) const ;
 
-    // for qprocessor
+    /** temporarly enable or disable extended resolution, to ensure that the number of variables remains the same */
+    void setExtendedResolution(bool enabled) { doAddVariablesViaER = enabled; }
+
+    /** query whether extended resolution is enabled or not */
+    bool getExtendedResolution() const { return doAddVariablesViaER; }
+
+/// for qprocessor
   public:
-    // void writeClauses( std::ostream& stream ) { }
+//      void writeClauses( std::ostream& stream ) {
+//
+//      }
 
 
-    // [BEGIN] modifications for parallel assumption based solver
+// [BEGIN] modifications for parallel assumption based solver
   public:
     /** setup the communication object
      * @param comm pointer to the communication object that should be used by this thread
@@ -717,7 +994,7 @@ class Solver
     void resetLastSolve();
 
   private:
-    Communicator* communication; /** communication with the outside, and control of this solver */
+    Communicator* communication; /// communication with the outside, and control of this solver
 
     /** goto sleep, wait until master did updates, wakeup, process the updates
      * @param toSend if not 0, send the (learned) clause, if 0, receive shared clauses
@@ -749,35 +1026,39 @@ class Solver
     /*
      * stats and limits for communication
      */
-    vec<Lit> receiveClause;                    /** temporary placeholder for receiving clause                                            */
-    std::vector< CRef > receiveClauses;        /** temporary placeholder indexes of the clauses that have been received by communication */
-    int currentTries;                          /** current number of waits                                                               */
-    int receiveEvery;                          /** do receive every n tries                                                              */
-    float currentSendSizeLimit;                /** dynamic limit to control send size                                                    */
-    float currentSendLbdLimit;                 /** dynamic limit to control send lbd                                                     */
+    vec<Lit> receiveClause;         /// temporary placeholder for receiving clause
+    std::vector< CRef > receiveClauses; /// temporary placeholder indexes of the clauses that have been received by communication
+    int currentTries;                          /// current number of waits
+    int receiveEvery;                          /// do receive every n tries
+    float currentSendSizeLimit;                /// dynamic limit to control send size
+    float currentSendLbdLimit;                 /// dynamic limit to control send lbd
   public:
-    int succesfullySend;                       /** number of clauses that have been sucessfully transmitted                              */
-    int succesfullyReceived;                   /** number of clauses that have been sucessfully transmitted                              */
+    int succesfullySend;                       /// number of clauses that have been sucessfully transmitted
+    int succesfullyReceived;                   /// number of clauses that have been sucessfully transmitted
   private:
-    float sendSize;                            /** Minimum Lbd of clauses to send  (also start value)                                    */
-    float sendLbd;                             /** Minimum size of clauses to send (also start value)                                    */
-    float sendMaxSize;                         /** Maximum size of clauses to send                                                       */
-    float sendMaxLbd;                          /** Maximum Lbd of clauses to send                                                        */
-    float sizeChange;                          /** How fast should size send limit be adopted?                                           */
-    float lbdChange;                           /** How fast should lbd send limit be adopted?                                            */
-    float sendRatio;                           /** How big should the ratio of send clauses be?                                          */
+    float sendSize;                            /// Minimum Lbd of clauses to send  (also start value)
+    float sendLbd;                             /// Minimum size of clauses to send (also start value)
+    float sendMaxSize;                         /// Maximum size of clauses to send
+    float sendMaxLbd;                          /// Maximum Lbd of clauses to send
+    float sizeChange;                          /// How fast should size send limit be adopted?
+    float lbdChange;                           /// How fast should lbd send limit be adopted?
+    float sendRatio;                           /// How big should the ratio of send clauses be?
 
-    // [END] modifications for parallel assumption based solver
+// [END] modifications for parallel assumption based solver
 
-    // Modifications for Pcasso
+// Modifications for Pcasso
     #ifdef PCASSO
     Pcasso::PcassoClient* pcassoClient;
 
     #endif
-    // END modifications for Pcasso
+// END modifications for Pcasso
+
 
 };
 
+
+//=================================================================================================
+// Implementation of inline methods:
 
 inline CRef Solver::reason(Var x) const { return vardata[x].reason; }
 inline int  Solver::level(Var x) const { return vardata[x].level; }
@@ -787,6 +1068,8 @@ inline void Solver::insertVarOrder(Var x)
     if (!order_heap.inHeap(x) && varFlags[x].decision) { order_heap.insert(x); }
 }
 
+inline void Solver::varSetActivity(Var v, double value) {activity[v] = value;}
+inline double Solver::varGetActivity(Var v) const { return activity[v]; }
 inline void Solver::varDecayActivity() { var_inc *= (1 / var_decay); }
 inline void Solver::varBumpActivity(Var v, double inverseRatio) { varBumpActivityD(v, var_inc / (double) inverseRatio); }
 inline void Solver::varBumpActivityD(Var v, double inc)
@@ -797,16 +1080,14 @@ inline void Solver::varBumpActivityD(Var v, double inc)
     if (activity[v] > 1e100) {
         DOUT(if (config.opt_printDecisions > 0) std::cerr << "c rescale decision heap" << std::endl;) ;
         // Rescale:
-        for (int i = 0; i < nVars(); i++) {
-            activity[i] *= 1e-100;
-        }
+        for (int i = 0; i < nVars(); i++)
+        { activity[i] *= 1e-100; }
         var_inc *= 1e-100;
     }
 
     // Update order_heap with respect to new activity:
-    if (order_heap.inHeap(v)) {
-        order_heap.decrease(v);
-    }
+    if (order_heap.inHeap(v))
+    { order_heap.decrease(v); }
 }
 
 inline void Solver::claDecayActivity() { cla_inc *= (1 / clause_decay); }
@@ -815,9 +1096,8 @@ inline void Solver::claBumpActivity(Clause& c, double inverseRatio)
     DOUT(if (config.opt_removal_debug > 1) std::cerr << "c bump clause activity for " << c << " with " << c.activity() << " by " << inverseRatio << std::endl;) ;
     if ((c.activity() += cla_inc / inverseRatio) > 1e20) {
         // Rescale:
-        for (int i = 0; i < learnts.size(); i++) {
-            ca[learnts[i]].activity() *= 1e-20;
-        }
+        for (int i = 0; i < learnts.size(); i++)
+        { ca[learnts[i]].activity() *= 1e-20; }
         cla_inc *= 1e-20;
         DOUT(if (config.opt_removal_debug > 1) std::cerr << "c rescale clause activities" << std::endl;) ;
     }
@@ -826,9 +1106,8 @@ inline void Solver::claBumpActivity(Clause& c, double inverseRatio)
 inline void Solver::checkGarbage(void) { return checkGarbage(garbage_frac); }
 inline void Solver::checkGarbage(double gf)
 {
-    if (ca.wasted() > ca.size() * gf) {
-        garbageCollect();
-    }
+    if (ca.wasted() > ca.size() * gf)
+    { garbageCollect(); }
 }
 
 // NOTE: enqueue does not set the ok flag! (only public methods do)
@@ -840,9 +1119,8 @@ inline bool     Solver::addClause(Lit p, Lit q)          { add_tmp.clear(); add_
 inline bool     Solver::addClause(Lit p, Lit q, Lit r)   { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); add_tmp.push(r); return addClause_(add_tmp); }
 inline bool     Solver::locked(const Clause& c) const
 {
-    if (c.size() > 2) {
-        return value(c[0]) == l_True && reason(var(c[0])) != CRef_Undef && ca.lea(reason(var(c[0]))) == &c;
-    }
+    if (c.size() > 2)
+    { return value(c[0]) == l_True && reason(var(c[0])) != CRef_Undef && ca.lea(reason(var(c[0]))) == &c; }
     return
         (value(c[0]) == l_True && reason(var(c[0])) != CRef_Undef && ca.lea(reason(var(c[0]))) == &c)
         ||
@@ -863,6 +1141,7 @@ inline int      Solver::nVars()      const   { return vardata.size(); }
 inline int      Solver::nTotLits()      const   { return clauses_literals + learnts_literals; }
 inline int      Solver::nFreeVars()      const   { return (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]); }
 inline void     Solver::setPolarity(Var v, bool b) { varFlags[v].polarity = b; }
+inline bool     Solver::getPolarity(Var v)         { return varFlags[v].polarity; }
 inline void     Solver::setDecisionVar(Var v, bool b)
 {
     if (b && !varFlags[v].decision) { dec_vars++; }
@@ -922,6 +1201,47 @@ bool Solver::addUnitClauses(const vec< Lit >& other)
     return propagate() != CRef_Undef;
 }
 
+/************************************************************
+ * Compute LBD functions
+ *************************************************************/
+
+template<typename T>
+inline int Solver::computeLBD(const T& lits)
+{
+
+    // Already discovered decision levels are stored in a mark array. We do
+    // not want to allocate the mark array for each call of ths function.
+    // Therefore a "gobal" mark array for the whole Solver instance will be
+    // used.
+
+    int distance = 0;
+
+    // Generate a unique identifier (aka step) for this function call
+    lbd_marker.nextStep();
+    bool withLevelZero = false;
+    const int minLevel = (config.opt_lbd_ignore_assumptions ? assumptions.size() : 0);
+    for (int i = 0; i < lits.size(); i++) {
+        // decision level of the literal
+        const int& dec_level = level(var(lits[i]));
+        if (dec_level < minLevel) { continue; }  // ignore literals for assumptions
+        withLevelZero = (dec_level == 0);
+
+        // If the current decision level in the mark array is not associated
+        // with the current step, that means that the decision level was
+        // not discovered before.
+        if (!lbd_marker.isCurrentStep(dec_level)) {
+            // mark the current level as discovered
+            lbd_marker.setCurrentStep(dec_level);
+            // a new decision level was found
+            distance++;
+        }
+    }
+
+    // if the parameter says that level 0 should be ignored, ignore it (if it have been present)
+    // Ignore all literals on level 0, as they are implied by the formula
+    if (config.opt_lbd_ignore_l0 && withLevelZero) { return distance - 1; }
+    return distance;
+}
 
 
 //
@@ -976,14 +1296,14 @@ inline bool Solver::outputsProof() const
 }
 
 template <class T>
-inline void Solver::addToProof(const T& clause, bool deleteFromProof, const Lit remLit)
+inline void Solver::addToProof(const T& clause, const bool deleteFromProof, const Lit& remLit)
 {
     if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly)) { return; }  // no proof, or delete and noDrup
 
-    if (communication != 0) {   // if the solver is part of a portfolio, then produce a global proof!
+    if (communication != 0) {  // if the solver is part of a portfolio, then produce a global proof!
 //       if( deleteFromProof ) std::cerr << "c [" << communication->getID() << "] remove clause " << clause << " to proof" << std::endl;
 //       else std::cerr << "c [" << communication->getID() << "] add clause " << clause << " to proof" << std::endl;
-        if (deleteFromProof) { communication->getPM()->delFromProof(clause, remLit, communication->getID(), false); }    // first version: work on global proof only! TODO: change to local!
+        if (deleteFromProof) { communication->getPM()->delFromProof(clause, remLit, communication->getID(), false); }   // first version: work on global proof only! TODO: change to local!
         else { communication->getPM()->addToProof(clause, remLit, communication->getID(), false); }  // first version: work on global proof only!
         return;
     }
@@ -997,7 +1317,7 @@ inline void Solver::addToProof(const T& clause, bool deleteFromProof, const Lit 
     }
     // actually print the clause into the file
     if (deleteFromProof) { fprintf(drupProofFile, "d "); }
-    if (remLit != lit_Undef) { fprintf(drupProofFile, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1)); }   // print this literal first (e.g. for DRAT clauses)
+    if (remLit != lit_Undef) { fprintf(drupProofFile, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1)); }  // print this literal first (e.g. for DRAT clauses)
     for (int i = 0; i < clause.size(); i++) {
         if (clause[i] == lit_Undef || clause[i] == remLit) { continue; }   // print the remaining literal, if they have not been printed yet
         fprintf(drupProofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
@@ -1020,8 +1340,8 @@ inline void Solver::addUnitToProof(const Lit& l, bool deleteFromProof)
 {
     if (!outputsProof() || (deleteFromProof && config.opt_rupProofOnly)) { return; }  // no proof, or delete and noDrup
 
-    if (communication != 0) {   // if the solver is part of a portfolio, then produce a global proof!
-        if (deleteFromProof) { communication->getPM()->delFromProof(l, communication->getID(), false); }    // first version: work on global proof only! TODO: change to local!
+    if (communication != 0) {  // if the solver is part of a portfolio, then produce a global proof!
+        if (deleteFromProof) { communication->getPM()->delFromProof(l, communication->getID(), false); }   // first version: work on global proof only! TODO: change to local!
         else { communication->getPM()->addUnitToProof(l, communication->getID(), false); }  // first version: work on global proof only!
         return;
     }
@@ -1033,7 +1353,7 @@ inline void Solver::addUnitToProof(const Lit& l, bool deleteFromProof)
             onlineDratChecker->addClause(l);
         }
     }
-    if (l == lit_Undef) { return; }   // no need to check this literal, however, routine can be used to check whether the empty clause is in the proof
+    if (l == lit_Undef) { return; }  // no need to check this literal, however, routine can be used to check whether the empty clause is in the proof
     // actually print the clause into the file
     if (deleteFromProof) { fprintf(drupProofFile, "d "); }
     fprintf(drupProofFile, "%i 0\n", (var(l) + 1) * (-2 * sign(l) + 1));

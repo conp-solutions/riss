@@ -454,7 +454,7 @@ bool BoundedVariableAddition::andBVA()
         // continue with next literal, if there has not been any reduction
         if (bvaMatchingLiterals.size() < 2) {
             if (bvaHeap.size() > 0)
-            { DOUT(if (config.bva_debug > 2) cerr << "c [BVA] continue because not two matching literals (" << right << "), bvaHeap[" << bvaHeap.size() << "],0=" << toLit(bvaHeap[0]) << endl; });
+            { DOUT(if (config.bva_debug > 2) cerr << "c [BVA] continue because not two matching literals (" << right << "), bvaHeap[" << bvaHeap.size() << "],0=" << toLit(bvaHeap[0]) << endl;); }
         continue;
     }
 
@@ -1833,7 +1833,7 @@ bool BoundedVariableAddition::iteBVAfull()
 }
 
 
-bool BoundedVariableAddition::bvaHandleComplement(const Lit right, Heap<LitOrderHeapLt>& bvaHeap)
+bool BoundedVariableAddition::bvaHandleComplement(const Lit& right, Heap< Coprocessor::LitOrderHeapLt >& bvaHeap)
 {
     data.clss.clear();
     const Lit left = ~right;
@@ -2001,7 +2001,7 @@ void BoundedVariableAddition::destroy()
 }
 
 
-void BoundedVariableAddition::removeDuplicateClauses(const Lit literal)
+void BoundedVariableAddition::removeDuplicateClauses(const Lit& literal)
 {
 
     for (uint32_t i = 0 ; i < data.list(literal).size() ; ++ i) {

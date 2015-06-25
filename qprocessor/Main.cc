@@ -85,11 +85,11 @@ int main(int argc, char** argv)
         bool foundHelp = coreConfig.parseOptions(argc, argv);
         foundHelp = cp3config.parseOptions(argc, argv) || foundHelp;
         ::parseOptions(argc, argv);   // parse all global options
-        if (foundHelp) { exit(0); }   // stop after printing the help information
+        if (foundHelp) { exit(0); }  // stop after printing the help information
         coreConfig.setPreset(string(opt_config == 0 ? "" : opt_config));
         cp3config.setPreset(string(opt_config == 0 ? "" : opt_config));
 
-        if (opt_cmdLine) {   // print the command line options
+        if (opt_cmdLine) {  // print the command line options
             std::stringstream s;
             coreConfig.configCall(s);
             cp3config.configCall(s);
@@ -98,7 +98,7 @@ int main(int argc, char** argv)
             exit(0);
         }
 
-        Solver S(coreConfig);
+        Solver S(&coreConfig);
 //  S.setPreprocessor(&cp3config); // tell solver about preprocessor
         double      initial_time = cpuTime();
 
@@ -197,7 +197,7 @@ int main(int argc, char** argv)
             fprintf(res, "p cnf %u %i\n", vars, cls);
             // print all the quantifiers again!
             bool lastQisE = quantifiers.size() == 0 ? false : quantifiers[ quantifiers.size() - 1 ].kind == 'e';
-            for (int i = 0; i < quantifiers.size(); ++ i) {   // check whether the last quantifier is 'e'. if yes, add BVA variables, if not, add another quantifier sequence
+            for (int i = 0; i < quantifiers.size(); ++ i) {  // check whether the last quantifier is 'e'. if yes, add BVA variables, if not, add another quantifier sequence
                 fprintf(res, "%c ", quantifiers[i].kind);
                 for (int j = 0 ; j < quantifiers[i].lits.size(); ++ j) {
                     const int l = toInt(quantifiers[i].lits[j]);
@@ -214,7 +214,7 @@ int main(int argc, char** argv)
                 }
                 fprintf(res, "0\n");
             }
-            if (! lastQisE && beforeVariables < S.nVars()) {   // additional variables have been added, add them to the prefix as existential
+            if (! lastQisE && beforeVariables < S.nVars()) {  // additional variables have been added, add them to the prefix as existential
                 fprintf(res, "e ");
                 for (Var v = beforeVariables; v < S.nVars(); ++v) { fprintf(res, "%i ", v + 1); }
                 fprintf(res, "0\n");

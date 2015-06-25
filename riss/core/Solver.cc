@@ -50,8 +50,10 @@ namespace Riss
 // Constructor/Destructor:
 
 
-Solver::Solver(CoreConfig& _config) :
-    config(_config)
+Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreConfig& _config
+    privateConfig(externalConfig == 0 ? new CoreConfig(configName) : externalConfig)
+    , deleteConfig(externalConfig == 0)
+    , config(* privateConfig)
     // DRUP output file
     , drupProofFile(0)
     // Parameters (user settable):
@@ -91,6 +93,9 @@ Solver::Solver(CoreConfig& _config) :
     , var_inc(1)
     , watches(WatcherDeleted(ca))
 //  , watchesBin            (WatcherDeleted(ca))
+    
+    , reverseMinimization( config.opt_use_reverse_minimization) // reverse minimization hack
+    
     , qhead(0)
     , realHead(0)
     , simpDB_assigns(-1)
@@ -222,11 +227,17 @@ Var Solver::newVar(bool sign, bool dvar, char type)
     //activity .push(0);
     activity .push(rnd_init_act ? drand(random_seed) * 0.00001 : 0);
 //     seen     .push(0);
-    permDiff  .resize(2 * v + 2); // add space for the next variable
+    lbd_marker  .resize(2 * v + 2); // add space for the next variable
 
     trail    .capacity(v + 1);
     setDecisionVar(v, dvar);
 
+    // get space for reverse data structures watches
+    if( reverseMinimization.enabled ) { 
+      reverseMinimization.assigns.push(l_Undef);
+      reverseMinimization.trail.capacity(v+1);
+    }
+    
     return v;
 }
 
@@ -242,9 +253,16 @@ void Solver::reserveVars(Var v)
     //activity .push(0);
     activity .capacity(v + 1);
 //     seen     .capacity(v+1);
-    permDiff  .capacity(2 * v + 2);
+    lbd_marker  .capacity(2 * v + 2);
     varFlags. capacity(v + 1);
     trail    .capacity(v + 1);
+    
+    // get space for reverse data structures watches
+    if( reverseMinimization.enabled ) { 
+      reverseMinimization.assigns.push(l_Undef);
+      reverseMinimization.trail.capacity(v+1);
+    }
+    
 }
 
 
@@ -334,21 +352,14 @@ void Solver::attachClause(CRef cr)
     assert(c.size() > 1 && "cannot watch unit clauses!");
     assert(c.mark() == 0 && "satisfied clauses should not be attached!");
 
-//     cerr << "c attach clause " << cr << " which is " << ca[cr] << endl;
-
-    // check for duplicates here!
-//     for (int i = 0; i < c.size(); i++)
-//       for (int j = i+1; j < c.size(); j++)
-//  assert( c[i] != c[j] && "have no duplicate literals in clauses!" );
-
     if (c.size() == 2) {
         watches[~c[0]].push(Watcher(cr, c[1], 0)); // add watch element for binary clause
         watches[~c[1]].push(Watcher(cr, c[0], 0)); // add watch element for binary clause
     } else {
-//      cerr << "c DEBUG-REMOVE watch clause " << c << " in lists for literals " << ~c[0] << " and " << ~c[1] << endl;
         watches[~c[0]].push(Watcher(cr, c[1], 1));
         watches[~c[1]].push(Watcher(cr, c[0], 1));
     }
+    
     if (c.learnt()) { learnts_literals += c.size(); }
     else            { clauses_literals += c.size(); }
 }
@@ -423,43 +434,6 @@ bool Solver::satisfied(const Clause& c) const
     return false;
 }
 
-/************************************************************
- * Compute LBD functions
- *************************************************************/
-
-inline unsigned int Solver::computeLBD(const vec<Lit>& lits)
-{
-    int nblevels = 0;
-    permDiff.nextStep();
-    bool withLevelZero = false;
-    for (int i = 0; i < lits.size(); i++) {
-        int l = level(var(lits[i]));
-        withLevelZero = (l == 0);
-        if (! permDiff.isCurrentStep(l)) {
-            permDiff.setCurrentStep(l);
-            nblevels++;
-        }
-    }
-    if (config.opt_lbd_ignore_l0 && withLevelZero) { return nblevels - 1; }
-    else { return nblevels; }
-}
-
-inline unsigned int Solver::computeLBD(const Clause& c)
-{
-    int nblevels = 0;
-    permDiff.nextStep();
-    bool withLevelZero = false;
-    for (int i = 0; i < c.size(); i++) {
-        int l = level(var(c[i]));
-        withLevelZero = (l == 0);
-        if (! permDiff.isCurrentStep(l)) {
-            permDiff.setCurrentStep(l);
-            nblevels++;
-        }
-    }
-    if (config.opt_lbd_ignore_l0 && withLevelZero) { return nblevels - 1; }
-    else { return nblevels; }
-}
 
 
 /******************************************************************
@@ -473,16 +447,16 @@ bool Solver::minimisationWithBinaryResolution(vec< Lit >& out_learnt, unsigned i
     const Lit p = ~out_learnt[0];
 
     if (lbd <= lbLBDMinimizingClause) {
-        permDiff.nextStep();
-        for (int i = 1; i < out_learnt.size(); i++) { permDiff.setCurrentStep(var(out_learnt[i])); }
+        lbd_marker.nextStep();
+        for (int i = 1; i < out_learnt.size(); i++) { lbd_marker.setCurrentStep(var(out_learnt[i])); }
         const vec<Watcher>&  wbin  = watches[p]; // const!
         int nb = 0;
         for (int k = 0; k < wbin.size(); k++) {
             if (!wbin[k].isBinary()) { continue; }   // has been looping on binary clauses only before!
             const Lit imp = wbin[k].blocker();
-            if (permDiff.isCurrentStep(var(imp)) && value(imp) == l_True) {
+            if (lbd_marker.isCurrentStep(var(imp)) && value(imp) == l_True) {
                 nb++;
-                permDiff.reset(var(imp));
+                lbd_marker.reset(var(imp));
                 #ifdef CLS_EXTRA_INFO
                 extraInfo = extraInfo >= ca[wbin[k].cref()].extraInformation() ? extraInfo : ca[wbin[k].cref()].extraInformation();
                 #endif
@@ -492,7 +466,7 @@ bool Solver::minimisationWithBinaryResolution(vec< Lit >& out_learnt, unsigned i
         if (nb > 0) {
             nbReducedClauses++;
             for (int i = 1; i < out_learnt.size() - nb; i++) {
-                if (! permDiff.isCurrentStep(var(out_learnt[i]))) {
+                if (! lbd_marker.isCurrentStep(var(out_learnt[i]))) {
                     const Lit p = out_learnt[l];
                     out_learnt[l] = out_learnt[i];
                     out_learnt[i] = p;
@@ -923,18 +897,23 @@ int Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned
              */
 
         if (out_learnt.size() <= lbSizeMinimizingClause) {
-            if (recomputeLBD) { lbd = computeLBD(out_learnt); }   // update current lbd
+            if (recomputeLBD) { lbd = computeLBD(out_learnt); }   // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
             recomputeLBD = minimisationWithBinaryResolution(out_learnt, lbd); // code in this method should execute below code until determining correct backtrack level
         }
 
         if (out_learnt.size() <= config.uhle_minimizing_size) {
-            if (recomputeLBD) { lbd = computeLBD(out_learnt); }   // update current lbd
+            if (recomputeLBD) { lbd = computeLBD(out_learnt); }   // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
             recomputeLBD = searchUHLE(out_learnt, lbd);
+        }
+        
+        if (out_learnt.size() <= config.reverse_minimizing_size) {
+            if (recomputeLBD) { lbd = computeLBD(out_learnt); }   // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
+            recomputeLBD = reverseLearntClause(out_learnt, lbd);
         }
 
         // rewrite clause only, if one of the two systems added information
         if (out_learnt.size() <= 0) {   // FIXME not used yet
-            if (recomputeLBD) { lbd = computeLBD(out_learnt); }   // update current lbd
+            if (recomputeLBD) { lbd = computeLBD(out_learnt); }   // update current lbd, such that the following method can decide next whether it wants to apply minimization to the clause
             recomputeLBD = erRewrite(out_learnt, lbd);
         }
     } // end working on usual learnt clause (minimize etc.)
@@ -1040,6 +1019,124 @@ bool Solver::litRedundant(Lit p, uint32_t abstract_levels, uint64_t& extraInfo)
 }
 
 
+bool Solver::reverseLearntClause(vec<Lit>& learned_clause, unsigned int& lbd) {
+  if (!reverseMinimization.enabled || lbd > config.lbLBDreverseClause) return false;
+
+  // sort literal in the clause
+  sort( learned_clause, TrailPosition_Gt(vardata) );
+  assert( level( var(learned_clause[0]) ) == decisionLevel() && "first literal is conflict literal (or now assertion literal)" );
+  
+  reverseMinimization.attempts ++;
+  
+  // update minimization trail with top level units (if there have been new ones)
+  for( int i = reverseMinimization.trail.size() ; i < trail_lim[0]; ++i ){
+    reverseMinimization.uncheckedEnqueue( trail[i] );
+  }
+  
+  // perform vivification
+  int keptLits = 0;
+  for( int i = 0; i < learned_clause.size(); ++ i ) {
+    const Lit l = learned_clause[i];
+    if( reverseMinimization.value( l ) == l_Undef ) { // enqueue literal and perform propagation
+      learned_clause[keptLits++ ] = l; // keep literal
+    } else if ( reverseMinimization.value(l) == l_True ) {
+      learned_clause[keptLits++ ] = l; // keep literal, and terminate, as this clause is entailed by the formula already
+      break;
+    } else {
+      assert( reverseMinimization.value(l) == l_False && "there only exists three values" );
+      // continue, as this clause is minimized
+      reverseMinimization.revMindroppedLiterals ++;
+      continue;
+    }
+    
+    // propagate the current literal
+    int trailHead = trail.size(); 
+    reverseMinimization.uncheckedEnqueue(~l);
+    
+#warning implement propagation
+#warning use internal data structures
+    CRef    confl     = CRef_Undef;
+    watches.cleanAll();
+    while (trailHead < reverseMinimization.trail.size()){
+        const Lit p   = reverseMinimization.trail[trailHead++];     // 'p' is enqueued fact to propagate.
+        vec<Watcher>&  ws  = watches[p];                // do not modify watch list!
+        Watcher        *i, *end;
+        // propagate longer clauses here!
+        for (i = (Watcher*)ws, end = i + ws.size();  i != end; i++)
+	{
+	    if( i->isBinary() ) {  // handle binary clauses as usual (no write access necessary!)
+		const Lit& imp = i->blocker();
+		if(reverseMinimization.value(imp) == l_False) {
+		  confl = i->cref();              // store the conflict
+		  trailHead = reverseMinimization.trail.size(); // to stop propagation (condition of the above while loop)
+		  break;
+		} 
+		continue;
+	    }
+            // Try to avoid inspecting the clause:
+            const Lit blocker = i->blocker();
+            if (reverseMinimization.value(blocker) == l_True){ // keep binary clauses, and clauses where the blocking literal is satisfied
+                continue; }
+
+            // Make sure the false literal is data[1]:
+            const CRef cr = i->cref();
+            const Clause&  c = ca[cr];
+            
+            // Look for new watch:
+	    Lit impliedLit = lit_Undef;
+            for (int k = 0; k < c.size(); k++) {
+	      if (reverseMinimization.value(c[k]) == l_Undef) {
+		if( impliedLit != lit_Undef) impliedLit = c[k]; // if there is exactly one left
+		else { 
+		  impliedLit == lit_Error;                   // there are multiple left
+		  break; 
+		}
+	      } else if( reverseMinimization.value( c[k] ) == l_True ) {
+		impliedLit = lit_Error;
+		break;
+	      } 
+	    }
+	    
+	    if( impliedLit != lit_Error ) {   // the clause is unit or conflict
+	      if( impliedLit == lit_Undef ) { // conflict
+		confl = i->cref();
+		trailHead = reverseMinimization.trail.size(); // to stop propagation (condition of the above while loop)
+	      }
+	      else {
+		reverseMinimization.uncheckedEnqueue(impliedLit);
+	      }
+	    }
+        NextClause:;
+        }
+
+    }
+    
+    // found a conflict during reverse propagation
+    if( confl != CRef_Undef ) {
+      if( i+1 < learned_clause.size() ) reverseMinimization.revMinConflicts ++; // count cases when the technique was succesful
+      break;
+    }
+
+  } // end of looping over all literals of the clause
+
+  // perform backtracking
+  for( int i = trail_lim[0]; i < reverseMinimization.trail.size(); ++ i ) {
+    reverseMinimization.assigns[ var(reverseMinimization.trail[i]) ] = l_Undef;  
+  }
+  reverseMinimization.trail.shrink( reverseMinimization.trail.size() - trail_lim[0] );
+  
+  // remove all redundant literals
+  if( keptLits < learned_clause.size() ){
+    reverseMinimization.succesfulReverseMinimizations ++;
+    reverseMinimization.revMincutOffLiterals += (learned_clause.size() - keptLits);
+    assert( level( var(learned_clause[0]) ) == decisionLevel() && "first literal is conflict literal (or now assertion literal)" );
+    learned_clause.shrink ( learned_clause.size() - keptLits );
+    assert( level( var(learned_clause[0]) ) == decisionLevel() && "first literal is conflict literal (or now assertion literal)" );
+    return true;
+  }
+  return false; // clause was not changed, LBD should not be recomputed
+}
+
 /*_________________________________________________________________________________________________
 |
 |  analyzeFinal : (p : Lit)  ->  [void]
@@ -1098,8 +1195,7 @@ void Solver::uncheckedEnqueue(Lit p, Riss::CRef from, bool addToProof, const uin
     varFlags[var(p)].assigns = lbool(!sign(p));
     /** include variableExtraInfo here, if required! */
     vardata[var(p)] = mkVarData(from, decisionLevel());
-
-    // trailPos[ var(p) ] = (int)trail.size(); // modified learning, important: before trail.push()!
+    vardata[var(p)].position = (int)trail.size(); // to sort learned clause for extra analysis
 
     // prefetch watch lists
     // __builtin_prefetch( & watchesBin[p], 1, 0 ); // prefetch the watch, prepare for a write (1), the data is highly temoral (0)
@@ -1123,114 +1219,118 @@ void Solver::uncheckedEnqueue(Lit p, Riss::CRef from, bool addToProof, const uin
 |________________________________________________________________________________________________@*/
 CRef Solver::propagate(bool duringAddingClauses)
 {
-    assert((decisionLevel() == 0 || !duringAddingClauses) && "clauses can only be added at level 0!");
+    assert( ( decisionLevel() == 0 || !duringAddingClauses ) && "clauses can only be added at level 0!" );
     // if( config.opt_printLhbr ) cerr << endl << "c called propagate" << endl;
-    DOUT(if (config.opt_learn_debug) cerr << "c call propagate with " << qhead << " for " <<  trail.size() << " lits" << endl;);
-
+    DOUT( if( config.opt_learn_debug ) cerr << "c call propagate with " << qhead << " for " <<  trail.size() << " lits" << endl; );
+  
     CRef    confl     = CRef_Undef;
     int     num_props = 0;
     watches.cleanAll(); clssToBump.clear();
-    while (qhead < trail.size()) {
+    while (qhead < trail.size()){
         Lit            p   = trail[qhead++];     // 'p' is enqueued fact to propagate.
-        DOUT(if (config.opt_learn_debug) cerr << "c propagate literal " << p << endl;);
+        DOUT( if( config.opt_learn_debug ) cerr << "c propagate literal " << p << endl; );
         realHead = qhead;
         vec<Watcher>&  ws  = watches[p];
         Watcher        *i, *j, *end;
         num_props++;
-
-        // First, Propagate binary clauses
-        const vec<Watcher>&  wbin  = watches[p];
-
-        for (int k = 0; k < wbin.size(); k++) {
-            if (!wbin[k].isBinary()) { continue; }
-            const Lit& imp = wbin[k].blocker();
-            assert(ca[ wbin[k].cref() ].size() == 2 && "in this list there can only be binary clauses");
-            if (value(imp) == l_False) {
-                if (!config.opt_long_conflict) { return wbin[k].cref(); }
-                confl = wbin[k].cref();
-                break;
-            }
-
-            if (value(imp) == l_Undef) {
-                uncheckedEnqueue(imp, wbin[k].cref(), duringAddingClauses);
-            }
-        }
-
+	
         // propagate longer clauses here!
-        for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;) {
-            if (i->isBinary()) { *j++ = *i++; continue; }   // skip binary clauses (have been propagated before already!}
-
-            DOUT(if (config.opt_learn_debug) cerr << "c check clause [" << i->cref() << "]" << ca[i->cref()] << endl;);
-            #ifndef PCASSO // PCASS reduces clauses during search without updating the watch lists ...
-            assert(ca[ i->cref() ].size() > 2 && "in this list there can only be clauses with more than 2 literals, except for PCASSO");
-            #endif
-
+        for (i = j = (Watcher*)ws, end = i + ws.size();  i != end;)
+	{
+	    if( i->isBinary() ) {  // handle binary clauses
+		const Lit& imp = i->blocker();
+		assert( ca[ i->cref() ].size() == 2 && "in this list there can only be binary clauses" );
+		DOUT( if( config.opt_learn_debug ) cerr << "c checked binary clause " << ca[i->cref() ] << " with implied literal having value " << toInt(value(imp)) << endl; );
+		if(value(imp) == l_False) {
+		  if( !config.opt_long_conflict ) { // stop on the first conflict we see?
+		    confl = i->cref();              // store the conflict
+		    while (i < end) *j++ = *i++;    // move the remaining elements forward
+		    ws.shrink_(i - j);              // remove all duplciate clauses
+		    goto FinishedPropagation;       // jump to end of method, so that the statistics can be updated correctly
+		  }
+		  confl = i->cref(); // store intermediate conflict to be evaluated later
+		} else if(value(imp) == l_Undef) { // enqueue the implied literal
+		  uncheckedEnqueue(imp,i->cref(), duringAddingClauses);
+		}
+		*j++ = *i++; // keep the element in the list
+		continue;
+	    }
+	    
+	    DOUT( if( config.opt_learn_debug ) cerr << "c check clause [" << i->cref() << "]" << ca[i->cref()] << endl; );
+#ifndef PCASSO // PCASS reduces clauses during search without updating the watch lists ...
+	    assert( ca[ i->cref() ].size() > 2 && "in this list there can only be clauses with more than 2 literals" );
+#endif
+	    
             // Try to avoid inspecting the clause:
             const Lit blocker = i->blocker();
-            if (value(blocker) == l_True) { // keep binary clauses, and clauses where the blocking literal is satisfied
-                *j++ = *i++; continue;
-            }
+            if (value(blocker) == l_True){ // keep binary clauses, and clauses where the blocking literal is satisfied
+                *j++ = *i++; continue; }
 
             // Make sure the false literal is data[1]:
             const CRef cr = i->cref();
             Clause&  c = ca[cr];
             const Lit false_lit = ~p;
             if (c[0] == false_lit)
-            { c[0] = c[1], c[1] = false_lit; }
+                c[0] = c[1], c[1] = false_lit;
             assert(c[1] == false_lit && "wrong literal order in the clause!");
             i++;
 
             // If 0th watch is true, then clause is already satisfied.
             Lit     first = c[0];
+#ifndef PCASSO // Pcasso reduces clauses without updating the watch lists
+	    assert( c.size() > 2 && "at this point, only larger clauses should be handled!" );
+#endif
             const Watcher& w     = Watcher(cr, first, 1); // updates the blocking literal
-            if (first != blocker && value(first) == l_True) { // satisfied clause
-
-                *j++ = w; continue;
-            } // same as goto NextClause;
-
+            if (first != blocker && value(first) == l_True) // satisfied clause
+	    {
+	      
+	      *j++ = w; continue; } // same as goto NextClause;
+	    
             // Look for new watch:
             for (int k = 2; k < c.size(); k++)
-                if (value(c[k]) != l_False) {
+                if (value(c[k]) != l_False)
+		{
                     c[1] = c[k]; c[k] = false_lit;
-                    DOUT(if (config.opt_learn_debug) cerr << "c new watched literal for clause " << ca[cr] << " is " << c[1] << endl;);
+		    DOUT( if( config.opt_learn_debug ) cerr << "c new watched literal for clause " << ca[cr] << " is " << c[1] <<endl; );
                     watches[~c[1]].push(w);
-                    goto NextClause;
-                } // no need to indicate failure of lhbr, because remaining code is skipped in this case!
+                    goto NextClause; 
+		} // no need to indicate failure of lhbr, because remaining code is skipped in this case!
 
-
+		
             // Did not find watch -- clause is unit under assignment:
-            *j++ = w;
+            *j++ = w; 
             // if( config.opt_printLhbr ) cerr << "c keep clause (" << cr << ")" << c << " in watch list while propagating " << p << endl;
-            if (value(first) == l_False) {
+            if ( value(first) == l_False ) {
                 confl = cr; // independent of opt_long_conflict -> overwrite confl!
                 qhead = trail.size();
                 // Copy the remaining watches:
                 while (i < end)
-                { *j++ = *i++; }
+                    *j++ = *i++;
             } else {
-                DOUT(if (config.opt_learn_debug) cerr << "c current clause is unit clause: " << ca[cr] << endl;);
+		DOUT( if( config.opt_learn_debug ) cerr << "c current clause is unit clause: " << ca[cr] << endl; );
                 uncheckedEnqueue(first, cr, duringAddingClauses);
-
-                // if( config.opt_printLhbr ) cerr << "c final common dominator: " << commonDominator << endl;
-
-                if (c.mark() == 0  && config.opt_update_lbd == 0) {  // if LHBR did not remove this clause
-                    int newLbd = computeLBD(c);
-                    if (newLbd < c.lbd() || config.opt_lbd_inc) {   // improve the LBD (either LBD decreased,or option is set)
-                        if (c.lbd() <= lbLBDFrozenClause) {
-                            c.setCanBeDel(false);   // LBD of clause improved, so that its not considered for deletion
-                        }
-                        c.setLBD(newLbd);
-                    }
-                }
-            }
+		
+		// if( config.opt_printLhbr ) cerr << "c final common dominator: " << commonDominator << endl;
+		
+		if( c.mark() == 0  && config.opt_update_lbd == 0) { // if LHBR did not remove this clause
+		  int newLbd = computeLBD( c );
+		  if( newLbd < c.lbd() || config.opt_lbd_inc ) { // improve the LBD (either LBD decreased,or option is set)
+		    if( c.lbd() <= lbLBDFrozenClause ) {
+		      c.setCanBeDel( false ); // LBD of clause improved, so that its not considered for deletion
+		    }
+		    c.setLBD(newLbd);
+		  }
+		}
+	    }
         NextClause:;
         }
         ws.shrink_(i - j); // remove all duplciate clauses!
 
     }
+    FinishedPropagation:
     propagations += num_props;
     simpDB_props -= num_props;
-
+    
     return confl;
 }
 
@@ -1639,7 +1739,7 @@ bool Solver::restartSearch(int& nof_conflicts, const int conflictC)
 }
 
 
-bool Solver::analyzeNewLearnedClause(const CRef newLearnedClause)
+bool Solver::analyzeNewLearnedClause(const CRef& newLearnedClause)
 {
     if (config.opt_uhdProbe == 0) { return false; }
 
@@ -2300,6 +2400,7 @@ lbool Solver::solve_()
                (int64_t)maxLearnedClauseSize
               );
         printf("c search-UHLE: %d attempts, %d rem-lits\n", searchUHLEs, searchUHLElits);
+	printf("c revMin: %d tries %d succesful %d dropped %d cut %d conflicts\n", reverseMinimization.attempts, reverseMinimization.succesfulReverseMinimizations, reverseMinimization.revMindroppedLiterals, reverseMinimization.revMinConflicts, reverseMinimization.revMincutOffLiterals);
         printf("c decisionClauses: %d\n", learnedDecisionClauses);
         printf("c IntervalRestarts: %d\n", intervalRestart);
         printf("c partial restarts: %d saved decisions: %d saved propagations: %d recursives: %d\n", rs_partialRestarts, rs_savedDecisions, rs_savedPropagations, rs_recursiveRefinements);
@@ -2716,8 +2817,10 @@ lbool Solver::handleMultipleUnits(vec< Lit >& learnt_clause)
         if (value(learnt_clause[i]) == l_Undef) { uncheckedEnqueue(learnt_clause[i]); }
         else if (value(learnt_clause[i]) == l_False) { return l_False; }  // otherwise, we have a top level conflict here!
         else
-        { DOUT(if (config.opt_learn_debug) cerr << "c tried to enqueue a unit clause that was already a unit clause ... " << endl; });
-    DOUT(if (config.opt_printDecisions > 1) cerr << "c enqueue multi-learned literal " << learnt_clause[i] << "(" << i << "/" << learnt_clause.size() << ") at level " <<  decisionLevel() << endl;);
+        { 
+	  DOUT(if (config.opt_learn_debug) { cerr << "c tried to enqueue a unit clause that was already a unit clause ... " << endl; } );
+	  DOUT(if (config.opt_printDecisions > 1){ cerr << "c enqueue multi-learned literal " << learnt_clause[i] << "(" << i << "/" << learnt_clause.size() << ") at level " <<  decisionLevel() << endl;} );
+        }
     }
 
     // write learned unit clauses to DRUP!

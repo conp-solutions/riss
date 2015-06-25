@@ -226,7 +226,7 @@ bool Resolving::resolve(const Clause& c, const Clause& d, const int v, vec<Lit>&
     return false;
 }
 
-bool Resolving::checkPush(vec<Lit>& ps, const Lit l)
+bool Resolving::checkPush(vec< Lit >& ps, const Lit& l)
 {
     if (ps.size() > 0) {
         if (ps.last() == l)

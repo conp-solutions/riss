@@ -2,8 +2,8 @@
 Copyright (c) 2014, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#ifndef OnlineProofChecker_h
-#define OnlineProofChecker_h
+#ifndef RISS_OnlineProofChecker_h
+#define RISS_OnlineProofChecker_h
 
 #include "riss/mtl/Vec.h"
 #include "riss/mtl/Heap.h"

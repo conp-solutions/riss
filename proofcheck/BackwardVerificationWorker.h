@@ -2,8 +2,8 @@
 Copyright (c) 2015, All rights reserved, Norbert Manthey
 **************************************************************************************************/
 
-#ifndef SEQUENTIALBACKWARDWORKER_H
-#define SEQUENTIALBACKWARDWORKER_H
+#ifndef RISS_SEQUENTIALBACKWARDWORKER_H
+#define RISS_SEQUENTIALBACKWARDWORKER_H
 
 #include "riss/mtl/Vec.h"
 #include "riss/core/SolverTypes.h"

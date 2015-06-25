@@ -1,8 +1,8 @@
 /********************************************************************[BoundedVariableElimination.h]
 Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
-#ifndef BVE_HH
-#define BVE_HH
+#ifndef RISS_BVE_HH
+#define RISS_BVE_HH
 
 #include "riss/core/Solver.h"
 
@@ -91,7 +91,7 @@ class BoundedVariableElimination : public Technique
     /** run BVE until completion */
     Riss::lbool runBVE(CoprocessorData& data, const bool doStatistics = true);
 
-    void initClause(const Riss::CRef cr); // inherited from Technique
+    void initClause(const Riss::CRef& cr);  // inherited from Technique
     void destroy();
     void giveMoreSteps();
     void printStatistics(std::ostream& stream);
@@ -108,7 +108,7 @@ class BoundedVariableElimination : public Technique
     /** remove clauses from data structures and add to extension lists
      *  @param l literal that has been used to remove the clauses during elimination (if l == Riss::lit_Undef, clauses are not added to extension stack)
      */
-    inline void removeClauses(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, const std::vector<Riss::CRef>& list, const Riss::Lit l, const int limit, const bool doStatistics = true);
+    inline void removeClauses(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, const std::vector<Riss::CRef>& list, const Riss::Lit& l, const int limit, const bool doStatistics = true);
 
 
     /** ths method applies unit propagation during resolution, if possible! */
@@ -151,15 +151,15 @@ class BoundedVariableElimination : public Technique
      , int64_t& parBVEchecks
      , const bool force = false, const bool doStatistics = true) ;
 
-    inline void removeBlockedClauses(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, const std::vector< Riss::CRef>& list, const int32_t stats[], const Riss::Lit l, const int limit, const bool doStatistics = true);
+    inline void removeBlockedClauses(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, const std::vector< Riss::CRef>& list, const int32_t stats[], const Riss::Lit& l, const int limit, const bool doStatistics = true);
 
     /** run parallel bve with all available threads */
     void parallelBVE(CoprocessorData& data);
 
-    inline void removeClausesThreadSafe(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, const std::vector<Riss::CRef>& list, const Riss::Lit l, const int limit, SpinLock& data_lock, SpinLock& heap_lock, ParBVEStats& stats, int& garbageCounter, const bool doStatistics);
+    inline void removeClausesThreadSafe(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, const std::vector<Riss::CRef>& list, const Riss::Lit& l, const int limit, SpinLock& data_lock, SpinLock& heap_lock, ParBVEStats& stats, int& garbageCounter, const bool doStatistics);
     inline Riss::lbool resolveSetThreadSafe(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, std::vector<Riss::CRef>& positive, std::vector<Riss::CRef>& negative, const int v, const int p_limit, const int n_limit, Riss::vec < Riss::Lit >& ps, Riss::AllocatorReservation& memoryReservation, std::deque<Riss::CRef>& strengthQueue, ParBVEStats& stats, SpinLock& data_lock, SpinLock& heap_lock, int expectedResolvents, int64_t& bveChecks, const bool doStatistics, const bool keepLearntResolvents = false);
     inline Riss::lbool anticipateEliminationThreadsafe(CoprocessorData& data, std::vector<Riss::CRef>& positive, std::vector<Riss::CRef>& negative, const int v, const int p_limit, const int n_limit, Riss::vec<Riss::Lit>& resolvent, Riss::vec < int32_t >& pos_stats, Riss::vec < int32_t >& neg_stats, int& lit_clauses, int& lit_learnts, int& new_clauses, int& new_learnts, SpinLock& data_lock, ParBVEStats& stats, int64_t& bveChecks, const bool doStatistics);
-    inline void removeBlockedClausesThreadSafe(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, const std::vector< Riss::CRef>& list, const int32_t _stats[], const Riss::Lit l, const int limit, SpinLock& data_lock, SpinLock& heap_lock, ParBVEStats& stats, int& garbageCounter, const bool doStatistics);
+    inline void removeBlockedClausesThreadSafe(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, const std::vector< Riss::CRef>& list, const int32_t _stats[], const Riss::Lit& l, const int limit, SpinLock& data_lock, SpinLock& heap_lock, ParBVEStats& stats, int& garbageCounter, const bool doStatistics);
 
     // Special subsimp implementations for par bve:
     void par_bve_strengthening_worker(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, const Riss::Var ignore, std::vector< SpinLock >& var_lock, ReadersWriterLock& rwlock, std::deque<Riss::CRef>& sharedStrengthQueue, std::deque<Riss::CRef>& localQueue, Riss::MarkArray& dirtyOccs, ParBVEStats& stats, int& rwlock_count, int& garbageCounter, const bool strength_resolvents, const bool doStatistics);
@@ -173,8 +173,8 @@ class BoundedVariableElimination : public Technique
     // Helpers for both par and seq
     inline bool resolve(const Riss::Clause& c, const Riss::Clause& d, const int v, Riss::vec<Riss::Lit>& ps);
     inline int  tryResolve(const Riss::Clause& c, const Riss::Clause& d, const int v);
-    inline bool checkPush(Riss::vec<Riss::Lit>& ps, const Riss::Lit l);
-    inline char checkUpdatePrev(Riss::Lit& prev, const Riss::Lit l);
+    inline bool checkPush(Riss::vec<Riss::Lit>& ps, const Riss::Lit& l);
+    inline char checkUpdatePrev(Riss::Lit& prev, const Riss::Lit& l);
     bool findGates(CoprocessorData& data, const Riss::Var v, int& p_limit, int& n_limit, double& _gateTim, Riss::MarkArray * helper = NULL);
 
 
@@ -283,7 +283,7 @@ inline int BoundedVariableElimination::tryResolve(const Riss::Clause& c, const R
     return r;
 }
 
-inline bool BoundedVariableElimination::checkPush(Riss::vec<Riss::Lit>& ps, const Riss::Lit l)
+inline bool BoundedVariableElimination::checkPush(Riss::vec<Riss::Lit>& ps, const Riss::Lit& l)
 {
     if (ps.size() > 0) {
         if (ps.last() == l) {
@@ -297,7 +297,7 @@ inline bool BoundedVariableElimination::checkPush(Riss::vec<Riss::Lit>& ps, cons
     return false;
 }
 
-inline char BoundedVariableElimination::checkUpdatePrev(Riss::Lit& prev, const Riss::Lit l)
+inline char BoundedVariableElimination::checkUpdatePrev(Riss::Lit& prev, const Riss::Lit& l)
 {
     if (prev != Riss::lit_Undef) {
         if (prev == l) {

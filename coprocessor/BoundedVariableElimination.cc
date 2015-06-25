@@ -538,9 +538,7 @@ void BoundedVariableElimination::bve_worker(CoprocessorData& data, Heap<VarOrder
  *      remove it from data-Objects statistics
  *      mark it for deletion
  */
-inline void BoundedVariableElimination::removeClauses(CoprocessorData& data, Heap<VarOrderBVEHeapLt>& heap,
-        const vector<CRef>& list, const Lit l, const int limit,
-        const bool doStatistics)
+inline void BoundedVariableElimination::removeClauses(Coprocessor::CoprocessorData& data, Heap< Coprocessor::VarOrderBVEHeapLt >& heap, const vector< Riss::CRef >& list, const Lit& l, const int limit, const bool doStatistics)
 {
     for (int cr_i = 0; cr_i < list.size(); ++cr_i) {
         Clause& c = ca[list[cr_i]];
@@ -612,9 +610,13 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& 
         { clausesToUse = (ca[positive[cr_p]].can_be_deleted()) ? clausesToUse : clausesToUse + 1; }
         for (int cr_p = 0; cr_p < negative.size(); ++cr_p)
         { clausesToUse = (ca[negative[cr_p]].can_be_deleted()) ? clausesToUse : clausesToUse + 1; }
-        clausesToUse = clausesToUse + config.opt_bve_grow + config.opt_bve_growTotal -
-                       totallyAddedClauses; // have one stable reference value
+        clausesToUse = clausesToUse + config.opt_bve_grow;
+        if (config.opt_bve_growTotal != INT32_MAX) {
+            clausesToUse += (config.opt_bve_growTotal -
+                             totallyAddedClauses); // have one stable reference value
+        }
     }
+    bool binariesOnly = false; // process only binary clauses? use if we already reached the clause limit with bve early
 
     for (int cr_p = 0; cr_p < positive.size(); ++cr_p) {
         Clause& p = ca[positive[cr_p]];
@@ -623,6 +625,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& 
             { cerr << "c    skipped p " << p << endl; }
             continue;
         }
+        if (binariesOnly && p.size() > 2) { continue; }  // we are already over the clause limit, but we are still looking for units
         if (config.opt_bve_verbose > 2) { cerr << "c [" << cr_p << "/" << positive.size() << "] : " << p << endl; }
         for (int cr_n = 0; cr_n < negative.size(); ++cr_n) {
             // do not check resolvents, which would touch two clauses out of the variable definition
@@ -639,6 +642,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& 
                 }
                 continue;
             }
+            if (binariesOnly && n.size() > 2) { continue; }   // we are already over the clause limit, but we are still looking for units
             int newLits = tryResolve(p, n, v);
             if (config.opt_bve_verbose > 2) { cerr << "c vs [" << cr_n << "/" << negative.size() << "] : " << n << endl; }
 
@@ -665,8 +669,10 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& 
                 resolvents++; // count number of produced clauses!
 
                 // check for an early abort -- we already have more resolvents than we are allowed to create
-                if (config.opt_bve_earlyAbort && resolvents > clausesToUse)
-                { return l_True; } // indicate that we interrupted the process, hence, the BCE information is not valid
+                if (config.opt_bve_earlyAbort && resolvents > clausesToUse) { // indicate that we interrupted the process, hence, the BCE information is not valid, furthermore, we continue only on binary clauses
+                    binariesOnly = true;
+                    if (config.opt_bve_verbose > 2) { cerr << "c reached clauses to use limit (" << clausesToUse << ") with resolvents: " << resolvents << endl;}
+                }
 
             }
 
@@ -899,9 +905,7 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData& data, Heap<VarOrde
  * i.e. all resolvents are tautologies
  *
  */
-inline void BoundedVariableElimination::removeBlockedClauses(CoprocessorData& data, Heap<VarOrderBVEHeapLt>& heap,
-        const vector<CRef>& list, const int32_t stats[],
-        const Lit l, const int limit, const bool doStatistics)
+inline void BoundedVariableElimination::removeBlockedClauses(Coprocessor::CoprocessorData& data, Heap< Coprocessor::VarOrderBVEHeapLt >& heap, const vector< Riss::CRef >& list, const int32_t stats[], const Lit& l, const int limit, const bool doStatistics)
 {
     for (unsigned ci = 0; ci < list.size(); ++ci) {
         Clause& c = ca[list[ci]];
