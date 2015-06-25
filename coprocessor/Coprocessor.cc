@@ -44,7 +44,7 @@ Preprocessor::Preprocessor(Solver* _solver, CP3Config& _config, int32_t _threads
     , bve(config, solver->ca, controller, propagation, subsumption)
     , bva(config, solver->ca, controller, data, propagation)
     , cce(config, solver->ca, controller, propagation)
-    , ee(config, solver->ca, controller, propagation, subsumption)
+    , ee(data, config, solver->ca, controller, propagation, subsumption)
     , unhiding(config, solver->ca, controller, data, propagation, subsumption, ee)
     , probing(config, solver->ca, controller, data, propagation, ee, *solver)
     , rate(config, solver->ca, controller, data, *solver, propagation)
@@ -253,7 +253,7 @@ lbool Preprocessor::performSimplification()
         if (config.opt_ee) {  // before this technique nothing should be run that alters the structure of the formula (e.g. BVE;BVA)
             if (config.opt_verbose > 0) { cerr << "c ee ..." << endl; }
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") equivalence elimination" << endl; }
-            if (status == l_Undef) { ee.process(data); }   // cannot change status, can generate new unit clauses
+            if (status == l_Undef) { ee.process(); }   // cannot change status, can generate new unit clauses
             if (config.opt_verbose > 1)  { printStatistics(cerr); ee.printStatistics(cerr); }
             if (! data.ok())
             { status = l_False; }
@@ -759,7 +759,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
         // ee "e"
         else if (execute == 'e' && config.opt_ee && status == l_Undef && data.ok()) {
             if (config.opt_verbose > 2) { cerr << "c ee" << endl; }
-            ee.process(data);
+            ee.process();
             change = ee.appliedSomething() || change;
             if (config.opt_verbose > 1) { cerr << "c EE changed formula: " << change << endl; }
         }

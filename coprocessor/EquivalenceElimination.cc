@@ -14,7 +14,7 @@ namespace Coprocessor
 
 static const int eeLevel = 1;
 
-EquivalenceElimination::EquivalenceElimination(CP3Config& _config, ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation, Coprocessor::Subsumption& _subsumption)
+EquivalenceElimination::EquivalenceElimination(Coprocessor::CoprocessorData& _data, Coprocessor::CP3Config& _config, ClauseAllocator& _ca, ThreadController& _controller, Coprocessor::Propagation& _propagation, Coprocessor::Subsumption& _subsumption)
     : Technique(_config, _ca, _controller)
     , gateSteps(0)
     , gateTime(0)
@@ -28,6 +28,7 @@ EquivalenceElimination::EquivalenceElimination(CP3Config& _config, ClauseAllocat
     , eqInSCC(0)
     , eqIndex(0)
     , isToAnalyze(0)
+    , data(_data)
     , propagation(_propagation)
     , subsumption(_subsumption)
 {}
@@ -38,7 +39,7 @@ void EquivalenceElimination::giveMoreSteps()
 }
 
 
-bool EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
+bool EquivalenceElimination::process()
 {
     if (!performSimplification()) { return false; }   // do not perform simplification because of presiously failed runs?
 
@@ -67,9 +68,9 @@ bool EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
         isToAnalyze[ v ] = 1;
     }
 
-    if (replacedBy.size() < data.nVars()) {   // extend replacedBy structure
-        for (Var v = replacedBy.size(); v < data.nVars(); ++v)
-        { replacedBy.push_back(mkLit(v, false)); }
+    if (data.replacedBy().size() < data.nVars()) {   // extend replacedBy structure
+        for (Var v = data.replacedBy().size(); v < data.nVars(); ++v)
+        { data.replacedBy().push(mkLit(v, false)); }
     }
 
 
@@ -126,7 +127,8 @@ bool EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
                     { cerr << "c " << v + 1 << " == " << getReplacement(mkLit(v, false)) << endl; }
             });
 
-            vector<Lit> oldReplacedBy = replacedBy;
+            vec<Lit> oldReplacedBy;
+	    data.replacedBy().copyTo( oldReplacedBy );
             //vector< vector<Lit> >* externBig
 
             {
@@ -143,7 +145,7 @@ bool EquivalenceElimination::process(Coprocessor::CoprocessorData& data)
                 DOUT(if (!data.ok()) if (config.ee_debug_out > 2) cerr << "state of formula is UNSAT!" << endl;);
             }
 
-            replacedBy = oldReplacedBy;
+            oldReplacedBy.moveTo( data.replacedBy() );
 
             if (!data.ok()) { return modifiedFormula; }
             // after we extracted more information from the gates, we can apply these additional equivalences to the forula!
@@ -1910,8 +1912,8 @@ void EquivalenceElimination::eqTarjan(int depth, Lit l, Lit list, CoprocessorDat
 
 Lit EquivalenceElimination::getReplacement(Lit l)
 {
-    while (var(replacedBy[var(l)]) != var(l)) { l = sign(l) ? ~replacedBy[var(l)] : replacedBy[var(l)]; }   // go down through the whole hierarchy!
-    // replacedBy[var(startLit)] = l; // speed up future calculations!
+    while (var( data.replacedBy() [var(l)]) != var(l)) { l = sign(l) ? ~ data.replacedBy() [var(l)] :  data.replacedBy() [var(l)]; }   // go down through the whole hierarchy!
+    //  data.replacedBy() [var(startLit)] = l; // speed up future calculations!
     return l;
 }
 
@@ -1922,13 +1924,13 @@ bool EquivalenceElimination::setEquivalent(Lit representative, Lit toReplace)
     if (r == ~s) { return false; }
     DOUT(if (config.ee_debug_out > 2) cerr << "c ee literals: " << representative << " ( -> " << r << ") is representative for " << toReplace << " ( -> " << s << ")" << endl;);
     if (r < s) {
-        replacedBy[ var(s) ] = (sign(s) ? ~r : r);   // propagate forward!
+         data.replacedBy() [ var(s) ] = (sign(s) ? ~r : r);   // propagate forward!
     } else {
-        replacedBy[ var(r) ] = (sign(r) ? ~s : s);   // propagate forward!
+         data.replacedBy() [ var(r) ] = (sign(r) ? ~s : s);   // propagate forward!
     }
     /*
-    replacedBy[ var(toReplace) ] = ( sign(toReplace) ? ~r : r );
-    replacedBy[ var(s) ] = ( sign(s) ? ~r : r ); // propagate forward!
+     data.replacedBy() [ var(toReplace) ] = ( sign(toReplace) ? ~r : r );
+     data.replacedBy() [ var(s) ] = ( sign(s) ? ~r : r ); // propagate forward!
     */
     return true;
 }
@@ -1943,12 +1945,12 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
         isToAnalyze.resize(data.nVars(), 0);
         data.ma.resize(2 * data.nVars());
 
-        if (replacedBy.size() < data.nVars()) {   // extend replacedBy structure
-            for (Var v = replacedBy.size(); v < data.nVars(); ++v)
-            { replacedBy.push_back(mkLit(v, false)); }
+        if ( data.replacedBy() .size() < data.nVars()) {   // extend  data.replacedBy()  structure
+            for (Var v =  data.replacedBy() .size(); v < data.nVars(); ++v)
+            {  data.replacedBy() .push(mkLit(v, false)); }
         }
 
-        vector<Lit>& ee = data.getEquivalences();
+        vec<Lit>& ee = data.getEquivalences();
 
         DOUT(if (config.ee_debug_out > 2) {
         if (config.ee_debug_out > 2) {
@@ -1979,7 +1981,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
             for (int i = 0 ; i < ee.size(); ++ i) {
                 if (ee[i] == lit_Undef || !data.doNotTouch(var(ee[i]))) { ee[keep++] = ee[i]; }       // keep all literals that are not frozen, and keep the "lit_Undef" separators!
             }
-            ee.resize(keep);
+            ee.shrink( ee.size() - keep );
         }
 
         for (int i = 0 ; i < ee.size(); ++ i) {
@@ -2441,8 +2443,6 @@ void EquivalenceElimination::destroy()
     vector< int32_t >().swap(eqNodeLowLinks);
     vector< int32_t >().swap(eqNodeIndex);
     vector< Lit >().swap(eqCurrentComponent);
-
-    vector<Lit>().swap(replacedBy);
 
     vector<char>().swap(isToAnalyze);
     vector<Lit>().swap(eqDoAnalyze);

@@ -359,30 +359,86 @@ class Solver
         unsigned polarity: 1;
         unsigned decision: 1;
         unsigned seen: 1;
-        unsigned extra: 4; // TODO: use for special variable (not in LBD) and do not touch!
+        unsigned extra: 2; // TODO: use for special variable (not in LBD) and do not touch!
+	unsigned addModels: 1; // possibly increased number of models, e.g. by running CCE, BCE, RAT
+	unsigned delModels: 1; // possibly decreased number of models, e.g. by running CLE, BCM, RATM
         unsigned frozen: 1; // indicate that this variable cannot be used for simplification techniques that do not preserve equivalence
         #ifdef PCASSO
         unsigned varPT: 16; // partition tree level for this variable
         #endif
-        VarFlags(char _polarity) : assigns(l_Undef), polarity(_polarity), decision(0), seen(0), extra(0), frozen(0)
+        VarFlags(char _polarity) : assigns(l_Undef), polarity(_polarity), decision(0), seen(0), extra(0), addModels(0), delModels(0), frozen(0)
             #ifdef PCASSO
             , varPT(0)
             #endif
         {}
-        VarFlags() : assigns(l_Undef), polarity(1), decision(0), seen(0), extra(0), frozen(0)
+        VarFlags() : assigns(l_Undef), polarity(1), decision(0), seen(0), extra(0), addModels(0), delModels(0), frozen(0)
             #ifdef PCASSO
             , varPT(0)
             #endif
         {}
     };
 
+    /// all the data that is needed to handle equivalent literals, and the related methods
+    class EquivalenceInfo {
+      bool activeReplacements;                    // replaced by also points to offsets somewhere
+      vec<Riss::Lit> equivalencesStack;   // stack of literal classes that represent equivalent literals which have to be processed
+    public:
+      vec<Riss::Lit> replacedBy;          // stores which variable has been replaced by which literal
+      
+      // methods
+      EquivalenceInfo() : activeReplacements(false) {}
+      
+      inline vec<Riss::Lit>& getEquivalenceStack() { return equivalencesStack; }
+      
+      inline bool hasReplacements () const { return activeReplacements; }                    /// @return true means that there are variables pointing to other variables
+      inline bool hasEquivalencesToProcess () const { return equivalencesStack.size() > 0; } 
+      
+      inline void addEquivalenceClass( const Lit & a, const Lit & b ) {
+	if(a != b) {
+	  equivalencesStack.push(a);
+	  equivalencesStack.push(b);
+	  equivalencesStack.push(Riss::lit_Undef);   // termination symbol!
+	}
+      }
+      template <class T>
+      inline void addEquivalenceClass(const T& lits)
+      {
+	  for (int i = 0 ; i < lits.size(); ++ i) { equivalencesStack.push(lits[i]); }
+	  equivalencesStack.push(Riss::lit_Undef);   // termination symbol!
+      }
+      
+      /** just return the next smaller reprentative */
+      inline Lit getFirstReplacement( Lit l ) const {
+	if( var(l) >= replacedBy.size() ) return l;
+	return sign(l) ? ~replacedBy[var(l)] : replacedBy[var(l)]; 
+      }
+      
+      /** return the smallest equivalent literal */
+      inline Lit getReplacement( Lit l ) const {
+	if( var(l) >= replacedBy.size() ) return l;
+	while (var(replacedBy[var(l)]) != var(l)) { l = sign(l) ? ~replacedBy[var(l)] : replacedBy[var(l)]; }   // go down through the whole hierarchy!
+	return l;
+      }
+      
+      /** return the smallest equivalent literal */
+      inline Lit getReplacement( const Var& v ) const {
+	if( v >= replacedBy.size() ) return mkLit(v,false);
+	return getReplacement( mkLit(v,false ) );
+      }
+      
+      inline void growTo(const int& newSize ) {
+	for (Var v = replacedBy.size(); v < newSize; ++v) { replacedBy.push(mkLit(v, false)); }
+      }
+      
+    } eqInfo;
+    
   protected:
     vec<VarFlags> varFlags;
 
 //     vec<lbool>          assigns;          // The current assignments.
 //     vec<char>           polarity;         // The preferred polarity of each variable.
 //     vec<char>           decision;         // Declares if a variable is eligible for selection in the decision heuristic.
-//      vec<char>           seen;
+//     vec<char>           seen;
 
 
   public:

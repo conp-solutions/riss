@@ -92,7 +92,7 @@ class CoprocessorData
     int decompressedUndoLits;             // number of literals on the decompressedUndoLits stack
 
   private:
-    std::vector<Riss::Lit> equivalences;             // stack of literal classes that represent equivalent literals
+    
     std::vector<Riss::CRef> subsume_queue; // queue of clause references that potentially can subsume other clauses
     std::vector<Riss::CRef> strengthening_queue;     // std::vector of clausereferences, which potentially can strengthen
 
@@ -301,7 +301,8 @@ class CoprocessorData
     // handling equivalent literals
     void addEquivalences(const std::vector<Riss::Lit>& list);
     void addEquivalences(const Riss::Lit& l1, const Riss::Lit& l2);
-    std::vector<Riss::Lit>& getEquivalences();
+    Riss::vec< Riss::Lit >& getEquivalences();
+    Riss::vec< Riss::Lit >& replacedBy () { return solver->eqInfo.replacedBy; }
 
     /** add a clause to the queues, so that this clause will be checked by the next call to subsumeStrength
      * @return true, if clause has really been added and was not in both queues before
@@ -600,13 +601,16 @@ inline void CoprocessorData::moveVar(Riss::Var from, Riss::Var to, bool final)
 {
     if (from != to) {   // move data only if necessary
         solver->varFlags[to].assigns = solver->varFlags[from].assigns; solver->varFlags[from].assigns = l_Undef;
-        solver->vardata[to] = solver->vardata[from]; solver->vardata[from] = Riss::Solver::VarData();
+        solver->vardata[to]  = solver->vardata[from];  solver->vardata[from] = Riss::Solver::VarData();
         solver->activity[to] = solver->activity[from]; solver->activity[from] = 0;
         solver->varFlags[to].seen = solver->varFlags[to].seen; solver->varFlags[to].seen = 0;
         solver->varFlags[to].polarity = solver->varFlags[from].polarity; solver->varFlags[from].polarity = 0;
         solver->varFlags[to].decision = solver->varFlags[from].decision; solver->varFlags[from].decision = false;
         solver->varFlags[to].frozen = solver->varFlags[from].frozen; solver->varFlags[from].frozen = false;
 
+	solver->eqInfo.replacedBy[to] = solver->eqInfo.replacedBy[from]; solver->eqInfo.replacedBy[from] = Riss::mkLit(from,false);
+	solver->trailPos[ to ] = solver->trailPos[ from ];
+	
         // cp3 structures
         lit_occurrence_count[Riss::toInt(Riss::mkLit(to, false))] = lit_occurrence_count[Riss::toInt(Riss::mkLit(from, false))];
         lit_occurrence_count[Riss::toInt(Riss::mkLit(to, true))] = lit_occurrence_count[Riss::toInt(Riss::mkLit(from, true))];
@@ -614,14 +618,16 @@ inline void CoprocessorData::moveVar(Riss::Var from, Riss::Var to, bool final)
         occs[Riss::toInt(Riss::mkLit(to, true))].swap(occs[Riss::toInt(Riss::mkLit(from, true))]);
     }
     if (final == true) {
-
         // std::cerr << "c compress variables to " << to+1 << std::endl;
-//     solver->assigns.shrink( solver->assigns.size() - to - 1);
+	//     solver->assigns.shrink( solver->assigns.size() - to - 1);
         solver->vardata.shrink_(solver->vardata.size() - to - 1);
         solver->activity.shrink_(solver->activity.size() - to - 1);
-//    solver->seen.shrink( solver->seen.size() - to - 1);
+
         solver->varFlags.shrink_(solver->varFlags.size() - to - 1);
 
+	solver->eqInfo.replacedBy.shrink_(solver->varFlags.size() - to - 1);
+	solver->trailPos.shrink_(solver->varFlags.size() - to - 1);
+	
         solver->rebuildOrderHeap();
 
         // set cp3 variable representation!
@@ -1493,22 +1499,19 @@ inline void CoprocessorData::addCommentToProof(const char* text, bool deleteFrom
 inline void CoprocessorData::addEquivalences(const std::vector< Riss::Lit >& list)
 {
     assert((list.size() != 2 || list[0] != list[1]) && "do not allow to add a std::pair of the same literals");
-    for (int i = 0 ; i < list.size(); ++ i) { equivalences.push_back(list[i]); }
-    equivalences.push_back(Riss::lit_Undef);   // termination symbol!
+    solver->eqInfo.addEquivalenceClass( list );
 }
 
 inline void CoprocessorData::addEquivalences(const Riss::Lit& l1, const Riss::Lit& l2)
 {
     assert(l1 != l2 && "do not state that the same literal is equivalent to itself");
     if (global_debug_out) { std::cerr << "c [DATA] set equi: " << l1 << " == " << l2 << std::endl; }
-    equivalences.push_back(l1);
-    equivalences.push_back(l2);
-    equivalences.push_back(Riss::lit_Undef);   // termination symbol!
+    solver->eqInfo.addEquivalenceClass(l1,l2);
 }
 
-inline std::vector< Riss::Lit >& CoprocessorData::getEquivalences()
+inline Riss::vec< Riss::Lit >& CoprocessorData::getEquivalences()
 {
-    return equivalences;
+    return solver->eqInfo.getEquivalenceStack();
 }
 
 inline bool CoprocessorData::addSubStrengthClause(const Riss::CRef& cr, const bool& isNew)

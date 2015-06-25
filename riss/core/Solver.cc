@@ -1053,8 +1053,6 @@ bool Solver::reverseLearntClause(vec<Lit>& learned_clause, unsigned int& lbd) {
     int trailHead = trail.size(); 
     reverseMinimization.uncheckedEnqueue(~l);
     
-#warning implement propagation
-#warning use internal data structures
     CRef    confl     = CRef_Undef;
     watches.cleanAll();
     while (trailHead < reverseMinimization.trail.size()){
