@@ -1,7 +1,7 @@
 /***********************************************************[BoundedVariableEliminationParallel.cc]
 Copyright (c) 2013, Kilian Gebhardt, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
-#include "coprocessor/BoundedVariableElimination.h"
+#include "BVE.h"
 #include "coprocessor/Propagation.h"
 #include "coprocessor/Subsumption.h"
 #include <algorithm> // std::sort

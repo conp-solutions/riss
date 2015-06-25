@@ -4,7 +4,7 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 
 #include <algorithm>
 
-#include "coprocessor/Bva.h"
+#include "BVA.h"
 
 using namespace Riss;
 using namespace std;

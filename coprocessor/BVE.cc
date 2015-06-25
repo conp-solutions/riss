@@ -2,7 +2,7 @@
 Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "coprocessor/BoundedVariableElimination.h"
+#include "BVE.h"
 #include "coprocessor/Propagation.h"
 #include "coprocessor/Subsumption.h"
 #include "riss/mtl/Heap.h"

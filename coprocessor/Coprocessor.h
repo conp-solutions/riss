@@ -16,17 +16,17 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "coprocessor/Propagation.h"
 #include "coprocessor/Subsumption.h"
 #include "coprocessor/HiddenTautologyElimination.h"
-#include "coprocessor/BoundedVariableElimination.h"
+#include "coprocessor/BVE.h"
 #include "coprocessor/ClauseElimination.h"
 #include "coprocessor/rate.h"
 #include "coprocessor/EquivalenceElimination.h"
-#include "coprocessor/Bva.h"
+#include "coprocessor/BVA.h"
 #include "coprocessor/Unhiding.h"
 #include "coprocessor/Probing.h"
 #include "coprocessor/Resolving.h"
 #include "coprocessor/Rewriter.h"
 #include "coprocessor/FourierMotzkin.h"
-#include "coprocessor/bce.h"
+#include "coprocessor/BCE.h"
 #include "coprocessor/LiteralAddition.h"
 #include "coprocessor/xor.h"
 #include "coprocessor/Entailed.h"
@@ -172,6 +172,7 @@ class Preprocessor
     BlockedClauseElimination    bce;
     LiteralAddition             la;
     EntailedRedundant           entailedRedundant;
+
     Sls                         sls;
     TwoSatSolver                twoSAT;
 

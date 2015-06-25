@@ -11,9 +11,9 @@ version("3.0.0")
 # Libraries:
 # 
 set(LIB_SOURCES
-    BoundedVariableElimination.cc
-    BoundedVariableEliminationParallel.cc
-    Bva.cc
+    BVE.cc
+    BVEParallel.cc
+    BVA.cc
     CP3Config.cc
     Circuit.cc
     ClauseElimination.cc
@@ -39,7 +39,7 @@ set(LIB_SOURCES
     # not to be stored inside the other sources. That is why we
     # add the absolute path here
     ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}/version.cc
-    bce.cc
+    BCE.cc
     libcoprocessorc.cc
     rate.cc
     sls.cc

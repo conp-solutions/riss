@@ -2,7 +2,7 @@
 Copyright (c) 2013, Norbert Manthey, All rights reserved.
 **************************************************************************************************/
 
-#include "coprocessor/bce.h"
+#include "BCE.h"
 
 using namespace Riss;
 using namespace std;
