@@ -139,7 +139,12 @@ EXECUTE_PROCESS(COMMAND ls .
     #                    COMMAND ${CMAKE_RANLIB} ${outfile})
   endif()
 
-  string(MAKE_C_IDENTIFIER "${outlib}_sublibs" sublibs_identifier)
+
+  # Because we on many systems we have no up-to-date CMake with the MAKE_C_IDENTIFIER
+  # subcommand, we use this workaround
+  # string(MAKE_C_IDENTIFIER "${outlib}_sublibs" sublibs_identifier)
+  string(REPLACE "-" "_" sublibs_identifier "${outlib}_sublibs")
+
   file(WRITE ${dummyfile}.base "const char* ${sublibs_identifier}=\"${libs}\";")
   add_custom_command(OUTPUT  ${dummyfile}
                      COMMAND ${CMAKE_COMMAND}  -E copy ${dummyfile}.base ${dummyfile}
