@@ -33,17 +33,17 @@ class BoundedVariableElimination : public Technique<BoundedVariableElimination>
         Riss::Var var, reason;
         PostponeReason(Riss::Var _var, Riss::Var _reason) : var(_var), reason(_reason) {}
     };
-    // Vector for restarting bve (seq and par)
-    std::vector<Riss::Var> touched_variables;
-    // variable queue for random variable-order
-    std::vector< Riss::Var > variable_queue;
+
+    std::vector<Riss::Var> touched_variables; // Vector for restarting bve (seq and par)
+    std::vector< Riss::Var > variable_queue;  // variable queue for random variable-order
 
     // sequential member variables
     Riss::vec< Riss::Lit > resolvent; // std::vector for sequential resolution
     Riss::vec< int32_t > pos_stats;
     Riss::vec< int32_t > neg_stats;
+
     // parallel member variables
-    Riss::MarkArray lastTouched;                    //Riss::MarkArray to track modifications of parallel BVE-Threads
+    Riss::MarkArray lastTouched;                    // MarkArray to track modifications of parallel BVE-Threads
     Riss::MarkArray dirtyOccs;                      // tracks occs that contain Riss::CRef_Undef
     std::vector< Riss::Job > jobs;
     std::vector< SpinLock > variableLocks;         // 3 extra SpinLock for data, heap, ca
@@ -53,6 +53,7 @@ class BoundedVariableElimination : public Technique<BoundedVariableElimination>
     std::vector< Riss::MarkArray > gateMarkArrays;
     std::deque< Riss::CRef > sharedStrengthQueue;
     ReadersWriterLock allocatorRWLock;
+
     // stats variables
     struct ParBVEStats {
         int removedClauses, removedLiterals, createdClauses, createdLiterals, removedLearnts, learntLits, newLearnts,

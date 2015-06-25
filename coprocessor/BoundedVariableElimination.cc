@@ -14,19 +14,48 @@ namespace Coprocessor
 {
 
 BoundedVariableElimination::BoundedVariableElimination(CP3Config& _config, Riss::ClauseAllocator& _ca,
-        Riss::ThreadController& _controller,
-        Coprocessor::Propagation& _propagation,
-        Coprocessor::Subsumption& _subsumption)
-    : Technique(_config, _ca, _controller), propagation(_propagation), subsumption(_subsumption),
-      heap_option(config.opt_unlimited_bve), removedClauses(0), removedLiterals(0), createdClauses(0),
-      createdLiterals(0), removedLearnts(0), learntLits(0), newLearnts(0), newLearntLits(0), testedVars(0),
-      anticipations(0), eliminatedVars(0), removedBC(0), blockedLits(0), removedBlockedLearnt(0), learntBlockedLit(0),
-      skippedVars(0), unitsEnqueued(0), foundGates(0), usedGates(0), initialClauses(0), initialLits(0), clauseCount(0),
-      litCount(0), unitCount(0), elimCount(0), restarts(0), seqBveSteps(0), bveLimit(config.opt_bve_limit),
-      nClsIncreases(0), nClsDecreases(0), nClsKeep(0), totallyAddedClauses(0), processTime(0), subsimpTime(0),
-      gateTime(0)
-//, heap_comp(NULL)
-//, variable_heap(heap_comp)
+                                                       Riss::ThreadController& _controller,
+                                                       Coprocessor::Propagation& _propagation,
+                                                       Coprocessor::Subsumption& _subsumption)
+    : Technique(_config, _ca, _controller)
+    , propagation(_propagation)
+    , subsumption(_subsumption)
+    , heap_option(config.opt_unlimited_bve) // FIXME is this the correct option name?!
+    , removedClauses(0)
+    , removedLiterals(0)
+    , createdClauses(0)
+    , createdLiterals(0)
+    , removedLearnts(0)
+    , learntLits(0)
+    , newLearnts(0)
+    , newLearntLits(0)
+    , testedVars(0)
+    , anticipations(0)
+    , eliminatedVars(0)
+    , removedBC(0)
+    , blockedLits(0)
+    , removedBlockedLearnt(0)
+    , learntBlockedLit(0)
+    , skippedVars(0)
+    , unitsEnqueued(0)
+    , foundGates(0)
+    , usedGates(0)
+    , initialClauses(0)
+    , initialLits(0)
+    , clauseCount(0)
+    , litCount(0)
+    , unitCount(0)
+    , elimCount(0)
+    , restarts(0)
+    , seqBveSteps(0)
+    , bveLimit(config.opt_bve_limit)
+    , nClsIncreases(0)
+    , nClsDecreases(0)
+    , nClsKeep(0)
+    , totallyAddedClauses(0)
+    , processTime(0)
+    , subsimpTime(0)
+    , gateTime(0)
 {
 }
 
@@ -128,7 +157,11 @@ void BoundedVariableElimination::progressStats(CoprocessorData& data, const bool
 
 lbool BoundedVariableElimination::process(CoprocessorData& data, const bool doStatistics)
 {
-    if (!performSimplification()) { return l_Undef; } // do not do anything?!
+    // do not do anything?!
+    if (!performSimplification()) {
+        return l_Undef;
+    }
+
     modifiedFormula = false;
 
     // do not simplify, if the formula is considered to be too large!
@@ -140,6 +173,7 @@ lbool BoundedVariableElimination::process(CoprocessorData& data, const bool doSt
 
     initialClauses = data.nCls();
     restarts = 0;
+
     if (controller.size() > 0) {
         parallelBVE(data);
         if (data.ok()) {
@@ -154,7 +188,7 @@ lbool BoundedVariableElimination::process(CoprocessorData& data, const bool doSt
     VarOrderBVEHeapLt comp(data, config.opt_bve_heap);
     Heap<VarOrderBVEHeapLt> newheap(comp);
 
-    // We is a heap, if the option is not set to "random"
+    // We use a heap, if the option is not set to "random"
     // otherwise use a plain vector
     if (config.opt_bve_heap != 2) {
         data.getActiveVariables(lastDeleteTime(), newheap);
@@ -256,10 +290,13 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData& data,
 
     touched_variables.clear();
 
-    // repeat loop only, if not already interrupted
-    while (!data.isInterupted()
-            && ((config.opt_bve_heap != 2 && heap.size() > 0) || (config.opt_bve_heap == 2 && variable_queue.size() > 0))
-            && (seqBveSteps < bveLimit || data.unlimited()) // have a limit for this technique!
+
+    while (// repeat loop only, if not already interrupted
+           !data.isInterupted()
+           // variable heap or list is not empty
+           && ((config.opt_bve_heap != 2 && heap.size() > 0) || (config.opt_bve_heap == 2 && variable_queue.size() > 0))
+           // check if are are inside the limit
+           && (seqBveSteps < bveLimit || data.unlimited())
           ) {
 
         updateDeleteTime(data.getMyDeleteTimer());

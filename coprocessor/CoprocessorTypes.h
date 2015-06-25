@@ -968,7 +968,9 @@ inline void CoprocessorData::addedLiteral(const Riss::Lit& l, const int32_t diff
         }
     }
 }
-inline void CoprocessorData::removedLiteral(const Riss::Lit& l, const int32_t diff, Riss::Heap<VarOrderBVEHeapLt> * heap, const bool update, const Riss::Var ignore, SpinLock * data_lock, SpinLock * heap_lock)   // update counter for literal
+inline void CoprocessorData::removedLiteral(const Riss::Lit& l, const int32_t diff, Riss::Heap<VarOrderBVEHeapLt> * heap,
+                                            const bool update, const Riss::Var ignore,
+                                            SpinLock * data_lock, SpinLock * heap_lock)
 {
     if (heap == NULL && data_lock == NULL && heap_lock == NULL) {
         deletedVar(var(l));

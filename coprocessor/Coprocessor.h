@@ -150,29 +150,30 @@ class Preprocessor
     Riss::Lit giveNewLit(const Riss::Lit& l) const;
 
   protected:
+    //
     // techniques
-    Propagation propagation;
-    Subsumption subsumption;
-    HiddenTautologyElimination hte;
-    BoundedVariableElimination bve;
-    BoundedVariableAddition bva;
-    ClauseElimination cce;
-    EquivalenceElimination ee;
-    Unhiding unhiding;
-    Probing probing;
-    RATElimination rate;
-    Resolving res;
-    Rewriter rew;
-    FourierMotzkin fourierMotzkin;
-    Dense dense;
-    Symmetry symmetry;
-    XorReasoning xorReasoning;
-    BlockedClauseElimination bce;
-    LiteralAddition la;
-    EntailedRedundant entailedRedundant;
-
-    Sls sls;
-    TwoSatSolver twoSAT;
+    //
+    Propagation                 propagation;
+    Subsumption                 subsumption;
+    HiddenTautologyElimination  hte;
+    BoundedVariableElimination  bve;
+    BoundedVariableAddition     bva;
+    ClauseElimination           cce;
+    EquivalenceElimination      ee;
+    Unhiding                    unhiding;
+    Probing                     probing;
+    RATElimination              rate;
+    Resolving                   res;
+    Rewriter                    rew;
+    FourierMotzkin              fourierMotzkin;
+    Dense                       dense;
+    Symmetry                    symmetry;
+    XorReasoning                xorReasoning;
+    BlockedClauseElimination    bce;
+    LiteralAddition             la;
+    EntailedRedundant           entailedRedundant;
+    Sls                         sls;
+    TwoSatSolver                twoSAT;
 
     int shuffleVariable;  // number of variables that have been present when the formula has been shuffled
     Riss::vec<Riss::Var> specialFrozenVariables;
