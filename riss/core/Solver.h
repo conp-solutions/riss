@@ -491,7 +491,7 @@ class Solver
     vec<Lit>            add_tmp;
     unsigned long  MYFLAG;
 
-    vec<int> trailPos;          /// store the position where the variable is located in the trail exactly (for hack)
+//     vec<int> trailPos;          /// store the position where the variable is located in the trail exactly (for hack)
 
     double              max_learnts;
     double              learntsize_adjust_confl;

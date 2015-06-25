@@ -613,7 +613,6 @@ inline void CoprocessorData::moveVar(Riss::Var from, Riss::Var to, bool final)
         solver->varFlags[to].frozen = solver->varFlags[from].frozen; solver->varFlags[from].frozen = false;
 
         solver->eqInfo.replacedBy[to] = solver->eqInfo.replacedBy[from]; solver->eqInfo.replacedBy[from] = Riss::mkLit(from, false);
-        solver->trailPos[ to ] = solver->trailPos[ from ];
 
         // cp3 structures
         lit_occurrence_count[Riss::toInt(Riss::mkLit(to, false))] = lit_occurrence_count[Riss::toInt(Riss::mkLit(from, false))];
@@ -630,7 +629,6 @@ inline void CoprocessorData::moveVar(Riss::Var from, Riss::Var to, bool final)
         solver->varFlags.shrink_(solver->varFlags.size() - to - 1);
 
         solver->eqInfo.replacedBy.shrink_(solver->varFlags.size() - to - 1);
-        solver->trailPos.shrink_(solver->varFlags.size() - to - 1);
 
         solver->rebuildOrderHeap();
 
