@@ -64,39 +64,45 @@ main(int argc, char **argv)
                     "  -s  strip and do not show symbols\n"
                     "  -i  use integer indices (divide literals by two)\n");
             exit(0);
-        } else if (!strcmp(argv[i], "-s"))
-        { strip = 1; }
-        else if (!strcmp(argv[i], "-i"))
-        { intlits = 2; }
-        else if (argv[i][0] == '-')
-        { die("unknown command line option '%s'", argv[i]); }
-        else if (dot_name)
-        { die("expected at most two file names on command line"); }
-        else if (model_name)
-        { dot_name = argv[i]; }
-        else
-        { model_name = argv[i]; }
+        } else if (!strcmp(argv[i], "-s")) {
+            strip = 1;
+        } else if (!strcmp(argv[i], "-i")) {
+            intlits = 2;
+        } else if (argv[i][0] == '-') {
+            die("unknown command line option '%s'", argv[i]);
+        } else if (dot_name) {
+            die("expected at most two file names on command line");
+        } else if (model_name) {
+            dot_name = argv[i];
+        } else {
+            model_name = argv[i];
+        }
     }
 
-    if (model_name && dot_name && !strcmp(model_name, dot_name))
-    { die("two identical file names given"); }
+    if (model_name && dot_name && !strcmp(model_name, dot_name)) {
+        die("two identical file names given");
+    }
 
     model = aiger_init();
-    if (model_name)
-    { err = aiger_open_and_read_from_file(model, model_name); }
-    else
-    { err = aiger_read_from_file(model, stdin); }
+    if (model_name) {
+        err = aiger_open_and_read_from_file(model, model_name);
+    } else {
+        err = aiger_read_from_file(model, stdin);
+    }
 
-    if (err)
-    { die("%s", err); }
+    if (err) {
+        die("%s", err);
+    }
 
-    if (strip)
-    { aiger_strip_symbols_and_comments(model); }
+    if (strip) {
+        aiger_strip_symbols_and_comments(model);
+    }
 
     if (dot_name) {
         dot_file = fopen(dot_name, "w");
-        if (!dot_file)
-        { die("can not write to '%s'", dot_name); }
+        if (!dot_file) {
+            die("can not write to '%s'", dot_name);
+        }
         close_dot_file = 1;
     } else {
         dot_file = stdout;
@@ -106,13 +112,15 @@ main(int argc, char **argv)
     fputs("digraph \"", dot_file);
     if (model_name) {
         for (p = model_name; (ch = *p); p++) {
-            if (ch == '"' || ch == '\\')      /* mangle */
-            { fputc('\\', dot_file); }
+            if (ch == '"' || ch == '\\') {    /* mangle */
+                fputc('\\', dot_file);
+            }
 
             fputc(ch, dot_file);
         }
-    } else
-    { fputs("<stdin>", dot_file); }
+    } else {
+        fputs("<stdin>", dot_file);
+    }
 
     fputs("\" {\n", dot_file);
 
@@ -146,11 +154,13 @@ main(int argc, char **argv)
         fputs((( and ->rhs1 & 1) ? "dot" : "none"), dot_file);
         fputs("];\n", dot_file);
 
-        if ( and ->rhs0 <= 1)
-        { zero = 1; }
+        if ( and ->rhs0 <= 1) {
+            zero = 1;
+        }
 
-        if ( and ->rhs1 <= 1)
-        { zero = 1; }
+        if ( and ->rhs1 <= 1) {
+            zero = 1;
+        }
     }
 
     for (i = 0; i < model->num_outputs; i++) {
@@ -167,8 +177,9 @@ main(int argc, char **argv)
         fputs((((model->outputs[i].lit) & 1) ? "dot" : "none"), dot_file);
         fputs("];\n", dot_file);
 
-        if (model->outputs[i].lit <= 1)
-        { zero = 1; }
+        if (model->outputs[i].lit <= 1) {
+            zero = 1;
+        }
     }
 
     for (i = 0; i < model->num_bad; i++) {
@@ -185,8 +196,9 @@ main(int argc, char **argv)
         fputs((((model->bad[i].lit) & 1) ? "dot" : "none"), dot_file);
         fputs("];\n", dot_file);
 
-        if (model->bad[i].lit <= 1)
-        { zero = 1; }
+        if (model->bad[i].lit <= 1) {
+            zero = 1;
+        }
     }
 
     for (i = 0; i < model->num_constraints; i++) {
@@ -203,8 +215,9 @@ main(int argc, char **argv)
         fputs((((model->constraints[i].lit) & 1) ? "dot" : "none"), dot_file);
         fputs("];\n", dot_file);
 
-        if (model->constraints[i].lit <= 1)
-        { zero = 1; }
+        if (model->constraints[i].lit <= 1) {
+            zero = 1;
+        }
     }
 
     for (i = 0; i < model->num_latches; i++) {
@@ -229,17 +242,20 @@ main(int argc, char **argv)
                 "L%u -> \"%u\"[style=dashed,color=magenta,arrowhead=none];\n",
                 i, LIT(model->latches[i].lit));
 
-        if (model->latches[i].next <= 1)
-        { zero = 1; }
+        if (model->latches[i].next <= 1) {
+            zero = 1;
+        }
     }
 
-    if (zero)
-    { fputs("\"0\"[color=red,shape=box];\n", dot_file); }
+    if (zero) {
+        fputs("\"0\"[color=red,shape=box];\n", dot_file);
+    }
 
     fputs("}\n", dot_file);
 
-    if (close_dot_file)
-    { fclose(dot_file); }
+    if (close_dot_file) {
+        fclose(dot_file);
+    }
 
     aiger_reset(model);
 

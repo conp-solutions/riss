@@ -50,7 +50,7 @@ ProofChecker::ProofChecker(bool opt_drat, bool opt_backward, int opt_threads, bo
 
 ProofChecker::~ProofChecker()
 {
-    if (forwardChecker != 0)  { delete forwardChecker; }
+    if (forwardChecker != 0) { delete forwardChecker; }
     if (backwardChecker != 0) { delete backwardChecker; }
 }
 

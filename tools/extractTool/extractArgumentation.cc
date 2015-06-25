@@ -107,7 +107,7 @@ int main(int argc, char* argv[])
             else if (!handled[6] && (line.find("found answers: ") == 0 || line.find("solution(s) found"))) {
                 handled[6] = true;
                 if (line.find("found answers: ") == 0) { Models =  Get(line, 2).c_str(); }
-                else  { Models =  Get(line, 0).c_str(); }
+                else { Models =  Get(line, 0).c_str(); }
 
                 if (! is_number(Models)) { Models = "" ; handled[6] = false; }
             }
@@ -130,23 +130,23 @@ int main(int argc, char* argv[])
 
     // output collected information
     cout << argv[ fileNameIndex ] << " ";
-    if (handled[0] || Status != "") { cout << Status ; } else { cout << "fail"; }
+    if (handled[0] || Status != "") { cout << Status ; }  else { cout << "fail"; }
     cout << " ";
-    if (handled[1] || ExitCode != "") { cout << ExitCode ; } else { cout << "-"; }
+    if (handled[1] || ExitCode != "") { cout << ExitCode ; }  else { cout << "-"; }
     cout << " ";
-    if (handled[2] || RealTime != "") { cout << RealTime ; } else { cout << "-"; }
+    if (handled[2] || RealTime != "") { cout << RealTime ; }  else { cout << "-"; }
     cout << " ";
-    if (handled[3] || CpuTime != "") { cout << CpuTime ; } else { cout << "-"; }
+    if (handled[3] || CpuTime != "") { cout << CpuTime ; }  else { cout << "-"; }
     cout << " ";
-    if (handled[4] || Memory != "") { cout << Memory ; } else { cout << "-"; }
+    if (handled[4] || Memory != "") { cout << Memory ; }  else { cout << "-"; }
     cout << " ";
     if (handled[5]) {
-        if (SolverCode != "") { cout << SolverCode; } else { cout << "-"; }
+        if (SolverCode != "") { cout << SolverCode; }  else { cout << "-"; }
         cout << " ";
-        if (ToolCode != "") { cout << ToolCode; } else { cout << "-"; }
+        if (ToolCode != "") { cout << ToolCode; }  else { cout << "-"; }
     } else { cout << "- -"; }
     cout << " ";
-    if (handled[6] || Models != "") { cout << Models ; } else { cout << "-"; }
+    if (handled[6] || Models != "") { cout << Models ; }  else { cout << "-"; }
     cout << " ";
 
 

@@ -69,8 +69,9 @@ bool EquivalenceElimination::process()
     }
 
     if (data.replacedBy().size() < data.nVars()) {   // extend replacedBy structure
-        for (Var v = data.replacedBy().size(); v < data.nVars(); ++v)
-        { data.replacedBy().push(mkLit(v, false)); }
+        for (Var v = data.replacedBy().size(); v < data.nVars(); ++v) {
+            data.replacedBy().push(mkLit(v, false));
+        }
     }
 
 
@@ -123,12 +124,13 @@ bool EquivalenceElimination::process()
                 cerr << "==============================" << endl << endl;
                 cerr << "c equivalences:" << endl;
                 for (Var v = 0 ; v < data.nVars(); ++v)
-                    if (mkLit(v, false) != getReplacement(mkLit(v, false)))
-                    { cerr << "c " << v + 1 << " == " << getReplacement(mkLit(v, false)) << endl; }
+                    if (mkLit(v, false) != getReplacement(mkLit(v, false))) {
+                        cerr << "c " << v + 1 << " == " << getReplacement(mkLit(v, false)) << endl;
+                    }
             });
 
             vec<Lit> oldReplacedBy;
-	    data.replacedBy().copyTo( oldReplacedBy );
+            data.replacedBy().copyTo(oldReplacedBy);
             //vector< vector<Lit> >* externBig
 
             {
@@ -145,7 +147,7 @@ bool EquivalenceElimination::process()
                 DOUT(if (!data.ok()) if (config.ee_debug_out > 2) cerr << "state of formula is UNSAT!" << endl;);
             }
 
-            oldReplacedBy.moveTo( data.replacedBy() );
+            oldReplacedBy.moveTo(data.replacedBy());
 
             if (!data.ok()) { return modifiedFormula; }
             // after we extracted more information from the gates, we can apply these additional equivalences to the forula!
@@ -167,8 +169,9 @@ bool EquivalenceElimination::process()
             } while (doRepeat && data.ok());
             // cerr << "c moreEquivalences in iteration " << iter << " : " << moreEquivalences << " with BIGee iterations " << eeIter << endl;
         }
-        if (((const char*)config.opt_ee_aagFile) != 0)
-        { writeAAGfile(data); }
+        if (((const char*)config.opt_ee_aagFile) != 0) {
+            writeAAGfile(data);
+        }
 
         if (data.hasToPropagate()) {
             if (l_False == propagation.process(data, true)) {
@@ -621,8 +624,9 @@ bool EquivalenceElimination::findGateEquivalencesNew(Coprocessor::CoprocessorDat
                             DOUT(if (config.ee_debug_out > 2) cerr << "c re-activate output variable " << minV + 1 << endl;);
                         }
                         // moves gates from greater to smaller!
-                        for (int k = 0 ; k < varTable[maxV].size(); ++k)
-                        { varTable[minV].push_back(varTable[maxV][k]); }
+                        for (int k = 0 ; k < varTable[maxV].size(); ++k) {
+                            varTable[minV].push_back(varTable[maxV][k]);
+                        }
                         varTable[maxV].clear();
                     } else {
                         if (x == ~ox) {
@@ -861,7 +865,7 @@ bool EquivalenceElimination::allInputsStamped(Circuit::Gate& g, std::vector< uns
             const Var v = var(g.get(j));
             // one bit must not be stamped!
             if ((bitType[ v ] & 4) == 0)
-                if (count != 0) { return false; } else { count++; }
+                if (count != 0) { return false; }  else { count++; }
         }
         //cerr << "c all inputs of ExO are stamped: "; g.print(cerr);
         return true;
@@ -1088,8 +1092,9 @@ void EquivalenceElimination::processExOgate(CoprocessorData& data, Circuit::Gate
 //   g.print(cerr);
 
     Lit lits[g.size()];
-    for (int i = 0 ; i < g.size(); ++ i)
-    { lits[i] = getReplacement(g.get(i)); }
+    for (int i = 0 ; i < g.size(); ++ i) {
+        lits[i] = getReplacement(g.get(i));
+    }
 
     for (int i = 0 ; i < queue.size(); ++ i) {
         const Circuit::Gate& other = gates [queue[i]] ;
@@ -1184,8 +1189,9 @@ void EquivalenceElimination::processGenANDgate(CoprocessorData& data, Circuit::G
 //   g.print(cerr);
 
     Lit lits[g.size()];
-    for (int i = 0 ; i < g.size(); ++ i)
-    { lits[i] = getReplacement(g.get(i)); }
+    for (int i = 0 ; i < g.size(); ++ i) {
+        lits[i] = getReplacement(g.get(i));
+    }
 
     for (int i = 0 ; i < queue.size(); ++ i) {
         const Circuit::Gate& other = gates [queue[i]] ;
@@ -1723,8 +1729,9 @@ void EquivalenceElimination::findEquivalencesOnBigFast(CoprocessorData& data, ve
                 } else {
                     DOUT(if (config.ee_debug_out > 1) cerr << "c found [" << vertexes[toInt(V)].seen << "]: already analyzed " << v << " [" << vertexes[toInt(v)].start << " , " << vertexes[toInt(V)].min << "]" << endl;);
                     // check this edge only, if the other vertex has not been completed yet!
-                    if (!data.ma.isCurrentStep(toInt(v)))     // this literal does not give a bigger SCC! -> has been removed from path already!
-                    { vertexes[toInt(V)].min = vertexes[toInt(V)].min <= vertexes[toInt(v)].start ? vertexes[toInt(V)].min : vertexes[toInt(v)].start ; } // set min of "parent node" // TODO: according to recursive algorithm: use start instead of min!
+                    if (!data.ma.isCurrentStep(toInt(v))) {   // this literal does not give a bigger SCC! -> has been removed from path already!
+                        vertexes[toInt(V)].min = vertexes[toInt(V)].min <= vertexes[toInt(v)].start ? vertexes[toInt(V)].min : vertexes[toInt(v)].start ;    // set min of "parent node" // TODO: according to recursive algorithm: use start instead of min!
+                    }
                     DOUT(if (config.ee_debug_out > 1)  cerr << "c update already found min(" << V << ") to " << vertexes[toInt(V)].min << endl;);
                     vertexes[toInt(V)].seen ++;
                 }
@@ -1760,8 +1767,9 @@ void EquivalenceElimination::findEquivalencesOnBigFast(CoprocessorData& data, ve
     }
 
     //if( config.ee_debug_out > 1 &&
-    if (steps > config.opt_ee_limit)
-    { cerr  << "c abort rewriting equivalences, because step limit has been reached " << endl; }
+    if (steps > config.opt_ee_limit) {
+        cerr  << "c abort rewriting equivalences, because step limit has been reached " << endl;
+    }
 }
 
 void EquivalenceElimination::findEquivalencesOnBig(CoprocessorData& data, vector< vector<Lit> >* externBig)
@@ -1776,9 +1784,9 @@ void EquivalenceElimination::findEquivalencesOnBigRec(CoprocessorData& data, vec
 {
     // create / resize data structures:
     if (eqLitInStack == 0) { eqLitInStack = (char*) malloc(sizeof(char) * data.nVars() * 2); }
-    else  { eqLitInStack = (char*) realloc(eqLitInStack, sizeof(char) * data.nVars() * 2); }
+    else { eqLitInStack = (char*) realloc(eqLitInStack, sizeof(char) * data.nVars() * 2); }
     if (eqInSCC == 0) { eqInSCC = (char*) malloc(sizeof(char) * data.nVars()); }
-    else  { eqInSCC = (char*) realloc(eqInSCC, sizeof(char) * data.nVars()); }
+    else { eqInSCC = (char*) realloc(eqInSCC, sizeof(char) * data.nVars()); }
     eqNodeIndex.resize(data.nVars() * 2, -1);
     eqNodeLowLinks.resize(data.nVars() * 2, -1);
 
@@ -1912,7 +1920,7 @@ void EquivalenceElimination::eqTarjan(int depth, Lit l, Lit list, CoprocessorDat
 
 Lit EquivalenceElimination::getReplacement(Lit l)
 {
-    while (var( data.replacedBy() [var(l)]) != var(l)) { l = sign(l) ? ~ data.replacedBy() [var(l)] :  data.replacedBy() [var(l)]; }   // go down through the whole hierarchy!
+    while (var(data.replacedBy() [var(l)]) != var(l)) { l = sign(l) ? ~ data.replacedBy() [var(l)] :  data.replacedBy() [var(l)]; }    // go down through the whole hierarchy!
     //  data.replacedBy() [var(startLit)] = l; // speed up future calculations!
     return l;
 }
@@ -1924,9 +1932,9 @@ bool EquivalenceElimination::setEquivalent(Lit representative, Lit toReplace)
     if (r == ~s) { return false; }
     DOUT(if (config.ee_debug_out > 2) cerr << "c ee literals: " << representative << " ( -> " << r << ") is representative for " << toReplace << " ( -> " << s << ")" << endl;);
     if (r < s) {
-         data.replacedBy() [ var(s) ] = (sign(s) ? ~r : r);   // propagate forward!
+        data.replacedBy() [ var(s) ] = (sign(s) ? ~r : r);   // propagate forward!
     } else {
-         data.replacedBy() [ var(r) ] = (sign(r) ? ~s : s);   // propagate forward!
+        data.replacedBy() [ var(r) ] = (sign(r) ? ~s : s);   // propagate forward!
     }
     /*
      data.replacedBy() [ var(toReplace) ] = ( sign(toReplace) ? ~r : r );
@@ -1945,9 +1953,10 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
         isToAnalyze.resize(data.nVars(), 0);
         data.ma.resize(2 * data.nVars());
 
-        if ( data.replacedBy() .size() < data.nVars()) {   // extend  data.replacedBy()  structure
-            for (Var v =  data.replacedBy() .size(); v < data.nVars(); ++v)
-            {  data.replacedBy() .push(mkLit(v, false)); }
+        if (data.replacedBy() .size() < data.nVars()) {    // extend  data.replacedBy()  structure
+            for (Var v =  data.replacedBy() .size(); v < data.nVars(); ++v) {
+                data.replacedBy() .push(mkLit(v, false));
+            }
         }
 
         vec<Lit>& ee = data.getEquivalences();
@@ -1981,7 +1990,7 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
             for (int i = 0 ; i < ee.size(); ++ i) {
                 if (ee[i] == lit_Undef || !data.doNotTouch(var(ee[i]))) { ee[keep++] = ee[i]; }       // keep all literals that are not frozen, and keep the "lit_Undef" separators!
             }
-            ee.shrink( ee.size() - keep );
+            ee.shrink(ee.size() - keep);
         }
 
         for (int i = 0 ; i < ee.size(); ++ i) {
@@ -2002,8 +2011,9 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
                 for (int j = start ; j < i; ++ j) {   // set all equivalent literals
                     const Lit myReplace = getReplacement(ee[j]);
                     if (myReplace == ee[j]) { equivalentLits ++; }   // count how many equal literals
-                    if (! data.ma.isCurrentStep(toInt(myReplace)))
-                    { data.lits.push_back(myReplace); } // has to look through that list as well!
+                    if (! data.ma.isCurrentStep(toInt(myReplace))) {
+                        data.lits.push_back(myReplace);    // has to look through that list as well!
+                    }
 
                     // add the equivalence to the proof, as single sequential clauses
                     if (data.outputsProof() && repr != ee[j]) {   // do not add trivial clauses to the proof!
@@ -2222,8 +2232,9 @@ bool EquivalenceElimination::applyEquivalencesToFormula(CoprocessorData& data, b
 
                         // clear the occurrence lists, since there are no clauses in them any more!
                         assert(l != repr && "will not clear list of representative literal!");
-                        for (int pol = 0; pol < 2; ++ pol)   // clear both occurrence lists!
-                        { (pol == 0 ? data.list(l) : data.list(~l)).clear(); }
+                        for (int pol = 0; pol < 2; ++ pol) { // clear both occurrence lists!
+                            (pol == 0 ? data.list(l) : data.list(~l)).clear();
+                        }
                         DOUT(if (config.ee_debug_out > 2) cerr << "c cleared list of var " << var(l) + 1 << endl;);
 
                     }
@@ -2322,15 +2333,17 @@ static bool ordered_subsumes(const Clause& c, const Clause& other)
             ++j;
         }
         // D does not contain c[i]
-        else if (c[i] < other[j])
-        { return false; }
-        else
-        { ++j; }
+        else if (c[i] < other[j]) {
+            return false;
+        } else {
+            ++j;
+        }
     }
-    if (i == c.size())
-    { return true; }
-    else
-    { return false; }
+    if (i == c.size()) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 bool EquivalenceElimination::hasDuplicate(CoprocessorData& data, vector<CRef>& list, const Clause& c)
@@ -2413,11 +2426,13 @@ void EquivalenceElimination::writeAAGfile(CoprocessorData& data)
         << pureOutputs.size() << " "
         << gates.size() << endl;
     // input
-    for (int i = 0 ; i < pureInputs.size(); ++ i)
-    { AAG << (pureInputs[i] + 1) * 2 << endl; }
+    for (int i = 0 ; i < pureInputs.size(); ++ i) {
+        AAG << (pureInputs[i] + 1) * 2 << endl;
+    }
     // output
-    for (int i = 0 ; i < pureOutputs.size(); ++ i)
-    { AAG << (pureOutputs[i] + 1) * 2 << endl; }
+    for (int i = 0 ; i < pureOutputs.size(); ++ i) {
+        AAG << (pureOutputs[i] + 1) * 2 << endl;
+    }
     // gates
     for (int i = 0; i < gates.size(); ++ i) {
         const Circuit::Gate& g = gates[i];

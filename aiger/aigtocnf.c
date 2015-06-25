@@ -90,22 +90,24 @@ main(int argc, char **argv)
         } else if (!strcmp(argv[i], "-m")) { prtmap = 1; }
         else if (!strcmp(argv[i], "-v")) { verbose++; }
         else if (!strcmp(argv[i], "--no-pg")) { pg = 0; }
-        else if (argv[i][0] == '-')
-        { die("invalid command line option '%s'", argv[i]); }
-        else if (!input_name) { input_name = argv[i]; }
+        else if (argv[i][0] == '-') {
+            die("invalid command line option '%s'", argv[i]);
+        } else if (!input_name) { input_name = argv[i]; }
         else if (!output_name) { output_name = argv[i]; }
         else { die("more than two files specified"); }
     }
 
     aiger = aiger_init();
 
-    if (input_name)
-    { error = aiger_open_and_read_from_file(aiger, input_name); }
-    else
-    { error = aiger_read_from_file(aiger, stdin); }
+    if (input_name) {
+        error = aiger_open_and_read_from_file(aiger, input_name);
+    } else {
+        error = aiger_read_from_file(aiger, stdin);
+    }
 
-    if (error)
-    { die("%s: %s", input_name ? input_name : "<stdin>", error); }
+    if (error) {
+        die("%s: %s", input_name ? input_name : "<stdin>", error);
+    }
 
     msg("read MILOA %u %u %u %u %u",
         aiger->maxvar,
@@ -115,10 +117,12 @@ main(int argc, char **argv)
         aiger->num_ands);
 
     if (aiger->num_latches) { die("can not handle latches"); }
-    if (aiger->num_bad)
-    { die("can not handle bad state properties (use 'aigmove')"); }
-    if (aiger->num_constraints)
-    { die("can not handle environment constraints (use 'aigmove')"); }
+    if (aiger->num_bad) {
+        die("can not handle bad state properties (use 'aigmove')");
+    }
+    if (aiger->num_constraints) {
+        die("can not handle environment constraints (use 'aigmove')");
+    }
     if (!aiger->num_outputs) { die("no output"); }
     if (aiger->num_outputs > 1) { die("more than one output"); }
     if (aiger->num_justice) { wrn("ignoring justice properties"); }
@@ -129,8 +133,9 @@ main(int argc, char **argv)
         file = fopen(output_name, "w");
         if (!file) { die("failed to write '%s'", output_name); }
         close_file = 1;
-    } else
-    { file = stdout; }
+    } else {
+        file = stdout;
+    }
 
     aiger_reencode(aiger);
 
@@ -160,8 +165,9 @@ main(int argc, char **argv)
         }
 
         if (!pg) {
-            for (lit = 2; lit <= 2 * aiger->maxvar + 1; lit++)
-            { refs[lit] = INT_MAX; }
+            for (lit = 2; lit <= 2 * aiger->maxvar + 1; lit++) {
+                refs[lit] = INT_MAX;
+            }
         }
 
         map = calloc(2 * (aiger->maxvar + 1), sizeof * map);

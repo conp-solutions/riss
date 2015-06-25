@@ -43,14 +43,16 @@ int main(int argc, char **argv)
                 cin >> timestamp;
                 cin.get(); // skip tabulation
 
-                if (!cin.good())
-                { break; }
+                if (!cin.good()) {
+                    break;
+                }
             }
 
             getline(cin, s);
 
-            if (!cin.good() && s.length() == 0)
-            { break; }
+            if (!cin.good() && s.length() == 0) {
+                break;
+            }
 
             // we're only concerned by a "v " line
             if (s.length() >= 2 && s[0] == 'v' && s[1] == ' ') {
@@ -64,12 +66,14 @@ int main(int argc, char **argv)
                     // read a literal
                     word = "";
                     f >> word;
-                    if (word == "")
-                    { break; }
+                    if (word == "") {
+                        break;
+                    }
 
                     if (len == 0) {
-                        if (withTimestamp)
-                        { cout << timestamp << "\t"; }
+                        if (withTimestamp) {
+                            cout << timestamp << "\t";
+                        }
                         cout << "v";
                     }
 
@@ -82,14 +86,16 @@ int main(int argc, char **argv)
                     }
                 }
 
-                if (len != 0)
-                { cout << endl; }
+                if (len != 0) {
+                    cout << endl;
+                }
 
                 s.clear();
             } else {
                 // copy
-                if (withTimestamp)
-                { cout << timestamp << "\t"; }
+                if (withTimestamp) {
+                    cout << timestamp << "\t";
+                }
                 cout << s << endl;
             }
         }

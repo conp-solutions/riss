@@ -108,7 +108,7 @@ class HashLookUpTable
     ~HashLookUpTable() { delete [] table; }
 
     // PRECONDITION: the key must *NOT* exist in the map.
-    void insert(const K& k) { if (checkCap(size + 1)) { rehash(); } _insert(k); size++; }
+    void insert(const K& k) { if (checkCap(size + 1)) { rehash(); }  _insert(k); size++; }
 
     bool has(const K& k) const
     {

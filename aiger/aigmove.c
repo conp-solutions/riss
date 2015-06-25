@@ -60,8 +60,9 @@ static void die(const char *fmt, ...)
 static void msg(const char *fmt, ...)
 {
     va_list ap;
-    if (!verbose)
-    { return; }
+    if (!verbose) {
+        return;
+    }
     fputs("[aigmove] ", stderr);
     va_start(ap, fmt);
     vfprintf(stderr, fmt, ap);
@@ -86,9 +87,9 @@ int main(int argc, char ** argv)
         else if (!strcmp(argv[i], "-v")) { verbose = 1; }
         else if (!strcmp(argv[i], "-i")) { ignore = 1; }
         else if (!strcmp(argv[i], "-r")) { reverse = 1; }
-        else if (argv[i][0] == '-')
-        { die("invalid command line option '%s'", argv[i]); }
-        else if (output) { die("too many arguments"); }
+        else if (argv[i][0] == '-') {
+            die("invalid command line option '%s'", argv[i]);
+        } else if (output) { die("too many arguments"); }
         else if (input) { output = argv[i]; }
         else { input = argv[i]; }
     }
@@ -109,19 +110,23 @@ int main(int argc, char ** argv)
         src->num_inputs, src->num_latches, src->num_outputs, src->num_ands,
         src->num_bad, src->num_constraints, src->num_justice, src->num_fairness);
 
-    if (!ignore && src->num_justice)
-    { die("will not ignore justice properties (use '-i')"); }
-    if (!ignore && src->num_fairness)
-    { die("will not ignore fairness properties (use '-i')"); }
+    if (!ignore && src->num_justice) {
+        die("will not ignore justice properties (use '-i')");
+    }
+    if (!ignore && src->num_fairness) {
+        die("will not ignore fairness properties (use '-i')");
+    }
 
     if (!reverse && src->num_outputs &&
             !src->num_bad && !src->num_constraints &&
-            !src->num_justice && !src->num_fairness)
-    { die("only outputs founds (use '-r' for reverse move)"); }
+            !src->num_justice && !src->num_fairness) {
+        die("only outputs founds (use '-r' for reverse move)");
+    }
 
     dst = aiger_init();
-    for (j = 0; j < src->num_inputs; j++)
-    { aiger_add_input(dst, src->inputs[j].lit, src->inputs[j].name); }
+    for (j = 0; j < src->num_inputs; j++) {
+        aiger_add_input(dst, src->inputs[j].lit, src->inputs[j].name);
+    }
     for (j = 0; j < src->num_latches; j++) {
         aiger_add_latch(dst,
                         src->latches[j].lit, src->latches[j].next, src->latches[j].name);
@@ -133,11 +138,13 @@ int main(int argc, char ** argv)
     }
 
     if (reverse) {
-        for (j = 0; j < src->num_outputs; j++)
-        { aiger_add_bad(dst, src->outputs[j].lit, src->outputs[j].name); }
+        for (j = 0; j < src->num_outputs; j++) {
+            aiger_add_bad(dst, src->outputs[j].lit, src->outputs[j].name);
+        }
     } else {
-        for (j = 0; j < src->num_outputs; j++)
-        { aiger_add_output(dst, src->outputs[j].lit, src->outputs[j].name); }
+        for (j = 0; j < src->num_outputs; j++) {
+            aiger_add_output(dst, src->outputs[j].lit, src->outputs[j].name);
+        }
 
         if (src->num_bad && src->num_constraints) {
             if (src->num_latches) {
@@ -166,8 +173,9 @@ int main(int argc, char ** argv)
                 aiger_add_output(dst, bad, src->bad[j].name);
             }
         } else
-            for (j = 0; j < src->num_bad; j++)
-            { aiger_add_output(dst, src->bad[j].lit, src->bad[j].name); }
+            for (j = 0; j < src->num_bad; j++) {
+                aiger_add_output(dst, src->bad[j].lit, src->bad[j].name);
+            }
     }
 
     aiger_reset(src);

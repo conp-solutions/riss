@@ -76,8 +76,9 @@ die(const char * fmt, ...)
     va_end(ap);
     fputc('\n', stderr);
     fflush(stderr);
-    if (tmp[0] == '/')
-    { unlink(tmp); }
+    if (tmp[0] == '/') {
+        unlink(tmp);
+    }
     exit(1);
 }
 
@@ -114,13 +115,15 @@ parse(void)
         zipped = 0;
     }
 
-    if (!file)
-    { die("can not read from '%s'", src); }
+    if (!file) {
+        die("can not read from '%s'", src);
+    }
 
 SKIP:
     ch = getc(file);
-    if (isspace(ch))
-    { goto SKIP; }
+    if (isspace(ch)) {
+        goto SKIP;
+    }
 
     if (ch == 'c') {
         ch = getc(file);
@@ -134,8 +137,9 @@ SKIP:
                 nbuf = 0;
                 ch = getc(file);
                 while (isalnum(ch) || ch == '-' || ch == '_') {
-                    if (nbuf + 1 >= szbuf)
-                    { buffer = realloc(buffer, szbuf = szbuf ? 2 * szbuf : 2); }
+                    if (nbuf + 1 >= szbuf) {
+                        buffer = realloc(buffer, szbuf = szbuf ? 2 * szbuf : 2);
+                    }
                     buffer[nbuf++] = ch;
                     buffer[nbuf] = 0;
                     ch = getc(file);
@@ -145,8 +149,9 @@ SKIP:
                     if (ch == '-') {
                         sign = -1;
                         ch = getc(file);
-                    } else
-                    { sign = 1; }
+                    } else {
+                        sign = 1;
+                    }
                     if (isdigit(ch)) {
                         val = ch - '0';
                         ch = getc(file);
@@ -176,16 +181,19 @@ SKIP:
 
     free(buffer);
 
-    if (ch != 'p' || fscanf(file, " cnf %d %d", &maxidx, &size_clauses) != 2)
-    { die("expected 'p cnf ...' header"); }
+    if (ch != 'p' || fscanf(file, " cnf %d %d", &maxidx, &size_clauses) != 2) {
+        die("expected 'p cnf ...' header");
+    }
 
     movedto = malloc((maxidx + 1) * sizeof * movedto);
-    for (i = 1; i <= maxidx; i++)
-    { movedto[i] = i; }
+    for (i = 1; i <= maxidx; i++) {
+        movedto[i] = i;
+    }
 
     used = calloc(maxidx + 1, sizeof * used);
-    for (i = 1; i <= maxidx; i++)
-    { used[i] = 1; }
+    for (i = 1; i <= maxidx; i++) {
+        used[i] = 1;
+    }
 
     clauses = malloc(size_clauses * sizeof * clauses);
 
@@ -195,28 +203,34 @@ SKIP:
 NEXT:
 
     ch = getc(file);
-    if (isspace(ch))
-    { goto NEXT; }
+    if (isspace(ch)) {
+        goto NEXT;
+    }
 
     if (ch == 'a' || ch == 'e') {
-        if (count_clauses)
-        { die("quantifier after clause"); }
+        if (count_clauses) {
+            die("quantifier after clause");
+        }
 
-        if (quantifier)
-        { die("'0' after quantifier missing"); }
+        if (quantifier) {
+            die("'0' after quantifier missing");
+        }
 
         if (!qbf) {
             assert(!prefix);
             qbf = calloc(maxidx + 1, sizeof * qbf);
             prefix = malloc(maxidx * sizeof * prefix);
-        } else
-        { assert(qbf && prefix); }
+        } else {
+            assert(qbf && prefix);
+        }
 
-        if (ch == 'e')
-        { quantifier = 1; }
+        if (ch == 'e') {
+            quantifier = 1;
+        }
 
-        if (ch == 'a')
-        { quantifier = -1; }
+        if (ch == 'a') {
+            quantifier = -1;
+        }
 
         goto NEXT;
     }
@@ -228,23 +242,28 @@ NEXT:
     }
 
     if (ch == '-') {
-        if (quantifier)
-        { die("'-' in quantifier declaration"); }
+        if (quantifier) {
+            die("'-' in quantifier declaration");
+        }
 
         sign = -1;
         ch = getc(file);
-        if (ch == EOF)
-        { die("EOF after '-'"); }
-    } else
-    { sign = 1; }
+        if (ch == EOF) {
+            die("EOF after '-'");
+        }
+    } else {
+        sign = 1;
+    }
 
-    if (ch != EOF && !isdigit(ch))
-    { die("invalid character %02x", ch); }
+    if (ch != EOF && !isdigit(ch)) {
+        die("invalid character %02x", ch);
+    }
 
     if (isdigit(ch)) {
         lit = ch - '0';
-        while (isdigit(ch = getc(file)))
-        { lit = 10 * lit + (ch - '0'); }
+        while (isdigit(ch = getc(file))) {
+            lit = 10 * lit + (ch - '0');
+        }
 
         if (!quantifier) {
             lit *= sign;
@@ -257,8 +276,9 @@ NEXT:
             clause[count_clause++] = lit;
 
             if (!lit) {
-                if (count_clauses == size_clauses)
-                { die("too many clauses"); }
+                if (count_clauses == size_clauses) {
+                    die("too many clauses");
+                }
 
                 clauses[count_clauses++] = clause;
                 count_clause = size_clause = 0;
@@ -266,34 +286,40 @@ NEXT:
             }
         } else if (lit) {
             assert(sign == 1);
-            if (qbf[lit])
-            { die("variable %d quantified twice", lit); }
+            if (qbf[lit]) {
+                die("variable %d quantified twice", lit);
+            }
 
             prefix[quantified++] = quantifier * lit;
             qbf[lit] = quantifier * abs(quantified);
-        } else
-        { quantifier = 0; }
+        } else {
+            quantifier = 0;
+        }
 
         goto NEXT;
     }
 
     assert(ch == EOF);
 
-    if (count_clause)
-    { die("missing '0' after clause"); }
+    if (count_clause) {
+        die("missing '0' after clause");
+    }
 
-    if (quantifier)
-    { die("missing '0' after quantifier declaration"); }
+    if (quantifier) {
+        die("missing '0' after quantifier declaration");
+    }
 
-    if (count_clauses < size_clauses)
-    { die("%d clauses missing", size_clauses - count_clauses); }
+    if (count_clauses < size_clauses) {
+        die("%d clauses missing", size_clauses - count_clauses);
+    }
 
     assert(!clause);
 
-    if (zipped)
-    { pclose(file); }
-    else
-    { fclose(file); }
+    if (zipped) {
+        pclose(file);
+    } else {
+        fclose(file);
+    }
 
     msg("parsed %d variables", maxidx);
     msg("parsed %d clauses", size_clauses);
@@ -335,11 +361,13 @@ static int
 deref(int lit)
 {
     int idx, res;
-    if (!lit)
-    { return 0; }
+    if (!lit) {
+        return 0;
+    }
     idx = abs(lit);
-    if (idx == INT_MAX)
-    { return lit; }
+    if (idx == INT_MAX) {
+        return lit;
+    }
     idx = movedto[idx];
     res = (lit < 0) ? -idx : idx;
     return res;
@@ -349,12 +377,14 @@ static int
 clausesatisfied(int i)
 {
     int j, lit;
-    if (!clauses[i])
-    { return 1; }
+    if (!clauses[i]) {
+        return 1;
+    }
     j = 0;
     while ((lit = clauses[i][j++]))
-        if (deref(lit) == TRUE)
-        { return 1; }
+        if (deref(lit) == TRUE) {
+            return 1;
+        }
     return 0;
 }
 
@@ -365,8 +395,9 @@ keptvariables(void)
 
     res = 0;
     for (i = 1; i <= maxidx; i++)
-        if (used[i] && movedto[i] > res)
-        { res = movedto[i]; }
+        if (used[i] && movedto[i] > res) {
+            res = movedto[i];
+        }
 
     return res;
 }
@@ -378,8 +409,9 @@ keptclauses(void)
 
     res = 0;
     for (i = 0; i < size_clauses; i++)
-        if (!clausesatisfied(i))
-        { res++; }
+        if (!clausesatisfied(i)) {
+            res++;
+        }
 
     return res;
 }
@@ -397,12 +429,14 @@ print(const char * name)
     FILE * file = fopen(name, "w");
     int i, j, lit, quantifier = 0;
 
-    if (!file)
-    { die("can not write to '%s'", name); }
+    if (!file) {
+        die("can not write to '%s'", name);
+    }
 
     for (i = 0; i < nopts; i++)
-        if (options[i])
-        { fprintf(file, "c --%s=%d\n", options[i], values[i]); }
+        if (options[i]) {
+            fprintf(file, "c --%s=%d\n", options[i], values[i]);
+        }
 
     fprintf(file, "p cnf %d %d\n", keptvariables(), keptclauses());
 
@@ -410,11 +444,13 @@ print(const char * name)
         quantifier = 0;
         if (quantify)
             for (i = 1; i <= maxidx; i++) {
-                if (!used[i])
-                { continue; }
+                if (!used[i]) {
+                    continue;
+                }
 
-                if (qbf[i])
-                { continue; }
+                if (qbf[i]) {
+                    continue;
+                }
 
                 if (!quantifier) {
                     quantifier = -1;
@@ -427,12 +463,14 @@ print(const char * name)
         for (i = 0; i < quantified; i++) {
             lit = prefix[i];
 
-            if (!used[ abs(lit)])
-            { continue; }
+            if (!used[ abs(lit)]) {
+                continue;
+            }
 
             if (sgn(lit) != quantifier) {
-                if (quantifier)
-                { fprintf(file, " 0\n"); }
+                if (quantifier) {
+                    fprintf(file, " 0\n");
+                }
 
                 if (lit < 0) {
                     quantifier = -1;
@@ -445,18 +483,21 @@ print(const char * name)
             fprintf(file, " %d", deref(abs(lit)));
         }
 
-        if (quantifier)
-        { fprintf(file, " 0\n"); }
+        if (quantifier) {
+            fprintf(file, " 0\n");
+        }
     }
 
     for (i = 0; i < size_clauses; i++) {
-        if (clausesatisfied(i))
-        { continue; }
+        if (clausesatisfied(i)) {
+            continue;
+        }
 
         j = 0;
         while ((lit = deref(clauses[i][j++]))) {
-            if (lit == FALSE)
-            { continue; }
+            if (lit == FALSE) {
+                continue;
+            }
 
             fprintf(file, "%d ", lit);
         }
@@ -472,8 +513,9 @@ setup(int compute_expected)
 {
     msg("copied '%s' to '%s'", src, dst);
     print(dst);
-    if (compute_expected)
-    { expected = run(dst); }
+    if (compute_expected) {
+        expected = run(dst);
+    }
     msg("expected exit code %s masking out signals is %d",
         masksignals ? "after" : "without", expected);
     sprintf(tmp, "/tmp/cnfdd-%u", (unsigned) getpid());
@@ -492,8 +534,9 @@ erase(void)
 {
     int i;
     fputc('\r', stderr);
-    for (i = 0; i < 79; i++)
-    { fputc(' ', stderr); }
+    for (i = 0; i < 79; i++) {
+        fputc(' ', stderr);
+    }
     fputc('\r', stderr);
 }
 
@@ -507,8 +550,9 @@ reduce(void)
     total = 0;
 
     while (width) {
-        if (!isatty(2))
-        { msg("reduce(%d) width %d", round, width); }
+        if (!isatty(2)) {
+            msg("reduce(%d) width %d", round, width);
+        }
 
         removed = 0;
         i = 0;
@@ -524,8 +568,9 @@ reduce(void)
             }
 
             end = i + width;
-            if (end > size_clauses)
-            { end = size_clauses; }
+            if (end > size_clauses) {
+                end = size_clauses;
+            }
 
             found = 0;
             for (j = i; j < end; j++) {
@@ -533,8 +578,9 @@ reduce(void)
                     found++;
                     saved[j] = clauses[j];
                     clauses[j] = 0;
-                } else
-                { saved[j] = 0; }
+                } else {
+                    saved[j] = 0;
+                }
             }
 
             if (found) {
@@ -548,8 +594,9 @@ reduce(void)
                         }
                     }
                 } else {
-                    for (j = i; j < end; j++)
-                    { clauses[j] = saved[j]; }
+                    for (j = i; j < end; j++) {
+                        clauses[j] = saved[j];
+                    }
                 }
             }
 
@@ -557,25 +604,28 @@ reduce(void)
 
         } while (i < size_clauses);
 
-        if (isatty(2))
-        { erase(); }
+        if (isatty(2)) {
+            erase();
+        }
 
         msg("reduce(%d) width %d removed %d clauses",
             round, width, removed);
 
-        if (removed)
-        { save(); }
+        if (removed) {
+            save();
+        }
 
-        if (removed && thorough)
-        { width = size_clauses; }
-        else if (width > 1)
-        { width = (width + 1) / 2; }
-        else { width = 0; }
+        if (removed && thorough) {
+            width = size_clauses;
+        } else if (width > 1) {
+            width = (width + 1) / 2;
+        } else { width = 0; }
 
         j = 0;
         for (i = 0; i < size_clauses; i++)
-            if (clauses[i])
-            { clauses[j++] = clauses[i]; }
+            if (clauses[i]) {
+                clauses[j++] = clauses[i];
+            }
 
         size_clauses = j;
     }
@@ -590,19 +640,22 @@ shrink(void)
 
     removed = 0;
     for (i = 0; i < size_clauses; i++) {
-        if (!clauses[i])
-        { continue; }
+        if (!clauses[i]) {
+            continue;
+        }
 
         for (j = 0; (lit = clauses[i][j]); j++) {
-            if (lit == FALSE)
-            { continue; }
+            if (lit == FALSE) {
+                continue;
+            }
 
             clauses[i][j] = FALSE;
             print(tmp);
-            if (run(tmp) == expected)
-            { removed++; }
-            else
-            { clauses[i][j] = lit; }
+            if (run(tmp) == expected) {
+                removed++;
+            } else {
+                clauses[i][j] = lit;
+            }
         }
 
         if (isatty(2)) {
@@ -614,13 +667,15 @@ shrink(void)
         }
     }
 
-    if (isatty(2))
-    { erase(); }
+    if (isatty(2)) {
+        erase();
+    }
 
     msg("shrink(%d) removed %d literals", round, removed);
 
-    if (removed)
-    { save(); }
+    if (removed) {
+        save();
+    }
 }
 
 static void
@@ -630,23 +685,27 @@ move(void)
     int i, j, count, * saved, movedtomaxidx, moved, idx;
 
     for (i = 0; i < size_clauses; i++) {
-        if (!clauses[i])
-        { continue; }
+        if (!clauses[i]) {
+            continue;
+        }
 
         j = 0;
         while ((idx = abs(clauses[i][j++])))
-            if (idx != INT_MAX)
-            { occur[idx] = 1; }
+            if (idx != INT_MAX) {
+                occur[idx] = 1;
+            }
     }
 
     movedtomaxidx = 0;
     count = 0;
     for (i = 1; i <= maxidx; i++) {
-        if (!occur[i])
-        { continue; }
+        if (!occur[i]) {
+            continue;
+        }
 
-        if (movedto[i] > movedtomaxidx)
-        { movedtomaxidx = movedto[i]; }
+        if (movedto[i] > movedtomaxidx) {
+            movedtomaxidx = movedto[i];
+        }
 
         count++;
     }
@@ -654,13 +713,15 @@ move(void)
     moved = movedtomaxidx - count;
     if (count && moved) {
         saved = malloc((maxidx + 1) * sizeof * saved);
-        for (i = 1; i <= maxidx; i++)
-        { saved[i] = movedto[i]; }
+        for (i = 1; i <= maxidx; i++) {
+            saved[i] = movedto[i];
+        }
 
         j = 0;
         for (i = 1; i <= maxidx; i++)
-            if (occur[i])
-            { movedto[i] = ++j; }
+            if (occur[i]) {
+                movedto[i] = ++j;
+            }
 
         assert(j == count);
 
@@ -669,11 +730,13 @@ move(void)
         print(tmp);
         if (run(tmp) != expected) {
             moved = 0;
-            for (i = 1; i <= maxidx; i++)
-            { movedto[i] = saved[i]; }
+            for (i = 1; i <= maxidx; i++) {
+                movedto[i] = saved[i];
+            }
             used = sused;
-        } else
-        { occur = sused; }
+        } else {
+            occur = sused;
+        }
 
         free(saved);
     }
@@ -697,15 +760,17 @@ opts(void)
 
     n = 0;
     for (i = 0; i < nopts; i++)
-        if (options[i])
-        { n++; }
+        if (options[i]) {
+            n++;
+        }
 
     removed = 0;
     if (removeopts) {
         c = 0;
         for (i = 0; i < nopts; i++) {
-            if (!options[i])
-            { continue; }
+            if (!options[i]) {
+                continue;
+            }
 
             c++;
 
@@ -723,12 +788,14 @@ opts(void)
             if (run(tmp) == expected) {
                 removed++;
                 free(opt);
-            } else
-            { options[i] = opt; }
+            } else {
+                options[i] = opt;
+            }
         }
 
-        if (isatty(2))
-        { erase(); }
+        if (isatty(2)) {
+            erase();
+        }
 
         if (removed) {
             msg("opts(%d) removed %d options", round, removed);
@@ -741,8 +808,9 @@ opts(void)
     reductions = reduced = 0;
 
     for (i = 0; i < nopts; i++) {
-        if (!options[i])
-        { continue; }
+        if (!options[i]) {
+            continue;
+        }
 
         if (isatty(2)) {
             fprintf(stderr,
@@ -786,18 +854,22 @@ opts(void)
             }
         }
 
-        if (isatty(2))
-        { erase(); }
+        if (isatty(2)) {
+            erase();
+        }
 
-        if (once)
-        { reduced++; }
+        if (once) {
+            reduced++;
+        }
     }
 
-    if (isatty(2))
-    { erase(); }
+    if (isatty(2)) {
+        erase();
+    }
 
-    if (reduced)
-    { save(); }
+    if (reduced) {
+        save();
+    }
 
     if (reduced)
         msg("opts(%d) reduced %d option values in %d reductions",
@@ -808,16 +880,18 @@ static void
 reset(void)
 {
     int i;
-    for (i = 0; i < size_clauses; i++)
-    { free(clauses[i]); }
+    for (i = 0; i < size_clauses; i++) {
+        free(clauses[i]);
+    }
     free(clauses);
     free(movedto);
     free(used);
     free(qbf);
     free(prefix);
     free(cmd);
-    for (i = 0; i < nopts; i++)
-    { free(options[i]); }
+    for (i = 0; i < nopts; i++) {
+        free(options[i]);
+    }
     free(options);
     unlink(tmp);
 }
@@ -832,45 +906,50 @@ main(int argc, char ** argv)
         if (!cmd && !strcmp(argv[i], "-h")) {
             printf("%s", USAGE);
             exit(0);
-        } else if (!cmd && !strcmp(argv[i], "-t"))
-        { thorough = 1; }
-        else if (!cmd && !strcmp(argv[i], "-r"))
-        { removeopts = 1; }
-        else if (!strcmp(argv[i], "-m"))
-        { masksignals = 1; }
-        else if (!strcmp(argv[i], "-q"))
-        { quantify = 1; }
-        else if (!strcmp(argv[i], "-c"))
-        { coreonly = 1; }
-        else if (!cmd && !strcmp(argv[i], "-e")) {
-            if (i == argc - 1)
-            { die("expected exit code missing"); }
+        } else if (!cmd && !strcmp(argv[i], "-t")) {
+            thorough = 1;
+        } else if (!cmd && !strcmp(argv[i], "-r")) {
+            removeopts = 1;
+        } else if (!strcmp(argv[i], "-m")) {
+            masksignals = 1;
+        } else if (!strcmp(argv[i], "-q")) {
+            quantify = 1;
+        } else if (!strcmp(argv[i], "-c")) {
+            coreonly = 1;
+        } else if (!cmd && !strcmp(argv[i], "-e")) {
+            if (i == argc - 1) {
+                die("expected exit code missing");
+            }
             i++;
             expected = atoi(argv[i]);
             compute_expected = 0;
-        } else if (!cmd && argv[i][0] == '-')
-        { die("invalid command line option '%s'", argv[i]); }
-        else if (cmd) {
+        } else if (!cmd && argv[i][0] == '-') {
+            die("invalid command line option '%s'", argv[i]);
+        } else if (cmd) {
             char * old = cmd;
             cmd = malloc(strlen(old) + 1 + strlen(argv[i]) + 1);
             sprintf(cmd, "%s %s", old, argv[i]);
             free(old);
-        } else if (dst)
-        { cmd = strdup(argv[i]); }
-        else if (src)
-        { dst = argv[i]; }
-        else
-        { src = argv[i]; }
+        } else if (dst) {
+            cmd = strdup(argv[i]);
+        } else if (src) {
+            dst = argv[i];
+        } else {
+            src = argv[i];
+        }
     }
 
-    if (!src)
-    { die("'src' missing"); }
+    if (!src) {
+        die("'src' missing");
+    }
 
-    if (!dst)
-    { die("'dst' missing"); }
+    if (!dst) {
+        die("'dst' missing");
+    }
 
-    if (!cmd)
-    { die("'cmd' missing"); }
+    if (!cmd) {
+        die("'cmd' missing");
+    }
 
     parse();
     setup(compute_expected);

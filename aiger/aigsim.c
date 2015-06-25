@@ -64,10 +64,12 @@ deref(unsigned lit)
     unsigned res = current[aiger_lit2var(lit)];
     res ^= aiger_sign(lit);
     #ifndef NDEBUG
-    if (lit == 0)
-    { assert(res == 0); }
-    if (lit == 1)
-    { assert(res == 1); }
+    if (lit == 0) {
+        assert(res == 0);
+    }
+    if (lit == 1) {
+        assert(res == 1);
+    }
     #endif
     return res;
 }
@@ -76,10 +78,11 @@ static void
 put(unsigned lit)
 {
     unsigned v = deref(lit);
-    if (v & 2)
-    { fputc('x', stdout); }
-    else
-    { fputc('0' + (v & 1), stdout); }
+    if (v & 2) {
+        fputc('x', stdout);
+    } else {
+        fputc('0' + (v & 1), stdout);
+    }
 }
 
 static const char *
@@ -94,8 +97,9 @@ static const char *
 aiger_symbol_as_string(aiger_symbol * s)
 {
     static char buffer[20];
-    if (s->name)
-    { return s->name; }
+    if (s->name) {
+        return s->name;
+    }
 
     sprintf(buffer, "%u", s->lit / 2);
     return buffer;
@@ -107,8 +111,9 @@ print_vcd_symbol(const char *symbol)
     const char *p;
     char ch;
 
-    for (p = symbol; (ch = *p); p++)
-    { fputc((isspace(ch) ? '"' : ch), stdout); }
+    for (p = symbol; (ch = *p); p++) {
+        fputc((isspace(ch) ? '"' : ch), stdout);
+    }
 }
 
 static int
@@ -118,8 +123,9 @@ nxtc(FILE * file)
 RESTART:
     if ((start = getc(file)) == 'c' || start == 'u') {
         while ((ch = getc(file)) != '\n')
-            if (ch == EOF)
-            { die("unexpected EOF after '%c'", start); }
+            if (ch == EOF) {
+                die("unexpected EOF after '%c'", start);
+            }
         goto RESTART;
     }
     return start;
@@ -179,74 +185,87 @@ main(int argc, char **argv)
         if (!strcmp(argv[i], "-h")) {
             fprintf(stderr, USAGE);
             exit(0);
-        } else if (!strcmp(argv[i], "-c"))
-        { check = witness = ground = 1; }
-        else if (!strcmp(argv[i], "-m"))
-        { move = 1; }
-        else if (!strcmp(argv[i], "-w"))
-        { witness = 1; }
-        else if (!strcmp(argv[i], "-v"))
-        { vcd = 1; }
-        else if (!strcmp(argv[i], "-d"))
-        { delay = 1; }
-        else if (!strcmp(argv[i], "-3"))
-        { three = 1; }
-        else if (!strcmp(argv[i], "-2"))
-        { ground = 1; }
-        else if (!strcmp(argv[i], "-s")) {
-            if (i + 1 == argc)
-            { die("argvument to '-s' missing"); }
+        } else if (!strcmp(argv[i], "-c")) {
+            check = witness = ground = 1;
+        } else if (!strcmp(argv[i], "-m")) {
+            move = 1;
+        } else if (!strcmp(argv[i], "-w")) {
+            witness = 1;
+        } else if (!strcmp(argv[i], "-v")) {
+            vcd = 1;
+        } else if (!strcmp(argv[i], "-d")) {
+            delay = 1;
+        } else if (!strcmp(argv[i], "-3")) {
+            three = 1;
+        } else if (!strcmp(argv[i], "-2")) {
+            ground = 1;
+        } else if (!strcmp(argv[i], "-s")) {
+            if (i + 1 == argc) {
+                die("argvument to '-s' missing");
+            }
 
             seed = atoi(argv[++i]);
             seeded = 1;
         } else if (!strcmp(argv[i], "-r")) {
-            if (i + 1 == argc)
-            { die("argument to '-r' missing"); }
+            if (i + 1 == argc) {
+                die("argument to '-r' missing");
+            }
 
             vectors = atoi(argv[++i]);
-        } else if (argv[i][0] == '-')
-        { die("invalid option '%s' (try '-h')", argv[i]); }
-        else if (!model_file_name)
-        { model_file_name = argv[i]; }
-        else if (!stimulus_file_name)
-        { stimulus_file_name = argv[i]; }
-        else
-        { die("more than two files specified"); }
+        } else if (argv[i][0] == '-') {
+            die("invalid option '%s' (try '-h')", argv[i]);
+        } else if (!model_file_name) {
+            model_file_name = argv[i];
+        } else if (!stimulus_file_name) {
+            stimulus_file_name = argv[i];
+        } else {
+            die("more than two files specified");
+        }
     }
 
-    if (!model_file_name && vectors < 0)
-    { die("can only read model from <stdin> in random simulation mode"); }
+    if (!model_file_name && vectors < 0) {
+        die("can only read model from <stdin> in random simulation mode");
+    }
 
-    if (vectors >= 0 && stimulus_file_name)
-    { die("random simulation but also stimulus file specified"); }
+    if (vectors >= 0 && stimulus_file_name) {
+        die("random simulation but also stimulus file specified");
+    }
 
-    if (vectors >= 0 && witness)
-    { die("random simulation but also witness specified"); }
+    if (vectors >= 0 && witness) {
+        die("random simulation but also witness specified");
+    }
 
-    if (seeded && vectors < 0)
-    { die("seed given but no random simulation specified"); }
+    if (seeded && vectors < 0) {
+        die("seed given but no random simulation specified");
+    }
 
-    if (vectors < 0 && three)
-    { die("can not use '-3' without '-r <vectors>'"); }
+    if (vectors < 0 && three) {
+        die("can not use '-3' without '-r <vectors>'");
+    }
 
-    if (vectors >= 0 && ground)
-    { die("can not combine '-2' with '-r <vectors>'"); }
+    if (vectors >= 0 && ground) {
+        die("can not combine '-2' with '-r <vectors>'");
+    }
 
-    if (check && vcd)
-    { die("can not combine '-v' with '-c'"); }
+    if (check && vcd) {
+        die("can not combine '-v' with '-c'");
+    }
 
-    if (!vcd && delay)
-    { die("can not use '-d' without '-v'"); }
+    if (!vcd && delay) {
+        die("can not use '-d' without '-v'");
+    }
 
     model = aiger_init();
 
-    if (model_file_name)
-    { error = aiger_open_and_read_from_file(model, model_file_name); }
-    else
-    { error = aiger_read_from_file(model, stdin); }
+    if (model_file_name) {
+        error = aiger_open_and_read_from_file(model, model_file_name);
+    } else {
+        error = aiger_read_from_file(model, stdin);
+    }
 
-    if (error)
-    { die("%s", error); }
+    if (error) {
+        die("%s", error);
+    }
 
     if (!move && !model->num_bad && !model->num_justice && model->num_outputs) {
         wrn("no properties found, using outputs instead");
@@ -264,12 +283,14 @@ main(int argc, char **argv)
 
     if (stimulus_file_name) {
         file = fopen(stimulus_file_name, "r");
-        if (!file)
-        { die("failed to open '%s'", stimulus_file_name); }
+        if (!file) {
+            die("failed to open '%s'", stimulus_file_name);
+        }
 
         close_file = 1;
-    } else
-    { file = stdin; }
+    } else {
+        file = stdin;
+    }
 
     if (vcd) {
         for (i = 0; i < model->num_inputs; i++) {
@@ -295,19 +316,23 @@ main(int argc, char **argv)
 
     period = delay ? 20 : 1;
 
-    if (seeded)
-    { srand(seed); }
+    if (seeded) {
+        srand(seed);
+    }
 
-    if (witness)
-    { ch = nxtc(file); }
+    if (witness) {
+        ch = nxtc(file);
+    }
 
     prop_result =
         calloc(model->num_bad + model->num_justice, sizeof(prop_result[0]));
-    for (i = 0; i < model->num_bad + model->num_justice; i++)
-    { prop_result[i] = 2; }
+    for (i = 0; i < model->num_bad + model->num_justice; i++) {
+        prop_result[i] = 2;
+    }
 
-    if (witness && ch == EOF)
-    { goto DONE; }
+    if (witness && ch == EOF) {
+        goto DONE;
+    }
 
 readNextWitness:
     /* SW110526 Initialize
@@ -327,8 +352,9 @@ readNextWitness:
         int expectTrace = ch == '1';
         int knownResult = ch != '2';
 
-        if ((ch != '0' && ch != '1' && ch != '2') || nxtc(file) != '\n')
-        { die("expected '0', '1' or '2' as first line"); }
+        if ((ch != '0' && ch != '1' && ch != '2') || nxtc(file) != '\n') {
+            die("expected '0', '1' or '2' as first line");
+        }
 
         if (ch == '0' || ch == '2') {
             res = 0;
@@ -337,11 +363,13 @@ readNextWitness:
 
         /* Read specification of properties witnessed */
         ch = nxtc(file);
-        if (ch != 'b' && ch != 'j')
-        { die("expected 'b' or 'j' in witness\n"); }
+        if (ch != 'b' && ch != 'j') {
+            die("expected 'b' or 'j' in witness\n");
+        }
 
-        if (print)
-        { printf("Grounded instance of this trace should be a witness for: {"); }
+        if (print) {
+            printf("Grounded instance of this trace should be a witness for: {");
+        }
 
         do {
             /* If we're checking then a loop should only be found if
@@ -349,8 +377,9 @@ readNextWitness:
             requireloop |= ch == 'j';
             och = ch;
             ch = nxtc(file);
-            if (ch < '0' || ch > '9')
-            { die("expected integer after '%c' in witness\n", ch); }
+            if (ch < '0' || ch > '9') {
+                die("expected integer after '%c' in witness\n", ch);
+            }
 
             j = 0;
             do {
@@ -359,8 +388,9 @@ readNextWitness:
                 ch = nxtc(file);
             } while (ch >= '0' && ch <= '9');
 
-            if (ch != 'b' && ch != 'j' && ch != '\n')
-            { die("expected digit, 'b', 'j' or new line in witness\n"); }
+            if (ch != 'b' && ch != 'j' && ch != '\n') {
+                die("expected digit, 'b', 'j' or new line in witness\n");
+            }
 
             if ((och == 'b' && j >= model->num_bad) ||
                     (och == 'j' && j >= model->num_justice))
@@ -370,27 +400,32 @@ readNextWitness:
                 i = j + ((och == 'j') ? model->num_bad : 0);
                 if (expectTrace &&
                         prop_result[i] != 2 &&
-                        prop_result[i] != (expectTrace ? 1 : 0))
-                { die("Inconsistent results specified for %c%d\n", och, j); }
+                        prop_result[i] != (expectTrace ? 1 : 0)) {
+                    die("Inconsistent results specified for %c%d\n", och, j);
+                }
 
                 expected_prop[i] = 1;
                 prop_result[i] = expectTrace ? 1 : 0;
             }
 
-            if (print)
-            { printf(" %c%d", och, j); }
+            if (print) {
+                printf(" %c%d", och, j);
+            }
         } while (ch == 'b' || ch == 'j');
 
-        if (print)
-        { printf(" }\n"); }
+        if (print) {
+            printf(" }\n");
+        }
 
-        if (ch != '\n')
-        { die("expected new line after \"%c%d\" in witness\n", och, j); }
+        if (ch != '\n') {
+            die("expected new line after \"%c%d\" in witness\n", och, j);
+        }
 
         if (!expectTrace) {
             ch = nxtc(file);
-            if (ch != '.')
-            { die("expected '.' after witness without trace\n"); }
+            if (ch != '.') {
+                die("expected '.' after witness without trace\n");
+            }
             goto skipWitness;
         }
     }
@@ -402,8 +437,9 @@ readNextWitness:
     fair = calloc(model->num_fairness, sizeof(fair[0]));
     bad = calloc(model->num_bad, sizeof(bad[0]));
     justice = calloc(model->num_justice, sizeof(justice[0]));
-    for (i = 0; i < model->num_justice; i++)
-    { justice[i] = calloc(model->justice[i].size, sizeof(justice[0][0])); }
+    for (i = 0; i < model->num_justice; i++) {
+        justice[i] = calloc(model->justice[i].size, sizeof(justice[0][0]));
+    }
 
     if (witness) {
         /* Read initial state */
@@ -412,17 +448,20 @@ readNextWitness:
             assert(symbol->reset <= 1 || symbol->reset == symbol->lit);
 
             ch = nxtc(file);
-            if (ch != '0' && ch != '1' && ch != 'x')
-            { die("expected '0', '1' or 'x' in initial state in witness\n"); }
+            if (ch != '0' && ch != '1' && ch != 'x') {
+                die("expected '0', '1' or 'x' in initial state in witness\n");
+            }
 
-            if (symbol->reset <= 1 && (ch == 'x' || symbol->reset != ch - '0'))
-            { die("witness specifies invalid initial state for latch l%d\n", j); }
+            if (symbol->reset <= 1 && (ch == 'x' || symbol->reset != ch - '0')) {
+                die("witness specifies invalid initial state for latch l%d\n", j);
+            }
 
             current[symbol->lit / 2] = (ch != 'x') ? (ch - '0') : (ground ? 0 : 2);
         }
 
-        if (nxtc(file) != '\n')
-        { die("expected new line after initial state in witness\n"); }
+        if (nxtc(file) != '\n') {
+            die("expected new line after initial state in witness\n");
+        }
     }
     /* Set initial state */
     else {
@@ -451,27 +490,30 @@ readNextWitness:
             ch = nxtc(file);
             j = 1;
 
-            if (ch == '.')
-            { break; }
+            if (ch == '.') {
+                break;
+            }
 
             /* First read and overwrite inputs.
              */
             while (j <= model->num_inputs) {
-                if (ch == '0')
-                { current[j] = 0; }
-                else if (ch == '1')
-                { current[j] = 1; }
-                else if (ch == 'x')
-                { current[j] = ground ? 0 : 2; }
-                else
-                { die("line %u: pos %u: expected '0' or '1'", i, j); }
+                if (ch == '0') {
+                    current[j] = 0;
+                } else if (ch == '1') {
+                    current[j] = 1;
+                } else if (ch == 'x') {
+                    current[j] = ground ? 0 : 2;
+                } else {
+                    die("line %u: pos %u: expected '0' or '1'", i, j);
+                }
 
                 j++;
                 ch = nxtc(file);
             }
 
-            if (ch != '\n')
-            { die("line %u: pos %u: expected new line", i, j); }
+            if (ch != '\n') {
+                die("line %u: pos %u: expected new line", i, j);
+            }
         }
 
         /* Simulate AND nodes.
@@ -520,27 +562,31 @@ readNextWitness:
                          realloc(states, statesAlloc * sizeof(states[0]));
             }
             states[i - 1] = calloc(model->num_latches, sizeof(states[0][0]));
-            for (j = 0; j < model->num_latches; j++)
-            { states[i - 1][j] = deref(model->latches[j].lit); }
+            for (j = 0; j < model->num_latches; j++) {
+                states[i - 1][j] = deref(model->latches[j].lit);
+            }
         }
 
         /* SW110525 "bad" outputs */
-        for (j = 0; j < model->num_bad; j++)
-        { bad[j] |= (deref(model->bad[j].lit) == 1); }
+        for (j = 0; j < model->num_bad; j++) {
+            bad[j] |= (deref(model->bad[j].lit) == 1);
+        }
 
         /* Print current state of latches.
          */
         if (print) {
-            for (j = 0; j < model->num_latches; j++)
-            { put(model->latches[j].lit); }
+            for (j = 0; j < model->num_latches; j++) {
+                put(model->latches[j].lit);
+            }
             fputc(' ', stdout);
         }
 
         if (vcd) {
             printf("#%u\n", period * (i - 1));
 
-            if (i == 1)
-            { printf("$dumpvars\n"); }
+            if (i == 1) {
+                printf("$dumpvars\n");
+            }
 
             for (j = 0; j < model->num_latches; j++) {
                 put(model->latches[j].lit);
@@ -562,8 +608,9 @@ readNextWitness:
                 }
             }
 
-            if (i == 1)
-            { printf("$end\n"); }
+            if (i == 1) {
+                printf("$end\n");
+            }
         }
 
         /* Then first calculate next state values of latches in  parallel.
@@ -583,27 +630,31 @@ readNextWitness:
         if (print) {
             /* Print inputs.
              */
-            for (j = 0; j < model->num_inputs; j++)
-            { put(model->inputs[j].lit); }
+            for (j = 0; j < model->num_inputs; j++) {
+                put(model->inputs[j].lit);
+            }
             fputc(' ', stdout);
 
             /* Print outputs.
              */
-            for (j = 0; j < model->num_outputs; j++)
-            { put(model->outputs[j].lit); }
+            for (j = 0; j < model->num_outputs; j++) {
+                put(model->outputs[j].lit);
+            }
             fputc(' ', stdout);
 
             /* Print next state of latches.
              */
-            for (j = 0; j < model->num_latches; j++)
-            { put(model->latches[j].lit); }
+            for (j = 0; j < model->num_latches; j++) {
+                put(model->latches[j].lit);
+            }
 
             fputc('\n', stdout);
         }
 
         if (vcd) {
-            if (delay)
-            { printf("#%u\n", period * (i - 1) + 1); }
+            if (delay) {
+                printf("#%u\n", period * (i - 1) + 1);
+            }
 
             for (j = 0; j < model->num_inputs; j++) {
                 put(model->inputs[j].lit);
@@ -611,8 +662,9 @@ readNextWitness:
                 fputc('\n', stdout);
             }
 
-            if (delay)
-            { printf("#%u\n", period * (i - 1) + 2); }
+            if (delay) {
+                printf("#%u\n", period * (i - 1) + 2);
+            }
 
             for (j = 0; j < model->num_outputs; j++) {
                 put(model->outputs[j].lit);
@@ -624,18 +676,21 @@ readNextWitness:
         i++;
     }
 
-    if (vcd)
-    { printf("#%u\n", period * (i - 1)); }
+    if (vcd) {
+        printf("#%u\n", period * (i - 1));
+    }
 
-    if (print)
-    { printf("Trace is a witness for: {"); }
+    if (print) {
+        printf("Trace is a witness for: {");
+    }
 
     /* SW110525 Check & print reachable bad states */
     for (j = 0; j < model->num_bad; j++) {
-        if (!bad[j])
-        { checkpass &= !expected_prop[j]; }
-        else if (print)
-        { printf(" b%d", j); }
+        if (!bad[j]) {
+            checkpass &= !expected_prop[j];
+        } else if (print) {
+            printf(" b%d", j);
+        }
 
         if (!prop_result[j] && bad[j])
             die(
@@ -653,15 +708,18 @@ readNextWitness:
             if (!foundfair && !constraintViolation) {
                 foundfair = 1;
                 /* State at this timepoint should be next state at endpoint */
-                for (j = 0; foundfair && j < model->num_latches; j++)
-                { foundfair &= (states[i][j] == deref(model->latches[j].lit)); }
+                for (j = 0; foundfair && j < model->num_latches; j++) {
+                    foundfair &= (states[i][j] == deref(model->latches[j].lit));
+                }
                 /* The last time a fairness constraint held should be at
                    the earliest at the looppoint */
-                for (j = 0; foundfair && j < model->num_fairness; j++)
-                { foundfair &= fair[j] > i; }
+                for (j = 0; foundfair && j < model->num_fairness; j++) {
+                    foundfair &= fair[j] > i;
+                }
 
-                if (foundfair)
-                { looppoint = i; }
+                if (foundfair) {
+                    looppoint = i;
+                }
             }
 
             /* Remove stored state */
@@ -675,16 +733,19 @@ readNextWitness:
             /* If we found a fair loop then check if justice constraint i is
                satisfied */
             int foundjust = foundfair;
-            for (j = 0; foundjust && j < model->justice[i].size; j++)
-            { foundjust &= justice[i][j] > looppoint; }
+            for (j = 0; foundjust && j < model->justice[i].size; j++) {
+                foundjust &= justice[i][j] > looppoint;
+            }
 
-            if (!foundjust)
-            { checkpass &= !expected_prop[model->num_bad + i]; }
-            else if (print)
-            { printf(" j%d", i); }
+            if (!foundjust) {
+                checkpass &= !expected_prop[model->num_bad + i];
+            } else if (print) {
+                printf(" j%d", i);
+            }
 
-            if (!prop_result[model->num_bad + i] && foundjust)
-            { die("Trace witnesses j%d which was previously specified unsatisfiable\n", i); }
+            if (!prop_result[model->num_bad + i] && foundjust) {
+                die("Trace witnesses j%d which was previously specified unsatisfiable\n", i);
+            }
 
             /* Free memory for this just constraint */
             free(justice[i]);
@@ -694,14 +755,16 @@ readNextWitness:
 
     if (print) {
         printf(" }\n");
-        if (foundfair)
-        { printf("Loop starts at timepoint: %d\n", looppoint); }
+        if (foundfair) {
+            printf("Loop starts at timepoint: %d\n", looppoint);
+        }
     }
     /* It is possible to have a constraint violation AND a check pass, if this
        is a witness of a bad state output and the constraint violation happens
        after the bad state output becomes high */
-    if (checkpass)
-    { res = 0; }
+    if (checkpass) {
+        res = 0;
+    }
 
     free(fair);
     free(justice);
@@ -713,19 +776,22 @@ skipWitness:;
 
     if (witness && res == 0 && ch == '.') {
         ch = nxtc(file);
-        if (ch != '\n')
-        { die("expected new line after '.'\n"); }
+        if (ch != '\n') {
+            die("expected new line after '.'\n");
+        }
         ch = nxtc(file);
-        if (ch != EOF)
-        { goto readNextWitness; }
+        if (ch != EOF) {
+            goto readNextWitness;
+        }
     }
 
 DONE:
 
     free(prop_result);
 
-    if (close_file)
-    { fclose(file); }
+    if (close_file) {
+        fclose(file);
+    }
 
     aiger_reset(model);
 

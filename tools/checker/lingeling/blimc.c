@@ -86,7 +86,7 @@ static void catchsig(int sig)
         if (verbose) { stats(), caughtsigmsg(sig); }
     }
     resetsighandlers();
-    if (!getenv("LGLNABORT")) { raise(sig); } else { exit(1); }
+    if (!getenv("LGLNABORT")) { raise(sig); }  else { exit(1); }
 }
 
 static void setsighandlers(void)
@@ -239,8 +239,9 @@ static void prepfreeze(void)
     unsigned i;
     msg(2, "freeze");
     for (i = 0; i < model->num_inputs; i++)
-        if (ulitincoi(aiginput(i)))
-        { lglfreeze(lgl, prepinput(i)); }
+        if (ulitincoi(aiginput(i))) {
+            lglfreeze(lgl, prepinput(i));
+        }
     for (i = 0; i < model->num_latches; i++) {
         if (!ulitincoi(aiglatch(i))) { continue; }
         lglfreeze(lgl, preplatch(i));
@@ -266,8 +267,9 @@ static void logic(void)
     msg(2, "logic");
     if (ulitincoi(0)) { unit(-1); }
     for (i = 0; i < model->num_ands; i++)
-        if (ulitincoi(model->ands[i].lhs))
-        { and (preplhs(i), prepleft(i), prepright(i)); }
+        if (ulitincoi(model->ands[i].lhs)) {
+            and (preplhs(i), prepleft(i), prepright(i));
+        }
 }
 
 static const char * usage =
@@ -401,8 +403,9 @@ static void mapcnf(void)
     int * p, lit;
     Clause * c;
     for (c = clauses; c < clauses + nclauses; c++)
-        for (p = c->lits; (lit = *p); p++)
-        { *p = mapuntimedlit(lit); }
+        for (p = c->lits; (lit = *p); p++) {
+            *p = mapuntimedlit(lit);
+        }
     msg(1, "mapped %d variables", maxvar);
 }
 
@@ -446,8 +449,9 @@ static void shiftcnf(int time)
         lgladd(lgl, 0);
     }
     for (i = 0; i < model->num_latches; i++)
-        if (ulitincoi(aiglatch(i)))
-        { lglfreeze(lgl, shift(mainilit(aignext(i)), time)); }
+        if (ulitincoi(aiglatch(i))) {
+            lglfreeze(lgl, shift(mainilit(aignext(i)), time));
+        }
 }
 
 static void bad(int time)
@@ -478,11 +482,13 @@ static void init(void)
     mapcnf();
     #ifndef NDEBUG
     for (i = 0; i < model->num_outputs; i++)
-        if (ulitincoi(aigoutput(i)))
-        { assert(litmap[abs(prepoutput(i))]); }
+        if (ulitincoi(aigoutput(i))) {
+            assert(litmap[abs(prepoutput(i))]);
+        }
     for (i = 0; i < model->num_latches; i++)
-        if (ulitincoi(aiglatch(i)))
-        { assert(litmap[abs(prepnext(i))]); }
+        if (ulitincoi(aiglatch(i))) {
+            assert(litmap[abs(prepnext(i))]);
+        }
     #endif
     for (i = 0; i < model->num_latches; i++) {
         if (!ulitincoi(aiglatch(i))) { continue; }
@@ -528,12 +534,12 @@ int main(int argc, char ** argv)
         else if (!strcmp(argv[i], "-O6")) { opt = 6; }
         else if (!strcmp(argv[i], "--no-fork")) { nofork = 1; }
         else if (!strcmp(argv[i], "--no-brute-fork")) { nobrutefork = 1; }
-        else if (argv[i][0] == '-')
-        { die("invalid command line option '%s'", argv[i]); }
-        else if (isnumstr(argv[i])) { maxk = atoi(argv[i]); }
-        else if (iname)
-        { die("two files specified '%s' and '%s'", iname, argv[i]); }
-        else { iname = argv[i]; }
+        else if (argv[i][0] == '-') {
+            die("invalid command line option '%s'", argv[i]);
+        } else if (isnumstr(argv[i])) { maxk = atoi(argv[i]); }
+        else if (iname) {
+            die("two files specified '%s' and '%s'", iname, argv[i]);
+        } else { iname = argv[i]; }
     }
     if (verbose)
         lglbnr("BLIMC Bounded Lingeling Model Checker",
@@ -551,8 +557,9 @@ int main(int argc, char ** argv)
         model->num_latches,
         model->num_outputs,
         model->num_ands);
-    if (model->num_outputs != 1)
-    { die("expected exactly one output but got %u", model->num_outputs); }
+    if (model->num_outputs != 1) {
+        die("expected exactly one output but got %u", model->num_outputs);
+    }
     init0 = init1 = initx = 0;
     for (j = 0; j < model->num_latches; j++) {
         unsigned rst = aigreset(j);
@@ -605,8 +612,9 @@ int main(int argc, char ** argv)
             shiftcnf(k);
             bad(k);
             #if 1
-            if (!nofork)
-            { lglsetopt(lgl, "clim", 100000); }
+            if (!nofork) {
+                lglsetopt(lgl, "clim", 100000);
+            }
             #else
             lglsetopt(lgl, "clim", 5);
             #endif
@@ -617,8 +625,9 @@ int main(int argc, char ** argv)
                 sprintf(prefix, "[lglfork%d] ", nforked++);
                 setopts(forked, prefix);
                 #if 1
-                if (!nobrutefork)
-                { lglsetopt(forked, "clim", 1000000); }
+                if (!nobrutefork) {
+                    lglsetopt(forked, "clim", 1000000);
+                }
                 #else
                 lglsetopt(forked, "clim", 10);
                 #endif

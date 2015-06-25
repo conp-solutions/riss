@@ -92,7 +92,7 @@ class CoprocessorData
     int decompressedUndoLits;             // number of literals on the decompressedUndoLits stack
 
   private:
-    
+
     std::vector<Riss::CRef> subsume_queue; // queue of clause references that potentially can subsume other clauses
     std::vector<Riss::CRef> strengthening_queue;     // std::vector of clausereferences, which potentially can strengthen
 
@@ -220,10 +220,14 @@ class CoprocessorData
     void garbageCollect(std::vector<Riss::CRef> ** updateVectors = 0, int size = 0);
     void relocAll(Riss::ClauseAllocator& to, std::vector<Riss::CRef> ** updateVectors = 0, int size = 0);
     void checkGarbage(std::vector<Riss::CRef> ** updateVectors = 0, int size = 0) { return checkGarbage(solver->garbage_frac, updateVectors, size); }
-    void checkGarbage(double gf, std::vector<Riss::CRef> ** updateVectors = 0, int size = 0) {  if (ca.wasted() > ca.size() * gf) { garbageCollect(updateVectors, size); } }
+    void checkGarbage(double gf, std::vector<Riss::CRef> ** updateVectors = 0, int size = 0) {  if (ca.wasted() > ca.size() * gf) { garbageCollect(updateVectors, size); }  }
 
     void updateClauseAfterDelLit(const Riss::Clause& clause)
-    { if (global_debug_out) { std::cerr << "what to update in clause?! " << clause << std::endl; } }
+    {
+        if (global_debug_out) {
+            std::cerr << "what to update in clause?! " << clause << std::endl;
+        }
+    }
 
     // sort
     void sortClauseLists(bool alsoLearnts = false);
@@ -302,7 +306,7 @@ class CoprocessorData
     void addEquivalences(const std::vector<Riss::Lit>& list);
     void addEquivalences(const Riss::Lit& l1, const Riss::Lit& l2);
     Riss::vec< Riss::Lit >& getEquivalences();
-    Riss::vec< Riss::Lit >& replacedBy () { return solver->eqInfo.replacedBy; }
+    Riss::vec< Riss::Lit >& replacedBy() { return solver->eqInfo.replacedBy; }
 
     /** add a clause to the queues, so that this clause will be checked by the next call to subsumeStrength
      * @return true, if clause has really been added and was not in both queues before
@@ -608,9 +612,9 @@ inline void CoprocessorData::moveVar(Riss::Var from, Riss::Var to, bool final)
         solver->varFlags[to].decision = solver->varFlags[from].decision; solver->varFlags[from].decision = false;
         solver->varFlags[to].frozen = solver->varFlags[from].frozen; solver->varFlags[from].frozen = false;
 
-	solver->eqInfo.replacedBy[to] = solver->eqInfo.replacedBy[from]; solver->eqInfo.replacedBy[from] = Riss::mkLit(from,false);
-	solver->trailPos[ to ] = solver->trailPos[ from ];
-	
+        solver->eqInfo.replacedBy[to] = solver->eqInfo.replacedBy[from]; solver->eqInfo.replacedBy[from] = Riss::mkLit(from, false);
+        solver->trailPos[ to ] = solver->trailPos[ from ];
+
         // cp3 structures
         lit_occurrence_count[Riss::toInt(Riss::mkLit(to, false))] = lit_occurrence_count[Riss::toInt(Riss::mkLit(from, false))];
         lit_occurrence_count[Riss::toInt(Riss::mkLit(to, true))] = lit_occurrence_count[Riss::toInt(Riss::mkLit(from, true))];
@@ -619,15 +623,15 @@ inline void CoprocessorData::moveVar(Riss::Var from, Riss::Var to, bool final)
     }
     if (final == true) {
         // std::cerr << "c compress variables to " << to+1 << std::endl;
-	//     solver->assigns.shrink( solver->assigns.size() - to - 1);
+        //     solver->assigns.shrink( solver->assigns.size() - to - 1);
         solver->vardata.shrink_(solver->vardata.size() - to - 1);
         solver->activity.shrink_(solver->activity.size() - to - 1);
 
         solver->varFlags.shrink_(solver->varFlags.size() - to - 1);
 
-	solver->eqInfo.replacedBy.shrink_(solver->varFlags.size() - to - 1);
-	solver->trailPos.shrink_(solver->varFlags.size() - to - 1);
-	
+        solver->eqInfo.replacedBy.shrink_(solver->varFlags.size() - to - 1);
+        solver->trailPos.shrink_(solver->varFlags.size() - to - 1);
+
         solver->rebuildOrderHeap();
 
         // set cp3 variable representation!
@@ -882,7 +886,7 @@ inline void CoprocessorData::sortClauseLists(bool alsoLearnts)
             Riss::CRef* tmp = a; a = b; b = tmp;
         }
         // write data back into std::vector
-        for (int32_t i = 0 ; i < n; i++) {clauseList[i] = a[i];}
+        for (int32_t i = 0 ; i < n; i++) { clauseList[i] = a[i]; }
 
         delete [] tmpA;
         delete [] tmpB;
@@ -1414,7 +1418,7 @@ inline void CoprocessorData::extendModel(Riss::vec< Riss::lbool >& model)
 
 
         std::cerr << "next clause: ";
-        for (int j = undo.size() - 1; j >= 0 ; --j) if (undo[j] == Riss::lit_Undef) { break; } else { std::cerr << " " << undo[j]; }
+        for (int j = undo.size() - 1; j >= 0 ; --j) if (undo[j] == Riss::lit_Undef) { break; }  else { std::cerr << " " << undo[j]; }
         std::cerr << std::endl;
 
     }
@@ -1448,7 +1452,7 @@ inline void CoprocessorData::extendModel(Riss::vec< Riss::lbool >& model)
                 }
                 std::cerr << std::endl;
                 std::cerr << "next clause: ";
-                for (int j = i - 1; j >= 0 ; --j) if (undo[j] == Riss::lit_Undef) { break; } else { std::cerr << " " << undo[j]; }
+                for (int j = i - 1; j >= 0 ; --j) if (undo[j] == Riss::lit_Undef) { break; }  else { std::cerr << " " << undo[j]; }
                 std::cerr << std::endl;
             }
             continue;
@@ -1462,7 +1466,7 @@ inline void CoprocessorData::extendModel(Riss::vec< Riss::lbool >& model)
             }
             if (local_debug) {   // print intermediate state!
                 std::cerr << "next clause: ";
-                for (int j = i - 1; j >= 0 ; --j) if (undo[j] == Riss::lit_Undef) { break; } else { std::cerr << " " << undo[j]; }
+                for (int j = i - 1; j >= 0 ; --j) if (undo[j] == Riss::lit_Undef) { break; }  else { std::cerr << " " << undo[j]; }
                 std::cerr << std::endl;
             }
         }
@@ -1499,14 +1503,14 @@ inline void CoprocessorData::addCommentToProof(const char* text, bool deleteFrom
 inline void CoprocessorData::addEquivalences(const std::vector< Riss::Lit >& list)
 {
     assert((list.size() != 2 || list[0] != list[1]) && "do not allow to add a std::pair of the same literals");
-    solver->eqInfo.addEquivalenceClass( list );
+    solver->eqInfo.addEquivalenceClass(list);
 }
 
 inline void CoprocessorData::addEquivalences(const Riss::Lit& l1, const Riss::Lit& l2)
 {
     assert(l1 != l2 && "do not state that the same literal is equivalent to itself");
     if (global_debug_out) { std::cerr << "c [DATA] set equi: " << l1 << " == " << l2 << std::endl; }
-    solver->eqInfo.addEquivalenceClass(l1,l2);
+    solver->eqInfo.addEquivalenceClass(l1, l2);
 }
 
 inline Riss::vec< Riss::Lit >& CoprocessorData::getEquivalences()

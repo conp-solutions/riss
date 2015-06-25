@@ -331,8 +331,9 @@ msg(int level, const char *msg, ...)
 {
     va_list ap;
 
-    if (level > verbose)
-    { return; }
+    if (level > verbose) {
+        return;
+    }
 
     fprintf(stderr, "[smvtoaig] ");
     va_start(ap, msg);
@@ -364,8 +365,9 @@ full_buffer(void)
 static void
 push_buffer(int ch)
 {
-    if (full_buffer())
-    { enlarge_buffer(); }
+    if (full_buffer()) {
+        enlarge_buffer();
+    }
 
     buffer[count_buffer++] = ch;
 }
@@ -393,8 +395,9 @@ enlarge_expr_stack(void)
 static void
 push_expr(Expr * expr)
 {
-    if (count_expr_stack >= size_expr_stack)
-    { enlarge_expr_stack(); }
+    if (count_expr_stack >= size_expr_stack) {
+        enlarge_expr_stack();
+    }
 
     expr_stack[count_expr_stack++] = expr;
 }
@@ -418,14 +421,17 @@ next_char(void)
     if (char_has_been_saved) {
         res = saved_char;
         char_has_been_saved = 0;
-    } else
-    { res = getc(input); }
+    } else {
+        res = getc(input);
+    }
 
-    if (res != EOF)
-    { push_buffer(res); }
+    if (res != EOF) {
+        push_buffer(res);
+    }
 
-    if (res == '\n')
-    { lineno++; }
+    if (res == '\n') {
+        lineno++;
+    }
 
     return res;
 }
@@ -445,8 +451,9 @@ save_char(int ch)
     saved_char = ch;
     char_has_been_saved = 1;
 
-    if (ch != EOF && count_buffer)
-    { pop_buffer(); }
+    if (ch != EOF && count_buffer) {
+        pop_buffer();
+    }
 }
 
 /*------------------------------------------------------------------------*/
@@ -471,14 +478,17 @@ init_issymbol(void)
 
     memset(issymbol, 0, sizeof(issymbol));
 
-    for (ch = '0'; ch <= '9'; ch++)
-    { issymbol[ch] = 1; }
+    for (ch = '0'; ch <= '9'; ch++) {
+        issymbol[ch] = 1;
+    }
 
-    for (ch = 'a'; ch <= 'z'; ch++)
-    { issymbol[ch] = 1; }
+    for (ch = 'a'; ch <= 'z'; ch++) {
+        issymbol[ch] = 1;
+    }
 
-    for (ch = 'A'; ch <= 'Z'; ch++)
-    { issymbol[ch] = 1; }
+    for (ch = 'A'; ch <= 'Z'; ch++) {
+        issymbol[ch] = 1;
+    }
 
     issymbol['-'] = 1;
     issymbol['_'] = 1;
@@ -532,37 +542,42 @@ SKIP_WHITE_SPACE:
                 ;
 
             goto SKIP_WHITE_SPACE;
-        } else if (ch != '>')
-        { invalid_token(); }
+        } else if (ch != '>') {
+            invalid_token();
+        }
 
         return IMPLIES;
     }
 
     if (ch == '!') {
         ch = next_char();
-        if (ch == '=')
-        { return NOTEQ; }
+        if (ch == '=') {
+            return NOTEQ;
+        }
 
         save_char(ch);
         return '!';
     }
 
     if (ch == '=' || ch == '|' || ch == '(' || ch == ')' ||
-            ch == ';' || ch == '&' || ch == '0' || ch == '1')
-    { return ch; }
+            ch == ';' || ch == '&' || ch == '0' || ch == '1') {
+        return ch;
+    }
 
     if (ch == ':') {
         ch = next_char();
-        if (ch == '=')
-        { return BECOMES; }
+        if (ch == '=') {
+            return BECOMES;
+        }
 
         save_char(ch);
         return ':';
     }
 
     if (ch == '<') {
-        if (next_char() != '-' || next_char() != '>')
-        { invalid_token(); }
+        if (next_char() != '-' || next_char() != '>') {
+            invalid_token();
+        }
 
         return IFF;
     }
@@ -574,69 +589,91 @@ SKIP_WHITE_SPACE:
         push_buffer(0);
 
         if (strlen(buffer) == 1 &&
-                is_temporal_operator(buffer[0]))
-        { return buffer[0]; }
+                is_temporal_operator(buffer[0])) {
+            return buffer[0];
+        }
 
-        if (!strcmp(buffer, "AG"))
-        { return AG; }
-        if (!strcmp(buffer, "ASSIGN"))
-        { return ASSIGN; }
-        if (!strcmp(buffer, "boolean"))
-        { return boolean; }
-        if (!strcmp(buffer, "case"))
-        { return CASE; }
-        if (!strcmp(buffer, "DEFINE"))
-        { return DEFINE; }
-        if (!strcmp(buffer, "esac"))
-        { return ESAC; }
-        if (!strcmp(buffer, "INIT"))
-        { return INIT; }
-        if (!strcmp(buffer, "init"))
-        { return init; }
-        if (!strcmp(buffer, "INVAR"))
-        { return INVAR; }
-        if (!strcmp(buffer, "MODULE"))
-        { return MODULE; }
-        if (!strcmp(buffer, "next"))
-        { return next; }
+        if (!strcmp(buffer, "AG")) {
+            return AG;
+        }
+        if (!strcmp(buffer, "ASSIGN")) {
+            return ASSIGN;
+        }
+        if (!strcmp(buffer, "boolean")) {
+            return boolean;
+        }
+        if (!strcmp(buffer, "case")) {
+            return CASE;
+        }
+        if (!strcmp(buffer, "DEFINE")) {
+            return DEFINE;
+        }
+        if (!strcmp(buffer, "esac")) {
+            return ESAC;
+        }
+        if (!strcmp(buffer, "INIT")) {
+            return INIT;
+        }
+        if (!strcmp(buffer, "init")) {
+            return init;
+        }
+        if (!strcmp(buffer, "INVAR")) {
+            return INVAR;
+        }
+        if (!strcmp(buffer, "MODULE")) {
+            return MODULE;
+        }
+        if (!strcmp(buffer, "next")) {
+            return next;
+        }
         if (!strcmp(buffer, "SPEC") ||
                 /* SW110309 Added CTLSPEC which is a synonym for SPEC
                  */
-                !strcmp(buffer, "CTLSPEC"))
-        { return SPEC; }
-        if (!strcmp(buffer, "LTLSPEC"))
-        { return LTLSPEC; }
-        if (!strcmp(buffer, "TRANS"))
-        { return TRANS; }
-        if (!strcmp(buffer, "TRUE"))
-        { return ONE; }
+                !strcmp(buffer, "CTLSPEC")) {
+            return SPEC;
+        }
+        if (!strcmp(buffer, "LTLSPEC")) {
+            return LTLSPEC;
+        }
+        if (!strcmp(buffer, "TRANS")) {
+            return TRANS;
+        }
+        if (!strcmp(buffer, "TRUE")) {
+            return ONE;
+        }
         /* SW110308 Added IVAR as synonym for VAR
         TODO Handle IVAR seperately to include restrictions imposed on
          input variables (e.g. can't be left hand side of assignment).
             */
-        if (!strcmp(buffer, "VAR") || !strcmp(buffer, "IVAR"))
-        { return VAR; }
-        if (!strcmp(buffer, "FALSE"))
-        { return ZERO; }
+        if (!strcmp(buffer, "VAR") || !strcmp(buffer, "IVAR")) {
+            return VAR;
+        }
+        if (!strcmp(buffer, "FALSE")) {
+            return ZERO;
+        }
         /* SW110131
          */
-        if (!strcmp(buffer, "FAIRNESS") || !strcmp(buffer, "JUSTICE"))
-        { return FAIRNESS; }
+        if (!strcmp(buffer, "FAIRNESS") || !strcmp(buffer, "JUSTICE")) {
+            return FAIRNESS;
+        }
         /* SW110307
          */
-        if (!strcmp(buffer, "xor"))
-        { return XOR; }
-        if (!strcmp(buffer, "xnor"))
-        { return XNOR; }
+        if (!strcmp(buffer, "xor")) {
+            return XOR;
+        }
+        if (!strcmp(buffer, "xnor")) {
+            return XNOR;
+        }
 
         return SYMBOL;
     }
 
     if (ch != EOF) {
-        if (isprint(ch))
-        { perr("invalid character '%c'", ch); }
-        else
-        { perr("invalid character"); }
+        if (isprint(ch)) {
+            perr("invalid character '%c'", ch);
+        } else {
+            perr("invalid character");
+        }
     }
 
     return EOF;
@@ -734,10 +771,11 @@ next_token(void)
     /* Dump all tokens to 'stdout' to debug scanner and parser.
      */
     fprintf(stderr, "%s:%d: ", input_name, lineno);
-    if (token == SYMBOL)
-    { fputs(buffer, stderr); }
-    else
-    { print_token(stderr, token); }
+    if (token == SYMBOL) {
+        fputs(buffer, stderr);
+    } else {
+        print_token(stderr, token);
+    }
     fprintf(stderr, "\n");
     fflush(stderr);
     #endif
@@ -762,8 +800,9 @@ hash_str(const char *str)
         res *= *q++;
         res += ch;
 
-        if (q >= eoprimes)
-        { q = primes; }
+        if (q >= eoprimes) {
+            q = primes;
+        }
     }
 
     res *= *q;
@@ -836,8 +875,9 @@ new_symbol(const char * name)
 {
     Symbol **p, *res;
 
-    if (size_symbols <= count_symbols)
-    { enlarge_symbols(); }
+    if (size_symbols <= count_symbols) {
+        enlarge_symbols();
+    }
 
     p = find_symbol(name);
     res = *p;
@@ -845,10 +885,11 @@ new_symbol(const char * name)
     if (!res) {
         NEW(res);
         res->name = strdup(name);
-        if (last_symbol)
-        { last_symbol->order = res; }
-        else
-        { first_symbol = res; }
+        if (last_symbol) {
+            last_symbol->order = res;
+        } else {
+            first_symbol = res;
+        }
         last_symbol = res;
         *p = res;
 
@@ -863,8 +904,9 @@ new_symbol(const char * name)
 static Symbol *
 new_internal_symbol(const char *name)
 {
-    if (have_symbol(name))
-    { die("duplicate internal symbol '%s'", name); }
+    if (have_symbol(name)) {
+        die("duplicate internal symbol '%s'", name);
+    }
 
     return new_symbol(name);
 }
@@ -874,10 +916,11 @@ new_internal_symbol(const char *name)
 static void
 enqueue_expr(Expr * expr)
 {
-    if (last_expr)
-    { last_expr->next = expr; }
-    else
-    { first_expr = expr; }
+    if (last_expr) {
+        last_expr->next = expr;
+    } else {
+        first_expr = expr;
+    }
 
     last_expr = expr;
     count_exprs++;
@@ -920,8 +963,9 @@ new_expr(Tag tag, Expr * c0, Expr * c1)
 static void
 eat_token(Tag expected)
 {
-    if (token != expected)
-    { perr("expected '%c'", expected); }
+    if (token != expected) {
+        perr("expected '%c'", expected);
+    }
 
     next_token();
 }
@@ -931,8 +975,9 @@ eat_token(Tag expected)
 static void
 eat_symbolic_token(Tag expected, const char *str)
 {
-    if (token != expected)
-    { perr("expected '%s'", str); }
+    if (token != expected) {
+        perr("expected '%s'", str);
+    }
 
     next_token();
 }
@@ -944,8 +989,9 @@ eat_symbol(void)
 {
     Symbol *res;
 
-    if (token != SYMBOL)
-    { perr("expected variable"); }
+    if (token != SYMBOL) {
+        perr("expected variable");
+    }
 
     res = new_symbol(buffer);
     next_token();
@@ -966,14 +1012,16 @@ print_expr(FILE *out, Expr *expr)
     assert(expr->tag != SYMBOL ||
            (expr->symbol && expr->symbol->name));
 
-    if (expr->tag != SYMBOL)
-    { print_token(out, expr->tag); }
-    else
-    { fputs(expr->symbol->name, out); }
+    if (expr->tag != SYMBOL) {
+        print_token(out, expr->tag);
+    } else {
+        fputs(expr->symbol->name, out);
+    }
     fputc(' ', out);
 
-    if (expr->c0 && !expr->c1)
-    { print_expr(out, expr->c0); }
+    if (expr->c0 && !expr->c1) {
+        print_expr(out, expr->c0);
+    }
 
     if (expr->c0 && expr->c1) {
         print_expr(out, expr->c1);
@@ -994,10 +1042,12 @@ parse_vars(void)
 
     while (token == SYMBOL) {
         symbol = new_symbol(buffer);
-        if (symbol->declared)
-        { perr("variable '%s' declared twice", symbol->name); }
-        if (symbol->def_expr)
-        { perr("can not declare already defined variable '%s'", symbol->name); }
+        if (symbol->declared) {
+            perr("variable '%s' declared twice", symbol->name);
+        }
+        if (symbol->def_expr) {
+            perr("can not declare already defined variable '%s'", symbol->name);
+        }
         symbol->declared = 1;
         next_token();
 
@@ -1019,8 +1069,9 @@ parse_next(void)
     int next_was_allowed = next_allowed;
     Expr *res;
 
-    if (!next_allowed)
-    { perr("'next' not allowed here"); }
+    if (!next_allowed) {
+        perr("'next' not allowed here");
+    }
 
     assert(token == next);
     next_token();
@@ -1048,8 +1099,9 @@ parse_case(void)
     lhs = 0;
 
     while (token != ESAC) {
-        if (token == EOF)
-        { perr("'esac' missing"); }
+        if (token == EOF) {
+            perr("'esac' missing");
+        }
 
         lhs = parse_expr();
         eat_token(':');
@@ -1059,13 +1111,15 @@ parse_case(void)
         push_expr(clause);
     }
 
-    if (!lhs)
-    { perr("case statemement without clauses"); }
+    if (!lhs) {
+        perr("case statemement without clauses");
+    }
 
     res = 0;
 
-    while (count < count_expr_stack)
-    { res = new_expr(CASE, pop_expr(), res); }
+    while (count < count_expr_stack) {
+        res = new_expr(CASE, pop_expr(), res);
+    }
 
     next_token();
 
@@ -1082,18 +1136,19 @@ parse_basic(void)
     if (token == ZERO || token == ONE) {
         res = new_expr(token, 0, 0);
         next_token();
-    } else if (token == SYMBOL)
-    { res = sym2expr(eat_symbol()); }
-    else if (token == next)
-    { res = parse_next(); }
-    else if (token == CASE)
-    { res = parse_case(); }
-    else if (token == '(') {
+    } else if (token == SYMBOL) {
+        res = sym2expr(eat_symbol());
+    } else if (token == next) {
+        res = parse_next();
+    } else if (token == CASE) {
+        res = parse_case();
+    } else if (token == '(') {
         next_token();
         res = parse_expr();
         eat_token(')');
-    } else
-    { perr("expected basic expression"); }
+    } else {
+        perr("expected basic expression");
+    }
 
     return res;
 }
@@ -1147,8 +1202,9 @@ parse_left_associative(Tag tag, Expr * (*f)(void))
     }
 
     res = pop_expr();
-    while (count < count_expr_stack)
-    { res = new_expr(tag, pop_expr(), res); }
+    while (count < count_expr_stack) {
+        res = new_expr(tag, pop_expr(), res);
+    }
 
     return res;
 }
@@ -1180,8 +1236,9 @@ parse_not(void)
     }
 
     res = parse_temporal_postfix();
-    if (count)
-    { res = new_expr('!', res, 0); }
+    if (count) {
+        res = new_expr('!', res, 0);
+    }
 
     return res;
 }
@@ -1205,8 +1262,9 @@ parse_ltl_releases(void)
 static Expr *
 parse_ltl_until(void)
 {
-    if (is_temporal_operator(token) && !temporal_operators_allowed)
-    { perr("Temporal operator not allowed here"); }
+    if (is_temporal_operator(token) && !temporal_operators_allowed) {
+        perr("Temporal operator not allowed here");
+    }
     return parse_right_associative(LTL_UNTIL, parse_ltl_releases);
 }
 
@@ -1268,14 +1326,17 @@ parse_expr(void)
 static int
 contains_temporal_operator(Expr * expr)
 {
-    if (!expr)
-    { return 0; }
+    if (!expr) {
+        return 0;
+    }
 
-    if (is_temporal_operator(expr->tag))
-    { return 1; }
+    if (is_temporal_operator(expr->tag)) {
+        return 1;
+    }
 
-    if (contains_temporal_operator(expr->c0))
-    { return 1; }
+    if (contains_temporal_operator(expr->c0)) {
+        return 1;
+    }
 
     return contains_temporal_operator(expr->c1);
 }
@@ -1290,8 +1351,9 @@ parse_spec(void)
     const int s = spec_expr_cnt;
     assert(token == SPEC);
 
-    if (ltlspec)
-    { perr("Error: SPEC not allowed in SMV translation of LTL formula\n"); }
+    if (ltlspec) {
+        perr("Error: SPEC not allowed in SMV translation of LTL formula\n");
+    }
 
     next_token();
 
@@ -1302,8 +1364,9 @@ parse_spec(void)
     temporal_operators_allowed = 0;
 
     if (spec_expr[s]->tag != AG ||
-            contains_temporal_operator(spec_expr[s]->c0))
-    { perr("can handle only simple 'AG' safety properties"); }
+            contains_temporal_operator(spec_expr[s]->c0)) {
+        perr("can handle only simple 'AG' safety properties");
+    }
 }
 
 /* SW110527 Handling LTLSPEC
@@ -1314,8 +1377,9 @@ parse_ltlspec(void)
     const int s = ltlspec_expr_cnt++;
     assert(token == LTLSPEC);
 
-    if (ltlspec)
-    { perr("Error: LTLSPEC not allowed in SMV translation of LTL formula\n"); }
+    if (ltlspec) {
+        perr("Error: LTLSPEC not allowed in SMV translation of LTL formula\n");
+    }
 
     next_token();
     ltlspec_expr = (Expr**) realloc(ltlspec_expr, ltlspec_expr_cnt * sizeof(Expr*));
@@ -1345,19 +1409,22 @@ parse_assigns(void)
         }
 
         symbol = eat_symbol();
-        if (symbol->def_expr)
-        { perr("can not assign or define variable '%s' twice", symbol->name); }
+        if (symbol->def_expr) {
+            perr("can not assign or define variable '%s' twice", symbol->name);
+        }
 
         if (tag == SYMBOL) {
             if (symbol->init_expr || symbol->next_expr)
                 perr("can not define already assigned variable '%s'",
                      symbol->name);
         } else {
-            if (tag == init && symbol->init_expr)
-            { perr("multiple 'init' assignments for '%s'", symbol->name); }
+            if (tag == init && symbol->init_expr) {
+                perr("multiple 'init' assignments for '%s'", symbol->name);
+            }
 
-            if (tag == next && symbol->next_expr)
-            { perr("multiple 'next' assignments for '%s'", symbol->name); }
+            if (tag == next && symbol->next_expr) {
+                perr("multiple 'next' assignments for '%s'", symbol->name);
+            }
 
             eat_token(')');
         }
@@ -1366,11 +1433,11 @@ parse_assigns(void)
         rhs = parse_expr();
         eat_token(';');
 
-        if (tag == init)
-        { symbol->init_expr = rhs; }
-        else if (tag == next)
-        { symbol->next_expr = rhs; }
-        else {
+        if (tag == init) {
+            symbol->init_expr = rhs;
+        } else if (tag == next) {
+            symbol->next_expr = rhs;
+        } else {
             assert(tag == SYMBOL);
             symbol->def_expr = rhs;
         }
@@ -1390,12 +1457,15 @@ parse_defines(void)
 
     while (token == SYMBOL) {
         symbol = eat_symbol();
-        if (symbol->declared)
-        { perr("can not define already declared variable '%s'", symbol->name); }
-        if (symbol->def_expr)
-        { perr("multiple definitions for '%s'", symbol->name); }
-        if (symbol->init_expr || symbol->next_expr)
-        { perr("can not define already assigned variable '%s'", symbol->name); }
+        if (symbol->declared) {
+            perr("can not define already declared variable '%s'", symbol->name);
+        }
+        if (symbol->def_expr) {
+            perr("multiple definitions for '%s'", symbol->name);
+        }
+        if (symbol->init_expr || symbol->next_expr) {
+            perr("can not define already assigned variable '%s'", symbol->name);
+        }
         eat_symbolic_token(BECOMES, ":=");
 
         next_allowed = 1;
@@ -1427,10 +1497,11 @@ parse_init(void)
 
     res = parse_expr();
 
-    if (!ltlspec)
-    { add_to_init_expr(res); }
-    else
-    { ltl_init_expr = new_expr('&', ltl_init_expr, res); }
+    if (!ltlspec) {
+        add_to_init_expr(res);
+    } else {
+        ltl_init_expr = new_expr('&', ltl_init_expr, res);
+    }
 }
 
 /*------------------------------------------------------------------------*/
@@ -1459,10 +1530,11 @@ parse_trans(void)
     res = parse_expr();
     next_allowed = 0;
 
-    if (!ltlspec)
-    { add_to_trans_expr(res); }
-    else
-    { ltl_trans_expr = new_expr('&', ltl_trans_expr, res); }
+    if (!ltlspec) {
+        add_to_trans_expr(res);
+    } else {
+        ltl_trans_expr = new_expr('&', ltl_trans_expr, res);
+    }
 }
 
 /*------------------------------------------------------------------------*/
@@ -1472,8 +1544,9 @@ parse_invar(void)
 {
     Expr *res, **p;
 
-    if (ltlspec)
-    { perr("Error: INVAR not allowed in SMV translation of LTL formula\n"); }
+    if (ltlspec) {
+        perr("Error: INVAR not allowed in SMV translation of LTL formula\n");
+    }
 
     assert(token == INVAR);
     next_token();
@@ -1492,8 +1565,9 @@ add_fair_expr(Expr *expr)
     fair_expr = (Expr**) realloc(fair_expr, ++fair_expr_cnt * sizeof(Expr*));
     fair_expr[fair_expr_cnt - 1] = expr;
 
-    if (ltlspec)
-    { justice_groups[ltlspec]++; }
+    if (ltlspec) {
+        justice_groups[ltlspec]++;
+    }
 }
 
 /* SW110131 Added for handling of fairness/justice properties
@@ -1514,32 +1588,35 @@ parse_section(void)
 {
     assert(token != EOF);
 
-    if (token == VAR)
-    { parse_vars(); }
-    else if (token == SPEC)
-    { parse_spec(); }
-    else if (token == LTLSPEC)
-    { parse_ltlspec(); }
-    else if (token == ASSIGN)
-    { parse_assigns(); }
-    else if (token == DEFINE)
-    { parse_defines(); }
-    else if (token == TRANS)
-    { parse_trans(); }
-    else if (token == INVAR)
-    { parse_invar(); }
-    else if (token == INIT)
-    { parse_init(); }
+    if (token == VAR) {
+        parse_vars();
+    } else if (token == SPEC) {
+        parse_spec();
+    } else if (token == LTLSPEC) {
+        parse_ltlspec();
+    } else if (token == ASSIGN) {
+        parse_assigns();
+    } else if (token == DEFINE) {
+        parse_defines();
+    } else if (token == TRANS) {
+        parse_trans();
+    } else if (token == INVAR) {
+        parse_invar();
+    } else if (token == INIT) {
+        parse_init();
+    }
     /* SW110131
      */
-    else if (token == FAIRNESS)
-    { parse_fairness(); }
+    else if (token == FAIRNESS) {
+        parse_fairness();
+    }
     /* SW110310 This will allow ; add the end of a section
      */
-    else if (token == ';')
-    { eat_token(';'); }
-    else
-    { perr("expected EOF or section start"); }
+    else if (token == ';') {
+        eat_token(';');
+    } else {
+        perr("expected EOF or section start");
+    }
 }
 
 /*------------------------------------------------------------------------*/
@@ -1547,21 +1624,25 @@ parse_section(void)
 static void
 parse_main(void)
 {
-    if (token != MODULE)
-    { perr("expected 'MODULE'"); }
+    if (token != MODULE) {
+        perr("expected 'MODULE'");
+    }
 
     next_token();
 
-    if (token != SYMBOL)
-    { perr("expected module name"); }
+    if (token != SYMBOL) {
+        perr("expected module name");
+    }
 
-    if (!ltlspec && strcmp(buffer, "main"))
-    { perr("expected 'main'"); }
+    if (!ltlspec && strcmp(buffer, "main")) {
+        perr("expected 'main'");
+    }
 
     next_token();
 
-    while (token != EOF)
-    { parse_section(); }
+    while (token != EOF) {
+        parse_section();
+    }
 }
 
 /*------------------------------------------------------------------------*/
@@ -1585,8 +1666,9 @@ handle_ltlspec(Expr *expr)
     strcpy(tmp_name, "/tmp/smvtoaig-ltlexpr-XXXXXX");
     fid = mkstemp(tmp_name);
     ltlexpr_filename = strdup(tmp_name);
-    if (fid < 0 || !(file = fdopen(fid, "wt")))
-    { perr("Failed to open temporary file for writing LTL specification\n"); }
+    if (fid < 0 || !(file = fdopen(fid, "wt"))) {
+        perr("Failed to open temporary file for writing LTL specification\n");
+    }
 
     print_expr(file, new_expr('!', expr, 0));
     print_expr(stderr, new_expr('!', expr, 0)); fprintf(stderr, "\n");
@@ -1607,16 +1689,17 @@ handle_ltlspec(Expr *expr)
         execlp(ltl2smv, ltl2smv, buf, ltlexpr_filename, smv_filename, NULL);
     } else if (pid > 0) {
         waitpid(pid, &status, 0);
-        if (!WIFEXITED(status))
-        { perr("Failed to launch \"%s\"\n", ltl2smv); }
-        else if (WEXITSTATUS(status))
+        if (!WIFEXITED(status)) {
+            perr("Failed to launch \"%s\"\n", ltl2smv);
+        } else if (WEXITSTATUS(status))
             perr("\"%s\" returned non-zero value %d\n",
                  ltl2smv, WEXITSTATUS(status));
     } else { perr("Failed to fork process for launching \"%s\"\n", ltl2smv); }
 
     input = fopen(smv_filename, "rt");
-    if (!input)
-    { perr("Failed to open output file of LTL to SMV translator (\"%s\") for reading\n", ltl2smv); }
+    if (!input) {
+        perr("Failed to open output file of LTL to SMV translator (\"%s\") for reading\n", ltl2smv);
+    }
 
     ltl_trans_expr = true_expr();
     ltl_init_expr = true_expr();
@@ -1665,8 +1748,9 @@ handle_ltlspecs(void)
     justice_groups[0] = fair_expr_cnt;
 
     assert(!ltlspec);
-    while (ltlspec++ < ltlspec_expr_cnt)
-    { handle_ltlspec(ltlspec_expr[ltlspec - 1]); }
+    while (ltlspec++ < ltlspec_expr_cnt) {
+        handle_ltlspec(ltlspec_expr[ltlspec - 1]);
+    }
 }
 
 /* SW110131 Modified for handling fairness properties
@@ -1686,8 +1770,9 @@ parse(void)
     justice_groups = NULL;
     parse_main();
 
-    if (!spec_expr_cnt && !ltlspec_expr_cnt)
-    { msg(0, "Warning: SMV model contains no properties"); }
+    if (!spec_expr_cnt && !ltlspec_expr_cnt) {
+        msg(0, "Warning: SMV model contains no properties");
+    }
 }
 
 /*------------------------------------------------------------------------*/
@@ -1705,11 +1790,13 @@ check_all_variables_are_defined_or_declared(void)
             assert(!p->next_expr);
         }
 
-        if (p->init_expr || p->next_expr)
-        { assert(!p->def_expr); }
+        if (p->init_expr || p->next_expr) {
+            assert(!p->def_expr);
+        }
         #endif
-        if (!p->declared && !p->def_expr)
-        { perr("undeclared and undefined variable '%s'", p->name); }
+        if (!p->declared && !p->def_expr) {
+            perr("undeclared and undefined variable '%s'", p->name);
+        }
     }
 }
 
@@ -1720,8 +1807,9 @@ unmark_symbols(void)
 {
     Symbol *p;
 
-    for (p = first_symbol; p; p = p->order)
-    { p->mark = 0; }
+    for (p = first_symbol; p; p = p->order) {
+        p->mark = 0;
+    }
 }
 
 /*------------------------------------------------------------------------*/
@@ -1733,14 +1821,16 @@ static void check_non_cyclic_symbol(Symbol *);
 static void
 check_non_cyclic_expr(Expr * expr)
 {
-    if (!expr)
-    { return; }
+    if (!expr) {
+        return;
+    }
 
     if (expr->tag != SYMBOL) {
         check_non_cyclic_expr(expr->c0);
         check_non_cyclic_expr(expr->c1);
-    } else
-    { check_non_cyclic_symbol(expr->symbol); }
+    } else {
+        check_non_cyclic_symbol(expr->symbol);
+    }
 }
 
 /*------------------------------------------------------------------------*/
@@ -1748,17 +1838,21 @@ check_non_cyclic_expr(Expr * expr)
 static void
 check_non_cyclic_symbol(Symbol * s)
 {
-    if (s->mark == 2)
-    { perr("cyclic definition of '%s'", s->name); }
+    if (s->mark == 2) {
+        perr("cyclic definition of '%s'", s->name);
+    }
 
-    if (s->mark)
-    { return; }
+    if (s->mark) {
+        return;
+    }
 
     s->mark = 2;
-    if (s->def_expr)
-    { check_non_cyclic_expr(s->def_expr); }
-    if (s->init_expr)
-    { check_non_cyclic_expr(s->init_expr); }
+    if (s->def_expr) {
+        check_non_cyclic_expr(s->def_expr);
+    }
+    if (s->init_expr) {
+        check_non_cyclic_expr(s->init_expr);
+    }
     s->mark = 1;
 }
 
@@ -1769,8 +1863,9 @@ check_non_cyclic_definitions(void)
 {
     Symbol *p;
 
-    for (p = first_symbol; p; p = p->order)
-    { check_non_cyclic_symbol(p); }
+    for (p = first_symbol; p; p = p->order) {
+        check_non_cyclic_symbol(p);
+    }
 
     unmark_symbols();
 }
@@ -1786,20 +1881,24 @@ count_next_nesting_level_expr(Expr * expr)
 {
     unsigned res, tmp;
 
-    if (!expr)
-    { return 1; }
+    if (!expr) {
+        return 1;
+    }
 
-    if (expr->tag == next)
-    { return count_next_nesting_level_expr(expr->c0) + 1; }
+    if (expr->tag == next) {
+        return count_next_nesting_level_expr(expr->c0) + 1;
+    }
 
-    if (expr->tag == SYMBOL)
-    { return count_next_nesting_level_symbol(expr->symbol); }
+    if (expr->tag == SYMBOL) {
+        return count_next_nesting_level_symbol(expr->symbol);
+    }
 
     res = count_next_nesting_level_expr(expr->c0);
     tmp = count_next_nesting_level_expr(expr->c1);
 
-    if (tmp > res)
-    { res = tmp; }
+    if (tmp > res) {
+        res = tmp;
+    }
 
     return res;
 }
@@ -1810,10 +1909,11 @@ static unsigned
 count_next_nesting_level_symbol(Symbol * p)
 {
     if (!p->mark) {
-        if (p->def_expr)
-        { p->mark = count_next_nesting_level_expr(p->def_expr); }
-        else
-        { p->mark = 1; }
+        if (p->def_expr) {
+            p->mark = count_next_nesting_level_expr(p->def_expr);
+        } else {
+            p->mark = 1;
+        }
     }
 
     return p->mark;
@@ -1832,26 +1932,32 @@ check_next_not_nested(void)
     Symbol *p;
     int i;
 
-    for (p = first_symbol; p; p = p->order)
-    { count_next_nesting_level_symbol(p); }
+    for (p = first_symbol; p; p = p->order) {
+        count_next_nesting_level_symbol(p);
+    }
 
     for (i = 0; i < spec_expr_cnt; i++)
-        if (count_next_nesting_level_expr(spec_expr[i]->c0) > 1)
-        { perr("SPEC depends on 'next' operator through definitions"); }
+        if (count_next_nesting_level_expr(spec_expr[i]->c0) > 1) {
+            perr("SPEC depends on 'next' operator through definitions");
+        }
 
     for (i = 0; i < fair_expr_cnt; i++)
-        if (count_next_nesting_level_expr(fair_expr[i]->c0) > 1)
-        { perr("FAIRNESS depends on 'next' operator through definitions"); }
+        if (count_next_nesting_level_expr(fair_expr[i]->c0) > 1) {
+            perr("FAIRNESS depends on 'next' operator through definitions");
+        }
 
     for (i = 0; i < invar_expr_cnt; i++)
-        if (count_next_nesting_level_expr(invar_expr[i]) > 1)
-        { perr("INVAR depends on 'next' operator through definitions"); }
+        if (count_next_nesting_level_expr(invar_expr[i]) > 1) {
+            perr("INVAR depends on 'next' operator through definitions");
+        }
 
-    if (init_expr && count_next_nesting_level_expr(init_expr) > 1)
-    { perr("INIT depends on 'next' operator through definitions"); }
+    if (init_expr && count_next_nesting_level_expr(init_expr) > 1) {
+        perr("INIT depends on 'next' operator through definitions");
+    }
 
-    if (trans_expr && count_next_nesting_level_expr(trans_expr) > 2)
-    { perr("TRANS depends too deeply on 'next' operator through definitions"); }
+    if (trans_expr && count_next_nesting_level_expr(trans_expr) > 2) {
+        perr("TRANS depends too deeply on 'next' operator through definitions");
+    }
 
     moved = 0;
     for (p = first_symbol; p; p = p->order) {
@@ -1861,8 +1967,9 @@ check_next_not_nested(void)
 
         if (p->next_expr) {
             nesting = count_next_nesting_level_expr(p->next_expr);
-            if (nesting > 2)
-            { perr("'next (%s)' depends on next after next state", p->name); }
+            if (nesting > 2) {
+                perr("'next (%s)' depends on next after next state", p->name);
+            }
 
             if (nesting > 1) {
                 lhs = new_expr(next, sym2expr(p), 0);
@@ -1876,8 +1983,9 @@ check_next_not_nested(void)
         }
     }
 
-    if (moved)
-    { msg(1, "moved %u next state assignments to TRANS", moved); }
+    if (moved) {
+        msg(1, "moved %u next state assignments to TRANS", moved);
+    }
 
     unmark_symbols();
 }
@@ -1966,10 +2074,11 @@ eq_aig(AIG * aig, Symbol * symbol, unsigned slice, AIG * c0, AIG * c1)
 {
     assert(sign_aig(aig) > 0);
 
-    if (symbol)
-    { return aig->symbol == symbol && aig->slice == slice; }
-    else
-    { return aig->c0 == c0 && aig->c1 == c1; }
+    if (symbol) {
+        return aig->symbol == symbol && aig->slice == slice;
+    } else {
+        return aig->c0 == c0 && aig->c1 == c1;
+    }
 }
 
 /*------------------------------------------------------------------------*/
@@ -2038,28 +2147,31 @@ print_aig(AIG * aig)
 {
     int sign;
 
-    if (aig == TRUE)
-    { fputc('1', stdout); }
-    else if (aig == FALSE)
-    { fputc('0', stdout); }
-    else {
+    if (aig == TRUE) {
+        fputc('1', stdout);
+    } else if (aig == FALSE) {
+        fputc('0', stdout);
+    } else {
         strip_aig(sign, aig);
 
-        if (sign < 0)
-        { fputc('!', stdout); }
+        if (sign < 0) {
+            fputc('!', stdout);
+        }
 
         if (aig->symbol) {
             fputs(aig->symbol->name, stdout);
         } else {
-            if (sign < 0)
-            { fputc('(', stdout); }
+            if (sign < 0) {
+                fputc('(', stdout);
+            }
 
             print_aig(aig->c0);
             fputc('&', stdout);
             print_aig(aig->c1);
 
-            if (sign < 0)
-            { fputc(')', stdout); }
+            if (sign < 0) {
+                fputc(')', stdout);
+            }
         }
     }
 }
@@ -2082,17 +2194,21 @@ simplify_aig_one_level(AIG * a, AIG * b)
 {
     assert(optimize >= 1);
 
-    if (a == FALSE || b == FALSE)
-    { return FALSE; }
+    if (a == FALSE || b == FALSE) {
+        return FALSE;
+    }
 
-    if (b == TRUE || a == b)
-    { return a; }
+    if (b == TRUE || a == b) {
+        return a;
+    }
 
-    if (a == TRUE)
-    { return b; }
+    if (a == TRUE) {
+        return b;
+    }
 
-    if (a == not_aig(b))
-    { return FALSE; }
+    if (a == not_aig(b)) {
+        return FALSE;
+    }
 
     return 0;
 }
@@ -2123,28 +2239,34 @@ simplify_aig_two_level(AIG * a, AIG * b)
          *
          * (a0 & a1) & signed_b
          */
-        if (a0 == not_aig(signed_b))
-        { return FALSE; }
-        if (a1 == not_aig(signed_b))
-        { return FALSE; }
+        if (a0 == not_aig(signed_b)) {
+            return FALSE;
+        }
+        if (a1 == not_aig(signed_b)) {
+            return FALSE;
+        }
 
         /* Assymetric Idempotence.
          *
          * (a0 & a1) & signed_b
          */
-        if (a0 == signed_b)
-        { return signed_a; }
-        if (a1 == signed_b)
-        { return signed_a; }
+        if (a0 == signed_b) {
+            return signed_a;
+        }
+        if (a1 == signed_b) {
+            return signed_a;
+        }
     } else {
         /* Assymetric Subsumption.
          *
          * (!a0 | !a1) & signed_b
          */
-        if (a0 == not_aig(signed_b))
-        { return signed_b; }
-        if (a1 == not_aig(signed_b))
-        { return signed_b; }
+        if (a0 == not_aig(signed_b)) {
+            return signed_b;
+        }
+        if (a1 == not_aig(signed_b)) {
+            return signed_b;
+        }
     }
 
     if (t > 0) {
@@ -2152,28 +2274,34 @@ simplify_aig_two_level(AIG * a, AIG * b)
          *
          * signed_a & (b0 & b1)
          */
-        if (b0 == not_aig(signed_a))
-        { return FALSE; }
-        if (b1 == not_aig(signed_a))
-        { return FALSE; }
+        if (b0 == not_aig(signed_a)) {
+            return FALSE;
+        }
+        if (b1 == not_aig(signed_a)) {
+            return FALSE;
+        }
 
         /* Assymetric Idempotence.
          *
          * signed_a & (b0 & b1)
          */
-        if (b0 == signed_a)
-        { return signed_b; }
-        if (b1 == signed_a)
-        { return signed_b; }
+        if (b0 == signed_a) {
+            return signed_b;
+        }
+        if (b1 == signed_a) {
+            return signed_b;
+        }
     } else {
         /* Assymetric Subsumption.
          *
          * signed_a & (!b0 | !b1)
          */
-        if (b0 == not_aig(signed_a))
-        { return signed_a; }
-        if (b1 == not_aig(signed_a))
-        { return signed_a; }
+        if (b0 == not_aig(signed_a)) {
+            return signed_a;
+        }
+        if (b1 == not_aig(signed_a)) {
+            return signed_a;
+        }
     }
 
     if (s > 0 && t > 0) {
@@ -2181,40 +2309,52 @@ simplify_aig_two_level(AIG * a, AIG * b)
          *
          * (a0 & a1) & (b0 & b1)
          */
-        if (a0 == not_aig(b0))
-        { return FALSE; }
-        if (a0 == not_aig(b1))
-        { return FALSE; }
-        if (a1 == not_aig(b0))
-        { return FALSE; }
-        if (a1 == not_aig(b1))
-        { return FALSE; }
+        if (a0 == not_aig(b0)) {
+            return FALSE;
+        }
+        if (a0 == not_aig(b1)) {
+            return FALSE;
+        }
+        if (a1 == not_aig(b0)) {
+            return FALSE;
+        }
+        if (a1 == not_aig(b1)) {
+            return FALSE;
+        }
     } else if (s < 0 && t > 0) {
         /* Symmetric Subsumption.
          *
          * (!a0 | !a1) & (b0 & b1)
          */
-        if (a0 == not_aig(b0))
-        { return b; }
-        if (a1 == not_aig(b0))
-        { return b; }
-        if (a0 == not_aig(b1))
-        { return b; }
-        if (a1 == not_aig(b1))
-        { return b; }
+        if (a0 == not_aig(b0)) {
+            return b;
+        }
+        if (a1 == not_aig(b0)) {
+            return b;
+        }
+        if (a0 == not_aig(b1)) {
+            return b;
+        }
+        if (a1 == not_aig(b1)) {
+            return b;
+        }
     } else if (s > 0 && t < 0) {
         /* Symmetric Subsumption.
          *
          * a0 & a1 & (!b0 | !b1)
          */
-        if (b0 == not_aig(a0))
-        { return a; }
-        if (b1 == not_aig(a0))
-        { return a; }
-        if (b0 == not_aig(a1))
-        { return a; }
-        if (b1 == not_aig(a1))
-        { return a; }
+        if (b0 == not_aig(a0)) {
+            return a;
+        }
+        if (b1 == not_aig(a0)) {
+            return a;
+        }
+        if (b0 == not_aig(a1)) {
+            return a;
+        }
+        if (b1 == not_aig(a1)) {
+            return a;
+        }
     } else {
         assert(s < 0 && t < 0);
 
@@ -2222,14 +2362,18 @@ simplify_aig_two_level(AIG * a, AIG * b)
          *
          * (!a0 | !a1) & (!b0 | !b1)
          */
-        if (a0 == b0 && a1 == not_aig(b1))
-        { return not_aig(a0); }
-        if (a0 == b1 && a1 == not_aig(b0))
-        { return not_aig(a0); }
-        if (a1 == b0 && a0 == not_aig(b1))
-        { return not_aig(a1); }
-        if (a1 == b1 && a0 == not_aig(b0))
-        { return not_aig(a1); }
+        if (a0 == b0 && a1 == not_aig(b1)) {
+            return not_aig(a0);
+        }
+        if (a0 == b1 && a1 == not_aig(b0)) {
+            return not_aig(a0);
+        }
+        if (a1 == b0 && a0 == not_aig(b1)) {
+            return not_aig(a1);
+        }
+        if (a1 == b1 && a0 == not_aig(b0)) {
+            return not_aig(a1);
+        }
     }
 
     return 0;
@@ -2245,17 +2389,20 @@ new_aig(Symbol * symbol, unsigned slice, AIG * a, AIG * b)
     assert(!symbol == (a && b));
     assert(!slice || symbol);
 
-    if (count_aigs >= size_aigs)
-    { enlarge_aigs(); }
+    if (count_aigs >= size_aigs) {
+        enlarge_aigs();
+    }
 
     if (!symbol) {
     TRY_TO_SIMPLIFY_AGAIN:
         assert(optimize >= 1);
-        if ((res = simplify_aig_one_level(a, b)))
-        { return res; }
+        if ((res = simplify_aig_one_level(a, b))) {
+            return res;
+        }
 
-        if (optimize >= 2 && (res = simplify_aig_two_level(a, b)))
-        { return res; }
+        if (optimize >= 2 && (res = simplify_aig_two_level(a, b))) {
+            return res;
+        }
 
         if (optimize >= 3) {
             AIG *not_a = not_aig(a);
@@ -2357,8 +2504,9 @@ new_aig(Symbol * symbol, unsigned slice, AIG * a, AIG * b)
             }
         }
 
-        if (stripped_aig(a)->id > stripped_aig(b)->id)
-        { swap_aig(a, b); }
+        if (stripped_aig(a)->id > stripped_aig(b)->id) {
+            swap_aig(a, b);
+        }
     }
 
 
@@ -2390,10 +2538,11 @@ static AIG *build_expr(Expr *, unsigned);
 AIG *
 symbol_aig(Symbol * symbol, unsigned slice)
 {
-    if (symbol->def_expr)
-    { return build_expr(symbol->def_expr, slice); }
-    else
-    { return new_aig(symbol, slice, 0, 0); }
+    if (symbol->def_expr) {
+        return build_expr(symbol->def_expr, slice);
+    } else {
+        return new_aig(symbol, slice, 0, 0);
+    }
 }
 
 /*------------------------------------------------------------------------*/
@@ -2450,8 +2599,9 @@ build_cases(Expr * expr, unsigned slice)
     AIG *c, *t, *e;
     Expr *clause;
 
-    if (!expr)
-    { return TRUE; }
+    if (!expr) {
+        return TRUE;
+    }
 
     assert(expr->tag == CASE);
 
@@ -2476,33 +2626,41 @@ build_expr_uncached(Expr * expr, unsigned slice)
     assert(expr);
     assert(slice <= 1);
 
-    if (tag == '0')
-    { return FALSE; }
+    if (tag == '0') {
+        return FALSE;
+    }
 
-    if (tag == '1')
-    { return TRUE; }
+    if (tag == '1') {
+        return TRUE;
+    }
 
-    if (tag == SYMBOL)
-    { return symbol_aig(expr->symbol, slice); }
+    if (tag == SYMBOL) {
+        return symbol_aig(expr->symbol, slice);
+    }
 
-    if (tag == next)
-    { return build_expr(expr->c0, slice + 1); }
+    if (tag == next) {
+        return build_expr(expr->c0, slice + 1);
+    }
 
-    if (tag == CASE)
-    { return build_cases(expr, slice); }
+    if (tag == CASE) {
+        return build_cases(expr, slice);
+    }
 
     l = build_expr(expr->c0, slice);
 
-    if (tag == NOT)
-    { return not_aig(l); }
+    if (tag == NOT) {
+        return not_aig(l);
+    }
 
     r = build_expr(expr->c1, slice);
 
-    if (tag == AND)
-    { return and_aig(l, r); }
+    if (tag == AND) {
+        return and_aig(l, r);
+    }
 
-    if (tag == OR)
-    { return or_aig(l, r); }
+    if (tag == OR) {
+        return or_aig(l, r);
+    }
 
     /* SW110307
      */
@@ -2513,8 +2671,9 @@ build_expr_uncached(Expr * expr, unsigned slice)
         return not_aig(xor_aig(l, r));
     }
 
-    if (tag == IMPLIES)
-    { return implies_aig(l, r); }
+    if (tag == IMPLIES) {
+        return implies_aig(l, r);
+    }
 
     assert(tag == IFF);
 
@@ -2584,15 +2743,18 @@ shift_aig_aux(AIG * aig, unsigned delta)
             l = shift_aig_aux(aig->c0, delta);
             r = shift_aig_aux(aig->c1, delta);
             res = and_aig(l, r);
-        } else
-        { res = symbol_aig(aig->symbol, aig->slice + delta); }
+        } else {
+            res = symbol_aig(aig->symbol, aig->slice + delta);
+        }
 
         cache(aig, res);
-    } else
-    { res = aig->cache; }
+    } else {
+        res = aig->cache;
+    }
 
-    if (sign < 0)
-    { res = not_aig(res); }
+    if (sign < 0) {
+        res = not_aig(res);
+    }
 
     return res;
 }
@@ -2604,8 +2766,9 @@ shift_aig(AIG * aig, unsigned delta)
 {
     AIG *res;
 
-    if (delta == 0 || aig == FALSE || aig == TRUE)
-    { return aig; }
+    if (delta == 0 || aig == FALSE || aig == TRUE) {
+        return aig;
+    }
 
     res = shift_aig_aux(aig, delta);
     reset_cache();
@@ -2629,14 +2792,17 @@ build_assignments(void)
     Symbol *p;
 
     for (p = first_symbol; p; p = p->order) {
-        if (p->def_expr)
-        { p->def_aig = build_expr(p->def_expr, 0); }
+        if (p->def_expr) {
+            p->def_aig = build_expr(p->def_expr, 0);
+        }
 
-        if (p->init_expr)
-        { p->init_aig = build_expr(p->init_expr, 0); }
+        if (p->init_expr) {
+            p->init_aig = build_expr(p->init_expr, 0);
+        }
 
-        if (p->next_expr)
-        { p->next_aig = build_expr(p->next_expr, 0); }
+        if (p->next_expr) {
+            p->next_aig = build_expr(p->next_expr, 0);
+        }
     }
 }
 
@@ -2649,8 +2815,9 @@ substitute_def_next_aig_delta(AIG * aig, unsigned delta)
     Symbol *symbol;
     int sign;
 
-    if (aig == TRUE || aig == FALSE)
-    { return aig; }
+    if (aig == TRUE || aig == FALSE) {
+        return aig;
+    }
 
     assert(delta == 0 || delta == 1);
 
@@ -2659,18 +2826,20 @@ substitute_def_next_aig_delta(AIG * aig, unsigned delta)
     if (!aig->cache) {
         symbol = aig->symbol;
         if (symbol) {
-            if (symbol->def_aig)
-            { res = substitute_def_next_aig_delta(symbol->def_aig, delta); }
-            else if (aig->slice) {
+            if (symbol->def_aig) {
+                res = substitute_def_next_aig_delta(symbol->def_aig, delta);
+            } else if (aig->slice) {
                 assert(!delta);
                 assert(aig->slice == 1);
 
-                if (symbol->next_aig)
-                { res = substitute_def_next_aig_delta(symbol->next_aig, 0); }
-                else
-                { res = aig; }
-            } else
-            { res = aig; }
+                if (symbol->next_aig) {
+                    res = substitute_def_next_aig_delta(symbol->next_aig, 0);
+                } else {
+                    res = aig;
+                }
+            } else {
+                res = aig;
+            }
         } else {
             l = substitute_def_next_aig_delta(aig->c0, delta);
             r = substitute_def_next_aig_delta(aig->c1, delta);
@@ -2678,11 +2847,13 @@ substitute_def_next_aig_delta(AIG * aig, unsigned delta)
         }
 
         cache(aig, res);
-    } else
-    { res = aig->cache; }
+    } else {
+        res = aig->cache;
+    }
 
-    if (sign < 0)
-    { res = not_aig(res); }
+    if (sign < 0) {
+        res = not_aig(res);
+    }
 
     return res;
 }
@@ -2700,14 +2871,17 @@ substitute_def_next_aig(AIG * node)
 static void
 substitute_def_next_symbol(Symbol * symbol)
 {
-    if (symbol->def_aig)
-    { symbol->def_aig = substitute_def_next_aig(symbol->def_aig); }
+    if (symbol->def_aig) {
+        symbol->def_aig = substitute_def_next_aig(symbol->def_aig);
+    }
 
-    if (symbol->init_aig)
-    { symbol->init_aig = substitute_def_next_aig(symbol->init_aig); }
+    if (symbol->init_aig) {
+        symbol->init_aig = substitute_def_next_aig(symbol->init_aig);
+    }
 
-    if (symbol->next_aig)
-    { symbol->next_aig = substitute_def_next_aig(symbol->next_aig); }
+    if (symbol->next_aig) {
+        symbol->next_aig = substitute_def_next_aig(symbol->next_aig);
+    }
 }
 
 /*------------------------------------------------------------------------*/
@@ -2716,8 +2890,9 @@ static void
 substitute_def_next_symbols(void)
 {
     Symbol *p;
-    for (p = first_symbol; p; p = p->order)
-    { substitute_def_next_symbol(p); }
+    for (p = first_symbol; p; p = p->order) {
+        substitute_def_next_symbol(p);
+    }
 }
 
 /*------------------------------------------------------------------------*/
@@ -2733,14 +2908,17 @@ substitute_def_next(void)
     init_aig = substitute_def_next_aig(init_aig);
     trans_aig = substitute_def_next_aig(trans_aig);
 
-    for (i = 0; i < invar_expr_cnt; i++)
-    { invar_aig[i] = substitute_def_next_aig(invar_aig[i]); }
+    for (i = 0; i < invar_expr_cnt; i++) {
+        invar_aig[i] = substitute_def_next_aig(invar_aig[i]);
+    }
 
-    for (i = 0; i < spec_expr_cnt; i++)
-    { bad_aig[i] = substitute_def_next_aig(bad_aig[i]); }
+    for (i = 0; i < spec_expr_cnt; i++) {
+        bad_aig[i] = substitute_def_next_aig(bad_aig[i]);
+    }
 
-    for (i = 0; i < fair_expr_cnt; i++)
-    { fair_aig[i] = substitute_def_next_aig(fair_aig[i]); }
+    for (i = 0; i < fair_expr_cnt; i++) {
+        fair_aig[i] = substitute_def_next_aig(fair_aig[i]);
+    }
 
     reset_cache();
 }
@@ -2754,8 +2932,9 @@ substitute_init_aig(AIG * aig)
     Symbol *symbol;
     int sign;
 
-    if (aig == TRUE || aig == FALSE)
-    { return aig; }
+    if (aig == TRUE || aig == FALSE) {
+        return aig;
+    }
 
     strip_aig(sign, aig);
 
@@ -2765,10 +2944,11 @@ substitute_init_aig(AIG * aig)
             assert(!aig->slice);
             assert(!symbol->def_aig);     /* substituted before */
 
-            if (symbol->init_aig)
-            { res = substitute_init_aig(symbol->init_aig); }
-            else
-            { res = aig; }
+            if (symbol->init_aig) {
+                res = substitute_init_aig(symbol->init_aig);
+            } else {
+                res = aig;
+            }
         } else {
             l = substitute_init_aig(aig->c0);
             r = substitute_init_aig(aig->c1);
@@ -2776,11 +2956,13 @@ substitute_init_aig(AIG * aig)
         }
 
         cache(aig, res);
-    } else
-    { res = aig->cache; }
+    } else {
+        res = aig->cache;
+    }
 
-    if (sign < 0)
-    { res = not_aig(res); }
+    if (sign < 0) {
+        res = not_aig(res);
+    }
 
     return res;
 }
@@ -2790,8 +2972,9 @@ substitute_init_aig(AIG * aig)
 static void
 substitute_init_symbol(Symbol * symbol)
 {
-    if (symbol->init_aig)
-    { symbol->init_aig = substitute_init_aig(symbol->init_aig); }
+    if (symbol->init_aig) {
+        symbol->init_aig = substitute_init_aig(symbol->init_aig);
+    }
 }
 
 /*------------------------------------------------------------------------*/
@@ -2800,8 +2983,9 @@ static void
 substitute_init_symbols(void)
 {
     Symbol *p;
-    for (p = first_symbol; p; p = p->order)
-    { substitute_init_symbol(p); }
+    for (p = first_symbol; p; p = p->order) {
+        substitute_init_symbol(p);
+    }
 }
 
 /*------------------------------------------------------------------------*/
@@ -2832,8 +3016,9 @@ flip_aux(AIG * aig)
     Symbol *symbol;
     int sign;
 
-    if (aig == TRUE || aig == FALSE)
-    { return aig; }
+    if (aig == TRUE || aig == FALSE) {
+        return aig;
+    }
 
     strip_aig(sign, aig);
 
@@ -2844,14 +3029,16 @@ flip_aux(AIG * aig)
             l = flip_aux(aig->c0);
             r = flip_aux(aig->c1);
             res = and_aig(l, r);
-        } else
-        { res = (symbol->init_aig == TRUE) ? not_aig(aig) : aig; }
+        } else {
+            res = (symbol->init_aig == TRUE) ? not_aig(aig) : aig;
+        }
 
         cache(aig, res);
     }
 
-    if (sign < 0)
-    { res = not_aig(res); }
+    if (sign < 0) {
+        res = not_aig(res);
+    }
 
     return res;
 }
@@ -2875,17 +3062,20 @@ classify_nondet_aux(AIG * aig, const char *context)
     Symbol *symbol;
     int sign;
 
-    if (aig == TRUE || aig == FALSE)
-    { return; }
+    if (aig == TRUE || aig == FALSE) {
+        return;
+    }
 
     strip_aig(sign, aig);
 
     symbol = aig->symbol;
-    if (symbol && aig->slice)
-    { aig = symbol_aig(symbol, 0); }    /* normalize to slice 0 */
+    if (symbol && aig->slice) {
+        aig = symbol_aig(symbol, 0);    /* normalize to slice 0 */
+    }
 
-    if (aig->cache)
-    { return; }
+    if (aig->cache) {
+        return;
+    }
 
     if (symbol) {
         if (!symbol->nondet && !symbol->latch) {
@@ -2941,12 +3131,14 @@ get_initialized_symbol(void)
 
     res = have_symbol(INITIALIZED_SYMBOL);
     if (res) {
-        if (res->def_aig || res->init_aig != FALSE || res->next_aig != TRUE)
-        { die("name clash for '%s'", INITIALIZED_SYMBOL); }
+        if (res->def_aig || res->init_aig != FALSE || res->next_aig != TRUE) {
+            die("name clash for '%s'", INITIALIZED_SYMBOL);
+        }
 
         assert(!res->input);
-        if (!res->latch)
-        { new_latch(res); }
+        if (!res->latch) {
+            new_latch(res);
+        }
 
         return res;
     }
@@ -2969,8 +3161,9 @@ classify_states(void)
     unsigned oldndets, newndets;
 
     for (p = first_symbol; p; p = p->order) {
-        if (p == initialized_symbol)
-        { continue; }
+        if (p == initialized_symbol) {
+            continue;
+        }
 
         if (p->next_aig &&
                 (p->init_aig == FALSE || p->init_aig == TRUE || !p->init_aig)) {
@@ -3001,12 +3194,14 @@ classify_states(void)
         }
     }
 
-    if (latches && (init_aig != TRUE || trans_aig != TRUE))
-    { msg(1, "%u deterministic latches", latches); }
+    if (latches && (init_aig != TRUE || trans_aig != TRUE)) {
+        msg(1, "%u deterministic latches", latches);
+    }
 
     classify_nondet(init_aig, "INIT");
-    if (nondets)
-    { msg(1, "found %u non determistic inputs/latches in INIT", nondets); }
+    if (nondets) {
+        msg(1, "found %u non determistic inputs/latches in INIT", nondets);
+    }
 
     oldndets = nondets;
     classify_nondet(trans_aig, "TRANS");
@@ -3017,8 +3212,9 @@ classify_states(void)
             newndets, oldndets ? "additional " : "");
 
     for (p = first_symbol; p; p = p->order) {
-        if (p->def_aig || p->nondet || p->latch)
-        { continue; }
+        if (p->def_aig || p->nondet || p->latch) {
+            continue;
+        }
 
         assert(!p->input);
         assert(!p->init_aig);
@@ -3042,8 +3238,9 @@ check_deterministic(void)
     assert(trans_aig == TRUE);
 
     for (p = first_symbol; p; p = p->order) {
-        if (p->nondet)
-        { assert(!p->input && !p->latch); }
+        if (p->nondet) {
+            assert(!p->input && !p->latch);
+        }
 
         if (p->input) {
             assert(!p->init_aig);
@@ -3054,8 +3251,9 @@ check_deterministic(void)
         } else if (p->nondet) {
             assert(p->init_aig == FALSE);
             assert(p->next_aig);
-        } else
-        { assert(p->def_aig); }
+        } else {
+            assert(p->def_aig);
+        }
     }
 }
 
@@ -3078,11 +3276,13 @@ choueka(void)
 
             tmp = symbol_aig(invalid_symbol, 0);
 
-            for (i = 0; i < spec_expr_cnt; i++)
-            { bad_aig[i] = and_aig(bad_aig[i], not_aig(tmp)); }
+            for (i = 0; i < spec_expr_cnt; i++) {
+                bad_aig[i] = and_aig(bad_aig[i], not_aig(tmp));
+            }
 
-            for (i = 0; i < fair_expr_cnt; i++)
-            { fair_aig[i] = and_aig(fair_aig[i], not_aig(tmp)); }
+            for (i = 0; i < fair_expr_cnt; i++) {
+                fair_aig[i] = and_aig(fair_aig[i], not_aig(tmp));
+            }
 
             tmp = or_aig(tmp, not_aig(trans_aig));
 
@@ -3095,11 +3295,13 @@ choueka(void)
 
             tmp = symbol_aig(valid_symbol, 0);
 
-            for (i = 0; i < spec_expr_cnt; i++)
-            { bad_aig[i] = and_aig(bad_aig[i], tmp); }
+            for (i = 0; i < spec_expr_cnt; i++) {
+                bad_aig[i] = and_aig(bad_aig[i], tmp);
+            }
 
-            for (i = 0; i < fair_expr_cnt; i++)
-            { fair_aig[i] = and_aig(fair_aig[i], tmp); }
+            for (i = 0; i < fair_expr_cnt; i++) {
+                fair_aig[i] = and_aig(fair_aig[i], tmp);
+            }
 
             tmp = and_aig(tmp, trans_aig);
 
@@ -3107,20 +3309,22 @@ choueka(void)
             initialized = symbol_aig(initialized_symbol, 0);
             tmp = ite_aig(initialized, tmp, next_aig(init_aig));
 
-            for (i = 0; i < invar_expr_cnt; i++)
-            { invar_aig[i] = or_aig(invar_aig[i], not_aig(initialized)); }
+            for (i = 0; i < invar_expr_cnt; i++) {
+                invar_aig[i] = or_aig(invar_aig[i], not_aig(initialized));
+            }
 
             valid_symbol->init_aig = FALSE;
             valid_symbol->next_aig = tmp;
 
             for (p = first_symbol; p; p = p->order) {
                 if (!p->latch || !p->init_aig ||
-                        p->nondet || p == initialized_symbol || p == valid_symbol)
-                { continue; }
+                        p->nondet || p == initialized_symbol || p == valid_symbol) {
+                    continue;
+                }
 
-                if (p->init_aig == FALSE)
-                { p->next_aig = and_aig(initialized, p->next_aig); }
-                else {
+                if (p->init_aig == FALSE) {
+                    p->next_aig = and_aig(initialized, p->next_aig);
+                } else {
                     assert(p->init_aig == TRUE);
                     p->next_aig = or_aig(not_aig(initialized), p->next_aig);
                 }
@@ -3145,15 +3349,18 @@ check_rebuild_aig(AIG * aig)
     AIG *tmp;
     int s;
 
-    if (aig == TRUE || aig == FALSE)
-    { return; }
+    if (aig == TRUE || aig == FALSE) {
+        return;
+    }
 
     strip_aig(s, aig);
-    if (aig->cache)
-    { return; }
+    if (aig->cache) {
+        return;
+    }
 
-    if (aig->symbol)
-    { return; }
+    if (aig->symbol) {
+        return;
+    }
 
     check_rebuild_aig(aig->c0);
     check_rebuild_aig(aig->c1);
@@ -3170,8 +3377,9 @@ check_rebuild(void)
 {
     Symbol *p;
     for (p = first_symbol; p; p = p->order)
-        if (p->next_aig)
-        { check_rebuild_aig(p->next_aig); }
+        if (p->next_aig) {
+            check_rebuild_aig(p->next_aig);
+        }
     reset_cache();
 }
 
@@ -3189,22 +3397,25 @@ build(void)
     if (invar_expr_cnt) {
         int i;
         invar_aig = (AIG**) malloc(invar_expr_cnt * sizeof(AIG*));
-        for (i = 0; i < invar_expr_cnt; i++)
-        { invar_aig[i] = build_expr(invar_expr[i], 0); }
+        for (i = 0; i < invar_expr_cnt; i++) {
+            invar_aig[i] = build_expr(invar_expr[i], 0);
+        }
     }
 
     if (spec_expr_cnt) {
         int i;
         bad_aig = (AIG**) malloc(spec_expr_cnt * sizeof(AIG*));
-        for (i = 0; i < spec_expr_cnt; i++)
-        { bad_aig[i] = not_aig(build_expr(spec_expr[i]->c0, 0)); }
+        for (i = 0; i < spec_expr_cnt; i++) {
+            bad_aig[i] = not_aig(build_expr(spec_expr[i]->c0, 0));
+        }
     }
 
     if (fair_expr_cnt) {
         int i;
         fair_aig = (AIG**) malloc(fair_expr_cnt * sizeof(AIG*));
-        for (i = 0; i < fair_expr_cnt; i++)
-        { fair_aig[i] = build_expr(fair_expr[i], 0); }
+        for (i = 0; i < fair_expr_cnt; i++) {
+            fair_aig[i] = build_expr(fair_expr[i], 0);
+        }
     }
 
     build_assignments();
@@ -3236,11 +3447,13 @@ tseitin_inputs(void)
     Symbol *p;
     assert(!idx);
     for (p = first_symbol; p; p = p->order) {
-        if (p->input)
-        { tseitin_symbol(p, 0); }
+        if (p->input) {
+            tseitin_symbol(p, 0);
+        }
 
-        if (p->nondet)
-        { tseitin_symbol(p, 1); }
+        if (p->nondet) {
+            tseitin_symbol(p, 1);
+        }
     }
 
     assert(idx == 2 * inputs);
@@ -3255,8 +3468,9 @@ tseitin_latches(void)
 
     assert(idx == 2 * inputs);
     for (p = first_symbol; p; p = p->order) {
-        if (p->latch || p->nondet)
-        { tseitin_symbol(p, 0); }
+        if (p->latch || p->nondet) {
+            tseitin_symbol(p, 0);
+        }
     }
 
     assert(idx == 2 * (inputs + latches));
@@ -3269,8 +3483,9 @@ tseitin_aig(AIG * aig)
 {
     int sign;
 
-    if (aig == TRUE || aig == FALSE)
-    { return; }
+    if (aig == TRUE || aig == FALSE) {
+        return;
+    }
 
     strip_aig(sign, aig);
 
@@ -3279,8 +3494,9 @@ tseitin_aig(AIG * aig)
         return;
     }
 
-    if (aig->idx)
-    { return; }
+    if (aig->idx) {
+        return;
+    }
 
     tseitin_aig(aig->c0);
     tseitin_aig(aig->c1);
@@ -3299,8 +3515,9 @@ tseitin_next(void)
     Symbol *p;
 
     for (p = first_symbol; p; p = p->order) {
-        if (!p->latch && !p->nondet)
-        { continue; }
+        if (!p->latch && !p->nondet) {
+            continue;
+        }
 
         assert(p->next_aig);
         assert(p->init_aig == FALSE || p->init_aig == TRUE || !p->init_aig);
@@ -3323,12 +3540,15 @@ tseitin(void)
     tseitin_latches();
     tseitin_next();
 
-    for (i = 0; i < invar_expr_cnt; i++)
-    { tseitin_aig(invar_aig[i]); }
-    for (i = 0; i < spec_expr_cnt; i++)
-    { tseitin_aig(bad_aig[i]); }
-    for (i = 0; i < fair_expr_cnt; i++)
-    { tseitin_aig(fair_aig[i]); }
+    for (i = 0; i < invar_expr_cnt; i++) {
+        tseitin_aig(invar_aig[i]);
+    }
+    for (i = 0; i < spec_expr_cnt; i++) {
+        tseitin_aig(bad_aig[i]);
+    }
+    for (i = 0; i < fair_expr_cnt; i++) {
+        tseitin_aig(fair_aig[i]);
+    }
 
     msg(1, "%u ands", ands);
     assert(inputs + latches + ands == idx / 2);
@@ -3344,18 +3564,21 @@ aig_idx(AIG * aig)
 
     assert(aig);
 
-    if (aig == TRUE)
-    { return 1; }
+    if (aig == TRUE) {
+        return 1;
+    }
 
-    if (aig == FALSE)
-    { return 0; }
+    if (aig == FALSE) {
+        return 0;
+    }
 
     strip_aig(sign, aig);
     res = aig->idx;
     assert(res > 1);
     assert(!(res & 1));
-    if (sign < 0)
-    { res++; }
+    if (sign < 0) {
+        res++;
+    }
 
     return res;
 }
@@ -3381,8 +3604,9 @@ add_inputs(void)
             assert(aig_idx(symbol_aig(p, 1)) == i);
             tmp = strip_symbols ? 0 : strdup2(NEXT_PREFIX, p->name);
             aiger_add_input(writer, i, tmp);
-            if (tmp)
-            { free(tmp); }
+            if (tmp) {
+                free(tmp);
+            }
             i += 2;
         }
     }
@@ -3406,12 +3630,13 @@ add_latches(void)
                             i, aig_idx(p->next_aig),
                             strip_symbols ? 0 : p->name);
 
-            if (p->init_aig == TRUE)
-            { aiger_add_reset(writer, i, 1); }
-            else if (!p->init_aig)
-            { aiger_add_reset(writer, i, i); }
-            else
-            { assert(p->init_aig == FALSE); }
+            if (p->init_aig == TRUE) {
+                aiger_add_reset(writer, i, 1);
+            } else if (!p->init_aig) {
+                aiger_add_reset(writer, i, i);
+            } else {
+                assert(p->init_aig == FALSE);
+            }
 
             i += 2;
         }
@@ -3478,8 +3703,9 @@ print(void)
     unsigned *lits = calloc(fair_expr_cnt - justice_groups[0],
                             sizeof(unsigned));
     unsigned *l = lits;
-    for (i = justice_groups[0]; i < fair_expr_cnt; i++)
-    { *(l++) = aig_idx(fair_aig[i]); }
+    for (i = justice_groups[0]; i < fair_expr_cnt; i++) {
+        *(l++) = aig_idx(fair_aig[i]);
+    }
 
     l = lits;
     for (i = 1; i <= ltlspec_expr_cnt; i++) {
@@ -3499,12 +3725,14 @@ print(void)
     }
 
     if (output_name) {
-        if (!aiger_open_and_write_to_file(writer, output_name))
-        { die("failed to write to %s", output_name); }
+        if (!aiger_open_and_write_to_file(writer, output_name)) {
+            die("failed to write to %s", output_name);
+        }
     } else {
         aiger_mode mode = ascii ? aiger_ascii_mode : aiger_binary_mode;
-        if (!aiger_write_to_file(writer, mode, stdout))
-        { die("failed to write to <stdout>"); }
+        if (!aiger_write_to_file(writer, mode, stdout)) {
+            die("failed to write to <stdout>");
+        }
     }
 
     aiger_reset(writer);
@@ -3559,8 +3787,9 @@ release_aigs(void)
 {
     unsigned i;
 
-    for (i = 0; i < size_aigs; i++)
-    { release_aig_chain(aigs[i]); }
+    for (i = 0; i < size_aigs; i++) {
+        release_aig_chain(aigs[i]);
+    }
 
     free(aigs);
     free(cached);
@@ -3595,8 +3824,9 @@ release(void)
         free(fair_aig);
         free(fair_expr);
     }
-    if (ltlspec_expr_cnt)
-    { free(ltlspec_expr); }
+    if (ltlspec_expr_cnt) {
+        free(ltlspec_expr);
+    }
     free(justice_groups);
 
     free(expr_stack);
@@ -3633,40 +3863,44 @@ main(int argc, char **argv)
         if (!strcmp(argv[i], "-h")) {
             fputs(USAGE, stdout);
             exit(0);
-        } else if (!strcmp(argv[i], "-v"))
-        { verbose++; }
-        else if (!strcmp(argv[i], "-s"))
-        { strip_symbols = 1; }
-        else if (!strcmp(argv[i], "-a"))
-        { ascii = 1; }
-        else if (!strcmp(argv[i], "-L")) {
-            if (++i >= argc)
-            { die("expected path to ltl2smv translator after -L\n"); }
+        } else if (!strcmp(argv[i], "-v")) {
+            verbose++;
+        } else if (!strcmp(argv[i], "-s")) {
+            strip_symbols = 1;
+        } else if (!strcmp(argv[i], "-a")) {
+            ascii = 1;
+        } else if (!strcmp(argv[i], "-L")) {
+            if (++i >= argc) {
+                die("expected path to ltl2smv translator after -L\n");
+            }
             ltl2smv = argv[i];
         } else if (argv[i][0] == '-' && argv[i][1] == 'O') {
             optimize = atoi(argv[i] + 2);
             if (optimize != 1 && optimize != 2 && optimize != 3
-                    && optimize != 4)
-            { die("can only use 1, 2, 3 or 4 as argument to '-O'"); }
-        } else if (argv[i][0] == '-')
-        { die("unknown command line option '%s' (try '-h')", argv[i]); }
-        else if (output_name)
-        { die("too many files"); }
-        else if (input)
-        { output_name = argv[i]; }
-        else if (!(input = fopen(argv[i], "r")))
-        { die("can not read '%s'", argv[i]); }
-        else {
+                    && optimize != 4) {
+                die("can only use 1, 2, 3 or 4 as argument to '-O'");
+            }
+        } else if (argv[i][0] == '-') {
+            die("unknown command line option '%s' (try '-h')", argv[i]);
+        } else if (output_name) {
+            die("too many files");
+        } else if (input) {
+            output_name = argv[i];
+        } else if (!(input = fopen(argv[i], "r"))) {
+            die("can not read '%s'", argv[i]);
+        } else {
             input_name = argv[i];
             close_input = 1;
         }
     }
 
-    if (ascii && output_name)
-    { die("'-a' in combination with 'dst'"); }
+    if (ascii && output_name) {
+        die("'-a' in combination with 'dst'");
+    }
 
-    if (!ascii && !output_name && isatty(1))
-    { ascii = 1; }
+    if (!ascii && !output_name && isatty(1)) {
+        ascii = 1;
+    }
 
     if (!input) {
         input = stdin;
@@ -3674,8 +3908,9 @@ main(int argc, char **argv)
     }
 
     parse();
-    if (close_input)
-    { fclose(input); }
+    if (close_input) {
+        fclose(input);
+    }
 
     handle_ltlspecs();
 

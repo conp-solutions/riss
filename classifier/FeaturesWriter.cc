@@ -25,8 +25,9 @@ FeaturesWriter::~FeaturesWriter()
 
 void FeaturesWriter::writeFeature(double value)
 {
-    if (featuresCount > 0)
-    { output << ","; }
+    if (featuresCount > 0) {
+        output << ",";
+    }
     output << value;
     featuresCount++;
     assert(featuresCount <= featuresNumber && "Increase the number of features");
@@ -35,8 +36,9 @@ void FeaturesWriter::writeFeature(double value)
 void FeaturesWriter::fillWithUnknown()
 {
     for (int i = featuresCount; i < featuresNumber - 1; ++i) {
-        if (featuresCount > 0)
-        { output << ","; }
+        if (featuresCount > 0) {
+            output << ",";
+        }
         output << "?";
         featuresCount++;
     }

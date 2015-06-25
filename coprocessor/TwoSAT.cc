@@ -85,9 +85,9 @@ bool TwoSatSolver::tmpUnitPropagate()
         for (int i = 0 ; i < impliedLiteralsSize; ++ i) {
             const Lit l = impliedLiterals[i];
             assert(var(l) != var(x) && "a variable should/cannot imply iteself");
-            if (permVal[ toInt(l) ] != 0 || tempVal[toInt(l)] == 1)
-            { continue; }
-            else {
+            if (permVal[ toInt(l) ] != 0 || tempVal[toInt(l)] == 1) {
+                continue;
+            } else {
                 DOUT(if (config.twosat_debug_out > 2) cerr  << "TEMP: Enqueue " << l << " " << endl;);
                 tmpUnitQueue.push_back(l);
             }
@@ -136,8 +136,9 @@ bool TwoSatSolver::unitPropagate()
 //  tempVal[ toInt(impliedLiterals[i]) ] = 1; tempVal[ toInt(~impliedLiterals[i])] = -1;
                 DOUT(if (config.twosat_debug_out > 2)  cerr << "c found by unit propagate [" << i << "/" << impliedLiteralsSize << "] " << impliedLiterals[i] << endl;);
                 unitQueue.push_back(impliedLiterals[i]);
-            } else if (permVal[ toInt(impliedLiterals[i]) ] == -1)
-            { return false; }
+            } else if (permVal[ toInt(impliedLiterals[i]) ] == -1) {
+                return false;
+            }
         }
     }
     return true;
