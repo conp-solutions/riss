@@ -496,8 +496,9 @@ bool Rewriter::rewriteAMO()
                     const Lit* lList = big.getArray(l);
                     const int lListSize = big.getSize(l);
                     int count = 0;
-                    for (int k = 0 ; k < lListSize; ++ k)
-                    { count = (inAmo.isCurrentStep(toInt(lList[k])) || big.isChild(l, lList[k])) ? count + 1 : count; }
+                    for (int k = 0 ; k < lListSize; ++ k) {
+                        count = (inAmo.isCurrentStep(toInt(lList[k])) || big.isChild(l, lList[k])) ? count + 1 : count;
+                    }
                     if (count + 1 < c.size()) { found = false; break; }   // not all literals can be found by this literal!
                 }
                 if (!found) { continue; }
@@ -517,8 +518,8 @@ bool Rewriter::rewriteAMO()
 
         rewHeap.clear();
         for (Var v = 0 ; v < data.nVars(); ++ v) {
-            if (data[  mkLit(v, false) ] >= config.opt_rew_min) if (!rewHeap.inHeap(toInt(mkLit(v, false))))  { rewHeap.insert(toInt(mkLit(v, false))); }
-            if (data[  mkLit(v, true)  ] >= config.opt_rew_min) if (!rewHeap.inHeap(toInt(mkLit(v, true))))   { rewHeap.insert(toInt(mkLit(v, true))); }
+            if (data[  mkLit(v, false) ] >= config.opt_rew_min) if (!rewHeap.inHeap(toInt(mkLit(v, false)))) { rewHeap.insert(toInt(mkLit(v, false))); }
+            if (data[  mkLit(v, true)  ] >= config.opt_rew_min) if (!rewHeap.inHeap(toInt(mkLit(v, true)))) { rewHeap.insert(toInt(mkLit(v, true))); }
         }
 
         DOUT(if (config.rew_debug_out > 0) cerr << "c run with " << rewHeap.size() << " elements" << endl;);
@@ -582,8 +583,8 @@ bool Rewriter::rewriteAMO()
                     if (j != data.lits.size()) {
                         DOUT(if (config.rew_debug_out > 0) cerr << "c reject [" << i << "]" << data.lits[i] << ", because failed with [" << j << "]" << data.lits[j] << endl;);
                         data.lits[i] = lit_Undef; // if not all literals are covered, disable this literal!
-                    } else
-                    { DOUT(if (config.rew_debug_out > 0) cerr << "c keep [" << i << "]" << data.lits[i] << " which hits [" << j << "] literas"  << endl; });
+                    } else {
+                        DOUT(if (config.rew_debug_out > 0) cerr << "c keep [" << i << "]" << data.lits[i] << " which hits [" << j << "] literas"  << endl; });
             } else {
                 for (int j = 0 ; j < size2; ++ j) {
                         DOUT(if (config.rew_debug_out > 2) cerr << "c literal " << l << " hits literal " << list2[j] << endl;);
@@ -616,11 +617,13 @@ bool Rewriter::rewriteAMO()
 
             // remember that these literals have been used in an amo already!
             amos.push_back(data.lits);
-            for (int i = 0 ; i < data.lits.size(); ++ i)
-            { amos[amos.size() - 1][i] = ~(amos[amos.size() - 1][i]); }  // need to negate all!
+            for (int i = 0 ; i < data.lits.size(); ++ i) {
+                amos[amos.size() - 1][i] = ~(amos[amos.size() - 1][i]);    // need to negate all!
+            }
 
-            for (int i = 0 ; i < data.lits.size(); ++ i)
-            { data.ma.setCurrentStep(var(data.lits[i])); }
+            for (int i = 0 ; i < data.lits.size(); ++ i) {
+                data.ma.setCurrentStep(var(data.lits[i]));
+            }
 
             DOUT(if (config.rew_debug_out > 0) cerr << "c found AMO (negated, == AllExceptOne): " << data.lits << endl;);
         }
@@ -683,8 +686,8 @@ bool Rewriter::rewriteAMO()
                     Clause& c = ca[ ll[k] ];
                     if (c.can_be_deleted() || c.size() != 2) { continue; }   // to not care about these clauses!
                     if (inAmo.isCurrentStep(toInt(c[0])) && inAmo.isCurrentStep(toInt(c[1]))) { count ++; c.set_delete(true); data.removedClause(ll[k]); }
-                    else
-                    { DOUT(if (config.rew_debug_out > 2) cerr << "c not matching binary clause: " << c << endl; });
+                    else {
+                        DOUT(if (config.rew_debug_out > 2) cerr << "c not matching binary clause: " << c << endl; });
             }
         }
         DOUT(if (config.rew_debug_out > 0)  cerr << "c found " << count << " binary clauses, out of " << (size * (size - 1)) / 2 << endl;);
@@ -1011,10 +1014,12 @@ void Rewriter::destroy()
 bool Rewriter::checkPush(vec< Lit >& ps, const Lit& l)
 {
     if (ps.size() > 0) {
-        if (ps.last() == l)
-        { return false; }
-        if (ps.last() == ~l)
-        { return true; }
+        if (ps.last() == l) {
+            return false;
+        }
+        if (ps.last() == ~l) {
+            return true;
+        }
     }
     ps.push(l);
     return false;
@@ -1030,15 +1035,17 @@ bool Rewriter::ordered_subsumes(const Clause& c, const Clause& other) const
             ++j;
         }
         // D does not contain c[i]
-        else if (c[i] < other[j])
-        { return false; }
-        else
-        { ++j; }
+        else if (c[i] < other[j]) {
+            return false;
+        } else {
+            ++j;
+        }
     }
-    if (i == c.size())
-    { return true; }
-    else
-    { return false; }
+    if (i == c.size()) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 bool Rewriter::ordered_subsumes(const vec<Lit>& c, const Clause& other) const
@@ -1050,15 +1057,17 @@ bool Rewriter::ordered_subsumes(const vec<Lit>& c, const Clause& other) const
             ++j;
         }
         // D does not contain c[i]
-        else if (c[i] < other[j])
-        { return false; }
-        else
-        { ++j; }
+        else if (c[i] < other[j]) {
+            return false;
+        } else {
+            ++j;
+        }
     }
-    if (i == c.size())
-    { return true; }
-    else
-    { return false; }
+    if (i == c.size()) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 bool Rewriter::ordered_subsumes(const Clause& c, const vec<Lit>& other) const
@@ -1070,15 +1079,17 @@ bool Rewriter::ordered_subsumes(const Clause& c, const vec<Lit>& other) const
             ++j;
         }
         // D does not contain c[i]
-        else if (c[i] < other[j])
-        { return false; }
-        else
-        { ++j; }
+        else if (c[i] < other[j]) {
+            return false;
+        } else {
+            ++j;
+        }
     }
-    if (i == c.size())
-    { return true; }
-    else
-    { return false; }
+    if (i == c.size()) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 // TODO: have a template here!

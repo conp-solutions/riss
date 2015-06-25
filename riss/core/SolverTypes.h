@@ -365,7 +365,7 @@ class Clause
     }
 
     int          size()      const   { return header.size; }
-    void         shrink(int i)         { assert(i <= size()); if (header.has_extra) { data[header.size - i] = data[header.size]; } header.size -= i; }
+    void         shrink(int i)         { assert(i <= size()); if (header.has_extra) { data[header.size - i] = data[header.size]; }  header.size -= i; }
     void         pop()              { shrink(1); }
     bool         learnt()      const   { return header.learnt; }
     void         learnt(bool learnt)   { header.learnt = learnt; }
@@ -417,7 +417,7 @@ class Clause
     void         remove_lit(const Lit& p);         /** keeps the order of the remaining literals */
     void         strengthen(const Riss::Lit& p);
 
-    void    set_delete(bool b)          { if (b) { header.mark = 1; } else { header.mark = 0; }}
+    void    set_delete(bool b)          { if (b) { header.mark = 1; }  else { header.mark = 0; } }
     void    set_learnt(bool b)         { header.learnt = b; }
     bool    can_be_deleted()     const  { return mark() == 1; }
 
@@ -490,14 +490,14 @@ class Clause
         header.locked = 0;
     };
 
-    void    removePositionUnsorted(int i)    { data[i].lit = data[ size() - 1].lit; shrink(1); if (has_extra() && !header.learnt) { calcAbstraction(); } }
-    inline void removePositionSorted(int i)      { for (int j = i; j < size() - 1; ++j) { data[j] = data[j + 1]; } shrink(1); if (has_extra() && !header.learnt) { calcAbstraction(); } }
+    void    removePositionUnsorted(int i)    { data[i].lit = data[ size() - 1].lit; shrink(1); if (has_extra() && !header.learnt) { calcAbstraction(); }  }
+    inline void removePositionSorted(int i)      { for (int j = i; j < size() - 1; ++j) { data[j] = data[j + 1]; }  shrink(1); if (has_extra() && !header.learnt) { calcAbstraction(); }  }
     // thread safe version, that changes the first literal last
     inline void removePositionSortedThreadSafe(int i)
     {
         if (i == 0) {
             Lit second = data[1].lit;
-            for (int j = 1; j < size() - 1; ++j) { data[j] = data[j + 1]; } shrink(1);
+            for (int j = 1; j < size() - 1; ++j) { data[j] = data[j + 1]; }  shrink(1);
             if (has_extra() && !header.learnt) { calcAbstraction(second); }
             data[0].lit = second;
         } else { removePositionSorted(i); }
@@ -543,7 +543,7 @@ class Clause
     //setting the shared to true... means the clause is shared or coming from a shared pool
     void setShared() {        header.shared = 1;    }
     void initShCleanDelay(unsigned i) {        i > 1 ? header.shCleanDelay = 1 : header.shCleanDelay = i;    }
-    void decShCleanDelay() {        if (header.shCleanDelay > 0) { header.shCleanDelay--; }    }
+    void decShCleanDelay() {        if (header.shCleanDelay > 0) { header.shCleanDelay--; }     }
     unsigned getShCleanDelay() {       return header.shCleanDelay;    }
     #endif
 
@@ -836,7 +836,7 @@ class OccLists
     void  init(const Idx& idx) { occs.growTo(toInt(idx) + 1); dirty.growTo(toInt(idx) + 1, 0); }
     // Vec&  operator[](const Idx& idx){ return occs[toInt(idx)]; }
     Vec&  operator[](const Idx& idx) { return occs[toInt(idx)]; }
-    Vec&  lookup(const Idx& idx) { if (dirty[toInt(idx)]) { clean(idx); } return occs[toInt(idx)]; }
+    Vec&  lookup(const Idx& idx) { if (dirty[toInt(idx)]) { clean(idx); }  return occs[toInt(idx)]; }
 
     void  cleanAll();
     void  clean(const Idx& idx);

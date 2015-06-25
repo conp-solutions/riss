@@ -131,11 +131,11 @@ bool SolverPT::addClause_(vec<Lit>& ps, unsigned int pt_level) // Davide> pt_lev
     sort(ps);
     Lit p; int i, j;
     for (i = j = 0, p = lit_Undef; i < ps.size(); i++)
-        if (value(ps[i]) == l_True || ps[i] == ~p)
-        { return true; }
-        else if (value(ps[i]) != l_False && ps[i] != p)
-        { ps[j++] = p = ps[i]; }
-        else if (value(ps[i]) == l_False && ps[i] != p) {
+        if (value(ps[i]) == l_True || ps[i] == ~p) {
+            return true;
+        } else if (value(ps[i]) != l_False && ps[i] != p) {
+            ps[j++] = p = ps[i];
+        } else if (value(ps[i]) == l_False && ps[i] != p) {
             if (false && addClause_FalseRemoval == 0) { // TODO reconsider this
                 // Davide> In order to maximize sharing, the safety of a clauses
                 // is not corrupted
@@ -285,8 +285,9 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsig
             c[0] =  c[1], c[1] = tmp;
         }
 
-        if (c.learnt())
-        { claBumpActivity(c); }
+        if (c.learnt()) {
+            claBumpActivity(c);
+        }
 
         for (int j = (p == lit_Undef) ? 0 : 1; j < c.size(); j++) {
             Lit q = c[j];
@@ -299,8 +300,9 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsig
                         pathC++;
                         #ifdef UPDATEVARACTIVITY
                         // UPDATEVARACTIVITY trick (see competition'09 companion paper)
-                        if ((reason(var(q)) != CRef_Undef)  && ca[reason(var(q))].learnt())
-                        { lastDecisionLevel.push(q); }
+                        if ((reason(var(q)) != CRef_Undef)  && ca[reason(var(q))].learnt()) {
+                            lastDecisionLevel.push(q);
+                        }
                         #endif
 
                     } else {
@@ -365,17 +367,20 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsig
 
         uint32_t abstract_level = 0;
 
-        for (i = 1; i < out_learnt.size(); i++)
-        { abstract_level |= abstractLevel(var(out_learnt[i])); } // (maintain an abstraction of levels involved in conflict)
+        for (i = 1; i < out_learnt.size(); i++) {
+            abstract_level |= abstractLevel(var(out_learnt[i]));    // (maintain an abstraction of levels involved in conflict)
+        }
         for (i = j = 1; i < out_learnt.size(); i++)
-            if (reason(var(out_learnt[i])) == CRef_Undef || !litRedundant(out_learnt[i], abstract_level))
-            { out_learnt[j++] = out_learnt[i]; }
+            if (reason(var(out_learnt[i])) == CRef_Undef || !litRedundant(out_learnt[i], abstract_level)) {
+                out_learnt[j++] = out_learnt[i];
+            }
 
         // Davide> statistics
         if (!disable_stats)
 
-            if (out_learnt.size() != oldSize)
-            { statistics.changeI(n_clcanbeccminID, 1); }
+            if (out_learnt.size() != oldSize) {
+                statistics.changeI(n_clcanbeccminID, 1);
+            }
 
 
     } else if (ccmin_mode == 1) { // Davide> & let's enable this
@@ -388,9 +393,9 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsig
         for (i = j = 1; i < out_learnt.size(); i++) {
             Var x = var(out_learnt[i]);
 
-            if (reason(x) == CRef_Undef /*|| (vardata[x].pt_level > PTLevel)*/)   // Davide> If not safe, the literal cannot be removed if its level is bigger than the clause to be learnt ( EDITED )
-            { out_learnt[j++] = out_learnt[i]; }
-            else {
+            if (reason(x) == CRef_Undef /*|| (vardata[x].pt_level > PTLevel)*/) { // Davide> If not safe, the literal cannot be removed if its level is bigger than the clause to be learnt ( EDITED )
+                out_learnt[j++] = out_learnt[i];
+            } else {
                 Clause& c = ca[reason(x)];
                 if (c.getPTLevel() <= PTLevel) { // Davide> the clause is safe
                     for (int k = 1; k < c.size(); k++)
@@ -402,18 +407,20 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsig
                                 PTLevel = getLiteralPTLevel(c[k]); // Davide> ccmin clause worsening
                             }
                 } else {
-                    out_learnt[j++] = out_learnt[i];
-                } // Davide> do not consider unsafe reason clauses
+                    out_learnt[j++] = out_learnt[i];    // Davide> do not consider unsafe reason clauses
+                }
             }
         }
         // Davide> statistics
         if (!disable_stats)
 
-            if (out_learnt.size() != oldSize)
-            { statistics.changeI(n_clcanbeccminID, 1); }
+            if (out_learnt.size() != oldSize) {
+                statistics.changeI(n_clcanbeccminID, 1);
+            }
 
-    } else
-    { i = j = out_learnt.size(); }
+    } else {
+        i = j = out_learnt.size();
+    }
 
     max_literals += out_learnt.size();
     out_learnt.shrink_(i - j);
@@ -501,14 +508,15 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsig
     }
     // Find correct backtrack level:
     //
-    if (out_learnt.size() == 1)
-    { out_btlevel = 0; }
-    else {
+    if (out_learnt.size() == 1) {
+        out_btlevel = 0;
+    } else {
         int max_i = 1;
         // Find the first literal assigned at the next-highest level:
         for (int i = 2; i < out_learnt.size(); i++)
-            if (level(var(out_learnt[i])) > level(var(out_learnt[max_i])))
-            { max_i = i; }
+            if (level(var(out_learnt[i])) > level(var(out_learnt[max_i]))) {
+                max_i = i;
+            }
         // Swap-in this literal at index 1:
         Lit p             = out_learnt[max_i];
         out_learnt[max_i] = out_learnt[1];
@@ -534,8 +542,9 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsig
     // UPDATEVARACTIVITY trick (see competition'09 companion paper)
     if (lastDecisionLevel.size() > 0) {
         for (int i = 0; i < lastDecisionLevel.size(); i++) {
-            if (ca[reason(var(lastDecisionLevel[i]))].lbd() < lbd)
-            { varBumpActivity(var(lastDecisionLevel[i])); }
+            if (ca[reason(var(lastDecisionLevel[i]))].lbd() < lbd) {
+                varBumpActivity(var(lastDecisionLevel[i]));
+            }
         }
         lastDecisionLevel.clear();
     }
@@ -567,8 +576,9 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsig
         }
         if (pools_filling) {
             vector<TreeNode*> intermediate_nodes;
-            for (unsigned int i = 0; i <= getNodePTLevel(); i++)
-            { intermediate_nodes.push_back(0); }
+            for (unsigned int i = 0; i <= getNodePTLevel(); i++) {
+                intermediate_nodes.push_back(0);
+            }
 
             TreeNode* temp_node = tnode;
             for (int i = static_cast<int>(getNodePTLevel()); i >= static_cast<int>(tempPTLevel); i--) {
@@ -578,27 +588,31 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsig
             PcassoDavide::LevelPool* pool;
             while (tempPTLevel < getNodePTLevel()) {
                 pool = intermediate_nodes[tempPTLevel]->lv_pool;
-                if (pool->isFull())
-                { tempPTLevel++; }
-                else { break; }
+                if (pool->isFull()) {
+                    tempPTLevel++;
+                } else { break; }
             }
         }
         if (!disable_stats) {
             // Davide> statistics
-            if (tempPTLevel == 1)
-            { localStat.changeI(sum_clauses_pools_lv1ID, 1); }
-            else if (tempPTLevel == 0)
-            { localStat.changeI(sum_clauses_pools_lv0ID, 1); }
+            if (tempPTLevel == 1) {
+                localStat.changeI(sum_clauses_pools_lv1ID, 1);
+            } else if (tempPTLevel == 0) {
+                localStat.changeI(sum_clauses_pools_lv0ID, 1);
+            }
             // if( out_learnt.size() == 1 )
             localStat.changeI(n_unary_shclausesID, 1);
             // if( out_learnt_lbd <= 2 )
             localStat.changeI(n_lbd2_shclausesID, 1);
-            if (oldPTLevel != tempPTLevel)
-            { localStat.changeI(n_ccmin_worseningID, 1); }
-            if (tempPTLevel == getNodePTLevel())
-            { localStat.changeI(n_clsent_curr_lvID, 1); }
-            if (tempPTLevel == getNodePTLevel() - 1)
-            { localStat.changeI(n_clsent_prev_lvID, 1); }
+            if (oldPTLevel != tempPTLevel) {
+                localStat.changeI(n_ccmin_worseningID, 1);
+            }
+            if (tempPTLevel == getNodePTLevel()) {
+                localStat.changeI(n_clsent_curr_lvID, 1);
+            }
+            if (tempPTLevel == getNodePTLevel() - 1) {
+                localStat.changeI(n_clsent_prev_lvID, 1);
+            }
         }
 
         int back_steps = getNodePTLevel() - tempPTLevel;
@@ -620,8 +634,9 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsig
         //      pthread_setcancelstate (PTHREAD_CANCEL_DISABLE, &old_cancel_state);
 
         if (!pool->levelPoolLock.try_wLock()) {
-            if (!disable_stats)
-            { localStat.changeI(n_threads_blockedID, 1); } // Davide> statistics
+            if (!disable_stats) {
+                localStat.changeI(n_threads_blockedID, 1);    // Davide> statistics
+            }
             pool->levelPoolLock.wLock();
         }
         sharedSuccess = pool->add_shared(out_learnt, tnode->id(), disable_dupl_removal, disable_dupl_check);
@@ -633,19 +648,22 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsig
         // ******************** END OF CRITICAL SECTION ******************* //
 
         if (!sharedSuccess)
-            if (!disable_stats)
-            { localStat.changeI(n_pool_duplicatesID, 1); } // Davide> statistics
+            if (!disable_stats) {
+                localStat.changeI(n_pool_duplicatesID, 1);    // Davide> statistics
+            }
 
         if (!disable_stats) {
-            if (!fullPool)
-            { localStat.changeI(n_tot_shared_minus_delID, 1); }
+            if (!fullPool) {
+                localStat.changeI(n_tot_shared_minus_delID, 1);
+            }
 
             localStat.changeI(n_tot_sharedID, 1);
 
-            if (tempPTLevel == 0)
-            { localStat.changeI(sum_clauses_pools_lv0_effID, 1); }
-            else if (tempPTLevel == 1)
-            { localStat.changeI(sum_clauses_pools_lv1_effID, 1); }
+            if (tempPTLevel == 0) {
+                localStat.changeI(sum_clauses_pools_lv0_effID, 1);
+            } else if (tempPTLevel == 1) {
+                localStat.changeI(sum_clauses_pools_lv1_effID, 1);
+            }
         }
 
 
@@ -662,8 +680,9 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsig
         }
         if (pools_filling) {
             vector<TreeNode*> intermediate_nodes;
-            for (unsigned int i = 0; i <= getNodePTLevel(); i++)
-            { intermediate_nodes.push_back(0); }
+            for (unsigned int i = 0; i <= getNodePTLevel(); i++) {
+                intermediate_nodes.push_back(0);
+            }
 
             TreeNode* temp_node = tnode;
             for (int i = static_cast<int>(getNodePTLevel()); i >= static_cast<int>(tempPTLevel); i--) {
@@ -673,37 +692,45 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsig
             PcassoDavide::LevelPool* pool;
             while (tempPTLevel < getNodePTLevel()) {
                 pool = intermediate_nodes[tempPTLevel]->lv_pool;
-                if (pool->isFull())
-                { tempPTLevel++; }
-                else { break; }
+                if (pool->isFull()) {
+                    tempPTLevel++;
+                } else { break; }
             }
         }
         if (shconditions_relaxing) {
-            if (out_learnt.size() > sharedClauseMaxSize + floor(tempPTLevel != 0 ? log2(tempPTLevel) : 0) && lbd > LBD_lt + floor(tempPTLevel != 0 ? log2(tempPTLevel) : 0))
-            { return; }
+            if (out_learnt.size() > sharedClauseMaxSize + floor(tempPTLevel != 0 ? log2(tempPTLevel) : 0) && lbd > LBD_lt + floor(tempPTLevel != 0 ? log2(tempPTLevel) : 0)) {
+                return;
+            }
         }
         if (opt_dyn_lbd_shr) {
-            if (lbd > ceil(opt_dyn_lbd_shr_fac * (sumLBD / conflicts)) && out_learnt.size() > sharedClauseMaxSize && lbd > LBD_lt)
-            { return; }
+            if (lbd > ceil(opt_dyn_lbd_shr_fac * (sumLBD / conflicts)) && out_learnt.size() > sharedClauseMaxSize && lbd > LBD_lt) {
+                return;
+            }
         }
         // Davide> statistics
         if (!disable_stats) {
-            if (tempPTLevel == 1)
-            { localStat.changeI(sum_clauses_pools_lv1ID, 1); }
-            else if (tempPTLevel == 0)
-            { localStat.changeI(sum_clauses_pools_lv0ID, 1); }
-            if (out_learnt.size() == 1)
-            { localStat.changeI(n_unary_shclausesID, 1); }
-            else if (out_learnt.size() == 2)
-            { localStat.changeI(n_binary_shclausesID, 1); }
-            if (lbd <= 2)
-            { localStat.changeI(n_lbd2_shclausesID, 1); }
-            if (oldPTLevel != tempPTLevel)
-            { localStat.changeI(n_ccmin_worseningID, 1); }
-            if (tempPTLevel == getNodePTLevel())
-            { localStat.changeI(n_clsent_curr_lvID, 1); }
-            if (tempPTLevel == getNodePTLevel() - 1)
-            { localStat.changeI(n_clsent_prev_lvID, 1); }
+            if (tempPTLevel == 1) {
+                localStat.changeI(sum_clauses_pools_lv1ID, 1);
+            } else if (tempPTLevel == 0) {
+                localStat.changeI(sum_clauses_pools_lv0ID, 1);
+            }
+            if (out_learnt.size() == 1) {
+                localStat.changeI(n_unary_shclausesID, 1);
+            } else if (out_learnt.size() == 2) {
+                localStat.changeI(n_binary_shclausesID, 1);
+            }
+            if (lbd <= 2) {
+                localStat.changeI(n_lbd2_shclausesID, 1);
+            }
+            if (oldPTLevel != tempPTLevel) {
+                localStat.changeI(n_ccmin_worseningID, 1);
+            }
+            if (tempPTLevel == getNodePTLevel()) {
+                localStat.changeI(n_clsent_curr_lvID, 1);
+            }
+            if (tempPTLevel == getNodePTLevel() - 1) {
+                localStat.changeI(n_clsent_prev_lvID, 1);
+            }
         }
 
         // Davide> Register the cr index of the clause
@@ -737,8 +764,9 @@ bool SolverPT::litRedundant(Lit p, uint32_t abstract_levels)
                     analyze_stack.push(p);
                     analyze_toclear.push(p);
                 } else {
-                    for (int j = top; j < analyze_toclear.size(); j++)
-                    { varFlags[var(analyze_toclear[j])].seen = 0; }
+                    for (int j = top; j < analyze_toclear.size(); j++) {
+                        varFlags[var(analyze_toclear[j])].seen = 0;
+                    }
                     analyze_toclear.shrink_(analyze_toclear.size() - top);
                     return false;
                 }
@@ -758,8 +786,9 @@ bool SolverPT::litRedundant(Lit p, uint32_t abstract_levels)
                     else*/
                 PTLevel = c.getPTLevel();
             } else {
-                for (int j = top; j < analyze_toclear.size(); j++)
-                { varFlags[var(analyze_toclear[j])].seen = 0; }
+                for (int j = top; j < analyze_toclear.size(); j++) {
+                    varFlags[var(analyze_toclear[j])].seen = 0;
+                }
                 analyze_toclear.shrink_(analyze_toclear.size() - top);
                 return false;
             }
@@ -781,8 +810,9 @@ Lit SolverPT::pickBranchLit()
     // Random decision:
     if (((rndDecLevel0 && decisionLevel() == 0) || drand(random_seed) < random_var_freq) && !order_heap.empty()) {
         next = order_heap[irand(random_seed, order_heap.size())];
-        if (value(next) == l_Undef && varFlags[next].decision)
-        { rnd_decisions++; }
+        if (value(next) == l_Undef && varFlags[next].decision) {
+            rnd_decisions++;
+        }
     }
 
     // Activity based decision:
@@ -790,8 +820,9 @@ Lit SolverPT::pickBranchLit()
         if (order_heap.empty()) {
             next = var_Undef;
             break;
-        } else
-        { next = order_heap.removeMin(); }
+        } else {
+            next = order_heap.removeMin();
+        }
 
     return next == var_Undef ? lit_Undef : mkLit(next, rnd_pol ? drand(random_seed) < 0.5 : varFlags[next].polarity);
 }
@@ -837,16 +868,18 @@ CRef SolverPT::propagate()
                     // found out
                     unsigned int max_bad_pt_level = 0;
                     Clause& c = ca[wbin[k].cref()];
-                    for (int i = 0; i < c.size(); i++)
-                    { max_bad_pt_level = max_bad_pt_level >= getLiteralPTLevel(c[i]) ? max_bad_pt_level : getLiteralPTLevel(c[i]); }
+                    for (int i = 0; i < c.size(); i++) {
+                        max_bad_pt_level = max_bad_pt_level >= getLiteralPTLevel(c[i]) ? max_bad_pt_level : getLiteralPTLevel(c[i]);
+                    }
                     //                      if( getLiteralPTLevel(c[i]) > max_bad_pt_level ){
                     //                          max_bad_pt_level = getLiteralPTLevel(c[i]);
                     //                          // break; Davide> Unfortunately, I cannot break now here
                     //                      }
-                    if (c.getPTLevel() > max_bad_pt_level)
-                    { uncheckedEnqueue(imp, wbin[k].cref(), c.getPTLevel()); }
-                    else
-                    { uncheckedEnqueue(imp, wbin[k].cref(), max_bad_pt_level); }
+                    if (c.getPTLevel() > max_bad_pt_level) {
+                        uncheckedEnqueue(imp, wbin[k].cref(), c.getPTLevel());
+                    } else {
+                        uncheckedEnqueue(imp, wbin[k].cref(), max_bad_pt_level);
+                    }
                 } // Davide> End of my Part
                 else {
                     //printLit(p);printf(" ");printClause(wbin[k].cref);printf("->  ");printLit(imp);printf("\n");
@@ -869,8 +902,9 @@ CRef SolverPT::propagate()
             CRef     cr        = i->cref();
             Clause&  c         = ca[cr];
             Lit      false_lit = ~p;
-            if (c[0] == false_lit)
-            { c[0] = c[1], c[1] = false_lit; }
+            if (c[0] == false_lit) {
+                c[0] = c[1], c[1] = false_lit;
+            }
             assert(c[1] == false_lit);
             i++;
 
@@ -896,8 +930,9 @@ CRef SolverPT::propagate()
                 confl = cr;
                 qhead = trail.size();
                 // Copy the remaining watches:
-                while (i < end)
-                { *j++ = *i++; }
+                while (i < end) {
+                    *j++ = *i++;
+                }
             } else {
                 // Davide> A zero-level variable is unsafe if:
                 //         1) it underlies a unary constraint
@@ -909,8 +944,9 @@ CRef SolverPT::propagate()
                     // Davide> I want the "most constraining" literal to be
                     // found out
                     unsigned int max_bad_pt_level = 0;
-                    for (int i = 0; i < c.size(); i++)
-                    { max_bad_pt_level = max_bad_pt_level >= getLiteralPTLevel(c[i]) ? max_bad_pt_level : getLiteralPTLevel(c[i]); }
+                    for (int i = 0; i < c.size(); i++) {
+                        max_bad_pt_level = max_bad_pt_level >= getLiteralPTLevel(c[i]) ? max_bad_pt_level : getLiteralPTLevel(c[i]);
+                    }
                     //                      if( getLiteralPTLevel(c[i]) > max_bad_pt_level ){
                     //                          max_bad_pt_level = getLiteralPTLevel(c[i]);
                     //                          // break; Davide> Unfortunately, I cannot break now here
@@ -992,14 +1028,14 @@ lbool SolverPT::search(int nof_conflicts)
     bool pullClausesCheck = false; //for checking if the clauses have been pulled
     //ahmed> pulling the shared clauses
     pull_learnts(curRestart);
-    if (!ok)  { return l_False; }
+    if (!ok) { return l_False; }
     //ahmed> updating activity and polarity in treenode
     if (update_act_pol > 0) {
         tnode->updateActivityPolarity(activity, varFlags, update_act_pol);
     }
     if (opt_pull_learnts_interval == 0) {
         pull_learnts(starts);
-        if (!ok)  { return l_False; }
+        if (!ok) { return l_False; }
     }
 
     for (;;) {
@@ -1009,7 +1045,7 @@ lbool SolverPT::search(int nof_conflicts)
         //Ahmed> pull shared clauses
         if (opt_pull_learnts_interval != 0 && !pullClausesCheck && conflictC % opt_pull_learnts_interval == 0) {
             pull_learnts(starts);
-            if (!ok)  { return l_False; }
+            if (!ok) { return l_False; }
             pullClausesCheck = true;
         }
         CRef confl = propagate();
@@ -1101,7 +1137,7 @@ lbool SolverPT::search(int nof_conflicts)
                 level0UnitsIndex = getTopLevelUnits(); //skipping the trivial units as they are already progated by parents
                 push_learnts(); // Davide> Share learnts clauses that can be shared
                 pull_learnts(starts);
-                if (!ok)  { return l_False; }
+                if (!ok) { return l_False; }
                 if (!simplify()) {
                     printf("c last restart ## conflicts  :  %d %d \n", conflictC, decisionLevel());
                     return l_False;
@@ -1157,8 +1193,9 @@ lbool SolverPT::solve_()
 {
     // Davide> attempt
     vector<unsigned int> a;
-    for (unsigned int i = 0; i <= getNodePTLevel(); i++)
-    { learnts_indeces.push_back(a); } // Davide> copy
+    for (unsigned int i = 0; i <= getNodePTLevel(); i++) {
+        learnts_indeces.push_back(a);    // Davide> copy
+    }
 
     model.clear();
     conflict.clear();
@@ -1209,8 +1246,9 @@ lbool SolverPT::solve_()
         // Extend & copy model:
         model.growTo(nVars());
         for (int i = 0; i < nVars(); i++) { model[i] = value(i); }
-    } else if (status == l_False && conflict.size() == 0)
-    { ok = false; }
+    } else if (status == l_False && conflict.size() == 0) {
+        ok = false;
+    }
 
     cancelUntil(0);
     return status;
@@ -1262,12 +1300,14 @@ void SolverPT::push_units()
         Lit l = trail[trailIndex];
         unsigned int tempPTLevel = getLiteralPTLevel(l);
         //if(tempPTLevel<opt_unit_sharing_ptlevel_limit)//skipping the units whose level is below limit
-        if (tempPTLevel < curPTLevel) //skipping the units whose ptlevel is less than the ptlevel of the node
-        { continue; }
+        if (tempPTLevel < curPTLevel) { //skipping the units whose ptlevel is less than the ptlevel of the node
+            continue;
+        }
         if (pools_filling) {
             vector<TreeNode*> intermediate_nodes;
-            for (unsigned int i = 0; i <= getNodePTLevel(); i++)
-            { intermediate_nodes.push_back(0); }
+            for (unsigned int i = 0; i <= getNodePTLevel(); i++) {
+                intermediate_nodes.push_back(0);
+            }
 
             TreeNode* temp_node = tnode;
             for (int i = static_cast<int>(getNodePTLevel()); i >= static_cast<int>(tempPTLevel); i--) {
@@ -1277,25 +1317,28 @@ void SolverPT::push_units()
             PcassoDavide::LevelPool* pool;
             while (tempPTLevel < getNodePTLevel()) {
                 pool = intermediate_nodes[tempPTLevel]->lv_pool;
-                if (pool->isFull())
-                { tempPTLevel++; }
-                else { break; }
+                if (pool->isFull()) {
+                    tempPTLevel++;
+                } else { break; }
             }
         }
         if (!disable_stats) {
             // Davide> statistics
-            if (tempPTLevel == 1)
-            { localStat.changeI(sum_clauses_pools_lv1ID, 1); }
-            else if (tempPTLevel == 0)
-            { localStat.changeI(sum_clauses_pools_lv0ID, 1); }
+            if (tempPTLevel == 1) {
+                localStat.changeI(sum_clauses_pools_lv1ID, 1);
+            } else if (tempPTLevel == 0) {
+                localStat.changeI(sum_clauses_pools_lv0ID, 1);
+            }
             // if( out_learnt.size() == 1 )
             localStat.changeI(n_unary_shclausesID, 1);
             // if( out_learnt_lbd <= 2 )
             localStat.changeI(n_lbd2_shclausesID, 1);
-            if (tempPTLevel == getNodePTLevel())
-            { localStat.changeI(n_clsent_curr_lvID, 1); }
-            if (tempPTLevel == getNodePTLevel() - 1)
-            { localStat.changeI(n_clsent_prev_lvID, 1); }
+            if (tempPTLevel == getNodePTLevel()) {
+                localStat.changeI(n_clsent_curr_lvID, 1);
+            }
+            if (tempPTLevel == getNodePTLevel() - 1) {
+                localStat.changeI(n_clsent_prev_lvID, 1);
+            }
         }
 
         int back_steps = getNodePTLevel() - tempPTLevel;
@@ -1318,8 +1361,9 @@ void SolverPT::push_units()
         // ******************** CRITICAL SECTION ************************** //
 
         if (!pool->levelPoolLock.try_wLock()) {
-            if (!disable_stats)
-            { localStat.changeI(n_threads_blockedID, 1); }
+            if (!disable_stats) {
+                localStat.changeI(n_threads_blockedID, 1);
+            }
             pool->levelPoolLock.wLock();
         }
 
@@ -1331,19 +1375,22 @@ void SolverPT::push_units()
         // ******************** END OF CRITICAL SECTION ******************* //
 
         if (!sharedSuccess)
-            if (!disable_stats)
-            { localStat.changeI(n_pool_duplicatesID, 1); } // Davide> statistics
+            if (!disable_stats) {
+                localStat.changeI(n_pool_duplicatesID, 1);    // Davide> statistics
+            }
 
         if (!disable_stats) {
-            if (!fullPool)
-            { localStat.changeI(n_tot_shared_minus_delID, 1); }
+            if (!fullPool) {
+                localStat.changeI(n_tot_shared_minus_delID, 1);
+            }
 
             localStat.changeI(n_tot_sharedID, 1);
 
-            if (tempPTLevel == 0)
-            { localStat.changeI(sum_clauses_pools_lv0_effID, 1); }
-            else if (tempPTLevel == 1)
-            { localStat.changeI(sum_clauses_pools_lv1_effID, 1); }
+            if (tempPTLevel == 0) {
+                localStat.changeI(sum_clauses_pools_lv0_effID, 1);
+            } else if (tempPTLevel == 1) {
+                localStat.changeI(sum_clauses_pools_lv1_effID, 1);
+            }
         }
     }
     level0UnitsIndex = getTopLevelUnits(); //storing the index of start of level1 literal
@@ -1358,8 +1405,9 @@ void SolverPT::push_learnts()
     // Davide> Idea1 : put shared clauses into shared pools
     vector<PcassoDavide::LevelPool*> previous_pools;
 
-    for (unsigned int i = 0; i <= getNodePTLevel(); i++)
-    { previous_pools.push_back(0); }
+    for (unsigned int i = 0; i <= getNodePTLevel(); i++) {
+        previous_pools.push_back(0);
+    }
 
     TreeNode* curNode = tnode;
 
@@ -1382,8 +1430,9 @@ void SolverPT::push_learnts()
         // ******************** CRITICAL SECTION ************************** //
 
         if (!pool->levelPoolLock.try_wLock()) { // Attempt with spin-lock
-            if (!disable_stats)
-            { localStat.changeI(n_threads_blockedID, 1); } // Davide> statistics
+            if (!disable_stats) {
+                localStat.changeI(n_threads_blockedID, 1);    // Davide> statistics
+            }
             pool->levelPoolLock.wLock();
         }
         for (unsigned int j = 0; j < learnts_indeces[i].size(); j++) {
@@ -1400,19 +1449,22 @@ void SolverPT::push_learnts()
             fullPool = pool->isFull();
 
             if (!sharedSuccess)
-                if (!disable_stats)
-                { localStat.changeI(n_pool_duplicatesID, 1); } // Davide> statistics
+                if (!disable_stats) {
+                    localStat.changeI(n_pool_duplicatesID, 1);    // Davide> statistics
+                }
 
             if (!disable_stats) {
-                if (!fullPool)
-                { localStat.changeI(n_tot_shared_minus_delID, 1); }
+                if (!fullPool) {
+                    localStat.changeI(n_tot_shared_minus_delID, 1);
+                }
 
                 localStat.changeI(n_tot_sharedID, 1);
 
-                if (i == 0)
-                { localStat.changeI(sum_clauses_pools_lv0_effID, 1); }
-                else if (i == 1)
-                { localStat.changeI(sum_clauses_pools_lv1_effID, 1); }
+                if (i == 0) {
+                    localStat.changeI(sum_clauses_pools_lv0_effID, 1);
+                } else if (i == 1) {
+                    localStat.changeI(sum_clauses_pools_lv1_effID, 1);
+                }
             }
         }
         pool->levelPoolLock.unlock(); // Davide> End of critical
@@ -1420,8 +1472,9 @@ void SolverPT::push_learnts()
         // ******************** END OF CRITICAL SECTION ******************* //
     }
     // Davide> cleaning things
-    for (unsigned int i = 0; i < learnts_indeces.size(); i++)
-    { learnts_indeces[i].clear(); }
+    for (unsigned int i = 0; i < learnts_indeces.size(); i++) {
+        learnts_indeces[i].clear();
+    }
 
     //localStat.changeD(sharing_time_ID, cpuTime_t()-startSharingTime);
 }
@@ -1466,14 +1519,16 @@ void SolverPT::pull_learnts(int curr_restarts)
 
                 chunk.clear();
                 PcassoDavide::LevelPool* pool = back_steps_node->lv_pool;
-                if (pool == 0)
-                { continue; }
+                if (pool == 0) {
+                    continue;
+                }
                 bool check = true;
                 // ******************** CRITICAL SECTION ************************** //
 
                 if (!pool->levelPoolLock.try_rLock()) {
-                    if (!disable_stats)
-                    { localStat.changeI(n_threads_blockedID, 1); } // Davide> statistics
+                    if (!disable_stats) {
+                        localStat.changeI(n_threads_blockedID, 1);    // Davide> statistics
+                    }
                     pool->levelPoolLock.rLock();                 // Davide> START CRITICAL
                 }
                 int readP = shared_indeces[i];
@@ -1494,8 +1549,9 @@ void SolverPT::pull_learnts(int curr_restarts)
                 //fprintf(stderr,"Pull Learnts: Read Unlock\n");
                 //              pthread_setcancelstate(old_cancel_state, NULL);
 
-                if (!ok)
-                { break; }
+                if (!ok) {
+                    break;
+                }
             } // Davide> End of if
         } // Davide> End of for
         //localStat.changeD(sharing_time_ID, cpuTime_t()-startSharingTime);
@@ -1509,11 +1565,11 @@ bool SolverPT::addSharedLearnt(vec<Lit>& ps, unsigned int pt_level)
 
     Lit p; int i, j;
     for (i = j = 0; i < ps.size(); i++) {
-        if (value(ps[i]) == l_True && level(var(ps[i])) == 0)     // we do not use satisfied clauses on any level
-        { return true; }
-        else if (value(ps[i]) == l_Undef || level(var(ps[i])) != 0) // its undef, or not assigned at  level 0 => keep literal
-        { ps[j++] = ps[i]; }
-        else if (level(var(ps[i])) == 0 &&  value(ps[i]) == l_False) { //removing propagated literals at decision level zero  from the clause
+        if (value(ps[i]) == l_True && level(var(ps[i])) == 0) {   // we do not use satisfied clauses on any level
+            return true;
+        } else if (value(ps[i]) == l_Undef || level(var(ps[i])) != 0) { // its undef, or not assigned at  level 0 => keep literal
+            ps[j++] = ps[i];
+        } else if (level(var(ps[i])) == 0 &&  value(ps[i]) == l_False) { //removing propagated literals at decision level zero  from the clause
             if (false && addClause_FalseRemoval == 0) {
                 // Davide> In order to maximize sharing, the safety of a clauses
                 // is not corrupted
@@ -1530,8 +1586,9 @@ bool SolverPT::addSharedLearnt(vec<Lit>& ps, unsigned int pt_level)
     ps.shrink_(i - j);
 
     if (ps.size() == 0) {
-        if (!disable_stats)
-        { localStat.changeI(n_import_shcl_unsatID, 1); }
+        if (!disable_stats) {
+            localStat.changeI(n_import_shcl_unsatID, 1);
+        }
         lastLevel = pt_level; // TODO Tests
         return ok = false;
     }
@@ -1602,8 +1659,9 @@ bool SolverPT::addSharedLearnt(vec<Lit>& ps, unsigned int pt_level)
         cr = ca.alloc(ps, true);
 
         if (opt_sharing_var_bump && pt_level < getNodePTLevel()) //bumping the var activity present in the shared clause if the shared clauses level is lower than the level of this solver
-            for (int i = 0; i < ps.size(); i++)
-            { varBumpActivity(var(ps[i]), var_inc / double(pt_level + 1)); }
+            for (int i = 0; i < ps.size(); i++) {
+                varBumpActivity(var(ps[i]), var_inc / double(pt_level + 1));
+            }
 
         // Davide> If the clause comes from one sh-pool, treat it as a learnt clause
         learnts.push(cr);
@@ -1638,8 +1696,9 @@ void SolverPT::satRestartStrategy()
 {
     K = 0.8;
     lbdQueue.growTo(75);
-    if (!diversification && randomization)
-    { random_var_freq = 0.01 * (double)curPTLevel; }
+    if (!diversification && randomization) {
+        random_var_freq = 0.01 * (double)curPTLevel;
+    }
     if (cleaning_delay == 1) {
         incReduceDB = 200;
     } else if (cleaning_delay == 2) {
@@ -1692,7 +1751,7 @@ void SolverPT::reduceDB()
     // We have a lot of "good" clauses, it is difficult to compare them. Keep more !
     if (ca[learnts[learnts.size() / RATIOREMOVECLAUSES]].lbd() <= 3) { nbclausesbeforereduce += specialIncReduceDB; }
     // Useless :-)
-    if (ca[learnts.last()].lbd() <= 5)  { nbclausesbeforereduce += specialIncReduceDB; }
+    if (ca[learnts.last()].lbd() <= 5) { nbclausesbeforereduce += specialIncReduceDB; }
 
 
     // Don't delete binary or locked clauses. From the rest, delete clauses from the first half
@@ -1710,10 +1769,11 @@ void SolverPT::reduceDB()
             if (!c.canBeDel()) { limit++; } //we keep c, so we can delete an other clause
             c.setCanBeDel(true);       // At the next step, c can be delete
             learnts[j++] = learnts[i];
-            if (c.isShared())
-            { c.decShCleanDelay(); }
-            else if (c.lbd() <= LBD_lt)
-            { learnts_indeces[c.getPTLevel()].push_back(j - 1); }
+            if (c.isShared()) {
+                c.decShCleanDelay();
+            } else if (c.lbd() <= LBD_lt) {
+                learnts_indeces[c.getPTLevel()].push_back(j - 1);
+            }
         }
     }
     //push_learnts();

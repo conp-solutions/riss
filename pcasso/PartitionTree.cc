@@ -241,8 +241,9 @@ TreeNode::fillConstraintPathWithLevels(vector< pair< vector<Lit>*, unsigned int 
 
     // fill the vector up to the top by simply calling the parent node to do the same
     // Davide> Edited in order to include pt_level information
-    for (unsigned int i = 0; i < additionalConstraints.size(); i++)
-    { toFill->push_back(make_pair(additionalConstraints[i], pt_level)); }
+    for (unsigned int i = 0; i < additionalConstraints.size(); i++) {
+        toFill->push_back(make_pair(additionalConstraints[i], pt_level));
+    }
 
     unitLock.unlock();
 
@@ -430,16 +431,18 @@ TreeNode::setExpanded(bool value)
 void TreeNode::activityCopyTo(vec<double>& act)
 {
     unitLock.wait();
-    if (activity.size() > 0)
-    { activity.copyTo(act); }
+    if (activity.size() > 0) {
+        activity.copyTo(act);
+    }
     unitLock.unlock();
 }
 
 void TreeNode::phaseCopyTo(vec<char>& ph)
 {
     unitLock.wait();
-    if (phase.size() > 0)
-    { phase.copyTo(ph); }
+    if (phase.size() > 0) {
+        phase.copyTo(ph);
+    }
     unitLock.unlock();
 }
 
@@ -519,10 +522,11 @@ void TreeNode::checkOnlyChildScenarioChild()
         TreeNode *unsolvedChild;
         for (unsigned j = 0; j < childsCount(); j++) {
             child = getChild(j);
-            if (child->getState() == unsat)
-            { solved++; }
-            else
-            { unsolvedChild = child; }
+            if (child->getState() == unsat) {
+                solved++;
+            } else {
+                unsolvedChild = child;
+            }
         }
         if (solved == childsCount() - 1) {
             onlyChildScenario = true;

@@ -18,7 +18,6 @@
 # Pythons indention syntax is cool -- but not in C++ code. We use brackets for each
 # statement.
 --add-brackets
---add-one-line-brackets
 # indent class visibility modifiers (public, protected)
 # one half indent
 --indent-modifiers

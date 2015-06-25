@@ -59,8 +59,9 @@ static void die(const char *fmt, ...)
 static void msg(const char *fmt, ...)
 {
     va_list ap;
-    if (!verbose)
-    { return; }
+    if (!verbose) {
+        return;
+    }
     fputs("[aigmove] ", stderr);
     va_start(ap, fmt);
     vfprintf(stderr, fmt, ap);
@@ -93,8 +94,9 @@ static void normalize(void)
     if (check) {
         for (i = 0; i < model->num_latches; i++) {
             sym = model->latches + i;
-            if (sym->reset == sym->lit)
-            { die("latch %u literal %u uninitialized", i, sym->lit); }
+            if (sym->reset == sym->lit) {
+                die("latch %u literal %u uninitialized", i, sym->lit);
+            }
         }
     }
     for (i = 0; i < model->num_latches; i++) {
@@ -103,20 +105,25 @@ static void normalize(void)
         if (sym->reset == reset) { continue; }
         model->latches[i].next = aiger_not(normlit(model->latches[i].next));
     }
-    for (i = 0; i < model->num_outputs; i++)
-    { normlitptr(&model->outputs[i].lit); }
+    for (i = 0; i < model->num_outputs; i++) {
+        normlitptr(&model->outputs[i].lit);
+    }
     for (i = 0; i < model->num_ands; i++)
         normlitptr(&model->ands[i].rhs0),
                    normlitptr(&model->ands[i].rhs1);
-    for (i = 0; i < model->num_bad; i++)
-    { normlitptr(&model->bad[i].lit); }
-    for (i = 0; i < model->num_constraints; i++)
-    { normlitptr(&model->constraints[i].lit); }
+    for (i = 0; i < model->num_bad; i++) {
+        normlitptr(&model->bad[i].lit);
+    }
+    for (i = 0; i < model->num_constraints; i++) {
+        normlitptr(&model->constraints[i].lit);
+    }
     for (i = 0; i < model->num_justice; i++)
-        for (j = 0; j < model->justice[i].size; j++)
-        { normlitptr(&model->justice[i].lits[j]); }
-    for (i = 0; i < model->num_fairness; i++)
-    { normlitptr(&model->fairness[i].lit); }
+        for (j = 0; j < model->justice[i].size; j++) {
+            normlitptr(&model->justice[i].lits[j]);
+        }
+    for (i = 0; i < model->num_fairness; i++) {
+        normlitptr(&model->fairness[i].lit);
+    }
     for (i = 0; i < model->num_latches; i++) {
         sym = model->latches + i;
         if (sym->reset == sym->lit) { continue; }
@@ -144,9 +151,9 @@ int main(int argc, char ** argv)
         else if (!strcmp(argv[i], "-0")) { reset = aiger_false; }
         else if (!strcmp(argv[i], "-1")) { reset = aiger_true; }
         else if (!strcmp(argv[i], "-c")) { check = 1; }
-        else if (argv[i][0] == '-')
-        { die("invalid command line option '%s'", argv[i]); }
-        else if (output) { die("too many arguments"); }
+        else if (argv[i][0] == '-') {
+            die("invalid command line option '%s'", argv[i]);
+        } else if (output) { die("too many arguments"); }
         else if (input) { output = argv[i]; }
         else { input = argv[i]; }
     }

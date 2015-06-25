@@ -119,8 +119,8 @@ bool FourierMotzkin::process()
 
     heap.clear();
     for (Var v = 0 ; v < data.nVars(); ++ v) {
-        if (!heap.inHeap(toInt(mkLit(v, false))))  { heap.insert(toInt(mkLit(v, false))); }
-        if (!heap.inHeap(toInt(mkLit(v, true))))   { heap.insert(toInt(mkLit(v, true))); }
+        if (!heap.inHeap(toInt(mkLit(v, false)))) { heap.insert(toInt(mkLit(v, false))); }
+        if (!heap.inHeap(toInt(mkLit(v, true)))) { heap.insert(toInt(mkLit(v, true))); }
     }
 
     amoTime = cpuTime() - amoTime;
@@ -195,8 +195,8 @@ bool FourierMotzkin::process()
                 if (j != data.lits.size()) {
                     DOUT(if (config.fm_debug_out > 0) cerr << "c reject [" << i << "]" << data.lits[i] << ", because failed with [" << j << "]" << data.lits[j] << endl;);
                     data.lits[i] = lit_Undef; // if not all literals are covered, disable this literal!
-                } else
-                { DOUT(if (config.fm_debug_out > 0) cerr << "c keep [" << i << "]" << data.lits[i] << " which hits [" << j << "] literas"  << endl; });
+                } else {
+                    DOUT(if (config.fm_debug_out > 0) cerr << "c keep [" << i << "]" << data.lits[i] << " which hits [" << j << "] literas"  << endl; });
         } else {
             for (int j = 0 ; j < size2; ++ j) {
                     DOUT(if (config.fm_debug_out > 2) cerr << "c literal " << l << " hits literal " << list2[j] << endl;);
@@ -248,8 +248,9 @@ bool FourierMotzkin::process()
         if (config.opt_fm_multiVarAMO && data.lits.size() > 1 && config.opt_fm_avoid_duplicates && big.getSize(right) > 0) { heap.insert(toInt(right)); }         // this literal might have more cliques
     }
 
-    if (config.opt_fm_avoid_duplicates && cards.size() > 0)
-    { big.recreate(ca, data.nVars(), data.getClauses(), data.getLEarnts()); }
+    if (config.opt_fm_avoid_duplicates && cards.size() > 0) {
+        big.recreate(ca, data.nVars(), data.getClauses(), data.getLEarnts());
+    }
 
     amoTime = cpuTime() - amoTime;
     foundAmos = cards.size();
@@ -343,7 +344,7 @@ bool FourierMotzkin::process()
 
     vector< vector<int> > leftHands(data.nVars() * 2), rightHands(data.nVars() * 2);   // indexes into the cards list
     for (int i = 0 ; i < cards.size(); ++ i) {
-        for (int j = 0; j < cards[i].ll.size(); ++ j)  { leftHands[ toInt(cards[i].ll[j]) ].push_back(i); }
+        for (int j = 0; j < cards[i].ll.size(); ++ j) { leftHands[ toInt(cards[i].ll[j]) ].push_back(i); }
         for (int j = 0; j < cards[i].lr.size(); ++ j) { rightHands[ toInt(cards[i].lr[j]) ].push_back(i); }
     }
 
@@ -379,7 +380,7 @@ bool FourierMotzkin::process()
                             // TODO: enqueue, later remove from all cards!
                             DOUT(if (config.fm_debug_out > 1) cerr << "c AMOs entail unit literal " << ~ v1[n1] << endl;);
                             n1++; n2++;
-                        } else if (v1[n1] < v2[n2]) {n1 ++;}
+                        } else if (v1[n1] < v2[n2]) { n1 ++; }
                         else { n2 ++; }
                     }
                 }
@@ -709,26 +710,26 @@ bool FourierMotzkin::process()
                             n1++; n2++;
                         } else if (v1[n1] < v2[n2]) {
                             if (v1[n1] != toEliminate) { data.lits.push_back(v1[n1]); }
-                            else
-                            { DOUT(if (config.fm_debug_out) cerr << "c drop " << v1[n1] << endl; });
+                            else {
+                                DOUT(if (config.fm_debug_out) cerr << "c drop " << v1[n1] << endl; });
                         n1 ++;
                     } else {
                         if (v2[n2] != toEliminate) { data.lits.push_back(v2[n2]); }
-                            else
-                            { DOUT(if (config.fm_debug_out) cerr << "c drop " << v2[n2] << endl; });
+                            else {
+                                DOUT(if (config.fm_debug_out) cerr << "c drop " << v2[n2] << endl; });
                         n2 ++;
                     }
                 }
                 if (!hasDuplicates) { // add the remaining elements of one of the vectors!
                         for (; n1 < v1.size(); ++ n1) {
                             if (v1[n1] != toEliminate) { data.lits.push_back(v1[n1]); }
-                            else
-                            { DOUT(if (config.fm_debug_out) cerr << "c drop " << v1[n1] << endl; });
+                            else {
+                                DOUT(if (config.fm_debug_out) cerr << "c drop " << v1[n1] << endl; });
                     }
                     for (; n2 < v2.size(); ++ n2) {
                             if (v2[n2] != toEliminate) { data.lits.push_back(v2[n2]); }
-                            else
-                            { DOUT(if (config.fm_debug_out) cerr << "c drop " << v2[n2] << endl; });
+                            else {
+                                DOUT(if (config.fm_debug_out) cerr << "c drop " << v2[n2] << endl; });
                     }
                 }
                 if (p == 0) { thisCard.ll = data.lits; }
@@ -896,7 +897,7 @@ bool FourierMotzkin::process()
         // add new constraints
         for (int i = oldSize; i < cards.size(); ++ i) {
             const CardC& card = cards[i];
-            for (int j = 0 ; j < card.ll.size(); ++ j)  { leftHands[ toInt(card.ll[j]) ].push_back(i); }
+            for (int j = 0 ; j < card.ll.size(); ++ j) { leftHands[ toInt(card.ll[j]) ].push_back(i); }
             for (int j = 0 ; j < card.lr.size(); ++ j) { rightHands[ toInt(card.lr[j]) ].push_back(i); }
         }
         newCards += cards.size() - oldSize;
@@ -1072,17 +1073,20 @@ void FourierMotzkin::findCardsSemantic(vector< FourierMotzkin::CardC >& cards, v
 
             // merge two sorted fields into one
             while (i < hi && j < stopb) {
-                if ((ca[a[i]].size()) < (ca[a[j]].size()))         // compare size!
-                { b[currentb++] = a[i++]; }
-                else
-                { b[currentb++] = a[j++]; }
+                if ((ca[a[i]].size()) < (ca[a[j]].size())) {       // compare size!
+                    b[currentb++] = a[i++];
+                } else {
+                    b[currentb++] = a[j++];
+                }
             }
             // copy rest of the elements
-            for (; i < hi;)
-            { b[currentb++] = a[i++]; }
+            for (; i < hi;) {
+                b[currentb++] = a[i++];
+            }
 
-            for (; j < stopb;)
-            { b[currentb++] = a[j++]; }
+            for (; j < stopb;) {
+                b[currentb++] = a[j++];
+            }
 
         } while (m > 0);
 
@@ -1412,8 +1416,9 @@ void FourierMotzkin::deduceALOfromAmoAloMatrix(vector< FourierMotzkin::CardC >& 
                     }
                     if (hitAlready) { continue; }
                     data.clss.push_back(data.list(kLit)[m]);
-                    for (int n = 0 ; n < ALOk.size(); ++ n)   // avoid duplicates!
-                    { data.ma.setCurrentStep(toInt(ALOk[n])); }
+                    for (int n = 0 ; n < ALOk.size(); ++ n) { // avoid duplicates!
+                        data.ma.setCurrentStep(toInt(ALOk[n]));
+                    }
                     break;    // sufficient to find one!
                 }
             }
@@ -1442,8 +1447,9 @@ void FourierMotzkin::deduceALOfromAmoAloMatrix(vector< FourierMotzkin::CardC >& 
                     if (hitAlready) { continue; }
                     // use this AMO! mark its lits to avoid duplicates in AMO!
                     amoCands.push_back(leftHands[ toInt(bLit)][m]);
-                    for (int n = 0 ; n < C.ll.size(); ++ n)
-                    { data.ma.setCurrentStep(toInt(C.ll[n])); }
+                    for (int n = 0 ; n < C.ll.size(); ++ n) {
+                        data.ma.setCurrentStep(toInt(C.ll[n]));
+                    }
                     break;
                 }
             }
@@ -1564,8 +1570,9 @@ void FourierMotzkin::findTwoProduct(vector< FourierMotzkin::CardC >& cards, BIG&
                     DOUT(if (config.fm_debug_out > 3) cerr << "c current lit in B: " << bLit << endl;);
 
                     data.ma.nextStep();   // prepare for count different hits
-                    for (int n = 0 ; n < cards[i].ll.size(); ++ n)   // mark all literals from AMO A for becoming hit in this iteration
-                    { data.ma.setCurrentStep(toInt(cards[i].ll[n])); }
+                    for (int n = 0 ; n < cards[i].ll.size(); ++ n) { // mark all literals from AMO A for becoming hit in this iteration
+                        data.ma.setCurrentStep(toInt(cards[i].ll[n]));
+                    }
 
                     for (int n = 0 ; n < big.getSize(~bLit); ++ n) {     // check whether this literal implies a set of literal, which hit all different literals from A
                         searchSteps++;
@@ -1615,8 +1622,9 @@ void FourierMotzkin::findTwoProduct(vector< FourierMotzkin::CardC >& cards, BIG&
                         if (!amoExistsAlready(data.lits, leftHands, cards)) {
                             DOUT(if (config.fm_debug_out > 0) cerr << "c found new AMO " << data.lits << endl;);
                             DOUT(if (config.fm_debug_out > 2) cerr << "c   based on " << cards[i].ll << " and AMO " << B.ll << endl;);    // here, the reference is still working
-                            for (int n = 0 ; n < data.lits.size(); ++ n)
-                            { leftHands[ toInt(data.lits[n]) ].push_back(cards.size()); }       // register new AMO in data structures
+                            for (int n = 0 ; n < data.lits.size(); ++ n) {
+                                leftHands[ toInt(data.lits[n]) ].push_back(cards.size());    // register new AMO in data structures
+                            }
                             cards.push_back(CardC(data.lits));     // actually add new AMO
                             twoPrAmos ++;
                             twoPrAmoLits += data.lits.size();
@@ -1674,15 +1682,17 @@ static bool ordered_subsumes(const S& c, const T& other)
             ++j;
         }
         // D does not contain c[i]
-        else if (c[i] < other[j])
-        { return false; }
-        else
-        { ++j; }
+        else if (c[i] < other[j]) {
+            return false;
+        } else {
+            ++j;
+        }
     }
-    if (i == c.size())
-    { return true; }
-    else
-    { return false; }
+    if (i == c.size()) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 bool FourierMotzkin::hasDuplicate(const vector<Lit>& c)
@@ -1746,8 +1756,8 @@ bool FourierMotzkin::propagateCards(vec< Lit >& unitQueue, vector< std::vector< 
                         } else if (data.value(c.ll[j]) == l_Undef) {
                             DOUT(if (config.fm_debug_out > 2) cerr << "c keep literal " << c.ll[j] << endl;);
                             c.ll[kc++] = c.ll[j];
-                        } else
-                        { DOUT(if (config.fm_debug_out > 2) cerr << "c drop unsatisfied literal " << c.ll[j] << endl; });
+                        } else {
+                            DOUT(if (config.fm_debug_out > 2) cerr << "c drop unsatisfied literal " << c.ll[j] << endl; });
                 }
                 c.ll.resize(kc);
                     DOUT(if (config.fm_debug_out > 2) cerr << "c        to " << c.ll << " <= " << c.k << " + " << c.lr << endl;);
@@ -1866,17 +1876,20 @@ void FourierMotzkin::cleanSolver()
 
     // clear all watches!
     for (int v = 0; v < solver.nVars(); v++)
-        for (int s = 0; s < 2; s++)
-        { solver.watches[ mkLit(v, s) ].clear(); }
+        for (int s = 0; s < 2; s++) {
+            solver.watches[ mkLit(v, s) ].clear();
+        }
 
     solver.learnts_literals = 0;
     solver.clauses_literals = 0;
     solver.watches.cleanAll();
 
-    for (int i = 0 ; i < solver.learnts.size(); ++ i)
-    { ca[ solver.learnts[i] ].sort(); }
-    for (int i = 0 ; i < solver.clauses.size(); ++ i)
-    { ca[ solver.clauses[i] ].sort(); }
+    for (int i = 0 ; i < solver.learnts.size(); ++ i) {
+        ca[ solver.learnts[i] ].sort();
+    }
+    for (int i = 0 ; i < solver.clauses.size(); ++ i) {
+        ca[ solver.clauses[i] ].sort();
+    }
 }
 
 void FourierMotzkin::reSetupSolver()
@@ -1886,8 +1899,9 @@ void FourierMotzkin::reSetupSolver()
     if (solver.trail_lim.size() > 0)
         for (int i = 0 ; i < solver.trail_lim[0]; ++ i)
             if (solver.reason(var(solver.trail[i])) != CRef_Undef)
-                if (ca[ solver.reason(var(solver.trail[i])) ].can_be_deleted())
-                { solver.vardata[ var(solver.trail[i]) ].reason = CRef_Undef; }
+                if (ca[ solver.reason(var(solver.trail[i])) ].can_be_deleted()) {
+                    solver.vardata[ var(solver.trail[i]) ].reason = CRef_Undef;
+                }
 
     // give back into solver
     for (int p = 0 ; p < 2; ++ p) {

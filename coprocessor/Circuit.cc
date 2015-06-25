@@ -67,8 +67,9 @@ void Circuit::extractGates(CoprocessorData& data, vector< Gate >& gates)
     }
 
     // try to find all gates with output variable v for all the variables
-    for (Var v = 0 ; v < data.nVars(); ++v)
-    { getGatesWithOutput(v, gates, data); }
+    for (Var v = 0 ; v < data.nVars(); ++v) {
+        getGatesWithOutput(v, gates, data);
+    }
 }
 
 void Circuit::getGatesWithOutput(const Var v, vector< Circuit::Gate >& gates, CoprocessorData& data)
@@ -176,8 +177,9 @@ void Circuit::getANDGates(const Var& v, vector< Coprocessor::Circuit::Gate >& ga
                     // all occurrences in binary clauses!
                     if (config.circ_AddBlocked) {
                         learnt_clause.clear();
-                        for (int j = 0 ; j < data.lits.size(); ++ j)
-                        { learnt_clause.push(~data.lits[j]); }
+                        for (int j = 0 ; j < data.lits.size(); ++ j) {
+                            learnt_clause.push(~data.lits[j]);
+                        }
                         learnt_clause.push(pos);
                         if (!config.circ_genAND) { assert(learnt_clause.size() == 3 && "only binary and-gates are allowed"); }
                         // todo: have method to add new clause!
@@ -215,8 +217,9 @@ void Circuit::getANDGates(const Var& v, vector< Coprocessor::Circuit::Gate >& ga
         } else if (config.circ_BLOCKED && (! config.circ_genAND || data.lits.size() == 2)) {  // handle case where all binary clauses are blocked (and removed) and only the large clause is present
             // [a,-b,-c],[-a,b],[-a,c] : binary clauses are blocked if there is no other occurrence with positive a!!
             int count = 0;
-            for (int i = 0 ; i < data.list(pos).size(); ++i)
-            { count = (ca[ data.list(pos)[i] ].can_be_deleted() ? count : count + 1); }
+            for (int i = 0 ; i < data.list(pos).size(); ++i) {
+                count = (ca[ data.list(pos)[i] ].can_be_deleted() ? count : count + 1);
+            }
             if (count == 1) {
                 DOUT(if (config.circ_debug_out) cerr << "c BLOCKED Generic Gates IS NOT PROPERLY IMPLEMENTED YET!!" << endl;);
                 continue;
@@ -275,8 +278,9 @@ void Circuit::getExOGates(const Var& v, vector< Coprocessor::Circuit::Gate >& ga
                 const Lit* lList = big->getArray(l);
                 const int lListSize = big->getSize(l);
                 int count = 0;
-                for (int k = 0 ; k < lListSize; ++ k)
-                { count = (data.ma.isCurrentStep(toInt(lList[k])) || big->implies(l, lList[k])) ? count + 1 : count; }
+                for (int k = 0 ; k < lListSize; ++ k) {
+                    count = (data.ma.isCurrentStep(toInt(lList[k])) || big->implies(l, lList[k])) ? count + 1 : count;
+                }
                 if (count + 1 < c.size()) { found = false; break; }   // not all literals can be found by this literal!
             }
             if (!found) { continue; }
@@ -289,16 +293,18 @@ void Circuit::getExOGates(const Var& v, vector< Coprocessor::Circuit::Gate >& ga
         const int pListSize = big->getSize(pos);
         data.lits.clear(); // will be filled with all the literals that form an amo with pos
         data.lits.push_back(~pos);
-        for (int j = 0 ; j < pListSize; ++ j)
-        { data.lits.push_back(pList[j]); }
+        for (int j = 0 ; j < pListSize; ++ j) {
+            data.lits.push_back(pList[j]);
+        }
         for (int j = 0 ; j < data.lits.size(); ++ j) {
             const Lit l = data.lits[j];
             data.ma.nextStep();
             Lit * lList = big->getArray(~l);
             const int lListSize = big->getSize(~l);
             data.ma.setCurrentStep(toInt(l));   // mark all literals that are implied by l
-            for (int k = 0 ; k < lListSize; ++ k)
-            { data.ma.setCurrentStep(toInt(lList[k])); }
+            for (int k = 0 ; k < lListSize; ++ k) {
+                data.ma.setCurrentStep(toInt(lList[k]));
+            }
             int kept = 0;         // store number of kept elements
             int continueHere = 0; // store where to proceed
             for (int k = 0 ; k < data.lits.size(); ++ k) {
@@ -317,7 +323,7 @@ void Circuit::getExOGates(const Var& v, vector< Coprocessor::Circuit::Gate >& ga
         // check smallest criterion:
         for (int j = 0 ; j < data.lits.size(); ++ j)
             if (var(data.lits[j]) < v) { data.lits.clear(); break; }
-        if (data.lits.size() < 3)  { continue; }   // only consider clauses with more literals!
+        if (data.lits.size() < 3) { continue; }   // only consider clauses with more literals!
         // check whether for each literal there are only these occurrences of binary clauses in the formula
         bool found = true;
         int count = 0;
@@ -583,8 +589,9 @@ void Circuit::getITEGates(const Var& v, vector< Coprocessor::Circuit::Gate >& ga
                             countPos = countPos + 1;
                             nonTernary = (bClause.size() != 3) ? true : nonTernary;
                             if ((~data.lits[0] == bClause[0] || ~data.lits[0] == bClause[1] || ~data.lits[0] == bClause[2])
-                                    && (~t == bClause[0] || ~t == bClause[1] || ~t == bClause[2]))
-                            { redundantTernary = true; }
+                                    && (~t == bClause[0] || ~t == bClause[1] || ~t == bClause[2])) {
+                                redundantTernary = true;
+                            }
                         }
                         if (!nonTernary && (countPos == 2 || (countPos == 3 && redundantTernary))) {
                             DOUT(if (config.circ_debug_out) cerr << "c current ITE gate is implied with blocked clause! ternaries: " << countPos << " found redundant: " << redundantTernary << endl;);
@@ -863,8 +870,9 @@ Circuit::Gate::Gate(const Clause& c, const Coprocessor::Circuit::Gate::Type _typ
         assert(false && "this constructor is not suitable for ITE gates!");
     } else if (_type == Gate::FA_SUM) {
         assert(c.size() == 4 && "full adder sum clause has to have four literals");
-        for (int i = 0 ; i < 4; ++i)
-        { data.lits[i] = c[i]; }
+        for (int i = 0 ; i < 4; ++i) {
+            data.lits[i] = c[i];
+        }
     } else if (_type == AND) {
         assert(c.size() == 3 && "AND gate can only be generated from a ternary clause");
         //if( config.circ_debug_out ) cerr << "c create AND gate from ternary clause" << endl;
@@ -883,8 +891,9 @@ Circuit::Gate::Gate(const vector< Lit >& c, const Coprocessor::Circuit::Gate::Ty
         //if(  config.circ_debug_out) cerr << "c create generic vector gate with " << data.e.size << " inputs with output " << output <<  endl;
         data.e.x = output; // in case of ExO, it should be lit_Undef
         data.e.externLits = (Lit*) malloc(data.e.size * sizeof(Lit));
-        for (int i = 0; i < c.size(); ++ i)
-        { data.e.externLits[i] = (type == Gate::ExO) ? c[i] : ~c[i]; }
+        for (int i = 0; i < c.size(); ++ i) {
+            data.e.externLits[i] = (type == Gate::ExO) ? c[i] : ~c[i];
+        }
     } else if (_type == Gate::XOR) {
         assert(c.size() == 3 && "xor clause has to have four literals");
         data.lits[0] = output;
@@ -895,8 +904,9 @@ Circuit::Gate::Gate(const vector< Lit >& c, const Coprocessor::Circuit::Gate::Ty
         assert(false && "this constructor is not suitable for ITE gates!");
     } else if (_type == Gate::FA_SUM) {
         assert(c.size() == 4 && "full adder sum clause has to have four literals");
-        for (int i = 0 ; i < 4; ++i)
-        { data.lits[i] = c[i]; }
+        for (int i = 0 ; i < 4; ++i) {
+            data.lits[i] = c[i];
+        }
     } else if (_type == AND) {
         x() = output;
         a() = c[0] == output ? c[1] : c[0];
@@ -976,8 +986,9 @@ void Circuit::Gate::print(ostream& stream) const
         switch (type) {
         case AND:    stream << "AND( " << a() << " , " << b() << " )" << endl; break;
         case GenAND: stream << "g-AND(";
-            for (int i = 0 ;  i < data.e.size; ++ i)
-            { stream << " " << data.e.externLits[i] ; }
+            for (int i = 0 ;  i < data.e.size; ++ i) {
+                stream << " " << data.e.externLits[i] ;
+            }
             stream << " )" << endl;
             break;
         case ITE:    stream << "ITE( " << s() << " , " << t() << " , " << f() << " )" << endl; break;

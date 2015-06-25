@@ -42,22 +42,25 @@ main(int argc, char **argv)
         } else if (file_name) {
             fprintf(stderr, "*** [aignm] multiple files\n");
             return 1;
-        } else
-        { file_name = argv[i]; }
+        } else {
+            file_name = argv[i];
+        }
     }
 
     aiger = aiger_init();
 
-    if (file_name)
-    { error = aiger_open_and_read_from_file(aiger, file_name); }
-    else
-    { error = aiger_read_from_file(aiger, stdin); }
+    if (file_name) {
+        error = aiger_open_and_read_from_file(aiger, file_name);
+    } else {
+        error = aiger_read_from_file(aiger, stdin);
+    }
 
     if (error) {
         fprintf(stderr, "*** [aignm] %s\n", error);
         res = 1;
-    } else
-    { res = (aiger_write_symbols_to_file(aiger, stdout) == EOF); }
+    } else {
+        res = (aiger_write_symbols_to_file(aiger, stdout) == EOF);
+    }
 
     aiger_reset(aiger);
 

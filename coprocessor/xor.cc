@@ -66,7 +66,7 @@ bool XorReasoning::process()
     DOUT(if (config.opt_xor_debug > 2) {
     for (int i = 0 ; i < xorList.size(); ++ i) {
             cerr << "[" << i << "]: "
-                 << " + "; for (int j = 0 ; j < xorList[i].vars.size(); ++ j) { cerr << xorList[i].vars[j] + 1 << " + "; } cerr << " == " << (xorList[i].k ? 1 : 0) << endl;
+                 << " + "; for (int j = 0 ; j < xorList[i].vars.size(); ++ j) { cerr << xorList[i].vars[j] + 1 << " + "; }  cerr << " == " << (xorList[i].k ? 1 : 0) << endl;
         }
     });
     parseTime = cpuTime() - parseTime;
@@ -81,7 +81,7 @@ bool XorReasoning::process()
 
     // setup and fill heap
     Heap<VarLt> heap(occs);
-    for (Var v = 0 ; v < data.nVars(); ++ v) if (!heap.inHeap(v))  { heap.insert(v); }
+    for (Var v = 0 ; v < data.nVars(); ++ v) if (!heap.inHeap(v)) { heap.insert(v); }
 
     vector<Lit> unitQueue;
     data.ma.resize(2 * data.nVars());
@@ -149,7 +149,7 @@ bool XorReasoning::process()
         const int xorIndex = occs[v][selectIndex];
         selectedX.used = true; // indicate that this xor was used!
 
-        DOUT(if (config.opt_xor_debug > 1) { cerr << "c eliminate " << v + 1 << " with XOR " <<  " + "; for (int j = 0 ; j < selectedX.vars.size(); ++ j) { cerr << selectedX.vars[j] + 1 << " + "; } cerr << " == " << (selectedX.k ? 1 : 0) << endl; });
+        DOUT(if (config.opt_xor_debug > 1) { cerr << "c eliminate " << v + 1 << " with XOR " <<  " + "; for (int j = 0 ; j < selectedX.vars.size(); ++ j) { cerr << selectedX.vars[j] + 1 << " + "; }  cerr << " == " << (selectedX.k ? 1 : 0) << endl; });
 
         // if there are XORs to work with
         while (occs[v].size() > 0) {
@@ -161,12 +161,12 @@ bool XorReasoning::process()
 
             xorSteps ++;
             GaussXor& simpX = xorList[ occs[v][0] ]; // xor that is simplified
-            DOUT(if (config.opt_xor_debug > 1) { cerr << "c change XOR " <<  " + "; for (int j = 0 ; j < simpX.vars.size(); ++ j) { cerr << simpX.vars[j] + 1 << " + "; } cerr << " == " << (simpX.k ? 1 : 0) << endl; });
+            DOUT(if (config.opt_xor_debug > 1) { cerr << "c change XOR " <<  " + "; for (int j = 0 ; j < simpX.vars.size(); ++ j) { cerr << simpX.vars[j] + 1 << " + "; }  cerr << " == " << (simpX.k ? 1 : 0) << endl; });
             toRemoveVars.clear(); tmpVars.clear();
             simpX.add(selectedX, toRemoveVars, tmpVars);
             DOUT(if (config.opt_xor_debug > 1) {
-            cerr << "c       into " <<  " + "; for (int j = 0 ; j < simpX.vars.size(); ++ j) { cerr << simpX.vars[j] + 1 << " + "; } cerr << " == " << (simpX.k ? 1 : 0) << endl;
-                cerr << "c and remove from "; for (int j = 0 ; j < toRemoveVars.size(); ++ j) { cerr << " " << toRemoveVars[j] + 1; } cerr << " " << endl;
+            cerr << "c       into " <<  " + "; for (int j = 0 ; j < simpX.vars.size(); ++ j) { cerr << simpX.vars[j] + 1 << " + "; }  cerr << " == " << (simpX.k ? 1 : 0) << endl;
+                cerr << "c and remove from "; for (int j = 0 ; j < toRemoveVars.size(); ++ j) { cerr << " " << toRemoveVars[j] + 1; }  cerr << " " << endl;
             });
 
             // drop after all operations, so that refrences stay consistent!
@@ -177,7 +177,7 @@ bool XorReasoning::process()
                     data.ma.setCurrentStep(toInt(simpX.getUnitLit()));
                     xorDeducedUnits ++;
                     unitQueue.push_back(simpX.getUnitLit());
-                    DOUT(if (config.opt_xor_debug > 1) { cerr << "c created unit " << simpX.getUnitLit() << " from  XOR " <<  " + "; for (int j = 0 ; j < simpX.vars.size(); ++ j) { cerr << simpX.vars[j] + 1 << " + "; } cerr << " == " << (simpX.k ? 1 : 0) << endl; });
+                    DOUT(if (config.opt_xor_debug > 1) { cerr << "c created unit " << simpX.getUnitLit() << " from  XOR " <<  " + "; for (int j = 0 ; j < simpX.vars.size(); ++ j) { cerr << simpX.vars[j] + 1 << " + "; }  cerr << " == " << (simpX.k ? 1 : 0) << endl; });
                 }
             } else if (simpX.size() == 2) {
                 eqs ++;
@@ -239,7 +239,7 @@ bool XorReasoning::propagate(vector< Lit >& unitQueue, MarkArray& ma, vector< st
                     data.ma.setCurrentStep(toInt(x.getUnitLit()));
                     xorDeducedUnits ++;
                     unitQueue.push_back(x.getUnitLit());
-                    DOUT(if (config.opt_xor_debug > 1) { cerr << "c created unit " << x.getUnitLit() << " from  XOR " <<  " + "; for (int j = 0 ; j < x.vars.size(); ++ j) { cerr << x.vars[j] + 1 << " + "; } cerr << " == " << (x.k ? 1 : 0) << endl; });
+                    DOUT(if (config.opt_xor_debug > 1) { cerr << "c created unit " << x.getUnitLit() << " from  XOR " <<  " + "; for (int j = 0 ; j < x.vars.size(); ++ j) { cerr << x.vars[j] + 1 << " + "; }  cerr << " == " << (x.k ? 1 : 0) << endl; });
                 }
             }
         }
@@ -656,10 +656,11 @@ CRef XorReasoning::addClause(const Lit* lits, int size, bool learnt)
     CRef cr = ca.alloc(lits, size, learnt); // allocate clause
     DOUT(if (config.opt_xor_debug > 4) cerr << "c added clause by reencoding: [" << cr << "]: " << ca[cr] << endl;);    // print created clause
     data.addClause(cr);               // add to coprocessor data structures
-    if (learnt)                       // add to corresponding clause list
-    { data.getLEarnts().push(cr); }
-    else
-    { data.getClauses().push(cr); }
+    if (learnt) {                     // add to corresponding clause list
+        data.getLEarnts().push(cr);
+    } else {
+        data.getClauses().push(cr);
+    }
 
     if (config.opt_xor_checkNewSubsume) { reAddedClauses.push(cr); }
     return cr;

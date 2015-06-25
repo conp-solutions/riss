@@ -50,8 +50,9 @@ class Shared_pool
         s << "c [POOL] all collected shared clauses begin: " << std::endl;
         for (unsigned int i = 0 ; i < shared_clauses.size(); ++i) {
             PcassoClause& c = shared_clauses[i];
-            for (unsigned int j = 0; j < c.size; j++)
-            { s << (sign(c.lits[j]) ? "-" : "") << var(c.lits[j]) + 1 << " "; }
+            for (unsigned int j = 0; j < c.size; j++) {
+                s << (sign(c.lits[j]) ? "-" : "") << var(c.lits[j]) + 1 << " ";
+            }
             s << "0\n";
         }
         s << "c [POOL] all collected shared clauses end: " << std::endl;

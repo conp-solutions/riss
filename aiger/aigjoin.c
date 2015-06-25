@@ -163,8 +163,9 @@ find(Tag tag, AIG * c0, AIG * c1)
     h = hash(tag, c0, c1);
     h &= size - 1;
     for (p = table + h; (a = *p); p = &a->next)
-        if (a->tag == tag && a->child[0] == c0 && a->child[1] == c1)
-        { return p; }
+        if (a->tag == tag && a->child[0] == c0 && a->child[1] == c1) {
+            return p;
+        }
     return p;
 }
 
@@ -263,9 +264,9 @@ assign(AIG * b, AIG * a)
     merged++;
     push(d);
     for (p = d->rper; p; p = p->rper) {
-        if (p->repr == d)
-        { p->repr = c; }
-        else {
+        if (p->repr == d) {
+            p->repr = c;
+        } else {
             assert(p->repr == not(d));
             p->repr = not(c);
         }
@@ -301,9 +302,9 @@ join(void)
             assert(strip(s->child[pos]) == strip(a));
             n = s->link[pos];
             c = derepr(s->child[0]);
-            if (s->tag == AND)
-            { b = and (c, derepr(s->child[1])); }
-            else {
+            if (s->tag == AND) {
+                b = and (c, derepr(s->child[1]));
+            } else {
                 assert(p->tag == LATCH);
                 b = latch(c);
             }
@@ -323,8 +324,9 @@ coi(AIG * r)
     while (top > stack) {
         a = strip(pop());
         assert(!a->repr);
-        if (a->relevant)
-        { continue; }
+        if (a->relevant) {
+            continue;
+        }
         a->relevant = 1;
         relevant++;
         if (a->tag == AND) {
@@ -332,8 +334,9 @@ coi(AIG * r)
             push(a->child[1]);
         } else if (a->tag == LATCH) {
             push(a->next);
-        } else
-        { assert(a->tag == CONST); }
+        } else {
+            assert(a->tag == CONST);
+        }
     }
 }
 
@@ -356,29 +359,32 @@ main(int argc, char ** argv)
             exit(0);
         }
 
-        if (!strcmp(argv[i], "-v"))
-        { verbose++; }
-        else if (!strcmp(argv[i], "-f"))
-        { force = 1; }
-        else if (!strcmp(argv[i], "-o")) {
-            if (++i == argc)
-            { die("argument to '-o' missing"); }
+        if (!strcmp(argv[i], "-v")) {
+            verbose++;
+        } else if (!strcmp(argv[i], "-f")) {
+            force = 1;
+        } else if (!strcmp(argv[i], "-o")) {
+            if (++i == argc) {
+                die("argument to '-o' missing");
+            }
 
-            if (output)
-            { die("multiple output files specified"); }
+            if (output) {
+                die("multiple output files specified");
+            }
 
             output = argv[i];
-        } else if (argv[i][0] == '-')
-        { die("invalid command line option '%s'", argv[i]); }
-        else {
+        } else if (argv[i][0] == '-') {
+            die("invalid command line option '%s'", argv[i]);
+        } else {
             assert(p < srcnames + argc);
             *p++ = argv[i];
         }
     }
 
     models = p - srcnames;
-    if (!models)
-    { die("no input model specified"); }
+    if (!models) {
+        die("no input model specified");
+    }
 
     msg(1, "specified %d models for merging", p - srcnames);
     assert(p < srcnames + argc);
@@ -389,8 +395,9 @@ main(int argc, char ** argv)
         msg(1, "reading %s", *p);
         src = *q++ = aiger_init();
         err = aiger_open_and_read_from_file(src, *p);
-        if (err)
-        { die("read error on %s: %s", *p, err); }
+        if (err) {
+            die("read error on %s: %s", *p, err);
+        }
         msg(2, "found MILOA %u %u %u %u %u",
             src->maxvar,
             src->num_inputs,
@@ -402,14 +409,16 @@ main(int argc, char ** argv)
                 if (force) {
                     msg(1, "%s: expected %u inputs but got %u",
                         *p, inputs, src->num_inputs);
-                    if (inputs < src->num_inputs)
-                    { inputs = src->num_inputs; }
+                    if (inputs < src->num_inputs) {
+                        inputs = src->num_inputs;
+                    }
                 } else
                     die("%s: expected %u inputs but got %u",
                         *p, inputs, src->num_inputs);
             }
-        } else
-        { inputs = src->num_inputs; }
+        } else {
+            inputs = src->num_inputs;
+        }
     }
 
     free(srcnames);
@@ -417,13 +426,15 @@ main(int argc, char ** argv)
     assert(inputs < UINT_MAX);
 
     msg(2, "reencoding models");
-    for (j = 0; j < models; j++)
-    { aiger_reencode(srcs[j]); }
+    for (j = 0; j < models; j++) {
+        aiger_reencode(srcs[j]);
+    }
 
     msg(2, "building aigs");
     srcaigs = calloc(models, sizeof * srcaigs);
-    for (j = 0; j < models; j++)
-    { srcaigs[j] = calloc(2 * (srcs[j]->maxvar + 1), sizeof * srcaigs[j]); }
+    for (j = 0; j < models; j++) {
+        srcaigs[j] = calloc(2 * (srcs[j]->maxvar + 1), sizeof * srcaigs[j]);
+    }
 
     latches = inputs;
     for (j = 0; j < models; j++) {
@@ -539,8 +550,9 @@ main(int argc, char ** argv)
         dst->num_ands);
 
     msg(2, "cleaning up models");
-    for (j = 0; j < models; j++)
-    { aiger_reset(srcs[j]), free(srcaigs[j]); }
+    for (j = 0; j < models; j++) {
+        aiger_reset(srcs[j]), free(srcaigs[j]);
+    }
     free(srcs), free(aigs), free(srcaigs);
 
     msg(2, "cleaning up %u aigs", count);
@@ -553,17 +565,18 @@ main(int argc, char ** argv)
 
     msg(1, "writing %s", output ? output : "<stdout>");
 
-    if (output)
-    { ok = aiger_open_and_write_to_file(dst, output); }
-    else {
+    if (output) {
+        ok = aiger_open_and_write_to_file(dst, output);
+    } else {
         mode = isatty(1) ? aiger_ascii_mode : aiger_binary_mode;
         ok = aiger_write_to_file(dst, mode, stdout);
     }
 
     aiger_reset(dst);
 
-    if (!ok)
-    { die("writing failed"); }
+    if (!ok) {
+        die("writing failed");
+    }
 
     free(stack);
 

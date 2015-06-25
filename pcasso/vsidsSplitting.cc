@@ -166,8 +166,9 @@ lbool VSIDSSplitting::scatterSolve(void* data)
         // Extend & copy model:
         model.growTo(nVars());
         for (int i = 0; i < nVars(); i++) { model[i] = value(i); }
-    } else if (status == l_False && conflict.size() == 0)
-    { ok = false; }
+    } else if (status == l_False && conflict.size() == 0) {
+        ok = false;
+    }
 
     cancelUntil(0);
 
@@ -263,8 +264,9 @@ lbool VSIDSSplitting::scatterSeach(int nof_conflicts, void* data)
                     cancelUntil(assumptions.size());
                     d.startscatter = false;
                     d.isscattering = true;
-                    if (d.time_cond)
-                    { d.prevscatter = cpuTime_t(); }
+                    if (d.time_cond) {
+                        d.prevscatter = cpuTime_t();
+                    }
                 }
             }
 
@@ -390,12 +392,13 @@ lbool VSIDSSplitting::scatterSeach(int nof_conflicts, void* data)
                 bool excludeAssumptions = false;
                 {
                     vec<Lit>* cl = new vec<Lit>;
-                    for (int i = 0; i < declits->size(); i++)
-                    { cl->push(~(*(declits))[i]); }
+                    for (int i = 0; i < declits->size(); i++) {
+                        cl->push(~(*(declits))[i]);
+                    }
                     addClause_(*cl);
                     delete cl;
                     reduceDB();
-                    if (ok)  { excludeAssumptions = true; }
+                    if (ok) { excludeAssumptions = true; }
                 }
 
                 // Include the negation to the instance
@@ -406,10 +409,11 @@ lbool VSIDSSplitting::scatterSeach(int nof_conflicts, void* data)
                 }
                 d.startscatter = true;
                 d.isscattering = true;
-                if (d.cnfl_cond)
-                { d.sc_bw_cnfl = conflicts + d.cnfl_bw; }
-                else
-                { d.prevscatter = cpuTime_t(); }
+                if (d.cnfl_cond) {
+                    d.sc_bw_cnfl = conflicts + d.cnfl_bw;
+                } else {
+                    d.prevscatter = cpuTime_t();
+                }
             } else {
 
                 if (next == lit_Undef) {

@@ -93,7 +93,7 @@ static inline double wallClockTime(void)
 static inline void printClause(int* clause)
 {
     printf("[%i] ", clause[ID]);
-    while (*clause) { printf("%i ", *clause++); } printf("0\n");
+    while (*clause) { printf("%i ", *clause++); }  printf("0\n");
 }
 
 static inline void addWatch(struct solver* S, int* clause, int index)
@@ -136,11 +136,13 @@ static inline void removeUnit(struct solver* S, int lit)
 
 static inline void unassignUnit(struct solver* S, int lit)
 {
-    if (S->verb)
-    { printf("c removing unit %i\n", lit); }
+    if (S->verb) {
+        printf("c removing unit %i\n", lit);
+    }
     while (S->false[-lit]) {
-        if (S->verb)
-        { printf("c removing unit %i (%i)\n", S->forced[-1], lit); }
+        if (S->verb) {
+            printf("c removing unit %i (%i)\n", S->forced[-1], lit);
+        }
         S->false[*(--S->forced)] = 0;
     }
     S->processed = S->assigned = S->forced;
@@ -170,8 +172,9 @@ static inline void markClause(struct solver* S, int* clause, int index)
     if ((clause[index - 1] & ACTIVE) == 0) {
         S->MARKcount++;
         clause[index - 1] |= ACTIVE;
-        if (S->lemmaFile && clause[1])
-        { *(S->delinfo++) = (((int)(clause - S->DB) + index) << 1) + 1; }
+        if (S->lemmaFile && clause[1]) {
+            *(S->delinfo++) = (((int)(clause - S->DB) + index) << 1) + 1;
+        }
         if (clause[1 + index] == 0) { return; }
         markWatch(S, clause,     index, -index);
         markWatch(S, clause, 1 + index, -index);
@@ -187,8 +190,9 @@ void analyze(struct solver* S, int* clause, int index)        // Mark all clause
         if (S->false[ lit ] == MARK) {
             if (S->reason[ abs(lit) ]) {
                 markClause(S, S->DB + S->reason[ abs(lit) ], -1);
-                if (S->assigned >= S->forced)
-                { S->reason[ abs(lit) ] = 0; }
+                if (S->assigned >= S->forced) {
+                    S->reason[ abs(lit) ] = 0;
+                }
             }
         } else if (S->false[ lit ] == ASSUMED && !S->RATmode) {
             S->delLit++;
@@ -386,8 +390,9 @@ void printDependencies(struct solver *S, int* clause)
             if (S->dependencies[i] != 0) {
                 fprintf(S->traceFile, "%d ", S->dependencies[i]);
                 for (j = i + 1; j < S->nDependencies; j++)
-                    if (S->dependencies[j] == S->dependencies[i])
-                    { S->dependencies[j] = 0; }
+                    if (S->dependencies[j] == S->dependencies[i]) {
+                        S->dependencies[j] = 0;
+                    }
             }
         }
         fprintf(S->traceFile, "0\n");
@@ -430,8 +435,9 @@ int redundancyCheck(struct solver *S, int *clause, int size, int uni)
     // Failed RUP check.  Now test RAT.
     // printf("RUP check failed.  Starting RAT check.\n");
     int reslit = clause[PIVOT];
-    if (S->verb)
-    { printf("c RUP checked failed; resolution literal %d.\n", reslit); }
+    if (S->verb) {
+        printf("c RUP checked failed; resolution literal %d.\n", reslit);
+    }
     int j, blocked, numCandidates = 0;
     long int reason;
     int* savedForced = S->forced;
@@ -453,8 +459,9 @@ int redundancyCheck(struct solver *S, int *clause, int size, int uni)
                     int lit = *watchedClause++;
                     if (lit == -reslit) { flag = 1; }
                     else if (S->false[-lit]) { // Unless some other literal is satisfied
-                        if (blocked == 0 || reason > S->reason[ abs(lit) ])
-                        { blocked = lit, reason = S->reason[ abs(lit) ]; }
+                        if (blocked == 0 || reason > S->reason[ abs(lit) ]) {
+                            blocked = lit, reason = S->reason[ abs(lit) ];
+                        }
                     }
                 }
 
@@ -530,13 +537,14 @@ int verify(struct solver *S)
         int *lemmas = S->DB + (ad >> INFOBITS);
 
         S->time = lemmas[ID];
-        if (d) { active--; } else { active++; }
+        if (d) { active--; }  else { active++; }
         if (S->mode == FORWARD_SAT && S->verb) { printf("c %i active clauses\n", active); }
 
         if (!lemmas[1]) { // found a unit
             int lit = lemmas[0];
-            if (S->verb)
-            { printf("c found unit in proof %i (%li)\n", lit, d); }
+            if (S->verb) {
+                printf("c found unit in proof %i (%li)\n", lit, d);
+            }
             if (d) {
                 if (S->mode == FORWARD_SAT) {
                     removeUnit(S, lit); propagateUnits(S, 0);
@@ -578,8 +586,9 @@ int verify(struct solver *S)
             S->nDependencies = 0;
         }
 
-        if (lemmas[1])
-        { addWatch(S, lemmas, 0), addWatch(S, lemmas, 1); }
+        if (lemmas[1]) {
+            addWatch(S, lemmas, 0), addWatch(S, lemmas, 1);
+        }
 
         if (size == 0) { printf("c conflict claimed, but not detected\n"); return SAT; }  // change to FAILED?
         if (size == 1) {
@@ -706,7 +715,7 @@ int parse(struct solver* S)
 
     do {
         tmp = fscanf(S->inputFile, " cnf %i %li \n", &S->nVars, &S->nClauses);   // Read the first line
-        if (tmp > 0 && tmp != EOF) { break; } tmp = fscanf(S->inputFile, "%*s\n");
+        if (tmp > 0 && tmp != EOF) { break; }  tmp = fscanf(S->inputFile, "%*s\n");
     }  // In case a commment line was found
     while (tmp != 2 && tmp != EOF);                                              // Skip it and read next line
     int nZeros = S->nClauses;
@@ -761,7 +770,7 @@ int parse(struct solver* S)
 
         if (tmp == 0) {
             char ignore[1024];
-            if (!fileSwitchFlag) { if (fgets(ignore, sizeof(ignore), S->inputFile) == NULL) { printf("c\n"); } }
+            if (!fileSwitchFlag) { if (fgets(ignore, sizeof(ignore), S->inputFile) == NULL) { printf("c\n"); }  }
             else if (fgets(ignore, sizeof(ignore), S->proofFile) == NULL) { printf("c\n"); }
             if (S->verb) { printf("c WARNING: parsing mismatch assuming a comment\n"); }
             continue;
@@ -823,7 +832,7 @@ int parse(struct solver* S)
 //      printf("c "); printClause(buffer);
 
             qsort(buffer, size, sizeof(int), compare);
-            for (i = 0; i < size; ++i) { clause[ i ] = buffer[ i ]; } clause[ i ] = 0;
+            for (i = 0; i < size; ++i) { clause[ i ] = buffer[ i ]; }  clause[ i ] = 0;
             S->mem_used += size + EXTRA;
 
             hash = getHash(clause);
@@ -1052,8 +1061,8 @@ int main(int argc, char** argv)
     fclose(S.inputFile);
     fclose(S.proofFile);
     int sts = ERROR;
-    if (parseReturnValue == ERROR)    { printf("s MEMORY ALLOCATION ERROR\n"); }
-    else if (parseReturnValue == UNSAT)    { printf("c trivial UNSAT\ns VERIFIED\n"); }
+    if (parseReturnValue == ERROR) { printf("s MEMORY ALLOCATION ERROR\n"); }
+    else if (parseReturnValue == UNSAT) { printf("c trivial UNSAT\ns VERIFIED\n"); }
     else if ((sts = verify(&S)) == UNSAT) { printf("s VERIFIED\n"); }
     else { printf("s NOT VERIFIED\n")  ; }
 

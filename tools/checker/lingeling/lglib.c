@@ -1211,8 +1211,9 @@ static void lglabort(LGL * lgl)
                 getpid(), lgl->opts->sleeponabort.val);
         sleep(lgl->opts->sleeponabort.val);
     }
-    if (lgl->cbs && lgl->cbs->onabort)
-    { lgl->cbs->onabort(lgl->cbs->abortstate); }
+    if (lgl->cbs && lgl->cbs->onabort) {
+        lgl->cbs->onabort(lgl->cbs->abortstate);
+    }
     if (lgl->opts && lgl->opts->exitonabort.val) { exit(1); }
     abort();
 }
@@ -1225,8 +1226,9 @@ static const char * lglprefix(LGL * lgl)
 static int lglmsgstart(LGL * lgl, int level)
 {
     if (lgl->opts->verbose.val < level) { return 0; }
-    if (lgl->cbs && lgl->cbs->msglock.lock)
-    { lgl->cbs->msglock.lock(lgl->cbs->msglock.state); }
+    if (lgl->cbs && lgl->cbs->msglock.lock) {
+        lgl->cbs->msglock.lock(lgl->cbs->msglock.state);
+    }
     fputs(lglprefix(lgl), lgl->out);
     if (lgl->tid >= 0) { fprintf(lgl->out, "%d ", lgl->tid); }
     return 1;
@@ -1236,8 +1238,9 @@ static void lglmsgend(LGL * lgl)
 {
     fputc('\n', lgl->out);
     fflush(lgl->out);
-    if (lgl->cbs && lgl->cbs->msglock.unlock)
-    { lgl->cbs->msglock.unlock(lgl->cbs->msglock.state); }
+    if (lgl->cbs && lgl->cbs->msglock.unlock) {
+        lgl->cbs->msglock.unlock(lgl->cbs->msglock.state);
+    }
 }
 
 static void lglprt(LGL * lgl, int level, const char * msg, ...)
@@ -1256,8 +1259,9 @@ static void lglogstart(LGL * lgl, int level, const char * msg, ...)
 {
     va_list ap;
     assert(lgl->opts->log.val >= level);
-    if (lgl->cbs && lgl->cbs->msglock.lock)
-    { lgl->cbs->msglock.lock(lgl->cbs->msglock.state); }
+    if (lgl->cbs && lgl->cbs->msglock.lock) {
+        lgl->cbs->msglock.lock(lgl->cbs->msglock.state);
+    }
     fputs(lglprefix(lgl), lgl->out);
     if (lgl->tid >= 0) { fprintf(lgl->out, "%d ", lgl->tid); }
     fprintf(lgl->out, "LOG%d %d ", level, lgl->level);
@@ -1328,11 +1332,12 @@ static void * lglrsz(LGL * lgl, void * ptr, size_t old, size_t new)
     if (!new) { lgldel(lgl, ptr, old); return 0; }
     if (old == new) { return ptr; }
     lgldec(lgl, old);
-    if (lgl->mem->realloc)
-    { res = lgl->mem->realloc(lgl->mem->state, ptr, old, new); }
-    else { res = realloc(ptr, new); }
-    if (!res)
-    { lgldie(lgl, "out of memory reallocating %ld to %ld bytes", old, new); }
+    if (lgl->mem->realloc) {
+        res = lgl->mem->realloc(lgl->mem->state, ptr, old, new);
+    } else { res = realloc(ptr, new); }
+    if (!res) {
+        lgldie(lgl, "out of memory reallocating %ld to %ld bytes", old, new);
+    }
     assert(res);
     LOG(5, "reallocating %p to %p from %ld to %ld bytes", ptr, res, old, new);
     lglinc(lgl, new);
@@ -1504,8 +1509,9 @@ static void lglrmstk(Stk * s, int elem)
         if (*p == elem) { break; }
     assert(p < s->top);
     q = p++;
-    while (p < s->top)
-    { *q++ = *p++; }
+    while (p < s->top) {
+        *q++ = *p++;
+    }
     s->top = q;
 }
 
@@ -1649,8 +1655,9 @@ static void lglpopcontrol(LGL * lgl)
 
 static void lglrstcontrol(LGL * lgl, int count)
 {
-    while (lglcntctk(&lgl->control) > count)
-    { lglpopcontrol(lgl); }
+    while (lglcntctk(&lgl->control) > count) {
+        lglpopcontrol(lgl);
+    }
 }
 
 static int lglevelused(LGL * lgl, int level)
@@ -1725,8 +1732,9 @@ static void lglchkenv(LGL * lgl)
         d = dst;
         for (s = src + 3; s < eos; s++) { *d++ = tolower(*s); }
         *d = 0;
-        if (!lglhasopt(lgl, dst) && strcmp(dst, "apitrace"))
-        { lglwrn(lgl, "invalid 'LGL...' environment '%s'", src); }
+        if (!lglhasopt(lgl, dst) && strcmp(dst, "apitrace")) {
+            lglwrn(lgl, "invalid 'LGL...' environment '%s'", src);
+        }
         DEL(dst, len + 1);
     }
 }
@@ -2007,7 +2015,7 @@ static void lglqclone(LGL * lgl, LGL * orig)
         tl->last = fl->last;
         tl->unassigned = fl->unassigned;
         fl->down = tl;
-        if (pl) { pl->up = tl; } else { to->queue.bottom = tl; }
+        if (pl) { pl->up = tl; }  else { to->queue.bottom = tl; }
         tl->down = pl;
         tl->repr = tl;
         pl = tl;
@@ -2020,7 +2028,7 @@ static void lglqclone(LGL * lgl, LGL * orig)
         assert(fl->repr != fl);
         NEW(tl, 1);
         fl->down = tl;
-        if (pl) { pl->up = tl; } else { to->queue.merged = tl; }
+        if (pl) { pl->up = tl; }  else { to->queue.merged = tl; }
         pl = tl;
     }
     for (fl = from->queue.merged; fl; fl = fl->up) {
@@ -2059,8 +2067,9 @@ static void lglqclone(LGL * lgl, LGL * orig)
         pl = fl;
     }
     assert(pl == from->queue.top);
-    for (fl = from->queue.merged; fl; fl = fl->up)
-    { fl->down = 0; }
+    for (fl = from->queue.merged; fl; fl = fl->up) {
+        fl->down = 0;
+    }
 
     to->queue.nmerged = from->queue.nmerged;
     to->queue.nlines = from->queue.nlines;
@@ -2178,8 +2187,9 @@ static int lglmaxoptnamelen(LGL * lgl)
     int res = 0, len;
     Opt * o;
     for (o = FIRSTOPT(lgl); o <= LASTOPT(lgl); o++)
-        if ((len = strlen(o->lng)) > res)
-        { res = len; }
+        if ((len = strlen(o->lng)) > res) {
+            res = len;
+        }
     return res;
 }
 
@@ -2218,8 +2228,9 @@ void lglrgopts(LGL * lgl)
 {
     Opt * o;
     REQINIT();
-    for (o = FIRSTOPT(lgl); o <= LASTOPT(lgl); o++)
-    { fprintf(lgl->out, "%s %d %d %d\n", o->lng, o->val, o->min, o->max); }
+    for (o = FIRSTOPT(lgl); o <= LASTOPT(lgl); o++) {
+        fprintf(lgl->out, "%s %d %d %d\n", o->lng, o->val, o->min, o->max);
+    }
 }
 
 int lglhasopt(LGL * lgl, const char * opt)
@@ -2254,17 +2265,17 @@ void lglsetopt(LGL * lgl, const char * opt, int val)
     int oldval;
     Opt * o;
     #if 0
-    if (!strcmp(opt, "clim"))     { o = &lgl->opts->clim; }
-    else if (!strcmp(opt, "bias"))     { o = &lgl->opts->bias; }
+    if (!strcmp(opt, "clim")) { o = &lgl->opts->clim; }
+    else if (!strcmp(opt, "bias")) { o = &lgl->opts->bias; }
     else if (!strcmp(opt, "flipping")) { o = &lgl->opts->flipping; }
-    else if (!strcmp(opt, "mocint"))   { o = &lgl->opts->mocint; }
-    else if (!strcmp(opt, "phase"))    { o = &lgl->opts->phase; }
-    else if (!strcmp(opt, "plain"))    { o = &lgl->opts->plain; }
-    else if (!strcmp(opt, "reduce"))   { o = &lgl->opts->reduce; }
-    else if (!strcmp(opt, "seed"))     { o = &lgl->opts->seed; }
-    else if (!strcmp(opt, "verbose"))  { o = &lgl->opts->verbose; }
+    else if (!strcmp(opt, "mocint")) { o = &lgl->opts->mocint; }
+    else if (!strcmp(opt, "phase")) { o = &lgl->opts->phase; }
+    else if (!strcmp(opt, "plain")) { o = &lgl->opts->plain; }
+    else if (!strcmp(opt, "reduce")) { o = &lgl->opts->reduce; }
+    else if (!strcmp(opt, "seed")) { o = &lgl->opts->seed; }
+    else if (!strcmp(opt, "verbose")) { o = &lgl->opts->verbose; }
     #ifndef NLGLOG
-    else if (!strcmp(opt, "log"))      { o = &lgl->opts->log; }
+    else if (!strcmp(opt, "log")) { o = &lgl->opts->log; }
     #endif
     else
     #endif
@@ -2280,8 +2291,9 @@ void lglsetopt(LGL * lgl, const char * opt, int val)
     if (o->max < val) { val = o->max; }
     oldval = o->val;
     o->val = val;
-    if (o == &lgl->opts->flipping && !oldval)
-    { lgl->flipping = lgl->notflipped = 0; }
+    if (o == &lgl->opts->flipping && !oldval) {
+        lgl->flipping = lgl->notflipped = 0;
+    }
     if (o == &lgl->opts->plain) {
         if (val > 0 && !oldval) { lglsetplain(lgl, 1); }
         if (!val && oldval) { lglsetplain(lgl, 0); }
@@ -2469,14 +2481,16 @@ static void lglchkqueue(LGL * lgl)
     if (lgl->opts->check.val < 2) { return; }
     line = lgl->queue.top;
     while (line != lgl->queue.unassigned) {
-        for (lit = line->first; lit; lit = lglqnd(lgl, lit)->next)
-        { assert(lglval(lgl, lit)); }
+        for (lit = line->first; lit; lit = lglqnd(lgl, lit)->next) {
+            assert(lglval(lgl, lit));
+        }
         line = line->down;
     }
     for (lit = line->first;
             lit != line->unassigned;
-            lit = lglqnd(lgl, lit)->next)
-    { assert(lglval(lgl, lit)); }
+            lit = lglqnd(lgl, lit)->next) {
+        assert(lglval(lgl, lit));
+    }
     #endif
 }
 
@@ -2785,7 +2799,7 @@ static void lglassign(LGL * lgl, int lit, int r0, int r1)
         av->phase = phase;
     }
     #ifndef NDEBUG
-    if (phase < 0) { av->wasfalse = 1; } else { av->wasfalse = 0; }
+    if (phase < 0) { av->wasfalse = 1; }  else { av->wasfalse = 0; }
     #endif
     td->level = lgl->level;
     if (!lgl->level) {
@@ -2876,8 +2890,9 @@ static Qln * lglqln(LGL * lgl, int lit)
     node = lglqnd(lgl, lit);
     for (res = node->line; (line = res->repr) != res; res = line)
         ;
-    for (line = node->line; line != res; line = next)
-    { next = line->repr, line->repr = res; }
+    for (line = node->line; line != res; line = next) {
+        next = line->repr, line->repr = res;
+    }
     node->line = res;
     return res;
 }
@@ -2904,8 +2919,9 @@ static void lglunassign(LGL * lgl, int lit)
         n = lglqln(lgl, idx);
         n->unassigned = n->first;
         if (!lgl->queue.unassigned ||
-                lgl->queue.unassigned->prior < n->prior)
-        { lgl->queue.unassigned = n; }
+                lgl->queue.unassigned->prior < n->prior) {
+            lgl->queue.unassigned = n;
+        }
     }
     td = lgltd(lgl, idx);
     r0 = td->rsn[0];
@@ -3056,8 +3072,9 @@ static void lglpicosatchkunsat(LGL * lgl)
         LOG(1, "PicoSAT is already in inconsistent state");
         return;
     }
-    for (p = lgl->eassume.start; p < lgl->eassume.top; p++)
-    { picosat_assume(PICOSAT, lglimport(lgl, *p)); }
+    for (p = lgl->eassume.start; p < lgl->eassume.top; p++) {
+        picosat_assume(PICOSAT, lglimport(lgl, *p));
+    }
     res = picosat_sat(PICOSAT, -1);
     assert(res == 20);
     LOG(1, "PicoSAT proved unsatisfiability");
@@ -3099,8 +3116,9 @@ static void lglchksimpcls(LGL * lgl)
         assert(!av->simp);
         av->simp = 1;
     }
-    while (p > lgl->clause.start)
-    { lglavar(lgl,  *--p)->simp = 0; }
+    while (p > lgl->clause.start) {
+        lglavar(lgl,  *--p)->simp = 0;
+    }
     #endif
 }
 
@@ -3257,8 +3275,9 @@ static long lglenlwchs(LGL * lgl, HTS * hts)
         start[j++] = start[i];
         start[i] = 0;
     }
-    while (j < newoffset + newhcount)
-    { start[j++] = 0; }
+    while (j < newoffset + newhcount) {
+        start[j++] = 0;
+    }
     assert(start + j <= lgl->wchs->stk.top);
     hts->offset = newoffset;
     if (oldhcount > 0) { lglfreewch(lgl, oldoffset, oldhcount); }
@@ -3425,8 +3444,9 @@ static void lgledown(LGL * lgl, int lit)
         child = p[cpos];
         if (cpos + 1 < size) {
             right = p[cpos + 1];
-            if (lglecmp(lgl, child, right) < 0)
-            { cpos++, child = right; }
+            if (lglecmp(lgl, child, right) < 0) {
+                cpos++, child = right;
+            }
         }
         if (lglecmp(lgl, child, lit) <= 0) { break; }
         cposptr = lglepos(lgl, child);
@@ -3588,8 +3608,9 @@ static void lglrescoreclauses(LGL * lgl)
 {
     int glue;
     lgl->stats->rescored.clauses++;
-    for (glue = 0; glue < MAXGLUE; glue++)
-    { lglrescoreglue(lgl, glue); }
+    for (glue = 0; glue < MAXGLUE; glue++) {
+        lglrescoreglue(lgl, glue);
+    }
 }
 
 static void lglchkirrstats(LGL * lgl)
@@ -3645,12 +3666,14 @@ static void lglincirr(LGL * lgl, int size)
     if (size < 2) { return; }
     lgl->stats->irr.clauses.cur++;
     assert(lgl->stats->irr.clauses.cur > 0);
-    if (lgl->stats->irr.clauses.cur > lgl->stats->irr.clauses.max)
-    { lgl->stats->irr.clauses.max = lgl->stats->irr.clauses.cur; }
+    if (lgl->stats->irr.clauses.cur > lgl->stats->irr.clauses.max) {
+        lgl->stats->irr.clauses.max = lgl->stats->irr.clauses.cur;
+    }
     lgl->stats->irr.lits.cur += size;
     assert(lgl->stats->irr.lits.cur >= size);
-    if (lgl->stats->irr.lits.cur > lgl->stats->irr.lits.max)
-    { lgl->stats->irr.lits.max = lgl->stats->irr.lits.cur; }
+    if (lgl->stats->irr.lits.cur > lgl->stats->irr.lits.max) {
+        lgl->stats->irr.lits.max = lgl->stats->irr.lits.cur;
+    }
     lgl->stats->irrprgss++;
 }
 
@@ -3743,12 +3766,15 @@ static int lgladdcls(LGL * lgl, int red, int origlue, int force)
         lglwchtrn(lgl, other, lit, other2, red);
         lglwchtrn(lgl, other2, lit, other, red);
         if (red) {
-            if (force && lglval(lgl, lit) < 0 && lglval(lgl, other) < 0)
-            { lglf3rce(lgl, other2, lit, other, REDCS); }
-            if (force && lglval(lgl, lit) < 0 && lglval(lgl, other2) < 0)
-            { lglf3rce(lgl, other, lit, other2, REDCS); }
-            if (force && lglval(lgl, other) < 0 && lglval(lgl, other2) < 0)
-            { lglf3rce(lgl, lit, other, other2, REDCS); }
+            if (force && lglval(lgl, lit) < 0 && lglval(lgl, other) < 0) {
+                lglf3rce(lgl, other2, lit, other, REDCS);
+            }
+            if (force && lglval(lgl, lit) < 0 && lglval(lgl, other2) < 0) {
+                lglf3rce(lgl, other, lit, other2, REDCS);
+            }
+            if (force && lglval(lgl, other) < 0 && lglval(lgl, other2) < 0) {
+                lglf3rce(lgl, lit, other, other2, REDCS);
+            }
         } else if (lgl->dense) {
             assert(!red);
             lglincocc(lgl, lit);
@@ -3801,8 +3827,9 @@ static int lgladdcls(LGL * lgl, int red, int origlue, int force)
                 lidx = lglcntstk(w);
                 assert(!lidx);
             }
-            if (lidx > MAXREDLIDX)
-            { lgldie(lgl, "number of redundant large clause literals exhausted"); }
+            if (lidx > MAXREDLIDX) {
+                lgldie(lgl, "number of redundant large clause literals exhausted");
+            }
         }
         // fprintf (stderr, "orig %d scaled %d glue\n", origlue, scaledglue);
         lglpushstk(lgl, w, NOTALIT);
@@ -3818,11 +3845,13 @@ static int lgladdcls(LGL * lgl, int red, int origlue, int force)
         w = &lgl->irr;
         lidx = lglcntstk(w);
         scaledglue = 0;
-        if (lidx <= 0 && !lglmtstk(w))
-        { lgldie(lgl, "number of irredundant large clause literals exhausted"); }
+        if (lidx <= 0 && !lglmtstk(w)) {
+            lgldie(lgl, "number of irredundant large clause literals exhausted");
+        }
     }
-    for (p = lgl->clause.start; (other2 = *p); p++)
-    { lglpushstk(lgl, w, other2); }
+    for (p = lgl->clause.start; (other2 = *p); p++) {
+        lglpushstk(lgl, w, other2);
+    }
     lglpushstk(lgl, w, 0);
     if (red) {
         unit = 0;
@@ -3849,8 +3878,9 @@ static int lgladdcls(LGL * lgl, int red, int origlue, int force)
         lgl->stats->red.lrg++;
     }
     if (!red && lgl->dense >= 2) {
-        if (lidx > MAXIRRLIDX)
-        { lgldie(lgl, "number of irredundant large clause literals exhausted"); }
+        if (lidx > MAXIRRLIDX) {
+            lgldie(lgl, "number of irredundant large clause literals exhausted");
+        }
         blit = (lidx << RMSHFT) | OCCS;
         for (p = lgl->clause.start; (other2 = *p); p++) {
             lglincocc(lgl, other2);
@@ -3888,8 +3918,9 @@ static void lgliadd(LGL * lgl, int ilit)
 static void lgleunassignall(LGL * lgl)
 {
     int eidx;
-    for (eidx = 1; eidx <= lgl->maxext; eidx++)
-    { lglelit2ext(lgl, eidx)->val = 0; }
+    for (eidx = 1; eidx <= lgl->maxext; eidx++) {
+        lglelit2ext(lgl, eidx)->val = 0;
+    }
 }
 
 static void lglchkeassumeclean(LGL * lgl)
@@ -4016,8 +4047,9 @@ static void lglfadd(LGL * lgl, int elit)
             if (size == 3) { lgl->stats->features.clauses.trn++; }
             if (size > 3) { lgl->stats->features.clauses.lrg++; }
             sum = 0;
-            for (p = lgl->eclause.start; p < lgl->eclause.top; p++)
-            { sum += abs(*p); }
+            for (p = lgl->eclause.start; p < lgl->eclause.top; p++) {
+                sum += abs(*p);
+            }
             sum *= 10;
             sum /= size;
             sum += 5;
@@ -4128,8 +4160,9 @@ static void lgleassume(LGL * lgl, int elit)
             LOG(2, "internal literal %d already assumed", ilit);
         } else {
             av->assumed |= bit;
-            if (av->assumed & (bit ^ 3))
-            { LOG(2, "negation %d was also already assumed", -ilit); }
+            if (av->assumed & (bit ^ 3)) {
+                LOG(2, "negation %d was also already assumed", -ilit);
+            }
             lglpushstk(lgl, &lgl->assume, ilit);
         }
     } else if (val > 0) {
@@ -4196,10 +4229,12 @@ void lglfixate(LGL * lgl)
     TRAPI("fixate");
     if (lgl->mt) { return; }
     CLR(eassume);
-    for (p = lgl->eassume.start; p < lgl->eassume.top; p++)
-    { lglpushstk(lgl, &eassume, *p); }
-    for (p = eassume.start; p < eassume.top; p++)
-    { lgleadd(lgl, *p), lgleadd(lgl, 0); }
+    for (p = lgl->eassume.start; p < lgl->eassume.top; p++) {
+        lglpushstk(lgl, &eassume, *p);
+    }
+    for (p = eassume.start; p < eassume.top; p++) {
+        lgleadd(lgl, *p), lgleadd(lgl, 0);
+    }
     lglrelstk(lgl, &eassume);
     lgluse(lgl);
     if (lgl->clone) { lglfixate(lgl->clone); }
@@ -4256,8 +4291,9 @@ static void lglonflict(LGL * lgl, int check, int lit, int red, int lidx)
     #ifndef NLGLOG
     if (lgl->opts->log.val >= 2) {
         lglogstart(lgl, 2, "inconsistent %s large clause", lglred2str(red));
-        for (p = c ; *p; p++)
-        { fprintf(lgl->out, " %d", *p); }
+        for (p = c ; *p; p++) {
+            fprintf(lgl->out, " %d", *p);
+        }
         lglogend(lgl);
     }
     #endif
@@ -4329,14 +4365,16 @@ static void lglrmtwch(LGL * lgl, int lit, int other1, int other2, int red)
 
 static void lglpopnunmarkstk(LGL * lgl, Stk * stk)
 {
-    while (!lglmtstk(stk))
-    { lglavar(lgl, lglpopstk(stk))->mark = 0; }
+    while (!lglmtstk(stk)) {
+        lglavar(lgl, lglpopstk(stk))->mark = 0;
+    }
 }
 
 static void lglpopnunlcamarkstk(LGL * lgl, Stk * stk)
 {
-    while (!lglmtstk(stk))
-    { lglavar(lgl, lglpopstk(stk))->lcamark = 0; }
+    while (!lglmtstk(stk)) {
+        lglavar(lgl, lglpopstk(stk))->lcamark = 0;
+    }
 }
 
 static int lglcamarked(LGL * lgl, int lit)
@@ -4445,8 +4483,9 @@ static void lglrmlwch(LGL * lgl, int lit, int red, int lidx)
     }
     assert((p[-2] & REDCS) == red);
     assert(p[-1] == lidx);
-    for (q = p; q < eow; q++)
-    { q[-2] = q[0]; }
+    for (q = p; q < eow; q++) {
+        q[-2] = q[0];
+    }
 
     lglshrinkhts(lgl, hts, q - w - 2);
 }
@@ -4596,8 +4635,9 @@ static void lglrmlocc(LGL * lgl, int lit, int red, int lidx)
         if (tag == TRNCS || tag == LRGCS) { p++; }
     } while (blit != search);
     assert(p[-1] == search);
-    for (q = p ; q < eow; q++)
-    { q[-1] = q[0]; }
+    for (q = p ; q < eow; q++) {
+        q[-1] = q[0];
+    }
     lglshrinkhts(lgl, hts, q - w - 1);
 }
 
@@ -4684,7 +4724,7 @@ static void lglprop(LGL * lgl, int lit)
                 p++;
                 break;
             }
-            if (!val) { SWAP(int, other, other2); } else { assert(val < 0); }
+            if (!val) { SWAP(int, other, other2); }  else { assert(val < 0); }
             if (lgl->level &&
                     lgl->simp &&
                     lgl->opts->lhbr.val &&
@@ -4828,8 +4868,9 @@ static void lglprop(LGL * lgl, int lit)
                 if (!dom) { goto NO_HBR_JUST_FLRCE; }
                 LOGCLS(2, c, "closest dominator %d", dom);
                 subsumed = 0;
-                for (l = c; !subsumed && (other2 = *l); l++)
-                { subsumed = (dom == -other2); }
+                for (l = c; !subsumed && (other2 = *l); l++) {
+                    subsumed = (dom == -other2);
+                }
                 assert(lit != dom || subsumed);
                 hbred = lglhbred(lgl, subsumed, red);
                 LOG(2, "hyper binary resolved %s clause %d %d",
@@ -5157,8 +5198,9 @@ FAILED:
         } else {
             assert(tag == LRGCS);
             q = lglidx2lits(lgl, LRGCS, (r0 & REDCS), r1);
-            while (!poisoned && (other = *q++))
-            { poisoned = lglavar(lgl, other)->poisoned; }
+            while (!poisoned && (other = *q++)) {
+                poisoned = lglavar(lgl, other)->poisoned;
+            }
         }
         if (!poisoned) { continue; }
         assert(!av->poisoned);
@@ -5264,8 +5306,9 @@ static int64_t lglavglue(LGL * lgl)
 static void lglrephead(LGL * lgl)
 {
     if (lgl->tid > 0) { return; }
-    if (lgl->cbs && lgl->cbs->msglock.lock)
-    { lgl->cbs->msglock.lock(lgl->cbs->msglock.state); }
+    if (lgl->cbs && lgl->cbs->msglock.lock) {
+        lgl->cbs->msglock.lock(lgl->cbs->msglock.state);
+    }
     assert(lgl->prefix);
     fprintf(lgl->out, "%s\n", lgl->prefix);
     fprintf(lgl->out, "%s%s"
@@ -5276,8 +5319,9 @@ static void lglrephead(LGL * lgl)
             "glue         MB\n", lgl->prefix, !lgl->tid ? "  " : "");
     fprintf(lgl->out, "%s\n", lgl->prefix);
     fflush(lgl->out);
-    if (lgl->cbs && lgl->cbs->msglock.unlock)
-    { lgl->cbs->msglock.unlock(lgl->cbs->msglock.state); }
+    if (lgl->cbs && lgl->cbs->msglock.unlock) {
+        lgl->cbs->msglock.unlock(lgl->cbs->msglock.state);
+    }
 }
 
 static void lglrep(LGL * lgl, int level, char type)
@@ -5486,13 +5530,15 @@ static int64_t lglubyrec(LGL * lgl, int i)
     int k;
 
     for (k = 1; !res && k < 32; s++, k++) {
-        if (i == (1 << k) - 1)
-        { res = 1 << (k - 1); }
+        if (i == (1 << k) - 1) {
+            res = 1 << (k - 1);
+        }
     }
 
     for (k = 1; !res; k++, s++)
-        if ((1 << (k - 1)) <= i && i < (1 << k) - 1)
-        { res = lglubyrec(lgl, i - (1 << (k - 1)) + 1); }
+        if ((1 << (k - 1)) <= i && i < (1 << k) - 1) {
+            res = lglubyrec(lgl, i - (1 << (k - 1)) + 1);
+        }
 
     lgl->stats->luby.steps += s;
 
@@ -5549,9 +5595,9 @@ static void lglreduce(LGL * lgl, int forced)
     delta = lgl->stats->red.lrg;
     delta -= lgl->lrgluereasons;
     assert(delta >= 0);
-    if (delta > 3 * lgl->limits->reduce.inner / 2)
-    { target = delta - lgl->limits->reduce.inner / 2; }
-    else { target = delta / 2; }
+    if (delta > 3 * lgl->limits->reduce.inner / 2) {
+        target = delta - lgl->limits->reduce.inner / 2;
+    } else { target = delta / 2; }
     rem = target;
     LOG(2, "target is to collect %d clauses out of %d", target, delta);
     for (maxredglue = MAXGLUE - 1; maxredglue >= 0; maxredglue--)
@@ -5783,8 +5829,9 @@ static void lglreduce(LGL * lgl, int forced)
         }
     }
     LOG(1, "moved %d and collected %d occurrences", moved, collected);
-    for (glue = minredglue; glue <= maxredglue; glue++)
-    { DEL(maps[glue], sizes[glue]); }
+    for (glue = minredglue; glue <= maxredglue; glue++) {
+        DEL(maps[glue], sizes[glue]);
+    }
     DEL(sizes, maxredglue + 1);
     DEL(maps, maxredglue + 1);
     if (lgl->opts->redfixed.val) { goto NOINC; }
@@ -5824,8 +5871,9 @@ static void lglreduce(LGL * lgl, int forced)
         } else {
             assert(lgl->opts->reduce.val == 4);
             outer = lgl->limits->reduce.outer + lgl->opts->redloutinc.val;
-            if (outer < lgl->limits->reduce.inner)
-            { outer = lgl->limits->reduce.inner; }
+            if (outer < lgl->limits->reduce.inner) {
+                outer = lgl->limits->reduce.inner;
+            }
         }
         if (outer > (int64_t) INT_MAX) { outer = INT_MAX; }
         lgl->limits->reduce.outer = outer;
@@ -5935,8 +5983,9 @@ static void lglrmtcls(LGL * lgl, int a, int b, int c, int red)
     lglrmtwch(lgl, c, a, b, red);
     LOG(2, "removed %s ternary clause %d %d %d", lglred2str(red), a, b, c);
     lgldeclscnt(lgl, 3, red, 0);
-    if (!red && lgl->dense)
-    { lgldecocc(lgl, a), lgldecocc(lgl, b), lgldecocc(lgl, c); }
+    if (!red && lgl->dense) {
+        lgldecocc(lgl, a), lgldecocc(lgl, b), lgldecocc(lgl, c);
+    }
 }
 
 static void lglrmlcls(LGL * lgl, int lidx, int red)
@@ -6023,8 +6072,9 @@ static void lgldynstr(LGL * lgl, int del, int lit, int r0, int r1)
     lidx = r1;
     glue = red ? (lidx & GLUEMASK) : 0;
     c = lglidx2lits(lgl, LRGCS, red, lidx);
-    for (p = c; *p != del; p++)
-    { assert(*p); }
+    for (p = c; *p != del; p++) {
+        assert(*p);
+    }
     if (glue < MAXGLUE) {
         lglrmlwch(lgl, c[0], red, lidx);
         lglrmlwch(lgl, c[1], red, lidx);
@@ -6043,10 +6093,12 @@ static void lgldynstr(LGL * lgl, int del, int lit, int r0, int r1)
         other = c[0], other2 = c[1], other3 = c[2];
         if (red && glue < MAXGLUE) { LGLCHKACT(c[-1]); c[-1] = REMOVED; }
         c[0] = c[1] = c[2] = c[3] = REMOVED;
-        if (lglevel(lgl, other2) < lglevel(lgl, other3))
-        { SWAP(int, other2, other3); }
-        if (lglevel(lgl, other) < lglevel(lgl, other2))
-        { SWAP(int, other, other2); }
+        if (lglevel(lgl, other2) < lglevel(lgl, other3)) {
+            SWAP(int, other2, other3);
+        }
+        if (lglevel(lgl, other) < lglevel(lgl, other2)) {
+            SWAP(int, other, other2);
+        }
         lglwchtrn(lgl, other, other2, other3, red);
         lglwchtrn(lgl, other2, other, other3, red);
         lglwchtrn(lgl, other3, other, other2, red);
@@ -6072,8 +6124,9 @@ static void lgldynstr(LGL * lgl, int del, int lit, int r0, int r1)
 
 static void lglclnframes(LGL * lgl)
 {
-    while (!lglmtstk(&lgl->frames))
-    { lglunuselevel(lgl, lglpopstk(&lgl->frames)); }
+    while (!lglmtstk(&lgl->frames)) {
+        lglunuselevel(lgl, lglpopstk(&lgl->frames));
+    }
 }
 
 static void lglclnpoisoned(LGL * lgl)
@@ -6170,8 +6223,9 @@ static void lgldeprioritize(LGL * lgl)
         lgl->queue.merged = p;
         lgl->queue.nmerged++;
         lgl->stats->queue.merged++;
-        if (lgl->queue.nmerged >= lgl->opts->queuemergelim.val)
-        { lglflushqmerged(lgl); }
+        if (lgl->queue.nmerged >= lgl->opts->queuemergelim.val) {
+            lglflushqmerged(lgl);
+        }
     }
     lglchkqueue(lgl);
     if (lgl->opts->log.val >= 5) { lglqdump(lgl); }
@@ -6237,8 +6291,9 @@ static void lglvmtf(LGL * lgl, int lit)
     node->line = dst;
     dst->last = lit;
     if (!lglval(lgl, lit) &&
-            (!lgl->queue.unassigned || lgl->queue.unassigned->prior < newprior))
-    { lgl->queue.unassigned = dst; }
+            (!lgl->queue.unassigned || lgl->queue.unassigned->prior < newprior)) {
+        lgl->queue.unassigned = dst;
+    }
     if (!dst->unassigned) { dst->unassigned = lit; }
     if (!src->first) {
         assert(!src->last);
@@ -6261,8 +6316,9 @@ static void lglbumplits(LGL * lgl)
 {
     const int * p;
     lglstart(lgl, &lgl->times->bump);
-    for (p = lgl->seen.start; p < lgl->seen.top; p++)
-    { lglvmtf(lgl, *p); }
+    for (p = lgl->seen.start; p < lgl->seen.top; p++) {
+        lglvmtf(lgl, *p);
+    }
     lgldeprioritize(lgl);
     lglstop(lgl);
 }
@@ -6376,8 +6432,9 @@ RESTART:
         resolventsize = open + lglcntstk(&lgl->clause);
         #ifdef RESOLVENT
         LOGRESOLVENT(2, "resolvent");
-        if (lglmaintainresolvent(lgl))
-        { assert(lglcntstk(&lgl->resolvent) == resolventsize); }
+        if (lglmaintainresolvent(lgl)) {
+            assert(lglcntstk(&lgl->resolvent) == resolventsize);
+        }
         #endif
         if (lgl->opts->otfs.val &&
                 (resolved >= 2) &&
@@ -6445,8 +6502,9 @@ RESTART:
             goto DONE;
         }
         savedsize = size;
-        while (!lglmarked(lgl, lit = lglpopstk(&lgl->trail)))
-        { lglunassign(lgl, lit); }
+        while (!lglmarked(lgl, lit = lglpopstk(&lgl->trail))) {
+            lglunassign(lgl, lit);
+        }
         lglunassign(lgl, lit);
         if (!--open) { uip = -lit; break; }
         LOG(2, "analyzing reason of literal %d next", lit);
@@ -6463,18 +6521,21 @@ RESTART:
     if (lglmaintainresolvent(lgl)) {
         int * q = lgl->resolvent.start;
         for (p = q; p < lgl->resolvent.top; p++)
-            if (lglevel(lgl, (other = *p)))
-            { *q++ = other; }
+            if (lglevel(lgl, (other = *p))) {
+                * q++ = other;
+            }
         lgl->resolvent.top = q;
         LOGRESOLVENT(2, "final resolvent after flushing fixed literals");
         assert(lglcntstk(&lgl->resolvent) == lglcntstk(&lgl->clause));
-        for (p = lgl->clause.start; p < lgl->clause.top; p++)
-        { assert(lglavar(lgl, *p)->mark > 0); }
+        for (p = lgl->clause.start; p < lgl->clause.top; p++) {
+            assert(lglavar(lgl, *p)->mark > 0);
+        }
         for (p = lgl->resolvent.start; p < lgl->resolvent.top; p++) {
             av = lglavar(lgl, *p); assert(av->mark > 0); av->mark = -av->mark;
         }
-        for (p = lgl->clause.start; p < lgl->clause.top; p++)
-        { assert(lglavar(lgl, *p)->mark < 0); }
+        for (p = lgl->clause.start; p < lgl->clause.top; p++) {
+            assert(lglavar(lgl, *p)->mark < 0);
+        }
         for (p = lgl->resolvent.start; p < lgl->resolvent.top; p++) {
             av = lglavar(lgl, *p); assert(av->mark < 0); av->mark = -av->mark;
         }
@@ -6546,9 +6607,9 @@ static void lglincrestartaux(LGL * lgl, int skip)
         delta *= lglinout(lgl, count, lgl->opts->rstinoutinc.val);
     }
     lgl->limits->restart.confs = lgl->stats->confs + delta;
-    if (lgl->limits->restart.wasmaxdelta)
-    { lglrep(lgl, 1 + skip, skip ? 'N' : 'R'); }
-    else { lglrep(lgl, 2, skip ? 'n' : 'r'); }
+    if (lgl->limits->restart.wasmaxdelta) {
+        lglrep(lgl, 1 + skip, skip ? 'N' : 'R');
+    } else { lglrep(lgl, 2, skip ? 'n' : 'r'); }
     if (delta > lgl->limits->restart.maxdelta) {
         lgl->limits->restart.wasmaxdelta = 1;
         lgl->limits->restart.maxdelta = delta;
@@ -6575,8 +6636,9 @@ static int lglnextdecision(LGL * lgl)
     for (;;) {
         Qnd * n;
         assert(line);
-        for (res = line->unassigned; res && lglval(lgl, res); res = n->next)
-        { n = lglqnd(lgl, res); }
+        for (res = line->unassigned; res && lglval(lgl, res); res = n->next) {
+            n = lglqnd(lgl, res);
+        }
         if ((line->unassigned = res)) { break; }
         line = lgl->queue.unassigned = line->down;
     }
@@ -6789,7 +6851,7 @@ static void lglconnaux(LGL * lgl, int glue)
             c = p;
             continue;
         }
-        if (lglisact(act)) { *q++ = *c++; } else { act = -1; }
+        if (lglisact(act)) { *q++ = *c++; }  else { act = -1; }
         p = c;
         d = q;
         satisfied = 0;
@@ -6914,8 +6976,9 @@ static void lglcount(LGL * lgl)
         count = 0;
         for (c = lir->start; c < lir->top; c++)
             if (!*c) { count++; }
-        if (count)
-        { LOG(1, "counted %d redundant clauses with glue %d", count, glue); }
+        if (count) {
+            LOG(1, "counted %d redundant clauses with glue %d", count, glue);
+        }
         lgl->stats->red.lrg += count;
         lgl->stats->lir[glue].clauses = count;
     }
@@ -7013,8 +7076,9 @@ static void lgljwh(LGL * lgl)
         if (val > 0) { continue; }
         inc = lglflt(-size, 1);
         for (p = c; (other = *p); p++)
-            if (!lglval(lgl, other))
-            { lglincjwh(lgl, other, inc); }
+            if (!lglval(lgl, other)) {
+                lglincjwh(lgl, other, inc);
+            }
     }
 }
 
@@ -7077,8 +7141,9 @@ static int * lglis(LGL * lgl)
         }
         if (val > 0) { continue; }
         for (p = c; (other = *p); p++)
-            if (!lglval(lgl, other))
-            { res[other]++; }
+            if (!lglval(lgl, other)) {
+                res[other]++;
+            }
     }
     return res;
 }
@@ -7105,15 +7170,16 @@ static int lglsetjwhbias(LGL * lgl, int idx)
     if (av->bias == bias) { return bias; }
     av->bias = bias;
     lgl->stats->phase.set++;
-    if (pos > neg) { lgl->stats->phase.pos++; } else { lgl->stats->phase.neg++; }
+    if (pos > neg) { lgl->stats->phase.pos++; }  else { lgl->stats->phase.neg++; }
     return bias;
 }
 
 static void lglsetallphases(LGL * lgl)
 {
     int res = 1, idx;
-    for (idx = 2; res && idx < lgl->nvars; idx++)
-    { res = !lglisfree(lgl, idx) || lglavar(lgl, idx)->phase; }
+    for (idx = 2; res && idx < lgl->nvars; idx++) {
+        res = !lglisfree(lgl, idx) || lglavar(lgl, idx)->phase;
+    }
     lgl->allphaseset = res;
 }
 
@@ -7262,8 +7328,9 @@ static void lglmapstk(LGL * lgl, int * map, Stk * lits)
 {
     int * p, * eol;
     eol = lits->top;
-    for (p = lits->start; p < eol; p++)
-    { *p = lglmaplit(map, *p); }
+    for (p = lits->start; p < eol; p++) {
+        *p = lglmaplit(map, *p);
+    }
 }
 
 static void lglmapglue(LGL * lgl, int * map, Stk * lits)
@@ -7278,8 +7345,9 @@ static void lglmaplits(LGL * lgl, int * map)
 {
     int glue;
     lglmapstk(lgl, map, &lgl->irr);
-    for (glue = 0; glue < MAXGLUE; glue++)
-    { lglmapglue(lgl, map, &lgl->red[glue]); }
+    for (glue = 0; glue < MAXGLUE; glue++) {
+        lglmapglue(lgl, map, &lgl->red[glue]);
+    }
 }
 
 static void lglmapvars(LGL * lgl, int * map, int nvars)
@@ -7300,22 +7368,25 @@ static void lglmapvars(LGL * lgl, int * map, int nvars)
 
     NEW(vals, nvars);
     for (i = 2; i < oldnvars; i++)
-        if (lglisfree(lgl, i))
-        { vals[map[i]] = lgl->vals[i]; }
+        if (lglisfree(lgl, i)) {
+            vals[map[i]] = lgl->vals[i];
+        }
     DEL(lgl->vals, lgl->szvars);
     lgl->vals = vals;
 
     NEW(i2e, nvars);
     for (i = 2; i < oldnvars; i++)
-        if (lglisfree(lgl, i))
-        { i2e[map[i]] = lgl->i2e[i]; }
+        if (lglisfree(lgl, i)) {
+            i2e[map[i]] = lgl->i2e[i];
+        }
     DEL(lgl->i2e, lgl->szvars);
     lgl->i2e = i2e;
 
     NEW(dvars, nvars);
     for (i = 2; i < oldnvars; i++)
-        if (lglisfree(lgl, i))
-        { dvars[map[i]] = lgl->dvars[i]; }
+        if (lglisfree(lgl, i)) {
+            dvars[map[i]] = lgl->dvars[i];
+        }
     DEL(lgl->dvars, lgl->szvars);
     lgl->dvars = dvars;
 
@@ -7334,15 +7405,17 @@ static void lglmapvars(LGL * lgl, int * map, int nvars)
 
     NEW(nodes, nvars);
     for (i = 2; i < oldnvars; i++)
-        if (lglisfree(lgl, i))
-        { nodes[map[i]] = lgl->queue.nodes[i]; }
+        if (lglisfree(lgl, i)) {
+            nodes[map[i]] = lgl->queue.nodes[i];
+        }
     DEL(lgl->queue.nodes, lgl->szvars);
     lgl->queue.nodes = nodes;
 
     NEW(avars, nvars);
     for (i = 2; i < oldnvars; i++)
-        if (lglisfree(lgl, i))
-        { avars[map[i]] = lgl->avars[i]; }
+        if (lglisfree(lgl, i)) {
+            avars[map[i]] = lgl->avars[i];
+        }
     DEL(lgl->avars, lgl->szvars);
     lgl->avars = avars;              // Last since 'lglisfree' depends on it !!!
 
@@ -7583,8 +7656,9 @@ static void lglmapass(LGL * lgl, int * map)
         assert(lglsignedmarked(lgl, iass));
         lglsignedunmark(lgl, iass);
     }
-    if (flushed)
-    { LOG(2, "flushed %d duplicated internal assumptions", flushed); }
+    if (flushed) {
+        LOG(2, "flushed %d duplicated internal assumptions", flushed);
+    }
 }
 
 #if !defined(NDEBUG) && !defined(NLGLPICOSAT)
@@ -7654,8 +7728,9 @@ static void lglpicosatchkall(LGL * lgl)
     int res, * p;
     lglpicosatinit(lgl);
     if (lgl->opts->check.val >= 2) {
-        for (p = lgl->eassume.start; p < lgl->eassume.top; p++)
-        { picosat_assume(PICOSAT, lglimport(lgl, *p)); }
+        for (p = lgl->eassume.start; p < lgl->eassume.top; p++) {
+            picosat_assume(PICOSAT, lglimport(lgl, *p));
+        }
         res = picosat_sat(PICOSAT, -1);
         LOG(1, "PicoSAT returns %d", res);
         if (lgl->picosat.res) { assert(res == lgl->picosat.res); }
@@ -7682,8 +7757,9 @@ static void lglpicosatrestart(LGL * lgl)
     if (lgl->mt) { picosat_add(PICOSAT, 0); }
     lglpicosataddhts(lgl);
     lglpicosataddstk(lgl, &lgl->irr);
-    for (glue = 0; glue < MAXGLUE; glue++)
-    { lglpicosataddstk(lgl, &lgl->red[glue]); }
+    for (glue = 0; glue < MAXGLUE; glue++) {
+        lglpicosataddstk(lgl, &lgl->red[glue]);
+    }
     #endif
 }
 
@@ -7864,12 +7940,14 @@ RESTART:
     }
     assert(V > 1);
     mincut = span / (V - 1);
-    if (C > 0) { span /= C; } else { span = 0; }
+    if (C > 0) { span /= C; }  else { span = 0; }
     if (lgl->stats->force.count > 1) {
-        if (lgl->stats->force.mincut.min > mincut)
-        { lgl->stats->force.mincut.min = mincut; }
-        if (lgl->stats->force.mincut.max < mincut)
-        { lgl->stats->force.mincut.max = mincut; }
+        if (lgl->stats->force.mincut.min > mincut) {
+            lgl->stats->force.mincut.min = mincut;
+        }
+        if (lgl->stats->force.mincut.max < mincut) {
+            lgl->stats->force.mincut.max = mincut;
+        }
     } else { lgl->stats->force.mincut.min = lgl->stats->force.mincut.max = mincut; }
     lglprt(lgl, 1,
            "[force-%lld] mincut %.1f, span %.1f, %d variables, %d clauses",
@@ -7948,8 +8026,9 @@ static void lglcompact(LGL * lgl)
     lglfitstk(lgl, &lgl->wchs->stk);
 
     lglfitstk(lgl, &lgl->irr);
-    for (glue = 0; glue < MAXGLUE; glue++)
-    { lglfitlir(lgl, lgl->red + glue); }
+    for (glue = 0; glue < MAXGLUE; glue++) {
+        lglfitlir(lgl, lgl->red + glue);
+    }
     lglrelstk(lgl, &lgl->lcaseen);
     lglrelstk(lgl, &lgl->poisoned);
     lglrelstk(lgl, &lgl->seen);
@@ -8255,7 +8334,7 @@ static void lgldcpclnstk(LGL * lgl, int red, Stk * s)
             p--;
             continue;
         }
-        if (lglisact(act)) { *q++ = *c++; } else { act = -1; }
+        if (lglisact(act)) { *q++ = *c++; }  else { act = -1; }
         d = q;
         satisfied = 0;
         #ifndef NDEBUG
@@ -8325,7 +8404,7 @@ static void lgldcpconnaux(LGL * lgl, int red, int glue, Stk * s)
     assert(!glue || red);
     q = start;
     for (c = q; c < eos; c = p + 1) {
-        if (lglisact(act = *c)) { *q++ = *c++; } else { act = -1; }
+        if (lglisact(act = *c)) { * q++ = *c++; }  else { act = -1; }
         d = q;
         for (p = c; (lit = *p); p++) {
             assert(!lgl->repr[abs(lit)]);
@@ -8728,11 +8807,13 @@ static int lglsyncunits(LGL * lgl)
         }
     }
     lgl->cbs->units.produce.fun = produce;
-    if (lgl->cbs->units.consumed.fun)
-    { lgl->cbs->units.consumed.fun(lgl->cbs->units.consumed.state, count); }
+    if (lgl->cbs->units.consumed.fun) {
+        lgl->cbs->units.consumed.fun(lgl->cbs->units.consumed.state, count);
+    }
     if (lgl->mt) { return 0; }
-    if (count)
-    { LOG(1, "imported %d units", lgl->tid, count); }
+    if (count) {
+        LOG(1, "imported %d units", lgl->tid, count);
+    }
     if (!count) { return 1; }
     assert(!lgl->level);
     res = lglbcp(lgl);
@@ -8779,8 +8860,9 @@ static int lglprbana(LGL * lgl, int probe)
         }
         LOG(3, "open %d antecedents in probing analysis", open - 1);
         assert(open > 0);
-        while (!lglmarked(lgl, lit = lglpopstk(&lgl->trail)))
-        { lglunassign(lgl, lit); }
+        while (!lglmarked(lgl, lit = lglpopstk(&lgl->trail))) {
+            lglunassign(lgl, lit);
+        }
         lglunassign(lgl, lit);
         if (!--open) { res = lit; break; }
         LOG(2, "analyzing reason of literal %d in probing analysis next", lit);
@@ -8788,9 +8870,9 @@ static int lglprbana(LGL * lgl, int probe)
         r0 = rsn[0], r1 = rsn[1];
     }
     assert(res);
-    if (res == probe)
-    { LOG(2, "probing analysis returns the probe %d as 1st UIP", probe); }
-    else
+    if (res == probe) {
+        LOG(2, "probing analysis returns the probe %d as 1st UIP", probe);
+    } else
         LOG(2, "probing analysis returns different 1st UIP %d and not probe %d",
             res, probe);
     lglpopnunmarkstk(lgl, &lgl->seen);
@@ -9060,8 +9142,9 @@ static int lglsimpleprobelrgexists(LGL * lgl, int a)
             res = !other;
         }
     }
-    for (p = lgl->clause.start; p + 1 < lgl->clause.top; p++)
-    { lglunmark(lgl, *p); }
+    for (p = lgl->clause.start; p + 1 < lgl->clause.top; p++) {
+        lglunmark(lgl, *p);
+    }
     return res;
 }
 
@@ -9072,8 +9155,9 @@ static int lglsimpleprobeclausexists(LGL * lgl)
     assert(!lgl->clause.top[-1]);
     s = lgl->clause.start;
     for (p = s + 1; p + 1 < lgl->clause.top; p++)
-        if (lglhts(lgl, *s)->count > lglhts(lgl, *p)->count)
-        { SWAP(int, *s, *p); }
+        if (lglhts(lgl, *s)->count > lglhts(lgl, *p)->count) {
+            SWAP(int, *s, *p);
+        }
     a = lgl->clause.start[0];
     if (len == 2) {
         b = lgl->clause.start[1];
@@ -9082,9 +9166,9 @@ static int lglsimpleprobeclausexists(LGL * lgl)
         b = lgl->clause.start[1];
         c = lgl->clause.start[2];
         res = lglsimpleprobetrnexists(lgl, a, b, c);
-    } else if (len > 3)
-    { res = lglsimpleprobelrgexists(lgl, a); }
-    else { res = 0; }
+    } else if (len > 3) {
+        res = lglsimpleprobelrgexists(lgl, a);
+    } else { res = 0; }
     if (res) { LOG(2, "will not add already existing clause"); }
     return res;
 }
@@ -9201,8 +9285,9 @@ static int lgljwhlook(LGL * lgl)
         if (ext->melted) {
             ext->melted = 0;
             LOG(2, "jwh-look-ahead winner external %d not melted anymore", elit);
-        } else
-        { LOG(2, "jwh-look-ahead winner external %d was not melted anyhow", elit); }
+        } else {
+            LOG(2, "jwh-look-ahead winner external %d was not melted anyhow", elit);
+        }
     } else { LOG(1, "no proper best jwh-look-ahead literal found"); }
     return res;
 }
@@ -9238,8 +9323,9 @@ static int lglislook(LGL * lgl)
         if (ext->melted) {
             ext->melted = 0;
             LOG(2, "lis-look-ahead winner external %d not melted anymore", elit);
-        } else
-        { LOG(2, "lis-look-ahead winner external %d was not melted anyhow", elit); }
+        } else {
+            LOG(2, "lis-look-ahead winner external %d was not melted anyhow", elit);
+        }
     } else { LOG(1, "no proper best jwh-look-ahead literal found"); }
     return res;
 }
@@ -9285,8 +9371,9 @@ static int lglschedbasicprobe(LGL * lgl, Stk * probes, int round)
     for (i = 0; i < res; i++) {
         idx = lglpeek(probes, i);
         if (!idx) { continue; }
-        if (!lglavar(lgl, idx)->donotbasicprobe)
-        { lglpoke(probes, j++, idx); }
+        if (!lglavar(lgl, idx)->donotbasicprobe) {
+            lglpoke(probes, j++, idx);
+        }
     }
     lglrststk(probes, (res = j));
     if (!res)
@@ -9304,10 +9391,12 @@ static int lglschedbasicprobe(LGL * lgl, Stk * probes, int round)
 
 static void lglupdprbasicpen(LGL * lgl, int success)
 {
-    if (success && lgl->limits->prb.pen.basic)
-    { lgl->limits->prb.pen.basic--; }
-    if (!success && lgl->limits->prb.pen.basic < MAXPEN)
-    { lgl->limits->prb.pen.basic++; }
+    if (success && lgl->limits->prb.pen.basic) {
+        lgl->limits->prb.pen.basic--;
+    }
+    if (!success && lgl->limits->prb.pen.basic < MAXPEN) {
+        lgl->limits->prb.pen.basic++;
+    }
 }
 
 static void lglsetprbasiclim(LGL * lgl)
@@ -9315,11 +9404,13 @@ static void lglsetprbasiclim(LGL * lgl)
     int64_t limit, irrlim;
     int pen;
     limit = (lgl->opts->prbasicreleff.val * lgl->stats->visits.search) / 1000;
-    if (limit < lgl->opts->prbasicmineff.val)
-    { limit = lgl->opts->prbasicmineff.val; }
+    if (limit < lgl->opts->prbasicmineff.val) {
+        limit = lgl->opts->prbasicmineff.val;
+    }
     if (lgl->opts->prbasicmaxeff.val >= 0 &&
-            limit > lgl->opts->prbasicmaxeff.val)
-    { limit = lgl->opts->prbasicmaxeff.val; }
+            limit > lgl->opts->prbasicmaxeff.val) {
+        limit = lgl->opts->prbasicmaxeff.val;
+    }
     limit >>= (pen = lgl->limits->prb.pen.basic + lglszpen(lgl));
     irrlim = lgl->stats->irr.lits.cur / 2;
     irrlim >>= lgl->limits->simp.pen;
@@ -9393,8 +9484,9 @@ RESTART:
                    lgl->stats->prb.basic.failed - oldfailed,
                    lgl->stats->prb.basic.lifted - oldlifted,
                    lgl->stats->hbr.cnt - oldhbr);
-            for (idx = 2; idx < lgl->nvars; idx++)
-            { lglavar(lgl, idx)->donotbasicprobe = 0; }
+            for (idx = 2; idx < lgl->nvars; idx++) {
+                lglavar(lgl, idx)->donotbasicprobe = 0;
+            }
             break;
         }
         lglavar(lgl, root)->donotbasicprobe = 1;
@@ -9432,8 +9524,9 @@ RESTART:
             lglprt(lgl, 1,
                    "[basicprobe-%d-%d] fully completed probing",
                    lgl->stats->prb.basic.count, round);
-            for (idx = 2; idx < lgl->nvars; idx++)
-            { lglavar(lgl, idx)->donotbasicprobe = 0; }
+            for (idx = 2; idx < lgl->nvars; idx++) {
+                lglavar(lgl, idx)->donotbasicprobe = 0;
+            }
         }
     }
 DONE:
@@ -9546,8 +9639,9 @@ static void lgldense(LGL * lgl, int occstoo)
             }
             lglshrinkhts(lgl, hts, q - w);
         }
-    if (count)
-    { LOG(1, "counted %d occurrences in small irredundant clauses", count); }
+    if (count) {
+        LOG(1, "counted %d occurrences in small irredundant clauses", count);
+    }
     if (occstoo) {
         count = 0;
         start = lgl->irr.start;
@@ -9565,8 +9659,9 @@ static void lgldense(LGL * lgl, int occstoo)
             }
         }
     }
-    if (count)
-    { LOG(1, "counted %d occurrences in large irredundant clauses", count); }
+    if (count) {
+        LOG(1, "counted %d occurrences in large irredundant clauses", count);
+    }
     count = 0;
     if (!lgl->cgrclosing && !lgl->probing && !lgl->gaussing && !lgl->cceing) {
         for (idx = 2; idx < lgl->nvars; idx++) {
@@ -9942,8 +10037,9 @@ static int lglbacksub(LGL * lgl, int * c, int str)
     LOGCLS(3, c, "backward %s check for mapped clause", mode);
     phase = (c - start) >= lgl->elm->neglidx;
     for (p = c; (lit = *p); p++)
-        if (abs(lit) != 1)
-        { csig |= lglsig(lit); }
+        if (abs(lit) != 1) {
+            csig |= lglsig(lit);
+        }
     size = p - c;
     assert(csig == lglpeek(&lgl->elm->csigs, c - start));
     assert(size == lglpeek(&lgl->elm->sizes, c - start));
@@ -9983,7 +10079,7 @@ static int lglbacksub(LGL * lgl, int * c, int str)
         }
         d = lgl->elm->lits.start + next;
         if (c <= d && d < c + size) { continue; }
-        if (str) { lgl->stats->elm.strchks++; } else { lgl->stats->elm.subchks++; }
+        if (str) { lgl->stats->elm.strchks++; }  else { lgl->stats->elm.subchks++; }
         while (d[-1]) { d--; }
         assert(c != d);
         LOGMCLS(3, d, "backward %s check with clause", mode);
@@ -10275,8 +10371,9 @@ static int lglflushlits(LGL * lgl, int lit)
                 }
             } else {
                 #ifndef NDEBUG
-                if (!red || (!lgliselim(lgl, other) && !lgliselim(lgl, other2)))
-                { assert(val > 0 || val2 > 0); }
+                if (!red || (!lgliselim(lgl, other) && !lgliselim(lgl, other2))) {
+                    assert(val > 0 || val2 > 0);
+                }
                 #endif
             }
         } else {
@@ -10556,14 +10653,16 @@ static void lglepusheliminated(LGL * lgl, int idx)
         lglepush(lgl, lit);
         if (tag == BINCS || tag == TRNCS) {
             lglepush(lgl, blit >> RMSHFT);
-            if (tag == TRNCS)
-            { lglepush(lgl, *p); }
+            if (tag == TRNCS) {
+                lglepush(lgl, *p);
+            }
         } else {
             assert(tag == OCCS);
             c = lglidx2lits(lgl, OCCS, 0, blit >> RMSHFT);
             for (l = c; (other = *l); l++)
-                if (other != lit)
-                { lglepush(lgl, other); }
+                if (other != lit) {
+                    lglepush(lgl, other);
+                }
         }
     }
     lglepush(lgl, 0);
@@ -10667,7 +10766,7 @@ static int lgltrylargeve(LGL * lgl)
         end = i ? eon : eop;
         for (c = start; c < end; c++) {
             lgl->stats->elm.steps++;
-            if (*c == REMOVED) { while (*c) { c++; } continue; }
+            if (*c == REMOVED) { while (*c) { c++; }  continue; }
             while ((lit = *c)) {
                 (void) lglm2i(lgl, lit);
                 c++;
@@ -10888,8 +10987,9 @@ static void lglvar2funaux(int v, Fun res, int negate)
     if (v < 6) {
         tmp = lglbasevar2funtab[v];
         if (negate) { tmp = ~tmp; }
-        for (i = 0; i < FUNQUADS; i++)
-        { res[i] = tmp; }
+        for (i = 0; i < FUNQUADS; i++) {
+            res[i] = tmp;
+        }
     } else {
         tmp = negate ? ~0ull : 0ull;
         p = 1 << (v - 6);
@@ -10916,22 +11016,25 @@ static void lglnegvar2fun(int v, Fun res)
 static void lglfuncpy(Fun dst, const Fun src)
 {
     int i;
-    for (i = 0; i < FUNQUADS; i++)
-    { dst[i] = src[i]; }
+    for (i = 0; i < FUNQUADS; i++) {
+        dst[i] = src[i];
+    }
 }
 
 static void lglfalsefun(Fun res)
 {
     int i;
-    for (i = 0; i < FUNQUADS; i++)
-    { res[i] = 0ll; }
+    for (i = 0; i < FUNQUADS; i++) {
+        res[i] = 0ll;
+    }
 }
 
 static void lgltruefun(Fun res)
 {
     int i;
-    for (i = 0; i < FUNQUADS; i++)
-    { res[i] = ~0ll; }
+    for (i = 0; i < FUNQUADS; i++) {
+        res[i] = ~0ll;
+    }
 }
 
 static int lglisfalsefun(const Fun f)
@@ -10953,57 +11056,65 @@ static int lglistruefun(const Fun f)
 static void lglorfun(Fun a, const Fun b)
 {
     int i;
-    for (i = 0; i < FUNQUADS; i++)
-    { a[i] |= b[i]; }
+    for (i = 0; i < FUNQUADS; i++) {
+        a[i] |= b[i];
+    }
 }
 
 static void lglornegfun(Fun a, const Fun b)
 {
     int i;
-    for (i = 0; i < FUNQUADS; i++)
-    { a[i] |= ~b[i]; }
+    for (i = 0; i < FUNQUADS; i++) {
+        a[i] |= ~b[i];
+    }
 }
 
 static void lglor3fun(Fun a, const Fun b, const Fun c)
 {
     int i;
-    for (i = 0; i < FUNQUADS; i++)
-    { a[i] = b[i] | c[i]; }
+    for (i = 0; i < FUNQUADS; i++) {
+        a[i] = b[i] | c[i];
+    }
 }
 
 static void lglor3negfun(Fun a, const Fun b, const Fun c)
 {
     int i;
-    for (i = 0; i < FUNQUADS; i++)
-    { a[i] = b[i] | ~c[i]; }
+    for (i = 0; i < FUNQUADS; i++) {
+        a[i] = b[i] | ~c[i];
+    }
 }
 
 static void lglandornegfun(Fun a, const Fun b, const Fun c)
 {
     int i;
-    for (i = 0; i < FUNQUADS; i++)
-    { a[i] &= b[i] | ~c[i]; }
+    for (i = 0; i < FUNQUADS; i++) {
+        a[i] &= b[i] | ~c[i];
+    }
 }
 
 static void lglandfun(Fun a, const Fun b)
 {
     int i;
-    for (i = 0; i < FUNQUADS; i++)
-    { a[i] &= b[i]; }
+    for (i = 0; i < FUNQUADS; i++) {
+        a[i] &= b[i];
+    }
 }
 
 static void lgland3fun(Fun a, const Fun b, const Fun c)
 {
     int i;
-    for (i = 0; i < FUNQUADS; i++)
-    { a[i] = b[i] & c[i]; }
+    for (i = 0; i < FUNQUADS; i++) {
+        a[i] = b[i] & c[i];
+    }
 }
 
 static void lgland3negfun(Fun a, const Fun b, const Fun c)
 {
     int i;
-    for (i = 0; i < FUNQUADS; i++)
-    { a[i] = b[i] & ~c[i]; }
+    for (i = 0; i < FUNQUADS; i++) {
+        a[i] = b[i] & ~c[i];
+    }
 }
 
 static void lglsrfun(Fun a, int shift)
@@ -11749,8 +11860,9 @@ static void lglsetblklim(LGL * lgl)
     } else {
         limit = (lgl->opts->blkreleff.val * lgl->stats->visits.search) / 1000;
         if (limit < lgl->opts->blkmineff.val) { limit = lgl->opts->blkmineff.val; }
-        if (lgl->opts->blkmaxeff.val >= 0 && limit > lgl->opts->blkmaxeff.val)
-        { limit = lgl->opts->blkmaxeff.val; }
+        if (lgl->opts->blkmaxeff.val >= 0 && limit > lgl->opts->blkmaxeff.val) {
+            limit = lgl->opts->blkmaxeff.val;
+        }
         limit >>= (pen = lgl->limits->blk.pen + lglszpen(lgl));
         irrlim = lgl->stats->irr.lits.cur;
         irrlim >>= lgl->limits->simp.pen;
@@ -11886,8 +11998,9 @@ static void lglblock(LGL * lgl)
         lglprt(lgl, 1,
                "[block-%d] incomplete blocked clause elimination %d not tried %.0f%%",
                lgl->stats->blk.count, rem, lglpcnt(rem, lgl->nvars - 2));
-    else
-    { rem = lgleschedrem(lgl, 0); }
+    else {
+        rem = lgleschedrem(lgl, 0);
+    }
     lglsetdonotesched(lgl, !rem);
     lglrelstk(lgl, &lgl->esched);
     lglsparse(lgl);
@@ -11916,8 +12029,9 @@ static void lglsetccelim(LGL * lgl)
     int pen;
     limit = (lgl->opts->ccereleff.val * lgl->stats->visits.search) / 1000;
     if (limit < lgl->opts->ccemineff.val) { limit = lgl->opts->ccemineff.val; }
-    if (lgl->opts->ccemaxeff.val >= 0 && limit > lgl->opts->ccemaxeff.val)
-    { limit = lgl->opts->ccemaxeff.val; }
+    if (lgl->opts->ccemaxeff.val >= 0 && limit > lgl->opts->ccemaxeff.val) {
+        limit = lgl->opts->ccemaxeff.val;
+    }
     limit >>= (pen = lgl->limits->cce.pen + lglszpen(lgl));
     irrlim = lgl->stats->irr.lits.cur;
     irrlim >>= lgl->limits->simp.pen;
@@ -12147,15 +12261,18 @@ ALA:
             if (first) {
                 if (tag == BINCS) {
                     if (lglsignedmarked(lgl, -other)) { continue; }
-                    if (!lglsignedmarked(lgl, other))
-                    { lglpushstk(lgl, &lgl->cce->cla, other); }
+                    if (!lglsignedmarked(lgl, other)) {
+                        lglpushstk(lgl, &lgl->cce->cla, other);
+                    }
                 } else if (tag == TRNCS) {
                     if (lglsignedmarked(lgl, -other)) { continue; }
                     if (lglsignedmarked(lgl, -*p)) { continue; }
-                    if (!lglsignedmarked(lgl, other))
-                    { lglpushstk(lgl, &lgl->cce->cla, other); }
-                    if (!lglsignedmarked(lgl, *p))
-                    { lglpushstk(lgl, &lgl->cce->cla, *p); }
+                    if (!lglsignedmarked(lgl, other)) {
+                        lglpushstk(lgl, &lgl->cce->cla, other);
+                    }
+                    if (!lglsignedmarked(lgl, *p)) {
+                        lglpushstk(lgl, &lgl->cce->cla, *p);
+                    }
                 } else {
                     assert(tag == OCCS);
                     d = lglidx2lits(lgl, OCCS, 0, other);
@@ -12164,8 +12281,9 @@ ALA:
                         if (other != -lit && lglsignedmarked(lgl, -other)) { break; }
                     if (other) { continue; }
                     for (q = d; (other = *q); q++) // add to cla only, if lits are not already marked!
-                        if (other != -lit && !lglsignedmarked(lgl, other))
-                        { lglpushstk(lgl, &lgl->cce->cla, other); }
+                        if (other != -lit && !lglsignedmarked(lgl, other)) {
+                            lglpushstk(lgl, &lgl->cce->cla, other);
+                        }
                 }
                 first = 0;
             } else {
@@ -12194,8 +12312,9 @@ ALA:
                         lglsignedmark2(lgl, other);
                     }
                     for (q = r; q < lgl->cce->cla.top; q++)
-                        if (lglsignedmarked2(lgl, (other = *q)))
-                        { *r++ = other; }
+                        if (lglsignedmarked2(lgl, (other = *q))) {
+                            * r++ = other;
+                        }
                     for (q = d; (other = *q); q++) {
                         if (other == -lit) { continue; }
                         assert(other != lit);
@@ -12231,8 +12350,9 @@ SKIPCLA:
         lgl->stats->cce.ate++;
     } else if (lgl->opts->block.val && lgl->opts->cce.val >= 2) {
         for (p = lgl->cce->cla.start; p < lgl->cce->cla.top; p++)
-            if (!lglifrozen(lgl, (other = *p)) && (res = lglabce(lgl, other)))
-            { break; }
+            if (!lglifrozen(lgl, (other = *p)) && (res = lglabce(lgl, other))) {
+                break;
+            }
         if (res) {
             LOGCLS(CCELOGLEVEL, c, "ABCE on %d clause", other);
             lglpushstk(lgl, &lgl->cce->extend, 0);
@@ -12372,8 +12492,9 @@ static int lglcce(LGL * lgl)
         lglprt(lgl, 1,
                "[cce-%d] incomplete covered clause elimination %d not tried %.0f%%",
                lgl->stats->cce.count, rem, lglpcnt(rem, lgl->nvars - 2));
-    else
-    { rem = lgleschedrem(lgl, 0); }
+    else {
+        rem = lgleschedrem(lgl, 0);
+    }
     lglsetdonotesched(lgl, !rem);
     lglsparse(lgl);
     lglgc(lgl);
@@ -12433,8 +12554,9 @@ static void lglcliffclause(LGL * lgl, const int * c)
         } else {
             r = lgl->cliff->lift.start;
             for (q = r; q < lgl->cliff->lift.top; q++)
-                if (lglval(lgl, (other = *q)) > 0)
-                { *r++ = other; }
+                if (lglval(lgl, (other = *q)) > 0) {
+                    * r++ = other;
+                }
             lgl->cliff->lift.top = r;
         }
         lglbacktrack(lgl, 0);
@@ -12503,8 +12625,9 @@ static int lglclifflit(LGL * lgl, int lit)
             assert(tag == LRGCS);
             c = lglidx2lits(lgl, LRGCS, (blit & REDCS), *p);
             if (*c != lit) { continue; }
-            for (l = c; (other = *l); l++)
-            { lglpushstk(lgl, &lgl->cliff->lits, other); }
+            for (l = c; (other = *l); l++) {
+                lglpushstk(lgl, &lgl->cliff->lits, other);
+            }
         }
         lglpushstk(lgl, &lgl->cliff->lits, 0);
     }
@@ -12519,8 +12642,9 @@ static void lglsetclifflim(LGL * lgl)
     int pen;
     limit = (lgl->opts->cliffreleff.val * lgl->stats->visits.search) / 1000;
     if (limit < lgl->opts->cliffmineff.val) { limit = lgl->opts->cliffmineff.val; }
-    if (lgl->opts->cliffmaxeff.val >= 0 && limit > lgl->opts->cliffmaxeff.val)
-    { limit = lgl->opts->cliffmaxeff.val; }
+    if (lgl->opts->cliffmaxeff.val >= 0 && limit > lgl->opts->cliffmaxeff.val) {
+        limit = lgl->opts->cliffmaxeff.val;
+    }
     limit >>= (pen = lgl->limits->cliff.pen + lglszpen(lgl));
     irrlim = 2 * lgl->stats->irr.lits.cur;
     irrlim >>= lgl->limits->simp.pen;
@@ -12556,8 +12680,9 @@ static int lglcliff(LGL * lgl)
     oldlifted = lgl->stats->cliff.lifted;
     oldfailed = lgl->stats->cliff.failed;
     lglsetclifflim(lgl);
-    if (lglrandlitrav(lgl, lglclifflit))
-    { lglcliffclauses(lgl, &lgl->irr); }
+    if (lglrandlitrav(lgl, lglclifflit)) {
+        lglcliffclauses(lgl, &lgl->irr);
+    }
     lifted = lgl->stats->cliff.lifted - oldlifted;
     failed = lgl->stats->cliff.failed - oldfailed;
     lglprt(lgl, 1, "[cliff-%d] failed %d, lifted %d",
@@ -12584,8 +12709,9 @@ static void lglsetelmlim(LGL * lgl)
     } else {
         limit = (lgl->opts->elmreleff.val * lgl->stats->visits.search) / 1000;
         if (limit < lgl->opts->elmineff.val) { limit = lgl->opts->elmineff.val; }
-        if (lgl->opts->elmaxeff.val >= 0 && limit > lgl->opts->elmaxeff.val)
-        { limit = lgl->opts->elmaxeff.val; }
+        if (lgl->opts->elmaxeff.val >= 0 && limit > lgl->opts->elmaxeff.val) {
+            limit = lgl->opts->elmaxeff.val;
+        }
         limit >>= (pen = lgl->limits->elm.pen + lglszpen(lgl));
         irrlim = lgl->stats->irr.lits.cur;
         irrlim >>= lgl->limits->simp.pen;
@@ -12656,8 +12782,9 @@ static int lglelim(LGL * lgl)
         lglprt(lgl, 1,
                "[elim-%d] incomplete variable elimination %d not tried %.0f%%",
                lgl->stats->elm.count, rem, lglpcnt(rem, lgl->nvars - 2));
-    else
-    { rem = lgleschedrem(lgl, 0); }
+    else {
+        rem = lgleschedrem(lgl, 0);
+    }
     lglsetdonotesched(lgl, !rem);
     lglrelstk(lgl, &lgl->esched);
     lglrelecls(lgl);
@@ -12753,8 +12880,9 @@ static int lglsynceqs(LGL * lgl)
     }
     LOG(1, "produced %d equivalences", produced);
 DONE:
-    if (lgl->cbs->eqs.unlock.fun)
-    { lgl->cbs->eqs.unlock.fun(lgl->cbs->eqs.unlock.state, consumed, produced); }
+    if (lgl->cbs->eqs.unlock.fun) {
+        lgl->cbs->eqs.unlock.fun(lgl->cbs->eqs.unlock.state, consumed, produced);
+    }
     return !lgl->mt;
 }
 
@@ -12784,7 +12912,7 @@ static int lgldecomp(LGL * lgl)
     lglcompact(lgl);
     lglmap(lgl);
     if (lgl->mt) { goto DONE; }
-    if (!lglbcp(lgl)) { if (!lgl->mt) { lgl->mt = 1; } goto DONE; }
+    if (!lglbcp(lgl)) { if (!lgl->mt) { lgl->mt = 1; }  goto DONE; }
     lglcount(lgl);
     lglgc(lgl);
     if (lgl->mt) { goto DONE; }
@@ -13504,7 +13632,7 @@ static void lglprtcgrem(LGL * lgl)
     int idx, ret = 0, rem = 0;
     for (idx = 2; idx < lgl->nvars; idx++) {
         if (!lglisfree(lgl, idx)) { continue; }
-        if (lglavar(lgl, idx)->donotcgrcls) { ret++; } else { rem++; }
+        if (lglavar(lgl, idx)->donotcgrcls) { ret++; }  else { rem++; }
     }
     if (rem)
         lglprt(lgl, 1, "[cgrclsr-%d] %d variables remain %.0f%% (%d retained)",
@@ -13512,8 +13640,9 @@ static void lglprtcgrem(LGL * lgl)
     else {
         lglprt(lgl, 1, "[cgrclsr-%d] fully completed congruence closure",
                lgl->stats->cgr.count);
-        for (idx = 2; idx < lgl->nvars; idx++)
-        { lglavar(lgl, idx)->donotcgrcls = 0; }
+        for (idx = 2; idx < lgl->nvars; idx++) {
+            lglavar(lgl, idx)->donotcgrcls = 0;
+        }
     }
 }
 
@@ -13552,8 +13681,9 @@ static void lglcgreset(LGL * lgl)
     const int * p;
     int idx;
     for (idx = 2; idx < lgl->nvars; idx++) { lgl->avars[idx].donotcgrcls = 1; }
-    for (p = lgl->wrk->queue.start; p < lgl->wrk->queue.top; p++)
-    { lgl->avars[abs(*p)].donotcgrcls = 0; }
+    for (p = lgl->wrk->queue.start; p < lgl->wrk->queue.top; p++) {
+        lgl->avars[abs(*p)].donotcgrcls = 0;
+    }
     lglwrkreset(lgl);
     for (idx = 2; idx < lgl->nvars; idx++) { lgl->avars[idx].gate = 0; }
     for (idx = 2; idx < lgl->nvars; idx++) { lglrelstk(lgl, lgl->cgr->goccs + idx); }
@@ -13834,10 +13964,10 @@ static int lglmatchgate(LGL * lgl, int fixed, Gat * g, Gat * h)
     assert(g->size == h->size);
     assert(g->minrhs == h->minrhs);
     assert(g->size >= 2);
-    if (g->tag == ITETAG) { if (!(s = lglmatchitegate(lgl, g, h))) { return 0; } }
-    else if (g->size == 2) { if (!(s = lglmatchbingate(lgl, g, h))) { return 0; } }
-    else if (g->tag == ANDTAG) { if (!(s = lglmatchlrgand(lgl, g, h))) { return 0; } }
-    else if (g->tag == XORTAG) { if (!(s = lglmatchlrgxor(lgl, g, h))) { return 0; } }
+    if (g->tag == ITETAG) { if (!(s = lglmatchitegate(lgl, g, h))) { return 0; }  }
+    else if (g->size == 2) { if (!(s = lglmatchbingate(lgl, g, h))) { return 0; }  }
+    else if (g->tag == ANDTAG) { if (!(s = lglmatchlrgand(lgl, g, h))) { return 0; }  }
+    else if (g->tag == XORTAG) { if (!(s = lglmatchlrgxor(lgl, g, h))) { return 0; }  }
     else { return 0; }
     repr = s * l, other = k;
     if (repr == other) { return 0; }
@@ -13876,19 +14006,19 @@ static int lglsimpbinand(LGL * lgl, Gat * g)
         if (lhs == 1) { return 0; }
         res = 1;
         LOG(2, "binary and gate with lhs %d simplified to true", g->lhs);
-        if (lhs == -1) { conflict = 1; } else { conflict = !lglcgunit(lgl, lhs); }
+        if (lhs == -1) { conflict = 1; }  else { conflict = !lglcgunit(lgl, lhs); }
     } else if (a == -1 || b == -1 || a == -b) {
         if (lhs == -1) { return 0; }
         res = 1;
         LOG(2, "binary and gate with lhs %d simplified to false", g->lhs);
-        if (lhs == 1) { conflict = 1; } else { conflict = !lglcgunit(lgl, -lhs); }
+        if (lhs == 1) { conflict = 1; }  else { conflict = !lglcgunit(lgl, -lhs); }
     } else {
         if (b == 1) { SWAP(int, a, b); }
         if (a == 1) {
             if (lhs == b) { return 0; }
             res = 1;
             LOG(2, "binary and gate with lhs %d simplifies to %d", g->lhs, b);
-            if (lhs == -b) { conflict = 1; } else { lglcgmerge(lgl, lhs, b); }
+            if (lhs == -b) { conflict = 1; }  else { lglcgmerge(lgl, lhs, b); }
         }
     }
     if (res) {
@@ -13920,7 +14050,7 @@ static int lglsimplrgand(LGL * lgl, Gat * g)
         repr = lglcgrepr(lgl, -other);
         if (repr == 1) { continue; }
         if (repr == -1) { foundfalse = 1; break; }
-        if (rhs) { rhs = INT_MAX; } else { assert(repr); rhs = repr; }
+        if (rhs) { rhs = INT_MAX; }  else { assert(repr); rhs = repr; }
         u = lglavar(lgl, repr);
         bit = (1 << (repr < 0));
         if (u->mark & bit) { continue; }
@@ -13939,19 +14069,19 @@ static int lglsimplrgand(LGL * lgl, Gat * g)
         if (lhs != -1) {
             res = 1;
             LOG(2, "gate with lhs %d simplifies to false", g->lhs);
-            if (lhs == 1) { conflict = 1; } else { conflict = !lglcgunit(lgl, -lhs); }
+            if (lhs == 1) { conflict = 1; }  else { conflict = !lglcgunit(lgl, -lhs); }
         }
     } else if (!rhs) {
         if (lhs != 1) {
             res = 1;
             LOG(2, "large and gate with lhs %d simplifies to true", g->lhs);
-            if (lhs == -1) { conflict = 1; } else { conflict = !lglcgunit(lgl, lhs); }
+            if (lhs == -1) { conflict = 1; }  else { conflict = !lglcgunit(lgl, lhs); }
         }
     } else if (rhs != INT_MAX) {
         if (lhs != rhs) {
             res = 1;
             LOG(2, "large and gate with lhs %d simplifies to %d", g->lhs, rhs);
-            if (lhs == -rhs) { conflict = 1; } else { lglcgmerge(lgl, lhs, rhs); }
+            if (lhs == -rhs) { conflict = 1; }  else { lglcgmerge(lgl, lhs, rhs); }
         }
     }
     if (res) {
@@ -14308,8 +14438,9 @@ static void lglsetcgrclsrlim(LGL * lgl)
     int pen;
     limit = (lgl->opts->cgreleff.val * lgl->stats->visits.search) / 1000;
     if (limit < lgl->opts->cgrmineff.val) { limit = lgl->opts->cgrmineff.val; }
-    if (lgl->opts->cgrmaxeff.val >= 0 && limit > lgl->opts->cgrmaxeff.val)
-    { limit = lgl->opts->cgrmaxeff.val; }
+    if (lgl->opts->cgrmaxeff.val >= 0 && limit > lgl->opts->cgrmaxeff.val) {
+        limit = lgl->opts->cgrmaxeff.val;
+    }
     limit >>= (pen = lgl->limits->cgr.pen + lglszpen(lgl));
     irrlim = lgl->stats->irr.lits.cur / 2;
     irrlim >>= lgl->limits->simp.pen;
@@ -14484,8 +14615,9 @@ static int64_t lglobalftlim(LGL * lgl)
     int pen;
     limit = (lgl->opts->lftreleff.val * lgl->stats->visits.search) / 1000;
     if (limit < lgl->opts->lftmineff.val) { limit = lgl->opts->lftmineff.val; }
-    if (lgl->opts->lftmaxeff.val >= 0 && limit > lgl->opts->lftmaxeff.val)
-    { limit = lgl->opts->lftmaxeff.val; }
+    if (lgl->opts->lftmaxeff.val >= 0 && limit > lgl->opts->lftmaxeff.val) {
+        limit = lgl->opts->lftmaxeff.val;
+    }
     limit >>= (pen = lgl->limits->lft.pen + lglszpen(lgl));
     irrlim = lgl->stats->irr.lits.cur / 4;
     irrlim >>= lgl->limits->simp.pen;
@@ -14512,7 +14644,7 @@ static void lglprtlftrem(LGL * lgl)
     int idx, ret = 0, rem = 0;
     for (idx = 2; idx < lgl->nvars; idx++) {
         if (!lglisfree(lgl, idx)) { continue; }
-        if (lglavar(lgl, idx)->donotlft) { ret++; } else { rem++; }
+        if (lglavar(lgl, idx)->donotlft) { ret++; }  else { rem++; }
     }
     if (rem)
         lglprt(lgl, 1, "[lift-%d] %d variables remain %.0f%% (%d retained)",
@@ -14520,8 +14652,9 @@ static void lglprtlftrem(LGL * lgl)
     else {
         lglprt(lgl, 1, "[lift-%d] fully completed lifting",
                lgl->stats->lift.count);
-        for (idx = 2; idx < lgl->nvars; idx++)
-        { lglavar(lgl, idx)->donotlft = 0; }
+        for (idx = 2; idx < lgl->nvars; idx++) {
+            lglavar(lgl, idx)->donotlft = 0;
+        }
     }
 }
 
@@ -14588,7 +14721,7 @@ static int lgliftaux(LGL * lgl)
         assert(pos < (unsigned) mod);
         outer = probes.start[pos];
         lglavar(lgl, outer)->donotlft = 1;
-        if (outer == first) { if (changed) { changed = 0; } else { break; } }
+        if (outer == first) { if (changed) { changed = 0; }  else { break; }  }
         if (!first) { first = outer; }
         pos += delta;
         if (pos >= mod) { pos -= mod; }
@@ -14646,8 +14779,9 @@ static int lgliftaux(LGL * lgl)
             goto FIRST_OUTER_BRANCH_FAILED;
         }
         lglclnstk(&saved);
-        for (i = oldouter; i < lglcntstk(&lgl->trail); i++)
-        { lglpushstk(lgl, &saved, lglpeek(&lgl->trail, i)); }
+        for (i = oldouter; i < lglcntstk(&lgl->trail); i++) {
+            lglpushstk(lgl, &saved, lglpeek(&lgl->trail, i));
+        }
         LOG(3, "saved %d assignments of 1st inner branch %d in 1st outer branch",
             lglcntstk(&saved), inner, outer);
         lglbacktrack(lgl, 1);
@@ -14724,8 +14858,9 @@ static int lgliftaux(LGL * lgl)
         #ifndef NDEBUG
         oldinner = lglcntstk(&lgl->trail);
         #endif
-        if (!inner || lglval(lgl, inner))
-        { inner = lglinnerprobe(lgl, oldouter, &probes, &tmp); }
+        if (!inner || lglval(lgl, inner)) {
+            inner = lglinnerprobe(lgl, oldouter, &probes, &tmp);
+        }
         if (!inner) {
         SECOND_OUTER_BRANCH_WIHOUT_INNER_PROBE:
             LOG(2, "no inner probe for 2nd outer branch %d", -outer);
@@ -14756,8 +14891,9 @@ static int lgliftaux(LGL * lgl)
             goto SECOND_OUTER_BRANCH_FAILED;
         }
         lglclnstk(&saved);
-        for (i = oldouter; i < lglcntstk(&lgl->trail); i++)
-        { lglpushstk(lgl, &saved, lglpeek(&lgl->trail, i)); }
+        for (i = oldouter; i < lglcntstk(&lgl->trail); i++) {
+            lglpushstk(lgl, &saved, lglpeek(&lgl->trail, i));
+        }
         LOG(3,
             "saved %d assignments of 1st inner branch %d in 2nd outer branch %d",
             lglcntstk(&saved), inner, -outer);
@@ -14855,8 +14991,9 @@ static int lgliftaux(LGL * lgl)
         lglcleanrepr(lgl, &represented[1], reprs[1]);
     }
     if (!lgl->mt) {
-        for (idx = 2; idx < lgl->nvars; idx++)
-        { (void) lglptrjmp(reprs[2], lgl->nvars - 1, idx); }
+        for (idx = 2; idx < lgl->nvars; idx++) {
+            (void) lglptrjmp(reprs[2], lgl->nvars - 1, idx);
+        }
         for (idx = 2; idx < lgl->nvars; idx++) {
             repr = lglptrjmp(reprs[2], lgl->nvars - 1, idx);
             val = lglval(lgl, idx);
@@ -15227,8 +15364,9 @@ static void lglseternreslim(LGL * lgl)
     } else {
         limit = (lgl->opts->trnreleff.val * lgl->stats->visits.search) / 1000;
         if (limit < lgl->opts->trnrmineff.val) { limit = lgl->opts->trnrmineff.val; }
-        if (lgl->opts->trnrmaxeff.val >= 0 && limit > lgl->opts->trnrmaxeff.val)
-        { limit = lgl->opts->trnrmaxeff.val; }
+        if (lgl->opts->trnrmaxeff.val >= 0 && limit > lgl->opts->trnrmaxeff.val) {
+            limit = lgl->opts->trnrmaxeff.val;
+        }
         limit >>= (pen = lgl->limits->trnr.pen + lglszpen(lgl));
         irrlim = 4 * lgl->stats->irr.lits.cur;
         irrlim >>= lgl->limits->simp.pen;
@@ -15256,7 +15394,7 @@ static void lglprternresrem(LGL * lgl)
     int idx, ret = 0, rem = 0;
     for (idx = 2; idx < lgl->nvars; idx++) {
         if (!lglisfree(lgl, idx)) { continue; }
-        if (lglavar(lgl, idx)->donoternres) { ret++; } else { rem++; }
+        if (lglavar(lgl, idx)->donoternres) { ret++; }  else { rem++; }
     }
     if (rem)
         lglprt(lgl, 1, "[ternres-%d] %d variables remain %.0f%% (%d retained)",
@@ -15264,8 +15402,9 @@ static void lglprternresrem(LGL * lgl)
     else {
         lglprt(lgl, 1, "[ternres-%d] fully completed ternary resolution",
                lgl->stats->trnr.count);
-        for (idx = 2; idx < lgl->nvars; idx++)
-        { lglavar(lgl, idx)->donoternres = 0; }
+        for (idx = 2; idx < lgl->nvars; idx++) {
+            lglavar(lgl, idx)->donoternres = 0;
+        }
     }
 }
 
@@ -15459,8 +15598,9 @@ static void lglsetrdlim(LGL * lgl)
     int pen;
     limit = (lgl->opts->trdreleff.val * lgl->stats->visits.search) / 1000;
     if (limit < lgl->opts->trdmineff.val) { limit = lgl->opts->trdmineff.val; }
-    if (lgl->opts->trdmaxeff.val >= 0 && limit > lgl->opts->trdmaxeff.val)
-    { limit = lgl->opts->trdmaxeff.val; }
+    if (lgl->opts->trdmaxeff.val >= 0 && limit > lgl->opts->trdmaxeff.val) {
+        limit = lgl->opts->trdmaxeff.val;
+    }
     limit >>= (pen = lgl->limits->trd.pen + lglszpen(lgl));
     irrlim = lgl->stats->irr.lits.cur;
     irrlim >>= lgl->limits->simp.pen;
@@ -15683,8 +15823,9 @@ static int lglstamp(LGL * lgl, int root,
                     lglpushwtk(lgl, work, BEFORE, lit, other, red);
                 }
                 end = lglcntwtk(work);
-                for (r = work->start + start; r < work->top; r++)
-                { lglunmark(lgl, r->other); }
+                for (r = work->start + start; r < work->top; r++) {
+                    lglunmark(lgl, r->other);
+                }
                 mod = (end - start);
                 if (mod <= 1) { continue; }
                 for (i = start; i < end - 1;  i++) {
@@ -15727,8 +15868,9 @@ static int lglstamp(LGL * lgl, int root,
                 LOG(1, "stamping failing edge %d %d", lit, other);
                 for (failed = lit;
                         dfpr[lglulit(failed)].discovered > observed;
-                        failed = dfpr[lglulit(failed)].parent)
-                { assert(failed); }
+                        failed = dfpr[lglulit(failed)].parent) {
+                    assert(failed);
+                }
                 LOG(1, "stamping failed literal %d", failed);
                 lglpushstk(lgl, units, -failed);
                 lgl->stats->unhd.stamp.failed++;
@@ -16160,8 +16302,9 @@ static int lglunhideglue(LGL * lgl, const DFPR * dfpr, int glue, int irronly)
         LOGCLS(2, c, "unhiding failed literal through large %s clause", type);
         LOG(2, "unhiding that all negations are implied by root %d", root);
         lca = -*c;
-        for (p = c + 1; p < eoc; p++)
-        { lca = lglunhlca(lgl, dfpr, -*p, lca); }
+        for (p = c + 1; p < eoc; p++) {
+            lca = lglunhlca(lgl, dfpr, -*p, lca);
+        }
         assert(!lglval(lgl, lca));
         LOG(2, "unhiding failed large %s clause implied by LCA %d", type, lca);
         lgl->stats->unhd.failed.lrg++;
@@ -16365,13 +16508,15 @@ static int lglunhideglue(LGL * lgl, const DFPR * dfpr, int glue, int irronly)
             for (p = c; (lit = *p); p++) {
                 root = lglunhroot(dfpr, -lit);
                 if (root) {
-                    if (root == root1)
-                    { lca1 = lca1 ? lglunhlca(lgl, dfpr, lca1, -lit) : -lit; }
-                    if (root == root2)
-                    { lca2 = lca2 ? lglunhlca(lgl, dfpr, lca2, -lit) : -lit; }
+                    if (root == root1) {
+                        lca1 = lca1 ? lglunhlca(lgl, dfpr, lca1, -lit) : -lit;
+                    }
+                    if (root == root2) {
+                        lca2 = lca2 ? lglunhlca(lgl, dfpr, lca2, -lit) : -lit;
+                    }
                 } else {
                     assert(!lca2);
-                    if (lca1) { lca2 = -lit; } else { lca1 = -lit; }
+                    if (lca1) { lca2 = -lit; }  else { lca1 = -lit; }
                 }
             }
         } else {
@@ -16449,14 +16594,18 @@ static int lglunhideglue(LGL * lgl, const DFPR * dfpr, int glue, int irronly)
         LOG(1, "unhiding large clause produces empty clause");
         res = 0;
     }
-    if (nunits)
-    { LOG(1, "unhiding %d units from large %s clauses", nunits, type); }
-    if (ntaut)
-    { LOG(1, "unhiding %d large tautological %s clauses", ntaut, type); }
-    if (nstr)
-    { LOG(1, "unhiding removal of %d literals in %s clauses", nstr, type); }
-    if (nhbrs)
-    { LOG(1, "unhiding %d hyper binary resolutions in %s clauses", nhbrs, type); }
+    if (nunits) {
+        LOG(1, "unhiding %d units from large %s clauses", nunits, type);
+    }
+    if (ntaut) {
+        LOG(1, "unhiding %d large tautological %s clauses", ntaut, type);
+    }
+    if (nstr) {
+        LOG(1, "unhiding removal of %d literals in %s clauses", nstr, type);
+    }
+    if (nhbrs) {
+        LOG(1, "unhiding %d hyper binary resolutions in %s clauses", nhbrs, type);
+    }
     if (dfl) { DEL(dfl, szdfl); }
     return res;
 }
@@ -16498,8 +16647,9 @@ static void lglfixlrgwchs(LGL * lgl)
 static int lglunhidelrg(LGL * lgl, const DFPR * dfpr, int irronly)
 {
     int glue, res = 1;
-    for (glue = -1; res && glue < MAXGLUE; glue++)
-    { res = lglunhideglue(lgl, dfpr, glue, irronly); }
+    for (glue = -1; res && glue < MAXGLUE; glue++) {
+        res = lglunhideglue(lgl, dfpr, glue, irronly);
+    }
     lglfixlrgwchs(lgl);
     return res;
 }
@@ -16571,14 +16721,15 @@ static void lglrmbindup(LGL * lgl)
                     other = blit >> RMSHFT;
                     if (lglsignedmarked(lgl, other)) {
                         if (round && !red) { goto ONLYCOPY; }
-                        if (red) { redrem++; } else { irrem++; }
+                        if (red) { redrem++; }  else { irrem++; }
                         if (abs(lit) > abs(other)) {
                             LOG(2,
                                 "removing duplicated %s binary clause %d %d and 2nd watch %d",
                                 lglred2str(red), lit, other, other);
                             lgldeclscnt(lgl, 2, red, 0);
-                            if (!red && lgl->dense)
-                            { lgldecocc(lgl, lit), lgldecocc(lgl, other); }
+                            if (!red && lgl->dense) {
+                                lgldecocc(lgl, lit), lgldecocc(lgl, other);
+                            }
                             lgl->stats->bindup.removed++;
                             if (red) { lgl->stats->bindup.red++; }
                         } else
@@ -16586,8 +16737,9 @@ static void lglrmbindup(LGL * lgl)
                                 "removing 1st watch %d of duplicated %s binary clause %d %d",
                                 other, lglred2str(red), other, lit);
                     } else {
-                        if ((!round && !red) || (round && red))
-                        { lglsignedmarknpushseen(lgl, other); }
+                        if ((!round && !red) || (round && red)) {
+                            lglsignedmarknpushseen(lgl, other);
+                        }
                     ONLYCOPY:
                         *q++ = blit;
                     }
@@ -16642,7 +16794,7 @@ static DFPR * lglstampall(LGL * lgl, int irronly)
             if (rootsonly &&
                     !lglunhdisroot(lgl, root, dfpr, irronly)) { goto CONTINUE; }
             if (!lglunhdhasbins(lgl, dfpr, -root, irronly)) {
-                if (rootsonly) { noimpls++; } goto CONTINUE;
+                if (rootsonly) { noimpls++; }  goto CONTINUE;
             }
             if (rootsonly) { roots++; }
             searches++;
@@ -16720,8 +16872,9 @@ static void lglsetunhdlim(LGL * lgl)
     int pen;
     limit = (lgl->opts->unhdreleff.val * lgl->stats->visits.search) / 1000;
     if (limit < lgl->opts->unhdmineff.val) { limit = lgl->opts->unhdmineff.val; }
-    if (lgl->opts->unhdmaxeff.val >= 0 && limit > lgl->opts->unhdmaxeff.val)
-    { limit = lgl->opts->unhdmaxeff.val; }
+    if (lgl->opts->unhdmaxeff.val >= 0 && limit > lgl->opts->unhdmaxeff.val) {
+        limit = lgl->opts->unhdmaxeff.val;
+    }
     limit >>= (pen = lgl->limits->unhd.pen + lglszpen(lgl));
     irrlim = lgl->stats->irr.lits.cur;
     irrlim >>= lgl->limits->simp.pen;
@@ -16819,8 +16972,9 @@ static int lglpar64(uint64_t i)
 {
     unsigned x;
     int res = 0;
-    for (x = i; x; x = x & (x - 1))
-    { res = !res; }
+    for (x = i; x; x = x & (x - 1)) {
+        res = !res;
+    }
     return res;
 }
 
@@ -16952,8 +17106,9 @@ static int lglgaussextractxoraux(LGL * lgl, const int * c)
 static int lglgaussextractxor(LGL * lgl, const int * c)
 {
     int old = lglcntstk(&lgl->gauss->xors), res;
-    if (!(res = lglgaussextractxoraux(lgl, c)))
-    { lglrststk(&lgl->gauss->xors, old); }
+    if (!(res = lglgaussextractxoraux(lgl, c))) {
+        lglrststk(&lgl->gauss->xors, old);
+    }
     return res;
 }
 
@@ -16963,8 +17118,9 @@ static int lglgaussextractsmallit(LGL * lgl, int lit)
     int cls[4], blit, tag, other, other2;
     const int * w, * eow, * p;
     HTS * hts;
-    if (lgl->stats->gauss.steps.extr >= lgl->limits->gauss.steps.extr)
-    { return 0; }
+    if (lgl->stats->gauss.steps.extr >= lgl->limits->gauss.steps.extr) {
+        return 0;
+    }
     if (lglval(lgl, lit) > 0) { return 1; }
     hts = lglhts(lgl, lit);
     w = lglhts2wchs(lgl, hts);
@@ -17021,8 +17177,9 @@ static void lglgaussconeqn(LGL * lgl, int eqn)
     const int * xors = lgl->gauss->xors.start;
     int i, var;
     lgl->stats->gauss.steps.elim++;
-    for (i = eqn; (var = xors[i]) > 1; i++)
-    { lglpushstk(lgl, lgl->gauss->occs + var, eqn); }
+    for (i = eqn; (var = xors[i]) > 1; i++) {
+        lglpushstk(lgl, lgl->gauss->occs + var, eqn);
+    }
 }
 
 static void lglgaussdiseqn(LGL * lgl, int eqn)
@@ -17064,8 +17221,9 @@ static void lglgaussconnect(LGL * lgl)
 static int lglgaussorderidx(LGL * lgl,  int var)
 {
     assert(2 <= var && var < lgl->nvars);
-    if (!lglmtstk(lgl->gauss->occs + var))
-    { lglpushstk(lgl, &lgl->gauss->order, var); }
+    if (!lglmtstk(lgl->gauss->occs + var)) {
+        lglpushstk(lgl, &lgl->gauss->order, var);
+    }
     return 1;
 }
 
@@ -17080,8 +17238,9 @@ static void lglgaussdisconnect(LGL * lgl)
     int idx;
     assert(lgl->gauss->occs);
     LOG(2, "disconnecting equations");
-    for (idx = 2; idx < lgl->nvars; idx++)
-    { lglrelstk(lgl, lgl->gauss->occs + idx); }
+    for (idx = 2; idx < lgl->nvars; idx++) {
+        lglrelstk(lgl, lgl->gauss->occs + idx);
+    }
     DEL(lgl->gauss->occs, lgl->nvars);
     assert(!lgl->gauss->occs);
 }
@@ -17158,18 +17317,20 @@ static int lglgausspickeqn(LGL * lgl, int pivot)
         size = q - e;
         res = cand;
     }
-    if (res >= 0)
-    { LOGEQN(2, res, "picking size %d weight %d equation", size, weight); }
-    else
-    { LOG(2, "no uneliminated equation for pivot %d left", pivot); }
+    if (res >= 0) {
+        LOGEQN(2, res, "picking size %d weight %d equation", size, weight);
+    } else {
+        LOG(2, "no uneliminated equation for pivot %d left", pivot);
+    }
     return res;
 }
 
 static void lglcpystk(LGL * lgl, Stk * dst, Stk * src)
 {
     const int * p;
-    for (p = src->start; p < src->top; p++)
-    { lglpushstk(lgl, dst, *p); }
+    for (p = src->start; p < src->top; p++) {
+        lglpushstk(lgl, dst, *p);
+    }
 }
 
 static int lglgaussaddeqn(LGL * lgl, int eqn)
@@ -17413,8 +17574,9 @@ static void lglsetgausslim(LGL * lgl)
     int pen;
     limit = (lgl->opts->gaussreleff.val * lgl->stats->visits.search) / 1000;
     if (limit < lgl->opts->gaussmineff.val) { limit = lgl->opts->gaussmineff.val; }
-    if (lgl->opts->gaussmaxeff.val >= 0 && limit > lgl->opts->gaussmaxeff.val)
-    { limit = lgl->opts->gaussmaxeff.val; }
+    if (lgl->opts->gaussmaxeff.val >= 0 && limit > lgl->opts->gaussmaxeff.val) {
+        limit = lgl->opts->gaussmaxeff.val;
+    }
     limit >>= (pen = lgl->limits->gauss.pen + lglszpen(lgl));
     irrlim = lgl->stats->irr.lits.cur / 2;
     irrlim >>= lgl->limits->simp.pen;
@@ -17432,10 +17594,12 @@ static void lglsetgausslim(LGL * lgl)
 
 static void lglupdgausspen(LGL * lgl, int success)
 {
-    if (success && lgl->limits->gauss.pen)
-    { lgl->limits->gauss.pen--; }
-    if (!success && lgl->limits->gauss.pen < MAXPEN)
-    { lgl->limits->gauss.pen++; }
+    if (success && lgl->limits->gauss.pen) {
+        lgl->limits->gauss.pen--;
+    }
+    if (!success && lgl->limits->gauss.pen < MAXPEN) {
+        lgl->limits->gauss.pen++;
+    }
 }
 
 static int lglgauss(LGL * lgl)
@@ -17466,8 +17630,9 @@ static int lglgauss(LGL * lgl)
             lglgaussdisconnect(lgl);
             if (!lglgaussexport(lgl) || !lglbcp(lgl)) { lgl->mt = 1; }
             else if (lgl->limits->gauss.steps.extr > lgl->stats->gauss.steps.extr &&
-                     lgl->limits->gauss.steps.elim > lgl->stats->gauss.steps.elim)
-            { lglprt(lgl, 1, "[gauss-%d] fully completed", lgl->stats->gauss.count); }
+                     lgl->limits->gauss.steps.elim > lgl->stats->gauss.steps.elim) {
+                lglprt(lgl, 1, "[gauss-%d] fully completed", lgl->stats->gauss.count);
+            }
         }
     }
     lglgaussreset(lgl);
@@ -18011,8 +18176,9 @@ static void lglpicosatchksol(LGL * lgl)
         lit = lglsgn(val) * idx;
         picosat_assume(PICOSAT, lit);
     }
-    for (p = lgl->eassume.start; p < lgl->eassume.top; p++)
-    { picosat_assume(PICOSAT, lglimport(lgl, *p)); }
+    for (p = lgl->eassume.start; p < lgl->eassume.top; p++) {
+        picosat_assume(PICOSAT, lglimport(lgl, *p));
+    }
     res = picosat_sat(PICOSAT, -1);
     assert(res == 10);
     LOG(1, "PicoSAT checked solution");
@@ -18049,10 +18215,11 @@ static void lglextend(LGL * lgl)
     assert(!(lgl->state & EXTENDED));
     lgleunassignall(lgl);
     for (equiv = 0; equiv <= 1; equiv++) {
-        if (equiv)
-        { LOG(1, "initializing assignment of non-representative externals"); }
-        else
-        { LOG(1, "initializing assignment of external representatives"); }
+        if (equiv) {
+            LOG(1, "initializing assignment of non-representative externals");
+        } else {
+            LOG(1, "initializing assignment of external representatives");
+        }
         for (eidx = 1; eidx <= lgl->maxext; eidx++) {
             ext = lglelit2ext(lgl, eidx);
             if (!ext->imported) { continue; }
@@ -18070,8 +18237,9 @@ static void lglextend(LGL * lgl)
                         LOG(3, "using external %d to internal %d mapping",
                             abs(erepr), ilit);
                         val = lglcval(lgl, ilit);
-                    } else
-                    { LOG(3, "external %d without internal representative", abs(erepr)); }
+                    } else {
+                        LOG(3, "external %d without internal representative", abs(erepr));
+                    }
                 }
                 if (erepr < 0) { val = -val; }
             } else if ((ilit = ext->repr)) {
@@ -18149,8 +18317,9 @@ static void lglchksol(LGL * lgl)
     for (c = lgl->orig.start; c < eoo; c = p + 1) {
         satisfied = 0;
         for (p = c; (lit = *p); p++)
-            if (!satisfied && lglederef(lgl, lit) > 0)
-            { satisfied = 1; }
+            if (!satisfied && lglederef(lgl, lit) > 0) {
+                satisfied = 1;
+            }
         if (satisfied) { continue; }
         fflush(stderr);
         lglmsgstart(lgl, 0);
@@ -18223,13 +18392,16 @@ static void lglnegass(LGL * lgl)
     TRAPI("negass");
     if (lgl->mt) { return; }
     CLR(eassume);
-    for (p = lgl->eassume.start; p < lgl->eassume.top; p++)
-    { lglpushstk(lgl, &eassume, *p); }
-    for (p = eassume.start; p < eassume.top; p++)
-    { lgleadd(lgl, -*p); }
+    for (p = lgl->eassume.start; p < lgl->eassume.top; p++) {
+        lglpushstk(lgl, &eassume, *p);
+    }
+    for (p = eassume.start; p < eassume.top; p++) {
+        lgleadd(lgl, -*p);
+    }
     lgleadd(lgl, 0);
-    for (p = eassume.start; p < eassume.top; p++)
-    { lglassume(lgl, *p); }
+    for (p = eassume.start; p < eassume.top; p++) {
+        lglassume(lgl, *p);
+    }
     lglrelstk(lgl, &eassume);
     lgluse(lgl);
     if (lgl->clone) { lglnegass(lgl->clone); }
@@ -18516,9 +18688,9 @@ int lglookahead(LGL * lgl)
     if (lgl->level) { lglbacktrack(lgl, 0); }
     if (!lgl->mt && lglbcp(lgl)) {
         ilit = 0;
-        if (lgl->opts->lkhd.val == 2 && !lglsmallirr(lgl))
-        { ilit = lgljwhlook(lgl); }
-        else switch (lgl->opts->lkhd.val) {
+        if (lgl->opts->lkhd.val == 2 && !lglsmallirr(lgl)) {
+            ilit = lgljwhlook(lgl);
+        } else switch (lgl->opts->lkhd.val) {
             case 0: ilit = lglislook(lgl); break;
             default:
             case 1: ilit = lgljwhlook(lgl); break;
@@ -19390,8 +19562,9 @@ void lglrelease(LGL * lgl)
     #ifndef NDEBUG
     #ifndef NLGLPICOSAT
     if (lgl->tid < 0 && lgl->picosat.solver) {
-        if (lgl->opts->verbose.val > 0 && lgl->opts->check.val > 0)
-        { picosat_stats(PICOSAT); }
+        if (lgl->opts->verbose.val > 0 && lgl->opts->check.val > 0) {
+            picosat_stats(PICOSAT);
+        }
         picosat_reset(PICOSAT);
         lgl->picosat.solver = 0;
     }
@@ -19685,9 +19858,9 @@ static LGL * lglforkaux(LGL * lgl, int brutefork, int complete)
     if (!res->mt) { lglrtrav(lgl, res, (void (*)(void *, int, int)) lglfjradd); }
     if (complete) { lglcompletefork(res, lgl); }
     nass = lglcntstk(&lgl->assume);
-    if ((res->bruteforked = (nass && brutefork)))
-    { LOG(1, "brute forking with %d assumptions", nass); }
-    else { LOG(1, "non-brute forking with %d assumptions", nass); }
+    if ((res->bruteforked = (nass && brutefork))) {
+        LOG(1, "brute forking with %d assumptions", nass);
+    } else { LOG(1, "non-brute forking with %d assumptions", nass); }
     assert(lglmtstk(&res->fassume));
     for (p = lgl->eassume.start; p < lgl->eassume.top; p++) {
         lglpushstk(res, &res->fassume, (elit = * p));
@@ -19721,8 +19894,9 @@ static void lglforkmerge(LGL * to, LGL * from)
         lglutrav(from, &travstate, lgltravallu);
         lgletrav(from, &travstate, lgltravalle);
     }
-    for (p = from->fassume.start; p < from->fassume.top; p++)
-    { lgleassume(to, *p); }
+    for (p = from->fassume.start; p < from->fassume.top; p++) {
+        lgleassume(to, *p);
+    }
 }
 
 int lgljoin(LGL * to, LGL * from)
@@ -19747,8 +19921,9 @@ int lgljoin(LGL * to, LGL * from)
         } else {
             for (p = from->fassume.start; p < from->fassume.top; p++) {
                 elit = *p;
-                if (from->bruteforked || lglfailed(from, elit))
-                { lglfjadd(to, -elit); }
+                if (from->bruteforked || lglfailed(from, elit)) {
+                    lglfjadd(to, -elit);
+                }
             }
             lglfjadd(to, 0);
             lglforkmerge(to, from);

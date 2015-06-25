@@ -136,31 +136,31 @@ int main(int argc, char* argv[])
 
     // output collected information
     cout << argv[ fileNameIndex ] << " ";
-    if (handled[0] && Status != "") { cout << Status ; } else { cout << "fail"; }
+    if (handled[0] && Status != "") { cout << Status ; }  else { cout << "fail"; }
     cout << " ";
-    if (handled[1] && ExitCode != "") { cout << ExitCode ; } else { cout << "-"; }
+    if (handled[1] && ExitCode != "") { cout << ExitCode ; }  else { cout << "-"; }
     cout << " ";
-    if (handled[2] && RealTime != "") { cout << RealTime ; } else { cout << "-"; }
+    if (handled[2] && RealTime != "") { cout << RealTime ; }  else { cout << "-"; }
     cout << " ";
-    if (handled[3] && CpuTime != "") { cout << CpuTime ; } else { cout << "-"; }
+    if (handled[3] && CpuTime != "") { cout << CpuTime ; }  else { cout << "-"; }
     cout << " ";
-    if (handled[4] && Memory != "") { cout << Memory ; } else { cout << "-"; }
+    if (handled[4] && Memory != "") { cout << Memory ; }  else { cout << "-"; }
     cout << " ";
-    if (handled[5] && variables != "") { cout << variables ; } else { cout << "-"; }
+    if (handled[5] && variables != "") { cout << variables ; }  else { cout << "-"; }
     cout << " ";
-    if (handled[6] && clauses != "") { cout << clauses ; } else { cout << "-"; }
+    if (handled[6] && clauses != "") { cout << clauses ; }  else { cout << "-"; }
     cout << " ";
-    if (handled[7] && nodes != "") { cout << nodes ; } else { cout << "-"; }
+    if (handled[7] && nodes != "") { cout << nodes ; }  else { cout << "-"; }
     cout << " ";
-    if (handled[8] && height != "") { cout << height ; } else { cout << "-"; }
+    if (handled[8] && height != "") { cout << height ; }  else { cout << "-"; }
     cout << " ";
-    if (handled[9] && evaHeight != "") { cout << evaHeight ; } else { cout << "-"; }
+    if (handled[9] && evaHeight != "") { cout << evaHeight ; }  else { cout << "-"; }
     cout << " ";
-    if (handled[10] && conflictKilled != "") { cout << conflictKilled ; } else { cout << "-"; }
+    if (handled[10] && conflictKilled != "") { cout << conflictKilled ; }  else { cout << "-"; }
     cout << " ";
-    if (handled[11] && sharedClauses != "") { cout << sharedClauses ; } else { cout << "-"; }
+    if (handled[11] && sharedClauses != "") { cout << sharedClauses ; }  else { cout << "-"; }
     cout << " ";
-    if (handled[12] && safeSharedClauses != "") { cout << safeSharedClauses ; } else { cout << "-"; }
+    if (handled[12] && safeSharedClauses != "") { cout << safeSharedClauses ; }  else { cout << "-"; }
     cout << " ";
     cout << endl;
 

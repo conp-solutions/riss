@@ -23,8 +23,9 @@ numstr(const char * str)
 {
     const char * p;
     for (p = str; *p; p++)
-        if (!isdigit(*p))
-        { return 0; }
+        if (!isdigit(*p)) {
+            return 0;
+        }
     return 1;
 }
 
@@ -64,9 +65,9 @@ main(int argc, char ** argv)
             );
             exit(0);
         }
-        if (!strcmp(argv[i], "-q"))
-        { qbf = 1; }
-        else if (numstr(argv[i])) {
+        if (!strcmp(argv[i], "-q")) {
+            qbf = 1;
+        } else if (numstr(argv[i])) {
             if (seed >= 0) {
                 fprintf(stderr, "*** cnfuzz: multiple seeds\n");
                 exit(1);
@@ -79,8 +80,9 @@ main(int argc, char ** argv)
         } else if (options) {
             fprintf(stderr, "*** cnfuzz: multiple option files\n");
             exit(1);
-        } else
-        { options = argv[i]; }
+        } else {
+            options = argv[i];
+        }
     }
 
     if (seed < 0) { seed = abs((times(0) * getpid()) >> 1); }
@@ -91,16 +93,18 @@ main(int argc, char ** argv)
     if (qbf) {
         printf("c qbf\n");
         fp = pick(0, 3);
-        if (fp)
-        { printf("c but forced to be propositional\n"); }
+        if (fp) {
+            printf("c but forced to be propositional\n");
+        }
     }
     if (options) {
         file = fopen(options, "r");
         ospread = pick(0, 10);
-        if ((allmin = pick(0, 1)))
-        { printf("c allmin\n"); }
-        else if ((allmax = pick(0, 1)))
-        { printf("c allmax\n"); }
+        if ((allmin = pick(0, 1))) {
+            printf("c allmin\n");
+        } else if ((allmax = pick(0, 1))) {
+            printf("c allmax\n");
+        }
         printf("c %d ospread\n", ospread);
         if (!file) {
             fprintf(stderr, "*** cnfuzz: can not read '%s'\n", options);
@@ -151,23 +155,28 @@ main(int argc, char ** argv)
         unused[i] = calloc(nunused[i], sizeof * unused[i]);
         k = 0;
         for (j = low[i]; j <= high[i]; j++)
-            for (sign = -1; sign <= 1; sign += 2)
-            { unused[i][k++] = sign * j; }
+            for (sign = -1; sign <= 1; sign += 2) {
+                unused[i][k++] = sign * j;
+            }
         assert(k == nunused[i]);
     }
     arity = calloc(ands, sizeof * arity);
     maxarity = m / 2;
-    if (maxarity >= MAX)
-    { maxarity = MAX - 1; }
-    for (i = 0; i < ands; i++)
-    { arity[i] = pick(2, maxarity); }
+    if (maxarity >= MAX) {
+        maxarity = MAX - 1;
+    }
+    for (i = 0; i < ands; i++) {
+        arity[i] = pick(2, maxarity);
+    }
     n = 0;
-    for (i = 0; i < ands; i++)
-    { n += arity[i] + 1; }
+    for (i = 0; i < ands; i++) {
+        n += arity[i] + 1;
+    }
     m = high[nlayers - 1];
     mark = calloc(m + 1, 1);
-    for (i = 0; i < nlayers; i++)
-    { n += clauses[i]; }
+    for (i = 0; i < nlayers; i++) {
+        n += clauses[i];
+    }
     n += 2 * eqs;
     printf("p cnf %d %d\n", m, n);
     map = calloc(2 * m + 1, sizeof * map);
@@ -176,20 +185,23 @@ main(int argc, char ** argv)
         for (i = 0; i < nlayers; i++) {
             if (!i && !quant[0]) { continue; }
             fputc(quant[i] < 0 ? 'a' : 'e', stdout);
-            for (j = low[i]; j <= high[i]; j++)
-            { printf(" %d", j); }
+            for (j = low[i]; j <= high[i]; j++) {
+                printf(" %d", j);
+            }
             fputs(" 0\n", stdout);
         }
     for (i = 0; i < nlayers; i++) {
         for (j = 0; j < clauses[i]; j++) {
             l = 3;
-            while (l < MAX && pick(17, 19) != 17)
-            { l++; }
+            while (l < MAX && pick(17, 19) != 17) {
+                l++;
+            }
 
             for (k = 0; k < l; k++) {
                 layer = i;
-                while (layer && pick(3, 4) == 3)
-                { layer--; }
+                while (layer && pick(3, 4) == 3) {
+                    layer--;
+                }
                 if (nunused[layer]) {
                     o = nunused[layer] - 1;
                     p = pick(0, o);
@@ -207,8 +219,9 @@ main(int argc, char ** argv)
                 printf("%d ", lit);
             }
             printf("0\n");
-            for (k = 0; k < l; k++)
-            { mark[abs(clause[k])] = 0; }
+            for (k = 0; k < l; k++) {
+                mark[abs(clause[k])] = 0;
+            }
         }
     }
     while (eqs-- > 0) {
@@ -244,10 +257,12 @@ main(int argc, char ** argv)
             printf("%d ", rhs);
         }
         printf("0\n");
-        for (k = 1; k <= l; k++)
-        { printf("%d %d 0\n", -clause[0], -clause[k]); }
-        for (k = 0; k <= l; k++)
-        { mark [abs(clause[k])] = 0; }
+        for (k = 1; k <= l; k++) {
+            printf("%d %d 0\n", -clause[0], -clause[k]);
+        }
+        for (k = 0; k <= l; k++) {
+            mark [abs(clause[k])] = 0;
+        }
     }
     map -= m;
     free(map);
@@ -259,8 +274,9 @@ main(int argc, char ** argv)
     free(width);
     free(nunused);
     free(quant);
-    for (i = 0; i < nlayers; i++)
-    { free(layers[i]), free(unused[i]); }
+    for (i = 0; i < nlayers; i++) {
+        free(layers[i]), free(unused[i]);
+    }
     free(layers);
     return 0;
 }

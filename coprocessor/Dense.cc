@@ -81,8 +81,9 @@ void Dense::compress(const char* newWhiteFile)
         if (config.opt_dense_store_forward) {
             DOUT(if (config.dense_debug_out) cerr << "c store forward mapping " << endl;);
             forward_mapping.resize(data.nVars(), -1);   // initially, set to -1 for no mapping (dropped)
-            for (Var v = 0; v < data.nVars() ; v++)
-            { forward_mapping[v] = compression.mapping[v]; } // store everything into the new mapping file!
+            for (Var v = 0; v < data.nVars() ; v++) {
+                forward_mapping[v] = compression.mapping[v];    // store everything into the new mapping file!
+            }
         }
 
         free(count);   // do not need the count array any more
@@ -167,8 +168,9 @@ void Dense::compress(const char* newWhiteFile)
     if (config.opt_dense_store_forward) {
         DOUT(if (config.dense_debug_out) cerr << "c store forward mapping " << endl;);
         forward_mapping.resize(data.nVars(), -1);   // initially, set to -1 for no mapping (dropped)
-        for (Var v = 0; v < data.nVars() ; v++)
-        { forward_mapping[v] = compression.mapping[v]; } // store everything into the new mapping file!
+        for (Var v = 0; v < data.nVars() ; v++) {
+            forward_mapping[v] = compression.mapping[v];    // store everything into the new mapping file!
+        }
     }
 
 
@@ -229,8 +231,9 @@ void Dense::decompress(vec< lbool >& model)
         // extend the assignment, so that it is large enough
         if (model.size() < compression.variables) {
             model.growTo(compression.variables, l_False);
-            while (data.nVars() < compression.variables)
-            { data.nextFreshVariable('o'); }
+            while (data.nVars() < compression.variables) {
+                data.nextFreshVariable('o');
+            }
         }
         // backwards, because variables will increase - do not overwrite old values!
         for (int v = compression.variables - 1; v >= 0 ; v--) {

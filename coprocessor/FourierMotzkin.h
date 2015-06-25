@@ -84,7 +84,7 @@ class FourierMotzkin : public Technique<FourierMotzkin>
         int k;
         CardC(std::vector<Riss::Lit>& amo) : ll(amo), k(1) {};   // constructor to add amo constraint
         CardC(std::vector<Riss::Lit>& amk, int _k) : ll(amk), k(_k) {};   // constructor to add amk constraint
-        CardC(const Riss::Clause& c) : k(-1) { lr.resize(c.size(), Riss::lit_Undef); for (int i = 0 ; i < c.size(); ++i) { lr[i] = c[i]; } }    // constructor for usual clauses
+        CardC(const Riss::Clause& c) : k(-1) { lr.resize(c.size(), Riss::lit_Undef); for (int i = 0 ; i < c.size(); ++i) { lr[i] = c[i]; }  }   // constructor for usual clauses
         bool amo() const { return k == 1 && lr.size() == 0 ; }
         bool amt() const { return k == 2 && lr.size() == 0 ; }
         bool amk() const { return k >= 0 && lr.size() == 0 ; }

@@ -294,9 +294,9 @@ lbool PSolver::solveLimited(const vec< Lit >& assumps)
             for (int i = 0 ; i < solvers[winningSolver]->model.size(); ++ i) { model.push(solvers[winningSolver]->model[i]); }
 
             if (false && verbosity > 2) {
-                cerr << "c units: " << endl; for (int i = 0 ; i < solvers[winningSolver]->trail.size(); ++ i) { cerr << " " << solvers[winningSolver]->trail[i] << " 0" << endl; } cerr << endl;
+                cerr << "c units: " << endl; for (int i = 0 ; i < solvers[winningSolver]->trail.size(); ++ i) { cerr << " " << solvers[winningSolver]->trail[i] << " 0" << endl; }  cerr << endl;
                 cerr << "c clauses: " << endl; for (int i = 0 ; i < solvers[winningSolver]->clauses.size(); ++ i) { cerr << "c " << solvers[winningSolver]->ca[solvers[winningSolver]->clauses[i]] << endl; }
-                cerr << "c assumptions: " << endl; for (int i = 0 ; i < assumps.size(); ++ i) { cerr << " " << assumps[i]; } cerr << endl;
+                cerr << "c assumptions: " << endl; for (int i = 0 ; i < assumps.size(); ++ i) { cerr << " " << assumps[i]; }  cerr << endl;
             }
 
         } else if (ret == l_False) {
@@ -531,7 +531,7 @@ void PSolver::kill()
 {
     if (!initialized) { return; }  // child threads have never been created - no need to kill them
 
-    if (verbosity > 0)  { cerr << "c MASTER kills all child threads ..." << endl; }
+    if (verbosity > 0) { cerr << "c MASTER kills all child threads ..." << endl; }
     // set all threads to working (they'll have a look for new work on their own)
     for (unsigned i = 0 ; i < threads; ++ i) {
         communicators[i]->ownLock->lock();
