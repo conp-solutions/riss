@@ -39,8 +39,9 @@ static const char *
 on(unsigned i)
 {
     assert(mgr && i < mgr->num_outputs);
-    if (mgr->outputs[i].name)
-    { return mgr->outputs[i].name; }
+    if (mgr->outputs[i].name) {
+        return mgr->outputs[i].name;
+    }
 
     sprintf(buffer, "o%u", i);
 
@@ -69,10 +70,11 @@ print_mangled(const char * name, FILE * file)
     const char * p;
     char ch;
     for (p = name; (ch = *p); p++)
-        if (isblifsymchar(ch))
-        { fputc(ch, file); }
-        else
-        { fprintf(file, "\\%0X", ch); }
+        if (isblifsymchar(ch)) {
+            fputc(ch, file);
+        } else {
+            fprintf(file, "\\%0X", ch);
+        }
 }
 
 static int require_const0;
@@ -89,22 +91,23 @@ pl(unsigned lit)
         ps("c0"); require_const0 = 1;
     } else if (lit == 1) {
         ps("c1"); require_const1 = 1;
-    } else if ((lit & 1))
-    { putc('!', file), pl(lit - 1); }
-    else if ((name = aiger_get_symbol(mgr, lit))) {
+    } else if ((lit & 1)) {
+        putc('!', file), pl(lit - 1);
+    } else if ((name = aiger_get_symbol(mgr, lit))) {
         print_mangled(name, file);
     } else {
-        if (aiger_is_input(mgr, lit))
-        { ch = 'i'; }
-        else if (aiger_is_latch(mgr, lit))
-        { ch = 'l'; }
-        else {
+        if (aiger_is_input(mgr, lit)) {
+            ch = 'i';
+        } else if (aiger_is_latch(mgr, lit)) {
+            ch = 'l';
+        } else {
             assert(aiger_is_and(mgr, lit));
             ch = 'a';
         }
 
-        for (i = 0; i <= count; i++)
-        { fputc(ch, file); }
+        for (i = 0; i <= count; i++) {
+            fputc(ch, file);
+        }
 
         fprintf(file, "%u", lit);
     }
@@ -119,8 +122,9 @@ count_ch_prefix(const char *str, char ch)
     for (p = str; *p == ch; p++)
         ;
 
-    if (*p && !isdigit(*p))
-    { return 0; }
+    if (*p && !isdigit(*p)) {
+        return 0;
+    }
 
     return p - str;
 }
@@ -135,20 +139,25 @@ setupcount(void)
     count = 0;
     for (i = 1; i <= mgr->maxvar; i++) {
         symbol = aiger_get_symbol(mgr, 2 * i);
-        if (!symbol)
-        { continue; }
+        if (!symbol) {
+            continue;
+        }
 
-        if ((tmp = count_ch_prefix(symbol, 'i')) > count)
-        { count = tmp; }
+        if ((tmp = count_ch_prefix(symbol, 'i')) > count) {
+            count = tmp;
+        }
 
-        if ((tmp = count_ch_prefix(symbol, 'l')) > count)
-        { count = tmp; }
+        if ((tmp = count_ch_prefix(symbol, 'l')) > count) {
+            count = tmp;
+        }
 
-        if ((tmp = count_ch_prefix(symbol, 'o')) > count)
-        { count = tmp; }
+        if ((tmp = count_ch_prefix(symbol, 'o')) > count) {
+            count = tmp;
+        }
 
-        if ((tmp = count_ch_prefix(symbol, 'a')) > count)
-        { count = tmp; }
+        if ((tmp = count_ch_prefix(symbol, 'a')) > count) {
+            count = tmp;
+        }
     }
 }
 
@@ -173,18 +182,18 @@ main(int argc, char **argv)
                     "usage: aigtoblif [-p <prefix>][-h][-s][src [dst]]\n");
             exit(0);
         }
-        if (!strcmp(argv[i], "-s"))
-        { strip = 1; }
-        else if (!strcmp(argv[i], "-v"))
-        { verbose++; }
-        else if (argv[i][0] == '-') {
+        if (!strcmp(argv[i], "-s")) {
+            strip = 1;
+        } else if (!strcmp(argv[i], "-v")) {
+            verbose++;
+        } else if (argv[i][0] == '-') {
             fprintf(stderr, "=[aigtoblif] invalid option '%s'\n", argv[i]);
             exit(1);
-        } else if (!src)
-        { src = argv[i]; }
-        else if (!dst)
-        { dst = argv[i]; }
-        else {
+        } else if (!src) {
+            src = argv[i];
+        } else if (!dst) {
+            dst = argv[i];
+        } else {
             fprintf(stderr, "=[aigtoblif] too many files\n");
             exit(1);
         }
@@ -192,10 +201,11 @@ main(int argc, char **argv)
 
     mgr = aiger_init();
 
-    if (src)
-    { error = aiger_open_and_read_from_file(mgr, src); }
-    else
-    { error = aiger_read_from_file(mgr, stdin); }
+    if (src) {
+        error = aiger_open_and_read_from_file(mgr, src);
+    } else {
+        error = aiger_read_from_file(mgr, stdin);
+    }
 
     if (error) {
         fprintf(stderr, "=[aigtoblif] %s\n", error);
@@ -206,21 +216,24 @@ main(int argc, char **argv)
                 fprintf(stderr, "=[aigtoblif] failed to write to '%s'\n", dst);
                 exit(1);
             }
-        } else
-        { file = stdout; }
+        } else {
+            file = stdout;
+        }
 
-        if (strip)
-        { aiger_strip_symbols_and_comments(mgr); }
-        else
-        { setupcount(); }
+        if (strip) {
+            aiger_strip_symbols_and_comments(mgr);
+        } else {
+            setupcount();
+        }
 
         ps(".model "), ps(src ? src : "stdin"), ps("\n");
         fputs(".inputs ", file);
         for (i = 0; i < mgr->num_inputs; i++) {
             pl(mgr->inputs[i].lit), ps(" ");
 
-            if ((i + 1) % 10 == 0 && (i < (mgr->num_inputs - 1)))
-            { ps("\\\n"); }
+            if ((i + 1) % 10 == 0 && (i < (mgr->num_inputs - 1))) {
+                ps("\\\n");
+            }
         }
         ps("\n");
         fputs(".outputs ", file);
@@ -233,8 +246,9 @@ main(int argc, char **argv)
 
             ps(on(i)), ps(" ");
 
-            if ((i + 1) % 10 == 0 && (i < (mgr->num_outputs - 1)))
-            { ps("\\\n"); }
+            if ((i + 1) % 10 == 0 && (i < (mgr->num_outputs - 1))) {
+                ps("\\\n");
+            }
         }
         ps("\n");
 
@@ -360,8 +374,9 @@ main(int argc, char **argv)
         fputs(".end\n", file);
 
         /* close file */
-        if (dst)
-        { fclose(file); }
+        if (dst) {
+            fclose(file);
+        }
     }
 
     aiger_reset(mgr);

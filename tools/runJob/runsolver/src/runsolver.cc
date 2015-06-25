@@ -131,8 +131,9 @@ class RunSolver
 
         void enforceLimit()
         {
-            if (resource < 0)
-            { return; } // this is a fake limit, don't enforce anything
+            if (resource < 0) {
+                return;    // this is a fake limit, don't enforce anything
+            }
 
             struct rlimit lim = {limit, limit};
 
@@ -142,14 +143,16 @@ class RunSolver
             }
 
             lim.rlim_cur = limit << scale;
-            if (setrlimit(resource, &lim))
-            { perror("setrlimit failed"); }
+            if (setrlimit(resource, &lim)) {
+                perror("setrlimit failed");
+            }
         }
 
         rlim_t getEnforcedLimit()
         {
-            if (resource < 0)
-            { return limit; } // this is a fake limit, don't ask the system
+            if (resource < 0) {
+                return limit;    // this is a fake limit, don't ask the system
+            }
 
             struct rlimit lim;
 
@@ -362,8 +365,9 @@ class RunSolver
         // know). For this reason, this code is disabled and we use
         // SA_NOCLDSTOP
 
-        if (signum == SIGCHLD)
-        { return; }
+        if (signum == SIGCHLD) {
+            return;
+        }
         #endif
 
         if (signum == SIGTERM || signum == SIGINT) {
@@ -441,8 +445,9 @@ class RunSolver
      */
     bool readProcessData(bool updateChildrenList = true)
     {
-        if (!childpid)
-        { return false; } // trying to collect data before parent got the pid
+        if (!childpid) {
+            return false;    // trying to collect data before parent got the pid
+        }
 
         #ifdef debug
         cout << "Reading process data" << endl;
@@ -455,10 +460,12 @@ class RunSolver
 
         if (updateChildrenList) {
             procTree->readProcesses();
-            if (cleanupSolverOwnIPCQueues)
-            { procTree->listProcesses(listAllProcesses); }
-        } else
-        { procTree->updateProcessesData(); }
+            if (cleanupSolverOwnIPCQueues) {
+                procTree->listProcesses(listAllProcesses);
+            }
+        } else {
+            procTree->updateProcessesData();
+        }
 
         if (procTree->rootProcessEnded()) {
             delete procTree;
@@ -506,14 +513,17 @@ class RunSolver
 
         tStamp.setCPUtimeFromAnotherThread(currentCPUTime);
 
-        if (limitCPUTime && currentCPUTime + lostCPUTime >= limitCPUTime)
-        { stopSolver("Maximum CPU time exceeded: sending SIGTERM then SIGKILL"); }
+        if (limitCPUTime && currentCPUTime + lostCPUTime >= limitCPUTime) {
+            stopSolver("Maximum CPU time exceeded: sending SIGTERM then SIGKILL");
+        }
 
-        if (limitWallClockTime && ellapsed >= limitWallClockTime)
-        { stopSolver("Maximum wall clock time exceeded: sending SIGTERM then SIGKILL"); }
+        if (limitWallClockTime && ellapsed >= limitWallClockTime) {
+            stopSolver("Maximum wall clock time exceeded: sending SIGTERM then SIGKILL");
+        }
 
-        if (limitVSize && currentVSize >= limitVSize)
-        { stopSolver("Maximum VSize exceeded: sending SIGTERM then SIGKILL"); }
+        if (limitVSize && currentVSize >= limitVSize) {
+            stopSolver("Maximum VSize exceeded: sending SIGTERM then SIGKILL");
+        }
 
         return false;
     }
@@ -655,8 +665,9 @@ class RunSolver
     ~RunSolver()
     {
         // cancel redirection before we leave
-        if (coutSaveBuf)
-        { cout.rdbuf(coutSaveBuf); }
+        if (coutSaveBuf) {
+            cout.rdbuf(coutSaveBuf);
+        }
     }
 
 
@@ -723,8 +734,9 @@ class RunSolver
     void setSolverOutputLimits(unsigned long long int activateSize,
                                unsigned long long int maxSize)
     {
-        if (!timeStamping)
-        { throw runtime_error("limit on the output size can only be enforced when timestamping is on"); }
+        if (!timeStamping) {
+            throw runtime_error("limit on the output size can only be enforced when timestamping is on");
+        }
 
         limitedOutputActivateSize = activateSize;
         limitedOutputMaxSize = maxSize;
@@ -815,8 +827,9 @@ class RunSolver
 
     void printLimits(ostream& s)
     {
-        for (int i = 0; i < limits.size(); ++i)
-        { limits[i]->output(s); }
+        for (int i = 0; i < limits.size(); ++i) {
+            limits[i]->output(s);
+        }
 
         if (limitedOutputMaxSize) {
             if (timeStamping)
@@ -932,17 +945,19 @@ class RunSolver
             tStamp.watch(stderrRedirFD[0], 'e', fd); // 'e' as error
             #else
 
-            if (usePTY)
-            { outputFromSolverFD = ptymaster; }
-            else
-            { outputFromSolverFD = stdoutRedirFD[0]; }
+            if (usePTY) {
+                outputFromSolverFD = ptymaster;
+            } else {
+                outputFromSolverFD = stdoutRedirFD[0];
+            }
 
             if (limitedOutputMaxSize) {
                 limitedOutputSizeFilter.setup(fd, limitedOutputActivateSize,
                                               limitedOutputMaxSize);
                 tStamp.watch(outputFromSolverFD, &limitedOutputSizeFilter, 0);
-            } else
-            { tStamp.watch(outputFromSolverFD, 0, fd); }
+            } else {
+                tStamp.watch(outputFromSolverFD, 0, fd);
+            }
             #endif
             tStamp.resetTimeStamp();
 
@@ -962,8 +977,9 @@ class RunSolver
             // child
 
             // enforce limits
-            for (int i = 0; i < limits.size(); ++i)
-            { limits[i]->enforceLimit(); }
+            for (int i = 0; i < limits.size(); ++i) {
+                limits[i]->enforceLimit();
+            }
 
             StackSizeLimit stackLimit;
             stackLimit.outputEnforcedLimit(cout);
@@ -974,8 +990,9 @@ class RunSolver
             setpgid(0, 0);
 
             #ifdef WATCHSYSCALLS
-            if (InterceptKernelCalls)
-            { syscallsTracer.childTraceKernelCalls(); }
+            if (InterceptKernelCalls) {
+                syscallsTracer.childTraceKernelCalls();
+            }
             #endif
 
             if (inputRedirectionFilename) {
@@ -1072,8 +1089,9 @@ class RunSolver
 
             int i = 0;
             cerr << "Solver command line was: ";
-            while (cmd[i])
-            { cerr << cmd[i++] << ' '; }
+            while (cmd[i]) {
+                cerr << cmd[i++] << ' ';
+            }
 
             cerr << '\n' << endl;
 
@@ -1090,8 +1108,9 @@ class RunSolver
             childrenList.add(childpid);
 
             #ifdef WATCHSYSCALLS
-            if (InterceptKernelCalls)
-            { syscallsTracer.parentTraceKernelCalls(childpid); }
+            if (InterceptKernelCalls) {
+                syscallsTracer.parentTraceKernelCalls(childpid);
+            }
             #endif
 
             procTree->setDefaultRootPID(childpid);
@@ -1106,22 +1125,24 @@ class RunSolver
 
             procTree->setEllapsedTime(0);
             procTree->readProcesses();
-            if (cleanupSolverOwnIPCQueues)
-            { procTree->listProcesses(listAllProcesses); }
+            if (cleanupSolverOwnIPCQueues) {
+                procTree->listProcesses(listAllProcesses);
+            }
             procTree->dumpProcessTree(cout);
 
             int err = pthread_create(&timerThreadTID, NULL, timerThread, NULL);
-            if (err)
-            { cout << "Failed to create the timer thread" << endl; }
+            if (err) {
+                cout << "Failed to create the timer thread" << endl;
+            }
 
             int childstatus;
             struct rusage childrusage;
             int wait4result;
 
             #ifdef WATCHSYSCALLS
-            if (InterceptKernelCalls)
-            { syscallsTracer.watchKernelCalls(childpid, childstatus, childrusage); }
-            else
+            if (InterceptKernelCalls) {
+                syscallsTracer.watchKernelCalls(childpid, childstatus, childrusage);
+            } else
             #endif
                 wait4result = wait4(childpid, &childstatus, 0, &childrusage);
 
@@ -1154,17 +1175,18 @@ class RunSolver
             procHistory.dumpHistory(cout, lastDisplayedEllapsedTime);
             cout << endl;
 
-            if (WIFEXITED(childstatus))
-            { cout << "Child status: " << WEXITSTATUS(childstatus) << endl; }
-            else if (WIFSIGNALED(childstatus)) {
+            if (WIFEXITED(childstatus)) {
+                cout << "Child status: " << WEXITSTATUS(childstatus) << endl;
+            } else if (WIFSIGNALED(childstatus)) {
                 int sig = WTERMSIG(childstatus);
 
                 cout << "Child ended because it received signal "
                      << sig  << " (" << getSignalName(sig) << ")" << endl;
 
                 #ifdef WCOREDUMP
-                if (WCOREDUMP(childstatus))
-                { cout << "Child dumped core" << endl; }
+                if (WCOREDUMP(childstatus)) {
+                    cout << "Child dumped core" << endl;
+                }
                 #endif
 
             } else if (WIFSTOPPED(childstatus)) {
@@ -1274,8 +1296,9 @@ class RunSolver
                  << maxVSize << endl;
 
 
-            if (cleanupAllIPCQueues || cleanupSolverOwnIPCQueues)
-            { cleanupIPCMsgQueues(); }
+            if (cleanupAllIPCQueues || cleanupSolverOwnIPCQueues) {
+                cleanupIPCMsgQueues();
+            }
 
             struct rusage r;
             getrusage(RUSAGE_CHILDREN, &r);
@@ -1326,8 +1349,9 @@ class RunSolver
     {
         int err;
 
-        if (stopSolverStarted)
-        { return; }
+        if (stopSolverStarted) {
+            return;
+        }
 
         stopSolverStarted = true;
 
@@ -1348,8 +1372,9 @@ class RunSolver
 
         err = pthread_create(&stopSolverThreadTID, NULL, waitAndKillSolver,
                              const_cast<char *>(msg));
-        if (err)
-        { cout << "Failed to create a thread to stop solver" << endl; }
+        if (err) {
+            cout << "Failed to create a thread to stop solver" << endl;
+        }
 
         stopSolverThreadStarted = true;
     }
@@ -1399,8 +1424,9 @@ class RunSolver
         // use a loop in case of an interrupt
         while (solverIsRunning && nanosleep(&delay, &delay) == -1 && errno == EINTR);
 
-        if (!solverIsRunning)
-        { return; }
+        if (!solverIsRunning) {
+            return;
+        }
 
         #ifdef SENDSIGNALBOTTOMUP
         cout << "\nSending SIGKILL to process tree (bottom up)" << endl;
@@ -1432,22 +1458,25 @@ class RunSolver
         cout << "\n";
 
         maxid = msgctl(0, MSG_INFO, reinterpret_cast<struct msqid_ds *>(&msginfo));
-        if (maxid < 0)
-        { return; }
+        if (maxid < 0) {
+            return;
+        }
 
         for (int id = 0; id <= maxid; ++id) {
             msqid = msgctl(id, MSG_STAT, &msgqueue);
 
-            if (msqid < 0)
-            { continue; }
+            if (msqid < 0) {
+                continue;
+            }
 
             if (msgqueue.msg_perm.cuid == myUid &&
                     (cleanupAllIPCQueues ||
                      listAllProcesses.find(msgqueue.msg_lspid) != listAllProcesses.end() ||
                      listAllProcesses.find(msgqueue.msg_lrpid) != listAllProcesses.end())) {
                 cout << "deleting IPC queue " << msqid;
-                if (msgctl(msqid, IPC_RMID, &msgqueue))
-                { cout << " (failed: " << strerror(errno) << ")"; }
+                if (msgctl(msqid, IPC_RMID, &msgqueue)) {
+                    cout << " (failed: " << strerror(errno) << ")";
+                }
                 cout << "\n";
             }
         }
@@ -1637,14 +1666,16 @@ int main(int argc, char **argv)
              << "GNU General Public License for more details.\n"
              << endl;
 
-        if (optind == argc)
-        { usage(argv[0]); }
+        if (optind == argc) {
+            usage(argv[0]);
+        }
 
         cout << "command line: " << cmdline << endl
              << endl;
 
-        if (memLimit)
-        { solver.setMemLimit(memLimit, memSoftToHardLimit); }
+        if (memLimit) {
+            solver.setMemLimit(memLimit, memSoftToHardLimit);
+        }
 
         solver.printLimits(cout);
 

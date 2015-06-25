@@ -43,8 +43,9 @@ link(void)
     char ch;
 
     m2e = malloc(sizeof(m2e[0]) * model->num_inputs);
-    for (mpos = 0; mpos < model->num_inputs; mpos++)
-    { m2e[mpos] = calloc(k + 1, sizeof(m2e[mpos][0])); }
+    for (mpos = 0; mpos < model->num_inputs; mpos++) {
+        m2e[mpos] = calloc(k + 1, sizeof(m2e[mpos][0]));
+    }
 
     for (epos = 0; epos < expansion->num_inputs; epos++) {
         esym = expansion->inputs + epos;
@@ -59,8 +60,9 @@ link(void)
                 epos, expansion_file_name);
 
         i = ch - '0';
-        while (isdigit(ch = *p++))
-        { i = 10 * i + (ch - '0'); }
+        while (isdigit(ch = *p++)) {
+            i = 10 * i + (ch - '0');
+        }
 
         if (i > k)
             die("time prefix %u of input %u in '%s' exceeds bound %u",
@@ -79,8 +81,9 @@ link(void)
             ;
 
         end_of_name = p;
-        if (end_of_name < start_of_name)
-        { goto SPACE_MISSING; }
+        if (end_of_name < start_of_name) {
+            goto SPACE_MISSING;
+        }
 
         mpos = 0;
         while ((ch = *++p)) {
@@ -145,8 +148,9 @@ parse(void)
             expansion->num_inputs, stimulus_file_name);
 
     ch = getc(stimulus_file);
-    if (ch != EOF)
-    { die("trailing characters after line 1 of '%s'", stimulus_file_name); }
+    if (ch != EOF) {
+        die("trailing characters after line 1 of '%s'", stimulus_file_name);
+    }
 }
 
 static void
@@ -155,8 +159,9 @@ print(void)
     unsigned i, mpos;
 
     for (i = 0; i <= k; i++) {
-        for (mpos = 0; mpos < model->num_inputs; mpos++)
-        { fputc(assignment[m2e[mpos][i]], stdout); }
+        for (mpos = 0; mpos < model->num_inputs; mpos++) {
+            fputc(assignment[m2e[mpos][i]], stdout);
+        }
 
         fputc('\n', stdout);
     }
@@ -196,64 +201,75 @@ main(int argc, char **argv)
         if (!strcmp(argv[i], "-h")) {
             fprintf(stderr, USAGE);
             exit(0);
-        } else if (argv[i][0] == '-')
-        { die("invalid command line option '%s'", argv[i]); }
-        else if (!model_file_name)
-        { model_file_name = argv[i]; }
-        else if (!expansion_file_name)
-        { expansion_file_name = argv[i]; }
-        else if (!foundk) {
+        } else if (argv[i][0] == '-') {
+            die("invalid command line option '%s'", argv[i]);
+        } else if (!model_file_name) {
+            model_file_name = argv[i];
+        } else if (!expansion_file_name) {
+            expansion_file_name = argv[i];
+        } else if (!foundk) {
             const char *p = argv[i];
             while (*p)
-                if (!isdigit(*p++))
-                { die("expected bound as third argument"); }
+                if (!isdigit(*p++)) {
+                    die("expected bound as third argument");
+                }
 
             k = atoi(argv[i]);
             foundk = 1;
-        } else if (!stimulus_file)
-        { stimulus_file_name = argv[i]; }
-        else
-        { die("too many paramaters"); }
+        } else if (!stimulus_file) {
+            stimulus_file_name = argv[i];
+        } else {
+            die("too many paramaters");
+        }
     }
 
-    if (!model_file_name)
-    { die("no model specified"); }
+    if (!model_file_name) {
+        die("no model specified");
+    }
 
-    if (!expansion_file_name)
-    { die("no expansion specified"); }
+    if (!expansion_file_name) {
+        die("no expansion specified");
+    }
 
-    if (!foundk)
-    { die("unspecified bound"); }
+    if (!foundk) {
+        die("unspecified bound");
+    }
 
     model = aiger_init();
-    if ((err = aiger_open_and_read_from_file(model, model_file_name)))
-    { die("%s", err); }
+    if ((err = aiger_open_and_read_from_file(model, model_file_name))) {
+        die("%s", err);
+    }
 
     expansion = aiger_init();
-    if ((err = aiger_open_and_read_from_file(expansion, expansion_file_name)))
-    { die("%s", err); }
+    if ((err = aiger_open_and_read_from_file(expansion, expansion_file_name))) {
+        die("%s", err);
+    }
 
     link();
 
     if (stimulus_file_name) {
-        if (!(stimulus_file = fopen(stimulus_file_name, "r")))
-        { die("failed to read '%s'", stimulus_file_name); }
+        if (!(stimulus_file = fopen(stimulus_file_name, "r"))) {
+            die("failed to read '%s'", stimulus_file_name);
+        }
 
         close_stimulus_file = 1;
-    } else
-    { stimulus_file = stdin; }
+    } else {
+        stimulus_file = stdin;
+    }
 
     parse();
 
-    if (close_stimulus_file)
-    { fclose(stimulus_file); }
+    if (close_stimulus_file) {
+        fclose(stimulus_file);
+    }
 
     aiger_reset(expansion);
 
     print();
 
-    for (i = 0; i < model->num_inputs; i++)
-    { free(m2e[i]); }
+    for (i = 0; i < model->num_inputs; i++) {
+        free(m2e[i]);
+    }
     free(m2e);
 
     aiger_reset(model);

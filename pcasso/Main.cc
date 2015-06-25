@@ -130,8 +130,9 @@ int main(int argc, char** argv)
         getrlimit(RLIMIT_CPU, &rl);
         if (rl.rlim_max == RLIM_INFINITY || (rlim_t)cpu_lim < rl.rlim_max) {
             rl.rlim_cur = cpu_lim;
-            if (setrlimit(RLIMIT_CPU, &rl) == -1)
-            { fprintf(stderr, "WARNING! Could not set resource limit: CPU-time.\n"); }
+            if (setrlimit(RLIMIT_CPU, &rl) == -1) {
+                fprintf(stderr, "WARNING! Could not set resource limit: CPU-time.\n");
+            }
         }
     }
 
@@ -142,8 +143,9 @@ int main(int argc, char** argv)
         getrlimit(RLIMIT_AS, &rl);
         if (rl.rlim_max == RLIM_INFINITY || new_mem_lim < rl.rlim_max) {
             rl.rlim_cur = new_mem_lim;
-            if (setrlimit(RLIMIT_AS, &rl) == -1)
-            { fprintf(stderr, "WARNING! Could not set resource limit: Virtual memory.\n"); }
+            if (setrlimit(RLIMIT_AS, &rl) == -1) {
+                fprintf(stderr, "WARNING! Could not set resource limit: Virtual memory.\n");
+            }
         }
     }
 
@@ -255,12 +257,14 @@ void* solverMain(void* pointer)
 
 
 
-        if (p.argc == 1)
-        { fprintf(stderr, "Reading from standard input... Use '--help' for help.\n"); }
+        if (p.argc == 1) {
+            fprintf(stderr, "Reading from standard input... Use '--help' for help.\n");
+        }
 
         gzFile in = (p.argc == 1) ? gzdopen(0, "rb") : gzopen(p.argv[1], "rb");
-        if (in == NULL)
-        { fprintf(stderr, "ERROR! Could not open file: %s\n", p.argc == 1 ? "<stdin>" : p.argv[1]), exit(1); }
+        if (in == NULL) {
+            fprintf(stderr, "ERROR! Could not open file: %s\n", p.argc == 1 ? "<stdin>" : p.argv[1]), exit(1);
+        }
 
         if (S.verbosity > 0) {
             fprintf(stderr, "============================[ Problem Statistics ]=============================\n");
@@ -277,8 +281,9 @@ void* solverMain(void* pointer)
         }
 
         double parsed_time = cpuTime();
-        if (S.verbosity > 0)
-        { fprintf(stderr, "|  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time); }
+        if (S.verbosity > 0) {
+            fprintf(stderr, "|  Parse time:           %12.2f s                                       |\n", parsed_time - initial_time);
+        }
 
         // Change to signal-handlers that will only notify the solver and allow it to terminate
         // voluntarily:
@@ -316,11 +321,13 @@ void* solverMain(void* pointer)
         }
 
         if (p.dimacs) {
-            if (S.verbosity > 0)
-            { fprintf(stderr, "==============================[ Writing DIMACS ]===============================\n"); }
+            if (S.verbosity > 0) {
+                fprintf(stderr, "==============================[ Writing DIMACS ]===============================\n");
+            }
             S.toDimacs((const char*)p.dimacs);
-            if (S.verbosity > 0)
-            { printStats(S); }
+            if (S.verbosity > 0) {
+                printStats(S);
+            }
             exit(0);
         }
 
@@ -342,13 +349,15 @@ void* solverMain(void* pointer)
                 if (ret == l_True) {
                     fprintf(res, "SAT\n");
                     for (int i = 0; i < S.nVars(); i++)
-                        if (S.model[i] != l_Undef)
-                        { fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1); }
+                        if (S.model[i] != l_Undef) {
+                            fprintf(res, "%s%s%d", (i == 0) ? "" : " ", (S.model[i] == l_True) ? "" : "-", i + 1);
+                        }
                     fprintf(res, " 0\n");
-                } else if (ret == l_False)
-                { fprintf(res, "UNSAT\n"); }
-                else
-                { fprintf(res, "INDET\n"); }
+                } else if (ret == l_False) {
+                    fprintf(res, "UNSAT\n");
+                } else {
+                    fprintf(res, "INDET\n");
+                }
                 fclose(res);
             }
         }

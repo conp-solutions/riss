@@ -53,8 +53,9 @@ static void
 msg(const char *fmt, ...)
 {
     va_list ap;
-    if (!verbose)
-    { return; }
+    if (!verbose) {
+        return;
+    }
     fputs("[aigflip] ", stderr);
     va_start(ap, fmt);
     vfprintf(stderr, fmt, ap);
@@ -82,27 +83,30 @@ main(int argc, char ** argv)
             exit(0);
         }
 
-        if (!strcmp(argv[i], "-v"))
-        { verbose = 1; }
-        else if (argv[i][0] == '-')
-        { die("invalid command line option '%s'", argv[i]); }
-        else if (output)
-        { die("too many arguments"); }
-        else if (input)
-        { output = argv[i]; }
-        else
-        { input = argv[i]; }
+        if (!strcmp(argv[i], "-v")) {
+            verbose = 1;
+        } else if (argv[i][0] == '-') {
+            die("invalid command line option '%s'", argv[i]);
+        } else if (output) {
+            die("too many arguments");
+        } else if (input) {
+            output = argv[i];
+        } else {
+            input = argv[i];
+        }
     }
 
     msg("reading %s", input ? input : "<stdin>");
     src = aiger_init();
-    if (input)
-    { err = aiger_open_and_read_from_file(src, input); }
-    else
-    { err = aiger_read_from_file(src, stdin); }
+    if (input) {
+        err = aiger_open_and_read_from_file(src, input);
+    } else {
+        err = aiger_read_from_file(src, stdin);
+    }
 
-    if (err)
-    { die("read error: %s", err); }
+    if (err) {
+        die("read error: %s", err);
+    }
 
     msg("read MILOA %u %u %u %u %u",
         src->maxvar,
@@ -112,14 +116,16 @@ main(int argc, char ** argv)
         src->num_ands);
 
     if (src->num_bad) { die("can not handle bad state properties"); }
-    if (src->num_constraints)
-    { die("can not handle environment state constraints"); }
+    if (src->num_constraints) {
+        die("can not handle environment state constraints");
+    }
     if (src->num_justice) { die("can not handle justice properties"); }
     if (src->num_fairness) { die("can not handle fairness constraints"); }
 
     dst = aiger_init();
-    for (i = 0; i < src->num_inputs; i++)
-    { aiger_add_input(dst, src->inputs[i].lit, src->inputs[i].name); }
+    for (i = 0; i < src->num_inputs; i++) {
+        aiger_add_input(dst, src->inputs[i].lit, src->inputs[i].name);
+    }
 
     for (i = 0; i < src->num_latches; i++) {
         aiger_add_latch(dst, src->latches[i].lit,
@@ -139,8 +145,9 @@ main(int argc, char ** argv)
         if (srcname) {
             srcname = malloc(strlen(srcname) + 20);
             sprintf(dstname, "AIGFLIP_%s", dstname);
-        } else
-        { dstname = 0; }
+        } else {
+            dstname = 0;
+        }
         aiger_add_output(dst, aiger_not(out), dstname);
         free(dstname);
     }
@@ -154,15 +161,16 @@ main(int argc, char ** argv)
 
     msg("writing %s", output ? output : "<stdout>");
 
-    if (output)
-    { ok = aiger_open_and_write_to_file(dst, output); }
-    else {
+    if (output) {
+        ok = aiger_open_and_write_to_file(dst, output);
+    } else {
         mode = isatty(1) ? aiger_ascii_mode : aiger_binary_mode;
         ok = aiger_write_to_file(dst, mode, stdout);
     }
 
-    if (!ok)
-    { die("writing failed"); }
+    if (!ok) {
+        die("writing failed");
+    }
 
     msg("wrote MILOA %u %u %u %u %u",
         dst->maxvar,

@@ -88,8 +88,9 @@ IN THE SOFTWARE.
     msg(int level, const char *fmt, ...)
     {
         va_list ap;
-        if (verbose < level)
-        { return; }
+        if (verbose < level) {
+            return;
+        }
         fputs("[aigdd] ", stderr);
         va_start(ap, fmt);
         vfprintf(stderr, fmt, ap);
@@ -127,16 +128,18 @@ IN THE SOFTWARE.
                     tmp0 = deref( and ->rhs0);
                     tmp1 = deref( and ->rhs1);
 
-                    if (!tmp0 || !tmp1)
-                    { tmp = 0; }
-                    else if (tmp0 == 1)
-                    { tmp = tmp1; }
-                    else if (tmp1 == 1)
-                    { tmp = tmp0; }
+                    if (!tmp0 || !tmp1) {
+                        tmp = 0;
+                    } else if (tmp0 == 1) {
+                        tmp = tmp1;
+                    } else if (tmp1 == 1) {
+                        tmp = tmp0;
+                    }
                 }
             }
-        } else
-        { tmp = deref(tmp); }
+        } else {
+            tmp = deref(tmp);
+        }
 
         unstable[idx] = tmp;
         fixed[idx] = 1;
@@ -163,8 +166,9 @@ IN THE SOFTWARE.
             lit = symbol->lit;
             if (deref(lit) != lit) { continue; }
             aiger_add_input(dst, lit, symbol->name);
-            if (symbol->reset)                // TODO delta debug
-            { aiger_add_reset(dst, lit, symbol->reset); }
+            if (symbol->reset) {              // TODO delta debug
+                aiger_add_reset(dst, lit, symbol->reset);
+            }
         }
 
         for (i = 0; i < src->num_latches; i++) {
@@ -172,9 +176,9 @@ IN THE SOFTWARE.
             lit = symbol->lit;
             if (deref(lit) != lit) { continue; }
             aiger_add_latch(dst, lit, deref(symbol->next), symbol->name);
-            if (symbol->reset <= 1)
-            { aiger_add_reset(dst, lit, symbol->reset); }
-            else {
+            if (symbol->reset <= 1) {
+                aiger_add_reset(dst, lit, symbol->reset);
+            } else {
                 assert(symbol->reset == lit);
                 aiger_add_reset(dst, lit, lit);
             }
@@ -182,8 +186,9 @@ IN THE SOFTWARE.
 
         for (i = 0; i < src->num_ands; i++) {
             and = src->ands + i;
-            if (deref( and ->lhs) == and ->lhs)
-            { aiger_add_and(dst, and ->lhs, deref( and ->rhs0), deref( and ->rhs1)); }
+            if (deref( and ->lhs) == and ->lhs) {
+                aiger_add_and(dst, and ->lhs, deref( and ->rhs0), deref( and ->rhs1));
+            }
         }
 
         for (i = 0; i < src->num_outputs; i++) {
@@ -209,8 +214,9 @@ IN THE SOFTWARE.
             if (!justice[i]) { continue; }
             symbol = src->justice + i;
             lits = malloc(symbol->size * sizeof * lits);
-            for (j = 0; j < symbol->size; j++)
-            { lits[j] = deref(symbol->lit); }
+            for (j = 0; j < symbol->size; j++) {
+                lits[j] = deref(symbol->lit);
+            }
             aiger_add_justice(dst, symbol->size, lits, symbol->name);
             free(lits);
         }
@@ -224,12 +230,14 @@ IN THE SOFTWARE.
 
         assert(!aiger_check(dst));
 
-        if (reencode)
-        { aiger_reencode(dst); }
+        if (reencode) {
+            aiger_reencode(dst);
+        }
 
         unlink(name);
-        if (!aiger_open_and_write_to_file(dst, name))
-        { die("failed to write '%s'", name); }
+        if (!aiger_open_and_write_to_file(dst, name)) {
+            die("failed to write '%s'", name);
+        }
 
         if (print_progress) {
             assert(name == dst_name);
@@ -244,8 +252,9 @@ IN THE SOFTWARE.
                 dst->num_constraints,
                 dst->num_justice,
                 dst->num_fairness);
-        } else
-        { assert(name == tmp_name); }
+        } else {
+            assert(name == tmp_name);
+        }
 
         aiger_reset(dst);
     }
@@ -255,8 +264,9 @@ IN THE SOFTWARE.
     {
         unsigned i;
 
-        for (i = 0; i <= src->maxvar; i++)
-        { unstable[i] = stable[i]; }
+        for (i = 0; i <= src->maxvar; i++) {
+            unstable[i] = stable[i];
+        }
         msg(2, "writing '%s'", dst_name);
         write_unstable(dst_name);
     }
@@ -310,32 +320,36 @@ IN THE SOFTWARE.
             if (!src_name && !strcmp(argv[i], "-h")) {
                 fprintf(stderr, USAGE);
                 exit(0);
-            } else if (!src_name && !strcmp(argv[i], "-v"))
-            { verbose++; }
-            else if (!src_name && !strcmp(argv[i], "-r"))
-            { reencode = 1; }
-            else if (src_name && dst_name && cmd)
-            { cmd = strapp(strapp(cmd, " "), argv[i]); }
-            else if (dst_name)
-            { cmd = strdup(argv[i]); }
-            else if (src_name)
-            { dst_name = argv[i]; }
-            else
-            { src_name = argv[i]; }
+            } else if (!src_name && !strcmp(argv[i], "-v")) {
+                verbose++;
+            } else if (!src_name && !strcmp(argv[i], "-r")) {
+                reencode = 1;
+            } else if (src_name && dst_name && cmd) {
+                cmd = strapp(strapp(cmd, " "), argv[i]);
+            } else if (dst_name) {
+                cmd = strdup(argv[i]);
+            } else if (src_name) {
+                dst_name = argv[i];
+            } else {
+                src_name = argv[i];
+            }
         }
 
-        if (!src_name || !dst_name)
-        { die("expected exactly two files"); }
+        if (!src_name || !dst_name) {
+            die("expected exactly two files");
+        }
 
-        if (!cmd)
-        { die("name of executable missing"); }
+        if (!cmd) {
+            die("name of executable missing");
+        }
 
         expected = run(cmd, src_name);
         msg(1, "'%s %s' returns %d", cmd, src_name, expected);
 
         src = aiger_init();
-        if ((err = aiger_open_and_read_from_file(src, src_name)))
-        { die("%s: %s", src_name, err); }
+        if ((err = aiger_open_and_read_from_file(src, src_name))) {
+            die("%s: %s", src_name, err);
+        }
 
         stable = malloc(sizeof(stable[0]) * (src->maxvar + 1));
         unstable = malloc(sizeof(unstable[0]) * (src->maxvar + 1));
@@ -347,18 +361,24 @@ IN THE SOFTWARE.
         justice = malloc(src->num_justice + sizeof * justice);
         fairness = malloc(src->num_fairness + sizeof * fairness);
 
-        for (i = 0; i <= src->maxvar; i++)
-        { stable[i] = 2 * i; }
-        for (i = 0; i < src->num_outputs; i++)
-        { outputs[i] = 1; }
-        for (i = 0; i < src->num_bad; i++)
-        { bad[i] = 1; }
-        for (i = 0; i < src->num_constraints; i++)
-        { constraints[i] = 1; }
-        for (i = 0; i < src->num_justice; i++)
-        { justice[i] = 1; }
-        for (i = 0; i < src->num_fairness; i++)
-        { fairness[i] = 1; }
+        for (i = 0; i <= src->maxvar; i++) {
+            stable[i] = 2 * i;
+        }
+        for (i = 0; i < src->num_outputs; i++) {
+            outputs[i] = 1;
+        }
+        for (i = 0; i < src->num_bad; i++) {
+            bad[i] = 1;
+        }
+        for (i = 0; i < src->num_constraints; i++) {
+            constraints[i] = 1;
+        }
+        for (i = 0; i < src->num_justice; i++) {
+            justice[i] = 1;
+        }
+        for (i = 0; i < src->num_fairness; i++) {
+            fairness[i] = 1;
+        }
 
         copy_stable_to_unstable_and_write_dst_name();
 
@@ -377,8 +397,9 @@ IN THE SOFTWARE.
             i = 1;
 
             do {
-                for (j = 1; j < i; j++)
-                { unstable[j] = stable[j]; }
+                for (j = 1; j < i; j++) {
+                    unstable[j] = stable[j];
+                }
 
                 changed = 0;
                 last = min(i + delta - 1, src->maxvar);
@@ -387,29 +408,33 @@ IN THE SOFTWARE.
                     if (stable[j]) {  /* replace '1' by '0' as well */
                         unstable[j] = 0;
                         changed++;
-                    } else
-                    { unstable[j] = 0; }    /* always favor 'zero' */
+                    } else {
+                        unstable[j] = 0;    /* always favor 'zero' */
+                    }
                 }
 
                 if (changed) {
-                    for (j = i + delta; j <= src->maxvar; j++)
-                    { unstable[j] = stable[j]; }
+                    for (j = i + delta; j <= src->maxvar; j++) {
+                        unstable[j] = stable[j];
+                    }
 
                     res = write_and_run_unstable(cmd);
                     if (res == expected) {
                         msg(1, "[%d,%d] set to 0 (%d out of %d)",
                             i, last, changed, outof);
 
-                        for (j = i; j <= last; j++)
-                        { stable[j] = unstable[j]; }
+                        for (j = i; j <= last; j++) {
+                            stable[j] = unstable[j];
+                        }
 
                         copy_stable_to_unstable_and_write_dst_name();
                     } else {  /* try setting to 'one' */
                         msg(3, "[%d,%d] can not be set to 0 (%d out of %d)",
                             i, last, changed, outof);
 
-                        for (j = 1; j < i; j++)
-                        { unstable[j] = stable[j]; }
+                        for (j = 1; j < i; j++) {
+                            unstable[j] = stable[j];
+                        }
 
                         changed = 0;
                         for (j = i; j <= last; j++) {
@@ -417,23 +442,27 @@ IN THE SOFTWARE.
                                 if (stable[j] > 1) {
                                     unstable[j] = 1;
                                     changed++;
-                                } else
-                                { unstable[j] = 1; }
-                            } else
-                            { unstable[j] = 0; }    /* always favor '0' */
+                                } else {
+                                    unstable[j] = 1;
+                                }
+                            } else {
+                                unstable[j] = 0;    /* always favor '0' */
+                            }
                         }
 
                         if (changed) {
-                            for (j = i + delta; j <= src->maxvar; j++)
-                            { unstable[j] = stable[j]; }
+                            for (j = i + delta; j <= src->maxvar; j++) {
+                                unstable[j] = stable[j];
+                            }
 
                             res = write_and_run_unstable(cmd);
                             if (res == expected) {
                                 msg(1, "[%d,%d] set to 1 (%d out of %d)",
                                     i, last, changed, outof);
 
-                                for (j = i; j < i + delta && j <= src->maxvar; j++)
-                                { stable[j] = unstable[j]; }
+                                for (j = i; j < i + delta && j <= src->maxvar; j++) {
+                                    stable[j] = unstable[j];
+                                }
 
                                 copy_stable_to_unstable_and_write_dst_name();
                             } else
@@ -442,8 +471,9 @@ IN THE SOFTWARE.
                                     i, last, changed, outof);
                         }
                     }
-                } else
-                { msg(3, "[%d,%d] stabilized to 0", i, last); }
+                } else {
+                    msg(3, "[%d,%d] stabilized to 0", i, last);
+                }
 
                 i += delta;
             } while (i <= src->maxvar);
@@ -465,8 +495,9 @@ IN THE SOFTWARE.
                     outputs[i] = 1;
                 }
             }
-            if (changed)
-            { msg(1, "removed %d outputs", changed); }
+            if (changed) {
+                msg(1, "removed %d outputs", changed);
+            }
 
             copy_stable_to_unstable_and_write_dst_name();
         }
@@ -485,8 +516,9 @@ IN THE SOFTWARE.
                     bad[i] = 1;
                 }
             }
-            if (changed)
-            { msg(1, "removed %d bad state properties", changed); }
+            if (changed) {
+                msg(1, "removed %d bad state properties", changed);
+            }
 
             copy_stable_to_unstable_and_write_dst_name();
         }
@@ -505,8 +537,9 @@ IN THE SOFTWARE.
                     constraints[i] = 1;
                 }
             }
-            if (changed)
-            { msg(1, "removed %d environment constraints", changed); }
+            if (changed) {
+                msg(1, "removed %d environment constraints", changed);
+            }
 
             copy_stable_to_unstable_and_write_dst_name();
         }
@@ -525,8 +558,9 @@ IN THE SOFTWARE.
                     justice[i] = 1;
                 }
             }
-            if (changed)
-            { msg(1, "removed %d justice property", changed); }
+            if (changed) {
+                msg(1, "removed %d justice property", changed);
+            }
 
             copy_stable_to_unstable_and_write_dst_name();
         }
@@ -545,16 +579,18 @@ IN THE SOFTWARE.
                     fairness[i] = 1;
                 }
             }
-            if (changed)
-            { msg(1, "removed %d fairness constraint", changed); }
+            if (changed) {
+                msg(1, "removed %d fairness constraint", changed);
+            }
 
             copy_stable_to_unstable_and_write_dst_name();
         }
 
         changed = 0;
         for (i = 1; i <= src->maxvar; i++)
-            if (stable[i] <= 1)
-            { changed++; }
+            if (stable[i] <= 1) {
+                changed++;
+            }
 
         msg(1, "%.1f%% literals removed (%d out of %d)",
             src->maxvar ? changed * 100.0 / src->maxvar : 0, changed, src->maxvar);

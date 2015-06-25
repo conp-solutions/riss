@@ -41,8 +41,9 @@ static inline int memReadStat(int field)
     if (in == NULL) { return 0; }
 
     for (; field >= 0; field--)
-        if (fscanf(in, "%d", &value) != 1)
-        { printf("ERROR! Failed to parse memory statistics from \"/proc\".\n"), exit(1); }
+        if (fscanf(in, "%d", &value) != 1) {
+            printf("ERROR! Failed to parse memory statistics from \"/proc\".\n"), exit(1);
+        }
     fclose(in);
     return value;
 }

@@ -50,8 +50,9 @@ aigtoaig_malloc(memory * m, size_t bytes)
 {
     m->bytes += bytes;
     assert(m->bytes);
-    if (m->bytes > m->max)
-    { m->max = m->bytes; }
+    if (m->bytes > m->max) {
+        m->max = m->bytes;
+    }
     return malloc(bytes);
 }
 
@@ -69,8 +70,9 @@ aigtoaig_put(char ch, stream * stream)
     int res;
 
     res = putc((unsigned char) ch, stream->file);
-    if (res != EOF)
-    { stream->bytes++; }
+    if (res != EOF) {
+        stream->bytes++;
+    }
 
     return res;
 }
@@ -81,8 +83,9 @@ aigtoaig_get(stream * stream)
     int res;
 
     res = getc(stream->file);
-    if (res != EOF)
-    { stream->bytes++; }
+    if (res != EOF) {
+        stream->bytes++;
+    }
 
     return res;
 }
@@ -146,38 +149,44 @@ main(int argc, char **argv)
         if (!strcmp(argv[i], "-h")) {
             fprintf(stderr, USAGE);
             exit(0);
-        } else if (!strcmp(argv[i], "-v"))
-        { verbose = 1; }
-        else if (!strcmp(argv[i], "-s"))
-        { strip = 1; }
-        else if (!strcmp(argv[i], "-a"))
-        { ascii = 1; }
-        else if (argv[i][0] == '-' && argv[i][1])
-        { die("invalid command line option '%s'", argv[i]); }
-        else if (!src_name) {
+        } else if (!strcmp(argv[i], "-v")) {
+            verbose = 1;
+        } else if (!strcmp(argv[i], "-s")) {
+            strip = 1;
+        } else if (!strcmp(argv[i], "-a")) {
+            ascii = 1;
+        } else if (argv[i][0] == '-' && argv[i][1]) {
+            die("invalid command line option '%s'", argv[i]);
+        } else if (!src_name) {
             if (!strcmp(argv[i], "-")) {
                 src = 0;
                 src_name = "<stdin>";
-            } else
-            { src = src_name = argv[i]; }
+            } else {
+                src = src_name = argv[i];
+            }
         } else if (!dst_name) {
             if (!strcmp(argv[i], "-")) {
                 dst = 0;
                 dst_name = "<stdout>";
-            } else
-            { dst = dst_name = argv[i]; }
-        } else
-        { die("more than two files specified"); }
+            } else {
+                dst = dst_name = argv[i];
+            }
+        } else {
+            die("more than two files specified");
+        }
     }
 
-    if (dst && ascii)
-    { die("'dst' file and '-a' specified"); }
+    if (dst && ascii) {
+        die("'dst' file and '-a' specified");
+    }
 
-    if (!dst && !ascii && isatty(1))
-    { ascii = 1; }
+    if (!dst && !ascii && isatty(1)) {
+        ascii = 1;
+    }
 
-    if (src && dst && !strcmp(src, dst))
-    { die("identical 'src' and 'dst' file"); }
+    if (src && dst && !strcmp(src, dst)) {
+        die("identical 'src' and 'dst' file");
+    }
 
     memory.max = memory.bytes = 0;
     aiger = aiger_init_mem(&memory,
@@ -205,8 +214,9 @@ main(int argc, char **argv)
 
         error = aiger_read_generic(aiger, &reader, (aiger_get) aigtoaig_get);
 
-        if (error)
-        { goto READ_ERROR; }
+        if (error) {
+            goto READ_ERROR;
+        }
 
         if (verbose) {
             fprintf(stderr,
@@ -246,14 +256,16 @@ main(int argc, char **argv)
             writer.file = stdout;
             writer.bytes = 0;
 
-            if (ascii)
-            { mode = aiger_ascii_mode; }
-            else
-            { mode = aiger_binary_mode; }
+            if (ascii) {
+                mode = aiger_ascii_mode;
+            } else {
+                mode = aiger_binary_mode;
+            }
 
             if (!aiger_write_generic(aiger, mode,
-                                     &writer, (aiger_put) aigtoaig_put))
-            { goto WRITE_ERROR; }
+                                     &writer, (aiger_put) aigtoaig_put)) {
+                goto WRITE_ERROR;
+            }
 
             if (verbose) {
                 fprintf(stderr,

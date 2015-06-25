@@ -278,14 +278,14 @@ lbool BackwardVerificationWorker::continueCheck(int64_t untilProofPosition)
 
     if (verbose > 7) {
         cerr << "c [S-BW-CHK] full state: " << endl;
-        cerr << "c non-marked-units (" << nonMarkedUnitClauses.size() << "): "; for (int i = 0 ; i < nonMarkedUnitClauses.size(); ++ i) { cerr << " " << nonMarkedUnitClauses[i].getLit() ; } cerr << endl;
-        cerr << "c marked-units (" << markedUnitClauses.size()  << "): "; for (int i = 0 ; i < markedUnitClauses.size(); ++ i) { cerr << " " << markedUnitClauses[i].getLit() ; } cerr << endl;
+        cerr << "c non-marked-units (" << nonMarkedUnitClauses.size() << "): "; for (int i = 0 ; i < nonMarkedUnitClauses.size(); ++ i) { cerr << " " << nonMarkedUnitClauses[i].getLit() ; }  cerr << endl;
+        cerr << "c marked-units (" << markedUnitClauses.size()  << "): "; for (int i = 0 ; i < markedUnitClauses.size(); ++ i) { cerr << " " << markedUnitClauses[i].getLit() ; }  cerr << endl;
         cerr << "c HEAD: markedUnit: " << markedUnitHead << " marked: " << markedQhead << " non-markedUnits: " << nonMarkedUnithead << " non-marked: " << nonMarkedQHead << endl;
         cerr << "c trail: " << trail << endl;
         cerr << "c BEGIN FULL PROOF" << endl;
         for (int i = 0 ; i < fullProof.size(); ++ i) {
             cerr << "c item [" << i << "] id: " << fullProof[i].getID() << " valid until " << fullProof[i].getValidUntil() << " byMe: " << proofItemProperties[i].isMarkedByMe() << " marked: " << label[i].isMarked() << " delete: " << fullProof[i].isDelete() << "  clause: ";
-            if (fullProof[i].getRef() == CRef_Undef) { cerr << "empty"; } else { cerr << ca[ fullProof[i].getRef() ] ; }
+            if (fullProof[i].getRef() == CRef_Undef) { cerr << "empty"; }  else { cerr << ca[ fullProof[i].getRef() ] ; }
             cerr << endl;
         }
         cerr << "c END FULL PROOF" << endl;
@@ -364,15 +364,15 @@ lbool BackwardVerificationWorker::continueCheck(int64_t untilProofPosition)
 
     if (verbose > 8) {
         cerr << "c [S-BW-CHK] full state: " << endl;
-        cerr << "c non-marked-units (" << nonMarkedUnitClauses.size() << "): "; for (int i = 0 ; i < nonMarkedUnitClauses.size(); ++ i) { cerr << " " << nonMarkedUnitClauses[i].getLit() ; } cerr << endl;
-        cerr << "c marked-units (" << markedUnitClauses.size()  << "): "; for (int i = 0 ; i < markedUnitClauses.size(); ++ i) { cerr << " " << markedUnitClauses[i].getLit() ; } cerr << endl;
+        cerr << "c non-marked-units (" << nonMarkedUnitClauses.size() << "): "; for (int i = 0 ; i < nonMarkedUnitClauses.size(); ++ i) { cerr << " " << nonMarkedUnitClauses[i].getLit() ; }  cerr << endl;
+        cerr << "c marked-units (" << markedUnitClauses.size()  << "): "; for (int i = 0 ; i < markedUnitClauses.size(); ++ i) { cerr << " " << markedUnitClauses[i].getLit() ; }  cerr << endl;
         cerr << "c HEAD: markedUnit: " << markedUnitHead << " marked: " << markedQhead << " non-markedUnits: " << nonMarkedUnithead << " non-marked: " << nonMarkedQHead << endl;
         cerr << "c trail: " << trail << endl;
         cerr << "c BEGIN FULL PROOF" << endl;
         for (int i = 0 ; i < fullProof.size(); ++ i) {
             cerr << "c item [" << i << "] id: " << fullProof[i].getID() << " valid until " << fullProof[i].getValidUntil() << " byMe: " << proofItemProperties[i].isMarkedByMe() << " marked: " << label[i].isMarked()
                  << " verified: " << label[i].isVerified() << " deleted: "  << fullProof[i].isDelete() << "  clause: ";
-            if (fullProof[i].getRef() == CRef_Undef) { cerr << "empty"; } else { cerr << ca[ fullProof[i].getRef() ] ; }
+            if (fullProof[i].getRef() == CRef_Undef) { cerr << "empty"; }  else { cerr << ca[ fullProof[i].getRef() ] ; }
             cerr << endl;
         }
         cerr << "c END FULL PROOF" << endl;
@@ -391,14 +391,14 @@ lbool BackwardVerificationWorker::checkClause(vec< Lit >& clause, int64_t untilP
 
     if (verbose > 4) {
         cerr << "c [S-BW-CHK] full state: " << endl;
-        cerr << "c non-marked-units: "; for (int i = 0 ; i < nonMarkedUnitClauses.size(); ++ i) { cerr << " " << nonMarkedUnitClauses[i].getLit() ; } cerr << endl;
-        cerr << "c marked-units: "; for (int i = 0 ; i < markedUnitClauses.size(); ++ i) { cerr << " " << markedUnitClauses[i].getLit() ; } cerr << endl;
+        cerr << "c non-marked-units: "; for (int i = 0 ; i < nonMarkedUnitClauses.size(); ++ i) { cerr << " " << nonMarkedUnitClauses[i].getLit() ; }  cerr << endl;
+        cerr << "c marked-units: "; for (int i = 0 ; i < markedUnitClauses.size(); ++ i) { cerr << " " << markedUnitClauses[i].getLit() ; }  cerr << endl;
         cerr << "c HEAD: markedUnit: " << markedUnitHead << " marked: " << markedQhead << " non-markedUnits: " << nonMarkedUnithead << " non-marked: " << nonMarkedQHead << endl;
         cerr << "c trail: " << trail << endl;
         cerr << "c BEGIN FULL PROOF" << endl;
         for (int i = 0 ; i < fullProof.size(); ++ i) {
             cerr << "c item [" << i << "] id: " << fullProof[i].getID() << " valid until " << fullProof[i].getValidUntil() << " byMe: " << proofItemProperties[i].isMarkedByMe() << " marked: " << label[i].isMarked() << " delete: " << fullProof[i].isDelete() << "  clause: ";
-            if (fullProof[i].getRef() == CRef_Undef) { cerr << "empty"; } else { cerr << ca[ fullProof[i].getRef() ] ; }
+            if (fullProof[i].getRef() == CRef_Undef) { cerr << "empty"; }  else { cerr << ca[ fullProof[i].getRef() ] ; }
             cerr << endl;
         }
         cerr << "c END FULL PROOF" << endl;
@@ -462,8 +462,9 @@ CRef BackwardVerificationWorker::propagateMarkedUnits(const int64_t currentID)
             if (value(l) == l_True) { continue; }        // check whether its SAT already
             else if (value(l) == l_False) {
                 if (verbose > 8) { cerr << "c [S-BW-CHK] conflict with unit " << unit.getLit() << " (id: " << unit.getID() << ")" << endl; }
-                for (int i = markedUnitHead + 1; i < markedUnitClauses.size(); ++ i)   // kept the current literal already
-                { markedUnitClauses[ keptUnits ++ ] = markedUnitClauses[ i ]; }          // keep all other elements element
+                for (int i = markedUnitHead + 1; i < markedUnitClauses.size(); ++ i) { // kept the current literal already
+                    markedUnitClauses[ keptUnits ++ ] = markedUnitClauses[ i ];    // keep all other elements element
+                }
                 markedUnitClauses.shrink_(markedUnitClauses.size() - keptUnits);        // remove all removed elements
                 return 0; // we do not know the exact clause, be we see a conflict
             } else {
@@ -504,8 +505,9 @@ CRef BackwardVerificationWorker::propagateMarked(const int64_t currentID)
             const CRef cr = i->getRef();
             Clause&  c = ca[cr];
             const Lit false_lit = ~p;
-            if (c[0] == false_lit)
-            { c[0] = c[1], c[1] = false_lit; }
+            if (c[0] == false_lit) {
+                c[0] = c[1], c[1] = false_lit;
+            }
             assert(c[1] == false_lit && "wrong literal order in the clause!");
 
             // If 0th watch is true, then clause is already satisfied.
@@ -533,8 +535,9 @@ CRef BackwardVerificationWorker::propagateMarked(const int64_t currentID)
                 confl = cr; // independent of opt_long_conflict -> overwrite confl!
                 markedQhead = trail.size();
                 // Copy the remaining watches:
-                while (i < end)
-                { *j++ = *i++; }
+                while (i < end) {
+                    *j++ = *i++;
+                }
             } else {
                 uncheckedEnqueue(first);
             }
@@ -599,8 +602,9 @@ CRef BackwardVerificationWorker::propagateMarkedShared(const int64_t currentID)
                 confl = cr;
                 markedQhead = trail.size();
                 // Copy the remaining watches:
-                while (i < end)
-                { *j++ = *i++; }
+                while (i < end) {
+                    *j++ = *i++;
+                }
             } else {
                 uncheckedEnqueue(otherWatchedLit);
             }
@@ -637,8 +641,9 @@ CRef BackwardVerificationWorker::propagateUnmarkedUnits(const int64_t currentID)
                 // memorize where to continue checking next time this method is called
                 nonMarkedUnithead = keptUnits;
                 // repair data structure before leaving the routine
-                for (; continueToCheck  < nonMarkedUnitClauses.size(); ++ continueToCheck)           // do not keep this unit that failed
-                { nonMarkedUnitClauses[ keptUnits ++ ] = nonMarkedUnitClauses[ continueToCheck  ]; }   // keep all other elements element
+                for (; continueToCheck  < nonMarkedUnitClauses.size(); ++ continueToCheck) {         // do not keep this unit that failed
+                    nonMarkedUnitClauses[ keptUnits ++ ] = nonMarkedUnitClauses[ continueToCheck  ];    // keep all other elements element
+                }
                 nonMarkedUnitClauses.shrink_(nonMarkedUnitClauses.size() - keptUnits);                // remove all removed elements
                 // use this unit, as it leads to a conflict
                 if (verbose > 4) { cerr << "c [S-BW-CHK] unit resulted in conflict: " << unit.getLit() << " with id " << unit.getID() << " valid until " << unit.getValidUntil() << endl; }
@@ -658,8 +663,9 @@ CRef BackwardVerificationWorker::propagateUnmarkedUnits(const int64_t currentID)
                 // memorize where to continue checking next time this method is called
                 nonMarkedUnithead = keptUnits;
                 // repair data structure before leaving the routine
-                for (; continueToCheck  < nonMarkedUnitClauses.size(); ++ continueToCheck)           // do not keep this unit that failed
-                { nonMarkedUnitClauses[ keptUnits ++ ] = nonMarkedUnitClauses[ continueToCheck  ]; }   // keep all other elements element
+                for (; continueToCheck  < nonMarkedUnitClauses.size(); ++ continueToCheck) {         // do not keep this unit that failed
+                    nonMarkedUnitClauses[ keptUnits ++ ] = nonMarkedUnitClauses[ continueToCheck  ];    // keep all other elements element
+                }
                 nonMarkedUnitClauses.shrink_(nonMarkedUnitClauses.size() - keptUnits);                // remove all removed elements
                 // use this unit, as it leads to a conflict
                 return CRef_Undef; // we just enqueued another literal, so everything's fine
@@ -691,8 +697,9 @@ CRef BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEager(const i
         if (verbose > 6) {
             cerr << "c [S-BW-CHK] non-marked watch list for literal " << p << endl;
             for (int i = 0 ; i < nonMarkedWatches[p].size(); ++ i) {
-                if (nonMarkedWatches[p][i].isValidAt(currentID - 1))
-                { cerr << "c [" << i << "] ref: " << nonMarkedWatches[p][i].getRef() << " clause: " << ca[ nonMarkedWatches[p][i].getRef() ] << endl; }
+                if (nonMarkedWatches[p][i].isValidAt(currentID - 1)) {
+                    cerr << "c [" << i << "] ref: " << nonMarkedWatches[p][i].getRef() << " clause: " << ca[ nonMarkedWatches[p][i].getRef() ] << endl;
+                }
             }
         }
 
@@ -709,8 +716,9 @@ CRef BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEager(const i
             Clause&  c = ca[cr];
             if (verbose > 5) { cerr << "c [S-BW-CHK] propagate on clause " << c << endl; }
             const Lit false_lit = ~p;
-            if (c[0] == false_lit)
-            { c[0] = c[1], c[1] = false_lit; }
+            if (c[0] == false_lit) {
+                c[0] = c[1], c[1] = false_lit;
+            }
             assert(c[1] == false_lit && "wrong literal order in the clause!");
 
             // If 0th watch is true, then clause is already satisfied.
@@ -752,8 +760,9 @@ CRef BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEager(const i
 
 
             // Copy the remaining watches:
-            while (i < end)
-            { *j++ = *i++; }
+            while (i < end) {
+                *j++ = *i++;
+            }
             ws.shrink_(i - j); // remove all duplciate clauses!
             return confl;
 
@@ -841,8 +850,9 @@ CRef BackwardVerificationWorker::propagateUntilFirstUnmarkedEnqueueEagerShared(c
 
 
             // Copy the remaining watches:
-            while (i < end)
-            { *j++ = *i++; }
+            while (i < end) {
+                *j++ = *i++;
+            }
             ws.shrink_(i - j); // remove all duplciate clauses!
             return confl;
 

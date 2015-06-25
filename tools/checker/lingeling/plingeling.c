@@ -91,7 +91,7 @@ static void msg(int wid, int level, const char * fmt, ...)
     va_list ap;
     if (verbose < level) { return; }
     pthread_mutex_lock(&msgmutex);
-    if (wid < 0) { printf("c - "); } else { printf("c %d ", wid); }
+    if (wid < 0) { printf("c - "); }  else { printf("c %d ", wid); }
     printf("W %6.1f ", getime());
     va_start(ap, fmt);
     vfprintf(stdout, fmt, ap);
@@ -143,22 +143,26 @@ static void caughtsigmsg(int sig)
 
 static void incmem(size_t bytes)
 {
-    if (pthread_mutex_lock(&memutex))
-    { warn("failed to lock 'mem' mutex in 'incmem'"); }
+    if (pthread_mutex_lock(&memutex)) {
+        warn("failed to lock 'mem' mutex in 'incmem'");
+    }
     mem.current += bytes;
     if (mem.current > mem.max) { mem.max = mem.current; }
-    if (pthread_mutex_unlock(&memutex))
-    { warn("failed to unlock 'mem' mutex in 'incmem'"); }
+    if (pthread_mutex_unlock(&memutex)) {
+        warn("failed to unlock 'mem' mutex in 'incmem'");
+    }
 }
 
 static void decmem(size_t bytes)
 {
-    if (pthread_mutex_lock(&memutex))
-    { warn("failed to lock 'mem' mutex in 'decmem'"); }
+    if (pthread_mutex_lock(&memutex)) {
+        warn("failed to lock 'mem' mutex in 'decmem'");
+    }
     assert(mem.current >= bytes);
     mem.current -= bytes;
-    if (pthread_mutex_unlock(&memutex))
-    { warn("failed to unlock 'mem' mutex in 'decmem'"); }
+    if (pthread_mutex_unlock(&memutex)) {
+        warn("failed to unlock 'mem' mutex in 'decmem'");
+    }
 }
 
 static void * alloc(void * dummy, size_t bytes)
@@ -177,14 +181,16 @@ static void dealloc(void * dummy, void * void_ptr, size_t bytes)
 static void * resize(void * dummy, void * ptr,
                      size_t old_bytes, size_t new_bytes)
 {
-    if (pthread_mutex_lock(&memutex))
-    { warn("failed to lock 'mem' mutex in 'resize'"); }
+    if (pthread_mutex_lock(&memutex)) {
+        warn("failed to lock 'mem' mutex in 'resize'");
+    }
     assert(mem.current >= old_bytes);
     mem.current -= old_bytes;
     mem.current += new_bytes;
     if (mem.current > mem.max) { mem.max = mem.current; }
-    if (pthread_mutex_unlock(&memutex))
-    { warn("failed to unlock 'mem' mutex in 'resize'"); }
+    if (pthread_mutex_unlock(&memutex)) {
+        warn("failed to unlock 'mem' mutex in 'resize'");
+    }
     return realloc(ptr, new_bytes);
 }
 
@@ -236,7 +242,7 @@ static void catchsig(int sig)
         if (verbose) { stats(), caughtsigmsg(sig); }
     }
     resetsighandlers();
-    if (!getenv("LGLNABORT")) { raise(sig); } else { exit(1); }
+    if (!getenv("LGLNABORT")) { raise(sig); }  else { exit(1); }
 }
 
 static void setsighandlers(void)
@@ -259,8 +265,9 @@ HEADER:
     }
     if (ch != 'p') { return "expected header or comment"; }
     ungetc(ch, file);
-    if (fscanf(file, "p cnf %d %d", &nvars, &nclauses) != 2)
-    { return "can not parse header"; }
+    if (fscanf(file, "p cnf %d %d", &nvars, &nclauses) != 2) {
+        return "can not parse header";
+    }
     msg(-1, 1, "p cnf %d %d", nvars, nclauses);
     NEW(fixed, nvars + 1);
     NEW(vals, nvars + 1);
@@ -286,8 +293,9 @@ LIT:
     if (!isdigit(ch)) { return "expected digit"; }
     if (!nclauses) { return "too many clauses"; }
     lit = ch - '0';
-    while (isdigit(ch = getc(file)))
-    { lit = 10 * lit + (ch - '0'); }
+    while (isdigit(ch = getc(file))) {
+        lit = 10 * lit + (ch - '0');
+    }
     if (lit < 0 || lit > nvars) { return "invalid variable index"; }
     lit *= sign;
     lgladd(workers[0].lgl, lit);
@@ -313,12 +321,14 @@ static int term(void * voidptr)
     int wid = worker - workers, res;
     assert(0 <= wid && wid < nworkers);
     msg(wid, 3, "checking early termination");
-    if (pthread_mutex_lock(&donemutex))
-    { warn("failed to lock 'done' mutex in termination check"); }
+    if (pthread_mutex_lock(&donemutex)) {
+        warn("failed to lock 'done' mutex in termination check");
+    }
     res = done;
     termchks++;
-    if (pthread_mutex_unlock(&donemutex))
-    { warn("failed to unlock 'done' mutex in termination check"); }
+    if (pthread_mutex_unlock(&donemutex)) {
+        warn("failed to unlock 'done' mutex in termination check");
+    }
     msg(wid, 3, "early termination check %s", res ? "succeeded" : "failed");
     return res;
 }
@@ -329,8 +339,9 @@ static void flush(Worker * worker, int keep_locked)
     int lit, idx, val, tmp, i;
     assert(worker->nunits);
     msg(wid, 2, "flushing %d units", worker->nunits);
-    if (pthread_mutex_lock(&fixedmutex))
-    { warn("failed to lock 'fixed' mutex in flush"); }
+    if (pthread_mutex_lock(&fixedmutex)) {
+        warn("failed to lock 'fixed' mutex in flush");
+    }
     flushed++;
     for (i = 0; i < worker->nunits; i++) {
         lit = worker->units[i];
@@ -349,20 +360,23 @@ static void flush(Worker * worker, int keep_locked)
             worker->stats.produced++;
             units++;
         } else if (tmp == -val) {
-            if (pthread_mutex_lock(&donemutex))
-            { warn("failed to lock 'done' mutex flushing unit"); }
+            if (pthread_mutex_lock(&donemutex)) {
+                warn("failed to lock 'done' mutex flushing unit");
+            }
             if (!globalres) { msg(wid, 1, "mismatched unit"); }
             globalres = 20;
             done = 1;
-            if (pthread_mutex_unlock(&donemutex))
-            { warn("failed to unlock 'done' mutex flushing unit"); }
+            if (pthread_mutex_unlock(&donemutex)) {
+                warn("failed to unlock 'done' mutex flushing unit");
+            }
             break;
         } else { assert(tmp == val); }
     }
     worker->nunits = 0;
     if (keep_locked) { return; }
-    if (pthread_mutex_unlock(&fixedmutex))
-    { warn("failed to unlock 'fixed' mutex in flush"); }
+    if (pthread_mutex_unlock(&fixedmutex)) {
+        warn("failed to unlock 'fixed' mutex in flush");
+    }
 }
 
 static void produce(void * voidptr, int lit)
@@ -380,22 +394,25 @@ static void consume(void * voidptr, int ** fromptr, int ** toptr)
     Worker * worker = voidptr;
     int wid = worker - workers;
     if (worker->nunits) { flush(worker, 1); }
-    else if (pthread_mutex_lock(&fixedmutex))
-    { warn("failed to lock 'fixed' mutex in consume"); }
+    else if (pthread_mutex_lock(&fixedmutex)) {
+        warn("failed to lock 'fixed' mutex in consume");
+    }
     msg(wid, 3, "starting unit synchronization");
     syncs.units++;
     *fromptr = fixed + worker->fixed;
     *toptr = fixed + nfixed;
-    if (pthread_mutex_unlock(&fixedmutex))
-    { warn("failed to unlock 'fixed' in consume"); }
+    if (pthread_mutex_unlock(&fixedmutex)) {
+        warn("failed to unlock 'fixed' in consume");
+    }
 }
 
 static int * lockrepr(void * voidptr)
 {
     Worker * worker = voidptr;
     int wid = worker - workers;
-    if (pthread_mutex_lock(&reprmutex))
-    { warn("failed to lock 'repr' mutex"); }
+    if (pthread_mutex_lock(&reprmutex)) {
+        warn("failed to lock 'repr' mutex");
+    }
     msg(wid, 3, "starting equivalences synchronization");
     syncs.eqs++;
     return repr;
@@ -414,8 +431,9 @@ static void unlockrepr(void * voidptr, int consumed, int produced)
     worker->stats.produced += produced;
     eqs += produced;
     assert(eqs < nvars);
-    if (pthread_mutex_unlock(&reprmutex))
-    { warn("failed to unlock 'repr' mutex"); }
+    if (pthread_mutex_unlock(&reprmutex)) {
+        warn("failed to unlock 'repr' mutex");
+    }
 }
 
 static void consumed(void * voidptr, int consumed)
@@ -451,23 +469,27 @@ static void * work(void * voidptr)
     assert(workers <= worker && worker < workers + nworkers);
     worker->res = lglsat(lgl);
     msg(wid, 1, "result %d", worker->res);
-    if (pthread_mutex_lock(&donemutex))
-    { warn("failed to lock 'done' mutex in worker"); }
+    if (pthread_mutex_lock(&donemutex)) {
+        warn("failed to lock 'done' mutex in worker");
+    }
     done = 1;
-    if (pthread_mutex_unlock(&donemutex))
-    { warn("failed to unlock 'done' mutex in worker"); }
+    if (pthread_mutex_unlock(&donemutex)) {
+        warn("failed to unlock 'done' mutex in worker");
+    }
     msg(wid, 2, "%d decisions, %d conflicts, %.0f props, %.1f MB",
         lglgetdecs(lgl), lglgetconfs(lgl), lglgetprops(lgl), lglmb(lgl));
     if (verbose >= 2) {
-        if (pthread_mutex_lock(&fixedmutex))
-        { warn("failed to lock 'fixed' in work"); }
+        if (pthread_mutex_lock(&fixedmutex)) {
+            warn("failed to lock 'fixed' in work");
+        }
         msg(wid, 2, "consumed %d units %.0f%%, produced %d units %.0f%%",
             worker->stats.units.consumed,
             percent(worker->stats.units.consumed, nfixed),
             worker->stats.units.produced,
             percent(worker->stats.units.produced, nfixed));
-        if (pthread_mutex_unlock(&fixedmutex))
-        { warn("failed to unlock 'fixed' in work"); }
+        if (pthread_mutex_unlock(&fixedmutex)) {
+            warn("failed to unlock 'fixed' in work");
+        }
     }
     return worker->res ? worker : 0;
 }
@@ -477,13 +499,15 @@ static int64_t getsystemtotalmem(int explain)
     long long res;
     FILE * p = popen("grep MemTotal /proc/meminfo", "r");
     if (p && fscanf(p, "MemTotal: %lld kB", &res) == 1) {
-        if (explain)
-        { msg(-1, 0, "%lld KB total memory according to /proc/meminfo", res); }
+        if (explain) {
+            msg(-1, 0, "%lld KB total memory according to /proc/meminfo", res);
+        }
         res <<= 10;
     } else {
         res = MAXGB << 30;;
-        if (explain)
-        { msg(-1, 0, "assuming compiled in memory size of %d GB", MAXGB); }
+        if (explain) {
+            msg(-1, 0, "assuming compiled in memory size of %d GB", MAXGB);
+        }
     }
     if (p) { pclose(p); }
     return (int64_t) res;
@@ -497,20 +521,22 @@ static int getsystemcores(int explain)
 
     syscores = sysconf(_SC_NPROCESSORS_ONLN);
     if (explain) {
-        if (syscores > 0)
-        { msg(-1, 1, "'sysconf' reports %d processors online", syscores); }
-        else
-        { msg(-1, 1, "'sysconf' fails to determine number of online processors"); }
+        if (syscores > 0) {
+            msg(-1, 1, "'sysconf' reports %d processors online", syscores);
+        } else {
+            msg(-1, 1, "'sysconf' fails to determine number of online processors");
+        }
     }
 
     p = popen("grep '^core id' /proc/cpuinfo 2>/dev/null|sort|uniq|wc -l", "r");
     if (p) {
         if (fscanf(p, "%d", &coreids) != 1) { coreids = 0; }
         if (explain) {
-            if (coreids > 0)
-            { msg(-1, 1, "found %d unique core ids in '/proc/cpuinfo'", coreids); }
-            else
-            { msg(-1, 1, "failed to extract core ids from '/proc/cpuinfo'"); }
+            if (coreids > 0) {
+                msg(-1, 1, "found %d unique core ids in '/proc/cpuinfo'", coreids);
+            } else {
+                msg(-1, 1, "failed to extract core ids from '/proc/cpuinfo'");
+            }
         }
         pclose(p);
     } else { coreids = 0; }
@@ -523,8 +549,9 @@ static int getsystemcores(int explain)
             if (physids > 0)
                 msg(-1, 1, "found %d unique physical ids in '/proc/cpuinfo'",
                     physids);
-            else
-            { msg(-1, 1, "failed to extract physical ids from '/proc/cpuinfo'"); }
+            else {
+                msg(-1, 1, "failed to extract physical ids from '/proc/cpuinfo'");
+            }
         }
         pclose(p);
     } else { physids = 0; }
@@ -550,11 +577,13 @@ static int getsystemcores(int explain)
         usesyscores = 1;
     } else {
         intel = !system("grep vendor /proc/cpuinfo 2>/dev/null|grep -q Intel");
-        if (intel && explain)
-        { msg(-1, 1, "found Intel as vendor in '/proc/cpuinfo'"); }
+        if (intel && explain) {
+            msg(-1, 1, "found Intel as vendor in '/proc/cpuinfo'");
+        }
         amd = !system("grep vendor /proc/cpuinfo 2>/dev/null|grep -q AMD");
-        if (amd && explain)
-        { msg(-1, 1, "found AMD as vendor in '/proc/cpuinfo'"); }
+        if (amd && explain) {
+            msg(-1, 1, "found AMD as vendor in '/proc/cpuinfo'");
+        }
         assert(syscores > 0);
         assert(procpuinfocores > 0);
         assert(syscores != procpuinfocores);
@@ -570,8 +599,9 @@ static int getsystemcores(int explain)
             }
             useprocpuinfo = 1;
         }  else {
-            if (explain)
-            { msg(-1, 1, "trusting 'sysconf' on unknown vendor machine"); }
+            if (explain) {
+                msg(-1, 1, "trusting 'sysconf' on unknown vendor machine");
+            }
             usesyscores = 1;
         }
     }
@@ -589,8 +619,9 @@ static int getsystemcores(int explain)
                 syscores);
         res = syscores;
     } else {
-        if (explain)
-        { msg(-1, 0, "using compiled in default value of %d workers", NWORKERS); }
+        if (explain) {
+            msg(-1, 0, "using compiled in default value of %d workers", NWORKERS);
+        }
         res = NWORKERS;
     }
 
@@ -619,8 +650,9 @@ static int parsenbcoreenv(void)
 {
     const char * str = getenv("NBCORE");
     if (!str) { return 0; }
-    if (!isposnum(str))
-    { die("invalid value '%s' for environment variable NBCORE", str); }
+    if (!isposnum(str)) {
+        die("invalid value '%s' for environment variable NBCORE", str);
+    }
     return atoi(str);
 }
 
@@ -728,16 +760,18 @@ int main(int argc, char ** argv)
         else if (!strcmp(argv[i], "-t")) {
             if (nworkers) { die("multiple '-t' options"); }
             if (i + 1 == argc) { die("argument to '-t' missing"); }
-            if (!isposnum(arg = argv[++i]) || (nworkers = atoi(arg)) <= 0)
-            { die("invalid argument '%s' to '-t'", arg); }
+            if (!isposnum(arg = argv[++i]) || (nworkers = atoi(arg)) <= 0) {
+                die("invalid argument '%s' to '-t'", arg);
+            }
         } else if (!strcmp(argv[i], "-g")) {
             if (memlimit) { die("multiple '-g' options"); }
             if (i + 1 == argc) { die("argument to '-g' missing"); }
-            if (!isposnum(arg = argv[++i]) || (memlimit = (atoll(arg) << 30)) <= 0)
-            { die("invalid argument '%s' to '-g'", arg); }
-        } else if (argv[i][0] == '-')
-        { die("invalid option '%s' (try '-h')", argv[i]); }
-        else if (name) { die("multiple input files '%s' and '%s'", name, argv[i]); }
+            if (!isposnum(arg = argv[++i]) || (memlimit = (atoll(arg) << 30)) <= 0) {
+                die("invalid argument '%s' to '-g'", arg);
+            }
+        } else if (argv[i][0] == '-') {
+            die("invalid option '%s' (try '-h')", argv[i]);
+        } else if (name) { die("multiple input files '%s' and '%s'", name, argv[i]); }
         else { name = argv[i]; }
     }
     lglbnr("Plingeling Parallel Lingeling", "c ", stdout);
@@ -840,8 +874,9 @@ int main(int argc, char ** argv)
         for (i = 0; i < nworkers; i++) {
             w = workers + i;
             if (!w->lgl) { continue; }
-            if (pthread_create(&w->thread, 0, work, w))
-            { die("failed to create worker thread %d", i); }
+            if (pthread_create(&w->thread, 0, work, w)) {
+                die("failed to create worker thread %d", i);
+            }
             msg(-1, 2, "started worker %d", i);
         }
         maxproducer = maxconsumer = winner = 0;
@@ -849,8 +884,9 @@ int main(int argc, char ** argv)
         for (i = 0; i < nworkers; i++) {
             w = workers + i;
             if (!w->lgl) { continue; }
-            if (pthread_join(w->thread, 0))
-            { die("failed to join worker thread %d", i); }
+            if (pthread_join(w->thread, 0)) {
+                die("failed to join worker thread %d", i);
+            }
             msg(-1, 2, "joined worker %d", i);
             if (w->res) {
                 if (!res) {
@@ -859,10 +895,12 @@ int main(int argc, char ** argv)
                     msg(-1, 0, "worker %d is the winner with result %d", i, res);
                 } else if (res != w->res) { die("result discrepancy"); }
             }
-            if (!maxconsumer || w->stats.consumed > maxconsumer->stats.consumed)
-            { maxconsumer = w; }
-            if (!maxproducer || w->stats.produced > maxproducer->stats.produced)
-            { maxproducer = w; }
+            if (!maxconsumer || w->stats.consumed > maxconsumer->stats.consumed) {
+                maxconsumer = w;
+            }
+            if (!maxproducer || w->stats.produced > maxproducer->stats.produced) {
+                maxproducer = w;
+            }
         }
     }
     NEW(sorted, nworkers);

@@ -148,8 +148,9 @@ uint64_t Graph::computeStatistics(int quantilesCount)
     uint64_t operations = 0;
     if (!mergeAtTheEnd) {
         operations += computeOnlyStatistics(quantilesCount);
-    } else
-    { operations += computeNmergeStatistics(quantilesCount); }
+    } else {
+        operations += computeNmergeStatistics(quantilesCount);
+    }
     return operations;
 }
 
@@ -202,8 +203,9 @@ uint64_t Graph::computeNmergeStatistics(int quantilesCount)
                     tnode = node[i][j].first;
                     cnode = 0;
                     wnode = 0;
-                } else
-                { cnode++; }
+                } else {
+                    cnode++;
+                }
                 wnode += node[i][j].second;
             }
             operations += node[i].size();

@@ -138,7 +138,7 @@ void HiddenTautologyElimination::elimination_worker(CoprocessorData& data, uint3
     for (uint32_t index = start; index < end && !data.isInterupted() ; ++index) {
         if (steps == 0 && !data.unlimited()) { break; }   // stop if number of iterations has been reached
         const Var v = activeVariables[index];
-        if (config.opt_hteTalk)  { fprintf(stderr, "c HTE on variable %d\n", v + 1); }
+        if (config.opt_hteTalk) { fprintf(stderr, "c HTE on variable %d\n", v + 1); }
 
         DOUT(if (config.hte_debug_out > 1) {
         fprintf(stderr, "[HTE] ITERATION implications:\n");
@@ -284,7 +284,7 @@ bool HiddenTautologyElimination::hiddenTautologyElimination(Var v, CoprocessorDa
                             break;
                         }
                     }
-                    if (!doLock)    { steps = (steps > 0) ? steps - 1 : 0; }  // limit
+                    if (!doLock) { steps = (steps > 0) ? steps - 1 : 0; }  // limit
                     // if clause has been removed from its lists, update!
                     if (remClause) {
                         // TODO: statistics removed clause
@@ -473,8 +473,9 @@ bool HiddenTautologyElimination::hlaMarkClause(const Riss::CRef& cr, Coprocessor
 
             if (! markArray.isCurrentStep(toInt(jLit))) {
                 if (markArray.isCurrentStep(toInt(~jLit))) {
-                    if (clause.size() == 2)
-                    { big.removeEdge(clause[0], clause[1]); }
+                    if (clause.size() == 2) {
+                        big.removeEdge(clause[0], clause[1]);
+                    }
                     return true;
                 }
                 markArray.setCurrentStep(toInt(jLit));
@@ -514,8 +515,9 @@ bool HiddenTautologyElimination::hlaMarkClause(vec< Lit >& clause, BIG& big, Mar
 
             if (! markArray.isCurrentStep(toInt(jLit))) {
                 if (markArray.isCurrentStep(toInt(~jLit))) {
-                    if (clause.size() == 2)
-                    { big.removeEdge(clause[0], clause[1]); }
+                    if (clause.size() == 2) {
+                        big.removeEdge(clause[0], clause[1]);
+                    }
                     return true;
                 }
                 markArray.setCurrentStep(toInt(jLit));

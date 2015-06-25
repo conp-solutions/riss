@@ -59,8 +59,9 @@ const char *signalNames[] = {
 
 const char *getSignalName(int sig)
 {
-    if (sig > 0 && sig <= sizeof(signalNames) / sizeof(char *))
-    { return signalNames[sig]; }
-    else
-    { return "???"; }
+    if (sig > 0 && sig <= sizeof(signalNames) / sizeof(char *)) {
+        return signalNames[sig];
+    } else {
+        return "???";
+    }
 }

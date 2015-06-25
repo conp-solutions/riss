@@ -92,8 +92,9 @@ void setTimeLimit(int timeout)
         getrlimit(RLIMIT_CPU, &rl);
         if (rl.rlim_max == RLIM_INFINITY || (rlim_t)timeout < rl.rlim_max) {
             rl.rlim_cur = timeout;
-            if (setrlimit(RLIMIT_CPU, &rl) == -1)
-            { printf("c WARNING! Could not set resource limit: CPU-time.\n"); }
+            if (setrlimit(RLIMIT_CPU, &rl) == -1) {
+                printf("c WARNING! Could not set resource limit: CPU-time.\n");
+            }
         }
     }
 }
@@ -107,8 +108,9 @@ void setMEMLimit(int memout)
         getrlimit(RLIMIT_AS, &rl);
         if (rl.rlim_max == RLIM_INFINITY || new_mem_lim < rl.rlim_max) {
             rl.rlim_cur = new_mem_lim;
-            if (setrlimit(RLIMIT_AS, &rl) == -1)
-            { printf("c WARNING! Could not set resource limit: Virtual memory.\n"); }
+            if (setrlimit(RLIMIT_AS, &rl) == -1) {
+                printf("c WARNING! Could not set resource limit: Virtual memory.\n");
+            }
         }
     }
 }
@@ -147,8 +149,9 @@ void dumpData()
     }
     ostream& fout = *output;
 
-    if (fileoutput)
-    { (*fileout).open(attrFile, fstream::out | fstream::app); }
+    if (fileoutput) {
+        (*fileout).open(attrFile, fstream::out | fstream::app);
+    }
     fout.setf(ios::fixed);
     fout.precision(4);
     if (attr && fileoutput) {
@@ -193,8 +196,9 @@ void printFeatures(int argc, char** argv)
     double initial_time = cpuTime();
     S.verbosity = 0;
 
-    if (verb > 0)
-    { printf("c trying %s\n", cnffile); }
+    if (verb > 0) {
+        printf("c trying %s\n", cnffile);
+    }
 
     gzFile in = gzopen(cnffile, "rb");
     if (in == NULL) {
@@ -250,10 +254,11 @@ void printFeatures(int argc, char** argv)
     cnfclassifier->setQuantilesCount(qcount);
     cnfclassifier->setPlotsFileName(plotFile);
     cnfclassifier->setComputingVarGraph(varf);
-    if (attr)
-    { cnfclassifier->setAttrFileName(attrFile); }
-    else
-    { cnfclassifier->setAttrFileName(NULL); }
+    if (attr) {
+        cnfclassifier->setAttrFileName(attrFile);
+    } else {
+        cnfclassifier->setAttrFileName(NULL);
+    }
     cnfclassifier->setComputingDerivative(derivative);
 
     // in output features the actual calculation is done
@@ -270,8 +275,9 @@ void printFeatures(int argc, char** argv)
     time1 = cpuTime() - time1;
     dumpData();
 //  }
-    if (fileoutput)
-    { (*fileout).close(); }
+    if (fileoutput) {
+        (*fileout).close();
+    }
 }
 
 
@@ -322,8 +328,9 @@ int main(int argc, char** argv)
         // Set limit on virtual memory:
         setMEMLimit(mem_lim);
 
-        if (argc == 1)
-        { printf("c Reading from standard input... Use '--help' for help.\n"); }
+        if (argc == 1) {
+            printf("c Reading from standard input... Use '--help' for help.\n");
+        }
 
 
         if (verb > 0) {

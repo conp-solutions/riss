@@ -137,8 +137,9 @@ bool ExperimentalTechniques::process()
             if (!c.can_be_deleted()) {
                 solver.cancelUntil(0);     // make sure we're back on level 0
                 solver.attachClause(cr);
-            } else
-            { totalRemoves ++; }
+            } else {
+                totalRemoves ++;
+            }
             solver.cancelUntil(1);
         }
 
@@ -176,17 +177,20 @@ void ExperimentalTechniques::cleanSolver()
 
     // clear all watches!
     for (int v = 0; v < solver.nVars(); v++)
-        for (int s = 0; s < 2; s++)
-        { solver.watches[ mkLit(v, s) ].clear(); }
+        for (int s = 0; s < 2; s++) {
+            solver.watches[ mkLit(v, s) ].clear();
+        }
 
     solver.learnts_literals = 0;
     solver.clauses_literals = 0;
     solver.watches.cleanAll();
 
-    for (int i = 0 ; i < solver.learnts.size(); ++ i)
-    { ca[ solver.learnts[i] ].sort(); }
-    for (int i = 0 ; i < solver.clauses.size(); ++ i)
-    { ca[ solver.clauses[i] ].sort(); }
+    for (int i = 0 ; i < solver.learnts.size(); ++ i) {
+        ca[ solver.learnts[i] ].sort();
+    }
+    for (int i = 0 ; i < solver.clauses.size(); ++ i) {
+        ca[ solver.clauses[i] ].sort();
+    }
 }
 
 void ExperimentalTechniques::reSetupSolver()
@@ -196,8 +200,9 @@ void ExperimentalTechniques::reSetupSolver()
     if (solver.trail_lim.size() > 0)
         for (int i = 0 ; i < solver.trail_lim[0]; ++ i)
             if (solver.reason(var(solver.trail[i])) != CRef_Undef)
-                if (ca[ solver.reason(var(solver.trail[i])) ].can_be_deleted())
-                { solver.vardata[ var(solver.trail[i]) ].reason = CRef_Undef; }
+                if (ca[ solver.reason(var(solver.trail[i])) ].can_be_deleted()) {
+                    solver.vardata[ var(solver.trail[i]) ].reason = CRef_Undef;
+                }
 
     // give back into solver
     for (int p = 0 ; p < 1; ++ p) {   // do not use learned clauses, because they might be dropped without any notice later again

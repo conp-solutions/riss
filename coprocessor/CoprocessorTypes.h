@@ -220,10 +220,14 @@ class CoprocessorData
     void garbageCollect(std::vector<Riss::CRef> ** updateVectors = 0, int size = 0);
     void relocAll(Riss::ClauseAllocator& to, std::vector<Riss::CRef> ** updateVectors = 0, int size = 0);
     void checkGarbage(std::vector<Riss::CRef> ** updateVectors = 0, int size = 0) { return checkGarbage(solver->garbage_frac, updateVectors, size); }
-    void checkGarbage(double gf, std::vector<Riss::CRef> ** updateVectors = 0, int size = 0) {  if (ca.wasted() > ca.size() * gf) { garbageCollect(updateVectors, size); } }
+    void checkGarbage(double gf, std::vector<Riss::CRef> ** updateVectors = 0, int size = 0) {  if (ca.wasted() > ca.size() * gf) { garbageCollect(updateVectors, size); }  }
 
     void updateClauseAfterDelLit(const Riss::Clause& clause)
-    { if (global_debug_out) { std::cerr << "what to update in clause?! " << clause << std::endl; } }
+    {
+        if (global_debug_out) {
+            std::cerr << "what to update in clause?! " << clause << std::endl;
+        }
+    }
 
     // sort
     void sortClauseLists(bool alsoLearnts = false);
@@ -876,7 +880,7 @@ inline void CoprocessorData::sortClauseLists(bool alsoLearnts)
             Riss::CRef* tmp = a; a = b; b = tmp;
         }
         // write data back into std::vector
-        for (int32_t i = 0 ; i < n; i++) {clauseList[i] = a[i];}
+        for (int32_t i = 0 ; i < n; i++) { clauseList[i] = a[i]; }
 
         delete [] tmpA;
         delete [] tmpB;
@@ -1408,7 +1412,7 @@ inline void CoprocessorData::extendModel(Riss::vec< Riss::lbool >& model)
 
 
         std::cerr << "next clause: ";
-        for (int j = undo.size() - 1; j >= 0 ; --j) if (undo[j] == Riss::lit_Undef) { break; } else { std::cerr << " " << undo[j]; }
+        for (int j = undo.size() - 1; j >= 0 ; --j) if (undo[j] == Riss::lit_Undef) { break; }  else { std::cerr << " " << undo[j]; }
         std::cerr << std::endl;
 
     }
@@ -1442,7 +1446,7 @@ inline void CoprocessorData::extendModel(Riss::vec< Riss::lbool >& model)
                 }
                 std::cerr << std::endl;
                 std::cerr << "next clause: ";
-                for (int j = i - 1; j >= 0 ; --j) if (undo[j] == Riss::lit_Undef) { break; } else { std::cerr << " " << undo[j]; }
+                for (int j = i - 1; j >= 0 ; --j) if (undo[j] == Riss::lit_Undef) { break; }  else { std::cerr << " " << undo[j]; }
                 std::cerr << std::endl;
             }
             continue;
@@ -1456,7 +1460,7 @@ inline void CoprocessorData::extendModel(Riss::vec< Riss::lbool >& model)
             }
             if (local_debug) {   // print intermediate state!
                 std::cerr << "next clause: ";
-                for (int j = i - 1; j >= 0 ; --j) if (undo[j] == Riss::lit_Undef) { break; } else { std::cerr << " " << undo[j]; }
+                for (int j = i - 1; j >= 0 ; --j) if (undo[j] == Riss::lit_Undef) { break; }  else { std::cerr << " " << undo[j]; }
                 std::cerr << std::endl;
             }
         }

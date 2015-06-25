@@ -162,15 +162,15 @@ int main(int argc, char* argv[])
 
     // output collected information
     cout << argv[ fileNameIndex ] << " ";
-    if (handled[0] && Status != "") { cout << Status ; } else { cout << "fail"; }
+    if (handled[0] && Status != "") { cout << Status ; }  else { cout << "fail"; }
     cout << " ";
-    if (handled[1] && ExitCode != "") { cout << ExitCode ; } else { cout << "-"; }
+    if (handled[1] && ExitCode != "") { cout << ExitCode ; }  else { cout << "-"; }
     cout << " ";
-    if (handled[2] && RealTime != "") { cout << RealTime ; } else { cout << "-"; }
+    if (handled[2] && RealTime != "") { cout << RealTime ; }  else { cout << "-"; }
     cout << " ";
-    if (handled[3] && CpuTime != "") { cout << CpuTime ; } else { cout << "-"; }
+    if (handled[3] && CpuTime != "") { cout << CpuTime ; }  else { cout << "-"; }
     cout << " ";
-    if (handled[4] && Memory != "") { cout << Memory ; } else { cout << "-"; }
+    if (handled[4] && Memory != "") { cout << Memory ; }  else { cout << "-"; }
     cout << " ";
     if (handled[11]) cout << (aigtime != "" ? aigtime : "-") << " "
                               << (inCNFtime  != "" ? inCNFtime  : "-") << " "

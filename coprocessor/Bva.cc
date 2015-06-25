@@ -117,8 +117,8 @@ bool BoundedVariableAddition::andBVA()
     // setup own structures
     bvaHeap.addNewElement(data.nVars() * 2);
     for (Var v = 0 ; v < data.nVars(); ++ v) {
-        if (data[  mkLit(v, false) ] > 2) if (!bvaHeap.inHeap(toInt(mkLit(v, false))))  { bvaHeap.insert(toInt(mkLit(v, false))); }
-        if (data[  mkLit(v, true)  ] > 2) if (!bvaHeap.inHeap(toInt(mkLit(v, true))))   { bvaHeap.insert(toInt(mkLit(v, true))); }
+        if (data[  mkLit(v, false) ] > 2) if (!bvaHeap.inHeap(toInt(mkLit(v, false)))) { bvaHeap.insert(toInt(mkLit(v, false))); }
+        if (data[  mkLit(v, true)  ] > 2) if (!bvaHeap.inHeap(toInt(mkLit(v, true)))) { bvaHeap.insert(toInt(mkLit(v, true))); }
     }
     data.ma.resize(2 * data.nVars());
     bvaCountMark.resize(data.nVars() * 2, lit_Undef);
@@ -166,8 +166,9 @@ bool BoundedVariableAddition::andBVA()
         while (bvaMatchingClauses.size() < index + 1) { bvaMatchingClauses.push_back(vector<CRef>()); }
         // fill matrix (Mlit in pseudo code) with first column, corresponding to Mcls
         bvaMatchingClauses[0].clear();
-        for (uint32_t i = 0 ; i < data.list(right).size(); ++i) {
+        for (uint32_t i = 0 ; i < data.list(right).size(); ++i)
 
+        {
             bvaMatchingClauses[0].push_back(data.list(right)[i]);
         }
 
@@ -370,7 +371,7 @@ bool BoundedVariableAddition::andBVA()
                 removeDuplicateClauses(left);
                 DOUT(if (config.bva_debug > 1) {
                 cerr << "c reduced list by " << os - data.list(left).size() << " to " << data.list(left).size() << endl;
-                    for (uint32_t j = 0 ; j < data.list(left).size(); ++j) { cerr <<  data.list(left)[j] << " : " << ca[ data.list(left)[j] ]  << endl;}
+                    for (uint32_t j = 0 ; j < data.list(left).size(); ++j) { cerr <<  data.list(left)[j] << " : " << ca[ data.list(left)[j] ]  << endl; }
                 });
                 index --; continue; // redo the current literal!
             }
@@ -455,11 +456,11 @@ bool BoundedVariableAddition::andBVA()
         if (bvaMatchingLiterals.size() < 2) {
             if (bvaHeap.size() > 0)
             { DOUT(if (config.bva_debug > 2) cerr << "c [BVA] continue because not two matching literals (" << right << "), bvaHeap[" << bvaHeap.size() << "],0=" << toLit(bvaHeap[0]) << endl;); }
-        continue;
-    }
+            continue;
+        }
 
-    // if inprocessing, check whether there are enough learned clauses among all the clauses
-    if (data.isInprocessing()) {
+        // if inprocessing, check whether there are enough learned clauses among all the clauses
+        if (data.isInprocessing()) {
             int learnRows = 0;
             {
                 assert(bvaMatchingClauses.size() > 0 && "there have to be clauses");
@@ -473,7 +474,7 @@ bool BoundedVariableAddition::andBVA()
                     learntCol = clauseI.learnt() ? learntCol : learntCol + 1;
                     // take care of learned clauses (if the replace clause is learned and any matching clause is original, keep this clause!)
                     for (uint32_t k = 1; k < bvaMatchingLiterals.size(); ++ k) {
-                        if (!ca[ bvaMatchingClauses[k][j] ].learnt()) { learntCol ++; if (learntCol >= 2) { break; } }     // count number of nice replacements
+                        if (!ca[ bvaMatchingClauses[k][j] ].learnt()) { learntCol ++; if (learntCol >= 2) { break; }  }    // count number of nice replacements
                     }
                     if (learntCol >= 2) { learnRows ++; }
                 }
@@ -515,8 +516,9 @@ bool BoundedVariableAddition::andBVA()
 
                 DOUT(if (config.bva_debug > 3) {
                 cerr << "c PRE occurrence list of right - lit: " << right << " : " << endl;
-                for (int i = 0 ; i < data.list(right).size(); ++ i)
-                    { cerr << "c [" << i << "] clause[ " << data.list(right)[i] << " ]= " << ca[data.list(right)[i]] << endl; }
+                for (int i = 0 ; i < data.list(right).size(); ++ i) {
+                        cerr << "c [" << i << "] clause[ " << data.list(right)[i] << " ]= " << ca[data.list(right)[i]] << endl;
+                    }
                 });
 
                 // clauses of right literal, alter, so that they will be kept
@@ -578,8 +580,9 @@ bool BoundedVariableAddition::andBVA()
 
                     DOUT(if (config.bva_debug > 3) {
                     cerr << "c POST occurrence list of right - lit: " << right << " : " << endl;
-                    for (int i = 0 ; i < data.list(right).size(); ++ i)
-                        { cerr << "c [" << i << "] clause[ " << data.list(right)[i] << " ]= " << ca[data.list(right)[i]] << endl; }
+                    for (int i = 0 ; i < data.list(right).size(); ++ i) {
+                            cerr << "c [" << i << "] clause[ " << data.list(right)[i] << " ]= " << ca[data.list(right)[i]] << endl;
+                        }
                     });
                 }
             } else {
@@ -636,8 +639,9 @@ bool BoundedVariableAddition::andBVA()
                     addedProofAnd = true;
                     clauseLits.clear();
                     clauseLits.push(replaceLit);   // new literal has to be the first literal
-                    for (uint32_t j = 0 ; j < bvaMatchingLiterals.size(); ++j)
-                    { clauseLits.push(~bvaMatchingLiterals[j]); }
+                    for (uint32_t j = 0 ; j < bvaMatchingLiterals.size(); ++j) {
+                        clauseLits.push(~bvaMatchingLiterals[j]);
+                    }
                     data.addCommentToProof("add BVA and clause");
                     data.addToProof(clauseLits);
                 }
@@ -702,8 +706,9 @@ bool BoundedVariableAddition::andBVA()
                 if (!addedAnd) {
                     addedAnd = true;
                     clauseLits.clear();
-                    for (uint32_t j = 0 ; j < bvaMatchingLiterals.size(); ++j)
-                    { clauseLits.push(~bvaMatchingLiterals[j]); }
+                    for (uint32_t j = 0 ; j < bvaMatchingLiterals.size(); ++j) {
+                        clauseLits.push(~bvaMatchingLiterals[j]);
+                    }
                     clauseLits.push(replaceLit);
                     CRef tmpRef = ca.alloc(clauseLits, false); // no learnt clause!
                     if (doSort) { ca[tmpRef].sort(); }
@@ -760,8 +765,8 @@ bool BoundedVariableAddition::xorBVAhalf()
     // data structures
     bvaHeap.addNewElement(data.nVars() * 2);
     for (Var v = 0 ; v < data.nVars(); ++ v) {
-        if (data[  mkLit(v, false) ] >= replacePairs) if (!bvaHeap.inHeap(toInt(mkLit(v, false))))  { bvaHeap.insert(toInt(mkLit(v, false))); }
-        if (data[  mkLit(v, true)  ] >= replacePairs) if (!bvaHeap.inHeap(toInt(mkLit(v, true))))   { bvaHeap.insert(toInt(mkLit(v, true))); }
+        if (data[  mkLit(v, false) ] >= replacePairs) if (!bvaHeap.inHeap(toInt(mkLit(v, false)))) { bvaHeap.insert(toInt(mkLit(v, false))); }
+        if (data[  mkLit(v, true)  ] >= replacePairs) if (!bvaHeap.inHeap(toInt(mkLit(v, true)))) { bvaHeap.insert(toInt(mkLit(v, true))); }
     }
     data.ma.resize(2 * data.nVars());
 
@@ -831,9 +836,9 @@ bool BoundedVariableAddition::xorBVAhalf()
         // sort based on second literal -- TODO: use improved sort!
 
         // sort( xorPairs.begin(), xorPairs.end() );
-        if (xorPairs.size() > 20)
-        { mergesort(&(xorPairs[0]), xorPairs.size()); }
-        else {
+        if (xorPairs.size() > 20) {
+            mergesort(&(xorPairs[0]), xorPairs.size());
+        } else {
             for (int i = 0 ; i < xorPairs.size(); ++ i) {
                 for (int j = i + 1; j < xorPairs.size(); ++ j) {
                     if (xorPairs[i] > xorPairs[j]) {
@@ -965,8 +970,8 @@ bool BoundedVariableAddition::xorBVAfull()
     // data structures
     bvaHeap.addNewElement(data.nVars() * 2); // keeps old values?! - drawback: cannot pre-filter
     for (Var v = 0 ; v < data.nVars(); ++ v) {
-        if (!bvaHeap.inHeap(toInt(mkLit(v, false))))  { bvaHeap.insert(toInt(mkLit(v, false))); }
-        if (!bvaHeap.inHeap(toInt(mkLit(v, true))))   { bvaHeap.insert(toInt(mkLit(v, true))); }
+        if (!bvaHeap.inHeap(toInt(mkLit(v, false)))) { bvaHeap.insert(toInt(mkLit(v, false))); }
+        if (!bvaHeap.inHeap(toInt(mkLit(v, true)))) { bvaHeap.insert(toInt(mkLit(v, true))); }
     }
     data.ma.resize(2 * data.nVars());
 
@@ -1044,9 +1049,9 @@ bool BoundedVariableAddition::xorBVAfull()
         // evaluate matches here!
         // sort based on second literal -- TODO: use improved sort!
         // sort( xorPairs.begin(), xorPairs.end() );
-        if (xorPairs.size() > 20)
-        { mergesort(&(xorPairs[0]), xorPairs.size()); }
-        else {
+        if (xorPairs.size() > 20) {
+            mergesort(&(xorPairs[0]), xorPairs.size());
+        } else {
             for (int i = 0 ; i < xorPairs.size(); ++ i) {
                 for (int j = i + 1; j < xorPairs.size(); ++ j) {
                     if (xorPairs[i] > xorPairs[j]) {
@@ -1117,9 +1122,9 @@ bool BoundedVariableAddition::xorBVAfull()
             }
         });
 
-        if (nxorPairs.size() > 20)
-        { mergesort(&(nxorPairs[0]), nxorPairs.size()); }
-        else {
+        if (nxorPairs.size() > 20) {
+            mergesort(&(nxorPairs[0]), nxorPairs.size());
+        } else {
             for (int i = 0 ; i < nxorPairs.size(); ++ i) {
                 for (int j = i + 1; j < nxorPairs.size(); ++ j) {
                     if (toInt(nxorPairs[i].l2) > toInt(nxorPairs[j].l2)) {
@@ -1437,9 +1442,9 @@ bool BoundedVariableAddition::iteBVAhalf()
         }
         // evaluate matches here!
         // sort based on second literal -- TODO: use improved sort! merge sort is broken!
-        if (itePairs.size() > 20)
-        { mergesort(&(itePairs[0]), itePairs.size()); }
-        else {
+        if (itePairs.size() > 20) {
+            mergesort(&(itePairs[0]), itePairs.size());
+        } else {
             for (int i = 0 ; i < itePairs.size(); ++ i) {
                 for (int j = i + 1; j < itePairs.size(); ++ j) {
                     if (itePairs[i] > itePairs[j]) {
@@ -1657,9 +1662,9 @@ bool BoundedVariableAddition::iteBVAfull()
         }
         // evaluate matches here!
         // sort based on second literal -- TODO: use improved sort!
-        if (itePairs.size() > 20)
-        { mergesort(&(itePairs[0]), itePairs.size()); }
-        else {
+        if (itePairs.size() > 20) {
+            mergesort(&(itePairs[0]), itePairs.size());
+        } else {
             for (int i = 0 ; i < itePairs.size(); ++ i) {
                 for (int j = i + 1; j < itePairs.size(); ++ j) {
                     if (itePairs[i] > itePairs[j]) {

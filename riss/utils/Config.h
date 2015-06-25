@@ -574,10 +574,11 @@ bool Config::parseOptions(int& argc, char** argv, bool strict)
             }
 
             if (!parsed_ok)
-                if (strict && match(argv[i], "-"))
-                { fprintf(stderr, "ERROR! Unknown flag \"%s\". Use '--%shelp' for help.\n", argv[i], Option::getHelpPrefixString()), exit(1); }
-                else
-                { argv[j++] = argv[i]; }
+                if (strict && match(argv[i], "-")) {
+                    fprintf(stderr, "ERROR! Unknown flag \"%s\". Use '--%shelp' for help.\n", argv[i], Option::getHelpPrefixString()), exit(1);
+                } else {
+                    argv[j++] = argv[i];
+                }
         }
     }
 
@@ -603,10 +604,11 @@ void Config::printUsageAndExit(int  argc, char** argv, bool verbose)
         const char* cat  = (*optionListPtr)[i]->category;
         const char* type = (*optionListPtr)[i]->type_name;
 
-        if (cat != prev_cat)
-        { fprintf(stderr, "\n%s OPTIONS:\n\n", cat); }
-        else if (type != prev_type)
-        { fprintf(stderr, "\n"); }
+        if (cat != prev_cat) {
+            fprintf(stderr, "\n%s OPTIONS:\n\n", cat);
+        } else if (type != prev_type) {
+            fprintf(stderr, "\n");
+        }
 
         (*optionListPtr)[i]->help(verbose);
 

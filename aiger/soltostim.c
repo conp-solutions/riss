@@ -71,8 +71,9 @@ static int
 next(void)
 {
     int ch = getc(solution_file);
-    if (prev == '\n')
-    { lineno++; }
+    if (prev == '\n') {
+        lineno++;
+    }
     prev = ch;
     return ch;
 }
@@ -83,8 +84,9 @@ match(const char *str)
     const char *p;
 
     for (p = str; *p; p++)
-        if (*p != next())
-        { return 0; }
+        if (*p != next()) {
+            return 0;
+        }
 
     return 1;
 }
@@ -106,15 +108,17 @@ parse(void)
 SKIP_COMMENTS_UNTIL_SOLUTION_START:
 
     ch = next();
-    if (ch == 's')
-    { goto SOLUTION_START; }
+    if (ch == 's') {
+        goto SOLUTION_START;
+    }
 
     if (ch == 'c') {
         while ((ch = next()) != '\n' && ch != EOF)
             ;
 
-        if (ch == EOF)
-        { die("%s: no solution line found", solution_file_name); }
+        if (ch == EOF) {
+            die("%s: no solution line found", solution_file_name);
+        }
 
         goto SKIP_COMMENTS_UNTIL_SOLUTION_START;
     }
@@ -133,29 +137,35 @@ SOLUTION_START:
     if (ch != 'S') {
         if (ch == 'U') {
             ch = next();
-            if (ch != 'N')
-            { goto INVALID_SOLUTION_LINE; }
+            if (ch != 'N') {
+                goto INVALID_SOLUTION_LINE;
+            }
 
             ch = next();
             if (ch == 'K') {
-                if (!match("NOWN\n"))
-                { goto INVALID_SOLUTION_LINE; }
+                if (!match("NOWN\n")) {
+                    goto INVALID_SOLUTION_LINE;
+                }
 
             EXPECTED_SATISFIABLE_SOLUTION:
                 perr("expected 's SATISFIABLE'");
             } else if (ch == 'S') {
-                if (!match("ATISFIABLE\n"))
-                { goto INVALID_SOLUTION_LINE; }
+                if (!match("ATISFIABLE\n")) {
+                    goto INVALID_SOLUTION_LINE;
+                }
 
                 goto EXPECTED_SATISFIABLE_SOLUTION;
-            } else
-            { goto INVALID_SOLUTION_LINE; }
-        } else
-        { goto INVALID_SOLUTION_LINE; }
+            } else {
+                goto INVALID_SOLUTION_LINE;
+            }
+        } else {
+            goto INVALID_SOLUTION_LINE;
+        }
     }
 
-    if (!match("ATISFIABLE\n"))
-    { goto INVALID_SOLUTION_LINE; }
+    if (!match("ATISFIABLE\n")) {
+        goto INVALID_SOLUTION_LINE;
+    }
 
 SCAN_SOLUTION:
     ch = next();
@@ -167,30 +177,37 @@ SCAN_LITERAL:
     ch = next();
 
 SCAN_LITERAL_AFTER_READING_CH:
-    if (ch == ' ' || ch == '\t')
-    { goto SCAN_LITERAL; }
+    if (ch == ' ' || ch == '\t') {
+        goto SCAN_LITERAL;
+    }
 
-    if (ch == EOF)
-    { goto UNTERMINATED_SOLUTION; }
+    if (ch == EOF) {
+        goto UNTERMINATED_SOLUTION;
+    }
 
-    if (ch == '\n')
-    { goto SCAN_SOLUTION; }
+    if (ch == '\n') {
+        goto SCAN_SOLUTION;
+    }
 
     if (ch == '-') {
         sign = -1;
         ch = next();
-    } else
-    { sign = 1; }
+    } else {
+        sign = 1;
+    }
 
-    if (!isdigit(ch))
-    { perr("expected literal"); }
+    if (!isdigit(ch)) {
+        perr("expected literal");
+    }
 
     lit = ch - '0';
-    while (isdigit(ch = next()))
-    { lit = 10 * lit + (ch - '0'); }
+    while (isdigit(ch = next())) {
+        lit = 10 * lit + (ch - '0');
+    }
 
-    if (!lit)
-    { return; }
+    if (!lit) {
+        return;
+    }
 
     lit *= sign;
     push(lit);
@@ -206,8 +223,9 @@ assign(void)
     size_assignment = 0;
     for (i = 0; i < count_solution; i++) {
         tmp = abs(solution[i]);
-        if (size_assignment < tmp)
-        { size_assignment = tmp; }
+        if (size_assignment < tmp) {
+            size_assignment = tmp;
+        }
     }
 
     size_assignment++;
@@ -238,12 +256,13 @@ print(void)
     for (i = 0; i < model->num_inputs; i++) {
         idx = model->inputs[i].lit / 2;
         tmp = deref(idx);
-        if (tmp < 0)
-        { ch = '0'; }
-        else if (tmp > 0)
-        { ch = '1'; }
-        else
-        { ch = 'x'; }
+        if (tmp < 0) {
+            ch = '0';
+        } else if (tmp > 0) {
+            ch = '1';
+        } else {
+            ch = 'x';
+        }
 
         fputc(ch, stdout);
     }
@@ -266,26 +285,30 @@ main(int argc, char **argv)
         if (!strcmp(argv[i], "-h")) {
             fputs(USAGE, stdout);
             exit(1);
-        } else if (argv[i][0] == '-')
-        { die("invalid command line option '%s'", argv[i]); }
-        else if (solution_file_name)
-        { die("more than two files on command line"); }
-        else if (model_file_name)
-        { solution_file_name = argv[i]; }
-        else
-        { model_file_name = argv[i]; }
+        } else if (argv[i][0] == '-') {
+            die("invalid command line option '%s'", argv[i]);
+        } else if (solution_file_name) {
+            die("more than two files on command line");
+        } else if (model_file_name) {
+            solution_file_name = argv[i];
+        } else {
+            model_file_name = argv[i];
+        }
     }
 
-    if (!model_file_name)
-    { die("no model specified"); }
+    if (!model_file_name) {
+        die("no model specified");
+    }
 
     model = aiger_init();
-    if ((err = aiger_open_and_read_from_file(model, model_file_name)))
-    { die("%s: %s", model_file_name, err); }
+    if ((err = aiger_open_and_read_from_file(model, model_file_name))) {
+        die("%s: %s", model_file_name, err);
+    }
 
     if (solution_file_name) {
-        if (!(solution_file = fopen(solution_file_name, "r")))
-        { die("failed to read '%s'", solution_file_name); }
+        if (!(solution_file = fopen(solution_file_name, "r"))) {
+            die("failed to read '%s'", solution_file_name);
+        }
 
         close_solution_file = 1;
     } else {
@@ -297,8 +320,9 @@ main(int argc, char **argv)
     assign();
     print();
 
-    if (close_solution_file)
-    { fclose(solution_file); }
+    if (close_solution_file) {
+        fclose(solution_file);
+    }
 
     aiger_reset(model);
     free(solution);

@@ -265,7 +265,7 @@ int main(int argc, char* argv[])
         }
         if (uniqueConfig >= 0) {
             familyConfigData[familyID][uniqueConfig].uniqueContributions ++; // store unique contributions!
-            if (fileState[ lineNr - 2 ] == unsat)    { familyConfigData[familyID][uniqueConfig].unsatContributions ++; }
+            if (fileState[ lineNr - 2 ] == unsat) { familyConfigData[familyID][uniqueConfig].unsatContributions ++; }
             else if (fileState[ lineNr - 2 ] == sat) { familyConfigData[familyID][uniqueConfig].satContributions ++; }
         }
 
@@ -327,7 +327,7 @@ int main(int argc, char* argv[])
             }
             if (uniqueConfig >= 0) {
                 categoryConfigData[categoryID][uniqueConfig].uniqueContributions ++; // store unique contributions!
-                if (fileState[ lineNr - 2 ] == unsat)    { categoryConfigData[categoryID][uniqueConfig].unsatContributions ++; }
+                if (fileState[ lineNr - 2 ] == unsat) { categoryConfigData[categoryID][uniqueConfig].unsatContributions ++; }
                 else if (fileState[ lineNr - 2 ] == sat) { categoryConfigData[categoryID][uniqueConfig].satContributions ++; }
             }
         }
@@ -453,7 +453,7 @@ int main(int argc, char* argv[])
             while (times.size() <  allInstances[0].totalInstances) { times.push_back(timeout); }
             sort(times.begin(), times.end(), sortfunction);
             cout << " & ";
-            if (times.size() > 0)  { cout << " " << times[ times.size() / 2 ]; }
+            if (times.size() > 0) { cout << " " << times[ times.size() / 2 ]; }
             else { cout << " -"; }
         }
         cout << "\\\\" << endl;
@@ -577,7 +577,7 @@ int main(int argc, char* argv[])
             while (times.size() <  categoryConfigData[f][0].totalInstances) { times.push_back(timeout); }
             sort(times.begin(), times.end(), sortfunction);
             cout << " & ";
-            if (times.size() > 0)  { cout << " " << times[ times.size() / 2 ]; }
+            if (times.size() > 0) { cout << " " << times[ times.size() / 2 ]; }
             else { cout << " -"; }
         }
         cout << "\\\\" << endl;
@@ -708,7 +708,7 @@ int main(int argc, char* argv[])
             while (times.size() <  familyConfigData[f][0].totalInstances) { times.push_back(timeout); }
             sort(times.begin(), times.end(), sortfunction);
             cout << " & ";
-            if (times.size() > 0)  { cout << " " << times[ times.size() / 2 ]; }
+            if (times.size() > 0) { cout << " " << times[ times.size() / 2 ]; }
             else { cout << " -"; }
         }
         cout << "\\\\" << endl;

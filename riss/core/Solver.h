@@ -327,29 +327,29 @@ class Solver
   public: // TODO FIXME undo after debugging!
     OccLists<Lit, vec<Watcher>, WatcherDeleted> watches;          // 'watches[lit]' is a list of constraints watching 'lit' (will go there if literal becomes true).
     // no watchesBin, incorporated into watches
-    
+
     /** structure to hande reverse minimization nicely
      *  uses data structures of solver for incomplete propagation
      */
     struct ReverseMinimization {
-      vec<lbool> assigns;                                    // assignment for learned clause minimization
-      vec<Lit>   trail;                                      // trail for learned clause minimization
-      bool enabled;                                                 // indicate whether the technique is enabled
-      
-      int attempts;
-      int revMindroppedLiterals;
-      int revMinConflicts;
-      int revMincutOffLiterals;
-      int succesfulReverseMinimizations;
-      
-      ReverseMinimization(bool doUse) : enabled(doUse), attempts(0), revMindroppedLiterals(0), revMinConflicts(0), revMincutOffLiterals(0), succesfulReverseMinimizations(0) { }
-      
-      lbool value(const Var& x) const { return assigns[x]; }                         /// The current value of a variable.
-      lbool value(const Lit& p) const { return assigns[var(p)] ^ sign(p); } /// The current value of a literal.
-      void uncheckedEnqueue(const Lit& l){ assigns[ var(l) ] = sign(l) ? l_False : l_True; trail.push( l ); } /// add variable assignment
-      
+        vec<lbool> assigns;                                    // assignment for learned clause minimization
+        vec<Lit>   trail;                                      // trail for learned clause minimization
+        bool enabled;                                                 // indicate whether the technique is enabled
+
+        int attempts;
+        int revMindroppedLiterals;
+        int revMinConflicts;
+        int revMincutOffLiterals;
+        int succesfulReverseMinimizations;
+
+        ReverseMinimization(bool doUse) : enabled(doUse), attempts(0), revMindroppedLiterals(0), revMinConflicts(0), revMincutOffLiterals(0), succesfulReverseMinimizations(0) { }
+
+        lbool value(const Var& x) const { return assigns[x]; }                         /// The current value of a variable.
+        lbool value(const Lit& p) const { return assigns[var(p)] ^ sign(p); } /// The current value of a literal.
+        void uncheckedEnqueue(const Lit& l) { assigns[ var(l) ] = sign(l) ? l_False : l_True; trail.push(l); }  /// add variable assignment
+
     } reverseMinimization;
-    
+
   public: // TODO: set more nicely, or write method!
     vec<CRef>           clauses;          // List of problem clauses.
     vec<CRef>           learnts;          // List of learnt clauses.
@@ -756,17 +756,17 @@ class Solver
      * @return true, if the clause has been shrinked, false otherwise (then, the LBD also stays the same)
      */
     bool searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd);
-    
+
     /// sort according to position of literal in trail
-    struct TrailPosition_Gt { 
-      vec<VarData>& varData;  // data to use for sorting
-      bool operator()(const Lit & x, const Lit & y) const
-      {
-	return varData[ var(x) ].position > varData[ var(y) ].position; // compare data of x and y instead of elements themselves
-      }
-      TrailPosition_Gt(vec<VarData>& _varData) : varData(_varData) {}
+    struct TrailPosition_Gt {
+        vec<VarData>& varData;  // data to use for sorting
+        bool operator()(const Lit& x, const Lit& y) const
+        {
+            return varData[ var(x) ].position > varData[ var(y) ].position; // compare data of x and y instead of elements themselves
+        }
+        TrailPosition_Gt(vec<VarData>& _varData) : varData(_varData) {}
     };
-    
+
     /** reduce the literals inside the clause by performing vivification in the opposite order the literals have been added to the trail
      * @param lbd current lbd value of the given clause
      * @return true, if the clause has been shrinked, false otherwise (then, the LBD also stays the same)
@@ -1080,14 +1080,16 @@ inline void Solver::varBumpActivityD(Var v, double inc)
     if (activity[v] > 1e100) {
         DOUT(if (config.opt_printDecisions > 0) std::cerr << "c rescale decision heap" << std::endl;) ;
         // Rescale:
-        for (int i = 0; i < nVars(); i++)
-        { activity[i] *= 1e-100; }
+        for (int i = 0; i < nVars(); i++) {
+            activity[i] *= 1e-100;
+        }
         var_inc *= 1e-100;
     }
 
     // Update order_heap with respect to new activity:
-    if (order_heap.inHeap(v))
-    { order_heap.decrease(v); }
+    if (order_heap.inHeap(v)) {
+        order_heap.decrease(v);
+    }
 }
 
 inline void Solver::claDecayActivity() { cla_inc *= (1 / clause_decay); }
@@ -1096,8 +1098,9 @@ inline void Solver::claBumpActivity(Clause& c, double inverseRatio)
     DOUT(if (config.opt_removal_debug > 1) std::cerr << "c bump clause activity for " << c << " with " << c.activity() << " by " << inverseRatio << std::endl;) ;
     if ((c.activity() += cla_inc / inverseRatio) > 1e20) {
         // Rescale:
-        for (int i = 0; i < learnts.size(); i++)
-        { ca[learnts[i]].activity() *= 1e-20; }
+        for (int i = 0; i < learnts.size(); i++) {
+            ca[learnts[i]].activity() *= 1e-20;
+        }
         cla_inc *= 1e-20;
         DOUT(if (config.opt_removal_debug > 1) std::cerr << "c rescale clause activities" << std::endl;) ;
     }
@@ -1106,8 +1109,9 @@ inline void Solver::claBumpActivity(Clause& c, double inverseRatio)
 inline void Solver::checkGarbage(void) { return checkGarbage(garbage_frac); }
 inline void Solver::checkGarbage(double gf)
 {
-    if (ca.wasted() > ca.size() * gf)
-    { garbageCollect(); }
+    if (ca.wasted() > ca.size() * gf) {
+        garbageCollect();
+    }
 }
 
 // NOTE: enqueue does not set the ok flag! (only public methods do)
@@ -1119,8 +1123,9 @@ inline bool     Solver::addClause(Lit p, Lit q)          { add_tmp.clear(); add_
 inline bool     Solver::addClause(Lit p, Lit q, Lit r)   { add_tmp.clear(); add_tmp.push(p); add_tmp.push(q); add_tmp.push(r); return addClause_(add_tmp); }
 inline bool     Solver::locked(const Clause& c) const
 {
-    if (c.size() > 2)
-    { return value(c[0]) == l_True && reason(var(c[0])) != CRef_Undef && ca.lea(reason(var(c[0]))) == &c; }
+    if (c.size() > 2) {
+        return value(c[0]) == l_True && reason(var(c[0])) != CRef_Undef && ca.lea(reason(var(c[0]))) == &c;
+    }
     return
         (value(c[0]) == l_True && reason(var(c[0])) != CRef_Undef && ca.lea(reason(var(c[0]))) == &c)
         ||

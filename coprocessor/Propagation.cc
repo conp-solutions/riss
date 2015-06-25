@@ -46,9 +46,9 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
         for (int i = 0 ; i < positive.size(); ++i) {
 
             Clause& satisfied = ca[positive[i]];
-            if (ca[ positive[i] ].can_be_deleted()) // only track yet-non-deleted clauses
-            { continue; } // could remove from list, but list is cleared any ways!
-            else if (ca[ positive[i] ].size() > 1) {   // do not remove the unit clause!
+            if (ca[ positive[i] ].can_be_deleted()) { // only track yet-non-deleted clauses
+                continue;    // could remove from list, but list is cleared any ways!
+            } else if (ca[ positive[i] ].size() > 1) { // do not remove the unit clause!
                 data.addCommentToProof("removed by positive UP", true);
                 data.addToProof(ca[ positive[i] ], true);   // remove this clause, if this has not been done before
             }
@@ -68,7 +68,7 @@ lbool Propagation::process(CoprocessorData& data, bool sort, Heap<VarOrderBVEHea
         for (int i = 0 ; i < negative.size(); ++i) {
             Clause& c = ca[ negative[i] ];
             //what if c can be deleted? -> continue
-            if (c.can_be_deleted())  { continue; }
+            if (c.can_be_deleted()) { continue; }
             // sorted propagation, no!
 
             for (int j = 0; j < c.size(); ++ j) {
