@@ -363,7 +363,7 @@ void Solver::attachClause(CRef cr)
     }
 
     if (c.learnt()) { learnts_literals += c.size(); }
-    else { clauses_literals += c.size(); }
+    else            { clauses_literals += c.size(); }
 }
 
 
@@ -397,7 +397,7 @@ void Solver::detachClause(CRef cr, bool strict)
     }
 
     if (c.learnt()) { learnts_literals -= c.size(); }
-    else { clauses_literals -= c.size(); }
+    else            { clauses_literals -= c.size(); }
 }
 
 
@@ -571,7 +571,7 @@ bool Solver::searchUHLE(vec<Lit>& learned_clause, unsigned int& lbd)
         searchUHLElits += (cs - learned_clause.size());
         if (cs != learned_clause.size()) { return true; }   // some literals have been removed
         else { return false; } // no literals have been removed
-    } else { return false; } // no literals have been removed
+    } else { return false; }// no literals have been removed
 }
 
 /** check whether there is an AND-gate that can be used to simplify the given clause
@@ -1097,8 +1097,9 @@ bool Solver::reverseLearntClause(vec<Lit>& learned_clause, unsigned int& lbd)
                 Lit impliedLit = lit_Undef;
                 for (int k = 0; k < c.size(); k++) {
                     if (reverseMinimization.value(c[k]) == l_Undef) {
-                        if (impliedLit != lit_Undef) { impliedLit = c[k]; } // if there is exactly one left
-                        else {
+                        if (impliedLit != lit_Undef) {
+                            impliedLit = c[k];  // if there is exactly one left
+                        } else {
                             impliedLit == lit_Error;                   // there are multiple left
                             break;
                         }
@@ -1212,7 +1213,7 @@ void Solver::uncheckedEnqueue(Lit p, Riss::CRef from, bool addToProof, const uin
     // prefetch watch lists
     // __builtin_prefetch( & watchesBin[p], 1, 0 ); // prefetch the watch, prepare for a write (1), the data is highly temoral (0)
     __builtin_prefetch(& watches[p], 1, 0);   // prefetch the watch, prepare for a write (1), the data is highly temoral (0)
-    DOUT(if (config.opt_printDecisions > 1) {cerr << "c uncheched enqueue " << p; if (from != CRef_Undef) { cerr << " because of [" << from << "] " <<  ca[from]; }  cerr << endl;});
+    DOUT(if (config.opt_printDecisions > 1) {cerr << "c uncheched enqueue " << p; if (from != CRef_Undef) { cerr << " because of [" << from << "] " <<  ca[from]; } cerr << endl;});
 
     trail.push_(p);
 }
@@ -1400,7 +1401,7 @@ void Solver::reduceDB()
     // We have a lot of "good" clauses, it is difficult to compare them. Keep more !
     if (ca[learnts[learnts.size() / RATIOREMOVECLAUSES]].lbd() <= 3) { nbclausesbeforereduce += specialIncReduceDB; }
     // Useless :-)
-    if (ca[learnts.last()].lbd() <= 5) { nbclausesbeforereduce += specialIncReduceDB; }
+    if (ca[learnts.last()].lbd() <= 5)  { nbclausesbeforereduce += specialIncReduceDB; }
 
 
     // Don't delete binary or locked clauses. From the rest, delete clauses from the first half
@@ -1533,7 +1534,7 @@ lbool Solver::search(int nof_conflicts)
     bool blocked = false;
     starts++;
     int proofTopLevels = 0;
-    if (trail_lim.size() == 0) { proofTopLevels = trail.size(); }  else { proofTopLevels  = trail_lim[0]; }
+    if (trail_lim.size() == 0) { proofTopLevels = trail.size(); } else { proofTopLevels  = trail_lim[0]; }
     for (;;) {
         propagationTime.start();
         CRef confl = propagate();
@@ -1784,7 +1785,7 @@ bool Solver::analyzeNewLearnedClause(const CRef& newLearnedClause)
                         || (big->getStart(~bLit) < big->getStart(~aLit) && big->getStop(~aLit) < big->getStop(~bLit))) {
                     if (decisionLevel() != 0) { cancelUntil(0); }   // go to level 0, because a unit is added next
                     if (value(bLit) == l_Undef) {     // only if not set already
-                        if (j == 0 || k == 0) { L2units ++; }  else { L3units ++; } // stats
+                        if (j == 0 || k == 0) { L2units ++; } else { L3units ++; } // stats
                         DOUT(if (config.opt_learn_debug) cerr << "c uhdPR bin(b) enqueue " << bLit << "@" << decisionLevel() << endl;);
                         uncheckedEnqueue(bLit);
                         addCommentToProof("added by uhd probing:"); addUnitToProof(bLit); // not sure whether DRUP can always find this
@@ -1797,7 +1798,7 @@ bool Solver::analyzeNewLearnedClause(const CRef& newLearnedClause)
                             || (big->getStart(~aLit) < big->getStart(~bLit) && big->getStop(~bLit) < big->getStop(~aLit))) {
                         if (decisionLevel() != 0) { cancelUntil(0); }   // go to level 0, because a unit is added next
                         if (value(aLit) == l_Undef) {     // only if not set already
-                            if (j == 0 || k == 0) { L2units ++; }  else { L3units ++; } // stats
+                            if (j == 0 || k == 0) { L2units ++; } else { L3units ++; } // stats
                             DOUT(if (config.opt_learn_debug) cerr << "c uhdPR bin(a) enqueue " << aLit << "@" << decisionLevel() << endl;);
                             uncheckedEnqueue(aLit);
                             addCommentToProof("added by uhd probing:"); addUnitToProof(aLit);
@@ -1957,7 +1958,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue)
         for (int j = 0; j < actualLAlevel; ++j) { uncheckedEnqueue((i & (1 << j)) != 0 ? ~d[j] : d[j]); }   // flip polarity of d[j], if corresponding bit in i is set -> enumerate all combinations!
         bool f = propagate() != CRef_Undef; // for tests!
 //    if(config.localLookaheadDebug) { cerr << "c propagated iteration " << i << " : " ;  for(int j=0;j<actualLAlevel;++j) cerr << " " << ( (i&(1<<j))!=0 ? ~d[j] : d[j] ) ; cerr << endl; }
-        DOUT(if (config.localLookaheadDebug) { cerr << "c corresponding trail: "; if (f) { cerr << " FAILED! "; }  else  for (int j = trail_lim[0]; j < trail.size(); ++ j) { cerr << " "  << trail[j]; }  cerr << endl; });
+        DOUT(if (config.localLookaheadDebug) { cerr << "c corresponding trail: "; if (f) { cerr << " FAILED! "; } else  for (int j = trail_lim[0]; j < trail.size(); ++ j) { cerr << " "  << trail[j]; } cerr << endl; });
 
         if (f) {
             LONG_INT m = 3;
@@ -1969,7 +1970,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue)
             failedProbesInARow = 0;
         }
 //    if(config.localLookaheadDebug) cerr << "c this propafation [" << i << "] failed: " << f << " current match pattern: " << pt << "(inv: " << ~pt << ")" << endl;
-        DOUT(if (config.localLookaheadDebug) { cerr << "c cut: "; for (int j = 0; j < 2 << actualLAlevel; ++j) { cerr << ((patternMask & (1 << j))  != (LONG_INT)0); }  cerr << endl; });
+        DOUT(if (config.localLookaheadDebug) { cerr << "c cut: "; for (int j = 0; j < 2 << actualLAlevel; ++j) { cerr << ((patternMask & (1 << j))  != (LONG_INT)0); } cerr << endl; });
     }
     if (failedProbesInARow > 0) { fillLAmodel(variablesPattern, failedProbesInARow, relevantLAvariables, true); }   // finally, moving all variables right
     cancelUntil(0);
@@ -2130,7 +2131,7 @@ bool Solver::laHack(vec<Lit>& toEnqueue)
 
     if (config.opt_laDyn) {
         if (foundUnit) { laBound = config.opt_laEvery; }    // reset down to specified minimum
-        else {if (laBound < config.opt_laMaxEvery) { laBound++; } } // increase by one!
+        else {if (laBound < config.opt_laMaxEvery) { laBound++; }} // increase by one!
     }
     laStart = false; untilLa = laBound; // reset counter
     laTime = cpuTime() - laTime;
@@ -2307,7 +2308,7 @@ lbool Solver::solve_()
     solves++;
 
     lbool initValue = initSolve(solves);
-    if (initValue != l_Undef) { return initValue; }
+    if (initValue != l_Undef)  { return initValue; }
 
     lbool   status        = l_Undef;
     nbclausesbeforereduce = firstReduceDB;
@@ -2337,9 +2338,9 @@ lbool Solver::solve_()
     if (false) {
         cerr << "c solver state after preprocessing" << endl;
         cerr << "c start solving with " << nVars() << " vars, " << nClauses() << " clauses and " << nLearnts() << " learnts decision vars: " << order_heap.size() << endl;
-        cerr << "c units: " ; for (int i = 0 ; i < trail.size(); ++ i) { cerr << " " << trail[i]; }  cerr << endl;
+        cerr << "c units: " ; for (int i = 0 ; i < trail.size(); ++ i) { cerr << " " << trail[i]; } cerr << endl;
         cerr << "c clauses: " << endl; for (int i = 0 ; i < clauses.size(); ++ i) { cerr << "c [" << clauses[i] << "]m: " << ca[clauses[i]].mark() << " == " << ca[clauses[i]] << endl; }
-        cerr << "c assumptions: "; for (int i = 0 ; i < assumptions.size(); ++ i) { cerr << " " << assumptions[i]; }  cerr << endl;
+        cerr << "c assumptions: "; for (int i = 0 ; i < assumptions.size(); ++ i) { cerr << " " << assumptions[i]; } cerr << endl;
         cerr << "c solve with " << config.presetConfig() << endl;
     }
 
@@ -2814,7 +2815,7 @@ void Solver::printConflictTrail(CRef confl)
         cerr << "c conflict clause: " << ca[confl] << endl;
         cerr << "c trail: " ;
         for (int i = 0 ; i < trail.size(); ++ i) {
-            cerr << " " << trail[i] << "@" << level(var(trail[i])) << "?"; if (reason(var(trail[i])) == CRef_Undef) { cerr << "U"; }  else { cerr << reason(var(trail[i])); }
+            cerr << " " << trail[i] << "@" << level(var(trail[i])) << "?"; if (reason(var(trail[i])) == CRef_Undef) { cerr << "U"; } else { cerr << reason(var(trail[i])); }
         } cerr << endl;
     });
 }

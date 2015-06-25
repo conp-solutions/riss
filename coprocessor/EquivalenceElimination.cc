@@ -14,7 +14,7 @@ namespace Coprocessor
 
 static const int eeLevel = 1;
 
-EquivalenceElimination::EquivalenceElimination(Coprocessor::CoprocessorData& _data, Coprocessor::CP3Config& _config, ClauseAllocator& _ca, ThreadController& _controller, Coprocessor::Propagation& _propagation, Coprocessor::Subsumption& _subsumption)
+EquivalenceElimination::EquivalenceElimination(CP3Config& _config, ClauseAllocator& _ca, ThreadController& _controller, Propagation& _propagation, Coprocessor::Subsumption& _subsumption)
     : Technique(_config, _ca, _controller)
     , gateSteps(0)
     , gateTime(0)
@@ -865,7 +865,7 @@ bool EquivalenceElimination::allInputsStamped(Circuit::Gate& g, std::vector< uns
             const Var v = var(g.get(j));
             // one bit must not be stamped!
             if ((bitType[ v ] & 4) == 0)
-                if (count != 0) { return false; }  else { count++; }
+                if (count != 0) { return false; } else { count++; }
         }
         //cerr << "c all inputs of ExO are stamped: "; g.print(cerr);
         return true;
@@ -1784,9 +1784,9 @@ void EquivalenceElimination::findEquivalencesOnBigRec(CoprocessorData& data, vec
 {
     // create / resize data structures:
     if (eqLitInStack == 0) { eqLitInStack = (char*) malloc(sizeof(char) * data.nVars() * 2); }
-    else { eqLitInStack = (char*) realloc(eqLitInStack, sizeof(char) * data.nVars() * 2); }
+    else  { eqLitInStack = (char*) realloc(eqLitInStack, sizeof(char) * data.nVars() * 2); }
     if (eqInSCC == 0) { eqInSCC = (char*) malloc(sizeof(char) * data.nVars()); }
-    else { eqInSCC = (char*) realloc(eqInSCC, sizeof(char) * data.nVars()); }
+    else  { eqInSCC = (char*) realloc(eqInSCC, sizeof(char) * data.nVars()); }
     eqNodeIndex.resize(data.nVars() * 2, -1);
     eqNodeLowLinks.resize(data.nVars() * 2, -1);
 
@@ -2458,6 +2458,7 @@ void EquivalenceElimination::destroy()
     vector< int32_t >().swap(eqNodeLowLinks);
     vector< int32_t >().swap(eqNodeIndex);
     vector< Lit >().swap(eqCurrentComponent);
+
 
     vector<char>().swap(isToAnalyze);
     vector<Lit>().swap(eqDoAnalyze);
