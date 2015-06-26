@@ -157,6 +157,8 @@ void MaxSAT::copySolver(MaxSAT *solver)
   polarityCache.copyTo(solver->polarityCache);
   activityCache.copyTo(solver->activityCache);
   
+  solver->refineCores = refineCores;
+  refineAssumptions.copyTo( solver->refineAssumptions );
   if (nbInitialVariables != 0) solver->saveModel(model);
 }
 
@@ -259,6 +261,22 @@ lbool MaxSAT::searchSATSolver(Solver *S, vec<Lit> &assumptions, bool pre)
     for( Var v = 0 ; v < S->nVars(); ++v ) {
       activityCache[v] = S->varGetActivity(v);
     }
+  }
+  // if we used assumptions, found UNSAT and have an unsat core, try to simplify the core
+  if( refineCores && (res == l_False) && assumptions .size() > 0 ) {
+    assumptions.moveTo( refineAssumptions ); // store original assumptions
+    assumptions.clear();
+    // Solver::analyzeFinal adds assumptions in reverse order to the conflict clause, hence, add them in this order again
+    for( int i = 0 ; i < S->conflict.size(); ++ i ) assumptions.push( ~S->conflict[i] );
+    // call the solver once more
+//     cerr << "c call solver again with " << assumptions.size() << " assumptions" << endl;
+#ifdef SIMP
+    res = ((SimpSolver *)S)->solveLimited(assumptions, pre);
+#else
+    res = S->solveLimited(assumptions);
+#endif
+    refineAssumptions.moveTo( assumptions );
+    assert( res == l_False && "the core still has to be unsatisfiable" );
   }
   
   return res;
