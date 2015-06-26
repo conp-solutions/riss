@@ -74,6 +74,7 @@ class MaxSAT
         setActWithAssumptions = false;
         useActivityCache = false;
 
+        refineCores = false; // turned off by default
         currentWeight = 1;
 
         // 'ubCost' will be set to the sum of the weights of soft clauses
@@ -212,6 +213,10 @@ class MaxSAT
         setActWithAssumptions = useAssumpts;
     }
 
+    void setRefineCores(bool use)
+    {
+        refineCores = use;
+    }
   protected:
     // MaxSAT database
     //
@@ -266,6 +271,10 @@ class MaxSAT
     bool setActWithAssumptions;  // use activity caching
     bool useActivityCache;       // use activity values of last SAT call
     vec<double> activityCache;   // cache activities of previous run
+    // How to work with unsatisfiable cores
+    //
+    bool refineCores;            // reverse core assumptions of UNSAT results with assumptions
+    vec<Lit> refineAssumptions;  // vector to temporarily store assumptions
 
     // Utils for model management
     //

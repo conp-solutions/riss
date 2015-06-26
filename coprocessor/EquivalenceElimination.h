@@ -46,11 +46,10 @@ class EquivalenceElimination : public Technique
     std::vector< int32_t > eqNodeIndex;          // index per node
     std::vector< Riss::Lit > eqCurrentComponent; // literals in the currently searched SCC
 
-    std::vector<Riss::Lit> replacedBy;           // stores which variable has been replaced by which literal
-
     std::vector<char> isToAnalyze;               // stores that a literal has to be analyzed further
     std::vector<Riss::Lit> eqDoAnalyze;          // stores the literals to be analyzed
 
+    CoprocessorData& data;                       // object that can talk to solver
     Propagation& propagation;                    // object that takes care of unit propagation
     Subsumption& subsumption;                    // object that takes care of subsumption and strengthening
 
@@ -58,10 +57,10 @@ class EquivalenceElimination : public Technique
 
   public:
 
-    EquivalenceElimination(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, Propagation& _propagation, Subsumption& _subsumption);
+    EquivalenceElimination(CoprocessorData& _data, CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, Propagation& _propagation, Subsumption& _subsumption);
 
     /** run equivalent literal elimination */
-    bool process(CoprocessorData& data);
+    bool process();
 
     void initClause(const Riss::CRef& cr);  // inherited from Technique
 

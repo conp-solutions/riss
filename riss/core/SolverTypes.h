@@ -179,7 +179,9 @@ class Clause
         unsigned has_extra : 1;
         unsigned reloced   : 1;
         #ifndef PCASSO
-        unsigned lbd       : 23;
+        unsigned lbd       : 21;
+        unsigned wasPropagated : 1; // indicate that this clause triggere unit propagation (during propagation, not immediately after learning)
+        unsigned usedInAnalyze : 1; // indicate that this clause was used for conflict resolution
         unsigned isCore    : 1;
         unsigned canbedel  : 1;
         unsigned can_subsume : 1;
@@ -188,11 +190,13 @@ class Clause
         #else
         unsigned shared     : 1;
         unsigned shCleanDelay : 1;
-        unsigned size      : 25;
+        unsigned size      : 21;
+        unsigned wasPropagated : 1; // indicate that this clause triggere unit propagation (during propagation, not immediately after learning)
+        unsigned usedInAnalyze : 1; // indicate that this clause was used for conflict resolution
         unsigned canbedel  : 1;
         unsigned can_subsume : 1;
         unsigned can_strengthen : 1;
-        unsigned pt_level   : 9;     // level of the clause in the decision tree
+        unsigned pt_level   : 11;     // level of the clause in the decision tree
         unsigned isCore    : 1;
         unsigned lbd       : 19;
         #endif

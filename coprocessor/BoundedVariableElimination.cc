@@ -18,7 +18,7 @@ BoundedVariableElimination::BoundedVariableElimination(CP3Config& _config, Riss:
         Coprocessor::Propagation& _propagation,
         Coprocessor::Subsumption& _subsumption)
     : Technique(_config, _ca, _controller), propagation(_propagation), subsumption(_subsumption),
-      heap_option(config.opt_unlimited_bve), removedClauses(0), removedLiterals(0), createdClauses(0),
+      heap_option(config.opt_bve_heap), removedClauses(0), removedLiterals(0), createdClauses(0),
       createdLiterals(0), removedLearnts(0), learntLits(0), newLearnts(0), newLearntLits(0), testedVars(0),
       anticipations(0), eliminatedVars(0), removedBC(0), blockedLits(0), removedBlockedLearnt(0), learntBlockedLit(0),
       skippedVars(0), unitsEnqueued(0), foundGates(0), usedGates(0), initialClauses(0), initialLits(0), clauseCount(0),
