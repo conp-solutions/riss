@@ -28,7 +28,7 @@ endfunction()
 # 
 # Version of the whole tool box. Subprojects can define their own versions. If
 # no version is specified, this "global" version will be used,
-version("5.0.1")
+version("5.0.2")
 
 option(STATIC_BINARIES "Build fully statically linked binaries" ON)
 option(PCASSO          "adapt assertions to algorithm used in pcasso" OFF)
