@@ -195,7 +195,7 @@ class CP3Config : public Riss::Config
 
     #ifndef NDEBUG
     Riss::BoolOption opt_debug    ;
-    Riss::IntOption opt_check    ;
+    Riss::IntOption opt_check     ;
     Riss::IntOption  opt_log      ;
     Riss::StringOption printAfter ;
     #endif
@@ -205,7 +205,7 @@ class CP3Config : public Riss::Config
 //
 
     Riss::IntOption opt_par_bve         ;
-    Riss::IntOption  opt_bve_verbose     ;
+    Riss::IntOption  opt_bve_verbose    ;
 
     Riss::IntOption  opt_bve_limit       ;
     Riss::IntOption  opt_learnt_growth   ;
@@ -223,7 +223,7 @@ class CP3Config : public Riss::Config
     Riss::BoolOption opt_totalGrow       ;
 
     Riss::BoolOption opt_bve_bc          ;
-    Riss::IntOption heap_updates         ;
+    Riss::IntOption  heap_updates        ;
     Riss::BoolOption opt_bve_earlyAbort  ;
     Riss::BoolOption opt_bce_only        ;
     Riss::BoolOption opt_print_progress  ;

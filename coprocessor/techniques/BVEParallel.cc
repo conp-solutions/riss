@@ -91,7 +91,7 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData& data, Heap<VarO
     int32_t timeStamp;
     while (data.ok()
             && (!data.isInterupted())
-            && (seqBveSteps + parBVEchecks < bveLimit || data.unlimited())
+            && (seqBveSteps + parBVEchecks < config.opt_bve_limit || data.unlimited())
           ) { // if solver state = false => abort
         // Propagate (rw-locks)
         if (data.hasToPropagate()) {

@@ -25,9 +25,6 @@ class BoundedVariableElimination : public Technique<BoundedVariableElimination>
     Coprocessor::Propagation& propagation;
     Coprocessor::Subsumption& subsumption;
 
-    // variable heap comperators
-    const int heap_option;
-
     struct PostponeReason {
         Riss::Var var, reason;
         PostponeReason(Riss::Var _var, Riss::Var _reason) : var(_var), reason(_reason) {}
@@ -78,7 +75,7 @@ class BoundedVariableElimination : public Technique<BoundedVariableElimination>
         newLearntLits, testedVars, anticipations, eliminatedVars, removedBC, blockedLits, removedBlockedLearnt, learntBlockedLit,
         skippedVars, unitsEnqueued, foundGates, usedGates,
         initialClauses, initialLits, clauseCount, litCount, unitCount, elimCount, restarts;
-    int64_t seqBveSteps, bveLimit;
+    int64_t seqBveSteps;
     int64_t nClsIncreases, nClsDecreases, nClsKeep, totallyAddedClauses; // number of clauses that have been added by bve
     double processTime, subsimpTime, gateTime;
 

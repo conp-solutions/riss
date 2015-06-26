@@ -20,7 +20,6 @@ BoundedVariableElimination::BoundedVariableElimination(CP3Config& _config, Riss:
     : Technique(_config, _ca, _controller)
     , propagation(_propagation)
     , subsumption(_subsumption)
-    , heap_option(config.opt_unlimited_bve) // FIXME is this the correct option name?!
     , removedClauses(0)
     , removedLiterals(0)
     , createdClauses(0)
@@ -48,7 +47,6 @@ BoundedVariableElimination::BoundedVariableElimination(CP3Config& _config, Riss:
     , elimCount(0)
     , restarts(0)
     , seqBveSteps(0)
-    , bveLimit(config.opt_bve_limit)
     , nClsIncreases(0)
     , nClsDecreases(0)
     , nClsKeep(0)
@@ -296,7 +294,7 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData& data,
            // variable heap or list is not empty
            && ((config.opt_bve_heap != 2 && heap.size() > 0) || (config.opt_bve_heap == 2 && variable_queue.size() > 0))
            // check if are are inside the limit
-           && (seqBveSteps < bveLimit || data.unlimited())
+           && (seqBveSteps < config.opt_bve_limit || data.unlimited())
           ) {
 
         updateDeleteTime(data.getMyDeleteTimer());
@@ -357,7 +355,7 @@ void BoundedVariableElimination::bve_worker(CoprocessorData& data, Heap<VarOrder
     // repeat loop only until being interrupted
     while (!data.isInterupted()
             && ((config.opt_bve_heap != 2 && heap.size() > 0) || (config.opt_bve_heap == 2 && variable_queue.size() > 0))
-            && (seqBveSteps < bveLimit ||
+            && (seqBveSteps < config.opt_bve_limit ||
                 data.unlimited()) // bveChecks is a reference to seqBveSteps - thus this comparison works
           ) {
         Var v = var_Undef;
