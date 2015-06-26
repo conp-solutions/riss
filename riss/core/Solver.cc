@@ -2829,6 +2829,7 @@ void Solver::refineFinalConflict()
   if( assumptions.size() == 0 || conflict.size() < 2 ) return;  // nothing to be done
   assumptions.moveTo( refineAssumptions );                      // memorize original assumptions
 
+  cancelUntil( 0 );  // make sure we are on level 0 again
   assert( decisionLevel() == 0 && "run this routine only after the trail has been cleared already" );
   
   // Solver::analyzeFinal adds assumptions in reverse order to the conflict clause, hence, add them in this order again

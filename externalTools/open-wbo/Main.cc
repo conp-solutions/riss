@@ -437,11 +437,12 @@ int main(int argc, char **argv)
       // Check if the formula is BMO without caching the bmo functions.
       bool bmo_strategy = S->isBMO(false);
       MaxSAT *solver;
-      if (bmo_strategy)
+      if (bmo_strategy || incomplete )
         solver = new WMSU3(_VERBOSITY_SOME_, _INCREMENTAL_ITERATIVE_,
                            _CARD_TOTALIZER_, _PB_SWC_, true);
-      else
-        solver = new WBO(_VERBOSITY_SOME_, _WEIGHT_DIVERSIFY_, true, 500000);
+      else {
+	solver = new WBO(_VERBOSITY_SOME_, _WEIGHT_DIVERSIFY_, true, 500000);
+      }
 
       // HACK: Copy the contents of a solver to a fresh solver.
       // This could be avoided if the parsing was done to a DB that is
