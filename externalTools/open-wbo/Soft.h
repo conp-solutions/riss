@@ -23,9 +23,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define Soft_h
 
 #ifdef SIMP
-#include "simp/SimpSolver.h"
+    #include "simp/SimpSolver.h"
 #else
-#include "core/Solver.h"
+    #include "core/Solver.h"
 #endif
 
 namespace NSPACE
@@ -34,27 +34,27 @@ namespace NSPACE
 class Soft
 {
 
-public:
-  Soft(vec<Lit> &soft, int w, Lit assump, vec<Lit> &relax)
-  {
-    soft.copyTo(clause);
-    weight = w;
-    assumptionVar = assump;
-    relax.copyTo(relaxationVars);
-  }
+  public:
+    Soft(vec<Lit>& soft, int w, Lit assump, vec<Lit>& relax)
+    {
+        soft.copyTo(clause);
+        weight = w;
+        assumptionVar = assump;
+        relax.copyTo(relaxationVars);
+    }
 
-  Soft() {}
-  ~Soft()
-  {
-    clause.clear();
-    relaxationVars.clear();
-  }
+    Soft() {}
+    ~Soft()
+    {
+        clause.clear();
+        relaxationVars.clear();
+    }
 
-  vec<Lit> clause;   // Soft clause
-  int weight;        // Weight of the soft clause
-  Lit assumptionVar; // Assumption variable used for retrieving the core
-  // Relaxation variables that will be added to the soft clause
-  vec<Lit> relaxationVars;
+    vec<Lit> clause;   // Soft clause
+    int weight;        // Weight of the soft clause
+    Lit assumptionVar; // Assumption variable used for retrieving the core
+    // Relaxation variables that will be added to the soft clause
+    vec<Lit> relaxationVars;
 };
 }
 

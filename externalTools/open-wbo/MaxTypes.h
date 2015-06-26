@@ -22,59 +22,50 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef MaxTypes_h
 #define MaxTypes_h
 
-enum
-{
-  _VERBOSITY_MINIMAL_ = 0,
-  _VERBOSITY_SOME_
+enum {
+    _VERBOSITY_MINIMAL_ = 0,
+    _VERBOSITY_SOME_
 };
-enum
-{
-  _UNWEIGHTED_ = 0,
-  _WEIGHTED_
+enum {
+    _UNWEIGHTED_ = 0,
+    _WEIGHTED_
 };
-enum
-{
-  _WEIGHT_NONE_ = 0,
-  _WEIGHT_NORMAL_,
-  _WEIGHT_DIVERSIFY_
+enum {
+    _WEIGHT_NONE_ = 0,
+    _WEIGHT_NORMAL_,
+    _WEIGHT_DIVERSIFY_
 };
-enum
-{
-  _ALGORITHM_WBO_ = 0,
-  _ALGORITHM_LINEAR_SU_,
-  _ALGORITHM_LINEAR_US_,
-  _ALGORITHM_MSU3_,
-  _ALGORITHM_WMSU3_,
-  _ALGORITHM_BEST_,
+enum {
+    _ALGORITHM_WBO_ = 0,
+    _ALGORITHM_LINEAR_SU_,
+    _ALGORITHM_LINEAR_US_,
+    _ALGORITHM_MSU3_,
+    _ALGORITHM_WMSU3_,
+    _ALGORITHM_BEST_,
 };
-enum
-{
-  _SATISFIABLE_ = 10,
-  _UNSATISFIABLE_ = 20,
-  _OPTIMUM_ = 30,
-  _UNKNOWN_ = 40,
-  _ERROR_ = 50
+enum {
+    _SATISFIABLE_ = 10,
+    _UNSATISFIABLE_ = 20,
+    _OPTIMUM_ = 30,
+    _UNKNOWN_ = 40,
+    _ERROR_ = 50
 };
-enum
-{
-  _INCREMENTAL_NONE_ = 0,
-  _INCREMENTAL_BLOCKING_,
-  _INCREMENTAL_WEAKENING_,
-  _INCREMENTAL_ITERATIVE_
+enum {
+    _INCREMENTAL_NONE_ = 0,
+    _INCREMENTAL_BLOCKING_,
+    _INCREMENTAL_WEAKENING_,
+    _INCREMENTAL_ITERATIVE_
 };
-enum
-{
-  _CARD_CNETWORKS_ = 0,
-  _CARD_TOTALIZER_,
-  _CARD_MTOTALIZER_
+enum {
+    _CARD_CNETWORKS_ = 0,
+    _CARD_TOTALIZER_,
+    _CARD_MTOTALIZER_
 };
-enum
-{
-  _AMO_LADDER_ = 0
+enum {
+    _AMO_LADDER_ = 0
 };
-enum
-{
-  _PB_SWC_ = 0
+enum {
+    _PB_SWC_ = 0
 };
 
 #endif

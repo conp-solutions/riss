@@ -23,9 +23,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define Encoder_h
 
 #ifdef SIMP
-#include "simp/SimpSolver.h"
+    #include "simp/SimpSolver.h"
 #else
-#include "core/Solver.h"
+    #include "core/Solver.h"
 #endif
 
 #include "core/SolverTypes.h"
@@ -45,109 +45,109 @@ namespace NSPACE
 class Encoder
 {
 
-public:
-  Encoder(int incremental = _INCREMENTAL_NONE_,
-          int cardinality = _CARD_TOTALIZER_, int amo = _AMO_LADDER_,
-          int pb = _PB_SWC_)
-  {
-    incremental_strategy = incremental;
-    cardinality_encoding = cardinality;
-    totalizer.setIncremental(incremental);
-  }
+  public:
+    Encoder(int incremental = _INCREMENTAL_NONE_,
+            int cardinality = _CARD_TOTALIZER_, int amo = _AMO_LADDER_,
+            int pb = _PB_SWC_)
+    {
+        incremental_strategy = incremental;
+        cardinality_encoding = cardinality;
+        totalizer.setIncremental(incremental);
+    }
 
-  ~Encoder() {}
+    ~Encoder() {}
 
-  // At-most-one encodings:
-  //
-  // Encode exactly-one constraint into CNF.
-  void encodeAMO(Solver *S, vec<Lit> &lits);
+    // At-most-one encodings:
+    //
+    // Encode exactly-one constraint into CNF.
+    void encodeAMO(Solver *S, vec<Lit>& lits);
 
-  // Cardinality encodings:
-  //
-  // Encode cardinality constraint into CNF.
-  void encodeCardinality(Solver *S, vec<Lit> &lits, int64_t rhs);
+    // Cardinality encodings:
+    //
+    // Encode cardinality constraint into CNF.
+    void encodeCardinality(Solver *S, vec<Lit>& lits, int64_t rhs);
 
-  // Update the rhs of an already existent cardinality constraint
-  void updateCardinality(Solver *S, int64_t rhs);
+    // Update the rhs of an already existent cardinality constraint
+    void updateCardinality(Solver *S, int64_t rhs);
 
-  // Incremental cardinality encodings:
-  //
-  // Build a cardinality constraint that can count up to 'rhs'.
-  // No restriction is made on the value of 'rhs'.
-  // buildCardinality + updateCardinality is equivalent to encodeCardinality.
-  // Useful for incremental encodings.
-  void buildCardinality(Solver *S, vec<Lit> &lits, int64_t rhs);
+    // Incremental cardinality encodings:
+    //
+    // Build a cardinality constraint that can count up to 'rhs'.
+    // No restriction is made on the value of 'rhs'.
+    // buildCardinality + updateCardinality is equivalent to encodeCardinality.
+    // Useful for incremental encodings.
+    void buildCardinality(Solver *S, vec<Lit>& lits, int64_t rhs);
 
-  // Incremental update for cardinality constraints;
-  void incUpdateCardinality(Solver *S, vec<Lit> &join, vec<Lit> &lits,
-                            int64_t rhs, vec<Lit> &assumptions);
+    // Incremental update for cardinality constraints;
+    void incUpdateCardinality(Solver *S, vec<Lit>& join, vec<Lit>& lits,
+                              int64_t rhs, vec<Lit>& assumptions);
 
-  // PB encodings:
-  //
-  // Encode pseudo-Boolean constraint into CNF.
-  void encodePB(Solver *S, vec<Lit> &lits, vec<int> &coeffs, int64_t rhs);
-  // Update the rhs of an already existent pseudo-Boolean constraint.
-  void updatePB(Solver *S, int64_t rhs);
+    // PB encodings:
+    //
+    // Encode pseudo-Boolean constraint into CNF.
+    void encodePB(Solver *S, vec<Lit>& lits, vec<int>& coeffs, int64_t rhs);
+    // Update the rhs of an already existent pseudo-Boolean constraint.
+    void updatePB(Solver *S, int64_t rhs);
 
-  // Incremental PB encodings:
-  //
-  // Incremental PB encoding.
-  void incEncodePB(Solver *S, vec<Lit> &lits, vec<int> &coeffs, int64_t rhs,
-                   vec<Lit> &assumptions, int size);
+    // Incremental PB encodings:
+    //
+    // Incremental PB encoding.
+    void incEncodePB(Solver *S, vec<Lit>& lits, vec<int>& coeffs, int64_t rhs,
+                     vec<Lit>& assumptions, int size);
 
-  // Incremental update of PB encodings.
-  void incUpdatePB(Solver *S, vec<Lit> &lits, vec<int> &coeffs, int64_t rhs,
-                   vec<Lit> &assumptions);
+    // Incremental update of PB encodings.
+    void incUpdatePB(Solver *S, vec<Lit>& lits, vec<int>& coeffs, int64_t rhs,
+                     vec<Lit>& assumptions);
 
-  // Incremental update of assumptions.
-  void incUpdatePBAssumptions(Solver *S, vec<Lit> &assumptions);
+    // Incremental update of assumptions.
+    void incUpdatePBAssumptions(Solver *S, vec<Lit>& assumptions);
 
-  // Other:
-  //
-  // Returns true if an encoding has been built, false otherwise.
-  bool hasCardEncoding();
-  bool hasPBEncoding();
+    // Other:
+    //
+    // Returns true if an encoding has been built, false otherwise.
+    bool hasCardEncoding();
+    bool hasPBEncoding();
 
-  // Controls the type of encoding to be used:
-  //
-  void setCardEncoding(int enc) { cardinality_encoding = enc; }
-  int getCardEncoding() { return cardinality_encoding; }
+    // Controls the type of encoding to be used:
+    //
+    void setCardEncoding(int enc) { cardinality_encoding = enc; }
+    int getCardEncoding() { return cardinality_encoding; }
 
-  void setPBEncoding(int enc) { pb_encoding = enc; }
-  int getPBEncoding() { return pb_encoding; }
+    void setPBEncoding(int enc) { pb_encoding = enc; }
+    int getPBEncoding() { return pb_encoding; }
 
-  void setAMOEncoding(int enc) { amo_encoding = enc; }
-  int getAMOEncoding() { return amo_encoding; }
+    void setAMOEncoding(int enc) { amo_encoding = enc; }
+    int getAMOEncoding() { return amo_encoding; }
 
-  // Controls the modulo value that is used in the modulo totalizer encoding.
-  //
-  void setModulo(int m) { mtotalizer.setModulo(m); }
-  int getModulo() { return mtotalizer.getModulo(); }
+    // Controls the modulo value that is used in the modulo totalizer encoding.
+    //
+    void setModulo(int m) { mtotalizer.setModulo(m); }
+    int getModulo() { return mtotalizer.getModulo(); }
 
-  // Sets the incremental strategy for the totalizer encoding.
-  //
-  void setIncremental(int incremental)
-  {
-    incremental_strategy = incremental;
-    totalizer.setIncremental(incremental);
-  }
+    // Sets the incremental strategy for the totalizer encoding.
+    //
+    void setIncremental(int incremental)
+    {
+        incremental_strategy = incremental;
+        totalizer.setIncremental(incremental);
+    }
 
-protected:
-  int incremental_strategy;
-  int cardinality_encoding;
-  int pb_encoding;
-  int amo_encoding;
+  protected:
+    int incremental_strategy;
+    int cardinality_encoding;
+    int pb_encoding;
+    int amo_encoding;
 
-  // At-most-one encodings
-  Ladder ladder;
+    // At-most-one encodings
+    Ladder ladder;
 
-  // Cardinality encodings
-  CNetworks cnetworks;
-  MTotalizer mtotalizer;
-  Totalizer totalizer;
+    // Cardinality encodings
+    CNetworks cnetworks;
+    MTotalizer mtotalizer;
+    Totalizer totalizer;
 
-  // PB encodings
-  SWC swc;
+    // PB encodings
+    SWC swc;
 };
 }
 

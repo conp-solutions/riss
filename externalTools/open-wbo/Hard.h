@@ -23,9 +23,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define Hard_h
 
 #ifdef SIMP
-#include "simp/SimpSolver.h"
+    #include "simp/SimpSolver.h"
 #else
-#include "core/Solver.h"
+    #include "core/Solver.h"
 #endif
 
 namespace NSPACE
@@ -34,13 +34,13 @@ namespace NSPACE
 class Hard
 {
 
-public:
-  Hard(vec<Lit> &hard) { hard.copyTo(clause); }
+  public:
+    Hard(vec<Lit>& hard) { hard.copyTo(clause); }
 
-  Hard() {}
-  ~Hard() { clause.clear(); }
+    Hard() {}
+    ~Hard() { clause.clear(); }
 
-  vec<Lit> clause; // Hard clause
+    vec<Lit> clause; // Hard clause
 };
 }
 
