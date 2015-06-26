@@ -1111,7 +1111,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
                 parBveStepSum += parStats[i].parBveChecks;
             }
             seqBveSteps += parBveStepSum / controller.size();
-            bve_worker(data, newheap, seqBveSteps);
+            bve_worker(data, seqBveSteps);
             seqBveSteps -= parBveStepSum / controller.size();
         }
         //propagate units

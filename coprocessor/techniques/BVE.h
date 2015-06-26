@@ -11,13 +11,11 @@ Copyright (c) 2012, Kilian Gebhardt, Norbert Manthey, All rights reserved.
 #include "Subsumption.h"
 #include "riss/mtl/Heap.h"
 
-// using namespace Riss;
-// using namespace std;
-
 namespace Coprocessor
 {
 
-/** This class implement blocked variable elimination
+/**
+ * This class implement blocked variable elimination
  */
 class BoundedVariableElimination : public Technique<BoundedVariableElimination>
 {
@@ -30,8 +28,21 @@ class BoundedVariableElimination : public Technique<BoundedVariableElimination>
         PostponeReason(Riss::Var _var, Riss::Var _reason) : var(_var), reason(_reason) {}
     };
 
-    std::vector<Riss::Var> touched_variables; // Vector for restarting bve (seq and par)
-    std::vector< Riss::Var > variable_queue;  // variable queue for random variable-order
+    std::vector< Riss::Var > touched_variables;    // Vector for restarting bve (seq and par)
+
+    /**
+     * variable queue for random variable-order
+     *
+     * the variable heap and queue are persisted between the different runs to finish variables that not processed in
+     * the last run of the technique
+     */
+    std::vector< Riss::Var > variable_queue;
+
+    /**
+     * Heap for currently processed variables if a special variable order is used. The heap is initialized in the first
+     * run of the technique.
+     */
+    Riss::Heap< VarOrderBVEHeapLt >* variable_heap;
 
     // sequential member variables
     Riss::vec< Riss::Lit > resolvent; // std::vector for sequential resolution
@@ -83,6 +94,8 @@ class BoundedVariableElimination : public Technique<BoundedVariableElimination>
 
     BoundedVariableElimination(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller , Coprocessor::Propagation& _propagation, Coprocessor::Subsumption& _subsumption);
 
+    ~BoundedVariableElimination();
+
     /** run BVE until completion */
     Riss::lbool process(CoprocessorData& data, const bool doStatistics = true);
 
@@ -95,17 +108,17 @@ class BoundedVariableElimination : public Technique<BoundedVariableElimination>
     void progressStats(CoprocessorData& data, const bool cputime = false);      // prints statistics before/after each BVE-Run
 
     // sequential functions:
-    void sequentiellBVE(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, const bool force = false, const bool doStatistics = true);
-    void bve_worker(Coprocessor::CoprocessorData& data, Riss::Heap< Coprocessor::VarOrderBVEHeapLt >& heap, int64_t& bveChecks, const bool force = false, const bool doStatistics = true);
+    void sequentiellBVE(CoprocessorData& data, const bool force = false, const bool doStatistics = true);
+    void bve_worker(Coprocessor::CoprocessorData& data, int64_t& bveChecks, const bool force = false, const bool doStatistics = true);
 
     /** remove clauses from data structures and add to extension lists
      *  @param l literal that has been used to remove the clauses during elimination (if l == Riss::lit_Undef, clauses are not added to extension stack)
      */
-    inline void removeClauses(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, const std::vector<Riss::CRef>& list, const Riss::Lit& l, const int limit, const bool doStatistics = true);
+    inline void removeClauses(CoprocessorData& data, const std::vector<Riss::CRef>& list, const Riss::Lit& l, const int limit, const bool doStatistics = true);
 
 
     /** ths method applies unit propagation during resolution, if possible! */
-    inline Riss::lbool resolveSet(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, std::vector<Riss::CRef>& positive, std::vector<Riss::CRef>& negative
+    inline Riss::lbool resolveSet(CoprocessorData& data, std::vector<Riss::CRef>& positive, std::vector<Riss::CRef>& negative
                                   , const int v, const int p_limit, const int n_limit, int64_t& bveChecks
                                   , const bool keepLearntResolvents = false, const bool force = false, const bool doStatistics = true);
     inline Riss::lbool anticipateElimination(CoprocessorData& data, std::vector<Riss::CRef>& positive, std::vector<Riss::CRef>& negative
@@ -144,7 +157,9 @@ class BoundedVariableElimination : public Technique<BoundedVariableElimination>
      , int64_t& parBVEchecks
      , const bool force = false, const bool doStatistics = true) ;
 
-    inline void removeBlockedClauses(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, const std::vector< Riss::CRef>& list, const int32_t stats[], const Riss::Lit& l, const int limit, const bool doStatistics = true);
+    /** This function removes Clauses that have no resolvents i.e. all resolvents are tautologies */
+    inline void removeBlockedClauses(CoprocessorData& data, const std::vector< Riss::CRef>& list,
+                                     const int32_t stats[], const Riss::Lit& l, const int limit, const bool doStatistics = true);
 
     /** run parallel bve with all available threads */
     void parallelBVE(CoprocessorData& data);
