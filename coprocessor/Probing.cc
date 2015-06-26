@@ -238,8 +238,9 @@ CRef Probing::prPropagate(bool doDouble)
             // more fine grained probe limit
             probeChecks++;
             Lit      false_lit = ~p;
-            if (c[0] == false_lit)
-            { c[0] = c[1], c[1] = false_lit; }
+            if (c[0] == false_lit) {
+                c[0] = c[1], c[1] = false_lit;
+            }
             assert(c[1] == false_lit);
             i++;
 
@@ -284,8 +285,9 @@ CRef Probing::prPropagate(bool doDouble)
                 confl = cr;
                 solver.qhead = solver.trail.size();
                 // Copy the remaining watches:
-                while (i < end)
-                { *j++ = *i++; }
+                while (i < end) {
+                    *j++ = *i++;
+                }
             } else { // the current clause is a unit clause, hence, LHBR might also be possible!
                 solver.uncheckedEnqueue(first, cr);
 
@@ -346,8 +348,9 @@ bool Probing::prAnalyze(CRef confl)
     if (config.pr_uip == 0 && solver.decisionLevel() == 0) { return false; }
 
     DOUT(if (config.pr_debug_out > 2) {
-    for (Var i = 0 ; i < data.nVars(); ++ i)
-        { assert(solver.varFlags[ i ].seen == 0 && "value has to be true!"); }
+    for (Var i = 0 ; i < data.nVars(); ++ i) {
+            assert(solver.varFlags[ i ].seen == 0 && "value has to be true!");
+        }
     });
 
     // genereate learnt clause - extract all units!
@@ -364,8 +367,9 @@ bool Probing::prAnalyze(CRef confl)
     int index   = solver.trail.size() - 1;
 
     DOUT(if (config.pr_debug_out > 2) {
-    for (int i = 0 ; i < ca[confl].size(); ++ i)
-        { assert(solver.varFlags[ var(ca[confl][i]) ].seen == 0 && "value cannot be true!"); }
+    for (int i = 0 ; i < ca[confl].size(); ++ i) {
+            assert(solver.varFlags[ var(ca[confl][i]) ].seen == 0 && "value cannot be true!");
+        }
     });
 
     do {
@@ -399,10 +403,11 @@ bool Probing::prAnalyze(CRef confl)
                     solver.varBumpActivity(var(q));
                     DOUT(if (config.pr_debug_out > 2) cerr << "c set seen INT for " << var(q) + 1 << endl;);
                     solver.varFlags[var(q)].seen = 1; // for every variable, which is not on level 0, set seen!
-                    if (solver.level(var(q)) >= solver.decisionLevel())
-                    { pathC++; }
-                    else
-                    { data.lits.push_back(q); }
+                    if (solver.level(var(q)) >= solver.decisionLevel()) {
+                        pathC++;
+                    } else {
+                        data.lits.push_back(q);
+                    }
                 }
             }
 
@@ -435,8 +440,9 @@ bool Probing::prAnalyze(CRef confl)
                     }
 
                     DOUT(if (config.pr_debug_out > 2) {
-                    for (Var i = 0 ; i < data.nVars(); ++ i)
-                        { assert(solver.varFlags[ i ].seen == 0 && "value has to be true!"); }
+                    for (Var i = 0 ; i < data.nVars(); ++ i) {
+                            assert(solver.varFlags[ i ].seen == 0 && "value has to be true!");
+                        }
                     });
 
                     return learntUnits.size() == 0 ? false : true;
@@ -466,8 +472,9 @@ bool Probing::prAnalyze(CRef confl)
     });
 
     DOUT(if (config.pr_debug_out > 2) {
-    for (Var i = 0 ; i < data.nVars(); ++ i)
-        { assert(solver.varFlags[ i ].seen == 0 && "value has to be true!"); }
+    for (Var i = 0 ; i < data.nVars(); ++ i) {
+            assert(solver.varFlags[ i ].seen == 0 && "value has to be true!");
+        }
     });
 
     // NOTE no need to add the unit again, has been done in the loop already!
@@ -509,8 +516,9 @@ bool Probing::prDoubleLook(Lit l1decision)
 
         DOUT(if (config.pr_debug_out > 1) {
         cerr << "c current trail: ";
-        for (int k = 0 ; k < solver.trail.size(); ++ k)
-            { cerr << " " << solver.trail[k]; }
+        for (int k = 0 ; k < solver.trail.size(); ++ k) {
+                cerr << " " << solver.trail[k];
+            }
             cerr << endl;
         });
 
@@ -594,8 +602,9 @@ bool Probing::prDoubleLook(Lit l1decision)
         DOUT(if (config.pr_debug_out > 1) cerr << "c conflict after level 2 propagate " << negLit << " present? " << (thisConflict != CRef_Undef) << " trail elements: " << solver.trail.size() << endl;);
         DOUT(if (config.pr_debug_out > 1) {
         cerr << "c current trail: ";
-        for (int k = 0 ; k < solver.trail.size(); ++ k)
-            { cerr << " " << solver.trail[k]; }
+        for (int k = 0 ; k < solver.trail.size(); ++ k) {
+                cerr << " " << solver.trail[k];
+            }
             cerr << endl;
         });
         if (thisConflict != CRef_Undef) {
@@ -694,8 +703,9 @@ bool Probing::prDoubleLook(Lit l1decision)
 
         DOUT(if (config.pr_debug_out > 1) {
         cerr << "c current trail: ";
-        for (int k = 0 ; k < solver.trail.size(); ++ k)
-            { cerr << " " << solver.trail[k]; }
+        for (int k = 0 ; k < solver.trail.size(); ++ k) {
+                cerr << " " << solver.trail[k];
+            }
             cerr << endl;
         });
 
@@ -741,8 +751,9 @@ void Probing::cleanSolver()
 
     // clear all watches!
     for (int v = 0; v < solver.nVars(); v++)
-        for (int s = 0; s < 2; s++)
-        { solver.watches[ mkLit(v, s) ].clear(); }
+        for (int s = 0; s < 2; s++) {
+            solver.watches[ mkLit(v, s) ].clear();
+        }
 
     solver.learnts_literals = 0;
     solver.clauses_literals = 0;
@@ -777,8 +788,9 @@ void Probing::reSetupSolver()
     if (solver.trail_lim.size() > 0)
         for (int i = 0 ; i < solver.trail_lim[0]; ++ i)
             if (solver.reason(var(solver.trail[i])) != CRef_Undef)
-                if (ca[ solver.reason(var(solver.trail[i])) ].can_be_deleted())
-                { solver.vardata[ var(solver.trail[i]) ].reason = CRef_Undef; }
+                if (ca[ solver.reason(var(solver.trail[i])) ].can_be_deleted()) {
+                    solver.vardata[ var(solver.trail[i]) ].reason = CRef_Undef;
+                }
 
     // give back into solver
     for (int p = 0 ; p < 2; ++ p) {
@@ -999,9 +1011,9 @@ void Probing::probing()
                     continue;
                 } // something has been found, so that second polarity has not to be propagated
                 else
-                { DOUT(if (config.pr_debug_out > 1) cerr << "c double lookahead did not fail" << endl; ); }
-        }
-        solver.varFlags.copyTo(prPositive);
+                { DOUT(if (config.pr_debug_out > 1) cerr << "c double lookahead did not fail" << endl;); }
+            }
+            solver.varFlags.copyTo(prPositive);
 
             DOUT(if (config.pr_debug_out > 0) {
             cerr << "c positive trail: " ;
@@ -1041,10 +1053,10 @@ void Probing::probing()
                     continue;
                 } // something has been found, so that second polarity has not to be propagated
                 else
-                { DOUT(if (config.pr_debug_out > 1) cerr << "c double lookahead did not fail" << endl; ); }
-        }
-        // could copy to prNegatie here, but we do not do this, but refer to the vector inside the solver instead
-        if (!data.ok()) { break; }
+                { DOUT(if (config.pr_debug_out > 1) cerr << "c double lookahead did not fail" << endl;); }
+            }
+            // could copy to prNegatie here, but we do not do this, but refer to the vector inside the solver instead
+            if (!data.ok()) { break; }
 
             assert(solver.decisionLevel() == 1 && "");
 
@@ -1100,12 +1112,14 @@ void Probing::probing()
             }
 
             // propagate implied(necessary) literals inside solver
-            if (solver.propagate() != CRef_Undef)
-            { data.setFailed(); }
+            if (solver.propagate() != CRef_Undef) {
+                data.setFailed();
+            }
 
             // tell coprocessor about equivalent literals
-            if (data.lits.size() > 1)
-            { data.addEquivalences(data.lits); }
+            if (data.lits.size() > 1) {
+                data.addEquivalences(data.lits);
+            }
 
         }
         globalModify = globalModify || modifiedFormula;
@@ -1130,8 +1144,9 @@ void Probing::probing()
         }
     } else {
         for (int i = 0 ; i < l2conflicts.size(); ++ i)
-            if (ca[l2conflicts[i]].size() > 1)
-            { data.getClauses().push(l2conflicts[i]); }
+            if (ca[l2conflicts[i]].size() > 1) {
+                data.getClauses().push(l2conflicts[i]);
+            }
     }
     l2conflicts.clear();
 
@@ -1151,8 +1166,9 @@ void Probing::probing()
         }
     } else {
         for (int i = 0 ; i < l2implieds.size(); ++ i)
-            if (ca[l2implieds[i]].size() > 1)
-            { data.getClauses().push(l2implieds[i]); }
+            if (ca[l2implieds[i]].size() > 1) {
+                data.getClauses().push(l2implieds[i]);
+            }
     }
     l2implieds.clear();
 
@@ -1186,7 +1202,7 @@ void Probing::clauseVivification()
                 const CRef cr = clList[i];
                 const Clause& c = ca[cr];
 
-                if (c.can_be_deleted())  { cerr << "[" << i << "](ign)"; }
+                if (c.can_be_deleted()) { cerr << "[" << i << "](ign)"; }
                 else { cerr << "c [" << i << "]"; }
                 cerr << "(" << cr << ") : " << c << endl;
                 if (c.can_be_deleted()) { continue; }
@@ -1282,12 +1298,14 @@ void Probing::clauseVivification()
 
             DOUT(if (config.pr_debug_out > 1) {
             cerr << "c literals to work with (curr=" << j << "): ";
-            for (int k = 0 ; k < data.lits.size(); ++ k)
-                { cerr << " " << data.lits[k] << " @" << toInt(solver.value(data.lits[k])); }
+            for (int k = 0 ; k < data.lits.size(); ++ k) {
+                    cerr << " " << data.lits[k] << " @" << toInt(solver.value(data.lits[k]));
+                }
                 cerr << endl;
                 cerr << "c current trail: ";
-                for (int k = 0 ; k < solver.trail.size(); ++ k)
-                { cerr << " " << solver.trail[k]; }
+                for (int k = 0 ; k < solver.trail.size(); ++ k) {
+                    cerr << " " << solver.trail[k];
+                }
                 cerr << endl;
             });
 
@@ -1320,8 +1338,9 @@ void Probing::clauseVivification()
 
             DOUT(if (config.pr_debug_out > 1) {
             cerr << "c current trail (after enqueue): ";
-            for (int k = 0 ; k < solver.trail.size(); ++ k)
-                { cerr << " " << solver.trail[k]; }
+            for (int k = 0 ; k < solver.trail.size(); ++ k) {
+                    cerr << " " << solver.trail[k];
+                }
                 cerr << endl;
             });
 
@@ -1334,8 +1353,9 @@ void Probing::clauseVivification()
                 DOUT(if (config.pr_debug_out > 1) {
                 cerr << "c found conflict [" << confl << "]" << ca[confl] << endl;
                     cerr << "c current trail (after propagate): ";
-                    for (int k = 0 ; k < solver.trail.size(); ++ k)
-                    { cerr << " " << solver.trail[k]; }
+                    for (int k = 0 ; k < solver.trail.size(); ++ k) {
+                        cerr << " " << solver.trail[k];
+                    }
                     cerr << endl;
                 });
                 // clauselits[0] AND ... AND data.lits[j] -> false => new sub clause!
@@ -1361,8 +1381,9 @@ void Probing::clauseVivification()
 
             DOUT(if (config.pr_debug_out > 1) {
             cerr << "c replace clause " << sameClause << " with ";
-            for (int j = 0 ; j < data.lits.size(); ++ j)
-                { cerr << " " << ~data.lits[j]; }
+            for (int j = 0 ; j < data.lits.size(); ++ j) {
+                    cerr << " " << ~data.lits[j];
+                }
                 cerr << endl;
             });
             data.addCommentToProof("shrinked by vivification"); // delete clause that has been shrinked by vivification
@@ -1374,8 +1395,9 @@ void Probing::clauseVivification()
             data.addToProof(sameClause, true);   // delete clause that has been shrinked by vivification
 
             data.ma.nextStep();
-            for (int j = 0 ; j < data.lits.size(); ++ j)
-            { data.ma.setCurrentStep(toInt(~data.lits[j])); }
+            for (int j = 0 ; j < data.lits.size(); ++ j) {
+                data.ma.setCurrentStep(toInt(~data.lits[j]));
+            }
 
             int keptLits = 0;
             for (int j = 0 ; j < sameClause.size(); ++ j) {

@@ -53,8 +53,9 @@ double Configurations::getTimeInfo(istream& input, double penalization)
     } else {
         double time;
         std::istringstream i(word); // have another stream, to not parse twice from the stream input
-        if (!(i >> time))     // parse time into double
-        { return -1 ; }     // if fails, then return -1
+        if (!(i >> time)) {   // parse time into double
+            return -1 ;    // if fails, then return -1
+        }
         return time + penalization; // otherwise return the time
     }
 }
@@ -117,10 +118,11 @@ string Configurations::configInfo(istream& input, double penalization)
 void Configurations::removeIndex(int index)
 {
     removeCount++;
-    if (removeCount == 1)
-    { attrToRemove << index; }
-    else
-    { attrToRemove << "," << index; }
+    if (removeCount == 1) {
+        attrToRemove << index;
+    } else {
+        attrToRemove << "," << index;
+    }
 }
 
 void Configurations::removeIndexes(const vector<int>& indexes)

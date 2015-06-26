@@ -99,8 +99,9 @@ int main(int argc, char** argv)
             getrlimit(RLIMIT_CPU, &rl);
             if (rl.rlim_max == RLIM_INFINITY || (rlim_t)cpu_lim < rl.rlim_max) {
                 rl.rlim_cur = cpu_lim;
-                if (setrlimit(RLIMIT_CPU, &rl) == -1)
-                { printf("c WARNING! Could not set resource limit: CPU-time.\n"); }
+                if (setrlimit(RLIMIT_CPU, &rl) == -1) {
+                    printf("c WARNING! Could not set resource limit: CPU-time.\n");
+                }
             }
         }
 
@@ -111,8 +112,9 @@ int main(int argc, char** argv)
             getrlimit(RLIMIT_AS, &rl);
             if (rl.rlim_max == RLIM_INFINITY || new_mem_lim < rl.rlim_max) {
                 rl.rlim_cur = new_mem_lim;
-                if (setrlimit(RLIMIT_AS, &rl) == -1)
-                { printf("c WARNING! Could not set resource limit: Virtual memory.\n"); }
+                if (setrlimit(RLIMIT_AS, &rl) == -1) {
+                    printf("c WARNING! Could not set resource limit: Virtual memory.\n");
+                }
             }
         }
 

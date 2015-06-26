@@ -63,7 +63,7 @@ class vec
 
     // Size operations:
     int      size(void) const     { return sz; }
-    void     shrink(int nelems)     { assert(nelems <= sz); for (int i = 0; i < nelems; i++) { sz--, data[sz].~T(); } }
+    void     shrink(int nelems)     { assert(nelems <= sz); for (int i = 0; i < nelems; i++) { sz--, data[sz].~T(); }  }
     void     shrink_(int nelems)     { assert(nelems <= sz); sz -= nelems; }
     int      capacity(void) const     { return cap; }
     void     capacity(int min_cap);
@@ -72,8 +72,8 @@ class vec
     void     clear(bool dealloc = false);
 
     // Stack interface:
-    void     push(void)              { if (sz == cap) { capacity(sz + 1); } new(&data[sz]) T(); sz++; }
-    void     push(const T& elem)     { if (sz == cap) { capacity(sz + 1); } data[sz++] = elem; }
+    void     push(void)              { if (sz == cap) { capacity(sz + 1); }  new(&data[sz]) T(); sz++; }
+    void     push(const T& elem)     { if (sz == cap) { capacity(sz + 1); }  data[sz++] = elem; }
     void     push_(const T& elem)     { assert(sz < cap); data[sz++] = elem; }
     void     pop(void)              { assert(sz > 0); sz--, data[sz].~T(); }
     // NOTE: it seems possible that overflow can happen in the 'sz+1' expression of 'push()', but
@@ -89,7 +89,7 @@ class vec
     T&       operator [](int index)       { assert(0 <= index && index < sz); return data[index]; }
 
     // Duplicatation (preferred instead):
-    void copyTo(vec<T>& copy) const { copy.clear(); copy.growTo(sz); for (int i = 0; i < sz; i++) { copy[i] = data[i]; } }
+    void copyTo(vec<T>& copy) const { copy.clear(); copy.growTo(sz); for (int i = 0; i < sz; i++) { copy[i] = data[i]; }  }
     void moveTo(vec<T>& dest) { dest.clear(true); dest.data = data; dest.sz = sz; dest.cap = cap; data = NULL; sz = 0; cap = 0; }
 
     /** reduce used space to exactly fit the space that is needed */

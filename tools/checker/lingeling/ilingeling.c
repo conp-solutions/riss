@@ -137,7 +137,7 @@ static void msg(Worker * w, int level, const char * fmt, ...)
     va_list ap;
     if (verbose < level) { return; }
     msglock(0);
-    if (w) { printf("c %d ", WID(w)); } else { printf("c - "); }
+    if (w) { printf("c %d ", WID(w)); }  else { printf("c - "); }
     va_start(ap, fmt);
     vprintf(fmt, ap);
     va_end(ap);
@@ -192,11 +192,13 @@ static int term(void * voidptr)
     Worker * w = voidptr;
     int res;
     msg(w, 3, "checking early termination");
-    if (pthread_mutex_lock(&donemutex))
-    { warn("failed to lock 'done' mutex in termination check"); }
+    if (pthread_mutex_lock(&donemutex)) {
+        warn("failed to lock 'done' mutex in termination check");
+    }
     res = done;
-    if (pthread_mutex_unlock(&donemutex))
-    { warn("failed to unlock 'done' mutex in termination check"); }
+    if (pthread_mutex_unlock(&donemutex)) {
+        warn("failed to unlock 'done' mutex in termination check");
+    }
     msg(w, 3, "early termination check %s", res ? "succeeded" : "failed");
     return res;
 }
@@ -263,11 +265,13 @@ static void initlgl(LGL * lgl, Worker * w, int opts)
 static int justreturn(Worker * w)
 {
     int res;
-    if (pthread_mutex_lock(&donemutex))
-    { warn("worker %d failed to lock 'done' mutex", WID(w)); }
+    if (pthread_mutex_lock(&donemutex)) {
+        warn("worker %d failed to lock 'done' mutex", WID(w));
+    }
     res = done;
-    if (pthread_mutex_unlock(&donemutex))
-    { warn("worker %d failed to unlock 'done' mutex", WID(w)); }
+    if (pthread_mutex_unlock(&donemutex)) {
+        warn("worker %d failed to unlock 'done' mutex", WID(w));
+    }
     return res;
 }
 
@@ -288,27 +292,31 @@ static int sat(Worker * w)
         if (dofork >= 2) { lglsetopt(forked, "clim", BRUTE_FORK_LIMIT); }
         sprintf(name, "c F%d ", w->forked.count++);
         lglsetprefix(forked, name);
-        if (pthread_mutex_lock(&w->forked.lock))
-        { warn("worker %d failed to lock 'forked' mutex", WID(w)); }
+        if (pthread_mutex_lock(&w->forked.lock)) {
+            warn("worker %d failed to lock 'forked' mutex", WID(w));
+        }
         assert(!w->forked.lgl);
         w->forked.lgl = forked;
-        if (pthread_mutex_unlock(&w->forked.lock))
-        { warn("worker %d failed to unlock 'forked' mutex", WID(w)); }
+        if (pthread_mutex_unlock(&w->forked.lock)) {
+            warn("worker %d failed to unlock 'forked' mutex", WID(w));
+        }
         #ifndef NDEBUG
         oldres =
         #else
         (void)
         #endif
             lglsat(forked);
-        if (pthread_mutex_lock(&w->forked.lock))
-        { warn("worker %d failed to lock 'forked' mutex", WID(w)); }
+        if (pthread_mutex_lock(&w->forked.lock)) {
+            warn("worker %d failed to lock 'forked' mutex", WID(w));
+        }
         assert(forked == w->forked.lgl);
         w->forked.lgl = 0;
         w->forked.decs += lglgetdecs(forked);
         w->forked.confs += lglgetconfs(forked);
         w->forked.props += lglgetprops(forked);
-        if (pthread_mutex_unlock(&w->forked.lock))
-        { warn("worker %d failed to unlock 'forked' mutex", WID(w)); }
+        if (pthread_mutex_unlock(&w->forked.lock)) {
+            warn("worker %d failed to unlock 'forked' mutex", WID(w));
+        }
         if (statsfile) {
             lglsetout(forked, statsfile);
             lglstats(forked);
@@ -324,12 +332,14 @@ static int sat(Worker * w)
             initlgl(forked, w, 0);
             sprintf(name, "c B%d ", w->forked.bcount++);
             lglsetprefix(forked, name);
-            if (pthread_mutex_lock(&w->forked.lock))
-            { warn("worker %d failed to lock '(brute) forked' mutex", WID(w)); }
+            if (pthread_mutex_lock(&w->forked.lock)) {
+                warn("worker %d failed to lock '(brute) forked' mutex", WID(w));
+            }
             assert(!w->forked.lgl);
             w->forked.lgl = forked;
-            if (pthread_mutex_unlock(&w->forked.lock))
-            { warn("worker %d failed to unlock '(brute) forked' mutex", WID(w)); }
+            if (pthread_mutex_unlock(&w->forked.lock)) {
+                warn("worker %d failed to unlock '(brute) forked' mutex", WID(w));
+            }
             #ifndef NDEBUG
             oldres =
             #else
@@ -337,15 +347,17 @@ static int sat(Worker * w)
             #endif
                 lglsat(forked);
             assert(res || justreturn(w));
-            if (pthread_mutex_lock(&w->forked.lock))
-            { warn("worker %d failed to lock '(brute) forked' mutex", WID(w)); }
+            if (pthread_mutex_lock(&w->forked.lock)) {
+                warn("worker %d failed to lock '(brute) forked' mutex", WID(w));
+            }
             assert(forked == w->forked.lgl);
             w->forked.lgl = 0;
             w->forked.decs += lglgetdecs(forked);
             w->forked.confs += lglgetconfs(forked);
             w->forked.props += lglgetprops(forked);
-            if (pthread_mutex_unlock(&w->forked.lock))
-            { warn("worker %d failed to unlock '(brute) forked' mutex", WID(w)); }
+            if (pthread_mutex_unlock(&w->forked.lock)) {
+                warn("worker %d failed to unlock '(brute) forked' mutex", WID(w));
+            }
             if (statsfile) {
                 lglsetout(forked, statsfile);
                 lglstats(forked);
@@ -366,12 +378,14 @@ static void * work(void * voidptr)
     Worker * w = voidptr;
     msg(w, 1, "running");
     for (;;) {
-        if (pthread_mutex_lock(&queuemutex))
-        { die("worker %d failed to lock 'queue' mutex", WID(w)); }
+        if (pthread_mutex_lock(&queuemutex)) {
+            die("worker %d failed to lock 'queue' mutex", WID(w));
+        }
         assert(queue <= nassumptions);
         if ((last = queue) < nassumptions) { queue++; }
-        if (pthread_mutex_unlock(&queuemutex))
-        { die("worker %d failed to unlock 'queue' mutex", WID(w)); }
+        if (pthread_mutex_unlock(&queuemutex)) {
+            die("worker %d failed to unlock 'queue' mutex", WID(w));
+        }
         if (last == nassumptions) {
         DONE:
             if (!bar) { msg(w, 1, "done"); }
@@ -386,8 +400,9 @@ static void * work(void * voidptr)
                 lgladd(w->lgl, 0);
             }
             for (p = a; (lit = *p); p++)
-                if (used [idx = abs(lit)] == i)
-                { lglmelt(w->lgl, idx), count++; }
+                if (used [idx = abs(lit)] == i) {
+                    lglmelt(w->lgl, idx), count++;
+                }
         }
         msg(w, 2, "melted %d variables", count);
         a = assumptions[w->last = last];
@@ -410,11 +425,13 @@ static void * work(void * voidptr)
         }
         if (w->res == 10) {
             if (!bar) { msg(w, 1, "job %d SATISFIABLE", last); }
-            if (pthread_mutex_lock(&donemutex))
-            { warn("worker %d failed to lock 'done' mutex", WID(w)); }
+            if (pthread_mutex_lock(&donemutex)) {
+                warn("worker %d failed to lock 'done' mutex", WID(w));
+            }
             done = 1;
-            if (pthread_mutex_unlock(&donemutex))
-            { warn("worker %d failed to unlock 'done' mutex", WID(w)); }
+            if (pthread_mutex_unlock(&donemutex)) {
+                warn("worker %d failed to unlock 'done' mutex", WID(w));
+            }
             goto DONE;
         } else if (w->res == 20) {
             red = 0;
@@ -462,8 +479,9 @@ static void reset(void)
     DEL(times, nassumptions);
     DEL(lits, szlits);
     DEL(used, szvars);
-    if (allocated)
-    { warn("internal memory leak of %lld bytes", (long long) allocated); }
+    if (allocated) {
+        warn("internal memory leak of %lld bytes", (long long) allocated);
+    }
 }
 
 static void perr(const char * fmt, ...)
@@ -540,7 +558,7 @@ CLAUSES:
         nvars = lit;
     }
     lit *= sign;
-    if (lit) { nlits++; } else { nlits = 0, nclauses++; }
+    if (lit) { nlits++; }  else { nlits = 0, nclauses++; }
     add(lit);
     goto CLAUSES;
 ASSUMPTIONS:
@@ -560,14 +578,16 @@ LITS:
     if (!isdigit(ch)) { perr("expected literal"); }
     lit = ch - '0';
     while (isdigit(ch = next())) { lit = 10 * lit + ch - '0'; }
-    if (lit > nvars)
-    { perr("assumption %d exceeds maximum variables %d", lit, nvars); }
+    if (lit > nvars) {
+        perr("assumption %d exceeds maximum variables %d", lit, nvars);
+    }
     assert(0 <= lit && lit < szvars);
     if (used[lit] < 0) { nused++; }
     used[lit] = nassumptions;
     lit *= sign;
-    if (ch != ' ' && ch != '\t' && ch != '\r' && ch != '\n')
-    { perr("expected white space after '%l'", lit); }
+    if (ch != ' ' && ch != '\t' && ch != '\r' && ch != '\n') {
+        perr("expected white space after '%l'", lit);
+    }
     if (lit) { PUSH(lits, lit); goto LITS; }
     NEW(assumption, nlits + 1);
     for (i = 0; i < nlits; i++) { assumption[i] = lits[i]; }
@@ -600,16 +620,18 @@ static void freeze(void)
     int idx, i;
     for (idx = 1; idx < nvars; idx++)
         if (used[idx] >= 0)
-            for (i = 0; i < nworkers; i++)
-            { lglfreeze(workers[i].lgl, idx); }
+            for (i = 0; i < nworkers; i++) {
+                lglfreeze(workers[i].lgl, idx);
+            }
 }
 
 static void start(void)
 {
     Worker * w;
     for (w = workers; w < workers + nworkers; w++) {
-        if (pthread_create(&w->thread, 0, work, w))
-        { die("failed to create worker thread %d", WID(w)); }
+        if (pthread_create(&w->thread, 0, work, w)) {
+            die("failed to create worker thread %d", WID(w));
+        }
     }
 }
 
@@ -618,8 +640,9 @@ static void stop(void)
     Worker * w;
     double avg;
     for (w = workers; w < workers + nworkers; w++)
-        if (pthread_join(w->thread, 0))
-        { die("failed to join worker %d", WID(w)); }
+        if (pthread_join(w->thread, 0)) {
+            die("failed to join worker %d", WID(w));
+        }
     if (bar) {
         avg = finished ? sumtimes / finished : 0.0;
         progress((1000 * finished) / nassumptions, finished, nassumptions, avg, 1);
@@ -669,8 +692,9 @@ static void stats(void)
         decs += lglgetdecs(workers[i].lgl);
         confs += lglgetconfs(workers[i].lgl);
         props += lglgetprops(workers[i].lgl);
-        if (pthread_mutex_lock(&workers[i].forked.lock))
-        { warn("worker failed to lock 'forked' mutex"); }
+        if (pthread_mutex_lock(&workers[i].forked.lock)) {
+            warn("worker failed to lock 'forked' mutex");
+        }
         if (workers[i].forked.lgl) {
             fprintf(file, "c ---------[forked worker %d dstats]----------\n", i);
             fprintf(file, "c\n");
@@ -685,8 +709,9 @@ static void stats(void)
         decs += workers[i].forked.decs;
         confs += workers[i].forked.confs;
         props += workers[i].forked.props;
-        if (pthread_mutex_unlock(&workers[i].forked.lock))
-        { warn("worker failed to lock 'forked' mutex"); }
+        if (pthread_mutex_unlock(&workers[i].forked.lock)) {
+            warn("worker failed to lock 'forked' mutex");
+        }
     }
     fprintf(file, "c\n");
     fprintf(file, "c ---------[global-stats]-------------------------\n");
@@ -736,8 +761,9 @@ static void hist(void)
 {
     FILE * file = histfile ? histfile : stdout;
     int i;
-    for (i = 0; i < nassumptions; i++)
-    { fprintf(file, "%.3f\n", times[i]); }
+    for (i = 0; i < nassumptions; i++) {
+        fprintf(file, "%.3f\n", times[i]);
+    }
     fflush(file);
 }
 
@@ -774,7 +800,7 @@ static void catchsig(int sig)
         if (statsfile || histfile) { caughtsigmsg(sig); }
     }
     resetsighandlers();
-    if (!getenv("LGLNABORT")) { raise(sig); } else { exit(1); }
+    if (!getenv("LGLNABORT")) { raise(sig); }  else { exit(1); }
 }
 
 static void setsighandlers(void)
@@ -835,19 +861,23 @@ int main(int argc, char ** argv)
         else if (isnum(argv[i])) {
             if (nworkers) die("number of workers specified twice: '%d' and '%s'",
                                   nworkers, argv[i]);
-            if ((nworkers = atoi(argv[i])) <= 0)
-            { die("invalid number of workers argument: '%s'", argv[i]); }
-        } else if (inputname)
-        { die("two files given: '%s' and '%s'", inputname, argv[i]); }
-        else { inputname = argv[i]; }
+            if ((nworkers = atoi(argv[i])) <= 0) {
+                die("invalid number of workers argument: '%s'", argv[i]);
+            }
+        } else if (inputname) {
+            die("two files given: '%s' and '%s'", inputname, argv[i]);
+        } else { inputname = argv[i]; }
     }
-    if (bar && !isatty(1))
-    { die("progress bar requested but <stdout> not connected to terminal"); }
+    if (bar && !isatty(1)) {
+        die("progress bar requested but <stdout> not connected to terminal");
+    }
     if (verbose >= 2 && bar) { die("verbosity %d > 1 with '-b'", verbose); }
-    if (statsfilename && !(statsfile = fopen(statsfilename, "w")))
-    { die("can not write to stats file '%s'", statsfilename); }
-    if (histfilename && !(histfile = fopen(histfilename, "w")))
-    { die("can not write to job run time histogram file '%s'", histfilename); }
+    if (statsfilename && !(statsfile = fopen(statsfilename, "w"))) {
+        die("can not write to stats file '%s'", statsfilename);
+    }
+    if (histfilename && !(histfile = fopen(histfilename, "w"))) {
+        die("can not write to job run time histogram file '%s'", histfilename);
+    }
     if (verbose && !statsfile) { statsfile = stdout; }
     if (verbose)
         lglbnr("iLingeling Incremental Parallel Lingeling", "c ", stdout),
@@ -855,8 +885,9 @@ int main(int argc, char ** argv)
     if (!nworkers) { nworkers = 1; }
     msg(0, 1, "using %d workers", nworkers);
     if (inputname) {
-        if (!(inputfile = fopen(inputname, "r")))
-        { die("can not read '%s'", inputname); }
+        if (!(inputfile = fopen(inputname, "r"))) {
+            die("can not read '%s'", inputname);
+        }
         closeinputfile = 1;
     } else { inputname = "<stdin>", inputfile = stdin, closeinputfile = 0; }
     init();
@@ -871,11 +902,12 @@ int main(int argc, char ** argv)
     stop();
     winner = 0;
     for (w = workers; w < workers + nworkers; w++)
-        if (w->res) { winner = w;  if (w->res == 10) { break; } }
+        if (w->res) { winner = w;  if (w->res == 10) { break; }  }
     if (winner && (res = winner->res) == 10 && !nowitness) {
         NEW(vals, nvars);
-        for (i = 1; i < nvars; i++)
-        { vals[i] = lglderef(winner->lgl, i); }
+        for (i = 1; i < nvars; i++) {
+            vals[i] = lglderef(winner->lgl, i);
+        }
     }
     assert(winner || !nassumptions);
     resetsighandlers();

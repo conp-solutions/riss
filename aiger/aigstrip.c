@@ -47,8 +47,9 @@ main(int argc, char **argv)
         } else if (name) {
             fprintf(stderr, "*** [aigstrip] multiple files\n");
             return 1;
-        } else
-        { name = argv[i]; }
+        } else {
+            name = argv[i];
+        }
     }
 
     res = 0;
@@ -86,10 +87,11 @@ main(int argc, char **argv)
             fprintf(stderr, "*** [aigstrip] failed to write '%s'\n", name);
             res = 1;
 
-            if (rename(renamed, name))
-            { fprintf(stderr, "*** [aigstrip] backup in '%s'\n", renamed); }
-            else
-            { fprintf(stderr, "*** [aigstrip] original file restored\n"); }
+            if (rename(renamed, name)) {
+                fprintf(stderr, "*** [aigstrip] backup in '%s'\n", renamed);
+            } else {
+                fprintf(stderr, "*** [aigstrip] original file restored\n");
+            }
         }
 
         free(renamed);

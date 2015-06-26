@@ -37,8 +37,9 @@ int main()
     map<int, string>::iterator it;
 
     for (it = list.begin(); it != list.end(); ++it)
-        if ((*it).first > max)
-        { max = (*it).first; }
+        if ((*it).first > max) {
+            max = (*it).first;
+        }
 
     ofstream Hfile("SyscallNames.hh");
 
@@ -67,14 +68,16 @@ int main()
     for (int i = 0; i <= max; ++i) {
         string name;
         it = list.find(i);
-        if (it == list.end())
-        { name = "???"; }
-        else
-        { name = (*it).second; }
+        if (it == list.end()) {
+            name = "???";
+        } else {
+            name = (*it).second;
+        }
 
         CCfile << "\t\"" << name << "\"";
-        if (i != max)
-        { CCfile << ","; }
+        if (i != max) {
+            CCfile << ",";
+        }
 
         CCfile << "\n";
     }

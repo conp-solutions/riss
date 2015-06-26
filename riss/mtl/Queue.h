@@ -47,7 +47,7 @@ class Queue
     T&       operator [](int index)        { assert(index >= 0); assert(index < size()); return buf[(first + index) % buf.size()]; }
 
     T    peek() const { assert(first != end); return buf[first]; }
-    void pop() { assert(first != end); first++; if (first == buf.size()) { first = 0; } }
+    void pop() { assert(first != end); first++; if (first == buf.size()) { first = 0; }  }
     void insert(T elem)     // INVARIANT: buf[end] is always unused
     {
         buf[end++] = elem;

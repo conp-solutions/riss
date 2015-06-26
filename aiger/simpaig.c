@@ -348,11 +348,13 @@ dec(simpaigmgr * mgr, simpaig * aig)
 
     if (aig->ref < UINT_MAX) { aig->ref--; }
 
-    if (aig->ref)
-    { return; }
+    if (aig->ref) {
+        return;
+    }
 
-    if (ISFALSE(aig))
-    { return; }
+    if (ISFALSE(aig)) {
+        return;
+    }
 
     if (aig->c0) {
         dec(mgr, aig->c0);    /* TODO: derecursify */
@@ -360,8 +362,9 @@ dec(simpaigmgr * mgr, simpaig * aig)
     }
 
     p = simpaig_find(mgr, aig->var, aig->slice, aig->c0, aig->c1);
-    if (*p != aig)
-    { p = simpaig_find(mgr, aig->var, aig->slice, aig->c1, aig->c0); }
+    if (*p != aig) {
+        p = simpaig_find(mgr, aig->var, aig->slice, aig->c1, aig->c0);
+    }
 
     assert(*p == aig);
     *p = aig->next;
@@ -382,8 +385,9 @@ simpaig_var(simpaigmgr * mgr, void *var, int slice)
 {
     simpaig **p, *res;
     assert(var);
-    if (mgr->size_table == mgr->count_table)
-    { simpaig_enlarge(mgr); }
+    if (mgr->size_table == mgr->count_table) {
+        simpaig_enlarge(mgr);
+    }
 
     p = simpaig_find(mgr, var, slice, 0, 0);
     if (!(res = *p)) {
@@ -402,17 +406,21 @@ simpaig_and(simpaigmgr * mgr, simpaig * c0, simpaig * c1)
 {
     simpaig **p, *res;
 
-    if (ISFALSE(c0) || ISFALSE(c1) || c0 == NOT(c1))
-    { return simpaig_false(mgr); }
+    if (ISFALSE(c0) || ISFALSE(c1) || c0 == NOT(c1)) {
+        return simpaig_false(mgr);
+    }
 
-    if (ISTRUE(c0) || c0 == c1)
-    { return inc(c1); }
+    if (ISTRUE(c0) || c0 == c1) {
+        return inc(c1);
+    }
 
-    if (ISTRUE(c1))
-    { return inc(c0); }
+    if (ISTRUE(c1)) {
+        return inc(c0);
+    }
 
-    if (mgr->size_table == mgr->count_table)
-    { simpaig_enlarge(mgr); }
+    if (mgr->size_table == mgr->count_table) {
+        simpaig_enlarge(mgr);
+    }
 
     p = simpaig_find(mgr, 0, 0, c1, c0);
     if (!(res = *p)) {
@@ -537,20 +545,23 @@ simpaig_substitute_rec(simpaigmgr * mgr, simpaig * node)
     unsigned sign;
 
     sign = SIGN(node);
-    if (sign)
-    { node = NOT(node); }
+    if (sign) {
+        node = NOT(node);
+    }
 
     if (node->cache) {
         res = inc(node->cache);
     } else {
         if (ISVAR(node)) {
             if (node->rhs) {
-                if (ISCONST(node->rhs))
-                { res = simpaig_inc(mgr, node->rhs); }
-                else
-                { res = simpaig_substitute_rec(mgr, node->rhs); }
-            } else
-            { res = inc(node); }
+                if (ISCONST(node->rhs)) {
+                    res = simpaig_inc(mgr, node->rhs);
+                } else {
+                    res = simpaig_substitute_rec(mgr, node->rhs);
+                }
+            } else {
+                res = inc(node);
+            }
         } else {
             l = simpaig_substitute_rec(mgr, node->c0);    /* TODO derecursify */
             r = simpaig_substitute_rec(mgr, node->c1);    /* TODO derecursify */
@@ -562,8 +573,9 @@ simpaig_substitute_rec(simpaigmgr * mgr, simpaig * node)
         simpaig_cache(mgr, node, res);
     }
 
-    if (sign)
-    { res = NOT(res); }
+    if (sign) {
+        res = NOT(res);
+    }
 
     return res;
 }
@@ -578,8 +590,9 @@ simpaig_substitute(simpaigmgr * mgr, simpaig * node)
         assert(!mgr->count_cached);
         res = simpaig_substitute_rec(mgr, node);
         simpaig_reset_cache(mgr);
-    } else
-    { res = inc(node); }
+    } else {
+        res = inc(node);
+    }
 
     simpaig_reset_assignment(mgr);
 
@@ -593,8 +606,9 @@ simpaig_shift_rec(simpaigmgr * mgr, simpaig * node, int delta)
     unsigned sign;
 
     sign = SIGN(node);
-    if (sign)
-    { node = NOT(node); }
+    if (sign) {
+        node = NOT(node);
+    }
 
     if (node->cache) {
         res = inc(node->cache);
@@ -612,8 +626,9 @@ simpaig_shift_rec(simpaigmgr * mgr, simpaig * node, int delta)
         simpaig_cache(mgr, node, res);
     }
 
-    if (sign)
-    { res = NOT(res); }
+    if (sign) {
+        res = NOT(res);
+    }
 
     return res;
 }
@@ -624,8 +639,9 @@ simpaig_shift(simpaigmgr * mgr, simpaig * node, int delta)
     simpaig *res;
 
     node = IMPORT(node);
-    if (ISCONST(node))
-    { return inc(node); }
+    if (ISCONST(node)) {
+        return inc(node);
+    }
 
     assert(!mgr->count_cached);
     res = simpaig_shift_rec(mgr, node, delta);
@@ -650,8 +666,9 @@ static void
 simpaig_assign_indices_rec(simpaigmgr * mgr, simpaig * node)
 {
     node = STRIP(node);
-    if (node->idx)
-    { return; }
+    if (node->idx) {
+        return;
+    }
 
     if (!ISVAR(node)) {
         simpaig_assign_indices_rec(mgr, node->c0);
@@ -664,8 +681,9 @@ simpaig_assign_indices_rec(simpaigmgr * mgr, simpaig * node)
 void
 simpaig_assign_indices(simpaigmgr * mgr, simpaig * node)
 {
-    if (!ISCONST(node))
-    { simpaig_assign_indices_rec(mgr, node); }
+    if (!ISCONST(node)) {
+        simpaig_assign_indices_rec(mgr, node);
+    }
 }
 
 void

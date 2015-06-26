@@ -64,8 +64,9 @@ static void
 msg(const char *fmt, ...)
 {
     va_list ap;
-    if (!verbose)
-    { return; }
+    if (!verbose) {
+        return;
+    }
     fputs("[aigsplit] ", stderr);
     va_start(ap, fmt);
     vfprintf(stderr, fmt, ap);
@@ -91,8 +92,9 @@ chop(const char * src)
 {
     char * res = strdup(src), * last, * p;
     last = 0;
-    while ((p = strstr(last ? last + 4 : res, ".aig")))
-    { last = p; }
+    while ((p = strstr(last ? last + 4 : res, ".aig"))) {
+        last = p;
+    }
     if (last) { *last = 0; }
     return res;
 }
@@ -118,14 +120,16 @@ print(Type type, unsigned idx, unsigned count, unsigned max)
     name = malloc(strlen(prefix) + l + 5);
     sprintf(name, fmt, prefix, count);
 
-    if (!force && exists(name))
-    { die("output file '%s' already exists (use '-f')", name); }
+    if (!force && exists(name)) {
+        die("output file '%s' already exists (use '-f')", name);
+    }
 
     msg("writing %s", name);
 
     dst = aiger_init();
-    for (j = 0; j < src->num_inputs; j++)
-    { aiger_add_input(dst, src->inputs[j].lit, src->inputs[j].name); }
+    for (j = 0; j < src->num_inputs; j++) {
+        aiger_add_input(dst, src->inputs[j].lit, src->inputs[j].name);
+    }
 
     for (j = 0; j < src->num_latches; j++) {
         aiger_add_latch(dst, src->latches[j].lit,
@@ -179,8 +183,9 @@ print(Type type, unsigned idx, unsigned count, unsigned max)
 
     ok = aiger_open_and_write_to_file(dst, name);
 
-    if (!ok)
-    { die("writing to %s failed", name); }
+    if (!ok) {
+        die("writing to %s failed", name);
+    }
 
     free(name);
 
@@ -215,25 +220,28 @@ main(int argc, char ** argv)
             exit(0);
         }
 
-        if (!strcmp(argv[i], "-v"))
-        { verbose = 1; }
-        else if (!strcmp(argv[i], "-f"))
-        { force = 1; }
-        else if (argv[i][0] == '-')
-        { die("invalid command line option '%s'", argv[i]); }
-        else if (prefix)
-        { die("too many arguments"); }
-        else if (input)
-        { prefix = chop(argv[i]); }
-        else
-        { input = argv[i]; }
+        if (!strcmp(argv[i], "-v")) {
+            verbose = 1;
+        } else if (!strcmp(argv[i], "-f")) {
+            force = 1;
+        } else if (argv[i][0] == '-') {
+            die("invalid command line option '%s'", argv[i]);
+        } else if (prefix) {
+            die("too many arguments");
+        } else if (input) {
+            prefix = chop(argv[i]);
+        } else {
+            input = argv[i];
+        }
     }
 
-    if (!input)
-    { die("no input specified"); }
+    if (!input) {
+        die("no input specified");
+    }
 
-    if (!prefix)
-    { prefix = chop(input); }
+    if (!prefix) {
+        prefix = chop(input);
+    }
 
     msg("prefix %s", prefix);
 
@@ -241,8 +249,9 @@ main(int argc, char ** argv)
     src = aiger_init();
     err = aiger_open_and_read_from_file(src, input);
 
-    if (err)
-    { die("read error: %s", err); }
+    if (err) {
+        die("read error: %s", err);
+    }
 
     msg("read MILOA = %u %u %u %u %u",
         src->maxvar,
@@ -261,12 +270,15 @@ main(int argc, char ** argv)
     max += src->num_bad;
     max += src->num_justice;
     k = 0;
-    for (j = 0; j < src->num_outputs; j++)
-    { print(OUTPUT, j, k++, max); }
-    for (j = 0; j < src->num_bad; j++)
-    { print(BAD, j, k++, max); }
-    for (j = 0; j < src->num_justice; j++)
-    { print(JUSTICE, j, k++, max); }
+    for (j = 0; j < src->num_outputs; j++) {
+        print(OUTPUT, j, k++, max);
+    }
+    for (j = 0; j < src->num_bad; j++) {
+        print(BAD, j, k++, max);
+    }
+    for (j = 0; j < src->num_justice; j++) {
+        print(JUSTICE, j, k++, max);
+    }
 
     msg("wrote %u files", k);
 

@@ -60,8 +60,8 @@ void LiteralAddition::asymemtricLiteralAddition()
 
     // init
     for (Var v = 0 ; v < data.nVars(); ++ v) {   // one literals that appear at least twice, otherwise it doesnt work
-        if (data[  mkLit(v, false) ] > 1) if (!laHeap.inHeap(toInt(mkLit(v, false))))  { nextRoundLits.push_back(mkLit(v, false)); }
-        if (data[  mkLit(v, true)  ] > 1) if (!laHeap.inHeap(toInt(mkLit(v, true))))   { nextRoundLits.push_back(mkLit(v, true)); }
+        if (data[  mkLit(v, false) ] > 1) if (!laHeap.inHeap(toInt(mkLit(v, false)))) { nextRoundLits.push_back(mkLit(v, false)); }
+        if (data[  mkLit(v, true)  ] > 1) if (!laHeap.inHeap(toInt(mkLit(v, true)))) { nextRoundLits.push_back(mkLit(v, true)); }
     }
     data.ma.resize(2 * data.nVars());
     data.ma.nextStep();
@@ -217,8 +217,8 @@ void LiteralAddition::coverdLiteralAddition()
     // init
     for (Var v = 0 ; v < data.nVars(); ++ v) {
         if (data.doNotTouch(v)) { continue; }   // do not consider variables that have to stay fixed!
-        if (data[  mkLit(v, false) ] > 0) if (!laHeap.inHeap(toInt(mkLit(v, false))))  { nextRoundLits.push_back(mkLit(v, false)); }
-        if (data[  mkLit(v, true)  ] > 0) if (!laHeap.inHeap(toInt(mkLit(v, true))))   { nextRoundLits.push_back(mkLit(v, true)); }
+        if (data[  mkLit(v, false) ] > 0) if (!laHeap.inHeap(toInt(mkLit(v, false)))) { nextRoundLits.push_back(mkLit(v, false)); }
+        if (data[  mkLit(v, true)  ] > 0) if (!laHeap.inHeap(toInt(mkLit(v, true)))) { nextRoundLits.push_back(mkLit(v, true)); }
     }
     data.ma.resize(2 * data.nVars());
     data.ma.nextStep();

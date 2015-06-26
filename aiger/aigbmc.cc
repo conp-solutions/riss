@@ -389,8 +389,9 @@ static int encode(bool actuallyEnode = true)
     aiger_and * u_and;
     unsigned reset;
     int i, j;
-    if (nstates == szstates)
-    { states = realloc(states, ++szstates * sizeof * states); }
+    if (nstates == szstates) {
+        states = realloc(states, ++szstates * sizeof * states);
+    }
     nstates++; /// work on next state
     res = states + time;
     memset(res, 0, sizeof * res);
@@ -425,8 +426,9 @@ static int encode(bool actuallyEnode = true)
             if (!reset) { lit = -1; } // should be false lit -> use equivalence to false lit !
             else if (reset == 1) { lit = 1; } // should be true-lit -> use equivalence to !falseLit !
             else {
-                if (reset != symbol->lit)
-                { die("can only handle constant or uninitialized reset logic"); }
+                if (reset != symbol->lit) {
+                    die("can only handle constant or uninitialized reset logic");
+                }
                 lit = newvar();
             }
 
@@ -506,12 +508,14 @@ static int encode(bool actuallyEnode = true)
         if (!didNumConstraints) { cerr << "WARNING: CANNOT HANDLE NUM_CONSTRAINTS YET!" << endl; didNumConstraints = true; }
         res->constraints =
             malloc(model->num_constraints * sizeof * res->constraints);
-        for (i = 0; i < model->num_constraints; i++)
-        { res->constraints[i] = import(res, model->constraints[i].lit); }
+        for (i = 0; i < model->num_constraints; i++) {
+            res->constraints[i] = import(res, model->constraints[i].lit);
+        }
         res->sane = newvar();
         if (actuallyEnode) {
-            for (i = 0; i < model->num_constraints; i++)
-            { binary(-res->sane, res->constraints[i]); }
+            for (i = 0; i < model->num_constraints; i++) {
+                binary(-res->sane, res->constraints[i]);
+            }
             if (time) { binary(-res->sane, prev->sane); }  /// compare with previous round!
             binary(-res->assume, res->sane);
         }
@@ -821,8 +825,9 @@ int main(int argc, char ** argv)
                 getrlimit(RLIMIT_AS, &rl);
                 if (rl.rlim_max == RLIM_INFINITY || new_mem_lim < rl.rlim_max) {
                     rl.rlim_cur = new_mem_lim;
-                    if (setrlimit(RLIMIT_AS, &rl) == -1)
-                    { wrn("could not set resource limit: Virtual memory."); }
+                    if (setrlimit(RLIMIT_AS, &rl) == -1) {
+                        wrn("could not set resource limit: Virtual memory.");
+                    }
                 } else {
                     msg(0, "set memory limit to %d MB", memLim);
                 }
@@ -993,16 +998,17 @@ int main(int argc, char ** argv)
         wrn("%u fairness constraints but no justice properties",
             model->num_fairness);
     if (move) {
-        if (model->num_bad)
-        { wrn("will not move outputs if bad state properties exists"); }
-        else if (model->num_constraints)
-        { wrn("will not move outputs if environment constraints exists"); }
-        else if (!model->outputs)
-        { wrn("not outputs to move"); }
-        else {
+        if (model->num_bad) {
+            wrn("will not move outputs if bad state properties exists");
+        } else if (model->num_constraints) {
+            wrn("will not move outputs if environment constraints exists");
+        } else if (!model->outputs) {
+            wrn("not outputs to move");
+        } else {
             wrn("using %u outputs as bad state properties", model->num_outputs);
-            for (i = 0; i < model->num_outputs; i++)
-            { aiger_add_bad(model, model->outputs[i].lit, 0); }
+            for (i = 0; i < model->num_outputs; i++) {
+                aiger_add_bad(model, model->outputs[i].lit, 0);
+            }
         }
     }
     msg(1, "BCJF = %u %u %u %u",
@@ -1163,10 +1169,10 @@ int main(int argc, char ** argv)
         if (verbose > 1) {
             cerr << "c maxVar[" << k << "]:     " << nvars << endl;
             cerr << "c assume[" << k << "]:     " << shiftFormula.currentAssume << endl;
-            cerr << "c inputs[" << k << "]:     " << shiftFormula.inputs.size() << ": "; for (int i = 0 ; i < shiftFormula.inputs.size(); ++ i) { cerr << " " << shiftFormula.inputs[i]; } cerr << endl;
-            cerr << "c latches[" << k << "]:    " << shiftFormula.latch.size() << ": "; for (int i = 0 ; i < shiftFormula.latch.size(); ++ i) { cerr << " " << shiftFormula.latch[i]; } cerr << endl;
-            cerr << "c latchNext[" << k << "]:  " << shiftFormula.latchNext.size() << ": "; for (int i = 0 ; i < shiftFormula.latchNext.size(); ++ i) { cerr << " " << shiftFormula.latchNext[i]; } cerr << endl;
-            cerr << "c thisBad[" << k << "]:  " << shiftFormula.currentBads.size() << ": "; for (int i = 0 ; i < shiftFormula.currentBads.size(); ++ i) { cerr << " " << shiftFormula.currentBads[i]; } cerr << endl;
+            cerr << "c inputs[" << k << "]:     " << shiftFormula.inputs.size() << ": "; for (int i = 0 ; i < shiftFormula.inputs.size(); ++ i) { cerr << " " << shiftFormula.inputs[i]; }  cerr << endl;
+            cerr << "c latches[" << k << "]:    " << shiftFormula.latch.size() << ": "; for (int i = 0 ; i < shiftFormula.latch.size(); ++ i) { cerr << " " << shiftFormula.latch[i]; }  cerr << endl;
+            cerr << "c latchNext[" << k << "]:  " << shiftFormula.latchNext.size() << ": "; for (int i = 0 ; i < shiftFormula.latchNext.size(); ++ i) { cerr << " " << shiftFormula.latchNext[i]; }  cerr << endl;
+            cerr << "c thisBad[" << k << "]:  " << shiftFormula.currentBads.size() << ": "; for (int i = 0 ; i < shiftFormula.currentBads.size(); ++ i) { cerr << " " << shiftFormula.currentBads[i]; }  cerr << endl;
             cerr << "c formula[" << k << "]:    " << endl;
             for (int i = 0 ; i < shiftFormula.formula.size(); ++ i) {
                 cerr << " " << shiftFormula.formula[i];
@@ -1211,7 +1217,7 @@ int main(int argc, char ** argv)
                 break;
             } else if (satResult == 20) {
                 if (iterations == 1) { msg(0, "found no latch configuration for reaching the bad state - can unroll infinitely!"); }
-                else  { msg(0, "there exists exactly %d latch configurations that lead to the bad state", iterations - 1); }
+                else { msg(0, "there exists exactly %d latch configurations that lead to the bad state", iterations - 1); }
             } else {
                 msg(0, "could not analyze bad state properties completely within resource bounds. So far, found %d potential latch configurations.", iterations - 1);
             }
@@ -1224,8 +1230,9 @@ int main(int argc, char ** argv)
     int shiftDist = shiftFormula.afterPPmaxVar - 1;  // shift depends on the variables that are actually in the formula that is used for solving
 
     if (lazyEncode)
-        for (int i = 0 ; i < shiftFormula.todoEqualities.size(); i += 2)
-        { _eq(shiftFormula.todoEqualities[i], shiftFormula.todoEqualities[i + 1], false); }
+        for (int i = 0 ; i < shiftFormula.todoEqualities.size(); i += 2) {
+            _eq(shiftFormula.todoEqualities[i], shiftFormula.todoEqualities[i + 1], false);
+        }
 
     SharedData sharedData;
     if (wildGuesser) {
@@ -1245,10 +1252,10 @@ int main(int argc, char ** argv)
     if (verbose > 2) {
         cerr << "c maxVar[" << k << "]:     " << nvars << endl;
         cerr << "c assume[" << k << "]:     " << shiftFormula.currentAssume << endl;
-        cerr << "c inputs[" << k << "]:     " << shiftFormula.inputs.size() << ": "; for (int i = 0 ; i < shiftFormula.inputs.size(); ++ i) { cerr << " " << shiftFormula.inputs[i]; } cerr << endl;
-        cerr << "c latches[" << k << "]:    " << shiftFormula.latch.size() << ": "; for (int i = 0 ; i < shiftFormula.latch.size(); ++ i) { cerr << " " << shiftFormula.latch[i]; } cerr << endl;
-        cerr << "c latchNext[" << k << "]:  " << shiftFormula.latchNext.size() << ": "; for (int i = 0 ; i < shiftFormula.latchNext.size(); ++ i) { cerr << " " << shiftFormula.latchNext[i]; } cerr << endl;
-        cerr << "c thisBad[" << k << "]:  " << shiftFormula.currentBads.size() << ": "; for (int i = 0 ; i < shiftFormula.currentBads.size(); ++ i) { cerr << " " << shiftFormula.currentBads[i]; } cerr << endl;
+        cerr << "c inputs[" << k << "]:     " << shiftFormula.inputs.size() << ": "; for (int i = 0 ; i < shiftFormula.inputs.size(); ++ i) { cerr << " " << shiftFormula.inputs[i]; }  cerr << endl;
+        cerr << "c latches[" << k << "]:    " << shiftFormula.latch.size() << ": "; for (int i = 0 ; i < shiftFormula.latch.size(); ++ i) { cerr << " " << shiftFormula.latch[i]; }  cerr << endl;
+        cerr << "c latchNext[" << k << "]:  " << shiftFormula.latchNext.size() << ": "; for (int i = 0 ; i < shiftFormula.latchNext.size(); ++ i) { cerr << " " << shiftFormula.latchNext[i]; }  cerr << endl;
+        cerr << "c thisBad[" << k << "]:  " << shiftFormula.currentBads.size() << ": "; for (int i = 0 ; i < shiftFormula.currentBads.size(); ++ i) { cerr << " " << shiftFormula.currentBads[i]; }  cerr << endl;
         cerr << "c formula[" << k << "]:    " << endl;
         for (int i = 0 ; i < shiftFormula.formula.size(); ++ i) {
             cerr << " " << shiftFormula.formula[i];
@@ -1284,17 +1291,18 @@ int main(int argc, char ** argv)
             lit = encode();
 
             if (lazyEncode)
-                for (int i = 0 ; i < shiftFormula.todoEqualities.size(); i += 2)
-                { _eq(shiftFormula.todoEqualities[i], shiftFormula.todoEqualities[i + 1]); }
+                for (int i = 0 ; i < shiftFormula.todoEqualities.size(); i += 2) {
+                    _eq(shiftFormula.todoEqualities[i], shiftFormula.todoEqualities[i + 1]);
+                }
 
             assume(lit);
             if (verbose > 2) {
                 cerr << "c maxVar[" << k << "]:     " << nvars << endl;
                 cerr << "c assume[" << k << "]:     " << shiftFormula.currentAssume << endl;
-                cerr << "c inputs[" << k << "]:     " << shiftFormula.inputs.size() << ": "; for (int i = 0 ; i < shiftFormula.inputs.size(); ++ i) { cerr << " " << shiftFormula.inputs[i]; } cerr << endl;
-                cerr << "c latches[" << k << "]:    " << shiftFormula.latch.size() << ": "; for (int i = 0 ; i < shiftFormula.latch.size(); ++ i) { cerr << " " << shiftFormula.latch[i]; } cerr << endl;
-                cerr << "c latchNext[" << k << "]:  " << shiftFormula.latchNext.size() << ": "; for (int i = 0 ; i < shiftFormula.latchNext.size(); ++ i) { cerr << " " << shiftFormula.latchNext[i]; } cerr << endl;
-                cerr << "c thisBad[" << k << "]:  " << shiftFormula.currentBads.size() << ": "; for (int i = 0 ; i < shiftFormula.currentBads.size(); ++ i) { cerr << " " << shiftFormula.currentBads[i]; } cerr << endl;
+                cerr << "c inputs[" << k << "]:     " << shiftFormula.inputs.size() << ": "; for (int i = 0 ; i < shiftFormula.inputs.size(); ++ i) { cerr << " " << shiftFormula.inputs[i]; }  cerr << endl;
+                cerr << "c latches[" << k << "]:    " << shiftFormula.latch.size() << ": "; for (int i = 0 ; i < shiftFormula.latch.size(); ++ i) { cerr << " " << shiftFormula.latch[i]; }  cerr << endl;
+                cerr << "c latchNext[" << k << "]:  " << shiftFormula.latchNext.size() << ": "; for (int i = 0 ; i < shiftFormula.latchNext.size(); ++ i) { cerr << " " << shiftFormula.latchNext[i]; }  cerr << endl;
+                cerr << "c thisBad[" << k << "]:  " << shiftFormula.currentBads.size() << ": "; for (int i = 0 ; i < shiftFormula.currentBads.size(); ++ i) { cerr << " " << shiftFormula.currentBads[i]; }  cerr << endl;
                 cerr << "c formula[" << k << "]:    " << endl;
                 for (int i = 0 ; i < shiftFormula.formula.size(); ++ i) {
                     cerr << " " << shiftFormula.formula[i];
@@ -1333,10 +1341,10 @@ int main(int argc, char ** argv)
                 cerr << "c shiftDist:           " << shiftDist << endl;
                 cerr << "c maxVar[" << k << "]:     " << nvars << endl;
                 cerr << "c assume[" << k << "]:     " << shiftFormula.currentAssume + thisShift << endl;
-                cerr << "c inputs[" << k << "]:     " << shiftFormula.inputs.size() << ": ";           for (int i = 0 ; i < shiftFormula.inputs.size(); ++ i) { cerr << " " << varadd(shiftFormula.inputs[i], thisShift); } cerr << endl;
-                cerr << "c latches[" << k << "]:    " << shiftFormula.latch.size() << ": ";             for (int i = 0 ; i < shiftFormula.latch.size(); ++ i) { cerr << " " << varadd(shiftFormula.latch[i], thisShift); } cerr << endl;
-                cerr << "c latchNext[" << k << "]:  " << shiftFormula.latchNext.size() << ": "    ; for (int i = 0 ; i < shiftFormula.latchNext.size(); ++ i) { cerr << " " << varadd(shiftFormula.latchNext[i], thisShift); } cerr << endl;
-                cerr << "c thisBad[" << k << "]:  "   << shiftFormula.currentBads.size() << ": "; for (int i = 0 ; i < shiftFormula.currentBads.size(); ++ i) { cerr << " " << shiftFormula.currentBads[i]; } cerr << endl;
+                cerr << "c inputs[" << k << "]:     " << shiftFormula.inputs.size() << ": ";           for (int i = 0 ; i < shiftFormula.inputs.size(); ++ i) { cerr << " " << varadd(shiftFormula.inputs[i], thisShift); }  cerr << endl;
+                cerr << "c latches[" << k << "]:    " << shiftFormula.latch.size() << ": ";             for (int i = 0 ; i < shiftFormula.latch.size(); ++ i) { cerr << " " << varadd(shiftFormula.latch[i], thisShift); }  cerr << endl;
+                cerr << "c latchNext[" << k << "]:  " << shiftFormula.latchNext.size() << ": "    ; for (int i = 0 ; i < shiftFormula.latchNext.size(); ++ i) { cerr << " " << varadd(shiftFormula.latchNext[i], thisShift); }  cerr << endl;
+                cerr << "c thisBad[" << k << "]:  "   << shiftFormula.currentBads.size() << ": "; for (int i = 0 ; i < shiftFormula.currentBads.size(); ++ i) { cerr << " " << shiftFormula.currentBads[i]; }  cerr << endl;
             }
             // shift the formula!
             int thisClauses = 0;
@@ -1460,8 +1468,9 @@ finishedSolving:;
             } else {
                 for (i = 0; i < model->num_bad; i++) {
                     int thisBad = shiftFormula.currentBads[i] + thisShift;
-                    if (deref(thisBad) > 0)
-                    { printf("b%d", i), found++; }
+                    if (deref(thisBad) > 0) {
+                        printf("b%d", i), found++;
+                    }
                 }
                 assert(found && "there has to be found something!");
             }
@@ -1512,12 +1521,13 @@ finishedSolving:;
                     for (j = 0; j < shiftFormula.inputs.size(); j++) { // print the actual values!
                         int tlit = shiftFormula.inputs[j];
                         if (tlit > 0) { printV(frameModel[ tlit - 1 ] == l_False ? -1 : 1); }     // print input j of iteration i
-                        else  { printV(frameModel[ -tlit - 1 ] == l_True ? -1 : 1); }     // or complementary literal
+                        else { printV(frameModel[ -tlit - 1 ] == l_True ? -1 : 1); }     // or complementary literal
                     }
 
                 } else { // if inputs have been frozen, their is no need to treat them special
-                    for (j = 0; j < model->num_inputs; j++)
-                    { print(shiftFormula.inputs[j] + shiftDist * i); }    // print input j of iteration i
+                    for (j = 0; j < model->num_inputs; j++) {
+                        print(shiftFormula.inputs[j] + shiftDist * i);    // print input j of iteration i
+                    }
                 }
                 nl();
             }
@@ -1527,8 +1537,9 @@ finishedSolving:;
             // "old" way of printing the witness with all structures from the tool
             assert(nstates == k + 1);
             for (i = 0; i < model->num_bad; i++) {
-                if (deref(states[k].bad[i]) > 0)
-                { printf("b%d", i), found++; }
+                if (deref(states[k].bad[i]) > 0) {
+                    printf("b%d", i), found++;
+                }
                 // cerr << "c check bad state for: " << states[k].bad[i] << endl;
             }
             assert(found);
@@ -1543,8 +1554,9 @@ finishedSolving:;
             }
             nl();
             for (i = 0; i <= k; i++) {
-                for (j = 0; j < model->num_inputs; j++)
-                { print(states[i].inputs[j]); }
+                for (j = 0; j < model->num_inputs; j++) {
+                    print(states[i].inputs[j]);
+                }
                 nl();
             }
             printf(".\n");

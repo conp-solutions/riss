@@ -119,7 +119,7 @@ uint32_t Unhiding::linStamp(const Lit& literal, uint32_t stamp, bool& detectedEE
                          << endl;);
                 }
                 if (data.value(~lfailed) != l_True) { data.addCommentToProof("found during stamping in unhiding"); data.addUnitToProof(~lfailed); }     // add the unit twice?
-                if (l_False == data.enqueue(~lfailed, data.defaultExtraInfo())) {  return stamp; }
+                if (l_False == data.enqueue(~lfailed, data.defaultExtraInfo())) { return stamp; }
 
                 if (stampInfo[ toInt(~l1) ].dsc != 0 && stampInfo[ toInt(~l1) ].fin == 0) { continue; }
             }
@@ -538,7 +538,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
                                 // a -> aLit, b -> bLit, -bLit -> -aLit = aLit -> bLit -> F -> bLit
                                 || (stampInfo[ toInt(~bLit) ].dsc < stampInfo[ toInt(~aLit) ].dsc && stampInfo[ toInt(~aLit) ].fin < stampInfo[ toInt(~bLit) ].fin)) {
                             if (data.value(bLit) == l_Undef) {
-                                if (j == 0 || k == 0) { uhdProbeL2Units ++; } else { uhdProbeL3Units ++; }
+                                if (j == 0 || k == 0) { uhdProbeL2Units ++; }  else { uhdProbeL3Units ++; }
                             }
                             if (data.value(bLit) != l_True) { data.addCommentToProof("implied by unhiding probing"); data.addUnitToProof(bLit); }
                             if (l_False == data.enqueue(bLit, data.defaultExtraInfo())) {
@@ -548,7 +548,7 @@ bool Unhiding::unhideSimplify(bool borderIteration, bool& foundEE)
                             if ((stampInfo[  toInt(bLit) ].dsc < stampInfo[ toInt(aLit) ].dsc && stampInfo[ toInt(aLit) ].fin < stampInfo[ toInt(bLit) ].fin)
                                     || (stampInfo[ toInt(~aLit) ].dsc < stampInfo[ toInt(~bLit) ].dsc && stampInfo[ toInt(~bLit) ].fin < stampInfo[ toInt(~aLit) ].fin)) {
                                 if (data.value(aLit) == l_Undef) {
-                                    if (j == 0 || k == 0) { uhdProbeL2Units ++; } else { uhdProbeL3Units ++; }
+                                    if (j == 0 || k == 0) { uhdProbeL2Units ++; }  else { uhdProbeL3Units ++; }
                                     data.addCommentToProof("implied by unhiding probing");
                                     data.addUnitToProof(aLit);
                                 }
@@ -816,7 +816,7 @@ bool Unhiding::process()
             while (i < starts.size() && j < starts.size()) {
                 if (starts[i] < ends[j]) {
                     ++i;
-                } else if (starts[i] > ends[j])  {
+                } else if (starts[i] > ends[j]) {
                     ++ j;
                 } else {
                     assert(starts[i] == ends[j] && "start and end stamp cannot be the same");
