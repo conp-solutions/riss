@@ -12,29 +12,28 @@ Copyright (c) 2012, Norbert Manthey, All rights reserved.
 #include "riss/utils/ThreadController.h"
 #include "coprocessor/CP3Config.h"
 
+#include "coprocessor/techniques/Propagation.h"
+#include "coprocessor/techniques/Subsumption.h"
+#include "coprocessor/techniques/HiddenTautologyElimination.h"
+#include "coprocessor/techniques/BVE.h"
+#include "coprocessor/techniques/ClauseElimination.h"
+#include "coprocessor/techniques/RATE.h"
+#include "coprocessor/techniques/EquivalenceElimination.h"
+#include "coprocessor/techniques/BVA.h"
+#include "coprocessor/techniques/Unhiding.h"
+#include "coprocessor/techniques/Probing.h"
+#include "coprocessor/techniques/Resolving.h"
+#include "coprocessor/techniques/Rewriter.h"
+#include "coprocessor/techniques/FourierMotzkin.h"
+#include "coprocessor/techniques/BCE.h"
+#include "coprocessor/techniques/LiteralAddition.h"
+#include "coprocessor/techniques/Xor.h"
+#include "coprocessor/techniques/Entailed.h"
+#include "coprocessor/techniques/Dense.h"
+#include "coprocessor/techniques/Symmetry.h"
 
-#include "coprocessor/Propagation.h"
-#include "coprocessor/Subsumption.h"
-#include "coprocessor/HiddenTautologyElimination.h"
-#include "coprocessor/BVE.h"
-#include "coprocessor/ClauseElimination.h"
-#include "coprocessor/rate.h"
-#include "coprocessor/EquivalenceElimination.h"
-#include "coprocessor/BVA.h"
-#include "coprocessor/Unhiding.h"
-#include "coprocessor/Probing.h"
-#include "coprocessor/Resolving.h"
-#include "coprocessor/Rewriter.h"
-#include "coprocessor/FourierMotzkin.h"
-#include "coprocessor/BCE.h"
-#include "coprocessor/LiteralAddition.h"
-#include "coprocessor/xor.h"
-#include "coprocessor/Entailed.h"
-#include "coprocessor/Dense.h"
-#include "coprocessor/Symmetry.h"
-
-#include "coprocessor/sls.h"
-#include "coprocessor/TwoSAT.h"
+#include "coprocessor/techniques/SLS.h"
+#include "coprocessor/techniques/TwoSAT.h"
 
 #include <string>
 #include <cstring>
@@ -173,7 +172,7 @@ class Preprocessor
     LiteralAddition             la;
     EntailedRedundant           entailedRedundant;
 
-    Sls                         sls;
+    SLS sls;
     TwoSatSolver                twoSAT;
 
     int shuffleVariable;  // number of variables that have been present when the formula has been shuffled
