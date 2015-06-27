@@ -357,7 +357,7 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsig
 
     unsigned int oldPTLevel = PTLevel; // Davide> for statistics
 
-    if (ccmin_mode == 2) {
+    if (searchconfiguration.ccmin_mode == 2) {
         // Davide> Niklas Sorensson's words:
         //
         // 'abstract_levels' is just a simple approximate representation of the
@@ -383,7 +383,7 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsig
             }
 
 
-    } else if (ccmin_mode == 1) { // Davide> & let's enable this
+    } else if (searchconfiguration.ccmin_mode == 1) { // Davide> & let's enable this
 
         // Davide> Here I follow a much conservative approach: if the clause is safe,
         //         then perform only those resolutions that do not destroy the
@@ -433,7 +433,7 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsig
       Then, we reduce clauses with small LBD.
       Otherwise, this can be useless
      */
-    if (opt_lbd_minimization && out_learnt.size() <= lbSizeMinimizingClause) {
+    if (opt_lbd_minimization && out_learnt.size() <= searchconfiguration.lbSizeMinimizingClause) {
         PcassoDebug::PRINTLN_DEBUG("START MINIMIZING LEARNT CLAUSE");
         PcassoDebug::PRINTLN_DEBUG(out_learnt);
         // Find the LBD measure
@@ -449,7 +449,7 @@ void SolverPT::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsig
         }
 
 
-        if (lbd <= lbLBDMinimizingClause) {
+        if (lbd <= searchconfiguration.lbLBDMinimizingClause) {
             lbd_marker.nextStep();
 
             for (int i = 1; i < out_learnt.size(); i++) {
@@ -978,7 +978,7 @@ CRef SolverPT::propagate()
 
                     }
                     if (nblevels + 1 < c.lbd()) { // improve the LBD
-                        if (c.lbd() <= lbLBDFrozenClause) {
+                        if (c.lbd() <= searchconfiguration.lbLBDFrozenClause) {
                             c.setCanBeDel(false);
                         }
                         /*if(tnode->childsCount()>0 && c.lbd()>opt_LBD_lt && nblevels < opt_LBD_lt)  {
@@ -1070,7 +1070,7 @@ lbool SolverPT::search(int nof_conflicts)
             }
 
             trailQueue.push(trail.size());
-            if (conflicts > LOWER_BOUND_FOR_BLOCKING_RESTART && lbdQueue.isvalid()  && trail.size() > R * trailQueue.getavg()) {
+            if (conflicts > LOWER_BOUND_FOR_BLOCKING_RESTART && lbdQueue.isvalid()  && trail.size() > searchconfiguration.R * trailQueue.getavg()) {
                 lbdQueue.fastclear();
                 nbstopsrestarts++;
                 if (!blocked) {lastblockatrestart = starts; nbstopsrestartssame++; blocked = true;}
@@ -1121,7 +1121,7 @@ lbool SolverPT::search(int nof_conflicts)
             pullClausesCheck = false;
         } else {
             // Our dynamic restart, see the SAT09 competition compagnion paper
-            if ((lbdQueue.isvalid() && ((lbdQueue.getavg()*K) > (sumLBD / conflicts)))) {
+            if ((lbdQueue.isvalid() && ((lbdQueue.getavg()*searchconfiguration.K) > (sumLBD / conflicts)))) {
                 lbdQueue.fastclear();
                 progress_estimate = progressEstimate();
                 cancelUntil(0);
@@ -1150,7 +1150,7 @@ lbool SolverPT::search(int nof_conflicts)
                 assert(learnts.size() > 0);
                 curRestart = (conflicts / nbclausesbeforereduce) + 1;
                 reduceDB();
-                nbclausesbeforereduce += incReduceDB;
+                nbclausesbeforereduce += searchconfiguration.incReduceDB;
             }
 
             Lit next = lit_Undef;
@@ -1201,16 +1201,16 @@ lbool SolverPT::solve_()
     conflict.clear();
     if (!ok) { return l_False; }
 
-    lbdQueue.initSize(sizeLBDQueue);
+    lbdQueue.initSize(searchconfiguration.sizeLBDQueue);
 
-    trailQueue.initSize(sizeTrailQueue);
+    trailQueue.initSize(searchconfiguration.sizeTrailQueue);
     sumLBD = 0;
 
     solves++;
 
 
     lbool   status        = l_Undef;
-    nbclausesbeforereduce = firstReduceDB;
+    nbclausesbeforereduce = searchconfiguration.firstReduceDB;
 
     // Search:
     int curr_restarts = 0;
@@ -1694,26 +1694,26 @@ bool SolverPT::addSharedLearnt(vec<Lit>& ps, unsigned int pt_level)
 
 void SolverPT::satRestartStrategy()
 {
-    K = 0.8;
+    searchconfiguration.K = 0.8;
     lbdQueue.growTo(75);
     if (!diversification && randomization) {
         random_var_freq = 0.01 * (double)curPTLevel;
     }
     if (cleaning_delay == 1) {
-        incReduceDB = 200;
+        searchconfiguration.incReduceDB = 200;
     } else if (cleaning_delay == 2) {
-        incReduceDB = 600;
+        searchconfiguration.incReduceDB = 600;
     }
 }
 
 void SolverPT::unsatRestartStrategy()
 {
-    K = 0.8;
+    searchconfiguration.K = 0.8;
     lbdQueue.growTo(50);
     if (cleaning_delay == 1) {
-        incReduceDB = 100;
+        searchconfiguration.incReduceDB = 100;
     } else if (cleaning_delay == 2) {
-        incReduceDB = 900;
+        searchconfiguration.incReduceDB = 900;
     }
 }
 
@@ -1749,9 +1749,9 @@ void SolverPT::reduceDB()
     sort(learnts, reduceDB_lt(ca));
 
     // We have a lot of "good" clauses, it is difficult to compare them. Keep more !
-    if (ca[learnts[learnts.size() / RATIOREMOVECLAUSES]].lbd() <= 3) { nbclausesbeforereduce += specialIncReduceDB; }
+    if (ca[learnts[learnts.size() / RATIOREMOVECLAUSES]].lbd() <= 3) { nbclausesbeforereduce += searchconfiguration.specialIncReduceDB; }
     // Useless :-)
-    if (ca[learnts.last()].lbd() <= 5) { nbclausesbeforereduce += specialIncReduceDB; }
+    if (ca[learnts.last()].lbd() <= 5) { nbclausesbeforereduce += searchconfiguration.specialIncReduceDB; }
 
 
     // Don't delete binary or locked clauses. From the rest, delete clauses from the first half

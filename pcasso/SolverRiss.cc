@@ -46,14 +46,14 @@ void SolverRiss::setTimeOut(double timeout)
 void SolverRiss::setupForPortfolio(const int nodeLevel)
 {
     if (nodeLevel == 1) {
-        solver.K = 0.8;
-        solver.R = 1.5;
+        solver.searchconfiguration.K = 0.8;
+        solver.searchconfiguration.R = 1.5;
     } else if (nodeLevel == 2) {
-        solver.firstReduceDB = 10000;
+        solver.searchconfiguration.firstReduceDB = 10000;
     } else if (nodeLevel == 3) {
         solver.rnd_init_act = true;
     } else if (nodeLevel == 4) {
-        solver.sizeLBDQueue = 150;
+        solver.searchconfiguration.sizeLBDQueue = 150;
     } else { // default diversification
         srand(rand());
         solver.rnd_init_act = true;

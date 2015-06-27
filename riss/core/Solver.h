@@ -241,28 +241,48 @@ class Solver
     //
     int       verbosity;
     int       verbEveryConflicts;
+
+    // Object that controls configuration of search, might be changed during search
+
     // Constants For restarts
-    double    K;
-    double    R;
-    double    sizeLBDQueue;
-    double    sizeTrailQueue;
+    class SearchConfiguration
+    {
+      public:
+        double    K;
+        double    R;
+        double    sizeLBDQueue;
+        double    sizeTrailQueue;
 
-    // Constants for reduce DB
-    int firstReduceDB;
-    int incReduceDB;
-    int specialIncReduceDB;
-    unsigned int lbLBDFrozenClause;
+        // Constants for reduce DB
+        int firstReduceDB;
+        int incReduceDB;
+        int specialIncReduceDB;
+        unsigned int lbLBDFrozenClause;
 
-    // Constant for reducing clause
-    int lbSizeMinimizingClause;
-    unsigned int lbLBDMinimizingClause;
+        // Constant for reducing clause
+        int lbSizeMinimizingClause;
+        unsigned int lbLBDMinimizingClause;
+        int uhle_minimizing_size;
+        int uhle_minimizing_lbd;
+        bool use_reverse_minimization;
+        int lbSizeReverseClause;
+        int lbLBDReverseClause;
 
-    double    var_decay;
-    double    clause_decay;
+        double    var_decay;
+        double    var_decay_start;    // have dynamic var decay (starting point)
+        double    var_decay_end;      // end point
+        double    var_decay_inc;      // increment by this value
+        int       var_decay_distance; // increment every X conflicts
+        double    clause_decay;
+
+        int       ccmin_mode;         // Controls conflict clause minimization (0=none, 1=basic, 2=deep).
+        int       phase_saving;       // Controls the level of phase saving (0=none, 1=limited, 2=full).
+
+        int       restarts_type;       // choose series (dynamic, luby, geometric)
+    } searchconfiguration;
+
     double    random_var_freq;
     double    random_seed;
-    int       ccmin_mode;         // Controls conflict clause minimization (0=none, 1=basic, 2=deep).
-    int       phase_saving;       // Controls the level of phase saving (0=none, 1=limited, 2=full).
     bool      rnd_pol;            // Use random polarities for branching heuristics.
     bool      rnd_init_act;       // Initialize variable activities with a small random value.
     double    garbage_frac;       // The fraction of wasted memory allowed before a garbage collection is triggered.
@@ -1132,7 +1152,7 @@ inline void Solver::insertVarOrder(Var x)
 
 inline void Solver::varSetActivity(Var v, double value) {activity[v] = value;}
 inline double Solver::varGetActivity(Var v) const { return activity[v]; }
-inline void Solver::varDecayActivity() { var_inc *= (1 / var_decay); }
+inline void Solver::varDecayActivity() { var_inc *= (1 / searchconfiguration.var_decay); }
 inline void Solver::varBumpActivity(Var v, double inverseRatio) { varBumpActivityD(v, var_inc / (double) inverseRatio); }
 inline void Solver::varBumpActivityD(Var v, double inc)
 {
@@ -1154,7 +1174,7 @@ inline void Solver::varBumpActivityD(Var v, double inc)
     }
 }
 
-inline void Solver::claDecayActivity() { cla_inc *= (1 / clause_decay); }
+inline void Solver::claDecayActivity() { cla_inc *= (1 / searchconfiguration.clause_decay); }
 inline void Solver::claBumpActivity(Clause& c, double inverseRatio)
 {
     DOUT(if (config.opt_removal_debug > 1) std::cerr << "c bump clause activity for " << c << " with " << c.activity() << " by " << inverseRatio << std::endl;) ;

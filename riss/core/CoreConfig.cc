@@ -104,7 +104,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_act_based("999HACK", "act-based",    "use activity for learned clauses", false, optionListPtr),
     opt_lbd_core_thresh("999HACK", "lbd-core-th",  "Saving learnt clause forever if LBD deceeds this threshold", 0, IntRange(0, INT32_MAX), optionListPtr),
     opt_l_red_frac("999HACK", "reduce-frac",  "Remove this quota of learnt clauses when database is reduced", 0.50, DoubleRange(0, false, HUGE_VAL, false), optionListPtr),
-    opt_keep_permanent_size("999HACK", "size_core", "Saving learnt clause forever if size deceeds this threshold", 0, IntRange(0, INT32_MAX), optionListPtr),
+    opt_keep_permanent_size("999HACK", "size-core", "Saving learnt clause forever if size deceeds this threshold", 0, IntRange(0, INT32_MAX), optionListPtr),
 
     opt_updateLearnAct("MODS", "updLearnAct", "UPDATEVARACTIVITY trick (see glucose competition'09 companion paper)", true , optionListPtr),
 
@@ -172,8 +172,6 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_rer_each("EXTENDED RESOLUTION RER", "rer-e", "when a pair is rejected, initialize with the new clause", false, optionListPtr),
     opt_rer_extractGates("EXTENDED RESOLUTION RER", "rer-g", "extract binary and gates from the formula for RER rewriting", false, optionListPtr),
     opt_rer_addInputAct("EXTENDED RESOLUTION RER", "rer-ga", "increase activity for input variables",  0, DoubleRange(0, true, HUGE_VAL, true) , optionListPtr),
-
-
     erRewrite_size("EXTENDED RESOLUTION", "er-size", "rewrite new learned clauses with ER, if size is small enough", 30, IntRange(0, INT32_MAX), optionListPtr),
     erRewrite_lbd("EXTENDED RESOLUTION", "er-lbd" , "rewrite new learned clauses with ER, if lbd is small enough",  6,  IntRange(0, INT32_MAX), optionListPtr),
 
@@ -196,20 +194,9 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
 
 // USING BIG information during search
     opt_uhdProbe("SEARCH UNHIDE PROBING", "sUhdProbe", "perform probing based on learned clauses (off,linear,quadratic,larger)", 0, IntRange(0, 3), optionListPtr),
-    opt_uhdCleanRebuild("SEARCH UNHIDE PROBING", "sUhdPrRb",  "rebuild BIG before cleaning the formula" , true, optionListPtr),
     opt_uhdRestartReshuffle("SEARCH UNHIDE PROBING", "sUhdPrSh",  "travers the BIG again during every i-th restart 0=off" , 0, IntRange(0, INT32_MAX), optionListPtr),
     uhle_minimizing_size("SEARCH UNHIDE PROBING", "sUHLEsize", "maximal clause size for UHLE for learnt clauses (0=off)" , 0, IntRange(0, INT32_MAX), optionListPtr),
     uhle_minimizing_lbd("SEARCH UNHIDE PROBING", "sUHLElbd",  "maximal LBD for UHLE for learnt clauses (0=off)", 6, IntRange(0, INT32_MAX), optionListPtr),
-
-// CEGAR
-    opt_maxSDcalls("SUBSTITUTE DISJUNCTIONS", "sdCalls", "number of calls of assumptions, before solving original formula" , 0, IntRange(0, INT32_MAX), optionListPtr),
-    opt_sdLimit("SUBSTITUTE DISJUNCTIONS",    "sdSteps", "number of steps for subsitute disjunctions" , 250000, IntRange(0, INT32_MAX), optionListPtr),
-
-    opt_maxCBcalls("CEGAR BVA", "cbCalls", "number of calls to cegar bva iterations" ,        0, IntRange(0, INT32_MAX), optionListPtr),
-    opt_cbLimit("CEGAR BVA",    "cbSteps", "number of steps for subsitute disjunctions" , 2500000, IntRange(0, INT32_MAX), optionListPtr),
-    opt_cbLeast("CEGAR BVA",    "cbLeast", "use least frequent lit for matching (otherwise, most freq.) " , true),
-    opt_cbStrict("CEGAR BVA",  "cbStrict", "only use cegar BVA for patterns that always lead to reduction" , true),
-
 
 // DRUP
     opt_verboseProof("PROOF", "verb-proof", "also print comments into the proof, 2=print proof also to stderr", 0, IntRange(0, 2) , optionListPtr),
