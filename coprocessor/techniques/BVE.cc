@@ -180,29 +180,45 @@ lbool BoundedVariableElimination::process(CoprocessorData& data, const bool doSt
     initialClauses = data.nCls();
     restarts = 0;
 
+    // run the parallel BVE
     if (controller.size() > 0) {
         parallelBVE(data);
+
         if (data.ok()) {
             return l_Undef;
         } else {
             return l_False;
         }
     }
+    // sequential BVE here
+
     if (doStatistics) {
         processTime = cpuTime() - processTime;
     }
 
     // We use a heap, if the option is not set to "random"
-    // otherwise use a plain vector
+    // otherwise use a plain vector.
+    //
+    // Because we do not clear the heap / queue after a process step to reuse the remaining variables in the next
+    // process step, we have to check for duplicates when we insert new variables into the heap / queue
     if (config.opt_bve_heap != 2) {
-        // initialize heap
+        // initialize variable heap only once
         if (variable_heap == 0) {
             VarOrderBVEHeapLt comp(data, config.opt_bve_heap);
             variable_heap = new Heap<VarOrderBVEHeapLt>(comp);
         }
-        data.getActiveVariables(lastDeleteTime(), *variable_heap);
+        data.getActiveVariables(lastDeleteTime(), *variable_heap, true);
     } else {
-        data.getActiveVariables(lastDeleteTime(), variable_queue);
+        // initialze mark array the first time process() gets called
+        if (duplicateMarker.size() == 0) {
+            duplicateMarker.create(data.nVars());
+            duplicateMarker.nextStep(); // create initial step
+        }
+        // if new variables are created by other techniques, reserve some space in the marker
+        else  if (duplicateMarker.size() < data.nVars()) {
+            duplicateMarker.resize(data.nVars());
+        }
+        data.getActiveVariables(lastDeleteTime(), variable_queue, &duplicateMarker);
     }
 
     if (propagation.process(data, true) == l_False) {
@@ -223,13 +239,22 @@ lbool BoundedVariableElimination::process(CoprocessorData& data, const bool doSt
 
     sequentiellBVE(data, false);
 
-    // clear the variable keeping data structure
+
+
+    // Note:
+    //  We do not clear the variable queue / heap, because we want to reuse the variables in the next
+    //  process step.
     if (config.opt_bve_heap != 2) {
-        variable_heap->clear();
-    } else {
-        variable_queue.clear();
+        duplicateMarker.nextStep();
+        // Mark all variables with the current step so that they are recognized the next time
+        // process() gets called
+        for (int i = 0; i < variable_queue.size(); ++i) {
+            duplicateMarker.setCurrentStep(variable_queue[i]);
+        }
+
     }
 
+    //
     if (doStatistics) {
         processTime = cpuTime() - processTime;
     }

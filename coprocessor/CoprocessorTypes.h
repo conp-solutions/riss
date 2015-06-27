@@ -238,10 +238,10 @@ class CoprocessorData
     /** tell timer system that variable has been deleted (thread safe!) */
     void deletedVar(const Riss::Var v);
     /** fill the std::vector with all the literals that have been deleted after the given timer */
-    void getActiveVariables(const uint32_t myTimer, std::vector< Riss::Var >& activeVariables);
+    void getActiveVariables(const uint32_t myTimer, std::vector< Riss::Var >& activeVariables, Riss::MarkArray* duplicateMarker = 0);
     /** fill the heap with all the literals that have been deleted afetr the given timer */
     template <class Comp>
-    void getActiveVariables(const uint32_t myTimer, Riss::Heap < Comp >& heap);
+    void getActiveVariables(const uint32_t myTimer, Riss::Heap < Comp >& heap, bool checkDuplicates = false);
 
     /** resets all delete timer */
     void resetDeleteTimer();
@@ -898,19 +898,47 @@ inline void CoprocessorData::deletedVar(const Riss::Var v)
     deleteTimer.setCurrentStep(v);
 }
 
-inline void CoprocessorData::getActiveVariables(const uint32_t myTimer, std::vector< Riss::Var >& activeVariables)
+inline void CoprocessorData::getActiveVariables(const uint32_t myTimer, std::vector< Riss::Var >& activeVariables,
+                                                Riss::MarkArray* duplicateMarker)
 {
-    for (Riss::Var v = 0 ; v < solver->nVars(); ++ v) {
-        if (deleteTimer.getIndex(v) >= myTimer) { activeVariables.push_back(v); }
+    // check for duplicate variables
+    if (duplicateMarker == 0) {
+        for (Riss::Var v = 0 ; v < solver->nVars(); ++ v) {
+            if (deleteTimer.getIndex(v) >= myTimer && !duplicateMarker->isCurrentStep(v)) {
+                activeVariables.push_back(v);
+            }
+        }
     }
+    // no check for duplicates
+    else {
+        for (Riss::Var v = 0 ; v < solver->nVars(); ++ v) {
+            if (deleteTimer.getIndex(v) >= myTimer) {
+                activeVariables.push_back(v);
+            }
+        }
+    }
+
 }
 
 
 template<class Comp>
-inline void CoprocessorData::getActiveVariables(const uint32_t myTimer, Riss::Heap< Comp >& heap)
+inline void CoprocessorData::getActiveVariables(const uint32_t myTimer, Riss::Heap< Comp >& heap, bool checkDuplicates)
 {
-    for (Riss::Var v = 0 ; v < solver->nVars(); ++ v) {
-        if (deleteTimer.getIndex(v) >= myTimer) { heap.insert(v); }
+    // check for duplicate variables
+    if (checkDuplicates) {
+        for (Riss::Var v = 0 ; v < solver->nVars(); ++ v) {
+            if (deleteTimer.getIndex(v) >= myTimer && !heap.inHeap(v)) {
+                heap.insert(v);
+            }
+        }
+    }
+    // no check for duplicates
+    else {
+        for (Riss::Var v = 0 ; v < solver->nVars(); ++ v) {
+            if (deleteTimer.getIndex(v) >= myTimer) {
+                heap.insert(v);
+            }
+        }
     }
 }
 

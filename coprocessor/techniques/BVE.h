@@ -44,6 +44,12 @@ class BoundedVariableElimination : public Technique<BoundedVariableElimination>
      */
     Riss::Heap< VarOrderBVEHeapLt >* variable_heap;
 
+    /**
+     * Because we reuse remaining variables after each process call, we have to check for duplicates. If the variable
+     * order is random (which means we use the variable queue) the check is performed by this mark array
+     */
+    Riss::MarkArray duplicateMarker;
+
     // sequential member variables
     Riss::vec< Riss::Lit > resolvent; // std::vector for sequential resolution
     Riss::vec< int32_t > pos_stats;
