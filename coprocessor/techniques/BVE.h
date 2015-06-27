@@ -191,7 +191,6 @@ class BoundedVariableElimination : public Technique<BoundedVariableElimination>
     inline char checkUpdatePrev(Riss::Lit& prev, const Riss::Lit& l);
     bool findGates(CoprocessorData& data, const Riss::Var v, int& p_limit, int& n_limit, double& _gateTim, Riss::MarkArray * helper = NULL);
 
-
   public:
     /** converts arg into BVEWorkData*, runs bve of its part of the queue */
     static void* runParallelBVE(void* arg);

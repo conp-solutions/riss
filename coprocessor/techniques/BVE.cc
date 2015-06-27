@@ -1107,7 +1107,7 @@ inline void BoundedVariableElimination::addClausesToSubsumption(const vector<CRe
 }
 
 bool BoundedVariableElimination::findGates(CoprocessorData& data, const Var v, int& p_limit, int& n_limit,
-        double& _gateTime, MarkArray *helper)
+                                           double& _gateTime, MarkArray *helper)
 {
     // do not touch lists that are too small for benefit
     if (data.list(mkLit(v, false)).size() < 3 && data.list(mkLit(v, true)).size() < 3) { return false; }

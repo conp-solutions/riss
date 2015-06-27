@@ -238,7 +238,7 @@ class CoprocessorData
     /** tell timer system that variable has been deleted (thread safe!) */
     void deletedVar(const Riss::Var v);
     /** fill the std::vector with all the literals that have been deleted after the given timer */
-    void getActiveVariables(const uint32_t myTimer, std::vector< Riss::Var >& activeVariables, Riss::MarkArray* duplicateMarker = 0);
+    void getActiveVariables(const uint32_t myTimer, std::vector< Riss::Var >& activeVariables, Riss::MarkArray* duplicateMarker = NULL);
     /** fill the heap with all the literals that have been deleted afetr the given timer */
     template <class Comp>
     void getActiveVariables(const uint32_t myTimer, Riss::Heap < Comp >& heap, bool checkDuplicates = false);
@@ -902,7 +902,7 @@ inline void CoprocessorData::getActiveVariables(const uint32_t myTimer, std::vec
                                                 Riss::MarkArray* duplicateMarker)
 {
     // check for duplicate variables
-    if (duplicateMarker == 0) {
+    if (duplicateMarker != NULL) {
         for (Riss::Var v = 0 ; v < solver->nVars(); ++ v) {
             if (deleteTimer.getIndex(v) >= myTimer && !duplicateMarker->isCurrentStep(v)) {
                 activeVariables.push_back(v);
