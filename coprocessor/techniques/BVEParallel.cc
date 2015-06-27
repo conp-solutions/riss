@@ -628,7 +628,7 @@ inline void BoundedVariableElimination::removeClausesThreadSafe(Coprocessor::Cop
         Clause& c = ca[cr];
         if (!c.can_be_deleted()) {
             c.set_delete(true);
-            didChange();
+            successfulSimplification();
             if (config.opt_minimal_updates) {
                 for (int i = 0; i < c.size(); ++i) {
                     data.deletedVar(var(c[i]));
@@ -958,7 +958,7 @@ inline void BoundedVariableElimination::removeBlockedClausesThreadSafe(Coprocess
             continue;
         }
         if (_stats[ci] == 0) {
-            didChange();
+            successfulSimplification();
             c.set_delete(true);
             if (config.opt_minimal_updates) {
                 for (int i = 0; i < c.size(); ++i) {
@@ -1153,7 +1153,7 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data, const bool d
         if (doStatistics) { subsimpTime = wallClockTime() - subsimpTime; }
         subsumption.process();
         if (subsumption.appliedSomething()) {
-            didChange();
+            successfulSimplification();
         }
         if (doStatistics) { subsimpTime = wallClockTime() - subsimpTime; }
         modifiedFormula = modifiedFormula || subsumption.appliedSomething();
@@ -1490,7 +1490,7 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData& dat
             // unit found
             if (other.size() == 2) {
                 other.set_delete(true);
-                didChange();
+                successfulSimplification();
                 data_lock.lock();
                 lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
                 data_lock.unlock();
@@ -1518,7 +1518,7 @@ inline lbool BoundedVariableElimination::strength_check_pos(CoprocessorData& dat
                 assert(false && "no unit clauses should be strengthened");
                 // empty -> fail
             } else {
-                didChange();
+                successfulSimplification();
                 Lit neg = other[negated_lit_pos];
                 if (config.opt_bve_verbose > 2 || global_debug_out) {
                     cerr << "c remove " << neg << " from clause " << other << endl;
@@ -1663,7 +1663,7 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData& dat
         // but it doesn't harm at this point (just takes longer?)
         if (negated_lit_pos == -1 && si == strengthener.size()) {
             other.set_delete(true);
-            didChange();
+            successfulSimplification();
             if (config.opt_bve_verbose > 2) { cerr << "c " << strengthener << " subsumed " << other << endl; }
             if (doStatistics) {
                 if (!other.learnt()) {
@@ -1687,7 +1687,7 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData& dat
 
             // unit found
             if (other.size() == 2) {
-                didChange();
+                successfulSimplification();
                 other.set_delete(true);
                 data_lock.lock();
                 lbool state = data.enqueue(other[(negated_lit_pos + 1) % 2]);
@@ -1726,7 +1726,7 @@ inline lbool BoundedVariableElimination::strength_check_neg(CoprocessorData& dat
                 dirtyOccs.setCurrentStep(toInt(neg));
 
                 other.removePositionSortedThreadSafe(negated_lit_pos);
-                didChange();
+                successfulSimplification();
                 if (config.opt_minimal_updates) {
                     data.deletedVar(var(neg));
                     ++garbageCounter; // do not update data structure
@@ -1827,7 +1827,7 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
             }
             satisfied.set_delete(true);
             satisfied.unlock();
-            didChange();
+            successfulSimplification();
 
             // overwrite CRef in Occ
 
@@ -1905,7 +1905,7 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
                 if (solver->value(c[0]) == l_Undef) {
                     solver->uncheckedEnqueue(c[0]);
                 }
-                didChange();
+                successfulSimplification();
                 c.set_delete(true);
                 data_lock.unlock();
                 if (config.opt_minimal_updates) {
@@ -1926,7 +1926,7 @@ lbool BoundedVariableElimination::par_bve_propagate(CoprocessorData& data, Heap<
                 }
             } else {
                 data_lock.unlock();
-                didChange();
+                successfulSimplification();
                 if (true && !c.can_strengthen()) {
                     c.set_strengthen(true);
                     c.set_subsume(true);

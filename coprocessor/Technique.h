@@ -26,6 +26,10 @@ namespace Coprocessor
 template<class T>
 class Technique
 {
+    int penalty;               // how many attepts will be blocked, before the technique is allowed to perform preprocessing again
+    int peakPenalty;           // if the next simplification is unsuccessful, block the simplification for more than the given number
+    const int increasePenalty; // if a technique was unsuccessful, this penalty will be hand out
+
   protected:
 
     /**
@@ -63,9 +67,6 @@ class Technique
     bool isInitialized;           // true, if the structures have been initialized and the technique can be used
     uint32_t myDeleteTimer;       // timer to control which deleted variables have been seen already
 
-    int thisPelalty;              // how many attepts will be blocked, before the technique is allowed to perform preprocessing again
-    int lastMaxPenalty;           // if the next simplification is unsuccessful, block the simplification for more than the given number
-
     Riss::ClauseAllocator& ca;          // clause allocator for direct access to clauses
     Riss::ThreadController& controller; // controller for parallel execution
 
@@ -77,18 +78,20 @@ class Technique
     /**
      * @param budget number of computation steps the technique is allowed to use. Defaults to maximal integer value
      */
-    Technique(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, int limit = numeric_limits<int64_t>::max())
+    Technique(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller,
+              int limit = numeric_limits<int64_t>::max(), int _increasePenalty = 1)
         : config(_config)
         , modifiedFormula(false)
         , isInitialized(false)
         , myDeleteTimer(0)
-        , thisPelalty(0)
-        , lastMaxPenalty(0)
         , ca(_ca)
         , controller(_controller)
         , didPrintCannotDrup(false)
         , didPrintCannotExtraInfo(false)
         , stepper(limit)
+        , penalty(0)
+        , peakPenalty(0)
+        , increasePenalty(_increasePenalty)
     {}
 
     // TODO Maybe we can use a generic interface for all techniques? This would save us a lot of boiler plate code
@@ -140,13 +143,6 @@ class Technique
 
   protected:
 
-    /** call this method to indicate that the technique has applied changes to the formula */
-    inline void didChange()
-    {
-        modifiedFormula = true;
-    }
-
-
     /** reset counter, so that complete propagation is executed next time
      *  This method should be overwritten by all techniques that inherit this class
      */
@@ -195,21 +191,41 @@ class Technique
         if (!stepper.inLimit()) {
             return false;
         }
-        bool ret = (thisPelalty == 0);
-        thisPelalty = (thisPelalty == 0) ? thisPelalty : thisPelalty - 1;  // reduce current wait cycle if necessary!
-        return ret; // if there is no penalty, apply the simplification!
+
+        // technique holds still a penalty. It should not process but the penalty is decreased.
+        if (penalty > 0) {
+            --penalty;
+            return false;
+        }
+
+        // no step limit or penalty - go ahead!
+        return true;
     }
 
     /** return whether next time the simplification will be performed */
     inline bool willSimplify() const
     {
-        return thisPelalty == 0;
+        return penalty == 0;
     }
 
     /** report that the current simplification was unsuccessful */
     inline void unsuccessfulSimplification()
     {
-        thisPelalty = ++lastMaxPenalty;
+        peakPenalty += increasePenalty;
+        penalty = peakPenalty;
+    }
+
+    /**
+     * Call this method to indicate that the application of the technique was successful and has applied changes
+     * to the formula. The "modifiedFormula" flag will be set to true.
+     */
+    inline void successfulSimplification()
+    {
+        modifiedFormula = true;
+        assert(penalty == 0 && "Penalty must be zero for a technique to be applied");
+
+        // clear penalty - assure the technique runs next time for sure
+        peakPenalty = 0;
     }
 
 

@@ -397,7 +397,7 @@ void BlockedClauseElimination::blockedClauseElimination()
                                 }
                             }
                         }
-                        didChange();
+                        successfulSimplification();
                         if (!c.learnt()) {
                             if (config.opt_bce_verbose > 2)
                                 cerr << "c remove with blocking literal " << right << " blocked clause " <<
@@ -448,7 +448,7 @@ void BlockedClauseElimination::blockedClauseElimination()
 
                         // there are unnecessary literals
                         if (deletedSomeLiteral) {
-                            didChange();                                                     // tell penalty system about modification
+                            successfulSimplification();                                                     // tell penalty system about modification
                             bcm_cls++;
                             bcm_lits += (c.size() - keptLiterals);             // counters
                             assert(keptLiterals < c.size() &&
@@ -465,7 +465,7 @@ void BlockedClauseElimination::blockedClauseElimination()
 
                     if (config.opt_bce_cle && canCle && data.lits.size() > 0) {
                         // cle can actually be performed:
-                        didChange();
+                        successfulSimplification();
                         remCLE += data.lits.size();
                         int k = 0, l = 0; // data.lits is a sub set of c, both c and data.lits are ordered!
                         int keptLiterals = 0;

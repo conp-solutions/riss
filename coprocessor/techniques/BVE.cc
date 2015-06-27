@@ -256,7 +256,7 @@ lbool BoundedVariableElimination::process(CoprocessorData& data, const bool doSt
     }
 
     if (appliedSomething() || propagatedSomething) {
-        didChange();
+        successfulSimplification();
     }
 
     if (data.getSolver()->okay()) {
@@ -640,7 +640,7 @@ inline void BoundedVariableElimination::removeClauses(Coprocessor::CoprocessorDa
             } else {
                 data.removedClause(cr);
             }
-            didChange();
+            successfulSimplification();
             c.set_delete(true);
             if (l != lit_Undef && !c.learnt() /*&& cr < limit*/) { data.addToExtension(cr, l); }
             if (doStatistics) {
@@ -782,7 +782,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& 
 
             // empty Clause
             else if (newLits == 0) {
-                didChange();
+                successfulSimplification();
                 if (config.opt_bve_verbose > 2) {
                     cerr << "c    empty resolvent" << endl;
                     cerr << "c    Clause P: ";
@@ -817,12 +817,12 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& 
                 lbool status = data.enqueue(resolvent[0], extraInfo); //check for level 0 conflict
 
                 if (status == l_False) {
-                    didChange();
+                    successfulSimplification();
                     if (config.opt_bve_verbose > 2) { cerr << "c finished anticipate_bve with conflict" << endl; }
                     return l_False;
                 } else if (status == l_Undef); // variable already assigned
                 else if (status == l_True) {
-                    didChange();
+                    successfulSimplification();
                     //assert(false && "all units should be discovered before (while strengthening)!");
                     if (doStatistics) { ++unitsEnqueued; }
                     if (propagation.process(data, true) == l_False) {
@@ -1040,7 +1040,7 @@ inline void BoundedVariableElimination::removeBlockedClauses(Coprocessor::Coproc
             } else {
                 data.removedClause(list[ci]);
             }
-            didChange();
+            successfulSimplification();
             if (!c.learnt() /*&& ci < limit*/) {
                 if (config.opt_bve_verbose > 2) { cerr << "c remove blocked clause " << ca[list[ci]] << endl; }
                 data.addToExtension(list[ci], l);

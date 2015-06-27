@@ -277,7 +277,7 @@ void Subsumption :: subsumption_worker(unsigned int start, unsigned int end, Hea
                 data.addCommentToProof("remove by subsumption");
                 data.addToProof(ca[list[i]], true); // remove this clause from the proof!
                 data.removedClause(list[i]);
-                didChange();
+                successfulSimplification();
                 DOUT(if (config.opt_sub_debug > 1) cerr << "c subsumption removed " << (ca[list[i]].learnt() ? "learned" : "") << " clause " << ca[list[i]] << " by "  << (ca[list[i]].learnt() ? "learned" : "") << c << endl;);
                 occ_updates.push_back(list[i]);
                 DOUT(if (config.opt_sub_debug > 1) cerr << "c clause " << ca[list[i]] << " is deleted by " << c << endl;);
@@ -1390,7 +1390,7 @@ lbool Subsumption::strengthening_worker(unsigned int start, unsigned int end, He
                         localQueue.push_back(list[j]);
                         other.set_strengthen(true);
                     }
-                    didChange();
+                    successfulSimplification();
                     DOUT(if (config.opt_sub_debug > 1) cerr << "c add remove info (@" << __LINE__ << ")  [" << occ_updates.size() << "] : " << list[j] << " with clause " << other[negated_lit_pos] << " and ref " << list[j] << endl;);
                     occ_updates.push_back(OccUpdate(list[j] , other[negated_lit_pos]));
                     DOUT(if (config.opt_sub_debug > 1) cerr << "c remove (@" << __LINE__ << ")" << other[negated_lit_pos] << " from clause " << other << " with " << strengthener << endl;);
@@ -1487,7 +1487,7 @@ lbool Subsumption::strengthening_worker(unsigned int start, unsigned int end, He
                     });
                     occ_updates.push_back(OccUpdate(list_neg[j] , other[negated_lit_pos]));
                     DOUT(if (config.opt_sub_debug > 1) cerr << "c remove (@" << __LINE__ << ")" << other[negated_lit_pos] << " from clause " << other << " with strengthener " << strengthener << " ( via index: " << list_neg[j] << " cls: " << ca[list_neg[j]] << ")" << endl;);
-                    didChange();
+                    successfulSimplification();
                     const Lit remLit = other[negated_lit_pos];
                     other.removePositionSorted(negated_lit_pos);
                     data.addCommentToProof("removed literal by strengthening");
