@@ -1,0 +1,8 @@
+# ChangeLog for coprocessor
+
+## v3.0.0
+
+ * persistent heap for sequential BVE (lucas)
+ * Technique class with **CRTP** (static polymorphism) (lucas)
+ * generic stepper class for all techniques (lucas)
+ * move all technique implementations into [coprocessor/techniques](techniques/) (lucas)
