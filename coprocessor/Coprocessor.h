@@ -55,21 +55,21 @@ class Preprocessor
 
     // attributes
     int32_t threads;             // number of threads that can be used by the preprocessor
-    Riss::Solver* solver;              // handle to the solver object that stores the formula
-    Riss::ClauseAllocator& ca;         // reference to clause allocator
+    Riss::Solver* solver;        // handle to the solver object that stores the formula
+    Riss::ClauseAllocator& ca;   // reference to clause allocator
 
-    Logger log;                  // log output
-    CoprocessorData  data;       // all the data that needs to be accessed by other classes (preprocessing methods)
+    Logger log;                        // log output
+    CoprocessorData data;              // all the data that needs to be accessed by other classes (preprocessing methods)
     Riss::ThreadController controller; // controller for all threads
 
-    Clock ppTime;     // time to do preprocessing
-    Clock ipTime;     // time to do inpreprocessing
-    Clock overheadTime;       // time for pp overhead (init and all that)
+    Clock ppTime;         // time to do preprocessing
+    Clock ipTime;         // time to do inpreprocessing
+    Clock overheadTime;   // time for pp overhead (init and all that)
     int thisClauses;      // number of original clauses before current run
     int thisLearnts;      // number of learnt clauses before current run
 
-    int lastInpConflicts;     // number of conflicts when inprocessing has been called last time
-    int formulaVariables;     // number of variables in the initial formula
+    int lastInpConflicts; // number of conflicts when inprocessing has been called last time
+    int formulaVariables; // number of variables in the initial formula
 
   public:
 
@@ -162,8 +162,8 @@ class Preprocessor
     Unhiding                    unhiding;
     Probing                     probing;
     RATElimination              rate;
-    Resolving                   res;
-    Rewriter                    rew;
+    Resolving                   resolving;
+    Rewriter                    rewriter;
     FourierMotzkin              fourierMotzkin;
     Dense                       dense;
     Symmetry                    symmetry;
@@ -172,7 +172,7 @@ class Preprocessor
     LiteralAddition             la;
     EntailedRedundant           entailedRedundant;
 
-    SLS sls;
+    SLS                         sls;
     TwoSatSolver                twoSAT;
 
     int shuffleVariable;  // number of variables that have been present when the formula has been shuffled

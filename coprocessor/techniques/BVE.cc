@@ -168,8 +168,6 @@ lbool BoundedVariableElimination::process(CoprocessorData& data, const bool doSt
         return l_Undef;
     }
 
-    modifiedFormula = false;
-
     // do not simplify, if the formula is considered to be too large!
     if (!data.unlimited() && (data.nVars() > config.opt_bve_vars &&
                               data.getClauses().size() + data.getLEarnts().size() > config.opt_bve_cls &&
@@ -224,7 +222,7 @@ lbool BoundedVariableElimination::process(CoprocessorData& data, const bool doSt
     if (propagation.process(data, true) == l_False) {
         return l_False;
     }
-    bool upAppliedSomething = propagation.appliedSomething();
+    bool propagatedSomething = propagation.appliedSomething();
 
 
     if (false) {
@@ -239,8 +237,6 @@ lbool BoundedVariableElimination::process(CoprocessorData& data, const bool doSt
 
     sequentiellBVE(data, false);
 
-
-
     // Note:
     //  We do not clear the variable queue / heap, because we want to reuse the variables in the next
     //  process step.
@@ -251,17 +247,19 @@ lbool BoundedVariableElimination::process(CoprocessorData& data, const bool doSt
         for (int i = 0; i < variable_queue.size(); ++i) {
             duplicateMarker.setCurrentStep(variable_queue[i]);
         }
-
     }
 
-    //
     if (doStatistics) {
         processTime = cpuTime() - processTime;
     }
-    if (!modifiedFormula) {
+    if (!appliedSomething()) {
         unsuccessfulSimplification();
     }
-    modifiedFormula = modifiedFormula || upAppliedSomething;
+
+    if (appliedSomething() || propagatedSomething) {
+        didChange();
+    }
+
     if (data.getSolver()->okay()) {
         return l_Undef;
     } else {

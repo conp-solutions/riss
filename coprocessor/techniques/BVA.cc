@@ -63,7 +63,7 @@ void BoundedVariableAddition::giveMoreSteps()
 bool BoundedVariableAddition::process()
 {
     MethodTimer mv(&processTime);
-    if (! performSimplification()) { return false; }   // do not do anything?!
+    if (!performSimplification()) { return false; }   // do not do anything?!
     modifiedFormula = false;
 
     // do not simplify, if the formula is considered to be too large!

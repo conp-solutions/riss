@@ -48,8 +48,8 @@ Preprocessor::Preprocessor(Solver* _solver, CP3Config& _config, int32_t _threads
     , unhiding(config, solver->ca, controller, data, propagation, subsumption, ee)
     , probing(config, solver->ca, controller, data, propagation, ee, *solver)
     , rate(config, solver->ca, controller, data, *solver, propagation)
-    , res(config, solver->ca, controller, data, propagation)
-    , rew(config, solver->ca, controller, data, subsumption)
+    , resolving(config, solver->ca, controller, data, propagation)
+    , rewriter(config, solver->ca, controller, data, subsumption)
     , fourierMotzkin(config, solver->ca, controller, data, propagation, *solver)
     , dense(config, solver->ca, controller, data, propagation)
     , symmetry(config, solver->ca, controller, data, *solver)
@@ -169,7 +169,7 @@ lbool Preprocessor::performSimplification()
         if (config.opt_xor) {
             if (config.opt_verbose > 0) { cerr << "c xor ..." << endl; }
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") XOR" << endl; }
-            if (status == l_Undef) { xorReasoning.process(); }   // cannot change status, can generate new unit clauses
+            if (status == l_Undef) { xorReasoning.apply(data); }   // cannot change status, can generate new unit clauses
             if (config.opt_verbose > 1)  { printStatistics(cerr); xorReasoning.printStatistics(cerr); }
             if (! data.ok()) {
                 status = l_False;
@@ -197,8 +197,8 @@ lbool Preprocessor::performSimplification()
 
         if (config.opt_ternResolve) {
             if (config.opt_verbose > 0) { cerr << "c res3 ..." << endl; }
-            res.process(false);
-            if (config.opt_verbose > 1)  { printStatistics(cerr); res.printStatistics(cerr); }
+            resolving.process(false);
+            if (config.opt_verbose > 1)  { printStatistics(cerr); resolving.printStatistics(cerr); }
             DOUT(if (printTernResolve || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == '3')) printFormula("after TernResolve"););
         }
 
@@ -243,8 +243,8 @@ lbool Preprocessor::performSimplification()
         if (config.opt_rew) {
             if (config.opt_verbose > 0) { cerr << "c rew ..." << endl; }
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") rewriting" << endl; }
-            if (status == l_Undef) { rew.process(); }   // cannot change status, can generate new unit clauses
-            if (config.opt_verbose > 1)  { printStatistics(cerr); rew.printStatistics(cerr); }
+            if (status == l_Undef) { rewriter.process(); }   // cannot change status, can generate new unit clauses
+            if (config.opt_verbose > 1)  { printStatistics(cerr); rewriter.printStatistics(cerr); }
             if (! data.ok()) {
                 status = l_False;
             }
@@ -404,8 +404,8 @@ lbool Preprocessor::performSimplification()
 
     if (config.opt_addRedBins) {
         if (config.opt_verbose > 0) { cerr << "c add2 ..." << endl; }
-        res.process(true);
-        if (config.opt_verbose > 1)  { printStatistics(cerr); res.printStatistics(cerr); }
+        resolving.process(true);
+        if (config.opt_verbose > 1)  { printStatistics(cerr); resolving.printStatistics(cerr); }
         DOUT(if (printAddRedBin || config.opt_debug || (config.printAfter != 0 && strlen(config.printAfter) > 0 && config.printAfter[0] == 'a')) printFormula("after Add2"););
     }
 
@@ -527,7 +527,7 @@ lbool Preprocessor::performSimplification()
         if (config.opt_bva) { bva.printStatistics(cerr); }
         if (config.opt_probe) { probing.printStatistics(cerr); }
         if (config.opt_unhide) { unhiding.printStatistics(cerr); }
-        if (config.opt_ternResolve || config.opt_addRedBins) { res.printStatistics(cerr); }
+        if (config.opt_ternResolve || config.opt_addRedBins) { resolving.printStatistics(cerr); }
         if (config.opt_xor) { xorReasoning.printStatistics(cerr); }
         if (config.opt_sls) { sls.printStatistics(cerr); }
         if (config.opt_twosat) { twoSAT.printStatistics(cerr); }
@@ -536,7 +536,7 @@ lbool Preprocessor::performSimplification()
         if (config.opt_cce) { cce.printStatistics(cerr); }
         if (config.opt_rate) { rate.printStatistics(cerr); }
         if (config.opt_ent) { entailedRedundant.printStatistics(cerr); }
-        if (config.opt_rew) { rew.printStatistics(cerr); }
+        if (config.opt_rew) { rewriter.printStatistics(cerr); }
         if (config.opt_FM) { fourierMotzkin.printStatistics(cerr); }
         if (config.opt_dense) { dense.printStatistics(cerr); }
         if (config.opt_symm) { symmetry.printStatistics(cerr); }
@@ -714,16 +714,16 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
         // addRed2 "a"
         else if (execute == 'a' && config.opt_addRedBins && status == l_Undef && data.ok()) {
             if (config.opt_verbose > 2) { cerr << "c addRed2" << endl; }
-            res.process(true);
-            change = res.appliedSomething() || change;
+            resolving.process(true);
+            change = resolving.appliedSomething() || change;
             if (config.opt_verbose > 1) { cerr << "c AddRed2 changed formula: " << change << endl; }
         }
 
         // ternRes "3"
         else if (execute == '3' && config.opt_ternResolve && status == l_Undef && data.ok()) {
             if (config.opt_verbose > 2) { cerr << "c ternRes" << endl; }
-            res.process(false);
-            change = res.appliedSomething() || change;
+            resolving.process(false);
+            change = resolving.appliedSomething() || change;
             if (config.opt_verbose > 1) { cerr << "c TernRes changed formula: " << change << endl; }
         }
 
@@ -826,8 +826,8 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
         // rewriting "r"
         else if (execute == 'r' && config.opt_rew && status == l_Undef && data.ok()) {
             if (config.opt_verbose > 2) { cerr << "c rew" << endl; }
-            rew.process();
-            change = rew.appliedSomething() || change;
+            rewriter.process();
+            change = rewriter.appliedSomething() || change;
             if (config.opt_verbose > 1) { cerr << "c REW changed formula: " << change << endl; }
         }
 
@@ -986,7 +986,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
         if (config.opt_bva) { bva.printStatistics(cerr); }
         if (config.opt_probe) { probing.printStatistics(cerr); }
         if (config.opt_unhide) { unhiding.printStatistics(cerr); }
-        if (config.opt_ternResolve || config.opt_addRedBins) { res.printStatistics(cerr); }
+        if (config.opt_ternResolve || config.opt_addRedBins) { resolving.printStatistics(cerr); }
         if (config.opt_xor) { xorReasoning.printStatistics(cerr); }
         if (config.opt_sls) { sls.printStatistics(cerr); }
         if (config.opt_twosat) { twoSAT.printStatistics(cerr); }
@@ -995,7 +995,7 @@ lbool Preprocessor::performSimplificationScheduled(string techniques)
         if (config.opt_cce) { cce.printStatistics(cerr); }
         if (config.opt_rate) { rate.printStatistics(cerr); }
         if (config.opt_ent) { entailedRedundant.printStatistics(cerr); }
-        if (config.opt_rew) { rew.printStatistics(cerr); }
+        if (config.opt_rew) { rewriter.printStatistics(cerr); }
         if (config.opt_FM) { fourierMotzkin.printStatistics(cerr); }
         if (config.opt_dense) { dense.printStatistics(cerr); }
         if (config.opt_symm) { symmetry.printStatistics(cerr); }
@@ -1118,8 +1118,8 @@ void Preprocessor::giveMoreSteps()
     ee.giveMoreSteps();
     unhiding.giveMoreSteps();
     probing.giveMoreSteps();
-    res.giveMoreSteps();
-    rew.giveMoreSteps();
+    resolving.giveMoreSteps();
+    rewriter.giveMoreSteps();
     fourierMotzkin.giveMoreSteps();
 }
 
@@ -1346,7 +1346,7 @@ void Preprocessor::destroyTechniques()
     if (config.opt_bva) { bva.destroy(); }
     if (config.opt_probe) { probing.destroy(); }
     if (config.opt_unhide) { unhiding.destroy(); }
-    if (config.opt_ternResolve || config.opt_addRedBins) { res.destroy(); }
+    if (config.opt_ternResolve || config.opt_addRedBins) { resolving.destroy(); }
     if (config.opt_xor) { xorReasoning.destroy(); }
     if (config.opt_sls) { sls.destroy(); }
     if (config.opt_twosat) { twoSAT.destroy(); }
@@ -1545,7 +1545,7 @@ void Preprocessor::reSetupSolver()
 
 void Preprocessor::shuffle()
 {
-    VarShuffler vs(config);
+    VarShuffler shuffler(config);
 
     assert(solver->decisionLevel() == 0 && "shuffle only on level 0!");
 
@@ -1556,7 +1556,7 @@ void Preprocessor::shuffle()
 
     // shuffle trail, clauses and learned clauses
     shuffleVariable = data.nVars();
-    vs.process(data.getClauses(), data.getLEarnts(), solver->trail, data.nVars(), ca);
+    shuffler.process(data.getClauses(), data.getLEarnts(), solver->trail, data.nVars(), ca);
 
     // set all assignments according to the trail!
     for (int i = 0 ; i < solver->trail.size(); ++ i) {
@@ -1567,10 +1567,10 @@ void Preprocessor::shuffle()
 void Preprocessor::unshuffle(vec< lbool >& model)
 {
     // setup shuffler, and unshuffle model!
-    VarShuffler vs(config);
+    VarShuffler shuffler(config);
 
     assert((shuffleVariable == -1 || model.size() == shuffleVariable) && "number of variables has to match");
-    vs.unshuffle(model, model.size());
+    shuffler.unshuffle(model, model.size());
 }
 
 void Preprocessor::sortClauses()
