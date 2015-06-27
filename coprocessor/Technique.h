@@ -31,8 +31,8 @@ class Technique
      */
     class Stepper
     {
-        int budget; // number of steps (which should correlate to the computation time) the technique is allowd to run
-        int steps;  // number of steps already used (shows the usage)
+        int64_t budget; // number of steps (which should correlate to the computation time) the technique is allowd to run
+        int64_t steps;  // number of steps already used (shows the usage)
 
       public:
         Stepper(int budget) : budget(budget), steps(0) {}
@@ -68,7 +68,7 @@ class Technique
     /**
      * @param budget number of computation steps the technique is allowed to use. Defaults to maximal integer value
      */
-    Technique(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, int budget = numeric_limits<int>::max())
+    Technique(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, int budget = numeric_limits<int64_t>::max())
         : config(_config)
         , modifiedFormula(false)
         , isInitialized(false)
