@@ -161,18 +161,19 @@ class BoundedVariableElimination : public Technique<BoundedVariableElimination>
                         std::deque < Riss::CRef >& strengthQueue ,
                         std::deque < Riss::CRef >& sharedStrengthQueue,
                         std::deque < PostponeReason >& postponed,
-                        std::vector< SpinLock >& var_lock,
-                        ReadersWriterLock& rwlock, ParBVEStats& stats , Riss::MarkArray * gateMarkArray,
-                        int& rwlock_count, int& garbageCounter, int64_t& parBVEchecks,
+                        std::vector< SpinLock >& var_lock,ReadersWriterLock& rwlock,
+                        ParBVEStats& stats , Riss::MarkArray * gateMarkArray, int& rwlock_count,
+                        int& garbageCounter,
+                        int64_t& parBVEchecks,
                         const bool force = false, const bool doStatistics = true) ;
 
     /** run parallel bve with all available threads */
     void parallelBVE(CoprocessorData& data);
 
-    inline void        removeClausesThreadSafe        (CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, const std::vector<Riss::CRef>& list, const Riss::Lit& l, const int limit, SpinLock& data_lock, SpinLock& heap_lock, ParBVEStats& stats, int& garbageCounter, const bool doStatistics);
-    inline void        removeBlockedClausesThreadSafe (CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, const std::vector< Riss::CRef>& list, const int32_t _stats[], const Riss::Lit& l, const int limit, SpinLock& data_lock, SpinLock& heap_lock, ParBVEStats& stats, int& garbageCounter, const bool doStatistics);
-    inline Riss::lbool resolveSetThreadSafe           (CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, std::vector<Riss::CRef>& positive, std::vector<Riss::CRef>& negative, const int v, const int p_limit, const int n_limit, Riss::vec < Riss::Lit >& ps, Riss::AllocatorReservation& memoryReservation, std::deque<Riss::CRef>& strengthQueue, ParBVEStats& stats, SpinLock& data_lock, SpinLock& heap_lock, int expectedResolvents, int64_t& bveChecks, const bool doStatistics, const bool keepLearntResolvents = false);
-    inline Riss::lbool anticipateEliminationThreadsafe(CoprocessorData& data, std::vector<Riss::CRef>& positive,   std::vector<Riss::CRef>& negative, const int v, const int p_limit, const int n_limit, Riss::vec<Riss::Lit>& resolvent, Riss::vec < int32_t >& pos_stats, Riss::vec < int32_t >& neg_stats, int& lit_clauses, int& lit_learnts, int& new_clauses, int& new_learnts, SpinLock& data_lock, ParBVEStats& stats, int64_t& bveChecks, const bool doStatistics);
+    inline void removeClausesThreadSafe(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, const std::vector<Riss::CRef>& list, const Riss::Lit& l, const int limit, SpinLock& data_lock, SpinLock& heap_lock, ParBVEStats& stats, int& garbageCounter, const bool doStatistics);
+    inline Riss::lbool resolveSetThreadSafe(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, std::vector<Riss::CRef>& positive, std::vector<Riss::CRef>& negative, const int v, const int p_limit, const int n_limit, Riss::vec < Riss::Lit >& ps, Riss::AllocatorReservation& memoryReservation, std::deque<Riss::CRef>& strengthQueue, ParBVEStats& stats, SpinLock& data_lock, SpinLock& heap_lock, int expectedResolvents, int64_t& bveChecks, const bool doStatistics, const bool keepLearntResolvents = false);
+    inline Riss::lbool anticipateEliminationThreadsafe(CoprocessorData& data, std::vector<Riss::CRef>& positive, std::vector<Riss::CRef>& negative, const int v, const int p_limit, const int n_limit, Riss::vec<Riss::Lit>& resolvent, Riss::vec < int32_t >& pos_stats, Riss::vec < int32_t >& neg_stats, int& lit_clauses, int& lit_learnts, int& new_clauses, int& new_learnts, SpinLock& data_lock, ParBVEStats& stats, int64_t& bveChecks, const bool doStatistics);
+    inline void removeBlockedClausesThreadSafe(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, const std::vector< Riss::CRef>& list, const int32_t _stats[], const Riss::Lit& l, const int limit, SpinLock& data_lock, SpinLock& heap_lock, ParBVEStats& stats, int& garbageCounter, const bool doStatistics);
 
     // Special subsimp implementations for par bve:
     void par_bve_strengthening_worker(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, const Riss::Var ignore, std::vector< SpinLock >& var_lock, ReadersWriterLock& rwlock, std::deque<Riss::CRef>& sharedStrengthQueue, std::deque<Riss::CRef>& localQueue, Riss::MarkArray& dirtyOccs, ParBVEStats& stats, int& rwlock_count, int& garbageCounter, const bool strength_resolvents, const bool doStatistics);
@@ -181,8 +182,8 @@ class BoundedVariableElimination : public Technique<BoundedVariableElimination>
     Riss::lbool par_bve_propagate(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, const Riss::Var ignore, std::vector< SpinLock >& var_lock, ReadersWriterLock& rwlock, Riss::MarkArray& dirtyOccs, std::deque <Riss::CRef>& sharedSubsimpQueue, ParBVEStats& stats, int& rwlock_count, int& garbageCounter, const bool doStatistics);
 
     inline Riss::lbool strength_check_pos(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, const Riss::Var ignore, std::vector < Riss::CRef >& list, std::deque<Riss::CRef>& sharedStrengthQueue, std::deque<Riss::CRef>& localQueue, Riss::Clause& strengthener, Riss::CRef cr, Riss::Var fst, std::vector < SpinLock >& var_lock, Riss::MarkArray& dirtyOccs, ParBVEStats& stats, int& garbageCounter, const bool strength_resolvents, const bool doStatistics);
-    inline Riss::lbool strength_check_neg(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, const Riss::Var ignore, std::vector < Riss::CRef >& list, std::deque<Riss::CRef>& sharedStrengthQueue, std::deque<Riss::CRef>& localQueue, Riss::Clause& strengthener, Riss::CRef cr, Riss::Lit min, Riss::Var fst, std::vector < SpinLock >& var_lock, Riss::MarkArray& dirtyOccs, ParBVEStats& stats, int& garbageCounter, const bool strength_resolvents, const bool doStatistics);
 
+    inline Riss::lbool strength_check_neg(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, const Riss::Var ignore, std::vector < Riss::CRef >& list, std::deque<Riss::CRef>& sharedStrengthQueue, std::deque<Riss::CRef>& localQueue, Riss::Clause& strengthener, Riss::CRef cr, Riss::Lit min, Riss::Var fst, std::vector < SpinLock >& var_lock, Riss::MarkArray& dirtyOccs, ParBVEStats& stats, int& garbageCounter, const bool strength_resolvents, const bool doStatistics);
     // Helpers for both par and seq
     inline bool resolve(const Riss::Clause& c, const Riss::Clause& d, const int v, Riss::vec<Riss::Lit>& ps);
     inline int  tryResolve(const Riss::Clause& c, const Riss::Clause& d, const int v);

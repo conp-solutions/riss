@@ -169,7 +169,7 @@ lbool Preprocessor::performSimplification()
         if (config.opt_xor) {
             if (config.opt_verbose > 0) { cerr << "c xor ..." << endl; }
             if (config.opt_verbose > 4) { cerr << "c coprocessor(" << data.ok() << ") XOR" << endl; }
-            if (status == l_Undef) { xorReasoning.apply(data); }   // cannot change status, can generate new unit clauses
+            if (status == l_Undef) { xorReasoning.process(); }   // cannot change status, can generate new unit clauses
             if (config.opt_verbose > 1)  { printStatistics(cerr); xorReasoning.printStatistics(cerr); }
             if (! data.ok()) {
                 status = l_False;
