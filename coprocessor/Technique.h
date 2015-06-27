@@ -37,11 +37,11 @@ class Technique
       public:
         Stepper(int limit) : limit(limit), steps(0) {}
 
-        inline int  getCurrentSteps() const             { return steps; }; // returns the number of consumed steps
-        inline void increaseLimit(int additionalBudget) { limit += additionalBudget; }
-        inline void increaseSteps(int _steps = 1)       { steps += _steps; }
-        inline bool inLimit() const                     { return steps < limit; }
-        inline void reset()                             { steps = 0; }
+        inline int64_t getCurrentSteps() const             { return steps; }; // returns the number of consumed steps
+        inline void    increaseLimit(int additionalBudget) { limit += additionalBudget; }
+        inline void    increaseSteps(int _steps = 1)       { steps += _steps; }
+        inline bool    inLimit() const                     { return steps < limit; }
+        inline void    reset()                             { steps = 0; }
     };
 
 
