@@ -17,10 +17,10 @@ BoundedVariableElimination::BoundedVariableElimination(CP3Config& _config, Riss:
                                                        Riss::ThreadController& _controller,
                                                        Coprocessor::Propagation& _propagation,
                                                        Coprocessor::Subsumption& _subsumption)
-    : Technique(_config, _ca, _controller)
+    : Technique(_config, _ca, _controller, _config.opt_bve_limit)
     , propagation(_propagation)
     , subsumption(_subsumption)
-    , variable_heap(0) // FIXME use nullptr instead 0 literal (also for the checks)
+    , variable_heap(NULL) // FIXME use nullptr instead NULL macro (also for the checks)
     , removedClauses(0)
     , removedLiterals(0)
     , createdClauses(0)
@@ -47,7 +47,6 @@ BoundedVariableElimination::BoundedVariableElimination(CP3Config& _config, Riss:
     , unitCount(0)
     , elimCount(0)
     , restarts(0)
-    , seqBveSteps(0)
     , nClsIncreases(0)
     , nClsDecreases(0)
     , nClsKeep(0)
@@ -67,7 +66,7 @@ BoundedVariableElimination::~BoundedVariableElimination()
 
 void BoundedVariableElimination::giveMoreSteps()
 {
-    seqBveSteps = (seqBveSteps < config.opt_bveInpStepInc) ? 0 : seqBveSteps - config.opt_bveInpStepInc;
+    stepper.increaseLimit(config.opt_bveInpStepInc);
 }
 
 
@@ -78,7 +77,7 @@ void BoundedVariableElimination::printStatistics(ostream& stream)
            << testedVars << " vars tested, "
            << anticipations << " anticipations, "  //  = tested vars?
            << skippedVars << " vars skipped, "
-           << seqBveSteps << " checks, "
+           << stepper.getCurrentSteps() << " checks, "
            << endl;
     stream << "c [STAT] BVE(2) " << removedClauses << " rem cls, "
            << "with " << removedLiterals << " lits, "
@@ -325,8 +324,8 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData& data, const boo
            !data.isInterupted()
            // variable heap or list is not empty
            && ((config.opt_bve_heap != 2 && variable_heap->size() > 0) || (config.opt_bve_heap == 2 && variable_queue.size() > 0))
-           // check if are are inside the limit
-           && (seqBveSteps < config.opt_bve_limit || data.unlimited())
+           // check if we are inside the limit
+           && (stepper.inLimit() || data.unlimited())
           ) {
 
         updateDeleteTime(data.getMyDeleteTimer());
@@ -338,7 +337,7 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData& data, const boo
             cerr << "c sequentiel bve on "
                  << ((config.opt_bve_heap != 2) ? variable_heap->size() : variable_queue.size()) << " variables" << endl;
 
-        bve_worker(data, seqBveSteps, force, doStatistics);
+        bve_worker(data, stepper, force, doStatistics);
 
         if (!data.ok()) { return; }
 
@@ -375,19 +374,20 @@ void BoundedVariableElimination::sequentiellBVE(CoprocessorData& data, const boo
     progressStats(data, true);
 }
 
-//expects filled variable processing queue
-//
-// force -> forces resolution
-//
-//
-void BoundedVariableElimination::bve_worker(CoprocessorData& data, int64_t& bveChecks, const bool force, const bool doStatistics)
+/**
+ * Expects filled variable processing queue
+ *
+ * force -> forces resolution
+ */
+void BoundedVariableElimination::bve_worker(CoprocessorData& data, Stepper& workerStepper, const bool force, const bool doStatistics)
 {
-    // repeat loop only until being interrupted
-    while (!data.isInterupted()
-            && ((config.opt_bve_heap != 2 && variable_heap->size() > 0) || (config.opt_bve_heap == 2 && variable_queue.size() > 0))
-            && (seqBveSteps < config.opt_bve_limit ||
-                data.unlimited()) // bveChecks is a reference to seqBveSteps - thus this comparison works
-          ) {
+    while (// repeat loop only until being interrupted
+           !data.isInterupted()
+           // variable queue / heap is not empty
+           && ((config.opt_bve_heap != 2 && variable_heap->size() > 0) || (config.opt_bve_heap == 2 && variable_queue.size() > 0))
+           // step limit not reached
+           && (workerStepper.inLimit() || data.unlimited())
+        ) {
         Var v = var_Undef;
         if (config.opt_bve_heap != 2) {
             v = variable_heap->removeMin();
@@ -410,8 +410,8 @@ void BoundedVariableElimination::bve_worker(CoprocessorData& data, int64_t& bveC
 
         // Heuristic Cutoff Gate-Search
         if (!config.opt_force_gates && !config.opt_unlimited_bve &&
-                (data[mkLit(v, true)] > 10 && data[mkLit(v, false)] > 10 ||
-                 data[v] > 15 && (data[mkLit(v, true)] > 5 || data[mkLit(v, false)] > 5))) {
+            (data[mkLit(v, true)] > 10 && data[mkLit(v, false)] > 10 ||
+             data[v] > 15 && (data[mkLit(v, true)] > 5 || data[mkLit(v, false)] > 5))) {
             if (doStatistics) { ++skippedVars; }
             continue;
         }
@@ -430,10 +430,10 @@ void BoundedVariableElimination::bve_worker(CoprocessorData& data, int64_t& bveC
 
         // Heuristic Cutoff Anticipation (if no Gate Found)
         if (!config.opt_unlimited_bve && !foundGate &&
-                (data[mkLit(v, true)] > 10 && data[mkLit(v, false)] > 10
-                 || data[v] > 15 && (data[mkLit(v, true)] > 5 || data[mkLit(v, false)] > 5)
-                )
-           ) {
+            (data[mkLit(v, true)] > 10 && data[mkLit(v, false)] > 10
+             || data[v] > 15 && (data[mkLit(v, true)] > 5 || data[mkLit(v, false)] > 5)
+            )
+            ) {
             if (doStatistics) { ++skippedVars; }
             continue;
         }
@@ -502,7 +502,7 @@ void BoundedVariableElimination::bve_worker(CoprocessorData& data, int64_t& bveC
             if (pos_count != 0 && neg_count != 0) {
                 if (doStatistics) { ++anticipations; }
                 anticipateResult = anticipateElimination(data, pos, neg, v, p_limit, n_limit, pos_stats, neg_stats,
-                                   lit_clauses, lit_learnts, resolvents, bveChecks);
+                                                         lit_clauses, lit_learnts, resolvents, workerStepper);
                 if (anticipateResult == l_False) { return; }  // level 0 conflict found while anticipation TODO ABORT
             }
 
@@ -539,8 +539,8 @@ void BoundedVariableElimination::bve_worker(CoprocessorData& data, int64_t& bveC
         assert((anticipateResult != l_True || reducedClss) && "in case of an early abort, we have to resolve");
 
         if ((force || doResolve) // clauses or literals should be reduced and we did
-                && !config.opt_bce_only // only if bve should be done
-           ) {
+            && !config.opt_bce_only // only if bve should be done
+            ) {
             if (resolvents < pos_count + neg_count) {
                 nClsDecreases++;
             } else if (resolvents > pos_count + neg_count) {
@@ -552,7 +552,7 @@ void BoundedVariableElimination::bve_worker(CoprocessorData& data, int64_t& bveC
             if (doStatistics) { usedGates = (foundGate ? usedGates + 1 : usedGates); } // statistics
             if (config.opt_bve_verbose > 1) { cerr << "c resolveSet" << endl; }
             data.addCommentToProof("perform BVE");
-            if (resolveSet(data, pos, neg, v, p_limit, n_limit, bveChecks) == l_False) {
+            if (resolveSet(data, pos, neg, v, p_limit, n_limit, workerStepper) == l_False) {
                 assert(!data.ok() && "here, the data object should already know that nothing can be done");
                 return;
             }
@@ -618,6 +618,7 @@ void BoundedVariableElimination::bve_worker(CoprocessorData& data, int64_t& bveC
         }
 
     }
+
 }
 
 /*
@@ -625,7 +626,8 @@ void BoundedVariableElimination::bve_worker(CoprocessorData& data, int64_t& bveC
  *      remove it from data-Objects statistics
  *      mark it for deletion
  */
-inline void BoundedVariableElimination::removeClauses(Coprocessor::CoprocessorData& data, const vector< Riss::CRef >& list, const Lit& l, const int limit, const bool doStatistics)
+inline void BoundedVariableElimination::removeClauses(Coprocessor::CoprocessorData& data, const vector< Riss::CRef >& list,
+                                                      const Lit& l, const int limit, const bool doStatistics)
 {
     for (int cr_i = 0; cr_i < list.size(); ++cr_i) {
         Clause& c = ca[list[cr_i]];
@@ -672,13 +674,14 @@ inline void BoundedVariableElimination::removeClauses(Coprocessor::CoprocessorDa
  *  -> total number of literals in clauses after resolution:    lit_clauses
  *  -> total number of literals in learnts after resolution:    lit_learnts
  *
- *  @return l_False, if the empty clause was produced, l_Undef, if the procedure reached its end, l_True, if we had an early abort due to too many resolvents
+ *  @return l_False if the empty clause was produced, l_Undef, if the procedure reached its end, l_True, if we had an
+ *                  early abort due to too many resolvents
  */
 inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& data, vector<CRef>& positive,
         vector<CRef>& negative, const int v, const int p_limit,
         const int n_limit, vec<int32_t>& pos_stats,
         vec<int32_t>& neg_stats, int& lit_clauses,
-        int& lit_learnts, int& resolvents, int64_t& bveChecks,
+        int& lit_learnts, int& resolvents, Stepper& bveStepper,
         const bool doStatistics)
 {
     if (config.opt_bve_verbose > 2) {
@@ -717,16 +720,21 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& 
             }
             continue;
         }
-        if (binariesOnly && p.size() > 2) { continue; }  // we are already over the clause limit, but we are still looking for units
+        // we are already over the clause limit, but we are still looking for units
+        if (binariesOnly && p.size() > 2) {
+            continue;
+        }
         if (config.opt_bve_verbose > 2) { cerr << "c [" << cr_p << "/" << positive.size() << "] : " << p << endl; }
         for (int cr_n = 0; cr_n < negative.size(); ++cr_n) {
             // do not check resolvents, which would touch two clauses out of the variable definition
             if (cr_p >= p_limit && cr_n >= n_limit) { continue; }
             if (hasDefinition && cr_p < p_limit && cr_n < n_limit) {
-                continue;    // no need to resolve the definition clauses with each other NOTE: assumes that these clauses result in tautologies
+                // no need to resolve the definition clauses with each other
+                // NOTE: assumes that these clauses result in tautologies
+                continue;
             }
 
-            bveChecks++; // count number of clause dereferrences!
+            bveStepper.increaseSteps(1); // count number of clause dereferrences!
 
             Clause& n = ca[negative[cr_n]];
             if (n.can_be_deleted()) {
@@ -860,7 +868,7 @@ inline lbool BoundedVariableElimination::anticipateElimination(CoprocessorData& 
  */
 lbool BoundedVariableElimination::resolveSet(CoprocessorData& data,
                                              vector<CRef>& positive, vector<CRef>& negative, const int v,
-                                             const int p_limit, const int n_limit, int64_t& bveChecks,
+                                             const int p_limit, const int n_limit, Stepper& bveStepper,
                                              const bool keepLearntResolvents, const bool force,
                                              const bool doStatistics)
 {
@@ -876,8 +884,7 @@ lbool BoundedVariableElimination::resolveSet(CoprocessorData& data,
             if (hasDefinition && cr_p < p_limit && cr_n < n_limit) {
                 continue;    // no need to resolve the definition clauses with each other NOTE: assumes that these clauses result in tautologies
             }
-
-            bveChecks++; // count number of clause dereferrences!
+            bveStepper.increaseSteps(1); // count number of clause dereferrences!
             Clause& p = ca[positive[cr_p]]; // renew reference as it could got invalid while clause allocation
             Clause& n = ca[negative[cr_n]];
             if (n.can_be_deleted()) {

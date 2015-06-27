@@ -69,12 +69,16 @@ static void printClauses(ClauseAllocator& ca, vector<CRef>& list, bool skipDelet
  *          you must not acquire a write lock on the data object, if alread 2.b was acquired
  *          you either hold a heap lock or any of the other locks
  */
-void BoundedVariableElimination::par_bve_worker(CoprocessorData& data, Heap<VarOrderBVEHeapLt>& heap,
-        deque<CRef>& strengthQueue, deque<CRef>& sharedStrengthQueue,
-        deque<PostponeReason>& postponed, vector<SpinLock>& var_lock,
-        ReadersWriterLock& rwlock, ParBVEStats& stats, MarkArray *gateMarkArray,
-        int& rwlock_count, int& garbageCounter, int64_t& parBVEchecks,
-        const bool force, const bool doStatistics)
+void BoundedVariableElimination::par_bve_worker(CoprocessorData& data,
+                                                Heap<VarOrderBVEHeapLt>& heap,
+                                                deque<CRef>& strengthQueue,
+                                                deque<CRef>& sharedStrengthQueue,
+                                                deque<PostponeReason>& postponed,
+                                                vector<SpinLock>& var_lock, ReadersWriterLock& rwlock,
+                                                ParBVEStats& stats,
+                                                MarkArray *gateMarkArray,
+                                                int& rwlock_count, int& garbageCounter, int64_t& parBVEchecks,
+                                                const bool force, const bool doStatistics)
 {
     if (doStatistics) { stats.processTime = wallClockTime() - stats.processTime; }
 
@@ -91,7 +95,7 @@ void BoundedVariableElimination::par_bve_worker(CoprocessorData& data, Heap<VarO
     int32_t timeStamp;
     while (data.ok()
             && (!data.isInterupted())
-            && (seqBveSteps + parBVEchecks < config.opt_bve_limit || data.unlimited())
+            && (stepper.inLimit(parBVEchecks) || data.unlimited())
           ) { // if solver state = false => abort
         // Propagate (rw-locks)
         if (data.hasToPropagate()) {
@@ -999,7 +1003,7 @@ void *BoundedVariableElimination::runParallelBVE(void *arg)
     return 0;
 }
 
-void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
+void BoundedVariableElimination::parallelBVE(CoprocessorData& data, const bool doStatistics)
 {
     printDRUPwarning(cerr, "parallel BVE"); // warnings that certain things are not supported (yet)
     printExtraInfowarning(cerr, "parallel BVE");
@@ -1011,7 +1015,6 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
             modifiedFormula = modifiedFormula || propagation.appliedSomething();
         }
     }
-    const bool doStatistics = true;
     if (doStatistics) { processTime = wallClockTime() - processTime; }
 
     lastTouched.resize(data.nVars());
@@ -1038,17 +1041,20 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
         }
     }
 
+    // create data set for each BVE worker
     for (int i = 0; i < controller.size(); ++i) {
-        workData[i].bve = this;
-        workData[i].data = &data;
-        workData[i].var_locks = &variableLocks;
-        workData[i].rw_lock = &allocatorRWLock;
-        workData[i].heap = &newheap;
-        workData[i].strengthQueue = &strengthQueues[i];
+        workData[i].bve                 = this;
+        workData[i].data                = &data;
+        workData[i].var_locks           = &variableLocks;
+        workData[i].rw_lock             = &allocatorRWLock;
+        workData[i].heap                = &newheap;
+        workData[i].strengthQueue       = &strengthQueues[i];
         workData[i].sharedStrengthQueue = &sharedStrengthQueue;
-        workData[i].postponed = &postpones[i];
-        workData[i].bveStats = &parStats[i];
-        if (true || config.opt_bve_findGate) { workData[i].gateMarkArray = &gateMarkArrays[i]; }
+        workData[i].postponed           = &postpones[i];
+        workData[i].bveStats            = &parStats[i];
+        if (true || config.opt_bve_findGate) {
+            workData[i].gateMarkArray   = &gateMarkArrays[i];
+        }
     }
 
     if (config.opt_bve_heap != 2) {
@@ -1058,9 +1064,11 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
     }
 
     bool reachedLimit = false; // indicate if enough steps have been performed
-    while (((config.opt_bve_heap != 2 && newheap.size() > 0) || (config.opt_bve_heap == 2 && variable_queue.size() > 0))
-            && !data.isInterupted()
-            && !reachedLimit
+
+    while (// variable queue / heap is not empty
+           ((config.opt_bve_heap != 2 && newheap.size() > 0) || (config.opt_bve_heap == 2 && variable_queue.size() > 0))
+           && !data.isInterupted()
+           && !reachedLimit
           ) {
 
         updateDeleteTime(data.getMyDeleteTimer());
@@ -1071,7 +1079,12 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
 
         int QSize = ((config.opt_bve_heap != 2) ? newheap.size() : variable_queue.size());
         ReadersWriterLock allocatorRWLock;
-        if (config.opt_par_bve == 2 || (QSize > config.par_bve_threshold && config.opt_par_bve == 1)) {
+
+        // determine if we should run parallel or sequential worker
+        if (config.opt_par_bve == 2 // always parallel (cp3_par_bve: 2)
+            || (config.opt_par_bve == 1              // heuristic parallel (cp3_par_bve: 1) which means,
+                && QSize > config.par_bve_threshold) // number of variables exceeds the threshold
+            ) {
             for (int i = 0; i < controller.size(); ++i) {
                 jobs[i].function = BoundedVariableElimination::runParallelBVE;
                 workData[i].rw_lock = &allocatorRWLock;
@@ -1103,16 +1116,21 @@ void BoundedVariableElimination::parallelBVE(CoprocessorData& data)
                     if (workData[i].garbageCounter > 0) { ca.freeLit(workData[i].garbageCounter); }
                 }
             }
-        } else {
+        }
+        // we run a sequential BVE - its likly that we have performed parallel runs before
+        else {
             if (config.opt_bve_findGate) { data.ma.resize(data.nVars() * 2); }
             if (config.opt_bve_verbose > 0) { cerr << "c sequentiel bve on " << QSize << " variables" << endl; }
+
+            // sum up all parallel steps performed until now
             int parBveStepSum = 0;
             for (int i = 0; i < controller.size(); ++i) {
                 parBveStepSum += parStats[i].parBveChecks;
             }
-            seqBveSteps += parBveStepSum / controller.size();
-            bve_worker(data, seqBveSteps);
-            seqBveSteps -= parBveStepSum / controller.size();
+            // FIXME why add and then remove parallel BVE steps?!
+            stepper.increaseSteps(parBveStepSum / controller.size()); // adds average parallel BVE steps to stepper
+            bve_worker(data, stepper); // runs a single BVE worker
+            stepper.increaseSteps(parBveStepSum / controller.size()); // removes average parallel BVE steps from stepper
         }
         //propagate units
         if (data.hasToPropagate()) {

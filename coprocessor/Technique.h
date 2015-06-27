@@ -26,6 +26,8 @@ namespace Coprocessor
 template<class T>
 class Technique
 {
+  protected:
+
     /**
      * Helper class that controls the budget of computation time a technique is allowd to use
      */
@@ -35,17 +37,24 @@ class Technique
         int64_t steps;  // number of steps already used (shows the usage)
 
       public:
-        Stepper(int limit) : limit(limit), steps(0) {}
+        Stepper(int limit, int steps = 0) : limit(limit), steps(steps) {}
 
-        inline int64_t getCurrentSteps() const             { return steps; }; // returns the number of consumed steps
+        inline int64_t getCurrentSteps() const             { return steps; } // returns the number of consumed steps
+        inline int64_t getCurrentLimit() const             { return limit; } // returns budget of steps
+        inline void    reset()                             { steps = 0; }    // set step counter to zero, persists current budget
         inline void    increaseLimit(int additionalBudget) { limit += additionalBudget; }
-        inline void    increaseSteps(int _steps = 1)       { steps += _steps; }
+        inline void    increaseSteps(int _steps = 1)       { steps += _steps; } // you can also decrease the steps by using a negative argument
         inline bool    inLimit() const                     { return steps < limit; }
-        inline void    reset()                             { steps = 0; }
+
+        /**
+         * This limit check is useful if you an additional counter (for example for multiple parallel threads) and
+         * you want that this extra counters are also inside the step limit.
+         *
+         * @return true, if the current steps + offset is inside the limit
+         */
+        inline bool    inLimit(uint64_t offset) const      { return steps + offset < limit; }
     };
 
-
-  protected:
     CP3Config& config;            // store the configuration for the whole preprocessor
     Stepper stepper;
 

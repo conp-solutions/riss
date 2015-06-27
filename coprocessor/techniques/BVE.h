@@ -92,7 +92,6 @@ class BoundedVariableElimination : public Technique<BoundedVariableElimination>
         newLearntLits, testedVars, anticipations, eliminatedVars, removedBC, blockedLits, removedBlockedLearnt, learntBlockedLit,
         skippedVars, unitsEnqueued, foundGates, usedGates,
         initialClauses, initialLits, clauseCount, litCount, unitCount, elimCount, restarts;
-    int64_t seqBveSteps;
     int64_t nClsIncreases, nClsDecreases, nClsKeep, totallyAddedClauses; // number of clauses that have been added by bve
     double processTime, subsimpTime, gateTime;
 
@@ -115,7 +114,7 @@ class BoundedVariableElimination : public Technique<BoundedVariableElimination>
 
     // sequential functions:
     void sequentiellBVE(CoprocessorData& data, const bool force = false, const bool doStatistics = true);
-    void bve_worker(Coprocessor::CoprocessorData& data, int64_t& bveChecks, const bool force = false, const bool doStatistics = true);
+    void bve_worker(Coprocessor::CoprocessorData& data, Stepper& workerStepper, const bool force = false, const bool doStatistics = true);
 
     /** remove clauses from data structures and add to extension lists
      *  @param l literal that has been used to remove the clauses during elimination (if l == Riss::lit_Undef, clauses are not added to extension stack)
@@ -124,12 +123,12 @@ class BoundedVariableElimination : public Technique<BoundedVariableElimination>
 
 
     /** ths method applies unit propagation during resolution, if possible! */
-    inline Riss::lbool resolveSet(CoprocessorData& data, std::vector<Riss::CRef>& positive, std::vector<Riss::CRef>& negative
-                                  , const int v, const int p_limit, const int n_limit, int64_t& bveChecks
-                                  , const bool keepLearntResolvents = false, const bool force = false, const bool doStatistics = true);
-    inline Riss::lbool anticipateElimination(CoprocessorData& data, std::vector<Riss::CRef>& positive, std::vector<Riss::CRef>& negative
-            , const int v, const int p_limit, const int n_limit, Riss::vec<int32_t>& pos_stats, Riss::vec<int32_t>& neg_stats
-            , int& lit_clauses, int& lit_learnts, int& resolvents, int64_t& bveChecks, const bool doStatistics = true);
+    inline Riss::lbool resolveSet(CoprocessorData& data, std::vector<Riss::CRef>& positive, std::vector<Riss::CRef>& negative,
+                                  const int v, const int p_limit, const int n_limit, Stepper& bveStepper,
+                                  const bool keepLearntResolvents = false, const bool force = false, const bool doStatistics = true);
+    inline Riss::lbool anticipateElimination(CoprocessorData& data, std::vector<Riss::CRef>& positive, std::vector<Riss::CRef>& negative,
+                                             const int v, const int p_limit, const int n_limit, Riss::vec<int32_t>& pos_stats, Riss::vec<int32_t>& neg_stats,
+                                             int& lit_clauses, int& lit_learnts, int& resolvents, Stepper& bveStepper, const bool doStatistics = true);
     inline void addClausesToSubsumption(const std::vector<Riss::CRef>& clauses);
     void touchedVarsForSubsumption(CoprocessorData& data, const std::vector<Riss::Var>& touched_vars);
 
@@ -168,7 +167,7 @@ class BoundedVariableElimination : public Technique<BoundedVariableElimination>
                         const bool force = false, const bool doStatistics = true) ;
 
     /** run parallel bve with all available threads */
-    void parallelBVE(CoprocessorData& data);
+    void parallelBVE(CoprocessorData& data, const bool doStatistics = true);
 
     inline void removeClausesThreadSafe(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, const std::vector<Riss::CRef>& list, const Riss::Lit& l, const int limit, SpinLock& data_lock, SpinLock& heap_lock, ParBVEStats& stats, int& garbageCounter, const bool doStatistics);
     inline Riss::lbool resolveSetThreadSafe(CoprocessorData& data, Riss::Heap<VarOrderBVEHeapLt>& heap, std::vector<Riss::CRef>& positive, std::vector<Riss::CRef>& negative, const int v, const int p_limit, const int n_limit, Riss::vec < Riss::Lit >& ps, Riss::AllocatorReservation& memoryReservation, std::deque<Riss::CRef>& strengthQueue, ParBVEStats& stats, SpinLock& data_lock, SpinLock& heap_lock, int expectedResolvents, int64_t& bveChecks, const bool doStatistics, const bool keepLearntResolvents = false);
