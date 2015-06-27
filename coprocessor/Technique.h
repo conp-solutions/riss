@@ -31,17 +31,17 @@ class Technique
      */
     class Stepper
     {
-        int64_t budget; // number of steps (which should correlate to the computation time) the technique is allowd to run
+        int64_t limit;  // number of steps (which should correlate to the computation time) the technique is allowd to run
         int64_t steps;  // number of steps already used (shows the usage)
 
       public:
-        Stepper(int budget) : budget(budget), steps(0) {}
+        Stepper(int limit) : limit(limit), steps(0) {}
 
-        inline int  getCurrentSteps() const              { return steps; };
-        inline void increaseBudget(int additionalBudget) { budget += additionalBudget; }
-        inline void increaseSteps(int _steps = 1)        { steps += _steps; }
-        inline bool inBudget() const                     { return steps < budget; }
-        inline void reset()                              { steps = 0; }
+        inline int  getCurrentSteps() const             { return steps; }; // returns the number of consumed steps
+        inline void increaseLimit(int additionalBudget) { limit += additionalBudget; }
+        inline void increaseSteps(int _steps = 1)       { steps += _steps; }
+        inline bool inLimit() const                     { return steps < limit; }
+        inline void reset()                             { steps = 0; }
     };
 
 
@@ -68,7 +68,7 @@ class Technique
     /**
      * @param budget number of computation steps the technique is allowed to use. Defaults to maximal integer value
      */
-    Technique(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, int budget = numeric_limits<int64_t>::max())
+    Technique(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, int limit = numeric_limits<int64_t>::max())
         : config(_config)
         , modifiedFormula(false)
         , isInitialized(false)
@@ -79,7 +79,7 @@ class Technique
         , controller(_controller)
         , didPrintCannotDrup(false)
         , didPrintCannotExtraInfo(false)
-        , stepper(budget)
+        , stepper(limit)
     {}
 
     // TODO Maybe we can use a generic interface for all techniques? This would save us a lot of boiler plate code
@@ -183,7 +183,7 @@ class Technique
     inline bool performSimplification()
     {
         // check if budget of computation steps is depleted
-        if (!stepper.inBudget()) {
+        if (!stepper.inLimit()) {
             return false;
         }
         bool ret = (thisPelalty == 0);
