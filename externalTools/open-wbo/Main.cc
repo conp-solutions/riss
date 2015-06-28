@@ -231,6 +231,8 @@ int main(int argc, char **argv)
 
         BoolOption opt_act_cache("Initialization", "actCache", "use activity caching\n", false);
 
+	BoolOption opt_refine_cores("Incremental","-refCores", "refine cores", true );
+	
         #if NSPACE == Riss
         StringOption    opt_pre_config("CONFIG", "preConfig",     "configuration for simplification", 0);
         StringOption opt_solver_config("CONFIG", "solverConfig",  "configuration for sat solver",    0);
