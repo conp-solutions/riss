@@ -211,8 +211,8 @@ int main(int argc, char** argv)
         }
 
         // open file for proof
-        S.drupProofFile = (drupFile) ? fopen((const char*) drupFile , "wb") : NULL;
-        if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S.drupProofFile != NULL) { fprintf(S.drupProofFile, "o proof %s\n", (const char*)opt_proofFormat); }     // we are writing proofs of the given format!
+        S.proofFile = (drupFile) ? fopen((const char*) drupFile , "wb") : NULL;
+        if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S.proofFile != NULL) { fprintf(S.proofFile, "o proof %s\n", (const char*)opt_proofFormat); }     // we are writing proofs of the given format!
 
         parse_DIMACS(in, S);
         gzclose(in);
@@ -249,7 +249,7 @@ int main(int argc, char** argv)
                 else { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
             }
             // add the empty clause to the proof, close proof file
-            if (S.drupProofFile != NULL) { fprintf(S.drupProofFile, "0\n"), fclose(S.drupProofFile); }
+            if (S.proofFile != NULL) { fprintf(S.proofFile, "0\n"), fclose(S.proofFile); }
 
             if (S.verbosity > 0) {
                 printf("c =========================================================================================================\n");
@@ -298,7 +298,7 @@ int main(int argc, char** argv)
         else { printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n"); }
 
         // put empty clause on proof
-        if (ret == l_False && S.drupProofFile != NULL) { fprintf(S.drupProofFile, "0\n"); }
+        if (ret == l_False && S.proofFile != NULL) { fprintf(S.proofFile, "0\n"); }
 
         // print solution into file
         if (res != NULL) {

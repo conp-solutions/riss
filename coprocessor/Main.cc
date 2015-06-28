@@ -166,8 +166,8 @@ int main(int argc, char** argv)
             }
 
             // open file for proof
-            S.drupProofFile = (drupFile) ? fopen((const char*) drupFile , "wb") : NULL;
-            if (opt_proofFormat && strlen(opt_proofFormat) > 0 &&  S.drupProofFile != NULL) { fprintf(S.drupProofFile, "o proof %s\n", (const char*)opt_proofFormat); }    // we are writing proofs of the given format!
+            S.proofFile = (drupFile) ? fopen((const char*) drupFile , "wb") : NULL;
+            if (opt_proofFormat && strlen(opt_proofFormat) > 0 &&  S.proofFile != NULL) { fprintf(S.proofFile, "o proof %s\n", (const char*)opt_proofFormat); }    // we are writing proofs of the given format!
 
             parse_DIMACS(in, S);
             gzclose(in);
@@ -215,7 +215,7 @@ int main(int argc, char** argv)
             }
 
             if (!S.okay()) {
-                if (S.drupProofFile != NULL) { fprintf(S.drupProofFile, "0\n"), fclose(S.drupProofFile); } // tell proof about result!
+                if (S.proofFile != NULL) { fprintf(S.proofFile, "0\n"), fclose(S.proofFile); } // tell proof about result!
                 if (res != NULL) { fprintf(res, "s UNSATISFIABLE\n"); fclose(res); cerr << "s UNSATISFIABLE" << endl; }
                 else { printf("s UNSATISFIABLE\n"); }
                 if (S.verbosity > 0) {
@@ -242,7 +242,7 @@ int main(int argc, char** argv)
                     ret = S.solveLimited(dummy);
                 }
                 if (ret == l_True) {
-                    if (S.drupProofFile != 0) { fclose(S.drupProofFile); }  // close proof file!
+                    if (S.proofFile != 0) { fclose(S.proofFile); }  // close proof file!
                     preprocessor.extendModel(S.model);
                     if (res != NULL) {
                         cerr << "s SATISFIABLE" << endl;
@@ -267,7 +267,7 @@ int main(int argc, char** argv)
                     return (10);
                     #endif
                 } else if (ret == l_False) {
-                    if (S.drupProofFile != NULL) { fprintf(S.drupProofFile, "0\n"), fclose(S.drupProofFile); } // tell proof about result!
+                    if (S.proofFile != NULL) { fprintf(S.proofFile, "0\n"), fclose(S.proofFile); } // tell proof about result!
                     if (res != NULL) { fprintf(res, "s UNSATISFIABLE\n"), fclose(res); }
                     printf("s UNSATISFIABLE\n");
                     cerr.flush(); cout.flush();

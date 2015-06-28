@@ -62,7 +62,7 @@ bool Riss::parseOptions(int& argc, char** argv, bool strict)
 
 void Riss::setUsageHelp(const char* str) { Option::getUsageString() = str; }
 void Riss::setHelpPrefixStr(const char* str) { Option::getHelpPrefixString() = str; }
-void Riss::printUsageAndExit(int argc, char** argv, bool verbose)
+void Riss::printUsageAndExit(int argc, char** argv, bool verbose, int activeLevel)
 {
     const char* usage = Option::getUsageString();
 
@@ -72,6 +72,9 @@ void Riss::printUsageAndExit(int argc, char** argv, bool verbose)
     const char* prev_type = NULL;
 
     for (int i = 0; i < Option::getOptionList().size(); i++) {
+      
+        
+      
         const char* cat  = Option::getOptionList()[i]->category;
         const char* type = Option::getOptionList()[i]->type_name;
 

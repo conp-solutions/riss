@@ -228,7 +228,7 @@ class Solver
     void    checkGarbage();
 
     // Output for DRUP unsat proof
-    FILE*               drupProofFile;
+    FILE*               proofFile;
 
     // Extra results: (read-only member variable)
     //

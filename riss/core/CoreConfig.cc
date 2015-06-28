@@ -78,9 +78,9 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
 
     opt_restart_level(_cat, "rlevel", "Choose to which level to jump to: 0=0, 1=ReusedTrail, 2=recursive reused trail", 0, IntRange(0, 2), optionListPtr),
     opt_restarts_type(_cat, "rtype", "Choose type of restart (0=dynamic,1=luby,2=geometric)", 0, IntRange(0, 2), optionListPtr),
-    opt_restart_first(_cat, "rfirst", "The base restart interval", 100, IntRange(1, INT32_MAX), optionListPtr),
-    opt_restart_inc(_cat, "rinc", "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false), optionListPtr),
-    opt_inc_restart_level(_cat, "irlevel", "Choose how often restarts beyond assumptions shoud be performed (every X)", 1, IntRange(1, INT32_MAX), optionListPtr),
+    opt_restart_first(_cat, "rfirst", "The base restart interval", 100, IntRange(1, INT32_MAX), optionListPtr, &opt_restarts_type),
+    opt_restart_inc(_cat, "rinc", "Restart interval increase factor", 2, DoubleRange(1, false, HUGE_VAL, false), optionListPtr, &opt_restarts_type),
+    opt_inc_restart_level(_cat, "irlevel", "Choose how often restarts beyond assumptions shoud be performed (every X)", 1, IntRange(1, INT32_MAX), optionListPtr, &opt_restarts_type),
 
     opt_garbage_frac(_cat, "gc-frac", "The fraction of wasted memory allowed before a garbage collection is triggered", 0.20, DoubleRange(0, false, HUGE_VAL, false), optionListPtr),
 
@@ -128,25 +128,25 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     #endif
 
     opt_rMax("MODS", "rMax", "initial max. interval between two restarts (-1 = off)", -1, IntRange(-1, INT32_MAX) , optionListPtr),
-    opt_rMaxInc("MODS", "rMaxInc", "increase of the max. restart interval per restart", 1.1, DoubleRange(1, true, HUGE_VAL, false), optionListPtr),
+    opt_rMaxInc("MODS", "rMaxInc", "increase of the max. restart interval per restart", 1.1, DoubleRange(1, true, HUGE_VAL, false), optionListPtr, &opt_rMax),
 
     #ifndef NDEBUG
     localLookaheadDebug("SEARCH - LOCAL LOOK AHEAD", "laHackOutput", "output info about LA", false, optionListPtr),
     #endif
     localLookAhead("SEARCH - LOCAL LOOK AHEAD", "laHack", "enable lookahead on level 0", false, optionListPtr),
-    tb("SEARCH - LOCAL LOOK AHEAD", "tabu", "do not perform LA, if all considered LA variables are as before", true, optionListPtr),
-    opt_laDyn("SEARCH - LOCAL LOOK AHEAD", "dyn", "dynamically set the frequency based on success", false, optionListPtr),
-    opt_laEEl("SEARCH - LOCAL LOOK AHEAD", "laEEl", "add EE clauses as learnt clauses", false, optionListPtr),
-    opt_laEEp("SEARCH - LOCAL LOOK AHEAD", "laEEp", "add EE clauses, if less than p percent tests failed", 0, IntRange(0, 100), optionListPtr),
-    opt_laMaxEvery("SEARCH - LOCAL LOOK AHEAD", "hlaMax", "maximum bound for frequency", 50, IntRange(0, INT32_MAX) , optionListPtr),
+    tb("SEARCH - LOCAL LOOK AHEAD", "tabu", "do not perform LA, if all considered LA variables are as before", true, optionListPtr, &localLookAhead),
+    opt_laDyn("SEARCH - LOCAL LOOK AHEAD", "dyn", "dynamically set the frequency based on success", false, optionListPtr, &localLookAhead),
+    opt_laEEl("SEARCH - LOCAL LOOK AHEAD", "laEEl", "add EE clauses as learnt clauses", false, optionListPtr, &localLookAhead),
+    opt_laEEp("SEARCH - LOCAL LOOK AHEAD", "laEEp", "add EE clauses, if less than p percent tests failed", 0, IntRange(0, 100), optionListPtr, &localLookAhead),
+    opt_laMaxEvery("SEARCH - LOCAL LOOK AHEAD", "hlaMax", "maximum bound for frequency", 50, IntRange(0, INT32_MAX) , optionListPtr, &localLookAhead),
     #ifdef DONT_USE_128_BIT
-    opt_laLevel("SEARCH - LOCAL LOOK AHEAD", "hlaLevel", "level of look ahead", 5, IntRange(1, 5) , optionListPtr),
+    opt_laLevel("SEARCH - LOCAL LOOK AHEAD", "hlaLevel", "level of look ahead", 5, IntRange(1, 5) , optionListPtr, &localLookAhead),
     #else
-    opt_laLevel("SEARCH - LOCAL LOOK AHEAD", "hlaLevel", "level of look ahead", 5, IntRange(1, 5) , optionListPtr),
+    opt_laLevel("SEARCH - LOCAL LOOK AHEAD", "hlaLevel", "level of look ahead", 5, IntRange(1, 5) , optionListPtr, &localLookAhead),
     #endif
-    opt_laEvery("SEARCH - LOCAL LOOK AHEAD", "hlaevery", "initial frequency of LA", 1, IntRange(0, INT32_MAX) , optionListPtr),
-    opt_laBound("SEARCH - LOCAL LOOK AHEAD", "hlabound", "max. nr of LAs (-1 == inf)", 4096, IntRange(-1, INT32_MAX) , optionListPtr),
-    opt_laTopUnit("SEARCH - LOCAL LOOK AHEAD", "hlaTop", "allow another LA after learning another nr of top level units (-1 = never)", -1, IntRange(-1, INT32_MAX), optionListPtr),
+    opt_laEvery("SEARCH - LOCAL LOOK AHEAD", "hlaevery", "initial frequency of LA", 1, IntRange(0, INT32_MAX) , optionListPtr, &localLookAhead),
+    opt_laBound("SEARCH - LOCAL LOOK AHEAD", "hlabound", "max. nr of LAs (-1 == inf)", 4096, IntRange(-1, INT32_MAX) , optionListPtr, &localLookAhead),
+    opt_laTopUnit("SEARCH - LOCAL LOOK AHEAD", "hlaTop", "allow another LA after learning another nr of top level units (-1 = never)", -1, IntRange(-1, INT32_MAX), optionListPtr, &localLookAhead),
 
     opt_hpushUnit("MODS", "delay-units", "does not propagate unit clauses until solving is initialized", false, optionListPtr),
     opt_simplifyInterval("MODS", "sInterval", "how often to perform simplifications on level 0", 0, IntRange(0, INT32_MAX) , optionListPtr),
@@ -156,49 +156,49 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     opt_learnDecRER("SEARCH - DECISION CLAUSES", "learnDecRER", "consider decision clauses for RER?", false , optionListPtr),
 
     opt_restrictedExtendedResolution("EXTENDED RESOLUTION RER", "rer", "perform restricted extended resolution (along Audemard ea 2010)", false, optionListPtr),
-    opt_rer_as_learned("EXTENDED RESOLUTION RER", "rer-l", "store extensions as learned clauses", true, optionListPtr),
-    opt_rer_as_replaceAll("EXTENDED RESOLUTION RER", "rer-r", "replace all disjunctions of the RER extension (only, if not added as learned, and if full - RER adds a conjunction, optionListPtr ), 0=no,1=formula,2=formula+learned", 0, IntRange(0, 2), optionListPtr),
-    opt_rer_rewriteNew("EXTENDED RESOLUTION RER", "rer-rn", "rewrite new learned clauses, only if full and not added as learned", false, optionListPtr),
-    opt_rer_full("EXTENDED RESOLUTION RER", "rer-f", "add full rer extension?", true, optionListPtr),
-    opt_rer_minSize("EXTENDED RESOLUTION RER", "rer-min-size", "minimum size of learned clause to perform rer", 2, IntRange(2, INT32_MAX) , optionListPtr),
-    opt_rer_maxSize("EXTENDED RESOLUTION RER", "rer-max-size", "maximum size of learned clause to perform rer", INT32_MAX, IntRange(2, INT32_MAX) , optionListPtr),
-    opt_rer_minLBD("EXTENDED RESOLUTION RER", "rer-minLBD", "minimum LBD to perform rer", 1, IntRange(1, INT32_MAX) , optionListPtr),
-    opt_rer_maxLBD("EXTENDED RESOLUTION RER", "rer-maxLBD", "maximum LBD to perform rer", INT32_MAX, IntRange(1, INT32_MAX) , optionListPtr),
-    opt_rer_windowSize("EXTENDED RESOLUTION RER", "rer-window", "number of clauses to collect before fuse", 2, IntRange(2, INT32_MAX) , optionListPtr),
-    opt_rer_newAct("EXTENDED RESOLUTION RER", "rer-new-act", "how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean", 0, IntRange(0, 4) , optionListPtr),
-    opt_rer_ite("EXTENDED RESOLUTION RER", "rer-ite", "check for ITE pattern, if AND is not found?", false , optionListPtr),
+    opt_rer_as_learned("EXTENDED RESOLUTION RER", "rer-l", "store extensions as learned clauses", true, optionListPtr, &opt_restrictedExtendedResolution),
+    opt_rer_as_replaceAll("EXTENDED RESOLUTION RER", "rer-r", "replace all disjunctions of the RER extension (only, if not added as learned, and if full - RER adds a conjunction, optionListPtr ), 0=no,1=formula,2=formula+learned", 0, IntRange(0, 2), optionListPtr, &opt_restrictedExtendedResolution),
+    opt_rer_rewriteNew("EXTENDED RESOLUTION RER", "rer-rn", "rewrite new learned clauses, only if full and not added as learned", false, optionListPtr, &opt_restrictedExtendedResolution),
+    opt_rer_full("EXTENDED RESOLUTION RER", "rer-f", "add full rer extension?", true, optionListPtr, &opt_restrictedExtendedResolution),
+    opt_rer_minSize("EXTENDED RESOLUTION RER", "rer-min-size", "minimum size of learned clause to perform rer", 2, IntRange(2, INT32_MAX) , optionListPtr, &opt_restrictedExtendedResolution),
+    opt_rer_maxSize("EXTENDED RESOLUTION RER", "rer-max-size", "maximum size of learned clause to perform rer", INT32_MAX, IntRange(2, INT32_MAX) , optionListPtr, &opt_restrictedExtendedResolution),
+    opt_rer_minLBD("EXTENDED RESOLUTION RER", "rer-minLBD", "minimum LBD to perform rer", 1, IntRange(1, INT32_MAX) , optionListPtr, &opt_restrictedExtendedResolution),
+    opt_rer_maxLBD("EXTENDED RESOLUTION RER", "rer-maxLBD", "maximum LBD to perform rer", INT32_MAX, IntRange(1, INT32_MAX) , optionListPtr, &opt_restrictedExtendedResolution),
+    opt_rer_windowSize("EXTENDED RESOLUTION RER", "rer-window", "number of clauses to collect before fuse", 2, IntRange(2, INT32_MAX) , optionListPtr, &opt_restrictedExtendedResolution),
+    opt_rer_newAct("EXTENDED RESOLUTION RER", "rer-new-act", "how to set the new activity: 0=avg, 1=max, 2=min, 3=sum, 4=geo-mean", 0, IntRange(0, 4) , optionListPtr, &opt_restrictedExtendedResolution),
+    opt_rer_ite("EXTENDED RESOLUTION RER", "rer-ite", "check for ITE pattern, if AND is not found?", false , optionListPtr, &opt_restrictedExtendedResolution),
     #ifndef NDEBUG
-    opt_rer_debug("EXTENDED RESOLUTION RER", "rer-d", "debug output for RER", false, optionListPtr),
+    opt_rer_debug("EXTENDED RESOLUTION RER", "rer-d", "debug output for RER", false, optionListPtr, &opt_restrictedExtendedResolution),
     #endif
-    opt_rer_every("EXTENDED RESOLUTION RER", "rer-freq", "how often rer compared to usual learning", 1, DoubleRange(0, true, 1, true) , optionListPtr),
-    opt_rer_each("EXTENDED RESOLUTION RER", "rer-e", "when a pair is rejected, initialize with the new clause", false, optionListPtr),
-    opt_rer_extractGates("EXTENDED RESOLUTION RER", "rer-g", "extract binary and gates from the formula for RER rewriting", false, optionListPtr),
-    opt_rer_addInputAct("EXTENDED RESOLUTION RER", "rer-ga", "increase activity for input variables",  0, DoubleRange(0, true, HUGE_VAL, true) , optionListPtr),
-    erRewrite_size("EXTENDED RESOLUTION", "er-size", "rewrite new learned clauses with ER, if size is small enough", 30, IntRange(0, INT32_MAX), optionListPtr),
-    erRewrite_lbd("EXTENDED RESOLUTION", "er-lbd" , "rewrite new learned clauses with ER, if lbd is small enough",  6,  IntRange(0, INT32_MAX), optionListPtr),
+    opt_rer_every("EXTENDED RESOLUTION RER", "rer-freq", "how often rer compared to usual learning", 1, DoubleRange(0, true, 1, true) , optionListPtr, &opt_restrictedExtendedResolution),
+    opt_rer_each("EXTENDED RESOLUTION RER", "rer-e", "when a pair is rejected, initialize with the new clause", false, optionListPtr, &opt_restrictedExtendedResolution),
+    opt_rer_extractGates("EXTENDED RESOLUTION RER", "rer-g", "extract binary and gates from the formula for RER rewriting", false, optionListPtr, &opt_restrictedExtendedResolution),
+    opt_rer_addInputAct("EXTENDED RESOLUTION RER", "rer-ga", "increase activity for input variables",  0, DoubleRange(0, true, HUGE_VAL, true) , optionListPtr, &opt_rer_extractGates),
+    erRewrite_size("EXTENDED RESOLUTION", "er-size", "rewrite new learned clauses with ER, if size is small enough", 30, IntRange(0, INT32_MAX), optionListPtr, &opt_rer_rewriteNew),
+    erRewrite_lbd("EXTENDED RESOLUTION", "er-lbd" , "rewrite new learned clauses with ER, if lbd is small enough",  6,  IntRange(0, INT32_MAX), optionListPtr, &opt_rer_rewriteNew),
 
     opt_interleavedClauseStrengthening("INTERLEAVED CLAUSE STRENGTHENING", "ics", "perform interleaved clause strengthening (along Wieringa ea 2013)", false, optionListPtr),
-    opt_ics_interval("INTERLEAVED CLAUSE STRENGTHENING", "ics_window" , "run ICS after another N conflicts", 5000, IntRange(0, INT32_MAX) , optionListPtr),
-    opt_ics_processLast("INTERLEAVED CLAUSE STRENGTHENING", "ics_processLast" , "process this number of learned clauses (analyse, reject if quality too bad!)", 5050, IntRange(0, INT32_MAX) , optionListPtr),
-    opt_ics_keepLearnts("INTERLEAVED CLAUSE STRENGTHENING", "ics_keepNew" , "keep the learned clauses that have been produced during the ICS", false , optionListPtr),
-    opt_ics_dynUpdate("INTERLEAVED CLAUSE STRENGTHENING", "ics_dyn" , "update variable/clause activities during ICS", false , optionListPtr),
-    opt_ics_shrinkNew("INTERLEAVED CLAUSE STRENGTHENING", "ics_shrinkNew" , "shrink the kept learned clauses in the very same run?! (makes only sense if the other clauses are kept!)", false , optionListPtr),
-    opt_ics_LBDpercent("INTERLEAVED CLAUSE STRENGTHENING", "ics_relLBD" , "only look at a clause if its LBD is less than this percent of the average of the clauses that are looked at, 1=100%", 1, DoubleRange(0, true, HUGE_VAL, true) , optionListPtr),
-    opt_ics_SIZEpercent("INTERLEAVED CLAUSE STRENGTHENING", "ics_relSIZE" , "only look at a clause if its size is less than this percent of the average size of the clauses that are looked at, 1=100%", 1, DoubleRange(0, true, HUGE_VAL, true) , optionListPtr),
+    opt_ics_interval("INTERLEAVED CLAUSE STRENGTHENING", "ics_window" , "run ICS after another N conflicts", 5000, IntRange(0, INT32_MAX) , optionListPtr, &opt_interleavedClauseStrengthening),
+    opt_ics_processLast("INTERLEAVED CLAUSE STRENGTHENING", "ics_processLast" , "process this number of learned clauses (analyse, reject if quality too bad!)", 5050, IntRange(0, INT32_MAX) , optionListPtr, &opt_interleavedClauseStrengthening),
+    opt_ics_keepLearnts("INTERLEAVED CLAUSE STRENGTHENING", "ics_keepNew" , "keep the learned clauses that have been produced during the ICS", false , optionListPtr, &opt_interleavedClauseStrengthening),
+    opt_ics_dynUpdate("INTERLEAVED CLAUSE STRENGTHENING", "ics_dyn" , "update variable/clause activities during ICS", false , optionListPtr, &opt_interleavedClauseStrengthening),
+    opt_ics_shrinkNew("INTERLEAVED CLAUSE STRENGTHENING", "ics_shrinkNew" , "shrink the kept learned clauses in the very same run?! (makes only sense if the other clauses are kept!)", false , optionListPtr, &opt_interleavedClauseStrengthening),
+    opt_ics_LBDpercent("INTERLEAVED CLAUSE STRENGTHENING", "ics_relLBD" , "only look at a clause if its LBD is less than this percent of the average of the clauses that are looked at, 1=100%", 1, DoubleRange(0, true, HUGE_VAL, true) , optionListPtr, &opt_interleavedClauseStrengthening),
+    opt_ics_SIZEpercent("INTERLEAVED CLAUSE STRENGTHENING", "ics_relSIZE" , "only look at a clause if its size is less than this percent of the average size of the clauses that are looked at, 1=100%", 1, DoubleRange(0, true, HUGE_VAL, true) , optionListPtr, &opt_interleavedClauseStrengthening),
     #ifndef NDEBUG
-    opt_ics_debug("INTERLEAVED CLAUSE STRENGTHENING", "ics-debug", "debug output for ICS", false, optionListPtr),
+    opt_ics_debug("INTERLEAVED CLAUSE STRENGTHENING", "ics-debug", "debug output for ICS", false, optionListPtr, &opt_interleavedClauseStrengthening),
     #endif
 
 // MINIMIZATION BY REVERSING AND VIVIFICATION
     opt_use_reverse_minimization("REVERSE MINIMIZATION", "revMin",  "minimize learned clause by using reverse vivification", false, optionListPtr),
-    reverse_minimizing_size("REVERSE MINIMIZATION", "revMinSize", "max clause size for revMin" , 12, IntRange(2, INT32_MAX), optionListPtr),
-    lbLBDreverseClause("REVERSE MINIMIZATION", "revMinLBD", "max clause LBD for revMin", 6, IntRange(1, INT32_MAX), optionListPtr),
+    reverse_minimizing_size("REVERSE MINIMIZATION", "revMinSize", "max clause size for revMin" , 12, IntRange(2, INT32_MAX), optionListPtr, &opt_use_reverse_minimization),
+    lbLBDreverseClause("REVERSE MINIMIZATION", "revMinLBD", "max clause LBD for revMin", 6, IntRange(1, INT32_MAX), optionListPtr, &opt_use_reverse_minimization),
 
 // USING BIG information during search
     opt_uhdProbe("SEARCH UNHIDE PROBING", "sUhdProbe", "perform probing based on learned clauses (off,linear,quadratic,larger)", 0, IntRange(0, 3), optionListPtr),
-    opt_uhdRestartReshuffle("SEARCH UNHIDE PROBING", "sUhdPrSh",  "travers the BIG again during every i-th restart 0=off" , 0, IntRange(0, INT32_MAX), optionListPtr),
-    uhle_minimizing_size("SEARCH UNHIDE PROBING", "sUHLEsize", "maximal clause size for UHLE for learnt clauses (0=off)" , 0, IntRange(0, INT32_MAX), optionListPtr),
-    uhle_minimizing_lbd("SEARCH UNHIDE PROBING", "sUHLElbd",  "maximal LBD for UHLE for learnt clauses (0=off)", 6, IntRange(0, INT32_MAX), optionListPtr),
+    opt_uhdRestartReshuffle("SEARCH UNHIDE PROBING", "sUhdPrSh",  "travers the BIG again during every i-th restart 0=off" , 0, IntRange(0, INT32_MAX), optionListPtr, &opt_uhdProbe),
+    uhle_minimizing_size("SEARCH UNHIDE PROBING", "sUHLEsize", "maximal clause size for UHLE for learnt clauses (0=off)" , 0, IntRange(0, INT32_MAX), optionListPtr, &opt_uhdProbe),
+    uhle_minimizing_lbd("SEARCH UNHIDE PROBING", "sUHLElbd",  "maximal LBD for UHLE for learnt clauses (0=off)", 6, IntRange(0, INT32_MAX), optionListPtr, &opt_uhdProbe),
 
 // DRUP
     opt_verboseProof("PROOF", "verb-proof", "also print comments into the proof, 2=print proof also to stderr", 0, IntRange(0, 2) , optionListPtr),

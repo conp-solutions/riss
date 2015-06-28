@@ -55,7 +55,7 @@ Solver::Solver(CoreConfig* externalConfig , const char* configName) :   // CoreC
     , deleteConfig(externalConfig == 0)
     , config(* privateConfig)
     // DRUP output file
-    , drupProofFile(0)
+    , proofFile(0)
 
     // setup search configuration as code to fill struct
     , verbosity(config.opt_verb)

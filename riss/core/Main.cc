@@ -107,7 +107,7 @@ int main(int argc, char** argv)
     IntOption    cpu_lim("MAIN", "cpu-lim", "Limit on CPU time allowed in seconds.\n", INT32_MAX, IntRange(0, INT32_MAX));
     IntOption    mem_lim("MAIN", "mem-lim", "Limit on memory usage in megabytes.\n", INT32_MAX, IntRange(0, INT32_MAX));
 
-    StringOption drupFile("PROOF", "proof", "Write a proof trace into the given file", 0);
+    StringOption proofFile("PROOF", "proof", "Write a proof trace into the given file", 0);
     StringOption opt_proofFormat("PROOF", "proofFormat", "Do print the proof format (print o line with the given format, DRUP or DRAT)", "DRAT");
 
 
@@ -118,7 +118,8 @@ int main(int argc, char** argv)
     BoolOption   opt_quiet("MAIN", "quiet",      "Do not print the model", false);
     BoolOption   opt_parseOnly("MAIN", "parseOnly", "abort after parsing", false);
     BoolOption   opt_cmdLine("MAIN", "cmd", "print the relevant options", false);
-
+    IntOption    opt_helpLevel("MAIN", "helpLevel", "Show only partial help.\n", -1, IntRange(-1, INT32_MAX));
+    
     try {
 
         //
@@ -127,8 +128,8 @@ int main(int argc, char** argv)
         bool foundHelp = ::parseOptions(argc, argv);   // parse all global options
         CoreConfig coreConfig(string(opt_config == 0 ? "" : opt_config));
         Coprocessor::CP3Config cp3config(string(opt_config == 0 ? "" : opt_config));
-        foundHelp = coreConfig.parseOptions(argc, argv) || foundHelp;
-        foundHelp = cp3config.parseOptions(argc, argv) || foundHelp;
+        foundHelp = coreConfig.parseOptions(argc, argv, false, opt_helpLevel) || foundHelp;
+        foundHelp = cp3config.parseOptions(argc, argv, false, opt_helpLevel) || foundHelp;
         if (foundHelp) { exit(0); }  // stop after printing the help information
 
         if (opt_cmdLine) {  // print the command line options
@@ -206,8 +207,8 @@ int main(int argc, char** argv)
 
 
         // open file for proof
-        S.drupProofFile = (drupFile) ? fopen((const char*) drupFile , "wb") : NULL;
-        if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S.drupProofFile != NULL) { fprintf(S.drupProofFile, "o proof %s\n", (const char*)opt_proofFormat); }    // we are writing proofs of the given format!
+        S.proofFile = (proofFile) ? fopen((const char*) proofFile , "wb") : NULL;
+        if (opt_proofFormat && strlen(opt_proofFormat) > 0 && S.proofFile != NULL) { fprintf(S.proofFile, "o proof %s\n", (const char*)opt_proofFormat); }    // we are writing proofs of the given format!
 
         parse_DIMACS(in, S);
         gzclose(in);
@@ -236,10 +237,10 @@ int main(int argc, char** argv)
                 res = NULL;
             }
             // add the empty clause to the proof, close proof file
-            if (S.drupProofFile != NULL) {
+            if (S.proofFile != NULL) {
                 bool validProof = S.checkProof(); // check the proof that is generated inside the solver
                 if (verb > 0) { cerr << "c checked proof, valid= " << validProof << endl; }
-                fprintf(S.drupProofFile, "0\n"), fclose(S.drupProofFile);
+                fprintf(S.proofFile, "0\n"), fclose(S.proofFile);
             }
             if (S.verbosity > 0) {
                 printf("c =========================================================================================================\n");
@@ -262,10 +263,10 @@ int main(int argc, char** argv)
         // have we reached UNKNOWN because of the limited number of conflicts? then continue with the next loop!
         if (ret == l_Undef) {
             if (res != NULL) { fclose(res); res == NULL; }
-            if (S.drupProofFile != NULL) {
-                fclose(S.drupProofFile);   // close the current file
-                S.drupProofFile = fopen((const char*) drupFile, "w"); // remove the content of that file
-                fclose(S.drupProofFile);   // close the file again
+            if (S.proofFile != NULL) {
+                fclose(S.proofFile);   // close the current file
+                S.proofFile = fopen((const char*) proofFile, "w"); // remove the content of that file
+                fclose(S.proofFile);   // close the file again
             }
         }
 
@@ -289,10 +290,10 @@ int main(int argc, char** argv)
         else { printf(ret == l_True ? "s SATISFIABLE\n" : ret == l_False ? "s UNSATISFIABLE\n" : "s UNKNOWN\n"); }
 
         // put empty clause on proof
-        if (ret == l_False && S.drupProofFile != NULL) {
+        if (ret == l_False && S.proofFile != NULL) {
             bool validProof = S.checkProof(); // check the proof that is generated inside the solver
             if (verb > 0) { cerr << "c checked proof, valid= " << validProof << endl; }
-            fprintf(S.drupProofFile, "0\n");
+            fprintf(S.proofFile, "0\n");
         }
 
         // print solution into file

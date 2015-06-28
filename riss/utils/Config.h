@@ -39,12 +39,12 @@ class Config
     /** parse all options from the command line
       * @return true, if "help" has been found in the parameters
       */
-    bool parseOptions(int& argc, char** argv, bool strict = false);
+    bool parseOptions(int& argc, char** argv, bool strict = false, int activeLevel = -1);
 
     /** parse options that are present in one std::string
      * @return true, if "help" has been found in the parameters
      */
-    bool parseOptions(const std::string& options, bool strict = false);
+    bool parseOptions(const std::string& options, bool strict = false, int activeLevel = -1);
 
     /** set all the options of the specified preset option sets (multiple separated with : possible) */
     void setPreset(const std::string& optionSet);
@@ -55,7 +55,7 @@ class Config
     bool addPreset(const std::string& optionSet);
 
     /** show print for the options of this object */
-    void printUsageAndExit(int  argc, char** argv, bool verbose = false);
+    void printUsageAndExit(int  argc, char** argv, bool verbose = false, int activeLevel = -1);
 
     /** checks all specified constraints */
     bool checkConfiguration();
@@ -506,10 +506,10 @@ bool Config::addPreset(const std::string& optionSet)
 
 
 inline
-bool Config::parseOptions(const std::string& options, bool strict)
+bool Config::parseOptions(const std::string& options, bool strict, int activeLevel)
 {
     if (options.size() == 0) { return false; }
-    // split std::string into sub std::strings, separated by ':'
+    // split std::string into sub std::strings, separated by ' '
     std::vector<std::string> optionList;
     int lastStart = 0;
     int findP = 0;
@@ -532,13 +532,13 @@ bool Config::parseOptions(const std::string& options, bool strict)
     int argc = optionList.size() + 1;
 
     // call conventional method
-    bool ret = parseOptions(argc, argv, strict);
+    bool ret = parseOptions(argc, argv, strict, activeLevel);
     return ret;
 }
 
 
 inline
-bool Config::parseOptions(int& argc, char** argv, bool strict)
+bool Config::parseOptions(int& argc, char** argv, bool strict, int activeLevel)
 {
     if (optionListPtr == 0) { return false; }  // the options will not be parsed
 
@@ -557,10 +557,10 @@ bool Config::parseOptions(int& argc, char** argv, bool strict)
         const char* str = argv[i];
         if (match(str, "--") && match(str, Option::getHelpPrefixString()) && match(str, "help")) {
             if (*str == '\0') {
-                this->printUsageAndExit(argc, argv);
+                this->printUsageAndExit(argc, argv, false, activeLevel);
                 ret = true;
             } else if (match(str, "-verb")) {
-                this->printUsageAndExit(argc, argv, true);
+                this->printUsageAndExit(argc, argv, true, activeLevel);
                 ret = true;
             }
             argv[j++] = argv[i]; // keep -help in parameters!
@@ -587,7 +587,7 @@ bool Config::parseOptions(int& argc, char** argv, bool strict)
 }
 
 inline
-void Config::printUsageAndExit(int  argc, char** argv, bool verbose)
+void Config::printUsageAndExit(int  argc, char** argv, bool verbose, int activeLevel )
 {
     const char* usage = Option::getUsageString();
     if (usage != NULL) {
@@ -601,6 +601,9 @@ void Config::printUsageAndExit(int  argc, char** argv, bool verbose)
     const char* prev_type = NULL;
 
     for (int i = 0; i < (*optionListPtr).size(); i++) {
+      
+	if( activeLevel >= 0 && (*optionListPtr)[i]->getDependencyLevel() > activeLevel ) continue; // can jump over full categories
+	
         const char* cat  = (*optionListPtr)[i]->category;
         const char* type = (*optionListPtr)[i]->type_name;
 

@@ -40,7 +40,7 @@ namespace Riss
 
 
 extern bool parseOptions(int& argc, char** argv, bool strict = false);
-extern void printUsageAndExit(int  argc, char** argv, bool verbose = false);
+extern void printUsageAndExit(int  argc, char** argv, bool verbose = false, int activeLevel = -1);
 extern void setUsageHelp(const char* str);
 extern void setHelpPrefixStr(const char* str);
 
@@ -58,6 +58,7 @@ class Option
     const char* category;
     const char* type_name;
 
+    Option* dependOnNonDefaultOf;      // option that activates the current option
 
     static vec<Option*>& getOptionList() { static vec<Option*> options; return options; }
     static const char*&  getUsageString() { static const char* usage_str; return usage_str; }
@@ -76,11 +77,14 @@ class Option
            const char* desc_,
            const char* cate_,
            const char* type_,
-           vec<Option*>* externOptionList) :  // push to this list, if present!
+           vec<Option*>* externOptionList,
+	   Option* dependOn = 0
+	  ) :  // push to this list, if present!
         name(name_)
         , description(desc_)
         , category(cate_)
         , type_name(type_)
+	, dependOnNonDefaultOf( dependOn )
     {
         if (externOptionList == 0) { getOptionList().push(this); }
         else { externOptionList->push(this); }
@@ -95,6 +99,16 @@ class Option
 
     virtual bool hasDefaultValue() = 0;                 // check whether the current value corresponds to the default value of the option
     virtual void printOptionCall(std::stringstream& strean) = 0;        // print the call that is required to obtain that this option is set
+    
+    int  getDependencyLevel() {  // return the number of options this option depends on (tree-like)
+      if( dependOnNonDefaultOf == 0 ) return 0;
+      return dependOnNonDefaultOf->getDependencyLevel() + 1;
+    }
+    
+    bool isEnabled() {
+      if( dependOnNonDefaultOf == 0 ) return true;
+      else return !dependOnNonDefaultOf->hasDefaultValue() && dependOnNonDefaultOf->isEnabled();
+    }
 
     friend  bool parseOptions(int& argc, char** argv, bool strict);
     friend  void printUsageAndExit(int  argc, char** argv, bool verbose);
@@ -140,8 +154,9 @@ class DoubleOption : public Option
     double      defaultValue; // the value that is given to this option during construction
 
   public:
-    DoubleOption(const char* c, const char* n, const char* d, double def = double(), DoubleRange r = DoubleRange(-HUGE_VAL, false, HUGE_VAL, false), vec<Option*>* externOptionList = 0)
-        : Option(n, d, c, "<double>", externOptionList), range(r), value(def), defaultValue(def)
+    DoubleOption(const char* c, const char* n, const char* d, double def = double(), DoubleRange r = DoubleRange(-HUGE_VAL, false, HUGE_VAL, false), vec<Option*>* externOptionList = 0, 
+	   Option* dependOn = 0)
+        : Option(n, d, c, "<double>", externOptionList, dependOn), range(r), value(def), defaultValue(def)
     {
         // FIXME: set LC_NUMERIC to "C" to make sure that strtof/strtod parses decimal point correctly.
     }
@@ -224,8 +239,8 @@ class IntOption : public Option
     int32_t  defaultValue;
 
   public:
-    IntOption(const char* c, const char* n, const char* d, int32_t def = int32_t(), IntRange r = IntRange(INT32_MIN, INT32_MAX), vec<Option*>* externOptionList = 0)
-        : Option(n, d, c, "<int32>", externOptionList), range(r), value(def), defaultValue(def) {}
+    IntOption(const char* c, const char* n, const char* d, int32_t def = int32_t(), IntRange r = IntRange(INT32_MIN, INT32_MAX), vec<Option*>* externOptionList = 0, Option* dependOn = 0)
+        : Option(n, d, c, "<int32>", externOptionList, dependOn), range(r), value(def), defaultValue(def) {}
 
     operator   int32_t (void) const { return value; }
     operator   int32_t&  (void)       { return value; }
@@ -312,8 +327,8 @@ class Int64Option : public Option
     int64_t  defaultValue;
 
   public:
-    Int64Option(const char* c, const char* n, const char* d, int64_t def = int64_t(), Int64Range r = Int64Range(INT64_MIN, INT64_MAX), vec<Option*>* externOptionList = 0)
-        : Option(n, d, c, "<int64>", externOptionList), range(r), value(def), defaultValue(def) {}
+    Int64Option(const char* c, const char* n, const char* d, int64_t def = int64_t(), Int64Range r = Int64Range(INT64_MIN, INT64_MAX), vec<Option*>* externOptionList = 0, Option* dependOn = 0)
+        : Option(n, d, c, "<int64>", externOptionList, dependOn), range(r), value(def), defaultValue(def) {}
 
     operator     int64_t (void) const { return value; }
     operator     int64_t&  (void)       { return value; }
@@ -398,8 +413,8 @@ class StringOption : public Option
     const char* value;
     const char* defaultValue;
   public:
-    StringOption(const char* c, const char* n, const char* d, const char* def = NULL, vec<Option*>* externOptionList = 0)
-        : Option(n, d, c, "<std::string>", externOptionList), value(def), defaultValue(def) {}
+    StringOption(const char* c, const char* n, const char* d, const char* def = NULL, vec<Option*>* externOptionList = 0, Option* dependOn = 0)
+        : Option(n, d, c, "<std::string>", externOptionList, dependOn), value(def), defaultValue(def) {}
 
     operator      const char*  (void) const     { return value; }
     operator      const char*& (void)           { return value; }
@@ -453,8 +468,8 @@ class BoolOption : public Option
     bool defaultValue;
 
   public:
-    BoolOption(const char* c, const char* n, const char* d, bool v, vec<Option*>* externOptionList = 0)
-        : Option(n, d, c, "<bool>", externOptionList), value(v), defaultValue(v) {}
+    BoolOption(const char* c, const char* n, const char* d, bool v, vec<Option*>* externOptionList = 0, Option* dependOn = 0)
+        : Option(n, d, c, "<bool>", externOptionList, dependOn), value(v), defaultValue(v) {}
 
     operator    bool (void) const { return value; }
     operator    bool&    (void)       { return value; }
