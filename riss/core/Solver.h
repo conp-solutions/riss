@@ -264,7 +264,7 @@ class Solver
         unsigned int lbLBDMinimizingClause;
         int uhle_minimizing_size;
         int uhle_minimizing_lbd;
-        bool use_reverse_minimization;
+        bool use_reverse_minimization; // has to be set explicitely here: ReverseMinimization.enabled
         int lbSizeReverseClause;
         int lbLBDReverseClause;
 
