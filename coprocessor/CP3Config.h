@@ -39,6 +39,8 @@ class CP3Config : public Riss::Config
     */
 
 // options
+    Riss::BoolOption opt_enabled     ;
+    Riss::BoolOption opt_inprocess   ;
     Riss::IntOption opt_cp3_vars;  // variable limit to enable CP3
     Riss::IntOption opt_cp3_cls;   // clause limit to enable CP3
     Riss::IntOption opt_cp3_lits;
@@ -49,8 +51,7 @@ class CP3Config : public Riss::Config
     Riss::BoolOption opt_randomized  ;
     Riss::IntOption  opt_inprocessInt;
     Riss::IntOption  opt_simplifyRounds;
-    Riss::BoolOption opt_enabled     ;
-    Riss::BoolOption opt_inprocess   ;
+    
     Riss::IntOption  opt_exit_pp     ;
     Riss::BoolOption opt_randInp     ;
     Riss::BoolOption opt_inc_inp     ;
@@ -155,21 +156,9 @@ class CP3Config : public Riss::Config
     Riss::IntOption opt_bva_vars;  // variable limit to enable
     Riss::IntOption opt_bva_cls;   // clause limit to enable
     Riss::IntOption opt_bva_lits;  // total literals limit to enable
-    Riss::IntOption opt_Ibva_vars;     // variable limit to enable
-    Riss::IntOption opt_Ibva_cls;      // clause limit to enable
-    Riss::IntOption opt_Ibva_lits; // total literals limit to enable
-    Riss::IntOption opt_Xbva_vars;     // variable limit to enable
-    Riss::IntOption opt_Xbva_cls;      // clause limit to enable
-    Riss::IntOption opt_Xbva_lits; // total literals limit to enable
     Riss::IntOption opt_unhide_vars;   // variable limit to enable
     Riss::IntOption opt_unhide_cls;    // clause limit to enable
     Riss::IntOption opt_unhide_lits;   // total literals limit to enable
-    Riss::IntOption opt_probe_vars;    // variable limit to enable
-    Riss::IntOption opt_probe_cls;     // clause limit to enable
-    Riss::IntOption opt_probe_lits;    // total literals limit to enable
-    Riss::IntOption opt_viv_vars;  // variable limit to enable
-    Riss::IntOption opt_viv_cls;   // clause limit to enable
-    Riss::IntOption opt_viv_lits;  // total literals limit to enable
     Riss::IntOption opt_ternResolve_vars;  // variable limit to enable
     Riss::IntOption opt_ternResolve_cls;   // clause limit to enable
     Riss::IntOption opt_ternResolve_lits;  // total literals limit to enable
@@ -244,8 +233,8 @@ class CP3Config : public Riss::Config
 //
     Riss::IntOption  opt_bva_push             ;
     Riss::IntOption  opt_bva_VarLimit         ;
-    Riss::IntOption  opt_bva_Alimit           ;
     Riss::BoolOption opt_Abva                 ;
+    Riss::IntOption  opt_bva_Alimit           ;
     Riss::IntOption  opt_Abva_maxRed          ;
     Riss::IntOption  opt_bvaInpStepInc        ;
     Riss::IntOption  opt_Abva_heap            ;
@@ -257,15 +246,20 @@ class CP3Config : public Riss::Config
     Riss::IntOption  opt_bvaAnalysisDebug     ;
     #endif
 
+    Riss::IntOption  opt_Xbva                 ;
+    Riss::IntOption  opt_Ibva                 ;
     Riss::IntOption  opt_bva_Xlimit           ;
     Riss::IntOption  opt_bva_Ilimit           ;
     Riss::IntOption  opt_Xbva_maxRed          ;
     Riss::IntOption  opt_Ibva_maxRed          ;
     Riss::IntOption  opt_Xbva_heap            ;
     Riss::IntOption  opt_Ibva_heap            ;
-    Riss::IntOption  opt_Xbva                 ;
-    Riss::IntOption  opt_Ibva                 ;
-
+    Riss::IntOption opt_Ibva_vars;     // variable limit to enable
+    Riss::IntOption opt_Ibva_cls;      // clause limit to enable
+    Riss::IntOption opt_Ibva_lits; // total literals limit to enable
+    Riss::IntOption opt_Xbva_vars;     // variable limit to enable
+    Riss::IntOption opt_Xbva_cls;      // clause limit to enable
+    Riss::IntOption opt_Xbva_lits; // total literals limit to enable
 
 //
 // BCE
@@ -472,10 +466,10 @@ class CP3Config : public Riss::Config
 //
 // Probing
 //
+    Riss::BoolOption pr_probe      ;
     Riss::IntOption pr_uip;
     Riss::BoolOption opt_pr_probeBinary;
     Riss::BoolOption pr_double     ;
-    Riss::BoolOption pr_probe      ;
     Riss::BoolOption pr_rootsOnly  ;
     Riss::BoolOption pr_repeat     ;
     Riss::IntOption pr_clsSize     ;
@@ -491,6 +485,12 @@ class CP3Config : public Riss::Config
     Riss::IntOption  pr_opt_inpStepInc2      ;
     Riss::IntOption  pr_keepLHBRs  ;
     Riss::BoolOption pr_necBinaries  ;
+    Riss::IntOption opt_probe_vars;    // variable limit to enable
+    Riss::IntOption opt_probe_cls;     // clause limit to enable
+    Riss::IntOption opt_probe_lits;    // total literals limit to enable
+    Riss::IntOption opt_viv_vars;  // variable limit to enable
+    Riss::IntOption opt_viv_cls;   // clause limit to enable
+    Riss::IntOption opt_viv_lits;  // total literals limit to enable
     #ifndef NDEBUG
     Riss::IntOption pr_debug_out;
     #endif
