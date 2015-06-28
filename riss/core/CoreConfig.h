@@ -45,6 +45,7 @@ class CoreConfig : public Config
     IntOption opt_removal_debug;
     #endif
     BoolOption opt_refineConflict;
+    BoolOption opt_refineConflictReverse;
 
     DoubleOption opt_K;
     DoubleOption opt_R;

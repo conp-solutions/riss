@@ -587,7 +587,7 @@ bool Config::parseOptions(int& argc, char** argv, bool strict, int activeLevel)
 }
 
 inline
-void Config::printUsageAndExit(int  argc, char** argv, bool verbose, int activeLevel )
+void Config::printUsageAndExit(int  argc, char** argv, bool verbose, int activeLevel)
 {
     const char* usage = Option::getUsageString();
     if (usage != NULL) {
@@ -601,9 +601,9 @@ void Config::printUsageAndExit(int  argc, char** argv, bool verbose, int activeL
     const char* prev_type = NULL;
 
     for (int i = 0; i < (*optionListPtr).size(); i++) {
-      
-	if( activeLevel >= 0 && (*optionListPtr)[i]->getDependencyLevel() > activeLevel ) continue; // can jump over full categories
-	
+
+        if (activeLevel >= 0 && (*optionListPtr)[i]->getDependencyLevel() > activeLevel) { continue; }  // can jump over full categories
+
         const char* cat  = (*optionListPtr)[i]->category;
         const char* type = (*optionListPtr)[i]->type_name;
 

@@ -1379,7 +1379,7 @@ namespace Riss   // open namespace again!
 inline bool Solver::outputsProof() const
 {
     // either there is a local file, or there is a parallel build proof
-    return drupProofFile != NULL || (communication != 0 && communication->getPM() != 0);
+    return proofFile != NULL || (communication != 0 && communication->getPM() != 0);
 }
 
 template <class T>
@@ -1403,13 +1403,13 @@ inline void Solver::addToProof(const T& clause, const bool deleteFromProof, cons
         }
     }
     // actually print the clause into the file
-    if (deleteFromProof) { fprintf(drupProofFile, "d "); }
-    if (remLit != lit_Undef) { fprintf(drupProofFile, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1)); }  // print this literal first (e.g. for DRAT clauses)
+    if (deleteFromProof) { fprintf(proofFile, "d "); }
+    if (remLit != lit_Undef) { fprintf(proofFile, "%i ", (var(remLit) + 1) * (-2 * sign(remLit) + 1)); }  // print this literal first (e.g. for DRAT clauses)
     for (int i = 0; i < clause.size(); i++) {
         if (clause[i] == lit_Undef || clause[i] == remLit) { continue; }   // print the remaining literal, if they have not been printed yet
-        fprintf(drupProofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
+        fprintf(proofFile, "%i ", (var(clause[i]) + 1) * (-2 * sign(clause[i]) + 1));
     }
-    fprintf(drupProofFile, "0\n");
+    fprintf(proofFile, "0\n");
 
     if (config.opt_verboseProof == 2) {
         std::cerr << "c [PROOF] ";
@@ -1442,8 +1442,8 @@ inline void Solver::addUnitToProof(const Lit& l, bool deleteFromProof)
     }
     if (l == lit_Undef) { return; }  // no need to check this literal, however, routine can be used to check whether the empty clause is in the proof
     // actually print the clause into the file
-    if (deleteFromProof) { fprintf(drupProofFile, "d "); }
-    fprintf(drupProofFile, "%i 0\n", (var(l) + 1) * (-2 * sign(l) + 1));
+    if (deleteFromProof) { fprintf(proofFile, "d "); }
+    fprintf(proofFile, "%i 0\n", (var(l) + 1) * (-2 * sign(l) + 1));
     if (config.opt_verboseProof == 2) {
         if (deleteFromProof) { std::cerr << "c [PROOF] d " << l << std::endl; }
         else { std::cerr << "c [PROOF] " << l << std::endl; }
@@ -1458,7 +1458,7 @@ inline void Solver::addCommentToProof(const char* text, bool deleteFromProof)
         communication->getPM()->addCommentToProof(text, communication->getID());
         return;
     }
-    fprintf(drupProofFile, "c %s\n", text);
+    fprintf(proofFile, "c %s\n", text);
     if (config.opt_verboseProof == 2) { std::cerr << "c [PROOF] c " << text << std::endl; }
 }
 

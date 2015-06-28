@@ -41,6 +41,7 @@ CoreConfig::CoreConfig(const std::string& presetOptions)  // add new options her
     #endif
 
     opt_refineConflict(_cat, "refConflict", "refine conflict clause after solving with assumptions", true, optionListPtr),
+    opt_refineConflictReverse(_cat, "revRevC", "refine conflict clause after solving with assumptions", false, optionListPtr),
 
     opt_K(_cr, "K", "The constant used to force restart", 0.8, DoubleRange(0, false, 1, false), optionListPtr),
     opt_R(_cr, "R", "The constant used to block restart", 1.4, DoubleRange(1, false, 5, false), optionListPtr),

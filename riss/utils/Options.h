@@ -78,13 +78,13 @@ class Option
            const char* cate_,
            const char* type_,
            vec<Option*>* externOptionList,
-	   Option* dependOn = 0
-	  ) :  // push to this list, if present!
+           Option* dependOn = 0
+          ) :  // push to this list, if present!
         name(name_)
         , description(desc_)
         , category(cate_)
         , type_name(type_)
-	, dependOnNonDefaultOf( dependOn )
+        , dependOnNonDefaultOf(dependOn)
     {
         if (externOptionList == 0) { getOptionList().push(this); }
         else { externOptionList->push(this); }
@@ -99,15 +99,17 @@ class Option
 
     virtual bool hasDefaultValue() = 0;                 // check whether the current value corresponds to the default value of the option
     virtual void printOptionCall(std::stringstream& strean) = 0;        // print the call that is required to obtain that this option is set
-    
-    int  getDependencyLevel() {  // return the number of options this option depends on (tree-like)
-      if( dependOnNonDefaultOf == 0 ) return 0;
-      return dependOnNonDefaultOf->getDependencyLevel() + 1;
+
+    int  getDependencyLevel()    // return the number of options this option depends on (tree-like)
+    {
+        if (dependOnNonDefaultOf == 0) { return 0; }
+        return dependOnNonDefaultOf->getDependencyLevel() + 1;
     }
-    
-    bool isEnabled() {
-      if( dependOnNonDefaultOf == 0 ) return true;
-      else return !dependOnNonDefaultOf->hasDefaultValue() && dependOnNonDefaultOf->isEnabled();
+
+    bool isEnabled()
+    {
+        if (dependOnNonDefaultOf == 0) { return true; }
+        else { return !dependOnNonDefaultOf->hasDefaultValue() && dependOnNonDefaultOf->isEnabled(); }
     }
 
     friend  bool parseOptions(int& argc, char** argv, bool strict);
@@ -154,8 +156,8 @@ class DoubleOption : public Option
     double      defaultValue; // the value that is given to this option during construction
 
   public:
-    DoubleOption(const char* c, const char* n, const char* d, double def = double(), DoubleRange r = DoubleRange(-HUGE_VAL, false, HUGE_VAL, false), vec<Option*>* externOptionList = 0, 
-	   Option* dependOn = 0)
+    DoubleOption(const char* c, const char* n, const char* d, double def = double(), DoubleRange r = DoubleRange(-HUGE_VAL, false, HUGE_VAL, false), vec<Option*>* externOptionList = 0,
+                 Option* dependOn = 0)
         : Option(n, d, c, "<double>", externOptionList, dependOn), range(r), value(def), defaultValue(def)
     {
         // FIXME: set LC_NUMERIC to "C" to make sure that strtof/strtod parses decimal point correctly.

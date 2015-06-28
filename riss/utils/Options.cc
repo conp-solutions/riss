@@ -72,9 +72,9 @@ void Riss::printUsageAndExit(int argc, char** argv, bool verbose, int activeLeve
     const char* prev_type = NULL;
 
     for (int i = 0; i < Option::getOptionList().size(); i++) {
-      
-        
-      
+
+
+
         const char* cat  = Option::getOptionList()[i]->category;
         const char* type = Option::getOptionList()[i]->type_name;
 
