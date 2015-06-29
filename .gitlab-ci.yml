@@ -1,0 +1,33 @@
+# Runs CI script for all branches
+build-and-check: 
+  script: "scripts/ci.sh"
+  only: 
+    - branches
+
+# We could split the tests in separate tests, but they would possibly executed
+# in parallel. This makes it more complicated. Therefore we we have a single
+# monolithic CI script
+# before_script:
+#   - printenv
+#   # build fuzz checker
+#   - cd tools/checker
+#   - make
+#   - cd ../..
+
+# build-debug:
+#   script:
+#     - mkdir debug/
+#     - cd debug/
+#     - cmake -D CMAKE_BUILD_TYPE=Debug ..
+#     - make all
+
+# build-release:
+#   script:
+#     - mkdir release/
+#     - cd release/
+#     - cmake -D CMAKE_BUILD_TYPE=Release ..
+#     - make all
+
+# fuzz-check-riss-core:
+#   script:
+#     - cd tools/checker
