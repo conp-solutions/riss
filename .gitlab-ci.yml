@@ -1,5 +1,19 @@
-# Runs other CI script for all branches 
-build-and-check: 
-  script: "scripts/ci.sh"
-  only: 
-    - branches
+before_script:
+  - printenv
+  # build fuzz checker
+  - cd $CI_PROJECT_DIR/tools/checker
+  - make
+
+build-debug:
+  script:
+    - mkdir $CI_PROJECT_DIR/debug/
+    - cd $CI_PROJECT_DIR/debug/
+    - cmake -D CMAKE_BUILD_TYPE=Debug $CI_PROJECT_DIR
+    - make all
+
+build-release:
+  script:
+    - mkdir $CI_PROJECT_DIR/release/
+    - cd $CI_PROJECT_DIR/release/
+    - cmake -D CMAKE_BUILD_TYPE=Debug $CI_PROJECT_DIR
+    - make all
