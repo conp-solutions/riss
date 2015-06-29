@@ -1,0 +1,5 @@
+# Runs other CI script for all branches 
+build-and-check: 
+  script: "scripts/ci.sh"
+  only: 
+    - branches
