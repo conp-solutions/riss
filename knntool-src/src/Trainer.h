@@ -25,9 +25,11 @@ class Trainer {
 
     vector<string> instances;
 
-    void setBasic(int dimension, int amountClasses, int amountFiles, int standardClass, int classAppearance[] );
+    void setBasic(int dimension, int amountClasses, int amountFiles, int standardClass, int classAppearance[], pair<int,int> solved );
     
-    void solvePCA();
+    void solvePCA(string out);
+    
+    void writeData(string out);
     
   private:
     
@@ -36,6 +38,7 @@ class Trainer {
     int amountFiles;
     int standardClass;
     int classAppearance[];
+    pair<int,int> solved;
     
 };
 

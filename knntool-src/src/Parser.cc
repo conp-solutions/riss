@@ -173,7 +173,7 @@ pair<int, int> select(Trainer& T, ifstream& featuresFile, int classAppearance[],
 		double temp = atof(Get(line, T.featureIdents[j].first).c_str());
 		if (isinf(temp) || temp > 10e+99) 
 		  temp = double(10e+99);    //TODO really naive way, might implement a better one
-		//features[j].push_back(temp);
+		  T.features[j].push_back(temp);
 	      }
 	    }
       }
@@ -204,7 +204,7 @@ void parseFiles(Trainer& T, ifstream& featuresFile, ifstream& timesFile, int tim
   cout << "\tNot solved instances:\t\t\t" << solved.second << endl;
   cout << "\tStandardclass:\t\t\t\t" << standardClass << " (" << T.classNames[standardClass] << ")" << endl;
   cout << endl;
-  
-  T.setBasic(dimension, amountClasses, amountFiles, standardClass, classAppearance);
+
+  T.setBasic(dimension, amountClasses, amountFiles, standardClass, classAppearance ,solved);
   
 }
