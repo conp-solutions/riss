@@ -2,7 +2,10 @@
 
 ## v3.0.0
 
- * persistent heap for sequential BVE (lucas)
+ * Persistent heap for sequential BVE (lucas)
  * Technique class with **CRTP** (static polymorphism) (lucas)
- * generic stepper class for all techniques (lucas)
- * move all technique implementations into [coprocessor/techniques](techniques/) (lucas)
+ * Generic stepper class for all techniques (lucas)
+ * Move all technique implementations into [coprocessor/techniques](techniques/) (lucas)
+ * Use Stepper for BVE (lucas)
+ * Use Stepper for Subsumption (lucas)
+ * Increase strengthening limit in "giveMoreSteps()" call of Subsumption (lucas)

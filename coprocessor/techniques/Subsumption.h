@@ -32,13 +32,16 @@ class Subsumption : public Technique<Subsumption>
     int subsumedClauses;  // statistic counter
     int subsumedLiterals; // sum up the literals of the clauses that have been subsumed
     int removedLiterals;  // statistic counter
-    int64_t subsumeSteps;     // number of clause comparisons in subsumption
-    int64_t strengthSteps;    // number of clause comparisons in strengthening
+    // int64_t subsumeSteps;     // number of clause comparisons in subsumption
+    // int64_t strengthSteps;    // number of clause comparisons in strengthening
     double processTime;   // statistic counter
     double strengthTime;  // statistic counter
 
-    int64_t subLimit; // step limit for subsumption
-    int64_t strLimit; // step limit for strengthening
+    Stepper subsumptionStepper;
+    Stepper strengtheningStepper;
+
+    // int64_t subLimit; // step limit for subsumption
+    // int64_t strLimit; // step limit for strengthening
     int64_t callIncrease; // step limit increase to be able to perform at least this number of checks
     int limitIncreases;   // number of times the limits have been relaxed
     int chunk_size;

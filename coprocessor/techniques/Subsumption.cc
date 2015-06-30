@@ -17,12 +17,10 @@ Subsumption::Subsumption(CP3Config& _config, ClauseAllocator& _ca, ThreadControl
     , subsumedClauses(0)
     , subsumedLiterals(0)
     , removedLiterals(0)
-    , subsumeSteps(0)
-    , strengthSteps(0)
     , processTime(0)
     , strengthTime(0)
-    , subLimit(config.opt_sub_subLimit)
-    , strLimit(config.opt_sub_strLimit)
+    , subsumptionStepper(config.opt_sub_subLimit)
+    , strengtheningStepper(config.opt_sub_strLimit)
     , callIncrease(config.opt_sub_callIncrease)
     , limitIncreases(0)
 {
@@ -31,7 +29,8 @@ Subsumption::Subsumption(CP3Config& _config, ClauseAllocator& _ca, ThreadControl
 void Subsumption::giveMoreSteps()
 {
     if (!willSimplify()) { return; }
-    subsumeSteps = subsumeSteps < config.opt_sub_inpStepInc ? 0 : subsumeSteps - config.opt_sub_inpStepInc;
+    subsumptionStepper.increaseSteps(config.opt_sub_inpStepInc);
+    strengtheningStepper.increaseSteps(config.opt_sub_inpStepInc);
     strengthTime = strengthTime < config.opt_sub_inpStepInc ? 0 : strengthTime - config.opt_sub_inpStepInc;
 }
 
@@ -43,8 +42,8 @@ void Subsumption::printStatistics(ostream& stream)
            << " with " << subsumedLiterals << " lits, "
            << removedLiterals << " strengthed "
            << endl;
-    stream << "c [STAT] SuSi(2) " << subsumeSteps << " subs-steps, "
-           << strengthSteps << " strenght-steps, "
+    stream << "c [STAT] SuSi(2) " << subsumptionStepper.getCurrentSteps() << " subs-steps, "
+           << strengtheningStepper.getCurrentSteps() << " strenght-steps, "
            << limitIncreases << " increases, "
            << strengthTime << "s strengthening "
            << endl;
@@ -103,8 +102,14 @@ bool Subsumption::process(bool doStrengthen, Heap< VarOrderBVEHeapLt >* heap, co
     if (!data.unlimited() && (data.nVars() > config.opt_subsimp_vars && data.getClauses().size() + data.getLEarnts().size() > config.opt_subsimp_cls && data.nTotLits() > config.opt_subsimp_lits)) { return false; }
 
     // increase limits per call if necessary
-    if (subsumeSteps + callIncrease > subLimit)  { subLimit = subsumeSteps + callIncrease;  limitIncreases++; }
-    if (strengthSteps + callIncrease > strLimit) { strLimit = strengthSteps + callIncrease; limitIncreases++; }
+    if (!subsumptionStepper.inLimit(callIncrease)) {
+        subsumptionStepper.increaseLimit(callIncrease);
+        limitIncreases++;
+    }
+    if (!strengtheningStepper.inLimit(callIncrease)) {
+        strengtheningStepper.increaseLimit(callIncrease);
+        limitIncreases++;
+    }
 
     DOUT(if (config.opt_sub_debug > 0) {
     cerr << "c check for subsumption: " << endl;
@@ -136,12 +141,12 @@ bool Subsumption::process(bool doStrengthen, Heap< VarOrderBVEHeapLt >* heap, co
                     avgParStrengthSteps += localStats[i].strengthSteps;
                 }
                 // increase seq StrengthSteps by parallel Avarage
-                if (controller.size() > 0) { strengthSteps += avgParStrengthSteps / controller.size(); }
+                if (controller.size() > 0) { strengtheningStepper.increaseSteps(avgParStrengthSteps / controller.size()); }
 
                 fullStrengthening(heap, ignore, doStatistics); // corrects occs and counters by itself
 
                 // decrease seq StrengthSteps by parallel Avarage again
-                if (controller.size() > 0) { strengthSteps -= avgParStrengthSteps / controller.size(); }
+                if (controller.size() > 0) { strengtheningStepper.increaseSteps(-avgParStrengthSteps / controller.size()); }
 
                 if (config.opt_sub_allStrengthRes > 0) {
                     for (int j = 0; j < toDelete.size(); ++j) {
@@ -193,11 +198,11 @@ lbool Subsumption::fullSubsumption(Heap<VarOrderBVEHeapLt> * heap, const Var ign
             avgParSubsSteps += localStats[i].subsumeSteps;
         }
         // increase seq StrengthSteps by parallel Avarage
-        if (controller.size() > 0) { subsumeSteps += avgParSubsSteps / controller.size(); }
+        if (controller.size() > 0) { subsumptionStepper.increaseSteps(avgParSubsSteps / controller.size()); }
 
         subsumption_worker(0, data.getSubsumeClauses().size(), heap, ignore, doStatistics); // performs all occ and stat-updates
 
-        if (controller.size() > 0) { subsumeSteps -= avgParSubsSteps / controller.size(); }
+        if (controller.size() > 0) { subsumptionStepper.increaseSteps(-avgParSubsSteps / controller.size()); }
     }
 
     for (int i = 0 ; i < data.getSubsumeClauses().size(); ++ i) { ca[ data.getSubsumeClauses()[i] ].set_subsume(false); }
@@ -237,7 +242,7 @@ void Subsumption :: subsumption_worker(unsigned int start, unsigned int end, Hea
     }
 
     for (; end > start && !data.isInterupted()
-            && (data.unlimited() || (doStatistics && subsumeSteps < subLimit))
+            && (data.unlimited() || (doStatistics && subsumptionStepper.inLimit()))
             ;) {
         --end;
         const CRef cr = data.getSubsumeClauses()[end];
@@ -254,13 +259,13 @@ void Subsumption :: subsumption_worker(unsigned int start, unsigned int end, Hea
         }
         vector<CRef>& list = data.list(min);
         for (unsigned i = 0; i < list.size()
-                && (data.unlimited() || (doStatistics && subsumeSteps < subLimit))
+                && (data.unlimited() || (doStatistics && subsumptionStepper.inLimit()))
                 ; ++i) {
 
             if (list[i] == cr) {
                 continue;
             }
-            if (doStatistics) { ++ subsumeSteps; }
+            if (doStatistics) { subsumptionStepper.increaseSteps(1); }
             if (ca[list[i]].size() < c.size()) {
                 continue;
             }
@@ -342,7 +347,7 @@ void Subsumption :: par_subsumption_worker(unsigned int& next_start, unsigned in
         stats.processTime = wallClockTime() - stats.processTime;
     }
     while (global_end > next_start &&  !data.isInterupted()
-            && (data.unlimited() || (doStatistics && subsumeSteps + stats.subsumeSteps < subLimit))) {
+            && (data.unlimited() || (doStatistics && subsumptionStepper.inLimit(stats.subsumeSteps)))) {
         balancerLock.lock();
         if (global_end > next_start) {
             start = next_start;
@@ -351,7 +356,7 @@ void Subsumption :: par_subsumption_worker(unsigned int& next_start, unsigned in
         }
         balancerLock.unlock();
         while (end > start && !data.isInterupted()
-                && (data.unlimited() || (doStatistics && subsumeSteps + stats.subsumeSteps < subLimit))) {
+                && (data.unlimited() || (doStatistics && subsumptionStepper.inLimit(stats.subsumeSteps)))) {
             --end;
             const CRef cr = data.getSubsumeClauses()[end];
             Clause& c = ca[cr];
@@ -652,7 +657,7 @@ void Subsumption::par_nn_strengthening_worker(unsigned int& next_start, unsigned
     SpinLock& data_lock = var_lock[data.nVars()];
 
     while (global_end > next_start && !data.isInterupted()
-            && (data.unlimited() || (doStatistics && strengthSteps + stats.strengthSteps < strLimit))) {
+            && (data.unlimited() || (doStatistics && strengtheningStepper.inLimit(stats.strengthSteps)))) {
         balancerLock.lock();
         if (global_end > next_start) {
             start = next_start;
@@ -661,7 +666,7 @@ void Subsumption::par_nn_strengthening_worker(unsigned int& next_start, unsigned
         }
         balancerLock.unlock();
         while (end > start && !data.isInterupted()
-                && (data.unlimited() || (doStatistics && strengthSteps + stats.strengthSteps < strLimit))) {
+                && (data.unlimited() || (doStatistics && strengtheningStepper.inLimit(stats.strengthSteps)))) {
             if (!data.ok()) {
                 stats.strengthTime = wallClockTime() - stats.strengthTime;
                 return;
@@ -790,7 +795,7 @@ inline lbool Subsumption::par_nn_strength_check(CoprocessorData& data, vector < 
 
     // test every clause, where the minimum is, if it can be strenghtened
     for (unsigned int j = 0; j < list.size() && !data.isInterupted()
-            && (data.unlimited() || (doStatistics && strengthSteps + stats.strengthSteps < strLimit));
+            && (data.unlimited() || (doStatistics && strengtheningStepper.inLimit(stats.strengthSteps)));
             ++j) {
         Clause& other = ca[list[j]];
         if (doStatistics) { ++stats.strengthSteps; }
@@ -932,7 +937,7 @@ inline lbool Subsumption::par_nn_negated_strength_check(CoprocessorData& data, v
 
     // test every clause, where the minimum is, if it can be strenghtened
     for (unsigned int j = 0; j < list.size() && !data.isInterupted()
-            && (data.unlimited() || (doStatistics && strengthSteps + stats.strengthSteps < strLimit))
+            && (data.unlimited() || (doStatistics && strengtheningStepper.inLimit(stats.strengthSteps)))
             ; ++j) {
         Clause& other = ca[list[j]];
         if (doStatistics) { ++stats.strengthSteps; }
@@ -1094,7 +1099,7 @@ lbool Subsumption::fullStrengthening(Heap<VarOrderBVEHeapLt> * heap, const Var i
             }
 
         for (int j = 0; j < c.size()
-                && (data.unlimited() || (doStatistics && strengthSteps < strLimit))
+                && (data.unlimited() || (doStatistics && strengtheningStepper.inLimit()))
                 ; ++j) {
             // negate this literal and check for subsumptions for every occurrence of its negation:
             Lit neg_lit = ~c[j];
@@ -1102,13 +1107,13 @@ lbool Subsumption::fullStrengthening(Heap<VarOrderBVEHeapLt> * heap, const Var i
             vector<CRef>& list = (neg_lit == ~min) ? data.list(neg_lit) : data.list(min);   // get occurrences of this lit
             //vector<CRef> & list = data.list(neg_lit);  // get occurrences of this lit
             for (unsigned int k = 0; k < list.size()
-                    && (data.unlimited() || (doStatistics && strengthSteps < strLimit))
+                    && (data.unlimited() || (doStatistics && strengtheningStepper.inLimit()))
                     ; ++k) {
                 if (list[k] == cr) {
                     continue;
                 }
 
-                if (doStatistics) { ++strengthSteps; }
+                if (doStatistics) { strengtheningStepper.increaseSteps(1); }
 
                 Clause& other = ca[list[k]];
                 if (other.can_be_deleted()) {    // dont check if this clause can be deleted, but remove it from its list
@@ -1269,7 +1274,7 @@ lbool Subsumption::strengthening_worker(unsigned int start, unsigned int end, He
     }
 
     for (; end > start && !data.isInterupted()
-            && (data.unlimited() || (doStatistics && strengthSteps < strLimit))
+            && (data.unlimited() || (doStatistics && strengtheningStepper.inLimit()))
             ;) {
         CRef cr = CRef_Undef;
         if (localQueue.size() == 0) {
@@ -1318,11 +1323,11 @@ lbool Subsumption::strengthening_worker(unsigned int start, unsigned int end, He
         // test every clause, where the minimum is, if it can be strenghtened
         for (unsigned int j = 0; j < list.size()
                 && !data.isInterupted()
-                && (data.unlimited() || (doStatistics && strengthSteps < strLimit))
+                && (data.unlimited() || (doStatistics && strengtheningStepper.inLimit()))
                 ; ++j) {
             if (list[j] == cr) { continue; }
             Clause& other = ca[list[j]];
-            if (doStatistics) { ++strengthSteps; }
+            if (doStatistics) { strengtheningStepper.increaseSteps(1); }
             if (other.size() == 0) { assert(!data.ok() && "unsat should be found already!"); break; }      // here, data.ok should be false already -> nothing to be done!
             if (other.can_be_deleted()) {   // skip, but remove from list!
                 DOUT(if (config.opt_sub_debug > 1) cerr << "c overwrite for literal " << min << " : list[" << j << "]=" << list[j] << " with list[" << list.size() - 1 << "] = " << list.back() << endl;);
@@ -1420,10 +1425,10 @@ lbool Subsumption::strengthening_worker(unsigned int start, unsigned int end, He
         // now test for the occurrences of negated min, now the literal, that appears negated has to be min
         for (unsigned int j = 0; j < list_neg.size()
                 && !data.isInterupted()
-                && (data.unlimited() || (doStatistics && strengthSteps < strLimit))
+                && (data.unlimited() || (doStatistics && strengtheningStepper.inLimit()))
                 ; ++j) {
             Clause& other = ca[list_neg[j]];
-            if (doStatistics) { ++ strengthSteps; }
+            if (doStatistics) { strengtheningStepper.increaseSteps(1); }
             if (other.can_be_deleted()) {
                 DOUT(if (config.opt_sub_debug > 1) cerr << "c overwrite for literal " << nmin << " : list_neg[" << j << "]=" << list_neg[j] << " with list_neg[" << list_neg.size() - 1 << "] = " << list_neg.back() << endl;);
                 list_neg[j] = list_neg.back(); list_neg.pop_back(); --j;
