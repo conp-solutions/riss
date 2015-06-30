@@ -41,9 +41,9 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
                                       COMPILE_FLAGS "-DPCASSO")
 
 if(STATIC_BINARIES)
-  target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}-lib-static riss-pcasso-lib-static coprocessor-lib-static pfolio)
+  target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}-lib-static riss-pcasso-lib-static pfolio-lib-static coprocessor-lib-static)
 else()
-  target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}-lib-shared riss-pcasso-lib-shared coprocessor-lib-shared pfolio)
+  target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}-lib-shared riss-pcasso-lib-shared pfolio-lib-shared coprocessor-lib-shared)
 endif()
 
 # Installation:
