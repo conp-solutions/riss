@@ -32,6 +32,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "pcasso/SplitterSolver.h"
 #include "pcasso/SolverPT.h"
 #include "pcasso/SolverRiss.h"
+#include "pcasso/SolverPriss.h"
 #include "pcasso/InstanceSolver.h"
 #include "pcasso/LookaheadSplitting.h"
 #include "pcasso/vsidsSplitting.h"
@@ -82,6 +83,7 @@ static Int64Option   MSverbosity("SPLITTER", "verbosity", "verbosity of the mast
 static BoolOption    Portfolio("SPLITTER", "portfolio",  "Portfolio mode.\n", false);
 static Int64Option   PortfolioLevel("SPLITTER", "portfolioL", "Perform Portfolio until specified level\n", 0, Int64Range(0, INT64_MAX));     // depends on option above!
 static BoolOption    UseHardwareCores("SPLITTER", "usehw",  "Use Hardware, pin threads to cores\n", false);
+static BoolOption    priss("SPLITTER", "use-priss",  "Uses Priss as instance solver\n", false);
 
 static vector<unsigned short int> hardwareCores; // set of available hardware cores
 
@@ -721,8 +723,13 @@ Master::solveInstance(void* data)
 
 
     // create a solver object
-    //bool simp = solve_mode;
-    InstanceSolver*solver = new SolverRiss(&defaultSolverConfig);
+    InstanceSolver* solver;
+    if( !priss ) {
+        solver = new SolverRiss(&defaultSolverConfig);
+    } else {
+        // TODO: how many threads for priss? commandline option?
+        solver = new SolverPriss(&defaultSolverConfig, 2);
+    }
     assert(tData.solver == NULL);
     tData.solver = solver;
 

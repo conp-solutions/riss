@@ -46,15 +46,14 @@ class InstanceSolver : public SolverInterface
 
     unsigned        curPTLevel;                    // level of partitioning tree
     TreeNode*       tnode;
-    vector<unsigned>shared_indeces;
     Statistics      localStat;                    // Norbert> Local Statistics
 
-    virtual unsigned int    getNumberOfTopLevelUnits() const = 0;                // return the number of top level units from that are on the trail
-    virtual void            setTimeOut(double timeout) = 0;                  // specify a number of seconds that is allowed to be executed
-    virtual Riss::Lit       trailGet(const unsigned int index) = 0;                // return a specifit literal from the trail
-    virtual unsigned        getLiteralPTLevel(const Riss::Lit& l) const = 0;   // get PT level of literal
+    virtual unsigned int    getNumberOfTopLevelUnits() const = 0;               // return the number of top level units from that are on the trail
+    virtual void            setTimeOut(double timeout) = 0;                     // specify a number of seconds that is allowed to be executed
+    virtual Riss::Lit       trailGet(const unsigned int index) = 0;             // return a specifit literal from the trail
+    virtual unsigned        getLiteralPTLevel(const Riss::Lit& l) const = 0;    // get PT level of literal
     virtual bool            addClause_(Riss::vec<Riss::Lit>& ps, unsigned int level = 0) = 0;
-    virtual void            setupForPortfolio(const int nodeLevel) = 0;       // set properties of the solver deoending on node level (for portfolio solver)
+    virtual void            setupForPortfolio(const int nodeLevel) = 0;         // set properties of the solver deoending on node level (for portfolio solver)
 };
 }
 

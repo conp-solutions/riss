@@ -16,6 +16,7 @@ set(LIB_SOURCES
     PartitionTree.cc
     SolverPT.cc
     SolverRiss.cc
+    SolverPriss.cc
     shared_pool.cc
     vsidsSplitting.cc)
 
@@ -40,9 +41,9 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
                                       COMPILE_FLAGS "-DPCASSO")
 
 if(STATIC_BINARIES)
-  target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}-lib-static riss-pcasso-lib-static coprocessor-lib-static)
+  target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}-lib-static riss-pcasso-lib-static coprocessor-lib-static pfolio)
 else()
-  target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}-lib-shared riss-pcasso-lib-shared coprocessor-lib-shared)
+  target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}-lib-shared riss-pcasso-lib-shared coprocessor-lib-shared pfolio)
 endif()
 
 # Installation:

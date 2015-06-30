@@ -71,5 +71,4 @@ inline uint64_t SolverRiss::getConflicts()              { return solver.conflict
 inline void     SolverRiss::getModel(Riss::vec<Riss::lbool>& model) { solver.model.copyTo(model); }
 inline Riss::Lit SolverRiss::trailGet(const unsigned int index) { return solver.trail[index]; }
 inline unsigned int SolverRiss::getNumberOfTopLevelUnits() const    { return solver.trail.size(); }
-
 } // namespace Pcasso
