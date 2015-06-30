@@ -22,6 +22,7 @@ class BoundedVariableElimination : public Technique<BoundedVariableElimination>
 
     Coprocessor::Propagation& propagation;
     Coprocessor::Subsumption& subsumption;
+    Stepper stepper;
 
     struct PostponeReason {
         Riss::Var var, reason;

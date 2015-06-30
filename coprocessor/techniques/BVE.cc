@@ -17,9 +17,10 @@ BoundedVariableElimination::BoundedVariableElimination(CP3Config& _config, Riss:
                                                        Riss::ThreadController& _controller,
                                                        Coprocessor::Propagation& _propagation,
                                                        Coprocessor::Subsumption& _subsumption)
-    : Technique(_config, _ca, _controller, _config.opt_bve_limit)
+    : Technique(_config, _ca, _controller)
     , propagation(_propagation)
     , subsumption(_subsumption)
+    , stepper(config.opt_bve_limit)
     , variable_heap(NULL) // FIXME use nullptr instead NULL macro (also for the checks)
     , removedClauses(0)
     , removedLiterals(0)

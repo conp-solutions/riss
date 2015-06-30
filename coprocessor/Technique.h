@@ -60,7 +60,6 @@ class Technique
     };
 
     CP3Config& config;            // store the configuration for the whole preprocessor
-    Stepper stepper;
 
     bool modifiedFormula;          // true, if subsumption did something on formula
 
@@ -78,8 +77,7 @@ class Technique
     /**
      * @param budget number of computation steps the technique is allowed to use. Defaults to maximal integer value
      */
-    Technique(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller,
-              int limit = numeric_limits<int64_t>::max(), int _increasePenalty = 1)
+    Technique(CP3Config& _config, Riss::ClauseAllocator& _ca, Riss::ThreadController& _controller, int _increasePenalty = 1)
         : config(_config)
         , modifiedFormula(false)
         , isInitialized(false)
@@ -88,7 +86,6 @@ class Technique
         , controller(_controller)
         , didPrintCannotDrup(false)
         , didPrintCannotExtraInfo(false)
-        , stepper(limit)
         , penalty(0)
         , peakPenalty(0)
         , increasePenalty(_increasePenalty)
@@ -187,11 +184,6 @@ class Technique
     /** Ask whether a simplification should be performed yet. This checks the penalty and a stepper system. */
     inline bool performSimplification()
     {
-        // check if budget of computation steps is depleted
-        if (!stepper.inLimit()) {
-            return false;
-        }
-
         // technique holds still a penalty. It should not process but the penalty is decreased.
         if (penalty > 0) {
             --penalty;
