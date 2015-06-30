@@ -31,6 +31,8 @@ class Trainer {
     
     void writeData(string out);
     
+    void writeCC();
+    
   private:
     
     int dimension;
@@ -39,6 +41,9 @@ class Trainer {
     int standardClass;
     int classAppearance[];
     pair<int,int> solved;
+    
+    vector<double> divisors;      
+
     
 };
 

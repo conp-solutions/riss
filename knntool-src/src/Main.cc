@@ -124,7 +124,8 @@ int main(int argc, char** argv)
   cout << endl;
   cout << "Success!" << endl;
   
-  T.writeData(vm["input-files"].as<vector<std::string> >()[2]);
+  if ( vm.count("generateheader") ) T.writeCC();
+  else T.writeData(vm["input-files"].as<vector<std::string> >()[2]);
  
   
   
