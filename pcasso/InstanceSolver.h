@@ -8,7 +8,7 @@
 #ifndef INSTANCESOLVER_H
 #define INSTANCESOLVER_H
 
-#include "pcasso/ISolver.h"
+#include "pcasso/SolverInterface.h"
 #include "riss/utils/Statistics-mt.h"    // Statistics
 #include "riss/core/Solver.h"
 #include "riss/core/SolverTypes.h"
@@ -18,7 +18,7 @@ class TreeNode; // to avoid circular dependencies
 
 namespace Pcasso
 {
-class InstanceSolver : public ISolver
+class InstanceSolver : public SolverInterface
 {
 
   public:
