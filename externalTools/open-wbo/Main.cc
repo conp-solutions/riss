@@ -151,13 +151,15 @@ void loadFromMprocessorToMaxsat(MaxSAT* S)
 
 int main(int argc, char **argv)
 {
-    printf(
-        "c\nc Open-WBO:\t a Modular MaxSAT Solver -- based on %s (%s version)\n",
+    printf("c Optiriss, Norbert Manthey, integrated the SAT Solver Riss into OpenWBO\n");
+    printf("c Optiriss is heavily based on:\n");
+  
+    printf("c\nc \tOpen-WBO:\t a Modular MaxSAT Solver -- based on %s (%s version)\n",
         SATVER, VER);
-    printf("c Version:\t 1.3.1 -- 18 February 2015\n");
-    printf("c Authors:\t Ruben Martins, Vasco Manquinho, Ines Lynce\n");
-    printf("c Contributors:\t Saurabh Joshi\n");
-    printf("c Contact:\t open-wbo@sat.inesc-id.pt -- "
+    printf("c\t Version:\t 1.3.1 -- 18 February 2015\n");
+    printf("c\t Authors:\t Ruben Martins, Vasco Manquinho, Ines Lynce\n");
+    printf("c\t Contributors:\t Saurabh Joshi\n");
+    printf("c\t Contact:\t open-wbo@sat.inesc-id.pt -- "
            "http://sat.inesc-id.pt/open-wbo/\nc\n");
     try {
         setUsageHelp("c USAGE: %s [options] <input-file>\n\n");
